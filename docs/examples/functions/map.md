@@ -116,6 +116,11 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
   mark into its 32768-wide bucket and the bit inside it (negative, zero, both bucket
   edges, NULL included), and `F.bitmap_count` counting set bits in a binary (EX-30).
   pins: ex-30-functions-remainder/C-002
+- [bitmap_aggregates.py](bitmap_aggregates.py) — `F.bitmap_construct_agg` counting the
+  distinct positions of a grouped/global aggregate, `F.bitmap_or_agg` / `F.bitmap_and_agg`
+  folding the per-group bitmaps (OR 3, AND 1), and the all-NULL and empty identities
+  (OR zeros, AND ones) (FNP-BITMAP-FACADE-1).
+  pins: fnp-bitmap-facade-1/C-004
 - [case.py](case.py) — `F.lcase`/`F.lower` and `F.ucase`/`F.upper` (alias pairs)
 - [concat.py](concat.py) — `F.concat` propagating NULL beside `F.concat_ws`
 - [edges.py](edges.py) — `F.left` / `F.right` at a positive width, and the empty

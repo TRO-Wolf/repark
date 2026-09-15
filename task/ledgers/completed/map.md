@@ -450,6 +450,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   Round 2: idx validated only inside the match arm; §7 `FN-REGEX-LOOKAROUND-1` filed;
   facade 2-arg widening disclosed.
   pins: fn-regexp-extract-1/C-001, C-002, C-003, C-004
+- [fnp-6d-followup-1-ledger.md](fnp-6d-followup-1-ledger.md) — Unit ledger — FNP-6D-FOLLOWUP-1 · bitmap aggregate signatures
 - [fnp-6d-ledger.md](fnp-6d-ledger.md) —
   **FNP-6D (2026-09-15), in flight:** Spark `bitmap_construct_agg` / `bitmap_or_agg` /
   `bitmap_and_agg` UDAFs (4096-byte BINARY, recorded cells `F6D-*` and `B8-*`).
@@ -482,6 +483,19 @@ else. The next pickup's `make ledger-archive` files everything here under
   (recorded 2026-09-14). `sum_distinct`/`sumDistinct` moved to FNP-AGG-1 (ruling D-6); the delivered six names, their warning messages, and the
   degrees/radians fix are pinned. `risk_tier: standard`. Branch `feat/fnp-alias-1`.
   pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [fnp-bitmap-facade-1-ledger.md](fnp-bitmap-facade-1-ledger.md) —
+  **FNP-BITMAP-FACADE-1 (2026-09-15), in flight:** the three FNP-6D bitmap aggregates
+  bind as Spark-facade names — `F.bitmap_construct_agg` / `F.bitmap_or_agg` /
+  `F.bitmap_and_agg` as one-line wrappers over `column._inner.aggregate(kind, False)`
+  through three new `unary_aggregate_udaf` arms (`mod bitmap_agg` flips `pub` for the
+  cross-crate path; `function_dispatch.rs` condenses its four `binary_expr` arms to stay
+  under its file-size ceiling). Rust UDAFs and SQL door untouched (FNP-6D, #609).
+  Round 15a complete: red re-run on the base facade with the native (9 failed), ten green
+  facade pins, byname `FACADE_ONLY_ROUTINE_NAMES` rows with the `call_function` bytes pin,
+  example executed under `--require-execute`, EX-0 1010 → 1013, registry flipped,
+  all four clauses PROVEN.
+  `risk_tier: standard`. Branch `feat/fnp-bitmap-facade-1`.
+  pins: fnp-bitmap-facade-1/C-001, C-002, C-003, C-004
 - [fnp-misc-1-ledger.md](fnp-misc-1-ledger.md) —
   **FNP-MISC-1 (2026-09-15), in flight:** `call_function` / `call_udf` by-name resolution,
   `arrow_udf` / `arrow_udtf` over the pandas/UDTF bridges, and `bucket` with a Column

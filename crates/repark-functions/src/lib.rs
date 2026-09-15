@@ -8,7 +8,7 @@ pub mod aggregate;
 pub mod analyzer;
 pub mod ansi;
 mod avg_groups;
-mod bitmap_agg;
+pub mod bitmap_agg;
 pub mod bool_decimal;
 pub mod cardinality;
 pub mod collection;
@@ -34,6 +34,7 @@ pub mod random;
 pub mod session_time_zone;
 pub mod spark_base64;
 pub mod spark_chr;
+pub mod spark_degrees;
 pub mod spark_elt;
 pub mod spark_from_unixtime;
 pub mod spark_initcap;
@@ -121,6 +122,7 @@ pub fn register_all(ctx: &SessionContext) {
         .chain(spark_isnan::functions())
         .chain(spark_initcap::functions())
         .chain(spark_chr::functions())
+        .chain(spark_degrees::functions())
         .chain(spark_elt::functions())
     {
         ctx.register_udf(udf.as_ref().clone());

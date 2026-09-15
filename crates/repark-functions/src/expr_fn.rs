@@ -356,6 +356,16 @@ pub fn split(text: Expr, pattern: Expr, limit: Expr) -> Expr {
 }
 
 #[must_use]
+pub fn degrees(arg: Expr) -> Expr {
+    call(crate::spark_degrees::degrees_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn radians(arg: Expr) -> Expr {
+    call(crate::spark_degrees::radians_udf(), vec![arg])
+}
+
+#[must_use]
 pub fn base64(arg: Expr) -> Expr {
     call(crate::spark_base64::base64_udf(), vec![arg])
 }

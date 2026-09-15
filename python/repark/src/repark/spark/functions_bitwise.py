@@ -6,7 +6,13 @@ import warnings
 from typing import Any
 
 from repark.spark.column import Column
-from repark.spark.functions import _as_column_arg, _scalar, _thread_origin, lit
+from repark.spark.functions import (
+    _aggregate_argument,
+    _as_column_arg,
+    _scalar,
+    _thread_origin,
+    lit,
+)
 
 
 def bitwise_not(col: Column | str) -> Column:
@@ -220,7 +226,62 @@ def bitmap_count(col: Column | str) -> Column:
     return _scalar("bitmap_count", col)
 
 
-INSTALL_NAMES: tuple[str, ...] = ("shiftLeft", "shiftRight", "shiftRightUnsigned")
+def bitmap_construct_agg(col: Column | str) -> Column:
+    """Aggregate bit positions into a bitmap (PySpark ``functions.bitmap_construct_agg``)."""
+    column, part = _aggregate_argument(col)
+    agg_name = f"bitmap_construct_agg({part})"
+    return Column(
+        column._inner.aggregate("bitmap_construct_agg", False),
+        agg_name=agg_name,
+        sql_expr=f"bitmap_construct_agg({column.sql_expr_part()})",
+        join_sql_expr=f"bitmap_construct_agg({column.join_sql_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+        **_thread_origin(column),
+    )
+
+
+def bitmap_or_agg(col: Column | str) -> Column:
+    """Fold 4096-byte bitmaps with OR (PySpark ``functions.bitmap_or_agg``)."""
+    column, part = _aggregate_argument(col)
+    agg_name = f"bitmap_or_agg({part})"
+    return Column(
+        column._inner.aggregate("bitmap_or_agg", False),
+        agg_name=agg_name,
+        sql_expr=f"bitmap_or_agg({column.sql_expr_part()})",
+        join_sql_expr=f"bitmap_or_agg({column.join_sql_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+        **_thread_origin(column),
+    )
+
+
+def bitmap_and_agg(col: Column | str) -> Column:
+    """Fold 4096-byte bitmaps with AND (PySpark ``functions.bitmap_and_agg``)."""
+    column, part = _aggregate_argument(col)
+    agg_name = f"bitmap_and_agg({part})"
+    return Column(
+        column._inner.aggregate("bitmap_and_agg", False),
+        agg_name=agg_name,
+        sql_expr=f"bitmap_and_agg({column.sql_expr_part()})",
+        join_sql_expr=f"bitmap_and_agg({column.join_sql_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+        **_thread_origin(column),
+    )
+
+
+INSTALL_NAMES: tuple[str, ...] = (
+    "shiftLeft",
+    "shiftRight",
+    "shiftRightUnsigned",
+    "bitmap_construct_agg",
+    "bitmap_or_agg",
+    "bitmap_and_agg",
+)
 
 
 def shiftLeft(col: Column | str, numBits: int) -> Column:  # noqa: N802, N803

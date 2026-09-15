@@ -414,10 +414,12 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     arrow_start = byname_start + byname_names
     assert exported[arrow_start : arrow_start + len(ARROW_EXPORTS)] == ARROW_EXPORTS
     assert exported[arrow_start + len(ARROW_EXPORTS) :] == FNP11A_EXPORTS
-    total = 360 + 62 + 10 + 12 + 8 + 1 + 6 + byname_names + len(ARROW_EXPORTS)
+    total = 360 + 62 + 10 + 12 + 8 + 1 + 9 + byname_names + len(ARROW_EXPORTS)
     assert len(exported) == total + len(FNP11A_EXPORTS)
 
 
 def test_every_all_name_resolves() -> None:
+    """pins: fnp-bitmap-facade-1/C-010"""
     missing = [name for name in F.__all__ if not hasattr(F, name)]
     assert missing == []
+    assert len(set(F.__all__)) == len(F.__all__)

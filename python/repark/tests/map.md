@@ -774,8 +774,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   native distinct-aggregate builder (`count_aggregate` is count-specific; `aggregate` has no
   distinct modifier) and Rust is fenced out of this unit — see the unit ledger's ruling question.
   **crit-logic-1 L-001 (2026-09-15):** the semi/anti right-ref raise (all four rescaled names),
-  the left-ref control, and the two-sided `degrees` ON-join pin; the `_rescaled` rewrap threads
-  join origin like `bitwise_not`. **L-002 (same round):** the SQL-door negative-count shift
+  the left-ref control, and the two-sided `degrees` ON-join pin; the wrapper threads
+  join origin like `bitwise_not` (**DEGREES-RUST-1**, owner Q-15a-1: a `_scalar` bind over
+  the Spark-exact UDFs, `_rescaled` deleted; round 3 drops the Python `double` cast).
+  **L-002 (same round):** the SQL-door negative-count shift
   cells replay on the Python door (values and types; names stay D-2's) and the Column-`numBits`
   shape pins Java's `& 31` masking on INT.
   pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
@@ -1290,6 +1292,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (11 datetime additions on the freeze inventory; independent of FN-C) + every
   name resolves. **FNP-15/16:** the pre-split 360 names stay the prefix; 62
   declared-absent names append. pins: fnp-15-16/C-016
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** the alias-segment constant moves 6 → 9 —
+  `functions_bitwise.INSTALL_NAMES` appends the three bitmap aggregate names.
   (2026-08-15): `__all__` before==after pin. **FN-E moved the pin** to 262 names
   (freeze 253 + 9 collection additions) + every name resolves.
   (2026-08-15): **FN-F moved the pin** to 263
@@ -4550,6 +4554,49 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   hand back different types — the facade casts `regr_count` to Spark's signed bigint, the SQL door
   still returns the engine's `UInt64`. Fixing the door turns this test red on purpose.
 
+- [test_fnp_bitmap_facade_1.py](test_fnp_bitmap_facade_1.py) — **FNP-BITMAP-FACADE-1
+  (2026-09-15):** the facade pins for `F.bitmap_construct_agg` / `F.bitmap_or_agg` /
+  `F.bitmap_and_agg` — name/signature presence, Python-door bytes and counts equal to the
+  SQL door and to the oracle fixture (global, grouped, NULL skipped, empty and all-NULL
+  identities, STRING→BIGINT coercion, `bitmap_count` over each result, one sliding
+  `Window.rowsBetween` cell), the `[INVALID_BITMAP_POSITION]` error cell, and
+  `F.call_function` routing for all three names (bytes equal to the wrappers and the SQL
+  door). Red on the base facade (9 failed with the native present), 10 passed after.
+  **Run 16a remediation (G-2):** the or/and refusal over INT/FLOAT/BOOLEAN/STRING and
+  the construct refusal over BOOLEAN (R-1, `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`
+  against the `FU-*` cells), the split `call_function` pins (R-2, construct over
+  `bitmap_bit_position` vs `F6D-construct`, or/and over BINARY vs `F6D-or-and`),
+  malformed-STRING `CAST_INVALID_INPUT` and FLOAT 1.7 (R-3), the `F6D-empty` /
+  short/empty/long fold / unbounded-window pins with Arrow types against the fixture
+  schema cells (R-4), the Python-door default name and the SQL-door qualifier-leak
+  expected divergence (R-5). 27 passed.
+  pins: fnp-bitmap-facade-1/C-001, C-002, C-003, C-005, C-006, C-007, C-008, C-009
+- [fnp_bitmap_facade_1_spark_oracle.json](fnp_bitmap_facade_1_spark_oracle.json) —
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** the 21 live PySpark 4.1.2 oracle cells this unit
+  pins, copied verbatim from run 15c's `fixtures-batch3.json` (`F6D-*`) and
+  `fixtures-batch8.json` (`B8-*`). **Run 16a (R-4):** the two truncated BINARY payloads
+  (`B8-construct-string`, `B8-group-schema`) carry the full 4096-byte hex in the
+  `F6D-construct` convention — byte 0 `0x02` from the recorded 80-char prefix, the
+  zero tail from the bitmap format with only bit 1 set, corroborated byte-for-byte
+  against the kernel answer. **Run 16a round 3 (L-009):** the recorded `FU-and-float`
+  cell joins the fixture so the AND-FLOAT pin cites an AND cell.
+- [test_fnp_degrees_rust_1.py](test_fnp_degrees_rust_1.py) +
+  [fnp_degrees_rust_1_spark_oracle.json](fnp_degrees_rust_1_spark_oracle.json) —
+  **FNP-BITMAP-FACADE-1 run 16a round 3 (DEGREES-RUST-1):** facade and SQL-door
+  `degrees` / `radians` / `toDegrees` / `toRadians` against the orchestrator's live
+  PySpark 4.1.2 recording (`/tmp/oc-worker/qa-613-crit/oracle/oracle_deg.py`,
+  146 `DEG-*` cells both doors both ANSI plus `FU-and-float`, copied verbatim).
+  Answers compare values, Arrow types and default names; refusals compare the class,
+  required DOUBLE, type name and SQLSTATE; malformed STRING compares
+  `CAST_INVALID_INPUT` under ANSI and NULL with ANSI off, and the no-CAST
+  construction pin (PYPERF-001). **Run 16a round 4:** the orchestrator's second
+  recording (`/tmp/oc-worker/qa-bitmap/oracle_deg_inf.py`, 200 `DEGI-*` cells: 20
+  STRING shapes over degrees/radians/CAST, both doors, both ANSI) is appended
+  verbatim; every `DEGI-degrees-*` / `DEGI-radians-*` cell is pinned on its door and
+  ANSI setting (infinities and NaN by class), and the ANSI-on/nonansi answer,
+  SQL-nonansi refusal and alias malformed cells the critic found unused are pinned
+  (309 tests).
+  pins: fnp-bitmap-facade-1/C-012, C-013, C-014, C-016, C-017, C-018
 - [test_fnp_6d_bitmap_aggregates.py](test_fnp_6d_bitmap_aggregates.py) — **FNP-6D
   (2026-09-15):** Spark SQL-door pins for `bitmap_construct_agg` / `bitmap_or_agg` /
   `bitmap_and_agg` against recorded oracle cells `F6D-*` and `B8-*` (values AND
@@ -5224,3 +5271,4 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 - **FNP-11A R3 intake (2026-09-15):** `test_fnp11a_temporal.py` now runs every SQL-door `timestamp_add` / `timestamp_diff` oracle cell (L-005) with the bare unit keyword quoted (`BARE_UNIT_CALL`), since bare keywords stay EX-FN-27 and `test_bare_timestampadd_unit_refuses` keeps that pinned. Only the `TIMESTAMP_NTZ'…'` literal cell stays in `D4_BLOCKED_SQL` (the SQL parser has no such type). `test_timestampdiff_ntz_pair_answers_days` runs that pair's end value through `make_timestamp_ntz` instead of diffing a column with itself (L-006).
 - **FNP-11A (2026-09-15):** `test_functions_split_identity.py` pins the eleven-name FNP-11A tail after `ARROW_EXPORTS`. `test_catalog_surface_1.py::test_list_functions_shape` (unique names) and `test_fnp_misc_1.py::test_fnp_misc_1_byname_allowlist_covers_facade` caught the duplicate install and are green again.
 - **DOOR-CONVERGE-2 (#622, 2026-09-15, orchestrator):** `test_fnp_6d_followup_1.py::test_concat_binary_types_string_expected_divergence` is renamed `test_concat_binary_types_binary_converged_door_converge_2` and flipped to `pa.binary()`, because `concat(BINARY, BINARY)` now converges on Spark's BINARY (oracle Q12-13). Run 16a filed the pin to go red on this convergence (ruling R-16c-11). pins: door-converge-2/C-001
+- `test_fnp_bitmap_facade_1.py` — **run 16a rebuild (2026-09-15):** `ruff format` normalizes the whitespace left by the cherry-pick conflict resolution onto #623; no pin changed. pins: fnp-bitmap-facade-1/C-011

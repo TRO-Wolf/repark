@@ -1,0 +1,5270 @@
+{
+ "spark": "4.1.2",
+ "recorded": "2026-09-15",
+ "recorder": "run 16a orchestrator (oracle_deg.py)",
+ "cells": [
+  {
+   "id": "DEG-degrees-bool-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-degrees-bool-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-radians-bool-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-radians-bool-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toDegrees-bool-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toRadians-bool-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-degrees-str-num-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-str-num-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-str-num-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-str-num-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-str-num-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-str-num-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-str-abc-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEG-degrees-str-abc-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEG-radians-str-abc-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEG-radians-str-abc-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEG-toDegrees-str-abc-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEG-toRadians-str-abc-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEG-degrees-str-empty-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEG-degrees-str-empty-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEG-radians-str-empty-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEG-radians-str-empty-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEG-toDegrees-str-empty-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEG-toRadians-str-empty-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEG-degrees-date-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-degrees-date-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-radians-date-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-radians-date-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toDegrees-date-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toRadians-date-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-degrees-int-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-int-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-int-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-int-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-int-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-int-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-bigint-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-bigint-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-bigint-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-bigint-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-bigint-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-bigint-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-decimal-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "85.94366926962348"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-decimal-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "85.94366926962348"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-decimal-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.026179938779914945"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-decimal-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.026179938779914945"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-decimal-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "85.94366926962348"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-decimal-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.026179938779914945"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-float-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "85.94366926962348"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-float-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "85.94366926962348"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-float-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.026179938779914945"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-float-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.026179938779914945"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-float-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "85.94366926962348"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-float-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.026179938779914945"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-null-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-null-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-null-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-null-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-null-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-null-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-timestamp-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"TIMESTAMP\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-degrees-timestamp-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"TIMESTAMP\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-radians-timestamp-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"TIMESTAMP\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-radians-timestamp-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"TIMESTAMP\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toDegrees-timestamp-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"TIMESTAMP\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toRadians-timestamp-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"TIMESTAMP\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-degrees-binary-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-degrees-binary-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-radians-binary-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-radians-binary-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toDegrees-binary-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toRadians-binary-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-degrees-bool-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-degrees-bool-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-radians-bool-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-radians-bool-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toDegrees-bool-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toRadians-bool-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-degrees-str-num-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-str-num-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-str-num-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-str-num-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-str-num-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-str-num-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-str-abc-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-str-abc-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-str-abc-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-str-abc-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-str-abc-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-str-abc-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-str-empty-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-str-empty-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-str-empty-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-str-empty-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-str-empty-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-str-empty-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-date-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-degrees-date-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-radians-date-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-radians-date-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toDegrees-date-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toRadians-date-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-degrees-int-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-int-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-int-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-int-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-int-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-int-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-bigint-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-bigint-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-bigint-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-bigint-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-bigint-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-bigint-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-decimal-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "85.94366926962348"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-decimal-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "85.94366926962348"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-decimal-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.026179938779914945"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-decimal-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.026179938779914945"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-decimal-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "85.94366926962348"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-decimal-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.026179938779914945"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-float-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "85.94366926962348"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-float-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "85.94366926962348"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-float-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.026179938779914945"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-float-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.026179938779914945"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-float-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "85.94366926962348"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-float-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.026179938779914945"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-null-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-null-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-null-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-radians-null-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toDegrees-null-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-toRadians-null-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEG-degrees-timestamp-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"TIMESTAMP\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-degrees-timestamp-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"TIMESTAMP\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-radians-timestamp-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"TIMESTAMP\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-radians-timestamp-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"TIMESTAMP\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toDegrees-timestamp-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"TIMESTAMP\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toRadians-timestamp-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"TIMESTAMP\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-degrees-binary-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-degrees-binary-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-radians-binary-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "DEG-radians-binary-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toDegrees-binary-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"DEGREES(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEG-toRadians-binary-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"RADIANS(x)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09;"
+  },
+  {
+   "id": "DEGI-degrees-Inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-Inf-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-Inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-Inf-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-Inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-inf-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-inf-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-neg-Inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-neg-Inf-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-neg-Inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-neg-Inf-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-neg-Inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-plus-inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-plus-inf-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-plus-inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-plus-inf-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-plus-inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-Infinity-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-Infinity-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-Infinity-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-Infinity-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-Infinity-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-neg-infinity-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-neg-infinity-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-neg-infinity-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-neg-infinity-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-neg-infinity-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-INFINITY-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-INFINITY-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-INFINITY-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-INFINITY-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-INFINITY-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-NaN-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-NaN-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-NaN-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-NaN-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-NaN-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-nan-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-nan-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-nan-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-nan-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-nan-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-NAN-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-NAN-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-NAN-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-NAN-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-NAN-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-space-Inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-space-Inf-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-space-Inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-space-Inf-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-space-Inf-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-e2-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "5729.5779513082325"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-e2-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "5729.5779513082325"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-e2-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.7453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-e2-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.7453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-e2-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "100.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-hex-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '0x10' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEGI-degrees-hex-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '0x10' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEGI-radians-hex-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '0x10' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEGI-radians-hex-python",
+   "door": "python",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '0x10' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEGI-cast-hex-sql",
+   "door": "sql",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '0x10' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "DEGI-degrees-neg-zero-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-0.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-neg-zero-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-0.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-neg-zero-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-0.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-neg-zero-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-0.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-neg-zero-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-0.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-d-suffix-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-d-suffix-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-d-suffix-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-d-suffix-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-d-suffix-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-f-suffix-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-f-suffix-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-f-suffix-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-f-suffix-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-f-suffix-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-plus-one-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-plus-one-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-plus-one-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-plus-one-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-plus-one-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-dot-one-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "28.64788975654116"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-dot-one-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "28.64788975654116"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-dot-one-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.008726646259971648"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-dot-one-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.008726646259971648"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-dot-one-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.5"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-one-dot-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-one-dot-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-one-dot-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-one-dot-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-one-dot-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-space-num-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-space-num-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-space-num-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-space-num-python",
+   "door": "python",
+   "ansi": "true",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-space-num-sql",
+   "door": "sql",
+   "ansi": "true",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-Inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-Inf-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-Inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-Inf-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-Inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-inf-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-inf-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-neg-Inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-neg-Inf-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-neg-Inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-neg-Inf-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-neg-Inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-plus-inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-plus-inf-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-plus-inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-plus-inf-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-plus-inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-Infinity-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-Infinity-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-Infinity-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-Infinity-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-Infinity-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-neg-infinity-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-neg-infinity-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-neg-infinity-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-neg-infinity-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-neg-infinity-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-INFINITY-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-INFINITY-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-INFINITY-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-INFINITY-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-INFINITY-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-NaN-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-NaN-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-NaN-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-NaN-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-NaN-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-nan-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-nan-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-nan-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-nan-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-nan-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-NAN-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-NAN-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-NAN-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-NAN-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-NAN-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "nan"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-space-Inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-space-Inf-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-space-Inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-space-Inf-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-space-Inf-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "inf"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-e2-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "5729.5779513082325"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-e2-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "5729.5779513082325"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-e2-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.7453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-e2-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.7453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-e2-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "100.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-hex-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-hex-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-hex-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-hex-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-hex-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-neg-zero-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-0.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-neg-zero-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-0.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-neg-zero-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-0.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-neg-zero-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-0.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-neg-zero-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "-0.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-d-suffix-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-d-suffix-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-d-suffix-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-d-suffix-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-d-suffix-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-f-suffix-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-f-suffix-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-f-suffix-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-f-suffix-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-f-suffix-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-plus-one-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-plus-one-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-plus-one-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-plus-one-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-plus-one-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-dot-one-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "28.64788975654116"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-dot-one-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "28.64788975654116"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-dot-one-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.008726646259971648"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-dot-one-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.008726646259971648"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-dot-one-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.5"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-one-dot-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-one-dot-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-one-dot-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-one-dot-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-one-dot-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.0"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-space-num-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-degrees-space-num-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "DEGREES(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "57.29577951308232"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-space-num-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-radians-space-num-python-nonansi",
+   "door": "python",
+   "ansi": "false",
+   "schema": [
+    [
+     "RADIANS(x)",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "0.017453292519943295"
+    ]
+   ]
+  },
+  {
+   "id": "DEGI-cast-space-num-sql-nonansi",
+   "door": "sql",
+   "ansi": "false",
+   "schema": [
+    [
+     "r",
+     "double",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "1.0"
+    ]
+   ]
+  }
+ ]
+}

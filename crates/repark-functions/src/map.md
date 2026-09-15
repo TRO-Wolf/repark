@@ -47,6 +47,20 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `n < 0`. pins: fn-fix-2-string-rows/C-002
 - `spark_elt.rs` — **FN-FIX-2 (2026-09-04):** Spark `elt`; ANSI out-of-range raises
   `INVALID_ARRAY_INDEX`; NULL `n` is NULL. pins: fn-fix-2-string-rows/C-002
+- `spark_degrees.rs` — **FNP-BITMAP-FACADE-1 run 16a round 3 (DEGREES-RUST-1, owner
+  Q-15a-1):** Spark-exact `degrees` / `radians` ScalarUDFs shared by both doors.
+  `Signature::user_defined` + pass-through `coerce_types`; numerics and STRING pass,
+  every other type refuses at planning with `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`
+  naming the DOUBLE requirement, the resolved argument and the Spark type name
+  (the shared `bitmap_agg::spark_type_name`). The kernel keeps the bit-exact
+  single multiply, casts STRING itself like `abs` does (`CAST_INVALID_INPUT` under
+  ANSI read from `args.config_options`, NULL under ANSI-off), and always answers
+  nullable Float64. **Run 16a round 4:** one trailing Java float suffix (`d`/`D`/`f`
+  /`F`) is accepted when the remainder is a decimal floating literal that already
+  parses — `'1d'`, `'1.5F'`, `'1e2d'` answer; suffixes after `Infinity`/lowercase
+  names/hex (`'Infinityd'`, `'infd'`, `'1dd'`, `'0x10'`) keep today's refuse/NULL. The shared
+  SQL `CAST` kernel is untouched. pins: fnp-bitmap-facade-1/C-012, C-013, C-014,
+  C-017, C-018
 - `spark_math.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `abs` / `hypot` / `bin` /
   `rint` kernels shared by both doors. `abs` keeps the input width, refuses BOOLEAN, and
   reads the ANSI carrier (`repark.ansi` extension via
@@ -264,6 +278,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   [`temporal_ctor/map.md`](temporal_ctor/map.md).
   pins: fnp-11a/C-002, C-003, C-004, C-005, C-011, C-013
 - `lib.rs` — crate-root stays at **175** under `check_lib_rs` with `pub mod timestamp_type`.
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** `mod bitmap_agg;` flips to `pub mod bitmap_agg;`
+  (same line count) so `repark-python`'s `unary_aggregate_udaf` can reach the three
+  `bitmap_agg` UDAF constructors the way it reaches `aggregate`'s.
+  pins: fnp-bitmap-facade-1/C-001
 - `timestamp_type.rs` — **Q10:** Spark-door `spark.sql.timestampType` carrier
   (`SparkTimestampTypeConfig`, `PREFIX = repark.timestamp`, default
   **TIMESTAMP_LTZ**). Parsed from the builder map in `SparkExtension::configure`.
@@ -453,7 +471,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims + **SEM-1** `spark_log`
   (Spark-door natural `log`, dual-arity null-guard) + **LOG1P-1** `spark_log1p`
   (`log1p` / `expm1`) — later registration wins a
-  name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
+  name clash) + Q1 percentile aliases + `datetime::functions()` date shims (the
+  single-use helper is inlined; the root stays under its ceiling) +
   `analyzer_rules()` (`SparkIntegerLiteral` → `LambdaRebind` → `SparkDecimalPrecision` →
   `SparkDecimalRewrite` → `SparkIntegerOverflow` → Spark semantics +
   cardinality + instant_ts + a closing `TypeCoercion` — the narrowing runs after

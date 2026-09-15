@@ -67,3 +67,9 @@ extend-glob = ["facade-5-ledger.md"]
 
 [type.facade5ledger.extend-words]
 ba = "ba" # base sha 30ca2ba1 in the rebase note (typos splits the short hash)
+
+[type.fnpbitmapfacade1ledger]
+extend-glob = ["fnp-bitmap-facade-1-ledger.md"]
+
+[type.fnpbitmapfacade1ledger.extend-words]
+ba = "ba"

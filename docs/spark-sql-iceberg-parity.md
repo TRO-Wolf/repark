@@ -1946,7 +1946,10 @@ the pin rather than obeying it.
   the same cells; `crates/repark-functions/src/bitmap_agg/groups.rs` (C-016,
   C-017).
 - **Rationale** — FIXED for the recorded aggregate, length, coercion, error-class,
-  and window shapes. Facade Python names are run 15a after this merges.
+  and window shapes. Facade Python names landed 2026-09-15 (FNP-BITMAP-FACADE-1):
+  `F.bitmap_construct_agg` / `F.bitmap_or_agg` / `F.bitmap_and_agg` are one-line wrappers
+  over the same UDAFs through `unary_aggregate_udaf`, pinned against the same oracle cells
+  in `python/repark/tests/test_fnp_bitmap_facade_1.py`.
 - **Residuals (FNP-6D-FOLLOWUP-1, 2026-09-15).** The followup closes the L-001/L-003
   signature gaps against the recorded `FU-*` cells
   (`python/repark/tests/fnp_6d_followup_1_spark_oracle.json`, live PySpark 4.1.2):
@@ -1962,6 +1965,14 @@ the pin rather than obeying it.
   (SET-ANSI-RUNTIME-1). `concat(BINARY, BINARY)` answers BINARY on the SQL door as Spark does
   (measured 2026-09-15; converged by DOOR-CONVERGE-2 #622, oracle Q12-13) —
   pinned by `test_concat_binary_types_binary_converged_door_converge_2`.
+- **Residual (FNP-BITMAP-FACADE-1, 2026-09-15).** Unaliased `spark.sql` /
+  `selectExpr` render the bitmap default name with the DataFusion qualifier
+  (`bitmap_construct_agg(datafusion.public.<view>.x)`) where Spark answers
+  `bitmap_construct_agg(x)`; the Python door matches Spark. The leak is systemic
+  (every unaliased SQL function shows it) and owned by the SQL door (run 16c) —
+  pinned as an expected divergence by
+  `python/repark/tests/test_fnp_bitmap_facade_1.py::test_sql_door_qualifier_leak_is_expected_divergence`,
+  which reds when the door converges.
 
 ### FNP8-NULLABILITY — higher-order result metadata retains inherited nullable fields
 

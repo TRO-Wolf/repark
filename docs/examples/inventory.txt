@@ -323,9 +323,12 @@ functions	F.bit_get
 functions	F.bit_length
 functions	F.bit_or
 functions	F.bit_xor
+functions	F.bitmap_and_agg
 functions	F.bitmap_bit_position
 functions	F.bitmap_bucket_number
+functions	F.bitmap_construct_agg
 functions	F.bitmap_count
+functions	F.bitmap_or_agg
 functions	F.bitwiseNOT
 functions	F.bitwise_not
 functions	F.bool_and

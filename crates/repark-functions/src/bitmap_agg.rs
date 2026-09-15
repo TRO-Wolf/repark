@@ -261,7 +261,7 @@ fn refuse_payload(
     }
 }
 
-fn spark_type_name(data_type: &DataType) -> String {
+pub(crate) fn spark_type_name(data_type: &DataType) -> String {
     match data_type {
         DataType::Null => "VOID".to_string(),
         DataType::Boolean => "BOOLEAN".to_string(),

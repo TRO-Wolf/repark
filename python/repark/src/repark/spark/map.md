@@ -193,6 +193,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `NOT_COLUMN_OR_INT`. Every call warns the Spark 4.1.2 `FutureWarning`; outside
   `partitionedBy` the fragment refuses like the int form.
   pins: fnp-misc-1/C-003, fnp-misc-1/L-003
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** `bitmap_construct_agg` / `bitmap_or_agg` /
+  `bitmap_and_agg` are one-line aggregate wrappers over
+  `column._inner.aggregate(kind, False)` — the same shape `functions.py`'s `sum` builds —
+  reaching the FNP-6D Rust UDAFs through the three new `unary_aggregate_udaf` arms, and
+  installing through this module's `INSTALL_NAMES`. pins: fnp-bitmap-facade-1/C-001, C-002
 - `functions_agg.py` — aggregate-function re-exports.
 - `functions_bitwise.py` — bitwise scalar wrappers.
 - `functions_arrow_udf.py` — **FNP-MISC-1 (2026-09-15):** `arrow_udf` over the pandas
@@ -215,6 +220,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (2026-09-16):** `char_length` leaves `FACADE_ONLY_ROUTINE_NAMES` — the Rust dispatch
   serves it (`call_function('char_length', lit('abc'))` = 3, A11-callfn-char-length).
   pins: fnp-misc-1/C-002, fnp-misc-1/F-3, fnp-misc-1/F-4, fnp-misc-1/F-5, fnp-misc-1/L-004, fnp-misc-1/L-005, fnp-misc-1/L-010
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** `FACADE_ONLY_ROUTINE_NAMES` gains
+  `bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg` (owner ruling: PySpark 4.1.2
+  resolves them as `call_function` builtins, so they are facade-only routines); the
+  by-name route answers the same bytes as the wrappers and the SQL door.
+  pins: fnp-bitmap-facade-1/C-002, fnp-bitmap-facade-1/C-004
 - `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9
   (2026-09-05):** `create_map`, `map_concat` and `array_insert` land here.
   pins: fnp-9-collections-json/C-006
@@ -337,6 +347,17 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   prints one zero); `months_between` prints `roundOff` only when false.
   pins: fnp-11a/C-001, C-015
 - `functions_math.py` — mathematical and trigonometric wrappers.
+  clause binds each side. **DEGREES-RUST-1 (2026-09-15, owner Q-15a-1):** `degrees` /
+  `radians` move onto the engine's scalar UDFs through new `call_scalar` dispatch arms —
+  the single-multiply `f64::to_degrees` / `f64::to_radians` form, swept bit-identical to
+  the replaced multiply over 4015 values, so reuse and not a new kernel. The wrappers are
+  thin `_scalar` binds over a `double` cast keeping the `DEGREES(x)` / `RADIANS(x)`
+  display, the warnings, and every alias pin green; `_rescaled` and the factor constants
+  are deleted. **Run 16a round 3 (DEGREES-RUST-1 done properly, owner Q-15a-1):** the
+  Python `double` cast is dropped (PYPERF-001) — the wrappers are bare `_scalar` binds
+  and the Spark-exact UDFs in `repark_functions::spark_degrees` carry the numeric/STRING
+  coercion, the refusals and the ANSI switch for both doors. pins: fnp-alias-1/C-001,
+  C-002, C-003, C-004; fnp-bitmap-facade-1/C-011, C-012, C-013, C-014
 - `functions_session.py` — session-bound function helpers.
 - `functions_udf.py` — Python UDF and pandas UDF markers, validation, and return-type
   contracts. Execution uses the DataFrame Arrow bridge. DFCORE-2 (2026-09-07): the
@@ -475,3 +496,4 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - **FNP-MISC-1 (2026-09-15, on ARRAY-NULL-1):** `array_append` / `array_prepend` leave `FACADE_ONLY_ROUTINE_NAMES`: since ARRAY-NULL-1 the engine resolves both names itself, so `call_function` reaches them through `_scalar` like any builtin.
 - **FNP-11A (2026-09-15, on 440b2773):** `FNP11A_EXPORTS` lists the eleven names new to `__all__`. `make_timestamp` and `months_between` were already exported through the `functions_expr.py` forwarders, and re-installing them duplicated both names in `__all__` and in `catalog.listFunctions()`. `functions_byname.py` follows the measured PySpark 4.1.2 `call_function` answers: `make_timestamp` / `months_between` resolve in the engine, while `timestamp_add` / `timestamp_diff` raise `UNRESOLVED_ROUTINE`.
 - **DOOR-CONVERGE-2 (#622, 2026-09-15, orchestrator):** `functions_byname.py` `FACADE_ONLY_ROUTINE_NAMES` drops `split`: the facade dispatch now resolves `split` on the Spark kernel, so it is no longer a measured engine gap (`test_fnp_misc_1_byname_allowlist_covers_facade`; ruling R-16c-11, run 16a told). `F.split` itself stays run 16a's hand-off. pins: door-converge-2/C-005
+- **DEGREES-RUST-1 by-name drift (2026-09-15, run 16a):** `degrees` / `radians` leave `functions_byname.py`'s `FACADE_ONLY_ROUTINE_NAMES` — once they bind engine scalar UDFs, `call_function` resolves them in the engine, so the derived allowlist no longer lists them as facade-only. pins: fnp-bitmap-facade-1/C-011
