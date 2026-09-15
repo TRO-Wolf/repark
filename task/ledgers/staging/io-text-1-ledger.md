@@ -64,6 +64,13 @@ lossy (R-3); every write lands `_SUCCESS` (R-9); missing paths answer PATH_NOT_F
 
 ## Coverage attestation
 
+**R-42 (orchestrator, run 16b, 2026-09-15; round-7 Rust perf P2).** The round-7 Rust perf re-check confirmed Z-2 spills a 1.92 GiB tail through
+a 128 MiB pool with an 8-way producer, but at DataFusion's default 64-way partitioning a 500k × 4 KiB write past the writer cap still refuses
+`Resources exhausted` under 128 MiB and 512 MiB pools. The orchestrator reproduced the class in 0.2 s at a 16 MiB pool (300 keys × 4 KiB), where
+the sort's merge reservation refuses with or without `spark.sql.shuffle.partitions=8`. The failure is loud and leaves no destination or staging
+directory, never a wrong value, so under ruling R-16b-39 it ships as BACKLOG registry row IO-TEXT-PART-POOL-1, pinned by
+`test_text_partitioned_fallback_tiny_pool_refuses_loudly`. Residue for the row: bound producer in-flight and the merge reservation to the pool.
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: io-text-1

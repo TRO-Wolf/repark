@@ -8869,6 +8869,25 @@ Oracle basis for this section: *documented* — Spark 4.1.2 `pyspark.sql.functio
 the name; the divergence is that repark refuses the call Spark would evaluate. No value
 oracle is involved.
 
+### IO-TEXT-PART-POOL-1 — a partitioned text write past the writer cap refuses under a tight session memory pool — **BACKLOG 2026-09-15**
+
+- **repark** — past 256 distinct `partitionBy` keys the text writer falls back to a streaming sort that spills under the session memory
+  pool. With a deliberately small pool the sort's merge reservation or DataFusion's non-spilling producer in-flight fills the pool first,
+  and the write fails loudly with `Resources exhausted` before any row is written; no destination and no staging directory remain. A 16 MiB
+  pool with 300 keys of 4 KiB rows refuses in about 0.2 s (with or without `spark.sql.shuffle.partitions=8`). At 128 MiB a 1.92 GiB shuffled
+  tail completes through an 8-way producer (339 MiB peak RSS, 478 spill files, one part file per key) but still refuses at DataFusion's
+  default 64-way partitioning; at 512 MiB the default-partitioning case also refuses.
+- **Apache Spark** — the sort-based dynamic partition writer spills through the task memory manager, so the equivalent write completes
+  given executor memory. No oracle cell exists for a comparable pool limit (the JVM executor memory model is not a byte-for-byte match).
+- **Pin** — `python/repark/tests/test_io_text_2.py::test_text_partitioned_fallback_tiny_pool_refuses_loudly` (today's loud refusal; reds when
+  the write completes), beside the Rust pins in `crates/repark-core/src/text_partition_fallback.rs`
+  (`text_partition_fallback_spills_fat_tail_under_session_pool`, `text_partition_fallback_splits_pool_busting_batches`) that prove the
+  spilling path where the producer fits.
+- **Rationale** — BACKLOG, filed by IO-TEXT-1 (run 16b, ruling R-42 from the round-7 Rust perf re-check). The failure is loud and leaves no
+  partial output, never a wrong value. Closing it needs the fallback to bound producer in-flight and the merge reservation to the pool
+  (cap `target_partitions` for the fallback or coalesce in-flight batches), measured against the default-partitioning 128 MiB case.
+  pins: io-text-1/Z-2
+
 ### FNP-15-java_method — JVM class-load reflection is unreachable
 
 - **repark** — `F.java_method`, Spark SQL `java_method(...)`, and ANSI SQL `java_method(...)`

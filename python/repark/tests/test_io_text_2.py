@@ -542,3 +542,27 @@ def test_text_probe7_ts_escaped_inferred(spark_ny: ReparkSession, tmp_path: Path
 def test_text_probe7_ts_iso_inferred(spark_ny: ReparkSession, tmp_path: Path) -> None:
     """cell text_probe7_ny_ts_iso_inferred — T wall stays string. pins: io-text-1/Z-1"""
     _result_pin(spark_ny.read.text(str(_write_kts_raw(tmp_path))), "text_probe7_ny_ts_iso_inferred")
+
+
+def test_text_partitioned_fallback_tiny_pool_refuses_loudly(tmp_path: Path) -> None:
+    """A fallback write past the cap under a 16 MiB pool refuses loudly. pins: io-text-1/Z-2"""
+    _reset_active_session_for_tests()
+    session = (
+        ReparkSession.builder.appName("test-io-text-2-tiny-pool")
+        .config("datafusion.runtime.memory_limit", "16M")
+        .getOrCreate()
+    )
+    destination = tmp_path / "out"
+    try:
+        frame = session.range(4096).selectExpr(
+            "CAST(id % 300 AS STRING) AS k", "repeat('x', 4096) AS value"
+        )
+        with pytest.raises(Exception, match="Resources exhausted"):
+            frame.write.partitionBy("k").text(str(destination))
+        assert not destination.exists()
+        assert not [
+            entry for entry in tmp_path.iterdir() if entry.name.startswith("repark-staging-")
+        ]
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()

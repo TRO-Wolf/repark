@@ -16,6 +16,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   spill-capable sort past the writer cap; the four width-label pins cite LOGICAL-WIDTH-1 / DF-TO-BINARY-1.
   Round 7 + R-40/R-41 (2026-09-15): zone-free `timestamp_ntz` walls with timestamp inference, and a pool-sized
   fallback tail (rechunk plus pool-capped spill reservation).
+  Round 7 + R-42 (2026-09-15): zone-free timestamp_ntz, pool-sized fallback tail; a tight-pool refusal is registry IO-TEXT-PART-POOL-1.
   `risk_tier: standard`. Branch `feat/io-text-1`.
   pins: io-text-1/C-001, C-002, C-003, C-004, T-1..T-9, P-1..P-3
 - [registry-16b-1-ledger.md](registry-16b-1-ledger.md) —

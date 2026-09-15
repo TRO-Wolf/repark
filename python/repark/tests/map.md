@@ -1926,6 +1926,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `timestamp` keeps the session wall and the space wall infers `timestamp`
   (string pins over `rows_as_string` wherever the Python repr depends on
   the machine zone). pins: io-text-1/Z-1
+  **R-42 (2026-09-15):** `test_text_partitioned_fallback_tiny_pool_refuses_loudly` pins the loud `Resources exhausted`
+  refusal of a fallback write past the writer cap under a 16 MiB pool, with no destination or staging left (registry
+  IO-TEXT-PART-POOL-1). pins: io-text-1/Z-2
 - `test_column_x1_census.py` — X1: Column between/pow/string/bitwise/eqNullSafe/lit temporal + trig;
   octo C1: bitwiseOR/XOR values, lit(time)/lit(list)/empty array, hypot 3-4-5, dayname(date);
   octo C2: eqNullSafe(None), between inclusive/inverted;
