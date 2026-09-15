@@ -323,7 +323,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   with one trailing terminator dropped, `wholetext` one row per file, chunked reads with
   separator hold-back so batches stream without buffering a file (wholetext excepted),
   invalid UTF-8 decoding lossy, the plan limit threaded into the scanner, missing paths
-  and unmatched globs answering `PATH_NOT_FOUND`. `ReparkSession::read_text` lives here
+  and unmatched globs answering `PATH_NOT_FOUND`. **Round 3 (2026-09-15, U-3):**
+  directory reads append discovered partition columns after `value` (see
+  `partition_discovery.rs`), honoring value-only, partition-only, and empty
+  projections; the scanner stops appending at the row limit and emits at once.
+  `ReparkSession::read_text` lives here
   as an inherent impl so `session.rs` keeps its size; Rust tests cover the split arms,
   the globs, the limit, and the error texts.
 - `text_glob.rs` — **IO-TEXT-1 follow-up (2026-09-15):** hand-written Hadoop glob
@@ -338,6 +342,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   and the round trip. Partitioned fan-out lives in `text_partition.rs`.
   pins: io-text-1/C-002, T-2, T-4, T-7
   pins: io-text-1/C-001, C-002
+- `partition_discovery.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-3):** Hive
+  partition discovery plus the shared batch materialization IO-ORC-1 reuses:
+  `discover_partitions` takes leaf files under a root and returns the
+  partition schema (directory order) with per-file typed values, knowing
+  nothing about text; beside it the projection planner (`plan_partition_slots`),
+  the per-row push (`push_partition_row`), the text row emitter
+  (`TextRowSink`/`emit_text_row`, stops at the row limit), and the batch
+  finishers (`finish_partition_columns`, `order_batch_columns`). Unit tests
+  cover unescape, order, default→NULL, inference, leaf paths, bigint.
+  pins: io-text-1/U-3
 - `text_partition.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-1+U-2):** the one-scan
   `partitionBy` text writer (`write_text_partitioned`, exported at the crate root).
   One `execute_stream` pass routes each row to its leaf writer by rendered key

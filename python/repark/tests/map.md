@@ -1878,10 +1878,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   IO-TEXT-PARTDISC-1), `_SUCCESS`, `PATH_NOT_FOUND`, and limit-first-rows.
   **Round 3 (2026-09-15, U-1+U-2):** the run-16b probe cells land as `text_probe3_*`;
   `test_text_probe3_part_*_listing` pins the one-scan write's Hive-escaped leaf
-  names, default-partition merging, and plain decimal rendering per cell. The fixture
+  names, default-partition merging, and plain decimal rendering per cell.
+  **(U-3):** `test_text_probe3_part_*_read` pins discovery rows, schemas, and
+  dtypes; the old `test_text_probe_partition_by` asserts `['value', 'k']`. The fixture
   row and registry rows are the docs half, and the neighboring reader/writer suites
   stay green around it.
-  pins: io-text-1/C-001, C-002, C-003, C-004, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9, U-1, U-2
+  pins: io-text-1/C-001, C-002, C-003, C-004, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9, U-1, U-2, U-3
 - `test_column_x1_census.py` — X1: Column between/pow/string/bitwise/eqNullSafe/lit temporal + trig;
   octo C1: bitwiseOR/XOR values, lit(time)/lit(list)/empty array, hypot 3-4-5, dayname(date);
   octo C2: eqNullSafe(None), between inclusive/inverted;

@@ -1875,9 +1875,10 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 > supports only a single column, and you have N columns.` The old refusal pin
 > flipped to the leaf listing in the same change. Retired per §6.
 
-- **repark** — `df.write.partitionBy(...).text(path)` writes the hive layout;
-  read-back answers the values (`struct<value:string>`, partition columns not
-  discovered — IO-TEXT-PARTDISC-1).
+- **repark** — `df.write.partitionBy(...).text(path)` writes the hive layout
+  in one engine scan (round 3, ruling U-1); read-back discovers the keys
+  (`struct<value:string>` plus inferred directory columns — IO-TEXT-PARTDISC-1,
+  FIXED 2026-09-15).
 - **Apache Spark** — writes `key=value/` leaf dirs with `part-*` files inside.
 - **Pin** — `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
   (leaf bytes plus `_SUCCESS`) and `::test_text_probe_partition_by_two_remaining`
@@ -8721,21 +8722,27 @@ field NAME.
   facade `projection_name`; `select` of the same expression already uses the facade
   display.
 
-### IO-TEXT-PARTDISC-1 — text reads of partitioned dirs answer values only
+### IO-TEXT-PARTDISC-1 — text reads of partitioned dirs discover the keys
 
 - **repark** — `spark.read.text` over a `key=value/` layout answers
-  `struct<value:string>` with the file bytes; the partition columns are not
-  discovered, so the `k` column Spark returns is absent (values agree).
+  `struct<value:string>` plus the directory columns in directory order
+  (`['value', 'k']` in `test_text_probe_partition_by`), `%XX` unescaped,
+  `__HIVE_DEFAULT_PARTITION__` → NULL, types inferred int → bigint →
+  double (decimal strings land double) → date `yyyy-MM-dd` → string
+  (timestamps and booleans stay string, per the probe3 cells); a leaf path
+  read adds no column.
 - **Apache Spark** — partition discovery adds the directory columns
   (`(value, k)` rows on the probe's `partition_by` read-back).
-  *(oracle: live PySpark 4.1.2, probe `partition_by`, 2026-09-15.)*
+  *(oracle: live PySpark 4.1.2, probes `partition_by` + probe3 `part_*`, 2026-09-15.)*
 - **Pin** —
   `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
-  (`back.columns == ["value"]` codifies today; discovery reds it on purpose).
-- **Rationale** — BACKLOG, filed 2026-09-15 (io-text-1 follow-up, ruling T-6).
-  The fix is scan-side partition discovery (infer `key=value` dirs into the
-  schema); the writer half already lands Spark's layout.
-  pins: io-text-1/T-6
+  plus `test_text_probe3_part_*_read` (slash, specials, empty/null,
+  decimal, bool, date/ts/double/int rows, schemas and dtypes).
+- **Rationale** — FIXED, 2026-09-15 (io-text-1 round 3, ruling U-3).
+  Discovery lives in the engine module `partition_discovery` (leaf files +
+  root in, schema + per-file values out; IO-ORC-1 reuses it) with the shared
+  batch materialization beside it.
+  pins: io-text-1/T-6, U-3
 
 ## 8. Drop-in disclosure rationale
 

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -28,14 +29,22 @@ const TEXT_READ_CHUNK: usize = 65536;
 
 const TEXT_SCAN_PARTITIONS: usize = 8;
 
-fn text_schema() -> SchemaRef {
-    Arc::new(Schema::new(vec![Field::new("value", DataType::Utf8, true)]))
+fn text_schema_with_partitions(partitions: &[Field]) -> SchemaRef {
+    let mut fields = Vec::with_capacity(partitions.len() + 1);
+    fields.push(Field::new("value", DataType::Utf8, true));
+    fields.extend(partitions.iter().cloned());
+    Arc::new(Schema::new(fields))
 }
 
 fn is_remote_path(path: &str) -> bool {
     path.starts_with("s3://") || path.starts_with("s3a://")
 }
 
+use crate::partition_discovery::{
+    DiscoveredPartitions, PartitionValue, TextRowSink, canonical_partition_text,
+    discover_partitions, emit_text_row, finish_partition_columns, order_batch_columns,
+    plan_partition_slots,
+};
 use crate::text_glob::{expand_text_glob, has_glob_meta, is_hidden_name};
 
 fn push_text_dir(dir: &Path, display: &str, out: &mut Vec<PathBuf>) -> Result<()> {
@@ -83,7 +92,7 @@ fn missing_text_path(path: &str) -> Error {
     ))
 }
 
-pub(crate) fn expand_text_paths(path: &str) -> Result<Vec<PathBuf>> {
+pub(crate) fn expand_text_paths(path: &str) -> Result<(Vec<PathBuf>, DiscoveredPartitions)> {
     if is_remote_path(path) {
         return Err(Error::Analysis(format!(
             "text read over {path:?} is not supported by repark yet (local files and directories only)"
@@ -94,17 +103,18 @@ pub(crate) fn expand_text_paths(path: &str) -> Result<Vec<PathBuf>> {
         if files.is_empty() {
             return Err(missing_text_path(path));
         }
-        return Ok(files);
+        return Ok((files, DiscoveredPartitions::default()));
     }
     let fs_path = Path::new(path);
     if fs_path.is_file() {
-        return Ok(vec![fs_path.to_path_buf()]);
+        return Ok((vec![fs_path.to_path_buf()], DiscoveredPartitions::default()));
     }
     if fs_path.is_dir() {
         let mut files: Vec<PathBuf> = Vec::new();
         push_text_dir(fs_path, path, &mut files)?;
         files.sort();
-        return Ok(files);
+        let partitions = discover_partitions(fs_path, &files);
+        return Ok((files, partitions));
     }
     Err(missing_text_path(path))
 }
@@ -123,6 +133,8 @@ pub(crate) struct TextTableProvider {
     wholetext: bool,
     line_sep: Option<String>,
     schema: SchemaRef,
+    partition_fields: Vec<Field>,
+    partition_values: HashMap<PathBuf, Vec<PartitionValue>>,
 }
 
 #[async_trait]
@@ -153,6 +165,21 @@ impl TableProvider for TextTableProvider {
             None => Arc::clone(&self.schema),
             Some(indices) => Arc::new(self.schema.project(indices)?),
         };
+        let order: Vec<usize> = match projection {
+            None => (0..self.schema.fields().len()).collect(),
+            Some(indices) => indices.clone(),
+        };
+        let plan: Vec<Option<usize>> = order
+            .into_iter()
+            .map(|position| position.checked_sub(1))
+            .collect();
+        let types: Vec<DataType> = self
+            .partition_fields
+            .iter()
+            .map(|field| field.data_type().clone())
+            .collect();
+        let (slots, included_types) =
+            plan_partition_slots(&plan, self.partition_fields.len(), &types);
         let partitions: Vec<Arc<dyn PartitionStream>> = group_text_files(&self.files)
             .into_iter()
             .map(|files| {
@@ -161,7 +188,10 @@ impl TableProvider for TextTableProvider {
                     wholetext: self.wholetext,
                     line_sep: self.line_sep.clone(),
                     schema: Arc::clone(&output_schema),
-                    values: !output_schema.fields().is_empty(),
+                    plan: plan.clone(),
+                    slots: slots.clone(),
+                    included_types: included_types.clone(),
+                    partition_values: self.partition_values.clone(),
                     limit,
                 }) as Arc<dyn PartitionStream>
             })
@@ -183,7 +213,10 @@ struct TextPartition {
     wholetext: bool,
     line_sep: Option<String>,
     schema: SchemaRef,
-    values: bool,
+    plan: Vec<Option<usize>>,
+    slots: Vec<Option<usize>>,
+    included_types: Vec<DataType>,
+    partition_values: HashMap<PathBuf, Vec<PartitionValue>>,
     limit: Option<usize>,
 }
 
@@ -202,6 +235,8 @@ impl PartitionStream for TextPartition {
             ));
         }
         let chunk = vec![0; TEXT_READ_CHUNK];
+        let value_included = self.plan.contains(&None);
+        let included = self.included_types.len();
         Box::pin(TextLineStream {
             files: self.files.clone(),
             file_index: 0,
@@ -209,15 +244,21 @@ impl PartitionStream for TextPartition {
             reader: None,
             chunk,
             carry: Vec::new(),
-            builder: StringBuilder::new(),
+            value_builder: value_included.then(StringBuilder::new),
+            part_builders: (0..included).map(|_| StringBuilder::new()).collect(),
+            part_slots: self.slots.clone(),
+            part_current: Vec::new(),
+            part_types: self.included_types.clone(),
+            part_plan: self.plan.clone(),
+            partition_values: self.partition_values.clone(),
             blank_rows: 0,
             wholetext: self.wholetext,
             separator: self.line_sep.clone().map(String::into_bytes),
             schema: Arc::clone(&self.schema),
-            values: self.values,
             limit: self.limit,
             emitted: 0,
             done: false,
+            bytes_read: 0,
         })
     }
 }
@@ -229,32 +270,37 @@ struct TextLineStream {
     reader: Option<File>,
     chunk: Vec<u8>,
     carry: Vec<u8>,
-    builder: StringBuilder,
+    value_builder: Option<StringBuilder>,
+    part_builders: Vec<StringBuilder>,
+    part_slots: Vec<Option<usize>>,
+    part_current: Vec<Option<String>>,
+    part_types: Vec<DataType>,
+    part_plan: Vec<Option<usize>>,
+    partition_values: HashMap<PathBuf, Vec<PartitionValue>>,
     blank_rows: usize,
     wholetext: bool,
     separator: Option<Vec<u8>>,
     schema: SchemaRef,
-    values: bool,
     limit: Option<usize>,
     emitted: usize,
     done: bool,
+    bytes_read: usize,
 }
 
 impl TextLineStream {
     fn pending_rows(&self) -> usize {
-        if self.values {
-            self.builder.len()
+        if let Some(builder) = self.value_builder.as_ref() {
+            builder.len()
+        } else if let Some(builder) = self.part_builders.first() {
+            builder.len()
         } else {
             self.blank_rows
         }
     }
 
-    fn push_piece(&mut self, piece: &[u8]) {
-        if self.values {
-            self.builder.append_value(&String::from_utf8_lossy(piece));
-        } else {
-            self.blank_rows += 1;
-        }
+    fn limit_reached(&self) -> bool {
+        self.limit
+            .is_some_and(|max| self.emitted + self.pending_rows() >= max)
     }
 
     fn open_next(&mut self) -> DataFusionResult<bool> {
@@ -264,8 +310,14 @@ impl TextLineStream {
         let file = File::open(&path).map_err(|error| {
             DataFusionError::Execution(format!("text read cannot open {}: {error}", path.display()))
         })?;
+        let width = self.part_slots.len();
+        let row = self.partition_values.get(&path).map_or_else(
+            || vec![None; width],
+            |values| values.iter().map(canonical_partition_text).collect(),
+        );
         self.current = Some(path);
         self.reader = Some(file);
+        self.part_current = row;
         self.carry.clear();
         Ok(true)
     }
@@ -279,7 +331,14 @@ impl TextLineStream {
         reader.read_to_end(&mut bytes).map_err(|error| {
             DataFusionError::Execution(format!("text read of {} failed: {error}", path.display()))
         })?;
-        self.push_piece(&bytes);
+        let mut sink = TextRowSink {
+            value: self.value_builder.as_mut(),
+            parts: &mut self.part_builders,
+            slots: &self.part_slots,
+            current: &self.part_current,
+            blank: &mut self.blank_rows,
+        };
+        emit_text_row(&mut sink, &bytes, self.limit, self.emitted);
         self.reader = None;
         self.current = None;
         self.file_index += 1;
@@ -296,10 +355,14 @@ impl TextLineStream {
 
     fn scan_universal(&mut self, final_scan: bool) {
         let Self {
-            builder,
             carry,
-            values,
+            value_builder,
+            part_builders,
+            part_slots,
+            part_current,
             blank_rows,
+            limit,
+            emitted,
             ..
         } = self;
         let mut start = 0usize;
@@ -310,33 +373,34 @@ impl TextLineStream {
         } else {
             carry.len()
         };
+        let mut sink = TextRowSink {
+            value: value_builder.as_mut(),
+            parts: part_builders,
+            slots: part_slots,
+            current: part_current,
+            blank: blank_rows,
+        };
         while index < end {
             let byte = carry[index];
             if byte == b'\n' {
-                if *values {
-                    builder.append_value(&String::from_utf8_lossy(&carry[start..index]));
-                } else {
-                    *blank_rows += 1;
+                if !emit_text_row(&mut sink, &carry[start..index], *limit, *emitted) {
+                    break;
                 }
                 index += 1;
                 start = index;
             } else if byte == b'\r' {
                 let paired = index + 1 < carry.len() && carry[index + 1] == b'\n';
                 if paired {
-                    if *values {
-                        builder.append_value(&String::from_utf8_lossy(&carry[start..index]));
-                    } else {
-                        *blank_rows += 1;
+                    if !emit_text_row(&mut sink, &carry[start..index], *limit, *emitted) {
+                        break;
                     }
                     index += 2;
                     start = index;
                 } else if index + 1 == carry.len() && !final_scan {
                     break;
                 } else {
-                    if *values {
-                        builder.append_value(&String::from_utf8_lossy(&carry[start..index]));
-                    } else {
-                        *blank_rows += 1;
+                    if !emit_text_row(&mut sink, &carry[start..index], *limit, *emitted) {
+                        break;
                     }
                     index += 1;
                     start = index;
@@ -350,11 +414,15 @@ impl TextLineStream {
 
     fn scan_custom(&mut self, final_scan: bool) {
         let Self {
-            builder,
             carry,
             separator,
-            values,
+            value_builder,
+            part_builders,
+            part_slots,
+            part_current,
             blank_rows,
+            limit,
+            emitted,
             ..
         } = self;
         let empty: Vec<u8> = Vec::new();
@@ -367,12 +435,17 @@ impl TextLineStream {
         let end = carry.len().saturating_sub(hold);
         let mut start = 0usize;
         let mut index = 0usize;
+        let mut sink = TextRowSink {
+            value: value_builder.as_mut(),
+            parts: part_builders,
+            slots: part_slots,
+            current: part_current,
+            blank: blank_rows,
+        };
         while index + active.len() <= end {
             if &carry[index..index + active.len()] == active.as_slice() {
-                if *values {
-                    builder.append_value(&String::from_utf8_lossy(&carry[start..index]));
-                } else {
-                    *blank_rows += 1;
+                if !emit_text_row(&mut sink, &carry[start..index], *limit, *emitted) {
+                    break;
                 }
                 index += active.len();
                 start = index;
@@ -386,7 +459,14 @@ impl TextLineStream {
     fn finish_file(&mut self) {
         if !self.carry.is_empty() {
             let tail = std::mem::take(&mut self.carry);
-            self.push_piece(&tail);
+            let mut sink = TextRowSink {
+                value: self.value_builder.as_mut(),
+                parts: &mut self.part_builders,
+                slots: &self.part_slots,
+                current: &self.part_current,
+                blank: &mut self.blank_rows,
+            };
+            emit_text_row(&mut sink, &tail, self.limit, self.emitted);
         }
         self.carry.clear();
     }
@@ -402,7 +482,7 @@ impl TextLineStream {
             }
         }
         self.emitted += count;
-        if !self.values {
+        if self.value_builder.is_none() && self.part_builders.is_empty() {
             self.blank_rows -= count;
             return RecordBatch::try_new_with_options(
                 Arc::clone(&self.schema),
@@ -411,13 +491,28 @@ impl TextLineStream {
             )
             .map_err(DataFusionError::from);
         }
-        let finished = std::mem::replace(&mut self.builder, StringBuilder::new()).finish();
-        let array: ArrayRef = if count == finished.len() {
-            Arc::new(finished)
-        } else {
-            Arc::new(finished.slice(0, count))
-        };
-        RecordBatch::try_new(Arc::clone(&self.schema), vec![array]).map_err(DataFusionError::from)
+        let value_array: Option<ArrayRef> = self.value_builder.as_mut().map(|builder| {
+            let finished = std::mem::replace(builder, StringBuilder::new()).finish();
+            let array: ArrayRef = if finished.len() == count {
+                Arc::new(finished)
+            } else {
+                Arc::new(finished.slice(0, count))
+            };
+            array
+        });
+        let builders = std::mem::take(&mut self.part_builders);
+        let finished_parts = finish_partition_columns(builders, &self.part_types, count)?;
+        self.part_builders = finished_parts
+            .iter()
+            .map(|_| StringBuilder::new())
+            .collect();
+        let columns = order_batch_columns(
+            &self.part_plan,
+            value_array.as_ref(),
+            &finished_parts,
+            &self.part_slots,
+        )?;
+        RecordBatch::try_new(Arc::clone(&self.schema), columns).map_err(DataFusionError::from)
     }
 }
 
@@ -436,7 +531,8 @@ impl Stream for TextLineStream {
                 this.done = true;
                 return Poll::Ready(None);
             }
-            if this.pending_rows() >= TEXT_BATCH_ROWS {
+            let pending = this.pending_rows();
+            if pending >= TEXT_BATCH_ROWS || (pending > 0 && this.limit_reached()) {
                 return Poll::Ready(Some(this.take_batch()));
             }
             if this.reader.is_none() {
@@ -463,19 +559,23 @@ impl Stream for TextLineStream {
                 }
                 continue;
             }
-            let path = this.current.clone().unwrap_or_default();
             let Some(reader) = this.reader.as_mut() else {
                 this.done = true;
                 return Poll::Ready(Some(Err(DataFusionError::Internal(
                     "text read lost its file handle".to_string(),
                 ))));
             };
-            let read = reader.read(&mut this.chunk).map_err(|error| {
-                DataFusionError::Execution(format!(
-                    "text read of {} failed: {error}",
-                    path.display()
-                ))
-            });
+            let outcome = reader.read(&mut this.chunk);
+            let read = match outcome {
+                Err(error) => {
+                    let path = this.current.clone().unwrap_or_default();
+                    Err(DataFusionError::Execution(format!(
+                        "text read of {} failed: {error}",
+                        path.display()
+                    )))
+                }
+                Ok(bytes) => Ok(bytes),
+            };
             match read {
                 Err(error) => {
                     this.done = true;
@@ -489,6 +589,7 @@ impl Stream for TextLineStream {
                     this.file_index += 1;
                 }
                 Ok(bytes) => {
+                    this.bytes_read += bytes;
                     this.carry.extend_from_slice(&this.chunk[..bytes]);
                     this.scan_carry(false);
                 }
@@ -520,12 +621,14 @@ impl crate::ReparkSession {
                 "text lineSep must be a non-empty string".to_string(),
             ));
         }
-        let files = expand_text_paths(path)?;
+        let (files, partitions) = expand_text_paths(path)?;
         let provider = Arc::new(TextTableProvider {
             files,
             wholetext,
             line_sep: line_sep.map(str::to_string),
-            schema: text_schema(),
+            schema: text_schema_with_partitions(&partitions.fields),
+            partition_fields: partitions.fields,
+            partition_values: partitions.values,
         });
         self.context().read_table(provider).map_err(engine_err)
     }
@@ -798,6 +901,45 @@ mod tests {
         let batches = limited.collect().await.unwrap();
         let count: usize = batches.iter().map(RecordBatch::num_rows).sum();
         assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn text_limit_stops_appending_at_limit() {
+        let mut stream = TextLineStream {
+            files: Vec::new(),
+            file_index: 0,
+            current: None,
+            reader: None,
+            chunk: Vec::new(),
+            carry: Vec::new(),
+            value_builder: Some(StringBuilder::new()),
+            part_builders: Vec::new(),
+            part_slots: Vec::new(),
+            part_current: Vec::new(),
+            part_types: Vec::new(),
+            part_plan: vec![None],
+            partition_values: HashMap::new(),
+            blank_rows: 0,
+            wholetext: false,
+            separator: None,
+            schema: text_schema_with_partitions(&[]),
+            limit: Some(10),
+            emitted: 0,
+            done: false,
+            bytes_read: 0,
+        };
+        let line = vec![b'x'; 10 * 1024];
+        for _ in 0..2000 {
+            stream.carry.extend_from_slice(&line);
+            stream.carry.push(b'\n');
+        }
+        stream.scan_carry(false);
+        assert_eq!(
+            stream.value_builder.as_ref().map(ArrayBuilder::len),
+            Some(10)
+        );
+        let batch = stream.take_batch().unwrap();
+        assert_eq!(batch.num_rows(), 10);
     }
 
     #[test]

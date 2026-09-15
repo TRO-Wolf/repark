@@ -350,6 +350,108 @@ def test_text_probe_glob_brackets_literal(spark: ReparkSession, tmp_path: Path) 
     assert [row.value for row in frame.collect()] == ["b-class"]
 
 
+def test_text_probe3_part_slash_read(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_part_slash — %2F unescapes, k discovers after value. pins: io-text-1/U-3"""
+    expected = _cell("text_probe3_part_slash")["result"]
+    out = tmp_path / "slash"
+    spark.createDataFrame([("a/b", "v1"), ("c", "v2")], "k string, value string").write.partitionBy(
+        "k"
+    ).text(str(out))
+    back = spark.read.text(str(out))
+    assert back.columns == ["value", "k"]
+    assert sorted((row.value, row.k) for row in back.collect()) == [("v1", "a/b"), ("v2", "c")]
+    assert expected["read_schema"] == "struct<value:string,k:string>"
+
+
+def test_text_probe3_part_specials_read(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_part_specials — every escaped leaf round-trips. pins: io-text-1/U-3"""
+    rows = [
+        ("x=y", "1"),
+        ("50%", "2"),
+        ("a b", "3"),
+        ("c:d", "4"),
+        ("e#f", "5"),
+        ("g?h", "6"),
+        ("i*j", "7"),
+        ("k\\l", "8"),
+        ("m{n}", "9"),
+        ("o[p]", "10"),
+        ("q'r", "11"),
+        ("é", "12"),
+    ]
+    out = tmp_path / "specials"
+    spark.createDataFrame(rows, "k string, value string").write.partitionBy("k").text(str(out))
+    back = spark.read.text(str(out))
+    assert back.columns == ["value", "k"]
+    assert sorted((row.value, row.k) for row in back.collect()) == sorted(
+        (value, key) for key, value in rows
+    )
+
+
+def test_text_probe3_part_empty_and_null_read(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_part_empty_and_null — the default dir reads NULL. pins: io-text-1/U-3"""
+    out = tmp_path / "emptynull"
+    spark.createDataFrame([("", "v1"), (None, "v2"), ("z", "v3")], "k string, value string").write.partitionBy(
+        "k"
+    ).text(str(out))
+    back = spark.read.text(str(out))
+    assert back.columns == ["value", "k"]
+    assert sorted((row.value, row.k) for row in back.collect()) == [
+        ("v1", None),
+        ("v2", None),
+        ("v3", "z"),
+    ]
+
+
+def test_text_probe3_part_decimal_read(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_part_decimal — 1.50 infers double 1.5. pins: io-text-1/U-3"""
+    import decimal
+
+    expected = _cell("text_probe3_part_decimal")["result"]
+    out = tmp_path / "dec"
+    spark.createDataFrame(
+        [(decimal.Decimal("1.50"), "v1")], "k decimal(10,2), value string"
+    ).write.partitionBy("k").text(str(out))
+    back = spark.read.text(str(out))
+    assert back.columns == ["value", "k"]
+    assert [(row.value, row.k) for row in back.collect()] == [("v1", 1.5)]
+    assert [tuple(pair) for pair in back.dtypes] == [("value", "string"), ("k", "double")]
+    assert expected["read_schema"] == "struct<value:string,k:double>"
+
+
+def test_text_probe3_part_bool_read(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_part_bool — booleans stay strings. pins: io-text-1/U-3"""
+    expected = _cell("text_probe3_part_bool")["result"]
+    out = tmp_path / "bool"
+    spark.createDataFrame([(True, "v1"), (False, "v2")], "k boolean, value string").write.partitionBy(
+        "k"
+    ).text(str(out))
+    back = spark.read.text(str(out))
+    assert back.columns == ["value", "k"]
+    assert sorted((row.value, row.k) for row in back.collect()) == [("v1", "true"), ("v2", "false")]
+    assert expected["read_schema"] == "struct<value:string,k:string>"
+
+
+def test_text_probe3_part_date_ts_double_int_read(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_part_date_ts_double_int — inferred date/string/double/int. pins: io-text-1/U-3"""
+    import datetime
+
+    expected = _cell("text_probe3_part_date_ts_double_int")["result"]
+    out = tmp_path / "dts"
+    spark.sql(
+        "SELECT DATE '2024-01-02' AS d, TIMESTAMP '2024-01-02 03:04:05.12' AS t, "
+        "CAST(2.5 AS DOUBLE) AS f, 7 AS i, 'v1' AS value"
+    ).write.partitionBy("d", "t", "f", "i").text(str(out))
+    back = spark.read.text(str(out))
+    assert back.columns == ["value", "d", "t", "f", "i"]
+    assert [(row.value, row.d, row.t, row.f, row.i) for row in back.collect()] == [
+        ("v1", datetime.date(2024, 1, 2), "2024-01-02 03:04:05.12", 2.5, 7)
+    ]
+    assert [tuple(pair) for pair in back.dtypes] == [
+        tuple(pair) for pair in _cell("text_probe3_part_read_types_inferred")["result"]
+    ]
+
+
 def test_text_probe_partition_by(spark: ReparkSession, tmp_path: Path) -> None:
     """cell probe/partition_by — hive leaf dirs, values read back. pins: io-text-1/T-6"""
     out = tmp_path / "part"
@@ -360,8 +462,11 @@ def test_text_probe_partition_by(spark: ReparkSession, tmp_path: Path) -> None:
     assert (out / "k=x" / "part-00000.txt").read_text(encoding="utf-8") == "hello\n"
     assert (out / "k=y" / "part-00000.txt").read_text(encoding="utf-8") == "world\n"
     back = spark.read.text(str(out))
-    assert back.columns == ["value"]
-    assert sorted(row.value for row in back.collect()) == ["hello", "world"]
+    assert back.columns == ["value", "k"]
+    assert sorted((row.value, row.k) for row in back.collect()) == [
+        ("hello", "x"),
+        ("world", "y"),
+    ]
 
 
 def _text_listing(root: Path) -> list[str]:
