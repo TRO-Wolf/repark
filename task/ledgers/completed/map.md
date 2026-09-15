@@ -693,6 +693,7 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 - [sql-harden-1-cutover-shapes-ledger.md](sql-harden-1-cutover-shapes-ledger.md) — Unit ledger — SQL-HARDEN-1 · the cutover pipeline cutover Iceberg SQL shapes
 - [sql-harden-2-cow-shapes-ledger.md](sql-harden-2-cow-shapes-ledger.md) — Unit ledger — SQL-HARDEN-2 · copy-on-write cutover shapes
+- [sql-set-door-1-ledger.md](sql-set-door-1-ledger.md) — Unit ledger — SQL-SET-DOOR-1 · `SET` / `RESET` / `SET TIME ZONE` through `spark.sql`
 - [torture-1-ledger.md](torture-1-ledger.md) —
   **TORTURE-1 steps 1–5 (2026-09-11):** the torture-test dataset suite —
   step 1: the `repark_parity.torture` generator package (checkout-only `__path__` graft,

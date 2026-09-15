@@ -645,7 +645,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `_DISPLAY_MAX_ROWS_CEILING = 10_000` so the styled probe cannot fetch unbounded
   (Q-51). `risk_tier: standard`. Branch `fix/review-fix-3-9-14`.
   pins: review-fix-14/C-001, C-002
-- [sql-set-door-1-ledger.md](sql-set-door-1-ledger.md) —
+- [sql-set-door-1-ledger.md](../completed/sql-set-door-1-ledger.md) —
   **SQL-SET-DOOR-1 (2026-09-14), in flight:** the `SET`/`RESET`/`SET TIME ZONE` SQL door for
   registry `B-TZ-5` — D-1 shapes through `RuntimeConfig` (the `datafusion.*` exclusion keeps the
   conf forwarder from looping), D-2 frames on `to_arrow` (non-null `key`/`value`, zero-column
