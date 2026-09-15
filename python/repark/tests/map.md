@@ -788,14 +788,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   residual cells (2026-09-15, 39 cells with `R-` ids, recorder
   `oracle_win_resid.py`, same Spark) plus the run-16a remediation critic cells
   (2026-09-15, 34 cells with `C-L*` ids, recorder `oracle_win_crit.py`, same
-  Spark; 295 cells total). Pins read their expected rows from it
+  Spark; 295 cells total) plus the run-16a verification-round-2 critic
+  session cells (2026-09-15, 12 cells with `C2-L002`/`C2-L003` ids, recorder
+  `oracle_win_crit2.py`, same Spark; 307 cells total). Pins read their
+  expected rows from it
   (tumbling, sliding, `startTime`, plain-`select`,
   `CANNOT_PARSE_INTERVAL` / `MISSING_AGGREGATION` errors, static/wide/dynamic-gap
   sessions, both doors, both ANSI settings; residuals by cell id with zone,
   NTZ, DATE, month/year, startTime-constraint, and zero/negative-gap cells;
   critic cells by id with exact-gap merge, null selects, signed startTime,
   dynamic null/zero/negative/month gaps, slide-above-window, nested/CTE/UNION
-  SQL, DATE sessions, and plain-struct `window_time` cells).
+  SQL, DATE sessions, and plain-struct `window_time` cells; round-2 session
+  cells by id with month-end/leap sessions and the running-end
+  discriminator).
   Step 1 is red on the base tree; steps 2–4 turn the pins green in name order.
   pins: fnp-win-1/C-001, C-002, C-003, C-004, C-005, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`

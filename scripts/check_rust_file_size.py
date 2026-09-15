@@ -57,7 +57,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract a cohesive rewrite family when that family next changes.",
     ),
     "crates/repark-functions/src/analyzer/time_window/mod.rs": (
-        1268,
+        1338,
         "The window analyzer rule, its staging helpers, and the shared rule tests stay together.",
         "Extract the window_time grouping rule once its provenance check stabilizes.",
     ),

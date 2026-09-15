@@ -135,7 +135,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split scalar, nested, and multiple-generator scenarios.",
     ),
     "python/repark/tests/test_fnp_win_1.py": (
-        1209,
+        1314,
         "Window oracle pins for three names on both doors stay in one battery.",
         "Split value pins from error and divergence pins by clause family.",
     ),

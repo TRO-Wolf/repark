@@ -209,6 +209,25 @@ fn lag_over(value: Expr, keys: &[Expr], time: &Expr) -> Expr {
     }))
 }
 
+fn running_max_over(value: Expr, keys: &[Expr], time: &Expr) -> Expr {
+    Expr::WindowFunction(Box::new(WindowFunction {
+        fun: max_udaf().into(),
+        params: WindowFunctionParams {
+            args: vec![value],
+            partition_by: keys.to_vec(),
+            order_by: vec![Sort::new(time.clone(), true, true)],
+            window_frame: WindowFrame::new_bounds(
+                WindowFrameUnits::Rows,
+                WindowFrameBound::Preceding(ScalarValue::UInt64(None)),
+                WindowFrameBound::Preceding(ScalarValue::UInt64(Some(1))),
+            ),
+            filter: None,
+            null_treatment: None,
+            distinct: false,
+        },
+    }))
+}
+
 fn running_sum_over(value: Expr, keys: &[Expr], time: &Expr) -> Expr {
     Expr::WindowFunction(Box::new(WindowFunction {
         fun: sum_udaf().into(),
@@ -388,8 +407,9 @@ fn sessionize_input(
         )?
         .build()?;
     let windowed = if dynamic {
-        let previous_end = lag_over(column_expression(SESSION_END_TS_COLUMN), keys, &spec.time)
-            .alias(SESSION_PREV_END_COLUMN);
+        let previous_end =
+            running_max_over(column_expression(SESSION_END_TS_COLUMN), keys, &spec.time)
+                .alias(SESSION_PREV_END_COLUMN);
         LogicalPlanBuilder::from(ordered)
             .window(vec![previous_end])?
             .build()?
