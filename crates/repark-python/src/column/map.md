@@ -149,6 +149,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **FNP-4B critic (2026-09-15):** `parse_unresolved_expr` reuses the eager `SessionContext`
   instead of building a second one after analysis fails. `sql_context` installs
   `FoldSparkNumericCasts`, `SparkProjectionDisplay`, and `__repark_spark_as__`.
+  **FNP-4B round 8 (2026-09-15):** `sql_context` serves a process-wide cached
+  `SessionContext` (fixed Databricks dialect, rules and `register_all` baked in once)
+  and `PyColumn.sql` blocks on the shared engine runtime: 10k `F.expr` 2.33s → 0.72s.
   **Round 5 (2026-09-15):** `sql_context` also installs
   `__repark_suffix_literal__`. pins: fnp-4b/C-021
   **FNP-8 repair (2026-09-07):** the throwaway context builds its standard analyzer vector with
