@@ -1,0 +1,291 @@
+<title>Spark Parity Run 15</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F2F5F7;
+    --paper: #FFFFFF;
+    --ink: #1A2430;
+    --ink-soft: #55616D;
+    --line: #D6DEE5;
+    --accent: #0E6C88;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #DCEBF1;
+    --good: #2A7A4B;
+    --good-soft: #DDEFE3;
+    --warn: #A86A10;
+    --warn-soft: #F6E8CF;
+    --bad: #B0372A;
+    --bad-soft: #F5DCD8;
+    --hold: #5A6470;
+    --hold-soft: #E4E8EC;
+    --bar: #9CC5D4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1418;
+      --paper: #151D23;
+      --ink: #E4EAEF;
+      --ink-soft: #A3AFB9;
+      --line: #27333C;
+      --accent: #4DB1CF;
+      --accent-ink: #0B1519;
+      --accent-soft: #163541;
+      --good: #63C48A;
+      --good-soft: #163425;
+      --warn: #E0A64A;
+      --warn-soft: #3A2C12;
+      --bad: #EE7A6C;
+      --bad-soft: #3E1D19;
+      --hold: #9AA6B1;
+      --hold-soft: #232D35;
+      --bar: #2B5F70;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1418;
+    --paper: #151D23;
+    --ink: #E4EAEF;
+    --ink-soft: #A3AFB9;
+    --line: #27333C;
+    --accent: #4DB1CF;
+    --accent-ink: #0B1519;
+    --accent-soft: #163541;
+    --good: #63C48A;
+    --good-soft: #163425;
+    --warn: #E0A64A;
+    --warn-soft: #3A2C12;
+    --bad: #EE7A6C;
+    --bad-soft: #3E1D19;
+    --hold: #9AA6B1;
+    --hold-soft: #232D35;
+    --bar: #2B5F70;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 36px 24px 72px; }
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 18px; margin-bottom: 28px; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  h1 {
+    font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: 34px;
+    line-height: 1.1;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  h2 {
+    font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    margin: 36px 0 12px;
+    text-wrap: balance;
+  }
+  .lede { color: var(--ink-soft); margin: 0; max-width: 66ch; }
+  .strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 22px 0 4px;
+  }
+  .tile {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .tile .n {
+    font-family: "IBM Plex Sans Condensed", sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tile .l { font-size: 12px; color: var(--ink-soft); margin-top: 6px; letter-spacing: 0.02em; }
+  .tbl { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 500;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: var(--ground);
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: "IBM Plex Mono", monospace; font-size: 13.5px; }
+  .chip {
+    display: inline-block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11.5px;
+    padding: 1px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .chip.good { background: var(--good-soft); color: var(--good); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); }
+  .chip.hold { background: var(--hold-soft); color: var(--hold); }
+  .chip.acc { background: var(--accent-soft); color: var(--accent); }
+  code, .mono { font-family: "IBM Plex Mono", monospace; font-size: 13px; }
+  .bars { display: grid; gap: 8px; margin: 10px 0 0; }
+  .bar { display: grid; grid-template-columns: 150px 1fr 90px; align-items: center; gap: 12px; font-size: 13.5px; }
+  .bar .track { height: 12px; background: var(--hold-soft); border-radius: 2px; position: relative; overflow: hidden; }
+  .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--bar); }
+  .bar .done { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+  .bar .v { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink-soft); text-align: right; font-variant-numeric: tabular-nums; }
+  .legend { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; }
+  .legend i { display: inline-block; width: 12px; height: 10px; vertical-align: -1px; margin-right: 4px; border-radius: 2px; }
+  ol, ul { padding-left: 22px; margin: 8px 0; }
+  li { margin: 5px 0; }
+  li b { font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 14px 16px; }
+  .card h3 { font-family: "IBM Plex Sans Condensed", sans-serif; font-size: 16px; margin: 0 0 8px; font-weight: 600; }
+  .card p { margin: 0 0 6px; font-size: 14px; }
+  .note { border-left: 3px solid var(--warn); padding: 8px 14px; background: var(--paper); border-radius: 0 4px 4px 0; font-size: 14px; margin: 14px 0; }
+  footer { margin-top: 44px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 12.5px; }
+  @media (max-width: 640px) {
+    .strip { grid-template-columns: 1fr 1fr; }
+    .grid2 { grid-template-columns: 1fr; }
+    .bar { grid-template-columns: 110px 1fr 70px; }
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">RePark · 1.5 Spark-parity campaign · morning of 2026-09-15</p>
+  <h1>Spark Parity Run 15</h1>
+  <p class="lede">The first overnight of the 1.5 parity campaign: three Opus orchestrators, one slice each, all exited clean by 07:16 EDT. Fourteen families are on main. The day run 16 started at 07:59 with Muse contributor as the builder tier for twelve hours.</p>
+  <div class="strip">
+    <div class="tile"><div class="n">14</div><div class="l">families merged to main</div></div>
+    <div class="tile"><div class="n">61 → 37</div><div class="l">function names missing, after queued PRs</div></div>
+    <div class="tile"><div class="n">$89</div><div class="l">worker spend (Grok 86, GLM 3)</div></div>
+    <div class="tile"><div class="n">429 G</div><div class="l">disk free after reclaim</div></div>
+  </div>
+</header>
+
+<h2>Census against PySpark 4.1.2</h2>
+<div class="bars">
+  <div class="bar"><span>functions (509)</span><div class="track"><div class="fill" style="width:90%"></div></div><span class="v">51 missing</span></div>
+  <div class="bar"><span>DataFrame (115)</span><div class="track"><div class="fill" style="width:92.2%"></div></div><span class="v">9 missing</span></div>
+  <div class="bar"><span>Reader / Writer / NA (34)</span><div class="track"><div class="fill" style="width:76.5%"></div></div><span class="v">8 missing</span></div>
+  <div class="bar"><span>Column (36)</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="v">complete</span></div>
+  <div class="bar"><span>GroupedData (15)</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="v">complete</span></div>
+  <div class="bar"><span>Catalog (27)</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="v">complete</span></div>
+  <div class="bar"><span>SparkSession (36)</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="v">complete</span></div>
+  <div class="bar"><span>Row · types · WriterV2</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="v">complete</span></div>
+</div>
+<p class="legend"><i style="background:var(--bar)"></i>present on main at 07:15 EDT. A name counts when it is on the facade and answers Spark on both doors, or is a dated declared refusal with Spark's error class.</p>
+
+<div class="tbl" style="margin-top:14px">
+<table>
+  <tr><th>Slice</th><th class="num">Start (629f3d5f)</th><th class="num">Main now</th><th class="num">After queued PRs</th><th>Queued</th></tr>
+  <tr><td>functions missing</td><td class="num">61</td><td class="num">51</td><td class="num">37</td><td>#606 temporal (11), #613 bitmap facade (3)</td></tr>
+  <tr><td>DataFrame missing</td><td class="num">25</td><td class="num">9</td><td class="num">7</td><td>inputFiles, semanticHash on a branch</td></tr>
+  <tr><td>Reader / Writer / NaFunctions missing</td><td class="num">11</td><td class="num">8</td><td class="num">1</td><td>#610 ORC · XML · JDBC · na.replace; text on a branch</td></tr>
+  <tr><td>SQL-door divergence rows</td><td class="num">22</td><td class="num">22</td><td class="num">14</td><td>#616 door convergence</td></tr>
+</table>
+</div>
+
+<h2>Merged overnight</h2>
+<div class="tbl">
+<table>
+  <tr><th>PR</th><th>Family</th><th>Run</th><th>Builder</th></tr>
+  <tr><td class="mono">#595</td><td>Row.count, Row.index</td><td>15b</td><td>GLM</td></tr>
+  <tr><td class="mono">#596</td><td>streaming-named DataFrame members on a batch frame</td><td>15b</td><td>Devin</td></tr>
+  <tr><td class="mono">#597</td><td>six alias names; degrees and radians Spark-exact</td><td>15a</td><td>GLM</td></tr>
+  <tr><td class="mono">#598</td><td>abstract type bases, Geography and Geometry, UserDefinedType</td><td>15b</td><td>Devin</td></tr>
+  <tr><td class="mono">#600</td><td>DataFrame surface A: to, withMetadata, checkpoint and four more</td><td>15b</td><td>Devin</td></tr>
+  <tr><td class="mono">#601</td><td>SET, RESET, SET TIME ZONE through spark.sql; current_timezone()</td><td>15c</td><td>Devin</td></tr>
+  <tr><td class="mono">#602</td><td>Catalog, thirteen names</td><td>15b</td><td>Devin</td></tr>
+  <tr><td class="mono">#603</td><td>SparkSession, nineteen names</td><td>15b</td><td>Devin</td></tr>
+  <tr><td class="mono">#594</td><td>call_function, call_udf, arrow_udf, arrow_udtf, bucket(Column)</td><td>15a</td><td>Muse</td></tr>
+  <tr><td class="mono">#609</td><td>bitmap aggregates on the SQL door, 4096-byte layout</td><td>15c</td><td>Grok</td></tr>
+  <tr><td class="mono">#604</td><td>bucketBy, sortBy, clusterBy writer checks</td><td>15b</td><td>Muse</td></tr>
+  <tr><td class="mono">#607</td><td>foreach, foreachPartition, observe, Observation</td><td>15b</td><td>Grok</td></tr>
+  <tr><td class="mono">#608</td><td>GroupedData apply, applyInArrow, cogroup</td><td>15b</td><td>Devin</td></tr>
+  <tr><td class="mono">#605</td><td>Column isin, isNaN, astype, name, outer, withField, dropFields</td><td>15b</td><td>Devin</td></tr>
+</table>
+</div>
+
+<h2>In flight and carried over</h2>
+<div class="tbl">
+<table>
+  <tr><th>PR</th><th>Unit</th><th>State at 08:00</th><th>Next</th></tr>
+  <tr><td class="mono">#617 #614 #615</td><td>run reports 15c, 15a, 15b</td><td><span class="chip good">#617 merged</span> <span class="chip acc">queue</span></td><td>sequential merge chain</td></tr>
+  <tr><td class="mono">#610</td><td>ORC, XML, JDBC as dated refusals; na.replace</td><td><span class="chip good">green</span></td><td>in the chain after the reports</td></tr>
+  <tr><td class="mono">#606</td><td>eleven temporal names, Rust kernels</td><td><span class="chip good">green</span></td><td>in the chain; make_timestamp 1476 → 53 ns per row</td></tr>
+  <tr><td class="mono">#616</td><td>door convergence: base64, hypot, abs, size, array_contains</td><td><span class="chip warn">regating</span></td><td>fresh clone; run 16c merges when green</td></tr>
+  <tr><td class="mono">#613</td><td>bitmap aggregates on the facade</td><td><span class="chip bad">P1 in kernel</span></td><td>run 16a fixes the payload check first</td></tr>
+  <tr><td class="mono">#611</td><td>Spark expression-string dialect on the door</td><td><span class="chip warn">33 failures</span></td><td>run 16c takes the follow-up branch green</td></tr>
+  <tr><td class="mono">#612</td><td>DOUBLE and FLOAT print as Java does</td><td><span class="chip hold">draft</span></td><td>run 16c rebases and gates; then the JDK 17 port</td></tr>
+  <tr><td class="mono">#618</td><td>window, window_time, session_window</td><td><span class="chip hold">step 1 of 4</span></td><td>run 16a resumes step 2 in Rust</td></tr>
+  <tr><td class="mono">branch</td><td>read.text and write.text</td><td><span class="chip hold">no PR</span></td><td>run 16b gates and opens it</td></tr>
+  <tr><td class="mono">branch</td><td>inputFiles, semanticHash</td><td><span class="chip bad">hash bug</span></td><td>run 16b restores the planning step</td></tr>
+</table>
+</div>
+
+<div class="note">The bitmap kernel merged in #609 accepts a string payload where Spark refuses anything but BINARY, so an integer argument is cast to text and folded as bytes. Run 15a's critic found it on the facade PR after the kernel had merged. It is the first unit of run 16a.</div>
+
+<h2>Owner rulings, morning of 2026-09-15</h2>
+<p class="lede">Every question from runs 14 and 15 was ruled on the recommendation. The decided items the day run carries:</p>
+<div class="grid2">
+  <div class="card">
+    <h3>Dependencies approved</h3>
+    <p>RustCrypto <code>aes</code>, <code>aes-gcm</code>, <code>cbc</code>, <code>ecb</code> for aes_encrypt and friends.</p>
+    <p><code>orc-rust</code> for a read-only ORC scan in 1.5. XML stays a dated refusal.</p>
+  </div>
+  <div class="card">
+    <h3>Rust-first work</h3>
+    <p>Port JDK 17 FloatingDecimal so rare doubles print byte-identical to Spark.</p>
+    <p>Facade degrees and radians move onto the Rust kernel.</p>
+    <p>Runtime SET of ANSI mode and the session time zone applies to the live session.</p>
+  </div>
+  <div class="card">
+    <h3>Wrong answers are P1</h3>
+    <p>concat and reverse on arrays return strings; sequence and split are missing on the SQL door. Top of door convergence 2, fixed per function, no global retag wrapper.</p>
+  </div>
+  <div class="card">
+    <h3>Process</h3>
+    <p>A second build clone per orchestrator above 250 G free. A shared queue file orders merges across runs; the GitHub merge-queue setting is the owner's to flip later. Size baselines stay ratchet-only. Collation gets a design note after the dialect work lands.</p>
+  </div>
+</div>
+
+<h2>Day run 16, 07:59 to 20:15 EDT</h2>
+<div class="tbl">
+<table>
+  <tr><th>Run</th><th>Slice</th><th>First units</th></tr>
+  <tr><td class="mono">16a</td><td>functions</td><td>bitmap payload fix → #613 → window functions step 2 → formats and TIME family → aggregates → math, mask, AES → generators</td></tr>
+  <tr><td class="mono">16b</td><td>facade surfaces and IO</td><td>text reader and writer → inputFiles hash fix → freqItems, transpose, metadataColumn in Rust → exists, scalar, lateralJoin, asTable → ORC scan on orc-rust</td></tr>
+  <tr><td class="mono">16c</td><td>SQL door, type table, backlog</td><td>#616 → door convergence 2 with the P1 rows first → expression-string dialect → Java double text and the JDK 17 port → runtime SET applied → geometry and geography DDL → grammar gaps</td></tr>
+</table>
+</div>
+<p class="lede" style="margin-top:10px">Every builder round today runs on Muse Spark 1.3 contributor. Grok stays the reviewer tier for the critic and the two perf reads. GLM is allowed only for sweeps that build nothing.</p>
+
+<h2>What the night taught</h2>
+<ul>
+  <li><b>One build clone was the bottleneck.</b> Every remaining family needs Rust, and a run could land at most two Rust units a night. Today allows two build clones per run.</li>
+  <li><b>Thin clones share objects with the build clone.</b> Deleting the build clone first corrupted a lane and produced two false test failures. Dependents go first now, and the rule is in the runbook brief.</li>
+  <li><b>A green PR waited hours for a hand-agreed merge slot.</b> The runs now order merges through one queue file.</li>
+  <li><b>The oracle overturned four reviewer claims</b> in run 15c alone. Live PySpark cells before the critic, every time.</li>
+  <li><b>Devin's free tier rate-limited two rounds</b> and a box-wide network blip at 04:17 cost one Muse round per run. Resume from the session recovered each one.</li>
+</ul>
+
+<footer>Sources: run reports 15a, 15b and 15c under task/roadmap/mid-term; PR board TRO-Wolf/repark; census dumps from main 629f3d5f against PySpark 4.1.2. Times are EDT.</footer>
+</div>
