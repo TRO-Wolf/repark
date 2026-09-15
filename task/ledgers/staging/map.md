@@ -186,6 +186,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   through reused batch buffers. L-004/L-001/L-002/L-003/P2-1/P2-4 PROVEN with
   oracle pins on both doors; P2-2 stays OPEN residue.
   `risk_tier: standard`. Branch `feat/java-double-fd-1`.
+  pins: java-double-fd-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [orphan-s3tables-1-ledger.md](orphan-s3tables-1-ledger.md) —
   **ORPHAN-S3TABLES-1 step 1 (2026-09-12), in flight:** `remove_orphan_files` refuses loud
   on an `s3tables`-kind catalog before any IO — table buckets answer `ListObjectsV2` 405 —
