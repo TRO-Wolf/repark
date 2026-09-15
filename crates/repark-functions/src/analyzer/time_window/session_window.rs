@@ -19,10 +19,10 @@ use datafusion::prelude::Partitioning;
 
 use crate::decimal_cast::spark_nonnull_udf;
 use crate::spark_session_window::{
-    SESSION_END_COLUMN, SESSION_END_TS_COLUMN, SESSION_FUNCTION_NAME, SESSION_GAP_COLUMN,
-    SESSION_INDEX_COLUMN, SESSION_NEW_COLUMN, SESSION_OUTPUT_NAME, SESSION_PREV_END_COLUMN,
-    SESSION_PREV_GAP_COLUMN, SESSION_PREV_TS_COLUMN, SESSION_START_COLUMN, SESSION_TS_COLUMN,
-    session_assemble_udf, session_end_udf, session_ts_udf,
+    MULTIPLE_SESSION_EXPRESSIONS, SESSION_END_COLUMN, SESSION_END_TS_COLUMN, SESSION_FUNCTION_NAME,
+    SESSION_GAP_COLUMN, SESSION_INDEX_COLUMN, SESSION_NEW_COLUMN, SESSION_OUTPUT_NAME,
+    SESSION_PREV_END_COLUMN, SESSION_PREV_GAP_COLUMN, SESSION_PREV_TS_COLUMN, SESSION_START_COLUMN,
+    SESSION_TS_COLUMN, session_assemble_udf, session_end_udf, session_ts_udf,
 };
 use crate::spark_time_window::parse_session_gap;
 
@@ -124,9 +124,7 @@ fn marker_session_spec_inner(
                 };
                 match seen.as_ref() {
                     Some((_, previous)) if !previous.same_specification(&spec) => {
-                        return plan_err!(
-                            "'session_window' takes one gap specification per query block; found a second one"
-                        );
+                        return plan_err!("{}", MULTIPLE_SESSION_EXPRESSIONS);
                     }
                     Some(_) => {}
                     None => {
@@ -314,9 +312,7 @@ fn session_group_parts(aggregate: &Aggregate) -> Result<Option<(Vec<Expr>, Strin
         };
         match seen.as_ref() {
             Some((_, previous)) if !previous.same_specification(&spec) => {
-                return plan_err!(
-                    "'session_window' takes one gap specification per query block; found a second one"
-                );
+                return plan_err!("{}", MULTIPLE_SESSION_EXPRESSIONS);
             }
             Some(_) => {}
             None => {

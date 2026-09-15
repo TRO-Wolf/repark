@@ -312,7 +312,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   non-positive gaps to NULL for the drop filter) with one parse per distinct
   gap string per batch; the assemble UDF takes an Int64-micros or a
   TIMESTAMP end; `Date32` coerces to `Timestamp(ns)`.
-  pins: fnp-win-1/C-004, C-008
+  pins: fnp-win-1/C-004, C-008. Round 2 (2026-09-15) shares the two-spec
+  `[_LEGACY_ERROR_TEMP_1039]` refusal text and the pre-plan-build
+  `check_single_session_spec` helper. pins: fnp-win-1/C-004
 - `registration.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the `analyzer_rules()`
   home moved out of `lib.rs` so the crate root stays under its `check_lib_rs`
   ceiling; `SparkSessionWindow` registers beside the window rules.

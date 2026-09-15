@@ -319,7 +319,9 @@ pins: rp-4-fork-repin/C-005, C-006
   strips the marker and rewrites stale parent `session_window` references.
   Remediation 16a stages inside CTE bodies, derived-table subqueries and both
   UNION branches by recursing the query/set tree; `time_window.rs` stays the
-  only file this unit touches under `repark-spark`.
+  only file this unit touches under `repark-spark`. Round 2 (2026-09-15):
+  the second session spec refuses with Spark's `1039` text (shared constant
+  from `repark_functions::spark_session_window`).
   pins: fnp-win-1/C-002, C-004, C-005, C-008
 - `window_range.rs` — Spark temporal `RANGE` rules. Unit-less bounds over `TIMESTAMP` refuse;
   bounds over `DATE` restate as day intervals because DataFusion reads bare values as months.

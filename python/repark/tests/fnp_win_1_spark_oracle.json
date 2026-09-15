@@ -9818,6 +9818,20 @@
      "2026-09-15 14:19:59.999999"
     ]
    ]
+  },
+  {
+   "id": "C2-L004-two-session-specs",
+   "door": "python",
+   "error_type": "AnalysisException",
+   "condition": "_LEGACY_ERROR_TEMP_1039",
+   "message": "Multiple time/session window expressions would result in a cartesian product of rows, therefore they are currently not supported."
+  },
+  {
+   "id": "C2-L004-two-session-specs",
+   "door": "sql",
+   "error_type": "AnalysisException",
+   "condition": "_LEGACY_ERROR_TEMP_1039",
+   "message": "Multiple time/session window expressions would result in a cartesian product of rows, therefore they are currently not supported.; line 1 pos 24"
   }
  ],
  "signatures": {

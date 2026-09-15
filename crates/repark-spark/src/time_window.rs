@@ -175,7 +175,8 @@ fn group_session_call(group_items: &[Expr]) -> Result<Option<(String, Expr)>> {
         match call_text.as_ref() {
             Some(previous) if previous != &text => {
                 return plan_err!(
-                    "'session_window' takes one gap specification per query block; found a second one"
+                    "{}",
+                    repark_functions::spark_session_window::MULTIPLE_SESSION_EXPRESSIONS
                 );
             }
             Some(_) => {}
@@ -522,7 +523,7 @@ mod tests {
         .unwrap();
         let error = wrap_time_window_grouping(&mut statements[0]).expect_err("must refuse");
         assert!(
-            error.to_string().contains("one gap specification"),
+            error.to_string().contains("_LEGACY_ERROR_TEMP_1039"),
             "unexpected: {error}"
         );
     }

@@ -6,9 +6,9 @@ use chrono::DateTime;
 use datafusion::arrow::array::{Array, ArrayRef, StringArray, StructArray};
 use datafusion::arrow::buffer::NullBuffer;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, TimeUnit};
-use datafusion::common::{Result, exec_err};
+use datafusion::common::{Result, exec_err, plan_err};
 use datafusion::logical_expr::{
-    ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
+    ColumnarValue, Expr, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
 };
 
@@ -32,6 +32,7 @@ pub const SESSION_NEW_COLUMN: &str = "__repark_session_new__";
 pub const SESSION_INDEX_COLUMN: &str = "__repark_session_idx__";
 pub const SESSION_START_COLUMN: &str = "__repark_session_start__";
 pub const SESSION_END_COLUMN: &str = "__repark_session_endm__";
+pub const MULTIPLE_SESSION_EXPRESSIONS: &str = "[_LEGACY_ERROR_TEMP_1039] Multiple time/session window expressions would result in a cartesian product of rows, therefore they are currently not supported.";
 
 #[must_use]
 pub fn session_window_udf() -> Arc<ScalarUDF> {
@@ -51,6 +52,33 @@ pub fn session_ts_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn session_assemble_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SessionAssemble::new()))
+}
+
+pub fn check_single_session_spec(group_by: &[Expr]) -> Result<()> {
+    let mut seen: Option<Vec<Expr>> = None;
+    for expression in group_by {
+        let call = match expression {
+            Expr::Alias(alias) => match alias.expr.as_ref() {
+                Expr::ScalarFunction(call) => call,
+                _ => continue,
+            },
+            Expr::ScalarFunction(call) => call,
+            _ => continue,
+        };
+        if call.func.name() != SESSION_FUNCTION_NAME {
+            continue;
+        }
+        match seen.as_ref() {
+            Some(previous) if previous != &call.args => {
+                return plan_err!("{}", MULTIPLE_SESSION_EXPRESSIONS);
+            }
+            Some(_) => {}
+            None => {
+                seen = Some(call.args.clone());
+            }
+        }
+    }
+    Ok(())
 }
 
 #[must_use]
