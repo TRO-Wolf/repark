@@ -760,6 +760,7 @@ io	DataFrameReader.schema
 io	DataFrameReader.sheet_names
 io	DataFrameReader.smartCsv
 io	DataFrameReader.table
+io	DataFrameReader.text
 io	DataFrameReader.xml
 io	DataFrameWriter.bucketBy
 io	DataFrameWriter.bucket_by
@@ -783,6 +784,7 @@ io	DataFrameWriter.saveAsTable
 io	DataFrameWriter.save_as_table
 io	DataFrameWriter.sortBy
 io	DataFrameWriter.sort_by
+io	DataFrameWriter.text
 io	DataFrameWriter.xml
 io	DataFrameWriterV2.append
 io	DataFrameWriterV2.clusterBy

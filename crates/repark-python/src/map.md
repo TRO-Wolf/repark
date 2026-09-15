@@ -58,6 +58,14 @@ and hand execution, SQL, and ML semantics to the engine crates.
   undeclared-name refusal maps through `to_py_err`), and `session_source_ping` re-resolves
   then calls `NamedSource::ping` so the connector-pending refusal keeps its engine class.
   pins: cfg-2/C-013, C-014, C-015 |
+| [`text_io.rs`](text_io.rs) | **IO-TEXT-1 (2026-09-14):** the text read/write bindings — two free `#[pyfunction]`s **IO-TEXT-1 (2026-09-15, orchestrator):** `text_io.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
+  (the `session_sources` shape, since pyo3 allows one `#[pymethods]` block per type):
+  runtime, `write_text_frame` drives `repark_core::write_text_frame` with a newline
+  default. **Round 3 (2026-09-15, U-1):** `write_text_partitioned` drives the
+  engine's one-scan fan-out (partition columns, lineSep, session zone).
+  **Round 4 (2026-09-15, W-1/W-4):** `read_text` passes the user schema as
+  name/type pairs plus `basePath` into the engine scan.
+  pins: io-text-1/C-001, C-002, U-1, W-1, W-4 |
 | [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export. |
 | [`plan_introspect.rs`](plan_introspect.rs) | DF-PLAN-INTROSPECT-1 (2026-09-14; follow-ups 2026-09-15): three free `#[pyfunction]`s over `&PyDataFrame` (the `session_sources` shape, since pyo3 allows one `#[pymethods]` block per type): `input_files` builds the physical plan on the shared runtime without executing it and walks it through `repark_core::input_files`, `semantic_hash(frame, lineages)` splits the frame into state plus logical plan, clones each lineage frame's plan into a cache-view definition map, and folds all three through `repark_core::semantic_hash` with the GIL detached, and `same_semantics(left, right, lineages)` compares both canonical streams through `repark_core::same_semantics` with the GIL detached. pins: df-plan-introspect-1/C-001, C-002, C-006, C-011 |
 | [`dataframe_stack.rs`](dataframe_stack.rs) | **PERF-UNPIVOT-1:** `stack_dataframe` binds `repark_core::apply_stack`; the internal `row_labels`/`cell_indices` kwargs bind `apply_labeled_stack` for the describe grid. pins: perf-unpivot-1/C-002, C-014 |

@@ -702,6 +702,805 @@
     "raises": "AnalysisException"
    }
   },
+  "text_probe3_empty_linesep_class": {
+   "result": {
+    "condition": null,
+    "message": "requirement failed: 'lineSep' cannot be an empty string.",
+    "raises": "IllegalArgumentException",
+    "sqlstate": null
+   }
+  },
+  "text_probe3_failing_write_leaves": {
+   "result": {
+    "error": "SparkRuntimeException",
+    "exists": true,
+    "listing": []
+   }
+  },
+  "text_probe3_format_recursive_false": {
+   "result": {
+    "option_bool_false": [
+     "('top',)"
+    ],
+    "option_str_false": [
+     "('top',)"
+    ]
+   }
+  },
+  "text_probe3_glob_escaped_star": {
+   "result": {
+    "escaped": [
+     "('star',)"
+    ],
+    "unescaped": [
+     "('star',)",
+     "('x',)"
+    ]
+   }
+  },
+  "text_probe3_glob_matches_dirs": {
+   "result": {
+    "dir_glob": [
+     "('a1',)",
+     "('b1',)"
+    ],
+    "star": [
+     "('a1',)",
+     "('b1',)",
+     "('t',)"
+    ]
+   }
+  },
+  "text_probe3_missing_path_class": {
+   "result": {
+    "condition": "PATH_NOT_FOUND",
+    "message": "[PATH_NOT_FOUND] Path does not exist: file:/tmp/qb-iotext3-w9ia23x7/nope. SQLSTATE: 42K03",
+    "raises": "AnalysisException",
+    "sqlstate": "42K03"
+   }
+  },
+  "text_probe3_part_bool": {
+   "result": {
+    "listing": [
+     "_SUCCESS",
+     "k=false/part-*",
+     "k=true/part-*"
+    ],
+    "read": [
+     "('v1', 'true')",
+     "('v2', 'false')"
+    ],
+    "read_schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe3_part_date_ts": {
+   "result": null
+  },
+  "text_probe3_part_date_ts_double_int": {
+   "result": {
+    "listing": [
+     "_SUCCESS",
+     "d=2024-01-02/t=2024-01-02 08%3A04%3A05.12/f=2.5/i=7/part-*"
+    ],
+    "read": [
+     "('v1', datetime.date(2024, 1, 2), '2024-01-02 08:04:05.12', 2.5, 7)"
+    ],
+    "read_schema": "struct<value:string,d:date,t:string,f:double,i:int>"
+   }
+  },
+  "text_probe3_part_decimal": {
+   "result": {
+    "listing": [
+     "_SUCCESS",
+     "k=1.50/part-*"
+    ],
+    "read": [
+     "('v1', 1.5)"
+    ],
+    "read_schema": "struct<value:string,k:double>"
+   }
+  },
+  "text_probe3_part_empty_and_null": {
+   "result": {
+    "listing": [
+     "_SUCCESS",
+     "k=__HIVE_DEFAULT_PARTITION__/part-*",
+     "k=z/part-*"
+    ],
+    "read": [
+     "('v1', None)",
+     "('v2', None)",
+     "('v3', 'z')"
+    ],
+    "read_schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe3_part_read_types_inferred": {
+   "result": [
+    [
+     "value",
+     "string"
+    ],
+    [
+     "d",
+     "date"
+    ],
+    [
+     "t",
+     "string"
+    ],
+    [
+     "f",
+     "double"
+    ],
+    [
+     "i",
+     "int"
+    ]
+   ]
+  },
+  "text_probe3_part_slash": {
+   "result": {
+    "listing": [
+     "_SUCCESS",
+     "k=a%2Fb/part-*",
+     "k=c/part-*"
+    ],
+    "read": [
+     "('v1', 'a/b')",
+     "('v2', 'c')"
+    ],
+    "read_schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe3_part_specials": {
+   "result": {
+    "listing": [
+     "_SUCCESS",
+     "k=50%25/part-*",
+     "k=a b/part-*",
+     "k=c%3Ad/part-*",
+     "k=e%23f/part-*",
+     "k=g%3Fh/part-*",
+     "k=i%2Aj/part-*",
+     "k=k%5Cl/part-*",
+     "k=m%7Bn}/part-*",
+     "k=o%5Bp%5D/part-*",
+     "k=q%27r/part-*",
+     "k=x%3Dy/part-*",
+     "k=\u00e9/part-*"
+    ],
+    "read": [
+     "('1', 'x=y')",
+     "('10', 'o[p]')",
+     "('11', \"q'r\")",
+     "('12', '\u00e9')",
+     "('2', '50%')",
+     "('3', 'a b')",
+     "('4', 'c:d')",
+     "('5', 'e#f')",
+     "('6', 'g?h')",
+     "('7', 'i*j')",
+     "('8', 'k\\\\l')",
+     "('9', 'm{n}')"
+    ],
+    "read_schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe3_two_col_class": {
+   "result": {
+    "condition": "_LEGACY_ERROR_TEMP_1290",
+    "message": "Text data source supports only a single column, and you have 2 columns.",
+    "raises": "AnalysisException",
+    "sqlstate": null
+   }
+  },
+  "text_probe4_conflicting_names": {
+   "error": {
+    "condition": "CONFLICTING_PARTITION_COLUMN_NAMES",
+    "message": "[CONFLICTING_PARTITION_COLUMN_NAMES] Conflicting partition column names detected:\n\n\tPartition column name list #0: k\n\tPartition column name list #1: n\n\nFor partitioned table directories, data files should only live in leaf directories.\nAnd directories at the same level should have the same partition column name.\nPlease check the following directories for unexpected files or inconsistent partition column names:\n\n\tfile:/tmp/qb-iotext4-a3qguimr/conf/k=x\n\tfile:/tmp/qb-iotext4-a3qguimr/conf/n=y SQLSTATE: KD009",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "KD009"
+   }
+  },
+  "text_probe4_decimal_text": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('dec', 1.5)"
+    ],
+    "schema": "struct<value:string,k:double>"
+   }
+  },
+  "text_probe4_glob_k_eq_star": {
+   "result": {
+    "columns": [
+     "value"
+    ],
+    "rows": [
+     "('hello',)",
+     "('world',)"
+    ],
+    "schema": "struct<value:string>"
+   }
+  },
+  "text_probe4_glob_star_over_partitioned": {
+   "result": {
+    "columns": [
+     "value"
+    ],
+    "rows": [
+     "('hello',)",
+     "('world',)"
+    ],
+    "schema": "struct<value:string>"
+   }
+  },
+  "text_probe4_glob_with_basepath": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('hello', 'x')",
+     "('world', 'y')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe4_int_overflow_to_bigint": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('big', 2147483648)"
+    ],
+    "schema": "struct<value:string,k:bigint>"
+   }
+  },
+  "text_probe4_lead_zero_and_plain": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('lead', 7)",
+     "('seven', 7)"
+    ],
+    "schema": "struct<value:string,k:int>"
+   }
+  },
+  "text_probe4_lead_zero_only": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('lead', 7)"
+    ],
+    "schema": "struct<value:string,k:int>"
+   }
+  },
+  "text_probe4_mixed_layout": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('hello', 'x')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe4_negative": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('neg', -7)"
+    ],
+    "schema": "struct<value:string,k:int>"
+   }
+  },
+  "text_probe4_plus_sign": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('plus', 7)"
+    ],
+    "schema": "struct<value:string,k:int>"
+   }
+  },
+  "text_probe4_schema_partition_first": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('hello', 'x')",
+     "('world', 'y')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe4_schema_renamed": {
+   "result": {
+    "columns": [
+     "line",
+     "k"
+    ],
+    "rows": [
+     "('hello', 'x')",
+     "('world', 'y')"
+    ],
+    "schema": "struct<line:string,k:string>"
+   }
+  },
+  "text_probe4_schema_value_only": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('hello', 'x')",
+     "('world', 'y')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe4_schema_with_partition": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('hello', 'x')",
+     "('world', 'y')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe4_schema_with_partition_int": {
+   "error": {
+    "condition": "INVALID_PARTITION_VALUE",
+    "message": "[INVALID_PARTITION_VALUE] Failed to cast value 'y' to data type \"INT\" for partition column `k`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "42846"
+   }
+  },
+  "text_probe5_date_inferred": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', datetime.date(2024, 1, 2))"
+    ],
+    "schema": "struct<value:string,k:date>"
+   }
+  },
+  "text_probe5_date_schema_date": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', datetime.date(2024, 1, 2))"
+    ],
+    "schema": "struct<value:string,k:date>"
+   }
+  },
+  "text_probe5_date_schema_string": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', '2024-01-02')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe5_date_schema_timestamp": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', datetime.datetime(2024, 1, 1, 19, 0))"
+    ],
+    "schema": "struct<value:string,k:timestamp>"
+   }
+  },
+  "text_probe5_dec_schema_decimal": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('dec', Decimal('1.50'))"
+    ],
+    "schema": "struct<value:string,k:decimal(10,2)>"
+   }
+  },
+  "text_probe5_dec_schema_double": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('dec', 1.5)"
+    ],
+    "schema": "struct<value:string,k:double>"
+   }
+  },
+  "text_probe5_dec_schema_string": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('dec', '1.50')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe5_default_partition_schema_int": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('nul', None)"
+    ],
+    "schema": "struct<value:string,k:int>"
+   }
+  },
+  "text_probe5_escaped_schema_string": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('esc', 'a/b')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe5_lead_schema_bigint": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('lead', 7)"
+    ],
+    "schema": "struct<value:string,k:bigint>"
+   }
+  },
+  "text_probe5_lead_schema_int": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('lead', 7)"
+    ],
+    "schema": "struct<value:string,k:int>"
+   }
+  },
+  "text_probe5_lead_schema_string": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('lead', '007')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe5_nonleaf_data_file": {
+   "error": {
+    "condition": "CONFLICTING_PARTITION_COLUMN_NAMES",
+    "message": "[CONFLICTING_PARTITION_COLUMN_NAMES] Conflicting partition column names detected:\n\n\tPartition column name list #0: k\n\tPartition column name list #1: k, n\n\nFor partitioned table directories, data files should only live in leaf directories.\nAnd directories at the same level should have the same partition column name.\nPlease check the following directories for unexpected files or inconsistent partition column names:\n\n\tfile:/tmp/qb-iotext5-syzlhb3j/nonleaf/k=x\n\tfile:/tmp/qb-iotext5-syzlhb3j/nonleaf/k=x/n=1 SQLSTATE: KD009",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "KD009"
+   }
+  },
+  "text_probe5_nonleaf_success_marker_only": {
+   "result": {
+    "columns": [
+     "value",
+     "k",
+     "n"
+    ],
+    "rows": [
+     "('leaf', 'x', 1)"
+    ],
+    "schema": "struct<value:string,k:string,n:int>"
+   }
+  },
+  "text_probe5_uneven_depth": {
+   "error": {
+    "condition": "CONFLICTING_PARTITION_COLUMN_NAMES",
+    "message": "[CONFLICTING_PARTITION_COLUMN_NAMES] Conflicting partition column names detected:\n\n\tPartition column name list #0: k\n\tPartition column name list #1: k, n\n\nFor partitioned table directories, data files should only live in leaf directories.\nAnd directories at the same level should have the same partition column name.\nPlease check the following directories for unexpected files or inconsistent partition column names:\n\n\tfile:/tmp/qb-iotext5-syzlhb3j/uneven/k=y\n\tfile:/tmp/qb-iotext5-syzlhb3j/uneven/k=x/n=1 SQLSTATE: KD009",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "KD009"
+   }
+  },
+  "text_probe6_bool_inferred": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('T', 'TRUE')",
+     "('f', 'false')",
+     "('t', 'true')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe6_bool_schema_boolean": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('T', True)",
+     "('f', False)",
+     "('t', True)"
+    ],
+    "schema": "struct<value:string,k:boolean>"
+   }
+  },
+  "text_probe6_bool_schema_boolean_bad": {
+   "error": {
+    "condition": "INVALID_PARTITION_VALUE",
+    "message": "[INVALID_PARTITION_VALUE] Failed to cast value 'yes' to data type \"BOOLEAN\" for partition column `k`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "42846"
+   }
+  },
+  "text_probe6_float_schema_float": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('f', 1.5)"
+    ],
+    "schema": "struct<value:string,k:float>"
+   }
+  },
+  "text_probe6_float_schema_smallint": {
+   "error": {
+    "condition": "INVALID_PARTITION_VALUE",
+    "message": "[INVALID_PARTITION_VALUE] Failed to cast value '1.50' to data type \"SMALLINT\" for partition column `k`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "42846"
+   }
+  },
+  "text_probe6_int_schema_array": {
+   "error": {
+    "condition": "INVALID_PARTITION_VALUE",
+    "message": "[INVALID_PARTITION_VALUE] Failed to cast value '7' to data type \"ARRAY<INT>\" for partition column `k`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "42846"
+   }
+  },
+  "text_probe6_int_schema_binary": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('i', b'7')"
+    ],
+    "schema": "struct<value:string,k:binary>"
+   }
+  },
+  "text_probe6_int_schema_smallint": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('i', 7)"
+    ],
+    "schema": "struct<value:string,k:smallint>"
+   }
+  },
+  "text_probe6_int_schema_timestamp_ntz": {
+   "error": {
+    "condition": "INVALID_PARTITION_VALUE",
+    "message": "[INVALID_PARTITION_VALUE] Failed to cast value '7' to data type \"TIMESTAMP_NTZ\" for partition column `k`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "42846"
+   }
+  },
+  "text_probe6_int_schema_tinyint": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('i', 7)"
+    ],
+    "schema": "struct<value:string,k:tinyint>"
+   }
+  },
+  "text_probe7_ny_date_inferred": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', datetime.date(2024, 1, 2))"
+    ],
+    "rows_as_string": [
+     "('d', '2024-01-02')"
+    ],
+    "schema": "struct<value:string,k:date>"
+   }
+  },
+  "text_probe7_ny_date_ltz": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', datetime.datetime(2024, 1, 2, 0, 0))"
+    ],
+    "rows_as_string": [
+     "('d', '2024-01-02 00:00:00')"
+    ],
+    "schema": "struct<value:string,k:timestamp>"
+   }
+  },
+  "text_probe7_ny_date_ntz": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', datetime.datetime(2024, 1, 2, 0, 0))"
+    ],
+    "rows_as_string": [
+     "('d', '2024-01-02 00:00:00')"
+    ],
+    "schema": "struct<value:string,k:timestamp_ntz>"
+   }
+  },
+  "text_probe7_ny_ts_escaped_inferred": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('e', datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "rows_as_string": [
+     "('e', '2024-01-02 03:04:05')"
+    ],
+    "schema": "struct<value:string,k:timestamp>"
+   }
+  },
+  "text_probe7_ny_ts_escaped_ltz": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('e', datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "rows_as_string": [
+     "('e', '2024-01-02 03:04:05')"
+    ],
+    "schema": "struct<value:string,k:timestamp>"
+   }
+  },
+  "text_probe7_ny_ts_escaped_ntz": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('e', datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "rows_as_string": [
+     "('e', '2024-01-02 03:04:05')"
+    ],
+    "schema": "struct<value:string,k:timestamp_ntz>"
+   }
+  },
+  "text_probe7_ny_ts_iso_inferred": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('r', '2024-01-02T03:04:05')"
+    ],
+    "rows_as_string": [
+     "('r', '2024-01-02T03:04:05')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe7_ny_ts_iso_ltz": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('r', datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "rows_as_string": [
+     "('r', '2024-01-02 03:04:05')"
+    ],
+    "schema": "struct<value:string,k:timestamp>"
+   }
+  },
+  "text_probe7_ny_ts_iso_ntz": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('r', datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "rows_as_string": [
+     "('r', '2024-01-02 03:04:05')"
+    ],
+    "schema": "struct<value:string,k:timestamp_ntz>"
+   }
+  },
   "text_read_dir_glob": {
    "result": {
     "kind": "int",

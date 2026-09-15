@@ -674,6 +674,29 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   (`DF-FOREACH-1`, `DF-OBSERVE-1`).
   pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-007
   **Re-check (2026-09-15):** a thread-local suppression keeps plan-only work from filling an Observation — `register_view_without_fill` (temp views, EXPLAIN's scratch view) and `rows_without_fill` (EXPLAIN's rows); `empty_rows_after_fill` answers `tail(0)`. `core.py` swaps its three call sites line for line; writers register through the session method directly and still fill.
+  Path-write notes (moved from the class docstring, IO-TEXT-1): table writes use CTAS or
+  INSERT paths and creation rejects tightened frames; CSV/JSON/Parquet path writes run
+  through `COPY` SQL; path overwrite stages and swaps output safely. **IO-TEXT-1
+  (2026-09-14):** `text` binds as the one-line class attribute `text = _writer_text.text`,
+  `format("text").save` routes to `writer_text.write_text_path`, and `text` joins
+  `_PATH_FORMATS`; the class docstring condenses to one line and the CSV docstring joins
+  to one line to fund those five lines, so the file ratchets DOWN 1111 → 1109 (mirrored
+  in the CAP-1 test). pins: io-text-1/C-002, C-003
+- `writer_text.py` owns the text path write. **IO-TEXT-1 (2026-09-14):**
+  `DataFrameWriter.text` overlays `compression` / `lineSep` into options, then
+  `write_text_path` refuses non-`none` compression (IO-TEXT-GZIP-1), mirrors the path
+  save modes (error / ignore / overwrite / append with the same messages), stages Rust
+  `part-*.txt` files under a uuid dir, and swaps or merges them into place.
+  **Follow-up (2026-09-15):** `partitionBy` writes the hive layout per distinct key
+  (partition columns dropped, remaining must be one string column per Spark's verbatim
+  1290 text), every write lands root `_SUCCESS`, and append drops the staged marker on
+  collision. **Round 3 (2026-09-15, U-1+U-2):** the per-key loop is gone — the wrapper
+  passes column names plus the session zone to the engine's one-scan fan-out
+  (`write_text_partitioned`), which renders Hive-escaped leaf names itself.
+  **(U-10/U-11):** the native 1290 text gains `_LEGACY_ERROR_TEMP_1290` through the
+  shared attach helper, and a failed write removes staging even when the
+  destination is absent.
+  pins: io-text-1/C-002, C-003, T-6, T-9, U-1, U-2, U-10, U-11
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`

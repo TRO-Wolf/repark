@@ -71,6 +71,10 @@ from ``streaming_batch.py`` — ``EXPECTED_DATAFRAME_DIR`` gains exactly
 IO-DECLARED-1 (2026-09-14): the package gains exactly the one new module name
 ``io_declared`` (bound by ``writer_readwriter`` importing it); no
 ``DataFrame`` member, slot, alias, or core-surface name changes.
+IO-TEXT-1 (2026-09-14): the ``DataFrameWriter.text`` body moves to
+``writer_text.py`` behind the one-line class attribute (the API freeze parses
+``def`` signatures, and an attribute bind keeps the surface); the package gains
+exactly the one new module name ``writer_text``, imported below.
 DF-SURFACE-A-1 step 1 (2026-09-14): the ``localCheckpoint`` and ``isStreaming``
 bodies move to ``surface_a.py`` behind signature-keeping def wrappers (the API
 freeze parses ``def`` signatures), and the seven surface-a names bind one-line
@@ -134,6 +138,7 @@ import repark.spark.dataframe.rows_export as rows_export
 import repark.spark.dataframe.udf_projection as udf_projection
 import repark.spark.dataframe.udf_schema as udf_schema
 import repark.spark.dataframe.udf_window_projection as udf_window_projection
+import repark.spark.dataframe.writer_text as writer_text  # noqa: F401
 from repark.spark.dataframe import DataFrame
 
 

@@ -6,7 +6,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
 from typing import Any
 
-from repark.spark.session import _funcs as _session_funcs
+from repark.spark.session import _funcs as _session_funcs, reader_text as _reader_text
 from repark.spark.session.session_core import ReparkSession
 from repark.spark.dataframe import io_declared as _io_declared
 
@@ -18,14 +18,10 @@ del _name, _session_funcs
 
 
 class DataFrameReader:
-    """PySpark ``DataFrameReader``: parquet, csv, json, excel, table, format/load, option(s).
+    """PySpark ``DataFrameReader``: parquet, csv, json, text, excel, table, format/load.
 
-    CSV/JSON route through DataFusion native readers (``read_csv`` / ``read_json``).
-    :meth:`schema` stores a user StructType/DDL for those formats. Unknown formats raise
-    :class:`~repark.errors.AnalysisException` (Spark's ``DATA_SOURCE_NOT_FOUND`` class shape).
-    Unknown options are accepted and stored (Spark silently tolerates them) except the semantic
-    denylist which fails loud. :meth:`excel` is a disclosed RePark extension (PySpark has no
-    excel reader); single-sheet v1 — use :meth:`sheet_names` to discover sheets.
+    Reads run in the engine (per-format notes in ``session/map.md``). Unknown formats raise
+    :class:`~repark.errors.AnalysisException`; unknown options store, semantic ones fail loud.
     """
 
     __slots__ = ("_format", "_options", "_schema", "_session")
@@ -289,6 +285,8 @@ class DataFrameReader:
         self._format = "json"
         return self._load_json(path)
 
+    text = _reader_text.text
+
     def excel(
         self,
         path: str | Path | None = None,
@@ -414,6 +412,8 @@ class DataFrameReader:
         fmt = (self._format or "").strip().lower()
         if fmt in {"orc", "xml"}:
             _io_declared.refuse_reader_load_format(self, fmt)
+        if fmt == "text":
+            _reader_text._drop_falsy_recursive_lookup(self)
         # Postgres/JDBC options are intentional; skip the parquet/iceberg semantic gate for them.
         if fmt not in {"postgres", "postgresql", "jdbc"}:
             self._reject_unsupported_semantic_options()
@@ -446,6 +446,8 @@ class DataFrameReader:
             if travel is not None:
                 return self._session.read_iceberg_table(str(effective_path), **travel)
             return self._session.read_iceberg_table(str(effective_path))
+        if fmt == "text":
+            return _reader_text.load_text(self, effective_path)
         if fmt in {"postgres", "postgresql", "jdbc"}:
             return self._load_postgres()
         # Truncate hostile/long format strings in the error.
@@ -878,7 +880,8 @@ class DataFrameReader:
                     "(Iceberg time travel)"
                 )
             if lowered in _UNSUPPORTED_SEMANTIC_READER_OPTIONS:
-                # Incremental-read bounds get a targeted message (future seed).
+                if lowered == "basepath" and fmt == "text":
+                    continue
                 if lowered in {"start-snapshot-id", "end-snapshot-id"}:
                     raise AnalysisException(
                         f"reader option {key!r} is not supported by repark yet "

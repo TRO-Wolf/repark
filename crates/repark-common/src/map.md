@@ -27,7 +27,10 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `DataFusion(String)` — the catch-all engine bucket; `Parse(String)` / `Analysis(String)` — the
   syntax / analysis-plan sub-classes split out so the PyO3 boundary can raise
   `repark.errors.ParseException` / `AnalysisException` (both render the inner engine text
-  verbatim, `#[error("{0}")]`, preserving the diagnostic in `str(exc)`); `Config(String)` — the
+  verbatim, `#[error("{0}")]`, preserving the diagnostic in `str(exc)`);
+  `IllegalArgument(String)` — **IO-TEXT-1 round 3 (2026-09-15, U-9):** the verbatim
+  `{0}` invalid-argument class for `repark.errors.IllegalArgumentException`;
+  `Config(String)` — the
   session/catalog config-mapping error for malformed `spark.sql.catalog.*` /
   `repark.sql.catalog.*` blocks and dual-prefix conflicts; messages name keys, not secret-bearing
   values; `Iceberg(String)` — the iceberg residual (commit conflicts, invalid data, unexpected —

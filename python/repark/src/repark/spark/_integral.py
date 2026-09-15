@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import operator
 from types import MethodType
-from typing import NoReturn
+from typing import Any, NoReturn
 
 from repark.errors import AnalysisException
 
@@ -38,6 +38,17 @@ def _attached_sql_state(error: object) -> str | None:
     """Return the Spark SQLSTATE attached on a native AnalysisException."""
     value = getattr(error, "_spark_sql_state", None)
     return value if isinstance(value, str) else None
+
+
+def attach_error_condition(error: Any, error_class: str, sql_state: str | None = None) -> None:
+    """Attach Spark's error class (and SQLSTATE) to a native exception in place."""
+    error._spark_error_class = error_class
+    error._spark_message_parameters = None
+    error._spark_sql_state = sql_state
+    error.getErrorClass = MethodType(_attached_error_class, error)
+    error.getCondition = MethodType(_attached_error_class, error)
+    error.getMessageParameters = MethodType(_attached_message_parameters, error)
+    error.getSqlState = MethodType(_attached_sql_state, error)
 
 
 def _column_sql(column: object) -> str:
