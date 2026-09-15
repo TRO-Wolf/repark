@@ -53,6 +53,18 @@ FAILED test_geo_ddl_reader_schema_string_refuses
 `test_geo_ddl_error_cells` (the 7 `PARSE_SYNTAX_ERROR` cells) passes on the base tree: the refusal shape the
 fix must preserve.
 
+## Review round 2 — 2026-09-15 (Grok critic-logic + S2-21 Rust perf, PR #624)
+
+| Finding | Reviewer | Severity | Disposition |
+|---|---|---|---|
+| L-001: the SRID capture was Python-`int`, not Spark's `INTEGER_VALUE` (`4_326`, `+4326`, fullwidth digits parsed). | critic-logic | P2 | Fixed: the capture is ASCII `[0-9]+`, same shape as the `decimal`/`char` arms; leading zeros still parse. Pinned in `spatial_srid_follows_spark_integer_value_grammar` and `test_geo_ddl_integer_value_grammar_edges`. The three refusals rest on Spark grammar knowledge, not a live cell — said in the pin docstrings, not in a comment. |
+| L-002: tab/NBSP inside the parens diverted to the Python residue (no spatial arm) and refused. | critic-logic | P2 | Fixed: the `isprintable` divert narrows by spatial keyword in one line, so these strings reach the Rust table, whose trim matches `str.strip`. One-line Python reason: the divert lives in Python and only Python can narrow it; Rust already accepted the tabs. Pinned in `test_geo_ddl_surrounding_whitespace_doors` with the decimal tab control. `_type_table.py` net line change is zero. |
+| L-003: `spark_type_from_py` accepted any SRID (`geography` + `0` built). | critic-logic | P3 | Fixed: `spatial_srid_supported` in the table plus a `validated_spatial_srid` bridge helper refuse with `ValueError` naming the SRID. Pinned in the bridge-tags test. Reachable only through hand-built dicts (no Python encoder emits spatial descriptors). |
+| L-004: `sql_type_from_token` still maps spatial tokens to a Utf8 string capsule, as on main. | critic-logic | P3 | Recorded; no change, not a regression. |
+| P3-1: miss tokens run two extra regex captures before the refusal. | S2-21 perf | P3 | Declined with reason: the suggested `starts_with` gate does not stay a two-line change once formatted, and miss tokens pay ~0.2 µs on a cold path common tokens never reach. |
+
+Round-2 notes. A live-oracle re-measure is out of lane (no JVM here); the recorded fixture is the spec, and the full G13 suite stays green, so no oracle drift. The grammar edges above are disclosed as grammar-knowledge, not live cells. One release-native rebuild covers round 2 (the round-1 red run already proved the rebased baseline, and `cargo check` passed on it).
+
 VERDICT: 5 clauses, 5 PROVEN, 0 OPEN, 0 REJECTED.
 
 ```yaml
