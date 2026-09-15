@@ -226,6 +226,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   two identical extractor expressions built under different session zones compare EQUAL — safe only
   while no plan cache or cross-session expression reuse exists, and stated in the module doc beside
   the rationale rather than left to be rediscovered.
+  **SQL-SET-DOOR-1 (2026-09-14):** `current_timezone_udf` — the SQL-door `current_timezone()`
+  Spark answers in `SELECT current_timezone()` — reads this same carrier and returns a
+  non-nullable Utf8 (a `ReturnFieldArgs` field so DataFusion plans the not-null `string`
+  Spark promises). Its `name()` is `&'static str` — a literal bound, what pedantic wants.
+  It registers through `instant_ts::functions()` — the session-zone temporal
+  family — rather than a `lib.rs` line, because the crate root sits on its exact line ceiling.
+  Pins: `session_time_zone::tests::current_timezone_*`.
 - `datetime.rs` — session-zone semantics are type-driven (`coerce_date_arg` /
   `coerce_to_timestamp_micros` /
   `coerce_to_date32`: `Timestamp(_, Some(_))` is an LTZ instant; `Timestamp(_, None)` is NTZ
@@ -497,7 +504,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   zone-suffixed string is not localized. Analyzer rule `spark_ltz_timestamp_cast` still wraps
   integer `CAST AS TIMESTAMP`. **Q10:** when `spark.sql.timestampType=TIMESTAMP_NTZ` the
   same rule resolves bare `TIMESTAMP` literals / casts to naive µs (no localization);
-  `to_timestamp` / `now` stay LTZ. Pins: `instant_ts::tests::*`.
+  `to_timestamp` / `now` stay LTZ. **SQL-SET-DOOR-1 (2026-09-14):** its `functions()` vector
+  also carries `session_time_zone::current_timezone_udf` — the `lib.rs`-free registration
+  slot for the session-zone family's SQL-door `current_timezone()` (crate root is at its
+  line ceiling). Pins: `instant_ts::tests::*`.
 - `timestamp_cast.rs` — **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
   `analyzer.rs` puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is

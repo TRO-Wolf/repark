@@ -69,6 +69,12 @@ def _served() -> tuple[Shape, ...]:
         ),
         Shape("S-SHOW-NS", "repark__list_schemas", f"show namespaces in {CATALOG}", None),
         Shape(
+            "S-SET-CONF",
+            "server_side_parameters",
+            "set spark.sql.shuffle.partitions = 2",
+            None,
+        ),
+        Shape(
             "S-CTAS",
             "spark__create_table_as",
             f"create or replace table {fact}\n"
@@ -237,12 +243,6 @@ def _refused() -> tuple[Shape, ...]:
             f"create or replace table {CATALOG}.{NAMESPACE}.commented2 using iceberg "
             f"tblproperties ({PROPERTIES}) comment 'a description' as select 1 as a",
             "Expected: end of statement, found: using",
-        ),
-        Shape(
-            "R-SET-CONF",
-            "server_side_parameters",
-            "set spark.sql.shuffle.partitions = 2",
-            'Could not find config namespace "spark"',
         ),
         Shape(
             "R-COLUMN-COMMENT",

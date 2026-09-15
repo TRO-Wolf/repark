@@ -90,3 +90,51 @@ async fn the_sql_set_door_cannot_reach_the_carrier() {
     );
     assert_eq!(SessionTimeZoneConfig::PREFIX, "repark.session");
 }
+
+#[tokio::test]
+async fn current_timezone_answers_the_carrier_zone_as_a_non_null_string() {
+    let config = with_session_time_zone(SessionConfig::new(), "America/New_York");
+    let ctx = SessionContext::new_with_config(config);
+    ctx.register_udf(super::current_timezone_udf().as_ref().clone());
+    let batches = ctx
+        .sql("SELECT current_timezone() tz")
+        .await
+        .expect("the udf must resolve")
+        .collect()
+        .await
+        .expect("the projection must run");
+    assert_eq!(batches.len(), 1);
+    let batch = &batches[0];
+    let schema = batch.schema();
+    let field = schema.field_with_name("tz").expect("tz column");
+    assert!(
+        !field.is_nullable(),
+        "Spark's current_timezone() is non-null"
+    );
+    let values = batch
+        .column(0)
+        .as_any()
+        .downcast_ref::<arrow::array::StringArray>()
+        .expect("a utf8 column");
+    assert_eq!(batch.num_rows(), 1);
+    assert_eq!(values.value(0), "America/New_York");
+}
+
+#[tokio::test]
+async fn current_timezone_defaults_to_utc_without_the_carrier() {
+    let ctx = SessionContext::new();
+    ctx.register_udf(super::current_timezone_udf().as_ref().clone());
+    let batches = ctx
+        .sql("SELECT current_timezone()")
+        .await
+        .expect("the udf must resolve")
+        .collect()
+        .await
+        .expect("the projection must run");
+    let values = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<arrow::array::StringArray>()
+        .expect("a utf8 column");
+    assert_eq!(values.value(0), DEFAULT_EXTRACTION_TIME_ZONE);
+}

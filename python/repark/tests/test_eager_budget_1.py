@@ -478,9 +478,15 @@ def test_budget_key_case_last_set_wins(spark: ReparkSession) -> None:
         built.stop()
 
 
-def test_sql_set_repark_cache_keys_refused(spark: ReparkSession) -> None:
-    """L-004: SQL ``SET`` on repark.cache keys raises the DataFusion namespace error."""
-    for key in (_RETAINED_KEY, _TOTAL_KEY, _MAX_BYTES_KEY):
-        with pytest.raises(PySparkException) as excinfo:
-            spark.sql(f"SET {key}=1")
-        assert 'config namespace "repark"' in str(excinfo.value)
+def test_sql_set_repark_cache_keys(spark: ReparkSession) -> None:
+    """L-004/SQL-SET-DOOR-1: SQL ``SET`` on repark.cache keys follows ``conf.set``."""
+    try:
+        for key in (_TOTAL_KEY, _MAX_BYTES_KEY):
+            rows = spark.sql(f"SET {key}=1").collect()
+            assert [(row.key, row.value) for row in rows] == [(key, "1")]
+            assert spark.conf.get(key) == "1"
+    finally:
+        for key in (_TOTAL_KEY, _MAX_BYTES_KEY):
+            spark.conf.unset(key)
+    with pytest.raises(IllegalArgumentException, match=r"INVALID_CONF_VALUE\.REQUIREMENT"):
+        spark.sql(f"SET {_RETAINED_KEY}=1")

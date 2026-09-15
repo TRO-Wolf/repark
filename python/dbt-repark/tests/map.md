@@ -25,7 +25,9 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
 
 - `conftest.py` — the two `sys.path` entries above.
 - `test_statement_surface.py` — 30 cases: every statement shape dbt emits, run through
-  `repark.sql()` on a memory catalog. Twelve served, sixteen refused with the exact message, plus
+  `repark.sql()` on a memory catalog. Thirteen served, fifteen refused with the exact message
+  (the `server_side_parameters` `SET` shape moved to served under SQL-SET-DOOR-1, 2026-09-15),
+  plus
   the facade-schema probe (the column source the adapter uses) and the `describe extended`
   probe (Spark shape since SQL-DESCRIBE-1, 2026-09-09 — the old Arrow-spellings premise reds on
   purpose in that unit's ledger). This file is the
@@ -33,6 +35,7 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   It needs **no adapter**, which is why it stays green when the package is removed — the
   red-first evidence lives in the two files below.
   pins: dbt-1-adapter/C-001
+  pins: sql-set-door-1/C-005
 - `test_cursor.py` — 10 cases over the cursor dbt drives: `fetchall` / `fetchmany` / `fetchone`
   across three-row results, `description` across two columns, the zero-column DDL result, the
   refused binding, and two cursors that do not drain each other. Added in round 2: the multi-row

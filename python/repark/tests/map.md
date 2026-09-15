@@ -279,8 +279,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   UNION refuses at `max_bytes=100` with the main-measured `312` integer, admits at 312,
   refuses at 311; a live-cache-view scan under both budgets refuses with the per-result
   message. C-004 gains case-insensitive budget-key pins (mixed-case `set`/`unset`,
-  last-set-wins, runtime-over-builder). L-004 pins SQL `SET repark.cache.*` raising
-  `config namespace "repark"`.
+  last-set-wins, runtime-over-builder). L-004 pins SQL `SET repark.cache.*` — re-pinned by
+  SQL-SET-DOOR-1 (2026-09-14) from the pre-door `config namespace "repark"` error to the
+  `conf.set` contract the SQL door now honours: the two budget keys store and echo, and
+  `retained_bytes` refuses `INVALID_CONF_VALUE.REQUIREMENT`.
   pins: eager-budget-1/C-004, C-005, C-006, C-007, C-008, C-009
 - [test_df_explain_1.py](test_df_explain_1.py) — **DF-EXPLAIN-1 (2026-09-08):** the red-first
   `explain` pins, red on base `f00ed9ea` (the run is recorded in the ledger) and green on the
@@ -4767,3 +4769,18 @@ EAGER-BUDGET-1 declared export delta (2026-09-13): `dataframe/core.py` imports o
   **DF-SURFACE-A-1 rebase (2026-09-14):** the frozen DataFrame dir lists `withMetadata` before `withWatermark` (sorted) after the rebase over DF-STREAM-BATCH-1 merged both name sets.
 `_cache_conf_lookup` and `_resolve_cache_max_bytes` and gain `_resolve_cache_budgets`. No other module read those names
 through `core` or the package. pins: eager-budget-1/C-010
+
+- `test_sql_set_door_1.py` — **SQL-SET-DOOR-1 (2026-09-14):** the `SET`/`RESET`/`SET TIME ZONE`
+  SQL-door pins for registry `B-TZ-5`, measured against `fixtures-batch1.json` cells
+  `BTZ5-0`…`BTZ5-19` and `fixtures-batch5.json` cells `S5-*` (PySpark 4.1.2). Result frames
+  assert on the `to_arrow` path — value AND Arrow type AND field nullability. Residues:
+  timezone SET echoes the live session zone (TZ-3), `spark.sql.ansi.enabled` stores but
+  `1/0` still raises `DIVIDE_BY_ZERO` (SET-ANSI-RUNTIME-1), `SET TIME ZONE LOCAL` is a
+  dated DECLARED refusal (SET-TZ-LOCAL-1). Round-3 pins: ZoneId.of offset zones (L-001),
+  case-sensitive keys (L-002), `SET CATALOG`/`NAMESPACE` vs unintercepted `SET ROLE`
+  (L-003), Spark default redaction regex on key-or-value (L-004), TZ-3 + G15 collation
+  RESET (L-005), positive shuffle.partitions (L-006), boolean `1`/`yes`/`TRUE` (N-1),
+  RESET restores a builder-seeded value (N-2), `SET k TO v` is `[INVALID_SET_SYNTAX]`
+  (N-3), backtick keys / double-quoted TIME ZONE / INTERVAL / empty value (N-4),
+  SQLSTATE suffixes (N-5), and a long SELECT is not intercepted (P1).
+  pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014

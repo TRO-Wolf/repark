@@ -21,6 +21,7 @@ from repark.spark.session.session_time_zone import (
     SESSION_TIME_ZONE_KEYS,
     normalize_session_time_zone_config,
 )
+from repark.spark.session.sql_set_statements import try_sql_set_statement
 from repark.spark.session.timestamp_type import (
     TIMESTAMP_TYPE_KEYS,
     normalize_timestamp_type_config,
@@ -176,12 +177,11 @@ class ReparkSession:
         # UDTF FROM-name(lit_args) before scalar UDF rewrite (distinct registries).
         from repark.spark.udtf import try_sql_registered_udtf
 
-        udtf_frame = try_sql_registered_udtf(self, query)
-        if udtf_frame is not None:
-            return udtf_frame
+        for rewrite in (try_sql_set_statement, try_sql_registered_udtf):
+            if (frame := rewrite(self, query)) is not None:
+                return frame
         # Registry-name scan before bare-table expand (rewrite may re-enter sql).
-        udf_frame = self._sql_with_registered_udfs(query)
-        if udf_frame is not None:
+        if (udf_frame := self._sql_with_registered_udfs(query)) is not None:
             return udf_frame
         expanded = self._expand_bare_table_names_in_sql(query)
         return DataFrame(inner.sql(expanded), inner, self._alive_token)
