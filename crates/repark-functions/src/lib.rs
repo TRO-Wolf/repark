@@ -62,15 +62,10 @@ pub use lambda_rebind::analyzer_rules_with_higher_order_preparation;
 use std::sync::Arc;
 
 use datafusion::execution::SessionState;
-use datafusion::logical_expr::{LogicalPlan, ScalarUDF};
+use datafusion::logical_expr::LogicalPlan;
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
 use datafusion::prelude::SessionContext;
-
-#[must_use]
-pub fn spark_date_shim_functions() -> Vec<Arc<ScalarUDF>> {
-    datetime::functions()
-}
 
 /// Register the full Spark-compatible scalar/aggregate/window function set into `ctx`.
 pub fn register_all(ctx: &SessionContext) {
@@ -93,7 +88,7 @@ pub fn register_all(ctx: &SessionContext) {
     for udwf in spark_result_types::signed_window_functions() {
         ctx.register_udwf(udwf.as_ref().clone());
     }
-    for udf in spark_date_shim_functions() {
+    for udf in datetime::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
     ctx.register_udf(timestamp_cast::to_date_udf().as_ref().clone());

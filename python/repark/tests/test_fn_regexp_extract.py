@@ -174,10 +174,13 @@ def test_extract_unicode_letter_class() -> None:
 
 
 def test_extract_java_lookbehind_is_loud() -> None:
-    """Lookbehind has no engine support and refuses. pins: fn-regexp-extract-1/C-002"""
-    with pytest.raises(Exception, match="invalid regular expression"):
+    """Lookbehind refuses loud (no engine support).
+
+    pins: fn-regexp-extract-1/C-002; door-converge-2/C-008
+    """
+    with pytest.raises(Exception, match="unsupported Java regular expression feature 'lookbehind'"):
         _session().sql("SELECT regexp_extract('foobar', '(?<=foo)bar', 0) AS r").collect()
-    with pytest.raises(Exception, match="invalid regular expression"):
+    with pytest.raises(Exception, match="unsupported Java regular expression feature 'lookbehind'"):
         _session().range(1).select(
             F.regexp_extract(F.lit("foobar"), "(?<=foo)bar", 0).alias("r")
         ).collect()

@@ -5168,13 +5168,17 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   through an `array_concat` → `concat` analyzer rewrite): array elements widen to the
   common type (`int`+`bigint` → `bigint`, `int`+`decimal(2,1)` → `decimal(11,1)`),
   `containsNull` is the OR of the inputs, the result is nullable iff any input is,
-  any NULL array nulls the row, `binary` stays `binary`, and an array/string mix
-  refuses `DATATYPE_MISMATCH.DATA_DIFF_TYPES` (oracle cells Q12-0…Q12-16).
+  any NULL array nulls the row, all-`BINARY` stays `BINARY`, any other mix with
+  `BINARY` answers `STRING` (each binary read as UTF-8 text), and an array/string
+  mix refuses `DATATYPE_MISMATCH.DATA_DIFF_TYPES` (oracle cells Q12-0…Q12-16;
+  round-3 cells Q15-5…Q15-8).
 - **Apache Spark** — `concat(array(1), array(2))` → `[1, 2]` (`array<int>`,
-  non-null); the full cell table is Q12-0…Q12-16. *(oracle: recorded PySpark 4.1.2
-  fixtures-batch12, 2026-09-15.)*
+  non-null); the full cell table is Q12-0…Q12-16. `concat('A', CAST(X'42' AS BINARY))`
+  → STRING `'AB'` (Q15-5…Q15-8). *(oracle: recorded PySpark 4.1.2
+  fixtures-batch12, 2026-09-15; fixtures-batch15-critic-622, 2026-09-15.)*
 - **Pin** — `python/repark/tests/test_door_converge_2.py::test_sql_cell` (`Q12-0…Q12-16`
-  legs), `test_facade_concat_arrays`, and the `concat_array` / `string` Rust unit pins.
+  legs), `test_q15_cell` (`Q15-5…Q15-8` legs), `test_facade_concat_arrays`,
+  `test_facade_concat_string_binary`, and the `concat_array` / `string` Rust unit pins.
 - **Rationale** — FIXED. History: the Spark-door shim coerced every argument to `Utf8`,
   so arrays stringified (`'[1][2]'`).
   pins: door-converge-2/C-001, C-005
@@ -5207,8 +5211,13 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   wrong-sign steps raise with Spark's exact
   `requirement failed: Illegal sequence boundaries: …` text on the base
   `PySparkException` mapping, decimal bounds refuse
-  `DATATYPE_MISMATCH.SEQUENCE_WRONG_INPUT_TYPES`, and the plan-time
-  `ArrayCardinalityCeiling` still fires (oracle cells Q12-26…Q12-40). The oracle
+  `DATATYPE_MISMATCH.SEQUENCE_WRONG_INPUT_TYPES`, the plan-time
+  `ArrayCardinalityCeiling` still fires for literal stops, and the same cap now fires
+  at runtime inside the row builders (closed-form cardinality up front, same refusal
+  text) so column stops obey RePark's own `repark.sql.maxArrayElements` policy too
+  (oracle cells Q12-26…Q12-40; round-3 cells Q15-0…Q15-4 month stepping from the start,
+  Q15-18/Q15-19 cap refusals). Month steps compute element `i` from the start
+  (`start + months × i`, Spark `daysAddMonths`), never by chaining. The oracle
   class (`IllegalArgumentException`, G-2 Q3) stays OPEN: execution errors cross
   Arrow IPC and remap in `dataframe/export_errors.py` (run 16b's fence) — P2
   hand-off to run 16b, tracked in the unit ledger. Supersedes
@@ -5217,8 +5226,10 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Apache Spark** — `sequence(1, 3)` → `[1, 2, 3]` (`array<int>`); the full cell table
   is Q12-26…Q12-40. *(oracle: recorded PySpark 4.1.2 fixtures-batch12, 2026-09-15.)*
 - **Pin** — `python/repark/tests/test_door_converge_2.py::test_sql_cell` (`Q12-26…Q12-40`
-  legs), `test_sql_error_cell` (`Q12-31`, `Q12-32`, `Q12-40`), `test_facade_sequence_column_stop`,
-  `test_facade_sequence_literals`,
+  legs), `test_sql_error_cell` (`Q12-31`, `Q12-32`, `Q12-40`), `test_q15_cell` (`Q15-0…Q15-4`
+  legs), `test_q15_error_cell` (`Q15-18`, `Q15-19` legs), `test_facade_sequence_column_stop`,
+  `test_facade_sequence_literals`, `test_facade_sequence_month_step`,
+  `test_facade_sequence_column_cap`,
   `python/repark/tests/test_fnp_9_collections_json.py::test_sequence_descending_counts_down_and_illegal_step_raises`,
   and the `spark_sequence` Rust unit pins.
 - **Rationale** — FIXED. History: the name was unregistered on the SQL door and the
@@ -5234,15 +5245,46 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   in → NULL out, `containsNull=false`, numeric first argument casts to string)
   with the Rust facade arm in `dispatch_spark.rs` (oracle cells Q12-41…Q12-55). The
   Python `F.split` still raises `UnsupportedOperationException` — P2 hand-off to run
-  16a, recorded in the unit ledger.
+  16a, recorded in the unit ledger. Round 3: `\Q…\E` literal quoting translates in the
+  shared compiler (Q15-9); lookahead/lookbehind, backreferences and possessive
+  quantifiers refuse loudly naming the feature (Q15-10…Q15-12, shared with
+  `regexp_*`/`rlike`); an invalid pattern keeps the `regex`-crate text beside Spark's
+  `Unclosed character class` (Q15-13, class under the 16b export hand-off).
 - **Apache Spark** — `split('a,b', ',')` → `['a', 'b']`; the full cell table is
-  Q12-41…Q12-55. *(oracle: recorded PySpark 4.1.2 fixtures-batch12, 2026-09-15.)*
+  Q12-41…Q12-55. *(oracle: recorded PySpark 4.1.2 fixtures-batch12, 2026-09-15;
+  fixtures-batch15-critic-622, 2026-09-15.)*
 - **Pin** — `python/repark/tests/test_door_converge_2.py::test_sql_cell` (`Q12-41…Q12-55`
-  legs) and the `spark_split` Rust unit pins; `test_facade_split_refusal_handoff_16a`
-  guards the Python refusal until run 16a wires it.
+  legs), `test_q15_cell` (`Q15-9`, `Q15-14`, `Q15-16` legs), `test_q15_error_cell`
+  (`Q15-10…Q15-13` legs) and the `spark_split` Rust unit pins;
+  `test_facade_split_refusal_handoff_16a` guards the Python refusal until run 16a
+  wires it.
 - **Rationale** — FIXED on the SQL door. History: the name was unregistered
   (`Invalid function 'split'`).
-  pins: door-converge-2/C-004, C-005
+  pins: door-converge-2/C-004, C-005; door-converge-2/C-008
+
+### JAVA-REGEX-FEATURES-1 — lookaround, backreferences and possessive quantifiers refuse — **BACKLOG 2026-09-15 (DOOR-CONVERGE-2 round 3)**
+
+- **repark** — `split` (and `regexp_*`/`rlike` through the shared compiler) raises
+  `unsupported Java regular expression feature 'lookahead' | 'lookbehind' |
+  'backreference' | 'possessive quantifier' in pattern '…'` where Spark evaluates:
+  `split('a,b,c', '(?=,)')` → `['a', ',b', ',c']` (Q15-10),
+  `split('aa-bb', '(a|b)\1')` → `['', '-', '']` (Q15-11),
+  `split('aaa', 'a++a')` → `['aaa']` (Q15-12). The `regex` crate has no lookaround,
+  backreferences or possessive quantifiers; closing the gap needs a regex engine
+  with those features (a new dependency — the owner decides, carried by the
+  orchestrator). An invalid pattern (`split('ab', '[')`, Q15-13) keeps the
+  `regex`-crate text (`unclosed character class`, lowercase) beside Spark's
+  `IllegalArgumentException` `Unclosed character class near index 0` (class under
+  the 16b export hand-off with C-003).
+- **Apache Spark** — evaluates all three cells above. *(oracle: live PySpark 4.1.2,
+  fixtures-batch15-critic-622, 2026-09-15.)*
+- **Pin** — `python/repark/tests/test_door_converge_2.py::test_q15_error_cell`
+  (`Q15-10`, `Q15-11`, `Q15-12` refusal legs, `Q15-13` text leg) pins today's
+  refusal so the fix flips it loudly.
+- **Rationale** — BACKLOG, filed 2026-09-15 (DOOR-CONVERGE-2 round 3). The refusal is
+  loud and names the feature; the fix is a regex-engine dependency the owner must
+  approve.
+  pins: door-converge-2/C-008
 
 ### FN-INITCAP-1 — `initcap` starts a word at any non-alphanumeric — **FIXED 2026-09-04 (FN-FIX-2)**
 

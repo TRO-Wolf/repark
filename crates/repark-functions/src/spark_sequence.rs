@@ -2,9 +2,11 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use datafusion::arrow::array::{
-    Array, ArrayRef, Date32Array, Int64Array, IntervalMonthDayNanoArray, ListArray,
-    TimestampMicrosecondArray,
+    Array, ArrayRef, Date32Array, Int8Array, Int16Array, Int32Array, Int64Array,
+    IntervalMonthDayNanoArray, ListArray, TimestampMicrosecondArray,
 };
+use datafusion::common::ScalarValue;
+
 use datafusion::arrow::buffer::{NullBuffer, OffsetBuffer};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{
@@ -15,6 +17,8 @@ use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     TypeSignature, Volatility,
 };
+
+mod rows;
 
 #[must_use]
 pub fn sequence_udf() -> Arc<ScalarUDF> {
@@ -201,6 +205,19 @@ impl ScalarUDFImpl for SparkSequence {
         let DataType::List(element) = return_field.data_type() else {
             return exec_err!("sequence needs a list return");
         };
+        if arg_values
+            .iter()
+            .all(|value| matches!(value, ColumnarValue::Scalar(_)))
+        {
+            return match element.data_type() {
+                DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {
+                    scalar_ints(element, &arg_values)
+                }
+                DataType::Date32 => scalar_dates(element, &arg_values),
+                DataType::Timestamp(_, _) => scalar_timestamps(element, &arg_values),
+                other => exec_err!("sequence cannot build {other} elements"),
+            };
+        }
         let arrays = ColumnarValue::values_to_arrays(&arg_values)?;
         let row_count = arrays.first().map_or(0, Array::len);
         match element.data_type() {
@@ -212,6 +229,195 @@ impl ScalarUDFImpl for SparkSequence {
             other => exec_err!("sequence cannot build {other} elements"),
         }
     }
+}
+
+fn finish_one(element: &FieldRef, values: ArrayRef, valid: bool) -> Result<ColumnarValue> {
+    let end = fit_i32(values.len())?;
+    finish_list(element, vec![0, end], vec![valid], !valid, values)
+}
+
+fn scalar_int(value: &ColumnarValue) -> Result<Option<i64>> {
+    match value {
+        ColumnarValue::Scalar(ScalarValue::Null) => Ok(None),
+        ColumnarValue::Scalar(scalar) => {
+            let single = as_i64(&scalar.to_array_of_size(1)?)?;
+            Ok(if single.is_null(0) {
+                None
+            } else {
+                Some(single.value(0))
+            })
+        }
+        ColumnarValue::Array(_) => exec_err!("sequence needs scalar bounds on the scalar path"),
+    }
+}
+
+fn scalar_days(value: &ColumnarValue) -> Result<Option<i32>> {
+    match value {
+        ColumnarValue::Scalar(ScalarValue::Null) => Ok(None),
+        ColumnarValue::Scalar(scalar) => {
+            let single = as_date_days(&scalar.to_array_of_size(1)?)?;
+            Ok(if single.is_null(0) {
+                None
+            } else {
+                Some(single.value(0))
+            })
+        }
+        ColumnarValue::Array(_) => exec_err!("sequence needs scalar bounds on the scalar path"),
+    }
+}
+
+fn scalar_interval(value: &ColumnarValue) -> Result<Option<IntervalMonthDayNano>> {
+    match value {
+        ColumnarValue::Scalar(ScalarValue::Null) => Ok(None),
+        ColumnarValue::Scalar(ScalarValue::IntervalMonthDayNano(v)) => Ok(*v),
+        _ => exec_err!("sequence needs a month-day-nano step on the scalar path"),
+    }
+}
+
+fn scalar_micros(value: &ColumnarValue) -> Result<Option<i64>> {
+    match value {
+        ColumnarValue::Scalar(ScalarValue::Null) => Ok(None),
+        ColumnarValue::Scalar(scalar) => {
+            let single = as_micros(&scalar.to_array_of_size(1)?)?;
+            Ok(if single.is_null(0) {
+                None
+            } else {
+                Some(single.value(0))
+            })
+        }
+        ColumnarValue::Array(_) => exec_err!("sequence needs scalar bounds on the scalar path"),
+    }
+}
+
+fn scalar_ints(element: &FieldRef, args: &[ColumnarValue]) -> Result<ColumnarValue> {
+    let start = scalar_int(&args[0])?;
+    let stop = scalar_int(&args[1])?;
+    let stride = if args.len() > 2 {
+        Some(scalar_int(&args[2])?)
+    } else {
+        None
+    };
+    match (start, stop, stride) {
+        (Some(start), Some(stop), None) => {
+            let shaped = shape_ints(element, rows::int_row(start, stop, None)?)?;
+            finish_one(element, shaped, true)
+        }
+        (Some(start), Some(stop), Some(Some(given))) => {
+            let shaped = shape_ints(element, rows::int_row(start, stop, Some(given))?)?;
+            finish_one(element, shaped, true)
+        }
+        _ => {
+            let shaped = shape_ints(element, Vec::new())?;
+            finish_one(element, shaped, false)
+        }
+    }
+}
+
+fn scalar_dates(element: &FieldRef, args: &[ColumnarValue]) -> Result<ColumnarValue> {
+    let start = scalar_days(&args[0])?;
+    let stop = scalar_days(&args[1])?;
+    let stride = if args.len() > 2 {
+        Some(scalar_interval(&args[2])?)
+    } else {
+        None
+    };
+    if let (Some(start), Some(stop), stride) = (start, stop, stride) {
+        let explicit = match stride {
+            None => None,
+            Some(None) => {
+                let shaped = shape_dates(Vec::new());
+                return finish_one(element, shaped, false);
+            }
+            Some(Some(given)) => Some(given),
+        };
+        match rows::date_row(start, stop, explicit)? {
+            None => {
+                let shaped = shape_dates(Vec::new());
+                finish_one(element, shaped, false)
+            }
+            Some(pieces) => {
+                let shaped = shape_dates(pieces);
+                finish_one(element, shaped, true)
+            }
+        }
+    } else {
+        let shaped = shape_dates(Vec::new());
+        finish_one(element, shaped, false)
+    }
+}
+
+fn scalar_timestamps(element: &FieldRef, args: &[ColumnarValue]) -> Result<ColumnarValue> {
+    let start = scalar_micros(&args[0])?;
+    let stop = scalar_micros(&args[1])?;
+    let stride = if args.len() > 2 {
+        Some(scalar_interval(&args[2])?)
+    } else {
+        None
+    };
+    if let (Some(start), Some(stop), stride) = (start, stop, stride) {
+        let explicit = match stride {
+            None => None,
+            Some(None) => {
+                let shaped = shape_timestamps(Vec::new());
+                return finish_one(element, shaped, false);
+            }
+            Some(Some(given)) => Some(given),
+        };
+        match rows::timestamp_row(start, stop, explicit)? {
+            None => {
+                let shaped = shape_timestamps(Vec::new());
+                finish_one(element, shaped, false)
+            }
+            Some(pieces) => {
+                let shaped = shape_timestamps(pieces);
+                finish_one(element, shaped, true)
+            }
+        }
+    } else {
+        let shaped = shape_timestamps(Vec::new());
+        finish_one(element, shaped, false)
+    }
+}
+
+fn shape_ints(element: &FieldRef, values: Vec<i64>) -> Result<ArrayRef> {
+    let out_of_range = |value: i64| {
+        DataFusionError::Execution(format!(
+            "sequence value {value} does not fit {}",
+            element.data_type()
+        ))
+    };
+    match element.data_type() {
+        DataType::Int8 => {
+            let mut narrow = Vec::with_capacity(values.len());
+            for value in values {
+                narrow.push(i8::try_from(value).map_err(|_| out_of_range(value))?);
+            }
+            Ok(Arc::new(Int8Array::from(narrow)))
+        }
+        DataType::Int16 => {
+            let mut narrow = Vec::with_capacity(values.len());
+            for value in values {
+                narrow.push(i16::try_from(value).map_err(|_| out_of_range(value))?);
+            }
+            Ok(Arc::new(Int16Array::from(narrow)))
+        }
+        DataType::Int32 => {
+            let mut narrow = Vec::with_capacity(values.len());
+            for value in values {
+                narrow.push(i32::try_from(value).map_err(|_| out_of_range(value))?);
+            }
+            Ok(Arc::new(Int32Array::from(narrow)))
+        }
+        _ => Ok(Arc::new(Int64Array::from(values))),
+    }
+}
+
+fn shape_dates(values: Vec<i32>) -> ArrayRef {
+    Arc::new(Date32Array::from(values))
+}
+
+fn shape_timestamps(values: Vec<i64>) -> ArrayRef {
+    Arc::new(TimestampMicrosecondArray::from(values).with_timezone("UTC"))
 }
 
 fn invoke_ints(arrays: &[ArrayRef], row_count: usize, element: &FieldRef) -> Result<ColumnarValue> {
@@ -239,18 +445,15 @@ fn invoke_ints(arrays: &[ArrayRef], row_count: usize, element: &FieldRef) -> Res
             validity.push(false);
             any_null = true;
         } else {
-            match int_row(starts.value(row), stops.value(row), explicit.flatten()) {
-                Err(error) => return Err(error),
-                Ok(pieces) => {
-                    validity.push(true);
-                    values.extend(pieces);
-                }
-            }
+            let start = starts.value(row);
+            let stop = stops.value(row);
+            let stride = rows::resolve_int_stride(start, stop, explicit.flatten())?;
+            rows::push_ints(&mut values, start, stop, stride)?;
+            validity.push(true);
         }
         offsets.push(fit_i32(values.len())?);
     }
-    let built: ArrayRef = Arc::new(Int64Array::from(values));
-    let shaped = cast(built.as_ref(), element.data_type())?;
+    let shaped = shape_ints(element, values)?;
     finish_list(element, offsets, validity, any_null, shaped)
 }
 
@@ -278,7 +481,7 @@ fn invoke_dates(
             any_null = true;
         } else {
             let interval = strides.as_ref().map(|strides| strides.value(row));
-            match date_row(starts.value(row), stops.value(row), interval) {
+            match rows::date_row(starts.value(row), stops.value(row), interval) {
                 Err(error) => return Err(error),
                 Ok(None) => {
                     validity.push(false);
@@ -292,7 +495,7 @@ fn invoke_dates(
         }
         offsets.push(fit_i32(values.len())?);
     }
-    let shaped: ArrayRef = Arc::new(Date32Array::from(values));
+    let shaped = shape_dates(values);
     finish_list(element, offsets, validity, any_null, shaped)
 }
 
@@ -320,7 +523,7 @@ fn invoke_timestamps(
             any_null = true;
         } else {
             let interval = strides.as_ref().map(|strides| strides.value(row));
-            match timestamp_row(starts.value(row), stops.value(row), interval) {
+            match rows::timestamp_row(starts.value(row), stops.value(row), interval) {
                 Err(error) => return Err(error),
                 Ok(None) => {
                     validity.push(false);
@@ -334,8 +537,7 @@ fn invoke_timestamps(
         }
         offsets.push(fit_i32(values.len())?);
     }
-    let built: ArrayRef = Arc::new(TimestampMicrosecondArray::from(values).with_timezone("UTC"));
-    let shaped = cast(built.as_ref(), element.data_type())?;
+    let shaped = shape_timestamps(values);
     finish_list(element, offsets, validity, any_null, shaped)
 }
 
@@ -409,271 +611,6 @@ fn finish_list(
         values,
         nulls,
     )?)))
-}
-
-fn boundary_error(start: &str, stop: &str, stride: &str) -> DataFusionError {
-    DataFusionError::Execution(format!(
-        "requirement failed: Illegal sequence boundaries: {start} to {stop} by {stride}"
-    ))
-}
-
-fn int_row(start: i64, stop: i64, stride: Option<i64>) -> Result<Vec<i64>> {
-    match stride {
-        None => {
-            let default = if stop >= start { 1 } else { -1 };
-            Ok(collect_ints(start, stop, default))
-        }
-        Some(given) => {
-            if given == 0 || (given > 0 && start > stop) || (given < 0 && start < stop) {
-                return Err(int_step_error(start, stop, given));
-            }
-            Ok(collect_ints(start, stop, given))
-        }
-    }
-}
-
-fn collect_ints(start: i64, stop: i64, stride: i64) -> Vec<i64> {
-    let mut values = Vec::new();
-    let mut current = start;
-    loop {
-        values.push(current);
-        if current == stop {
-            break;
-        }
-        match current.checked_add(stride) {
-            Some(next) if (stride > 0 && next <= stop) || (stride < 0 && next >= stop) => {
-                current = next;
-            }
-            _ => break,
-        }
-    }
-    values
-}
-
-fn int_step_error(start: i64, stop: i64, stride: i64) -> DataFusionError {
-    boundary_error(&start.to_string(), &stop.to_string(), &stride.to_string())
-}
-
-fn date_row(
-    start: i32,
-    stop: i32,
-    stride: Option<IntervalMonthDayNano>,
-) -> Result<Option<Vec<i32>>> {
-    match stride {
-        None => {
-            let default = if stop >= start { 1 } else { -1 };
-            Ok(Some(collect_dates(
-                start,
-                stop,
-                &IntervalMonthDayNano::new(0, default, 0),
-            )?))
-        }
-        Some(interval) => {
-            if interval.months == 0 && interval.days == 0 && interval.nanoseconds == 0 {
-                return Err(boundary_error(
-                    &format_days(start)?,
-                    &format_days(stop)?,
-                    &format_interval(&interval),
-                ));
-            }
-            if interval.nanoseconds != 0 {
-                return Err(DataFusionError::Execution(format!(
-                    "sequence date step carries sub-day nanos: {}",
-                    format_interval(&interval)
-                )));
-            }
-            if start == stop {
-                return Ok(Some(vec![start]));
-            }
-            let sign = if interval.months != 0 {
-                interval.months.signum()
-            } else {
-                interval.days.signum()
-            };
-            let want = if stop > start { 1 } else { -1 };
-            if sign != want {
-                return Err(boundary_error(
-                    &format_days(start)?,
-                    &format_days(stop)?,
-                    &format_interval(&interval),
-                ));
-            }
-            Ok(Some(collect_dates(start, stop, &interval)?))
-        }
-    }
-}
-
-fn collect_dates(start: i32, stop: i32, stride: &IntervalMonthDayNano) -> Result<Vec<i32>> {
-    let mut values = vec![start];
-    let mut current = start;
-    loop {
-        if current == stop {
-            break;
-        }
-        let next = add_date_interval(current, stride)?;
-        if (stop > start && next > stop) || (stop < start && next < stop) || next == current {
-            break;
-        }
-        values.push(next);
-        current = next;
-    }
-    Ok(values)
-}
-
-fn timestamp_row(
-    start: i64,
-    stop: i64,
-    stride: Option<IntervalMonthDayNano>,
-) -> Result<Option<Vec<i64>>> {
-    match stride {
-        None => {
-            let default = if stop >= start {
-                IntervalMonthDayNano::new(0, 0, 1_000_000_000)
-            } else {
-                IntervalMonthDayNano::new(0, 0, -1_000_000_000)
-            };
-            Ok(Some(collect_timestamps(start, stop, &default)?))
-        }
-        Some(interval) => {
-            if interval.months == 0 && interval.days == 0 && interval.nanoseconds == 0 {
-                return Err(boundary_error(
-                    &format_micros(start)?,
-                    &format_micros(stop)?,
-                    &format_interval(&interval),
-                ));
-            }
-            if interval.nanoseconds % 1_000 != 0 {
-                return Err(DataFusionError::Execution(format!(
-                    "sequence timestamp step carries sub-microsecond nanos: {}",
-                    format_interval(&interval)
-                )));
-            }
-            if start == stop {
-                return Ok(Some(vec![start]));
-            }
-            let sign = if interval.months != 0 {
-                i64::from(interval.months.signum())
-            } else if interval.days != 0 {
-                i64::from(interval.days.signum())
-            } else {
-                interval.nanoseconds.signum()
-            };
-            let want = if stop > start { 1 } else { -1 };
-            if sign != want {
-                return Err(boundary_error(
-                    &format_micros(start)?,
-                    &format_micros(stop)?,
-                    &format_interval(&interval),
-                ));
-            }
-            Ok(Some(collect_timestamps(start, stop, &interval)?))
-        }
-    }
-}
-
-fn collect_timestamps(start: i64, stop: i64, stride: &IntervalMonthDayNano) -> Result<Vec<i64>> {
-    let mut values = vec![start];
-    let mut current = start;
-    loop {
-        if current == stop {
-            break;
-        }
-        let next = add_timestamp_interval(current, stride)?;
-        if (stop > start && next > stop) || (stop < start && next < stop) || next == current {
-            break;
-        }
-        values.push(next);
-        current = next;
-    }
-    Ok(values)
-}
-
-fn epoch_date() -> Result<chrono::NaiveDate> {
-    chrono::NaiveDate::from_ymd_opt(1970, 1, 1)
-        .ok_or_else(|| DataFusionError::Execution("sequence date out of range".to_owned()))
-}
-
-fn ymd_from_days(days: i32) -> Result<chrono::NaiveDate> {
-    let epoch = epoch_date()?;
-    let delta = chrono::TimeDelta::try_days(i64::from(days))
-        .ok_or_else(|| DataFusionError::Execution("sequence date out of range".to_owned()))?;
-    epoch
-        .checked_add_signed(delta)
-        .ok_or_else(|| DataFusionError::Execution("sequence date out of range".to_owned()))
-}
-
-fn days_from_ymd(date: chrono::NaiveDate) -> Result<i32> {
-    let span = date.signed_duration_since(epoch_date()?).num_days();
-    i32::try_from(span)
-        .map_err(|_| DataFusionError::Execution("sequence date out of range".to_owned()))
-}
-
-fn add_date_interval(days: i32, step: &IntervalMonthDayNano) -> Result<i32> {
-    let date = ymd_from_days(days)?;
-    let shifted = if step.months != 0 {
-        crate::datetime::spark_add_months(date, step.months).ok_or_else(|| {
-            DataFusionError::Execution("sequence month step out of range".to_owned())
-        })?
-    } else {
-        date
-    };
-    let delta = chrono::TimeDelta::try_days(i64::from(step.days))
-        .ok_or_else(|| DataFusionError::Execution("sequence day step out of range".to_owned()))?;
-    let shifted = shifted
-        .checked_add_signed(delta)
-        .ok_or_else(|| DataFusionError::Execution("sequence day step out of range".to_owned()))?;
-    days_from_ymd(shifted)
-}
-
-fn add_timestamp_interval(micros: i64, step: &IntervalMonthDayNano) -> Result<i64> {
-    let naive = crate::datetime::datetime_from_micros(micros)
-        .ok_or_else(|| DataFusionError::Execution("sequence timestamp out of range".to_owned()))?;
-    let shifted = if step.months != 0 {
-        let date =
-            crate::datetime::spark_add_months(naive.date(), step.months).ok_or_else(|| {
-                DataFusionError::Execution("sequence month step out of range".to_owned())
-            })?;
-        date.and_time(naive.time())
-    } else {
-        naive
-    };
-    let delta = chrono::TimeDelta::try_days(i64::from(step.days))
-        .ok_or_else(|| DataFusionError::Execution("sequence timestamp out of range".to_owned()))?;
-    let shifted = shifted
-        .checked_add_signed(delta)
-        .ok_or_else(|| DataFusionError::Execution("sequence timestamp out of range".to_owned()))?;
-    shifted
-        .and_utc()
-        .timestamp_micros()
-        .checked_add(step.nanoseconds / 1_000)
-        .ok_or_else(|| DataFusionError::Execution("sequence timestamp out of range".to_owned()))
-}
-
-fn format_days(days: i32) -> Result<String> {
-    Ok(ymd_from_days(days)?.to_string())
-}
-
-fn format_micros(micros: i64) -> Result<String> {
-    crate::datetime::datetime_from_micros(micros)
-        .map(|naive| naive.to_string())
-        .ok_or_else(|| DataFusionError::Execution("sequence timestamp out of range".to_owned()))
-}
-
-fn format_interval(interval: &IntervalMonthDayNano) -> String {
-    let mut parts = Vec::new();
-    if interval.months != 0 {
-        parts.push(format!("{} months", interval.months));
-    }
-    if interval.days != 0 {
-        parts.push(format!("{} days", interval.days));
-    }
-    if interval.nanoseconds != 0 {
-        parts.push(format!("{} nanos", interval.nanoseconds));
-    }
-    if parts.is_empty() {
-        parts.push("0".to_owned());
-    }
-    parts.join(" ")
 }
 
 #[cfg(test)]
@@ -848,5 +785,23 @@ mod tests {
             .downcast_ref::<Date32Array>()
             .expect("date values");
         assert_eq!(days.values(), &[19723, 19754, 19783]);
+        let batches = ctx
+            .sql("SELECT sequence(DATE'2024-01-31', DATE'2024-03-31', INTERVAL 1 MONTH)")
+            .await
+            .expect("plan clamping month step")
+            .collect()
+            .await
+            .expect("execute clamping month step");
+        let lists = batches[0].column(0).as_list::<i32>();
+        let row = lists.value(0);
+        let days = row
+            .as_any()
+            .downcast_ref::<Date32Array>()
+            .expect("date values");
+        let rendered: Vec<String> = days
+            .iter()
+            .map(|day| rows::format_days(day.expect("date value")).expect("format date"))
+            .collect();
+        assert_eq!(rendered, vec!["2024-01-31", "2024-02-29", "2024-03-31"]);
     }
 }

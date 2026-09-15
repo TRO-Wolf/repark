@@ -277,6 +277,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   legs plus facade value/type/nullability legs, the illegal-step text pin (oracle
   class OPEN, run-16b hand-off) and the run-16a `F.split` red-when-wired refusal
   guard. pins: door-converge-2/C-001, C-002, C-003, C-004, C-005
+  **Round 3 (2026-09-15):** critic cells Q15-0…Q15-19 (month steps from the start,
+  STRING+BINARY concat, `\Q…\E` + loud feature refusals, limit equivalence,
+  code-point empty splits, column/literal cap refusals) with the Q15 id sequence
+  realigned to the oracle, a real nested-column `reverse` pin on both doors, and
+  scalar/limit/LRU perf-equivalence legs.
+  pins: door-converge-2/C-007, C-008, C-009
   **Round 2 (2026-09-16):** `unbase64` raises the Java MIME-decoder texts on
   malformed endings while `'QR'`/`'QQQ'`/whitespace/`'!!'` stay lenient;
   `array_contains` coerces to the tightest common type (DOUBLE needle →
@@ -4569,6 +4575,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `''` on no match, NULL-in NULL-out, `REGEX_GROUP_INDEX` naming `regexp_extract`, POSIX union,
   `\p{L}`, non-ASCII/empty edges, lookbehind refusal; round 2: non-matching input answers
   `''` for any idx on both doors). pins: fn-regexp-extract-1/C-002, C-003
+  **DOOR-CONVERGE-2 round 3 (2026-09-15):** the lookbehind refusal names the feature
+  (`unsupported Java regular expression feature 'lookbehind'`). pins: door-converge-2/C-008
 
 - `test_fnp_9_collections_json.py` — **FNP-9/10 (2026-09-05):** the collections and JSON
   families on both Spark-facade doors against the live PySpark 4.1.2 oracle — `get_json_object`

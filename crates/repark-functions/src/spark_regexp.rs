@@ -523,9 +523,126 @@ fn validate_group_index(raw_group: i32, regex: &Regex, name: &str) -> Result<usi
     })
 }
 
+fn unsupported_java_feature(pattern: &str) -> Option<&'static str> {
+    let bytes = pattern.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'\\' => {
+                index += 1;
+                if index >= bytes.len() {
+                    break;
+                }
+                match bytes[index] {
+                    b'Q' => {
+                        index += 1;
+                        while index < bytes.len() {
+                            if bytes[index] == b'\\' && bytes.get(index + 1) == Some(&b'E') {
+                                index += 2;
+                                break;
+                            }
+                            index += 1;
+                        }
+                    }
+                    b'1'..=b'9' => return Some("backreference"),
+                    b'k' => {
+                        if bytes.get(index + 1) == Some(&b'<') {
+                            return Some("backreference");
+                        }
+                        index += 1;
+                    }
+                    _ => index += 1,
+                }
+            }
+            b'[' => {
+                index += 1;
+                if bytes.get(index) == Some(&b'^') {
+                    index += 1;
+                }
+                if bytes.get(index) == Some(&b']') {
+                    index += 1;
+                }
+                while index < bytes.len() && bytes[index] != b']' {
+                    if bytes[index] == b'\\' {
+                        index += 1;
+                    }
+                    index += 1;
+                }
+                index += 1;
+            }
+            b'(' => match (
+                bytes.get(index + 1),
+                bytes.get(index + 2),
+                bytes.get(index + 3),
+            ) {
+                (Some(b'?'), Some(b'=' | b'!'), _) => return Some("lookahead"),
+                (Some(b'?'), Some(b'<'), Some(b'=' | b'!')) => return Some("lookbehind"),
+                _ => index += 1,
+            },
+            b'*' | b'+' | b'?' => {
+                if bytes.get(index + 1) == Some(&b'+') {
+                    return Some("possessive quantifier");
+                }
+                index += 1;
+            }
+            b'}' => {
+                if bytes.get(index + 1) == Some(&b'+') {
+                    let mut back = index;
+                    while back > 0 && (bytes[back - 1].is_ascii_digit() || bytes[back - 1] == b',')
+                    {
+                        back -= 1;
+                    }
+                    if back > 0
+                        && bytes[back - 1] == b'{'
+                        && bytes.get(back).is_some_and(u8::is_ascii_digit)
+                    {
+                        return Some("possessive quantifier");
+                    }
+                }
+                index += 1;
+            }
+            _ => index += 1,
+        }
+    }
+    None
+}
+
+fn translate_java_quotations(pattern: &str) -> String {
+    let mut out = String::with_capacity(pattern.len());
+    let mut rest = pattern;
+    while let Some(start) = rest.find("\\Q") {
+        out.push_str(&rest[..start]);
+        let quoted = &rest[start + 2..];
+        if let Some(end) = quoted.find("\\E") {
+            out.push_str(&regex::escape(&quoted[..end]));
+            rest = &quoted[end + 2..];
+        } else {
+            out.push_str(&regex::escape(quoted));
+            rest = "";
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+pub(crate) fn translate_java_pattern(pattern: &str) -> Result<String> {
+    if let Some(feature) = unsupported_java_feature(pattern) {
+        return Err(DataFusionError::Execution(format!(
+            "unsupported Java regular expression feature '{feature}' in pattern '{pattern}'"
+        )));
+    }
+    let quoted = translate_java_quotations(pattern);
+    let translated = crate::java_regex::translate_java_char_classes(&quoted);
+    Ok(crate::collection::bind_ascii_perl_classes(&translated))
+}
+
 pub(crate) fn compile_spark_regex(pattern: &str) -> Result<Regex> {
-    let translated = crate::java_regex::translate_java_char_classes(pattern);
-    let bound = crate::collection::bind_ascii_perl_classes(&translated);
+    if let Some(feature) = unsupported_java_feature(pattern) {
+        return Err(DataFusionError::Execution(format!(
+            "unsupported Java regular expression feature '{feature}' in pattern '{pattern}'"
+        )));
+    }
+    let bound = translate_java_pattern(pattern)?;
     Regex::new(&bound).map_err(|error| {
         DataFusionError::Execution(format!("invalid regular expression '{pattern}': {error}"))
     })
@@ -552,7 +669,18 @@ fn matches_at_mid_surrogate_index(pattern: &Regex) -> bool {
 
 /// Collect matches with Java's empty-after-non-empty stepping.
 pub(crate) fn collect_matches(text: &str, pattern: &Regex) -> Result<Vec<(usize, usize)>> {
+    collect_matches_up_to(text, pattern, usize::MAX)
+}
+
+pub(crate) fn collect_matches_up_to(
+    text: &str,
+    pattern: &Regex,
+    max_matches: usize,
+) -> Result<Vec<(usize, usize)>> {
     let mut found_all = Vec::new();
+    if max_matches == 0 {
+        return Ok(found_all);
+    }
     if pattern.as_str().is_empty() {
         let boundaries = text
             .char_indices()
@@ -571,6 +699,9 @@ pub(crate) fn collect_matches(text: &str, pattern: &Regex) -> Result<Vec<(usize,
             break;
         };
         found_all.push((found.start(), found.end()));
+        if found_all.len() >= max_matches {
+            break;
+        }
         if found_all.len() > usize::try_from(i32::MAX).unwrap_or(usize::MAX) {
             return Err(count_overflow());
         }
@@ -650,351 +781,4 @@ fn first_match_utf16_start(text: &str, pattern: &Regex) -> Result<i32> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    use datafusion::arrow::array::AsArray;
-    use datafusion::prelude::SessionContext;
-
-    fn ctx() -> SessionContext {
-        let ctx = SessionContext::new();
-        ctx.register_udf(regexp_count_udf().as_ref().clone());
-        ctx.register_udf(regexp_instr_udf().as_ref().clone());
-        ctx
-    }
-
-    fn ctx_register_all() -> SessionContext {
-        let ctx = SessionContext::new();
-        crate::register_all(&ctx);
-        ctx
-    }
-
-    async fn one_i32(ctx: &SessionContext, sql: &str) -> Option<i32> {
-        let batches = ctx
-            .sql(sql)
-            .await
-            .unwrap_or_else(|error| panic!("plan {sql}: {error}"))
-            .collect()
-            .await
-            .unwrap_or_else(|error| panic!("exec {sql}: {error}"));
-        let array = batches[0]
-            .column(0)
-            .as_primitive::<datafusion::arrow::datatypes::Int32Type>();
-        if array.is_null(0) {
-            None
-        } else {
-            Some(array.value(0))
-        }
-    }
-
-    async fn one_str(ctx: &SessionContext, sql: &str) -> Option<String> {
-        let batches = ctx
-            .sql(sql)
-            .await
-            .unwrap_or_else(|error| panic!("plan {sql}: {error}"))
-            .collect()
-            .await
-            .unwrap_or_else(|error| panic!("exec {sql}: {error}"));
-        let array = batches[0].column(0).as_string::<i32>();
-        if array.is_null(0) {
-            None
-        } else {
-            Some(array.value(0).to_owned())
-        }
-    }
-
-    #[tokio::test]
-    async fn regexp_count_null_in_null_out() {
-        let ctx = ctx();
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_count(CAST(NULL AS VARCHAR), 'ab')").await,
-            None
-        );
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_count('ababab', CAST(NULL AS VARCHAR))").await,
-            None
-        );
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_count('ababab', 'ab')").await,
-            Some(3)
-        );
-    }
-
-    #[tokio::test]
-    async fn regexp_instr_ignores_idx_value() {
-        let ctx = ctx();
-        // Discriminator: group-index would be 3; Spark (and we) return match start 2.
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_instr('abcde', 'b(c)d', 1)").await,
-            Some(2)
-        );
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_instr('abcde', 'b(c)d', 0)").await,
-            Some(2)
-        );
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_instr('abcde', 'b(c)d', 3)").await,
-            Some(2)
-        );
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_instr('abcde', 'b(c)d', 99)").await,
-            Some(2)
-        );
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_instr('abcde', 'b(c)d')").await,
-            Some(2)
-        );
-        assert_eq!(
-            one_i32(
-                &ctx,
-                "SELECT regexp_instr('abcde', 'b(c)d', CAST(NULL AS INT))"
-            )
-            .await,
-            None
-        );
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_instr('abcde', 'zzz')").await,
-            Some(0)
-        );
-    }
-
-    #[tokio::test]
-    async fn regexp_instr_is_character_not_byte() {
-        let ctx = ctx();
-        // 🐈 is one scalar / two UTF-16 units; Spark Matcher.start()+1 is 3.
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_instr('🐈ab', 'ab')").await,
-            Some(3)
-        );
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_instr('caféx', 'x')").await,
-            Some(5)
-        );
-        // Empty pattern: UTF-16 boundaries (`🐈` is 2 units → count 3).
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_count('🐈', '')").await,
-            Some(3)
-        );
-        // Java `\d` is ASCII; ARABIC-INDIC DIGIT THREE must not count.
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_count('٣', '\\d')").await,
-            Some(0)
-        );
-    }
-
-    #[tokio::test]
-    async fn empty_pattern_matches_spark() {
-        let ctx = ctx();
-        // Spark: regexp_count('aaa','') = 4 (zero-width at each boundary).
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_count('aaa', '')").await,
-            Some(4)
-        );
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_instr('aaa', '')").await,
-            Some(1)
-        );
-    }
-
-    #[tokio::test]
-    async fn overlapping_count_is_non_overlapping() {
-        let ctx = ctx();
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_count('aaa', 'aa')").await,
-            Some(1)
-        );
-    }
-
-    #[tokio::test]
-    async fn register_all_overwrites_datafusion() {
-        let ctx = ctx_register_all();
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_count(CAST(NULL AS VARCHAR), 'ab')").await,
-            None
-        );
-        assert_eq!(
-            one_i32(&ctx, "SELECT regexp_instr('abcde', 'b(c)d', 99)").await,
-            Some(2)
-        );
-    }
-
-    #[test]
-    fn java_find_loop_matches_spark_zero_width() {
-        let digits = compile_spark_regex("[0-9]*").expect("digits");
-        assert_eq!(count_non_overlapping("2026-08-19", &digits).expect("c"), 6);
-        let stars = compile_spark_regex("b*").expect("b*");
-        assert_eq!(count_non_overlapping("abc", &stars).expect("c"), 4);
-        let a_star = compile_spark_regex("a*").expect("a*");
-        assert_eq!(count_non_overlapping("🐈", &a_star).expect("c"), 3);
-        // R4-1: empty `is_match` overcounts start-anchored patterns at a mid-surrogate index.
-        let caret = compile_spark_regex("^").expect("caret");
-        assert!(!matches_at_mid_surrogate_index(&caret));
-        assert_eq!(count_non_overlapping("🐈", &caret).expect("c"), 1);
-        let caret_digits = compile_spark_regex(r"^\d*").expect("caret digits");
-        assert_eq!(
-            count_non_overlapping("🐈2026", &caret_digits).expect("c"),
-            1
-        );
-        let multiline_caret = compile_spark_regex("(?m)^").expect("multiline caret");
-        assert!(!matches_at_mid_surrogate_index(&multiline_caret));
-        assert_eq!(
-            count_non_overlapping("🐈\n🐈", &multiline_caret).expect("c"),
-            2
-        );
-        assert!(matches_at_mid_surrogate_index(&a_star));
-    }
-
-    #[tokio::test]
-    async fn dictionary_utf8_column_is_accepted() {
-        use datafusion::arrow::array::{DictionaryArray, Int8Array, StringArray};
-        use datafusion::arrow::datatypes::{Field, Int8Type, Schema};
-        use datafusion::arrow::record_batch::RecordBatch;
-
-        let ctx = ctx();
-        let values = StringArray::from(vec!["ababab", "xy"]);
-        let keys = Int8Array::from(vec![0_i8, 1, 0]);
-        let dict =
-            DictionaryArray::<Int8Type>::try_new(keys, Arc::new(values)).expect("dictionary");
-        let schema = Arc::new(Schema::new(vec![Field::new(
-            "s",
-            dict.data_type().clone(),
-            true,
-        )]));
-        let batch = RecordBatch::try_new(schema, vec![Arc::new(dict)]).expect("batch");
-        ctx.register_batch("dict_strings", batch).expect("register");
-        let batches = ctx
-            .sql("SELECT regexp_count(s, 'ab') AS c FROM dict_strings")
-            .await
-            .expect("plan dict")
-            .collect()
-            .await
-            .expect("exec dict");
-        let array = batches[0]
-            .column(0)
-            .as_primitive::<datafusion::arrow::datatypes::Int32Type>();
-        assert_eq!(array.value(0), 3);
-        assert_eq!(array.value(1), 0);
-        assert_eq!(array.value(2), 3);
-    }
-
-    #[tokio::test]
-    async fn regexp_extract_group_default_and_whole_match() {
-        let ctx = ctx_register_all();
-        assert_eq!(
-            one_str(
-                &ctx,
-                "SELECT regexp_extract('100-200', '([0-9]+)-([0-9]+)', 1)"
-            )
-            .await,
-            Some("100".to_owned())
-        );
-        assert_eq!(
-            one_str(
-                &ctx,
-                "SELECT regexp_extract('100-200', '([0-9]+)-([0-9]+)', 2)"
-            )
-            .await,
-            Some("200".to_owned())
-        );
-        assert_eq!(
-            one_str(
-                &ctx,
-                "SELECT regexp_extract('100-200', '([0-9]+)-([0-9]+)', 0)"
-            )
-            .await,
-            Some("100-200".to_owned())
-        );
-        assert_eq!(
-            one_str(
-                &ctx,
-                "SELECT regexp_extract('100-200', '([0-9]+)-([0-9]+)')"
-            )
-            .await,
-            Some("100".to_owned())
-        );
-        assert_eq!(
-            one_str(&ctx, "SELECT regexp_extract('ac', '(a)(b)?', 2)").await,
-            Some(String::new())
-        );
-    }
-
-    #[tokio::test]
-    async fn regexp_extract_no_match_is_empty_null_in_null_out() {
-        let ctx = ctx_register_all();
-        assert_eq!(
-            one_str(&ctx, "SELECT regexp_extract('abc', '([0-9]+)', 1)").await,
-            Some(String::new())
-        );
-        assert_eq!(
-            one_str(
-                &ctx,
-                "SELECT regexp_extract(CAST(NULL AS VARCHAR), '([0-9]+)', 1)"
-            )
-            .await,
-            None
-        );
-        assert_eq!(
-            one_str(
-                &ctx,
-                "SELECT regexp_extract('abc', CAST(NULL AS VARCHAR), 1)"
-            )
-            .await,
-            None
-        );
-        assert_eq!(
-            one_str(
-                &ctx,
-                "SELECT regexp_extract('abc', '([0-9]+)', CAST(NULL AS INT))"
-            )
-            .await,
-            None
-        );
-    }
-
-    #[tokio::test]
-    async fn regexp_extract_bad_group_names_extract() {
-        let ctx = ctx_register_all();
-        for idx in [3, -1] {
-            let query = format!("SELECT regexp_extract('a-b', '(a)-(b)', {idx})");
-            let result = ctx.sql(&query).await.expect("plan").collect().await;
-            let message = format!("{result:?}");
-            assert!(result.is_err(), "idx {idx} must raise; got {message}");
-            assert!(
-                message.contains("`regexp_extract` is invalid")
-                    && message.contains("between 0 and 2"),
-                "Spark REGEX_GROUP_INDEX shape; got {message}"
-            );
-        }
-    }
-
-    #[tokio::test]
-    async fn regexp_extract_java_union_and_unicode_class() {
-        let ctx = ctx_register_all();
-        assert_eq!(
-            one_str(&ctx, "SELECT regexp_extract('alpha', '([[:alpha:]]+)', 1)").await,
-            Some("alpha".to_owned())
-        );
-        assert_eq!(
-            one_str(&ctx, "SELECT regexp_extract('fox', '([[:alpha:]]+)', 1)").await,
-            Some(String::new())
-        );
-        assert_eq!(
-            one_str(&ctx, "SELECT regexp_extract('alpha', '(\\p{L}+)', 1)").await,
-            Some("alpha".to_owned())
-        );
-    }
-
-    #[tokio::test]
-    async fn malformed_string_idx_is_fail_loud() {
-        let ctx = ctx();
-        let planned = ctx
-            .sql("SELECT regexp_instr('abcde', 'b(c)d', 'i')")
-            .await
-            .expect("plan");
-        let result = planned.collect().await;
-        assert!(
-            result.is_err(),
-            "Spark CAST('i' AS INT) is fail-loud; got {result:?}"
-        );
-    }
-}
+mod tests;

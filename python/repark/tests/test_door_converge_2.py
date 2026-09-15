@@ -179,20 +179,20 @@ _SQL_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
         False,
     ),
     "Q12-17": (
-        "SELECT reverse(array(1, 2))",
-        [[2, 1]],
+        "SELECT reverse(array(1, 2, 3))",
+        [[3, 2, 1]],
         _int_list(True),
         False,
     ),
     "Q12-18": (
-        "SELECT reverse(array(CAST(3 AS INT), CAST(NULL AS INT)))",
-        [[None, 3]],
-        _int_list(True),
-        False,
-    ),
-    "Q12-19": (
         "SELECT reverse(an) FROM t",
         [[None, 3]],
+        pa.list_(pa.field("item", pa.int32(), nullable=True)),
+        True,
+    ),
+    "Q12-19": (
+        "SELECT reverse(allnull) FROM t",
+        [None],
         pa.list_(pa.field("item", pa.int32(), nullable=True)),
         True,
     ),
@@ -202,12 +202,7 @@ _SQL_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
         pa.list_(pa.field("element", pa.null(), nullable=True)),
         False,
     ),
-    "Q12-21": (
-        "SELECT reverse(allnull) FROM t",
-        [None],
-        pa.list_(pa.field("item", pa.int32(), nullable=True)),
-        True,
-    ),
+    "Q12-21": ("SELECT reverse('abc')", ["cba"], pa.string(), False),
     "Q12-22": (
         "SELECT reverse(sa) FROM t",
         [["y", "x"]],
@@ -215,13 +210,24 @@ _SQL_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
         True,
     ),
     "Q12-23": (
-        "SELECT reverse(array('a'))",
-        [["a"]],
-        pa.list_(pa.field("element", pa.string(), nullable=True)),
+        "SELECT reverse(array(array(1, 2), array(3)))",
+        [[[3], [1, 2]]],
+        pa.list_(
+            pa.field(
+                "element",
+                pa.list_(pa.field("element", pa.int32(), nullable=True)),
+                nullable=True,
+            )
+        ),
         False,
     ),
     "Q12-24": ("SELECT reverse(NULL)", [None], pa.string(), True),
-    "Q12-25": ("SELECT reverse('abc')", ["cba"], pa.string(), False),
+    "Q12-25": (
+        "SELECT reverse(CAST(NULL AS STRING))",
+        [None],
+        pa.string(),
+        True,
+    ),
     "Q12-26": (
         "SELECT sequence(1, 3)",
         [[1, 2, 3]],
@@ -517,3 +523,261 @@ def test_facade_split_refusal_handoff_16a(spark: ReparkSession) -> None:
     _frame(spark)
     with pytest.raises(UnsupportedOperationException):
         F.split("s", ",")
+
+
+def _date_list() -> pa.DataType:
+    """Array<date> result type with non-nullable elements."""
+    return pa.list_(pa.field("element", pa.date32(), nullable=False))
+
+
+def _q15_frame(spark: ReparkSession) -> DataFrame:
+    """Build the Q15 view frame and register temp view `q15`."""
+    frame = spark.createDataFrame(
+        [(10000001, "é🎉x")],
+        "n int, e string",
+    )
+    frame.createOrReplaceTempView("q15")
+    return frame
+
+
+_Q15_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
+    "Q15-0": (
+        "SELECT sequence(DATE'2024-01-31', DATE'2024-03-31', INTERVAL 1 MONTH)",
+        [
+            [
+                datetime_module.date(2024, 1, 31),
+                datetime_module.date(2024, 2, 29),
+                datetime_module.date(2024, 3, 31),
+            ]
+        ],
+        _date_list(),
+        False,
+    ),
+    "Q15-1": (
+        "SELECT sequence(DATE'2018-01-31', DATE'2018-03-31', INTERVAL 1 MONTH)",
+        [
+            [
+                datetime_module.date(2018, 1, 31),
+                datetime_module.date(2018, 2, 28),
+                datetime_module.date(2018, 3, 31),
+            ]
+        ],
+        _date_list(),
+        False,
+    ),
+    "Q15-2": (
+        "SELECT sequence(DATE'2024-01-31', DATE'2024-05-31', INTERVAL 1 MONTH)",
+        [
+            [
+                datetime_module.date(2024, 1, 31),
+                datetime_module.date(2024, 2, 29),
+                datetime_module.date(2024, 3, 31),
+                datetime_module.date(2024, 4, 30),
+                datetime_module.date(2024, 5, 31),
+            ]
+        ],
+        _date_list(),
+        False,
+    ),
+    "Q15-3": (
+        "SELECT sequence(TIMESTAMP'2024-01-31 10:00:00', TIMESTAMP'2024-03-31 10:00:00', "
+        "INTERVAL 1 MONTH)",
+        [
+            [
+                datetime_module.datetime(2024, 1, 31, 10, 0, tzinfo=datetime_module.UTC),
+                datetime_module.datetime(2024, 2, 29, 10, 0, tzinfo=datetime_module.UTC),
+                datetime_module.datetime(2024, 3, 31, 10, 0, tzinfo=datetime_module.UTC),
+            ]
+        ],
+        pa.list_(
+            pa.field("element", pa.timestamp("us", tz="UTC"), nullable=False),
+        ),
+        False,
+    ),
+    "Q15-4": (
+        "SELECT sequence(DATE'2024-03-31', DATE'2024-01-31', INTERVAL -1 MONTH)",
+        [
+            [
+                datetime_module.date(2024, 3, 31),
+                datetime_module.date(2024, 2, 29),
+                datetime_module.date(2024, 1, 31),
+            ]
+        ],
+        _date_list(),
+        False,
+    ),
+    "Q15-5": (
+        "SELECT concat('A', CAST(X'42' AS BINARY))",
+        ["AB"],
+        pa.string(),
+        False,
+    ),
+    "Q15-6": (
+        "SELECT concat('A', CAST(X'42' AS BINARY), 'C')",
+        ["ABC"],
+        pa.string(),
+        False,
+    ),
+    "Q15-7": (
+        "SELECT concat(CAST(X'42' AS BINARY), 'A')",
+        ["BA"],
+        pa.string(),
+        False,
+    ),
+    "Q15-8": (
+        "SELECT concat(CAST(X'41' AS BINARY), 1)",
+        ["A1"],
+        pa.string(),
+        False,
+    ),
+    "Q15-9": (
+        "SELECT split('a.b.c', '\\\\Q.\\\\E')",
+        [["a", "b", "c"]],
+        pa.list_(pa.field("element", pa.string(), nullable=False)),
+        False,
+    ),
+    "Q15-14": (
+        "SELECT split('a1b2c', '\\\\d')",
+        [["a", "b", "c"]],
+        pa.list_(pa.field("element", pa.string(), nullable=False)),
+        False,
+    ),
+    "Q15-15": (
+        "SELECT split('aXbXc', 'X', 2)",
+        [["a", "bXc"]],
+        pa.list_(pa.field("element", pa.string(), nullable=False)),
+        False,
+    ),
+    "Q15-17": (
+        "SELECT split('a🎉b', '')",
+        [["a", "🎉", "b"]],
+        pa.list_(pa.field("element", pa.string(), nullable=False)),
+        False,
+    ),
+    "Q15-16": (
+        "SELECT split(e, '') FROM q15",
+        [["é", "🎉", "x"]],
+        pa.list_(pa.field("element", pa.string(), nullable=False)),
+        True,
+    ),
+}
+
+_Q15_ERRORS: dict[str, tuple[str, type, str]] = {
+    "Q15-10": (
+        "SELECT split('a,b,c', '(?=,)')",
+        PySparkException,
+        "lookahead",
+    ),
+    "Q15-11": (
+        "SELECT split('aa-bb', '(a|b)\\\\1')",
+        PySparkException,
+        "backreference",
+    ),
+    "Q15-12": (
+        "SELECT split('aaa', 'a++a')",
+        PySparkException,
+        "possessive",
+    ),
+    "Q15-13": (
+        "SELECT split('ab', '[')",
+        PySparkException,
+        "nclosed character class",
+    ),
+    "Q15-18": (
+        "SELECT size(sequence(1, n)) FROM q15",
+        PySparkException,
+        "requested 10000001 elements",
+    ),
+    "Q15-19": (
+        "SELECT size(sequence(1, 10000001))",
+        AnalysisException,
+        "requested 10000001 elements",
+    ),
+}
+
+
+@pytest.mark.parametrize("cell_id", sorted(_Q15_VALUES), ids=sorted(_Q15_VALUES))
+def test_q15_cell(spark: ReparkSession, cell_id: str) -> None:
+    """pins: door-converge-2/C-007, C-008, C-009 — one round-3 oracle cell."""
+    _frame(spark)
+    _q15_frame(spark)
+    sql, value, arrow_type, nullable = _Q15_VALUES[cell_id]
+    _check_cell(spark, sql, value, arrow_type, nullable)
+
+
+@pytest.mark.parametrize("cell_id", sorted(_Q15_ERRORS), ids=sorted(_Q15_ERRORS))
+def test_q15_error_cell(spark: ReparkSession, cell_id: str) -> None:
+    """pins: door-converge-2/C-007, C-008, C-009 — one round-3 oracle refusal cell."""
+    _frame(spark)
+    _q15_frame(spark)
+    sql, error_type, match = _Q15_ERRORS[cell_id]
+    with pytest.raises(error_type, match=match):
+        spark.sql(sql).to_arrow()
+
+
+def test_facade_sequence_month_step(spark: ReparkSession) -> None:
+    """pins: door-converge-2/C-007 — F.sequence counts month steps from the start."""
+    frame = spark.createDataFrame(
+        [(datetime_module.date(2024, 1, 31), datetime_module.date(2024, 3, 31))],
+        "d1 date, d2 date",
+    )
+    table = frame.select(F.sequence("d1", "d2", F.expr("INTERVAL 1 MONTH")).alias("v")).to_arrow()
+    assert table.column(0).to_pylist() == [
+        [
+            datetime_module.date(2024, 1, 31),
+            datetime_module.date(2024, 2, 29),
+            datetime_module.date(2024, 3, 31),
+        ]
+    ]
+
+
+def test_facade_concat_string_binary(spark: ReparkSession) -> None:
+    """pins: door-converge-2/C-008 — F.concat over STRING+BINARY answers STRING."""
+    frame = spark.createDataFrame([("A", b"B")], "s string, b binary")
+    table = frame.select(F.concat(F.col("s"), F.col("b")).alias("v")).to_arrow()
+    assert table.column(0).to_pylist() == ["AB"]
+    assert table.schema[0].type == pa.string()
+
+
+def test_facade_sequence_column_cap(spark: ReparkSession) -> None:
+    """pins: door-converge-2/C-009 — F.sequence over a huge column stop refuses."""
+    frame = _q15_frame(spark)
+    with pytest.raises(PySparkException, match="requested 10000001 elements"):
+        frame.select(F.sequence(F.lit(1), "n").alias("v")).to_arrow()
+
+
+def test_split_limit_early_stop_matches_full_walk(spark: ReparkSession) -> None:
+    """pins: door-converge-2/C-009 — limit=2 truncates the walk, never the answer."""
+    table = spark.sql("SELECT split(repeat('a,', 5000), ',', 2) AS v").to_arrow()
+    [[first, rest]] = table.column(0).to_pylist()
+    assert first == "a"
+    assert rest == "a," * 4999
+
+
+def test_reverse_nested_column_keeps_inner(spark: ReparkSession) -> None:
+    """pins: door-converge-2/C-007 — reverse over nested arrays flips outer only."""
+    frame = spark.createDataFrame([([[1, 2], [3]],)], "nested array<array<int>>")
+    expected_type = pa.list_(
+        pa.field(
+            "item",
+            pa.list_(pa.field("item", pa.int32(), nullable=True)),
+            nullable=True,
+        )
+    )
+    for table in (
+        frame.selectExpr("reverse(nested) AS v").to_arrow(),
+        frame.select(F.reverse("nested").alias("v")).to_arrow(),
+    ):
+        assert table.column(0).to_pylist() == [[[3], [1, 2]]]
+        assert table.schema[0].type == expected_type
+        assert table.schema[0].nullable is True
+
+
+def test_split_per_row_pattern_column(spark: ReparkSession) -> None:
+    """pins: door-converge-2/C-009 — a pattern column resolves per row."""
+    frame = spark.createDataFrame(
+        [("a,b", ","), ("a;b", ";"), ("a,b", ";")],
+        "s string, p string",
+    )
+    table = frame.selectExpr("split(s, p) AS v").to_arrow()
+    assert table.column(0).to_pylist() == [["a", "b"], ["a", "b"], ["a,b"]]

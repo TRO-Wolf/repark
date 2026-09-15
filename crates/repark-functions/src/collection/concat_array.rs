@@ -172,7 +172,11 @@ pub(crate) fn invoke_array_concat(args: ScalarFunctionArgs) -> Result<ColumnarVa
     let row_count = lists.first().map_or(0, ListArray::len);
     let child_data: Vec<_> = lists.iter().map(|list| list.values().to_data()).collect();
     let child_refs: Vec<_> = child_data.iter().collect();
-    let mut mutable = MutableArrayData::new(child_refs, false, row_count);
+    let child_len: usize = child_data
+        .iter()
+        .map(datafusion::arrow::array::ArrayData::len)
+        .sum();
+    let mut mutable = MutableArrayData::new(child_refs, false, child_len);
     let mut offsets: Vec<i32> = Vec::with_capacity(row_count + 1);
     offsets.push(0);
     let mut validity: Vec<bool> = Vec::with_capacity(row_count);

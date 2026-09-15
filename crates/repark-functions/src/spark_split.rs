@@ -6,7 +6,7 @@ use datafusion::arrow::array::{Array, ArrayRef, Int32Array, ListArray, StringArr
 use datafusion::arrow::buffer::{NullBuffer, OffsetBuffer};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
-use datafusion::common::{DataFusionError, Result, exec_err};
+use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     TypeSignature, Volatility,
@@ -162,6 +162,9 @@ impl ScalarUDFImpl for SparkSplit {
         let DataType::List(element) = return_field.data_type() else {
             return exec_err!("split needs a list return");
         };
+        if let ColumnarValue::Scalar(ScalarValue::Utf8(Some(pattern))) = &arg_values[1] {
+            return split_scalar_pattern(&arg_values, pattern, element);
+        }
         let arrays = ColumnarValue::values_to_arrays(&arg_values)?;
         let strings = shaped_utf8(&arrays[0])?;
         let patterns = shaped_utf8(&arrays[1])?;
@@ -177,7 +180,7 @@ impl ScalarUDFImpl for SparkSplit {
         let mut any_null = false;
         let mut values = datafusion::arrow::array::StringBuilder::new();
         let mut value_count = 0usize;
-        let mut compiled: HashMap<String, Regex> = HashMap::new();
+        let mut compiled = PatternCache::default();
         for row in 0..row_count {
             let limit_null = limits.as_ref().is_some_and(|limits| limits.is_null(row));
             if strings.is_null(row) || patterns.is_null(row) || limit_null {
@@ -188,12 +191,8 @@ impl ScalarUDFImpl for SparkSplit {
             }
             validity.push(true);
             let limit = limits.as_ref().map_or(-1, |limits| limits.value(row));
-            let pieces = split_row(
-                strings.value(row),
-                patterns.value(row),
-                limit,
-                &mut compiled,
-            )?;
+            let pattern = compiled.resolve(patterns.value(row))?;
+            let pieces = split_row(strings.value(row), &pattern, limit)?;
             for piece in pieces {
                 values.append_value(piece);
                 value_count += 1;
@@ -251,40 +250,145 @@ fn fit_i32(value: usize) -> Result<i32> {
         .map_err(|_| DataFusionError::Execution("split row count does not fit i32".to_owned()))
 }
 
-fn compiled_pattern<'cache>(
-    pattern: &str,
-    compiled: &'cache mut HashMap<String, Regex>,
-) -> Result<&'cache Regex> {
-    if !compiled.contains_key(pattern) {
-        let regex = crate::spark_regexp::compile_spark_regex(pattern)?;
-        compiled.insert(pattern.to_owned(), regex);
-    }
-    compiled.get(pattern).ok_or_else(|| {
-        DataFusionError::Execution("split pattern cache missed its own insert".to_owned())
+#[derive(Clone)]
+enum SplitPattern {
+    Literal(String),
+    Regex(Regex),
+}
+
+fn is_plain_literal(translated: &str) -> bool {
+    !translated.chars().any(|character| {
+        matches!(
+            character,
+            '.' | '^' | '$' | '*' | '+' | '?' | '(' | ')' | '[' | ']' | '{' | '}' | '|' | '\\'
+        )
     })
+}
+
+fn resolve_pattern(translated: &str) -> Result<SplitPattern> {
+    if is_plain_literal(translated) {
+        return Ok(SplitPattern::Literal(translated.to_owned()));
+    }
+    let regex = Regex::new(translated).map_err(|error| {
+        DataFusionError::Execution(format!(
+            "invalid regular expression '{translated}': {error}"
+        ))
+    })?;
+    Ok(SplitPattern::Regex(regex))
+}
+
+#[derive(Default)]
+struct PatternCache {
+    entries: HashMap<String, SplitPattern>,
+    order: std::collections::VecDeque<String>,
+}
+
+impl PatternCache {
+    fn resolve(&mut self, pattern: &str) -> Result<SplitPattern> {
+        if let Some(hit) = self.entries.get(pattern) {
+            if let Some(position) = self.order.iter().position(|key| key == pattern) {
+                self.order.remove(position);
+                self.order.push_back(pattern.to_owned());
+            }
+            return Ok(hit.clone());
+        }
+        let translated = crate::spark_regexp::translate_java_pattern(pattern)?;
+        let resolved = resolve_pattern(&translated)?;
+        if self.entries.len() >= 64
+            && let Some(oldest) = self.order.pop_front()
+        {
+            self.entries.remove(&oldest);
+        }
+        self.order.push_back(pattern.to_owned());
+        self.entries.insert(pattern.to_owned(), resolved.clone());
+        Ok(resolved)
+    }
+}
+
+fn split_scalar_pattern(
+    arg_values: &[ColumnarValue],
+    pattern: &str,
+    element: &FieldRef,
+) -> Result<ColumnarValue> {
+    let translated = crate::spark_regexp::translate_java_pattern(pattern)?;
+    let resolved = resolve_pattern(&translated)?;
+    let mut shape_args = Vec::with_capacity(arg_values.len() - 1);
+    shape_args.push(arg_values[0].clone());
+    if arg_values.len() > 2 {
+        shape_args.push(arg_values[2].clone());
+    }
+    let arrays = ColumnarValue::values_to_arrays(&shape_args)?;
+    let strings = shaped_utf8(&arrays[0])?;
+    let limits = if arrays.len() > 1 {
+        Some(shaped_int32(&arrays[1])?)
+    } else {
+        None
+    };
+    let row_count = strings.len();
+    let mut offsets: Vec<i32> = Vec::with_capacity(row_count + 1);
+    offsets.push(0);
+    let mut validity: Vec<bool> = Vec::with_capacity(row_count);
+    let mut any_null = false;
+    let mut values = datafusion::arrow::array::StringBuilder::new();
+    let mut value_count = 0usize;
+    for row in 0..row_count {
+        let limit_null = limits.as_ref().is_some_and(|limits| limits.is_null(row));
+        if strings.is_null(row) || limit_null {
+            validity.push(false);
+            any_null = true;
+            offsets.push(fit_i32(value_count)?);
+            continue;
+        }
+        validity.push(true);
+        let limit = limits.as_ref().map_or(-1, |limits| limits.value(row));
+        let pieces = split_row(strings.value(row), &resolved, limit)?;
+        for piece in pieces {
+            values.append_value(piece);
+            value_count += 1;
+        }
+        offsets.push(fit_i32(value_count)?);
+    }
+    let nulls = if any_null {
+        Some(NullBuffer::from(validity))
+    } else {
+        None
+    };
+    Ok(ColumnarValue::Array(Arc::new(ListArray::try_new(
+        Arc::clone(element),
+        OffsetBuffer::new(offsets.into()),
+        Arc::new(values.finish()),
+        nulls,
+    )?)))
 }
 
 fn split_row<'text>(
     text: &'text str,
-    pattern: &str,
+    pattern: &SplitPattern,
     limit: i32,
-    compiled: &mut HashMap<String, Regex>,
 ) -> Result<Vec<&'text str>> {
     if text.is_empty() {
         return Ok(vec![text]);
     }
-    if pattern.is_empty() {
-        return Ok(text.split("").filter(|piece| !piece.is_empty()).collect());
+    if let SplitPattern::Literal(literal) = pattern {
+        if literal.is_empty() {
+            return Ok(text.split("").filter(|piece| !piece.is_empty()).collect());
+        }
+        if limit > 0 {
+            let bound = usize::try_from(limit).unwrap_or(usize::MAX);
+            return Ok(text.splitn(bound, literal.as_str()).collect());
+        }
+        return Ok(text.split(literal.as_str()).collect());
     }
-    let regex = compiled_pattern(pattern, compiled)?;
-    let found = crate::spark_regexp::collect_matches(text, regex)?;
-    let usable = if limit > 0 {
-        usize::try_from(limit - 1)
-            .unwrap_or(usize::MAX)
-            .min(found.len())
-    } else {
-        found.len()
+    let SplitPattern::Regex(regex) = pattern else {
+        return Ok(vec![text]);
     };
+    let max_matches = if limit > 0 {
+        usize::try_from(limit - 1).unwrap_or(usize::MAX)
+    } else {
+        usize::MAX
+    };
+    let found = crate::spark_regexp::collect_matches_up_to(text, regex, max_matches)?;
+    let usable = found.len();
     let mut pieces = Vec::with_capacity(usable + 1);
     let mut cursor = 0;
     for (start, end) in found.iter().take(usable) {

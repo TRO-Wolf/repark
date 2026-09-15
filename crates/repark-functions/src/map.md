@@ -240,6 +240,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `invoke_substr` returns NULL for a ZERO-WIDTH match, not `''` — Spark takes
   the first match and nulls it when empty, closing registry row `RE-3`.
   Ledger: `task/sem-6-substr-zero-width-null-ledger.md`.
+  **DOOR-CONVERGE-2 round 3 (2026-09-15):** the shared compiler gains `translate_java_pattern`
+  (`\Q…\E` quoting; lookaround/backreference/possessive refuse naming the feature) and the
+  bounded `collect_matches_up_to`; unit tests live in `spark_regexp/tests.rs` (file-size split,
+  move-only). pins: door-converge-2/C-008, C-009
 - `spark_split_part.rs` — **GT1-FIX F-6c / R3-1:** STRING `partNum` +
   Dictionary(_, Utf8); partNum 0 fail-loud.
 - `higher_order/` — FNP-4c Spark higher-order kernels (`transform`, `filter`, `forall`,
@@ -594,6 +598,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `Binary`; everything else keeps the `Utf8` path. The facade `PyColumn::concat` embeds the
   same UDF, so both doors resolve one kernel. The array coerce validates but never casts
   (provisional widths resolve post-narrowing). pins: door-converge-2/C-001
+  **DOOR-CONVERGE-2 round 3 (2026-09-15):** all-`Binary` stays `Binary`, any other mix
+  with `Binary` answers `STRING` (binary read as UTF-8 text); unit tests live in
+  `string/tests.rs` (file-size split, move-only). pins: door-converge-2/C-008
 - `spark_split.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `split`
   (Java-regex pattern through the shared `compile_spark_regex` + `collect_matches`
   stepping, `limit` > 0 caps with the remainder last, `limit` ≤ 0 keeps trailing
@@ -602,6 +609,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`find_at`, cures `'.'`-pattern Q12-50/51). The facade arm lives in `dispatch_spark.rs`,
   but the Python `F.split` still raises `UnsupportedOperationException` before reaching
   it — P2 hand-off to run 16a. pins: door-converge-2/C-004
+  **DOOR-CONVERGE-2 round 3 (2026-09-15):** scalar patterns compile once, pattern columns
+  resolve through an LRU(64) `PatternCache`, plain literals take the `str` path, and
+  `limit` > 0 stops the match walk after `limit - 1` (equivalence-pinned). pins:
+  door-converge-2/C-009
 - `spark_sequence.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `sequence`
   (int widths kept, descending default step, dates with 1-day default and month steps,
   timestamps with interval steps, NULL bound/step → NULL with `containsNull=false`, zero
@@ -614,6 +625,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   moved to `dispatch_spark.rs` with the `refuse_facade_literal_expansion` ceiling kept;
   the plan-time `ArrayCardinalityCeiling` still fires on the `sequence` name.
   pins: door-converge-2/C-003
+  **DOOR-CONVERGE-2 round 3 (2026-09-15):** month steps compute element `i` from the start
+  (`start + months × i`); the runtime cap reuses the literal refusal text for column stops;
+  closed-form counts reserve up front at native width with a scalar fast path. The int/date/
+  timestamp row kernels live in `spark_sequence/rows.rs` (file-size split, move-only).
+  pins: door-converge-2/C-007, C-009
 - `spark_reverse.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `reverse`
   (overwrites the string-only DataFusion kernel): arrays reverse element order with the
   element type, `containsNull` and nullability kept; strings reverse by character; untyped

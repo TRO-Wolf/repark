@@ -72,6 +72,8 @@ needed.
   the kernel casts internally). `all_list_args` is the analyzer's gate for the
   `array_concat` → `concat` rewrite (every argument list-shaped or NULL).
   pins: door-converge-2/C-001
+  **Round 3 (2026-09-15):** the `MutableArrayData` capacity is the total child length
+  (P3-trivial hint, no behavior change). pins: door-converge-2/C-009
 - `array_append.rs` — **ARRAY-NULL-1 (2026-09-14):** `spark_array_append_udf` /
   `spark_array_prepend_udf`. Each delegates to DataFusion's native kernel and then grafts
   the input array's outer `NullBuffer` onto the result — the kernels drop it, so a NULL
