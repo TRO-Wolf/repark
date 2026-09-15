@@ -2541,6 +2541,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   reader-schema V3-GEO-1 pin, and the door-blocked spatial DDL refusals
   (Rust type table owns `fromDDL`; Spark's bare-token answer is UNMEASURED).
   pins: types-bases-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `test_types_geo_ddl_1.py` + `fixtures-batch13-geo.json` — **TYPES-GEO-DDL-1 (2026-09-15):**
+  the recorded PySpark 4.1.2 `_parse_datatype_string` oracle (cells `G13-0 … G13-20`,
+  copied verbatim) pinned on both DDL doors (`DataType.fromDDL` and
+  `_parse_datatype_string`): value, `simpleString` and `json` for the 14 accept cells,
+  the `ValueError: cannot parse datatype` refusal shape for the 7 `PARSE_SYNTAX_ERROR`
+  cells, and the V3-GEO-1 column-use refusal through `createDataFrame(schema="…")` and
+  `spark.read.schema("…")` schema strings.
+  pins: types-geo-ddl-1/C-001, C-002, C-003, C-004, C-005
 - `test_types_x2_census.py` — X2 census: Row empty/unnamed repr + factory arity;
   createDataFrame LongType schema, nested list/struct/map, variable int arrays;
   **octo:** explicit nested StructType/MapType/ArrayType(String) Arrow values (not
