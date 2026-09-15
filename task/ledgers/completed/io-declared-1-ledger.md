@@ -112,3 +112,58 @@ refusals and one delegation, no Python compute.
 | R-3 round green — the same pair after the body landed | **34 passed**; `test_pg_acceptance.py` + `test_pg_jdbc_oracle.py` 6 passed (skip-loud without `REPARK_PG_DSN`); the example runs green with the `jdbc:mysql://` refusal arm. |
 | Round-2 red first — `pytest test_pg_jdbc_options.py test_io_declared_1.py -q` with the L-001/L-002 pins, before the fixes | **2 failed, 36 passed** (`test_writer_jdbc_mixed_case_modes_are_valid_then_refuse`, `test_jdbc_postgres_alias_url_reaches_read_postgres`); the invalid-spelling and `jdbc:postgres://` pins green-before. |
 | Round-2 green — the same pair after the fixes | **38 passed**. |
+
+## Rulings (orchestrator, G-2)
+
+- R-4 (2026-09-15): the S2-21 perf reviewers do not run on this unit. Every name is a dated refusal or a delegation to an existing
+  path (`DataFrame.replace`, `read_postgres`); no new data path.
+- R-5 (2026-09-15): recorded, not fixed. The partial-range teaching string now names Spark's camelCase parameters. `format("jdbc")`
+  still routes any URL to the PostgreSQL connector (owner question Q-15B-4). `write.xml(**{"ROWTAG": ...})` is not Spark's signature.
+  Passing both `properties` and `connection_properties` is a TypeError under R-3, where main silently preferred `properties`.
+- R-6 (2026-09-15): the re-check PASSED with no new findings; no further critic round.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: io-declared-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card, rulings R-1..R-3 and the recorded PySpark 4.1.2 reader/writer cells; the R-3 audit caught the card's R-2 removing main's working spark.read.jdbc path before review.
+      artifacts: [python/repark/tests/test_io_declared_1.py, python/repark/tests/facade_reader_writer_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Every ORC and XML spelling including format case and mixed-case rowTag keys; the argument-shape capture matrix against main's reader.jdbc; URL schemes including postgres://, upper case, leading whitespace and near-miss prefixes; all twelve Spark save-mode spellings plus invalid ones; na.replace sentinel, None, dict and subset shapes.
+      artifacts: [python/repark/tests/test_pg_jdbc_options.py]
+    - id: AT-3
+      status: N/A
+      justification: Python facade plumbing; no Rust, no unwrap.
+    - id: AT-4
+      status: N/A
+      justification: No shared mutable state; each call builds its own refusal or delegation.
+    - id: AT-5
+      status: ATTACKED
+      evidence: The restored jdbc path forwards properties without logging them and refuses non-PostgreSQL drivers before any connection attempt; no files or directories are written before an ORC or XML refusal (target paths checked absent).
+      artifacts: [python/repark/src/repark/spark/dataframe/io_declared.py]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Grok critic-logic round 1 (0 P1, 2 P2 L-001 save-mode case folding, L-002 postgres:// alias) went back to the actor; the re-check PASSED with in-process reverts reddening the new pins.
+      artifacts: [task/ledgers/completed/io-declared-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Full facade suite 6761 passed on the fresh release native, parity suite 757 passed, ruff 0.15.22 check and format, check_lib_py, example coverage with execution, map sync, typos; comment-ban grep zero hits.
+      artifacts: [docs/examples/io/io_declared_refusals.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark's contracts were read, not assumed - pyspark/sql/readwriter.py orc, xml and jdbc signatures, DataFrameWriter.mode(String) lowercasing with Locale.ROOT, error-conditions.json NOT_IMPLEMENTED, XML_ROW_TAG_MISSING and INVALID_SAVE_MODE.
+      artifacts: [python/repark/src/repark/spark/session/reader.py, python/repark/src/repark/spark/dataframe/writer_readwriter.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Refusals carry Spark's classes, messageParameters and SQLSTATEs; IO-ORC-1, IO-XML-1 (BACKLOG, owner question Q-15B-1) and IO-JDBC-1 (DECLARED until the 1.6 connectors) rows carry pins.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation guards run - dropping postgres:// from the prefix set reds the alias pin, dropping the mode lowercasing reds the mixed-case pin, lowercasing the error spelling reds the caller-spelling pin, re-refusing PostgreSQL jdbc() reds the C-007 pins.
+      artifacts: [python/repark/tests/test_io_declared_1.py]
+  complete: true
+```
+

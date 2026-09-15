@@ -4,21 +4,6 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
-- [io-declared-1-ledger.md](io-declared-1-ledger.md) —
-  **IO-DECLARED-1 (2026-09-14, round 2 / R-3), in flight:** the orc / xml reader-writer names
-  become dated declared refusals with Spark's own error classes (R-1; registry rows
-  `IO-ORC-1`, `IO-XML-1` — BACKLOG: an ORC / XML crate is owner question Q-15B-1),
-  Spark's own `rowTag` check reproduced byte-exact ahead of each refusal, and
-  `DataFrameNaFunctions.replace` joining as
-  the exact `DataFrame.replace` delegation through the shared no-value sentinel
-  (`ARGUMENT_REQUIRED` / `MIXED_TYPE_REPLACEMENT` cells). Round 2 applies R-3:
-  `DataFrameReader.jdbc` is RESTORED to main's PostgreSQL read path (body in
-  `io_declared.py`, Spark signature + main's keyword aliases, non-PostgreSQL driver
-  URLs refuse) and `DataFrameWriter.jdbc` stays declared behind the `INVALID_SAVE_MODE`
-  check (registry `IO-JDBC-1` rewritten to the read/write split). Facade-only —
-  refusals, one delegation, one restored connector path, no Rust change.
-  `risk_tier: standard`. Branch `feat/io-declared-1`.
-  pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`

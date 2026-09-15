@@ -542,6 +542,21 @@ else. The next pickup's `make ledger-archive` files everything here under
   `writer_readwriter.py` 1111 → 1105 (CAP-1 mirrored); example inventory 936 → 944.
   `risk_tier: standard`. Branch `feat/io-bucket-cluster-1`.
   pins: io-bucket-cluster-1/C-001, C-002, C-003, C-004
+- [io-declared-1-ledger.md](io-declared-1-ledger.md) —
+  **IO-DECLARED-1 (2026-09-14, round 2 / R-3), in flight:** the orc / xml reader-writer names
+  become dated declared refusals with Spark's own error classes (R-1; registry rows
+  `IO-ORC-1`, `IO-XML-1` — BACKLOG: an ORC / XML crate is owner question Q-15B-1),
+  Spark's own `rowTag` check reproduced byte-exact ahead of each refusal, and
+  `DataFrameNaFunctions.replace` joining as
+  the exact `DataFrame.replace` delegation through the shared no-value sentinel
+  (`ARGUMENT_REQUIRED` / `MIXED_TYPE_REPLACEMENT` cells). Round 2 applies R-3:
+  `DataFrameReader.jdbc` is RESTORED to main's PostgreSQL read path (body in
+  `io_declared.py`, Spark signature + main's keyword aliases, non-PostgreSQL driver
+  URLs refuse) and `DataFrameWriter.jdbc` stays declared behind the `INVALID_SAVE_MODE`
+  check (registry `IO-JDBC-1` rewritten to the read/write split). Facade-only —
+  refusals, one delegation, one restored connector path, no Rust change.
+  `risk_tier: standard`. Branch `feat/io-declared-1`.
+  pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [ledger-reading-1-ledger.md](ledger-reading-1-ledger.md) —
   **LEDGER-READING-1 step 1 (2026-09-09), in flight:**   reading units may prove clauses on
   document evidence (R-10). A staging ledger whose first 40 lines carry the READING value of
