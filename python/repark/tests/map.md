@@ -628,6 +628,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ex-29-class-remainder/C-002, C-003
   pins: df-describe-str-1/C-001, C-002, C-003
   pins: df-colregex-1/C-002, C-003, C-006
+- [test_fnp_alias_1.py](test_fnp_alias_1.py) + `fnp_alias_1_spark_oracle.json` —
+  **FNP-ALIAS-1 (2026-09-15):** the PySpark alias names over existing kernels, oracle-driven.
+  The fixture is the orchestrator's live PySpark 4.1.2 recording (2026-09-14, 98 cells, 14
+  signatures); pins replay the Python-door ANSI cells (column name, type, rows — nullability
+  pinned except the VALUES group key, run 15c's work, and the `approx_count_distinct` result,
+  BL-18), the deprecated-alias `FutureWarning` messages, parameter names/defaults vs the
+  recorded signatures, and the SQL-door degrees/radians values (SQL-door names are run 15c's).
+  `sum_distinct`/`sumDistinct` stay on the deferred census this round: a DISTINCT sum needs a
+  native distinct-aggregate builder (`count_aggregate` is count-specific; `aggregate` has no
+  distinct modifier) and Rust is fenced out of this unit — see the unit ledger's ruling question.
+  pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
