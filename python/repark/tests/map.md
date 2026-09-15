@@ -33,6 +33,24 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_df_surface_a_1.py](test_df_surface_a_1.py) +
+  [facade_dataframe_surface_oracle.json](facade_dataframe_surface_oracle.json) —
+  **DF-SURFACE-A-1 step 1 (2026-09-14):** the nine-name DataFrame surface pins
+  driven by the copied live-PySpark-4.1.2 fixture. `to` pins the store-assignment
+  cells (`to_reorder_cast`, `to_case`, `to_narrow`, `to_missing`,
+  `to_nullability`, `to_bad_cast`) plus the `to_not_schema` DF-TO-1 declared
+  `NOT_STRUCT` answer (Spark classic leaks `AttributeError`); `withMetadata`
+  pins replace-not-merge, order preservation, `NOT_DICT`, and the unresolved
+  column; `registerTempTable` pins the `FutureWarning`, `None` return, and
+  replace; `checkpoint` pins the DF-CHECKPOINT-1 same-rows new-frame answer for
+  both eager arms (Spark's `checkpoint_nodir` refusal is the declared
+  divergence); `sparkSession` pins owner identity and the `SparkSession` type;
+  `isLocal` pins `False` on every measured shape; `inputFiles` pins `file:` URI
+  answers, union dedupe, filter invariance, and the `[]` in-memory arm;
+  `executionInfo` pins the `CLASSIC_OPERATION_NOT_SUPPORTED_ON_DF` refusal text;
+  `semanticHash` pins int type, equal/different plans, alias normalization, and
+  filter-order sensitivity.
+  pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
   / `Row.index` answer the nine `row.*` cells of the committed run-15b oracle
   ([facade_row_oracle.json](facade_row_oracle.json), live PySpark 4.1.2) — value counts

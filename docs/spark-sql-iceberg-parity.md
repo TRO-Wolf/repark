@@ -1249,6 +1249,37 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   UDT registry — the same reason `FNP-15-unwrap_udt` is unreachable (row §9); there is no
   registry to serialize through, so the name answers Spark's facade shape and refuses at
   column use with Spark's own error class rather than silently mapping to another type.
+### DF-TO-1 — `DataFrame.to(schema)` refuses a non-StructType argument; Spark classic leaks `AttributeError`
+- **repark** — `df.to("a int")` raises `PySparkTypeError` with error class `NOT_STRUCT`:
+  `[NOT_STRUCT] Argument `schema` should be a StructType, got str.` —
+  `{"arg_name": "schema", "arg_type": "str"}`. Every `StructType` argument follows the
+  measured store-assignment contract (name match is case-insensitive with the schema's
+  spelling winning, nullable-miss fills NULL, `NULLABLE_COLUMN_OR_FIELD` and
+  `INVALID_COLUMN_OR_FIELD_DATA_TYPE` carry Spark's exact text).
+- **Apache Spark** — classic 4.1.2 leaks `AttributeError: 'str' object has no attribute
+  'json'` because `to` calls `schema.json` before validating the argument
+  *(oracle: `facade_dataframe_surface_oracle.json` cell `to_not_schema`, PySpark 4.1.2,
+  ruling R-1, 2026-09-14)*.
+- **Pin** —
+  `python/repark/tests/test_df_surface_a_1.py::test_to_non_struct_schema_raises_not_struct`
+- **Rationale** — DECLARED (R-1, 2026-09-14). The leaked `AttributeError` is an
+  implementation accident in Spark classic, not a contract; refusing with Spark's own
+  error-class shape is the honest near-drop-in answer.
+### DF-CHECKPOINT-1 — `DataFrame.checkpoint` materializes in memory; Spark refuses without `setCheckpointDir` and writes reliable storage
+- **repark** — `df.checkpoint(eager=True)` answers exactly what `df.localCheckpoint(eager)`
+  answers: a **new** `DataFrame` over an in-memory materialization of the same rows and
+  schema; `eager=False` defers the materialization to the next action.
+- **Apache Spark** — `checkpoint()` without `SparkContext.setCheckpointDir` fails with
+  `SparkException: Checkpoint directory has not been set in the SparkContext` (surfaced as
+  `Py4JJavaError`); with a directory set, Spark writes the plan's data to reliable
+  checkpoint storage and truncates lineage
+  *(oracle: `facade_dataframe_surface_oracle.json` cells `checkpoint_nodir`,
+  `checkpoint_with_dir`, `checkpoint_lazy`, PySpark 4.1.2, ruling R-3, 2026-09-14)*.
+- **Pin** —
+  `python/repark/tests/test_df_surface_a_1.py::test_checkpoint_returns_new_frame_with_same_rows`
+- **Rationale** — DECLARED (R-3, 2026-09-14). repark has no SparkContext checkpoint
+  directory and no reliable-storage checkpoint write; the in-memory materialization is
+  the same-rows answer rather than a refusal the engine cannot honor anyway.
 
 ---
 

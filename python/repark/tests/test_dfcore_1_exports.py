@@ -68,6 +68,15 @@ from ``streaming_batch.py`` — ``EXPECTED_DATAFRAME_DIR`` gains exactly
 ``writeStream``; ``EXPECTED_DATAFRAME_ALIASES`` gains the two camelCase pairs;
 ``core`` and the package each gain exactly the one new module name
 ``streaming_batch``.
+DF-SURFACE-A-1 step 1 (2026-09-14): the ``localCheckpoint`` and ``isStreaming``
+bodies move to ``surface_a.py`` behind signature-keeping def wrappers (the API
+freeze parses ``def`` signatures), and the nine surface-a names bind one-line
+each (``to``, ``withMetadata``, ``registerTempTable``, ``checkpoint``,
+``isLocal``, ``inputFiles``, ``semanticHash`` as functions; ``sparkSession`` and
+``executionInfo`` as properties), so ``EXPECTED_DATAFRAME_DIR`` gains exactly
+those nine names plus the new ``_schema_override`` slot;
+``EXPECTED_DATAFRAME_SLOTS`` gains exactly ``_schema_override``; ``core`` and
+the package each gain exactly the one new module name ``surface_a``.
 """
 
 from __future__ import annotations

@@ -106,6 +106,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   holds the GIL and abort. Use `Table.from_batches`, not `RecordBatchReader.from_batches`,
   so tests that patch `pa.RecordBatchReader` keep tracking `from_stream`. Exact baseline
   ratchets 4485 → 4473 → 4470. pins: facade-1/C-001, C-002, C-006
+  DF-SURFACE-A-1 step 1 (2026-09-14): the `localCheckpoint` body moves to
+  `surface_a.py` (checkpoint's sibling) and the nine surface-a names bind one-line
+  each; the `_schema_override` slot lands for `to`/`withMetadata`'s "schema's
+  spelling wins" contract. Exact baseline ratchets 4044 → 4041, mirrored in the
+  CAP-1 test. pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`.
 - `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
   PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,
@@ -132,6 +137,25 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   display/engine overlay + origin map + qualifier propagation shared by
   `core.py`'s identity spawns) — so `core.py` keeps only the slot and the call
   sites. `DataFrame.replace` is a one-line wrapper.
+- `surface_a.py` owns the DF-SURFACE-A-1 method bodies (2026-09-14) behind the
+  one-line class bindings: `to` (store-assignment reconciliation over a
+  `StructType` — case-insensitive name match with the schema's spelling winning,
+  nullable-miss NULL fill, `NULLABLE_COLUMN_OR_FIELD` /
+  `INVALID_COLUMN_OR_FIELD_DATA_TYPE` in Spark's exact text, `NOT_STRUCT` for a
+  non-schema argument per registry DF-TO-1), `withMetadata` (metadata-replacing
+  field stamp over the `alias(..., metadata=)` path, `NOT_DICT` on a non-dict,
+  the frame's own unresolved-column raise on a miss), `registerTempTable`
+  (FutureWarning + `create_or_replace_temp_view` delegation), `checkpoint` /
+  `localCheckpoint` (in-memory materialization, registry DF-CHECKPOINT-1),
+  `sparkSession` / `isLocal` / `inputFiles` (deduplicated `file:` URIs parsed
+  from the physical plan's `file_groups`; `[]` only for a plan with no file
+  scan), `executionInfo` (the `CLASSIC_OPERATION_NOT_SUPPORTED_ON_DF` refusal),
+  and `semanticHash` (SHA-256 over the extended EXPLAIN text with scratch view
+  names, common-expr ids, and projection alias names normalized; it hashes the
+  plan, where `sameSemantics` compares handle identity — registry EX-DF-11).
+  `to` and `withMetadata` stamp `_schema_override` so the schema property
+  reports the target schema verbatim (spelling, types, nullability, metadata).
+  pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
   `toLocalIterator`. Two converters live here: `rows_from_arrow_table_python` is the unchanged
   pure-Python path and stays the correctness oracle, and `rows_from_arrow_table` adds the
