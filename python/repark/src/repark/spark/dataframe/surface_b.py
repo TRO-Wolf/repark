@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import threading
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from types import MethodType
-from typing import TYPE_CHECKING, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from repark.errors import (
     AnalysisException,
@@ -152,8 +154,13 @@ def observe(frame: DataFrame, observation: object, *exprs: object) -> DataFrame:
     return child
 
 
+_FILL_SUPPRESSED = threading.local()
+
+
 def fill_on_action(frame: DataFrame) -> None:
     """Fill each attached Observation once via an extra agg over its observed frame."""
+    if getattr(_FILL_SUPPRESSED, "depth", 0):
+        return
     for attachment in getattr(frame, "_observations", ()):
         _fill_attachment(attachment)
 
@@ -194,3 +201,33 @@ def _fill_attachment(attachment: _ObservedMetricsAttachment) -> None:
     finally:
         with attachment._lock:
             attachment._filling = False
+
+
+@contextmanager
+def _fill_suppressed() -> Iterator[None]:
+    """Suppress Observation fills for plan-only work on this thread."""
+    _FILL_SUPPRESSED.depth = getattr(_FILL_SUPPRESSED, "depth", 0) + 1
+    try:
+        yield
+    finally:
+        _FILL_SUPPRESSED.depth -= 1
+
+
+def register_view_without_fill(frame: DataFrame, name: str) -> None:
+    """Register ``frame`` as a temp view without filling its Observation."""
+    from repark.spark.catalog_surface import _register_temp_view
+
+    with _fill_suppressed():
+        _register_temp_view(frame, name)
+
+
+def rows_without_fill(frame: DataFrame) -> list[Any]:
+    """Iterate a plan-only frame (EXPLAIN) without filling an Observation."""
+    with _fill_suppressed():
+        return list(frame.toLocalIterator())
+
+
+def empty_rows_after_fill(frame: DataFrame) -> list[Any]:
+    """Answer ``tail(0)`` as an empty list after the first-action fill."""
+    fill_on_action(frame)
+    return []

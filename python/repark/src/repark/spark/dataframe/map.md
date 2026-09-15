@@ -560,6 +560,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Driver-side callable execution and the second aggregation pass are DECLARED
   (`DF-FOREACH-1`, `DF-OBSERVE-1`).
   pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-007
+  **Re-check (2026-09-15):** a thread-local suppression keeps plan-only work from filling an Observation — `register_view_without_fill` (temp views, EXPLAIN's scratch view) and `rows_without_fill` (EXPLAIN's rows); `empty_rows_after_fill` answers `tail(0)`. `core.py` swaps its three call sites line for line; writers register through the session method directly and still fill.
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`

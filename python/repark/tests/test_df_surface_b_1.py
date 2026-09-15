@@ -563,3 +563,24 @@ def _raise_zero_division(row: Row) -> None:
     """Raise ZeroDivisionError for the foreach propagation pin."""
     del row
     raise ZeroDivisionError
+
+
+def test_observe_explain_and_temp_view_do_not_fill(spark: ReparkSession, tmp_path: Path) -> None:
+    """explain and temp views do not fill; tail(0) and a write do. pins: df-surface-b-1/C-008"""
+    frame = spark.createDataFrame([("x", 1, 2), ("y", 3, 4)], "key string, a int, b int")
+    explained = Observation("explained")
+    observed = frame.observe(explained, F.count(F.lit(1)).alias("c"))
+    observed.explain()
+    observed.explain(True)
+    with pytest.raises(PySparkAssertionError):
+        _ = explained.get
+    viewed = Observation("viewed")
+    frame.observe(viewed, F.count(F.lit(1)).alias("c")).createOrReplaceTempView("obs_no_fill")
+    with pytest.raises(PySparkAssertionError):
+        _ = viewed.get
+    tailed = Observation("tailed")
+    assert frame.observe(tailed, F.count(F.lit(1)).alias("c")).tail(0) == []
+    assert tailed.get == {"c": 2}
+    written = Observation("written")
+    frame.observe(written, F.count(F.lit(1)).alias("c")).write.parquet(str(tmp_path / "obs_pq"))
+    assert written.get == {"c": 2}

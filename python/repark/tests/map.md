@@ -2236,6 +2236,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   concurrent sibling observations fill independently; literal metrics are
   allowed; non-`Column` exprs refuse `NOT_LIST_OF_COLUMN` at `observe`.
   pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **Re-check L-101..L-103 (2026-09-15):** `explain` and `createOrReplaceTempView` no longer fill an Observation (plan-only work), `tail(0)` fills like `take(0)`, and a write still fills. pins: df-surface-b-1/C-008
 - `test_df_stream_batch_1.py` + `facade_dataframe_streaming_declared_oracle.json` —
   **DF-STREAM-BATCH-1 step 1 (2026-09-14):** the streaming-named DataFrame surface on a
   batch frame, driven cell-by-cell from the live-PySpark oracle copy. `writeStream`

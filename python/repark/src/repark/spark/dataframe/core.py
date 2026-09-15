@@ -951,9 +951,7 @@ class DataFrame:
 
     def create_or_replace_temp_view(self, name: str) -> None:
         """Register this DataFrame as a replaceable temporary view."""
-        from repark.spark.catalog_surface import _register_temp_view
-
-        _register_temp_view(self, name)
+        surface_b.register_view_without_fill(self, name)
 
     createOrReplaceTempView = create_or_replace_temp_view  # noqa: N815 — PySpark camelCase alias
 
@@ -2988,10 +2986,10 @@ class DataFrame:
         sql, keys = _EXPLAIN_SECTION_PLAN[selected]
         self._ensure_alive()
         view = scratch_view_name(self._session, "__repark_explain_")
-        self.create_or_replace_temp_view(view)
+        surface_b.register_view_without_fill(self, view)
         try:
             plan = self._spawn(self._session.sql(f"{sql} SELECT * FROM {view}"))
-            rows = [(row["plan_type"], row["plan"]) for row in plan.toLocalIterator()]
+            rows = [(row["plan_type"], row["plan"]) for row in surface_b.rows_without_fill(plan)]
         finally:
             self._session.drop_temp_view(view)
         return _render_explain_sections(selected, keys, rows)
@@ -3740,7 +3738,7 @@ class DataFrame:
             raise PySparkTypeError(f"Argument `num` should be a int, got {type(num).__name__}.")
         self._ensure_alive()
         if num <= 0:
-            return []
+            return surface_b.empty_rows_after_fill(self)
         rows = self.collect()
         if num >= len(rows):
             return rows

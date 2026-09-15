@@ -50,3 +50,16 @@ VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
 - `freqItems` is DF-FREQITEMS-1 on the build clone; not implemented here.
 - Spark's `observe_name_str_type` cell is a formatter crash (`AssertionError`); R-3 raises `PySparkTypeError` `NOT_LIST_OF_COLUMN` with Spark's intended params.
 - Spark `get` after `observe` with no action blocks forever; that cell was not recorded (`pass` in the oracle script).
+
+## Orchestrator fix after the re-check (run 15b, G-2)
+
+- R-6 (2026-09-15): the Grok re-check marked L-001..L-007 FIXED and found L-101 (P1: `explain` filled the Observation through the
+  scratch temp view and the EXPLAIN plan's iteration) and L-102 (P2: `createOrReplaceTempView` filled). The orchestrator fixed both
+  red-first with a thread-local fill suppression around plan-only work (`register_view_without_fill`, `rows_without_fill`), and made
+  L-103's `tail(0)` fill like `take(0)`; writers register through the session method directly and still fill. L-104 (P3: two unaliased
+  `lit(1)` metrics collide on the display name `"1"`) is recorded, not fixed. `core.py` swaps three call sites line for line.
+
+| Clause | Proposition | Proof | Verdict | Evidence |
+|---|---|---|---|---|
+| C-008 | Plan-only work never fills an Observation: `explain()`, `explain(True)` and `createOrReplaceTempView` leave `get` raising; `tail(0)` and a parquet write fill it. | `test_observe_explain_and_temp_view_do_not_fill`. | **PROVEN** | Red on 8dc64ae1 (1 failed: `explain()` filled the Observation), green after with the unit, frozen-surface and hygiene pins and every explain / temp_view / tail / writer / cte pin in the facade suite. pins: df-surface-b-1/C-008 |
+
