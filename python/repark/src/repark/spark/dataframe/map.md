@@ -542,6 +542,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   pins: io-bucket-cluster-1/C-005
   **Re-check (2026-09-15):** `_unpack_column_args` checks `cols` before `col` and raises `NOT_LIST_OF_STR` with Spark's sentence through `_refuse_not_list_of_str`.
 - `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1,
+- `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1, **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down. pins: df-surface-b-1/C-008
   2026-09-14), bound on the class from `core.py` at the exact ceiling. `foreach`
   streams `f(row)` through `toLocalIterator`; `foreachPartition` calls `f` once per
   Arrow batch with a `Row` iterator (an empty frame still calls `f` once).
