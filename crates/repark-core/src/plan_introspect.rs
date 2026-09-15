@@ -4,6 +4,7 @@ use std::hash::{BuildHasher, Hasher};
 use std::sync::Arc;
 
 use arrow::datatypes::DataType;
+use datafusion::common::ScalarValue;
 use datafusion::common::TableReference;
 use datafusion::datasource::listing::ListingTable;
 use datafusion::datasource::memory::MemTable;
@@ -13,7 +14,7 @@ use datafusion::datasource::view::ViewTable;
 use datafusion::execution::SessionState;
 use datafusion::execution::object_store::ObjectStoreUrl;
 use datafusion::functions_table::generate_series::GenerateSeriesTable;
-use datafusion::logical_expr::{Expr, LogicalPlan, SortExpr, TableSource};
+use datafusion::logical_expr::{BinaryExpr, Expr, LogicalPlan, Operator, SortExpr, TableSource};
 use datafusion::physical_plan::ExecutionPlan;
 use object_store::path::Path as ObjectPath;
 use url::Url;
@@ -86,41 +87,13 @@ fn hash_plan<S: BuildHasher>(
     ctx: &Ctx<'_, S>,
     hash: &mut DefaultHasher,
 ) -> crate::Result<()> {
-    if needs_analyze(plan) {
-        let analyzed = ctx
-            .state
-            .analyzer()
-            .execute_and_check(plan.clone(), ctx.state.config_options(), |_, _| {})
-            .map_err(crate::engine_err)?;
-        write_plan(&analyzed, ctx, hash);
-    } else {
-        write_plan(plan, ctx, hash);
-    }
+    let analyzed = ctx
+        .state
+        .analyzer()
+        .execute_and_check(plan.clone(), ctx.state.config_options(), |_, _| {})
+        .map_err(crate::engine_err)?;
+    write_plan(&analyzed, ctx, hash);
     Ok(())
-}
-
-fn needs_analyze(plan: &LogicalPlan) -> bool {
-    match plan {
-        LogicalPlan::Projection(node) => needs_analyze(&node.input),
-        LogicalPlan::Filter(node) => needs_analyze(&node.input),
-        LogicalPlan::Sort(node) => needs_analyze(&node.input),
-        LogicalPlan::Aggregate(node) => needs_analyze(&node.input),
-        LogicalPlan::Window(node) => needs_analyze(&node.input),
-        LogicalPlan::Join(node) => needs_analyze(&node.left) || needs_analyze(&node.right),
-        LogicalPlan::Repartition(node) => needs_analyze(&node.input),
-        LogicalPlan::Union(node) => node.inputs.iter().any(|input| needs_analyze(input)),
-        LogicalPlan::Subquery(node) => needs_analyze(&node.subquery),
-        LogicalPlan::SubqueryAlias(node) => needs_analyze(&node.input),
-        LogicalPlan::Limit(node) => needs_analyze(&node.input),
-        LogicalPlan::TableScan(scan) => is_view_source(&scan.source),
-        LogicalPlan::EmptyRelation(_) | LogicalPlan::Values(_) => false,
-        _ => true,
-    }
-}
-
-fn is_view_source(source: &Arc<dyn TableSource>) -> bool {
-    datafusion::datasource::default_table_source::source_as_provider(source)
-        .is_ok_and(|provider| provider.downcast_ref::<ViewTable>().is_some())
 }
 
 fn write_str(hash: &mut DefaultHasher, value: &str) {
@@ -201,23 +174,113 @@ fn write_norm_table(hash: &mut DefaultHasher, reference: &TableReference) {
     }
 }
 
-fn write_column_ref<S: BuildHasher>(
-    hash: &mut DefaultHasher,
-    ctx: &Ctx<'_, S>,
-    relation: Option<&TableReference>,
-    name: &str,
-) {
-    if let Some(reference) = relation {
-        let table = reference.table();
-        if table != "?table?" && !ctx.lineages.contains_key(table) {
-            hash.write_u8(1);
-            write_norm_table(hash, reference);
-            write_norm_ident(hash, name);
-            return;
-        }
-    }
+fn write_column_ref(hash: &mut DefaultHasher, name: &str) {
     hash.write_u8(0);
     write_norm_ident(hash, name);
+}
+
+fn scalar_int_value(value: &ScalarValue) -> Option<i128> {
+    match value {
+        ScalarValue::Int8(inner) => inner.map(i128::from),
+        ScalarValue::Int16(inner) => inner.map(i128::from),
+        ScalarValue::Int32(inner) => inner.map(i128::from),
+        ScalarValue::Int64(inner) => inner.map(i128::from),
+        ScalarValue::UInt8(inner) => inner.map(i128::from),
+        ScalarValue::UInt16(inner) => inner.map(i128::from),
+        ScalarValue::UInt32(inner) => inner.map(i128::from),
+        ScalarValue::UInt64(inner) => inner.map(i128::from),
+        _ => None,
+    }
+}
+
+fn is_int_type(kind: &DataType) -> bool {
+    matches!(
+        kind,
+        DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+    )
+}
+
+fn comparison_literal(expr: &Expr) -> Option<(i128, DataType)> {
+    match expr {
+        Expr::Literal(value, _) => scalar_int_value(value).map(|bits| (bits, value.data_type())),
+        Expr::Cast(cast) if is_int_type(cast.field.data_type()) => {
+            comparison_literal(&cast.expr).map(|(bits, _)| (bits, cast.field.data_type().clone()))
+        }
+        _ => None,
+    }
+}
+
+fn comparison_column<'a>(expr: &'a Expr, literal_kind: &DataType) -> Option<&'a str> {
+    match expr {
+        Expr::Column(column) => Some(column.name.as_str()),
+        Expr::Cast(cast)
+            if cast.field.data_type() == literal_kind && is_int_type(cast.field.data_type()) =>
+        {
+            comparison_column(&cast.expr, literal_kind)
+        }
+        _ => None,
+    }
+}
+
+fn comparison_key(binary: &BinaryExpr) -> Option<(&str, i128)> {
+    match binary.op {
+        Operator::Eq
+        | Operator::NotEq
+        | Operator::Lt
+        | Operator::LtEq
+        | Operator::Gt
+        | Operator::GtEq => {}
+        _ => return None,
+    }
+    if let Some((bits, kind)) = comparison_literal(&binary.right)
+        && let Some(name) = comparison_column(&binary.left, &kind)
+    {
+        return Some((name, bits));
+    }
+    if let Some((bits, kind)) = comparison_literal(&binary.left)
+        && let Some(name) = comparison_column(&binary.right, &kind)
+    {
+        return Some((name, bits));
+    }
+    None
+}
+
+fn fold_int_literal_cast(value: &ScalarValue, target: &DataType) -> Option<ScalarValue> {
+    let bits = scalar_int_value(value)?;
+    match target {
+        DataType::Int8 => i8::try_from(bits)
+            .ok()
+            .map(|inner| ScalarValue::Int8(Some(inner))),
+        DataType::Int16 => i16::try_from(bits)
+            .ok()
+            .map(|inner| ScalarValue::Int16(Some(inner))),
+        DataType::Int32 => i32::try_from(bits)
+            .ok()
+            .map(|inner| ScalarValue::Int32(Some(inner))),
+        DataType::Int64 => i64::try_from(bits)
+            .ok()
+            .map(|inner| ScalarValue::Int64(Some(inner))),
+        DataType::UInt8 => u8::try_from(bits)
+            .ok()
+            .map(|inner| ScalarValue::UInt8(Some(inner))),
+        DataType::UInt16 => u16::try_from(bits)
+            .ok()
+            .map(|inner| ScalarValue::UInt16(Some(inner))),
+        DataType::UInt32 => u32::try_from(bits)
+            .ok()
+            .map(|inner| ScalarValue::UInt32(Some(inner))),
+        DataType::UInt64 => u64::try_from(bits)
+            .ok()
+            .map(|inner| ScalarValue::UInt64(Some(inner))),
+        _ => None,
+    }
 }
 
 fn cache_view_name(reference: &TableReference) -> Option<&str> {
@@ -229,14 +292,28 @@ fn cache_view_name(reference: &TableReference) -> Option<&str> {
     }
 }
 
+fn passthrough_name(expr: &Expr) -> Option<&str> {
+    match expr {
+        Expr::Column(column) => Some(column.name.as_str()),
+        Expr::Alias(alias) => match alias.expr.as_ref() {
+            Expr::Column(column) if column.name.as_str() == alias.name.as_str() => {
+                Some(alias.name.as_str())
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 fn is_passthrough(exprs: &[Expr], input: &LogicalPlan) -> bool {
     let fields = input.schema();
     if exprs.len() != fields.fields().len() {
         return false;
     }
-    exprs.iter().zip(fields.fields().iter()).all(|(expr, field)| {
-        matches!(expr, Expr::Column(column) if column.name.as_str() == field.name().as_str())
-    })
+    exprs
+        .iter()
+        .zip(fields.fields().iter())
+        .all(|(expr, field)| passthrough_name(expr) == Some(field.name().as_str()))
 }
 
 fn write_plan<S: BuildHasher>(plan: &LogicalPlan, ctx: &Ctx<'_, S>, hash: &mut DefaultHasher) {
@@ -438,17 +515,24 @@ fn write_expr<S: BuildHasher>(expr: &Expr, ctx: &Ctx<'_, S>, hash: &mut DefaultH
         }
         Expr::Column(column) => {
             hash.write(b"C");
-            write_column_ref(hash, ctx, column.relation.as_ref(), &column.name);
+            write_column_ref(hash, &column.name);
         }
         Expr::Literal(value, _) => {
             hash.write(b"L");
             write_debug(hash, value);
         }
         Expr::BinaryExpr(binary) => {
-            hash.write(b"B");
-            write_expr(&binary.left, ctx, hash);
-            write_debug(hash, &binary.op);
-            write_expr(&binary.right, ctx, hash);
+            if let Some((name, bits)) = comparison_key(binary) {
+                hash.write(b"Cmp");
+                write_debug(hash, &binary.op);
+                write_norm_ident(hash, name);
+                hash.write_i128(bits);
+            } else {
+                hash.write(b"B");
+                write_expr(&binary.left, ctx, hash);
+                write_debug(hash, &binary.op);
+                write_expr(&binary.right, ctx, hash);
+            }
         }
         Expr::Not(inner) => write_wrapped(b"Not", inner, ctx, hash),
         Expr::Negative(inner) => write_wrapped(b"Neg", inner, ctx, hash),
@@ -494,9 +578,16 @@ fn write_expr_compound<S: BuildHasher>(expr: &Expr, ctx: &Ctx<'_, S>, hash: &mut
             write_opt_expr(case.else_expr.as_deref(), ctx, hash);
         }
         Expr::Cast(cast) => {
-            hash.write(b"Cast");
-            write_expr(&cast.expr, ctx, hash);
-            write_data_type(cast.field.data_type(), hash);
+            if let Expr::Literal(value, _) = cast.expr.as_ref()
+                && let Some(folded) = fold_int_literal_cast(value, cast.field.data_type())
+            {
+                hash.write(b"L");
+                write_debug(hash, &folded);
+            } else {
+                hash.write(b"Cast");
+                write_expr(&cast.expr, ctx, hash);
+                write_data_type(cast.field.data_type(), hash);
+            }
         }
         Expr::TryCast(cast) => {
             hash.write(b"TryCast");
@@ -612,7 +703,7 @@ fn write_expr_function<S: BuildHasher>(expr: &Expr, ctx: &Ctx<'_, S>, hash: &mut
         }
         Expr::OuterReferenceColumn(_, column) => {
             hash.write(b"OC");
-            write_column_ref(hash, ctx, column.relation.as_ref(), &column.name);
+            write_column_ref(hash, &column.name);
         }
         other => {
             hash.write(b"OpaqueExpr");
@@ -659,6 +750,29 @@ mod tests {
             .project(vec![
                 datafusion::logical_expr::col("one"),
                 datafusion::logical_expr::col("two"),
+            ])
+            .expect("test projection must build")
+            .build()
+            .expect("test plan must build");
+        let projected =
+            semantic_hash(&state, &wrapped, &HashMap::new()).expect("test plan must hash");
+        assert_eq!(bare, projected);
+    }
+
+    #[tokio::test]
+    async fn aliased_identity_projection_does_not_change_fingerprint() {
+        let context = SessionContext::new();
+        let frame = context
+            .sql("SELECT 1 AS one, 2 AS two")
+            .await
+            .expect("test sql must plan");
+        let plan = frame.logical_plan().clone();
+        let state = context.state();
+        let bare = semantic_hash(&state, &plan, &HashMap::new()).expect("test plan must hash");
+        let wrapped = datafusion::logical_expr::LogicalPlanBuilder::from(plan)
+            .project(vec![
+                datafusion::logical_expr::col("one").alias("one"),
+                datafusion::logical_expr::col("two").alias("two"),
             ])
             .expect("test projection must build")
             .build()

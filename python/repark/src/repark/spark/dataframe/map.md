@@ -195,8 +195,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   hashes the analyzed logical plan through the native `semantic_hash` fold, passing
   the live cache-view lineage map (view name to pre-cache native plan, gathered from
   the session token's tracked cache frames). `core.py` keeps its exact baseline by
-  absorbing the two binding lines into one collapsed validation raise.
-  pins: df-plan-introspect-1/C-001, C-002, C-006
+  absorbing the two binding lines into one collapsed validation raise. Follow-up
+  round 2 (2026-09-15, R-6/R-7/R-8) needs no facade change: the bodies already pass
+  the analyzed plan plus lineages through.
+  pins: df-plan-introspect-1/C-001, C-002, C-006, C-008, C-009, C-010
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
   `toLocalIterator`. Two converters live here: `rows_from_arrow_table_python` is the unchanged
   pure-Python path and stays the correctness oracle, and `rows_from_arrow_table` adds the

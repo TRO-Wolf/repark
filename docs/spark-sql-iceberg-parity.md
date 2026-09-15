@@ -1708,6 +1708,27 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   metrics are a second aggregation pass over the same plan. Blocking `get` is not
   an honest single-node answer, so repark raises Spark's own `NO_OBSERVE_BEFORE_GET`
   in both the never-attached and attached-but-no-action cases.
+### DF-PLAN-INTRO-1 — `inputFiles` lists scan files; `semanticHash` hashes the analyzed plan
+- **repark** — `inputFiles()` walks the built physical plan and lists every file-scan
+  group entry as `file:///` URIs in first-appearance order; a local frame answers
+  `[]`. `semanticHash()` hashes the always-analyzed logical plan (view inlining,
+  qualifier strip, identity-projection passthrough, integer-comparison
+  canonicalization) folded to a Java int. An Iceberg table scan answers `[]` like
+  Spark, and a manifest-backed file list is not offered. Independently built local
+  frames hash by construction identity, like Spark.
+- **Apache Spark** — `inputFiles` collects file relations only, so an Iceberg table
+  scan (V2 FileScan) answers `[]`; independently built same-data twins answer unequal
+  hashes with `sameSemantics` false. *(oracle: recorded — cells
+  `planintro_local_data_same_data_equal_hash`,
+  `planintro_local_data_same_data_same_semantics`,
+  `planintro_df_filter_vs_sql_where`, `planintro_select_all_named_vs_df` and the
+  sibling `planintro_*` cells in `facade_dataframe_surface_oracle.json`.)*
+- **Pin** — `python/repark/tests/test_df_plan_introspect_1.py::test_inputfiles_iceberg_scan_is_empty`,
+  `…::test_semantichash_df_filter_matches_sql_where`,
+  `…::test_semantichash_identity_selects_match_frame`
+- **Rationale** — IMPLEMENTED 2026-09-15 (DF-PLAN-INTROSPECT-1 follow-up round 2,
+  rulings R-6/R-7/R-8). `sameSemantics` stays handle identity per EX-DF-11; the hash
+  carries the equality.
 
 ### IO-ORC-1 — the ORC reader and writer names are a declared `NOT_IMPLEMENTED` refusal
 

@@ -90,3 +90,107 @@ cube / rollup / grouping sets by tag (the old always-analyze pass had erased the
 cube/rollup distinction). R-4 is the GIL-detached binding.
 
 VERDICT (whole ledger, 2026-09-15): 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Follow-up round 2 — 2026-09-15 (R-6..R-8, always-analyze plus door canonicalization)
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-008 | A DF-API `filter`/`where` and the same SQL `WHERE` hash equal, and a temp view over a filtered frame reads back equal through both `spark.sql` and `spark.table`. | The R-6 tests over `planintro_df_filter_vs_sql_where`, `planintro_df_filter_col_vs_sql_where`, `planintro_where_vs_filter`, `planintro_filter_then_select_vs_sql`, `planintro_view_over_filtered_sql`, `planintro_view_over_filtered_table`, red first on the round-1 head. | **PROVEN** | 35/35 green on the rebuilt release module. Red first on head `c48557dc` (new tests over the round-1 implementation): `test_semantichash_df_filter_matches_sql_where` (`assert (-172874460 == -936395348) == True`), `test_semantichash_filter_then_select_matches_sql` (`assert (-552705930 == 633446044) == True`), `test_semantichash_view_over_filtered_matches_frame` (`assert (359928196 == -250295646) == True`), `test_semantichash_identity_selects_match_frame` (`assert (1475915780 == 1120403206) == True`); the SQL-door selects, the reorder, and the Iceberg pins were already green. pins: df-plan-introspect-1/C-008 |
+| C-009 | An identity projection on either door hashes equal to its input; reorder, rename, subset, and expression projections stay `Projection` nodes. | The R-7 tests over `planintro_select_all_named_vs_df`, `planintro_select_cols_vs_df`, `planintro_select_star_vs_df`, `planintro_sql_select_named_vs_df`, `planintro_sql_select_star_vs_df`, `planintro_select_reordered_vs_df`, plus the rename/subset/expression/string-cast-fallthrough asserts, red first as above. | **PROVEN** | Same green run; the DF-door identity red above is the R-7 fail-before. `is_passthrough` now accepts a same-named `Alias` of a column next to a bare `Column`. pins: df-plan-introspect-1/C-009 |
+| C-010 | `inputFiles` keeps Spark's `[]` for an Iceberg table scan, pinned, with the registry row filed. | `test_inputfiles_iceberg_scan_is_empty` plus row DF-PLAN-INTRO-1 in `docs/spark-sql-iceberg-parity.md`. | **PROVEN** | Green on the round-1 head already (no code change on this arm); the row sits after DF-OBSERVE-1 and carries the `[]` note plus the R-1 construction-identity line. pins: df-plan-introspect-1/C-010 |
+
+**R-6 (L-101, P1, recorded as ordered).** The `needs_analyze` skip is removed:
+`hash_plan` always runs the analyzer, then streams into the hasher with the GIL
+still detached. Always-analyze alone fixed the view arms but NOT the predicate
+arms, so the round adds three measured normalizations, each probed before it was
+kept (temporary analyzer-shape probes, since removed): every column qualifier
+strips to the bare name (the analyzer keeps the view qualifier `v.a` after
+inlining, and the DF doors disagree with each other on it); an integer-literal
+cast folds to the target width (the SQL parser mints `Int64` while the Column
+API mints `Int32`, and the analyzer casts one side only); an integer comparison
+between a column (through int casts landing on the literal's own width) and an
+integer literal hashes as operator plus bare name plus `i128` value (the
+analyzer widens the *column* to the literal type on the string/SQL doors and
+leaves the Column door bare). The optimizer was measured and rejected: it
+constant-folds filters down to literal-vs-literal over `EmptyRelation`, which a
+semantic hash must never equate. Depth-200 chained-filter timing on the release
+native: median 0.0047s over 11 samples (0.0047–0.0051s, digest `159053862`,
+2026-09-15) against 0.0001s with the skip and 0.4143s before the follow-up; the
+cost is the analyzer pass, linear in plan depth, and per the ruling no timing
+repair may move a hash.
+
+**R-7 (L-102, P3 upgraded by the oracle, recorded as ordered).** The oracle
+(`planintro_l102_probe_2026-09-15.json`, twelve keys each holding `equal_hash`
+and `sameSemantics`) is transcribed one key per cell as
+`planintro_<key>` with `{"result": {"equal_hash": …, "sameSemantics": …}}`;
+`select_all_named`, `select_cols`, `select_star`, `sql_select_named`,
+`sql_select_star` are true/true and `select_reordered` is false/false, and every
+new pin reads its cell's `equal_hash`. The cells' `sameSemantics` values are
+transcribed but never asserted: repark answers `False` for distinct handles by
+EX-DF-11 while Spark answers `True`, so asserting them would pin a disposed
+divergence as a failure.
+
+**R-8 (Q-15B-3, owner ruling 2026-09-15, recorded as ordered).** `inputFiles`
+for Iceberg stays `[]`; row DF-PLAN-INTRO-1 filed after DF-OBSERVE-1, appended
+not reordered, carrying the one-line `[]` note and the one-line R-1
+construction-identity note. Spark itself answers unequal hashes with
+`sameSemantics` false for independently built same-data twins (cells
+`planintro_local_data_same_data_equal_hash` /
+`planintro_local_data_same_data_same_semantics` are both false), so
+construction identity is Spark-equal, not a divergence.
+
+**Known boundary (dated 2026-09-15, unmeasured on both engines).** The
+comparison canonicalization strips a column-side int cast only when it lands on
+the literal's own width, so an explicit *narrowing* cast that happens to match
+the literal width (`CAST(big_col AS INT) > <Int32 literal>`) hashes like the
+plain comparison. No pin covers it and no oracle cell measures it; a future
+cell deciding it either way reopens exactly `comparison_column`.
+
+VERDICT (whole ledger, 2026-09-15 round 2): 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: df-plan-introspect-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Clauses C-008/C-009/C-010 walked against the twelve recorded L-102 probe cells; four pins red on the round-1 head with the assert lines pasted above, all green after; every earlier clause re-green in the same run.
+      artifacts: [python/repark/tests/test_df_plan_introspect_1.py, python/repark/tests/facade_dataframe_surface_oracle.json, crates/repark-core/src/plan_introspect.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: String, Column, and SQL filter spellings; where-vs-filter; filter-then-select; filtered views through both doors; identity selects named/cols/star on both doors; reorder, rename, subset, expression, and string-cast selects that must stay distinct; Iceberg scan with live rows answering [].
+      artifacts: [python/repark/tests/test_df_plan_introspect_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Analyzer failure still maps to the engine error with no panic path (no unwrap in production code); stopped-session and non-DataFrame sameSemantics behavior unchanged and still covered by the round-1 null reports.
+      artifacts: [crates/repark-core/src/plan_introspect.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: No shared mutable state added; the GIL stays detached across analyze plus streaming hash; DefaultHasher stays process-seeded with the MemTable construction-identity boundary unchanged and re-pinned green.
+      artifacts: [crates/repark-python/src/plan_introspect.rs, python/repark/tests/test_df_plan_introspect_1.py]
+    - id: AT-5
+      status: ATTACKED
+      evidence: No new input surface (same two doors, facade untouched); the cast fold is total with a structural fallthrough for non-int and unrepresentable casts, pinned by the string-cast assert.
+      artifacts: [crates/repark-core/src/plan_introspect.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Every hash this round moves is re-pinned (35/35 green, including all C-001/C-002/C-006 pins); the fold only fires on value-preserving int casts and the comparison strip only on casts landing on the literal width; the explicit-narrowing corner is declared above, not absorbed.
+      artifacts: [python/repark/tests/test_df_plan_introspect_1.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Depth-200 chained-filter median 0.0047s on the release native (linear analyzer cost, streaming hasher kept, no intermediate string); hasher state stays fixed-size with no per-node allocation growth.
+      artifacts: [task/ledgers/staging/df-plan-introspect-1-ledger.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: No dependency change (Cargo.toml, Cargo.lock, pyproject.toml, uv.lock, .github untouched); facade signatures unchanged; DataFusion analyzer API used exactly as the round-1 view arm already did.
+      artifacts: [crates/repark-core/src/plan_introspect.rs, python/repark/src/repark/spark/dataframe/plan_introspect.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every new pin prints both hashes on failure (the red lines above came straight from that output); the ledger keeps the fail-before record next to the ruling.
+      artifacts: [python/repark/tests/test_df_plan_introspect_1.py, task/ledgers/staging/df-plan-introspect-1-ledger.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Four pins red before the fix, green after; every added branch names its triggering input (Alias arm by select of names, literal-cast fold by string/SQL int filters, comparison canonicalization by the Column-door filter, qualifier strip by the SQL door, reorder/rename/subset/expression fallthrough by the non-identity test).
+      artifacts: [python/repark/tests/test_df_plan_introspect_1.py, crates/repark-core/src/plan_introspect.rs]
+  complete: true
+```

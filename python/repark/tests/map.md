@@ -120,9 +120,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   twenty-three `planintro_*` probe cells: local-frame construction identity, the
   cache-keeps-hash lineage round-trip, cached `inputFiles` lengths, cube/rollup
   discrimination, hex column names, temp-view equality, and the URI form — five red
-  on the pre-follow-up implementation, three green, all green after. The example,
+  on the pre-follow-up implementation, three green, all green after. Follow-up round
+  2 (2026-09-15, rulings R-6/R-7/R-8) adds twelve `planintro_*` oracle cells from the
+  orchestrator's L-102 probe and eight tests: DF filter / `where` / filter-then-select
+  against SQL `WHERE`, views over filtered frames, identity selects on both doors
+  (reordered stays unequal), non-identity selects that stay projections, and the
+  Iceberg `[]` scan — four red on the round-1
+  head, all green after; the cells' `sameSemantics` values are transcribed but
+  unpinned because `sameSemantics` stays handle identity per EX-DF-11. The example,
   the inventory refresh, and this entry close the coverage loop.
-  pins: df-plan-introspect-1/C-003, C-006
+  pins: df-plan-introspect-1/C-003, C-006, C-008, C-009, C-010
   The touched DataFrame suites and the lint, format, clippy, and coverage gates
   stay green. pins: df-plan-introspect-1/C-004
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`

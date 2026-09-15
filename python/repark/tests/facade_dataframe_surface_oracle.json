@@ -1251,6 +1251,24 @@
     "value": 5
    }
   },
+  "planintro_df_filter_col_vs_sql_where": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_df_filter_vs_sql_where": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_filter_then_select_vs_sql": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
   "planintro_hex_names_equal_hash": {
    "result": {
     "kind": "bool",
@@ -1279,6 +1297,42 @@
    "result": {
     "kind": "bool",
     "value": false
+   }
+  },
+  "planintro_select_all_named_vs_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_select_cols_vs_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_select_reordered_vs_df": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_select_star_vs_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_sql_select_named_vs_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_sql_select_star_vs_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
    }
   },
   "planintro_temp_view_sql_equal_hash": {
@@ -1331,6 +1385,24 @@
      }
     ],
     "kind": "list"
+   }
+  },
+  "planintro_view_over_filtered_sql": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_view_over_filtered_table": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_where_vs_filter": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
    }
   },
   "registerTempTable": {

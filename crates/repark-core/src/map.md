@@ -197,27 +197,33 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `cfg!(debug_assertions)`. The measurement runner refuses to write a report unless it is
   false, so an H-3 number can never come from a debug build.
   pins: perf-dynflatten-1-measure/C-002
-- `plan_introspect.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-14; follow-up 2026-09-15):**
-  two plan-introspection kernels over a `DataFrame`'s plan. `input_files` walks the
-  built (never executed) physical plan and collects every `FileScanConfig` file-group
-  entry behind a `DataSourceExec`, rendered as the object store names it (`file:///`
-  for local paths, remote schemes unchanged) and de-duplicated in first-appearance
-  order; a plan with no file scan answers empty. `semantic_hash` streams the logical
-  plan into a process-seeded hasher with no intermediate string: output alias names
-  are skipped, column names hash with hex runs of 8+ normalized to `#`, `?table?`
-  and lineage-known view qualifiers strip to bare columns, scan-level pushed-down
-  filters are not hashed (the `Filter` node above carries them), file scans
-  fingerprint by listing-table paths, `generate_series` by bounds, memtables by
-  construction identity (independently built frames never share a hash, same data or
-  not), cube / rollup / grouping sets by distinct tags, and cache-view scans expand
-  through the caller-supplied lineage map; any other view source analyzes first (the
-  analyzer runs only then) and temp-view scans expand inline. Passthrough
-  projections and subquery aliases strip, file paths and literals never normalize,
-  and the fold keeps the low 32 bits of the digest as a signed int. Depth-200
-  chained-filter hash medians 0.0001s after the follow-up against 0.4143s before
-  (2026-09-15, release module). The Iceberg scan exec exposes table and snapshot
-  only, never materialized data files, so Iceberg frames answer empty.
-  pins: df-plan-introspect-1/C-001, C-002, C-006, C-007
+- `plan_introspect.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-14; follow-ups 2026-09-15,
+  rounds 1–2):** two plan-introspection kernels over a `DataFrame`'s plan.
+  `input_files` walks the built (never executed) physical plan and collects every
+  `FileScanConfig` file-group entry behind a `DataSourceExec`, rendered as the
+  object store names it (`file:///` for local paths, remote schemes unchanged) and
+  de-duplicated in first-appearance order; a plan with no file scan answers empty.
+  `semantic_hash` always analyzes first, then streams the analyzed plan into a
+  process-seeded hasher with no intermediate string: output alias names are
+  skipped, column names hash with hex runs of 8+ normalized to `#`, every column
+  qualifier strips to the bare name, scan-level pushed-down filters are not hashed
+  (the `Filter` node above carries them), file scans fingerprint by listing-table
+  paths, `generate_series` by bounds, memtables by construction identity
+  (independently built frames never share a hash, same data or not — Spark answers
+  the same), cube / rollup / grouping sets by distinct tags, and cache-view scans
+  expand through the caller-supplied lineage map while other temp-view scans expand
+  inline. Identity projections (each output the input column in order, bare or
+  same-named alias) and subquery aliases strip; integer-literal casts fold to the
+  target width, and an integer comparison between a column (through int-widening
+  casts only) and an integer literal hashes as operator plus bare name plus `i128`
+  value, so the string, Column, and SQL doors hash one filter one way (a cast on
+  the column side strips only when it lands on the literal's own width). The fold
+  keeps the low 32 bits of the digest as a signed int. Depth-200 chained-filter
+  hash medians 0.0047s on the always-analyze build against 0.0001s with the
+  analyze-skip and 0.4143s before the follow-up (2026-09-15, release module). The
+  Iceberg scan exec exposes table and snapshot only, never materialized data files,
+  so Iceberg frames answer empty.
+  pins: df-plan-introspect-1/C-001, C-002, C-006, C-007, C-008, C-009, C-010
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast first to repark-iceberg's `CommitStateUnknownError`
