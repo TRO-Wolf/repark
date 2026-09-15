@@ -59,13 +59,13 @@ expected divergence. `concat` itself is untouched.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | `bitmap_or_agg` / `bitmap_and_agg` refuse every non-BINARY payload at planning with `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]`, `The first parameter requires the "BINARY" type`, the Spark type name, `SQLSTATE: 42K09` (fixture ids `FU-or-*`, `FU-and-*`). | `test_fnp_6d_followup_1.py::test_or_and_agg_refuses_non_binary_payload` (12 cells). | OPEN | Red 2026-09-15: all 12 fail on the unfixed tree; the engine folds decimal-text bytes (see Red first). BLOCKED by the concat-Utf8 conflict below. |
-| C-002 | `bitmap_construct_agg` refuses BOOLEAN/BINARY/DATE/TIMESTAMP at planning with the same class requiring "BIGINT" (fixture `FU-construct-bool/binary/date` plus a TIMESTAMP arm per D-1). | `test_construct_agg_refuses_non_bigint_payload` (4 cells). | OPEN | Red 2026-09-15: all 4 fail (BOOLEAN/DATE answer 0 today; BINARY errors with the wrong class). |
-| C-003 | `bitmap_construct_agg` on malformed STRING ('abc', '', '1.5', mixed '1'/'abc') raises Spark's CAST_INVALID_INPUT text with `SQLSTATE: 22018` under ANSI-on (the door default). | `test_construct_agg_malformed_string_raises_cast_invalid_input` (4 cells). | OPEN | Red 2026-09-15: all 4 answer count 0 today. |
-| C-004 | `bitmap_construct_agg` answers Spark for numeric, trimmed-string, and NULL input: FLOAT 1.7 and 1.0, DOUBLE 2.0, DECIMAL 1.5, ' 1 ', INT, untyped NULL, typed NULL BIGINT. | `test_construct_agg_answers_numeric_trimmed_and_null` (8 cells). | OPEN | Red 2026-09-15: 5 fail (float/double/decimal/space answer 0 today); INT and both NULL arms already pass. |
-| C-005 | ANSI-off cells (`*-nonansi` malformed-string skips, '1.5' truncates to 1). | Registry row per the D-3 fallback, or pins if the ruling opens a carrier. | OPEN | The aggregate kernel has no config path: `AccumulatorArgs` carries exprs/schema only, and SQL `SET spark.sql.ansi.enabled` is stored-but-not-applied (SET-ANSI-RUNTIME-1), so ANSI-off is unreachable without a core/planner edit. D-3 fallback is ANSI-on plus a registry row. |
-| C-006 | No regression: the FNP-6D pins and `cargo test -p repark-functions bitmap` stay green. | `test_fnp_6d_bitmap_aggregates.py` (10 passed 2026-09-15, unfixed tree) plus the post-fix rerun. | OPEN | Baseline green recorded; post-fix rerun pending the ruling. |
-| C-007 | Registry rows (D-2 rendering residual, D-3 ANSI-off, and the ruling on the conflict below) plus map lockstep. | `docs/spark-sql-iceberg-parity.md` FNP-6D section; `map.md` rows for the fixture, the pin file, and this ledger. | OPEN | Maps for step 1 committed; registry rows pending the ruling. |
+| C-001 | `bitmap_or_agg` / `bitmap_and_agg` refuse every non-BINARY payload at planning with `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]`, `The first parameter requires the "BINARY" type`, the Spark type name, `SQLSTATE: 42K09` (fixture ids `FU-or-*`, `FU-and-*`). | `test_fnp_6d_followup_1.py::test_or_and_agg_refuses_non_binary_payload` (12 cells). | PROVEN | Red then green 2026-09-15: 12/12 fail unfixed, 12/12 pass fixed; Rust `or_agg_refuses_non_binary_with_spark_class` + `and_agg_refuses_non_binary_with_spark_class`; door text in Green evidence. The D-5 conflict resolved per ruling (a). |
+| C-002 | `bitmap_construct_agg` refuses BOOLEAN/BINARY/DATE/TIMESTAMP at planning with the same class requiring "BIGINT" (fixture `FU-construct-bool/binary/date` plus a TIMESTAMP arm per D-1). | `test_construct_agg_refuses_non_bigint_payload` (4 cells). | PROVEN | Red then green 2026-09-15: 4/4 fail unfixed, 4/4 pass fixed; Rust `construct_agg_refuses_non_bigint_with_spark_class`. |
+| C-003 | `bitmap_construct_agg` on malformed STRING ('abc', '', '1.5', mixed '1'/'abc') raises Spark's CAST_INVALID_INPUT text with `SQLSTATE: 22018` under ANSI-on (the door default). | `test_construct_agg_malformed_string_raises_cast_invalid_input` (4 cells). | PROVEN | Red then green 2026-09-15: 4/4 answer count 0 unfixed, 4/4 raise fixed; Rust `construct_agg_malformed_string_raises_cast_invalid_input`; door text in Green evidence. |
+| C-004 | `bitmap_construct_agg` answers Spark for numeric, trimmed-string, and NULL input: FLOAT 1.7 and 1.0, DOUBLE 2.0, DECIMAL 1.5, ' 1 ', INT, untyped NULL, typed NULL BIGINT. | `test_construct_agg_answers_numeric_trimmed_and_null` (8 cells). | PROVEN | Red then green 2026-09-15: 5 fail unfixed (float/double/decimal/space answer 0), 8/8 pass fixed; Rust `construct_agg_answers_numeric_trimmed_and_null` + `grouped_construct_agg_answers_trimmed_strings` (groups path shares `construct_positions`). |
+| C-005 | ANSI-off cells (`*-nonansi` malformed-string skips, '1.5' truncates to 1). | Registry row per the D-3 fallback, or pins if the ruling opens a carrier. | PROVEN | D-3 fallback taken: kernel always raises ANSI-on (the door default); the `*-nonansi` fixture cells stay recorded-but-unpinned and the registry Residuals row says why (no runtime ANSI-off switch, SET-ANSI-RUNTIME-1; no config path in `AccumulatorArgs`). |
+| C-006 | No regression: the FNP-6D pins and `cargo test -p repark-functions bitmap` stay green. | `test_fnp_6d_bitmap_aggregates.py` (10 passed 2026-09-15, unfixed tree) plus the post-fix rerun. | PROVEN | Post-fix 10/10 green incl. the D-5-adapted C-011 arm `CAST(concat(bitmap_construct_agg(0), X'01') AS BINARY)` (length 4096, Spark-true form; the only existing-pin SQL touched, per ruling (a)); full crate 473 passed; `make verify` exit 0. |
+| C-007 | Registry rows (D-2 rendering residual, D-3 ANSI-off, and the ruling on the conflict below) plus map lockstep. | `docs/spark-sql-iceberg-parity.md` FNP-6D section; `map.md` rows for the fixture, the pin file, and this ledger. | PROVEN | Registry Residuals row landed (rendering qualifier, ANSI-off, concat/DOOR-CONVERGE-2 with the divergence pin); maps current for the fixture, both pin files, `bitmap_agg.rs`, `groups.rs`, `tests.rs`, and this ledger (hook-green). |
 
 ## Evidence
 
@@ -150,7 +150,11 @@ function's surface); (c) keep Utf8 accepted (violates D-1 and the fixture). Lean
 ## Disk
 
 Checked 2026-09-15 before the probe runs: `df -h /tmp` shows 420 GB free of 1.8 TB.
-No worktree. No `cargo clean`. Step 1 ran Python pins only (no Rust build).
+No worktree. No `cargo clean`. Step 1 ran Python pins only (no Rust build). Step 2
+ran one debug `cargo test` cycle, one `make verify`, and one release
+`maturin develop`; no extra worktrees or coverage artifacts kept. Resolution of the
+conflict above: orchestrator ruling D-5 (option (a)) received and applied 2026-09-15;
+no HALT remains open.
 
 ## Gates (step 1)
 
@@ -158,3 +162,13 @@ No worktree. No `cargo clean`. Step 1 ran Python pins only (no Rust build).
 |---|---|
 | `.venv/bin/python -m pytest python/repark/tests/test_fnp_6d_followup_1.py -q --tb=no` | 25 failed, 3 passed (red-first, unfixed tree) |
 | `.venv/bin/python -m pytest python/repark/tests/test_fnp_6d_bitmap_aggregates.py -q --tb=no` | 10 passed (C-006 baseline) |
+
+## Gates (steps 2–3, fixed tree, 2026-09-15)
+
+| Command | Result |
+|---|---|
+| `cargo test -p repark-functions --lib bitmap_agg` | 13 passed, 0 failed |
+| `cargo test -p repark-functions` | 473 passed, 0 failed, 1 ignored |
+| release native `uvx maturin@1.14.1 develop --release` | installed repark-1.4.1 |
+| `.venv/bin/python -m pytest python/repark/tests/test_fnp_6d_followup_1.py python/repark/tests/test_fnp_6d_bitmap_aggregates.py -q` | 39 passed |
+| `make verify` | exit 0 (56 ok suites) |

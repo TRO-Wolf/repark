@@ -1908,6 +1908,22 @@ the pin rather than obeying it.
   C-017).
 - **Rationale** — FIXED for the recorded aggregate, length, coercion, error-class,
   and window shapes. Facade Python names are run 15a after this merges.
+- **Residuals (FNP-6D-FOLLOWUP-1, 2026-09-15).** The followup closes the L-001/L-003
+  signature gaps against the recorded `FU-*` cells
+  (`python/repark/tests/fnp_6d_followup_1_spark_oracle.json`, live PySpark 4.1.2):
+  OR/AND refuse every non-BINARY payload and construct refuses every non-BIGINT
+  payload at planning with Spark's class, required type, Spark type name, and
+  `SQLSTATE: 42K09`; malformed STRING raises Spark's `CAST_INVALID_INPUT` text with
+  `SQLSTATE: 22018` under ANSI-on (the door default). Three shapes stay open. The
+  refusal renders the resolved argument (`bitmap_bit_position(t.x)` for a nested
+  call) and carries no `line 1 pos N` suffix — pins assert class, required type,
+  type name, and SQLSTATE. ANSI-off keeps no separate path: the kernel always takes
+  the ANSI-on shape, and the `*-nonansi` fixture cells (NULL skip, `'1.5'` truncates
+  to 1) are not re-pinned — the door has no runtime ANSI-off switch
+  (SET-ANSI-RUNTIME-1). `concat(BINARY, BINARY)` types STRING on the SQL door where
+  Spark answers BINARY (measured 2026-09-15); owner: DOOR-CONVERGE-2 (run 16c) —
+  pinned by `test_concat_binary_types_string_expected_divergence`, which reds when
+  `concat` converges.
 
 ### FNP8-NULLABILITY — higher-order result metadata retains inherited nullable fields
 
