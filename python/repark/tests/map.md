@@ -239,6 +239,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and flip back to Spark's non-null when that unit lands. `test_element_at_alias_1_*`
   codifies today's `element_at` resolution against the alias-clobber hazard
   (ELEMENT-AT-ALIAS-1).
+  **Round 5 (2026-09-16):** `abs` takes Spark's implicit STRING→DOUBLE cast on both
+  doors — `test_c003_abs_casts_string_to_double_on_both_doors` pins `abs('-1')` =
+  1.0 double nullable and CAST_INVALID_INPUT on `'x'` literal and column inputs
+  (fixtures-batch11.json A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x).
   pins: door-converge-1/C-001, C-002, C-003, C-004, C-005,
   C-006, C-007, C-008, C-010, C-011, C-012, C-013, C-014
 - [test_abs_expr_1.py](test_abs_expr_1.py) — **ABS-EXPR-1 (2026-09-13):** `F.abs` /
@@ -4524,7 +4528,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   registry shadow and scan pins, sha2/bitwise/log/ntile shape pins, allowlist sync),
   NaN-collapse and all-null-group BACKLOG pins, CAST-fold, and tightened pins. Round 3
   maps engine arity failures to `WRONG_NUM_ARGS` with sha2/abs/substring pins plus a
-  type-mismatch guard.
+  type-mismatch guard. **DOOR-CONVERGE-1 round 5 (2026-09-16):** the abs type-mismatch
+  pin now asserts CAST_INVALID_INPUT plus a `lit('-1')` → 1.0 value leg
+  (fixtures-batch11.json A11-callfn-abs-x, A11-sql-abs-1), and `char_length` derives
+  out of the facade-only by-name allowlist (A11-callfn-char-length).
   pins: fnp-misc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, fnp-misc-1/F-1, fnp-misc-1/F-2, fnp-misc-1/F-3, fnp-misc-1/F-4, fnp-misc-1/F-5, fnp-misc-1/L-001, fnp-misc-1/L-002, fnp-misc-1/L-003, fnp-misc-1/L-004, fnp-misc-1/L-005, fnp-misc-1/L-007, fnp-misc-1/L-008, fnp-misc-1/L-010
 - `fnp_misc_1_agg_spark_oracle.json`, `fnp_misc_1_arrow2_spark_oracle.json`,
   `fnp_misc_1_arrow_bucket_spark_oracle.json` — **FNP-MISC-1 (2026-09-15):** the orchestrator's

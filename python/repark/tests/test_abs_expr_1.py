@@ -169,10 +169,13 @@ def test_abs_integer_min_raises(spark: ReparkSession) -> None:
 
 
 def test_abs_non_numeric_refuses(spark: ReparkSession) -> None:
-    """pins: abs-expr-1/C-001, C-002 — ``F.abs`` on boolean and string columns raises."""
+    """pins: abs-expr-1/C-001, C-002 — ``F.abs`` on a boolean column raises;
+    a malformed string column raises CAST_INVALID_INPUT at execution
+    (fixtures-batch11.json A11-api-abs-x; Spark's implicit STRING->DOUBLE cast).
+    """
     with pytest.raises(AnalysisException):
         spark.createDataFrame([(True,)], "x boolean").select(F.abs("x")).to_arrow()
-    with pytest.raises(AnalysisException):
+    with pytest.raises(PySparkException, match="CAST_INVALID_INPUT"):
         spark.createDataFrame([("a",)], "x string").select(F.abs("x")).to_arrow()
 
 

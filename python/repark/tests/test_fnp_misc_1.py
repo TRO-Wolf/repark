@@ -317,12 +317,19 @@ def test_fnp_misc_1_call_function_substring_range_arity_raises(spark: Any) -> No
 
 
 def test_fnp_misc_1_call_function_abs_string_mismatch_is_not_unresolved(spark: Any) -> None:
-    """A type mismatch on a known routine is its own error. pins: fnp-misc-1/L-010"""
+    """A malformed string under a known routine is its own error. pins: fnp-misc-1/L-010
+
+    Oracle fixtures-batch11.json A11-callfn-abs-x: ``call_function('abs', lit('x'))``
+    raises CAST_INVALID_INPUT (a malformed STRING->DOUBLE cast), not
+    UNRESOLVED_ROUTINE; A11-sql-abs-1 measures ``abs('-1')`` = 1.0 double.
+    """
     frame = spark.createDataFrame([("a",), (None,)], "s STRING")
-    with pytest.raises(AnalysisException) as caught:
+    with pytest.raises(PySparkException) as caught:
         frame.select(F.call_function("abs", col("s")).alias("x")).collect()
     assert "UNRESOLVED_ROUTINE" not in str(caught.value)
-    assert "Function 'abs' expects Numeric but received String" in str(caught.value)
+    assert "CAST_INVALID_INPUT" in str(caught.value)
+    values = _select_column_values(frame, F.call_function("abs", lit("-1")).alias("v"), "v")
+    assert values == [1.0, 1.0]
 
 
 def test_fnp_misc_1_byname_allowlist_covers_facade() -> None:

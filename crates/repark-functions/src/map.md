@@ -49,6 +49,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   on signed minima. `hypot` is rescaled `f64::hypot` (infinity over NaN). `bin` / `rint`
   use `Signature::user_defined` + `coerce_types` so a BOOLEAN input refuses with
   `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` rather than an internal signature error.
+  **Round 5 (2026-09-16):** `abs` accepts STRING per Spark's implicit STRING→DOUBLE
+  cast — `coerce_types` passes the utf8 type through and the kernel safe-casts
+  itself so a malformed value raises `[CAST_INVALID_INPUT]` under ANSI (NULL under
+  ANSI-off) instead of a bare Arrow cast error (fixtures-batch11.json
+  A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x).
   pins: door-converge-1/C-002, C-003, C-008
 - `spark_base64.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `base64` / `unbase64` — a
   hand-rolled `java.util.Base64` MIME codec (no `base64` crate dep): RFC 4648 padding,

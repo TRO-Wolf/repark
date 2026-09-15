@@ -44,7 +44,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   ELEMENT-AT-ALIAS-1 files the alias-clobber hazard as backlog. Round 4 (ruling
   R-13): C-011/C-013's literal-haystack nullability legs pin today's `nullable=True`
   as recorded divergence ARRAY-LITERAL-CONTAINSNULL-1 (owner DOOR-CONVERGE-2);
-  all clauses PROVEN.
+  all clauses PROVEN. Round 5 (2026-09-16, on main `23ba2e53`): `abs` takes Spark's
+  implicit STRING→DOUBLE cast with CAST_INVALID_INPUT on malformed input
+  (fixtures-batch11.json A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x);
+  `char_length` leaves `FACADE_ONLY_ROUTINE_NAMES` (A11-callfn-char-length).
   `risk_tier: standard`. Branch `feat/door-kernel-converge-1`.
   pins: door-converge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —

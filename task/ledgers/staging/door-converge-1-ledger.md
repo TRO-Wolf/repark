@@ -28,7 +28,7 @@ lexer divergence owned by another unit.
 |---|---|---|---|---|
 | C-001 | `base64` pads RFC 4648 AND chunks every 76 output chars with `\r\n`, non-null for non-null input, on both doors (cells BL17-0..8, DIV-api-base64-long); `unbase64` returns BINARY, accepts unpadded input, skips `\r\n`, answers empty binary for `'!!'` (cells DIV-unbase64-0..3). | `test_door_converge_1.py::test_c001_*` green on both doors. | PROVEN | Red (base tree): `base64(repeat('x',100))` answers unchunked and nullable (`At index 1 diff: True != False`); `unbase64('!!')` raises `Execution error: Failed to decode value using base64pad: Invalid symbol 33, offset 0.`; facade `F.base64` returns unpadded `U3Bhcms`/`QQ`. |
 | C-002 | `hypot` is registered on the SQL door, overflow-safe rescaled (`f64::hypot`): `hypot(1e200,1e200)` = 1.414213562373095e+200 non-null when both inputs non-null, NULL propagates, `hypot(inf, NaN)` = inf (cells BL16-0..8, BL16-api). | `test_c002_hypot_registers_rescaled_on_both_doors` green. | PROVEN | Red (base tree): `AnalysisException: Error during planning: Invalid function 'hypot'. Did you mean 'pow'?`; facade `F.hypot(1e200,1e200)` answers `inf`. |
-| C-003 | `abs` of a signed integer minimum raises `[ARITHMETIC_OVERFLOW]` on the SQL door under ANSI (cells DIV-abs-0..2); result type keeps the input width (`abs(CAST(-5 AS TINYINT))` = 5 tinyint); facade keeps raising. | `test_c003_abs_integer_min_raises_on_the_sql_door` green. | PROVEN | Red (base tree): `Failed: DID NOT RAISE PySparkException` — door answers -128/-32768/-2147483648/-9223372036854775808 wrapped (SparkAbs reads `execution.enable_ansi_mode`, never set). |
+| C-003 | `abs` of a signed integer minimum raises `[ARITHMETIC_OVERFLOW]` on the SQL door under ANSI (cells DIV-abs-0..2); result type keeps the input width (`abs(CAST(-5 AS TINYINT))` = 5 tinyint); facade keeps raising. Round 5 adds: `abs` takes Spark's implicit STRING→DOUBLE cast on both doors — `abs('-1')` = `1.0` double nullable, `'x'` literal and column inputs raise `[CAST_INVALID_INPUT]` (cells A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x). | `test_c003_abs_integer_min_raises_on_the_sql_door` + `test_c003_abs_casts_string_to_double_on_both_doors` green. | PROVEN | Red (base tree): `Failed: DID NOT RAISE PySparkException` — door answers -128/-32768/-2147483648/-9223372036854775808 wrapped (SparkAbs reads `execution.enable_ansi_mode`, never set). Round 5 red-first: STRING input refused `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` at `coerce_types` where Spark implicitly casts to DOUBLE. |
 | C-004 | `size(NULL array)` is NULL with nullable `int` on both doors (Spark 4 `sizeOfNull=false` default); `cardinality` answers `int` (cells DIV-size-0..3, DIV-api-size-null). | `test_c004_size_null_array_is_null_int_on_both_doors` green. | PROVEN | Red (base tree): `size(CAST(NULL AS ARRAY<INT>))` answers `-1` `int32 not null`; `cardinality` answers `uint64`. |
 | C-005 | `array_contains` is three-valued NULL on both doors (`array_contains(array(1,NULL), 2)` → NULL); a NULL-typed needle on the SQL door refuses `DATATYPE_MISMATCH.NULL_TYPE` (cells DIV-array_contains-0..3, DIV-api-contains). | `test_c005_array_contains_three_valued_on_both_doors` green. | PROVEN | Red (base tree): `Failed: DID NOT RAISE AnalysisException` — door answers NULL for a NULL-typed needle; facade `F.array_contains` answers `False`. |
 | C-006 | `approx_count_distinct` and `regr_count` derive NON-null `bigint` on both doors, also over empty input (cells BL18-sql, BL18-api, BL18-sql-empty). | `test_c006_count_aggregates_non_null_bigint_on_both_doors` green + `test_types_1.py` nullability pair trued up. | PROVEN | Red (base tree): `assert (DataType(int64), True) == (DataType(int64), False)` — both UDAFs derive nullable today. |
@@ -247,12 +247,40 @@ The `element_at` → `map_extract` alias clobber needs no fix on this branch (it
 an artifact of the removed re-registration sweep); the hazard and today's answer
 are pinned as ELEMENT-AT-ALIAS-1 (BACKLOG, §7 registry).
 
-## COVERAGE_ATTESTATION — DOOR-CONVERGE-1 — 2026-09-15 (round 4, R-13)
+## ROUND 5 — rebase onto main `23ba2e53` + A11 `abs`/`char_length` fixes — 2026-09-16
+
+The orchestrator rebased the branch onto main `23ba2e53` (7 commits replayed;
+`collection.rs` keeps main's ARRAY-NULL-1 `array_append`/`array_prepend` shims
+beside this unit's `array_contains`/`size` modules, `make_array` stays removed).
+Two post-rebase facade reds in `test_fnp_misc_1.py` landed here per run-15a
+clearance, measured against `fixtures-batch11.json` (live PySpark 4.1.2):
+
+- **`abs` over STRING** — Spark implicitly casts STRING→DOUBLE:
+  `abs('-1')` = `1.0` double nullable (A11-sql-abs-1); a malformed input raises
+  `[CAST_INVALID_INPUT]` on all three entry spellings (A11-sql-abs-x,
+  A11-api-abs-x, A11-callfn-abs-x). The kernel now accepts the utf8 family in
+  `coerce_types` (passed through unchanged, so no engine CAST is inserted) and
+  safe-casts inside `abs_typed` — under ANSI the first non-null input that
+  casts to NULL raises the Spark-classed `CAST_INVALID_INPUT` sentence; under
+  ANSI-off the malformed value answers NULL, matching Spark's try-cast
+  semantics. Red-first: the pin failed on the base tree with
+  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` before the kernel moved.
+  `test_fnp_misc_1_call_function_abs_string_mismatch_is_not_unresolved` now
+  asserts `CAST_INVALID_INPUT` (not UNRESOLVED_ROUTINE — its original intent)
+  plus the `call_function('abs', lit('-1'))` = 1.0 value leg.
+- **`char_length`** leaves `FACADE_ONLY_ROUTINE_NAMES` in `functions_byname.py` —
+  the Rust dispatch already serves it, so the derived facade-only set no longer
+  contains it (`call_function('char_length', lit('abc'))` = 3,
+  A11-callfn-char-length).
+
+## COVERAGE_ATTESTATION — DOOR-CONVERGE-1 — 2026-09-16 (round 5, A11)
 
 - C-001..C-009, C-010, C-012, C-014 PROVEN: every clause's both-door pin is green on the
   rebuilt release native module; the measured divergences in the red-first runs are each
   closed by a registered Spark kernel the facade and the SQL door share
-  (`door_parity_tests` keeps the divergence table at 14).
+  (`door_parity_tests` keeps the divergence table at 14). Round 5 extends C-003 with
+  the A11 string-coercion cells — `abs` over STRING casts to DOUBLE on both doors,
+  CAST_INVALID_INPUT on malformed input.
 - C-011, C-013 PROVEN under ruling R-13: value and column-haystack legs assert Spark's
   answer green; the literal-haystack nullability sub-claims moved to
   "Handed to DOOR-CONVERGE-2" — the pins assert today's `nullable=True` as recorded

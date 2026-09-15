@@ -5,7 +5,7 @@ use datafusion::arrow::array::{
     Array, ArrayRef, AsArray, PrimitiveArray, PrimitiveBuilder, StringArray,
 };
 use datafusion::arrow::buffer::{Buffer, OffsetBuffer, ScalarBuffer};
-use datafusion::arrow::compute::{binary, cast, try_unary, unary};
+use datafusion::arrow::compute::{CastOptions, binary, cast, cast_with_options, try_unary, unary};
 use datafusion::arrow::datatypes::{
     ArrowNativeTypeOp, ArrowPrimitiveType, DataType, Decimal32Type, Decimal64Type, Decimal128Type,
     Decimal256Type, Field, FieldRef, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type,
@@ -74,26 +74,36 @@ impl ScalarUDFImpl for SparkAbs {
     crate::shim_udf_boilerplate!("abs");
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        arg_types
-            .first()
-            .cloned()
-            .ok_or_else(|| DataFusionError::Plan("'abs' expects one numeric argument".to_string()))
+        let data_type = arg_types.first().ok_or_else(|| {
+            DataFusionError::Plan("'abs' expects one numeric argument".to_string())
+        })?;
+        if is_utf8_family(data_type) {
+            return Ok(DataType::Float64);
+        }
+        Ok(data_type.clone())
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
         let field = args.arg_fields.first().ok_or_else(|| {
             DataFusionError::Plan("'abs' expects one numeric argument".to_string())
         })?;
+        let string_input = is_utf8_family(field.data_type());
         Ok(Arc::new(Field::new(
             "abs",
-            field.data_type().clone(),
-            field.is_nullable(),
+            if string_input {
+                DataType::Float64
+            } else {
+                field.data_type().clone()
+            },
+            field.is_nullable() || string_input,
         )))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         match arg_types {
-            [data_type] if data_type.is_numeric() => Ok(vec![data_type.clone()]),
+            [data_type] if data_type.is_numeric() || is_utf8_family(data_type) => {
+                Ok(vec![data_type.clone()])
+            }
             [DataType::Null] => Ok(vec![DataType::Int32]),
             [data_type] => Err(unexpected_input_type("abs", "NUMERIC", data_type)),
             _ => exec_err!("'abs' expects one argument, got {}", arg_types.len()),
@@ -381,6 +391,7 @@ fn overflow_error(kind: &str) -> DataFusionError {
 
 fn abs_typed(array: &dyn Array, ansi: bool) -> Result<ArrayRef> {
     match array.data_type() {
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => abs_utf8(array, ansi),
         DataType::Int8 => abs_primitive::<Int8Type>(array, ansi, "byte"),
         DataType::Int16 => abs_primitive::<Int16Type>(array, ansi, "short"),
         DataType::Int32 => abs_primitive::<Int32Type>(array, ansi, "integer"),
@@ -406,6 +417,53 @@ fn abs_typed(array: &dyn Array, ansi: bool) -> Result<ArrayRef> {
         )),
         other => exec_err!("'abs' on unsupported type {other}"),
     }
+}
+
+fn abs_utf8(array: &dyn Array, ansi: bool) -> Result<ArrayRef> {
+    let options = CastOptions {
+        safe: true,
+        ..CastOptions::default()
+    };
+    let casted = cast_with_options(array, &DataType::Float64, &options)?;
+    let doubles = casted.as_primitive::<Float64Type>();
+    if ansi {
+        for row in 0..array.len() {
+            if !array.is_null(row) && doubles.is_null(row) {
+                return Err(malformed_double_cast(&utf8_row_value(array, row)));
+            }
+        }
+    }
+    Ok(Arc::new(unary::<Float64Type, _, Float64Type>(
+        doubles,
+        f64::abs,
+    )))
+}
+
+fn utf8_row_value(array: &dyn Array, row: usize) -> String {
+    cast(array, &DataType::Utf8).map_or_else(
+        |_| "invalid".to_string(),
+        |utf8| {
+            utf8.as_any().downcast_ref::<StringArray>().map_or_else(
+                || "invalid".to_string(),
+                |values| values.value(row).to_string(),
+            )
+        },
+    )
+}
+
+fn malformed_double_cast(value: &str) -> DataFusionError {
+    DataFusionError::Execution(format!(
+        "[CAST_INVALID_INPUT] The value '{value}' of the type \"STRING\" cannot be cast to \
+         \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its \
+         target type. Use `try_cast` to tolerate malformed input and return NULL instead."
+    ))
+}
+
+fn is_utf8_family(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
 }
 
 fn abs_primitive<T: ArrowPrimitiveType>(

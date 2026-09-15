@@ -159,6 +159,29 @@ def test_c003_abs_integer_min_raises_on_the_sql_door(spark: ReparkSession) -> No
         spark.sql("SELECT abs(x) AS v FROM mins").collect()
 
 
+def test_c003_abs_casts_string_to_double_on_both_doors(spark: ReparkSession) -> None:
+    """Oracle A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x: STRING casts to DOUBLE."""
+    assert _sql_field(spark, "SELECT abs('-1') AS v") == (pyarrow.float64(), True, [1.0])
+    with pytest.raises(PySparkException, match="CAST_INVALID_INPUT"):
+        spark.sql("SELECT abs('x') AS v").collect()
+    spark.createDataFrame([("-1",)], "s string").createOrReplaceTempView("abs_strings")
+    assert _sql_field(spark, "SELECT abs(s) AS v FROM abs_strings") == (
+        pyarrow.float64(),
+        True,
+        [1.0],
+    )
+    spark.createDataFrame([("x",)], "s string").createOrReplaceTempView("abs_bad_strings")
+    with pytest.raises(PySparkException, match="CAST_INVALID_INPUT"):
+        spark.sql("SELECT abs(s) AS v FROM abs_bad_strings").collect()
+    frame = spark.createDataFrame([(1,)], "a int")
+    assert frame.select(F.abs(F.lit("-1")).alias("v")).to_arrow().column("v").to_pylist() == [1.0]
+    with pytest.raises(PySparkException, match="CAST_INVALID_INPUT"):
+        frame.select(F.abs(F.lit("x")).alias("v")).collect()
+    bad_column = spark.createDataFrame([("x",), (None,)], "s string")
+    with pytest.raises(PySparkException, match="CAST_INVALID_INPUT"):
+        bad_column.select(F.abs("s").alias("v")).collect()
+
+
 def test_c004_size_null_array_is_null_int_on_both_doors(spark: ReparkSession) -> None:
     """Oracle DIV-size-0..3, DIV-api-size-null: sizeOfNull=false semantics, int out."""
     assert _sql_field(spark, "SELECT size(array(1, 2)) AS v") == (
