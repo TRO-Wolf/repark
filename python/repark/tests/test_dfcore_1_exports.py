@@ -61,6 +61,13 @@ REPLACE-LINEAR-1 step 1 (2026-09-14): the ``DataFrame.replace`` body moves to
 ``replace_expr.py`` (validation and the flat searched-CASE build); ``replace``
 stays a one-line wrapper so ``EXPECTED_DATAFRAME_DIR`` is unchanged; ``core``
 and the package each gain exactly the one new module name ``replace_expr``.
+DF-STREAM-BATCH-1 (2026-09-14): the streaming-named members bind on the class
+from ``streaming_batch.py`` — ``EXPECTED_DATAFRAME_DIR`` gains exactly
+``dropDuplicatesWithinWatermark``, ``drop_duplicates_within_watermark``,
+``pandas_api``, ``plot``, ``rdd``, ``withWatermark``, ``with_watermark``, and
+``writeStream``; ``EXPECTED_DATAFRAME_ALIASES`` gains the two camelCase pairs;
+``core`` and the package each gain exactly the one new module name
+``streaming_batch``.
 """
 
 from __future__ import annotations

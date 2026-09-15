@@ -1,0 +1,420 @@
+{
+ "cells": {
+  "connect_only_shape": {
+   "result": {
+    "kind": "str",
+    "value": "[ONLY_SUPPORTED_WITH_SPARK_CONNECT] SparkSession.client is only supported with Spark Connect; however, the current Spark session does not use Spark Connect."
+   }
+  },
+  "connect_rdd_shape": {
+   "result": {
+    "kind": "str",
+    "value": "[NOT_IMPLEMENTED] rdd is not implemented."
+   }
+  },
+  "ddww_bad_subset": {
+   "error": {
+    "condition": "NOT_LIST_OR_TUPLE",
+    "message": "[NOT_LIST_OR_TUPLE] Argument `subset` should be a list or tuple, got str.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkTypeError",
+     "PySparkException",
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "arg_name": "subset",
+     "arg_type": "str"
+    },
+    "raises": "PySparkTypeError"
+   }
+  },
+  "ddww_batch": {
+   "error": {
+    "condition": "_LEGACY_ERROR_TEMP_3102",
+    "message": "dropDuplicatesWithinWatermark is not supported with batch DataFrames/DataSets;\nDeduplicateWithinWatermark [k#249]\n+- LogicalRDD [k#249, v#250], false\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "msg": "dropDuplicatesWithinWatermark is not supported with batch DataFrames/DataSets"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "ddww_batch_noargs": {
+   "error": {
+    "condition": "_LEGACY_ERROR_TEMP_3102",
+    "message": "dropDuplicatesWithinWatermark is not supported with batch DataFrames/DataSets;\nDeduplicateWithinWatermark [k#251, v#252]\n+- LogicalRDD [k#251, v#252], false\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "msg": "dropDuplicatesWithinWatermark is not supported with batch DataFrames/DataSets"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "ddww_missing_col": {
+   "error": {
+    "condition": "_LEGACY_ERROR_TEMP_1201",
+    "message": "Cannot resolve column name \"zz\" among (k, v).",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "colName": "zz",
+     "fieldNames": "k, v"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "ddww_order": {
+   "error": {
+    "condition": "_LEGACY_ERROR_TEMP_1201",
+    "message": "Cannot resolve column name \"zz\" among (k, v).",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "colName": "zz",
+     "fieldNames": "k, v"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "isStreaming": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "pandas_api": {
+   "error": {
+    "condition": "PACKAGE_NOT_INSTALLED",
+    "message": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkImportError",
+     "PySparkException",
+     "ImportError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "minimum_version": "2.2.0",
+     "package_name": "Pandas"
+    },
+    "raises": "PySparkImportError"
+   }
+  },
+  "pandas_api_with_pandas": {
+   "error": {
+    "condition": null,
+    "message": "cannot import name '_builtin_table' from 'pandas.core.common' (/tmp/oc-worker/run15b/oracle/pdshim/pandas/core/common.py)",
+    "module": "builtins",
+    "mro": [
+     "ImportError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "ImportError"
+   }
+  },
+  "plot": {
+   "result": {
+    "kind": "str",
+    "value": "PySparkPlotAccessor"
+   }
+  },
+  "plot_line": {
+   "error": {
+    "condition": "PACKAGE_NOT_INSTALLED",
+    "message": "[PACKAGE_NOT_INSTALLED] Plotly >= 4.8 must be installed; however, it was not found.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkImportError",
+     "PySparkException",
+     "ImportError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "minimum_version": "4.8",
+     "package_name": "Plotly"
+    },
+    "raises": "PySparkImportError"
+   }
+  },
+  "plot_with_pandas": {
+   "error": {
+    "condition": "PACKAGE_NOT_INSTALLED",
+    "message": "[PACKAGE_NOT_INSTALLED] Plotly >= 4.8 must be installed; however, it was not found.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkImportError",
+     "PySparkException",
+     "ImportError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "minimum_version": "4.8",
+     "package_name": "Plotly"
+    },
+    "raises": "PySparkImportError"
+   }
+  },
+  "rdd": {
+   "result": {
+    "kind": "str",
+    "value": "RDD"
+   }
+  },
+  "withWatermark_bad_col": {
+   "result": {
+    "columns": [
+     "v"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(v=1)"
+    ],
+    "schema": "struct<v:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "v",
+       "nullable": false,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withWatermark_bad_delay": {
+   "error": {
+    "condition": "CANNOT_PARSE_INTERVAL",
+    "message": "[CANNOT_PARSE_INTERVAL] Unable to parse 'banana'. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. If the issue persists, please double check that the input value is not null or empty and try again. SQLSTATE: 22006",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "intervalString": "'banana'"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "withWatermark_batch": {
+   "result": {
+    "columns": [
+     "ts",
+     "v"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(ts=datetime.datetime(2023, 12, 31, 19, 0), v=1)"
+    ],
+    "schema": "struct<ts:timestamp,v:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "ts",
+       "nullable": false,
+       "type": "timestamp"
+      },
+      {
+       "metadata": {},
+       "name": "v",
+       "nullable": false,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withWatermark_delay_not_str": {
+   "error": {
+    "condition": "NOT_STR",
+    "message": "[NOT_STR] Argument `delayThreshold` should be a str, got int.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkTypeError",
+     "PySparkException",
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "arg_name": "delayThreshold",
+     "arg_type": "int"
+    },
+    "raises": "PySparkTypeError"
+   }
+  },
+  "withWatermark_eventtime_not_str": {
+   "error": {
+    "condition": "CANNOT_CONVERT_COLUMN_INTO_BOOL",
+    "message": "[CANNOT_CONVERT_COLUMN_INTO_BOOL] Cannot convert column into bool: please use '&' for 'and', '|' for 'or', '~' for 'not' when building DataFrame boolean expressions.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkValueError",
+     "PySparkException",
+     "ValueError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {},
+    "raises": "PySparkValueError"
+   }
+  },
+  "withWatermark_negative": {
+   "error": {
+    "condition": null,
+    "message": "requirement failed: delay threshold (-1 minute) should not be negative.",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "IllegalArgumentException",
+     "CapturedException",
+     "IllegalArgumentException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "IllegalArgumentException"
+   }
+  },
+  "withWatermark_nested_col": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling o613.withWatermark.\n: org.apache.spark.SparkException: [INTERNAL_ERROR] \nFailed to copy node.\nIs otherCopyArgs specified correctly for EventTimeWatermark.\nException message: argument type mismatch\nctor: public org.apache.spark.sql.catalyst.plans.logical.EventTimeWatermark(java.util.UUID,org.apache.spark.sql.catalyst.expressions.Attribute,org.apache.spark.unsafe.types.CalendarInterval,org.apache.spark.sql.catalyst.plans.logical.LogicalPlan)?\ntypes: class java.util.UUID, class org.apache.spark.sql.catalyst.expressions.Alias, class org.apache.spark.unsafe.types.CalendarInterval, class org.apache.spark.sql.catalyst.plans.logical.Project\nargs: 2b2f6ada-c6de-46f5-9485-483ee4b644f8, s#164.t AS t#165, 1 minutes, Project [named_struct(t, 2024-01-01 00:00:00) AS s#164]\n+- OneRowRelation\n\n            SQLSTATE: XX000\n\tat org.apache.spark.SparkException$.internalError(SparkException.scala:92)\n\tat org.apache.spark.SparkException$.internalError(SparkException.scala:96)\n\tat org.apache.spark.sql.catalyst.trees.TreeNode.makeCopy(TreeNode.scala:805)\n\tat org.apache.spark.sql.catalyst.trees.TreeNode.makeCopy(TreeNode.scala:748)\n\tat org.apache.spark.sql.catalyst.plans.Que",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  },
+  "withWatermark_not_ts": {
+   "result": {
+    "columns": [
+     "v"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(v=1)"
+    ],
+    "schema": "struct<v:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "v",
+       "nullable": false,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withWatermark_zero": {
+   "result": {
+    "columns": [
+     "ts"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(ts=datetime.datetime(2023, 12, 31, 19, 0))"
+    ],
+    "schema": "struct<ts:timestamp>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "ts",
+       "nullable": false,
+       "type": "timestamp"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "writeStream_batch": {
+   "error": {
+    "condition": "WRITE_STREAM_NOT_ALLOWED",
+    "message": "[WRITE_STREAM_NOT_ALLOWED] `writeStream` can be called only on streaming Dataset/DataFrame. SQLSTATE: 42601",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {},
+    "raises": "AnalysisException"
+   }
+  }
+ },
+ "oracle": "PySpark 4.1.2 classic, local[2], spark.sql.session.timeZone=UTC, recorded 2026-09-14 (run 15b); probe at /tmp/oc-worker/run15b/oracle/cells.py + cells2.py"
+}
