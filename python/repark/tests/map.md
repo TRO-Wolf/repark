@@ -274,8 +274,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `sequence` (widths, descending default step, date/timestamp stepping, NULL → NULL,
   illegal-step raise, `SEQUENCE_WRONG_INPUT_TYPES`), and `split` on the SQL door
   (Java regex, limit semantics, per-character empty-pattern split) — Q12-0…Q12-55
-  legs plus facade value/type/nullability legs and the run-16a `F.split`
-  red-when-wired refusal guard. pins: door-converge-2/C-001, C-002, C-003, C-004, C-005
+  legs plus facade value/type/nullability legs, the illegal-step text pin (oracle
+  class OPEN, run-16b hand-off) and the run-16a `F.split` red-when-wired refusal
+  guard. pins: door-converge-2/C-001, C-002, C-003, C-004, C-005
   **Round 2 (2026-09-16):** `unbase64` raises the Java MIME-decoder texts on
   malformed endings while `'QR'`/`'QQQ'`/whitespace/`'!!'` stay lenient;
   `array_contains` coerces to the tightest common type (DOUBLE needle →

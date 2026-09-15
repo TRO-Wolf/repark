@@ -287,9 +287,9 @@ _SQL_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
         "INTERVAL 1 HOUR)",
         [
             [
-                datetime_module.datetime(2024, 1, 1, 0, 0, tzinfo=datetime_module.timezone.utc),
-                datetime_module.datetime(2024, 1, 1, 1, 0, tzinfo=datetime_module.timezone.utc),
-                datetime_module.datetime(2024, 1, 1, 2, 0, tzinfo=datetime_module.timezone.utc),
+                datetime_module.datetime(2024, 1, 1, 0, 0, tzinfo=datetime_module.UTC),
+                datetime_module.datetime(2024, 1, 1, 1, 0, tzinfo=datetime_module.UTC),
+                datetime_module.datetime(2024, 1, 1, 2, 0, tzinfo=datetime_module.UTC),
             ]
         ],
         pa.list_(
@@ -431,7 +431,7 @@ _SQL_ERRORS: dict[str, tuple[str, type, str]] = {
 }
 
 
-@pytest.mark.parametrize("cell_id", sorted(_SQL_VALUES), ids=list(sorted(_SQL_VALUES)))
+@pytest.mark.parametrize("cell_id", sorted(_SQL_VALUES), ids=sorted(_SQL_VALUES))
 def test_sql_cell(spark: ReparkSession, cell_id: str) -> None:
     """pins: door-converge-2/C-001, C-002, C-003, C-004 — one SQL-door oracle cell."""
     _frame(spark)
@@ -439,7 +439,7 @@ def test_sql_cell(spark: ReparkSession, cell_id: str) -> None:
     _check_cell(spark, sql, value, arrow_type, nullable)
 
 
-@pytest.mark.parametrize("cell_id", sorted(_SQL_ERRORS), ids=list(sorted(_SQL_ERRORS)))
+@pytest.mark.parametrize("cell_id", sorted(_SQL_ERRORS), ids=sorted(_SQL_ERRORS))
 def test_sql_error_cell(spark: ReparkSession, cell_id: str) -> None:
     """pins: door-converge-2/C-001, C-003 — one SQL-door oracle refusal cell."""
     _frame(spark)
