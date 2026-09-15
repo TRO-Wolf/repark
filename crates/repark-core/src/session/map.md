@@ -90,6 +90,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   unrelated siblings loud. The wrapper preserves DataFusion's rule name and order.
   **PERF-UNPIVOT-1 (2026-09-12):** every core session installs `StackQueryPlanner` and
   registers the marker `stack` UDF. pins: perf-unpivot-1/C-003
+  **COLUMN-PARITY-1 critic round (2026-09-14):** every core session also registers the
+  `update_fields` and `repark_isnan` UDFs beside `stack`. pins: column-parity-1/C-008
   **FNP-8 (2026-09-07):** core hands the complete analyzer vector to the session extension before
   building `SessionState`; the identity hook preserves every guard and its position.
   The two guards sit at **different altitudes**,

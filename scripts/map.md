@@ -23,6 +23,21 @@ DF-SURFACE-B-1 (2026-09-14): `check_lib_py.py` `dataframe/core.py` 4044 → 4043
 and the `_oos` table is gone). `check_example_coverage.py` CLASS_SURFACES gains
 `Observation`; enumerator 948 → 952.
 pins: df-surface-b-1/C-005, C-006
+GROUPED-SURFACE-1 step 1 (2026-09-14): `check_lib_py.py`
+`dataframe/joins_columns.py` 1238 → 1169 (decrease — the Arrow-batch apply
+bridge `_apply_in_pandas_arrow_batches` moved byte-identical into the new
+`dataframe/grouped_arrow.py`; the six grouped-surface names bind on
+`GroupedData` as one-line aliases and the module still holds its row).
+The CAP-1 parity mirror row moves in the same commit.
+pins: grouped-surface-1/C-007
+COLUMN-PARITY-1 critic round (2026-09-14): `check_lib_py.py` `spark/column.py`
+1548 → 1532, `dataframe/core.py` 4044 → 4040 and `dataframe/plan_collapse.py`
+1057 → 1054 (the deferred struct-edit machinery is deleted for the native
+`update_fields` design; struct field access gains a join-ON bracket fragment), the
+CAP-1 mirror rows move with them; `build_api_freeze.py` follows `alias =
+_module.func` class bindings to the defining module so the sanctioned
+`column_fields` split keeps the frozen param pins exact.
+pins: column-parity-1/C-007, C-008
 FACADE-4 step-1 remediation round 4 (2026-09-14, L-007..L-009):
 `check_lib_py.py` `spark/types.py` 1772 → 1793 (increase — base's container
 `simpleString`/`_engine_type`/`jsonValue` dispatch bodies and the

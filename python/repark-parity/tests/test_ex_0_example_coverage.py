@@ -56,7 +56,7 @@ def test_ex_0_enumerator_emits_five_families_and_repark_sql() -> None:
     assert "F.unwrap_udt" in names
     assert "F.from_json" in names
     assert "F.stack" in names
-    assert len(rows) == 1022
+    assert len(rows) == 1035
 
 
 def test_ex_0_uncovered_name_is_red() -> None:
@@ -339,7 +339,7 @@ def test_ex_1_class_surfaces_are_enumerated_with_their_counts() -> None:
     families: dict[str, int] = {}
     for family, _name in rows:
         families[family] = families.get(family, 0) + 1
-    assert families["column"] == 40
+    assert families["column"] == 47
     assert families["window"] == 22
     assert families["catalog"] == 54
     assert families["types"] == 46

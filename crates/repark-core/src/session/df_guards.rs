@@ -54,6 +54,8 @@ pub(super) fn context_with_df_54_1_rule_guards(
         .build();
     let context = SessionContext::new_with_state(state);
     crate::stack::register_stack(&context);
+    crate::update_fields::register_update_fields(&context);
+    crate::isnan::register_repark_isnan(&context);
     Ok(context)
 }
 

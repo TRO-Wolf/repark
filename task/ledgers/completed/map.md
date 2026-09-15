@@ -114,6 +114,16 @@ else. The next pickup's `make ledger-archive` files everything here under
   Branches `feat/cfg-2-step1`, `feat/cfg-2-step2`.
   pins: cfg-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
+- [column-parity-1-ledger.md](column-parity-1-ledger.md) —
+  **COLUMN-PARITY-1 step 1 (2026-09-14), in flight:** the seven-name `Column`
+  surface — `isin`, `isNaN`, `astype`, `name`, `outer`, `withField`, `dropFields` —
+  driven by the `facade_column_oracle.json` cells; `withField`/`dropFields` resolve as
+  deferred select-boundary columns against `logical_schema_fields()` and rebuild the
+  struct through `getField` + `make_struct` + `when(isNotNull)`; two DECLARED rows
+  (COL-DROPFIELDS-TYPE-1, COL-ISIN-TUPLE-1) and five BACKLOG rows (SQL-IN-1,
+  SQL-ISNAN-1, COL-WITHFIELD-EMPTY-1, COL-NAME-MULTI-1, COL-DOTTED-FIELD-1).
+  `risk_tier: standard`. Branch `feat/column-parity-1`.
+  pins: column-parity-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [comment-core-1-ledger.md](comment-core-1-ledger.md) —
   **COMMENT-CORE-1 (2026-09-13), in flight:** remove the 341 full-line comments and 6
   trailing comments from `python/repark/src/repark/spark/dataframe/core.py`; keep the
@@ -433,6 +443,20 @@ else. The next pickup's `make ledger-archive` files everything here under
   `numBuckets`, all pinned against the live PySpark 4.1.2 oracle cells.
   `risk_tier: standard`. Branch `feat/fnp-misc-1`.
   pins: fnp-misc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [grouped-surface-1-ledger.md](grouped-surface-1-ledger.md) —
+  **GROUPED-SURFACE-1 step 1 (2026-09-14), in flight:** `GroupedData.apply`,
+  `applyInArrow`, `cogroup` + `PandasCogroupedOps` answer live-PySpark 4.1.2 over
+  the shared Arrow group bridge (`grouped_arrow.py`, `cogroup.py` bound one line
+  each on the class; `_apply_in_pandas_arrow_batches` moves out of
+  `joins_columns.py`, 1238 → 1169); the three state names are dated refusals
+  (`_LEGACY_ERROR_TEMP_3176` byte-exact, `NOT_IMPLEMENTED` × 2). Registry:
+  `GROUPED-ARROW-1`, `GROUPED-COGROUP-1`, `GROUPED-DECL-*` DECLARED,
+  `GROUPED-EXPRKEY-1` BACKLOG. Critic round 1 (2026-09-15): L-001's 0-column
+  empty-accept drop is fixed on all four Arrow paths and R-3 moves run-boundary
+  detection to `pyarrow.compute` (`as_py` once per run, per-row fallback for
+  nested key types). `risk_tier: standard`. Branch `feat/grouped-surface-1`.
+  pins: grouped-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009
 - [h3-spill-1-ledger.md](h3-spill-1-ledger.md) — Round 3: C-004 counts 22 pins.
   **H3-SPILL-1 (2026-09-05), in flight:** the Never-OOM truth table. 180 cells (18 operators ×
   5 pool sizes × 2 scales), each a fresh subprocess on a release module under a resident-memory

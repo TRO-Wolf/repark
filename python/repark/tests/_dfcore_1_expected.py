@@ -326,6 +326,7 @@ EXPECTED_DATAFRAME_SLOTS: tuple[str, ...] = (
     "_display_names",
     "_eager_shape",
     "_engine_names",
+    "_field_metadata",
     "_handles",
     "_ingest_report",
     "_inner",
@@ -452,6 +453,7 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_execute_map_in_arrow_bridge",
     "_execute_map_in_arrow_bridge_ipc",
     "_explain_text",
+    "_field_metadata",
     "_grouping_col_sql",
     "_grouping_sets_grouped",
     "_handles",
@@ -671,12 +673,15 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
 EXPECTED_OVERLOADED_METHODS: dict[str, int] = {"head": 2}
 
 EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
+    "_column_fields",
     "cache_handle",
+    "cogroup",
     "colregex",
     "display",
     "eager",
     "explain",
     "export_errors",
+    "grouped_arrow",
     "grouped_udf",
     "polars_cells",
     "replace_expr",
@@ -693,6 +698,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
 }
 
 EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
+    "_column_fields",
     "cache_handle",
     "display",
     "replace_expr",

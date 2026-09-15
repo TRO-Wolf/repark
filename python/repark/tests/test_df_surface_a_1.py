@@ -190,12 +190,12 @@ def test_to_nested_inner_bad_cast_refuses(spark: ReparkSession) -> None:
         nested.to(bad)
 
 
-def test_with_metadata_dropped_at_stamp_df_metadata_1(spark: ReparkSession) -> None:
-    """pins: df-surface-a-1/C-008 — DF-METADATA-1 codifies loss; cells withMetadata, _replaces."""
+def test_with_metadata_stamp_and_replace_answer_spark(spark: ReparkSession) -> None:
+    """pins: df-surface-a-1/C-008 — cells withMetadata, withMetadata_replaces, _order."""
     stamped = _kv(spark).withMetadata("a", {"k": "v"})
-    assert stamped.schema["a"].metadata == {}
+    assert stamped.schema["a"].metadata == {"k": "v"}
     restamped = stamped.withMetadata("a", {"j": 1})
-    assert restamped.schema["a"].metadata == {}
+    assert restamped.schema["a"].metadata == {"j": 1}
     assert stamped.columns == [
         item["value"] for item in _cell("withMetadata_order")["result"]["items"]
     ]
@@ -214,19 +214,19 @@ def test_with_metadata_dropped_across_positions_df_metadata_1(
     assert stamped.union(_kv(spark)).schema["a"].metadata == {}
     cached = stamped.cache()
     cached.collect()
-    assert cached.schema["a"].metadata == {}
+    assert cached.schema["a"].metadata == {"k": "v"}
     parquet_dir = str(tmp_path / "meta_pq")
     stamped.write.parquet(parquet_dir)
     assert spark.read.parquet(parquet_dir).schema["a"].metadata == {}
 
 
-def test_to_metadata_arms_drop_df_metadata_1(spark: ReparkSession) -> None:
-    """pins: df-surface-a-1/C-008 — L-010/DF-METADATA-1: source-keep and target-override lose."""
+def test_to_metadata_arms_df_metadata_1(spark: ReparkSession) -> None:
+    """pins: df-surface-a-1/C-008 — L-010: target override matches Spark; source-keep loses."""
     stamped = _kv(spark).withMetadata("a", {"src": "1"})
     kept = stamped.to(StructType([StructField("a", IntegerType())]))
     assert kept.schema["a"].metadata == {}
     overridden = stamped.to(StructType([StructField("a", IntegerType(), metadata={"tgt": "2"})]))
-    assert overridden.schema["a"].metadata == {}
+    assert overridden.schema["a"].metadata == {"tgt": "2"}
 
 
 def test_with_metadata_not_dict_raises(spark: ReparkSession) -> None:

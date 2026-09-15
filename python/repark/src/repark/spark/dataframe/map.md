@@ -119,6 +119,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   overlay records each view's registration object for staleness checks; the file
   stays on its exact baseline (4044 → 4043, ratcheted down).
   pins: catalog-surface-1/C-009
+  COLUMN-PARITY-1 step 1 (2026-09-14): `DataFrame` gains `_field_metadata`:
+  `Column.name(..., metadata=…)` stores it and `schema` overlays it on the projected
+  `StructField`. `__str__` moved to `column_fields` for baseline headroom and the
+  module binds here for the metadata helpers.
+  **Critic round (2026-09-14, R-4):** the select/filter struct-edit resolve hooks are
+  deleted — `withField` / `dropFields` are native `update_fields` expressions, so no
+  boundary rewrite runs. pins: column-parity-1/C-002, C-004, C-005, C-008
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`.
 - `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
   PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,
@@ -155,8 +162,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `transform`/`transform_keys`/`transform_values`,
   `NULLABLE_COLUMN_OR_FIELD` / `INVALID_COLUMN_OR_FIELD_DATA_TYPE` in Spark's
   exact text, `NOT_STRUCT` for a non-schema argument per registry DF-TO-1),
-  `withMetadata` (metadata rides `alias(..., metadata=)` — the engine drops
-  field metadata today, backlog DF-METADATA-1 — `NOT_DICT` on a non-dict,
+  `withMetadata` (`alias(name, metadata=)` — the stamped frame, a replace and a cache keep the dict; plan transforms still drop it, backlog DF-METADATA-1 —
+  `NOT_DICT` on a non-dict,
   `UNRESOLVED_COLUMN.WITH_SUGGESTION` attached `_integral`-style on a miss),
   `registerTempTable` (FutureWarning + `create_or_replace_temp_view`
   delegation), `checkpoint` / `localCheckpoint` (in-memory materialization,
@@ -168,6 +175,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   belongs to a Rust unit) and the `_schema_override` sticker (R-6 — the
   narrow-width divergence `to(…smallint)` reports is LOGICAL-WIDTH-1).
   pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005
+  **COLUMN-PARITY-1 (2026-09-15):** `to()` and `withMetadata` keep passing `alias(name, metadata=)`; with the column overlay the stamp, replace, cache and `to()` target-override positions answer Spark, and DF-METADATA-1 narrows to the positions a plan transform still loses (an earlier plain-rename repair in this branch was reverted).
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
   `toLocalIterator`. Two converters live here: `rows_from_arrow_table_python` is the unchanged
   pure-Python path and stays the correctness oracle, and `rows_from_arrow_table` adds the
@@ -198,7 +206,36 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   moved from `core.py`). The key-missing sentinel marks "no group seen yet" in the single-pass
   boundary scan; it is never a real key. An empty returned frame with no columns is an empty
   group result, not a mismatch. A group that continues past a batch edge is stitched onto the
-  pending segments, never closed. pins: dfcore-1/C-006
+  pending segments, never closed. GROUPED-SURFACE-1 (2026-09-14): the segment walk factors
+  into `_iter_apply_in_pandas_keyed_groups` (key + batch-slice segments per group) so
+  applyInArrow and the cogroup merge reuse it without materializing, and
+  `_apply_in_pandas_keys_compare` encodes the engine's ascending order (nulls first, NaN
+  last) for the merge walk. Critic round 1 (2026-09-15, R-3): run boundaries come from
+  `pyarrow.compute` (`_apply_in_pandas_column_run_mask` — NULL==NULL and NaN==NaN as the
+  old comparator defined, nested key types fall back to the per-row compare for that
+  column), so `as_py` runs once per contiguous run, never per row.
+  pins: dfcore-1/C-006, grouped-surface-1/C-002, C-004, C-009
+- `grouped_arrow.py` owns the grouped map bridges bound on `GroupedData` (GROUPED-SURFACE-1,
+  2026-09-14): `apply` accepts only a GROUPED_MAP pandas marker and delegates to
+  `applyInPandas` behind Spark's deprecation `UserWarning`; `applyInArrow` routes
+  table/iterator callbacks (arity decides `f(t)` vs `f(key, t)` — the key is a tuple of
+  `pyarrow.Scalar`, Spark's worker shape) through the same lazy `mapInArrow` bridge with
+  Spark's own `verify_arrow_*` checks (`UDF_RETURN_TYPE`, `RESULT_COLUMN_NAMES_MISMATCH`,
+  `RESULT_COLUMN_TYPES_MISMATCH`) — Spark's worker wraps these in `PythonException`, repark
+  raises the inner class (registry `GROUPED-ARROW-1`). `applyInPandasWithState` raises
+  Spark's batch refusal `_LEGACY_ERROR_TEMP_3176`; `transformWithState` /
+  `transformWithStateInPandas` are dated `NOT_IMPLEMENTED` refusals (Structured Streaming
+  state stores; registry `GROUPED-DECL-*`). The pandas bridge
+  `_apply_in_pandas_arrow_batches` moved here unchanged-in-behavior to keep
+  `joins_columns.py` under its ceiling. pins: grouped-surface-1/C-001, C-002, C-003, C-006
+- `cogroup.py` owns `GroupedData.cogroup` and `PandasCogroupedOps` (GROUPED-SURFACE-1,
+  2026-09-14). Both sides sort by their key names in the engine and merge-walk the two
+  keyed-group segment streams — one group's segments buffered per side, so memory stays
+  bounded by the largest pair of groups and neither side ever collects whole. A group
+  present on one side calls the callback with an empty frame/table of the other's schema
+  (Spark's shape). Key-count mismatch raises Spark's `requirement failed` text;
+  `cogroup(DataFrame)` is refused at the call with `NOT_EXPECTED_TYPE` where Spark accepts
+  silently (R-1; registry `GROUPED-COGROUP-1`). pins: grouped-surface-1/C-004, C-005
 - `udf_projection.py` owns the scalar pandas and classic UDF select rewrites (DFCORE-2,
   moved from `core.py`). Windowed GROUPED_AGG markers never enter the scalar bridge; they
   route to `udf_window_projection.py`. Partition-transform inputs are refused (they project
@@ -471,13 +508,21 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   and `grouped_udf.py`, not through `core`. The grouped-UDF names arrive via a module import
   with qualified call sites: the canonical two-name from-import costs two lines the exact
   ceiling cannot spare, and sibling ceilings never rise (1239 → 1238, mirrored in the CAP-1
-  test). pins: dfcore-1/C-006, C-007
+  test). GROUPED-SURFACE-1 (2026-09-14): `apply`, `applyInArrow`, `cogroup`,
+  `applyInPandasWithState`, `transformWithState`, and `transformWithStateInPandas` bind on the
+  class as module-function aliases (one line each); `_apply_in_pandas_arrow_batches` moved to
+  `grouped_arrow.py` (1238 → 1169, mirrored in the CAP-1 test and `check_lib_py.py`).
+  pins: dfcore-1/C-006, C-007, grouped-surface-1/C-007
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
   DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the module keeps the show
   control flow (`_format_polars_show`, `_display_type_labels_from_arrow`) and
   re-exports the spelling helpers; the spellings themselves live in
   `polars_cells.py`. pins: display-polars-1/C-005
+  COLUMN-PARITY-1 step 1 (2026-09-14): `_collapse_identity_projection_alias` propagates
+  the carried struct-edit/metadata attrs through `column_fields.carried_select_attrs`
+  and skips pending columns unchanged; the pending-check folds into the existing
+  early-return guard to hold the exact baseline. pins: column-parity-1/C-004
 - `polars_cells.py` owns every polars/duckdb cell and dtype spelling used by
   the show doors: `null` / lowercase bools / mixed-mode floats
   (shortest-expansion rules measured probe by probe against polars 1.43.2 —
@@ -943,6 +988,8 @@ that held the comment (pins: comment-core-1/C-003).
 | Export-error mapping | [`export_errors.py`](export_errors.py) |
 | `mapInArrow` schema checks | [`udf_schema.py`](udf_schema.py) |
 | Grouped-UDF assembly | [`grouped_udf.py`](grouped_udf.py) |
+| `apply` / `applyInArrow` / state refusals | [`grouped_arrow.py`](grouped_arrow.py) |
+| `cogroup` / `PandasCogroupedOps` | [`cogroup.py`](cogroup.py) |
 | UDF callbacks | [`udf_bridge.py`](udf_bridge.py) |
 | Scalar and classic UDF projection | [`udf_projection.py`](udf_projection.py) |
 | Windowed UDF projection | [`udf_window_projection.py`](udf_window_projection.py) |
@@ -989,6 +1036,9 @@ that held the comment (pins: comment-core-1/C-003).
   DF-EAGER-1 step 2 (2026-09-09): `core.py` 4525→4487; `eager.py` (92), `display.py`
   (+6 for the eager-shape total), and `polars.py` (+4 for the `eager` mirror) stay below
   the source-size default (pins: df-eager-1/C-001, C-002, C-003, C-004, C-006).
+  GROUPED-SURFACE-1 (2026-09-14): `joins_columns.py` 1238→1169 as the pandas bridge moved
+  to `grouped_arrow.py` (484) and `cogroup.py` (350), both below the source-size default
+  (pins: grouped-surface-1/C-007).
   DFCORE-5 (2026-09-07): `statistics.py` 261→264, no new module, no ceiling row;
   stays below the source-size default (pins: dfcore-5/C-005).
   DFCORE-6 (2026-09-07): `display.py` 322→320, no new module, no ceiling row;
