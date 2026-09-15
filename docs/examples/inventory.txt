@@ -869,8 +869,10 @@ ta	ta.with_indicators
 ta	ta.wma
 types	Row.asDict
 types	Row.as_dict
+types	Row.count
 types	Row.from_mapping
 types	Row.from_ordered_fields
+types	Row.index
 types	types.ArrayType
 types	types.BinaryType
 types	types.BooleanType
