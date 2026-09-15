@@ -357,3 +357,105 @@ def test_apply_in_pandas_still_answers(spark: ReparkSession) -> None:
     """applyInPandas is unchanged by the new bindings. pins: grouped-surface-1/C-008"""
     result = _kv_frame(spark).groupBy("id").applyInPandas(_gm, "id long, v double")
     _assert_frame_cell(result.orderBy("id", "v"), "applyInPandas_exists")
+
+
+def test_apply_in_arrow_zero_column_result_drops_group(spark: ReparkSession) -> None:
+    """L-001: a 0-column 0-row Arrow result contributes no rows for its group.
+
+    Spark's verify_arrow_result accepts the empty shape and the group emits
+    nothing; the later select must not run on it. pins: grouped-surface-1/C-009
+    """
+    frame = _kv_frame(spark)
+
+    def drop_id1(table: pa.Table) -> pa.Table:
+        if table.column("id")[0].as_py() == 1:
+            return pa.table({})
+        return table
+
+    result = frame.groupBy("id").applyInArrow(drop_id1, "id long, v double")
+    assert [tuple(row) for row in result.orderBy("id").collect()] == [(2, 3.0)]
+    keyed = frame.groupBy("id").applyInArrow(
+        lambda key, table: drop_id1(table), "id long, v double"
+    )
+    assert [tuple(row) for row in keyed.orderBy("id").collect()] == [(2, 3.0)]
+
+    def drop_id1_iter(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
+        for batch in batches:
+            if batch.column("id")[0].as_py() == 1:
+                yield pa.RecordBatch.from_pydict({})
+            else:
+                yield batch
+
+    iterated = frame.groupBy("id").applyInArrow(drop_id1_iter, "id long, v double")
+    assert [tuple(row) for row in iterated.orderBy("id").collect()] == [(2, 3.0)]
+
+    def drop_left1(left: pa.Table, right: pa.Table) -> pa.Table:
+        if left.num_rows and left.column("id")[0].as_py() == 1:
+            return pa.table({})
+        return pa.table({"n": [left.num_rows + right.num_rows]})
+
+    cogrouped = frame.groupBy("id").cogroup(frame.groupBy("id")).applyInArrow(drop_left1, "n long")
+    assert [tuple(row) for row in cogrouped.collect()] == [(2,)]
+
+    typed_empty = frame.groupBy("id").applyInArrow(
+        lambda table: pa.table(
+            {
+                "id": pa.array([], type=pa.int64()),
+                "v": pa.array([], type=pa.float64()),
+            }
+        ),
+        "id long, v double",
+    )
+    assert typed_empty.collect() == []
+    pandas_empty = frame.groupBy("id").applyInPandas(
+        lambda pdf: pd.DataFrame() if pdf["id"].iloc[0] == 1 else pdf,
+        "id long, v double",
+    )
+    assert [tuple(row) for row in pandas_empty.orderBy("id").collect()] == [(2, 3.0)]
+
+
+def test_group_scan_row_key_is_per_boundary_not_per_row() -> None:
+    """R-3: run boundaries come from pyarrow.compute, so the row-key helper runs
+    once per contiguous run, never per row. pins: grouped-surface-1/C-009"""
+    import repark.spark.dataframe.grouped_udf as grouped_udf
+
+    def counted_scan(batches: list[pa.RecordBatch]) -> tuple[list[tuple[Any, int]], int]:
+        calls = {"n": 0}
+        real_row_key = grouped_udf._apply_in_pandas_row_key
+
+        def counting_row_key(batch: Any, key_names: list[str], row_index: int) -> tuple[Any, ...]:
+            calls["n"] += 1
+            return real_row_key(batch, key_names, row_index)
+
+        grouped_udf._apply_in_pandas_row_key = counting_row_key  # type: ignore[assignment]
+        try:
+            groups = [
+                (key, sum(segment.num_rows for segment in segments))
+                for key, segments in grouped_udf._iter_apply_in_pandas_keyed_groups(
+                    iter(batches), ["k"]
+                )
+            ]
+        finally:
+            grouped_udf._apply_in_pandas_row_key = real_row_key  # type: ignore[assignment]
+        return groups, calls["n"]
+
+    one_group = pa.table(
+        {
+            "k": pa.array([7] * 1000, type=pa.int64()),
+            "v": pa.array(range(1000), type=pa.int64()),
+        }
+    ).to_batches(max_chunksize=50)
+    groups, calls = counted_scan(one_group)
+    assert groups == [((7,), 1000)]
+    assert calls <= len(one_group) + 1
+
+    many = pa.table(
+        {
+            "k": pa.array([index // 2 for index in range(20_000)], type=pa.int64()),
+            "v": pa.array(range(20_000), type=pa.int64()),
+        }
+    ).to_batches(max_chunksize=8192)
+    groups, calls = counted_scan(many)
+    assert len(groups) == 10_000
+    assert all(count == 2 for _key, count in groups)
+    assert calls <= 10_000 + len(many)

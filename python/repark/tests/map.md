@@ -2077,6 +2077,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   raises `_LEGACY_ERROR_TEMP_3176` byte-exact and `transformWithState*` raise
   `NOT_IMPLEMENTED` (R-2; `GROUPED-DECL-*`).
   pins: grouped-surface-1/C-001, C-002, C-003, C-004, C-005, C-006
+  Critic round 1 (2026-09-15): a 0-column 0-row Arrow result contributes no rows
+  for its group on the table, keyed-table, iterator, and cogrouped paths (L-001),
+  and the grouping scan's `as_py` runs once per contiguous run, never per row
+  (P2-1 under R-3 — `pyarrow.compute` run boundaries).
+  pins: grouped-surface-1/C-009
   Registry rows, the fixture copy, and map/ledger/inventory lockstep for this unit are
   proven by these pins and the frozen-surface tables. pins: grouped-surface-1/C-007
 - `test_pandas_udf.py` — U7 + **M5/M6** `@pandas_udf` pins: SCALAR select/withColumn + multi-UDF one-pass + octo C1–C8 harden pins retained; **SCALAR_ITER** basic/multi-arg/pass-through/wrong-batch-count + dual-UDF streams (octo M5 C5); **pure GROUPED_AGG** mean/global/multi-key+multi-arg + large-group stitch (octo M5 C7); **M6 mixed UDF+builtin** order-independent + global crossJoin + **null group-key null-safe join** (octo M6 C1); cube/rollup refuse (octo M5 C6) + hostile returnType refuse (octo M5 C1) + GROUPED_AGG-in-select refuse + SCALAR-in-agg refuse; **M6 windowed GROUPED_AGG** unbounded `partitionBy` + **null partition keys** + **select alias overwrite** last-wins (octo M6 C1/C2); **M7** ordered default frame (UNBOUNDED PRECEDING→CURRENT ROW running agg) + duck-typed `_frame_start`/`_frame_end` rowsBetween; GROUPED_MAP/WINDOW functionType tag still loud; PandasUDFType ints match PySpark 4.1.2 (200/201/202/204).

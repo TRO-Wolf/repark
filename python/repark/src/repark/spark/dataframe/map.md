@@ -202,7 +202,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   into `_iter_apply_in_pandas_keyed_groups` (key + batch-slice segments per group) so
   applyInArrow and the cogroup merge reuse it without materializing, and
   `_apply_in_pandas_keys_compare` encodes the engine's ascending order (nulls first, NaN
-  last) for the merge walk. pins: dfcore-1/C-006, grouped-surface-1/C-002, C-004
+  last) for the merge walk. Critic round 1 (2026-09-15, R-3): run boundaries come from
+  `pyarrow.compute` (`_apply_in_pandas_column_run_mask` — NULL==NULL and NaN==NaN as the
+  old comparator defined, nested key types fall back to the per-row compare for that
+  column), so `as_py` runs once per contiguous run, never per row.
+  pins: dfcore-1/C-006, grouped-surface-1/C-002, C-004, C-009
 - `grouped_arrow.py` owns the grouped map bridges bound on `GroupedData` (GROUPED-SURFACE-1,
   2026-09-14): `apply` accepts only a GROUPED_MAP pandas marker and delegates to
   `applyInPandas` behind Spark's deprecation `UserWarning`; `applyInArrow` routes

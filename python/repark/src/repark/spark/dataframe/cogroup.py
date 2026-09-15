@@ -176,6 +176,8 @@ def _cogrouped_arrow_batches(
                 user_func, "applyInArrow", left_table, right_table
             )
         grouped_arrow._verify_arrow_table_result(result, expected_arrow)
+        if result.num_columns == 0 and result.num_rows == 0:
+            continue
         if list(result.schema.names) != list(expected_arrow.names):
             result = result.select(list(expected_arrow.names))
         yield from result.to_batches()

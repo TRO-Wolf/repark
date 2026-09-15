@@ -309,6 +309,8 @@ def _iter_apply_in_arrow_results(result: Any, expected_arrow: Any) -> Iterator[A
     try:
         for batch in result:
             _verify_arrow_batch_result(batch, expected_arrow)
+            if batch.num_columns == 0 and batch.num_rows == 0:
+                continue
             if list(batch.schema.names) != list(expected_arrow.names):
                 batch = batch.select(list(expected_arrow.names))
             yield batch
@@ -355,6 +357,8 @@ def _apply_in_arrow_group_batches(
         else:
             result = _call_grouped_user_func(user_func, "applyInArrow", table)
         _verify_arrow_table_result(result, expected_arrow)
+        if result.num_columns == 0 and result.num_rows == 0:
+            continue
         if list(result.schema.names) != list(expected_arrow.names):
             result = result.select(list(expected_arrow.names))
         yield from result.to_batches()

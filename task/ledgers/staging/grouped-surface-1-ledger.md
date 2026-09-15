@@ -8,6 +8,18 @@
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
+**Rulings since step 1.** R-3 (orchestrator, 2026-09-15, binding): the contiguous-key
+scan in `grouped_udf.py` must not call `as_py()` per row — run boundaries are found with
+`pyarrow.compute` over adjacent key values (NULL equals NULL, NaN equals NaN, as
+`_apply_in_pandas_keys_equal` defines, including multi-column keys and a group spanning
+a batch edge), and `as_py()` runs only on boundary rows and the key handed to a keyed
+callback. A key type with no `pyarrow.compute` `not_equal` kernel (nested types —
+struct, list, map) falls back to the per-row scalar compare for that column only.
+Critic round 1 (Grok logic, `/tmp/oc-worker/run15b/critic-grp-report.md`) filed L-001;
+the Python perf review (`/tmp/oc-worker/run15b/perf-grp-report.md`) filed P2-1, which
+R-3 resolves; P2-2, P2-3, P3-1, P3-2 and the critic's UNMEASURED table were recorded
+not-to-fix by the orchestrator.
+
 **Why now.** The 1.5 PySpark-parity campaign requires every public `GroupedData` name to answer
 PySpark 4.1.2 or carry a dated declared refusal. `apply`, `applyInArrow`, `cogroup`, and the
 three streaming-state names were absent entirely; the oracle run-15b recorded Spark's answers
@@ -31,8 +43,9 @@ design (per-name reasons below).
 | C-006 | `applyInPandasWithState` raises Spark's batch refusal byte-exact; `transformWithState`/`transformWithStateInPandas` raise `NOT_IMPLEMENTED` with the feature name. | `test_state_api_refusals`. | **PROVEN** | `applyInPandasWithState` raises `UnsupportedOperationException` `_LEGACY_ERROR_TEMP_3176` with the cell's exact message and empty params; the two transformWithState names raise `PySparkNotImplementedError` `NOT_IMPLEMENTED` `{"feature": …}` (R-2; Spark's batch answer is an internal `CANNOT_LOAD_STATE_STORE` — rows `GROUPED-DECL-*`). pins: grouped-surface-1/C-006 |
 | C-007 | Registry rows, maps, and the unchanged fixture copy land in the same commit. | The gates; `test_fixture_covers_the_named_cells`. | **PROVEN** | Fixture copied byte-identical (sha256 `168c93ff…` both sides). Four DECLARED rows + one BACKLOG row in `docs/spark-sql-iceberg-parity.md`; dataframe map + tests map updated; `_dfcore_1_expected.py` gains `cogroup`/`grouped_arrow` package submodules; `joins_columns.py` baseline ratcheted 1238 → 1169 in `check_lib_py.py` and `test_cap_1_source_file_line_cap.py`. pins: grouped-surface-1/C-007 |
 | C-008 | No regression: applyInPandas/mapInArrow suites, the export freeze, and the API inventory stay green. | The gate runs. | **PROVEN** | `test_applyinpandas.py` + `test_applyinpandas_oracle.py` + `test_mapinarrow.py` + `test_mapinarrow_oracle.py` + `test_t0_df_regions_import_freeze.py` + `test_dfcore_1_exports.py` all green on the final tree; `_apply_in_pandas_arrow_batches` moved with byte-identical behavior (the same runner, the same messages). pins: grouped-surface-1/C-008 |
+| C-009 | Critic round 1: L-001 — a 0-column 0-row Arrow result (`pa.table({})`, `pa.RecordBatch.from_pydict({})` in the iterator form) contributes no rows for its group on the table, keyed-table, iterator, and cogrouped `applyInArrow` paths, matching Spark's `verify_arrow_result` empty-accept; typed-empty and `applyInPandas(pd.DataFrame())` stay green. Perf P2-1 under R-3 — the grouping scan finds run boundaries with `pyarrow.compute`, `as_py` runs once per contiguous run. | `test_apply_in_arrow_zero_column_result_drops_group`, `::test_group_scan_row_key_is_per_boundary_not_per_row`, red on the step-1 tree. | **PROVEN** | Red on the step-1 tree: L-001 `KeyError: 'Field "id" does not exist in schema'` (the post-verify `select`), and the boundary pin counted 1000 `as_py` row-key calls on a 20-batch 1-group stream. Fixed: the empty shape is skipped after verify on all four paths; the scan computes a per-column adjacent-diff mask (`is_null` diff, `not_equal` with fill_null, `is_nan` masking on floats — NULL==NULL and NaN==NaN byte-identical to the old comparator) merged across key columns, `indices_nonzero` gives run starts, `as_py` runs once per run. Synthetic 1e6-row scan (perf reviewer's harness): 4.28 s → 0.02 s at 10 groups, 5.28 s → 1.32 s at 1e5 groups; `row_key` 1,000,000 → 132 / 100,098. Fallback named: struct/list/map key columns (no `not_equal` kernel) take the per-row path for that column. pins: grouped-surface-1/C-009 |
 
-VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Per-name decisions
 
