@@ -10,6 +10,7 @@ pub mod ansi;
 mod avg_groups;
 pub mod bitmap_agg;
 pub mod bool_decimal;
+pub use bool_decimal::install_shared_analyzer_rules;
 pub mod cardinality;
 pub mod collection;
 pub mod count_if;

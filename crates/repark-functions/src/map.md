@@ -436,7 +436,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   struct CAST.
   pins: nullability-2/C-001, C-002, C-004
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
-  rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3, moved from the crate root as the sanctioned net-negative out for the step-3 registrations; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts).
+  rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts).
   installer calls it in place of the integer-only one — same line count, so the
   session map needs no ratchet): `CAST(bool AS DECIMAL(p,s))` becomes a
   precision-carrying UDF (true → 1, false → 0 at scale; per-row nulls). The UDF
