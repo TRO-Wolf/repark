@@ -11,6 +11,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from repark.errors import AnalysisException
+from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._idents import sql_string_literal as _sql_string_literal
 from repark.spark.column import Column
@@ -129,7 +130,7 @@ def _strip_internal_tighten_metadata(table: Any) -> Any:
 
 
 def _collapse_identity_projection_alias(column: Column) -> Column:
-    """Collapse nested identity aliases before applying the projection alias gate."""
+    """Collapse nested identity aliases before the projection alias gate."""
     if column._projection_name is None:
         return column
     try:
@@ -157,6 +158,7 @@ def _collapse_identity_projection_alias(column: Column) -> Column:
             join_sql_expr=column._join_sql_expr,
             g2_range_order_names=column._g2_range_order_names,
             window_spec=column._window_spec,
+            **_column_fields.carried_select_attrs(column),
         )
     except AttributeError:
         pass
@@ -194,11 +196,6 @@ def _window_spec_structural_key(spec: Any) -> tuple[Any, ...] | None:
         return None
 
 
-def _column_window_spec(column: Column) -> Any | None:
-    """Return the window specification retained by a column, if any."""
-    return getattr(column, "_window_spec", None)
-
-
 def _uniform_window_key_from_map(cols_map: dict[str, Any]) -> tuple[Any, ...] | None:
     """Return a shared structural key when all mapped columns use one window spec."""
     if not cols_map:
@@ -207,7 +204,7 @@ def _uniform_window_key_from_map(cols_map: dict[str, Any]) -> tuple[Any, ...] | 
     for value in cols_map.values():
         if not isinstance(value, Column):
             return None
-        spec = _column_window_spec(value)
+        spec = _column_fields.column_window_spec(value)
         if spec is None:
             return None
         key = _window_spec_structural_key(spec)

@@ -326,6 +326,7 @@ EXPECTED_DATAFRAME_SLOTS: tuple[str, ...] = (
     "_display_names",
     "_eager_shape",
     "_engine_names",
+    "_field_metadata",
     "_handles",
     "_ingest_report",
     "_inner",
@@ -339,6 +340,7 @@ EXPECTED_DATAFRAME_SLOTS: tuple[str, ...] = (
     "_mia_cleanup_registered",
     "_mia_plan_ready",
     "_mia_temp_views",
+    "_observations",
     "_origin_map",
     "_origin_not_emitted",
     "_persist_requested",
@@ -451,6 +453,7 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_execute_map_in_arrow_bridge",
     "_execute_map_in_arrow_bridge_ipc",
     "_explain_text",
+    "_field_metadata",
     "_grouping_col_sql",
     "_grouping_sets_grouped",
     "_handles",
@@ -477,6 +480,7 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_mia_temp_views",
     "_name_of",
     "_native_for_registration",
+    "_observations",
     "_origin_map",
     "_origin_not_emitted",
     "_origin_plan_ids",
@@ -558,6 +562,8 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "fillna",
     "filter",
     "first",
+    "foreach",
+    "foreachPartition",
     "groupBy",
     "group_by",
     "groupby",
@@ -586,6 +592,7 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "mergeInto",
     "merge_into",
     "na",
+    "observe",
     "offset",
     "orderBy",
     "order_by",
@@ -666,12 +673,15 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
 EXPECTED_OVERLOADED_METHODS: dict[str, int] = {"head": 2}
 
 EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
+    "_column_fields",
     "cache_handle",
+    "cogroup",
     "colregex",
     "display",
     "eager",
     "explain",
     "export_errors",
+    "grouped_arrow",
     "grouped_udf",
     "polars_cells",
     "replace_expr",
@@ -680,6 +690,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "statistics",
     "streaming_batch",
     "surface_a",
+    "surface_b",
     "udf_projection",
     "udf_schema",
     "udf_window_projection",
@@ -687,6 +698,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
 }
 
 EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
+    "_column_fields",
     "cache_handle",
     "display",
     "replace_expr",
@@ -694,6 +706,7 @@ EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
     "statistics",
     "streaming_batch",
     "surface_a",
+    "surface_b",
     "udf_projection",
     "udf_window_projection",
 }

@@ -215,7 +215,30 @@ def source_paths(root: Path) -> tuple[str, ...]:
     paths.extend(gate.FUNCTIONS_INSTALLER_SOURCES)
     paths.extend(relative for _family, _prefix, relative in gate.MODULE_SURFACES)
     paths.extend(relative for _family, _prefix, relative, _cls, _nested in gate.CLASS_SURFACES)
+    paths.extend(binding_source_paths(root, gate))
     return tuple(sorted(set(paths)))
+
+
+def binding_source_paths(root: Path, gate: ModuleType) -> list[str]:
+    """Return repo-relative paths that class attribute bindings resolve to."""
+    found: list[str] = []
+    for _family, _prefix, relative, class_name, nested in gate.CLASS_SURFACES:
+        tree = gate.parse_source(root / relative)
+        owner = gate.class_def(tree, class_name, where=relative)
+        target = (
+            gate.nested_class_def(owner, nested, where=relative) if nested is not None else owner
+        )
+        imports = import_from_map(tree)
+        for node in target.body:
+            if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Attribute):
+                continue
+            receiver = node.value.value
+            if not isinstance(receiver, ast.Name) or receiver.id not in imports:
+                continue
+            source = resolve_module_file(root, relative, imports[receiver.id])
+            if source is not None and source.is_file():
+                found.append(source.relative_to(root).as_posix())
+    return found
 
 
 def required_parameters(node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
@@ -239,6 +262,74 @@ def module_function_defs(tree: ast.Module) -> dict[str, list[str]]:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             defs.setdefault(node.name, required_parameters(node))
     return defs
+
+
+def bound_required_parameters(node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
+    """Return required parameters for a module function bound as a class method."""
+    args = node.args
+    positional = list(args.posonlyargs) + list(args.args)
+    positional = positional[1:]
+    supplied = len(args.defaults)
+    required = [item.arg for item in positional[: len(positional) - supplied]]
+    for index, item in enumerate(args.kwonlyargs):
+        if args.kw_defaults[index] is None:
+            required.append(item.arg)
+    return required
+
+
+def import_from_map(tree: ast.Module) -> dict[str, str]:
+    """Return local alias to dotted module for top-level ``from`` imports."""
+    mapping: dict[str, str] = {}
+    for node in tree.body:
+        if not isinstance(node, ast.ImportFrom) or not node.module:
+            continue
+        for item in node.names:
+            if item.name == "*":
+                continue
+            mapping[item.asname or item.name] = f"{node.module}.{item.name}"
+    return mapping
+
+
+def resolve_module_file(root: Path, importing_relative: str, dotted: str) -> Path | None:
+    """Return the file for a dotted module, resolved against the importer."""
+    parts = dotted.split(".")
+    directory = (root / importing_relative).parent
+    for depth in range(1, len(parts) + 1):
+        candidate = directory.joinpath(*parts[-depth:]).with_suffix(".py")
+        if candidate.is_file():
+            return candidate
+        directory = directory.parent
+    return None
+
+
+def bound_attribute_signatures(
+    root: Path, relative: str, tree: ast.Module, class_node: ast.ClassDef
+) -> dict[str, list[str]]:
+    """Return required parameters for ``alias = _module.func`` class bindings."""
+    found: dict[str, list[str]] = {}
+    imports = import_from_map(tree)
+    for node in class_node.body:
+        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Attribute):
+            continue
+        receiver = node.value.value
+        if not isinstance(receiver, ast.Name) or receiver.id not in imports:
+            continue
+        source = resolve_module_file(root, relative, imports[receiver.id])
+        if source is None:
+            continue
+        try:
+            module_tree = ast.parse(source.read_text(encoding="utf-8"))
+        except OSError:
+            continue
+        for candidate in module_tree.body:
+            if (
+                isinstance(candidate, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and candidate.name == node.value.attr
+            ):
+                for bound in node.targets:
+                    if isinstance(bound, ast.Name):
+                        found.setdefault(bound.id, bound_required_parameters(candidate))
+    return found
 
 
 def class_body_signatures(class_node: ast.ClassDef) -> dict[str, list[str]]:
@@ -296,6 +387,10 @@ def python_signatures(root: Path, gate: ModuleType) -> dict[str, list[str] | Non
         for member, params in class_body_signatures(target).items():
             key = f"{prefix}.{member}"
             if key in signatures:
+                signatures[key] = params
+        for member, params in bound_attribute_signatures(root, relative, tree, target).items():
+            key = f"{prefix}.{member}"
+            if key in signatures and signatures[key] is None:
                 signatures[key] = params
     return signatures
 

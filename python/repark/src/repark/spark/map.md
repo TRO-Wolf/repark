@@ -8,7 +8,7 @@ session-local state. Engine computation stays in Rust; user UDF callbacks execut
 in Python over Arrow batches.
 
 The package exposes `ReparkSession`, the `SparkSession` and `ReParkSession`
-aliases, `DataFrame`, `Column`, `Catalog`, `Window`, `Row`, Spark data
+aliases, `DataFrame`, `Column`, `Catalog`, `Window`, `Row`, `Observation`, Spark data
 types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 `sql` and `types` aliases preserve common PySpark import paths.
 
@@ -130,6 +130,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `column.py` — lazy expression objects, type gates, aliases, field access, generators,
   aggregates, windows, casts, and Spark-compatible operator behavior. Column identity
   metadata preserves join and duplicate-name semantics.
+  **COLUMN-PARITY-1 critic round (2026-09-14):** struct field access carries a second,
+  join-ON SQL fragment in bracket form (`(child)['field']`, literal via
+  `sql_string_literal`, rendered by `PyColumnParts.field_join_sql`) — this DataFusion
+  version refuses dot access on parenthesized expressions, so join conditions over
+  `getField` (plain or `update_fields`) now parse. Free-SQL `sql_expr` keeps the dot
+  form byte-identical (goldens + hostile-ident pin unchanged). A later `alias`/`name`
+  without `metadata=` drops earlier metadata (Spark builds a new alias).
+  pins: column-parity-1/C-008
   **FACADE-2 step 2 (2026-09-12):** Group-2 operator/method families make one
   `_native.PyColumnParts` call per operation; display/SQL/join text is rendered in
   `crates/repark-python/src/column/display.rs`. The public `Column` class, `__slots__`,
@@ -137,6 +145,16 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **FACADE-2 step 2b (2026-09-12):** `alias` keeps `sql_expr` as a Python passthrough
   (`self.sql_expr_part()` — reuse, not assembly) instead of round-tripping the string
   through Rust; the native `alias` returns `(PyColumn, spark_display)`. pins: facade-2/C-013
+- `column_fields.py` — **COLUMN-PARITY-1 (2026-09-14):** method bodies bound on
+  `Column` (kept out of `column.py`, which is at its exact line baseline):
+  `between` / `eqNullSafe` (extracted for headroom), `isin`, `isNaN`, `astype`,
+  `name`, `outer`, `withField`, `dropFields`.
+  **Critic round (2026-09-14, R-4):** `isin` builds one native `IN`-list expression
+  (empty list → `lit(False)`), `isNaN` calls the `repark_isnan` engine UDF, and
+  `withField` / `dropFields` build the `update_fields` engine expression immediately
+  (one `PyColumnParts` call each, chains nest) — the deferred select-boundary
+  resolver is deleted, so filter / `when` / `orderBy` / `groupBy` / join / nested
+  positions compose. pins: column-parity-1/C-001, C-002, C-003, C-004, C-005, C-008
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.
@@ -318,6 +336,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `row_number` to BIGINT (pins: types-1/C-005). DF-EAGER-1 step 2 (2026-09-09):
   `PolarsFrame.eager()` wraps the Spark `eager()`; `collect()` is untouched
   (pins: df-eager-1/C-006).
+- `observation.py` — **DF-SURFACE-B-1 (2026-09-14):** PySpark `Observation`. A
+  named (or generated-name) handle filled by the first action on a
+  `DataFrame.observe` child; `get` before that action raises
+  `NO_OBSERVE_BEFORE_GET` instead of blocking. Exported from `repark.spark` and
+  `repark.spark.sql`. pins: df-surface-b-1/C-003, C-004, C-005
 - `row.py` — Spark-compatible Row construction, indexing, equality, nested conversion,
   display, and pickling. ROW-TUPLE-1 step 1 (2026-09-14): `count` / `index` delegate to
   the stored values tuple (factory rows: the field-name tuple), answering the recorded

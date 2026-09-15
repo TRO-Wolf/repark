@@ -25,10 +25,12 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
+from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
-from repark.spark.dataframe import cache_handle, streaming_batch, surface_a
+from repark.spark.column_fields import column_window_spec as _column_window_spec
+from repark.spark.dataframe import cache_handle, streaming_batch, surface_a, surface_b
 from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
 from repark.spark.dataframe.udf_bridge import (
@@ -277,6 +279,7 @@ class DataFrame:
         "_display_names",
         "_eager_shape",
         "_engine_names",
+        "_field_metadata",
         "_handles",
         "_ingest_report",
         "_inner",
@@ -290,6 +293,7 @@ class DataFrame:
         "_mia_cleanup_registered",
         "_mia_plan_ready",
         "_mia_temp_views",
+        "_observations",
         "_origin_map",
         "_origin_not_emitted",
         "_persist_requested",
@@ -319,6 +323,7 @@ class DataFrame:
         self._cache_view: str | None = None
         self._cache_view_owned_handle: Any | None = None
         self._handles: tuple[Any, ...] = ()
+        self._observations: tuple[Any, ...] = ()
         self._eager_shape: tuple[int, int] | None = None
         self._lineage_inner: Any | None = None
         self._storage_level: Any | None = None
@@ -332,6 +337,7 @@ class DataFrame:
         self._plan_id: str = uuid.uuid4().hex[:12]
         self._display_names: list[str] | None = None
         self._engine_names: list[str] | None = None
+        self._field_metadata: dict[str, dict[str, Any]] | None = None
         self._join_qualifiers: list[str] | None = None
         self._origin_map: dict[tuple[str, str], str] | None = None
         self._origin_not_emitted: frozenset[str] = frozenset()
@@ -360,6 +366,9 @@ class DataFrame:
             other._tighten_derived for other in others
         )
         child._handles = self._handles
+        child._observations = self._observations + tuple(
+            attachment for other in others for attachment in other._observations
+        )
         for other in others:
             if other._handles:
                 child._handles = cache_handle.union_handles(child._handles, other._handles)
@@ -447,6 +456,7 @@ class DataFrame:
     def _action_inner(self) -> Any:
         """Return the native frame for an action, re-running uncached bridges."""
         self._ensure_alive()
+        surface_b.fill_on_action(self)
         if self._map_bridge is not None:
             if self._cache_view is not None:
                 return self._inner
@@ -602,6 +612,7 @@ class DataFrame:
         bridge = self._map_bridge
         if bridge is None:
             raise RuntimeError("mapInArrow bridge missing")
+        surface_b.fill_on_action(self)
         expected_arrow: pa.Schema = bridge["arrow_schema"]
         batches = list(self._iter_map_in_arrow_output(max_output_rows=max_output_rows))
         if not batches:
@@ -894,6 +905,9 @@ class DataFrame:
     withWatermark = with_watermark = streaming_batch.with_watermark  # noqa: N815
     dropDuplicatesWithinWatermark = streaming_batch.drop_duplicates_within_watermark  # noqa: N815
     drop_duplicates_within_watermark = dropDuplicatesWithinWatermark
+    foreach = surface_b.foreach
+    foreachPartition = surface_b.foreachPartition  # noqa: N815
+    observe = surface_b.observe
 
     def sameSemantics(self, other: DataFrame) -> bool:  # noqa: N802 — PySpark camelCase
         """Whether ``other`` has the same logical semantics (PySpark ``DataFrame.sameSemantics``).
@@ -941,9 +955,7 @@ class DataFrame:
 
     def create_or_replace_temp_view(self, name: str) -> None:
         """Register this DataFrame as a replaceable temporary view."""
-        from repark.spark.catalog_surface import _register_temp_view
-
-        _register_temp_view(self, name)
+        surface_b.register_view_without_fill(self, name)
 
     createOrReplaceTempView = create_or_replace_temp_view  # noqa: N815 — PySpark camelCase alias
 
@@ -1388,6 +1400,7 @@ class DataFrame:
                             origin_field=column._origin_field,
                             join_sql_expr=column._join_sql_expr,
                             sql_expr=column._sql_expr,
+                            **_column_fields.carried_select_attrs(column),
                         )
                     )
                     h1_display_names.append(name)
@@ -1458,6 +1471,7 @@ class DataFrame:
                 return sql_child
         natives = [column._inner for column in projected]
         child = self._spawn(self._plan().select(natives))
+        child._field_metadata = _column_fields.select_field_metadata(projected)
         if h1_multi_name and h1_display_names is not None:
             child._display_names = h1_display_names
             child._engine_names = h1_engine_names
@@ -1696,14 +1710,6 @@ class DataFrame:
         except AttributeError:
             raise AttributeError(name) from None
         self._ensure_alive()
-        _oos = {
-            "foreach": "foreach is out of scope until the UDF campaign (use collect + Python)",
-            "foreachPartition": (
-                "foreachPartition is out of scope until the UDF campaign (use to_arrow / to_polars)"
-            ),
-        }
-        if name in _oos:
-            raise UnsupportedOperationException(f"DataFrame.{name} is not supported: {_oos[name]}")
         if name not in self.columns:
             raise PySparkAttributeError(
                 f"[ATTRIBUTE_NOT_SUPPORTED] Attribute `{name}` is not supported."
@@ -1995,6 +2001,7 @@ class DataFrame:
             join_sql_expr=quoted,
             sort_ascending=column._sort_ascending,
             sort_nulls_first=column._sort_nulls_first,
+            **_column_fields.carried_select_attrs(column),
         )
 
     def _bind_schema_column(self, name: str, canonical: str | None = None) -> Column:
@@ -2234,12 +2241,10 @@ class DataFrame:
                 StructField(display, field.dataType, field.nullable)
                 for display, field in zip(overlay, fields, strict=True)
             ]
+        fields = _column_fields.apply_field_metadata(fields, self._field_metadata)
         return StructType(fields)
 
-    @property
-    def dtypes(self) -> list[tuple[str, str]]:
-        """Column name + simple type string pairs (PySpark ``DataFrame.dtypes``)."""
-        return [(field.name, field.dataType.simpleString()) for field in self.schema.fields]
+    dtypes = property(_column_fields.dataframe_dtypes)
 
     def printSchema(  # noqa: N802 — PySpark method name
         self, level: int | None = None
@@ -2256,15 +2261,7 @@ class DataFrame:
 
     print_schema = printSchema
 
-    def __str__(self) -> str:
-        """``DataFrame[name: type, …]`` (PySpark ``DataFrame.__str__``).
-
-        Uses ``dtypes`` simpleString pairs (``bigint`` for LongType). Apache
-        ``test_column_name_with_non_ascii`` pins this form via ``str(df)``.
-        """
-        self._ensure_alive()
-        parts = [f"{name}: {type_name}" for name, type_name in self.dtypes]
-        return f"DataFrame[{', '.join(parts)}]"
+    __str__ = _column_fields.dataframe_str
 
     def __repr__(self) -> str:
         """Spark keeps its eager-eval repr; polars and duckdb always render the styled table."""
@@ -2986,10 +2983,10 @@ class DataFrame:
         sql, keys = _EXPLAIN_SECTION_PLAN[selected]
         self._ensure_alive()
         view = scratch_view_name(self._session, "__repark_explain_")
-        self.create_or_replace_temp_view(view)
+        surface_b.register_view_without_fill(self, view)
         try:
             plan = self._spawn(self._session.sql(f"{sql} SELECT * FROM {view}"))
-            rows = [(row["plan_type"], row["plan"]) for row in plan.toLocalIterator()]
+            rows = [(row["plan_type"], row["plan"]) for row in surface_b.rows_without_fill(plan)]
         finally:
             self._session.drop_temp_view(view)
         return _render_explain_sections(selected, keys, rows)
@@ -3681,10 +3678,9 @@ class DataFrame:
         Negative values raise ``AnalysisException`` with Spark's invalid-limit error class.
         Pending cache or persist requests materialize before the limited action.
         """
-        if self._map_bridge is not None and not (
-            self._persist_requested or self._checkpoint_lazy or self._cache_view is not None
-        ):
+        if display._use_bridge_peek(self):
             limit_count = self._require_non_negative_limit(num)
+            surface_b.fill_on_action(self)
             if limit_count == 0:
                 return []
             table = self._consume_map_in_arrow_batches(max_output_rows=limit_count)
@@ -3739,7 +3735,7 @@ class DataFrame:
             raise PySparkTypeError(f"Argument `num` should be a int, got {type(num).__name__}.")
         self._ensure_alive()
         if num <= 0:
-            return []
+            return surface_b.empty_rows_after_fill(self)
         rows = self.collect()
         if num >= len(rows):
             return rows
@@ -3750,9 +3746,7 @@ class DataFrame:
 
         The check limits the plan to one row and materializes pending cache requests.
         """
-        if self._map_bridge is not None and not (
-            self._persist_requested or self._checkpoint_lazy or self._cache_view is not None
-        ):
+        if display._use_bridge_peek(self):
             return self._consume_map_in_arrow_batches(max_output_rows=1).num_rows == 0
         self._materialize_cache_if_needed()
         return self.limit(1).count() == 0
@@ -3938,7 +3932,6 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _collapse_identity_projection_alias,
     _column_may_reference_names,
     _column_widths,
-    _column_window_spec,
     _data_type_has_required_child,
     _decode_qcol_field,
     _display_type_labels_from_arrow,
