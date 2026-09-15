@@ -122,6 +122,11 @@ registration to `catalog_surface._register_temp_view`; the frame-token note
 lives in `cache_handle.bind_registered_view`). The CAP-1 parity mirror row
 moves in the same commit.
 pins: catalog-surface-1/C-009
+FNP-4B (2026-09-15): `check_rust_file_size.py` `merge/tests/merge.rs` 1068 → 1065,
+`column/mod.rs` 1052 → 1040, `dataframe.rs` 1084 → 1082; `check_lib_py.py`
+`_live_parity.py` 1778 → 1763 (backtick-disclosure retire). The CAP-1 mirror rows
+moved with them.
+pins: fnp-4b/C-009, C-010
 REPLACE-LINEAR-1 step 1 critic round (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4054 → 4044 (the `_join_qualifiers` slot plus minimal call
 sites so `replace` binds duplicate-name equi-join output by relation qualifier
@@ -1255,3 +1260,4 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
 `make workflows-parse`. Escalate to:
 [../map.md#debug](../map.md).
 - **FNP-11A (2026-09-15, on 440b2773):** `check_lib_py.py` ratchets `functions_expr.py` to 2235 lines, the FNP-11A forwarder trim landing on top of main's baseline.
+- **FNP-4B remediation (2026-09-15):** size ceilings set to the real line counts (`check_rust_file_size.py`: `column/mod.rs` 1038, `cross_door.rs` 1258; `check_lib_py.py`: `_live_parity.py` 1753).

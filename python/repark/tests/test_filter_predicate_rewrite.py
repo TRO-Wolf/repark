@@ -1,7 +1,7 @@
 """The SQL-string filter-predicate rewriter (``DataFrame._quote_filter_sql_identifiers``).
 
-``filter(str)`` / ``where(str)`` rewrite schema-bound identifiers to double-quoted canonical form
-so DataFusion's unquoted lowercase fold cannot lose a mixed-case field. Three behaviours of that
+``filter(str)`` / ``where(str)`` rewrite schema-bound identifiers to backtick-quoted canonical form
+so DataFusion's unquoted lowercase fold cannot lose a mixed-case field. Four behaviours of that
 rewriter are pinned here, per user entry point (**both** ``.filter`` and ``.where``) and on the
 Arrow export path (``to_arrow`` — value AND type), never ``show``:
 
@@ -17,6 +17,8 @@ Arrow export path (``to_arrow`` — value AND type), never ``show``:
   keep their grammar meaning even on a frame with a column literally named ``true`` / ``false`` /
   ``null``. **All three** members of ``_SQL_LITERAL_KEYWORDS`` are pinned against a frame that
   actually carries a column of that name — dropping any one member reds this module.
+* **backtick-quoted spans pass through untouched** (BL-2, FIXED FNP-4B): ``filter("`my col` > 2")``
+  filters on the spaced column; the rewriter never quotes inside backticks.
 
 Each keyword/lookahead pin also asserts the rewritten form the skip suppresses fails, so removing
 the skip turns the test red rather than merely changing an unobserved plan.
@@ -34,10 +36,7 @@ session with no standing live leg — their drift detector is the live legs plus
 * the :class:`Column` entry point (``df.filter(df["id"] > 0)``) does NOT refuse — it resolves
   exact-case-first and returns rows; live Spark raises ``AMBIGUOUS_REFERENCE``;
 * an explicitly double-quoted ``'"ID" > 1'`` does NOT refuse — DataFusion resolves it
-  case-sensitively; Spark reads ``"ID"`` as a string *literal* and raises ``CAST_INVALID_INPUT``;
-* backtick-quoted identifiers are **not** a protected span — ``filter("`x` > 0")`` is corrupted
-  into ``No field named \"\"\"x\"\"\"``; live Spark filters normally; the fix belongs in a
-  follow-up unit.
+  case-sensitively; Spark reads ``"ID"`` as a string *literal* and raises ``CAST_INVALID_INPUT``.
 """
 
 from __future__ import annotations
@@ -46,7 +45,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, ParseException
+from repark.errors import AnalysisException, ParseException, PySparkException
 from repark.spark.dataframe import DataFrame
 
 
@@ -155,38 +154,39 @@ def test_column_entry_point_bypasses_the_ambiguity_refusal(
 
 
 @pytest.mark.parametrize("entry_point", ["filter", "where"])
-def test_explicitly_double_quoted_ident_bypasses_the_ambiguity_refusal(
+def test_explicitly_double_quoted_span_is_a_string_literal(
     spark: ReparkSession, entry_point: str
 ) -> None:
-    """DISCLOSED DIVERGENCE (not a fix): an already-double-quoted span is a protected span, passed
-    through; DataFusion resolves it case-**sensitively** rather than refusing. Spark does not even
-    read ``"ID"`` as an identifier — it is a string literal there, and live PySpark 4.1.2 raises
-    ``CAST_INVALID_INPUT`` on ``'"ID" > 1'``.
+    """FIXED 2026-09-15 (FNP-4B): an already-double-quoted span is a protected span, passed
+    through; the Databricks lexer reads it as a STRING literal, so comparing it to a number
+    is loud on both doors. Live PySpark 4.1.2 raises ``CAST_INVALID_INPUT`` on
+    ``'"ID" > 1'``; repark raises the Arrow cast error (BL-1 raise-vs-raise precedent).
     """
     df = _collides(spark)
-    upper = getattr(df, entry_point)('"ID" > 1').to_arrow()
-    lower = getattr(df, entry_point)('"id" > 1').to_arrow()
-
-    assert upper.to_pylist() == [{"id": 1, "ID": 2, "other": 3}]
-    assert upper.schema.field("ID").type == pa.int64()
-    assert lower.to_pylist() == []
-    assert lower.schema.field("id").type == pa.int64()
+    with pytest.raises((AnalysisException, PySparkException), match=r"ID"):
+        getattr(df, entry_point)('"ID" > 1').to_arrow()
+    with pytest.raises((AnalysisException, PySparkException), match=r"id"):
+        getattr(df, entry_point)('"id" > 1').to_arrow()
 
 
 @pytest.mark.parametrize("entry_point", ["filter", "where"])
-def test_backtick_quoted_identifier_is_not_a_protected_span(
+def test_backtick_quoted_identifier_is_a_protected_span(
     spark: ReparkSession, entry_point: str
 ) -> None:
-    """DISCLOSED HOLE (pre-existing, not a G2 regression): backticks — Spark's own quoting
-    spelling — are NOT protected, so the token inside them is rewritten and DataFusion re-quotes
-    the result. Live PySpark 4.1.2 filters normally. Pinned with the observed text so the
-    follow-up fix has to update this test.
+    """Backtick spans pass through untouched (cell FNP4B-filter-bt, BL-2 FIXED FNP-4B):
+    live PySpark 4.1.2 filters normally on the backticked name, and so does repark.
+    The ``x`` shape is the bite-proof half: the token inside the backticks names a real
+    column, so the pre-fix rewriter doubled the backticks and the predicate died.
     """
-    df = spark.createDataFrame([(1, 2)], ["x", "b"])
-    with pytest.raises(AnalysisException) as excinfo:
-        getattr(df, entry_point)("`x` > 0").to_arrow()
+    df = spark.createDataFrame([(1, "n"), (3, "y")], ["my col", "tag"])
+    kept = getattr(df, entry_point)("`my col` > 2").to_arrow()
 
-    assert 'No field named """x"""' in str(excinfo.value)
+    assert kept.to_pylist() == [{"my col": 3, "tag": "y"}]
+    assert kept.schema.field("my col").type == pa.int64()
+    bare = spark.createDataFrame([(1, 2)], ["x", "b"])
+    kept_bare = getattr(bare, entry_point)("`x` > 0").to_arrow()
+
+    assert kept_bare.to_pylist() == [{"x": 1, "b": 2}]
 
 
 # a token followed by `(` is a function call, not a column

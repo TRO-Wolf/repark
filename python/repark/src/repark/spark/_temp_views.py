@@ -34,7 +34,7 @@ def _home_segments(session: Any) -> list[str] | None:
 def scratch_view_name(session: Any, prefix: str) -> str:
     """A fresh INTERNAL scratch-view name, spelled against the session's temp-view home.
 
-    Returns ``"catalog"."schema"."<prefix><uuid>"`` — ALWAYS quoted (the home-less fallback is the
+    Returns the backtick-quoted three-part reference — ALWAYS quoted (the home-less fallback is the
     quoted bare name), so the returned string is a ready-to-embed SQL reference and a call site
     must never wrap it in :func:`~repark.spark._idents.quote_ident` again. It is a single string
     that is simultaneously the name the native temp-view API registers (the seam accepts the
@@ -75,4 +75,6 @@ def local_view_name(view: str) -> str:
     tail = view.rpartition(".")[2] or view
     if len(tail) >= 2 and tail.startswith('"') and tail.endswith('"'):
         return tail[1:-1].replace('""', '"')
+    if len(tail) >= 2 and tail.startswith("`") and tail.endswith("`"):
+        return tail[1:-1].replace("``", "`")
     return tail

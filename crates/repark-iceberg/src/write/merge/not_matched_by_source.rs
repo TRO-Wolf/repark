@@ -173,7 +173,7 @@ pub(super) fn mor_work_sql(sql: &MergeSql<'_>, write_schema: &ArrowSchema) -> St
     let ta = &sql.spec.target_alias;
     let projection = sql.rewrite_projection(write_schema);
     format!(
-        "SELECT {ta}.\"{FILE_PATH_COL}\", {ta}.\"{POS_COL}\", \
+        "SELECT {ta}.{FILE_PATH_COL}, {ta}.{POS_COL}, \
          CAST(1 AS BIGINT) AS match_count, \
          CAST(1 AS BIGINT) AS is_mutated, \
          CASE WHEN ({updated}) THEN 1 ELSE 0 END AS is_update, \

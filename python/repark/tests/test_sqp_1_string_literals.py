@@ -75,16 +75,17 @@ def test_sql_door_escape_reaches_the_binary_cast(spark: ReparkSession) -> None:
     assert table.column("h").to_pylist() == ["09"]
 
 
-def test_double_quoted_literal_is_an_identifier(spark: ReparkSession) -> None:
-    """BL-9 (registry §7). ``"abc"`` is a double-quoted identifier, not a STRING — reds when the
-    FNP-4b fix makes it a Spark STRING literal."""
-    with pytest.raises((AnalysisException, PySparkException), match=r"abc"):
-        spark.sql('SELECT "abc" AS s').to_arrow()
+def test_double_quoted_literal_is_a_string(spark: ReparkSession) -> None:
+    """BL-9 (registry §7). ``"abc"`` is a Spark STRING literal — FIXED 2026-09-15 (FNP-4B)."""
+    table = _table(spark.sql('SELECT "abc" AS s'))
+    assert table.column("s").to_pylist() == ["abc"]
+    assert pa.types.is_string(table.schema.field("s").type)
+    assert table.schema.field("s").nullable is False
 
 
 def test_escaped_string_literals_flag_has_no_carrier(spark: ReparkSession) -> None:
-    """BL-10 (registry §7). No carrier for ``escapedStringLiterals=true``; the door always processes
-    escapes, so ``'\\d'`` is ``d`` — reds when a carrier lands and ``true`` keeps the backslash."""
+    """BL-10 (registry §7). The default door processes escapes, so ``'\\d'`` is ``d``; the
+    ``true`` carrier path is pinned in ``test_fnp_4b_literals.py``."""
     table = _table(spark.sql(r"SELECT '\d' AS s, length('\d') AS n"))
     assert table.column("s").to_pylist() == ["d"]
     assert table.column("n").to_pylist() == [1]
@@ -162,12 +163,12 @@ def test_string_indexer_round_trips_a_backslash_label(spark: ReparkSession) -> N
     assert "a\\d" in origs
 
 
-def test_out_of_range_unicode_escape_is_one_replacement(spark: ReparkSession) -> None:
-    r"""BL-12 (registry §7). An out-of-range ``\U`` (past U+10FFFF) becomes a SINGLE ``?`` here,
-    where Spark's Java UTF-8 encoder emits two (``3F3F``); reds if repark reproduces the artifact.
+def test_out_of_range_unicode_escape_is_two_replacements(spark: ReparkSession) -> None:
+    r"""BL-12 (registry §7). An out-of-range ``\U`` (past U+10FFFF) keeps Spark's Java
+    two-char artifact — FIXED 2026-09-15 (FNP-4B).
 
     pins: sqp-1-spark-string-literals/C-011
     """
     table = _table(spark.sql(r"SELECT '\U00110000' AS v, length('\U00110000') AS n"))
-    assert table.column("v").to_pylist() == ["?"]
-    assert table.column("n").to_pylist() == [1]
+    assert table.column("v").to_pylist() == ["??"]
+    assert table.column("n").to_pylist() == [2]

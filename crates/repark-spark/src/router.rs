@@ -41,7 +41,9 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
 ) -> Result<DataFrame> {
     // Canonicalize once at the Spark SQL front door so later tokenizers cannot process escapes again.
     // Translate downstream parser locations back to the caller's SQL before returning an error.
-    let canonical = crate::spark_literals::canonicalize(sql)?;
+    let verbatim =
+        crate::spark_literals::escaped_verbatim_from_options(ctx.state().config().options());
+    let canonical = crate::spark_literals::canonicalize_verbatim(sql, verbatim)?;
     let canonical_sql = canonical.as_ref();
     // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
@@ -117,8 +119,15 @@ async fn execute_time_travelled(
     if let Some(original) = original_for_locations
         .and_then(|original| original_sql_for_locations(original, sql, sql_storage.as_ref()))
     {
+        let verbatim =
+            crate::spark_literals::escaped_verbatim_from_options(ctx.state().config().options());
         result.map_err(|error| {
-            crate::spark_literals::translate_downstream_error(original, sql_storage.as_ref(), error)
+            crate::spark_literals::translate_downstream_error_verbatim(
+                original,
+                sql_storage.as_ref(),
+                error,
+                verbatim,
+            )
         })
     } else {
         result

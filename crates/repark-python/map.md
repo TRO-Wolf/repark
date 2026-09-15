@@ -16,7 +16,8 @@ crates; this crate owns the Python boundary and the PyO3/Arrow FFI `unsafe` boun
 - [`src/lib.rs`](src/lib.rs) registers the native module and maps engine errors.
 - [`src/session.rs`](src/session.rs) provides synchronous session methods over the shared runtime.
 - [`src/dataframe.rs`](src/dataframe.rs) provides immutable plans, actions, transforms, and lazy
-  Arrow C Stream export.
+  Arrow C Stream export. **FNP-4B (2026-09-15):** `filter_sql` canonicalizes the predicate with
+  the Spark-door lexer and maps downstream locations back; `F.expr` contexts parse Databricks.
 - [`src/collect_rows.rs`](src/collect_rows.rs) materializes Arrow record batches as Python value
   tuples for `collect`. It imports the batch back through the Arrow C Data Interface
   (`__arrow_c_array__`) and converts only the cell kinds whose `to_pylist` mapping is

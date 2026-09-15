@@ -589,23 +589,23 @@ class GroupedData:
             r"(sum|avg|mean|min|max|count|stddev|stddev_samp|stddev_pop|"
             r"variance|var_samp|var_pop|median|bit_and|bit_or|bit_xor|"
             r"collect_list|collect_set)"
-            r'\("?([A-Za-z_][A-Za-z0-9_]*)"?\)'
+            r'\([`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?\)'
         )
         match = self._match_af_text(column, simple_af)
         if match is None and column._is_aggregate_function and column._sql_expr is not None:
             # Alias recovery uses the structural array aggregation forms.
             set_distinct = re.fullmatch(
-                r'coalesce\(array_distinct\(array_agg\("?([A-Za-z_][A-Za-z0-9_]*)"?\)'
+                r'coalesce\(array_distinct\(array_agg\([`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?\)'
                 r" IGNORE NULLS\),\s*make_array\(\)\)",
                 column._sql_expr,
             )
             set_legacy = re.fullmatch(
-                r'coalesce\(array_agg\(DISTINCT "?([A-Za-z_][A-Za-z0-9_]*)"?\)'
+                r'coalesce\(array_agg\(DISTINCT [`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?\)'
                 r" IGNORE NULLS,\s*make_array\(\)\)",
                 column._sql_expr,
             )
             list_match = re.fullmatch(
-                r'coalesce\(array_agg\("?([A-Za-z_][A-Za-z0-9_]*)"?\)'
+                r'coalesce\(array_agg\([`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?\)'
                 r" IGNORE NULLS,\s*make_array\(\)\)",
                 column._sql_expr,
             )
@@ -663,7 +663,7 @@ class GroupedData:
             name_match = None
             if column._agg_name is not None:
                 name_match = re.fullmatch(
-                    r'(first|last)\("?([A-Za-z_][A-Za-z0-9_]*)"?\)',
+                    r'(first|last)\([`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?\)',
                     column._agg_name,
                 )
             if name_match is None:
@@ -672,7 +672,7 @@ class GroupedData:
             ignore_nulls = False
         else:
             sql_match = re.fullmatch(
-                r'(first|last)_value\("?([A-Za-z_][A-Za-z0-9_]*)"?\)( IGNORE NULLS)?',
+                r'(first|last)_value\([`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?\)( IGNORE NULLS)?',
                 column._sql_expr,
             )
             if sql_match is None:
@@ -693,7 +693,7 @@ class GroupedData:
         """Rebind a binary aggregate with simple column inputs."""
         binary_af = (
             r"(corr|covar_pop|covar_samp)"
-            r'\("?([A-Za-z_][A-Za-z0-9_]*)"?\s*,\s*"?([A-Za-z_][A-Za-z0-9_]*)"?\)'
+            r'\([`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?\s*,\s*[`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?\)'
         )
         match = self._match_af_text(column, binary_af)
         if match is None:

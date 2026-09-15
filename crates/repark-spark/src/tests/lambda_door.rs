@@ -10,9 +10,13 @@ fn hof_ctx() -> (SessionContext, CatalogRegistry) {
 }
 
 fn hof_ctx_with_ansi(ansi_enabled: bool) -> (SessionContext, CatalogRegistry) {
-    let config = repark_functions::ansi::with_spark_ansi_config(
-        datafusion::prelude::SessionConfig::new(),
-        ansi_enabled,
+    let config = crate::extension::apply_spark_parser_dialect(
+        crate::extension::apply_spark_float_as_decimal(
+            repark_functions::ansi::with_spark_ansi_config(
+                datafusion::prelude::SessionConfig::new(),
+                ansi_enabled,
+            ),
+        ),
     );
     let rules =
         repark_functions::analyzer_rules_with_higher_order_preparation(Analyzer::new().rules)
@@ -24,6 +28,7 @@ fn hof_ctx_with_ansi(ansi_enabled: bool) -> (SessionContext, CatalogRegistry) {
         .build();
     let ctx = SessionContext::new_with_state(state);
     repark_functions::register_all(&ctx);
+    ctx.register_udf(crate::spark_as_udf().as_ref().clone());
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
     }
@@ -480,6 +485,8 @@ async fn sql_door_index_elements_are_non_nullable() {
 async fn queries_without_a_lambda_still_parse_with_the_session_dialect() {
     let (ctx, catalogs) = hof_ctx();
     let batch = collect_one(&ctx, &catalogs, "SELECT count(\"v\") AS r FROM t").await;
+    assert_eq!(int_values(batch.column(0).as_ref()), vec![Some(3)]);
+    let batch = collect_one(&ctx, &catalogs, "SELECT count(`v`) AS r FROM t").await;
     assert_eq!(int_values(batch.column(0).as_ref()), vec![Some(2)]);
 }
 

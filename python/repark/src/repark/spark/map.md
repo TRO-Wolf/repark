@@ -80,6 +80,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024, C-026, C-029..C-031, C-033; types-geo-ddl-1/C-002
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.
+  **FNP-4B (2026-09-15):** identifier quoting is backticks (both doors read them as
+  identifiers; the Spark door reads double quotes as strings).
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
   integer knobs (`checked_integral`); numpy `__index__` types run, bool/float/str fail
   with `AnalysisException` / `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` carrying Spark's
@@ -90,6 +92,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `_secrets.py` — secret-property classification and redacted runtime configuration
   listing. Explicit `get` calls do not redact values.
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.
+  **FNP-4B (2026-09-15):** `local_view_name` also strips backtick quoting (handles are
+  backticked since the D-2 quoter move). pins: fnp-4b/C-008
 - `_pyarrow.py` — **FACADE-1 (2026-09-12):** `require_pyarrow()` imports pyarrow or raises
   `ImportError` naming `repark[pyarrow]`. Package import does not load pyarrow.
   pins: facade-1/C-002
