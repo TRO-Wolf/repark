@@ -63,6 +63,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   STRING `partNum` implicit-cast; partNum 0 fail-loud; Dictionary(_, Utf8).
 - `src/higher_order/` — FNP-4c kernels on the FNP-4a shared table. See
   [src/higher_order/map.md](src/higher_order/map.md).
+- `src/bitmap_agg.rs` — **FNP-6D (2026-09-15):** Spark bitmap aggregate UDAFs
+  (`bitmap_construct_agg`, `bitmap_or_agg`, `bitmap_and_agg`). `[u8; 4096]` state, no
+  new crate. Sliding frames refuse. pins: fnp-6d/C-001, C-002, C-003, C-006, C-007, C-010
 - `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later
   registration wins) + **FN-FIX-1** `percentile_approx` / `approx_percentile` discrete UDAF
   (`percentile_approx_udaf` with alias); `approx_percentile_cont` stays the t-digest name for ML +

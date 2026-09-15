@@ -103,6 +103,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: fnp-9-collections-json/C-002, C-003, C-004, C-005
 - `count_if.rs` — **TYPES-1 (2026-09-05):** SQL-door `count_if` aggregate UDF answering
   `Int64`. pins: types-1/C-003
+- `bitmap_agg.rs` — **FNP-6D (2026-09-15):** Spark `bitmap_construct_agg` /
+  `bitmap_or_agg` / `bitmap_and_agg` UDAFs. A bitmap is BINARY of 4096 bytes (32768
+  bits, least-significant first). Empty `construct`/`or` answer all-zero; empty `and`
+  answers all-ones. Sliding frames refuse (WIN-SLIDE). Registered through
+  `aggregate::functions()`. pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
   compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable

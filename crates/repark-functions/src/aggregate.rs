@@ -25,6 +25,7 @@ use crate::avg_groups;
 #[must_use]
 pub fn functions() -> Vec<Arc<AggregateUDF>> {
     let mut functions = vec![avg_udaf(), try_avg_udaf(), crate::count_if::count_if_udaf()];
+    functions.extend(crate::bitmap_agg::functions());
     functions.extend(crate::spark_result_types::signed_aggregate_functions());
     functions
 }

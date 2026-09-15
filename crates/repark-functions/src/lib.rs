@@ -8,6 +8,7 @@ pub mod aggregate;
 pub mod analyzer;
 pub mod ansi;
 mod avg_groups;
+mod bitmap_agg;
 pub mod bool_decimal;
 pub mod cardinality;
 pub mod collection;
@@ -59,7 +60,6 @@ use datafusion::optimizer::AnalyzerRule;
 use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
 use datafusion::prelude::SessionContext;
 
-/// Return this crate's Spark date-function shims for inspection or registration.
 #[must_use]
 pub fn spark_date_shim_functions() -> Vec<Arc<ScalarUDF>> {
     datetime::functions()
