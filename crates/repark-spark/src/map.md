@@ -255,7 +255,16 @@ pins: rp-4-fork-repin/C-005, C-006
   Round-2 remediation: `TypeTableError::IntegerOverflow` marks integer
   parameters beyond i64 so the bridge can route them to Python's unbounded
   parse (`PyOverflowError`).
-  pins: facade-4/C-010, C-019, C-020
+  **TYPES-GEO-DDL-1 (2026-09-15):** `SparkDataType::Geometry { srid }` /
+  `Geography { srid }` (`-1` is Spark's `any`, `SPATIAL_MIXED_SRID`); the
+  supported-SRID sets live here once (`GEOMETRY_SRIDS`, `GEOGRAPHY_SRIDS`) —
+  Python keeps only the JSON door's CRS spellings. `simple_string` answers the
+  oracle `geometry(n)` / `geography(n)` forms; `arrow_type_from_spark` refuses
+  both variants naming the type (V3-GEO-1) instead of the `Utf8` catch-all;
+  `ddl_token` / `sql_marker_token` fall through to the existing generic arms.
+  Round 2: `spatial_srid_supported` validates inbound bridge SRIDs (mixed form
+  included) so no Spark-impossible spelling builds.
+  pins: facade-4/C-010, C-019, C-020; types-geo-ddl-1/C-001, C-003
 - `type_table/parse.rs` — the text→descriptor half of the table, split out at the
   file-size ceiling: DDL and SQL-token parsing (`parse_ddl`,
   `sql_type_from_token`, field lists, `decimal(p,s)` and interval spellings) with
@@ -264,7 +273,15 @@ pins: rp-4-fork-repin/C-005, C-006
   Round-2 remediation: `parse_py_int` is checked multiply/add and overflows to
   `TypeTableError::IntegerOverflow` (propagated through `parse_atomic_token`
   and the field-list parse rather than swallowed into a refusal).
-  pins: facade-4/C-010, C-020
+  **TYPES-GEO-DDL-1 (2026-09-15):** the `parse_atomic_token` spatial arm
+  (`geometry(...)` / `geography(...)`, case-insensitive keyword and `any`,
+  inner whitespace): `any` maps to `SPATIAL_MIXED_SRID`, digits map on SRID
+  membership, and anything else (bare tokens, unknown SRIDs, `-1`, CRS
+  strings) falls through to the existing `cannot parse datatype` refusal.
+  Unit battery in `type_table/tests.rs` (file-backed `#[cfg(test)]` module).
+  Round 2: the capture is ASCII `[0-9]+` (Spark `INTEGER_VALUE`, not Python
+  `int`) — underscores, signs and fullwidth digits refuse; leading zeros parse.
+  pins: facade-4/C-010, C-020; types-geo-ddl-1/C-001, C-005
 - `spark_ast.rs` — the Spark passthrough: ORDER BY null-placement defaults, eager analysis,
   eager DML/`COPY` commands (F-BR-2), SEC-02 gate call, the **G15 collation valve**
   (`refuse_type_position_collation_in_sql` on the raw executing-parse text, then

@@ -222,14 +222,16 @@ def test_geometry_requires_srid() -> None:
     assert str(excinfo.value) == expected["message"]
 
 
-def test_geometry_ddl_door_blocked() -> None:
-    """Cell ``geo_ddl``: the DDL door is the Rust type table, whose parser has no spatial arm.
+def test_geometry_ddl_door_answers() -> None:
+    """Cell ``geo_ddl``: the DDL door parses through the Rust type table.
 
-    Today's ``ValueError`` refusal is pinned so the door stays honest until the Rust spatial
-    step lands; the oracle's struct answer resumes on that arm. pins: types-bases-1/C-003
+    pins: types-geo-ddl-1/C-004
     """
-    with pytest.raises(ValueError, match="cannot parse datatype"):
-        spark_types.DataType.fromDDL("g geometry(4326)")
+    parsed = spark_types.DataType.fromDDL("g geometry(4326)")
+    assert repr(parsed) == _result("geo_ddl")["value"]
+    assert parsed == spark_types.StructType(
+        [spark_types.StructField("g", spark_types.GeometryType(4326), True)]
+    )
 
 
 def test_geo_fromjson_refuses() -> None:
@@ -509,18 +511,15 @@ def test_spatial_json_edge_cells() -> None:
         assert round_trip == spatial
 
 
-def test_spatial_ddl_door_blocked() -> None:
-    """L-003/R-4: spatial DDL tokens refuse through the Rust type table (UNMEASURED door).
+def test_spatial_ddl_door_answers() -> None:
+    """L-003/R-4: spatial DDL tokens parse through the Rust type table.
 
-    pins: types-bases-1/C-006
+    pins: types-geo-ddl-1/C-004
     """
-    for ddl in (
-        "geometry",
-        "geography",
-        "geometry(4326)",
-        "geography(4326)",
-        "geometry(any)",
-    ):
+    assert spark_types.DataType.fromDDL("geometry(4326)") == spark_types.GeometryType(4326)
+    assert spark_types.DataType.fromDDL("geography(4326)") == spark_types.GeographyType(4326)
+    assert spark_types.DataType.fromDDL("geometry(any)") == spark_types.GeometryType("ANY")
+    for ddl in ("geometry", "geography"):
         with pytest.raises(ValueError, match="cannot parse datatype"):
             spark_types.DataType.fromDDL(ddl)
 

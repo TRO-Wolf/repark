@@ -4,34 +4,6 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
-- [registry-16b-1-ledger.md](registry-16b-1-ledger.md) —
-  **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
-  CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live
-  PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
-  `risk_tier: standard`. Branch `docs/registry-16b-1`.
-  pins: registry-16b-1/C-001, C-002, C-003
-- [facade-5-ledger.md](facade-5-ledger.md) —
-  **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
-  split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
-  formatters, the audit §6 UNMEASURED cell), the renderer × truncation-rule pin
-  census, goldens for the pairs no §8 pin binds (recorded from base, mutation
-  proven), and the step-1 target — a measured format wall and its Rust move, or
-  the smallest byte-identical consolidation naming what stays for `eager.py`.
-  No product change under `python/repark/src/` or `crates/`.
-  `risk_tier: standard`. Branch `perf/facade-5-s0`.
-  pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [array-null-1-ledger.md](array-null-1-ledger.md) —
-  **ARRAY-NULL-1 (2026-09-14):** `F.array_append`/`F.array_prepend` lower through
-  `spark_array_append_udf`/`spark_array_prepend_udf` — a `ScalarUDF` that delegates
-  to DataFusion's kernel and grafts the input array's outer null buffer back
-  (route (a); the CASE route died at depth 40 and no lateral plan-level alias
-  exists). One native call per facade level: depth-40 RSS ~2.0 MB vs 577 MB at
-  depth 16 before; the SQL door answers the same arm in Spark `(array, element)`
-  order, and the depth-40 memory pin runs by default on both functions.
-  Measurement script: [array-null-1-spikes/](array-null-1-spikes/map.md).
-  `risk_tier: standard`. Branch `fix/array-null-1`.
-  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
-  L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
 - [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —
   **ABS-EXPR-1 (2026-09-13), in flight:** `F.abs` / `F.cbrt` / `F.nullif` lower to one
   native `call_scalar` each (`expr_fn::abs` / `cbrt` / `nullif`) — the facade `when(...)`
@@ -43,31 +15,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   its own card; `dataframe/core.py` is fenced to another lane).
   `risk_tier: standard`. Branch `fix/abs-expr-1`.
   pins: abs-expr-1/C-001, C-002, C-003, C-004, C-005
-- [silver-s1-ledger.md](silver-s1-ledger.md) —
-  **SILVER-S1 (2026-09-12), in flight:** typed `SilverPlan` in `crates/repark-core/src/silver/`
-  — TOML parse with key-path refusals, closed operation enums, parse-time structural
-  validation, canonical identity bytes, deterministic `explain()`. No data execution.
-  `risk_tier: standard`. Branch `feat/silver-s1`.
-  pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
-- [silver-s0-ledger.md](silver-s0-ledger.md) —
-  **SILVER-S0 (2026-09-12), in flight:** READING unit — contract and storage
-  feasibility for the deterministic silver-layer compiler (epic §17 S-0).
-  Clause verdicts from the fork pin `3ebf7d36` and RePark write adapter
-  source; probe tests live only in `fork/` on `probe/silver-s0`.
-  `risk_tier: standard`. Branch `docs/silver-s0`.
-  pins: silver-s0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
-- [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
-  S2-21 re-check of the step-2 remediation: 500-column describe 8.16 s, no P1 / P2.
-  **PERF-UNPIVOT-1 (2026-09-12), in flight:** step 1 (#542) shipped native
-  `stack(n, expr…)` / `UnpivotExec` in `repark-core`, Spark SQL rewrite, `F.stack`,
-  linearity exponent 0.91 at 50/250/500; `interleave` once per stacked column and
-  stream each input batch (C-006, C-007). Step 2 (`perf/unpivot-1-s2`) moves
-  `describe`/`summary` back to a pure plan — chunked aggregates → one stack-order
-  string-cast projection → `UnpivotExec`; the `mapInArrow` bridge and
-  `_summary_unpivot` are deleted.
-  `risk_tier: standard`. Branch `perf/unpivot-1` / `perf/unpivot-1-s2`.
-  pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010, C-011, C-012, C-013
 - [ap-1-close-1-ledger.md](ap-1-close-1-ledger.md) —
   **AP-1-CLOSE-1 (2026-09-12), in flight:** `projected_files_at_target` re-read as an
   upper bound from the inputs' compressed bytes — the 20 % target retires (S2-27),
@@ -86,6 +33,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   maintenance guide's S2-24 known-issues line move with it.
   `risk_tier: standard`. Branch `feat/ap-3`.
   pins: ap-3/C-001, C-002, C-003, C-004, C-005, C-006
+- [array-null-1-ledger.md](array-null-1-ledger.md) —
+  **ARRAY-NULL-1 (2026-09-14):** `F.array_append`/`F.array_prepend` lower through
+  `spark_array_append_udf`/`spark_array_prepend_udf` — a `ScalarUDF` that delegates
+  to DataFusion's kernel and grafts the input array's outer null buffer back
+  (route (a); the CASE route died at depth 40 and no lateral plan-level alias
+  exists). One native call per facade level: depth-40 RSS ~2.0 MB vs 577 MB at
+  depth 16 before; the SQL door answers the same arm in Spark `(array, element)`
+  order, and the depth-40 memory pin runs by default on both functions.
+  Measurement script: [array-null-1-spikes/](array-null-1-spikes/map.md).
+  `risk_tier: standard`. Branch `fix/array-null-1`.
+  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
+  L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →
@@ -95,15 +54,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PROVEN, 24 pins in `config_file/tests.rs`; `sources.rs` / `redact.rs` stay placeholders
   for step 2. `risk_tier: standard`. Branch `feat/cfg-1`.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [df-describe-str-1-ledger.md](df-describe-str-1-ledger.md) —
-  **DF-DESCRIBE-STR-1 (2026-09-11), in flight:** `describe`/`summary` answer Spark's
-  ordered stat rows on string columns — `mean`/`stddev` over `try_cast(col AS DOUBLE)`
-  (NULL for `"a"`/`"b"`, `6.0` for `"10","2","a"`), non-numeric non-string columns
-  skipped by the bare forms and refused with `PySparkValueError` when named, UNION ALL
-  legs ordered by a stat ordinal. §7 EX-DF-4 FIXED whole; EX-DF-15 narrowed to the
-  bare-`summary()` percentile refusal. `risk_tier: standard`. Branch
-  `fix/df-describe-str-1`.
-  pins: df-describe-str-1/C-001, C-002, C-003, C-004
 - [df-colregex-1-ledger.md](df-colregex-1-ledger.md) —
   **DF-COLREGEX-1 step 1 (2026-09-11), in flight:** `colRegex`/`col_regex` reach the
   measured Spark contract — a backticked pattern returns the `RegexColumn` marker
@@ -118,6 +68,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   500 — while overlay/duplicate-name frames keep the positional path. Facade-only —
   no engine change. `risk_tier: standard`. Branch `fix/df-colregex-1`.
   pins: df-colregex-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [df-describe-str-1-ledger.md](df-describe-str-1-ledger.md) —
+  **DF-DESCRIBE-STR-1 (2026-09-11), in flight:** `describe`/`summary` answer Spark's
+  ordered stat rows on string columns — `mean`/`stddev` over `try_cast(col AS DOUBLE)`
+  (NULL for `"a"`/`"b"`, `6.0` for `"10","2","a"`), non-numeric non-string columns
+  skipped by the bare forms and refused with `PySparkValueError` when named, UNION ALL
+  legs ordered by a stat ordinal. §7 EX-DF-4 FIXED whole; EX-DF-15 narrowed to the
+  bare-`summary()` percentile refusal. `risk_tier: standard`. Branch
+  `fix/df-describe-str-1`.
+  pins: df-describe-str-1/C-001, C-002, C-003, C-004
 - [ex-29-class-remainder-ledger.md](ex-29-class-remainder-ledger.md) —
   **EX-29 (2026-09-11), in flight:** the v1.1 example backfill's class-surface
   remainder — the 29 non-`F.*` backlog names at base `a10062b8`. Re-measured on
@@ -181,6 +140,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   dispositions marked).
   `risk_tier: standard`. Branch `perf/facade-4-s1`.
   pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
+- [facade-5-ledger.md](facade-5-ledger.md) —
+  **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
+  split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
+  formatters, the audit §6 UNMEASURED cell), the renderer × truncation-rule pin
+  census, goldens for the pairs no §8 pin binds (recorded from base, mutation
+  proven), and the step-1 target — a measured format wall and its Rust move, or
+  the smallest byte-identical consolidation naming what stays for `eager.py`.
+  No product change under `python/repark/src/` or `crates/`.
+  `risk_tier: standard`. Branch `perf/facade-5-s0`.
+  pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
@@ -198,6 +167,34 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   maintenance guide's S3 Tables paragraph and the parity registry row land with it (C-005).
   `risk_tier: standard`. Branch `fix/orphan-s3tables-1`.
   pins: orphan-s3tables-1/C-001, C-002, C-003, C-004, C-005
+- [perf-describe-1-ledger.md](perf-describe-1-ledger.md) —
+  **PERF-DESCRIBE-1 (2026-09-11), in flight:** `describe`/`summary` aggregate in one
+  pass — one `AggregateExec` computes count/avg/stddev/min/max per column over the
+  frame's own plan (native column API, no SQL text, no temp view), then the requested
+  summary rows are projected as literal `VALUES` in Spark's order so the stat ordinal
+  and its `ORDER BY` are gone. Casts are emitted only where engine formatting is
+  load-bearing; measured medians improve on every harness shape (200k numeric 0.132 →
+  0.098 s, 50×10k wide 1.164 → 0.993 s, 200k strings 0.194 → 0.191 s, 200k mixed
+  0.197 → 0.139 s). `risk_tier: standard`. Branch `perf/describe-1`.
+  pins: perf-describe-1/C-001, C-002, C-003, C-004
+- [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
+  S2-21 re-check of the step-2 remediation: 500-column describe 8.16 s, no P1 / P2.
+  **PERF-UNPIVOT-1 (2026-09-12), in flight:** step 1 (#542) shipped native
+  `stack(n, expr…)` / `UnpivotExec` in `repark-core`, Spark SQL rewrite, `F.stack`,
+  linearity exponent 0.91 at 50/250/500; `interleave` once per stacked column and
+  stream each input batch (C-006, C-007). Step 2 (`perf/unpivot-1-s2`) moves
+  `describe`/`summary` back to a pure plan — chunked aggregates → one stack-order
+  string-cast projection → `UnpivotExec`; the `mapInArrow` bridge and
+  `_summary_unpivot` are deleted.
+  `risk_tier: standard`. Branch `perf/unpivot-1` / `perf/unpivot-1-s2`.
+  pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012, C-013
+- [registry-16b-1-ledger.md](registry-16b-1-ledger.md) —
+  **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
+  CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live
+  PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
+  `risk_tier: standard`. Branch `docs/registry-16b-1`.
+  pins: registry-16b-1/C-001, C-002, C-003
 - [sepmo-e0-e1-ledger.md](sepmo-e0-e1-ledger.md) —
   **SEPMO-E0E1 (2026-09-06), in flight, round 3:** telemetry inventory (E-0) and usage
   collector (E-1). Minority truncated JSONL and exit-without-terminal are degraded
@@ -221,6 +218,19 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `--brief` / `--followup`. `risk_tier: standard`. Branch
   `sepmo/e2-compact-packets`.
   pins: sepmo-e2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [silver-s0-ledger.md](silver-s0-ledger.md) —
+  **SILVER-S0 (2026-09-12), in flight:** READING unit — contract and storage
+  feasibility for the deterministic silver-layer compiler (epic §17 S-0).
+  Clause verdicts from the fork pin `3ebf7d36` and RePark write adapter
+  source; probe tests live only in `fork/` on `probe/silver-s0`.
+  `risk_tier: standard`. Branch `docs/silver-s0`.
+  pins: silver-s0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [silver-s1-ledger.md](silver-s1-ledger.md) —
+  **SILVER-S1 (2026-09-12), in flight:** typed `SilverPlan` in `crates/repark-core/src/silver/`
+  — TOML parse with key-path refusals, closed operation enums, parse-time structural
+  validation, canonical identity bytes, deterministic `explain()`. No data execution.
+  `risk_tier: standard`. Branch `feat/silver-s1`.
+  pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —
   **V3-0 (2026-08-21):** the format-v3 scope audit, and the defect it found. Intended as a
   charter with no product change and it does not close that way. **Read §3 first**:
@@ -241,16 +251,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   gaps F-1 (mutation-proven cast pin), F-2 (partitioned abort pin) and F-4 (§8 counts). No
   dependency, no spawn. `risk_tier: standard`. Branch `perf/write-distribution-2`.
   pins: write-distribution-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [perf-describe-1-ledger.md](perf-describe-1-ledger.md) —
-  **PERF-DESCRIBE-1 (2026-09-11), in flight:** `describe`/`summary` aggregate in one
-  pass — one `AggregateExec` computes count/avg/stddev/min/max per column over the
-  frame's own plan (native column API, no SQL text, no temp view), then the requested
-  summary rows are projected as literal `VALUES` in Spark's order so the stat ordinal
-  and its `ORDER BY` are gone. Casts are emitted only where engine formatting is
-  load-bearing; measured medians improve on every harness shape (200k numeric 0.132 →
-  0.098 s, 50×10k wide 1.164 → 0.993 s, 200k strings 0.194 → 0.191 s, 200k mixed
-  0.197 → 0.139 s). `risk_tier: standard`. Branch `perf/describe-1`.
-  pins: perf-describe-1/C-001, C-002, C-003, C-004
 
 ## Pointers
 - Up: [../map.md](../map.md)

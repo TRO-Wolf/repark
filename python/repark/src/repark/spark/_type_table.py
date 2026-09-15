@@ -444,6 +444,10 @@ def _descriptor_to_datatype(descriptor: Any) -> Any:
             inverted_fields[descriptor[1]],
             inverted_fields[descriptor[2]],
         )
+    if kind == "geometry":
+        return t.GeometryType("ANY" if descriptor[1] == -1 else descriptor[1])
+    if kind == "geography":
+        return t.GeographyType("ANY" if descriptor[1] == -1 else descriptor[1])
     if kind == "array":
         return t.ArrayType(
             _descriptor_to_datatype(descriptor[1]),
@@ -572,7 +576,7 @@ def _parse_datatype_string(text: str) -> Any:
     Parameters beyond ``i64`` and non-printable text leave the Rust path for base's Python
     parse, so value, ``simpleString`` and refusal bytes equal base.
     """
-    if not text.isprintable():
+    if not text.isprintable() and not ("geometry" in text.lower() or "geography" in text.lower()):
         return _parse_datatype_string_python(text)
     try:
         return _descriptor_to_datatype(_native_function("spark_descriptor_from_ddl")(text))

@@ -881,6 +881,13 @@ else. The next pickup's `make ledger-archive` files everything here under
   the build clone); `types.py` 1793 → 1739 lines, baseline lowered.
   `risk_tier: standard`. Branch `feat/types-bases-1`.
   pins: types-bases-1/C-001, C-002, C-003, C-004, C-005
+- [types-geo-ddl-1-ledger.md](types-geo-ddl-1-ledger.md) —
+  **TYPES-GEO-DDL-1 (2026-09-15), in flight, review round 2:** `geometry(n)` /
+  `geography(n)` in DDL schema strings through the Rust type table (round-1 arm
+  shipped; round 2 answers the critic's INTEGER_VALUE grammar, the tab/NBSP
+  divert and the inbound-SRID validation).
+  `risk_tier: standard`. Branch `feat/types-geo-ddl-1`.
+  pins: types-geo-ddl-1/C-001, C-002, C-003, C-004, C-005
 - [win-slide-1-ledger.md](win-slide-1-ledger.md) — **WIN-SLIDE-1 (2026-09-04), in flight:** the
   thirteen aggregates that refused over a sliding frame now answer Spark-equal on both doors.
   One mechanism, not thirteen: a `sliding_frame_rescan` analyzer rule on every core session

@@ -1,0 +1,153 @@
+{
+ "spark": "4.1.2",
+ "java": "17.0.15",
+ "geo": [
+  {
+   "id": "G13-0",
+   "ddl": "g geometry(4326)",
+   "json": "{\"fields\":[{\"metadata\":{},\"name\":\"g\",\"nullable\":true,\"type\":\"geometry(OGC:CRS84)\"}],\"type\":\"struct\"}",
+   "simple": "struct<g:geometry(4326)>",
+   "repr": "StructType([StructField('g', GeometryType(4326), True)])"
+  },
+  {
+   "id": "G13-1",
+   "ddl": "geometry(4326)",
+   "json": "\"geometry(OGC:CRS84)\"",
+   "simple": "geometry(4326)",
+   "repr": "GeometryType(4326)"
+  },
+  {
+   "id": "G13-2",
+   "ddl": "geography(4326)",
+   "json": "\"geography(OGC:CRS84, SPHERICAL)\"",
+   "simple": "geography(4326)",
+   "repr": "GeographyType(4326)"
+  },
+  {
+   "id": "G13-3",
+   "ddl": "geometry(0)",
+   "json": "\"geometry(SRID:0)\"",
+   "simple": "geometry(0)",
+   "repr": "GeometryType(0)"
+  },
+  {
+   "id": "G13-4",
+   "ddl": "geometry(3857)",
+   "json": "\"geometry(EPSG:3857)\"",
+   "simple": "geometry(3857)",
+   "repr": "GeometryType(3857)"
+  },
+  {
+   "id": "G13-5",
+   "ddl": "geography(3857)",
+   "error_type": "ParseException",
+   "condition": "PARSE_SYNTAX_ERROR",
+   "error": ""
+  },
+  {
+   "id": "G13-6",
+   "ddl": "geography(0)",
+   "error_type": "ParseException",
+   "condition": "PARSE_SYNTAX_ERROR",
+   "error": ""
+  },
+  {
+   "id": "G13-7",
+   "ddl": "geometry(any)",
+   "json": "\"geometry(SRID:ANY)\"",
+   "simple": "geometry(any)",
+   "repr": "GeometryType(ANY)"
+  },
+  {
+   "id": "G13-8",
+   "ddl": "geography(any)",
+   "json": "\"geography(SRID:ANY, SPHERICAL)\"",
+   "simple": "geography(any)",
+   "repr": "GeographyType(ANY)"
+  },
+  {
+   "id": "G13-9",
+   "ddl": "geometry(ANY)",
+   "json": "\"geometry(SRID:ANY)\"",
+   "simple": "geometry(any)",
+   "repr": "GeometryType(ANY)"
+  },
+  {
+   "id": "G13-10",
+   "ddl": "geometry",
+   "error_type": "ParseException",
+   "condition": "PARSE_SYNTAX_ERROR",
+   "error": ""
+  },
+  {
+   "id": "G13-11",
+   "ddl": "geography",
+   "error_type": "ParseException",
+   "condition": "PARSE_SYNTAX_ERROR",
+   "error": ""
+  },
+  {
+   "id": "G13-12",
+   "ddl": "GEOMETRY(4326)",
+   "json": "\"geometry(OGC:CRS84)\"",
+   "simple": "geometry(4326)",
+   "repr": "GeometryType(4326)"
+  },
+  {
+   "id": "G13-13",
+   "ddl": "geometry( 4326 )",
+   "json": "\"geometry(OGC:CRS84)\"",
+   "simple": "geometry(4326)",
+   "repr": "GeometryType(4326)"
+  },
+  {
+   "id": "G13-14",
+   "ddl": "geometry(9999)",
+   "error_type": "ParseException",
+   "condition": "PARSE_SYNTAX_ERROR",
+   "error": ""
+  },
+  {
+   "id": "G13-15",
+   "ddl": "geography(-1)",
+   "error_type": "ParseException",
+   "condition": "PARSE_SYNTAX_ERROR",
+   "error": ""
+  },
+  {
+   "id": "G13-16",
+   "ddl": "geometry(OGC:CRS84)",
+   "error_type": "ParseException",
+   "condition": "PARSE_SYNTAX_ERROR",
+   "error": ""
+  },
+  {
+   "id": "G13-17",
+   "ddl": "a int, g geography(4326)",
+   "json": "{\"fields\":[{\"metadata\":{},\"name\":\"a\",\"nullable\":true,\"type\":\"integer\"},{\"metadata\":{},\"name\":\"g\",\"nullable\":true,\"type\":\"geography(OGC:CRS84, SPHERICAL)\"}],\"type\":\"struct\"}",
+   "simple": "struct<a:int,g:geography(4326)>",
+   "repr": "StructType([StructField('a', IntegerType(), True), StructField('g', GeographyType(4326), True)])"
+  },
+  {
+   "id": "G13-18",
+   "ddl": "struct<g: geometry(4326)>",
+   "json": "{\"fields\":[{\"metadata\":{},\"name\":\"g\",\"nullable\":true,\"type\":\"geometry(OGC:CRS84)\"}],\"type\":\"struct\"}",
+   "simple": "struct<g:geometry(4326)>",
+   "repr": "StructType([StructField('g', GeometryType(4326), True)])"
+  },
+  {
+   "id": "G13-19",
+   "ddl": "array<geography(4326)>",
+   "json": "{\"containsNull\":true,\"elementType\":\"geography(OGC:CRS84, SPHERICAL)\",\"type\":\"array\"}",
+   "simple": "array<geography(4326)>",
+   "repr": "ArrayType(GeographyType(4326), True)"
+  },
+  {
+   "id": "G13-20",
+   "ddl": "map<string, geometry(0)>",
+   "json": "{\"keyType\":\"string\",\"type\":\"map\",\"valueContainsNull\":true,\"valueType\":\"geometry(SRID:0)\"}",
+   "simple": "map<string,geometry(0)>",
+   "repr": "MapType(StringType(), GeometryType(0), True)"
+  }
+ ]
+}

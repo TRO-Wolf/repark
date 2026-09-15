@@ -2537,10 +2537,25 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `fromInternal` / `jsonValue` / `__eq__` / unhashable) and the base UDT
   refusal features, the `{"type": "udt"}` `fromJson` refusal, the SRID/JSON
   edge table (`GeometryType(False)`, `True` / float / string SRIDs, lowercase
-  `"any"`, the `ST_INVALID_ALGORITHM_VALUE` JSON form, CRS round trips), the
-  reader-schema V3-GEO-1 pin, and the door-blocked spatial DDL refusals
-  (Rust type table owns `fromDDL`; Spark's bare-token answer is UNMEASURED).
+  `"any"`, the `ST_INVALID_ALGORITHM_VALUE` JSON form, CRS round trips) and the
+  reader-schema V3-GEO-1 pin. The spatial DDL doors now parse
+  (**TYPES-GEO-DDL-1**, 2026-09-15 — flipped to
+  `test_geometry_ddl_door_answers` / `test_spatial_ddl_door_answers`;
+  pins: types-geo-ddl-1/C-004).
   pins: types-bases-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `test_types_geo_ddl_1.py` + `fixtures-batch13-geo.json` — **TYPES-GEO-DDL-1 (2026-09-15):**
+  the recorded PySpark 4.1.2 `_parse_datatype_string` oracle (cells `G13-0 … G13-20`,
+  copied verbatim) pinned on both DDL doors (`DataType.fromDDL` and
+  `_parse_datatype_string`): value, `simpleString` and `json` for the 14 accept cells,
+  the `ValueError: cannot parse datatype` refusal shape for the 7 `PARSE_SYNTAX_ERROR`
+  cells, and the V3-GEO-1 column-use refusal through `createDataFrame(schema="…")` and
+  `spark.read.schema("…")` schema strings, plus the direct bridge tag-shape pin
+  (`simple_string_from_descriptor` / `ddl_token_from_descriptor` over hand-built
+  `{"kind", "srid"}` dicts, invalid SRIDs refused).
+  Round 2: the Spark-grammar SRID edges (leading zeros parse; underscore, sign
+  and fullwidth refuse — grammar knowledge, no live cell) and the tab/NBSP
+  parentheses (decimal tab control answers).
+  pins: types-geo-ddl-1/C-001, C-002, C-003, C-004, C-005
 - `test_types_x2_census.py` — X2 census: Row empty/unnamed repr + factory arity;
   createDataFrame LongType schema, nested list/struct/map, variable int arrays;
   **octo:** explicit nested StructType/MapType/ArrayType(String) Arrow values (not
