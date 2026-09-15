@@ -1863,6 +1863,75 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `DUPLICATED_ARTIFACT` arm, `render`'s `type`-check-first order, and `tvf.json_tuple`'s
   string-literal-Column field conversion (R-4/R-5/R-6).
   pins: session-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- `test_io_text_1.py` + `facade_reader_writer_oracle.json` — **IO-TEXT-1 (2026-09-14):**
+  the `text` reader/writer card against the run-15b live-PySpark-4.1.2 fixture copied
+  unchanged. Reads pin the universal-newline split with one trailing terminator dropped,
+  `lineSep`, `wholetext`, path lists, directories, `struct<value:string>`, and
+  `format("text").load`; engine file-scope options fail loud. Writes pin the round trip
+  with null-as-empty, Spark's `UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE` text on the first
+  non-string column, `part-*.txt` bytes, `lineSep` joins, save modes, and
+  `format("text").save`. The gzip refusal (IO-TEXT-GZIP-1), the `text.` SQL-door refusal
+  (IO-TEXT-SQL-1), and the remote refusal pin today's answers. **Follow-up (2026-09-15,
+  T-1..T-9, P-1..P-3):** `test_text_probe_*` pins the live-probe cells — falsy
+  `recursiveFileLookup`, empty-`lineSep` refusals, lossy UTF-8, Hadoop globs, the
+  `partitionBy` hive layout (IO-TEXT-PART-1 retired, read-side discovery at
+  IO-TEXT-PARTDISC-1), `_SUCCESS`, `PATH_NOT_FOUND`, and limit-first-rows.
+  **Round 3 (2026-09-15, U-1+U-2):** the run-16b probe cells land as `text_probe3_*`;
+  `test_text_probe3_part_*_listing` pins the one-scan write's Hive-escaped leaf
+  names, default-partition merging, and plain decimal rendering per cell.
+  **(U-3):** `test_text_probe3_part_*_read` pins discovery rows, schemas, and
+  dtypes; the old `test_text_probe_partition_by` asserts `['value', 'k']`. The fixture
+  row and registry rows are the docs half, and the neighboring reader/writer suites
+  stay green around it.
+  **(U-4..U-6):** `test_text_probe3_format_recursive_false` pins the falsy flag
+  reading like omitted; `test_text_probe3_glob_escaped_star` pins the literal-star
+  read; `test_text_probe3_glob_matches_dirs` pins the one-leaf-level dir globs.
+  **(U-9..U-11):** `test_text_probe3_empty_linesep_class` pins the write-door
+  `IllegalArgumentException` (the T-2 write pin flips class, the read door stays);
+  `test_text_probe3_two_col_class` and the two-remaining pin assert the 1290
+  condition; `test_text_probe3_missing_path_class` asserts `PATH_NOT_FOUND` plus
+  `getSqlState`; `test_text_probe3_failing_write_leaves` pins no staging left
+  behind a failed write.
+  **Round 4 (2026-09-15, W-1..W-5, V-1, V-2):** the probe4 cells land as
+  `text_probe4_*`; `test_text_probe4_schema_*` pins the data-schema overlay
+  (value-only, renamed, with-partition, partition-first, int-cast refusal
+  with condition plus sqlstate); `test_text_probe4_mixed_layout` pins root
+  files dropping out; `test_text_probe4_conflicting_names` pins the
+  same-level refusal; `test_text_probe4_glob_with_basepath` pins `basePath`
+  discovery with the bare globs staying `value`-only (L-205 as filed);
+  `lead_zero_*`, `plus_sign`, `negative`, `int_overflow_to_bigint`,
+  `decimal_text` pin today's inference (L-201 closed).
+  **Round 5 (2026-09-15, X-1/X-2/X-3):** the probe5 cells land as `text_probe5_*`
+  in the new file `test_io_text_2.py` (`test_io_text_1.py` sits at its ceiling):
+  raw-text overlay pins (string keeps `007`/`1.50`/`2024-01-02`, date parses,
+  timestamp is midnight session zone, decimal keeps scale, default stays NULL),
+  uneven-depth and non-leaf layouts refuse before any row, `_SUCCESS`-only
+  non-leaf dirs read the leaf. **(X-4):** `test_text_partition_fallback_*`
+  pins one part per leaf with full row sets past 256 keys; pin docstrings
+  stay within the line limit.
+  **Round 6 (2026-09-15, Y-2):** the probe6 cells land as `text_probe6_*`
+  in `test_io_text_2.py`: boolean overlay (case-insensitive parse, `yes`
+  refuses) and timestamp_ntz / array / smallint-over-`1.50` refusals with
+  Spark's uppercase display; the pins read columns, schema simpleString, and
+  Row reprs (result pins) or text, condition, and sqlstate (refusal pins) off
+  the oracle cells. The float/smallint/tinyint/binary result pins are held
+  out until the shared schema-display layer reports exact keys (ledger R-38).
+  pins: io-text-1/C-001, C-002, C-003, C-004, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9, U-1, U-2, U-3, U-4, U-5, U-6, U-9, U-10, U-11, W-1, W-2, W-3, W-4, W-5, V-1, V-2, X-1, X-2, X-3, X-4, Y-2, Z-1
+  **R-39 (2026-09-15):** four probe6 overlay pins (`float`, `smallint`, `tinyint`, `binary`) in `test_io_text_2.py`
+  assert Spark's exact rows and today's wide schema label through `_width_divergence_pin` (registry
+  LOGICAL-WIDTH-1, DF-TO-BINARY-1); each reds when the width fix lands. pins: io-text-1/Y-2
+  **Round 7 (2026-09-15, Z-1):** the probe7 cells land as `text_probe7_*`
+  in `test_io_text_2.py` through a New York builder session:
+  `timestamp_ntz` overlay pins read the naive wall (result pins) while
+  `timestamp` keeps the session wall and the space wall infers `timestamp`
+  (string pins over `rows_as_string` wherever the Python repr depends on
+  the machine zone). pins: io-text-1/Z-1
+  **R-42 (2026-09-15):** `test_text_partitioned_fallback_tiny_pool_refuses_loudly` pins the loud `Resources exhausted`
+  refusal of a fallback write past the writer cap under a 16 MiB pool, with no destination or staging left (registry
+  IO-TEXT-PART-POOL-1). pins: io-text-1/Z-2
+  **CI zone fix (2026-09-15):** `test_text_probe5_date_schema_timestamp` reads the probe5 oracle's recorded wall clock in
+  `America/New_York`, the zone the probe's Python process ran in, instead of the machine zone, so the epoch comparison holds on the
+  UTC CI runners. pins: io-text-1/X-1
 - `test_column_x1_census.py` — X1: Column between/pow/string/bitwise/eqNullSafe/lit temporal + trig;
   octo C1: bitwiseOR/XOR values, lit(time)/lit(list)/empty array, hypot 3-4-5, dayname(date);
   octo C2: eqNullSafe(None), between inclusive/inverted;

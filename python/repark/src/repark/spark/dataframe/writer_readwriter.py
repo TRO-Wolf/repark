@@ -28,6 +28,7 @@ from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
 from repark.spark.dataframe import io_declared as _io_declared
+from repark.spark.dataframe import writer_text as _writer_text
 from repark.spark.dataframe.core import (
     DataFrame,
     _by_name_casefold_map,
@@ -68,11 +69,7 @@ def _resolve_writer_table(dataframe: DataFrame, name: str) -> tuple[str, str]:
 
 
 class DataFrameWriter:
-    """Build Iceberg table writes and Parquet, CSV, or JSON path writes through SQL.
-
-    Table writes use CTAS or INSERT paths, and creation rejects tightened frames. Path overwrite
-    stages and swaps output safely.
-    """
+    """Build Iceberg table writes and Parquet, CSV, JSON, or text path writes."""
 
     __slots__ = (
         "_bucket_columns",
@@ -87,7 +84,7 @@ class DataFrameWriter:
     )
 
     _VALID_MODES = _PATH_MODES = ("append", "overwrite", "error", "errorifexists", "ignore")
-    _PATH_FORMATS = frozenset({"parquet", "csv", "json"})
+    _PATH_FORMATS = frozenset({"parquet", "csv", "json", "text"})
     _CSV_WRITE_UNSUPPORTED_OPTIONS: frozenset[str] = frozenset(
         {
             "dateformat",
@@ -294,10 +291,7 @@ class DataFrameWriter:
         partitionBy: str | list[str] | None = None,  # noqa: N803 — PySpark param name
         **extra: Any,
     ) -> None:
-        """Write CSV through ``COPY``.
-
-        The shorthand defaults ``header`` to true and refuses unsupported options.
-        """
+        """Write CSV through ``COPY`` (header defaults true, unsupported options raise)."""
         if mode is not None:
             self.mode(mode)
         if partitionBy is not None:
@@ -360,6 +354,7 @@ class DataFrameWriter:
     orc = _io_declared.writer_orc
     xml = _io_declared.writer_xml
     jdbc = _io_declared.writer_jdbc
+    text = _writer_text.text
 
     def save(
         self,
@@ -369,7 +364,7 @@ class DataFrameWriter:
         partitionBy: str | list[str] | None = None,  # noqa: N803 — PySpark param name
         **options: Any,
     ) -> None:
-        """Write to a Parquet, CSV, or JSON path using the configured save mode."""
+        """Write to a Parquet, CSV, JSON, or text path using the configured save mode."""
         self._dataframe._ensure_alive()
         if format is not None:
             self.format(format)
@@ -391,10 +386,12 @@ class DataFrameWriter:
         if self._format not in self._PATH_FORMATS:
             if self._format == "iceberg":
                 raise AnalysisException(
-                    "DataFrameWriter.save(path) requires format('parquet'|'csv'|'json'); "
+                    "DataFrameWriter.save(path) requires format('parquet'|'csv'|'json'|'text'); "
                     "use saveAsTable for Iceberg tables"
                 )
             _io_declared.refuse_writer_save_format(self)
+        if self._format == "text":
+            return _writer_text.write_text_path(self, path)
         self._apply_path_write(path, stored_as=self._format.upper())
 
     def _apply_path_write(self, path: str, *, stored_as: str) -> None:

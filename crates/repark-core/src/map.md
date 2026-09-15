@@ -315,6 +315,133 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: nullability-2/C-006
   pins: csv-infer-perf-1/C-002, C-005
   pins: torture-1/C-018, C-020
+- `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
+  A `TableProvider` over sorted local files, plain dirs (hidden `_`/`.` skipped,
+  `key=value` dirs descended), and Hadoop globs (see `text_glob.rs`), serving one
+  nullable `value` Utf8 column through `StreamingTableExec` over at most 8 contiguous
+  file-group partitions: universal `\n`/`\r\n`/`\r` splitting (or one custom `lineSep`)
+  with one trailing terminator dropped, `wholetext` one row per file, chunked reads with
+  separator hold-back so batches stream without buffering a file (wholetext excepted),
+  invalid UTF-8 decoding lossy, the plan limit threaded into the scanner, missing paths
+  and unmatched globs answering `PATH_NOT_FOUND`. **Round 3 (2026-09-15, U-3):**
+  directory reads append discovered partition columns after `value` (see
+  `partition_discovery.rs`), honoring value-only, partition-only, and empty
+  projections; the scanner stops appending at the row limit and emits at once.
+  `ReparkSession::read_text` lives here
+  as an inherent impl so `session.rs` keeps its size; Rust tests cover the split arms,
+  the globs, the limit, and the error texts. **Round 4 (2026-09-15, W-1..W-4,
+  V-2):** the user-schema overlay lives in `text_schema.rs` (this module passes
+  the pairs plus `basePath` through); partitioned leaves win over root files;
+  bare globs discover nothing while `basePath` globs discover beneath the base;
+  the partition-dir walk is an explicit stack. **Round 5 (2026-09-15, X-1):**
+  the battery moves verbatim to [`text_scan/`](text_scan/map.md).
+  **Round 5 (2026-09-15, X-5):** the per-file partition values ride one `Arc`
+  into every scan partition and `execute` instead of a clone per partition.
+  **Round 7 (2026-09-15, Z-1):** `expand_text_paths` takes the session zone
+  so inferred timestamps parse session-local.
+- `text_glob.rs` — **IO-TEXT-1 follow-up (2026-09-15):** hand-written Hadoop glob
+  matcher (`*?[]{}`, no `/` crossing, char-aware, brace nesting capped, no new
+  dependency) with matcher unit tests. **Round 3 (2026-09-15, U-5/U-6):** each
+  pattern parses once to per-segment tokens (the old `match_segment`/`match_glob`
+  pair is deleted); `\`-escaped meta matches literally, and a pattern whose last
+  segment names a directory lists one leaf level through an iterative walk.
+  pins: io-text-1/T-5, U-5, U-6
+- `text_io.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` writer.
+  **Follow-up (2026-09-15):** the writer streams `execute_stream` batches into
+  sequential `part-*.txt` (NULL rows write empty lines, every row terminated; an empty
+  frame still writes one empty part), writing array bytes direct. Schema check stays
+  offender-first with Spark's `UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE` text, then the
+  verbatim 1290 count text; empty `lineSep` refuses as `IllegalArgument` (Spark's
+  class; the partitioned writer already refused so). Rust tests cover the error texts
+  and the round trip. Partitioned fan-out lives in `text_partition.rs`.
+  pins: io-text-1/C-002, T-2, T-4, T-7, U-9
+  pins: io-text-1/C-001, C-002
+- `partition_discovery.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-3):** Hive
+  partition discovery plus the shared batch materialization IO-ORC-1 reuses:
+  `discover_partitions` takes leaf files under a root and returns the
+  partition schema (directory order) with per-file typed values, knowing
+  nothing about text; beside it the projection planner (`plan_partition_slots`),
+  the per-row push (`push_partition_row`), the text row emitter
+  (`TextRowSink`/`emit_text_row`, stops at the row limit), and the batch
+  finishers (`finish_partition_columns`, `order_batch_columns`). Unit tests
+  cover unescape, order, default→NULL, inference, leaf paths, bigint.
+  **Round 4 (2026-09-15, W-1/W-3):** same-depth name lists refuse
+  `CONFLICTING_PARTITION_COLUMN_NAMES` `KD009`; beside them the user-type
+  parser (`user_partition_type`: string/int/bigint/double/date),
+  the raw caster (`cast_raw_partition_value`), and the
+  `INVALID_PARTITION_VALUE` `42846` message builder.
+  **Round 5 (2026-09-15, X-1/X-2/X-3):** every per-file record keeps the raw
+  unescaped texts beside the inferred values; name lists that differ at any
+  depth refuse through one shared message builder; user types gain decimal
+  and session-zone timestamp with canonical decimal/timestamp text.
+  **Round 6 (2026-09-15, Y-2):** user types gain boolean (case-insensitive,
+  anything else refuses), float, smallint, tinyint, binary (raw UTF-8 bytes),
+  timestamp_ntz (no zone), and `array<primitive>` (always refuses as
+  `INVALID_PARTITION_VALUE` with Spark's uppercase display); map/struct stay
+  unsupported-type refusals.
+  **Round 7 (2026-09-15, Z-1):** inference gains the timestamp step after
+  date (exactly `yyyy-MM-dd HH:mm:ss` infers session-zone `timestamp`; the
+  `T` and fractional walls stay `string`); `discover_partitions` takes the
+  session zone for the inferred values; `cast_raw_partition_value` splits
+  the timestamp arm (zoned keeps X-1, `None` parses the naive wall); the
+  X-1 wall grammar lives in `partition_timestamp.rs` with both parsers on
+  it. New code and tests stay in the new module; this file keeps its
+  ceiling with wiring only.
+  pins: io-text-1/U-3, W-1, W-3, X-1, X-2, X-3, Y-2, Z-1
+- `partition_timestamp.rs` — **IO-TEXT-1 round 7 (2026-09-15, Z-1):** the
+  zone-free wall clock beside discovery (split from `partition_discovery.rs`
+  at the 1000-line ceiling): `parse_wall_naive` carries the shared wall
+  grammar (date-only, space/`T`, optional fraction),
+  `parse_timestamp_ntz_micros` stamps the naive wall, and
+  `looks_like_timestamp` admits exactly the space wall with no fraction for
+  inference. Unit tests pin naive midnight/walls/refusals, the unchanged
+  zoned walls, and discovery types and values under New York.
+  pins: io-text-1/Z-1
+- `text_partition.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-1+U-2):** the one-scan
+  `partitionBy` text writer (`write_text_partitioned`, exported at the crate root).
+  One `execute_stream` pass routes each row to its leaf writer by rendered key
+  (bounded LRU of 256 open part writers, `TEXT_PARTITION_WRITERS_CAP`; round 4,
+  ruling V-1: an evicted key reopens its `part-00000.txt` in append mode, so a
+  shuffled write holds one part per leaf); partition columns drop from the body and
+  the remaining column keeps the single-string check with Spark's verbatim 1290
+  text. Leaf names use Hive `escapePathName` (`%XX` uppercase; space, non-ASCII
+  and `}` literal); NULL and empty write `__HIVE_DEFAULT_PARTITION__`; decimals
+  render plain (`1.50`), booleans lower-case, dates `yyyy-MM-dd`, timestamps in
+  the caller-passed session zone with trimmed fractions, doubles and ints plain.
+  Rust tests cover the escape set, decimal rendering, the fan-out, the 1290,
+  and the append-on-evict row count. **Round 5 (2026-09-15, X-4):** the first
+  eviction diverts the tail to `text_partition_fallback.rs` (sorted
+  single-writer append); the eviction arm stays pinned by direct unit test.
+  **Round 6 (2026-09-15, Y-1):** the divert hands over the live stream plus
+  the frame's session task context.
+  **Round 7 (2026-09-15, Z-2):** the writer returns the sort spill count
+  (zero when the fallback never runs); the binding is unchanged.
+  pins: io-text-1/U-1, U-2, V-1, X-4, Y-1, Z-2
+- `text_partition_fallback.rs` — **IO-TEXT-1 round 5 (2026-09-15, X-4):**
+  Spark's high-cardinality fallback: the tail past 256 distinct keys sorts by
+  the partition columns and appends key by key with one open writer onto each
+  key's existing part file. **Round 6 (2026-09-15, Y-1):** the remaining
+  stream feeds the sort through a single-partition `TailSourceExec` under the
+  session task context (session pool and disk manager, so the sort spills),
+  and the single-writer walk consumes the sort output batch by batch —
+  nothing is collected. The function returns the sort spill count. Rust tests
+  pin one part per leaf past the cap, the unchanged below-cap layout, and a
+  spill under a 16 MiB pool over a 54 MiB tail (spill count above zero, every
+  row written, one part per key).
+  **Round 7 (2026-09-15, Z-2):** the tail re-chunks from the session pool
+  (one batch plus the sort reservation fits, capped reservation on a derived
+  task context; oversized batches split by rows into deep copies with
+  measure-verify) before the same sort and walk. Rust tests pin the 500k x
+  4 KiB tail at 128/512 MiB pools, the pool-busting single batch (red
+  without the split), and the rechunk contract.
+  pins: io-text-1/X-4, Y-1, Z-2
+- `text_schema.rs` — **IO-TEXT-1 round 4 (2026-09-15, W-1):** the user-schema
+  overlay beside the scan (split from `text_scan.rs` at the 1000-line ceiling):
+  the user schema is the data schema with discovered columns appended after it,
+  named partition types override inference, bad casts refuse
+  `INVALID_PARTITION_VALUE` `42846`. **Round 5 (2026-09-15, X-1):** a named
+  column recasts from the raw directory text through one shared row builder.
+  pins: io-text-1/W-1, X-1
 - `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability
   derivation. `relax_schema_to_nullable` marks every field nullable over
   struct/list/map (map keys stay required — Arrow forbids nullable map keys); the walk

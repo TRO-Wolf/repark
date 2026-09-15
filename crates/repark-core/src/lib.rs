@@ -14,6 +14,8 @@ mod lineage_columns;
 mod named_sources;
 mod namespace_create;
 mod object_store_s3;
+mod partition_discovery;
+mod partition_timestamp;
 mod pool_refusals;
 mod pre_execute;
 mod read_options;
@@ -26,6 +28,12 @@ mod sorted_view;
 mod spark_nullable;
 mod stack;
 mod temp_view;
+mod text_glob;
+mod text_io;
+mod text_partition;
+mod text_partition_fallback;
+mod text_scan;
+mod text_schema;
 mod time_travel;
 mod update_fields;
 
@@ -106,3 +114,5 @@ pub fn built_with_debug_assertions() -> bool {
 pub(crate) use error_map::{iceberg_err, resolve_s3_region_override};
 pub(crate) use idents::parse_table_identifier_segments;
 pub(crate) use read_options::json_read_options_from_map;
+pub use text_io::write_text_frame;
+pub use text_partition::write_text_partitioned;

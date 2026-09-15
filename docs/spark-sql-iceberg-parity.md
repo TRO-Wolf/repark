@@ -1841,6 +1841,85 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   in 1.6. The PostgreSQL read path keeps its `format('postgres')` spelling beside
   `spark.read.jdbc`.
 
+### IO-TEXT-GZIP-1 — text writes refuse compression; Spark writes `.txt.gz`
+
+- **repark** — `DataFrameWriter.text(path, compression=...)` (and
+  `format("text").save` with a `compression` option) answers only `none` / `uncompressed`
+  (plain `part-*.txt`). Any other codec raises `AnalysisException`
+  (`DataFrameWriter.text option 'compression' is not supported yet`). A compressor needs a
+  new dependency and `Cargo.toml` is frozen for this unit, so loud refusal is the honest
+  shape, never silent plain bytes behind a gzip request.
+- **Apache Spark** — `compression="gzip"` writes `part-*.txt.gz` files. *(oracle: live
+  PySpark 4.1.2, local[2], UTC, 2026-09-14, run 15b `facade_reader_writer_oracle.json`
+  `text_compression` cell.)*
+- **Pin** — `python/repark/tests/test_io_text_1.py::test_text_compression_gzip_refused`
+- **Rationale** — DECLARED, 2026-09-14 (io-text-1). Revisit when the workspace vendors a
+  compressor; the pin then flips to Spark's `.txt.gz` listing.
+
+### IO-TEXT-SQL-1 — `SELECT * FROM text.\`<path>\`` refuses; the planner owns that door
+
+- **repark** — `spark.sql("SELECT * FROM text.`<path>`")` raises `AnalysisException`
+  (`table 'datafusion.text.<path>' not found`). The path-format table route belongs to the
+  SQL planner lane, so this unit pins today's refusal instead of teaching it.
+- **Apache Spark** — answers the file's lines as `struct<value:string>`.
+- **Pin** — `python/repark/tests/test_io_text_1.py::test_text_sql_door_pins_today_refusal`
+- **Rationale** — DECLARED, 2026-09-14 (io-text-1). The pin reds the day the planner
+  routes `text.` paths, and the row retires with it.
+
+### IO-TEXT-PART-1 — FIXED (io-text-1 follow-up, 2026-09-15): `partitionBy` text writes lay out hive dirs
+
+> **CLOSED 2026-09-15 (io-text-1 follow-up round, ruling T-6).** The text
+> writer stages one string column per `key=value/` leaf (partition columns
+> dropped from the file body, `part-*.txt` plus `_SUCCESS` at the root)
+> against the live probe `partition_by` listing. A frame whose remaining
+> columns are not exactly one answers Spark's verbatim `Text data source
+> supports only a single column, and you have N columns.` The old refusal pin
+> flipped to the leaf listing in the same change. Retired per §6.
+
+- **repark** — `df.write.partitionBy(...).text(path)` writes the hive layout
+  in one engine scan (round 3, ruling U-1); read-back discovers the keys
+  (`struct<value:string>` plus inferred directory columns — IO-TEXT-PARTDISC-1,
+  FIXED 2026-09-15). Past the 256-writer cap an evicted key reopens its
+  `part-00000.txt` in append mode (round 4, ruling V-1), so a shuffled
+  write holds one part file per leaf. Past 256 distinct keys the tail diverts
+  to the sorted single-writer fallback (round 5, ruling X-4; round 6, ruling
+  Y-1): the remaining stream enters a DataFusion sort through a
+  single-partition source under the session task context — session pool and
+  disk manager, so the sort spills under the session memory limit — and
+  appends key by key from the sort output stream onto each key's existing
+  part file with nothing collected. Shuffled k=1000/200k runs 0.156 s at
+  152 MiB peak, fat 50k x 4 KiB runs 0.443 s at 533 MiB peak (round-5 build:
+  0.219 s / 232 MiB and 1.587 s / 730 MiB with zero spill files).
+  Round 7 (ruling Z-2): the tail stream re-chunks into batches sized from
+  the session pool (one batch plus the sort spill reservation fits, a third
+  each for the batch, the sorter's 2x working copy, and producer headroom)
+  with deep copies so a sliced parent never inflates the sort accounting,
+  and the fallback sort runs under a task context whose spill reservation
+  is the session's capped to the pool; 500k x 4 KiB shuffled past the cap
+  completes under a 128 MiB pool (18.9 s / 378 MiB peak, 40 spills, one
+  part per key, every row) and under a 512 MiB pool (17.3 s / 708 MiB
+  peak, 8 spills).
+- **Apache Spark** — writes `key=value/` leaf dirs with `part-*` files inside.
+- **Pin** — `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
+  (leaf bytes plus `_SUCCESS`) and `::test_text_probe_partition_by_two_remaining`
+  (the verbatim 1290 text, destination absent, plus its `_LEGACY_ERROR_TEMP_1290`
+  condition — round 3, ruling U-10); `crates/repark-core/src/text_partition.rs::text_partition_evicted_key_appends_to_same_part`
+  (300 keys round-robin past the cap hold one part per leaf — round 4, ruling V-1,
+  now via the fallback); `crates/repark-core/src/text_partition_fallback.rs::text_partition_fallback_holds_one_part_per_leaf`
+  plus `::text_partition_fallback_keeps_below_cap_path` (round 5, ruling X-4)
+  plus `::text_partition_fallback_spills_under_small_memory_limit` (round 6,
+  ruling Y-1: 16 MiB pool over a 54 MiB tail spills and writes every row, one
+  part per key)
+  plus `::text_partition_fallback_spills_fat_tail_under_session_pool` (round 7,
+  ruling Z-2: 500k x 4 KiB shuffled past the cap completes with spill, one
+  part per key, every row, at 128 MiB and 512 MiB pools)
+  plus `::text_partition_fallback_splits_pool_busting_batches` and
+  `::tail_rechunk_splits_only_oversized_batches` (round 7, ruling Z-2: the
+  rechunk contract — red without the split, green with it)
+  and `python/repark/tests/test_io_text_2.py::test_text_partition_fallback_holds_one_part_per_leaf`.
+- **Rationale** — FIXED, 2026-09-15 (io-text-1 follow-up).
+  pins: io-text-1/T-6, X-4, Y-1, Z-2
+
 ---
 
 ## 6. How a row is added, mirrored and retired
@@ -3244,6 +3323,9 @@ the pin rather than obeying it.
   (`_CAST_FLAG_ROWS`, red when fixed), and
   `python/repark/tests/test_df_surface_a_1.py::test_to_narrow_reports_logical_width_1`
   (the same collapse seen through `DataFrame.to`, oracle cell `to_narrow`).
+  IO-TEXT-1 (2026-09-15): a user schema typing a text partition column `float` / `smallint` / `tinyint` reads the exact
+  values and reports the wide label — `python/repark/tests/test_io_text_2.py::test_text_probe6_float_schema_float`,
+  `…::test_text_probe6_int_schema_smallint`, `…::test_text_probe6_int_schema_tinyint` (red when fixed).
 - **Rationale** — BACKLOG. Filed 2026-09-06 (NULLABILITY-2 round 2).
 
 ### FLOAT-AGG-1 — sum of catastrophic-cancellation float vector
@@ -6024,6 +6106,8 @@ Shared roster pin for every heading:
   for binary → string. *(oracle: documented — `Dataset.to` store assignment; the binary → string value is UNMEASURED on a
   live Spark, recorded for the next oracle round.)*
 - **Pin** — `python/repark/tests/test_df_surface_a_1.py::test_to_binary_follows_reported_schema_df_to_binary_1`
+- **Pin (IO-TEXT-1, 2026-09-15)** — a user schema typing a text partition column `binary` reads the raw bytes and reports
+  `string`: `python/repark/tests/test_io_text_2.py::test_text_probe6_int_schema_binary` (red when fixed).
 - **Rationale** — BACKLOG, filed by DF-SURFACE-A-1 (run 15b) from the critic re-check finding L-101. The root is the
   binary report on the scan surface, which FACADE-4 step 0 put to the owner as question 2 (keep `string` where the
   physically decoded column is described, or report `binary`). `to()` reconciles against the reported schema by design;
@@ -8712,6 +8796,74 @@ field NAME.
   facade `projection_name`; `select` of the same expression already uses the facade
   display.
 
+### IO-TEXT-PARTDISC-1 — text reads of partitioned dirs discover the keys
+
+- **repark** — `spark.read.text` over a `key=value/` layout answers
+  `struct<value:string>` plus the directory columns in directory order
+  (`['value', 'k']` in `test_text_probe_partition_by`), `%XX` unescaped,
+  `__HIVE_DEFAULT_PARTITION__` → NULL, types inferred int → bigint →
+  double (decimal strings land double) → date `yyyy-MM-dd` → timestamp
+  (exactly `yyyy-MM-dd HH:mm:ss`; the fractional and `T` walls stay
+  string, per the probe3 and probe7 cells) → string (booleans stay
+  string, per the probe3 cells); a leaf path
+  read adds no column. A user schema is the data schema with the directory
+  columns still appended after it (round 4, ruling W-1: `value string` →
+  `value, k`, a renamed single field keeps its name, a named `k` supplies
+  its type with data first, a bad cast answers `INVALID_PARTITION_VALUE`
+  `42846`); root files drop out beside partitioned leaves (W-2);
+  same-level name lists refuse `CONFLICTING_PARTITION_COLUMN_NAMES`
+  `KD009` before any row (W-3); a glob alone discovers nothing while a
+  glob with `basePath` discovers under the base path (W-4, `L-205`
+  pinned as filed). Round 5 (rulings X-1/X-2/X-3): a named column parses the
+  raw unescaped directory text — string keeps `007`/`1.50`/`2024-01-02`,
+  date parses `yyyy-MM-dd`, timestamp is midnight in the session zone,
+  `decimal(10,2)` keeps scale, default stays NULL; name lists that differ at
+  any depth (uneven depth, non-leaf data files) refuse
+  `CONFLICTING_PARTITION_COLUMN_NAMES` before any row while `_`-prefixed
+  markers never count as data files; per-file values ride one `Arc` into
+  every scan partition (ruling X-5: `count()` over 100k files falls from
+  ~3.6 KiB to ~1.3 KiB RSS per file). Round 6 (ruling Y-2): a named column
+  also parses boolean (case-insensitive, anything else refuses), float,
+  smallint, tinyint (strict, so `1.50` refuses as SMALLINT), binary (raw
+  UTF-8 bytes), timestamp_ntz, and `array<primitive>` — the last two miss
+  with Spark's uppercase display (`TIMESTAMP_NTZ`, `ARRAY<INT>`) as
+  `INVALID_PARTITION_VALUE` 42846; map/struct stay unsupported-type
+  refusals; inferred boolean-looking directories stay string. Round 7
+  (ruling Z-1): a named `timestamp_ntz` column parses the raw unescaped
+  text as a zone-free wall clock (date-only is naive midnight; the space
+  and `T` walls keep 03:04:05 in any session zone) while `timestamp`
+  keeps the session-zone wall; the space wall infers session-zone
+  `timestamp` under Spark's order (integral, fractional, date,
+  timestamp, string).
+- **Apache Spark** — partition discovery adds the directory columns
+  (`(value, k)` rows on the probe's `partition_by` read-back).
+  *(oracle: live PySpark 4.1.2, probes `partition_by` + probe3 `part_*` + probe4 `text_probe4_*` + probe5 `text_probe5_*` + probe6 `text_probe6_*` + probe7 `text_probe7_*` (America/New_York session), 2026-09-15.)*
+- **Pin** —
+  `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
+  plus `test_text_probe3_part_*_read` (slash, specials, empty/null,
+  decimal, bool, date/ts/double/int rows, schemas and dtypes) plus
+  `test_text_probe4_schema_*` (value-only, renamed, with-partition,
+  partition-first, int-cast refusal), `::test_text_probe4_mixed_layout`,
+  `::test_text_probe4_conflicting_names`, `::test_text_probe4_glob_with_basepath`
+  and the `L-201`/`L-205` pins (`lead_zero_*`, `plus_sign`, bare globs stay
+  `value`-only) plus `python/repark/tests/test_io_text_2.py::test_text_probe5_*`
+  (raw-text overlay, uneven-depth and non-leaf refusals, marker-only layout,
+  fallback layout — round 5, rulings X-1, X-2, X-3, X-4) plus
+  `::test_text_probe6_*` (boolean overlay and results, the four uppercase
+  refusals — round 6, ruling Y-2; the float/smallint/tinyint/binary result
+  pins ride the shared schema-display divergence keys, ledger R-39) plus
+  `::test_text_probe7_*` (zone-free `timestamp_ntz` walls, session-zone
+  `timestamp` walls, timestamp inference — round 7, ruling Z-1).
+- **Rationale** — FIXED, 2026-09-15 (io-text-1 round 3, ruling U-3).
+  Discovery lives in the engine module `partition_discovery` (leaf files +
+  root in, schema + per-file values out; IO-ORC-1 reuses it) with the shared
+  batch materialization beside it; the user-schema overlay lives in the new
+  engine module `text_schema` beside the scan (round 4, ruling W-1); the
+  zone-free wall parser and the timestamp-inference predicate live in the
+  new engine module `partition_timestamp` beside discovery (round 7,
+  ruling Z-1).
+  pins: io-text-1/T-6, U-3, W-1, W-2, W-3, W-4, X-1, X-2, X-3, X-4, X-5, Y-1, Y-2, Z-1
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
@@ -8752,6 +8904,25 @@ VARIANT, geospatial) have landed.
 Oracle basis for this section: *documented* — Spark 4.1.2 `pyspark.sql.functions` exports
 the name; the divergence is that repark refuses the call Spark would evaluate. No value
 oracle is involved.
+
+### IO-TEXT-PART-POOL-1 — a partitioned text write past the writer cap refuses under a tight session memory pool — **BACKLOG 2026-09-15**
+
+- **repark** — past 256 distinct `partitionBy` keys the text writer falls back to a streaming sort that spills under the session memory
+  pool. With a deliberately small pool the sort's merge reservation or DataFusion's non-spilling producer in-flight fills the pool first,
+  and the write fails loudly with `Resources exhausted` before any row is written; no destination and no staging directory remain. A 16 MiB
+  pool with 300 keys of 4 KiB rows refuses in about 0.2 s (with or without `spark.sql.shuffle.partitions=8`). At 128 MiB a 1.92 GiB shuffled
+  tail completes through an 8-way producer (339 MiB peak RSS, 478 spill files, one part file per key) but still refuses at DataFusion's
+  default 64-way partitioning; at 512 MiB the default-partitioning case also refuses.
+- **Apache Spark** — the sort-based dynamic partition writer spills through the task memory manager, so the equivalent write completes
+  given executor memory. No oracle cell exists for a comparable pool limit (the JVM executor memory model is not a byte-for-byte match).
+- **Pin** — `python/repark/tests/test_io_text_2.py::test_text_partitioned_fallback_tiny_pool_refuses_loudly` (today's loud refusal; reds when
+  the write completes), beside the Rust pins in `crates/repark-core/src/text_partition_fallback.rs`
+  (`text_partition_fallback_spills_fat_tail_under_session_pool`, `text_partition_fallback_splits_pool_busting_batches`) that prove the
+  spilling path where the producer fits.
+- **Rationale** — BACKLOG, filed by IO-TEXT-1 (run 16b, ruling R-42 from the round-7 Rust perf re-check). The failure is loud and leaves no
+  partial output, never a wrong value. Closing it needs the fallback to bound producer in-flight and the merge reservation to the pool
+  (cap `target_partitions` for the fallback or coalesce in-flight batches), measured against the default-partitioning 128 MiB case.
+  pins: io-text-1/Z-2
 
 ### FNP-15-java_method — JVM class-load reflection is unreachable
 

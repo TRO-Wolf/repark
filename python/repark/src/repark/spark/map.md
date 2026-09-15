@@ -83,7 +83,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
   integer knobs (`checked_integral`); numpy `__index__` types run, bool/float/str fail
   with `AnalysisException` / `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` carrying Spark's
-  sqlExpr/paramIndex/inputSql/inputType/requiredType (live 4.1.2). pins: perf-approxpct-1/C-002
+  sqlExpr/paramIndex/inputSql/inputType/requiredType (live 4.1.2). **IO-TEXT-1 Round 3
+  (2026-09-15, U-10):** `attach_error_condition` pins a Spark error class (and
+  SQLSTATE) onto a caught native exception in place, message untouched.
+  pins: perf-approxpct-1/C-002; io-text-1/U-10
 - `_secrets.py` — secret-property classification and redacted runtime configuration
   listing. Explicit `get` calls do not redact values.
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.

@@ -622,6 +622,21 @@ else. The next pickup's `make ledger-archive` files everything here under
   refusals, one delegation, one restored connector path, no Rust change.
   `risk_tier: standard`. Branch `feat/io-declared-1`.
   pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [io-text-1-ledger.md](io-text-1-ledger.md) —
+  **IO-TEXT-1 (2026-09-14), in flight:** `DataFrameReader.text` /
+  `DataFrameWriter.text` in Rust (`text_scan.rs` / `text_glob.rs` / `text_io.rs`)
+  with thin Python binds plus `format("text")` on both doors, pinned against the
+  run-15b live-PySpark-4.1.2 fixture; gzip and the `text.` SQL door stay dated
+  declared refusals (IO-TEXT-GZIP-1, IO-TEXT-SQL-1). **Follow-up (2026-09-15):**
+  critic + perf rulings T-1..T-9 / P-1..P-3 as R-1..R-12; `partitionBy` lays out
+  hive dirs (IO-TEXT-PART-1 retired, IO-TEXT-PARTDISC-1 filed).
+  Rounds 3–6 + R-39 (2026-09-15): one-scan partitioned writes, partition discovery, user-schema overlay, a streaming
+  spill-capable sort past the writer cap; the four width-label pins cite LOGICAL-WIDTH-1 / DF-TO-BINARY-1.
+  Round 7 + R-40/R-41 (2026-09-15): zone-free `timestamp_ntz` walls with timestamp inference, and a pool-sized
+  fallback tail (rechunk plus pool-capped spill reservation).
+  Round 7 + R-42 (2026-09-15): zone-free timestamp_ntz, pool-sized fallback tail; a tight-pool refusal is registry IO-TEXT-PART-POOL-1.
+  `risk_tier: standard`. Branch `feat/io-text-1`.
+  pins: io-text-1/C-001, C-002, C-003, C-004, T-1..T-9, P-1..P-3
 - [java-double-str-1-ledger.md](java-double-str-1-ledger.md) — Unit ledger — JAVA-DOUBLE-STR-1 · DOUBLE/FLOAT stringify as Java does
 - [ledger-reading-1-ledger.md](ledger-reading-1-ledger.md) —
   **LEDGER-READING-1 step 1 (2026-09-09), in flight:**   reading units may prove clauses on
@@ -769,6 +784,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   orchestrator bumps the pin. No RePark production code, no dependency move.
   `risk_tier: standard`. Branch `fix/rdf-schema-evo-1`.
   pins: rdf-schema-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [registry-16b-1-ledger.md](registry-16b-1-ledger.md) —
+  **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
+  CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live
+  PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
+  `risk_tier: standard`. Branch `docs/registry-16b-1`.
+  pins: registry-16b-1/C-001, C-002, C-003
 - [replace-linear-1-ledger.md](replace-linear-1-ledger.md) — Parked on owner question Q-R1 after step 0 (2026-09-13).
   **REPLACE-LINEAR-1 step 0 (2026-09-13), in flight:** `DataFrame.replace` dict loop
   is exponential — `when(expression == lit(old), lit(new)).otherwise(expression)`
