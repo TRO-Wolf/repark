@@ -17,6 +17,8 @@ pins: fnp-11a/C-001
 FNP-11A (2026-09-15, orchestrator): `check_example_coverage.py` walks `functions_temporal.py` and its
 `FNP11A_EXPORTS` export tuple, so the eleven temporal names that module installs at import are in
 the AST walk, not only in the live `__all__`.
+FNP-11A rebase (2026-09-15, run 16a): `check_example_coverage.py` stays at the 1000-line default
+— two docstring lines reflowed after the rebase, no exception row (owner ruling Q-15c-4).
 DF-SURFACE-A-1 critic round 1 (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4041 → 4035 (ruling R-5 removes the `inputFiles` and
 `semanticHash` bindings; ruling R-6 removes the `_schema_override` slot,

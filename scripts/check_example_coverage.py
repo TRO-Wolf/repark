@@ -3,12 +3,10 @@
 
 SSOT for the v0.7 example-drift gate. Prose points here and never restates the
 baselines. Walks facade sources by AST so ``make ci`` stays native-build-free.
-``F.*`` is the union of ``functions.py`` ``__all__``, the installer export
-tables that ``install_into`` appends at import, and public defs on that
-canonical module.
-When ``repark._native`` imports, every example script is executed and every
-module door's live ``__all__`` (``F``, ``ta``, ``types``, ``ml``) is
-cross-checked against the walk.
+``F.*`` is the union of ``functions.py`` ``__all__``, the installer export tables
+that ``install_into`` appends at import, and public defs on that module. When
+``repark._native`` imports, every example script runs and every module door's
+live ``__all__`` (``F``, ``ta``, ``types``, ``ml``) is checked against the walk.
 
 Closed set after EX-1 (roadmap colon list, session, and the seven class
 surfaces the owner ruled into v0.7 on 2026-08-31): ``F.*``, DataFrame /
