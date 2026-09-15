@@ -133,6 +133,8 @@ dataframe	DataFrame.explain
 dataframe	DataFrame.fillna
 dataframe	DataFrame.filter
 dataframe	DataFrame.first
+dataframe	DataFrame.foreach
+dataframe	DataFrame.foreachPartition
 dataframe	DataFrame.groupBy
 dataframe	DataFrame.group_by
 dataframe	DataFrame.groupby
@@ -161,6 +163,7 @@ dataframe	DataFrame.melt
 dataframe	DataFrame.mergeInto
 dataframe	DataFrame.merge_into
 dataframe	DataFrame.na
+dataframe	DataFrame.observe
 dataframe	DataFrame.offset
 dataframe	DataFrame.orderBy
 dataframe	DataFrame.order_by
@@ -250,6 +253,7 @@ dataframe	GroupedData.mean
 dataframe	GroupedData.min
 dataframe	GroupedData.pivot
 dataframe	GroupedData.sum
+dataframe	Observation.get
 functions	F.PandasUDFType
 functions	F.UserDefinedFunction
 functions	F.UserDefinedTableFunction

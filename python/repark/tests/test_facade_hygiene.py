@@ -85,8 +85,7 @@ def test_oos_named_errors(spark: ReparkSession) -> None:
         _ = frame.rdd
     with pytest.raises(AnalysisException, match="writeStream"):
         _ = frame.writeStream
-    with pytest.raises(UnsupportedOperationException, match="foreach"):
-        _ = frame.foreach
+    assert frame.foreach(lambda _row: None) is None
     with pytest.raises(UnsupportedOperationException, match="registerTempTable"):
         spark.registerTempTable("t", frame)
     with pytest.raises(UnsupportedOperationException, match="pandas_api"):

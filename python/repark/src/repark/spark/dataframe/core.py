@@ -28,7 +28,7 @@ from repark.errors import (
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
-from repark.spark.dataframe import cache_handle, streaming_batch, surface_a
+from repark.spark.dataframe import cache_handle, streaming_batch, surface_a, surface_b
 from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
 from repark.spark.dataframe.udf_bridge import (
@@ -290,6 +290,7 @@ class DataFrame:
         "_mia_cleanup_registered",
         "_mia_plan_ready",
         "_mia_temp_views",
+        "_observations",
         "_origin_map",
         "_origin_not_emitted",
         "_persist_requested",
@@ -319,6 +320,7 @@ class DataFrame:
         self._cache_view: str | None = None
         self._cache_view_owned_handle: Any | None = None
         self._handles: tuple[Any, ...] = ()
+        self._observations: tuple[Any, ...] = ()
         self._eager_shape: tuple[int, int] | None = None
         self._lineage_inner: Any | None = None
         self._storage_level: Any | None = None
@@ -360,6 +362,7 @@ class DataFrame:
             other._tighten_derived for other in others
         )
         child._handles = self._handles
+        child._observations = self._observations
         for other in others:
             if other._handles:
                 child._handles = cache_handle.union_handles(child._handles, other._handles)
@@ -447,6 +450,7 @@ class DataFrame:
     def _action_inner(self) -> Any:
         """Return the native frame for an action, re-running uncached bridges."""
         self._ensure_alive()
+        surface_b.fill_on_action(self)
         if self._map_bridge is not None:
             if self._cache_view is not None:
                 return self._inner
@@ -894,6 +898,9 @@ class DataFrame:
     withWatermark = with_watermark = streaming_batch.with_watermark  # noqa: N815
     dropDuplicatesWithinWatermark = streaming_batch.drop_duplicates_within_watermark  # noqa: N815
     drop_duplicates_within_watermark = dropDuplicatesWithinWatermark
+    foreach = surface_b.foreach
+    foreachPartition = surface_b.foreachPartition  # noqa: N815
+    observe = surface_b.observe
 
     def sameSemantics(self, other: DataFrame) -> bool:  # noqa: N802 — PySpark camelCase
         """Whether ``other`` has the same logical semantics (PySpark ``DataFrame.sameSemantics``).
@@ -1696,14 +1703,6 @@ class DataFrame:
         except AttributeError:
             raise AttributeError(name) from None
         self._ensure_alive()
-        _oos = {
-            "foreach": "foreach is out of scope until the UDF campaign (use collect + Python)",
-            "foreachPartition": (
-                "foreachPartition is out of scope until the UDF campaign (use to_arrow / to_polars)"
-            ),
-        }
-        if name in _oos:
-            raise UnsupportedOperationException(f"DataFrame.{name} is not supported: {_oos[name]}")
         if name not in self.columns:
             raise PySparkAttributeError(
                 f"[ATTRIBUTE_NOT_SUPPORTED] Attribute `{name}` is not supported."

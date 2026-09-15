@@ -541,6 +541,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `writer_readwriter.py` holds its exact 1105 baseline.
   pins: io-bucket-cluster-1/C-005
   **Re-check (2026-09-15):** `_unpack_column_args` checks `cols` before `col` and raises `NOT_LIST_OF_STR` with Spark's sentence through `_refuse_not_list_of_str`.
+- `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1,
+  2026-09-14), bound on the class from `core.py` at the exact ceiling. `foreach`
+  streams `f(row)` through `toLocalIterator`; `foreachPartition` calls `f` once per
+  Arrow batch with a `Row` iterator (an empty frame still calls `f` once).
+  `observe` attaches metric expressions to an identity child; the first action
+  through `_action_inner` runs `agg(*exprs)` once and fills a bound `Observation`.
+  Driver-side callable execution and the second aggregation pass are DECLARED
+  (`DF-FOREACH-1`, `DF-OBSERVE-1`).
+  pins: df-surface-b-1/C-001, C-002, C-003, C-004
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`
@@ -933,6 +942,8 @@ that held the comment (pins: comment-core-1/C-003).
 | Plan rewrites and display | [`plan_collapse.py`](plan_collapse.py) |
 | Writes and statistics | [`writer_readwriter.py`](writer_readwriter.py) |
 | Writer layout bodies and write helpers | [`writer_layout.py`](writer_layout.py) |
+| `foreach` / `foreachPartition` / `observe` | [`surface_b.py`](surface_b.py) |
+| `foreach` / `foreachPartition` / `observe` | [`surface_b.py`](surface_b.py) |
 | Parent navigation | [`../map.md`](../map.md) |
 | Rust engine contracts | [`../../../../../../crates/repark-core/src/map.md`](../../../../../../crates/repark-core/src/map.md) |
 | Tests | [`../../../../tests/map.md`](../../../../tests/map.md) |

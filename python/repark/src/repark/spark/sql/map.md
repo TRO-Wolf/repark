@@ -12,7 +12,7 @@ AttributeError naming the gap), never stubs.
 ## Contents
 
 - `__init__.py` — re-exports `SparkSession`, `DataFrame`, `Row`, `Column`, `Window`/
-  `WindowSpec`, `Catalog`, `GroupedData`, `DataFrameReader`, plus submodule handles
+  `WindowSpec`, `Catalog`, `GroupedData`, `Observation`, `DataFrameReader`, plus submodule handles
   `functions` / `types` / `window`. `__getattr__` names unimplemented pyspark.sql
   surfaces (`SQLContext`, `UDFRegistration`, writers, …).
 - `functions.py` — re-export of `repark.spark.functions.__all__` (`is` identity).

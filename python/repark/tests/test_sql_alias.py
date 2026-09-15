@@ -57,6 +57,7 @@ def test_spark_sql_package_core_names_are_canonical_identity() -> None:
         DataFrame,
         DataFrameReader,
         GroupedData,
+        Observation,
         Row,
         SparkSession,
         Window,
@@ -67,6 +68,7 @@ def test_spark_sql_package_core_names_are_canonical_identity() -> None:
     assert SparkSession is spark.ReparkSession
     assert DataFrame is spark.DataFrame
     assert Row is spark.Row
+    assert Observation is spark.Observation
     assert Column is spark.Column
     assert Window is spark.Window
     assert WindowSpec is spark.WindowSpec
