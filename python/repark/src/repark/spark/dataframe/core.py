@@ -28,7 +28,7 @@ from repark.errors import (
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
-from repark.spark.dataframe import cache_handle
+from repark.spark.dataframe import cache_handle, streaming_batch
 from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
 from repark.spark.dataframe.udf_bridge import (
@@ -899,6 +899,11 @@ class DataFrame:
 
     is_streaming = isStreaming
 
+    rdd, plot, writeStream, pandas_api = streaming_batch.DECLARED_MEMBERS  # noqa: N815
+    withWatermark = with_watermark = streaming_batch.with_watermark  # noqa: N815
+    dropDuplicatesWithinWatermark = streaming_batch.drop_duplicates_within_watermark  # noqa: N815
+    drop_duplicates_within_watermark = dropDuplicatesWithinWatermark
+
     def sameSemantics(self, other: DataFrame) -> bool:  # noqa: N802 — PySpark camelCase
         """Whether ``other`` has the same logical semantics (PySpark ``DataFrame.sameSemantics``).
 
@@ -1702,9 +1707,6 @@ class DataFrame:
             raise AttributeError(name) from None
         self._ensure_alive()
         _oos = {
-            "rdd": "RDD is out of scope for repark (use DataFrame API / Arrow collect)",
-            "writeStream": "Structured Streaming is out of scope (batch DataFrame writes only)",
-            "withWatermark": "watermarks require streaming (out of scope for repark v1)",
             "foreach": "foreach is out of scope until the UDF campaign (use collect + Python)",
             "foreachPartition": (
                 "foreachPartition is out of scope until the UDF campaign (use to_arrow / to_polars)"
@@ -4028,9 +4030,7 @@ from repark.spark.dataframe.grouped_udf import (  # noqa: E402
     _validate_apply_in_pandas_result_columns,
 )
 from repark.spark.dataframe import statistics, udf_projection, udf_window_projection  # noqa: E402
-from repark.spark.dataframe import sampling  # noqa: E402
-from repark.spark.dataframe import display  # noqa: E402
-from repark.spark.dataframe import replace_expr  # noqa: E402
+from repark.spark.dataframe import display, replace_expr, sampling  # noqa: E402
 from repark.spark.dataframe.eager import _resolve_cache_budgets  # noqa: E402
 from repark.spark.dataframe.sampling import _coerce_sample_seed  # noqa: E402
 

@@ -9,7 +9,11 @@ import gc
 import pytest
 
 from repark import ReparkSession
-from repark.errors import UnsupportedOperationException
+from repark.errors import (
+    AnalysisException,
+    PySparkNotImplementedError,
+    UnsupportedOperationException,
+)
 
 
 @pytest.fixture
@@ -77,9 +81,9 @@ def test_drop_duplicates_subset(spark: ReparkSession) -> None:
 
 def test_oos_named_errors(spark: ReparkSession) -> None:
     frame = spark.sql("SELECT 1 AS x")
-    with pytest.raises(UnsupportedOperationException, match="rdd"):
+    with pytest.raises(PySparkNotImplementedError, match="rdd"):
         _ = frame.rdd
-    with pytest.raises(UnsupportedOperationException, match="writeStream"):
+    with pytest.raises(AnalysisException, match="writeStream"):
         _ = frame.writeStream
     with pytest.raises(UnsupportedOperationException, match="foreach"):
         _ = frame.foreach
