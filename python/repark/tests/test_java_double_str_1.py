@@ -71,6 +71,9 @@ def test_spark_door_cast_float_stringify_matches_java(spark: ReparkSession) -> N
         ("123456.7", "123456.7"),
         ("1.0E-5", "1.0E-5"),
         ("Infinity", "Infinity"),
+        ("-Infinity", "-Infinity"),
+        ("NaN", "NaN"),
+        ("-0.0", "-0.0"),
     ]
     for raw, expected in cases:
         table = _spark_text(spark, f"CAST(CAST('{raw}' AS FLOAT) AS STRING)")
@@ -145,6 +148,19 @@ def test_spark_door_length_kernels_use_java_text(spark: ReparkSession) -> None:
         assert table.schema.field("b").type == pa.int32()
     table = _table(spark.sql("SELECT octet_length(CAST('1.0E10' AS FLOAT)) AS o"))
     assert table.column("o").to_pylist() == [6]
+    assert table.schema.field("o").type == pa.int32()
+
+
+def test_spark_door_null_float_stringify_is_null(spark: ReparkSession) -> None:
+    """NULL doubles stay NULL through CAST, concat and the length kernels."""
+    table = _table(spark.sql("SELECT CAST(CAST(NULL AS DOUBLE) AS STRING) AS s"))
+    assert table.column("s").to_pylist() == [None]
+    assert table.schema.field("s").type == pa.string()
+    table = _table(spark.sql("SELECT concat(CAST(NULL AS DOUBLE), '') AS c"))
+    assert table.column("c").to_pylist() == [None]
+    assert table.schema.field("c").type == pa.string()
+    table = _table(spark.sql("SELECT octet_length(CAST(NULL AS DOUBLE)) AS o"))
+    assert table.column("o").to_pylist() == [None]
     assert table.schema.field("o").type == pa.int32()
 
 

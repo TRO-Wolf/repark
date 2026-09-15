@@ -43,7 +43,90 @@ door; today they are DECIMAL). `lib.rs` registration hunks stay one added line e
 | C-005 | Shape rule, concat arm: SQL `concat` implicit coercion and `F.concat` answer Java text for DOUBLE/FLOAT inputs, value AND type. | Concat pins green both doors. | **PROVEN** | `SparkConcat` coercion keeps `Float32`/`Float64`; the kernel formats via the shared module (arrays and scalars). Concat pins green both doors, typed `string`. |
 | C-006 | D-3: the owned `bit_length` / `octet_length` kernels stringify DOUBLE/FLOAT with the shared formatter. | Length pins green, incl. float `1.0E10` → 6. | **PROVEN** | Coercion keeps `Float32`/`Float64`; `byte_lengths` counts shared-formatter bytes. Length pins green incl. float `1.0E10` → 6, typed `int32`. |
 | C-007 | D-4: registry BL-7 reads FIXED 2026-09-15 (JAVA-DOUBLE-STR-1); the gt1 pin asserts equality. | Registry section + green gt1 pin. | **PROVEN** | `docs/spark-sql-iceberg-parity.md` BL-7 rewritten as FIXED 2026-09-15 with the new pins; flipped gt1 pin green. |
-| C-008 | Gates: `cargo test -p repark-functions`, clippy/fmt, full facade suite, parity harness green; COVERAGE_ATTESTATION filed. | Commands and counts in evidence. | OPEN | Awaits step 4. |
+| C-008 | Gates: `cargo test -p repark-functions`, clippy/fmt, full facade suite, parity harness green; COVERAGE_ATTESTATION filed. | Commands and counts in evidence. | **PROVEN** | `cargo test -p repark-functions`: 463 passed, 0 failed, 1 ignored. `make rust-fmt-check` + `make rust-clippy` (`--locked --workspace --all-targets -D warnings`): clean. `make ci`: green end to end. `make py-test-facade`: 6681 passed, 373 skipped, 1 failed — the failure is the FNP10 pin this unit necessarily converges (shared formatter, D-1); after the lockstep flip the json + unit files run 134 passed. `make py-test`: 757 passed, 2 skipped, 12 xfailed. Attestation below. |
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: java-double-str-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: >
+        Walked card decisions D-1 through D-4 plus the shape rule clause by
+        clause against the ledger: shared module, CAST rewrite with native
+        kept, concat arm, length kernels, registry row. Every clause carries a
+        value-AND-type pin on the Arrow path.
+      artifacts: [python/repark/tests/test_java_double_str_1.py, python/repark/tests/test_functions_gt1.py::test_sql_door_double_infinity_stringify_is_named_divergence]
+    - id: AT-2
+      status: ATTACKED
+      evidence: >
+        Exercised inf, -inf, NaN, signed zero by both spellings, the E-notation
+        thresholds either side (1.0E-4 vs 0.001, 1.0E-3, 1.0E7 vs 1.0E6),
+        1.0E20/1.0E21, 3.4E38, max-double 1.7976931348623157E308, min-subnormal
+        4.9E-324, the 0.1+0.2 long tail, float edges 1.0E10/0.1/123456.7/1.0E-5,
+        and NULL through CAST, concat and octet_length. Step-4 hardening added
+        the NULL pin and the float -inf/NaN/neg-zero rows (green on arrival,
+        mechanism-identical to red-first cells).
+      artifacts: [python/repark/tests/test_java_double_str_1.py::test_spark_door_null_float_stringify_is_null, crates/repark-functions/src/java_double.rs::tests]
+    - id: AT-3
+      status: ATTACKED
+      evidence: >
+        The rule's passthrough arms (non-float source, non-string target,
+        unresolvable type) ran unchanged under the whole green suite, so no
+        adjacent CAST changes shape; the UDF's wrong-type arm returns a plan
+        error naming the UDF instead of misformatting.
+      artifacts: [make py-test-facade 6681 passed, crates/repark-functions/src/java_double.rs return_type]
+    - id: AT-4
+      status: N/A
+      justification: >
+        The formatter, the UDF and the analyzer rule are stateless pure
+        functions of their input; no shared mutable state, no ordering
+        assumption, no cross-row communication exists to race.
+    - id: AT-5
+      status: N/A
+      justification: >
+        No privileged action, no credential, no secret, no deserialized
+        untrusted structure: the formatter reads f64/f32 values, the rule
+        matches plan-node types. SQL text parsing stays with the engine.
+    - id: AT-6
+      status: ATTACKED
+      evidence: >
+        Native-door Arrow text pinned unchanged by the guard pin; to_json
+        MIN_VALUE convergence recorded with the FNP10 row note and pin flip;
+        no catalog, storage or wire format touched.
+      artifacts: [python/repark/tests/test_java_double_str_1.py::test_native_door_keeps_arrow_spelling, docs/spark-sql-iceberg-parity.md FNP10-JAVA-DOUBLE-TEXT-1]
+    - id: AT-7
+      status: N/A
+      justification: >
+        Per-row O(digits) formatting into sibling-sized StringBuilders; the
+        concat and length kernels already allocated equivalent Utf8 buffers on
+        this path, so no new growth, loop or leak class is introduced.
+    - id: AT-8
+      status: ATTACKED
+      evidence: >
+        No dependency change (Cargo.toml, Cargo.lock, uv.lock untouched);
+        output Arrow contracts hold (Utf8 strings, int32 lengths) per the type
+        asserts; no public Python name added or altered.
+      artifacts: [git diff --stat steps 1-4, type asserts in test_java_double_str_1.py]
+    - id: AT-9
+      status: N/A
+      justification: >
+        Value formatting has no failure alarm surface; the only new error (UDF
+        wrong-type plan refusal) travels the existing engine error path with
+        the UDF name in the message.
+    - id: AT-10
+      status: ATTACKED
+      evidence: >
+        Red-first: step-1 pins failed on base with the Arrow spellings pasted
+        in C-002, then passed unmodified after step 2. Bite history: the
+        MIN_VALUE branch is load-bearing (without it the 4.9E-324 pin answers
+        5.0E-324); every rule, coerce and kernel branch names a pinned input
+        (float32 vs float64 rows, null rows, scalar F.lit concat arms,
+        non-float passthrough via the full suite).
+      artifacts: [ledger C-002 red output, 8 passed run 2026-09-15, 134 passed re-run]
+  reattested: [AT-1, AT-6, AT-10]
+  complete: true
+```
 
 ## Census — paths reaching Arrow float→utf8 on base (C-001, measured 2026-09-15)
 
@@ -76,8 +159,20 @@ Native module built from base (`uvx maturin@1.14.1 develop --release`,
 `5e-324` but the oracle (BL7-16, JD-cast-13) answers Java `4.9E-324` — Java's
 `FloatingDecimal` spells `Double.MIN_VALUE` longhand (both spellings round-trip).
 The shared formatter matches that exact bit pattern (1 / `0x8000_0000_0000_0001`);
-every other oracle cell agrees with shortest-plus-thresholds. No oracle cell covers
-`Float.MIN_VALUE` (`1.4E-45`), so the float path is untouched there.
+every other BL7/JD oracle cell agrees with shortest-plus-thresholds. The FNP10 oracle
+(`FNP10-JAVA-DOUBLE-TEXT-1`) records three further cells where JDK longest wins over
+shortest (`8.41E21` → `8.409999999999999E21`, `1.0E23` → `9.999999999999999E22`, FLOAT
+`1.4E-45` → `1.4E-45`): those stay BACKLOG per that row's ruling (full closure means
+porting `FloatingDecimal`), and the Spark-door CAST path shares that residual — D-1
+(one formatter) and the card's oracle leave no other consistent choice. No oracle cell
+covers `Float.MIN_VALUE` beyond FNP10's divergent `1.0E-45`, so the float path is
+untouched there.
+
+Step-4 lockstep fallout of the shared formatter: `to_json` of `Double.MIN_VALUE` now
+renders `4.9E-324` (= Spark), so the FNP10 pin's first case flipped to equality and that
+row carries a dated convergence note; the other three cases still pin the divergence.
+The pin file sits outside the card fence — the flip is forced by D-1 + the full-suite
+gate, recorded here and in the handback for orchestrator review.
 
 Out of scope observed: `createDataFrame` refuses non-finite floats
 (`PySparkTypeError: createDataFrame does not support infinite float values`), so the

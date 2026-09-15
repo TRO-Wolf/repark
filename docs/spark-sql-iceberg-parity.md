@@ -7773,10 +7773,11 @@ field NAME.
   of whose surface is a silent `[]` should be closed once rather than twice. The pin codifies
   today's behaviour; the fix unit updates the pin rather than obeys it.
 
-### FNP10-JAVA-DOUBLE-TEXT-1 — four `Double.toString` spellings where the JDK is not shortest
+### FNP10-JAVA-DOUBLE-TEXT-1 — `Double.toString` spellings where the JDK is not shortest
 
 - **repark** — `to_json` and `get_json_object` render a double through the shortest decimal that
-  round-trips: `4.9E-324` renders `5.0E-324`, `8.41E21` renders `8.41E21`, `1.0E23` renders
+  round-trips, except `Double.MIN_VALUE`, which has spelled `4.9E-324` since JAVA-DOUBLE-STR-1
+  (2026-09-15, shared formatter): `8.41E21` renders `8.41E21`, `1.0E23` renders
   `1.0E23`, and a FLOAT `1.4E-45` renders `1.0E-45`.
 - **Apache Spark** — JDK 17's `FloatingDecimal` is NOT the shortest repr and answers
   `4.9E-324`, `8.409999999999999E21`, `9.999999999999999E22` and `1.4E-45` for the same four
@@ -7785,12 +7786,16 @@ field NAME.
   FNP-9/10 round 2.)*
 - **Pin** —
   `python/repark/tests/test_fnp_9_collections_json.py::test_to_json_double_text_diverges_on_the_jdk_legacy_spellings`
+  (three divergent cells pinned; the `4.9E-324` cell is an equality since 2026-09-15).
 - **Rationale** — BACKLOG, filed 2026-09-06 by the FNP-9/10 round-1 critic (finding F13). Closing
   it means porting `FloatingDecimal.toJavaFormatString` — the pre-JDK-19 dragon variant, which
-  emits an extra digit for a specific class of values — not tuning a format string. The four
-  cells are pinned so the divergence is a stated limit rather than a surprise, and the C-004
+  emits an extra digit for a specific class of values — not tuning a format string. The cells
+  are pinned so the divergence is a stated limit rather than a surprise, and the C-004
   clause that once claimed "doubles take `Double.toString`" is narrowed to say which values it
-  covers.
+  covers. **Update 2026-09-15 (JAVA-DOUBLE-STR-1):** the `4.9E-324` cell converged through the
+  shared Java formatter (exact `Double.MIN_VALUE` bit-pattern match, required by oracle cells
+  BL7-16 / JD-cast-13); the three remaining cells stay BACKLOG, and the Spark-door CAST path
+  shares that residual.
 
 ### FNP10-FROM-JSON-DDL-1 — `from_json` refuses an INTERVAL field in its schema
 

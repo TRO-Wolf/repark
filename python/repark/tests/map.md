@@ -5072,4 +5072,4 @@ through `core` or the package. pins: eager-budget-1/C-010
   `octet_length` kernels pin value AND Arrow type; the native `repark.sql()`
   guard keeps Arrow text (ADR-0002). Pin inputs are `CAST(<text> AS
   DOUBLE|FLOAT)` or DataFrame columns, never bare exponent literals (FNP-4B).
-  pins: java-double-str-1/C-001, C-002, C-004, C-005, C-006
+  pins: java-double-str-1/C-001, C-002, C-004, C-005, C-006, C-008
