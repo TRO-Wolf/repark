@@ -33,6 +33,26 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
+  / `Row.index` answer the nine `row.*` cells of the committed run-15b oracle
+  ([facade_row_oracle.json](facade_row_oracle.json), live PySpark 4.1.2) — value counts
+  (two distinct NaN objects → 0 via tuple identity-then-`==`; factory rows count the field
+  NAMES), `index` with `start`, and `index_missing` raising builtins `ValueError` with
+  Spark's exact `tuple.index(x): x not in tuple` (no PySpark wrapper). Red on base
+  `4d6b1ab0`: all nine behavioral pins `PySparkAttributeError [ATTRIBUTE_NOT_SUPPORTED]`.
+  Ruling R-1: repark does NOT become a tuple subclass here — the fixture's
+  `isinstance_tuple` / `add` / `hash_eq` cells are out of scope, measured in the ledger.
+  Ruling R-2: no SQL door exists for these names. Critic round 1 (2026-09-14, C-004):
+  L-001 `index` stop/negative-start tuple bounds, L-002 names+values never searched
+  together, L-003 the method wins attribute access over a same-named field (incl. a
+  collected `groupBy().count()` row), L-004 the EX-ROW-1 divergence arm (collected struct
+  cell counts as dict), L-005 / R-3 positional-only signatures (`TypeError` on keyword
+  calls). pins: row-tuple-1/C-001, C-002, C-003, C-004
+- [facade_row_oracle.json](facade_row_oracle.json) — **ROW-TUPLE-1 (2026-09-14):** the
+  run-15b oracle for the Row facade, copied unchanged from the orchestrator's live
+  PySpark 4.1.2 recording (provenance line inside the file); holds the `row.*` cells —
+  the nine this unit pins plus `isinstance_tuple` / `add` / `hash_eq` / `len` /
+  `types_row_is_sql_row`.
 - [test_ice_spark_table_1.py](test_ice_spark_table_1.py) — **ICE-SPARK-TABLE-1
   (2026-09-14):** RePark writes into a table **Spark created** — the G-3 / G-4-Spark-half
   standing requirement (inventory §8 ruling 6). Always-run: the committed

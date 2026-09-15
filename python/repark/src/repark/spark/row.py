@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import Any
 
 from repark.errors import PySparkAttributeError, PySparkValueError
@@ -157,6 +158,18 @@ class Row:
     def __contains__(self, item: Any) -> bool:
         """Field-name membership (``"col" in row``); values are NOT searched (live PySpark)."""
         return item in self.__field_names
+
+    def count(self, value: Any, /) -> int:
+        """Count how many times ``value`` appears. pins: row-tuple-1/C-001."""
+        if self.__factory:
+            return self.__field_names.count(value)
+        return self.__field_values.count(value)
+
+    def index(self, value: Any, start: int = 0, stop: int = sys.maxsize, /) -> int:
+        """First position of ``value`` from ``start`` to ``stop``. pins: row-tuple-1/C-002."""
+        if self.__factory:
+            return self.__field_names.index(value, start, stop)
+        return self.__field_values.index(value, start, stop)
 
     def asDict(self, recursive: bool = False) -> dict[str, Any]:  # noqa: N802 — PySpark name
         """Return a ``dict`` of field names to values (PySpark ``Row.asDict``).
