@@ -1269,3 +1269,9 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
   `test_fnp_win_1.py` 1209 (critic pins). The CAP-1 mirror rows and counts
   (38/32) move with them. `datetime.rs` keeps 1700 (audit S-2; the month
   helper lives in `spark_session_window.rs`). pins: fnp-win-1/C-008
+- **FNP-WIN-1 (2026-09-15, verification round 2, L-002/L-003):**
+  `check_rust_file_size.py` moves `analyzer/time_window/mod.rs` 1268 → 1338
+  (the running-end chaining test); `check_lib_py.py` moves
+  `test_fnp_win_1.py` 1209 → 1314 (the `C2-L002`/`C2-L003` pins). No new
+  exception row; the CAP-1 mirror rows move with them, counts still 38/32.
+  pins: fnp-win-1/C-004

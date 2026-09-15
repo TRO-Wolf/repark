@@ -1075,8 +1075,10 @@ them, and the document is ordered by surface, never by date.
   *(2026-09-15 rescoped: this row covers a static literal gap only. A per-row
   Column gap containing months now answers through the `__repark_session_end__`
   path with Spark's chaining rule — a row stays while its timestamp is at or
-  before the previous row's calendar end — pinned by
-  `test_crit_dynamic_gap_drops_and_month_answers` over `C-L004-dyn-month`.)*
+  before the running maximum of the session's calendar ends — pinned by
+  `test_crit_dynamic_gap_drops_and_month_answers` over `C-L004-dyn-month` and,
+  since round 2, by `test_crit2_dynamic_gap_chains_on_running_end` over
+  `C2-L003-discriminator` on both doors.)*
 
 ### WIN-2 — SQL `GROUP BY window(...)` with `slide > window` refuses where Spark reports an unresolved column
 

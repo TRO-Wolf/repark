@@ -22,7 +22,10 @@ re-exports through `mod.rs` so its registration path never moved.
   DATE times cast to timestamp, unkeyed plans stay single-partition while keyed
   plans hash-partition on the grouping keys, and display-named session refs
   rebase like the window side.
-  pins: fnp-win-1/C-004, C-006, C-008, C-009, C-011, C-012, C-013, C-015
+  pins: fnp-win-1/C-004, C-006, C-008, C-009, C-011, C-012, C-013, C-015.
+  Round 2 (2026-09-15): the dynamic-gap path chains on the running maximum
+  of session ends (`max(end)` over preceding rows per key) instead of the
+  previous row's end. pins: fnp-win-1/C-004
 
 ## Pointers
 

@@ -9376,6 +9376,347 @@
      "2026-09-15 10:39:59.999999"
     ]
    ]
+  },
+  {
+   "id": "C2-L002-jan31-leap",
+   "door": "python",
+   "schema": [
+    [
+     "s",
+     "string",
+     true
+    ],
+    [
+     "e",
+     "string",
+     true
+    ],
+    [
+     "count",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     "2024-01-31 15:00:00",
+     "2024-02-29 15:00:00",
+     "1"
+    ]
+   ]
+  },
+  {
+   "id": "C2-L002-jan31-nonleap",
+   "door": "python",
+   "schema": [
+    [
+     "s",
+     "string",
+     true
+    ],
+    [
+     "e",
+     "string",
+     true
+    ],
+    [
+     "count",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     "2023-01-31 15:00:00",
+     "2023-02-28 15:00:00",
+     "1"
+    ]
+   ]
+  },
+  {
+   "id": "C2-L002-mar31",
+   "door": "python",
+   "schema": [
+    [
+     "s",
+     "string",
+     true
+    ],
+    [
+     "e",
+     "string",
+     true
+    ],
+    [
+     "count",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     "2024-03-31 14:00:00",
+     "2024-04-30 14:00:00",
+     "1"
+    ]
+   ]
+  },
+  {
+   "id": "C2-L002-may31",
+   "door": "python",
+   "schema": [
+    [
+     "s",
+     "string",
+     true
+    ],
+    [
+     "e",
+     "string",
+     true
+    ],
+    [
+     "count",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     "2024-05-31 14:00:00",
+     "2024-06-30 14:00:00",
+     "1"
+    ]
+   ]
+  },
+  {
+   "id": "C2-L002-feb29",
+   "door": "python",
+   "schema": [
+    [
+     "s",
+     "string",
+     true
+    ],
+    [
+     "e",
+     "string",
+     true
+    ],
+    [
+     "count",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     "2024-02-29 15:00:00",
+     "2024-03-29 15:00:00",
+     "1"
+    ]
+   ]
+  },
+  {
+   "id": "C2-L002-chain-clamped",
+   "door": "python",
+   "schema": [
+    [
+     "s",
+     "string",
+     true
+    ],
+    [
+     "e",
+     "string",
+     true
+    ],
+    [
+     "count",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     "2024-01-31 15:00:00",
+     "2024-04-01 05:00:00",
+     "3"
+    ]
+   ]
+  },
+  {
+   "id": "C2-L002-jan31-feb29-exact",
+   "door": "python",
+   "schema": [
+    [
+     "s",
+     "string",
+     true
+    ],
+    [
+     "e",
+     "string",
+     true
+    ],
+    [
+     "count",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     "2024-01-31 15:00:00",
+     "2024-03-29 15:00:00",
+     "2"
+    ]
+   ]
+  },
+  {
+   "id": "C2-L002-jan31-feb29-plus1s",
+   "door": "python",
+   "schema": [
+    [
+     "s",
+     "string",
+     true
+    ],
+    [
+     "e",
+     "string",
+     true
+    ],
+    [
+     "count",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     "2024-01-31 15:00:00",
+     "2024-02-29 15:00:00",
+     "1"
+    ],
+    [
+     "2024-02-29 15:00:01",
+     "2024-03-29 15:00:01",
+     "1"
+    ]
+   ]
+  },
+  {
+   "id": "C2-L002-feb29-12months",
+   "door": "python",
+   "schema": [
+    [
+     "s",
+     "string",
+     true
+    ],
+    [
+     "e",
+     "string",
+     true
+    ],
+    [
+     "count",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     "2016-02-29 15:00:00",
+     "2017-02-28 15:00:00",
+     "1"
+    ]
+   ]
+  },
+  {
+   "id": "C2-L002-chain-clamped",
+   "door": "sql",
+   "schema": [
+    [
+     "s",
+     "string",
+     true
+    ],
+    [
+     "e",
+     "string",
+     true
+    ],
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     "2024-01-31 15:00:00",
+     "2024-04-01 05:00:00",
+     "3"
+    ]
+   ]
+  },
+  {
+   "id": "C2-L003-discriminator",
+   "door": "python",
+   "schema": [
+    [
+     "s",
+     "string",
+     true
+    ],
+    [
+     "e",
+     "string",
+     true
+    ],
+    [
+     "count",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     "2026-09-15 14:00:00",
+     "2026-09-15 15:00:00",
+     "3"
+    ]
+   ]
+  },
+  {
+   "id": "C2-L003-discriminator",
+   "door": "sql",
+   "schema": [
+    [
+     "s",
+     "string",
+     true
+    ],
+    [
+     "e",
+     "string",
+     true
+    ],
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     "2026-09-15 14:00:00",
+     "2026-09-15 15:00:00",
+     "3"
+    ]
+   ]
   }
  ],
  "signatures": {

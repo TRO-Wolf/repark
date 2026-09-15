@@ -868,6 +868,76 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn dynamic_gap_chains_on_the_running_end_across_batches() {
+        use datafusion::arrow::array::{StringArray, TimestampNanosecondArray};
+        use datafusion::arrow::datatypes::{Field, Schema};
+        use datafusion::datasource::memory::MemTable;
+        use datafusion::functions_aggregate::count::count_udaf;
+        use datafusion::logical_expr::expr::AggregateFunction;
+        let ctx = ctx();
+        let schema = Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int64, false),
+            Field::new("ts", DataType::Timestamp(TimeUnit::Nanosecond, None), false),
+            Field::new("gap", DataType::Utf8, false),
+        ]));
+        let base = 1_704_103_200_000_000_000_i64;
+        let batch_of = |rows: Vec<(i64, i64, &str)>| {
+            RecordBatch::try_new(
+                Arc::clone(&schema),
+                vec![
+                    Arc::new(Int64Array::from(
+                        rows.iter().map(|row| row.0).collect::<Vec<_>>(),
+                    )) as ArrayRef,
+                    Arc::new(TimestampNanosecondArray::from(
+                        rows.iter().map(|row| row.1).collect::<Vec<_>>(),
+                    )) as ArrayRef,
+                    Arc::new(StringArray::from(
+                        rows.iter().map(|row| row.2).collect::<Vec<_>>(),
+                    )) as ArrayRef,
+                ],
+            )
+            .unwrap()
+        };
+        let first = batch_of(vec![(1, base, "60 minutes")]);
+        let second = batch_of(vec![
+            (2, base + 600_000_000_000, "1 minute"),
+            (3, base + 1_200_000_000_000, "5 minutes"),
+        ]);
+        let table = MemTable::try_new(Arc::clone(&schema), vec![vec![first, second]]).unwrap();
+        ctx.register_table("chained", Arc::new(table)).unwrap();
+        let frame = ctx.table("chained").await.unwrap();
+        let counted = Expr::AggregateFunction(AggregateFunction::new_udf(
+            count_udaf(),
+            vec![lit(1)],
+            false,
+            None,
+            Vec::new(),
+            None,
+        ))
+        .alias("c");
+        let batches = frame
+            .aggregate(vec![session_call(col("ts"), col("gap"))], vec![counted])
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        let produced =
+            datafusion::arrow::compute::concat_batches(&batches[0].schema(), batches.iter())
+                .unwrap();
+        assert_eq!(produced.num_rows(), 1);
+        assert_eq!(
+            session_bounds(&produced, 0),
+            vec![(Some(base / 1_000), Some(base / 1_000 + 3_600_000_000))]
+        );
+        let counts = produced
+            .column(1)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .unwrap();
+        assert_eq!(counts.value(0), 3);
+    }
+
+    #[tokio::test]
     async fn static_gap_sessions_match_on_two_partitions() {
         use datafusion::logical_expr::{col, lit};
         let ctx = ctx_two_partitions();

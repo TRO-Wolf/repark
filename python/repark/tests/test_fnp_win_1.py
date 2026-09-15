@@ -1207,3 +1207,108 @@ def test_crit_window_time_table_struct_answers() -> None:
     )
     assert _string_column(answered, "wt") == ["2024-01-01 10:09:59.999999"]
     session.stop()
+
+
+def _crit2_session_rows(
+    session: ReparkSession, rows: list[Any], schema: str, gap: Any, count: str
+) -> pa.Table:
+    """Run the run-16b critic session query on one frame as temp view crit2."""
+    session.createDataFrame(rows, schema).createOrReplaceTempView("crit2")
+    return (
+        session.table("crit2")
+        .groupBy(F.session_window("ts", gap))
+        .count()
+        .select(
+            F.col("session_window").getField("start").cast("string").alias("s"),
+            F.col("session_window").getField("end").cast("string").alias("e"),
+            F.col("count").alias(count),
+        )
+        .orderBy("s")
+        .to_arrow()
+    )
+
+
+def _crit2_month_gap(months: str) -> Any:
+    """Build the run-16b critic forced calendar gap expression."""
+    return F.when(F.lit(True), F.lit(months))
+
+
+def test_crit2_dynamic_gap_chains_on_running_end() -> None:
+    """pins: fnp-win-1/C-004"""
+    session = _zoned_session("UTC")
+    rows: list[Any] = [
+        (1, datetime.datetime(2026, 9, 15, 14, 0, 0), "60 minutes"),
+        (2, datetime.datetime(2026, 9, 15, 14, 10, 0), "1 minute"),
+        (3, datetime.datetime(2026, 9, 15, 14, 20, 0), "5 minutes"),
+    ]
+    table = _crit2_session_rows(
+        session, rows, "id int, ts timestamp, gap string", F.col("gap"), "count"
+    )
+    _assert_crit_rows(_rcell("C2-L003-discriminator", "python"), table)
+    session.createDataFrame(rows, "id int, ts timestamp, gap string").createOrReplaceTempView(
+        "crit2_disc"
+    )
+    grouped = session.sql(
+        "SELECT CAST(session_window.start AS STRING) s, "
+        "CAST(session_window.end AS STRING) e, count(*) c FROM crit2_disc "
+        "GROUP BY session_window(ts, gap) ORDER BY s"
+    ).to_arrow()
+    _assert_crit_rows(_rcell("C2-L003-discriminator", "sql"), grouped)
+    session.stop()
+
+
+def test_crit2_month_end_sessions() -> None:
+    """pins: fnp-win-1/C-004"""
+    session = _zoned_session("UTC")
+    cases = (
+        ("C2-L002-jan31-leap", [(1, datetime.datetime(2024, 1, 31, 15, 0, 0))], "1 month"),
+        ("C2-L002-jan31-nonleap", [(1, datetime.datetime(2023, 1, 31, 15, 0, 0))], "1 month"),
+        ("C2-L002-mar31", [(1, datetime.datetime(2024, 3, 31, 14, 0, 0))], "1 month"),
+        ("C2-L002-may31", [(1, datetime.datetime(2024, 5, 31, 14, 0, 0))], "1 month"),
+        ("C2-L002-feb29", [(1, datetime.datetime(2024, 2, 29, 15, 0, 0))], "1 month"),
+        ("C2-L002-feb29-12months", [(1, datetime.datetime(2016, 2, 29, 15, 0, 0))], "12 months"),
+        (
+            "C2-L002-jan31-feb29-exact",
+            [
+                (1, datetime.datetime(2024, 1, 31, 15, 0, 0)),
+                (2, datetime.datetime(2024, 2, 29, 15, 0, 0)),
+            ],
+            "1 month",
+        ),
+        (
+            "C2-L002-jan31-feb29-plus1s",
+            [
+                (1, datetime.datetime(2024, 1, 31, 15, 0, 0)),
+                (2, datetime.datetime(2024, 2, 29, 15, 0, 1)),
+            ],
+            "1 month",
+        ),
+    )
+    for cell_id, rows, months in cases:
+        table = _crit2_session_rows(
+            session, rows, "id int, ts timestamp", _crit2_month_gap(months), "count"
+        )
+        _assert_crit_rows(_rcell(cell_id, "python"), table)
+    session.stop()
+
+
+def test_crit2_clamped_chain_stays_one_session() -> None:
+    """pins: fnp-win-1/C-004"""
+    session = _zoned_session("UTC")
+    rows: list[Any] = [
+        (1, datetime.datetime(2024, 1, 31, 15, 0, 0)),
+        (2, datetime.datetime(2024, 2, 28, 5, 0, 0)),
+        (3, datetime.datetime(2024, 3, 1, 5, 0, 0)),
+    ]
+    table = _crit2_session_rows(
+        session, rows, "id int, ts timestamp", _crit2_month_gap("1 month"), "count"
+    )
+    _assert_crit_rows(_rcell("C2-L002-chain-clamped", "python"), table)
+    session.createDataFrame(rows, "id int, ts timestamp").createOrReplaceTempView("crit2_chain")
+    grouped = session.sql(
+        "SELECT CAST(session_window.start AS STRING) s, "
+        "CAST(session_window.end AS STRING) e, count(*) c FROM crit2_chain "
+        "GROUP BY session_window(ts, CASE WHEN true THEN '1 month' END) ORDER BY s"
+    ).to_arrow()
+    _assert_crit_rows(_rcell("C2-L002-chain-clamped", "sql"), grouped)
+    session.stop()
