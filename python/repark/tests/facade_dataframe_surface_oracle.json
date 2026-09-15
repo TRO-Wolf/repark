@@ -1,0 +1,2186 @@
+{
+ "cells": {
+  "asTable_in_select": {
+   "error": {
+    "condition": "NOT_COLUMN_OR_STR",
+    "message": "[NOT_COLUMN_OR_STR] Argument `col` should be a Column or str, got TableArg.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkTypeError",
+     "PySparkException",
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "arg_name": "col",
+     "arg_type": "TableArg"
+    },
+    "raises": "PySparkTypeError"
+   }
+  },
+  "asTable_partitionBy": {
+   "result": {
+    "kind": "str",
+    "value": "TableArg"
+   }
+  },
+  "asTable_type": {
+   "result": {
+    "kind": "str",
+    "value": "TableArg"
+   }
+  },
+  "asTable_udtf": {
+   "result": {
+    "columns": [
+     "id",
+     "doubled"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=0, doubled=0)",
+     "Row(id=1, doubled=2)",
+     "Row(id=2, doubled=4)"
+    ],
+    "schema": "struct<id:int,doubled:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "doubled",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "checkpoint_lazy": {
+   "result": {
+    "columns": [
+     "key",
+     "a",
+     "b"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='x', a=1, b=2)",
+     "Row(key='y', a=3, b=4)"
+    ],
+    "schema": "struct<key:string,a:int,b:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "checkpoint_nodir": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling o2712.checkpoint.\n: org.apache.spark.SparkException: Checkpoint directory has not been set in the SparkContext\n\tat org.apache.spark.errors.SparkCoreErrors$.checkpointDirectoryHasNotBeenSetInSparkContextError(SparkCoreErrors.scala:154)\n\tat org.apache.spark.rdd.RDD.checkpoint(RDD.scala:1675)\n\tat org.apache.spark.sql.classic.Dataset.$anonfun$checkpoint$1(Dataset.scala:575)\n\tat org.apache.spark.sql.classic.Dataset.$anonfun$withAction$2(Dataset.scala:2265)\n\tat org.apache.spark.sql.execution.QueryExecution$.withInternalError(QueryExecution.scala:717)\n\tat org.apache.spark.sql.classic.Dataset.$anonfun$withAction$1(Dataset.scala:2263)\n\tat org.apache.spark.sql.execution.SQLExecution$.$anonfun$withNewExecutionId0$8(SQLExecution.scala:177)\n\tat org.apache.spark.sql.execution.SQLExecution$.withSessionTagsApplied(SQLExecution.scala:285)\n\tat org.apache.spark.sql.execution.SQLExecution$.$anonfun$withNewExecutionId0$7(SQLExecution.scala:139)\n\tat org.apache.spark.JobArtifactSet$.withActiveJobArtifactState(JobArtifactSet.scala:94)\n\tat org.apache.spark.sql.artifact.ArtifactManager.$anonfun$withResources$1(ArtifactManager.scala:112)\n\tat org.apache.spark.sql.artifact.Artif",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  },
+  "checkpoint_with_dir": {
+   "result": {
+    "columns": [
+     "key",
+     "a",
+     "b"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='x', a=1, b=2)",
+     "Row(key='y', a=3, b=4)"
+    ],
+    "schema": "struct<key:string,a:int,b:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "executionInfo": {
+   "error": {
+    "condition": "CLASSIC_OPERATION_NOT_SUPPORTED_ON_DF",
+    "message": "[CLASSIC_OPERATION_NOT_SUPPORTED_ON_DF] Calling property or member 'queryExecution' is not supported in PySpark Classic, please use Spark Connect instead.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkValueError",
+     "PySparkException",
+     "ValueError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "member": "queryExecution"
+    },
+    "raises": "PySparkValueError"
+   }
+  },
+  "exists_correlated": {
+   "result": {
+    "columns": [
+     "id"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=0)",
+     "Row(id=1)"
+    ],
+    "schema": "struct<id:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": false,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "exists_no_outer_select_value": {
+   "result": {
+    "columns": [
+     "e"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(e=False)",
+     "Row(e=False)"
+    ],
+    "schema": "struct<e:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "e",
+       "nullable": false,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "exists_repr": {
+   "result": {
+    "kind": "Column",
+    "repr": "Column<'EXISTS ([id: bigint])'>"
+   }
+  },
+  "exists_select": {
+   "result": {
+    "columns": [
+     "e"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(e=True)",
+     "Row(e=True)"
+    ],
+    "schema": "struct<e:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "e",
+       "nullable": false,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "exists_uncorrelated": {
+   "result": {
+    "columns": [
+     "id"
+    ],
+    "kind": "DataFrame",
+    "rows": [],
+    "schema": "struct<id:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": false,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "foreachPartition_return": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "foreach_not_callable": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling z:org.apache.spark.api.python.PythonRDD.collectAndServe.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 76.0 failed 1 times, most recent failure: Lost task 0.0 in stage 76.0 (TID 131) (localhost executor driver): org.apache.spark.api.python.PythonException: Traceback (most recent call last):\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3386, in main\n    process()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3375, in process\n    out_iter = func(split_index, iterator)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/core/rdd.py\", line 5306, in pipeline_func\n    return func(split, prev_func(split, iterator))\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/core/rdd.py\", line 5306, in pipeline_func\n    return func(split, prev_func(split, iterator))\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/core/rdd.py\", line 5306, in p",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  },
+  "foreach_raises": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling z:org.apache.spark.api.python.PythonRDD.collectAndServe.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 77.0 failed 1 times, most recent failure: Lost task 0.0 in stage 77.0 (TID 133) (localhost executor driver): org.apache.spark.api.python.PythonException: Traceback (most recent call last):\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3386, in main\n    process()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3375, in process\n    out_iter = func(split_index, iterator)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/core/rdd.py\", line 5306, in pipeline_func\n    return func(split, prev_func(split, iterator))\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/core/rdd.py\", line 5306, in pipeline_func\n    return func(split, prev_func(split, iterator))\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/core/rdd.py\", line 5306, in p",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  },
+  "foreach_return": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "freqItems": {
+   "result": {
+    "columns": [
+     "x_freqItems",
+     "y_freqItems"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(x_freqItems=[1, 2], y_freqItems=[None, 'a', 'b'])"
+    ],
+    "schema": "struct<x_freqItems:array<int>,y_freqItems:array<string>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "x_freqItems",
+       "nullable": false,
+       "type": {
+        "containsNull": true,
+        "elementType": "integer",
+        "type": "array"
+       }
+      },
+      {
+       "metadata": {},
+       "name": "y_freqItems",
+       "nullable": false,
+       "type": {
+        "containsNull": true,
+        "elementType": "string",
+        "type": "array"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "freqItems_all_null": {
+   "result": {
+    "columns": [
+     "x_freqItems"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(x_freqItems=[None])"
+    ],
+    "schema": "struct<x_freqItems:array<int>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "x_freqItems",
+       "nullable": false,
+       "type": {
+        "containsNull": true,
+        "elementType": "integer",
+        "type": "array"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "freqItems_bad_support": {
+   "error": {
+    "condition": null,
+    "message": "requirement failed: Support must be in [1e-4, 1], but got 1.0E-5.",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "IllegalArgumentException",
+     "CapturedException",
+     "IllegalArgumentException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "IllegalArgumentException"
+   }
+  },
+  "freqItems_stat": {
+   "result": {
+    "columns": [
+     "x_freqItems"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(x_freqItems=[1])"
+    ],
+    "schema": "struct<x_freqItems:array<int>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "x_freqItems",
+       "nullable": false,
+       "type": {
+        "containsNull": true,
+        "elementType": "integer",
+        "type": "array"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "freqItems_str": {
+   "error": {
+    "condition": "NOT_LIST_OR_TUPLE",
+    "message": "[NOT_LIST_OR_TUPLE] Argument `cols` should be a list or tuple, got str.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkTypeError",
+     "PySparkException",
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "arg_name": "cols",
+     "arg_type": "str"
+    },
+    "raises": "PySparkTypeError"
+   }
+  },
+  "freqItems_support": {
+   "result": {
+    "columns": [
+     "x_freqItems"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(x_freqItems=[1])"
+    ],
+    "schema": "struct<x_freqItems:array<int>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "x_freqItems",
+       "nullable": false,
+       "type": {
+        "containsNull": true,
+        "elementType": "integer",
+        "type": "array"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "freqItems_tuple": {
+   "result": {
+    "columns": [
+     "x_freqItems"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(x_freqItems=[1])"
+    ],
+    "schema": "struct<x_freqItems:array<int>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "x_freqItems",
+       "nullable": false,
+       "type": {
+        "containsNull": true,
+        "elementType": "integer",
+        "type": "array"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "inputFiles_csv_filter": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "inputFiles_local": {
+   "result": {
+    "items": [],
+    "kind": "list"
+   }
+  },
+  "inputFiles_parquet": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "part-|file"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "inputFiles_union": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "isLocal_collected_sql": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "isLocal_create": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "isLocal_empty": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "isLocal_filter_local": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "isLocal_parquet": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "isLocal_range": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "isLocal_sql_values": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "lateralJoin_bad_how": {
+   "error": {
+    "condition": "UNSUPPORTED_JOIN_TYPE",
+    "message": "[UNSUPPORTED_JOIN_TYPE] Unsupported join type 'right'. Supported join types include: 'inner', 'leftouter', 'left', 'left_outer', 'cross'. SQLSTATE: 0A000",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "supported": "'inner', 'leftouter', 'left', 'left_outer', 'cross'",
+     "typ": "right"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "lateralJoin_cross": {
+   "result": {
+    "columns": [
+     "a",
+     "b",
+     "id"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(a=1, b=2, id=0)",
+     "Row(a=1, b=2, id=1)",
+     "Row(a=3, b=4, id=0)",
+     "Row(a=3, b=4, id=1)"
+    ],
+    "schema": "struct<a:int,b:int,id:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": false,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "lateralJoin_explode": {
+   "result": {
+    "columns": [
+     "k",
+     "arr",
+     "col"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(k=1, arr=[1, 2], col=1)",
+     "Row(k=1, arr=[1, 2], col=2)"
+    ],
+    "schema": "struct<k:int,arr:array<int>,col:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "k",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "arr",
+       "nullable": true,
+       "type": {
+        "containsNull": true,
+        "elementType": "integer",
+        "type": "array"
+       }
+      },
+      {
+       "metadata": {},
+       "name": "col",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "lateralJoin_inner": {
+   "result": {
+    "columns": [
+     "a",
+     "b",
+     "s"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(a=1, b=2, s=3)",
+     "Row(a=3, b=4, s=7)"
+    ],
+    "schema": "struct<a:int,b:int,s:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "s",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "lateralJoin_left": {
+   "result": {
+    "columns": [
+     "a",
+     "b",
+     "id"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(a=1, b=2, id=None)",
+     "Row(a=3, b=4, id=None)"
+    ],
+    "schema": "struct<a:int,b:int,id:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "lateralJoin_on": {
+   "result": {
+    "columns": [
+     "a",
+     "b",
+     "id"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(a=3, b=4, id=1)",
+     "Row(a=3, b=4, id=2)"
+    ],
+    "schema": "struct<a:int,b:int,id:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": false,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "lateralJoin_on_string": {
+   "error": {
+    "condition": null,
+    "message": "'str' object has no attribute '_jc'",
+    "module": "builtins",
+    "mro": [
+     "AttributeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "AttributeError"
+   }
+  },
+  "lateralJoin_uncorrelated": {
+   "result": {
+    "columns": [
+     "a",
+     "b",
+     "id"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(a=1, b=2, id=0)",
+     "Row(a=1, b=2, id=1)",
+     "Row(a=3, b=4, id=0)",
+     "Row(a=3, b=4, id=1)"
+    ],
+    "schema": "struct<a:int,b:int,id:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": false,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "localCheckpoint": {
+   "result": {
+    "columns": [
+     "key",
+     "a",
+     "b"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='x', a=1, b=2)",
+     "Row(key='y', a=3, b=4)"
+    ],
+    "schema": "struct<key:string,a:int,b:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "localCheckpoint_lazy": {
+   "result": {
+    "columns": [
+     "key",
+     "a",
+     "b"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='x', a=1, b=2)",
+     "Row(key='y', a=3, b=4)"
+    ],
+    "schema": "struct<key:string,a:int,b:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "metadataColumn_local": {
+   "error": {
+    "condition": "UNRESOLVED_COLUMN.WITHOUT_SUGGESTION",
+    "message": "[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION] A column, variable, or function parameter with name `_metadata` cannot be resolved.  SQLSTATE: 42703",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "objectName": "`_metadata`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "metadataColumn_missing": {
+   "error": {
+    "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `nope` cannot be resolved. Did you mean one of the following? [`_metadata`]. SQLSTATE: 42703",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "objectName": "`nope`",
+     "proposal": "`_metadata`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "metadataColumn_parquet": {
+   "result": {
+    "columns": [
+     "m",
+     "key"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(m='part-00000-8b0b9bde-a354-4491-8429-c636a173e381-c000.snappy.parquet', key='x')",
+     "Row(m='part-00000-8b0b9bde-a354-4491-8429-c636a173e381-c000.snappy.parquet', key='y')"
+    ],
+    "schema": "struct<m:string,key:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "m",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "metadataColumn_schema": {
+   "result": {
+    "kind": "str",
+    "value": "struct<m:struct<file_path:string,file_name:string,file_size:bigint,file_block_start:bigint,file_block_length:bigint,file_modification_time:timestamp,row_index:bigint>>"
+   }
+  },
+  "observation_empty_name": {
+   "error": {
+    "condition": "VALUE_NOT_NON_EMPTY_STR",
+    "message": "[VALUE_NOT_NON_EMPTY_STR] Value for `name` must be a non-empty string, got ''.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkValueError",
+     "PySparkException",
+     "ValueError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "arg_name": "name",
+     "arg_value": ""
+    },
+    "raises": "PySparkValueError"
+   }
+  },
+  "observation_noname": {
+   "result": {
+    "kind": "str",
+    "value": "<pyspark.sql.observation.Observation object at 0x77c3e8ed3a40>"
+   }
+  },
+  "observe_name": {
+   "result": {
+    "columns": [
+     "key",
+     "a",
+     "b"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='x', a=1, b=2)",
+     "Row(key='y', a=3, b=4)"
+    ],
+    "schema": "struct<key:string,a:int,b:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "observe_name_str_type": {
+   "error": {
+    "condition": null,
+    "message": "Undefined error message parameter for error class: NOT_LIST_OF_COLUMN. Parameters: {'arg_name': 'observation', 'arg_type': 'int'}",
+    "module": "builtins",
+    "mro": [
+     "AssertionError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "AssertionError"
+   }
+  },
+  "observe_no_exprs": {
+   "error": {
+    "condition": "CANNOT_BE_EMPTY",
+    "message": "[CANNOT_BE_EMPTY] At least one exprs must be specified.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkValueError",
+     "PySparkException",
+     "ValueError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "item": "exprs"
+    },
+    "raises": "PySparkValueError"
+   }
+  },
+  "observe_non_agg": {
+   "error": {
+    "condition": "INVALID_OBSERVED_METRICS.NON_AGGREGATE_FUNC_ARG_IS_ATTRIBUTE",
+    "message": "[INVALID_OBSERVED_METRICS.NON_AGGREGATE_FUNC_ARG_IS_ATTRIBUTE] Invalid observed metrics. Attribute \"a\" can only be used as an argument to an aggregate function. SQLSTATE: 42K0E;\nCollectMetrics m4, [a#494], 199\n+- LogicalRDD [key#493, a#494, b#495], false\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "expr": "\"a\""
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "observe_obs": {
+   "result": {
+    "items": {
+     "c": {
+      "kind": "int",
+      "value": 2
+     },
+     "s": {
+      "kind": "int",
+      "value": 4
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "observe_obs_reuse_error": {
+   "error": {
+    "condition": "REUSE_OBSERVATION",
+    "message": "[REUSE_OBSERVATION] An Observation can be used with a DataFrame only once.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkAssertionError",
+     "PySparkException",
+     "AssertionError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {},
+    "raises": "PySparkAssertionError"
+   }
+  },
+  "observe_obs_twice_get": {
+   "result": {
+    "items": {
+     "c": {
+      "kind": "int",
+      "value": 2
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "observe_unaliased": {
+   "result": {
+    "items": [
+     {
+      "fields": [
+       "key",
+       "a",
+       "b"
+      ],
+      "kind": "Row",
+      "repr": "Row(key='x', a=1, b=2)"
+     },
+     {
+      "fields": [
+       "key",
+       "a",
+       "b"
+      ],
+      "kind": "Row",
+      "repr": "Row(key='y', a=3, b=4)"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "registerTempTable": {
+   "result": {
+    "columns": [
+     "key",
+     "a",
+     "b"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='x', a=1, b=2)",
+     "Row(key='y', a=3, b=4)"
+    ],
+    "schema": "struct<key:string,a:int,b:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   },
+   "warnings": [
+    "FutureWarning: Deprecated in 2.0, use createOrReplaceTempView instead."
+   ]
+  },
+  "registerTempTable_replace": {
+   "result": {
+    "columns": [
+     "id"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=0)"
+    ],
+    "schema": "struct<id:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": false,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   },
+   "warnings": [
+    "FutureWarning: Deprecated in 2.0, use createOrReplaceTempView instead.",
+    "FutureWarning: Deprecated in 2.0, use createOrReplaceTempView instead."
+   ]
+  },
+  "registerTempTable_return": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   },
+   "warnings": [
+    "FutureWarning: Deprecated in 2.0, use createOrReplaceTempView instead."
+   ]
+  },
+  "scalar_correlated": {
+   "result": {
+    "columns": [
+     "id",
+     "n"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=0, n=0)",
+     "Row(id=1, n=1)",
+     "Row(id=2, n=2)"
+    ],
+    "schema": "struct<id:bigint,n:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": false,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "n",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "scalar_empty": {
+   "result": {
+    "columns": [
+     "m"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(m=None)",
+     "Row(m=None)",
+     "Row(m=None)"
+    ],
+    "schema": "struct<m:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "m",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "scalar_multi_col": {
+   "error": {
+    "condition": "INVALID_SUBQUERY_EXPRESSION.SCALAR_SUBQUERY_RETURN_MORE_THAN_ONE_OUTPUT_COLUMN",
+    "message": "[INVALID_SUBQUERY_EXPRESSION.SCALAR_SUBQUERY_RETURN_MORE_THAN_ONE_OUTPUT_COLUMN] Invalid subquery: Scalar subquery must return only one column, but got 2. SQLSTATE: 42823;\nProject [scalar-subquery#449 [] AS m#450L]\n:  +- Project [id#448L, id#448L]\n:     +- Range (0, 5, step=1, splits=Some(2))\n+- Range (0, 3, step=1, splits=Some(2))\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "number": "2"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "scalar_multi_row": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling o2125.collectToPython.\n: org.apache.spark.SparkException: [SCALAR_SUBQUERY_TOO_MANY_ROWS] More than one row returned by a subquery used as an expression. SQLSTATE: 21000\n== DataFrame ==\n\"scalar\" was called from\njava.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\n\tat org.apache.spark.sql.errors.QueryExecutionErrors$.multipleRowScalarSubqueryError(QueryExecutionErrors.scala:2586)\n\tat org.apache.spark.sql.execution.ScalarSubquery.updateResult(subquery.scala:85)\n\tat org.apache.spark.sql.execution.SparkPlan.$anonfun$waitForSubqueries$1(SparkPlan.scala:290)\n\tat org.apache.spark.sql.execution.SparkPlan.$anonfun$waitForSubqueries$1$adapted(SparkPlan.scala:289)\n\tat scala.collection.IterableOnceOps.foreach(IterableOnce.scala:630)\n\tat scala.collection.IterableOnceOps.foreach$(IterableOnce.scala:628)\n\tat scala.collection.AbstractIterable.foreach(Iterable.scala:936)\n\tat org.apache.spark.sql.execution.SparkPlan.waitForSubqueries(SparkPlan.scala:289)\n\tat org.apache.spark.sql.execution.SparkPlan.$anonfun$executeQuery$1(SparkPlan.scala:259)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:151)\n\tat org.apache.sp",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  },
+  "scalar_repr": {
+   "result": {
+    "kind": "Column",
+    "repr": "Column<'([max(id): bigint])'>"
+   }
+  },
+  "scalar_uncorrelated": {
+   "result": {
+    "columns": [
+     "id",
+     "m"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=0, m=4)",
+     "Row(id=1, m=4)",
+     "Row(id=2, m=4)"
+    ],
+    "schema": "struct<id:bigint,m:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": false,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "m",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "semanticHash_alias_equal": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "semanticHash_diff": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "semanticHash_equal_plans": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "semanticHash_filter_order": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "semanticHash_type": {
+   "result": {
+    "kind": "str",
+    "value": "int"
+   }
+  },
+  "sparkSession_is": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "sparkSession_type": {
+   "result": {
+    "kind": "str",
+    "value": "SparkSession"
+   }
+  },
+  "sql_lateral": {
+   "result": {
+    "columns": [
+     "a",
+     "b",
+     "s"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(a=1, b=2, s=3)",
+     "Row(a=3, b=4, s=7)"
+    ],
+    "schema": "struct<a:int,b:int,s:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": false,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": false,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "s",
+       "nullable": false,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "sql_transpose": {
+   "result": {
+    "columns": [
+     "key",
+     "x"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='a', x=1)"
+    ],
+    "schema": "struct<key:string,x:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "to_bad_cast": {
+   "error": {
+    "condition": "INVALID_COLUMN_OR_FIELD_DATA_TYPE",
+    "message": "[INVALID_COLUMN_OR_FIELD_DATA_TYPE] Column or field `key` is of type \"STRING\" while it's required to be \"INT\". SQLSTATE: 42000",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "expectedType": "\"INT\"",
+     "name": "`key`",
+     "type": "\"STRING\""
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "to_case": {
+   "result": {
+    "columns": [
+     "A"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(A=1)",
+     "Row(A=3)"
+    ],
+    "schema": "struct<A:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "A",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "to_missing": {
+   "result": {
+    "columns": [
+     "zz"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(zz=None)",
+     "Row(zz=None)"
+    ],
+    "schema": "struct<zz:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "zz",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "to_narrow": {
+   "result": {
+    "columns": [
+     "a"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(a=1)",
+     "Row(a=3)"
+    ],
+    "schema": "struct<a:smallint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "short"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "to_not_schema": {
+   "error": {
+    "condition": null,
+    "message": "'str' object has no attribute 'json'",
+    "module": "builtins",
+    "mro": [
+     "AttributeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "AttributeError"
+   }
+  },
+  "to_nullability": {
+   "error": {
+    "condition": "NULLABLE_COLUMN_OR_FIELD",
+    "message": "[NULLABLE_COLUMN_OR_FIELD] Column or field `a` is nullable while it's required to be non-nullable. SQLSTATE: 42000",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "name": "`a`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "to_reorder_cast": {
+   "result": {
+    "columns": [
+     "b",
+     "key"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(b=2, key='x')",
+     "Row(b=4, key='y')"
+    ],
+    "schema": "struct<b:bigint,key:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "transpose": {
+   "result": {
+    "columns": [
+     "key",
+     "x",
+     "y"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='a', x=1, y=3)",
+     "Row(key='b', x=2, y=4)"
+    ],
+    "schema": "struct<key:string,x:int,y:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "y",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "transpose_bool_values": {
+   "result": {
+    "columns": [
+     "key",
+     "x"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='a', x=True)",
+     "Row(key='b', x=False)"
+    ],
+    "schema": "struct<key:string,x:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "transpose_decimal_index": {
+   "result": {
+    "columns": [
+     "key",
+     "1.5"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='a', 1.5=1)"
+    ],
+    "schema": "struct<key:string,1.5:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "1.5",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "transpose_dup_index": {
+   "result": {
+    "columns": [
+     "key",
+     "x",
+     "x"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='a', x=1, x=3)",
+     "Row(key='b', x=2, x=4)"
+    ],
+    "schema": "struct<key:string,x:int,x:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "transpose_empty_rows": {
+   "result": {
+    "columns": [
+     "key"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='a')"
+    ],
+    "schema": "struct<key:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "transpose_index": {
+   "result": {
+    "columns": [
+     "key",
+     "x",
+     "y"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='a', x=1, y=3)",
+     "Row(key='b', x=2, y=4)"
+    ],
+    "schema": "struct<key:string,x:int,y:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "y",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "transpose_int_index": {
+   "result": {
+    "columns": [
+     "key",
+     "1",
+     "2"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='a', 1=1, 2=3)",
+     "Row(key='b', 1=2, 2=4)"
+    ],
+    "schema": "struct<key:string,1:int,2:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "1",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "2",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "transpose_mixed_types": {
+   "error": {
+    "condition": "TRANSPOSE_NO_LEAST_COMMON_TYPE",
+    "message": "[TRANSPOSE_NO_LEAST_COMMON_TYPE] Transpose requires non-index columns to share a least common type, but \"INT\" and \"STRING\" do not. SQLSTATE: 42K09",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "dt1": "\"INT\"",
+     "dt2": "\"STRING\""
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "transpose_null_index": {
+   "result": {
+    "columns": [
+     "key",
+     "y"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='a', y=3)",
+     "Row(key='b', y=4)"
+    ],
+    "schema": "struct<key:string,y:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "y",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "transpose_nulls_values": {
+   "result": {
+    "columns": [
+     "key",
+     "x"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='a', x=None)",
+     "Row(key='b', x=2)"
+    ],
+    "schema": "struct<key:string,x:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "transpose_single_col": {
+   "result": {
+    "columns": [
+     "key",
+     "x"
+    ],
+    "kind": "DataFrame",
+    "rows": [],
+    "schema": "struct<key:string,x:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "transpose_struct_index": {
+   "error": {
+    "condition": "TRANSPOSE_INVALID_INDEX_COLUMN",
+    "message": "[TRANSPOSE_INVALID_INDEX_COLUMN] Invalid index column for TRANSPOSE because: Index column must be of atomic type, but found: StructType(StructField(k,IntegerType,false)) SQLSTATE: 42804",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "reason": "Index column must be of atomic type, but found: StructType(StructField(k,IntegerType,false))"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "transpose_unsorted": {
+   "result": {
+    "columns": [
+     "key",
+     "x",
+     "y"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='a', x=3, y=1)",
+     "Row(key='b', x=4, y=2)"
+    ],
+    "schema": "struct<key:string,x:int,y:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "y",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "transpose_widen": {
+   "result": {
+    "columns": [
+     "key",
+     "x"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='a', x=1.0)",
+     "Row(key='b', x=2.5)"
+    ],
+    "schema": "struct<key:string,x:double>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "double"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withMetadata": {
+   "result": {
+    "items": {
+     "k": {
+      "kind": "str",
+      "value": "v"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "withMetadata_missing": {
+   "error": {
+    "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `zz` cannot be resolved. Did you mean one of the following? [`key`, `a`, `b`]. SQLSTATE: 42703",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "objectName": "`zz`",
+     "proposal": "`key`, `a`, `b`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "withMetadata_not_dict": {
+   "error": {
+    "condition": "NOT_DICT",
+    "message": "[NOT_DICT] Argument `metadata` should be a dict, got str.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkTypeError",
+     "PySparkException",
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "arg_name": "metadata",
+     "arg_type": "str"
+    },
+    "raises": "PySparkTypeError"
+   }
+  },
+  "withMetadata_order": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "key"
+     },
+     {
+      "kind": "str",
+      "value": "a"
+     },
+     {
+      "kind": "str",
+      "value": "b"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "withMetadata_replaces": {
+   "result": {
+    "items": {
+     "j": {
+      "kind": "int",
+      "value": 1
+     }
+    },
+    "kind": "dict"
+   }
+  }
+ },
+ "oracle": "PySpark 4.1.2 classic, local[2], spark.sql.session.timeZone=UTC, recorded 2026-09-14 (run 15b); probe at /tmp/oc-worker/run15b/oracle/cells.py + cells2.py"
+}

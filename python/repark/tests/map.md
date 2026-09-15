@@ -33,6 +33,34 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_df_surface_a_1.py](test_df_surface_a_1.py) +
+  [facade_dataframe_surface_oracle.json](facade_dataframe_surface_oracle.json) —
+  **DF-SURFACE-A-1 (2026-09-14):** the seven-name DataFrame surface pins driven
+  by the copied live-PySpark-4.1.2 fixture. `to` pins the store-assignment
+  cells (`to_reorder_cast`, `to_case`, `to_missing`, `to_nullability`,
+  `to_bad_cast`) plus the `to_not_schema` DF-TO-1 declared `NOT_STRUCT` answer
+  (Spark classic leaks `AttributeError`); `to_narrow` pins the
+  LOGICAL-WIDTH-1-codified `struct<a:int>` answer (the cell records Spark's
+  `smallint`). `withMetadata` pins `NOT_DICT` and the
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` class+condition on a miss; the
+  `withMetadata`/`withMetadata_replaces` value cells and every survival
+  position (stamped frame, filter, select, withColumn, join, union,
+  cache, parquet round-trip, and `to()`'s source-keep and target-override
+  arms) pin today's loss as backlog DF-METADATA-1 — the engine has no field
+  metadata plumbing. `registerTempTable` pins the `FutureWarning`, `None`
+  return, and replace; `checkpoint` pins the DF-CHECKPOINT-1 same-rows
+  new-frame answer for both eager arms; `sparkSession` pins owner identity
+  including the `newSession`-promotion case (R-9); `isLocal` pins `False`
+  on every measured shape; `executionInfo` pins the
+  `CLASSIC_OPERATION_NOT_SUPPORTED_ON_DF` refusal text. Critic round 1
+  (L-001..L-010, rulings R-5..R-9): `inputFiles` and `semanticHash` moved
+  out to a Rust plan-introspection unit (R-5); the `_schema_override`
+  sticker is gone (R-6); store assignment admits atomic→string and
+  decimal→decimal widening and reconciles nested struct/array/map through
+  `named_struct`/`transform`/`transform_values`/`transform_keys` engine
+  expressions (R-8). pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005,
+  C-006, C-007, C-008
+  **DF-TO-BINARY-1 (2026-09-14):** `test_to_binary_follows_reported_schema_df_to_binary_1` codifies that `to()` follows the facade's `string` report for a binary column (FACADE-4 D7/D19). pins: df-surface-a-1/C-008
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
   / `Row.index` answer the nine `row.*` cells of the committed run-15b oracle
   ([facade_row_oracle.json](facade_row_oracle.json), live PySpark 4.1.2) — value counts
@@ -4712,5 +4740,6 @@ pins: fnp-8-review/C-009, C-010
 
 EAGER-BUDGET-1 declared export delta (2026-09-13): `dataframe/core.py` imports only `_resolve_cache_budgets` from
 `eager.py`, so the frozen `core` and package surfaces in `_dfcore_1_expected.py` lose `_CACHE_MAX_BYTES_KEY`,
+  **DF-SURFACE-A-1 rebase (2026-09-14):** the frozen DataFrame dir lists `withMetadata` before `withWatermark` (sorted) after the rebase over DF-STREAM-BATCH-1 merged both name sets.
 `_cache_conf_lookup` and `_resolve_cache_max_bytes` and gain `_resolve_cache_budgets`. No other module read those names
 through `core` or the package. pins: eager-budget-1/C-010

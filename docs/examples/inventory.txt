@@ -64,6 +64,7 @@ dataframe	DataFrame.agg
 dataframe	DataFrame.alias
 dataframe	DataFrame.approxQuantile
 dataframe	DataFrame.cache
+dataframe	DataFrame.checkpoint
 dataframe	DataFrame.coalesce
 dataframe	DataFrame.colRegex
 dataframe	DataFrame.col_regex
@@ -101,6 +102,7 @@ dataframe	DataFrame.dynamic_flatten
 dataframe	DataFrame.eager
 dataframe	DataFrame.exceptAll
 dataframe	DataFrame.except_all
+dataframe	DataFrame.executionInfo
 dataframe	DataFrame.explain
 dataframe	DataFrame.fillna
 dataframe	DataFrame.filter
@@ -116,6 +118,7 @@ dataframe	DataFrame.intersect
 dataframe	DataFrame.intersectAll
 dataframe	DataFrame.intersect_all
 dataframe	DataFrame.isEmpty
+dataframe	DataFrame.isLocal
 dataframe	DataFrame.isStreaming
 dataframe	DataFrame.is_cached
 dataframe	DataFrame.is_empty
@@ -141,6 +144,7 @@ dataframe	DataFrame.printSchema
 dataframe	DataFrame.print_schema
 dataframe	DataFrame.randomSplit
 dataframe	DataFrame.random_split
+dataframe	DataFrame.registerTempTable
 dataframe	DataFrame.repartition
 dataframe	DataFrame.repartitionById
 dataframe	DataFrame.repartitionByRange
@@ -158,6 +162,7 @@ dataframe	DataFrame.show
 dataframe	DataFrame.sort
 dataframe	DataFrame.sortWithinPartitions
 dataframe	DataFrame.sort_within_partitions
+dataframe	DataFrame.sparkSession
 dataframe	DataFrame.stat
 dataframe	DataFrame.storageLevel
 dataframe	DataFrame.storage_level
@@ -165,6 +170,7 @@ dataframe	DataFrame.subtract
 dataframe	DataFrame.summary
 dataframe	DataFrame.tail
 dataframe	DataFrame.take
+dataframe	DataFrame.to
 dataframe	DataFrame.toArrow
 dataframe	DataFrame.toArrowBatches
 dataframe	DataFrame.toDF
@@ -190,6 +196,7 @@ dataframe	DataFrame.withColumn
 dataframe	DataFrame.withColumnRenamed
 dataframe	DataFrame.withColumns
 dataframe	DataFrame.withColumnsRenamed
+dataframe	DataFrame.withMetadata
 dataframe	DataFrame.withWatermark
 dataframe	DataFrame.with_column
 dataframe	DataFrame.with_column_renamed
