@@ -74,39 +74,9 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             } else {
                 datafusion::logical_expr::lit(-1i32)
             };
-            Ok(repark_functions::expr_fn::split(
-                exprs[0].clone(),
-                exprs[1].clone(),
-                limit,
-            ))
+            repark_functions::expr_fn::split(exprs[0].clone(), exprs[1].clone(), limit)
         }
-        "sequence" | "generate_series" | "gen_series" => {
-            if exprs.len() < 2 {
-                return Err(PyValueError::new_err(format!(
-                    "call_scalar({name}) expects at least 2 args, got {}",
-                    exprs.len()
-                )));
-            }
-            if exprs.len() > 3 {
-                return Err(PyValueError::new_err(format!(
-                    "call_scalar({name}) expects at most 3 args, got {}",
-                    exprs.len()
-                )));
-            }
-            let step = if exprs.len() >= 3 {
-                exprs[2].clone()
-            } else {
-                datafusion::logical_expr::lit(1i64)
-            };
-            let check_args = vec![exprs[0].clone(), exprs[1].clone(), step];
-            repark_functions::cardinality::refuse_facade_literal_expansion("sequence", &check_args)
-                .map_err(crate::datafusion_to_py_err)?;
-            let mut forwarded = vec![exprs[0].clone(), exprs[1].clone()];
-            if exprs.len() >= 3 {
-                forwarded.push(exprs[2].clone());
-            }
-            repark_functions::expr_fn::sequence(forwarded)
-        }
+        "sequence" | "generate_series" | "gen_series" => sequence_expr(name, &exprs)?,
         other => {
             return Err(PyValueError::new_err(format!(
                 "call_scalar({other}) has no door-converged kernel"
@@ -114,4 +84,32 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
     };
     Ok(expr)
+}
+
+fn sequence_expr(name: &str, exprs: &[Expr]) -> PyResult<Expr> {
+    if exprs.len() < 2 {
+        return Err(PyValueError::new_err(format!(
+            "call_scalar({name}) expects at least 2 args, got {}",
+            exprs.len()
+        )));
+    }
+    if exprs.len() > 3 {
+        return Err(PyValueError::new_err(format!(
+            "call_scalar({name}) expects at most 3 args, got {}",
+            exprs.len()
+        )));
+    }
+    let step = if exprs.len() >= 3 {
+        exprs[2].clone()
+    } else {
+        datafusion::logical_expr::lit(1i64)
+    };
+    let check_args = vec![exprs[0].clone(), exprs[1].clone(), step];
+    repark_functions::cardinality::refuse_facade_literal_expansion("sequence", &check_args)
+        .map_err(crate::datafusion_to_py_err)?;
+    let mut forwarded = vec![exprs[0].clone(), exprs[1].clone()];
+    if exprs.len() >= 3 {
+        forwarded.push(exprs[2].clone());
+    }
+    Ok(repark_functions::expr_fn::sequence(forwarded))
 }

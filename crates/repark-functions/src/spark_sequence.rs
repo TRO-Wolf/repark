@@ -126,13 +126,7 @@ fn plan_sequence(arg_types: &[DataType]) -> Result<Family> {
             }
             Ok(family)
         }
-        Family::Date => {
-            if *step_type != DataType::Null && *step_type != month_day_nano() {
-                return Err(wrong_input_types(arg_types));
-            }
-            Ok(family)
-        }
-        Family::Timestamp => {
+        Family::Date | Family::Timestamp => {
             if *step_type != DataType::Null && *step_type != month_day_nano() {
                 return Err(wrong_input_types(arg_types));
             }
@@ -208,118 +202,141 @@ impl ScalarUDFImpl for SparkSequence {
             return exec_err!("sequence needs a list return");
         };
         let arrays = ColumnarValue::values_to_arrays(&arg_values)?;
-        let row_count = arrays.first().map_or(0, |array| array.len());
-        let mut offsets: Vec<i32> = Vec::with_capacity(row_count + 1);
-        offsets.push(0);
-        let mut validity: Vec<bool> = Vec::with_capacity(row_count);
-        let mut any_null = false;
+        let row_count = arrays.first().map_or(0, Array::len);
         match element.data_type() {
             DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {
-                let starts = as_i64(&arrays[0])?;
-                let stops = as_i64(&arrays[1])?;
-                let steps = if arrays.len() > 2 {
-                    Some(as_i64(&arrays[2])?)
-                } else {
-                    None
-                };
-                let mut values: Vec<i64> = Vec::new();
-                for row in 0..row_count {
-                    let explicit = steps.as_ref().map(|steps| {
-                        if steps.is_null(row) {
-                            None
-                        } else {
-                            Some(steps.value(row))
-                        }
-                    });
-                    if starts.is_null(row) || stops.is_null(row) || explicit == Some(None) {
-                        validity.push(false);
-                        any_null = true;
-                    } else {
-                        match int_row(starts.value(row), stops.value(row), explicit.flatten()) {
-                            Err(error) => return Err(error),
-                            Ok(pieces) => {
-                                validity.push(true);
-                                values.extend(pieces);
-                            }
-                        }
-                    }
-                    offsets.push(fit_i32(values.len())?);
-                }
-                let built: ArrayRef = Arc::new(Int64Array::from(values));
-                let shaped = cast(built.as_ref(), element.data_type())?;
-                finish_list(element, offsets, validity, any_null, shaped)
+                invoke_ints(&arrays, row_count, element)
             }
-            DataType::Date32 => {
-                let starts = as_date_days(&arrays[0])?;
-                let stops = as_date_days(&arrays[1])?;
-                let steps = if arrays.len() > 2 {
-                    Some(as_interval(&arrays[2])?)
-                } else {
-                    None
-                };
-                let mut values: Vec<i32> = Vec::new();
-                for row in 0..row_count {
-                    let step_null = steps.as_ref().is_some_and(|steps| steps.is_null(row));
-                    if starts.is_null(row) || stops.is_null(row) || step_null {
-                        validity.push(false);
-                        any_null = true;
-                    } else {
-                        let interval = steps.as_ref().map(|steps| steps.value(row));
-                        match date_row(starts.value(row), stops.value(row), interval) {
-                            Err(error) => return Err(error),
-                            Ok(None) => {
-                                validity.push(false);
-                                any_null = true;
-                            }
-                            Ok(Some(pieces)) => {
-                                validity.push(true);
-                                values.extend(pieces);
-                            }
-                        }
-                    }
-                    offsets.push(fit_i32(values.len())?);
-                }
-                let shaped: ArrayRef = Arc::new(Date32Array::from(values));
-                finish_list(element, offsets, validity, any_null, shaped)
-            }
-            DataType::Timestamp(_, _) => {
-                let starts = as_micros(&arrays[0])?;
-                let stops = as_micros(&arrays[1])?;
-                let steps = if arrays.len() > 2 {
-                    Some(as_interval(&arrays[2])?)
-                } else {
-                    None
-                };
-                let mut values: Vec<i64> = Vec::new();
-                for row in 0..row_count {
-                    let step_null = steps.as_ref().is_some_and(|steps| steps.is_null(row));
-                    if starts.is_null(row) || stops.is_null(row) || step_null {
-                        validity.push(false);
-                        any_null = true;
-                    } else {
-                        let interval = steps.as_ref().map(|steps| steps.value(row));
-                        match timestamp_row(starts.value(row), stops.value(row), interval) {
-                            Err(error) => return Err(error),
-                            Ok(None) => {
-                                validity.push(false);
-                                any_null = true;
-                            }
-                            Ok(Some(pieces)) => {
-                                validity.push(true);
-                                values.extend(pieces);
-                            }
-                        }
-                    }
-                    offsets.push(fit_i32(values.len())?);
-                }
-                let built: ArrayRef =
-                    Arc::new(TimestampMicrosecondArray::from(values).with_timezone("UTC"));
-                let shaped = cast(built.as_ref(), element.data_type())?;
-                finish_list(element, offsets, validity, any_null, shaped)
-            }
+            DataType::Date32 => invoke_dates(&arrays, row_count, element),
+            DataType::Timestamp(_, _) => invoke_timestamps(&arrays, row_count, element),
             other => exec_err!("sequence cannot build {other} elements"),
         }
     }
+}
+
+fn invoke_ints(arrays: &[ArrayRef], row_count: usize, element: &FieldRef) -> Result<ColumnarValue> {
+    let mut offsets: Vec<i32> = Vec::with_capacity(row_count + 1);
+    offsets.push(0);
+    let mut validity: Vec<bool> = Vec::with_capacity(row_count);
+    let mut any_null = false;
+    let starts = as_i64(&arrays[0])?;
+    let stops = as_i64(&arrays[1])?;
+    let strides = if arrays.len() > 2 {
+        Some(as_i64(&arrays[2])?)
+    } else {
+        None
+    };
+    let mut values: Vec<i64> = Vec::new();
+    for row in 0..row_count {
+        let explicit = strides.as_ref().map(|strides| {
+            if strides.is_null(row) {
+                None
+            } else {
+                Some(strides.value(row))
+            }
+        });
+        if starts.is_null(row) || stops.is_null(row) || explicit == Some(None) {
+            validity.push(false);
+            any_null = true;
+        } else {
+            match int_row(starts.value(row), stops.value(row), explicit.flatten()) {
+                Err(error) => return Err(error),
+                Ok(pieces) => {
+                    validity.push(true);
+                    values.extend(pieces);
+                }
+            }
+        }
+        offsets.push(fit_i32(values.len())?);
+    }
+    let built: ArrayRef = Arc::new(Int64Array::from(values));
+    let shaped = cast(built.as_ref(), element.data_type())?;
+    finish_list(element, offsets, validity, any_null, shaped)
+}
+
+fn invoke_dates(
+    arrays: &[ArrayRef],
+    row_count: usize,
+    element: &FieldRef,
+) -> Result<ColumnarValue> {
+    let mut offsets: Vec<i32> = Vec::with_capacity(row_count + 1);
+    offsets.push(0);
+    let mut validity: Vec<bool> = Vec::with_capacity(row_count);
+    let mut any_null = false;
+    let starts = as_date_days(&arrays[0])?;
+    let stops = as_date_days(&arrays[1])?;
+    let strides = if arrays.len() > 2 {
+        Some(as_interval(&arrays[2])?)
+    } else {
+        None
+    };
+    let mut values: Vec<i32> = Vec::new();
+    for row in 0..row_count {
+        let step_null = strides.as_ref().is_some_and(|strides| strides.is_null(row));
+        if starts.is_null(row) || stops.is_null(row) || step_null {
+            validity.push(false);
+            any_null = true;
+        } else {
+            let interval = strides.as_ref().map(|strides| strides.value(row));
+            match date_row(starts.value(row), stops.value(row), interval) {
+                Err(error) => return Err(error),
+                Ok(None) => {
+                    validity.push(false);
+                    any_null = true;
+                }
+                Ok(Some(pieces)) => {
+                    validity.push(true);
+                    values.extend(pieces);
+                }
+            }
+        }
+        offsets.push(fit_i32(values.len())?);
+    }
+    let shaped: ArrayRef = Arc::new(Date32Array::from(values));
+    finish_list(element, offsets, validity, any_null, shaped)
+}
+
+fn invoke_timestamps(
+    arrays: &[ArrayRef],
+    row_count: usize,
+    element: &FieldRef,
+) -> Result<ColumnarValue> {
+    let mut offsets: Vec<i32> = Vec::with_capacity(row_count + 1);
+    offsets.push(0);
+    let mut validity: Vec<bool> = Vec::with_capacity(row_count);
+    let mut any_null = false;
+    let starts = as_micros(&arrays[0])?;
+    let stops = as_micros(&arrays[1])?;
+    let strides = if arrays.len() > 2 {
+        Some(as_interval(&arrays[2])?)
+    } else {
+        None
+    };
+    let mut values: Vec<i64> = Vec::new();
+    for row in 0..row_count {
+        let step_null = strides.as_ref().is_some_and(|strides| strides.is_null(row));
+        if starts.is_null(row) || stops.is_null(row) || step_null {
+            validity.push(false);
+            any_null = true;
+        } else {
+            let interval = strides.as_ref().map(|strides| strides.value(row));
+            match timestamp_row(starts.value(row), stops.value(row), interval) {
+                Err(error) => return Err(error),
+                Ok(None) => {
+                    validity.push(false);
+                    any_null = true;
+                }
+                Ok(Some(pieces)) => {
+                    validity.push(true);
+                    values.extend(pieces);
+                }
+            }
+        }
+        offsets.push(fit_i32(values.len())?);
+    }
+    let built: ArrayRef = Arc::new(TimestampMicrosecondArray::from(values).with_timezone("UTC"));
+    let shaped = cast(built.as_ref(), element.data_type())?;
+    finish_list(element, offsets, validity, any_null, shaped)
 }
 
 fn downcast_primitive<T: datafusion::arrow::array::ArrowPrimitiveType>(
@@ -394,23 +411,23 @@ fn finish_list(
     )?)))
 }
 
-fn boundary_error(start: &str, stop: &str, step: &str) -> DataFusionError {
+fn boundary_error(start: &str, stop: &str, stride: &str) -> DataFusionError {
     DataFusionError::Execution(format!(
-        "requirement failed: Illegal sequence boundaries: {start} to {stop} by {step}"
+        "requirement failed: Illegal sequence boundaries: {start} to {stop} by {stride}"
     ))
 }
 
-fn int_row(start: i64, stop: i64, step: Option<i64>) -> Result<Vec<i64>> {
-    match step {
+fn int_row(start: i64, stop: i64, stride: Option<i64>) -> Result<Vec<i64>> {
+    match stride {
         None => {
-            let stride = if stop >= start { 1 } else { -1 };
-            Ok(collect_ints(start, stop, stride))
+            let default = if stop >= start { 1 } else { -1 };
+            Ok(collect_ints(start, stop, default))
         }
-        Some(stride) => {
-            if stride == 0 || (stride > 0 && start > stop) || (stride < 0 && start < stop) {
-                return Err(int_step_error(start, stop, stride));
+        Some(given) => {
+            if given == 0 || (given > 0 && start > stop) || (given < 0 && start < stop) {
+                return Err(int_step_error(start, stop, given));
             }
-            Ok(collect_ints(start, stop, stride))
+            Ok(collect_ints(start, stop, given))
         }
     }
 }
@@ -437,14 +454,18 @@ fn int_step_error(start: i64, stop: i64, stride: i64) -> DataFusionError {
     boundary_error(&start.to_string(), &stop.to_string(), &stride.to_string())
 }
 
-fn date_row(start: i32, stop: i32, step: Option<IntervalMonthDayNano>) -> Result<Option<Vec<i32>>> {
-    match step {
+fn date_row(
+    start: i32,
+    stop: i32,
+    stride: Option<IntervalMonthDayNano>,
+) -> Result<Option<Vec<i32>>> {
+    match stride {
         None => {
-            let stride = if stop >= start { 1 } else { -1 };
+            let default = if stop >= start { 1 } else { -1 };
             Ok(Some(collect_dates(
                 start,
                 stop,
-                &IntervalMonthDayNano::new(0, stride, 0),
+                &IntervalMonthDayNano::new(0, default, 0),
             )?))
         }
         Some(interval) => {
@@ -482,14 +503,14 @@ fn date_row(start: i32, stop: i32, step: Option<IntervalMonthDayNano>) -> Result
     }
 }
 
-fn collect_dates(start: i32, stop: i32, step: &IntervalMonthDayNano) -> Result<Vec<i32>> {
+fn collect_dates(start: i32, stop: i32, stride: &IntervalMonthDayNano) -> Result<Vec<i32>> {
     let mut values = vec![start];
     let mut current = start;
     loop {
         if current == stop {
             break;
         }
-        let next = add_date_interval(current, step)?;
+        let next = add_date_interval(current, stride)?;
         if (stop > start && next > stop) || (stop < start && next < stop) || next == current {
             break;
         }
@@ -502,16 +523,16 @@ fn collect_dates(start: i32, stop: i32, step: &IntervalMonthDayNano) -> Result<V
 fn timestamp_row(
     start: i64,
     stop: i64,
-    step: Option<IntervalMonthDayNano>,
+    stride: Option<IntervalMonthDayNano>,
 ) -> Result<Option<Vec<i64>>> {
-    match step {
+    match stride {
         None => {
-            let stride = if stop >= start {
+            let default = if stop >= start {
                 IntervalMonthDayNano::new(0, 0, 1_000_000_000)
             } else {
                 IntervalMonthDayNano::new(0, 0, -1_000_000_000)
             };
-            Ok(Some(collect_timestamps(start, stop, &stride)?))
+            Ok(Some(collect_timestamps(start, stop, &default)?))
         }
         Some(interval) => {
             if interval.months == 0 && interval.days == 0 && interval.nanoseconds == 0 {
@@ -550,14 +571,14 @@ fn timestamp_row(
     }
 }
 
-fn collect_timestamps(start: i64, stop: i64, step: &IntervalMonthDayNano) -> Result<Vec<i64>> {
+fn collect_timestamps(start: i64, stop: i64, stride: &IntervalMonthDayNano) -> Result<Vec<i64>> {
     let mut values = vec![start];
     let mut current = start;
     loop {
         if current == stop {
             break;
         }
-        let next = add_timestamp_interval(current, step)?;
+        let next = add_timestamp_interval(current, stride)?;
         if (stop > start && next > stop) || (stop < start && next < stop) || next == current {
             break;
         }

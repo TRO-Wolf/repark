@@ -69,7 +69,9 @@ needed.
   with Spark's `ARRAY<INT>` / `STRING` type names. Row assembly is one `MutableArrayData`
   over the widened values plus recomputed offsets. `coerce_types` validates but never
   casts (same provisional-`Int64` sandwich as `sequence`: widths resolve post-narrowing,
-  the kernel casts internally). pins: door-converge-2/C-001
+  the kernel casts internally). `all_list_args` is the analyzer's gate for the
+  `array_concat` → `concat` rewrite (every argument list-shaped or NULL).
+  pins: door-converge-2/C-001
 - `array_append.rs` — **ARRAY-NULL-1 (2026-09-14):** `spark_array_append_udf` /
   `spark_array_prepend_udf`. Each delegates to DataFusion's native kernel and then grafts
   the input array's outer `NullBuffer` onto the result — the kernels drop it, so a NULL

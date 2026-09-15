@@ -36,6 +36,10 @@ unit — so a new family gets a child module and the parent's default arm falls 
   **DOOR-CONVERGE-2 (2026-09-15):** `split` joins the converged arms (2–3 args, `-1`
   default limit); the Python `F.split` refusal sits above it, owned by run 16a.
   pins: door-converge-2/C-004
+  **DOOR-CONVERGE-2 G-2 (2026-09-15):** the three single-name converged arms merge into
+  the converge-1 arm (one pattern list, identical bodies), and the `sequence` arm body
+  moves to `sequence_expr` (the `call_scalar_expr` 100-line ceiling holds).
+  pins: door-converge-2/C-005
 
 ## Pointers
 

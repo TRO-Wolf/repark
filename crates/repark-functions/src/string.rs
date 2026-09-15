@@ -505,7 +505,7 @@ fn spark_concat_binary(args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         };
         binaries.push(shaped);
     }
-    let row_count = binaries.first().map_or(0, |array| array.len());
+    let row_count = binaries.first().map_or(0, Array::len);
     let mut builder = BinaryBuilder::with_capacity(row_count, 0);
     for row in 0..row_count {
         let mut piece: Vec<u8> = Vec::new();

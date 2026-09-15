@@ -110,7 +110,7 @@ impl ScalarUDFImpl for SparkReverse {
             return exec_err!("'reverse' expects one argument");
         };
         match return_field.data_type() {
-            DataType::List(_) => reverse_list(input, return_field),
+            DataType::List(_) => reverse_list(input, &return_field),
             _ => reverse_string(input),
         }
     }
@@ -136,7 +136,7 @@ fn reverse_string(input: &ColumnarValue) -> Result<ColumnarValue> {
     Ok(ColumnarValue::Array(Arc::new(StringArray::from(reversed))))
 }
 
-fn reverse_list(input: &ColumnarValue, return_field: FieldRef) -> Result<ColumnarValue> {
+fn reverse_list(input: &ColumnarValue, return_field: &FieldRef) -> Result<ColumnarValue> {
     let arrays = ColumnarValue::values_to_arrays(std::slice::from_ref(input))?;
     let array = &arrays[0];
     let DataType::List(field) = return_field.data_type() else {

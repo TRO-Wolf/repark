@@ -518,6 +518,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   0-based with invalid-index → NULL (rewrites the planner's
   `array_element` onto the embedded `__repark_array_get__` UDF); swaps planner-embedded built-in
   `substr` nodes onto the Spark shim (the `SUBSTRING` special form bypasses the registry);
+  **DOOR-CONVERGE-2 (2026-09-15):** planner-embedded `array_concat` nodes (the `||`
+  operator over equal lists, plus direct calls) rewrite onto the door-converged `concat`
+  UDF when every argument is list-shaped or NULL — the nested planner bakes its own UDF
+  in, so only the analyzer sees the name. pins: door-converge-2/C-001;
   **F2 octo C1:** `overlay(..., -1)` literal 4th arg dropped to 3-arg (Spark replace-length;
   pin `overlay_len_minus_one_matches_three_arg`);
   **TZ-5 (2026-08-12):** `CAST(TIMESTAMP AS <numeric>)` → epoch SECONDS
@@ -594,9 +598,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (Java-regex pattern through the shared `compile_spark_regex` + `collect_matches`
   stepping, `limit` > 0 caps with the remainder last, `limit` ≤ 0 keeps trailing
   empties, empty pattern splits per character, NULL in → NULL out, numeric first
-  argument casts to string). The facade arm lives in `dispatch_spark.rs`, but the Python
-  `F.split` still raises `UnsupportedOperationException` before reaching it — P2 hand-off
-  to run 16a. pins: door-converge-2/C-004
+  argument casts to string; overlapping matches resume one char past the last start
+  (`find_at`, cures `'.'`-pattern Q12-50/51). The facade arm lives in `dispatch_spark.rs`,
+  but the Python `F.split` still raises `UnsupportedOperationException` before reaching
+  it — P2 hand-off to run 16a. pins: door-converge-2/C-004
 - `spark_sequence.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `sequence`
   (int widths kept, descending default step, dates with 1-day default and month steps,
   timestamps with interval steps, NULL bound/step → NULL with `containsNull=false`, zero

@@ -328,7 +328,9 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             }
             repark_functions::expr_fn::from_unixtime(exprs.clone())
         }
-        "reverse" => {
+        "abs" | "hypot" | "bin" | "rint" | "base64" | "unbase64" | "size" | "cardinality"
+        | "array_contains" | "array_has" | "ascii" | "length" | "character_length"
+        | "char_length" | "reverse" | "sequence" | "generate_series" | "gen_series" | "split" => {
             return dispatch_spark::call_scalar_expr(name, exprs);
         }
         "repeat" => {
@@ -468,9 +470,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "map_entries" => {
             need(1)?;
             nested_fn::map_entries(exprs[0].clone())
-        }
-        "sequence" | "generate_series" | "gen_series" => {
-            return dispatch_spark::call_scalar_expr(name, exprs);
         }
         "elt" => {
             need_at_least(2)?;
@@ -628,9 +627,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "shiftrightunsigned" => {
             need(2)?;
             repark_functions::expr_fn::shiftrightunsigned(exprs[0].clone(), exprs[1].clone())
-        }
-        "split" => {
-            return dispatch_spark::call_scalar_expr(name, exprs);
         }
         "split_part" => {
             need(3)?;
@@ -881,11 +877,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "bitmap_count" => {
             need(1)?;
             repark_functions::expr_fn::bitmap_count(exprs[0].clone())
-        }
-        "abs" | "hypot" | "bin" | "rint" | "base64" | "unbase64" | "size" | "cardinality"
-        | "array_contains" | "array_has" | "ascii" | "length" | "character_length"
-        | "char_length" => {
-            return dispatch_spark::call_scalar_expr(name, exprs);
         }
         other => return dispatch_json::call_scalar_expr(other, exprs),
     };

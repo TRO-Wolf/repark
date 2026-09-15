@@ -146,8 +146,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   reverted the `array`/`make_array` `containsNull` declaration and the registry-wide
   promise retag to DOOR-CONVERGE-2 (fixtures-batch7) — literal-haystack
   `array_contains` nullability is the residual that rides on them.
+  **DOOR-CONVERGE-2 (2026-09-15):** `reverse`, `sequence` and `split` join
+  `SCALAR_NAMES` (the C-006 ratchet); `concat` stays out — variadic, no fixed arity.
   pins: door-converge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014
+  C-009, C-010, C-011, C-012, C-013, C-014; pins: door-converge-2/C-006
   **ABS-EXPR-1 (2026-09-13):** `EXPECTED_DIVERGENCES` gains `abs` — the facade's core
   `checked_abs` raises on integer-min (Spark ANSI-on answer); the door's `SparkAbs`
   wraps because repark never sets `execution.enable_ansi_mode` — measured on typed

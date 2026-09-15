@@ -4,8 +4,8 @@ use datafusion::arrow::array::{Array, ArrayRef, AsArray, ListArray, MutableArray
 use datafusion::arrow::buffer::{NullBuffer, OffsetBuffer};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
-use datafusion::common::{DataFusionError, Result, exec_err};
-use datafusion::logical_expr::{ColumnarValue, ScalarFunctionArgs};
+use datafusion::common::{DFSchema, DataFusionError, Result, exec_err};
+use datafusion::logical_expr::{ColumnarValue, Expr, ExprSchemable, ScalarFunctionArgs};
 
 use super::array_insert::tightest_common;
 
@@ -33,6 +33,14 @@ pub(crate) fn is_text_family(data_type: &DataType) -> bool {
         data_type,
         DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
     )
+}
+
+pub(crate) fn all_list_args(args: &[Expr], schema: &DFSchema) -> bool {
+    !args.is_empty()
+        && args.iter().all(|arg| {
+            arg.get_type(schema)
+                .is_ok_and(|data_type| is_list_family(&data_type) || data_type == DataType::Null)
+        })
 }
 
 pub(crate) fn spark_type_name(data_type: &DataType) -> String {
@@ -377,6 +385,26 @@ mod tests {
             .downcast_ref::<datafusion::arrow::array::Int64Array>()
             .expect("widened values");
         assert_eq!(inner.values(), &[1, 2]);
+    }
+
+    #[tokio::test]
+    async fn pipe_operator_over_arrays_resolves_the_concat_kernel() {
+        let ctx = ctx();
+        let batches = ctx
+            .sql("SELECT array(1) || array(2)")
+            .await
+            .expect("plan pipe")
+            .collect()
+            .await
+            .expect("execute pipe");
+        assert_eq!(
+            batches[0].column(0).data_type(),
+            &DataType::List(Arc::new(Field::new("element", DataType::Int32, true)))
+        );
+        assert!(!batches[0].schema().field(0).is_nullable());
+        let joined = value_of(&ctx, "SELECT array(1) || array(2)").await;
+        assert_eq!(joined.len(), 1);
+        assert_eq!(int_cells(&joined[0]), Some(vec![Some(1), Some(2)]));
     }
 
     #[tokio::test]
