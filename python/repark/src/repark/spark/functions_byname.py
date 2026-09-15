@@ -43,8 +43,6 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "approx_count_distinct",
     "approx_percentile",
     "array_agg",
-    "array_append",
-    "array_prepend",
     "array_size",
     "avg",
     "bit_and",
