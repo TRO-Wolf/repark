@@ -6,7 +6,7 @@ This report closes when its PR merges. Every measured claim below is dated 2026-
 
 ## 1. Census slice — before / after
 
-Two units merged tonight (#601, #609). Three are left as PRs for the owner (DOOR-CONVERGE-1, #612 draft, #611 draft). Runs 15a and 15b each held a four-to-six deep merge queue; every PR landed in order. The states below are read at the report's commit.
+Two units merged tonight (#601, #609). Three are left as PRs for the owner (#616 DOOR-CONVERGE-1, #612 draft, #611 draft). The run-15c report itself is #617. Runs 15a and 15b each held a four-to-six deep merge queue; every PR landed in order. The states below are read at the report's commit.
 
 | Item (run 15c slice) | Before (main acbb6a8e) | After (main at report time) | Unit / PR |
 |---|---|---|---|
@@ -33,7 +33,7 @@ Two units merged tonight (#601, #609). Three are left as PRs for the owner (DOOR
 |---|---|---|---|---|---|
 | #601 | SQL-SET-DOOR-1 (B-TZ-5, `current_timezone()`) | **merged 462c1eaf**, TREE-EQUAL, 02:31 | Devin 40 + 53 steps (free); Devin round 3 rate-limited (0); Grok round 3, 50 turns, $1.48 | Critic-logic NEEDS_REMEDIATION ($1.11; 2 of its claims overturned by oracle batch 5); S2-21 perf P1 full-query scan ($0.67) | make verify rc 0, facade 6639, parity 757, dbt 30 |
 | #609 | FNP-6D (`bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg`) | **merged**, tree-equal, 05:06 | Grok 94 turns $6.91 + 96 turns $6.84 | Critic-logic NEEDS_REMEDIATION ($0.51); S2-21 perf P1 no GroupsAccumulator ($0.60) | make verify rc 0, facade green, parity 757, dbt 30 |
-| `feat/door-kernel-converge-1` (PR opening at report time) | DOOR-CONVERGE-1 (BL-16/17/18, BL-6 SQL door, 22 → 14 divergences) | **open**, orchestrator-gated on a private target; queue slot after 15a's #606 (owner merges after one rebase) | Devin 61 + 166 + 94 + 129 steps + round 5 (free); one round rate-limited (0) | Critic-logic NEEDS_REMEDIATION, 5 P1 confirmed by batch 6 ($0.78); S2-21 perf 2 P1 ($0.86) | private-target make verify rc 0; facade / parity in the PR body |
+| #616 | DOOR-CONVERGE-1 (BL-16/17/18, BL-6 SQL door, 22 → 14 divergences) | **open**, orchestrator-gated on a private target; queue slot after 15a's #606 (owner merges after one rebase) | Devin 61 + 166 + 94 + 129 steps + round 5 (free); one round rate-limited (0) | Critic-logic NEEDS_REMEDIATION, 5 P1 confirmed by batch 6 ($0.78); S2-21 perf 2 P1 ($0.86) | private-target make verify rc 0; facade / parity in the PR body |
 | #612 | JAVA-DOUBLE-STR-1 (BL-7) | **draft**, head = round 1 rebased and gated; round 2 committed 41fb4a79 and pushed (worker-gated: make verify rc 0, facade 6799, parity 757) | Muse 171 steps (round 1); round 2 35 steps lost to the 04:17 network failure, resumed | Critic-logic NEEDS_REMEDIATION, all confirmed by batch 10 ($0.61); S2-21 perf no P1 ($0.54) | make verify rc 0, facade 6791, parity 757, dbt 30 (round 1) |
 | #611 | FNP-4B (Spark-door dialect, BL-2/9/10/12, typed literals, exponent DOUBLE) | **draft**; head e41e4f98 unchanged; round 4 salvaged to `wip/fnp-4b-round4` f44021f6 (make verify rc 0, parity 757, facade 33 failed: 14 test_explode_rewrite, 4 test_dml_b_partition_overwrite, 3 test_fnp_4b_literals, …) | Muse 898 + 374 steps; orchestrator remediation e41e4f98; Grok round 4, 300 turns (max), $24.85, uncommitted, then salvaged by the orchestrator | Critic-logic NEEDS_REMEDIATION ($1.37; 2 of its claims reversed by batch 9); S2-21 perf no P1 ($0.85) | e41e4f98: make verify rc 0, facade 6178 / 0 failed, parity 757 |
 
