@@ -471,10 +471,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   exact ceiling: `writeStream` is a property raising `AnalysisException`
   `WRITE_STREAM_NOT_ALLOWED` (SQLSTATE 42601) at attribute access;
   `withWatermark`/`with_watermark` run Spark's own validation (NOT_STR arg checks
-  per R-1 — the Connect shape, not classic's `CANNOT_CONVERT_COLUMN_INTO_BOOL`;
-  a small interval-string parser covering optional `interval` prefix, sign,
-  decimal amounts, and multi-unit groups — `CANNOT_PARSE_INTERVAL` on a miss,
-  `IllegalArgumentException` echoing the input string on a negative) and return
+  per R-1 — the Connect shape, not classic's `CANNOT_CONVERT_COLUMN_INTO_BOOL` —
+  including the empty-string `not s` gate; a small interval-string parser covering
+  optional `interval` prefix, sign, decimal amounts, and multi-unit groups —
+  `CANNOT_PARSE_INTERVAL` on a miss or a fractional months/days amount — then
+  refuse only when the accumulated `CalendarInterval` (months, days, microseconds)
+  nets negative under `IntervalUtils.isNegative` with daysPerMonth=31,
+  `IllegalArgumentException` echoing the input string) and return
   `self` (R-2: the batch planner eliminates the watermark node);
   `dropDuplicatesWithinWatermark`/`drop_duplicates_within_watermark` validate
   subset shape and column resolution (`_LEGACY_ERROR_TEMP_1201`,

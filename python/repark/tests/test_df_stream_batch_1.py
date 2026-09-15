@@ -140,6 +140,47 @@ def test_with_watermark_rejects_unparsable_delay(spark: ReparkSession) -> None:
     _assert_error_cell(raised.value, "withWatermark_bad_delay")
 
 
+def test_with_watermark_net_interval_sign(spark: ReparkSession) -> None:
+    """Negativity is Spark's net CalendarInterval, not a per-token minus (L-001/L-003)."""
+    frame = _ts_frame(spark)
+    for delay in (
+        "1 hour -30 minutes",
+        "1 hour - 30 minutes",
+        "1 hour-30 minutes",
+        "-1 hour 2 hours",
+        "8 days -1 week",
+        "2 months -1 month",
+        "1 day -1 hour",
+        "-0 seconds",
+    ):
+        assert frame.withWatermark("ts", delay) is frame, delay
+    with pytest.raises(IllegalArgumentException) as raised:
+        frame.withWatermark("ts", "1 day -25 hours")
+    assert (
+        str(raised.value)
+        == "requirement failed: delay threshold (1 day -25 hours) should not be negative."
+    )
+
+
+def test_with_watermark_rejects_empty_strings(spark: ReparkSession) -> None:
+    """Empty eventTime/delayThreshold hit Spark's `not s` gate as NOT_STR (L-002)."""
+    frame = _ts_frame(spark)
+    with pytest.raises(PySparkTypeError) as raised_event:
+        frame.withWatermark("", "1 minute")
+    assert raised_event.value.getCondition() == "NOT_STR"
+    assert raised_event.value.getMessageParameters() == {
+        "arg_name": "eventTime",
+        "arg_type": "str",
+    }
+    with pytest.raises(PySparkTypeError) as raised_delay:
+        frame.withWatermark("ts", "")
+    assert raised_delay.value.getCondition() == "NOT_STR"
+    assert raised_delay.value.getMessageParameters() == {
+        "arg_name": "delayThreshold",
+        "arg_type": "str",
+    }
+
+
 def test_with_watermark_rejects_negative_delay(spark: ReparkSession) -> None:
     """A negative delay raises IllegalArgumentException echoing the input string."""
     frame = _ts_frame(spark)
@@ -186,6 +227,24 @@ def test_drop_duplicates_within_watermark_refuses_on_batch(spark: ReparkSession)
         frame.drop_duplicates_within_watermark()
 
 
+def test_drop_duplicates_within_watermark_edge_shapes(spark: ReparkSession) -> None:
+    """Tuple, empty, duplicate, casefold, nested-name, and non-str subsets (L-004)."""
+    frame = _kv_frame(spark)
+    for subset in (("k",), [], (), ["k", "k"], ["K"]):
+        with pytest.raises(AnalysisException, match="not supported with batch"):
+            frame.dropDuplicatesWithinWatermark(subset)
+    struct_frame = spark.createDataFrame([((1, 2),)], "s struct<a:int,b:int>")
+    with pytest.raises(AnalysisException) as raised_nested:
+        struct_frame.dropDuplicatesWithinWatermark(["s.a"])
+    assert raised_nested.value.getCondition() == "_LEGACY_ERROR_TEMP_1201"
+    assert str(raised_nested.value) == 'Cannot resolve column name "s.a" among (s).'
+    for bad_member in ([1], [None]):
+        with pytest.raises(PySparkTypeError) as raised_member:
+            frame.dropDuplicatesWithinWatermark(bad_member)
+        assert raised_member.value.getCondition() == "NOT_STR"
+        assert raised_member.value.getMessageParameters()["arg_name"] == "subset"
+
+
 def test_rdd_property_raises_spark_not_implemented(spark: ReparkSession) -> None:
     """DataFrame.rdd raises NOT_IMPLEMENTED even when a column is named rdd."""
     frame = _kv_frame(spark)
@@ -198,6 +257,19 @@ def test_rdd_property_raises_spark_not_implemented(spark: ReparkSession) -> None
     with pytest.raises(PySparkNotImplementedError) as raised_shadow:
         _ = rdd_named.rdd
     assert raised_shadow.value.getCondition() == "NOT_IMPLEMENTED"
+
+
+def test_streaming_named_columns_and_attribute_probes(spark: ReparkSession) -> None:
+    """df[name] still binds Columns; hasattr runs the declared getter (L-005)."""
+    named = spark.createDataFrame([(1, 2, 3)], ["rdd", "plot", "writeStream"])
+    for name in ("rdd", "plot", "writeStream"):
+        assert type(named[name]).__name__ == "Column"
+    with pytest.raises(PySparkNotImplementedError) as raised_plot:
+        hasattr(named, "plot")
+    assert raised_plot.value.getCondition() == "NOT_IMPLEMENTED"
+    with pytest.raises(AnalysisException) as raised_stream:
+        hasattr(named, "writeStream")
+    assert raised_stream.value.getCondition() == "WRITE_STREAM_NOT_ALLOWED"
 
 
 def test_pandas_api_raises_spark_not_implemented(spark: ReparkSession) -> None:

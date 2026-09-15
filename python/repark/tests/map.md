@@ -2054,8 +2054,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   raises `WRITE_STREAM_NOT_ALLOWED` (SQLSTATE 42601) at attribute access and
   `isStreaming`/`is_streaming` stay False; `withWatermark`/`with_watermark` run Spark's
   own validation order (NOT_STR arg checks — the Connect shape per R-1, not classic's
-  `CANNOT_CONVERT_COLUMN_INTO_BOOL`; `CANNOT_PARSE_INTERVAL`; negative-delay
-  `IllegalArgumentException` echoing the input string) and then return `self` (R-2:
+  `CANNOT_CONVERT_COLUMN_INTO_BOOL`, including the empty-string `not s` gate;
+  `CANNOT_PARSE_INTERVAL`; net-`CalendarInterval` negativity under
+  `IntervalUtils.isNegative` with daysPerMonth=31, `IllegalArgumentException`
+  echoing the input string) and then return `self` (R-2:
   the batch planner eliminates the watermark node — timestamp column, non-timestamp
   column, and unresolvable name all accepted); `dropDuplicatesWithinWatermark` /
   `drop_duplicates_within_watermark` check subset shape (`NOT_LIST_OR_TUPLE`,

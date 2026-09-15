@@ -91,7 +91,9 @@ dataframe	DataFrame.describe_ingest
 dataframe	DataFrame.distinct
 dataframe	DataFrame.drop
 dataframe	DataFrame.dropDuplicates
+dataframe	DataFrame.dropDuplicatesWithinWatermark
 dataframe	DataFrame.drop_duplicates
+dataframe	DataFrame.drop_duplicates_within_watermark
 dataframe	DataFrame.dropna
 dataframe	DataFrame.dtypes
 dataframe	DataFrame.dynamicFlatten
@@ -188,10 +190,12 @@ dataframe	DataFrame.withColumn
 dataframe	DataFrame.withColumnRenamed
 dataframe	DataFrame.withColumns
 dataframe	DataFrame.withColumnsRenamed
+dataframe	DataFrame.withWatermark
 dataframe	DataFrame.with_column
 dataframe	DataFrame.with_column_renamed
 dataframe	DataFrame.with_columns
 dataframe	DataFrame.with_columns_renamed
+dataframe	DataFrame.with_watermark
 dataframe	DataFrame.write
 dataframe	DataFrame.writeTo
 dataframe	DataFrame.write_to

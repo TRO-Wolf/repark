@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from decimal import Decimal
 from types import MethodType
 from typing import TYPE_CHECKING, NoReturn
 
@@ -31,9 +32,24 @@ _INTERVAL_STRING_RE = re.compile(
 )
 
 _INTERVAL_GROUP_RE = re.compile(
-    rf"([+-]?)\s*\d+(?:\.\d+)?\s+(?:{_INTERVAL_UNITS})",
+    rf"([+-]?)\s*(\d+(?:\.\d+)?)\s+({_INTERVAL_UNITS})",
     re.IGNORECASE,
 )
+
+_MONTH_SCALES = {"year": 12, "month": 1}
+
+_DAY_SCALES = {"week": 7, "day": 1}
+
+_MICRO_SCALES = {
+    "hour": Decimal("3600000000"),
+    "minute": Decimal("60000000"),
+    "second": Decimal("1000000"),
+    "millisecond": Decimal("1000"),
+    "microsecond": Decimal("1"),
+    "nanosecond": Decimal("0.001"),
+}
+
+_MICROS_PER_DAY = 86_400_000_000
 
 
 def _raise_analysis(
@@ -52,6 +68,20 @@ def _raise_analysis(
     error.getMessageParameters = MethodType(_attached_message_parameters, error)
     error.getSqlState = MethodType(_attached_sql_state, error)
     raise error
+
+
+def _refuse_interval_string(delay_threshold: str) -> NoReturn:
+    """Raise Spark's ``CANNOT_PARSE_INTERVAL`` for a delay. pins: df-stream-batch-1/C-002"""
+    _raise_analysis(
+        f"[CANNOT_PARSE_INTERVAL] Unable to parse '{delay_threshold}'. Please ensure "
+        "that the value provided is in a valid format for defining an interval. You "
+        "can reference the documentation for the correct format. If the issue "
+        "persists, please double check that the input value is not null or empty "
+        "and try again. SQLSTATE: 22006",
+        "CANNOT_PARSE_INTERVAL",
+        message_parameters={"intervalString": f"'{delay_threshold}'"},
+        sql_state="22006",
+    )
 
 
 def refuse_write_stream(frame: DataFrame) -> NoReturn:
@@ -98,7 +128,7 @@ def with_watermark(
     delayThreshold: object,  # noqa: N803 — PySpark kwarg name
 ) -> DataFrame:
     """Validate the batch watermark contract, then return self. pins: df-stream-batch-1/C-002"""
-    if not isinstance(eventTime, str):
+    if type(eventTime) is not str or not eventTime:
         raise PySparkTypeError(
             f"[NOT_STR] Argument `eventTime` should be a str, got {type(eventTime).__name__}.",
             errorClass="NOT_STR",
@@ -107,7 +137,7 @@ def with_watermark(
                 "arg_type": type(eventTime).__name__,
             },
         )
-    if not isinstance(delayThreshold, str):
+    if type(delayThreshold) is not str or not delayThreshold:
         raise PySparkTypeError(
             f"[NOT_STR] Argument `delayThreshold` should be a str, got "
             f"{type(delayThreshold).__name__}.",
@@ -120,17 +150,23 @@ def with_watermark(
     frame._ensure_alive()
     match = _INTERVAL_STRING_RE.match(delayThreshold)
     if match is None:
-        _raise_analysis(
-            f"[CANNOT_PARSE_INTERVAL] Unable to parse '{delayThreshold}'. Please ensure "
-            "that the value provided is in a valid format for defining an interval. You "
-            "can reference the documentation for the correct format. If the issue "
-            "persists, please double check that the input value is not null or empty "
-            "and try again. SQLSTATE: 22006",
-            "CANNOT_PARSE_INTERVAL",
-            message_parameters={"intervalString": f"'{delayThreshold}'"},
-            sql_state="22006",
-        )
-    if any(group.group(1) == "-" for group in _INTERVAL_GROUP_RE.finditer(match.group(1))):
+        _refuse_interval_string(delayThreshold)
+    months = days = 0
+    micros = Decimal(0)
+    for group in _INTERVAL_GROUP_RE.finditer(match.group(1)):
+        sign = -1 if group.group(1) == "-" else 1
+        amount = Decimal(group.group(2))
+        unit = group.group(3).lower().removesuffix("s")
+        if unit in _MONTH_SCALES or unit in _DAY_SCALES:
+            if amount != amount.to_integral_value():
+                _refuse_interval_string(delayThreshold)
+            if unit in _MONTH_SCALES:
+                months += sign * int(amount) * _MONTH_SCALES[unit]
+            else:
+                days += sign * int(amount) * _DAY_SCALES[unit]
+        else:
+            micros += sign * amount * _MICRO_SCALES[unit]
+    if months * 31 * _MICROS_PER_DAY + days * _MICROS_PER_DAY + int(micros) < 0:
         raise IllegalArgumentException(
             f"requirement failed: delay threshold ({delayThreshold}) should not be negative."
         )
