@@ -267,6 +267,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `approx_count_distinct`/`regr_count` (non-null `bigint`, empty → 0),
   `ascii`/`length`/`character_length` (codepoint + binary bytes), and the BL-6
   SQL-door refusal class — all nine pins green on the converged kernels.
+- [test_door_converge_2.py](test_door_converge_2.py) — **DOOR-CONVERGE-2 (2026-09-15):**
+  both-door oracle pins for the four clause names — `concat` over arrays (element
+  widening, OR `containsNull`, NULL propagation, `||` over arrays, `DATA_DIFF_TYPES`
+  on an array/string mix), `reverse` over arrays (order, type, nullability kept),
+  `sequence` (widths, descending default step, date/timestamp stepping, NULL → NULL,
+  illegal-step raise, `SEQUENCE_WRONG_INPUT_TYPES`), and `split` on the SQL door
+  (Java regex, limit semantics, per-character empty-pattern split) — Q12-0…Q12-55
+  legs plus facade value/type/nullability legs and the run-16a `F.split`
+  red-when-wired refusal guard. pins: door-converge-2/C-001, C-002, C-003, C-004, C-005
   **Round 2 (2026-09-16):** `unbase64` raises the Java MIME-decoder texts on
   malformed endings while `'QR'`/`'QQQ'`/whitespace/`'!!'` stay lenient;
   `array_contains` coerces to the tightest common type (DOUBLE needle →
@@ -4576,7 +4585,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   empty-struct pruning, `array_insert` type widening, the leading-zero / non-finite / null-root /
   non-STRING-argument rules, the non-finite and timestamp decode forms, and the `sequence` pin
   the registry had cited but nobody had written.
-  pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **DOOR-CONVERGE-2 (2026-09-15):** the descending-`sequence` pin now expects the
+  converged behavior (count-down, illegal-step raise) — registry DC2-SEQUENCE-1
+  supersedes FNP9-SEQUENCE-1.
+  pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008;
+  pins: door-converge-2/C-003
 
 - `test_parity_live_fnp9.py::test_live_fnp9_collections_json` — **FNP-9/10 (2026-09-05):** the
   fifteen answer cells and four raising cells this unit pinned, re-derived from live Spark
