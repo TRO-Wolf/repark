@@ -693,7 +693,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   collision. **Round 3 (2026-09-15, U-1+U-2):** the per-key loop is gone — the wrapper
   passes column names plus the session zone to the engine's one-scan fan-out
   (`write_text_partitioned`), which renders Hive-escaped leaf names itself.
-  pins: io-text-1/C-002, C-003, T-6, T-9, U-1, U-2
+  **(U-10/U-11):** the native 1290 text gains `_LEGACY_ERROR_TEMP_1290` through the
+  shared attach helper, and a failed write removes staging even when the
+  destination is absent.
+  pins: io-text-1/C-002, C-003, T-6, T-9, U-1, U-2, U-10, U-11
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`

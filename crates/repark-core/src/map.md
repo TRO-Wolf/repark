@@ -342,9 +342,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   sequential `part-*.txt` (NULL rows write empty lines, every row terminated; an empty
   frame still writes one empty part), writing array bytes direct. Schema check stays
   offender-first with Spark's `UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE` text, then the
-  verbatim 1290 count text; empty `lineSep` refuses. Rust tests cover the error texts
+  verbatim 1290 count text; empty `lineSep` refuses as `IllegalArgument` (Spark's
+  class; the partitioned writer already refused so). Rust tests cover the error texts
   and the round trip. Partitioned fan-out lives in `text_partition.rs`.
-  pins: io-text-1/C-002, T-2, T-4, T-7
+  pins: io-text-1/C-002, T-2, T-4, T-7, U-9
   pins: io-text-1/C-001, C-002
 - `partition_discovery.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-3):** Hive
   partition discovery plus the shared batch materialization IO-ORC-1 reuses:

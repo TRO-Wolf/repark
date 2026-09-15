@@ -73,8 +73,15 @@ def load_text(reader: Any, path: str | Path | list[str] | None) -> DataFrame:
 def _read_one(inner: Any, token: Any, path: str, wholetext: bool, linesep: str | None) -> DataFrame:
     """Read one file or directory through the Rust text scan. pins: io-text-1/C-001"""
     from repark import _native
+    from repark.errors import AnalysisException
+    from repark.spark._integral import attach_error_condition
 
-    return DataFrame(_native.read_text(inner, path, wholetext, linesep), inner, token)
+    try:
+        return DataFrame(_native.read_text(inner, path, wholetext, linesep), inner, token)
+    except AnalysisException as error:
+        if str(error).startswith("[PATH_NOT_FOUND]"):
+            attach_error_condition(error, "PATH_NOT_FOUND", "42K03")
+        raise
 
 
 def _drop_falsy_recursive_lookup(reader: Any) -> None:

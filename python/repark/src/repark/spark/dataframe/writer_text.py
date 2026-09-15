@@ -30,6 +30,7 @@ def write_text_path(writer: Any, path: str) -> None:
     """Stage Rust part files through save-mode handling into place. pins: io-text-1/C-002"""
     from repark import _native
     from repark.errors import AnalysisException
+    from repark.spark._integral import attach_error_condition
 
     writer._dataframe._ensure_alive()
     _refuse_text_compression(writer)
@@ -63,10 +64,15 @@ def write_text_path(writer: Any, path: str) -> None:
     )
     native = writer._dataframe._native_for_registration()
     try:
-        if partition_columns:
-            _write_partitioned_text(writer, staging, partition_columns, linesep)
-        else:
-            _native.write_text_frame(native, str(staging), linesep)
+        try:
+            if partition_columns:
+                _write_partitioned_text(writer, staging, partition_columns, linesep)
+            else:
+                _native.write_text_frame(native, str(staging), linesep)
+        except AnalysisException as error:
+            if str(error).startswith("Text data source supports only a single column"):
+                attach_error_condition(error, "_LEGACY_ERROR_TEMP_1290")
+            raise
         (staging / "_SUCCESS").touch()
         if normalized_mode == "append" and destination.exists():
             from repark.spark.dataframe.writer_readwriter import _merge_path_write_tree
@@ -99,14 +105,14 @@ def write_text_path(writer: Any, path: str) -> None:
                 raise AnalysisException(f"cannot overwrite path {path!r}: {exc}") from exc
         staging.rename(destination)
     except AnalysisException:
-        if staging.exists() and destination.exists():
+        if staging.exists():
             if staging.is_dir() and not staging.is_symlink():
                 shutil.rmtree(staging)
             elif staging.is_file() or staging.is_symlink():
                 staging.unlink()
         raise
     except Exception:
-        if staging.exists() and destination.exists():
+        if staging.exists():
             if staging.is_dir() and not staging.is_symlink():
                 shutil.rmtree(staging)
             elif staging.is_file() or staging.is_symlink():

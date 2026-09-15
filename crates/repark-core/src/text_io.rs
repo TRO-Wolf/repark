@@ -179,7 +179,7 @@ fn write_text_batch(batch: &RecordBatch, part: &Path, separator: &[u8]) -> Resul
 pub async fn write_text_frame(frame: &DataFrame, dir: &Path, line_sep: &str) -> Result<()> {
     check_text_write_schema(frame.schema())?;
     if line_sep.is_empty() {
-        return Err(Error::Analysis(
+        return Err(Error::IllegalArgument(
             "requirement failed: 'lineSep' cannot be an empty string.".to_string(),
         ));
     }
@@ -292,6 +292,7 @@ mod tests {
             error.to_string(),
             "requirement failed: 'lineSep' cannot be an empty string."
         );
+        assert!(matches!(error, Error::IllegalArgument(_)));
         assert!(!target.exists());
     }
 

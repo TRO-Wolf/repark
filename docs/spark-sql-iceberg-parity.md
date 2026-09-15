@@ -1882,7 +1882,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — writes `key=value/` leaf dirs with `part-*` files inside.
 - **Pin** — `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
   (leaf bytes plus `_SUCCESS`) and `::test_text_probe_partition_by_two_remaining`
-  (the verbatim 1290 text, destination absent).
+  (the verbatim 1290 text, destination absent, plus its `_LEGACY_ERROR_TEMP_1290`
+  condition — round 3, ruling U-10).
 - **Rationale** — FIXED, 2026-09-15 (io-text-1 follow-up).
   pins: io-text-1/T-6
 

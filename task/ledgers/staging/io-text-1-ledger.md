@@ -177,6 +177,22 @@ cells. `text_io.rs` split: the partitioned fan-out moved to the new module
 | R-18 (U-6) | dir-matching globs | The walker recursed the whole tree and matched whole relatives with equal segment counts, so `d*` matched nothing (`d1/a.txt` is two segments) and `*` matched only top-level files, while Spark lists one leaf level under each matching dir (probe cell `text_probe3_glob_matches_dirs`: `d*` → `a1,b1`, `*` → `t,a1,b1`). The walk is now iterative per segment: a pattern whose last segment names a directory (or a mid-pattern directory segment) lists one leaf level without recursing deeper. Pins: `test_text_probe3_glob_matches_dirs` + Rust `glob_segment_matching_dir_lists_one_leaf_level`, `glob_walk_collects_nested_files_without_recursion`. |
 | R-19 (U-7) | limit early-stop | Perf P2 asked the scanner to stop appending at `emitted + pending == limit` instead of filling 8192-row batches (pre-fix `limit(10)` on 10 KiB lines read 86.3 MiB). That stop shipped inside U-3/R-15 (`emit_text_row` returns false at the budget; `poll_next` emits at once when `limit_reached`); no new code here. Post-fix measurement (`/tmp/u7_limit_rchar.py`, scratch, RELEASE .so, 200 MiB of 10 KiB lines): `limit(10)` reads 10 rows with 2.28 MiB rchar cold / 0.13 MiB hot at 0.16 s — under round-1's 12.16 MiB. Pin stays Rust `text_limit_stops_appending_at_limit` (10 rows appended from a 2000-line carry). The report's optional "cap the next `read()`" was not taken: the chunk already in hand bounds the overshoot to one 64 KiB read. |
 | R-20 (U-8) | glob once-parse + iterative walk + error-arm clone | Perf P3 asked three micro-fixes: parse the glob once per expansion instead of per candidate, bound the walker, clone the error path only on error. All three shipped inside earlier round-3 commits: `expand_text_glob` calls `parse_glob_patterns` once (U-6), `collect_glob_files` walks an explicit stack (U-6; the brace expander keeps its depth-16 cap), and the per-poll `current.clone()` moved into the read-error arm (U-3/R-15 refactor of `poll_next`; `slurp_current` keeps one clone per file on the wholetext path). Post-refactor measurement (`/tmp/u8_glob_100k.py`, scratch, 100 k `.txt` + 10 k `.log`): glob expand plus count 0.44–0.52 s wall for 100 000 rows — linear, no worse than the pre-refactor 0.40 s expand + 0.19 s count. Pins stay the U-5/U-6 behavior pins; no behavior-neutral micro-cost takes a pin. |
+| R-21 (U-9) | empty-`lineSep` write class | Both write doors raised `AnalysisException` with Spark's exact `requirement failed` text; Spark raises `IllegalArgumentException` (probe cell `text_probe3_empty_linesep_class`: class, message, condition None, sqlstate None). The partitioned writer already used `Error::IllegalArgument` (U-1/U-2); the plain writer in `text_io.rs` did not. One-line flip `Error::Analysis` → `Error::IllegalArgument` — the binding already maps that variant, so no taxonomy change. The read door keeps `AnalysisException` (unprobed either way; its message differs). Pins: flipped `test_text_probe_write_empty_linesep` (both doors), new `test_text_probe3_empty_linesep_class`, Rust `matches!(error, Error::IllegalArgument(_))` in `text_write_empty_line_sep_refuses`. |
+| R-22 (U-10) | 1290 and PATH_NOT_FOUND conditions | Both refusals carried the exact message but `getCondition()` None (cells `text_probe3_two_col_class` → `_LEGACY_ERROR_TEMP_1290`, sqlstate None; `text_probe3_missing_path_class` → `PATH_NOT_FOUND`, sqlstate `42K03`). New facade helper `_integral.attach_error_condition` (the `_raise_analysis` attach shape — class, params None, sqlstate — applied to a caught native error, `str()` untouched): `write_text_path` attaches 1290 on the native single-column text for both plain and partitioned funnels; `reader_text._read_one` attaches `PATH_NOT_FOUND` + `42K03` on the bracketed message (unmatched globs ride the same arm). `getMessageParameters` stays None, unprobed. Pins: `test_text_probe3_two_col_class`, the partitioned two-remaining pin gains the condition assert, `test_text_probe3_missing_path_class` (condition plus `getSqlState`). |
+| R-23 (U-11) | failed-write staging cleanup | A mid-stream execution failure on a fresh path left `repark-staging-<uuid>-<name>/` behind: both `except` arms required `destination.exists()`. This supersedes the round-2 note that no deterministic trigger reaches cleanup with staging present — L-107's data-dependent CAST failure (staging created before `execute_stream` yields the bad batch) does. Both arms now remove staging whenever it exists; dest-absent-on-failure is unchanged. Class divergence disclosed, out of scope: Spark raises `SparkRuntimeException` for the failed write while repark raises `PySparkException` (no such native class exists; the ruling names staging only). Pin: `test_text_probe3_failing_write_leaves` (L-107 reproducer shape, dest absent, no `repark-staging-*` in the parent). |
+
+Red-first U-9..U-11 (new pins vs pre-fix tree, RELEASE .so — no rebuild needed, the fixes are additive):
+
+```text
+FAILED test_text_probe_write_empty_linesep
+FAILED test_text_probe3_empty_linesep_class
+FAILED test_text_probe3_two_col_class
+FAILED test_text_probe_partition_by_two_remaining
+FAILED test_text_probe3_missing_path_class
+FAILED test_text_probe3_failing_write_leaves
+6 failed, 47 deselected in 1.26s
+Left contains one more item: PosixPath('.../repark-staging-7c574dd8b49e4d708884861c5f825c45-fail')
+```
 
 Red-first U-4..U-6 (new pins vs pre-fix code at 54331f9f, RELEASE .so for U-4, debug `cargo test` for U-5/U-6):
 
@@ -212,3 +228,42 @@ sequential part matches Spark's multi-part leaves); f32 rendering uses Rust
 exotic partition types (Decimal256, intervals, nested) refuse loud naming the
 column and type; an empty partitioned frame writes no leaves (unpinned,
 disclosed).
+
+## Round-3 coverage addendum (2026-09-15, R-13..R-23)
+
+Oracle: `iotext_probe3_2026-09-15.json` (live PySpark 4.1.2, run 16b); every
+cell copied as `text_probe3_<cell>` into
+`python/repark/tests/facade_reader_writer_oracle.json`, and every round-3 pin
+reads those cells (no hand-computed expectations). Red-first runs sit beside
+their rows above; `make verify` plus `test_io_text_1.py` 53/53 green on the
+RELEASE module at each group commit.
+
+- Error classes and conditions (U-9/U-10): empty-`lineSep` writes raise
+  `IllegalArgumentException` on both write doors (read door unchanged,
+  unprobed); the 1290 text carries `_LEGACY_ERROR_TEMP_1290` on the plain and
+  partitioned funnels; missing paths carry `PATH_NOT_FOUND` plus
+  `getSqlState() == "42K03"`; messages byte-unchanged throughout. This
+  supersedes the round-1 judgment line "`getCondition()` rides in the message
+  text". Pins: flipped `test_text_probe_write_empty_linesep`,
+  `test_text_probe3_empty_linesep_class`, `test_text_probe3_two_col_class`,
+  `test_text_probe_partition_by_two_remaining` (+condition),
+  `test_text_probe3_missing_path_class`, Rust
+  `matches!(error, Error::IllegalArgument(_))`.
+- Staging cleanup (U-11): a data-dependent mid-stream CAST failure on a fresh
+  path left `repark-staging-*` behind (red-first recorded); both `except` arms
+  now remove staging whenever it exists, destination still absent. This
+  supersedes AT-3's "no litter arises" and the round-2 revert note. Pin:
+  `test_text_probe3_failing_write_leaves`. Disclosed divergence, out of scope:
+  Spark raises `SparkRuntimeException` for the failed write, repark raises
+  `PySparkException` (no such native class).
+- One-scan partitioned write (U-1/U-2): Hive escaping with uppercase hex,
+  default-partition merging, plain decimals, session-zone timestamps; wall and
+  rchar measured at k=1/10/100/1000 (R-13). Pins: six listing tests plus the
+  `text_partition_*` Rust tests.
+- Read-side discovery (U-3): inference ladder, value/partition/empty
+  projections, wholetext, limit stop (2.28 MiB cold vs 86.3 pre-fix, R-19).
+  Pins: six read tests, the flipped `test_text_probe_partition_by`, five
+  discovery unit tests, `text_limit_stops_appending_at_limit`.
+- Globs (U-4/U-5/U-6/U-8): falsy format-door flag, escaped star, one-leaf
+  dir globs, once-parse patterns, explicit-stack walk (100k expand+count
+  0.44–0.52 s wall, R-20). Pins: three probe3 tests plus the Rust glob tests.

@@ -24,7 +24,8 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
+from repark import functions as F  # noqa: N812 — PySpark idiom
+from repark.errors import AnalysisException, IllegalArgumentException, PySparkException
 from repark.spark.session import _reset_active_session_for_tests
 
 CELLS: dict[str, Any] = json.loads(
@@ -283,17 +284,29 @@ def test_text_probe_read_empty_linesep(spark: ReparkSession, tmp_path: Path) -> 
 def test_text_probe_write_empty_linesep(spark: ReparkSession, tmp_path: Path) -> None:
     """cell probe/write_empty_linesep — empty lineSep refuses on write. pins: io-text-1/T-2"""
     out = tmp_path / "emptysep"
-    with pytest.raises(AnalysisException, match="lineSep"):
+    with pytest.raises(IllegalArgumentException, match="lineSep"):
         spark.createDataFrame([("a",), ("b",)], "value string").coalesce(1).write.text(
             str(out), lineSep=""
         )
     assert not out.exists()
     out_opt = tmp_path / "emptysep_opt"
-    with pytest.raises(AnalysisException, match="lineSep"):
+    with pytest.raises(IllegalArgumentException, match="lineSep"):
         spark.createDataFrame([("a",), ("b",)], "value string").coalesce(1).write.format(
             "text"
         ).option("lineSep", "").save(str(out_opt))
     assert not out_opt.exists()
+
+
+def test_text_probe3_empty_linesep_class(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_empty_linesep_class — write refuses IllegalArgument. pins: io-text-1/U-9"""
+    expected = _cell("text_probe3_empty_linesep_class")["result"]
+    assert expected["raises"] == "IllegalArgumentException"
+    out = tmp_path / "els"
+    with pytest.raises(IllegalArgumentException) as raised:
+        spark.createDataFrame([("a",)], "value string").write.option("lineSep", "").text(str(out))
+    assert str(raised.value) == expected["message"]
+    assert raised.value.getCondition() is None
+    assert not out.exists()
 
 
 def test_text_probe_invalid_utf8_lossy(spark: ReparkSession, tmp_path: Path) -> None:
@@ -323,6 +336,17 @@ def test_text_probe_two_string_write(spark: ReparkSession, tmp_path: Path) -> No
         )
     assert str(raised_save.value) == expected
     assert not out_save.exists()
+
+
+def test_text_probe3_two_col_class(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_two_col_class — 1290 carries its condition. pins: io-text-1/U-10"""
+    expected = _cell("text_probe3_two_col_class")["result"]
+    out = tmp_path / "twocol"
+    with pytest.raises(AnalysisException) as raised:
+        spark.createDataFrame([("x", "y")], "value string, extra string").write.text(str(out))
+    assert str(raised.value) == expected["message"]
+    assert raised.value.getCondition() == expected["condition"]
+    assert not out.exists()
 
 
 def test_text_probe_glob_star(spark: ReparkSession, tmp_path: Path) -> None:
@@ -627,6 +651,7 @@ def test_text_probe_partition_by_two_remaining(spark: ReparkSession, tmp_path: P
         str(raised.value)
         == "Text data source supports only a single column, and you have 2 columns."
     )
+    assert raised.value.getCondition() == "_LEGACY_ERROR_TEMP_1290"
     assert not out.exists()
 
 
@@ -661,6 +686,33 @@ def test_text_probe_missing_path(spark: ReparkSession, tmp_path: Path) -> None:
         str(raised.value)
         == f"[PATH_NOT_FOUND] Path does not exist: file:{missing}. SQLSTATE: 42K03"
     )
+
+
+def test_text_probe3_missing_path_class(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_missing_path_class — PATH_NOT_FOUND condition. pins: io-text-1/U-10"""
+    expected = _cell("text_probe3_missing_path_class")["result"]
+    missing = tmp_path / "nope"
+    with pytest.raises(AnalysisException) as raised:
+        spark.read.text(str(missing)).collect()
+    assert raised.value.getCondition() == expected["condition"]
+    assert str(raised.value).startswith("[PATH_NOT_FOUND] Path does not exist: file:")
+    assert str(raised.value).endswith("SQLSTATE: 42K03")
+    assert raised.value.getSqlState() == expected["sqlstate"]
+
+
+def test_text_probe3_failing_write_leaves(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_failing_write_leaves — no staging survives pins: io-text-1/U-11"""
+    frame = (
+        spark.range(40)
+        .selectExpr("CAST(id AS STRING) AS value")
+        .selectExpr("CAST(CASE WHEN value = '25' THEN 'x' ELSE value END AS INT) AS n")
+        .select(F.col("n").cast("string").alias("value"))
+    )
+    out = tmp_path / "fail"
+    with pytest.raises(PySparkException):
+        frame.write.text(str(out))
+    assert not out.exists()
+    assert [path for path in tmp_path.iterdir() if path.name.startswith("repark-staging-")] == []
 
 
 def test_text_probe_limit_reads_first_rows(spark: ReparkSession, tmp_path: Path) -> None:
