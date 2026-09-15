@@ -58,6 +58,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   an uncastable column refuses with `Error::Analysis` naming both fields). Inline
   `cache_conform_tests` pin the drifted conform, the refusal message, and the arity guard.
   pins: decimal-cache-1/C-003, C-004
+  (The analyze-then-conform pipeline is shared with the plain-`temp_view` path, which
+  funnels through the same `register_collected_memtable`.)
 - `cache_budget.rs` — **EAGER-BUDGET-1 step 1 (2026-09-13):** D-2 retained-byte accounting.
   `ReparkSession::retained_cache_bytes` enumerates the temp-view home's `__repark_cache_*`
   tables, downcasts each provider to `MemTable`, clones each partition's batch list under a

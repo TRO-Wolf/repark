@@ -199,7 +199,7 @@ impl ReparkSession {
         let (schema, batches) = crate::sorted_view::apply_tighten_provenance_on_materialize(
             &analyzed, schema, batches,
         )?;
-        let batches = conform_batches_to_schema(&schema, batches)?;
+        let batches = conform_batches_to_schema(&schema, &batches)?;
         let partitions = if batches.is_empty() {
             vec![vec![]]
         } else {
@@ -299,7 +299,7 @@ impl ReparkSession {
 
 fn conform_batches_to_schema(
     schema: &SchemaRef,
-    batches: Vec<RecordBatch>,
+    batches: &[RecordBatch],
 ) -> Result<Vec<RecordBatch>> {
     batches
         .iter()

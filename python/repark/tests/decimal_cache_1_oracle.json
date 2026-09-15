@@ -1,0 +1,302 @@
+[
+ {
+  "input": "decimal(38,10)",
+  "op": "*5",
+  "facade_type": "decimal(38,8)",
+  "facade_value": "882.80000000",
+  "sql": "price * 5",
+  "sql_type": "decimal(38,8)",
+  "sql_value": "882.80000000",
+  "cache_value": "882.80000000"
+ },
+ {
+  "input": "decimal(38,10)",
+  "op": "+1",
+  "facade_type": "decimal(38,9)",
+  "facade_value": "177.560000000",
+  "sql": "price + 1",
+  "sql_type": "decimal(38,9)",
+  "sql_value": "177.560000000",
+  "cache_value": "177.560000000"
+ },
+ {
+  "input": "decimal(38,10)",
+  "op": "*col",
+  "facade_type": "decimal(38,6)",
+  "facade_value": "31173.433600",
+  "sql": "price * price",
+  "sql_type": "decimal(38,6)",
+  "sql_value": "31173.433600",
+  "cache_value": "31173.433600"
+ },
+ {
+  "input": "decimal(38,10)",
+  "op": "-1",
+  "facade_type": "decimal(38,9)",
+  "facade_value": "175.560000000",
+  "sql": "price - 1",
+  "sql_type": "decimal(38,9)",
+  "sql_value": "175.560000000",
+  "cache_value": "175.560000000"
+ },
+ {
+  "input": "decimal(38,10)",
+  "op": "*lit_decimal",
+  "facade_type": "decimal(38,8)",
+  "facade_value": "882.80000000",
+  "sql": "price * CAST(5 AS DECIMAL(1,0))",
+  "sql_type": "decimal(38,8)",
+  "sql_value": "882.80000000",
+  "cache_value": "882.80000000"
+ },
+ {
+  "input": "decimal(38,6)",
+  "op": "*5",
+  "facade_type": "decimal(38,6)",
+  "facade_value": "882.800000",
+  "sql": "price * 5",
+  "sql_type": "decimal(38,6)",
+  "sql_value": "882.800000",
+  "cache_value": "882.800000"
+ },
+ {
+  "input": "decimal(38,6)",
+  "op": "+1",
+  "facade_type": "decimal(38,6)",
+  "facade_value": "177.560000",
+  "sql": "price + 1",
+  "sql_type": "decimal(38,6)",
+  "sql_value": "177.560000",
+  "cache_value": "177.560000"
+ },
+ {
+  "input": "decimal(38,6)",
+  "op": "*col",
+  "facade_type": "decimal(38,6)",
+  "facade_value": "31173.433600",
+  "sql": "price * price",
+  "sql_type": "decimal(38,6)",
+  "sql_value": "31173.433600",
+  "cache_value": "31173.433600"
+ },
+ {
+  "input": "decimal(38,6)",
+  "op": "-1",
+  "facade_type": "decimal(38,6)",
+  "facade_value": "175.560000",
+  "sql": "price - 1",
+  "sql_type": "decimal(38,6)",
+  "sql_value": "175.560000",
+  "cache_value": "175.560000"
+ },
+ {
+  "input": "decimal(38,6)",
+  "op": "*lit_decimal",
+  "facade_type": "decimal(38,6)",
+  "facade_value": "882.800000",
+  "sql": "price * CAST(5 AS DECIMAL(1,0))",
+  "sql_type": "decimal(38,6)",
+  "sql_value": "882.800000",
+  "cache_value": "882.800000"
+ },
+ {
+  "input": "decimal(30,10)",
+  "op": "*5",
+  "facade_type": "decimal(32,10)",
+  "facade_value": "882.8000000000",
+  "sql": "price * 5",
+  "sql_type": "decimal(32,10)",
+  "sql_value": "882.8000000000",
+  "cache_value": "882.8000000000"
+ },
+ {
+  "input": "decimal(30,10)",
+  "op": "+1",
+  "facade_type": "decimal(31,10)",
+  "facade_value": "177.5600000000",
+  "sql": "price + 1",
+  "sql_type": "decimal(31,10)",
+  "sql_value": "177.5600000000",
+  "cache_value": "177.5600000000"
+ },
+ {
+  "input": "decimal(30,10)",
+  "op": "*col",
+  "facade_type": "decimal(38,6)",
+  "facade_value": "31173.433600",
+  "sql": "price * price",
+  "sql_type": "decimal(38,6)",
+  "sql_value": "31173.433600",
+  "cache_value": "31173.433600"
+ },
+ {
+  "input": "decimal(30,10)",
+  "op": "-1",
+  "facade_type": "decimal(31,10)",
+  "facade_value": "175.5600000000",
+  "sql": "price - 1",
+  "sql_type": "decimal(31,10)",
+  "sql_value": "175.5600000000",
+  "cache_value": "175.5600000000"
+ },
+ {
+  "input": "decimal(30,10)",
+  "op": "*lit_decimal",
+  "facade_type": "decimal(32,10)",
+  "facade_value": "882.8000000000",
+  "sql": "price * CAST(5 AS DECIMAL(1,0))",
+  "sql_type": "decimal(32,10)",
+  "sql_value": "882.8000000000",
+  "cache_value": "882.8000000000"
+ },
+ {
+  "input": "decimal(28,6)",
+  "op": "*5",
+  "facade_type": "decimal(30,6)",
+  "facade_value": "882.800000",
+  "sql": "price * 5",
+  "sql_type": "decimal(30,6)",
+  "sql_value": "882.800000",
+  "cache_value": "882.800000"
+ },
+ {
+  "input": "decimal(28,6)",
+  "op": "+1",
+  "facade_type": "decimal(29,6)",
+  "facade_value": "177.560000",
+  "sql": "price + 1",
+  "sql_type": "decimal(29,6)",
+  "sql_value": "177.560000",
+  "cache_value": "177.560000"
+ },
+ {
+  "input": "decimal(28,6)",
+  "op": "*col",
+  "facade_type": "decimal(38,6)",
+  "facade_value": "31173.433600",
+  "sql": "price * price",
+  "sql_type": "decimal(38,6)",
+  "sql_value": "31173.433600",
+  "cache_value": "31173.433600"
+ },
+ {
+  "input": "decimal(28,6)",
+  "op": "-1",
+  "facade_type": "decimal(29,6)",
+  "facade_value": "175.560000",
+  "sql": "price - 1",
+  "sql_type": "decimal(29,6)",
+  "sql_value": "175.560000",
+  "cache_value": "175.560000"
+ },
+ {
+  "input": "decimal(28,6)",
+  "op": "*lit_decimal",
+  "facade_type": "decimal(30,6)",
+  "facade_value": "882.800000",
+  "sql": "price * CAST(5 AS DECIMAL(1,0))",
+  "sql_type": "decimal(30,6)",
+  "sql_value": "882.800000",
+  "cache_value": "882.800000"
+ },
+ {
+  "input": "decimal(20,10)",
+  "op": "*5",
+  "facade_type": "decimal(22,10)",
+  "facade_value": "882.8000000000",
+  "sql": "price * 5",
+  "sql_type": "decimal(22,10)",
+  "sql_value": "882.8000000000",
+  "cache_value": "882.8000000000"
+ },
+ {
+  "input": "decimal(20,10)",
+  "op": "+1",
+  "facade_type": "decimal(21,10)",
+  "facade_value": "177.5600000000",
+  "sql": "price + 1",
+  "sql_type": "decimal(21,10)",
+  "sql_value": "177.5600000000",
+  "cache_value": "177.5600000000"
+ },
+ {
+  "input": "decimal(20,10)",
+  "op": "*col",
+  "facade_type": "decimal(38,17)",
+  "facade_value": "31173.43360000000000000",
+  "sql": "price * price",
+  "sql_type": "decimal(38,17)",
+  "sql_value": "31173.43360000000000000",
+  "cache_value": "31173.43360000000000000"
+ },
+ {
+  "input": "decimal(20,10)",
+  "op": "-1",
+  "facade_type": "decimal(21,10)",
+  "facade_value": "175.5600000000",
+  "sql": "price - 1",
+  "sql_type": "decimal(21,10)",
+  "sql_value": "175.5600000000",
+  "cache_value": "175.5600000000"
+ },
+ {
+  "input": "decimal(20,10)",
+  "op": "*lit_decimal",
+  "facade_type": "decimal(22,10)",
+  "facade_value": "882.8000000000",
+  "sql": "price * CAST(5 AS DECIMAL(1,0))",
+  "sql_type": "decimal(22,10)",
+  "sql_value": "882.8000000000",
+  "cache_value": "882.8000000000"
+ },
+ {
+  "input": "decimal(10,2)",
+  "op": "*5",
+  "facade_type": "decimal(12,2)",
+  "facade_value": "882.80",
+  "sql": "price * 5",
+  "sql_type": "decimal(12,2)",
+  "sql_value": "882.80",
+  "cache_value": "882.80"
+ },
+ {
+  "input": "decimal(10,2)",
+  "op": "+1",
+  "facade_type": "decimal(11,2)",
+  "facade_value": "177.56",
+  "sql": "price + 1",
+  "sql_type": "decimal(11,2)",
+  "sql_value": "177.56",
+  "cache_value": "177.56"
+ },
+ {
+  "input": "decimal(10,2)",
+  "op": "*col",
+  "facade_type": "decimal(21,4)",
+  "facade_value": "31173.4336",
+  "sql": "price * price",
+  "sql_type": "decimal(21,4)",
+  "sql_value": "31173.4336",
+  "cache_value": "31173.4336"
+ },
+ {
+  "input": "decimal(10,2)",
+  "op": "-1",
+  "facade_type": "decimal(11,2)",
+  "facade_value": "175.56",
+  "sql": "price - 1",
+  "sql_type": "decimal(11,2)",
+  "sql_value": "175.56",
+  "cache_value": "175.56"
+ },
+ {
+  "input": "decimal(10,2)",
+  "op": "*lit_decimal",
+  "facade_type": "decimal(12,2)",
+  "facade_value": "882.80",
+  "sql": "price * CAST(5 AS DECIMAL(1,0))",
+  "sql_type": "decimal(12,2)",
+  "sql_value": "882.80",
+  "cache_value": "882.80"
+ }
+]
