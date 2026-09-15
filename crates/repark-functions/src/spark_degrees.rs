@@ -111,14 +111,14 @@ impl ScalarUDFImpl for SparkAngleConvert {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        match arg_types {
-            [data_type] => Ok(vec![data_type.clone()]),
-            _ => exec_err!(
+        let [data_type] = arg_types else {
+            return exec_err!(
                 "'{}' expects one argument, got {}",
                 self.name(),
                 arg_types.len()
-            ),
-        }
+            );
+        };
+        Ok(vec![data_type.clone()])
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -246,14 +246,12 @@ fn convert_strings(
             continue;
         }
         let raw = values.value(row);
-        match raw.trim().parse::<f64>() {
-            Ok(parsed) => out.push(Some(parsed * factor)),
-            Err(_) => {
-                if ansi {
-                    return Err(malformed_double_cast(raw));
-                }
-                out.push(None);
-            }
+        if let Ok(parsed) = raw.trim().parse::<f64>() {
+            out.push(Some(parsed * factor));
+        } else if ansi {
+            return Err(malformed_double_cast(raw));
+        } else {
+            out.push(None);
         }
     }
     Ok(Arc::new(Float64Array::from(out)))
@@ -423,8 +421,7 @@ mod tests {
         let underflow = one(&ctx, "SELECT radians(5e-324)").await;
         match underflow {
             ScalarValue::Float64(Some(value)) => {
-                assert_eq!(value, 0.0);
-                assert!(!value.is_sign_negative());
+                assert_eq!(value.to_bits(), 0x0);
             }
             other => panic!("expected positive zero, got {other:?}"),
         }
@@ -446,7 +443,8 @@ mod tests {
             let parsed: f64 = text.parse().unwrap_or_else(|_| panic!("bad probe {text}"));
             match answered {
                 ScalarValue::Float64(Some(value)) => {
-                    assert_eq!(value, parsed * (180.0 / std::f64::consts::PI), "{text}");
+                    let wanted = parsed * (180.0 / std::f64::consts::PI);
+                    assert_eq!(value.to_bits(), wanted.to_bits(), "{text}");
                 }
                 other => panic!("expected float for {text}, got {other:?}"),
             }

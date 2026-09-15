@@ -466,7 +466,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims + **SEM-1** `spark_log`
   (Spark-door natural `log`, dual-arity null-guard) + **LOG1P-1** `spark_log1p`
   (`log1p` / `expm1`) — later registration wins a
-  name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
+  name clash) + Q1 percentile aliases + `datetime::functions()` date shims (the
+  single-use helper is inlined; the root stays under its ceiling) +
   `analyzer_rules()` (`SparkIntegerLiteral` → `LambdaRebind` → `SparkDecimalPrecision` →
   `SparkDecimalRewrite` → `SparkIntegerOverflow` → Spark semantics +
   cardinality + instant_ts + a closing `TypeCoercion` — the narrowing runs after
