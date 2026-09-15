@@ -10,19 +10,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
   `risk_tier: standard`. Branch `docs/registry-16b-1`.
   pins: registry-16b-1/C-001, C-002, C-003
-- [fnp-bitmap-facade-1-ledger.md](fnp-bitmap-facade-1-ledger.md) —
-  **FNP-BITMAP-FACADE-1 (2026-09-15), in flight:** the three FNP-6D bitmap aggregates
-  bind as Spark-facade names — `F.bitmap_construct_agg` / `F.bitmap_or_agg` /
-  `F.bitmap_and_agg` as one-line wrappers over `column._inner.aggregate(kind, False)`
-  through three new `unary_aggregate_udaf` arms (`mod bitmap_agg` flips `pub` for the
-  cross-crate path; `function_dispatch.rs` condenses its four `binary_expr` arms to stay
-  under its file-size ceiling). Rust UDAFs and SQL door untouched (FNP-6D, #609).
-  Round 15a complete: red re-run on the base facade with the native (9 failed), ten green
-  facade pins, byname `FACADE_ONLY_ROUTINE_NAMES` rows with the `call_function` bytes pin,
-  example executed under `--require-execute`, EX-0 1010 → 1013, registry flipped,
-  all four clauses PROVEN.
-  `risk_tier: standard`. Branch `feat/fnp-bitmap-facade-1`.
-  pins: fnp-bitmap-facade-1/C-001, C-002, C-003, C-004
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
