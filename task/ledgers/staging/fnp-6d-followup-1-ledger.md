@@ -60,6 +60,26 @@ paths (C-004). The `1.0E30D` rendering reuses the crate's `java_double_text`
 (`json::reader`, visibility widened to `pub(crate)`); no live-PySpark re-measure
 exists in-lane (no pyspark module), so the recorded FU2 cells are the truth and the
 pins assert their message core verbatim.
+L-002 P2 ACCEPTED as a pin: a builder-config ANSI-off session still raises on
+`'abc'` today, pinned as the expected divergence against `FU-construct-abc-nonansi`
+(rows `[[0]]`), citing SET-ANSI-RUNTIME-1 and owner ruling Q-15c-3 (run 16b/16c owns
+the per-query snapshot and will flip this pin); `SparkAnsiConfig` is not reachable
+from `AccumulatorArgs` without a planner edit (critic-confirmed), so no ANSI-off
+kernel in this round (C-005).
+L-003 refuted by FU2-construct-str-overflow / -u64: Spark 4.1.2 raises
+`CAST_INVALID_INPUT` (not `CAST_OVERFLOW`) for `'9223372036854775808'` and
+`'18446744073709551615'`, and `'+1'` answers 1 — pinned as-is (C-003/C-004) so
+today's correct behaviour cannot regress.
+L-004 P2 ACCEPTED: refusal pins are driven from fixture ids — each pin looks up its
+cell, runs the adapted SQL from the id → SQL map in the test file (adaptation
+reasons in `python/repark/tests/map.md`), and asserts the fixture message core
+(class, required type, Spark type name, SQLSTATE) extracted from the cell's
+`message`, plus the registry-cited `t.x` qualifier for the nested bit-position
+rendering (C-001/C-002/C-003/C-007).
+L-005 P3 → ledger only (arity stays a loud Execution error; a WRONG_NUM_ARGS sweep
+is out of this unit). L-006 P3: `FU2-construct-fixedbin` folds `CAST(x AS BINARY)`;
+`FixedSizeBinary` joins the OR/AND payload set with a direct visit arm, pinned
+(C-001).
 
 **Not in this unit:** `STATUS.md`, `briefs/next-sequence.md`, `Cargo.toml`,
 `Cargo.lock`, `pyproject.toml`, `uv.lock`, `.github/`, `functions*.py`,

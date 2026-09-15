@@ -4497,8 +4497,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   INT)` (the door types bare `VALUES (1)` as BIGINT where Spark types INT),
   `CAST('1e30' AS DOUBLE)` (the door rejects the `1e30D` literal), plain-column
   instead of `length(...)` (planning fails before `length`), and the
-  registry-cited `t.x` qualifier inside nested calls.
-  pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004, C-007
+  registry-cited `t.x` qualifier inside nested calls. Round 2 drives every
+  refusal pin from its fixture cell id (message core extracted from the cell
+  text), pins the builder ANSI-off still-raises shape as the SET-ANSI-RUNTIME-1
+  divergence (C-005), and pins the FU2 overflow-string/i64-max/`+1` cells.
+  pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004, C-005, C-007
 - `test_fnp6_regexp.py` — **FNP-6a (2026-08-20):** `regexp_extract_all` / `regexp_substr`
   against Python's `re` as an independent oracle, the three no-match conventions Spark keeps
   apart, door agreement, and a pin tying `regexp_count` to `size(regexp_extract_all(...))` on an

@@ -17,125 +17,98 @@ _FIXTURE_PATH = Path(__file__).with_name("fnp_6d_followup_1_spark_oracle.json")
 _FIXTURE: dict[str, Any] = json.loads(_FIXTURE_PATH.read_text())
 _CELLS: dict[str, dict[str, Any]] = {cell["id"]: cell for cell in _FIXTURE["cells"]}
 
-OR_AND_REFUSALS: tuple[tuple[str, str, str, str], ...] = (
+OR_AND_REFUSALS: tuple[tuple[str, str], ...] = (
     (
         "FU-or-int",
         "SELECT bitmap_or_agg(x) b FROM VALUES (CAST(1 AS INT)), (CAST(2 AS INT)) AS t(x)",
-        "bitmap_or_agg",
-        "INT",
     ),
     (
         "FU-and-int",
         "SELECT bitmap_and_agg(x) b FROM VALUES (CAST(1 AS INT)), (CAST(2 AS INT)) AS t(x)",
-        "bitmap_and_agg",
-        "INT",
     ),
     (
         "FU-or-bigint-bitpos",
         "SELECT bitmap_or_agg(bitmap_bit_position(x)) b FROM VALUES (1), (2) AS t(x)",
-        "bitmap_or_agg",
-        "BIGINT",
     ),
     (
         "FU-or-float",
         "SELECT bitmap_or_agg(x) b FROM VALUES (CAST(1.0 AS FLOAT)) AS t(x)",
-        "bitmap_or_agg",
-        "FLOAT",
     ),
     (
         "FU-or-double",
         "SELECT bitmap_or_agg(x) b FROM VALUES (CAST(1.0 AS DOUBLE)) AS t(x)",
-        "bitmap_or_agg",
-        "DOUBLE",
     ),
     (
         "FU-or-bool",
         "SELECT bitmap_or_agg(x) b FROM VALUES (true) AS t(x)",
-        "bitmap_or_agg",
-        "BOOLEAN",
     ),
     (
         "FU-and-bool",
         "SELECT bitmap_and_agg(x) b FROM VALUES (true) AS t(x)",
-        "bitmap_and_agg",
-        "BOOLEAN",
     ),
     (
         "FU-or-string",
         "SELECT bitmap_or_agg(x) b FROM VALUES ('abc') AS t(x)",
-        "bitmap_or_agg",
-        "STRING",
     ),
     (
         "FU-and-string",
         "SELECT bitmap_and_agg(x) b FROM VALUES ('abc') AS t(x)",
-        "bitmap_and_agg",
-        "STRING",
     ),
     (
         "FU-or-decimal",
         "SELECT bitmap_or_agg(x) b FROM VALUES (CAST(1.5 AS DECIMAL(2,1))) AS t(x)",
-        "bitmap_or_agg",
-        "DECIMAL(2,1)",
     ),
     (
         "FU-or-date",
         "SELECT bitmap_or_agg(x) b FROM VALUES (DATE'2020-01-01') AS t(x)",
-        "bitmap_or_agg",
-        "DATE",
     ),
     (
         "FU-or-null-literal",
         "SELECT bitmap_or_agg(NULL) b FROM VALUES (1) AS t(x)",
-        "bitmap_or_agg",
-        "VOID",
     ),
 )
 
-CONSTRUCT_REFUSALS: tuple[tuple[str, str, str], ...] = (
+CONSTRUCT_REFUSALS: tuple[tuple[str, str], ...] = (
     (
         "FU-construct-bool",
         "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (true) AS t(x)",
-        "BOOLEAN",
     ),
     (
         "FU-construct-binary",
         "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (X'01') AS t(x)",
-        "BINARY",
     ),
     (
         "FU-construct-date",
         "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (DATE'2020-01-01') AS t(x)",
-        "DATE",
-    ),
-    (
-        "construct-timestamp",
-        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
-        "FROM VALUES (CAST('2020-01-01 00:00:00' AS TIMESTAMP)) AS t(x)",
-        "TIMESTAMP",
     ),
 )
 
-CONSTRUCT_MALFORMED: tuple[tuple[str, str, str], ...] = (
+CONSTRUCT_MALFORMED: tuple[tuple[str, str], ...] = (
     (
         "FU-construct-abc",
         "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('abc') AS t(x)",
-        "abc",
     ),
     (
         "FU-construct-empty-str",
         "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('') AS t(x)",
-        "",
     ),
     (
         "FU-construct-1.5-str",
         "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('1.5') AS t(x)",
-        "1.5",
     ),
     (
         "FU-construct-str-mixed",
         "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('1'), ('abc') AS t(x)",
-        "abc",
+    ),
+    (
+        "FU2-construct-str-overflow",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
+        "FROM VALUES ('9223372036854775808') AS t(x)",
+    ),
+    (
+        "FU2-construct-str-u64",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
+        "FROM VALUES ('18446744073709551615') AS t(x)",
     ),
 )
 
@@ -167,6 +140,11 @@ CONSTRUCT_ANSWERS: tuple[tuple[str, str, int], ...] = (
         1,
     ),
     (
+        "FU2-construct-str-plus",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('+1') AS t(x)",
+        1,
+    ),
+    (
         "FU-construct-null-literal",
         "SELECT bitmap_count(bitmap_construct_agg(NULL)) c FROM VALUES (1) AS t(x)",
         0,
@@ -191,15 +169,21 @@ def spark() -> Iterator[ReparkSession]:
     session.stop()
 
 
-_CLASS_RE = re.compile(r"\[(DATATYPE_MISMATCH\.[A-Z_]+|CAST_[A-Z_]+)\]")
+_CLASS_RE = re.compile(r"\[([A-Z_]+(?:\.[A-Z_]+)?)\]")
 _REQUIRED_RE = re.compile(r'The first parameter requires the "(BINARY|BIGINT)" type')
 _TYPE_RE = re.compile(r'has the type "([^"]+)"')
 _STATE_RE = re.compile(r"SQLSTATE: (\d+)")
-_OVERFLOW_VALUE_RE = re.compile(r'The value (\S+) of the type "([A-Z0-9(),]+)" cannot be cast to "BIGINT"')
+_OVERFLOW_VALUE_RE = re.compile(
+    r'The value (\S+) of the type "([A-Z0-9(),]+)" cannot be cast to "BIGINT"'
+)
 _STRING_VALUE_RE = re.compile(
     r'The value \'([^\']*)\' of the type "STRING" cannot be cast to "BIGINT"'
 )
 _CALL_RE = re.compile(r'Cannot resolve "(bitmap_(?:or|and|construct)_agg)\(')
+_POSITION_RE = re.compile(r"bitmap position (-?\d+)")
+_RENDERING_QUALIFIERS: dict[str, str] = {
+    "FU-or-bigint-bitpos": "bitmap_bit_position(t.x)",
+}
 
 
 def _refusal_needles(cell_id: str) -> list[str]:
@@ -226,13 +210,15 @@ def _refusal_needles(cell_id: str) -> list[str]:
     string_match = _STRING_VALUE_RE.search(message)
     if string_match is not None:
         needles.append(
-            f'The value \'{string_match.group(1)}\' of the type "STRING" '
-            f'cannot be cast to "BIGINT"'
+            f'The value \'{string_match.group(1)}\' of the type "STRING" cannot be cast to "BIGINT"'
         )
+    position_match = _POSITION_RE.search(message)
+    if position_match is not None:
+        needles.append(f"bitmap position {position_match.group(1)}")
     return needles
 
 
-def _assert_fixture_core(spark: ReparkSession, cell_id: str, sql: str) -> None:
+def _refusal_message(spark: ReparkSession, cell_id: str, sql: str) -> str:
     """Run sql and assert the door error carries the fixture cell core."""
     message = refuse_text(spark, sql)
     call_match = _CALL_RE.search(str(_CELLS[cell_id].get("message", "")))
@@ -240,6 +226,9 @@ def _assert_fixture_core(spark: ReparkSession, cell_id: str, sql: str) -> None:
         assert f'Cannot resolve "{call_match.group(1)}(' in message
     for needle in _refusal_needles(cell_id):
         assert needle in message
+    if cell_id in _RENDERING_QUALIFIERS:
+        assert _RENDERING_QUALIFIERS[cell_id] in message
+    return message
 
 
 def refuse_text(spark: ReparkSession, sql: str) -> str:
@@ -260,56 +249,66 @@ def count_cell(spark: ReparkSession, sql: str) -> int:
 
 
 @pytest.mark.parametrize(
-    ("cell_id", "sql", "function", "spark_type"),
+    ("cell_id", "sql"),
     OR_AND_REFUSALS,
     ids=[row[0] for row in OR_AND_REFUSALS],
 )
 def test_or_and_agg_refuses_non_binary_payload(
-    spark: ReparkSession, cell_id: str, sql: str, function: str, spark_type: str
+    spark: ReparkSession, cell_id: str, sql: str
 ) -> None:
     """pins: fnp-6d-followup-1/C-001."""
-    assert _CELLS[cell_id]["condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
-    message = refuse_text(spark, sql)
-    assert "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]" in message
-    assert function in message
-    assert 'The first parameter requires the "BINARY" type, however' in message
-    assert f'has the type "{spark_type}"' in message
-    assert "SQLSTATE: 42K09" in message
+    _refusal_message(spark, cell_id, sql)
 
 
 @pytest.mark.parametrize(
-    ("cell_id", "sql", "spark_type"),
+    ("cell_id", "sql"),
     CONSTRUCT_REFUSALS,
     ids=[row[0] for row in CONSTRUCT_REFUSALS],
 )
 def test_construct_agg_refuses_non_bigint_payload(
-    spark: ReparkSession, cell_id: str, sql: str, spark_type: str
+    spark: ReparkSession, cell_id: str, sql: str
 ) -> None:
     """pins: fnp-6d-followup-1/C-002."""
-    if cell_id in _CELLS:
-        assert _CELLS[cell_id]["condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
-    message = refuse_text(spark, sql)
+    _refusal_message(spark, cell_id, sql)
+
+
+def test_construct_agg_refuses_timestamp_without_fixture_cell(
+    spark: ReparkSession,
+) -> None:
+    """pins: fnp-6d-followup-1/C-002."""
+    message = refuse_text(
+        spark,
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
+        "FROM VALUES (CAST('2020-01-01 00:00:00' AS TIMESTAMP)) AS t(x)",
+    )
     assert "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]" in message
-    assert "bitmap_construct_agg" in message
     assert 'The first parameter requires the "BIGINT" type, however' in message
-    assert f'has the type "{spark_type}"' in message
+    assert 'has the type "TIMESTAMP"' in message
     assert "SQLSTATE: 42K09" in message
 
 
 @pytest.mark.parametrize(
-    ("cell_id", "sql", "value"),
+    ("cell_id", "sql"),
     CONSTRUCT_MALFORMED,
     ids=[row[0] for row in CONSTRUCT_MALFORMED],
 )
 def test_construct_agg_malformed_string_raises_cast_invalid_input(
-    spark: ReparkSession, cell_id: str, sql: str, value: str
+    spark: ReparkSession, cell_id: str, sql: str
 ) -> None:
     """pins: fnp-6d-followup-1/C-003."""
-    assert _CELLS[cell_id]["condition"] == "CAST_INVALID_INPUT"
-    message = refuse_text(spark, sql)
-    assert "[CAST_INVALID_INPUT]" in message
-    assert f'The value \'{value}\' of the type "STRING" cannot be cast to "BIGINT"' in message
-    assert "SQLSTATE: 22018" in message
+    _refusal_message(spark, cell_id, sql)
+
+
+def test_construct_agg_i64max_string_raises_bitmap_position(
+    spark: ReparkSession,
+) -> None:
+    """pins: fnp-6d-followup-1/C-004."""
+    _refusal_message(
+        spark,
+        "FU2-construct-str-i64max",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
+        "FROM VALUES ('9223372036854775807') AS t(x)",
+    )
 
 
 @pytest.mark.parametrize(
@@ -334,6 +333,30 @@ def test_concat_binary_types_string_expected_divergence(spark: ReparkSession) ->
     assert table.schema.field("b").type == pa.string()
 
 
+@pytest.fixture
+def spark_ansi_off() -> Iterator[ReparkSession]:
+    session = (
+        ReparkSession.builder.appName("fnp-6d-followup-1-ansi-off")
+        .config("spark.sql.ansi.enabled", "false")
+        .getOrCreate()
+    )
+    yield session
+    session.stop()
+
+
+def test_builder_ansi_off_still_raises_expected_divergence(
+    spark_ansi_off: ReparkSession,
+) -> None:
+    """pins: fnp-6d-followup-1/C-005; expected divergence SET-ANSI-RUNTIME-1."""
+    assert _CELLS["FU-construct-abc-nonansi"]["rows"] == [[0]]
+    message = refuse_text(
+        spark_ansi_off,
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('abc') AS t(x)",
+    )
+    assert "[CAST_INVALID_INPUT]" in message
+    assert "SQLSTATE: 22018" in message
+
+
 OVERFLOW_CASES: tuple[tuple[str, str], ...] = (
     (
         "FU2-construct-nan-double",
@@ -352,8 +375,7 @@ OVERFLOW_CASES: tuple[tuple[str, str], ...] = (
     ),
     (
         "FU2-construct-nan-float",
-        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
-        "FROM VALUES (CAST('NaN' AS FLOAT)) AS t(x)",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST('NaN' AS FLOAT)) AS t(x)",
     ),
     (
         "FU2-construct-big-double",
@@ -377,7 +399,7 @@ def test_construct_agg_numeric_overflow_raises_cast_overflow(
     spark: ReparkSession, cell_id: str, sql: str
 ) -> None:
     """pins: fnp-6d-followup-1/C-004."""
-    _assert_fixture_core(spark, cell_id, sql)
+    _refusal_message(spark, cell_id, sql)
 
 
 def test_construct_agg_overflow_raises_on_grouped_and_window_paths(
@@ -393,4 +415,4 @@ def test_construct_agg_overflow_raises_on_grouped_and_window_paths(
         "FROM VALUES (CAST('NaN' AS DOUBLE)) AS t(x)"
     )
     for sql in (grouped, windowed):
-        _assert_fixture_core(spark, "FU2-construct-nan-double", sql)
+        _refusal_message(spark, "FU2-construct-nan-double", sql)
