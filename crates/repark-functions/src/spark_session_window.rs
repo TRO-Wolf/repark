@@ -54,6 +54,11 @@ pub fn session_assemble_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SessionAssemble::new()))
 }
 
+/// Refuses a second `session_window` gap specification with Spark's text.
+///
+/// # Errors
+///
+/// Returns the `[_LEGACY_ERROR_TEMP_1039]` plan error when two specs differ.
 pub fn check_single_session_spec(group_by: &[Expr]) -> Result<()> {
     let mut seen: Option<Vec<Expr>> = None;
     for expression in group_by {
