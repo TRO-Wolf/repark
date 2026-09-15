@@ -15,12 +15,6 @@ def test_try_to_timestamp_refuses() -> None:
         F.try_to_timestamp("s")
 
 
-def test_unix_timestamp_format_refuses() -> None:
-    """unix_timestamp format argument refuses; Spark parses the pattern (EX-FN-21)."""
-    with pytest.raises(UnsupportedOperationException, match="format argument"):
-        F.unix_timestamp("s", "yyyy-MM-dd")
-
-
 def test_from_xml_refuses() -> None:
     """from_xml refuses as an E1 stub; Spark parses the row struct (EX-FN-22)."""
     with pytest.raises(UnsupportedOperationException, match="from_xml"):

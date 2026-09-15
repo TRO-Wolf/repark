@@ -146,8 +146,8 @@ pub fn second(arg: Expr) -> Expr {
 
 /// Spark `to_date(ts|date|string)` — TZ-8 session-zone date for an LTZ timestamp.
 #[must_use]
-pub fn to_date(arg: Expr) -> Expr {
-    call(crate::timestamp_cast::to_date_udf(), vec![arg])
+pub fn to_date(args: Vec<Expr>) -> Expr {
+    call(crate::timestamp_cast::to_date_udf(), args)
 }
 
 #[must_use]

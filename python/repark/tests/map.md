@@ -634,9 +634,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ex-16-dataframe-b/C-001
 - [test_examples_functions_b.py](test_examples_functions_b.py) — **EX-28 (2026-09-06):**
   the two divergence pins for the F.* scalar-remainder batch — `try_to_timestamp`
-  refuses (EX-FN-20) and the `unix_timestamp` format argument refuses (EX-FN-21,
-  BACKLOG ARM on a covered name). Both pin at call time; the registry rows are
-  `EX-FN-20` and `EX-FN-21`. **EX-30 (2026-09-11):** three more pins for the F.*
+  refuses (EX-FN-20); the `unix_timestamp` format-argument refusal pin (EX-FN-21) was
+  retired 2026-09-15 when FNP-11B step 2 parsed the pattern — its oracle cells now pin in
+  `test_fnp11b_temporal_formats.py`. The registry row is `EX-FN-20`. **EX-30 (2026-09-11):** three more pins for the F.*
   remainder — `from_xml` and `schema_of_xml` refuse as E1 stubs (EX-FN-22) and the
   `udf` / `pandas_udf` factories answer typed UDF objects where Spark 4.1.2 answers
   plain functions (EX-FN-23, BACKLOG ARM on covered names).
@@ -2589,7 +2589,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   class, message and params (`sqlExpr`/`paramIndex`/`inputSql`/`inputType`/
   `requiredType`), not `PySparkTypeError`.
   pins: perf-approxpct-1/C-002
-- `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.
+- `test_fn_batch3.py` — R-FN-BATCH3 datetime + Java-pattern parsing (FNP-11B step 2
+  answers `to_date` / `to_timestamp` with formats) + loud census.
 - `test_fn_batch2.py` (octo C1: exact overlay/slice pins)` — **R-FN-BATCH2**: strings/collection value+type+null pins; loud census
   (soundex/sentences/arrays_zip/map_from_arrays/locate pos / array_join null_replacement).
 
@@ -5341,3 +5342,22 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 - **FNP-11A (2026-09-15):** `test_functions_split_identity.py` pins the eleven-name FNP-11A tail after `ARROW_EXPORTS`. `test_catalog_surface_1.py::test_list_functions_shape` (unique names) and `test_fnp_misc_1.py::test_fnp_misc_1_byname_allowlist_covers_facade` caught the duplicate install and are green again.
 - **DOOR-CONVERGE-2 (#622, 2026-09-15, orchestrator):** `test_fnp_6d_followup_1.py::test_concat_binary_types_string_expected_divergence` is renamed `test_concat_binary_types_binary_converged_door_converge_2` and flipped to `pa.binary()`, because `concat(BINARY, BINARY)` now converges on Spark's BINARY (oracle Q12-13). Run 16a filed the pin to go red on this convergence (ruling R-16c-11). pins: door-converge-2/C-001
 - `test_fnp_bitmap_facade_1.py` — **run 16a rebuild (2026-09-15):** `ruff format` normalizes the whitespace left by the cherry-pick conflict resolution onto #623; no pin changed. pins: fnp-bitmap-facade-1/C-011
+FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
+
+- [fnp11b_spark_oracle.json](fnp11b_spark_oracle.json) — filtered oracle for the
+  card: 315 cells from `/tmp/oc-worker/pa-11b/fnp11_spark_oracle.json` (the
+  card names with `time_type_enabled == spark_default`, plus the
+  `make_timestamp` Python `date=` cells for Q-15a-3) and 22 cells from
+  `/tmp/oc-worker/pa-math/o245_spark_oracle.json` (the `to_char` /
+  `to_varchar` / `to_number` / `to_binary` cells, D-7); signatures carried over
+  for the C-001 pin. Recorded evidence is never hand-edited.
+  pins: fnp-11b/C-002, C-003, C-004, C-005, C-006
+- [test_fnp11b_temporal_formats.py](test_fnp11b_temporal_formats.py) — one
+  parametrized test per door over the 337 fixture cells: facade-signature
+  parity (C-001), Python-door and SQL-door oracle equality (C-002/C-003),
+  Spark error conditions and message prefixes on both ANSI settings (C-004),
+  the TIME-family refusals with `current_time` answering (C-005), and BL-13 /
+  BL-14 (C-006). SQL `typeof(current_time…)` cells run translated to Arrow
+  time64 assertions (no `typeof` on the SQL door); Python `tm` value cells run
+  on the TIME frame while `UNRESOLVED_COLUMN` cells stay on the plain frame.
+  pins: fnp-11b/C-001, C-002, C-003, C-004, C-005, C-006

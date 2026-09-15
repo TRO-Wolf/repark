@@ -1,0 +1,5368 @@
+{
+ "cells": [
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "F.make_timestamp(date=col('dt'), time=col('tm'))",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `tm` cannot be resolved. Did you mean one of the following? [`d`, `dt`, `h`, `mi`, `mo`]. SQLSTATE: 42703;",
+   "name": "make_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "F.make_timestamp(date=col('dt'), time=col('tm'))",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `tm` cannot be resolved. Did you mean one of the following? [`d`, `dt`, `h`, `mi`, `mo`]. SQLSTATE: 42703;",
+   "name": "make_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "F.make_timestamp(date=col('dt'), time=col('tm'))",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `tm` cannot be resolved. Did you mean one of the following? [`d`, `dt`, `h`, `mi`, `mo`]. SQLSTATE: 42703;",
+   "name": "make_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "F.make_timestamp(date=col('dt'), time=col('tm'))",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `tm` cannot be resolved. Did you mean one of the following? [`d`, `dt`, `h`, `mi`, `mo`]. SQLSTATE: 42703;",
+   "name": "make_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "F.make_timestamp(date='dt', time='tm', timezone='tz')",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `tm` cannot be resolved. Did you mean one of the following? [`d`, `dt`, `h`, `mi`, `mo`]. SQLSTATE: 42703;",
+   "name": "make_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ltz(ts_str)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz(ts_str)",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ltz(ts_str)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz(ts_str)",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(ts_str)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz(ts_str)",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(ts_str)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz(ts_str)",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ltz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ltz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "CAST_INVALID_INPUT",
+   "error_type": "DateTimeException",
+   "expr": "to_timestamp_ltz('garbage')",
+   "message": "[CAST_INVALID_INPUT] The value 'garbage' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
+   "name": "to_timestamp_ltz",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(garbage)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz('garbage')",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "CANNOT_PARSE_TIMESTAMP",
+   "error_type": "DateTimeException",
+   "expr": "to_timestamp_ltz('2016-12-31', 'yyyy-MM-dd HH')",
+   "message": "[CANNOT_PARSE_TIMESTAMP] Text '2016-12-31' could not be parsed at index 10. Use `try_to_timestamp` to tolerate invalid input string and return NULL instead. SQLSTATE: 22007",
+   "name": "to_timestamp_ltz",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(2016-12-31, yyyy-MM-dd HH)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz('2016-12-31', 'yyyy-MM-dd HH')",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ltz(dt)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz(dt)",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-30T19:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ltz(dt)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz(dt)",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T00:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(dt)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz(dt)",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-30T19:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(dt)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz(dt)",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T00:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ltz(2016-12-31 00:12:00+02:00)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz('2016-12-31 00:12:00+02:00')",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T17:12:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(2016-12-31 00:12:00+02:00)",
+   "door": "sql",
+   "expr": "to_timestamp_ltz('2016-12-31 00:12:00+02:00')",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T17:12:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ltz(ts_str)",
+   "door": "python",
+   "expr": "F.to_timestamp_ltz('ts_str')",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ltz(ts_str)",
+   "door": "python",
+   "expr": "F.to_timestamp_ltz('ts_str')",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(ts_str)",
+   "door": "python",
+   "expr": "F.to_timestamp_ltz('ts_str')",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(ts_str)",
+   "door": "python",
+   "expr": "F.to_timestamp_ltz('ts_str')",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ltz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_timestamp_ltz('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ltz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_timestamp_ltz('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_timestamp_ltz('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_timestamp_ltz('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "CAST_INVALID_INPUT",
+   "error_type": "DateTimeException",
+   "expr": "F.to_timestamp_ltz(lit('garbage'))",
+   "message": "[CAST_INVALID_INPUT] The value 'garbage' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
+   "name": "to_timestamp_ltz",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ltz(garbage)",
+   "door": "python",
+   "expr": "F.to_timestamp_ltz(lit('garbage'))",
+   "name": "to_timestamp_ltz",
+   "nullable": true,
+   "rows": [
+    null,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ntz(ts_str)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz(ts_str)",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ntz(ts_str)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz(ts_str)",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(ts_str)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz(ts_str)",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(ts_str)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz(ts_str)",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ntz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ntz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "CAST_INVALID_INPUT",
+   "error_type": "DateTimeException",
+   "expr": "to_timestamp_ntz('garbage')",
+   "message": "[CAST_INVALID_INPUT] The value 'garbage' of the type \"STRING\" cannot be cast to \"TIMESTAMP_NTZ\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
+   "name": "to_timestamp_ntz",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(garbage)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz('garbage')",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "CANNOT_PARSE_TIMESTAMP",
+   "error_type": "DateTimeException",
+   "expr": "to_timestamp_ntz('2016-12-31', 'yyyy-MM-dd HH')",
+   "message": "[CANNOT_PARSE_TIMESTAMP] Text '2016-12-31' could not be parsed at index 10. Use `try_to_timestamp` to tolerate invalid input string and return NULL instead. SQLSTATE: 22007",
+   "name": "to_timestamp_ntz",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(2016-12-31, yyyy-MM-dd HH)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz('2016-12-31', 'yyyy-MM-dd HH')",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ntz(dt)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz(dt)",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T00:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ntz(dt)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz(dt)",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T00:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(dt)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz(dt)",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T00:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(dt)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz(dt)",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T00:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ntz(2016-12-31 00:12:00+02:00)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz('2016-12-31 00:12:00+02:00')",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(2016-12-31 00:12:00+02:00)",
+   "door": "sql",
+   "expr": "to_timestamp_ntz('2016-12-31 00:12:00+02:00')",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ntz(ts_str)",
+   "door": "python",
+   "expr": "F.to_timestamp_ntz('ts_str')",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ntz(ts_str)",
+   "door": "python",
+   "expr": "F.to_timestamp_ntz('ts_str')",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(ts_str)",
+   "door": "python",
+   "expr": "F.to_timestamp_ntz('ts_str')",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(ts_str)",
+   "door": "python",
+   "expr": "F.to_timestamp_ntz('ts_str')",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ntz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_timestamp_ntz('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp_ntz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_timestamp_ntz('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_timestamp_ntz('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_timestamp_ntz('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "CAST_INVALID_INPUT",
+   "error_type": "DateTimeException",
+   "expr": "F.to_timestamp_ntz(lit('garbage'))",
+   "message": "[CAST_INVALID_INPUT] The value 'garbage' of the type \"STRING\" cannot be cast to \"TIMESTAMP_NTZ\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
+   "name": "to_timestamp_ntz",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp_ntz(garbage)",
+   "door": "python",
+   "expr": "F.to_timestamp_ntz(lit('garbage'))",
+   "name": "to_timestamp_ntz",
+   "nullable": true,
+   "rows": [
+    null,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp_ntz",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(ts_str)",
+   "door": "sql",
+   "expr": "try_to_timestamp(ts_str)",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(ts_str)",
+   "door": "sql",
+   "expr": "try_to_timestamp(ts_str)",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(ts_str)",
+   "door": "sql",
+   "expr": "try_to_timestamp(ts_str)",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(ts_str)",
+   "door": "sql",
+   "expr": "try_to_timestamp(ts_str)",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "try_to_timestamp(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "try_to_timestamp(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "try_to_timestamp(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "try_to_timestamp(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(garbage)",
+   "door": "sql",
+   "expr": "try_to_timestamp('garbage')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(garbage)",
+   "door": "sql",
+   "expr": "try_to_timestamp('garbage')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(2016-12-31, yyyy-MM-dd HH)",
+   "door": "sql",
+   "expr": "try_to_timestamp('2016-12-31', 'yyyy-MM-dd HH')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(2016-12-31, yyyy-MM-dd HH)",
+   "door": "sql",
+   "expr": "try_to_timestamp('2016-12-31', 'yyyy-MM-dd HH')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(dt)",
+   "door": "sql",
+   "expr": "try_to_timestamp(dt)",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-30T19:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(dt)",
+   "door": "sql",
+   "expr": "try_to_timestamp(dt)",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T00:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(dt)",
+   "door": "sql",
+   "expr": "try_to_timestamp(dt)",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-30T19:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(dt)",
+   "door": "sql",
+   "expr": "try_to_timestamp(dt)",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T00:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(2016-12-31 00:12:00+02:00)",
+   "door": "sql",
+   "expr": "try_to_timestamp('2016-12-31 00:12:00+02:00')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T17:12:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(2016-12-31 00:12:00+02:00)",
+   "door": "sql",
+   "expr": "try_to_timestamp('2016-12-31 00:12:00+02:00')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T17:12:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(ts_str)",
+   "door": "python",
+   "expr": "F.try_to_timestamp('ts_str')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(ts_str)",
+   "door": "python",
+   "expr": "F.try_to_timestamp('ts_str')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(ts_str)",
+   "door": "python",
+   "expr": "F.try_to_timestamp('ts_str')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(ts_str)",
+   "door": "python",
+   "expr": "F.try_to_timestamp('ts_str')",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.try_to_timestamp('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.try_to_timestamp('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.try_to_timestamp('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.try_to_timestamp('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(garbage)",
+   "door": "python",
+   "expr": "F.try_to_timestamp(lit('garbage'))",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    null,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(garbage)",
+   "door": "python",
+   "expr": "F.try_to_timestamp(lit('garbage'))",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    null,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(ts_str)",
+   "door": "sql",
+   "expr": "to_timestamp(ts_str)",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(ts_str)",
+   "door": "sql",
+   "expr": "to_timestamp(ts_str)",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(ts_str)",
+   "door": "sql",
+   "expr": "to_timestamp(ts_str)",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(ts_str)",
+   "door": "sql",
+   "expr": "to_timestamp(ts_str)",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_timestamp(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_timestamp(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_timestamp(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_timestamp(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "CAST_INVALID_INPUT",
+   "error_type": "DateTimeException",
+   "expr": "to_timestamp('garbage')",
+   "message": "[CAST_INVALID_INPUT] The value 'garbage' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
+   "name": "to_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(garbage)",
+   "door": "sql",
+   "expr": "to_timestamp('garbage')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "CANNOT_PARSE_TIMESTAMP",
+   "error_type": "DateTimeException",
+   "expr": "to_timestamp('2016-12-31', 'yyyy-MM-dd HH')",
+   "message": "[CANNOT_PARSE_TIMESTAMP] Text '2016-12-31' could not be parsed at index 10. Use `try_to_timestamp` to tolerate invalid input string and return NULL instead. SQLSTATE: 22007",
+   "name": "to_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(2016-12-31, yyyy-MM-dd HH)",
+   "door": "sql",
+   "expr": "to_timestamp('2016-12-31', 'yyyy-MM-dd HH')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(dt)",
+   "door": "sql",
+   "expr": "to_timestamp(dt)",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-30T19:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(dt)",
+   "door": "sql",
+   "expr": "to_timestamp(dt)",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T00:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(dt)",
+   "door": "sql",
+   "expr": "to_timestamp(dt)",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-30T19:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(dt)",
+   "door": "sql",
+   "expr": "to_timestamp(dt)",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T00:00:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(2016-12-31 00:12:00+02:00)",
+   "door": "sql",
+   "expr": "to_timestamp('2016-12-31 00:12:00+02:00')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T17:12:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(2016-12-31 00:12:00+02:00)",
+   "door": "sql",
+   "expr": "to_timestamp('2016-12-31 00:12:00+02:00')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T17:12:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(ts_str)",
+   "door": "python",
+   "expr": "F.to_timestamp('ts_str')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(ts_str)",
+   "door": "python",
+   "expr": "F.to_timestamp('ts_str')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(ts_str)",
+   "door": "python",
+   "expr": "F.to_timestamp('ts_str')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(ts_str)",
+   "door": "python",
+   "expr": "F.to_timestamp('ts_str')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T00:12:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "NOT_ITERABLE",
+   "error_type": "PySparkTypeError",
+   "expr": "F.to_timestamp('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "message": "[NOT_ITERABLE] Column is not iterable.",
+   "name": "to_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "NOT_ITERABLE",
+   "error_type": "PySparkTypeError",
+   "expr": "F.to_timestamp('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "message": "[NOT_ITERABLE] Column is not iterable.",
+   "name": "to_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "NOT_ITERABLE",
+   "error_type": "PySparkTypeError",
+   "expr": "F.to_timestamp('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "message": "[NOT_ITERABLE] Column is not iterable.",
+   "name": "to_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "NOT_ITERABLE",
+   "error_type": "PySparkTypeError",
+   "expr": "F.to_timestamp('fmt_str', lit('dd/MM/yyyy HH:mm'))",
+   "message": "[NOT_ITERABLE] Column is not iterable.",
+   "name": "to_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "CAST_INVALID_INPUT",
+   "error_type": "DateTimeException",
+   "expr": "F.to_timestamp(lit('garbage'))",
+   "message": "[CAST_INVALID_INPUT] The value 'garbage' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
+   "name": "to_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(garbage)",
+   "door": "python",
+   "expr": "F.to_timestamp(lit('garbage'))",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    null,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_timestamp('fmt_str', 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_timestamp('fmt_str', 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_timestamp('fmt_str', 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_timestamp('fmt_str', 'dd/MM/yyyy HH:mm')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T10:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.try_to_timestamp('fmt_str', F.lit('dd/MM/yyyy HH:mm'))",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_to_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.try_to_timestamp('fmt_str', F.lit('dd/MM/yyyy HH:mm'))",
+   "name": "try_to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(2016-12-31 10:30:15.123, yyyy-MM-dd HH:mm:ss.SSS)",
+   "door": "sql",
+   "expr": "to_timestamp('2016-12-31 10:30:15.123', 'yyyy-MM-dd HH:mm:ss.SSS')",
+   "name": "to_timestamp",
+   "nullable": false,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:15.123000",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(2016-12-31 10:30:15.123, yyyy-MM-dd HH:mm:ss.SSS)",
+   "door": "sql",
+   "expr": "to_timestamp('2016-12-31 10:30:15.123', 'yyyy-MM-dd HH:mm:ss.SSS')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:15.123000",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(12/31/2016 10:30 PM, MM/dd/yyyy hh:mm a)",
+   "door": "sql",
+   "expr": "to_timestamp('12/31/2016 10:30 PM', 'MM/dd/yyyy hh:mm a')",
+   "name": "to_timestamp",
+   "nullable": false,
+   "rows": [
+    {
+     "datetime": "2016-12-31T17:30:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(12/31/2016 10:30 PM, MM/dd/yyyy hh:mm a)",
+   "door": "sql",
+   "expr": "to_timestamp('12/31/2016 10:30 PM', 'MM/dd/yyyy hh:mm a')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T17:30:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(2016-12-31, yyyy-MM-dd)",
+   "door": "sql",
+   "expr": "to_timestamp('2016-12-31', 'yyyy-MM-dd')",
+   "name": "to_timestamp",
+   "nullable": false,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(2016-12-31, yyyy-MM-dd)",
+   "door": "sql",
+   "expr": "to_timestamp('2016-12-31', 'yyyy-MM-dd')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(2016-12-31T10:30:00, yyyy-MM-dd'T'HH:mm:ss)",
+   "door": "sql",
+   "expr": "to_timestamp('2016-12-31T10:30:00', \"yyyy-MM-dd'T'HH:mm:ss\")",
+   "name": "to_timestamp",
+   "nullable": false,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(2016-12-31T10:30:00, yyyy-MM-dd'T'HH:mm:ss)",
+   "door": "sql",
+   "expr": "to_timestamp('2016-12-31T10:30:00', \"yyyy-MM-dd'T'HH:mm:ss\")",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-31T05:30:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_timestamp(Dec 31 2016, MMM dd yyyy)",
+   "door": "sql",
+   "expr": "to_timestamp('Dec 31 2016', 'MMM dd yyyy')",
+   "name": "to_timestamp",
+   "nullable": false,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_timestamp(Dec 31 2016, MMM dd yyyy)",
+   "door": "sql",
+   "expr": "to_timestamp('Dec 31 2016', 'MMM dd yyyy')",
+   "name": "to_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2016-12-30T19:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION",
+   "error_type": "SparkUpgradeException",
+   "expr": "to_timestamp('2016-12-31', 'YYYY-MM-dd')",
+   "message": "[INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION] You may get a different result due to the upgrading to Spark >= 3.0:",
+   "name": "to_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION",
+   "error_type": "SparkUpgradeException",
+   "expr": "to_timestamp('2016-12-31', 'YYYY-MM-dd')",
+   "message": "[INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION] You may get a different result due to the upgrading to Spark >= 3.0:",
+   "name": "to_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_date(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_date(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_date(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "to_date(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_date(2016-12-31, yyyy-MM-dd)",
+   "door": "sql",
+   "expr": "to_date('2016-12-31', 'yyyy-MM-dd')",
+   "name": "to_date",
+   "nullable": false,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_date(2016-12-31, yyyy-MM-dd)",
+   "door": "sql",
+   "expr": "to_date('2016-12-31', 'yyyy-MM-dd')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_date(31.12.2016, dd.MM.yyyy)",
+   "door": "sql",
+   "expr": "to_date('31.12.2016', 'dd.MM.yyyy')",
+   "name": "to_date",
+   "nullable": false,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_date(31.12.2016, dd.MM.yyyy)",
+   "door": "sql",
+   "expr": "to_date('31.12.2016', 'dd.MM.yyyy')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "CANNOT_PARSE_TIMESTAMP",
+   "error_type": "DateTimeException",
+   "expr": "to_date('2016-13-31', 'yyyy-MM-dd')",
+   "message": "[CANNOT_PARSE_TIMESTAMP] Text '2016-13-31' could not be parsed: Invalid value for MonthOfYear (valid values 1 - 12): 13. Use `try_to_date` to tolerate invalid input string and return NULL instead. SQLSTATE: 22007",
+   "name": "to_date",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_date(2016-13-31, yyyy-MM-dd)",
+   "door": "sql",
+   "expr": "to_date('2016-13-31', 'yyyy-MM-dd')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_date(20161231, yyyyMMdd)",
+   "door": "sql",
+   "expr": "to_date('20161231', 'yyyyMMdd')",
+   "name": "to_date",
+   "nullable": false,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_date(20161231, yyyyMMdd)",
+   "door": "sql",
+   "expr": "to_date('20161231', 'yyyyMMdd')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "CANNOT_PARSE_TIMESTAMP",
+   "error_type": "DateTimeException",
+   "expr": "to_date('garbage', 'yyyy-MM-dd')",
+   "message": "[CANNOT_PARSE_TIMESTAMP] Text 'garbage' could not be parsed at index 0. Use `try_to_date` to tolerate invalid input string and return NULL instead. SQLSTATE: 22007",
+   "name": "to_date",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_date(garbage, yyyy-MM-dd)",
+   "door": "sql",
+   "expr": "to_date('garbage', 'yyyy-MM-dd')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_date(ts_str, yyyy-MM-dd HH:mm:ss)",
+   "door": "sql",
+   "expr": "to_date(ts_str, 'yyyy-MM-dd HH:mm:ss')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_date(ts_str, yyyy-MM-dd HH:mm:ss)",
+   "door": "sql",
+   "expr": "to_date(ts_str, 'yyyy-MM-dd HH:mm:ss')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_date(ts_str, yyyy-MM-dd HH:mm:ss)",
+   "door": "sql",
+   "expr": "to_date(ts_str, 'yyyy-MM-dd HH:mm:ss')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_date(ts_str, yyyy-MM-dd HH:mm:ss)",
+   "door": "sql",
+   "expr": "to_date(ts_str, 'yyyy-MM-dd HH:mm:ss')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_date(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_date('fmt_str', 'dd/MM/yyyy HH:mm')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_date(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.to_date('fmt_str', 'dd/MM/yyyy HH:mm')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "to_date(31.12.2016, dd.MM.yyyy)",
+   "door": "python",
+   "expr": "F.to_date(lit('31.12.2016'), 'dd.MM.yyyy')",
+   "name": "to_date",
+   "nullable": false,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    },
+    {
+     "date": "2016-12-31"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_date(31.12.2016, dd.MM.yyyy)",
+   "door": "python",
+   "expr": "F.to_date(lit('31.12.2016'), 'dd.MM.yyyy')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    {
+     "date": "2016-12-31"
+    },
+    {
+     "date": "2016-12-31"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "CANNOT_PARSE_TIMESTAMP",
+   "error_type": "DateTimeException",
+   "expr": "F.to_date(lit('garbage'), 'yyyy-MM-dd')",
+   "message": "[CANNOT_PARSE_TIMESTAMP] Text 'garbage' could not be parsed at index 0. Use `try_to_date` to tolerate invalid input string and return NULL instead. SQLSTATE: 22007",
+   "name": "to_date",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "to_date(garbage, yyyy-MM-dd)",
+   "door": "python",
+   "expr": "F.to_date(lit('garbage'), 'yyyy-MM-dd')",
+   "name": "to_date",
+   "nullable": true,
+   "rows": [
+    null,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "unix_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "unix_timestamp(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483180200,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "unix_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "unix_timestamp(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483198200,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "unix_timestamp(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483180200,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "sql",
+   "expr": "unix_timestamp(fmt_str, 'dd/MM/yyyy HH:mm')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483198200,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "unix_timestamp(2016-12-31, yyyy-MM-dd)",
+   "door": "sql",
+   "expr": "unix_timestamp('2016-12-31', 'yyyy-MM-dd')",
+   "name": "unix_timestamp",
+   "nullable": false,
+   "rows": [
+    1483142400
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "unix_timestamp(2016-12-31, yyyy-MM-dd)",
+   "door": "sql",
+   "expr": "unix_timestamp('2016-12-31', 'yyyy-MM-dd')",
+   "name": "unix_timestamp",
+   "nullable": false,
+   "rows": [
+    1483160400
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(2016-12-31, yyyy-MM-dd)",
+   "door": "sql",
+   "expr": "unix_timestamp('2016-12-31', 'yyyy-MM-dd')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483142400
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(2016-12-31, yyyy-MM-dd)",
+   "door": "sql",
+   "expr": "unix_timestamp('2016-12-31', 'yyyy-MM-dd')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483160400
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "CANNOT_PARSE_TIMESTAMP",
+   "error_type": "DateTimeException",
+   "expr": "unix_timestamp('garbage', 'yyyy-MM-dd')",
+   "message": "[CANNOT_PARSE_TIMESTAMP] Text 'garbage' could not be parsed at index 0. Use `try_to_timestamp` to tolerate invalid input string and return NULL instead. SQLSTATE: 22007",
+   "name": "unix_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(garbage, yyyy-MM-dd)",
+   "door": "sql",
+   "expr": "unix_timestamp('garbage', 'yyyy-MM-dd')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "unix_timestamp(ts_str, yyyy-MM-dd HH:mm:ss)",
+   "door": "sql",
+   "expr": "unix_timestamp(ts_str)",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483143120,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "unix_timestamp(ts_str, yyyy-MM-dd HH:mm:ss)",
+   "door": "sql",
+   "expr": "unix_timestamp(ts_str)",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483161120,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(ts_str, yyyy-MM-dd HH:mm:ss)",
+   "door": "sql",
+   "expr": "unix_timestamp(ts_str)",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483143120,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(ts_str, yyyy-MM-dd HH:mm:ss)",
+   "door": "sql",
+   "expr": "unix_timestamp(ts_str)",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483161120,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "unix_timestamp(dt, yyyy)",
+   "door": "sql",
+   "expr": "unix_timestamp(dt, 'yyyy')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1706659200,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "unix_timestamp(dt, yyyy)",
+   "door": "sql",
+   "expr": "unix_timestamp(dt, 'yyyy')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1706677200,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(dt, yyyy)",
+   "door": "sql",
+   "expr": "unix_timestamp(dt, 'yyyy')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1706659200,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(dt, yyyy)",
+   "door": "sql",
+   "expr": "unix_timestamp(dt, 'yyyy')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1706677200,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "unix_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.unix_timestamp('fmt_str', 'dd/MM/yyyy HH:mm')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483180200,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "unix_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.unix_timestamp('fmt_str', 'dd/MM/yyyy HH:mm')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483198200,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.unix_timestamp('fmt_str', 'dd/MM/yyyy HH:mm')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483180200,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(fmt_str, dd/MM/yyyy HH:mm)",
+   "door": "python",
+   "expr": "F.unix_timestamp('fmt_str', 'dd/MM/yyyy HH:mm')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483198200,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "CANNOT_PARSE_TIMESTAMP",
+   "error_type": "DateTimeException",
+   "expr": "F.unix_timestamp(lit('garbage'), 'yyyy-MM-dd')",
+   "message": "[CANNOT_PARSE_TIMESTAMP] Text 'garbage' could not be parsed at index 0. Use `try_to_timestamp` to tolerate invalid input string and return NULL instead. SQLSTATE: 22007",
+   "name": "unix_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(garbage, yyyy-MM-dd)",
+   "door": "python",
+   "expr": "F.unix_timestamp(lit('garbage'), 'yyyy-MM-dd')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    null,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "unix_timestamp(ts_str, yyyy-MM-dd HH:mm:ss)",
+   "door": "python",
+   "expr": "F.unix_timestamp('ts_str')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483143120,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "unix_timestamp(ts_str, yyyy-MM-dd HH:mm:ss)",
+   "door": "python",
+   "expr": "F.unix_timestamp('ts_str')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483161120,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(ts_str, yyyy-MM-dd HH:mm:ss)",
+   "door": "python",
+   "expr": "F.unix_timestamp('ts_str')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483143120,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "unix_timestamp(ts_str, yyyy-MM-dd HH:mm:ss)",
+   "door": "python",
+   "expr": "F.unix_timestamp('ts_str')",
+   "name": "unix_timestamp",
+   "nullable": true,
+   "rows": [
+    1483161120,
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "bigint",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_avg(v)",
+   "door": "sql",
+   "expr": "try_avg(v) FROM VALUES (INTERVAL 1 DAY), (INTERVAL 2 DAY) AS x(v) --",
+   "name": "try_avg",
+   "nullable": true,
+   "rows": [
+    {
+     "timedelta_us": 129600000000
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "interval day to second",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_avg(v)",
+   "door": "sql",
+   "expr": "try_avg(v) FROM VALUES (INTERVAL 1 DAY), (INTERVAL 2 DAY) AS x(v) --",
+   "name": "try_avg",
+   "nullable": true,
+   "rows": [
+    {
+     "timedelta_us": 129600000000
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "interval day to second",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "collect_note": "python collect cannot convert this type; rows_as_string is CAST(value AS STRING)",
+   "column_name": "try_avg(v)",
+   "door": "sql",
+   "error_condition": "NOT_IMPLEMENTED",
+   "error_type": "PySparkNotImplementedError",
+   "expr": "try_avg(v) FROM VALUES (INTERVAL '1' MONTH), (INTERVAL '2' MONTH) AS x(v) --",
+   "message": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented.",
+   "name": "try_avg",
+   "nullable": true,
+   "rows_as_string": [
+    "INTERVAL '0-2' YEAR TO MONTH"
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "interval year to month",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "collect_note": "python collect cannot convert this type; rows_as_string is CAST(value AS STRING)",
+   "column_name": "try_avg(v)",
+   "door": "sql",
+   "error_condition": "NOT_IMPLEMENTED",
+   "error_type": "PySparkNotImplementedError",
+   "expr": "try_avg(v) FROM VALUES (INTERVAL '1' MONTH), (INTERVAL '2' MONTH) AS x(v) --",
+   "message": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented.",
+   "name": "try_avg",
+   "nullable": true,
+   "rows_as_string": [
+    "INTERVAL '0-2' YEAR TO MONTH"
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "interval year to month",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "avg(v)",
+   "door": "sql",
+   "expr": "avg(v) FROM VALUES (INTERVAL 1 DAY), (INTERVAL 2 HOUR) AS x(v) --",
+   "name": "avg",
+   "nullable": true,
+   "rows": [
+    {
+     "timedelta_us": 46800000000
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "interval day to second",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "avg(v)",
+   "door": "sql",
+   "expr": "avg(v) FROM VALUES (INTERVAL 1 DAY), (INTERVAL 2 HOUR) AS x(v) --",
+   "name": "avg",
+   "nullable": true,
+   "rows": [
+    {
+     "timedelta_us": 46800000000
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "interval day to second",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_avg(v)",
+   "door": "sql",
+   "expr": "try_avg(v) FROM VALUES (CAST(NULL AS INTERVAL DAY)) AS x(v) --",
+   "name": "try_avg",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "interval day to second",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_avg(v)",
+   "door": "sql",
+   "expr": "try_avg(v) FROM VALUES (CAST(NULL AS INTERVAL DAY)) AS x(v) --",
+   "name": "try_avg",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "interval day to second",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_avg(v)",
+   "door": "sql",
+   "expr": "try_avg(v) FROM VALUES (INTERVAL '106751991' DAY), (INTERVAL '106751991' DAY) AS x(v) --",
+   "name": "try_avg",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "interval day to second",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_avg(v)",
+   "door": "sql",
+   "expr": "try_avg(v) FROM VALUES (INTERVAL '106751991' DAY), (INTERVAL '106751991' DAY) AS x(v) --",
+   "name": "try_avg",
+   "nullable": true,
+   "rows": [
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "interval day to second",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_avg(make_dt_interval(1, 0, 0, 0))",
+   "door": "python",
+   "expr": "F.try_avg(F.make_dt_interval(lit(1)))",
+   "name": "try_avg",
+   "nullable": true,
+   "rows": [
+    {
+     "timedelta_us": 86400000000
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "interval day to second",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_avg(make_dt_interval(1, 0, 0, 0))",
+   "door": "python",
+   "expr": "F.try_avg(F.make_dt_interval(lit(1)))",
+   "name": "try_avg",
+   "nullable": true,
+   "rows": [
+    {
+     "timedelta_us": 86400000000
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "interval day to second",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "DATE '2024-01-01' + INTERVAL '00' HOUR",
+   "door": "sql",
+   "expr": "DATE'2024-01-01' + INTERVAL 0 HOUR",
+   "name": "date_plus_interval",
+   "nullable": false,
+   "rows": [
+    {
+     "datetime": "2023-12-31T19:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "DATE '2024-01-01' + INTERVAL '00' HOUR",
+   "door": "sql",
+   "expr": "DATE'2024-01-01' + INTERVAL 0 HOUR",
+   "name": "date_plus_interval",
+   "nullable": false,
+   "rows": [
+    {
+     "datetime": "2023-12-31T19:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_add(DATE '2024-01-01', INTERVAL '00' HOUR)",
+   "door": "sql",
+   "expr": "try_add(DATE'2024-01-01', INTERVAL 0 HOUR)",
+   "name": "date_plus_interval",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2023-12-31T19:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_add(DATE '2024-01-01', INTERVAL '00' HOUR)",
+   "door": "sql",
+   "expr": "try_add(DATE'2024-01-01', INTERVAL 0 HOUR)",
+   "name": "date_plus_interval",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2023-12-31T19:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "date_add(DATE '2024-01-01', extractansiintervaldays(INTERVAL '0' DAY))",
+   "door": "sql",
+   "expr": "DATE'2024-01-01' + INTERVAL 0 DAY",
+   "name": "date_plus_interval",
+   "nullable": false,
+   "rows": [
+    {
+     "date": "2024-01-01"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "date_add(DATE '2024-01-01', extractansiintervaldays(INTERVAL '0' DAY))",
+   "door": "sql",
+   "expr": "DATE'2024-01-01' + INTERVAL 0 DAY",
+   "name": "date_plus_interval",
+   "nullable": false,
+   "rows": [
+    {
+     "date": "2024-01-01"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "date",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "DATE '2024-01-01' + INTERVAL '01' HOUR",
+   "door": "sql",
+   "expr": "DATE'2024-01-01' + INTERVAL 1 HOUR",
+   "name": "date_plus_interval",
+   "nullable": false,
+   "rows": [
+    {
+     "datetime": "2023-12-31T20:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "DATE '2024-01-01' + INTERVAL '01' HOUR",
+   "door": "sql",
+   "expr": "DATE'2024-01-01' + INTERVAL 1 HOUR",
+   "name": "date_plus_interval",
+   "nullable": false,
+   "rows": [
+    {
+     "datetime": "2023-12-31T20:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "try_add(DATE '2024-01-01', INTERVAL '0 00:00:00' DAY TO SECOND)",
+   "door": "sql",
+   "expr": "try_add(DATE'2024-01-01', INTERVAL '0 00:00:00' DAY TO SECOND)",
+   "name": "date_plus_interval",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2023-12-31T19:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "try_add(DATE '2024-01-01', INTERVAL '0 00:00:00' DAY TO SECOND)",
+   "door": "sql",
+   "expr": "try_add(DATE'2024-01-01', INTERVAL '0 00:00:00' DAY TO SECOND)",
+   "name": "date_plus_interval",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2023-12-31T19:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "DATE '2024-01-01' + INTERVAL '00' MINUTE",
+   "door": "sql",
+   "expr": "DATE'2024-01-01' + INTERVAL 0 MINUTE",
+   "name": "date_plus_interval",
+   "nullable": false,
+   "rows": [
+    {
+     "datetime": "2023-12-31T19:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "DATE '2024-01-01' + INTERVAL '00' MINUTE",
+   "door": "sql",
+   "expr": "DATE'2024-01-01' + INTERVAL 0 MINUTE",
+   "name": "date_plus_interval",
+   "nullable": false,
+   "rows": [
+    {
+     "datetime": "2023-12-31T19:00:00",
+     "tzinfo": "None"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.make_timestamp(date='dt', time='tm')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.make_timestamp(date='dt', time='tm')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.make_timestamp(date='dt', time='tm')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.make_timestamp(date='dt', time='tm')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_timestamp",
+   "time_type_enabled": "spark_default",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "make_time(h, mi, s)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "make_time(h, mi, s)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "make_time(6, 30, 45.887)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "make_time(6, 30, 45.887)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "make_time(24, 0, 0)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "make_time(24, 0, 0)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "make_time(23, 59, 60)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "make_time(23, 59, 60)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "make_time(1, 2, 3)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "make_time(1, 2, 3)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "make_time(1, 2, 3.1234567)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "make_time(1, 2, 3.1234567)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.make_time('h', 'mi', 's')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.make_time('h', 'mi', 's')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.make_time(lit(24), lit(0), lit(0))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.make_time(lit(24), lit(0), lit(0))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "to_time(t_str)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "to_time(t_str)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "to_time('10:30')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "to_time('10:30')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "to_time('25:00:00')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "to_time('25:00:00')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "to_time('garbage')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "to_time('garbage')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "to_time('10.30.15', 'HH.mm.ss')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "to_time('10.30.15', 'HH.mm.ss')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "to_time('12:34:56.123456789')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "to_time('12:34:56.123456789')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.to_time('t_str')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.to_time('t_str')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.to_time(lit('10.30.15'), lit('HH.mm.ss'))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.to_time(lit('10.30.15'), lit('HH.mm.ss'))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.to_time(lit('garbage'))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.to_time(lit('garbage'))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('HOUR', TIME'08:30:00', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('HOUR', TIME'08:30:00', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('HOUR', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('HOUR', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('MINUTE', TIME'08:30:00', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('MINUTE', TIME'08:30:00', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('MINUTE', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('MINUTE', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('SECOND', TIME'08:30:00', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('SECOND', TIME'08:30:00', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('SECOND', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('SECOND', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('MILLISECOND', TIME'08:30:00', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('MILLISECOND', TIME'08:30:00', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('MILLISECOND', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('MILLISECOND', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('MICROSECOND', TIME'08:30:00', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('MICROSECOND', TIME'08:30:00', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('MICROSECOND', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('MICROSECOND', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('DAY', TIME'08:30:00', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('DAY', TIME'08:30:00', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('DAY', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('DAY', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('HOUR', TIME'23:00:00', TIME'01:00:00')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('HOUR', TIME'23:00:00', TIME'01:00:00')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('WEEK', TIME'23:00:00', TIME'01:00:00')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('WEEK', TIME'23:00:00', TIME'01:00:00')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.time_diff(lit('HOUR'), lit(datetime.time(8, 30)), col('tm'))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.time_diff(lit('HOUR'), lit(datetime.time(8, 30)), col('tm'))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.time_trunc(lit('MINUTE'), col('tm'))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.time_trunc(lit('MINUTE'), col('tm'))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('MONTH', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('MONTH', tm)",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "typeof(current_time(0))",
+   "door": "sql",
+   "expr": "typeof(current_time(0))",
+   "name": "current_time",
+   "nullable": false,
+   "rows": [
+    "time(0)"
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "string",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "typeof(current_time(3))",
+   "door": "sql",
+   "expr": "typeof(current_time(3))",
+   "name": "current_time",
+   "nullable": false,
+   "rows": [
+    "time(3)"
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "string",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "typeof(current_time(6))",
+   "door": "sql",
+   "expr": "typeof(current_time)",
+   "name": "current_time",
+   "nullable": false,
+   "rows": [
+    "time(6)"
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "string",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE",
+   "error_type": "AnalysisException",
+   "expr": "current_time(7)",
+   "message": "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve \"current_time(7)\" due to data type mismatch: The `precision` must be between [0, 6] (current value = 7). SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "current_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE",
+   "error_type": "AnalysisException",
+   "expr": "current_time(7)",
+   "message": "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve \"current_time(7)\" due to data type mismatch: The `precision` must be between [0, 6] (current value = 7). SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "current_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "(current_time(0) IS NOT NULL)",
+   "door": "sql",
+   "expr": "current_time(0) IS NOT NULL",
+   "name": "current_time",
+   "nullable": false,
+   "rows": [
+    true
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "boolean",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.current_time().isNotNull()",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "current_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.typeof(F.current_time(3))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "current_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.typeof(F.current_time())",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "current_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "make_timestamp(dt, TIME '06:30:45.887')",
+   "door": "python",
+   "expr": "F.make_timestamp(date=col('dt'), time=lit(datetime.time(6, 30, 45, 887000)))",
+   "name": "make_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T01:30:45.887000",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "make_timestamp(dt, TIME '06:30:45.887')",
+   "door": "python",
+   "expr": "F.make_timestamp(date=col('dt'), time=lit(datetime.time(6, 30, 45, 887000)))",
+   "name": "make_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T06:30:45.887000",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "make_timestamp(dt, TIME '06:30:45.887')",
+   "door": "python",
+   "expr": "F.make_timestamp(date=col('dt'), time=lit(datetime.time(6, 30, 45, 887000)))",
+   "name": "make_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T01:30:45.887000",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "make_timestamp(dt, TIME '06:30:45.887')",
+   "door": "python",
+   "expr": "F.make_timestamp(date=col('dt'), time=lit(datetime.time(6, 30, 45, 887000)))",
+   "name": "make_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T06:30:45.887000",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "make_timestamp(dt, TIME '06:30:45.887')",
+   "door": "python",
+   "expr": "F.make_timestamp(date=col('dt'), time=F.expr(\"TIME'06:30:45.887'\"))",
+   "name": "make_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T01:30:45.887000",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "make_timestamp(dt, TIME '06:30:45.887')",
+   "door": "python",
+   "expr": "F.make_timestamp(date=col('dt'), time=F.expr(\"TIME'06:30:45.887'\"))",
+   "name": "make_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T06:30:45.887000",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "column_name": "make_timestamp(dt, TIME '06:30:45.887')",
+   "door": "python",
+   "expr": "F.make_timestamp(date=col('dt'), time=F.expr(\"TIME'06:30:45.887'\"))",
+   "name": "make_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T01:30:45.887000",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "make_timestamp(dt, TIME '06:30:45.887')",
+   "door": "python",
+   "expr": "F.make_timestamp(date=col('dt'), time=F.expr(\"TIME'06:30:45.887'\"))",
+   "name": "make_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T06:30:45.887000",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "column_name": "make_timestamp(dt, TIME '06:30:45.887', tz)",
+   "door": "python",
+   "expr": "F.make_timestamp(date=col('dt'), time=F.expr(\"TIME'06:30:45.887'\"), timezone=col('tz'))",
+   "name": "make_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T00:30:45.887000",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "column_name": "make_timestamp(dt, TIME '06:30:45.887', tz)",
+   "door": "python",
+   "expr": "F.make_timestamp(date=col('dt'), time=F.expr(\"TIME'06:30:45.887'\"), timezone=col('tz'))",
+   "name": "make_timestamp",
+   "nullable": true,
+   "rows": [
+    {
+     "datetime": "2024-01-31T00:30:45.887000",
+     "tzinfo": "None"
+    },
+    null
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "timestamp",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "typeof(current_time(6))",
+   "door": "sql",
+   "expr": "typeof(current_time())",
+   "name": "current_time",
+   "nullable": false,
+   "rows": [
+    "time(6)"
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "string",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "(current_time(6) IS NOT NULL)",
+   "door": "sql",
+   "expr": "current_time() IS NOT NULL",
+   "name": "current_time",
+   "nullable": false,
+   "rows": [
+    true
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "boolean",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "(current_time(3) IS NOT NULL)",
+   "door": "sql",
+   "expr": "current_time(3) IS NOT NULL",
+   "name": "current_time",
+   "nullable": false,
+   "rows": [
+    true
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "boolean",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "current_time(6)",
+   "door": "sql",
+   "expr": "current_time",
+   "name": "current_time",
+   "nullable": false,
+   "rows": [
+    {
+     "time": "01:07:53.280469"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "time(6)",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "hour(current_time()) >= 0",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "current_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "current_time(6)",
+   "door": "python",
+   "expr": "F.current_time()",
+   "name": "current_time",
+   "nullable": false,
+   "rows": [
+    {
+     "time": "01:07:53.366561"
+    },
+    {
+     "time": "01:07:53.366561"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "time(6)",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "column_name": "current_time(3)",
+   "door": "python",
+   "expr": "F.current_time(3)",
+   "name": "current_time",
+   "nullable": false,
+   "rows": [
+    {
+     "time": "01:07:53.378000"
+    },
+    {
+     "time": "01:07:53.378000"
+    }
+   ],
+   "time_type_enabled": "spark_default",
+   "type": "time(3)",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('HOUR', TIME'08:30:00', TIME'12:34:56')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_diff('HOUR', TIME'08:30:00', TIME'12:34:56')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_diff",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('HOUR', TIME'12:34:56')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "time_trunc('HOUR', TIME'12:34:56')",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "time_trunc",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "typeof(make_time(1, 2, 3))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "typeof(make_time(1, 2, 3))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "make_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "typeof(to_time('10:30'))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_TIME_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "typeof(to_time('10:30'))",
+   "message": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "name": "to_time",
+   "time_type_enabled": "spark_default",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "to_char(dec, 99,999.99)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.to_char(col('dec'), lit('99,999.99'))",
+   "name": "to_char",
+   "rows": [
+    [
+     "## ###.##"
+    ],
+    [
+     null
+    ],
+    [
+     "     0.50"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "to_char(dec, 99,999.99)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.to_char(col('dec'), lit('99,999.99'))",
+   "name": "to_char",
+   "rows": [
+    [
+     "## ###.##"
+    ],
+    [
+     null
+    ],
+    [
+     "     0.50"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "to_char(d, $9.99)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.to_char(col('d'), lit('$9.99'))",
+   "name": "to_char",
+   "rows": [
+    [
+     "$2.50"
+    ],
+    [
+     null
+    ],
+    [
+     "$#.##"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "to_char(d, $9.99)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.to_char(col('d'), lit('$9.99'))",
+   "name": "to_char",
+   "rows": [
+    [
+     "$2.50"
+    ],
+    [
+     null
+    ],
+    [
+     "$#.##"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "to_char(dec, 99,999.99)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "to_char(dec, 000000.0000)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "date_format(ts, yyyy-MM-dd)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "hex(CAST(X'414243' AS BINARY))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "decode(CAST(X'414243' AS BINARY), utf-8)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "base64(CAST(X'414243' AS BINARY))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT to_char(dec, '99,999.99'), to_char(dec, '000000.0000'), to_char(ts, 'yyyy-MM-dd'), to_char(CAST(X'414243' AS BINARY), 'hex'), to_char(CAST(X'414243' AS BINARY), 'utf-8'), to_char(CAST(X'414243' AS BINARY), 'base64') FROM FRAME",
+   "name": "to_char",
+   "rows": [
+    [
+     "## ###.##",
+     "012345.6789",
+     "2024-01-01",
+     "414243",
+     "ABC",
+     "QUJD"
+    ],
+    [
+     null,
+     null,
+     "2024-01-01",
+     "414243",
+     "ABC",
+     "QUJD"
+    ],
+    [
+     "     0.50",
+     "000000.5000",
+     "2024-01-01",
+     "414243",
+     "ABC",
+     "QUJD"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "to_char(dec, 99,999.99)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "to_char(dec, 000000.0000)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "date_format(ts, yyyy-MM-dd)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "hex(CAST(X'414243' AS BINARY))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "decode(CAST(X'414243' AS BINARY), utf-8)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "base64(CAST(X'414243' AS BINARY))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT to_char(dec, '99,999.99'), to_char(dec, '000000.0000'), to_char(ts, 'yyyy-MM-dd'), to_char(CAST(X'414243' AS BINARY), 'hex'), to_char(CAST(X'414243' AS BINARY), 'utf-8'), to_char(CAST(X'414243' AS BINARY), 'base64') FROM FRAME",
+   "name": "to_char",
+   "rows": [
+    [
+     "## ###.##",
+     "012345.6789",
+     "2024-01-01",
+     "414243",
+     "ABC",
+     "QUJD"
+    ],
+    [
+     null,
+     null,
+     "2024-01-01",
+     "414243",
+     "ABC",
+     "QUJD"
+    ],
+    [
+     "     0.50",
+     "000000.5000",
+     "2024-01-01",
+     "414243",
+     "ABC",
+     "QUJD"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "to_char(dec, 99,999.99)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.to_varchar(col('dec'), lit('99,999.99'))",
+   "name": "to_varchar",
+   "rows": [
+    [
+     "## ###.##"
+    ],
+    [
+     null
+    ],
+    [
+     "     0.50"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "to_char(dec, 99,999.99)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.to_varchar(col('dec'), lit('99,999.99'))",
+   "name": "to_varchar",
+   "rows": [
+    [
+     "## ###.##"
+    ],
+    [
+     null
+    ],
+    [
+     "     0.50"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "to_char(d, $9.99)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.to_varchar(col('d'), lit('$9.99'))",
+   "name": "to_varchar",
+   "rows": [
+    [
+     "$2.50"
+    ],
+    [
+     null
+    ],
+    [
+     "$#.##"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "to_char(d, $9.99)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.to_varchar(col('d'), lit('$9.99'))",
+   "name": "to_varchar",
+   "rows": [
+    [
+     "$2.50"
+    ],
+    [
+     null
+    ],
+    [
+     "$#.##"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "to_char(dec, 99,999.99)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "to_char(dec, 000000.0000)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "date_format(ts, yyyy-MM-dd)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "to_varchar(CAST(X'414243' AS BINARY))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "to_varchar(CAST(X'414243' AS BINARY), utf-8)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "to_varchar(CAST(X'414243' AS BINARY))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT to_varchar(dec, '99,999.99'), to_varchar(dec, '000000.0000'), to_varchar(ts, 'yyyy-MM-dd'), to_varchar(CAST(X'414243' AS BINARY), 'hex'), to_varchar(CAST(X'414243' AS BINARY), 'utf-8'), to_varchar(CAST(X'414243' AS BINARY), 'base64') FROM FRAME",
+   "name": "to_varchar",
+   "rows": [
+    [
+     "## ###.##",
+     "012345.6789",
+     "2024-01-01",
+     "414243",
+     "ABC",
+     "QUJD"
+    ],
+    [
+     null,
+     null,
+     "2024-01-01",
+     "414243",
+     "ABC",
+     "QUJD"
+    ],
+    [
+     "     0.50",
+     "000000.5000",
+     "2024-01-01",
+     "414243",
+     "ABC",
+     "QUJD"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "to_char(dec, 99,999.99)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "to_char(dec, 000000.0000)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "date_format(ts, yyyy-MM-dd)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "to_varchar(CAST(X'414243' AS BINARY))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "to_varchar(CAST(X'414243' AS BINARY), utf-8)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "to_varchar(CAST(X'414243' AS BINARY))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT to_varchar(dec, '99,999.99'), to_varchar(dec, '000000.0000'), to_varchar(ts, 'yyyy-MM-dd'), to_varchar(CAST(X'414243' AS BINARY), 'hex'), to_varchar(CAST(X'414243' AS BINARY), 'utf-8'), to_varchar(CAST(X'414243' AS BINARY), 'base64') FROM FRAME",
+   "name": "to_varchar",
+   "rows": [
+    [
+     "## ###.##",
+     "012345.6789",
+     "2024-01-01",
+     "414243",
+     "ABC",
+     "QUJD"
+    ],
+    [
+     null,
+     null,
+     "2024-01-01",
+     "414243",
+     "ABC",
+     "QUJD"
+    ],
+    [
+     "     0.50",
+     "000000.5000",
+     "2024-01-01",
+     "414243",
+     "ABC",
+     "QUJD"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "INVALID_FORMAT.MISMATCH_INPUT",
+   "error_type": "IllegalArgumentException",
+   "expr": "F.to_number(col('num'), lit('999'))",
+   "message": "[INVALID_FORMAT.MISMATCH_INPUT] The format is invalid: 999. The input \"STRING\" zz does not match the format. SQLSTATE: 42601",
+   "name": "to_number"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "INVALID_FORMAT.MISMATCH_INPUT",
+   "error_type": "IllegalArgumentException",
+   "expr": "F.to_number(col('num'), lit('999'))",
+   "message": "[INVALID_FORMAT.MISMATCH_INPUT] The format is invalid: 999. The input \"STRING\" zz does not match the format. SQLSTATE: 42601",
+   "name": "to_number"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "INVALID_FORMAT.MISMATCH_INPUT",
+   "error_type": "IllegalArgumentException",
+   "expr": "SELECT to_number(num, '999'), to_number('$1,234.56', '$9,999.99'), to_number('12', '9'), to_number('-12', 'S99') FROM FRAME",
+   "message": "[INVALID_FORMAT.MISMATCH_INPUT] The format is invalid: 9. The input \"STRING\" 12 does not match the format. SQLSTATE: 42601",
+   "name": "to_number"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "INVALID_FORMAT.MISMATCH_INPUT",
+   "error_type": "IllegalArgumentException",
+   "expr": "SELECT to_number(num, '999'), to_number('$1,234.56', '$9,999.99'), to_number('12', '9'), to_number('-12', 'S99') FROM FRAME",
+   "message": "[INVALID_FORMAT.MISMATCH_INPUT] The format is invalid: 9. The input \"STRING\" 12 does not match the format. SQLSTATE: 42601",
+   "name": "to_number"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "to_binary(num, utf-8)",
+     "nullable": true,
+     "type": "binary"
+    }
+   ],
+   "door": "python",
+   "expr": "F.to_binary(col('num'), lit('utf-8'))",
+   "name": "to_binary",
+   "rows": [
+    [
+     {
+      "bytes_hex": "313030"
+     }
+    ],
+    [
+     {
+      "bytes_hex": "7a7a"
+     }
+    ],
+    [
+     {
+      "bytes_hex": "2d3137"
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "to_binary(num, utf-8)",
+     "nullable": true,
+     "type": "binary"
+    }
+   ],
+   "door": "python",
+   "expr": "F.to_binary(col('num'), lit('utf-8'))",
+   "name": "to_binary",
+   "rows": [
+    [
+     {
+      "bytes_hex": "313030"
+     }
+    ],
+    [
+     {
+      "bytes_hex": "7a7a"
+     }
+    ],
+    [
+     {
+      "bytes_hex": "2d3137"
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "to_binary(abc)",
+     "nullable": true,
+     "type": "binary"
+    }
+   ],
+   "door": "python",
+   "expr": "F.to_binary(lit('abc'))",
+   "name": "to_binary",
+   "rows": [
+    [
+     {
+      "bytes_hex": "0abc"
+     }
+    ],
+    [
+     {
+      "bytes_hex": "0abc"
+     }
+    ],
+    [
+     {
+      "bytes_hex": "0abc"
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "to_binary(abc)",
+     "nullable": true,
+     "type": "binary"
+    }
+   ],
+   "door": "python",
+   "expr": "F.to_binary(lit('abc'))",
+   "name": "to_binary",
+   "rows": [
+    [
+     {
+      "bytes_hex": "0abc"
+     }
+    ],
+    [
+     {
+      "bytes_hex": "0abc"
+     }
+    ],
+    [
+     {
+      "bytes_hex": "0abc"
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "CONVERSION_INVALID_INPUT",
+   "error_type": "IllegalArgumentException",
+   "expr": "SELECT hex(to_binary('abc', 'utf-8')), hex(to_binary('616263', 'hex')), hex(to_binary('YWJj', 'base64')), hex(to_binary('abc')), to_binary('zz', 'hex') FROM FRAME",
+   "message": "[CONVERSION_INVALID_INPUT] The value 'zz' ('HEX') cannot be converted to \"BINARY\" because it is malformed. Correct the value as per the syntax, or change its format. Use `try_to_binary` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
+   "name": "to_binary"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "CONVERSION_INVALID_INPUT",
+   "error_type": "IllegalArgumentException",
+   "expr": "SELECT hex(to_binary('abc', 'utf-8')), hex(to_binary('616263', 'hex')), hex(to_binary('YWJj', 'base64')), hex(to_binary('abc')), to_binary('zz', 'hex') FROM FRAME",
+   "message": "[CONVERSION_INVALID_INPUT] The value 'zz' ('HEX') cannot be converted to \"BINARY\" because it is malformed. Correct the value as per the syntax, or change its format. Use `try_to_binary` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
+   "name": "to_binary"
+  }
+ ],
+ "signatures": {
+  "aes_decrypt": "(input: 'ColumnOrName', key: 'ColumnOrName', mode: Optional[ForwardRef('ColumnOrName')] = None, padding: Optional[ForwardRef('ColumnOrName')] = None, aad: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "aes_encrypt": "(input: 'ColumnOrName', key: 'ColumnOrName', mode: Optional[ForwardRef('ColumnOrName')] = None, padding: Optional[ForwardRef('ColumnOrName')] = None, iv: Optional[ForwardRef('ColumnOrName')] = None, aad: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "any_value": "(col: 'ColumnOrName', ignoreNulls: Union[bool, pyspark.sql.column.Column, NoneType] = None) -> pyspark.sql.column.Column",
+  "approxCountDistinct": "(col: 'ColumnOrName', rsd: Optional[float] = None) -> pyspark.sql.column.Column",
+  "array_join": "(col: 'ColumnOrName', delimiter: str, null_replacement: Optional[str] = None) -> pyspark.sql.column.Column",
+  "arrow_udf": "(f=None, returnType=None, functionType=None)",
+  "arrow_udtf": "(cls: Optional[Type] = None, *, returnType: Union[pyspark.sql.types.StructType, str, NoneType] = None) -> Union[ForwardRef('UserDefinedTableFunction'), Callable[[Type], ForwardRef('UserDefinedTableFunction')]]",
+  "bitmap_and_agg": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "bitmap_construct_agg": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "bitmap_or_agg": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "bround": "(col: 'ColumnOrName', scale: Union[pyspark.sql.column.Column, int, NoneType] = None) -> pyspark.sql.column.Column",
+  "bucket": "(numBuckets: Union[pyspark.sql.column.Column, int], col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "call_function": "(funcName: str, *cols: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "call_udf": "(udfName: str, *cols: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "collate": "(col: 'ColumnOrName', collation: str) -> pyspark.sql.column.Column",
+  "collation": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "conv": "(col: 'ColumnOrName', fromBase: int, toBase: int) -> pyspark.sql.column.Column",
+  "convert_timezone": "(sourceTz: Optional[pyspark.sql.column.Column], targetTz: pyspark.sql.column.Column, sourceTs: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "count_min_sketch": "(col: 'ColumnOrName', eps: Union[pyspark.sql.column.Column, float], confidence: Union[pyspark.sql.column.Column, float], seed: Union[pyspark.sql.column.Column, int, NoneType] = None) -> pyspark.sql.column.Column",
+  "current_time": "(precision: Optional[int] = None) -> pyspark.sql.column.Column",
+  "format_number": "(col: 'ColumnOrName', d: int) -> pyspark.sql.column.Column",
+  "from_csv": "(col: 'ColumnOrName', schema: Union[pyspark.sql.column.Column, str], options: Optional[Mapping[str, str]] = None) -> pyspark.sql.column.Column",
+  "from_xml": "(col: 'ColumnOrName', schema: Union[pyspark.sql.types.StructType, pyspark.sql.column.Column, str], options: Optional[Mapping[str, str]] = None) -> pyspark.sql.column.Column",
+  "grouping_id": "(*cols: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "hash": "(*cols: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "histogram_numeric": "(col: 'ColumnOrName', nBins: pyspark.sql.column.Column) -> pyspark.sql.column.Column",
+  "inline": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "inline_outer": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "input_file_name": "() -> pyspark.sql.column.Column",
+  "json_tuple": "(col: 'ColumnOrName', *fields: str) -> pyspark.sql.column.Column",
+  "kurtosis": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "listagg_distinct": "(col: 'ColumnOrName', delimiter: Union[pyspark.sql.column.Column, str, bytes, NoneType] = None) -> pyspark.sql.column.Column",
+  "localtimestamp": "() -> pyspark.sql.column.Column",
+  "locate": "(substr: str, str: 'ColumnOrName', pos: int = 1) -> pyspark.sql.column.Column",
+  "make_time": "(hour: 'ColumnOrName', minute: 'ColumnOrName', second: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "make_timestamp": "(years: Optional[ForwardRef('ColumnOrName')] = None, months: Optional[ForwardRef('ColumnOrName')] = None, days: Optional[ForwardRef('ColumnOrName')] = None, hours: Optional[ForwardRef('ColumnOrName')] = None, mins: Optional[ForwardRef('ColumnOrName')] = None, secs: Optional[ForwardRef('ColumnOrName')] = None, timezone: Optional[ForwardRef('ColumnOrName')] = None, date: Optional[ForwardRef('ColumnOrName')] = None, time: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "make_timestamp_ltz": "(years: 'ColumnOrName', months: 'ColumnOrName', days: 'ColumnOrName', hours: 'ColumnOrName', mins: 'ColumnOrName', secs: 'ColumnOrName', timezone: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "make_timestamp_ntz": "(years: Optional[ForwardRef('ColumnOrName')] = None, months: Optional[ForwardRef('ColumnOrName')] = None, days: Optional[ForwardRef('ColumnOrName')] = None, hours: Optional[ForwardRef('ColumnOrName')] = None, mins: Optional[ForwardRef('ColumnOrName')] = None, secs: Optional[ForwardRef('ColumnOrName')] = None, date: Optional[ForwardRef('ColumnOrName')] = None, time: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "make_ym_interval": "(years: Optional[ForwardRef('ColumnOrName')] = None, months: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "mask": "(col: 'ColumnOrName', upperChar: Optional[ForwardRef('ColumnOrName')] = None, lowerChar: Optional[ForwardRef('ColumnOrName')] = None, digitChar: Optional[ForwardRef('ColumnOrName')] = None, otherChar: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "max_by": "(col: 'ColumnOrName', ord: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "min_by": "(col: 'ColumnOrName', ord: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "mode": "(col: 'ColumnOrName', deterministic: bool = False) -> pyspark.sql.column.Column",
+  "monotonically_increasing_id": "() -> pyspark.sql.column.Column",
+  "months_between": "(date1: 'ColumnOrName', date2: 'ColumnOrName', roundOff: bool = True) -> pyspark.sql.column.Column",
+  "percentile": "(col: 'ColumnOrName', percentage: Union[pyspark.sql.column.Column, float, Sequence[float], Tuple[float, ...]], frequency: Union[pyspark.sql.column.Column, int] = 1) -> pyspark.sql.column.Column",
+  "posexplode": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "posexplode_outer": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "product": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "raise_error": "(errMsg: Union[pyspark.sql.column.Column, str]) -> pyspark.sql.column.Column",
+  "schema_of_csv": "(csv: Union[pyspark.sql.column.Column, str], options: Optional[Mapping[str, str]] = None) -> pyspark.sql.column.Column",
+  "schema_of_xml": "(xml: Union[pyspark.sql.column.Column, str], options: Optional[Mapping[str, str]] = None) -> pyspark.sql.column.Column",
+  "sentences": "(string: 'ColumnOrName', language: Optional[ForwardRef('ColumnOrName')] = None, country: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "session_window": "(timeColumn: 'ColumnOrName', gapDuration: Union[pyspark.sql.column.Column, str]) -> pyspark.sql.column.Column",
+  "shiftLeft": "(col: 'ColumnOrName', numBits: int) -> pyspark.sql.column.Column",
+  "shiftRight": "(col: 'ColumnOrName', numBits: int) -> pyspark.sql.column.Column",
+  "shiftRightUnsigned": "(col: 'ColumnOrName', numBits: int) -> pyspark.sql.column.Column",
+  "skewness": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "spark_partition_id": "() -> pyspark.sql.column.Column",
+  "split": "(str: 'ColumnOrName', pattern: Union[pyspark.sql.column.Column, str], limit: Union[ForwardRef('ColumnOrName'), int] = -1) -> pyspark.sql.column.Column",
+  "string_agg_distinct": "(col: 'ColumnOrName', delimiter: Union[pyspark.sql.column.Column, str, bytes, NoneType] = None) -> pyspark.sql.column.Column",
+  "sumDistinct": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "sum_distinct": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "time_diff": "(unit: 'ColumnOrName', start: 'ColumnOrName', end: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "time_trunc": "(unit: 'ColumnOrName', time: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "timestamp_add": "(unit: str, quantity: 'ColumnOrName', ts: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "timestamp_diff": "(unit: str, start: 'ColumnOrName', end: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "toDegrees": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "toRadians": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "to_binary": "(col: 'ColumnOrName', format: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "to_char": "(col: 'ColumnOrName', format: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "to_date": "(col: 'ColumnOrName', format: Optional[str] = None) -> pyspark.sql.column.Column",
+  "to_number": "(col: 'ColumnOrName', format: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "to_time": "(str: 'ColumnOrName', format: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "to_timestamp": "(col: 'ColumnOrName', format: Optional[str] = None) -> pyspark.sql.column.Column",
+  "to_timestamp_ltz": "(timestamp: 'ColumnOrName', format: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "to_timestamp_ntz": "(timestamp: 'ColumnOrName', format: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "to_varchar": "(col: 'ColumnOrName', format: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "try_aes_decrypt": "(input: 'ColumnOrName', key: 'ColumnOrName', mode: Optional[ForwardRef('ColumnOrName')] = None, padding: Optional[ForwardRef('ColumnOrName')] = None, aad: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "try_make_interval": "(years: Optional[ForwardRef('ColumnOrName')] = None, months: Optional[ForwardRef('ColumnOrName')] = None, weeks: Optional[ForwardRef('ColumnOrName')] = None, days: Optional[ForwardRef('ColumnOrName')] = None, hours: Optional[ForwardRef('ColumnOrName')] = None, mins: Optional[ForwardRef('ColumnOrName')] = None, secs: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "try_make_timestamp": "(years: Optional[ForwardRef('ColumnOrName')] = None, months: Optional[ForwardRef('ColumnOrName')] = None, days: Optional[ForwardRef('ColumnOrName')] = None, hours: Optional[ForwardRef('ColumnOrName')] = None, mins: Optional[ForwardRef('ColumnOrName')] = None, secs: Optional[ForwardRef('ColumnOrName')] = None, timezone: Optional[ForwardRef('ColumnOrName')] = None, date: Optional[ForwardRef('ColumnOrName')] = None, time: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "try_make_timestamp_ltz": "(years: 'ColumnOrName', months: 'ColumnOrName', days: 'ColumnOrName', hours: 'ColumnOrName', mins: 'ColumnOrName', secs: 'ColumnOrName', timezone: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "try_make_timestamp_ntz": "(years: Optional[ForwardRef('ColumnOrName')] = None, months: Optional[ForwardRef('ColumnOrName')] = None, days: Optional[ForwardRef('ColumnOrName')] = None, hours: Optional[ForwardRef('ColumnOrName')] = None, mins: Optional[ForwardRef('ColumnOrName')] = None, secs: Optional[ForwardRef('ColumnOrName')] = None, date: Optional[ForwardRef('ColumnOrName')] = None, time: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "try_to_time": "(str: 'ColumnOrName', format: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "try_to_timestamp": "(col: 'ColumnOrName', format: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "typeof": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "unix_timestamp": "(timestamp: Optional[ForwardRef('ColumnOrName')] = None, format: str = 'yyyy-MM-dd HH:mm:ss') -> pyspark.sql.column.Column",
+  "window": "(timeColumn: 'ColumnOrName', windowDuration: str, slideDuration: Optional[str] = None, startTime: Optional[str] = None) -> pyspark.sql.column.Column",
+  "window_time": "(windowColumn: 'ColumnOrName') -> pyspark.sql.column.Column"
+ },
+ "sources": {
+  "pa-11b": {
+   "cells": 315,
+   "filter": "name in card set and time_type_enabled == spark_default, plus make_timestamp python date= cells (Q-15a-3)",
+   "path": "/tmp/oc-worker/pa-11b/fnp11_spark_oracle.json"
+  },
+  "pa-math": {
+   "cells": 22,
+   "filter": "name in {to_char,to_varchar,to_number,to_binary}",
+   "path": "/tmp/oc-worker/pa-math/o245_spark_oracle.json"
+  }
+ },
+ "spark_version": "4.1.2"
+}

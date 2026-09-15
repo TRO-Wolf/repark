@@ -699,3 +699,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   blocked on the concat-Utf8 ruling recorded in the ledger.
   `risk_tier: standard`. Branch `feat/fnp-6d-followup-1`.
   pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [fnp-11b-ledger.md](fnp-11b-ledger.md) —
+  **FNP-11B step 1 (2026-09-15), in flight:** datetime format parsing, the TIME
+  family, BL-13 and BL-14 — ledger with D-1…D-10 (card D-1…D-6, run-16a D-7…D-10
+  with owner ruling Q-15a-3 under D-8), the filtered oracle
+  (`python/repark/tests/fnp11b_spark_oracle.json`: 315 pa-11b cells plus 22
+  pa-math `to_char`-family cells) and the red-first two-door pins
+  (`test_fnp11b_temporal_formats.py`: 310 failed, 28 passed on the base, all
+  clauses OPEN). No product code in step 1.
+  `risk_tier: standard`. Branch `feat/fnp-11b-temporal-formats`.
+  pins: fnp-11b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

@@ -1,4 +1,4 @@
-"""R-FN-BATCH3 — datetime / format wrappers + Chrono≠Java refusal pins."""
+"""R-FN-BATCH3 — datetime / Java-pattern format pins + loud census."""
 
 from __future__ import annotations
 
@@ -79,12 +79,25 @@ def test_datetime_null_case(spark: ReparkSession) -> None:
     assert val is None
 
 
-def test_chrono_java_format_refusal(spark: ReparkSession) -> None:
-    """U4 Chrono≠Java rule STANDS for format-pattern args (W3 greylight)."""
-    with pytest.raises(UnsupportedOperationException, match="format"):
-        to_timestamp(lit("2020-01-02"), format="yyyy-MM-dd")
-    with pytest.raises(UnsupportedOperationException, match="format"):
-        to_date(lit("2020-01-02"), format="yyyy-MM-dd")
+def test_java_datetime_patterns_parse(spark: ReparkSession) -> None:
+    """FNP-11B step 2 answers Java patterns (pins: fnp-11b/C-002)."""
+    frame = spark.sql("SELECT '31/12/2016 10:30' AS s, '2020-01-02' AS t")
+    table = frame.select(
+        to_date("s", "dd/MM/yyyy HH:mm").alias("d"),
+        to_timestamp("t", "yyyy-MM-dd").cast("string").alias("ts"),
+    ).to_arrow()
+    row = table.to_pylist()[0]
+    assert row["d"].isoformat() == "2016-12-31"
+    assert row["ts"] == "2020-01-02 00:00:00"
+    quoted = (
+        spark.sql("SELECT '2016-12-31T10:30:00' AS u")
+        .select(
+            to_timestamp("u", "yyyy-MM-dd'T'HH:mm:ss").cast("string").alias("q"),
+        )
+        .to_arrow()
+        .to_pylist()[0]["q"]
+    )
+    assert quoted == "2016-12-31 10:30:00"
 
 
 def test_batch3_loud_unsupported(spark: ReparkSession) -> None:

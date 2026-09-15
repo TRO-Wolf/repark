@@ -7785,21 +7785,22 @@ field NAME.
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-28 measurement. The name stays on the
   example backlog until the engine grows the tolerant timestamp parse.
 
-### EX-FN-21 — `unix_timestamp` format argument refuses; Spark parses the pattern
+### EX-FN-21 — `unix_timestamp` format argument refuses; Spark parses the pattern — **FIXED 2026-09-15 (FNP-11B)**
 
-- **repark** — `F.unix_timestamp("s", "yyyy-MM-dd")` raises `UnsupportedOperationException:
-  functions.unix_timestamp format argument is not supported yet`. The no-format arms agree
-  with Spark and carry the example coverage: `"2024-06-15 12:00:00"` answers `1718452800`,
-  `"1970-01-01 00:00:00"` answers `0`, NULL answers NULL, and a timestamp column of the same
-  noon instant answers `1718452800`. Zero-argument `unix_timestamp()` is a current-epoch int,
-  stable across rows of one query.
+- **repark** — **FIXED 2026-09-15 (FNP-11B step 2).** `F.unix_timestamp("s", "yyyy-MM-dd")`
+  parses Java datetime patterns through the Rust `java_datetime` parser on both doors; the
+  default format is Spark's `yyyy-MM-dd HH:mm:ss`. The no-format arms keep their example
+  coverage: `"2024-06-15 12:00:00"` answers `1718452800`, `"1970-01-01 00:00:00"` answers
+  `0`, NULL answers NULL.
 - **Apache Spark** — `unix_timestamp("2024-06-15", "yyyy-MM-dd")` answers `1718409600`;
-  `"1970-01-02"` answers `86400`; NULL answers NULL. The no-format arms agree with the repark
-  answers above. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_unix_timestamp_format_refuses`
-- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-28 measurement. The name stays
-  covered by the no-format arms; this row records the format argument until the parser
-  accepts Spark's pattern.
+  `"1970-01-02"` answers `86400`; NULL answers NULL. *(oracle: live PySpark 4.1.2, ANSI on,
+  UTC, 2026-09-06, EX-28 batch; FNP-11B oracle: live PySpark 4.1.2, both ANSI settings, UTC
+  and America/New_York, 2026-09-15.)*
+- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+  (the `unix_timestamp` cells, both doors)
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-28 measurement; closed
+  2026-09-15 by FNP-11B step 2, which retired the refusal pin
+  `test_examples_functions_b.py::test_unix_timestamp_format_refuses`.
 
 ### EX-FN-22 — `from_xml` / `schema_of_xml` refuse as E1 stubs; Spark parses and infers XML
 
