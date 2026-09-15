@@ -2182,19 +2182,28 @@ the pin rather than obeying it.
   `F.bin` still lowers as `bin(CAST(col AS BIGINT))` in `functions*.py`, outside this
   unit's fence.
 
-### BL-7 — `bit_length` / `octet_length` stringify DOUBLE with Arrow float formatting
+### BL-7 — DOUBLE/FLOAT stringify as Java does — **FIXED 2026-09-15 (JAVA-DOUBLE-STR-1)**
 
-- **repark** — a DOUBLE input to the owned length kernel is stringified by the Arrow
-  `float64 → utf8` cast: `CAST('Infinity' AS DOUBLE)` becomes `'inf'` (octet_length 3) and
-  `1.0E21` becomes `'1e21'` (octet_length 4). Mainstream values agree with Spark (`1.0` → 3,
-  `12.5` → 4).
+- **repark** — **FIXED 2026-09-15 (JAVA-DOUBLE-STR-1).** The Spark door and the
+  facade stringify `FLOAT`/`DOUBLE` via Java `Double.toString` / `Float.toString`:
+  `CAST(<float> AS STRING)` is rewritten to the embedded
+  `__repark_float_to_string__` UDF (SQL, `selectExpr`, `F.expr`, `col.cast`),
+  `concat` coercion and the owned `bit_length` / `octet_length` kernels use the
+  same shared formatter (`crates/repark-functions/src/java_double.rs`, moved out
+  of the JSON reader). `CAST('Infinity' AS DOUBLE)` is `'Infinity'`
+  (octet_length 8), `1.0E21` is `'1.0E21'` (octet_length 6). The native ANSI
+  door (`repark.sql()`) keeps Arrow formatting (ADR-0002).
 - **Apache Spark** — stringifies via Java `Double.toString`: `'Infinity'` (octet_length 8),
-  `'1.0E21'` (octet_length 6). *(oracle: live — PySpark 4.1.2, 2026-08-19.)*
-- **Pin** — `python/repark/tests/test_functions_gt1.py::test_sql_door_double_infinity_stringify_is_named_divergence`
-  (codifies today's `3`; the fix reds it on purpose).
-- **Rationale** — BACKLOG, intent to FIX (Java-shaped double formatting in the decimal-style
-  path, GT1-FIX round-3 ruling R3-4). The divergence is confined to the E-notation thresholds and
-  the Infinity/NaN spellings; the common numeric range already matches.
+  `'1.0E21'` (octet_length 6). *(oracle: live — PySpark 4.1.2, 2026-08-19;
+  cells `BL7-*` in `fixtures-batch1.json`, `JD-*` in `fixtures-batch4.json`.)*
+- **Pin** — `python/repark/tests/test_java_double_str_1.py` (CAST, `concat`,
+  `col.cast`/`selectExpr`, length kernels, native-door guard — value AND type)
+  and `python/repark/tests/test_functions_gt1.py::test_sql_door_double_infinity_stringify_is_named_divergence`
+  (now equality).
+- **Rationale** — FIXED 2026-09-15 (JAVA-DOUBLE-STR-1; GT1-FIX round-3 ruling R3-4).
+  Residual: `Float.MIN_VALUE` (`1.4E-45`) has no oracle cell, so the float path
+  keeps shortest-rendering there; `createDataFrame` still refuses non-finite
+  floats (pre-existing, out of this unit's scope).
 
 
 > **TZ-1 — timestamp extraction ignores the session zone — was CLOSED IN PART and CONVERTED on

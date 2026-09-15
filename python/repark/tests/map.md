@@ -1295,7 +1295,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   / ASCII ``\\d``, partNum 0 fail-loud, Java find-loop `[0-9]*` = 6, named
   Infinity stringify residual. **Round-4 (2026-08-19):** start-anchor
   mid-surrogate skip (`🐈`/`^` = 1 both doors; `🐈\\n🐈`/`(?m)^` = 2 via
-  F.*). Ledger: `task/fn-gt1-ledger.md`.
+  F.*). Ledger: `task/fn-gt1-ledger.md`. **JAVA-DOUBLE-STR-1 (2026-09-15):**
+  the named Infinity stringify residual is an equality since BL-7 FIXED
+  (`'Infinity'`, octet 8, typed). pins: java-double-str-1/C-007
 - [test_functions_w.py](test_functions_w.py) — FN-W (2026-08-15): window
   wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
   `lag`/`lead` default first/last-row NULL + explicit default + NULL-source
