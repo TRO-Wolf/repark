@@ -389,6 +389,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   Round 2: idx validated only inside the match arm; §7 `FN-REGEX-LOOKAROUND-1` filed;
   facade 2-arg widening disclosed.
   pins: fn-regexp-extract-1/C-001, C-002, C-003, C-004
+- [fnp-6d-ledger.md](fnp-6d-ledger.md) —
+  **FNP-6D (2026-09-15), in flight:** Spark `bitmap_construct_agg` / `bitmap_or_agg` /
+  `bitmap_and_agg` UDAFs (4096-byte BINARY, recorded cells `F6D-*` and `B8-*`).
+  SQL door only. `risk_tier: standard`. Branch `feat/fnp-6d-bitmap-aggregates`.
+  pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
 - [fnp-8-review-ledger.md](fnp-8-review-ledger.md) —
   **FNP-8-REVIEW (2026-09-07), in flight:** remediation round 1 for FNP-8 (PR #412,
   merged unreviewed) — the round-1 critic's F1–F7, each red-first against live
