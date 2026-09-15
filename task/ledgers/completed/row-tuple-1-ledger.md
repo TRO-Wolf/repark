@@ -72,3 +72,44 @@ column name is not silent. L-001…L-005 are discharged in C-004; the critic's v
 | `task/ledgers/staging/map.md` | This ledger's row. |
 
 `STATUS.md` and `briefs/next-sequence.md` untouched; no dependency change; no Rust change.
+
+## Orchestrator rulings (run 15b, G-2)
+
+- R-4 (2026-09-14): the critic's P2 findings L-001..L-004 were pin-only remediation; the orchestrator re-ran every
+  added pin and read the diff line by line, so no second critic round runs. L-005 (P3) was taken as ruling R-3
+  (positional-only signatures). L-006 stays a P3 note.
+- R-5 (2026-09-14): the S2-21 perf reviewers do not run on this unit — two O(n) delegations to the stored tuple, no
+  hot path, no Rust.
+- R-6 (2026-09-14): the example-coverage gate owed an example for the two new names; the orchestrator added
+  `docs/examples/dataframe/row_tuple.py` and moved the measured inventory counts (930 → 932, types 32 → 34).
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: row-tuple-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card and the fourteen recorded PySpark 4.1.2 row cells; the nine count/index cells are pinned one-to-one, and the critic's cell table re-derived all nine against the fixture and pyspark/sql/types.py.
+      artifacts: [python/repark/tests/test_row_tuple_1.py, python/repark/tests/facade_row_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Distinct and identical NaN objects, None fields, empty factory, factory versus value rows, names-plus-values double count, explicit stop, negative start, stop beyond length, keyword calls refused, fields named count and index, a collected groupBy().count() row, nested collected structs (EX-ROW-1 arm).
+      artifacts: [python/repark/tests/test_row_tuple_1.py, docs/spark-sql-iceberg-parity.md]
+    - id: AT-3
+      status: N/A
+      justification: Two Python methods delegating to an immutable tuple slot; no Rust, no unwrap, no I/O.
+    - id: AT-4
+      status: N/A
+      justification: No shared mutable state, no threads, no async.
+    - id: AT-5
+      status: N/A
+      justification: No authn/authz, deserialization, path, credential or network surface.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Grok critic-logic round 1 (0 P1, 4 P2, 2 P3); the P2s became pins in 8097597d, each re-run by the orchestrator; the stop pin was mutation-proven red by dropping the argument.
+      artifacts: [task/ledgers/completed/row-tuple-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Facade suite 6094 passed / 368 skipped and the parity suite on the release native of the rebased head; ruff, check_lib_py, ledger and map checks clean; example-coverage gate clean with the new example executed.
+      artifacts: [docs/examples/dataframe/row_tuple.py, python/repark-parity/tests/test_ex_0_example_coverage.py]
+```

@@ -663,6 +663,13 @@ else. The next pickup's `make ledger-archive` files everything here under
   pins: review-fix-7/C-001, C-002, C-003
 - [review-fix-8-ledger.md](review-fix-8-ledger.md) — Unit ledger — REVIEW-FIX-8 · the PROFILES-1 probe is re-runnable and its table is true
 - [review-fix-9-ledger.md](review-fix-9-ledger.md) — Unit ledger — REVIEW-FIX-9 step 1 · the polars renderer matches polars at its boundaries
+- [row-tuple-1-ledger.md](row-tuple-1-ledger.md) —
+  **ROW-TUPLE-1 step 1 (2026-09-14), in flight:** `Row.count` / `Row.index` answer the nine
+  recorded `row.*` oracle cells (`facade_row_oracle.json`, live PySpark 4.1.2 run 15b) —
+  tuple semantics incl. the two-distinct-NaN `count` → 0, the factory rows counting/indexing
+  field NAMES, and `index`'s exact plain-`ValueError` message. repark stays a non-tuple
+  subclass (R-1); no SQL door (R-2). `risk_tier: standard`. Branch `feat/row-tuple-1`.
+  pins: row-tuple-1/C-001, C-002, C-003
 - [rp-10-repin-f25-ledger.md](rp-10-repin-f25-ledger.md) — Charter ledger — RP-10 · fork repin 594bdbe5 → 85a4aaf0 (consume F-25; close PERF-DVCLOSE-STMT-1)
 - [rp-20-ledger.md](rp-20-ledger.md) —
   **RP-20 (2026-09-14), in flight:** the `edc38c6a` repin consumer — F-GLUE-REPLACE-1

@@ -5,13 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [row-tuple-1-ledger.md](row-tuple-1-ledger.md) —
-  **ROW-TUPLE-1 step 1 (2026-09-14), in flight:** `Row.count` / `Row.index` answer the nine
-  recorded `row.*` oracle cells (`facade_row_oracle.json`, live PySpark 4.1.2 run 15b) —
-  tuple semantics incl. the two-distinct-NaN `count` → 0, the factory rows counting/indexing
-  field NAMES, and `index`'s exact plain-`ValueError` message. repark stays a non-tuple
-  subclass (R-1); no SQL door (R-2). `risk_tier: standard`. Branch `feat/row-tuple-1`.
-  pins: row-tuple-1/C-001, C-002, C-003
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
