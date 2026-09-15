@@ -111,7 +111,22 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   is catalog-cached (the free-SQL DROP rewriter never re-qualifies a temp view —
   the same contract the old inline body kept); `Catalog.clearCache` and
   `Catalog.uncacheTable` release entries from the same registry.
-  pins: catalog-surface-1/C-001…C-006
+  **CATALOG-SURFACE-1 critic round 1 (2026-09-14, L-001..L-007 / R-6/R-7):** each
+  held cache entry stores an identity token — the Iceberg `current-snapshot-id`
+  from `DESCRIBE TABLE EXTENDED`'s `Table Properties` row for a table, the
+  registered view object for a temp view — and `session_table` / `isCached`
+  compare it on every call, dropping a stale entry exactly like `refreshTable`
+  (~0.53 ms per cached `spark.table` call, measured 1000×). `persist`'s
+  materialize path notes the same baseline on identity-mapped frames via
+  `cache_handle.bind_registered_view`; `create_or_replace_temp_view` registers
+  through `_register_temp_view` so replacements bump the view token. Every
+  raised `AnalysisException` carries its Spark errorClass through the
+  `_integral` attach helpers (`getCondition`). `Table Properties` parses as
+  comma-joined `k=v` with `=`-less fragments folded into the previous value
+  (comments with `,` / `]` round-trip), `# Partitioning` transform rows map to
+  their source columns (`bucket`/`truncate`/time transforms included), and
+  `createTable` DDL spells arrays `INT[]` recursively plus `NOT NULL`.
+  pins: catalog-surface-1/C-001…C-006, C-009
 - `column.py` — lazy expression objects, type gates, aliases, field access, generators,
   aggregates, windows, casts, and Spark-compatible operator behavior. Column identity
   metadata preserves join and duplicate-name semantics.

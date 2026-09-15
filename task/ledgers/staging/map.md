@@ -12,9 +12,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   cache handles, `createTable` / `createExternalTable` through the existing CREATE
   TABLE path, and the maintenance no-ops — driven by the run-15b live PySpark 4.1.2
   fixture. CAT-FUNCS-1 / CAT-RECOVER-1 filed DECLARED; `path=`/non-`iceberg` source
-  joins EX-IO-6's pin list.
+  joins EX-IO-6's pin list. Critic round 1 (L-001..L-007, rulings R-6/R-7):
+  identity-token cache staleness, special-character comments, partition-transform
+  source columns, `INT[]`/`NOT NULL` DDL, `SCHEMA_NOT_FOUND` on a missing
+  `listFunctions` dbName, case-insensitive temp views, and errorClass attachment.
   `risk_tier: standard`. Branch `feat/catalog-surface-1`.
-  pins: catalog-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: catalog-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`

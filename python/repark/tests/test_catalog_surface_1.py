@@ -19,7 +19,14 @@ from repark.errors import (
 from repark.spark import catalog as catalog_module
 from repark.spark.catalog import Catalog, Table
 from repark.spark.storage import StorageLevel
-from repark.spark.types import IntegerType, StringType, StructField, StructType
+from repark.spark.types import (
+    ArrayType,
+    IntegerType,
+    MapType,
+    StringType,
+    StructField,
+    StructType,
+)
 
 _FIXTURE = json.loads(
     (Path(__file__).parent / "facade_catalog_oracle.json").read_text(encoding="utf-8")
@@ -67,6 +74,21 @@ def _columns(cell_name: str) -> list[tuple[Any, ...]]:
     return [tuple(item) for item in _decode(_result(cell_name))]
 
 
+class _SpyInner:
+    """Records the SQL strings routed through the native session."""
+
+    def __init__(self, inner: Any, recorded: list[str]) -> None:
+        self._inner = inner
+        self._recorded = recorded
+
+    def sql(self, text: str) -> Any:
+        self._recorded.append(text)
+        return self._inner.sql(text)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._inner, name)
+
+
 def test_get_table_permanent(spark: ReparkSession) -> None:
     """C-001: getTable/get_table on an Iceberg table (oracle getTable, getTable_fields)."""
     row = spark.catalog.getTable("t1")
@@ -112,6 +134,27 @@ def test_get_table_missing(spark: ReparkSession) -> None:
         spark.catalog.getTable("nope_tbl")
 
 
+def test_get_table_temp_view_case_insensitive(spark: ReparkSession) -> None:
+    """C-009/L-006: an unquoted upper-case view name answers the TEMPORARY row."""
+    row = spark.catalog.getTable("TV1")
+    assert row == Table(
+        name="tv1",
+        catalog=None,
+        namespace=[],
+        description=None,
+        tableType="TEMPORARY",
+        isTemporary=True,
+    )
+
+
+def test_get_table_comment_round_trips_special(spark: ReparkSession) -> None:
+    """C-009/L-002: a comment containing ',' or ']' parses back verbatim."""
+    schema = StructType([StructField("a", IntegerType())])
+    for index, text in enumerate(("hello, world", "a]b")):
+        spark.catalog.createTable(f"ctc{index}", schema=schema, description=text)
+        assert spark.catalog.getTable(f"ctc{index}").description == text
+
+
 def test_list_columns_permanent(spark: ReparkSession) -> None:
     """C-002: one Column per field in order (oracle listColumns, column_fields)."""
     columns = spark.catalog.listColumns("t1")
@@ -138,6 +181,18 @@ def test_list_columns_view(spark: ReparkSession) -> None:
     """C-002: temp views list their columns (oracle listColumns_view)."""
     columns = spark.catalog.listColumns("tv1")
     assert [tuple(column) for column in columns] == _columns("listColumns_view")
+
+
+def test_list_columns_transform_partitions(spark: ReparkSession) -> None:
+    """C-009/L-003: the source column of bucket/days transforms is isPartition."""
+    spark.sql("CREATE TABLE glue_catalog.ns1.bt (id INT, v STRING) PARTITIONED BY (bucket(16, id))")
+    columns = {column.name: column for column in spark.catalog.listColumns("bt")}
+    assert columns["id"].isPartition is True
+    assert columns["v"].isPartition is False
+    spark.sql("CREATE TABLE glue_catalog.ns1.dt (ts TIMESTAMP, v STRING) PARTITIONED BY (days(ts))")
+    columns = {column.name: column for column in spark.catalog.listColumns("dt")}
+    assert columns["ts"].isPartition is True
+    assert columns["v"].isPartition is False
 
 
 def test_list_columns_missing(spark: ReparkSession) -> None:
@@ -181,6 +236,14 @@ def test_list_functions_pattern(spark: ReparkSession) -> None:
 def test_list_functions_db_name(spark: ReparkSession) -> None:
     """C-003: a dbName argument is accepted (oracle listFunctions_db / CAT-FUNCS-1)."""
     assert len(spark.catalog.listFunctions("ns1")) == len(spark.catalog.listFunctions())
+
+
+def test_list_functions_missing_db(spark: ReparkSession) -> None:
+    """C-009/L-005: a missing dbName raises SCHEMA_NOT_FOUND (exact text UNMEASURED)."""
+    with pytest.raises(AnalysisException, match="SCHEMA_NOT_FOUND") as caught:
+        spark.catalog.listFunctions("nope_db")
+    assert caught.value.getCondition() == "SCHEMA_NOT_FOUND"
+    assert any(function.name == "abs" for function in spark.catalog.listFunctions("ns1"))
 
 
 def test_list_functions_udf(spark: ReparkSession) -> None:
@@ -264,15 +327,59 @@ def test_cache_table_missing_names_raise(spark: ReparkSession) -> None:
         catalog.uncacheTable("nope_tbl")
 
 
-def test_cached_table_reads_the_cache_view(spark: ReparkSession) -> None:
-    """C-004: a second spark.table read scans the cache, not the live table."""
+def test_cached_table_reads_the_cache_view(spark: ReparkSession, monkeypatch: Any) -> None:
+    """C-004/C-009: with no intervening write a second read scans the held cache view."""
     catalog = spark.catalog
     assert spark.table("t1").count() == 2
     catalog.cacheTable("t1")
-    spark.sql("INSERT INTO glue_catalog.ns1.t1 VALUES (3, 'z')")
+    recorded: list[str] = []
+    spy = _SpyInner(spark._ensure_alive(), recorded)
+    monkeypatch.setattr(ReparkSession, "_ensure_alive", lambda _self: spy)
     assert spark.table("t1").count() == 2
+    assert any("__repark_cache_" in text for text in recorded)
+    recorded.clear()
+    assert catalog.isCached("t1") is True
     catalog.uncacheTable("t1")
+    assert spark.table("t1").count() == 2
+    assert any('"glue_catalog"."ns1"."t1"' in text for text in recorded)
+
+
+def test_cache_table_insert_serves_fresh_rows(spark: ReparkSession) -> None:
+    """C-009/L-001: cacheTable then INSERT answers the new count and drops the cache."""
+    catalog = spark.catalog
+    catalog.cacheTable("t1")
+    spark.sql("INSERT INTO glue_catalog.ns1.t1 VALUES (3, 'z')")
     assert spark.table("t1").count() == 3
+    assert catalog.isCached("t1") is False
+
+
+def test_cache_table_insert_overwrite_serves_fresh_rows(spark: ReparkSession) -> None:
+    """C-009/L-001: INSERT OVERWRITE invalidates the held cache."""
+    catalog = spark.catalog
+    catalog.cacheTable("t1")
+    spark.sql("INSERT OVERWRITE glue_catalog.ns1.t1 VALUES (9, 'w')")
+    assert spark.table("t1").count() == 1
+    assert catalog.isCached("t1") is False
+
+
+def test_cache_table_writer_append_serves_fresh_rows(spark: ReparkSession) -> None:
+    """C-009/L-001: a DataFrame writer append invalidates the held cache."""
+    catalog = spark.catalog
+    catalog.cacheTable("t1")
+    spark.createDataFrame([(7, "q")], ["a", "p"]).write.mode("append").saveAsTable(
+        "glue_catalog.ns1.t1"
+    )
+    assert spark.table("t1").count() == 3
+    assert catalog.isCached("t1") is False
+
+
+def test_cache_table_view_replace_serves_fresh_rows(spark: ReparkSession) -> None:
+    """C-009/L-001: createOrReplaceTempView over a cached view invalidates it."""
+    catalog = spark.catalog
+    catalog.cacheTable("tv1")
+    spark.createDataFrame([("n", 9, 9)], "key string, a int, b int").createOrReplaceTempView("tv1")
+    assert spark.table("tv1").count() == 1
+    assert catalog.isCached("tv1") is False
 
 
 def test_frame_cache_visible_to_is_cached(spark: ReparkSession) -> None:
@@ -350,6 +457,32 @@ def test_create_table_options_become_properties(spark: ReparkSession) -> None:
     rows = spark.sql("DESCRIBE TABLE EXTENDED glue_catalog.ns1.ct6").collect()
     props = [tuple(row) for row in rows if row[0] == "Table Properties"]
     assert props and "custom_opt=v" in props[0][1]
+
+
+def test_create_table_array_and_not_null(spark: ReparkSession) -> None:
+    """C-009/L-004: INT[] element spelling and NOT NULL round-trip through listColumns."""
+    schema = StructType(
+        [
+            StructField("id", IntegerType(), False),
+            StructField("tags", ArrayType(IntegerType())),
+            StructField("nested", ArrayType(ArrayType(StringType()))),
+        ]
+    )
+    spark.catalog.createTable("cta", schema=schema)
+    columns = {column.name: column for column in spark.catalog.listColumns("cta")}
+    assert columns["tags"].dataType == "array<int>"
+    assert columns["nested"].dataType == "array<array<string>>"
+    assert columns["id"].nullable is False
+
+
+def test_create_table_map_struct_refuse_loudly(spark: ReparkSession) -> None:
+    """C-009/L-004: map/struct schema keeps the engine's loud refusal."""
+    map_schema = StructType([StructField("m", MapType(StringType(), IntegerType()))])
+    with pytest.raises(AnalysisException):
+        spark.catalog.createTable("ctm", schema=map_schema)
+    struct_schema = StructType([StructField("s", StructType([StructField("a", IntegerType())]))])
+    with pytest.raises(UnsupportedOperationException):
+        spark.catalog.createTable("cts", schema=struct_schema)
 
 
 def test_create_table_exists(spark: ReparkSession) -> None:
@@ -449,6 +582,32 @@ def test_refresh_by_path(spark: ReparkSession) -> None:
     assert spark.catalog.refreshByPath("/tmp/whatever") is None
     assert spark.catalog.refreshByPath("/nonexistent/zz") is None
     assert spark.catalog.refresh_by_path("/nonexistent/zz") is None
+
+
+def test_error_conditions_attached(spark: ReparkSession) -> None:
+    """C-009/L-007: every raised AnalysisException carries its errorClass."""
+    schema = StructType([StructField("a", IntegerType())])
+    cases: list[tuple[Any, str]] = [
+        (lambda: spark.catalog.getTable("nope_tbl"), "TABLE_OR_VIEW_NOT_FOUND"),
+        (lambda: spark.catalog.listColumns("nope_tbl"), "TABLE_OR_VIEW_NOT_FOUND"),
+        (lambda: spark.catalog.getFunction("nope_fn"), "UNRESOLVED_ROUTINE"),
+        (lambda: spark.catalog.cacheTable("nope_tbl"), "TABLE_OR_VIEW_NOT_FOUND"),
+        (lambda: spark.catalog.isCached("nope_tbl"), "TABLE_OR_VIEW_NOT_FOUND"),
+        (lambda: spark.catalog.uncacheTable("nope_tbl"), "TABLE_OR_VIEW_NOT_FOUND"),
+        (lambda: spark.catalog.createTable("t1", schema=schema), "TABLE_OR_VIEW_ALREADY_EXISTS"),
+        (lambda: spark.catalog.createTable("ct9", source="iceberg"), "UNABLE_TO_INFER_SCHEMA"),
+        (
+            lambda: spark.catalog.recoverPartitions("tv1"),
+            "EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE",
+        ),
+        (lambda: spark.catalog.recoverPartitions("nope_tbl"), "TABLE_OR_VIEW_NOT_FOUND"),
+        (lambda: spark.catalog.refreshTable("nope_tbl"), "TABLE_OR_VIEW_NOT_FOUND"),
+        (lambda: spark.catalog.listFunctions("nope_db"), "SCHEMA_NOT_FOUND"),
+    ]
+    for call, condition in cases:
+        with pytest.raises(AnalysisException) as caught:
+            call()
+        assert caught.value.getCondition() == condition
 
 
 def test_catalog_surface_records_type(spark: ReparkSession) -> None:

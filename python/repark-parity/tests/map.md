@@ -211,8 +211,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `spark/session/session_maintenance.py` `sql_string_literal` 2 — the facade wrapper renders the
   table name and any string override into the `CALL … run_maintenance(…)` text through the helper
   rather than an f-string, so the one place a caller's value reaches SQL stays inside the audited
-  set. pins: h3-spill-1/C-001, maint-policy-1/C-030
-- `test_cap_1_source_file_line_cap.py` — **CATALOG-SURFACE-1 (2026-09-14):** `spark/session/session_core.py` row 2304 → 2291 with the script baseline (`table()` delegates to `catalog_surface.session_table`; the orphaned `_sql_table_ref_resolved` helper removed). pins: catalog-surface-1/C-004
+  set. CATALOG-SURFACE-1 critic round 1 (2026-09-14): the inventory gains
+  `spark/catalog_surface.py` `sql_string_literal` 2 — `create_table` renders
+  `TBLPROPERTIES` keys and values through the helper. pins: h3-spill-1/C-001,
+  maint-policy-1/C-030, catalog-surface-1/C-009
+- `test_cap_1_source_file_line_cap.py` — **CATALOG-SURFACE-1 (2026-09-14):** `spark/session/session_core.py` row 2304 → 2291 with the script baseline (`table()` delegates to `catalog_surface.session_table`; the orphaned `_sql_table_ref_resolved` helper removed). pins: catalog-surface-1/C-004 **Critic round 1 (2026-09-14):** `spark/dataframe/core.py` row 4044 → 4043 with the script baseline (`create_or_replace_temp_view` delegates registration to `catalog_surface._register_temp_view`; the frame-token note lives in `cache_handle.bind_registered_view`). pins: catalog-surface-1/C-009
 - `test_ex_0_example_coverage.py` — **CATALOG-SURFACE-1 (2026-09-14):** measured counts move with the 26 new Catalog names — `len(rows)` 930 → 956 and `families["catalog"]` 28 → 54; the four new `docs/examples/catalog/` scripts cover every name. pins: catalog-surface-1/C-007
 - `test_cap_1_source_file_line_cap.py` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `repark-core/src/session/tests/session.rs` row 1412 → 1407 in both tables (the ambiguous-commit classification pins moved to `session/tests/commit_unknown.rs`). pins: ice-commit-unknown-1/C-001
 - `test_cap_1_source_file_line_cap.py` — **DF-SURFACE-A-1 critic round 1 (2026-09-14):** `dataframe/core.py` row 4041 → 4035 with the script baseline (rulings R-5/R-6 removed the `inputFiles`/`semanticHash` bindings and the `_schema_override` slot). pins: df-surface-a-1/C-008

@@ -694,7 +694,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   shared Rust table; decimal, nested and collation-refusal paths stay Python).
   Round 2 re-hashed the same two bodies (`_data_type_to_sql_type` gained the
   SQL-marker leaf; `_sql_type_to_arrow` binds through `_native_function`).
-  pins: csv-infer-perf-1/C-002, C-005; facade-4/C-014, C-022, C-026
+  CATALOG-SURFACE-1 critic round 1 re-hashed `_sql_table_ref` (docstring-only:
+  the reference to the removed `ReparkSession._sql_table_ref_resolved` helper
+  dropped — `catalog_surface.session_table` is the resolved-identity door).
+  pins: csv-infer-perf-1/C-002, C-005; facade-4/C-014, C-022, C-026;
+  catalog-surface-1/C-008
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
@@ -3099,8 +3103,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `recoverPartitions` None + `EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE` +
   `TABLE_OR_VIEW_NOT_FOUND` (§5 CAT-RECOVER-1), `refreshTable` (OOB commit visible
   after refresh, view no-op, missing raise), `refreshByPath` None, and today's
-  `CACHE TABLE` / `UNCACHE TABLE` SQL refusals.
-  pins: catalog-surface-1/C-001, C-002, C-003, C-004, C-005, C-006
+  `CACHE TABLE` / `UNCACHE TABLE` SQL refusals. Critic round 1 (L-001..L-007):
+  staleness-token invalidation of held caches (INSERT / INSERT OVERWRITE / writer
+  append / `createOrReplaceTempView` all answer fresh rows and `isCached` False;
+  the no-write second read still scans the held cache view under the SQL spy),
+  `comment` values containing `,` or `]` round-trip, transform-source columns
+  (`bucket(16, id)`, `days(ts)`) flag `isPartition`, `createTable` renders `INT[]`
+  recursively and `NOT NULL` (map/struct keep the engine's loud refusal),
+  `listFunctions(dbName)` on a missing namespace raises `SCHEMA_NOT_FOUND`,
+  unquoted temp-view names classify case-insensitively, and every raised
+  `AnalysisException` carries its errorClass through `getCondition()`.
+  pins: catalog-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009
 - `test_dml_b_partition_overwrite.py` — **DML-B:** facade `spark.sql` `INSERT OVERWRITE …
   PARTITION` static/dynamic pins (values, Arrow types, snapshot operation, empty-dynamic
   refuse). pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005
