@@ -20,6 +20,7 @@ from typing import Any
 
 from repark._native import (
     AnalysisException,
+    CommitStateUnknownException,
     IllegalArgumentException,
     ParseException,
     PySparkException,
@@ -49,6 +50,7 @@ for _native_exception_type in (
     ParseException,
     UnsupportedOperationException,
     IllegalArgumentException,
+    CommitStateUnknownException,
 ):
     if not hasattr(_native_exception_type, "getCondition"):
         _native_exception_type.getCondition = _native_get_condition  # type: ignore[attr-defined]
@@ -282,12 +284,14 @@ for _exception_type in (
     ParseException,
     UnsupportedOperationException,
     IllegalArgumentException,
+    CommitStateUnknownException,
 ):
     _exception_type.__module__ = __name__
 del _exception_type
 
 __all__ = [
     "AnalysisException",
+    "CommitStateUnknownException",
     "IllegalArgumentException",
     "ParseException",
     "PySparkAssertionError",

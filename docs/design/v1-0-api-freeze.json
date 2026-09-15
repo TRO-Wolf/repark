@@ -6,7 +6,7 @@
   "rows": 35,
   "frozen_rows": 30,
   "unfrozen_rows": 5,
-  "frozen_names": 888
+  "frozen_names": 889
  },
  "rows": [
   {
@@ -5277,6 +5277,10 @@
    "members": [
     {
      "name": "AnalysisException",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "CommitStateUnknownException",
      "source": "python/repark/src/repark/errors.py"
     },
     {

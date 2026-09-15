@@ -445,6 +445,9 @@ async fn create_first_service_managed(
     .await;
 
     if let Err(write_err) = write {
+        if repark_iceberg::write::is_commit_state_unknown(&write_err) {
+            return Err(write_err);
+        }
         return Err(match target.catalog.drop_table(&target.ident()).await {
             Ok(()) => DataFusionError::Execution(format!(
                 "CREATE TABLE `{}` failed after the table was created (service-managed \

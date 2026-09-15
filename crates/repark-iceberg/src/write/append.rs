@@ -1,6 +1,5 @@
 //! Public bulk append through the fork's `fast_append` transaction path.
 
-use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::{Arc, atomic::AtomicBool, atomic::Ordering};
 
@@ -23,9 +22,10 @@ use iceberg::writer::partitioning::fanout_writer::FanoutWriter;
 use iceberg::{Catalog, TableIdent};
 use uuid::Uuid;
 
+use crate::write::commit_error::{commit_result, operation_id_and_summary};
 use crate::write::conform::{conform_batch, conform_batches, write_default_column_names};
 use crate::write::distribution::{route_partitioned_stream, send_routed};
-use crate::write::merge::{OPERATION_ID_PROP, write_data_files_with_concurrency};
+use crate::write::merge::write_data_files_with_concurrency;
 use crate::write::writer_props::writer_properties_for;
 use crate::write::{concurrency::WriteConcurrency, file_order::ascending_partition_order};
 
@@ -305,14 +305,14 @@ pub async fn commit_append(
     table: &Table,
     new_files: Vec<DataFile>,
 ) -> Result<Table> {
-    let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
+    let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
     let action = tx
         .fast_append()
         .add_data_files(new_files)
         .set_snapshot_properties(summary);
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    tx.commit(catalog.as_ref()).await.map_err(iceberg_err)
+    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
 
 /// Fold an iceberg error into the DataFusion error this crate's callers carry.
@@ -323,7 +323,7 @@ fn iceberg_err(err: iceberg::Error) -> DataFusionError {
 /// Append pins (downstream ask A1).
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
     use std::future::Future;
     use std::pin::Pin;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -1159,7 +1159,7 @@ mod tests {
             snapshot
                 .summary()
                 .additional_properties
-                .contains_key(OPERATION_ID_PROP),
+                .contains_key(crate::write::merge::OPERATION_ID_PROP),
             "the empty snapshot is stamped"
         );
         assert_eq!(snapshot_count(&catalog, &ident).await, 1);
@@ -1343,7 +1343,7 @@ mod tests {
         let first_id = first_snapshot
             .summary()
             .additional_properties
-            .get(OPERATION_ID_PROP)
+            .get(crate::write::merge::OPERATION_ID_PROP)
             .expect("append snapshot carries the engine.operation-id stamp");
         Uuid::from_str(first_id).expect("the stamp is a UUID");
 
@@ -1360,7 +1360,7 @@ mod tests {
             .expect("second snapshot")
             .summary()
             .additional_properties
-            .get(OPERATION_ID_PROP)
+            .get(crate::write::merge::OPERATION_ID_PROP)
             .expect("second stamp present")
             .clone();
         assert_ne!(

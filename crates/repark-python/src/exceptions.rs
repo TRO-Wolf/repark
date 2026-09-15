@@ -44,6 +44,16 @@ pyo3::create_exception!(
 );
 pyo3::create_exception!(
     repark._native,
+    CommitStateUnknownException,
+    PySparkException,
+    "An Iceberg commit whose outcome the catalog could not confirm or deny — the request may \
+     still land, so retrying blindly can duplicate rows. Carries the commit's \
+     `engine.operation-id` in `operation_id` when the write path stamped one (None \
+     otherwise). Subclasses PySparkException (hence RuntimeError), so existing \
+     `except PySparkException` still catches it."
+);
+pyo3::create_exception!(
+    repark._native,
     IllegalArgumentException,
     PySparkException,
     "An illegal or inappropriate argument reached the engine — today, an invalid `.config(...)` \

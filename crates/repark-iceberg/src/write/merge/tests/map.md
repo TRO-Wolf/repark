@@ -23,6 +23,9 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   with an NMBS clause present.
   pins: dml-a-merge-not-matched-by-source/C-002, C-003, C-004, C-005
 - `occ_conflict.rs` — OCC-2 M19/M20 batteries B/C/E/F/G/H/I.
+  `id_batch` and `path_exists` are `pub(super)` for `commit_unknown.rs`'s
+  keep-set pins (M14 `write_data_files` pattern).
+  pins: ice-commit-unknown-1/C-003
 - `occ.rs` — OCC / commit conflict pins + M13 isolation parse + M19-A split.
   RP-5 C-007: snapshot isolation still commits through a concurrent append.
   pins: rp-5-fork-repin/C-007
@@ -54,6 +57,15 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   table unmoved. `occ.rs` / `occ_conflict.rs` keep their spellings and exercise the empty-map
   wrappers, which have no production caller left and are `#[cfg(test)]`.
   pins: rp-7-f18-repin/C-002
+- `commit_unknown.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** a delegating catalog returns
+  `ErrorKind::CommitStateUnknown` from `update_table` after capturing the stamped
+  `engine.operation-id`; the surfaced `CommitStateUnknownError` carries exactly that id, and
+  `update_table` is attempted once (the fork never retries the ambiguous kind). Covers both
+  the `commit_overwrite` and `commit_row_delta` MERGE commit paths. The two
+  `*_leaves_written_files_on_disk` pins stage REAL Parquet files via `write_data_files`
+  and assert `path_exists` after the unknown — the `abort.rs` keep-set, mutation-proven
+  (deleting the carve-out reds both).
+  pins: ice-commit-unknown-1/C-003, C-007
 - `streaming_scan.rs` — streaming target-scan pins + PERF-04 residual-push + MG-1.
 - `streaming.rs` — stream write interleaving pins.
 

@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use datafusion::error::DataFusionError;
 use iceberg::ErrorKind;
 use repark_common::{Error, Result};
+use repark_iceberg::write::CommitStateUnknownError;
 
 use crate::object_store_s3;
 
@@ -17,6 +18,7 @@ pub(crate) enum EngineErrorKind<'a> {
     Unsupported,
     /// A peeled `External` wrapping a live [`iceberg::Error`], classified by its `kind()`.
     Iceberg(&'a iceberg::Error),
+    CommitStateUnknown(&'a CommitStateUnknownError),
     Other,
 }
 
@@ -34,9 +36,12 @@ pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorK
             }
             DataFusionError::NotImplemented(_) => return EngineErrorKind::Unsupported,
             DataFusionError::External(inner) => {
-                return match inner.downcast_ref::<iceberg::Error>() {
-                    Some(iceberg_error) => EngineErrorKind::Iceberg(iceberg_error),
-                    None => EngineErrorKind::Other,
+                return match inner.downcast_ref::<CommitStateUnknownError>() {
+                    Some(stamped) => EngineErrorKind::CommitStateUnknown(stamped),
+                    None => match inner.downcast_ref::<iceberg::Error>() {
+                        Some(iceberg_error) => EngineErrorKind::Iceberg(iceberg_error),
+                        None => EngineErrorKind::Other,
+                    },
                 };
             }
             DataFusionError::Context(_, inner) | DataFusionError::Diagnostic(_, inner) => {
@@ -62,6 +67,10 @@ pub fn engine_err(err: DataFusionError) -> Error {
         EngineErrorKind::Analysis => Error::Analysis(err.to_string()),
         EngineErrorKind::Unsupported => Error::NotImplemented(err.to_string()),
         EngineErrorKind::Iceberg(iceberg_error) => classify_iceberg_error(iceberg_error),
+        EngineErrorKind::CommitStateUnknown(stamped) => Error::CommitStateUnknown {
+            message: stamped.inner().to_string(),
+            operation_id: Some(stamped.operation_id().to_string()),
+        },
         EngineErrorKind::Other => Error::DataFusion(err.to_string()),
     }
 }
@@ -94,12 +103,15 @@ pub(crate) fn classify_iceberg_error(error: &iceberg::Error) -> Error {
         | ErrorKind::TableAlreadyExists
         | ErrorKind::NamespaceAlreadyExists
         | ErrorKind::ViewAlreadyExists => Error::Analysis(message),
+        ErrorKind::CommitStateUnknown => Error::CommitStateUnknown {
+            message,
+            operation_id: None,
+        },
         #[allow(clippy::match_same_arms)]
         ErrorKind::PreconditionFailed
         | ErrorKind::Unexpected
         | ErrorKind::DataInvalid
-        | ErrorKind::CatalogCommitConflicts
-        | ErrorKind::CommitStateUnknown => Error::Iceberg(message),
+        | ErrorKind::CatalogCommitConflicts => Error::Iceberg(message),
         _ => Error::Iceberg(message),
     }
 }

@@ -1,10 +1,19 @@
 //! `CREATE TABLE` clause-refusal unit tests.
 
+use std::collections::HashSet;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use datafusion::arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
+use iceberg::io::LocalFsStorageFactory;
+use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
+use iceberg::{CatalogBuilder, TableCommit, TableUpdate};
+use tempfile::TempDir;
 
 use super::*;
 
@@ -184,4 +193,300 @@ fn microsecond_timestamp_columns_pass_the_ns_gate() {
     ]);
     refuse_nanosecond_timestamp_columns(&schema, "CREATE TABLE", &[])
         .unwrap_or_else(|err| panic!("µs timestamps must pass: {err}"));
+}
+
+type BoxedCatalogFuture<'a, T> = Pin<Box<dyn Future<Output = iceberg::Result<T>> + Send + 'a>>;
+
+#[derive(Debug)]
+struct UnknownOutcomeCatalog {
+    inner: Arc<dyn Catalog>,
+    service_root: String,
+    drop_table_calls: AtomicUsize,
+    stamped_operation_id: Mutex<Option<String>>,
+}
+
+impl UnknownOutcomeCatalog {
+    fn drop_table_calls(&self) -> usize {
+        self.drop_table_calls.load(Ordering::SeqCst)
+    }
+
+    fn captured_operation_id(&self) -> String {
+        self.stamped_operation_id
+            .lock()
+            .expect("capture lock")
+            .clone()
+            .expect("the commit must stamp an engine.operation-id")
+    }
+}
+
+impl Catalog for UnknownOutcomeCatalog {
+    fn list_namespaces<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        parent: Option<&'life1 NamespaceIdent>,
+    ) -> BoxedCatalogFuture<'async_trait, Vec<NamespaceIdent>>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.list_namespaces(parent)
+    }
+
+    fn create_namespace<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        namespace: &'life1 NamespaceIdent,
+        properties: HashMap<String, String>,
+    ) -> BoxedCatalogFuture<'async_trait, iceberg::Namespace>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.create_namespace(namespace, properties)
+    }
+
+    fn get_namespace<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        namespace: &'life1 NamespaceIdent,
+    ) -> BoxedCatalogFuture<'async_trait, iceberg::Namespace>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.get_namespace(namespace)
+    }
+
+    fn namespace_exists<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        namespace: &'life1 NamespaceIdent,
+    ) -> BoxedCatalogFuture<'async_trait, bool>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.namespace_exists(namespace)
+    }
+
+    fn update_namespace<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        namespace: &'life1 NamespaceIdent,
+        properties: HashMap<String, String>,
+    ) -> BoxedCatalogFuture<'async_trait, ()>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.update_namespace(namespace, properties)
+    }
+
+    fn drop_namespace<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        namespace: &'life1 NamespaceIdent,
+    ) -> BoxedCatalogFuture<'async_trait, ()>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.drop_namespace(namespace)
+    }
+
+    fn list_tables<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        namespace: &'life1 NamespaceIdent,
+    ) -> BoxedCatalogFuture<'async_trait, Vec<TableIdent>>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.list_tables(namespace)
+    }
+
+    fn create_table<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        namespace: &'life1 NamespaceIdent,
+        creation: TableCreation,
+    ) -> BoxedCatalogFuture<'async_trait, iceberg::table::Table>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        let mut creation = creation;
+        if creation.location.is_none() {
+            creation.location = Some(format!(
+                "{}/{}/{}",
+                self.service_root,
+                namespace.to_url_string(),
+                creation.name
+            ));
+        }
+        self.inner.create_table(namespace, creation)
+    }
+
+    fn load_table<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        table: &'life1 TableIdent,
+    ) -> BoxedCatalogFuture<'async_trait, iceberg::table::Table>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.load_table(table)
+    }
+
+    fn drop_table<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        table: &'life1 TableIdent,
+    ) -> BoxedCatalogFuture<'async_trait, ()>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.drop_table_calls.fetch_add(1, Ordering::SeqCst);
+        self.inner.drop_table(table)
+    }
+
+    fn table_exists<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        table: &'life1 TableIdent,
+    ) -> BoxedCatalogFuture<'async_trait, bool>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.table_exists(table)
+    }
+
+    fn rename_table<'life0, 'life1, 'life2, 'async_trait>(
+        &'life0 self,
+        src: &'life1 TableIdent,
+        dest: &'life2 TableIdent,
+    ) -> BoxedCatalogFuture<'async_trait, ()>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        'life2: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.rename_table(src, dest)
+    }
+
+    fn register_table<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        table: &'life1 TableIdent,
+        metadata_location: String,
+    ) -> BoxedCatalogFuture<'async_trait, iceberg::table::Table>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.register_table(table, metadata_location)
+    }
+
+    fn update_table<'life0, 'async_trait>(
+        &'life0 self,
+        mut commit: TableCommit,
+    ) -> BoxedCatalogFuture<'async_trait, iceberg::table::Table>
+    where
+        'life0: 'async_trait,
+        Self: 'async_trait,
+    {
+        Box::pin(async move {
+            let stamped = commit
+                .take_updates()
+                .iter()
+                .find_map(|update| match update {
+                    TableUpdate::AddSnapshot { snapshot } => snapshot
+                        .summary()
+                        .additional_properties
+                        .get(repark_iceberg::write::merge::OPERATION_ID_PROP)
+                        .cloned(),
+                    _ => None,
+                });
+            *self.stamped_operation_id.lock().expect("capture lock") = stamped;
+            Err(iceberg::Error::new(
+                iceberg::ErrorKind::CommitStateUnknown,
+                "lost UpdateTable response".to_string(),
+            ))
+        })
+    }
+}
+
+#[tokio::test]
+async fn service_managed_ctas_commit_state_unknown_keeps_table_and_surfaces_class() {
+    let warehouse = TempDir::new().expect("warehouse");
+    let root = warehouse.path().to_str().expect("utf8").to_string();
+    let inner: Arc<dyn Catalog> = Arc::new(
+        MemoryCatalogBuilder::default()
+            .with_storage_factory(Arc::new(LocalFsStorageFactory))
+            .load(
+                "memory",
+                HashMap::from([(MEMORY_CATALOG_WAREHOUSE.to_string(), root.clone())]),
+            )
+            .await
+            .expect("memory catalog"),
+    );
+    inner
+        .create_namespace(&NamespaceIdent::new("sales".to_string()), HashMap::new())
+        .await
+        .expect("create namespace");
+    let svc = Arc::new(UnknownOutcomeCatalog {
+        inner,
+        service_root: format!("{root}/svc-assigned"),
+        drop_table_calls: AtomicUsize::new(0),
+        stamped_operation_id: Mutex::new(None),
+    });
+    let handle: Arc<dyn Catalog> = svc.clone();
+
+    let ctx = SessionContext::new();
+    repark_iceberg::catalog::register_iceberg_catalog(&ctx, "svc", handle.clone())
+        .await
+        .expect("register catalog");
+    let mut catalogs = CatalogRegistry::new();
+    catalogs.insert(
+        "svc".to_string(),
+        handle,
+        LocationPolicy::ServiceManagedLocation,
+    );
+    let read_only = HashSet::new();
+    let error = crate::execute(
+        EngineContext::new(&ctx, &catalogs, &read_only),
+        "CREATE TABLE svc.sales.t AS SELECT 1 AS id",
+    )
+    .await
+    .expect_err("the ambiguous commit outcome must surface");
+    assert_eq!(
+        svc.drop_table_calls(),
+        0,
+        "an ambiguous commit is NOT abort-dropped — the create may have landed"
+    );
+    assert!(
+        catalogs["svc"]
+            .table_exists(&TableIdent::new(
+                NamespaceIdent::new("sales".to_string()),
+                "t".to_string()
+            ))
+            .await
+            .expect("table_exists"),
+        "the possibly-committed table stays for the operator (or an IF NOT EXISTS retry)"
+    );
+    match repark_core::engine_err(error) {
+        repark_core::Error::CommitStateUnknown { operation_id, .. } => {
+            assert_eq!(
+                operation_id.as_deref(),
+                Some(svc.captured_operation_id().as_str()),
+                "the exception carries the operation id the commit attempted to stamp"
+            );
+        }
+        other => panic!("expected Error::CommitStateUnknown, got {other:?}"),
+    }
 }

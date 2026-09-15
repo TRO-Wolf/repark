@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::error::{DataFusionError, Result};
@@ -7,11 +6,10 @@ use iceberg::expr::Predicate;
 use iceberg::spec::DataFile;
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
-use uuid::Uuid;
 
 use super::commit_target::{maybe_to_branch, snapshot_id_for_commit};
-use super::merge::OPERATION_ID_PROP;
 use super::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
+use crate::write::commit_error::{commit_result, operation_id_and_summary};
 
 #[allow(clippy::missing_errors_doc)]
 pub async fn commit_overwrite_replace_all_to(
@@ -21,7 +19,7 @@ pub async fn commit_overwrite_replace_all_to(
     branch: Option<&str>,
 ) -> Result<Table> {
     let isolation = parse_overwrite_isolation(table)?;
-    let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
+    let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
     let mut action = tx
         .overwrite_files()
@@ -39,7 +37,7 @@ pub async fn commit_overwrite_replace_all_to(
     }
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    tx.commit(catalog.as_ref()).await.map_err(iceberg_err)
+    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
 
 fn iceberg_err(err: iceberg::Error) -> DataFusionError {

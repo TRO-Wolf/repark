@@ -31,13 +31,18 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   session/catalog config-mapping error for malformed `spark.sql.catalog.*` /
   `repark.sql.catalog.*` blocks and dual-prefix conflicts; messages name keys, not secret-bearing
   values; `Iceberg(String)` — the iceberg residual (commit conflicts, invalid data, unexpected —
-  U4), verbatim `{0}` whose text leads with the structured iceberg kind name) + `Result<T>`. Plus
-  `ErrorClass { Parse, Analysis, Unsupported, IllegalArgument, Base }` + `Error::exception_class()`
+  U4), verbatim `{0}` whose text leads with the structured iceberg kind name;
+  `CommitStateUnknown { message, operation_id }` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the
+  ambiguous-commit class, carrying the attempted commit's `engine.operation-id` when a RePark
+  write path minted one) + `Result<T>`. Plus
+  `ErrorClass { Parse, Analysis, Unsupported, IllegalArgument, CommitStateUnknown, Base }` + `Error::exception_class()`
   — the WG-3/U4/Group-X error-taxonomy routing (`NotImplemented → Unsupported` →
   `repark.errors.UnsupportedOperationException`, the PySpark class for a JVM
   `UnsupportedOperationException`; **Group X:** `Config → IllegalArgument` →
   `repark.errors.IllegalArgumentException`, what live pyspark 4.0.0 raises for an invalid
-  `SQLConf` value; `Iceberg → Base`): an **exhaustive, no-`_`** match so a new
+  `SQLConf` value; `Iceberg → Base`; **ICE-COMMIT-UNKNOWN-1:**
+  `CommitStateUnknown → CommitStateUnknown` → `repark.errors.CommitStateUnknownException` with
+  `operation_id` on the instance): an **exhaustive, no-`_`** match so a new
   variant fails to compile until explicitly routed to a Python exception partition (the "no
   silent default arm" guarantee). Stays at the bottom of the DAG: no heavy deps, so engine errors
   are carried as a formatted string and **classified** into the

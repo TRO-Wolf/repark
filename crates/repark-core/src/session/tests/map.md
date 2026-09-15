@@ -56,6 +56,15 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   max_total_bytes=u64::MAX)` refuses with this result's `get_array_memory_size` integer even
   though every buffer is shared.
   pins: eager-budget-1/C-005, C-007, C-008
+- `commit_unknown.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `engine_err` classification
+  pins for the ambiguous-commit path — the stamped `CommitStateUnknownError` wrapper maps to
+  `Error::CommitStateUnknown` carrying the minted `operation_id`, a bare iceberg
+  `CommitStateUnknown` kind maps to the same variant with `None`, and the definite kinds
+  (`CatalogCommitConflicts` included) stay in the `Error::Iceberg` base bucket. Mutation:
+  fold the stamped arm and the kind arm back to `Error::Iceberg` and both classification
+  pins red; the repark-common routing pin and the repark-python `to_py_err` pin red under
+  the matching `exception_class` → `Base` leg of the same mutant.
+  pins: ice-commit-unknown-1/C-001, C-004, C-007
 - `window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** six capability pins for the
   `sliding_frame_rescan` rule in [../df_guards/window_rescan.rs](../df_guards/window_rescan.rs). The throwaway
   `winslide_probe_sum` UDAF exists only here: it has no `retract_batch`, so it proves the fallback

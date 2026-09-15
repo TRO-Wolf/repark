@@ -14,6 +14,12 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 ## Contents
 
 - `snapshot_commit.rs` — snapshot-producing MERGE commits (`to_branch` when `MergeSpec.commit_branch` is set).
+  **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `commit_overwrite` and `commit_row_delta_kind` mint
+  the commit's `engine.operation-id` via `write::commit_error::operation_id_and_summary` and
+  route the `tx.commit` `Err` through `commit_err`, so a `CommitStateUnknown` surfaces
+  stamped for `error_map`'s wrapper downcast — after `abort.rs`'s file cleanup still ran
+  (the cleanup carve-out lives in `abort.rs` itself).
+  pins: ice-commit-unknown-1/C-003
   **V3-9:** `referenced` / `abort_paths` are moved out of the prepared deletes with
   `std::mem::take` instead of deep-cloned once per row-delta commit.
   pins: v3-9-mor-predicate-dml-dv/C-009
@@ -137,6 +143,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   persisted — Java's `CommitStateUnknownException` rethrow-before-cleanup rule);
   reclaim is orphan-file maintenance. Per-file `FileIO::delete` failures
   `tracing::warn` and never mask the original commit error.
+  **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the keep-set is now pinned by real-file
+  pins in `tests/commit_unknown.rs` — mutation-proven (deleting the early return
+  reds both).
+  pins: ice-commit-unknown-1/C-003, C-007
 - `not_matched_by_source.rs` — **DML-A:** `WHEN NOT MATCHED BY SOURCE` types, SQL
   fragments, full-snapshot path listing, MOR work SQL. COW rewrite applies the arm
   through `rewrite_column` ELSE / combined DELETE.

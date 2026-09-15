@@ -905,10 +905,6 @@ fn iceberg_feature_unsupported_classifies_unsupported() {
     assert!(via_direct.to_string().contains("FeatureUnsupported"));
 }
 
-/// Pin: the full 12-kind partition routes per the D-U4-2 oracle mapping (1 Unsupported /
-/// 6 Analysis / 5 iceberg-base). The risk: a not-found kind silently landing in the base
-/// bucket (PySpark raises `AnalysisException` — `NoSuchTableException` et al. extend it), or
-/// a commit kind landing in Analysis. Each kind's name must also survive in the message.
 #[test]
 fn iceberg_kind_partition_routes_per_oracle() {
     let analysis_kinds = [
@@ -935,7 +931,6 @@ fn iceberg_kind_partition_routes_per_oracle() {
         ErrorKind::Unexpected,
         ErrorKind::DataInvalid,
         ErrorKind::CatalogCommitConflicts,
-        ErrorKind::CommitStateUnknown,
     ];
     for kind in base_kinds {
         let converted = iceberg_err(iceberg_error_of(kind, "probe"));

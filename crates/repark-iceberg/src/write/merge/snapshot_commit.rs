@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::error::{DataFusionError, Result};
@@ -8,13 +7,12 @@ use iceberg::spec::DataFile;
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use tracing::Instrument;
-use uuid::Uuid;
 
 use super::KnownPartitions;
-use super::OPERATION_ID_PROP;
 use super::abort;
 use super::dv_close;
 use super::iceberg_err;
+use crate::write::commit_error::{commit_err, operation_id_and_summary};
 use crate::write::concurrency::WriteConcurrency;
 
 pub(crate) const WRITE_MERGE_ISOLATION_LEVEL: &str = "write.merge.isolation-level";
@@ -119,7 +117,7 @@ pub(crate) async fn commit_overwrite_on_ref(
         return Ok(());
     }
     let new_file_paths = abort::written_file_paths(&new_files);
-    let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
+    let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
     let tx = if affected.is_empty() {
         let mut action = tx
@@ -164,7 +162,7 @@ pub(crate) async fn commit_overwrite_on_ref(
         Ok(_) => Ok(()),
         Err(error) => {
             abort::delete_written_files_best_effort(table, &new_file_paths, &error).await;
-            Err(iceberg_err(error))
+            Err(commit_err(error, &operation_id))
         }
     }
 }
@@ -331,7 +329,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let delete_file_count = delete_file_paths.len() as u64;
     let arm_deleted_on_delete = prepared.arm_validate_deleted_files_on_delete;
 
-    let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
+    let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
     let mut action = tx.row_delta().add_data_files(data_files);
     action = prepared.apply(action);
@@ -371,7 +369,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
             let mut abort_paths = data_file_paths;
             abort_paths.extend(delete_file_paths);
             abort::delete_written_files_best_effort(table, &abort_paths, &error).await;
-            Err(iceberg_err(error))
+            Err(commit_err(error, &operation_id))
         }
     }
 }

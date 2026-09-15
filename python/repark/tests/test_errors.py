@@ -5,9 +5,10 @@
 not-found / already-exists) as :class:`AnalysisException`, a deterministic scope gate or
 unsupported iceberg feature as :class:`UnsupportedOperationException` (the class PySpark raises
 for a JVM ``UnsupportedOperationException``), an invalid ``.config(...)`` value as
-:class:`IllegalArgumentException`, and everything else (execution, iceberg commit/data errors) as
-the base :class:`PySparkException`. All subclass :class:`RuntimeError`, so the near-drop-in
-``except RuntimeError`` path keeps working after migrating from PySpark.
+:class:`IllegalArgumentException`, an ambiguous iceberg commit (the catalog could not confirm or
+deny the outcome) as :class:`CommitStateUnknownException`, and everything else (execution, iceberg
+commit/data errors) as the base :class:`PySparkException`. All subclass :class:`RuntimeError`, so
+the near-drop-in ``except RuntimeError`` path keeps working after migrating from PySpark.
 
 The Python-argument wrappers :class:`PySparkTypeError` / :class:`PySparkValueError` /
 :class:`PySparkAttributeError` each inherit both :class:`PySparkException` and the builtin they
@@ -29,6 +30,7 @@ from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
 from repark.errors import (
     AnalysisException,
+    CommitStateUnknownException,
     IllegalArgumentException,
     ParseException,
     PySparkAssertionError,
@@ -85,6 +87,13 @@ def test_exception_hierarchy_subclasses_runtime_error() -> None:
     assert not issubclass(IllegalArgumentException, AnalysisException)
     assert not issubclass(IllegalArgumentException, UnsupportedOperationException)
     assert not issubclass(AnalysisException, IllegalArgumentException)
+    assert issubclass(CommitStateUnknownException, PySparkException)
+    assert issubclass(CommitStateUnknownException, RuntimeError)
+    assert not issubclass(CommitStateUnknownException, AnalysisException)
+    assert not issubclass(CommitStateUnknownException, ParseException)
+    assert not issubclass(CommitStateUnknownException, UnsupportedOperationException)
+    assert not issubclass(CommitStateUnknownException, IllegalArgumentException)
+    assert not issubclass(PySparkException, CommitStateUnknownException)
 
 
 def test_analysis_exception_catches_parse_errors_pyspark_parity(spark: ReparkSession) -> None:
@@ -112,6 +121,7 @@ def test_errors_reexported_with_same_identity() -> None:
     assert PySparkException is _native.PySparkException
     assert UnsupportedOperationException is _native.UnsupportedOperationException
     assert IllegalArgumentException is _native.IllegalArgumentException
+    assert CommitStateUnknownException is _native.CommitStateUnknownException
     # The Python-argument leaves are facade-defined: they need MULTIPLE bases, which
     # `pyo3::create_exception!` cannot express — no native twin exists whose identity could drift.
     for facade_only in (PySparkValueError, PySparkTypeError, PySparkAttributeError):

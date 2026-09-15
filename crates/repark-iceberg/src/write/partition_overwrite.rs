@@ -17,10 +17,9 @@ use iceberg::expr::{Predicate, Reference};
 use iceberg::spec::{DataFile, Datum, NestedField, PrimitiveType, Transform, Type};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
-use uuid::Uuid;
 
+use crate::write::commit_error::{commit_result, operation_id_and_summary};
 use crate::write::commit_target::{maybe_to_branch, snapshot_id_for_commit};
-use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::store_assign::refuse_unless_write_store_assignable;
 
@@ -376,7 +375,7 @@ pub async fn commit_overwrite_by_row_filter_to(
     branch: Option<&str>,
 ) -> Result<Table> {
     let isolation = parse_overwrite_isolation(table)?;
-    let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
+    let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
     let mut action = tx
         .overwrite_files()
@@ -387,7 +386,7 @@ pub async fn commit_overwrite_by_row_filter_to(
     action = apply_overwrite_isolation(action, isolation, table, branch);
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    tx.commit(catalog.as_ref()).await.map_err(iceberg_err)
+    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
 
 /// Commit a dynamic partition overwrite: replace partitions present in `staged_files`.
@@ -410,7 +409,7 @@ pub async fn commit_replace_partitions_to(
 ) -> Result<Table> {
     refuse_empty_dynamic_overwrite(&staged_files)?;
     let isolation = parse_overwrite_isolation(table)?;
-    let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
+    let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
     let mut action = tx
         .replace_partitions()
@@ -427,7 +426,7 @@ pub async fn commit_replace_partitions_to(
     }
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    tx.commit(catalog.as_ref()).await.map_err(iceberg_err)
+    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
 
 enum PartitionClauseItem {

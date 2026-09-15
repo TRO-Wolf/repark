@@ -2711,7 +2711,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   already closed on main by Group H (`test_select_naming.py`) — verified, no invented work.
 - `test_errors.py` — the WG-3/U4 error-taxonomy matrix, end to end through the public facade: the
   subclass tree (`ParseException` ⊂ `AnalysisException` ⊂ `PySparkException` ⊂ `RuntimeError`,
-  `UnsupportedOperationException` ⊂ `PySparkException`; Group S reparents Parse under Analysis for
+  `UnsupportedOperationException` ⊂ `PySparkException`,
+  `CommitStateUnknownException` ⊂ `PySparkException` — **ICE-COMMIT-UNKNOWN-1**, the
+  ambiguous-commit alert class carrying `operation_id`; Group S reparents Parse under Analysis for
   PySpark parity — the other leaves stay distinct) + re-export identity
   (`repark.errors.X is repark._native.X`); then, per entry
   point, {parse → `ParseException`, analysis → `AnalysisException`, execution → base} pinned on

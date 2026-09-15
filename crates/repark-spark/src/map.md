@@ -103,6 +103,11 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: orphan-s3tables-1/C-001, C-002, C-004, C-005
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
+  **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the service-managed abort arm skips `drop_table`
+  and returns the original error unwrapped when `is_commit_state_unknown` fires — a
+  possibly-landed create is never abort-dropped, and the class + `operation_id` reach the
+  caller; definite kinds keep the drop-and-explain abort.
+  pins: ice-commit-unknown-1/C-001, C-003, C-004
   **CTAS-VIEW-1 (2026-09-03):** unpartitioned `write_ctas_stream` inherits stream conforming
   from `write_data_files_from_stream_with_concurrency` (Utf8View/BinaryView → table schema).
   pins: ctas-view-1-conform-stream/C-001, C-002

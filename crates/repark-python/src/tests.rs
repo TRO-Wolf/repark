@@ -68,6 +68,45 @@ fn to_py_err_routes_to_typed_exceptions_subclassing_runtime_error() {
     });
 }
 
+#[test]
+fn to_py_err_commit_state_unknown_is_typed_and_carries_operation_id() {
+    Python::attach(|py| {
+        let stamped = to_py_err(Error::CommitStateUnknown {
+            message: "CommitStateUnknown => lost UpdateTable response".into(),
+            operation_id: Some("op-42".into()),
+        });
+        assert!(stamped.is_instance_of::<CommitStateUnknownException>(py));
+        assert!(stamped.is_instance_of::<PySparkException>(py));
+        assert!(stamped.is_instance_of::<PyRuntimeError>(py));
+        assert!(!stamped.is_instance_of::<AnalysisException>(py));
+        assert!(!stamped.is_instance_of::<ParseException>(py));
+        assert!(!stamped.is_instance_of::<UnsupportedOperationException>(py));
+        assert!(!stamped.is_instance_of::<IllegalArgumentException>(py));
+        assert!(stamped.to_string().contains("CommitStateUnknown"));
+        let operation_id = stamped
+            .value(py)
+            .getattr("operation_id")
+            .expect("operation_id attribute")
+            .extract::<Option<String>>()
+            .expect("operation_id is str or None");
+        assert_eq!(operation_id.as_deref(), Some("op-42"));
+
+        let unstamped = to_py_err(Error::CommitStateUnknown {
+            message: "CommitStateUnknown => probe".into(),
+            operation_id: None,
+        });
+        assert!(unstamped.is_instance_of::<CommitStateUnknownException>(py));
+        assert!(unstamped.is_instance_of::<PySparkException>(py));
+        assert!(
+            unstamped
+                .value(py)
+                .getattr("operation_id")
+                .expect("operation_id attribute")
+                .is_none()
+        );
+    });
+}
+
 /// MUTATION: give `repark-core` its own `Error` enum (a plausible future re-split) and this crate stops compiling here — loudly, at the seam — instead of silently binding `to_py_err`'s exhaustive fold to a type the doors no longer raise.
 /// The native and facade error paths use the same core error type.
 const _: fn(repark_common::Error) -> repark_core::Error = |error| error;

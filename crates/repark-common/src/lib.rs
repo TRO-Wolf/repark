@@ -31,6 +31,12 @@ pub enum Error {
     /// An Iceberg error other than an unsupported feature or catalog analysis error.
     #[error("{0}")]
     Iceberg(String),
+
+    #[error("{message}")]
+    CommitStateUnknown {
+        message: String,
+        operation_id: Option<String>,
+    },
 }
 
 /// The PySpark exception partition an [`Error`] maps onto at the Python (PyO3) boundary.
@@ -44,6 +50,7 @@ pub enum ErrorClass {
     Unsupported,
     /// An invalid engine or catalog config value mapped to `IllegalArgumentException`.
     IllegalArgument,
+    CommitStateUnknown,
     /// Everything else mapped to the `RuntimeError`-compatible `repark.errors.PySparkException`.
     Base,
 }
@@ -58,6 +65,7 @@ impl Error {
             Error::Analysis(_) => ErrorClass::Analysis,
             Error::NotImplemented(_) => ErrorClass::Unsupported,
             Error::Config(_) => ErrorClass::IllegalArgument,
+            Error::CommitStateUnknown { .. } => ErrorClass::CommitStateUnknown,
             Error::DataFusion(_) | Error::Iceberg(_) => ErrorClass::Base,
         }
     }
