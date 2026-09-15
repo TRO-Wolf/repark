@@ -1946,7 +1946,10 @@ the pin rather than obeying it.
   the same cells; `crates/repark-functions/src/bitmap_agg/groups.rs` (C-016,
   C-017).
 - **Rationale** — FIXED for the recorded aggregate, length, coercion, error-class,
-  and window shapes. Facade Python names are run 15a after this merges.
+  and window shapes. Facade Python names landed 2026-09-15 (FNP-BITMAP-FACADE-1):
+  `F.bitmap_construct_agg` / `F.bitmap_or_agg` / `F.bitmap_and_agg` are one-line wrappers
+  over the same UDAFs through `unary_aggregate_udaf`, pinned against the same oracle cells
+  in `python/repark/tests/test_fnp_bitmap_facade_1.py`.
 - **Residuals (FNP-6D-FOLLOWUP-1, 2026-09-15).** The followup closes the L-001/L-003
   signature gaps against the recorded `FU-*` cells
   (`python/repark/tests/fnp_6d_followup_1_spark_oracle.json`, live PySpark 4.1.2):

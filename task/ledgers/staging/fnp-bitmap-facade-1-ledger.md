@@ -139,3 +139,18 @@ COVERAGE_ATTESTATION:
 
 No public API change beyond the three additive names: no crate dependency, no `Cargo.lock`
 edit, no `.github/` edit, no kernel change.
+
+## Run 16a rebuild and rulings (orchestrator, 2026-09-15)
+
+- The branch was rebuilt by cherry-picking this unit's eight commits onto main `bee2cde3`, the
+  squash of FNP-6D-FOLLOWUP-1 (#623). The earlier merge commits of the pre-squash follow-up
+  branch are gone. Conflicts resolved: map row tails kept from both sides; EX-0 1052 + 3 = 1055;
+  `function_dispatch.rs` keeps the three bitmap arms beside main's
+  `spark_result_types::approx_count_distinct_udaf()` arm; `test_functions_split_identity.py`
+  takes main's FNP-11A tail with the install constant 6 → 9; the registry bitmap paragraph
+  keeps the facade sentence once.
+- Q1 of the remediation round (the FNP-6D-FOLLOWUP-1 ledger-grammar red seen by `make verify`):
+  ruled "leave it to its own unit". #623 filed the COVERAGE_ATTESTATION and pins citations, and
+  this commit carries that ledger's departure move to `completed/`, which #623 omitted.
+- Owner ruling Q-15a-1 (DEGREES-RUST-1) is applied by rider R-7; owner ruling Q-15a-5 (the
+  `len(set(__all__)) == len(__all__)` uniqueness pin) is applied by R-6.

@@ -450,6 +450,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   Round 2: idx validated only inside the match arm; §7 `FN-REGEX-LOOKAROUND-1` filed;
   facade 2-arg widening disclosed.
   pins: fn-regexp-extract-1/C-001, C-002, C-003, C-004
+- [fnp-6d-followup-1-ledger.md](fnp-6d-followup-1-ledger.md) — Unit ledger — FNP-6D-FOLLOWUP-1 · bitmap aggregate signatures
 - [fnp-6d-ledger.md](fnp-6d-ledger.md) —
   **FNP-6D (2026-09-15), in flight:** Spark `bitmap_construct_agg` / `bitmap_or_agg` /
   `bitmap_and_agg` UDAFs (4096-byte BINARY, recorded cells `F6D-*` and `B8-*`).
