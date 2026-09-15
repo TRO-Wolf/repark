@@ -6,10 +6,10 @@ use std::sync::Arc;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
-    ColumnDef, ColumnOption, CreateTable, CreateTableOptions, DataType as SqlDataType,
-    ExactNumberInfo, SqlOption, TimezoneInfo,
+    ArrayElemTypeDef, ColumnDef, ColumnOption, CreateTable, CreateTableOptions,
+    DataType as SqlDataType, ExactNumberInfo, SqlOption, TimezoneInfo,
 };
-use iceberg::spec::{NestedField, PrimitiveType, Schema, Type, UnboundPartitionSpec};
+use iceberg::spec::{ListType, NestedField, PrimitiveType, Schema, Type, UnboundPartitionSpec};
 use iceberg::transaction::StagedTableTransaction;
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 
@@ -173,12 +173,11 @@ fn schema_from_column_defs(
     timestamp_type: SparkTimestampType,
 ) -> Result<Schema> {
     let mut fields = Vec::with_capacity(columns.len());
-    for (index, column) in columns.iter().enumerate() {
-        let field_id = i32::try_from(index + 1).map_err(|_| {
-            DataFusionError::Plan("CREATE TABLE exceeds Iceberg field-id range".into())
-        })?;
+    let mut next_id = 1i32;
+    for column in columns.iter() {
+        let field_id = alloc_field_id(&mut next_id)?;
         let iceberg_type =
-            sql_type_to_iceberg_with_timestamp_type(&column.data_type, timestamp_type)?;
+            sql_type_to_iceberg_nested(&column.data_type, timestamp_type, &mut next_id)?;
         // Only NULL and NOT NULL are supported.
         let mut required = false;
         for option in &column.options {
@@ -218,6 +217,29 @@ pub(crate) fn sql_type_to_iceberg_with_timestamp_type(
     data_type: &SqlDataType,
     timestamp_type: SparkTimestampType,
 ) -> Result<Type> {
+    let mut next_id = 1i32;
+    sql_type_to_iceberg_nested(data_type, timestamp_type, &mut next_id)
+}
+
+fn alloc_field_id(next_id: &mut i32) -> Result<i32> {
+    let allocated = *next_id;
+    *next_id = next_id.checked_add(1).ok_or_else(|| {
+        DataFusionError::Plan("CREATE TABLE exceeds Iceberg field-id range".into())
+    })?;
+    Ok(allocated)
+}
+
+fn sql_type_to_iceberg_nested(
+    data_type: &SqlDataType,
+    timestamp_type: SparkTimestampType,
+    next_id: &mut i32,
+) -> Result<Type> {
+    if let SqlDataType::Array(ArrayElemTypeDef::AngleBracket(element)) = data_type {
+        let element_id = alloc_field_id(next_id)?;
+        let element_type = sql_type_to_iceberg_nested(element, timestamp_type, next_id)?;
+        let field = NestedField::optional(element_id, "element", element_type);
+        return Ok(Type::List(ListType::new(Arc::new(field))));
+    }
     let primitive = match data_type {
         SqlDataType::Boolean | SqlDataType::Bool => PrimitiveType::Boolean,
         SqlDataType::TinyInt(_)
@@ -557,6 +579,36 @@ mod type_mapping_tests {
         use datafusion::sql::sqlparser::ast::ArrayElemTypeDef;
         let err = sql_type_to_iceberg(&SqlDataType::Array(ArrayElemTypeDef::None)).unwrap_err();
         assert!(err.to_string().contains("not supported"), "got: {err}");
+    }
+
+    #[test]
+    fn maps_angle_bracket_array_to_nullable_element_list() {
+        use datafusion::sql::sqlparser::ast::ArrayElemTypeDef;
+        let angle = |inner: SqlDataType| {
+            SqlDataType::Array(ArrayElemTypeDef::AngleBracket(Box::new(inner)))
+        };
+        let Type::List(list) = sql_type_to_iceberg(&angle(SqlDataType::Int(None))).unwrap()
+        else {
+            panic!("expected list");
+        };
+        assert_eq!(list.element_field.name, "element");
+        assert!(!list.element_field.required);
+        assert!(matches!(
+            list.element_field.field_type.as_ref(),
+            Type::Primitive(PrimitiveType::Int)
+        ));
+        let Type::List(outer) =
+            sql_type_to_iceberg(&angle(angle(SqlDataType::String(None)))).unwrap()
+        else {
+            panic!("expected nested list");
+        };
+        let Type::List(inner) = outer.element_field.field_type.as_ref() else {
+            panic!("expected inner list");
+        };
+        assert!(matches!(
+            inner.element_field.field_type.as_ref(),
+            Type::Primitive(PrimitiveType::String)
+        ));
     }
 
     #[test]

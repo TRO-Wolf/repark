@@ -141,8 +141,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   comma-joined `k=v` with `=`-less fragments folded into the previous value
   (comments with `,` / `]` round-trip), `# Partitioning` transform rows map to
   their source columns (`bucket`/`truncate`/time transforms included), and
-  `createTable` DDL spells arrays `INT[]` recursively plus `NOT NULL`.
-  pins: catalog-surface-1/C-001…C-006, C-009
+  `createTable` DDL spells arrays `ARRAY<INT>` recursively plus `NOT NULL`
+  (**FNP-4B round 7 (2026-09-15):** the one-line R-16b-21 grant; nothing else in
+  this file changed). pins: catalog-surface-1/C-001…C-006, C-009
 - `column.py` — lazy expression objects, type gates, aliases, field access, generators,
   aggregates, windows, casts, and Spark-compatible operator behavior. Column identity
   metadata preserves join and duplicate-name semantics.

@@ -565,7 +565,7 @@ def _ddl_type(data_type: Any) -> str:
     from repark.spark.types import ArrayType
 
     if isinstance(data_type, ArrayType):
-        return f"{_ddl_type(data_type.elementType)}[]"
+        return f"ARRAY<{_ddl_type(data_type.elementType)}>"
     return data_type.simpleString()
 
 
