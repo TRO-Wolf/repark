@@ -33,11 +33,7 @@ def write_text_path(writer: Any, path: str) -> None:
 
     writer._dataframe._ensure_alive()
     _refuse_text_compression(writer)
-    if writer._partition_columns:
-        raise AnalysisException(
-            "DataFrameWriter.text with partitionBy(...) is not supported yet "
-            "(partitioned text layout is a future seed)"
-        )
+    partition_columns = _text_partition_columns(writer)
     normalized_mode = "error" if writer._mode == "errorifexists" else writer._mode
     if normalized_mode not in writer._PATH_MODES:
         raise AnalysisException(
@@ -67,10 +63,17 @@ def write_text_path(writer: Any, path: str) -> None:
     )
     native = writer._dataframe._native_for_registration()
     try:
-        _native.write_text_frame(native, str(staging), linesep)
+        if partition_columns:
+            _write_partitioned_text(writer, staging, partition_columns, linesep)
+        else:
+            _native.write_text_frame(native, str(staging), linesep)
+        (staging / "_SUCCESS").touch()
         if normalized_mode == "append" and destination.exists():
             from repark.spark.dataframe.writer_readwriter import _merge_path_write_tree
 
+            staged_marker = staging / "_SUCCESS"
+            if (destination / "_SUCCESS").exists() and staged_marker.exists():
+                staged_marker.unlink()
             try:
                 _merge_path_write_tree(staging, destination)
             except (FileExistsError, OSError, shutil.Error) as exc:
@@ -109,6 +112,64 @@ def write_text_path(writer: Any, path: str) -> None:
             elif staging.is_file() or staging.is_symlink():
                 staging.unlink()
         raise
+
+
+def _text_partition_columns(writer: Any) -> list[str]:
+    """Resolve text partition columns against the frame, case-insensitively. pins: io-text-1/T-6"""
+    from repark.errors import AnalysisException
+
+    frame_columns = list(writer._dataframe.columns)
+    by_casefold = {column.casefold(): column for column in frame_columns}
+    resolved: list[str] = []
+    for column in writer._partition_columns:
+        actual = by_casefold.get(str(column).casefold())
+        if actual is None:
+            raise AnalysisException(
+                f"Partition column {column!r} not found in schema ({', '.join(frame_columns)})"
+            )
+        if actual not in resolved:
+            resolved.append(actual)
+    return resolved
+
+
+def _partition_dir_value(value: Any) -> str:
+    """Render one partition value for a hive directory name. pins: io-text-1/T-6"""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
+def _write_partitioned_text(
+    writer: Any, staging: Path, partition_columns: list[str], linesep: str
+) -> None:
+    """Write one string column per hive leaf dir, dropping partition columns. pins: io-text-1/T-6"""
+    from repark import _native
+    from repark.errors import AnalysisException
+    from repark.spark import functions as F  # noqa: N812 — local import avoids cycle at module load
+
+    frame = writer._dataframe
+    partitioned = set(partition_columns)
+    remaining = [column for column in frame.columns if column not in partitioned]
+    if len(remaining) != 1:
+        raise AnalysisException(
+            "Text data source supports only a single column, "
+            f"and you have {len(remaining)} columns."
+        )
+    keys = frame.select(*partition_columns).distinct().collect()
+    for key in keys:
+        condition = None
+        leaf = staging
+        for column in partition_columns:
+            value = key[column]
+            if value is None:
+                predicate = F.col(column).is_null()
+                leaf = leaf / f"{column}=__HIVE_DEFAULT_PARTITION__"
+            else:
+                predicate = F.col(column) == value
+                leaf = leaf / f"{column}={_partition_dir_value(value)}"
+            condition = predicate if condition is None else (condition & predicate)
+        keyed = frame.filter(condition).drop(*partition_columns)
+        _native.write_text_frame(keyed._native_for_registration(), str(leaf), linesep)
 
 
 def _refuse_text_compression(writer: Any) -> None:

@@ -41,8 +41,9 @@ lines, or take a custom multi-byte `lineSep`), so the unit writes a small
 | `DataFrameWriter.text` | implemented | Rust part-file writer, both Python doors |
 | text gzip compression | declared | No vendored compressor and `Cargo.toml` frozen; IO-TEXT-GZIP-1 |
 | `SELECT * FROM text.\`<path>\`` | declared | SQL planner belongs to another run; IO-TEXT-SQL-1 |
-| `partitionBy` text writes | declared | Partitioned layout is a future seed; IO-TEXT-PART-1 |
-| text globs / remote paths | declared | Local-only scan v1; loud refusals, pinned, no registry row |
+| `partitionBy` text writes | implemented (follow-up) | Hive `key=value/` leaves via key-filtered native writes; IO-TEXT-PART-1 retired, read-side discovery BACKLOG at IO-TEXT-PARTDISC-1 |
+| text globs | implemented (follow-up) | Hand-written Hadoop matcher, no new dependency; unmatched answers PATH_NOT_FOUND |
+| remote paths | declared | Local-only scan; loud refusal, pinned, no registry row |
 
 Python-allowed logic, one line per name: option overlay, path-list union, user-schema
 rename, compression/partitionBy refusals, and save-mode staging are pure API plumbing
@@ -57,6 +58,100 @@ bytes including on empty files (one `""` row); hidden `_`/`.` files skipped in d
 disclosed: five binding lines funded by condensing the two class docstrings (detail
 moved to the maps) plus joining the CSV docstring; writer ratchets DOWN 1111 → 1109.
 
+Follow-up supersedes: empty write `lineSep` now refuses (R-2); invalid bytes decode
+lossy (R-3); every write lands `_SUCCESS` (R-9); missing paths answer PATH_NOT_FOUND
+(R-8).
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: io-text-1
+  complete: true
+  reattested: [AT-1, AT-2, AT-3, AT-4, AT-6, AT-7, AT-8, AT-10]
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Clauses C-001..C-004 walked against behavior; the follow-up rulings R-1..R-12 each carry pins against the live probes in facade_iotext_probe_2026-09-15.json, and the retired refusal pins flipped by replacement.
+      artifacts: [task/ledgers/staging/io-text-1-ledger.md, python/repark/tests/test_io_text_1.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Empty file and empty frame, null rows, malformed UTF-8, lone CR, a CRLF straddling the 64 KiB chunk edge, two trailing terminators, bracket/question/star globs, and a 100-row limit exercised in pins; the 50 MiB line and multi-MiB straddles were probed in round 1 against the same split arms.
+      artifacts: [python/repark/tests/test_io_text_1.py, crates/repark-core/src/text_scan.rs, crates/repark-core/src/text_glob.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Every refusal pins its text and the destination state (1290, UNSUPPORTED, PATH_NOT_FOUND, lineSep, encoding, compression, modes); the old code's failure paths precede staging creation, so no litter arises — a cleanup widening with no deterministic trigger was tried and reverted, disclosed above.
+      artifacts: [python/repark/tests/test_io_text_1.py, crates/repark-core/src/text_io.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: Cross-partition order is channel-nondeterministic like Spark, so order pins sort; partitions own disjoint file groups with no shared mutable state; single-file order is exact. The GIL stays released via the unchanged detach bindings.
+      artifacts: [python/repark/tests/test_io_text_1.py, crates/repark-core/src/text_scan.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: Remote schemes refuse, glob walks stay under the literal base dir, hidden names skip at every level, no env reads at query time, and no secret or privileged surface was added.
+      artifacts: [crates/repark-core/src/text_glob.rs, python/repark/tests/test_io_text_1.py]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Round trips are byte-exact including null-as-empty and lossy codepoints; partitioned leaves match the probe listing byte for byte; part names changed from batch-indexed to sequential with no consumer depending on the old gaps; read-side partition discovery is a filed BACKLOG row, not papered over.
+      artifacts: [python/repark/tests/test_io_text_1.py, docs/spark-sql-iceberg-parity.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: The P1 collect-then-write OOM is fixed and measured (4 194 304 x 1 KiB: 4293 MiB / 17.48 s before, 165 MiB / 5.49 s after, byte-identical); partitions cap at 8 so file count cannot fan out tasks; wholetext still materializes by definition.
+      artifacts: [task/ledgers/staging/io-text-1-ledger.md, crates/repark-core/src/text_io.rs]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Refusal texts are verbatim against the live probes (1290, PATH_NOT_FOUND with SQLSTATE, the require lineSep line, UNSUPPORTED unchanged); both Python doors funnel through one native check each; the DataFusion streaming APIs are used as documented.
+      artifacts: [python/repark/tests/test_io_text_1.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every failure path names its file, separator, column, or path in the AnalysisException text, which is the diagnosable surface this local path offers; no separate log or metric channel exists house-wide.
+      artifacts: [python/repark/tests/test_io_text_1.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Five Python-side probe pins fail with the facade stashed and the two retired refusal pins red by replacement; the Rust pins assert messages the old code never produced; new branches (brace expansion, class negation, partition leaves, limit cut-off, empty projection) each have a nameable input in the suite.
+      artifacts: [python/repark/tests/test_io_text_1.py, crates/repark-core/src/text_scan.rs, crates/repark-core/src/text_glob.rs, crates/repark-core/src/text_io.rs]
+```
+
 ## Verdict
 
 PROVEN — all four clauses green, one commit, gates below.
+
+## Follow-up round (2026-09-15) — critic + perf remediation
+
+Pickup head `c607b312`. The critic round (`critic-iotext-report.md`,
+NEEDS_REMEDIATION, L-001..L-009) and the perf review (`perf-iotext-report.md`,
+P1..P3) ran against it; the orchestrator ruled T-1..T-9 and P-1..P-3 binding
+against the live probes in `facade_iotext_probe_2026-09-15.json`. Recorded here
+as R-1..R-12. Rust split: the scan lives in `text_scan.rs`, the Hadoop glob
+matcher in `text_glob.rs`, the streaming writer in `text_io.rs` (size ceilings
+held by the split, no new dependency).
+
+| R | Brief | Ruling and evidence |
+|---|---|---|
+| R-1 (T-1) | recursiveFileLookup default | Falsy flag is already the scan: `load_text` drops `recursiveFileLookup=false` before the semantic gate, `True` stays loud. `test_text_probe_recursive_false` pins omitted/`False`/`"false"` at `["top"]` against probe `recursive_false`. |
+| R-2 (T-2) | empty lineSep both doors | Write refuses in Rust with Spark's verbatim `requirement failed: 'lineSep' cannot be an empty string.` (both Python doors funnel through it); read keeps its refusal. `test_text_probe_write_empty_linesep`, `test_text_probe_read_empty_linesep`, Rust `text_write_empty_line_sep_refuses`; destinations absent. |
+| R-3 (T-3) | lossy UTF-8 | Pieces decode with `from_utf8_lossy` (probe `invalid_utf8` rows verbatim). Sound: pieces end at ASCII separators, so a split multi-byte char never decodes early. `test_text_probe_invalid_utf8_lossy`, Rust `text_invalid_utf8_decodes_lossy`. |
+| R-4 (T-4) | single-column 1290 | Offender-first stays (3-col mixed still names `` `a` ``/INT per the old oracle); the all-string fallthrough now carries Spark's verbatim `Text data source supports only a single column, and you have N columns.` `test_text_probe_two_string_write`, Rust `text_write_two_string_columns_match_spark`. |
+| R-5 (T-5) | Hadoop globs | Hand-written matcher (`*?[]{}`, no `/` crossing, char-aware); `foo[bar].txt` is a class matching `foob.txt` only, per probe `glob_brackets_literal`. Unmatched globs answer PATH_NOT_FOUND. Three probe tests, four matcher unit tests, three scan integration tests; the old refusal pin flipped. |
+| R-6 (T-6) | partitionBy layout | Key-filtered native writes under `key=value/` leaves plus root `_SUCCESS`; remaining != 1 answers the verbatim 1290. Plain-dir reads descend `=` dirs only (partition-discovery-lite); the undiscovered `k` column is BACKLOG row IO-TEXT-PARTDISC-1. `test_text_probe_partition_by[_two_remaining]`, example leg; IO-TEXT-PART-1 retired per §6. |
+| R-7 (T-7) | revert-green pins | `text_split_drops_one_trailing_terminator` and `text_write_round_trip_keeps_null_empty` kept verbatim and green; hollows filled (lone `\r`, 64 KiB `\r\n` straddle, two trailing terms, empty file). |
+| R-8 (T-8) | PATH_NOT_FOUND | Missing paths and unmatched globs answer `[PATH_NOT_FOUND] Path does not exist: file:{path}. SQLSTATE: 42K03`. `test_text_probe_missing_path`, two Rust tests. |
+| R-9 (T-9) | _SUCCESS | Empty `_SUCCESS` at the root of every write (empty and non-empty, probe listings verbatim); append drops the staged marker when the destination has one. `test_text_probe_empty_frame_write`, `test_text_probe_success_marker_on_write`. |
+| R-10 (P-1) | streaming writer | `execute_stream` batches to sequential `part-NNNNN.txt`; array bytes write direct, `text_batch_values` left test-only. Measured 4 194 304 x 1 KiB: 4293 MiB / 17.48 s before, 165 MiB / 5.49 s after, byte-identical output (`/tmp/iotext_perf.py`, scratch). |
+| R-11 (P-2) | parallel scan | At most 8 contiguous file groups (`partition_sizes=8` on 64 files, up from 1); cross-partition order is Spark-like nondeterministic, order pins sort. Limit threads into the scanner; batches pack across files (10k one-row files no longer emit 10k batches) at 8192 rows. `test_text_probe_limit_reads_first_rows`, Rust `text_limit_stops_after_enough_rows`. |
+| R-12 (P-3) | buffer reuse | One reused 64 KiB chunk, `File` instead of `BufReader`, builder-direct append (no per-line `String`), split-counting without decode under empty projection, no per-poll path clone. |
+
+Red-first: the five Python-side probe pins fail with the facade stashed
+(`recursive_false`, both `partition_by`, both `_SUCCESS` probes); the Rust pins
+assert messages the old code never produced. The two retired refusal pins
+(`partitionby`, glob) red on purpose by replacement.
+
+Judgment calls new this round: partitioned remaining-count is checked before
+column types (the mixed remaining arm is unprobed — Spark analogy says
+offender-first, disclosed); partition values render `bool` lower-case, `None`
+as `__HIVE_DEFAULT_PARTITION__`, else `str()`; per-name table flips
+`partitionBy` and globs to implemented; `wholetext`-option overwrite and
+`recursiveFileLookup=True` refusal stay as probed. A staging-cleanup widening
+was tried and reverted: every native failure check precedes staging creation
+and per-key checks are uniform, so no deterministic trigger reaches cleanup
+with staging present — the existing condition stands, disclosed, untested.

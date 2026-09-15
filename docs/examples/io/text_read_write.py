@@ -45,6 +45,20 @@ def main() -> None:
             whole = repark.read.format("text").option("wholetext", "true").load(str(piped))
             if whole.count() != len(data_bytes(piped, ".txt")):
                 raise SystemExit("wholetext does not answer one row per file")
+            parted = root / "ex_text_parted"
+            repark.createDataFrame(
+                [("x", "hello"), ("y", "world")], "k string, value string"
+            ).coalesce(1).write.partitionBy("k").text(str(parted))
+            leaves = sorted(
+                path.relative_to(parted).as_posix() for path in parted.rglob("part-*.txt")
+            )
+            if leaves != ["k=x/part-00000.txt", "k=y/part-00000.txt"]:
+                raise SystemExit(f"text partitionBy leaves {leaves!r} miss the hive layout")
+            if sorted(row.value for row in repark.read.text(str(parted)).collect()) != [
+                "hello",
+                "world",
+            ]:
+                raise SystemExit("partitioned text does not read back its values")
     finally:
         repark.stop()
 

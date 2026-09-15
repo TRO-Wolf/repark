@@ -26,7 +26,9 @@ mod sorted_view;
 mod spark_nullable;
 mod stack;
 mod temp_view;
+mod text_glob;
 mod text_io;
+mod text_scan;
 mod time_travel;
 mod update_fields;
 

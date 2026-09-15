@@ -315,18 +315,27 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: nullability-2/C-006
   pins: csv-infer-perf-1/C-002, C-005
   pins: torture-1/C-018, C-020
-- `text_io.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan and writer. The scan **IO-TEXT-1 (2026-09-15, orchestrator):** `text_io.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
-  is a `TableProvider` over sorted local files (hidden `_`/`.` sidecars skipped; globs,
-  remote paths, and missing paths refuse loud) serving one nullable `value` Utf8 column
-  through `StreamingTableExec` with one partition: universal `\n`/`\r\n`/`\r` splitting
-  (or one custom `lineSep`) with one trailing terminator dropped, `wholetext` one row per
-  file, chunked reads with separator hold-back so batches stream without buffering a file
-  (wholetext excepted), invalid UTF-8 failing loud. The writer checks one string column
-  first (Spark's `UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE` text naming the first offender),
-  then collects into `part-*.txt` (NULL rows write empty lines, every row terminated;
-  an empty frame still writes one empty part). `ReparkSession::read_text` lives here as
-  an inherent impl so `session.rs` keeps its size; Rust tests cover the split arms, the
-  error text, and the round trip.
+- `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
+  A `TableProvider` over sorted local files, plain dirs (hidden `_`/`.` skipped,
+  `key=value` dirs descended), and Hadoop globs (see `text_glob.rs`), serving one
+  nullable `value` Utf8 column through `StreamingTableExec` over at most 8 contiguous
+  file-group partitions: universal `\n`/`\r\n`/`\r` splitting (or one custom `lineSep`)
+  with one trailing terminator dropped, `wholetext` one row per file, chunked reads with
+  separator hold-back so batches stream without buffering a file (wholetext excepted),
+  invalid UTF-8 decoding lossy, the plan limit threaded into the scanner, missing paths
+  and unmatched globs answering `PATH_NOT_FOUND`. `ReparkSession::read_text` lives here
+  as an inherent impl so `session.rs` keeps its size; Rust tests cover the split arms,
+  the globs, the limit, and the error texts.
+- `text_glob.rs` — **IO-TEXT-1 follow-up (2026-09-15):** hand-written Hadoop glob
+  matcher (`*?[]{}`, no `/` crossing, char-aware, brace nesting capped, no new
+  dependency) with matcher unit tests. pins: io-text-1/T-5
+- `text_io.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` writer.
+  **Follow-up (2026-09-15):** the writer streams `execute_stream` batches into
+  sequential `part-*.txt` (NULL rows write empty lines, every row terminated; an empty
+  frame still writes one empty part), writing array bytes direct. Schema check stays
+  offender-first with Spark's `UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE` text, then the
+  verbatim 1290 count text; empty `lineSep` refuses. Rust tests cover the error texts
+  and the round trip. pins: io-text-1/C-002, T-2, T-4, T-7
   pins: io-text-1/C-001, C-002
 - `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability
   derivation. `relax_schema_to_nullable` marks every field nullable over

@@ -684,10 +684,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   in the CAP-1 test). pins: io-text-1/C-002, C-003
 - `writer_text.py` owns the text path write. **IO-TEXT-1 (2026-09-14):**
   `DataFrameWriter.text` overlays `compression` / `lineSep` into options, then
-  `write_text_path` refuses non-`none` compression (IO-TEXT-GZIP-1) and any
-  `partitionBy` (IO-TEXT-PART-1), mirrors the path save modes (error / ignore /
-  overwrite / append with the same messages), stages Rust `part-*.txt` files under a
-  uuid dir, and swaps or merges them into place. pins: io-text-1/C-002, C-003
+  `write_text_path` refuses non-`none` compression (IO-TEXT-GZIP-1), mirrors the path
+  save modes (error / ignore / overwrite / append with the same messages), stages Rust
+  `part-*.txt` files under a uuid dir, and swaps or merges them into place.
+  **Follow-up (2026-09-15):** `partitionBy` writes the hive layout per distinct key
+  (partition columns dropped, remaining must be one string column per Spark's verbatim
+  1290 text), every write lands root `_SUCCESS`, and append drops the staged marker on
+  collision. pins: io-text-1/C-002, C-003, T-6, T-9
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`

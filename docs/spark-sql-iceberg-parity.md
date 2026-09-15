@@ -1865,16 +1865,25 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED, 2026-09-14 (io-text-1). The pin reds the day the planner
   routes `text.` paths, and the row retires with it.
 
-### IO-TEXT-PART-1 — `partitionBy` text writes refuse; Spark lays out hive dirs
+### IO-TEXT-PART-1 — FIXED (io-text-1 follow-up, 2026-09-15): `partitionBy` text writes lay out hive dirs
 
-- **repark** — `df.write.partitionBy(...).text(path)` raises `AnalysisException`
-  (`DataFrameWriter.text with partitionBy(...) is not supported yet`). Partitioned text
-  layout is a future seed; refusing beats writing an unpartitioned dir behind a
-  partitioning request.
+> **CLOSED 2026-09-15 (io-text-1 follow-up round, ruling T-6).** The text
+> writer stages one string column per `key=value/` leaf (partition columns
+> dropped from the file body, `part-*.txt` plus `_SUCCESS` at the root)
+> against the live probe `partition_by` listing. A frame whose remaining
+> columns are not exactly one answers Spark's verbatim `Text data source
+> supports only a single column, and you have N columns.` The old refusal pin
+> flipped to the leaf listing in the same change. Retired per §6.
+
+- **repark** — `df.write.partitionBy(...).text(path)` writes the hive layout;
+  read-back answers the values (`struct<value:string>`, partition columns not
+  discovered — IO-TEXT-PARTDISC-1).
 - **Apache Spark** — writes `key=value/` leaf dirs with `part-*` files inside.
-- **Pin** — `python/repark/tests/test_io_text_1.py::test_text_partitionby_refused`
-- **Rationale** — DECLARED, 2026-09-14 (io-text-1). Revisit with the partitioned layout;
-  the pin then flips to the leaf listing.
+- **Pin** — `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
+  (leaf bytes plus `_SUCCESS`) and `::test_text_probe_partition_by_two_remaining`
+  (the verbatim 1290 text, destination absent).
+- **Rationale** — FIXED, 2026-09-15 (io-text-1 follow-up).
+  pins: io-text-1/T-6
 
 ---
 
@@ -8711,6 +8720,22 @@ field NAME.
   L-102). `GroupedData.agg` plans the key through the native expression without the
   facade `projection_name`; `select` of the same expression already uses the facade
   display.
+
+### IO-TEXT-PARTDISC-1 — text reads of partitioned dirs answer values only
+
+- **repark** — `spark.read.text` over a `key=value/` layout answers
+  `struct<value:string>` with the file bytes; the partition columns are not
+  discovered, so the `k` column Spark returns is absent (values agree).
+- **Apache Spark** — partition discovery adds the directory columns
+  (`(value, k)` rows on the probe's `partition_by` read-back).
+  *(oracle: live PySpark 4.1.2, probe `partition_by`, 2026-09-15.)*
+- **Pin** —
+  `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
+  (`back.columns == ["value"]` codifies today; discovery reds it on purpose).
+- **Rationale** — BACKLOG, filed 2026-09-15 (io-text-1 follow-up, ruling T-6).
+  The fix is scan-side partition discovery (infer `key=value` dirs into the
+  schema); the writer half already lands Spark's layout.
+  pins: io-text-1/T-6
 
 ## 8. Drop-in disclosure rationale
 

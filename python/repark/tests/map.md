@@ -1871,10 +1871,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with null-as-empty, Spark's `UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE` text on the first
   non-string column, `part-*.txt` bytes, `lineSep` joins, save modes, and
   `format("text").save`. The gzip refusal (IO-TEXT-GZIP-1), the `text.` SQL-door refusal
-  (IO-TEXT-SQL-1), the `partitionBy` refusal (IO-TEXT-PART-1), and the glob/remote
-  refusals pin today's answers. The fixture row and registry rows are the docs half,
-  and the neighboring reader/writer suites stay green around it.
-  pins: io-text-1/C-001, C-002, C-003, C-004
+  (IO-TEXT-SQL-1), and the remote refusal pin today's answers. **Follow-up (2026-09-15,
+  T-1..T-9, P-1..P-3):** `test_text_probe_*` pins the live-probe cells — falsy
+  `recursiveFileLookup`, empty-`lineSep` refusals, lossy UTF-8, Hadoop globs, the
+  `partitionBy` hive layout (IO-TEXT-PART-1 retired, read-side discovery at
+  IO-TEXT-PARTDISC-1), `_SUCCESS`, `PATH_NOT_FOUND`, and limit-first-rows. The fixture
+  row and registry rows are the docs half, and the neighboring reader/writer suites
+  stay green around it.
+  pins: io-text-1/C-001, C-002, C-003, C-004, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9
 - `test_column_x1_census.py` — X1: Column between/pow/string/bitwise/eqNullSafe/lit temporal + trig;
   octo C1: bitwiseOR/XOR values, lit(time)/lit(list)/empty array, hypot 3-4-5, dayname(date);
   octo C2: eqNullSafe(None), between inclusive/inverted;

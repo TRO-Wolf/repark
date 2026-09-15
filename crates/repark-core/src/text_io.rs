@@ -1,89 +1,18 @@
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Read, Write};
-use std::path::{Path, PathBuf};
-use std::pin::Pin;
-use std::sync::Arc;
-use std::task::{Context, Poll};
+use std::io::{BufWriter, Write};
+use std::path::Path;
 
-use arrow::array::{Array, ArrayRef, LargeStringArray, RecordBatch, StringArray, StringViewArray};
-use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
-use async_trait::async_trait;
-use datafusion::catalog::Session;
+use arrow::array::{
+    Array, GenericStringArray, LargeStringArray, OffsetSizeTrait, RecordBatch, StringArray,
+    StringViewArray,
+};
+use arrow::datatypes::DataType;
 use datafusion::common::DFSchema;
-use datafusion::common::exec_datafusion_err;
-use datafusion::datasource::{TableProvider, TableType};
-use datafusion::error::{DataFusionError, Result as DataFusionResult};
-use datafusion::execution::TaskContext;
-use datafusion::logical_expr::{Expr, TableProviderFilterPushDown};
-use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
-use datafusion::physical_plan::streaming::{PartitionStream, StreamingTableExec};
-use datafusion::physical_plan::{ExecutionPlan, RecordBatchStream, SendableRecordBatchStream};
+use datafusion::error::DataFusionError;
 use datafusion::prelude::DataFrame;
-use futures::Stream;
+use futures::StreamExt;
 
 use crate::{Error, Result, engine_err};
-
-const TEXT_BATCH_ROWS: usize = 1024;
-
-const TEXT_READ_CHUNK: usize = 65536;
-
-fn text_schema() -> SchemaRef {
-    Arc::new(Schema::new(vec![Field::new("value", DataType::Utf8, true)]))
-}
-
-fn is_remote_path(path: &str) -> bool {
-    path.starts_with("s3://") || path.starts_with("s3a://")
-}
-
-fn is_hidden_name(name: &std::ffi::OsStr) -> bool {
-    name.to_str()
-        .is_some_and(|text| text.starts_with('.') || text.starts_with('_'))
-}
-
-pub(crate) fn expand_text_paths(path: &str) -> Result<Vec<PathBuf>> {
-    if is_remote_path(path) {
-        return Err(Error::Analysis(format!(
-            "text read over {path:?} is not supported by repark yet (local files and directories only)"
-        )));
-    }
-    if path.contains(['*', '?', '[']) {
-        return Err(Error::Analysis(format!(
-            "text read path glob {path:?} is not supported by repark yet (pass a file, a directory, or a list of paths)"
-        )));
-    }
-    let fs_path = Path::new(path);
-    if fs_path.is_file() {
-        return Ok(vec![fs_path.to_path_buf()]);
-    }
-    if fs_path.is_dir() {
-        let mut files: Vec<PathBuf> = Vec::new();
-        let entries = std::fs::read_dir(fs_path).map_err(|error| {
-            Error::Analysis(format!("text read cannot list directory {path:?}: {error}"))
-        })?;
-        for entry in entries {
-            let entry = entry.map_err(|error| {
-                Error::Analysis(format!("text read cannot list directory {path:?}: {error}"))
-            })?;
-            let candidate = entry.path();
-            let listed_file = entry
-                .file_type()
-                .is_ok_and(|kind| kind.is_file() || kind.is_symlink())
-                && candidate.is_file();
-            if !listed_file {
-                continue;
-            }
-            if is_hidden_name(entry.file_name().as_os_str()) {
-                continue;
-            }
-            files.push(candidate);
-        }
-        files.sort();
-        return Ok(files);
-    }
-    Err(Error::Analysis(format!(
-        "text read path does not exist: {path:?}"
-    )))
-}
 
 fn spark_text_type_name(data_type: &DataType) -> String {
     match data_type {
@@ -143,28 +72,48 @@ fn check_text_write_schema(schema: &DFSchema) -> Result<()> {
             offender = Some((field.name().as_str(), field.data_type()));
         }
     }
-    if schema.fields().len() == 1 && offender.is_none() {
-        return Ok(());
-    }
     if let Some((name, data_type)) = offender {
         return Err(text_unsupported_column(name, data_type));
     }
-    Err(Error::Analysis(format!(
-        "text write requires a single string column, got {} columns ({})",
-        schema.fields().len(),
-        schema
-            .fields()
-            .iter()
-            .map(|field| field.name().as_str())
-            .collect::<Vec<_>>()
-            .join(", ")
-    )))
+    if schema.fields().len() != 1 {
+        return Err(Error::Analysis(format!(
+            "Text data source supports only a single column, and you have {} columns.",
+            schema.fields().len()
+        )));
+    }
+    Ok(())
 }
 
-fn text_batch_values(batch: &RecordBatch) -> DataFusionResult<Vec<Option<String>>> {
+fn write_offset_strings<O: OffsetSizeTrait>(
+    writer: &mut BufWriter<File>,
+    values: &GenericStringArray<O>,
+    part: &Path,
+    separator: &[u8],
+) -> Result<()> {
+    for row in 0..values.len() {
+        if !values.is_null(row) {
+            writer
+                .write_all(values.value(row).as_bytes())
+                .map_err(|error| {
+                    Error::Analysis(format!("text write to {} failed: {error}", part.display()))
+                })?;
+        }
+        writer.write_all(separator).map_err(|error| {
+            Error::Analysis(format!("text write to {} failed: {error}", part.display()))
+        })?;
+    }
+    Ok(())
+}
+
+fn write_text_batch(batch: &RecordBatch, part: &Path, separator: &[u8]) -> Result<()> {
+    let file = File::create(part).map_err(|error| {
+        Error::Analysis(format!(
+            "text write cannot create {}: {error}",
+            part.display()
+        ))
+    })?;
+    let mut writer = BufWriter::new(file);
     let column = batch.column(0);
-    let len = batch.num_rows();
-    let mut rows: Vec<Option<String>> = Vec::with_capacity(len);
     match column.data_type() {
         DataType::Utf8 => {
             let values = column
@@ -172,14 +121,9 @@ fn text_batch_values(batch: &RecordBatch) -> DataFusionResult<Vec<Option<String>
                 .downcast_ref::<StringArray>()
                 .ok_or_else(|| {
                     DataFusionError::Internal("text write column is not a Utf8 array".to_string())
-                })?;
-            for row in 0..len {
-                rows.push(if values.is_null(row) {
-                    None
-                } else {
-                    Some(values.value(row).to_string())
-                });
-            }
+                })
+                .map_err(engine_err)?;
+            write_offset_strings(&mut writer, values, part, separator)?;
         }
         DataType::LargeUtf8 => {
             let values = column
@@ -189,14 +133,9 @@ fn text_batch_values(batch: &RecordBatch) -> DataFusionResult<Vec<Option<String>
                     DataFusionError::Internal(
                         "text write column is not a LargeUtf8 array".to_string(),
                     )
-                })?;
-            for row in 0..len {
-                rows.push(if values.is_null(row) {
-                    None
-                } else {
-                    Some(values.value(row).to_string())
-                });
-            }
+                })
+                .map_err(engine_err)?;
+            write_offset_strings(&mut writer, values, part, separator)?;
         }
         DataType::Utf8View => {
             let values = column
@@ -206,64 +145,63 @@ fn text_batch_values(batch: &RecordBatch) -> DataFusionResult<Vec<Option<String>
                     DataFusionError::Internal(
                         "text write column is not a Utf8View array".to_string(),
                     )
+                })
+                .map_err(engine_err)?;
+            for row in 0..values.len() {
+                if !values.is_null(row) {
+                    writer
+                        .write_all(values.value(row).as_bytes())
+                        .map_err(|error| {
+                            Error::Analysis(format!(
+                                "text write to {} failed: {error}",
+                                part.display()
+                            ))
+                        })?;
+                }
+                writer.write_all(separator).map_err(|error| {
+                    Error::Analysis(format!("text write to {} failed: {error}", part.display()))
                 })?;
-            for row in 0..len {
-                rows.push(if values.is_null(row) {
-                    None
-                } else {
-                    Some(values.value(row).to_string())
-                });
             }
         }
         other => {
-            return Err(exec_datafusion_err!(
+            return Err(engine_err(DataFusionError::Execution(format!(
                 "text write reached an unsupported column type: {other}"
-            ));
+            ))));
         }
     }
-    Ok(rows)
+    writer.flush().map_err(|error| {
+        Error::Analysis(format!("text write to {} failed: {error}", part.display()))
+    })?;
+    Ok(())
 }
 
 #[allow(clippy::missing_errors_doc)]
 pub async fn write_text_frame(frame: &DataFrame, dir: &Path, line_sep: &str) -> Result<()> {
     check_text_write_schema(frame.schema())?;
-    let batches = frame.clone().collect().await.map_err(engine_err)?;
+    if line_sep.is_empty() {
+        return Err(Error::Analysis(
+            "requirement failed: 'lineSep' cannot be an empty string.".to_string(),
+        ));
+    }
     std::fs::create_dir_all(dir).map_err(|error| {
         Error::Analysis(format!(
             "text write cannot create directory {}: {error}",
             dir.display()
         ))
     })?;
-    let mut parts_written = 0usize;
-    for (index, batch) in batches.iter().enumerate() {
+    let separator = line_sep.as_bytes();
+    let mut stream = frame.clone().execute_stream().await.map_err(engine_err)?;
+    let mut part_index = 0usize;
+    while let Some(batch) = stream.next().await {
+        let batch = batch.map_err(engine_err)?;
         if batch.num_rows() == 0 {
             continue;
         }
-        let values = text_batch_values(batch).map_err(engine_err)?;
-        let part = dir.join(format!("part-{index:05}.txt"));
-        let file = File::create(&part).map_err(|error| {
-            Error::Analysis(format!(
-                "text write cannot create {}: {error}",
-                part.display()
-            ))
-        })?;
-        let mut writer = BufWriter::new(file);
-        for value in &values {
-            if let Some(text) = value {
-                writer.write_all(text.as_bytes()).map_err(|error| {
-                    Error::Analysis(format!("text write to {} failed: {error}", part.display()))
-                })?;
-            }
-            writer.write_all(line_sep.as_bytes()).map_err(|error| {
-                Error::Analysis(format!("text write to {} failed: {error}", part.display()))
-            })?;
-        }
-        writer.flush().map_err(|error| {
-            Error::Analysis(format!("text write to {} failed: {error}", part.display()))
-        })?;
-        parts_written += 1;
+        let part = dir.join(format!("part-{part_index:05}.txt"));
+        part_index += 1;
+        write_text_batch(&batch, &part, separator)?;
     }
-    if parts_written == 0 {
+    if part_index == 0 {
         let part = dir.join("part-00000.txt");
         File::create(&part).map_err(|error| {
             Error::Analysis(format!(
@@ -275,352 +213,12 @@ pub async fn write_text_frame(frame: &DataFrame, dir: &Path, line_sep: &str) -> 
     Ok(())
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct TextTableProvider {
-    files: Vec<PathBuf>,
-    wholetext: bool,
-    line_sep: Option<String>,
-    schema: SchemaRef,
-}
-
-#[async_trait]
-impl TableProvider for TextTableProvider {
-    fn schema(&self) -> SchemaRef {
-        Arc::clone(&self.schema)
-    }
-
-    fn table_type(&self) -> TableType {
-        TableType::Base
-    }
-
-    fn supports_filters_pushdown(
-        &self,
-        filters: &[&Expr],
-    ) -> DataFusionResult<Vec<TableProviderFilterPushDown>> {
-        Ok(vec![TableProviderFilterPushDown::Inexact; filters.len()])
-    }
-
-    async fn scan(
-        &self,
-        _state: &dyn Session,
-        projection: Option<&Vec<usize>>,
-        _filters: &[Expr],
-        limit: Option<usize>,
-    ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
-        let output_schema = match projection {
-            None => Arc::clone(&self.schema),
-            Some(indices) => Arc::new(self.schema.project(indices)?),
-        };
-        let partition = Arc::new(TextPartition {
-            files: self.files.clone(),
-            wholetext: self.wholetext,
-            line_sep: self.line_sep.clone(),
-            schema: Arc::clone(&output_schema),
-            values: !output_schema.fields().is_empty(),
-        });
-        Ok(Arc::new(StreamingTableExec::try_new(
-            output_schema,
-            vec![partition],
-            None,
-            vec![],
-            false,
-            limit,
-        )?))
-    }
-}
-
-#[derive(Debug)]
-struct TextPartition {
-    files: Vec<PathBuf>,
-    wholetext: bool,
-    line_sep: Option<String>,
-    schema: SchemaRef,
-    values: bool,
-}
-
-impl PartitionStream for TextPartition {
-    fn schema(&self) -> &SchemaRef {
-        &self.schema
-    }
-
-    fn execute(&self, _ctx: Arc<TaskContext>) -> SendableRecordBatchStream {
-        if self.line_sep.as_deref().is_some_and(str::is_empty) {
-            return Box::pin(RecordBatchStreamAdapter::new(
-                Arc::clone(&self.schema),
-                futures::stream::once(futures::future::ready(Err(exec_datafusion_err!(
-                    "text lineSep must be a non-empty string"
-                )))),
-            ));
-        }
-        Box::pin(TextLineStream {
-            files: self.files.clone(),
-            file_index: 0,
-            current_path: None,
-            reader: None,
-            carry: Vec::new(),
-            pending: Vec::new(),
-            wholetext: self.wholetext,
-            separator: self.line_sep.clone().map(String::into_bytes),
-            schema: Arc::clone(&self.schema),
-            values: self.values,
-            done: false,
-        })
-    }
-}
-
-fn decode_piece(bytes: &[u8], path: &Path) -> DataFusionResult<String> {
-    String::from_utf8(bytes.to_vec()).map_err(|_| {
-        DataFusionError::Execution(format!(
-            "text read of {} is not valid UTF-8 (repark reads UTF-8 text only)",
-            path.display()
-        ))
-    })
-}
-
-struct TextLineStream {
-    files: Vec<PathBuf>,
-    file_index: usize,
-    current_path: Option<PathBuf>,
-    reader: Option<BufReader<File>>,
-    carry: Vec<u8>,
-    pending: Vec<String>,
-    wholetext: bool,
-    separator: Option<Vec<u8>>,
-    schema: SchemaRef,
-    values: bool,
-    done: bool,
-}
-
-impl TextLineStream {
-    fn open_next(&mut self) -> DataFusionResult<bool> {
-        let Some(path) = self.files.get(self.file_index).cloned() else {
-            return Ok(false);
-        };
-        let file = File::open(&path).map_err(|error| {
-            DataFusionError::Execution(format!("text read cannot open {}: {error}", path.display()))
-        })?;
-        self.current_path = Some(path);
-        self.reader = Some(BufReader::new(file));
-        self.carry.clear();
-        Ok(true)
-    }
-
-    fn scan_carry(&mut self, final_scan: bool) -> DataFusionResult<()> {
-        if self.separator.is_none() {
-            self.scan_universal(final_scan)
-        } else {
-            self.scan_custom(final_scan)
-        }
-    }
-
-    fn scan_universal(&mut self, final_scan: bool) -> DataFusionResult<()> {
-        let path = self.current_path.clone().unwrap_or_default();
-        let mut start = 0usize;
-        let mut index = 0usize;
-        let hold_trailing_cr = !final_scan && self.carry.last().is_some_and(|last| *last == b'\r');
-        let end = if hold_trailing_cr {
-            self.carry.len().saturating_sub(1)
-        } else {
-            self.carry.len()
-        };
-        while index < end {
-            let byte = self.carry[index];
-            if byte == b'\n' {
-                self.pending
-                    .push(decode_piece(&self.carry[start..index], &path)?);
-                index += 1;
-                start = index;
-            } else if byte == b'\r' {
-                let paired = index + 1 < self.carry.len() && self.carry[index + 1] == b'\n';
-                if paired {
-                    self.pending
-                        .push(decode_piece(&self.carry[start..index], &path)?);
-                    index += 2;
-                    start = index;
-                } else if index + 1 == self.carry.len() && !final_scan {
-                    break;
-                } else {
-                    self.pending
-                        .push(decode_piece(&self.carry[start..index], &path)?);
-                    index += 1;
-                    start = index;
-                }
-            } else {
-                index += 1;
-            }
-        }
-        self.carry.drain(..start);
-        Ok(())
-    }
-
-    fn scan_custom(&mut self, final_scan: bool) -> DataFusionResult<()> {
-        let path = self.current_path.clone().unwrap_or_default();
-        let empty: Vec<u8> = Vec::new();
-        let separator = self.separator.as_ref().unwrap_or(&empty);
-        let hold = if final_scan {
-            0
-        } else {
-            separator.len().saturating_sub(1)
-        };
-        let end = self.carry.len().saturating_sub(hold);
-        let mut start = 0usize;
-        let mut index = 0usize;
-        while index + separator.len() <= end {
-            if &self.carry[index..index + separator.len()] == separator.as_slice() {
-                self.pending
-                    .push(decode_piece(&self.carry[start..index], &path)?);
-                index += separator.len();
-                start = index;
-            } else {
-                index += 1;
-            }
-        }
-        self.carry.drain(..start);
-        Ok(())
-    }
-
-    fn finish_file(&mut self) -> DataFusionResult<()> {
-        let path = self.current_path.clone().unwrap_or_default();
-        if self.wholetext || !self.carry.is_empty() {
-            self.pending.push(decode_piece(&self.carry, &path)?);
-        }
-        self.carry.clear();
-        Ok(())
-    }
-
-    fn take_batch(&mut self) -> DataFusionResult<RecordBatch> {
-        let count = self.pending.len().min(TEXT_BATCH_ROWS);
-        let rows: Vec<String> = self.pending.drain(..count).collect();
-        if !self.values {
-            return RecordBatch::try_new_with_options(
-                Arc::clone(&self.schema),
-                vec![],
-                &arrow::array::RecordBatchOptions::new().with_row_count(Some(rows.len())),
-            )
-            .map_err(DataFusionError::from);
-        }
-        let array: ArrayRef = Arc::new(StringArray::from(rows));
-        RecordBatch::try_new(Arc::clone(&self.schema), vec![array]).map_err(DataFusionError::from)
-    }
-}
-
-impl Stream for TextLineStream {
-    type Item = DataFusionResult<RecordBatch>;
-
-    fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        loop {
-            if self.done {
-                return Poll::Ready(None);
-            }
-            if self.pending.len() >= TEXT_BATCH_ROWS {
-                return Poll::Ready(Some(self.take_batch()));
-            }
-            if self.reader.is_none() {
-                match self.open_next() {
-                    Err(error) => {
-                        self.done = true;
-                        return Poll::Ready(Some(Err(error)));
-                    }
-                    Ok(false) => {
-                        self.done = true;
-                        if self.pending.is_empty() {
-                            return Poll::Ready(None);
-                        }
-                        return Poll::Ready(Some(self.take_batch()));
-                    }
-                    Ok(true) => {}
-                }
-            }
-            let path = self.current_path.clone().unwrap_or_default();
-            let mut chunk = vec![0u8; TEXT_READ_CHUNK];
-            let read = self
-                .reader
-                .as_mut()
-                .ok_or_else(|| {
-                    DataFusionError::Internal("text read lost its file handle".to_string())
-                })
-                .and_then(|reader| {
-                    reader.read(&mut chunk).map_err(|error| {
-                        DataFusionError::Execution(format!(
-                            "text read of {} failed: {error}",
-                            path.display()
-                        ))
-                    })
-                });
-            match read {
-                Err(error) => {
-                    self.done = true;
-                    return Poll::Ready(Some(Err(error)));
-                }
-                Ok(0) => {
-                    let flushed = if self.wholetext {
-                        self.finish_file()
-                    } else {
-                        self.scan_carry(true).and_then(|()| self.finish_file())
-                    };
-                    if let Err(error) = flushed {
-                        self.done = true;
-                        return Poll::Ready(Some(Err(error)));
-                    }
-                    self.reader = None;
-                    self.current_path = None;
-                    self.file_index += 1;
-                    if !self.pending.is_empty() {
-                        return Poll::Ready(Some(self.take_batch()));
-                    }
-                }
-                Ok(bytes) => {
-                    self.carry.extend_from_slice(&chunk[..bytes]);
-                    if self.wholetext {
-                        continue;
-                    }
-                    if let Err(error) = self.scan_carry(false) {
-                        self.done = true;
-                        return Poll::Ready(Some(Err(error)));
-                    }
-                }
-            }
-        }
-    }
-}
-
-impl RecordBatchStream for TextLineStream {
-    fn schema(&self) -> SchemaRef {
-        Arc::clone(&self.schema)
-    }
-}
-
-impl crate::ReparkSession {
-    #[expect(
-        clippy::unused_async,
-        reason = "symmetric with read_csv/read_json; remote reads will await"
-    )]
-    #[allow(clippy::missing_errors_doc)]
-    pub async fn read_text(
-        &self,
-        path: &str,
-        wholetext: bool,
-        line_sep: Option<&str>,
-    ) -> Result<DataFrame> {
-        if line_sep.is_some_and(str::is_empty) {
-            return Err(Error::Analysis(
-                "text lineSep must be a non-empty string".to_string(),
-            ));
-        }
-        let files = expand_text_paths(path)?;
-        let provider = Arc::new(TextTableProvider {
-            files,
-            wholetext,
-            line_sep: line_sep.map(str::to_string),
-            schema: text_schema(),
-        });
-        self.context().read_table(provider).map_err(engine_err)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use arrow::array::{ArrayRef, StringArray};
+    use arrow::datatypes::{Field, Schema};
+    use std::sync::Arc;
 
     fn test_session() -> crate::ReparkSession {
         crate::ReparkSession::builder().build().unwrap()
@@ -630,56 +228,17 @@ mod tests {
         let batches = frame.clone().collect().await.unwrap();
         let mut rows: Vec<Option<String>> = Vec::new();
         for batch in &batches {
-            rows.extend(text_batch_values(batch).unwrap());
+            let column = batch.column(0);
+            let values = column.as_any().downcast_ref::<StringArray>().unwrap();
+            for row in 0..batch.num_rows() {
+                rows.push(if values.is_null(row) {
+                    None
+                } else {
+                    Some(values.value(row).to_string())
+                });
+            }
         }
         rows
-    }
-
-    #[tokio::test]
-    async fn text_split_drops_one_trailing_terminator() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("t.txt");
-        std::fs::write(&path, "x\n\ny\r\nz").unwrap();
-        let session = test_session();
-        let frame = session
-            .read_text(path.to_str().unwrap(), false, None)
-            .await
-            .unwrap();
-        let rows = text_rows(&frame).await;
-        let plain: Vec<&str> = rows
-            .iter()
-            .map(|row| row.as_deref().unwrap_or("<null>"))
-            .collect();
-        assert_eq!(plain, vec!["x", "", "y", "z"]);
-    }
-
-    #[tokio::test]
-    async fn text_custom_separator_splits_only_on_it() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("t.txt");
-        std::fs::write(&path, "a;b;c").unwrap();
-        let session = test_session();
-        let frame = session
-            .read_text(path.to_str().unwrap(), false, Some(";"))
-            .await
-            .unwrap();
-        let rows = text_rows(&frame).await;
-        let plain: Vec<&str> = rows.iter().map(|row| row.as_deref().unwrap()).collect();
-        assert_eq!(plain, vec!["a", "b", "c"]);
-    }
-
-    #[tokio::test]
-    async fn text_wholetext_reads_one_row_per_file() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("t.txt");
-        std::fs::write(&path, "a\nb\n").unwrap();
-        let session = test_session();
-        let frame = session
-            .read_text(path.to_str().unwrap(), true, None)
-            .await
-            .unwrap();
-        let rows = text_rows(&frame).await;
-        assert_eq!(rows, vec![Some("a\nb\n".to_string())]);
     }
 
     #[tokio::test]
@@ -702,6 +261,41 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn text_write_two_string_columns_match_spark() {
+        let session = test_session();
+        let frame = session
+            .sql("SELECT 'x' AS value, 'y' AS extra")
+            .await
+            .unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("out");
+        let Err(error) = write_text_frame(&frame, &target, "\n").await else {
+            panic!("a two-string frame must refuse the text write");
+        };
+        assert_eq!(
+            error.to_string(),
+            "Text data source supports only a single column, and you have 2 columns."
+        );
+        assert!(!target.exists());
+    }
+
+    #[tokio::test]
+    async fn text_write_empty_line_sep_refuses() {
+        let session = test_session();
+        let frame = session.sql("SELECT 'a' AS value").await.unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("out");
+        let Err(error) = write_text_frame(&frame, &target, "").await else {
+            panic!("an empty lineSep must refuse the text write");
+        };
+        assert_eq!(
+            error.to_string(),
+            "requirement failed: 'lineSep' cannot be an empty string."
+        );
+        assert!(!target.exists());
+    }
+
+    #[tokio::test]
     async fn text_write_round_trip_keeps_null_empty() {
         let session = test_session();
         let frame = session
@@ -719,5 +313,25 @@ mod tests {
             .unwrap();
         let rows = text_rows(&back).await;
         assert_eq!(rows, vec![Some("a".to_string()), Some(String::new())]);
+    }
+
+    #[tokio::test]
+    async fn text_write_streams_batches_to_sequential_parts() {
+        let values: ArrayRef = Arc::new(StringArray::from(vec!["a", "b"]));
+        let schema = Arc::new(Schema::new(vec![Field::new("value", DataType::Utf8, true)]));
+        let batch = RecordBatch::try_new(Arc::clone(&schema), vec![values]).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("out");
+        std::fs::create_dir_all(&target).unwrap();
+        write_text_batch(&batch, &target.join("part-00000.txt"), b"\n").unwrap();
+        write_text_batch(&batch, &target.join("part-00001.txt"), b";").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(target.join("part-00000.txt")).unwrap(),
+            "a\nb\n"
+        );
+        assert_eq!(
+            std::fs::read_to_string(target.join("part-00001.txt")).unwrap(),
+            "a;b;"
+        );
     }
 }

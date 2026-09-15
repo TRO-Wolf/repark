@@ -3,9 +3,14 @@
 Oracle cells live in ``facade_reader_writer_oracle.json`` (recorded on live
 PySpark 4.1.2 by the orchestrator, run 15b). Reads pin columns plus schema
 simpleString plus Row reprs; writes pin file bytes and Spark's own error text;
-the SQL door and the gzip refusal pin today's answers.
+the SQL door and the gzip refusal pin today's answers. The ``test_text_probe_*``
+tests pin the follow-up probe cells (recorded on live PySpark 4.1.2 by the
+orchestrator, ``facade_iotext_probe_2026-09-15.json``): falsy
+``recursiveFileLookup``, empty ``lineSep`` on both doors, lossy UTF-8, Hadoop
+globs, the ``partitionBy`` hive layout, ``_SUCCESS``, and ``PATH_NOT_FOUND``.
 
-pins: io-text-1/C-001, C-002, C-003
+pins: io-text-1/C-001, C-002, C-003, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9
+(T-7 revert-green pins live beside the Rust modules)
 """
 
 from __future__ import annotations
@@ -229,20 +234,189 @@ def test_text_compression_gzip_refused(spark: ReparkSession, tmp_path: Path) -> 
     assert [path.suffix for path in sorted(plain.glob("part-*"))] == [".txt"]
 
 
-def test_text_partitionby_refused(spark: ReparkSession, tmp_path: Path) -> None:
-    """Partitioned text layout is a future seed, never silent. pins: io-text-1/C-003"""
-    with pytest.raises(AnalysisException, match="partitionBy"):
-        spark.createDataFrame([("a",)], "value string").write.partitionBy("value").text(
-            str(tmp_path / "parted")
-        )
-
-
 def test_text_glob_and_remote_refused(spark: ReparkSession, tmp_path: Path) -> None:
-    """Globs and remote paths fail loud on the local-only scan. pins: io-text-1/C-003"""
-    with pytest.raises(AnalysisException, match="glob"):
-        spark.read.text(str(tmp_path / "*.txt")).collect()
+    """Unmatched globs and remote paths fail loud. pins: io-text-1/C-003, T-5"""
+    with pytest.raises(AnalysisException, match="PATH_NOT_FOUND"):
+        spark.read.text(str(tmp_path / "*.nomatch")).collect()
     with pytest.raises(AnalysisException, match="not supported"):
         spark.read.text("s3://bucket/data.txt").collect()
+
+
+def _write_globdir(root: Path) -> None:
+    """Recreate the probe glob fixture (filenames carry classes). pins: io-text-1/T-5"""
+    for name, body in (
+        ("list_1.txt", "one\n"),
+        ("list_2.txt", "two\n"),
+        ("other.log", "log\n"),
+        ("foo[bar].txt", "brackets\n"),
+        ("foob.txt", "b-class\n"),
+    ):
+        (root / name).write_text(body, encoding="utf-8")
+
+
+def test_text_probe_recursive_false(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/recursive_false — subdirs stay out unless asked. pins: io-text-1/T-1"""
+    tree = tmp_path / "tree"
+    (tree / "sub").mkdir(parents=True)
+    (tree / "top.txt").write_text("top\n", encoding="utf-8")
+    (tree / "sub" / "leaf.txt").write_text("leaf\n", encoding="utf-8")
+    expected = ["Row(value='top')"]
+    assert [repr(row) for row in spark.read.text(str(tree)).collect()] == expected
+    assert [
+        repr(row) for row in spark.read.text(str(tree), recursiveFileLookup=False).collect()
+    ] == expected
+    assert [
+        repr(row) for row in spark.read.text(str(tree), recursiveFileLookup="false").collect()
+    ] == expected
+
+
+def test_text_probe_read_empty_linesep(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/write_empty_linesep read door — empty lineSep refuses. pins: io-text-1/T-2"""
+    target = tmp_path / "t.txt"
+    target.write_text("a\n", encoding="utf-8")
+    with pytest.raises(AnalysisException, match="lineSep"):
+        spark.read.text(str(target), lineSep="").collect()
+
+
+def test_text_probe_write_empty_linesep(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/write_empty_linesep — empty lineSep refuses on write. pins: io-text-1/T-2"""
+    out = tmp_path / "emptysep"
+    with pytest.raises(AnalysisException, match="lineSep"):
+        spark.createDataFrame([("a",), ("b",)], "value string").coalesce(1).write.text(
+            str(out), lineSep=""
+        )
+    assert not out.exists()
+    out_opt = tmp_path / "emptysep_opt"
+    with pytest.raises(AnalysisException, match="lineSep"):
+        spark.createDataFrame([("a",), ("b",)], "value string").coalesce(1).write.format(
+            "text"
+        ).option("lineSep", "").save(str(out_opt))
+    assert not out_opt.exists()
+
+
+def test_text_probe_invalid_utf8_lossy(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/invalid_utf8 — bad bytes decode as U+FFFD. pins: io-text-1/T-3"""
+    target = tmp_path / "bad.txt"
+    target.write_bytes(b"ok\n\xff\xfe\nmore\ncafe\xe2\x82")
+    assert [row.value for row in spark.read.text(str(target)).collect()] == [
+        "ok",
+        "��",
+        "more",
+        "cafe�",
+    ]
+
+
+def test_text_probe_two_string_write(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/two_string_write — Spark's verbatim 1290 text. pins: io-text-1/T-4"""
+    expected = "Text data source supports only a single column, and you have 2 columns."
+    out = tmp_path / "two"
+    with pytest.raises(AnalysisException) as raised:
+        spark.createDataFrame([("x", "y")], "value string, extra string").write.text(str(out))
+    assert str(raised.value) == expected
+    assert not out.exists()
+    out_save = tmp_path / "two_b"
+    with pytest.raises(AnalysisException) as raised_save:
+        spark.createDataFrame([("x", "y")], "a string, b string").write.format("text").save(
+            str(out_save)
+        )
+    assert str(raised_save.value) == expected
+    assert not out_save.exists()
+
+
+def test_text_probe_glob_star(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/glob_star — star stays inside one segment. pins: io-text-1/T-5"""
+    _write_globdir(tmp_path)
+    frame = spark.read.text(str(tmp_path / "*.txt"))
+    assert sorted(row.value for row in frame.collect()) == [
+        "b-class",
+        "brackets",
+        "one",
+        "two",
+    ]
+
+
+def test_text_probe_glob_question(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/glob_question — question mark takes one char. pins: io-text-1/T-5"""
+    _write_globdir(tmp_path)
+    frame = spark.read.text(str(tmp_path / "list_?.txt"))
+    assert sorted(row.value for row in frame.collect()) == ["one", "two"]
+
+
+def test_text_probe_glob_brackets_literal(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/glob_brackets_literal — brackets are a class. pins: io-text-1/T-5"""
+    _write_globdir(tmp_path)
+    frame = spark.read.text(str(tmp_path / "foo[bar].txt"))
+    assert [row.value for row in frame.collect()] == ["b-class"]
+
+
+def test_text_probe_partition_by(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/partition_by — hive leaf dirs, values read back. pins: io-text-1/T-6"""
+    out = tmp_path / "part"
+    spark.createDataFrame([("x", "hello"), ("y", "world")], "k string, value string").coalesce(
+        1
+    ).write.partitionBy("k").text(str(out))
+    assert (out / "_SUCCESS").is_file()
+    assert (out / "k=x" / "part-00000.txt").read_text(encoding="utf-8") == "hello\n"
+    assert (out / "k=y" / "part-00000.txt").read_text(encoding="utf-8") == "world\n"
+    back = spark.read.text(str(out))
+    assert back.columns == ["value"]
+    assert sorted(row.value for row in back.collect()) == ["hello", "world"]
+
+
+def test_text_probe_partition_by_two_remaining(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/partition_by_two_remaining — 1290 names the count. pins: io-text-1/T-6"""
+    out = tmp_path / "part2"
+    with pytest.raises(AnalysisException) as raised:
+        spark.createDataFrame(
+            [("x", "hello", "z")], "k string, value string, extra string"
+        ).write.partitionBy("k").text(str(out))
+    assert (
+        str(raised.value)
+        == "Text data source supports only a single column, and you have 2 columns."
+    )
+    assert not out.exists()
+
+
+def test_text_probe_empty_frame_write(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/empty_frame_write — _SUCCESS plus one empty part. pins: io-text-1/T-9"""
+    out = tmp_path / "empty"
+    spark.createDataFrame([], "value string").write.text(str(out))
+    assert (out / "_SUCCESS").is_file()
+    assert (out / "_SUCCESS").stat().st_size == 0
+    parts = sorted(out.glob("part-*.txt"))
+    assert len(parts) == 1
+    assert parts[0].stat().st_size == 0
+
+
+def test_text_probe_success_marker_on_write(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/nonempty_write_listing — _SUCCESS beside the parts. pins: io-text-1/T-9"""
+    out = tmp_path / "nonempty"
+    spark.createDataFrame([("a",), ("b",)], "value string").coalesce(1).write.text(str(out))
+    assert (out / "_SUCCESS").is_file()
+    assert (out / "_SUCCESS").stat().st_size == 0
+    parts = sorted(out.glob("part-*.txt"))
+    assert len(parts) == 1
+    assert parts[0].read_text(encoding="utf-8") == "a\nb\n"
+
+
+def test_text_probe_missing_path(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell probe/missing_path — Spark's PATH_NOT_FOUND text. pins: io-text-1/T-8"""
+    missing = tmp_path / "no" / "such" / "path"
+    with pytest.raises(AnalysisException) as raised:
+        spark.read.text(str(missing)).collect()
+    assert (
+        str(raised.value)
+        == f"[PATH_NOT_FOUND] Path does not exist: file:{missing}. SQLSTATE: 42K03"
+    )
+
+
+def test_text_probe_limit_reads_first_rows(spark: ReparkSession, tmp_path: Path) -> None:
+    """The scan stops after enough rows for a limit. pins: io-text-1/P-2"""
+    target = tmp_path / "many.txt"
+    target.write_text("".join(f"row-{index}\n" for index in range(100)), encoding="utf-8")
+    assert [row.value for row in spark.read.text(str(target)).limit(10).collect()] == [
+        f"row-{index}" for index in range(10)
+    ]
 
 
 def test_text_sql_door_pins_today_refusal(spark: ReparkSession, tmp_path: Path) -> None:

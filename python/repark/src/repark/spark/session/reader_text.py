@@ -49,6 +49,7 @@ def load_text(reader: Any, path: str | Path | list[str] | None) -> DataFrame:
         from repark.errors import AnalysisException
 
         raise AnalysisException("Text load requires a path argument")
+    _drop_falsy_recursive_lookup(reader)
     reader._reject_unsupported_semantic_options()
     _reject_text_encoding(reader)
     wholetext = reader._option_bool("wholetext", default=False)
@@ -74,6 +75,13 @@ def _read_one(inner: Any, token: Any, path: str, wholetext: bool, linesep: str |
     from repark import _native
 
     return DataFrame(_native.read_text(inner, path, wholetext, linesep), inner, token)
+
+
+def _drop_falsy_recursive_lookup(reader: Any) -> None:
+    """Drop an explicit non-recursive lookup flag (the scan never recurses). pins: io-text-1/T-1"""
+    for key in [key for key in reader._options if key.lower() == "recursivefilelookup"]:
+        if str(reader._options[key]).strip().lower() == "false":
+            del reader._options[key]
 
 
 def _reject_text_encoding(reader: Any) -> None:

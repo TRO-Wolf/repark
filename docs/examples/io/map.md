@@ -34,8 +34,9 @@ directory carries the one-liner (verified by scan, EX-26 round 2).
   pins: ex-26-io-session/C-004
 - [text_read_write.py](text_read_write.py) — `DataFrameReader.text` /
   `DataFrameWriter.text` round trip (null writes an empty line), the `format("text")`
-  spellings, and the `wholetext` row-per-file arm (IO-TEXT-1).
-  pins: io-text-1/C-003
+  spellings, the `wholetext` row-per-file arm (IO-TEXT-1), and the `partitionBy` hive
+  layout with values read back (follow-up, 2026-09-15).
+  pins: io-text-1/C-003, io-text-1/T-6
 - [writer_csv.py](writer_csv.py) — `csv` explicit-header arms plus `format` /
   `option` / `options` / `save`, asserting file bytes and data-file counts
   (EX-26). The header default is §7 `EX-IO-4`, the save default `EX-IO-5`,

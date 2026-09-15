@@ -68,6 +68,17 @@ honestly"). SQL routing and session-build registration are seam-inverted
 - `src/read_options.rs` — CSV/JSON Spark option-map helpers; `read_csv_path` (nullValue
   Utf8 scan; `utf8_columns` timestamp re-read). pins: nullability-2/C-006
   pins: csv-infer-perf-1/C-002, C-006
+- `src/text_scan.rs` — text read: `TableProvider` over local files, plain dirs
+  (hidden skipped, `key=value` dirs descended), and Hadoop globs; universal /
+  custom separators, wholetext, lossy UTF-8, ≤8 file-group partitions, limit
+  threaded into the scanner. pins: io-text-1/C-001, T-1, T-3, T-5, T-6, T-8
+- `src/text_glob.rs` — hand-written Hadoop glob matcher (`*?[]{}`, no `/`
+  crossing, char-aware) with no new dependency; unmatched globs answer
+  `PATH_NOT_FOUND` from the scan. pins: io-text-1/T-5
+- `src/text_io.rs` — streaming text part-file writer (`execute_stream` batches
+  to sequential `part-*.txt`, empty frame keeps one empty part); offender-first
+  schema check, Spark-verbatim 1290 count text, empty-`lineSep` refusal.
+  pins: io-text-1/C-002, T-2, T-4, T-7
 - `src/error_map.rs` — DataFusion/iceberg error folds into `repark_common::Error`; public
   `engine_err` (the single `DataFusionError → Error` classifier).
 - `src/namespace_create.rs` — G-6 Q1 location-conflict predicate shared by Session
