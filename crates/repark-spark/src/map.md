@@ -179,6 +179,7 @@ pins: rp-4-fork-repin/C-005, C-006
   `extension.rs` and the binding `sql_context`.
   **Round 5 (2026-09-15):** `SparkProjectionDisplay` rewrites only the root
   projection and keeps explicit non-marker aliases.
+  **Round 6 (2026-09-15):** `cargo fmt` applied.
   pins: fnp-4b/C-012, C-014, C-015, C-019, C-020, C-021, C-022
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in;
