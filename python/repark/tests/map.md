@@ -3477,6 +3477,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `listFunctions(dbName)` on a missing namespace raises `SCHEMA_NOT_FOUND`,
   unquoted temp-view names classify case-insensitively, and every raised
   `AnalysisException` carries its errorClass through `getCondition()`.
+  **FNP-4B round 8 (2026-09-15):** `ARRAY<INT NOT NULL>` element nullability stays a
+  loud SQL-door parse refusal.
   pins: catalog-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009
 - `test_dml_b_partition_overwrite.py` — **DML-B:** facade `spark.sql` `INSERT OVERWRITE …
   PARTITION` static/dynamic pins (values, Arrow types, snapshot operation, empty-dynamic
@@ -4616,6 +4618,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   all on the Arrow path (value AND type), plus exponent literals as DOUBLE with
   CAST(1.0E6 AS DOUBLE). Critic round: BD precision/scale, typed-literal non-null,
   `128Y`/`40000S` range refuse, `1e3L`/`0x1D` unresolved, chained struct field access.
+  **Round 8 (2026-09-15):** `-128Y`/`-32768S` minima on three doors with neighbours
+  and signed refusals, `L` overflow parse refusal, `-0.0BD` control, `1L` ROWS-bound
+  loud refusal.
   pins: fnp-4b/C-004, C-005, C-006, C-010, C-011, C-012, C-013, C-014, C-016
 - `test_fnp_4b_spark_dialect.py` — **FNP-4B (2026-09-15):** the Spark-door dialect pins —
   double-quoted STRING literals with Spark escapes and the `F.expr` / `filter` / `where` /
@@ -4623,7 +4628,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Critic: `selectExpr("`my col` + 1")` display `(my col + 1)`; struct-dot display
   `named_struct(a, 1).a`.
   **Round 7 (2026-09-15):** the `F.expr` backtick pin carries a strict xfail for
-  16a per R-16c-10. pins: fnp-4b/C-001, C-003, C-014, C-015, C-029
+  16a per R-16c-10. **Round 8 (2026-09-15):** nested suffix columns carry no
+  `__repark_` marker (columns, Arrow names, `explain()`); unaliased suffix names
+  render from value text on `spark.sql` / `selectExpr` / `F.expr`.
+  pins: fnp-4b/C-001, C-003, C-014, C-015, C-029
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
   packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips

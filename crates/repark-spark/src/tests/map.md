@@ -27,6 +27,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `__repark_suffix_literal__` beside `__repark_spark_as__`. pins: fnp-4b/C-021
   `-9223372036854775808L` answers `i64::MIN` non-null. pins: fnp-4b/C-023
   **Round 6 (2026-09-15):** `cargo fmt` applied.
+  **Round 8 (2026-09-15):** `-128Y` / `-32768S` typed minima with neighbours and
+  signed refusals, `L` overflow parse refusal (three shapes), `-0.0BD` control, and
+  unaliased root/nested/union suffix names from value text.
 - `lambda_door.rs` — **FNP-8 (2026-09-06):** the eleven higher-order names through
   `crate::execute` with `x -> y` syntax — both `transform`/`filter` arities, `exists` as a
   function (not the subquery keyword), `forall` on empty, `aggregate` with and without
