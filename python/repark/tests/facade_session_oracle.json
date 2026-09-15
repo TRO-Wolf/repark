@@ -1,0 +1,894 @@
+{
+ "cells": {
+  "addArtifact": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling o2953.addFile.\n: java.io.FileNotFoundException: File file:/tmp/x.py does not exist\n\tat org.apache.hadoop.fs.RawLocalFileSystem.deprecatedGetFileStatus(RawLocalFileSystem.java:980)\n\tat org.apache.hadoop.fs.RawLocalFileSystem.getFileLinkStatusInternal(RawLocalFileSystem.java:1301)\n\tat org.apache.hadoop.fs.RawLocalFileSystem.getFileStatus(RawLocalFileSystem.java:970)\n\tat org.apache.hadoop.fs.FilterFileSystem.getFileStatus(FilterFileSystem.java:462)\n\tat org.apache.spark.SparkContext.addFile(SparkContext.scala:1834)\n\tat org.apache.spark.SparkContext.addFile(SparkContext.scala:1811)\n\tat java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\tat java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)\n\tat java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.base/java.lang.reflect.Method.invoke(Method.java:569)\n\tat py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)\n\tat py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)\n\tat py4j.Gateway.invoke(Gateway.java:282)\n\tat py4j.commands.AbstractCommand.invokeMethod(Abs",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  },
+  "addArtifact_real": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "addArtifacts": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling o2956.addFile.\n: java.io.FileNotFoundException: File file:/tmp/x.py does not exist\n\tat org.apache.hadoop.fs.RawLocalFileSystem.deprecatedGetFileStatus(RawLocalFileSystem.java:980)\n\tat org.apache.hadoop.fs.RawLocalFileSystem.getFileLinkStatusInternal(RawLocalFileSystem.java:1301)\n\tat org.apache.hadoop.fs.RawLocalFileSystem.getFileStatus(RawLocalFileSystem.java:970)\n\tat org.apache.hadoop.fs.FilterFileSystem.getFileStatus(FilterFileSystem.java:462)\n\tat org.apache.spark.SparkContext.addFile(SparkContext.scala:1834)\n\tat org.apache.spark.SparkContext.addFile(SparkContext.scala:1811)\n\tat java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\tat java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)\n\tat java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.base/java.lang.reflect.Method.invoke(Method.java:569)\n\tat py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)\n\tat py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)\n\tat py4j.Gateway.invoke(Gateway.java:282)\n\tat py4j.commands.AbstractCommand.invokeMethod(Abs",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  },
+  "addArtifacts_two_flags": {
+   "error": {
+    "condition": null,
+    "message": "Undefined error message parameter for error class: INVALID_MULTIPLE_ARGUMENT_CONDITIONS. Parameters: {'arg_names': \"'pyfile', 'archive' and/or 'file'\", 'condition': 'True together'}",
+    "module": "builtins",
+    "mro": [
+     "AssertionError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "AssertionError"
+   }
+  },
+  "addTag": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "addTag_comma": {
+   "error": {
+    "condition": null,
+    "message": "Spark job tag cannot contain ','.",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "IllegalArgumentException",
+     "CapturedException",
+     "IllegalArgumentException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "IllegalArgumentException"
+   }
+  },
+  "addTag_empty": {
+   "error": {
+    "condition": null,
+    "message": "Spark job tag cannot be an empty string.",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "IllegalArgumentException",
+     "CapturedException",
+     "IllegalArgumentException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "IllegalArgumentException"
+   }
+  },
+  "addTag_not_str": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling o37.addTag. Trace:\npy4j.Py4JException: Method addTag([class java.lang.Integer]) does not exist\n\tat py4j.reflection.ReflectionEngine.getMethod(ReflectionEngine.java:321)\n\tat py4j.reflection.ReflectionEngine.getMethod(ReflectionEngine.java:329)\n\tat py4j.Gateway.invoke(Gateway.java:274)\n\tat py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:79)\n\tat py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)\n\tat py4j.ClientServerConnection.run(ClientServerConnection.java:108)\n\tat java.base/java.lang.Thread.run(Thread.java:840)\n\n",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JError"
+   }
+  },
+  "clearProgressHandlers": {
+   "error": {
+    "condition": "ONLY_SUPPORTED_WITH_SPARK_CONNECT",
+    "message": "[ONLY_SUPPORTED_WITH_SPARK_CONNECT] SparkSession.clearProgressHandlers is only supported with Spark Connect; however, the current Spark session does not use Spark Connect.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkRuntimeError",
+     "PySparkException",
+     "RuntimeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "feature": "SparkSession.clearProgressHandlers"
+    },
+    "raises": "PySparkRuntimeError"
+   }
+  },
+  "clearTags": {
+   "result": {
+    "items": [],
+    "kind": "set"
+   }
+  },
+  "client": {
+   "error": {
+    "condition": "ONLY_SUPPORTED_WITH_SPARK_CONNECT",
+    "message": "[ONLY_SUPPORTED_WITH_SPARK_CONNECT] SparkSession.client is only supported with Spark Connect; however, the current Spark session does not use Spark Connect.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkRuntimeError",
+     "PySparkException",
+     "RuntimeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "feature": "SparkSession.client"
+    },
+    "raises": "PySparkRuntimeError"
+   }
+  },
+  "copyFromLocalToFs": {
+   "error": {
+    "condition": "ONLY_SUPPORTED_WITH_SPARK_CONNECT",
+    "message": "[ONLY_SUPPORTED_WITH_SPARK_CONNECT] SparkSession.copyFromLocalToFs is only supported with Spark Connect; however, the current Spark session does not use Spark Connect.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkRuntimeError",
+     "PySparkException",
+     "RuntimeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "feature": "SparkSession.copyFromLocalToFs"
+    },
+    "raises": "PySparkRuntimeError"
+   }
+  },
+  "dataSource": {
+   "result": {
+    "kind": "DataSourceRegistration",
+    "module": "pyspark.sql.datasource",
+    "repr": "<pyspark.sql.datasource.DataSourceRegistration object at 0x7f755fa73c20>"
+   }
+  },
+  "dataSource_methods": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "register"
+     },
+     {
+      "kind": "str",
+      "value": "sparkSession"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "dataSource_register_bad": {
+   "error": {
+    "condition": null,
+    "message": "'int' object has no attribute 'name'",
+    "module": "builtins",
+    "mro": [
+     "AttributeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "AttributeError"
+   }
+  },
+  "getTags": {
+   "result": {
+    "items": [
+     "'t1'",
+     "'t2'"
+    ],
+    "kind": "set"
+   }
+  },
+  "getTags_type_initial": {
+   "result": {
+    "kind": "str",
+    "value": "set"
+   }
+  },
+  "interruptAll": {
+   "result": {
+    "items": [],
+    "kind": "list"
+   }
+  },
+  "interruptOperation": {
+   "error": {
+    "condition": null,
+    "message": "executionId must be a number in string form.",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "IllegalArgumentException",
+     "CapturedException",
+     "IllegalArgumentException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "IllegalArgumentException"
+   }
+  },
+  "interruptOperation_numeric": {
+   "result": {
+    "items": [],
+    "kind": "list"
+   }
+  },
+  "interruptTag": {
+   "result": {
+    "items": [],
+    "kind": "list"
+   }
+  },
+  "profile_methods": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "clear"
+     },
+     {
+      "kind": "str",
+      "value": "dump"
+     },
+     {
+      "kind": "str",
+      "value": "profiler_collector"
+     },
+     {
+      "kind": "str",
+      "value": "render"
+     },
+     {
+      "kind": "str",
+      "value": "show"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "profile_show": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   },
+   "warnings": [
+    "UserWarning: Install the 'memory_profiler' library in the cluster to enable memory profiling"
+   ]
+  },
+  "profile_type": {
+   "result": {
+    "kind": "str",
+    "value": "Profile"
+   }
+  },
+  "readStream_load": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "readStream_type": {
+   "result": {
+    "kind": "str",
+    "value": "DataStreamReader"
+   }
+  },
+  "registerProgressHandler": {
+   "error": {
+    "condition": "ONLY_SUPPORTED_WITH_SPARK_CONNECT",
+    "message": "[ONLY_SUPPORTED_WITH_SPARK_CONNECT] SparkSession.registerProgressHandler is only supported with Spark Connect; however, the current Spark session does not use Spark Connect.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkRuntimeError",
+     "PySparkException",
+     "RuntimeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "feature": "SparkSession.registerProgressHandler"
+    },
+    "raises": "PySparkRuntimeError"
+   }
+  },
+  "removeProgressHandler": {
+   "error": {
+    "condition": "ONLY_SUPPORTED_WITH_SPARK_CONNECT",
+    "message": "[ONLY_SUPPORTED_WITH_SPARK_CONNECT] SparkSession.removeProgressHandler is only supported with Spark Connect; however, the current Spark session does not use Spark Connect.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkRuntimeError",
+     "PySparkException",
+     "RuntimeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "feature": "SparkSession.removeProgressHandler"
+    },
+    "raises": "PySparkRuntimeError"
+   }
+  },
+  "removeTag": {
+   "result": {
+    "items": [
+     "'t2'"
+    ],
+    "kind": "set"
+   }
+  },
+  "removeTag_empty": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "removeTag_missing": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "streams_active": {
+   "result": {
+    "items": [],
+    "kind": "list"
+   }
+  },
+  "streams_methods": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "active"
+     },
+     {
+      "kind": "str",
+      "value": "addListener"
+     },
+     {
+      "kind": "str",
+      "value": "awaitAnyTermination"
+     },
+     {
+      "kind": "str",
+      "value": "get"
+     },
+     {
+      "kind": "str",
+      "value": "removeListener"
+     },
+     {
+      "kind": "str",
+      "value": "resetTerminated"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "streams_type": {
+   "result": {
+    "kind": "str",
+    "value": "StreamingQueryManager"
+   }
+  },
+  "tvf_collations": {
+   "result": {
+    "columns": [
+     "CATALOG",
+     "SCHEMA",
+     "NAME",
+     "LANGUAGE",
+     "COUNTRY",
+     "ACCENT_SENSITIVITY",
+     "CASE_SENSITIVITY",
+     "PAD_ATTRIBUTE",
+     "ICU_VERSION"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(CATALOG='SYSTEM', SCHEMA='BUILTIN', NAME='UTF8_BINARY', LANGUAGE=None, COUNTRY=None, ACCENT_SENSITIVITY='ACCENT_SENSITIVE', CASE_SENSITIVITY='CASE_SENSITIVE', PAD_ATTRIBUTE='NO_PAD', ICU_VERSION=None)"
+    ],
+    "schema": "struct<CATALOG:string,SCHEMA:string,NAME:string,LANGUAGE:string,COUNTRY:string,ACCENT_SENSITIVITY:string,CASE_SENSITIVITY:string,PAD_ATTRIBUTE:string,ICU_VERSION:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "CATALOG",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "SCHEMA",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "NAME",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "LANGUAGE",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "COUNTRY",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "ACCENT_SENSITIVITY",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "CASE_SENSITIVITY",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "PAD_ATTRIBUTE",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "ICU_VERSION",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "tvf_explode": {
+   "result": {
+    "columns": [
+     "col"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(col=1)",
+     "Row(col=2)"
+    ],
+    "schema": "struct<col:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "col",
+       "nullable": false,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "tvf_explode_outer_empty": {
+   "result": {
+    "columns": [
+     "col"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(col=None)"
+    ],
+    "schema": "struct<col:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "col",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "tvf_inline": {
+   "result": {
+    "columns": [
+     "a",
+     "b"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(a=1, b='x')"
+    ],
+    "schema": "struct<a:int,b:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": false,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": false,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "tvf_json_tuple": {
+   "result": {
+    "columns": [
+     "c0",
+     "c1"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(c0='1', c1='2')"
+    ],
+    "schema": "struct<c0:string,c1:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "c0",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "c1",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "tvf_methods": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "collations"
+     },
+     {
+      "kind": "str",
+      "value": "explode"
+     },
+     {
+      "kind": "str",
+      "value": "explode_outer"
+     },
+     {
+      "kind": "str",
+      "value": "inline"
+     },
+     {
+      "kind": "str",
+      "value": "inline_outer"
+     },
+     {
+      "kind": "str",
+      "value": "json_tuple"
+     },
+     {
+      "kind": "str",
+      "value": "posexplode"
+     },
+     {
+      "kind": "str",
+      "value": "posexplode_outer"
+     },
+     {
+      "kind": "str",
+      "value": "python_worker_logs"
+     },
+     {
+      "kind": "str",
+      "value": "range"
+     },
+     {
+      "kind": "str",
+      "value": "sql_keywords"
+     },
+     {
+      "kind": "str",
+      "value": "stack"
+     },
+     {
+      "kind": "str",
+      "value": "variant_explode"
+     },
+     {
+      "kind": "str",
+      "value": "variant_explode_outer"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "tvf_methods_full": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "collations"
+     },
+     {
+      "kind": "str",
+      "value": "explode"
+     },
+     {
+      "kind": "str",
+      "value": "explode_outer"
+     },
+     {
+      "kind": "str",
+      "value": "inline"
+     },
+     {
+      "kind": "str",
+      "value": "inline_outer"
+     },
+     {
+      "kind": "str",
+      "value": "json_tuple"
+     },
+     {
+      "kind": "str",
+      "value": "posexplode"
+     },
+     {
+      "kind": "str",
+      "value": "posexplode_outer"
+     },
+     {
+      "kind": "str",
+      "value": "python_worker_logs"
+     },
+     {
+      "kind": "str",
+      "value": "range"
+     },
+     {
+      "kind": "str",
+      "value": "sql_keywords"
+     },
+     {
+      "kind": "str",
+      "value": "stack"
+     },
+     {
+      "kind": "str",
+      "value": "variant_explode"
+     },
+     {
+      "kind": "str",
+      "value": "variant_explode_outer"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "tvf_posexplode": {
+   "result": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(pos=0, col='a')",
+     "Row(pos=1, col='b')"
+    ],
+    "schema": "struct<pos:int,col:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "pos",
+       "nullable": false,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "col",
+       "nullable": false,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "tvf_range": {
+   "result": {
+    "columns": [
+     "id"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=0)",
+     "Row(id=1)",
+     "Row(id=2)"
+    ],
+    "schema": "struct<id:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": false,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "tvf_sql_keywords": {
+   "result": {
+    "columns": [
+     "keyword",
+     "reserved"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(keyword='ADD', reserved=False)",
+     "Row(keyword='AFTER', reserved=False)"
+    ],
+    "schema": "struct<keyword:string,reserved:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "keyword",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "reserved",
+       "nullable": false,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "tvf_stack": {
+   "result": {
+    "columns": [
+     "col0",
+     "col1"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(col0=1, col1=2)",
+     "Row(col0=3, col1=4)"
+    ],
+    "schema": "struct<col0:int,col1:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "col0",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "col1",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "tvf_type": {
+   "result": {
+    "kind": "str",
+    "value": "TableValuedFunction"
+   }
+  },
+  "tvf_variant_explode": {
+   "result": {
+    "columns": [
+     "pos",
+     "key",
+     "value"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(pos=0, key='a', value=VariantVal(bytearray(b'\\x0c\\x01'), bytearray(b'\\x01\\x01\\x00\\x01a')))"
+    ],
+    "schema": "struct<pos:int,key:string,value:variant>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "pos",
+       "nullable": false,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "value",
+       "nullable": false,
+       "type": "variant"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  }
+ },
+ "oracle": "PySpark 4.1.2 classic, local[2], spark.sql.session.timeZone=UTC, recorded 2026-09-14 (run 15b); probe at /tmp/oc-worker/run15b/oracle/cells.py + cells2.py"
+}

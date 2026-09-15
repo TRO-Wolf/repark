@@ -7,6 +7,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from typing import Any
 
 import repark.spark.session._funcs as _sf
+import repark.spark.session.session_surface as _session_surface
 from repark.spark.session._coerce import range_bound_as_int as _range_bound_as_int
 from repark.spark.session._coerce import sql_clause_end_after as _sql_clause_end_after
 from repark.spark.session.builder_conf import RuntimeConfig, SparkContext
@@ -186,12 +187,7 @@ class ReparkSession:
         expanded = self._expand_bare_table_names_in_sql(query)
         return DataFrame(inner.sql(expanded), inner, self._alive_token)
 
-    def resolve_table_name(
-        self,
-        table_name: str,
-        *,
-        prefer_temp_view: bool = False,
-    ) -> str:
+    def resolve_table_name(self, table_name: str, *, prefer_temp_view: bool = False) -> str:
         """Qualify ``table_name`` under current catalog/database (shared resolution).
 
         Returns an unquoted multipart identifier. Use :func:`_sql_table_ref` for SQL embeds.
@@ -893,11 +889,7 @@ class ReparkSession:
         inner = self._ensure_alive()
         return DataFrame(inner.read_parquet(str(path)), inner, self._alive_token)
 
-    def read_csv(
-        self,
-        path: str | Path,
-        options: dict[str, str] | None = None,
-    ) -> DataFrame:
+    def read_csv(self, path: str | Path, options: dict[str, str] | None = None) -> DataFrame:
         """Engine entry for CSV reads (``spark.read.csv`` / ``format("csv").load``).
 
         Options are a string map (Spark keys). Rows never cross the Python boundary as Python
@@ -907,11 +899,7 @@ class ReparkSession:
         frame = inner.read_csv(str(path), options)
         return DataFrame(frame, inner, self._alive_token)
 
-    def read_json(
-        self,
-        path: str | Path,
-        options: dict[str, str] | None = None,
-    ) -> DataFrame:
+    def read_json(self, path: str | Path, options: dict[str, str] | None = None) -> DataFrame:
         """Engine entry for JSON reads (``spark.read.json`` / ``format("json").load``)."""
         inner = self._ensure_alive()
         frame = inner.read_json(str(path), options)
@@ -947,11 +935,7 @@ class ReparkSession:
         )
         return DataFrame(frame, inner, self._alive_token)
 
-    def read_excel(
-        self,
-        path: str | Path,
-        options: dict[str, str] | None = None,
-    ) -> DataFrame:
+    def read_excel(self, path: str | Path, options: dict[str, str] | None = None) -> DataFrame:
         """Engine entry for Excel reads (``spark.read.excel`` disclosed extension).
 
         Pure-Rust calamine path; rows never cross the Python boundary as Python objects —
@@ -1178,6 +1162,27 @@ class ReparkSession:
         """
         self._ensure_alive()
         return RuntimeConfig(self)
+
+    addTag = _session_surface.add_tag  # noqa: N815 — PySpark camelCase
+    removeTag = _session_surface.remove_tag  # noqa: N815 — PySpark camelCase
+    getTags = _session_surface.get_tags  # noqa: N815 — PySpark camelCase
+    clearTags = _session_surface.clear_tags  # noqa: N815 — PySpark camelCase
+    interruptAll = _session_surface.interrupt_all  # noqa: N815 — PySpark camelCase
+    interruptTag = _session_surface.interrupt_tag  # noqa: N815 — PySpark camelCase
+    interruptOperation = _session_surface.interrupt_operation  # noqa: N815 — PySpark camelCase
+
+    client = property(_session_surface.session_client)
+    copyFromLocalToFs = _session_surface.copy_from_local_to_fs  # noqa: N815
+    registerProgressHandler = _session_surface.register_progress_handler  # noqa: N815
+    removeProgressHandler = _session_surface.remove_progress_handler  # noqa: N815
+    clearProgressHandlers = _session_surface.clear_progress_handlers  # noqa: N815
+    readStream = property(_session_surface.session_read_stream)  # noqa: N815
+    streams = property(_session_surface.session_streams)
+    dataSource = property(_session_surface.session_data_source)  # noqa: N815
+    addArtifact = _session_surface.add_artifacts  # noqa: N815 — PySpark camelCase
+    addArtifacts = _session_surface.add_artifacts  # noqa: N815 — PySpark camelCase
+    profile = property(_session_surface.session_profile)
+    tvf = property(_session_surface.session_tvf)
 
     # Active session + context manager + newSession
     @classmethod

@@ -5,6 +5,14 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [session-surface-1-ledger.md](session-surface-1-ledger.md) —
+  **SESSION-SURFACE-1 step 1 (2026-09-14), in flight:** the 19-name SparkSession
+  surface card — job tags, the interrupt trio, the five Connect-only names,
+  `readStream`/`streams`/`dataSource`, `addArtifact(s)`, `profile` and `tvf` —
+  implemented or dated-declared in `session/session_surface.py` against the
+  PySpark 4.1.2 classic oracle; eight `SES-*` registry rows filed.
+  `risk_tier: standard`. Branch `feat/session-surface-1`.
+  pins: session-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
