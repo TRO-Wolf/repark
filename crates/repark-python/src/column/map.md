@@ -82,6 +82,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   pins: fnp-9-collections-json/C-006, C-007
   LOG1P-1: `log1p` / `expm1` arms embed `repark_functions::expr_fn` kernels.
   pins: log1p-1-precise-kernels/C-002
+  **FNP-11A:** the fourteen temporal arms live in `dispatch_json.rs` beside the JSON
+  arms (the parent file is at its 1000-line ceiling, so no arm lands there;
+  `datediff` moved here when the door grew its arity route).
+  pins: fnp-11a/C-002, C-003
   **DATE-FN-1:** `unix_timestamp` / `to_unix_timestamp` (0 or 1 arg). PySpark has no `F.date`.
   pins: date-fn-1-spark-date-spelling/C-002
   **FN-FIX-1:** `isnan` / `sha2` / array kernels. pins: fn-fix-1-registry-rows/C-002

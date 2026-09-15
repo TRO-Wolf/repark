@@ -5,6 +5,7 @@ Registry §7 rows EX-FN-1..19.
 
 from __future__ import annotations
 
+import datetime
 from collections.abc import Iterator
 
 import pytest
@@ -86,16 +87,22 @@ def test_moment_aggregates_refuse() -> None:
         F.mode("x")
 
 
-def test_make_timestamp_refuses() -> None:
-    """make_timestamp refuses; Spark builds the timestamp (EX-FN-10)."""
-    with pytest.raises(UnsupportedOperationException, match="make_timestamp"):
-        F.make_timestamp("y", "mo", "d", "h", "mi", "s")
+def test_make_timestamp_answers(spark: ReparkSession) -> None:
+    """make_timestamp builds the timestamp from parts (EX-FN-10, FIXED FNP-11A)."""
+    frame = spark.createDataFrame(
+        [(2014, 12, 28, 6, 30, 45)], "y INT, mo INT, d INT, h INT, mi INT, s INT"
+    )
+    table = frame.select(F.make_timestamp("y", "mo", "d", "h", "mi", "s").alias("v")).toArrow()
+    assert table.column("v").to_pylist() == [
+        datetime.datetime(2014, 12, 28, 6, 30, 45, tzinfo=datetime.UTC)
+    ]
 
 
-def test_months_between_refuses() -> None:
-    """months_between refuses; Spark answers the month distance (EX-FN-11)."""
-    with pytest.raises(UnsupportedOperationException, match="months_between"):
-        F.months_between("e", "s")
+def test_months_between_answers(spark: ReparkSession) -> None:
+    """months_between answers the month distance (EX-FN-11, FIXED FNP-11A)."""
+    frame = spark.createDataFrame([("2024-02-29", "2024-01-31")], "e STRING, s STRING")
+    table = frame.select(F.months_between("e", "s").alias("v")).toArrow()
+    assert table.column("v").to_pylist() == [1.0]
 
 
 def test_single_node_ids_refuse() -> None:
@@ -150,11 +157,11 @@ def test_split_refuses() -> None:
 
 
 def test_make_interval_string_form(spark: ReparkSession) -> None:
-    """make_interval casts to DataFusion's terse form; Spark spells units out (EX-FN-19)."""
+    """make_interval casts to Spark's spelled-out text (EX-FN-19, FIXED FNP-11A)."""
     frame = spark.createDataFrame(
         [(1, 2, 1, 3, 4, 5, 6)], "y INT, mo INT, w INT, d INT, h INT, mi INT, s INT"
     )
     rows = frame.select(
         F.make_interval("y", "mo", "w", "d", "h", "mi", "s").cast("string").alias("v")
     ).collect()
-    assert [row["v"] for row in rows] == ["14 mons 10 days 4 hours 5 mins 6.000000000 secs"]
+    assert [row["v"] for row in rows] == ["1 years 2 months 10 days 4 hours 5 minutes 6 seconds"]

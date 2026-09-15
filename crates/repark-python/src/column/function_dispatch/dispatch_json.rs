@@ -3,6 +3,7 @@ use datafusion::logical_expr::expr::ScalarFunction;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+#[allow(clippy::too_many_lines)]
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
     let need = |n: usize| -> PyResult<()> {
@@ -73,6 +74,92 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "arrays_zip" => repark_functions::expr_fn::arrays_zip(exprs.clone()),
         "map_concat" => repark_functions::expr_fn::map_concat(exprs.clone()),
         "create_map" => repark_functions::expr_fn::create_map(exprs.clone()),
+        "make_timestamp" | "try_make_timestamp" => {
+            if !matches!(exprs.len(), 2 | 3 | 6 | 7) {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 2, 3, 6 or 7 args, got {}",
+                    exprs.len()
+                )));
+            }
+            match name {
+                "make_timestamp" => repark_functions::expr_fn::make_timestamp(exprs.clone()),
+                _ => repark_functions::expr_fn::try_make_timestamp(exprs.clone()),
+            }
+        }
+        "make_timestamp_ltz" | "try_make_timestamp_ltz" => {
+            if !matches!(exprs.len(), 2 | 3 | 6 | 7) {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 2, 3, 6 or 7 args, got {}",
+                    exprs.len()
+                )));
+            }
+            match name {
+                "make_timestamp_ltz" => {
+                    repark_functions::expr_fn::make_timestamp_ltz(exprs.clone())
+                }
+                _ => repark_functions::expr_fn::try_make_timestamp_ltz(exprs.clone()),
+            }
+        }
+        "make_timestamp_ntz" | "try_make_timestamp_ntz" => {
+            if !matches!(exprs.len(), 2 | 6) {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 2 or 6 args, got {}",
+                    exprs.len()
+                )));
+            }
+            match name {
+                "make_timestamp_ntz" => {
+                    repark_functions::expr_fn::make_timestamp_ntz(exprs.clone())
+                }
+                _ => repark_functions::expr_fn::try_make_timestamp_ntz(exprs.clone()),
+            }
+        }
+        "make_ym_interval" => {
+            if exprs.len() > 2 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects at most 2 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::make_ym_interval(exprs.clone())
+        }
+        "try_make_interval" => {
+            if exprs.len() > 7 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects at most 7 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::try_make_interval(exprs.clone())
+        }
+        "months_between" | "convert_timezone" => {
+            if !matches!(exprs.len(), 2 | 3) {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 2 or 3 args, got {}",
+                    exprs.len()
+                )));
+            }
+            match name {
+                "months_between" => repark_functions::expr_fn::months_between(exprs.clone()),
+                _ => repark_functions::expr_fn::convert_timezone(exprs.clone()),
+            }
+        }
+        "localtimestamp" => {
+            need(0)?;
+            repark_functions::expr_fn::localtimestamp()
+        }
+        "timestampadd" => {
+            need(3)?;
+            repark_functions::expr_fn::timestampadd(exprs.clone())
+        }
+        "timestampdiff" => {
+            need(3)?;
+            repark_functions::expr_fn::timestampdiff(exprs.clone())
+        }
+        "datediff" => {
+            need(2)?;
+            repark_functions::expr_fn::datediff(exprs[0].clone(), exprs[1].clone())
+        }
         other => {
             return Err(PyValueError::new_err(format!(
                 "call_scalar: unsupported function {other:?}"

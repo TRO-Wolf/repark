@@ -10,6 +10,14 @@ merge of the duplicate `_VALID_MODES`/`_PATH_MODES` tuple) and retires the
 (`DataFrameReader.jdbc` is covered by the declared-refusal example). The CAP-1
 parity mirror rows moved with them.
 pins: io-declared-1/C-005, C-006
+FNP-11A (2026-09-15, orchestrator): `check_lib_py.py` `spark/functions_expr.py` 2247 → 2245 — the
+destubbed `make_timestamp` forwarder keeps the frozen 1.0 signature (ruling D-10), dropping its `date` / `time`
+parameters; the CAP-1 mirror row moves in the same commit.
+pins: fnp-11a/C-001
+FNP-11A (2026-09-15, orchestrator): `check_example_coverage.py` walks `functions_temporal.py` and its
+`FNP11A_EXPORTS` export tuple, so the eleven temporal names that module installs at import are in
+the AST walk, not only in the live `__all__`.
+DF-SURFACE-A-1 critic round 1 (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4041 → 4035 (ruling R-5 removes the `inputFiles` and
 `semanticHash` bindings; ruling R-6 removes the `_schema_override` slot,
 init line, and schema check). The CAP-1 parity mirror row moved with it.
@@ -1224,3 +1232,4 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
 `bash scripts/check_parity_live_dual_wire.sh`, `bash scripts/check_matrix_test_liveness.sh`,
 `make workflows-parse`. Escalate to:
 [../map.md#debug](../map.md).
+- **FNP-11A (2026-09-15, on 440b2773):** `check_lib_py.py` ratchets `functions_expr.py` to 2235 lines, the FNP-11A forwarder trim landing on top of main's baseline.

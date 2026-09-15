@@ -17,6 +17,7 @@ extend-exclude = [
   # Recorded MW-6 Critic evidence (oracle logs + disassembly): verbatim, never hand-edited,
   # same rationale as task/census/ (PROC-1, 2026-08-25).
   "task/mw-6-critic-evidence/",
+  "python/repark/tests/fnp11a_r2_spark_oracle.json",
 ]
 
 [default.extend-identifiers]

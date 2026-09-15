@@ -7305,28 +7305,32 @@ field NAME.
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. All three names
   stay on the example backlog until the moment kernels land.
 
-### EX-FN-10 — `make_timestamp` refuses; Spark builds the timestamp
+### EX-FN-10 — `make_timestamp` refuses; Spark builds the timestamp — **FIXED 2026-09-15 (FNP-11A)**
 
-- **repark** — `F.make_timestamp("y", "mo", "d", "h", "mi", "s")` raises
-  `UnsupportedOperationException: functions.make_timestamp is not supported yet (engine gap;
-  disclosed R-FN-BATCH3)`.
+- **repark** — **FIXED 2026-09-15 (FNP-11A).** `F.make_timestamp("y", "mo", "d", "h", "mi",
+  "s")` builds the session-zone timestamp; the `ltz` / `ntz` / `try_` variants, the
+  `(date, time[, zone])` form and leap-second rollover match Spark on both doors.
 - **Apache Spark** — `(2024, 1, 15, 10, 30, 5)` answers `2024-01-15T10:30:05`; February 30
   raises `DATETIME_FIELD_OUT_OF_BOUNDS` under ANSI. *(oracle: live PySpark 4.1.2, ANSI on,
-  2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_make_timestamp_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
-  on the example backlog until the engine grows the constructor.
+  2026-09-05, EX-25 batch; FNP-11A oracle: live PySpark 4.1.2, both ANSI settings, UTC and
+  America/New_York, 2026-09-14.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_make_timestamp_answers`
+  and `python/repark/tests/test_fnp11a_temporal.py`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement; closed 2026-09-15
+  by FNP-11A.
 
-### EX-FN-11 — `months_between` refuses; Spark answers the month distance
+### EX-FN-11 — `months_between` refuses; Spark answers the month distance — **FIXED 2026-09-15 (FNP-11A)**
 
-- **repark** — `F.months_between("e", "s")` raises `UnsupportedOperationException:
-  functions.months_between is not supported yet (engine gap; disclosed R-FN-BATCH1)`.
+- **repark** — **FIXED 2026-09-15 (FNP-11A).** `F.months_between("e", "s")` answers the
+  month distance with Spark's last-day and 31-day rules on both doors.
 - **Apache Spark** — `(2017-11-01, 2017-08-01)` answers `3.0`; `(1997-02-28, 1997-10-28)`
   answers `-8.0`; NULL answers NULL; `roundOff=false` agrees on whole months. *(oracle:
-  live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_months_between_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
-  on the example backlog until the engine grows the month arithmetic.
+  live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch; FNP-11A oracle: live PySpark 4.1.2,
+  both ANSI settings, UTC and America/New_York, 2026-09-14.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_months_between_answers`
+  and `python/repark/tests/test_fnp11a_temporal.py`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement; closed 2026-09-15
+  by FNP-11A.
 
 ### EX-FN-12 — `monotonically_increasing_id` / `spark_partition_id` refuse
 
@@ -7413,22 +7417,21 @@ field NAME.
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
   on the example backlog until the engine grows the split kernel.
 
-### EX-FN-19 — `make_interval` casts to the terse form; Spark spells the units out
+### EX-FN-19 — `make_interval` casts to the terse form; Spark spells the units out — **FIXED 2026-09-15 (FNP-11A)**
 
-- **repark** — `make_interval(1, 2, 1, 3, 4, 5, 6)` cast to string answers `"14 mons 10
-  days 4 hours 5 mins 6.000000000 secs"` (DataFusion's display). The date-arithmetic arms
-  agree with Spark and carry the example coverage: `2024-01-15` plus `(1y, 2mo, 3d)`
-  answers `2025-03-18`, and `2024-01-15T10:30:05` plus `(4h, 5m, 6s)` answers
-  `2024-01-15T14:35:11`.
+- **repark** — **FIXED 2026-09-15 (FNP-11A).** `make_interval(1, 2, 1, 3, 4, 5, 6)` cast to
+  string answers `"1 years 2 months 10 days 4 hours 5 minutes 6 seconds"` (the FNP-11A
+  interval CAST rule). The date-arithmetic arms agree with Spark and carry the example
+  coverage: `2024-01-15` plus `(1y, 2mo, 3d)` answers `2025-03-18`, and
+  `2024-01-15T10:30:05` plus `(4h, 5m, 6s)` answers `2024-01-15T14:35:11`.
 - **Apache Spark** — the same interval casts to `"1 years 2 months 10 days 4 hours 5
   minutes 6 seconds"`; the date-arithmetic arms agree with the repark answers above.
   Collecting the interval itself refuses on both engines (Spark:
   `CalendarIntervalType.fromInternal is not implemented`). *(oracle: live PySpark 4.1.2,
   ANSI on, 2026-09-05, EX-25 batch.)*
 - **Pin** — `python/repark/tests/test_examples_functions_a.py::test_make_interval_string_form`
-- **Rationale** — BACKLOG ARM, filed 2026-09-05 from the EX-25 measurement. The name stays
-  covered by the date-arithmetic arms; this row records the display arm until the cast
-  spells Spark's units.
+- **Rationale** — BACKLOG ARM, filed 2026-09-05 from the EX-25 measurement; the display arm
+  closed 2026-09-15 as a side effect of the FNP-11A interval CAST rule.
 
 ### EX-FN-20 — `try_to_timestamp` refuses; Spark answers the timestamp or NULL
 
@@ -7490,6 +7493,80 @@ field NAME.
   function). `F.udf`, `F.pandas_udf` and `F.udtf` stay covered by the value arms; this row
   records the factory return-type arm — a migrated `isinstance(u, UserDefinedFunction)`
   reads True here and False on Spark 4.1.2.
+
+### EX-FN-24 — literal-only temporal calls stay nullable; Spark folds them to non-nullable
+
+- **repark** — `SELECT make_timestamp(2019, 6, 30, 23, 59, 60)`,
+  `SELECT months_between(DATE'2024-02-29', DATE'2024-01-31')` and
+  `SELECT CAST(make_ym_interval() AS STRING)` answer Spark's values and types but report
+  `nullable=True`: the UDFs declare a nullable field and the engine does not fold
+  literal-only calls the way Spark's analyzer does.
+- **Apache Spark** — the same three calls report `nullable=False` (constant folding turns
+  each into a non-null literal). Values, types and row counts agree with the repark
+  answers above. *(oracle: live PySpark 4.1.2, both ANSI settings, UTC and
+  America/New_York, 2026-09-14, FNP-11A batch.)*
+- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_folded_literals_stay_nullable`
+  (the door pins skip the nullability assert for literal-only cells via `_folded_literal`
+  and still assert type and rows).
+- **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closing it
+  means folding literal-only UDF calls in the planner, not touching the kernels.
+
+### EX-FN-25 — bare `localtimestamp` answers the call; Spark raises UNRESOLVED_COLUMN
+
+- **repark** — `SELECT localtimestamp` (no parentheses) answers the current session-zone
+  wall clock as `timestamp_ntz`, non-null: the engine resolves a bare nullary function
+  name as a call.
+- **Apache Spark** — the same text raises `[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION]`; only
+  `localtimestamp()` with parentheses answers. *(oracle: live PySpark 4.1.2, ANSI on, UTC,
+  2026-09-14, FNP-11A batch.)*
+- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_bare_localtimestamp_answers_call`
+- **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closing it
+  means a SQL parser/planner change (run 15c owns the parser), out of scope for FNP-11A.
+
+### EX-FN-26 — naive Python datetime literals read as UTC; Spark reads the driver zone
+
+- **repark** — `F.timestamp_diff("HOUR", F.lit(datetime.datetime(2024, 1, 1)), F.col("ts"))`
+  answers `1657` (UTC session) and `1662` (America/New_York session): a naive literal is
+  the UTC instant. The engine never reads the process zone (server-prep disciplines), so
+  it cannot follow Spark here.
+- **Apache Spark** — the same expression answers `1652` (UTC session) and `1657`
+  (America/New_York session): a naive literal is the driver-process wall clock (the
+  recording box runs America/New_York). *(oracle: live PySpark 4.1.2, both ANSI settings,
+  2026-09-14, FNP-11A batch.)*
+- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_timestampdiff_python_lit_keeps_repark_lit_zone`
+  asserts both values and that they differ.
+- **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Matching
+  Spark would mean reading the driver zone, which the server-prep disciplines forbid.
+
+### EX-FN-27 — bare-unit `timestampadd` / `timestampdiff` keywords refuse; Spark parses them
+
+- **repark** — `SELECT timestampadd(YEAR, 1, TIMESTAMP'2024-01-01 00:00:00')` raises
+  `AnalysisException: Schema error: No field named year`: the bare unit parses as a column
+  reference. The string-unit spelling `timestampadd('YEAR', …)` answers on both doors, and
+  the Python door (`F.timestamp_add("YEAR", …)`) answers.
+- **Apache Spark** — the bare-unit spellings parse (the unit is a keyword, not a column)
+  and answer. *(oracle: live PySpark 4.1.2, both ANSI settings, UTC and
+  America/New_York, 2026-09-14, FNP-11A batch.)*
+- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_bare_timestampadd_unit_refuses`
+- **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closing it
+  means a SQL parser/planner change (run 15c owns the parser), out of scope for FNP-11A.
+
+
+### EX-FN-28 — facade `make_timestamp(date=, time=)` refuses: the frozen 1.0 signature keeps `years` … `secs` required
+
+- **repark** — `F.make_timestamp(date=…, time=…)` raises `TypeError` (missing required positional arguments). The
+  facade keeps the signature frozen in `docs/design/v1-0-api-freeze.json` (`years`, `months`, `days`, `hours`,
+  `mins`, `secs` required, `timezone` optional). The SQL door answers the same form:
+  `make_timestamp(DATE'2014-12-28', TIME'06:30:45.887')` returns the timestamp, and the 6- and 7-argument forms
+  answer on both doors.
+- **Apache Spark** — PySpark 4.1.2 declares every parameter optional so the `(date, time[, timezone])` keyword form
+  works on the Python door. *(oracle: live PySpark 4.1.2, 2026-09-14, `fnp11_spark_oracle.json` signatures and the
+  `F.make_timestamp(date=…, time=F.expr("TIME'…'"))` cells.)*
+- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_make_timestamp_date_time_keywords_refused_by_the_frozen_signature`,
+  `…::test_make_timestamp_keeps_its_frozen_signature`.
+- **Rationale** — BACKLOG 2026-09-15, owner question. Widening a frozen name's required parameters is a signature change
+  the API freeze register records as a break (rule J1); the unit keeps the register untouched and asks the owner
+  whether to widen `make_timestamp` to Spark's all-optional signature in a freeze-update PR.
 
 ### H3-SPILL-NLJ-1 — a nested-loop join at a tight pool refuses like every other operator — **FIXED 2026-09-06, H3-SPILL-RESIDUE-1**
 

@@ -377,6 +377,7 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     pins: fnp-15-16/C-016
     pins: fnp-4c-higher-order-kernels/C-011
     pins: fnp-7-try-inversions/C-013
+    FNP-11A appends the thirteen temporal names last.
     """
     from repark.spark.functions_agg import INSTALL_NAMES as AGG_INSTALL_NAMES
     from repark.spark.functions_arrow_udf import ARROW_EXPORTS
@@ -387,6 +388,7 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     from repark.spark.functions_lambda import HIGHER_ORDER_EXPORTS
     from repark.spark.functions_math import INSTALL_NAMES as MATH_INSTALL_NAMES
     from repark.spark.functions_stack import STACK_NAMES
+    from repark.spark.functions_temporal import FNP11A_EXPORTS
     from repark.spark.functions_try import TRY_EXPORTS
 
     exported = tuple(F.__all__)
@@ -409,8 +411,11 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     assert exported[alias_start : alias_start + len(alias_names)] == alias_names
     byname_start = alias_start + len(alias_names)
     assert exported[byname_start : byname_start + byname_names] == BYNAME_NAMES
-    assert exported[byname_start + byname_names :] == ARROW_EXPORTS
-    assert len(exported) == 360 + 62 + 10 + 12 + 8 + 1 + 6 + byname_names + len(ARROW_EXPORTS)
+    arrow_start = byname_start + byname_names
+    assert exported[arrow_start : arrow_start + len(ARROW_EXPORTS)] == ARROW_EXPORTS
+    assert exported[arrow_start + len(ARROW_EXPORTS) :] == FNP11A_EXPORTS
+    total = 360 + 62 + 10 + 12 + 8 + 1 + 6 + byname_names + len(ARROW_EXPORTS)
+    assert len(exported) == total + len(FNP11A_EXPORTS)
 
 
 def test_every_all_name_resolves() -> None:

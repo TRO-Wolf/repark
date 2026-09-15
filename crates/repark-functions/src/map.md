@@ -246,6 +246,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (decimal overflow NULL; INTERVAL input is the FNP-11 loud refuse).
   pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012, C-014, C-015, C-018, C-019
+- `temporal_ctor/` — FNP-11A scalar temporal kernels (constructors, intervals,
+  month arithmetic, zone conversion, add/diff, dateadd/datediff arity routes;
+  scalar args and column casts hoist out of the row loops). Details in
+  [`temporal_ctor/map.md`](temporal_ctor/map.md).
+  pins: fnp-11a/C-002, C-003, C-004, C-005, C-011, C-013
 - `lib.rs` — crate-root stays at **175** under `check_lib_rs` with `pub mod timestamp_type`.
 - `timestamp_type.rs` — **Q10:** Spark-door `spark.sql.timestampType` carrier
   (`SparkTimestampTypeConfig`, `PREFIX = repark.timestamp`, default
@@ -675,7 +680,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   entry points) stands in for the `# Errors` doc comment the no-code-comments ruling forbids;
   the error domain is the row above.
   pins: v3-10-upgrade-v2-to-v3/C-002, C-003
-- `expr_fn.rs` — logical-`Expr` builders for date, string, collection, URL, bitmap, and higher-order
+- `expr_fn.rs` — logical-`Expr` builders for date, string, collection, URL, bitmap, temporal, and higher-order
   functions. Builders embed the same shims registered by the SQL door, including `unix_date`,
   `bit_length`, regexp/split functions, `shuffle`, `map_from_entries`, and `str_to_map`, so facade
   columns remain self-contained without a `SessionContext`.
@@ -706,3 +711,4 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
 
 First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](../map.md).
 - **DOOR-CONVERGE-1 rebase (2026-09-15):** `collection.rs` keeps main's `array_append` / `array_prepend` shims (ARRAY-NULL-1) beside this unit's `array_contains` / `size` modules; the round-2 `make_array` shim stays removed (R-10).
+- **FNP-11A R3 (2026-09-15):** `expr_fn::datediff` is the Spark `datediff` spelling. The function door routes two arguments to `date_diff` and three to `timestampdiff` through `temporal_ctor::date_alias` (pins: fnp-11a/C-019).

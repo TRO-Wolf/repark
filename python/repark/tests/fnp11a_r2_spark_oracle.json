@@ -1,0 +1,2790 @@
+{
+ "cells": [
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    },
+    {
+     "name": "t",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(HOUR, 1, TIMESTAMP_NTZ'2024-03-10 01:30:00') AS v, typeof(timestampadd(HOUR, 1, TIMESTAMP_NTZ'2024-03-10 01:30:00')) AS t",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T02:30:00",
+      "tzinfo": "None"
+     },
+     "timestamp_ntz"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-10 02:30:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    },
+    {
+     "name": "t",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(HOUR, 1, TIMESTAMP_NTZ'2024-03-10 01:30:00') AS v, typeof(timestampadd(HOUR, 1, TIMESTAMP_NTZ'2024-03-10 01:30:00')) AS t",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T02:30:00",
+      "tzinfo": "None"
+     },
+     "timestamp_ntz"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-10 02:30:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    },
+    {
+     "name": "t",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(HOUR, 1, TIMESTAMP_NTZ'2024-03-10 01:30:00') AS v, typeof(timestampadd(HOUR, 1, TIMESTAMP_NTZ'2024-03-10 01:30:00')) AS t",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T02:30:00",
+      "tzinfo": "None"
+     },
+     "timestamp_ntz"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-10 02:30:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    },
+    {
+     "name": "t",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(HOUR, 1, TIMESTAMP_NTZ'2024-03-10 01:30:00') AS v, typeof(timestampadd(HOUR, 1, TIMESTAMP_NTZ'2024-03-10 01:30:00')) AS t",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T02:30:00",
+      "tzinfo": "None"
+     },
+     "timestamp_ntz"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-10 02:30:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    },
+    {
+     "name": "t",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(DAY, 1, TIMESTAMP_NTZ'2024-03-09 02:30:00') AS v, typeof(timestampadd(DAY, 1, TIMESTAMP_NTZ'2024-03-09 02:30:00')) AS t",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T02:30:00",
+      "tzinfo": "None"
+     },
+     "timestamp_ntz"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-10 02:30:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    },
+    {
+     "name": "t",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(DAY, 1, TIMESTAMP_NTZ'2024-03-09 02:30:00') AS v, typeof(timestampadd(DAY, 1, TIMESTAMP_NTZ'2024-03-09 02:30:00')) AS t",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T02:30:00",
+      "tzinfo": "None"
+     },
+     "timestamp_ntz"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-10 02:30:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    },
+    {
+     "name": "t",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(DAY, 1, TIMESTAMP_NTZ'2024-03-09 02:30:00') AS v, typeof(timestampadd(DAY, 1, TIMESTAMP_NTZ'2024-03-09 02:30:00')) AS t",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T02:30:00",
+      "tzinfo": "None"
+     },
+     "timestamp_ntz"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-10 02:30:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    },
+    {
+     "name": "t",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(DAY, 1, TIMESTAMP_NTZ'2024-03-09 02:30:00') AS v, typeof(timestampadd(DAY, 1, TIMESTAMP_NTZ'2024-03-09 02:30:00')) AS t",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T02:30:00",
+      "tzinfo": "None"
+     },
+     "timestamp_ntz"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-10 02:30:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(MONTH, 1, TIMESTAMP_NTZ'2024-01-31 10:00:00') AS v",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-02-29T10:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-02-29 10:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(MONTH, 1, TIMESTAMP_NTZ'2024-01-31 10:00:00') AS v",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-02-29T10:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-02-29 10:00:00"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(MONTH, 1, TIMESTAMP_NTZ'2024-01-31 10:00:00') AS v",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-02-29T10:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-02-29 10:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(MONTH, 1, TIMESTAMP_NTZ'2024-01-31 10:00:00') AS v",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-02-29T10:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-02-29 10:00:00"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "timestampadd(HOUR, 1, make_timestamp_ntz(2024, 3, 10, 1, 30, 0))",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "python",
+   "expr": "F.timestamp_add('HOUR', lit(1), F.make_timestamp_ntz(lit(2024), lit(3), lit(10), lit(1), lit(30), lit(0)))",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T02:30:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-10 02:30:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "timestampadd(HOUR, 1, make_timestamp_ntz(2024, 3, 10, 1, 30, 0))",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "python",
+   "expr": "F.timestamp_add('HOUR', lit(1), F.make_timestamp_ntz(lit(2024), lit(3), lit(10), lit(1), lit(30), lit(0)))",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T02:30:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-10 02:30:00"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "timestampadd(HOUR, 1, make_timestamp_ntz(2024, 3, 10, 1, 30, 0))",
+     "nullable": true,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "python",
+   "expr": "F.timestamp_add('HOUR', lit(1), F.make_timestamp_ntz(lit(2024), lit(3), lit(10), lit(1), lit(30), lit(0)))",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T02:30:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-10 02:30:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "timestampadd(HOUR, 1, make_timestamp_ntz(2024, 3, 10, 1, 30, 0))",
+     "nullable": true,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "python",
+   "expr": "F.timestamp_add('HOUR', lit(1), F.make_timestamp_ntz(lit(2024), lit(3), lit(10), lit(1), lit(30), lit(0)))",
+   "finding": "L-001",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T02:30:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-10 02:30:00"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "d",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "h",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(DAY, TIMESTAMP'2024-03-10 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS d, timestampdiff(HOUR, TIMESTAMP'2024-03-10 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS h",
+   "finding": "L-002",
+   "rows": [
+    [
+     1,
+     24
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1",
+     "24"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "d",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "h",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(DAY, TIMESTAMP'2024-03-10 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS d, timestampdiff(HOUR, TIMESTAMP'2024-03-10 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS h",
+   "finding": "L-002",
+   "rows": [
+    [
+     1,
+     24
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1",
+     "24"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "d",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "h",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(DAY, TIMESTAMP'2024-03-10 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS d, timestampdiff(HOUR, TIMESTAMP'2024-03-10 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS h",
+   "finding": "L-002",
+   "rows": [
+    [
+     1,
+     24
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1",
+     "24"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "d",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "h",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(DAY, TIMESTAMP'2024-03-10 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS d, timestampdiff(HOUR, TIMESTAMP'2024-03-10 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS h",
+   "finding": "L-002",
+   "rows": [
+    [
+     1,
+     24
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1",
+     "24"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "w",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(WEEK, TIMESTAMP'2024-03-04 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS w",
+   "finding": "L-002",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "w",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(WEEK, TIMESTAMP'2024-03-04 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS w",
+   "finding": "L-002",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "w",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(WEEK, TIMESTAMP'2024-03-04 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS w",
+   "finding": "L-002",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "w",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(WEEK, TIMESTAMP'2024-03-04 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS w",
+   "finding": "L-002",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "d",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(DAY, TIMESTAMP'2024-11-02 12:00:00', TIMESTAMP'2024-11-03 12:00:00') AS d",
+   "finding": "L-002",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "d",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(DAY, TIMESTAMP'2024-11-02 12:00:00', TIMESTAMP'2024-11-03 12:00:00') AS d",
+   "finding": "L-002",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "d",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(DAY, TIMESTAMP'2024-11-02 12:00:00', TIMESTAMP'2024-11-03 12:00:00') AS d",
+   "finding": "L-002",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "d",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(DAY, TIMESTAMP'2024-11-02 12:00:00', TIMESTAMP'2024-11-03 12:00:00') AS d",
+   "finding": "L-002",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "d",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(DAY, TIMESTAMP_NTZ'2024-03-10 01:30:00', TIMESTAMP_NTZ'2024-03-11 01:30:00') AS d",
+   "finding": "L-002",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "d",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(DAY, TIMESTAMP_NTZ'2024-03-10 01:30:00', TIMESTAMP_NTZ'2024-03-11 01:30:00') AS d",
+   "finding": "L-002",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "d",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(DAY, TIMESTAMP_NTZ'2024-03-10 01:30:00', TIMESTAMP_NTZ'2024-03-11 01:30:00') AS d",
+   "finding": "L-002",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "d",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(DAY, TIMESTAMP_NTZ'2024-03-10 01:30:00', TIMESTAMP_NTZ'2024-03-11 01:30:00') AS d",
+   "finding": "L-002",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "1"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(DAY, 1, TIMESTAMP'2024-03-10 01:30:00') AS v",
+   "finding": "L-002",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T21:30:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-11 01:30:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(DAY, 1, TIMESTAMP'2024-03-10 01:30:00') AS v",
+   "finding": "L-002",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-11T01:30:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-11 01:30:00"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(DAY, 1, TIMESTAMP'2024-03-10 01:30:00') AS v",
+   "finding": "L-002",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-10T21:30:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-11 01:30:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampadd(DAY, 1, TIMESTAMP'2024-03-10 01:30:00') AS v",
+   "finding": "L-002",
+   "rows": [
+    [
+     {
+      "datetime": "2024-03-11T01:30:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-03-11 01:30:00"
+    ]
+   ],
+   "tz": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "s",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CAST(try_make_interval(1, -2, 0, 3, -4, 5, 6.5) AS STRING) AS s",
+   "finding": "L-003",
+   "rows": [
+    [
+     "10 months 3 days -3 hours -54 minutes -53.5 seconds"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "10 months 3 days -3 hours -54 minutes -53.5 seconds"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "s",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CAST(try_make_interval(1, -2, 0, 3, -4, 5, 6.5) AS STRING) AS s",
+   "finding": "L-003",
+   "rows": [
+    [
+     "10 months 3 days -3 hours -54 minutes -53.5 seconds"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "10 months 3 days -3 hours -54 minutes -53.5 seconds"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "s",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CAST(make_interval(-1, 2, 0, -3, 4, -5, -6.5) AS STRING) AS s",
+   "finding": "L-003",
+   "rows": [
+    [
+     "-10 months -3 days 3 hours 54 minutes 53.5 seconds"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "-10 months -3 days 3 hours 54 minutes 53.5 seconds"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "s",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CAST(make_interval(-1, 2, 0, -3, 4, -5, -6.5) AS STRING) AS s",
+   "finding": "L-003",
+   "rows": [
+    [
+     "-10 months -3 days 3 hours 54 minutes 53.5 seconds"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "-10 months -3 days 3 hours 54 minutes 53.5 seconds"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "s",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "t",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CAST(make_interval(0, 0, 0, 0, 0, 0, -0.000001) AS STRING) AS s, CAST(make_interval(0, -1, 0, 1) AS STRING) AS t",
+   "finding": "L-003",
+   "rows": [
+    [
+     "-0.000001 seconds",
+     "-1 months 1 days"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "-0.000001 seconds",
+     "-1 months 1 days"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "s",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CAST(make_interval(0, 0, 0, 0, 0, 0, -0.000001) AS STRING) AS s, CAST(make_interval(0, -1, 0, 1) AS STRING) AS t",
+   "finding": "L-003",
+   "rows": [
+    [
+     "-0.000001 seconds",
+     "-1 months 1 days"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "-0.000001 seconds",
+     "-1 months 1 days"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "INVALID_TIMEZONE",
+   "error_type": "DateTimeException",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '+19:00') AS v",
+   "finding": "L-004",
+   "message": "[INVALID_TIMEZONE] The timezone: +19:00 is invalid. The timezone must be either a region-based zone ID or a zone offset. Region IDs must have the form 'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format '(+|-)HH', '(+|-)HH:mm\u2019 or '(+|-)HH:mm:ss', e.g '-08' , '+01:00' or '-13:33:33', and must be in the range from -18:00 to +18:00. 'Z' and 'UTC' are accepted as synonyms fo",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "INVALID_TIMEZONE",
+   "error_type": "DateTimeException",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '+19:00') AS v",
+   "finding": "L-004",
+   "message": "[INVALID_TIMEZONE] The timezone: +19:00 is invalid. The timezone must be either a region-based zone ID or a zone offset. Region IDs must have the form 'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format '(+|-)HH', '(+|-)HH:mm\u2019 or '(+|-)HH:mm:ss', e.g '-08' , '+01:00' or '-13:33:33', and must be in the range from -18:00 to +18:00. 'Z' and 'UTC' are accepted as synonyms fo",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "INVALID_TIMEZONE",
+   "error_type": "DateTimeException",
+   "expr": "SELECT convert_timezone('+19:00', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-004",
+   "message": "[INVALID_TIMEZONE] The timezone: +19:00 is invalid. The timezone must be either a region-based zone ID or a zone offset. Region IDs must have the form 'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format '(+|-)HH', '(+|-)HH:mm\u2019 or '(+|-)HH:mm:ss', e.g '-08' , '+01:00' or '-13:33:33', and must be in the range from -18:00 to +18:00. 'Z' and 'UTC' are accepted as synonyms fo",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "INVALID_TIMEZONE",
+   "error_type": "DateTimeException",
+   "expr": "SELECT convert_timezone('+19:00', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-004",
+   "message": "[INVALID_TIMEZONE] The timezone: +19:00 is invalid. The timezone must be either a region-based zone ID or a zone offset. Region IDs must have the form 'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format '(+|-)HH', '(+|-)HH:mm\u2019 or '(+|-)HH:mm:ss', e.g '-08' , '+01:00' or '-13:33:33', and must be in the range from -18:00 to +18:00. 'Z' and 'UTC' are accepted as synonyms fo",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "INVALID_TIMEZONE",
+   "error_type": "DateTimeException",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '+18:01') AS v",
+   "finding": "L-004",
+   "message": "[INVALID_TIMEZONE] The timezone: +18:01 is invalid. The timezone must be either a region-based zone ID or a zone offset. Region IDs must have the form 'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format '(+|-)HH', '(+|-)HH:mm\u2019 or '(+|-)HH:mm:ss', e.g '-08' , '+01:00' or '-13:33:33', and must be in the range from -18:00 to +18:00. 'Z' and 'UTC' are accepted as synonyms fo",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "INVALID_TIMEZONE",
+   "error_type": "DateTimeException",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '+18:01') AS v",
+   "finding": "L-004",
+   "message": "[INVALID_TIMEZONE] The timezone: +18:01 is invalid. The timezone must be either a region-based zone ID or a zone offset. Region IDs must have the form 'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format '(+|-)HH', '(+|-)HH:mm\u2019 or '(+|-)HH:mm:ss', e.g '-08' , '+01:00' or '-13:33:33', and must be in the range from -18:00 to +18:00. 'Z' and 'UTC' are accepted as synonyms fo",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "INVALID_TIMEZONE",
+   "error_type": "DateTimeException",
+   "expr": "SELECT convert_timezone('+18:01', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-004",
+   "message": "[INVALID_TIMEZONE] The timezone: +18:01 is invalid. The timezone must be either a region-based zone ID or a zone offset. Region IDs must have the form 'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format '(+|-)HH', '(+|-)HH:mm\u2019 or '(+|-)HH:mm:ss', e.g '-08' , '+01:00' or '-13:33:33', and must be in the range from -18:00 to +18:00. 'Z' and 'UTC' are accepted as synonyms fo",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "INVALID_TIMEZONE",
+   "error_type": "DateTimeException",
+   "expr": "SELECT convert_timezone('+18:01', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-004",
+   "message": "[INVALID_TIMEZONE] The timezone: +18:01 is invalid. The timezone must be either a region-based zone ID or a zone offset. Region IDs must have the form 'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format '(+|-)HH', '(+|-)HH:mm\u2019 or '(+|-)HH:mm:ss', e.g '-08' , '+01:00' or '-13:33:33', and must be in the range from -18:00 to +18:00. 'Z' and 'UTC' are accepted as synonyms fo",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "INVALID_TIMEZONE",
+   "error_type": "DateTimeException",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '-18:01') AS v",
+   "finding": "L-004",
+   "message": "[INVALID_TIMEZONE] The timezone: -18:01 is invalid. The timezone must be either a region-based zone ID or a zone offset. Region IDs must have the form 'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format '(+|-)HH', '(+|-)HH:mm\u2019 or '(+|-)HH:mm:ss', e.g '-08' , '+01:00' or '-13:33:33', and must be in the range from -18:00 to +18:00. 'Z' and 'UTC' are accepted as synonyms fo",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "INVALID_TIMEZONE",
+   "error_type": "DateTimeException",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '-18:01') AS v",
+   "finding": "L-004",
+   "message": "[INVALID_TIMEZONE] The timezone: -18:01 is invalid. The timezone must be either a region-based zone ID or a zone offset. Region IDs must have the form 'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format '(+|-)HH', '(+|-)HH:mm\u2019 or '(+|-)HH:mm:ss', e.g '-08' , '+01:00' or '-13:33:33', and must be in the range from -18:00 to +18:00. 'Z' and 'UTC' are accepted as synonyms fo",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "INVALID_TIMEZONE",
+   "error_type": "DateTimeException",
+   "expr": "SELECT convert_timezone('-18:01', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-004",
+   "message": "[INVALID_TIMEZONE] The timezone: -18:01 is invalid. The timezone must be either a region-based zone ID or a zone offset. Region IDs must have the form 'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format '(+|-)HH', '(+|-)HH:mm\u2019 or '(+|-)HH:mm:ss', e.g '-08' , '+01:00' or '-13:33:33', and must be in the range from -18:00 to +18:00. 'Z' and 'UTC' are accepted as synonyms fo",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "INVALID_TIMEZONE",
+   "error_type": "DateTimeException",
+   "expr": "SELECT convert_timezone('-18:01', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-004",
+   "message": "[INVALID_TIMEZONE] The timezone: -18:01 is invalid. The timezone must be either a region-based zone ID or a zone offset. Region IDs must have the form 'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format '(+|-)HH', '(+|-)HH:mm\u2019 or '(+|-)HH:mm:ss', e.g '-08' , '+01:00' or '-13:33:33', and must be in the range from -18:00 to +18:00. 'Z' and 'UTC' are accepted as synonyms fo",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '+18:00') AS v",
+   "finding": "L-004",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T01:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 06:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '+18:00') AS v",
+   "finding": "L-004",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T01:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 06:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('+18:00', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-004",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T06:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 06:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('+18:00', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-004",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T06:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 06:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '-18:00') AS v",
+   "finding": "L-004",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T13:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 18:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '-18:00') AS v",
+   "finding": "L-004",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T13:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 18:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('-18:00', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-004",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T18:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 18:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('-18:00', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-004",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T18:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 18:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, 'GMT+1') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T18:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 23:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, 'GMT+1') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T18:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 23:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('GMT+1', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T23:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 23:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('GMT+1', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T23:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 23:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, 'GMT-05:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T00:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 05:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, 'GMT-05:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T00:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 05:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('GMT-05:00', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T05:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 05:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('GMT-05:00', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T05:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 05:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '+05:30:15') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T13:29:45",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 18:29:45"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '+05:30:15') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T13:29:45",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 18:29:45"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('+05:30:15', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T18:29:45",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 18:29:45"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('+05:30:15', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T18:29:45",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 18:29:45"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, 'UTC+2') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T17:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 22:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, 'UTC+2') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T17:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 22:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('UTC+2', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T22:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 22:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('UTC+2', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T22:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 22:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, 'GMT') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T19:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 00:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, 'GMT') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T19:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 00:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('GMT', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T00:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 00:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('GMT', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T00:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 00:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, 'Z') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T19:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 00:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, 'Z') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T19:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 00:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('Z', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T00:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 00:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('Z', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T00:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 00:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '+5') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T14:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 19:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '+5') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T14:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 19:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('+5', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T19:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 19:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('+5', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2023-12-31T19:00:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2023-12-31 19:00:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '-0530') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T00:30:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 05:30:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 0, '-0530') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T00:30:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 05:30:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('-0530', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T05:30:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 05:30:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": false,
+     "type": "timestamp_ntz"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT convert_timezone('-0530', 'UTC', TIMESTAMP_NTZ'2024-01-01 00:00:00') AS v",
+   "finding": "L-007",
+   "rows": [
+    [
+     {
+      "datetime": "2024-01-01T05:30:00",
+      "tzinfo": "None"
+     }
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "2024-01-01 05:30:00"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "a",
+     "nullable": true,
+     "type": "timestamp"
+    },
+    {
+     "name": "b",
+     "nullable": true,
+     "type": "timestamp"
+    },
+    {
+     "name": "c",
+     "nullable": true,
+     "type": "timestamp"
+    },
+    {
+     "name": "d",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT try_make_timestamp(2024, 1, 1, 0, 0, 61) AS a, try_make_timestamp(2024, 1, 1, 0, 0, 60.5) AS b, try_make_timestamp(2024, 1, 1, 0, 0, -1) AS c, try_make_timestamp(2024, 1, 1, 0, 0, 99999999.999999) AS d",
+   "finding": "L-008",
+   "rows": [
+    [
+     null,
+     null,
+     null,
+     null
+    ]
+   ],
+   "rows_as_string": [
+    [
+     null,
+     null,
+     null,
+     null
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "a",
+     "nullable": true,
+     "type": "timestamp"
+    },
+    {
+     "name": "b",
+     "nullable": true,
+     "type": "timestamp"
+    },
+    {
+     "name": "c",
+     "nullable": true,
+     "type": "timestamp"
+    },
+    {
+     "name": "d",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT try_make_timestamp(2024, 1, 1, 0, 0, 61) AS a, try_make_timestamp(2024, 1, 1, 0, 0, 60.5) AS b, try_make_timestamp(2024, 1, 1, 0, 0, -1) AS c, try_make_timestamp(2024, 1, 1, 0, 0, 99999999.999999) AS d",
+   "finding": "L-008",
+   "rows": [
+    [
+     null,
+     null,
+     null,
+     null
+    ]
+   ],
+   "rows_as_string": [
+    [
+     null,
+     null,
+     null,
+     null
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "DATETIME_FIELD_OUT_OF_BOUNDS.WITH_SUGGESTION",
+   "error_type": "DateTimeException",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 61) AS a",
+   "finding": "L-008",
+   "message": "[DATETIME_FIELD_OUT_OF_BOUNDS.WITH_SUGGESTION] Invalid value for SecondOfMinute (valid values 0 - 59): 61. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22023",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "a",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2024, 1, 1, 0, 0, 61) AS a",
+   "finding": "L-008",
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "rows_as_string": [
+    [
+     null
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "NOT_IMPLEMENTED",
+   "error_type": "PySparkNotImplementedError",
+   "expr": "F.try_make_interval()",
+   "finding": "L-009",
+   "message": "[NOT_IMPLEMENTED] CalendarIntervalType.fromInternal is not implemented.",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "NOT_IMPLEMENTED",
+   "error_type": "PySparkNotImplementedError",
+   "expr": "F.try_make_interval()",
+   "finding": "L-009",
+   "message": "[NOT_IMPLEMENTED] CalendarIntervalType.fromInternal is not implemented.",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT try_make_interval() AS v",
+   "finding": "L-009",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `try_make_interval` requires [1, 2, 3, 4, 5, 6, 7] parameters but the actual number is 0. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT try_make_interval() AS v",
+   "finding": "L-009",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `try_make_interval` requires [1, 2, 3, 4, 5, 6, 7] parameters but the actual number is 0. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7",
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CAST(try_make_interval(0) AS STRING) AS v",
+   "finding": "L-009",
+   "rows": [
+    [
+     "0 seconds"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "0 seconds"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CAST(try_make_interval(0) AS STRING) AS v",
+   "finding": "L-009",
+   "rows": [
+    [
+     "0 seconds"
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "0 seconds"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "m1",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "m2",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "y1",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "y2",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(MONTH, TIMESTAMP'2024-01-31 12:00:00', TIMESTAMP'2024-02-29 11:00:00') AS m1, timestampdiff(MONTH, TIMESTAMP'2024-01-31 12:00:00', TIMESTAMP'2024-02-29 13:00:00') AS m2, timestampdiff(YEAR, TIMESTAMP'2023-03-01 12:00:00', TIMESTAMP'2024-03-01 11:59:59') AS y1, timestampdiff(YEAR, TIMESTAMP'2023-03-01 12:00:00', TIMESTAMP'2024-03-01 12:00:00') AS y2",
+   "finding": "L-010",
+   "rows": [
+    [
+     0,
+     0,
+     0,
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "0",
+     "0",
+     "0",
+     "1"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "m1",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "m2",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "y1",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "y2",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(MONTH, TIMESTAMP'2024-01-31 12:00:00', TIMESTAMP'2024-02-29 11:00:00') AS m1, timestampdiff(MONTH, TIMESTAMP'2024-01-31 12:00:00', TIMESTAMP'2024-02-29 13:00:00') AS m2, timestampdiff(YEAR, TIMESTAMP'2023-03-01 12:00:00', TIMESTAMP'2024-03-01 11:59:59') AS y1, timestampdiff(YEAR, TIMESTAMP'2023-03-01 12:00:00', TIMESTAMP'2024-03-01 12:00:00') AS y2",
+   "finding": "L-010",
+   "rows": [
+    [
+     0,
+     0,
+     0,
+     1
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "0",
+     "0",
+     "0",
+     "1"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "m",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "q",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(MONTH, TIMESTAMP'2024-01-15 10:00:00', TIMESTAMP'2024-02-15 09:59:59') AS m, timestampdiff(QUARTER, TIMESTAMP'2024-01-15 10:00:00', TIMESTAMP'2024-04-15 09:59:59') AS q",
+   "finding": "L-010",
+   "rows": [
+    [
+     0,
+     0
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "0",
+     "0"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "m",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "q",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT timestampdiff(MONTH, TIMESTAMP'2024-01-15 10:00:00', TIMESTAMP'2024-02-15 09:59:59') AS m, timestampdiff(QUARTER, TIMESTAMP'2024-01-15 10:00:00', TIMESTAMP'2024-04-15 09:59:59') AS q",
+   "finding": "L-010",
+   "rows": [
+    [
+     0,
+     0
+    ]
+   ],
+   "rows_as_string": [
+    [
+     "0",
+     "0"
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "DATETIME_FIELD_OUT_OF_BOUNDS.WITH_SUGGESTION",
+   "error_type": "DateTimeException",
+   "expr": "SELECT make_timestamp(2147483647, 1, 1, 0, 0, 0) AS v",
+   "finding": "L-011",
+   "message": "[DATETIME_FIELD_OUT_OF_BOUNDS.WITH_SUGGESTION] Invalid value for Year (valid values -999999999 - 999999999): 2147483647. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22023",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "timestamp"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT make_timestamp(2147483647, 1, 1, 0, 0, 0) AS v",
+   "finding": "L-011",
+   "rows": [
+    [
+     null
+    ]
+   ],
+   "rows_as_string": [
+    [
+     null
+    ]
+   ],
+   "tz": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": null,
+   "error_type": "ArithmeticException",
+   "expr": "SELECT make_timestamp(275760, 1, 1, 0, 0, 0) AS v, make_timestamp(-290309, 1, 1, 0, 0, 0) AS w",
+   "finding": "L-011",
+   "message": "long overflow",
+   "tz": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": null,
+   "error_type": "ArithmeticException",
+   "expr": "SELECT make_timestamp(275760, 1, 1, 0, 0, 0) AS v, make_timestamp(-290309, 1, 1, 0, 0, 0) AS w",
+   "finding": "L-011",
+   "message": "long overflow",
+   "tz": "UTC"
+  }
+ ],
+ "recorded": "2026-09-15 live PySpark 4.1.2 (run 15a, FNP-11A round-2 findings)",
+ "spark_version": "4.1.2"
+}

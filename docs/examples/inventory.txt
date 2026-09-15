@@ -349,6 +349,7 @@ functions	F.column
 functions	F.concat
 functions	F.concat_ws
 functions	F.contains
+functions	F.convert_timezone
 functions	F.corr
 functions	F.cos
 functions	F.cosh
@@ -490,6 +491,7 @@ functions	F.like
 functions	F.listagg
 functions	F.lit
 functions	F.ln
+functions	F.localtimestamp
 functions	F.locate
 functions	F.log
 functions	F.log10
@@ -502,7 +504,10 @@ functions	F.make_date
 functions	F.make_dt_interval
 functions	F.make_interval
 functions	F.make_timestamp
+functions	F.make_timestamp_ltz
+functions	F.make_timestamp_ntz
 functions	F.make_valid_utf8
+functions	F.make_ym_interval
 functions	F.map_concat
 functions	F.map_contains_key
 functions	F.map_entries
@@ -651,6 +656,8 @@ functions	F.theta_sketch_agg
 functions	F.theta_sketch_estimate
 functions	F.theta_union
 functions	F.theta_union_agg
+functions	F.timestamp_add
+functions	F.timestamp_diff
 functions	F.timestamp_micros
 functions	F.timestamp_millis
 functions	F.timestamp_seconds
@@ -674,6 +681,10 @@ functions	F.try_add
 functions	F.try_avg
 functions	F.try_divide
 functions	F.try_element_at
+functions	F.try_make_interval
+functions	F.try_make_timestamp
+functions	F.try_make_timestamp_ltz
+functions	F.try_make_timestamp_ntz
 functions	F.try_mod
 functions	F.try_multiply
 functions	F.try_parse_json

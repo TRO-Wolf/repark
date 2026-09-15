@@ -84,6 +84,7 @@ FUNCTIONS_INSTALLER_SOURCES: tuple[str, ...] = (
     "python/repark/src/repark/spark/functions_math.py",
     "python/repark/src/repark/spark/functions_byname.py",
     "python/repark/src/repark/spark/functions_arrow_udf.py",
+    "python/repark/src/repark/spark/functions_temporal.py",
 )
 FUNCTION_EXPORT_BINDINGS: frozenset[str] = frozenset(
     {
@@ -98,6 +99,7 @@ FUNCTION_EXPORT_BINDINGS: frozenset[str] = frozenset(
         "INSTALL_NAMES",
         "BYNAME_NAMES",
         "ARROW_EXPORTS",
+        "FNP11A_EXPORTS",
     }
 )
 FUNCTION_EXPORT_DICT_KEYS: frozenset[str] = frozenset({"FNP15_MESSAGES"})
