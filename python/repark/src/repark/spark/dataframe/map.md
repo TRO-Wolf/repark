@@ -175,6 +175,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   belongs to a Rust unit) and the `_schema_override` sticker (R-6 — the
   narrow-width divergence `to(…smallint)` reports is LOGICAL-WIDTH-1).
   pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005
+  **COLUMN-PARITY-1 (2026-09-15):** `to()` and `withMetadata` keep passing `alias(name, metadata=)`; with the column overlay the stamp, replace, cache and `to()` target-override positions answer Spark, and DF-METADATA-1 narrows to the positions a plan transform still loses (an earlier plain-rename repair in this branch was reverted).
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
   `toLocalIterator`. Two converters live here: `rows_from_arrow_table_python` is the unchanged
   pure-Python path and stays the correctness oracle, and `rows_from_arrow_table` adds the

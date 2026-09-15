@@ -102,6 +102,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `clusterBy_*` / `v2_clusterBy_*` cells this unit pins plus the `text_*` / `xml_*` /
   `orc_*` / `jdbc_*` / `na_replace_*` cells owned by other runs of the same oracle
   recording.
+  **COLUMN-PARITY-1 (2026-09-15):** with `alias(name, metadata=)` surfacing on `schema`, the stamp, replace, cache and `to()` target-override positions answer Spark and are re-pinned; DF-METADATA-1 narrows to the transform positions and `to()` source-keep. pins: df-surface-a-1/C-008
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
   / `Row.index` answer the nine `row.*` cells of the committed run-15b oracle
   ([facade_row_oracle.json](facade_row_oracle.json), live PySpark 4.1.2) — value counts

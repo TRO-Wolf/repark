@@ -137,3 +137,13 @@ VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
 - The parity-audit skill's live tier (JVM banner, `make parity-live`) stays with the
   orchestrator; every Spark-side wording above is labeled UNMEASURED for the next
   oracle round. pins: column-parity-1/C-009
+
+## Orchestrator rulings after round 2 (run 15b, G-2)
+
+- R-5 (2026-09-15): round 2's rebase repair stripped `metadata=` from `DataFrame.to` and `withMetadata` (merged DF-SURFACE-A-1) so
+  that the DF-METADATA-1 loss pins stayed green. That removed Spark-matching behaviour to preserve a BACKLOG pin — the registry's
+  retirement rule runs the other way. The orchestrator reverted both hunks, measured every position with this branch's alias
+  metadata (stamp `{"k": "v"}`, replace `{"j": 1}`, cache `{"k": "v"}`, `to()` target override `{"tgt": "2"}` now answer Spark;
+  `filter`, `select`, `withColumn`, `join`, `union`, parquet round trip and `to()` source-keep still `{}`), re-pinned the four
+  Spark-matching positions and narrowed DF-METADATA-1 to the rest. pins: column-parity-1/C-009
+

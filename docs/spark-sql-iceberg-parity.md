@@ -7873,34 +7873,29 @@ field NAME.
   to decide the footer, and the eager doors ran a bridged UDF over every
   row twice. Cells: `docs/perf/eager-preview-baseline.md`.
 
-### DF-METADATA-1 — `withMetadata` / `to` field metadata drops at every position
+### DF-METADATA-1 — `withMetadata` / `to` field metadata drops after a plan transform — **BACKLOG 2026-09-14, narrowed 2026-09-15**
 
-- **repark** — `df.withMetadata("a", {"k": "v"}).schema["a"].metadata` answers
-  `{}`, and the same loss holds on every position measured: the stamped frame,
-  `filter`, `select`, `withColumn`, `join`, `union`, `cache`/eager
-  materialization, a parquet write/read round trip, and both `to()` arms
-  (source-keep and non-empty target override). `withMetadata` / `to` project a
-  plain rename, so the stamped dict drops — there is no StructField
-  metadata plumbing on the native path (`logical_schema_fields` carries
-  name/type/nullable only; `PyColumnParts.alias` takes no metadata). (A user-spelled
-  `Column.alias(name, metadata=)` / `name(name, metadata=)` still surfaces on `schema`
-  through the column-parity-1 overlay, pinned by `test_name_metadata`.)
-- **Apache Spark** — `withMetadata` is a Dataset plan node and the dict
-  survives plan transforms; `to()` keeps a source field's metadata unless the
-  target field carries non-empty metadata (`dataframe.py` 2431-2432).
-  *(oracle: live PySpark 4.1.2, cells `withMetadata` / `withMetadata_replaces`
-  / `withMetadata_order`, 2026-09-14; the transform-survival positions are
-  documented in Spark's `withMetadata` semantics, not live-measured.)*
+- **repark** — the stamped frame answers Spark: `df.withMetadata("a", {"k": "v"}).schema["a"].metadata` is `{"k": "v"}`, a second
+  `withMetadata` replaces the dict, a cached frame keeps it, and `to()` with a non-empty target field metadata carries the target's
+  dict (narrowed 2026-09-15: COLUMN-PARITY-1 made `alias(name, metadata=)` surface on `schema`). The dict still drops at every plan
+  transform measured: `filter`, `select`, `withColumn`, `join`, `union`, a parquet write/read round trip, and `to()`'s source-keep
+  arm (a target field without metadata does not inherit the source field's dict). The native path carries name/type/nullable only
+  through `logical_schema_fields`; the facade overlay keeps the dict on the frame that stamped it.
+- **Apache Spark** — `withMetadata` is a Dataset plan node and the dict survives plan transforms; `to()` keeps a source field's
+  metadata unless the target field carries non-empty metadata (`dataframe.py` 2431-2432).
+  *(oracle: live PySpark 4.1.2, cells `withMetadata` / `withMetadata_replaces` / `withMetadata_order`, 2026-09-14; the
+  transform-survival positions are documented in Spark's `withMetadata` semantics, not live-measured.)*
 - **Pin** —
-  `python/repark/tests/test_df_surface_a_1.py::test_with_metadata_dropped_at_stamp_df_metadata_1`,
-  `...::test_with_metadata_dropped_across_positions_df_metadata_1`,
-  `...::test_to_metadata_arms_drop_df_metadata_1` (each codifies today's `{}`).
-- **Rationale** — BACKLOG, filed 2026-09-14 (DF-SURFACE-A-1 critic round 1,
-  ruling R-7). The fix is engine-side field-metadata plumbing; the facade
-  already routes every stamp through `alias(metadata=)` so the dict flows the
-  moment the native path accepts it.
+  `python/repark/tests/test_df_surface_a_1.py::test_with_metadata_dropped_across_positions_df_metadata_1`,
+  `python/repark/tests/test_df_surface_a_1.py::test_to_metadata_arms_df_metadata_1` (the lossy positions codify today's `{}`;
+  the Spark-matching positions are pinned by `test_with_metadata_stamp_and_replace_answer_spark` and the cache / target-override
+  assertions).
+- **Rationale** — BACKLOG, filed 2026-09-14 (DF-SURFACE-A-1 critic round 1, ruling R-7), narrowed 2026-09-15 by COLUMN-PARITY-1
+  when the stamp, replace, cache and target-override pins went red on purpose. The rest is engine-side field-metadata plumbing
+  through plan transforms.
   pins: df-surface-a-1/C-008
 ### FNP-MISC-1-COMP-1 — `arrow_udf(...)` mid-expression composition refuses
+### SQL-IN-1 — a mixed-type `IN` list refuses with a different error class
 
 - **repark** — `UnsupportedOperationException`: `pandas_udf result cannot be used in
   arithmetic (+) in repark v1 (facade projection-rewrite bridge only; not a Column
