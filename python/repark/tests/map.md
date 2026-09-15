@@ -1901,7 +1901,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   discovery with the bare globs staying `value`-only (L-205 as filed);
   `lead_zero_*`, `plus_sign`, `negative`, `int_overflow_to_bigint`,
   `decimal_text` pin today's inference (L-201 closed).
-  pins: io-text-1/C-001, C-002, C-003, C-004, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9, U-1, U-2, U-3, U-4, U-5, U-6, U-9, U-10, U-11, W-1, W-2, W-3, W-4, W-5, V-1, V-2
+  **Round 5 (2026-09-15, X-1/X-2/X-3):** the probe5 cells land as `text_probe5_*`
+  in the new file `test_io_text_2.py` (`test_io_text_1.py` sits at its ceiling):
+  raw-text overlay pins (string keeps `007`/`1.50`/`2024-01-02`, date parses,
+  timestamp is midnight session zone, decimal keeps scale, default stays NULL),
+  uneven-depth and non-leaf layouts refuse before any row, `_SUCCESS`-only
+  non-leaf dirs read the leaf.
+  pins: io-text-1/C-001, C-002, C-003, C-004, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9, U-1, U-2, U-3, U-4, U-5, U-6, U-9, U-10, U-11, W-1, W-2, W-3, W-4, W-5, V-1, V-2, X-1, X-2, X-3
 - `test_column_x1_census.py` — X1: Column between/pow/string/bitwise/eqNullSafe/lit temporal + trig;
   octo C1: bitwiseOR/XOR values, lit(time)/lit(list)/empty array, hypot 3-4-5, dayname(date);
   octo C2: eqNullSafe(None), between inclusive/inverted;

@@ -73,16 +73,22 @@ honestly"). SQL routing and session-build registration are seam-inverted
   win over root files), and Hadoop globs (bare globs discover nothing, `basePath`
   discovers beneath it); universal / custom separators, wholetext, lossy UTF-8,
   ≤8 file-group partitions, limit threaded into the scanner.
-  pins: io-text-1/C-001, T-1, T-3, T-5, T-6, T-8, W-2, W-4
+  Battery beside it in [`src/text_scan/`](src/text_scan/map.md) (round 5,
+  ruling X-1).
+  pins: io-text-1/C-001, T-1, T-3, T-5, T-6, T-8, W-2, W-4, X-1
 - `src/text_schema.rs` — **IO-TEXT-1 round 4 (2026-09-15):** the user-schema
   overlay beside the scan (split from `text_scan.rs` at the 1000-line ceiling):
   the user schema is the data schema with discovered columns appended after it,
   named partition types override inference, bad casts refuse
-  `INVALID_PARTITION_VALUE` `42846`. pins: io-text-1/W-1
+  `INVALID_PARTITION_VALUE` `42846`. Round 5 (ruling X-1): a named column
+  parses the raw unescaped directory text under the user type — string keeps
+  the raw, date parses `yyyy-MM-dd`, timestamp is midnight in the session
+  zone, decimal keeps its scale. pins: io-text-1/W-1, X-1
 - `src/partition_discovery.rs` — shared hive discovery (IO-ORC-1 reuses it):
   `%XX` unescape, default-marker NULL, int → bigint → double → date ladder,
-  same-depth name lists refuse `CONFLICTING_PARTITION_COLUMN_NAMES` `KD009`.
-  pins: io-text-1/U-3, W-3
+  per-file raw texts beside the inferred values; name lists that differ at any
+  depth refuse `CONFLICTING_PARTITION_COLUMN_NAMES` `KD009` (round 5, rulings
+  X-1/X-2/X-3). pins: io-text-1/U-3, W-3, X-1, X-2, X-3
 - `src/text_glob.rs` — hand-written Hadoop glob matcher (`*?[]{}`, no `/`
   crossing, char-aware) with no new dependency; unmatched globs answer
   `PATH_NOT_FOUND` from the scan. pins: io-text-1/T-5

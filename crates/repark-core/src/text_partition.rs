@@ -61,7 +61,7 @@ fn escape_partition_value(text: &str) -> Result<String> {
     })
 }
 
-fn decimal_plain_text(scaled: i128, scale: i8) -> Result<String> {
+pub(crate) fn decimal_plain_text(scaled: i128, scale: i8) -> Result<String> {
     if scale <= 0 {
         let mut text = scaled.to_string();
         for _ in scale..0 {

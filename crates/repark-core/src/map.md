@@ -333,7 +333,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   V-2):** the user-schema overlay lives in `text_schema.rs` (this module passes
   the pairs plus `basePath` through); partitioned leaves win over root files;
   bare globs discover nothing while `basePath` globs discover beneath the base;
-  the partition-dir walk is an explicit stack.
+  the partition-dir walk is an explicit stack. **Round 5 (2026-09-15, X-1):**
+  the battery moves verbatim to [`text_scan/`](text_scan/map.md).
 - `text_glob.rs` — **IO-TEXT-1 follow-up (2026-09-15):** hand-written Hadoop glob
   matcher (`*?[]{}`, no `/` crossing, char-aware, brace nesting capped, no new
   dependency) with matcher unit tests. **Round 3 (2026-09-15, U-5/U-6):** each

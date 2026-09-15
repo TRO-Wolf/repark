@@ -1085,6 +1085,179 @@
     "sqlstate": "42846"
    }
   },
+  "text_probe5_date_inferred": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', datetime.date(2024, 1, 2))"
+    ],
+    "schema": "struct<value:string,k:date>"
+   }
+  },
+  "text_probe5_date_schema_date": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', datetime.date(2024, 1, 2))"
+    ],
+    "schema": "struct<value:string,k:date>"
+   }
+  },
+  "text_probe5_date_schema_string": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', '2024-01-02')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe5_date_schema_timestamp": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', datetime.datetime(2024, 1, 1, 19, 0))"
+    ],
+    "schema": "struct<value:string,k:timestamp>"
+   }
+  },
+  "text_probe5_dec_schema_decimal": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('dec', Decimal('1.50'))"
+    ],
+    "schema": "struct<value:string,k:decimal(10,2)>"
+   }
+  },
+  "text_probe5_dec_schema_double": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('dec', 1.5)"
+    ],
+    "schema": "struct<value:string,k:double>"
+   }
+  },
+  "text_probe5_dec_schema_string": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('dec', '1.50')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe5_default_partition_schema_int": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('nul', None)"
+    ],
+    "schema": "struct<value:string,k:int>"
+   }
+  },
+  "text_probe5_escaped_schema_string": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('esc', 'a/b')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe5_lead_schema_bigint": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('lead', 7)"
+    ],
+    "schema": "struct<value:string,k:bigint>"
+   }
+  },
+  "text_probe5_lead_schema_int": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('lead', 7)"
+    ],
+    "schema": "struct<value:string,k:int>"
+   }
+  },
+  "text_probe5_lead_schema_string": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('lead', '007')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe5_nonleaf_data_file": {
+   "error": {
+    "condition": "CONFLICTING_PARTITION_COLUMN_NAMES",
+    "message": "[CONFLICTING_PARTITION_COLUMN_NAMES] Conflicting partition column names detected:\n\n\tPartition column name list #0: k\n\tPartition column name list #1: k, n\n\nFor partitioned table directories, data files should only live in leaf directories.\nAnd directories at the same level should have the same partition column name.\nPlease check the following directories for unexpected files or inconsistent partition column names:\n\n\tfile:/tmp/qb-iotext5-syzlhb3j/nonleaf/k=x\n\tfile:/tmp/qb-iotext5-syzlhb3j/nonleaf/k=x/n=1 SQLSTATE: KD009",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "KD009"
+   }
+  },
+  "text_probe5_nonleaf_success_marker_only": {
+   "result": {
+    "columns": [
+     "value",
+     "k",
+     "n"
+    ],
+    "rows": [
+     "('leaf', 'x', 1)"
+    ],
+    "schema": "struct<value:string,k:string,n:int>"
+   }
+  },
+  "text_probe5_uneven_depth": {
+   "error": {
+    "condition": "CONFLICTING_PARTITION_COLUMN_NAMES",
+    "message": "[CONFLICTING_PARTITION_COLUMN_NAMES] Conflicting partition column names detected:\n\n\tPartition column name list #0: k\n\tPartition column name list #1: k, n\n\nFor partitioned table directories, data files should only live in leaf directories.\nAnd directories at the same level should have the same partition column name.\nPlease check the following directories for unexpected files or inconsistent partition column names:\n\n\tfile:/tmp/qb-iotext5-syzlhb3j/uneven/k=y\n\tfile:/tmp/qb-iotext5-syzlhb3j/uneven/k=x/n=1 SQLSTATE: KD009",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "KD009"
+   }
+  },
   "text_read_dir_glob": {
    "result": {
     "kind": "int",

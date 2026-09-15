@@ -339,3 +339,52 @@ RELEASE module.
 - Writer cap (V-1): append-on-evict holds one part per leaf past 256
   (k=1000 shuffled 200k rows: 1000 leaves, 1000 files, wall 1.736 s).
 - Walk (V-2): explicit-stack partition-dir walk; brace depth-16 cap kept.
+
+## Follow-up round 5 (2026-09-15) — probe5 rulings X-1/X-2/X-3 (run 16b)
+
+Oracle: `/tmp/oc-worker/qb-oracle/iotext_probe5_2026-09-15.json`
+(live PySpark 4.1.2, recorded 2026-09-15, script `probe_iotext5.py` beside
+it); every cell copied as `text_probe5_<cell>` into
+`python/repark/tests/facade_reader_writer_oracle.json` (15 cells, `meta`
+excluded, purely additive) and the new pins live in
+`python/repark/tests/test_io_text_2.py` (`test_io_text_1.py` sits at its
+1000-line ceiling). All three critic claims stand as filed.
+
+| R | Brief | Ruling and evidence |
+|---|---|---|
+| R-32 (X-1) | named partition columns parse the raw directory text | A user schema that names a partition column parses its value from the raw unescaped directory text under the user type, never from the inferred canonical text (`partition_discovery` keeps the raw beside the inferred value in every per-file record; `text_schema` recasts from the raw). `string` keeps `2024-01-02`, `007`, `1.50`, `a/b`; `date` parses `yyyy-MM-dd`; `timestamp` over a date-only value is midnight in the session time zone (full `yyyy-MM-dd HH:mm:ss[.fraction]` walls parse too); `decimal(10,2)` keeps scale (`1.50` → `Decimal128(150, 2)`); `int`/`bigint` parse `007` as 7; `__HIVE_DEFAULT_PARTITION__` stays NULL for every type; a value that does not parse keeps W-1's `INVALID_PARTITION_VALUE`. New engine types `Decimal128(i128, scale)` and `TimestampMicros(i64)` round-trip through canonical text into `Decimal128Array` / tz-aware `TimestampMicrosecondArray`. Pins: 12 `test_text_probe5_{date,lead,dec,escaped,default}_*` result pins plus Rust `partition_user_type_maps_probe_shapes`. |
+| R-33 (X-2) | uneven depth refuses | Leaves whose name lists differ at any depth refuse `CONFLICTING_PARTITION_COLUMN_NAMES` with Spark's message (`k` then `k, n`, each list's first leaf dir, sqlstate KD009) before any row is read: `discover_partitions` compares the global distinct-list set instead of per-depth buckets, ordered by (length, names). Pins: `test_text_probe5_uneven_depth` (plan-time raise, both list lines from the cell) plus Rust `partition_discovery_refuses_uneven_depth_name_lists`. |
+| R-34 (X-3) | non-leaf data files refuse; markers never count | A data file in a non-leaf partition directory beside a deeper leaf is the same conflict (`[k]` vs `[k,n]`) and refuses the same way. Hidden and `_`-prefixed files never count as data files (the walk already skips them): `nonleaf_success_marker_only` reads `leaf, x, 1` with `n` inferred int. Pins: `test_text_probe5_nonleaf_data_file`, `test_text_probe5_nonleaf_success_marker_only`, Rust `partition_discovery_refuses_nonleaf_data_file_name_lists`. The old `partition_discovery_maps_default...` fixture mixed `[k]` with `[n,b]` leaves and is now a conflicting layout; it pins the same assertions on one `[k,n,b]` leaf family instead. |
+
+Red-first round 5 C1 (new pins vs round-4 RELEASE .so):
+
+```text
+8 failed, 7 passed in 0.21s
+FAILED test_text_probe5_date_schema_string
+FAILED test_text_probe5_date_schema_date
+FAILED test_text_probe5_date_schema_timestamp
+FAILED test_text_probe5_lead_schema_string
+FAILED test_text_probe5_dec_schema_string
+FAILED test_text_probe5_dec_schema_decimal
+FAILED test_text_probe5_uneven_depth — DID NOT RAISE at plan time
+FAILED test_text_probe5_nonleaf_data_file — DID NOT RAISE at plan time
+```
+
+```text
+partition_discovery_refuses_uneven_depth_name_lists — unwrap_err on Ok
+  (fail-open: value,k,n with n=NULL on the shallow leaf)
+partition_discovery_refuses_nonleaf_data_file_name_lists — unwrap_err on Ok
+```
+
+Judgment calls round 5 C1: the timestamp pin asserts midnight session-zone
+wall (`datetime(2024,1,2,0,0)` under the default UTC session) with an
+instant cross-check against the oracle wall through libc `mktime` (the
+oracle repr is the box-local wall `datetime(2024,1,1,19,0)`; same instant —
+a bare `ZoneInfo` lookup is DST-fragile and the venv ships no `tzdata`);
+bare `decimal` and `timestamp_ntz` user spellings refuse loud with the
+existing unsupported-type error; `text_scan.rs` 997 → 669 by moving the
+battery verbatim to canonical `text_scan/tests.rs` plus `text_scan/map.md`
+(the round-5 call-site arg is the only behavior line added there);
+`user_partition_type` displays are owned `String`s now (`DECIMAL(10,2)`).
+`make verify` plus `test_io_text_1.py` 69/69 and `test_io_text_2.py` 15/15
+green on the RELEASE module.

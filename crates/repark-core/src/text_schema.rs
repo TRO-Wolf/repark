@@ -2,11 +2,12 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use arrow::array::timezone::Tz;
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 
 use crate::partition_discovery::{
-    DiscoveredPartitions, PartitionValue, canonical_partition_text, cast_raw_partition_value,
-    invalid_partition_message, user_partition_type,
+    DiscoveredPartitions, PartitionValue, cast_raw_partition_value, invalid_partition_message,
+    user_partition_type,
 };
 use crate::{Error, Result};
 
@@ -38,6 +39,7 @@ pub(crate) fn apply_user_text_schema(
     files: Vec<PathBuf>,
     partitions: DiscoveredPartitions,
     user_schema: Option<Vec<(String, String)>>,
+    session_zone: &str,
 ) -> Result<AppliedTextSchema> {
     let Some(user) = user_schema else {
         let schema = text_schema_with_partitions(&partitions.fields);
@@ -74,12 +76,14 @@ pub(crate) fn apply_user_text_schema(
     };
     let mut final_fields: Vec<Field> = Vec::with_capacity(partitions.fields.len());
     let mut final_types: Vec<DataType> = Vec::with_capacity(partitions.fields.len());
-    let mut displays: Vec<Option<&'static str>> = Vec::with_capacity(partitions.fields.len());
+    let mut displays: Vec<Option<String>> = Vec::with_capacity(partitions.fields.len());
     for field in &partitions.fields {
         let key = field.name().to_lowercase();
         if let Some((_, kind)) = lowered.get(&key) {
             let normalized = kind.to_lowercase();
-            let Some((arrow_type, display)) = user_partition_type(normalized.as_str()) else {
+            let Some((arrow_type, display)) =
+                user_partition_type(normalized.as_str(), session_zone)
+            else {
                 return Err(Error::Analysis(format!(
                     "text partition column `{}` has unsupported type `{kind}`",
                     field.name()
@@ -94,31 +98,34 @@ pub(crate) fn apply_user_text_schema(
             displays.push(None);
         }
     }
+    let zone: Tz = session_zone.parse().map_err(|error| {
+        Error::Analysis(format!(
+            "text read cannot parse session time zone {session_zone:?}: {error}"
+        ))
+    })?;
     let mut ordered_files = files;
     ordered_files.sort();
     let mut final_values: HashMap<PathBuf, Vec<PartitionValue>> = HashMap::new();
     for file in &ordered_files {
-        let empty: Vec<PartitionValue> = Vec::new();
-        let current = partitions.values.get(file).unwrap_or(&empty);
+        let empty_values: Vec<PartitionValue> = Vec::new();
+        let current = partitions.values.get(file).unwrap_or(&empty_values);
+        let empty_raw: Vec<Option<String>> = Vec::new();
+        let current_raw = partitions.raw.get(file).unwrap_or(&empty_raw);
         let mut row = Vec::with_capacity(final_fields.len());
         for (index, field) in final_fields.iter().enumerate() {
-            let text = current.get(index).and_then(canonical_partition_text);
-            if displays[index].is_none() {
+            let Some(display) = displays[index].as_deref() else {
                 let kept = current.get(index).cloned().unwrap_or(PartitionValue::Null);
                 row.push(kept);
                 continue;
-            }
-            let Some(display) = displays[index] else {
+            };
+            let raw = current_raw.get(index).and_then(|slot| slot.as_ref());
+            let Some(text) = raw else {
                 row.push(PartitionValue::Null);
                 continue;
             };
-            let Some(raw) = text else {
-                row.push(PartitionValue::Null);
-                continue;
-            };
-            let Some(typed) = cast_raw_partition_value(&raw, &final_types[index]) else {
+            let Some(typed) = cast_raw_partition_value(text, &final_types[index], zone) else {
                 return Err(Error::Iceberg(invalid_partition_message(
-                    &raw,
+                    text,
                     display,
                     field.name(),
                 )));
