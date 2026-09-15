@@ -90,6 +90,13 @@ GROUPED-SURFACE-1 (2026-09-14): the six new ``GroupedData`` names bind from
 class surface only — no ``EXPECTED_DATAFRAME_DIR`` change; the package gains
 exactly the two new module names ``grouped_arrow`` and ``cogroup`` while
 ``core`` binds neither.
+COLUMN-PARITY-1 step 1 (2026-09-14): ``DataFrame`` gains one slot
+(``_field_metadata``, the ``name(..., metadata=)`` StructField overlay), so
+``EXPECTED_DATAFRAME_SLOTS`` and ``EXPECTED_DATAFRAME_DIR`` each gain exactly
+that name; ``core`` binds ``column_fields`` (the deferred struct-edit /
+method-body module), so ``EXPECTED_NEW_CORE_SUBMODULES`` and
+``EXPECTED_NEW_PACKAGE_SUBMODULES`` each gain exactly ``_column_fields``;
+``_column_window_spec`` now imports from ``column_fields`` unchanged.
 """
 
 from __future__ import annotations

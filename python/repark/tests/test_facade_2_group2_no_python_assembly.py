@@ -6,6 +6,9 @@ import ast
 from pathlib import Path
 
 COLUMN_PATH = Path(__file__).resolve().parents[1] / "src" / "repark" / "spark" / "column.py"
+COLUMN_FIELDS_PATH = (
+    Path(__file__).resolve().parents[1] / "src" / "repark" / "spark" / "column_fields.py"
+)
 SRC_ROOT = Path(__file__).resolve().parents[1] / "src" / "repark"
 GENERIC_HELPERS: dict[str, frozenset[str]] = {
     "functions.py": frozenset({"lit", "_lit_numpy_ndarray", "_scalar"}),
@@ -58,11 +61,32 @@ def _column_class(tree: ast.Module) -> ast.ClassDef:
 
 
 def _group2_functions(column_class: ast.ClassDef) -> dict[str, ast.FunctionDef]:
-    """Map Group-2 method names to their AST function nodes."""
+    """Map Group-2 names to AST nodes, resolving `_column_fields` bindings. pins: facade-2/C-009"""
     found: dict[str, ast.FunctionDef] = {}
+    bound: dict[str, str] = {}
     for item in column_class.body:
         if isinstance(item, ast.FunctionDef) and item.name in GROUP2_METHODS:
             found[item.name] = item
+        if (
+            isinstance(item, ast.Assign)
+            and len(item.targets) == 1
+            and isinstance(item.targets[0], ast.Name)
+            and item.targets[0].id in GROUP2_METHODS
+            and isinstance(item.value, ast.Attribute)
+            and isinstance(item.value.value, ast.Name)
+            and item.value.value.id == "_column_fields"
+        ):
+            bound[item.targets[0].id] = item.value.attr
+    if bound:
+        fields_tree = ast.parse(
+            COLUMN_FIELDS_PATH.read_text(encoding="utf-8"),
+            filename=str(COLUMN_FIELDS_PATH),
+        )
+        for node in fields_tree.body:
+            if isinstance(node, ast.FunctionDef):
+                for bound_name, func_name in bound.items():
+                    if node.name == func_name:
+                        found[bound_name] = node
     return found
 
 

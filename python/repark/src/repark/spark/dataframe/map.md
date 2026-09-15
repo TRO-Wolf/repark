@@ -119,6 +119,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   overlay records each view's registration object for staleness checks; the file
   stays on its exact baseline (4044 → 4043, ratcheted down).
   pins: catalog-surface-1/C-009
+  COLUMN-PARITY-1 step 1 (2026-09-14): `select` and `filter` resolve pending
+  `withField`/`dropFields` columns (built in `spark.column_fields`) against the frame's
+  analyzed `logical_schema_fields()` — the struct is rebuilt through `getField` +
+  `PyColumn.make_struct` under `when(source.isNotNull(), …)` so NULL structs stay NULL,
+  and a `("item", key)` op recorded by `__getitem__`/`getField` applies after the
+  rebuild. `DataFrame` gains `_field_metadata`: `Column.name(..., metadata=…)` stores it
+  and `schema` overlays it on the projected `StructField`. `__str__` moved to
+  `column_fields` for baseline headroom and the module binds here for the select-hook
+  import. pins: column-parity-1/C-002, C-004, C-005
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`.
 - `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
   PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,
@@ -511,6 +520,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   control flow (`_format_polars_show`, `_display_type_labels_from_arrow`) and
   re-exports the spelling helpers; the spellings themselves live in
   `polars_cells.py`. pins: display-polars-1/C-005
+  COLUMN-PARITY-1 step 1 (2026-09-14): `_collapse_identity_projection_alias` propagates
+  the carried struct-edit/metadata attrs through `column_fields.carried_select_attrs`
+  and skips pending columns unchanged; the pending-check folds into the existing
+  early-return guard to hold the exact baseline. pins: column-parity-1/C-004
 - `polars_cells.py` owns every polars/duckdb cell and dtype spelling used by
   the show doors: `null` / lowercase bools / mixed-mode floats
   (shortest-expansion rules measured probe by probe against polars 1.43.2 —

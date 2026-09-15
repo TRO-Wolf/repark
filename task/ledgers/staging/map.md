@@ -4,6 +4,16 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [column-parity-1-ledger.md](column-parity-1-ledger.md) —
+  **COLUMN-PARITY-1 step 1 (2026-09-14), in flight:** the seven-name `Column`
+  surface — `isin`, `isNaN`, `astype`, `name`, `outer`, `withField`, `dropFields` —
+  driven by the `facade_column_oracle.json` cells; `withField`/`dropFields` resolve as
+  deferred select-boundary columns against `logical_schema_fields()` and rebuild the
+  struct through `getField` + `make_struct` + `when(isNotNull)`; two DECLARED rows
+  (COL-DROPFIELDS-TYPE-1, COL-ISIN-TUPLE-1) and five BACKLOG rows (SQL-IN-1,
+  SQL-ISNAN-1, COL-WITHFIELD-EMPTY-1, COL-NAME-MULTI-1, COL-DOTTED-FIELD-1).
+  `risk_tier: standard`. Branch `feat/column-parity-1`.
+  pins: column-parity-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`

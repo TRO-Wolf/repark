@@ -137,6 +137,15 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **FACADE-2 step 2b (2026-09-12):** `alias` keeps `sql_expr` as a Python passthrough
   (`self.sql_expr_part()` — reuse, not assembly) instead of round-tripping the string
   through Rust; the native `alias` returns `(PyColumn, spark_display)`. pins: facade-2/C-013
+- `column_fields.py` — **COLUMN-PARITY-1 (2026-09-14):** method bodies bound on
+  `Column` (kept out of `column.py`, which is at its exact line baseline):
+  `between` / `eqNullSafe` (extracted for headroom), `isin`, `isNaN`, `astype`,
+  `name`, `outer`, `withField`, `dropFields`, and the deferred struct-edit resolver
+  `resolve_struct_edit_column` — `withField` / `dropFields` build a pending column
+  carrying `(source, edits, display)` that `DataFrame.select` / `filter` resolve
+  against the frame's analyzed `logical_schema_fields()` (schema-aware, no row pull),
+  rebuilding the struct through `getField` + `make_struct` + `when(is_not_null)` so a
+  NULL parent stays NULL. pins: column-parity-1/C-001, C-002, C-003, C-004, C-005
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

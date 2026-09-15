@@ -25,9 +25,11 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
+from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
+from repark.spark.column_fields import column_window_spec as _column_window_spec
 from repark.spark.dataframe import cache_handle, streaming_batch, surface_a, surface_b
 from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
@@ -277,6 +279,7 @@ class DataFrame:
         "_display_names",
         "_eager_shape",
         "_engine_names",
+        "_field_metadata",
         "_handles",
         "_ingest_report",
         "_inner",
@@ -334,6 +337,7 @@ class DataFrame:
         self._plan_id: str = uuid.uuid4().hex[:12]
         self._display_names: list[str] | None = None
         self._engine_names: list[str] | None = None
+        self._field_metadata: dict[str, dict[str, Any]] | None = None
         self._join_qualifiers: list[str] | None = None
         self._origin_map: dict[tuple[str, str], str] | None = None
         self._origin_not_emitted: frozenset[str] = frozenset()
@@ -1252,6 +1256,7 @@ class DataFrame:
                 if "__REPARK_QCOL_" not in local_sql:
                     return self._spawn_preserving_identity(self._plan().filter_sql(local_sql))
             predicate = self._rebind_origin_column(condition)
+            predicate = _column_fields.resolve_struct_edit_column(self, predicate)
             return self._spawn_preserving_identity(self._plan().filter(predicate._inner))
         if isinstance(condition, str):
             quoted = self._quote_filter_sql_identifiers(condition)
@@ -1396,6 +1401,7 @@ class DataFrame:
                             origin_field=column._origin_field,
                             join_sql_expr=column._join_sql_expr,
                             sql_expr=column._sql_expr,
+                            **_column_fields.carried_select_attrs(column),
                         )
                     )
                     h1_display_names.append(name)
@@ -1418,6 +1424,9 @@ class DataFrame:
                 h1_origin_map = None
         else:
             projected = [_collapse_identity_projection_alias(column) for column in projected]
+        projected = [
+            _column_fields.resolve_struct_edit_column(self, column) for column in projected
+        ]
         aggregate_flags = [bool(column._is_aggregate) for column in projected]
         if aggregate_flags and any(aggregate_flags):
             if generators:
@@ -1466,6 +1475,7 @@ class DataFrame:
                 return sql_child
         natives = [column._inner for column in projected]
         child = self._spawn(self._plan().select(natives))
+        child._field_metadata = _column_fields.select_field_metadata(projected)
         if h1_multi_name and h1_display_names is not None:
             child._display_names = h1_display_names
             child._engine_names = h1_engine_names
@@ -1995,6 +2005,7 @@ class DataFrame:
             join_sql_expr=quoted,
             sort_ascending=column._sort_ascending,
             sort_nulls_first=column._sort_nulls_first,
+            **_column_fields.carried_select_attrs(column),
         )
 
     def _bind_schema_column(self, name: str, canonical: str | None = None) -> Column:
@@ -2234,12 +2245,10 @@ class DataFrame:
                 StructField(display, field.dataType, field.nullable)
                 for display, field in zip(overlay, fields, strict=True)
             ]
+        fields = _column_fields.apply_field_metadata(fields, self._field_metadata)
         return StructType(fields)
 
-    @property
-    def dtypes(self) -> list[tuple[str, str]]:
-        """Column name + simple type string pairs (PySpark ``DataFrame.dtypes``)."""
-        return [(field.name, field.dataType.simpleString()) for field in self.schema.fields]
+    dtypes = property(_column_fields.dataframe_dtypes)
 
     def printSchema(  # noqa: N802 — PySpark method name
         self, level: int | None = None
@@ -2256,15 +2265,7 @@ class DataFrame:
 
     print_schema = printSchema
 
-    def __str__(self) -> str:
-        """``DataFrame[name: type, …]`` (PySpark ``DataFrame.__str__``).
-
-        Uses ``dtypes`` simpleString pairs (``bigint`` for LongType). Apache
-        ``test_column_name_with_non_ascii`` pins this form via ``str(df)``.
-        """
-        self._ensure_alive()
-        parts = [f"{name}: {type_name}" for name, type_name in self.dtypes]
-        return f"DataFrame[{', '.join(parts)}]"
+    __str__ = _column_fields.dataframe_str
 
     def __repr__(self) -> str:
         """Spark keeps its eager-eval repr; polars and duckdb always render the styled table."""
@@ -3935,7 +3936,6 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _collapse_identity_projection_alias,
     _column_may_reference_names,
     _column_widths,
-    _column_window_spec,
     _data_type_has_required_child,
     _decode_qcol_field,
     _display_type_labels_from_arrow,

@@ -1528,6 +1528,27 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-09-14 (ruling R-2), unreachable: the name needs Structured
   Streaming state stores repark does not have; every repark frame is batch, so the refusal
   is the parity answer.
+### COL-DROPFIELDS-TYPE-1 — `Column.dropFields` refuses a non-string name Python-side
+- **repark** — `col("st").dropFields(1)` raises `PySparkTypeError` with errorClass `NOT_STR`
+  and `{"arg_name": "fieldNames", "arg_type": "int"}` at call time.
+- **Apache Spark** — `st.dropFields(1)` leaks a Py4J `ClassCastException`
+  (`java.lang.ClassCastException: class java.lang.Integer cannot be cast to class
+  java.lang.String`) through `py4j.Py4JException` on classic. *(oracle: live PySpark
+  4.1.2, 2026-09-14, `dropfields_not_str`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_dropfields_not_str`
+- **Rationale** — DECLARED, card COLUMN-PARITY-1 ruling R-3 (2026-09-14). Both engines
+  refuse the call; repark refuses with the facade's typed argument error instead of a
+  leaked JVM cast, the same class family every other `NOT_STR` facade argument uses.
+### COL-ISIN-TUPLE-1 — `Column.isin` refuses a tuple literal Python-side
+- **repark** — `col("i").isin((1, 2))` raises `PySparkRuntimeError` with errorClass
+  `UNSUPPORTED_FEATURE.LITERAL_TYPE` at call time.
+- **Apache Spark** — the same call raises `SparkRuntimeException` with condition
+  `UNSUPPORTED_FEATURE.LITERAL_TYPE` and a `class java.util.ArrayList` literal message.
+  *(oracle: live PySpark 4.1.2, 2026-09-14, `isin_tuple`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_isin_tuple`
+- **Rationale** — DECLARED, card COLUMN-PARITY-1 (2026-09-14). Same refusal, same
+  errorClass string; the Python exception class is the facade's `PySparkRuntimeError`
+  (repark's closest answer to `SparkRuntimeException`), not a JVM-bound wrapper.
 
 ### IO-BUCKET-1 — `bucketBy`/`sortBy` on an Iceberg table is a declared `NOT_IMPLEMENTED` refusal
 
@@ -7997,6 +8018,64 @@ field NAME.
   keys into the streamed frame first (the workaround the message names — project, then
   group by the resulting name).
   pins: grouped-surface-1/C-003
+### SQL-IN-1 — a mixed-type `IN` list refuses the string member
+- **repark** — `spark.sql("SELECT * FROM t WHERE s IN ('a', 1)")` raises a
+  DataFusion/Arrow cast error at analysis (`Casting Int64 to Utf8` family): the `IN`
+  list refuses to unify `Utf8` and `Int64` members.
+- **Apache Spark** — `s IN ('a', 1)` coerces the literal list and answers per-row
+  booleans (ANSI `IN` semantics, `NULL` propagated). *(oracle: live PySpark 4.1.2,
+  2026-09-14, `sql_in_mixed`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_sql_in_mixed`
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. The SQL-door
+  literal-list coercion belongs to the SQL parser/planner surface, which this unit is
+  fenced out of (run 15c owns it tonight); the pin codifies today's refusal so the fix
+  reds it on purpose.
+### SQL-ISNAN-1 — `isnan` on a SQL string literal refuses Utf8
+- **repark** — `spark.sql("SELECT isnan('a')")` raises an analysis/execution error
+  because `isnan` receives a `Utf8` argument; the SQL-door `isnan` does not coerce the
+  argument through DOUBLE.
+- **Apache Spark** — `SELECT isnan('a')` casts the string to DOUBLE and raises
+  `CAST_INVALID_INPUT` at collect for a malformed value. *(oracle: live PySpark
+  4.1.2, 2026-09-14, `isnan_sql_string`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_isnan_sql_string`
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. The DataFrame-door
+  `Column.isNaN` / `F.isnan` coerce through `CAST(x AS DOUBLE)` and match Spark; the
+  SQL-door kernel needs the same implicit cast, which lives in the SQL planner surface
+  this unit is fenced out of.
+### COL-WITHFIELD-EMPTY-1 — `withField("", v)` names the field `col{index}`
+- **repark** — `st.withField("", lit(3))` appends a field named `col2` (the
+  `col{index}` placeholder the native `named_struct` binding substitutes for an empty
+  field name): `struct<a:int,b:string,col2:int>`.
+- **Apache Spark** — `st.withField("", lit(3))` appends a field literally named `""`:
+  `struct<a:int,b:string,:int>`. *(oracle: live PySpark 4.1.2, 2026-09-14,
+  `withfield_empty_name`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_withfield_empty_name`
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. DataFusion's
+  `named_struct` requires every field-name literal to be a non-empty constant string,
+  so an empty name cannot reach the engine unchanged; the `col{index}` substitution is
+  the engine's own convention for nameless fields and keeps the update usable.
+### COL-NAME-MULTI-1 — `Column.name("x", "y")` refuses instead of naming generator outputs
+- **repark** — `F.explode(col("arr")).name("a", "b")` raises `AnalysisException`
+  (`CANNOT_GENERATE_MULTIPLE_NAMES` family) at call time.
+- **Apache Spark** — `explode(arr).name("a", "b")` aliases the two generator output
+  columns (`a` for key/pos, `b` for value/col). *(oracle: live PySpark 4.1.2,
+  2026-09-14, `name_multi`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_name_multi`
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. Multi-name
+  aliasing names generator outputs, which belongs to the generator select-path; the
+  pin codifies today's refusal so the fix reds it on purpose.
+### COL-DOTTED-FIELD-1 — `col("st.a")` does not resolve a dotted nested field
+- **repark** — `col("st.a")` resolves as one top-level identifier and raises
+  `AnalysisException` (`No field named st.a`) at select; nested access spells
+  `col("st").getField("a")`.
+- **Apache Spark** — `col("st.a")` binds the nested field `a` inside struct `st`.
+  *(oracle: live PySpark 4.1.2, 2026-09-14, `withfield_nested_replace` exercises the
+  same failure as the replacement value.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_withfield_nested_replace`
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. Dotted-name
+  resolution lives in column-name binding, outside this unit's fence; `withField`
+  itself walks dotted `fieldName` paths through `getField` reconstruction and is
+  unaffected.
 
 ## 8. Drop-in disclosure rationale
 
