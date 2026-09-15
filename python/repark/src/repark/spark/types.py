@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import calendar
 import datetime
-import json
 import re
 from collections.abc import Iterator
 from typing import Any, ClassVar
@@ -27,107 +26,30 @@ from repark.spark._type_table import (
     _ddl_order,
     _descriptor_to_datatype,
     _native_function,
-    _parse_datatype_string,
 )
-
-# ==================================================================================================
-# DataType base
-# ==================================================================================================
-
-
-class DataType:
-    """Base class for the repark cast / schema type objects (like ``pyspark.sql.types.DataType``).
-
-    Subclasses implement :meth:`_engine_type`, the canonical string the native cast understands.
-    """
-
-    def _engine_type(self) -> str:
-        """Return the canonical engine type string (e.g. ``"string"``, ``"decimal(10,4)"``)."""
-        return self.simpleString()
-
-    @classmethod
-    def typeName(cls) -> str:  # noqa: N802 — PySpark camelCase
-        """PySpark ``DataType.typeName()`` — class name without the ``Type`` suffix, lowercased.
-
-        Oracle (Spark 4.x): ``IntegerType().typeName() == "integer"``,
-        ``StringType().typeName() == "string"``. Classmethod so ``IntegerType.typeName()`` works.
-        """
-        name = cls.__name__
-        if name.endswith("Type"):
-            name = name[: -len("Type")]
-        return name.lower()
-
-    def simpleString(self) -> str:  # noqa: N802 — PySpark camelCase
-        """PySpark ``DataType.simpleString()`` — compact display form.
-
-        Default is :meth:`typeName`; atomic types that Spark shortens (``int`` not ``integer``)
-        override this.
-        """
-        answer = _SIMPLE_STRING_FAST.get(type(self))
-        if answer is not None:
-            return answer
-        return type(self).typeName()
-
-    def jsonValue(self) -> str | dict[str, Any]:  # noqa: N802 — PySpark camelCase
-        """PySpark ``DataType.jsonValue()`` — JSON-serializable type descriptor.
-
-        Atomic types return the type name string (Spark 4.x). Complex types return a dict.
-        """
-        return type(self).typeName()
-
-    def json(self) -> str:
-        """JSON string of :meth:`jsonValue` (Spark separators / sort_keys)."""
-        return json.dumps(self.jsonValue(), separators=(",", ":"), sort_keys=True)
-
-    def needConversion(self) -> bool:  # noqa: N802 — PySpark camelCase
-        """Whether Python ↔ internal conversion is required (Spark default False)."""
-        return False
-
-    def toInternal(self, obj: Any) -> Any:  # noqa: N802 — PySpark camelCase
-        """Convert a Python object to the internal SQL representation."""
-        return obj
-
-    def fromInternal(self, obj: Any) -> Any:  # noqa: N802 — PySpark camelCase
-        """Convert an internal SQL object to a native Python object."""
-        return obj
-
-    @classmethod
-    def fromDDL(cls, ddl: str) -> DataType:  # noqa: N802 — PySpark camelCase
-        """Parse a DDL / simpleString type or field-list into a :class:`DataType`.
-
-        Pure-Python port of Spark 4 ``DataType.fromDDL`` (no JVM). Supports atomic names,
-        ``decimal(p,s)``, ``char(n)`` / ``varchar(n)`` / ``time(n)``, ``array<…>``,
-        ``map<k,v>``, ``struct<…>``, and field lists ``a int, b string`` / ``a: int, b: string``.
-        """
-        return _parse_datatype_string(ddl)
-
-    def __eq__(self, other: object) -> bool:
-        """Value equality: same class+state, or same type name+simpleString (overlay residue).
-
-        After the pyspark→repark types overlay, private parsers may still construct *pyspark*
-        class instances (captured in ``_all_mappable_types``) while user constructors are
-        repark classes. Compare by type name + ``simpleString`` so ``test_parse_datatype_json``
-        and schema equality hold across both.
-        """
-        if other is None or not hasattr(other, "simpleString"):
-            return NotImplemented
-        if type(self) is type(other):
-            return getattr(self, "__dict__", {}) == getattr(other, "__dict__", {})
-        if type(other).__name__ == type(self).__name__:
-            try:
-                return self.simpleString() == other.simpleString()  # type: ignore[operator]
-            except Exception:
-                return False
-        return False
-
-    def __hash__(self) -> int:
-        """Hash on type name + simpleString (consistent with cross-impl :meth:`__eq__`)."""
-        return hash((type(self).__name__, self.simpleString()))
-
-    def __repr__(self) -> str:
-        """Render as the class name (PySpark renders ``StringType()`` / ``DecimalType(10,4)``)."""
-        return f"{type(self).__name__}()"
-
+from repark.spark._type_table import (
+    _parse_datatype_string as _parse_datatype_string,
+)
+from repark.spark.row import Row
+from repark.spark.types_bases import (
+    _SIMPLE_STRING_FAST,
+    AnsiIntervalType,
+    AnyTimeType,
+    AtomicType,
+    DataType,
+    DatetimeType,
+    FractionalType,
+    GeographyType,
+    GeometryType,
+    IntegralType,
+    NumericType,
+    SpatialType,
+    UserDefinedType,
+    _parse_spatial_json_token,
+    _refuse_spatial_json_token,
+    _struct_from_internal,
+    _struct_to_internal,
+)
 
 # ==================================================================================================
 # Atomic types
@@ -150,7 +72,7 @@ class NullType(DataType):
         return "void"
 
 
-class StringType(DataType):
+class StringType(AtomicType):
     """UTF-8 string (Arrow ``Utf8``). Optional collation (Spark 4+)."""
 
     def __init__(self, collation: str = "UTF8_BINARY") -> None:
@@ -182,7 +104,7 @@ class StringType(DataType):
         return f"StringType({self.collation!r})"
 
 
-class CharType(DataType):
+class CharType(AtomicType):
     """Fixed-length character type ``char(n)``."""
 
     def __init__(self, length: int) -> None:
@@ -206,7 +128,7 @@ class CharType(DataType):
         return f"CharType({self.length})"
 
 
-class VarcharType(DataType):
+class VarcharType(AtomicType):
     """Variable-length character type ``varchar(n)``."""
 
     def __init__(self, length: int) -> None:
@@ -230,7 +152,7 @@ class VarcharType(DataType):
         return f"VarcharType({self.length})"
 
 
-class BinaryType(DataType):
+class BinaryType(AtomicType):
     """Binary / byte array (Arrow ``Binary``)."""
 
     def __init__(self) -> None:
@@ -241,7 +163,7 @@ class BinaryType(DataType):
         return "binary"
 
 
-class BooleanType(DataType):
+class BooleanType(AtomicType):
     """Boolean (Arrow ``Boolean``)."""
 
     def __init__(self) -> None:
@@ -252,7 +174,7 @@ class BooleanType(DataType):
         return "boolean"
 
 
-class DateType(DataType):
+class DateType(DatetimeType):
     """Calendar date, days since the epoch (Arrow ``Date32``)."""
 
     EPOCH_ORDINAL = datetime.datetime(1970, 1, 1).toordinal()
@@ -281,7 +203,7 @@ class DateType(DataType):
         return None
 
 
-class TimestampType(DataType):
+class TimestampType(DatetimeType):
     """Microsecond LTZ timestamp (Arrow ``timestamp[us, tz=UTC]``)."""
 
     def __init__(self) -> None:
@@ -321,7 +243,7 @@ class TimestampType(DataType):
         return None
 
 
-class TimestampNTZType(DataType):
+class TimestampNTZType(DatetimeType):
     """Timestamp without time zone (Spark ``timestamp_ntz``)."""
 
     def __init__(self) -> None:
@@ -356,7 +278,7 @@ class TimestampNTZType(DataType):
         return None
 
 
-class TimeType(DataType):
+class TimeType(AnyTimeType):
     """Time-of-day type ``time(precision)`` (Spark 4.1+)."""
 
     def __init__(self, precision: int = 6) -> None:
@@ -380,7 +302,7 @@ class TimeType(DataType):
         return f"TimeType({self.precision})"
 
 
-class DecimalType(DataType):
+class DecimalType(FractionalType):
     """Fixed-precision decimal (Arrow ``Decimal128(precision, scale)``).
 
     Constructed with PySpark's positional signature ``DecimalType(precision, scale)``; the defaults
@@ -410,7 +332,7 @@ class DecimalType(DataType):
         return f"DecimalType({self.precision},{self.scale})"
 
 
-class DoubleType(DataType):
+class DoubleType(FractionalType):
     """64-bit IEEE-754 float (Arrow ``Float64``)."""
 
     def __init__(self) -> None:
@@ -421,7 +343,7 @@ class DoubleType(DataType):
         return "double"
 
 
-class FloatType(DataType):
+class FloatType(FractionalType):
     """32-bit IEEE-754 float (Arrow ``Float32``)."""
 
     def __init__(self) -> None:
@@ -436,7 +358,7 @@ class FloatType(DataType):
         return "float"
 
 
-class ByteType(DataType):
+class ByteType(IntegralType):
     """8-bit signed integer (Arrow ``Int8``)."""
 
     def __init__(self) -> None:
@@ -451,7 +373,7 @@ class ByteType(DataType):
         return "tinyint"
 
 
-class IntegerType(DataType):
+class IntegerType(IntegralType):
     """32-bit signed integer (Arrow ``Int32``)."""
 
     def __init__(self) -> None:
@@ -466,7 +388,7 @@ class IntegerType(DataType):
         return "int"
 
 
-class LongType(DataType):
+class LongType(IntegralType):
     """64-bit signed integer (Arrow ``Int64``; PySpark ``LongType``).
 
     Engine cast string is ``"long"`` / bigint path. Distinct from :class:`IntegerType` so
@@ -485,7 +407,7 @@ class LongType(DataType):
         return "bigint"
 
 
-class ShortType(DataType):
+class ShortType(IntegralType):
     """16-bit signed integer (Arrow ``Int16``)."""
 
     def __init__(self) -> None:
@@ -520,7 +442,7 @@ class CalendarIntervalType(DataType):
         return "interval"
 
 
-class DayTimeIntervalType(DataType):
+class DayTimeIntervalType(AnsiIntervalType):
     """Day-time ANSI interval type (Spark ``DayTimeIntervalType`` / ``datetime.timedelta``).
 
     E1: constructor validation raises :class:`repark.errors.PySparkRuntimeError` with
@@ -598,7 +520,7 @@ class DayTimeIntervalType(DataType):
         return f"{type(self).__name__}({self.startField}, {self.endField})"
 
 
-class YearMonthIntervalType(DataType):
+class YearMonthIntervalType(AnsiIntervalType):
     """Year-month ANSI interval type (Spark ``YearMonthIntervalType``).
 
     E1: constructor validation raises :class:`repark.errors.PySparkRuntimeError` with
@@ -669,7 +591,7 @@ class YearMonthIntervalType(DataType):
         return f"{type(self).__name__}({self.startField}, {self.endField})"
 
 
-class VariantType(DataType):
+class VariantType(AtomicType):
     """Spark Variant type marker (schema / DDL surface)."""
 
     def __init__(self) -> None:
@@ -849,6 +771,18 @@ class StructField(DataType):
             metadata,
         )
 
+    def needConversion(self) -> bool:  # noqa: N802
+        """Delegate to ``dataType`` (Spark ``StructField.needConversion``)."""
+        return self.dataType.needConversion()
+
+    def toInternal(self, obj: Any) -> Any:  # noqa: N802
+        """Delegate to ``dataType`` (Spark ``StructField.toInternal``)."""
+        return self.dataType.toInternal(obj)
+
+    def fromInternal(self, obj: Any) -> Any:  # noqa: N802
+        """Delegate to ``dataType`` (Spark ``StructField.fromInternal``)."""
+        return self.dataType.fromInternal(obj)
+
     def __eq__(self, other: object) -> bool:
         """Value equality on name, type, nullability (metadata ignored for schema eq)."""
         if not isinstance(other, StructField):
@@ -945,6 +879,18 @@ class StructType(DataType):
     def fieldNames(self) -> list[str]:  # noqa: N802 — PySpark camelCase
         """Field names in order (Spark ``fieldNames``)."""
         return list(self.names)
+
+    def needConversion(self) -> bool:  # noqa: N802
+        """True — Row / namedtuple converts into a tuple of field values (Spark)."""
+        return True
+
+    def toInternal(self, obj: Any) -> tuple[Any, ...] | None:  # noqa: N802
+        """Spark ``StructType.toInternal`` — dict / tuple / list / object → field tuple."""
+        return _struct_to_internal(self.names, self.fields, obj)
+
+    def fromInternal(self, obj: Any) -> Row | None:  # noqa: N802
+        """Spark ``StructType.fromInternal`` — field values → named :class:`Row`."""
+        return _struct_from_internal(self.names, self.fields, obj)
 
     def toDDL(self) -> str:  # noqa: N802 — PySpark camelCase
         """DDL field list (``a INT,b STRING NOT NULL``) — pure Python Spark 4 shape."""
@@ -1179,11 +1125,16 @@ def _parse_datatype_json_value(
             and str(json_value).lower() == "string"
         ):
             return StringType(collations_map[field_path])
-        atomic = _parse_atomic_token(str(json_value))
+        text = str(json_value)
+        spatial = _parse_spatial_json_token(text)
+        if spatial is not None:
+            return spatial
+        _refuse_spatial_json_token(text)
+        atomic = _parse_atomic_token(text)
         if atomic is not None:
             return atomic
         # Fall through to complex simpleString forms.
-        return _parse_complex_or_atomic(str(json_value))
+        return _parse_complex_or_atomic(text)
     type_name = json_value["type"]
     if type_name == "array":
         return ArrayType.fromJson(json_value, field_path, collations_map)
@@ -1191,6 +1142,14 @@ def _parse_datatype_json_value(
         return MapType.fromJson(json_value, field_path, collations_map)
     if type_name == "struct":
         return StructType.fromJson(json_value)
+    if type_name == "udt":
+        from repark.errors import PySparkNotImplementedError
+
+        raise PySparkNotImplementedError(
+            "[NOT_IMPLEMENTED] UserDefinedType is not implemented.",
+            errorClass="NOT_IMPLEMENTED",
+            messageParameters={"feature": "UserDefinedType"},
+        )
     if type_name in _ATOMIC_TYPE_NAMES:
         if collations_map is not None and field_path in collations_map and type_name == "string":
             return StringType(collations_map[field_path])
@@ -1431,6 +1390,8 @@ def _repark_type_to_arrow_python(data_type: DataType) -> Any:
         return pa.struct(
             [(field.name, repark_type_to_arrow(field.dataType)) for field in data_type.fields]
         )
+    if isinstance(data_type, (SpatialType, UserDefinedType)):
+        return data_type._engine_type()
     return pa.string()
 
 
@@ -1452,6 +1413,10 @@ def _merge_type(a: DataType, b: DataType, name: str | None = None) -> DataType:
         return a
     if isinstance(a, TimestampNTZType) and isinstance(b, TimestampType):
         return b
+    if isinstance(a, GeometryType) and isinstance(b, GeometryType) and a.srid != b.srid:
+        return GeometryType("ANY")
+    if isinstance(a, GeographyType) and isinstance(b, GeographyType) and a.srid != b.srid:
+        return GeographyType("ANY")
     # Spark AtomicType + StringType → StringType (map-key soft merge in test_merge_type).
     atomic = (
         ByteType,
@@ -1466,6 +1431,7 @@ def _merge_type(a: DataType, b: DataType, name: str | None = None) -> DataType:
         TimestampType,
         TimestampNTZType,
         DecimalType,
+        SpatialType,
     )
     if isinstance(a, atomic) and isinstance(b, StringType):
         return b
@@ -1749,19 +1715,24 @@ def refuse_collated_type_string(type_text: str) -> None:
     raise UnsupportedOperationException(collation_refusal_message(name))
 
 
-_SIMPLE_STRING_FAST: dict[type, str] = {
-    NullType: "void",
-    BinaryType: "binary",
-    BooleanType: "boolean",
-    DateType: "date",
-    TimestampType: "timestamp",
-    TimestampNTZType: "timestamp_ntz",
-    DoubleType: "double",
-}
+_SIMPLE_STRING_FAST.update(
+    {
+        NullType: "void",
+        BinaryType: "binary",
+        BooleanType: "boolean",
+        DateType: "date",
+        TimestampType: "timestamp",
+        TimestampNTZType: "timestamp_ntz",
+        DoubleType: "double",
+    }
+)
 
 
 __all__ = [
+    "AnsiIntervalType",
+    "AnyTimeType",
     "ArrayType",
+    "AtomicType",
     "BinaryType",
     "BooleanType",
     "ByteType",
@@ -1769,21 +1740,30 @@ __all__ = [
     "CharType",
     "DataType",
     "DateType",
+    "DatetimeType",
     "DayTimeIntervalType",
     "DecimalType",
     "DoubleType",
     "FloatType",
+    "FractionalType",
+    "GeographyType",
+    "GeometryType",
     "IntegerType",
+    "IntegralType",
     "LongType",
     "MapType",
     "NullType",
+    "NumericType",
+    "Row",
     "ShortType",
+    "SpatialType",
     "StringType",
     "StructField",
     "StructType",
     "TimeType",
     "TimestampNTZType",
     "TimestampType",
+    "UserDefinedType",
     "VarcharType",
     "VariantType",
     "YearMonthIntervalType",

@@ -21,6 +21,16 @@ FACADE-4 step-1 remediation (2026-09-14): `check_lib_py.py` `spark/types.py`
 fallbacks, and the atomic answer table — moved to `spark/_type_table.py` for
 P1-DTYPES).
 pins: facade-4/C-016
+TYPES-BASES-1 step 1 (2026-09-14): `check_lib_py.py`
+`spark/types.py` 1793 → 1739 on the post-FACADE-4 tree (the Spark abstract
+bases, `DataType`, spatial types, `UserDefinedType`, and the spatial JSON
+token helpers live in the new `spark/types_bases.py`). The CAP-1 parity
+mirror row moves in the same commit. Follow-up: 1739 → 1770 after critic
+round 1 added the `_merge_type` spatial arms and the `StructField` /
+`StructType` conversion delegates (bodies in `types_bases.py`; main's
+baseline 1792 was never crossed).
+pins: types-bases-1/C-001, C-006
+
 REPLACE-LINEAR-1 step 1 critic round (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4054 → 4044 (the `_join_qualifiers` slot plus minimal call
 sites so `replace` binds duplicate-name equi-join output by relation qualifier

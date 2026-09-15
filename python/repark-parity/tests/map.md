@@ -1,5 +1,16 @@
 # map — python/repark-parity/tests
 
+TYPES-BASES-1 (2026-09-14): CAP-1 mirror row ratcheted down with the code —
+`spark/types.py` 1834→1791 after the abstract bases, spatial types,
+`UserDefinedType`, and spatial token helpers moved to `spark/types_bases.py`.
+The `check_lib_py.py` exception row moved in the same commit; no row raised.
+Follow-up on FACADE-4 step 1: `spark/types.py` 1792→1770 (critic round 1 —
+the `_merge_type` spatial arms and `StructField`/`StructType` conversion
+delegates added inside the file; the struct conversion bodies live in
+`types_bases.py`). The `test_ex_0_example_coverage.py` count moves 930 → 942
+and the types family 32 → 44 as the twelve new `types.*` names join the
+enumerated surface (both covered by the new `docs/examples/types/` scripts).
+
 REVIEW-FIX-5 (2026-09-10): CAP-1 mirror tuple ratcheted down with the code — catalog_config.rs
 1044→1028 after the seventeen `//` reasons moved to `crates/repark-core/src/map.md` under the
 owner's no-code-comments ruling (D-5). The exact-baseline gate row moved with it; no row raised.
@@ -264,6 +275,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   **CFG-2 step 2 (2026-09-13):** 928 → 930 as `SparkSession.source` and `SparkSession.sources` join the session family (both covered by `docs/examples/session/named_sources.py`, so the backlog baseline is unchanged). pins: cfg-2/C-013
   **ROW-TUPLE-1 (2026-09-14):** 930 → 932 and the types family 32 → 34 as `Row.count` and `Row.index` join the enumerated surface (both covered by `docs/examples/dataframe/row_tuple.py`; backlog baseline unchanged). pins: row-tuple-1/C-003
   **DF-STREAM-BATCH-1 (2026-09-14):** 930 → 934 as `DataFrame.withWatermark`, `DataFrame.with_watermark`, `DataFrame.dropDuplicatesWithinWatermark` and `DataFrame.drop_duplicates_within_watermark` join the dataframe family (all four covered by `docs/examples/dataframe/batch_streaming_names.py`, so the backlog baseline is unchanged; `rdd`/`plot`/`writeStream`/`pandas_api` bind through a tuple assignment the AST walk does not enumerate). pins: df-stream-batch-1/C-007
+  **TYPES-BASES-1 follow-up (2026-09-14):** 930 → 942 and the types family 32 → 44 as the twelve new `types.*` names (the eight abstract bases, `GeographyType`, `GeometryType`, `UserDefinedType`, `types.Row`) join the enumerated surface — all covered by `docs/examples/types/abstract_bases.py` and `docs/examples/types/spatial_and_udt.py`. pins: types-bases-1/C-006
 - `test_cap_1_source_file_line_cap.py` — **MAINT-POLICY-1 audit fix (2026-09-10):** `session/session_core.py` row 2305 → 2304 with the script baseline; `_temp_view_home_ref` moves to `catalog_resolution.py` to pay for the `run_maintenance` class-body declaration. pins: maint-policy-1/C-030
 - `test_cap_1_source_file_line_cap.py` — REVIEW-FIX-6 (2026-09-10): `dataframe/core.py` row 4487 → 4486 with the script baseline; the four-line both-set guard is paid for by five moved comment lines, their facts moved to `python/repark/src/repark/spark/dataframe/map.md`. pins: review-fix-6/C-004
 - `test_cap_1_source_file_line_cap.py` — DISPLAY-LAZY-1 (2026-09-11, measured on the rebased tree after REVIEW-FIX-6 #487 took the row to 4486 by the same comment-funded method): `dataframe/core.py` row 4486 → 4485 with the script baseline; the checkpoint-arm `_eager_shape` record is paid for by deleting the cache-pinned early-return rationale (fact restated on the dataframe map). pins: display-lazy-1/C-007
