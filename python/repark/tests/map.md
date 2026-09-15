@@ -4560,11 +4560,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `Window.rowsBetween` cell), the `[INVALID_BITMAP_POSITION]` error cell, and
   `F.call_function` routing for all three names (bytes equal to the wrappers and the SQL
   door). Red on the base facade (9 failed with the native present), 10 passed after.
-  pins: fnp-bitmap-facade-1/C-001, C-002, C-003
+  **Run 16a remediation (G-2):** the or/and refusal over INT/FLOAT/BOOLEAN/STRING and
+  the construct refusal over BOOLEAN (R-1, `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`
+  against the `FU-*` cells), the split `call_function` pins (R-2, construct over
+  `bitmap_bit_position` vs `F6D-construct`, or/and over BINARY vs `F6D-or-and`),
+  malformed-STRING `CAST_INVALID_INPUT` and FLOAT 1.7 (R-3), the `F6D-empty` /
+  short/empty/long fold / unbounded-window pins with Arrow types against the fixture
+  schema cells (R-4), the Python-door default name and the SQL-door qualifier-leak
+  expected divergence (R-5). 27 passed.
+  pins: fnp-bitmap-facade-1/C-001, C-002, C-003, C-005, C-006, C-007, C-008, C-009
 - [fnp_bitmap_facade_1_spark_oracle.json](fnp_bitmap_facade_1_spark_oracle.json) —
   **FNP-BITMAP-FACADE-1 (2026-09-15):** the 21 live PySpark 4.1.2 oracle cells this unit
   pins, copied verbatim from run 15c's `fixtures-batch3.json` (`F6D-*`) and
-  `fixtures-batch8.json` (`B8-*`).
+  `fixtures-batch8.json` (`B8-*`). **Run 16a (R-4):** the two truncated BINARY payloads
+  (`B8-construct-string`, `B8-group-schema`) carry the full 4096-byte hex in the
+  `F6D-construct` convention — byte 0 `0x02` from the recorded 80-char prefix, the
+  zero tail from the bitmap format with only bit 1 set, corroborated byte-for-byte
+  against the kernel answer.
 - [test_fnp_6d_bitmap_aggregates.py](test_fnp_6d_bitmap_aggregates.py) — **FNP-6D
   (2026-09-15):** Spark SQL-door pins for `bitmap_construct_agg` / `bitmap_or_agg` /
   `bitmap_and_agg` against recorded oracle cells `F6D-*` and `B8-*` (values AND

@@ -421,3 +421,4 @@ def test_functions_all_matches_pre_split_inventory() -> None:
 def test_every_all_name_resolves() -> None:
     missing = [name for name in F.__all__ if not hasattr(F, name)]
     assert missing == []
+    assert len(set(F.__all__)) == len(F.__all__)
