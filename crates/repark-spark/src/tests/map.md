@@ -25,6 +25,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: fnp-4b/C-001, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013, C-014, C-015, C-016
   **Round 5 (2026-09-15):** the harness contexts register
   `__repark_suffix_literal__` beside `__repark_spark_as__`. pins: fnp-4b/C-021
+  `-9223372036854775808L` answers `i64::MIN` non-null. pins: fnp-4b/C-023
 - `lambda_door.rs` — **FNP-8 (2026-09-06):** the eleven higher-order names through
   `crate::execute` with `x -> y` syntax — both `transform`/`filter` arities, `exists` as a
   function (not the subquery keyword), `forall` on empty, `aggregate` with and without
