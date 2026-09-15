@@ -1,0 +1,3975 @@
+{
+ "blocks": {
+  "bl6": [
+   {
+    "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+    "error_type": "AnalysisException",
+    "id": "BL6-sql-0",
+    "input": "SELECT bin(true)",
+    "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bin(true)\" due to data type mismatch: The first parameter requires the \"BIGINT\" type, however \"true\" has the type \"BOOLEAN\". SQLSTATE: 42K09; line 1 pos 7;"
+   },
+   {
+    "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+    "error_type": "AnalysisException",
+    "id": "BL6-sql-1",
+    "input": "SELECT rint(true)",
+    "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"rint(true)\" due to data type mismatch: The first parameter requires the \"DOUBLE\" type, however \"true\" has the type \"BOOLEAN\". SQLSTATE: 42K09; line 1 pos 7;"
+   },
+   {
+    "id": "BL6-sql-2",
+    "input": "SELECT bin(1)",
+    "rows": [
+     [
+      "'1'"
+     ]
+    ],
+    "schema": [
+     [
+      "bin(1)",
+      "string",
+      false
+     ]
+    ]
+   },
+   {
+    "id": "BL6-sql-3",
+    "input": "SELECT rint(2.5D)",
+    "rows": [
+     [
+      "2.0"
+     ]
+    ],
+    "schema": [
+     [
+      "rint(2.5)",
+      "double",
+      true
+     ]
+    ]
+   },
+   {
+    "id": "DIV-like-1",
+    "input": "SELECT like('a%c', 'a/%c', '/') AS v",
+    "rows": [
+     [
+      "True"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "boolean",
+      false
+     ]
+    ]
+   },
+   {
+    "id": "DIV-api-like",
+    "input": "col.like with escape",
+    "rows": [
+     [
+      "True"
+     ]
+    ],
+    "schema": [
+     [
+      "l LIKE a/_c ESCAPE '/'",
+      "boolean",
+      true
+     ]
+    ]
+   }
+  ],
+  "f14": [
+   {
+    "id": "F14-mask",
+    "input": "SELECT mask('AbCd-123') a, mask('AbCd-123', 'Q', 'q', 'd', 'o') b, mask(NULL) c",
+    "rows": [
+     [
+      "'XxXx-nnn'",
+      "'QqQqoddd'",
+      "None"
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "string",
+      true
+     ],
+     [
+      "b",
+      "string",
+      true
+     ],
+     [
+      "c",
+      "string",
+      true
+     ]
+    ]
+   },
+   {
+    "id": "F14-mask-null-repl",
+    "input": "SELECT mask('AbCd-123', NULL, NULL, NULL, NULL) v",
+    "rows": [
+     [
+      "'AbCd-123'"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "string",
+      true
+     ]
+    ]
+   },
+   {
+    "id": "F14-aes-gcm-rt",
+    "input": "SELECT CAST(aes_decrypt(aes_encrypt('Spark', '0000111122223333'), '0000111122223333') AS STRING) v",
+    "rows": [
+     [
+      "'Spark'"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "string",
+      true
+     ]
+    ]
+   },
+   {
+    "id": "F14-aes-ecb",
+    "input": "SELECT hex(aes_encrypt('Spark', '0000111122223333', 'ECB', 'PKCS')) v",
+    "rows": [
+     [
+      "'348FF37EBDE05B7880BA339068FBDA5E'"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "string",
+      true
+     ]
+    ]
+   },
+   {
+    "id": "F14-aes-cbc-iv",
+    "input": "SELECT hex(aes_encrypt('Spark', '0000111122223333', 'CBC', 'PKCS', unhex('00000000000000000000000000000000'))) v",
+    "rows": [
+     [
+      "'00000000000000000000000000000000348FF37EBDE05B7880BA339068FBDA5E'"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "string",
+      true
+     ]
+    ]
+   },
+   {
+    "id": "F14-aes-gcm-iv",
+    "input": "SELECT hex(aes_encrypt('Spark', '0000111122223333', 'GCM', 'DEFAULT', unhex('000000000000000000000000'), 'aad')) v",
+    "rows": [
+     [
+      "'00000000000000000000000046C4EF1C6A58C82E08A2D6B5AA23225CD5DAB67E32'"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "string",
+      true
+     ]
+    ]
+   },
+   {
+    "id": "F14-aes-dec-ecb",
+    "input": "SELECT CAST(aes_decrypt(unhex('6E7CA17BBB468D3084B5744BCA729FB7B2B7BCB8E4472847D02670489D95FA97DBBA7D3210'), '0000111122223333', 'GCM') AS STRING) v",
+    "rows": [
+     [
+      "'Spark SQL'"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "string",
+      true
+     ]
+    ]
+   },
+   {
+    "condition": "INVALID_PARAMETER_VALUE.AES_KEY_LENGTH",
+    "error_type": "SparkRuntimeException",
+    "id": "F14-aes-badkey",
+    "input": "SELECT aes_encrypt('Spark', 'short') v",
+    "message": "[INVALID_PARAMETER_VALUE.AES_KEY_LENGTH] The value of parameter(s) `key` in `aes_encrypt`/`aes_decrypt` is invalid: expects a binary value with 16, 24 or 32 bytes, but got 5 bytes. SQLSTATE: 22023"
+   },
+   {
+    "id": "F14-try-aes-bad",
+    "input": "SELECT try_aes_decrypt(unhex('00'), '0000111122223333') v",
+    "rows": [
+     [
+      "None"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "binary",
+      true
+     ]
+    ]
+   },
+   {
+    "condition": "INVALID_PARAMETER_VALUE.AES_CRYPTO_ERROR",
+    "error_type": "SparkRuntimeException",
+    "id": "F14-aes-dec-bad",
+    "input": "SELECT aes_decrypt(unhex('00'), '0000111122223333') v",
+    "message": "[INVALID_PARAMETER_VALUE.AES_CRYPTO_ERROR] The value of parameter(s) `expr`, `key` in `aes_encrypt`/`aes_decrypt` is invalid: detail message: Invalid buffer arguments SQLSTATE: 22023"
+   }
+  ],
+  "o245": [
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "bround(d, 0)",
+      "nullable": true,
+      "type": "double"
+     }
+    ],
+    "door": "python",
+    "expr": "F.bround('d')",
+    "name": "bround",
+    "rows": [
+     [
+      2.0
+     ],
+     [
+      null
+     ],
+     [
+      0.0
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "bround(d, 0)",
+      "nullable": true,
+      "type": "double"
+     }
+    ],
+    "door": "python",
+    "expr": "F.bround('d')",
+    "name": "bround",
+    "rows": [
+     [
+      2.0
+     ],
+     [
+      null
+     ],
+     [
+      0.0
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "bround(d2, 0)",
+      "nullable": true,
+      "type": "double"
+     }
+    ],
+    "door": "python",
+    "expr": "F.bround('d2', 0)",
+    "name": "bround",
+    "rows": [
+     [
+      -2.0
+     ],
+     [
+      4.0
+     ],
+     [
+      1.0
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "bround(d2, 0)",
+      "nullable": true,
+      "type": "double"
+     }
+    ],
+    "door": "python",
+    "expr": "F.bround('d2', 0)",
+    "name": "bround",
+    "rows": [
+     [
+      -2.0
+     ],
+     [
+      4.0
+     ],
+     [
+      1.0
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "bround(dec, 2)",
+      "nullable": true,
+      "type": "decimal(9,2)"
+     }
+    ],
+    "door": "python",
+    "expr": "F.bround('dec', 2)",
+    "name": "bround",
+    "rows": [
+     [
+      {
+       "repr": "Decimal('12345.68')"
+      }
+     ],
+     [
+      null
+     ],
+     [
+      {
+       "repr": "Decimal('-0.50')"
+      }
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "bround(dec, 2)",
+      "nullable": true,
+      "type": "decimal(9,2)"
+     }
+    ],
+    "door": "python",
+    "expr": "F.bround('dec', 2)",
+    "name": "bround",
+    "rows": [
+     [
+      {
+       "repr": "Decimal('12345.68')"
+      }
+     ],
+     [
+      null
+     ],
+     [
+      {
+       "repr": "Decimal('-0.50')"
+      }
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "bround(d, -1)",
+      "nullable": true,
+      "type": "double"
+     }
+    ],
+    "door": "python",
+    "expr": "F.bround('d', lit(-1))",
+    "name": "bround",
+    "rows": [
+     [
+      0.0
+     ],
+     [
+      null
+     ],
+     [
+      0.0
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "bround(d, -1)",
+      "nullable": true,
+      "type": "double"
+     }
+    ],
+    "door": "python",
+    "expr": "F.bround('d', lit(-1))",
+    "name": "bround",
+    "rows": [
+     [
+      0.0
+     ],
+     [
+      null
+     ],
+     [
+      0.0
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "bround(d, 0)",
+      "nullable": true,
+      "type": "double"
+     },
+     {
+      "name": "bround(d2, 0)",
+      "nullable": true,
+      "type": "double"
+     },
+     {
+      "name": "bround(dec, 2)",
+      "nullable": true,
+      "type": "decimal(9,2)"
+     },
+     {
+      "name": "bround(dec, -2)",
+      "nullable": true,
+      "type": "decimal(7,0)"
+     },
+     {
+      "name": "bround(CAST(25 AS INT), -1)",
+      "nullable": true,
+      "type": "int"
+     },
+     {
+      "name": "bround(CAST(2147483647 AS INT), -9)",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT bround(d), bround(d2, 0), bround(dec, 2), bround(dec, -2), bround(CAST(25 AS INT), -1), bround(CAST(2147483647 AS INT), -9) FROM FRAME",
+    "name": "bround",
+    "rows": [
+     [
+      2.0,
+      -2.0,
+      {
+       "repr": "Decimal('12345.68')"
+      },
+      {
+       "repr": "Decimal('12300')"
+      },
+      20,
+      2000000000
+     ],
+     [
+      null,
+      4.0,
+      null,
+      null,
+      20,
+      2000000000
+     ],
+     [
+      0.0,
+      1.0,
+      {
+       "repr": "Decimal('-0.50')"
+      },
+      {
+       "repr": "Decimal('0')"
+      },
+      20,
+      2000000000
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "bround(d, 0)",
+      "nullable": true,
+      "type": "double"
+     },
+     {
+      "name": "bround(d2, 0)",
+      "nullable": true,
+      "type": "double"
+     },
+     {
+      "name": "bround(dec, 2)",
+      "nullable": true,
+      "type": "decimal(9,2)"
+     },
+     {
+      "name": "bround(dec, -2)",
+      "nullable": true,
+      "type": "decimal(7,0)"
+     },
+     {
+      "name": "bround(CAST(25 AS INT), -1)",
+      "nullable": true,
+      "type": "int"
+     },
+     {
+      "name": "bround(CAST(2147483647 AS INT), -9)",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT bround(d), bround(d2, 0), bround(dec, 2), bround(dec, -2), bround(CAST(25 AS INT), -1), bround(CAST(2147483647 AS INT), -9) FROM FRAME",
+    "name": "bround",
+    "rows": [
+     [
+      2.0,
+      -2.0,
+      {
+       "repr": "Decimal('12345.68')"
+      },
+      {
+       "repr": "Decimal('12300')"
+      },
+      20,
+      2000000000
+     ],
+     [
+      null,
+      4.0,
+      null,
+      null,
+      20,
+      2000000000
+     ],
+     [
+      0.0,
+      1.0,
+      {
+       "repr": "Decimal('-0.50')"
+      },
+      {
+       "repr": "Decimal('0')"
+      },
+      20,
+      2000000000
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "conv(num, 10, 16)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.conv('num', 10, 16)",
+    "name": "conv",
+    "rows": [
+     [
+      "64"
+     ],
+     [
+      "0"
+     ],
+     [
+      "FFFFFFFFFFFFFFEF"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "conv(num, 10, 16)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.conv('num', 10, 16)",
+    "name": "conv",
+    "rows": [
+     [
+      "64"
+     ],
+     [
+      "0"
+     ],
+     [
+      "FFFFFFFFFFFFFFEF"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "conv(num, 16, 10)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.conv('num', 16, 10)",
+    "name": "conv",
+    "rows": [
+     [
+      "256"
+     ],
+     [
+      "0"
+     ],
+     [
+      "18446744073709551593"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "conv(num, 16, 10)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.conv('num', 16, 10)",
+    "name": "conv",
+    "rows": [
+     [
+      "256"
+     ],
+     [
+      "0"
+     ],
+     [
+      "18446744073709551593"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "conv(num, 10, -16)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.conv('num', 10, -16)",
+    "name": "conv",
+    "rows": [
+     [
+      "64"
+     ],
+     [
+      "0"
+     ],
+     [
+      "-11"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "conv(num, 10, -16)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.conv('num', 10, -16)",
+    "name": "conv",
+    "rows": [
+     [
+      "64"
+     ],
+     [
+      "0"
+     ],
+     [
+      "-11"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "door": "sql",
+    "error_condition": "ARITHMETIC_OVERFLOW",
+    "error_type": "ArithmeticException",
+    "expr": "SELECT conv(num, 10, 2), conv('-10', 10, 16), conv('ff', 16, 10), conv('zz', 36, 10), conv(num, 10, 37), conv('18446744073709551616', 10, 10), conv('9', 2, 10) FROM FRAME",
+    "message": "[ARITHMETIC_OVERFLOW] Overflow in function conv(). If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003",
+    "name": "conv"
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "conv(num, 10, 2)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "conv(-10, 10, 16)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "conv(ff, 16, 10)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "conv(zz, 36, 10)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "conv(num, 10, 37)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "conv(18446744073709551616, 10, 10)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "conv(9, 2, 10)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT conv(num, 10, 2), conv('-10', 10, 16), conv('ff', 16, 10), conv('zz', 36, 10), conv(num, 10, 37), conv('18446744073709551616', 10, 10), conv('9', 2, 10) FROM FRAME",
+    "name": "conv",
+    "rows": [
+     [
+      "1100100",
+      "FFFFFFFFFFFFFFF6",
+      "255",
+      "1295",
+      null,
+      "18446744073709551615",
+      "0"
+     ],
+     [
+      "0",
+      "FFFFFFFFFFFFFFF6",
+      "255",
+      "1295",
+      null,
+      "18446744073709551615",
+      "0"
+     ],
+     [
+      "1111111111111111111111111111111111111111111111111111111111101111",
+      "FFFFFFFFFFFFFFF6",
+      "255",
+      "1295",
+      null,
+      "18446744073709551615",
+      "0"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "hash(id)",
+      "nullable": false,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.hash('id')",
+    "name": "hash",
+    "rows": [
+     [
+      -559580957
+     ],
+     [
+      1765031574
+     ],
+     [
+      -1823081949
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "hash(id)",
+      "nullable": false,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.hash('id')",
+    "name": "hash",
+    "rows": [
+     [
+      -559580957
+     ],
+     [
+      1765031574
+     ],
+     [
+      -1823081949
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "hash(id, txt)",
+      "nullable": false,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.hash('id', 'txt')",
+    "name": "hash",
+    "rows": [
+     [
+      -1094652493
+     ],
+     [
+      1765031574
+     ],
+     [
+      -202814920
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "hash(id, txt)",
+      "nullable": false,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.hash('id', 'txt')",
+    "name": "hash",
+    "rows": [
+     [
+      -1094652493
+     ],
+     [
+      1765031574
+     ],
+     [
+      -202814920
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "hash(d, dec, arr_i)",
+      "nullable": false,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.hash('d', 'dec', 'arr_i')",
+    "name": "hash",
+    "rows": [
+     [
+      1657889362
+     ],
+     [
+      42
+     ],
+     [
+      776039356
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "hash(d, dec, arr_i)",
+      "nullable": false,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.hash('d', 'dec', 'arr_i')",
+    "name": "hash",
+    "rows": [
+     [
+      1657889362
+     ],
+     [
+      42
+     ],
+     [
+      776039356
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "hash(id)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(txt)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(d)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(dec)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(arr_i)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(id, txt)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(NULL)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(CAST(1 AS BIGINT))",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(true)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(ts)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(CAST(0.0 AS DOUBLE))",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(CAST(0.0 AS DOUBLE))",
+      "nullable": false,
+      "type": "int"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT hash(id), hash(txt), hash(d), hash(dec), hash(arr_i), hash(id, txt), hash(NULL), hash(CAST(1 AS BIGINT)), hash(true), hash(ts), hash(CAST(0.0 AS DOUBLE)), hash(CAST(-0.0 AS DOUBLE)) FROM FRAME",
+    "name": "hash",
+    "rows": [
+     [
+      -559580957,
+      1312737952,
+      -892273744,
+      198011545,
+      1401423033,
+      -1094652493,
+      42,
+      -1712319331,
+      -559580957,
+      332591456,
+      -1670924195,
+      -1670924195
+     ],
+     [
+      1765031574,
+      42,
+      42,
+      42,
+      42,
+      1765031574,
+      42,
+      -1712319331,
+      -559580957,
+      1979615276,
+      -1670924195,
+      -1670924195
+     ],
+     [
+      -1823081949,
+      -1746277956,
+      240764735,
+      1505767161,
+      42,
+      -202814920,
+      42,
+      -1712319331,
+      -559580957,
+      215785259,
+      -1670924195,
+      -1670924195
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "hash(id)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(txt)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(d)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(dec)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(arr_i)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(id, txt)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(NULL)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(CAST(1 AS BIGINT))",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(true)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(ts)",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(CAST(0.0 AS DOUBLE))",
+      "nullable": false,
+      "type": "int"
+     },
+     {
+      "name": "hash(CAST(0.0 AS DOUBLE))",
+      "nullable": false,
+      "type": "int"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT hash(id), hash(txt), hash(d), hash(dec), hash(arr_i), hash(id, txt), hash(NULL), hash(CAST(1 AS BIGINT)), hash(true), hash(ts), hash(CAST(0.0 AS DOUBLE)), hash(CAST(-0.0 AS DOUBLE)) FROM FRAME",
+    "name": "hash",
+    "rows": [
+     [
+      -559580957,
+      1312737952,
+      -892273744,
+      198011545,
+      1401423033,
+      -1094652493,
+      42,
+      -1712319331,
+      -559580957,
+      332591456,
+      -1670924195,
+      -1670924195
+     ],
+     [
+      1765031574,
+      42,
+      42,
+      42,
+      42,
+      1765031574,
+      42,
+      -1712319331,
+      -559580957,
+      1979615276,
+      -1670924195,
+      -1670924195
+     ],
+     [
+      -1823081949,
+      -1746277956,
+      240764735,
+      1505767161,
+      42,
+      -202814920,
+      42,
+      -1712319331,
+      -559580957,
+      215785259,
+      -1670924195,
+      -1670924195
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "format_number(d, 2)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.format_number('d', 2)",
+    "name": "format_number",
+    "rows": [
+     [
+      "2.50"
+     ],
+     [
+      null
+     ],
+     [
+      "0.12"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "format_number(d, 2)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.format_number('d', 2)",
+    "name": "format_number",
+    "rows": [
+     [
+      "2.50"
+     ],
+     [
+      null
+     ],
+     [
+      "0.12"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "format_number(dec, 0)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.format_number('dec', 0)",
+    "name": "format_number",
+    "rows": [
+     [
+      "12,346"
+     ],
+     [
+      null
+     ],
+     [
+      "-0"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "format_number(dec, 0)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.format_number('dec', 0)",
+    "name": "format_number",
+    "rows": [
+     [
+      "12,346"
+     ],
+     [
+      null
+     ],
+     [
+      "-0"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "format_number(d, 2)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "format_number(dec, 3)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "format_number(CAST(1234567.891 AS DOUBLE), #,###.##)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "format_number(id, -1)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "format_number(CAST(12345 AS INT), 1)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT format_number(d, 2), format_number(dec, 3), format_number(CAST(1234567.891 AS DOUBLE), '#,###.##'), format_number(id, -1), format_number(CAST(12345 AS INT), 1) FROM FRAME",
+    "name": "format_number",
+    "rows": [
+     [
+      "2.50",
+      "12,345.679",
+      "1,234,567.89",
+      null,
+      "12,345.0"
+     ],
+     [
+      null,
+      null,
+      "1,234,567.89",
+      null,
+      "12,345.0"
+     ],
+     [
+      "0.12",
+      "-0.500",
+      "1,234,567.89",
+      null,
+      "12,345.0"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "format_number(d, 2)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "format_number(dec, 3)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "format_number(CAST(1234567.891 AS DOUBLE), #,###.##)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "format_number(id, -1)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "format_number(CAST(12345 AS INT), 1)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT format_number(d, 2), format_number(dec, 3), format_number(CAST(1234567.891 AS DOUBLE), '#,###.##'), format_number(id, -1), format_number(CAST(12345 AS INT), 1) FROM FRAME",
+    "name": "format_number",
+    "rows": [
+     [
+      "2.50",
+      "12,345.679",
+      "1,234,567.89",
+      null,
+      "12,345.0"
+     ],
+     [
+      null,
+      null,
+      "1,234,567.89",
+      null,
+      "12,345.0"
+     ],
+     [
+      "0.12",
+      "-0.500",
+      "1,234,567.89",
+      null,
+      "12,345.0"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "mask(masked, X, x, n, NULL)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.mask('masked')",
+    "name": "mask",
+    "rows": [
+     [
+      "xxxx-XXX-nnn"
+     ],
+     [
+      null
+     ],
+     [
+      "x"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "mask(masked, X, x, n, NULL)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.mask('masked')",
+    "name": "mask",
+    "rows": [
+     [
+      "xxxx-XXX-nnn"
+     ],
+     [
+      null
+     ],
+     [
+      "x"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "mask(masked, Y, y, d, *)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.mask('masked', lit('Y'), lit('y'), lit('d'), lit('*'))",
+    "name": "mask",
+    "rows": [
+     [
+      "yyyy*YYY*ddd"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "mask(masked, Y, y, d, *)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.mask('masked', lit('Y'), lit('y'), lit('d'), lit('*'))",
+    "name": "mask",
+    "rows": [
+     [
+      "yyyy*YYY*ddd"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "mask(masked, X, x, n, NULL)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "mask(masked, Y, x, n, NULL)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "mask(masked, NULL, NULL, NULL, o)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "mask(masked, X, x, n, NULL)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT mask(masked), mask(masked, 'Y'), mask(masked, NULL, NULL, NULL, 'o'), mask(masked, 'X', 'x', 'n', NULL) FROM FRAME",
+    "name": "mask",
+    "rows": [
+     [
+      "xxxx-XXX-nnn",
+      "xxxx-YYY-nnn",
+      "abcdoEFGo123",
+      "xxxx-XXX-nnn"
+     ],
+     [
+      null,
+      null,
+      null,
+      null
+     ],
+     [
+      "x",
+      "x",
+      "x",
+      "x"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "mask(masked, X, x, n, NULL)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "mask(masked, Y, x, n, NULL)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "mask(masked, NULL, NULL, NULL, o)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "mask(masked, X, x, n, NULL)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT mask(masked), mask(masked, 'Y'), mask(masked, NULL, NULL, NULL, 'o'), mask(masked, 'X', 'x', 'n', NULL) FROM FRAME",
+    "name": "mask",
+    "rows": [
+     [
+      "xxxx-XXX-nnn",
+      "xxxx-YYY-nnn",
+      "abcdoEFGo123",
+      "xxxx-XXX-nnn"
+     ],
+     [
+      null,
+      null,
+      null,
+      null
+     ],
+     [
+      "x",
+      "x",
+      "x",
+      "x"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "collate(txt, UTF8_LCASE)",
+      "nullable": true,
+      "type": "string collate UTF8_LCASE"
+     }
+    ],
+    "door": "python",
+    "expr": "F.collate('txt', 'UTF8_LCASE')",
+    "name": "collate",
+    "rows": [
+     [
+      "Hello World. How are you?"
+     ],
+     [
+      null
+     ],
+     [
+      "one"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "collate(txt, UTF8_LCASE)",
+      "nullable": true,
+      "type": "string collate UTF8_LCASE"
+     }
+    ],
+    "door": "python",
+    "expr": "F.collate('txt', 'UTF8_LCASE')",
+    "name": "collate",
+    "rows": [
+     [
+      "Hello World. How are you?"
+     ],
+     [
+      null
+     ],
+     [
+      "one"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "collation(txt)",
+      "nullable": false,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.collation('txt')",
+    "name": "collation",
+    "rows": [
+     [
+      "SYSTEM.BUILTIN.UTF8_BINARY"
+     ],
+     [
+      "SYSTEM.BUILTIN.UTF8_BINARY"
+     ],
+     [
+      "SYSTEM.BUILTIN.UTF8_BINARY"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "collation(txt)",
+      "nullable": false,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.collation('txt')",
+    "name": "collation",
+    "rows": [
+     [
+      "SYSTEM.BUILTIN.UTF8_BINARY"
+     ],
+     [
+      "SYSTEM.BUILTIN.UTF8_BINARY"
+     ],
+     [
+      "SYSTEM.BUILTIN.UTF8_BINARY"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "collation(txt)",
+      "nullable": false,
+      "type": "string"
+     },
+     {
+      "name": "collation(collate(txt, UTF8_LCASE))",
+      "nullable": false,
+      "type": "string"
+     },
+     {
+      "name": "(collate(txt, UNICODE_CI) = 'hello world. how are you?' collate UNICODE_CI)",
+      "nullable": true,
+      "type": "boolean"
+     },
+     {
+      "name": "(collate(a, UTF8_LCASE) = 'A' collate UTF8_LCASE)",
+      "nullable": false,
+      "type": "boolean"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT collation(txt), collation(txt COLLATE UTF8_LCASE), collate(txt, 'UNICODE_CI') = 'hello world. how are you?', 'a' COLLATE UTF8_LCASE = 'A' FROM FRAME",
+    "name": "collate",
+    "rows": [
+     [
+      "SYSTEM.BUILTIN.UTF8_BINARY",
+      "SYSTEM.BUILTIN.UTF8_LCASE",
+      true,
+      true
+     ],
+     [
+      "SYSTEM.BUILTIN.UTF8_BINARY",
+      "SYSTEM.BUILTIN.UTF8_LCASE",
+      null,
+      true
+     ],
+     [
+      "SYSTEM.BUILTIN.UTF8_BINARY",
+      "SYSTEM.BUILTIN.UTF8_LCASE",
+      false,
+      true
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "collation(txt)",
+      "nullable": false,
+      "type": "string"
+     },
+     {
+      "name": "collation(collate(txt, UTF8_LCASE))",
+      "nullable": false,
+      "type": "string"
+     },
+     {
+      "name": "(collate(txt, UNICODE_CI) = 'hello world. how are you?' collate UNICODE_CI)",
+      "nullable": true,
+      "type": "boolean"
+     },
+     {
+      "name": "(collate(a, UTF8_LCASE) = 'A' collate UTF8_LCASE)",
+      "nullable": false,
+      "type": "boolean"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT collation(txt), collation(txt COLLATE UTF8_LCASE), collate(txt, 'UNICODE_CI') = 'hello world. how are you?', 'a' COLLATE UTF8_LCASE = 'A' FROM FRAME",
+    "name": "collate",
+    "rows": [
+     [
+      "SYSTEM.BUILTIN.UTF8_BINARY",
+      "SYSTEM.BUILTIN.UTF8_LCASE",
+      true,
+      true
+     ],
+     [
+      "SYSTEM.BUILTIN.UTF8_BINARY",
+      "SYSTEM.BUILTIN.UTF8_LCASE",
+      null,
+      true
+     ],
+     [
+      "SYSTEM.BUILTIN.UTF8_BINARY",
+      "SYSTEM.BUILTIN.UTF8_LCASE",
+      false,
+      true
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "door": "sql",
+    "error_condition": null,
+    "error_type": "Py4JJavaError",
+    "expr": "SELECT collate(txt, 'NOT_A_COLLATION') FROM FRAME",
+    "message": "An error occurred while calling o33.sql.",
+    "name": "collate"
+   },
+   {
+    "ansi": false,
+    "door": "sql",
+    "error_condition": null,
+    "error_type": "Py4JJavaError",
+    "expr": "SELECT collate(txt, 'NOT_A_COLLATION') FROM FRAME",
+    "message": "An error occurred while calling o33.sql.",
+    "name": "collate"
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "sentences(txt, , )",
+      "nullable": true,
+      "type": "array<array<string>>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.sentences('txt')",
+    "name": "sentences",
+    "rows": [
+     [
+      [
+       [
+        "Hello",
+        "World"
+       ],
+       [
+        "How",
+        "are",
+        "you"
+       ]
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       [
+        "one"
+       ]
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "sentences(txt, , )",
+      "nullable": true,
+      "type": "array<array<string>>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.sentences('txt')",
+    "name": "sentences",
+    "rows": [
+     [
+      [
+       [
+        "Hello",
+        "World"
+       ],
+       [
+        "How",
+        "are",
+        "you"
+       ]
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       [
+        "one"
+       ]
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "sentences(txt, en, US)",
+      "nullable": true,
+      "type": "array<array<string>>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.sentences('txt', lit('en'), lit('US'))",
+    "name": "sentences",
+    "rows": [
+     [
+      [
+       [
+        "Hello",
+        "World"
+       ],
+       [
+        "How",
+        "are",
+        "you"
+       ]
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       [
+        "one"
+       ]
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "sentences(txt, en, US)",
+      "nullable": true,
+      "type": "array<array<string>>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.sentences('txt', lit('en'), lit('US'))",
+    "name": "sentences",
+    "rows": [
+     [
+      [
+       [
+        "Hello",
+        "World"
+       ],
+       [
+        "How",
+        "are",
+        "you"
+       ]
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       [
+        "one"
+       ]
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "sentences(txt, , )",
+      "nullable": true,
+      "type": "array<array<string>>"
+     },
+     {
+      "name": "sentences(Hi there! Nice day. Ok, en, )",
+      "nullable": true,
+      "type": "array<array<string>>"
+     },
+     {
+      "name": "sentences(, , )",
+      "nullable": true,
+      "type": "array<array<string>>"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT sentences(txt), sentences('Hi there! Nice day. Ok', 'en'), sentences('') FROM FRAME",
+    "name": "sentences",
+    "rows": [
+     [
+      [
+       [
+        "Hello",
+        "World"
+       ],
+       [
+        "How",
+        "are",
+        "you"
+       ]
+      ],
+      [
+       [
+        "Hi",
+        "there"
+       ],
+       [
+        "Nice",
+        "day"
+       ],
+       [
+        "Ok"
+       ]
+      ],
+      []
+     ],
+     [
+      null,
+      [
+       [
+        "Hi",
+        "there"
+       ],
+       [
+        "Nice",
+        "day"
+       ],
+       [
+        "Ok"
+       ]
+      ],
+      []
+     ],
+     [
+      [
+       [
+        "one"
+       ]
+      ],
+      [
+       [
+        "Hi",
+        "there"
+       ],
+       [
+        "Nice",
+        "day"
+       ],
+       [
+        "Ok"
+       ]
+      ],
+      []
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "sentences(txt, , )",
+      "nullable": true,
+      "type": "array<array<string>>"
+     },
+     {
+      "name": "sentences(Hi there! Nice day. Ok, en, )",
+      "nullable": true,
+      "type": "array<array<string>>"
+     },
+     {
+      "name": "sentences(, , )",
+      "nullable": true,
+      "type": "array<array<string>>"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT sentences(txt), sentences('Hi there! Nice day. Ok', 'en'), sentences('') FROM FRAME",
+    "name": "sentences",
+    "rows": [
+     [
+      [
+       [
+        "Hello",
+        "World"
+       ],
+       [
+        "How",
+        "are",
+        "you"
+       ]
+      ],
+      [
+       [
+        "Hi",
+        "there"
+       ],
+       [
+        "Nice",
+        "day"
+       ],
+       [
+        "Ok"
+       ]
+      ],
+      []
+     ],
+     [
+      null,
+      [
+       [
+        "Hi",
+        "there"
+       ],
+       [
+        "Nice",
+        "day"
+       ],
+       [
+        "Ok"
+       ]
+      ],
+      []
+     ],
+     [
+      [
+       [
+        "one"
+       ]
+      ],
+      [
+       [
+        "Hi",
+        "there"
+       ],
+       [
+        "Nice",
+        "day"
+       ],
+       [
+        "Ok"
+       ]
+      ],
+      []
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "split(csvs, ,, -1)",
+      "nullable": true,
+      "type": "array<string>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.split('csvs', ',')",
+    "name": "split",
+    "rows": [
+     [
+      [
+       "a",
+       "b",
+       "",
+       "c"
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       "x"
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "split(csvs, ,, -1)",
+      "nullable": true,
+      "type": "array<string>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.split('csvs', ',')",
+    "name": "split",
+    "rows": [
+     [
+      [
+       "a",
+       "b",
+       "",
+       "c"
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       "x"
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "split(csvs, ,, 2)",
+      "nullable": true,
+      "type": "array<string>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.split('csvs', ',', 2)",
+    "name": "split",
+    "rows": [
+     [
+      [
+       "a",
+       "b,,c"
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       "x"
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "split(csvs, ,, 2)",
+      "nullable": true,
+      "type": "array<string>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.split('csvs', ',', 2)",
+    "name": "split",
+    "rows": [
+     [
+      [
+       "a",
+       "b,,c"
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       "x"
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "split(csvs, ,, -1)",
+      "nullable": true,
+      "type": "array<string>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.split('csvs', ',', -1)",
+    "name": "split",
+    "rows": [
+     [
+      [
+       "a",
+       "b",
+       "",
+       "c"
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       "x"
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "split(csvs, ,, -1)",
+      "nullable": true,
+      "type": "array<string>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.split('csvs', ',', -1)",
+    "name": "split",
+    "rows": [
+     [
+      [
+       "a",
+       "b",
+       "",
+       "c"
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       "x"
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "split(csvs, ,, 0)",
+      "nullable": true,
+      "type": "array<string>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.split('csvs', ',', 0)",
+    "name": "split",
+    "rows": [
+     [
+      [
+       "a",
+       "b",
+       "",
+       "c"
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       "x"
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "split(csvs, ,, 0)",
+      "nullable": true,
+      "type": "array<string>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.split('csvs', ',', 0)",
+    "name": "split",
+    "rows": [
+     [
+      [
+       "a",
+       "b",
+       "",
+       "c"
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       "x"
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "split(csvs, [,], 3)",
+      "nullable": true,
+      "type": "array<string>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.split(col('csvs'), lit('[,]'), lit(3))",
+    "name": "split",
+    "rows": [
+     [
+      [
+       "a",
+       "b",
+       ",c"
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       "x"
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "split(csvs, [,], 3)",
+      "nullable": true,
+      "type": "array<string>"
+     }
+    ],
+    "door": "python",
+    "expr": "F.split(col('csvs'), lit('[,]'), lit(3))",
+    "name": "split",
+    "rows": [
+     [
+      [
+       "a",
+       "b",
+       ",c"
+      ]
+     ],
+     [
+      null
+     ],
+     [
+      [
+       "x"
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "split(csvs, ,, -1)",
+      "nullable": true,
+      "type": "array<string>"
+     },
+     {
+      "name": "split(csvs, ,, 2)",
+      "nullable": true,
+      "type": "array<string>"
+     },
+     {
+      "name": "split(csvs, , 2)",
+      "nullable": true,
+      "type": "array<string>"
+     },
+     {
+      "name": "split(a1b22c, [0-9]+, -1)",
+      "nullable": false,
+      "type": "array<string>"
+     },
+     {
+      "name": "split(csvs, ,, 1)",
+      "nullable": true,
+      "type": "array<string>"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT split(csvs, ','), split(csvs, ',', 2), split(csvs, '', 2), split('a1b22c', '[0-9]+'), split(csvs, ',', 1) FROM FRAME",
+    "name": "split",
+    "rows": [
+     [
+      [
+       "a",
+       "b",
+       "",
+       "c"
+      ],
+      [
+       "a",
+       "b,,c"
+      ],
+      [
+       "a",
+       ",b,,c"
+      ],
+      [
+       "a",
+       "b",
+       "c"
+      ],
+      [
+       "a,b,,c"
+      ]
+     ],
+     [
+      null,
+      null,
+      null,
+      [
+       "a",
+       "b",
+       "c"
+      ],
+      null
+     ],
+     [
+      [
+       "x"
+      ],
+      [
+       "x"
+      ],
+      [
+       "x"
+      ],
+      [
+       "a",
+       "b",
+       "c"
+      ],
+      [
+       "x"
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "split(csvs, ,, -1)",
+      "nullable": true,
+      "type": "array<string>"
+     },
+     {
+      "name": "split(csvs, ,, 2)",
+      "nullable": true,
+      "type": "array<string>"
+     },
+     {
+      "name": "split(csvs, , 2)",
+      "nullable": true,
+      "type": "array<string>"
+     },
+     {
+      "name": "split(a1b22c, [0-9]+, -1)",
+      "nullable": false,
+      "type": "array<string>"
+     },
+     {
+      "name": "split(csvs, ,, 1)",
+      "nullable": true,
+      "type": "array<string>"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT split(csvs, ','), split(csvs, ',', 2), split(csvs, '', 2), split('a1b22c', '[0-9]+'), split(csvs, ',', 1) FROM FRAME",
+    "name": "split",
+    "rows": [
+     [
+      [
+       "a",
+       "b",
+       "",
+       "c"
+      ],
+      [
+       "a",
+       "b,,c"
+      ],
+      [
+       "a",
+       ",b,,c"
+      ],
+      [
+       "a",
+       "b",
+       "c"
+      ],
+      [
+       "a,b,,c"
+      ]
+     ],
+     [
+      null,
+      null,
+      null,
+      [
+       "a",
+       "b",
+       "c"
+      ],
+      null
+     ],
+     [
+      [
+       "x"
+      ],
+      [
+       "x"
+      ],
+      [
+       "x"
+      ],
+      [
+       "a",
+       "b",
+       "c"
+      ],
+      [
+       "x"
+      ]
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "locate(o, txt, 1)",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.locate('o', 'txt')",
+    "name": "locate",
+    "rows": [
+     [
+      5
+     ],
+     [
+      null
+     ],
+     [
+      1
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "locate(o, txt, 1)",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.locate('o', 'txt')",
+    "name": "locate",
+    "rows": [
+     [
+      5
+     ],
+     [
+      null
+     ],
+     [
+      1
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "locate(o, txt, 6)",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.locate('o', 'txt', 6)",
+    "name": "locate",
+    "rows": [
+     [
+      8
+     ],
+     [
+      null
+     ],
+     [
+      0
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "locate(o, txt, 6)",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.locate('o', 'txt', 6)",
+    "name": "locate",
+    "rows": [
+     [
+      8
+     ],
+     [
+      null
+     ],
+     [
+      0
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "locate(o, txt, 0)",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.locate('o', 'txt', 0)",
+    "name": "locate",
+    "rows": [
+     [
+      0
+     ],
+     [
+      null
+     ],
+     [
+      0
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "locate(o, txt, 0)",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.locate('o', 'txt', 0)",
+    "name": "locate",
+    "rows": [
+     [
+      0
+     ],
+     [
+      null
+     ],
+     [
+      0
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "locate(o, txt, -1)",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.locate('o', 'txt', -1)",
+    "name": "locate",
+    "rows": [
+     [
+      0
+     ],
+     [
+      null
+     ],
+     [
+      0
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "locate(o, txt, -1)",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "python",
+    "expr": "F.locate('o', 'txt', -1)",
+    "name": "locate",
+    "rows": [
+     [
+      0
+     ],
+     [
+      null
+     ],
+     [
+      0
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "locate(o, txt, 1)",
+      "nullable": true,
+      "type": "int"
+     },
+     {
+      "name": "locate(o, txt, 6)",
+      "nullable": true,
+      "type": "int"
+     },
+     {
+      "name": "locate(o, txt, 0)",
+      "nullable": true,
+      "type": "int"
+     },
+     {
+      "name": "locate(, txt, 3)",
+      "nullable": true,
+      "type": "int"
+     },
+     {
+      "name": "locate(o, txt, 1)",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT locate('o', txt), locate('o', txt, 6), locate('o', txt, 0), locate('', txt, 3), position('o' IN txt) FROM FRAME",
+    "name": "locate",
+    "rows": [
+     [
+      5,
+      8,
+      0,
+      1,
+      5
+     ],
+     [
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      1
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "locate(o, txt, 1)",
+      "nullable": true,
+      "type": "int"
+     },
+     {
+      "name": "locate(o, txt, 6)",
+      "nullable": true,
+      "type": "int"
+     },
+     {
+      "name": "locate(o, txt, 0)",
+      "nullable": true,
+      "type": "int"
+     },
+     {
+      "name": "locate(, txt, 3)",
+      "nullable": true,
+      "type": "int"
+     },
+     {
+      "name": "locate(o, txt, 1)",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT locate('o', txt), locate('o', txt, 6), locate('o', txt, 0), locate('', txt, 3), position('o' IN txt) FROM FRAME",
+    "name": "locate",
+    "rows": [
+     [
+      5,
+      8,
+      0,
+      1,
+      5
+     ],
+     [
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      1
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "array_join(array(a, NULL, c), ,)",
+      "nullable": false,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.array_join(F.array(lit('a'), lit(None), lit('c')), ',')",
+    "name": "array_join",
+    "rows": [
+     [
+      "a,c"
+     ],
+     [
+      "a,c"
+     ],
+     [
+      "a,c"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "array_join(array(a, NULL, c), ,)",
+      "nullable": false,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.array_join(F.array(lit('a'), lit(None), lit('c')), ',')",
+    "name": "array_join",
+    "rows": [
+     [
+      "a,c"
+     ],
+     [
+      "a,c"
+     ],
+     [
+      "a,c"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "array_join(array(a, NULL, c), ,, NULL)",
+      "nullable": false,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.array_join(F.array(lit('a'), lit(None), lit('c')), ',', 'NULL')",
+    "name": "array_join",
+    "rows": [
+     [
+      "a,NULL,c"
+     ],
+     [
+      "a,NULL,c"
+     ],
+     [
+      "a,NULL,c"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "array_join(array(a, NULL, c), ,, NULL)",
+      "nullable": false,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.array_join(F.array(lit('a'), lit(None), lit('c')), ',', 'NULL')",
+    "name": "array_join",
+    "rows": [
+     [
+      "a,NULL,c"
+     ],
+     [
+      "a,NULL,c"
+     ],
+     [
+      "a,NULL,c"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "array_join(arr_i, -, ?)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.array_join('arr_i', '-', '?')",
+    "name": "array_join",
+    "rows": [
+     [
+      "10-20"
+     ],
+     [
+      ""
+     ],
+     [
+      null
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "array_join(arr_i, -, ?)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.array_join('arr_i', '-', '?')",
+    "name": "array_join",
+    "rows": [
+     [
+      "10-20"
+     ],
+     [
+      ""
+     ],
+     [
+      null
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "array_join(array(a, NULL, c), ,, N)",
+      "nullable": false,
+      "type": "string"
+     },
+     {
+      "name": "array_join(arr_i, -)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "array_join(array(NULL), ,, x)",
+      "nullable": false,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT array_join(array('a', NULL, 'c'), ',', 'N'), array_join(arr_i, '-'), array_join(array(NULL), ',', 'x') FROM FRAME",
+    "name": "array_join",
+    "rows": [
+     [
+      "a,N,c",
+      "10-20",
+      "x"
+     ],
+     [
+      "a,N,c",
+      "",
+      "x"
+     ],
+     [
+      "a,N,c",
+      null,
+      "x"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "array_join(array(a, NULL, c), ,, N)",
+      "nullable": false,
+      "type": "string"
+     },
+     {
+      "name": "array_join(arr_i, -)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "array_join(array(NULL), ,, x)",
+      "nullable": false,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT array_join(array('a', NULL, 'c'), ',', 'N'), array_join(arr_i, '-'), array_join(array(NULL), ',', 'x') FROM FRAME",
+    "name": "array_join",
+    "rows": [
+     [
+      "a,N,c",
+      "10-20",
+      "x"
+     ],
+     [
+      "a,N,c",
+      "",
+      "x"
+     ],
+     [
+      "a,N,c",
+      null,
+      "x"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "hex(aes_encrypt(Spark, 0000111122223333, ECB, DEFAULT, , ))",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.hex(F.aes_encrypt(lit('Spark'), lit('0000111122223333'), lit('ECB')))",
+    "name": "aes_encrypt",
+    "rows": [
+     [
+      "348FF37EBDE05B7880BA339068FBDA5E"
+     ],
+     [
+      "348FF37EBDE05B7880BA339068FBDA5E"
+     ],
+     [
+      "348FF37EBDE05B7880BA339068FBDA5E"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "hex(aes_encrypt(Spark, 0000111122223333, ECB, DEFAULT, , ))",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "python",
+    "expr": "F.hex(F.aes_encrypt(lit('Spark'), lit('0000111122223333'), lit('ECB')))",
+    "name": "aes_encrypt",
+    "rows": [
+     [
+      "348FF37EBDE05B7880BA339068FBDA5E"
+     ],
+     [
+      "348FF37EBDE05B7880BA339068FBDA5E"
+     ],
+     [
+      "348FF37EBDE05B7880BA339068FBDA5E"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "aes_decrypt(unhex(83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94), 0000111122223333, GCM, DEFAULT, )",
+      "nullable": true,
+      "type": "binary"
+     }
+    ],
+    "door": "python",
+    "expr": "F.aes_decrypt(F.unhex(lit('83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94')), lit('0000111122223333'))",
+    "name": "aes_decrypt",
+    "rows": [
+     [
+      {
+       "bytes_hex": "537061726b"
+      }
+     ],
+     [
+      {
+       "bytes_hex": "537061726b"
+      }
+     ],
+     [
+      {
+       "bytes_hex": "537061726b"
+      }
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "aes_decrypt(unhex(83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94), 0000111122223333, GCM, DEFAULT, )",
+      "nullable": true,
+      "type": "binary"
+     }
+    ],
+    "door": "python",
+    "expr": "F.aes_decrypt(F.unhex(lit('83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94')), lit('0000111122223333'))",
+    "name": "aes_decrypt",
+    "rows": [
+     [
+      {
+       "bytes_hex": "537061726b"
+      }
+     ],
+     [
+      {
+       "bytes_hex": "537061726b"
+      }
+     ],
+     [
+      {
+       "bytes_hex": "537061726b"
+      }
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "hex(aes_encrypt(Spark, 0000111122223333, ECB, PKCS, , ))",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "hex(aes_encrypt(Spark, 0000111122223333, ECB, DEFAULT, , ))",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "base64(aes_encrypt(Spark SQL, 1234567890abcdef, ECB, PKCS, , ))",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT hex(aes_encrypt('Spark', '0000111122223333', 'ECB', 'PKCS')), hex(aes_encrypt('Spark', '0000111122223333', 'ECB')), base64(aes_encrypt('Spark SQL', '1234567890abcdef', 'ECB', 'PKCS'))",
+    "name": "aes_encrypt",
+    "rows": [
+     [
+      "348FF37EBDE05B7880BA339068FBDA5E",
+      "348FF37EBDE05B7880BA339068FBDA5E",
+      "3lmwu+Mw0H3fi5NDvcu9lg=="
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "hex(aes_encrypt(Spark, 0000111122223333, ECB, PKCS, , ))",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "hex(aes_encrypt(Spark, 0000111122223333, ECB, DEFAULT, , ))",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "base64(aes_encrypt(Spark SQL, 1234567890abcdef, ECB, PKCS, , ))",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT hex(aes_encrypt('Spark', '0000111122223333', 'ECB', 'PKCS')), hex(aes_encrypt('Spark', '0000111122223333', 'ECB')), base64(aes_encrypt('Spark SQL', '1234567890abcdef', 'ECB', 'PKCS'))",
+    "name": "aes_encrypt",
+    "rows": [
+     [
+      "348FF37EBDE05B7880BA339068FBDA5E",
+      "348FF37EBDE05B7880BA339068FBDA5E",
+      "3lmwu+Mw0H3fi5NDvcu9lg=="
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "CAST(aes_decrypt(unhex(83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94), 0000111122223333, GCM, DEFAULT, ) AS STRING)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT CAST(aes_decrypt(unhex('83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94'), '0000111122223333') AS STRING)",
+    "name": "aes_decrypt",
+    "rows": [
+     [
+      "Spark"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "CAST(aes_decrypt(unhex(83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94), 0000111122223333, GCM, DEFAULT, ) AS STRING)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT CAST(aes_decrypt(unhex('83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94'), '0000111122223333') AS STRING)",
+    "name": "aes_decrypt",
+    "rows": [
+     [
+      "Spark"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "CAST(aes_decrypt(unbase64(3lmwu+Mw0H3fi5NDvcu9lg==), 1234567890abcdef, ECB, PKCS, ) AS STRING)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT CAST(aes_decrypt(unbase64('3lmwu+Mw0H3fi5NDvcu9lg=='), '1234567890abcdef', 'ECB', 'PKCS') AS STRING)",
+    "name": "aes_decrypt",
+    "rows": [
+     [
+      "Spark SQL"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "CAST(aes_decrypt(unbase64(3lmwu+Mw0H3fi5NDvcu9lg==), 1234567890abcdef, ECB, PKCS, ) AS STRING)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT CAST(aes_decrypt(unbase64('3lmwu+Mw0H3fi5NDvcu9lg=='), '1234567890abcdef', 'ECB', 'PKCS') AS STRING)",
+    "name": "aes_decrypt",
+    "rows": [
+     [
+      "Spark SQL"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "CAST(aes_decrypt(unbase64(2NYmDCjgXTbbxGA3/SnJEfFC/JQ7olk2VQWReIAAFKo=), 1234567890abcdef, CBC, DEFAULT, ) AS STRING)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT CAST(aes_decrypt(unbase64('2NYmDCjgXTbbxGA3/SnJEfFC/JQ7olk2VQWReIAAFKo='), '1234567890abcdef', 'CBC') AS STRING)",
+    "name": "aes_decrypt",
+    "rows": [
+     [
+      "Apache Spark"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "CAST(aes_decrypt(unbase64(2NYmDCjgXTbbxGA3/SnJEfFC/JQ7olk2VQWReIAAFKo=), 1234567890abcdef, CBC, DEFAULT, ) AS STRING)",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT CAST(aes_decrypt(unbase64('2NYmDCjgXTbbxGA3/SnJEfFC/JQ7olk2VQWReIAAFKo='), '1234567890abcdef', 'CBC') AS STRING)",
+    "name": "aes_decrypt",
+    "rows": [
+     [
+      "Apache Spark"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "door": "sql",
+    "error_condition": "INVALID_PARAMETER_VALUE.AES_CRYPTO_ERROR",
+    "error_type": "SparkRuntimeException",
+    "expr": "SELECT CAST(aes_decrypt(unhex('00'), '0000111122223333') AS STRING)",
+    "message": "[INVALID_PARAMETER_VALUE.AES_CRYPTO_ERROR] The value of parameter(s) `expr`, `key` in `aes_encrypt`/`aes_decrypt` is invalid: detail message: Invalid buffer arguments SQLSTATE: 22023",
+    "name": "aes_decrypt"
+   },
+   {
+    "ansi": false,
+    "door": "sql",
+    "error_condition": "INVALID_PARAMETER_VALUE.AES_CRYPTO_ERROR",
+    "error_type": "SparkRuntimeException",
+    "expr": "SELECT CAST(aes_decrypt(unhex('00'), '0000111122223333') AS STRING)",
+    "message": "[INVALID_PARAMETER_VALUE.AES_CRYPTO_ERROR] The value of parameter(s) `expr`, `key` in `aes_encrypt`/`aes_decrypt` is invalid: detail message: Invalid buffer arguments SQLSTATE: 22023",
+    "name": "aes_decrypt"
+   },
+   {
+    "ansi": true,
+    "door": "sql",
+    "error_condition": "INVALID_PARAMETER_VALUE.AES_KEY_LENGTH",
+    "error_type": "SparkRuntimeException",
+    "expr": "SELECT aes_decrypt(unhex('00'), 'shortkey')",
+    "message": "[INVALID_PARAMETER_VALUE.AES_KEY_LENGTH] The value of parameter(s) `key` in `aes_encrypt`/`aes_decrypt` is invalid: expects a binary value with 16, 24 or 32 bytes, but got 8 bytes. SQLSTATE: 22023",
+    "name": "aes_decrypt"
+   },
+   {
+    "ansi": false,
+    "door": "sql",
+    "error_condition": "INVALID_PARAMETER_VALUE.AES_KEY_LENGTH",
+    "error_type": "SparkRuntimeException",
+    "expr": "SELECT aes_decrypt(unhex('00'), 'shortkey')",
+    "message": "[INVALID_PARAMETER_VALUE.AES_KEY_LENGTH] The value of parameter(s) `key` in `aes_encrypt`/`aes_decrypt` is invalid: expects a binary value with 16, 24 or 32 bytes, but got 8 bytes. SQLSTATE: 22023",
+    "name": "aes_decrypt"
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "(aes_encrypt(Spark, 0000111122223333, GCM, DEFAULT, , ) IS NOT NULL)",
+      "nullable": false,
+      "type": "boolean"
+     },
+     {
+      "name": "length(aes_encrypt(Spark, 0000111122223333, GCM, DEFAULT, , ))",
+      "nullable": true,
+      "type": "int"
+     },
+     {
+      "name": "length(aes_encrypt(Spark, 0000111122223333, CBC, DEFAULT, , ))",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT aes_encrypt('Spark', '0000111122223333', 'GCM') IS NOT NULL, length(aes_encrypt('Spark', '0000111122223333', 'GCM')), length(aes_encrypt('Spark', '0000111122223333', 'CBC'))",
+    "name": "aes_encrypt",
+    "rows": [
+     [
+      true,
+      33,
+      32
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "(aes_encrypt(Spark, 0000111122223333, GCM, DEFAULT, , ) IS NOT NULL)",
+      "nullable": false,
+      "type": "boolean"
+     },
+     {
+      "name": "length(aes_encrypt(Spark, 0000111122223333, GCM, DEFAULT, , ))",
+      "nullable": true,
+      "type": "int"
+     },
+     {
+      "name": "length(aes_encrypt(Spark, 0000111122223333, CBC, DEFAULT, , ))",
+      "nullable": true,
+      "type": "int"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT aes_encrypt('Spark', '0000111122223333', 'GCM') IS NOT NULL, length(aes_encrypt('Spark', '0000111122223333', 'GCM')), length(aes_encrypt('Spark', '0000111122223333', 'CBC'))",
+    "name": "aes_encrypt",
+    "rows": [
+     [
+      true,
+      33,
+      32
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "CAST(aes_decrypt(aes_encrypt(Spark, 0000111122223333, GCM, DEFAULT, unhex(000000000000000000000000), aad), 0000111122223333, GCM, DEFAULT, aad) AS STRING)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "hex(aes_encrypt(Spark, 0000111122223333, CBC, DEFAULT, unhex(00000000000000000000000000000000), ))",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT CAST(aes_decrypt(aes_encrypt('Spark', '0000111122223333', 'GCM', 'DEFAULT', unhex('000000000000000000000000'), 'aad'), '0000111122223333', 'GCM', 'DEFAULT', 'aad') AS STRING), hex(aes_encrypt('Spark', '0000111122223333', 'CBC', 'DEFAULT', unhex('00000000000000000000000000000000')))",
+    "name": "aes_encrypt",
+    "rows": [
+     [
+      "Spark",
+      "00000000000000000000000000000000348FF37EBDE05B7880BA339068FBDA5E"
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "CAST(aes_decrypt(aes_encrypt(Spark, 0000111122223333, GCM, DEFAULT, unhex(000000000000000000000000), aad), 0000111122223333, GCM, DEFAULT, aad) AS STRING)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "hex(aes_encrypt(Spark, 0000111122223333, CBC, DEFAULT, unhex(00000000000000000000000000000000), ))",
+      "nullable": true,
+      "type": "string"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT CAST(aes_decrypt(aes_encrypt('Spark', '0000111122223333', 'GCM', 'DEFAULT', unhex('000000000000000000000000'), 'aad'), '0000111122223333', 'GCM', 'DEFAULT', 'aad') AS STRING), hex(aes_encrypt('Spark', '0000111122223333', 'CBC', 'DEFAULT', unhex('00000000000000000000000000000000')))",
+    "name": "aes_encrypt",
+    "rows": [
+     [
+      "Spark",
+      "00000000000000000000000000000000348FF37EBDE05B7880BA339068FBDA5E"
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "try_aes_decrypt(unhex(00), 0000111122223333, GCM, DEFAULT, )",
+      "nullable": true,
+      "type": "binary"
+     },
+     {
+      "name": "CAST(try_aes_decrypt(unhex(83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94), 0000111122223333, GCM, DEFAULT, ) AS STRING)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "try_aes_decrypt(unhex(00), shortkey, GCM, DEFAULT, )",
+      "nullable": true,
+      "type": "binary"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT try_aes_decrypt(unhex('00'), '0000111122223333'), CAST(try_aes_decrypt(unhex('83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94'), '0000111122223333') AS STRING), try_aes_decrypt(unhex('00'), 'shortkey')",
+    "name": "try_aes_decrypt",
+    "rows": [
+     [
+      null,
+      "Spark",
+      null
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "try_aes_decrypt(unhex(00), 0000111122223333, GCM, DEFAULT, )",
+      "nullable": true,
+      "type": "binary"
+     },
+     {
+      "name": "CAST(try_aes_decrypt(unhex(83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94), 0000111122223333, GCM, DEFAULT, ) AS STRING)",
+      "nullable": true,
+      "type": "string"
+     },
+     {
+      "name": "try_aes_decrypt(unhex(00), shortkey, GCM, DEFAULT, )",
+      "nullable": true,
+      "type": "binary"
+     }
+    ],
+    "door": "sql",
+    "expr": "SELECT try_aes_decrypt(unhex('00'), '0000111122223333'), CAST(try_aes_decrypt(unhex('83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94'), '0000111122223333') AS STRING), try_aes_decrypt(unhex('00'), 'shortkey')",
+    "name": "try_aes_decrypt",
+    "rows": [
+     [
+      null,
+      "Spark",
+      null
+     ]
+    ]
+   },
+   {
+    "ansi": true,
+    "columns": [
+     {
+      "name": "try_aes_decrypt(unhex(00), 0000111122223333, GCM, DEFAULT, )",
+      "nullable": true,
+      "type": "binary"
+     }
+    ],
+    "door": "python",
+    "expr": "F.try_aes_decrypt(F.unhex(lit('00')), lit('0000111122223333'))",
+    "name": "try_aes_decrypt",
+    "rows": [
+     [
+      null
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ]
+   },
+   {
+    "ansi": false,
+    "columns": [
+     {
+      "name": "try_aes_decrypt(unhex(00), 0000111122223333, GCM, DEFAULT, )",
+      "nullable": true,
+      "type": "binary"
+     }
+    ],
+    "door": "python",
+    "expr": "F.try_aes_decrypt(F.unhex(lit('00')), lit('0000111122223333'))",
+    "name": "try_aes_decrypt",
+    "rows": [
+     [
+      null
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ]
+   }
+  ],
+  "q12": [
+   {
+    "expr": "split('a,b', ',')",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": false,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-41",
+    "rows": [
+     "['a', 'b']"
+    ]
+   },
+   {
+    "expr": "split(s, ',')",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": true,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-42",
+    "rows": [
+     "['a', 'b', '', 'c']"
+    ]
+   },
+   {
+    "expr": "split(s, ',', 2)",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": true,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-43",
+    "rows": [
+     "['a', 'b,,c']"
+    ]
+   },
+   {
+    "expr": "split(s, ',', -1)",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": true,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-44",
+    "rows": [
+     "['a', 'b', '', 'c']"
+    ]
+   },
+   {
+    "expr": "split(s, ',', 0)",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": true,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-45",
+    "rows": [
+     "['a', 'b', '', 'c']"
+    ]
+   },
+   {
+    "expr": "split('a1b22c', '[0-9]+')",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": false,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-46",
+    "rows": [
+     "['a', 'b', 'c']"
+    ]
+   },
+   {
+    "expr": "split('abc', '')",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": false,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-47",
+    "rows": [
+     "['a', 'b', 'c']"
+    ]
+   },
+   {
+    "expr": "split('', ',')",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": false,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-48",
+    "rows": [
+     "['']"
+    ]
+   },
+   {
+    "expr": "split(NULL, ',')",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": true,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-49",
+    "rows": [
+     "None"
+    ]
+   },
+   {
+    "expr": "split(s, NULL)",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": true,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-50",
+    "rows": [
+     "None"
+    ]
+   },
+   {
+    "expr": "split('a.b', '.')",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": false,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-51",
+    "rows": [
+     "['', '', '', '']"
+    ]
+   },
+   {
+    "expr": "split('a|b', '\\\\|')",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": false,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-52",
+    "rows": [
+     "['a', 'b']"
+    ]
+   },
+   {
+    "expr": "split(s, ',', CAST(NULL AS INT))",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": true,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-53",
+    "rows": [
+     "None"
+    ]
+   },
+   {
+    "expr": "split('aXbxc', '(?i)x')",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": false,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-54",
+    "rows": [
+     "['a', 'b', 'c']"
+    ]
+   },
+   {
+    "expr": "split(123, '2')",
+    "field": {
+     "metadata": {},
+     "name": "v",
+     "nullable": false,
+     "type": {
+      "containsNull": false,
+      "elementType": "string",
+      "type": "array"
+     }
+    },
+    "id": "Q12-55",
+    "rows": [
+     "['1', '3']"
+    ]
+   }
+  ]
+ },
+ "provenance": {
+  "bl6": {
+   "note": "BL6-sql-0 through BL6-sql-3 plus DIV-like-1 and DIV-api-like",
+   "recorded": "2026-08-18",
+   "source": "/tmp/oc-worker/pc-oracle/fixtures-batch2.json",
+   "spark": "4.1.2"
+  },
+  "f14": {
+   "note": "every F14-* cell, SQL door",
+   "recorded": "2026-09-14",
+   "source": "/tmp/oc-worker/pc-oracle/fixtures-batch3.json",
+   "spark": "4.1.2"
+  },
+  "o245": {
+   "note": "cells whose name is in the D-6 scope plus locate and array_join, both doors, both ANSI settings",
+   "recorded": "2026-09-14",
+   "source": "/tmp/oc-worker/pa-math/o245_spark_oracle.json",
+   "spark": "4.1.2"
+  },
+  "q12": {
+   "note": "cells Q12-41 through Q12-55, split facade half",
+   "recorded": "2026-09-15",
+   "source": "/tmp/oc-worker/qc-oracle/fixtures-batch12.json",
+   "spark": "4.1.2"
+  }
+ },
+ "signatures": {
+  "aes_decrypt": "(input: 'ColumnOrName', key: 'ColumnOrName', mode: Optional[ForwardRef('ColumnOrName')] = None, padding: Optional[ForwardRef('ColumnOrName')] = None, aad: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "aes_encrypt": "(input: 'ColumnOrName', key: 'ColumnOrName', mode: Optional[ForwardRef('ColumnOrName')] = None, padding: Optional[ForwardRef('ColumnOrName')] = None, iv: Optional[ForwardRef('ColumnOrName')] = None, aad: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "array_join": "(col: 'ColumnOrName', delimiter: str, null_replacement: Optional[str] = None) -> pyspark.sql.column.Column",
+  "bround": "(col: 'ColumnOrName', scale: Union[pyspark.sql.column.Column, int, NoneType] = None) -> pyspark.sql.column.Column",
+  "collate": "(col: 'ColumnOrName', collation: str) -> pyspark.sql.column.Column",
+  "collation": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "conv": "(col: 'ColumnOrName', fromBase: int, toBase: int) -> pyspark.sql.column.Column",
+  "format_number": "(col: 'ColumnOrName', d: int) -> pyspark.sql.column.Column",
+  "from_csv": "(col: 'ColumnOrName', schema: Union[pyspark.sql.column.Column, str], options: Optional[Mapping[str, str]] = None) -> pyspark.sql.column.Column",
+  "from_xml": "(col: 'ColumnOrName', schema: Union[pyspark.sql.types.StructType, pyspark.sql.column.Column, str], options: Optional[Mapping[str, str]] = None) -> pyspark.sql.column.Column",
+  "hash": "(*cols: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "inline": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "inline_outer": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "json_tuple": "(col: 'ColumnOrName', *fields: str) -> pyspark.sql.column.Column",
+  "locate": "(substr: str, str: 'ColumnOrName', pos: int = 1) -> pyspark.sql.column.Column",
+  "mask": "(col: 'ColumnOrName', upperChar: Optional[ForwardRef('ColumnOrName')] = None, lowerChar: Optional[ForwardRef('ColumnOrName')] = None, digitChar: Optional[ForwardRef('ColumnOrName')] = None, otherChar: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "posexplode": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "posexplode_outer": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "schema_of_csv": "(csv: Union[pyspark.sql.column.Column, str], options: Optional[Mapping[str, str]] = None) -> pyspark.sql.column.Column",
+  "schema_of_xml": "(xml: Union[pyspark.sql.column.Column, str], options: Optional[Mapping[str, str]] = None) -> pyspark.sql.column.Column",
+  "sentences": "(string: 'ColumnOrName', language: Optional[ForwardRef('ColumnOrName')] = None, country: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "session_window": "(timeColumn: 'ColumnOrName', gapDuration: Union[pyspark.sql.column.Column, str]) -> pyspark.sql.column.Column",
+  "split": "(str: 'ColumnOrName', pattern: Union[pyspark.sql.column.Column, str], limit: Union[ForwardRef('ColumnOrName'), int] = -1) -> pyspark.sql.column.Column",
+  "to_binary": "(col: 'ColumnOrName', format: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "to_char": "(col: 'ColumnOrName', format: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "to_number": "(col: 'ColumnOrName', format: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "to_varchar": "(col: 'ColumnOrName', format: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "try_aes_decrypt": "(input: 'ColumnOrName', key: 'ColumnOrName', mode: Optional[ForwardRef('ColumnOrName')] = None, padding: Optional[ForwardRef('ColumnOrName')] = None, aad: Optional[ForwardRef('ColumnOrName')] = None) -> pyspark.sql.column.Column",
+  "window": "(timeColumn: 'ColumnOrName', windowDuration: str, slideDuration: Optional[str] = None, startTime: Optional[str] = None) -> pyspark.sql.column.Column",
+  "window_time": "(windowColumn: 'ColumnOrName') -> pyspark.sql.column.Column"
+ },
+ "spark_version": "4.1.2"
+}
