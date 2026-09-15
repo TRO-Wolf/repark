@@ -103,6 +103,15 @@ one-liner.
 - [grouped_pivot.py](grouped_pivot.py) — `GroupedData.pivot` (explicit values, discovery,
   multi-aggregate naming) and `applyInPandas` / `apply_in_pandas` (the per-group pandas
   bridge).
+- [schema_reconcile.py](schema_reconcile.py) — `DataFrame.to` / `withMetadata` /
+  `registerTempTable`: reorder+cast reconciliation, the metadata stamp's
+  current `{}` readback (backlog DF-METADATA-1), and the deprecated temp-view
+  register inside `warnings.catch_warnings()` (DF-SURFACE-A-1).
+- [session_and_checkpoint.py](session_and_checkpoint.py) — `DataFrame.sparkSession` /
+  `isLocal` / `executionInfo` / `checkpoint`: owning-session identity, the
+  always-False locality answer, the `CLASSIC_OPERATION_NOT_SUPPORTED_ON_DF`
+  refusal, and both checkpoint arms returning a new frame with the same rows
+  (DF-SURFACE-A-1).
 - [row_tuple.py](row_tuple.py) — `Row.count` / `Row.index`: the tuple protocol on a collected
   Row, including `index`'s start argument and its `ValueError` text (ROW-TUPLE-1).
 - [row_dicts.py](row_dicts.py) — `Row.asDict` / `Row.as_dict` (flat, and recursive over a

@@ -2424,7 +2424,9 @@ the pin rather than obeying it.
 - **Pin** —
   `python/repark/tests/test_nullability_2.py::test_narrow_logical_widths_report_wide_per_logical_width_1`
   plus the dtype asserts in `...::test_cast_nullability_matches_spark`
-  (`_CAST_FLAG_ROWS`, red when fixed).
+  (`_CAST_FLAG_ROWS`, red when fixed), and
+  `python/repark/tests/test_df_surface_a_1.py::test_to_narrow_reports_logical_width_1`
+  (the same collapse seen through `DataFrame.to`, oracle cell `to_narrow`).
 - **Rationale** — BACKLOG. Filed 2026-09-06 (NULLABILITY-2 round 2).
 
 ### FLOAT-AGG-1 — sum of catastrophic-cancellation float vector
@@ -7362,6 +7364,32 @@ field NAME.
 - **Rationale** — FIXED. History: a full preview ran a full `count()` only
   to decide the footer, and the eager doors ran a bridged UDF over every
   row twice. Cells: `docs/perf/eager-preview-baseline.md`.
+
+### DF-METADATA-1 — `withMetadata` / `to` field metadata drops at every position
+
+- **repark** — `df.withMetadata("a", {"k": "v"}).schema["a"].metadata` answers
+  `{}`, and the same loss holds on every position measured: the stamped frame,
+  `filter`, `select`, `withColumn`, `join`, `union`, `cache`/eager
+  materialization, a parquet write/read round trip, and both `to()` arms
+  (source-keep and non-empty target override). `Column.alias(name, metadata=)`
+  accepts the dict and the engine ignores it — there is no StructField
+  metadata plumbing on the native path (`logical_schema_fields` carries
+  name/type/nullable only; `PyColumnParts.alias` takes no metadata).
+- **Apache Spark** — `withMetadata` is a Dataset plan node and the dict
+  survives plan transforms; `to()` keeps a source field's metadata unless the
+  target field carries non-empty metadata (`dataframe.py` 2431-2432).
+  *(oracle: live PySpark 4.1.2, cells `withMetadata` / `withMetadata_replaces`
+  / `withMetadata_order`, 2026-09-14; the transform-survival positions are
+  documented in Spark's `withMetadata` semantics, not live-measured.)*
+- **Pin** —
+  `python/repark/tests/test_df_surface_a_1.py::test_with_metadata_dropped_at_stamp_df_metadata_1`,
+  `...::test_with_metadata_dropped_across_positions_df_metadata_1`,
+  `...::test_to_metadata_arms_drop_df_metadata_1` (each codifies today's `{}`).
+- **Rationale** — BACKLOG, filed 2026-09-14 (DF-SURFACE-A-1 critic round 1,
+  ruling R-7). The fix is engine-side field-metadata plumbing; the facade
+  already routes every stamp through `alias(metadata=)` so the dict flows the
+  moment the native path accepts it.
+  pins: df-surface-a-1/C-008
 
 ## 8. Drop-in disclosure rationale
 

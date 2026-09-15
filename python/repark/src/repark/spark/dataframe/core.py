@@ -294,7 +294,6 @@ class DataFrame:
         "_origin_not_emitted",
         "_persist_requested",
         "_plan_id",
-        "_schema_override",
         "_session",
         "_source_view_name",
         "_storage_level",
@@ -341,7 +340,6 @@ class DataFrame:
         self._layer_map: dict[str, Any] | None = None
         self._layer_defined: frozenset[str] | None = None
         self._source_view_name: str | None = None
-        self._schema_override: StructType | None = None
         self._tighten_derived: bool = False
 
     def _ensure_alive(self) -> None:
@@ -871,10 +869,8 @@ class DataFrame:
         return surface_a.localCheckpoint(self, eager=eager, storageLevel=storageLevel)
 
     checkpoint = surface_a.checkpoint
-    inputFiles = surface_a.inputFiles  # noqa: N815
     isLocal = surface_a.isLocal  # noqa: N815
     registerTempTable = surface_a.registerTempTable  # noqa: N815
-    semanticHash = surface_a.semanticHash  # noqa: N815
     to = surface_a.to
     withMetadata = surface_a.withMetadata  # noqa: N815
     executionInfo = property(surface_a.executionInfo)  # noqa: N815
@@ -2176,8 +2172,6 @@ class DataFrame:
     def schema(self) -> StructType:
         """Return the analyzed logical schema without executing the plan."""
         self._ensure_alive()
-        if self._schema_override is not None:
-            return self._schema_override
         if self._map_bridge is not None:
             return self._map_bridge["schema"]
         from repark.spark.types import (

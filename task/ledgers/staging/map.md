@@ -6,14 +6,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Contents
 - [df-surface-a-1-ledger.md](df-surface-a-1-ledger.md) —
-  **DF-SURFACE-A-1 step 1 (2026-09-14), in flight:** the nine-name DataFrame
-  surface (`to`/`withMetadata`/`registerTempTable`/`checkpoint`/`sparkSession`/
-  `isLocal`/`inputFiles`/`executionInfo`/`semanticHash`) answers the live
+  **DF-SURFACE-A-1 step 1 + critic round 1 (2026-09-14), in flight:** the
+  seven-name DataFrame surface (`to`/`withMetadata`/`registerTempTable`/
+  `checkpoint`/`sparkSession`/`isLocal`/`executionInfo`) answers the live
   PySpark 4.1.2 `facade_dataframe_surface_oracle.json` cells — bodies in the new
   `dataframe/surface_a.py` bound one line each on `DataFrame` (CAP-1 ceiling),
-  with `DF-TO-1` and `DF-CHECKPOINT-1` filed DECLARED in the parity registry.
+  with `DF-TO-1` and `DF-CHECKPOINT-1` filed DECLARED and `DF-METADATA-1` filed
+  BACKLOG in the parity registry; `inputFiles`/`semanticHash` moved to
+  DF-PLAN-INTROSPECT-1 under ruling R-5.
   `risk_tier: standard`. Branch `feat/df-surface-a-1`.
-  pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
