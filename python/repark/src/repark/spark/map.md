@@ -127,11 +127,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9
   (2026-09-05):** `create_map`, `map_concat` and `array_insert` land here.
   pins: fnp-9-collections-json/C-006
-  **ABS-EXPR-1 audit (2026-09-13):** `_glue_element`'s `when(isnull(a), NULL).otherwise(built)`
-  embeds `array_col` 2× per level (≈19 MB at depth 12, ~×2.2/level) and stays — DataFusion
-  `array_append`/`array_prepend` drop the input's null buffer, so the guard is load-bearing
-  for Spark's NULL-array→NULL answer; no one-call native answer exists (needs its own card).
-  pins: abs-expr-1/C-004
+  **ARRAY-NULL-1 (2026-09-14):** `_glue_element` is one `_scalar("array_append"/
+  "array_prepend", a, e)` call per level — the null-preserving
+  `spark_array_*_udf` shims replaced the `when(isnull(a), NULL).otherwise(flatten(...))`
+  rewrite that embedded `array_col` 2× per level (measured ~×3/level: 51 MB at
+  depth 12, 269 MB at depth 16 on the base tree).
+  pins: array-null-1/C-002, C-003
   **FN-FIX-1:** `arrays_overlap` is the three-valued kernel, not the size-of-intersect shim.
   Live co-collect `test_live_fn_fix_1_arrays`.
   pins: fn-fix-1-registry-rows/C-002
@@ -292,6 +293,29 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `Left+DecimalType` class without decimal attrs keeps base's left-parent
   Arrow answer instead of crashing.
   pins: facade-4/C-011, C-012, C-014, C-015, C-016, C-020..C-024, C-028..C-033
+  **TYPES-BASES-1 (2026-09-14):** the concrete classes re-parent onto the Spark
+  abstract bases imported from `types_bases.py` (`DataType` moved there so the
+  bases can subclass it without an import cycle; `_SIMPLE_STRING_FAST` is a
+  shared dict populated here so the fast path survives the move), and
+  `types.Row` re-exports `spark.row.Row`. DDL routing through the Rust table is
+  unchanged — spatial DDL tokens stay refused pending the Rust spatial step.
+  Follow-up: `_merge_type` gains Spark's two mixed-SRID arms
+  (Geometry×Geometry / Geography×Geography with different `srid` → the `ANY`
+  form) plus `SpatialType` in the `StringType` soft-merge tuple;
+  `StructField` / `StructType` gain `needConversion` / `toInternal` /
+  `fromInternal` delegating to the shared helpers in `types_bases.py`.
+  pins: types-bases-1/C-001, C-003, C-005, C-006
+- `types_bases.py` — **TYPES-BASES-1 (2026-09-14):** `DataType` plus the Spark
+  abstract bases (`AtomicType`, `NumericType`, `IntegralType`, `FractionalType`,
+  `DatetimeType`, `AnyTimeType`, `AnsiIntervalType`, `SpatialType`),
+  `GeographyType` / `GeometryType` with the vendored SRID→CRS table and Spark's
+  `ST_*` refusals, `UserDefinedType` (TYPES-UDT-1 declared refusal on column
+  use; the `serialize` / `deserialize` / `_cachedSqlType` / `toInternal` /
+  `fromInternal` / `jsonValue` / `__eq__` template follows Spark on a
+  subclass), the spatial JSON token helpers, and the shared
+  `_struct_to_internal` / `_struct_from_internal` conversion bodies.
+  `types.py` imports and re-exports every public
+  name. pins: types-bases-1/C-001, C-002, C-003, C-004, C-006
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
   calls, and Arrow expansion.
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and

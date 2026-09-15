@@ -82,6 +82,52 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   WRITE-ORDER-TRANSFORM-1 residual: a `bucket(4,id)` sorted table refuses the MERGE
   loudly (`only identity sort fields are supported`) and commits no snapshot.
   pins: ice-spark-table-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
+- [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
+  `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
+  D-2 oracle cells measured on live PySpark 4.1.2 through the facade on the Arrow
+  path (value AND type, `containsNull` widening); `test_array_*_door_oracle_cells`
+  pin the same cells through the SQL door (`spark.sql`, Spark `(array, element)`
+  order on both names). `test_array_append_depth3_plan_shape` pins one UDF call
+  per level and no CASE in the physical plan.
+  `test_array_append_depth40_memory_linear[append|prepend]` runs by default: a
+  subprocess worker under `RLIMIT_AS = VmSize + 3 × 8 GB` (S2-8) builds the
+  40-level nested chain with a per-level bound exit, bound =
+  `max(2 × flat 40-append select delta, 2 × same-tree depth-4 chain delta)` —
+  measured ~2.0 MB per leg across ten consecutive runs.
+  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-3, P2-1
+- [test_array_null_1_coercion.py](test_array_null_1_coercion.py) — **ARRAY-NULL-1
+  coercion half (split from `test_array_null_1.py` under the file-size ratchet).**
+  `test_array_element_coercion_cells` parametrises the run-14b oracle plus the
+  round-4 recursive cells (numeric ladder, nested arrays, maps, structs, every
+  refusal family with the full `["X", "Y"]` pair token, door-specific literal-width
+  tokens) over both functions × both doors; `test_array_element_coercion_door_only_cells`
+  pins the bare-SQL `1.5` DECIMAL(2,1) refusals. The L-5/L-6/L-9 temporal pins:
+  `test_date_array_elements_localize_in_session_zone`,
+  `test_timestamp_array_plus_date_element_localizes_in_session_zone` and
+  `test_ntz_array_plus_timestamp_localizes_in_session_zone` build sessions with
+  `spark.sql.session.timeZone=America/Los_Angeles` and compare unix micros against
+  the measured oracle on both doors × both functions (a date becomes midnight in
+  the session zone, an NTZ wall time is read in the session zone; all results µs,
+  year 0001/9999 survive).
+  `test_timestamp_array_plus_timestamp_plans_without_array_cast` pins the S2-21
+  perf guard: `array<timestamp[us]>` + timestamp keeps the plan free of any
+  array CAST. `test_array_all_null_input_returns_typed_null` pins the all-null
+  short-circuit on both doors. Round 5:
+  `test_float16_array_plus_int_resolves_as_float32` pins L-12 over polars
+  `pa.list_(pa.float16())` ingest — Spark has no half-float, so float16 ranks
+  as FLOAT on the ladder and `100000` stores `100000.0`, never Inf (red-first
+  `Inf` recorded in the ledger); `test_struct_field_matching_ignores_case_sensitive`
+  pins L-13 — field names match case-insensitively even under
+  `spark.sql.caseSensitive=true` (product rule, residue row in the ledger).
+  Round 6 (S2-21 round-3 remediation): `test_dst_transition_day_midnights` pins
+  date→LTZ on 2024-03-10/2024-11-03 LA transition days,
+  `test_ntz_walls_in_skipped_and_repeated_hours` pins NTZ walls inside the
+  skipped 02:30 and repeated 01:30 hours (unix-micro answers recorded before
+  the zone-offset cache landed), and
+  `test_timestamp_ns_unit_rescale_truncates_like_arrow_cast` pins negative
+  pre-epoch ns→µs truncation toward zero.
+  pins: array-null-1/L-1, L-2, L-5, L-6, L-7, L-8, L-9, L-10, L-12, L-13, P3-1
 - [test_replace_linear_1.py](test_replace_linear_1.py) — **REPLACE-LINEAR-1 step 1
   (2026-09-14):** `DataFrame.replace` oracle cells measured on live PySpark 4.1.2 —
   `test_replace_oracle_cells_matching` pins the already-matching cells and
@@ -2166,6 +2212,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   env asserts none (subscriber inert). Process isolation required (global `try_init`).
 - `test_types_simple_string.py` — R-PARITY-NITS / X2 simpleString/typeName/json/fromDDL/
   StructType.add / ArrayType / MapType / collation / toInternal pins.
+- `test_types_bases_1.py` + `facade_types_oracle.json` — **TYPES-BASES-1 (2026-09-14):**
+  the Spark abstract type bases (`AtomicType` → `SpatialType`) pinned cell-by-cell from
+  the run-15b PySpark 4.1.2 oracle — the full isinstance matrix both ways and every
+  recorded MRO, base instantiation, `GeographyType`/`GeometryType` surface plus DDL/JSON
+  doors and the V3-GEO-1 column-use refusal, `UserDefinedType` cells plus the R-3
+  `NOT_IMPLEMENTED` column-use refusal (TYPES-UDT-1), `types.Row` identity, and the
+  `DataTypeSingleton` non-reproduction pin (R-2 out-of-scope observation).
+  Follow-up (critic round 1): the `_merge_type` mixed-SRID / spatial×String /
+  nested pins, the Spark-shaped `PointUdt` template table (`toInternal` /
+  `fromInternal` / `jsonValue` / `__eq__` / unhashable) and the base UDT
+  refusal features, the `{"type": "udt"}` `fromJson` refusal, the SRID/JSON
+  edge table (`GeometryType(False)`, `True` / float / string SRIDs, lowercase
+  `"any"`, the `ST_INVALID_ALGORITHM_VALUE` JSON form, CRS round trips), the
+  reader-schema V3-GEO-1 pin, and the door-blocked spatial DDL refusals
+  (Rust type table owns `fromDDL`; Spark's bare-token answer is UNMEASURED).
+  pins: types-bases-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_types_x2_census.py` — X2 census: Row empty/unnamed repr + factory arity;
   createDataFrame LongType schema, nested list/struct/map, variable int arrays;
   **octo:** explicit nested StructType/MapType/ArrayType(String) Arrow values (not

@@ -18,13 +18,9 @@ from repark.spark.functions import (
     lit,
 )
 from repark.spark.functions_expr import (
-    array,
     array_contains,
-    flatten,
-    isnull,
     map_keys,
     size,
-    when,
 )
 
 
@@ -109,15 +105,9 @@ def map_contains_key(col: Column | str, key: Column | str | int | float) -> Colu
 
 
 def _glue_element(array_col: Column, element: Column, *, prepend: bool) -> Column:
-    """Concatenate one wrapped element onto ``array_col`` (NULL array → NULL).
-
-    ``F.concat`` is string-only (Utf8 cast). ``flatten(array(arr, array(x)))`` is
-    the honest array glue. A bare flatten of a NULL array would yield ``[x]``.
-    """
-    wrapped = array(element)
-    pieces = (wrapped, array_col) if prepend else (array_col, wrapped)
-    built = flatten(array(*pieces))
-    return when(isnull(array_col), lit(None)).otherwise(built)
+    """Glue one element onto ``array_col`` through the null-preserving native UDF."""
+    name = "array_prepend" if prepend else "array_append"
+    return _scalar(name, array_col, element)
 
 
 def array_append(

@@ -1,0 +1,1274 @@
+{
+ "cells": {
+  "geo_create_df": {
+   "error": {
+    "condition": "UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED",
+    "message": "[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED] The feature is not supported: Geospatial feature is disabled. SQLSTATE: 0A000",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {},
+    "raises": "AnalysisException"
+   }
+  },
+  "geo_ddl": {
+   "result": {
+    "kind": "str",
+    "value": "StructType([StructField('g', GeometryType(4326), True)])"
+   }
+  },
+  "geo_fromjson": {
+   "error": {
+    "condition": "CANNOT_PARSE_DATATYPE",
+    "message": "[CANNOT_PARSE_DATATYPE] Unable to parse datatype. geometry(4326).",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkValueError",
+     "PySparkException",
+     "ValueError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "msg": "geometry(4326)"
+    },
+    "raises": "PySparkValueError"
+   }
+  },
+  "geography_any": {
+   "result": {
+    "kind": "str",
+    "value": "GeographyType(ANY)"
+   }
+  },
+  "geography_attrs": {
+   "result": {
+    "items": {
+     "json": {
+      "kind": "str",
+      "value": "\"geography(OGC:CRS84, SPHERICAL)\""
+     },
+     "repr": {
+      "kind": "str",
+      "value": "GeographyType(4326)"
+     },
+     "simple": {
+      "kind": "str",
+      "value": "geography(4326)"
+     },
+     "srid": {
+      "kind": "int",
+      "value": 4326
+     },
+     "typeName": {
+      "kind": "str",
+      "value": "geography"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "geography_bad_srid": {
+   "error": {
+    "condition": "ST_INVALID_SRID_VALUE",
+    "message": "[ST_INVALID_SRID_VALUE] Invalid or unsupported SRID (spatial reference identifier) value: 3857.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "IllegalArgumentException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "srid": "3857"
+    },
+    "raises": "IllegalArgumentException"
+   }
+  },
+  "geography_default": {
+   "error": {
+    "condition": null,
+    "message": "GeographyType.__init__() missing 1 required positional argument: 'srid'",
+    "module": "builtins",
+    "mro": [
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "TypeError"
+   }
+  },
+  "geometry_any": {
+   "result": {
+    "kind": "str",
+    "value": "GeometryType(ANY)"
+   }
+  },
+  "geometry_attrs": {
+   "result": {
+    "items": {
+     "json": {
+      "kind": "str",
+      "value": "\"geometry(SRID:0)\""
+     },
+     "repr": {
+      "kind": "str",
+      "value": "GeometryType(0)"
+     },
+     "simple": {
+      "kind": "str",
+      "value": "geometry(0)"
+     },
+     "srid": {
+      "kind": "int",
+      "value": 0
+     },
+     "typeName": {
+      "kind": "str",
+      "value": "geometry"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "geometry_default": {
+   "error": {
+    "condition": null,
+    "message": "GeometryType.__init__() missing 1 required positional argument: 'srid'",
+    "module": "builtins",
+    "mro": [
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "TypeError"
+   }
+  },
+  "instantiate_AnsiIntervalType": {
+   "result": {
+    "items": {
+     "eq_new": {
+      "kind": "bool",
+      "value": true
+     },
+     "hash_eq": {
+      "kind": "bool",
+      "value": true
+     },
+     "json": {
+      "kind": "str",
+      "value": "\"ansiinterval\""
+     },
+     "repr": {
+      "kind": "str",
+      "value": "AnsiIntervalType()"
+     },
+     "simpleString": {
+      "kind": "str",
+      "value": "ansiinterval"
+     },
+     "typeName": {
+      "kind": "str",
+      "value": "ansiinterval"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "instantiate_AnyTimeType": {
+   "result": {
+    "items": {
+     "eq_new": {
+      "kind": "bool",
+      "value": true
+     },
+     "hash_eq": {
+      "kind": "bool",
+      "value": true
+     },
+     "json": {
+      "kind": "str",
+      "value": "\"anytime\""
+     },
+     "repr": {
+      "kind": "str",
+      "value": "AnyTimeType()"
+     },
+     "simpleString": {
+      "kind": "str",
+      "value": "anytime"
+     },
+     "typeName": {
+      "kind": "str",
+      "value": "anytime"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "instantiate_AtomicType": {
+   "result": {
+    "items": {
+     "eq_new": {
+      "kind": "bool",
+      "value": true
+     },
+     "hash_eq": {
+      "kind": "bool",
+      "value": true
+     },
+     "json": {
+      "kind": "str",
+      "value": "\"atomic\""
+     },
+     "repr": {
+      "kind": "str",
+      "value": "AtomicType()"
+     },
+     "simpleString": {
+      "kind": "str",
+      "value": "atomic"
+     },
+     "typeName": {
+      "kind": "str",
+      "value": "atomic"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "instantiate_DatetimeType": {
+   "result": {
+    "items": {
+     "eq_new": {
+      "kind": "bool",
+      "value": true
+     },
+     "hash_eq": {
+      "kind": "bool",
+      "value": true
+     },
+     "json": {
+      "kind": "str",
+      "value": "\"datetime\""
+     },
+     "repr": {
+      "kind": "str",
+      "value": "DatetimeType()"
+     },
+     "simpleString": {
+      "kind": "str",
+      "value": "datetime"
+     },
+     "typeName": {
+      "kind": "str",
+      "value": "datetime"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "instantiate_FractionalType": {
+   "result": {
+    "items": {
+     "eq_new": {
+      "kind": "bool",
+      "value": true
+     },
+     "hash_eq": {
+      "kind": "bool",
+      "value": true
+     },
+     "json": {
+      "kind": "str",
+      "value": "\"fractional\""
+     },
+     "repr": {
+      "kind": "str",
+      "value": "FractionalType()"
+     },
+     "simpleString": {
+      "kind": "str",
+      "value": "fractional"
+     },
+     "typeName": {
+      "kind": "str",
+      "value": "fractional"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "instantiate_IntegralType": {
+   "result": {
+    "items": {
+     "eq_new": {
+      "kind": "bool",
+      "value": true
+     },
+     "hash_eq": {
+      "kind": "bool",
+      "value": true
+     },
+     "json": {
+      "kind": "str",
+      "value": "\"integral\""
+     },
+     "repr": {
+      "kind": "str",
+      "value": "IntegralType()"
+     },
+     "simpleString": {
+      "kind": "str",
+      "value": "integral"
+     },
+     "typeName": {
+      "kind": "str",
+      "value": "integral"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "instantiate_NumericType": {
+   "result": {
+    "items": {
+     "eq_new": {
+      "kind": "bool",
+      "value": true
+     },
+     "hash_eq": {
+      "kind": "bool",
+      "value": true
+     },
+     "json": {
+      "kind": "str",
+      "value": "\"numeric\""
+     },
+     "repr": {
+      "kind": "str",
+      "value": "NumericType()"
+     },
+     "simpleString": {
+      "kind": "str",
+      "value": "numeric"
+     },
+     "typeName": {
+      "kind": "str",
+      "value": "numeric"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "instantiate_SpatialType": {
+   "result": {
+    "items": {
+     "eq_new": {
+      "kind": "bool",
+      "value": true
+     },
+     "hash_eq": {
+      "kind": "bool",
+      "value": true
+     },
+     "json": {
+      "kind": "str",
+      "value": "\"spatial\""
+     },
+     "repr": {
+      "kind": "str",
+      "value": "SpatialType()"
+     },
+     "simpleString": {
+      "kind": "str",
+      "value": "spatial"
+     },
+     "typeName": {
+      "kind": "str",
+      "value": "spatial"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "isinstance_matrix": {
+   "result": {
+    "items": {
+     "ArrayType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       }
+      ],
+      "kind": "list"
+     },
+     "BinaryType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       }
+      ],
+      "kind": "list"
+     },
+     "BooleanType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       }
+      ],
+      "kind": "list"
+     },
+     "ByteType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "NumericType"
+       },
+       {
+        "kind": "str",
+        "value": "IntegralType"
+       }
+      ],
+      "kind": "list"
+     },
+     "CalendarIntervalType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       }
+      ],
+      "kind": "list"
+     },
+     "CharType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       }
+      ],
+      "kind": "list"
+     },
+     "DateType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DatetimeType"
+       }
+      ],
+      "kind": "list"
+     },
+     "DayTimeIntervalType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "AnsiIntervalType"
+       }
+      ],
+      "kind": "list"
+     },
+     "DecimalType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "NumericType"
+       },
+       {
+        "kind": "str",
+        "value": "FractionalType"
+       }
+      ],
+      "kind": "list"
+     },
+     "DoubleType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "NumericType"
+       },
+       {
+        "kind": "str",
+        "value": "FractionalType"
+       }
+      ],
+      "kind": "list"
+     },
+     "FloatType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "NumericType"
+       },
+       {
+        "kind": "str",
+        "value": "FractionalType"
+       }
+      ],
+      "kind": "list"
+     },
+     "GeographyType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "SpatialType"
+       }
+      ],
+      "kind": "list"
+     },
+     "GeometryType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "SpatialType"
+       }
+      ],
+      "kind": "list"
+     },
+     "IntegerType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "NumericType"
+       },
+       {
+        "kind": "str",
+        "value": "IntegralType"
+       }
+      ],
+      "kind": "list"
+     },
+     "LongType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "NumericType"
+       },
+       {
+        "kind": "str",
+        "value": "IntegralType"
+       }
+      ],
+      "kind": "list"
+     },
+     "MapType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       }
+      ],
+      "kind": "list"
+     },
+     "NullType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       }
+      ],
+      "kind": "list"
+     },
+     "ShortType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "NumericType"
+       },
+       {
+        "kind": "str",
+        "value": "IntegralType"
+       }
+      ],
+      "kind": "list"
+     },
+     "StringType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       }
+      ],
+      "kind": "list"
+     },
+     "StructField": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       }
+      ],
+      "kind": "list"
+     },
+     "StructType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       }
+      ],
+      "kind": "list"
+     },
+     "TimeType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DatetimeType"
+       },
+       {
+        "kind": "str",
+        "value": "AnyTimeType"
+       }
+      ],
+      "kind": "list"
+     },
+     "TimestampNTZType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DatetimeType"
+       }
+      ],
+      "kind": "list"
+     },
+     "TimestampType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DatetimeType"
+       }
+      ],
+      "kind": "list"
+     },
+     "VarcharType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       }
+      ],
+      "kind": "list"
+     },
+     "VariantType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       }
+      ],
+      "kind": "list"
+     },
+     "YearMonthIntervalType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "AnsiIntervalType"
+       }
+      ],
+      "kind": "list"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "mro": {
+   "result": {
+    "items": {
+     "AnsiIntervalType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "AnsiIntervalType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "AnyTimeType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "AnyTimeType"
+       },
+       {
+        "kind": "str",
+        "value": "DatetimeType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "AtomicType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "CharType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "CharType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "DataType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "DatetimeType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DatetimeType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "DecimalType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "DecimalType"
+       },
+       {
+        "kind": "str",
+        "value": "FractionalType"
+       },
+       {
+        "kind": "str",
+        "value": "NumericType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "FractionalType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "FractionalType"
+       },
+       {
+        "kind": "str",
+        "value": "NumericType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "GeographyType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "GeographyType"
+       },
+       {
+        "kind": "str",
+        "value": "SpatialType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "GeometryType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "GeometryType"
+       },
+       {
+        "kind": "str",
+        "value": "SpatialType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "IntegralType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "IntegralType"
+       },
+       {
+        "kind": "str",
+        "value": "NumericType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "NumericType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "NumericType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "SpatialType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "SpatialType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "TimeType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "TimeType"
+       },
+       {
+        "kind": "str",
+        "value": "AnyTimeType"
+       },
+       {
+        "kind": "str",
+        "value": "DatetimeType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "UserDefinedType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "UserDefinedType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     },
+     "VariantType": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "VariantType"
+       },
+       {
+        "kind": "str",
+        "value": "AtomicType"
+       },
+       {
+        "kind": "str",
+        "value": "DataType"
+       },
+       {
+        "kind": "str",
+        "value": "object"
+       }
+      ],
+      "kind": "list"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "numeric_singleton": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "singleton_integral": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "spatial_instantiate": {
+   "result": {
+    "kind": "str",
+    "value": "SpatialType()"
+   }
+  },
+  "time_default_repr": {
+   "result": {
+    "kind": "str",
+    "value": "TimeType(6)"
+   }
+  },
+  "time_isinstance": {
+   "result": {
+    "items": [
+     {
+      "kind": "bool",
+      "value": true
+     },
+     {
+      "kind": "bool",
+      "value": true
+     },
+     {
+      "kind": "bool",
+      "value": true
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "udt_instantiate": {
+   "result": {
+    "kind": "str",
+    "value": "UserDefinedType()"
+   }
+  },
+  "udt_sqlType": {
+   "error": {
+    "condition": "NOT_IMPLEMENTED",
+    "message": "[NOT_IMPLEMENTED] sqlType() is not implemented.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkNotImplementedError",
+     "PySparkException",
+     "NotImplementedError",
+     "RuntimeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "feature": "sqlType()"
+    },
+    "raises": "PySparkNotImplementedError"
+   }
+  },
+  "udt_typeName": {
+   "result": {
+    "kind": "str",
+    "value": "userdefinedtype"
+   }
+  }
+ },
+ "oracle": "PySpark 4.1.2 classic, local[2], spark.sql.session.timeZone=UTC, recorded 2026-09-14 (run 15b); probe at /tmp/oc-worker/run15b/oracle/cells.py + cells2.py"
+}
