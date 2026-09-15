@@ -1,4 +1,10 @@
 mod dtoa;
+#[cfg(test)]
+mod tables_doubles;
+#[cfg(test)]
+mod tables_floats;
+#[cfg(test)]
+mod tests_corpus;
 
 pub(crate) use dtoa::{
     java_double_strings, java_double_text, java_double_text_len, java_float_strings,

@@ -48,8 +48,37 @@ exponent literal (FNP-4B).
 
 ## Red-first evidence — 2026-09-15
 
-TBD in step 1: corpus-test failing counts (expect 82 double mismatches plus the
-counted float mismatches), Python pin failures, before-perf numbers.
+Rust corpus test (`cargo test -p repark-functions --lib java_double::tests_corpus`
+with `REPARK_JDK17_TOSTRING_CORPUS` set): `jdk17_corpus_byte_equal` fails with
+**1,209 byte-mismatch rows** (first:
+`d b2909e20837e7c44 got 8.41E21 want 8.409999999999999E21`,
+`d f64ae1c7022db544 got 1.0E23 want 9.999999999999999E22`,
+`d 0a00000000000000 got 5.0E-323 want 4.9E-323`, …); `in_tree_nonshortest_tables_hold`
+fails on the first starter row. Canonical digit census of the fixture: 76 double
+rows (70 unique values) where Java is not shortest (brief: 82 — the delta is
+repr-vs-Grisu tie spelling on a handful of rows; the byte-equality test covers all
+rows either way), 579 unique non-shortest floats (exact round-trip-region census),
+200 seeded random rows join the in-tree tables.
+Python (`test_java_double_fd_1.py`, current release native): 10 failed —
+`fd_longhand_sql`, `fd_longhand_col_cast`, `format_string_f_half_up`,
+`cast_accepting_shapes` (ANSI on/off, both doors: `'1d'` raises
+`[CAST_INVALID_INPUT] ... cannot be cast to "DOUBLE"` from the `spark_float_stringify`
+rule), `cast_hex_refused[true]` facade half (Column.cast raises without the
+`CAST_INVALID_INPUT` marker — optimizer `simplify_expressions` Arrow error),
+`cast_hex_null_nonansi` facade half, `cast_suffix_float_target`.
+Before-perf (release native, 5M `rand()` doubles, best of 3):
+native Arrow CAST 0.066s; Spark SQL-door CAST 0.082s (1.24x); facade col.cast 0.049s.
+C-006 routing diagnosis: the SQL-door symptom is the pre-coercion fold
+(`fold_utf8_to_float_literal`) rejecting the Java type suffix — Rust `parse::<f64>`
+takes no `d`/`f` suffix, so the fold errors where Spark answers `1.0`. The
+`F.col("x").cast("double")` symptom is the literal reaching
+`CAST(__repark_decimal_cast_nullable__(<lit>) AS DOUBLE)` (pass-through nullability
+wrapper, `decimal_cast.rs`; the analyzed plan holds `CAST(<wrapper>(t.x))`, the
+physical plan the inlined literal), which no analyzer rule folds, so DF's optimizer
+`simplify_expressions` folds it with Arrow semantics and fails. Runtime (non-foldable)
+string columns fail the same way at execution (`CAST(repeat('1d',1) AS DOUBLE)` →
+Arrow error); true-column runtime parsing stays Arrow by the recorded C-013 posture
+and owner Q-15c-6, so the fix covers literal shapes only.
 
 ## Coverage attestation
 
