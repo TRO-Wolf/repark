@@ -1,3 +1,4 @@
+use core::fmt::Write as _;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
@@ -7,84 +8,231 @@ use datafusion::arrow::array::{
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Float32Type, Float64Type};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
-use datafusion::common::{DFSchema, DataFusionError, Result, exec_err};
-use datafusion::logical_expr::expr::ScalarFunction;
+use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue, exec_err};
+use datafusion::logical_expr::expr::{Like, ScalarFunction};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
-    ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
-    ScalarUDF, ScalarUDFImpl, Signature, Volatility,
+    Case, Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs,
+    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
 
-pub(crate) fn java_double_text(value: f64) -> String {
+pub(crate) const JAVA_FLOAT_TEXT_MAX_LEN: usize = 32;
+
+struct SliceWriter<'a> {
+    buf: &'a mut [u8],
+    pos: usize,
+}
+
+impl core::fmt::Write for SliceWriter<'_> {
+    fn write_str(&mut self, text: &str) -> core::fmt::Result {
+        let end = self.pos + text.len();
+        if end > self.buf.len() {
+            return Err(core::fmt::Error);
+        }
+        self.buf[self.pos..end].copy_from_slice(text.as_bytes());
+        self.pos = end;
+        Ok(())
+    }
+}
+
+pub(crate) fn with_java_double_text<R>(value: f64, render: impl FnOnce(&str) -> R) -> R {
     if value.is_nan() {
-        return "NaN".to_string();
+        return render("NaN");
     }
     if value.is_infinite() {
-        return if value.is_sign_negative() {
-            "-Infinity".to_string()
-        } else {
-            "Infinity".to_string()
-        };
+        if value.is_sign_negative() {
+            return render("-Infinity");
+        }
+        return render("Infinity");
     }
     let bits = value.to_bits();
     if bits == 1 || bits == 0x8000_0000_0000_0001 {
-        return if value.is_sign_negative() {
-            "-4.9E-324".to_string()
-        } else {
-            "4.9E-324".to_string()
-        };
+        if value.is_sign_negative() {
+            return render("-4.9E-324");
+        }
+        return render("4.9E-324");
     }
-    java_decimal_text(&format!("{value:e}"))
+    let mut shortest = [0u8; 64];
+    let mut writer = SliceWriter {
+        buf: &mut shortest,
+        pos: 0,
+    };
+    let _ = write!(writer, "{value:e}");
+    let len = writer.pos;
+    let mut composed = [0u8; JAVA_FLOAT_TEXT_MAX_LEN];
+    render(compose_from_shortest(
+        &shortest[..len],
+        value.is_sign_negative(),
+        &mut composed,
+    ))
+}
+
+pub(crate) fn with_java_float_text<R>(value: f32, render: impl FnOnce(&str) -> R) -> R {
+    if value.is_nan() {
+        return render("NaN");
+    }
+    if value.is_infinite() {
+        if value.is_sign_negative() {
+            return render("-Infinity");
+        }
+        return render("Infinity");
+    }
+    let bits = value.to_bits();
+    if bits == 1 || bits == 0x8000_0001 {
+        if value.is_sign_negative() {
+            return render("-1.4E-45");
+        }
+        return render("1.4E-45");
+    }
+    let mut shortest = [0u8; 64];
+    let mut writer = SliceWriter {
+        buf: &mut shortest,
+        pos: 0,
+    };
+    let _ = write!(writer, "{value:e}");
+    let len = writer.pos;
+    let mut composed = [0u8; JAVA_FLOAT_TEXT_MAX_LEN];
+    render(compose_from_shortest(
+        &shortest[..len],
+        value.is_sign_negative(),
+        &mut composed,
+    ))
+}
+
+fn compose_from_shortest<'a>(
+    shortest: &[u8],
+    negative: bool,
+    composed: &'a mut [u8; JAVA_FLOAT_TEXT_MAX_LEN],
+) -> &'a str {
+    let body = match shortest.first() {
+        Some(b'-') => &shortest[1..],
+        _ => shortest,
+    };
+    let Some(exp_mark) = body.iter().position(|byte| *byte == b'e') else {
+        return copy_bytes(body, composed);
+    };
+    let (mantissa, exponent_text) = body.split_at(exp_mark);
+    let exponent = parse_exponent(&exponent_text[1..]);
+    let mut digits = [0u8; 24];
+    let mut digit_len = 0usize;
+    for byte in mantissa {
+        if byte.is_ascii_digit() && digit_len < digits.len() {
+            digits[digit_len] = *byte;
+            digit_len += 1;
+        }
+    }
+    if digit_len == 0 {
+        return copy_bytes(body, composed);
+    }
+    let mut pos = 0usize;
+    if negative {
+        composed[0] = b'-';
+        pos = 1;
+    }
+    if (-3..=6).contains(&exponent) {
+        pos = write_plain_decimal(&digits[..digit_len], exponent, composed, pos);
+    } else {
+        composed[pos] = digits[0];
+        pos += 1;
+        composed[pos] = b'.';
+        pos += 1;
+        if digit_len > 1 {
+            let tail = &digits[1..digit_len];
+            composed[pos..pos + tail.len()].copy_from_slice(tail);
+            pos += tail.len();
+        } else {
+            composed[pos] = b'0';
+            pos += 1;
+        }
+        composed[pos] = b'E';
+        pos += 1;
+        let exp_text = &exponent_text[1..];
+        composed[pos..pos + exp_text.len()].copy_from_slice(exp_text);
+        pos += exp_text.len();
+    }
+    str::from_utf8(&composed[..pos]).unwrap_or("")
+}
+
+fn parse_exponent(text: &[u8]) -> i32 {
+    let (digits, negative) = match text.first() {
+        Some(b'-') => (&text[1..], true),
+        Some(b'+') => (&text[1..], false),
+        _ => (text, false),
+    };
+    let mut value: i32 = 0;
+    for byte in digits {
+        if !byte.is_ascii_digit() {
+            break;
+        }
+        value = value
+            .saturating_mul(10)
+            .saturating_add(i32::from(*byte - b'0'));
+    }
+    if negative { -value } else { value }
+}
+
+fn write_plain_decimal(
+    digits: &[u8],
+    exponent: i32,
+    composed: &mut [u8; JAVA_FLOAT_TEXT_MAX_LEN],
+    mut pos: usize,
+) -> usize {
+    if exponent < 0 {
+        composed[pos] = b'0';
+        composed[pos + 1] = b'.';
+        pos += 2;
+        let zeros = usize::try_from(-exponent - 1).unwrap_or(0);
+        for _ in 0..zeros {
+            composed[pos] = b'0';
+            pos += 1;
+        }
+        composed[pos..pos + digits.len()].copy_from_slice(digits);
+        pos + digits.len()
+    } else {
+        let point = usize::try_from(exponent + 1).unwrap_or(0);
+        if point >= digits.len() {
+            composed[pos..pos + digits.len()].copy_from_slice(digits);
+            pos += digits.len();
+            for _ in 0..point - digits.len() {
+                composed[pos] = b'0';
+                pos += 1;
+            }
+            composed[pos] = b'.';
+            composed[pos + 1] = b'0';
+            pos + 2
+        } else {
+            composed[pos..pos + point].copy_from_slice(&digits[..point]);
+            pos += point;
+            composed[pos] = b'.';
+            pos += 1;
+            let rest = &digits[point..];
+            composed[pos..pos + rest.len()].copy_from_slice(rest);
+            pos + rest.len()
+        }
+    }
+}
+
+fn copy_bytes<'a>(text: &[u8], composed: &'a mut [u8; JAVA_FLOAT_TEXT_MAX_LEN]) -> &'a str {
+    let len = text.len().min(composed.len());
+    composed[..len].copy_from_slice(&text[..len]);
+    str::from_utf8(&composed[..len]).unwrap_or("")
+}
+
+pub(crate) fn java_double_text(value: f64) -> String {
+    with_java_double_text(value, str::to_owned)
 }
 
 pub(crate) fn java_float_text(value: f32) -> String {
-    if value.is_nan() {
-        return "NaN".to_string();
-    }
-    if value.is_infinite() {
-        return if value.is_sign_negative() {
-            "-Infinity".to_string()
-        } else {
-            "Infinity".to_string()
-        };
-    }
-    java_decimal_text(&format!("{value:e}"))
+    with_java_float_text(value, str::to_owned)
 }
 
-fn java_decimal_text(shortest: &str) -> String {
-    let (sign, body) = match shortest.strip_prefix('-') {
-        Some(rest) => ("-", rest),
-        None => ("", shortest),
-    };
-    let Some((mantissa, exponent_text)) = body.split_once('e') else {
-        return shortest.to_string();
-    };
-    let Ok(exponent) = exponent_text.parse::<i32>() else {
-        return shortest.to_string();
-    };
-    let digits: String = mantissa.chars().filter(char::is_ascii_digit).collect();
-    if (-3..=6).contains(&exponent) {
-        format!("{sign}{}", plain_decimal(&digits, exponent))
-    } else {
-        let head = &digits[..1];
-        let tail = if digits.len() > 1 { &digits[1..] } else { "0" };
-        format!("{sign}{head}.{tail}E{exponent}")
-    }
+pub(crate) fn java_double_text_len(value: f64) -> usize {
+    with_java_double_text(value, str::len)
 }
 
-fn plain_decimal(digits: &str, exponent: i32) -> String {
-    if exponent < 0 {
-        let zeros = "0".repeat(usize::try_from(-exponent - 1).unwrap_or(0));
-        return format!("0.{zeros}{digits}");
-    }
-    let point = usize::try_from(exponent + 1).unwrap_or(0);
-    if point >= digits.len() {
-        let zeros = "0".repeat(point - digits.len());
-        format!("{digits}{zeros}.0")
-    } else {
-        format!("{}.{}", &digits[..point], &digits[point..])
-    }
+pub(crate) fn java_float_text_len(value: f32) -> usize {
+    with_java_float_text(value, str::len)
 }
 
 pub(crate) fn java_double_strings(values: &Float64Array) -> StringArray {
@@ -93,7 +241,7 @@ pub(crate) fn java_double_strings(values: &Float64Array) -> StringArray {
         if values.is_null(index) {
             builder.append_null();
         } else {
-            builder.append_value(java_double_text(values.value(index)));
+            with_java_double_text(values.value(index), |text| builder.append_value(text));
         }
     }
     builder.finish()
@@ -105,7 +253,7 @@ pub(crate) fn java_float_strings(values: &Float32Array) -> StringArray {
         if values.is_null(index) {
             builder.append_null();
         } else {
-            builder.append_value(java_float_text(values.value(index)));
+            with_java_float_text(values.value(index), |text| builder.append_value(text));
         }
     }
     builder.finish()
@@ -186,20 +334,21 @@ impl ScalarUDFImpl for SparkFloatToString {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct SparkFloatToStringCast;
+pub(crate) struct SparkFloatStringify;
 
-impl AnalyzerRule for SparkFloatToStringCast {
-    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(rewrite_float_cast_plan)
+impl AnalyzerRule for SparkFloatStringify {
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        let ansi = crate::ansi::spark_ansi_enabled_from_options(config);
+        plan.transform_up_with_subqueries(|node| rewrite_float_plan(node, ansi))
             .data()
     }
 
     fn name(&self) -> &'static str {
-        "spark_float_to_string_cast"
+        "spark_float_stringify"
     }
 }
 
-fn rewrite_float_cast_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+fn rewrite_float_plan(plan: LogicalPlan, ansi: bool) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -207,32 +356,424 @@ fn rewrite_float_cast_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten =
-            expr.transform_up(|node| Ok(rewrite_float_to_string_cast(node, &schema)))?;
+        let rewritten = expr.transform_up(|node| rewrite_float_expr(node, &schema, ansi))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
 }
 
-fn rewrite_float_to_string_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
-    let Expr::Cast(cast) = expr else {
-        return Transformed::no(expr);
-    };
-    let Ok(source_type) = cast.expr.get_type(schema) else {
-        return Transformed::no(Expr::Cast(cast));
-    };
-    if !matches!(source_type, DataType::Float32 | DataType::Float64) {
-        return Transformed::no(Expr::Cast(cast));
+fn rewrite_float_expr(expr: Expr, schema: &DFSchema, ansi: bool) -> Result<Transformed<Expr>> {
+    match expr {
+        Expr::Cast(cast) => rewrite_float_cast(cast, schema, ansi),
+        Expr::TryCast(try_cast) => {
+            let Ok(source_type) = try_cast.expr.get_type(schema) else {
+                return Ok(Transformed::no(Expr::TryCast(try_cast)));
+            };
+            if !matches!(source_type, DataType::Float32 | DataType::Float64) {
+                return Ok(Transformed::no(Expr::TryCast(try_cast)));
+            }
+            if !matches!(
+                try_cast.field.data_type(),
+                DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+            ) {
+                return Ok(Transformed::no(Expr::TryCast(try_cast)));
+            }
+            Ok(Transformed::yes(float_to_string_call(*try_cast.expr)))
+        }
+        Expr::Like(like) => Ok(rewrite_float_like(like, schema)),
+        Expr::Case(case) => rewrite_float_case(case, schema, ansi),
+        Expr::ScalarFunction(function) => rewrite_float_call(function, schema, ansi),
+        other => Ok(Transformed::no(other)),
     }
-    if !matches!(
-        cast.field.data_type(),
+}
+
+fn float_to_string_call(arg: Expr) -> Expr {
+    Expr::ScalarFunction(ScalarFunction::new_udf(
+        spark_float_to_string_udf(),
+        vec![arg],
+    ))
+}
+
+fn is_float_type(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Float32 | DataType::Float64)
+}
+
+fn is_string_type(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
         DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
+fn rewrite_float_cast(cast: Cast, schema: &DFSchema, ansi: bool) -> Result<Transformed<Expr>> {
+    let Ok(source_type) = cast.expr.get_type(schema) else {
+        return Ok(Transformed::no(Expr::Cast(cast)));
+    };
+    if is_float_type(&source_type) && is_string_type(cast.field.data_type()) {
+        return Ok(Transformed::yes(float_to_string_call(*cast.expr)));
+    }
+    if matches!(
+        cast.field.data_type(),
+        DataType::Float32 | DataType::Float64
     ) {
-        return Transformed::no(Expr::Cast(cast));
+        let target = cast.field.data_type().clone();
+        if let Expr::Literal(literal, _) = cast.expr.as_ref()
+            && let Some(text) = utf8_literal_text(literal)
+            && let Some(folded) = fold_utf8_to_float_literal(literal, &text, &target, ansi)?
+        {
+            return Ok(Transformed::yes(folded));
+        }
+    }
+    Ok(Transformed::no(Expr::Cast(cast)))
+}
+
+fn utf8_literal_text(literal: &ScalarValue) -> Option<String> {
+    match literal {
+        ScalarValue::Utf8(value) | ScalarValue::LargeUtf8(value) => value.clone(),
+        ScalarValue::Utf8View(value) => value.as_deref().map(str::to_owned),
+        _ => None,
+    }
+}
+
+fn float_null_literal(target: &DataType) -> Expr {
+    match target {
+        DataType::Float32 => Expr::Literal(ScalarValue::Float32(None), None),
+        _ => Expr::Literal(ScalarValue::Float64(None), None),
+    }
+}
+
+fn spark_float_type_name(target: &DataType) -> &'static str {
+    match target {
+        DataType::Float32 => "FLOAT",
+        _ => "DOUBLE",
+    }
+}
+
+fn fold_utf8_to_float_literal(
+    literal: &ScalarValue,
+    text: &str,
+    target: &DataType,
+    ansi: bool,
+) -> Result<Option<Expr>> {
+    if literal.cast_to(target).is_ok() {
+        return Ok(None);
+    }
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return Ok(Some(float_null_literal(target)));
+    }
+    let parsed = match target {
+        DataType::Float32 => trimmed
+            .parse::<f32>()
+            .ok()
+            .map(|value| ScalarValue::Float32(Some(value))),
+        _ => trimmed
+            .parse::<f64>()
+            .ok()
+            .map(|value| ScalarValue::Float64(Some(value))),
+    };
+    if let Some(value) = parsed {
+        return Ok(Some(Expr::Literal(value, None)));
+    }
+    if !ansi {
+        return Ok(Some(float_null_literal(target)));
+    }
+    Err(DataFusionError::Execution(format!(
+        "[CAST_INVALID_INPUT] The value '{text}' of the type \"STRING\" cannot be cast to \"{}\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
+        spark_float_type_name(target)
+    )))
+}
+
+fn rewrite_float_like(like: Like, schema: &DFSchema) -> Transformed<Expr> {
+    let Ok(left_type) = like.expr.get_type(schema) else {
+        return Transformed::no(Expr::Like(like));
+    };
+    let Ok(right_type) = like.pattern.get_type(schema) else {
+        return Transformed::no(Expr::Like(like));
+    };
+    let left_float = is_float_type(&left_type);
+    let right_float = is_float_type(&right_type);
+    if !left_float && !right_float {
+        return Transformed::no(Expr::Like(like));
+    }
+    if (left_float && !is_string_type(&right_type)) || (right_float && !is_string_type(&left_type))
+    {
+        return Transformed::no(Expr::Like(like));
+    }
+    let Like {
+        negated,
+        expr,
+        pattern,
+        escape_char,
+        case_insensitive,
+    } = like;
+    let expr = if left_float {
+        Box::new(float_to_string_call(*expr))
+    } else {
+        expr
+    };
+    let pattern = if right_float {
+        Box::new(float_to_string_call(*pattern))
+    } else {
+        pattern
+    };
+    Transformed::yes(Expr::Like(Like::new(
+        negated,
+        expr,
+        pattern,
+        escape_char,
+        case_insensitive,
+    )))
+}
+
+fn rewrite_float_case(case: Case, schema: &DFSchema, ansi: bool) -> Result<Transformed<Expr>> {
+    let mut target: Option<DataType> = None;
+    for (_, then) in &case.when_then_expr {
+        if let Ok(data_type) = then.get_type(schema)
+            && is_float_type(&data_type)
+            && !matches!(target, Some(DataType::Float64))
+        {
+            target = Some(data_type);
+        }
+    }
+    if let Some(else_expr) = &case.else_expr
+        && let Ok(data_type) = else_expr.get_type(schema)
+        && is_float_type(&data_type)
+        && !matches!(target, Some(DataType::Float64))
+    {
+        target = Some(data_type);
+    }
+    let Some(target) = target else {
+        return Ok(Transformed::no(Expr::Case(case)));
+    };
+    let mut has_string = false;
+    for (_, then) in &case.when_then_expr {
+        if let Ok(data_type) = then.get_type(schema)
+            && is_string_type(&data_type)
+        {
+            has_string = true;
+        }
+    }
+    if let Some(else_expr) = &case.else_expr
+        && let Ok(data_type) = else_expr.get_type(schema)
+        && is_string_type(&data_type)
+    {
+        has_string = true;
+    }
+    if !has_string {
+        return Ok(Transformed::no(Expr::Case(case)));
+    }
+    let Case {
+        expr,
+        when_then_expr,
+        else_expr,
+    } = case;
+    let mut new_whens = Vec::with_capacity(when_then_expr.len());
+    for (when, then) in when_then_expr {
+        if let Ok(data_type) = then.get_type(schema)
+            && is_string_type(&data_type)
+        {
+            new_whens.push((
+                when,
+                Box::new(string_branch_to_float(*then, &target, ansi)?),
+            ));
+        } else {
+            new_whens.push((when, then));
+        }
+    }
+    let new_else = match else_expr {
+        Some(else_expr)
+            if matches!(
+                else_expr.get_type(schema).as_ref(),
+                Ok(data_type) if is_string_type(data_type)
+            ) =>
+        {
+            Some(Box::new(string_branch_to_float(*else_expr, &target, ansi)?))
+        }
+        other => other,
+    };
+    Ok(Transformed::yes(Expr::Case(Case {
+        expr,
+        when_then_expr: new_whens,
+        else_expr: new_else,
+    })))
+}
+
+fn string_branch_to_float(branch: Expr, target: &DataType, ansi: bool) -> Result<Expr> {
+    if let Expr::Literal(literal, _) = &branch
+        && let Some(text) = utf8_literal_text(literal)
+        && let Some(folded) = fold_utf8_to_float_literal(literal, &text, target, ansi)?
+    {
+        return Ok(folded);
+    }
+    Ok(Expr::Cast(Cast::new(Box::new(branch), target.clone())))
+}
+
+fn rewrite_float_call(
+    function: ScalarFunction,
+    schema: &DFSchema,
+    ansi: bool,
+) -> Result<Transformed<Expr>> {
+    let name = function.func.name();
+    if name == "format_string" || name == "printf" {
+        return Ok(rewrite_format_string_args(function, schema));
+    }
+    if name == "array_to_string"
+        || name == "array_join"
+        || name == "list_join"
+        || name == "list_to_string"
+    {
+        return Ok(rewrite_array_join_arg(function, schema));
+    }
+    if name == "coalesce" {
+        return rewrite_coalesce_args(function, schema, ansi);
+    }
+    Ok(Transformed::no(Expr::ScalarFunction(function)))
+}
+
+fn rewrite_coalesce_args(
+    function: ScalarFunction,
+    schema: &DFSchema,
+    ansi: bool,
+) -> Result<Transformed<Expr>> {
+    let mut target: Option<DataType> = None;
+    for arg in &function.args {
+        if let Ok(data_type) = arg.get_type(schema)
+            && is_float_type(&data_type)
+            && !matches!(target, Some(DataType::Float64))
+        {
+            target = Some(data_type);
+        }
+    }
+    let Some(target) = target else {
+        return Ok(Transformed::no(Expr::ScalarFunction(function)));
+    };
+    let mut rewritten = function;
+    let mut changed = false;
+    for index in 0..rewritten.args.len() {
+        if let Expr::Literal(literal, _) = &rewritten.args[index]
+            && let Some(text) = utf8_literal_text(literal)
+            && let Some(folded) = fold_utf8_to_float_literal(literal, &text, &target, ansi)?
+        {
+            rewritten.args[index] = folded;
+            changed = true;
+        }
+    }
+    if changed {
+        Ok(Transformed::yes(Expr::ScalarFunction(rewritten)))
+    } else {
+        Ok(Transformed::no(Expr::ScalarFunction(rewritten)))
+    }
+}
+
+fn rewrite_format_string_args(function: ScalarFunction, schema: &DFSchema) -> Transformed<Expr> {
+    if function.args.len() < 2 {
+        return Transformed::no(Expr::ScalarFunction(function));
+    }
+    let Some(fmt) = scalar_string(&function.args[0]) else {
+        return Transformed::no(Expr::ScalarFunction(function));
+    };
+    if !format_uses_only_string_verbs(&fmt) {
+        return Transformed::no(Expr::ScalarFunction(function));
+    }
+    let mut rewritten = function;
+    let mut changed = false;
+    for arg in rewritten.args.iter_mut().skip(1) {
+        if let Ok(data_type) = arg.get_type(schema)
+            && is_float_type(&data_type)
+        {
+            *arg = float_to_string_call(std::mem::replace(
+                arg,
+                Expr::Literal(ScalarValue::Null, None),
+            ));
+            changed = true;
+        }
+    }
+    if changed {
+        Transformed::yes(Expr::ScalarFunction(rewritten))
+    } else {
+        Transformed::no(Expr::ScalarFunction(rewritten))
+    }
+}
+
+fn scalar_string(expr: &Expr) -> Option<String> {
+    match expr {
+        Expr::Literal(literal, _) => utf8_literal_text(literal),
+        _ => None,
+    }
+}
+
+fn format_uses_only_string_verbs(fmt: &str) -> bool {
+    let bytes = fmt.as_bytes();
+    let mut index = 0usize;
+    let mut saw_string = false;
+    while index < bytes.len() {
+        if bytes[index] != b'%' {
+            index += 1;
+            continue;
+        }
+        index += 1;
+        if index >= bytes.len() {
+            return false;
+        }
+        match bytes[index] {
+            b'%' | b'n' => {
+                index += 1;
+            }
+            b's' | b'S' => {
+                saw_string = true;
+                index += 1;
+            }
+            _ => {
+                while index < bytes.len()
+                    && matches!(
+                        bytes[index],
+                        b'-' | b'#' | b'+' | b' ' | b'0' | b',' | b'(' | b'<'
+                    )
+                {
+                    index += 1;
+                }
+                while index < bytes.len() && (bytes[index].is_ascii_digit() || bytes[index] == b'*')
+                {
+                    index += 1;
+                }
+                if index < bytes.len() && bytes[index] == b'.' {
+                    index += 1;
+                    while index < bytes.len()
+                        && (bytes[index].is_ascii_digit() || bytes[index] == b'*')
+                    {
+                        index += 1;
+                    }
+                }
+                if index < bytes.len() && (bytes[index] == b's' || bytes[index] == b'S') {
+                    saw_string = true;
+                    index += 1;
+                } else {
+                    return false;
+                }
+            }
+        }
+    }
+    saw_string
+}
+
+fn rewrite_array_join_arg(function: ScalarFunction, schema: &DFSchema) -> Transformed<Expr> {
+    if function.args.len() < 2 || function.args.len() > 3 {
+        return Transformed::no(Expr::ScalarFunction(function));
+    }
+    let Ok(first) = function.args[0].get_type(schema) else {
+        return Transformed::no(Expr::ScalarFunction(function));
+    };
+    let element = match &first {
+        DataType::List(field) | DataType::LargeList(field) => field.data_type(),
+        _ => return Transformed::no(Expr::ScalarFunction(function)),
+    };
+    if !is_float_type(element) {
+        return Transformed::no(Expr::ScalarFunction(function));
     }
     Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
-        spark_float_to_string_udf(),
-        vec![*cast.expr],
+        crate::string::spark_array_join_udf(),
+        function.args,
     )))
 }
 
@@ -266,6 +807,118 @@ mod tests {
         assert_eq!(java_float_text(0.1), "0.1");
         assert_eq!(java_float_text(123_456.7), "123456.7");
         assert_eq!(java_float_text(0.00001), "1.0E-5");
+        assert_eq!(java_float_text(f32::from_bits(1)), "1.4E-45");
+        assert_eq!(java_float_text(-f32::from_bits(1)), "-1.4E-45");
+        assert_eq!(java_float_text(f32::MAX), "3.4028235E38");
+    }
+
+    fn utf8_scalar(text: &str) -> ScalarValue {
+        ScalarValue::Utf8(Some(text.to_owned()))
+    }
+
+    #[test]
+    fn fold_utf8_to_float_leaves_arrow_accepted_literals() {
+        assert!(
+            fold_utf8_to_float_literal(&utf8_scalar("1.0E7"), "1.0E7", &DataType::Float64, true)
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            fold_utf8_to_float_literal(
+                &utf8_scalar("Infinity"),
+                "Infinity",
+                &DataType::Float64,
+                true
+            )
+            .unwrap()
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn fold_utf8_to_float_repairs_arrow_rejections() {
+        let repaired =
+            fold_utf8_to_float_literal(&utf8_scalar(" 1.5 "), " 1.5 ", &DataType::Float64, true)
+                .unwrap()
+                .unwrap();
+        assert!(matches!(
+            repaired,
+            Expr::Literal(ScalarValue::Float64(_), _)
+        ));
+        let nulled = fold_utf8_to_float_literal(&utf8_scalar(""), "", &DataType::Float64, true)
+            .unwrap()
+            .unwrap();
+        assert!(matches!(
+            nulled,
+            Expr::Literal(ScalarValue::Float64(None), _)
+        ));
+        let ansi_off =
+            fold_utf8_to_float_literal(&utf8_scalar("x"), "x", &DataType::Float64, false)
+                .unwrap()
+                .unwrap();
+        assert!(matches!(
+            ansi_off,
+            Expr::Literal(ScalarValue::Float64(None), _)
+        ));
+    }
+
+    fn double_cast_of(text: &str) -> Cast {
+        Cast::new(
+            Box::new(Expr::Literal(
+                ScalarValue::Utf8(Some(text.to_owned())),
+                None,
+            )),
+            DataType::Float64,
+        )
+    }
+
+    #[test]
+    fn rule_arm_folds_bad_string_to_double_literal() {
+        let schema = DFSchema::empty();
+        let error = rewrite_float_cast(double_cast_of("x"), &schema, true).unwrap_err();
+        assert!(error.to_string().contains("CAST_INVALID_INPUT"));
+        let nulled = rewrite_float_cast(double_cast_of("x"), &schema, false).unwrap();
+        assert!(matches!(
+            nulled.data,
+            Expr::Literal(ScalarValue::Float64(None), _)
+        ));
+        let left = rewrite_float_cast(double_cast_of("1.0E7"), &schema, true).unwrap();
+        assert!(!left.transformed);
+    }
+
+    #[test]
+    fn fold_utf8_to_float_raises_spark_error_when_ansi_on() {
+        let error = fold_utf8_to_float_literal(&utf8_scalar("x"), "x", &DataType::Float64, true)
+            .unwrap_err();
+        let message = error.to_string();
+        assert!(message.contains("CAST_INVALID_INPUT"), "{message}");
+    }
+
+    #[test]
+    fn text_len_matches_text_bytes() {
+        for value in [
+            f64::INFINITY,
+            f64::NAN,
+            10_000_000.0,
+            1_000_000.0,
+            0.0001,
+            0.001,
+            1.0e21,
+            -0.0,
+            0.300_000_000_000_000_04,
+            f64::from_bits(1),
+        ] {
+            assert_eq!(java_double_text_len(value), java_double_text(value).len());
+        }
+        for value in [
+            f32::INFINITY,
+            10_000_000_000.0,
+            0.1,
+            f32::from_bits(1),
+            f32::MAX,
+        ] {
+            assert_eq!(java_float_text_len(value), java_float_text(value).len());
+        }
     }
 
     #[test]

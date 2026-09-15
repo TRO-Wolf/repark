@@ -5073,3 +5073,8 @@ through `core` or the package. pins: eager-budget-1/C-010
   guard keeps Arrow text (ADR-0002). Pin inputs are `CAST(<text> AS
   DOUBLE|FLOAT)` or DataFrame columns, never bare exponent literals (FNP-4B).
   pins: java-double-str-1/C-001, C-002, C-004, C-005, C-006, C-008
+  **Round 2 (2026-09-15):** `TRY_CAST`/`try_cast`, `array_join`, `format_string`
+  `%s` (`%f` pinned as today's answer), float min/max, the L-006 coercion shapes
+  (`LIKE`, `VARCHAR`/`CHAR`, `CASE`/`coalesce` mixes raising `CAST_INVALID_INPUT`),
+  and the JAVA-DOUBLE-FD-1 backlog pins — value AND type throughout.
+  pins: java-double-str-1/C-009, C-010, C-011, C-012, C-013, C-014

@@ -246,14 +246,32 @@ fn byte_lengths(array: &dyn Array) -> Result<Int32Array> {
         | DataType::Decimal128(_, scale)
         | DataType::Decimal256(_, scale) => decimal_byte_lengths(array, *scale),
         DataType::Float64 => {
-            let rendered =
-                crate::java_double::java_double_strings(array.as_primitive::<Float64Type>());
-            utf8_byte_lengths(&rendered)
+            let primitive = array.as_primitive::<Float64Type>();
+            let mut lengths = Vec::with_capacity(primitive.len());
+            for index in 0..primitive.len() {
+                if primitive.is_null(index) {
+                    lengths.push(None);
+                } else {
+                    lengths.push(Some(spark_int_len(
+                        crate::java_double::java_double_text_len(primitive.value(index)),
+                    )?));
+                }
+            }
+            Ok(Int32Array::from(lengths))
         }
         DataType::Float32 => {
-            let rendered =
-                crate::java_double::java_float_strings(array.as_primitive::<Float32Type>());
-            utf8_byte_lengths(&rendered)
+            let primitive = array.as_primitive::<Float32Type>();
+            let mut lengths = Vec::with_capacity(primitive.len());
+            for index in 0..primitive.len() {
+                if primitive.is_null(index) {
+                    lengths.push(None);
+                } else {
+                    lengths.push(Some(spark_int_len(
+                        crate::java_double::java_float_text_len(primitive.value(index)),
+                    )?));
+                }
+            }
+            Ok(Int32Array::from(lengths))
         }
         _ => {
             let as_utf8: ArrayRef = cast(array, &DataType::Utf8)?;

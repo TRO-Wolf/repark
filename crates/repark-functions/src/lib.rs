@@ -149,7 +149,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
         Arc::new(spark_nullability::SparkNullability),
         Arc::new(integer_spark::SparkIntegerOverflow),
         Arc::new(analyzer::SparkExprSemantics),
-        Arc::new(java_double::SparkFloatToStringCast),
+        Arc::new(java_double::SparkFloatStringify),
     ];
     rules.extend(cardinality::analyzer_rules());
     rules.push(instant_ts::ltz_timestamp_cast_rule());

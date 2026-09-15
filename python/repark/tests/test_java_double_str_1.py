@@ -174,3 +174,235 @@ def test_native_door_keeps_arrow_spelling() -> None:
     table = repark.sql("SELECT CAST(CAST('1.0E7' AS DOUBLE) AS STRING) AS s").to_arrow()
     assert table.column("s").to_pylist() == ["10000000.0"]
     assert table.schema.field("s").type == pa.string()
+
+
+def test_spark_door_try_cast_stringify_matches_java(spark: ReparkSession) -> None:
+    """TRY_CAST of doubles uses Java text, typed string, NULL stays NULL."""
+    table = _table(
+        spark.sql(
+            "SELECT TRY_CAST(CAST('1.0E7' AS DOUBLE) AS STRING) AS a, "
+            "TRY_CAST(CAST('Infinity' AS DOUBLE) AS STRING) AS b, "
+            "TRY_CAST(CAST('0.001' AS DOUBLE) AS STRING) AS c"
+        )
+    )
+    assert table.column("a").to_pylist() == ["1.0E7"]
+    assert table.column("b").to_pylist() == ["Infinity"]
+    assert table.column("c").to_pylist() == ["0.001"]
+    assert table.schema.field("a").type == pa.string()
+    frame = spark.sql(
+        "SELECT * FROM (VALUES (0, CAST('1.0E7' AS DOUBLE)), "
+        "(1, CAST('Infinity' AS DOUBLE)), (2, CAST('1.0E-5' AS DOUBLE)), "
+        "(3, CAST('1.0E6' AS DOUBLE)), (4, CAST(NULL AS DOUBLE))) AS v(n, d) ORDER BY n"
+    )
+    table = _table(frame.select(F.col("d").try_cast("string").alias("s")))
+    assert table.column("s").to_pylist() == ["1.0E7", "Infinity", "1.0E-5", "1000000.0", None]
+    assert table.schema.field("s").type == pa.string()
+
+
+def test_spark_door_array_join_uses_java_text(spark: ReparkSession) -> None:
+    """array_join renders double/float elements with Java text, typed string."""
+    table = _table(
+        spark.sql(
+            "SELECT array_join(array(CAST('1.0E7' AS DOUBLE), CAST('0.1' AS DOUBLE), "
+            "CAST('1.0E-5' AS DOUBLE)), ',') AS a"
+        )
+    )
+    assert table.column("a").to_pylist() == ["1.0E7,0.1,1.0E-5"]
+    assert table.schema.field("a").type == pa.string()
+    table = _table(
+        spark.sql(
+            "SELECT array_join(array(CAST('1.0E10' AS FLOAT), CAST('0.1' AS FLOAT)), ',') AS a"
+        )
+    )
+    assert table.column("a").to_pylist() == ["1.0E10,0.1"]
+    assert table.schema.field("a").type == pa.string()
+    frame = spark.sql(
+        "SELECT * FROM (VALUES (0, CAST('1.0E7' AS DOUBLE)), "
+        "(1, CAST('0.1' AS DOUBLE)), (2, CAST('1.0E-5' AS DOUBLE))) AS v(n, d) ORDER BY n"
+    )
+    table = _table(frame.select(F.array_join(F.array(F.col("d"), F.col("d")), ",").alias("a")))
+    assert table.column("a").to_pylist() == ["1.0E7,1.0E7", "0.1,0.1", "1.0E-5,1.0E-5"]
+    assert table.schema.field("a").type == pa.string()
+
+
+def test_spark_door_format_string_s_uses_java_text(spark: ReparkSession) -> None:
+    """format_string/printf %s renders doubles with Java text, typed string."""
+    table = _table(
+        spark.sql(
+            "SELECT format_string('%s', CAST('1.0E7' AS DOUBLE)) AS a, "
+            "format_string('%s', CAST('0.1' AS DOUBLE)) AS b, "
+            "printf('%s', CAST('1.0E-5' AS DOUBLE)) AS c"
+        )
+    )
+    assert table.column("a").to_pylist() == ["1.0E7"]
+    assert table.column("b").to_pylist() == ["0.1"]
+    assert table.column("c").to_pylist() == ["1.0E-5"]
+    assert table.schema.field("a").type == pa.string()
+    frame = spark.range(1).select(
+        F.format_string("%s", F.lit(1.0e7)).alias("a"),
+        F.printf("%s", F.lit(0.1)).alias("b"),
+    )
+    assert _table(frame).column("a").to_pylist() == ["1.0E7"]
+    assert _table(frame).column("b").to_pylist() == ["0.1"]
+
+
+def test_spark_door_format_string_f_is_todays_answer(spark: ReparkSession) -> None:
+    """%f stays DataFusion fixed-point (0.125 rounds to 0.12, not Java HALF_UP 0.13)."""
+    table = _table(
+        spark.sql(
+            "SELECT format_string('%f', CAST('1.0E7' AS DOUBLE)) AS a, "
+            "format_string('%.2f', CAST('0.125' AS DOUBLE)) AS b"
+        )
+    )
+    assert table.column("a").to_pylist() == ["10000000.000000"]
+    assert table.column("b").to_pylist() == ["0.12"]
+
+
+def test_spark_door_float_min_max(spark: ReparkSession) -> None:
+    """Float.MIN_VALUE spells 1.4E-45 and Float.MAX_VALUE spells 3.4028235E38."""
+    table = _table(
+        spark.sql(
+            "SELECT CAST(CAST('1.4E-45' AS FLOAT) AS STRING) AS a, "
+            "CAST(CAST('3.4028235E38' AS FLOAT) AS STRING) AS b"
+        )
+    )
+    assert table.column("a").to_pylist() == ["1.4E-45"]
+    assert table.column("b").to_pylist() == ["3.4028235E38"]
+    assert table.schema.field("a").type == pa.string()
+
+
+def test_spark_door_string_double_comparison_is_numeric(spark: ReparkSession) -> None:
+    """String-to-double comparison and IN coerce numerically, typed boolean."""
+    table = _table(
+        spark.sql(
+            "SELECT '1.0E7' = CAST('1.0E7' AS DOUBLE) AS a, "
+            "'10000000' = CAST('1.0E7' AS DOUBLE) AS b"
+        )
+    )
+    assert table.column("a").to_pylist() == [True]
+    assert table.column("b").to_pylist() == [True]
+    assert table.schema.field("a").type == pa.bool_()
+    table = _table(spark.sql("SELECT '1.0E7' IN (CAST('1.0E7' AS DOUBLE)) AS a"))
+    assert table.column("a").to_pylist() == [True]
+    assert table.schema.field("a").type == pa.bool_()
+
+
+def test_spark_door_concat_ws_and_like_use_java_text(spark: ReparkSession) -> None:
+    """concat_ws joins and LIKE matches the Java text, typed outputs."""
+    table = _table(spark.sql("SELECT concat_ws('-', CAST('1.0E7' AS DOUBLE), 'a') AS a"))
+    assert table.column("a").to_pylist() == ["1.0E7-a"]
+    assert table.schema.field("a").type == pa.string()
+    table = _table(spark.sql("SELECT CAST('1.0E7' AS DOUBLE) LIKE '1.0E7' AS a"))
+    assert table.column("a").to_pylist() == [True]
+    assert table.schema.field("a").type == pa.bool_()
+
+
+def test_spark_door_cast_varchar_uses_java_text(spark: ReparkSession) -> None:
+    """CAST to VARCHAR/CHAR renders the Java text, typed string."""
+    table = _table(
+        spark.sql(
+            "SELECT CAST(CAST('1.0E7' AS DOUBLE) AS VARCHAR(10)) AS a, "
+            "CAST(CAST('1.0E7' AS DOUBLE) AS CHAR(8)) AS b"
+        )
+    )
+    assert table.column("a").to_pylist() == ["1.0E7"]
+    assert table.column("b").to_pylist() == ["1.0E7"]
+    assert table.schema.field("a").type == pa.string()
+
+
+def test_spark_door_case_and_coalesce_mix_raise(spark: ReparkSession) -> None:
+    """CASE/coalesce mixing a bad string with a double raise CAST_INVALID_INPUT."""
+    with pytest.raises(Exception, match="CAST_INVALID_INPUT"):
+        spark.sql(
+            "SELECT CASE WHEN true THEN 'x' ELSE CAST('1.0E7' AS DOUBLE) END AS a, "
+            "CASE WHEN false THEN 'x' ELSE CAST('1.0E7' AS DOUBLE) END AS b"
+        ).to_arrow()
+    with pytest.raises(Exception, match="CAST_INVALID_INPUT"):
+        spark.sql(
+            "SELECT coalesce('a', CAST('1.0E7' AS DOUBLE)) AS a, "
+            "coalesce(NULL, CAST('1.0E7' AS DOUBLE), 'b') AS b"
+        ).to_arrow()
+
+
+def test_spark_door_decimal_to_json_negzero_shapes(spark: ReparkSession) -> None:
+    """Decimals keep Arrow text, to_json renders Java doubles, -0.0 keeps sign."""
+    table = _table(
+        spark.sql(
+            "SELECT CAST(CAST('10000000' AS DECIMAL(10,0)) AS STRING) AS a, "
+            "CAST(CAST('0.10' AS DECIMAL(3,2)) AS STRING) AS b"
+        )
+    )
+    assert table.column("a").to_pylist() == ["10000000"]
+    assert table.column("b").to_pylist() == ["0.10"]
+    table = _table(
+        spark.sql(
+            "SELECT to_json(named_struct('d', CAST('1.0E7' AS DOUBLE), "
+            "'e', CAST('0.1' AS DOUBLE))) AS a"
+        )
+    )
+    assert table.column("a").to_pylist() == ['{"d":1.0E7,"e":0.1}']
+    table = _table(
+        spark.sql(
+            "SELECT CAST(CAST('-0.0' AS DOUBLE) AS STRING) AS a, "
+            "concat(CAST('-0.0' AS DOUBLE), '') AS b"
+        )
+    )
+    assert table.column("a").to_pylist() == ["-0.0"]
+    assert table.column("b").to_pylist() == ["-0.0"]
+    assert table.schema.field("b").type == pa.string()
+
+
+def test_spark_door_jdk_longhand_cells(spark: ReparkSession) -> None:
+    """Shortest-form cells where the JDK agrees pin the equality side."""
+    table = _table(
+        spark.sql(
+            "SELECT CAST(CAST('2.0E-3' AS DOUBLE) AS STRING) AS a, "
+            "CAST(CAST('5.0E-324' AS DOUBLE) AS STRING) AS b, "
+            "CAST(CAST('2.2250738585072014E-308' AS DOUBLE) AS STRING) AS c, "
+            "CAST(CAST('9.007199254740993E15' AS DOUBLE) AS STRING) AS d, "
+            "CAST(CAST('1.1' AS DOUBLE) AS STRING) AS e"
+        )
+    )
+    assert table.column("a").to_pylist() == ["0.002"]
+    assert table.column("b").to_pylist() == ["4.9E-324"]
+    assert table.column("c").to_pylist() == ["2.2250738585072014E-308"]
+    assert table.column("d").to_pylist() == ["9.007199254740992E15"]
+    assert table.column("e").to_pylist() == ["1.1"]
+    assert table.schema.field("a").type == pa.string()
+
+
+def test_spark_door_jdk_longhand_backlog(spark: ReparkSession) -> None:
+    """JDK-longhand cells the shortest formatter does not spell (JAVA-DOUBLE-FD-1)."""
+    table = _table(
+        spark.sql(
+            "SELECT CAST(CAST('8.41E21' AS DOUBLE) AS STRING) AS a, "
+            "CAST(CAST('1.0E23' AS DOUBLE) AS STRING) AS b"
+        )
+    )
+    assert table.column("a").to_pylist() == ["8.41E21"]
+    assert table.column("b").to_pylist() == ["1.0E23"]
+
+
+def test_spark_door_array_join_null_shapes(spark: ReparkSession) -> None:
+    """array_join null elements/rows/delimiters follow Spark, typed string."""
+    table = _table(
+        spark.sql(
+            "SELECT array_join(array(CAST('1.0E7' AS DOUBLE), CAST(NULL AS DOUBLE), "
+            "CAST('0.1' AS DOUBLE)), ',') AS a"
+        )
+    )
+    assert table.column("a").to_pylist() == ["1.0E7,0.1"]
+    assert table.schema.field("a").type == pa.string()
+    table = _table(spark.sql("SELECT array_join(CAST(NULL AS ARRAY<DOUBLE>), ',') AS a"))
+    assert table.column("a").to_pylist() == [None]
+    table = _table(
+        spark.sql("SELECT array_join(array(CAST('1.0E7' AS DOUBLE)), CAST(NULL AS STRING)) AS a")
+    )
+    assert table.column("a").to_pylist() == [None]
+    table = _table(
+        spark.sql(
+            "SELECT array_join(array(CAST('1.0E7' AS DOUBLE), CAST(NULL AS DOUBLE)), "
+            "',', 'N/A') AS a"
+        )
+    )
+    assert table.column("a").to_pylist() == ["1.0E7,N/A"]
