@@ -722,6 +722,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   cells replay on the Python door (values and types; names stay D-2's) and the Column-`numBits`
   shape pins Java's `& 31` masking on INT.
   pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [test_fnp_agg_1.py](test_fnp_agg_1.py) + `fnp_agg_1_spark_oracle.json` —
+  **FNP-AGG-1 step 1 (2026-09-15), red-first:** the orchestrator's live PySpark 4.1.2
+  recording (2026-09-14, 202 cells over the shared frame, both ANSI settings, with
+  `signatures` for the facade names) copied verbatim, plus two-door pins over the card's
+  fourteen names on that frame and the `sum_distinct` / `sumDistinct` pins replayed from
+  `fnp_alias_1_spark_oracle.json` on its own frame. Value pins compare column name, Spark
+  type, rows exactly, and nullability except the VALUES group key; error pins assert
+  Spark's own condition, including the `UNRESOLVED_ROUTINE` refusals the SQL door must
+  keep. Red on the base tree: 162 failed, 4 passed (the `kurtosis`/`skewness` signature
+  pins and the 2 pre-existing `listagg` Python cells).
+  pins: fnp-agg-1/C-001, C-002, C-003, C-004
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
