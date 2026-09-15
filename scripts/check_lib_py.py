@@ -60,7 +60,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract a cohesive method family behind re-export bindings.",
     ),
     "python/repark/src/repark/spark/dataframe/core.py": (
-        4044,
+        4035,
         "The DataFrame facade still combines many plan-building method families.",
         "Extract one existing method region when a charter changes that responsibility.",
     ),
@@ -80,12 +80,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split writer and reader bindings into separate cohesive modules.",
     ),
     "python/repark/src/repark/spark/functions.py": (
-        1962,
+        1960,
         "Facade function exports and wrappers remain consolidated.",
         "Split by function family while preserving the public re-export surface.",
     ),
     "python/repark/src/repark/spark/functions_expr.py": (
-        2247,
+        2237,
         "Expression-building function families share one module.",
         "Split string, collection, or predicate expression families.",
     ),

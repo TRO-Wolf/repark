@@ -174,7 +174,6 @@ def test_fn_c_deferred_names_are_absent() -> None:
     deferred = (
         "sum_distinct",
         "sumDistinct",
-        "approxCountDistinct",
         "any_value",
         "max_by",
         "min_by",

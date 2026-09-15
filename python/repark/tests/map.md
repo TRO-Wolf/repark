@@ -33,6 +33,34 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_df_surface_a_1.py](test_df_surface_a_1.py) +
+  [facade_dataframe_surface_oracle.json](facade_dataframe_surface_oracle.json) —
+  **DF-SURFACE-A-1 (2026-09-14):** the seven-name DataFrame surface pins driven
+  by the copied live-PySpark-4.1.2 fixture. `to` pins the store-assignment
+  cells (`to_reorder_cast`, `to_case`, `to_missing`, `to_nullability`,
+  `to_bad_cast`) plus the `to_not_schema` DF-TO-1 declared `NOT_STRUCT` answer
+  (Spark classic leaks `AttributeError`); `to_narrow` pins the
+  LOGICAL-WIDTH-1-codified `struct<a:int>` answer (the cell records Spark's
+  `smallint`). `withMetadata` pins `NOT_DICT` and the
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` class+condition on a miss; the
+  `withMetadata`/`withMetadata_replaces` value cells and every survival
+  position (stamped frame, filter, select, withColumn, join, union,
+  cache, parquet round-trip, and `to()`'s source-keep and target-override
+  arms) pin today's loss as backlog DF-METADATA-1 — the engine has no field
+  metadata plumbing. `registerTempTable` pins the `FutureWarning`, `None`
+  return, and replace; `checkpoint` pins the DF-CHECKPOINT-1 same-rows
+  new-frame answer for both eager arms; `sparkSession` pins owner identity
+  including the `newSession`-promotion case (R-9); `isLocal` pins `False`
+  on every measured shape; `executionInfo` pins the
+  `CLASSIC_OPERATION_NOT_SUPPORTED_ON_DF` refusal text. Critic round 1
+  (L-001..L-010, rulings R-5..R-9): `inputFiles` and `semanticHash` moved
+  out to a Rust plan-introspection unit (R-5); the `_schema_override`
+  sticker is gone (R-6); store assignment admits atomic→string and
+  decimal→decimal widening and reconciles nested struct/array/map through
+  `named_struct`/`transform`/`transform_values`/`transform_keys` engine
+  expressions (R-8). pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005,
+  C-006, C-007, C-008
+  **DF-TO-BINARY-1 (2026-09-14):** `test_to_binary_follows_reported_schema_df_to_binary_1` codifies that `to()` follows the facade's `string` report for a binary column (FACADE-4 D7/D19). pins: df-surface-a-1/C-008
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
   / `Row.index` answer the nine `row.*` cells of the committed run-15b oracle
   ([facade_row_oracle.json](facade_row_oracle.json), live PySpark 4.1.2) — value counts
@@ -602,6 +630,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ex-29-class-remainder/C-002, C-003
   pins: df-describe-str-1/C-001, C-002, C-003
   pins: df-colregex-1/C-002, C-003, C-006
+- [test_fnp_alias_1.py](test_fnp_alias_1.py) + `fnp_alias_1_spark_oracle.json` —
+  **FNP-ALIAS-1 (2026-09-15):** the PySpark alias names over existing kernels, oracle-driven.
+  The fixture is the orchestrator's live PySpark 4.1.2 recording (2026-09-14, 98 cells, 14
+  signatures); pins replay the Python-door ANSI cells (column name, type, rows — nullability
+  pinned except the VALUES group key, run 15c's work, and the `approx_count_distinct` result,
+  BL-18), the deprecated-alias `FutureWarning` messages, parameter names/defaults vs the
+  recorded signatures, and the SQL-door degrees/radians values (SQL-door names are run 15c's).
+  `sum_distinct`/`sumDistinct` stay on the deferred census this round: a DISTINCT sum needs a
+  native distinct-aggregate builder (`count_aggregate` is count-specific; `aggregate` has no
+  distinct modifier) and Rust is fenced out of this unit — see the unit ledger's ruling question.
+  **crit-logic-1 L-001 (2026-09-15):** the semi/anti right-ref raise (all four rescaled names),
+  the left-ref control, and the two-sided `degrees` ON-join pin; the `_rescaled` rewrap threads
+  join origin like `bitwise_not`. **L-002 (same round):** the SQL-door negative-count shift
+  cells replay on the Python door (values and types; names stay D-2's) and the Column-`numBits`
+  shape pins Java's `& 31` masking on INT.
+  pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
@@ -1107,13 +1151,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   declared-absent names append. pins: fnp-15-16/C-016
   (2026-08-15): `__all__` before==after pin. **FN-E moved the pin** to 262 names
   (freeze 253 + 9 collection additions) + every name resolves.
-  (2026-08-15): `__all__` before==after pin. **FN-F moved the pin** to 263
+  (2026-08-15): **FN-F moved the pin** to 263
   names (253 FN-A+FN-B + 10 session/bitwise additions) + every name resolves.
   (2026-08-15): **FN-W moved the pin** 291→296 (5 window additions:
   `lag`/`lead`/`nth_value`/`percent_rank`/`cume_dist`).
   (2026-08-17): **FN-GT1 moved the pin** 296→315 (18 leftover thin-wires +
   `getbit` alias of `bit_get`).
   (2026-08-17): **FN-GT2 moved the pin** 315→333 (18 datetime/collections/url/bitmap).
+  **FNP-ALIAS-1 (2026-09-15): the pin moves 453 → 459** (six install_into alias
+  names after the stack segment: approxCountDistinct, the three camelCase shifts,
+  toDegrees, toRadians). pins: fnp-alias-1/C-001
 - [test_functions_gt2.py](test_functions_gt2.py) — FN-GT2 (2026-08-17): leftover
   THIN-WIRE datetime/collections/url/bitmap through Arrow (value AND type).
   ``datediff`` stub stays; ``element_at`` pins 1-based + zero-index refuse +
@@ -1185,6 +1232,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   aliases/shims through `ReparkSession` Arrow `to_arrow()` (value AND type).
   Alias names resolve + one behavior case vs canonical. `count_if` pins
   true-only counting; `bool_and`/`bool_or` pin vs `min`/`max` on booleans.
+  **FNP-ALIAS-1 (2026-09-15):** `approxCountDistinct` ships and leaves the
+  deferred census; `sum_distinct`/`sumDistinct` stay (native DISTINCT-aggregate
+  builder needed, Rust fenced — unit ledger ruling question).
 - [test_functions_d.py](test_functions_d.py) — FN-D (2026-08-15): datetime wrappers
   through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias names resolve
   + one behavior case. `unix_seconds` pins toward-zero vs TZ-5 CAST floor.
@@ -1196,8 +1246,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_functions_f.py](test_functions_f.py) — FN-F (2026-08-15): try / session /
   bitwise wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
   `uuid` pins type + uniqueness; `version` is the repark string. FN-GT1 later
-  shipped ``bit_count`` / ``getbit`` / snake-case shifts; camelCase shift
-  aliases and charter try_* stay absent.
+  shipped ``bit_count`` / ``getbit`` / snake-case shifts; charter try_* stay absent.
+  **FNP-ALIAS-1 (2026-09-15):** the camelCase shift aliases ship
+  (`functions_bitwise.py` install), so the three leave this census; behavior and
+  warnings are pinned in `test_fnp_alias_1.py`. pins: fnp-alias-1/C-001, C-003
 - [test_version_ssot.py](test_version_ssot.py) — version SSOT pins (release PR): `__version__` == distribution version, PEP 440 release shape, past the 0.0.1 name-reservation era. Guards the `dynamic = ["version"]` maturin wiring.
 - `test_partition_value_audit.py` + `_record_partition_value_goldens.py` — **V-4
   (2026-08-13):** write-path partition-key VALUE audit vs live Spark 4.1.2 + Iceberg.
@@ -4714,6 +4766,7 @@ pins: fnp-8-review/C-009, C-010
 
 EAGER-BUDGET-1 declared export delta (2026-09-13): `dataframe/core.py` imports only `_resolve_cache_budgets` from
 `eager.py`, so the frozen `core` and package surfaces in `_dfcore_1_expected.py` lose `_CACHE_MAX_BYTES_KEY`,
+  **DF-SURFACE-A-1 rebase (2026-09-14):** the frozen DataFrame dir lists `withMetadata` before `withWatermark` (sorted) after the rebase over DF-STREAM-BATCH-1 merged both name sets.
 `_cache_conf_lookup` and `_resolve_cache_max_bytes` and gain `_resolve_cache_budgets`. No other module read those names
 through `core` or the package. pins: eager-budget-1/C-010
 

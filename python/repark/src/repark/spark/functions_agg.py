@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import warnings
+from typing import Any
+
 from repark.spark.column import Column
 from repark.spark.functions import col, count, first, last, lit, max, min
-from repark.spark.functions_expr import stddev, when
+from repark.spark.functions_expr import approx_count_distinct, stddev, when
 
 
 def first_value(col: Column | str, ignorenulls: bool = False) -> Column:
@@ -58,3 +61,24 @@ def bool_or(col: Column | str) -> Column:
 def some(col: Column | str) -> Column:
     """Boolean OR of a group (PySpark ``functions.some``; alias of ``bool_or``)."""
     return bool_or(col)
+
+
+INSTALL_NAMES: tuple[str, ...] = ("approxCountDistinct",)
+
+
+def approxCountDistinct(col: Column | str, rsd: float | None = None) -> Column:  # noqa: N802
+    """Approximate distinct count (PySpark ``functions.approxCountDistinct``; deprecated)."""
+    warnings.warn(
+        "Deprecated in 2.1, use approx_count_distinct instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
+    return approx_count_distinct(col, rsd)
+
+
+def install_into(namespace: dict[str, Any], exported: list[str]) -> None:
+    """Copy this module's deprecated alias onto the canonical functions module."""
+    for name in INSTALL_NAMES:
+        namespace[name] = globals()[name]
+        if name not in exported:
+            exported.append(name)
