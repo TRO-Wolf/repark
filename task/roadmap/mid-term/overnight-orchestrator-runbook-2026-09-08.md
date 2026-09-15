@@ -219,6 +219,17 @@ contract — type mapping, bulk ingest, cursor and cancellation semantics. A uni
 shaped each design decision. The no-code-comments ruling (CLAUDE.md, 2026-08-26) applies to these units exactly
 as to every other.
 
+### Standing instruction — Rust first (owner, 2026-09-14)
+
+"Continue down the path of making everything written in Rust if it can be written as such." Every
+new function, aggregate, kernel, planner rule, type conversion or renderer lands in Rust — a
+DataFusion UDF/UDAF, a planner rewrite, or `repark-core` — with the Python facade a thin wrapper
+that binds names and argument shapes. A Python-only implementation is allowed only when the engine
+cannot carry it (a JVM, RDD, streaming or Connect-client refusal; pure API plumbing), and the ledger
+states why in one line. This applies to the parity campaign of 1.5 (runs 15+) as much as to the
+FACADE roll-call: the census names are added in Rust so the switchover never has to move them.
+Brief every worker with this sentence beside the comment ban and the attribution rule.
+
 ## 6. Decision authority (G-2)
 
 May decide alone, logging a new `D-n` row in the card and a line in the ledger:
