@@ -282,6 +282,8 @@ functions	F.array_sort
 functions	F.array_union
 functions	F.arrays_overlap
 functions	F.arrays_zip
+functions	F.arrow_udf
+functions	F.arrow_udtf
 functions	F.asc
 functions	F.asc_nulls_first
 functions	F.asc_nulls_last
@@ -311,6 +313,8 @@ functions	F.bool_or
 functions	F.broadcast
 functions	F.btrim
 functions	F.bucket
+functions	F.call_function
+functions	F.call_udf
 functions	F.cardinality
 functions	F.cbrt
 functions	F.ceil

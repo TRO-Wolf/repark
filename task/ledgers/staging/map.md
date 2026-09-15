@@ -5,6 +5,12 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [fnp-misc-1-ledger.md](fnp-misc-1-ledger.md) —
+  **FNP-MISC-1 (2026-09-15), in flight:** `call_function` / `call_udf` by-name resolution,
+  `arrow_udf` / `arrow_udtf` over the pandas/UDTF bridges, and `bucket` with a Column
+  `numBuckets`, all pinned against the live PySpark 4.1.2 oracle cells.
+  `risk_tier: standard`. Branch `feat/fnp-misc-1`.
+  pins: fnp-misc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`

@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime
 import enum
 import math
+import warnings
 from typing import Any
 
 from repark import _native
@@ -1116,31 +1117,29 @@ def hours(col: Column | str) -> Column:
 
 
 def bucket(numBuckets: int | Column, col: Column | str) -> Column:  # noqa: N803 — PySpark arg name
-    """Partition transform: bucket — only for ``partitionedBy`` (PySpark ``functions.bucket``).
-
-    Renders ``bucket(<numBuckets>, "col")`` into CTAS ``PARTITIONED BY`` (the identity column arg
-    is double-quoted). ``numBuckets`` must be a positive ``int`` (or Column); the engine
-    also rejects ``<= 0`` loudly at parse time (Spark/Iceberg analysis-error parity).
-
-    E1: bad ``numBuckets`` type raises ``PySparkTypeError`` with ``NOT_COLUMN_OR_INT`` so Apache
-    ``check_error`` class + parameter-key equality PASSes.
-    """
+    """Partition transform: bucket — only for ``partitionedBy`` (PySpark ``functions.bucket``)."""
     from repark.spark._idents import quote_ident as _quote_ident
 
-    if not isinstance(numBuckets, (int, Column)) or isinstance(numBuckets, bool):
+    warnings.warn(
+        "Deprecated in 4.0.0, use partitioning.bucket instead.", FutureWarning, stacklevel=2
+    )
+    if isinstance(numBuckets, Column):
+        fold_text = numBuckets.sql_expr_part().strip() if bool(numBuckets._is_foldable) else ""
+        folded_count = int(fold_text) if fold_text.lstrip("+-").isdigit() else None
+        if folded_count is None and fold_text[:5].upper() == "CAST(" and fold_text.endswith(")"):
+            inner, gap, target = fold_text[5:-1].partition(" AS ")
+            if gap and target.upper().strip() in ("INT", "SMALLINT", "TINYINT", "BIGINT"):
+                folded_count = int(inner) if inner.strip().lstrip("+-").isdigit() else None
+        if folded_count is None:
+            raise PySparkTypeError(
+                errorClass="NOT_COLUMN_OR_INT",
+                messageParameters={"arg_name": "numBuckets", "arg_type": "Column"},
+            )
+        numBuckets = folded_count  # noqa: N806 — PySpark arg-name spelling
+    if not isinstance(numBuckets, int) or isinstance(numBuckets, bool):
         raise PySparkTypeError(
             errorClass="NOT_COLUMN_OR_INT",
-            messageParameters={
-                "arg_name": "numBuckets",
-                "arg_type": type(numBuckets).__name__,
-            },
-        )
-    if isinstance(numBuckets, Column):
-        from repark.errors import UnsupportedOperationException
-
-        raise UnsupportedOperationException(
-            "bucket(Column, col) as a partition transform is not supported yet "
-            "(pass an int numBuckets; disclosed E1)"
+            messageParameters={"arg_name": "numBuckets", "arg_type": type(numBuckets).__name__},
         )
     column = _column_argument(col)
     source_name = col if isinstance(col, str) else column.spark_display_part()
@@ -1954,7 +1953,8 @@ __all__ = [
     "zeroifnull",
 ]
 # fmt: off
-from repark.spark import functions_agg as _fa, functions_bitwise as _fb, functions_declared as _fd  # noqa: E402, I001
-from repark.spark import functions_json as _fj, functions_lambda as _fl  # noqa: E402
-from repark.spark import functions_math as _fm, functions_stack as _fk, functions_try as _ft  # noqa: E402
-_x = [m.install_into(globals(), __all__) for m in (_fd, _fl, _ft, _fj, _fk, _fa, _fb, _fm)]
+from repark.spark import functions_agg as _fa, functions_arrow_udf as _fw, functions_bitwise as _fb  # noqa: E402, I001
+from repark.spark import functions_byname as _fy, functions_declared as _fd, functions_json as _fj  # noqa: E402
+from repark.spark import functions_lambda as _fl, functions_math as _fm, functions_stack as _fk  # noqa: E402
+from repark.spark import functions_try as _ft  # noqa: E402
+_x = [m.install_into(globals(), __all__) for m in (_fd, _fl, _ft, _fj, _fk, _fa, _fb, _fm, _fy, _fw)]  # noqa: E501

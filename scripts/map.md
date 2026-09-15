@@ -10,6 +10,9 @@ DF-SURFACE-A-1 step 1 (2026-09-14): `check_lib_py.py` `dataframe/core.py`
 beside its `checkpoint` sibling; the nine surface-a bindings are one line
 each). The CAP-1 parity mirror row moved with it.
 pins: df-surface-a-1/C-006
+FNP-MISC-1 (2026-09-15, orchestrator): `check_example_coverage.py` walks `functions_byname.py`
+and `functions_arrow_udf.py` and their `BYNAME_NAMES` / `ARROW_EXPORTS` export tuples, so the
+four names those modules install at import are in the AST walk, not only in the live `__all__`.
 FACADE-4 step-1 remediation round 4 (2026-09-14, L-007..L-009):
 `check_lib_py.py` `spark/types.py` 1772 → 1793 (increase — base's container
 `simpleString`/`_engine_type`/`jsonValue` dispatch bodies and the
