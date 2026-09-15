@@ -1,14 +1,6 @@
-//! Secondary Spark-door token rewrites over the shared lexer.
-//!
-//! The primary literal pass lives in [`crate::spark_literals`]; this module holds the four
-//! rewrites that turn Spark-only spellings into DataFusion-plannable SQL: numeric literal
-//! suffixes, `DROP TEMPORARY`, `* EXCLUDE` columns, and call-base struct field access.
-
 use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan};
 
 use super::spark_literals::{LiteralRegion, requote_generic};
-/// Collect Spark numeric-suffix rewrites (`2.5D` → `CAST('2.5' AS DOUBLE)`). A number
-/// written with an exponent (`1.0E6`) behaves as if it carried the `D` suffix (DOUBLE).
 pub(crate) fn plan_suffix_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
     let mut regions = Vec::new();
     let mut index = 0;
@@ -52,7 +44,6 @@ pub(crate) fn plan_suffix_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion
     regions
 }
 
-/// The word index after a number when it sits directly against it, unquoted.
 fn adjacent_suffix_word(tokens: &[TokenWithSpan], number: usize) -> Option<usize> {
     let end = tokens[number].span.end;
     let mut cursor = number + 1;
@@ -66,13 +57,10 @@ fn adjacent_suffix_word(tokens: &[TokenWithSpan], number: usize) -> Option<usize
     matches!(candidate.token, Token::Word(_)).then_some(cursor)
 }
 
-/// True for an exponent-form number (`1E2`, `1.0E-3`): Spark types it DOUBLE while a
-/// plain decimal stays DECIMAL. The `f64` parse rejects non-decimal spellings (hex words).
 fn is_exponent_double(digits: &str) -> bool {
     digits.bytes().any(|byte| byte == b'e' || byte == b'E') && digits.parse::<f64>().is_ok()
 }
 
-/// The cast target for a suffixed-number word, or `None` when it is not a suffix.
 fn suffix_target(token: &Token) -> Option<&'static str> {
     let Token::Word(word) = token else {
         return None;
@@ -90,7 +78,6 @@ fn suffix_target(token: &Token) -> Option<&'static str> {
     }
 }
 
-/// The cast text: a string cast for `DOUBLE` (a huge exponent overflows decimal), digits else.
 fn suffix_replacement(digits: &str, target: &str) -> String {
     if target == "DOUBLE" {
         format!("CAST('{digits}' AS DOUBLE)")
@@ -99,9 +86,6 @@ fn suffix_replacement(digits: &str, target: &str) -> String {
     }
 }
 
-/// Drop a `TEMPORARY` keyword directly after `DROP` (valid Spark SQL for `FUNCTION`
-/// and `VIEW`; the Databricks lexer has no `TEMPORARY`). DataFusion tracks no
-/// temp-ness through SQL, so the bare `DROP` keeps the statement's meaning.
 pub(crate) fn plan_drop_temporary_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
     let mut regions = Vec::new();
     let mut index = 0;
@@ -135,7 +119,6 @@ pub(crate) fn plan_drop_temporary_regions(tokens: &[TokenWithSpan]) -> Vec<Liter
     regions
 }
 
-/// Rewrite `* EXCLUDE (…)` to `* EXCEPT (…)` (the Databricks lexer has no `EXCLUDE`).
 pub(crate) fn plan_wildcard_except_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
     let mut regions = Vec::new();
     let mut index = 0;
@@ -173,7 +156,6 @@ pub(crate) fn plan_wildcard_except_regions(tokens: &[TokenWithSpan]) -> Vec<Lite
     regions
 }
 
-/// Rewrite `named_struct(…).field` to a subscript (the planner rejects call-base field access).
 pub(crate) fn plan_struct_field_regions(
     tokens: &[TokenWithSpan],
     sql: &str,
@@ -254,7 +236,6 @@ pub(crate) fn plan_struct_field_regions(
     }
 }
 
-/// A `named_struct(…) . field` match: statement span, call end, and field name.
 struct StructFieldMatch {
     start: Location,
     call_end: Location,
@@ -262,7 +243,6 @@ struct StructFieldMatch {
     field: String,
 }
 
-/// Match `named_struct (` balanced-parens `) . field` at `tokens[index]`.
 fn match_struct_field(tokens: &[TokenWithSpan], index: usize) -> Option<StructFieldMatch> {
     let mut cursor = skip_whitespace(tokens, index + 1);
     if !matches!(tokens.get(cursor)?.token, Token::LParen) {
@@ -301,7 +281,6 @@ fn match_struct_field(tokens: &[TokenWithSpan], index: usize) -> Option<StructFi
     })
 }
 
-/// The first non-whitespace token at or after `index`.
 fn skip_whitespace(tokens: &[TokenWithSpan], mut index: usize) -> usize {
     while matches!(
         tokens.get(index).map(|with_span| &with_span.token),
@@ -312,7 +291,6 @@ fn skip_whitespace(tokens: &[TokenWithSpan], mut index: usize) -> usize {
     index
 }
 
-/// Byte index of every line start in `sql`.
 fn line_starts(sql: &str) -> Vec<usize> {
     let mut starts = vec![0];
     for (offset, character) in sql.char_indices() {
@@ -323,8 +301,6 @@ fn line_starts(sql: &str) -> Vec<usize> {
     starts
 }
 
-/// Byte offset of a 1-based char-column location, or `None` when out of range. An
-/// exclusive span end sitting exactly at the input end has no character to index.
 fn byte_offset(starts: &[usize], sql: &str, location: Location) -> Option<usize> {
     let line_start = *starts.get(usize::try_from(location.line).ok()?.checked_sub(1)?)?;
     let column = usize::try_from(location.column).ok()?.checked_sub(1)?;

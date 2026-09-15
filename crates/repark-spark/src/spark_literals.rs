@@ -1,11 +1,4 @@
-//! The rules (Spark 4.1.2, `<pyspark-4.1.2-oracle>`): backslash KEPT unless the
-//! `escapedStringLiterals` carrier keeps literals verbatim; one astral char, except an
-//! out-of-range `\U` keeps Java's two-char artifact. Double-quoted text is a STRING with the
-//! same escapes (the Databricks lexer reads `"` as a string, backtick-free). A `2.5D` numeric
-//! suffix becomes a typed `CAST`; `named_struct(…).field` becomes a subscript. The executing
-//! parse runs under Databricks, which never processes single-quoted backslashes, so canonical
-//! output cannot escape-process twice.
-
+//! The rules (Spark 4.1.2, `<pyspark-4.1.2-oracle>`): backslash KEPT; one astral char.
 use std::any::TypeId;
 use std::borrow::Cow;
 use std::iter::Peekable;
@@ -22,7 +15,6 @@ use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan, Toke
 /// Spark's measured replacement for an unrepresentable code point.
 const UNREPRESENTABLE: char = '\u{003F}';
 
-/// Generic lexing with Spark's backslash behavior, plus Spark's double-quoted strings.
 #[derive(Debug)]
 struct SparkLexDialect(GenericDialect);
 
@@ -44,7 +36,6 @@ impl Dialect for SparkLexDialect {
     fn is_identifier_part(&self, ch: char) -> bool {
         self.0.is_identifier_part(ch)
     }
-    /// Only backticks quote identifiers, so `"` lexes as a string with Spark escapes.
     fn is_delimited_identifier_start(&self, ch: char) -> bool {
         ch == '`'
     }
@@ -104,22 +95,13 @@ impl Dialect for SparkLexDialect {
     }
 }
 
-/// Rewrite every string literal to the value Spark 4.1.2's lexer would produce.
-/// # Errors
-/// # Errors [`DataFusionError::SQL`] with the lexer's line/column when the text does not tokenise.
-/// Fragment entry (`filter_sql`): process escapes, the default door mode.
 /// # Errors
 /// # Errors [`DataFusionError::SQL`] with the lexer's line/column when the text does not tokenise.
 pub fn canonicalize(sql: &str) -> Result<Cow<'_, str>> {
     canonicalize_verbatim(sql, false)
 }
 
-/// The session-door entry: `keep_verbatim` keeps backslashes per `escapedStringLiterals`.
-/// # Errors
-/// # Errors [`DataFusionError::SQL`] with the lexer's line/column when the text does not tokenise.
 pub(crate) fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Cow<'_, str>> {
-    // No quote, no backslash, no suffixed number, no DROP TEMPORARY, no wildcard
-    // EXCLUDE: lexers agree, so borrow.
     if !sql.as_bytes().contains(&b'\'')
         && !sql.as_bytes().contains(&b'"')
         && !sql.as_bytes().contains(&b'\\')
@@ -135,20 +117,15 @@ pub(crate) fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Co
     }
 }
 
-/// True when `sql` may hold `* EXCLUDE (` (the Databricks lexer has no `EXCLUDE`).
 fn sql_may_have_wildcard_exclude(sql: &str) -> bool {
     sql.as_bytes().contains(&b'*') && sql.to_ascii_lowercase().contains("exclude")
 }
 
-/// True when `sql` holds a `DROP TEMPORARY` pair (valid Spark SQL the Databricks
-/// lexer rejects).
 fn sql_may_have_drop_temporary(sql: &str) -> bool {
     let lower = sql.to_ascii_lowercase();
     lower.contains("drop") && lower.contains("temporary")
 }
 
-/// True when `sql` holds a digit directly followed by a suffix letter (`1D`, `1.5BD`)
-/// or an exponent marker (`1E2`, `1.0e-3`).
 fn sql_may_have_numeric_suffix(sql: &str) -> bool {
     let bytes = sql.as_bytes();
     bytes.windows(2).any(|pair| {
@@ -182,7 +159,6 @@ pub fn translate_downstream_error(
     translate_downstream_error_verbatim(original, canonical, error, false)
 }
 
-/// The session-door entry: recompute the rewrite with the door's verbatim flag.
 pub(crate) fn translate_downstream_error_verbatim(
     original: &str,
     canonical: &str,
@@ -383,8 +359,6 @@ fn plan_literal_regions(tokens: &[TokenWithSpan], keep_verbatim: bool) -> Vec<Li
             cursor = lookahead + 1;
         }
         if literal_count > 1 || single_needs_rewrite {
-            // A lone double-quoted literal keeps its quotes so the downstream dialect still
-            // reads identifiers as identifiers; only a `"` in the value forces single quotes.
             let replacement = if single_is_double && !merged.contains('"') {
                 requote_double(&merged)
             } else {
@@ -401,7 +375,6 @@ fn plan_literal_regions(tokens: &[TokenWithSpan], keep_verbatim: bool) -> Vec<Li
     regions
 }
 
-/// The Spark value of a string literal token (raw strings verbatim, E19), or `None`.
 fn literal_token_value(token: &Token, keep_verbatim: bool) -> Option<String> {
     let unescape = |raw: &String| {
         if keep_verbatim {
@@ -417,9 +390,6 @@ fn literal_token_value(token: &Token, keep_verbatim: bool) -> Option<String> {
     }
 }
 
-/// True when a single literal alone produces different text than the downstream lexer.
-/// Double-quoted text without backslashes stays untouched so quoted identifiers and aliases
-/// keep their positions; verbatim mode keeps every backslash, so doubles never rewrite.
 fn literal_needs_rewrite(token: &Token, keep_verbatim: bool) -> bool {
     match token {
         Token::SingleQuotedString(raw) => raw.contains('\\'),
@@ -429,7 +399,6 @@ fn literal_needs_rewrite(token: &Token, keep_verbatim: bool) -> bool {
     }
 }
 
-/// Keep backslashes verbatim (`escapedStringLiterals=true`); only `''` still folds.
 fn unescape_verbatim_literal(raw: &str) -> String {
     let mut out = String::with_capacity(raw.len());
     let mut characters = raw.chars().peekable();
@@ -442,8 +411,6 @@ fn unescape_verbatim_literal(raw: &str) -> String {
     out
 }
 
-/// Re-quote a finished Spark string value in double quotes. The caller only sends values
-/// without `"` (a `"` in the value forces single quotes), so a plain wrap is exact.
 fn requote_double(value: &str) -> String {
     format!("\"{value}\"")
 }
@@ -688,7 +655,6 @@ fn read_hex(characters: &[char], start: usize, count: usize) -> Option<u32> {
     Some(value)
 }
 
-/// Emit the character for `code_point`, or Spark's Java artifact when it is not representable.
 fn push_code_point(code_point: u32, out: &mut String) {
     if let Some(character) = char::from_u32(code_point) {
         out.push(character);
@@ -701,7 +667,6 @@ fn push_code_point(code_point: u32, out: &mut String) {
     push_java_surrogate_artifact(code_point, out);
 }
 
-/// Java narrows an out-of-range `\U` to two chars, each lone surrogate encoding as `?`.
 fn push_java_surrogate_artifact(code_point: u32, out: &mut String) {
     let shifted = code_point.wrapping_sub(0x1_0000);
     let high = 0xD800u32.wrapping_add((shifted.cast_signed() >> 10).cast_unsigned()) & 0xFFFF;
@@ -717,7 +682,6 @@ fn push_java_surrogate_artifact(code_point: u32, out: &mut String) {
     push_java_unit(low, out);
 }
 
-/// One narrowed unit: a lone surrogate encodes as `?`, a BMP scalar as itself.
 fn push_java_unit(unit: u32, out: &mut String) {
     if (0xD800..=0xDFFF).contains(&unit) {
         out.push(UNREPRESENTABLE);
@@ -728,19 +692,15 @@ fn push_java_unit(unit: u32, out: &mut String) {
     }
 }
 
-/// Canonical Spark `SQLConf` key.
 pub(crate) const SPARK_SQL_PARSER_ESCAPED_STRING_LITERALS_KEY: &str =
     "spark.sql.parser.escapedStringLiterals";
 
-/// Session-scoped verbatim-literal flag the Spark front door reads out of [`ConfigOptions`].
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct SparkEscapedStringLiteralsConfig {
-    /// `true` keeps backslashes verbatim; `false` processes Spark escapes (the default).
     pub keep_verbatim: bool,
 }
 
 impl datafusion::common::config::ConfigExtension for SparkEscapedStringLiteralsConfig {
-    /// Two segments keep the carrier unreachable through `SET`.
     const PREFIX: &'static str = "repark.escaped-string-literals";
 }
 
@@ -757,7 +717,6 @@ impl datafusion::common::config::ExtensionOptions for SparkEscapedStringLiterals
         Box::new(self.clone())
     }
 
-    /// Refuse because the knob is set on the session builder.
     fn set(&mut self, key: &str, _value: &str) -> datafusion::common::Result<()> {
         Err(DataFusionError::Configuration(format!(
             "`{}.{key}` is not a settable option: the verbatim-literal mode is set with \
@@ -766,15 +725,11 @@ impl datafusion::common::config::ExtensionOptions for SparkEscapedStringLiterals
         )))
     }
 
-    /// Keep the carrier out of `SET` listings.
     fn entries(&self) -> Vec<datafusion::common::config::ConfigEntry> {
         Vec::new()
     }
 }
 
-/// Parse `spark.sql.parser.escapedStringLiterals`.
-/// # Errors
-/// A present value that is not a boolean token.
 pub(crate) fn parse_escaped_string_literals(raw: &str) -> Result<bool> {
     match raw.trim().to_ascii_lowercase().as_str() {
         "true" | "1" | "yes" => Ok(true),
@@ -787,9 +742,6 @@ pub(crate) fn parse_escaped_string_literals(raw: &str) -> Result<bool> {
     }
 }
 
-/// Read the builder conf map.
-/// # Errors
-/// Present but unparsable value (the `notabool` fail-loud).
 pub(crate) fn escaped_string_literals_from_config_map<S>(
     config: &std::collections::HashMap<String, String, S>,
 ) -> Result<bool>
@@ -802,7 +754,6 @@ where
     }
 }
 
-/// Attach the verbatim-literal flag to a [`SessionConfig`] (Spark door `configure` hook).
 #[must_use]
 pub(crate) fn with_escaped_string_literals_config(
     config: SessionConfig,
@@ -811,7 +762,6 @@ pub(crate) fn with_escaped_string_literals_config(
     config.with_option_extension(SparkEscapedStringLiteralsConfig { keep_verbatim })
 }
 
-/// Front-door accessor over session options.
 #[must_use]
 pub(crate) fn escaped_verbatim_from_options(
     options: &datafusion::common::config::ConfigOptions,

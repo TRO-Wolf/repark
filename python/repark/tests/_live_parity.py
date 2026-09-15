@@ -1485,9 +1485,6 @@ def _collision_frame(engine: Engine) -> Any:
 
 
 def _disc_filter_case_collision_bypasses_repark(engine: Engine) -> None:
-    # The Column form never reaches the SQL-string rewriter and still resolves
-    # exact-case-first (ID-2 remainder). A double-quoted span reads as a STRING literal
-    # since FNP-4B, so comparing it to a number is loud (BL-1 raise-vs-raise precedent).
     src = _collision_frame(engine)
     assert engine.arrow_of(src.filter(src["ID"] > 1)).num_rows == 1, "Column form binds `ID`"
     assert engine.arrow_of(src.filter(src["id"] > 1)).num_rows == 0, "Column form binds `id`"
@@ -1502,11 +1499,6 @@ def _disc_filter_case_collision_bypasses_spark(engine: Engine) -> None:
     _expect_raises(lambda: engine.arrow_of(src.filter(src["ID"] > 1)))
     _expect_raises(lambda: engine.arrow_of(src.filter(src["id"] > 1)))
     _expect_raises(lambda: engine.arrow_of(src.filter('"ID" > 1')))
-
-
-# `filter_backtick_identifier` converged under FNP-4B (BL-2 FIXED 2026-09-15): both
-# engines filter on the backticked name, pinned JVM-free by
-# test_filter_predicate_rewrite.py::test_backtick_quoted_identifier_is_a_protected_span.
 
 
 # Disclosure names must match the registry `- `live-mirror: <name>`` bullets exactly.
@@ -1703,8 +1695,6 @@ DISCLOSURES: list[Disclosure] = [
         "for the Column form and CAST_INVALID_INPUT for the quoted form under ANSI. Audit G2 "
         "plus FNP-4B — the Column-form remainder is disclosed, not fixed.",
     ),
-    # `filter_backtick_identifier` retired under FNP-4B (BL-2 FIXED 2026-09-15) —
-    # converged, so it no longer belongs in the divergence roster.
     Disclosure(
         "sum_catastrophic_cancellation_fixture",
         _disc_sum_catastrophic_cancellation_repark,

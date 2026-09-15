@@ -32,8 +32,6 @@ pub(super) fn reciprocal_trig_or_inf(divisor: Expr) -> Expr {
     })
 }
 
-/// Parse a free-SQL filter predicate through the Spark-door lexer, mapping downstream
-/// locations back to the caller's text. The output is Generic-plannable by construction.
 pub(crate) fn parse_canonical_predicate(
     frame: &datafusion::prelude::DataFrame,
     predicate: &str,
@@ -48,11 +46,6 @@ pub(crate) fn parse_canonical_predicate(
     })
 }
 
-/// Plan `SELECT (<expr>)` for `F.expr`, returning the projection expression.
-///
-/// Literals and builtins analyze eagerly (post-analysis types included). A column the empty
-/// schema cannot resolve falls back to [`parse_unresolved_expr`] so the consumer frame binds
-/// it with its own case folding; any other failure stays loud at this call.
 pub(crate) async fn plan_expr_column(
     context: &SessionContext,
     select_sql: &str,
@@ -93,7 +86,6 @@ pub(crate) async fn plan_expr_column(
     )
 }
 
-/// The missing `(qualifier, name)` when `error` is an unresolved-column failure, else `None`.
 fn missing_column(
     error: &datafusion::error::DataFusionError,
 ) -> Option<(Option<TableReference>, String)> {
@@ -109,12 +101,6 @@ fn missing_column(
     }
 }
 
-/// Parse `canonical` with a discovered dummy schema: each unresolved-column failure names one
-/// more column, so the loop converges on exactly the referenced names (lambdas bind internally
-/// and never surface). Dummy `Utf8` types never reach the tree — conversion is name-based and
-/// the consumer re-analyzes. Normalization stays off so the user's spelling (`ID`, not `id`)
-/// reaches the consumer, matching the `Column` exact-case contract. Caps at 64 columns; stalls
-/// stay loud. Uppercase function names with columns stay loud: lookup needs normalization.
 fn parse_unresolved_expr(canonical: &str) -> datafusion::error::Result<Expr> {
     let context = sql_context(canonical, false)?;
     repark_functions::register_all(&context);

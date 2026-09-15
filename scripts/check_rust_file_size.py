@@ -112,7 +112,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split DELETE and UPDATE scenario families with shared setup retained.",
     ),
     "crates/repark-python/src/column/mod.rs": (
-        1040,
+        1038,
         "PyO3 Column methods remain grouped in one binding module.",
         "Extract the remaining date or window method family.",
     ),
@@ -192,7 +192,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split statement families into production-aligned test modules.",
     ),
     "crates/repark-sql/tests/cross_door.rs": (
-        1259,
+        1258,
         "Cross-door parity cases share one integration battery.",
         "Split syntax-equivalence from deliberate-divergence cases.",
     ),

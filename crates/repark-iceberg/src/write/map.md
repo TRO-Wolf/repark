@@ -532,3 +532,4 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
   that read it. Sites here: `append.rs` — the example table literal in
   `append_a1_acceptance_identity_partitioned_end_to_end`, now `"t"` like every other
   `create_table` call in the file.
+- **FNP-4B remediation (2026-09-15):** `idents.rs` keeps the backtick `quote_ident_spark`; the unit's added code comments were removed under the 2026-08-26 ruling (facts stay in this map).

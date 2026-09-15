@@ -15,6 +15,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
 - `spark_dialect.rs` — **FNP-4B (2026-09-15):** the Spark-door dialect pins over a
+  pins: fnp-4b/C-007
   production-configured session — Databricks session dialect, the `escapedStringLiterals`
   carrier (default off, `true` honored, `notabool` refused), double-quoted STRING
   literals with Spark escapes, the `D/F/S/Y/L/BD` numeric suffixes with Spark Arrow

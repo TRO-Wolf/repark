@@ -428,3 +428,4 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
 - **`__repark` is an engine-reserved name prefix** — user tables and views must not use it. The
   mint step deregisters an occupied name before registering the pinned provider. This is required
   because the schema provider rejects duplicate registration; do not remove that cleanup.
+- **FNP-4B remediation (2026-09-15):** added code comments in `spark_literals.rs`, `spark_rewrites.rs`, `normalize.rs` removed (ruling 2026-08-26); the pre-existing one-line `spark_literals.rs` module doc that `python/repark-parity/tests/test_sqp_1_record.py` pins is kept verbatim.

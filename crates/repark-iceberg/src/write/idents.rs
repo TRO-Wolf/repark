@@ -1,6 +1,5 @@
 //! Shared Spark/DataFusion identifier quoting and path-escape needles (CQ-006/007).
 
-/// Backtick-quote a SQL identifier for the Spark / DataFusion dialect.
 #[must_use]
 pub fn quote_ident_spark(name: &str) -> String {
     format!("`{}`", name.replace('`', "``"))
@@ -58,7 +57,6 @@ pub mod probes {
 mod tests {
     use super::*;
 
-    /// Spark `quote_ident`: plain + embedded backtick + injection payloads stay single tokens.
     #[test]
     fn quote_ident_spark_doubles_embedded_quotes() {
         assert_eq!(quote_ident_spark("plain"), "`plain`");
@@ -70,7 +68,6 @@ mod tests {
         );
     }
 
-    /// Injection probes: quoted form starts/ends with a backtick and round-trips the payload.
     #[test]
     fn spark_injection_probes_are_single_quoted_tokens() {
         for probe in probes::SPARK_INJECTION_PROBES {

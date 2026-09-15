@@ -210,8 +210,6 @@ impl PyColumn {
     /// planner-embedded `substr` → shim, …) *and* their post-analysis types — so both the
     /// values and the schema a consumer `DataFrame` exports over Arrow match `spark.sql`. The
     /// rules are idempotent, so the consumer session's own analysis pass is a no-op on this
-    /// subtree. A column the empty schema cannot resolve skips eager analysis instead of
-    /// failing, so the consumer frame binds it (same case folding as `filter`).
     ///
     /// # Errors
     /// Returns `ParseException` for invalid SQL and `AnalysisException` for unresolved columns.

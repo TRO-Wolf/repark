@@ -172,3 +172,4 @@ sync after changes.
 
 - Up: [src map](../map.md)
 - Crate: [repark-python map](../../map.md)
+- **FNP-4B remediation (2026-09-15):** `expr_build.rs` / `mod.rs` added code comments removed (ruling 2026-08-26); `mod.rs` ceiling ratcheted 1040 → 1038.

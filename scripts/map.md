@@ -1122,3 +1122,4 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
 `bash scripts/check_parity_live_dual_wire.sh`, `bash scripts/check_matrix_test_liveness.sh`,
 `make workflows-parse`. Escalate to:
 [../map.md#debug](../map.md).
+- **FNP-4B remediation (2026-09-15):** size ceilings set to the real line counts (`check_rust_file_size.py`: `column/mod.rs` 1038, `cross_door.rs` 1258; `check_lib_py.py`: `_live_parity.py` 1753).

@@ -732,3 +732,4 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
 
 First checks: `PYTHONPATH=python/repark-parity/src pytest python/repark-parity/tests -q`.
 Escalate to: [../map.md#debug](../map.md).
+- **FNP-4B remediation (2026-09-15):** CAP-1 mirror ratcheted with the scripts: `column/mod.rs` 1038, `cross_door.rs` 1258, `_live_parity.py` 1753.

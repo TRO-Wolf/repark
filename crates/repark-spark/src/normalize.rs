@@ -414,7 +414,6 @@ pub(crate) fn refuse_dml_subquery_predicate_in_statement(statement: &Statement) 
     }
 }
 
-/// Render a DML target by part value: bare parts stay bare, quoted parts become `"…"`.
 pub(crate) fn canonical_dml_target_name(name: &ObjectName) -> String {
     name.0
         .iter()

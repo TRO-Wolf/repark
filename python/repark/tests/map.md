@@ -4572,3 +4572,4 @@ EAGER-BUDGET-1 declared export delta (2026-09-13): `dataframe/core.py` imports o
 `eager.py`, so the frozen `core` and package surfaces in `_dfcore_1_expected.py` lose `_CACHE_MAX_BYTES_KEY`,
 `_cache_conf_lookup` and `_resolve_cache_max_bytes` and gain `_resolve_cache_budgets`. No other module read those names
 through `core` or the package. pins: eager-budget-1/C-010
+- **FNP-4B remediation (2026-09-15):** added comment lines removed from `_live_parity.py`, `test_columns.py`, `test_errors.py` (ruling 2026-08-26); `_live_parity.py` ceiling 1763 → 1753 after ruff format.

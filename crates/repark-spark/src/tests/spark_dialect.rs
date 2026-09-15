@@ -6,7 +6,6 @@ use datafusion::arrow::array::{
 };
 use repark_core::{SessionBuildConf, SessionExtension, SessionTimeZone};
 
-/// A production-faithful Spark-door context: `SparkExtension::configure` plus registry and rules.
 fn production_ctx(keep_verbatim: bool) -> SessionContext {
     let mut conf = HashMap::new();
     if keep_verbatim {
@@ -42,7 +41,6 @@ fn production_ctx(keep_verbatim: bool) -> SessionContext {
     ctx
 }
 
-/// The single output batch of a one-row `SELECT`, with its Arrow field.
 async fn one_cell(ctx: &SessionContext, sql: &str) -> (RecordBatch, DataType, bool) {
     let batches = execute(ctx, &CatalogRegistry::new(), sql)
         .await
@@ -58,7 +56,6 @@ async fn one_cell(ctx: &SessionContext, sql: &str) -> (RecordBatch, DataType, bo
     (batches[0].clone(), data_type, nullable)
 }
 
-/// The `Utf8` value of a one-row select.
 async fn utf8_value(ctx: &SessionContext, sql: &str) -> (String, bool) {
     let (batch, data_type, nullable) = one_cell(ctx, sql).await;
     assert_eq!(data_type, DataType::Utf8, "`{sql}` must be Utf8");
@@ -70,7 +67,6 @@ async fn utf8_value(ctx: &SessionContext, sql: &str) -> (String, bool) {
     (column.value(0).to_string(), nullable)
 }
 
-/// `configure` parses every statement with `Dialect::Databricks`.
 #[test]
 fn configure_parses_with_databricks_dialect() {
     let ctx = production_ctx(false);
@@ -80,7 +76,6 @@ fn configure_parses_with_databricks_dialect() {
     );
 }
 
-/// `configure` carries `escapedStringLiterals=false` unless the builder sets it.
 #[test]
 fn configure_defaults_verbatim_off_and_honors_true() {
     let off = production_ctx(false);
@@ -93,7 +88,6 @@ fn configure_defaults_verbatim_off_and_honors_true() {
     ));
 }
 
-/// A present-but-unparsable flag value fail-louds naming the key.
 #[test]
 fn configure_refuses_verbatim_notabool() {
     let mut conf = HashMap::new();
@@ -118,7 +112,6 @@ fn configure_refuses_verbatim_notabool() {
     );
 }
 
-/// BL9-0: a double-quoted literal is a non-null STRING.
 #[tokio::test]
 async fn double_quoted_literal_is_a_string() {
     let ctx = production_ctx(false);
@@ -127,7 +120,6 @@ async fn double_quoted_literal_is_a_string() {
     assert!(!nullable);
 }
 
-/// BL9-1/2/3: Spark escapes inside double quotes.
 #[tokio::test]
 async fn double_quoted_escapes_match_spark() {
     let ctx = production_ctx(false);
@@ -156,7 +148,6 @@ async fn double_quoted_escapes_match_spark() {
     assert_eq!(squote, "it's");
 }
 
-/// BL9-6: a double-quoted digits literal compares as a string.
 #[tokio::test]
 async fn double_quoted_digits_compare_as_string() {
     let ctx = production_ctx(false);
@@ -172,7 +163,6 @@ async fn double_quoted_digits_compare_as_string() {
     );
 }
 
-/// BL10: the default door processes escapes; the verbatim door keeps them.
 #[tokio::test]
 async fn verbatim_flag_keeps_backslashes() {
     let off = production_ctx(false);
@@ -183,7 +173,6 @@ async fn verbatim_flag_keeps_backslashes() {
     assert_eq!(kept, "\\d");
 }
 
-/// BL12: an out-of-range `\U` keeps Java's two-char artifact.
 #[tokio::test]
 async fn out_of_range_u_keeps_java_artifact() {
     let ctx = production_ctx(false);
@@ -193,7 +182,6 @@ async fn out_of_range_u_keeps_java_artifact() {
     assert_eq!(value, "\u{d7bf}?");
 }
 
-/// BL6-sql-3 + DIV: `D`-suffixed numbers are DOUBLE with Spark's values.
 #[tokio::test]
 async fn d_suffix_is_double() {
     let ctx = production_ctx(false);
@@ -233,7 +221,6 @@ async fn d_suffix_is_double() {
     );
 }
 
-/// `L/S/Y/F/BD` suffixes keep their Spark Arrow types.
 #[tokio::test]
 async fn other_suffixes_keep_spark_types() {
     let ctx = production_ctx(false);
@@ -287,7 +274,6 @@ async fn other_suffixes_keep_spark_types() {
     );
 }
 
-/// A backticked alias survives the door as the field name.
 #[tokio::test]
 async fn backtick_ident_survives_the_door() {
     let ctx = production_ctx(false);
@@ -300,7 +286,6 @@ async fn backtick_ident_survives_the_door() {
     assert_eq!(batches[0].schema().field(0).name(), "my col");
 }
 
-/// Internal `SELECT * EXCLUDE` keeps working: the door reads it as `EXCEPT`.
 #[tokio::test]
 async fn wildcard_exclude_reads_as_except() {
     let ctx = production_ctx(false);
@@ -326,8 +311,6 @@ async fn wildcard_exclude_reads_as_except() {
     );
 }
 
-/// `DROP TEMPORARY FUNCTION IF EXISTS` parses on the Spark door (valid Spark SQL;
-/// the Databricks lexer has no `TEMPORARY`) and is a no-op for a missing function.
 #[tokio::test]
 async fn drop_temporary_function_if_exists_is_a_noop() {
     let ctx = production_ctx(false);
@@ -344,7 +327,6 @@ async fn drop_temporary_function_if_exists_is_a_noop() {
     assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 0);
 }
 
-/// JD-exp-literal-types: exponent literals are DOUBLE, a plain decimal stays DECIMAL.
 #[tokio::test]
 async fn exponent_literal_is_double() {
     let ctx = production_ctx(false);
@@ -399,7 +381,6 @@ async fn exponent_literal_is_double() {
     );
 }
 
-/// FNP4B-sql-struct-lit: field access on a `named_struct` call answers.
 #[tokio::test]
 async fn struct_field_access_on_call_result() {
     let ctx = production_ctx(false);

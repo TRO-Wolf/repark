@@ -97,9 +97,6 @@ def test_expr_resolves_column_free_sql(spark: ReparkSession) -> None:
 
 
 def test_expr_referencing_a_column_defers(spark: ReparkSession) -> None:
-    # A column-referencing expr() defers binding to the consumer frame (FNP-4B): standalone
-    # construction succeeds, and use against a frame without the column raises
-    # AnalysisException (the PySpark-faithful type, a RuntimeError subclass).
     deferred = F.expr("a + 1")
     df = spark.sql("SELECT 1 AS keep")
     with pytest.raises(AnalysisException):

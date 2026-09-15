@@ -633,7 +633,6 @@ async fn cross_door_g3e8_refusals_render_identically() {
         "DELETE FROM ice.sales.orders WHERE id > 1 AND id IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.orders WHERE id = ANY (SELECT id FROM ice.sales.keys)",
         "UPDATE ice.sales.orders SET label = 'z' WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
-        // The target rendering, quoted in backticks — double quotes lex as strings on Spark.
         "DELETE FROM `ice`.`sales`.`orders` WHERE id = (SELECT max(id) FROM ice.sales.keys)",
     ] {
         let ansi_refusal = match ansi.session.sql(sql).await {
