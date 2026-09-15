@@ -106,7 +106,7 @@ def test_text_probe5_date_schema_timestamp(spark: ReparkSession, tmp_path: Path)
     """cell text_probe5_date_schema_timestamp — date-only is midnight zone. pins: io-text-1/X-1"""
     import datetime
     import re
-    import time
+    import zoneinfo
 
     expected = _cell("text_probe5_date_schema_timestamp")["result"]
     root = tmp_path / "kdate"
@@ -120,7 +120,7 @@ def test_text_probe5_date_schema_timestamp(spark: ReparkSession, tmp_path: Path)
     match = re.search(r"datetime\(([^)]*)\)", expected["rows"][0])
     assert match is not None
     oracle_wall = datetime.datetime(*[int(part) for part in match.group(1).split(",")])
-    oracle_epoch = time.mktime(oracle_wall.timetuple())
+    oracle_epoch = oracle_wall.replace(tzinfo=zoneinfo.ZoneInfo("America/New_York")).timestamp()
     repark_epoch = rows[0].k.replace(tzinfo=datetime.UTC).timestamp()
     assert oracle_epoch == repark_epoch
 
