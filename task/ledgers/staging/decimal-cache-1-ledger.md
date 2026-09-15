@@ -33,6 +33,11 @@ into the pin file as a fixture.
 | C-004 | An uncastable batch refuses with `Error::Analysis` naming both fields, e.g. `cache materialize: column 'n' is decimal(38,10) in the executed batches but decimal(38,6) in the plan schema`. | Rust test asserting the message | **PROVEN** | Pins `uncastable_batch_refuses_naming_both_fields` (`Error::Analysis`, `cache materialize: column 'n' is Utf8 in the executed batches but decimal(38,8) in the plan schema`) and `column_count_mismatch_refuses`. Same runs as C-003. Note: the measured direction on current main is batches-carry-Spark-type vs plan-carries-unanalyzed-type; the card's example had them flipped (1.4.1-vintage, illustrative). |
 | C-005 | Every oracle cell is pinned through `.eager()`, `.cache().collect()`, `.persist().collect()` and `collect()` on the facade (`withColumns`) and the SQL door (`spark.sql`), values as `Decimal` strings and types via `df.schema[...]`; plus the original report shape `withColumns({"new_price": F.col("price") * 5}).eager()` on a `DECIMAL(38,10)` frame. | `python/repark/tests/test_decimal_cache_1.py` green on the release native | **PROVEN** | `test_decimal_cache_1.py`: 60 parametrized cells + the report shape. Release native (`maturin develop --release` after the Rust fixes): `test_decimal_cache_1.py` + `test_df_eager_1.py` + `test_eager_budget_1.py` + `test_types_1.py`: 177 passed, 7 skipped (sanctioned live-oracle tier, `REPARK_PARITY_LIVE` unset). Fixture `decimal_cache_1_oracle.json` is a verbatim copy of the live-PySpark oracle. |
 | C-006 | Registry row in `docs/spark-sql-iceberg-parity.md` under the decimal section, FIXED with the pin. | Registry diff citing the pin | **PROVEN** | New `### DEC-10` row (refusal + min-precision halves, oracle table, pin cites) and the TY-10 flip to FIXED with the flipped pin. |
+| C-007 | Facade `-decimal(p,s)` keeps the child type like Spark and like the SQL door (no `lit(0) - x` retyping through the pre-coercion seat). | `test_decimal_cache_1.py` `-p` cells on both doors + every action | **PROVEN** | R2 evidence below. Bite-proof: the two facade `-p` pins failed pre-fix (`decimal(11,2)` vs `(10,2)`; SQL door already green), green post-fix. Basis: Spark `UnaryMinus` keeps the child type (logic-critic live measurement, PySpark 4.1.2); values cross-checked against the SQL door. `test_decimal_cache_1.py` + `test_types_1.py`: 147 passed, 7 sanctioned live-oracle skips. |
+| C-008 | Cache conformance resolves each plan field by name: a reordered equal-arity batch conforms with values under the right names; a missing plan field and a duplicate batch name refuse. | Rust tests in `temp_views` | **PROVEN** | R2 evidence below. Pins `reordered_equal_arity_batch_conforms_by_name`, `missing_name_batch_refuses`, `duplicate_name_batch_refuses`, `extra_batch_column_projects_away` (superset projects, mirroring `resolve_projection`). `cargo test -p repark-core --lib session::temp_views`: 9 passed. |
+| C-009 | Both unpinned refusal arms refuse with the named two-field `Error::Analysis`: a conform-time cast overflow names both types plus the cast error text; a non-nullable plan field over an array containing nulls refuses (residual rebuild failures are `Analysis`, never bare engine errors). | Rust tests in `temp_views` | **PROVEN** | R2 evidence below. Pins `overflowing_cast_refuses_with_cast_error` (`decimal(10,2)` 176.56 over `decimal(2,1)` refuses with both types plus the Arrow overflow text) and `null_in_non_nullable_plan_field_refuses`; the `Utf8` pin now asserts the appended cast error text. Same run as C-008. |
+| C-010 | One analyzer pass per cache materialize: the analyzed plan is optimized and executed directly, never cloned-and-analyzed a second time. | 200-col eager timing before/after on the release native, median of 5 | **PROVEN** | R2 evidence below. BEFORE (S2-21 bench2, release, 6390ea13): eager 31.1 ms vs toArrow 8.2 ms; AFTER (this round, release, two runs): eager 30.1/30.5 ms vs toArrow 8.4/8.7 ms. Full `python/repark/tests` green on the new path (behavior-identical execution). |
+| C-011 | No double batch rebuild under tighten: a batch whose schema already matches returns untouched, so tighten-stamped batches skip the second `try_new`. | Code structure + unchanged end-to-end cache suites | **PROVEN** | R2 evidence below. The skip is behavior-identical by construction (same column `Arc`s, same schema `Arc`); no new pin can bite on it, so the pre-existing declareSorted/eager/cache suites hold it. Same full-suite run as C-010. |
 
 ## Evidence
 
@@ -64,6 +69,78 @@ min-precision the user's explicit `CAST(5 AS DECIMAL(10,0))` to `(12,2)`, tradin
 divergence for another. The fix must run before DataFusion's `TypeCoercion`, where bare
 literals are still bare: C-002. The unanalyzed-vs-analyzed pin selection is the C-003/C-004 fix.
 
+### R2 remediation round (2026-09-15)
+
+Scope amendment: the remediation brief explicitly authorizes one edit each in
+`crates/repark-python/src/column/display.rs` (`unary_neg`) and
+`python/repark/src/repark/spark/column.py` (the `__neg__` docstring, reworded in place at
+the exact 1532-line baseline) — the ledger's "Not in this unit" line predates that brief.
+No dependency, manifest, workflow, or registry file was touched.
+
+C-007 (L-001): the facade encoded `-col` as `lit(0_i32) - col`, which the new pre-coercion
+seat min-precisioned to `(1,0)`, retyping `-decimal(10,2)` to `(11,2)` (and `(38,10)` to
+`(38,9)`) where Spark `UnaryMinus` keeps the child type. `unary_neg` now emits
+`Expr::Negative` of the child; display/SQL fragments unchanged. Fail-before: the two new
+facade `-p` pins failed on the pre-fix native while the SQL-door `-p` pins passed (the
+critic's table reproduced as pins). Fixture: two appended `-p` cells with a `basis` key;
+the 30 live cells are byte-untouched. Existing `__neg__` pins (int64 exact width, null
+preservation, float) stayed green — `Negative` preserves those types too. L-004 rode the
+same pin file: `_assert_every_action` now asserts `.cache().collect()` against the cell
+`cache_value` (all 32 cells) while eager/persist/collect assert their own value fields.
+
+C-008 (L-002): `conform_batch_to_schema` resolves each plan field by name (case-sensitive,
+like `lineage_columns.rs::resolve_projection`), so a reordered equal-arity batch conforms
+with values under the right names. A plan field missing from the batch refuses with the
+two-field message (`... is missing in the executed batches but ...`); a batch name
+occurring twice refuses (`... appears {n} times ...`). Extra batch columns project away
+(the old arity-count guard is gone; its fewer-columns direction is now the missing-name
+refusal). Case-sensitivity and projection match `resolve_projection`; duplicate refusal is
+stricter than its last-wins `HashMap` by explicit brief order.
+
+C-009 (L-003): the cast-failure message now appends the Arrow error text after the two
+field types (`... in the plan schema: {error}`); the pre-existing `Utf8` pin asserts the
+full text. Overflow arm: `decimal(10,2)` 176.56 over `decimal(2,1)` refuses with both
+types plus `Invalid argument error: 176.6 is too large to store in a Decimal128 of
+precision 2. Max is 9.9`. Null arm: the null scan runs over the conformed columns before
+`try_new`, so a non-nullable plan field over an array containing nulls refuses with the
+two-field nullability message even if Arrow ever stops validating; any residual `try_new`
+failure is `Error::Analysis` naming both schemas, never a bare engine error.
+
+C-010 (P2-1): `register_collected_memtable` ran `Analyzer::execute_and_check` on a plan
+clone and then `execute_stream` analyzed the original again (four `SparkDecimalPrecision`
+walks per eager with the dual seat). It now optimizes the analyzed plan
+(`optimizer().optimize`, which runs optimizer rules only — analyze lives in
+`SessionState::optimize`, not in `Optimizer::optimize`, verified in
+`datafusion-54.1.0` `session_state.rs`) and executes that physical plan with the same
+`TaskContext::from(&state)` and the same coalescing single-partition `execute_stream`
+`DataFrame::execute_stream` uses (verified in `dataframe/mod.rs` + `execution_plan.rs`).
+One structural `analyzed.clone()` feeds the by-value optimizer; no second analyzer pass.
+Timing (release native, DF shape `spark.range(10).select(id AS c0..c199)`, median of 5,
+warmup 1, the exact bench2 construction): BEFORE eager 31.1 ms vs toArrow 8.2 ms
+(bench2.json at 6390ea13); AFTER eager 30.1 ms / 30.5 ms (two runs) vs toArrow 8.4 ms /
+8.7 ms. The box was shared (load ~14-17, another worker's release build) for the AFTER
+runs; the BEFORE box state is unrecorded, so the honest claim is directional (~1 ms on a
+plan-dominated shape), not a ratio. The small win is expected: the shape is dominated by
+parse/optimizer/physical plus the pre-existing eager post-`count()` that fills
+`_eager_shape` (out of scope, named in the S2-21 report) — the removed analyzer stack was
+only ever a few ms here, and the 1 M-row produce path never showed it. Every `.eager()` /
+`.cache()` / `.persist()` / temp-view pin passes on the new path, so execution is
+behavior-identical.
+
+C-011 (P2-2): `conform_batch_to_schema` returns an untouched `batch.clone()` when the
+batch schema already equals the target schema, so tighten-stamped batches (which carry
+the reminted schema `Arc`) skip the second `try_new`; the common same-schema path drops
+from one `try_new` to none. Behavior-identical by construction: same column `Arc`s, same
+schema `Arc`, no cast kernel can fire on equal types — so no new unit pin can bite on the
+skip, and the declareSorted/eager/cache end-to-end suites (green in the full run) hold it.
+
+P3-1 (declined): no Decimal128 probe was added — the probe would itself walk the plan, so
+it trades one tree walk for another, and the review measured decimal-vs-int planning
+0.17 ms apart. Revisit only with a measured plan-dominated regression.
+
+P3-2: half-done by construction. The P2-2 skip is the pass-through (no `RecordBatch`
+alloc when schemas match). The Vec is still borrowed, not consumed: `clippy::needless_pass_by_value` (a `-D warnings` gate) mandates the borrow, and the overlap it preserves is metadata-only on the common path — transient 2x survives only on the exceptional cast path. Retiring that remainder needs a sanctioned per-site escape with its own review, not a passenger on this round.
+
 ### Out of scope observed (not in this unit)
 
 - Literal-only decimal arithmetic can disagree on nullability (analyzed nullable, physical
@@ -84,15 +161,15 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/decimal-cache-1-ledger.md, python/repark/tests/test_decimal_cache_1.py]
     - id: AT-2
       status: ATTACKED
-      evidence: All 30 oracle cells exercised (six input types under * 5, + 1, - 1, * price, * CAST(5 AS DECIMAL(1,0))), including the clamp shapes (38,6), (38,17) and (21,4); the conformance cells cover drifted (38,6)->(38,8), uncastable Utf8 and arity mismatch. Every pin asserts Arrow value AND type per cell.
+      evidence: All 30 oracle cells exercised (six input types under * 5, + 1, - 1, * price, * CAST(5 AS DECIMAL(1,0))), including the clamp shapes (38,6), (38,17) and (21,4); the conformance cells cover drifted (38,6)->(38,8), uncastable Utf8 and arity mismatch. R2 adds the two -p cells (both doors, every action) and the reorder/missing/duplicate/superset/overflow/null conformance pins. Every pin asserts Arrow value AND type per cell.
       artifacts: [python/repark/tests/test_decimal_cache_1.py, python/repark/tests/decimal_cache_1_oracle.json, crates/repark-core/src/session/temp_views.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: The uncastable batch refuses with Error::Analysis naming both fields (message pinned verbatim); the arity guard refuses with both counts; both faults stay AnalysisException on the facade. Pre-existing refusal posture elsewhere untouched.
+      evidence: The uncastable batch refuses with Error::Analysis naming both fields plus the cast error text (message pinned verbatim); the arity guard is replaced by name-matched refusal (missing name, duplicate name, both pinned verbatim) with superset projection; overflow and null-under-non-nullable arms refuse with the two-field message (both pinned verbatim); every fault stays AnalysisException on the facade. Pre-existing refusal posture elsewhere untouched.
       artifacts: [crates/repark-core/src/session/temp_views.rs]
     - id: AT-4
       status: ATTACKED
-      evidence: No collateral — full repark-functions lib (543 passed), core session cohort (122), repark-spark lib with the extended order contract, make verify (ci + workspace Rust tests), the release-native trio (177 passed, 7 sanctioned live-oracle skips) and the full python suite (7601 passed, 368 sanctioned skips, 0 failed) all green in-session.
+      evidence: No collateral — full repark-functions lib (543 passed), core session cohort (122), repark-spark lib with the extended order contract, make verify (ci + workspace Rust tests), the release-native trio (177 passed, 7 sanctioned live-oracle skips) and the full python suite (7601 passed, 368 sanctioned skips, 0 failed) all green in-session. R2 so far: the unit pin files on the rebuilt release native (147 passed, 7 sanctioned live-oracle skips) and session::temp_views (9 passed); make verify, the full python suite, check-ledgers and check-map-sync re-run before close.
       artifacts: [task/ledgers/staging/decimal-cache-1-ledger.md]
     - id: AT-5
       status: N/A
@@ -102,18 +179,19 @@ COVERAGE_ATTESTATION:
       evidence: Arrow value AND type pinned per oracle cell — values as Decimal strings off collect(), types via df.schema[...] on every action (eager, cache, persist, collect) and both doors; the Rust pins assert logical == physical field (name, type, nullability, metadata) plus the unscaled value.
       artifacts: [python/repark/tests/test_decimal_cache_1.py, crates/repark-functions/src/decimal_precision.rs]
     - id: AT-7
-      status: N/A
-      justification: No data-size loop added in the steady state — conformance is a pointer-identical pass-through when schemas agree (pinned), and the added analyzer pass is plan-size work over the materialized plan.
+      status: ATTACKED
+      evidence: R2 removes one analyzer stack per materialize (four SparkDecimalPrecision walks per eager become two) and the second try_new under tighten / on matching schemas. 200-col eager before/after on the release native (median of 5): 31.1 ms before, 30.1/30.5 ms after (two runs, shared box, load ~14-17); toArrow 8.2 ms before, 8.4/8.7 ms after. P3-1 declined (a probe walks the plan too); P3-2's Vec-borrow remainder kept by the clippy gate, metadata-only overlap on the common path.
+      artifacts: [crates/repark-core/src/session/temp_views.rs, task/ledgers/staging/decimal-cache-1-ledger.md]
     - id: AT-8
       status: ATTACKED
       evidence: DataFusion 54.1.0 behavior verified against the vendored crate source (Int32|UInt32 -> (10,0) coercion, cast_to no-op on equal types, Analyzer::new rule order, with_analyzer_rules replace semantics); file-size ceilings unmoved, new files under the default ceiling.
       artifacts: [crates/repark-functions/src/decimal_precision.rs, crates/repark-core/src/session/temp_views.rs, python/repark/tests/test_decimal_cache_1.py]
     - id: AT-9
       status: ATTACKED
-      evidence: The new refusal message (cache materialize: column ... is ... in the executed batches but ... in the plan schema) is pinned verbatim; all other failure families unchanged.
+      evidence: The new refusal message (cache materialize: column ... is ... in the executed batches but ... in the plan schema) is pinned verbatim; R2 extends it with the missing/duplicate/nullable arms and the appended cast error text (all pinned verbatim); all other failure families unchanged.
       artifacts: [crates/repark-core/src/session/temp_views.rs]
     - id: AT-10
       status: ATTACKED
-      evidence: Red-first held where red was obtainable — the TY-10 pin and the assembly order pin failed on the changed tree exactly as predicted before their flip; the pre-fix measurement recorded the wrong types in the ledger; every added branch (pass-through, cast, refusal, arity guard) has a named pin, so no dead branch ships.
-      artifacts: [python/repark/tests/test_types_1.py, crates/repark-spark/src/extension/tests.rs, task/ledgers/staging/decimal-cache-1-ledger.md]
+      evidence: Red-first held where red was obtainable — the TY-10 pin and the assembly order pin failed on the changed tree exactly as predicted before their flip; the pre-fix measurement recorded the wrong types in the ledger; every added branch (pass-through, cast, refusal, arity guard) has a named pin, so no dead branch ships. R2 red-first: both facade -p pins failed pre-fix (11,2 vs 10,2) with the SQL door green; the overflow pin was written against a placeholder and pinned only after the real Arrow text was observed; every added R2 branch (reorder, missing, duplicate, superset, overflow, null) has a named pin. The C-011 skip is behavior-identical by construction, so no pin can bite on it — stated, not pinned.
+      artifacts: [python/repark/tests/test_types_1.py, crates/repark-spark/src/extension/tests.rs, task/ledgers/staging/decimal-cache-1-ledger.md, python/repark/tests/test_decimal_cache_1.py]
 ```
