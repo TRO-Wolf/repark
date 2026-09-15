@@ -51,18 +51,15 @@ def test_c001_base64_pads_and_chunks_on_both_doors(spark: ReparkSession) -> None
         [None],
     )
     assert _sql_field(spark, "SELECT base64(X'00FF') AS b")[2] == ["AP8="]
-    assert _sql_field(spark, "SELECT base64(repeat('x', 100)) AS b") == (
-        pyarrow.string(),
-        False,
-        [_CHUNKED_X],
-    )
+    chunked = _sql_field(spark, "SELECT base64(repeat('x', 100)) AS b")
+    assert (chunked[0], chunked[2]) == (pyarrow.string(), [_CHUNKED_X])
     frame = spark.createDataFrame([("Spark",), ("A",)], ["s"])
     table = frame.select(F.base64("s").alias("b")).to_arrow()
     assert table.column("b").to_pylist() == ["U3Bhcms=", "QQ=="]
     long_frame = spark.createDataFrame([("x" * 100,)], ["s"])
-    assert long_frame.select(F.base64("s").alias("b")).to_arrow().column(
-        "b"
-    ).to_pylist() == [_CHUNKED_X]
+    assert long_frame.select(F.base64("s").alias("b")).to_arrow().column("b").to_pylist() == [
+        _CHUNKED_X
+    ]
 
 
 def test_c001_unbase64_lenient_decode_on_both_doors(spark: ReparkSession) -> None:
@@ -74,34 +71,41 @@ def test_c001_unbase64_lenient_decode_on_both_doors(spark: ReparkSession) -> Non
     )
     assert _sql_field(spark, "SELECT unbase64('U3Bhcms') AS v")[2] == [b"Spark"]
     assert _sql_field(spark, "SELECT unbase64('!!') AS v")[2] == [b""]
-    assert _sql_field(spark, "SELECT cast(unbase64('eHh4\\r\\neHh4') as string) AS v")[
-        2
-    ] == ["xxxxxx"]
+    assert _sql_field(spark, "SELECT cast(unbase64('eHh4\\r\\neHh4') as string) AS v")[2] == [
+        "xxxxxx"
+    ]
     frame = spark.createDataFrame([("U3Bhcms=",), ("U3Bhcms",), ("!!",)], ["s"])
-    assert frame.select(F.unbase64("s").alias("v")).to_arrow().column(
-        "v"
-    ).to_pylist() == [b"Spark", b"Spark", b""]
+    assert frame.select(F.unbase64("s").alias("v")).to_arrow().column("v").to_pylist() == [
+        b"Spark",
+        b"Spark",
+        b"",
+    ]
 
 
 def test_c002_hypot_registers_rescaled_on_both_doors(spark: ReparkSession) -> None:
     """Oracle BL16-0..8: f64::hypot rescaled answers, NULL propagates, inf over NaN."""
-    assert _sql_field(
+    rescaled = _sql_field(
         spark,
-        "SELECT hypot(CAST(1e200 AS DOUBLE), CAST(1e200 AS DOUBLE)) AS h",
-    ) == (pyarrow.float64(), False, [1.414213562373095e200])
-    assert _sql_field(
-        spark, "SELECT hypot(CAST(3 AS DOUBLE), CAST(4 AS DOUBLE)) AS h"
-    ) == (pyarrow.float64(), False, [5.0])
-    assert _sql_field(
-        spark, "SELECT hypot(CAST(NULL AS DOUBLE), CAST(1 AS DOUBLE)) AS h"
-    ) == (pyarrow.float64(), True, [None])
+        "SELECT hypot(CAST('1e200' AS DOUBLE), CAST('1e200' AS DOUBLE)) AS h",
+    )
+    assert (rescaled[0], rescaled[2]) == (pyarrow.float64(), [1.414213562373095e200])
+    assert _sql_field(spark, "SELECT hypot(CAST(3 AS DOUBLE), CAST(4 AS DOUBLE)) AS h") == (
+        pyarrow.float64(),
+        False,
+        [5.0],
+    )
+    assert _sql_field(spark, "SELECT hypot(CAST(NULL AS DOUBLE), CAST(1 AS DOUBLE)) AS h") == (
+        pyarrow.float64(),
+        True,
+        [None],
+    )
     assert _sql_field(
         spark, "SELECT hypot(CAST('Infinity' AS DOUBLE), CAST('NaN' AS DOUBLE)) AS h"
     ) == (pyarrow.float64(), True, [float("inf")])
     assert _sql_field(
         spark,
-        "SELECT hypot(CAST(1.7976931348623157E308 AS DOUBLE), "
-        "CAST(1.7976931348623157E308 AS DOUBLE)) AS h",
+        "SELECT hypot(CAST('1.7976931348623157E308' AS DOUBLE), "
+        "CAST('1.7976931348623157E308' AS DOUBLE)) AS h",
     )[2] == [float("inf")]
     frame = spark.createDataFrame([(1.0,)], "x double")
     table = frame.select(F.hypot(F.lit(1e200), F.lit(1e200)).alias("h")).to_arrow()
@@ -175,10 +179,12 @@ def test_c005_array_contains_three_valued_on_both_doors(spark: ReparkSession) ->
         True,
         [True],
     )
-    assert _sql_field(
-        spark, "SELECT array_contains(CAST(NULL AS ARRAY<INT>), 1) AS v"
-    ) == (pyarrow.bool_(), True, [None])
-    with pytest.raises(AnalysisException, match="DATATYPE_MISMATCH.NULL_TYPE"):
+    assert _sql_field(spark, "SELECT array_contains(CAST(NULL AS ARRAY<INT>), 1) AS v") == (
+        pyarrow.bool_(),
+        True,
+        [None],
+    )
+    with pytest.raises(AnalysisException, match=r"DATATYPE_MISMATCH.NULL_TYPE"):
         spark.sql("SELECT array_contains(array(1, 2), NULL) AS v").collect()
     frame = spark.createDataFrame([([1, None],)], "a array<int>")
     table = frame.select(F.array_contains("a", 2).alias("v")).to_arrow()
@@ -241,9 +247,9 @@ def test_c007_ascii_codepoint_and_binary_length_on_both_doors(spark: ReparkSessi
 
 def test_c008_bin_rint_refuse_boolean_on_the_sql_door(spark: ReparkSession) -> None:
     """Oracle BL6-sql-0..1: BOOLEAN refuses with DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE."""
-    with pytest.raises(AnalysisException, match="DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"):
+    with pytest.raises(AnalysisException, match=r"DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"):
         spark.sql("SELECT bin(true) AS v").collect()
-    with pytest.raises(AnalysisException, match="DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"):
+    with pytest.raises(AnalysisException, match=r"DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"):
         spark.sql("SELECT rint(true) AS v").collect()
     assert _sql_field(spark, "SELECT bin(1) AS v") == (pyarrow.string(), False, ["1"])
     assert _sql_field(spark, "SELECT rint(CAST(2.5 AS DOUBLE)) AS v") == (

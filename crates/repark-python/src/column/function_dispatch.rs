@@ -3,7 +3,6 @@
 use std::sync::Arc;
 
 use datafusion::arrow::datatypes::DataType;
-use datafusion::functions_aggregate::approx_distinct::approx_distinct_udaf;
 use datafusion::functions_aggregate::bit_and_or_xor::{bit_and_udaf, bit_or_udaf, bit_xor_udaf};
 use datafusion::functions_aggregate::correlation::corr_udaf;
 use datafusion::functions_aggregate::covariance::{covar_pop_udaf, covar_samp_udaf};
@@ -12,8 +11,8 @@ use datafusion::functions_aggregate::grouping::grouping_udaf;
 use datafusion::functions_aggregate::median::median_udaf;
 use datafusion::functions_aggregate::min_max::{max_udaf, min_udaf};
 use datafusion::functions_aggregate::regr::{
-    regr_avgx_udaf, regr_avgy_udaf, regr_count_udaf, regr_intercept_udaf, regr_r2_udaf,
-    regr_slope_udaf, regr_sxx_udaf, regr_sxy_udaf, regr_syy_udaf,
+    regr_avgx_udaf, regr_avgy_udaf, regr_intercept_udaf, regr_r2_udaf, regr_slope_udaf,
+    regr_sxx_udaf, regr_sxy_udaf, regr_syy_udaf,
 };
 use datafusion::functions_aggregate::stddev::{stddev_pop_udaf, stddev_udaf};
 use datafusion::functions_aggregate::string_agg::string_agg_udaf;
@@ -26,6 +25,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 mod dispatch_json;
+mod dispatch_spark;
 
 use super::expr_build::reciprocal_trig_or_inf;
 
@@ -61,10 +61,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "upper" => {
             need(1)?;
             expr_fn::upper(exprs[0].clone())
-        }
-        "length" | "character_length" => {
-            need(1)?;
-            expr_fn::length(exprs[0].clone())
         }
         "trim" | "btrim" => {
             need_at_least(1)?;
@@ -105,10 +101,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 exprs[1].clone(),
                 exprs[2].clone(),
             )
-        }
-        "abs" => {
-            need(1)?;
-            expr_fn::abs(exprs[0].clone())
         }
         "cbrt" => {
             need(1)?;
@@ -206,12 +198,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "csc" => {
             need(1)?;
             reciprocal_trig_or_inf(expr_fn::sin(exprs[0].clone()))
-        }
-        "hypot" => {
-            need(2)?;
-            let xx = expr_fn::power(exprs[0].clone(), lit(2i64));
-            let yy = expr_fn::power(exprs[1].clone(), lit(2i64));
-            expr_fn::sqrt(xx + yy)
         }
         "bitwise_and" | "bit_and_scalar" => {
             need(2)?;
@@ -362,10 +348,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             expr_fn::levenshtein(exprs[0].clone(), exprs[1].clone())
         }
-        "ascii" => {
-            need(1)?;
-            expr_fn::ascii(exprs[0].clone())
-        }
         "chr" => {
             need(1)?;
             repark_functions::expr_fn::chr(exprs[0].clone())
@@ -407,18 +389,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             expr_fn::decode(exprs[0].clone(), exprs[1].clone())
         }
-        "base64" => {
-            need(1)?;
-            expr_fn::encode(exprs[0].clone(), lit("base64"))
-        }
-        "unbase64" => {
-            need(1)?;
-            expr_fn::decode(exprs[0].clone(), lit("base64"))
-        }
-        "size" | "cardinality" => {
-            need(1)?;
-            nested_fn::cardinality(exprs[0].clone())
-        }
         "array_distinct" => {
             need(1)?;
             nested_fn::array_distinct(exprs[0].clone())
@@ -454,10 +424,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "array_position" => {
             need(2)?;
             repark_functions::expr_fn::array_position(exprs[0].clone(), exprs[1].clone())
-        }
-        "array_contains" | "array_has" => {
-            need(2)?;
-            nested_fn::array_has(exprs[0].clone(), exprs[1].clone())
         }
         "array_remove" => {
             need(2)?;
@@ -630,10 +596,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 args,
             ))
         }
-        "bin" => {
-            need(1)?;
-            repark_functions::expr_fn::bin(exprs[0].clone())
-        }
         "hex" => {
             need(1)?;
             repark_functions::expr_fn::hex(exprs[0].clone())
@@ -645,10 +607,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "factorial" => {
             need(1)?;
             repark_functions::expr_fn::factorial(exprs[0].clone())
-        }
-        "rint" => {
-            need(1)?;
-            repark_functions::expr_fn::rint(exprs[0].clone())
         }
         "width_bucket" => {
             need(4)?;
@@ -929,6 +887,11 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::bitmap_count(exprs[0].clone())
         }
+        "abs" | "hypot" | "bin" | "rint" | "base64" | "unbase64" | "size" | "cardinality"
+        | "array_contains" | "array_has" | "ascii" | "length" | "character_length"
+        | "char_length" => {
+            return dispatch_spark::call_scalar_expr(name, exprs);
+        }
         other => return dispatch_json::call_scalar_expr(other, exprs),
     };
     Ok(expr)
@@ -953,7 +916,9 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "bit_and" => bit_and_udaf(),
         "bit_or" => bit_or_udaf(),
         "bit_xor" => bit_xor_udaf(),
-        "approx_count_distinct" | "approx_distinct" => approx_distinct_udaf(),
+        "approx_count_distinct" | "approx_distinct" => {
+            repark_functions::spark_result_types::approx_count_distinct_udaf()
+        }
         "grouping" => grouping_udaf(),
         other => {
             return Err(PyValueError::new_err(format!(
@@ -982,7 +947,7 @@ pub(super) fn binary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "covar_samp" | "covar" => covar_samp_udaf(),
         "regr_avgx" => regr_avgx_udaf(),
         "regr_avgy" => regr_avgy_udaf(),
-        "regr_count" => regr_count_udaf(),
+        "regr_count" => repark_functions::spark_result_types::regr_count_signed_udaf(),
         "regr_intercept" => regr_intercept_udaf(),
         "regr_r2" => regr_r2_udaf(),
         "regr_slope" => regr_slope_udaf(),

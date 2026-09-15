@@ -42,12 +42,28 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `n < 0`. pins: fn-fix-2-string-rows/C-002
 - `spark_elt.rs` — **FN-FIX-2 (2026-09-04):** Spark `elt`; ANSI out-of-range raises
   `INVALID_ARRAY_INDEX`; NULL `n` is NULL. pins: fn-fix-2-string-rows/C-002
+- `spark_math.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `abs` / `hypot` / `bin` /
+  `rint` kernels shared by both doors. `abs` keeps the input width, refuses BOOLEAN, and
+  reads the ANSI carrier (`repark.ansi` extension via
+  `ansi::spark_ansi_enabled_from_options`) to raise Spark-shaped `[ARITHMETIC_OVERFLOW]`
+  on signed minima. `hypot` is rescaled `f64::hypot` (infinity over NaN). `bin` / `rint`
+  use `Signature::user_defined` + `coerce_types` so a BOOLEAN input refuses with
+  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` rather than an internal signature error.
+  pins: door-converge-1/C-002, C-003, C-008
+- `spark_base64.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `base64` / `unbase64` — a
+  hand-rolled `java.util.Base64` MIME codec (no `base64` crate dep): RFC 4648 padding,
+  CRLF chunking every 76 output characters, lenient decode that skips non-alphabet bytes
+  and accepts unpadded input. String and binary input; NULL propagates.
+  pins: door-converge-1/C-001
 - `spark_result_types.rs` (+ `spark_result_types/tests.rs`) — **TYPES-1 (2026-09-05):**
   `SparkIntegerLiteral` narrows in-range `Int64` literals to `Int32` (first in
   `analyzer_rules()`, after DataFusion's own `TypeCoercion`; `LIMIT` fetch/skip stay `Int64`
   for the physical planner), `SignedAggregate` casts `regr_count`/`approx_distinct` to
   `Int64`, `SignedWindow` casts the rank family to `Int32`.
   pins: types-1/C-001, C-003, C-005, C-007
+  **DOOR-CONVERGE-1 (2026-09-15):** `SignedAggregate` additionally declares
+  `is_nullable() = false` with `default_value = 0` — `approx_count_distinct` /
+  `regr_count` answer non-null `bigint`, `0` on empty input. pins: door-converge-1/C-006
   **FNP-8 (2026-09-07):** exposes the existing single-node provisional-integer narrowing inside
   the crate so HOF preparation can reuse it without changing global literal or overflow rules.
 - `lambda_rebind.rs` — **FNP-8 (2026-09-06):** `LambdaRebind`, in `analyzer_rules()`

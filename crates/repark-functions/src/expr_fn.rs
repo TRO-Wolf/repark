@@ -301,10 +301,19 @@ pub fn to_timestamp(args: Vec<Expr>) -> Expr {
     call(crate::instant_ts::to_timestamp_udf(), args)
 }
 
-/// Spark `bin(expr)` — binary string of a long (from `datafusion-spark`).
+#[must_use]
+pub fn abs(arg: Expr) -> Expr {
+    call(crate::spark_math::abs_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn hypot(left: Expr, right: Expr) -> Expr {
+    call(crate::spark_math::hypot_udf(), vec![left, right])
+}
+
 #[must_use]
 pub fn bin(arg: Expr) -> Expr {
-    spark_math::bin(arg)
+    call(crate::spark_math::bin_udf(), vec![arg])
 }
 
 /// Spark `hex(expr)` — hex string of a number, string, or binary (from `datafusion-spark`).
@@ -326,10 +335,47 @@ pub fn factorial(arg: Expr) -> Expr {
     spark_math::factorial(arg)
 }
 
-/// Spark `rint(expr)` — nearest integer as a double (from `datafusion-spark`).
 #[must_use]
 pub fn rint(arg: Expr) -> Expr {
-    spark_math::rint(arg)
+    call(crate::spark_math::rint_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn base64(arg: Expr) -> Expr {
+    call(crate::spark_base64::base64_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn unbase64(arg: Expr) -> Expr {
+    call(crate::spark_base64::unbase64_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn size(arg: Expr) -> Expr {
+    call(crate::collection::size_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn cardinality(arg: Expr) -> Expr {
+    call(crate::collection::cardinality_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn array_contains(haystack: Expr, needle: Expr) -> Expr {
+    call(
+        crate::collection::array_contains_udf(),
+        vec![haystack, needle],
+    )
+}
+
+#[must_use]
+pub fn ascii(arg: Expr) -> Expr {
+    call(datafusion_spark::function::string::ascii(), vec![arg])
+}
+
+#[must_use]
+pub fn length(arg: Expr) -> Expr {
+    call(datafusion_spark::function::string::length(), vec![arg])
 }
 
 /// Spark `width_bucket(value, min, max, numBucket)` (from `datafusion-spark`).
