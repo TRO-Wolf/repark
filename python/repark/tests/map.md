@@ -233,8 +233,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   exit, bounded by 2× the flat `F.sqrt` delta; the answer pins encode the live
   PySpark 4.1.2 oracle cells on the Arrow path (value AND type: tinyint keeps int8
   and raises at min, decimal keeps (10,3), `cbrt` int exact / `-0.0` signed /
-  double for every numeric input). `test_abs_door_parity_integer_min` value-pins the
-  recorded divergence — facade raises at int-min, `SELECT abs(x)` wraps. Pin docstrings
+  double for every numeric input). `test_abs_door_parity_integer_min` pins parity —
+  both doors raise `[ARITHMETIC_OVERFLOW]` at int-min under ANSI (DOOR-CONVERGE-1
+  2026-09-15; the pin previously recorded the door's wrap). Pin docstrings
   stay one line under the 100-column ruff limit (clause ids first, then the claim).
   pins: abs-expr-1/C-001, C-002, C-003, C-004
 - [test_perf_unpivot_1.py](test_perf_unpivot_1.py) — **PERF-UNPIVOT-1 step 1 (2026-09-12):**
@@ -472,8 +473,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_pr_245_revalidation.py` — PR #245 public-door revalidation for Spark string literals,
   binary casts, parser limits, and facade controls.
 - [test_bl15_bl16_math_divergences.py](test_bl15_bl16_math_divergences.py) — **BL-15 FIXED
-  (LOG1P-1, 2026-09-02):** `F.expm1` is the precise kernel (`math.expm1`); BL-16 hypot
-  still overflows to `inf` at extreme magnitude. pins: log1p-1-precise-kernels/C-005
+  (LOG1P-1, 2026-09-02):** `F.expm1` is the precise kernel (`math.expm1`); **BL-16 FIXED
+  (DOOR-CONVERGE-1, 2026-09-15):** `hypot` rescales like Spark —
+  `hypot(1e200,1e200)` → `1.4142135623730951e+200` on both doors.
+  pins: log1p-1-precise-kernels/C-005, door-converge-1/C-002
 - [test_fn_arrays_divergence.py](test_fn_arrays_divergence.py) — **FN-FIX-1 (2026-09-03):** (module docstring is the forced one-liner; the EX-8 and FN-FIX-1 pins are cited on this row, not in the file)
   Spark-equal array pins — FN-ARRAYPOS-1 not-found `0`, FN-ARRAYSORT-1 NULLs last,
   FN-ARRAYSOVERLAP-1 three-valued, FN-FLATTEN-1 NULL sub-array → NULL row.
@@ -508,10 +511,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the
   session-scoped `spark_engine`. Oracle live PySpark 4.1.2.
   pins: log1p-1-precise-kernels/C-001, C-002, C-004
-- [test_bl17_base64_padding.py](test_bl17_base64_padding.py) — **BL-17 (2026-09-03):**
-  codifies today's unpadded `F.base64` (`'Spark'` → `U3Bhcms`, `'A'` → `QQ`) so a
-  padded kernel reds the pin; Spark 4.1.2 is `U3Bhcms=` / `QQ==`. Measured by EX-4.
-  pins: ex-4-functions-strings-a/C-001
+- [test_bl17_base64_padding.py](test_bl17_base64_padding.py) — **BL-17 FIXED
+  (DOOR-CONVERGE-1, 2026-09-15):** pins Spark's RFC 4648 padded answers on both doors
+  (`'Spark'` → `U3Bhcms=`, `'A'` → `QQ==`, `'Apache'` → `QXBhY2hl`). Measured by EX-4.
+  pins: ex-4-functions-strings-a/C-001, door-converge-1/C-001
 - [test_fn_initcap_divergence.py](test_fn_initcap_divergence.py) — **FN-FIX-2 (2026-09-04):**
   FN-INITCAP-1. `initcap` starts a word only after SPACE (`'a-b'` → `'A-b'`).
   pins: fn-fix-2-string-rows/C-003
@@ -833,9 +836,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins — INT literals and arithmetic in both ANSI modes, BIGINT count-likes, the INT rank
   family, session-zone STRING `from_unixtime` with the format argument, EXPLAIN plan-cast
   pins, ANSI-door stock-type controls, and seven live-oracle legs behind
-  `REPARK_PARITY_LIVE=1` (full-match shapes, an approx/regr nullability carve-out, an
-  ANSI-off overflow leg, from_unixtime extremes, a grouping type carve-out, re-coercion
-  shapes). Round 4 adds CASE/COALESCE/IF/array/struct/map/UNION/DECIMAL re-coercion cells,
+  `REPARK_PARITY_LIVE=1` (full-match shapes, an ANSI-off overflow leg, from_unixtime
+  extremes, a grouping type carve-out, re-coercion shapes; the approx/regr nullability
+  carve-out retired when DOOR-CONVERGE-1 made both non-null, 2026-09-15).
+  Round 4 adds CASE/COALESCE/IF/array/struct/map/UNION/DECIMAL re-coercion cells,
   TINYINT/SMALLINT sums, `ntile(BIGINT)` and grouping acceptances (TY-7/8/9/10), and
   wrapped-year from_unixtime cells. Round 5 adds negative 3- and 4-digit-year
   from_unixtime cells (default, `yyyy`, `yy`) on both doors plus a New York cell.

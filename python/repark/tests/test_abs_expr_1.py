@@ -227,7 +227,7 @@ def test_cbrt_non_numeric_refuses(spark: ReparkSession) -> None:
 
 
 def test_abs_door_parity_integer_min(spark: ReparkSession) -> None:
-    """pins: abs-expr-1/C-002 — facade ``F.abs`` raises at int-min; the SQL door wraps."""
+    """pins: abs-expr-1/C-002, door-converge-1/C-003 — both doors raise at int-min."""
     for ddl, minimum in (
         ("tinyint", -128),
         ("smallint", -32768),
@@ -237,8 +237,10 @@ def test_abs_door_parity_integer_min(spark: ReparkSession) -> None:
         with pytest.raises(PySparkException, match="overflow"):
             spark.createDataFrame([(minimum,)], f"x {ddl}").select(F.abs("x")).to_arrow()
         spark.createDataFrame([(minimum,)], f"x {ddl}").createOrReplaceTempView("v")
-        assert spark.sql("SELECT abs(x) AS a FROM v").collect()[0]["a"] == minimum, ddl
-    assert spark.sql("SELECT abs(CAST(-2147483648 AS INT)) AS a").collect()[0]["a"] == -2147483648
+        with pytest.raises(PySparkException, match="ARITHMETIC_OVERFLOW"):
+            spark.sql("SELECT abs(x) AS a FROM v").collect()
+    with pytest.raises(PySparkException, match="ARITHMETIC_OVERFLOW"):
+        spark.sql("SELECT abs(CAST(-2147483648 AS INT)) AS a").collect()
 
 
 def test_nullif_oracle_answer_cells(spark: ReparkSession) -> None:

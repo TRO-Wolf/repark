@@ -2084,6 +2084,11 @@ the pin rather than obeying it.
 - **Rationale** — BACKLOG, intent to FIX (fail-loud on BOOLEAN before the cast). Deliberately kept
   out of the GT1-FIX PR (#180, round-2 ruling A4): wrong-answer classes outranked over-accepts in
   the 0.4.0 gate round, and an over-accept never corrupts a value a correct script produces.
+- **SQL-door half FIXED 2026-09-15 (DOOR-CONVERGE-1)** — `bin(true)` / `rint(true)` now
+  refuse with `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]` on the SQL door (Spark's
+  `spark_math` kernels replace the internal signature error). The facade half stays OPEN:
+  `F.bin` still lowers as `bin(CAST(col AS BIGINT))` in `functions*.py`, outside this
+  unit's fence.
 
 ### BL-7 — `bit_length` / `octet_length` stringify DOUBLE with Arrow float formatting
 
@@ -4781,15 +4786,18 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 > `python/repark/tests/test_bl15_bl16_math_divergences.py::test_bl15_expm1_matches_spark_precise_kernel`,
 > `python/repark/tests/test_log1p_1.py`. Oracle: live PySpark 4.1.2, 2026-09-02.
 
-### BL-16 — `hypot` squares before the root, overflowing where Spark rescales
+### BL-16 — `hypot` squares before the root, overflowing where Spark rescales — **FIXED 2026-09-15 (DOOR-CONVERGE-1)**
 
-- **repark** — `F.hypot(1e200, 1e200)` → `inf` (the naive `sqrt(a*a + b*b)` overflows at
-  `a*a`). Ordinary-magnitude behavior is exact.
+- **repark** — **FIXED 2026-09-15 (DOOR-CONVERGE-1).** `hypot` is a registered Spark kernel
+  (`repark_functions::spark_math::SparkHypot`, `f64::hypot`) on both doors:
+  `hypot(1e200, 1e200)` → `1.4142135623730951e+200`, NULL propagates, `hypot(inf, NaN)` →
+  `inf`, result `double` non-null for non-null inputs.
 - **Apache Spark** — `java.lang.Math.hypot` rescales: `1.4142135623730951e+200`.
-  *(measured 2026-09-01, EX-2 pilot; the example demonstrates ordinary input only.)*
-- **Pin** — `python/repark/tests/test_bl15_bl16_math_divergences.py::test_bl16_hypot_overflows_to_inf_today`.
-- **Rationale** — BACKLOG, filed 2026-09-01. Same FNP numerics unit as BL-15; overflow-safe
-  hypot is a standard rescale.
+  *(measured 2026-09-01, EX-2 pilot; oracle cells BL16-0..8.)*
+- **Pin** — `python/repark/tests/test_door_converge_1.py::test_c002_hypot_registers_rescaled_on_both_doors`
+  and `test_bl15_bl16_math_divergences.py::test_bl16_hypot_rescales_like_spark`.
+- **Rationale** — FIXED. History: the facade composed `sqrt(x*x + y*y)` and the SQL door had
+  no `hypot` at all (`Invalid function 'hypot'`).
 
 ### FN-ARRAYPOS-1 — `array_position` answers NULL where Spark answers 0 — **FIXED 2026-09-03 (FN-FIX-1)**
 
@@ -4829,32 +4837,36 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   *(oracle: live PySpark 4.1.2, 2026-09-03.)*
 - **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_flatten_null_subarray_makes_row_null`
 - **Rationale** — FIXED. History: DataFusion flatten skipped NULL sub-arrays.
-### BL-17 — `base64` omits RFC 4648 padding
+### BL-17 — `base64` omits RFC 4648 padding — **FIXED 2026-09-15 (DOOR-CONVERGE-1)**
 
-- **repark** — `F.base64` on UTF-8 bytes of `'Spark'` / `'A'` / `''` / NULL returns
-  `U3Bhcms`, `QQ`, `''`, NULL. Lengths that are already a multiple of three match Spark
-  (`'Apache'` → `QXBhY2hl`). Binary input agrees with the string path. The encoder is
-  unpadded (`base64`, not `base64pad`).
-- **Apache Spark** — RFC 4648 padded: `'Spark'` → `U3Bhcms=`, `'A'` → `QQ==`, `'Apache'` →
-  `QXBhY2hl`, empty and NULL unchanged. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
-  2026-09-03, EX-4 string-basics batch; same values on a string column and a binary column.)*
-- **Pin** — `python/repark/tests/test_bl17_base64_padding.py::test_bl17_base64_omits_rfc4648_padding_today`
-  (asserts today's unpadded answers so a padded kernel reds the pin on purpose).
-- **Rationale** — BACKLOG, filed 2026-09-03 from the EX-4 measurement. The name stays on the
-  example backlog until the encoder emits Spark's padding; teaching the unpadded form would
-  assert a silent wrong answer.
+- **repark** — **FIXED 2026-09-15 (DOOR-CONVERGE-1).** `base64` is one MIME codec kernel on
+  both doors (`repark_functions::spark_base64::SparkBase64`): RFC 4648 padded and
+  CRLF-chunked every 76 output characters, `java.util.Base64` MIME semantics — `'Spark'` →
+  `U3Bhcms=`, `'A'` → `QQ==`, 100 `x` bytes → 76-char line + `\r\n` + remainder. `unbase64`
+  returns `binary`, accepts unpadded input, skips `\r\n`, and answers empty binary for
+  `'!!'` (oracle cells BL17-0..7, DIV-unbase64-0..3, DIV-api-base64-long).
+- **Apache Spark** — RFC 4648 padded and MIME-chunked: `'Spark'` → `U3Bhcms=`, `'A'` →
+  `QQ==`, `'Apache'` → `QXBhY2hl`, empty and NULL unchanged. *(oracle: live PySpark 4.1.2 +
+  Iceberg 1.11.0, 2026-09-03, EX-4 string-basics batch.)*
+- **Pin** — `python/repark/tests/test_door_converge_1.py::test_c001_base64_pads_and_chunks_on_both_doors`,
+  `test_c001_unbase64_lenient_decode_on_both_doors`, and
+  `test_bl17_base64_padding.py::test_bl17_base64_applies_rfc4648_padding`.
+- **Rationale** — FIXED. History: the facade lowered `base64` to `encode(x, 'base64')` and
+  the door's kernel neither padded nor chunked.
 
-### BL-18 — `approx_count_distinct` / `regr_count` derive nullable where Spark is non-null
+### BL-18 — `approx_count_distinct` / `regr_count` derive nullable where Spark is non-null — **FIXED 2026-09-15 (DOOR-CONVERGE-1)**
 
-- **repark** — both answer `int64` with Spark's values (TYPES-1 fixed the `UInt64` half under
-  BL-8) but derive **nullable** from the wrapped DataFusion kernels.
+- **repark** — **FIXED 2026-09-15 (DOOR-CONVERGE-1).** `SignedAggregate` now declares
+  `is_nullable() = false` and `default_value = 0`, so both doors answer `int64`
+  **non-null**, `0` on empty input (oracle cells BL18-0..3).
 - **Apache Spark** — answers `int64` / **non-null** with the same values. *(oracle: live
   PySpark 4.1.2, 2026-09-05, TYPES-1 close-out probe on the shared int/bigint/string seed.)*
-- **Pin** — `python/repark/tests/test_types_1.py::test_live_sketch_and_regression_counts_match_on_type_and_value`
-  (pins the `(True, False)` nullability pair so either side moving reds it).
-- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1). Nullability derivation is
-  CUTOVER-SCHEMA-1's domain and out of TYPES-1's charter; the pin holds the divergence.
-  pins: types-1/C-003
+- **Pin** — `python/repark/tests/test_door_converge_1.py::test_c006_count_aggregates_non_null_bigint_on_both_doors`
+  and `test_types_1.py::test_live_sketch_and_regression_counts_match_on_type_and_value`
+  (full `(type, nullable, value)` equality now).
+- **Rationale** — FIXED. History: the DataFusion kernels were `UInt64`-nullable; TYPES-1
+  signed the type, DOOR-CONVERGE-1 signed the nullability.
+  pins: types-1/C-003, door-converge-1/C-006
 
 ### FN-INITCAP-1 — `initcap` starts a word at any non-alphanumeric — **FIXED 2026-09-04 (FN-FIX-2)**
 
