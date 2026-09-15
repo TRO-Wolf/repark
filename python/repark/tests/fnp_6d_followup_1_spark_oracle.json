@@ -1,0 +1,550 @@
+{
+ "spark": "4.1.2",
+ "recorded": "2026-09-15",
+ "cells": [
+  {
+   "id": "FU-or-int",
+   "sql": "SELECT bitmap_or_agg(x) b FROM VALUES (1), (2) AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"INT\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-int-nonansi",
+   "sql": "SELECT bitmap_or_agg(x) b FROM VALUES (1), (2) AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"INT\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-and-int",
+   "sql": "SELECT bitmap_and_agg(x) b FROM VALUES (1), (2) AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_and_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"INT\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-and-int-nonansi",
+   "sql": "SELECT bitmap_and_agg(x) b FROM VALUES (1), (2) AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_and_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"INT\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-bigint-bitpos",
+   "sql": "SELECT bitmap_or_agg(bitmap_bit_position(x)) b FROM VALUES (1), (2) AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(bitmap_bit_position(x))\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"bitmap_bit_position(x)\" has the type \"BIGINT\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-bigint-bitpos-nonansi",
+   "sql": "SELECT bitmap_or_agg(bitmap_bit_position(x)) b FROM VALUES (1), (2) AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(bitmap_bit_position(x))\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"bitmap_bit_position(x)\" has the type \"BIGINT\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-float",
+   "sql": "SELECT bitmap_or_agg(x) b FROM VALUES (CAST(1.0 AS FLOAT)) AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"FLOAT\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-float-nonansi",
+   "sql": "SELECT bitmap_or_agg(x) b FROM VALUES (CAST(1.0 AS FLOAT)) AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"FLOAT\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-double",
+   "sql": "SELECT bitmap_or_agg(x) b FROM VALUES (1.0D) AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"DOUBLE\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-double-nonansi",
+   "sql": "SELECT bitmap_or_agg(x) b FROM VALUES (1.0D) AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"DOUBLE\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-bool",
+   "sql": "SELECT bitmap_or_agg(x) b FROM VALUES (true) AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-bool-nonansi",
+   "sql": "SELECT bitmap_or_agg(x) b FROM VALUES (true) AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-and-bool",
+   "sql": "SELECT bitmap_and_agg(x) b FROM VALUES (true) AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_and_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-and-bool-nonansi",
+   "sql": "SELECT bitmap_and_agg(x) b FROM VALUES (true) AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_and_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-string",
+   "sql": "SELECT length(bitmap_or_agg(x)) l FROM VALUES ('abc') AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"STRING\". SQLSTATE: 42K09; line 1 pos 14;"
+  },
+  {
+   "id": "FU-or-string-nonansi",
+   "sql": "SELECT length(bitmap_or_agg(x)) l FROM VALUES ('abc') AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"STRING\". SQLSTATE: 42K09; line 1 pos 14;"
+  },
+  {
+   "id": "FU-and-string",
+   "sql": "SELECT length(bitmap_and_agg(x)) l FROM VALUES ('abc') AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_and_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"STRING\". SQLSTATE: 42K09; line 1 pos 14;"
+  },
+  {
+   "id": "FU-and-string-nonansi",
+   "sql": "SELECT length(bitmap_and_agg(x)) l FROM VALUES ('abc') AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_and_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"STRING\". SQLSTATE: 42K09; line 1 pos 14;"
+  },
+  {
+   "id": "FU-or-decimal",
+   "sql": "SELECT bitmap_or_agg(x) b FROM VALUES (1.5BD) AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"DECIMAL(2,1)\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-decimal-nonansi",
+   "sql": "SELECT bitmap_or_agg(x) b FROM VALUES (1.5BD) AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"DECIMAL(2,1)\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-date",
+   "sql": "SELECT bitmap_or_agg(x) b FROM VALUES (DATE'2020-01-01') AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-date-nonansi",
+   "sql": "SELECT bitmap_or_agg(x) b FROM VALUES (DATE'2020-01-01') AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(x)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "id": "FU-or-null-literal",
+   "sql": "SELECT length(bitmap_or_agg(NULL)) l FROM VALUES (1) AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(NULL)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"NULL\" has the type \"VOID\". SQLSTATE: 42K09; line 1 pos 14;"
+  },
+  {
+   "id": "FU-or-null-literal-nonansi",
+   "sql": "SELECT length(bitmap_or_agg(NULL)) l FROM VALUES (1) AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_or_agg(NULL)\" due to data type mismatch: The first parameter requires the \"BINARY\" type, however \"NULL\" has the type \"VOID\". SQLSTATE: 42K09; line 1 pos 14;"
+  },
+  {
+   "id": "FU-construct-abc",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('abc') AS t(x)",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "FU-construct-abc-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('abc') AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-empty-str",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('') AS t(x)",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "FU-construct-empty-str-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('') AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-1.5-str",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('1.5') AS t(x)",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '1.5' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "FU-construct-1.5-str-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('1.5') AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-space-str",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (' 1 ') AS t(x)",
+   "ansi": "true",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-space-str-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (' 1 ') AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-float",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST(1.0 AS FLOAT)) AS t(x)",
+   "ansi": "true",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-float-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST(1.0 AS FLOAT)) AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-float-frac",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST(1.7 AS FLOAT)) AS t(x)",
+   "ansi": "true",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-float-frac-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST(1.7 AS FLOAT)) AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-double",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (2.0D) AS t(x)",
+   "ansi": "true",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-double-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (2.0D) AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-bool",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (true) AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_construct_agg(x)\" due to data type mismatch: The first parameter requires the \"BIGINT\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09; line 1 pos 20;"
+  },
+  {
+   "id": "FU-construct-bool-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (true) AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_construct_agg(x)\" due to data type mismatch: The first parameter requires the \"BIGINT\" type, however \"x\" has the type \"BOOLEAN\". SQLSTATE: 42K09; line 1 pos 20;"
+  },
+  {
+   "id": "FU-construct-decimal",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (1.5BD) AS t(x)",
+   "ansi": "true",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-decimal-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (1.5BD) AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-binary",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (X'01') AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_construct_agg(x)\" due to data type mismatch: The first parameter requires the \"BIGINT\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09; line 1 pos 20;"
+  },
+  {
+   "id": "FU-construct-binary-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (X'01') AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_construct_agg(x)\" due to data type mismatch: The first parameter requires the \"BIGINT\" type, however \"x\" has the type \"BINARY\". SQLSTATE: 42K09; line 1 pos 20;"
+  },
+  {
+   "id": "FU-construct-date",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (DATE'2020-01-01') AS t(x)",
+   "ansi": "true",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_construct_agg(x)\" due to data type mismatch: The first parameter requires the \"BIGINT\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09; line 1 pos 20;"
+  },
+  {
+   "id": "FU-construct-date-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (DATE'2020-01-01') AS t(x)",
+   "ansi": "false",
+   "error_type": "AnalysisException",
+   "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bitmap_construct_agg(x)\" due to data type mismatch: The first parameter requires the \"BIGINT\" type, however \"x\" has the type \"DATE\". SQLSTATE: 42K09; line 1 pos 20;"
+  },
+  {
+   "id": "FU-construct-null-literal",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(NULL)) c FROM VALUES (1) AS t(x)",
+   "ansi": "true",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-null-literal-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(NULL)) c FROM VALUES (1) AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "id": "FU-construct-str-mixed",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('1'), ('abc') AS t(x)",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "FU-construct-str-mixed-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('1'), ('abc') AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  }
+ ]
+}

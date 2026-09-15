@@ -4481,6 +4481,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `[INVALID_BITMAP_POSITION]`, all-NULL identities, unbounded partition.
   pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009, C-011,
   C-012, C-013, C-014, C-015
+- [test_fnp_6d_followup_1.py](test_fnp_6d_followup_1.py) +
+  [fnp_6d_followup_1_spark_oracle.json](fnp_6d_followup_1_spark_oracle.json) —
+  **FNP-6D-FOLLOWUP-1 (2026-09-15):** SQL-door pins for the bitmap signature
+  followup against the copied live-PySpark-4.1.2 fixture (50 cells, `FU-*`):
+  OR/AND refuse every non-BINARY payload, construct refuses non-BIGINT payloads
+  and raises `CAST_INVALID_INPUT` on malformed STRING under ANSI-on, numerics and
+  trimmed strings answer Spark. Step 1 is red-first on the unfixed tree.
+  pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004
 - `test_fnp6_regexp.py` — **FNP-6a (2026-08-20):** `regexp_extract_all` / `regexp_substr`
   against Python's `re` as an independent oracle, the three no-match conventions Spark keeps
   apart, door agreement, and a pin tying `regexp_count` to `size(regexp_extract_all(...))` on an
