@@ -5320,6 +5320,8 @@ through `core` or the package. pins: eager-budget-1/C-010
   `F.col` casts pin value AND Arrow type on both ANSI settings. The C-004
   before/after perf pair is recorded in the unit ledger's clause evidence.
   pins: java-double-fd-1/C-003, C-004, C-005, C-006
+  **Close-out (2026-09-15):** all 10 pins green on both doors with ANSI on and
+  off; the file is ruff-format clean.
 FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 
 - [fnp11_spark_oracle.json](fnp11_spark_oracle.json) — live PySpark 4.1.2 recording

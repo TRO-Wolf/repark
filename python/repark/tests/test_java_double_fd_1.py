@@ -155,9 +155,7 @@ def test_spark_door_cast_accepting_shapes_nonansi(spark_nonansi: ReparkSession) 
 def test_facade_cast_accepting_shapes(spark: ReparkSession) -> None:
     """Every accepting DEGI-cast cell answers its value through Column.cast."""
     for literal, expected in _CAST_CASES:
-        frame = spark.sql(f"SELECT {literal} AS x").select(
-            F.col("x").cast("double").alias("r")
-        )
+        frame = spark.sql(f"SELECT {literal} AS x").select(F.col("x").cast("double").alias("r"))
         _check_double(_table(frame), "r", expected)
 
 
@@ -184,9 +182,7 @@ def test_cast_hex_null_nonansi(spark_nonansi: ReparkSession) -> None:
     table = _table(spark_nonansi.sql("SELECT CAST('0x10' AS DOUBLE) AS r"))
     assert table.column("r").to_pylist() == [None]
     assert table.schema.field("r").type == pa.float64()
-    frame = spark_nonansi.sql("SELECT '0x10' AS x").select(
-        F.col("x").cast("double").alias("r")
-    )
+    frame = spark_nonansi.sql("SELECT '0x10' AS x").select(F.col("x").cast("double").alias("r"))
     table = _table(frame)
     assert table.column("r").to_pylist() == [None]
 
