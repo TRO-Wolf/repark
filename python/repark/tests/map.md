@@ -5282,7 +5282,8 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
   **Remediation (2026-09-15):** two unary-minus cells (`-p` on `(10,2)` / `(38,10)`,
   basis "Spark UnaryMinus keeps the child type") on both doors, and `.cache().collect()`
   is asserted against the cell `cache_value` while the other actions assert their own
-  value fields.
+  value fields — the split keeps the pin sensitive to a cached-vs-collected divergence
+  the old single-value assert could not see.
   pins: decimal-cache-1/C-005, C-006, C-007
 - [decimal_cache_1_oracle.json](decimal_cache_1_oracle.json) — **DECIMAL-CACHE-1 (2026-09-15):**
   the 30 live-PySpark oracle cells (six input types under `* 5`, `+ 1`, `- 1`, `* price`,

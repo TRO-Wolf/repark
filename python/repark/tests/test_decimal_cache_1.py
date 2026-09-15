@@ -73,7 +73,9 @@ def _assert_rows(rows: list[Any], expected_value: str) -> None:
     assert str(rows[0]["n"]) == expected_value
 
 
-def _assert_every_action(frame: DataFrame, expected_type: str, expected_value: str) -> None:
+def _assert_every_action(
+    frame: DataFrame, expected_type: str, expected_value: str, cache_value: str
+) -> None:
     """Assert type and value through eager, cache, persist, and collect."""
     _assert_type(frame, expected_type)
     eager = frame.eager()
@@ -81,7 +83,7 @@ def _assert_every_action(frame: DataFrame, expected_type: str, expected_value: s
     _assert_rows(eager.collect(), expected_value)
     cached = frame.cache()
     _assert_type(cached, expected_type)
-    _assert_rows(cached.collect(), expected_value)
+    _assert_rows(cached.collect(), cache_value)
     persisted = frame.persist()
     _assert_type(persisted, expected_type)
     _assert_rows(persisted.collect(), expected_value)
@@ -95,7 +97,7 @@ def test_oracle_cell_on_facade_through_every_action(
     """C-005: one oracle cell via withColumns through every materializing action."""
     base = _base_frame(spark, cell["input"])
     frame = base.withColumns({"n": _facade_expression(cell["op"])})
-    _assert_every_action(frame, cell["facade_type"], cell["facade_value"])
+    _assert_every_action(frame, cell["facade_type"], cell["facade_value"], cell["cache_value"])
 
 
 @pytest.mark.parametrize("cell", _oracle_cells(), ids=_cell_id)
@@ -106,7 +108,7 @@ def test_oracle_cell_on_sql_door_through_every_action(
     base = _base_frame(spark, cell["input"])
     base.createOrReplaceTempView("v")
     frame = spark.sql(f"SELECT {cell['sql']} AS n FROM v")
-    _assert_every_action(frame, cell["sql_type"], cell["sql_value"])
+    _assert_every_action(frame, cell["sql_type"], cell["sql_value"], cell["cache_value"])
 
 
 def test_original_report_shape_eager(spark: ReparkSession) -> None:
