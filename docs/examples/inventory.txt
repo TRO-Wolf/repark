@@ -672,6 +672,8 @@ functions	F.to_csv
 functions	F.to_date
 functions	F.to_json
 functions	F.to_timestamp
+functions	F.to_timestamp_ltz
+functions	F.to_timestamp_ntz
 functions	F.to_unix_timestamp
 functions	F.to_utc_timestamp
 functions	F.to_variant_object

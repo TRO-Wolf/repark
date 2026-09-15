@@ -349,7 +349,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `__all__`; `make_timestamp` and `months_between` delegate through `functions_expr.py`.
   Interval builders print only the parts the call gave (`try_make_interval()`
   prints one zero); `months_between` prints `roundOff` only when false.
-  pins: fnp-11a/C-001, C-015
+  **FNP-11B step 3 (2026-09-15):** `to_timestamp_ltz` / `to_timestamp_ntz` join
+  `FNP11A_EXPORTS` (thin `_scalar` binds, `format` stays a literal position) —
+  a new exports tuple would cost the example-coverage gate a binding-table line
+  it has no room for (`check_example_coverage.py` sits exactly on its ceiling),
+  so the step-3 names ride the existing installer tuple and binding;
+  `try_to_timestamp` is destubbed in place in `functions_expr.py`.
+  pins: fnp-11a/C-001, C-015; fnp-11b/C-001, C-002
 - `functions_math.py` — mathematical and trigonometric wrappers.
   clause binds each side. **DEGREES-RUST-1 (2026-09-15, owner Q-15a-1):** `degrees` /
   `radians` move onto the engine's scalar UDFs through new `call_scalar` dispatch arms —
@@ -501,3 +507,4 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - **FNP-11A (2026-09-15, on 440b2773):** `FNP11A_EXPORTS` lists the eleven names new to `__all__`. `make_timestamp` and `months_between` were already exported through the `functions_expr.py` forwarders, and re-installing them duplicated both names in `__all__` and in `catalog.listFunctions()`. `functions_byname.py` follows the measured PySpark 4.1.2 `call_function` answers: `make_timestamp` / `months_between` resolve in the engine, while `timestamp_add` / `timestamp_diff` raise `UNRESOLVED_ROUTINE`.
 - **DOOR-CONVERGE-2 (#622, 2026-09-15, orchestrator):** `functions_byname.py` `FACADE_ONLY_ROUTINE_NAMES` drops `split`: the facade dispatch now resolves `split` on the Spark kernel, so it is no longer a measured engine gap (`test_fnp_misc_1_byname_allowlist_covers_facade`; ruling R-16c-11, run 16a told). `F.split` itself stays run 16a's hand-off. pins: door-converge-2/C-005
 - **DEGREES-RUST-1 by-name drift (2026-09-15, run 16a):** `degrees` / `radians` leave `functions_byname.py`'s `FACADE_ONLY_ROUTINE_NAMES` — once they bind engine scalar UDFs, `call_function` resolves them in the engine, so the derived allowlist no longer lists them as facade-only. pins: fnp-bitmap-facade-1/C-011
+- **FNP-11B step 3 (2026-09-15):** `try_to_timestamp` leaves `FACADE_ONLY_ROUTINE_NAMES` for the same reason — the facade dispatch now resolves it on the tolerant-timestamp kernel. pins: fnp-11b/C-007

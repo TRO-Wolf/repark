@@ -100,10 +100,22 @@ def test_java_datetime_patterns_parse(spark: ReparkSession) -> None:
     assert quoted == "2016-12-31 10:30:00"
 
 
+def test_batch3_try_to_timestamp_answers(spark: ReparkSession) -> None:
+    """FNP-11B step 3 answers timestamps and NULLs (pins: fnp-11b/C-002)."""
+    frame = spark.sql("SELECT '2024-06-15 12:00:00' AS s, 'garbage' AS g")
+    table = frame.select(
+        try_to_timestamp("s").cast("string").alias("ok"),
+        try_to_timestamp("g").alias("bad"),
+        try_to_timestamp("s", lit("yyyy-MM-dd HH:mm:ss")).cast("string").alias("fmt"),
+    ).to_arrow()
+    row = table.to_pylist()[0]
+    assert row["ok"] == "2024-06-15 12:00:00"
+    assert row["bad"] is None
+    assert row["fmt"] == "2024-06-15 12:00:00"
+
+
 def test_batch3_loud_unsupported(spark: ReparkSession) -> None:
     with pytest.raises(UnsupportedOperationException, match="format_number"):
         format_number("x", 2)
-    with pytest.raises(UnsupportedOperationException, match="try_to_timestamp"):
-        try_to_timestamp("x")
     # FNP-3: to_utc_timestamp / from_utc_timestamp ship (datafusion-spark kernels).
     # Behavior + the zone round trip: test_fnp3_destubbed.py.

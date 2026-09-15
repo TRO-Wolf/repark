@@ -133,6 +133,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `DataFrame.foreachPartition`, `DataFrame.observe`, and `Observation.get` join
   the dataframe family; `docs/examples/dataframe/foreach_observe.py` covers them.
   pins: df-surface-b-1/C-005
+- `test_ex_0_example_coverage.py` — **FNP-11B step 3 (2026-09-15):** the enumerated
+  public surface moves 1057 → 1059 as `F.to_timestamp_ltz` / `F.to_timestamp_ntz`
+  join the functions family; `docs/examples/functions/timestamp_ltz_ntz.py` covers
+  them with `F.try_to_timestamp`.
+  pins: fnp-11b/C-007
 - `test_ex_0_example_coverage.py` — **EX-0 (2026-08-31):** the v0.7 example-drift
   gate: five-family enumerator, uncovered / stale-backlog / covered-in-backlog
   reds, backlog and exceptions baselines, COVERS-must-be-used, seed `COVERS`,

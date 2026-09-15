@@ -56,6 +56,7 @@ pub mod spark_year_pad;
 pub mod string;
 pub mod temporal_ctor;
 pub mod timestamp_cast;
+pub mod timestamp_ltz_ntz;
 pub mod timestamp_type;
 pub mod try_invert;
 pub mod url;
@@ -134,11 +135,6 @@ pub fn register_all(ctx: &SessionContext) {
     higher_order::register(ctx);
     decimal_spark::register_spark_decimal_planner(ctx);
     integer_spark::register_spark_integer_planner(ctx);
-}
-
-pub fn install_shared_analyzer_rules(ctx: &SessionContext) {
-    integer_spark::install_integer_overflow(ctx);
-    bool_decimal::install_bool_decimal_cast(ctx);
 }
 
 /// Return analyzer rules: decimal precision, decimal rewrite, semantics, safety, then LTZ casts.

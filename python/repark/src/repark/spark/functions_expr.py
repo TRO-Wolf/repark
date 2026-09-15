@@ -1140,12 +1140,12 @@ def format_number(col: Column | str, d: int) -> Column:
     )
 
 
-def try_to_timestamp(col: Column | str, format: str | None = None) -> Column:
-    """Unsupported because ``try_to_timestamp`` is not wired."""
-
-    raise UnsupportedOperationException(
-        "functions.try_to_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)"
-    )
+def try_to_timestamp(col: Column | str, format: Column | str | None = None) -> Column:
+    """Parse to a timestamp, answering NULL where ``to_timestamp`` would raise."""
+    if format is None:
+        return _scalar("try_to_timestamp", col)
+    target = lit(format) if isinstance(format, str) else format
+    return _scalar("try_to_timestamp", col, target)
 
 
 def to_utc_timestamp(timestamp: Column | str, tz: str) -> Column:

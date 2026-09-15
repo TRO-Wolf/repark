@@ -18,11 +18,13 @@ FNP11A_EXPORTS: tuple[str, ...] = (
     "localtimestamp",
     "timestamp_add",
     "timestamp_diff",
+    "to_timestamp_ltz",
+    "to_timestamp_ntz",
 )
 
 
 def install_into(namespace: dict[str, Any], all: list[str]) -> None:
-    """Expose the FNP-11A names on ``repark.spark.functions`` (see functions_try)."""
+    """Expose the temporal names on ``repark.spark.functions`` (see functions_try)."""
     from repark.spark import functions_temporal as module
 
     for name in FNP11A_EXPORTS:
@@ -217,3 +219,17 @@ def timestamp_add(unit: str | Column, quantity: Column | str | int, ts: Column |
 def timestamp_diff(unit: str | Column, start: Column | str, end: Column | str) -> Column:
     """Whole units between two timestamps (unit is case-insensitive)."""
     return _scalar("timestampdiff", unit, start, end, lit_indices=frozenset({0}))
+
+
+def to_timestamp_ltz(timestamp: Column | str, format: Column | str | None = None) -> Column:
+    """Parse to a session-zone timestamp, with an optional Java datetime pattern."""
+    if format is None:
+        return _scalar("to_timestamp_ltz", timestamp)
+    return _scalar("to_timestamp_ltz", timestamp, format, lit_indices=frozenset({1}))
+
+
+def to_timestamp_ntz(timestamp: Column | str, format: Column | str | None = None) -> Column:
+    """Parse to a zone-free timestamp, with an optional Java datetime pattern."""
+    if format is None:
+        return _scalar("to_timestamp_ntz", timestamp)
+    return _scalar("to_timestamp_ntz", timestamp, format, lit_indices=frozenset({1}))

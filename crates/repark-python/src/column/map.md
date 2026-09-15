@@ -205,13 +205,18 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 - `split` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the Rust
   arm is ready, but Python `F.split` raises before reaching it (run 16a owns that half).
   pins: door-converge-2/C-004
+- `to_timestamp_ltz` / `to_timestamp_ntz` dispatch beside `to_timestamp`, and
+  `try_to_timestamp` joins the `try_to_date` arm (FNP-11B step 3): thin arms over
+  `expr_fn` onto the new `timestamp_ltz_ntz` kernels.
+  pins: fnp-11b/C-001, C-002
 - Window frames use Spark-relative offsets. Count-like unsigned results are cast to signed types.
 - Unknown scalar, aggregate, cast, or window names fail with typed Python exceptions.
 
 ## Change locations
 
 FNP-7 try_* scalar and aggregate names dispatch here (`try_divide` … `try_to_time`,
-`try_sum`, `try_avg`). pins: fnp-7-try-inversions/C-013
+`try_sum`, `try_avg`); FNP-11B step 3 adds `try_to_timestamp` to the same arm.
+pins: fnp-7-try-inversions/C-013; fnp-11b/C-001
 SEM-1 `log` embeds `SparkLog` (1- or 2-arg); `ln` stays DataFusion `ln`.
 pins: sem-1-spark-answer-parity/C-005, C-006
 

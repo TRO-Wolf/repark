@@ -19,11 +19,6 @@ from repark.errors import AnalysisException
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark.session.session_time_zone import SESSION_TIME_ZONE_KEY
 
-_FN_D_DEFERRED: tuple[str, ...] = (
-    "to_timestamp_ltz",
-    "to_timestamp_ntz",
-)
-
 
 @pytest.fixture
 def spark() -> ReparkSession:
@@ -227,9 +222,6 @@ def test_current_timezone_stays_string_beside_an_aggregate(spark: ReparkSession)
     )
 
 
-# Honest-cut / charter ENGINE-WORK names stay absent
-
-
-@pytest.mark.parametrize("name", _FN_D_DEFERRED)
-def test_fn_d_deferred_names_are_absent(name: str) -> None:
-    assert not hasattr(F, name)
+def test_fn_d_ltz_ntz_names_are_present() -> None:
+    assert callable(F.to_timestamp_ltz)
+    assert callable(F.to_timestamp_ntz)

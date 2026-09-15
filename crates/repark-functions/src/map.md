@@ -436,7 +436,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   struct CAST.
   pins: nullability-2/C-001, C-002, C-004
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
-  rule, installed on BOTH doors via `install_shared_analyzer_rules` (the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts).
+  rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3, moved from the crate root as the sanctioned net-negative out for the step-3 registrations; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts).
   installer calls it in place of the integer-only one — same line count, so the
   session map needs no ratchet): `CAST(bool AS DECIMAL(p,s))` becomes a
   precision-carrying UDF (true → 1, false → 0 at scale; per-row nulls). The UDF
@@ -704,6 +704,20 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`. pins: types-1/C-006
+- `timestamp_ltz_ntz.rs` — **FNP-11B step 3 (2026-09-15):** `to_timestamp_ltz` /
+  `to_timestamp_ntz` / `try_to_timestamp` on the step-2 parser (card D-1, no new
+  parser). `to_timestamp_ltz` forwards both arities to the `to_timestamp` kernel;
+  `try_to_timestamp` forwards with the ANSI extension cloned off so data errors
+  answer NULL under both ANSI settings while pattern refusals still raise.
+  `to_timestamp_ntz` emits naive walls: the format arm reuses the
+  `plan_format_column` / `parse_wall_or_null` primitives through a module-local
+  walls helper (the `stamps_with_format_column` loop stays untouched behind its
+  pins, and `java_datetime.rs` sits 3 lines under its ceiling), while the 1-arg
+  arm strips a zone/offset suffix and round-trips the wall through the
+  `to_timestamp` kernel before un-localizing, so offset strings keep their
+  written wall and malformed strings retarget `[CAST_INVALID_INPUT]` at the
+  `TIMESTAMP_NTZ` name. pins: fnp-11b/C-002, C-003, C-004;
+  `timestamp_ltz_ntz::tests::*`.
 - `collection.rs` — `SparkElementAt` (`element_at`; public `element_at_udf()` for the facade embed):
   arrays are 1-based / negative-from-end / OOB → NULL
   with index 0 → error (Spark `INVALID_INDEX_OF_ZERO`); maps return the plain value-or-NULL

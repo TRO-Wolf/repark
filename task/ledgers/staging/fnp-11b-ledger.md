@@ -175,3 +175,82 @@ parser/dialect edit D-3 assigns to run 16c; the kernel path is pinned on the
 Python door per the D-10 precedent, no HALT. All other reds in the pin file
 are step 3–7 names (`to_timestamp_ltz/ntz`, `try_to_timestamp`, TIME family,
 `to_char` family, `make_timestamp` keywords, BL-13/BL-14).
+
+## 4. Step-3 record (2026-09-15, run 16a round 3)
+
+`to_timestamp_ltz` / `to_timestamp_ntz` / `try_to_timestamp` answer PySpark
+4.1.2 on both doors, both ANSI settings and both zones, on the step-2 parser.
+No new parser (card step-3 scope).
+
+New Rust module `crates/repark-functions/src/timestamp_ltz_ntz.rs` (one file;
+`expr_fn` + dispatch arms only elsewhere, registration folds into the existing
+`instant_ts::functions()` vector): `to_timestamp_ltz`
+forwards both arities to the `to_timestamp` kernel; `try_to_timestamp`
+forwards with the ANSI extension cloned off so data errors answer NULL under
+both ANSI settings while pattern refusals still raise; `to_timestamp_ntz`
+emits naive walls — the format arm reuses the `plan_format_column` /
+`parse_wall_or_null` primitives through a module-local walls helper, the 1-arg
+arm strips a zone/offset suffix and round-trips the wall through the
+`to_timestamp` kernel before un-localizing. The `stamps_with_format_column`
+loop in `java_datetime.rs` stays untouched behind its pins (`java_datetime.rs`
+sits 3 lines under its ceiling, so the helper could not move there).
+Malformed NTZ strings retarget `[CAST_INVALID_INPUT]` at the `TIMESTAMP_NTZ`
+name; partial patterns answer `[CANNOT_PARSE_TIMESTAMP]` with the recorded
+index. Python-only logic: none (Rust first holds; the facade binds names and
+the literal `format` position, and `format` accepts a Column per the recorded
+`ColumnOrName` signatures).
+
+Red evidence for the partial-batch flaw the fixture cannot see (single-row
+garbage cells): the new example's 3-row frame answered `[None, None, None]`
+for `try_to_timestamp` — one bad row nulled the valid rows, against the
+`try_to_date` per-row precedent. Fix in the same round: batch fast path plus
+a per-row salvage fallback that runs only on partial failure (D-6 hot path
+stays one cast per batch), applied to `try_to_timestamp` under both ANSI
+settings and to `to_timestamp_ntz` under non-ANSI. ANSI-raise paths are
+unchanged. New Rust pins `try_keeps_valid_rows_beside_garbage` and
+`ntz_without_ansi_keeps_valid_rows_beside_garbage` cover it.
+
+Decisions applied in this round: D-12 the two new facade names ride the
+existing `FNP11A_EXPORTS` installer tuple and its example-coverage binding —
+a new exports tuple would cost `check_example_coverage.py` a binding-table
+line it has no room for (exactly on its 1000-line ceiling, ceilings only move
+down per Q-15c-4), so the tuple grows eleven to thirteen with this note.
+D-14 the crate-root ceiling (`check_lib_rs`: `lib.rs` exactly on 175) is paid
+by sanctioned out (1): the step-3 UDFs register through the existing
+`instant_ts::functions()` vector (944 lines, under its ceiling) and the
+undocumented `install_shared_analyzer_rules` moves from the root to
+`bool_decimal.rs` (335 lines) with the one caller retargeted — root lands at
+171 lines, no baseline touched.
+D-13 no double-quoted-pattern cell exists for the three names (zero fixture
+cells carry `"` in `expr`), so nothing stays red on the run-16c account.
+Q-15a-3 / Q-15c-4 named where applied. Owner rulings applied: RUST FIRST,
+SHAPE RULE, NO COMMENTS IN CODE (added-line grep clean).
+
+Per-name pin counts (both doors, both ANSI settings, both zones):
+`to_timestamp_ltz` 28/28, `to_timestamp_ntz` 28/28, `try_to_timestamp` 30/30
+green; facade signatures match the recorded oracle for all three names (the
+file-level signature pin still stops at the later-step `current_time`, then
+`make_time` / `to_time` / `time_diff` / `time_trunc` / `to_char` family /
+`make_timestamp` keywords per steps 4–7). Step-2 counts hold (`to_date`
+22/22, `unix_timestamp` 28/28; the only `to_timestamp` reds stay SQL-door
+cells 129/130, the run-16c seam). Rust unit tests beside each kernel: 10 in
+`timestamp_ltz_ntz::tests::*` (LTZ zone shift mirrored to `to_timestamp`, NTZ
+no-shift in both zones, NTZ offset-strip, NTZ `TIMESTAMP_NTZ` naming,
+try-NULL under ANSI on, partial-batch pair);
+`cargo test -p repark-functions` 582 passed, 0 failed, 1 ignored; clippy the
+Makefile way (`-A clippy::disallowed_methods`, the panic-ban gate holding
+`disallowed_methods` live on lib+bins) clean.
+
+Census per D-4: `test_functions_d.py` deferred tuple retired (presence pin in
+its place); `test_fn_batch3.py` stub refusal replaced by an answering pin;
+`BYNAME` facade-only row drops `try_to_timestamp` (derived census green);
+split-identity tail and total follow the thirteen-name tuple with no edit;
+EX-0 enumerator count 1057 → 1059, backlog 112 → 111 with `F.try_to_timestamp`
+covered by the new runnable example
+`docs/examples/functions/timestamp_ltz_ntz.py` (listed in that directory's
+`map.md`, executes green under `--require-execute`; inventory gains the two
+LTZ/NTZ rows). Registry row EX-FN-20 flips to FIXED with the oracle cells as
+its pin (EX-FN-21 shape); the refusal pin
+`test_examples_functions_b.py::test_try_to_timestamp_refuses` is retired.
+C-001 PROVEN for the three names; C-002/C-003/C-004 PROVEN for their cells;
+C-005/C-006/C-007/C-008 stay OPEN for steps 4–7.

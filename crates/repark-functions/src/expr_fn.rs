@@ -302,6 +302,21 @@ pub fn to_timestamp(args: Vec<Expr>) -> Expr {
 }
 
 #[must_use]
+pub fn to_timestamp_ltz(args: Vec<Expr>) -> Expr {
+    call(crate::timestamp_ltz_ntz::to_timestamp_ltz_udf(), args)
+}
+
+#[must_use]
+pub fn to_timestamp_ntz(args: Vec<Expr>) -> Expr {
+    call(crate::timestamp_ltz_ntz::to_timestamp_ntz_udf(), args)
+}
+
+#[must_use]
+pub fn try_to_timestamp(args: Vec<Expr>) -> Expr {
+    call(crate::timestamp_ltz_ntz::try_to_timestamp_udf(), args)
+}
+
+#[must_use]
 pub fn abs(arg: Expr) -> Expr {
     call(crate::spark_math::abs_udf(), vec![arg])
 }

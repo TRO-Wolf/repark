@@ -9,12 +9,6 @@ from repark.spark import functions as F  # noqa: N812
 from repark.spark.types import LongType
 
 
-def test_try_to_timestamp_refuses() -> None:
-    """try_to_timestamp refuses; Spark answers the timestamp or NULL (EX-FN-20)."""
-    with pytest.raises(UnsupportedOperationException, match="try_to_timestamp"):
-        F.try_to_timestamp("s")
-
-
 def test_from_xml_refuses() -> None:
     """from_xml refuses as an E1 stub; Spark parses the row struct (EX-FN-22)."""
     with pytest.raises(UnsupportedOperationException, match="from_xml"):

@@ -7691,15 +7691,22 @@ field NAME.
 - **Rationale** — BACKLOG ARM, filed 2026-09-05 from the EX-25 measurement; the display arm
   closed 2026-09-15 as a side effect of the FNP-11A interval CAST rule.
 
-### EX-FN-20 — `try_to_timestamp` refuses; Spark answers the timestamp or NULL
+### EX-FN-20 — `try_to_timestamp` refuses; Spark answers the timestamp or NULL — **FIXED 2026-09-15 (FNP-11B)**
 
-- **repark** — `F.try_to_timestamp("s")` raises `UnsupportedOperationException:
-  functions.try_to_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)`.
+- **repark** — **FIXED 2026-09-15 (FNP-11B step 3).** `F.try_to_timestamp("s")`
+  answers the session-zone instant and NULL where `to_timestamp` raises, under both ANSI
+  settings, with and without a Java datetime pattern, through the shared step-2 Rust
+  parser with the ANSI flag cloned off. The no-format arms keep their example
+  coverage: `"2024-06-15 12:00:00"` answers `2024-06-15T12:00:00`, `"garbage"`
+  and NULL answer NULL.
 - **Apache Spark** — `"2024-06-15 12:00:00"` answers `2024-06-15T12:00:00`; `"not-a-timestamp"`
-  and NULL answer NULL. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_try_to_timestamp_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-28 measurement. The name stays on the
-  example backlog until the engine grows the tolerant timestamp parse.
+  and NULL answer NULL. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch;
+  FNP-11B oracle: live PySpark 4.1.2, both ANSI settings, UTC and America/New_York, 2026-09-15.)*
+- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+  (the `try_to_timestamp` cells, both doors)
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-28 measurement; closed
+  2026-09-15 by FNP-11B step 3, which retired the refusal pin
+  `test_examples_functions_b.py::test_try_to_timestamp_refuses`.
 
 ### EX-FN-21 — `unix_timestamp` format argument refuses; Spark parses the pattern — **FIXED 2026-09-15 (FNP-11B)**
 

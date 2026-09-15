@@ -377,7 +377,8 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     pins: fnp-15-16/C-016
     pins: fnp-4c-higher-order-kernels/C-011
     pins: fnp-7-try-inversions/C-013
-    FNP-11A appends its eleven new temporal names last.
+    FNP-11A appends its eleven new temporal names last, with FNP-11B step 3
+    appending the LTZ and NTZ timestamp parsers to the same installer tuple.
     """
     from repark.spark.functions_agg import INSTALL_NAMES as AGG_INSTALL_NAMES
     from repark.spark.functions_arrow_udf import ARROW_EXPORTS
