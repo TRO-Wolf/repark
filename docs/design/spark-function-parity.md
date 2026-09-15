@@ -472,7 +472,7 @@ format-v3 critical path becomes ready.
 
 Four units are deferred **with reasons rather than dropped** — FNP-6d (bitmap aggregates:
 **delivered 2026-09-15**, SQL-door UDAFs in `bitmap_agg.rs`, registry `FNP-6D`; sliding
-frames DECLARED; facade names are run 15a), FNP-13 (collation), FNP-14 (crypto: a new
+frames use WIN-SLIDE-1 rescan; facade names are run 15a), FNP-13 (collation), FNP-14 (crypto: a new
 cipher dependency for four names), and FNP-4b (the Spark-door dialect, blocked on the
 write-path change in §3.3). A deferral with no reason attached is indistinguishable from
 a name nobody looked at — a lesson this campaign learned four separate times from prior

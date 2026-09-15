@@ -1419,26 +1419,29 @@ the pin rather than obeying it.
 
 ### FNP-6D — Spark bitmap aggregates — **FIXED 2026-09-15**
 
-- **repark** — **FIXED 2026-09-15.** `bitmap_construct_agg` / `bitmap_or_agg` /
+- **repark** — **FIXED 2026-09-15 (round 2).** `bitmap_construct_agg` / `bitmap_or_agg` /
   `bitmap_and_agg` answer Spark on the SQL door: a bitmap is BINARY of 4096 bytes
   (32768 bits, least-significant first). Construct sets bit `p` and ignores NULL;
-  empty construct and empty or answer the all-zero bitmap; empty and answers
-  all-ones. Or/and fold byte-wise. Results are non-null BINARY. A sliding frame
-  refuses with DataFusion's `retract_batch` message (DECLARED, WIN-SLIDE; retract
-  is not in this unit). Position outside `[0, 32767]` and a bitmap whose length is
-  not 4096 are unmeasured (not in `F6D-*`); the kernel refuses rather than panic.
-- **Apache Spark** — the three aggregates answer the recorded cells `F6D-construct`,
-  `F6D-or-and`, `F6D-empty`, `F6D-and-empty-type` (PySpark 4.1.2). Spark re-scans a
-  sliding frame. *(oracle: recorded, `fixtures-batch3.json`, 2026-09-14.)*
-- **Pin** — `python/repark/tests/test_fnp_6d_bitmap_aggregates.py::test_construct_agg_sets_bits_and_ignores_null`,
-  `…::test_or_and_agg_fold_grouped_bitmaps`,
-  `…::test_empty_input_identities_are_non_null_binary`,
-  `…::test_and_agg_length_is_4096_int`,
-  `…::test_sliding_frame_refuses_loudly`;
-  `crates/repark-functions/src/bitmap_agg.rs` kernel tests of the same cells.
-- **Rationale** — FIXED for the recorded aggregate shapes. Sliding-frame refuse is
-  DECLARED (D-1: retractable window support is not required). Facade Python names
-  are run 15a after this merges.
+  a STRING argument coerces as Spark's implicit BIGINT (`'1'` sets bit 1). Empty
+  construct and empty or answer the all-zero bitmap; empty and all-NULL and
+  answer all-ones; all-NULL or answers zeros. Or/and accept a payload of any
+  length and fold it as zero-padded or truncated to 4096 (a one-byte `X'01'`
+  counts 1 for both or and and; `concat` of a 4096-byte bitmap plus one extra
+  byte still answers length 4096). Results are non-null BINARY. Position
+  outside `[0, 32767]` raises `[INVALID_BITMAP_POSITION] … SQLSTATE: 22003`.
+  A sliding frame answers Spark (counts 1, 2, 2) through the WIN-SLIDE-1
+  rescan: these UDAFs do not override `create_sliding_accumulator`, so the
+  session rule wraps them the same way as `bit_or` / `collect_set`. Grouped
+  aggregation uses `GroupsAccumulator` (`n_groups * 4096` packed bytes).
+- **Apache Spark** — the three aggregates answer the recorded cells `F6D-*`
+  (`fixtures-batch3.json`, 2026-09-14) and `B8-*` (`fixtures-batch8.json`,
+  live PySpark 4.1.2, 2026-09-15). Spark re-scans a sliding frame.
+- **Pin** — `python/repark/tests/test_fnp_6d_bitmap_aggregates.py` (C-001..C-006,
+  C-011..C-015); `crates/repark-functions/src/bitmap_agg.rs` kernel tests of
+  the same cells; `crates/repark-functions/src/bitmap_agg/groups.rs` (C-016,
+  C-017).
+- **Rationale** — FIXED for the recorded aggregate, length, coercion, error-class,
+  and window shapes. Facade Python names are run 15a after this merges.
 
 ### FNP8-NULLABILITY — higher-order result metadata retains inherited nullable fields
 

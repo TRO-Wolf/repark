@@ -7,9 +7,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 ## Contents
 - [fnp-6d-ledger.md](fnp-6d-ledger.md) —
   **FNP-6D (2026-09-15), in flight:** Spark `bitmap_construct_agg` / `bitmap_or_agg` /
-  `bitmap_and_agg` UDAFs (4096-byte BINARY, recorded cells `F6D-*`). SQL door only.
-  `risk_tier: standard`. Branch `feat/fnp-6d-bitmap-aggregates`.
-  pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  `bitmap_and_agg` UDAFs (4096-byte BINARY, recorded cells `F6D-*` and `B8-*`).
+  SQL door only. `risk_tier: standard`. Branch `feat/fnp-6d-bitmap-aggregates`.
+  pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`

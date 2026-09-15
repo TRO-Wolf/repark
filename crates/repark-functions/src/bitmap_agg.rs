@@ -1,17 +1,20 @@
 use std::sync::Arc;
 
-use arrow::array::{Array, ArrayRef, AsArray};
+use arrow::array::{Array, ArrayRef, AsArray, BinaryArray};
+use arrow::buffer::{Buffer, OffsetBuffer};
 use arrow::compute::cast;
 use arrow::datatypes::{DataType, Field, FieldRef, Int64Type};
-use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err, not_impl_err};
+use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err};
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::utils::format_state_name;
 use datafusion::logical_expr::{
-    Accumulator, AggregateUDF, AggregateUDFImpl, Signature, Volatility,
+    Accumulator, AggregateUDF, AggregateUDFImpl, GroupsAccumulator, Signature, Volatility,
 };
 
-const BITMAP_BYTES: usize = 4096;
-const BITMAP_BITS: i64 = 32768;
+mod groups;
+
+pub(crate) const BITMAP_BYTES: usize = 4096;
+pub(crate) const BITMAP_BITS: i64 = 32768;
 
 #[must_use]
 pub fn functions() -> Vec<Arc<AggregateUDF>> {
@@ -38,7 +41,7 @@ pub fn bitmap_and_agg_udaf() -> Arc<AggregateUDF> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum BitmapFold {
+pub(crate) enum BitmapFold {
     Construct,
     Or,
     And,
@@ -60,6 +63,9 @@ impl BitmapAgg {
                     DataType::Int16,
                     DataType::Int32,
                     DataType::Int64,
+                    DataType::Utf8,
+                    DataType::LargeUtf8,
+                    DataType::Utf8View,
                 ],
                 Volatility::Immutable,
             ),
@@ -69,31 +75,24 @@ impl BitmapAgg {
 
     fn or_agg() -> Self {
         Self {
-            signature: Signature::exact(vec![DataType::Binary], Volatility::Immutable),
+            signature: bitmap_payload_signature(),
             fold: BitmapFold::Or,
         }
     }
 
     fn and_agg() -> Self {
         Self {
-            signature: Signature::exact(vec![DataType::Binary], Volatility::Immutable),
+            signature: bitmap_payload_signature(),
             fold: BitmapFold::And,
         }
     }
 
-    fn identity_byte(fold: BitmapFold) -> u8 {
-        match fold {
-            BitmapFold::Construct | BitmapFold::Or => 0,
-            BitmapFold::And => 0xff,
-        }
-    }
-
     fn identity_bitmap(fold: BitmapFold) -> [u8; BITMAP_BYTES] {
-        [Self::identity_byte(fold); BITMAP_BYTES]
+        [identity_byte(fold); BITMAP_BYTES]
     }
 
     fn identity_scalar(fold: BitmapFold) -> ScalarValue {
-        ScalarValue::Binary(Some(vec![Self::identity_byte(fold); BITMAP_BYTES]))
+        ScalarValue::Binary(Some(vec![identity_byte(fold); BITMAP_BYTES]))
     }
 }
 
@@ -125,6 +124,23 @@ impl AggregateUDFImpl for BitmapAgg {
         Ok(Box::new(BitmapAccumulator::new(self.fold)))
     }
 
+    fn groups_accumulator_supported(&self, args: AccumulatorArgs) -> bool {
+        !args.is_distinct
+    }
+
+    fn create_groups_accumulator(
+        &self,
+        args: AccumulatorArgs,
+    ) -> Result<Box<dyn GroupsAccumulator>> {
+        if args.is_distinct {
+            return Err(DataFusionError::Plan(format!(
+                "{}(DISTINCT ...) is not supported",
+                self.name()
+            )));
+        }
+        Ok(Box::new(groups::BitmapGroupsAccumulator::new(self.fold)))
+    }
+
     fn state_fields(&self, _args: StateFieldsArgs) -> Result<Vec<FieldRef>> {
         Ok(vec![Arc::new(Field::new(
             format_state_name(self.name(), "bitmap"),
@@ -139,12 +155,6 @@ impl AggregateUDFImpl for BitmapAgg {
 
     fn default_value(&self, _data_type: &DataType) -> Result<ScalarValue> {
         Ok(Self::identity_scalar(self.fold))
-    }
-
-    fn create_sliding_accumulator(&self, _args: AccumulatorArgs) -> Result<Box<dyn Accumulator>> {
-        not_impl_err!(
-            "Aggregate can not be used as a sliding accumulator because retract_batch is not implemented"
-        )
     }
 }
 
@@ -162,84 +172,166 @@ impl BitmapAccumulator {
         }
     }
 
-    fn set_bit(bits: &mut [u8; BITMAP_BYTES], position: i64) -> Result<()> {
-        if !(0..BITMAP_BITS).contains(&position) {
-            return exec_err!(
-                "bitmap_construct_agg position {position} is outside [0, {}]",
-                BITMAP_BITS - 1
-            );
-        }
-        let unsigned = u32::try_from(position).map_err(|_| {
-            DataFusionError::Internal(format!(
-                "bitmap_construct_agg position {position} does not fit u32"
-            ))
-        })?;
-        let byte_index = usize::try_from(unsigned / 8).map_err(|_| {
-            DataFusionError::Internal(
-                "bitmap_construct_agg byte index does not fit usize".to_string(),
-            )
-        })?;
-        let shift = u8::try_from(unsigned % 8).map_err(|_| {
-            DataFusionError::Internal("bitmap_construct_agg bit shift does not fit u8".to_string())
-        })?;
-        bits[byte_index] |= 1_u8 << shift;
-        Ok(())
-    }
-
-    fn fold_bytes(bits: &mut [u8; BITMAP_BYTES], incoming: &[u8], fold: BitmapFold) -> Result<()> {
-        if incoming.len() != BITMAP_BYTES {
-            return exec_err!(
-                "bitmap aggregate expected BINARY of {BITMAP_BYTES} bytes, got {}",
-                incoming.len()
-            );
-        }
-        match fold {
-            BitmapFold::Construct | BitmapFold::Or => {
-                for (destination, source) in bits.iter_mut().zip(incoming.iter()) {
-                    *destination |= *source;
-                }
-            }
-            BitmapFold::And => {
-                for (destination, source) in bits.iter_mut().zip(incoming.iter()) {
-                    *destination &= *source;
-                }
-            }
-        }
-        Ok(())
-    }
-
     fn update_positions(&mut self, values: &ArrayRef) -> Result<()> {
-        let casted = cast(values, &DataType::Int64)?;
-        let positions = casted.as_primitive::<Int64Type>();
-        for position in positions.iter().flatten() {
-            Self::set_bit(&mut self.bits, position)?;
-        }
-        Ok(())
+        update_positions_into(&mut self.bits, values)
     }
 
     fn update_bitmaps(&mut self, values: &ArrayRef) -> Result<()> {
-        match values.data_type() {
-            DataType::Binary => {
-                for incoming in values.as_binary::<i32>().iter().flatten() {
-                    Self::fold_bytes(&mut self.bits, incoming, self.fold)?;
-                }
-            }
-            DataType::LargeBinary => {
-                for incoming in values.as_binary::<i64>().iter().flatten() {
-                    Self::fold_bytes(&mut self.bits, incoming, self.fold)?;
-                }
-            }
-            DataType::BinaryView => {
-                for incoming in values.as_binary_view().iter().flatten() {
-                    Self::fold_bytes(&mut self.bits, incoming, self.fold)?;
-                }
-            }
-            other => {
-                return exec_err!("bitmap aggregate expected BINARY, got {other}");
+        let values = coerce_bitmap_column(values)?;
+        for_each_binary(&values, |incoming| {
+            fold_incoming(&mut self.bits, incoming, self.fold);
+            Ok(())
+        })
+    }
+}
+
+fn bitmap_payload_signature() -> Signature {
+    Signature::uniform(
+        1,
+        vec![
+            DataType::Binary,
+            DataType::LargeBinary,
+            DataType::BinaryView,
+            DataType::Utf8,
+            DataType::LargeUtf8,
+            DataType::Utf8View,
+        ],
+        Volatility::Immutable,
+    )
+}
+
+pub(crate) fn coerce_bitmap_column(values: &ArrayRef) -> Result<ArrayRef> {
+    match values.data_type() {
+        DataType::Binary => Ok(Arc::clone(values)),
+        DataType::LargeBinary
+        | DataType::BinaryView
+        | DataType::Utf8
+        | DataType::LargeUtf8
+        | DataType::Utf8View => cast(values, &DataType::Binary)
+            .map_err(|error| DataFusionError::Execution(error.to_string())),
+        other => exec_err!("bitmap aggregate expected BINARY, got {other}"),
+    }
+}
+
+pub(crate) fn identity_byte(fold: BitmapFold) -> u8 {
+    match fold {
+        BitmapFold::Construct | BitmapFold::Or => 0,
+        BitmapFold::And => 0xff,
+    }
+}
+
+pub(crate) fn invalid_bitmap_position(position: i64) -> DataFusionError {
+    DataFusionError::Execution(format!(
+        "[INVALID_BITMAP_POSITION] The 0-indexed bitmap position {position} is out of bounds. \
+         The bitmap has 32768 bits (4096 bytes). SQLSTATE: 22003"
+    ))
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+pub(crate) fn set_bit(bits: &mut [u8], position: i64) -> Result<()> {
+    if !(0..BITMAP_BITS).contains(&position) {
+        return Err(invalid_bitmap_position(position));
+    }
+    let byte_index = (position as usize) >> 3;
+    let shift = (position as u32) & 7;
+    bits[byte_index] |= 1_u8 << shift;
+    Ok(())
+}
+
+fn fold_words(destination: &mut [u8], source: &[u8], is_and: bool) {
+    let width = destination.len().min(source.len());
+    let word_bytes = width - (width % 8);
+    let (dest_words, dest_tail) = destination[..width].split_at_mut(word_bytes);
+    let (source_words, source_tail) = source[..width].split_at(word_bytes);
+    for (dest, src) in dest_words
+        .chunks_exact_mut(8)
+        .zip(source_words.chunks_exact(8))
+    {
+        let mut dest_bytes = [0_u8; 8];
+        dest_bytes.copy_from_slice(dest);
+        let mut source_bytes = [0_u8; 8];
+        source_bytes.copy_from_slice(src);
+        let folded = if is_and {
+            u64::from_ne_bytes(dest_bytes) & u64::from_ne_bytes(source_bytes)
+        } else {
+            u64::from_ne_bytes(dest_bytes) | u64::from_ne_bytes(source_bytes)
+        };
+        dest.copy_from_slice(&folded.to_ne_bytes());
+    }
+    if is_and {
+        for (dest, src) in dest_tail.iter_mut().zip(source_tail) {
+            *dest &= *src;
+        }
+    } else {
+        for (dest, src) in dest_tail.iter_mut().zip(source_tail) {
+            *dest |= *src;
+        }
+    }
+}
+
+pub(crate) fn fold_incoming(destination: &mut [u8], incoming: &[u8], fold: BitmapFold) {
+    let width = incoming.len().min(destination.len());
+    match fold {
+        BitmapFold::And => {
+            fold_words(&mut destination[..width], &incoming[..width], true);
+            destination[width..].fill(0);
+        }
+        BitmapFold::Construct | BitmapFold::Or => {
+            fold_words(&mut destination[..width], &incoming[..width], false);
+        }
+    }
+}
+
+pub(crate) fn update_positions_into(bits: &mut [u8], values: &ArrayRef) -> Result<()> {
+    let casted = if values.data_type() == &DataType::Int64 {
+        Arc::clone(values)
+    } else {
+        cast(values, &DataType::Int64)?
+    };
+    let positions = casted.as_primitive::<Int64Type>();
+    if positions.null_count() == 0 {
+        for &position in positions.values() {
+            set_bit(bits, position)?;
+        }
+    } else {
+        for (index, &position) in positions.values().iter().enumerate() {
+            if positions.is_valid(index) {
+                set_bit(bits, position)?;
             }
         }
-        Ok(())
     }
+    Ok(())
+}
+
+pub(crate) fn for_each_binary(
+    values: &ArrayRef,
+    mut visit: impl FnMut(&[u8]) -> Result<()>,
+) -> Result<()> {
+    let values = coerce_bitmap_column(values)?;
+    let array = values.as_binary::<i32>();
+    for index in 0..array.len() {
+        if array.is_valid(index) {
+            visit(array.value(index))?;
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn packed_bitmaps_to_array(bits: Vec<u8>) -> Result<ArrayRef> {
+    if !bits.len().is_multiple_of(BITMAP_BYTES) {
+        return exec_err!("bitmap packed length is not a multiple of {BITMAP_BYTES}");
+    }
+    let groups = bits.len() / BITMAP_BYTES;
+    let mut offsets = Vec::with_capacity(groups + 1);
+    for group in 0..=groups {
+        let offset = i32::try_from(group * BITMAP_BYTES).map_err(|_| {
+            DataFusionError::Execution("bitmap group count exceeds Binary offset range".to_string())
+        })?;
+        offsets.push(offset);
+    }
+    BinaryArray::try_new(OffsetBuffer::new(offsets.into()), Buffer::from(bits), None)
+        .map(|array| Arc::new(array) as ArrayRef)
+        .map_err(|error| DataFusionError::Execution(error.to_string()))
 }
 
 impl Accumulator for BitmapAccumulator {
@@ -427,35 +519,102 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn sliding_frame_refuses_loudly() {
+    async fn out_of_range_position_names_invalid_bitmap_position() {
         let ctx = ctx();
         for sql in [
-            "SELECT bitmap_construct_agg(bitmap_bit_position(x)) \
-             OVER (ORDER BY x ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) \
-             FROM VALUES (1), (2) AS t(x)",
-            "SELECT bitmap_or_agg(b) \
-             OVER (ORDER BY g ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) \
-             FROM (SELECT g, bitmap_construct_agg(bitmap_bit_position(x)) AS b \
-                   FROM VALUES (1, 1), (2, 2) AS t(x, g) GROUP BY g)",
-            "SELECT bitmap_and_agg(b) \
-             OVER (ORDER BY g ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) \
-             FROM (SELECT g, bitmap_construct_agg(bitmap_bit_position(x)) AS b \
-                   FROM VALUES (1, 1), (2, 2) AS t(x, g) GROUP BY g)",
+            "SELECT bitmap_construct_agg(x) FROM VALUES (32768) AS t(x)",
+            "SELECT bitmap_construct_agg(x) FROM VALUES (-1) AS t(x)",
         ] {
-            let planned = ctx.sql(sql).await;
-            let message = match planned {
-                Ok(frame) => frame
-                    .collect()
-                    .await
-                    .expect_err("sliding frame must refuse")
-                    .to_string(),
-                Err(error) => error.to_string(),
-            };
-            let lower = message.to_ascii_lowercase();
+            let error = ctx
+                .sql(sql)
+                .await
+                .expect("plan")
+                .collect()
+                .await
+                .expect_err("out of range must refuse");
+            let message = error.to_string();
             assert!(
-                lower.contains("retract_batch") || lower.contains("sliding"),
+                message.contains("[INVALID_BITMAP_POSITION]"),
                 "got {message}"
             );
+            assert!(message.contains("32768 bits (4096 bytes)"), "got {message}");
+            assert!(message.contains("SQLSTATE: 22003"), "got {message}");
         }
+        let batch = batch(
+            &ctx,
+            "SELECT bitmap_count(bitmap_construct_agg(x)) AS c FROM VALUES (32767) AS t(x)",
+        )
+        .await;
+        assert_eq!(int64_cell(&batch, 0), 1);
+    }
+
+    #[tokio::test]
+    async fn short_binary_or_and_normalize_to_4096() {
+        let ctx = ctx();
+        let schema = Arc::new(Schema::new(vec![Field::new("b", DataType::Binary, true)]));
+        let array: ArrayRef = Arc::new(BinaryArray::from(vec![Some(&b"\x01"[..])]));
+        let short = RecordBatch::try_new(schema, vec![array]).expect("short binary");
+        ctx.register_batch("short_bitmaps", short)
+            .expect("register short");
+        let or_agg = batch(
+            &ctx,
+            "SELECT length(bitmap_or_agg(b)) AS l, bitmap_count(bitmap_or_agg(b)) AS c \
+             FROM short_bitmaps",
+        )
+        .await;
+        match or_agg.schema().field(0).data_type() {
+            DataType::Int32 => assert_eq!(int32_cell(&or_agg, 0), 4096),
+            DataType::Int64 => assert_eq!(int64_cell(&or_agg, 0), 4096),
+            other => panic!("unexpected length type {other:?}"),
+        }
+        assert_eq!(int64_cell(&or_agg, 1), 1);
+        let and_agg = batch(
+            &ctx,
+            "SELECT length(bitmap_and_agg(b)) AS l, bitmap_count(bitmap_and_agg(b)) AS c \
+             FROM short_bitmaps",
+        )
+        .await;
+        match and_agg.schema().field(0).data_type() {
+            DataType::Int32 => assert_eq!(int32_cell(&and_agg, 0), 4096),
+            DataType::Int64 => assert_eq!(int64_cell(&and_agg, 0), 4096),
+            other => panic!("unexpected length type {other:?}"),
+        }
+        assert_eq!(int64_cell(&and_agg, 1), 1);
+        let mut long_bytes = vec![0_u8; BITMAP_BYTES + 1];
+        long_bytes[0] = 0x01;
+        long_bytes[BITMAP_BYTES] = 0x01;
+        let long_schema = Arc::new(Schema::new(vec![Field::new("b", DataType::Binary, true)]));
+        let long_array: ArrayRef = Arc::new(BinaryArray::from(vec![Some(long_bytes.as_slice())]));
+        let long = RecordBatch::try_new(long_schema, vec![long_array]).expect("long binary");
+        ctx.register_batch("long_bitmaps", long)
+            .expect("register long");
+        let long_agg = batch(
+            &ctx,
+            "SELECT length(bitmap_or_agg(b)) AS l FROM long_bitmaps",
+        )
+        .await;
+        match long_agg.schema().field(0).data_type() {
+            DataType::Int32 => assert_eq!(int32_cell(&long_agg, 0), 4096),
+            DataType::Int64 => assert_eq!(int64_cell(&long_agg, 0), 4096),
+            other => panic!("unexpected length type {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn unbounded_partition_window_answers() {
+        let ctx = ctx();
+        let batch = batch(
+            &ctx,
+            "SELECT bitmap_count(bitmap_construct_agg(x) OVER (PARTITION BY g)) AS c \
+             FROM VALUES (1, 1), (1, 2), (2, 3) AS t(g, x) ORDER BY g",
+        )
+        .await;
+        let array = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("Int64Array");
+        let counts: Vec<i64> = (0..array.len()).map(|index| array.value(index)).collect();
+        assert_eq!(counts, vec![2, 2, 1]);
     }
 }
