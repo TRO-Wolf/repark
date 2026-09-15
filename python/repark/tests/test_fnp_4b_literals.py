@@ -308,7 +308,7 @@ def test_window_frame_with_long_suffix_refuses_loudly(spark: ReparkSession) -> N
         )
     )
     assert table.column("s").to_pylist() == [1, 3, 5]
-    with pytest.raises(Exception, match="[Ff]rame"):
+    with pytest.raises(Exception, match=r"[Ff]rame"):
         spark.sql(
             "SELECT x, sum(x) OVER (ORDER BY x ROWS BETWEEN 1L PRECEDING "
             "AND CURRENT ROW) s FROM VALUES (1), (2), (3) t(x)"

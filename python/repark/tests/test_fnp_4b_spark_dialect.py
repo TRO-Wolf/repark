@@ -200,7 +200,7 @@ def test_expr_backtick_column_reference_binds_the_frame_column(
 def test_nested_suffix_literal_hides_the_provenance_marker(
     spark: ReparkSession, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """L-001: no ``__repark_`` marker in columns, Arrow names, or explain."""
+    """Round-8 L-001: no ``__repark_`` marker in columns, Arrow names, or explain."""
     cases = [
         ("SELECT * FROM (SELECT 1.5BD) t", "1.5"),
         ("WITH c AS (SELECT 1.5BD) SELECT * FROM c", "1.5"),
@@ -218,7 +218,7 @@ def test_nested_suffix_literal_hides_the_provenance_marker(
 
 
 def test_unaliased_suffix_names_come_from_value_text(spark: ReparkSession) -> None:
-    """L-003: unaliased root suffix names are Spark value text, not dumps."""
+    """Round-8 L-003: unaliased root suffix names are Spark value text, not dumps."""
     cases = [
         ("SELECT 1.5BD", "1.5"),
         ("SELECT 1e200D", "1.0E200"),
