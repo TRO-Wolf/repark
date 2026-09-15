@@ -193,6 +193,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `NOT_COLUMN_OR_INT`. Every call warns the Spark 4.1.2 `FutureWarning`; outside
   `partitionedBy` the fragment refuses like the int form.
   pins: fnp-misc-1/C-003, fnp-misc-1/L-003
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** `bitmap_construct_agg` / `bitmap_or_agg` /
+  `bitmap_and_agg` are one-line aggregate wrappers over
+  `column._inner.aggregate(kind, False)` — the same shape `functions.py`'s `sum` builds —
+  reaching the FNP-6D Rust UDAFs through the three new `unary_aggregate_udaf` arms, and
+  installing through this module's `INSTALL_NAMES`. pins: fnp-bitmap-facade-1/C-001, C-002
 - `functions_agg.py` — aggregate-function re-exports.
 - `functions_bitwise.py` — bitwise scalar wrappers.
 - `functions_arrow_udf.py` — **FNP-MISC-1 (2026-09-15):** `arrow_udf` over the pandas

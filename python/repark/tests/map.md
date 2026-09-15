@@ -1290,6 +1290,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (11 datetime additions on the freeze inventory; independent of FN-C) + every
   name resolves. **FNP-15/16:** the pre-split 360 names stay the prefix; 62
   declared-absent names append. pins: fnp-15-16/C-016
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** the alias-segment constant moves 6 → 9 —
+  `functions_bitwise.INSTALL_NAMES` appends the three bitmap aggregate names.
   (2026-08-15): `__all__` before==after pin. **FN-E moved the pin** to 262 names
   (freeze 253 + 9 collection additions) + every name resolves.
   (2026-08-15): **FN-F moved the pin** to 263
