@@ -660,6 +660,7 @@ def _sql_type_to_arrow(sql_type: str) -> Any:
 
     import pyarrow as pa
 
+    from repark.spark._type_table import _native_function
     from repark.spark.types import DataType, repark_type_to_arrow
 
     stripped = sql_type.strip()
@@ -687,36 +688,6 @@ def _sql_type_to_arrow(sql_type: str) -> Any:
 
     base = upper.split("(", 1)[0].strip()
 
-    mapping = {
-        "BOOLEAN": pa.bool_(),
-        "BOOL": pa.bool_(),
-        "TINYINT": pa.int8(),
-        "SMALLINT": pa.int16(),
-        "INT": pa.int32(),
-        "INTEGER": pa.int32(),
-        "BIGINT": pa.int64(),
-        "LONG": pa.int64(),
-        "FLOAT": pa.float32(),
-        "REAL": pa.float32(),
-        "DOUBLE": pa.float64(),
-        "FLOAT8": pa.float64(),
-        "VARCHAR": pa.string(),
-        "STRING": pa.string(),
-        "TEXT": pa.string(),
-        "DATE": pa.date32(),
-        "TIMESTAMP": pa.timestamp("us", tz="UTC"),
-        "TIMESTAMP_NTZ": pa.timestamp("us"),
-        "BINARY": pa.binary(),
-        "BYTEA": pa.binary(),
-        # G3b D-5: an explicitly requested void column stays void (pa.null()), never
-        # a silent pa.string() substitution.
-        "VOID": pa.null(),
-        "NULL": pa.null(),
-    }
-
-    if base in mapping:
-        return mapping[base]
-
     if base == "DECIMAL" or base == "NUMERIC":
         # DECIMAL(p,s) — default 38,18 when unparsed; try extract.
 
@@ -732,6 +703,11 @@ def _sql_type_to_arrow(sql_type: str) -> Any:
 
         return pa.decimal128(precision, scale)
 
-    # Fallback matches prior VALUES-path default for unknown (string).
+    capsule, decimal_precision, decimal_scale = _native_function("sql_token_to_arrow_capsule")(
+        stripped
+    )
 
-    return pa.string()
+    if capsule is None:
+        return pa.decimal128(decimal_precision, decimal_scale)
+
+    return pa.DataType._import_from_c_capsule(capsule)

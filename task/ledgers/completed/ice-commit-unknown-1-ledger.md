@@ -223,3 +223,14 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/ice-commit-unknown-1-ledger.md, crates/repark-iceberg/src/write/merge/tests/commit_unknown.rs]
   complete: true
 ```
+
+## S2-21 performance review (orchestrator, 2026-09-14)
+
+Grok 4.6 read-only reviewer over `ac057eb2` (fresh clone): CLEAN, no P1 or P2. Every new branch runs on the
+commit-failure or Python-raise path; `commit_result` is a no-op `map_err` on success; the extra `error_map` downcast
+runs only for a failed statement's `DataFusionError::External`; `repark.errors` import grows by about 310 ns.
+
+| Finding | Severity | Disposition |
+|---|---|---|
+| One extra 36-byte UUID `String` clone per successful commit in `operation_id_and_summary` (`commit_error.rs`) | P3 | Recorded; keep the `Uuid` on the stack and format it only into the summary map and on the error arm if a later unit touches the file |
+

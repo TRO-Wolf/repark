@@ -20,6 +20,16 @@ from collections.abc import Iterator
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
+from repark.spark._type_table import (
+    _arrow_order,
+    _datatype_to_ddl_token,
+    _datatype_to_descriptor,
+    _ddl_order,
+    _descriptor_to_datatype,
+    _native_function,
+    _parse_datatype_string,
+)
+
 # ==================================================================================================
 # DataType base
 # ==================================================================================================
@@ -53,6 +63,9 @@ class DataType:
         Default is :meth:`typeName`; atomic types that Spark shortens (``int`` not ``integer``)
         override this.
         """
+        answer = _SIMPLE_STRING_FAST.get(type(self))
+        if answer is not None:
+            return answer
         return type(self).typeName()
 
     def jsonValue(self) -> str | dict[str, Any]:  # noqa: N802 — PySpark camelCase
@@ -570,7 +583,7 @@ class DayTimeIntervalType(DataType):
         return f"interval {start_name} to {end_name}"
 
     def simpleString(self) -> str:  # noqa: N802
-        """Spark ``interval day to second`` / ``interval hour`` form."""
+        """Interval display form (``interval day to second``)."""
         return self._str_repr()
 
     def jsonValue(self) -> str:  # noqa: N802
@@ -578,7 +591,7 @@ class DayTimeIntervalType(DataType):
         return self._str_repr()
 
     def _engine_type(self) -> str:
-        """Engine tag for cast surface."""
+        """Engine tag (same display form)."""
         return self._str_repr()
 
     def __repr__(self) -> str:
@@ -641,7 +654,7 @@ class YearMonthIntervalType(DataType):
         return f"interval {start_name} to {end_name}"
 
     def simpleString(self) -> str:  # noqa: N802
-        """Spark ``interval year to month`` / ``interval year`` form."""
+        """Interval display form (``interval year to month``)."""
         return self._str_repr()
 
     def jsonValue(self) -> str:  # noqa: N802
@@ -649,7 +662,7 @@ class YearMonthIntervalType(DataType):
         return self._str_repr()
 
     def _engine_type(self) -> str:
-        """Engine tag for cast surface."""
+        """Engine tag (same display form)."""
         return self._str_repr()
 
     def __repr__(self) -> str:
@@ -935,12 +948,14 @@ class StructType(DataType):
 
     def toDDL(self) -> str:  # noqa: N802 — PySpark camelCase
         """DDL field list (``a INT,b STRING NOT NULL``) — pure Python Spark 4 shape."""
-        parts: list[str] = []
-        for field in self.fields:
-            type_sql = _datatype_to_ddl_token(field.dataType)
-            null_suffix = "" if field.nullable else " NOT NULL"
-            parts.append(f"{field.name} {type_sql}{null_suffix}")
-        return ",".join(parts)
+        descriptor = _datatype_to_descriptor(self, _ddl_order())
+        if descriptor is None:
+            return ",".join(
+                f"{field.name} {_datatype_to_ddl_token(field.dataType)}"
+                f"{'' if field.nullable else ' NOT NULL'}"
+                for field in self.fields
+            )
+        return _native_function("struct_field_ddl_from_descriptor")(descriptor)
 
     def treeString(  # noqa: N802 — PySpark camelCase
         self,
@@ -1120,59 +1135,6 @@ def _parse_complex_or_atomic(text: str) -> DataType:
     raise ValueError(f"cannot parse datatype: {text!r}")
 
 
-def _parse_field_list(text: str) -> StructType:
-    """Parse ``a int, b string`` or ``a: int, b: string`` into a StructType.
-
-    Colon form only when the *name* is immediately followed by ``:`` (``a: int``). Do not
-    split on colons inside nested ``STRUCT<field: type>`` when the outer form is
-    space-separated (``c2 STRUCT<c3: INT>`` — Apache ``test_tree_string``).
-    """
-    fields: list[StructField] = []
-    name_colon = re.compile(r"^([A-Za-z_][\w]*)\s*:\s*(.+)$")
-    for part in _split_top_level(text, ","):
-        part = part.strip()
-        if not part:
-            continue
-        colon_match = name_colon.match(part)
-        if colon_match is not None:
-            name = colon_match.group(1).strip().strip('`"')
-            type_text = colon_match.group(2)
-            fields.append(StructField(name, _parse_complex_or_atomic(type_text), True))
-            continue
-        tokens = part.split(None, 1)
-        if len(tokens) != 2:
-            raise ValueError(f"cannot parse field: {part!r}")
-        name, type_text = tokens[0].strip().strip('`"'), tokens[1]
-        fields.append(StructField(name, _parse_complex_or_atomic(type_text), True))
-    return StructType(fields)
-
-
-def _parse_datatype_string(text: str) -> DataType:
-    """Parse a DDL / simpleString type or field list (Spark ``_parse_datatype_string`` shape)."""
-    stripped = text.strip()
-    if not stripped:
-        return StructType([])
-    lower = stripped.lower()
-    # Parameterized atomics / complex types without a field name — parse as types first.
-    if (
-        _FIXED_DECIMAL.fullmatch(stripped)
-        or _LENGTH_CHAR.fullmatch(stripped)
-        or _LENGTH_VARCHAR.fullmatch(stripped)
-        or _TIME.fullmatch(stripped)
-        or lower.startswith(("array<", "map<", "struct<"))
-        or lower in _ATOMIC_TYPE_NAMES
-        or _STRING_COLLATE.fullmatch(stripped)
-    ):
-        return _parse_complex_or_atomic(stripped)
-    # Field list: ``a: int``, ``a int, b string``, ``a time(6)`` (single field).
-    if "," in stripped or ":" in stripped or " " in stripped:
-        try:
-            return _parse_field_list(stripped)
-        except ValueError:
-            pass
-    return _parse_complex_or_atomic(stripped)
-
-
 _COLLATIONS_METADATA_KEY = "__COLLATIONS"
 
 
@@ -1315,61 +1277,6 @@ def _append_datatype_tree(
             )
 
 
-def _datatype_to_ddl_token(data_type: DataType) -> str:
-    """Uppercase DDL type token for :meth:`StructType.toDDL`."""
-    if isinstance(data_type, NullType):
-        return "VOID"
-    if isinstance(data_type, StringType):
-        return "STRING"
-    if isinstance(data_type, BinaryType):
-        return "BINARY"
-    if isinstance(data_type, BooleanType):
-        return "BOOLEAN"
-    if isinstance(data_type, ByteType):
-        return "TINYINT"
-    if isinstance(data_type, ShortType):
-        return "SMALLINT"
-    if isinstance(data_type, IntegerType):
-        return "INT"
-    if isinstance(data_type, LongType):
-        return "BIGINT"
-    if isinstance(data_type, FloatType):
-        return "FLOAT"
-    if isinstance(data_type, DoubleType):
-        return "DOUBLE"
-    if isinstance(data_type, DateType):
-        return "DATE"
-    if isinstance(data_type, TimestampType):
-        return "TIMESTAMP"
-    if isinstance(data_type, TimestampNTZType):
-        return "TIMESTAMP_NTZ"
-    if isinstance(data_type, TimeType):
-        return f"TIME({data_type.precision})"
-    if isinstance(data_type, DecimalType):
-        return f"DECIMAL({data_type.precision},{data_type.scale})"
-    if isinstance(data_type, ArrayType):
-        return f"ARRAY<{_datatype_to_ddl_token(data_type.elementType)}>"
-    if isinstance(data_type, MapType):
-        return (
-            f"MAP<{_datatype_to_ddl_token(data_type.keyType)},"
-            f"{_datatype_to_ddl_token(data_type.valueType)}>"
-        )
-    if isinstance(data_type, StructType):
-        inner = ",".join(
-            f"{field.name}:{_datatype_to_ddl_token(field.dataType)}" for field in data_type.fields
-        )
-        return f"STRUCT<{inner}>"
-    if isinstance(data_type, VariantType):
-        return "VARIANT"
-    if isinstance(data_type, CalendarIntervalType):
-        return "INTERVAL"
-    if isinstance(data_type, CharType):
-        return f"CHAR({data_type.length})"
-    if isinstance(data_type, VarcharType):
-        return f"VARCHAR({data_type.length})"
-    return data_type.simpleString().upper()
-
-
 # ==================================================================================================
 # Arrow ↔ repark schema helpers
 # ==================================================================================================
@@ -1379,20 +1286,32 @@ def _arrow_type_to_repark(arrow_type: object) -> DataType:
     """Map a ``pyarrow.DataType`` onto the closest repark :class:`DataType` (schema surface)."""
     import pyarrow as pa
 
-    if pa.types.is_int8(arrow_type):
-        return ByteType()
-    if pa.types.is_int16(arrow_type):
-        return ShortType()
-    if pa.types.is_int32(arrow_type):
-        return IntegerType()
-    if pa.types.is_int64(arrow_type):
-        return LongType()
-    if pa.types.is_float32(arrow_type):
-        return FloatType()
-    if pa.types.is_floating(arrow_type):
-        return DoubleType()
-    if pa.types.is_boolean(arrow_type):
-        return BooleanType()
+    if not isinstance(arrow_type, pa.DataType):
+        return StringType()
+    try:
+        descriptor = _native_function("spark_descriptor_from_arrow_type")(
+            arrow_type.__arrow_c_schema__()
+        )
+    except Exception:
+        return _arrow_type_to_repark_python(arrow_type)
+    return _descriptor_to_datatype(descriptor)
+
+
+def _arrow_type_to_repark_python(arrow_type: object) -> DataType:
+    """Python Arrow→facade mapping for types the FFI envelope cannot carry."""
+    import pyarrow as pa
+
+    for check, data_class in (
+        (pa.types.is_int8, ByteType),
+        (pa.types.is_int16, ShortType),
+        (pa.types.is_int32, IntegerType),
+        (pa.types.is_int64, LongType),
+        (pa.types.is_float32, FloatType),
+        (pa.types.is_floating, DoubleType),
+        (pa.types.is_boolean, BooleanType),
+    ):
+        if check(arrow_type):
+            return data_class()
     if pa.types.is_string(arrow_type) or pa.types.is_large_string(arrow_type):
         return StringType()
     if pa.types.is_binary(arrow_type) or pa.types.is_large_binary(arrow_type):
@@ -1434,6 +1353,22 @@ def struct_type_from_arrow(schema: object) -> StructType:
     import pyarrow as pa
 
     assert isinstance(schema, pa.Schema)
+    try:
+        descriptor = _native_function("spark_descriptor_from_arrow_schema")(
+            schema.__arrow_c_schema__()
+        )
+    except Exception:
+        return _struct_type_from_arrow_python(schema)
+    result = _descriptor_to_datatype(descriptor)
+    assert isinstance(result, StructType)
+    return result
+
+
+def _struct_type_from_arrow_python(schema: object) -> StructType:
+    """Python schema→StructType walk for trees the FFI envelope cannot carry."""
+    import pyarrow as pa
+
+    assert isinstance(schema, pa.Schema)
     fields = [
         StructField(field.name, _arrow_type_to_repark(field.type), field.nullable)
         for field in schema
@@ -1445,28 +1380,40 @@ def repark_type_to_arrow(data_type: DataType) -> Any:
     """Map a repark :class:`DataType` to a ``pyarrow.DataType`` (createDataFrame nested)."""
     import pyarrow as pa
 
-    if isinstance(data_type, NullType):
-        return pa.null()
-    if isinstance(data_type, BooleanType):
-        return pa.bool_()
-    if isinstance(data_type, ByteType):
-        return pa.int8()
-    if isinstance(data_type, ShortType):
-        return pa.int16()
-    if isinstance(data_type, IntegerType):
-        return pa.int32()
-    if isinstance(data_type, LongType):
-        return pa.int64()
-    if isinstance(data_type, FloatType):
-        return pa.float32()
-    if isinstance(data_type, DoubleType):
-        return pa.float64()
-    if isinstance(data_type, (StringType, CharType, VarcharType)):
-        return pa.string()
-    if isinstance(data_type, BinaryType):
-        return pa.binary()
-    if isinstance(data_type, DateType):
-        return pa.date32()
+    descriptor = _datatype_to_descriptor(data_type, _arrow_order())
+    if descriptor is None:
+        return _repark_type_to_arrow_python(data_type)
+    if descriptor.get("kind") == "decimal" and (
+        not (1 <= descriptor["precision"] <= 38) or not (-128 <= descriptor["scale"] <= 127)
+    ):
+        return _repark_type_to_arrow_python(data_type)
+    try:
+        return pa.DataType._import_from_c_capsule(
+            _native_function("arrow_type_capsule_from_descriptor")(descriptor)
+        )
+    except Exception:
+        return _repark_type_to_arrow_python(data_type)
+
+
+def _repark_type_to_arrow_python(data_type: DataType) -> Any:
+    """Python facade→Arrow mapping for descriptors the table cannot see or carry."""
+    import pyarrow as pa
+
+    for type_classes, arrow_factory in (
+        (NullType, pa.null),
+        (BooleanType, pa.bool_),
+        (ByteType, pa.int8),
+        (ShortType, pa.int16),
+        (IntegerType, pa.int32),
+        (LongType, pa.int64),
+        (FloatType, pa.float32),
+        (DoubleType, pa.float64),
+        ((StringType, CharType, VarcharType), pa.string),
+        (BinaryType, pa.binary),
+        (DateType, pa.date32),
+    ):
+        if isinstance(data_type, type_classes):
+            return arrow_factory()
     if isinstance(data_type, TimestampType):
         return pa.timestamp("us", tz="UTC")
     if isinstance(data_type, TimestampNTZType):
@@ -1800,6 +1747,17 @@ def refuse_collated_type_string(type_text: str) -> None:
     from repark.errors import UnsupportedOperationException
 
     raise UnsupportedOperationException(collation_refusal_message(name))
+
+
+_SIMPLE_STRING_FAST: dict[type, str] = {
+    NullType: "void",
+    BinaryType: "binary",
+    BooleanType: "boolean",
+    DateType: "date",
+    TimestampType: "timestamp",
+    TimestampNTZType: "timestamp_ntz",
+    DoubleType: "double",
+}
 
 
 __all__ = [

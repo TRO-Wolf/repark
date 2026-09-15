@@ -24,6 +24,7 @@ mod spark_literals;
 mod spark_type_names;
 mod time_travel;
 mod truncate;
+pub mod type_table;
 mod window_range;
 mod write_to_branch;
 

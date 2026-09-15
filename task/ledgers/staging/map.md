@@ -5,50 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [ice-commit-unknown-1-ledger.md](ice-commit-unknown-1-ledger.md) —
-  **ICE-COMMIT-UNKNOWN-1 (2026-09-14), in flight:** `ErrorKind::CommitStateUnknown` maps to a
-  dedicated `CommitStateUnknownException(PySparkException)` carrying the commit's
-  `engine.operation-id` — a new `Error::CommitStateUnknown { message, operation_id }` variant,
-  a new `ErrorClass`, a `CommitStateUnknownError` wrapper stamped at the six RePark mint sites,
-  and the registry/inventory rows naming the Airflow alert + retry boundary.
-  `risk_tier: standard`. Branch `feat/ice-commit-unknown-1`.
-  pins: ice-commit-unknown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [rp-20-ledger.md](rp-20-ledger.md) —
-  **RP-20 (2026-09-14), in flight:** the `edc38c6a` repin consumer — F-GLUE-REPLACE-1
-  (#282) gives `GlueCatalog::publish_replace_table` a version-id-checked `UpdateTable`
-  through the Glue commit transport, staged metadata read-validated before the send.
-  Pin verified by grep (orchestrator's bump commit `f1630f5a` carried the fork-sync row
-  and root `map.md` sentence); the cutover rows naming the Glue replace refusal are
-  stamped FIXED at `edc38c6a`. `risk_tier: standard`. Branch `chore/repin-rp-20`.
-  pins: rp-20/C-001, C-002, C-003
-- [ice-gold-twice-1-ledger.md](ice-gold-twice-1-ledger.md) —
-  **ICE-GOLD-TWICE-1 (2026-09-14), in flight:** the replace path into the nightly —
-  `_acceptance_replace.run_create_or_replace_twice` (3-row CTAS seed, two
-  `CREATE OR REPLACE … AS` over 4- and 5-row answers) proven offline on the memory
-  catalog, Glue + S3 Tables `replace2` legs in `test_aws_acceptance.py`, the gold module
-  on unique `testing_dbt1_<uuid8>` stems with two `dbt run` passes and `dbt test`, and
-  the `dbt gold acceptance` step in `aws-acceptance.yml` after the silver module.
-  `risk_tier: standard`. Branch `chore/repin-rp-20`.
-  pins: ice-gold-twice-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [ice-spark-table-1-ledger.md](ice-spark-table-1-ledger.md) —
-  **ICE-SPARK-TABLE-1 (2026-09-14), in flight:** evidence unit — RePark writes into a
-  **Spark-created** Iceberg v2 copy-on-write table (inventory §8 ruling 6, G-3 / the
-  Spark half of G-4). Measured on PySpark 4.1.2 + iceberg-runtime 1.11.0 over a Hadoop
-  catalog (`InMemoryCatalog` tried first, writes no local bytes): `register_table`
-  adoption, the production `UPDATE SET * / INSERT *` MERGE twice, the weekly
-  maintenance CALLs, and Spark read-back (`EXCEPT ALL` both ways against the
-  independently derived rows, counts, metadata tables). Hardened by a Grok 4.6
-  critic-logic round: full five-column pins at every stage, a load-bearing
-  `older_than`, a planted orphan sweep, and the measured stale-cache shape — stale
-  READS need a Spark-side `refreshTable` after repark commits (catalog-agnostic; C4
-  is Glue), while a same-session stale WRITE scan-forwards and commits cleanly;
-  `bucket` sort orders refuse loudly (WRITE-ORDER-TRANSFORM-1); Spark-stamped
-  `owner`/codec/`write.distribution-mode` are carried forward verbatim; an evolved
-  partition spec is honoured (`spec_id 1` writes). A 67.8 KB Spark-written fixture
-  lands under `fixtures/torture/data/ice_spark_table_1/` for JVM-free CI.
-  No product change.
-  `risk_tier: standard`. Branch `test/ice-spark-table-1`.
-  pins: ice-spark-table-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
@@ -193,15 +149,21 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Branch `feat/facade-2-s3`.
   pins: facade-2/C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021
 - [facade-4-ledger.md](facade-4-ledger.md) —
-  **FACADE-4 step 0 (2026-09-14), in flight:** measurement and pins only — release
-  baseline cells isolating `repark_type_to_arrow` / `struct_type_from_arrow` / DDL
-  parse+write per schema plus conversion's share of end-to-end walls, the
-  three-table agreement census (facade `types.py` vs `_csv_smart` rungs vs the
-  reader lattice + Rust `spark_ddl_type_name`/`arrow_type_key`), DDL/Arrow goldens
-  for every F1 type class with a mutation proof, and the step-1 target list. No
-  product code under `python/repark/src/` or `crates/` in this step.
-  `risk_tier: standard`. Branch `perf/facade-4-s0`.
-  pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **FACADE-4 steps 0–1 (2026-09-14), in flight:** step 0 is measurement and pins
+  only — release baseline cells isolating `repark_type_to_arrow` /
+  `struct_type_from_arrow` / DDL parse+write per schema plus conversion's share
+  of end-to-end walls, the three-table agreement census (facade `types.py` vs
+  `_csv_smart` rungs vs the reader lattice + Rust
+  `spark_ddl_type_name`/`arrow_type_key`), DDL/Arrow goldens for every F1 type
+  class with a mutation proof, and the step-1 target list. Step 1 is the
+  correctness consolidation — one Rust `type_table` owns Arrow ↔ Spark
+  descriptor ↔ DDL semantics with every surface keeping its step-0 answer
+  byte-for-byte — plus the S2-21 remediation findings table (P1-DTYPES, P2-DICT,
+  P3-*), the critic-logic remediation chains (L-001..L-011 → C-020..C-033),
+  and the round-2 census alignment (corrected D1–D24 pins, R2-P3
+  dispositions marked).
+  `risk_tier: standard`. Branch `perf/facade-4-s1`.
+  pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

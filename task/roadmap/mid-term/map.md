@@ -6,6 +6,12 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [overnight-report-2026-09-14-run14.md](overnight-report-2026-09-14-run14.md) — **run 14 report (2026-09-14, the Iceberg
+  production-cutover slate):** F-GLUE-REPLACE-1 merged in the fork (`edc38c6a`), RP-20 + ICE-GOLD-TWICE-1 (#587) with
+  aws-acceptance run 34901483202 green (replace twice on Glue and S3 Tables, gold dbt twice on Glue), ICE-SPARK-TABLE-1
+  (#589, RePark MERGE and maintenance on a Spark-created table, Spark reads back), ICE-COMMIT-UNKNOWN-1 (#590,
+  `CommitStateUnknownException` with `operation_id`, ambiguous CTAS keeps the table); C0–C6 state and owner questions
+  Q-R14-1..6 with recommendations.
 - [ice-cutover-slate-2026-09-14.md](ice-cutover-slate-2026-09-14.md) — **Iceberg production-cutover slate (2026-09-14,
   run 14, from the production assessment's G-1..G-6 and rulings Q-ICE-1..7):** F-GLUE-REPLACE-1 (fork Glue replace
   publish), RP-20 + ICE-GOLD-TWICE-1 (repin, CREATE OR REPLACE twice in the nightly, gold dbt twice in aws-acceptance),

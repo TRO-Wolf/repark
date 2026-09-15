@@ -15,6 +15,7 @@ mod logical_names;
 mod ml;
 mod session;
 mod session_sources;
+mod type_bridge;
 
 use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
@@ -131,6 +132,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     logical_names::register(module)?;
     ml::register(module)?;
     session_sources::register(module)?;
+    type_bridge::register(module)?;
     Ok(())
 }
 
