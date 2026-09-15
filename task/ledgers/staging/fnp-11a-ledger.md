@@ -282,6 +282,9 @@ with the Muse Spark trailer.
   embeds the same route, so the door-parity identity gate holds), the facade arm
   split, five routing tests, maps in lockstep.
 
+- Rebase onto 440b2773 (orchestrator, 2026-09-15): FNP-11A's `FNP11A_EXPORTS` re-installed `make_timestamp` and `months_between`, duplicating them in `__all__` and `catalog.listFunctions()`. Caught by the fresh-native facade leg, the tuple drops both. `call_function` classes now match measured PySpark 4.1.2 (`timestamp_add` / `timestamp_diff` raise `UNRESOLVED_ROUTINE`).
+- P3 residual, ledger only: through `call_function`, `months_between(te, ts)` names its column without Spark's rendered default `, true` (`months_between(te, ts, true)`). Values agree.
+
 Gates at close: `test_fnp11a_temporal.py` 316 passed (was 309 + 7 red);
 `test_fnp11a_r2.py` 112 passed; `cargo test -p repark-functions` 500 passed;
 `cargo test -p repark-python` green including both door-parity gates;

@@ -7,7 +7,6 @@ from repark.spark.column import Column
 from repark.spark.functions import _scalar
 
 FNP11A_EXPORTS: tuple[str, ...] = (
-    "make_timestamp",
     "make_timestamp_ltz",
     "make_timestamp_ntz",
     "try_make_timestamp",
@@ -15,7 +14,6 @@ FNP11A_EXPORTS: tuple[str, ...] = (
     "try_make_timestamp_ntz",
     "make_ym_interval",
     "try_make_interval",
-    "months_between",
     "convert_timezone",
     "localtimestamp",
     "timestamp_add",
