@@ -244,6 +244,7 @@ dataframe	DataFrame.writeTo
 dataframe	DataFrame.write_to
 dataframe	DataFrameNaFunctions.drop
 dataframe	DataFrameNaFunctions.fill
+dataframe	DataFrameNaFunctions.replace
 dataframe	DataFrameStatFunctions.approxQuantile
 dataframe	DataFrameStatFunctions.corr
 dataframe	DataFrameStatFunctions.cov
@@ -737,11 +738,13 @@ io	DataFrameReader.json
 io	DataFrameReader.load
 io	DataFrameReader.option
 io	DataFrameReader.options
+io	DataFrameReader.orc
 io	DataFrameReader.parquet
 io	DataFrameReader.schema
 io	DataFrameReader.sheet_names
 io	DataFrameReader.smartCsv
 io	DataFrameReader.table
+io	DataFrameReader.xml
 io	DataFrameWriter.bucketBy
 io	DataFrameWriter.bucket_by
 io	DataFrameWriter.clusterBy
@@ -750,10 +753,12 @@ io	DataFrameWriter.csv
 io	DataFrameWriter.format
 io	DataFrameWriter.insertInto
 io	DataFrameWriter.insert_into
+io	DataFrameWriter.jdbc
 io	DataFrameWriter.json
 io	DataFrameWriter.mode
 io	DataFrameWriter.option
 io	DataFrameWriter.options
+io	DataFrameWriter.orc
 io	DataFrameWriter.parquet
 io	DataFrameWriter.partitionBy
 io	DataFrameWriter.partition_by
@@ -762,6 +767,7 @@ io	DataFrameWriter.saveAsTable
 io	DataFrameWriter.save_as_table
 io	DataFrameWriter.sortBy
 io	DataFrameWriter.sort_by
+io	DataFrameWriter.xml
 io	DataFrameWriterV2.append
 io	DataFrameWriterV2.clusterBy
 io	DataFrameWriterV2.cluster_by

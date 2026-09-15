@@ -114,7 +114,7 @@ FAMILIES: tuple[str, ...] = (
     "window",
 )
 BACKLOG_BASELINE = 112
-EXCEPTIONS_BASELINE = 2
+EXCEPTIONS_BASELINE = 1
 COLUMN_PLUMBING_REASON = (
     "bound select-boundary plumbing on repark's Column; measured absent from "
     "pyspark.sql.Column 4.1.2 — inspect.getattr_static finds no member and "

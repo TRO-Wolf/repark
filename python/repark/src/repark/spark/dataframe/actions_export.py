@@ -13,13 +13,14 @@ from repark.errors import (
 )
 from repark.spark.column import Column
 from repark.spark.dataframe.core import DataFrame, _normalize_subset
+from repark.spark.dataframe.replace_expr import _NO_VALUE
 from repark.spark.types import DataType, StructField, StructType
 
 logger = logging.getLogger("repark.spark.dataframe")
 
 
 class DataFrameNaFunctions:
-    """The missing-data surface (PySpark ``DataFrame.na``): :meth:`fill` and :meth:`drop`."""
+    """The missing-data surface (PySpark ``DataFrame.na``): fill, drop, and replace."""
 
     __slots__ = ("_dataframe",)
 
@@ -288,3 +289,12 @@ class DataFrameNaFunctions:
             for flag in not_null_flags[1:]:
                 predicate = predicate & flag
         return self._dataframe.filter(predicate)
+
+    def replace(
+        self,
+        to_replace: Any,
+        value: Any = _NO_VALUE,
+        subset: str | list[str] | tuple[str, ...] | None = None,
+    ) -> DataFrame:
+        """Replace value(s) exactly as ``DataFrame.replace``. pins: io-declared-1/C-004"""
+        return self._dataframe.replace(to_replace, value, subset)

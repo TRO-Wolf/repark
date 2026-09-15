@@ -56,7 +56,7 @@ def test_ex_0_enumerator_emits_five_families_and_repark_sql() -> None:
     assert "F.unwrap_udt" in names
     assert "F.from_json" in names
     assert "F.stack" in names
-    assert len(rows) == 1035
+    assert len(rows) == 1041
 
 
 def test_ex_0_uncovered_name_is_red() -> None:
@@ -128,9 +128,9 @@ def test_ex_0_exceptions_file_names_only_inventory_rows() -> None:
         assert name in enumerated
         assert reason
     assert "SparkSession.read_postgres" in mapping
-    assert "DataFrameReader.jdbc" in mapping
+    assert "DataFrameReader.jdbc" not in mapping
     assert len(mapping) == gate.EXCEPTIONS_BASELINE
-    assert gate.EXCEPTIONS_BASELINE == 2
+    assert gate.EXCEPTIONS_BASELINE == 1
 
 
 def test_ex_0_execute_nonzero_is_red(tmp_path: Path) -> None:

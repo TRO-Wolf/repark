@@ -51,8 +51,6 @@ def test_live_jdbc_predicates_shape_or_skip(spark: SparkSession) -> None:
     dsn = _dsn_or_skip()
     if dsn is None:
         return
-    # predicates[] needs a real table, not a VALUES subquery; exercise single-partition
-    # jdbc(url, table_subquery, props) instead.
     frame = spark.read.jdbc(
         dsn,
         "(SELECT 1::int4 AS id UNION ALL SELECT 2::int4) AS t",

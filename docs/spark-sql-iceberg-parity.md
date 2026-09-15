@@ -1674,6 +1674,98 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   an honest single-node answer, so repark raises Spark's own `NO_OBSERVE_BEFORE_GET`
   in both the never-attached and attached-but-no-action cases.
 
+### IO-ORC-1 — the ORC reader and writer names are a declared `NOT_IMPLEMENTED` refusal
+
+- **repark** — `DataFrameReader.orc(path, mergeSchema, pathGlobFilter, recursiveFileLookup,
+  modifiedBefore, modifiedAfter)`, `DataFrameWriter.orc(path, mode, partitionBy, compression)`,
+  and `format("orc")` on either side raise `PySparkNotImplementedError` with errorClass
+  `NOT_IMPLEMENTED` and `{"feature": "orc"}`, str `[NOT_IMPLEMENTED] orc is not implemented.`
+  — at the call for the shorthand methods, at `load()` / `save()` for the `format` spellings.
+  The old writer `DATA_SOURCE_NOT_FOUND` refusal's orc arm became this class.
+- **Apache Spark** — reads and writes ORC, including nested array/map/struct columns, decimals,
+  dates, timestamps, and the zstd default compression. *(oracle: recorded —
+  `facade_reader_writer_oracle.json` cells `orc_roundtrip`, `orc_nested_types`,
+  `orc_compression_default`, `orc_format_save`; PySpark 4.1.2, run 15b.)*
+- **Pin** — `python/repark/tests/test_io_declared_1.py::test_reader_orc_refuses_at_the_call`,
+  `…::test_reader_format_orc_refuses_at_load`, `…::test_writer_orc_refuses_at_the_call`,
+  `…::test_writer_format_orc_refuses_at_save`.
+- **Rationale** — DECLARED (R-1, 2026-09-14). BACKLOG 2026-09-14: reachable in Rust; needs an
+  ORC crate — owner question Q-15B-1. A Rust ORC reader/writer is a new-crate dependency
+  decision reserved to the owner; Python never grows a reader.
+
+### IO-XML-1 — the XML reader and writer names are a declared `NOT_IMPLEMENTED` refusal behind Spark's own `rowTag` check
+
+- **repark** — `DataFrameReader.xml(path, rowTag, schema, **options)`,
+  `DataFrameWriter.xml(path, rowTag, mode, **options)`, and `format("xml")` on either side
+  first run Spark's own option check: without a `rowTag` (argument or `rowTag` option) they
+  raise `AnalysisException` errorClass `XML_ROW_TAG_MISSING`, SQLSTATE `42KDF`, with Spark's
+  message and `{"rowTag": "`rowTag`"}` byte-exact; with a `rowTag` they raise
+  `PySparkNotImplementedError` `NOT_IMPLEMENTED` `{"feature": "xml"}`, str
+  `[NOT_IMPLEMENTED] xml is not implemented.` — at the call for the shorthand methods, at
+  `load()` / `save()` for the `format` spellings.
+- **Apache Spark** — reads and writes XML with attribute promotion, nested elements, and the
+  declared `.xml` suffix. *(oracle: recorded — `facade_reader_writer_oracle.json` cells
+  `xml_roundtrip`, `xml_read_attrs`, `xml_nested_write`, `xml_write_default_ok`,
+  `xml_no_rowtag_write`, `xml_read_default_rowtag`; PySpark 4.1.2, run 15b. In Spark the
+  missing-path check precedes the `rowTag` check — cell `xml_read_no_rowtag` answers
+  `PATH_NOT_FOUND` — so the declared refusal's rowTag-first answer applies to paths Spark
+  would resolve.)*
+- **Pin** — `python/repark/tests/test_io_declared_1.py::test_reader_xml_without_row_tag_refuses`,
+  `…::test_reader_xml_with_row_tag_refuses`, `…::test_reader_format_xml_row_tag_from_options`,
+  `…::test_writer_xml_without_row_tag_refuses`, `…::test_writer_xml_with_row_tag_refuses`.
+- **Rationale** — DECLARED (R-1, 2026-09-14). BACKLOG 2026-09-14: reachable in Rust; needs an
+  XML crate — owner question Q-15B-1. The `rowTag` check is Spark's own error surface and is
+  reproduced exactly before the declared refusal.
+
+### IO-JDBC-1 — PostgreSQL URLs read through `spark.read.jdbc`; other drivers and every `write.jdbc` are declared `NOT_IMPLEMENTED` until the 1.6 native connectors
+
+- **repark** — `spark.read.jdbc(url, table, column, lowerBound, upperBound, numPartitions,
+  predicates, properties)` (Spark's signature; main's `lower_bound` / `upper_bound` /
+  `num_partitions` / `connection_properties` keyword spellings stay as keyword-only aliases,
+  both spellings of one parameter raising `TypeError`) reads PostgreSQL URLs
+  (`jdbc:postgresql://`, `postgresql://`, and libpq's `postgres://` alias — case-insensitive
+  after stripping leading whitespace, the caller's URL string forwarded untouched) through
+  the native connector: the
+  dbtable-from-properties resolution, the three `IllegalArgumentException` teaching errors
+  (predicates with a range bag, a partial range bag, empty predicates), and the
+  `read_postgres` delegation with main's exact arguments (R-3 restored the working path the
+  IO-DECLARED-1 step-1 diff had refused). A URL naming any other driver — including the
+  undocumented `jdbc:postgres://` spelling — refuses at the call,
+  before any connection attempt, with `PySparkNotImplementedError` `NOT_IMPLEMENTED`
+  `{"feature": "jdbc"}`, str `[NOT_IMPLEMENTED] jdbc is not implemented.`;
+  `DataFrameWriter.jdbc(url, table, mode, properties)` is declared for every URL: it first
+  matches the mode the way Spark's own `DataFrameWriter.mode(String)` does — lowercased
+  before the six-name match — so Spark's own mixed-case spellings (`Append`, `OVERWRITE`,
+  `ErrorIfExists`, `ERROR`, `Ignore`, `DEFAULT`) refuse `NOT_IMPLEMENTED`
+  `{"feature": "jdbc"}`, while `bogus`, the empty string, and a padded valid word raise
+  Spark's own `AnalysisException` `INVALID_SAVE_MODE` (SQLSTATE `42000`, the
+  `writer_jdbc_mode_bad` message with the caller's original spelling, and
+  `{"mode": "\"<mode>\""}` params) before the refusal.
+- **Apache Spark** — resolves the JDBC driver through the JVM `DriverManager`; without a
+  suitable driver it fails with a `Py4JJavaError` `java.sql.SQLException: No suitable driver`
+  at relation creation. *(oracle: recorded — `facade_reader_writer_oracle.json` cells
+  `jdbc_read_no_driver`, `reader_jdbc_props`, `jdbc_write_no_driver`, `writer_jdbc_mode_bad`;
+  PySpark 4.1.2, run 15b. The recorded read cells used a driverless PostgreSQL URL, which
+  repark answers by reading; the declared refusal is the answer for the other drivers'
+  JVM-driver path.)*
+- **Pin** — `python/repark/tests/test_pg_jdbc_options.py::test_jdbc_dbtable_from_properties_is_forwarded`,
+  `…::test_jdbc_camel_case_keywords_reach_read_postgres`, `…::test_jdbc_snake_case_aliases_reach_read_postgres`,
+  `…::test_jdbc_both_keyword_spellings_raise_typeerror`, `…::test_jdbc_postgres_alias_url_reaches_read_postgres`,
+  `…::test_jdbc_postgres_jdbc_scheme_still_refuses_not_implemented`, `…::test_jdbc_predicates_xor_range`,
+  `…::test_jdbc_empty_predicates_fails` (the read path);
+  `python/repark/tests/test_io_declared_1.py::test_reader_jdbc_non_postgres_urls_refuse_at_the_call`,
+  `…::test_reader_jdbc_non_postgres_props_refuse_at_the_call`,
+  `…::test_writer_jdbc_refuses_after_the_mode_check`,
+  `…::test_writer_jdbc_bad_mode_is_invalid_save_mode`,
+  `…::test_writer_jdbc_mixed_case_modes_are_valid_then_refuse`,
+  `…::test_writer_jdbc_invalid_modes_keep_the_caller_spelling` (the declared arms).
+- **Rationale** — DECLARED for non-PostgreSQL reads and every write (R-2, narrowed by R-3
+  2026-09-14: "replacing a working path with a refusal is a regression") "until the 1.6
+  native connectors (Postgres, SQL Server writes; SQL Server reads); the JVM JDBC driver
+  path is unreachable". BACKLOG 2026-09-14: the owner roadmap ships the native connectors
+  in 1.6. The PostgreSQL read path keeps its `format('postgres')` spelling beside
+  `spark.read.jdbc`.
+
 ---
 
 ## 6. How a row is added, mirrored and retired
