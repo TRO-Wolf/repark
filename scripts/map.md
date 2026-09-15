@@ -1,6 +1,6 @@
 # map — scripts/
 
-DF-SURFACE-A-1 critic round 1 (2026-09-14): `check_lib_py.py` **SESSION-SURFACE-1 (2026-09-15, rebase onto #602):** `spark/session/session_core.py` row 2291 → 2290; EX-0 counts recounted after the Catalog merge. pins: session-surface-1/C-001
+DF-SURFACE-A-1 critic round 1 (2026-09-14): `check_lib_py.py` **SESSION-SURFACE-1 (2026-09-15, rebase onto #602):** `spark/session/session_core.py` row 2291 → 2290; EX-0 counts recounted after the Catalog merge. pins: session-surface-1/C-001 **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down. pins: df-surface-b-1/C-008
 `dataframe/core.py` 4041 → 4035 (ruling R-5 removes the `inputFiles` and
 `semanticHash` bindings; ruling R-6 removes the `_schema_override` slot,
 init line, and schema check). The CAP-1 parity mirror row moved with it.
@@ -18,6 +18,18 @@ IO-BUCKET-CLUSTER-1 (2026-09-14): `check_lib_py.py` `writer_readwriter.py`
 check-call growth was paid by moving the five write helpers to the new
 `dataframe/writer_layout.py`). The CAP-1 parity mirror row moved with it.
 pins: io-bucket-cluster-1/C-003, C-004
+DF-SURFACE-B-1 (2026-09-14): `check_lib_py.py` `dataframe/core.py` 4044 → 4043
+(down-only; `foreach` / `foreachPartition` / `observe` bind from `surface_b.py`
+and the `_oos` table is gone). `check_example_coverage.py` CLASS_SURFACES gains
+`Observation`; enumerator 948 → 952.
+pins: df-surface-b-1/C-005, C-006
+GROUPED-SURFACE-1 step 1 (2026-09-14): `check_lib_py.py`
+`dataframe/joins_columns.py` 1238 → 1169 (decrease — the Arrow-batch apply
+bridge `_apply_in_pandas_arrow_batches` moved byte-identical into the new
+`dataframe/grouped_arrow.py`; the six grouped-surface names bind on
+`GroupedData` as one-line aliases and the module still holds its row).
+The CAP-1 parity mirror row moves in the same commit.
+pins: grouped-surface-1/C-007
 FACADE-4 step-1 remediation round 4 (2026-09-14, L-007..L-009):
 `check_lib_py.py` `spark/types.py` 1772 → 1793 (increase — base's container
 `simpleString`/`_engine_type`/`jsonValue` dispatch bodies and the

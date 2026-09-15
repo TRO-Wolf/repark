@@ -1477,6 +1477,57 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `NOT_A_PARTITIONED_TABLE` is a Hive-directory concept — a table whose partitions live as
   directories a metastore must re-discover. An unpartitioned Iceberg table has no
   recoverable directory structure, so the no-op is the truthful answer.
+### GROUPED-ARROW-1 — `applyInArrow` raises the inner error class where Spark wraps it in `PythonException`
+- **repark** — `GroupedData.applyInArrow` validates a returned Arrow table/batch against the
+  declared schema in the facade (Spark's own `verify_arrow_*` order: `pa.Table` shape, then
+  name set, then per-name types) and raises the inner class directly —
+  `PySparkTypeError` `UDF_RETURN_TYPE`, `PySparkRuntimeError`
+  `RESULT_COLUMN_NAMES_MISMATCH` / `RESULT_COLUMN_TYPES_MISMATCH`. A non-callable `func`
+  raises `PySparkTypeError` `NOT_CALLABLE` `{"arg_name": "func", "arg_type": …}` at the call.
+- **Apache Spark** — the same checks run in the Python worker and surface as
+  `PythonException` with the inner error class in the embedded traceback; a non-callable
+  `func` crashes the driver with `UnboundLocalError` after a "Cannot infer the eval type"
+  `UserWarning`. *(oracle: recorded — cells `applyInArrow_bad_schema_result`,
+  `applyInArrow_missing_col`, `applyInArrow_extra_col`, `applyInArrow_returns_not_table`,
+  `applyInArrow_iter`, `applyInArrow_not_callable`.)*
+  `python/repark/tests/test_grouped_surface_1.py::test_apply_in_arrow_result_validation_errors`,
+  `…::test_apply_in_arrow_not_callable`.
+- **Rationale** — DECLARED 2026-09-14. repark has no worker/driver split to wrap across, so
+  the inner Spark error class is the honest answer — the card names it explicitly over the
+  recorded `PythonException` wrapper and the `UnboundLocalError` driver crash.
+### GROUPED-COGROUP-1 — `cogroup` refuses an ungrouped side where Spark accepts silently
+- **repark** — `GroupedData.cogroup(other)` requires `other` to be a `GroupedData` and
+  raises `PySparkTypeError` `NOT_EXPECTED_TYPE` `{"arg_name": "other",
+  "expected_type": "GroupedData", "arg_type": …}` at the call otherwise.
+- **Apache Spark** — accepts `cogroup(<a DataFrame>)` silently and returns
+  `PandasCogroupedOps`; the failure lands later inside the JVM apply call.
+  *(oracle: recorded — cell `cogroup_not_grouped`.)*
+  `python/repark/tests/test_grouped_surface_1.py::test_cogroup_type_and_ungrouped_side`.
+- **Rationale** — DECLARED 2026-09-14 (ruling R-1). Spark's silent acceptance is a
+  deferred-crash shape the facade does not reproduce; the eager refusal names the argument,
+  the expected type, and the actual type at the point of the mistake.
+### GROUPED-DECL-transformWithState — `GroupedData.transformWithState` is a declared `NOT_IMPLEMENTED` refusal
+- **repark** — raises `PySparkNotImplementedError` with errorClass `NOT_IMPLEMENTED` and
+  `{"feature": "transformWithState"}`, str `[NOT_IMPLEMENTED] transformWithState is not
+  implemented.`
+- **Apache Spark** — on a batch frame the call reaches the streaming state store and fails
+  with `CANNOT_LOAD_STATE_STORE.UNCATEGORIZED` (SQLSTATE 58030) from inside the JVM.
+  *(oracle: recorded — cell `transformWithState_batch`.)*
+  `python/repark/tests/test_grouped_surface_1.py::test_state_api_refusals`.
+- **Rationale** — DECLARED 2026-09-14 (ruling R-2), unreachable: the name needs Structured
+  Streaming state stores repark does not have; every repark frame is batch, so the refusal
+  is the parity answer.
+### GROUPED-DECL-transformWithStateInPandas — `GroupedData.transformWithStateInPandas` is a declared `NOT_IMPLEMENTED` refusal
+- **repark** — raises `PySparkNotImplementedError` with errorClass `NOT_IMPLEMENTED` and
+  `{"feature": "transformWithStateInPandas"}`, str
+  `[NOT_IMPLEMENTED] transformWithStateInPandas is not implemented.`
+- **Apache Spark** — on a batch frame the call reaches the streaming state store and fails
+  with `CANNOT_LOAD_STATE_STORE.UNCATEGORIZED` (SQLSTATE 58030) from inside the JVM.
+  *(oracle: recorded — cell `transformWithStateInPandas_batch`.)*
+  `python/repark/tests/test_grouped_surface_1.py::test_state_api_refusals`.
+- **Rationale** — DECLARED 2026-09-14 (ruling R-2), unreachable: the name needs Structured
+  Streaming state stores repark does not have; every repark frame is batch, so the refusal
+  is the parity answer.
 
 ### IO-BUCKET-1 — `bucketBy`/`sortBy` on an Iceberg table is a declared `NOT_IMPLEMENTED` refusal
 
@@ -1539,6 +1590,68 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-09-14, Ruling R-2: recording clustering columns would claim a
   layout the engine never applies, so the table-write refusal names the feature. The conflict
   errors and the path-write answer are Spark-equal.
+### DF-FOREACH-1 — `foreach` / `foreachPartition` run the callable on the driver
+- **repark** — `foreach(f)` calls `f(row)` once per `Row` through `toLocalIterator` and
+  returns `None`; `foreachPartition(f)` calls `f` once per Arrow record batch with an
+  iterator of `Row`s (an empty frame still calls `f` once with an empty iterator). A
+  non-callable `f` raises `PySparkTypeError` `NOT_CALLABLE` at the call; an exception
+  raised by `f` propagates as that exception class.
+- **Apache Spark** — runs `f` on executors and wraps both a non-callable `f` and a
+  user-raised exception in a Py4J job abort (`Py4JJavaError`). Partition count is the
+  RDD partition count, not the Arrow batch count. *(oracle: recorded — cells
+  `foreach_return`, `foreach_not_callable`, `foreach_raises`,
+  `foreachPartition_return`.)*
+- **Pin** — `python/repark/tests/test_df_surface_b_1.py::test_foreach_rejects_non_callable`,
+  `…::test_foreach_propagates_user_exception`,
+  `…::test_foreach_partition_empty_frame_calls_once`.
+- **Rationale** — DECLARED 2026-09-14. repark has no executor/RDD layer; the callable
+  runs on the driver over streamed `Row`s. Spark's own `NOT_CALLABLE` class is raised
+  at the call instead of a job abort, and the original exception class is preserved.
+### DF-OBSERVE-1 — observed metrics are a second aggregation; `get` before an action raises
+- **repark** — `observe` returns a child with the same rows and schema. The first action
+  on that child evaluates `agg(*exprs)` once and fills a bound `Observation`; later
+  actions do not overwrite it. `Observation.get` before any action — never attached, or
+  attached with no action yet — raises `PySparkAssertionError` `NO_OBSERVE_BEFORE_GET`.
+  The str-name form returns the frame with no Python-visible metrics.
+- **repark** — `observe` returns a child with the same rows and schema carrying a
+  shared `(observation, exprs, observed_frame)` attachment that every descendant
+  references. The first row-producing action on the observed frame or any descendant
+  (`take`/`head`/`first`/`isEmpty`/`show` peeks, `filter`/`union`/`limit`/`select`/
+  `drop` children, `collect`/`count`/`toPandas`/`toLocalIterator`/`foreach`/
+  `foreachPartition`/writes) evaluates `agg(*exprs)` over the **observed** frame once
+  and fills a bound `Observation`; later actions never overwrite. A metric must be a
+  literal (e.g. `lit(42)`) or contain aggregate function(s) over attributes with no
+  free attribute outside them; otherwise the first action raises
+  `INVALID_OBSERVED_METRICS.NON_AGGREGATE_FUNC_ARG_IS_ATTRIBUTE`, and a non-`Column`
+  expr raises `PySparkTypeError` `NOT_LIST_OF_COLUMN` at the `observe` call.
+  `Observation.get` before that action raises `PySparkAssertionError`
+  `NO_OBSERVE_BEFORE_GET`. The str-name form returns the frame with no Python-visible
+  metrics. *(ruling R-5, 2026-09-15)*
+- **Apache Spark** — `CollectMetrics` is a node in the same plan as the action, so
+  metrics fill as a side channel of that job; `get` after `observe` but before an
+  action blocks the caller forever. *(oracle: recorded — cells `observe_obs`,
+  `observe_obs_twice_get`, `observe_name`, `observe_unaliased`; `observe_get_before`
+  was not recorded because it blocks.)*
+- **Pin** — `python/repark/tests/test_df_surface_b_1.py::test_observe_obs_get_after_action`,
+  `…::test_observe_agg_runs_once_across_actions`,
+  `…::test_observe_get_before_action_raises`,
+  `…::test_observe_take_head_first_isempty_fill_full_metrics`,
+  `…::test_observe_show_fills_full_metrics_both_styles`,
+  `…::test_observe_filter_descendant_fills_observed_metrics`,
+  `…::test_observe_union_descendant_fills_observed_metrics`,
+  `…::test_observe_limit_descendant_fills_observed_metrics`,
+  `…::test_observe_select_descendant_fills_observed_metrics`,
+  `…::test_observe_drop_descendant_fills_observed_metrics`,
+  `…::test_observe_map_in_arrow_take_fills`,
+  `…::test_observe_concurrent_fills_are_independent`,
+  `…::test_observe_literal_metric_fills`,
+  `…::test_observe_non_column_exprs_raise_at_observe`,
+  `…::test_observe_free_attribute_outside_aggregate_refuses`,
+  `…::test_observe_agg_runs_once_across_action_sequences`.
+- **Rationale** — DECLARED 2026-09-14. The engine has no CollectMetrics node; the
+  metrics are a second aggregation pass over the same plan. Blocking `get` is not
+  an honest single-node answer, so repark raises Spark's own `NO_OBSERVE_BEFORE_GET`
+  in both the never-attached and attached-but-no-action cases.
 
 ---
 
@@ -7870,6 +7983,20 @@ field NAME.
   needs the input Arrow type at the adapter, which only the bridge schema knows
   (`dataframe/**`, owned by another orchestrator).
   pins: fnp-misc-1/L-007
+### GROUPED-EXPRKEY-1 — expression group keys refuse on the grouped map UDFs
+- **repark** — `groupBy(<expression>)` followed by `applyInPandas`, `applyInArrow`, or a
+  cogrouped apply raises `AnalysisException` naming the simple-column-name requirement;
+  the boundary scan needs concrete streamed key columns. `groupBy(<name>)` works.
+- **Apache Spark** — `groupBy(F.col("id") % 2).applyInArrow(...)` answers the grouped
+  result, and the keyed callback receives the expression's value.
+  *(oracle: recorded — cell `applyInArrow_expr_group` answers
+  `Row(k=0, n=1), Row(k=1, n=2)`.)*
+  `python/repark/tests/test_grouped_surface_1.py::test_apply_in_arrow_expression_group_key_refusal`.
+- **Rationale** — BACKLOG, filed 2026-09-14 (GROUPED-SURFACE-1). The refusal predates this
+  unit on `applyInPandas` and the new doors keep it; fixing it means projecting expression
+  keys into the streamed frame first (the workaround the message names — project, then
+  group by the resulting name).
+  pins: grouped-surface-1/C-003
 
 ## 8. Drop-in disclosure rationale
 

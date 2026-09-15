@@ -28,7 +28,7 @@ from repark.errors import (
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
-from repark.spark.dataframe import cache_handle, streaming_batch, surface_a
+from repark.spark.dataframe import cache_handle, streaming_batch, surface_a, surface_b
 from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
 from repark.spark.dataframe.udf_bridge import (
@@ -290,6 +290,7 @@ class DataFrame:
         "_mia_cleanup_registered",
         "_mia_plan_ready",
         "_mia_temp_views",
+        "_observations",
         "_origin_map",
         "_origin_not_emitted",
         "_persist_requested",
@@ -319,6 +320,7 @@ class DataFrame:
         self._cache_view: str | None = None
         self._cache_view_owned_handle: Any | None = None
         self._handles: tuple[Any, ...] = ()
+        self._observations: tuple[Any, ...] = ()
         self._eager_shape: tuple[int, int] | None = None
         self._lineage_inner: Any | None = None
         self._storage_level: Any | None = None
@@ -360,6 +362,9 @@ class DataFrame:
             other._tighten_derived for other in others
         )
         child._handles = self._handles
+        child._observations = self._observations + tuple(
+            attachment for other in others for attachment in other._observations
+        )
         for other in others:
             if other._handles:
                 child._handles = cache_handle.union_handles(child._handles, other._handles)
@@ -447,6 +452,7 @@ class DataFrame:
     def _action_inner(self) -> Any:
         """Return the native frame for an action, re-running uncached bridges."""
         self._ensure_alive()
+        surface_b.fill_on_action(self)
         if self._map_bridge is not None:
             if self._cache_view is not None:
                 return self._inner
@@ -602,6 +608,7 @@ class DataFrame:
         bridge = self._map_bridge
         if bridge is None:
             raise RuntimeError("mapInArrow bridge missing")
+        surface_b.fill_on_action(self)
         expected_arrow: pa.Schema = bridge["arrow_schema"]
         batches = list(self._iter_map_in_arrow_output(max_output_rows=max_output_rows))
         if not batches:
@@ -894,6 +901,9 @@ class DataFrame:
     withWatermark = with_watermark = streaming_batch.with_watermark  # noqa: N815
     dropDuplicatesWithinWatermark = streaming_batch.drop_duplicates_within_watermark  # noqa: N815
     drop_duplicates_within_watermark = dropDuplicatesWithinWatermark
+    foreach = surface_b.foreach
+    foreachPartition = surface_b.foreachPartition  # noqa: N815
+    observe = surface_b.observe
 
     def sameSemantics(self, other: DataFrame) -> bool:  # noqa: N802 — PySpark camelCase
         """Whether ``other`` has the same logical semantics (PySpark ``DataFrame.sameSemantics``).
@@ -941,9 +951,7 @@ class DataFrame:
 
     def create_or_replace_temp_view(self, name: str) -> None:
         """Register this DataFrame as a replaceable temporary view."""
-        from repark.spark.catalog_surface import _register_temp_view
-
-        _register_temp_view(self, name)
+        surface_b.register_view_without_fill(self, name)
 
     createOrReplaceTempView = create_or_replace_temp_view  # noqa: N815 — PySpark camelCase alias
 
@@ -1696,14 +1704,6 @@ class DataFrame:
         except AttributeError:
             raise AttributeError(name) from None
         self._ensure_alive()
-        _oos = {
-            "foreach": "foreach is out of scope until the UDF campaign (use collect + Python)",
-            "foreachPartition": (
-                "foreachPartition is out of scope until the UDF campaign (use to_arrow / to_polars)"
-            ),
-        }
-        if name in _oos:
-            raise UnsupportedOperationException(f"DataFrame.{name} is not supported: {_oos[name]}")
         if name not in self.columns:
             raise PySparkAttributeError(
                 f"[ATTRIBUTE_NOT_SUPPORTED] Attribute `{name}` is not supported."
@@ -2986,10 +2986,10 @@ class DataFrame:
         sql, keys = _EXPLAIN_SECTION_PLAN[selected]
         self._ensure_alive()
         view = scratch_view_name(self._session, "__repark_explain_")
-        self.create_or_replace_temp_view(view)
+        surface_b.register_view_without_fill(self, view)
         try:
             plan = self._spawn(self._session.sql(f"{sql} SELECT * FROM {view}"))
-            rows = [(row["plan_type"], row["plan"]) for row in plan.toLocalIterator()]
+            rows = [(row["plan_type"], row["plan"]) for row in surface_b.rows_without_fill(plan)]
         finally:
             self._session.drop_temp_view(view)
         return _render_explain_sections(selected, keys, rows)
@@ -3681,10 +3681,9 @@ class DataFrame:
         Negative values raise ``AnalysisException`` with Spark's invalid-limit error class.
         Pending cache or persist requests materialize before the limited action.
         """
-        if self._map_bridge is not None and not (
-            self._persist_requested or self._checkpoint_lazy or self._cache_view is not None
-        ):
+        if display._use_bridge_peek(self):
             limit_count = self._require_non_negative_limit(num)
+            surface_b.fill_on_action(self)
             if limit_count == 0:
                 return []
             table = self._consume_map_in_arrow_batches(max_output_rows=limit_count)
@@ -3739,7 +3738,7 @@ class DataFrame:
             raise PySparkTypeError(f"Argument `num` should be a int, got {type(num).__name__}.")
         self._ensure_alive()
         if num <= 0:
-            return []
+            return surface_b.empty_rows_after_fill(self)
         rows = self.collect()
         if num >= len(rows):
             return rows
@@ -3750,9 +3749,7 @@ class DataFrame:
 
         The check limits the plan to one row and materializes pending cache requests.
         """
-        if self._map_bridge is not None and not (
-            self._persist_requested or self._checkpoint_lazy or self._cache_view is not None
-        ):
+        if display._use_bridge_peek(self):
             return self._consume_map_in_arrow_batches(max_output_rows=1).num_rows == 0
         self._materialize_cache_if_needed()
         return self.limit(1).count() == 0

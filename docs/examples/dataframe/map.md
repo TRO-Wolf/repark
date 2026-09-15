@@ -112,6 +112,12 @@ one-liner.
   always-False locality answer, the `CLASSIC_OPERATION_NOT_SUPPORTED_ON_DF`
   refusal, and both checkpoint arms returning a new frame with the same rows
   (DF-SURFACE-A-1).
+- [foreach_observe.py](foreach_observe.py) — `foreach`, `foreachPartition`,
+  `observe`, and `Observation.get` (DF-SURFACE-B-1). pins: df-surface-b-1/C-005
+- [grouped_udfs.py](grouped_udfs.py) — `GroupedData.apply` (GROUPED_MAP marker +
+  deprecation warning), `applyInArrow`, `cogroup` into `PandasCogroupedOps.applyInPandas`,
+  and the three state-API refusals (`applyInPandasWithState` `_LEGACY_ERROR_TEMP_3176`,
+  `transformWithState` / `transformWithStateInPandas` `NOT_IMPLEMENTED`).
 - [row_tuple.py](row_tuple.py) — `Row.count` / `Row.index`: the tuple protocol on a collected
   Row, including `index`'s start argument and its `ValueError` text (ROW-TUPLE-1).
 - [row_dicts.py](row_dicts.py) — `Row.asDict` / `Row.as_dict` (flat, and recursive over a

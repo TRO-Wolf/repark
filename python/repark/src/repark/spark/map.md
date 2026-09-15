@@ -8,7 +8,7 @@ session-local state. Engine computation stays in Rust; user UDF callbacks execut
 in Python over Arrow batches.
 
 The package exposes `ReparkSession`, the `SparkSession` and `ReParkSession`
-aliases, `DataFrame`, `Column`, `Catalog`, `Window`, `Row`, Spark data
+aliases, `DataFrame`, `Column`, `Catalog`, `Window`, `Row`, `Observation`, Spark data
 types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 `sql` and `types` aliases preserve common PySpark import paths.
 
@@ -318,6 +318,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `row_number` to BIGINT (pins: types-1/C-005). DF-EAGER-1 step 2 (2026-09-09):
   `PolarsFrame.eager()` wraps the Spark `eager()`; `collect()` is untouched
   (pins: df-eager-1/C-006).
+- `observation.py` — **DF-SURFACE-B-1 (2026-09-14):** PySpark `Observation`. A
+  named (or generated-name) handle filled by the first action on a
+  `DataFrame.observe` child; `get` before that action raises
+  `NO_OBSERVE_BEFORE_GET` instead of blocking. Exported from `repark.spark` and
+  `repark.spark.sql`. pins: df-surface-b-1/C-003, C-004, C-005
 - `row.py` — Spark-compatible Row construction, indexing, equality, nested conversion,
   display, and pickling. ROW-TUPLE-1 step 1 (2026-09-14): `count` / `index` delegate to
   the stored values tuple (factory rows: the field-name tuple), answering the recorded
