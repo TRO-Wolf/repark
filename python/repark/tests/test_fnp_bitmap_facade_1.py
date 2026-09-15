@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import datetime
 import inspect
 import json
 from collections.abc import Iterator
@@ -33,9 +34,11 @@ OR_AND_REFUSALS: tuple[tuple[str, str, list, str, str], ...] = (
     ("bitmap_or_agg", "x boolean", [(True,), (False,)], "BOOLEAN", "FU-or-bool"),
     ("bitmap_or_agg", "x string", [("1",), ("2",)], "STRING", "FU-or-string"),
     ("bitmap_and_agg", "x int", [(1,), (2,)], "INT", "FU-and-int"),
-    ("bitmap_and_agg", "x float", [(1.0,), (2.0,)], "FLOAT", "FU-or-float"),
+    ("bitmap_and_agg", "x float", [(1.0,), (2.0,)], "FLOAT", "FU-and-float"),
     ("bitmap_and_agg", "x boolean", [(True,), (False,)], "BOOLEAN", "FU-and-bool"),
     ("bitmap_and_agg", "x string", [("1",), ("2",)], "STRING", "FU-and-string"),
+    ("bitmap_or_agg", "x date", [(datetime.date(2020, 1, 1),)], "DATE", "FU-or-date"),
+    ("bitmap_and_agg", "x date", [(datetime.date(2020, 1, 1),)], "DATE", "FU-or-date"),
 )
 FOLD_LENGTH_CASES: tuple[tuple[str, bytes, str], ...] = (
     ("B8-or-short", b"\x01", "bitmap_or_agg"),
@@ -55,6 +58,13 @@ def spark() -> Iterator[ReparkSession]:
 def _fixture_cell(cell_id: str) -> dict:
     cells = json.loads(FIXTURE_PATH.read_text())["cells"]
     return next(cell for cell in cells if cell["id"] == cell_id)
+
+
+def _refusal_cell(cell_id: str) -> dict:
+    for cell in json.loads(FIXTURE_PATH.read_text())["cells"]:
+        if cell["id"] == cell_id:
+            return cell
+    return _FOLLOWUP_CELLS[cell_id]
 
 
 def _fixture_value(raw: str) -> object:
@@ -287,8 +297,8 @@ def test_sliding_window_rows_between_answers(spark: ReparkSession) -> None:
 def test_or_and_agg_refuse_non_binary_columns(
     spark: ReparkSession, name: str, schema: str, rows: list, spark_type: str, cell_id: str
 ) -> None:
-    """pins: fnp-bitmap-facade-1/R-1"""
-    assert _FOLLOWUP_CELLS[cell_id]["condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
+    """pins: fnp-bitmap-facade-1/R-1, C-015"""
+    assert _refusal_cell(cell_id)["condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
     frame = spark.createDataFrame(rows, schema)
     with pytest.raises(Exception) as caught:
         frame.select(getattr(F, name)("x")).collect()
@@ -300,19 +310,52 @@ def test_or_and_agg_refuse_non_binary_columns(
     assert "SQLSTATE: 42K09" in message
 
 
-def test_construct_agg_refuses_boolean_column(spark: ReparkSession) -> None:
-    """pins: fnp-bitmap-facade-1/R-1"""
-    cell = _FOLLOWUP_CELLS["FU-construct-bool"]
+@pytest.mark.parametrize(
+    ("rows", "schema", "spark_type", "cell_id"),
+    [
+        ([(True,)], "x boolean", "BOOLEAN", "FU-construct-bool"),
+        ([(datetime.date(2020, 1, 1),)], "x date", "DATE", "FU-construct-date"),
+    ],
+    ids=["boolean", "date"],
+)
+def test_construct_agg_refuses_non_bigint_columns(
+    spark: ReparkSession, rows: list, schema: str, spark_type: str, cell_id: str
+) -> None:
+    """pins: fnp-bitmap-facade-1/R-1, C-015"""
+    cell = _FOLLOWUP_CELLS[cell_id]
     assert cell["condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
-    frame = spark.createDataFrame([(True,)], "x boolean")
+    frame = spark.createDataFrame(rows, schema)
     with pytest.raises(Exception) as caught:
         frame.select(F.bitmap_construct_agg("x")).collect()
     message = str(caught.value)
     assert "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]" in message
     assert "bitmap_construct_agg" in message
     assert 'The first parameter requires the "BIGINT" type, however' in message
-    assert 'has the type "BOOLEAN"' in message
+    assert f'has the type "{spark_type}"' in message
     assert "SQLSTATE: 42K09" in message
+
+
+@pytest.mark.parametrize(
+    ("cell_id", "cast"),
+    [
+        ("FU2-construct-nan-double", "CAST('NaN' AS DOUBLE)"),
+        ("FU2-construct-inf-double", "CAST('Infinity' AS DOUBLE)"),
+    ],
+    ids=["nan", "inf"],
+)
+def test_construct_agg_nan_and_inf_raise_cast_overflow(
+    spark: ReparkSession, cell_id: str, cast: str
+) -> None:
+    """pins: fnp-bitmap-facade-1/C-015"""
+    cell = _FOLLOWUP_CELLS[cell_id]
+    assert cell["condition"] == "CAST_OVERFLOW"
+    frame = spark.sql(f"SELECT {cast} AS x")
+    with pytest.raises(Exception) as caught:
+        frame.select(F.bitmap_construct_agg("x")).collect()
+    message = str(caught.value)
+    assert "[CAST_OVERFLOW]" in message
+    assert cell["message"].split(" Use `try_cast`")[0] in message
+    assert "SQLSTATE: 22003" in message
 
 
 def test_construct_agg_malformed_string_raises_cast_invalid_input(

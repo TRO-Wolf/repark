@@ -4577,7 +4577,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`B8-construct-string`, `B8-group-schema`) carry the full 4096-byte hex in the
   `F6D-construct` convention — byte 0 `0x02` from the recorded 80-char prefix, the
   zero tail from the bitmap format with only bit 1 set, corroborated byte-for-byte
-  against the kernel answer.
+  against the kernel answer. **Run 16a round 3 (L-009):** the recorded `FU-and-float`
+  cell joins the fixture so the AND-FLOAT pin cites an AND cell.
+- [test_fnp_degrees_rust_1.py](test_fnp_degrees_rust_1.py) +
+  [fnp_degrees_rust_1_spark_oracle.json](fnp_degrees_rust_1_spark_oracle.json) —
+  **FNP-BITMAP-FACADE-1 run 16a round 3 (DEGREES-RUST-1):** facade and SQL-door
+  `degrees` / `radians` / `toDegrees` / `toRadians` against the orchestrator's live
+  PySpark 4.1.2 recording (`/tmp/oc-worker/qa-613-crit/oracle/oracle_deg.py`,
+  146 `DEG-*` cells both doors both ANSI plus `FU-and-float`, copied verbatim).
+  Answers compare values, Arrow types and default names; refusals compare the class,
+  required DOUBLE, type name and SQLSTATE; malformed STRING compares
+  `CAST_INVALID_INPUT` under ANSI and NULL with ANSI off.
+  pins: fnp-bitmap-facade-1/C-012, C-013, C-014
 - [test_fnp_6d_bitmap_aggregates.py](test_fnp_6d_bitmap_aggregates.py) — **FNP-6D
   (2026-09-15):** Spark SQL-door pins for `bitmap_construct_agg` / `bitmap_or_agg` /
   `bitmap_and_agg` against recorded oracle cells `F6D-*` and `B8-*` (values AND
