@@ -949,6 +949,13 @@ them, and the document is ordered by surface, never by date.
   `conf.set(key, "Mars/Olympus_Mons")` is swallowed. The disclosure is once per **process**, not
   per session, so a second session in the same interpreter gets a fully silent no-op. The zone is
   resolved and validated exactly once, at session build.
+  **Extended 2026-09-15 (SQL-SET-DOOR-1):** the SQL door inherits the identical contract —
+  `SET spark.sql.session.timeZone = 'America/New_York'` and `SET TIME ZONE 'America/New_York'`
+  through `spark.sql()` are accepted, apply nothing, and store nothing; their result row echoes
+  the zone the live session actually has, never a value `conf.get` would contradict. One
+  deliberate difference from the raw `conf.set` laxness: the SQL door validates the zone (Spark
+  refuses an unresolvable one with `INVALID_CONF_VALUE.TIME_ZONE`), so the unvalidated half of
+  this row now lives only on `conf.set`/`conf.unset`.
 - **Apache Spark** — applies the new zone to the live session immediately, and validates it:
   the same call raises `[INVALID_CONF_VALUE.TIME_ZONE] … SQLSTATE: 22022`. *(oracle: recorded —
   observed against live PySpark 4.1.2 while authoring the unit.)*
@@ -956,7 +963,9 @@ them, and the document is ordered by surface, never by date.
   (valid leg, warning text, and the invalid leg under `simplefilter("error")`);
   `…::test_apache_sql_conf_context_manager_round_trips_the_session_zone`;
   `…::test_getorcreate_reuse_with_an_invalid_zone_warns_and_does_not_raise` (the same laxness on
-  the reuse path)
+  the reuse path); the SQL-door half is pinned by
+  `python/repark/tests/test_sql_set_door_1.py::test_set_session_time_zone_is_accepted_but_not_applied`
+  and `…::test_set_time_zone_literal_returns_the_pair`
 - **Rationale** — DECLARED, and evidence-driven: refusing the call reds the pinned Apache drop-in
   test `test_create_dataframe_from_pandas_with_dst`, which sets this key through PySpark's own
   `sql_conf` helper. Accepting keeps drop-in source compatibility; not storing keeps `conf.get`
@@ -976,6 +985,23 @@ them, and the document is ordered by surface, never by date.
   `timestamp[ns, tz=<session zone>]`, moving it *away* from Spark's `timestamp[us, tz=UTC]`
   (TZ-4). This row therefore stands, and the working shown is in
   [history/hardening-h1/h1a-ledger.md](history/hardening-h1/h1a-ledger.md) decision D-B2 rather than restated here.
+
+### SET-TZ-LOCAL-1 — `SET TIME ZONE LOCAL` is refused; repark never reads the host zone
+
+- **repark** — `SET TIME ZONE LOCAL` through `spark.sql()` refuses with
+  `UnsupportedOperationException` naming this row and pointing at the two spellings that do
+  set the zone (`SET TIME ZONE '<iana-id>'`, `ReparkSession.builder.config`). The refusal is
+  dated 2026-09-15 (SQL-SET-DOOR-1). Every other `SET TIME ZONE '<zone>'` spelling is served —
+  IANA ids and `±HH[:MM]` fixed offsets, the grammar the engine's `Tz::from_str` accepts.
+- **Apache Spark** — resolves `LOCAL` to the host machine's local timezone and applies it.
+  *(oracle: documented — the claim here is the refusal, not a value.)*
+- **Pin** —
+  `python/repark/tests/test_sql_set_door_1.py::test_set_time_zone_local_is_a_declared_refusal`
+- **Rationale** — DECLARED. Serving `LOCAL` would require reading the host machine's zone, a
+  global input the server-prep disciplines (ADR-0004: no env reads at query time) keep off the
+  query path — and on the runtime-set residue the row would sit on (TZ-3), the value would be
+  swallowed unapplied anyway. A loud refusal naming the explicit spellings beats both halves
+  of that silent stub. Revisit if a facade-level "name the local zone" facility ever exists.
 
 ### F-V4-2 — timestamptz Arrow annotation after Iceberg read
 
@@ -1407,23 +1433,52 @@ the pin rather than obeying it.
   SQL surface retains a measured, named diagnostic difference.
   pins: fnp-8/C-005
 
-### B-TZ-5 — the SQL `SET` door does not reach the `spark.*` conf namespace
+### B-TZ-5 — the SQL `SET` door did not reach the `spark.*` conf namespace — FIXED 2026-09-15, SQL-SET-DOOR-1
 
-- **repark** — `SET spark.sql.shuffle.partitions = 2` refuses with `PySparkException: datafusion
-  engine error: Invalid or Unsupported Configuration: Could not find config namespace "spark"`.
-  This holds for **every** `spark.*` key, not only the session zone, so there is no SQL path to
-  session configuration at all. Configuration is a builder concern: `ReparkSession.builder
-  .config(...)` before `getOrCreate`. `dbt-repark` therefore has no equivalent of dbt-spark's
-  `server_side_parameters`; its profile carries `session_properties`, applied on the builder.
-- **Apache Spark** — `SET spark.sql.<key> = <value>` sets the runtime conf and returns the pair.
-  *(oracle: documented — the claim here is the refusal form, not a value.)*
+> **FIXED (2026-09-15, SQL-SET-DOOR-1).** `spark.sql()` now recognises the `SET`/`RESET`/
+> `SET TIME ZONE` statement family ahead of the engine and runs it through the session's
+> `RuntimeConfig` — a SQL `SET` has exactly the effect `spark.conf.set` of the same key has.
+> `SET k = v` and `SET k` answer the `(key, value)` pair with Spark's non-nullable string
+> fields; `RESET` / `RESET k` answer the zero-column frame; bare `SET` lists the runtime-set
+> keys sorted with secret-shaped values masked, and `SET -v` adds the empty `meaning` /
+> `Since version` columns. `SELECT current_timezone()` resolves and answers the session
+> zone as a non-null string. Spark-class errors the conf layer cannot raise are produced
+> on the door: `CANNOT_MODIFY_STATIC_CONFIG` (`AnalysisException`),
+> `INVALID_CONF_VALUE.TIME_ZONE` and `INVALID_CONF_VALUE.TYPE_MISMATCH`
+> (`IllegalArgumentException`). `datafusion.*` keys still reach the engine, and
+> `spark.wap.*` keeps REF-3's fail-closed refusal. Measured against `fixtures-batch1.json`
+> cells `BTZ5-0`…`BTZ5-19` (PySpark 4.1.2). What the door does **not** change rides the
+> recorded residue rows: the runtime session-zone set is accepted but neither validated,
+> stored nor applied ([TZ-3](#tz-3--a-runtime-confset-of-the-session-zone-is-accepted-neither-validated-nor-applied)
+> — extended to the SQL door), `spark.sql.ansi.enabled` stores but does not apply
+> ([SET-ANSI-RUNTIME-1](#set-ansi-runtime-1--a-runtime-set-of-sparksqlansienabled-stores-but-does-not-apply)),
+> and `SET TIME ZONE LOCAL` is a dated DECLARED refusal
+> ([SET-TZ-LOCAL-1](#set-tz-local-1--set-time-zone-local-is-refused-repark-never-reads-the-host-zone)).
+> Pins: `python/repark/tests/test_sql_set_door_1.py`,
+> `python/dbt-repark/tests/test_statement_surface.py::test_served_shapes_run[S-SET-CONF]`,
+> `crates/repark-functions/src/session_time_zone/tests.rs::current_timezone_*`.
+> Module: `python/repark/src/repark/spark/session/sql_set_statements.py`.
+
+### SET-ANSI-RUNTIME-1 — a runtime `SET` of `spark.sql.ansi.enabled` stores but does not apply
+
+- **repark** — `SET spark.sql.ansi.enabled = false` (and the `conf.set` spelling) stores the
+  value — `conf.get` and `SET spark.sql.ansi.enabled` read it back, `SET`/`SET -v` list it —
+  but the running session's ANSI behaviour does not change: `SELECT 1/0` still answers what the
+  build-time flag dictates (`[DIVIDE_BY_ZERO]` under ANSI-on). The flag is a build-time carrier
+  (`repark_functions::ansi::SparkAnsiConfig`) `SparkExtension::configure` installs once from the
+  builder map; its `set` refuses, so no runtime spelling can reach it. Measured on the unit
+  clone 2026-09-14: `conf.set("spark.sql.ansi.enabled", "false")` stored `'false'` and `1/0`
+  still raised. *(same contract TZ-3 records for the session zone: accepted, not applied.)*
+- **Apache Spark** — `SET spark.sql.ansi.enabled = false` flips the live session's ANSI mode;
+  the same `1/0` then answers NULL. *(oracle: measured — `fixtures-batch1.json` cell `BTZ5-8`,
+  PySpark 4.1.2.)*
 - **Pin** —
-  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-SET-CONF]`
-- **Rationale** — BACKLOG, surfaced by H-1a as queue candidate `B-TZ-5` and admitted as a row on
-  2026-09-04 when DBT-1 landed its pin (§6: a queued candidate becomes a row in the change that
-  pins it). It wants its own decision — which `spark.*` keys a live `SET` should reach, and what
-  a `SET` of a build-time knob means on a session that is already built — rather than a fold into
-  any one unit. The pin codifies today's refusal so that decision reds it on purpose.
+  `python/repark/tests/test_sql_set_door_1.py::test_set_ansi_enabled_stores_but_does_not_apply`
+- **Rationale** — BACKLOG. The SQL door binds itself to `conf.set`'s effect by contract
+  (SQL-SET-DOOR-1 D-4), and `conf.set` already had this store-not-apply residue — the door
+  inherits it honestly rather than pretending the flag moved. Applying it needs a live path to
+  the built engine's `SparkAnsiConfig`, the same shape of change a runtime-applied session zone
+  (TZ-3) needs; the two are the natural pair for whichever unit builds that path.
 
 ### DBT-CTASCLAUSE-1 — `LOCATION`, `OPTIONS` and `CLUSTERED BY` are refused on an Iceberg CTAS
 
@@ -5019,7 +5074,7 @@ Shared roster pin for every heading:
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued
 here so the surfacing is on the record, and each becomes a
 row in the change that lands its pin (the unit ledger `docs/history/hardening-h1/h1a-ledger.md` §6 carries the full
-observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3 / #90); B-TZ-5 left it on 2026-09-04 (DBT-1) when its pin landed; its description moved to the §7 row of the same name.**
+observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3 / #90); B-TZ-5 left it on 2026-09-04 (DBT-1) when its pin landed; its description moved to the §7 row of the same name, now FIXED 2026-09-15 (SQL-SET-DOOR-1).**
 
 - **B-TZ-1** — `unix_timestamp` is not a Spark-door SQL function (the facade `F.unix_timestamp`
   exists; the SQL spelling does not plan).

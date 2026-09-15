@@ -85,11 +85,12 @@ Every relation renders three parts, `catalog.namespace.table`, because RePark's 
 not visible, whatever the `warehouse` path says. Use `warehouse` only when the same process both
 creates and reads the tables; use `catalog_properties` for anything durable.
 
-## Session configuration, not `SET`
+## Session configuration
 
-`SET spark.sql.…` is not a statement RePark accepts, so dbt's `server_side_parameters` has no
-equivalent. Configuration goes on the builder through `session_properties`, before the session
-exists. There is nothing to set afterwards.
+`SET spark.sql.…` is a statement RePark accepts since SQL-SET-DOOR-1 (2026-09-15, registry
+B-TZ-5) — it has the same effect `spark.conf.set` of the same key has. The adapter profile
+still carries no `server_side_parameters` equivalent: configuration goes on the builder
+through `session_properties`, before the session exists.
 
 ## Threads
 
