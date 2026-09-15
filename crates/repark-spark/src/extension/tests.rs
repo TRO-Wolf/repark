@@ -43,6 +43,7 @@ fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_
             name != "higher_order_preparation"
                 && name != "spark_float_stringify"
                 && name != "spark_decimal_precision"
+                && name != "spark_negate_null_decimal"
         })
         .collect();
     assert_eq!(without_insertions, original_names);

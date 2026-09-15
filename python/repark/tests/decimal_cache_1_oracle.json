@@ -320,5 +320,49 @@
   "sql_value": "-176.56",
   "cache_value": "-176.56",
   "basis": "Spark UnaryMinus keeps the child type"
+ },
+ {
+  "input": "decimal(10,2)",
+  "op": "-null-dec",
+  "facade_type": "decimal(10,2)",
+  "facade_value": "None",
+  "sql": "-CAST(NULL AS DECIMAL(10,2))",
+  "sql_type": "decimal(10,2)",
+  "sql_value": "None",
+  "cache_value": "None",
+  "basis": "Spark UnaryMinus null-propagation"
+ },
+ {
+  "input": "int",
+  "op": "-null-int",
+  "facade_type": "int",
+  "facade_value": "None",
+  "sql": "-CAST(NULL AS INT)",
+  "sql_type": "int",
+  "sql_value": "None",
+  "cache_value": "None",
+  "basis": "Spark UnaryMinus null-propagation"
+ },
+ {
+  "input": "bigint",
+  "op": "-null-bigint",
+  "facade_type": "bigint",
+  "facade_value": "None",
+  "sql": "-CAST(NULL AS BIGINT)",
+  "sql_type": "bigint",
+  "sql_value": "None",
+  "cache_value": "None",
+  "basis": "Spark UnaryMinus null-propagation"
+ },
+ {
+  "input": "double",
+  "op": "-null-double",
+  "facade_type": "double",
+  "facade_value": "None",
+  "sql": "-CAST(NULL AS DOUBLE)",
+  "sql_type": "double",
+  "sql_value": "None",
+  "cache_value": "None",
+  "basis": "Spark UnaryMinus null-propagation"
  }
 ]

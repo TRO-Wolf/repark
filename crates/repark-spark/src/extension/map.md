@@ -34,6 +34,10 @@ function-registry + analyzer-rule installation + the composed
   seat, `spark_decimal_precision` immediately before `type_coercion` (name kept so the
   FNP-8 citation still resolves); the facade `* Int32` min-precision pins prove the seat.
   pins: decimal-cache-1/C-002
+  **DECIMAL-CACHE-1 round 2 (2026-09-15):** the filter additionally passes
+  `spark_negate_null_decimal` through (first in `analyzer_rules()`, not a pre-coercion
+  insert, so the seating contract is unchanged).
+  pins: decimal-cache-1/C-012
 
 ## Pointers
 

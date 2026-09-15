@@ -1,6 +1,6 @@
 """DECIMAL-CACHE-1 pins: every oracle decimal cell on both doors and every action.
 
-pins: decimal-cache-1/C-005, C-007
+pins: decimal-cache-1/C-005, C-007, C-012
 """
 
 from __future__ import annotations
@@ -40,11 +40,18 @@ def spark() -> Iterator[ReparkSession]:
     session.stop()
 
 
-def _base_frame(spark: ReparkSession, decimal_input: str) -> DataFrame:
-    """Two-column frame with one 176.56 price row at the oracle input type."""
-    return spark.createDataFrame(
-        [(1, Decimal("176.56"))], f"id LONG, price {decimal_input.upper()}"
-    )
+def _base_frame(
+    spark: ReparkSession, decimal_input: str, price: Any = Decimal("176.56")
+) -> DataFrame:
+    """Two-column frame with one price row at the oracle input type."""
+    return spark.createDataFrame([(1, price)], f"id LONG, price {decimal_input.upper()}")
+
+
+def _cell_base_frame(spark: ReparkSession, cell: dict[str, str]) -> DataFrame:
+    """Base frame for one cell: null-scalar cells carry a null price row."""
+    if "-null" in cell["op"]:
+        return _base_frame(spark, cell["input"], None)
+    return _base_frame(spark, cell["input"])
 
 
 def _facade_expression(operation: str) -> Any:
@@ -59,6 +66,14 @@ def _facade_expression(operation: str) -> Any:
         return F.col("price") * F.col("price")
     if operation == "-p":
         return -F.col("price")
+    if operation == "-null-dec":
+        return -(F.lit(None).cast("decimal(10,2)"))
+    if operation == "-null-int":
+        return -(F.lit(None).cast("int"))
+    if operation == "-null-bigint":
+        return -(F.lit(None).cast("bigint"))
+    if operation == "-null-double":
+        return -(F.lit(None).cast("double"))
     return F.col("price") * F.lit(5).cast("decimal(1,0)")
 
 
@@ -95,7 +110,7 @@ def test_oracle_cell_on_facade_through_every_action(
     spark: ReparkSession, cell: dict[str, str]
 ) -> None:
     """C-005: one oracle cell via withColumns through every materializing action."""
-    base = _base_frame(spark, cell["input"])
+    base = _cell_base_frame(spark, cell)
     frame = base.withColumns({"n": _facade_expression(cell["op"])})
     _assert_every_action(frame, cell["facade_type"], cell["facade_value"], cell["cache_value"])
 
@@ -105,7 +120,7 @@ def test_oracle_cell_on_sql_door_through_every_action(
     spark: ReparkSession, cell: dict[str, str]
 ) -> None:
     """C-005: one oracle cell via spark.sql through every materializing action."""
-    base = _base_frame(spark, cell["input"])
+    base = _cell_base_frame(spark, cell)
     base.createOrReplaceTempView("v")
     frame = spark.sql(f"SELECT {cell['sql']} AS n FROM v")
     _assert_every_action(frame, cell["sql_type"], cell["sql_value"], cell["cache_value"])
@@ -118,3 +133,29 @@ def test_original_report_shape_eager(spark: ReparkSession) -> None:
     rows = frame.eager().collect()
     assert len(rows) == 1
     assert str(rows[0]["new_price"]) == "882.80000000"
+
+
+_NULL_COLUMN_TYPES: list[tuple[str, str]] = [
+    ("decimal(10,2)", "DECIMAL(10,2)"),
+    ("int", "INT"),
+    ("bigint", "BIGINT"),
+    ("double", "DOUBLE"),
+]
+
+
+@pytest.mark.parametrize(("simple_type", "ddl_type"), _NULL_COLUMN_TYPES)
+def test_neg_null_column_rows_stay_null(
+    spark: ReparkSession, simple_type: str, ddl_type: str
+) -> None:
+    """C-012: negating an all-null column keeps every row null with the child type."""
+    inferred = spark.createDataFrame([(1, None), (2, None)], "id LONG, price DOUBLE")
+    base = inferred.withColumns({"price": F.col("price").cast(ddl_type)})
+    frame = base.withColumns({"n": -F.col("price")})
+    assert frame.schema["n"].dataType.simpleString() == simple_type
+    for rows in (frame.collect(), frame.eager().collect()):
+        assert [row["n"] for row in rows] == [None, None]
+    base.createOrReplaceTempView("v_null")
+    sql_frame = spark.sql("SELECT -price AS n FROM v_null")
+    assert sql_frame.schema["n"].dataType.simpleString() == simple_type
+    for rows in (sql_frame.collect(), sql_frame.eager().collect()):
+        assert [row["n"] for row in rows] == [None, None]

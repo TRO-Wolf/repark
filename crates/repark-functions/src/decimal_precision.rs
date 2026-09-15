@@ -2,6 +2,7 @@
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
+use datafusion::common::metadata::FieldMetadata;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, Result, ScalarValue};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
@@ -326,6 +327,100 @@ fn bounded_scale(value: i32, precision: i32) -> i8 {
     let clamped = value.clamp(0, precision.clamp(0, MAX_PRECISION));
     i8::try_from(clamped).unwrap_or(0)
 }
+
+#[derive(Debug, Default)]
+pub struct SparkNegateNullDecimal;
+
+impl AnalyzerRule for SparkNegateNullDecimal {
+    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+        plan.transform_up_with_subqueries(rewrite_negate_null_plan)
+            .data()
+    }
+
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn name(&self) -> &str {
+        "spark_negate_null_decimal"
+    }
+}
+
+fn rewrite_negate_null_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    let name_preserver = NamePreserver::new(&plan);
+    let transformed = plan.map_expressions(|expr| {
+        let saved_name = name_preserver.save(&expr);
+        let rewritten = expr.transform_down(|node| Ok(rewrite_negative_null(node)))?;
+        Ok(rewritten.update_data(|node| saved_name.restore(node)))
+    })?;
+    if transformed.transformed {
+        transformed.map_data(LogicalPlan::recompute_schema)
+    } else {
+        Ok(transformed)
+    }
+}
+
+fn rewrite_negative_null(expr: Expr) -> Transformed<Expr> {
+    let Expr::Negative(inner) = &expr else {
+        return Transformed::no(expr);
+    };
+    let Some((null, meta)) = null_decimal_operand(inner) else {
+        return Transformed::no(expr);
+    };
+    Transformed::yes(Expr::Literal(null, meta))
+}
+
+fn null_decimal_operand(expr: &Expr) -> Option<(ScalarValue, Option<FieldMetadata>)> {
+    match expr {
+        Expr::Negative(inner) => null_decimal_operand(inner),
+        Expr::Cast(cast) => cast_null_decimal(&cast.expr, cast.field.data_type()),
+        Expr::TryCast(cast) => cast_null_decimal(&cast.expr, cast.field.data_type()),
+        Expr::Literal(scalar, meta) if scalar.is_null() && is_decimal_scalar(scalar) => {
+            Some((scalar.clone(), meta.clone()))
+        }
+        _ => None,
+    }
+}
+
+fn cast_null_decimal(
+    inner: &Expr,
+    target: &DataType,
+) -> Option<(ScalarValue, Option<FieldMetadata>)> {
+    if !is_decimal_data_type(target) {
+        return None;
+    }
+    match inner {
+        Expr::Literal(scalar, _) if scalar.is_null() => {
+            Some((ScalarValue::try_from(target).ok()?, None))
+        }
+        nested => {
+            null_decimal_operand(nested)?;
+            ScalarValue::try_from(target)
+                .ok()
+                .map(|scalar| (scalar, None))
+        }
+    }
+}
+
+fn is_decimal_scalar(scalar: &ScalarValue) -> bool {
+    matches!(
+        scalar,
+        ScalarValue::Decimal32(..)
+            | ScalarValue::Decimal64(..)
+            | ScalarValue::Decimal128(..)
+            | ScalarValue::Decimal256(..)
+    )
+}
+
+fn is_decimal_data_type(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Decimal32(..)
+            | DataType::Decimal64(..)
+            | DataType::Decimal128(..)
+            | DataType::Decimal256(..)
+    )
+}
+
+#[cfg(test)]
+mod negate_null_tests;
 
 #[cfg(test)]
 mod tests {

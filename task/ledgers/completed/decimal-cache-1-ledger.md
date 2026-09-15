@@ -38,6 +38,7 @@ into the pin file as a fixture.
 | C-009 | Both unpinned refusal arms refuse with the named two-field `Error::Analysis`: a conform-time cast overflow names both types plus the cast error text; a non-nullable plan field over an array containing nulls refuses (residual rebuild failures are `Analysis`, never bare engine errors). | Rust tests in `temp_views` | **PROVEN** | R2 evidence below. Pins `overflowing_cast_refuses_with_cast_error` (`decimal(10,2)` 176.56 over `decimal(2,1)` refuses with both types plus the Arrow overflow text) and `null_in_non_nullable_plan_field_refuses`; the `Utf8` pin now asserts the appended cast error text. Same run as C-008. |
 | C-010 | One analyzer pass per cache materialize: the analyzed plan is optimized and executed directly, never cloned-and-analyzed a second time. | 200-col eager timing before/after on the release native, median of 5 | **PROVEN** | R2 evidence below. BEFORE (S2-21 bench2, release, 6390ea13): eager 31.1 ms vs toArrow 8.2 ms; AFTER (this round, release, two runs): eager 30.1/30.5 ms vs toArrow 8.4/8.7 ms. Full `python/repark/tests` green on the new path (behavior-identical execution). |
 | C-011 | No double batch rebuild under tighten: a batch whose schema already matches returns untouched, so tighten-stamped batches skip the second `try_new`. | Code structure + unchanged end-to-end cache suites | **PROVEN** | R2 evidence below. The skip is behavior-identical by construction (same column `Arc`s, same schema `Arc`); no new pin can bite on it, so the pre-existing declareSorted/eager/cache suites hold it. Same full-suite run as C-010. |
+| C-012 | Facade/SQL negated null decimals return a typed null (no `Internal error`): null scalars for decimal/int/bigint/double and null rows in all-null columns, on collect and eager. | `test_decimal_cache_1.py` null cells + null-column test; Rust unit tests beside the rule | **PROVEN** | Round-2 evidence below. Fail-before: only the two decimal null-scalar pins failed pre-fix (facade + SQL door); int/bigint/double scalars and all null-column cases already passed. `SparkNegateNullDecimal` (first in `analyzer_rules()`) folds `Negative` over null decimals to a typed null literal. `test_decimal_cache_1.py` + `test_types_1.py`: 159 passed, 7 sanctioned live-oracle skips; `negate_null` Rust tests: 9 passed. |
 
 ## Evidence
 
@@ -141,6 +142,39 @@ it trades one tree walk for another, and the review measured decimal-vs-int plan
 P3-2: half-done by construction. The P2-2 skip is the pass-through (no `RecordBatch`
 alloc when schemas match). The Vec is still borrowed, not consumed: `clippy::needless_pass_by_value` (a `-D warnings` gate) mandates the borrow, and the overlap it preserves is metadata-only on the common path — transient 2x survives only on the exceptional cast path. Retiring that remainder needs a sanctioned per-site escape with its own review, not a passenger on this round.
 
+### Round-2 finding L-101 (2026-09-15)
+
+DataFusion's scalar `Negative` kernel (`datafusion-common-54.1.0` `scalar/mod.rs`
+`arithmetic_negate`) answers null `Int*`/`Float*` scalars but has no null-decimal arms,
+so a constant-folded `Decimal128(None,p,s)` fails `Internal error` instead of returning
+null. Spark `UnaryMinus` propagates null. Both doors hit it (the SQL door pre-existing:
+`SELECT -CAST(NULL AS DECIMAL(10,2))` failed identically). The old `0 - x` encoding
+returned null with the wrong type; the L-001 `Expr::Negative` encoding returned the
+right type for columns but newly shared this scalar hole with SQL.
+
+Fix: new `SparkNegateNullDecimal` analyzer rule (in `decimal_precision.rs`, tests in the
+canonical child `decimal_precision/negate_null_tests.rs` — a new top-level module would
+have pushed `lib.rs` past its exact 175-line ceiling, and this file is 990/1000 after),
+first in `analyzer_rules()` so it sees the raw facade/SQL shape `Negative(Cast(null-lit))`
+before const-folding. It folds `Negative` over a null decimal — a null decimal literal
+directly, through `Cast`/`TryCast` to a decimal target, and through nested negatives
+(`-(-null)` is null) — to a null literal of that type, preserving literal metadata and
+the pre-rewrite display name; recompute runs only when a node rewrote. Valued decimals,
+null/valued non-decimals, non-decimal cast targets, and bare untyped `-NULL` pass
+through untouched (their kernels already agree with Spark or refuse loudly as before).
+
+Fail-before: the two decimal null-scalar pins failed pre-fix on both doors while the
+int/bigint/double scalar pins and every null-column pin passed. Rust pins (9): fold of
+cast/literal/try-cast/double-negative/wide-target shapes plus untouched pins for valued
+decimal, null int, null string, and non-decimal cast. Verified live: the exact L-101
+repro returns `decimal(10,2)` / `[Row(n=None)]` on facade and SQL, collect and eager.
+
+Float scope note: `-(float null)` propagates `None` correctly, but the reported width is
+`double` — that label comes from the pre-existing registered LOGICAL-WIDTH-1 divergence
+(`arrow_type_key` collapses `Float32`→`double`; `CAST(1.5 AS FLOAT)` reports `double`
+with no negation involved), so float carries no C-012 pin rather than pinning the
+diverged label against the registry row that already owns it.
+
 ### Out of scope observed (not in this unit)
 
 - Literal-only decimal arithmetic can disagree on nullability (analyzed nullable, physical
@@ -161,7 +195,7 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/decimal-cache-1-ledger.md, python/repark/tests/test_decimal_cache_1.py]
     - id: AT-2
       status: ATTACKED
-      evidence: All 30 oracle cells exercised (six input types under * 5, + 1, - 1, * price, * CAST(5 AS DECIMAL(1,0))), including the clamp shapes (38,6), (38,17) and (21,4); the conformance cells cover drifted (38,6)->(38,8), uncastable Utf8 and arity mismatch. R2 adds the two -p cells (both doors, every action) and the reorder/missing/duplicate/superset/overflow/null conformance pins. Every pin asserts Arrow value AND type per cell.
+      evidence: All 30 oracle cells exercised (six input types under * 5, + 1, - 1, * price, * CAST(5 AS DECIMAL(1,0))), including the clamp shapes (38,6), (38,17) and (21,4); the conformance cells cover drifted (38,6)->(38,8), uncastable Utf8 and arity mismatch. R2 adds the two -p cells (both doors, every action) and the reorder/missing/duplicate/superset/overflow/null conformance pins. Round 2 adds four null-scalar cells (decimal/int/bigint/double, both doors, every action) and the all-null-column test (both doors, collect and eager); float is scope-cut per the registered LOGICAL-WIDTH-1 row. Every pin asserts Arrow value AND type per cell.
       artifacts: [python/repark/tests/test_decimal_cache_1.py, python/repark/tests/decimal_cache_1_oracle.json, crates/repark-core/src/session/temp_views.rs]
     - id: AT-3
       status: ATTACKED
@@ -169,7 +203,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/session/temp_views.rs]
     - id: AT-4
       status: ATTACKED
-      evidence: No collateral — full repark-functions lib (543 passed), core session cohort (122), repark-spark lib with the extended order contract, make verify (ci + workspace Rust tests), the release-native trio (177 passed, 7 sanctioned live-oracle skips) and the full python suite (7601 passed, 368 sanctioned skips, 0 failed) all green in-session. R2 so far: the unit pin files on the rebuilt release native (147 passed, 7 sanctioned live-oracle skips) and session::temp_views (9 passed); make verify, the full python suite, check-ledgers and check-map-sync re-run before close.
+      evidence: No collateral — full repark-functions lib (543 passed), core session cohort (122), repark-spark lib with the extended order contract, make verify (ci + workspace Rust tests), the release-native trio (177 passed, 7 sanctioned live-oracle skips) and the full python suite (7601 passed, 368 sanctioned skips, 0 failed) all green in-session. R2 so far: the unit pin files on the rebuilt release native (147 passed, 7 sanctioned live-oracle skips) and session::temp_views (9 passed); make verify, the full python suite, check-ledgers and check-map-sync re-run before close. Round 2: make verify, the unit pin files on the rebuilt release native (159 passed, 7 sanctioned skips), negate_null Rust tests (9 passed), check-ledgers, check-ledger-grammar and check-map-sync — all green.
       artifacts: [task/ledgers/staging/decimal-cache-1-ledger.md]
     - id: AT-5
       status: N/A
@@ -192,6 +226,6 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/session/temp_views.rs]
     - id: AT-10
       status: ATTACKED
-      evidence: Red-first held where red was obtainable — the TY-10 pin and the assembly order pin failed on the changed tree exactly as predicted before their flip; the pre-fix measurement recorded the wrong types in the ledger; every added branch (pass-through, cast, refusal, arity guard) has a named pin, so no dead branch ships. R2 red-first: both facade -p pins failed pre-fix (11,2 vs 10,2) with the SQL door green; the overflow pin was written against a placeholder and pinned only after the real Arrow text was observed; every added R2 branch (reorder, missing, duplicate, superset, overflow, null) has a named pin. The C-011 skip is behavior-identical by construction, so no pin can bite on it — stated, not pinned.
+      evidence: Red-first held where red was obtainable — the TY-10 pin and the assembly order pin failed on the changed tree exactly as predicted before their flip; the pre-fix measurement recorded the wrong types in the ledger; every added branch (pass-through, cast, refusal, arity guard) has a named pin, so no dead branch ships. R2 red-first: both facade -p pins failed pre-fix (11,2 vs 10,2) with the SQL door green; the overflow pin was written against a placeholder and pinned only after the real Arrow text was observed; every added R2 branch (reorder, missing, duplicate, superset, overflow, null) has a named pin. The C-011 skip is behavior-identical by construction, so no pin can bite on it — stated, not pinned. Round-2 red-first: only the two decimal null-scalar pins failed pre-fix (both doors); int/bigint/double scalars and null columns already passed, so the fix is proven to bite exactly the L-101 arm.
       artifacts: [python/repark/tests/test_types_1.py, crates/repark-spark/src/extension/tests.rs, task/ledgers/staging/decimal-cache-1-ledger.md, python/repark/tests/test_decimal_cache_1.py]
 ```

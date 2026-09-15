@@ -149,6 +149,18 @@ scalars live under [`try_invert/`](try_invert/map.md).
   since the wrapper asserts a non-null field and padded NULLs would crash Arrow);
   the Values arm resolves every row and bails on any non-constructor cell.
   pins: fnp-8-review/C-009, C-010
+- `decimal_precision.rs` (`decimal_precision/negate_null_tests.rs`) — **DECIMAL-CACHE-1
+  round 2 (2026-09-15):** `SparkNegateNullDecimal`, first in `analyzer_rules()`.
+  DataFusion's scalar `Negative` kernel rejects a constant-folded null decimal
+  (`Decimal128(None,p,s)` → `Internal error`) where Spark `UnaryMinus` propagates null;
+  the rule folds `Negative` over a null decimal literal — directly, through
+  `Cast`/`TryCast` to a decimal target (the facade/SQL `-(lit/cast-null)` shape), and
+  through nested negatives — to a null literal of that type before const-folding runs.
+  Valued decimals, null/valued non-decimals, and non-decimal cast targets pass through
+  untouched (their kernels already agree with Spark). Recompute runs only when a node
+  rewrote. The rule lives in this file (not a new module) so `lib.rs` stays at its exact
+  175-line ceiling with the one seat line; tests ride the canonical child module.
+  pins: decimal-cache-1/C-012
 - `json.rs` (+ [`json/`](json/map.md)) — **FNP-10 (2026-09-05):** the Spark JSON family —
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
   `from_json`. Registered from `register_all`; no new dependency (see `json/map.md`). Each
