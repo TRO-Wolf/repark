@@ -352,6 +352,101 @@ async fn out_of_range_integer_suffix_is_invalid_numeric_literal() {
 }
 
 #[tokio::test]
+async fn signed_integer_suffix_minima_answer() {
+    let ctx = production_ctx(false);
+    let (batch, data_type, nullable) = one_cell(&ctx, "SELECT -128Y AS v").await;
+    assert_eq!(data_type, DataType::Int8);
+    assert!(!nullable);
+    assert_eq!(
+        batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int8Array>()
+            .expect("Int8")
+            .value(0),
+        i8::MIN
+    );
+    let (batch, data_type, nullable) = one_cell(&ctx, "SELECT -32768S AS v").await;
+    assert_eq!(data_type, DataType::Int16);
+    assert!(!nullable);
+    assert_eq!(
+        batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int16Array>()
+            .expect("Int16")
+            .value(0),
+        i16::MIN
+    );
+    for (sql, value) in [
+        ("SELECT -1Y AS v", -1i64),
+        ("SELECT 127Y AS v", 127i64),
+        ("SELECT -1S AS v", -1i64),
+        ("SELECT 32767S AS v", 32767i64),
+    ] {
+        let (batch, data_type, nullable) = one_cell(&ctx, sql).await;
+        assert!(!nullable, "{sql}");
+        let actual: i64 = match data_type {
+            DataType::Int8 => batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<Int8Array>()
+                .expect("Int8")
+                .value(0)
+                .into(),
+            DataType::Int16 => batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<Int16Array>()
+                .expect("Int16")
+                .value(0)
+                .into(),
+            other => panic!("{sql} kept unexpected type {other}"),
+        };
+        assert_eq!(actual, value, "{sql}");
+    }
+    let (batch, data_type, nullable) = one_cell(&ctx, "SELECT -1L AS v").await;
+    assert_eq!(data_type, DataType::Int64);
+    assert!(!nullable);
+    assert_eq!(
+        batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("Int64")
+            .value(0),
+        -1
+    );
+    for sql in ["SELECT -129Y AS v", "SELECT -32769S AS v"] {
+        let error = execute(&ctx, &CatalogRegistry::new(), sql)
+            .await
+            .expect_err("out-of-range signed suffix refuses");
+        assert!(
+            error.to_string().contains("INVALID_NUMERIC_LITERAL_RANGE"),
+            "{sql}: {error}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn bigint_overflow_is_invalid_numeric_literal() {
+    let ctx = production_ctx(false);
+    for sql in [
+        "SELECT 9223372036854775808L AS v",
+        "SELECT -9223372036854775809L AS v",
+        "SELECT -(9223372036854775808L) AS v",
+    ] {
+        let error = execute(&ctx, &CatalogRegistry::new(), sql)
+            .await
+            .expect_err("out-of-range BIGINT refuses");
+        assert!(
+            error.to_string().contains("INVALID_NUMERIC_LITERAL_RANGE"),
+            "{sql}: {error}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn exponent_l_and_zero_x_hex_are_unresolved_identifiers() {
     let ctx = production_ctx(false);
     let error = execute(&ctx, &CatalogRegistry::new(), "SELECT 1e3L AS v")

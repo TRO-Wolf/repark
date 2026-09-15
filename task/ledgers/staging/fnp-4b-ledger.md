@@ -567,3 +567,30 @@ COVERAGE_ATTESTATION (round 7 extension, 2026-09-15):
 6. Parity `PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest
    python/repark-parity/tests -q`: 757 passed, 2 skipped, 12 xfailed, rc 0.
 7. `make check-ledgers` and `make check-map-sync`: clean.
+
+## Round 8 progress (2026-09-15, run 16c; actor muse-spark-1.3-contributor)
+
+Final-review remediation (critic `/tmp/oc-worker/pc-cv2-fnp4bcrit/report.md`,
+perf `/tmp/oc-worker/pc-cv2-fnp4bperf/report.md`, both NEEDS_REMEDIATION /
+no-P1). Baseline Q17 probes on the head native reproduced all four L defects
+before any edit.
+
+Slice A — L-002 + L-004 (`crates/repark-spark/src/spark_rewrites.rs`):
+Y/S regions absorb a unary minus exactly like the LONG_MIN `L` arm
+(`CAST({signed} AS TINYINT/SMALLINT)` covering the minus token, range-checked
+on the signed text), so `-128Y` / `-32768S` answer the typed minima and a
+binary minus keeps the unsigned literal (`a-128Y` refuses, as Spark does).
+`integer_suffix_replacement` renders the effective literal. The `L` arm is now
+three-way: in-range digits keep the plain region, LONG_MIN-class keeps the
+minus-absorbing region, anything else refuses at parse with
+`INVALID_NUMERIC_LITERAL_RANGE` (positive overflow, negative overflow, and the
+parenthesized inner positive). Pins: Rust
+`signed_integer_suffix_minima_answer` (minima + `-1Y/127Y/-1S/32767S/-1L`
+neighbours + `-129Y/-32769S` refusals) and
+`bigint_overflow_is_invalid_numeric_literal` (three overflow shapes);
+facade `test_signed_integer_suffix_minima_answer`,
+`test_signed_minima_on_all_doors` (`spark.sql` / `F.expr` / `selectExpr`),
+`test_bigint_overflow_raises_invalid_numeric_literal`
+(`python/repark/tests/test_fnp_4b_literals.py`). The refusal pins assert the
+error class, which the old optimizer `Can't cast value` error does not carry,
+so they go red without the fix.

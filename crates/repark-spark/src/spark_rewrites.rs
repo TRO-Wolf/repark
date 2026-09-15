@@ -16,21 +16,24 @@ pub(crate) fn plan_suffix_regions(tokens: &[TokenWithSpan]) -> Result<Vec<Litera
         let signed = signed_digits(tokens, index, digits);
         if *long {
             if digits.bytes().all(|byte| byte.is_ascii_digit()) {
-                if digits.parse::<i64>().is_err()
-                    && signed.parse::<i64>().is_ok()
-                    && let Some(start) = unary_minus_start(tokens, index)
-                {
-                    regions.push(LiteralRegion {
-                        start,
-                        end: tokens[index].span.end,
-                        replacement: format!("CAST({signed} AS BIGINT)"),
-                    });
-                } else {
+                if digits.parse::<i64>().is_ok() {
                     regions.push(LiteralRegion {
                         start: tokens[index].span.start,
                         end: tokens[index].span.end,
                         replacement: format!("CAST({digits} AS BIGINT)"),
                     });
+                } else {
+                    let minus = unary_minus_start(tokens, index);
+                    if signed.parse::<i64>().is_ok() && minus.is_some() {
+                        regions.push(LiteralRegion {
+                            start: minus.unwrap_or(tokens[index].span.start),
+                            end: tokens[index].span.end,
+                            replacement: format!("CAST({signed} AS BIGINT)"),
+                        });
+                    } else {
+                        let literal = minus.map_or(digits.as_str(), |_| signed.as_str());
+                        return Err(invalid_numeric_literal_range(&format!("{literal}L")));
+                    }
                 }
             } else if is_exponent_double(digits) {
                 regions.push(LiteralRegion {
@@ -71,10 +74,17 @@ pub(crate) fn plan_suffix_regions(tokens: &[TokenWithSpan]) -> Result<Vec<Litera
         } else if let Some(found) = adjacent_suffix(tokens, index)
             && let Some(target) = suffix_target(&tokens[found.index].token)
         {
+            let (start, literal) = match target {
+                "SMALLINT" | "TINYINT" => match unary_minus_start(tokens, index) {
+                    Some(start) => (start, signed.clone()),
+                    None => (tokens[index].span.start, digits.clone()),
+                },
+                _ => (suffix_start(tokens, index), signed.clone()),
+            };
             regions.push(LiteralRegion {
-                start: suffix_start(tokens, index),
+                start,
                 end: found.end,
-                replacement: suffix_replacement(digits, target, &signed)?,
+                replacement: suffix_replacement(digits, target, &literal)?,
             });
         }
         index += 1;
@@ -216,29 +226,18 @@ fn suffix_replacement(digits: &str, target: &str, signed: &str) -> Result<String
     match target {
         "DOUBLE" => Ok(double_replacement(digits)),
         "FLOAT" => Ok(float_replacement(digits)),
-        "SMALLINT" => integer_suffix_replacement(
-            digits,
-            signed,
-            "SMALLINT",
-            "S",
-            i16::MIN.into(),
-            i16::MAX.into(),
-        ),
-        "TINYINT" => integer_suffix_replacement(
-            digits,
-            signed,
-            "TINYINT",
-            "Y",
-            i8::MIN.into(),
-            i8::MAX.into(),
-        ),
+        "SMALLINT" => {
+            integer_suffix_replacement(signed, "SMALLINT", "S", i16::MIN.into(), i16::MAX.into())
+        }
+        "TINYINT" => {
+            integer_suffix_replacement(signed, "TINYINT", "Y", i8::MIN.into(), i8::MAX.into())
+        }
         "DECIMAL" => decimal_suffix_replacement(digits),
         other => Ok(format!("CAST({digits} AS {other})")),
     }
 }
 
 fn integer_suffix_replacement(
-    digits: &str,
     signed: &str,
     sql_type: &str,
     suffix: &str,
@@ -247,11 +246,11 @@ fn integer_suffix_replacement(
 ) -> Result<String> {
     let value = signed
         .parse::<i64>()
-        .map_err(|_| invalid_numeric_literal_range(&format!("{digits}{suffix}")))?;
+        .map_err(|_| invalid_numeric_literal_range(&format!("{signed}{suffix}")))?;
     if value < min || value > max {
         return Err(invalid_numeric_literal_range(&format!("{signed}{suffix}")));
     }
-    Ok(format!("CAST({digits} AS {sql_type})"))
+    Ok(format!("CAST({signed} AS {sql_type})"))
 }
 
 fn invalid_numeric_literal_range(token: &str) -> DataFusionError {
