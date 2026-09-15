@@ -129,6 +129,21 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `ROWS` / `GROUPS` bounds stay `UInt64`, which is already the coercion target.
   Registry: `WIN-RANGE-DF-1`. pins: win-slide-1/C-003
 - [`door_parity_tests.rs`](door_parity_tests.rs) pins standalone facade UDF behavior against SQL.
+  **DOOR-CONVERGE-1 (2026-09-15):** `EXPECTED_DIVERGENCES` ratchets 22 → 14 — `abs`,
+  `hypot`, `bin`, `rint`, `base64`, `unbase64`, `size`, `cardinality`,
+  `array_contains`/`array_has`, `ascii`, `length`, `character_length` leave the table
+  and join `SCALAR_NAMES`; the facade arms for them live in
+  [`function_dispatch/dispatch_spark.rs`](function_dispatch/dispatch_spark.rs) and call
+  the same `repark_functions::expr_fn` kernels `register_all` installs on the door.
+  Round 2 (2026-09-16): `unbase64` raises the Java MIME-decoder errors on malformed
+  endings; `array_contains` coerces element and needle to the tightest common type,
+  refuses incompatible pairs with `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES`, and
+  answers `array_contains(array(), 1)` = `False`. Round 3 (2026-09-15): ruling R-10
+  reverted the `array`/`make_array` `containsNull` declaration and the registry-wide
+  promise retag to DOOR-CONVERGE-2 (fixtures-batch7) — literal-haystack
+  `array_contains` nullability is the residual that rides on them.
+  pins: door-converge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013, C-014
   **ABS-EXPR-1 (2026-09-13):** `EXPECTED_DIVERGENCES` gains `abs` — the facade's core
   `checked_abs` raises on integer-min (Spark ANSI-on answer); the door's `SparkAbs`
   wraps because repark never sets `execution.enable_ansi_mode` — measured on typed

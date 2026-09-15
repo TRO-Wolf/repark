@@ -6,6 +6,7 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [overnight-report-2026-09-15-15b.md](overnight-report-2026-09-15-15b.md) — **run 15b report (2026-09-15, the facade surfaces of the 1.5 PySpark-parity campaign):** Row, types, Catalog, SparkSession, DataFrame surface A, DataFrame streaming-on-batch, bucket/cluster writer checks and DataFrame surface B merged; Column, GroupedData and ORC/XML/JDBC refusals green in the queue; DF-PLAN-INTROSPECT-1 and IO-TEXT-1 end as branches with next-run briefs; four owner questions.
 - [overnight-report-2026-09-14-run14.md](overnight-report-2026-09-14-run14.md) — **run 14 report (2026-09-14, the Iceberg
   production-cutover slate):** F-GLUE-REPLACE-1 merged in the fork (`edc38c6a`), RP-20 + ICE-GOLD-TWICE-1 (#587) with
   aws-acceptance run 34901483202 green (replace twice on Glue and S3 Tables, gold dbt twice on Glue), ICE-SPARK-TABLE-1
@@ -230,3 +231,4 @@ declines it (a dated ruling in the intake, then the archive).
 
 ## Pointers
 - Up: [../map.md](../map.md)
+- [overnight-report-2026-09-15-15a.md](overnight-report-2026-09-15-15a.md) — run 15a (1.5 Spark-parity campaign, THE FUNCTIONS): census slice before/after, per-PR table with reviewer verdicts and costs, rulings, owner questions.

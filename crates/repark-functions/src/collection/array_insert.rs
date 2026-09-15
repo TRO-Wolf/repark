@@ -44,14 +44,14 @@ impl Hash for SparkArrayInsert {
     }
 }
 
-fn is_text(data_type: &DataType) -> bool {
+pub(crate) fn is_text(data_type: &DataType) -> bool {
     matches!(
         data_type,
         DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
     )
 }
 
-fn tightest_common(left: &DataType, right: &DataType) -> Option<DataType> {
+pub(crate) fn tightest_common(left: &DataType, right: &DataType) -> Option<DataType> {
     if left == right {
         return Some(left.clone());
     }

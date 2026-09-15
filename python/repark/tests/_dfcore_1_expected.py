@@ -683,6 +683,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "export_errors",
     "grouped_arrow",
     "grouped_udf",
+    "io_declared",
     "polars_cells",
     "replace_expr",
     "rows_export",

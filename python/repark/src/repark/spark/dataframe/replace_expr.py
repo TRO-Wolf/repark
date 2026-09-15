@@ -16,9 +16,17 @@ from repark.spark.column import Column
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
 
+_NO_VALUE: Any = object()
+
 
 def _validate_replace_arguments(to_replace: Any, value: Any, subset: Any) -> None:
     """Eager argument checks, in PySpark ``DataFrame.replace`` order."""
+    if not isinstance(to_replace, dict) and value is _NO_VALUE:
+        raise PySparkTypeError(
+            "[ARGUMENT_REQUIRED] Argument `value` is required when `to_replace` is dict.",
+            errorClass="ARGUMENT_REQUIRED",
+            messageParameters={"arg_name": "value", "condition": "`to_replace` is dict"},
+        )
     if not isinstance(to_replace, (bool, float, int, str, list, tuple, dict)):
         raise PySparkTypeError(
             errorClass="NOT_BOOL_OR_DICT_OR_FLOAT_OR_INT_OR_LIST_OR_STR_OR_TUPLE",
@@ -65,7 +73,7 @@ def _replacement_dict(to_replace: Any, value: Any) -> dict[Any, Any]:
     if isinstance(to_replace, (float, int, str)):
         to_replace = [to_replace]
     if isinstance(to_replace, dict):
-        if value is not None:
+        if value is not None and value is not _NO_VALUE:
             warnings.warn(
                 "to_replace is a dict and value is not None. value will be ignored.",
                 UserWarning,
@@ -86,7 +94,11 @@ def _check_replacement_groups(rep_dict: dict[Any, Any]) -> None:
         and all(isinstance(item, group) for item in values)
         for group in (bool, str, (float, int))
     ):
-        raise PySparkValueError(errorClass="MIXED_TYPE_REPLACEMENT", messageParameters={})
+        raise PySparkValueError(
+            "[MIXED_TYPE_REPLACEMENT] Mixed type replacements are not supported.",
+            errorClass="MIXED_TYPE_REPLACEMENT",
+            messageParameters={},
+        )
 
 
 def _resolve_subset_targets(frame: DataFrame, subset: list[str] | None) -> set[str] | None:

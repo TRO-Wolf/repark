@@ -8,6 +8,7 @@ from typing import Any
 
 from repark.spark.session import _funcs as _session_funcs
 from repark.spark.session.session_core import ReparkSession
+from repark.spark.dataframe import io_declared as _io_declared
 
 for _name in dir(_session_funcs):
     if _name.startswith("__"):
@@ -358,80 +359,9 @@ class DataFrameReader:
             return self._session.read_iceberg_table(table_name, **travel)
         return self._session.table(table_name)
 
-    def jdbc(
-        self,
-        url: str,
-        table: str | None = None,
-        column: str | None = None,
-        lower_bound: int | None = None,
-        upper_bound: int | None = None,
-        num_partitions: int | None = None,
-        predicates: list[str] | None = None,
-        properties: dict[str, str] | None = None,
-        *,
-        connection_properties: dict[str, str] | None = None,
-    ) -> DataFrame:
-        """Read PostgreSQL via JDBC-compatible options (PySpark ``spark.read.jdbc``).
-
-        Three Spark overload shapes are supported:
-
-        1. ``jdbc(url, table, properties=...)`` — single partition
-        2. ``jdbc(url, table, column, lower_bound, upper_bound, num_partitions, properties)`` —
-           range partitions (Spark stride; first/last unbounded)
-        3. ``jdbc(url, table, predicates=[...], properties=...)`` — one partition per predicate
-           (Spark does no overlap checking; duplicates are contractual)
-
-        Only PostgreSQL URLs are supported in v1 (``jdbc:postgresql://`` or ``postgresql://``).
-        ``driver`` is accepted and ignored (disclosed). TLS (SEC-001): default
-        ``sslmode=prefer`` when omitted; prefer attempts verified TLS and may fall back to
-        plaintext **with a downgrade warning** (never silent). Explicit ``disable`` is silent
-        plaintext. ``require`` / ``verify-full`` encrypt + verify and never fall back;
-        ``verify-ca`` is refused loud.
-        """
-        from repark.errors import IllegalArgumentException
-
-        props = dict(properties or connection_properties or {})
-        # Never log props (may contain password). Resolve dbtable from the positional table
-        # arg OR properties["dbtable"] (case-insensitive).
-        dbtable = table
-        if dbtable is None:
-            for key, value in props.items():
-                if key.lower() == "dbtable" and value:
-                    dbtable = value
-                    break
-        if dbtable is None:
-            raise IllegalArgumentException(
-                "jdbc requires a table name (or dbtable option) — "
-                "use spark.read.jdbc(url, table, properties=...) "
-                "or format('postgres').option('dbtable', ...).load()"
-            )
-        # Detect partial range bags early for a clear facade error.
-        range_parts = [column, lower_bound, upper_bound, num_partitions]
-        range_set = sum(part is not None for part in range_parts)
-        if predicates is not None and range_set > 0:
-            raise IllegalArgumentException(
-                "jdbc predicates[] cannot be combined with partitionColumn/lowerBound/"
-                "upperBound/numPartitions (Spark JDBC mutual exclusion)"
-            )
-        if range_set not in (0, 4):
-            raise IllegalArgumentException(
-                "jdbc range partitioning requires column, lower_bound, upper_bound, and "
-                "num_partitions together (Spark JDBC parity)"
-            )
-        if predicates is not None and len(predicates) == 0:
-            raise IllegalArgumentException("jdbc predicates[] must be non-empty when supplied")
-
-        return self._session.read_postgres(
-            url=url,
-            dbtable=dbtable,
-            query=None,
-            properties=props,
-            partition_column=column,
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
-            num_partitions=num_partitions,
-            predicates=predicates,
-        )
+    orc = _io_declared.reader_orc
+    xml = _io_declared.reader_xml
+    jdbc = _io_declared.reader_jdbc
 
     def format(self, source: str) -> DataFrameReader:
         """Set the input format (PySpark ``DataFrameReader.format``); returns self for chaining."""
@@ -482,6 +412,8 @@ class DataFrameReader:
                 self.option(key, value)
 
         fmt = (self._format or "").strip().lower()
+        if fmt in {"orc", "xml"}:
+            _io_declared.refuse_reader_load_format(self, fmt)
         # Postgres/JDBC options are intentional; skip the parquet/iceberg semantic gate for them.
         if fmt not in {"postgres", "postgresql", "jdbc"}:
             self._reject_unsupported_semantic_options()

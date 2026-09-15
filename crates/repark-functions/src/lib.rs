@@ -31,6 +31,7 @@ pub mod percentile_approx;
 pub mod quantile_summaries;
 pub mod random;
 pub mod session_time_zone;
+pub mod spark_base64;
 pub mod spark_chr;
 pub mod spark_elt;
 pub mod spark_from_unixtime;
@@ -39,6 +40,7 @@ pub mod spark_isnan;
 pub mod spark_length;
 pub mod spark_log;
 pub mod spark_log1p;
+pub mod spark_math;
 pub mod spark_nullability;
 pub mod spark_regexp;
 pub mod spark_regexp_match;
@@ -113,22 +115,16 @@ pub fn register_all(ctx: &SessionContext) {
     for udf in random::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
-    for udf in spark_log::functions() {
-        ctx.register_udf(udf.as_ref().clone());
-    }
-    for udf in spark_log1p::functions() {
-        ctx.register_udf(udf.as_ref().clone());
-    }
-    for udf in spark_isnan::functions() {
-        ctx.register_udf(udf.as_ref().clone());
-    }
-    for udf in spark_initcap::functions() {
-        ctx.register_udf(udf.as_ref().clone());
-    }
-    for udf in spark_chr::functions() {
-        ctx.register_udf(udf.as_ref().clone());
-    }
-    for udf in spark_elt::functions() {
+    for udf in spark_log::functions()
+        .into_iter()
+        .chain(spark_log1p::functions())
+        .chain(spark_math::functions())
+        .chain(spark_base64::functions())
+        .chain(spark_isnan::functions())
+        .chain(spark_initcap::functions())
+        .chain(spark_chr::functions())
+        .chain(spark_elt::functions())
+    {
         ctx.register_udf(udf.as_ref().clone());
     }
     validate::register(ctx);

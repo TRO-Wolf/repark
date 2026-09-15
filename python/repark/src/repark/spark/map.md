@@ -202,7 +202,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `REQUIRES_SINGLE_PART_NAMESPACE`; `BYNAME_NON_ROUTINE_NAMES` never resolve). Round 3 maps
   engine arity failures to `WRONG_NUM_ARGS.WITHOUT_SUGGESTION` (exact counts in Spark's
   words; ranged specs reuse the engine wording). Installed
-  onto `functions.py` after `__all__` through `install_into`.
+  onto `functions.py` after `__all__` through `install_into`. **DOOR-CONVERGE-1 round 5
+  (2026-09-16):** `char_length` leaves `FACADE_ONLY_ROUTINE_NAMES` — the Rust dispatch
+  serves it (`call_function('char_length', lit('abc'))` = 3, A11-callfn-char-length).
   pins: fnp-misc-1/C-002, fnp-misc-1/F-3, fnp-misc-1/F-4, fnp-misc-1/F-5, fnp-misc-1/L-004, fnp-misc-1/L-005, fnp-misc-1/L-010
 - `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9
   (2026-09-05):** `create_map`, `map_concat` and `array_insert` land here.

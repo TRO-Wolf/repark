@@ -68,6 +68,9 @@ from ``streaming_batch.py`` — ``EXPECTED_DATAFRAME_DIR`` gains exactly
 ``writeStream``; ``EXPECTED_DATAFRAME_ALIASES`` gains the two camelCase pairs;
 ``core`` and the package each gain exactly the one new module name
 ``streaming_batch``.
+IO-DECLARED-1 (2026-09-14): the package gains exactly the one new module name
+``io_declared`` (bound by ``writer_readwriter`` importing it); no
+``DataFrame`` member, slot, alias, or core-surface name changes.
 DF-SURFACE-A-1 step 1 (2026-09-14): the ``localCheckpoint`` and ``isStreaming``
 bodies move to ``surface_a.py`` behind signature-keeping def wrappers (the API
 freeze parses ``def`` signatures), and the seven surface-a names bind one-line

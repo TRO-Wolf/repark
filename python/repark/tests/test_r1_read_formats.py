@@ -8,7 +8,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, PySparkNotImplementedError
 from repark.spark.session import _reset_active_session_for_tests
 from repark.spark.types import IntegerType, StringType, StructField, StructType
 
@@ -156,9 +156,12 @@ def test_read_mode_failfast_loud(spark: ReparkSession, tmp_path: Path) -> None:
         spark.read.csv(str(path), header=True, mode="FAILFAST")
 
 
-def test_load_orc_still_data_source_not_found(spark: ReparkSession) -> None:
-    with pytest.raises(AnalysisException, match="DATA_SOURCE_NOT_FOUND"):
+def test_load_orc_declared_not_implemented(spark: ReparkSession) -> None:
+    """format('orc').load is the declared NOT_IMPLEMENTED refusal (IO-ORC-1, R-1)."""
+    with pytest.raises(PySparkNotImplementedError) as raised:
         spark.read.format("orc").load("/tmp/does-not-matter")
+    assert raised.value.getCondition() == "NOT_IMPLEMENTED"
+    assert raised.value.getMessageParameters() == {"feature": "orc"}
 
 
 # Writers + round-trips (Arrow value AND type)
@@ -232,10 +235,12 @@ def test_write_csv_error_mode_on_existing(spark: ReparkSession, tmp_path: Path) 
         spark.createDataFrame([(2, "b")], ["id", "name"]).write.mode("error").csv(str(path))
 
 
-def test_write_orc_still_data_source_not_found(spark: ReparkSession, tmp_path: Path) -> None:
-    with pytest.raises(AnalysisException, match="DATA_SOURCE_NOT_FOUND") as raised:
+def test_write_orc_declared_not_implemented(spark: ReparkSession, tmp_path: Path) -> None:
+    """format('orc').save is the declared NOT_IMPLEMENTED refusal (IO-ORC-1, R-1)."""
+    with pytest.raises(PySparkNotImplementedError) as raised:
         spark.createDataFrame([(1,)], ["id"]).write.format("orc").save(str(tmp_path / "o"))
-    assert "orc" in str(raised.value).lower()
+    assert raised.value.getCondition() == "NOT_IMPLEMENTED"
+    assert raised.value.getMessageParameters() == {"feature": "orc"}
 
 
 def test_write_empty_csv_overwrite_preserves_path(spark: ReparkSession, tmp_path: Path) -> None:
