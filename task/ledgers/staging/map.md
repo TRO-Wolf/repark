@@ -4,6 +4,12 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [registry-16b-1-ledger.md](registry-16b-1-ledger.md) —
+  **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
+  CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live
+  PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
+  `risk_tier: standard`. Branch `docs/registry-16b-1`.
+  pins: registry-16b-1/C-001, C-002, C-003
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`

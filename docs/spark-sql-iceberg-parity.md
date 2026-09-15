@@ -1006,6 +1006,41 @@ them, and the document is ordered by surface, never by date.
   swallowed unapplied anyway. A loud refusal naming the explicit spellings beats both halves
   of that silent stub. Revisit if a facade-level "name the local zone" facility ever exists.
 
+### CONF-UNSET-1 — `spark.conf.unset` of a builder-seeded SQL conf raises on the next `get`; Spark answers the conf's default — **BACKLOG 2026-09-15**
+
+- **repark** — `RESET spark.sql.shuffle.partitions` restores a builder-seeded `7` (matches). After
+  `spark.conf.set(k, "3")` and `spark.conf.unset(k)`, `spark.conf.get(k)` raises
+  `Configuration property spark.sql.shuffle.partitions is not set.` A custom builder key reads absent after `unset`
+  (matches).
+- **Apache Spark** — after the same `set` / `unset`, `spark.conf.get("spark.sql.shuffle.partitions")` answers `"200"`,
+  the registered default, not the builder's `7`; only SQL `RESET` restores the builder value. *(oracle: live PySpark
+  4.1.2, 2026-09-15, run 16b probe cells `unset_builder_sql_conf`, `sql_reset_builder_value`, `unset_builder_value`,
+  `unset_never_set`.)*
+- **Pin** — `python/repark/tests/test_registry_16b_1.py::test_conf_unset_builder_sql_conf_raises_on_get`,
+  `python/repark/tests/test_registry_16b_1.py::test_sql_reset_restores_builder_value`
+- **Rationale** — BACKLOG, filed by REGISTRY-16B-1 (run 16b). Run 15c read this as "unset hides a builder value Spark
+  restores"; the measurement shows Spark does not restore on `unset` either, so the divergence is the raised `get` where
+  Spark answers the registered default. The fix is a registered-default table behind `RuntimeConfig.get`; the unset pin
+  reds when it lands.
+  pins: registry-16b-1/C-001
+
+### CONF-WAP-1 — `spark.wap.*` through `spark.conf.set` stores silently and reports modifiable; SQL `SET` of the key fails in the engine — **BACKLOG 2026-09-15**
+
+- **repark** — `spark.conf.set("spark.wap.branch", "b1")` and `spark.wap.id` store and read back, but nothing honours
+  them, so a write meant for a WAP branch lands on the table's current branch; `spark.conf.isModifiable("spark.wap.branch")`
+  answers `True`; SQL `SET spark.wap.branch=b2` fails with the engine's `Could not find config namespace "spark"` rather
+  than a named refusal.
+- **Apache Spark** — both keys store and read back; `isModifiable` answers `False` (not a registered SQL conf); SQL
+  `SET spark.wap.branch=b2` answers the `(key, value)` row; with `write.wap.enabled=true` on an Iceberg table the key
+  redirects writes (REF-3 above). *(oracle: live PySpark 4.1.2, 2026-09-15, run 16b probe cells `wap_branch_set_get`,
+  `wap_id_set_get`, `wap_is_modifiable`, `wap_sql_set`.)*
+- **Pin** — `python/repark/tests/test_registry_16b_1.py::test_conf_wap_keys_store_and_report_modifiable`,
+  `python/repark/tests/test_registry_16b_1.py::test_sql_set_wap_branch_raises`
+- **Rationale** — BACKLOG, filed by REGISTRY-16B-1 (run 16b). REF-3's fail-closed rule should cover the `conf.set`
+  spelling (a loud refusal until the publish procedures exist), and `isModifiable` should answer Spark's `False`; both
+  pins red when that lands.
+  pins: registry-16b-1/C-002
+
 ### F-V4-2 — timestamptz Arrow annotation after Iceberg read
 
 - **repark** — Iceberg `timestamptz` columns export `timestamp[us, tz=+00:00]`.
@@ -1829,6 +1864,24 @@ condition the mirror exists to make impossible.
 Differences we intend to close. Each pin **codifies today's behavior** so the fix reds it on
 purpose; a pin here is a description, not a contract, and the unit that fixes the class *updates*
 the pin rather than obeying it.
+
+### IO-JDBC-FORMAT-1 — `format("jdbc").load()` sends every URL to the PostgreSQL connector; `spark.read.jdbc` dispatches by URL — **BACKLOG 2026-09-15**
+
+- **repark** — `spark.read.jdbc` refuses a non-PostgreSQL URL with `NOT_IMPLEMENTED` `{"feature": "jdbc"}` before any
+  connection attempt (IO-JDBC-1). `spark.read.format("jdbc")` is the `format("postgres")` alias, so
+  `.option("url", "jdbc:mysql://…").load()` reaches the PostgreSQL connector path instead of that refusal, and a load
+  with no `url` raises `IllegalArgumentException` naming `format('postgres')`.
+- **Apache Spark** — `format("jdbc")` and `spark.read.jdbc` share one path: a URL with no registered driver answers
+  `java.sql.SQLException: No suitable driver` for MySQL and PostgreSQL URLs alike on a driverless classpath, and a load
+  with no `url` answers `IllegalArgumentException: requirement failed: Option 'url' is required.` *(oracle: live PySpark
+  4.1.2, 2026-09-15, run 16b probe cells `jdbc_format_mysql_url`, `jdbc_format_no_url`, `jdbc_method_mysql_url`,
+  `jdbc_format_postgres_url_refused_conn`.)*
+- **Pin** — `python/repark/tests/test_registry_16b_1.py::test_format_jdbc_non_postgres_url_is_not_the_declared_refusal`,
+  `python/repark/tests/test_registry_16b_1.py::test_format_jdbc_missing_url_names_postgres`
+- **Rationale** — BACKLOG, owner ruling Q-15B-4 (2026-09-15): the alias applies the same URL dispatch as
+  `spark.read.jdbc` in the 1.6 native connector work; recorded now so the two doors' difference has one home. The
+  format-door pin reds when the dispatch lands.
+  pins: registry-16b-1/C-003
 
 ### FNP-6D — Spark bitmap aggregates — **FIXED 2026-09-15**
 
