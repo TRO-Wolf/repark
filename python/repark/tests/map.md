@@ -2031,7 +2031,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   across arities 0–3, nested and aliased, recorded from the step-2 tree and proven
   byte-identical to a re-record under the base release interpreter.
   Record mode is `REPARK_FACADE_2_RECORD_GOLDENS=1` and is refused when `CI` or
-  `GITHUB_ACTIONS` is set. `isinstance(c, repark.Column)` is pinned. Cast/try_cast
+  `GITHUB_ACTIONS` is set.
+  **FNP-4B round 6 (2026-09-15):** `facade_2_column_display_goldens.json`
+  re-recorded for 8 getitem/getfield `join_sql` `"` → backtick moves, display
+  fields byte-identical.
+  `isinstance(c, repark.Column)` is pinned. Cast/try_cast
   of a named attribute currently answers `select` with a
   `datafusion.public.__repark_cdf_<id>.<field>` qualifier; the golden stores the
   trailing field only (the UUID is session-local, not a display-string contract).
@@ -3453,7 +3457,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `description="N/A."`, `UNRESOLVED_ROUTINE` miss — §5 CAT-FUNCS-1), the cache
   trio (cache → isCached True → uncache False, `spark.table` second-read serves
   the held cache via the scan spy, live-frame `cache()` visible to `isCached`,
-  missing table `TABLE_OR_VIEW_NOT_FOUND`), `createTable` /
+  missing table `TABLE_OR_VIEW_NOT_FOUND`),
+  **FNP-4B round 6 (2026-09-15):** the post-uncache scan-spy needle moved to the
+  backtick table-ref form. `createTable` /
   `createExternalTable` (empty Iceberg table → `spark.table` DataFrame,
   `description` → comment, `TBLPROPERTIES` options, `TABLE_OR_VIEW_ALREADY_EXISTS`,
   `UNABLE_TO_INFER_SCHEMA` no-schema refusal, `path=` / non-`iceberg` source EX-IO-6
@@ -4616,6 +4622,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `selectExpr` expression-string door sharing the same lexer, on the Arrow path (value AND type).
   Critic: `selectExpr("`my col` + 1")` display `(my col + 1)`; struct-dot display
   `named_struct(a, 1).a`. pins: fnp-4b/C-001, C-003, C-014, C-015
+- `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
+  16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
+  packing marker. pins: fnp-4b/C-026
 - `test_fnp_8_sql_door.py` — **FNP-8 (2026-09-07), in flight:** the fifteen accepted
   higher-order callable forms through the Column door, Spark SQL, and column-free `F.expr`.
   It fences the separately BACKLOGed EX-FN-4 column-reference refusal, pins Spark-equal public
@@ -4814,7 +4823,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   resolution (registered-UDF-wins, engine-built routines with a facade-only aggregate
   fallback, grouped `sum`, `UNRESOLVED_ROUTINE` / `REQUIRES_SINGLE_PART_NAMESPACE`
   messages), `bucket` Column folding plus the `NOT_COLUMN_OR_INT` refusal and the
-  4.1.2 `FutureWarning`, `arrow_udf`
+  4.1.2 `FutureWarning`
+  (**FNP-4B round 6 (2026-09-15):** the fold-pin display needle moved to the
+  backtick-quoted column form), `arrow_udf`
   scalar / iterator / grouped cells with the `CANNOT_BE_NONE` and `SCHEMA_MISMATCH` errors,
   and `arrow_udtf` rows over the Python UDTF path. Expected values are read from the three
   `fnp_misc_1_*_spark_oracle.json` fixtures (live PySpark 4.1.2, 2026-09-14), never
