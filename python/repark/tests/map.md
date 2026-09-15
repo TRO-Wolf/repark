@@ -5140,3 +5140,26 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 - **FNP-11A (2026-09-15):** `fnp11a_r2_spark_oracle.json` is excluded from the typos gate in `.typos.toml`: it records verbatim live-PySpark 4.1.2 messages, one of them truncated mid-word by the recorder, and recorded evidence is never hand-edited.
 - **FNP-11A R3 intake (2026-09-15):** `test_fnp11a_temporal.py` now runs every SQL-door `timestamp_add` / `timestamp_diff` oracle cell (L-005) with the bare unit keyword quoted (`BARE_UNIT_CALL`), since bare keywords stay EX-FN-27 and `test_bare_timestampadd_unit_refuses` keeps that pinned. Only the `TIMESTAMP_NTZ'…'` literal cell stays in `D4_BLOCKED_SQL` (the SQL parser has no such type). `test_timestampdiff_ntz_pair_answers_days` runs that pair's end value through `make_timestamp_ntz` instead of diffing a column with itself (L-006).
 - **FNP-11A (2026-09-15):** `test_functions_split_identity.py` pins the eleven-name FNP-11A tail after `ARROW_EXPORTS`. `test_catalog_surface_1.py::test_list_functions_shape` (unique names) and `test_fnp_misc_1.py::test_fnp_misc_1_byname_allowlist_covers_facade` caught the duplicate install and are green again.
+- [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) —
+  **FNP-MATH-1 step 1 (2026-09-15, run 16a):** 137 recorded PySpark 4.1.2 cells
+  in four named blocks, copied verbatim, never re-recorded. Block `o245` (106
+  cells): the D-6 scope names plus `locate` / `array_join`, both doors, both ANSI
+  settings, from `/tmp/oc-worker/pa-math/o245_spark_oracle.json` (2026-09-14).
+  Block `f14` (10 cells): every `F14-*` mask/AES cell from
+  `/tmp/oc-worker/pc-oracle/fixtures-batch3.json` (2026-09-14). Block `q12` (15
+  cells): `Q12-41`…`Q12-55` split cells from
+  `/tmp/oc-worker/qc-oracle/fixtures-batch12.json` (2026-09-15). Block `bl6` (6
+  cells): `BL6-sql-0`…`BL6-sql-3` plus `DIV-like-1` / `DIV-api-like` from
+  `/tmp/oc-worker/pc-oracle/fixtures-batch2.json` (2026-08-18). The top-level
+  `signatures` map is the recorded PySpark parameter shapes for C-001.
+  pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009
+- [test_fnp_math_1.py](test_fnp_math_1.py) — **FNP-MATH-1 step 1 (2026-09-15, run
+  16a):** red-first pins over the fixture above, 227 failed / 16 passed on the
+  base tree. One parametrized test per cell: facade signatures (C-001),
+  Python-door values (C-002), SQL-door values (C-003), error conditions on the
+  recorded door and ANSI setting (C-004), byte-exact hash/AES both doors both
+  ANSI (C-005), the frame-seed control (C-006), fixture integrity (C-007), the
+  split facade half with containsNull (C-008), the BL-6 facade half (C-009).
+  The shared frame grafts `ts` per row with a `CASE` because a `VALUES` list
+  carrying TIMESTAMP fails to execute on the base tree (ledger § out-of-scope).
+  pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
