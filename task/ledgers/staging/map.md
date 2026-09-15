@@ -179,6 +179,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
+- [java-double-fd-1-ledger.md](java-double-fd-1-ledger.md) —
+  **JAVA-DOUBLE-FD-1 round 2 (2026-09-15), in flight:** the Q19 reviewer cells —
+  `%F` refuses, NaN takes no sign prefix, `#` forces the point, suffix casts run
+  over real columns through a shared kernel, and the float text paths render
+  through reused batch buffers. L-004/L-001/L-002/L-003/P2-1/P2-4 PROVEN with
+  oracle pins on both doors; P2-2 stays OPEN residue.
+  `risk_tier: standard`. Branch `feat/java-double-fd-1`.
 - [orphan-s3tables-1-ledger.md](orphan-s3tables-1-ledger.md) —
   **ORPHAN-S3TABLES-1 step 1 (2026-09-12), in flight:** `remove_orphan_files` refuses loud
   on an `s3tables`-kind catalog before any IO — table buckets answer `ListObjectsV2` 405 —
