@@ -474,3 +474,22 @@ the 16b prescription is moot, no fence crossed. DF-PLAN-INTRO-CAST-1 has no pin
 in this tree and the suite is green — seam unchanged, registry row untouched.
 `getbit` / `bit_get(6,1)` and the 8 v3 DV / legacy-delete failures from round 5
 do not reproduce — closed as stale-binary artifacts.
+
+## Round 6 gates (2026-09-15, actor muse-spark-1.3-contributor)
+
+- `cargo test -p repark-spark --lib`: 970 passed, 0 failed (round-5 slices).
+- `cargo test -p repark-iceberg write::merge`: 145 passed, 0 failed (Q1 pin).
+- `make rust-clippy`: clean. `make verify`: exit 0 (3187 passed, 0 failed;
+  includes the `cargo fmt` fix on the round-5 slices, committed separately).
+- Release native rebuilt twice (instrumented capture, then clean); final tree
+  rebuilt once more after the fmt commit — binary matches source.
+- Full facade `.venv/bin/python -m pytest python/repark/tests -q
+  -p no:cacheprovider`: 8 failed, 7128 passed, 367 skipped; after the D-2
+  needle moves + goldens re-record, the touched files re-run 151 passed with
+  only the 3 sanctioned hand-offs red (C-025 INT[] on 16b; C-029 F.expr display
+  on 16a; C-026 HOF marker on 16a).
+- Parity `make py-test`: exit 0 (757 passed, 2 skipped, 12 xfailed).
+- `check_lib_py`, `check_docstring_presence`, `check_python_conventions`,
+  `check_rust_file_size`, `check-ledgers`, `check-map-sync`: all clean.
+- Round-5 fenced pins (`sum_alias_and_alias_lit`, `rebind_extended_afs`) pass;
+  no fence crossed. `/tmp/pc-cv2-base` left for the orchestrator to remove.
