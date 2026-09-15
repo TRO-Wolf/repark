@@ -2044,14 +2044,15 @@ the pin rather than obeying it.
   (SET-ANSI-RUNTIME-1). `concat(BINARY, BINARY)` answers BINARY on the SQL door as Spark does
   (measured 2026-09-15; converged by DOOR-CONVERGE-2 #622, oracle Q12-13) —
   pinned by `test_concat_binary_types_binary_converged_door_converge_2`.
-- **Residual (FNP-BITMAP-FACADE-1, 2026-09-15).** Unaliased `spark.sql` /
-  `selectExpr` render the bitmap default name with the DataFusion qualifier
+- **Residual (FNP-BITMAP-FACADE-1, 2026-09-15).** Unaliased `spark.sql` renders the
+  bitmap default name with the DataFusion qualifier
   (`bitmap_construct_agg(datafusion.public.<view>.x)`) where Spark answers
-  `bitmap_construct_agg(x)`; the Python door matches Spark. The leak is systemic
-  (every unaliased SQL function shows it) and owned by the SQL door (run 16c) —
-  pinned as an expected divergence by
-  `python/repark/tests/test_fnp_bitmap_facade_1.py::test_sql_door_qualifier_leak_is_expected_divergence`,
-  which reds when the door converges.
+  `bitmap_construct_agg(x)`; the Python door matches Spark, and `selectExpr` matches
+  Spark since FNP-4B (#611, root-projection display names). The `spark.sql` leak is
+  systemic (every unaliased SQL function over a view column shows it) and owned by the
+  SQL door (run 16c) — pinned as an expected divergence by
+  `python/repark/tests/test_fnp_bitmap_facade_1.py::test_sql_door_qualifier_leak_is_expected_divergence`
+  (its `selectExpr` half now asserts Spark's name), which reds when the `spark.sql` door converges.
 
 ### FNP8-NULLABILITY — higher-order result metadata retains inherited nullable fields
 

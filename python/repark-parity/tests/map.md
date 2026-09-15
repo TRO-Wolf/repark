@@ -812,3 +812,4 @@ Escalate to: [../map.md#debug](../map.md).
 - **FNP-11A (2026-09-15, on 440b2773):** the CAP-1 table mirrors the `functions_expr.py` ratchet to 2235 lines.
 - `test_cap_1_source_file_line_cap.py` — **DOOR-CONVERGE-2 (#622, 2026-09-15):** the `crates/repark-python/src/column/mod.rs` mirror row 1052 → 1036 matches the script baseline (ratchet down). The `analyzer.rs` row 1142 → 1150 is the one-time grant R-1 (Q-15c-4).
 - **FNP-4B remediation (2026-09-15):** CAP-1 mirror ratcheted with the scripts: `column/mod.rs` 1038, `cross_door.rs` 1258, `_live_parity.py` 1753.
+- `test_cap_1_source_file_line_cap.py` — **FNP-4B (#611, 2026-09-15, orchestrator):** the `crates/repark-python/src/column/mod.rs` mirror row 1022 → 1014 matches the script baseline after the rebase onto #613 (ratchet down).
