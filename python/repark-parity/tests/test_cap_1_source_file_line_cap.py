@@ -72,7 +72,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/src/repark/spark/functions_expr.py", 2237),
     ("python/repark/src/repark/spark/functions_udf.py", 1300),
     ("python/repark/src/repark/spark/ml/feature/_transformers.py", 2717),
-    ("python/repark/src/repark/spark/session/reader.py", 1022),
+    ("python/repark/src/repark/spark/session/reader.py", 954),
     ("python/repark/src/repark/spark/session/session_core.py", 2290),
     ("python/repark/src/repark/spark/ta.py", 1818),
     ("python/repark/src/repark/spark/types.py", 1772),
@@ -179,7 +179,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert rust_debt == rust_approved
     assert python_debt == python_approved
     assert len(rust_approved) == 36
-    assert len(python_approved) == 32
+    assert len(python_approved) == 31
 
 
 def test_cap_1_growth_above_exact_baseline_fails(

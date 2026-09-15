@@ -30,7 +30,7 @@ from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
 from repark.spark.column_fields import column_window_spec as _column_window_spec
-from repark.spark.dataframe import cache_handle, streaming_batch, surface_a, surface_b
+from repark.spark.dataframe import cache_handle, replace_expr, streaming_batch, surface_a, surface_b
 from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
 from repark.spark.dataframe.udf_bridge import (
@@ -2437,7 +2437,7 @@ class DataFrame:
     def replace(
         self,
         to_replace: Any,
-        value: Any = None,
+        value: Any = replace_expr._NO_VALUE,
         subset: str | list[str] | tuple[str, ...] | None = None,
     ) -> DataFrame:
         """Replace value(s) across columns (PySpark ``DataFrame.replace``).
@@ -4013,7 +4013,7 @@ from repark.spark.dataframe.grouped_udf import (  # noqa: E402
     _validate_apply_in_pandas_result_columns,
 )
 from repark.spark.dataframe import statistics, udf_projection, udf_window_projection  # noqa: E402
-from repark.spark.dataframe import display, replace_expr, sampling  # noqa: E402
+from repark.spark.dataframe import display, sampling  # noqa: E402
 from repark.spark.dataframe.eager import _resolve_cache_budgets  # noqa: E402
 from repark.spark.dataframe.sampling import _coerce_sample_seed  # noqa: E402
 

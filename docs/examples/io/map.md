@@ -64,6 +64,13 @@ directory carries the one-liner (verified by scan, EX-26 round 2).
   `append` (and a second append arm read back ordered by id),
   `overwritePartitions` / `overwrite_partitions`, `option` /
   `options` (EX-22).
+- [io_declared_refusals.py](io_declared_refusals.py) — the declared
+  `orc`/`xml`/`jdbc` reader-writer refusals (`DataFrameReader.orc`/`xml`/`jdbc`,
+  `DataFrameWriter.orc`/`xml`/`jdbc`) asserting each `NOT_IMPLEMENTED` shape and
+  Spark's own `XML_ROW_TAG_MISSING` check, plus the `DataFrameNaFunctions.replace`
+  delegation with its `ARGUMENT_REQUIRED` / `MIXED_TYPE_REPLACEMENT` arms
+  (IO-DECLARED-1; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1). `DataFrameReader.jdbc`
+  leaves the exceptions list — the refusal is the example.
 
 ## Pointers
 

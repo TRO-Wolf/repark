@@ -27,6 +27,7 @@ from repark.spark._idents import escape_sql_single_quotes
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
+from repark.spark.dataframe import io_declared as _io_declared
 from repark.spark.dataframe.core import (
     DataFrame,
     _by_name_casefold_map,
@@ -85,8 +86,7 @@ class DataFrameWriter:
         "_sort_columns",
     )
 
-    _VALID_MODES = ("append", "overwrite", "error", "errorifexists", "ignore")
-    _PATH_MODES = ("append", "overwrite", "error", "errorifexists", "ignore")
+    _VALID_MODES = _PATH_MODES = ("append", "overwrite", "error", "errorifexists", "ignore")
     _PATH_FORMATS = frozenset({"parquet", "csv", "json"})
     _CSV_WRITE_UNSUPPORTED_OPTIONS: frozenset[str] = frozenset(
         {
@@ -357,6 +357,10 @@ class DataFrameWriter:
         self._format = "json"
         self.save(path)
 
+    orc = _io_declared.writer_orc
+    xml = _io_declared.writer_xml
+    jdbc = _io_declared.writer_jdbc
+
     def save(
         self,
         path: str | None = None,
@@ -390,12 +394,7 @@ class DataFrameWriter:
                     "DataFrameWriter.save(path) requires format('parquet'|'csv'|'json'); "
                     "use saveAsTable for Iceberg tables"
                 )
-            shown = (self._format or "")[:64]
-            raise AnalysisException(
-                f"DATA_SOURCE_NOT_FOUND: Failed to find the data source: {shown!r}. "
-                "repark path writes support format('parquet'|'csv'|'json') via COPY TO "
-                "(orc/other formats are not supported)."
-            )
+            _io_declared.refuse_writer_save_format(self)
         self._apply_path_write(path, stored_as=self._format.upper())
 
     def _apply_path_write(self, path: str, *, stored_as: str) -> None:

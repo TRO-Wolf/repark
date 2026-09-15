@@ -128,9 +128,9 @@ def test_ex_0_exceptions_file_names_only_inventory_rows() -> None:
         assert name in enumerated
         assert reason
     assert "SparkSession.read_postgres" in mapping
-    assert "DataFrameReader.jdbc" in mapping
+    assert "DataFrameReader.jdbc" not in mapping
     assert len(mapping) == gate.EXCEPTIONS_BASELINE
-    assert gate.EXCEPTIONS_BASELINE == 2
+    assert gate.EXCEPTIONS_BASELINE == 1
 
 
 def test_ex_0_execute_nonzero_is_red(tmp_path: Path) -> None:

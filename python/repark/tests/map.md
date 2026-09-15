@@ -2288,6 +2288,30 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusal shape for `rdd`), and a column named `rdd` does not shadow the property.
   pins: df-stream-batch-1/C-001, C-002, C-003, C-004
   Registry rows and the no-regression inventory updates for this unit are proven by these pins and the frozen-surface tables. pins: df-stream-batch-1/C-005, C-006
+- `test_io_declared_1.py` + `facade_reader_writer_oracle.json` —
+  **IO-DECLARED-1 (2026-09-14):** the orc / xml / jdbc declared IO refusals and
+  `DataFrameNaFunctions.replace`, driven cell-by-cell from the live-PySpark oracle copy.
+  `DataFrameReader.orc` (Spark's full signature) / `DataFrameWriter.orc` /
+  `format("orc")` refuse `NOT_IMPLEMENTED` `{"feature": "orc"}` at the call (at
+  `load`/`save` for the `format` spellings) — registry IO-ORC-1; `DataFrameReader.xml`
+  / `DataFrameWriter.xml` / `format("xml")` first reproduce Spark's own
+  `XML_ROW_TAG_MISSING` (SQLSTATE 42KDF, byte-exact message) without a `rowTag`
+  argument or option, then refuse `NOT_IMPLEMENTED` `{"feature": "xml"}` — registry
+  IO-XML-1; `DataFrameReader.jdbc` (Spark's camelCase signature; the old
+  snake-case postgres-connector body is replaced by the refusal) and
+  `DataFrameWriter.jdbc` first reproduce Spark's `INVALID_SAVE_MODE` (SQLSTATE 42000,
+  the `writer_jdbc_mode_bad` cell message) for a bad mode, then refuse
+  `NOT_IMPLEMENTED` `{"feature": "jdbc"}` — registry IO-JDBC-1, reads stay on
+  `format('postgres')` / `session.read_postgres`. `na.replace` delegates exactly to
+  `DataFrame.replace` through the shared no-value sentinel: scalar/list/subset/None
+  cells, `MIXED_TYPE_REPLACEMENT`, `ARGUMENT_REQUIRED` (omitted value over a non-dict
+  `to_replace`), and the `na_replace_identity` equality cell. The writer orc pin
+  rewrites (test_e2_readwriter, test_r1_read_formats, test_writer_v2) and the
+  declared-shape rewrites of the three `spark.read.jdbc` pins in
+  `test_pg_jdbc_options.py` ride this unit. The example for the new names is
+  `docs/examples/io/io_declared_refusals.py`, the fixture and inventory updates are
+  C-005, and the named-suite sweep is C-006.
+  pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_cache_persist.py` — **R-PERF-CACHE** + **r23 CACHE1**: cache/persist self + is_cached + storageLevel;
   second action after cache cheap; derived after materialize; unpersist; localCheckpoint;
   clearCache real drop (live + hand-registered `__repark_cache_*` prefix sweep + leaves

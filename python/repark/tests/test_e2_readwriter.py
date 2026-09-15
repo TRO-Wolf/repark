@@ -8,7 +8,11 @@ import pytest
 
 from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom
-from repark.errors import AnalysisException, PySparkTypeError, PySparkValueError
+from repark.errors import (
+    PySparkNotImplementedError,
+    PySparkTypeError,
+    PySparkValueError,
+)
 from repark.spark.session import (
     _default_namespace_from_builder_config,
     _parse_table_identifier_segments,
@@ -410,17 +414,17 @@ def test_parquet_save_load_round_trip(spark: ReparkSession, tmp_path: Path) -> N
     assert rows == [{"id": 1, "name": "a"}, {"id": 2, "name": "b"}]
 
 
-def test_save_unsupported_format_loud(spark: ReparkSession, tmp_path: Path) -> None:
-    """Path save of an unsupported format must be DATA_SOURCE_NOT_FOUND-shaped.
+def test_save_orc_declared_not_implemented(spark: ReparkSession) -> None:
+    """Path save of format('orc') is the declared NOT_IMPLEMENTED refusal.
 
-    The match requires the Spark error-class token — a format-name-only AnalysisException must
-    not keep this pin green (the load pin is the same strict shape).
+    IO-ORC-1 (R-1, 2026-09-14): the orc branch of the old DATA_SOURCE_NOT_FOUND refusal
+    became Spark's NOT_IMPLEMENTED class; the message is the IO-ORC-1 row's str shape.
     """
-    path = tmp_path / "orc_out"
-    with pytest.raises(AnalysisException, match="DATA_SOURCE_NOT_FOUND") as raised:
-        spark.createDataFrame([(1,)], ["id"]).write.format("orc").save(str(path))
-    # Format name still surfaces in the message (mutation-proofs the shown source).
-    assert "orc" in str(raised.value).lower()
+    with pytest.raises(PySparkNotImplementedError) as raised:
+        spark.createDataFrame([(1,)], ["id"]).write.format("orc").save("/tmp/unused-orc-out")
+    assert raised.value.getCondition() == "NOT_IMPLEMENTED"
+    assert raised.value.getMessageParameters() == {"feature": "orc"}
+    assert str(raised.value) == "[NOT_IMPLEMENTED] orc is not implemented."
 
 
 def test_write_csv_json_round_trip_e2(spark: ReparkSession, tmp_path: Path) -> None:
@@ -436,9 +440,12 @@ def test_write_csv_json_round_trip_e2(spark: ReparkSession, tmp_path: Path) -> N
     assert json_rows == [{"id": 1, "name": "a"}]
 
 
-def test_load_unsupported_format_loud(spark: ReparkSession) -> None:
-    with pytest.raises(AnalysisException, match="DATA_SOURCE_NOT_FOUND"):
+def test_load_orc_declared_not_implemented(spark: ReparkSession) -> None:
+    """format('orc').load is the declared NOT_IMPLEMENTED refusal (IO-ORC-1)."""
+    with pytest.raises(PySparkNotImplementedError) as raised:
         spark.read.format("orc").load("/tmp/does-not-matter")
+    assert raised.value.getCondition() == "NOT_IMPLEMENTED"
+    assert raised.value.getMessageParameters() == {"feature": "orc"}
 
 
 # ndarray lit

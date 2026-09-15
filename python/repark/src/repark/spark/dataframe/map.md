@@ -126,7 +126,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **Critic round (2026-09-14, R-4):** the select/filter struct-edit resolve hooks are
   deleted — `withField` / `dropFields` are native `update_fields` expressions, so no
   boundary rewrite runs. pins: column-parity-1/C-002, C-004, C-005, C-008
-- `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`.
+- `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
+  IO-DECLARED-1 (2026-09-14): `replace` joins the missing-data surface as the exact
+  `DataFrame.replace` delegation with the same no-value sentinel
+  (`replace_expr._NO_VALUE`) — PySpark's `<no value>` default — so `na.replace(x)`
+  over a non-dict `to_replace` raises `ARGUMENT_REQUIRED` while an explicit `None`
+  value null-replaces. pins: io-declared-1/C-004
 - `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
   PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,
   same-type-group `MIXED_TYPE_REPLACEMENT`, subset resolution through
@@ -152,6 +157,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   display/engine overlay + origin map + qualifier propagation shared by
   `core.py`'s identity spawns) — so `core.py` keeps only the slot and the call
   sites. `DataFrame.replace` is a one-line wrapper.
+  IO-DECLARED-1 (2026-09-14): the module owns the shared no-value sentinel
+  `_NO_VALUE` — PySpark's `<no value>` — now the default of both
+  `DataFrame.replace` and `DataFrameNaFunctions.replace`; a non-dict
+  `to_replace` with the sentinel value raises `ARGUMENT_REQUIRED` (Spark's
+  message and params byte-exact, pinned by `na_replace_novalue_nondict`), an
+  explicit `None` value still null-replaces, and the `MIXED_TYPE_REPLACEMENT`
+  raise carries Spark's full message text. pins: io-declared-1/C-004
 - `surface_a.py` owns the DF-SURFACE-A-1 method bodies (2026-09-14) behind the
   one-line class bindings: `to` (store-assignment reconciliation over a
   `StructType` — case-insensitive name match with the schema's spelling
@@ -545,6 +557,22 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `udf_bridge.py` owns action-time pandas, classic, and Arrow UDF callbacks without importing
   `DataFrame` at module scope. DFCORE-2 (2026-09-07) keeps callback execution here; only the
   projection rewrites moved out. pins: dfcore-2/C-005
+- `io_declared.py` owns the declared orc / xml / jdbc reader-writer refusal bodies
+  (IO-DECLARED-1, 2026-09-14; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1). `reader_orc`,
+  `reader_xml`, `reader_jdbc`, `writer_orc`, `writer_xml`, and `writer_jdbc` carry
+  Spark 4.1.2's signatures and raise `PySparkNotImplementedError` `NOT_IMPLEMENTED`
+  with the feature parameter at the call; `xml` runs Spark's own `rowTag` check first
+  (argument or option map, case-insensitive) and raises `XML_ROW_TAG_MISSING`
+  (SQLSTATE 42KDF) through `streaming_batch._raise_analysis` exactly as Spark words
+  it; `writer_jdbc` checks the save mode first and raises `INVALID_SAVE_MODE`
+  (SQLSTATE 42000, the live-Spark message) before refusing; `refuse_reader_load_format`
+  and `refuse_writer_save_format` are the `format("orc")` / `format("xml")` arms at
+  `load()` / `save()`, with `save()`'s residual `DATA_SOURCE_NOT_FOUND` answer for
+  every other non-path format kept byte-identical. The methods bind on the classes
+  from `reader.py` and `writer_readwriter.py`, both at exact line ceilings.
+  Python is correct here under the Rust-first instruction: a Rust ORC or XML
+  reader/writer needs a new crate (owner question Q-15B-1) and JDBC needs the JVM
+  driver layer — refusals, not compute. pins: io-declared-1/C-001, C-002, C-003
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
   helpers. **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
   (ceiling 1117→1113). pins: dml-b-insert-overwrite/C-003, C-004
@@ -558,6 +586,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   and are re-imported here, so `core.py`'s import surface is unchanged
   (1111 → 1105, mirrored in the CAP-1 test).
   pins: io-bucket-cluster-1/C-001, C-002, C-004
+  IO-DECLARED-1 (2026-09-14): `orc`/`xml`/`jdbc` bind on `DataFrameWriter` from
+  `io_declared.py` and `save()`'s non-path-format fallback delegates to
+  `_io_declared.refuse_writer_save_format` (1111 → 1110, mirrored in the CAP-1
+  test); the orc arm of the old `DATA_SOURCE_NOT_FOUND` refusal became the declared
+  `NOT_IMPLEMENTED` (IO-ORC-1) and the duplicate `_VALID_MODES`/`_PATH_MODES`
+  tuple became one shared line. pins: io-declared-1/C-001, C-003
 - `writer_layout.py` owns the writer layout bodies (IO-BUCKET-CLUSTER-1, 2026-09-14):
   the `bucketBy` / `sortBy` / `clusterBy` state setters (Spark's `NOT_INT` on
   `numBuckets` at the call, list first columns flattened), the action-time checks —

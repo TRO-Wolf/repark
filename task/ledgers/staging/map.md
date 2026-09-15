@@ -4,6 +4,17 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [io-declared-1-ledger.md](io-declared-1-ledger.md) —
+  **IO-DECLARED-1 (2026-09-14), in flight:** the orc / xml / jdbc reader-writer names
+  become dated declared refusals with Spark's own error classes (R-1 / R-2; registry rows
+  `IO-ORC-1`, `IO-XML-1`, `IO-JDBC-1` — BACKLOG: an ORC / XML crate is owner question
+  Q-15B-1, JDBC waits for the 1.6 native connectors), Spark's own `rowTag` and save-mode
+  checks reproduced byte-exact ahead of each refusal, the writer's orc arm of the
+  `DATA_SOURCE_NOT_FOUND` refusal rewritten, and `DataFrameNaFunctions.replace` joining as
+  the exact `DataFrame.replace` delegation through the shared no-value sentinel
+  (`ARGUMENT_REQUIRED` / `MIXED_TYPE_REPLACEMENT` cells). Facade-only — refusals and one
+  delegation, no Rust change. `risk_tier: standard`. Branch `feat/io-declared-1`.
+  pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`

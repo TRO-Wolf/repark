@@ -509,11 +509,16 @@ def test_write_csv_json_round_trip(spark: ReparkSession, tmp_path: Path) -> None
     assert spark.read.json(str(json_path)).to_arrow().to_pylist() == [{"id": 1, "name": "a"}]
 
 
-def test_write_orc_loud(spark: ReparkSession, tmp_path: Path) -> None:
-    """Unsupported path format stays DATA_SOURCE_NOT_FOUND-shaped."""
+def test_write_unregistered_format_loud(spark: ReparkSession, tmp_path: Path) -> None:
+    """Unsupported path format stays DATA_SOURCE_NOT_FOUND-shaped.
+
+    The probe is ``avro``: the ``orc`` arm of this refusal became the declared
+    NOT_IMPLEMENTED (IO-ORC-1, R-1); every other non-path format keeps the
+    DATA_SOURCE_NOT_FOUND answer.
+    """
     with pytest.raises(AnalysisException, match="DATA_SOURCE_NOT_FOUND") as raised:
-        _source(spark, "(1,'a')").write.format("orc").save(str(tmp_path / "o"))
-    assert "orc" in str(raised.value).lower()
+        _source(spark, "(1,'a')").write.format("avro").save(str(tmp_path / "o"))
+    assert "avro" in str(raised.value).lower()
 
 
 # ==================================================================================================

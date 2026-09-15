@@ -99,11 +99,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "ML feature transformer facades share one module.",
         "Split transformers by feature family with stable public re-exports.",
     ),
-    "python/repark/src/repark/spark/session/reader.py": (
-        1022,
-        "DataFrameReader formats and option handling narrowly exceed the default.",
-        "Split format-specific readers from shared option validation.",
-    ),
     "python/repark/src/repark/spark/session/session_core.py": (
         2290,
         "SparkSession lifecycle and query entry points share one facade module.",
