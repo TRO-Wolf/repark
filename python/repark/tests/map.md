@@ -3324,8 +3324,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `FIELD_NOT_FOUND` / `DATATYPE_MISMATCH.*` error shapes, `update_fields(...)` naming,
   `getField` after edit, `caseSensitive` conf no-effect pin), and the four SQL-door
   cells (`IN` NULL + mixed-type error-class backlog SQL-IN-1, `isnan` numeric + string
-  backlog SQL-ISNAN-1, no-spelling refusal pins). pins: column-parity-1/C-001,
-  C-002, C-003, C-004, C-005, C-006, C-008
+  backlog SQL-ISNAN-1, no-spelling refusal pins). Re-check round 2 (2026-09-15):
+  struct/array `isNaN` plan refusal, unaliased `groupBy` engine-key names (backlog
+  COL-GROUPKEY-NAME-1), empty-name `withField` chain (COL-WITHFIELD-EMPTY-1).
+  pins: column-parity-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009
 - `test_column_parity_1_critic.py` — **COLUMN-PARITY-1 critic round** (2026-09-14,
   R-4): the 13 L-001..L-010 + wide-`isin` pins in their own module (the oracle file
   stays under its line ceiling) — sequential `withField`/`dropFields` chains,

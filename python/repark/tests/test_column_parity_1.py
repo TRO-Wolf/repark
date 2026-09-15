@@ -6,6 +6,7 @@ pins: column-parity-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 from __future__ import annotations
 
 import math
+import re
 from pathlib import Path
 from typing import Any
 
@@ -819,3 +820,77 @@ def test_no_sql_spelling_for_struct_edit_names(spark: ReparkSession) -> None:
     ]:
         with pytest.raises(AnalysisException, match="Invalid function"):
             spark.sql(sql)
+
+
+def test_isnan_struct_refuses(spark: ReparkSession) -> None:
+    """``st.isNaN()`` on a struct raises ``DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE``.
+
+    pins: column-parity-1/C-009
+    """
+    with pytest.raises(AnalysisException) as raised:
+        _base_df(spark).select(F.col("st").isNaN())
+    assert "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE" in str(raised.value)
+    assert "isnan" in str(raised.value)
+    assert "STRUCT" in str(raised.value)
+
+
+def test_isnan_array_refuses(spark: ReparkSession) -> None:
+    """``arr.isNaN()`` on an array raises ``DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE``.
+
+    pins: column-parity-1/C-009
+    """
+    frame = spark.createDataFrame([([1, 2],), ([],), (None,)], "arr array<int>")
+    with pytest.raises(AnalysisException) as raised:
+        frame.select(F.col("arr").isNaN())
+    assert "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE" in str(raised.value)
+    assert "isnan" in str(raised.value)
+    assert "ARRAY" in str(raised.value)
+
+
+def test_groupby_unaliased_arith_key_uses_engine_name(spark: ReparkSession) -> None:
+    """Unaliased ``groupBy(i + 1)`` names the key with the engine expression string.
+
+    pins: column-parity-1/C-009; registry COL-GROUPKEY-NAME-1
+    """
+    out = _base_df(spark).groupBy(F.col("i") + 1).count()
+    assert out.columns[1] == "count"
+    assert (
+        re.fullmatch(r"datafusion\.public\.__repark_cdf_[0-9a-f]+\.i \+ Int32\(1\)", out.columns[0])
+        is not None
+    )
+    assert {row[0]: row[1] for row in out.collect()} == {2: 1, 3: 1, None: 1}
+
+
+def test_groupby_withfield_key_uses_engine_name(spark: ReparkSession) -> None:
+    """Unaliased ``groupBy(withField-getField)`` names the key with the engine string.
+
+    pins: column-parity-1/C-009; registry COL-GROUPKEY-NAME-1
+    """
+    frame = spark.createDataFrame([((1,),), ((2,),), (None,)], "st struct<a:int>")
+    out = frame.groupBy(F.col("st").withField("c", F.lit(9)).getField("c")).count()
+    assert out.columns[1] == "count"
+    assert (
+        re.fullmatch(
+            r"update_fields\((?:datafusion\.public\.__repark_cdf_[0-9a-f]+\.)?st,"
+            r"Utf8\(\"with\"\),Utf8\(\"c\"\),Int32\(9\)\)\[c\]",
+            out.columns[0],
+        )
+        is not None
+    )
+    assert {row[0]: row[1] for row in out.collect()} == {9: 2, None: 1}
+
+
+def test_withfield_empty_name_chain_appends_placeholders(spark: ReparkSession) -> None:
+    """Chained ``withField("", ...)`` appends ``col2`` then ``col3`` (COL-WITHFIELD-EMPTY-1).
+
+    pins: column-parity-1/C-009; registry COL-WITHFIELD-EMPTY-1
+    """
+    out = _base_df(spark).select(
+        F.col("st").withField("", F.lit(1)).withField("", F.lit(2)).alias("w")
+    )
+    assert out.schema.simpleString() == "struct<w:struct<a:int,b:string,col2:int,col3:int>>"
+    assert out.to_arrow().to_pylist() == [
+        {"w": {"a": 1, "b": "x", "col2": 1, "col3": 2}},
+        {"w": None},
+        {"w": {"a": 3, "b": None, "col2": 1, "col3": 2}},
+    ]

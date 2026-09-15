@@ -214,9 +214,7 @@ def to(frame: DataFrame, schema: Any) -> DataFrame:
             if source.nullable and not field.nullable:
                 raise AnalysisException(_nullable_column_message(field.name))
             expr = _reconcile(frame[source.name], source.dataType, field.dataType, field.name)
-        projected.append(
-            expr.alias(field.name, metadata=field.metadata if field.metadata else None)
-        )
+        projected.append(expr.alias(field.name))
     return frame.select(*projected)
 
 
@@ -256,10 +254,7 @@ def withMetadata(frame: DataFrame, columnName: str, metadata: dict) -> DataFrame
     if columnName not in names and not any(name.casefold() == folded for name in names):
         _raise_unresolved_column(columnName, names)
     resolved = frame._resolve_getitem_column_name(columnName)
-    projected = [
-        frame[name].alias(name, metadata=dict(metadata)) if name == resolved else frame[name]
-        for name in names
-    ]
+    projected = [frame[name].alias(name) if name == resolved else frame[name] for name in names]
     return frame.select(*projected)
 
 

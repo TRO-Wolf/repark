@@ -7879,10 +7879,12 @@ field NAME.
   `{}`, and the same loss holds on every position measured: the stamped frame,
   `filter`, `select`, `withColumn`, `join`, `union`, `cache`/eager
   materialization, a parquet write/read round trip, and both `to()` arms
-  (source-keep and non-empty target override). `Column.alias(name, metadata=)`
-  accepts the dict and the engine ignores it — there is no StructField
+  (source-keep and non-empty target override). `withMetadata` / `to` project a
+  plain rename, so the stamped dict drops — there is no StructField
   metadata plumbing on the native path (`logical_schema_fields` carries
-  name/type/nullable only; `PyColumnParts.alias` takes no metadata).
+  name/type/nullable only; `PyColumnParts.alias` takes no metadata). (A user-spelled
+  `Column.alias(name, metadata=)` / `name(name, metadata=)` still surfaces on `schema`
+  through the column-parity-1 overlay, pinned by `test_name_metadata`.)
 - **Apache Spark** — `withMetadata` is a Dataset plan node and the dict
   survives plan transforms; `to()` keeps a source field's metadata unless the
   target field carries non-empty metadata (`dataframe.py` 2431-2432).
@@ -8076,6 +8078,8 @@ field NAME.
 - **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. Multi-name
   aliasing names generator outputs, which belongs to the generator select-path; the
   pin codifies today's refusal so the fix reds it on purpose.
+  and `::test_withfield_empty_name_chain_appends_placeholders` (the chain keeps the
+  sequential rule: the second `""` never matches the `col2` placeholder, so it appends `col3`).
 - **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. The `update_fields`
   engine expression requires addressable field names, so an empty name cannot reach
   the kernel unchanged; the `col{index}` substitution is the engine's own convention
@@ -8120,6 +8124,26 @@ field NAME.
   Both engines refuse the malformed ANSI coercion; only the error class and message
   diverge. The pins assert today's class and message; a Spark-aligned
   `CAST_INVALID_INPUT` fix reds them on purpose.
+
+### COL-GROUPKEY-NAME-1 — unaliased `groupBy(<expression>)` names the key with the engine expression string
+
+- **repark** — `df.groupBy(F.col("i") + 1).count()` names the key
+  `datafusion.public.__repark_cdf_<session-uuid>.i + Int32(1)` (the uuid varies per
+  session); `frame.groupBy(F.col("st").withField("c", F.lit(9)).getField("c")).count()`
+  names it `update_fields(st,Utf8("with"),Utf8("c"),Int32(9))[c]` (a
+  table-qualified `st` appears on some plan shapes). The groups and counts are correct
+  in both shapes; only the key name diverges.
+- **Apache Spark** — the display form is the target (`(a + 1)`,
+  `update_fields(st, WithField(9))[c]` — the facade `select` spelling, per the
+  round-2 ruling; UNMEASURED live this round).
+- **Pin** —
+  `python/repark/tests/test_column_parity_1.py::test_groupby_unaliased_arith_key_uses_engine_name`
+  and `::test_groupby_withfield_key_uses_engine_name` (each asserts today's engine
+  string shape plus the grouped values, so a display-form fix reds them on purpose).
+- **Rationale** — BACKLOG, filed 2026-09-15 by unit column-parity-1 (critic re-check
+  L-102). `GroupedData.agg` plans the key through the native expression without the
+  facade `projection_name`; `select` of the same expression already uses the facade
+  display.
 
 ## 8. Drop-in disclosure rationale
 
