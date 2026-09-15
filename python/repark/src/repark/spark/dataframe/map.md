@@ -162,7 +162,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `transform`/`transform_keys`/`transform_values`,
   `NULLABLE_COLUMN_OR_FIELD` / `INVALID_COLUMN_OR_FIELD_DATA_TYPE` in Spark's
   exact text, `NOT_STRUCT` for a non-schema argument per registry DF-TO-1),
-  `withMetadata` (plain rename — the stamped dict drops, backlog DF-METADATA-1 —
+  `withMetadata` (`alias(name, metadata=)` — the stamped frame, a replace and a cache keep the dict; plan transforms still drop it, backlog DF-METADATA-1 —
   `NOT_DICT` on a non-dict,
   `UNRESOLVED_COLUMN.WITH_SUGGESTION` attached `_integral`-style on a miss),
   `registerTempTable` (FutureWarning + `create_or_replace_temp_view`
