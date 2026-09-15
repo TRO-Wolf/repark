@@ -4,7 +4,9 @@ use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, Result, ScalarValue, plan_err};
 use datafusion::logical_expr::expr::ScalarFunction;
-use datafusion::logical_expr::{Aggregate, Expr, LogicalPlan, LogicalPlanBuilder, Projection};
+use datafusion::logical_expr::{
+    Aggregate, Expr, Join, LogicalPlan, LogicalPlanBuilder, Projection,
+};
 use datafusion::optimizer::AnalyzerRule;
 
 use crate::decimal_cast::spark_nonnull_udf;
@@ -129,7 +131,36 @@ fn windowed_column(column: &Column, input: &LogicalPlan) -> bool {
             false
         }
         LogicalPlan::SubqueryAlias(alias) => windowed_column(column, &alias.input),
-        _ => true,
+        LogicalPlan::Filter(filter) => windowed_column(column, &filter.input),
+        LogicalPlan::Limit(limit) => windowed_column(column, &limit.input),
+        LogicalPlan::Sort(sort) => windowed_column(column, &sort.input),
+        LogicalPlan::Distinct(distinct) => windowed_column(column, distinct.input()),
+        LogicalPlan::Repartition(repartition) => windowed_column(column, &repartition.input),
+        LogicalPlan::Subquery(subquery) => windowed_column(column, &subquery.subquery),
+        LogicalPlan::Join(join) => windowed_join_column(column, join),
+        LogicalPlan::Union(union) => {
+            !union.inputs.is_empty()
+                && union
+                    .inputs
+                    .iter()
+                    .all(|child| windowed_column(column, child))
+        }
+        LogicalPlan::Aggregate(_) | LogicalPlan::TableScan(_) | LogicalPlan::Window(_) => true,
+        _ => false,
+    }
+}
+
+fn windowed_join_column(column: &Column, join: &Join) -> bool {
+    let mut owners = [&join.left, &join.right].into_iter().filter(|child| {
+        child
+            .schema()
+            .fields()
+            .iter()
+            .any(|field| field.name() == &column.name)
+    });
+    match (owners.next(), owners.next()) {
+        (Some(owner), None) => windowed_column(column, owner),
+        _ => false,
     }
 }
 
@@ -1226,6 +1257,53 @@ mod tests {
             message.contains("The input is not a correct window column:"),
             "expected the reason, got {message}"
         );
+    }
+
+    #[tokio::test]
+    async fn window_time_struct_behind_unary_nodes_refuses() {
+        let ctx = ctx();
+        let shaped = [
+            "SELECT window_time(w) AS wt FROM (SELECT named_struct('start', TIMESTAMP '2024-01-01 10:00:00', 'end', TIMESTAMP '2024-01-01 10:10:00') AS w) AS t WHERE true",
+            "SELECT window_time(w) AS wt FROM (SELECT named_struct('start', TIMESTAMP '2024-01-01 10:00:00', 'end', TIMESTAMP '2024-01-01 10:10:00') AS w) AS t LIMIT 10",
+            "SELECT window_time(w) AS wt FROM (SELECT named_struct('start', TIMESTAMP '2024-01-01 10:00:00', 'end', TIMESTAMP '2024-01-01 10:10:00') AS w) AS t ORDER BY w",
+            "SELECT DISTINCT window_time(w) AS wt FROM (SELECT named_struct('start', TIMESTAMP '2024-01-01 10:00:00', 'end', TIMESTAMP '2024-01-01 10:10:00') AS w) AS t",
+        ];
+        for sql in shaped {
+            let message = rule_error(&ctx, sql).await;
+            assert!(
+                message.contains("[_LEGACY_ERROR_TEMP_3101]"),
+                "expected the condition for {sql}, got {message}"
+            );
+        }
+        let unioned = rule_error(
+            &ctx,
+            "SELECT window_time(w) AS wt FROM (SELECT named_struct('start', TIMESTAMP '2024-01-01 10:00:00', 'end', TIMESTAMP '2024-01-01 10:10:00') AS w UNION ALL SELECT named_struct('start', TIMESTAMP '2024-01-01 10:00:00', 'end', TIMESTAMP '2024-01-01 10:10:00') AS w) AS t",
+        )
+        .await;
+        assert!(
+            unioned.contains("[_LEGACY_ERROR_TEMP_3101]"),
+            "expected the condition for the union, got {unioned}"
+        );
+        let joined = rule_error(
+            &ctx,
+            "SELECT window_time(w) AS wt FROM (SELECT named_struct('start', TIMESTAMP '2024-01-01 10:00:00', 'end', TIMESTAMP '2024-01-01 10:10:00') AS w) AS t CROSS JOIN (SELECT 1 AS id) AS u",
+        )
+        .await;
+        assert!(
+            joined.contains("[_LEGACY_ERROR_TEMP_3101]"),
+            "expected the condition for the join, got {joined}"
+        );
+    }
+
+    #[tokio::test]
+    async fn window_time_grouped_window_behind_filter_answers() {
+        let ctx = ctx();
+        let produced = batch(
+            &ctx,
+            "SELECT window_time(window) AS wt FROM (SELECT window(ts, '10 minutes') AS window, count(*) AS c FROM (SELECT * FROM (VALUES (1, TIMESTAMP '2024-01-01 10:07:30'), (2, TIMESTAMP '2024-01-01 10:12:00')) AS t(id, ts)) GROUP BY window(ts, '10 minutes')) AS u WHERE c > 0",
+        )
+        .await;
+        assert_eq!(produced.num_rows(), 2);
     }
 
     #[tokio::test]

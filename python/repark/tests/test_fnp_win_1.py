@@ -1312,3 +1312,104 @@ def test_crit2_clamped_chain_stays_one_session() -> None:
     ).to_arrow()
     _assert_crit_rows(_rcell("C2-L002-chain-clamped", "sql"), grouped)
     session.stop()
+
+
+def test_crit2_window_time_struct_shapes_refuse() -> None:
+    """pins: fnp-win-1/C-003"""
+    session = _zoned_session("UTC")
+    session.createDataFrame(
+        [
+            (datetime.datetime(2024, 1, 1, 10, 0, 0), datetime.datetime(2024, 1, 1, 10, 10, 0)),
+        ],
+        "start timestamp, end timestamp",
+    ).createOrReplaceTempView("crit2_se")
+    struct_cols = session.table("crit2_se").select(F.struct("start", "end").alias("w"))
+    struct_cols.createOrReplaceTempView("crit2_sc")
+    ring = session.range(1)
+    builds = (
+        ("C2-L001-struct-plain", "python", lambda: struct_cols.select(F.window_time("w"))),
+        (
+            "C2-L001-struct-filter",
+            "python",
+            lambda: struct_cols.filter(F.lit(True)).select(F.window_time("w")),
+        ),
+        (
+            "C2-L001-struct-limit",
+            "python",
+            lambda: struct_cols.limit(10).select(F.window_time("w")),
+        ),
+        (
+            "C2-L001-struct-orderby",
+            "python",
+            lambda: struct_cols.orderBy("w").select(F.window_time("w")),
+        ),
+        (
+            "C2-L001-struct-distinct",
+            "python",
+            lambda: struct_cols.distinct().select(F.window_time("w")),
+        ),
+        (
+            "C2-L001-struct-crossjoin",
+            "python",
+            lambda: struct_cols.crossJoin(ring).select(F.window_time("w")),
+        ),
+        (
+            "C2-L001-struct-union",
+            "python",
+            lambda: (
+                struct_cols.select("w").union(struct_cols.select("w")).select(F.window_time("w"))
+            ),
+        ),
+        (
+            "C2-L001-namedstruct-where",
+            "sql",
+            lambda: session.sql(
+                "SELECT CAST(window_time(w) AS STRING) wt FROM "
+                "(SELECT named_struct('start', start, 'end', end) AS w FROM crit2_se) t "
+                "WHERE true"
+            ),
+        ),
+        (
+            "C2-L001-view-where",
+            "sql",
+            lambda: session.sql(
+                "SELECT CAST(window_time(w) AS STRING) wt FROM crit2_sc WHERE true"
+            ),
+        ),
+    )
+    for cell_id, door, build in builds:
+        cell = _rcell(cell_id, door)
+        assert cell["condition"] == "_LEGACY_ERROR_TEMP_3101"
+        with pytest.raises(AnalysisException) as excinfo:
+            build().to_arrow()
+        message = str(excinfo.value)
+        assert cell["condition"] in message
+        assert "The input is not a correct window column:" in message
+    session.stop()
+
+
+def test_crit2_window_time_grouped_survives_filter() -> None:
+    """pins: fnp-win-1/C-003"""
+    session = _zoned_session("UTC")
+    rows: list[Any] = [
+        (1, datetime.datetime(2026, 9, 15, 14, 7, 30)),
+        (2, datetime.datetime(2026, 9, 15, 14, 12, 0)),
+    ]
+    session.createDataFrame(rows, "id int, ts timestamp").createOrReplaceTempView("crit2_ev")
+    table = (
+        session.table("crit2_ev")
+        .groupBy(F.window("ts", "10 minutes"))
+        .count()
+        .filter(F.col("count") > 0)
+        .select(F.window_time("window").cast("string").alias("wt"))
+        .orderBy("wt")
+        .to_arrow()
+    )
+    _assert_crit_rows(_rcell("C2-L001-real-window-filter", "python"), table)
+    grouped = session.sql(
+        "SELECT CAST(window_time(window) AS STRING) wt FROM "
+        "(SELECT window(ts, '10 minutes') AS window, count(*) c FROM crit2_ev "
+        "GROUP BY window(ts, '10 minutes')) t WHERE c > 0 ORDER BY wt"
+    ).to_arrow()
+    _assert_crit_rows(_rcell("C2-L001-real-window-where", "sql"), grouped)
+    session.stop()

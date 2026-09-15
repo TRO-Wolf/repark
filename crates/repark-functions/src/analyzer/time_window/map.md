@@ -25,7 +25,11 @@ re-exports through `mod.rs` so its registration path never moved.
   pins: fnp-win-1/C-004, C-006, C-008, C-009, C-011, C-012, C-013, C-015.
   Round 2 (2026-09-15): the dynamic-gap path chains on the running maximum
   of session ends (`max(end)` over preceding rows per key) instead of the
-  previous row's end. pins: fnp-win-1/C-004
+  previous row's end. pins: fnp-win-1/C-004. Round 2 (2026-09-15):
+  `mod.rs` recurses the `window_time` provenance walk through Filter /
+  Limit / Sort / Distinct / Repartition / Subquery into the defining input
+  and Join / Union into the owning child, failing closed otherwise.
+  pins: fnp-win-1/C-003.
 
 ## Pointers
 

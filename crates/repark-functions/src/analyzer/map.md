@@ -30,7 +30,9 @@ under its `check_rust_file_size` ceiling and each matrix has one home.
   `check_rust_file_size` ceiling. Month/year gaps refuse loud beside the
   rule. pins: fnp-win-1/C-004, C-006, C-008, C-011. Round 2 (2026-09-15):
   `session_window.rs` chains dynamic gaps on the running maximum of ends.
-  pins: fnp-win-1/C-004.
+  pins: fnp-win-1/C-004. The `window_time` provenance walk recurses through
+  Filter / Limit / Sort / Distinct / Repartition / Subquery / Join / Union
+  into the defining input, failing closed otherwise. pins: fnp-win-1/C-003.
 - `cast_legality.rs` — Spark's CAST / TRY_CAST type-legality deny matrix covers exactly
   `{Date32, Date64} ↔ {Int8, Int16, Int32, Int64}`. Refusals are `DataFusionError::Plan` with
   `[DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION]`, both Spark type names, and the applicable
