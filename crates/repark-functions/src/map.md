@@ -47,6 +47,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `n < 0`. pins: fn-fix-2-string-rows/C-002
 - `spark_elt.rs` — **FN-FIX-2 (2026-09-04):** Spark `elt`; ANSI out-of-range raises
   `INVALID_ARRAY_INDEX`; NULL `n` is NULL. pins: fn-fix-2-string-rows/C-002
+- `spark_degrees.rs` — **FNP-BITMAP-FACADE-1 run 16a round 3 (DEGREES-RUST-1, owner
+  Q-15a-1):** Spark-exact `degrees` / `radians` ScalarUDFs shared by both doors.
+  `Signature::user_defined` + pass-through `coerce_types`; numerics and STRING pass,
+  every other type refuses at planning with `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`
+  naming the DOUBLE requirement, the resolved argument and the Spark type name
+  (the shared `bitmap_agg::spark_type_name`). The kernel keeps the bit-exact
+  single multiply, casts STRING itself like `abs` does (`CAST_INVALID_INPUT` under
+  ANSI read from `args.config_options`, NULL under ANSI-off), and always answers
+  nullable Float64. pins: fnp-bitmap-facade-1/C-012, C-013, C-014
 - `spark_math.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `abs` / `hypot` / `bin` /
   `rint` kernels shared by both doors. `abs` keeps the input width, refuses BOOLEAN, and
   reads the ANSI carrier (`repark.ansi` extension via

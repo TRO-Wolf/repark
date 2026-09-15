@@ -154,14 +154,14 @@ def degrees(col: Column | str) -> Column:
     """Radians to degrees (PySpark ``functions.degrees``)."""
     column = _as_column_arg(col, as_lit=False)
     display = f"DEGREES({column.spark_wrap_display_part()})"
-    return _scalar("degrees", column.cast("double"), display=display)
+    return _scalar("degrees", column, display=display)
 
 
 def radians(col: Column | str) -> Column:
     """Degrees to radians (PySpark ``functions.radians``)."""
     column = _as_column_arg(col, as_lit=False)
     display = f"RADIANS({column.spark_wrap_display_part()})"
-    return _scalar("radians", column.cast("double"), display=display)
+    return _scalar("radians", column, display=display)
 
 
 def toDegrees(col: Column | str) -> Column:  # noqa: N802

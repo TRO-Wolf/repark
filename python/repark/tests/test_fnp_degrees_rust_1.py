@@ -38,6 +38,7 @@ REFUSAL_TAGS: tuple[tuple[str, str], ...] = (
     ("binary", "BINARY"),
 )
 MALFORMED_TAGS: tuple[str, ...] = ("str-abc", "str-empty")
+PYTHON_DOOR_DIVERGENT_TYPE_NAMES: dict[str, str] = {"timestamp": "TIMESTAMP_LTZ"}
 WARNINGS: dict[str, str] = {
     "toDegrees": "Deprecated in 2.1, use degrees instead.",
     "toRadians": "Deprecated in 2.1, use radians instead.",
@@ -92,12 +93,8 @@ def _apply_python(function: str) -> object:
     return getattr(F, function)("x")
 
 
-@pytest.mark.parametrize(
-    ("function", "tag", "door"), _answer_cases(), ids=_ANSWER_IDS
-)
-def test_answer_matches_oracle(
-    spark: ReparkSession, function: str, tag: str, door: str
-) -> None:
+@pytest.mark.parametrize(("function", "tag", "door"), _answer_cases(), ids=_ANSWER_IDS)
+def test_answer_matches_oracle(spark: ReparkSession, function: str, tag: str, door: str) -> None:
     """pins: fnp-bitmap-facade-1/C-012"""
     if function in ("degrees", "radians"):
         cell_id = f"DEG-{function}-{tag}-{door}"
@@ -134,25 +131,29 @@ def _refusal_cases() -> list[tuple[str, str, str]]:
     return cases
 
 
+def _refusal_cell_id(function: str, tag: str, door: str) -> str:
+    if function in ("degrees", "radians"):
+        return f"DEG-{function}-{tag}-{door}"
+    return f"DEG-{function}-{tag}-python"
+
+
+def _refusal_display(function: str) -> str:
+    return "DEGREES(x)" if function in ("degrees", "toDegrees") else "RADIANS(x)"
+
+
 _REFUSAL_IDS: list[str] = [f"{function}-{tag}-{door}" for function, tag, door in _refusal_cases()]
 
 
-@pytest.mark.parametrize(
-    ("function", "tag", "door"), _refusal_cases(), ids=_REFUSAL_IDS
-)
-def test_refusal_matches_oracle(
-    spark: ReparkSession, function: str, tag: str, door: str
-) -> None:
+@pytest.mark.parametrize(("function", "tag", "door"), _refusal_cases(), ids=_REFUSAL_IDS)
+def test_refusal_matches_oracle(spark: ReparkSession, function: str, tag: str, door: str) -> None:
     """pins: fnp-bitmap-facade-1/C-013"""
-    if function in ("degrees", "radians"):
-        cell_id = f"DEG-{function}-{tag}-{door}"
-        display = "DEGREES(x)" if function == "degrees" else "RADIANS(x)"
-    else:
-        cell_id = f"DEG-{function}-{tag}-python"
-        display = "DEGREES(x)" if function == "toDegrees" else "RADIANS(x)"
+    cell_id = _refusal_cell_id(function, tag, door)
+    display = _refusal_display(function)
     cell = _cell(cell_id)
     assert cell["condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
     spark_type = next(known for known_tag, known in REFUSAL_TAGS if known_tag == tag)
+    if door == "python":
+        spark_type = PYTHON_DOOR_DIVERGENT_TYPE_NAMES.get(tag, spark_type)
     literal = LITERALS[tag]
     with pytest.raises(Exception) as caught:
         if door == "sql":
@@ -166,7 +167,24 @@ def test_refusal_matches_oracle(
     assert 'The first parameter requires the "DOUBLE" type, however' in message
     assert f'has the type "{spark_type}"' in message
     assert "SQLSTATE: 42K09" in message
-    assert cell["message"].split(" SQLSTATE")[0] in message
+    if tag != "timestamp" or door != "python":
+        assert cell["message"].split(" SQLSTATE")[0] in message
+
+
+@pytest.mark.parametrize("function", ["degrees", "radians", "toDegrees", "toRadians"])
+def test_refusal_timestamp_ltz_is_expected_divergence(spark: ReparkSession, function: str) -> None:
+    """pins: fnp-bitmap-facade-1/C-013"""
+    cell = _cell(_refusal_cell_id(function, "timestamp", "python"))
+    assert cell["condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
+    assert '"TIMESTAMP"' in cell["message"] and "LTZ" not in cell["message"]
+    frame = spark.sql(f"SELECT {LITERALS['timestamp']} AS x")
+    with pytest.raises(Exception) as caught:
+        frame.select(_apply_python(function)).collect()
+    message = str(caught.value)
+    assert "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]" in message
+    assert 'The first parameter requires the "DOUBLE" type, however' in message
+    assert 'has the type "TIMESTAMP_LTZ"' in message
+    assert "SQLSTATE: 42K09" in message
 
 
 @pytest.mark.parametrize("function", ["degrees", "radians"])
@@ -206,9 +224,9 @@ def test_malformed_string_ansi_off_answers_null(
             f"SELECT {function}(x) AS r FROM (SELECT {literal} AS x)"
         ).toArrow()
     else:
-        table = spark_ansi_off.sql(f"SELECT {literal} AS x").select(
-            getattr(F, function)("x")
-        ).toArrow()
+        table = (
+            spark_ansi_off.sql(f"SELECT {literal} AS x").select(getattr(F, function)("x")).toArrow()
+        )
     assert table.column(0).to_pylist() == [None]
 
 

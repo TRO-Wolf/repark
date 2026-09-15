@@ -353,7 +353,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   the replaced multiply over 4015 values, so reuse and not a new kernel. The wrappers are
   thin `_scalar` binds over a `double` cast keeping the `DEGREES(x)` / `RADIANS(x)`
   display, the warnings, and every alias pin green; `_rescaled` and the factor constants
-  are deleted. pins: fnp-alias-1/C-001, C-002, C-003, C-004; fnp-bitmap-facade-1/C-011
+  are deleted. **Run 16a round 3 (DEGREES-RUST-1 done properly, owner Q-15a-1):** the
+  Python `double` cast is dropped (PYPERF-001) — the wrappers are bare `_scalar` binds
+  and the Spark-exact UDFs in `repark_functions::spark_degrees` carry the numeric/STRING
+  coercion, the refusals and the ANSI switch for both doors. pins: fnp-alias-1/C-001,
+  C-002, C-003, C-004; fnp-bitmap-facade-1/C-011, C-012, C-013, C-014
 - `functions_session.py` — session-bound function helpers.
 - `functions_udf.py` — Python UDF and pandas UDF markers, validation, and return-type
   contracts. Execution uses the DataFrame Arrow bridge. DFCORE-2 (2026-09-07): the

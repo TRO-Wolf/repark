@@ -776,7 +776,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **crit-logic-1 L-001 (2026-09-15):** the semi/anti right-ref raise (all four rescaled names),
   the left-ref control, and the two-sided `degrees` ON-join pin; the wrapper threads
   join origin like `bitwise_not` (**DEGREES-RUST-1**, owner Q-15a-1: a `_scalar` bind over
-  the engine UDFs, `_rescaled` deleted). **L-002 (same round):** the SQL-door negative-count shift
+  the Spark-exact UDFs, `_rescaled` deleted; round 3 drops the Python `double` cast).
+  **L-002 (same round):** the SQL-door negative-count shift
   cells replay on the Python door (values and types; names stay D-2's) and the Column-`numBits`
   shape pins Java's `& 31` masking on INT.
   pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
