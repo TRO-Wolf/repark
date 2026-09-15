@@ -415,6 +415,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   (recorded 2026-09-14). `sum_distinct`/`sumDistinct` moved to FNP-AGG-1 (ruling D-6); the delivered six names, their warning messages, and the
   degrees/radians fix are pinned. `risk_tier: standard`. Branch `feat/fnp-alias-1`.
   pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [fnp-misc-1-ledger.md](fnp-misc-1-ledger.md) —
+  **FNP-MISC-1 (2026-09-15), in flight:** `call_function` / `call_udf` by-name resolution,
+  `arrow_udf` / `arrow_udtf` over the pandas/UDTF bridges, and `bucket` with a Column
+  `numBuckets`, all pinned against the live PySpark 4.1.2 oracle cells.
+  `risk_tier: standard`. Branch `feat/fnp-misc-1`.
+  pins: fnp-misc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [h3-spill-1-ledger.md](h3-spill-1-ledger.md) — Round 3: C-004 counts 22 pins.
   **H3-SPILL-1 (2026-09-05), in flight:** the Never-OOM truth table. 180 cells (18 operators ×
   5 pool sizes × 2 scales), each a fresh subprocess on a release module under a resident-memory
