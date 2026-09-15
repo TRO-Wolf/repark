@@ -1542,6 +1542,32 @@ Differences we intend to close. Each pin **codifies today's behavior** so the fi
 purpose; a pin here is a description, not a contract, and the unit that fixes the class *updates*
 the pin rather than obeying it.
 
+### FNP-6D — Spark bitmap aggregates — **FIXED 2026-09-15**
+
+- **repark** — **FIXED 2026-09-15 (round 2).** `bitmap_construct_agg` / `bitmap_or_agg` /
+  `bitmap_and_agg` answer Spark on the SQL door: a bitmap is BINARY of 4096 bytes
+  (32768 bits, least-significant first). Construct sets bit `p` and ignores NULL;
+  a STRING argument coerces as Spark's implicit BIGINT (`'1'` sets bit 1). Empty
+  construct and empty or answer the all-zero bitmap; empty and all-NULL and
+  answer all-ones; all-NULL or answers zeros. Or/and accept a payload of any
+  length and fold it as zero-padded or truncated to 4096 (a one-byte `X'01'`
+  counts 1 for both or and and; `concat` of a 4096-byte bitmap plus one extra
+  byte still answers length 4096). Results are non-null BINARY. Position
+  outside `[0, 32767]` raises `[INVALID_BITMAP_POSITION] … SQLSTATE: 22003`.
+  A sliding frame answers Spark (counts 1, 2, 2) through the WIN-SLIDE-1
+  rescan: these UDAFs do not override `create_sliding_accumulator`, so the
+  session rule wraps them the same way as `bit_or` / `collect_set`. Grouped
+  aggregation uses `GroupsAccumulator` (`n_groups * 4096` packed bytes).
+- **Apache Spark** — the three aggregates answer the recorded cells `F6D-*`
+  (`fixtures-batch3.json`, 2026-09-14) and `B8-*` (`fixtures-batch8.json`,
+  live PySpark 4.1.2, 2026-09-15). Spark re-scans a sliding frame.
+- **Pin** — `python/repark/tests/test_fnp_6d_bitmap_aggregates.py` (C-001..C-006,
+  C-011..C-015); `crates/repark-functions/src/bitmap_agg.rs` kernel tests of
+  the same cells; `crates/repark-functions/src/bitmap_agg/groups.rs` (C-016,
+  C-017).
+- **Rationale** — FIXED for the recorded aggregate, length, coercion, error-class,
+  and window shapes. Facade Python names are run 15a after this merges.
+
 ### FNP8-NULLABILITY — higher-order result metadata retains inherited nullable fields
 
 - **repark** — the measured non-null `forall` result stays nullable. `transform_keys`,

@@ -103,6 +103,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: fnp-9-collections-json/C-002, C-003, C-004, C-005
 - `count_if.rs` — **TYPES-1 (2026-09-05):** SQL-door `count_if` aggregate UDF answering
   `Int64`. pins: types-1/C-003
+- `bitmap_agg.rs` (+ [`bitmap_agg/`](bitmap_agg/map.md)) — **FNP-6D (2026-09-15,
+  round 2):** Spark `bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg`.
+  State is `[u8; 4096]` (or `n_groups * 4096` on the groups path). Empty
+  `construct`/`or` answer all-zero; empty `and` answers all-ones. Short/long
+  BINARY is zero-padded or truncated to 4096. STRING construct args coerce to
+  BIGINT. Out-of-range positions raise `[INVALID_BITMAP_POSITION]` SQLSTATE
+  22003. Sliding frames use the session WIN-SLIDE-1 rescan (no local
+  `create_sliding_accumulator` refuse). GroupsAccumulator in `bitmap_agg/groups.rs`.
+  pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
 - `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
   compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable

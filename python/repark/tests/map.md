@@ -4277,6 +4277,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   hand back different types — the facade casts `regr_count` to Spark's signed bigint, the SQL door
   still returns the engine's `UInt64`. Fixing the door turns this test red on purpose.
 
+- [test_fnp_6d_bitmap_aggregates.py](test_fnp_6d_bitmap_aggregates.py) — **FNP-6D
+  (2026-09-15):** Spark SQL-door pins for `bitmap_construct_agg` / `bitmap_or_agg` /
+  `bitmap_and_agg` against recorded oracle cells `F6D-*` and `B8-*` (values AND
+  Arrow type/nullability). Sliding frames answer Spark via WIN-SLIDE-1 rescan
+  (counts 1, 2, 2). Round 2: short/empty/long pad/trunc, STRING→BIGINT construct,
+  `[INVALID_BITMAP_POSITION]`, all-NULL identities, unbounded partition.
+  pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009, C-011,
+  C-012, C-013, C-014, C-015
 - `test_fnp6_regexp.py` — **FNP-6a (2026-08-20):** `regexp_extract_all` / `regexp_substr`
   against Python's `re` as an independent oracle, the three no-match conventions Spark keeps
   apart, door agreement, and a pin tying `regexp_count` to `size(regexp_extract_all(...))` on an

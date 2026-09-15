@@ -427,7 +427,7 @@ census rows flip out of the gap bucket, and does the work reuse a seam RePark al
 | **FNP-4b** | **The Spark-door dialect**, and making the engine's own generated SQL dialect-independent. *Split out 2026-08-20 on owner ruling* — the dialect works (all three DataFusion kernels become SQL-reachable) but costs 5 cross-door DML tests, because `write/idents.rs::quote_ident_spark` emits ANSI double quotes that a Spark dialect reads as string literals. That is a write-path change and is judged on its own evidence. Adjacent to registry row BL-2, which understates the scope. | — | Measured evidence in [../../task/fnp-4a-lambda-seam-ledger.md](../../task/ledgers/archive/2026-08/2026-08-21-fnp-4a-lambda-seam-ledger.md). |
 | **FNP-4c** | **The eight new kernels**, plus `forall` (an `array_any_match` rewrite) and `reduce` (an alias of `aggregate`). Per §3.5: one RePark kernel per name declaring `[element, index]`, so both Spark arities are served and the index costs nothing when unused. | 10 | The bulk of the lambda work; ~2,700–3,200 impl lines. |
 | **FNP-5** | **Wire-only aggregates.** The nine `regr_*`, `grouping`, `approx_count_distinct`, `listagg`, `string_agg`. | 13 | All already in `all_default_aggregate_functions()` and registered on every session. *Corrected 2026-08-20:* `sum_distinct`, `listagg_distinct` and `string_agg_distinct` are **not** kernels — DataFusion spells them as a `DISTINCT` modifier on the aggregate call, so they need the facade's DISTINCT path, not a dispatch arm. |
-| **FNP-6** | **Reuse RePark's own kernels.** `regexp_extract_all`, `regexp_substr`, `randstr`, `uniform`, `validate_utf8`, `try_validate_utf8`, the three `bitmap_*_agg`, `assert_true`. | 10 | The hard semantics — Java regex dialect, Spark's PRNG, the bitmap layout — were already paid for. |
+| **FNP-6** | **Reuse RePark's own kernels.** `regexp_extract_all`, `regexp_substr`, `randstr`, `uniform`, `validate_utf8`, `try_validate_utf8`, the three `bitmap_*_agg`, `assert_true`. | 10 | The hard semantics — Java regex dialect, Spark's PRNG, the bitmap layout — were already paid for. **FNP-6d delivered 2026-09-15:** `bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg` on the SQL door (registry `FNP-6D`). |
 | **FNP-7a** | **The `try_*` names whose raising path exists.** `try_divide`, `try_mod` (divide-by-zero raises today), `try_element_at`, `try_to_date`, `try_to_number`, `try_to_binary`, `try_to_time` (parse raises), `try_sum` (a `datafusion-spark` kernel). | 8 | Each is genuinely the inversion the design described: a path that raises, made to yield NULL. |
 | **FNP-7b** | **Unblocked (F-Y10-1 FIXED 2026-08-30).** `try_add`, `try_subtract`, `try_multiply`, `try_avg`. | 4 | Integer `+` / `-` / `*` now raise `ARITHMETIC_OVERFLOW` under ANSI, so Spark's `try_*` NULL-on-overflow path has a raising path to invert. Ship next after FNP-4c (or paired with FNP-7a). **2026-08-31:** `try_avg(INTERVAL)` is **not** this unit — Spark returns interval day to second; averaging intervals needs the FNP-11 temporal family. RePark refuses loud (`[FNP-11]`, dated 2026-08-31). DATE/TIMESTAMP ± INTERVAL and INTERVAL / numeric on `try_add`/`try_divide` ship here from existing Arrow interval fields, not a new interval engine. |
 | **FNP-8** | **Repatriation.** The 55 non-compliant functions of §4. | 55 | The owner's "own the semantics" decision. Sized against the ~287-line median kernel. |
@@ -470,12 +470,13 @@ Each slash joins work that may share one tightly coupled PR. The campaign may us
 window because none of these units consumes F-17, but it does not gate v1.0 and yields when the
 format-v3 critical path becomes ready.
 
-Four units are deferred **with reasons rather than dropped** — FNP-6d (bitmap aggregates: UDAFs
-needing Spark's exact 4096-bit layout, unverifiable without a live Spark, least-used names in the
-gap), FNP-13 (collation), FNP-14 (crypto: a new cipher dependency for four names), and FNP-4b (the
-Spark-door dialect, blocked on the write-path change in §3.3). A deferral with no reason attached
-is indistinguishable from a name nobody looked at — a lesson this campaign learned four separate
-times from prior units' fences.
+Four units are deferred **with reasons rather than dropped** — FNP-6d (bitmap aggregates:
+**delivered 2026-09-15**, SQL-door UDAFs in `bitmap_agg.rs`, registry `FNP-6D`; sliding
+frames use WIN-SLIDE-1 rescan; facade names are run 15a), FNP-13 (collation), FNP-14 (crypto: a new
+cipher dependency for four names), and FNP-4b (the Spark-door dialect, blocked on the
+write-path change in §3.3). A deferral with no reason attached is indistinguishable from
+a name nobody looked at — a lesson this campaign learned four separate times from prior
+units' fences.
 
 ## 8. D-7 — the sub-project families (owner ruling, 2026-08-20)
 
