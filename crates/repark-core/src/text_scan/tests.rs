@@ -284,7 +284,7 @@ fn text_limit_stops_appending_at_limit() {
         part_current: Vec::new(),
         part_types: Vec::new(),
         part_plan: vec![None],
-        partition_values: HashMap::new(),
+        partition_values: Arc::new(HashMap::new()),
         blank_rows: 0,
         wholetext: false,
         separator: None,

@@ -10,3 +10,5 @@ ceiling in IO-TEXT-1 round 5; behavior unchanged by the move.
 ## Modules
 
 - [`tests.rs`](tests.rs) — the scan battery. pins: io-text-1/C-001, T-1, T-3, T-5, T-6, T-8, W-2, W-4
+- [`text_scan.rs`](../text_scan.rs) — round 5 (ruling X-5): the per-file
+  partition values ride one `Arc` into every scan partition and `execute`.

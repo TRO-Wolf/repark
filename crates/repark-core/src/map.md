@@ -335,6 +335,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   bare globs discover nothing while `basePath` globs discover beneath the base;
   the partition-dir walk is an explicit stack. **Round 5 (2026-09-15, X-1):**
   the battery moves verbatim to [`text_scan/`](text_scan/map.md).
+  **Round 5 (2026-09-15, X-5):** the per-file partition values ride one `Arc`
+  into every scan partition and `execute` instead of a clone per partition.
 - `text_glob.rs` — **IO-TEXT-1 follow-up (2026-09-15):** hand-written Hadoop glob
   matcher (`*?[]{}`, no `/` crossing, char-aware, brace nesting capped, no new
   dependency) with matcher unit tests. **Round 3 (2026-09-15, U-5/U-6):** each

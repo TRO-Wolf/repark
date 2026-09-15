@@ -420,3 +420,21 @@ condition (a missing key with 256 writers open), which is exactly the
 with nulls first (Spark's default); within-key row order follows the
 sort's stable runs and the pins assert multisets, not order; below-cap
 writes never touch the new module.
+
+## Follow-up round 5 C3 — X-5 shared partition values (run 16b)
+
+| R | Brief | Ruling and evidence |
+|---|---|---|
+| R-36 (X-5) | one `Arc` across scan partitions and `execute` | `TextTableProvider`, `TextPartition`, and `TextLineStream` hold `Arc<HashMap<PathBuf, Vec<PartitionValue>>>`; `scan` and `execute` take `Arc::clone`. No behavior change — the existing read pins (69 + 16 Python, 38 + 9 Rust) cover it. |
+
+Measurement (`/tmp/iotext5_rss_before.py` scratch, same 100k-leaf tree,
+`count()` peak RSS):
+
+| build | rss base | rss plan | rss count | per file |
+|---|---|---:|---:|---:|
+| round-4 .so (before) | 72 MiB | 154 MiB | 422 MiB | 3.58 KiB |
+| X-5 .so (after) | 73 MiB | 167 MiB | 198 MiB | 1.29 KiB |
+
+Plan/count wall on the after build: 1.32 s / 0.15 s at load 14 (a first
+run at load 26 read 10.03 s / 1.11 s — box contention, RSS identical at
+198 MiB both runs). Round-4 report on its box: ~457 MiB at count.

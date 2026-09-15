@@ -160,7 +160,7 @@ pub(crate) struct TextTableProvider {
     line_sep: Option<String>,
     schema: SchemaRef,
     partition_fields: Vec<Field>,
-    partition_values: HashMap<PathBuf, Vec<PartitionValue>>,
+    partition_values: Arc<HashMap<PathBuf, Vec<PartitionValue>>>,
 }
 
 #[async_trait]
@@ -217,7 +217,7 @@ impl TableProvider for TextTableProvider {
                     plan: plan.clone(),
                     slots: slots.clone(),
                     included_types: included_types.clone(),
-                    partition_values: self.partition_values.clone(),
+                    partition_values: Arc::clone(&self.partition_values),
                     limit,
                 }) as Arc<dyn PartitionStream>
             })
@@ -242,7 +242,7 @@ struct TextPartition {
     plan: Vec<Option<usize>>,
     slots: Vec<Option<usize>>,
     included_types: Vec<DataType>,
-    partition_values: HashMap<PathBuf, Vec<PartitionValue>>,
+    partition_values: Arc<HashMap<PathBuf, Vec<PartitionValue>>>,
     limit: Option<usize>,
 }
 
@@ -276,7 +276,7 @@ impl PartitionStream for TextPartition {
             part_current: Vec::new(),
             part_types: self.included_types.clone(),
             part_plan: self.plan.clone(),
-            partition_values: self.partition_values.clone(),
+            partition_values: Arc::clone(&self.partition_values),
             blank_rows: 0,
             wholetext: self.wholetext,
             separator: self.line_sep.clone().map(String::into_bytes),
@@ -302,7 +302,7 @@ struct TextLineStream {
     part_current: Vec<Option<String>>,
     part_types: Vec<DataType>,
     part_plan: Vec<Option<usize>>,
-    partition_values: HashMap<PathBuf, Vec<PartitionValue>>,
+    partition_values: Arc<HashMap<PathBuf, Vec<PartitionValue>>>,
     blank_rows: usize,
     wholetext: bool,
     separator: Option<Vec<u8>>,
@@ -659,7 +659,7 @@ impl crate::ReparkSession {
             line_sep: line_sep.map(str::to_string),
             schema,
             partition_fields: fields,
-            partition_values: values,
+            partition_values: Arc::new(values),
         });
         self.context().read_table(provider).map_err(engine_err)
     }

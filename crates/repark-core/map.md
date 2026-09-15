@@ -74,8 +74,9 @@ honestly"). SQL routing and session-build registration are seam-inverted
   discovers beneath it); universal / custom separators, wholetext, lossy UTF-8,
   ≤8 file-group partitions, limit threaded into the scanner.
   Battery beside it in [`src/text_scan/`](src/text_scan/map.md) (round 5,
-  ruling X-1).
-  pins: io-text-1/C-001, T-1, T-3, T-5, T-6, T-8, W-2, W-4, X-1
+  ruling X-1); per-file values ride one `Arc` into every scan partition
+  (round 5, ruling X-5).
+  pins: io-text-1/C-001, T-1, T-3, T-5, T-6, T-8, W-2, W-4, X-1, X-5
 - `src/text_schema.rs` — **IO-TEXT-1 round 4 (2026-09-15):** the user-schema
   overlay beside the scan (split from `text_scan.rs` at the 1000-line ceiling):
   the user schema is the data schema with discovered columns appended after it,
