@@ -88,6 +88,9 @@ impl ScalarUDFImpl for JavaFormatFloat {
         let Some(spec) = parse_float_format(&format_text) else {
             return exec_err!("'{}' got an unsupported format string", self.name());
         };
+        if spec.upper {
+            return exec_err!("Conversion = 'F'");
+        }
         let rendered = match values_arg {
             ColumnarValue::Array(array) => match array.data_type() {
                 DataType::Float32 => array
@@ -219,17 +222,19 @@ pub(crate) fn parse_float_format(format: &str) -> Option<FloatFormat> {
 pub(crate) fn format_float_value(spec: &FloatFormat, value: f64) -> String {
     let mut prefix = String::new();
     let mut suffix = String::new();
-    if value.is_sign_negative() {
-        if spec.has(FloatFormat::PAREN) {
-            prefix.push('(');
-            suffix.push(')');
-        } else {
-            prefix.push('-');
+    if !value.is_nan() {
+        if value.is_sign_negative() {
+            if spec.has(FloatFormat::PAREN) {
+                prefix.push('(');
+                suffix.push(')');
+            } else {
+                prefix.push('-');
+            }
+        } else if spec.has(FloatFormat::PLUS) {
+            prefix.push('+');
+        } else if spec.has(FloatFormat::SPACE) {
+            prefix.push(' ');
         }
-    } else if spec.has(FloatFormat::PLUS) {
-        prefix.push('+');
-    } else if spec.has(FloatFormat::SPACE) {
-        prefix.push(' ');
     }
     let number = if value.is_finite() {
         let mut fixed = half_up_fixed(value.abs(), spec.precision);
@@ -238,13 +243,7 @@ pub(crate) fn format_float_value(spec: &FloatFormat, value: f64) -> String {
         }
         fixed
     } else if value.is_infinite() {
-        if spec.upper {
-            "INFINITY".to_owned()
-        } else {
-            "Infinity".to_owned()
-        }
-    } else if spec.upper {
-        "NAN".to_owned()
+        "Infinity".to_owned()
     } else {
         "NaN".to_owned()
     };
@@ -516,9 +515,19 @@ mod tests {
         assert_eq!(render("%(.2f", -0.125), "(0.13)");
         assert_eq!(render("%f", f64::INFINITY), "Infinity");
         assert_eq!(render("%f", f64::NEG_INFINITY), "-Infinity");
-        assert_eq!(render("%F", f64::NAN), "NAN");
         assert_eq!(render("%f", f64::NAN), "NaN");
+        assert_eq!(render("%f", -f64::NAN), "NaN");
         assert_eq!(render("%f", f64::NEG_INFINITY), "-Infinity");
+    }
+
+    #[test]
+    fn nan_takes_no_sign_space_or_paren_prefix() {
+        assert_eq!(render("%+f", f64::NAN), "NaN");
+        assert_eq!(render("% f", f64::NAN), "NaN");
+        assert_eq!(render("%f", -f64::NAN), "NaN");
+        assert_eq!(render("%(f", -f64::NAN), "NaN");
+        assert_eq!(render("%+f", f64::NEG_INFINITY), "-Infinity");
+        assert_eq!(render("%(f", f64::NEG_INFINITY), "(Infinity)");
     }
 
     #[test]
@@ -551,5 +560,24 @@ mod tests {
         };
         let texts = array.as_string::<i32>();
         assert_eq!(texts.value(0), "0.13");
+    }
+
+    #[test]
+    fn udf_refuses_upper_float_conversion_like_java() {
+        for format in ["%F", "%+F", "%10.2F"] {
+            let udf = java_format_float_udf();
+            let args = ScalarFunctionArgs {
+                args: vec![
+                    ColumnarValue::Scalar(ScalarValue::Utf8(Some(format.to_owned()))),
+                    ColumnarValue::Scalar(ScalarValue::Float64(Some(f64::NAN))),
+                ],
+                arg_fields: vec![],
+                number_rows: 1,
+                return_field: Arc::new(Field::new("r", DataType::Utf8, false)),
+                config_options: Arc::new(datafusion::common::config::ConfigOptions::new()),
+            };
+            let error = udf.invoke_with_args(args).unwrap_err();
+            assert!(error.to_string().contains("Conversion = 'F'"), "{format}");
+        }
     }
 }
