@@ -6,6 +6,9 @@
 
 ## Review — Round 2 (run 16c, 2026-09-15 18:10)
 
+| C-007 | P2-2: heapless `%f` digit path. | No time left in the box; the quadratic left-pad loop is already gone with the P2-1 rewrite. Follow-up: one scratch `Vec<u8>` through `half_up_fixed_into`. Which follow-up unit takes it is the orchestrator's call. | **OPEN** |
+
+
 Spec: `/tmp/oc-worker/qc-oracle/fixtures-batch19-critic-633.json`, cells `Q19-*`
 (live PySpark 4.1.2 on JDK 17; orchestrator re-measured every claim, R-15c-4).
 R-16c-16 accepts the 14 `#[allow(clippy::cast_*)]` attributes as repository idiom.
