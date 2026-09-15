@@ -4258,7 +4258,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-09-15):** Spark SQL-door pins for `bitmap_construct_agg` / `bitmap_or_agg` /
   `bitmap_and_agg` against recorded oracle cells `F6D-construct`, `F6D-or-and`,
   `F6D-empty`, `F6D-and-empty-type` (values AND Arrow type/nullability). Sliding frames
-  refuse. pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006
+  refuse. pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009
 - `test_fnp6_regexp.py` — **FNP-6a (2026-08-20):** `regexp_extract_all` / `regexp_substr`
   against Python's `re` as an independent oracle, the three no-match conventions Spark keeps
   apart, door agreement, and a pin tying `regexp_count` to `size(regexp_extract_all(...))` on an

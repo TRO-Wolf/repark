@@ -41,7 +41,9 @@ repo.
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
   table (one row per dedicated bump PR; started 2026-08-15; live pin RP-11 `189a73ed` on 2026-09-04).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
-  single home for how repark differs from Apache Spark. **FN-FIX-1 round 3:**
+  single home for how repark differs from Apache Spark. **FNP-6D FIXED 2026-09-15:**
+  `bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg` on the SQL door; sliding
+  frames DECLARED. **FN-FIX-1 round 3:**
   `FN-APPROXPCT-ACC-1` and `PERF-APPROXPCT-1` BACKLOG (both FIXED 2026-09-05 by
   PERF-APPROXPCT-1). F-Y10-1 (2026-08-30) names SMALLINT/Int16
   overflow wrap as a dated residue of the int32/int64 partition. Lambda-variable operands of

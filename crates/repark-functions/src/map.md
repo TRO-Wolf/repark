@@ -108,7 +108,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   least-significant first). Empty `construct`/`or` answer all-zero; empty `and`
   answers all-ones. `create_sliding_accumulator` refuses (WIN-SLIDE retract_batch
   needle). Registered through `aggregate::functions()`. pins: fnp-6d/C-001, C-002,
-  C-003, C-004, C-005, C-006, C-007, C-010
+  C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
   compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable
