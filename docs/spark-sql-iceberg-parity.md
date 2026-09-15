@@ -1136,6 +1136,24 @@ them, and the document is ordered by surface, never by date.
   marker on the window UDF output would close it if it survives aggregation
   and view boundaries; unproven, not attempted.
 
+### WIN-4 — two `session_window` specs on the Python door raise a duplicate-name error where Spark raises `1039`
+
+- **repark** — `groupBy(F.session_window("ts", "5 minutes"), F.session_window("ts", "10 minutes"))`
+  raises DataFusion's `Schema contains duplicate unqualified field name session_window` at plan
+  build: both grouping markers alias to `session_window` before any analyzer rule runs. The SQL
+  door refuses with Spark's `[_LEGACY_ERROR_TEMP_1039]` text.
+- **Apache Spark** — refuses on both doors with `[_LEGACY_ERROR_TEMP_1039] Multiple time/session
+  window expressions would result in a cartesian product of rows, therefore they are currently not
+  supported.` *(oracle: live — PySpark 4.1.2, run-16a verification cells
+  `C2-L004-two-session-specs` on both doors.)*
+- **Pin** — `python/repark/tests/test_fnp_win_1.py::test_crit2_two_session_specs_refuse` asserts
+  Spark's cell and RePark's duplicate-name error on the Python door, and the `1039` text on the SQL
+  door. pins: fnp-win-1/C-004
+- **Rationale** — DECLARED, as a **refusal-shape divergence**: both engines refuse. The seam is
+  `PyDataFrame::aggregate` in `crates/repark-python/src/dataframe.rs` (run 16b's binding), where a
+  pre-plan-build check for a second session spec would surface Spark's text; the functions slice
+  does not edit that file.
+
 ### RAND-1 — `randstr` refuses a length Spark accepts
 
 - **repark** — `randstr(n, seed)` refuses `n` above **1,000,000** with a catchable

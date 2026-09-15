@@ -5402,3 +5402,4 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
   **Round 2 (2026-09-15):** four appended null-scalar cells carrying the
   null-propagation `basis` key (decimal/int/bigint/double; no float — see above).
   pins: decimal-cache-1/C-005, C-007, C-012
+- `test_fnp_win_1.py` — **FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a):** `test_crit2_two_session_specs_refuse` pins Spark's `C2-L004` cell on both doors, the SQL door's `1039` text, and the Python door's duplicate-name error as registry WIN-4. pins: fnp-win-1/C-004

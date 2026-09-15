@@ -218,16 +218,26 @@ states why in one line.
   America/New_York driver shifted its naive literals into UTC (January
   +5 h, September +4 h). The pins therefore build the shifted walls
   directly, reproducing Spark's instants rather than its literal text.
-- D-34 (verification round 2, L-004 P3): two session specs refuse with
-  Spark's `[_LEGACY_ERROR_TEMP_1039]` text on both doors. The analyzer and
-  SQL-staging sites share one constant from `spark_session_window.rs`; the
-  Python door checks `check_single_session_spec` in the binding's
-  `aggregate` before plan build, because both markers alias to
-  `session_window` and DataFusion's duplicate-name error fires first. The
+- D-34 (verification round 2, L-004 P3): on the SQL door two session specs
+  refuse with Spark's `[_LEGACY_ERROR_TEMP_1039]` text; the analyzer and
+  SQL-staging sites share one constant from `spark_session_window.rs`. The
   DataFusion rule-name / planning prefix may precede the text (same
-  standing rule as D-30); the pins assert condition plus text. Identical
-  twin specs are out of scope: they still hit the duplicate-name error,
-  fail-loud either way.
+  standing rule as D-30). On the Python door both markers alias to
+  `session_window`, so DataFusion's duplicate-name schema error fires at
+  plan build before any analyzer rule: registry row WIN-4 records that
+  divergence, and the pin asserts Spark's cell plus RePark's duplicate-name
+  error. Identical twin specs hit the same duplicate-name error.
+- D-35 (orchestrator fix-up after round 2, run 16a): the round's Python-door
+  pre-check lived in `crates/repark-python/src/dataframe.rs`
+  (`PyDataFrame::aggregate`), which is run 16b's binding and also edited by
+  run 16c's open #611, and it raised that pre-existing file's size baseline
+  1019 → 1021 (owner ruling Q-15c-4 keeps baselines ratchet-only). The
+  orchestrator reverted the call, the map row and both baseline edits;
+  removed the helper it made dead; and removed five `///` doc-comment lines
+  added for clippy (CLAUDE.md comment ban). The four round-2 commit trailers
+  were rewritten non-interactively to the owner's exact
+  `Authored-By: Muse Spark (muse-spark-1.3-contributor) <noreply@meta.ai>`
+  form. Tree content otherwise unchanged.
 
 ## PROPOSITION LEDGER — FNP-WIN-1 — 2026-09-15
 
@@ -648,8 +658,9 @@ orchestrator's live re-recording (`win_crit2_spark_oracle.json`, recorder
   (measured 10:00 → 10:00 in a UTC session); the pins build the recorder's
   shifted UTC walls directly (January +5 h, September +4 h, D-33).
 - L-004 P3: two specs died as duplicate-name (Python) / RePark-only text
-  (SQL). Both doors now refuse with Spark's `[_LEGACY_ERROR_TEMP_1039]`
-  text (D-34). Red pre-fix on both doors, green post-fix.
+  (SQL). The SQL door now refuses with Spark's `[_LEGACY_ERROR_TEMP_1039]`
+  text; the Python door keeps DataFusion's duplicate-name error as registry
+  row WIN-4 (D-34, D-35).
 
 Gates (this round, release native rebuilt from the head tree): `cargo
 test -p repark-functions time_window` 47 passed; `session_window` 8
@@ -660,7 +671,6 @@ passed; the parity trio (example coverage, api freeze, CAP-1) 71 passed;
 both size gates clean with no new exception row (38/32 counts hold);
 `check_example_coverage --require-execute` green (1053 names, 940
 covered, 112 backlog, 1 exception, 240 examples); `ruff format --check
-.` clean; `make verify` exit 0. Follow-up inside this round: clippy
-pedantic `missing_errors_doc` on the new `check_single_session_spec`
-(one `# Errors` doc section, no behavior change) and `cargo fmt` /
-`ruff format` reflows, all folded before the head commit.
+.` clean; `make verify` exit 0. The round's `check_single_session_spec`
+binding pre-check and its `# Errors` doc section were removed by the
+orchestrator fix-up (D-35); `cargo fmt` / `ruff format` reflows folded in.

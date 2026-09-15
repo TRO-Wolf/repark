@@ -30,7 +30,9 @@ re-exports through `mod.rs` so its registration path never moved.
   Limit / Sort / Distinct / Repartition / Subquery into the defining input
   and Join / Union into the owning child, failing closed otherwise.
   pins: fnp-win-1/C-003. Round 2 (2026-09-15): a second session spec per
-  block refuses with Spark's `1039` text. pins: fnp-win-1/C-004.
+  block refuses with Spark's `1039` text on the SQL door; the Python door
+  meets DataFusion's duplicate-name error first (registry WIN-4).
+  pins: fnp-win-1/C-004.
 
 ## Pointers
 

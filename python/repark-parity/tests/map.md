@@ -820,3 +820,4 @@ Escalate to: [../map.md#debug](../map.md).
 - **FNP-11A (2026-09-15, on 440b2773):** the CAP-1 table mirrors the `functions_expr.py` ratchet to 2235 lines.
 - `test_cap_1_source_file_line_cap.py` — **DOOR-CONVERGE-2 (#622, 2026-09-15):** the `crates/repark-python/src/column/mod.rs` mirror row 1052 → 1036 matches the script baseline (ratchet down). The `analyzer.rs` row 1142 → 1150 is the one-time grant R-1 (Q-15c-4).
 - `test_ex_0_example_coverage.py` — **FNP-WIN-1 rebase onto 230468c5 (2026-09-15, run 16a):** #613 and #618 each moved the count 1054 → 1057 on the same line, which a merge keeps at 1057; the true combined count is main's 1057 plus this unit's three names, 1060. pins: fnp-win-1/C-007
+- `test_cap_1_source_file_line_cap.py` — **FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a):** the `crates/repark-python/src/dataframe.rs` mirror row returns to 1019 with the script baseline. pins: fnp-win-1/C-007

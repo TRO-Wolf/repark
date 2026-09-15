@@ -1284,3 +1284,4 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
   `repark-python/src/dataframe.rs` 1019 → 1021 (the two-spec pre-check
   call); `check_lib_py.py` moves `test_fnp_win_1.py` 1415 → 1454 (the
   `C2-L004` pin). Ratchets only. pins: fnp-win-1/C-004
+FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` puts `crates/repark-python/src/dataframe.rs` back at 1019 after the round-2 binding pre-check was reverted (owner ruling Q-15c-4); `check_lib_py.py` ratchets `python/repark/tests/test_fnp_win_1.py` down 1454 → 1449.
