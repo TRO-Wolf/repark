@@ -545,11 +545,21 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   2026-09-14), bound on the class from `core.py` at the exact ceiling. `foreach`
   streams `f(row)` through `toLocalIterator`; `foreachPartition` calls `f` once per
   Arrow batch with a `Row` iterator (an empty frame still calls `f` once).
-  `observe` attaches metric expressions to an identity child; the first action
-  through `_action_inner` runs `agg(*exprs)` once and fills a bound `Observation`.
+  `observe` records a shared `_ObservedMetricsAttachment`
+  `(observation, exprs, observed_frame)` on the returned frame; every descendant
+  references the same object (`_spawn` merges attachments from all parents).
+  `fill_on_action` is the single fill helper, called from `_action_inner` (every
+  action that reaches it), from `_consume_map_in_arrow_batches` (every map-bridge
+  peek in `take`, `isEmpty`, `show`, `repr`, `_repr_html`), and from `take` (the
+  `take(0)` early return). The fill runs `observed_frame.agg(*exprs)` once —
+  never on the actioned descendant or a `limit(n)` frame — under a per-attachment
+  lock + in-progress flag, so a re-entrant `agg().collect()` is skipped and a
+  concurrent fill of a different attachment is not. Literal metrics are allowed;
+  an attribute outside an aggregate refuses `INVALID_OBSERVED_METRICS` at the
+  first action; a non-`Column` expr refuses `NOT_LIST_OF_COLUMN` at `observe`.
   Driver-side callable execution and the second aggregation pass are DECLARED
   (`DF-FOREACH-1`, `DF-OBSERVE-1`).
-  pins: df-surface-b-1/C-001, C-002, C-003, C-004
+  pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-007
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`

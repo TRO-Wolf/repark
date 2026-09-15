@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import io
 import json
+import threading
 from collections.abc import Iterator
+from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -81,6 +84,22 @@ def _agg_logged(frame: DataFrame, *exprs: Column | dict[str, str]) -> DataFrame:
     """Forward DataFrame.agg while recording argument tuples."""
     _AggCallLog.calls.append(exprs)
     return _AggCallLog.original(frame, *exprs)
+
+
+class _BarrierAction:
+    """Run ``frame.collect()`` after both threads reach a shared barrier."""
+
+    def __init__(self, frame: DataFrame, barrier: threading.Barrier) -> None:
+        self._frame = frame
+        self._barrier = barrier
+        self.error: Exception | None = None
+
+    def __call__(self) -> None:
+        try:
+            self._barrier.wait()
+            self._frame.collect()
+        except Exception as error:
+            self.error = error
 
 
 @pytest.fixture
@@ -360,6 +379,184 @@ def test_observation_is_exported_from_spark(spark: ReparkSession) -> None:
 
     assert spark_pkg.Observation is Observation
     assert sql_pkg.Observation is Observation
+
+
+def _observed_two_metric(spark: ReparkSession, name: str) -> tuple[Observation, DataFrame]:
+    """Attach count/sum metrics named by the caller to the two-row oracle frame."""
+    observation = Observation(name)
+    observed = _kv_frame(spark).observe(
+        observation, F.count(F.lit(1)).alias("c"), F.sum("a").alias("s")
+    )
+    return observation, observed
+
+
+def test_observe_take_head_first_isempty_fill_full_metrics(
+    spark: ReparkSession,
+) -> None:
+    """L-001: peek actions fill full observed metrics once. pins: df-surface-b-1/C-007"""
+    peek_actions = [
+        lambda observed: observed.take(1),
+        lambda observed: observed.take(0),
+        lambda observed: observed.head(),
+        lambda observed: observed.first(),
+        lambda observed: observed.isEmpty(),
+    ]
+    for action in peek_actions:
+        observation, observed = _observed_two_metric(spark, "peek")
+        action(observed)
+        assert observation.get == {"c": 2, "s": 4}
+        observed.collect()
+        assert observation.get == {"c": 2, "s": 4}
+
+
+def test_observe_show_fills_full_metrics_both_styles(spark: ReparkSession) -> None:
+    """L-001: show(1) under both display styles fills full metrics. pins: df-surface-b-1/C-007"""
+    for style in ("spark", "polars"):
+        spark.display_style = style
+        observation, observed = _observed_two_metric(spark, "show")
+        with redirect_stdout(io.StringIO()):
+            observed.show(1)
+        assert observation.get == {"c": 2, "s": 4}
+        observed.collect()
+        assert observation.get == {"c": 2, "s": 4}
+    spark.display_style = "spark"
+
+
+def test_observe_filter_descendant_fills_observed_metrics(spark: ReparkSession) -> None:
+    """L-002: a filter descendant aggregates the observed frame. pins: df-surface-b-1/C-007"""
+    observation, observed = _observed_two_metric(spark, "filt")
+    rows = observed.filter(F.col("a") > 1).collect()
+    assert [row.a for row in rows] == [3]
+    assert observation.get == {"c": 2, "s": 4}
+    observed.collect()
+    assert observation.get == {"c": 2, "s": 4}
+
+
+def test_observe_union_descendant_fills_observed_metrics(spark: ReparkSession) -> None:
+    """L-002: a union descendant aggregates the observed side only. pins: df-surface-b-1/C-007"""
+    other = spark.createDataFrame([("z", 9, 9)], "key string, a int, b int")
+    observation = Observation("uni")
+    observed = _kv_frame(spark).observe(observation, F.count(F.lit(1)).alias("c"))
+    rows = observed.union(other).collect()
+    assert len(rows) == 3
+    assert observation.get == {"c": 2}
+
+
+def test_observe_limit_descendant_fills_observed_metrics(spark: ReparkSession) -> None:
+    """L-002: a limit descendant aggregates the observed frame. pins: df-surface-b-1/C-007"""
+    observation, observed = _observed_two_metric(spark, "lim")
+    rows = observed.limit(1).collect()
+    assert len(rows) == 1
+    assert observation.get == {"c": 2, "s": 4}
+
+
+def test_observe_select_descendant_fills_observed_metrics(spark: ReparkSession) -> None:
+    """L-002: select fills metrics on projected-out columns. pins: df-surface-b-1/C-007"""
+    observation = Observation("sel")
+    observed = _kv_frame(spark).observe(
+        observation, F.sum("b").alias("s"), F.max("key").alias("mk")
+    )
+    rows = observed.select("a").collect()
+    assert [repr(row) for row in rows] == ["Row(a=1)", "Row(a=3)"]
+    assert observation.get == {"s": 6, "mk": "y"}
+
+
+def test_observe_drop_descendant_fills_observed_metrics(spark: ReparkSession) -> None:
+    """L-002: a drop descendant fills a metric on the dropped column. pins: df-surface-b-1/C-007"""
+    observation = Observation("drp")
+    observed = _kv_frame(spark).observe(observation, F.sum("a").alias("s"))
+    rows = observed.drop("a").collect()
+    assert [repr(row) for row in rows] == ["Row(key='x', b=2)", "Row(key='y', b=4)"]
+    assert observation.get == {"s": 4}
+
+
+def test_observe_map_in_arrow_take_fills(spark: ReparkSession) -> None:
+    """L-003: a mapInArrow peek action fills the Observation. pins: df-surface-b-1/C-007"""
+    frame = _kv_frame(spark)
+    mapped = frame.mapInArrow(lambda batch: batch, frame.schema)
+    observation = Observation("mia")
+    observed = mapped.observe(observation, F.count(F.lit(1)).alias("c"))
+    rows = observed.take(1)
+    assert [repr(row) for row in rows] == ["Row(key='x', a=1, b=2)"]
+    assert observation.get == {"c": 2}
+
+
+def test_observe_concurrent_fills_are_independent(spark: ReparkSession) -> None:
+    """L-004: two threads fill two Observations on sibling observes. pins: df-surface-b-1/C-007"""
+    for _ in range(20):
+        frame = _kv_frame(spark)
+        observation_a = Observation("a")
+        observation_b = Observation("b")
+        observed_a = frame.observe(observation_a, F.sum("a").alias("s"))
+        observed_b = frame.observe(observation_b, F.sum("a").alias("s"))
+        barrier = threading.Barrier(2)
+        action_a = _BarrierAction(observed_a, barrier)
+        action_b = _BarrierAction(observed_b, barrier)
+        threads = [threading.Thread(target=action_a), threading.Thread(target=action_b)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        assert action_a.error is None and action_b.error is None
+        assert observation_a.get == {"s": 4}
+        assert observation_b.get == {"s": 4}
+
+
+def test_observe_literal_metric_fills(spark: ReparkSession) -> None:
+    """L-005: literal metrics fill their literal value. pins: df-surface-b-1/C-007"""
+    observation = Observation("lit")
+    observed = _kv_frame(spark).observe(observation, F.lit(42).alias("k"))
+    observed.collect()
+    assert observation.get == {"k": 42}
+    unaliased = Observation("lit2")
+    _kv_frame(spark).observe(unaliased, F.lit(7)).collect()
+    assert unaliased.get == {"7": 7}
+
+
+def test_observe_non_column_exprs_raise_at_observe(spark: ReparkSession) -> None:
+    """L-006: non-Column exprs raise NOT_LIST_OF_COLUMN at observe. pins: df-surface-b-1/C-007"""
+    frame = _kv_frame(spark)
+    with pytest.raises(PySparkTypeError) as raised:
+        frame.observe(Observation("s"), "count(1)")
+    assert raised.value.getCondition() == "NOT_LIST_OF_COLUMN"
+    assert raised.value.getMessageParameters() == {"arg_name": "exprs"}
+    with pytest.raises(PySparkTypeError):
+        frame.observe(Observation("s2"), F.count(F.lit(1)).alias("c"), "sum(a)")
+
+
+def test_observe_free_attribute_outside_aggregate_refuses(spark: ReparkSession) -> None:
+    """L-006: a bare attribute in a metric refuses at first action. pins: df-surface-b-1/C-007"""
+    observed = _kv_frame(spark).observe(Observation("mix"), F.col("a") + F.sum("b").alias("s"))
+    with pytest.raises(AnalysisException) as raised:
+        observed.collect()
+    assert (
+        raised.value.getCondition()
+        == "INVALID_OBSERVED_METRICS.NON_AGGREGATE_FUNC_ARG_IS_ATTRIBUTE"
+    )
+
+
+def test_observe_agg_runs_once_across_action_sequences(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """L-007: one extra agg across mixed actions and descendants. pins: df-surface-b-1/C-007"""
+    observation = Observation("once")
+    observed = _kv_frame(spark).observe(observation, F.count(F.lit(1)).alias("c"))
+    _AggCallLog.calls = []
+    _AggCallLog.original = DataFrame.agg
+    monkeypatch.setattr(DataFrame, "agg", _agg_logged)
+    observed.take(1)
+    observed.head()
+    with redirect_stdout(io.StringIO()):
+        observed.show(1)
+    observed.count()
+    observed.collect()
+    observed.toPandas()
+    assert len(_AggCallLog.calls) == 1
+    assert observation.get == {"c": 2}
+    descendant = observed.filter(F.col("a") > 0)
+    descendant.take(1)
+    descendant.collect()
+    assert len(_AggCallLog.calls) == 1
 
 
 def _raise_zero_division(row: Row) -> None:

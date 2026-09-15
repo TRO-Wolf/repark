@@ -1562,6 +1562,20 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   actions do not overwrite it. `Observation.get` before any action — never attached, or
   attached with no action yet — raises `PySparkAssertionError` `NO_OBSERVE_BEFORE_GET`.
   The str-name form returns the frame with no Python-visible metrics.
+- **repark** — `observe` returns a child with the same rows and schema carrying a
+  shared `(observation, exprs, observed_frame)` attachment that every descendant
+  references. The first row-producing action on the observed frame or any descendant
+  (`take`/`head`/`first`/`isEmpty`/`show` peeks, `filter`/`union`/`limit`/`select`/
+  `drop` children, `collect`/`count`/`toPandas`/`toLocalIterator`/`foreach`/
+  `foreachPartition`/writes) evaluates `agg(*exprs)` over the **observed** frame once
+  and fills a bound `Observation`; later actions never overwrite. A metric must be a
+  literal (e.g. `lit(42)`) or contain aggregate function(s) over attributes with no
+  free attribute outside them; otherwise the first action raises
+  `INVALID_OBSERVED_METRICS.NON_AGGREGATE_FUNC_ARG_IS_ATTRIBUTE`, and a non-`Column`
+  expr raises `PySparkTypeError` `NOT_LIST_OF_COLUMN` at the `observe` call.
+  `Observation.get` before that action raises `PySparkAssertionError`
+  `NO_OBSERVE_BEFORE_GET`. The str-name form returns the frame with no Python-visible
+  metrics. *(ruling R-5, 2026-09-15)*
 - **Apache Spark** — `CollectMetrics` is a node in the same plan as the action, so
   metrics fill as a side channel of that job; `get` after `observe` but before an
   action blocks the caller forever. *(oracle: recorded — cells `observe_obs`,
@@ -1569,7 +1583,20 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   was not recorded because it blocks.)*
 - **Pin** — `python/repark/tests/test_df_surface_b_1.py::test_observe_obs_get_after_action`,
   `…::test_observe_agg_runs_once_across_actions`,
-  `…::test_observe_get_before_action_raises`.
+  `…::test_observe_get_before_action_raises`,
+  `…::test_observe_take_head_first_isempty_fill_full_metrics`,
+  `…::test_observe_show_fills_full_metrics_both_styles`,
+  `…::test_observe_filter_descendant_fills_observed_metrics`,
+  `…::test_observe_union_descendant_fills_observed_metrics`,
+  `…::test_observe_limit_descendant_fills_observed_metrics`,
+  `…::test_observe_select_descendant_fills_observed_metrics`,
+  `…::test_observe_drop_descendant_fills_observed_metrics`,
+  `…::test_observe_map_in_arrow_take_fills`,
+  `…::test_observe_concurrent_fills_are_independent`,
+  `…::test_observe_literal_metric_fills`,
+  `…::test_observe_non_column_exprs_raise_at_observe`,
+  `…::test_observe_free_attribute_outside_aggregate_refuses`,
+  `…::test_observe_agg_runs_once_across_action_sequences`.
 - **Rationale** — DECLARED 2026-09-14. The engine has no CollectMetrics node; the
   metrics are a second aggregation pass over the same plan. Blocking `get` is not
   an honest single-node answer, so repark raises Spark's own `NO_OBSERVE_BEFORE_GET`

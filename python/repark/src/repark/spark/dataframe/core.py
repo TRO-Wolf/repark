@@ -362,7 +362,9 @@ class DataFrame:
             other._tighten_derived for other in others
         )
         child._handles = self._handles
-        child._observations = self._observations
+        child._observations = self._observations + tuple(
+            attachment for other in others for attachment in other._observations
+        )
         for other in others:
             if other._handles:
                 child._handles = cache_handle.union_handles(child._handles, other._handles)
@@ -606,6 +608,7 @@ class DataFrame:
         bridge = self._map_bridge
         if bridge is None:
             raise RuntimeError("mapInArrow bridge missing")
+        surface_b.fill_on_action(self)
         expected_arrow: pa.Schema = bridge["arrow_schema"]
         batches = list(self._iter_map_in_arrow_output(max_output_rows=max_output_rows))
         if not batches:
@@ -3680,10 +3683,9 @@ class DataFrame:
         Negative values raise ``AnalysisException`` with Spark's invalid-limit error class.
         Pending cache or persist requests materialize before the limited action.
         """
-        if self._map_bridge is not None and not (
-            self._persist_requested or self._checkpoint_lazy or self._cache_view is not None
-        ):
+        if display._use_bridge_peek(self):
             limit_count = self._require_non_negative_limit(num)
+            surface_b.fill_on_action(self)
             if limit_count == 0:
                 return []
             table = self._consume_map_in_arrow_batches(max_output_rows=limit_count)
@@ -3749,9 +3751,7 @@ class DataFrame:
 
         The check limits the plan to one row and materializes pending cache requests.
         """
-        if self._map_bridge is not None and not (
-            self._persist_requested or self._checkpoint_lazy or self._cache_view is not None
-        ):
+        if display._use_bridge_peek(self):
             return self._consume_map_in_arrow_batches(max_output_rows=1).num_rows == 0
         self._materialize_cache_if_needed()
         return self.limit(1).count() == 0

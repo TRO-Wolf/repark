@@ -9,7 +9,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `foreachPartition` / `observe` and `Observation` on the facade. Driver-side
   callable execution and the second aggregation pass are DECLARED
   (`DF-FOREACH-1`, `DF-OBSERVE-1`). Branch `feat/df-surface-b-1`.
-  pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`

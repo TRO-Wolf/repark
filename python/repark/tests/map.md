@@ -2230,8 +2230,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   argument raise Spark's classes; a non-aggregate expr raises
   `INVALID_OBSERVED_METRICS.NON_AGGREGATE_FUNC_ARG_IS_ATTRIBUTE` at the first
   action; `obs.get` after one action is the metric dict and later actions do not
-  re-agg (registry `DF-OBSERVE-1`).
-  pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-005, C-006
+  re-agg (registry `DF-OBSERVE-1`). Critic round 1 (L-001..L-007) under ruling
+  R-5 adds the shared-attachment contract: peek actions, transform descendants,
+  and map-bridge peeks fill the observed frame's full metrics exactly once;
+  concurrent sibling observations fill independently; literal metrics are
+  allowed; non-`Column` exprs refuse `NOT_LIST_OF_COLUMN` at `observe`.
+  pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `test_df_stream_batch_1.py` + `facade_dataframe_streaming_declared_oracle.json` —
   **DF-STREAM-BATCH-1 step 1 (2026-09-14):** the streaming-named DataFrame surface on a
   batch frame, driven cell-by-cell from the live-PySpark oracle copy. `writeStream`
