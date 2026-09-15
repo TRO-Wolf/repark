@@ -28,7 +28,7 @@ from repark.errors import (
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
-from repark.spark.dataframe import cache_handle, streaming_batch
+from repark.spark.dataframe import cache_handle, streaming_batch, surface_a
 from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
 from repark.spark.dataframe.udf_bridge import (
@@ -860,25 +860,21 @@ class DataFrame:
 
         return _to_lazy(self)
 
-    def localCheckpoint(  # noqa: N802 — PySpark method name
+    def localCheckpoint(  # noqa: N802
         self,
         eager: bool = True,
-        storageLevel: Any = None,  # noqa: N803 — Spark arg name
+        storageLevel: Any = None,  # noqa: N803
     ) -> DataFrame:
-        """Truncate lineage by materializing to a MemTable (PySpark ``localCheckpoint``).
+        """Truncate lineage by materializing to a MemTable (PySpark ``localCheckpoint``)."""
+        return surface_a.localCheckpoint(self, eager=eager, storageLevel=storageLevel)
 
-        When ``eager`` is true (default), materializes immediately. Unlike ``cache``,
-        checkpoint does **not** set :attr:`is_cached` (live Spark 4.1.2 oracle). Returns self.
-        ``storageLevel`` is accepted for signature parity and ignored (always MemTable).
-        """
-        _ = storageLevel
-        self._ensure_alive()
-        self._checkpoint_lazy = True
-        self._persist_requested = False
-        self._storage_level = None
-        if eager:
-            self._materialize_cache_if_needed()
-        return self
+    checkpoint = surface_a.checkpoint
+    isLocal = surface_a.isLocal  # noqa: N815
+    registerTempTable = surface_a.registerTempTable  # noqa: N815
+    to = surface_a.to
+    withMetadata = surface_a.withMetadata  # noqa: N815
+    executionInfo = property(surface_a.executionInfo)  # noqa: N815
+    sparkSession = property(surface_a.sparkSession)  # noqa: N815
 
     @property
     def is_cached(self) -> bool:
@@ -888,14 +884,9 @@ class DataFrame:
         return self._persist_requested or self._cache_view is not None
 
     @property
-    def isStreaming(self) -> bool:  # noqa: N802 — PySpark property name
-        """Whether this is a streaming DataFrame (PySpark ``DataFrame.isStreaming``).
-
-           repark is batch-only in v1 — always ``False``. Apache suite probes this attribute
-        after many function/column builders; exposing it unblocks that FAIL-MISSING wall
-        without claiming streaming support (``readStream`` remains absent).
-        """
-        return False
+    def isStreaming(self) -> bool:  # noqa: N802
+        """Whether this is a streaming DataFrame; always ``False`` (batch-only)."""
+        return surface_a.isStreaming(self)
 
     is_streaming = isStreaming
 

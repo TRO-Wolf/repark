@@ -1249,6 +1249,37 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   UDT registry — the same reason `FNP-15-unwrap_udt` is unreachable (row §9); there is no
   registry to serialize through, so the name answers Spark's facade shape and refuses at
   column use with Spark's own error class rather than silently mapping to another type.
+### DF-TO-1 — `DataFrame.to(schema)` refuses a non-StructType argument; Spark classic leaks `AttributeError`
+- **repark** — `df.to("a int")` raises `PySparkTypeError` with error class `NOT_STRUCT`:
+  `[NOT_STRUCT] Argument `schema` should be a StructType, got str.` —
+  `{"arg_name": "schema", "arg_type": "str"}`. Every `StructType` argument follows the
+  measured store-assignment contract (name match is case-insensitive with the schema's
+  spelling winning, nullable-miss fills NULL, `NULLABLE_COLUMN_OR_FIELD` and
+  `INVALID_COLUMN_OR_FIELD_DATA_TYPE` carry Spark's exact text).
+- **Apache Spark** — classic 4.1.2 leaks `AttributeError: 'str' object has no attribute
+  'json'` because `to` calls `schema.json` before validating the argument
+  *(oracle: `facade_dataframe_surface_oracle.json` cell `to_not_schema`, PySpark 4.1.2,
+  ruling R-1, 2026-09-14)*.
+- **Pin** —
+  `python/repark/tests/test_df_surface_a_1.py::test_to_non_struct_schema_raises_not_struct`
+- **Rationale** — DECLARED (R-1, 2026-09-14). The leaked `AttributeError` is an
+  implementation accident in Spark classic, not a contract; refusing with Spark's own
+  error-class shape is the honest near-drop-in answer.
+### DF-CHECKPOINT-1 — `DataFrame.checkpoint` materializes in memory; Spark refuses without `setCheckpointDir` and writes reliable storage
+- **repark** — `df.checkpoint(eager=True)` answers exactly what `df.localCheckpoint(eager)`
+  answers: a **new** `DataFrame` over an in-memory materialization of the same rows and
+  schema; `eager=False` defers the materialization to the next action.
+- **Apache Spark** — `checkpoint()` without `SparkContext.setCheckpointDir` fails with
+  `SparkException: Checkpoint directory has not been set in the SparkContext` (surfaced as
+  `Py4JJavaError`); with a directory set, Spark writes the plan's data to reliable
+  checkpoint storage and truncates lineage
+  *(oracle: `facade_dataframe_surface_oracle.json` cells `checkpoint_nodir`,
+  `checkpoint_with_dir`, `checkpoint_lazy`, PySpark 4.1.2, ruling R-3, 2026-09-14)*.
+- **Pin** —
+  `python/repark/tests/test_df_surface_a_1.py::test_checkpoint_returns_new_frame_with_same_rows`
+- **Rationale** — DECLARED (R-3, 2026-09-14). repark has no SparkContext checkpoint
+  directory and no reliable-storage checkpoint write; the in-memory materialization is
+  the same-rows answer rather than a refusal the engine cannot honor anyway.
 
 ---
 
@@ -2393,7 +2424,9 @@ the pin rather than obeying it.
 - **Pin** —
   `python/repark/tests/test_nullability_2.py::test_narrow_logical_widths_report_wide_per_logical_width_1`
   plus the dtype asserts in `...::test_cast_nullability_matches_spark`
-  (`_CAST_FLAG_ROWS`, red when fixed).
+  (`_CAST_FLAG_ROWS`, red when fixed), and
+  `python/repark/tests/test_df_surface_a_1.py::test_to_narrow_reports_logical_width_1`
+  (the same collapse seen through `DataFrame.to`, oracle cell `to_narrow`).
 - **Rationale** — BACKLOG. Filed 2026-09-06 (NULLABILITY-2 round 2).
 
 ### FLOAT-AGG-1 — sum of catastrophic-cancellation float vector
@@ -5014,6 +5047,21 @@ Shared roster pin for every heading:
   the same SRID → CRS table as `types_bases.py`; the run's Rust fence did not include `repark-spark` tonight. Spatial
   column use stays `V3-GEO-1`. The pins codify today's refusal and red when the arm lands.
 
+### DF-TO-BINARY-1 — `DataFrame.to` follows the facade's `string` report for a binary column — **BACKLOG 2026-09-14**
+
+- **repark** — a `binary` column reports `string` through `df.schema` / `dtypes` (FACADE-4 census rows D7 and D19), so
+  `df.to(StructType([StructField("b", StringType())]))` is treated as identity and keeps the `bytes` values under a field
+  that reports `string`, while `df.to(StructType([StructField("b", BinaryType())]))` refuses with
+  `INVALID_COLUMN_OR_FIELD_DATA_TYPE` (source reported `STRING`).
+- **Apache Spark** — the column is `binary`: `to(binary)` is identity; `to(string)` follows Spark's store-assignment rule
+  for binary → string. *(oracle: documented — `Dataset.to` store assignment; the binary → string value is UNMEASURED on a
+  live Spark, recorded for the next oracle round.)*
+- **Pin** — `python/repark/tests/test_df_surface_a_1.py::test_to_binary_follows_reported_schema_df_to_binary_1`
+- **Rationale** — BACKLOG, filed by DF-SURFACE-A-1 (run 15b) from the critic re-check finding L-101. The root is the
+  binary report on the scan surface, which FACADE-4 step 0 put to the owner as question 2 (keep `string` where the
+  physically decoded column is described, or report `binary`). `to()` reconciles against the reported schema by design;
+  it changes with that ruling, and this pin reds on purpose when it does.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued
@@ -7331,6 +7379,32 @@ field NAME.
 - **Rationale** — FIXED. History: a full preview ran a full `count()` only
   to decide the footer, and the eager doors ran a bridged UDF over every
   row twice. Cells: `docs/perf/eager-preview-baseline.md`.
+
+### DF-METADATA-1 — `withMetadata` / `to` field metadata drops at every position
+
+- **repark** — `df.withMetadata("a", {"k": "v"}).schema["a"].metadata` answers
+  `{}`, and the same loss holds on every position measured: the stamped frame,
+  `filter`, `select`, `withColumn`, `join`, `union`, `cache`/eager
+  materialization, a parquet write/read round trip, and both `to()` arms
+  (source-keep and non-empty target override). `Column.alias(name, metadata=)`
+  accepts the dict and the engine ignores it — there is no StructField
+  metadata plumbing on the native path (`logical_schema_fields` carries
+  name/type/nullable only; `PyColumnParts.alias` takes no metadata).
+- **Apache Spark** — `withMetadata` is a Dataset plan node and the dict
+  survives plan transforms; `to()` keeps a source field's metadata unless the
+  target field carries non-empty metadata (`dataframe.py` 2431-2432).
+  *(oracle: live PySpark 4.1.2, cells `withMetadata` / `withMetadata_replaces`
+  / `withMetadata_order`, 2026-09-14; the transform-survival positions are
+  documented in Spark's `withMetadata` semantics, not live-measured.)*
+- **Pin** —
+  `python/repark/tests/test_df_surface_a_1.py::test_with_metadata_dropped_at_stamp_df_metadata_1`,
+  `...::test_with_metadata_dropped_across_positions_df_metadata_1`,
+  `...::test_to_metadata_arms_drop_df_metadata_1` (each codifies today's `{}`).
+- **Rationale** — BACKLOG, filed 2026-09-14 (DF-SURFACE-A-1 critic round 1,
+  ruling R-7). The fix is engine-side field-metadata plumbing; the facade
+  already routes every stamp through `alias(metadata=)` so the dict flows the
+  moment the native path accepts it.
+  pins: df-surface-a-1/C-008
 
 ## 8. Drop-in disclosure rationale
 

@@ -175,6 +175,17 @@ else. The next pickup's `make ledger-archive` files everything here under
   Bodies live in `dataframe/streaming_batch.py`, bound on the class from `core.py` at
   the exact 4044 baseline. `risk_tier: standard`. Branch `feat/df-stream-batch-1`.
   pins: df-stream-batch-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [df-surface-a-1-ledger.md](df-surface-a-1-ledger.md) —
+  **DF-SURFACE-A-1 step 1 + critic round 1 (2026-09-14), in flight:** the
+  seven-name DataFrame surface (`to`/`withMetadata`/`registerTempTable`/
+  `checkpoint`/`sparkSession`/`isLocal`/`executionInfo`) answers the live
+  PySpark 4.1.2 `facade_dataframe_surface_oracle.json` cells — bodies in the new
+  `dataframe/surface_a.py` bound one line each on `DataFrame` (CAP-1 ceiling),
+  with `DF-TO-1` and `DF-CHECKPOINT-1` filed DECLARED and `DF-METADATA-1` filed
+  BACKLOG in the parity registry; `inputFiles`/`semanticHash` moved to
+  DF-PLAN-INTROSPECT-1 under ruling R-5.
+  `risk_tier: standard`. Branch `feat/df-surface-a-1`.
+  pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [dfcore-1-ledger.md](dfcore-1-ledger.md) —
   **DFCORE-1 (2026-09-07), in flight:** leaf helpers out of `core.py` — Arrow cell
   conversion to `rows_export.py`, export-error mapping to new `export_errors.py`,

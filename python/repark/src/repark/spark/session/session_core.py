@@ -79,8 +79,8 @@ class ReparkSession:
                 "known_catalogs": known_catalogs,
                 "information_schema_enabled": False,
             },
-            # Classic scalar Python UDF registry (name → entry); dies with stop().
             "udf_registry": {},
+            "facade_session": self,
         }
         master = _builder_config_get_master(self._builder_config)
         # Stable per-session id (PySpark uses local-<epochms><seq>); repark uses a uuid suffix.

@@ -1,5 +1,15 @@
 # map — scripts/
 
+DF-SURFACE-A-1 critic round 1 (2026-09-14): `check_lib_py.py`
+`dataframe/core.py` 4041 → 4035 (ruling R-5 removes the `inputFiles` and
+`semanticHash` bindings; ruling R-6 removes the `_schema_override` slot,
+init line, and schema check). The CAP-1 parity mirror row moved with it.
+pins: df-surface-a-1/C-008
+DF-SURFACE-A-1 step 1 (2026-09-14): `check_lib_py.py` `dataframe/core.py`
+4044 → 4041 (the `localCheckpoint` body moved to `dataframe/surface_a.py`
+beside its `checkpoint` sibling; the nine surface-a bindings are one line
+each). The CAP-1 parity mirror row moved with it.
+pins: df-surface-a-1/C-006
 FACADE-4 step-1 remediation round 4 (2026-09-14, L-007..L-009):
 `check_lib_py.py` `spark/types.py` 1772 → 1793 (increase — base's container
 `simpleString`/`_engine_type`/`jsonValue` dispatch bodies and the
