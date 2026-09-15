@@ -74,6 +74,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   spatial tags (`geometry`/`geography` + srid, `-1` for Spark's `ANY`) into the
   `types_bases.py` objects the JSON door already builds; no encoder arm is added,
   so every other surface keeps its existing fallback or refusal bytes.
+  Round 2: the non-printable divert narrows by spatial keyword in one line —
+  tab/NBSP spatial strings reach the Rust table and parse there; all other
+  non-printable text keeps the Python residue path byte-for-byte.
   pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024, C-026, C-029..C-031, C-033; types-geo-ddl-1/C-002
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.

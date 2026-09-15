@@ -137,6 +137,18 @@ fn dict_required<'py>(
     })
 }
 
+fn validated_spatial_srid(dict: &Bound<'_, PyDict>, geography: bool) -> PyResult<i64> {
+    let py = dict.py();
+    let srid: i64 = dict_required(dict, intern!(py, "srid"))?.extract()?;
+    if type_table::spatial_srid_supported(geography, srid) {
+        Ok(srid)
+    } else {
+        Err(PyValueError::new_err(format!(
+            "unsupported spatial SRID {srid}"
+        )))
+    }
+}
+
 fn spark_field_from_py(dict: &Bound<'_, PyDict>) -> PyResult<SparkField> {
     let py = dict.py();
     let name: String = dict_required(dict, intern!(py, "name"))?.extract()?;
@@ -210,10 +222,10 @@ fn spark_type_from_py(obj: &Bound<'_, PyAny>) -> PyResult<SparkDataType> {
         },
         "variant" => SparkDataType::Variant,
         "geometry" => SparkDataType::Geometry {
-            srid: dict_required(dict, intern!(py, "srid"))?.extract()?,
+            srid: validated_spatial_srid(dict, false)?,
         },
         "geography" => SparkDataType::Geography {
-            srid: dict_required(dict, intern!(py, "srid"))?.extract()?,
+            srid: validated_spatial_srid(dict, true)?,
         },
         "array" => SparkDataType::Array {
             element: Box::new(spark_type_from_py(&dict_required(

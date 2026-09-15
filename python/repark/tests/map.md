@@ -2551,7 +2551,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   cells, and the V3-GEO-1 column-use refusal through `createDataFrame(schema="…")` and
   `spark.read.schema("…")` schema strings, plus the direct bridge tag-shape pin
   (`simple_string_from_descriptor` / `ddl_token_from_descriptor` over hand-built
-  `{"kind", "srid"}` dicts).
+  `{"kind", "srid"}` dicts, invalid SRIDs refused).
+  Round 2: the Spark-grammar SRID edges (leading zeros parse; underscore, sign
+  and fullwidth refuse — grammar knowledge, no live cell) and the tab/NBSP
+  parentheses (decimal tab control answers).
   pins: types-geo-ddl-1/C-001, C-002, C-003, C-004, C-005
 - `test_types_x2_census.py` — X2 census: Row empty/unnamed repr + factory arity;
   createDataFrame LongType schema, nested list/struct/map, variable int arrays;

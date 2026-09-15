@@ -47,6 +47,17 @@ fn spatial_ddl_refuse_cells_keep_parse_error() {
 }
 
 #[test]
+fn spatial_srid_follows_spark_integer_value_grammar() {
+    let parsed =
+        parse_ddl("geometry(04326)").unwrap_or_else(|error| panic!("leading zeros parse: {error}"));
+    assert_eq!(simple_string(&parsed), "geometry(4326)");
+    for ddl in ["geometry(4_326)", "geometry(+4326)", "geometry(４３２６)"] {
+        let error = parse_ddl(ddl).expect_err(&format!("{ddl} refuses"));
+        assert!(error.to_string().contains("cannot parse datatype"), "{ddl}");
+    }
+}
+
+#[test]
 fn spatial_mixed_form_uses_spark_any_marker() {
     for ddl in ["geometry(any)", "geography(any)", "geometry(ANY)"] {
         let parsed = parse_ddl(ddl).unwrap_or_else(|error| panic!("{ddl} parses: {error}"));

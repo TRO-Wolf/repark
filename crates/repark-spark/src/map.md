@@ -262,6 +262,8 @@ pins: rp-4-fork-repin/C-005, C-006
   oracle `geometry(n)` / `geography(n)` forms; `arrow_type_from_spark` refuses
   both variants naming the type (V3-GEO-1) instead of the `Utf8` catch-all;
   `ddl_token` / `sql_marker_token` fall through to the existing generic arms.
+  Round 2: `spatial_srid_supported` validates inbound bridge SRIDs (mixed form
+  included) so no Spark-impossible spelling builds.
   pins: facade-4/C-010, C-019, C-020; types-geo-ddl-1/C-001, C-003
 - `type_table/parse.rs` — the text→descriptor half of the table, split out at the
   file-size ceiling: DDL and SQL-token parsing (`parse_ddl`,
@@ -277,6 +279,8 @@ pins: rp-4-fork-repin/C-005, C-006
   membership, and anything else (bare tokens, unknown SRIDs, `-1`, CRS
   strings) falls through to the existing `cannot parse datatype` refusal.
   Unit battery in `type_table/tests.rs` (file-backed `#[cfg(test)]` module).
+  Round 2: the capture is ASCII `[0-9]+` (Spark `INTEGER_VALUE`, not Python
+  `int`) — underscores, signs and fullwidth digits refuse; leading zeros parse.
   pins: facade-4/C-010, C-020; types-geo-ddl-1/C-001, C-005
 - `spark_ast.rs` — the Spark passthrough: ORDER BY null-placement defaults, eager analysis,
   eager DML/`COPY` commands (F-BR-2), SEC-02 gate call, the **G15 collation valve**

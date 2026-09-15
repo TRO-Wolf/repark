@@ -98,6 +98,49 @@ def test_geo_ddl_bridge_tags_both_ways() -> None:
         _native.simple_string_from_descriptor({"kind": "geography", "srid": -1}) == "geography(any)"
     )
     assert _native.ddl_token_from_descriptor({"kind": "geometry", "srid": 0}) == "GEOMETRY(0)"
+    with pytest.raises(ValueError, match="unsupported spatial SRID"):
+        _native.simple_string_from_descriptor({"kind": "geography", "srid": 0})
+    with pytest.raises(ValueError, match="unsupported spatial SRID"):
+        _native.simple_string_from_descriptor({"kind": "geometry", "srid": 9999})
+
+
+def _parse_both_doors(ddl: str) -> list[spark_types.DataType]:
+    """Both DDL doors over one input."""
+    return [
+        spark_types.DataType.fromDDL(ddl),
+        spark_types._parse_datatype_string(ddl),
+    ]
+
+
+def test_geo_ddl_integer_value_grammar_edges() -> None:
+    """SRID spellings follow Spark's ``INTEGER_VALUE`` grammar, not Python ``int``.
+
+    No live cell covers these; the grammar (``DIGIT+``, ASCII) is the spec.
+    pins: types-geo-ddl-1/C-001
+    """
+    for parsed in _parse_both_doors("geometry(04326)"):
+        assert parsed == spark_types.GeometryType(4326)
+    for ddl in ("geometry(4_326)", "geometry(+4326)", "geometry(\uff14\uff13\uff12\uff16)"):
+        with pytest.raises(ValueError, match="cannot parse datatype"):
+            spark_types.DataType.fromDDL(ddl)
+        with pytest.raises(ValueError, match="cannot parse datatype"):
+            spark_types._parse_datatype_string(ddl)
+
+
+def test_geo_ddl_surrounding_whitespace_doors() -> None:
+    """Tab and NBSP inside the SRID parentheses parse on both DDL doors.
+
+    No live cell covers these; the Rust trim matches Python ``str.strip``.
+    pins: types-geo-ddl-1/C-002
+    """
+    for ddl in ("geometry(\t4326\t)", "geometry(\xa04326\xa0)"):
+        for parsed in _parse_both_doors(ddl):
+            assert parsed == spark_types.GeometryType(4326), repr(ddl)
+    for parsed in (
+        spark_types.DataType.fromDDL("decimal(\t10\t,\t2\t)"),
+        spark_types._parse_datatype_string("decimal(\t10\t,\t2\t)"),
+    ):
+        assert parsed == spark_types.DecimalType(10, 2)
 
 
 def test_geo_ddl_create_schema_string_refuses() -> None:

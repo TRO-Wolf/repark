@@ -421,6 +421,18 @@ pub fn simple_string(data_type: &SparkDataType) -> String {
     }
 }
 
+#[must_use]
+pub fn spatial_srid_supported(geography: bool, srid: i64) -> bool {
+    if srid == SPATIAL_MIXED_SRID {
+        return true;
+    }
+    if geography {
+        GEOGRAPHY_SRIDS.contains(&srid)
+    } else {
+        GEOMETRY_SRIDS.contains(&srid)
+    }
+}
+
 fn spatial_simple_string(prefix: &str, srid: i64) -> String {
     if srid == SPATIAL_MIXED_SRID {
         format!("{prefix}(any)")

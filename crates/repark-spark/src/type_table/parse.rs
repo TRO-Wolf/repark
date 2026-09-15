@@ -241,14 +241,16 @@ fn parse_atomic_token(token: &str) -> Result<Option<SparkDataType>, TypeTableErr
         let precision = parse_py_int(precision_match.as_str())?;
         return Ok(Some(SparkDataType::Time { precision }));
     }
-    if let Some(captures) = regex_fullmatch(r"(?i)\Ageometry\s*\(\s*([^()]*)\s*\)\z", stripped) {
+    if let Some(captures) = regex_fullmatch(r"(?i)\Ageometry\s*\(\s*([0-9]+|any)\s*\)\z", stripped)
+    {
         let Some(inner_match) = captures.get(1) else {
             return Ok(None);
         };
         return Ok(parse_spatial_srid(inner_match.as_str(), GEOMETRY_SRIDS)
             .map(|srid| SparkDataType::Geometry { srid }));
     }
-    if let Some(captures) = regex_fullmatch(r"(?i)\Ageography\s*\(\s*([^()]*)\s*\)\z", stripped) {
+    if let Some(captures) = regex_fullmatch(r"(?i)\Ageography\s*\(\s*([0-9]+|any)\s*\)\z", stripped)
+    {
         let Some(inner_match) = captures.get(1) else {
             return Ok(None);
         };

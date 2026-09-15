@@ -576,7 +576,7 @@ def _parse_datatype_string(text: str) -> Any:
     Parameters beyond ``i64`` and non-printable text leave the Rust path for base's Python
     parse, so value, ``simpleString`` and refusal bytes equal base.
     """
-    if not text.isprintable():
+    if not text.isprintable() and not ("geometry" in text.lower() or "geography" in text.lower()):
         return _parse_datatype_string_python(text)
     try:
         return _descriptor_to_datatype(_native_function("spark_descriptor_from_ddl")(text))
