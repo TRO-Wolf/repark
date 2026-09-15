@@ -253,6 +253,30 @@ else. The next pickup's `make ledger-archive` files everything here under
   `make check-docs-links` checks every tracked `*.md`'s relative links, GitHub-style anchors
   and `docs:` evidence cells; the measured 10-link baseline is the allowlist residue
   (`scripts/docs_links_allowlist.txt`). Clauses C-001…C-003 green. Branch `feat/docs-links-1`.
+- [door-converge-1-ledger.md](door-converge-1-ledger.md) —
+  **DOOR-CONVERGE-1 (2026-09-15), in flight:** one-kernel convergence for `base64` /
+  `unbase64` (RFC 4648 padding + 76-char CRLF chunking, lenient decode), `hypot`
+  (`f64::hypot` rescaled, SQL-door registration), `abs` (ANSI `[ARITHMETIC_OVERFLOW]`
+  on signed minima through the `repark.ansi` carrier, width kept), `size`/`cardinality`
+  (`sizeOfNull=false` NULL-int), `array_contains` (three-valued NULL +
+  `DATATYPE_MISMATCH.NULL_TYPE` needle refusal), `approx_count_distinct`/`regr_count`
+  (non-null `bigint`), `ascii`/`length`/`character_length` (facade lands on the
+  datafusion-spark kernels), and the BL-6 SQL-door half (`bin`/`rint` BOOLEAN refusal).
+  `EXPECTED_DIVERGENCES` ratchets 22 → 14; registry rows BL-16/BL-17/BL-18 go FIXED.
+  Round 3 (2026-09-15, ruling R-10): the registry-wide `promise_retag` wrapper and the
+  `make_array` `containsNull` change were un-built and handed to DOOR-CONVERGE-2 —
+  the batch-7 probe showed the ctor fix never reached the SQL door; the probe's
+  `array_append` (N7-11) delta was re-attributed to main advancing past the branch
+  base (`array-null-1`, `44ca3aea`), not the retag, and the audit claim withdrawn.
+  ELEMENT-AT-ALIAS-1 files the alias-clobber hazard as backlog. Round 4 (ruling
+  R-13): C-011/C-013's literal-haystack nullability legs pin today's `nullable=True`
+  as recorded divergence ARRAY-LITERAL-CONTAINSNULL-1 (owner DOOR-CONVERGE-2);
+  all clauses PROVEN. Round 5 (2026-09-16, on main `23ba2e53`): `abs` takes Spark's
+  implicit STRING→DOUBLE cast with CAST_INVALID_INPUT on malformed input
+  (fixtures-batch11.json A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x);
+  `char_length` leaves `FACADE_ONLY_ROUTINE_NAMES` (A11-callfn-char-length).
+  `risk_tier: standard`. Branch `feat/door-kernel-converge-1`.
+  pins: door-converge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [dynflatten-listnull-1-ledger.md](dynflatten-listnull-1-ledger.md) —
   **DYNFLATTEN-LISTNULL-1 (2026-09-06), in flight:** Spark's parquet reader infers
   `optional int32 element (Null)` as `array<int>`; repark kept `List(Null)` and

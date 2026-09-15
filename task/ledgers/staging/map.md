@@ -26,30 +26,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/array-null-1`.
   pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
   L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
-- [door-converge-1-ledger.md](door-converge-1-ledger.md) —
-  **DOOR-CONVERGE-1 (2026-09-15), in flight:** one-kernel convergence for `base64` /
-  `unbase64` (RFC 4648 padding + 76-char CRLF chunking, lenient decode), `hypot`
-  (`f64::hypot` rescaled, SQL-door registration), `abs` (ANSI `[ARITHMETIC_OVERFLOW]`
-  on signed minima through the `repark.ansi` carrier, width kept), `size`/`cardinality`
-  (`sizeOfNull=false` NULL-int), `array_contains` (three-valued NULL +
-  `DATATYPE_MISMATCH.NULL_TYPE` needle refusal), `approx_count_distinct`/`regr_count`
-  (non-null `bigint`), `ascii`/`length`/`character_length` (facade lands on the
-  datafusion-spark kernels), and the BL-6 SQL-door half (`bin`/`rint` BOOLEAN refusal).
-  `EXPECTED_DIVERGENCES` ratchets 22 → 14; registry rows BL-16/BL-17/BL-18 go FIXED.
-  Round 3 (2026-09-15, ruling R-10): the registry-wide `promise_retag` wrapper and the
-  `make_array` `containsNull` change were un-built and handed to DOOR-CONVERGE-2 —
-  the batch-7 probe showed the ctor fix never reached the SQL door; the probe's
-  `array_append` (N7-11) delta was re-attributed to main advancing past the branch
-  base (`array-null-1`, `44ca3aea`), not the retag, and the audit claim withdrawn.
-  ELEMENT-AT-ALIAS-1 files the alias-clobber hazard as backlog. Round 4 (ruling
-  R-13): C-011/C-013's literal-haystack nullability legs pin today's `nullable=True`
-  as recorded divergence ARRAY-LITERAL-CONTAINSNULL-1 (owner DOOR-CONVERGE-2);
-  all clauses PROVEN. Round 5 (2026-09-16, on main `23ba2e53`): `abs` takes Spark's
-  implicit STRING→DOUBLE cast with CAST_INVALID_INPUT on malformed input
-  (fixtures-batch11.json A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x);
-  `char_length` leaves `FACADE_ONLY_ROUTINE_NAMES` (A11-callfn-char-length).
-  `risk_tier: standard`. Branch `feat/door-kernel-converge-1`.
-  pins: door-converge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —
   **ABS-EXPR-1 (2026-09-13), in flight:** `F.abs` / `F.cbrt` / `F.nullif` lower to one
   native `call_scalar` each (`expr_fn::abs` / `cbrt` / `nullif`) — the facade `when(...)`
