@@ -185,6 +185,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
+- [io-text-1-ledger.md](io-text-1-ledger.md) —
+  **IO-TEXT-1 (2026-09-14), in flight:** `DataFrameReader.text` /
+  `DataFrameWriter.text` in Rust (`text_scan.rs` / `text_glob.rs` / `text_io.rs`)
+  with thin Python binds plus `format("text")` on both doors, pinned against the
+  run-15b live-PySpark-4.1.2 fixture; gzip and the `text.` SQL door stay dated
+  declared refusals (IO-TEXT-GZIP-1, IO-TEXT-SQL-1). **Follow-up (2026-09-15):**
+  critic + perf rulings T-1..T-9 / P-1..P-3 as R-1..R-12; `partitionBy` lays out
+  hive dirs (IO-TEXT-PART-1 retired, IO-TEXT-PARTDISC-1 filed).
+  Rounds 3–6 + R-39 (2026-09-15): one-scan partitioned writes, partition discovery, user-schema overlay, a streaming
+  spill-capable sort past the writer cap; the four width-label pins cite LOGICAL-WIDTH-1 / DF-TO-BINARY-1.
+  `risk_tier: standard`. Branch `feat/io-text-1`.
+  pins: io-text-1/C-001, C-002, C-003, C-004, T-1..T-9, P-1..P-3
 - [orphan-s3tables-1-ledger.md](orphan-s3tables-1-ledger.md) —
   **ORPHAN-S3TABLES-1 step 1 (2026-09-12), in flight:** `remove_orphan_files` refuses loud
   on an `s3tables`-kind catalog before any IO — table buckets answer `ListObjectsV2` 405 —
