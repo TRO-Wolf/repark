@@ -4,7 +4,7 @@
 **Model:** swe-2-high · **Policy:**
 [../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract".
 **Path:** STANDARD. **Proven pattern:**
-[rp-19-ledger.md](rp-19-ledger.md) — repin consumer with a registry-truth clause.
+[rp-19-ledger.md](../staging/rp-19-ledger.md) — repin consumer with a registry-truth clause.
 
 **Retires:** the orchestrator moves this ledger to `../completed/` after the post-merge
 live run; per the unit brief it stays in `staging/` until then.
@@ -136,3 +136,11 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/rp-20-ledger.md, docs/cutover/production-iceberg-status-2026-09-14.md]
   complete: true
 ```
+
+## Live proof (orchestrator, 2026-09-14)
+
+Post-merge `workflow_dispatch` of `aws-acceptance.yml` on `main` `0b33f5b7`: run 34901483202, 21:55:59Z → 22:27:04Z,
+conclusion success, no environment wait. Acceptance module: 10 passed in 308.55 s (the eight existing legs plus
+`test_create_or_replace_twice_against_glue` and `test_create_or_replace_twice_against_s3tables`). dbt gold acceptance:
+`test_gold_stage_on_glue` 1 passed in 36.19 s (two `dbt run` passes, `dbt test` 10 blocks). Recorded in
+`docs/cutover/inventory.md` §8.
