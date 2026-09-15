@@ -5328,6 +5328,7 @@ through `core` or the package. pins: eager-budget-1/C-010
   L-003: the six column pin functions cover the eight Q19 cells on both doors
   with value, Arrow type and nullability. The suffix pin is test_q19_suffix_col_ok
   after a lint rename.
+  pins: java-double-fd-1/C-001, C-002, C-003, C-004, C-005, C-006
 FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 
 - [fnp11_spark_oracle.json](fnp11_spark_oracle.json) — live PySpark 4.1.2 recording
