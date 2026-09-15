@@ -2,6 +2,7 @@ mod commit_unknown;
 mod dv_commit_opens;
 mod lineage;
 mod merge;
+mod merge_dialect;
 mod nmbs;
 mod occ;
 mod occ_branch;
