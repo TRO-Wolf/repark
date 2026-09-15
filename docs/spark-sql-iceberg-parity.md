@@ -1880,15 +1880,23 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   (`struct<value:string>` plus inferred directory columns — IO-TEXT-PARTDISC-1,
   FIXED 2026-09-15). Past the 256-writer cap an evicted key reopens its
   `part-00000.txt` in append mode (round 4, ruling V-1), so a shuffled
-  write holds one part file per leaf.
+  write holds one part file per leaf. Past 256 distinct keys the tail diverts
+  to the sorted single-writer fallback (round 5, ruling X-4): the remaining
+  rows sort by the partition columns through a spill-capable DataFusion sort
+  and append key by key onto each key's existing part file — shuffled
+  k=1000/200k falls from 2.07 s and ~200k opens to 0.29 s and 1256 opens,
+  k=10000/1M from 12.47 s and ~1M opens to 1.58 s and 10256 opens.
 - **Apache Spark** — writes `key=value/` leaf dirs with `part-*` files inside.
 - **Pin** — `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
   (leaf bytes plus `_SUCCESS`) and `::test_text_probe_partition_by_two_remaining`
   (the verbatim 1290 text, destination absent, plus its `_LEGACY_ERROR_TEMP_1290`
   condition — round 3, ruling U-10); `crates/repark-core/src/text_partition.rs::text_partition_evicted_key_appends_to_same_part`
-  (300 keys round-robin past the cap hold one part per leaf — round 4, ruling V-1).
+  (300 keys round-robin past the cap hold one part per leaf — round 4, ruling V-1,
+  now via the fallback); `crates/repark-core/src/text_partition_fallback.rs::text_partition_fallback_holds_one_part_per_leaf`
+  plus `::text_partition_fallback_keeps_below_cap_path` (round 5, ruling X-4)
+  and `python/repark/tests/test_io_text_2.py::test_text_partition_fallback_holds_one_part_per_leaf`.
 - **Rationale** — FIXED, 2026-09-15 (io-text-1 follow-up).
-  pins: io-text-1/T-6
+  pins: io-text-1/T-6, X-4
 
 ---
 
@@ -8742,10 +8750,18 @@ field NAME.
   same-level name lists refuse `CONFLICTING_PARTITION_COLUMN_NAMES`
   `KD009` before any row (W-3); a glob alone discovers nothing while a
   glob with `basePath` discovers under the base path (W-4, `L-205`
-  pinned as filed).
+  pinned as filed). Round 5 (rulings X-1/X-2/X-3): a named column parses the
+  raw unescaped directory text — string keeps `007`/`1.50`/`2024-01-02`,
+  date parses `yyyy-MM-dd`, timestamp is midnight in the session zone,
+  `decimal(10,2)` keeps scale, default stays NULL; name lists that differ at
+  any depth (uneven depth, non-leaf data files) refuse
+  `CONFLICTING_PARTITION_COLUMN_NAMES` before any row while `_`-prefixed
+  markers never count as data files; per-file values ride one `Arc` into
+  every scan partition (ruling X-5: `count()` over 100k files falls from
+  ~3.6 KiB to ~1.3 KiB RSS per file).
 - **Apache Spark** — partition discovery adds the directory columns
   (`(value, k)` rows on the probe's `partition_by` read-back).
-  *(oracle: live PySpark 4.1.2, probes `partition_by` + probe3 `part_*` + probe4 `text_probe4_*`, 2026-09-15.)*
+  *(oracle: live PySpark 4.1.2, probes `partition_by` + probe3 `part_*` + probe4 `text_probe4_*` + probe5 `text_probe5_*`, 2026-09-15.)*
 - **Pin** —
   `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
   plus `test_text_probe3_part_*_read` (slash, specials, empty/null,
@@ -8754,13 +8770,15 @@ field NAME.
   partition-first, int-cast refusal), `::test_text_probe4_mixed_layout`,
   `::test_text_probe4_conflicting_names`, `::test_text_probe4_glob_with_basepath`
   and the `L-201`/`L-205` pins (`lead_zero_*`, `plus_sign`, bare globs stay
-  `value`-only).
+  `value`-only) plus `python/repark/tests/test_io_text_2.py::test_text_probe5_*`
+  (raw-text overlay, uneven-depth and non-leaf refusals, marker-only layout,
+  fallback layout — round 5, rulings X-1, X-2, X-3, X-4).
 - **Rationale** — FIXED, 2026-09-15 (io-text-1 round 3, ruling U-3).
   Discovery lives in the engine module `partition_discovery` (leaf files +
   root in, schema + per-file values out; IO-ORC-1 reuses it) with the shared
   batch materialization beside it; the user-schema overlay lives in the new
   engine module `text_schema` beside the scan (round 4, ruling W-1).
-  pins: io-text-1/T-6, U-3, W-1, W-2, W-3, W-4
+  pins: io-text-1/T-6, U-3, W-1, W-2, W-3, W-4, X-1, X-2, X-3, X-4, X-5
 
 ## 8. Drop-in disclosure rationale
 

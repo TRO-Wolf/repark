@@ -72,44 +72,44 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Clauses C-001..C-004 walked against behavior; the follow-up rulings R-1..R-12 each carry pins against the live probes in facade_iotext_probe_2026-09-15.json, and the retired refusal pins flipped by replacement.
-      artifacts: [task/ledgers/staging/io-text-1-ledger.md, python/repark/tests/test_io_text_1.py]
+      evidence: Clauses C-001..C-004 walked against behavior; the follow-up rulings R-1..R-12 each carry pins against the live probes in facade_iotext_probe_2026-09-15.json, and the retired refusal pins flipped by replacement. Round 5 reattests R-32..R-36 against iotext_probe5_2026-09-15.json (raw-text overlay, cross-depth refusals, sorted fallback, shared values).
+      artifacts: [task/ledgers/staging/io-text-1-ledger.md, python/repark/tests/test_io_text_1.py, python/repark/tests/test_io_text_2.py]
     - id: AT-2
       status: ATTACKED
       evidence: Empty file and empty frame, null rows, malformed UTF-8, lone CR, a CRLF straddling the 64 KiB chunk edge, two trailing terminators, bracket/question/star globs, and a 100-row limit exercised in pins; the 50 MiB line and multi-MiB straddles were probed in round 1 against the same split arms.
       artifacts: [python/repark/tests/test_io_text_1.py, crates/repark-core/src/text_scan.rs, crates/repark-core/src/text_glob.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: Every refusal pins its text and the destination state (1290, UNSUPPORTED, PATH_NOT_FOUND, lineSep, encoding, compression, modes); the old code's failure paths precede staging creation, so no litter arises — a cleanup widening with no deterministic trigger was tried and reverted, disclosed above.
-      artifacts: [python/repark/tests/test_io_text_1.py, crates/repark-core/src/text_io.rs]
+      evidence: Every refusal pins its text and the destination state (1290, UNSUPPORTED, PATH_NOT_FOUND, lineSep, encoding, compression, modes); the old code's failure paths precede staging creation, so no litter arises — a cleanup widening with no deterministic trigger was tried and reverted, disclosed above. Round 5 reattests the cross-depth CONFLICTING_PARTITION_COLUMN_NAMES refusal (plan-time, both name lists, KD009) and the kept INVALID_PARTITION_VALUE on raw text.
+      artifacts: [python/repark/tests/test_io_text_1.py, python/repark/tests/test_io_text_2.py, crates/repark-core/src/text_io.rs, crates/repark-core/src/partition_discovery.rs]
     - id: AT-4
       status: ATTACKED
-      evidence: Cross-partition order is channel-nondeterministic like Spark, so order pins sort; partitions own disjoint file groups with no shared mutable state; single-file order is exact. The GIL stays released via the unchanged detach bindings.
-      artifacts: [python/repark/tests/test_io_text_1.py, crates/repark-core/src/text_scan.rs]
+      evidence: Cross-partition order is channel-nondeterministic like Spark, so order pins sort; partitions own disjoint file groups with no shared mutable state; single-file order is exact. The GIL stays released via the unchanged detach bindings. Round 5 reattests the fallback multiset pins past the cap and the one-Arc value share across the 8 scan partitions.
+      artifacts: [python/repark/tests/test_io_text_1.py, python/repark/tests/test_io_text_2.py, crates/repark-core/src/text_scan.rs, crates/repark-core/src/text_partition_fallback.rs]
     - id: AT-5
       status: ATTACKED
       evidence: Remote schemes refuse, glob walks stay under the literal base dir, hidden names skip at every level, no env reads at query time, and no secret or privileged surface was added.
       artifacts: [crates/repark-core/src/text_glob.rs, python/repark/tests/test_io_text_1.py]
     - id: AT-6
       status: ATTACKED
-      evidence: Round trips are byte-exact including null-as-empty and lossy codepoints; partitioned leaves match the probe listing byte for byte; part names changed from batch-indexed to sequential with no consumer depending on the old gaps; read-side partition discovery is a filed BACKLOG row, not papered over.
-      artifacts: [python/repark/tests/test_io_text_1.py, docs/spark-sql-iceberg-parity.md]
+      evidence: Round trips are byte-exact including null-as-empty and lossy codepoints; partitioned leaves match the probe listing byte for byte; part names changed from batch-indexed to sequential with no consumer depending on the old gaps; read-side partition discovery is a filed BACKLOG row, not papered over. Round 5 reattests one part per leaf under the sorted fallback (measured 0.29 s / 1.58 s) and the IO-TEXT registry rows for X-1..X-4.
+      artifacts: [python/repark/tests/test_io_text_1.py, python/repark/tests/test_io_text_2.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-7
       status: ATTACKED
       evidence: The P1 collect-then-write OOM is fixed and measured (4 194 304 x 1 KiB: 4293 MiB / 17.48 s before, 165 MiB / 5.49 s after, byte-identical); partitions cap at 8 so file count cannot fan out tasks; wholetext still materializes by definition.
       artifacts: [task/ledgers/staging/io-text-1-ledger.md, crates/repark-core/src/text_io.rs]
     - id: AT-8
       status: ATTACKED
-      evidence: Refusal texts are verbatim against the live probes (1290, PATH_NOT_FOUND with SQLSTATE, the require lineSep line, UNSUPPORTED unchanged); both Python doors funnel through one native check each; the DataFusion streaming APIs are used as documented.
-      artifacts: [python/repark/tests/test_io_text_1.py]
+      evidence: Refusal texts are verbatim against the live probes (1290, PATH_NOT_FOUND with SQLSTATE, the require lineSep line, UNSUPPORTED unchanged); both Python doors funnel through one native check each; the DataFusion streaming APIs are used as documented. Round 5 reattests the CONFLICTING head, both name lists, and KD009 from the probe5 cells.
+      artifacts: [python/repark/tests/test_io_text_1.py, python/repark/tests/test_io_text_2.py]
     - id: AT-9
       status: ATTACKED
       evidence: Every failure path names its file, separator, column, or path in the AnalysisException text, which is the diagnosable surface this local path offers; no separate log or metric channel exists house-wide.
       artifacts: [python/repark/tests/test_io_text_1.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Five Python-side probe pins fail with the facade stashed and the two retired refusal pins red by replacement; the Rust pins assert messages the old code never produced; new branches (brace expansion, class negation, partition leaves, limit cut-off, empty projection) each have a nameable input in the suite.
-      artifacts: [python/repark/tests/test_io_text_1.py, crates/repark-core/src/text_scan.rs, crates/repark-core/src/text_glob.rs, crates/repark-core/src/text_io.rs]
+      evidence: Five Python-side probe pins fail with the facade stashed and the two retired refusal pins red by replacement; the Rust pins assert messages the old code never produced; new branches (brace expansion, class negation, partition leaves, limit cut-off, empty projection) each have a nameable input in the suite. Round 5 reattests 8 red probe5 pins plus 2 red Rust conflict pins pre-fix (X-4's layout pins pass before and after by design; the strace open counts are its red).
+      artifacts: [python/repark/tests/test_io_text_1.py, python/repark/tests/test_io_text_2.py, crates/repark-core/src/text_scan.rs, crates/repark-core/src/text_glob.rs, crates/repark-core/src/text_io.rs, crates/repark-core/src/partition_discovery.rs]
 ```
 
 ## Verdict
@@ -438,3 +438,30 @@ Measurement (`/tmp/iotext5_rss_before.py` scratch, same 100k-leaf tree,
 Plan/count wall on the after build: 1.32 s / 0.15 s at load 14 (a first
 run at load 26 read 10.03 s / 1.11 s — box contention, RSS identical at
 198 MiB both runs). Round-4 report on its box: ~457 MiB at count.
+
+## Round-5 coverage addendum (2026-09-15, R-32..R-36)
+
+Oracle: `iotext_probe5_2026-09-15.json` (live PySpark 4.1.2, run 16b); every
+cell copied as `text_probe5_<cell>` into
+`python/repark/tests/facade_reader_writer_oracle.json`, and every round-5 pin
+reads those cells (the timestamp wall follows the ruling with an
+instant cross-check; the `INVALID` letter rule from round 4 stands).
+Red-first runs sit beside their rows above; `make verify` plus
+`test_io_text_1.py` 69/69 and `test_io_text_2.py` 16/16 green on the
+RELEASE module at each group commit.
+
+- Raw-text overlay (X-1): string keeps the directory text, date parses,
+  timestamp is midnight session zone, decimal keeps scale, default stays
+  NULL, bad casts keep `INVALID_PARTITION_VALUE`.
+- Layout conflicts (X-2/X-3): uneven depth and non-leaf data files refuse
+  `CONFLICTING_PARTITION_COLUMN_NAMES` before any row; marker-only
+  non-leaf dirs read the leaf.
+- Writer fallback (X-4): past 256 distinct keys the tail sorts and appends
+  with one open writer (k=1000/200k: 0.29 s, 1256 opens; k=10000/1M:
+  1.58 s, 10256 opens; one part per leaf).
+- Shared values (X-5): one `Arc` across scan partitions and `execute`
+  (`count()` over 100k files: 422 MiB to 198 MiB).
+- Registry: IO-TEXT-PART-1 and IO-TEXT-PARTDISC-1 updated in place for
+  X-1..X-4; the COVERAGE_ATTESTATION block reattests what this round
+  touched. The remaining perf P3 lines stand as ledger residue with the
+  reviewer's numbers (R-31).
