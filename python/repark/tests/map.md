@@ -2358,6 +2358,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `docs/examples/io/io_declared_refusals.py`, the fixture and inventory updates are
   C-005, and the named-suite sweep is C-006.
   pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [test_registry_16b_1.py](test_registry_16b_1.py) — **REGISTRY-16B-1 (2026-09-15):** the pins behind three
+  BACKLOG rows: `conf.unset` of a builder-seeded SQL conf raises on `get` while SQL `RESET` restores the builder
+  value (CONF-UNSET-1), `spark.wap.*` stores through `conf.set`, reports modifiable and fails on the SQL `SET`
+  door (CONF-WAP-1), and `format("jdbc")` reaches the PostgreSQL path where `spark.read.jdbc` refuses a
+  non-PostgreSQL URL (IO-JDBC-FORMAT-1). Each pin holds today's answer and reds when its row's fix lands.
+  pins: registry-16b-1/C-001, C-002, C-003
 - `test_cache_persist.py` — **R-PERF-CACHE** + **r23 CACHE1**: cache/persist self + is_cached + storageLevel;
   second action after cache cheap; derived after materialize; unpersist; localCheckpoint;
   clearCache real drop (live + hand-registered `__repark_cache_*` prefix sweep + leaves
