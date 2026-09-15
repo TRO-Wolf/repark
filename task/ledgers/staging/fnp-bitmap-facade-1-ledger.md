@@ -47,7 +47,9 @@ answers 2), (5) the real red re-run, green pins, census and gates on the native-
 | C-009 | The Python door's default name matches the fixture schema name, and the SQL-door qualifier leak is a registry-recorded expected divergence (G-2 R-5): unaliased `bitmap_construct_agg(x)` selects `bitmap_construct_agg(x)` on the Python door; `spark.sql` / `selectExpr` render `bitmap_construct_agg(datafusion.public.<view>.x)` — pinned as today's shape, owned by the SQL door (run 16c). | `test_fnp_bitmap_facade_1.py::test_default_name_matches_fixture_schema` + `::test_sql_door_qualifier_leak_is_expected_divergence`; registry row under FNP-6D in `docs/spark-sql-iceberg-parity.md`. | **PROVEN** | Green at first run; the leak shape measured live (`datafusion.public.fnp_facade1_name_leak.x`, `__repark_selx_<hex>` for `selectExpr`) and recorded exactly. pins: fnp-bitmap-facade-1/C-009 |
 | C-010 | `functions.__all__` carries no duplicates (owner Q-15a-5 via G-2 R-6). | `test_functions_split_identity.py::test_every_all_name_resolves` gains `assert len(set(F.__all__)) == len(F.__all__)`. | **PROVEN** | Green in the same run as the split-identity suite. pins: fnp-bitmap-facade-1/C-010 |
 
-VERDICT: 10 clauses, 10 PROVEN, 0 OPEN, 0 REJECTED (C-011, the DEGREES-RUST-1 rider, lands in the next commit of this run).
+| C-011 | `degrees` / `radians` compute on a Rust kernel with thin facade binds (owner Q-15a-1 via G-2 R-7): new `call_scalar` dispatch arms reuse the engine's `degrees` / `radians` scalar UDFs; the facade wrappers are `_scalar` binds over a `double` cast keeping the `DEGREES(x)` / `RADIANS(x)` display names, the `toDegrees` / `toRadians` warnings, and every existing `fnp_alias_1_spark_oracle.json` pin green; `_rescaled` and the factor constants are deleted. | `test_fnp_alias_1.py` (55 pins, values/names/warnings/joins). | **PROVEN** | Reuse, not a new kernel: the engine UDF is `f64::to_degrees` / `f64::to_radians`, a single multiply by the correctly-rounded factor — the same operation the replaced Python multiply performed (D-7 of FNP-ALIAS-1). Evidence: all 55 alias pins green on the rebuilt native (Spark-recorded doubles, names, `FutureWarning` texts, semi/anti and ON-join behavior); a 4015-value sweep of kernel vs `x * (180.0/pi)` / `x * (pi/180.0)` answers 0 mismatches for both names. pins: fnp-bitmap-facade-1/C-011 |
+
+VERDICT: 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Orchestrator rulings G-2 (run 16a) — dispositions
 
@@ -59,6 +61,7 @@ VERDICT: 10 clauses, 10 PROVEN, 0 OPEN, 0 REJECTED (C-011, the DEGREES-RUST-1 ri
 | R-4 (G-2) | Restore the two truncated BINARY cells; pin `F6D-empty`, short/empty/long folds, unbounded window, Arrow types vs fixture schema. | Applied in C-008. |
 | R-5 (G-2) | Pin the Python-door default name; record the SQL-door qualifier leak as a registry residual with a divergence pin. | Applied in C-009. |
 | R-6 (G-2, owner Q-15a-5) | Add `assert len(set(functions.__all__)) == len(functions.__all__)` to `test_functions_split_identity.py`. | Applied in C-010. |
+| R-7 (G-2, owner Q-15a-1) | Move `degrees` / `radians` onto a Rust kernel (reuse the engine UDFs when bit-exact, else a Spark-exact kernel); add dispatch arms; keep display names, warnings and alias pins green; delete `_rescaled` and the constants. | Applied in C-011 as reuse: arms call `datafusion::functions::expr_fn::degrees` / `::radians`; facade binds keep names, warnings, pins; `_rescaled`, `_DEGREES_PER_RADIAN`, `_RADIANS_PER_DEGREE` deleted with the now-unused `math`, `lit`, `_thread_origin` imports. |
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -130,6 +133,9 @@ COVERAGE_ATTESTATION:
 | `python/repark/tests/test_functions_split_identity.py` (run 16a) | R-6: `__all__` uniqueness assert. |
 | `python/repark/tests/map.md` (run 16a) | Facade pin-file and fixture entries record the R-1..R-5 remediation. |
 | `docs/spark-sql-iceberg-parity.md` (run 16a) | R-5: FNP-6D residual row for the SQL-door qualifier leak with its divergence pin. |
+| `crates/repark-python/src/column/function_dispatch.rs` (run 16a) | R-7: `degrees` / `radians` `call_scalar` arms onto the engine UDFs, beside the bitmap arms. |
+| `python/repark/src/repark/spark/functions_math.py` (run 16a) | R-7: thin `_scalar` binds over a `double` cast; `_rescaled`, the factor constants and the orphaned imports deleted. |
+| `crates/repark-python/src/column/map.md`, `python/repark/src/repark/spark/map.md`, `python/repark/tests/map.md` (run 16a) | R-7 lockstep: the dispatch-arm note, the `functions_math.py` implementation note, the `_rescaled` sentence. |
 
 No public API change beyond the three additive names: no crate dependency, no `Cargo.lock`
 edit, no `.github/` edit, no kernel change.

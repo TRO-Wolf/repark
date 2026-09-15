@@ -347,6 +347,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   prints one zero); `months_between` prints `roundOff` only when false.
   pins: fnp-11a/C-001, C-015
 - `functions_math.py` — mathematical and trigonometric wrappers.
+  clause binds each side. **DEGREES-RUST-1 (2026-09-15, owner Q-15a-1):** `degrees` /
+  `radians` move onto the engine's scalar UDFs through new `call_scalar` dispatch arms —
+  the single-multiply `f64::to_degrees` / `f64::to_radians` form, swept bit-identical to
+  the replaced multiply over 4015 values, so reuse and not a new kernel. The wrappers are
+  thin `_scalar` binds over a `double` cast keeping the `DEGREES(x)` / `RADIANS(x)`
+  display, the warnings, and every alias pin green; `_rescaled` and the factor constants
+  are deleted. pins: fnp-alias-1/C-001, C-002, C-003, C-004; fnp-bitmap-facade-1/C-011
 - `functions_session.py` — session-bound function helpers.
 - `functions_udf.py` — Python UDF and pandas UDF markers, validation, and return-type
   contracts. Execution uses the DataFrame Arrow bridge. DFCORE-2 (2026-09-07): the

@@ -79,6 +79,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   the existing import (8 → 4 lines each, the `IsNotDistinctFrom` call staying wrapped for
   rustfmt) before the three arms land — 1000 → 991 lines, no baseline raised.
   pins: fnp-bitmap-facade-1/C-001
+  **DEGREES-RUST-1 (2026-09-15, owner Q-15a-1):** `call_scalar_expr` gains the `degrees` /
+  `radians` arms onto the engine's scalar UDFs (`datafusion::functions::expr_fn`) — the
+  single-multiply `f64::to_degrees` / `f64::to_radians` form the facade measured bit-equal
+  to Spark, so reuse and not a new kernel. pins: fnp-bitmap-facade-1/C-011
 - [`function_dispatch/dispatch_json.rs`](function_dispatch/dispatch_json.rs) —
   **FNP-9/10 (2026-09-05):** arms for
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,

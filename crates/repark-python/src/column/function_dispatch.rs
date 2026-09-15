@@ -854,6 +854,14 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::try_url_decode(exprs[0].clone())
         }
+        "degrees" => {
+            need(1)?;
+            repark_functions::expr_fn::degrees(exprs[0].clone())
+        }
+        "radians" => {
+            need(1)?;
+            repark_functions::expr_fn::radians(exprs[0].clone())
+        }
         "bitmap_bit_position" => {
             need(1)?;
             repark_functions::expr_fn::bitmap_bit_position(exprs[0].clone())
