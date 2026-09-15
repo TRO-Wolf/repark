@@ -633,7 +633,7 @@ pub async fn write_text_partitioned(
     line_sep: &str,
     partition_columns: &[String],
     session_zone: &str,
-) -> Result<()> {
+) -> Result<usize> {
     let (partition_at, body_at, body_type) =
         partition_write_layout(frame.schema(), partition_columns)?;
     if line_sep.is_empty() {
@@ -666,7 +666,7 @@ pub async fn write_text_partitioned(
             if !open.contains_key(&key) && open.len() >= TEXT_PARTITION_WRITERS_CAP {
                 flush_open_writers(&mut open)?;
                 let head = batch.slice(row, batch.num_rows() - row);
-                let _spilled = crate::text_partition_fallback::append_remaining_sorted(
+                let spilled = crate::text_partition_fallback::append_remaining_sorted(
                     head,
                     stream,
                     crate::text_partition_fallback::PartitionTail {
@@ -683,7 +683,7 @@ pub async fn write_text_partitioned(
                     frame.task_ctx(),
                 )
                 .await?;
-                return Ok(());
+                return Ok(spilled);
             }
             tick += 1;
             let (writer, part) = partition_leaf_writer(
@@ -699,7 +699,7 @@ pub async fn write_text_partitioned(
         }
     }
     flush_open_writers(&mut open)?;
-    Ok(())
+    Ok(0)
 }
 
 pub(crate) fn write_partition_body_row(

@@ -414,7 +414,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   single-writer append); the eviction arm stays pinned by direct unit test.
   **Round 6 (2026-09-15, Y-1):** the divert hands over the live stream plus
   the frame's session task context.
-  pins: io-text-1/U-1, U-2, V-1, X-4, Y-1
+  **Round 7 (2026-09-15, Z-2):** the writer returns the sort spill count
+  (zero when the fallback never runs); the binding is unchanged.
+  pins: io-text-1/U-1, U-2, V-1, X-4, Y-1, Z-2
 - `text_partition_fallback.rs` — **IO-TEXT-1 round 5 (2026-09-15, X-4):**
   Spark's high-cardinality fallback: the tail past 256 distinct keys sorts by
   the partition columns and appends key by key with one open writer onto each
@@ -426,7 +428,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pin one part per leaf past the cap, the unchanged below-cap layout, and a
   spill under a 16 MiB pool over a 54 MiB tail (spill count above zero, every
   row written, one part per key).
-  pins: io-text-1/X-4, Y-1
+  **Round 7 (2026-09-15, Z-2):** the tail re-chunks from the session pool
+  (one batch plus the sort reservation fits, capped reservation on a derived
+  task context; oversized batches split by rows into deep copies with
+  measure-verify) before the same sort and walk. Rust tests pin the 500k x
+  4 KiB tail at 128/512 MiB pools, the pool-busting single batch (red
+  without the split), and the rechunk contract.
+  pins: io-text-1/X-4, Y-1, Z-2
 - `text_schema.rs` — **IO-TEXT-1 round 4 (2026-09-15, W-1):** the user-schema
   overlay beside the scan (split from `text_scan.rs` at the 1000-line ceiling):
   the user schema is the data schema with discovered columns appended after it,
