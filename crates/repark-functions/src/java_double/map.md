@@ -43,3 +43,4 @@ instead. The corpus byte-equality test (29,451 + 9,976 rows) guards every edit
 there. The eight-argument `dtoa_int`/`dtoa_long`/`dtoa_big` signatures and the
 `lvalue`/`ivalue` port names are kept 1:1 with the JDK structure under the same
 treatment rather than renamed.
+- **R-16c-17 (2026-09-15, orchestrator):** the nine `///` lines added in round 1 on private and `pub(crate)` items of `format_float.rs` are removed (owner comment ban; no lint requires them). The per-item rationale stays in this map and the ledger.
