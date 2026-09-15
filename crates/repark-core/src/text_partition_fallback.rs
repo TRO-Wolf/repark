@@ -2,19 +2,24 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufWriter, Write as _};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use arrow::array::timezone::Tz;
-use arrow::datatypes::DataType;
+use arrow::datatypes::{DataType, SchemaRef};
 use datafusion::arrow::array::RecordBatch;
 use datafusion::arrow::compute::SortOptions;
-use datafusion::datasource::memory::MemorySourceConfig;
 use datafusion::error::DataFusionError;
 use datafusion::execution::TaskContext;
 use datafusion::physical_expr::expressions::Column;
-use datafusion::physical_expr::{LexOrdering, PhysicalSortExpr};
+use datafusion::physical_expr::{
+    EquivalenceProperties, LexOrdering, Partitioning, PhysicalSortExpr,
+};
+use datafusion::physical_plan::execution_plan::{Boundedness, EmissionType};
 use datafusion::physical_plan::sorts::sort::SortExec;
-use datafusion::physical_plan::{ExecutionPlan, SendableRecordBatchStream};
+use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
+use datafusion::physical_plan::{
+    DisplayAs, DisplayFormatType, ExecutionPlan, PlanProperties, SendableRecordBatchStream,
+};
 use futures::StreamExt;
 
 use crate::text_partition::{
@@ -34,20 +39,107 @@ pub(crate) struct PartitionTail<'a> {
     pub(crate) zone: Tz,
 }
 
+struct TailSourceExec {
+    schema: SchemaRef,
+    stream: Mutex<Option<SendableRecordBatchStream>>,
+    properties: Arc<PlanProperties>,
+}
+
+impl TailSourceExec {
+    fn chained(head: RecordBatch, rest: SendableRecordBatchStream) -> SendableRecordBatchStream {
+        let schema = head.schema();
+        let stream = futures::stream::once(async move { Ok(head) }).chain(rest);
+        Box::pin(RecordBatchStreamAdapter::new(schema, stream))
+    }
+
+    fn new(head: RecordBatch, rest: SendableRecordBatchStream) -> Self {
+        let schema = head.schema();
+        let properties = Arc::new(PlanProperties::new(
+            EquivalenceProperties::new(Arc::clone(&schema)),
+            Partitioning::UnknownPartitioning(1),
+            EmissionType::Incremental,
+            Boundedness::Bounded,
+        ));
+        Self {
+            schema,
+            stream: Mutex::new(Some(Self::chained(head, rest))),
+            properties,
+        }
+    }
+}
+
+impl std::fmt::Debug for TailSourceExec {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("TailSourceExec")
+            .field("schema", &self.schema)
+            .finish_non_exhaustive()
+    }
+}
+
+impl DisplayAs for TailSourceExec {
+    fn fmt_as(
+        &self,
+        _mode: DisplayFormatType,
+        formatter: &mut std::fmt::Formatter,
+    ) -> std::fmt::Result {
+        write!(formatter, "TailSourceExec")
+    }
+}
+
+impl ExecutionPlan for TailSourceExec {
+    fn name(&self) -> &'static str {
+        "TailSourceExec"
+    }
+
+    fn properties(&self) -> &Arc<PlanProperties> {
+        &self.properties
+    }
+
+    fn children(&self) -> Vec<&Arc<dyn ExecutionPlan>> {
+        Vec::new()
+    }
+
+    fn with_new_children(
+        self: Arc<Self>,
+        children: Vec<Arc<dyn ExecutionPlan>>,
+    ) -> datafusion::error::Result<Arc<dyn ExecutionPlan>> {
+        if children.is_empty() {
+            Ok(self)
+        } else {
+            Err(DataFusionError::Internal(
+                "TailSourceExec takes no children".to_string(),
+            ))
+        }
+    }
+
+    fn execute(
+        &self,
+        partition: usize,
+        _context: Arc<TaskContext>,
+    ) -> datafusion::error::Result<SendableRecordBatchStream> {
+        if partition != 0 {
+            return Err(DataFusionError::Internal(format!(
+                "TailSourceExec has one partition, got {partition}"
+            )));
+        }
+        self.stream
+            .lock()
+            .map_err(|_| {
+                DataFusionError::Internal("TailSourceExec lost its tail stream".to_string())
+            })?
+            .take()
+            .ok_or_else(|| DataFusionError::Internal("TailSourceExec runs once".to_string()))
+    }
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn append_remaining_sorted(
     head: RecordBatch,
-    stream: &mut SendableRecordBatchStream,
+    stream: SendableRecordBatchStream,
     tail: PartitionTail<'_>,
-) -> Result<()> {
-    let schema = head.schema();
-    let mut batches = vec![head];
-    while let Some(batch) = stream.next().await {
-        let batch = batch.map_err(engine_err)?;
-        if batch.num_rows() > 0 {
-            batches.push(batch);
-        }
-    }
+    task_ctx: TaskContext,
+) -> Result<usize> {
     let mut order = Vec::with_capacity(tail.partition_at.len());
     for (position, column_at) in tail.partition_at.iter().enumerate() {
         order.push(PhysicalSortExpr {
@@ -61,27 +153,36 @@ pub(crate) async fn append_remaining_sorted(
             },
         });
     }
-    let mut ordered = batches;
-    if let Some(ordering) = LexOrdering::new(order) {
-        let memory =
-            MemorySourceConfig::try_new_exec(&[ordered], schema, None).map_err(engine_err)?;
-        let sort = SortExec::new(ordering, memory);
-        let mut stream = sort
-            .execute(0, Arc::new(TaskContext::default()))
-            .map_err(engine_err)?;
-        ordered = Vec::new();
-        while let Some(batch) = stream.next().await {
-            ordered.push(batch.map_err(engine_err)?);
-        }
-    }
+    let Some(ordering) = LexOrdering::new(order) else {
+        let mut direct = TailSourceExec::chained(head, stream);
+        write_sorted_stream(&mut direct, tail).await?;
+        return Ok(0);
+    };
+    let source: Arc<dyn ExecutionPlan> = Arc::new(TailSourceExec::new(head, stream));
+    let sort = SortExec::new(ordering, source);
+    let mut out = sort.execute(0, Arc::new(task_ctx)).map_err(engine_err)?;
+    write_sorted_stream(&mut out, tail).await?;
+    let spilled = sort
+        .metrics()
+        .and_then(|metrics| metrics.spill_count())
+        .unwrap_or(0);
+    Ok(spilled)
+}
+
+#[allow(clippy::missing_errors_doc)]
+async fn write_sorted_stream(
+    stream: &mut SendableRecordBatchStream,
+    tail: PartitionTail<'_>,
+) -> Result<()> {
     let mut open: HashMap<Vec<String>, (BufWriter<File>, PathBuf)> = HashMap::new();
     let mut touched: HashMap<Vec<String>, u64> = HashMap::new();
     let mut tick = 0u64;
     let mut current: Option<Vec<String>> = None;
-    for batch in &ordered {
+    while let Some(batch) = stream.next().await {
+        let batch = batch.map_err(engine_err)?;
         for row in 0..batch.num_rows() {
             let key = render_partition_key(
-                batch,
+                &batch,
                 row,
                 tail.partition_at,
                 tail.partition_columns,
@@ -117,7 +218,7 @@ pub(crate) async fn append_remaining_sorted(
             })?;
             write_partition_body_row(
                 writer,
-                batch,
+                &batch,
                 tail.body_at,
                 tail.body_type,
                 row,
@@ -137,9 +238,83 @@ pub(crate) async fn append_remaining_sorted(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use arrow::array::{ArrayRef, StringArray};
+    use arrow::datatypes::{Field, Schema};
 
     fn test_session() -> crate::ReparkSession {
         crate::ReparkSession::builder().build().unwrap()
+    }
+
+    #[tokio::test]
+    async fn text_partition_fallback_spills_under_small_memory_limit() {
+        let session = crate::ReparkSession::builder()
+            .memory_limit_bytes(16 * 1024 * 1024)
+            .batch_size(512)
+            .build()
+            .unwrap();
+        let keys = 400usize;
+        let per_key = 3000usize;
+        let rows = keys * per_key;
+        let schema = Arc::new(Schema::new(vec![
+            Field::new("k", DataType::Utf8, false),
+            Field::new("value", DataType::Utf8, false),
+        ]));
+        let padding = "v".repeat(32);
+        let mut batches: Vec<RecordBatch> = Vec::new();
+        for start in (0..rows).step_by(2_000) {
+            let end = (start + 2_000).min(rows);
+            let names: Vec<String> = (start..end)
+                .map(|index| format!("k{}", index % keys))
+                .collect();
+            let bodies: Vec<String> = (start..end).map(|_| padding.clone()).collect();
+            batches.push(
+                RecordBatch::try_new(
+                    Arc::clone(&schema),
+                    vec![
+                        Arc::new(StringArray::from(names)) as ArrayRef,
+                        Arc::new(StringArray::from(bodies)) as ArrayRef,
+                    ],
+                )
+                .unwrap(),
+            );
+        }
+        let input = futures::stream::iter(batches.into_iter().map(Ok));
+        let mut stream: SendableRecordBatchStream =
+            Box::pin(RecordBatchStreamAdapter::new(Arc::clone(&schema), input));
+        let head = stream.next().await.unwrap().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("out");
+        std::fs::create_dir_all(&target).unwrap();
+        let mut parts: HashMap<Vec<String>, PathBuf> = HashMap::new();
+        let mut created: HashSet<Vec<String>> = HashSet::new();
+        let columns = vec![String::from("k")];
+        let at = vec![0usize];
+        let body_type = DataType::Utf8;
+        let zone: Tz = "UTC".parse().unwrap();
+        let probe = session.sql("SELECT 1 AS one").await.unwrap();
+        let spilled = append_remaining_sorted(
+            head,
+            stream,
+            PartitionTail {
+                partition_columns: &columns,
+                partition_at: &at,
+                body_at: 1,
+                body_type: &body_type,
+                dir: &target,
+                separator: b"\n",
+                parts: &mut parts,
+                created: &mut created,
+                zone,
+            },
+            probe.task_ctx(),
+        )
+        .await
+        .unwrap();
+        assert!(
+            spilled > 0,
+            "the sort must spill under a 16 MiB pool over a 54 MiB tail"
+        );
+        assert_eq!(leaf_stats(&target), (keys, keys, rows));
     }
 
     fn leaf_stats(target: &Path) -> (usize, usize, usize) {

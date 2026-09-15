@@ -666,9 +666,9 @@ pub async fn write_text_partitioned(
             if !open.contains_key(&key) && open.len() >= TEXT_PARTITION_WRITERS_CAP {
                 flush_open_writers(&mut open)?;
                 let head = batch.slice(row, batch.num_rows() - row);
-                crate::text_partition_fallback::append_remaining_sorted(
+                let _spilled = crate::text_partition_fallback::append_remaining_sorted(
                     head,
-                    &mut stream,
+                    stream,
                     crate::text_partition_fallback::PartitionTail {
                         partition_columns,
                         partition_at: &partition_at,
@@ -680,6 +680,7 @@ pub async fn write_text_partitioned(
                         created: &mut created,
                         zone,
                     },
+                    frame.task_ctx(),
                 )
                 .await?;
                 return Ok(());
