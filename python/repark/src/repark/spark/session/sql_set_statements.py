@@ -5,10 +5,13 @@
 after ``=``, trimmed, quotes kept — Spark refuses ``'Asia/Tokyo'`` with its quotes,
 cell BTZ5-4), ``RESET``, ``RESET <key>``, ``SET TIME ZONE '<zone>'`` and
 ``SET TIME ZONE LOCAL``. Keywords are case-insensitive; surrounding whitespace and one
-trailing ``;`` are tolerated. Anything else returns ``None`` so the statement reaches
-the engine unchanged — including every ``datafusion.*`` key and every ``spark.wap.*``
-assignment/unset. The ``datafusion.*`` exclusion is load-bearing: ``RuntimeConfig.set``
-forwards those keys through this same SQL entry point, so intercepting them would loop.
+trailing ``;`` are tolerated. ``--`` and ``/* … */`` comments outside string literals are
+stripped before matching (Spark's parser does the same), a statement with a real second
+``;`` or an unterminated quote defers to the engine, and anything else returns ``None`` so
+the statement reaches the engine unchanged — including every ``datafusion.*`` key and
+every ``spark.wap.*`` assignment/unset. The ``datafusion.*`` exclusion is load-bearing:
+``RuntimeConfig.set`` forwards those keys through this same SQL entry point, so
+intercepting them would loop.
 The ``spark.wap.*`` exclusion is fail-closed: repark does not implement WAP, and the
 engine's refusal (not a silent conf store) is the pinned answer (REF-3). ``RESET`` of a
 collation key refuses through ``refuse_collation_session_key``, mirroring the engine's
@@ -50,6 +53,7 @@ from repark.spark.session.session_configuration import (
     _looks_like_datafusion_conf_key,
 )
 from repark.spark.session.session_time_zone import SESSION_TIME_ZONE_KEY
+from repark.spark.session.sql_relations import _sql_mask_strings_and_comments
 from repark.spark.types import refuse_collation_session_key
 
 if TYPE_CHECKING:
@@ -89,9 +93,14 @@ _WAP_SESSION_KEY_PREFIX = "spark.wap."
 
 def try_sql_set_statement(session: ReparkSession, query: str) -> DataFrame | None:
     """Answer a recognised ``SET``/``RESET`` statement, or ``None`` to defer to the engine."""
-    text = query.strip()
+    text, balanced = _strip_sql_comments(query.strip())
+    if not balanced:
+        return None
+    text = text.strip()
     if text.endswith(";"):
         text = text[:-1].rstrip()
+    if ";" in _sql_mask_strings_and_comments(text):
+        return None
     words = text.split(None, 1)
     if not words or words[0].upper() not in ("SET", "RESET"):
         return None
@@ -119,6 +128,8 @@ def try_sql_set_statement(session: ReparkSession, query: str) -> DataFrame | Non
         key = reset_key_match.group("key")
         if _looks_like_datafusion_conf_key(key) or _is_wap_session_key(key):
             return None
+        if key.upper() == "ALL":
+            return _reset_all(session)
         refuse_collation_session_key(key)
         session.conf.unset(key)
         return _empty_frame(session)
@@ -130,6 +141,45 @@ def try_sql_set_statement(session: ReparkSession, query: str) -> DataFrame | Non
 def _is_wap_session_key(key: str) -> bool:
     """Whether ``key`` is a ``spark.wap.*`` conf the engine must keep refusing."""
     return key.lower().startswith(_WAP_SESSION_KEY_PREFIX)
+
+
+def _strip_sql_comments(text: str) -> tuple[str, bool]:
+    """Drop ``--`` / ``/* … */`` comments outside string literals; report quote balance."""
+    out: list[str] = []
+    index = 0
+    quote: str | None = None
+    while index < len(text):
+        char = text[index]
+        if quote is not None:
+            out.append(char)
+            if char == quote:
+                if index + 1 < len(text) and text[index + 1] == quote:
+                    out.append(quote)
+                    index += 2
+                    continue
+                quote = None
+            index += 1
+            continue
+        if char in "'\"`":
+            quote = char
+            out.append(char)
+            index += 1
+            continue
+        if char == "-" and index + 1 < len(text) and text[index + 1] == "-":
+            end = text.find("\n", index)
+            if end < 0:
+                break
+            index = end
+            continue
+        if char == "/" and index + 1 < len(text) and text[index + 1] == "*":
+            end = text.find("*/", index + 2)
+            if end < 0:
+                break
+            index = end + 2
+            continue
+        out.append(char)
+        index += 1
+    return "".join(out), quote is None
 
 
 def _apply_set(session: ReparkSession, key: str, value: str) -> DataFrame:
@@ -164,11 +214,7 @@ def _apply_set_time_zone(session: ReparkSession, literal: str) -> DataFrame:
 
 def _read_frame(session: ReparkSession, key: str) -> DataFrame:
     """Answer ``SET <key>`` — the effective conf value, or ``<undefined>`` when unset."""
-    try:
-        value = session.conf.get(key)
-    except Exception:
-        value = _UNDEFINED_CONF_VALUE
-    return _pair_frame(session, [(key, value)])
+    return _pair_frame(session, [(key, session.conf.get(key, _UNDEFINED_CONF_VALUE))])
 
 
 def _listing_frame(session: ReparkSession, *, verbose: bool) -> DataFrame:

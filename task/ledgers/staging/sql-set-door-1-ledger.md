@@ -99,6 +99,12 @@ Decisions taken under the card (recorded, not invented):
   pre-door namespace error — re-pinned in `test_eager_budget_1.py` to the conf contract);
   `repark.cache.retained_bytes` refuses `INVALID_CONF_VALUE.REQUIREMENT` on both SET and
   RESET via `conf`'s own read-only guard — a strictly better error than the old namespace one.
+- **`RESET ALL` is the bare-`RESET` spelling** (Spark treats the two identically), routed to
+  `_reset_all` before the key pattern can read `ALL` as a conf name.
+- **Comments are stripped before matching** (`--` and `/* … */` outside string literals —
+  Spark's parser removes them), so `SET x = 1 -- c` stores `1` and `SET k = 'a;b'` stores the
+  quoted value; a surviving `;` outside literals (multi-statement) or an unterminated quote
+  defers to the engine, which answers with the same error the pre-door tree produced.
 
 ## PROPOSITION LEDGER — SQL-SET-DOOR-1 — 2026-09-14
 

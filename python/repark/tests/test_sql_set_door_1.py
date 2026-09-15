@@ -187,6 +187,61 @@ def test_reset_all_clears_the_runtime_keys() -> None:
     spark.stop()
 
 
+def test_reset_all_spelling_also_clears_the_runtime_keys() -> None:
+    """``RESET ALL`` is Spark's other spelling of bare ``RESET``, not a key named ALL."""
+    spark = _session()
+    _set_and_get(spark, "SET spark.sql.shuffle.partitions = 2")
+    schema, rows = _set_and_get(spark, "RESET ALL")
+    assert len(schema) == 0
+    assert rows == []
+    _, rows = _set_and_get(spark, "SET spark.sql.shuffle.partitions")
+    assert rows == [{"key": "spark.sql.shuffle.partitions", "value": "<undefined>"}]
+    spark.stop()
+
+
+def test_multi_statement_defers_to_the_engine() -> None:
+    """``SET x = 1; SET y = 2`` is not one D-1 shape — the engine keeps today's answer."""
+    spark = _session()
+    with pytest.raises(PySparkException):
+        spark.sql("SET spark.a = 1; SET spark.b = 2").to_arrow()
+    _, rows = _set_and_get(spark, "SET spark.a")
+    assert rows == [{"key": "spark.a", "value": "<undefined>"}]
+    spark.stop()
+
+
+def test_comments_strip_like_the_spark_parser() -> None:
+    """``--``/``/* … */`` outside string literals drop before matching, like Spark."""
+    spark = _session()
+    _, rows = _set_and_get(spark, "SET spark.a = 1 -- kept the value")
+    assert rows == [{"key": "spark.a", "value": "1"}]
+    _, rows = _set_and_get(spark, "SET spark.a = 2 /* block */")
+    assert rows == [{"key": "spark.a", "value": "2"}]
+    _, rows = _set_and_get(spark, "-- leading\nSET spark.a = 3")
+    assert rows == [{"key": "spark.a", "value": "3"}]
+    _, rows = _set_and_get(spark, "SET spark.b = 'semi;colon'")
+    assert rows == [{"key": "spark.b", "value": "'semi;colon'"}]
+    with pytest.raises(PySparkException):
+        spark.sql("SET spark.c = 'unterminated").to_arrow()
+    _, rows = _set_and_get(spark, "SET spark.c")
+    assert rows == [{"key": "spark.c", "value": "<undefined>"}]
+    spark.stop()
+
+
+def test_set_listing_masks_secret_shaped_values() -> None:
+    """Bare ``SET`` and ``SET -v`` mask secret-shaped values as ``***`` like ``getAll``."""
+    spark = _session()
+    _set_and_get(spark, "SET spark.my.api.password = hunter2")
+    _set_and_get(spark, "SET repark.plain = visible")
+    _, rows = _set_and_get(spark, "SET")
+    assert {row["key"]: row["value"] for row in rows} == {
+        "repark.plain": "visible",
+        "spark.my.api.password": "***",
+    }
+    _, verbose_rows = _set_and_get(spark, "SET -v")
+    assert {row["key"]: row["value"] for row in verbose_rows}["spark.my.api.password"] == "***"
+    spark.stop()
+
+
 def test_set_static_sql_conf_refuses_with_spark_error() -> None:
     """``SET spark.sql.warehouse.dir = …`` refuses — BTZ5-13."""
     spark = _session()

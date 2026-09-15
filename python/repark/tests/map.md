@@ -4726,4 +4726,9 @@ through `core` or the package. pins: eager-budget-1/C-010
   `SET spark.sql.ansi.enabled` stores but `1/0` still raises `DIVIDE_BY_ZERO`
   (SET-ANSI-RUNTIME-1), and `SET TIME ZONE LOCAL` is a dated DECLARED refusal (SET-TZ-LOCAL-1).
   `SET datafusion.*` stays on the engine path so `RuntimeConfig`'s SQL forwarder cannot loop.
+  Edge pins cover the parser-side rulings: `RESET ALL` clears like bare `RESET` (not a key
+  named `ALL`), `SET x = 1; SET y = 2` defers to the engine instead of mis-storing
+  `1; SET y = 2`, `--`/`/* … */` comments outside literals strip like Spark's parser while
+  `;` inside a quoted value stays part of it, an unterminated quote defers to the engine's
+  tokenizer error, and bare `SET`/`SET -v` mask secret-shaped values as `***`.
   pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-006
