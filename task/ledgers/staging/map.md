@@ -5,6 +5,13 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
 - [registry-16b-1-ledger.md](../completed/registry-16b-1-ledger.md) —
+- [fnp-agg-1-ledger.md](fnp-agg-1-ledger.md) —
+  **FNP-AGG-1 step 1 (2026-09-15), in flight:** ledger, the copied live-PySpark 4.1.2
+  oracle fixture and the red-first two-door pins for the fourteen missing-aggregate names
+  plus `sum_distinct` / `sumDistinct`. No product code, no cargo (run 16a).
+  `risk_tier: standard`. Branch `feat/fnp-agg-1`.
+  pins: fnp-agg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [registry-16b-1-ledger.md](registry-16b-1-ledger.md) —
   **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
   CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live
   PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
