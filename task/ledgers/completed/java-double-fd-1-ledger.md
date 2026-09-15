@@ -15,7 +15,7 @@ R-16c-17: the owner comment ban covers private items too — no doc comments add
 |---|---|---|---|
 | L-004 | P1 | `%F` is not a Java conversion; Spark refuses with `Conversion = 'F'` (Q19-fmt-4/5) | FIXED — shim parses `%F` only to refuse it at invoke with `Conversion = 'F'`; single-`%F`-over-float calls still route to the shim so upstream never answers; both cells pinned SQL door + facade |
 | L-001 | P1 | Sign/space/paren flags must not prefix NaN; infinity keeps sign handling (Q19-fmt-0..3, controls 6/7) | FIXED — prefix block skipped for NaN before any sign test; all six cells pinned on both doors where the facade reaches |
-| L-002 | P2 | `#` always prints the decimal point (Q19-fmt-8..11, controls 12/13) | OPEN — next group |
+| L-002 | P2 | `#` always prints the decimal point (Q19-fmt-8..11, controls 12/13) | FIXED — `#` sets an ALT flag the renderer honors by appending `.` when precision is 0 (after grouping, finite values only); all six cells pinned SQL door plus facade legs |
 | L-003 | P2 | Suffix cast applies to every STRING value, not just literals (Q19 eight column cells) | OPEN — third group; Rust kernel, Arrow-first with Java-grammar fallback, native door untouched |
 | P2-1 | fix | `%f` shim copies a `Vec<Option<String>>` per batch | OPEN — fourth group; render into a reused scratch plus `StringBuilder` |
 | P2-4 | fix | `to_json`/`reader`/`string`/`bitmap_agg` allocate one `String` per value | OPEN — fourth group; `with_java_double_text` into existing buffers |

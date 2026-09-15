@@ -9,7 +9,8 @@ folds (with the Java-suffix strip), one-level literal propagation through
 projections, `%s`-verb float wrapping, and single-verb `%f`/`%F` routing to the
 HALF_UP shim. Round 2 (2026-09-15, L-004/L-001): `%F` parses only to refuse with
 `Conversion = 'F'` (Java has no upper-float conversion); NaN renders bare `NaN`
-under every sign/space/paren flag while infinity keeps sign handling.
+under every sign/space/paren flag while infinity keeps sign handling. L-002: `#`
+sets an ALT flag that appends `.` when precision is 0.
 
 - `dtoa.rs` — **JAVA-DOUBLE-FD-1 (2026-09-15):** the digit engine. Independent Rust
   implementation written from the published JDK 17 `FloatingDecimal` algorithm
