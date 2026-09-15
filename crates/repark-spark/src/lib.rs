@@ -23,6 +23,7 @@ mod spark_ast;
 mod spark_literals;
 mod spark_type_names;
 mod time_travel;
+mod time_window;
 mod truncate;
 pub mod type_table;
 mod window_range;

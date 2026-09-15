@@ -19,6 +19,9 @@ unit — so a new family gets a child module and the parent's default arm falls 
   native call per facade level, Spark `(array, element)` order.
   pins: fnp-9-collections-json/C-006, C-007, array-null-1/C-003
   pins: fnp-9-collections-json/C-006, C-007
+  **FNP-WIN-1 step 3 (2026-09-15):** the `window_time` arm builds one
+  `ScalarFunction::new_udf` over `spark_window_time::window_time_udf`.
+  pins: fnp-win-1/C-003
 - `dispatch_spark.rs` — **DOOR-CONVERGE-1 (2026-09-15):** the converged scalar arms —
   `abs`, `hypot`, `bin`, `rint`, `base64`, `unbase64`, `size`, `cardinality`,
   `array_contains` / `array_has`, `ascii`, `length` / `character_length` /

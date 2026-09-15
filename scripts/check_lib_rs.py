@@ -29,12 +29,16 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
     # alphabetically; ceilings ratchet DOWN only. Entries are added with a measured count and
     # reason in the same change that makes a crate root exceed the default.
     "repark-functions": (
-        175,  # measured 168 (`pub mod url;` in, `shim_udf_boilerplate!` out)
+        182,
         "register_all / analyzer_rules registration glue is root-legitimate; "
         "U5 added the ANSI ConfigExtension module decl; "
         "FN-GT2 X8 added `pub mod url;` + a four-line register_all loop and paid for them "
         "net-negative via sanctioned out (1) — the `shim_udf_boilerplate!` body moved to "
         "src/shim_macros.rs and is re-exported at the root, so the ceiling did NOT rise; "
+        "FNP-WIN-1 added `pub mod spark_time_window;` + a three-line register_all loop + "
+        "the analyzer_rules push (measured 180) with no further out available; "
+        "FNP-WIN-1 step 3 adds `pub mod spark_window_time;` + the grouping-refusal rule "
+        "push (measured 182 at commit time), same sanctioned out (2) with this stated reason; "
         "RATCHET: if registration moves",
     ),
     "repark-python": (

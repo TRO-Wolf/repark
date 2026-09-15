@@ -781,6 +781,34 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   cells replay on the Python door (values and types; names stay D-2's) and the Column-`numBits`
   shape pins Java's `& 31` masking on INT.
   pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [test_fnp_win_1.py](test_fnp_win_1.py) +
+  [fnp_win_1_spark_oracle.json](fnp_win_1_spark_oracle.json) — **FNP-WIN-1
+  (2026-09-15):** `window` / `window_time` / `session_window` over the run-15a
+  live-PySpark-4.1.2 oracle (2026-09-14, 222 cells, verbatim) plus the run-16a
+  residual cells (2026-09-15, 39 cells with `R-` ids, recorder
+  `oracle_win_resid.py`, same Spark) plus the run-16a remediation critic cells
+  (2026-09-15, 34 cells with `C-L*` ids, recorder `oracle_win_crit.py`, same
+  Spark; 295 cells total) plus the run-16a verification-round-2 critic
+  session cells (2026-09-15, 12 cells with `C2-L002`/`C2-L003` ids, recorder
+  `oracle_win_crit2.py`, same Spark) plus the round-2 `C2-L001`
+  `window_time` cells (2026-09-15, 11 cells, same recorder; 318 cells
+  total) plus the round-2 `C2-L004` two-spec cells (2026-09-15, 2 cells,
+  same recorder; 320 cells total). Pins read their
+  expected rows from it
+  (tumbling, sliding, `startTime`, plain-`select`,
+  `CANNOT_PARSE_INTERVAL` / `MISSING_AGGREGATION` errors, static/wide/dynamic-gap
+  sessions, both doors, both ANSI settings; residuals by cell id with zone,
+  NTZ, DATE, month/year, startTime-constraint, and zero/negative-gap cells;
+  critic cells by id with exact-gap merge, null selects, signed startTime,
+  dynamic null/zero/negative/month gaps, slide-above-window, nested/CTE/UNION
+  SQL, DATE sessions, and plain-struct `window_time` cells; round-2 session
+  cells by id with month-end/leap sessions and the running-end
+  discriminator, plus round-2 `window_time` cells by id with
+  struct-behind-Filter/Limit/Sort/Distinct/Join/Union refusals and
+  grouped-window-behind-filter answers, plus the two-spec `1039`
+  refusals).
+  Step 1 is red on the base tree; steps 2–4 turn the pins green in name order.
+  pins: fnp-win-1/C-001, C-002, C-003, C-004, C-005, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
@@ -1306,6 +1334,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **FNP-ALIAS-1 (2026-09-15): the pin moves 453 → 459** (six install_into alias
   names after the stack segment: approxCountDistinct, the three camelCase shifts,
   toDegrees, toRadians). pins: fnp-alias-1/C-001
+  **FNP-WIN-1 (2026-09-15, Q-15a-5):** `__all__` carries no duplicates
+  (`len(set(...)) == len(...)`).
 - [test_functions_gt2.py](test_functions_gt2.py) — FN-GT2 (2026-08-17): leftover
   THIN-WIRE datetime/collections/url/bitmap through Arrow (value AND type).
   ``datediff`` stub stays; ``element_at`` pins 1-based + zero-index refuse +
@@ -1382,6 +1412,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **FNP-ALIAS-1 (2026-09-15):** `approxCountDistinct` ships and leaves the
   deferred census; `sum_distinct`/`sumDistinct` stay (native DISTINCT-aggregate
   builder needed, Rust fenced — unit ledger ruling question).
+  **FNP-WIN-1 step 3 (2026-09-15):** `window_time` ships and leaves the
+  deferred census (`session_window` stays for step 4).
+  pins: fnp-win-1/C-007
 - [test_functions_d.py](test_functions_d.py) — FN-D (2026-08-15): datetime wrappers
   through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias names resolve
   + one behavior case. `unix_seconds` pins toward-zero vs TZ-5 CAST floor.
@@ -5369,3 +5402,4 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
   **Round 2 (2026-09-15):** four appended null-scalar cells carrying the
   null-propagation `basis` key (decimal/int/bigint/double; no float — see above).
   pins: decimal-cache-1/C-005, C-007, C-012
+- `test_fnp_win_1.py` — **FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a):** `test_crit2_two_session_specs_refuse` pins Spark's `C2-L004` cell on both doors, the SQL door's `1039` text, and the Python door's duplicate-name error as registry WIN-4. pins: fnp-win-1/C-004

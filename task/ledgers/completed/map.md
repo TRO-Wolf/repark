@@ -508,6 +508,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   `numBuckets`, all pinned against the live PySpark 4.1.2 oracle cells.
   `risk_tier: standard`. Branch `feat/fnp-misc-1`.
   pins: fnp-misc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [fnp-win-1-ledger.md](fnp-win-1-ledger.md) — Charter ledger — FNP-WIN-1 · window, window_time, session_window (run 15a)
 - [grouped-surface-1-ledger.md](grouped-surface-1-ledger.md) —
   **GROUPED-SURFACE-1 step 1 (2026-09-14), in flight:** `GroupedData.apply`,
   `applyInArrow`, `cogroup` + `PandasCogroupedOps` answer live-PySpark 4.1.2 over

@@ -15,6 +15,24 @@ under its `check_rust_file_size` ceiling and each matrix has one home.
   unconsumed escape char is `DataFusionError::Plan` `[INVALID_FORMAT.ESC_AT_THE_END]`
   SQLSTATE 42601. Foldable literals only. pins: fn-fix-2-string-rows/C-002
 - `overlay.rs` — `overlay(..., -1)` drops the Spark default length to the 3-arg form.
+- `time_window/` — **FNP-WIN-1 (2026-09-15):** `SparkTimeWindow`, the
+  `TimeWindowing` equivalent. Bare `window(...)` group/projection keys take the
+  `window` name (explicit aliases win); sliding calls expand one row per
+  overlapping bucket through the internal starts UDF plus `Unnest`, so the
+  existing GroupedData path carries struct grouping keys untouched; dangling
+  parent references to the pre-rename display remap to `window`. Non-literal
+  durations and a second window specification per block refuse loud.
+  pins: fnp-win-1/C-002, C-005, C-006. Step 3 adds `SparkWindowTimeGrouping`,
+  which refuses a `window_time(...)` call placed directly in an aggregate with
+  the oracle `[MISSING_AGGREGATION]` text. pins: fnp-win-1/C-005.
+  `mod.rs` keeps the window rules; `session_window.rs` (step 4) owns the
+  `SparkSessionWindow` sessionize rewrite so each file stays under the
+  `check_rust_file_size` ceiling. Month/year gaps refuse loud beside the
+  rule. pins: fnp-win-1/C-004, C-006, C-008, C-011. Round 2 (2026-09-15):
+  `session_window.rs` chains dynamic gaps on the running maximum of ends.
+  pins: fnp-win-1/C-004. The `window_time` provenance walk recurses through
+  Filter / Limit / Sort / Distinct / Repartition / Subquery / Join / Union
+  into the defining input, failing closed otherwise. pins: fnp-win-1/C-003.
 - `cast_legality.rs` — Spark's CAST / TRY_CAST type-legality deny matrix covers exactly
   `{Date32, Date64} ↔ {Int8, Int16, Int32, Int64}`. Refusals are `DataFusionError::Plan` with
   `[DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION]`, both Spark type names, and the applicable
