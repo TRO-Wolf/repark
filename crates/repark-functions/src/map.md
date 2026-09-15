@@ -540,6 +540,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `map_from_entries.rs` (`ReparkMapFromEntries`: duplicate keys raise
   `DUPLICATED_MAP_KEY` per `spark.sql.mapKeyDedupPolicy=EXCEPTION`, instead of the
   upstream kernel's silent last-write-wins).
+  **ARRAY-NULL-1 (2026-09-14):** `collection/array_append.rs` registers
+  `spark_array_append_udf`/`spark_array_prepend_udf` last in `functions()` —
+  DataFusion's kernels drop the input array's null buffer, so the shims graft it
+  back and serve both doors under Spark's `(array, element)` order. Element
+  coercion is Spark's recursive `findTightestCommonType`, validated (never
+  plan-cast) by a user-defined signature and converted at invoke time in
+  `collection/array_append/coerce.rs` — see [collection/map.md](collection/map.md).
+  pins: array-null-1/C-003, C-004
   Also `SparkArrayGet`
   (`__repark_array_get__`) — the embedded (never registered) `[]` subscript UDF the analyzer
   swaps in. **E1 octo C2:** `SparkGetItem` / `spark_get_item_udf` (`__repark_get_item__`) —

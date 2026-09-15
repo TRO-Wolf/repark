@@ -20,6 +20,7 @@ pub(crate) use str_to_map::bind_ascii_perl_classes;
 /// NULL-guarded `shuffle` (X1 — the upstream kernel panics on an all-NULL list).
 mod shuffle;
 
+mod array_append;
 mod array_insert;
 mod array_position;
 mod array_sort;
@@ -47,6 +48,8 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         array_insert::array_insert_udf(),
         arrays_zip::arrays_zip_udf(),
         map_concat::map_concat_udf(),
+        array_append::spark_array_append_udf(),
+        array_append::spark_array_prepend_udf(),
     ]
 }
 
@@ -54,6 +57,16 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
 #[must_use]
 pub fn shuffle_udf() -> Arc<ScalarUDF> {
     shuffle::shuffle_udf()
+}
+
+#[must_use]
+pub fn spark_array_append_udf() -> Arc<ScalarUDF> {
+    array_append::spark_array_append_udf()
+}
+
+#[must_use]
+pub fn spark_array_prepend_udf() -> Arc<ScalarUDF> {
+    array_append::spark_array_prepend_udf()
 }
 
 /// Spark `map_from_entries` UDF (duplicate keys raise `DUPLICATED_MAP_KEY`).

@@ -127,11 +127,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9
   (2026-09-05):** `create_map`, `map_concat` and `array_insert` land here.
   pins: fnp-9-collections-json/C-006
-  **ABS-EXPR-1 audit (2026-09-13):** `_glue_element`'s `when(isnull(a), NULL).otherwise(built)`
-  embeds `array_col` 2× per level (≈19 MB at depth 12, ~×2.2/level) and stays — DataFusion
-  `array_append`/`array_prepend` drop the input's null buffer, so the guard is load-bearing
-  for Spark's NULL-array→NULL answer; no one-call native answer exists (needs its own card).
-  pins: abs-expr-1/C-004
+  **ARRAY-NULL-1 (2026-09-14):** `_glue_element` is one `_scalar("array_append"/
+  "array_prepend", a, e)` call per level — the null-preserving
+  `spark_array_*_udf` shims replaced the `when(isnull(a), NULL).otherwise(flatten(...))`
+  rewrite that embedded `array_col` 2× per level (measured ~×3/level: 51 MB at
+  depth 12, 269 MB at depth 16 on the base tree).
+  pins: array-null-1/C-002, C-003
   **FN-FIX-1:** `arrays_overlap` is the three-valued kernel, not the size-of-intersect shim.
   Live co-collect `test_live_fn_fix_1_arrays`.
   pins: fn-fix-1-registry-rows/C-002
