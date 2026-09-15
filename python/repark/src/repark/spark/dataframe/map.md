@@ -557,22 +557,31 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `udf_bridge.py` owns action-time pandas, classic, and Arrow UDF callbacks without importing
   `DataFrame` at module scope. DFCORE-2 (2026-09-07) keeps callback execution here; only the
   projection rewrites moved out. pins: dfcore-2/C-005
-- `io_declared.py` owns the declared orc / xml / jdbc reader-writer refusal bodies
-  (IO-DECLARED-1, 2026-09-14; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1). `reader_orc`,
-  `reader_xml`, `reader_jdbc`, `writer_orc`, `writer_xml`, and `writer_jdbc` carry
+- `io_declared.py` owns the orc / xml declared-refusal bodies and the `jdbc` reader-writer
+  surface (IO-DECLARED-1, 2026-09-14; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1). `reader_orc`,
+  `reader_xml`, `writer_orc`, and `writer_xml` carry
   Spark 4.1.2's signatures and raise `PySparkNotImplementedError` `NOT_IMPLEMENTED`
   with the feature parameter at the call; `xml` runs Spark's own `rowTag` check first
   (argument or option map, case-insensitive) and raises `XML_ROW_TAG_MISSING`
   (SQLSTATE 42KDF) through `streaming_batch._raise_analysis` exactly as Spark words
-  it; `writer_jdbc` checks the save mode first and raises `INVALID_SAVE_MODE`
-  (SQLSTATE 42000, the live-Spark message) before refusing; `refuse_reader_load_format`
+  it; `refuse_reader_load_format`
   and `refuse_writer_save_format` are the `format("orc")` / `format("xml")` arms at
   `load()` / `save()`, with `save()`'s residual `DATA_SOURCE_NOT_FOUND` answer for
-  every other non-path format kept byte-identical. The methods bind on the classes
-  from `reader.py` and `writer_readwriter.py`, both at exact line ceilings.
+  every other non-path format kept byte-identical.
+  R-3 (2026-09-14 round 2): `reader_jdbc` is main's PostgreSQL read path —
+  dbtable-from-properties resolution, the three `IllegalArgumentException` teaching
+  errors, and the `read_postgres` delegation with main's argument names — behind
+  Spark's positional/camelCase signature with main's `lower_bound` / `upper_bound` /
+  `num_partitions` / `connection_properties` spellings as keyword-only aliases (both
+  spellings of one parameter raise `TypeError`); a non-PostgreSQL URL refuses
+  `NOT_IMPLEMENTED` at the dispatch, before any connection. `writer_jdbc` checks the
+  save mode first and raises `INVALID_SAVE_MODE`
+  (SQLSTATE 42000, the live-Spark message) before refusing. The methods bind on the
+  classes from `reader.py` and `writer_readwriter.py`, both at exact line ceilings.
   Python is correct here under the Rust-first instruction: a Rust ORC or XML
-  reader/writer needs a new crate (owner question Q-15B-1) and JDBC needs the JVM
-  driver layer — refusals, not compute. pins: io-declared-1/C-001, C-002, C-003
+  reader/writer needs a new crate (owner question Q-15B-1), JDBC writes and
+  non-PostgreSQL drivers need the JVM driver layer — refusals, a restored connector
+  delegation, not compute. pins: io-declared-1/C-001, C-002, C-003, C-007
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
   helpers. **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
   (ceiling 1117→1113). pins: dml-b-insert-overwrite/C-003, C-004

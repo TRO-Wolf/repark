@@ -63,6 +63,21 @@ def _row_tag_provided(row_tag: Any, options: Mapping[str, str]) -> bool:
     return any(key.lower() == "rowtag" for key in options)
 
 
+def _jdbc_alias(camel: str, camel_value: Any, snake: str, snake_value: Any) -> Any:
+    """Resolve one jdbc parameter's keyword spellings; passing both raises ``TypeError``."""
+    if camel_value is not None and snake_value is not None:
+        raise TypeError(
+            f"jdbc received both {camel} and {snake}; pass one spelling of the parameter"
+        )
+    return camel_value if camel_value is not None else snake_value
+
+
+def _is_postgres_url(url: str) -> bool:
+    """Whether a JDBC URL names PostgreSQL (the driver the native connector serves)."""
+    lowered = str(url).strip().lower()
+    return lowered.startswith("jdbc:postgresql://") or lowered.startswith("postgresql://")
+
+
 def reader_orc(
     reader: DataFrameReader,
     path: Any,
@@ -102,11 +117,64 @@ def reader_jdbc(
     numPartitions: int | None = None,  # noqa: N803 — PySpark param name
     predicates: list[str] | None = None,
     properties: dict[str, str] | None = None,
+    *,
+    lower_bound: int | None = None,
+    upper_bound: int | None = None,
+    num_partitions: int | None = None,
+    connection_properties: dict[str, str] | None = None,
 ) -> DataFrame:
-    """Refuse JDBC reads until the 1.6 native connectors. pins: io-declared-1/C-003"""
-    _ = reader, url, table, column, lowerBound, upperBound, numPartitions
-    _ = predicates, properties
-    _refuse("jdbc")
+    """Read PostgreSQL via the native connector; other drivers refuse.
+
+    pins: io-declared-1/C-003, C-007
+    """
+    from repark.errors import IllegalArgumentException
+
+    resolved_lower = _jdbc_alias("lowerBound", lowerBound, "lower_bound", lower_bound)
+    resolved_upper = _jdbc_alias("upperBound", upperBound, "upper_bound", upper_bound)
+    resolved_num = _jdbc_alias("numPartitions", numPartitions, "num_partitions", num_partitions)
+    resolved_props = _jdbc_alias(
+        "properties", properties, "connection_properties", connection_properties
+    )
+    props = dict(resolved_props or {})
+    dbtable = table
+    if dbtable is None:
+        for key, value in props.items():
+            if key.lower() == "dbtable" and value:
+                dbtable = value
+                break
+    if dbtable is None:
+        raise IllegalArgumentException(
+            "jdbc requires a table name (or dbtable option) — "
+            "use spark.read.jdbc(url, table, properties=...) "
+            "or format('postgres').option('dbtable', ...).load()"
+        )
+    range_parts = [column, resolved_lower, resolved_upper, resolved_num]
+    range_set = sum(part is not None for part in range_parts)
+    if predicates is not None and range_set > 0:
+        raise IllegalArgumentException(
+            "jdbc predicates[] cannot be combined with partitionColumn/lowerBound/"
+            "upperBound/numPartitions (Spark JDBC mutual exclusion)"
+        )
+    if range_set not in (0, 4):
+        raise IllegalArgumentException(
+            "jdbc range partitioning requires column, lowerBound, upperBound, and "
+            "numPartitions together (Spark JDBC parity)"
+        )
+    if predicates is not None and len(predicates) == 0:
+        raise IllegalArgumentException("jdbc predicates[] must be non-empty when supplied")
+    if not _is_postgres_url(url):
+        _refuse("jdbc")
+    return reader._session.read_postgres(
+        url=url,
+        dbtable=dbtable,
+        query=None,
+        properties=props,
+        partition_column=column,
+        lower_bound=resolved_lower,
+        upper_bound=resolved_upper,
+        num_partitions=resolved_num,
+        predicates=predicates,
+    )
 
 
 def refuse_reader_load_format(reader: DataFrameReader, source_format: str) -> NoReturn:

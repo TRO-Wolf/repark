@@ -2297,12 +2297,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   / `DataFrameWriter.xml` / `format("xml")` first reproduce Spark's own
   `XML_ROW_TAG_MISSING` (SQLSTATE 42KDF, byte-exact message) without a `rowTag`
   argument or option, then refuse `NOT_IMPLEMENTED` `{"feature": "xml"}` — registry
-  IO-XML-1; `DataFrameReader.jdbc` (Spark's camelCase signature; the old
-  snake-case postgres-connector body is replaced by the refusal) and
-  `DataFrameWriter.jdbc` first reproduce Spark's `INVALID_SAVE_MODE` (SQLSTATE 42000,
-  the `writer_jdbc_mode_bad` cell message) for a bad mode, then refuse
-  `NOT_IMPLEMENTED` `{"feature": "jdbc"}` — registry IO-JDBC-1, reads stay on
-  `format('postgres')` / `session.read_postgres`. `na.replace` delegates exactly to
+  IO-XML-1; `DataFrameWriter.jdbc` first reproduces Spark's `INVALID_SAVE_MODE`
+  (SQLSTATE 42000, the `writer_jdbc_mode_bad` cell message) for a bad mode, then refuses
+  `NOT_IMPLEMENTED` `{"feature": "jdbc"}` — registry IO-JDBC-1. R-3 (2026-09-14 round 2):
+  `DataFrameReader.jdbc` RESTORED for PostgreSQL URLs with main's exact behaviour
+  (dbtable-from-properties, the three teaching errors, the `read_postgres` delegation) behind
+  Spark's signature with main's snake-case spellings as keyword-only aliases (both spellings
+  of one parameter raise `TypeError`), pinned in `test_pg_jdbc_options.py` (restored main
+  pins plus the camelCase-capture, snake-alias, `TypeError`, and non-Postgres refusal pins);
+  `na.replace` delegates exactly to
   `DataFrame.replace` through the shared no-value sentinel: scalar/list/subset/None
   cells, `MIXED_TYPE_REPLACEMENT`, `ARGUMENT_REQUIRED` (omitted value over a non-dict
   `to_replace`), and the `na_replace_identity` equality cell. The writer orc pin
@@ -2311,7 +2314,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_pg_jdbc_options.py` ride this unit. The example for the new names is
   `docs/examples/io/io_declared_refusals.py`, the fixture and inventory updates are
   C-005, and the named-suite sweep is C-006.
-  pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `test_cache_persist.py` — **R-PERF-CACHE** + **r23 CACHE1**: cache/persist self + is_cached + storageLevel;
   second action after cache cheap; derived after materialize; unpersist; localCheckpoint;
   clearCache real drop (live + hand-registered `__repark_cache_*` prefix sweep + leaves

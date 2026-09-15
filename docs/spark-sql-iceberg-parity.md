@@ -1717,28 +1717,44 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   XML crate — owner question Q-15B-1. The `rowTag` check is Spark's own error surface and is
   reproduced exactly before the declared refusal.
 
-### IO-JDBC-1 — the `jdbc` reader and writer names are a declared `NOT_IMPLEMENTED` refusal until the 1.6 native connectors
+### IO-JDBC-1 — PostgreSQL URLs read through `spark.read.jdbc`; other drivers and every `write.jdbc` are declared `NOT_IMPLEMENTED` until the 1.6 native connectors
 
-- **repark** — `DataFrameReader.jdbc(url, table, column, lowerBound, upperBound, numPartitions,
-  predicates, properties)` and `DataFrameWriter.jdbc(url, table, mode, properties)` refuse:
-  the writer first raises Spark's own `AnalysisException` `INVALID_SAVE_MODE` (SQLSTATE
-  `42000`, the `writer_jdbc_mode_bad` message and `{"mode": "\"<mode>\""}` params) for a mode
-  outside Spark's valid set, then every remaining call raises `PySparkNotImplementedError`
-  `NOT_IMPLEMENTED` `{"feature": "jdbc"}`, str `[NOT_IMPLEMENTED] jdbc is not implemented.`
-  Reads alternative today: the session's `read_postgres` / `format('postgres')` native
-  PostgreSQL connector (unchanged).
+- **repark** — `spark.read.jdbc(url, table, column, lowerBound, upperBound, numPartitions,
+  predicates, properties)` (Spark's signature; main's `lower_bound` / `upper_bound` /
+  `num_partitions` / `connection_properties` keyword spellings stay as keyword-only aliases,
+  both spellings of one parameter raising `TypeError`) reads PostgreSQL URLs
+  (`jdbc:postgresql://` and `postgresql://`) through the native connector: the
+  dbtable-from-properties resolution, the three `IllegalArgumentException` teaching errors
+  (predicates with a range bag, a partial range bag, empty predicates), and the
+  `read_postgres` delegation with main's exact arguments (R-3 restored the working path the
+  IO-DECLARED-1 step-1 diff had refused). A URL naming any other driver refuses at the call,
+  before any connection attempt, with `PySparkNotImplementedError` `NOT_IMPLEMENTED`
+  `{"feature": "jdbc"}`, str `[NOT_IMPLEMENTED] jdbc is not implemented.`;
+  `DataFrameWriter.jdbc(url, table, mode, properties)` is declared for every URL: it first
+  raises Spark's own `AnalysisException` `INVALID_SAVE_MODE` (SQLSTATE `42000`, the
+  `writer_jdbc_mode_bad` message and `{"mode": "\"<mode>\""}` params) for a mode outside
+  Spark's valid set, then refuses `NOT_IMPLEMENTED` `{"feature": "jdbc"}`.
 - **Apache Spark** — resolves the JDBC driver through the JVM `DriverManager`; without a
   suitable driver it fails with a `Py4JJavaError` `java.sql.SQLException: No suitable driver`
   at relation creation. *(oracle: recorded — `facade_reader_writer_oracle.json` cells
   `jdbc_read_no_driver`, `reader_jdbc_props`, `jdbc_write_no_driver`, `writer_jdbc_mode_bad`;
-  PySpark 4.1.2, run 15b.)*
-- **Pin** — `python/repark/tests/test_io_declared_1.py::test_reader_jdbc_refuses_at_the_call`,
-  `…::test_reader_jdbc_props_refuses_at_the_call`, `…::test_writer_jdbc_refuses_after_the_mode_check`,
-  `…::test_writer_jdbc_bad_mode_is_invalid_save_mode`.
-- **Rationale** — DECLARED (R-2, 2026-09-14) "until the 1.6 native connectors (Postgres, SQL
-  Server); the JVM JDBC driver path is unreachable". BACKLOG 2026-09-14: the owner roadmap
-  ships the native connectors in 1.6. The pre-existing postgres read path keeps its
-  `format('postgres')` / session spelling; only the `jdbc` names are declared.
+  PySpark 4.1.2, run 15b. The recorded read cells used a driverless PostgreSQL URL, which
+  repark answers by reading; the declared refusal is the answer for the other drivers'
+  JVM-driver path.)*
+- **Pin** — `python/repark/tests/test_pg_jdbc_options.py::test_jdbc_dbtable_from_properties_is_forwarded`,
+  `…::test_jdbc_camel_case_keywords_reach_read_postgres`, `…::test_jdbc_snake_case_aliases_reach_read_postgres`,
+  `…::test_jdbc_both_keyword_spellings_raise_typeerror`, `…::test_jdbc_predicates_xor_range`,
+  `…::test_jdbc_empty_predicates_fails` (the read path);
+  `python/repark/tests/test_io_declared_1.py::test_reader_jdbc_non_postgres_urls_refuse_at_the_call`,
+  `…::test_reader_jdbc_non_postgres_props_refuse_at_the_call`,
+  `…::test_writer_jdbc_refuses_after_the_mode_check`,
+  `…::test_writer_jdbc_bad_mode_is_invalid_save_mode` (the declared arms).
+- **Rationale** — DECLARED for non-PostgreSQL reads and every write (R-2, narrowed by R-3
+  2026-09-14: "replacing a working path with a refusal is a regression") "until the 1.6
+  native connectors (Postgres, SQL Server writes; SQL Server reads); the JVM JDBC driver
+  path is unreachable". BACKLOG 2026-09-14: the owner roadmap ships the native connectors
+  in 1.6. The PostgreSQL read path keeps its `format('postgres')` spelling beside
+  `spark.read.jdbc`.
 
 ---
 

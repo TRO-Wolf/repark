@@ -60,7 +60,7 @@ def main() -> None:
         _expect_refusal(lambda: reader.orc("/tmp/unused-io-declared/orc"), "orc")
         _expect_row_tag_missing(lambda: reader.xml("/tmp/unused-io-declared/xml"))
         _expect_refusal(lambda: reader.xml("/tmp/unused-io-declared/xml", rowTag="row"), "xml")
-        _expect_refusal(lambda: reader.jdbc("jdbc:postgresql://127.0.0.1:1/x", "t"), "jdbc")
+        _expect_refusal(lambda: reader.jdbc("jdbc:mysql://127.0.0.1:1/x", "t"), "jdbc")
         writer = frame.write
         _expect_refusal(lambda: writer.orc("/tmp/unused-io-declared/orc"), "orc")
         _expect_row_tag_missing(lambda: writer.xml("/tmp/unused-io-declared/xml"))

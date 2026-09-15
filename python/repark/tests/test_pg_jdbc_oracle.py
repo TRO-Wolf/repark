@@ -51,11 +51,10 @@ def test_live_jdbc_predicates_shape_or_skip(spark: SparkSession) -> None:
     dsn = _dsn_or_skip()
     if dsn is None:
         return
-    frame = (
-        spark.read.format("postgres")
-        .option("url", dsn)
-        .option("dbtable", "(SELECT 1::int4 AS id UNION ALL SELECT 2::int4) AS t")
-        .load()
+    frame = spark.read.jdbc(
+        dsn,
+        "(SELECT 1::int4 AS id UNION ALL SELECT 2::int4) AS t",
+        properties={},
     )
     assert frame.count() == 2
 

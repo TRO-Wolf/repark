@@ -65,12 +65,15 @@ directory carries the one-liner (verified by scan, EX-26 round 2).
   `overwritePartitions` / `overwrite_partitions`, `option` /
   `options` (EX-22).
 - [io_declared_refusals.py](io_declared_refusals.py) — the declared
-  `orc`/`xml`/`jdbc` reader-writer refusals (`DataFrameReader.orc`/`xml`/`jdbc`,
-  `DataFrameWriter.orc`/`xml`/`jdbc`) asserting each `NOT_IMPLEMENTED` shape and
-  Spark's own `XML_ROW_TAG_MISSING` check, plus the `DataFrameNaFunctions.replace`
+  `orc`/`xml` refusals and the non-PostgreSQL-driver `jdbc` refusals
+  (`DataFrameReader.orc`/`xml`/`jdbc`, `DataFrameWriter.orc`/`xml`/`jdbc`)
+  asserting each `NOT_IMPLEMENTED` shape and Spark's own `XML_ROW_TAG_MISSING`
+  check, plus the `DataFrameNaFunctions.replace`
   delegation with its `ARGUMENT_REQUIRED` / `MIXED_TYPE_REPLACEMENT` arms
-  (IO-DECLARED-1; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1). `DataFrameReader.jdbc`
-  leaves the exceptions list — the refusal is the example.
+  (IO-DECLARED-1; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1 — R-3 restores
+  PostgreSQL reads on `DataFrameReader.jdbc`, pinned in
+  `test_pg_jdbc_options.py`). `DataFrameReader.jdbc`
+  leaves the exceptions list — the non-Postgres refusal is the example.
 
 ## Pointers
 

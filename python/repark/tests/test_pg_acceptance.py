@@ -112,11 +112,10 @@ def test_acceptance_battery_or_skip(tmp_path: Path) -> None:
     t2 = time.perf_counter()
 
     # (2) Scale timing -- full REPARK_PG_SCALE (default 100k); record, never gate.
-    single = (
-        spark.read.format("postgres")
-        .option("url", dsn)
-        .option("dbtable", f"(SELECT generate_series(1, {scale}) AS id) AS g")
-        .load()
+    single = spark.read.jdbc(
+        dsn,
+        f"(SELECT generate_series(1, {scale}) AS id) AS g",
+        properties={},
     )
     counted = single.count()
     t3 = time.perf_counter()

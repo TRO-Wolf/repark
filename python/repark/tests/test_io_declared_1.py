@@ -219,24 +219,26 @@ def test_writer_jdbc_refuses_after_the_mode_check(spark: ReparkSession) -> None:
     _assert_not_implemented(raised.value, "jdbc")
 
 
-def test_reader_jdbc_refuses_at_the_call(spark: ReparkSession) -> None:
-    """spark.read.jdbc refuses NOT_IMPLEMENTED jdbc at the call.
+def test_reader_jdbc_non_postgres_urls_refuse_at_the_call(spark: ReparkSession) -> None:
+    """Non-PostgreSQL driver URLs refuse NOT_IMPLEMENTED jdbc at the call.
 
+    R-3: PostgreSQL URLs read through the native connector (pinned in
+    test_pg_jdbc_options.py); every other driver keeps the declared refusal.
     Replaces oracle cell ``jdbc_read_no_driver`` (registry IO-JDBC-1).
     """
     with pytest.raises(PySparkNotImplementedError) as raised:
-        spark.read.jdbc("jdbc:postgresql://127.0.0.1:1/x", "t")
+        spark.read.jdbc("jdbc:mysql://127.0.0.1:1/x", "t")
     _assert_not_implemented(raised.value, "jdbc")
 
 
-def test_reader_jdbc_props_refuses_at_the_call(spark: ReparkSession) -> None:
-    """spark.read.jdbc with Spark's camelCase partition signature refuses too.
+def test_reader_jdbc_non_postgres_props_refuse_at_the_call(spark: ReparkSession) -> None:
+    """A non-PostgreSQL URL with Spark's camelCase partition signature refuses too.
 
     Replaces oracle cell ``reader_jdbc_props`` (registry IO-JDBC-1).
     """
     with pytest.raises(PySparkNotImplementedError) as raised:
         spark.read.jdbc(
-            "jdbc:postgresql://127.0.0.1:1/x",
+            "jdbc:sqlserver://127.0.0.1:1/x",
             "t",
             column="a",
             lowerBound=1,
