@@ -2068,6 +2068,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `NOT_IMPLEMENTED` refusals with the feature-name parameter (Spark Connect's
   refusal shape for `rdd`), and a column named `rdd` does not shadow the property.
   pins: df-stream-batch-1/C-001, C-002, C-003, C-004
+  Registry rows and the no-regression inventory updates for this unit are proven by these pins and the frozen-surface tables. pins: df-stream-batch-1/C-005, C-006
 - `test_cache_persist.py` — **R-PERF-CACHE** + **r23 CACHE1**: cache/persist self + is_cached + storageLevel;
   second action after cache cheap; derived after materialize; unpersist; localCheckpoint;
   clearCache real drop (live + hand-registered `__repark_cache_*` prefix sweep + leaves
