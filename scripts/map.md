@@ -9,6 +9,7 @@ the wrapped import). A ratchet DOWN; the duplicate table in
 pins: df-plan-introspect-1/C-012
 
 DF-SURFACE-A-1 critic round 1 (2026-09-14): `check_lib_py.py` **SESSION-SURFACE-1 (2026-09-15, rebase onto #602):** `spark/session/session_core.py` row 2291 → 2290; EX-0 counts recounted after the Catalog merge. pins: session-surface-1/C-001 **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down. pins: df-surface-b-1/C-008
+IO-TEXT-1 (2026-09-15, rebase onto IO-DECLARED-1): `check_lib_py.py` ratchets `dataframe/writer_readwriter.py` 1104 → 1101 with the CAP-1 mirror (the text binding and format route are net-negative after the shared-mode-tuple merge). pins: io-text-1/C-004
 IO-DECLARED-1 (2026-09-14): `check_lib_py.py` ratchets
 `dataframe/writer_readwriter.py` 1111 → 1110, and 1105 → 1104 on the 2026-09-15 rebase onto #604/#605 (the orc/xml/jdbc bindings and the
 save() fallback delegation in `io_declared.py` are line-neutral against the
