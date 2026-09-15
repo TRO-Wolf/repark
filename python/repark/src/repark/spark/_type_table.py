@@ -365,8 +365,6 @@ def _datatype_to_descriptor(
         if any(field is None for field in fields):
             return None
         return {"kind": "struct", "fields": fields}
-    if primary is None and isinstance(data_type, t.StructField):
-        return _field_descriptor(data_type, order)
     if primary is not None:
         head = heads[primary]
         if isinstance(head, str):

@@ -566,7 +566,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   import — doomed-path cheapening for the real-base fallback bar).
   NULLABILITY-2 round 3 re-hashed `_promote_csv_string_types` (timestamp candidate + clock guard).
   FACADE-1 re-hashed `_arrow_table_from_raw_tuples_fast`, `_create_dataframe_from_rows_inner`,
-  and `_materialize_arrow_as_memtable_frame`. pins: facade-1/C-001, C-002
+  and `_materialize_arrow_as_memtable_frame`.
+  FACADE-4 round 5 corrected `_data_type_to_sql_type` to the hash of the body
+  committed in `a3424513` (`204ad7a…` was a stale mid-edit value).
+  pins: facade-1/C-001, C-002
   CSV-INFER-PERF-1 re-hashed `_promote_csv_string_types` (one `try_cast` failure-count agg)
   and `_CSV_NATIVE_OPTION_KEYS` (`utf8_columns`). Round 2 restored `_CSV_NATIVE_OPTION_KEYS`
   (internal `utf8_columns` no longer in the public native-key set) and re-hashed
@@ -1841,7 +1844,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `repark_type_to_arrow`/`createDataFrame` schema — every answer recorded
   from the base release, plus an override pin on each of the five
   dynamic-answer classes. Each fix carries a pasted scratch-mutation red.
-  pins: facade-4/C-020, C-021, C-022, C-023, C-024, C-027, C-028, C-029..C-031
+  **Round 5 (2026-09-14):** byte-identity repro pins for the critic-logic
+  re-check round-3 findings L-010/L-011 — all 15 `Left+DecimalType` pairs
+  plus `DualDec` and the `StringType+DecimalType+IntegerType` triple through
+  `repark_type_to_arrow` (the envelope guard runs only after the
+  `_arrow_order` pick), and all five `Left+StructField` pairs plus
+  `DualField` through `repark_type_to_arrow`, wrap `toDDL`, and nested
+  Array/Map/direct SQL (a field is encoded only from `StructType.fields`).
+  Each fix carries a pasted scratch-mutation red.
+  pins: facade-4/C-020, C-021, C-022, C-023, C-024, C-027, C-028, C-029..C-033
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

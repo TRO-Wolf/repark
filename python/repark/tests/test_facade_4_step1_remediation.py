@@ -731,3 +731,108 @@ def test_mi_create_dataframe_schema(name: str, expected: str) -> None:
 
     session = ReparkSession.builder.appName("facade-4-mi").getOrCreate()
     assert session.createDataFrame([(1,)], _mi_instance(name)).schema.simpleString() == expected
+
+
+_L010_LEFT: list[tuple[type, tuple[Any, ...], str]] = [
+    (NullType, (), "null"),
+    (BooleanType, (), "bool"),
+    (ByteType, (), "int8"),
+    (ShortType, (), "int16"),
+    (IntegerType, (), "int32"),
+    (LongType, (), "int64"),
+    (FloatType, (), "float"),
+    (DoubleType, (), "double"),
+    (StringType, (), "string"),
+    (CharType, (10,), "string"),
+    (VarcharType, (10,), "string"),
+    (BinaryType, (), "binary"),
+    (DateType, (), "date32[day]"),
+    (TimestampType, (), "timestamp[us, tz=UTC]"),
+    (TimestampNTZType, (), "timestamp[us]"),
+]
+
+
+@pytest.mark.parametrize(
+    "left,args,expected",
+    _L010_LEFT,
+    ids=[left.__name__ for left, _, _ in _L010_LEFT],
+)
+def test_mi_decimal_second_arrow_follows_left_pick(
+    left: type, args: tuple[Any, ...], expected: str
+) -> None:
+    """``Left+DecimalType`` constructed without ``precision``/``scale`` keeps base's Arrow
+    answer — the wide-decimal envelope guard runs only after the ``_arrow_order`` pick.
+
+    pins: facade-4/C-032
+    """
+    cls = type(f"DualDec_{left.__name__}", (left, DecimalType), {})
+    assert str(repark_type_to_arrow(cls(*args))) == expected
+
+
+def test_dual_dec_named_class_arrow() -> None:
+    """``DualDec(IntegerType, DecimalType)`` answers ``int32`` exactly as base.
+
+    pins: facade-4/C-032
+    """
+    dual_dec = type("DualDec", (IntegerType, DecimalType), {})
+    assert str(repark_type_to_arrow(dual_dec())) == "int32"
+
+
+def test_mi_decimal_triple_arrow_follows_arrow_order() -> None:
+    """``StringType+DecimalType+IntegerType`` picks ``IntegerType`` under Arrow order.
+
+    pins: facade-4/C-032
+    """
+    cls = type("Triple", (StringType, DecimalType, IntegerType), {})
+    assert str(repark_type_to_arrow(cls())) == "int32"
+
+
+_L011_LEFT: list[tuple[type, tuple[Any, ...], str, str]] = [
+    (DayTimeIntervalType, (), "INTERVAL DAY TO SECOND", "interval day to second"),
+    (YearMonthIntervalType, (), "INTERVAL YEAR TO MONTH", "interval year to month"),
+    (CalendarIntervalType, (), "INTERVAL", "interval"),
+    (TimeType, (6,), "TIME(6)", "time(6)"),
+    (VariantType, (), "VARIANT", "variant"),
+]
+
+
+def _field_dual(left: type, args: tuple[Any, ...]) -> Any:
+    cls = type(f"DualField_{left.__name__}", (left, StructField), {})
+    return cls(*args)
+
+
+@pytest.mark.parametrize(
+    "left,args,ddl,sql",
+    _L011_LEFT,
+    ids=[left.__name__ for left, _, _, _ in _L011_LEFT],
+)
+def test_mi_struct_field_second_not_a_field(
+    left: type, args: tuple[Any, ...], ddl: str, sql: str
+) -> None:
+    """``Left+StructField`` without field attrs answers base's non-field parent on
+    ``repark_type_to_arrow``, the wrap ``toDDL``, and nested Array/Map SQL — a field
+    is encoded only from ``StructType.fields``.
+
+    pins: facade-4/C-033
+    """
+    from repark.spark.session.create_dataframe_values import _data_type_to_sql_type
+
+    instance = _field_dual(left, args)
+    assert str(repark_type_to_arrow(instance)) == "string"
+    assert StructType([StructField("f", instance)]).toDDL() == f"f {ddl}"
+    assert _data_type_to_sql_type(ArrayType(instance, True)) == f"ARRAY<{sql}>"
+    assert _data_type_to_sql_type(MapType(StringType(), instance, True)) == (f"MAP<STRING,{sql}>")
+    assert _data_type_to_sql_type(instance) == sql
+
+
+def test_dual_field_named_class() -> None:
+    """``DualField(DayTimeIntervalType, StructField)`` answers base on all three surfaces.
+
+    pins: facade-4/C-033
+    """
+    from repark.spark.session.create_dataframe_values import _data_type_to_sql_type
+
+    dual_field = type("DualField", (DayTimeIntervalType, StructField), {})()
+    assert str(repark_type_to_arrow(dual_field)) == "string"
+    assert StructType([StructField("f", dual_field)]).toDDL() == "f INTERVAL DAY TO SECOND"
+    assert _data_type_to_sql_type(ArrayType(dual_field, True)) == ("ARRAY<interval day to second>")

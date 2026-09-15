@@ -1380,12 +1380,12 @@ def repark_type_to_arrow(data_type: DataType) -> Any:
     """Map a repark :class:`DataType` to a ``pyarrow.DataType`` (createDataFrame nested)."""
     import pyarrow as pa
 
-    if isinstance(data_type, DecimalType) and (
-        not (1 <= data_type.precision <= 38) or not (-128 <= data_type.scale <= 127)
-    ):
-        return _repark_type_to_arrow_python(data_type)
     descriptor = _datatype_to_descriptor(data_type, _arrow_order())
     if descriptor is None:
+        return _repark_type_to_arrow_python(data_type)
+    if descriptor.get("kind") == "decimal" and (
+        not (1 <= descriptor["precision"] <= 38) or not (-128 <= descriptor["scale"] <= 127)
+    ):
         return _repark_type_to_arrow_python(data_type)
     try:
         return pa.DataType._import_from_c_capsule(

@@ -64,7 +64,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   build through `_field_descriptor`. `_leaf_ddl`/`_ddl_token_python` keep the
   DDL fallback on `data_type.simpleString().upper()` so `simpleString`
   overrides (intervals and every other leaf) survive nested.
-  pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024, C-026, C-029..C-031
+  **Round 5 (2026-09-14, L-011):** the `isinstance(StructField)` arm is deleted
+  — a field is encoded only from `StructType.fields` through
+  `_field_descriptor`, so a `Left+StructField` class built without `.dataType`
+  falls to the Python fallbacks and answers its non-field parent like base.
+  pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024, C-026, C-029..C-031, C-033
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
@@ -276,7 +280,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `jsonValue`s dispatch through `self.simpleString()` again. `StructType.toDDL`
   and `repark_type_to_arrow` pass their surface orders into
   `_type_table`'s descriptor build.
-  pins: facade-4/C-011, C-012, C-014, C-015, C-016, C-020..C-024, C-028..C-031
+  **Remediation round 5 (2026-09-14, L-010):** `repark_type_to_arrow` builds
+  the descriptor before the C-028 wide-decimal envelope guard and keys the
+  guard on the descriptor's `decimal` kind — `.precision`/`.scale` are read
+  only after the `_arrow_order` pick resolves to `DecimalType`, so a
+  `Left+DecimalType` class without decimal attrs keeps base's left-parent
+  Arrow answer instead of crashing.
+  pins: facade-4/C-011, C-012, C-014, C-015, C-016, C-020..C-024, C-028..C-033
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
   calls, and Arrow expansion.
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and
