@@ -82,3 +82,58 @@ VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
 | `docs/spark-sql-iceberg-parity.md` | Rows `DF-STREAM-1`, `DF-DECL-rdd`, `DF-DECL-pandas_api`, `DF-DECL-plot` at the end of §5. |
 | `python/repark/tests/map.md`, `python/repark/src/repark/spark/dataframe/map.md`, `task/ledgers/staging/map.md` | Lockstep rows. |
 | `STATUS.md`, `briefs/next-sequence.md`, `Cargo.toml`, `Cargo.lock`, `pyproject.toml`, `uv.lock`, `.github/` | Untouched. |
+
+## Orchestrator rulings (run 15b, G-2)
+
+- R-7 (2026-09-14): Grok critic-logic round 1 found two P1 wrong answers (per-token minus instead of Spark's net
+  CalendarInterval sign; empty strings skipping the `not s` NOT_STR gate) and three P2 pin gaps; Devin fixed all five
+  in `ce71f89e`; the same critic session re-checked the fix head and answered PASS with no new finding.
+- R-8 (2026-09-14): the S2-21 perf reviewers do not run on this unit — argument checks, a regex interval parse over a
+  user string, and refusals; no data path, no Rust.
+- R-9 (2026-09-14): the critic's UNMEASURED interval forms (fractional month/day amounts, sub-microsecond rounding,
+  `INTERVAL '1' MINUTE`, `interval1 minute`, `1 nanosecond`) keep today's answers and go to the next live-oracle round.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: df-stream-batch-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card and the twenty-four recorded PySpark 4.1.2 dfdecl cells; each cell pin asserts class, errorClass, parameters and message (first line where Spark appends a plan dump, ruling R-4).
+      artifacts: [python/repark/tests/test_df_stream_batch_1.py, python/repark/tests/facade_dataframe_streaming_declared_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Empty and non-str eventTime/delayThreshold, Column eventTime, zero and signed-zero delays, mixed-sign net-positive and net-negative delays, decimal amounts, the interval prefix, unparsable text; subset as str, tuple, empty list, duplicates, case-folded, nested, non-str elements, missing column before the batch refusal; columns named rdd/plot/writeStream.
+      artifacts: [python/repark/tests/test_df_stream_batch_1.py]
+    - id: AT-3
+      status: N/A
+      justification: Python argument checks and refusals only; no Rust, no unwrap, no I/O, no allocation on a data path.
+    - id: AT-4
+      status: N/A
+      justification: No shared mutable state, threads or async; every member returns self or raises.
+    - id: AT-5
+      status: N/A
+      justification: No authn/authz, deserialization, path, credential or network surface; the interval regex is anchored and linear over the user string.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Grok critic-logic round 1 NEEDS_REMEDIATION (2 P1, 3 P2), all fixed in ce71f89e with red-first evidence for the P1s; the same critic session re-checked the fix head and answered PASS.
+      artifacts: [task/ledgers/completed/df-stream-batch-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Facade suite and parity suite on the release native module of the rebased head, ruff 0.15.22 over the tree, check_lib_py, ledger lifecycle and grammar, docs links, owner ruling, example coverage with the new example executed; comment-ban grep zero hits.
+      artifacts: [docs/examples/dataframe/batch_streaming_names.py, python/repark-parity/tests/test_ex_0_example_coverage.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark's contracts were read, not assumed - pyspark/sql/classic/dataframe.py withWatermark and dropDuplicatesWithinWatermark argument gates, the Connect client's NOT_STR shape for a Column eventTime, Dataset.withWatermark's fromIntervalString and IntervalUtils.isNegative with daysPerMonth 31.
+      artifacts: [python/repark/src/repark/spark/dataframe/streaming_batch.py, python/repark/src/repark/spark/dataframe/map.md]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every refusal carries Spark's errorClass, message parameters and SQLSTATE where Spark has one, attached to repark's native AnalysisException through the existing _integral attach helpers; the declared names use Spark Connect's NOT_IMPLEMENTED shape and have dated registry rows.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation guards run - the per-token sign test reds the net-interval pin, dropping the empty-string check reds the NOT_STR pins, a property shadowed by __getattr__ reds the column-named-rdd pin.
+      artifacts: [python/repark/tests/test_df_stream_batch_1.py]
+  complete: true
+```
+
