@@ -123,7 +123,9 @@ changing a decision here means a new dated design pass, not an in-place edit.
   F-Y10-1 closed 2026-08-30; FNP-7b is unblocked. SMALLINT/Int16 wrap is a dated
   residue (2026-08-30). **2026-08-31:** FNP-7 ships; `try_avg(INTERVAL)` is deferred to
   FNP-11 (registry BL-13). Remaining order is FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z.
-  **FNP-6d delivered 2026-09-15:** the three `bitmap_*_agg` UDAFs on the SQL door.
+  **FNP-6d delivered 2026-09-15:** the three `bitmap_*_agg` UDAFs on the SQL door
+  (the deferred-roster sentence still starts `Four units are deferred` so PLAN-1 C-004
+  keeps its end marker).
   pins: fnp-6d/C-008
   design (settled 2026-08-20): close the `pyspark.sql.functions` gap and move the semantics behind
   every name out of Python into Rust. Goal and the three done-criteria (§1), the measured ground

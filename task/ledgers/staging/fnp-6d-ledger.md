@@ -83,3 +83,59 @@ Did you mean 'bitmap_count'?
 
 Checked 2026-09-15: 426 GB free of 1.8 TB (76% used). `CARGO_TARGET_DIR=/tmp/pc-build/target`.
 No worktree. No `cargo clean`.
+
+## Gates (step 4)
+
+| Command | Result |
+|---|---|
+| `cargo test -p repark-functions` | 463 passed, 0 failed, 1 ignored (0.52s) |
+| `cargo clippy --locked -p repark-functions --all-targets -- -D warnings -A clippy::disallowed_methods` | clean |
+| `cargo fmt --check` (crate files) | clean |
+| `.venv/bin/python -m pytest python/repark/tests -q` | serial: **6602 passed**, 358 skipped, 1 failed (`test_ml_boost_oracle.py::test_cross_validator_live_pyspark_shape` — `PermissionError` in `multiprocessing/synchronize.py`; isolated re-run still red; not this unit) |
+| `PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest python/repark-parity/tests -q` | 757 passed, 2 skipped, 12 xfailed (140.21s) after restoring the PLAN-1 `Four units are deferred` end marker |
+| `python3 scripts/check_ledger_grammar.py` | 138 live ledgers clean (980 clauses, 1599 pinned clause ids) |
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: fnp-6d
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against recorded F6D cells and WIN-SLIDE refuse, not paraphrase — construct bits 0/1/2/32766 and NULL skip, grouped or/and popcounts, empty identities (zeros/zeros/ones), length 4096, BINARY non-null, sliding retract_batch refuse, aggregate::functions registration, registry FNP-6D, maps, [u8; 4096] state.
+      artifacts: [crates/repark-functions/src/bitmap_agg.rs, python/repark/tests/test_fnp_6d_bitmap_aggregates.py, docs/spark-sql-iceberg-parity.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Empty input vs all-NULL vs populated, NULL ignored, sliding vs scalar agg, Int32/Int64 positions, grouped fold. Out-of-range position and non-4096 length are unmeasured and refuse rather than panic.
+      artifacts: [crates/repark-functions/src/bitmap_agg.rs, python/repark/tests/test_fnp_6d_bitmap_aggregates.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Sliding frames refuse with retract_batch. DISTINCT refuses at accumulator build. Wrong-length BINARY and out-of-range position exec_err. No retry/timeout surface.
+      artifacts: [crates/repark-functions/src/bitmap_agg.rs, python/repark/tests/test_fnp_6d_bitmap_aggregates.py]
+    - id: AT-4
+      status: ATTACKED
+      evidence: No shared mutable state. Accumulators own a [u8; 4096] per group. Merge is byte-wise OR/AND. Registration is one extend on aggregate::functions so a parallel lib.rs edit stays a one-line merge.
+      artifacts: [crates/repark-functions/src/bitmap_agg.rs, crates/repark-functions/src/aggregate.rs]
+    - id: AT-5
+      status: N/A
+      justification: Local bitwise aggregates over in-memory Arrow; no credential, secret, network, path, or deserialization surface.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Recorded Spark 4.1.2 cells F6D-construct / F6D-or-and / F6D-empty / F6D-and-empty-type pin values AND Arrow type/nullability. Sliding refuse is DECLARED, not absorbed. Red-first Invalid function then green.
+      artifacts: [python/repark/tests/test_fnp_6d_bitmap_aggregates.py, fixtures-batch3.json]
+    - id: AT-7
+      status: N/A
+      justification: 4096-byte state per group; no unbounded collect, no Python row loop, no plan-size explosion.
+    - id: AT-8
+      status: ATTACKED
+      evidence: No Cargo.toml/lock edit. No new crate. State is [u8; 4096], not roaring. Facade names fenced to run 15a. Sliding DECLARED under FNP-6D.
+      artifacts: [crates/repark-functions/src/bitmap_agg.rs, docs/spark-sql-iceberg-parity.md]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Red-first pasted Invalid function diagnostics. Sliding refuse names retract_batch. Distinct names DISTINCT. Wrong length names the observed byte count.
+      artifacts: [task/ledgers/staging/fnp-6d-ledger.md, crates/repark-functions/src/bitmap_agg.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red 7 python + 5 rust failed, then green 7 python + 5 rust + 463 crate tests. Mutation of the identity byte or bit layout would red F6D-construct / F6D-empty.
+      artifacts: [python/repark/tests/test_fnp_6d_bitmap_aggregates.py, crates/repark-functions/src/bitmap_agg.rs]
+  complete: true
+```

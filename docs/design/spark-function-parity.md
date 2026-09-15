@@ -470,15 +470,13 @@ Each slash joins work that may share one tightly coupled PR. The campaign may us
 window because none of these units consumes F-17, but it does not gate v1.0 and yields when the
 format-v3 critical path becomes ready.
 
-**FNP-6d delivered 2026-09-15.** The three `bitmap_*_agg` UDAFs answer the recorded
-`F6D-*` cells on the SQL door (`crates/repark-functions/src/bitmap_agg.rs`, registry
-`FNP-6D`). Sliding frames refuse (DECLARED, WIN-SLIDE). Facade names are run 15a.
-
-Three units remain deferred **with reasons rather than dropped** — FNP-13 (collation),
-FNP-14 (crypto: a new cipher dependency for four names), and FNP-4b (the Spark-door
-dialect, blocked on the write-path change in §3.3). A deferral with no reason attached
-is indistinguishable from a name nobody looked at — a lesson this campaign learned four
-separate times from prior units' fences.
+Four units are deferred **with reasons rather than dropped** — FNP-6d (bitmap aggregates:
+**delivered 2026-09-15**, SQL-door UDAFs in `bitmap_agg.rs`, registry `FNP-6D`; sliding
+frames DECLARED; facade names are run 15a), FNP-13 (collation), FNP-14 (crypto: a new
+cipher dependency for four names), and FNP-4b (the Spark-door dialect, blocked on the
+write-path change in §3.3). A deferral with no reason attached is indistinguishable from
+a name nobody looked at — a lesson this campaign learned four separate times from prior
+units' fences.
 
 ## 8. D-7 — the sub-project families (owner ruling, 2026-08-20)
 
