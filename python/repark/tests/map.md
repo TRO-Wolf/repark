@@ -4594,7 +4594,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   STRING shapes over degrees/radians/CAST, both doors, both ANSI) is appended
   verbatim; every `DEGI-degrees-*` / `DEGI-radians-*` cell is pinned on its door and
   ANSI setting (infinities and NaN by class), and the ANSI-on/nonansi answer,
-  SQL-nonansi refusal and alias malformed cells the critic found unused are pinned.
+  SQL-nonansi refusal and alias malformed cells the critic found unused are pinned
+  (309 tests).
   pins: fnp-bitmap-facade-1/C-012, C-013, C-014, C-016, C-017, C-018
 - [test_fnp_6d_bitmap_aggregates.py](test_fnp_6d_bitmap_aggregates.py) — **FNP-6D
   (2026-09-15):** Spark SQL-door pins for `bitmap_construct_agg` / `bitmap_or_agg` /

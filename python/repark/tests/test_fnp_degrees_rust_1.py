@@ -123,17 +123,13 @@ def _answer_cell_id(function: str, tag: str, door: str, suffix: str) -> str:
     return f"DEG-{function}-{tag}-python{suffix}"
 
 
-def _assert_answer(
-    session: ReparkSession, function: str, tag: str, door: str, suffix: str
-) -> None:
+def _assert_answer(session: ReparkSession, function: str, tag: str, door: str, suffix: str) -> None:
     cell_id = _answer_cell_id(function, tag, door, suffix)
     cell = _cell(cell_id)
     assert "rows" in cell, cell_id
     literal = LITERALS[tag]
     if door == "sql":
-        table = session.sql(
-            f"SELECT {function}(x) AS r FROM (SELECT {literal} AS x)"
-        ).toArrow()
+        table = session.sql(f"SELECT {function}(x) AS r FROM (SELECT {literal} AS x)").toArrow()
         name, spark_type, nullable = cell["schema"][0]
         assert name == "r"
     else:
@@ -281,9 +277,7 @@ def test_refusal_timestamp_ltz_is_expected_divergence(spark: ReparkSession, func
     assert "SQLSTATE: 42K09" in message
 
 
-def _assert_malformed_raises(
-    session: ReparkSession, function: str, tag: str, door: str
-) -> None:
+def _assert_malformed_raises(session: ReparkSession, function: str, tag: str, door: str) -> None:
     if function in ("degrees", "radians"):
         cell = _cell(f"DEG-{function}-{tag}-{door}")
     else:
@@ -320,9 +314,7 @@ def test_malformed_string_sql_raises_cast_invalid_input(
     _assert_malformed_raises(spark, function, tag, "sql")
 
 
-def _assert_malformed_nulls(
-    session: ReparkSession, function: str, tag: str, door: str
-) -> None:
+def _assert_malformed_nulls(session: ReparkSession, function: str, tag: str, door: str) -> None:
     if function in ("degrees", "radians"):
         cell = _cell(f"DEG-{function}-{tag}-{door}-nonansi")
     else:
@@ -330,9 +322,7 @@ def _assert_malformed_nulls(
     assert cell["rows"] == [["None"]]
     literal = LITERALS[tag]
     if door == "sql":
-        table = session.sql(
-            f"SELECT {function}(x) AS r FROM (SELECT {literal} AS x)"
-        ).toArrow()
+        table = session.sql(f"SELECT {function}(x) AS r FROM (SELECT {literal} AS x)").toArrow()
     else:
         table = session.sql(f"SELECT {literal} AS x").select(_apply_python(function)).toArrow()
     assert table.column(0).to_pylist() == [None]
@@ -382,9 +372,7 @@ def _assert_degi_value(answered: list, raw: str, cell_id: str) -> None:
         assert value == float(raw), cell_id
 
 
-def _assert_degi(
-    session: ReparkSession, function: str, tag: str, door: str, suffix: str
-) -> None:
+def _assert_degi(session: ReparkSession, function: str, tag: str, door: str, suffix: str) -> None:
     cell_id = f"DEGI-{function}-{tag}-{door}{suffix}"
     cell = _cell(cell_id)
     literal = DEGI_LITERALS[tag]
@@ -394,26 +382,20 @@ def _assert_degi(
             if door == "sql":
                 session.sql(f"SELECT {function}(x) AS r FROM (SELECT {literal} AS x)").toArrow()
             else:
-                session.sql(f"SELECT {literal} AS x").select(
-                    getattr(F, function)("x")
-                ).collect()
+                session.sql(f"SELECT {literal} AS x").select(getattr(F, function)("x")).collect()
         message = str(caught.value)
         assert "[CAST_INVALID_INPUT]" in message
         assert (
-            f'The value \'{literal[1:-1]}\' of the type "STRING" '
+            f"The value '{literal[1:-1]}' of the type \"STRING\" "
             'cannot be cast to "DOUBLE"' in message
         )
         assert "SQLSTATE: 22018" in message
         return
     if door == "sql":
-        table = session.sql(
-            f"SELECT {function}(x) AS r FROM (SELECT {literal} AS x)"
-        ).toArrow()
+        table = session.sql(f"SELECT {function}(x) AS r FROM (SELECT {literal} AS x)").toArrow()
         name = "r"
     else:
-        table = session.sql(f"SELECT {literal} AS x").select(
-            getattr(F, function)("x")
-        ).toArrow()
+        table = session.sql(f"SELECT {literal} AS x").select(getattr(F, function)("x")).toArrow()
         name = _refusal_display(function)
         assert table.column_names == [name]
     expected_name, spark_type, nullable = cell["schema"][0]
