@@ -70,6 +70,15 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch.
   Its default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before
   refusing.
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** `unary_aggregate_udaf` gains the
+  `bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg` arms mapping to
+  `repark_functions::bitmap_agg::{bitmap_construct_agg_udaf, bitmap_or_agg_udaf,
+  bitmap_and_agg_udaf}` (the module flipped `pub` in `repark-functions` for the cross-crate
+  path, the same shape as the `repark_functions::aggregate` arms). The file sat at the exact
+  1000-line ceiling, so the four `datafusion::logical_expr::binary_expr` arms condense onto
+  the existing import (8 → 4 lines each, the `IsNotDistinctFrom` call staying wrapped for
+  rustfmt) before the three arms land — 1000 → 991 lines, no baseline raised.
+  pins: fnp-bitmap-facade-1/C-001
 - [`function_dispatch/dispatch_json.rs`](function_dispatch/dispatch_json.rs) —
   **FNP-9/10 (2026-09-05):** arms for
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,

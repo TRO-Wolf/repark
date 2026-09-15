@@ -8,7 +8,7 @@ pub mod aggregate;
 pub mod analyzer;
 pub mod ansi;
 mod avg_groups;
-mod bitmap_agg;
+pub mod bitmap_agg;
 pub mod bool_decimal;
 pub mod cardinality;
 pub mod collection;

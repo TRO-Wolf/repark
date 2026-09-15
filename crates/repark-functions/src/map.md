@@ -264,6 +264,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   [`temporal_ctor/map.md`](temporal_ctor/map.md).
   pins: fnp-11a/C-002, C-003, C-004, C-005, C-011, C-013
 - `lib.rs` — crate-root stays at **175** under `check_lib_rs` with `pub mod timestamp_type`.
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** `mod bitmap_agg;` flips to `pub mod bitmap_agg;`
+  (same line count) so `repark-python`'s `unary_aggregate_udaf` can reach the three
+  `bitmap_agg` UDAF constructors the way it reaches `aggregate`'s.
+  pins: fnp-bitmap-facade-1/C-001
 - `timestamp_type.rs` — **Q10:** Spark-door `spark.sql.timestampType` carrier
   (`SparkTimestampTypeConfig`, `PREFIX = repark.timestamp`, default
   **TIMESTAMP_LTZ**). Parsed from the builder map in `SparkExtension::configure`.

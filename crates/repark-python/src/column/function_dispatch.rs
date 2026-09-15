@@ -19,7 +19,7 @@ use datafusion::functions_aggregate::string_agg::string_agg_udaf;
 use datafusion::functions_aggregate::sum::sum_udaf;
 use datafusion::functions_aggregate::variance::{var_pop_udaf, var_samp_udaf};
 use datafusion::logical_expr::expr::{Cast, ScalarFunction};
-use datafusion::logical_expr::{AggregateUDF, Expr, lit};
+use datafusion::logical_expr::{AggregateUDF, Expr, Operator, binary_expr, lit};
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -203,33 +203,21 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "bitwise_and" | "bit_and_scalar" => {
             need(2)?;
-            datafusion::logical_expr::binary_expr(
-                exprs[0].clone(),
-                datafusion::logical_expr::Operator::BitwiseAnd,
-                exprs[1].clone(),
-            )
+            binary_expr(exprs[0].clone(), Operator::BitwiseAnd, exprs[1].clone())
         }
         "bitwise_or" | "bit_or_scalar" => {
             need(2)?;
-            datafusion::logical_expr::binary_expr(
-                exprs[0].clone(),
-                datafusion::logical_expr::Operator::BitwiseOr,
-                exprs[1].clone(),
-            )
+            binary_expr(exprs[0].clone(), Operator::BitwiseOr, exprs[1].clone())
         }
         "bitwise_xor" | "bit_xor_scalar" => {
             need(2)?;
-            datafusion::logical_expr::binary_expr(
-                exprs[0].clone(),
-                datafusion::logical_expr::Operator::BitwiseXor,
-                exprs[1].clone(),
-            )
+            binary_expr(exprs[0].clone(), Operator::BitwiseXor, exprs[1].clone())
         }
         "is_not_distinct_from" | "eqnullsafe" | "eq_null_safe" => {
             need(2)?;
-            datafusion::logical_expr::binary_expr(
+            binary_expr(
                 exprs[0].clone(),
-                datafusion::logical_expr::Operator::IsNotDistinctFrom,
+                Operator::IsNotDistinctFrom,
                 exprs[1].clone(),
             )
         }
@@ -902,6 +890,9 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "bit_and" => bit_and_udaf(),
         "bit_or" => bit_or_udaf(),
         "bit_xor" => bit_xor_udaf(),
+        "bitmap_construct_agg" => repark_functions::bitmap_agg::bitmap_construct_agg_udaf(),
+        "bitmap_or_agg" => repark_functions::bitmap_agg::bitmap_or_agg_udaf(),
+        "bitmap_and_agg" => repark_functions::bitmap_agg::bitmap_and_agg_udaf(),
         "approx_count_distinct" | "approx_distinct" => {
             repark_functions::spark_result_types::approx_count_distinct_udaf()
         }
