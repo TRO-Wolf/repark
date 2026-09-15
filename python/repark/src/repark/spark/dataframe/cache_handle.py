@@ -106,6 +106,9 @@ def bind_registered_view(frame: Any, view_name: str, lineage: Any) -> None:
     handle = CacheViewHandle(frame._session, frame._alive_token, view_name)
     frame._cache_view_owned_handle = handle
     frame._handles = (*frame._handles, handle)
+    from repark.spark.catalog_surface import _note_frame_cached
+
+    _note_frame_cached(frame)
 
 
 def release_view_hold(frame: Any, view_name: str) -> None:

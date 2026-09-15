@@ -114,6 +114,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `schema` reports the engine plan (the narrow-width divergence is registry
   LOGICAL-WIDTH-1). Exact baseline ratchets 4044 → 4035, mirrored in the
   CAP-1 test. pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005
+  CATALOG-SURFACE-1 critic round 1 (2026-09-14): `create_or_replace_temp_view`
+  delegates registration to `catalog_surface._register_temp_view` so the catalog
+  overlay records each view's registration object for staleness checks; the file
+  stays on its exact baseline (4044 → 4043, ratcheted down).
+  pins: catalog-surface-1/C-009
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`.
 - `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
   PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,
@@ -421,6 +426,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_warn_storage_level_cosmetic_once` moved here unchanged and is re-imported by
   `core`, keeping the frozen surfaces. pins: eager-own-1/C-002, C-003, C-004,
   C-005, C-006, C-007, C-008, C-010, C-011
+  CATALOG-SURFACE-1 critic round 1 (2026-09-14): `bind_registered_view` notes the
+  materialize-time identity token (`catalog_surface._note_frame_cached`) for
+  `spark.table(name)` frames, so the catalog overlay can tell a still-current
+  `.cache()` from a stale one. pins: catalog-surface-1/C-009
   REVIEW-FIX-4 (2026-09-10, closes Q-12, Q-13, Q-50): `lazy()` on an eager
   frame is `_spawn_preserving_identity(frame._inner)` with no `_cache_view`
   interpolation — a set `_eager_shape` with no `_cache_view` (the checkpoint

@@ -359,7 +359,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_sql_strip_comments_preserve_strings": (
         "992a00d5a057fc07c3c7c03ac209f07fcdf72c3f2d766e55ff7768f7e5b36bef"
     ),
-    "_sql_table_ref": ("55d5693a8fc7f585736ba57f95b80cfbd92a4226e2f5e85dbd83c4f4b4853f29"),
+    "_sql_table_ref": ("f84a8a8405316c4c6a13235f56a73fd5885283c07780add54bb98a6964c110a2"),
     "_sql_top_level_keyword_index": (
         "8d33d0dfa976fc6e0b6140838507e8d5aaaadf6283ccae14c0927fe3c2baffff"
     ),

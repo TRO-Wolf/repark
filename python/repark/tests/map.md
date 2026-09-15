@@ -694,7 +694,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   shared Rust table; decimal, nested and collation-refusal paths stay Python).
   Round 2 re-hashed the same two bodies (`_data_type_to_sql_type` gained the
   SQL-marker leaf; `_sql_type_to_arrow` binds through `_native_function`).
-  pins: csv-infer-perf-1/C-002, C-005; facade-4/C-014, C-022, C-026
+  CATALOG-SURFACE-1 critic round 1 re-hashed `_sql_table_ref` (docstring-only:
+  the reference to the removed `ReparkSession._sql_table_ref_resolved` helper
+  dropped — `catalog_surface.session_table` is the resolved-identity door).
+  pins: csv-infer-perf-1/C-002, C-005; facade-4/C-014, C-022, C-026;
+  catalog-surface-1/C-008
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
@@ -3082,6 +3086,34 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
+- `test_catalog_surface_1.py` + `facade_catalog_oracle.json` — **CATALOG-SURFACE-1
+  (2026-09-14):** the thirteen-name second half of `Catalog`, driven by the run-15b
+  live-PySpark-4.1.2 fixture copied unchanged. `getTable` (`MANAGED` / qualified /
+  `TEMPORARY` rows, `TABLE_OR_VIEW_NOT_FOUND`), `listColumns` (field order,
+  `simpleString` dataType, partition flag, `dbName` FutureWarning, view arm),
+  `listFunctions` / `getFunction` (repark-registry rows, glob patterns, UDF
+  `description="N/A."`, `UNRESOLVED_ROUTINE` miss — §5 CAT-FUNCS-1), the cache
+  trio (cache → isCached True → uncache False, `spark.table` second-read serves
+  the held cache via the scan spy, live-frame `cache()` visible to `isCached`,
+  missing table `TABLE_OR_VIEW_NOT_FOUND`), `createTable` /
+  `createExternalTable` (empty Iceberg table → `spark.table` DataFrame,
+  `description` → comment, `TBLPROPERTIES` options, `TABLE_OR_VIEW_ALREADY_EXISTS`,
+  `UNABLE_TO_INFER_SCHEMA` no-schema refusal, `path=` / non-`iceberg` source EX-IO-6
+  refusal, `FutureWarning` on the deprecated alias), `dropGlobalTempView` False,
+  `recoverPartitions` None + `EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE` +
+  `TABLE_OR_VIEW_NOT_FOUND` (§5 CAT-RECOVER-1), `refreshTable` (OOB commit visible
+  after refresh, view no-op, missing raise), `refreshByPath` None, and today's
+  `CACHE TABLE` / `UNCACHE TABLE` SQL refusals. Critic round 1 (L-001..L-007):
+  staleness-token invalidation of held caches (INSERT / INSERT OVERWRITE / writer
+  append / `createOrReplaceTempView` all answer fresh rows and `isCached` False;
+  the no-write second read still scans the held cache view under the SQL spy),
+  `comment` values containing `,` or `]` round-trip, transform-source columns
+  (`bucket(16, id)`, `days(ts)`) flag `isPartition`, `createTable` renders `INT[]`
+  recursively and `NOT NULL` (map/struct keep the engine's loud refusal),
+  `listFunctions(dbName)` on a missing namespace raises `SCHEMA_NOT_FOUND`,
+  unquoted temp-view names classify case-insensitively, and every raised
+  `AnalysisException` carries its errorClass through `getCondition()`.
+  pins: catalog-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009
 - `test_dml_b_partition_overwrite.py` — **DML-B:** facade `spark.sql` `INSERT OVERWRITE …
   PARTITION` static/dynamic pins (values, Arrow types, snapshot operation, empty-dynamic
   refuse). pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005

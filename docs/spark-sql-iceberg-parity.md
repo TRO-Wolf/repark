@@ -1310,6 +1310,49 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   directory and no reliable-storage checkpoint write; the in-memory materialization is
   the same-rows answer rather than a refusal the engine cannot honor anyway.
 
+### CAT-FUNCS-1 — `listFunctions` / `getFunction` read the repark registry, not Spark's JVM one
+
+- **repark** — `spark.catalog.listFunctions()` answers the names `repark.spark.functions`
+  exports (declared refusals excluded) plus session-registered UDFs, sorted by name, each
+  as `Function(name, catalog=None, namespace=None, description, className,
+  isTemporary=True)`; built-ins carry `description=""` and `className="repark.builtin"`,
+  session UDFs `description="N/A."` and `className="repark.python_udf"`. `getFunction`
+  resolves a session UDF first, then a built-in, case-insensitively on the leaf name; a
+  miss raises `AnalysisException` `UNRESOLVED_ROUTINE` with Spark's search-path message
+  shape (`system.builtin` / `system.session` / current `catalog.db`).
+- **Apache Spark** — lists 533 JVM-registered functions (operators included) with real
+  descriptions and `org.apache.spark.sql.catalyst.expressions.*` class names; session UDFs
+  carry a `UDFRegistration$$Lambda` class name. *(oracle: live PySpark 4.1.2, local[2],
+  UTC, 2026-09-14, run 15b `facade_catalog_oracle.json` `listFunctions_*` /
+  `getFunction_*` cells.)*
+- **Pin** —
+  `python/repark/tests/test_catalog_surface_1.py::test_list_functions_shape`,
+  `…::test_list_functions_pattern`, `…::test_list_functions_db_name`,
+  `…::test_list_functions_udf`, `…::test_get_function_builtin`,
+  `…::test_get_function_udf`, `…::test_get_function_missing`
+- **Rationale** — DECLARED, 2026-09-14 (catalog-surface-1 ruling R-1). There is no JVM
+  expression registry to mirror; the honest list is what the facade's own function surface
+  resolves, with repark-owned class names that make the difference visible instead of
+  invented Spark class strings. Revisit if a native function-catalog listing lands.
+
+### CAT-RECOVER-1 — `recoverPartitions` answers `None` for an unpartitioned table
+
+- **repark** — `spark.catalog.recoverPartitions(name)` answers `None` for every Iceberg
+  table, partitioned or not (Iceberg keeps partitions in metadata; there is nothing to
+  recover), raises `AnalysisException` `EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE` for a view,
+  and `TABLE_OR_VIEW_NOT_FOUND` for a missing name.
+- **Apache Spark** — answers `None` for a partitioned Hive-style table and raises
+  `AnalysisException` `NOT_A_PARTITIONED_TABLE` for an unpartitioned one. *(oracle: live
+  PySpark 4.1.2, local[2], UTC, 2026-09-14, run 15b `facade_catalog_oracle.json`
+  `recoverPartitions_*` cells.)*
+- **Pin** —
+  `python/repark/tests/test_catalog_surface_1.py::test_recover_partitions`,
+  `…::test_recover_partitions_view`, `…::test_recover_partitions_missing`
+- **Rationale** — DECLARED, 2026-09-14 (catalog-surface-1 ruling R-5). Spark's
+  `NOT_A_PARTITIONED_TABLE` is a Hive-directory concept — a table whose partitions live as
+  directories a metastore must re-discover. An unpartitioned Iceberg table has no
+  recoverable directory structure, so the no-op is the truthful answer.
+
 ---
 
 ## 6. How a row is added, mirrored and retired
@@ -7058,7 +7101,11 @@ field NAME.
   on the EX-26 frame). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
   EX-26 batch.)*
 - **Pin** —
-  `python/repark/tests/test_examples_io_session.py::test_saveas_table_non_iceberg_refuses`
+  `python/repark/tests/test_examples_io_session.py::test_saveas_table_non_iceberg_refuses`;
+  `python/repark/tests/test_catalog_surface_1.py::test_create_table_non_iceberg_source_refuses`
+  and `…::test_create_table_path_refuses` (CATALOG-SURFACE-1, 2026-09-14 —
+  `createTable`/`createExternalTable` `path=` and non-`iceberg` `source=` share this
+  refusal arm).
 - **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-26 measurement. The example keeps
   the default-format arm, where rows and dtypes agree; other formats are pinned, not taught.
 

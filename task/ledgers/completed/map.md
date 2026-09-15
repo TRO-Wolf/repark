@@ -87,6 +87,20 @@ else. The next pickup's `make ledger-archive` files everything here under
   travel; encode-time rebuild-and-compare guard retired; BALLISTA-M2-A-R-001 closed.
   Wire `RPIC` v2. `risk_tier: standard`. Branch `feat/ballista-m2-b`.
   pins: ballista-m2-b/C-001, C-002, C-003, C-004, C-005
+- [catalog-surface-1-ledger.md](catalog-surface-1-ledger.md) —
+  **CATALOG-SURFACE-1 (2026-09-14), in flight:** the thirteen-name second half of the
+  `Catalog` surface — `getTable` / `listColumns` / `listFunctions` / `getFunction`
+  metadata, the `cacheTable` / `isCached` / `uncacheTable` trio over EAGER-OWN-1
+  cache handles, `createTable` / `createExternalTable` through the existing CREATE
+  TABLE path, and the maintenance no-ops — driven by the run-15b live PySpark 4.1.2
+  fixture. CAT-FUNCS-1 / CAT-RECOVER-1 filed DECLARED; `path=`/non-`iceberg` source
+  joins EX-IO-6's pin list. Critic round 1 (L-001..L-007, rulings R-6/R-7):
+  identity-token cache staleness, special-character comments, partition-transform
+  source columns, `INT[]`/`NOT NULL` DDL, `SCHEMA_NOT_FOUND` on a missing
+  `listFunctions` dbName, case-insensitive temp views, and errorClass attachment.
+  `risk_tier: standard`. Branch `feat/catalog-surface-1`.
+  pins: catalog-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009
 - [cfg-2-ledger.md](cfg-2-ledger.md) —
   **CFG-2 steps 1–2 (2026-09-13):** named database sources — parsed `SourceSpec`s
   ride `FileConfig` into the built session, `register_configured_sources` installs a

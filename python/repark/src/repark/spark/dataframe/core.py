@@ -940,11 +940,10 @@ class DataFrame:
         return PolarsFrame(self)
 
     def create_or_replace_temp_view(self, name: str) -> None:
-        """Register this DataFrame as a replaceable temporary view.
+        """Register this DataFrame as a replaceable temporary view."""
+        from repark.spark.catalog_surface import _register_temp_view
 
-        Materialize pending bridges and cache requests so SQL scans real rows.
-        """
-        self._session.create_or_replace_temp_view(name, self._native_for_registration())
+        _register_temp_view(self, name)
 
     createOrReplaceTempView = create_or_replace_temp_view  # noqa: N815 — PySpark camelCase alias
 

@@ -60,7 +60,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract a cohesive method family behind re-export bindings.",
     ),
     "python/repark/src/repark/spark/dataframe/core.py": (
-        4035,
+        4034,
         "The DataFrame facade still combines many plan-building method families.",
         "Extract one existing method region when a charter changes that responsibility.",
     ),
@@ -105,7 +105,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split format-specific readers from shared option validation.",
     ),
     "python/repark/src/repark/spark/session/session_core.py": (
-        2304,
+        2291,
         "SparkSession lifecycle and query entry points share one facade module.",
         "Split construction and configuration from query and catalog methods.",
     ),

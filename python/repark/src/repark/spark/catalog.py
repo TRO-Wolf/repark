@@ -46,6 +46,14 @@ CatalogMetadata = namedtuple(
     "CatalogMetadata",
     ["name", "description"],
 )
+Column = namedtuple(
+    "Column",
+    ["name", "description", "dataType", "nullable", "isPartition", "isBucket", "isCluster"],
+)
+Function = namedtuple(
+    "Function",
+    ["name", "catalog", "namespace", "description", "className", "isTemporary"],
+)
 SourceMetadata = namedtuple(
     "SourceMetadata",
     ["name", "kind", "key_path", "auto_register", "properties"],
@@ -257,6 +265,9 @@ class Catalog:
             for frame in list(registry):
                 frame.unpersist()
             registry.clear()
+        cached_tables = token.get("catalog_cached_tables")
+        if isinstance(cached_tables, dict):
+            cached_tables.clear()
         # Orphan cache views (handle GC'd without unpersist) — drop by prefix only.
         # Use Catalog.drop_temp_view (native handle via _ensure_alive); ReparkSession has no
         for view_name in self._session.list_temp_view_names():
@@ -632,6 +643,193 @@ class Catalog:
         return any(key.lower() == short_lower for key in registry)
 
     functionExists = function_exists  # noqa: N815 — PySpark camelCase
+
+    def get_table(self, tableName: str) -> Any:  # noqa: N803 — PySpark camelCase
+        """Return the ``Table`` record for a table or temp view.
+
+        pins: catalog-surface-1/C-001
+        """
+        from repark.spark import catalog_surface
+
+        return catalog_surface.get_table(self, tableName)
+
+    getTable = get_table  # noqa: N815 — PySpark camelCase
+
+    def list_columns(
+        self,
+        tableName: str,  # noqa: N803 — PySpark camelCase
+        dbName: str | None = None,  # noqa: N803 — PySpark camelCase
+    ) -> list[Any]:
+        """One ``Column`` record per schema field, in order.
+
+        pins: catalog-surface-1/C-002
+        """
+        from repark.spark import catalog_surface
+
+        return catalog_surface.list_columns(self, tableName, dbName)
+
+    listColumns = list_columns  # noqa: N815 — PySpark camelCase
+
+    def list_functions(
+        self,
+        dbName: str | None = None,  # noqa: N803 — PySpark camelCase
+        pattern: str | None = None,
+    ) -> list[Any]:
+        """Built-in and session-UDF ``Function`` records sorted by name.
+
+        pins: catalog-surface-1/C-003
+        """
+        from repark.spark import catalog_surface
+
+        return catalog_surface.list_functions(self, dbName, pattern)
+
+    listFunctions = list_functions  # noqa: N815 — PySpark camelCase
+
+    def get_function(self, functionName: str) -> Any:  # noqa: N803 — PySpark camelCase
+        """The ``Function`` record for a UDF or built-in.
+
+        pins: catalog-surface-1/C-003
+        """
+        from repark.spark import catalog_surface
+
+        return catalog_surface.get_function(self, functionName)
+
+    getFunction = get_function  # noqa: N815 — PySpark camelCase
+
+    def cache_table(
+        self,
+        tableName: str,  # noqa: N803 — PySpark camelCase
+        storageLevel: Any = None,  # noqa: N803 — PySpark camelCase
+    ) -> None:
+        """Eagerly cache a table or temp view under its resolved identity.
+
+        pins: catalog-surface-1/C-004
+        """
+        from repark.spark import catalog_surface
+
+        catalog_surface.cache_table(self, tableName, storageLevel)
+
+    cacheTable = cache_table  # noqa: N815 — PySpark camelCase
+
+    def is_cached(self, tableName: str) -> bool:  # noqa: N803 — PySpark camelCase
+        """Whether the resolved table/view identity has a live cache.
+
+        pins: catalog-surface-1/C-004
+        """
+        from repark.spark import catalog_surface
+
+        return bool(catalog_surface.is_cached(self, tableName))
+
+    isCached = is_cached  # noqa: N815 — PySpark camelCase
+
+    def uncache_table(self, tableName: str) -> None:  # noqa: N803 — PySpark camelCase
+        """Release the catalog cache entry for a table or temp view.
+
+        pins: catalog-surface-1/C-004
+        """
+        from repark.spark import catalog_surface
+
+        catalog_surface.uncache_table(self, tableName)
+
+    uncacheTable = uncache_table  # noqa: N815 — PySpark camelCase
+
+    def create_table(
+        self,
+        tableName: str,  # noqa: N803 — PySpark camelCase
+        path: str | None = None,
+        source: str | None = None,
+        schema: Any = None,
+        description: str | None = None,
+        **options: Any,
+    ) -> Any:
+        """Create an empty Iceberg table and return its DataFrame.
+
+        pins: catalog-surface-1/C-005
+        """
+        from repark.spark import catalog_surface
+
+        return catalog_surface.create_table(
+            self,
+            tableName,
+            path=path,
+            source=source,
+            schema=schema,
+            description=description,
+            **options,
+        )
+
+    createTable = create_table  # noqa: N815 — PySpark camelCase
+
+    def create_external_table(
+        self,
+        tableName: str,  # noqa: N803 — PySpark camelCase
+        path: str | None = None,
+        source: str | None = None,
+        schema: Any = None,
+        description: str | None = None,
+        **options: Any,
+    ) -> Any:
+        """Deprecated alias of :meth:`create_table` (warns ``FutureWarning``).
+
+        pins: catalog-surface-1/C-005
+        """
+        from repark.spark import catalog_surface
+
+        return catalog_surface.create_external_table(
+            self,
+            tableName,
+            path=path,
+            source=source,
+            schema=schema,
+            description=description,
+            **options,
+        )
+
+    createExternalTable = create_external_table  # noqa: N815 — PySpark camelCase
+
+    def drop_global_temp_view(self, viewName: str) -> bool:  # noqa: N803 — PySpark camelCase
+        """False always — global temp views stay refused under EX-DF-2.
+
+        pins: catalog-surface-1/C-006
+        """
+        from repark.spark import catalog_surface
+
+        return bool(catalog_surface.drop_global_temp_view(self, viewName))
+
+    dropGlobalTempView = drop_global_temp_view  # noqa: N815 — PySpark camelCase
+
+    def recover_partitions(self, tableName: str) -> None:  # noqa: N803 — PySpark camelCase
+        """No-op for Iceberg tables; views and misses raise.
+
+        pins: catalog-surface-1/C-006
+        """
+        from repark.spark import catalog_surface
+
+        catalog_surface.recover_partitions(self, tableName)
+
+    recoverPartitions = recover_partitions  # noqa: N815 — PySpark camelCase
+
+    def refresh_table(self, tableName: str) -> None:  # noqa: N803 — PySpark camelCase
+        """Rebuild the table's catalog provider and drop its cache.
+
+        pins: catalog-surface-1/C-006
+        """
+        from repark.spark import catalog_surface
+
+        catalog_surface.refresh_table(self, tableName)
+
+    refreshTable = refresh_table  # noqa: N815 — PySpark camelCase
+
+    def refresh_by_path(self, path: str) -> None:
+        """No-op — repark keeps no path-keyed cache.
+
+        pins: catalog-surface-1/C-006
+        """
+        from repark.spark import catalog_surface
+
+        catalog_surface.refresh_by_path(self, path)
+
+    refreshByPath = refresh_by_path  # noqa: N815 — PySpark camelCase
 
     # ===========================================================================================
     # Internals

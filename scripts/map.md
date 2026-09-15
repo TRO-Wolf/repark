@@ -51,6 +51,18 @@ blocks, the tail gains a third module-handle line for the new `install_into` mod
 and one narration comment line goes — the owner comment ban pays the tail). The CAP-1
 mirror rows move in the same commit.
 pins: fnp-alias-1/C-001, C-004, C-006
+CATALOG-SURFACE-1 (2026-09-14): `check_lib_py.py`
+`spark/session/session_core.py` 2304 → 2291 (`table()` delegates to
+`catalog_surface.session_table` for the catalog-cache overlay, and the
+now-unused `_sql_table_ref_resolved` helper went with it). The CAP-1 parity
+mirror row moves in the same commit.
+pins: catalog-surface-1/C-004
+CATALOG-SURFACE-1 critic round 1 (2026-09-14): `check_lib_py.py`
+`spark/dataframe/core.py` 4044 → 4043 (`create_or_replace_temp_view` delegates
+registration to `catalog_surface._register_temp_view`; the frame-token note
+lives in `cache_handle.bind_registered_view`). The CAP-1 parity mirror row
+moves in the same commit.
+pins: catalog-surface-1/C-009
 REPLACE-LINEAR-1 step 1 critic round (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4054 → 4044 (the `_join_qualifiers` slot plus minimal call
 sites so `replace` binds duplicate-name equi-join output by relation qualifier
