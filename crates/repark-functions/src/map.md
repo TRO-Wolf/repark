@@ -229,7 +229,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **SQL-SET-DOOR-1 (2026-09-14):** `current_timezone_udf` — the SQL-door `current_timezone()`
   Spark answers in `SELECT current_timezone()` — reads this same carrier and returns a
   non-nullable Utf8 (a `ReturnFieldArgs` field so DataFusion plans the not-null `string`
-  Spark promises). It registers through `instant_ts::functions()` — the session-zone temporal
+  Spark promises). Its `name()` is `&'static str` — a literal bound, what pedantic wants.
+  It registers through `instant_ts::functions()` — the session-zone temporal
   family — rather than a `lib.rs` line, because the crate root sits on its exact line ceiling.
   Pins: `session_time_zone::tests::current_timezone_*`.
 - `datetime.rs` — session-zone semantics are type-driven (`coerce_date_arg` /

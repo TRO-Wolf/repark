@@ -176,10 +176,10 @@ class ReparkSession:
         # UDTF FROM-name(lit_args) before scalar UDF rewrite (distinct registries).
         from repark.spark.session.sql_set_statements import try_sql_set_statement
         from repark.spark.udtf import try_sql_registered_udtf
-        if (set_frame := try_sql_set_statement(self, query)) is not None:
-            return set_frame
-        if (udtf_frame := try_sql_registered_udtf(self, query)) is not None:
-            return udtf_frame
+
+        for rewrite in (try_sql_set_statement, try_sql_registered_udtf):
+            if (frame := rewrite(self, query)) is not None:
+                return frame
         # Registry-name scan before bare-table expand (rewrite may re-enter sql).
         if (udf_frame := self._sql_with_registered_udfs(query)) is not None:
             return udf_frame

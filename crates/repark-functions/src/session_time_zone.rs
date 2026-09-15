@@ -120,7 +120,7 @@ impl Hash for CurrentTimezone {
 }
 
 impl ScalarUDFImpl for CurrentTimezone {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "current_timezone"
     }
 

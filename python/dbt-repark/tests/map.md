@@ -35,6 +35,7 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   It needs **no adapter**, which is why it stays green when the package is removed — the
   red-first evidence lives in the two files below.
   pins: dbt-1-adapter/C-001
+  pins: sql-set-door-1/C-005
 - `test_cursor.py` — 10 cases over the cursor dbt drives: `fetchall` / `fetchmany` / `fetchone`
   across three-row results, `description` across two columns, the zero-column DDL result, the
   refused binding, and two cursors that do not drain each other. Added in round 2: the multi-row
