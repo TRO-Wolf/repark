@@ -4714,3 +4714,14 @@ EAGER-BUDGET-1 declared export delta (2026-09-13): `dataframe/core.py` imports o
 `eager.py`, so the frozen `core` and package surfaces in `_dfcore_1_expected.py` lose `_CACHE_MAX_BYTES_KEY`,
 `_cache_conf_lookup` and `_resolve_cache_max_bytes` and gain `_resolve_cache_budgets`. No other module read those names
 through `core` or the package. pins: eager-budget-1/C-010
+
+- `test_sql_set_door_1.py` — **SQL-SET-DOOR-1 (2026-09-14):** the `SET`/`RESET`/`SET TIME ZONE`
+  SQL-door pins for registry `B-TZ-5`, measured against `fixtures-batch1.json` cells
+  `BTZ5-0`…`BTZ5-19` (PySpark 4.1.2). Result frames assert on the `to_arrow` path — value AND
+  Arrow type AND field nullability (non-null `key`/`value`; the four-column `SET -v`; the
+  zero-column `RESET`). The pinned divergences are the facade's recorded contract, not stubs:
+  `SET spark.sql.session.timeZone` is accepted but echoes the live session zone (TZ-3),
+  `SET spark.sql.ansi.enabled` stores but `1/0` still raises `DIVIDE_BY_ZERO`
+  (SET-ANSI-RUNTIME-1), and `SET TIME ZONE LOCAL` is a dated DECLARED refusal (SET-TZ-LOCAL-1).
+  `SET datafusion.*` stays on the engine path so `RuntimeConfig`'s SQL forwarder cannot loop.
+  pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-006

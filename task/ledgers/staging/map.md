@@ -645,3 +645,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `_DISPLAY_MAX_ROWS_CEILING = 10_000` so the styled probe cannot fetch unbounded
   (Q-51). `risk_tier: standard`. Branch `fix/review-fix-3-9-14`.
   pins: review-fix-14/C-001, C-002
+- [sql-set-door-1-ledger.md](sql-set-door-1-ledger.md) —
+  **SQL-SET-DOOR-1 (2026-09-14), in flight:** the `SET`/`RESET`/`SET TIME ZONE` SQL door for
+  registry `B-TZ-5` — D-1 shapes through `RuntimeConfig` (the `datafusion.*` exclusion keeps the
+  conf forwarder from looping), D-2 frames on `to_arrow` (non-null `key`/`value`, zero-column
+  `RESET`, four-column `SET -v`), Spark-class errors produced in the new module
+  (`CANNOT_MODIFY_STATIC_CONFIG`, `INVALID_CONF_VALUE.TIME_ZONE`, `INVALID_CONF_VALUE.TYPE_MISMATCH`),
+  `SET TIME ZONE LOCAL` a dated refusal, and the D-4 measurement recorded — timezone and ANSI are
+  accepted-but-not-applied residues (TZ-3, SET-ANSI-RUNTIME-1). `risk_tier: standard`.
+  Branch `feat/sql-set-door-1`. pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-005, C-006
