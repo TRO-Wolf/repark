@@ -2212,6 +2212,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   env asserts none (subscriber inert). Process isolation required (global `try_init`).
 - `test_types_simple_string.py` — R-PARITY-NITS / X2 simpleString/typeName/json/fromDDL/
   StructType.add / ArrayType / MapType / collation / toInternal pins.
+- `test_types_bases_1.py` + `facade_types_oracle.json` — **TYPES-BASES-1 (2026-09-14):**
+  the Spark abstract type bases (`AtomicType` → `SpatialType`) pinned cell-by-cell from
+  the run-15b PySpark 4.1.2 oracle — the full isinstance matrix both ways and every
+  recorded MRO, base instantiation, `GeographyType`/`GeometryType` surface plus DDL/JSON
+  doors and the V3-GEO-1 column-use refusal, `UserDefinedType` cells plus the R-3
+  `NOT_IMPLEMENTED` column-use refusal (TYPES-UDT-1), `types.Row` identity, and the
+  `DataTypeSingleton` non-reproduction pin (R-2 out-of-scope observation).
+  Follow-up (critic round 1): the `_merge_type` mixed-SRID / spatial×String /
+  nested pins, the Spark-shaped `PointUdt` template table (`toInternal` /
+  `fromInternal` / `jsonValue` / `__eq__` / unhashable) and the base UDT
+  refusal features, the `{"type": "udt"}` `fromJson` refusal, the SRID/JSON
+  edge table (`GeometryType(False)`, `True` / float / string SRIDs, lowercase
+  `"any"`, the `ST_INVALID_ALGORITHM_VALUE` JSON form, CRS round trips), the
+  reader-schema V3-GEO-1 pin, and the door-blocked spatial DDL refusals
+  (Rust type table owns `fromDDL`; Spark's bare-token answer is UNMEASURED).
+  pins: types-bases-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_types_x2_census.py` — X2 census: Row empty/unnamed repr + factory arity;
   createDataFrame LongType schema, nested list/struct/map, variable int arrays;
   **octo:** explicit nested StructType/MapType/ArrayType(String) Arrow values (not
