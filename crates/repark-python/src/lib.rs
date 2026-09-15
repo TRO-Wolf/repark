@@ -13,6 +13,7 @@ mod dataframe_stack;
 mod fence;
 mod logical_names;
 mod ml;
+mod plan_introspect;
 mod session;
 mod session_sources;
 mod type_bridge;
@@ -131,6 +132,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     collect_rows::register(module)?;
     logical_names::register(module)?;
     ml::register(module)?;
+    plan_introspect::register(module)?;
     session_sources::register(module)?;
     type_bridge::register(module)?;
     Ok(())

@@ -30,7 +30,14 @@ from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
 from repark.spark.column_fields import column_window_spec as _column_window_spec
-from repark.spark.dataframe import cache_handle, replace_expr, streaming_batch, surface_a, surface_b
+from repark.spark.dataframe import (
+    cache_handle,
+    plan_introspect,
+    replace_expr,
+    streaming_batch,
+    surface_a,
+    surface_b,
+)
 from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
 from repark.spark.dataframe.udf_bridge import (
@@ -886,6 +893,8 @@ class DataFrame:
     withMetadata = surface_a.withMetadata  # noqa: N815
     executionInfo = property(surface_a.executionInfo)  # noqa: N815
     sparkSession = property(surface_a.sparkSession)  # noqa: N815
+    inputFiles = plan_introspect.inputFiles  # noqa: N815
+    semanticHash = plan_introspect.semanticHash  # noqa: N815
 
     @property
     def is_cached(self) -> bool:
@@ -3408,9 +3417,7 @@ class DataFrame:
         """
         self._ensure_alive()
         if not isinstance(separator, str):
-            raise PySparkTypeError(
-                f"separator must be str, got {type(separator).__name__}",
-            )
+            raise PySparkTypeError(f"separator must be str, got {type(separator).__name__}")
         if isinstance(explode_lists, bool) is False:
             raise PySparkTypeError(
                 f"explode_lists must be bool, got {type(explode_lists).__name__}",

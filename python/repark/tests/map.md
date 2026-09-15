@@ -105,6 +105,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `orc_*` / `jdbc_*` / `na_replace_*` cells owned by other runs of the same oracle
   recording.
   **COLUMN-PARITY-1 (2026-09-15):** with `alias(name, metadata=)` surfacing on `schema`, the stamp, replace, cache and `to()` target-override positions answer Spark and are re-pinned; DF-METADATA-1 narrows to the transform positions and `to()` source-keep. pins: df-surface-a-1/C-008
+- [test_df_plan_introspect_1.py](test_df_plan_introspect_1.py) —
+  **DF-PLAN-INTROSPECT-1 (2026-09-14):** `DataFrame.inputFiles` /
+  `DataFrame.semanticHash` answer PySpark 4.1.2 in Rust, driven by the committed
+  run-15b oracle ([facade_dataframe_surface_oracle.json](facade_dataframe_surface_oracle.json)).
+  `inputFiles` pins the four oracle cells plus a `", "`/bracket filename surviving as
+  one URI, an overlapping-name join listing both sides, csv/json reads, a glob, a
+  cache-kept lineage, and the SQL door; the oracle's `part-` filename is Spark's
+  writer naming, repark writes its own names. `semanticHash` pins the five oracle
+  cells plus literals, column order, limits, CAST widths, two file paths, and
+  batch-size independence; the fold keeps the low 32 bits as a signed int. Red on
+  base `efcb14ef`: all nineteen pins `PySparkAttributeError
+  [ATTRIBUTE_NOT_SUPPORTED]`. The example, the inventory refresh, and this entry
+  close the coverage loop. pins: df-plan-introspect-1/C-003
+  The touched DataFrame suites and the lint, format, clippy, and coverage gates
+  stay green. pins: df-plan-introspect-1/C-004
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
   / `Row.index` answer the nine `row.*` cells of the committed run-15b oracle
   ([facade_row_oracle.json](facade_row_oracle.json), live PySpark 4.1.2) — value counts
@@ -1408,6 +1423,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   default ceiling, so the `EXPECTED_*` tables split into
   [_dfcore_1_expected.py](_dfcore_1_expected.py) — the gate's sanctioned out.
   pins: eager-own-1/C-002
+  DF-PLAN-INTROSPECT-1 (2026-09-14): the class dir gains exactly `inputFiles`
+  and `semanticHash` (one-line bindings over `plan_introspect.py`); package and
+  core each gain exactly `plan_introspect` behind the new module import.
+  pins: df-plan-introspect-1/C-004
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.

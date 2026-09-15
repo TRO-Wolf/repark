@@ -59,6 +59,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   then calls `NamedSource::ping` so the connector-pending refusal keeps its engine class.
   pins: cfg-2/C-013, C-014, C-015 |
 | [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export. |
+| [`plan_introspect.rs`](plan_introspect.rs) | DF-PLAN-INTROSPECT-1 (2026-09-14): two free `#[pyfunction]`s over `&PyDataFrame` (the `session_sources` shape, since pyo3 allows one `#[pymethods]` block per type): `input_files` builds the physical plan on the shared runtime without executing it and walks it through `repark_core::input_files`, `semantic_hash` splits the frame into state plus logical plan and folds it through `repark_core::semantic_hash`. pins: df-plan-introspect-1/C-001, C-002 |
 | [`dataframe_stack.rs`](dataframe_stack.rs) | **PERF-UNPIVOT-1:** `stack_dataframe` binds `repark_core::apply_stack`; the internal `row_labels`/`cell_indices` kwargs bind `apply_labeled_stack` for the describe grid. pins: perf-unpivot-1/C-002, C-014 |
   `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself.
   Nested DDL element tokens come from `repark-spark::spark_ddl_type_name_at_depth`

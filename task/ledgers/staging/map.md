@@ -104,6 +104,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   bare-`summary()` percentile refusal. `risk_tier: standard`. Branch
   `fix/df-describe-str-1`.
   pins: df-describe-str-1/C-001, C-002, C-003, C-004
+- [df-plan-introspect-1-ledger.md](df-plan-introspect-1-ledger.md) —
+  **DF-PLAN-INTROSPECT-1 (2026-09-14), in flight:** `DataFrame.inputFiles` /
+  `DataFrame.semanticHash` land in Rust (`crates/repark-core/src/plan_introspect.rs`:
+  physical file-group walk plus analyzed-logical canonical hash, thinnest
+  `repark-python` free-function binding, one-line facade delegations with `core.py`
+  held at its exact baseline). Nineteen pins on the release module, example plus
+  inventory refresh, maps in lockstep. `risk_tier: standard`. Branch
+  `feat/df-plan-introspect-1`.
+  pins: df-plan-introspect-1/C-001, C-002, C-003, C-004
 - [df-colregex-1-ledger.md](df-colregex-1-ledger.md) —
   **DF-COLREGEX-1 step 1 (2026-09-11), in flight:** `colRegex`/`col_regex` reach the
   measured Spark contract — a backticked pattern returns the `RegexColumn` marker

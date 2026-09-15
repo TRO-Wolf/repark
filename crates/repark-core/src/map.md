@@ -197,6 +197,20 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `cfg!(debug_assertions)`. The measurement runner refuses to write a report unless it is
   false, so an H-3 number can never come from a debug build.
   pins: perf-dynflatten-1-measure/C-002
+- `plan_introspect.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-14):** two plan-introspection
+  kernels over a `DataFrame`'s plan. `input_files` walks the built (never executed)
+  physical plan and collects every `FileScanConfig` file-group entry behind a
+  `DataSourceExec`, rendered as the object store names it (`file:///` for local paths,
+  remote schemes unchanged) and de-duplicated in first-appearance order; a plan with
+  no file scan answers empty. `semantic_hash` analyzes the logical plan, renders a
+  canonical form that skips output alias names, all schema field names, and every
+  `__repark_` scratch identifier (hex runs of 8+ normalize to `#`, file paths and
+  literals never normalize), fingerprints file scans by listing-table paths,
+  `generate_series` bounds, memtable schema shapes, and view definitions, and folds
+  the 64-bit digest to a Java-int-range `i64` from the low 32 bits. The Iceberg scan
+  exec exposes table and snapshot only, never materialized data files, so Iceberg
+  frames answer empty. Same-schema different-data memtables can share a hash.
+  pins: df-plan-introspect-1/C-001, C-002
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast first to repark-iceberg's `CommitStateUnknownError`

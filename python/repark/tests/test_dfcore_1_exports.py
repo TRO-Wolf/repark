@@ -100,6 +100,11 @@ that name; ``core`` binds ``column_fields`` (the deferred struct-edit /
 method-body module), so ``EXPECTED_NEW_CORE_SUBMODULES`` and
 ``EXPECTED_NEW_PACKAGE_SUBMODULES`` each gain exactly ``_column_fields``;
 ``_column_window_spec`` now imports from ``column_fields`` unchanged.
+DF-PLAN-INTROSPECT-1 (2026-09-14): ``inputFiles`` and ``semanticHash`` return
+from the R-5 Rust unit as one-line class bindings over ``plan_introspect.py``,
+so ``EXPECTED_DATAFRAME_DIR`` gains exactly those two names; ``core`` and the
+package each gain exactly the one new module name ``plan_introspect``.
+pins: df-plan-introspect-1/C-004
 """
 
 from __future__ import annotations
@@ -124,6 +129,7 @@ import repark.spark.dataframe.colregex as colregex  # noqa: F401
 import repark.spark.dataframe.core as dataframe_core
 import repark.spark.dataframe.export_errors as export_errors
 import repark.spark.dataframe.grouped_udf as grouped_udf
+import repark.spark.dataframe.plan_introspect as plan_introspect  # noqa: F401
 import repark.spark.dataframe.rows_export as rows_export
 import repark.spark.dataframe.udf_projection as udf_projection
 import repark.spark.dataframe.udf_schema as udf_schema
