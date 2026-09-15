@@ -8,7 +8,7 @@ use arrow::datatypes::{
 };
 use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err, plan_err};
 
-use crate::json::reader::{java_double_text, java_float_text};
+use crate::java_double::{java_double_text, java_float_text};
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::utils::format_state_name;
 use datafusion::logical_expr::{

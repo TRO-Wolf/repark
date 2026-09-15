@@ -7,7 +7,7 @@ mod ddl;
 mod decode;
 mod from_json;
 mod path;
-pub(crate) mod reader;
+mod reader;
 mod scalars;
 mod schema_of;
 mod to_json;

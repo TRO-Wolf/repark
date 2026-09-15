@@ -720,3 +720,4 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
 First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](../map.md).
 - **DOOR-CONVERGE-1 rebase (2026-09-15):** `collection.rs` keeps main's `array_append` / `array_prepend` shims (ARRAY-NULL-1) beside this unit's `array_contains` / `size` modules; the round-2 `make_array` shim stays removed (R-10).
 - **FNP-11A R3 (2026-09-15):** `expr_fn::datediff` is the Spark `datediff` spelling. The function door routes two arguments to `date_diff` and three to `timestampdiff` through `temporal_ctor::date_alias` (pins: fnp-11a/C-019).
+- **FNP-6D-FOLLOWUP-1 rebase (2026-09-15, run 16a):** after #612 moved the Java text helpers into `java_double.rs`, `bitmap_agg.rs` imports `java_double_text` / `java_float_text` from `crate::java_double`; `json.rs` keeps `mod reader;` private as on main.
