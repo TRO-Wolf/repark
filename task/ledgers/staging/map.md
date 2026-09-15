@@ -176,6 +176,19 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   dispositions marked).
   `risk_tier: standard`. Branch `perf/facade-4-s1`.
   pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
+- [types-bases-1-ledger.md](types-bases-1-ledger.md) —
+  **TYPES-BASES-1 step 1 (2026-09-14), in flight:** the Spark abstract type bases
+  (`AtomicType` → `SpatialType`) in a new `types_bases.py` with every concrete
+  repark type re-parented to match the run-15b oracle's `isinstance_matrix` and
+  MRO cells, `GeographyType`/`GeometryType` with the vendored SRID→CRS table
+  (column use stays the V3-GEO-1 declared refusal, pin appended),
+  `UserDefinedType` (TYPES-UDT-1 declared, links FNP-15-unwrap_udt), and
+  `types.Row` re-exported. `DataTypeSingleton` deliberately not reproduced (R-2).
+  Rebased onto FACADE-4 step 1: spatial DDL parsing is now Rust-table-owned
+  (`crates/repark-spark/src/type_table/parse.rs` has no spatial arm — HALT for
+  the build clone); `types.py` 1793 → 1739 lines, baseline lowered.
+  `risk_tier: standard`. Branch `feat/types-bases-1`.
+  pins: types-bases-1/C-001, C-002, C-003, C-004, C-005
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

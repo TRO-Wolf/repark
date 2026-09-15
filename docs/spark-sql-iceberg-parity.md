@@ -1013,8 +1013,11 @@ them, and the document is ordered by surface, never by date.
 - **repark** — no engine surface reaches either type. `CREATE TABLE … (g GEOMETRY)` (and
   `GEOGRAPHY`) refuses on both SQL doors at the column-type mapping, naming the type, and
   leaves no table behind; there is no fixture to measure a read and none is planned for v1.0.
-  **Owner ruling 2026-08-25: dated DECLARED exclusion from the v1.0 gate** (north star §3,
-  the types row).
+  The facade type objects added 2026-09-14 (`GeographyType` / `GeometryType` on
+  `repark.spark.types`, TYPES-BASES-1) construct and describe like Spark, but using one as a
+  column type — `createDataFrame`, `cast`, or a table schema — refuses at the same mapping,
+  naming the type. **Owner ruling 2026-08-25: dated DECLARED exclusion from the v1.0 gate**
+  (north star §3, the types row).
 - **Apache Spark** — the ratified v3 spec defines both types and Iceberg-Java models them
   (fork `GAP_MATRIX` row R89 tracks the fork-side gap); this engine never reaches a value, so
   there is no value oracle. *(oracle: documented — the v3 spec's type table; no live
@@ -1022,7 +1025,9 @@ them, and the document is ordered by surface, never by date.
 - **Pin** —
   `crates/repark-spark/src/tests/create_table.rs::v3_type_columns_geometry_geography_variant_refuse_naming_the_type`
   (ANSI twin of the same name in `crates/repark-sql/src/v3/types.rs`; facade
-  `python/repark/tests/test_v3_create_opt_in.py::test_v3_geometry_geography_variant_columns_refuse_naming_the_type`)
+  `python/repark/tests/test_v3_create_opt_in.py::test_v3_geometry_geography_variant_columns_refuse_naming_the_type`);
+  facade type objects:
+  `python/repark/tests/test_types_bases_1.py::test_spatial_column_use_refuses_naming_the_type`
 - **Rationale** — DECLARED, owner-dated 2026-08-25. Spatial types are fork work (F-15 → R89)
   with no consumer on the v1.0 path; the ruling keeps the gate honest instead of silent.
   Reversing it needs a new dated decision, and the landing reds the pin on purpose. `variant`
@@ -1223,6 +1228,24 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   plotly/pandas-on-Spark. *(oracle: recorded — cells `plot`, `plot_line`, `plot_with_pandas`.)*
 - **Pin** — `python/repark/tests/test_df_stream_batch_1.py::test_plot_property_raises_spark_not_implemented`
 - **Rationale** — DECLARED 2026-09-14, reachable, deferred: port the accessor over `toPandas`.
+### TYPES-UDT-1 — `UserDefinedType` exists on the facade; column use refuses through the missing JVM registry
+- **repark** — `repark.spark.types.UserDefinedType` exists and instantiates like Spark
+  (`repr` `UserDefinedType()`, `typeName()` `userdefinedtype`, `simpleString` `udt`), and
+  `sqlType()` raises `PySparkNotImplementedError` `NOT_IMPLEMENTED`
+  `{"feature": "sqlType()"}` — the same answer Spark's own base class gives. Using a
+  `UserDefinedType` (subclass) instance as a column type — `createDataFrame`, `cast`, or a
+  schema — raises `PySparkNotImplementedError` `NOT_IMPLEMENTED`
+  `{"feature": "UserDefinedType"}`, and a `{"type": "udt"}` JSON payload refuses the same way.
+- **Apache Spark** — serializes UDT values through the JVM UDT registry (`sqlType()` +
+  the registered Scala/Python class pair); the Python surface is the class itself plus the
+  `sqlType()` / `module()` contract. *(oracle: measured — PySpark 4.1.2, run 15b cells
+  `udt_instantiate` / `udt_typeName` / `udt_sqlType`.)*
+- **Pin** — `python/repark/tests/test_types_bases_1.py::test_udt_cells`,
+  `…::test_udt_column_use_refuses`.
+- **Rationale** — DECLARED, 2026-09-14 (TYPES-BASES-1). Spark UDT execution walks the JVM
+  UDT registry — the same reason `FNP-15-unwrap_udt` is unreachable (row §9); there is no
+  registry to serialize through, so the name answers Spark's facade shape and refuses at
+  column use with Spark's own error class rather than silently mapping to another type.
 
 ---
 

@@ -1,5 +1,10 @@
 # map — python/repark-parity/tests
 
+TYPES-BASES-1 (2026-09-14): CAP-1 mirror row ratcheted down with the code —
+`spark/types.py` 1834→1791 after the abstract bases, spatial types,
+`UserDefinedType`, and spatial token helpers moved to `spark/types_bases.py`.
+The `check_lib_py.py` exception row moved in the same commit; no row raised.
+
 REVIEW-FIX-5 (2026-09-10): CAP-1 mirror tuple ratcheted down with the code — catalog_config.rs
 1044→1028 after the seventeen `//` reasons moved to `crates/repark-core/src/map.md` under the
 owner's no-code-comments ruling (D-5). The exact-baseline gate row moved with it; no row raised.

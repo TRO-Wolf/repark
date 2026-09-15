@@ -293,6 +293,20 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `Left+DecimalType` class without decimal attrs keeps base's left-parent
   Arrow answer instead of crashing.
   pins: facade-4/C-011, C-012, C-014, C-015, C-016, C-020..C-024, C-028..C-033
+  **TYPES-BASES-1 (2026-09-14):** the concrete classes re-parent onto the Spark
+  abstract bases imported from `types_bases.py` (`DataType` moved there so the
+  bases can subclass it without an import cycle; `_SIMPLE_STRING_FAST` is a
+  shared dict populated here so the fast path survives the move), and
+  `types.Row` re-exports `spark.row.Row`. DDL routing through the Rust table is
+  unchanged — spatial DDL tokens stay refused pending the Rust spatial step.
+  pins: types-bases-1/C-001, C-003, C-005
+- `types_bases.py` — **TYPES-BASES-1 (2026-09-14):** `DataType` plus the Spark
+  abstract bases (`AtomicType`, `NumericType`, `IntegralType`, `FractionalType`,
+  `DatetimeType`, `AnyTimeType`, `AnsiIntervalType`, `SpatialType`),
+  `GeographyType` / `GeometryType` with the vendored SRID→CRS table and Spark's
+  `ST_*` refusals, `UserDefinedType` (TYPES-UDT-1 declared refusal), and the
+  spatial JSON token helpers. `types.py` imports and re-exports every public
+  name. pins: types-bases-1/C-001, C-002, C-003, C-004
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
   calls, and Arrow expansion.
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and

@@ -75,7 +75,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/src/repark/spark/session/reader.py", 1022),
     ("python/repark/src/repark/spark/session/session_core.py", 2304),
     ("python/repark/src/repark/spark/ta.py", 1818),
-    ("python/repark/src/repark/spark/types.py", 1792),
+    ("python/repark/src/repark/spark/types.py", 1739),
     ("python/repark/tests/_live_parity.py", 1778),
     ("python/repark/tests/test_display_styles.py", 1175),
     ("python/repark/tests/test_dynamic_flatten.py", 1618),
