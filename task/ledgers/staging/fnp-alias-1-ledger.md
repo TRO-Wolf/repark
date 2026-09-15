@@ -78,6 +78,31 @@ the base the card's C-004 builds on.
 | C-006 | Registry row + maps. | `docs/spark-sql-iceberg-parity.md` §7 `FNP-ALIAS-DEGREES-1`; map.md lockstep in every touched directory; ledger evidence complete. | **PROVEN** | The registry row is filed in the FN-* style with the `live PySpark 4.1.2, 2026-09-14` oracle line. Maps updated in-lockstep in the same commits: `python/repark/tests/map.md` (new test + fixture + census/surface ratchet notes), `python/repark/src/repark/spark/map.md` (three module entries + the move note), `scripts/map.md` and `python/repark-parity/tests/map.md` (ceiling ratchets), `task/ledgers/staging/map.md` (this ledger). pins: fnp-alias-1/C-006 |
 | C-007 | The unit's review round ran on the merge head: a Grok critic-logic pass and an S2-21 Python performance pass, every P1/P2 remediated or ruled in this ledger, and AT-1..AT-10 attested from their evidence. | Reports `/tmp/oc-worker/pa-alias-crit/report.md` and `/tmp/oc-worker/pa-alias-perf/report.md`; dispositions recorded here. | **OPEN** | Launched by the orchestrator on 2026-09-15 after rulings D-6/D-7 and the example-coverage fix (`docs/examples/functions/deprecated_aliases.py`, the `INSTALL_NAMES` bindings in `scripts/check_example_coverage.py`); closes with the COVERAGE_ATTESTATION block. |
 
+## Critic-logic findings (crit-logic-1, 2026-09-15) — dispositions
+
+- **L-001 (P1) — REMEDIATED.** `_rescaled` dropped `join_sql_expr` and the origin keywords, so
+  after `leftsemi`/`leftanti` the four rescaled names silently converted the LEFT `k` (where
+  `F.abs(right["k"])` raises `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION`), and an
+  inner join whose ON clause used `F.degrees` on both sides failed with an ambiguous-reference
+  error. Fix follows `bitwise_not`'s rewrap: `join_sql_expr=result.join_sql_part()` and
+  `**_thread_origin(column)`. Pins (`test_fnp_alias_1.py`):
+  `test_rescaled_right_ref_raises_after_semi_family_join` (4 names x leftsemi/leftanti, select
+  and filter), `test_rescaled_left_ref_still_resolves_after_semi_family_join` (left-ref control),
+  `test_inner_join_on_degrees_both_sides_resolves_and_matches`. Red on the unfixed tree: **9
+  failed, 4 passed** — the 8 right-ref pins `Failed: DID NOT RAISE AnalysisException` (silent
+  left bind), the inner-join pin `Schema error: Ambiguous reference to unqualified field x`; the
+  4 left-ref controls passed. Green after: 51 passed.
+- **L-002 (P2) — REMEDIATED.** The fixture's SQL-door negative-count cells (`shiftleft(i, -1)`,
+  `shiftright(i, -1)`, `shiftrightunsigned(i, -1)` — Java `& 31` masking on INT) were not
+  replayed on the Python door, and the Column-`numBits` shape was unpinned. New pins
+  (`test_fnp_alias_1.py`): `test_negative_shift_matches_the_sql_oracle_values_and_types` (values
+  and types from the SQL cells; names stay D-2's) and
+  `test_column_num_bits_shifts_mask_like_java_on_int` (`F.shiftLeft('i', F.col('n'))` over
+  `n ∈ {1, 2, -1, 33}` → `[16, 32, 0, 16]` at `int`). The aliases already answered the oracle
+  (pin-gap finding), so the pins are green on arrival; liveness was proven by a scratch mutation
+  of the `shiftLeft` wrapper to a constant count: the two shiftLeft pins red (2 failed, 2
+  passed), reverted, 4 passed. A kernel masking regression therefore reds this suite.
+
 ## Ruling questions — resolved by the orchestrator (Q-1 → D-6, Q-2 → D-7)
 
 - **Q-1 (RULING)** — `sum_distinct`/`sumDistinct`: the card's "follow how `count_distinct`

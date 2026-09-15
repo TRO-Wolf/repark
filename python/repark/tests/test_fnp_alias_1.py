@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
+from repark.errors import AnalysisException
 from repark.spark import functions as F  # noqa: N812
 
 FIXTURE_PATH = Path(__file__).parent / "fnp_alias_1_spark_oracle.json"
@@ -32,6 +33,13 @@ DELIVERED_NAMES = (
     "radians",
 )
 GROUPED_NAMES = frozenset({"approxCountDistinct", "approx_count_distinct"})
+_MISSING_APPEAR = "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+_RESCALED_VALUES_FOR_ONE: dict[str, float] = {
+    "degrees": 57.29577951308232,
+    "radians": 0.017453292519943295,
+    "toDegrees": 57.29577951308232,
+    "toRadians": 0.017453292519943295,
+}
 DEPRECATED_MESSAGES: dict[str, str] = {
     "approxCountDistinct": "Deprecated in 2.1, use approx_count_distinct instead.",
     "shiftLeft": "Deprecated in 3.2, use shiftleft instead.",
@@ -146,3 +154,42 @@ def test_sql_door_degrees_radians_values_match_the_spark_oracle(spark: ReparkSes
         column["type"] for column in cell["columns"]
     ]
     assert [list(row) for row in result.collect()] == cell["rows"]
+
+
+@pytest.mark.parametrize("name", ["degrees", "radians", "toDegrees", "toRadians"])
+@pytest.mark.parametrize("how", ["leftsemi", "leftanti"])
+def test_rescaled_right_ref_raises_after_semi_family_join(
+    spark: ReparkSession, name: str, how: str
+) -> None:
+    """Right-parent degrees/radians after semi/anti raise the class ``F.abs`` raises."""
+    left = spark.createDataFrame([(1, 1.0), (2, 2.0), (None, 3.0)], ["k", "a"])
+    right = spark.createDataFrame([(1,), (9,)], ["k"])
+    joined = left.join(right, on="k", how=how)
+    function = getattr(F, name)
+    with pytest.raises(AnalysisException, match=_MISSING_APPEAR) as excinfo:
+        joined.select(function(right["k"]))
+    assert 'Resolved attribute(s) "k"' in str(excinfo.value)
+    with pytest.raises(AnalysisException, match=_MISSING_APPEAR):
+        joined.filter(function(right["k"]) > 0)
+
+
+@pytest.mark.parametrize("name", ["degrees", "radians", "toDegrees", "toRadians"])
+def test_rescaled_left_ref_still_resolves_after_semi_family_join(
+    spark: ReparkSession, name: str
+) -> None:
+    """The origin thread must not refuse a left-parent column after a semi/anti join."""
+    left = spark.createDataFrame([(1, 1.0), (2, 2.0), (None, 3.0)], ["k", "a"])
+    right = spark.createDataFrame([(1,), (9,)], ["k"])
+    joined = left.join(right, on="k", how="leftsemi")
+    function = getattr(F, name)
+    table = joined.select(function(left["k"]).alias("d")).to_arrow()
+    assert table.column("d").to_pylist() == [_RESCALED_VALUES_FOR_ONE[name]]
+
+
+def test_inner_join_on_degrees_both_sides_resolves_and_matches(spark: ReparkSession) -> None:
+    """An ON clause using degrees on both sides binds each side and returns the matching row."""
+    left = spark.createDataFrame([(1, 1.0), (2, 2.0)], ["k", "x"])
+    right = spark.createDataFrame([(10, 1.0), (20, 0.5)], ["k", "x"])
+    joined = left.join(right, F.degrees(left["x"]) == F.degrees(right["x"]))
+    table = joined.select(left["k"].alias("lk"), right["k"].alias("rk")).to_arrow()
+    assert table.to_pydict() == {"lk": [1], "rk": [10]}

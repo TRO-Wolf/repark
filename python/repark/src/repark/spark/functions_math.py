@@ -7,7 +7,7 @@ import warnings
 from typing import Any
 
 from repark.spark.column import Column
-from repark.spark.functions import _as_column_arg, _scalar, lit
+from repark.spark.functions import _as_column_arg, _scalar, _thread_origin, lit
 
 
 def bin(col: Column | str) -> Column:
@@ -165,12 +165,14 @@ def _rescaled(display_name: str, col: Column | str, factor: float) -> Column:
         spark_display=display,
         projection_name=display,
         sql_expr=result.sql_expr_part(),
+        join_sql_expr=result.join_sql_part(),
         stable_name=False,
         is_aggregate=column._is_aggregate,
         is_foldable=column._is_foldable and not column._is_aggregate,
         has_free_attribute=column._has_free_attribute,
         has_ungroupable=column._has_ungroupable,
         partition_transform=column._partition_transform,
+        **_thread_origin(column),
     )
 
 

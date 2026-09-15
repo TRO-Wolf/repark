@@ -242,7 +242,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (the DOUBLE literal coerces before the multiply, so no ANSI overflow). Display is Spark's
   `DEGREES(x)`/`RADIANS(x)` via the `dayname`-style rewrap. `toDegrees`/`toRadians` are the
   deprecated aliases and warn Spark's exact `FutureWarning`; they reach `functions.py`
-  through this module's `install_into`. pins: fnp-alias-1/C-001, C-002, C-003, C-004
+  through this module's `install_into`. **crit-logic-1 L-001 (2026-09-15):** `_rescaled`
+  threads join origin like every house wrapper — `join_sql_expr` from the multiply result and
+  `**_thread_origin(column)` — so a right-parent column after semi/anti raises
+  `MISSING_ATTRIBUTES` instead of silently binding the left, and a two-sided `degrees` ON
+  clause binds each side. pins: fnp-alias-1/C-001, C-002, C-003, C-004
 - `functions_session.py` — session-bound function helpers.
 - `functions_udf.py` — Python UDF and pandas UDF markers, validation, and return-type
   contracts. Execution uses the DataFrame Arrow bridge. DFCORE-2 (2026-09-07): the
