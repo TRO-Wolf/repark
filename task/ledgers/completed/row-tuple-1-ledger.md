@@ -112,4 +112,17 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: Facade suite 6094 passed / 368 skipped and the parity suite on the release native of the rebased head; ruff, check_lib_py, ledger and map checks clean; example-coverage gate clean with the new example executed.
       artifacts: [docs/examples/dataframe/row_tuple.py, python/repark-parity/tests/test_ex_0_example_coverage.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: The contracts used were read, not assumed - pyspark/sql/types.py `class Row(tuple)` and its `__new__` (factory rows are a tuple of field names, value rows a tuple of values, no count/index override) and CPython's `tuple.count` / `tuple.index` signatures (identity-then-equality comparison, positional-only, start/stop slicing semantics).
+      artifacts: [python/repark/src/repark/spark/row.py, python/repark/tests/facade_row_oracle.json]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Both names raise the builtin ValueError with CPython's own text on a miss and TypeError on keyword calls, exactly as Spark's inherited tuple methods do; field access through `row["count"]` / `row["index"]` still returns the field, pinned beside the method-wins rule.
+      artifacts: [python/repark/tests/test_row_tuple_1.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutations run, not reasoned - dropping `stop` from the index call reds the stop pin; searching values for a factory row reds count_factory; names-plus-values double counting reds the L-002 pin.
+      artifacts: [task/ledgers/completed/row-tuple-1-ledger.md, python/repark/tests/test_row_tuple_1.py]
+  complete: true
 ```
