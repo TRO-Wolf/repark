@@ -100,6 +100,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `Inf` recorded in the ledger); `test_struct_field_matching_ignores_case_sensitive`
   pins L-13 — field names match case-insensitively even under
   `spark.sql.caseSensitive=true` (product rule, residue row in the ledger).
+  Round 6 (S2-21 round-3 remediation): `test_dst_transition_day_midnights` pins
+  date→LTZ on 2024-03-10/2024-11-03 LA transition days,
+  `test_ntz_walls_in_skipped_and_repeated_hours` pins NTZ walls inside the
+  skipped 02:30 and repeated 01:30 hours (unix-micro answers recorded before
+  the zone-offset cache landed), and
+  `test_timestamp_ns_unit_rescale_truncates_like_arrow_cast` pins negative
+  pre-epoch ns→µs truncation toward zero.
   pins: array-null-1/L-1, L-2, L-5, L-6, L-7, L-8, L-9, L-10, L-12, L-13, P3-1
 - [test_replace_linear_1.py](test_replace_linear_1.py) — **REPLACE-LINEAR-1 step 1
   (2026-09-14):** `DataFrame.replace` oracle cells measured on live PySpark 4.1.2 —

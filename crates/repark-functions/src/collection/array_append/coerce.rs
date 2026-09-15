@@ -1,5 +1,8 @@
+use std::cmp::Ordering;
 use std::sync::Arc;
 
+use chrono::{DateTime, NaiveDateTime, Offset, TimeZone};
+use datafusion::arrow::array::builder::NullBufferBuilder;
 use datafusion::arrow::array::timezone::Tz;
 use datafusion::arrow::array::{
     Array, ArrayData, ArrayRef, AsArray, FixedSizeListArray, LargeListArray, ListArray, MapArray,
@@ -8,12 +11,12 @@ use datafusion::arrow::array::{
 use datafusion::arrow::buffer::OffsetBuffer;
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{
-    DataType, Date32Type, Field, FieldRef, TimeUnit, TimestampMicrosecondType,
+    DataType, Date32Type, Field, FieldRef, Int64Type, TimeUnit, TimestampMicrosecondType,
 };
 use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err, plan_err};
 use datafusion::logical_expr::{ColumnarValue, ReturnFieldArgs};
 
-use crate::datetime::localize_wall_micros_in_zone;
+use crate::datetime::{datetime_from_micros, localize_wall_micros_in_zone};
 use crate::instant_ts::{ltz_timestamp_type, ntz_timestamp_type};
 
 const NUMERIC_ORDER: [DataType; 6] = [
@@ -295,48 +298,206 @@ pub(super) fn spark_return_field(args: &ReturnFieldArgs<'_>, name: &str) -> Resu
     )))
 }
 
+struct DaySpan {
+    start_day: i64,
+    end_day: i64,
+    offset_secs: Option<i32>,
+}
+
+struct ZoneSpans {
+    zone: Tz,
+    spans: Vec<DaySpan>,
+}
+
+impl ZoneSpans {
+    fn new(zone: Tz) -> Self {
+        Self {
+            zone,
+            spans: Vec::new(),
+        }
+    }
+
+    fn resolve_day(&self, day: i64) -> Option<i32> {
+        let midnight = midnight_naive(day)?;
+        let next = midnight_naive(day.checked_add(1)?)?;
+        let (Some(start), Some(end)) = (
+            self.zone.offset_from_local_datetime(&midnight).single(),
+            self.zone.offset_from_local_datetime(&next).single(),
+        ) else {
+            return None;
+        };
+        (start.fix() == end.fix()).then(|| start.fix().local_minus_utc())
+    }
+
+    fn offset_for_day(&mut self, day: i64) -> Option<i32> {
+        let index = self.spans.partition_point(|span| span.end_day <= day);
+        if index < self.spans.len() && self.spans[index].start_day <= day {
+            return self.spans[index].offset_secs;
+        }
+        if let Some(offset) = self.resolve_day(day) {
+            let mut start = day;
+            let mut end = day + 1;
+            if index > 0 {
+                let left = &self.spans[index - 1];
+                if left.end_day == day && left.offset_secs == Some(offset) {
+                    start = left.start_day;
+                    self.spans.remove(index - 1);
+                }
+            }
+            let index = self.spans.partition_point(|span| span.end_day <= day);
+            if index < self.spans.len() {
+                let right = &self.spans[index];
+                if right.start_day == day + 1 && right.offset_secs == Some(offset) {
+                    end = right.end_day;
+                    self.spans.remove(index);
+                }
+            }
+            let index = self.spans.partition_point(|span| span.end_day <= day);
+            self.spans.insert(
+                index,
+                DaySpan {
+                    start_day: start,
+                    end_day: end,
+                    offset_secs: Some(offset),
+                },
+            );
+            return Some(offset);
+        }
+        self.spans.insert(
+            index,
+            DaySpan {
+                start_day: day,
+                end_day: day + 1,
+                offset_secs: None,
+            },
+        );
+        None
+    }
+
+    fn localize_wall(&mut self, wall_micros: i64) -> Option<i64> {
+        let day = wall_micros.div_euclid(86_400_000_000);
+        match self.offset_for_day(day) {
+            Some(offset) => {
+                let micros = wall_micros.checked_sub(i64::from(offset) * 1_000_000)?;
+                datetime_from_micros(micros).map(|_| micros)
+            }
+            None => localize_wall_micros_in_zone(wall_micros, self.zone),
+        }
+    }
+}
+
+fn midnight_naive(day: i64) -> Option<NaiveDateTime> {
+    DateTime::from_timestamp(day.checked_mul(86_400)?, 0).map(|instant| instant.naive_utc())
+}
+
+fn push_localized(
+    localizer: &mut ZoneSpans,
+    wall: Option<i64>,
+    values: &mut Vec<i64>,
+    nulls: &mut NullBufferBuilder,
+) {
+    if let Some(micros) = wall.and_then(|wall| localizer.localize_wall(wall)) {
+        values.push(micros);
+        nulls.append_non_null();
+    } else {
+        values.push(0);
+        nulls.append_null();
+    }
+}
+
 fn localize_wall_column(
     array: &ArrayRef,
     source: &DataType,
     target: &DataType,
-    zone: Tz,
+    zone: Option<Tz>,
 ) -> Result<ArrayRef> {
-    let walls: Vec<Option<i64>> = match source {
-        DataType::Date32 | DataType::Date64 => {
-            let days = cast(array.as_ref(), &DataType::Date32)?;
-            let days = days.as_primitive::<Date32Type>();
-            (0..days.len())
-                .map(|row| {
-                    (!days.is_null(row)).then(|| i64::from(days.value(row)) * 86_400 * 1_000_000)
-                })
-                .collect()
-        }
-        DataType::Timestamp(TimeUnit::Microsecond, None) => {
-            let micros = array.as_primitive::<TimestampMicrosecondType>();
-            (0..micros.len())
-                .map(|row| (!micros.is_null(row)).then(|| micros.value(row)))
-                .collect()
-        }
-        other => return exec_err!("cannot localize a {other} wall clock"),
-    };
-    let mut builder = TimestampMicrosecondArray::builder(walls.len());
-    for wall in walls {
-        match wall.and_then(|wall| localize_wall_micros_in_zone(wall, zone)) {
-            Some(micros) => builder.append_value(micros),
-            None => builder.append_null(),
-        }
-    }
     let DataType::Timestamp(_, Some(zone_name)) = target else {
         return exec_err!("localize target is not a zoned timestamp: {target}");
     };
-    Ok(Arc::new(builder.finish().with_timezone(zone_name.as_ref())))
+    let Some(zone) = zone else {
+        return exec_err!("wall-clock localization requires a session time zone");
+    };
+    let mut localizer = ZoneSpans::new(zone);
+    let mut values = Vec::with_capacity(array.len());
+    let mut nulls = NullBufferBuilder::new(array.len());
+    match source {
+        DataType::Date32 | DataType::Date64 => {
+            let days = cast(array.as_ref(), &DataType::Date32)?;
+            let days = days.as_primitive::<Date32Type>();
+            for row in 0..days.len() {
+                let wall =
+                    (!days.is_null(row)).then(|| i64::from(days.value(row)) * 86_400 * 1_000_000);
+                push_localized(&mut localizer, wall, &mut values, &mut nulls);
+            }
+        }
+        DataType::Timestamp(TimeUnit::Microsecond, None) => {
+            let micros = array.as_primitive::<TimestampMicrosecondType>();
+            for row in 0..micros.len() {
+                let wall = (!micros.is_null(row)).then(|| micros.value(row));
+                push_localized(&mut localizer, wall, &mut values, &mut nulls);
+            }
+        }
+        other => return exec_err!("cannot localize a {other} wall clock"),
+    }
+    let stamps = TimestampMicrosecondArray::new(values.into(), nulls.finish());
+    Ok(Arc::new(stamps.with_timezone(zone_name.as_ref())))
+}
+
+fn time_unit_multiple(unit: TimeUnit) -> i64 {
+    match unit {
+        TimeUnit::Second => 1,
+        TimeUnit::Millisecond => 1_000,
+        TimeUnit::Microsecond => 1_000_000,
+        TimeUnit::Nanosecond => 1_000_000_000,
+    }
+}
+
+pub(super) fn rescale_timestamp_column(
+    array: &ArrayRef,
+    source_unit: TimeUnit,
+    target_unit: TimeUnit,
+    target: &DataType,
+) -> Result<ArrayRef> {
+    let ints = cast(array.as_ref(), &DataType::Int64)?;
+    let ints = ints.as_primitive::<Int64Type>();
+    let source_size = time_unit_multiple(source_unit);
+    let target_size = time_unit_multiple(target_unit);
+    let converted = match source_size.cmp(&target_size) {
+        Ordering::Greater => match source_size / target_size {
+            1_000 => ints.unary::<_, Int64Type>(|value| value / 1_000),
+            1_000_000 => ints.unary::<_, Int64Type>(|value| value / 1_000_000),
+            1_000_000_000 => ints.unary::<_, Int64Type>(|value| value / 1_000_000_000),
+            divisor => ints.unary::<_, Int64Type>(|value| value / divisor),
+        },
+        Ordering::Equal => ints.clone(),
+        Ordering::Less => match target_size / source_size {
+            1_000 => ints.unary_opt::<_, Int64Type>(|value| value.checked_mul(1_000)),
+            1_000_000 => ints.unary_opt::<_, Int64Type>(|value| value.checked_mul(1_000_000)),
+            1_000_000_000 => {
+                ints.unary_opt::<_, Int64Type>(|value| value.checked_mul(1_000_000_000))
+            }
+            factor => ints.unary_opt::<_, Int64Type>(|value| value.checked_mul(factor)),
+        },
+    };
+    Ok(make_array(
+        converted
+            .to_data()
+            .into_builder()
+            .data_type(target.clone())
+            .build()?,
+    ))
+}
+
+fn offset_bound(offset: i64) -> Result<usize> {
+    usize::try_from(offset)
+        .map_err(|error| DataFusionError::Execution(format!("list offset out of range: {error}")))
 }
 
 fn convert_list(
     array: &ArrayRef,
     source: &DataType,
     target: &DataType,
-    zone: Tz,
+    zone: Option<Tz>,
 ) -> Result<ArrayRef> {
     let Some(source_element) = array_element_type(source) else {
         return exec_err!("list conversion source is not a list: {source}");
@@ -348,27 +509,42 @@ fn convert_list(
     match source {
         DataType::List(_) => {
             let list = array.as_list::<i32>();
-            let values = convert_array(list.values(), source_element, target_element, zone)?;
+            let base = list.offsets()[0];
+            let first = offset_bound(i64::from(base))?;
+            let end = offset_bound(i64::from(list.offsets()[list.len()]))?;
+            let window = list.values().slice(first, end - first);
+            let values = convert_array(&window, source_element, target_element, zone)?;
+            let offsets =
+                OffsetBuffer::new(list.offsets().iter().map(|offset| *offset - base).collect());
             Ok(Arc::new(ListArray::new(
                 field,
-                list.offsets().clone(),
+                offsets,
                 values,
                 list.nulls().cloned(),
             )))
         }
         DataType::LargeList(_) => {
             let list = array.as_list::<i64>();
-            let values = convert_array(list.values(), source_element, target_element, zone)?;
+            let base = list.offsets()[0];
+            let first = offset_bound(base)?;
+            let end = offset_bound(list.offsets()[list.len()])?;
+            let window = list.values().slice(first, end - first);
+            let values = convert_array(&window, source_element, target_element, zone)?;
+            let rebased = list
+                .offsets()
+                .iter()
+                .map(|offset| *offset - base)
+                .collect::<Vec<_>>();
             if let DataType::LargeList(_) = target {
                 return Ok(Arc::new(LargeListArray::new(
                     field,
-                    list.offsets().clone(),
+                    OffsetBuffer::new(rebased.into()),
                     values,
                     list.nulls().cloned(),
                 )));
             }
             let offsets = OffsetBuffer::new(
-                list.offsets()
+                rebased
                     .iter()
                     .map(|offset| i32::try_from(*offset))
                     .collect::<std::result::Result<_, _>>()
@@ -392,7 +568,13 @@ fn convert_list(
                 .ok_or_else(|| {
                     DataFusionError::Execution(format!("expected a fixed-size list, got {source}"))
                 })?;
-            let values = convert_array(list.values(), source_element, target_element, zone)?;
+            let width = usize::try_from(*size).map_err(|error| {
+                DataFusionError::Execution(format!("fixed-size list width: {error}"))
+            })?;
+            let window = list
+                .values()
+                .slice(list.offset() * width, list.len() * width);
+            let values = convert_array(&window, source_element, target_element, zone)?;
             if let DataType::FixedSizeList(_, target_size) = target {
                 return Ok(Arc::new(FixedSizeListArray::new(
                     field,
@@ -420,7 +602,7 @@ fn convert_struct(
     array: &ArrayRef,
     source: &DataType,
     target: &DataType,
-    zone: Tz,
+    zone: Option<Tz>,
 ) -> Result<ArrayRef> {
     let (DataType::Struct(source_fields), DataType::Struct(target_fields)) = (source, target)
     else {
@@ -450,7 +632,7 @@ fn convert_map(
     array: &ArrayRef,
     source: &DataType,
     target: &DataType,
-    zone: Tz,
+    zone: Option<Tz>,
 ) -> Result<ArrayRef> {
     let (DataType::Map(source_field, _), DataType::Map(target_field, target_sorted)) =
         (source, target)
@@ -466,7 +648,14 @@ fn convert_map(
         .as_any()
         .downcast_ref::<MapArray>()
         .ok_or_else(|| DataFusionError::Execution(format!("expected a map array: {source}")))?;
-    let entries = map.entries();
+    let base = map.offsets()[0];
+    let first = offset_bound(i64::from(base))?;
+    let end = offset_bound(i64::from(map.offsets()[map.len()]))?;
+    let entries = map.entries().slice(first, end - first);
+    let entries = entries
+        .as_any()
+        .downcast_ref::<StructArray>()
+        .ok_or_else(|| DataFusionError::Execution(format!("expected map entries: {source}")))?;
     let keys = convert_array(
         entries.column(0),
         source_entries[0].data_type(),
@@ -484,9 +673,10 @@ fn convert_map(
         vec![keys, values],
         entries.nulls().cloned(),
     );
+    let offsets = OffsetBuffer::new(map.offsets().iter().map(|offset| *offset - base).collect());
     Ok(Arc::new(MapArray::new(
         Arc::clone(target_field),
-        map.offsets().clone(),
+        offsets,
         new_entries,
         map.nulls().cloned(),
         *target_sorted,
@@ -497,7 +687,7 @@ fn convert_array(
     array: &ArrayRef,
     source: &DataType,
     target: &DataType,
-    zone: Tz,
+    zone: Option<Tz>,
 ) -> Result<ArrayRef> {
     if source == target {
         return Ok(Arc::clone(array));
@@ -508,6 +698,12 @@ fn convert_array(
             DataType::Date32 | DataType::Date64 | DataType::Timestamp(TimeUnit::Microsecond, None),
             DataType::Timestamp(TimeUnit::Microsecond, Some(_)),
         ) => localize_wall_column(array, source, target, zone),
+        (
+            DataType::Timestamp(source_unit, source_zone),
+            DataType::Timestamp(target_unit, target_zone),
+        ) if source_zone == target_zone => {
+            rescale_timestamp_column(array, *source_unit, *target_unit, target)
+        }
         (a, b) if is_list_type(a) && is_list_type(b) => convert_list(array, a, b, zone),
         (DataType::Struct(_), DataType::Struct(_)) => convert_struct(array, source, target, zone),
         (DataType::Map(..), DataType::Map(..)) => convert_map(array, source, target, zone),
@@ -519,7 +715,7 @@ pub(super) fn convert_columnar(
     value: &ColumnarValue,
     source: &DataType,
     target: &DataType,
-    zone: Tz,
+    zone: Option<Tz>,
 ) -> Result<ColumnarValue> {
     if source == target {
         return Ok(value.clone());

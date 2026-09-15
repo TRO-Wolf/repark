@@ -122,31 +122,35 @@ fn invoke_preserved(args: &ScalarFunctionArgs, prepend: bool) -> Result<Columnar
     let Some(target_element) = array_element_type(args.return_field.data_type()).cloned() else {
         return exec_err!("array function return type is not an array");
     };
-    let zone = session_time_zone_from_options(args.config_options.as_ref())
-        .parse::<Tz>()
-        .map_err(|error| {
-            DataFusionError::Execution(format!(
-                "session timezone could not be resolved at query time ({error})"
-            ))
-        })?;
-    let array_type = args.args[0].data_type();
-    let element_type = args.args[1].data_type();
-    let array = convert_columnar(
-        &args.args[0],
-        &array_type,
-        &widened_list(&array_type, target_element.clone()),
-        zone,
-    )?;
-    let element = convert_columnar(&args.args[1], &element_type, &target_element, zone)?;
-    let arrays = ColumnarValue::values_to_arrays(&[array, element])?;
-    let input = Arc::clone(&arrays[0]);
-    if input.null_count() == input.len() {
+    let raw_input = match &args.args[0] {
+        ColumnarValue::Array(array) => Arc::clone(array),
+        ColumnarValue::Scalar(scalar) => scalar.to_array()?,
+    };
+    if raw_input.null_count() == raw_input.len() {
         let all_null = make_array(ArrayData::new_null(
             args.return_field.data_type(),
-            input.len(),
+            raw_input.len(),
         ));
         return finish_preserved(all_null, all_scalar);
     }
+    let array_type = args.args[0].data_type();
+    let element_type = args.args[1].data_type();
+    let array_target = widened_list(&array_type, target_element.clone());
+    let zone = (array_type != array_target || element_type != target_element)
+        .then(|| {
+            session_time_zone_from_options(args.config_options.as_ref())
+                .parse::<Tz>()
+                .map_err(|error| {
+                    DataFusionError::Execution(format!(
+                        "session timezone could not be resolved at query time ({error})"
+                    ))
+                })
+        })
+        .transpose()?;
+    let array = convert_columnar(&args.args[0], &array_type, &array_target, zone)?;
+    let element = convert_columnar(&args.args[1], &element_type, &target_element, zone)?;
+    let arrays = ColumnarValue::values_to_arrays(&[array, element])?;
+    let input = Arc::clone(&arrays[0]);
     let mut call_args: Vec<ColumnarValue> = arrays
         .iter()
         .map(|array| ColumnarValue::Array(Arc::clone(array)))
@@ -631,5 +635,37 @@ mod tests {
         assert!(out.is_null(0), "row 0 is the sliced NULL row");
         let scalar = ScalarValue::try_from_array(&out, 1).expect("row 1 scalar");
         assert_eq!(scalar.to_string(), "[3, 9]");
+    }
+
+    #[test]
+    fn timestamp_unit_rescale_truncates_toward_zero() {
+        let source: ArrayRef = Arc::new(
+            datafusion::arrow::array::TimestampNanosecondArray::from(vec![
+                Some(-1_500_000_001),
+                Some(-1_500_000_000),
+                Some(-999),
+                Some(999),
+                None,
+            ])
+            .with_timezone("UTC"),
+        );
+        let target = ltz_timestamp_type();
+        let converted = super::coerce::rescale_timestamp_column(
+            &source,
+            TimeUnit::Nanosecond,
+            TimeUnit::Microsecond,
+            &target,
+        )
+        .expect("rescale");
+        assert_eq!(converted.data_type(), &target);
+        let micros = converted
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::TimestampMicrosecondArray>()
+            .expect("microsecond array");
+        let collected: Vec<Option<i64>> = micros.iter().collect();
+        assert_eq!(
+            collected,
+            vec![Some(-1_500_000), Some(-1_500_000), Some(0), Some(0), None]
+        );
     }
 }

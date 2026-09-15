@@ -67,8 +67,10 @@ needed.
   array wrongly answered `[x]`. Spark `(array, element)` order on both names (prepend
   swaps args for the kernel call), the result element field is forced nullable
   (`containsNull=True` like Spark), an all-null input short-circuits to a null array of
-  the result type without calling the kernel, and a `DataType::Null` input yields an
-  all-null result. The `Signature::user_defined` signature routes argument coercion
+  the result type on the unconverted input — before `convert_columnar` and before the
+  session `Tz` parse (which only runs when a conversion is actually needed) — and a
+  `DataType::Null` input yields an all-null result. The `Signature::user_defined`
+  signature routes argument coercion
   through `coerce_types`, which VALIDATES the pair against Spark's recursive
   `findTightestCommonType` but returns the argument types unchanged — no plan-level
   CAST is ever inserted, so an `array<timestamp[us]>` stays un-cast (the S2-21 perf

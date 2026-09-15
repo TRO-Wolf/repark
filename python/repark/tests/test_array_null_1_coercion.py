@@ -709,3 +709,100 @@ def test_struct_field_matching_ignores_case_sensitive(door: str, func: str) -> N
         else [[{"x": 2, "y": "b"}, {"x": 1, "y": "a"}]]
     )
     _check(table, want, "struct<x: int32, y: string>")
+
+
+@pytest.mark.parametrize("func", ["array_append", "array_prepend"])
+@pytest.mark.parametrize("door", ["facade", "sql"])
+def test_dst_transition_day_midnights(door: str, func: str) -> None:
+    """pins: array-null-1/P2-1 — spring-forward and fall-back midnights keep the
+    answers localize_wall_micros_in_zone produced before the span cache."""
+    spark = _la_session()
+    rows = [([date(2024, 3, 10)],), ([date(2024, 11, 3)],)]
+    ts_micros = _micros(datetime(2024, 5, 6, 7, 8, 9, tzinfo=ZoneInfo(_LA_ZONE)))
+    if door == "facade":
+        element = F.lit("2024-05-06 07:08:09").cast("timestamp")
+        table = (
+            spark.createDataFrame(rows, "a array<date>")
+            .select(getattr(F, func)("a", element).alias("r"))
+            .to_arrow()
+        )
+    else:
+        table = _coercion_door_table(
+            spark,
+            "a array<date>",
+            rows,
+            func,
+            "TIMESTAMP'2024-05-06 07:08:09'",
+        )
+    midnights = [1710057600000000, 1730617200000000]
+    want = [
+        [midnights[i], ts_micros] if func == "array_append" else [ts_micros, midnights[i]]
+        for i in range(len(rows))
+    ]
+    assert str(table.schema.field("r").type.value_type) == _TS_ARROW
+    assert _micros_rows(table) == want
+
+
+@pytest.mark.parametrize("func", ["array_append", "array_prepend"])
+@pytest.mark.parametrize("door", ["facade", "sql"])
+def test_ntz_walls_in_skipped_and_repeated_hours(door: str, func: str) -> None:
+    """pins: array-null-1/P2-1 — the 02:30 wall inside the spring-forward gap keeps
+    the pre-gap offset; the 01:30 wall inside the fall-back overlap keeps the
+    earliest (pre-transition) offset, both from the pre-change answers."""
+    spark = _la_session()
+    rows = [([datetime(2024, 3, 10, 2, 30)],), ([datetime(2024, 11, 3, 1, 30)],)]
+    ts_micros = _micros(datetime(2024, 5, 6, 7, 8, 9, tzinfo=ZoneInfo(_LA_ZONE)))
+    if door == "facade":
+        element = F.lit("2024-05-06 07:08:09").cast("timestamp")
+        table = (
+            spark.createDataFrame(rows, "a array<timestamp_ntz>")
+            .select(getattr(F, func)("a", element).alias("r"))
+            .to_arrow()
+        )
+    else:
+        table = _coercion_door_table(
+            spark,
+            "a array<timestamp_ntz>",
+            rows,
+            func,
+            "TIMESTAMP'2024-05-06 07:08:09'",
+        )
+    walls = [1710066600000000, 1730622600000000]
+    want = [
+        [walls[i], ts_micros] if func == "array_append" else [ts_micros, walls[i]]
+        for i in range(len(rows))
+    ]
+    assert str(table.schema.field("r").type.value_type) == _TS_ARROW
+    assert _micros_rows(table) == want
+
+
+@pytest.mark.parametrize("func", ["array_append", "array_prepend"])
+@pytest.mark.parametrize("door", ["facade", "sql"])
+def test_timestamp_ns_unit_rescale_truncates_like_arrow_cast(
+    spark: ReparkSession, door: str, func: str
+) -> None:
+    """pins: array-null-1/P2-2 — ns -> us rescale divides by 1000 with Arrow's
+    truncation toward zero for negative pre-epoch values."""
+    inner = pa.array(
+        [-1_500_000_001, -1_500_000_000, -999, 999],
+        type=pa.timestamp("ns", tz="UTC"),
+    )
+    column = pa.ListArray.from_arrays(pa.array([0, 4], type=pa.int32()), inner)
+    spark._ensure_alive().register_arrow_stream_as_temp_view("ns_v", pa.table({"a": column}))
+    if door == "facade":
+        table = (
+            spark.sql("SELECT a FROM ns_v")
+            .select(
+                getattr(F, func)("a", F.lit("2024-05-06 07:08:09").cast("timestamp")).alias("r")
+            )
+            .to_arrow()
+        )
+    else:
+        table = spark.sql(
+            f"SELECT {func}(a, TIMESTAMP'2024-05-06 07:08:09') AS r FROM ns_v"
+        ).to_arrow()
+    ts_micros = _micros(datetime(2024, 5, 6, 7, 8, 9, tzinfo=ZoneInfo("UTC")))
+    rescaled = [-1_500_000, -1_500_000, 0, 0]
+    want = [[*rescaled, ts_micros] if func == "array_append" else [ts_micros, *rescaled]]
+    assert str(table.schema.field("r").type.value_type) == _TS_ARROW
+    assert _micros_rows(table) == want
