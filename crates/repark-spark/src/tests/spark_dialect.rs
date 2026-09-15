@@ -35,9 +35,12 @@ fn production_ctx(keep_verbatim: bool) -> SessionContext {
         .build();
     let ctx = SessionContext::new_with_state(state);
     repark_functions::register_all(&ctx);
+    ctx.register_udf(crate::spark_as_udf().as_ref().clone());
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
     }
+    ctx.add_analyzer_rule(Arc::new(crate::FoldSparkNumericCasts));
+    ctx.add_analyzer_rule(Arc::new(crate::SparkProjectionDisplay));
     ctx
 }
 
@@ -261,16 +264,117 @@ async fn other_suffixes_keep_spark_types() {
             .to_bits(),
         1.5f32.to_bits()
     );
-    let (batch, data_type, _) = one_cell(&ctx, "SELECT 1.5BD AS v").await;
-    assert!(matches!(data_type, DataType::Decimal128(_, _)));
-    assert!(
+    let (batch, data_type, nullable) = one_cell(&ctx, "SELECT 1.5BD AS v").await;
+    assert_eq!(data_type, DataType::Decimal128(2, 1));
+    assert!(!nullable);
+    assert_eq!(
         batch
             .column(0)
             .as_any()
             .downcast_ref::<Decimal128Array>()
             .expect("Decimal128")
-            .value(0)
-            > 0
+            .value(0),
+        15
+    );
+}
+
+#[tokio::test]
+async fn bd_literals_take_precision_from_digits() {
+    let ctx = production_ctx(false);
+    let (_, data_type, nullable) = one_cell(&ctx, "SELECT 10BD AS v").await;
+    assert_eq!(data_type, DataType::Decimal128(2, 0));
+    assert!(!nullable);
+    let (_, data_type, _) = one_cell(&ctx, "SELECT 0.001BD AS v").await;
+    assert_eq!(data_type, DataType::Decimal128(3, 3));
+    let (batch, data_type, _) = one_cell(&ctx, "SELECT 1.5e2BD AS v").await;
+    assert_eq!(data_type, DataType::Decimal128(3, 0));
+    assert_eq!(
+        batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Decimal128Array>()
+            .expect("Decimal128")
+            .value(0),
+        150
+    );
+}
+
+#[tokio::test]
+async fn typed_numeric_literals_are_non_null() {
+    let ctx = production_ctx(false);
+    for sql in [
+        "SELECT 2.5D AS v",
+        "SELECT 1e200D AS v",
+        "SELECT .5D AS v",
+        "SELECT 5.D AS v",
+        "SELECT 1E-2D AS v",
+        "SELECT 1e3 AS v",
+    ] {
+        let (_, data_type, nullable) = one_cell(&ctx, sql).await;
+        assert_eq!(data_type, DataType::Float64, "{sql}");
+        assert!(!nullable, "{sql}");
+    }
+    let (_, data_type, nullable) = one_cell(&ctx, "SELECT 1.5F AS v").await;
+    assert_eq!(data_type, DataType::Float32);
+    assert!(!nullable);
+}
+
+#[tokio::test]
+async fn out_of_range_integer_suffix_is_invalid_numeric_literal() {
+    let ctx = production_ctx(false);
+    let error = execute(&ctx, &CatalogRegistry::new(), "SELECT 128Y AS v")
+        .await
+        .expect_err("128Y is out of range");
+    assert!(
+        error.to_string().contains("INVALID_NUMERIC_LITERAL_RANGE"),
+        "{error}"
+    );
+    let error = execute(&ctx, &CatalogRegistry::new(), "SELECT 40000S AS v")
+        .await
+        .expect_err("40000S is out of range");
+    assert!(
+        error.to_string().contains("INVALID_NUMERIC_LITERAL_RANGE"),
+        "{error}"
+    );
+}
+
+#[tokio::test]
+async fn exponent_l_and_zero_x_hex_are_unresolved_identifiers() {
+    let ctx = production_ctx(false);
+    let error = execute(&ctx, &CatalogRegistry::new(), "SELECT 1e3L AS v")
+        .await
+        .expect_err("1e3L is an identifier");
+    assert!(
+        error.to_string().contains("1e3L") || error.to_string().contains("No field named"),
+        "{error}"
+    );
+    let error = execute(&ctx, &CatalogRegistry::new(), "SELECT 0x1D AS v")
+        .await
+        .expect_err("0x1D is an identifier");
+    assert!(
+        error.to_string().contains("0x1D") || error.to_string().contains("No field named"),
+        "{error}"
+    );
+}
+
+#[tokio::test]
+async fn chained_struct_field_access_on_call_result() {
+    let ctx = production_ctx(false);
+    let (batch, data_type, nullable) = one_cell(
+        &ctx,
+        "SELECT named_struct('s', named_struct('a', 1)).s.a AS v",
+    )
+    .await;
+    assert_eq!(data_type, DataType::Int32);
+    assert!(!nullable);
+    assert_eq!(
+        batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .expect("Int32")
+            .value(0),
+        1
     );
 }
 
@@ -395,5 +499,19 @@ async fn struct_field_access_on_call_result() {
             .expect("Int32")
             .value(0),
         1
+    );
+}
+
+#[test]
+fn fromless_delete_rewrites_to_delete_from() {
+    let rewritten =
+        crate::spark_literals::canonicalize("DELETE ice.sales.tgt WHERE id = 1").expect("rewrites");
+    assert_eq!(rewritten.as_ref(), "DELETE FROM ice.sales.tgt WHERE id = 1");
+    let rewritten =
+        crate::spark_literals::canonicalize("WHEN MATCHED THEN DELETE OUTPUT DELETED.*")
+            .expect("rewrites");
+    assert_eq!(
+        rewritten.as_ref(),
+        "WHEN MATCHED THEN DELETE OUTPUT DELETED.*"
     );
 }

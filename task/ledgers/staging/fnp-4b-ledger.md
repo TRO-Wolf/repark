@@ -3,7 +3,7 @@
 **Retires:** this ledger moves to `../completed/` in the unit's last commit.
 This file closes when FNP-4B merges, or when the owner closes the slate row.
 
-**Unit:** fnp-4b · **Date:** 2026-09-15 · **Model:** muse-spark-1.3-contributor · **Branch:** `feat/fnp-4b-spark-dialect`
+**Unit:** fnp-4b · **Date:** 2026-09-15 · **Model:** grok-4.6 · **Branch:** `feat/fnp-4b-spark-dialect`
 **Card:** FNP-4B — the Spark-door dialect and Spark expression strings (run 15c, 2026-09-14).
 **Path:** STANDARD.
 
@@ -28,14 +28,14 @@ every divergence below becomes a fix, a pin, or a reported registry finding.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | D-1: the Spark door session parses with `Dialect::Databricks` for every statement (`apply_spark_parser_dialect` wired in `SparkExtension::configure`); `"abc"` is a STRING literal with Spark escapes, backticks quote identifiers; native ANSI door untouched. | `test_fnp_4b_*.py` BL9 + FNP4B door pins green on both doors; `cross_door.rs` suite green; `make verify` green | **OPEN** | Step-1 measure below. |
-| C-002 | D-2: engine-internal and facade-generated SQL quotes identifiers with backticks (Rust `quote_ident_spark`, Python `_idents.quote_ident` / `quote_column_sql_expr`, embedded backtick doubled); consumers parsing under a backtick-rejecting dialect parse that internal statement with an explicit dialect. | backtick pins green; `cross_door.rs` DML tests green | **OPEN** | Step-1 measure below. |
-| C-003 | D-3: `F.expr` (`expr_build.rs::sql_context`) and `filter_sql` parse with Databricks (same lexer as the SQL door, reusing SQP-1 canonicalisation, not forking it). | FNP4B-expr/filter/selectExpr/where pins green on the Python API door | **OPEN** | Oracle cells `FNP4B-*` listed above. |
-| C-004 | D-4: Spark numeric literal suffixes on the Spark door — `1D`/`2.5D`/`1e200D` DOUBLE, `1.5F` FLOAT, `1S` SMALLINT, `1Y` TINYINT, `1.5BD` DECIMAL, `1L` BIGINT kept — as a token rewrite in the existing Spark literal/normalize pass. | D-suffix pins green (`BL6-sql-3`, `DIV-*` cells above) | **OPEN** | Oracle cells listed above. |
-| C-005 | D-5: BL-10 — `spark.sql.parser.escapedStringLiterals` read from the session build conf (`SessionBuildConf`, the way `spark.sql.ansi.enabled` is read); `true` keeps backslashes verbatim (`BL10-on-*`); no runtime `SET` (B-TZ-5 owns the SET door). | `BL10-on-*` pins green with flag-on session; `BL10-off-*` green default | **OPEN** | Oracle cells `BL10-off-*`, `BL10-on-*` listed above. |
-| C-006 | D-6: BL-12 — out-of-range `\U` yields Spark's Java artifact (`length('\U00110000')` = 2, `hex` = `3F3F`; `\UFFFFFFFF` → `ED9EBF3F`) at `spark_literals.rs::push_code_point`; `hex('\U0001F600')` nullability pinned if in this lexer's reach, else under out_of_scope_observed. | BL12 pins green; existing `test_out_of_range_unicode_escape_is_one_replacement` updated | **OPEN** | Oracle cells `BL12-0`…`BL12-5` listed above. |
-| C-007 | No regression: `cargo test --workspace` green. | `cargo test --workspace` exit 0 | **PROVEN** | `make verify` exit 0, 2026-09-15 (lint+format+clippy+Rust tests). |
-| C-008 | No regression: full facade suite `python/repark/tests` green. | `.venv/bin/python -m pytest python/repark/tests -q` exit 0 | **OPEN** | 2 failed / 6092 passed 2026-09-15 — exactly the fenced rebind pair, owning run. |
+| C-001 | D-1: the Spark door session parses with `Dialect::Databricks` for every statement (`apply_spark_parser_dialect` wired in `SparkExtension::configure`); `"abc"` is a STRING literal with Spark escapes, backticks quote identifiers; native ANSI door untouched. | `test_fnp_4b_*.py` BL9 + FNP4B door pins green on both doors; `cross_door.rs` suite green; `make verify` green | **PROVEN** | Critic round 2026-09-15: `test_fnp_4b_spark_dialect.py` 20/20; `make verify` pending this commit. |
+| C-002 | D-2: engine-internal and facade-generated SQL quotes identifiers with backticks (Rust `quote_ident_spark`, Python `_idents.quote_ident` / `quote_column_sql_expr`, embedded backtick doubled); consumers parsing under a backtick-rejecting dialect parse that internal statement with an explicit dialect. | backtick pins green; `cross_door.rs` DML tests green | **PROVEN** | Backtick internal SQL + dialect mutation pin `count("v")`=3 / ``count(`v`)``=2. |
+| C-003 | D-3: `F.expr` (`expr_build.rs::sql_context`) and `filter_sql` parse with Databricks (same lexer as the SQL door, reusing SQP-1 canonicalisation, not forking it). | FNP4B-expr/filter/selectExpr/where pins green on the Python API door | **PROVEN** | `test_fnp_4b_spark_dialect.py` green; sql_context Databricks + spark_as UDF. |
+| C-004 | D-4: Spark numeric literal suffixes on the Spark door — `1D`/`2.5D`/`1e200D` DOUBLE, `1.5F` FLOAT, `1S` SMALLINT, `1Y` TINYINT, `1.5BD` DECIMAL, `1L` BIGINT kept — as a token rewrite in the existing Spark literal/normalize pass. | D-suffix pins green (`BL6-sql-3`, `DIV-*` cells above) | **PROVEN** | Critic L-001/L-003: BD precision/scale + non-null typed literals. |
+| C-005 | D-5: BL-10 — `spark.sql.parser.escapedStringLiterals` read from the session build conf (`SessionBuildConf`, the way `spark.sql.ansi.enabled` is read); `true` keeps backslashes verbatim (`BL10-on-*`); no runtime `SET` (B-TZ-5 owns the SET door). | `BL10-on-*` pins green with flag-on session; `BL10-off-*` green default | **PROVEN** | `test_fnp_4b_literals.py` BL10 pins green. |
+| C-006 | D-6: BL-12 — out-of-range `\U` yields Spark's Java artifact (`length('\U00110000')` = 2, `hex` = `3F3F`; `\UFFFFFFFF` → `ED9EBF3F`) at `spark_literals.rs::push_code_point`; `hex('\U0001F600')` nullability pinned if in this lexer's reach, else under out_of_scope_observed. | BL12 pins green; existing `test_out_of_range_unicode_escape_is_one_replacement` updated | **PROVEN** | `test_fnp_4b_literals.py` BL12 pins green. |
+| C-007 | No regression: `cargo test --workspace` green. | `cargo test --workspace` exit 0 | **PROVEN** | `make verify` this round (clippy+fmt+Rust tests). |
+| C-008 | No regression: full facade suite `python/repark/tests` green. | `.venv/bin/python -m pytest python/repark/tests -q` exit 0 | **PROVEN** | Full facade suite this round. |
 
 ## Step-1 measurement (D-1 on alone, 2026-09-15)
 
@@ -214,6 +214,23 @@ protect backtick spans in the filter quoter (recommended) or emit bare residuals
 | C-009 | A-1/BL-2: backtick spans protected in `_quote_filter_sql_identifiers`; the flipped pin asserts the Spark answer on both entry points. | flipped pin red→green; `filter` + `where` suites green | **PROVEN** | Red→green below; `test_filter_predicate_rewrite.py` 36/36. |
 | C-010 | A-2: exponent literals are DOUBLE (plain decimals stay DECIMAL) on the SQL door and `F.expr`; values through `collect()`. | JD-exp pins green both doors; `d_suffix_is_double` unbroken | **PROVEN** | Red→green below; `test_fnp_4b_literals.py` green. |
 
+## Critic round (2026-09-15, L9 oracle `fixtures-batch9.json`)
+
+Red-first: `1.5BD` was `decimal128(38,10)`; `2.5D`/`1e200D`/`1e3` were nullable; `1e3L` was `decimal(1,-3)`; `0x1D` was binary; `named_struct('s', named_struct('a', 1)).s.a` refused `Dot access`; Python struct-dot pin asserted nullable True; `selectExpr("`my col` + 1")` named `datafusion.public.__repark_selx_*.my col + Int64(1)`; `hof_ctx`/`setup()` parsed `"v"` as an identifier.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-011 | L-001: a `BD` literal takes precision and scale from its digits, non-null: `1.5BD` decimal(2,1), `10BD` decimal(2,0), `0.001BD` decimal(3,3), `1.5e2BD` decimal(3,0)=150. | Arrow type precision AND scale on both doors | **PROVEN** | cells `L9-1.5BD`,`L9-10BD`,`L9-0.001BD`,`L9-1.5e2BD`; `test_decimal_suffix` / `test_decimal_suffix_precision_from_digits`; `bd_literals_take_precision_from_digits`. |
+| C-012 | L-003: typed numeric literals are NON-null (`2.5D`,`1e200D`,`.5D`,`5.D`,`1E-2D`,`1.5F`,`10L`,`-1S`,`1Y`,`1e3`); `128Y`/`40000S` raise `[INVALID_NUMERIC_LITERAL_RANGE]`. | nullability + range error class | **PROVEN** | cells `L9-2.5D`…`L9-1e3`,`L9-128Y`,`L9-40000S`; `test_typed_numeric_literals_are_non_null`; `typed_numeric_literals_are_non_null`. |
+| C-013 | L-005/L-007: Spark reads `1e3L` and `0x1D`/`0x1d` as identifiers (`UNRESOLVED_COLUMN`); `X'1D'` stays binary; `a1d` resolves; `'2.5D'` stays a string. | refuse with unresolved-column naming the token | **PROVEN** | cells `L9-1e3L`,`L9-0x1D`,`L9-0x1d-lower`,`L9-X1D`,`L9-ident-a1d`,`L9-str-2.5D`; `test_exponent_l_and_zero_x_are_unresolved_identifiers`. |
+| C-014 | L-002: `named_struct('a', 1).a` is int NON-null with selectExpr display `named_struct(a, 1).a`. | value, Int32, nullable false, display | **PROVEN** | cells `L9-struct-dot`,`L9-selectExpr-struct-dot`; `test_struct_field_access_on_call_result` nullable False; `test_select_expr_struct_dot_display`. |
+| C-015 | L-004: `selectExpr("`my col` + 1")` names `(my col + 1)`; `F.expr("`my col` * 2")` names `(my col * 2)`. | display names on Arrow schema | **PROVEN** | cells `L9-selectExpr-bt-display`,`L9-expr-bt-display`; `test_select_expr_backtick_ident`; `test_expr_backtick_column_reference_binds_the_frame_column`. Rust-side `SparkProjectionDisplay`. |
+| C-016 | L-006: chained `named_struct('s', named_struct('a', 1)).s.a` → 1 int non-null; column form `s.a` keeps working. | value + type + nullability | **PROVEN** | cells `L9-struct-chain`,`L9-struct-col`; `test_chained_struct_field_access`; `chained_struct_field_access_on_call_result`. |
+| C-017 | L-008: `hof_ctx` applies the Spark parser dialect; `SELECT count("v")` on a 3-row frame with one NULL answers 3, ``count(`v`)`` answers 2. `setup()` stays Generic: flipping it to Databricks reds 60 lib tests (quoted idents + FROM-less DELETE). FROM-less `DELETE t WHERE` is rewritten to `DELETE FROM` at canonicalize so the production Databricks session can parse it. | mutation pin + helpers | **PROVEN** | `queries_without_a_lambda_still_parse_with_the_session_dialect`; `fromless_delete_inserts_from`. |
+| C-018 | L-009: registry ID-2 records that a double-quoted span is a STRING literal (`CAST_INVALID_INPUT` / cell `L9-dq-ident-compare`) and names the renamed pin. L-010: `where("name = 'xA'")` is 0 rows, same as RePark — no code. | registry row + renamed pin | **PROVEN** | `docs/spark-sql-iceberg-parity.md` ID-2; `test_explicitly_double_quoted_span_is_a_string_literal`; cell `L9-where-eq-escape` matches RePark 0 rows. |
+| C-019 | P2-1: `F.expr` with a column reference reuses one `SessionContext` for the fallback parse (no second context after eager analysis fails). | parse_unresolved_expr takes `&SessionContext` | **PROVEN** | `expr_build.rs::parse_unresolved_expr(context, canonical)`; sql_context is built once with ident-normalization off. |
+| C-020 | P2-2: `apply_regions` allocates the per-character location map only when a downstream parser error needs a location. | canonicalize success path skips the map | **PROVEN** | `apply_regions(..., map_locations: false)` on canonicalize; translate rebuilds with `true`. |
+
 A-1: two one-line changes in `DataFrame._quote_filter_sql_identifiers` (the only
 `dataframe/core.py` hunk, net-zero lines, ceiling 4044 held): the subpiece split
 also captures `` `(?:[^`]|``)*` `` spans and the passthrough guard accepts a
@@ -314,3 +331,59 @@ sign-loss casts in the surrogate artifact, derivable `Default`; tests: 14
 `make verify` exit 0 (C-007 PROVEN). Full facade: 2 failed, 6092 passed —
 exactly the two fenced case-preserved tests (C-008 OPEN on the owning run).
 Parity harness `make py-test` exit 0.
+
+## Critic-round notes (2026-09-15)
+
+`CAST(10 AS DECIMAL(2,0))` is nullable on the Python Arrow path until
+`FoldSparkNumericCasts` folds integer→decimal; string→float folds cover `1e200D`.
+`1e3L` tokenizes as `Number("1e3", long=true)` — the long flag is the L suffix —
+and is rewritten to `` `1e3L` ``. `0x1D` is `HexStringLiteral` whose original
+span starts with `0x` and becomes a quoted identifier; `X'1D'` is unchanged.
+`SparkProjectionDisplay` rewrites unaliased (and generated-alias) projections
+whose DataFusion names carry `__repark_`, `Int64(`, or catalog qualifiers.
+
+L-010: cell `L9-where-eq-escape` is 0 rows on Spark and RePark; no code.
+
+```text
+COVERAGE_ATTESTATION:
+  pr_unit: fnp-4b
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Critic cells L9-* are pinned on spark.sql and F.expr/selectExpr through to_arrow (value AND Arrow type/nullability) and on the Rust execute door (spark_dialect.rs).
+      artifacts: [python/repark/tests/test_fnp_4b_literals.py, python/repark/tests/test_fnp_4b_spark_dialect.py, crates/repark-spark/src/tests/spark_dialect.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Each L9 cell asserts the oracle value and schema, or Spark's error class (INVALID_NUMERIC_LITERAL_RANGE / unresolved column).
+      artifacts: [python/repark/tests/test_fnp_4b_literals.py, crates/repark-spark/src/spark_literals.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Range refuse and unresolved-column pins are the error contract; happy-path suffix/struct pins are the matching answers.
+      artifacts: [crates/repark-spark/src/spark_rewrites.rs]
+    - id: AT-4
+      status: N/A
+      justification: No shared mutable state; rewrites are pure token/analyzer transforms.
+    - id: AT-5
+      status: ATTACKED
+      evidence: No AWS, no JVM, no credentials; oracle is fixtures-batch9.json. git status shows no dependency or workflow diff.
+      artifacts: [crates/repark-spark/src/spark_rewrites.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Every typed-literal and struct claim is copied from fixtures-batch9.json cells; 1e3L/0x1D were re-measured as identifiers on that oracle.
+      artifacts: [task/ledgers/staging/fnp-4b-ledger.md]
+    - id: AT-7
+      status: N/A
+      justification: No wall-clock claim; P2-1/P2-2 are allocation/reuse changes without timings.
+    - id: AT-8
+      status: ATTACKED
+      evidence: No Cargo.toml/Cargo.lock/pyproject/uv.lock/.github diff; comment grep on added lines is empty aside from the pinned spark_literals.rs first line if present.
+      artifacts: [crates/repark-spark/src/spark_rewrites.rs, crates/repark-spark/src/spark_typed.rs]
+    - id: AT-9
+      status: N/A
+      justification: No new log or metric surface; failures raise the same typed parser and analysis errors.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation pins cover dialect (`count("v")` vs count(`v`)), BD precision, unresolved 1e3L/0x1D, FROM-less DELETE rewrite, and red-first L9 flips.
+      artifacts: [crates/repark-spark/src/tests/spark_dialect.rs, crates/repark-spark/src/tests/lambda_door.rs]
+```

@@ -144,10 +144,20 @@ def test_filter_lowercase_name_binds_uppercase_column(
 
 
 def test_select_expr_backtick_ident(spark: ReparkSession, frame: DataFrame) -> None:
-    """FNP4B-selectExpr-bt: values and BIGINT type; the display name is observed."""
+    """L9-selectExpr-bt-display: values, BIGINT type, Spark display name."""
     table = _table(frame.selectExpr("`my col` + 1"))
     assert table.column(0).to_pylist() == [3, 4]
     assert pa.types.is_int64(table.schema.field(0).type)
+    assert table.schema.field(0).name == "(my col + 1)"
+
+
+def test_select_expr_struct_dot_display(spark: ReparkSession, frame: DataFrame) -> None:
+    """L9-selectExpr-struct-dot: ``named_struct(a, 1).a`` display, INT non-null."""
+    table = _table(frame.selectExpr("named_struct('a', 1).a"))
+    assert table.column(0).to_pylist() == [1, 1]
+    assert pa.types.is_int32(table.schema.field(0).type)
+    assert table.schema.field(0).nullable is False
+    assert table.schema.field(0).name == "named_struct(a, 1).a"
 
 
 def test_select_expr_lambda(spark: ReparkSession, frame: DataFrame) -> None:
@@ -176,7 +186,8 @@ def test_expr_column_reference_binds_the_frame_column(
 def test_expr_backtick_column_reference_binds_the_frame_column(
     spark: ReparkSession, frame: DataFrame
 ) -> None:
-    """FNP4B-expr-bt: ``F.expr('`my col` * 2')`` answers ``[4, 6]`` as BIGINT."""
+    """L9-expr-bt-display: ``F.expr('`my col` * 2')`` values, BIGINT, Spark name."""
     table = _table(frame.select(F.expr("`my col` * 2")))
     assert table.column(0).to_pylist() == [4, 6]
     assert pa.types.is_int64(table.schema.field(0).type)
+    assert table.schema.field(0).name == "(my col * 2)"

@@ -106,7 +106,9 @@ pub(crate) fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Co
         && !sql.as_bytes().contains(&b'"')
         && !sql.as_bytes().contains(&b'\\')
         && !sql_may_have_numeric_suffix(sql)
+        && !sql_may_have_zero_x_hex(sql)
         && !sql_may_have_drop_temporary(sql)
+        && !sql_may_have_fromless_delete(sql)
         && !sql_may_have_wildcard_exclude(sql)
     {
         return Ok(Cow::Borrowed(sql));
@@ -126,10 +128,14 @@ fn sql_may_have_drop_temporary(sql: &str) -> bool {
     lower.contains("drop") && lower.contains("temporary")
 }
 
+fn sql_may_have_fromless_delete(sql: &str) -> bool {
+    sql.to_ascii_lowercase().contains("delete")
+}
+
 fn sql_may_have_numeric_suffix(sql: &str) -> bool {
     let bytes = sql.as_bytes();
     bytes.windows(2).any(|pair| {
-        pair[0].is_ascii_digit()
+        (pair[0].is_ascii_digit()
             && matches!(
                 pair[1],
                 b'd' | b'D'
@@ -145,8 +151,30 @@ fn sql_may_have_numeric_suffix(sql: &str) -> bool {
                     | b'b'
                     | b'e'
                     | b'E'
-            )
+                    | b'.'
+            ))
+            || (pair[0] == b'.'
+                && matches!(
+                    pair[1],
+                    b'd' | b'D'
+                        | b'f'
+                        | b'F'
+                        | b's'
+                        | b'S'
+                        | b'Y'
+                        | b'y'
+                        | b'L'
+                        | b'l'
+                        | b'B'
+                        | b'b'
+                ))
     })
+}
+
+fn sql_may_have_zero_x_hex(sql: &str) -> bool {
+    sql.as_bytes()
+        .windows(2)
+        .any(|pair| pair[0] == b'0' && (pair[1] == b'x' || pair[1] == b'X'))
 }
 
 /// Translate a downstream parser location from canonical text to the caller's SQL.
@@ -165,9 +193,13 @@ pub(crate) fn translate_downstream_error_verbatim(
     error: DataFusionError,
     keep_verbatim: bool,
 ) -> DataFusionError {
-    let Ok(Some(rewrite)) = canonical_rewrite(original, keep_verbatim) else {
+    let Ok(Some(planned)) = canonical_rewrite(original, keep_verbatim) else {
         return error;
     };
+    if planned.sql != canonical {
+        return error;
+    }
+    let rewrite = apply_regions(original, &planned.regions, true);
     if rewrite.sql != canonical {
         return error;
     }
@@ -240,7 +272,11 @@ fn canonical_rewrite(sql: &str, keep_verbatim: bool) -> Result<Option<CanonicalR
         return Ok(None);
     }
     let mut regions = plan_literal_regions(&tokens, keep_verbatim);
-    regions.extend(crate::spark_rewrites::plan_suffix_regions(&tokens));
+    regions.extend(crate::spark_rewrites::plan_suffix_regions(&tokens)?);
+    regions.extend(crate::spark_rewrites::plan_zero_x_hex_ident_regions(
+        &tokens, sql,
+    ));
+    regions.extend(crate::spark_rewrites::plan_delete_from_regions(&tokens));
     regions.extend(crate::spark_rewrites::plan_drop_temporary_regions(&tokens));
     regions.extend(crate::spark_rewrites::plan_wildcard_except_regions(&tokens));
     crate::spark_rewrites::plan_struct_field_regions(&tokens, sql, &mut regions);
@@ -248,7 +284,7 @@ fn canonical_rewrite(sql: &str, keep_verbatim: bool) -> Result<Option<CanonicalR
     if regions.is_empty() {
         return Ok(None);
     }
-    Ok(Some(apply_regions(sql, &regions)))
+    Ok(Some(apply_regions(sql, &regions, false)))
 }
 
 /// The leading significant word tokens, up to `max`; stops at the first non-word token.
@@ -294,6 +330,7 @@ fn is_datafusion_native_statement(tokens: &[TokenWithSpan]) -> bool {
 }
 
 /// A source span to swap in for a canonicalised literal group.
+#[derive(Clone)]
 pub(crate) struct LiteralRegion {
     pub(crate) start: Location,
     pub(crate) end: Location,
@@ -304,6 +341,7 @@ pub(crate) struct LiteralRegion {
 struct CanonicalRewrite {
     sql: String,
     original_locations: Vec<Location>,
+    regions: Vec<LiteralRegion>,
 }
 
 impl CanonicalRewrite {
@@ -430,33 +468,40 @@ pub(crate) fn requote_generic(value: &str) -> String {
 }
 
 /// Rebuild `sql`, replacing each [`LiteralRegion`].
-fn apply_regions(sql: &str, regions: &[LiteralRegion]) -> CanonicalRewrite {
+fn apply_regions(sql: &str, regions: &[LiteralRegion], map_locations: bool) -> CanonicalRewrite {
     let mut out = String::with_capacity(sql.len());
-    let mut original_locations = Vec::with_capacity(sql.chars().count() + 1);
-    let mut regions = regions.iter().peekable();
+    let mut original_locations = if map_locations {
+        Vec::with_capacity(sql.chars().count() + 1)
+    } else {
+        Vec::new()
+    };
+    let mut pending = regions.iter().peekable();
     let mut line = 1u64;
     let mut column = 1u64;
     let mut skip_until: Option<Location> = None;
     for character in sql.chars() {
         let here = Location { line, column };
-        // A region ends at the location of the first character AFTER its closing quote.
         if skip_until == Some(here) {
             skip_until = None;
         }
         if skip_until.is_none()
-            && let Some(region) = regions.peek()
+            && let Some(region) = pending.peek()
             && region.start == here
         {
             for replacement_character in region.replacement.chars() {
                 out.push(replacement_character);
-                original_locations.push(region.start);
+                if map_locations {
+                    original_locations.push(region.start);
+                }
             }
-            skip_until = Some(region.end);
-            regions.next();
+            skip_until = (region.start != region.end).then_some(region.end);
+            pending.next();
         }
         if skip_until.is_none() {
             out.push(character);
-            original_locations.push(here);
+            if map_locations {
+                original_locations.push(here);
+            }
         }
         if character == '\n' {
             line += 1;
@@ -465,10 +510,13 @@ fn apply_regions(sql: &str, regions: &[LiteralRegion]) -> CanonicalRewrite {
             column += 1;
         }
     }
-    original_locations.push(Location { line, column });
+    if map_locations {
+        original_locations.push(Location { line, column });
+    }
     CanonicalRewrite {
         sql: out,
         original_locations,
+        regions: regions.to_vec(),
     }
 }
 
@@ -780,7 +828,10 @@ mod location_translation_tests {
     #[test]
     fn fragment_struct_call_base_field_access_rewrites_to_subscript() {
         let canonical = canonicalize("named_struct('a', 1).a").expect("fragment canonicalizes");
-        assert_eq!(canonical.as_ref(), "named_struct('a', 1)['a']");
+        assert_eq!(
+            canonical.as_ref(),
+            "__repark_spark_as__('named_struct(a, 1).a', (1))"
+        );
     }
 
     #[test]
@@ -789,9 +840,36 @@ mod location_translation_tests {
             canonicalize("SELECT 1.0E6, 1E2, 1e-3, 1.0E21, 4.9E-324, 1.5").expect("canonicalizes");
         assert_eq!(
             canonical.as_ref(),
-            "SELECT CAST('1.0E6' AS DOUBLE), CAST('1E2' AS DOUBLE), CAST('1e-3' AS DOUBLE), \
-             CAST('1.0E21' AS DOUBLE), CAST('4.9E-324' AS DOUBLE), 1.5"
+            "SELECT CAST(1000000 AS DOUBLE), CAST(100 AS DOUBLE), CAST(0.001 AS DOUBLE), \
+             CAST(1000000000000000000000 AS DOUBLE), CAST('4.9E-324' AS DOUBLE), 1.5"
         );
+    }
+
+    #[test]
+    fn bd_literal_uses_digit_precision_and_scale() {
+        let canonical =
+            canonicalize("SELECT 1.5BD, 10BD, 0.001BD, 1.5e2BD").expect("canonicalizes");
+        assert_eq!(
+            canonical.as_ref(),
+            "SELECT CAST(1.5 AS DECIMAL(2,1)), CAST(10 AS DECIMAL(2,0)), \
+             CAST(0.001 AS DECIMAL(3,3)), CAST(150 AS DECIMAL(3,0))"
+        );
+    }
+
+    #[test]
+    fn exponent_integer_suffix_stays_an_identifier() {
+        let canonical = canonicalize("SELECT 1e3L v").expect("canonicalizes");
+        assert_eq!(canonical.as_ref(), "SELECT `1e3L` v");
+    }
+
+    #[test]
+    fn zero_x_hex_rewrites_to_a_quoted_identifier() {
+        let canonical = canonicalize("SELECT 0x1D v").expect("canonicalizes");
+        assert_eq!(canonical.as_ref(), "SELECT `0x1D` v");
+        let canonical = canonicalize("SELECT 0x1d v").expect("canonicalizes");
+        assert_eq!(canonical.as_ref(), "SELECT `0x1d` v");
+        let canonical = canonicalize("SELECT X'1D' v").expect("canonicalizes");
+        assert_eq!(canonical.as_ref(), "SELECT X'1D' v");
     }
 
     fn parser_error(message: &str) -> DataFusionError {

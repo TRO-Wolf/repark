@@ -2891,6 +2891,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   named explicitly in `ON` here so the test pins the CONFORM, not that resolution.)
   **FNP-4B (2026-09-15):** the `ON` qualifier uses backticks (BL-9); ruff-format only after.
 - `test_filter_predicate_rewrite.py` — **audit G2**: the SQL-string filter-predicate identifier
+  rewriter. FNP-4B critic: double-quoted span is a STRING literal (renamed pin
+  `test_explicitly_double_quoted_span_is_a_string_literal`). pins: fnp-4b/C-018
   rewriter (`DataFrame._quote_filter_sql_identifiers`), pinned through BOTH entry points
   (`.filter` and `.where`, parametrized) on the `to_arrow` path, value AND Arrow type. Four
   behaviours + their discriminators: (1) a casefold collision (`id`/`ID`) refuses **at the
@@ -3981,11 +3983,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins (verbatim backslashes, `notabool` refused), the out-of-range `\U` Java artifact, the
   `D/F/S/Y/L/BD` numeric suffixes with Spark Arrow types, and struct-literal field access —
   all on the Arrow path (value AND type), plus exponent literals as DOUBLE with
-  CAST(1.0E6 AS DOUBLE). pins: fnp-4b/C-004, C-005, C-006, C-010
+  CAST(1.0E6 AS DOUBLE). Critic round: BD precision/scale, typed-literal non-null,
+  `128Y`/`40000S` range refuse, `1e3L`/`0x1D` unresolved, chained struct field access.
+  pins: fnp-4b/C-004, C-005, C-006, C-010, C-011, C-012, C-013, C-014, C-016
 - `test_fnp_4b_spark_dialect.py` — **FNP-4B (2026-09-15):** the Spark-door dialect pins —
   double-quoted STRING literals with Spark escapes and the `F.expr` / `filter` / `where` /
   `selectExpr` expression-string door sharing the same lexer, on the Arrow path (value AND type).
-  pins: fnp-4b/C-001, C-003 (ruff-format only after Step 2).
+  Critic: `selectExpr("`my col` + 1")` display `(my col + 1)`; struct-dot display
+  `named_struct(a, 1).a`. pins: fnp-4b/C-001, C-003, C-014, C-015
 - `test_fnp_8_sql_door.py` — **FNP-8 (2026-09-07), in flight:** the fifteen accepted
   higher-order callable forms through the Column door, Spark SQL, and column-free `F.expr`.
   It fences the separately BACKLOGed EX-FN-4 column-reference refusal, pins Spark-equal public

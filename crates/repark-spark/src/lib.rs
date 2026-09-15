@@ -23,6 +23,9 @@ mod spark_ast;
 pub mod spark_literals;
 mod spark_rewrites;
 mod spark_type_names;
+mod spark_typed;
+
+pub use spark_typed::{FoldSparkNumericCasts, SparkProjectionDisplay, spark_as_udf};
 mod time_travel;
 mod truncate;
 mod window_range;

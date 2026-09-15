@@ -222,7 +222,7 @@ def test_double_suffix_huge_scientific(spark: ReparkSession) -> None:
     table = _table(spark.sql("SELECT CAST(1e200D AS DOUBLE) AS v"))
     assert table.column("v").to_pylist() == [1e200]
     assert pa.types.is_float64(table.schema.field("v").type)
-    assert table.schema.field("v").nullable is True
+    assert table.schema.field("v").nullable is False
 
 
 def test_double_suffix_bare_huge_scientific(spark: ReparkSession) -> None:
@@ -268,25 +268,101 @@ def test_float_suffix(spark: ReparkSession) -> None:
 
 
 def test_decimal_suffix(spark: ReparkSession) -> None:
-    """``1.5BD`` is ``1.5`` as DECIMAL."""
+    """L9-1.5BD: ``1.5BD`` is ``1.5`` as decimal(2,1) non-null."""
     table = _table(spark.sql("SELECT 1.5BD AS v"))
     assert table.column("v").to_pylist() == [decimal.Decimal("1.5")]
-    assert pa.types.is_decimal(table.schema.field("v").type)
+    assert table.schema.field("v").type == pa.decimal128(2, 1)
+    assert table.schema.field("v").nullable is False
+
+
+def test_decimal_suffix_precision_from_digits(spark: ReparkSession) -> None:
+    """L9-10BD / L9-0.001BD / L9-1.5e2BD: precision and scale follow the digits."""
+    ten = _table(spark.sql("SELECT 10BD AS v"))
+    assert ten.schema.field("v").type == pa.decimal128(2, 0)
+    assert ten.schema.field("v").nullable is False
+    assert ten.column("v").to_pylist() == [decimal.Decimal("10")]
+    milli = _table(spark.sql("SELECT 0.001BD AS v"))
+    assert milli.schema.field("v").type == pa.decimal128(3, 3)
+    assert milli.column("v").to_pylist() == [decimal.Decimal("0.001")]
+    shifted = _table(spark.sql("SELECT 1.5e2BD AS v"))
+    assert shifted.schema.field("v").type == pa.decimal128(3, 0)
+    assert shifted.column("v").to_pylist() == [decimal.Decimal("150")]
 
 
 def test_struct_field_access_on_call_result(spark: ReparkSession) -> None:
-    """FNP4B-sql-struct-lit: ``named_struct('a', 1).a`` is ``1`` as INT."""
+    """L9-struct-dot: ``named_struct('a', 1).a`` is ``1`` as INT non-null."""
     table = _table(spark.sql("SELECT named_struct('a', 1).a AS v"))
     assert table.column("v").to_pylist() == [1]
     assert pa.types.is_int32(table.schema.field("v").type)
-    assert table.schema.field("v").nullable is True
+    assert table.schema.field("v").nullable is False
 
 
 def test_struct_field_access_on_call_result_via_expr(spark: ReparkSession) -> None:
-    """FNP4B-sql-struct-lit through ``F.expr``: same value and type."""
+    """L9-struct-dot through ``F.expr``: same value, type, and non-null."""
     table = _table(spark.range(1).select(F.expr("named_struct('a', 1).a").alias("v")))
     assert table.column("v").to_pylist() == [1]
     assert pa.types.is_int32(table.schema.field("v").type)
+    assert table.schema.field("v").nullable is False
+
+
+def test_chained_struct_field_access(spark: ReparkSession) -> None:
+    """L9-struct-chain: nested ``named_struct`` field access is INT non-null."""
+    table = _table(spark.sql("SELECT named_struct('s', named_struct('a', 1)).s.a AS v"))
+    assert table.column("v").to_pylist() == [1]
+    assert pa.types.is_int32(table.schema.field("v").type)
+    assert table.schema.field("v").nullable is False
+
+
+def test_struct_column_field_access(spark: ReparkSession) -> None:
+    """L9-struct-col: ``s.a`` on a named struct column stays INT."""
+    table = _table(spark.sql("SELECT s.a FROM (SELECT named_struct('a', 1) AS s)"))
+    assert table.column(0).to_pylist() == [1]
+    assert pa.types.is_int32(table.schema.field(0).type)
+
+
+def test_typed_numeric_literals_are_non_null(spark: ReparkSession) -> None:
+    """L9-2.5D and siblings: suffixed and exponent literals are non-null."""
+    cases = [
+        ("SELECT 2.5D AS v", pa.float64(), [2.5]),
+        ("SELECT 1e200D AS v", pa.float64(), [1e200]),
+        ("SELECT .5D AS v", pa.float64(), [0.5]),
+        ("SELECT 5.D AS v", pa.float64(), [5.0]),
+        ("SELECT 1E-2D AS v", pa.float64(), [0.01]),
+        ("SELECT 1e3 AS v", pa.float64(), [1000.0]),
+        ("SELECT 1.5F AS v", pa.float32(), [1.5]),
+        ("SELECT 10L AS v", pa.int64(), [10]),
+        ("SELECT -1S AS v", pa.int16(), [-1]),
+        ("SELECT 1Y AS v", pa.int8(), [1]),
+    ]
+    for sql, data_type, values in cases:
+        table = _table(spark.sql(sql))
+        assert table.column("v").to_pylist() == values, sql
+        assert table.schema.field("v").type == data_type, sql
+        assert table.schema.field("v").nullable is False, sql
+
+
+def test_out_of_range_integer_suffix_raises(spark: ReparkSession) -> None:
+    """L9-128Y / L9-40000S: Spark ``[INVALID_NUMERIC_LITERAL_RANGE]``."""
+    with pytest.raises(Exception, match="INVALID_NUMERIC_LITERAL_RANGE"):
+        spark.sql("SELECT 128Y AS v").to_arrow()
+    with pytest.raises(Exception, match="INVALID_NUMERIC_LITERAL_RANGE"):
+        spark.sql("SELECT 40000S AS v").to_arrow()
+
+
+def test_exponent_l_and_zero_x_are_unresolved_identifiers(spark: ReparkSession) -> None:
+    """L9-1e3L / L9-0x1D: Spark reads these as identifiers, not typed literals."""
+    with pytest.raises(Exception, match=r"1e3L|No field named"):
+        spark.sql("SELECT 1e3L AS v").to_arrow()
+    with pytest.raises(Exception, match=r"0x1D|0x1d|No field named"):
+        spark.sql("SELECT 0x1D AS v").to_arrow()
+    with pytest.raises(Exception, match=r"0x1d|No field named"):
+        spark.sql("SELECT 0x1d AS v").to_arrow()
+    table = _table(spark.sql("SELECT X'1D' AS v"))
+    assert table.column("v").to_pylist() == [b"\x1d"]
+    ident = _table(spark.sql("SELECT a1d FROM (SELECT 7 AS a1d)"))
+    assert ident.column("a1d").to_pylist() == [7]
+    text = _table(spark.sql("SELECT '2.5D' AS v"))
+    assert text.column("v").to_pylist() == ["2.5D"]
 
 
 def test_exponent_literals_are_double(spark: ReparkSession) -> None:

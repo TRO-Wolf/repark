@@ -720,24 +720,23 @@ them, and the document is ordered by surface, never by date.
 ### ID-2 — the case-collision refusal covers the SQL-string form only
 
 - **repark** — on a frame carrying both `id` and `ID`, the SQL-string predicate
-  `filter("id > 1")` refuses with an ambiguity error, but two spellings bypass that refusal and
-  return rows: the `Column` entry point (`df.filter(df["ID"] > 1)`) resolves exact-case-first, and
-  an explicitly double-quoted `filter('"ID" > 1')` is a protected span DataFusion then resolves
-  case-sensitively.
+  `filter("id > 1")` refuses with an ambiguity error. The `Column` entry point
+  (`df.filter(df["ID"] > 1)`) still resolves exact-case-first and returns rows. A
+  double-quoted span is now a STRING literal (FNP-4B): `filter('"ID" > 1')` and
+  `spark.sql('SELECT "ID" = 1')` raise loud (Arrow cast / `CAST_INVALID_INPUT` class,
+  cell `L9-dq-ident-compare`).
 - **Apache Spark** — raises `AMBIGUOUS_REFERENCE` for the `Column` form, and reads a
   double-quoted span as a string **literal**, raising `CAST_INVALID_INPUT` under ANSI when it is
-  compared to a number. *(oracle: live.)*
+  compared to a number. *(oracle: live; cell `L9-dq-ident-compare`.)*
 - **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_column_entry_point_bypasses_the_ambiguity_refusal`
-  and `python/repark/tests/test_filter_predicate_rewrite.py::test_explicitly_double_quoted_ident_bypasses_the_ambiguity_refusal`,
+  and `python/repark/tests/test_filter_predicate_rewrite.py::test_explicitly_double_quoted_span_is_a_string_literal`
+  (renamed from `test_explicitly_double_quoted_ident_bypasses_the_ambiguity_refusal`),
   with the guarded half in the same module's
   `test_ambiguous_reference_raises_analysis_exception`
 - `live-mirror: filter_case_collision_bypasses`
-- **Rationale** — DECLARED. The refusal is deliberately scoped to the rewriter's own surface: the
-  two bypassing spellings never reach the SQL-string rewriter at all, so covering them means
-  intercepting `Column` resolution and DataFusion's quoted-identifier handling — the same
-  engine-wide resolution change [ID-1](#id-1--a-quoted-identifier-resolves-case-sensitively)
-  declines. Case-colliding frames are legal in both engines; what is recorded here is which
-  spellings are guarded.
+- **Rationale** — DECLARED for the `Column` bypass (ID-1 still declines engine-wide
+  exact-case resolution). The double-quoted-span half is FIXED 2026-09-15 (FNP-4B): it is a
+  STRING literal, matching Spark's `CAST_INVALID_INPUT` raise-vs-raise. pins: fnp-4b/C-018
 
 ### ID-3 — exact duplicate column names are refused at construction
 

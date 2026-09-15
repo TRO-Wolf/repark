@@ -156,15 +156,21 @@ pins: rp-4-fork-repin/C-005, C-006
   verbatim mode (`canonicalize_verbatim`, `translate_downstream_error_verbatim`,
   `escaped_string_literals_from_config_map` / `with_escaped_string_literals_config` /
   `escaped_verbatim_from_options`); `pub` so the binding's `filter_sql` path reuses it.
-  pins: fnp-4b/C-001, C-004, C-005, C-006
-- `spark_rewrites.rs` — **FNP-4B (2026-09-15):** the three secondary token rewrites split out of
-  `spark_literals.rs` for the 1000-line ceiling (909 + 281): numeric suffixes, `* EXCLUDE` →
-  `* EXCEPT`, and call-base struct field access. Shares `LiteralRegion` / `requote_generic`.
-  `byte_offset` resolves exclusive span ends at the input end (struct access as the last
-  fragment text). Keep-double rule (same unit): a lone double-quoted literal without
-  backslashes is never rewritten, so quoted identifiers/aliases keep their positions for the
-  downstream dialect; only Spark escapes rewrite, re-quoted double (single only when the
-  value holds `"`). pins: fnp-4b/C-001, C-004, C-010, BL-9 (follow-up: exponent literals behave as D-suffixed, DOUBLE; the verbatim fast-path gate opens on digit+e/E; DROP TEMPORARY rewrites to DROP; slice-3: must_use + cast_* + derived Default lints only)
+  Location maps in `apply_regions` are built only when a downstream parser error needs
+  them. pins: fnp-4b/C-001, C-004, C-005, C-006, C-020
+- `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
+  digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
+  `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),
+  `* EXCLUDE` → `* EXCEPT`, DROP TEMPORARY, FROM-less `DELETE t WHERE` → `DELETE FROM t WHERE`,
+  and call-base struct field access (chained
+  `.s.a` extracts the named_struct value and wraps `__repark_spark_as__` so selectExpr
+  display is `named_struct(a, 1).a` and nullability follows the value).
+  pins: fnp-4b/C-001, C-004, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+- `spark_typed.rs` — **FNP-4B critic (2026-09-15):** `FoldSparkNumericCasts` folds
+  `CAST('1e200' AS DOUBLE)` to a non-null Float64 literal; `SparkProjectionDisplay`
+  aliases unaliased projections whose DataFusion names carry `Int64(` /
+  `datafusion.public` / backticks to Spark display (`(my col + 1)`); `__repark_spark_as__`
+  is the identity UDF that carries a Spark display name. pins: fnp-4b/C-012, C-014, C-015, C-019, C-020
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in;
   `Model: Grok 4.6 xHigh`);

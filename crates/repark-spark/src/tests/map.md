@@ -20,14 +20,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   carrier (default off, `true` honored, `notabool` refused), double-quoted STRING
   literals with Spark escapes, the `D/F/S/Y/L/BD` numeric suffixes with Spark Arrow
   types, the out-of-range `\U` Java artifact, backtick field names, and
-  `named_struct(…).field` subscript access.
-  pins: fnp-4b/C-001, C-004, C-005, C-006, C-010 (follow-up: exponent literals as DOUBLE, CAST(1.0E6 AS DOUBLE) is 1000000.0; DROP TEMPORARY FUNCTION IF EXISTS is a no-op; slice-3: float pins compare to_bits())
+  `named_struct(…).field` access (non-null, chained), BD precision/scale, typed-literal
+  nullability, `1e3L`/`0x1D` unresolved identifiers, and `[INVALID_NUMERIC_LITERAL_RANGE]`.
+  pins: fnp-4b/C-001, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - `lambda_door.rs` — **FNP-8 (2026-09-06):** the eleven higher-order names through
   `crate::execute` with `x -> y` syntax — both `transform`/`filter` arities, `exists` as a
   function (not the subquery keyword), `forall` on empty, `aggregate` with and without
   `finish`, `reduce`, `zip_with` null-padding, the four map names, the
-  `DUPLICATED_MAP_KEY` raise, and the gate guard (`count("v")` stays the identifier count,
-  so lambda-free SQL still parses Generic). The dtype test pins the early-`LambdaRebind`
+  `DUPLICATED_MAP_KEY` raise, and the dialect mutation pin (`count("v")` is the string-literal
+  count 3; ``count(`v`)`` is the identifier count 2). pins: fnp-4b/C-017
+  The dtype test pins the early-`LambdaRebind`
   seat: `transform`/`filter`/`zip_with` over `make_array` keep `Int32` elements and
   `aggregate` stays `Int32` (the closing coercion must see rebound bindings, not bake
   `BIGINT` casts from stale ones). Short lambdas carry Spark's arity class, an
@@ -290,6 +292,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   TRUNCATE; a real three-part table named `branch_<x>` is not a selector.
   pins: rp-5-fork-repin/C-004
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`,
+  **FNP-4B critic:** `setup()` applies `apply_spark_parser_dialect` and registers
+  `__repark_spark_as__`. pins: fnp-4b/C-017
   `register_view_typed_source` (CTAS-VIEW-1 Utf8View+BinaryView), `table_rows`, …)
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
   `execute_without_collecting`, unsafe-cast walk helpers). **V3-2:**

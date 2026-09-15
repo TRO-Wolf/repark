@@ -58,7 +58,7 @@ pub(crate) async fn plan_expr_column(
                 Ok(analyzed) => analyzed,
                 Err(error) => {
                     if missing_column(&error).is_some() {
-                        return parse_unresolved_expr(canonical)
+                        return parse_unresolved_expr(context, canonical)
                             .map_err(crate::datafusion_to_py_err);
                     }
                     return Err(crate::datafusion_to_py_err(error));
@@ -67,7 +67,8 @@ pub(crate) async fn plan_expr_column(
         }
         Err(error) => {
             if missing_column(&error).is_some() {
-                return parse_unresolved_expr(canonical).map_err(crate::datafusion_to_py_err);
+                return parse_unresolved_expr(context, canonical)
+                    .map_err(crate::datafusion_to_py_err);
             }
             return Err(crate::datafusion_to_py_err(error));
         }
@@ -101,9 +102,10 @@ fn missing_column(
     }
 }
 
-fn parse_unresolved_expr(canonical: &str) -> datafusion::error::Result<Expr> {
-    let context = sql_context(canonical, false)?;
-    repark_functions::register_all(&context);
+fn parse_unresolved_expr(
+    context: &SessionContext,
+    canonical: &str,
+) -> datafusion::error::Result<Expr> {
     let mut qualified: Vec<(Option<TableReference>, Arc<Field>)> = Vec::new();
     loop {
         let schema =
@@ -138,21 +140,25 @@ pub(super) fn strip_outer_alias(expr: Expr) -> Expr {
 
 pub(super) fn sql_context(
     sql: &str,
-    normalize_idents: bool,
+    _normalize_idents: bool,
 ) -> datafusion::error::Result<SessionContext> {
     let mut config = SessionConfig::new();
     config.options_mut().sql_parser.dialect =
         repark_spark::dialect_for_executing_parse(sql, datafusion::config::Dialect::Databricks);
-    config.options_mut().sql_parser.enable_ident_normalization = normalize_idents;
-    let rules = repark_functions::analyzer_rules_with_higher_order_preparation(
+    config.options_mut().sql_parser.enable_ident_normalization = false;
+    let mut rules = repark_functions::analyzer_rules_with_higher_order_preparation(
         datafusion::optimizer::Analyzer::new().rules,
     )?;
+    rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
+    rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
     let state = SessionStateBuilder::new()
         .with_config(config)
         .with_default_features()
         .with_analyzer_rules(rules)
         .build();
-    Ok(SessionContext::new_with_state(state))
+    let context = SessionContext::new_with_state(state);
+    context.register_udf(repark_spark::spark_as_udf().as_ref().clone());
+    Ok(context)
 }
 
 /// Collapse nested `Alias` layers to one outer rename.
