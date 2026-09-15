@@ -42,12 +42,37 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `n < 0`. pins: fn-fix-2-string-rows/C-002
 - `spark_elt.rs` — **FN-FIX-2 (2026-09-04):** Spark `elt`; ANSI out-of-range raises
   `INVALID_ARRAY_INDEX`; NULL `n` is NULL. pins: fn-fix-2-string-rows/C-002
+- `spark_math.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `abs` / `hypot` / `bin` /
+  `rint` kernels shared by both doors. `abs` keeps the input width, refuses BOOLEAN, and
+  reads the ANSI carrier (`repark.ansi` extension via
+  `ansi::spark_ansi_enabled_from_options`) to raise Spark-shaped `[ARITHMETIC_OVERFLOW]`
+  on signed minima. `hypot` is rescaled `f64::hypot` (infinity over NaN). `bin` / `rint`
+  use `Signature::user_defined` + `coerce_types` so a BOOLEAN input refuses with
+  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` rather than an internal signature error.
+  **Round 5 (2026-09-16):** `abs` accepts STRING per Spark's implicit STRING→DOUBLE
+  cast — `coerce_types` passes the utf8 type through and the kernel safe-casts
+  itself so a malformed value raises `[CAST_INVALID_INPUT]` under ANSI (NULL under
+  ANSI-off) instead of a bare Arrow cast error (fixtures-batch11.json
+  A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x).
+  pins: door-converge-1/C-002, C-003, C-008
+- `spark_base64.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `base64` / `unbase64` — a
+  hand-rolled `java.util.Base64` MIME codec (no `base64` crate dep): RFC 4648 padding,
+  CRLF chunking every 76 output characters, lenient decode that skips non-alphabet bytes
+  and accepts unpadded input. String and binary input; NULL propagates.
+  **Round 2 (2026-09-16):** malformed endings raise the Java decoder's texts
+  (`incorrect ending byte at N`, `wrong 4-byte ending unit`, `Last unit does not have
+  enough valid bits`); encode writes one `StringBuilder`, decode uses a `static`
+  table into a single batch buffer with the input null bitmap.
+  pins: door-converge-1/C-001, C-010
 - `spark_result_types.rs` (+ `spark_result_types/tests.rs`) — **TYPES-1 (2026-09-05):**
   `SparkIntegerLiteral` narrows in-range `Int64` literals to `Int32` (first in
   `analyzer_rules()`, after DataFusion's own `TypeCoercion`; `LIMIT` fetch/skip stay `Int64`
   for the physical planner), `SignedAggregate` casts `regr_count`/`approx_distinct` to
   `Int64`, `SignedWindow` casts the rank family to `Int32`.
   pins: types-1/C-001, C-003, C-005, C-007
+  **DOOR-CONVERGE-1 (2026-09-15):** `SignedAggregate` additionally declares
+  `is_nullable() = false` with `default_value = 0` — `approx_count_distinct` /
+  `regr_count` answer non-null `bigint`, `0` on empty input. pins: door-converge-1/C-006
   **FNP-8 (2026-09-07):** exposes the existing single-node provisional-integer narrowing inside
   the crate so HOF preparation can reuse it without changing global literal or overflow rules.
 - `lambda_rebind.rs` — **FNP-8 (2026-09-06):** `LambdaRebind`, in `analyzer_rules()`
@@ -642,3 +667,4 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
 | `date_trunc` returns the right instant with the wrong-looking wall clock | Expected if the viewer ignores the UTC annotation: ticks are Spark's instant, typed as `timestamp[us, tz=UTC]`. |
 
 First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](../map.md).
+- **DOOR-CONVERGE-1 rebase (2026-09-15):** `collection.rs` keeps main's `array_append` / `array_prepend` shims (ARRAY-NULL-1) beside this unit's `array_contains` / `size` modules; the round-2 `make_array` shim stays removed (R-10).

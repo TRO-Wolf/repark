@@ -21,6 +21,7 @@ pub(crate) use str_to_map::bind_ascii_perl_classes;
 mod shuffle;
 
 mod array_append;
+mod array_contains;
 mod array_insert;
 mod array_position;
 mod array_sort;
@@ -31,6 +32,7 @@ mod flatten;
 mod map_concat;
 /// `map_from_entries` with Spark's `EXCEPTION` map-key dedup policy (X7).
 mod map_from_entries;
+mod size;
 
 /// The collection shims registered after DataFusion's defaults.
 #[must_use]
@@ -40,6 +42,9 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         str_to_map_udf(),
         shuffle_udf(),
         map_from_entries_udf(),
+        array_contains::array_contains_udf(),
+        size::size_udf(),
+        size::cardinality_udf(),
         array_position::array_position_udf(),
         array_sort::array_sort_udf(),
         array_sort::sort_array_udf(),
@@ -124,6 +129,21 @@ pub fn map_concat_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn create_map_udf() -> Arc<ScalarUDF> {
     create_map::create_map_udf()
+}
+
+#[must_use]
+pub fn array_contains_udf() -> Arc<ScalarUDF> {
+    array_contains::array_contains_udf()
+}
+
+#[must_use]
+pub fn size_udf() -> Arc<ScalarUDF> {
+    size::size_udf()
+}
+
+#[must_use]
+pub fn cardinality_udf() -> Arc<ScalarUDF> {
+    size::cardinality_udf()
 }
 
 /// Spark `element_at` UDF instance (1-based array / map-by-key).

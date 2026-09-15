@@ -272,9 +272,9 @@ def test_approx_and_regr_count_are_bigint() -> None:
         "SELECT approx_count_distinct(s) AS r FROM types1_probe",
         "SELECT regr_count(b, i) AS r FROM types1_probe",
     ]:
-        assert _door_type(session, query) == ("int64", True)
+        assert _door_type(session, query) == ("int64", False)
     facade = frame.select(F.approx_count_distinct("s").alias("r"))
-    assert _frame_type(facade) == ("int64", True)
+    assert _frame_type(facade) == ("int64", False)
 
 
 def test_count_if_is_bigint_on_both_doors() -> None:
@@ -713,11 +713,7 @@ def test_live_aggregates_and_rank_match_the_oracle(spark_engine: lp.Engine) -> N
 def test_live_sketch_and_regression_counts_match_on_type_and_value(
     spark_engine: lp.Engine,
 ) -> None:
-    """pins: types-1/C-003 — approx and regr_count match Spark on type and value.
-
-    Nullability is carved out: repark derives nullable from the DataFusion
-    kernels while Spark marks both non-null (registry row BL-18).
-    """
+    """pins: types-1/C-003 — approx and regr_count match Spark on type and value."""
     session = _session()
     _seed(session)
     _seed_oracle(spark_engine)
@@ -726,10 +722,7 @@ def test_live_sketch_and_regression_counts_match_on_type_and_value(
         "SELECT approx_count_distinct(s) AS r FROM types1_probe",
         "SELECT regr_count(b, i) AS r FROM types1_probe",
     ]:
-        mine = _live_type(engine, query)
-        spark = _live_type(spark_engine, query)
-        assert (mine[0], mine[2]) == (spark[0], spark[2])
-        assert (mine[1], spark[1]) == (True, False)
+        assert _live_type(engine, query) == _live_type(spark_engine, query)
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)

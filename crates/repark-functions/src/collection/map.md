@@ -87,6 +87,23 @@ needed.
   short-circuit.
   pins: array-null-1/C-003, C-004, C-005, L-1, P3-1
 - `array_append/` — the coercion child module; see [its map](array_append/map.md).
+- `size.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `size` / `cardinality` under the
+  Spark-4 `sizeOfNull=false` default: a NULL array/map answers NULL, the field is
+  nullable `int32` (the DF kernels answer `-1` `uint64`). Covers list / large-list /
+  fixed-size-list and map (`MapArray::value_length`). pins: door-converge-1/C-004
+- `array_contains.rs` — **DOOR-CONVERGE-1 (2026-09-15):** `array_contains` wraps
+  datafusion-spark's `SparkArrayContains` (already three-valued: match → TRUE, no match
+  with a NULL element → NULL, no match → FALSE) behind `Signature::user_defined` and a
+  `coerce_types` that refuses a `Null`-typed needle with `DATATYPE_MISMATCH.NULL_TYPE`
+  before the signature can coerce it. Registered under the `array_has` alias too — the
+  facade lowers `F.array_contains` through that spelling, so both doors resolve the same
+  kernel. pins: door-converge-1/C-005
+  **Round 2 (2026-09-16):** `coerce_types` widens element and needle to their tightest
+  common type (never needle→element), refuses incompatible pairs with
+  `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` (`'x'` vs `array<int>` either
+  direction, ANSI on and off), adopts the needle type for an untyped empty array, and
+  reads the element field's nullability into the result (`Spark`'s
+  `left || right || containsNull` rule). pins: door-converge-1/C-011, C-012, C-013
 
 ## I want to...
 
