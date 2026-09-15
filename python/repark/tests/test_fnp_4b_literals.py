@@ -290,13 +290,29 @@ def test_decimal_suffix_precision_from_digits(spark: ReparkSession) -> None:
 
 
 def test_negative_zero_bd_answers_plain_zero(spark: ReparkSession) -> None:
-    """L-004 control: ``-0.0BD`` is ``decimal(1,1)`` zero, non-null, named."""
+    """Round-8 L-004 control: ``-0.0BD`` is ``decimal(1,1)`` zero, non-null, named."""
     table = _table(spark.sql("SELECT -0.0BD AS v"))
     assert table.column("v").to_pylist() == [decimal.Decimal("0.0")]
     assert table.schema.field("v").type == pa.decimal128(1, 1)
     assert table.schema.field("v").nullable is False
     bare = _table(spark.sql("SELECT -0.0BD"))
     assert bare.schema.names == ["-0.0"]
+
+
+def test_window_frame_with_long_suffix_refuses_loudly(spark: ReparkSession) -> None:
+    """Round-8 L-005: ``1L`` in a ROWS bound is loud; the plain bound answers."""
+    table = _table(
+        spark.sql(
+            "SELECT x, sum(x) OVER (ORDER BY x ROWS BETWEEN 1 PRECEDING "
+            "AND CURRENT ROW) s FROM VALUES (1), (2), (3) t(x)"
+        )
+    )
+    assert table.column("s").to_pylist() == [1, 3, 5]
+    with pytest.raises(Exception, match="[Ff]rame"):
+        spark.sql(
+            "SELECT x, sum(x) OVER (ORDER BY x ROWS BETWEEN 1L PRECEDING "
+            "AND CURRENT ROW) s FROM VALUES (1), (2), (3) t(x)"
+        ).to_arrow()
 
 
 def test_struct_field_access_on_call_result(spark: ReparkSession) -> None:
@@ -360,7 +376,7 @@ def test_out_of_range_integer_suffix_raises(spark: ReparkSession) -> None:
 
 
 def test_signed_integer_suffix_minima_answer(spark: ReparkSession) -> None:
-    """L-002: ``-128Y`` / ``-32768S`` are the typed minima, non-null."""
+    """Round-8 L-002: ``-128Y`` / ``-32768S`` are the typed minima, non-null."""
     cases = [
         ("SELECT -128Y AS v", pa.int8(), [-128]),
         ("SELECT -32768S AS v", pa.int16(), [-32768]),
@@ -382,7 +398,7 @@ def test_signed_integer_suffix_minima_answer(spark: ReparkSession) -> None:
 
 
 def test_signed_minima_on_all_doors(spark: ReparkSession) -> None:
-    """L-002: the minima answer on ``F.expr`` and ``selectExpr`` too."""
+    """Round-8 L-002: the minima answer on ``F.expr`` and ``selectExpr`` too."""
     table = _table(spark.range(1).select(F.expr("-128Y").alias("v")))
     assert table.column("v").to_pylist() == [-128]
     assert table.schema.field("v").type == pa.int8()
@@ -402,7 +418,7 @@ def test_signed_minima_on_all_doors(spark: ReparkSession) -> None:
 
 
 def test_bigint_overflow_raises_invalid_numeric_literal(spark: ReparkSession) -> None:
-    """L-004: ``L`` overflow refuses at parse, not as an optimizer cast error."""
+    """Round-8 L-004: ``L`` overflow refuses at parse, not as an optimizer cast error."""
     for sql in [
         "SELECT 9223372036854775808L AS v",
         "SELECT -9223372036854775809L AS v",

@@ -618,3 +618,17 @@ names, `explain()`), `test_unaliased_suffix_names_come_from_value_text`
 (`spark.sql` / `selectExpr` / `F.expr` doors),
 `test_negative_zero_bd_answers_plain_zero` (L-004 `-0.0BD` control:
 `decimal(1,1)` zero, non-null, `-0.0`).
+
+Slice C — L-005 / L-006 / L-007 record-or-narrow (pins only, no production
+change): L-005 stays a loud `AnalysisException` at plan time — the ROWS/GROUPS
+bound check runs on the SQL AST (`Value::Number`), before any analyzer rule,
+so a `CAST`ed `1L` bound cannot be folded into it; a token-context rewrite
+would be fragile, so the boundary is pinned instead
+(`test_window_frame_with_long_suffix_refuses_loudly`: plain bound answers
+`[1, 3, 5]`, `1L` bound refuses). L-006 `ARRAY<INT NOT NULL>` and L-007
+SQL-door `MAP<...>` stay loud `ParseException`s from the Databricks dialect
+(element nullability and SQL-door MAP are unmapped by design here); pinned by
+`test_create_table_array_element_not_null_refuses_loudly` next to the granted
+array pin, whose `listColumns` contract is unchanged, and the existing
+`test_create_table_map_struct_refuse_loudly`. Round-8 pin docstrings say
+`Round-8 L-00N` to keep them apart from the earlier critic's L-numbers.
