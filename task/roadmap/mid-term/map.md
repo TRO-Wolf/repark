@@ -17,6 +17,15 @@ declines it (a dated ruling in the intake, then the archive).
   publish), RP-20 + ICE-GOLD-TWICE-1 (repin, CREATE OR REPLACE twice in the nightly, gold dbt twice in aws-acceptance),
   ICE-SPARK-TABLE-1 (RePark MERGE and maintenance on a Spark-created table, Spark reads back), ICE-COMMIT-UNKNOWN-1
   (own exception class), ICE-TRINO-READ-1 (parked behind 1.8 Trino) and the pipeline-side SHADOW-1 change.
+- [overnight-report-2026-09-14-run14b.md](overnight-report-2026-09-14-run14b.md) — **run 14b report (2026-09-14,
+  day run beside run 14):** FACADE-4 step 1 merged (#582: one Rust type table under every conversion surface,
+  byte-identical answers through three critic rounds and a 600-pair differential, every end-to-end cell within ±5 % of
+  main per Q-R13-14) and ARRAY-NULL-1 (#581: null-preserving `array_append`/`array_prepend`, Spark's recursive element
+  coercion measured on the oracle, session-zone µs temporal widening, S2-21 bars re-measured by the orchestrator).
+  Rulings applied, decisions R14b-D-1..13, incidents, owner questions Q-R14b-1..6 with recommendations.
+- [ddl-depth-1-card-2026-09-14.md](ddl-depth-1-card-2026-09-14.md) — **card DDL-DEPTH-1 (2026-09-14, run 14b under
+  owner ruling Q-R13-13, card only):** a nesting-depth cap on the DDL type parser at `SPARK_TYPE_NAME_MAX_DEPTH` with a
+  typed refusal, measured on the Spark oracle first; no new refusal ships until the card runs.
 - [overnight-report-2026-09-14-run13b.md](overnight-report-2026-09-14-run13b.md) — **run 13b report (2026-09-14,
   expressions, beside run 13; night window 05:19–06:30, day continuation to 12:00):** REPLACE-LINEAR-1 step 1 (#577):
   a flat searched CASE with Spark semantics per Q-R1, 277 MB → 4.5 MiB at 16 entries on a release native, Grok
