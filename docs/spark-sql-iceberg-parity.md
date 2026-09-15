@@ -6115,7 +6115,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `{'s': {'g': 'a', 'k': 1}}`. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-19
   DataFrame-d batch; one-row `g`/`k` frame.)*
 - **Pin** —
-  `python/repark/tests/test_examples_dataframe_d.py::test_row_asdict_recursive_false_struct_divergence`
+  `python/repark/tests/test_examples_dataframe_d.py::test_row_asdict_recursive_false_struct_divergence`,
+  `python/repark/tests/test_row_tuple_1.py::test_collected_nested_struct_counts_as_dict_not_row`
+  (ROW-TUPLE-1 critic round 1, 2026-09-14: the count/index arm — the collected struct cell is a
+  dict, so `.count({"x": 1, "y": 2}) == 1` and `.count(Row(x=1, y=2)) == 0`)
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-19 measurement. `Row.asDict` /
   `Row.as_dict` stay covered by the flat-row arm and the recursive arm, where the engines agree;
   this row records the struct-field representation until collect returns nested Rows the way
