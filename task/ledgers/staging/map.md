@@ -4,6 +4,14 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [fnp-gen-1-ledger.md](fnp-gen-1-ledger.md) —
+  **FNP-GEN-1 step 1 (2026-09-15), in flight:** the 1.5 Spark-parity generators and
+  semi-structured parsers (`inline`, `posexplode`, `json_tuple`, `from_csv`,
+  `schema_of_csv`, plus the D-6 declared XML refusal) — ledger with D-1…D-7,
+  the 62-cell oracle subset, and the red-first two-door pins (32 failed, 5
+  signature pins already green on base `bee2cde3`). No product code in step 1.
+  `risk_tier: standard`. Branch `feat/fnp-gen-1`.
+  pins: fnp-gen-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [registry-16b-1-ledger.md](registry-16b-1-ledger.md) —
   **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
   CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live

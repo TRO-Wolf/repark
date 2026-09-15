@@ -5140,3 +5140,23 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 - **FNP-11A (2026-09-15):** `fnp11a_r2_spark_oracle.json` is excluded from the typos gate in `.typos.toml`: it records verbatim live-PySpark 4.1.2 messages, one of them truncated mid-word by the recorder, and recorded evidence is never hand-edited.
 - **FNP-11A R3 intake (2026-09-15):** `test_fnp11a_temporal.py` now runs every SQL-door `timestamp_add` / `timestamp_diff` oracle cell (L-005) with the bare unit keyword quoted (`BARE_UNIT_CALL`), since bare keywords stay EX-FN-27 and `test_bare_timestampadd_unit_refuses` keeps that pinned. Only the `TIMESTAMP_NTZ'…'` literal cell stays in `D4_BLOCKED_SQL` (the SQL parser has no such type). `test_timestampdiff_ntz_pair_answers_days` runs that pair's end value through `make_timestamp_ntz` instead of diffing a column with itself (L-006).
 - **FNP-11A (2026-09-15):** `test_functions_split_identity.py` pins the eleven-name FNP-11A tail after `ARROW_EXPORTS`. `test_catalog_surface_1.py::test_list_functions_shape` (unique names) and `test_fnp_misc_1.py::test_fnp_misc_1_byname_allowlist_covers_facade` caught the duplicate install and are green again.
+- [fnp_gen_1_spark_oracle.json](fnp_gen_1_spark_oracle.json) —
+  **FNP-GEN-1 step 1 (2026-09-15):** the 62 cells of the nine card names
+  (`inline`, `inline_outer`, `posexplode`, `posexplode_outer`, `json_tuple`,
+  `from_csv`, `schema_of_csv`, `from_xml`, `schema_of_xml`) plus their nine
+  `inspect.signature` entries, copied verbatim from the orchestrator's live
+  PySpark 4.1.2 recording `/tmp/oc-worker/pa-gen/o245_spark_oracle.json`
+  (recorder `/tmp/oc-worker/pa-gen/o245.py`, 2026-09-14); `spark_version`
+  4.1.2 kept. No cell projects `ts`, so no driver-zone localization applies.
+  pins: fnp-gen-1/C-001, C-002, C-003, C-004, C-005
+- [test_fnp_gen_1.py](test_fnp_gen_1.py) — **FNP-GEN-1 step 1 (2026-09-15):**
+  red-first two-door pins over the fixture's ansi-True cells (SQL SELECT-list
+  only): facade presence and signature parity (C-001), Python-door and SQL-door
+  value/type/name equality for the generators, `json_tuple`, `from_csv` and
+  `schema_of_csv` (C-002/C-003), the FAILFAST / non-foldable / uninferable
+  error shapes (C-004), the outer/NULL rows inside the generator pins (C-005),
+  and the D-6 declared XML refusal pins naming `FNP-16-csv-xml-xpath` (step 5
+  carries the marker into the message). The three ansi-True `LATERAL VIEW`
+  cells stay unpinned, blocked on run 16c (D-7). Red on base `bee2cde3`:
+  32 failed, 5 signature pins already green on matching stubs.
+  pins: fnp-gen-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
