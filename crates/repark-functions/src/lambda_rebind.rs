@@ -40,6 +40,10 @@ pub fn analyzer_rules_with_higher_order_preparation(
         position + 1,
         Arc::new(crate::java_double::SparkFloatStringify),
     );
+    rules.insert(
+        position + 2,
+        Arc::new(crate::decimal_precision::SparkDecimalPrecision),
+    );
     Ok(rules)
 }
 

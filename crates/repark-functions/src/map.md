@@ -110,6 +110,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   seats one more rule one slot later — `SparkFloatStringify`, which must see `LIKE`
   and `CASE` before `TypeCoercion` errors on (or mis-unifies) float/string mixes.
   pins: java-double-str-1/C-013
+  **DECIMAL-CACHE-1 (2026-09-15):** the same insertion point seats `SparkDecimalPrecision`
+  one slot later still (immediately pre-coercion). DataFusion's default `TypeCoercion`
+  pre-wraps bare integer literals (`Int32 -> (10,0)`), which the late seat can no longer
+  tell apart from explicit user casts (#386 keeps `(10,0)`-over-`Int32` user casts declared);
+  the early seat sees bare literals and min-precisions them, so facade `price * 5` reaches
+  `(38,8)`. The appended seat stays (sessions without this preparation, and shapes the
+  early seat skips); the already-correct-`CAST` stop makes the second run a no-op.
+  pins: decimal-cache-1/C-002
   **FNP-8 repair (2026-09-07):** `HigherOrderPreparation` runs only before the first default
   type-coercion pass. It narrows direct constructor literals for indexed `transform`, narrows a
   direct `aggregate`/`reduce` initial literal and its lambda-body literals, and derives direct
@@ -394,6 +402,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   physical fields per probe (facade plans pin the unanalyzed `(38,10)` schema; facade
   `* Int32(5)` analyzes to `(38,6)` where the oracle demands `(38,8)`).
   pins: decimal-cache-1/C-001
+  **DECIMAL-CACHE-1 seam fix (2026-09-15):** the rule is additionally seated pre-coercion
+  (see `lambda_rebind.rs`); product logic unchanged. Tests add a prod-like assembly helper
+  (`Analyzer::new().rules` + preparation + `analyzer_rules()`, ANSI on) with six pins:
+  facade `*`/`+`/col shapes, SQL `* 5`, explicit-cast preservation, explicit `(1,0)` cast —
+  each asserting logical == physical (name, type, nullability, metadata) and the value.
+  pins: decimal-cache-1/C-002
 - `decimal_spark.rs` — **R-2:** `SparkDecimalRewrite` (A5 slot: clean `decimal / decimal`
   before `SparkExprSemantics`; UDF owns `/0`) + `SparkDecimalExprPlanner` (DEC-8
   compute-with-clamp) + checked `+`/`−` (DEC-6, reads `SparkAnsiConfig`). Registered

@@ -648,6 +648,11 @@ mod tests {
 
     fn price_memtable_ctx() -> SessionContext {
         let context = ctx();
+        register_price_fixture(&context);
+        context
+    }
+
+    fn register_price_fixture(context: &SessionContext) {
         let array = Decimal128Array::from(vec![Some(1_765_600_000_000_i128)])
             .with_precision_and_scale(38, 10)
             .expect("price fixture keeps (38,10)");
@@ -658,7 +663,146 @@ mod tests {
         context
             .register_table("v", Arc::new(table))
             .expect("register price fixture");
+    }
+
+    fn prod_like_price_ctx() -> SessionContext {
+        let prepared = crate::lambda_rebind::analyzer_rules_with_higher_order_preparation(
+            datafusion::optimizer::Analyzer::new().rules,
+        )
+        .expect("prod-like assembly keeps a type_coercion seat");
+        let mut rules = prepared;
+        rules.extend(crate::analyzer_rules());
+        let config =
+            crate::ansi::with_spark_ansi_config(datafusion::prelude::SessionConfig::new(), true);
+        let state = datafusion::execution::SessionStateBuilder::new()
+            .with_config(config)
+            .with_default_features()
+            .with_analyzer_rules(rules)
+            .build();
+        let context = SessionContext::new_with_state(state);
+        crate::decimal_spark::register_spark_decimal_planner(&context);
+        register_price_fixture(&context);
         context
+    }
+
+    fn assert_logical_matches_physical(logical: &Field, physical: &Field) {
+        assert_eq!(logical.name(), physical.name());
+        assert_eq!(logical.data_type(), physical.data_type());
+        assert_eq!(logical.is_nullable(), physical.is_nullable());
+        assert_eq!(logical.metadata(), physical.metadata());
+    }
+
+    async fn facade_cell(
+        context: &SessionContext,
+        operator: Operator,
+        operand: Expr,
+    ) -> (Field, Field, Option<i128>) {
+        let frame = context
+            .table("v")
+            .await
+            .expect("read price fixture")
+            .select(vec![
+                datafusion::logical_expr::binary_expr(
+                    datafusion::logical_expr::col("price"),
+                    operator,
+                    operand,
+                )
+                .alias("n"),
+            ])
+            .expect("project facade probe");
+        let analyzed = analyze_eagerly(&context.state(), frame.logical_plan().clone())
+            .expect("analyze facade probe");
+        let logical = analyzed.schema().as_arrow().field(0).clone();
+        let batches = frame.collect().await.expect("collect facade probe");
+        assert_eq!(batches.len(), 1, "one batch for one row");
+        let physical = batches[0].schema().field(0).clone();
+        let array = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<Decimal128Array>()
+            .expect("decimal128 output");
+        (logical, physical, array.is_valid(0).then(|| array.value(0)))
+    }
+
+    async fn sql_cell(context: &SessionContext, sql: &str) -> (Field, Field, Option<i128>) {
+        let frame = context.sql(sql).await.expect("plan sql probe");
+        let analyzed = analyze_eagerly(&context.state(), frame.logical_plan().clone())
+            .expect("analyze sql probe");
+        let logical = analyzed.schema().as_arrow().field(0).clone();
+        let batches = frame.collect().await.expect("collect sql probe");
+        assert_eq!(batches.len(), 1, "one batch for {sql}");
+        let physical = batches[0].schema().field(0).clone();
+        let array = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<Decimal128Array>()
+            .expect("decimal128 output");
+        (logical, physical, array.is_valid(0).then(|| array.value(0)))
+    }
+
+    #[tokio::test]
+    async fn facade_int32_times_decimal_reaches_spark_min_precision() {
+        let context = prod_like_price_ctx();
+        let operand = Expr::Literal(ScalarValue::Int32(Some(5)), None);
+        let (logical, physical, value) = facade_cell(&context, Operator::Multiply, operand).await;
+        assert_logical_matches_physical(&logical, &physical);
+        assert_eq!(logical.data_type(), &DataType::Decimal128(38, 8));
+        assert_eq!(value, Some(88_280_000_000));
+    }
+
+    #[tokio::test]
+    async fn facade_int32_plus_decimal_matches_oracle() {
+        let context = prod_like_price_ctx();
+        let operand = Expr::Literal(ScalarValue::Int32(Some(1)), None);
+        let (logical, physical, value) = facade_cell(&context, Operator::Plus, operand).await;
+        assert_logical_matches_physical(&logical, &physical);
+        assert_eq!(logical.data_type(), &DataType::Decimal128(38, 9));
+        assert_eq!(value, Some(177_560_000_000));
+    }
+
+    #[tokio::test]
+    async fn facade_col_times_col_still_clamps() {
+        let context = prod_like_price_ctx();
+        let operand = datafusion::logical_expr::col("price");
+        let (logical, physical, value) = facade_cell(&context, Operator::Multiply, operand).await;
+        assert_logical_matches_physical(&logical, &physical);
+        assert_eq!(logical.data_type(), &DataType::Decimal128(38, 6));
+        assert_eq!(value, Some(31_173_433_600));
+    }
+
+    #[tokio::test]
+    async fn sql_int64_times_decimal_still_min_precision_with_early_rule() {
+        let context = prod_like_price_ctx();
+        let (logical, physical, value) = sql_cell(&context, "SELECT price * 5 AS n FROM v").await;
+        assert_logical_matches_physical(&logical, &physical);
+        assert_eq!(logical.data_type(), &DataType::Decimal128(38, 8));
+        assert_eq!(value, Some(88_280_000_000));
+    }
+
+    #[tokio::test]
+    async fn explicit_cast_keeps_declared_precision_with_early_rule() {
+        let context = prod_like_price_ctx();
+        let (logical, physical, value) = sql_cell(
+            &context,
+            "SELECT CAST(5 AS DECIMAL(10,0)) * price AS n FROM v",
+        )
+        .await;
+        assert_logical_matches_physical(&logical, &physical);
+        assert_eq!(logical.data_type(), &DataType::Decimal128(38, 6));
+        assert_eq!(value, Some(882_800_000));
+    }
+
+    #[tokio::test]
+    async fn explicit_min_precision_cast_times_decimal_matches_oracle() {
+        let context = prod_like_price_ctx();
+        let (logical, physical, value) = sql_cell(
+            &context,
+            "SELECT price * CAST(5 AS DECIMAL(1,0)) AS n FROM v",
+        )
+        .await;
+        assert_logical_matches_physical(&logical, &physical);
+        assert_eq!(logical.data_type(), &DataType::Decimal128(38, 8));
+        assert_eq!(value, Some(88_280_000_000));
     }
 
     #[tokio::test]
