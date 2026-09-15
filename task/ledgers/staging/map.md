@@ -4,27 +4,6 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
-- [io-text-1-ledger.md](io-text-1-ledger.md) —
-  **IO-TEXT-1 (2026-09-14), in flight:** `DataFrameReader.text` /
-  `DataFrameWriter.text` in Rust (`text_scan.rs` / `text_glob.rs` / `text_io.rs`)
-  with thin Python binds plus `format("text")` on both doors, pinned against the
-  run-15b live-PySpark-4.1.2 fixture; gzip and the `text.` SQL door stay dated
-  declared refusals (IO-TEXT-GZIP-1, IO-TEXT-SQL-1). **Follow-up (2026-09-15):**
-  critic + perf rulings T-1..T-9 / P-1..P-3 as R-1..R-12; `partitionBy` lays out
-  hive dirs (IO-TEXT-PART-1 retired, IO-TEXT-PARTDISC-1 filed).
-  Rounds 3–6 + R-39 (2026-09-15): one-scan partitioned writes, partition discovery, user-schema overlay, a streaming
-  spill-capable sort past the writer cap; the four width-label pins cite LOGICAL-WIDTH-1 / DF-TO-BINARY-1.
-  Round 7 + R-40/R-41 (2026-09-15): zone-free `timestamp_ntz` walls with timestamp inference, and a pool-sized
-  fallback tail (rechunk plus pool-capped spill reservation).
-  Round 7 + R-42 (2026-09-15): zone-free timestamp_ntz, pool-sized fallback tail; a tight-pool refusal is registry IO-TEXT-PART-POOL-1.
-  `risk_tier: standard`. Branch `feat/io-text-1`.
-  pins: io-text-1/C-001, C-002, C-003, C-004, T-1..T-9, P-1..P-3
-- [registry-16b-1-ledger.md](registry-16b-1-ledger.md) —
-  **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
-  CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live
-  PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
-  `risk_tier: standard`. Branch `docs/registry-16b-1`.
-  pins: registry-16b-1/C-001, C-002, C-003
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
@@ -232,7 +211,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `perf/unpivot-1` / `perf/unpivot-1-s2`.
   pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013
-- [registry-16b-1-ledger.md](registry-16b-1-ledger.md) —
+- [registry-16b-1-ledger.md](../completed/registry-16b-1-ledger.md) —
   **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
   CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live
   PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.

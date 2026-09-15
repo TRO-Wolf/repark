@@ -71,6 +71,53 @@ the sort's merge reservation refuses with or without `spark.sql.shuffle.partitio
 directory, never a wrong value, so under ruling R-16b-39 it ships as BACKLOG registry row IO-TEXT-PART-POOL-1, pinned by
 `test_text_partitioned_fallback_tiny_pool_refuses_loudly`. Residue for the row: bound producer in-flight and the merge reservation to the pool.
 
+## Departure — run 16b orchestrator, 2026-09-15
+
+**Reviews this run (Grok 4.6, read-only clones, fresh release natives).**
+- Logic re-check of the 15b follow-up: NEEDS_REMEDIATION ($0.83; L-101 P1 unescaped `/` partition value silently dropped rows, 7 P2,
+  3 P3) → round 3 (U-1..U-11).
+- Round-3 logic re-check: NEEDS_REMEDIATION ($0.95; every prior finding FIXED; 5 new P2 — two overturned by live cells, L-201 `k=007`
+  and L-205 bare glob) → round 4 (W-1..W-5).
+- Round-4 logic re-check: NEEDS_REMEDIATION ($0.74; L-301 raw-text overlay, L-302 uneven depth, L-303 non-leaf file — all measured
+  and standing) → round 5 (X-1..X-3).
+- Round-5 logic re-check: PASS ($0.71; L-301..L-303 FIXED; L-401 P3 user boolean / float / binary overlay refused — measured,
+  real, fixed in round 6 as Y-2).
+- Round-6 logic re-check: NEEDS_REMEDIATION ($0.60; L-401 FIXED; Y-1 correctness confirmed; L-501 P2 `timestamp_ntz` overlay
+  parsed in the session zone — measured in a New York session, real) → round 7 (Z-1).
+- Round-7 logic re-check: PASS ($0.55; L-501 FIXED in New York, UTC and Tokyo; no new findings).
+- S2-21 Rust perf re-check of the 15b follow-up: NEEDS_REMEDIATION (P1 partitionBy one scan per key; P2 limit granularity) → U-1, U-7.
+- Round-3 perf re-check: PASS ($0.56; P2 LRU minted a part file per row past the cap) → V-1, V-2.
+- Round-4 perf re-check: PASS ($0.54; P2 open-append-close per row past the cap) → X-4, X-5.
+- Round-5 perf re-check: PASS with one P1 ($0.58) ruled not shippable — the X-4 fallback drained the tail into memory and never
+  spilled (50k × 4 KiB → 710 MiB) → round 6 Y-1 (streaming sort under the session task context).
+- Round-6 perf re-check: PASS with one P2 ($1.08; Y-1 spills — 50k × 4 KiB peaks 424 MiB with 4 spill files; P2 500k × 4 KiB
+  failed ResourcesExhausted under a 128 M / 512 M pool before the sort could spill) → round 7 (Z-2).
+- Round-7 perf re-check: PASS with one P2 ($0.92; tight-pool refusal at DataFusion's default 64-way partitioning, loud and leaving no output) → BACKLOG registry row IO-TEXT-PART-POOL-1 pinned on today's refusal (R-42).
+
+**Orchestrator rulings (run 16b ledger ids R-16b-2, -7, -8, -14, -16, -17, -24, -25, -27, -28, -29, -31, -32, -33, -34, -35).** Every UNMEASURED review cell was measured on
+live PySpark 4.1.2 before ruling (iotext_probe3..iotext_probe7 batches). The round-3 fence note: the U-9 IllegalArgument
+variant touched crates/repark-common/src/lib.rs (5 lines) and U-10's condition helper lives in spark/_integral.py — owned by no other run,
+accepted. Commit 99f7b43e (round 1) and the round-4 commits lacked parsed Authored-By trailers; the orchestrator repaired the messages
+(trees unchanged).
+
+**Rebases.** Onto IO-DECLARED-1's pre-squash head (writer_readwriter.py 1104 → 1101 in both tables), onto main after #610 squashed
+(`--onto`), onto e9ea03c7 after #612, #621, #623, #606 and #626 (EX-0 1054 → 1056; round-5 gates there: make verify rc 0, parity 757,
+facade 7669 passed / 0 failed), and onto 4bd43fc8 after #622 and #624 (main had re-sorted the staging map; the IO-TEXT-1 entry went to
+its sorted position). Round 6 closed Y-1 (streaming, spilling fallback sort) and Y-2 (overlay types); ruling R-39 landed four pins that
+assert Spark's values and the registered wide schema labels (LOGICAL-WIDTH-1, DF-TO-BINARY-1).
+
+**Residue (recorded, not fixed).** memchr absent in the line split (1 GiB count 811–909 MiB/s); two `write_all` per row with an 8 KiB
+`BufWriter`; the glob matcher collects `chars()` per candidate; per-row key `Vec<String>` + escape in the partitioned writer;
+discover_partitions has no unique-value table; the user-schema overlay walks every file even when types do not change. Divergence notes
+in the registry rows: a failed write keeps the destination absent where Spark leaves an empty directory; INVALID_PARTITION_VALUE names the
+first failing value where Spark's cell named another.
+
+**Rust-first roll-call.** Python-only: argument and option checks (lineSep, compression, mode spelling, recursiveFileLookup), the
+path-list union, save-mode staging and the staging cleanup, and the facade condition helper `_integral.attach_error_condition`
+(exception attribute plumbing). Every scan, split, glob, partition discovery, schema overlay, escape and write is Rust.
+
+**Hygiene.** REGISTRY-16B-1 (#621) merged with its ledger in staging/; this departure also moves it to completed/ (ruling R-16b-26).
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: io-text-1
