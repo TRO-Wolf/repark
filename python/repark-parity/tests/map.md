@@ -341,6 +341,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `_live_parity.py` row 1877 → 1778 with the script baseline when the three
   converged nullability disclosures retire.
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. PERF-APPROXPCT-1 (2026-09-05): `repark-python/src/column/mod.rs` 1053 → 1052 with the script baseline.
+- `test_cap_1_source_file_line_cap.py` — **DF-PLAN-INTROSPECT-1 (2026-09-15, rebase onto #610/#612):** `dataframe/core.py` row 4014 → 4015 with the script baseline (the wrapped import gains `replace_expr`). pins: df-plan-introspect-1/C-004
   **CSV-INFER-PERF-1 (2026-09-06):** `session.rs` exception retired (1002 → 988, under the default); the `_RUST_BASELINES` row is deleted. Round 2: `reader.py` 1026 → 1022 in both tables.
   pins: csv-infer-perf-1/C-006
   DF-PRINTSCHEMA-1 (2026-09-04): the `dataframe/core.py` row ratchets 6371 → 6368 with the gate table.

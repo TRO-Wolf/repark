@@ -1,5 +1,6 @@
 # map — scripts/
 
+DF-PLAN-INTROSPECT-1 (2026-09-15, rebase onto main after #610/#612): `check_lib_py.py` sets `dataframe/core.py` 4014 → 4015 with the CAP-1 mirror — the wrapped `repark.spark.dataframe` import gains `replace_expr` from #610; still below main's 4027. pins: df-plan-introspect-1/C-004
 DF-PLAN-INTROSPECT-1 follow-up round 3 (2026-09-15, R-11): `check_lib_py.py`
 `dataframe/core.py` 4027 → 4014 (the `sameSemantics` body moves to
 `dataframe/plan_introspect.py` behind a one-line class binding, which pays for
