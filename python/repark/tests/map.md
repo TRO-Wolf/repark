@@ -4862,3 +4862,4 @@ through `core` or the package. pins: eager-budget-1/C-010
   (N-3), backtick keys / double-quoted TIME ZONE / INTERVAL / empty value (N-4),
   SQLSTATE suffixes (N-5), and a long SELECT is not intercepted (P1).
   pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- **FNP-MISC-1 (2026-09-15):** `test_fnp_misc_1.py::test_fnp_misc_1_call_function_on_camel_case_aliases_matches_spark` pins `call_function` on #597's six camel-case aliases to the measured Spark 4.1.2 answers (pins: fnp-misc-1/F-4).

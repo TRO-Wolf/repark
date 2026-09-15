@@ -353,6 +353,22 @@ def test_fnp_misc_1_byname_allowlist_covers_facade() -> None:
     assert sorted(derived) == sorted(FACADE_ONLY_ROUTINE_NAMES)
 
 
+def test_fnp_misc_1_call_function_on_camel_case_aliases_matches_spark(spark: Any) -> None:
+    """Camel-case aliases resolve only when Spark's builtin does. pins: fnp-misc-1/F-4"""
+    frame = spark.createDataFrame([(12,)], "a INT")
+    shifted = frame.select(
+        F.call_function("shiftLeft", "a", lit(1)),
+        F.call_function("shiftRight", "a", lit(1)),
+        F.call_function("shiftRightUnsigned", "a", lit(1)),
+    )
+    assert shifted.columns == ["shiftleft(a, 1)", "shiftright(a, 1)", "shiftrightunsigned(a, 1)"]
+    assert [tuple(row) for row in shifted.collect()] == [(24, 6, 6)]
+    for name in ("approxCountDistinct", "toDegrees", "toRadians"):
+        with pytest.raises(AnalysisException) as caught:
+            frame.select(F.call_function(name, "a")).collect()
+        assert str(caught.value).startswith(f"[UNRESOLVED_ROUTINE] Cannot resolve routine `{name}`")
+
+
 def test_fnp_misc_1_bucket_literal_column_folds_to_the_int_path(spark: Any) -> None:
     """bucket(lit(4)) refuses exactly like bucket(4). pins: fnp-misc-1/C-003"""
     frame = spark.createDataFrame([(1, 10), (2, 20)], "id INT, v INT")

@@ -11,6 +11,7 @@ BYNAME_NAMES: tuple[str, ...] = ("call_function", "call_udf")
 
 BYNAME_NON_ROUTINE_NAMES: frozenset[str] = frozenset(
     {
+        "approxCountDistinct",
         "asc",
         "asc_nulls_first",
         "asc_nulls_last",
@@ -28,6 +29,8 @@ BYNAME_NON_ROUTINE_NAMES: frozenset[str] = frozenset(
         "expr",
         "lit",
         "pandas_udf",
+        "toDegrees",
+        "toRadians",
         "udf",
         "udtf",
         "when",
@@ -209,6 +212,9 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "schema_of_xml",
     "sentences",
     "session_user",
+    "shiftLeft",
+    "shiftRight",
+    "shiftRightUnsigned",
     "skewness",
     "some",
     "spark_partition_id",
