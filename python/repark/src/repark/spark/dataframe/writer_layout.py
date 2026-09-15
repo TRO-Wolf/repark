@@ -115,18 +115,22 @@ def _unpack_column_args(col: Any, cols: tuple[Any, ...]) -> tuple[str, ...]:
     else:
         first = col
         rest = cols
-    if not isinstance(first, str):
-        raise PySparkTypeError(
-            errorClass="NOT_LIST_OF_STR",
-            messageParameters={"arg_name": "col", "arg_type": type(first).__name__},
-        )
     for item in rest:
         if not isinstance(item, str):
-            raise PySparkTypeError(
-                errorClass="NOT_LIST_OF_STR",
-                messageParameters={"arg_name": "cols", "arg_type": type(item).__name__},
-            )
+            _refuse_not_list_of_str("cols", item)
+    if not isinstance(first, str):
+        _refuse_not_list_of_str("col", first)
     return (first, *rest)
+
+
+def _refuse_not_list_of_str(arg_name: str, value: Any) -> None:
+    """Raise Spark's NOT_LIST_OF_STR with its rendered sentence."""
+    arg_type = type(value).__name__
+    raise PySparkTypeError(
+        f"[NOT_LIST_OF_STR] Argument `{arg_name}` should be a list[str], got {arg_type}.",
+        errorClass="NOT_LIST_OF_STR",
+        messageParameters={"arg_name": arg_name, "arg_type": arg_type},
+    )
 
 
 def _backticked_table_name(qualified: str) -> str:

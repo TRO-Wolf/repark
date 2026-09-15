@@ -417,3 +417,22 @@ def test_partitioned_save_as_table_still_writes(spark: ReparkSession) -> None:
     frame.write.partitionBy("a").saveAsTable("reg_parted")
     rows = spark.sql("SELECT key FROM reg_parted WHERE a = 3 ORDER BY key").to_arrow().to_pylist()
     assert rows == [{"key": "y"}]
+
+
+def test_not_list_of_str_message_and_extra_first_order(spark: ReparkSession) -> None:
+    """NOT_LIST_OF_STR has Spark's sentence, extra cols first. pins: io-bucket-cluster-1/C-006"""
+    frame = spark.createDataFrame([("x", 1, 2)], "key string, a int, b int")
+    with pytest.raises(PySparkTypeError) as first_bad:
+        frame.write.bucketBy(2, 1)
+    assert (
+        str(first_bad.value) == "[NOT_LIST_OF_STR] Argument `col` should be a list[str], got int."
+    )
+    with pytest.raises(PySparkTypeError) as extra_bad:
+        frame.write.sortBy("a", None)
+    assert (
+        str(extra_bad.value)
+        == "[NOT_LIST_OF_STR] Argument `cols` should be a list[str], got NoneType."
+    )
+    with pytest.raises(PySparkTypeError) as both_bad:
+        frame.write.bucketBy(2, 1, 2)
+    assert both_bad.value.getMessageParameters() == {"arg_name": "cols", "arg_type": "int"}

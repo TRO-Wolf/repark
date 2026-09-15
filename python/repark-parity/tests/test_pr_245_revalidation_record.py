@@ -60,9 +60,10 @@ _SQL_LITERAL_CALLS = {
     "python/repark/src/repark/spark/catalog.py": {"sql_string_literal": 1},
     "python/repark/src/repark/spark/catalog_surface.py": {"sql_string_literal": 2},
     "python/repark/src/repark/spark/dataframe/core.py": {"_sql_string_literal": 1},
+    "python/repark/src/repark/spark/dataframe/writer_layout.py": {"escape_sql_single_quotes": 1},
     "python/repark/src/repark/spark/dataframe/writer_readwriter.py": {
         "_sql_string_literal": 2,
-        "escape_sql_single_quotes": 2,
+        "escape_sql_single_quotes": 1,
     },
     "python/repark/src/repark/spark/functions.py": {"sql_string_literal": 4},
     "python/repark/src/repark/spark/functions_collections.py": {"sql_string_literal": 1},

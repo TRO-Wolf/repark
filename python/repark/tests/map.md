@@ -94,6 +94,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   while `clusterBy` keeps writing there. The round-1 chaining pin that passed
   `bucket_by(2, ["a", "b"], "key")` was corrected — Spark refuses that shape.
   pins: io-bucket-cluster-1/C-005
+  **Critic re-check L-101/L-102 (2026-09-15):** `NOT_LIST_OF_STR` carries Spark's rendered sentence and checks the extra columns before the first, as `readwriter.py` does. pins: io-bucket-cluster-1/C-006
 - [facade_reader_writer_oracle.json](facade_reader_writer_oracle.json) —
   **IO-BUCKET-CLUSTER-1 (2026-09-14):** the run-15b oracle for the reader/writer
   facade, copied unchanged from the orchestrator's live PySpark 4.1.2 recording

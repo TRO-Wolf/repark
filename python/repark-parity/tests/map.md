@@ -756,6 +756,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   counts: regenerate the tuples in the commit that ratchets a gate, then run this suite
   (`make py-test` — the suite is not in `preflight`; its CAP-1 file is, as
   `make py-test-parity-cap`, since PREFLIGHT-PARITY-1, 2026-09-09).
+  **IO-BUCKET-CLUSTER-1 (2026-09-15):** one `escape_sql_single_quotes` call moved with `_sql_option_escape` from `dataframe/writer_readwriter.py` (2 → 1) to the new `dataframe/writer_layout.py` (1); the inventory follows.
 | Symptom | First check |
 |---|---|
 | `test_datasets_manifest_types` reds | A schema field and its `manifest.json` row were edited one-sidedly; the failure names the family and class id |
