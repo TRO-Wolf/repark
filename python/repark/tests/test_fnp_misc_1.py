@@ -424,7 +424,7 @@ def test_fnp_misc_1_bucket_cast_int_column_folds_to_the_int_path(
         folded = F.bucket(lit(4).cast(cast_type), col("v"))
     with pytest.warns(FutureWarning, match="partitioning.bucket"):
         direct = F.bucket(4, "v")
-    assert folded.spark_display_part() == direct.spark_display_part() == 'bucket(4, "v")'
+    assert folded.spark_display_part() == direct.spark_display_part() == "bucket(4, `v`)"
     for expression in (folded, direct):
         with pytest.raises(
             AnalysisException, match="PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY"

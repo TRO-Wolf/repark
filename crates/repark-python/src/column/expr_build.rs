@@ -1,11 +1,15 @@
 //! Expression-construction helpers for [`super::PyColumn`].
 
-use datafusion::arrow::datatypes::{DataType, TimeUnit};
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
+
+use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
+use datafusion::common::{DFSchema, SchemaError, TableReference};
 use datafusion::execution::SessionStateBuilder;
 use datafusion::functions_aggregate::array_agg::array_agg_udaf;
 use datafusion::logical_expr::LogicalPlan;
-use datafusion::logical_expr::expr::{Alias, NullTreatment, WindowFunction};
+use datafusion::logical_expr::expr::{Alias, Cast, NullTreatment, WindowFunction};
 use datafusion::logical_expr::{
     Case, Expr, ExprFunctionExt, Operator, WindowFunctionDefinition, binary_expr, lit,
 };
@@ -28,6 +32,104 @@ pub(super) fn reciprocal_trig_or_inf(divisor: Expr) -> Expr {
     })
 }
 
+pub(crate) fn parse_canonical_predicate(
+    frame: &datafusion::prelude::DataFrame,
+    predicate: &str,
+) -> datafusion::error::Result<Expr> {
+    let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
+    frame.parse_sql_expr(canonical.as_ref()).map_err(|error| {
+        repark_spark::spark_literals::translate_downstream_error(
+            predicate,
+            canonical.as_ref(),
+            error,
+        )
+    })
+}
+
+pub(crate) async fn plan_expr_column(
+    context: &SessionContext,
+    select_sql: &str,
+    canonical: &str,
+) -> PyResult<Expr> {
+    let plan = match context.sql(select_sql).await {
+        Ok(frame) => {
+            match repark_functions::analyze_eagerly(&context.state(), frame.logical_plan().clone())
+            {
+                Ok(analyzed) => analyzed,
+                Err(error) => {
+                    if missing_column(&error).is_some() {
+                        return parse_unresolved_expr(context, canonical)
+                            .map_err(crate::datafusion_to_py_err);
+                    }
+                    return Err(crate::datafusion_to_py_err(error));
+                }
+            }
+        }
+        Err(error) => {
+            if missing_column(&error).is_some() {
+                return parse_unresolved_expr(context, canonical)
+                    .map_err(crate::datafusion_to_py_err);
+            }
+            return Err(crate::datafusion_to_py_err(error));
+        }
+    };
+    let expr = strip_outer_alias(extract_projection_expr(&plan)?);
+    Ok(
+        match plan
+            .schema()
+            .fields()
+            .first()
+            .map(|field| field.data_type().clone())
+        {
+            Some(DataType::Utf8View) => Expr::Cast(Cast::new(Box::new(expr), DataType::Utf8)),
+            _ => expr,
+        },
+    )
+}
+
+fn missing_column(
+    error: &datafusion::error::DataFusionError,
+) -> Option<(Option<TableReference>, String)> {
+    match error {
+        datafusion::error::DataFusionError::SchemaError(inner, _) => match inner.as_ref() {
+            SchemaError::FieldNotFound { field, .. } => {
+                Some((field.relation.clone(), field.name.clone()))
+            }
+            _ => None,
+        },
+        datafusion::error::DataFusionError::Diagnostic(_, inner) => missing_column(inner),
+        _ => None,
+    }
+}
+
+fn parse_unresolved_expr(
+    context: &SessionContext,
+    canonical: &str,
+) -> datafusion::error::Result<Expr> {
+    let mut qualified: Vec<(Option<TableReference>, Arc<Field>)> = Vec::new();
+    loop {
+        let schema =
+            DFSchema::new_with_metadata(qualified.clone(), HashMap::new()).map_err(|error| {
+                datafusion::error::DataFusionError::Plan(format!(
+                    "F.expr discovered-column schema failed: {error}"
+                ))
+            })?;
+        match context.state().create_logical_expr(canonical, &schema) {
+            Ok(expr) => return Ok(expr),
+            Err(error) => {
+                let Some((relation, name)) = missing_column(&error) else {
+                    return Err(error);
+                };
+                let next = (relation, Arc::new(Field::new(name, DataType::Utf8, true)));
+                if qualified.len() >= 64 || qualified.contains(&next) {
+                    return Err(error);
+                }
+                qualified.push(next);
+            }
+        }
+    }
+}
+
 /// Drop one outer alias so a standalone expression can be re-aliased by the facade.
 pub(super) fn strip_outer_alias(expr: Expr) -> Expr {
     match expr {
@@ -36,19 +138,40 @@ pub(super) fn strip_outer_alias(expr: Expr) -> Expr {
     }
 }
 
-pub(super) fn sql_context(sql: &str) -> datafusion::error::Result<SessionContext> {
+static EXPR_CONTEXT: OnceLock<SessionContext> = OnceLock::new();
+
+pub(super) fn sql_context(
+    _sql: &str,
+    _normalize_idents: bool,
+) -> datafusion::error::Result<SessionContext> {
+    if let Some(context) = EXPR_CONTEXT.get() {
+        return Ok(context.clone());
+    }
+    let context = build_expr_context()?;
+    let _ = EXPR_CONTEXT.set(context.clone());
+    Ok(context)
+}
+
+fn build_expr_context() -> datafusion::error::Result<SessionContext> {
     let mut config = SessionConfig::new();
-    config.options_mut().sql_parser.dialect =
-        repark_spark::dialect_for_executing_parse(sql, datafusion::config::Dialect::Generic);
-    let rules = repark_functions::analyzer_rules_with_higher_order_preparation(
+    config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
+    config.options_mut().sql_parser.enable_ident_normalization = false;
+    let mut rules = repark_functions::analyzer_rules_with_higher_order_preparation(
         datafusion::optimizer::Analyzer::new().rules,
     )?;
+    rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
+    rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
+    rules.extend(repark_functions::analyzer_rules());
     let state = SessionStateBuilder::new()
         .with_config(config)
         .with_default_features()
         .with_analyzer_rules(rules)
         .build();
-    Ok(SessionContext::new_with_state(state))
+    let context = SessionContext::new_with_state(state);
+    context.register_udf(repark_spark::spark_as_udf().as_ref().clone());
+    context.register_udf(repark_spark::suffix_literal_udf().as_ref().clone());
+    repark_functions::register_all(&context);
+    Ok(context)
 }
 
 /// Collapse nested `Alias` layers to one outer rename.

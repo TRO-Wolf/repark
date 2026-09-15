@@ -460,7 +460,8 @@ repark-core's error map.
   hazard this file's stamping discipline exists to avoid. The SQL door resolves the target and
   calls it; the door's `bug001_*` battery pins it end to end. MERGE is never gated here.
 - `idents.rs` — shared Spark/DF `quote_ident_spark` + path-escape needles + `probes` tables
-  (single source; MERGE `quote_ident` delegates here).
+  (single source; MERGE `quote_ident` delegates here). **FNP-4B (2026-09-15):** quoting
+  emits backticks (embedded doubled). pins: fnp-4b/C-002
 - `writer_props.rs` — Parquet `WriterProperties` from Iceberg
   `write.parquet.compression-codec` (+ optional level). Default **zstd** when absent (Java
   Iceberg 1.4+ parity); accepted `zstd|snappy|gzip|lz4|uncompressed`; unknown = loud error.
@@ -531,3 +532,4 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
   that read it. Sites here: `append.rs` — the example table literal in
   `append_a1_acceptance_identity_partitioned_end_to_end`, now `"t"` like every other
   `create_table` call in the file.
+- **FNP-4B remediation (2026-09-15):** `idents.rs` keeps the backtick `quote_ident_spark`; the unit's added code comments were removed under the 2026-08-26 ruling (facts stay in this map).

@@ -277,7 +277,7 @@ fn rewrite_case_encodes_clause_order() {
         name_case.contains("WHEN 0 THEN (s.name)"),
         "name branch must key on clause_id 0, got: {name_case}"
     );
-    assert!(name_case.contains("ELSE t.\"name\""));
+    assert!(name_case.contains("ELSE t.`name`"));
     assert!(
         name_case.contains("COALESCE((s.op = 'a'), FALSE)"),
         "clause_id CASE must still 3VL-harden clause 0 predicate, got: {name_case}"
@@ -524,11 +524,11 @@ fn rewrite_sql_drops_in_list_when_allowlisted_else_path_semijoin() {
     let allowlisted = sql.rewrite_sql_allowlisted("scoped_target", &schema);
     // Note: do not search bare `IN (` — `JOIN (` contains that substring.
     assert!(
-        !allowlisted.contains("\"_file\" IN (") && !allowlisted.contains("_file IN ("),
+        !allowlisted.contains("`_file` IN (") && !allowlisted.contains("_file IN ("),
         "allowlisted rewrite must not embed path IN list, got: {allowlisted}"
     );
     assert!(
-        allowlisted.contains("FROM \"scoped_target\" AS t"),
+        allowlisted.contains("FROM `scoped_target` AS t"),
         "allowlisted rewrite must FROM the scoped target, got: {allowlisted}"
     );
     assert!(
@@ -538,15 +538,15 @@ fn rewrite_sql_drops_in_list_when_allowlisted_else_path_semijoin() {
 
     let semi = sql.rewrite_sql_path_semijoin("scratch", "aff_paths", &schema);
     assert!(
-        semi.contains("INNER JOIN \"aff_paths\" AS __repark_aff"),
+        semi.contains("INNER JOIN `aff_paths` AS __repark_aff"),
         "else-path must semi-join path MemTable, got: {semi}"
     );
     assert!(
-        semi.contains("t.\"_file\" = __repark_aff.\"path\""),
+        semi.contains("t._file = __repark_aff.path"),
         "semi-join key must be _file = path, got: {semi}"
     );
     assert!(
-        !semi.contains("\"_file\" IN (") && !semi.contains("_file IN ("),
+        !semi.contains("`_file` IN (") && !semi.contains("_file IN ("),
         "path semi-join must not also embed path IN list, got: {semi}"
     );
 }
@@ -687,19 +687,19 @@ fn merge_sql_keys_identity_on_file_and_pos() {
     // Stage A live SQL (QUAL-08 deleted residual cardinality_sql / affected_files_sql).
     let discovery = sql.match_discovery_sql();
     assert!(
-        discovery.contains("GROUP BY t.\"_file\", t.\"_pos\""),
+        discovery.contains("GROUP BY t._file, t._pos"),
         "match discovery must group on the (_file, _pos) identity, got: {discovery}"
     );
     // INNER JOIN puts SOURCE first so it is the hash build side and the target is the probe.
     assert!(
-        discovery.contains(") AS s JOIN \"scratch\" AS t"),
+        discovery.contains(") AS s JOIN `scratch` AS t"),
         "must build the join on the source (source JOIN target), got: {discovery}"
     );
     let insert = sql.insert_sql(0, &arrow_schema()).unwrap();
     // Audit M4: the anti-join `_pos` rides through the source-only scope as a sentinel alias.
     assert!(
-        insert.contains("t.\"_pos\" AS \"__repark_not_matched_pos\"")
-            && insert.contains("WHERE \"__repark_not_matched_pos\" IS NULL"),
+        insert.contains("t._pos AS __repark_not_matched_pos")
+            && insert.contains("WHERE __repark_not_matched_pos IS NULL"),
         "insert anti-join must key on the sentinel `_pos` copy inside the source-only scope, \
          got: {insert}"
     );
@@ -727,12 +727,12 @@ fn insert_projection_validates_columns() {
     let schema = arrow_schema();
     assert_eq!(
         insert_projection(&insert(&["id", "name"], &["s.id", "s.name"]), &schema).unwrap(),
-        "(s.id) AS \"id\", (s.name) AS \"name\""
+        "(s.id) AS `id`, (s.name) AS `name`"
     );
 
     assert_eq!(
         insert_projection(&insert(&["id"], &["s.id"]), &schema).unwrap(),
-        "(s.id) AS \"id\", NULL AS \"name\""
+        "(s.id) AS `id`, NULL AS `name`"
     );
 
     let err = insert_projection(&insert(&["name"], &["s.name"]), &schema).unwrap_err();
@@ -759,7 +759,7 @@ fn insert_projection_positional() {
     let schema = arrow_schema();
     assert_eq!(
         insert_projection(&insert(&[], &["s.id", "s.name"]), &schema).unwrap(),
-        "(s.id) AS \"id\", (s.name) AS \"name\""
+        "(s.id) AS `id`, (s.name) AS `name`"
     );
 }
 
@@ -867,7 +867,7 @@ fn insert_projection_case_insensitive_columns() {
     let schema = arrow_schema();
     assert_eq!(
         insert_projection(&insert(&["ID", "Name"], &["s.id", "s.name"]), &schema).unwrap(),
-        "(s.id) AS \"id\", (s.name) AS \"name\""
+        "(s.id) AS `id`, (s.name) AS `name`"
     );
     let err = insert_projection(&insert(&["id", "ID"], &["1", "2"]), &schema).unwrap_err();
     assert!(
@@ -908,8 +908,8 @@ async fn expand_star_clauses_resolves_by_name() {
     assert_eq!(
         assignments,
         &[
-            ("id".to_string(), "s.\"id\"".to_string()),
-            ("name".to_string(), "s.\"name\"".to_string()),
+            ("id".to_string(), "s.`id`".to_string()),
+            ("name".to_string(), "s.`name`".to_string()),
         ]
     );
     let InsertAction::Explicit {
@@ -920,7 +920,7 @@ async fn expand_star_clauses_resolves_by_name() {
         panic!("expected an expanded INSERT clause");
     };
     assert_eq!(columns, &["id", "name"]);
-    assert_eq!(values_sql, &["s.\"id\"", "s.\"name\""]);
+    assert_eq!(values_sql, &["s.`id`", "s.`name`"]);
 
     let plain = spec(vec![delete(None)], vec![]);
     let untouched = expand_star_clauses(&ctx, &plain, &target_schema)
@@ -985,8 +985,8 @@ async fn expand_star_clauses_resolves_source_case_insensitively() {
     assert_eq!(
         assignments,
         &[
-            ("id".to_string(), "s.\"ID\"".to_string()),
-            ("name".to_string(), "s.\"NAME\"".to_string()),
+            ("id".to_string(), "s.`ID`".to_string()),
+            ("name".to_string(), "s.`NAME`".to_string()),
         ],
         "target keeps its own name; the value binds to the actual (uppercase) source column"
     );
@@ -998,7 +998,7 @@ async fn expand_star_clauses_resolves_source_case_insensitively() {
         panic!("expected an expanded INSERT clause");
     };
     assert_eq!(columns, &["id", "name"]);
-    assert_eq!(values_sql, &["s.\"ID\"", "s.\"NAME\""]);
+    assert_eq!(values_sql, &["s.`ID`", "s.`NAME`"]);
 }
 
 /// PIN PL-6 — two source columns colliding on one target is a loud AMBIGUOUS error naming both.
@@ -1039,19 +1039,16 @@ fn sql_literal_escapes_quotes() {
 /// Schema-derived names keep embedded double quotes from breaking generated-SQL identifiers.
 #[test]
 fn generated_sql_quotes_identifiers() {
-    assert_eq!(quote_ident("plain"), "\"plain\"");
-    assert_eq!(quote_ident("na\"me"), "\"na\"\"me\"");
+    assert_eq!(quote_ident("plain"), "`plain`");
+    assert_eq!(quote_ident("na\"me"), "`na\"me`");
 
     let weird = ArrowSchema::new(vec![Field::new("na\"me", DataType::Utf8, true)]);
     let projected = insert_projection(&insert(&["na\"me"], &["s.x"]), &weird).unwrap();
-    assert_eq!(projected, "(s.x) AS \"na\"\"me\"");
+    assert_eq!(projected, "(s.x) AS `na\"me`");
 
     let plain_spec = spec(vec![], vec![]);
     let sql = merge_sql(&plain_spec);
-    assert_eq!(
-        sql.rewrite_column("na\"me"),
-        "t.\"na\"\"me\" AS \"na\"\"me\""
-    );
+    assert_eq!(sql.rewrite_column("na\"me"), "t.`na\"me` AS `na\"me`");
 }
 
 // === idents ===
@@ -1062,7 +1059,7 @@ fn qi1_merge_quote_ident_joins_spark_injection_battery() {
         let via_merge = quote_ident(probe);
         let via_ssot = crate::write::idents::quote_ident_spark(probe);
         assert_eq!(via_merge, via_ssot, "merge must delegate to idents SSOT");
-        let expected = format!("\"{}\"", probe.replace('"', "\"\""));
+        let expected = format!("`{}`", probe.replace('`', "``"));
         assert_eq!(via_merge, expected, "under-quote residual for {probe:?}");
     }
 }

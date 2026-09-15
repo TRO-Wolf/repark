@@ -25,14 +25,13 @@ use pyo3::types::{PyBool, PyFloat, PyInt, PyString};
 pub(crate) mod display;
 #[cfg(test)]
 mod door_parity_tests;
-mod expr_build;
+pub(crate) mod expr_build;
 mod function_dispatch;
 mod window;
 
 use expr_build::{
-    TIMESTAMP_UNIT, collapse_identity_alias_chain, extract_projection_expr, parse_data_type,
-    percentile_approx_list_expr, percentile_approx_scalar_expr, refuse_nested_higher_order,
-    strip_outer_alias,
+    TIMESTAMP_UNIT, collapse_identity_alias_chain, parse_data_type, percentile_approx_list_expr,
+    percentile_approx_scalar_expr, refuse_nested_higher_order,
 };
 use function_dispatch::{
     binary_aggregate_udaf, call_scalar_expr, cast_unsigned_count_to_signed, unary_aggregate_udaf,
@@ -203,15 +202,15 @@ impl PyColumn {
 
     /// A SQL-string expression (PySpark `expr(sql)` / `F.expr`).
     ///
-    /// Parses `sql` on a throwaway context provisioned with `repark_functions::register_all` +
-    /// `analyzer_rules()` (same function surface as a repark session), plans `SELECT (<sql>)`,
-    /// then runs the analyzer **eagerly** (`repark_functions::analyze_eagerly`) before
-    /// extracting the projection expression. The extracted [`Expr`] therefore already carries
-    /// the Spark rewrites (integer `/` → both-operands-double, div-by-zero `nullif`,
-    /// planner-embedded `substr` → shim, …) *and* their post-analysis types — so both the
-    /// values and the schema a consumer `DataFrame` exports over Arrow match `spark.sql`. The
-    /// rules are idempotent, so the consumer session's own analysis pass is a no-op on this
-    /// subtree. Column-referencing expressions still fail (empty schema / no FROM).
+    /// Parses `sql` on the shared process-wide expr context provisioned with
+    /// `repark_functions::register_all` + `analyzer_rules()` (same function surface as a
+    /// repark session), plans `SELECT (<sql>)`, then runs the analyzer **eagerly**
+    /// (`repark_functions::analyze_eagerly`) before extracting the projection expression.
+    /// The extracted [`Expr`] therefore already carries the Spark rewrites (integer `/` →
+    /// both-operands-double, div-by-zero `nullif`, planner-embedded `substr` → shim, …)
+    /// *and* their post-analysis types — so both the values and the schema a consumer
+    /// `DataFrame` exports over Arrow match `spark.sql`. The rules are idempotent, so the
+    /// consumer session's own analysis pass is a no-op on this
     ///
     /// # Errors
     /// Returns `ParseException` for invalid SQL and `AnalysisException` for unresolved columns.
@@ -220,35 +219,14 @@ impl PyColumn {
     pub fn sql(sql: &str) -> PyResult<Self> {
         fenced!("Column.sql", {
             repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
-            let context = expr_build::sql_context(sql).map_err(crate::datafusion_to_py_err)?;
-            repark_functions::register_all(&context);
-            for rule in repark_functions::analyzer_rules() {
-                context.add_analyzer_rule(rule);
-            }
-            let select_sql = format!("SELECT ({sql}) AS _repark_expr");
-            let runtime = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .map_err(|err| {
-                    PyValueError::new_err(format!("could not start expr runtime: {err}"))
-                })?;
-            let plan = runtime
-                .block_on(async {
-                    let df = context.sql(&select_sql).await?;
-                    repark_functions::analyze_eagerly(&context.state(), df.logical_plan().clone())
-                })
+            let context =
+                expr_build::sql_context(sql, true).map_err(crate::datafusion_to_py_err)?;
+            let canonical = repark_spark::spark_literals::canonicalize(sql)
                 .map_err(crate::datafusion_to_py_err)?;
-            let expr = strip_outer_alias(extract_projection_expr(&plan)?);
-            // Cast Utf8View for Arrow FFI compatibility; analyzed numeric types remain unchanged.
-            let expr = match plan
-                .schema()
-                .fields()
-                .first()
-                .map(|field| field.data_type().clone())
-            {
-                Some(DataType::Utf8View) => Expr::Cast(Cast::new(Box::new(expr), DataType::Utf8)),
-                _ => expr,
-            };
+            let select_sql = format!("SELECT ({}) AS _repark_expr", canonical.as_ref());
+            let runtime = crate::session::shared_runtime()?;
+            let planned = expr_build::plan_expr_column(&context, &select_sql, canonical.as_ref());
+            let expr = runtime.block_on(planned)?;
             Ok(Self::from_expr(expr))
         })
     }

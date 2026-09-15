@@ -635,6 +635,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `CAST_INVALID_INPUT` (ANSI on) or `NULL`. It rides pre-coercion (one slot in
   the shared insertion) and post-coercion (in `analyzer_rules()`); both seats
   are idempotent. The JDK-longhand remainder is JAVA-DOUBLE-FD-1.
+  **FNP-4B round 8 (2026-09-15):** the text helpers are `pub` (module `pub`) so the
+  Spark door names suffix-literal fields from value text.
   pins: java-double-str-1/C-003, C-004, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - `string.rs` — `SparkSubstring` (`substring`, alias `substr`; audit #6): Spark's
   `UTF8String.substringSQL` character-based semantics — pos 0 acts as 1, negative pos counts

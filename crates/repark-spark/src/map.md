@@ -149,6 +149,53 @@ pins: rp-4-fork-repin/C-005, C-006
   maps the passthrough parser's reachable `SQL` and `Diagnostic(SQL)` errors from canonical text to
   original source. Planning, execution, shared, and collection errors remain unchanged; a boundary
   pin holds this contract. Secondary rewrites stop mapping only when their SQL bytes change.
+  **FNP-4B (2026-09-15):** the Databricks-lexer canonicalizer — Spark escapes in double-quoted
+  STRING literals (escape-free ones keep their quotes, see the keep-double rule below),
+  `D/F/S/Y/L/BD` numeric suffixes as CASTs, `* EXCLUDE` → `* EXCEPT`, struct
+  call-base field access, the out-of-range `\U` Java artifact, and the `escapedStringLiterals`
+  verbatim mode (`canonicalize_verbatim`, `translate_downstream_error_verbatim`,
+  `escaped_string_literals_from_config_map` / `with_escaped_string_literals_config` /
+  `escaped_verbatim_from_options`); `pub` so the binding's `filter_sql` path reuses it.
+  Location maps in `apply_regions` are built only when a downstream parser error needs
+  them. **FNP-4B round 8 (2026-09-15):** the numeric-suffix fast path fires on
+  digit/`.` + suffix letter or exponent (`1.e2` stays on the rewrite path); bare
+  decimals skip the tokenize. The 200-column decimal gap is DataFusion-side.
+  pins: fnp-4b/C-001, C-004, C-005, C-006, C-020
+- `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
+  digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
+  `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),
+  `* EXCLUDE` → `* EXCEPT`, DROP TEMPORARY, FROM-less `DELETE t WHERE` → `DELETE FROM t WHERE`,
+  and call-base struct field access (chained
+  `.s.a` extracts the named_struct value and wraps `__repark_spark_as__` so selectExpr
+  display is `named_struct(a, 1).a` and nullability follows the value).
+  **Round 5 (2026-09-15):** D/F/decimal rewrites wrap a string operand in
+  `__repark_suffix_literal__` so the fold still sees the literal.
+  `-9223372036854775808L` folds the unary minus into the BIGINT region.
+  **Round 8 (2026-09-15):** Y/S regions absorb a unary minus like the LONG_MIN arm
+  (`CAST({signed} AS TINYINT/SMALLINT)`), range-checked on the signed text; the L arm
+  refuses out-of-range `BIGINT` at parse with `[INVALID_NUMERIC_LITERAL_RANGE]`.
+  pins: fnp-4b/C-001, C-004, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-021, C-023
+- `spark_typed.rs` — **FNP-4B critic (2026-09-15):** `FoldSparkNumericCasts` folds
+  `CAST('1e200' AS DOUBLE)` to a non-null Float64 literal; `SparkProjectionDisplay`
+  aliases unaliased projections whose DataFusion names carry `Int64(` /
+  `datafusion.public` / backticks to Spark display (`(my col + 1)`); `__repark_spark_as__`
+  is the identity UDF that carries a Spark display name.
+  **Round 5 (2026-09-15):** `__repark_suffix_literal__` is the companion
+  provenance-marker UDF with fold-through and display unwrapping, registered in
+  `extension.rs` and the binding `sql_context`.
+  **Round 5 (2026-09-15):** `SparkProjectionDisplay` rewrites only the root
+  projection and keeps explicit non-marker aliases.
+  **Round 6 (2026-09-15):** `cargo fmt` applied.
+  **Round 8 (2026-09-15):** `SuffixLiteral` schema/display names come from the
+  value text (Java double/float text, scale-exact decimals), so nested columns never
+  carry the marker; the fold covers numeric targets except `Int64` (whose CAST anchor
+  must survive re-analysis); the root display fires on single-root scalar-dump
+  names only (balanced `Int64(1)`, table-qualified `t.Int64(1)`, negated
+  `(- 0.0)`; composites like `a + Int64(1)` or `getbit(Int64(6),Int64(1))`
+  keep their plan names) and names unfolded integer `CAST`s from the literal
+  inner. Inner renames are out of scope:
+  analysis runs twice and outer references would go stale.
+  pins: fnp-4b/C-012, C-014, C-015, C-019, C-020, C-021, C-022
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in;
   `Model: Grok 4.6 xHigh`);
@@ -160,6 +207,10 @@ pins: rp-4-fork-repin/C-005, C-006
   primitives behind the same opt-in (pins: v3-6-v3-types/C-003); v2 CREATE refuses via
   the fork's `check_compatibility`.
   4 in-module tests (`type_mapping_tests`) + `tests/create_table.rs` pin + CTAS type smoke.
+  **FNP-4B round 7 (2026-09-15):** angle-bracket `ARRAY<T>` maps to an Iceberg
+  list with nullable `element` fields and table-unique ids from a checked
+  allocator (R-16b-21 grant); bare/square-bracket forms still refuse.
+  pins: fnp-4b/C-025 (round-7 fmt/clippy follow-ups carry no behavior change)
 - `format_version.rs` — **V3-10:** the Spark-door adapter for `SET TBLPROPERTIES
   ('format-version' = …)`. It lifts the reserved key out of the property map before the
   transaction (so it is never persisted), resolves it against the table's current version and the
@@ -401,9 +452,10 @@ part of that section's pin — changing either one changes both.
 | Time-travel span scanning | `time_travel.rs` (pin half: `repark-core/src/time_travel.rs`) |
 | See what this door ships vs deliberately does NOT | `matrix.rs` (the Q13 surface matrix) |
 
-**FNP-4a — `apply_spark_parser_dialect` is present but not wired.** Generated SQL still uses ANSI
-double-quoted identifiers, which Spark parsing treats as string literals. Fix that write-path
-contract before enabling the helper.
+**FNP-4B (2026-09-15), in flight:** `apply_spark_parser_dialect` is wired in
+`SparkExtension::configure` (step 1 of the card); generated SQL still uses ANSI double-quoted
+identifiers, which the Databricks lexer reads as string literals — D-2 moves that write-path
+contract to backticks. Ledger: `task/ledgers/staging/fnp-4b-ledger.md`.
 
 ## Pointers
 
@@ -455,3 +507,4 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
 - **`__repark` is an engine-reserved name prefix** — user tables and views must not use it. The
   mint step deregisters an occupied name before registering the pinned provider. This is required
   because the schema provider rejects duplicate registration; do not remove that cleanup.
+- **FNP-4B remediation (2026-09-15):** added code comments in `spark_literals.rs`, `spark_rewrites.rs`, `normalize.rs` removed (ruling 2026-08-26); the pre-existing one-line `spark_literals.rs` module doc that `python/repark-parity/tests/test_sqp_1_record.py` pins is kept verbatim.

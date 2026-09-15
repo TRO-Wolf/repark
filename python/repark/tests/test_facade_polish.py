@@ -272,10 +272,10 @@ def test_sql_table_ref_accepts_quoted_segments_with_dots() -> None:
     """Quote-aware multipart parsing (dots inside quotes)."""
     from repark.spark.session import _sql_table_ref
 
-    assert _sql_table_ref('catalog."db.with.dot".t') == '"catalog"."db.with.dot"."t"'
-    assert _sql_table_ref('"a.b"') == '"a.b"'
-    assert _sql_table_ref("cat.db.`my-table`") == '"cat"."db"."my-table"'
-    assert _sql_table_ref('cat.db."order"') == '"cat"."db"."order"'
+    assert _sql_table_ref('catalog."db.with.dot".t') == "`catalog`.`db.with.dot`.`t`"
+    assert _sql_table_ref('"a.b"') == "`a.b`"
+    assert _sql_table_ref("cat.db.`my-table`") == "`cat`.`db`.`my-table`"
+    assert _sql_table_ref('cat.db."order"') == "`cat`.`db`.`order`"
 
 
 def test_read_semantic_option_rejected_on_parquet_and_iceberg_snapshot(
