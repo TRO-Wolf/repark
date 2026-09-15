@@ -121,9 +121,7 @@ def _sql_table_ref(table_name: str) -> str:
 
     Does **not** apply default-catalog / default-namespace qualification — callers that need
 
-    bare-name expansion must resolve first via :meth:`ReparkSession.resolve_table_name` /
-
-    :meth:`ReparkSession._sql_table_ref_resolved` (E2).
+    bare-name expansion must resolve first via :meth:`ReparkSession.resolve_table_name` (E2).
 
     """
 

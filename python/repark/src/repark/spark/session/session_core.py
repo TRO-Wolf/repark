@@ -216,17 +216,6 @@ class ReparkSession:
             default_catalog_is_auto=bool(state.get("auto_default_catalog")),
         )
 
-    def _sql_table_ref_resolved(
-        self,
-        table_name: str,
-        *,
-        prefer_temp_view: bool = False,
-    ) -> str:
-        """Resolve then quote a table identifier for SQL (writer paths)."""
-        return _sql_table_ref(
-            self.resolve_table_name(table_name, prefer_temp_view=prefer_temp_view)
-        )
-
     def _expand_bare_table_names_in_sql(self, query: str) -> str:
         """Expand bare / two-part names in load-bearing free SQL at the SQL entry point.
 
@@ -997,11 +986,9 @@ class ReparkSession:
                     "arg_type": type(table_name).__name__,
                 },
             )
-        # Prefer temp-view for one-part names (Spark: temps before current db). Use the native
-        # SQL path directly so the free-SQL DROP rewriter cannot re-qualify a temp view.
-        table_ref = self._sql_table_ref_resolved(table_name, prefer_temp_view=True)
-        inner = self._ensure_alive()
-        return DataFrame(inner.sql(f"SELECT * FROM {table_ref}"), inner, self._alive_token)
+        from repark.spark import catalog_surface
+
+        return catalog_surface.session_table(self, table_name)
 
     def run_maintenance(self, table: str, dry_run: bool = True, **overrides: Any) -> DataFrame:
         """Run the maintenance policy for one table."""

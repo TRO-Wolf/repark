@@ -43,6 +43,24 @@ catalog, and the local filesystem only — no cloud catalog, no JVM.
 - [list_tables.py](list_tables.py) — `list_tables`: the exact `MANAGED` row
   for a memory-catalog Iceberg table, the `TEMPORARY` view row, the bare arm,
   and an exact-pattern arm.
+- [get_table.py](get_table.py) — CATALOG-SURFACE-1 metadata arms: `getTable` /
+  `get_table` (the `MANAGED` Iceberg row and the `TEMPORARY` view row),
+  `listColumns` / `list_columns` (table and view column rows in order),
+  `listFunctions` / `list_functions` (sorted built-ins plus a `to_*` pattern
+  arm), and `getFunction` / `get_function` (a `repark.builtin` row and a
+  session-UDF `repark.python_udf` row). The list/class-name arm diverges from
+  Spark's JVM registry — §5 CAT-FUNCS-1.
+- [cache_table.py](cache_table.py) — `cacheTable` / `cache_table`,
+  `isCached` / `is_cached`, and `uncacheTable` / `uncache_table`: False → True
+  → False around the cache/uncache calls, on a temp view and an Iceberg table.
+- [create_table.py](create_table.py) — `createTable` / `create_table` build
+  empty schema'd Iceberg tables and answer DataFrames (source `iceberg`,
+  `description` → table comment); `createExternalTable` /
+  `create_external_table` warn `FutureWarning` and take the same path.
+- [maintain.py](maintain.py) — `dropGlobalTempView` / `drop_global_temp_view`
+  answer False while EX-DF-2 stands; `recoverPartitions` /
+  `recover_partitions` answer None (§5 CAT-RECOVER-1); `refreshTable` /
+  `refresh_table` and `refreshByPath` / `refresh_by_path` answer None.
 
 Every snake_case spelling is a repark extension (`hasattr` measured False on
 live PySpark 4.1.2) covered beside its camelCase twin, measured Spark-equal.

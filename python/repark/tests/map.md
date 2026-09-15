@@ -3082,6 +3082,25 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
+- `test_catalog_surface_1.py` + `facade_catalog_oracle.json` — **CATALOG-SURFACE-1
+  (2026-09-14):** the thirteen-name second half of `Catalog`, driven by the run-15b
+  live-PySpark-4.1.2 fixture copied unchanged. `getTable` (`MANAGED` / qualified /
+  `TEMPORARY` rows, `TABLE_OR_VIEW_NOT_FOUND`), `listColumns` (field order,
+  `simpleString` dataType, partition flag, `dbName` FutureWarning, view arm),
+  `listFunctions` / `getFunction` (repark-registry rows, glob patterns, UDF
+  `description="N/A."`, `UNRESOLVED_ROUTINE` miss — §5 CAT-FUNCS-1), the cache
+  trio (cache → isCached True → uncache False, `spark.table` second-read serves
+  the held cache via the scan spy, live-frame `cache()` visible to `isCached`,
+  missing table `TABLE_OR_VIEW_NOT_FOUND`), `createTable` /
+  `createExternalTable` (empty Iceberg table → `spark.table` DataFrame,
+  `description` → comment, `TBLPROPERTIES` options, `TABLE_OR_VIEW_ALREADY_EXISTS`,
+  `UNABLE_TO_INFER_SCHEMA` no-schema refusal, `path=` / non-`iceberg` source EX-IO-6
+  refusal, `FutureWarning` on the deprecated alias), `dropGlobalTempView` False,
+  `recoverPartitions` None + `EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE` +
+  `TABLE_OR_VIEW_NOT_FOUND` (§5 CAT-RECOVER-1), `refreshTable` (OOB commit visible
+  after refresh, view no-op, missing raise), `refreshByPath` None, and today's
+  `CACHE TABLE` / `UNCACHE TABLE` SQL refusals.
+  pins: catalog-surface-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_dml_b_partition_overwrite.py` — **DML-B:** facade `spark.sql` `INSERT OVERWRITE …
   PARTITION` static/dynamic pins (values, Arrow types, snapshot operation, empty-dynamic
   refuse). pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005

@@ -97,6 +97,21 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **CFG-2 step 2 (2026-09-13):** `SourceMetadata` (the `name` / `kind` / `key_path` /
   `auto_register` / `properties` namedtuple) lives beside `CatalogMetadata` — the
   `listCatalogs` idiom — for `ReparkSession.sources()` rows. pins: cfg-2/C-013
+- `catalog_surface.py` — **CATALOG-SURFACE-1 (2026-09-14):** the thirteen-name second
+  half of the `Catalog` surface — `getTable` / `listColumns` / `listFunctions` /
+  `getFunction` metadata (DESCRIBE + SHOW PARTITIONS + the `repark.spark.functions`
+  export table), the `cacheTable` / `isCached` / `uncacheTable` trio over EAGER-OWN-1
+  cache handles keyed by resolved table identity on the session's alive token,
+  `createTable` / `createExternalTable` through the existing CREATE TABLE path
+  (non-`iceberg` source and `path=` share the EX-IO-6 refusal), and the maintenance
+  no-ops (`dropGlobalTempView` False while EX-DF-2 stands, `recoverPartitions` None —
+  §5 CAT-RECOVER-1, `refreshTable` via `refresh_catalog_provider`, `refreshByPath`
+  None). `ReparkSession.table` delegates to `catalog_surface.session_table`, which
+  resolves the name temp-view-first and scans the held cache view when the identity
+  is catalog-cached (the free-SQL DROP rewriter never re-qualifies a temp view —
+  the same contract the old inline body kept); `Catalog.clearCache` and
+  `Catalog.uncacheTable` release entries from the same registry.
+  pins: catalog-surface-1/C-001…C-006
 - `column.py` — lazy expression objects, type gates, aliases, field access, generators,
   aggregates, windows, casts, and Spark-compatible operator behavior. Column identity
   metadata preserves join and duplicate-name semantics.

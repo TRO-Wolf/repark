@@ -1,0 +1,66 @@
+# Charter ledger — CATALOG-SURFACE-1 · the thirteen-name second half of the Catalog surface
+
+**Date:** 2026-09-14 · **Branch:** `feat/catalog-surface-1` · **Base:** `origin/main`
+`84992add` · **Model:** swe-2-high · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. **risk_tier: standard.**
+**Registry:** `CAT-FUNCS-1` and `CAT-RECOVER-1` filed DECLARED (§5); the
+`createTable`/`createExternalTable` `path=` and non-`iceberg` `source=` refusal arms
+join the existing `EX-IO-6` row's Pin list (no second row). `EX-DF-2` stands and keeps
+`dropGlobalTempView` answering `False`.
+
+**Why now.** The 1.5 PySpark-parity campaign covers every public `Catalog` name. The
+first half (`current*` / `list*` / `*Exists` / `clearCache` / temp-view drops /
+`registerFunction`) shipped with EX-20/EX-21 and R-CURCAT. This unit lands the
+remaining thirteen names — both spellings each — driven by the run-15b live PySpark
+4.1.2 fixture (`facade_catalog_oracle.json`, copied unchanged into
+`python/repark/tests/`).
+
+**Not in this unit:** SQL-door `CACHE TABLE` / `UNCACHE TABLE` / `REFRESH TABLE`
+spellings (run 15c's SQL door owns them; today's parser refusals are pinned, not
+taught); `createGlobalTempView` (EX-DF-2 stays refused); a real path-keyed cache for
+`refreshByPath` (none exists — `None` is Spark's measured answer and ours); a JVM
+function-registry mirror (CAT-FUNCS-1).
+
+## PROPOSITION LEDGER — CATALOG-SURFACE-1 — 2026-09-14
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-001 | `getTable` answers the Spark-shaped `Table` row for an Iceberg table (bare and qualified, `description` from the `comment` table property), the `TEMPORARY` row for a view, and `AnalysisException` `TABLE_OR_VIEW_NOT_FOUND` for a miss. | `test_catalog_surface_1.py::{test_get_table_permanent,test_get_table_qualified,test_get_table_two_part,test_get_table_temp_view,test_get_table_missing}` vs fixture cells `getTable*`, `createTable_description`. | **PROVEN** | All five red on the base tree (`AttributeError: 'Catalog' object has no attribute 'getTable'`). Green after: `Table(name, catalog, namespace, description, "MANAGED", False)` reads catalog/namespace from the resolved identity and `description` from `DESCRIBE TABLE EXTENDED`'s `Table Properties` row; a session temp view answers `(name, None, [], None, "TEMPORARY", True)`; a miss raises the pinned class+errorClass. pins: catalog-surface-1/C-001 |
+| C-002 | `listColumns` answers one `Column` per schema field in order — `simpleString` dataType, schema nullability, `isPartition` for identity-partition source columns — on tables, partitioned tables, and views; `dbName` warns Spark's FutureWarning and resolves `db.table`; a miss raises `TABLE_OR_VIEW_NOT_FOUND`. | `test_catalog_surface_1.py::{test_list_columns_permanent,test_list_columns_partitioned,test_list_columns_db_name_warns,test_list_columns_view,test_list_columns_missing}` vs cells `listColumns_*`. | **PROVEN** | All five red on the base. Green after: the partitioned Iceberg table's `p` column carries `isPartition=True` (read off `DESCRIBE TABLE EXTENDED`'s `# Partitioning` rows); the view arm matches the oracle's nullable `kv()` fields; `dbName` warns the exact Spark text and still resolves. pins: catalog-surface-1/C-002 |
+| C-003 | `listFunctions` answers sorted `Function` rows covering the `repark.spark.functions` export table (minus declared refusals) plus session UDFs, with `*`/`|` glob filtering; `getFunction` resolves UDF-then-builtin and misses with `UNRESOLVED_ROUTINE` in Spark's search-path shape. | `test_catalog_surface_1.py::{test_list_functions_shape,test_list_functions_pattern,test_list_functions_db_name,test_list_functions_udf,test_get_function_builtin,test_get_function_udf,test_get_function_missing}` vs cells `listFunctions_*`, `getFunction_*`. | **PROVEN** | All seven red on the base. Green after: Ruling R-1 applied — repark's list is its own registry (Spark's 533-JVM list cannot be mirrored; CAT-FUNCS-1 DECLARED); built-ins carry `className="repark.builtin"`, `description=""`; UDFs `className="repark.python_udf"`, `description="N/A."`; the miss message renders `[UNRESOLVED_ROUTINE] Cannot resolve routine `nope_fn` on search path [`system`.`builtin`, `system`.`session`, `ex_cat`.`ex_db`].`. pins: catalog-surface-1/C-003 |
+| C-004 | The cache trio holds: `cacheTable` makes `isCached` True and the next `spark.table(name)` scan reads the held cache; `uncacheTable` releases and is a no-op on a never-cached table; a DataFrame `.cache()` on a held frame is visible to `isCached`; missing names raise `TABLE_OR_VIEW_NOT_FOUND`; `clearCache` drops the catalog entries; `storageLevel` is accepted. | `test_catalog_surface_1.py::{test_cache_table_then_is_cached_and_uncache,test_cache_table_storage_level,test_cache_table_missing_names_raise,test_cached_table_reads_the_cache_view,test_frame_cache_visible_to_is_cached,test_clear_cache_drops_catalog_tables}` vs cells `cacheTable*`, `isCached*`, `uncacheTable*`, `df_cache_visible_isCached`. | **PROVEN** | All six red on the base. Green after: Ruling R-2 applied — `cacheTable` builds `SELECT * FROM <resolved>` on the native session, `.cache()`s it eagerly, and files the frame in a `catalog_cached_tables` dict on the session alive token keyed by resolved identity; `ReparkSession.table` delegates to `catalog_surface.session_table`, which scans `entry._cache_view` when the identity is cached (the scan-spy pin proves the second read never re-scans the table). `spark.table(name).cache()` on a held frame is visible through the `_frame_identities` WeakKeyDictionary — Spark's `df_cache_visible_isCached` answer, so no CAT-CACHE-1 backlog row was needed. `StorageLevel` flows through the existing persist plumbing (flags accepted, single-node MemTable — unchanged contract). pins: catalog-surface-1/C-004 |
+| C-005 | `createTable` creates an empty Iceberg table through the existing CREATE TABLE path and returns `spark.table(name)`; `description` lands as the `comment` property, `**options` as table properties; an existing name raises `TABLE_OR_VIEW_ALREADY_EXISTS`; no schema and no path raises the `UNABLE_TO_INFER_SCHEMA` refusal; `path=` or a non-`iceberg` `source` shares the EX-IO-6 refusal; `createExternalTable` warns Spark's FutureWarning and delegates. | `test_catalog_surface_1.py::{test_create_table_iceberg_schema,test_create_table_return_type_and_default_source,test_create_table_description,test_create_table_options_become_properties,test_create_table_exists,test_create_table_no_schema_no_path,test_create_table_non_iceberg_source_refuses,test_create_table_path_refuses,test_create_external_table_warns_and_delegates}` vs cells `createTable_*`, `createExternalTable`. | **PROVEN** | All nine red on the base. Green after: DDL renders `CREATE TABLE <ref> (<cols>) [TBLPROPERTIES ('k'='v'…)]` — probes showed the parser accepts bare/quoted identifiers with properties only in the unquoted-tail form, so `_sql_table_ref` supplies it; `schema` accepts `StructType` or DDL str; duplicate raises Spark's class+errorClass; the `path=`/non-iceberg refusal names `iceberg` lowercase and joins EX-IO-6's pin list. pins: catalog-surface-1/C-005 |
+| C-006 | `dropGlobalTempView` answers `False` (EX-DF-2 stands); `recoverPartitions` answers `None` on Iceberg tables, `EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE` on a view, `TABLE_OR_VIEW_NOT_FOUND` on a miss; `refreshTable` makes an out-of-band commit visible and is a view no-op; `refreshByPath` answers `None` for any path. | `test_catalog_surface_1.py::{test_drop_global_temp_view_missing,test_recover_partitions,test_recover_partitions_view,test_recover_partitions_missing,test_refresh_table_roundtrip,test_refresh_table_view_and_missing,test_refresh_by_path}` vs cells `dropGlobalTempView_*`, `recoverPartitions_*`, `refreshTable_*`, `refreshByPath*`. | **PROVEN** | All seven red on the base. Green after: `refreshTable` drops the catalog cache entry for the identity, unpersists identity-mapped live frames, and calls `session.refresh_catalog_provider(<catalog>)`; the roundtrip pin commits out-of-band via `_testing_oob_create_table`/`_testing_oob_drop_table` and sees the new table only after refresh. `recoverPartitions` on an unpartitioned Iceberg table answers `None` where Spark's Hive table raises `NOT_A_PARTITIONED_TABLE` — Ruling R-5, CAT-RECOVER-1 DECLARED. pins: catalog-surface-1/C-006 |
+| C-007 | The fixture is copied unchanged, every row/map/ledger cell is written, and the four new example scripts cover all 26 public names. | `python/repark/tests/facade_catalog_oracle.json` byte-equal to `/tmp/oc-worker/run15b/oracle/facade_catalog_oracle.json`; `test_map.py` / `check_example_coverage.py`. | **PROVEN** | `cmp` byte-identical. Registry: CAT-FUNCS-1 + CAT-RECOVER-1 at §5 end, EX-IO-6 pin list extended. Maps: `python/repark/src/repark/spark/map.md`, `python/repark/tests/map.md`, `docs/examples/catalog/map.md`, `task/ledgers/staging/map.md`. Examples: `get_table.py`, `cache_table.py`, `create_table.py`, `maintain.py` all pass under `.venv/bin/python`; `inventory.txt` regenerated (949 names / 835 covered / 220 examples); `test_ex_0` pins moved 930→956 and catalog 28→54. pins: catalog-surface-1/C-007 |
+| C-008 | No regression: `test_catalog*.py`, `test_examples_window_catalog.py`, cache/session suites stay green; the API inventory pin carries the 26 new names; `check_lib_py.py`, Ruff, and the parity `-k "registry or cap_1 or map"` gate all pass. | The gate list below. | **PROVEN** | `test_catalog_surface_1.py` 41 passed; `test_catalog_surface.py` + `test_examples_window_catalog.py` + `test_catalog_*` siblings 76 passed; `check_lib_py.py` 688 files clean (session_core baseline ratcheted down 2304→2302 — the delegation edit shrank it); the facade public-surface pin now expects the 54-name Catalog roster; `CACHE TABLE`/`UNCACHE TABLE` parser refusals stay pinned (SQL door is run 15c's). pins: catalog-surface-1/C-008 |
+
+VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Per-name decisions — catalog-surface-1
+
+| Name | Verdict | Reason (one line) |
+|---|---|---|
+| `getTable` / `get_table` | implemented | API plumbing — resolved identity + `DESCRIBE TABLE EXTENDED` metadata; no new engine capability. |
+| `listColumns` / `list_columns` | implemented | API plumbing — frame schema fields + `# Partitioning` rows; `dbName` is Spark's deprecated prefix form. |
+| `listFunctions` / `list_functions` | implemented (DECLARED CAT-FUNCS-1) | R-1: the honest list is `repark.spark.functions.__all__` minus declared refusals plus session UDFs; no JVM registry exists to mirror. |
+| `getFunction` / `get_function` | implemented (DECLARED CAT-FUNCS-1) | Same registry; `UNRESOLVED_ROUTINE` miss reproduces Spark's search-path message shape. |
+| `cacheTable` / `cache_table` | implemented | R-2: EAGER-OWN-1 cache handle held on the alive token under the resolved identity. |
+| `isCached` / `is_cached` | implemented | Catalog entries + `_frame_identities` mapping make `spark.table(name).cache()` visible — Spark's answer. |
+| `uncacheTable` / `uncache_table` | implemented | Releases the entry and unpersists identity frames; no-op when never cached. |
+| `createTable` / `create_table` | implemented | R-3: existing CREATE TABLE path; `path=`/non-`iceberg` source join the EX-IO-6 refusal. |
+| `createExternalTable` / `create_external_table` | implemented | Spark's FutureWarning then `createTable`. |
+| `dropGlobalTempView` / `drop_global_temp_view` | implemented | `False` while EX-DF-2 stands — Spark's answer for a missing view. |
+| `recoverPartitions` / `recover_partitions` | implemented (DECLARED CAT-RECOVER-1) | R-5: Iceberg keeps partitions in metadata; `None` is the truthful answer. |
+| `refreshTable` / `refresh_table` | implemented | Drops the identity's cache + `refresh_catalog_provider`; view is a no-op. |
+| `refreshByPath` / `refresh_by_path` | implemented | No path-keyed cache exists; `None` is Spark's measured answer. |
+
+## Gates run
+
+| Command | Result |
+|---|---|
+| `.venv/bin/python -m pytest python/repark/tests/test_catalog_surface_1.py -q` | 41 passed |
+| `.venv/bin/python -m pytest python/repark/tests/test_catalog_surface.py python/repark/tests/test_catalog_surface_1.py python/repark/tests/test_examples_window_catalog.py -q` | 76 + 41 = green |
+| `.venv/bin/python docs/examples/catalog/{get_table,cache_table,create_table,maintain}.py` | all exit 0 |
+| `python3 scripts/check_example_coverage.py` | 949 names, 835 covered, 0 findings |
+| `python3 scripts/check_lib_py.py` | 688 files clean; session_core baseline 2304→2302 |
+| comment fence (`git diff --cached \| grep -P …`) | empty |

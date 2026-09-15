@@ -1,0 +1,1665 @@
+{
+ "cells": {
+  "cacheTable": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "cacheTable_missing": {
+   "error": {
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `nope_tbl` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01;\n'UnresolvedRelation [nope_tbl], [], false\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "relationName": "`nope_tbl`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "cacheTable_storage_level": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "column_fields": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "name"
+     },
+     {
+      "kind": "str",
+      "value": "description"
+     },
+     {
+      "kind": "str",
+      "value": "dataType"
+     },
+     {
+      "kind": "str",
+      "value": "nullable"
+     },
+     {
+      "kind": "str",
+      "value": "isPartition"
+     },
+     {
+      "kind": "str",
+      "value": "isBucket"
+     },
+     {
+      "kind": "str",
+      "value": "isCluster"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "createExternalTable": {
+   "result": {
+    "columns": [
+     "key",
+     "a",
+     "b"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='x', a=1, b=2)",
+     "Row(key='y', a=3, b=4)"
+    ],
+    "schema": "struct<key:string,a:int,b:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   },
+   "warnings": [
+    "FutureWarning: createExternalTable is deprecated since Spark 2.2, please use createTable instead."
+   ]
+  },
+  "createTable_description": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "ct4"
+     },
+     {
+      "kind": "str",
+      "value": "spark_catalog"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "default"
+       }
+      ],
+      "kind": "list"
+     },
+     {
+      "kind": "str",
+      "value": "hello"
+     },
+     {
+      "kind": "str",
+      "value": "MANAGED"
+     },
+     {
+      "kind": "bool",
+      "value": false
+     }
+    ],
+    "kind": "Table"
+   }
+  },
+  "createTable_exists": {
+   "error": {
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "message": "[TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `spark_catalog`.`default`.`ct1` because it already exists.\nChoose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "relationName": "`spark_catalog`.`default`.`ct1`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "createTable_no_schema_no_path": {
+   "error": {
+    "condition": "UNABLE_TO_INFER_SCHEMA",
+    "message": "[UNABLE_TO_INFER_SCHEMA] Unable to infer schema for Parquet. It must be specified manually. SQLSTATE: 42KD9",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "format": "Parquet"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "createTable_options": {
+   "result": {
+    "columns": [
+     "a"
+    ],
+    "kind": "DataFrame",
+    "rows": [],
+    "schema": "struct<a:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "createTable_parquet": {
+   "result": {
+    "columns": [
+     "a",
+     "p"
+    ],
+    "kind": "DataFrame",
+    "rows": [],
+    "schema": "struct<a:int,p:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "p",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "createTable_path": {
+   "result": {
+    "columns": [
+     "key",
+     "a",
+     "b"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='x', a=1, b=2)",
+     "Row(key='y', a=3, b=4)"
+    ],
+    "schema": "struct<key:string,a:int,b:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "createTable_return_type": {
+   "result": {
+    "kind": "str",
+    "value": "DataFrame"
+   }
+  },
+  "df_cache_visible_isCached": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "dropGlobalTempView_missing": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "dropGlobalTempView_present": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "getFunction_builtin": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "abs"
+     },
+     {
+      "kind": "NoneType",
+      "value": null
+     },
+     {
+      "kind": "NoneType",
+      "value": null
+     },
+     {
+      "kind": "str",
+      "value": "abs(expr) - Returns the absolute value of the numeric or interval value."
+     },
+     {
+      "kind": "str",
+      "value": "org.apache.spark.sql.catalyst.expressions.Abs"
+     },
+     {
+      "kind": "bool",
+      "value": true
+     }
+    ],
+    "kind": "Function"
+   }
+  },
+  "getFunction_missing": {
+   "error": {
+    "condition": "UNRESOLVED_ROUTINE",
+    "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nope_fn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883;\n'UnresolvedFunctionName [nope_fn], Catalog.makeFunction, false, ArraySeq(spark_catalog, default, nope_fn)\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "routineName": "`nope_fn`",
+     "searchPath": "[`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "getFunction_udf": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "my_udf1"
+     },
+     {
+      "kind": "NoneType",
+      "value": null
+     },
+     {
+      "kind": "NoneType",
+      "value": null
+     },
+     {
+      "kind": "str",
+      "value": "N/A."
+     },
+     {
+      "kind": "str",
+      "value": "org.apache.spark.sql.classic.UDFRegistration$$Lambda$5075/0x00007531a153ec30"
+     },
+     {
+      "kind": "bool",
+      "value": true
+     }
+    ],
+    "kind": "Function"
+   }
+  },
+  "getTable": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "ct1"
+     },
+     {
+      "kind": "str",
+      "value": "spark_catalog"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "default"
+       }
+      ],
+      "kind": "list"
+     },
+     {
+      "kind": "NoneType",
+      "value": null
+     },
+     {
+      "kind": "str",
+      "value": "MANAGED"
+     },
+     {
+      "kind": "bool",
+      "value": false
+     }
+    ],
+    "kind": "Table"
+   }
+  },
+  "getTable_fields": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "name"
+     },
+     {
+      "kind": "str",
+      "value": "catalog"
+     },
+     {
+      "kind": "str",
+      "value": "namespace"
+     },
+     {
+      "kind": "str",
+      "value": "description"
+     },
+     {
+      "kind": "str",
+      "value": "tableType"
+     },
+     {
+      "kind": "str",
+      "value": "isTemporary"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "getTable_missing": {
+   "error": {
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `nope_tbl` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01;\n'UnresolvedTableOrView [nope_tbl], Catalog.makeTable, true\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "relationName": "`nope_tbl`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "getTable_qualified": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "ct1"
+     },
+     {
+      "kind": "str",
+      "value": "spark_catalog"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "default"
+       }
+      ],
+      "kind": "list"
+     },
+     {
+      "kind": "NoneType",
+      "value": null
+     },
+     {
+      "kind": "str",
+      "value": "MANAGED"
+     },
+     {
+      "kind": "bool",
+      "value": false
+     }
+    ],
+    "kind": "Table"
+   }
+  },
+  "getTable_temp_view": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "tv1"
+     },
+     {
+      "kind": "NoneType",
+      "value": null
+     },
+     {
+      "items": [],
+      "kind": "list"
+     },
+     {
+      "kind": "NoneType",
+      "value": null
+     },
+     {
+      "kind": "str",
+      "value": "TEMPORARY"
+     },
+     {
+      "kind": "bool",
+      "value": true
+     }
+    ],
+    "kind": "Table"
+   }
+  },
+  "isCached_after_uncache": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "isCached_false": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "isCached_missing": {
+   "error": {
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `nope_tbl` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01;\n'UnresolvedRelation [nope_tbl], [], false\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "relationName": "`nope_tbl`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "isCached_true": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "listColumns": {
+   "result": {
+    "items": [
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "a"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "int"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       }
+      ],
+      "kind": "Column"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "p"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "string"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       }
+      ],
+      "kind": "Column"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "listColumns_dbName": {
+   "result": {
+    "items": [
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "a"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "int"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       }
+      ],
+      "kind": "Column"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "p"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "string"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       }
+      ],
+      "kind": "Column"
+     }
+    ],
+    "kind": "list"
+   },
+   "warnings": [
+    "FutureWarning: `dbName` has been deprecated since Spark 3.4 and might be removed in a future version. Use listColumns(`dbName.tableName`) instead."
+   ]
+  },
+  "listColumns_missing": {
+   "error": {
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `nope_tbl` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01;\n'UnresolvedTableOrView [nope_tbl], Catalog.listColumns, true\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "relationName": "`nope_tbl`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "listColumns_partitioned": {
+   "result": {
+    "items": [
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "a"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "int"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       }
+      ],
+      "kind": "Column"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "p"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "string"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       },
+       {
+        "kind": "bool",
+        "value": true
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       }
+      ],
+      "kind": "Column"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "listColumns_view": {
+   "result": {
+    "items": [
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "key"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "string"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       }
+      ],
+      "kind": "Column"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "a"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "int"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       }
+      ],
+      "kind": "Column"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "b"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "int"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       },
+       {
+        "kind": "bool",
+        "value": false
+       }
+      ],
+      "kind": "Column"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "listFunctions_db": {
+   "result": {
+    "kind": "int",
+    "value": 533
+   }
+  },
+  "listFunctions_len_type": {
+   "result": {
+    "items": {
+     "abs": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "Function(name='abs', catalog=None, namespace=None, description='abs(expr) - Returns the absolute value of the numeric or interval value.', className='org.apache.spark.sql.catalyst.expressions.Abs', isTemporary=True)"
+       }
+      ],
+      "kind": "list"
+     },
+     "fields": {
+      "items": [
+       {
+        "kind": "str",
+        "value": "name"
+       },
+       {
+        "kind": "str",
+        "value": "catalog"
+       },
+       {
+        "kind": "str",
+        "value": "namespace"
+       },
+       {
+        "kind": "str",
+        "value": "description"
+       },
+       {
+        "kind": "str",
+        "value": "className"
+       },
+       {
+        "kind": "str",
+        "value": "isTemporary"
+       }
+      ],
+      "kind": "list"
+     },
+     "first": {
+      "kind": "str",
+      "value": "Function(name='!', catalog=None, namespace=None, description='! expr - Logical not.', className='org.apache.spark.sql.catalyst.expressions.Not', isTemporary=True)"
+     },
+     "n": {
+      "kind": "int",
+      "value": 533
+     },
+     "type": {
+      "kind": "str",
+      "value": "Function"
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "listFunctions_pattern": {
+   "result": {
+    "items": [
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_avro"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "\n    to_avro(child[, jsonFormatSchema]) - Converts a Catalyst binary input value into its\n      corresponding Avro format result.\n  "
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ToAvro"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_binary"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "\n    to_binary(str[, fmt]) - Converts the input `str` to a binary value based on the supplied `fmt`.\n      `fmt` can be a case-insensitive string literal of \"hex\", \"utf-8\", \"utf8\", or \"base64\".\n      By default, the binary format for conversion is \"hex\" if `fmt` is omitted.\n      The function returns NULL if at least one of the input parameters is NULL.\n  "
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ToBinary"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_char"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "\n    to_char(expr, format) - Convert `expr` to a string based on the `format`.\n      Throws an exception if the conversion fails. The format can consist of the following\n      characters, case insensitive:\n        '0' or '9': Specifies an expected digit between 0 and 9. A sequence of 0 or 9 in the format\n          string matches a sequence of digits in the input value, generating a result string of the\n          same length as the corresponding sequence in the format string. The result string is\n          left-padded with zeros if the 0/9 sequence comprises more digits than the matching part of\n          the decimal value, starts with 0, and is before the decimal point. Otherwise, it is\n          padded with spaces.\n        '.' or 'D': Specifies the position of the decimal point (optional, only allowed once).\n        ',' or 'G': Specifies the position of the grouping (thousands) separator (,). There must be\n          a 0 or 9 to the left and right of each grouping separator.\n        '$': Specifies the location of the $ currency sign. This character may only be specified\n          once.\n        'S' or 'MI': Specifies the position of a '-' or '+' sign (optional, only allowed once at\n          the beginning or end of the format string). Note that 'S' prints '+' for positive values\n          but 'MI' prints a space.\n        'PR': Only allowed at the end of the format string; specifies that the result string will be\n          wrapped by angle brackets if the input value is negative.\n          ('<1>').\n      If `expr` is a datetime, `format` shall be a valid datetime pattern, see <a href=\"https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html\">Datetime Patterns</a>.\n      If `expr` is a binary, it is converted to a string in one of the formats:\n        'base64': a base 64 string.\n        'hex': a string in the hexadecimal format.\n        'utf-8': the input binary is decoded to UTF-8 string.\n  "
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ToCharacterBuilder"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_csv"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "to_csv(expr[, options]) - Returns a CSV string with a given struct value"
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.StructsToCsv"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_date"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "\n    to_date(date_str[, fmt]) - Parses the `date_str` expression with the `fmt` expression to\n      a date. Returns null with invalid input. By default, it follows casting rules to a date if\n      the `fmt` is omitted.\n  "
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ParseToDate"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_json"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "to_json(expr[, options]) - Returns a JSON string with a given struct value"
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.StructsToJson"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_number"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "\n     to_number(expr, fmt) - Convert string 'expr' to a number based on the string format 'fmt'.\n       Throws an exception if the conversion fails. The format can consist of the following\n       characters, case insensitive:\n         '0' or '9': Specifies an expected digit between 0 and 9. A sequence of 0 or 9 in the format\n           string matches a sequence of digits in the input string. If the 0/9 sequence starts with\n           0 and is before the decimal point, it can only match a digit sequence of the same size.\n           Otherwise, if the sequence starts with 9 or is after the decimal point, it can match a\n           digit sequence that has the same or smaller size.\n         '.' or 'D': Specifies the position of the decimal point (optional, only allowed once).\n         ',' or 'G': Specifies the position of the grouping (thousands) separator (,). There must be\n           a 0 or 9 to the left and right of each grouping separator. 'expr' must match the\n           grouping separator relevant for the size of the number.\n         '$': Specifies the location of the $ currency sign. This character may only be specified\n           once.\n         'S' or 'MI': Specifies the position of a '-' or '+' sign (optional, only allowed once at\n           the beginning or end of the format string). Note that 'S' allows '-' but 'MI' does not.\n         'PR': Only allowed at the end of the format string; specifies that 'expr' indicates a\n           negative number with wrapping angled brackets.\n           ('<1>').\n  "
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ToNumber"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_protobuf"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "\n    to_protobuf(child, messageName, descFilePath, options) - Converts a Catalyst binary input value into its corresponding\n      Protobuf format result.\n  "
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ToProtobuf"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_time"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "\n    to_time(str[, format]) - Parses the `str` expression with the `format` expression to a time.\n    If `format` is malformed or its application does not result in a well formed time, the function\n    raises an error. By default, it follows casting rules to a time if the `format` is omitted.\n  "
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ToTime"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_timestamp"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "\n    to_timestamp(timestamp_str[, fmt]) - Parses the `timestamp_str` expression with the `fmt` expression\n      to a timestamp. Returns null with invalid input. By default, it follows casting rules to\n      a timestamp if the `fmt` is omitted. The result data type is consistent with the value of\n      configuration `spark.sql.timestampType`.\n  "
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ParseToTimestamp"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_timestamp_ltz"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "\n    to_timestamp_ltz(timestamp_str[, fmt]) - Parses the `timestamp_str` expression with the `fmt` expression\n      to a timestamp with local time zone. Returns null with invalid input. By default, it follows casting rules to\n      a timestamp if the `fmt` is omitted.\n  "
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ParseToTimestampLTZExpressionBuilder"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_timestamp_ntz"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "\n    to_timestamp_ntz(timestamp_str[, fmt]) - Parses the `timestamp_str` expression with the `fmt` expression\n      to a timestamp without time zone. Returns null with invalid input. By default, it follows casting rules to\n      a timestamp if the `fmt` is omitted.\n  "
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ParseToTimestampNTZExpressionBuilder"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_unix_timestamp"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "to_unix_timestamp(timeExp[, fmt]) - Returns the UNIX timestamp of the given time."
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ToUnixTimestamp"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_utc_timestamp"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "to_utc_timestamp(timestamp, timezone) - Given a timestamp like '2017-07-14 02:40:00.0', interprets it as a time in the given time zone, and renders that time as a timestamp in UTC. For example, 'GMT+1' would yield '2017-07-14 01:40:00.0'."
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ToUTCTimestamp"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_varchar"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "\n    to_varchar(expr, format) - Convert `expr` to a string based on the `format`.\n      Throws an exception if the conversion fails. The format can consist of the following\n      characters, case insensitive:\n        '0' or '9': Specifies an expected digit between 0 and 9. A sequence of 0 or 9 in the format\n          string matches a sequence of digits in the input value, generating a result string of the\n          same length as the corresponding sequence in the format string. The result string is\n          left-padded with zeros if the 0/9 sequence comprises more digits than the matching part of\n          the decimal value, starts with 0, and is before the decimal point. Otherwise, it is\n          padded with spaces.\n        '.' or 'D': Specifies the position of the decimal point (optional, only allowed once).\n        ',' or 'G': Specifies the position of the grouping (thousands) separator (,). There must be\n          a 0 or 9 to the left and right of each grouping separator.\n        '$': Specifies the location of the $ currency sign. This character may only be specified\n          once.\n        'S' or 'MI': Specifies the position of a '-' or '+' sign (optional, only allowed once at\n          the beginning or end of the format string). Note that 'S' prints '+' for positive values\n          but 'MI' prints a space.\n        'PR': Only allowed at the end of the format string; specifies that the result string will be\n          wrapped by angle brackets if the input value is negative.\n          ('<1>').\n      If `expr` is a datetime, `format` shall be a valid datetime pattern, see <a href=\"https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html\">Datetime Patterns</a>.\n      If `expr` is a binary, it is converted to a string in one of the formats:\n        'base64': a base 64 string.\n        'hex': a string in the hexadecimal format.\n        'utf-8': the input binary is decoded to UTF-8 string.\n  "
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.ToCharacterBuilder"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_variant_object"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "to_variant_object(expr) - Convert a nested input (array/map/struct) into a variant where maps and structs are converted to variant objects which are unordered unlike SQL structs. Input maps can only have string keys."
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.variant.ToVariantObject"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     },
+     {
+      "items": [
+       {
+        "kind": "str",
+        "value": "to_xml"
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "NoneType",
+        "value": null
+       },
+       {
+        "kind": "str",
+        "value": "to_xml(expr[, options]) - Returns a XML string with a given struct value"
+       },
+       {
+        "kind": "str",
+        "value": "org.apache.spark.sql.catalyst.expressions.StructsToXml"
+       },
+       {
+        "kind": "bool",
+        "value": true
+       }
+      ],
+      "kind": "Function"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "listFunctions_udf": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "Function(name='my_udf1', catalog=None, namespace=None, description='N/A.', className='org.apache.spark.sql.classic.UDFRegistration$$Lambda$5075/0x00007531a153ec30', isTemporary=True)"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "recoverPartitions_missing": {
+   "error": {
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `nope_tbl` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01;\n'RecoverPartitions\n+- 'UnresolvedTable [nope_tbl], recoverPartitions(), false\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "relationName": "`nope_tbl`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "recoverPartitions_partitioned": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "recoverPartitions_unpartitioned": {
+   "error": {
+    "condition": "NOT_A_PARTITIONED_TABLE",
+    "message": "[NOT_A_PARTITIONED_TABLE] Operation ALTER TABLE RECOVER PARTITIONS is not allowed for `spark_catalog`.`default`.`ct1` because it is not a partitioned table. SQLSTATE: 42809",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "operation": "ALTER TABLE RECOVER PARTITIONS",
+     "tableIdentWithDB": "`spark_catalog`.`default`.`ct1`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "recoverPartitions_view": {
+   "error": {
+    "condition": "EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE",
+    "message": "[EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE] 'recoverPartitions()' expects a table but `tv1` is a view.  SQLSTATE: 42809",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "operation": "recoverPartitions()",
+     "viewName": "`tv1`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "refreshByPath": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "refreshByPath_missing": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "refreshTable": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "refreshTable_missing": {
+   "error": {
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `nope_tbl` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01;\n'UnresolvedRelation [nope_tbl], [], false\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "relationName": "`nope_tbl`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "refreshTable_view": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "sql_cache_table": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "sql_refresh_table": {
+   "result": {
+    "columns": [],
+    "kind": "DataFrame",
+    "rows": [],
+    "schema": "struct<>",
+    "schema_json": {
+     "fields": [],
+     "type": "struct"
+    }
+   }
+  },
+  "sql_uncache_table": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "uncacheTable": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "uncacheTable_missing": {
+   "error": {
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `nope_tbl` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01;\n'UnresolvedRelation [nope_tbl], [], false\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "relationName": "`nope_tbl`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "uncacheTable_not_cached": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  }
+ },
+ "oracle": "PySpark 4.1.2 classic, local[2], spark.sql.session.timeZone=UTC, recorded 2026-09-14 (run 15b); probe at /tmp/oc-worker/run15b/oracle/cells.py + cells2.py"
+}
