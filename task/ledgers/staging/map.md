@@ -231,13 +231,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   validation, canonical identity bytes, deterministic `explain()`. No data execution.
   `risk_tier: standard`. Branch `feat/silver-s1`.
   pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
-- [types-geo-ddl-1-ledger.md](types-geo-ddl-1-ledger.md) —
-  **TYPES-GEO-DDL-1 (2026-09-15), in flight, review round 2:** `geometry(n)` /
-  `geography(n)` in DDL schema strings through the Rust type table (round-1 arm
-  shipped; round 2 answers the critic's INTEGER_VALUE grammar, the tab/NBSP
-  divert and the inbound-SRID validation).
-  `risk_tier: standard`. Branch `feat/types-geo-ddl-1`.
-  pins: types-geo-ddl-1/C-001, C-002, C-003, C-004, C-005
 - [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —
   **V3-0 (2026-08-21):** the format-v3 scope audit, and the defect it found. Intended as a
   charter with no product change and it does not close that way. **Read §3 first**:
