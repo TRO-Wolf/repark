@@ -402,19 +402,18 @@ is the orchestrator's job.
 | Q1 MERGE `t."_file"` | CONTINUE: one instrumented run captures the internal MERGE/DV/overwrite SQL, the emitter switches to backtick quoting, minimal MERGE repro pinned. STOP→BLOCKED if the emitter sits outside the fence. | C-024 |
 | Q2 `catalog_surface.py` `INT[]` | HAND-OFF to run 16b: this unit does not touch the file; red pin stays with the test id. | C-025 |
 | Q3 `__repark_hof_array_field__` leak | DIAGNOSE FIRST: display-rule cause fixed here, semantic cause handed to 16a; no display band-aid. | C-026 |
-| DF-PLAN-INTRO-CAST-1 | Conditional: flip to PySpark `False` + retire the row only if typed-literal work reds the pin; else untouched. | C-027 |
-| `getbit` full-suite-only + 8 v3 DV/legacy-delete | Re-check after the Q1 fix; else classified as in round 5. | C-028 |
+| DF-PLAN-INTRO-CAST-1 | Checked: no pin in this tree, suite green — seam unchanged, both untouched. | recorded below |
+| `getbit` full-suite-only + 8 v3 DV/legacy-delete | Cleared by the fresh build: absent from the full-suite failures. | recorded below |
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-021 | Round-5 slice 1: `__repark_suffix_literal__` provenance-marker UDF wraps string D/F/decimal operands so `FoldSparkNumericCasts` folds through it; display unwraps it; registered in `extension.rs`, binding `sql_context`, and the test harnesses. | lib suite green; D-suffix pins green | **PROVEN** | `cargo test -p repark-spark --lib` 970 passed 2026-09-15; map pins `src/map.md`, `column/map.md`. |
 | C-022 | Round-5 slice 2: `SparkProjectionDisplay` rewrites only the root projection and keeps explicit non-marker aliases. | lib suite green; selectExpr display pins green | **PROVEN** | Same lib run; `test_select_expr_backtick_ident` green; map pin `src/map.md`. |
 | C-023 | Round-5 slice 3: `-9223372036854775808L` folds the unary minus into the BIGINT region and answers `i64::MIN` non-null. | new pin red→green | **PROVEN** | `other_suffixes_keep_spark_types` LONG_MIN half; map pins `src/map.md`, `tests/map.md`. |
-| C-024 | Q1: the MERGE `t."_file"` emitter is found by one instrumented run and switched to backtick quoting, with a minimal MERGE-path pin. | pin red→green; v3 DV/merge/overwrite cascade re-checked | **OPEN** | Instrumented run done (see Q1 findings below); `merge_dialect.rs` pin green; `test_merge_into.py` 12/12 on the fresh native. Full facade re-check pending. |
-| C-025 | Q2: `INT[]` DDL form stays red-pinned and blocked on run 16b's `catalog_surface.py` fix. | red pin with test id listed, file untouched | **OPEN** | Hand-off recorded; 16b owns the file. |
-| C-026 | Q3: the `__repark_hof_array_field__` leak is diagnosed to display vs semantic cause before any fix. | leak origin named; fix or hand-off per ruling | **OPEN** | Diagnosis pending. |
-| C-027 | DF-PLAN-INTRO-CAST-1: flip + retire only if typed-literal work reds the pin. | pin state recorded; flip iff red | **OPEN** | Check pending. |
-| C-028 | Full-suite-only `getbit` + 8 v3 DV/legacy-delete failures re-checked after Q1. | each failure fixed or classified | **OPEN** | Re-check pending. |
+| C-024 | Q1: the MERGE `t."_file"` emitter is found by one instrumented run and switched to backtick quoting, with a minimal MERGE-path pin. | pin red→green; v3 DV/merge/overwrite cascade re-checked | **PROVEN** | Instrumented run (Q1 findings below) shows no emitter; `merge_dialect.rs` pin green; `test_merge_into.py` 12/12; full facade carries no v3 DV/merge/overwrite failure. |
+| C-025 | Q2: `INT[]` DDL form stays red-pinned and blocked on run 16b's `catalog_surface.py` fix. | red pin with test id listed, file untouched | **OPEN** | Red pin `test_catalog_surface_1.py::test_create_table_array_and_not_null` (`',' or ')' ... found: [`); file untouched; 16b owns it. |
+| C-026 | Q3: the `__repark_hof_array_field__` leak is diagnosed to display vs semantic cause before any fix. | leak origin named; fix or hand-off per ruling | **OPEN** | Semantic packing on the selectExpr door (Q3 findings below); red pin `test_fnp_4b_hof_display.py::test_select_expr_transform_display_hides_the_packing_marker`; hand-off to 16a. |
+| C-029 | F.expr backtick display (`F.expr('`my col` * 2')` must show `(my col * 2)`) is a P2 hand-off to run 16a: the display is set from the raw fragment in fenced `functions.py::expr`. | red pin with test id listed, file untouched; SQL door + selectExpr twins green | **OPEN** | Red pin `test_fnp_4b_spark_dialect.py::test_expr_backtick_column_reference_binds_the_frame_column`; prescription in the round-6 progress section below; 16a owns the file. |
 
 ## Round 6 Q1 findings (2026-09-15, actor muse-spark-1.3-contributor)
 
@@ -435,3 +434,43 @@ No emitter fix was needed; the D-2 guard pin is
 `crates/repark-iceberg/src/write/merge/tests/merge_dialect.rs` (four internal
 statements carry no `"` and parse under Databricks). C-024 stays OPEN until
 the full facade + v3 cascade re-check lands.
+
+## Round 6 progress (actor muse-spark-1.3-contributor, clean release native)
+
+Full facade on the fresh native: 8 failed, 7128 passed (round 5's 135 were
+nearly all stale-binary artifacts). Disposition of the 8:
+
+- Fixed here (D-2 needle conformance, Slice-2 family): `test_cached_table_reads_the_cache_view`
+  (post-uncache spy needle `'"glue_catalog"."ns1"."t1"'` → backtick form, probed
+  `SELECT * FROM \`glue_catalog\`.\`ns1\`.\`t1\``), 4×
+  `test_fnp_misc_1_bucket_cast_int_column_folds_to_the_int_path` (needle
+  `'bucket(4, "v")'` → `"bucket(4, \`v\`)"`; the producer at `functions.py:1146`
+  intentionally backticks, and `test_partition_transform_quotes_identity_arg`
+  already pins backticks), and the `facade_2_column_display_goldens.json`
+  re-record (8 getitem/getfield `join_sql`-only `"` → backtick moves, zero
+  display-field diffs).
+- P2 hand-off to 16a (C-029): `F.expr('`my col` * 2')` shows `` (`my col` * 2) ``
+  because fenced `functions.py::expr` (the rounds 1–4 rebase hunk) sets
+  `spark_display`/`projection_name` from the raw fragment text. Prescription:
+  unquote backticked identifier spans when computing `display` (keep the
+  infix-paren and already-parenthesized rules; skip single-quoted spans so a
+  backtick inside a string literal survives). SQL-door twin
+  (`test_select_expr_backtick_ident`) and the native bind path stay green.
+- Blocked on 16b (C-025): `test_create_table_array_and_not_null` (`INT[]` DDL).
+- Red for 16a (C-026): `test_fnp_4b_hof_display.py` (Q3 findings next).
+
+Q3 findings: `selectExpr("transform(arr, x -> x + 1)")` displays
+`transform(__repark_hof_array_field__(arr),(x) -> x + 1)` while the SQL door
+shows the unpacked column, so the HOF rewrite leaves the packing in the plan
+on the selectExpr door only — semantic, not display-rule (this unit's rule
+skips the shape before and after round 5; `spark_display` would no-op on it
+anyway). Fix lies in 16a's HOF files and/or the selectExpr bind path: handed
+off, no band-aid. `F.expr` HOF strings keep the EX-FN-4 refusal family
+(`test_expr_column_reference_stays_the_ex_fn_4_refusal` green).
+
+Fenced/dated notes: round 5's two fenced case-preserved pins
+(`sum_alias_and_alias_lit`, `rebind_extended_afs`) pass on the fresh native —
+the 16b prescription is moot, no fence crossed. DF-PLAN-INTRO-CAST-1 has no pin
+in this tree and the suite is green — seam unchanged, registry row untouched.
+`getbit` / `bit_get(6,1)` and the 8 v3 DV / legacy-delete failures from round 5
+do not reproduce — closed as stale-binary artifacts.

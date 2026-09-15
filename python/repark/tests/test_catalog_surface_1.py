@@ -341,7 +341,7 @@ def test_cached_table_reads_the_cache_view(spark: ReparkSession, monkeypatch: An
     assert catalog.isCached("t1") is True
     catalog.uncacheTable("t1")
     assert spark.table("t1").count() == 2
-    assert any('"glue_catalog"."ns1"."t1"' in text for text in recorded)
+    assert any("`glue_catalog`.`ns1`.`t1`" in text for text in recorded)
 
 
 def test_cache_table_insert_serves_fresh_rows(spark: ReparkSession) -> None:
