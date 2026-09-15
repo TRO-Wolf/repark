@@ -78,12 +78,13 @@ def escape_sql_single_quotes(value: str) -> str:
 
 
 def quote_ident(name: str) -> str:
-    """Always double-quote a SQL identifier (Spark/DF column + alias class).
+    """Always backtick-quote a SQL identifier (Spark/DF column + alias class).
 
-    Embedded ``"`` are doubled. Empty names become ``\"\"`` (callers that refuse empty
-    do so before quoting).
+    Embedded backticks are doubled. Empty names become two backticks (callers that
+    refuse empty do so before quoting). Backticks read as identifiers under both the
+    Spark Databricks session dialect and the native Generic door.
     """
-    return '"' + name.replace('"', '""') + '"'
+    return "`" + name.replace("`", "``") + "`"
 
 
 def quote_ident_if_needed(segment: str) -> str:
@@ -98,11 +99,11 @@ def quote_ident_if_needed(segment: str) -> str:
 
 
 def quote_column_sql_expr(name: str) -> str:
-    """Double-quote a column reference for free-SQL embeds.
+    """Backtick-quote a column reference for free-SQL embeds.
 
-    Unqualified names become ``\"x\"``. Dotted qualifiers (``source.name`` for MERGE)
-    are quoted per segment as ``\"source\".\"name\"`` so a single identifier containing a
-    literal dot is never produced.
+    Unqualified names become one backticked segment. Dotted qualifiers (``source.name``
+    for MERGE) are quoted per segment so a single identifier containing a literal dot
+    is never produced.
     """
     if "." not in name:
         return quote_ident(name)
@@ -147,7 +148,7 @@ def reject_path_escape_segment(segment: str) -> None:
 
 
 def assert_spark_injection_probe_is_single_token(probe: str) -> str:
-    """Quote ``probe`` and assert it is a single double-quoted token (Spark dialect).
+    """Quote ``probe`` and assert it is a single backticked token (Spark dialect).
 
     Returns the quoted form. Used by the injection-probe battery and cross-lang pins.
 
@@ -155,15 +156,13 @@ def assert_spark_injection_probe_is_single_token(probe: str) -> str:
     can miss an embedded quote that closes the SQL identifier early.
     """
     quoted = quote_ident(probe)
-    # Independent oracle — do not derive expected solely from undoubling the result.
-    expected = '"' + probe.replace('"', '""') + '"'
+    expected = "`" + probe.replace("`", "``") + "`"
     if quoted != expected:
         raise AssertionError(
             f"under-quote/escape residual for {probe!r}: got {quoted!r}, want {expected!r}"
         )
-    # Residual unpaired `"` inside the token (defense-in-depth if oracle formula drifts).
     inner = quoted[1:-1]
-    if '"' in inner.replace('""', ""):
+    if "`" in inner.replace("``", ""):
         raise AssertionError(f"unpaired quote inside token for {probe!r}: {quoted!r}")
     return quoted
 

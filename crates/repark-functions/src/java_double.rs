@@ -68,7 +68,7 @@ pub(crate) fn with_java_double_text<R>(value: f64, render: impl FnOnce(&str) -> 
     ))
 }
 
-pub(crate) fn with_java_float_text<R>(value: f32, render: impl FnOnce(&str) -> R) -> R {
+pub fn with_java_float_text<R>(value: f32, render: impl FnOnce(&str) -> R) -> R {
     if value.is_nan() {
         return render("NaN");
     }
@@ -219,19 +219,19 @@ fn copy_bytes<'a>(text: &[u8], composed: &'a mut [u8; JAVA_FLOAT_TEXT_MAX_LEN]) 
     str::from_utf8(&composed[..len]).unwrap_or("")
 }
 
-pub(crate) fn java_double_text(value: f64) -> String {
+pub fn java_double_text(value: f64) -> String {
     with_java_double_text(value, str::to_owned)
 }
 
-pub(crate) fn java_float_text(value: f32) -> String {
+pub fn java_float_text(value: f32) -> String {
     with_java_float_text(value, str::to_owned)
 }
 
-pub(crate) fn java_double_text_len(value: f64) -> usize {
+pub fn java_double_text_len(value: f64) -> usize {
     with_java_double_text(value, str::len)
 }
 
-pub(crate) fn java_float_text_len(value: f32) -> usize {
+pub fn java_float_text_len(value: f32) -> usize {
     with_java_float_text(value, str::len)
 }
 

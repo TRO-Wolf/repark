@@ -5,8 +5,8 @@ use std::ops::ControlFlow;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    Expr, FromTable, ObjectName, Query, Statement, TableFactor, TableWithJoins, Value, Visit,
-    Visitor,
+    Expr, FromTable, ObjectName, ObjectNamePart, Query, Statement, TableFactor, TableWithJoins,
+    Value, Visit, Visitor,
 };
 use datafusion::sql::sqlparser::dialect::{DatabricksDialect, GenericDialect};
 use datafusion::sql::sqlparser::keywords::Keyword;
@@ -402,16 +402,30 @@ pub(crate) fn refuse_dml_subquery_predicate_in_statement(statement: &Statement) 
             DmlSubqueryVerb::Delete,
             delete.selection.as_ref(),
             &delete_target_object_name(delete)
-                .map_or_else(|| "<table>".to_string(), ToString::to_string),
+                .map_or_else(|| "<table>".to_string(), canonical_dml_target_name),
         ),
         Statement::Update(update) => refuse_dml_subquery_predicate(
             DmlSubqueryVerb::Update,
             update.selection.as_ref(),
             &object_name_from_table_with_joins(&update.table)
-                .map_or_else(|| update.table.to_string(), ToString::to_string),
+                .map_or_else(|| update.table.to_string(), canonical_dml_target_name),
         ),
         _ => Ok(()),
     }
+}
+
+pub(crate) fn canonical_dml_target_name(name: &ObjectName) -> String {
+    name.0
+        .iter()
+        .map(|part| match part {
+            ObjectNamePart::Identifier(ident) if ident.quote_style.is_none() => ident.value.clone(),
+            ObjectNamePart::Identifier(ident) => {
+                format!("\"{}\"", ident.value.replace('"', "\"\""))
+            }
+            ObjectNamePart::Function(function) => function.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join(".")
 }
 
 /// True when a `Query` node appears anywhere inside `expr` — i.e.

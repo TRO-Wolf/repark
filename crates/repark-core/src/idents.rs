@@ -34,8 +34,8 @@ pub(crate) fn parse_table_identifier_segments(
             while index < length {
                 let current = chars[index];
                 if current == quote {
-                    if quote == '"' && index + 1 < length && chars[index + 1] == '"' {
-                        buffer.push('"');
+                    if index + 1 < length && chars[index + 1] == quote {
+                        buffer.push(quote);
                         index += 2;
                         continue;
                     }

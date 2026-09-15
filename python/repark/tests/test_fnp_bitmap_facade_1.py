@@ -516,6 +516,4 @@ def test_sql_door_qualifier_leak_is_expected_divergence(spark: ReparkSession) ->
     leaked = spark.sql("SELECT bitmap_construct_agg(x) FROM fnp_facade1_name_leak").columns
     assert leaked == ["bitmap_construct_agg(datafusion.public.fnp_facade1_name_leak.x)"]
     expressed = frame.selectExpr("bitmap_construct_agg(x)").columns
-    assert len(expressed) == 1
-    assert expressed[0].startswith("bitmap_construct_agg(datafusion.public.")
-    assert expressed[0].endswith(".x)")
+    assert expressed == ["bitmap_construct_agg(x)"]

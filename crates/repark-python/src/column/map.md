@@ -138,8 +138,22 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   UDAF call. pins: perf-approxpct-1/C-002
   **FNP-8 (2026-09-06):** `sql_context` builds the `PyColumn.sql` throwaway
   context with `repark_spark::dialect_for_executing_parse`, so column-free `F.expr` with
-  `x -> y` parses as a lambda. `mod.rs` stays at its exact 1052 baseline — the call site
+  `x -> y` parses as a lambda. `mod.rs` stays at its exact baseline — the call site
   is a one-line swap. pins: fnp-8/C-004
+  **FNP-4B (2026-09-15):** `plan_expr_column` analyzes eagerly, then falls back on an
+  unresolved-column failure (`Diagnostic`-wrapped included) to `parse_unresolved_expr`,
+  which discovers referenced names through typed errors on a normalization-off context and
+  returns the unresolved tree for the consumer frame to bind (exact-case `Column`
+  contract). `PyColumn.sql` canonicalizes fragments first (struct-at-EOF included).
+  pins: fnp-4b/C-003, C-019
+  **FNP-4B critic (2026-09-15):** `parse_unresolved_expr` reuses the eager `SessionContext`
+  instead of building a second one after analysis fails. `sql_context` installs
+  `FoldSparkNumericCasts`, `SparkProjectionDisplay`, and `__repark_spark_as__`.
+  **FNP-4B round 8 (2026-09-15):** `sql_context` serves a process-wide cached
+  `SessionContext` (fixed Databricks dialect, rules and `register_all` baked in once)
+  and `PyColumn.sql` blocks on the shared engine runtime: 10k `F.expr` 2.33s → 0.72s.
+  **Round 5 (2026-09-15):** `sql_context` also installs
+  `__repark_suffix_literal__`. pins: fnp-4b/C-021
   **FNP-8 repair (2026-09-07):** the throwaway context builds its standard analyzer vector with
   the same pre-coercion HOF preparation as a normal Spark session. pins: fnp-8/C-003, C-004
   **FNP-8-REVIEW (2026-09-07):** the nested-HOF refusal names the Column door as the
@@ -229,3 +243,4 @@ sync after changes.
 
 - Up: [src map](../map.md)
 - Crate: [repark-python map](../../map.md)
+- **FNP-4B remediation (2026-09-15):** `expr_build.rs` / `mod.rs` added code comments removed (ruling 2026-08-26); `mod.rs` ceiling ratcheted 1040 → 1038.
