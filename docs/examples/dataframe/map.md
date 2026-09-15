@@ -40,6 +40,10 @@ one-liner.
   merged rows).
 - [rows_nulls.py](rows_nulls.py) — `limit`, `offset`, `orderBy` / `order_by` (null ordering),
   `melt` (the full 12-row multiset, duplicate proved), and the `na` fill/drop surface.
+- [batch_streaming_names.py](batch_streaming_names.py) — `withWatermark` / `with_watermark`
+  (batch-validated identity) and `dropDuplicatesWithinWatermark` /
+  `drop_duplicates_within_watermark` (the `_LEGACY_ERROR_TEMP_3102` batch refusal's first
+  line) — the batch answers for the streaming-named surface, DF-STREAM-BATCH-1.
 - [state_cache.py](state_cache.py) — `isEmpty` / `is_empty`, `isStreaming` / `is_streaming`,
   the `is_cached` arc, `persist`, and `localCheckpoint`.
 - [bridges.py](bridges.py) — `mapInArrow` / `map_in_arrow`, `mapInPandas` / `map_in_pandas`

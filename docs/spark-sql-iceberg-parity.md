@@ -1175,6 +1175,55 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   visible (`conf.get` discloses it), and both directions stay under test so a drift in
   either inference path reds.
 
+### DF-STREAM-1 — `dropDuplicatesWithinWatermark` drops the appended plan dump
+
+- **repark** — raises `AnalysisException` with errorClass `_LEGACY_ERROR_TEMP_3102` at the call,
+  and the message is the single line
+  `dropDuplicatesWithinWatermark is not supported with batch DataFrames/DataSets;`.
+- **Apache Spark** — raises the same class and the same first line, then appends a
+  `DeduplicateWithinWatermark` logical-plan dump after it. *(oracle: recorded —
+  cells `ddww_batch` / `ddww_batch_noargs`; subset-shape and missing-column errors in
+  `ddww_bad_subset` / `ddww_missing_col` / `ddww_order` match exactly.)*
+- **Pin** — `python/repark/tests/test_df_stream_batch_1.py::test_drop_duplicates_within_watermark_refuses_on_batch`
+- **Rationale** — DECLARED 2026-09-14. repark is batch-only, so the refusal is the parity answer;
+  the appended plan dump is a JVM logical-plan rendering repark does not have. The pin asserts
+  the first line byte-exactly; the tail differs by omission, never by content.
+
+### DF-DECL-rdd — `DataFrame.rdd` is a declared `NOT_IMPLEMENTED` refusal
+
+- **repark** — `df.rdd` raises `PySparkNotImplementedError` with errorClass `NOT_IMPLEMENTED`
+  and `{"feature": "rdd"}`, str `[NOT_IMPLEMENTED] rdd is not implemented.` — Spark Connect's
+  own refusal for the same name. A column named `rdd` does not shadow the property.
+- **Apache Spark** — classic returns the frame's `RDD`; the Connect client refuses with the
+  same `NOT_IMPLEMENTED` shape repark raises. *(oracle: recorded — cells `rdd`,
+  `connect_rdd_shape`.)*
+- **Pin** — `python/repark/tests/test_df_stream_batch_1.py::test_rdd_property_raises_spark_not_implemented`
+- **Rationale** — DECLARED 2026-09-14, unreachable: the name needs the JVM RDD layer, which
+  repark does not have; the Connect refusal is the honest answer for a name that can never
+  produce its classic return type here.
+
+### DF-DECL-pandas_api — `DataFrame.pandas_api` is a declared `NOT_IMPLEMENTED` refusal
+
+- **repark** — `df.pandas_api(...)` raises `PySparkNotImplementedError` with errorClass
+  `NOT_IMPLEMENTED` and `{"feature": "pandas_api"}`, str
+  `[NOT_IMPLEMENTED] pandas_api is not implemented.`
+- **Apache Spark** — returns a pandas-on-Spark frame (`pandas_api` needs pandas >= 2.2.0 and the
+  pandas-on-Spark layer; the oracle environment raised `PACKAGE_NOT_INSTALLED`).
+  *(oracle: recorded — cells `pandas_api`, `pandas_api_with_pandas`.)*
+- **Pin** — `python/repark/tests/test_df_stream_batch_1.py::test_pandas_api_raises_spark_not_implemented`
+- **Rationale** — DECLARED 2026-09-14, unreachable: pandas-on-Spark needs the JVM RDD layer
+  repark does not have. The declared `NOT_IMPLEMENTED` refusal is named by the orchestrator
+  ruling over the environment-specific `PACKAGE_NOT_INSTALLED` the oracle recorded.
+
+### DF-DECL-plot — `DataFrame.plot` is a declared `NOT_IMPLEMENTED` refusal
+
+- **repark** — `df.plot` raises `PySparkNotImplementedError` with errorClass `NOT_IMPLEMENTED`
+  and `{"feature": "plot"}`, str `[NOT_IMPLEMENTED] plot is not implemented.`
+- **Apache Spark** — returns a `PySparkPlotAccessor` whose methods (`.line`, `.bar`, …) plot via
+  plotly/pandas-on-Spark. *(oracle: recorded — cells `plot`, `plot_line`, `plot_with_pandas`.)*
+- **Pin** — `python/repark/tests/test_df_stream_batch_1.py::test_plot_property_raises_spark_not_implemented`
+- **Rationale** — DECLARED 2026-09-14, reachable, deferred: port the accessor over `toPandas`.
+
 ---
 
 ## 6. How a row is added, mirrored and retired
