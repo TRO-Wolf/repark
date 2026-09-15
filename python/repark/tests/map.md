@@ -792,7 +792,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   session cells (2026-09-15, 12 cells with `C2-L002`/`C2-L003` ids, recorder
   `oracle_win_crit2.py`, same Spark) plus the round-2 `C2-L001`
   `window_time` cells (2026-09-15, 11 cells, same recorder; 318 cells
-  total). Pins read their
+  total) plus the round-2 `C2-L004` two-spec cells (2026-09-15, 2 cells,
+  same recorder; 320 cells total). Pins read their
   expected rows from it
   (tumbling, sliding, `startTime`, plain-`select`,
   `CANNOT_PARSE_INTERVAL` / `MISSING_AGGREGATION` errors, static/wide/dynamic-gap
@@ -804,7 +805,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   cells by id with month-end/leap sessions and the running-end
   discriminator, plus round-2 `window_time` cells by id with
   struct-behind-Filter/Limit/Sort/Distinct/Join/Union refusals and
-  grouped-window-behind-filter answers).
+  grouped-window-behind-filter answers, plus the two-spec `1039`
+  refusals).
   Step 1 is red on the base tree; steps 2–4 turn the pins green in name order.
   pins: fnp-win-1/C-001, C-002, C-003, C-004, C-005, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`

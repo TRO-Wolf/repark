@@ -1085,7 +1085,7 @@ mod tests {
         )
         .await;
         assert!(
-            message.contains("one gap specification"),
+            message.contains("_LEGACY_ERROR_TEMP_1039"),
             "expected the refusal, got {message}"
         );
     }

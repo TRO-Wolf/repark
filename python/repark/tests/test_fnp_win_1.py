@@ -1413,3 +1413,42 @@ def test_crit2_window_time_grouped_survives_filter() -> None:
     ).to_arrow()
     _assert_crit_rows(_rcell("C2-L001-real-window-where", "sql"), grouped)
     session.stop()
+
+
+def test_crit2_two_session_specs_refuse() -> None:
+    """pins: fnp-win-1/C-004"""
+    session = _zoned_session("UTC")
+    rows: list[Any] = [
+        (1, datetime.datetime(2026, 9, 15, 14, 7, 30)),
+        (2, datetime.datetime(2026, 9, 15, 14, 12, 0)),
+    ]
+    session.createDataFrame(rows, "id int, ts timestamp").createOrReplaceTempView("crit2_ev")
+    for door, build in (
+        (
+            "python",
+            lambda: (
+                session.table("crit2_ev")
+                .groupBy(F.session_window("ts", "5 minutes"), F.session_window("ts", "10 minutes"))
+                .count()
+                .to_arrow()
+            ),
+        ),
+        (
+            "sql",
+            lambda: session.sql(
+                "SELECT count(*) FROM crit2_ev "
+                "GROUP BY session_window(ts, '5 minutes'), session_window(ts, '10 minutes')"
+            ).to_arrow(),
+        ),
+    ):
+        cell = _rcell("C2-L004-two-session-specs", door)
+        assert cell["condition"] == "_LEGACY_ERROR_TEMP_1039"
+        with pytest.raises(AnalysisException) as excinfo:
+            build()
+        message = str(excinfo.value)
+        assert cell["condition"] in message
+        assert (
+            "Multiple time/session window expressions would result in a cartesian product of rows"
+            in message
+        )
+    session.stop()

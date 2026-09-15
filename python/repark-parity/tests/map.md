@@ -137,6 +137,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   **FNP-WIN-1 (2026-09-15, verification round 2, L-001):** mirror rows move
   to `time_window/mod.rs` 1416, `test_fnp_win_1.py` 1415, counts still
   38/32. pins: fnp-win-1/C-003
+  **FNP-WIN-1 (2026-09-15, verification round 2, L-004):** mirror rows move
+  to `dataframe.rs` 1021, `test_fnp_win_1.py` 1454, counts still 38/32.
+  pins: fnp-win-1/C-004
 - `test_ex_0_example_coverage.py` — **DF-SURFACE-B-1 (2026-09-14):** the enumerated
   public surface moves 948 → 952 as `DataFrame.foreach`,
   `DataFrame.foreachPartition`, `DataFrame.observe`, and `Observation.get` join
