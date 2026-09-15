@@ -412,6 +412,34 @@ else. The next pickup's `make ledger-archive` files everything here under
   `collect()` raises `MemoryError`. Seven mutations, seven kills. `risk_tier: elevated`.
   Branch `harden/h3-spill-residue-1`, PR #401.
   pins: h3-spill-residue-1/C-001, C-002, C-003, C-004, C-005
+- [ice-gold-twice-1-ledger.md](ice-gold-twice-1-ledger.md) —
+  **ICE-GOLD-TWICE-1 (2026-09-14), in flight:** the replace path into the nightly —
+  `_acceptance_replace.run_create_or_replace_twice` (3-row CTAS seed, two
+  `CREATE OR REPLACE … AS` over 4- and 5-row answers) proven offline on the memory
+  catalog, Glue + S3 Tables `replace2` legs in `test_aws_acceptance.py`, the gold module
+  on unique `testing_dbt1_<uuid8>` stems with two `dbt run` passes and `dbt test`, and
+  the `dbt gold acceptance` step in `aws-acceptance.yml` after the silver module.
+  `risk_tier: standard`. Branch `chore/repin-rp-20`.
+  pins: ice-gold-twice-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [ice-spark-table-1-ledger.md](ice-spark-table-1-ledger.md) —
+  **ICE-SPARK-TABLE-1 (2026-09-14), in flight:** evidence unit — RePark writes into a
+  **Spark-created** Iceberg v2 copy-on-write table (inventory §8 ruling 6, G-3 / the
+  Spark half of G-4). Measured on PySpark 4.1.2 + iceberg-runtime 1.11.0 over a Hadoop
+  catalog (`InMemoryCatalog` tried first, writes no local bytes): `register_table`
+  adoption, the production `UPDATE SET * / INSERT *` MERGE twice, the weekly
+  maintenance CALLs, and Spark read-back (`EXCEPT ALL` both ways against the
+  independently derived rows, counts, metadata tables). Hardened by a Grok 4.6
+  critic-logic round: full five-column pins at every stage, a load-bearing
+  `older_than`, a planted orphan sweep, and the measured stale-cache shape — stale
+  READS need a Spark-side `refreshTable` after repark commits (catalog-agnostic; C4
+  is Glue), while a same-session stale WRITE scan-forwards and commits cleanly;
+  `bucket` sort orders refuse loudly (WRITE-ORDER-TRANSFORM-1); Spark-stamped
+  `owner`/codec/`write.distribution-mode` are carried forward verbatim; an evolved
+  partition spec is honoured (`spec_id 1` writes). A 67.8 KB Spark-written fixture
+  lands under `fixtures/torture/data/ice_spark_table_1/` for JVM-free CI.
+  No product change.
+  `risk_tier: standard`. Branch `test/ice-spark-table-1`.
+  pins: ice-spark-table-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [ledger-reading-1-ledger.md](ledger-reading-1-ledger.md) —
   **LEDGER-READING-1 step 1 (2026-09-09), in flight:**   reading units may prove clauses on
   document evidence (R-10). A staging ledger whose first 40 lines carry the READING value of
@@ -628,6 +656,14 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [review-fix-8-ledger.md](review-fix-8-ledger.md) — Unit ledger — REVIEW-FIX-8 · the PROFILES-1 probe is re-runnable and its table is true
 - [review-fix-9-ledger.md](review-fix-9-ledger.md) — Unit ledger — REVIEW-FIX-9 step 1 · the polars renderer matches polars at its boundaries
 - [rp-10-repin-f25-ledger.md](rp-10-repin-f25-ledger.md) — Charter ledger — RP-10 · fork repin 594bdbe5 → 85a4aaf0 (consume F-25; close PERF-DVCLOSE-STMT-1)
+- [rp-20-ledger.md](rp-20-ledger.md) —
+  **RP-20 (2026-09-14), in flight:** the `edc38c6a` repin consumer — F-GLUE-REPLACE-1
+  (#282) gives `GlueCatalog::publish_replace_table` a version-id-checked `UpdateTable`
+  through the Glue commit transport, staged metadata read-validated before the send.
+  Pin verified by grep (orchestrator's bump commit `f1630f5a` carried the fork-sync row
+  and root `map.md` sentence); the cutover rows naming the Glue replace refusal are
+  stamped FIXED at `edc38c6a`. `risk_tier: standard`. Branch `chore/repin-rp-20`.
+  pins: rp-20/C-001, C-002, C-003
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 - [sql-harden-1-cutover-shapes-ledger.md](sql-harden-1-cutover-shapes-ledger.md) — Unit ledger — SQL-HARDEN-1 · the cutover pipeline cutover Iceberg SQL shapes
 - [sql-harden-2-cow-shapes-ledger.md](sql-harden-2-cow-shapes-ledger.md) — Unit ledger — SQL-HARDEN-2 · copy-on-write cutover shapes
