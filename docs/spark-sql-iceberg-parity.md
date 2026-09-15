@@ -1053,6 +1053,84 @@ them, and the document is ordered by surface, never by date.
 
 ---
 
+### WIN-1 — `session_window` refuses month/year gaps Spark answers
+
+- **repark** — `session_window(ts, '1 month')` refuses with
+  `'session_window' gapDuration '1 month' uses months or years, which have no fixed
+  length in microseconds`: session ends are microsecond maxima, so a calendar-month
+  gap has nowhere to land.
+- **Apache Spark** — answers one session per chain with a calendar-month end
+  (`2026-09-15 10:07:30 → 2026-10-15 10:31:00`, count 3 on the three-row frame).
+  *(oracle: live — PySpark 4.1.2, run-16a residual cell `R-session-month-gap`.)*
+- **Pin** — `python/repark/tests/test_fnp_win_1.py::test_resid_session_month_diverges`
+  pins today's refusal against that cell. pins: fnp-win-1/C-015
+- **Rationale** — DECLARED, as an **unsupported calendar semantic rather than a
+  parity claim**: matching the cell would need calendar-month session ends and a
+  month-aware chaining rule, and one answered cell cannot specify the chaining
+  rule for rows months apart. The seam is the session assemble path
+  (`crates/repark-functions/src/spark_session_window.rs` plus the
+  `sessionize_output` end computation in
+  `crates/repark-functions/src/analyzer/time_window/session_window.rs`).
+  *(2026-09-15 rescoped: this row covers a static literal gap only. A per-row
+  Column gap containing months now answers through the `__repark_session_end__`
+  path with Spark's chaining rule — a row stays while its timestamp is at or
+  before the previous row's calendar end — pinned by
+  `test_crit_dynamic_gap_drops_and_month_answers` over `C-L004-dyn-month`.)*
+
+### WIN-2 — SQL `GROUP BY window(...)` with `slide > window` refuses where Spark reports an unresolved column
+
+- **repark** — `GROUP BY window(ts, '5 minutes', '10 minutes')` refuses on every
+  door with
+  `[DATATYPE_MISMATCH.PARAMETER_CONSTRAINT_VIOLATION] ... The
+  \`slide_duration\`(600000000L) must be <= the \`window_duration\`(300000000L).
+  SQLSTATE: 42K09`, including the SQL door, where the analyzer rule fires
+  after the `__repark_windowed` staging.
+- **Apache Spark** — refuses on the Python door and in `select` with the same
+  constraint, but the SQL door reports
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function
+  parameter with name \`window\`.\`start\` cannot be resolved. ...`
+  *(oracle: live — PySpark 4.1.2, run-16a critic cell `C-L005-window-lt-slide`
+  SQL door.)*
+- **Pin** — `python/repark/tests/test_fnp_win_1.py::test_crit_window_lt_slide_refuses`
+  asserts the recorded `UNRESOLVED_COLUMN` condition on the cell and RePark's
+  constraint refusal on the door. pins: fnp-win-1/C-005
+- **Rationale** — DECLARED, as a **refusal-shape divergence rather than a
+  parity claim**: both engines refuse, and the Python-door text matches
+  Spark's; imitating the unresolved-column message on the SQL door would hide
+  the real bad spec behind a resolution error. The seam is `window_call_of`
+  in `crates/repark-functions/src/analyzer/time_window/mod.rs`, which validates
+  before the grouping input is staged.
+- P3 (2026-09-15, fnp-win-1 audit): this refusal (and the `abs(startTime)`
+  one) arrives prefixed with the refusing rule's name
+  (`spark_time_window\ncaused by\nError during planning: [...]`) because
+  DataFusion's analyzer loop unconditionally wraps rule errors; the class and
+  text from the bracket on are Spark's, and no function planning hook sees
+  the literal durations, so the prefix cannot be raised from this unit's code.
+
+### WIN-3 — `window_time` answers over an opaque struct column Spark refuses
+
+- **repark** — `window_time(w)` over a stored struct column with `start` and
+  `end` timestamps answers `end` minus one microsecond. The analyzer
+  provenance rule refuses a `named_struct` call argument and any projection
+  that defines the column as a non-window expression (including through temp
+  views, which unfold to their defining projection), but an opaque scan has no
+  defining expression to inspect.
+- **Apache Spark** — `window_time` requires a window-typed column and refuses
+  any other struct with `[_LEGACY_ERROR_TEMP_3101] The input is not a correct
+  window column: ...`
+  *(oracle: live — PySpark 4.1.2, run-16a critic cells
+  `C-L008-window-time-plain-struct` on both doors.)*
+- **Pin** — `python/repark/tests/test_fnp_win_1.py::test_crit_window_time_table_struct_answers`
+  pins today's answer (`2024-01-01 10:09:59.999999`) over a struct-DDL frame.
+  pins: fnp-win-1/C-003
+- **Rationale** — DECLARED, as a **type-system gap rather than a parity
+  claim**: DataFusion structs carry no window-type marker, so provenance is
+  all the rule can check. The seam is `windowed_argument` /
+  `windowed_column` in
+  `crates/repark-functions/src/analyzer/time_window/mod.rs`. A field-metadata
+  marker on the window UDF output would close it if it survives aggregation
+  and view boundaries; unproven, not attempted.
+
 ### RAND-1 — `randstr` refuses a length Spark accepts
 
 - **repark** — `randstr(n, seed)` refuses `n` above **1,000,000** with a catchable

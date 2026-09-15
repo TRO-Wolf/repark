@@ -30,6 +30,7 @@ pub use spark_typed::{
     suffix_literal_udf,
 };
 mod time_travel;
+mod time_window;
 mod truncate;
 pub mod type_table;
 mod window_range;

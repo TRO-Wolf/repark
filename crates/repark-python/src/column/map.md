@@ -52,6 +52,12 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   child type like Spark's `UnaryMinus` (the old encoding drifted through the
   pre-coercion seat to `(11,2)` / `(38,9)`); display and SQL fragments unchanged.
   pins: decimal-cache-1/C-007
+  **FNP-WIN-1 (2026-09-15):** `time_window` is a `#[pymethods]` wrapper in this same
+  impl block for the same reason — a thin call into the `repark-functions`
+  time-window UDFs; grouping/expansion live in the analyzer rule. Step 4 adds
+  the `session_window` wrapper the same way (marker call aliased
+  `session_window`).
+  pins: fnp-win-1/C-001, C-002, C-004, C-008
 - [`display/construct.rs`](display/construct.rs) — **FACADE-2 step 3 (2026-09-13):** the
   Group-1 typed constructors that replace `_native.PyColumn.sql` call sites:
   `lit_timestamp`, `lit_date`, `lit_time`, `lit_array_cast`, `pi`, `uuid` — a `display`

@@ -31,6 +31,7 @@ pub mod lambda_rebind;
 pub mod percentile_approx;
 pub mod quantile_summaries;
 pub mod random;
+pub mod registration;
 pub mod session_time_zone;
 pub mod spark_base64;
 pub mod spark_chr;
@@ -49,8 +50,11 @@ pub mod spark_regexp_match;
 pub mod spark_result_types;
 pub mod spark_reverse;
 pub mod spark_sequence;
+pub mod spark_session_window;
 pub mod spark_split;
 pub mod spark_split_part;
+pub mod spark_time_window;
+pub mod spark_window_time;
 pub mod spark_year_pad;
 pub mod string;
 pub mod temporal_ctor;
@@ -60,12 +64,10 @@ pub mod try_invert;
 pub mod url;
 pub mod validate;
 pub use lambda_rebind::analyzer_rules_with_higher_order_preparation;
-use std::sync::Arc;
+pub use registration::analyzer_rules;
 
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::LogicalPlan;
-use datafusion::optimizer::AnalyzerRule;
-use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
 use datafusion::prelude::SessionContext;
 
 /// Register the full Spark-compatible scalar/aggregate/window function set into `ctx`.
@@ -127,6 +129,12 @@ pub fn register_all(ctx: &SessionContext) {
     {
         ctx.register_udf(udf.as_ref().clone());
     }
+    for udf in spark_time_window::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
+    for udf in spark_session_window::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
     validate::register(ctx);
     try_invert::register(ctx);
     temporal_ctor::register(ctx);
@@ -138,28 +146,6 @@ pub fn register_all(ctx: &SessionContext) {
 pub fn install_shared_analyzer_rules(ctx: &SessionContext) {
     integer_spark::install_integer_overflow(ctx);
     bool_decimal::install_bool_decimal_cast(ctx);
-}
-
-/// Return analyzer rules: null-decimal negation, decimal precision, decimal rewrite, semantics, safety, then LTZ casts.
-#[must_use]
-pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
-    let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
-        Arc::new(decimal_precision::SparkNegateNullDecimal),
-        Arc::new(spark_result_types::SparkIntegerLiteral),
-        Arc::new(lambda_rebind::LambdaRebind),
-        Arc::new(decimal_precision::SparkDecimalPrecision),
-        Arc::new(decimal_spark::SparkDecimalRewrite),
-        Arc::new(spark_nullability::SparkNullability),
-        Arc::new(integer_spark::SparkIntegerOverflow),
-        Arc::new(analyzer::SparkExprSemantics),
-        Arc::new(java_double::SparkFloatStringify),
-    ];
-    rules.extend(cardinality::analyzer_rules());
-    rules.push(instant_ts::ltz_timestamp_cast_rule());
-    rules.push(temporal_ctor::interval_string_cast_rule());
-    rules.push(Arc::new(TypeCoercion::new()));
-    rules.push(Arc::new(lambda_rebind::LambdaRebind));
-    rules
 }
 
 /// Run Spark analyzer rules until schema changes reach the `TypeCoercion` fixpoint.

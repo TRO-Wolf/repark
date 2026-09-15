@@ -180,9 +180,6 @@ def test_fn_c_deferred_names_are_absent() -> None:
         "product",
         "grouping_id",
         "percentile",
-        "window",
-        "window_time",
-        "session_window",
     )
     present = [name for name in deferred if hasattr(F, name)]
     assert present == []

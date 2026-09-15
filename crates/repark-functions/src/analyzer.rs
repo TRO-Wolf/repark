@@ -14,7 +14,7 @@ use datafusion::optimizer::AnalyzerRule;
 mod cast_legality;
 mod like_escape;
 mod overlay;
-
+pub(crate) mod time_window;
 /// Spark operator semantics over type-coerced logical plans; the rule is stateless.
 #[derive(Debug, Default)]
 pub struct SparkExprSemantics;
