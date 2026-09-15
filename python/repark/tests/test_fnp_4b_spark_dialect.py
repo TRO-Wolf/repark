@@ -106,9 +106,7 @@ def test_filter_double_quoted_id_string_raises_on_int_compare(
         frame.filter('"ID" = 1').to_arrow()
 
 
-def test_select_expr_double_quoted_literal(
-    spark: ReparkSession, frame: DataFrame
-) -> None:
+def test_select_expr_double_quoted_literal(spark: ReparkSession, frame: DataFrame) -> None:
     """FNP4B-selectExpr-dq: ``selectExpr('"abc" AS s')`` is ``abc`` on both rows."""
     table = _table(frame.selectExpr('"abc" AS s'))
     assert table.column("s").to_pylist() == ["abc", "abc"]

@@ -173,6 +173,7 @@ fn sql_may_have_numeric_suffix(sql: &str) -> bool {
 }
 
 /// Translate a downstream parser location from canonical text to the caller's SQL.
+#[must_use]
 pub fn translate_downstream_error(
     original: &str,
     canonical: &str,
@@ -703,7 +704,7 @@ fn push_code_point(code_point: u32, out: &mut String) {
 /// Java narrows an out-of-range `\U` to two chars, each lone surrogate encoding as `?`.
 fn push_java_surrogate_artifact(code_point: u32, out: &mut String) {
     let shifted = code_point.wrapping_sub(0x1_0000);
-    let high = (0xD800u32.wrapping_add((shifted as i32 >> 10) as u32)) & 0xFFFF;
+    let high = 0xD800u32.wrapping_add((shifted.cast_signed() >> 10).cast_unsigned()) & 0xFFFF;
     let low = 0xDC00 + (shifted & 0x3FF);
     if (0xD800..=0xDBFF).contains(&high) && (0xDC00..=0xDFFF).contains(&low) {
         let combined = 0x1_0000 + ((high - 0xD800) << 10) + (low - 0xDC00);
@@ -732,18 +733,10 @@ pub(crate) const SPARK_SQL_PARSER_ESCAPED_STRING_LITERALS_KEY: &str =
     "spark.sql.parser.escapedStringLiterals";
 
 /// Session-scoped verbatim-literal flag the Spark front door reads out of [`ConfigOptions`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct SparkEscapedStringLiteralsConfig {
     /// `true` keeps backslashes verbatim; `false` processes Spark escapes (the default).
     pub keep_verbatim: bool,
-}
-
-impl Default for SparkEscapedStringLiteralsConfig {
-    fn default() -> Self {
-        Self {
-            keep_verbatim: false,
-        }
-    }
 }
 
 impl datafusion::common::config::ConfigExtension for SparkEscapedStringLiteralsConfig {

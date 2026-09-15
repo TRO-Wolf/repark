@@ -34,8 +34,8 @@ every divergence below becomes a fix, a pin, or a reported registry finding.
 | C-004 | D-4: Spark numeric literal suffixes on the Spark door — `1D`/`2.5D`/`1e200D` DOUBLE, `1.5F` FLOAT, `1S` SMALLINT, `1Y` TINYINT, `1.5BD` DECIMAL, `1L` BIGINT kept — as a token rewrite in the existing Spark literal/normalize pass. | D-suffix pins green (`BL6-sql-3`, `DIV-*` cells above) | **OPEN** | Oracle cells listed above. |
 | C-005 | D-5: BL-10 — `spark.sql.parser.escapedStringLiterals` read from the session build conf (`SessionBuildConf`, the way `spark.sql.ansi.enabled` is read); `true` keeps backslashes verbatim (`BL10-on-*`); no runtime `SET` (B-TZ-5 owns the SET door). | `BL10-on-*` pins green with flag-on session; `BL10-off-*` green default | **OPEN** | Oracle cells `BL10-off-*`, `BL10-on-*` listed above. |
 | C-006 | D-6: BL-12 — out-of-range `\U` yields Spark's Java artifact (`length('\U00110000')` = 2, `hex` = `3F3F`; `\UFFFFFFFF` → `ED9EBF3F`) at `spark_literals.rs::push_code_point`; `hex('\U0001F600')` nullability pinned if in this lexer's reach, else under out_of_scope_observed. | BL12 pins green; existing `test_out_of_range_unicode_escape_is_one_replacement` updated | **OPEN** | Oracle cells `BL12-0`…`BL12-5` listed above. |
-| C-007 | No regression: `cargo test --workspace` green. | `cargo test --workspace` exit 0 | **OPEN** | Step-1 measure below. |
-| C-008 | No regression: full facade suite `python/repark/tests` green. | `.venv/bin/python -m pytest python/repark/tests -q` exit 0 | **OPEN** | Step-1 measure below. |
+| C-007 | No regression: `cargo test --workspace` green. | `cargo test --workspace` exit 0 | **PROVEN** | `make verify` exit 0, 2026-09-15 (lint+format+clippy+Rust tests). |
+| C-008 | No regression: full facade suite `python/repark/tests` green. | `.venv/bin/python -m pytest python/repark/tests -q` exit 0 | **OPEN** | 2 failed / 6092 passed 2026-09-15 — exactly the fenced rebind pair, owning run. |
 
 ## Step-1 measurement (D-1 on alone, 2026-09-15)
 
@@ -301,3 +301,16 @@ and the rebind patterns accept only `"?"` leaves — no match, no rebind, bare
 family for `count(DISTINCT ...)`). The pivot path already accepts backticks.
 Prescription: accept `` [`"`]? `` at each leaf slot, keeping `"` (synthetic
 `sum("x")` still rebinds today). The two red tests are the pins.
+
+## Slice-3 (2026-09-15): lint + gates
+
+`make verify` was red on clippy pedantic from the Step-2 tree (lib: needless raw
+string in `run_maintenance.rs:220`, `must_use` on `translate_downstream_error`,
+sign-loss casts in the surrogate artifact, derivable `Default`; tests: 14
+`float_cmp` strict compares incl. Step-2's `2.0`/`1e200`/`1.5F` sites) plus
+`ruff format` on three test files. Fixed all: casts via `cast_signed`/
+`cast_unsigned` (bit-identical), `Default` derived, float pins compare
+`to_bits()` (bit-exact, stronger than `==`), ruff with the pinned 0.15.22.
+`make verify` exit 0 (C-007 PROVEN). Full facade: 2 failed, 6092 passed —
+exactly the two fenced case-preserved tests (C-008 OPEN on the owning run).
+Parity harness `make py-test` exit 0.

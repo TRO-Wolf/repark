@@ -217,7 +217,7 @@ async fn sum_metadata_bytes(
         .map(|clause| format!(" WHERE {clause}"))
         .unwrap_or_default();
     let sql =
-        format!(r#"SELECT COALESCE(SUM(file_size_in_bytes), 0) AS bytes FROM {path}{predicate}"#);
+        format!(r"SELECT COALESCE(SUM(file_size_in_bytes), 0) AS bytes FROM {path}{predicate}");
     let frame = Box::pin(crate::router::execute(ctx, catalogs, &sql)).await?;
     let batches = frame.collect().await?;
     let mut total: i64 = 0;

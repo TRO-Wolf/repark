@@ -77,6 +77,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
   pins: orphan-s3tables-1/C-003
   **FNP-4B (2026-09-15):** the local `quote_ident` emits backticks (embedded doubled);
   fixed engine-internal names in the metadata reads stay bare. pins: fnp-4b/C-002
+  (slice-3: needless raw-string-hash lint only, no behavior change).
 - `run_maintenance_apply.rs` — **MAINT-POLICY-1 step 3 (2026-09-10):** the apply path. Each
   planned step runs through the same procedure body the CALL door dispatches to (built
   `CallArgs`, no SQL-text re-entry): position-delete, manifests, expire and orphan steps

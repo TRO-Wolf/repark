@@ -20,7 +20,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   literals with Spark escapes, the `D/F/S/Y/L/BD` numeric suffixes with Spark Arrow
   types, the out-of-range `\U` Java artifact, backtick field names, and
   `named_struct(…).field` subscript access.
-  pins: fnp-4b/C-001, C-004, C-005, C-006, C-010 (follow-up: exponent literals as DOUBLE, CAST(1.0E6 AS DOUBLE) is 1000000.0; DROP TEMPORARY FUNCTION IF EXISTS is a no-op)
+  pins: fnp-4b/C-001, C-004, C-005, C-006, C-010 (follow-up: exponent literals as DOUBLE, CAST(1.0E6 AS DOUBLE) is 1000000.0; DROP TEMPORARY FUNCTION IF EXISTS is a no-op; slice-3: float pins compare to_bits())
 - `lambda_door.rs` — **FNP-8 (2026-09-06):** the eleven higher-order names through
   `crate::execute` with `x -> y` syntax — both `transform`/`filter` arities, `exists` as a
   function (not the subquery keyword), `forall` on empty, `aggregate` with and without

@@ -1471,6 +1471,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **octo C1–C6** as before; **G1:** UPDATE/DELETE identifier scan, WHERE-subquery FROM,
   SET body never regexed, leading trivia; **octo C1:** table name ending in `set`, refuse
   eating SET keyword as table when target missing).
+  **FNP-4B (2026-09-15):** expander expectations in backtick form; ruff-format only after.
 - `test_g2_window_rand_sampleby.py` — G2 R-CENSUS-R5: Window rowsBetween/rangeBetween +
   ranks; XORShift rand/randn; sampleBy seed-0 **exact XORShift key set** (not band);
   eagerEval repr/html + **HTML escape XSS pins**; RANGE non-numeric refuse + without
@@ -2888,6 +2889,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   source columns colliding on one target raise a loud ambiguous error naming both. (The `ON`
   predicate/explicit references are DataFusion-resolved — a disclosed follow-up; the source column is
   named explicitly in `ON` here so the test pins the CONFORM, not that resolution.)
+  **FNP-4B (2026-09-15):** the `ON` qualifier uses backticks (BL-9); ruff-format only after.
 - `test_filter_predicate_rewrite.py` — **audit G2**: the SQL-string filter-predicate identifier
   rewriter (`DataFrame._quote_filter_sql_identifiers`), pinned through BOTH entry points
   (`.filter` and `.where`, parametrized) on the `to_arrow` path, value AND Arrow type. Four
@@ -3983,7 +3985,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_fnp_4b_spark_dialect.py` — **FNP-4B (2026-09-15):** the Spark-door dialect pins —
   double-quoted STRING literals with Spark escapes and the `F.expr` / `filter` / `where` /
   `selectExpr` expression-string door sharing the same lexer, on the Arrow path (value AND type).
-  pins: fnp-4b/C-001, C-003
+  pins: fnp-4b/C-001, C-003 (ruff-format only after Step 2).
 - `test_fnp_8_sql_door.py` — **FNP-8 (2026-09-07), in flight:** the fifteen accepted
   higher-order callable forms through the Column door, Spark SQL, and column-free `F.expr`.
   It fences the separately BACKLOGed EX-FN-4 column-reference refusal, pins Spark-equal public

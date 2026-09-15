@@ -205,8 +205,9 @@ async fn d_suffix_is_double() {
             .as_any()
             .downcast_ref::<Float64Array>()
             .expect("Float64")
-            .value(0),
-        2.0
+            .value(0)
+            .to_bits(),
+        2.0f64.to_bits()
     );
     let (batch, data_type, _) = one_cell(&ctx, "SELECT ceil(-1.5D) AS v").await;
     assert_eq!(data_type, DataType::Int64);
@@ -226,8 +227,9 @@ async fn d_suffix_is_double() {
             .as_any()
             .downcast_ref::<Float64Array>()
             .expect("Float64")
-            .value(0),
-        1e200
+            .value(0)
+            .to_bits(),
+        1e200f64.to_bits()
     );
 }
 
@@ -268,8 +270,9 @@ async fn other_suffixes_keep_spark_types() {
             .as_any()
             .downcast_ref::<Float32Array>()
             .expect("Float32")
-            .value(0),
-        1.5
+            .value(0)
+            .to_bits(),
+        1.5f32.to_bits()
     );
     let (batch, data_type, _) = one_cell(&ctx, "SELECT 1.5BD AS v").await;
     assert!(matches!(data_type, DataType::Decimal128(_, _)));
@@ -367,7 +370,7 @@ async fn exponent_literal_is_double() {
         schema.field_with_name("c").unwrap().data_type(),
         &DataType::Decimal128(2, 1)
     );
-    let floats = |name: &str| {
+    let bits = |name: &str| {
         batches[0]
             .column_by_name(name)
             .unwrap()
@@ -375,12 +378,13 @@ async fn exponent_literal_is_double() {
             .downcast_ref::<Float64Array>()
             .expect("Float64")
             .value(0)
+            .to_bits()
     };
-    assert_eq!(floats("a"), 1_000_000.0);
-    assert_eq!(floats("b"), 100.0);
-    assert_eq!(floats("d"), 0.001);
-    assert_eq!(floats("e"), 1e21);
-    assert_eq!(floats("f"), 5e-324);
+    assert_eq!(bits("a"), 1_000_000.0f64.to_bits());
+    assert_eq!(bits("b"), 100.0f64.to_bits());
+    assert_eq!(bits("d"), 0.001f64.to_bits());
+    assert_eq!(bits("e"), 1e21f64.to_bits());
+    assert_eq!(bits("f"), 5e-324f64.to_bits());
     let (batch, data_type, _) = one_cell(&ctx, "SELECT CAST(1.0E6 AS DOUBLE) AS v").await;
     assert_eq!(data_type, DataType::Float64);
     assert_eq!(
@@ -389,8 +393,9 @@ async fn exponent_literal_is_double() {
             .as_any()
             .downcast_ref::<Float64Array>()
             .expect("Float64")
-            .value(0),
-        1_000_000.0
+            .value(0)
+            .to_bits(),
+        1_000_000.0f64.to_bits()
     );
 }
 

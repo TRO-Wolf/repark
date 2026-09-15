@@ -164,7 +164,7 @@ pins: rp-4-fork-repin/C-005, C-006
   fragment text). Keep-double rule (same unit): a lone double-quoted literal without
   backslashes is never rewritten, so quoted identifiers/aliases keep their positions for the
   downstream dialect; only Spark escapes rewrite, re-quoted double (single only when the
-  value holds `"`). pins: fnp-4b/C-001, C-004, C-010, BL-9 (follow-up: exponent literals behave as D-suffixed, DOUBLE; the verbatim fast-path gate opens on digit+e/E; DROP TEMPORARY rewrites to DROP)
+  value holds `"`). pins: fnp-4b/C-001, C-004, C-010, BL-9 (follow-up: exponent literals behave as D-suffixed, DOUBLE; the verbatim fast-path gate opens on digit+e/E; DROP TEMPORARY rewrites to DROP; slice-3: must_use + cast_* + derived Default lints only)
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in;
   `Model: Grok 4.6 xHigh`);
