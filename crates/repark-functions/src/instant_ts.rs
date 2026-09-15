@@ -21,7 +21,7 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::AnalyzerRule;
 
 use crate::datetime::localize_wall_micros_in_zone;
-use crate::session_time_zone::session_time_zone_from_options;
+use crate::session_time_zone::{current_timezone_udf, session_time_zone_from_options};
 use crate::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 
 /// Spark's default `TIMESTAMP` / LTZ Arrow type — µs with a UTC annotation.
@@ -37,7 +37,12 @@ pub(crate) fn ntz_timestamp_type() -> DataType {
 /// The instant-typed SQL producers this crate overwrites after `datafusion-spark`.
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
-    vec![now_udf(), current_timestamp_udf(), to_timestamp_udf()]
+    vec![
+        now_udf(),
+        current_timestamp_udf(),
+        to_timestamp_udf(),
+        current_timezone_udf(),
+    ]
 }
 
 /// Analyzer rule: `CAST(<integer|NULL> AS TIMESTAMP)` yields the LTZ wire type.

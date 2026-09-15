@@ -14,9 +14,14 @@ all. `SET TIME ZONE 'x'` is a parse-time `UnsupportedOperationException`, `SET <
 
 **Mechanism.** A new module `python/repark/src/repark/spark/session/sql_set_statements.py`
 recognises the D-1 shapes after whitespace + one-trailing-`;` normalisation; anything else —
-including every `datafusion.*` key — falls through to the engine unchanged (the exclusion is
-load-bearing: `RuntimeConfig.set` forwards `datafusion.*` keys through `session.sql("SET …")`,
-so intercepting them would loop). `SparkSession.sql` gains one hook line that returns the
+including every `datafusion.*` key and every `spark.wap.*` assignment/unset — falls through to
+the engine unchanged (the `datafusion.*` exclusion is load-bearing: `RuntimeConfig.set` forwards
+those keys through `session.sql("SET …")`, so intercepting them would loop; the `spark.wap.*`
+exclusion is fail-closed — repark does not implement WAP and the engine's loud refusal, not a
+silent conf store, is the REF-3-pinned answer). `RESET` of a collation key calls
+`refuse_collation_session_key` before `conf.unset`, mirroring the engine's G15
+`refuse_collation_reset_variable` valve the intercept would otherwise bypass (`conf.unset`
+carries no collation guard). `SparkSession.sql` gains one hook line that returns the
 module's DataFrame when it answers. Every read/write goes through `self.conf`
 (`RuntimeConfig.set`/`get`/`unset`) — D-4's "same effect `spark.conf.set` has" by construction.
 Result frames are `pa.Table`s materialised through `_materialize_arrow_as_memtable_frame`, which
@@ -83,6 +88,17 @@ Decisions taken under the card (recorded, not invented):
 - **`spark.app.name` and other non-`_SQLCONF_STATIC_KEYS` statics** are not refused (repark's
   static set is the SSOT) — Spark raises `CANNOT_MODIFY_STATIC_CONFIG` for them; noted
   divergence, no fixture cell.
+- **`spark.wap.*` assignment/unset defers to the engine**, not `conf.set`: `conf.set` silently
+  stores `spark.wap.branch` (a pre-existing conf-door hole this card cannot fix — `builder_conf`
+  is frozen), and intercepting would turn REF-3's fail-closed refusal into a silent store.
+  `SET spark.wap.branch` (read) is still answered from the store — honest readback.
+- **`RESET <collation key>` refuses** via `refuse_collation_session_key` (same helper
+  `conf.set` uses) — the engine's `refuse_collation_reset_variable` valve survives the door.
+- **`repark.*` keys intercept** (D-4): `repark.cache.max_bytes`/`max_total_bytes` are real
+  runtime knobs `conf.set` honours, so SQL `SET` now stores them (the L-004 pin asserted the
+  pre-door namespace error — re-pinned in `test_eager_budget_1.py` to the conf contract);
+  `repark.cache.retained_bytes` refuses `INVALID_CONF_VALUE.REQUIREMENT` on both SET and
+  RESET via `conf`'s own read-only guard — a strictly better error than the old namespace one.
 
 ## PROPOSITION LEDGER — SQL-SET-DOOR-1 — 2026-09-14
 

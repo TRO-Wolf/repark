@@ -8,7 +8,7 @@ session timezone (`spark.sql.session.timeZone`) down to the calendar extractors 
 
 ## Contents
 
-- `tests.rs` — six pins in two cohorts:
+- `tests.rs` — eight pins in three cohorts:
   - **it carries** — an absent carrier falls back to `DEFAULT_EXTRACTION_TIME_ZONE` (`UTC`) so a
     bare DataFusion context still works; an installed zone reads back verbatim for IANA ids and
     fixed offsets alike; installing twice keeps the last value rather than leaving two truths.
@@ -18,6 +18,10 @@ session timezone (`spark.sql.session.timeZone`) down to the calendar extractors 
     `information_schema` settings), and `the_sql_set_door_cannot_reach_the_carrier` (a real
     `SessionContext`: `SET repark.session.…` and `SET spark.sql.session.timeZone` both fail, and
     the session's zone is unchanged after every refused spelling).
+  - **it feeds `current_timezone()`** — SQL-SET-DOOR-1 (2026-09-14):
+    `current_timezone_answers_the_carrier_zone_as_a_non_null_string` (the installed zone comes
+    back in a non-nullable Utf8 field, the Arrow nullability Spark promises) and
+    `current_timezone_defaults_to_utc_without_the_carrier` (a bare context answers the default).
 
 Deliberately NOT here: the extraction SEMANTICS. What `year` / `hour` / `date_trunc` actually
 answer under a zone is pinned end-to-end on real sessions in

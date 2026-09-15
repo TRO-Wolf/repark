@@ -251,8 +251,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   UNION refuses at `max_bytes=100` with the main-measured `312` integer, admits at 312,
   refuses at 311; a live-cache-view scan under both budgets refuses with the per-result
   message. C-004 gains case-insensitive budget-key pins (mixed-case `set`/`unset`,
-  last-set-wins, runtime-over-builder). L-004 pins SQL `SET repark.cache.*` raising
-  `config namespace "repark"`.
+  last-set-wins, runtime-over-builder). L-004 pins SQL `SET repark.cache.*` — re-pinned by
+  SQL-SET-DOOR-1 (2026-09-14) from the pre-door `config namespace "repark"` error to the
+  `conf.set` contract the SQL door now honours: the two budget keys store and echo, and
+  `retained_bytes` refuses `INVALID_CONF_VALUE.REQUIREMENT`.
   pins: eager-budget-1/C-004, C-005, C-006, C-007, C-008, C-009
 - [test_df_explain_1.py](test_df_explain_1.py) — **DF-EXPLAIN-1 (2026-09-08):** the red-first
   `explain` pins, red on base `f00ed9ea` (the run is recorded in the ledger) and green on the

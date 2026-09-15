@@ -1,9 +1,17 @@
 //! Session-timezone carrier for calendar extractors, never a second knob.
 
 use std::any::Any;
+use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 
+use arrow::datatypes::{DataType, Field, FieldRef};
+use datafusion::common::ScalarValue;
 use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, ExtensionOptions};
 use datafusion::error::{DataFusionError, Result};
+use datafusion::logical_expr::{
+    ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
+    Volatility,
+};
 use datafusion::prelude::SessionConfig;
 
 /// The zone the extractors use when no [`SessionTimeZoneConfig`] is installed.
@@ -82,6 +90,67 @@ pub fn session_time_zone_from_options(options: &ConfigOptions) -> &str {
         .extensions
         .get::<SessionTimeZoneConfig>()
         .map_or(DEFAULT_EXTRACTION_TIME_ZONE, SessionTimeZoneConfig::zone)
+}
+
+#[derive(Debug)]
+struct CurrentTimezone {
+    signature: Signature,
+}
+
+impl CurrentTimezone {
+    fn new() -> Self {
+        Self {
+            signature: Signature::nullary(Volatility::Stable),
+        }
+    }
+}
+
+impl PartialEq for CurrentTimezone {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for CurrentTimezone {}
+
+impl Hash for CurrentTimezone {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        "current_timezone".hash(state);
+    }
+}
+
+impl ScalarUDFImpl for CurrentTimezone {
+    fn name(&self) -> &str {
+        "current_timezone"
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Utf8)
+    }
+
+    fn return_field_from_args(&self, _args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        Ok(Arc::new(Field::new(
+            "current_timezone",
+            DataType::Utf8,
+            false,
+        )))
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let zone = session_time_zone_from_options(args.config_options.as_ref());
+        Ok(ColumnarValue::Scalar(ScalarValue::Utf8(Some(
+            zone.to_string(),
+        ))))
+    }
+}
+
+#[must_use]
+pub fn current_timezone_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::new_from_impl(CurrentTimezone::new()))
 }
 
 #[cfg(test)]

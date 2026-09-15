@@ -271,9 +271,7 @@ def test_set_verbose_lists_the_same_keys_with_empty_metadata() -> None:
     for name in schema.names:
         assert schema.field(name).type == pa.string()
         assert schema.field(name).nullable is False
-    assert rows == [
-        {"key": "repark.anything", "value": "1", "meaning": "", "Since version": ""}
-    ]
+    assert rows == [{"key": "repark.anything", "value": "1", "meaning": "", "Since version": ""}]
     _set_and_get(spark, "RESET")
     _, rows = _set_and_get(spark, "SET -v")
     assert rows == []
