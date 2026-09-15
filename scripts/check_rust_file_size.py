@@ -56,10 +56,20 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Spark analyzer rewrites remain grouped in one rule implementation.",
         "Extract a cohesive rewrite family when that family next changes.",
     ),
+    "crates/repark-functions/src/analyzer/time_window/mod.rs": (
+        1268,
+        "The window analyzer rule, its staging helpers, and the shared rule tests stay together.",
+        "Extract the window_time grouping rule once its provenance check stabilizes.",
+    ),
     "crates/repark-functions/src/datetime.rs": (
         1700,
         "Calendar and timestamp Spark-semantics functions share one module.",
         "Split calendar extractors from timezone-aware timestamp functions.",
+    ),
+    "crates/repark-functions/src/spark_time_window.rs": (
+        1125,
+        "Window duration parsing, bucket kernels, and the window UDFs share one module.",
+        "Extract the duration-string parser from the bucket kernels.",
     ),
     "crates/repark-iceberg/src/catalog/tests/catalog.rs": (
         1843,

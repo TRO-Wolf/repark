@@ -134,6 +134,11 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Explode rewrite shapes share one test battery.",
         "Split scalar, nested, and multiple-generator scenarios.",
     ),
+    "python/repark/tests/test_fnp_win_1.py": (
+        1209,
+        "Window oracle pins for three names on both doors stay in one battery.",
+        "Split value pins from error and divergence pins by clause family.",
+    ),
     "python/repark/tests/test_interchange_parity.py": (
         1533,
         "Dataframe-interchange parity scenarios share one module.",

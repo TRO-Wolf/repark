@@ -231,6 +231,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   resolves them as `call_function` builtins, so they are facade-only routines); the
   by-name route answers the same bytes as the wrappers and the SQL door.
   pins: fnp-bitmap-facade-1/C-002, fnp-bitmap-facade-1/C-004
+  **FNP-WIN-1 step 5 (2026-09-15):** `window` and `session_window` join the
+  facade-only rows (analyzer-rewrite and GROUP-BY-only marker names the scalar
+  dispatch does not carry; step-2 debt for `window`).
+  pins: fnp-misc-1/C-002, fnp-misc-1/F-3, fnp-misc-1/F-4, fnp-misc-1/F-5, fnp-misc-1/L-004, fnp-misc-1/L-005, fnp-misc-1/L-010, fnp-win-1/C-008
 - `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9
   (2026-09-05):** `create_map`, `map_concat` and `array_insert` land here.
   pins: fnp-9-collections-json/C-006
@@ -371,7 +375,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `dataframe/udf_projection.py` (line-count neutral; ceiling stays 1300).
   pins: dfcore-2/C-004
 - `functions_url.py` — URL parsing and encoding wrappers.
-- `functions_window.py` — window function wrappers.
+- `functions_window.py` — window function wrappers, plus the thin `window(...)`
+  wrapper and its tail-install row (**FNP-WIN-1**, 2026-09-15); step 3 adds the
+  thin `window_time(...)` wrapper to the same tail-install row; step 4 adds the
+  thin `session_window(timeColumn, gapDuration)` wrapper (string or Column gap).
+  Rebased onto FNP-11A: the tail-install row runs after the temporal row
+  (`_fz`, then `_fwn`), and its import shares the temporal import line so
+  `functions.py` stays at its 1960 baseline.
+  pins: fnp-win-1/C-001, C-002, C-003, C-004, C-008
 - `merge.py` — `mergeInto` builder and SQL MERGE source registration. DML-A:
   `whenNotMatchedBySource` DELETE/UPDATE execute.
   pins: dml-a-merge-not-matched-by-source/C-002, C-003

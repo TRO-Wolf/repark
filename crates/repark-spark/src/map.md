@@ -305,6 +305,22 @@ pins: rp-4-fork-repin/C-005, C-006
   **FNP-8 (2026-09-06):** the EXECUTING parse takes `normalize::dialect_for_executing_parse`
   (Databricks when the SQL carries a lambda arrow, else the session dialect), so HOF calls
   with `x -> y` plan to the registered kernels. pins: fnp-8/C-004
+- `time_window.rs` — **FNP-WIN-1 (2026-09-15):** the SQL-door `TimeWindowing`
+  aliasing. A top-level `GROUP BY window(...)` stages the query over
+  `SELECT *, window(...) AS window` so `window.start` / `window.end` resolve to
+  a real column; the group and bare projection calls resolve to that column.
+  Sliding values stay correct because the analyzer rule expands the staged
+  projection. A second window specification refuses loud. Step 3 refuses a
+  `window_time(...)` call in the staged projection / having / order-by with
+  the oracle `[MISSING_AGGREGATION]` text, because the planner lifts it into a
+  projection where the analyzer can no longer tell it apart from the legal
+  post-aggregation use. Step 4 stages `GROUP BY session_window(...)` the same
+  way (`SELECT *, session_window(...) AS session_window`); the analyzer rule
+  strips the marker and rewrites stale parent `session_window` references.
+  Remediation 16a stages inside CTE bodies, derived-table subqueries and both
+  UNION branches by recursing the query/set tree; `time_window.rs` stays the
+  only file this unit touches under `repark-spark`.
+  pins: fnp-win-1/C-002, C-004, C-005, C-008
 - `window_range.rs` — Spark temporal `RANGE` rules. Unit-less bounds over `TIMESTAMP` refuse;
   bounds over `DATE` restate as day intervals because DataFusion reads bare values as months.
   Negative and value-inverted frames retain Spark refusal/empty behavior; numeric-key interval
