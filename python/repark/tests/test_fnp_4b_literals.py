@@ -289,6 +289,16 @@ def test_decimal_suffix_precision_from_digits(spark: ReparkSession) -> None:
     assert shifted.column("v").to_pylist() == [decimal.Decimal("150")]
 
 
+def test_negative_zero_bd_answers_plain_zero(spark: ReparkSession) -> None:
+    """L-004 control: ``-0.0BD`` is ``decimal(1,1)`` zero, non-null, named."""
+    table = _table(spark.sql("SELECT -0.0BD AS v"))
+    assert table.column("v").to_pylist() == [decimal.Decimal("0.0")]
+    assert table.schema.field("v").type == pa.decimal128(1, 1)
+    assert table.schema.field("v").nullable is False
+    bare = _table(spark.sql("SELECT -0.0BD"))
+    assert bare.schema.names == ["-0.0"]
+
+
 def test_struct_field_access_on_call_result(spark: ReparkSession) -> None:
     """L9-struct-dot: ``named_struct('a', 1).a`` is ``1`` as INT non-null."""
     table = _table(spark.sql("SELECT named_struct('a', 1).a AS v"))

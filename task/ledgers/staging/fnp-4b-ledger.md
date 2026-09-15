@@ -594,3 +594,27 @@ facade `test_signed_integer_suffix_minima_answer`,
 (`python/repark/tests/test_fnp_4b_literals.py`). The refusal pins assert the
 error class, which the old optimizer `Can't cast value` error does not carry,
 so they go red without the fix.
+
+Slice B — L-001 + L-003 (`crates/repark-spark/src/spark_typed.rs`,
+`crates/repark-functions/src/java_double.rs`): `SuffixLiteral` now names its
+field through the value text (`return_field_from_args` / `schema_name` /
+`display_name` share `suffix_literal_name`: Java double/float text for floats,
+plain digits for ints, scale-exact plain text for decimals, f64-parsed text
+for the quoted exponent operand), so nested/CTE/large-`D` columns never carry
+the marker. Root unaliased names render from value text: `literal_spark` uses
+the Java formatters plus scale-exact decimals, the display rule fires on
+scalar-dump names, and unfolded integer `CAST`s name their literal inner.
+Probes, not reasoning, fixed the shape (three findings): analysis runs twice
+(`SessionState::optimize` re-analyzes), so inner renames orphan outer column
+references on the second pass — the display rule stays root-only and the
+critic's nested-rewalk prescription is not applied; the fold covers numeric
+targets except `Int64` because `SparkIntegerLiteral` re-narrows bare `Int64`
+literals on the second pass (an early fold of `1L` executed as `Int32`);
+nested non-marker suffixes keep their build-time dump names (recorded gap,
+no regression). Pins: Rust `unaliased_suffix_names_come_from_value_text`
+(14 root/nested/union names); facade
+`test_nested_suffix_literal_hides_the_provenance_marker` (columns, Arrow
+names, `explain()`), `test_unaliased_suffix_names_come_from_value_text`
+(`spark.sql` / `selectExpr` / `F.expr` doors),
+`test_negative_zero_bd_answers_plain_zero` (L-004 `-0.0BD` control:
+`decimal(1,1)` zero, non-null, `-0.0`).

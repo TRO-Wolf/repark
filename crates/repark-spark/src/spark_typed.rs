@@ -13,6 +13,7 @@ use datafusion::logical_expr::{
 };
 use datafusion::logical_expr::{ReturnFieldArgs, ScalarFunctionArgs};
 use datafusion::optimizer::AnalyzerRule;
+use repark_functions::java_double::{java_double_text, java_float_text};
 
 pub const SPARK_AS_NAME: &str = "__repark_spark_as__";
 
@@ -55,19 +56,21 @@ fn fold_expr(expr: Expr) -> Transformed<Expr> {
         }
         _ => return Transformed::no(expr),
     };
-    let is_string = matches!(
-        scalar,
-        ScalarValue::Utf8(_) | ScalarValue::LargeUtf8(_) | ScalarValue::Utf8View(_)
-    );
-    let is_float_target = matches!(
+    let is_foldable_target = matches!(
         cast.field.data_type(),
-        DataType::Float32 | DataType::Float64
+        DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::Float32
+            | DataType::Float64
+            | DataType::Decimal128(_, _)
+            | DataType::Decimal256(_, _)
     );
-    let is_decimal_target = matches!(
-        cast.field.data_type(),
-        DataType::Decimal128(_, _) | DataType::Decimal256(_, _)
-    );
-    if !((is_string && is_float_target) || is_decimal_target) {
+    if !is_foldable_target {
         return Transformed::no(expr);
     }
     let Ok(folded) = scalar.cast_to(cast.field.data_type()) else {
@@ -98,24 +101,28 @@ fn rewrite_projection_display(plan: LogicalPlan) -> Result<LogicalPlan> {
     };
     let mut changed = false;
     for expr in &mut projection.expr {
-        let current = expr.clone();
-        let (inner, name, explicit) = match current {
-            Expr::Alias(alias) => {
-                let explicit = !alias.name.contains("__repark_");
-                (*alias.expr, alias.name, explicit)
-            }
-            other => {
-                let name = other.schema_name().to_string();
-                (other, name, false)
-            }
+        let (name, explicit) = match &*expr {
+            Expr::Alias(alias) => (
+                alias.name.clone(),
+                !alias.name.contains("__repark_") && !scalar_dump_name(&alias.name),
+            ),
+            other => (other.schema_name().to_string(), false),
         };
         if explicit || !needs_spark_display(&name) {
             continue;
         }
-        let display = spark_display(&inner);
+        let inner = match &*expr {
+            Expr::Alias(alias) => alias.expr.as_ref(),
+            other => other,
+        };
+        let display = spark_display(inner);
         if display == name {
             continue;
         }
+        let inner = match expr.clone() {
+            Expr::Alias(alias) => *alias.expr,
+            other => other,
+        };
         *expr = Expr::Alias(Alias::new(inner, None::<&str>, display));
         changed = true;
     }
@@ -145,6 +152,28 @@ fn needs_spark_display(name: &str) -> bool {
         || name.contains("named_struct(")
         || name.contains("get_field(")
         || name.contains('`')
+        || scalar_dump_name(name)
+}
+
+fn scalar_dump_name(name: &str) -> bool {
+    name.contains("Int64(")
+        || name.contains("Int32(")
+        || name.contains("Int16(")
+        || name.contains("Int8(")
+        || name.contains("UInt64(")
+        || name.contains("UInt32(")
+        || name.contains("UInt16(")
+        || name.contains("UInt8(")
+        || name.contains("Float64(")
+        || name.contains("Float32(")
+        || name.contains("Decimal128(")
+        || name.contains("Decimal256(")
+        || name.contains("Utf8(\"")
+        || name.contains("LargeUtf8(\"")
+        || name.contains("Utf8View(\"")
+        || name.contains("Boolean(")
+        || name.contains("Some(")
+        || name.contains("(- ")
 }
 
 fn spark_display(expr: &Expr) -> String {
@@ -156,6 +185,31 @@ fn spark_display_inner(expr: &Expr) -> String {
         Expr::Alias(alias) => spark_display(alias.expr.as_ref()),
         Expr::Column(column) => column.name.clone(),
         Expr::Literal(scalar, _) => literal_spark(scalar),
+        Expr::Negative(inner) => format!("-{}", spark_display(inner.as_ref())),
+        Expr::Cast(cast) => match cast.expr.as_ref() {
+            Expr::Literal(scalar, _)
+                if matches!(
+                    scalar,
+                    ScalarValue::Int8(Some(_))
+                        | ScalarValue::Int16(Some(_))
+                        | ScalarValue::Int32(Some(_))
+                        | ScalarValue::Int64(Some(_))
+                ) && matches!(
+                    cast.field.data_type(),
+                    DataType::Int8
+                        | DataType::Int16
+                        | DataType::Int32
+                        | DataType::Int64
+                        | DataType::UInt8
+                        | DataType::UInt16
+                        | DataType::UInt32
+                        | DataType::UInt64
+                ) =>
+            {
+                literal_spark(scalar)
+            }
+            _ => expr.schema_name().to_string(),
+        },
         Expr::BinaryExpr(binary) => format!(
             "({} {} {})",
             spark_display(binary.left.as_ref()),
@@ -254,13 +308,21 @@ fn named_struct_spark(args: &[Expr]) -> String {
 
 fn literal_spark(scalar: &ScalarValue) -> String {
     match scalar {
-        ScalarValue::Utf8(Some(text)) | ScalarValue::Utf8View(Some(text)) => text.clone(),
+        ScalarValue::Utf8(Some(text))
+        | ScalarValue::LargeUtf8(Some(text))
+        | ScalarValue::Utf8View(Some(text)) => text.clone(),
         ScalarValue::Int8(Some(value)) => value.to_string(),
         ScalarValue::Int16(Some(value)) => value.to_string(),
         ScalarValue::Int32(Some(value)) => value.to_string(),
         ScalarValue::Int64(Some(value)) => value.to_string(),
-        ScalarValue::Float32(Some(value)) => value.to_string(),
-        ScalarValue::Float64(Some(value)) => value.to_string(),
+        ScalarValue::UInt8(Some(value)) => value.to_string(),
+        ScalarValue::UInt16(Some(value)) => value.to_string(),
+        ScalarValue::UInt32(Some(value)) => value.to_string(),
+        ScalarValue::UInt64(Some(value)) => value.to_string(),
+        ScalarValue::Float32(Some(value)) => java_float_text(*value),
+        ScalarValue::Float64(Some(value)) => java_double_text(*value),
+        ScalarValue::Decimal128(Some(value), _, scale) => decimal_literal_text(*value, *scale),
+        ScalarValue::Boolean(Some(value)) => value.to_string(),
         other => other.to_string(),
     }
 }
@@ -396,7 +458,21 @@ impl ScalarUDFImpl for SuffixLiteral {
         let first = args.arg_fields.first().ok_or_else(|| {
             DataFusionError::Plan(format!("'{SUFFIX_LITERAL_NAME}' expects one argument"))
         })?;
-        Ok(Field::new(SUFFIX_LITERAL_NAME, first.data_type().clone(), true).into())
+        let scalar = args
+            .scalar_arguments
+            .first()
+            .and_then(|scalar| scalar.as_ref())
+            .copied();
+        let name = suffix_literal_name(scalar);
+        Ok(Field::new(name, first.data_type().clone(), true).into())
+    }
+
+    fn display_name(&self, args: &[Expr]) -> Result<String> {
+        Ok(suffix_expr_name(args.first()))
+    }
+
+    fn schema_name(&self, args: &[Expr]) -> Result<String> {
+        Ok(suffix_expr_name(args.first()))
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -404,6 +480,55 @@ impl ScalarUDFImpl for SuffixLiteral {
             DataFusionError::Execution(format!("'{SUFFIX_LITERAL_NAME}' expects one argument"))
         })
     }
+}
+
+#[must_use]
+pub fn suffix_literal_name(scalar: Option<&ScalarValue>) -> String {
+    match scalar {
+        Some(ScalarValue::Float64(Some(value))) => java_double_text(*value),
+        Some(ScalarValue::Float32(Some(value))) => java_float_text(*value),
+        Some(ScalarValue::Int8(Some(value))) => value.to_string(),
+        Some(ScalarValue::Int16(Some(value))) => value.to_string(),
+        Some(ScalarValue::Int32(Some(value))) => value.to_string(),
+        Some(ScalarValue::Int64(Some(value))) => value.to_string(),
+        Some(ScalarValue::Decimal128(Some(value), _, scale)) => {
+            decimal_literal_text(*value, *scale)
+        }
+        Some(
+            ScalarValue::Utf8(Some(text))
+            | ScalarValue::LargeUtf8(Some(text))
+            | ScalarValue::Utf8View(Some(text)),
+        ) => match text.parse::<f64>() {
+            Ok(value) => java_double_text(value),
+            Err(_) => text.clone(),
+        },
+        Some(scalar) => scalar.to_string(),
+        None => "NULL".to_string(),
+    }
+}
+
+fn suffix_expr_name(arg: Option<&Expr>) -> String {
+    match arg {
+        Some(Expr::Literal(scalar, _)) => suffix_literal_name(Some(scalar)),
+        Some(other) => other.to_string(),
+        None => SUFFIX_LITERAL_NAME.to_string(),
+    }
+}
+
+fn decimal_literal_text(value: i128, scale: i8) -> String {
+    if scale <= 0 {
+        let zeros = "0".repeat(scale.unsigned_abs() as usize);
+        return format!("{value}{zeros}");
+    }
+    let width = usize::from(u8::try_from(scale).unwrap_or(0));
+    let digits = value.unsigned_abs().to_string();
+    let text = if digits.len() > width {
+        let split = digits.len() - width;
+        format!("{}.{}", &digits[..split], &digits[split..])
+    } else {
+        format!("0.{digits:0>width$}")
+    };
+    if value < 0 { format!("-{text}") } else { text }
 }
 
 #[must_use]
