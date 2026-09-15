@@ -179,7 +179,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
-- [java-double-fd-1-ledger.md](java-double-fd-1-ledger.md) —
   **JAVA-DOUBLE-FD-1 round 2 (2026-09-15), in flight:** the Q19 reviewer cells —
   `%F` refuses, NaN takes no sign prefix, `#` forces the point, suffix casts run
   over real columns through a shared kernel, and the float text paths render
