@@ -196,3 +196,58 @@ def test_cast_suffix_float_target(spark: ReparkSession) -> None:
     table = _table(frame)
     assert table.column("r").to_pylist() == [1.0]
     assert table.schema.field("r").type == pa.float32()
+
+
+def _check_string(table: pa.Table, column: str, expected: str) -> None:
+    values = table.column(column).to_pylist()
+    assert values == [expected]
+    assert table.schema.field(column).type == pa.string()
+
+
+def test_spark_door_format_string_nan_takes_no_sign(spark: ReparkSession) -> None:
+    """Q19-fmt-0..3: sign, space and paren flags never prefix NaN."""
+    for literal in [
+        "SELECT format_string('%+f', CAST('NaN' AS DOUBLE)) AS v",
+        "SELECT format_string('% f', CAST('NaN' AS DOUBLE)) AS v",
+        "SELECT format_string('%f', -CAST('NaN' AS DOUBLE)) AS v",
+        "SELECT format_string('%(f', -CAST('NaN' AS DOUBLE)) AS v",
+    ]:
+        _check_string(_table(spark.sql(literal)), "v", "NaN")
+    frame = spark.range(1).select(
+        F.format_string("%+f", F.lit(float("nan"))).alias("v"),
+        F.format_string("% f", F.lit(float("nan"))).alias("w"),
+    )
+    table = _table(frame)
+    _check_string(table, "v", "NaN")
+    _check_string(table, "w", "NaN")
+
+
+def test_spark_door_format_string_infinity_sign_controls(spark: ReparkSession) -> None:
+    """Q19-fmt-6..7: infinity keeps Java sign handling on both doors."""
+    table = _table(spark.sql("SELECT format_string('%+f', CAST('-Infinity' AS DOUBLE)) AS v"))
+    _check_string(table, "v", "-Infinity")
+    table = _table(spark.sql("SELECT format_string('%(f', CAST('-Infinity' AS DOUBLE)) AS v"))
+    _check_string(table, "v", "(Infinity)")
+    frame = spark.range(1).select(
+        F.format_string("%+f", F.lit(float("-inf"))).alias("v"),
+    )
+    _check_string(_table(frame), "v", "-Infinity")
+
+
+def test_spark_door_format_string_upper_f_refuses(spark: ReparkSession) -> None:
+    """Q19-fmt-4..5: %F is not a Java conversion and refuses on both doors."""
+    for literal in [
+        "SELECT format_string('%F', -CAST('NaN' AS DOUBLE)) AS v",
+        "SELECT format_string('%+F', CAST('NaN' AS DOUBLE)) AS v",
+    ]:
+        with pytest.raises(Exception, match="Conversion = 'F'"):
+            spark.sql(literal).to_arrow()
+    frame = spark.range(1).select(F.format_string("%F", F.lit(float("nan"))).alias("v"))
+    with pytest.raises(Exception, match="Conversion = 'F'"):
+        frame.to_arrow()
+
+
+def test_spark_door_format_string_trailing_text_control(spark: ReparkSession) -> None:
+    """Q19-fmt-14: trailing literal text after one verb answers upstream."""
+    table = _table(spark.sql("SELECT format_string('%-10.2f|', CAST('3.14159' AS DOUBLE)) AS v"))
+    _check_string(table, "v", "3.14      |")
