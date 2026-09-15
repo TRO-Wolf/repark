@@ -1185,6 +1185,154 @@
     "kind": "list"
    }
   },
+  "planintro_cached_hash_cache_keeps_hash": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_cached_hash_cached_differ": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_cached_hash_filter_child_on_cached_equals_uncached_child": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_cached_hash_uncached_differ": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_cached_input_files_cached_after_action_len": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "planintro_cached_input_files_cached_before_action_len": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "planintro_cached_input_files_filter_child_len": {
+   "result": {
+    "kind": "int",
+    "value": 0
+   }
+  },
+  "planintro_cached_input_files_uncached_len": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "planintro_cube_rollup_cube_rows": {
+   "result": {
+    "kind": "int",
+    "value": 7
+   }
+  },
+  "planintro_cube_rollup_equal_hash": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "planintro_cube_rollup_rollup_rows": {
+   "result": {
+    "kind": "int",
+    "value": 5
+   }
+  },
+  "planintro_hex_names_equal_hash": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "planintro_local_data_different_data_equal_hash": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "planintro_local_data_different_data_same_semantics": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "planintro_local_data_same_data_equal_hash": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "planintro_local_data_same_data_same_semantics": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "planintro_temp_view_sql_equal_hash": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_temp_view_sql_input_files_len": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "planintro_temp_view_sql_same_semantics": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_temp_view_table_equal_hash": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_temp_view_table_same_semantics": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_uri_form_files": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "file:///tmp/pb-oracle-pi-_7809xge/pq_a/part-00000-34d8d730-93d9-4c1c-b4e7-bee43c66b44f-c000.snappy.parquet"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "planintro_uri_form_prefix": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "file:///tmp/"
+     }
+    ],
+    "kind": "list"
+   }
+  },
   "registerTempTable": {
    "result": {
     "columns": [

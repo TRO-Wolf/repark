@@ -69,3 +69,24 @@ therefore carries the brackets in the FILE name (`data [0], x.parquet` under an
 Write-path territory; reported, not touched.
 
 VERDICT: 4 clauses, 4 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Follow-up round — 2026-09-15 (R-1..R-4, P2-1/P2-2)
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-006 | The follow-up hash answers hold: local-frame construction identity, the cache-keeps-hash lineage round-trip, cached `inputFiles` lengths, cube/rollup discrimination, hex column names, temp-view equality, and the URI form. | The eight `C-006` tests over the twenty-three `planintro_*` oracle cells, red first on the pre-follow-up implementation. | **PROVEN** | 27/27 green on the rebuilt release module. Red first measured 2026-09-15 (new tests over the old implementation): `local_frames_differ_by_data`, `cache_keeps_hash`, `cube_rollup_differ`, `hex_names_differ`, `temp_view_matches_frame` red; `stable_for_one_frame`, `inputfiles_cached_frame_matches_spark`, `uri_form` green. pins: df-plan-introspect-1/C-006 |
+| C-007 | The follow-up hash stays fast: a depth-200 chained-filter `semanticHash` keeps its answer while the analyze-skip plus streaming rewrite removes the old cost. | Depth-200 timing before/after on the release module. | **PROVEN** | Before 0.4143s median; after 0.0001s median (11 samples, 0.00006–0.00008s, same shape, release module, 2026-09-15). The old cost was the unconditional analyzer pass plus the intermediate canonical string. pins: df-plan-introspect-1/C-007 |
+
+**Supersessions (dated, §5 stays as the 2026-09-14 record).** R-1 replaces the
+"Memtable boundary" ruling: independently built memtables hash by construction
+identity now, so same-data twins no longer share a hash and §5's
+`sameSemantics`-with-equal-hashes vacuous case no longer occurs — twins answer
+unequal hashes. R-2 adds the cache-lineage map (Python gathers live cache-view
+name to pre-cache plan pairs; the hash expands scans through it). The view-strip
+rule (`?table?` and lineage-known qualifiers strip, scan-level pushed-down
+filters are not hashed) makes a filter over a cache view equal the same filter
+over the base table. R-3 keeps the hex-norm on identifiers and discriminates
+cube / rollup / grouping sets by tag (the old always-analyze pass had erased the
+cube/rollup distinction). R-4 is the GIL-detached binding.
+
+VERDICT (whole ledger, 2026-09-15): 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.

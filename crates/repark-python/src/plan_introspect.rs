@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use datafusion::logical_expr::LogicalPlan;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
@@ -28,9 +31,18 @@ fn input_files(py: Python<'_>, frame: &PyDataFrame) -> PyResult<Vec<String>> {
 
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 #[pyfunction]
-fn semantic_hash(frame: &PyDataFrame) -> PyResult<i64> {
+fn semantic_hash(
+    py: Python<'_>,
+    frame: &PyDataFrame,
+    lineages: HashMap<String, Bound<'_, PyDataFrame>>,
+) -> PyResult<i64> {
     fenced!("plan_introspect.semantic_hash", {
         let (state, plan) = frame.df.clone().into_parts();
-        repark_core::semantic_hash(&state, &plan).map_err(to_py_err)
+        let mut definitions = HashMap::with_capacity(lineages.len());
+        for (name, lineage) in &lineages {
+            let definition: LogicalPlan = lineage.borrow().df.clone().into_parts().1;
+            definitions.insert(name.clone(), definition);
+        }
+        py.detach(|| repark_core::semantic_hash(&state, &plan, &definitions).map_err(to_py_err))
     })
 }

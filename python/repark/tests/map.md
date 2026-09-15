@@ -116,8 +116,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   cells plus literals, column order, limits, CAST widths, two file paths, and
   batch-size independence; the fold keeps the low 32 bits as a signed int. Red on
   base `efcb14ef`: all nineteen pins `PySparkAttributeError
-  [ATTRIBUTE_NOT_SUPPORTED]`. The example, the inventory refresh, and this entry
-  close the coverage loop. pins: df-plan-introspect-1/C-003
+  [ATTRIBUTE_NOT_SUPPORTED]`. Follow-up (2026-09-15) pins eight C-006 tests over
+  twenty-three `planintro_*` probe cells: local-frame construction identity, the
+  cache-keeps-hash lineage round-trip, cached `inputFiles` lengths, cube/rollup
+  discrimination, hex column names, temp-view equality, and the URI form — five red
+  on the pre-follow-up implementation, three green, all green after. The example,
+  the inventory refresh, and this entry close the coverage loop.
+  pins: df-plan-introspect-1/C-003, C-006
   The touched DataFrame suites and the lint, format, clippy, and coverage gates
   stay green. pins: df-plan-introspect-1/C-004
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`

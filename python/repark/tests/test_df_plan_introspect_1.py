@@ -229,3 +229,146 @@ def test_semantichash_stable_and_sql_door(spark: ReparkSession) -> None:
     frame = spark.range(3).filter("id > 1")
     assert frame.semanticHash() == frame.semanticHash()
     assert spark.sql("SELECT 1 AS a").semanticHash() == spark.sql("SELECT 1 AS b").semanticHash()
+
+
+def test_semantichash_local_frames_differ_by_data(spark: ReparkSession) -> None:
+    """pins: df-plan-introspect-1/C-006 — cells planintro_local_data_*."""
+    first = spark.createDataFrame([(1,)], "a int")
+    second = spark.createDataFrame([(2,)], "a int")
+    twin = spark.createDataFrame([(1,)], "a int")
+    assert (first.semanticHash() == second.semanticHash()) == _cell(
+        "planintro_local_data_different_data_equal_hash"
+    )["result"]["value"]
+    assert (
+        first.sameSemantics(second)
+        == _cell("planintro_local_data_different_data_same_semantics")["result"]["value"]
+    )
+    assert (first.semanticHash() == twin.semanticHash()) == _cell(
+        "planintro_local_data_same_data_equal_hash"
+    )["result"]["value"]
+    assert (
+        first.sameSemantics(twin)
+        == _cell("planintro_local_data_same_data_same_semantics")["result"]["value"]
+    )
+
+
+def test_semantichash_stable_for_one_frame(spark: ReparkSession) -> None:
+    """pins: df-plan-introspect-1/C-006 — one registration hashes stable."""
+    frame = spark.createDataFrame([(1,)], "a int")
+    assert frame.semanticHash() == frame.semanticHash()
+    assert frame.filter("a > 0").semanticHash() == frame.filter("a > 0").semanticHash()
+
+
+def test_semantichash_cache_keeps_hash(spark: ReparkSession, tmp_path: Path) -> None:
+    """pins: df-plan-introspect-1/C-006 — cells planintro_cached_hash_*."""
+    left_path = str(tmp_path / "left")
+    right_path = str(tmp_path / "right")
+    spark.createDataFrame([(1, 10), (2, 20)], "key int, a int").coalesce(1).write.parquet(left_path)
+    spark.createDataFrame([(3, 30), (4, 40)], "key int, a int").coalesce(1).write.parquet(
+        right_path
+    )
+    left = spark.read.parquet(left_path)
+    right = spark.read.parquet(right_path)
+    before_left = left.semanticHash()
+    assert (before_left != right.semanticHash()) == _cell("planintro_cached_hash_uncached_differ")[
+        "result"
+    ]["value"]
+    left.cache()
+    right.cache()
+    assert left.count() == 2
+    assert right.count() == 2
+    assert (left.semanticHash() != right.semanticHash()) == _cell(
+        "planintro_cached_hash_cached_differ"
+    )["result"]["value"]
+    assert (before_left == left.semanticHash()) == _cell("planintro_cached_hash_cache_keeps_hash")[
+        "result"
+    ]["value"]
+    child_cached = left.filter("a > 0").semanticHash()
+    child_fresh = spark.read.parquet(left_path).filter("a > 0").semanticHash()
+    assert (child_cached == child_fresh) == _cell(
+        "planintro_cached_hash_filter_child_on_cached_equals_uncached_child"
+    )["result"]["value"]
+    left.unpersist()
+    right.unpersist()
+
+
+def test_inputfiles_cached_frame_matches_spark(spark: ReparkSession, tmp_path: Path) -> None:
+    """pins: df-plan-introspect-1/C-006 — cells planintro_cached_input_files_*."""
+    target = str(tmp_path / "pq")
+    _write_parquet(spark, target)
+    frame = spark.read.parquet(target)
+    assert (
+        len(frame.inputFiles())
+        == _cell("planintro_cached_input_files_uncached_len")["result"]["value"]
+    )
+    frame.cache()
+    assert (
+        len(frame.inputFiles())
+        == _cell("planintro_cached_input_files_cached_before_action_len")["result"]["value"]
+    )
+    assert frame.count() == 2
+    assert (
+        len(frame.inputFiles())
+        == _cell("planintro_cached_input_files_cached_after_action_len")["result"]["value"]
+    )
+    assert (
+        len(frame.filter("a > 0").inputFiles())
+        == _cell("planintro_cached_input_files_filter_child_len")["result"]["value"]
+    )
+    frame.unpersist()
+
+
+def test_semantichash_cube_rollup_differ(spark: ReparkSession) -> None:
+    """pins: df-plan-introspect-1/C-006 — cells planintro_cube_rollup_*."""
+    frame = _kv(spark)
+    cube = frame.cube("key", "a").count()
+    roll = frame.rollup("key", "a").count()
+    assert len(cube.collect()) == _cell("planintro_cube_rollup_cube_rows")["result"]["value"]
+    assert len(roll.collect()) == _cell("planintro_cube_rollup_rollup_rows")["result"]["value"]
+    assert (cube.semanticHash() == roll.semanticHash()) == _cell(
+        "planintro_cube_rollup_equal_hash"
+    )["result"]["value"]
+
+
+def test_semantichash_hex_names_differ(spark: ReparkSession) -> None:
+    """pins: df-plan-introspect-1/C-006 — cell planintro_hex_names_equal_hash."""
+    first = spark.createDataFrame([(1,)], "deadbeef int")
+    second = spark.createDataFrame([(1,)], "cafebabe int")
+    assert (first.semanticHash() == second.semanticHash()) == _cell(
+        "planintro_hex_names_equal_hash"
+    )["result"]["value"]
+
+
+def test_semantichash_temp_view_matches_frame(spark: ReparkSession, tmp_path: Path) -> None:
+    """pins: df-plan-introspect-1/C-006 — cells planintro_temp_view_* (hash and files)."""
+    target = str(tmp_path / "pq")
+    _write_parquet(spark, target)
+    direct = spark.read.parquet(target)
+    direct.createOrReplaceTempView("plan_intro_v")
+    try:
+        via_sql = spark.sql("SELECT * FROM plan_intro_v")
+        via_table = spark.table("plan_intro_v")
+        assert (via_sql.semanticHash() == direct.semanticHash()) == _cell(
+            "planintro_temp_view_sql_equal_hash"
+        )["result"]["value"]
+        assert (via_table.semanticHash() == direct.semanticHash()) == _cell(
+            "planintro_temp_view_table_equal_hash"
+        )["result"]["value"]
+        assert (
+            len(via_sql.inputFiles())
+            == _cell("planintro_temp_view_sql_input_files_len")["result"]["value"]
+        )
+    finally:
+        spark.catalog.dropTempView("plan_intro_v")
+
+
+def test_inputfiles_uri_form(spark: ReparkSession, tmp_path: Path) -> None:
+    """pins: df-plan-introspect-1/C-006 — cell planintro_uri_form_prefix."""
+    prefix = _cell("planintro_uri_form_prefix")["result"]["items"][0]["value"]
+    assert prefix == "file:///tmp/"
+    target = str(tmp_path / "pq")
+    _write_parquet(spark, target)
+    files = spark.read.parquet(target).inputFiles()
+    assert len(files) == 1
+    assert files[0].startswith(prefix)
+    assert files[0].endswith(".parquet")
