@@ -246,3 +246,24 @@ def test_text_probe5_nonleaf_success_marker_only(
     (root / "k=x" / "_SUCCESS").write_text("", encoding="utf-8")
     (root / "k=x" / "n=1" / "part-00000.txt").write_text("leaf\n", encoding="utf-8")
     _result_pin(spark.read.text(str(root)), "text_probe5_nonleaf_success_marker_only")
+
+
+def test_text_partition_fallback_holds_one_part_per_leaf(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """Past 256 keys the sorted fallback keeps one part per leaf. pins: io-text-1/X-4"""
+    out = tmp_path / "fallback"
+    rows = [(f"k{key}", f"r{round}-k{key}") for round in range(4) for key in range(300)]
+    spark.createDataFrame(rows, "k string, value string").write.partitionBy("k").text(str(out))
+    assert (out / "_SUCCESS").is_file()
+    leaves = sorted(path for path in out.iterdir() if path.is_dir())
+    assert len(leaves) == 300
+    total = 0
+    for leaf in leaves:
+        parts = sorted(leaf.glob("part-*.txt"))
+        assert len(parts) == 1
+        lines = parts[0].read_text(encoding="utf-8").splitlines()
+        total += len(lines)
+        number = leaf.name.split("=", 1)[1][1:]
+        assert sorted(lines) == sorted(f"r{round}-k{number}" for round in range(4))
+    assert total == 1200

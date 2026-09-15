@@ -98,7 +98,13 @@ honestly"). SQL routing and session-build registration are seam-inverted
   pins: io-text-1/C-002, T-2, T-4, T-7
 - `src/text_partition.rs` — one-scan `partitionBy` fan-out with Hive escaping;
   past the 256-writer cap evicted keys append to the same `part-00000.txt`
-  (round 4, ruling V-1). pins: io-text-1/U-1, U-2, V-1
+  (round 4, ruling V-1); past 256 distinct keys the tail diverts to the sorted
+  single-writer fallback (round 5, ruling X-4). pins: io-text-1/U-1, U-2, V-1, X-4
+- `src/text_partition_fallback.rs` — **IO-TEXT-1 round 5 (2026-09-15):**
+  Spark's high-cardinality fallback beside the fan-out: the remaining stream
+  sorts by the partition columns through DataFusion `SortExec` (spill-capable)
+  and appends key by key with one open writer, reusing the fan-out's
+  leaf-writer and body row. pins: io-text-1/X-4
 - `src/error_map.rs` — DataFusion/iceberg error folds into `repark_common::Error`; public
   `engine_err` (the single `DataFusionError → Error` classifier).
 - `src/namespace_create.rs` — G-6 Q1 location-conflict predicate shared by Session

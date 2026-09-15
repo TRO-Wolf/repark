@@ -30,6 +30,7 @@ mod temp_view;
 mod text_glob;
 mod text_io;
 mod text_partition;
+mod text_partition_fallback;
 mod text_scan;
 mod text_schema;
 mod time_travel;

@@ -511,7 +511,50 @@ fn partition_write_layout(
     Ok((partition_at, body_at, body_type))
 }
 
-fn partition_leaf_writer<'a>(
+pub(crate) fn render_partition_key(
+    batch: &RecordBatch,
+    row: usize,
+    partition_at: &[usize],
+    partition_columns: &[String],
+    zone: Tz,
+) -> Result<Vec<String>> {
+    let mut key: Vec<String> = Vec::with_capacity(partition_at.len());
+    for (position, column_at) in partition_at.iter().enumerate() {
+        let column = batch.column(*column_at);
+        let resolved = resolve_partition_column(
+            column.as_ref(),
+            &partition_columns[position],
+            column.data_type(),
+        )?;
+        let raw = render_partition_value(&resolved, row, zone)?;
+        let segment = match raw {
+            None => format!("{}={HIVE_DEFAULT_PARTITION}", partition_columns[position]),
+            Some(text) if text.is_empty() => {
+                format!("{}={HIVE_DEFAULT_PARTITION}", partition_columns[position])
+            }
+            Some(text) => {
+                format!(
+                    "{}={}",
+                    partition_columns[position],
+                    escape_partition_value(&text)?
+                )
+            }
+        };
+        key.push(segment);
+    }
+    Ok(key)
+}
+
+fn flush_open_writers(open: &mut HashMap<Vec<String>, (BufWriter<File>, PathBuf)>) -> Result<()> {
+    for (_, (mut writer, part)) in open.drain() {
+        writer.flush().map_err(|error| {
+            Error::Analysis(format!("text write to {} failed: {error}", part.display()))
+        })?;
+    }
+    Ok(())
+}
+
+pub(crate) fn partition_leaf_writer<'a>(
     open: &'a mut HashMap<Vec<String>, (BufWriter<File>, PathBuf)>,
     touched: &mut HashMap<Vec<String>, u64>,
     parts: &mut HashMap<Vec<String>, PathBuf>,
@@ -619,29 +662,27 @@ pub async fn write_text_partitioned(
     while let Some(batch) = stream.next().await {
         let batch = batch.map_err(engine_err)?;
         for row in 0..batch.num_rows() {
-            let mut key: Vec<String> = Vec::with_capacity(partition_at.len());
-            for (position, column_at) in partition_at.iter().enumerate() {
-                let column = batch.column(*column_at);
-                let resolved = resolve_partition_column(
-                    column.as_ref(),
-                    &partition_columns[position],
-                    column.data_type(),
-                )?;
-                let raw = render_partition_value(&resolved, row, zone)?;
-                let segment = match raw {
-                    None => format!("{}={HIVE_DEFAULT_PARTITION}", partition_columns[position]),
-                    Some(text) if text.is_empty() => {
-                        format!("{}={HIVE_DEFAULT_PARTITION}", partition_columns[position])
-                    }
-                    Some(text) => {
-                        format!(
-                            "{}={}",
-                            partition_columns[position],
-                            escape_partition_value(&text)?
-                        )
-                    }
-                };
-                key.push(segment);
+            let key = render_partition_key(&batch, row, &partition_at, partition_columns, zone)?;
+            if !open.contains_key(&key) && open.len() >= TEXT_PARTITION_WRITERS_CAP {
+                flush_open_writers(&mut open)?;
+                let head = batch.slice(row, batch.num_rows() - row);
+                crate::text_partition_fallback::append_remaining_sorted(
+                    head,
+                    &mut stream,
+                    crate::text_partition_fallback::PartitionTail {
+                        partition_columns,
+                        partition_at: &partition_at,
+                        body_at,
+                        body_type: &body_type,
+                        dir,
+                        separator,
+                        parts: &mut parts,
+                        created: &mut created,
+                        zone,
+                    },
+                )
+                .await?;
+                return Ok(());
             }
             tick += 1;
             let (writer, part) = partition_leaf_writer(
@@ -656,15 +697,11 @@ pub async fn write_text_partitioned(
             write_partition_body_row(writer, &batch, body_at, &body_type, row, part, separator)?;
         }
     }
-    for (_, (mut writer, part)) in open {
-        writer.flush().map_err(|error| {
-            Error::Analysis(format!("text write to {} failed: {error}", part.display()))
-        })?;
-    }
+    flush_open_writers(&mut open)?;
     Ok(())
 }
 
-fn write_partition_body_row(
+pub(crate) fn write_partition_body_row(
     writer: &mut BufWriter<File>,
     batch: &RecordBatch,
     body_at: usize,
@@ -809,6 +846,61 @@ mod tests {
             "Text data source supports only a single column, and you have 2 columns."
         );
         assert!(!target.exists());
+    }
+
+    #[test]
+    fn text_partition_leaf_writer_appends_on_evict() {
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("out");
+        std::fs::create_dir_all(&target).unwrap();
+        let mut open: HashMap<Vec<String>, (BufWriter<File>, PathBuf)> = HashMap::new();
+        let mut touched: HashMap<Vec<String>, u64> = HashMap::new();
+        let mut parts: HashMap<Vec<String>, PathBuf> = HashMap::new();
+        let mut created: HashSet<Vec<String>> = HashSet::new();
+        for index in 0..TEXT_PARTITION_WRITERS_CAP {
+            let key = vec![format!("k=k{index}")];
+            partition_leaf_writer(
+                &mut open,
+                &mut touched,
+                &mut parts,
+                &mut created,
+                &target,
+                &key,
+                u64::try_from(index).unwrap(),
+            )
+            .unwrap();
+        }
+        assert_eq!(open.len(), TEXT_PARTITION_WRITERS_CAP);
+        let first = vec![String::from("k=k0")];
+        let extra = vec![String::from("k=extra")];
+        partition_leaf_writer(
+            &mut open,
+            &mut touched,
+            &mut parts,
+            &mut created,
+            &target,
+            &extra,
+            1000,
+        )
+        .unwrap();
+        assert!(!open.contains_key(&first));
+        let before = parts[&first].clone();
+        let (writer, part) = partition_leaf_writer(
+            &mut open,
+            &mut touched,
+            &mut parts,
+            &mut created,
+            &target,
+            &first,
+            1001,
+        )
+        .unwrap();
+        assert_eq!(*part, before);
+        writer.write_all(b"resumed\n").unwrap();
+        for (_, (mut writer, _)) in open.drain() {
+            writer.flush().unwrap();
+        }
+        assert_eq!(std::fs::read_to_string(&before).unwrap(), "resumed\n");
     }
 
     #[tokio::test]

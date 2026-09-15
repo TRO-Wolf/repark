@@ -388,3 +388,35 @@ battery verbatim to canonical `text_scan/tests.rs` plus `text_scan/map.md`
 `user_partition_type` displays are owned `String`s now (`DECIMAL(10,2)`).
 `make verify` plus `test_io_text_1.py` 69/69 and `test_io_text_2.py` 15/15
 green on the RELEASE module.
+
+## Follow-up round 5 C2 — X-4 sorted fallback (run 16b)
+
+| R | Brief | Ruling and evidence |
+|---|---|---|
+| R-35 (X-4) | high-cardinality writes sort the tail | Past 256 distinct keys the write diverts at the first eviction: open writers flush and close, the remaining stream (current row on) sorts by the partition columns through DataFusion `SortExec` over a `MemorySourceConfig` — the repark-iceberg distribution sort idiom, spill-capable, no Python sort — and appends key by key with one open writer onto each key's existing part file. Below the cap the concurrent path is byte-identical. New engine module `text_partition_fallback.rs` (the key renderer, leaf writer, and body row are shared `pub(crate)` with the fan-out). Pins: Rust `text_partition_fallback_holds_one_part_per_leaf` (300 keys, one part per leaf, per-leaf row sets), `text_partition_fallback_keeps_below_cap_path` (256 keys), `text_partition_leaf_writer_appends_on_evict` (the retained eviction arm, direct), Python `test_text_partition_fallback_holds_one_part_per_leaf` (300 keys, `_SUCCESS`, one part per leaf, 1200 rows). |
+
+Measurements (`/tmp/measure_x4.py` scratch, RELEASE .so, box load ~20):
+
+| keys | rows | wall s | leaves | part files | parts/leaf | write opens | peak RSS |
+|---:|---:|---:|---:|---:|---|---|---:|
+| 1000 | 200000 | 0.29 | 1000 | 1000 | 1 | 1256 (1000 create + 256 append) | 202 MiB |
+| 10000 | 1000000 | 1.58 | 10000 | 10000 | 1 | 10256 (10000 create + 256 append) | 341 MiB |
+
+Round-4 numbers on the same shapes: 2.07 s with ~200000 opens, 12.47 s
+with ~1000000 opens (one open-append-close per row). Open counts via
+`strace -f -e trace=openat` (read-back opens excluded from the write
+count: 1000 and 10000 `O_RDONLY` part opens respectively).
+
+No red-first layout pin exists for X-4 on purpose: the V-1 append path
+already lays out one part per leaf, so a layout pin passes before and
+after — the defect was the syscall tax, which the strace counts above
+prove, and the new pins guard the layout under the diverted path. The
+round-4 V-1 Rust test (300 keys round-robin) now exercises the fallback;
+the eviction arm it used to cover stays pinned by direct unit test.
+
+Judgment calls round 5 C2: the divert fires on the first-eviction
+condition (a missing key with 256 writers open), which is exactly the
+257th distinct key — no churn threshold to tune; sort order is ascending
+with nulls first (Spark's default); within-key row order follows the
+sort's stable runs and the pins assert multisets, not order; below-cap
+writes never touch the new module.

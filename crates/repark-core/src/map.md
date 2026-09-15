@@ -379,8 +379,17 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   render plain (`1.50`), booleans lower-case, dates `yyyy-MM-dd`, timestamps in
   the caller-passed session zone with trimmed fractions, doubles and ints plain.
   Rust tests cover the escape set, decimal rendering, the fan-out, the 1290,
-  and the append-on-evict row count.
-  pins: io-text-1/U-1, U-2, V-1
+  and the append-on-evict row count. **Round 5 (2026-09-15, X-4):** the first
+  eviction diverts the tail to `text_partition_fallback.rs` (sorted
+  single-writer append); the eviction arm stays pinned by direct unit test.
+  pins: io-text-1/U-1, U-2, V-1, X-4
+- `text_partition_fallback.rs` — **IO-TEXT-1 round 5 (2026-09-15, X-4):**
+  Spark's high-cardinality fallback: the tail past 256 distinct keys sorts by
+  the partition columns through DataFusion `SortExec` over a `MemorySourceConfig`
+  (the repark-iceberg distribution sort idiom, spill-capable) and appends key
+  by key with one open writer onto each key's existing part file. Rust tests
+  pin one part per leaf past the cap and the unchanged below-cap layout.
+  pins: io-text-1/X-4
 - `text_schema.rs` — **IO-TEXT-1 round 4 (2026-09-15, W-1):** the user-schema
   overlay beside the scan (split from `text_scan.rs` at the 1000-line ceiling):
   the user schema is the data schema with discovered columns appended after it,
