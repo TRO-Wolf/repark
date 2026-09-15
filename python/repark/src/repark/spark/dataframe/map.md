@@ -466,6 +466,29 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   DFCORE-3 (2026-09-07): `DataFrameStatFunctions.freqItems` delegates its refusal to
   `statistics._freq_items` (1113 → 1111, mirrored in the CAP-1 test); the class keeps
   the stat accessor shape. pins: dfcore-3/C-005, C-006
+- `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
+  (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
+  exact ceiling: `writeStream` is a property raising `AnalysisException`
+  `WRITE_STREAM_NOT_ALLOWED` (SQLSTATE 42601) at attribute access;
+  `withWatermark`/`with_watermark` run Spark's own validation (NOT_STR arg checks
+  per R-1 — the Connect shape, not classic's `CANNOT_CONVERT_COLUMN_INTO_BOOL` —
+  including the empty-string `not s` gate; a small interval-string parser covering
+  optional `interval` prefix, sign, decimal amounts, and multi-unit groups —
+  `CANNOT_PARSE_INTERVAL` on a miss or a fractional months/days amount — then
+  refuse only when the accumulated `CalendarInterval` (months, days, microseconds)
+  nets negative under `IntervalUtils.isNegative` with daysPerMonth=31,
+  `IllegalArgumentException` echoing the input string) and return
+  `self` (R-2: the batch planner eliminates the watermark node);
+  `dropDuplicatesWithinWatermark`/`drop_duplicates_within_watermark` validate
+  subset shape and column resolution (`_LEGACY_ERROR_TEMP_1201`,
+  case-insensitive) before the `_LEGACY_ERROR_TEMP_3102` batch refusal whose
+  message is the first line only (R-4: Spark appends a plan dump repark does
+  not have — registry DF-STREAM-1). `rdd`, `pandas_api`, and `plot` are declared
+  `NOT_IMPLEMENTED` refusals (Spark Connect's `rdd` refusal shape; registry
+  DF-DECL-rdd/-pandas_api/-plot). Structured `AnalysisException` errors reuse
+  `_integral.py`'s `_spark_error_class` attach helpers; the helpers are bound
+  as real class members so `__getattr__` column access can never shadow them.
+  pins: df-stream-batch-1/C-001, C-002, C-003, C-004
 - `__init__.py` preserves the package import surface, including private compatibility names.
 
 ## Durable contracts

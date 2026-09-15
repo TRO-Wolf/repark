@@ -164,6 +164,17 @@ else. The next pickup's `make ledger-archive` files everything here under
   paragraph. `risk_tier: standard`. Branch `feat/df-explain-1`.
   pins: df-explain-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [df-printschema-1-trailing-newline-ledger.md](df-printschema-1-trailing-newline-ledger.md) — Unit ledger — DF-PRINTSCHEMA-1 · printSchema prints Spark's trailing blank line
+- [df-stream-batch-1-ledger.md](df-stream-batch-1-ledger.md) —
+  **DF-STREAM-BATCH-1 step 1 (2026-09-14), in flight:** the streaming-named DataFrame
+  surface on a batch frame — `writeStream` raises `WRITE_STREAM_NOT_ALLOWED` at
+  attribute access, `withWatermark`/`with_watermark` validate in Spark's order and
+  return `self`, `dropDuplicatesWithinWatermark`/`drop_duplicates_within_watermark`
+  validate subset shape and column resolution before the `_LEGACY_ERROR_TEMP_3102`
+  batch refusal (first line only, registry DF-STREAM-1), and `rdd`/`pandas_api`/`plot`
+  are declared `NOT_IMPLEMENTED` refusals (registry DF-DECL-rdd/-pandas_api/-plot).
+  Bodies live in `dataframe/streaming_batch.py`, bound on the class from `core.py` at
+  the exact 4044 baseline. `risk_tier: standard`. Branch `feat/df-stream-batch-1`.
+  pins: df-stream-batch-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [dfcore-1-ledger.md](dfcore-1-ledger.md) —
   **DFCORE-1 (2026-09-07), in flight:** leaf helpers out of `core.py` — Arrow cell
   conversion to `rows_export.py`, export-error mapping to new `export_errors.py`,

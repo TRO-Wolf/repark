@@ -2048,6 +2048,27 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark (flat / nested struct / array / `level=1` exact captures) plus the live leg;
   red-first 4 red of 4.
   pins: df-printschema-1-trailing-newline/C-002, C-003, C-004
+- `test_df_stream_batch_1.py` + `facade_dataframe_streaming_declared_oracle.json` —
+  **DF-STREAM-BATCH-1 step 1 (2026-09-14):** the streaming-named DataFrame surface on a
+  batch frame, driven cell-by-cell from the live-PySpark oracle copy. `writeStream`
+  raises `WRITE_STREAM_NOT_ALLOWED` (SQLSTATE 42601) at attribute access and
+  `isStreaming`/`is_streaming` stay False; `withWatermark`/`with_watermark` run Spark's
+  own validation order (NOT_STR arg checks — the Connect shape per R-1, not classic's
+  `CANNOT_CONVERT_COLUMN_INTO_BOOL`, including the empty-string `not s` gate;
+  `CANNOT_PARSE_INTERVAL`; net-`CalendarInterval` negativity under
+  `IntervalUtils.isNegative` with daysPerMonth=31, `IllegalArgumentException`
+  echoing the input string) and then return `self` (R-2:
+  the batch planner eliminates the watermark node — timestamp column, non-timestamp
+  column, and unresolvable name all accepted); `dropDuplicatesWithinWatermark` /
+  `drop_duplicates_within_watermark` check subset shape (`NOT_LIST_OR_TUPLE`,
+  `NOT_STR`) and column resolution (`_LEGACY_ERROR_TEMP_1201`, case-insensitive)
+  before the `_LEGACY_ERROR_TEMP_3102` batch refusal — the pin asserts the first
+  line byte-exactly and repark appends no plan dump (R-4, registry DF-STREAM-1);
+  `rdd`, `pandas_api`, `plot` are declared `PySparkNotImplementedError`
+  `NOT_IMPLEMENTED` refusals with the feature-name parameter (Spark Connect's
+  refusal shape for `rdd`), and a column named `rdd` does not shadow the property.
+  pins: df-stream-batch-1/C-001, C-002, C-003, C-004
+  Registry rows and the no-regression inventory updates for this unit are proven by these pins and the frozen-surface tables. pins: df-stream-batch-1/C-005, C-006
 - `test_cache_persist.py` — **R-PERF-CACHE** + **r23 CACHE1**: cache/persist self + is_cached + storageLevel;
   second action after cache cheap; derived after materialize; unpersist; localCheckpoint;
   clearCache real drop (live + hand-registered `__repark_cache_*` prefix sweep + leaves
