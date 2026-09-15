@@ -167,7 +167,8 @@ pins: rp-4-fork-repin/C-005, C-006
   display is `named_struct(a, 1).a` and nullability follows the value).
   **Round 5 (2026-09-15):** D/F/decimal rewrites wrap a string operand in
   `__repark_suffix_literal__` so the fold still sees the literal.
-  pins: fnp-4b/C-001, C-004, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-021
+  `-9223372036854775808L` folds the unary minus into the BIGINT region.
+  pins: fnp-4b/C-001, C-004, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-021, C-023
 - `spark_typed.rs` — **FNP-4B critic (2026-09-15):** `FoldSparkNumericCasts` folds
   `CAST('1e200' AS DOUBLE)` to a non-null Float64 literal; `SparkProjectionDisplay`
   aliases unaliased projections whose DataFusion names carry `Int64(` /

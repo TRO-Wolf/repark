@@ -16,11 +16,22 @@ pub(crate) fn plan_suffix_regions(tokens: &[TokenWithSpan]) -> Result<Vec<Litera
         let signed = signed_digits(tokens, index, digits);
         if *long {
             if digits.bytes().all(|byte| byte.is_ascii_digit()) {
-                regions.push(LiteralRegion {
-                    start: tokens[index].span.start,
-                    end: tokens[index].span.end,
-                    replacement: format!("CAST({digits} AS BIGINT)"),
-                });
+                if digits.parse::<i64>().is_err()
+                    && signed.parse::<i64>().is_ok()
+                    && let Some(start) = unary_minus_start(tokens, index)
+                {
+                    regions.push(LiteralRegion {
+                        start,
+                        end: tokens[index].span.end,
+                        replacement: format!("CAST({signed} AS BIGINT)"),
+                    });
+                } else {
+                    regions.push(LiteralRegion {
+                        start: tokens[index].span.start,
+                        end: tokens[index].span.end,
+                        replacement: format!("CAST({digits} AS BIGINT)"),
+                    });
+                }
             } else if is_exponent_double(digits) {
                 regions.push(LiteralRegion {
                     start: tokens[index].span.start,
@@ -117,6 +128,48 @@ fn signed_digits(tokens: &[TokenWithSpan], number: usize, digits: &str) -> Strin
 
 fn suffix_start(tokens: &[TokenWithSpan], number: usize) -> Location {
     tokens[number].span.start
+}
+
+fn unary_minus_start(tokens: &[TokenWithSpan], number: usize) -> Option<Location> {
+    use datafusion::sql::sqlparser::keywords::Keyword;
+    let mut cursor = number;
+    let minus = loop {
+        if cursor == 0 {
+            return None;
+        }
+        cursor -= 1;
+        match &tokens[cursor].token {
+            Token::Whitespace(_) => {}
+            Token::Minus => break cursor,
+            _ => return None,
+        }
+    };
+    let mut before = minus;
+    loop {
+        if before == 0 {
+            return Some(tokens[minus].span.start);
+        }
+        before -= 1;
+        match &tokens[before].token {
+            Token::Whitespace(_) => {}
+            Token::Number(_, _)
+            | Token::RParen
+            | Token::RBracket
+            | Token::SingleQuotedString(_)
+            | Token::DoubleQuotedString(_)
+            | Token::SingleQuotedRawStringLiteral(_)
+            | Token::HexStringLiteral(_)
+            | Token::Placeholder(_) => return None,
+            Token::Word(word) => {
+                return if word.keyword == Keyword::NoKeyword {
+                    None
+                } else {
+                    Some(tokens[minus].span.start)
+                };
+            }
+            _ => return Some(tokens[minus].span.start),
+        }
+    }
 }
 
 fn is_exponent_double(digits: &str) -> bool {

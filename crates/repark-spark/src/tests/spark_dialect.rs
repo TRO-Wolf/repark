@@ -2,7 +2,8 @@ use super::super::*;
 use super::common::*;
 
 use datafusion::arrow::array::{
-    BooleanArray, Decimal128Array, Float32Array, Float64Array, Int8Array, Int16Array,
+    BooleanArray, Decimal128Array, Float32Array, Float64Array, Int16Array, Int64Array,
+    Int8Array,
 };
 use repark_core::{SessionBuildConf, SessionExtension, SessionTimeZone};
 
@@ -231,6 +232,19 @@ async fn other_suffixes_keep_spark_types() {
     let (_, data_type, nullable) = one_cell(&ctx, "SELECT 1L AS v").await;
     assert_eq!(data_type, DataType::Int64);
     assert!(!nullable);
+    let (batch, data_type, nullable) =
+        one_cell(&ctx, "SELECT -9223372036854775808L AS v").await;
+    assert_eq!(data_type, DataType::Int64);
+    assert!(!nullable);
+    assert_eq!(
+        batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("Int64")
+            .value(0),
+        i64::MIN
+    );
     let (batch, data_type, _) = one_cell(&ctx, "SELECT 1S AS v").await;
     assert_eq!(data_type, DataType::Int16);
     assert_eq!(
