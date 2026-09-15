@@ -132,7 +132,7 @@ fn sql_may_have_fromless_delete(sql: &str) -> bool {
     sql.to_ascii_lowercase().contains("delete")
 }
 
-fn sql_may_have_numeric_suffix(sql: &str) -> bool {
+pub(crate) fn sql_may_have_numeric_suffix(sql: &str) -> bool {
     let bytes = sql.as_bytes();
     bytes.windows(2).any(|pair| {
         (pair[0].is_ascii_digit()
@@ -151,7 +151,6 @@ fn sql_may_have_numeric_suffix(sql: &str) -> bool {
                     | b'b'
                     | b'e'
                     | b'E'
-                    | b'.'
             ))
             || (pair[0] == b'.'
                 && matches!(
@@ -167,6 +166,8 @@ fn sql_may_have_numeric_suffix(sql: &str) -> bool {
                         | b'l'
                         | b'B'
                         | b'b'
+                        | b'e'
+                        | b'E'
                 ))
     })
 }

@@ -4620,7 +4620,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `128Y`/`40000S` range refuse, `1e3L`/`0x1D` unresolved, chained struct field access.
   **Round 8 (2026-09-15):** `-128Y`/`-32768S` minima on three doors with neighbours
   and signed refusals, `L` overflow parse refusal, `-0.0BD` control, `1L` ROWS-bound
-  loud refusal.
+  loud refusal, `1.e2` rewrite shape.
   pins: fnp-4b/C-004, C-005, C-006, C-010, C-011, C-012, C-013, C-014, C-016
 - `test_fnp_4b_spark_dialect.py` — **FNP-4B (2026-09-15):** the Spark-door dialect pins —
   double-quoted STRING literals with Spark escapes and the `F.expr` / `filter` / `where` /

@@ -322,6 +322,7 @@ async fn typed_numeric_literals_are_non_null() {
         "SELECT 5.D AS v",
         "SELECT 1E-2D AS v",
         "SELECT 1e3 AS v",
+        "SELECT 1.e2 AS v",
     ] {
         let (_, data_type, nullable) = one_cell(&ctx, sql).await;
         assert_eq!(data_type, DataType::Float64, "{sql}");
@@ -656,4 +657,35 @@ fn fromless_delete_rewrites_to_delete_from() {
         rewritten.as_ref(),
         "WHEN MATCHED THEN DELETE OUTPUT DELETED.*"
     );
+}
+
+#[test]
+fn numeric_suffix_guard_skips_bare_decimals() {
+    for sql in [
+        "SELECT 1.5 AS v",
+        "SELECT 0.5 AS c_0, 1.5 AS c_1",
+        "SELECT * FROM t WHERE x > 2.5",
+    ] {
+        assert!(
+            !crate::spark_literals::sql_may_have_numeric_suffix(sql),
+            "{sql}"
+        );
+    }
+    for sql in [
+        "SELECT 1.5D AS v",
+        "SELECT 1.5BD AS v",
+        "SELECT 1L AS v",
+        "SELECT 1Y AS v",
+        "SELECT 1S AS v",
+        "SELECT 1.5F AS v",
+        "SELECT 1e3 AS v",
+        "SELECT 1.e2 AS v",
+        "SELECT .5D AS v",
+        "SELECT 5.D AS v",
+    ] {
+        assert!(
+            crate::spark_literals::sql_may_have_numeric_suffix(sql),
+            "{sql}"
+        );
+    }
 }
