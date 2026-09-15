@@ -2024,8 +2024,8 @@ class DataFrame:
         schema matches so case-preserved fields remain resolvable. It ignores single-quoted
         literals and double-quoted spans.
 
-        Backtick-quoted identifiers are not protected. The rewrite can quote their contents
-        again and make a valid Spark predicate fail in DataFusion.
+        Backtick-quoted spans pass through untouched, like double-quoted spans. The
+        rewrite never quotes their contents, so a valid Spark predicate still parses.
 
         A case-fold collision fails only when the predicate names the ambiguous field. The
         error lists the conflicting field names and omits Spark's SQLSTATE suffix.
@@ -2044,9 +2044,9 @@ class DataFrame:
             if piece.startswith("'"):
                 rebuilt.append(piece)
                 continue
-            subpieces = re.split(r'("(?:[^"]|"")*")', piece)
+            subpieces = re.split(r'("(?:[^"]|"")*"|`(?:[^`]|``)*`)', piece)
             for subpiece in subpieces:
-                if subpiece.startswith('"'):
+                if subpiece.startswith(('"', "`")):
                     rebuilt.append(subpiece)
                 else:
                     rebuilt.append(

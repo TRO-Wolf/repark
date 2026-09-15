@@ -294,7 +294,7 @@ def test_select_hostile_count_name_does_not_retarget_from(frame: object) -> None
     assert "table 'datafusion.public.secret'" not in message
     assert 'table "secret"' not in message
     # Structural pin: sql_expr is quoted (mutation-proof for the quoting fix).
-    assert F.count(hostile).sql_expr_part() == f'count("{hostile}")'
+    assert F.count(hostile).sql_expr_part() == f"count(`{hostile}`)"
 
 
 def test_select_case_preserved_sum_with_lit(frame: object) -> None:
@@ -311,16 +311,16 @@ def test_select_case_preserved_sum_with_lit(frame: object) -> None:
 
 def test_aggregate_structural_sql_expr_quoted() -> None:
     """Mutation-proof: AF builders carry structural quoted sql_expr."""
-    assert F.sum("x").sql_expr_part() == 'sum("x")'
-    assert F.avg("x").sql_expr_part() == 'avg("x")'
-    assert F.min("x").sql_expr_part() == 'min("x")'
-    assert F.max("x").sql_expr_part() == 'max("x")'
-    assert F.count("x").sql_expr_part() == 'count("x")'
-    assert F.sum(F.col("x") + 1).sql_expr_part() == 'sum(("x" + 1))'
+    assert F.sum("x").sql_expr_part() == "sum(`x`)"
+    assert F.avg("x").sql_expr_part() == "avg(`x`)"
+    assert F.min("x").sql_expr_part() == "min(`x`)"
+    assert F.max("x").sql_expr_part() == "max(`x`)"
+    assert F.count("x").sql_expr_part() == "count(`x`)"
+    assert F.sum(F.col("x") + 1).sql_expr_part() == "sum((`x` + 1))"
     # alias does not embed AS into sql_expr.
-    assert F.sum("x").alias("total").sql_expr_part() == 'sum("x")'
-    assert (F.sum("x").alias("total") + 1).sql_expr_part() == '(sum("x") + 1)'
-    assert F.sum("x").alias("total").cast("double").sql_expr_part() == 'CAST(sum("x") AS DOUBLE)'
+    assert F.sum("x").alias("total").sql_expr_part() == "sum(`x`)"
+    assert (F.sum("x").alias("total") + 1).sql_expr_part() == "(sum(`x`) + 1)"
+    assert F.sum("x").alias("total").cast("double").sql_expr_part() == "CAST(sum(`x`) AS DOUBLE)"
     # current_timestamp is free of attributes / foldable for the classifier.
     ts = F.current_timestamp()
     assert ts._has_free_attribute is False
@@ -346,11 +346,11 @@ def test_select_case_preserved_sum_alias_and_alias_lit(frame: object) -> None:
 
 def test_select_batch4_af_sql_expr_and_case_preserved(frame: object) -> None:
     """Structural sql_expr + rebind allowlist for the batch-4 AFs."""
-    assert F.stddev("x").sql_expr_part() == 'stddev("x")'
-    assert F.variance("x").sql_expr_part() == 'var_samp("x")'
-    assert F.median("x").sql_expr_part() == 'median("x")'
-    assert F.bit_and("x").sql_expr_part() == 'bit_and("x")'
-    assert F.corr("x", "id").sql_expr_part() == 'corr("x", "id")'
+    assert F.stddev("x").sql_expr_part() == "stddev(`x`)"
+    assert F.variance("x").sql_expr_part() == "var_samp(`x`)"
+    assert F.median("x").sql_expr_part() == "median(`x`)"
+    assert F.bit_and("x").sql_expr_part() == "bit_and(`x`)"
+    assert F.corr("x", "id").sql_expr_part() == "corr(`x`, `id`)"
     # Companion lit forces free-SQL path — must not fall back to unquoted schema_name.
     table = frame.select(F.stddev("x"), F.lit(1).alias("one")).to_arrow()
     assert table.num_rows == 1
@@ -365,7 +365,7 @@ def test_select_batch4_af_sql_expr_and_case_preserved(frame: object) -> None:
     assert pure.to_pylist()[0]["stddev(X)"] == via_sql.to_pylist()[0]["stddev(X)"]
     # Hostile identifier stays quoted.
     hostile = "x) FROM secret --"
-    assert F.stddev(hostile).sql_expr_part() == f'stddev("{hostile}")'
+    assert F.stddev(hostile).sql_expr_part() == f"stddev(`{hostile}`)"
     with pytest.raises(Exception) as caught:
         frame.select(F.stddev(hostile), F.lit(1).alias("one")).collect()
     message = str(caught.value).lower()
@@ -376,20 +376,20 @@ def test_select_batch4_af_sql_expr_and_case_preserved(frame: object) -> None:
 def test_select_asc_preserves_sql_expr() -> None:
     """``Column.asc``/``desc`` keep structural sql_expr."""
     bare = F.sum("x")
-    assert bare.asc().sql_expr_part() == 'sum("x")'
-    assert bare.desc().sql_expr_part() == 'sum("x")'
+    assert bare.asc().sql_expr_part() == "sum(`x`)"
+    assert bare.desc().sql_expr_part() == "sum(`x`)"
     assert bare.asc()._is_aggregate is True
     assert bare.asc()._sql_expr == bare._sql_expr
     hostile = "x) FROM secret --"
-    assert F.sum(hostile).asc().sql_expr_part() == f'sum("{hostile}")'
+    assert F.sum(hostile).asc().sql_expr_part() == f"sum(`{hostile}`)"
 
 
 def test_select_first_ignorenulls_sql_path(spark: ReparkSession) -> None:
     """``first/last(ignorenulls=True)`` free-SQL global-agg value parity."""
     source = spark.createDataFrame([(None,), (20,), (30,)], ["v"])
-    assert F.first("v", ignorenulls=True).sql_expr_part() == 'first_value("v") IGNORE NULLS'
-    assert F.last("v", ignorenulls=True).sql_expr_part() == 'last_value("v") IGNORE NULLS'
-    assert F.first("v", ignorenulls=False).sql_expr_part() == 'first_value("v")'
+    assert F.first("v", ignorenulls=True).sql_expr_part() == "first_value(`v`) IGNORE NULLS"
+    assert F.last("v", ignorenulls=True).sql_expr_part() == "last_value(`v`) IGNORE NULLS"
+    assert F.first("v", ignorenulls=False).sql_expr_part() == "first_value(`v`)"
     # lit companion forces SQL path — must match native 20, not leading NULL.
     via_sql = source.select(F.first("v", ignorenulls=True), F.lit(1).alias("one")).to_arrow()
     via_native = source.agg(F.first("v", ignorenulls=True)).to_arrow()
@@ -442,7 +442,7 @@ def test_select_isnull_and_date_family_sticky(frame: object, spark: ReparkSessio
     assert F.isnull(free)._is_aggregate is False
     assert F.isnull(bare)._is_aggregate is True
     assert F.isnull(bare)._has_free_attribute is False
-    assert F.isnull(bare).sql_expr_part() == '(sum("x") IS NULL)'
+    assert F.isnull(bare).sql_expr_part() == "(sum(`x`) IS NULL)"
     with pytest.raises(AnalysisException, match=r"MISSING_GROUP_BY"):
         frame.select(F.sum("x"), F.isnull(F.col("id"))).collect()
     # isnull(sum) is pure global (one row).
@@ -523,7 +523,7 @@ def test_select_count_distinct_multi_sql_null_if_any(spark: ReparkSession) -> No
     sql_expr = F.count_distinct("a", "b").sql_expr_part()
     assert "struct(" in sql_expr
     assert "IS NOT NULL" in sql_expr
-    assert 'count(DISTINCT "a", "b")' not in sql_expr
+    assert "count(DISTINCT `a`, `b`)" not in sql_expr
     via_sql = source.select(F.count_distinct("a", "b"), F.lit(1).alias("one")).to_arrow()
     via_pure = source.select(F.count_distinct("a", "b")).to_arrow()
     via_native = source.agg(F.count_distinct("a", "b")).to_arrow()
@@ -608,7 +608,7 @@ def test_select_case_preserved_sum_compound_pure_and_sql(frame: object) -> None:
     preserved = frame.select("X")  # type: ignore[attr-defined]
     compound = F.sum(F.col("X") + 1)
     assert compound._is_aggregate_function is True
-    assert compound.sql_expr_part() == 'sum(("X" + 1))'
+    assert compound.sql_expr_part() == "sum((`X` + 1))"
     # Nested paren → not native-pure (mutation-proof for the compound-routing fix).
     from repark.spark.dataframe import _is_native_pure_global_aggregate
 
@@ -645,12 +645,12 @@ def test_polars_sort_key_preserves_sql_expr(frame: object) -> None:
 
     bare = F.sum("x")
     keyed = _sort_key(bare, ascending=True)
-    assert keyed.sql_expr_part() == bare.sql_expr_part() == 'sum("x")'
+    assert keyed.sql_expr_part() == bare.sql_expr_part() == "sum(`x`)"
     assert keyed._is_aggregate is True
     assert keyed._sql_expr == bare._sql_expr
     hostile = "x) FROM secret --"
     keyed_hostile = _sort_key(F.sum(hostile), ascending=False)
-    assert keyed_hostile.sql_expr_part() == f'sum("{hostile}")'
+    assert keyed_hostile.sql_expr_part() == f"sum(`{hostile}`)"
     # Generator sticky (parity with Column.asc/desc) — not only sql_expr.
     gen = F.explode(F.col("a")).cast("INT")
     assert gen._generator == "explode"
@@ -774,13 +774,13 @@ def test_grouping_col_sql_quotes_hostile_string_keys(spark: ReparkSession) -> No
     hostile = 'a") UNION ALL SELECT 1 --'
     quoted = frame._grouping_col_sql(hostile)
     assert quoted == _quote_ident(hostile)
-    assert quoted == '"a"") UNION ALL SELECT 1 --"'
+    assert quoted == '`a") UNION ALL SELECT 1 --`'
     # Naive f-string would leave a single closing quote after a — pin escape.
     assert quoted != f'"{hostile}"'
-    assert '""' in quoted
+    assert quoted.startswith("`") and quoted.endswith("`")
     # Identifier-looking keys are also always quoted (not bare isidentifier passthrough).
-    assert frame._grouping_col_sql("order") == _quote_ident("order") == '"order"'
-    assert frame._grouping_col_sql("g") == _quote_ident("g") == '"g"'
+    assert frame._grouping_col_sql("order") == _quote_ident("order") == "`order`"
+    assert frame._grouping_col_sql("g") == _quote_ident("g") == "`g`"
     # Behavioral: cube on reserved-name string key still works; hostile key cannot inject.
     cube_table = frame.cube("order").agg(F.sum("x")).to_arrow()
     by_order = {
@@ -809,11 +809,11 @@ def test_rebind_sort_marker_preserves_sticky_bits(spark: ReparkSession) -> None:
     frame = spark.createDataFrame([(1, 10), (2, 20)], ["order", "x"])
     # Public path: bare col + asc rebinds and keeps schema-quoted sql_expr.
     sorted_order = F.col("order").asc()
-    assert sorted_order._sql_expr == '"order"'
+    assert sorted_order._sql_expr == "`order`"
     rebound = frame._rebind_stable_name_column(sorted_order)
     assert rebound._sort_ascending is True
-    assert rebound.sql_expr_part() == '"order"'
-    assert rebound._sql_expr == '"order"'
+    assert rebound.sql_expr_part() == "`order`"
+    assert rebound._sql_expr == "`order`"
     assert rebound._has_free_attribute is True
     # Synthetic sticky AF + generator: mutation-proof vs omitting fields in the sort branch.
     base = frame._bind_schema_column("x")
@@ -826,7 +826,7 @@ def test_rebind_sort_marker_preserves_sticky_bits(spark: ReparkSession) -> None:
         stable_name=True,
         is_aggregate=True,
         is_aggregate_function=True,
-        sql_expr='sum("x")',
+        sql_expr="sum(`x`)",
         agg_name="sum(x)",
         generator="explode",
         generator_cast="INT",
@@ -837,7 +837,7 @@ def test_rebind_sort_marker_preserves_sticky_bits(spark: ReparkSession) -> None:
     assert synth_rebound._is_aggregate_function is True
     assert synth_rebound._generator == "explode"
     assert synth_rebound._generator_cast == "INT"
-    assert synth_rebound._sql_expr == base._sql_expr == '"x"'
+    assert synth_rebound._sql_expr == base._sql_expr == "`x`"
     # Behavioral: cube on reserved-name sort key still free-SQL SELECT-quoted.
     cube_table = frame.cube(F.col("order").asc()).agg(F.sum("x")).to_arrow()
     rows = cube_table.to_pylist()

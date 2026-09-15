@@ -233,6 +233,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
+  **FNP-4B (2026-09-15):** the `test_sqp_1_string_literals.py` hash re-baselined for the BL-9/BL-12
+  FIXED flips (the old pins documented this red→green).
   H3-SPILL-1 (2026-09-05): the literal-helper inventory gains
   `bench/spill/cell_worker.py` `sql_string_literal` 1 — the spill harness escapes its own
   warehouse path into `CREATE NAMESPACE … LOCATION`, so it uses the helper rather than a
@@ -254,6 +256,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   bracket key through the helper rather than an f-string. pins: column-parity-1/C-007
 - `test_cap_1_source_file_line_cap.py` — **COLUMN-PARITY-1 critic round (2026-09-14):** `spark/column.py` row 1548 → 1532, `dataframe/core.py` row 4044 → 4040 and `dataframe/plan_collapse.py` row 1057 → 1054 with the script baselines (the deferred struct-edit machinery is deleted for the native `update_fields` design; struct field access gains a join-ON bracket fragment). pins: column-parity-1/C-007
 - `test_cap_1_source_file_line_cap.py` — **FNP-11A (2026-09-15):** the `functions_expr.py` row ratchets 1010 → 1021 with the script baseline (the destubbed `make_timestamp` forwarder keeps the frozen 1.0 signature, D-10). pins: fnp-11a/C-001
+- `test_cap_1_source_file_line_cap.py` — **FNP-4B (2026-09-15):** the three Rust rows
+1068 → 1065 / 1052 → 1040 / 1084 → 1082 and the `_live_parity.py` row 1778 → 1763 in
+both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b/C-009, C-010
 - `test_cap_1_source_file_line_cap.py` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `repark-core/src/session/tests/session.rs` row 1412 → 1407 in both tables (the ambiguous-commit classification pins moved to `session/tests/commit_unknown.rs`). pins: ice-commit-unknown-1/C-001
 - `test_cap_1_source_file_line_cap.py` — **IO-DECLARED-1 (2026-09-14):** `dataframe/writer_readwriter.py` mirror row 1111 → 1110 with the script baseline and the `session/reader.py` row retires (1022 → 954, under the default; the orc/xml/jdbc refusals bind from `io_declared.py`); `test_ex_0_example_coverage.py` pins the 955 → 961 raw walk and `EXCEPTIONS_BASELINE` 2 → 1 (`DataFrameReader.jdbc` now covered). pins: io-declared-1/C-005, C-006
 - `test_cap_1_source_file_line_cap.py` — **DOOR-CONVERGE-2 (2026-09-15, G-2 Q1 one-time grant R-1 under Q-15c-4):** `repark-functions/src/analyzer.rs` row 1142 → 1150 with the script baseline (the `array_concat` → `concat` analyzer arm for Q12-16 outer nullability). pins: door-converge-2/C-001
@@ -806,3 +811,5 @@ First checks: `PYTHONPATH=python/repark-parity/src pytest python/repark-parity/t
 Escalate to: [../map.md#debug](../map.md).
 - **FNP-11A (2026-09-15, on 440b2773):** the CAP-1 table mirrors the `functions_expr.py` ratchet to 2235 lines.
 - `test_cap_1_source_file_line_cap.py` — **DOOR-CONVERGE-2 (#622, 2026-09-15):** the `crates/repark-python/src/column/mod.rs` mirror row 1052 → 1036 matches the script baseline (ratchet down). The `analyzer.rs` row 1142 → 1150 is the one-time grant R-1 (Q-15c-4).
+- **FNP-4B remediation (2026-09-15):** CAP-1 mirror ratcheted with the scripts: `column/mod.rs` 1038, `cross_door.rs` 1258, `_live_parity.py` 1753.
+- `test_cap_1_source_file_line_cap.py` — **FNP-4B (#611, 2026-09-15, orchestrator):** the `crates/repark-python/src/column/mod.rs` mirror row 1022 → 1014 matches the script baseline after the rebase onto #613 (ratchet down).

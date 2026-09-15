@@ -96,11 +96,11 @@ def test_expr_resolves_column_free_sql(spark: ReparkSession) -> None:
     assert _rows(df) == [{"keep": 1, "s": 2}]
 
 
-def test_expr_referencing_a_column_raises(spark: ReparkSession) -> None:
-    # Column-referencing expr() has no schema to bind to and raises AnalysisException (the
-    # PySpark-faithful type, a RuntimeError subclass).
+def test_expr_referencing_a_column_defers(spark: ReparkSession) -> None:
+    deferred = F.expr("a + 1")
+    df = spark.sql("SELECT 1 AS keep")
     with pytest.raises(AnalysisException):
-        F.expr("a + 1")
+        df.withColumn("s", deferred).to_arrow()
 
 
 # column.py — operators (arithmetic / comparison / logical)

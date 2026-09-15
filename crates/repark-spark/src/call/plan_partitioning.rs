@@ -165,7 +165,7 @@ fn inventory(metadata: &TableMetadata) -> Inventory {
 }
 
 fn quote_ident(part: &str) -> String {
-    format!("\"{}\"", part.replace('"', "\"\""))
+    format!("`{}`", part.replace('`', "``"))
 }
 
 fn metadata_path(catalog_name: &str, ident: &TableIdent, suffix: &str) -> String {
@@ -196,12 +196,7 @@ async fn read_branch_names(
     ident: &TableIdent,
 ) -> Result<Vec<String>> {
     let path = metadata_path(catalog_name, ident, "refs");
-    let batches = collect_sql(
-        ctx,
-        catalogs,
-        &format!("SELECT \"name\", \"type\" FROM {path}"),
-    )
-    .await?;
+    let batches = collect_sql(ctx, catalogs, &format!("SELECT name, type FROM {path}")).await?;
     let mut branches = Vec::new();
     for batch in &batches {
         let names = batch
@@ -255,7 +250,7 @@ async fn read_files(
         ctx,
         catalogs,
         &format!(
-            "SELECT \"file_size_in_bytes\", \"file_path\", \"readable_metrics\" FROM {path} WHERE \"content\" = 0"
+            "SELECT file_size_in_bytes, file_path, readable_metrics FROM {path} WHERE content = 0"
         ),
     )
     .await?;

@@ -45,6 +45,7 @@ mod refs_and_wap;
 mod router;
 mod run_maintenance;
 mod service_managed_ctas;
+mod spark_dialect;
 mod spark_string_literals;
 mod time_travel;
 mod transform_overwrite;

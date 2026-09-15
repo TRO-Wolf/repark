@@ -42,7 +42,7 @@ _FROZEN_SQP_FILES = {
         "917ddb77f710763e52927a5730c5c2c94867639d64ad61b46e4d4ce26986b95c"
     ),
     "python/repark/tests/test_sqp_1_string_literals.py": (
-        "3c67eb43efac916cefe05725aba4e0ecd01e0a5b7defddc014e65dcb258e03ed"
+        "6d481644d199e4dc8d045abedfe78aedcaf006bf56e23ee5f2d6c4c3d88502b8"
     ),
     "python/repark-parity/tests/test_sqp_1_record.py": (
         "39584dfb5b8d3d73685a9d64146fc691a9dd2bbdf278d489bbbd930b55f6c519"

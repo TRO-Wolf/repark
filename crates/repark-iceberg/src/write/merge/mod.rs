@@ -1272,11 +1272,11 @@ impl MergeSql<'_> {
     fn match_discovery_sql(&self) -> String {
         let ta = &self.spec.target_alias;
         format!(
-            "SELECT {ta}.\"{FILE_PATH_COL}\", {ta}.\"{POS_COL}\", \
+            "SELECT {ta}.{FILE_PATH_COL}, {ta}.{POS_COL}, \
              count(*) AS match_count, \
              MAX(CASE WHEN ({mutated}) THEN 1 ELSE 0 END) AS is_mutated \
              FROM {source} JOIN {target} ON {on} \
-             GROUP BY {ta}.\"{FILE_PATH_COL}\", {ta}.\"{POS_COL}\"",
+             GROUP BY {ta}.{FILE_PATH_COL}, {ta}.{POS_COL}",
             target = self.target_from(),
             source = self.source_from(),
             on = self.spec.on_sql,
@@ -1299,8 +1299,8 @@ impl MergeSql<'_> {
         let ta = &self.spec.target_alias;
         let projection = self.rewrite_projection(write_schema);
         format!(
-            "SELECT {ta}.\"{FILE_PATH_COL}\", {ta}.\"{POS_COL}\", \
-             count(*) OVER (PARTITION BY {ta}.\"{FILE_PATH_COL}\", {ta}.\"{POS_COL}\") \
+            "SELECT {ta}.{FILE_PATH_COL}, {ta}.{POS_COL}, \
+             count(*) OVER (PARTITION BY {ta}.{FILE_PATH_COL}, {ta}.{POS_COL}) \
                AS match_count, \
              CASE WHEN ({mutated}) THEN 1 ELSE 0 END AS is_mutated, \
              CASE WHEN ({updated}) THEN 1 ELSE 0 END AS is_update, \
@@ -1374,7 +1374,7 @@ impl MergeSql<'_> {
         format!(
             "SELECT {projection} FROM {quoted_target} AS {ta} \
              INNER JOIN {quoted_paths} AS __repark_aff \
-               ON {ta}.\"{FILE_PATH_COL}\" = __repark_aff.\"{path_col}\" \
+               ON {ta}.{FILE_PATH_COL} = __repark_aff.{path_col} \
              LEFT JOIN {source} ON {on} \
              WHERE NOT ({deleted})",
             source = self.source_from(),
@@ -1466,9 +1466,9 @@ impl MergeSql<'_> {
             .collect();
         let clause_id = Self::clause_id_case(&predicates);
         Ok(format!(
-            "SELECT {projection} FROM (SELECT {sa}.*, {ta}.\"{POS_COL}\" AS \"{NOT_MATCHED_POS_SENTINEL}\" \
+            "SELECT {projection} FROM (SELECT {sa}.*, {ta}.{POS_COL} AS {NOT_MATCHED_POS_SENTINEL} \
              FROM {source} LEFT JOIN {target} ON {on}) AS {sa} \
-             WHERE \"{NOT_MATCHED_POS_SENTINEL}\" IS NULL AND ({clause_id}) = {index}",
+             WHERE {NOT_MATCHED_POS_SENTINEL} IS NULL AND ({clause_id}) = {index}",
             source = self.source_from(),
             target = self.target_from(),
             on = self.spec.on_sql,

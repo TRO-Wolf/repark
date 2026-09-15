@@ -269,10 +269,10 @@ def test_merge_into_render_sql_shape() -> None:
     from repark.spark.functions import col, lit
     from repark.spark.merge import _column_sql, _on_sql, _quote_assign_target
 
-    assert _on_sql("id") == 'target."id" = source."id"'
-    assert _on_sql("  name  ") == 'target."name" = source."name"'
+    assert _on_sql("id") == "target.`id` = source.`id`"
+    assert _on_sql("  name  ") == "target.`name` = source.`name`"
     assert _quote_assign_target("name") == "name"
-    assert _quote_assign_target("weird-name") == '"weird-name"'
+    assert _quote_assign_target("weird-name") == "`weird-name`"
     # != / CASE / coalesce must quote string literals for MERGE embed.
     assert "'bee'" in _column_sql(col("source.name") != lit("bee"))
     assert "'x'" in _column_sql(when(col("id") > 0, lit("x")).otherwise(lit("y")))

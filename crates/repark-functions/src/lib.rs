@@ -24,7 +24,7 @@ mod groups_null_state;
 pub mod higher_order;
 pub mod instant_ts;
 pub mod integer_spark;
-mod java_double;
+pub mod java_double;
 mod java_regex;
 pub mod json;
 pub mod lambda_rebind;
