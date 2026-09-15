@@ -3,6 +3,8 @@
 use std::sync::Arc;
 
 use arrow::array::RecordBatch;
+use arrow::compute::{CastOptions, cast_with_options};
+use arrow::datatypes::{DataType, SchemaRef};
 use datafusion::datasource::MemTable;
 use datafusion::prelude::DataFrame;
 use datafusion::sql::TableReference;
@@ -139,7 +141,12 @@ impl ReparkSession {
         max_total_bytes: Option<u64>,
     ) -> Result<()> {
         let plan = frame.logical_plan().clone();
-        let schema = Arc::new(frame.schema().as_arrow().clone());
+        let state = self.context().state();
+        let analyzed = state
+            .analyzer()
+            .execute_and_check(plan, state.config_options(), |_, _| {})
+            .map_err(engine_err)?;
+        let schema = Arc::new(analyzed.schema().as_arrow().clone());
         let (mut seen, retained) = if max_total_bytes.is_some() {
             self.live_cache_buffer_set().await?
         } else {
@@ -189,8 +196,10 @@ impl ReparkSession {
             )));
         }
         drop(stream);
-        let (schema, batches) =
-            crate::sorted_view::apply_tighten_provenance_on_materialize(&plan, schema, batches)?;
+        let (schema, batches) = crate::sorted_view::apply_tighten_provenance_on_materialize(
+            &analyzed, schema, batches,
+        )?;
+        let batches = conform_batches_to_schema(&schema, batches)?;
         let partitions = if batches.is_empty() {
             vec![vec![]]
         } else {
@@ -285,5 +294,169 @@ impl ReparkSession {
             .deregister_table(reference)
             .map_err(engine_err)?
             .is_some())
+    }
+}
+
+fn conform_batches_to_schema(
+    schema: &SchemaRef,
+    batches: Vec<RecordBatch>,
+) -> Result<Vec<RecordBatch>> {
+    batches
+        .iter()
+        .map(|batch| conform_batch_to_schema(schema, batch))
+        .collect()
+}
+
+fn conform_batch_to_schema(schema: &SchemaRef, batch: &RecordBatch) -> Result<RecordBatch> {
+    if batch.num_columns() != schema.fields().len() {
+        let batch_columns = batch.num_columns();
+        let plan_columns = schema.fields().len();
+        return Err(Error::Analysis(format!(
+            "cache materialize: executed batches carry {batch_columns} columns but the plan schema carries {plan_columns}"
+        )));
+    }
+    let mut columns = Vec::with_capacity(schema.fields().len());
+    for (field, column) in schema.fields().iter().zip(batch.columns()) {
+        if column.data_type() == field.data_type() {
+            columns.push(Arc::clone(column));
+            continue;
+        }
+        let cast = cast_with_options(
+            column,
+            field.data_type(),
+            &CastOptions {
+                safe: false,
+                ..CastOptions::default()
+            },
+        )
+        .map_err(|_| {
+            let name = field.name();
+            let batch_type = cache_column_type(column.data_type());
+            let plan_type = cache_column_type(field.data_type());
+            Error::Analysis(format!(
+                "cache materialize: column '{name}' is {batch_type} in the executed batches but {plan_type} in the plan schema"
+            ))
+        })?;
+        columns.push(cast);
+    }
+    RecordBatch::try_new(Arc::clone(schema), columns).map_err(|error| engine_err(error.into()))
+}
+
+fn cache_column_type(data_type: &DataType) -> String {
+    match data_type {
+        DataType::Decimal128(precision, scale) => format!("decimal({precision},{scale})"),
+        _ => data_type.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod cache_conform_tests {
+    use super::*;
+
+    use std::collections::HashMap;
+
+    use arrow::array::{Decimal128Array, StringArray};
+    use arrow::datatypes::Field;
+
+    fn decimal_batch(
+        name: &str,
+        precision: u8,
+        scale: i8,
+        values: Vec<Option<i128>>,
+    ) -> RecordBatch {
+        let array = Decimal128Array::from(values)
+            .with_precision_and_scale(precision, scale)
+            .expect("decimal fixture keeps its precision and scale");
+        let schema = Arc::new(arrow::datatypes::Schema::new(vec![Field::new(
+            name,
+            DataType::Decimal128(precision, scale),
+            true,
+        )]));
+        RecordBatch::try_new(schema, vec![Arc::new(array)]).expect("decimal fixture batch")
+    }
+
+    fn logical_schema() -> SchemaRef {
+        Arc::new(arrow::datatypes::Schema::new(vec![
+            Field::new("n", DataType::Decimal128(38, 8), false)
+                .with_metadata(HashMap::from([("repark".to_string(), "cache".to_string())])),
+        ]))
+    }
+
+    #[test]
+    fn drifted_batch_conforms_to_the_logical_field() {
+        let batch = decimal_batch("n", 38, 6, vec![Some(882_800_000)]);
+        let schema = logical_schema();
+        let conformed = conform_batch_to_schema(&schema, &batch).expect("drifted batch conforms");
+        assert_eq!(conformed.schema(), schema);
+        assert!(!conformed.schema().field(0).is_nullable());
+        assert_eq!(
+            conformed.schema().field(0).metadata(),
+            schema.field(0).metadata()
+        );
+        let array = conformed
+            .column(0)
+            .as_any()
+            .downcast_ref::<Decimal128Array>()
+            .expect("decimal128 output");
+        assert_eq!(array.value(0), 88_280_000_000);
+    }
+
+    #[test]
+    fn same_type_batch_passes_through_untouched() {
+        let batch = decimal_batch("n", 38, 8, vec![Some(88_280_000_000)]);
+        let schema = logical_schema();
+        let conformed = conform_batch_to_schema(&schema, &batch).expect("same type passes");
+        assert_eq!(conformed.schema(), schema);
+        assert!(Arc::ptr_eq(conformed.column(0), batch.column(0)));
+    }
+
+    #[test]
+    fn uncastable_batch_refuses_naming_both_fields() {
+        let schema = logical_schema();
+        let batch_schema = Arc::new(arrow::datatypes::Schema::new(vec![Field::new(
+            "n",
+            DataType::Utf8,
+            true,
+        )]));
+        let batch =
+            RecordBatch::try_new(batch_schema, vec![Arc::new(StringArray::from(vec!["abc"]))])
+                .expect("utf8 fixture batch");
+        let error = conform_batch_to_schema(&schema, &batch).expect_err("uncastable batch refuses");
+        assert!(matches!(error, Error::Analysis(_)));
+        assert_eq!(
+            error.to_string(),
+            "cache materialize: column 'n' is Utf8 in the executed batches but decimal(38,8) in the plan schema"
+        );
+    }
+
+    #[test]
+    fn column_count_mismatch_refuses() {
+        let schema = logical_schema();
+        let batch_schema = Arc::new(arrow::datatypes::Schema::new(vec![
+            Field::new("n", DataType::Decimal128(38, 8), true),
+            Field::new("m", DataType::Decimal128(38, 8), true),
+        ]));
+        let batch = RecordBatch::try_new(
+            batch_schema,
+            vec![
+                Arc::new(
+                    Decimal128Array::from(vec![Some(1_i128)])
+                        .with_precision_and_scale(38, 8)
+                        .expect("decimal fixture keeps its precision and scale"),
+                ),
+                Arc::new(
+                    Decimal128Array::from(vec![Some(2_i128)])
+                        .with_precision_and_scale(38, 8)
+                        .expect("decimal fixture keeps its precision and scale"),
+                ),
+            ],
+        )
+        .expect("two-column fixture batch");
+        let error = conform_batch_to_schema(&schema, &batch).expect_err("arity mismatch refuses");
+        assert!(matches!(error, Error::Analysis(_)));
+        assert_eq!(
+            error.to_string(),
+            "cache materialize: executed batches carry 2 columns but the plan schema carries 1"
+        );
     }
 }
