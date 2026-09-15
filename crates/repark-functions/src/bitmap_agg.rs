@@ -1,10 +1,14 @@
 use std::sync::Arc;
 
-use arrow::array::{Array, ArrayRef, AsArray, BinaryArray};
+use arrow::array::{Array, ArrayRef, AsArray, BinaryArray, Int64Array};
 use arrow::buffer::{Buffer, OffsetBuffer};
 use arrow::compute::cast;
-use arrow::datatypes::{DataType, Field, FieldRef, Int64Type};
-use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err};
+use arrow::datatypes::{
+    DataType, Decimal128Type, Decimal256Type, Field, FieldRef, Float32Type, Float64Type, Int64Type,
+};
+use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err, plan_err};
+
+use crate::java_double::{java_double_text, java_float_text};
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::utils::format_state_name;
 use datafusion::logical_expr::{
@@ -56,19 +60,7 @@ struct BitmapAgg {
 impl BitmapAgg {
     fn construct() -> Self {
         Self {
-            signature: Signature::uniform(
-                1,
-                vec![
-                    DataType::Int8,
-                    DataType::Int16,
-                    DataType::Int32,
-                    DataType::Int64,
-                    DataType::Utf8,
-                    DataType::LargeUtf8,
-                    DataType::Utf8View,
-                ],
-                Volatility::Immutable,
-            ),
+            signature: Signature::user_defined(Volatility::Immutable),
             fold: BitmapFold::Construct,
         }
     }
@@ -110,8 +102,23 @@ impl AggregateUDFImpl for BitmapAgg {
         &self.signature
     }
 
-    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        refuse_payload(self.name(), self.fold, None, arg_types)?;
         Ok(DataType::Binary)
+    }
+
+    fn return_field(&self, arg_fields: &[FieldRef]) -> Result<FieldRef> {
+        let arg_types: Vec<DataType> = arg_fields
+            .iter()
+            .map(|field| field.data_type().clone())
+            .collect();
+        let argument = arg_fields.first().map(|field| field.name().clone());
+        refuse_payload(self.name(), self.fold, argument.as_deref(), &arg_types)?;
+        Ok(Arc::new(Field::new(self.name(), DataType::Binary, false)))
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        Ok(arg_types.to_vec())
     }
 
     fn accumulator(&self, acc_args: AccumulatorArgs) -> Result<Box<dyn Accumulator>> {
@@ -177,8 +184,7 @@ impl BitmapAccumulator {
     }
 
     fn update_bitmaps(&mut self, values: &ArrayRef) -> Result<()> {
-        let values = coerce_bitmap_column(values)?;
-        for_each_binary(&values, |incoming| {
+        for_each_binary(values, |incoming| {
             fold_incoming(&mut self.bits, incoming, self.fold);
             Ok(())
         })
@@ -186,30 +192,223 @@ impl BitmapAccumulator {
 }
 
 fn bitmap_payload_signature() -> Signature {
-    Signature::uniform(
-        1,
-        vec![
-            DataType::Binary,
-            DataType::LargeBinary,
-            DataType::BinaryView,
-            DataType::Utf8,
-            DataType::LargeUtf8,
-            DataType::Utf8View,
-        ],
-        Volatility::Immutable,
-    )
+    Signature::user_defined(Volatility::Immutable)
 }
 
-pub(crate) fn coerce_bitmap_column(values: &ArrayRef) -> Result<ArrayRef> {
-    match values.data_type() {
-        DataType::Binary => Ok(Arc::clone(values)),
-        DataType::LargeBinary
+fn payload_allowed(fold: BitmapFold, data_type: &DataType) -> bool {
+    match fold {
+        BitmapFold::Or | BitmapFold::And => matches!(
+            data_type,
+            DataType::Binary
+                | DataType::LargeBinary
+                | DataType::BinaryView
+                | DataType::FixedSizeBinary(_)
+        ),
+        BitmapFold::Construct => matches!(
+            data_type,
+            DataType::Null
+                | DataType::Int8
+                | DataType::Int16
+                | DataType::Int32
+                | DataType::Int64
+                | DataType::UInt8
+                | DataType::UInt16
+                | DataType::UInt32
+                | DataType::UInt64
+                | DataType::Float32
+                | DataType::Float64
+                | DataType::Decimal128(_, _)
+                | DataType::Decimal256(_, _)
+                | DataType::Utf8
+                | DataType::LargeUtf8
+                | DataType::Utf8View
+        ),
+    }
+}
+
+fn refuse_payload(
+    name: &str,
+    fold: BitmapFold,
+    argument: Option<&str>,
+    arg_types: &[DataType],
+) -> Result<()> {
+    let Some(data_type) = arg_types.first() else {
+        return exec_err!("{name} expects one argument");
+    };
+    if arg_types.len() != 1 {
+        return exec_err!("{name} expects one argument, got {}", arg_types.len());
+    }
+    if payload_allowed(fold, data_type) {
+        return Ok(());
+    }
+    let wanted = match fold {
+        BitmapFold::Construct => "BIGINT",
+        BitmapFold::Or | BitmapFold::And => "BINARY",
+    };
+    let got = spark_type_name(data_type);
+    if let Some(argument) = argument {
+        plan_err!(
+            "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"{name}({argument})\" \
+             due to data type mismatch: The first parameter requires the \"{wanted}\" type, \
+             however \"{argument}\" has the type \"{got}\". SQLSTATE: 42K09"
+        )
+    } else {
+        plan_err!(
+            "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"{name}\" due to data \
+             type mismatch: The first parameter requires the \"{wanted}\" type, however the \
+             argument has the type \"{got}\". SQLSTATE: 42K09"
+        )
+    }
+}
+
+fn spark_type_name(data_type: &DataType) -> String {
+    match data_type {
+        DataType::Null => "VOID".to_string(),
+        DataType::Boolean => "BOOLEAN".to_string(),
+        DataType::Int8 | DataType::UInt8 => "TINYINT".to_string(),
+        DataType::Int16 | DataType::UInt16 => "SMALLINT".to_string(),
+        DataType::Int32 | DataType::UInt32 => "INT".to_string(),
+        DataType::Int64 | DataType::UInt64 => "BIGINT".to_string(),
+        DataType::Float32 => "FLOAT".to_string(),
+        DataType::Float64 => "DOUBLE".to_string(),
+        DataType::Decimal32(precision, scale)
+        | DataType::Decimal64(precision, scale)
+        | DataType::Decimal128(precision, scale)
+        | DataType::Decimal256(precision, scale) => {
+            format!("DECIMAL({precision},{scale})")
+        }
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => "STRING".to_string(),
+        DataType::Binary
+        | DataType::LargeBinary
         | DataType::BinaryView
-        | DataType::Utf8
-        | DataType::LargeUtf8
-        | DataType::Utf8View => cast(values, &DataType::Binary)
-            .map_err(|error| DataFusionError::Execution(error.to_string())),
-        other => exec_err!("bitmap aggregate expected BINARY, got {other}"),
+        | DataType::FixedSizeBinary(_) => "BINARY".to_string(),
+        DataType::Date32 | DataType::Date64 => "DATE".to_string(),
+        DataType::Float16
+        | DataType::Time32(_)
+        | DataType::Time64(_)
+        | DataType::Duration(_)
+        | DataType::Union(_, _) => data_type.to_string(),
+        DataType::Timestamp(_, None) => "TIMESTAMP".to_string(),
+        DataType::Timestamp(_, Some(_)) => "TIMESTAMP_LTZ".to_string(),
+        DataType::Interval(_) => "INTERVAL".to_string(),
+        DataType::List(field)
+        | DataType::LargeList(field)
+        | DataType::ListView(field)
+        | DataType::LargeListView(field)
+        | DataType::FixedSizeList(field, _) => {
+            format!("ARRAY<{}>", spark_type_name(field.data_type()))
+        }
+        DataType::Struct(fields) => {
+            let inner = fields
+                .iter()
+                .map(|field| format!("{}: {}", field.name(), spark_type_name(field.data_type())))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("STRUCT<{inner}>")
+        }
+        DataType::Map(entry, _) => match entry.data_type() {
+            DataType::Struct(pair) if pair.len() == 2 => format!(
+                "MAP<{}, {}>",
+                spark_type_name(pair[0].data_type()),
+                spark_type_name(pair[1].data_type())
+            ),
+            _ => "MAP".to_string(),
+        },
+        DataType::Dictionary(_, values) => spark_type_name(values),
+        DataType::RunEndEncoded(_, values) => spark_type_name(values.data_type()),
+    }
+}
+
+fn malformed_bigint_cast(value: &str) -> DataFusionError {
+    DataFusionError::Execution(format!(
+        "[CAST_INVALID_INPUT] The value '{value}' of the type \"STRING\" cannot be cast to \
+         \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change \
+         its target type. Use `try_cast` to tolerate malformed input and return NULL instead. \
+         SQLSTATE: 22018"
+    ))
+}
+
+pub(crate) fn parse_bigint_cell(raw: &str) -> Result<i64> {
+    raw.trim()
+        .parse::<i64>()
+        .map_err(|_| malformed_bigint_cast(raw))
+}
+
+pub(crate) fn utf8_strings(column: &ArrayRef) -> Result<ArrayRef> {
+    if matches!(column.data_type(), DataType::Utf8) {
+        Ok(Arc::clone(column))
+    } else {
+        cast(column, &DataType::Utf8).map_err(|error| DataFusionError::Execution(error.to_string()))
+    }
+}
+
+pub(crate) fn int64_positions(column: &ArrayRef) -> Result<ArrayRef> {
+    if matches!(column.data_type(), DataType::Int64) {
+        Ok(Arc::clone(column))
+    } else {
+        cast(column, &DataType::Int64)
+            .map_err(|error| DataFusionError::Execution(error.to_string()))
+    }
+}
+
+pub(crate) fn position_at(
+    source: &ArrayRef,
+    positions: &Int64Array,
+    row: usize,
+) -> Result<Option<i64>> {
+    if positions.is_valid(row) {
+        Ok(Some(positions.value(row)))
+    } else if source.is_null(row) {
+        Ok(None)
+    } else {
+        Err(cast_overflow_error(source, row))
+    }
+}
+
+fn cast_overflow_error(source: &ArrayRef, row: usize) -> DataFusionError {
+    let (value, spark_type) = overflow_cell_text(source, row);
+    DataFusionError::Execution(format!(
+        "[CAST_OVERFLOW] The value {value} of the type \"{spark_type}\" cannot be cast to \
+         \"BIGINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL \
+         instead. SQLSTATE: 22003"
+    ))
+}
+
+fn overflow_cell_text(source: &ArrayRef, row: usize) -> (String, String) {
+    match source.data_type() {
+        DataType::Float64 => {
+            let value = source.as_primitive::<Float64Type>().value(row);
+            let text = java_double_text(value);
+            let text = if value.is_finite() {
+                format!("{text}D")
+            } else {
+                text
+            };
+            (text, "DOUBLE".to_string())
+        }
+        DataType::Float32 => {
+            let value = source.as_primitive::<Float32Type>().value(row);
+            let text = java_float_text(value);
+            let text = if value.is_finite() {
+                format!("{text}F")
+            } else {
+                text
+            };
+            (text, "FLOAT".to_string())
+        }
+        DataType::Decimal128(_, _) => {
+            let text = source.as_primitive::<Decimal128Type>().value_as_string(row);
+            (format!("{text}BD"), spark_type_name(source.data_type()))
+        }
+        DataType::Decimal256(_, _) => {
+            let text = source.as_primitive::<Decimal256Type>().value_as_string(row);
+            (format!("{text}BD"), spark_type_name(source.data_type()))
+        }
+        _ => (
+            ScalarValue::try_from_array(source, row)
+                .map_or_else(|_| "invalid".to_string(), |scalar| scalar.to_string()),
+            spark_type_name(source.data_type()),
+        ),
     }
 }
 
@@ -283,38 +482,86 @@ pub(crate) fn fold_incoming(destination: &mut [u8], incoming: &[u8], fold: Bitma
 }
 
 pub(crate) fn update_positions_into(bits: &mut [u8], values: &ArrayRef) -> Result<()> {
-    let casted = if values.data_type() == &DataType::Int64 {
-        Arc::clone(values)
-    } else {
-        cast(values, &DataType::Int64)?
-    };
-    let positions = casted.as_primitive::<Int64Type>();
-    if positions.null_count() == 0 {
-        for &position in positions.values() {
-            set_bit(bits, position)?;
-        }
-    } else {
-        for (index, &position) in positions.values().iter().enumerate() {
-            if positions.is_valid(index) {
-                set_bit(bits, position)?;
+    match values.data_type() {
+        DataType::Null => Ok(()),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
+            let strings = utf8_strings(values)?;
+            let strings = strings.as_string::<i32>();
+            if strings.null_count() == 0 {
+                for row in 0..strings.len() {
+                    set_bit(bits, parse_bigint_cell(strings.value(row))?)?;
+                }
+            } else {
+                for row in 0..strings.len() {
+                    if strings.is_valid(row) {
+                        set_bit(bits, parse_bigint_cell(strings.value(row))?)?;
+                    }
+                }
             }
+            Ok(())
+        }
+        _ => {
+            let casted = int64_positions(values)?;
+            let positions = casted.as_primitive::<Int64Type>();
+            if positions.null_count() == 0 {
+                for &position in positions.values() {
+                    set_bit(bits, position)?;
+                }
+            } else {
+                for row in 0..positions.len() {
+                    if let Some(position) = position_at(values, positions, row)? {
+                        set_bit(bits, position)?;
+                    }
+                }
+            }
+            Ok(())
         }
     }
-    Ok(())
 }
 
 pub(crate) fn for_each_binary(
     values: &ArrayRef,
     mut visit: impl FnMut(&[u8]) -> Result<()>,
 ) -> Result<()> {
-    let values = coerce_bitmap_column(values)?;
-    let array = values.as_binary::<i32>();
-    for index in 0..array.len() {
-        if array.is_valid(index) {
-            visit(array.value(index))?;
+    match values.data_type() {
+        DataType::Binary => {
+            let array = values.as_binary::<i32>();
+            for index in 0..array.len() {
+                if array.is_valid(index) {
+                    visit(array.value(index))?;
+                }
+            }
+            Ok(())
         }
+        DataType::LargeBinary => {
+            let array = values.as_binary::<i64>();
+            for index in 0..array.len() {
+                if array.is_valid(index) {
+                    visit(array.value(index))?;
+                }
+            }
+            Ok(())
+        }
+        DataType::BinaryView => {
+            let array = values.as_binary_view();
+            for index in 0..array.len() {
+                if array.is_valid(index) {
+                    visit(array.value(index))?;
+                }
+            }
+            Ok(())
+        }
+        DataType::FixedSizeBinary(_) => {
+            let array = values.as_fixed_size_binary();
+            for index in 0..array.len() {
+                if array.is_valid(index) {
+                    visit(array.value(index))?;
+                }
+            }
+            Ok(())
+        }
+        other => exec_err!("bitmap aggregate expected BINARY, got {other}"),
     }
-    Ok(())
 }
 
 pub(crate) fn packed_bitmaps_to_array(bits: Vec<u8>) -> Result<ArrayRef> {
@@ -366,255 +613,4 @@ impl Accumulator for BitmapAccumulator {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-
-    use datafusion::arrow::array::{Array, ArrayRef, BinaryArray, Int32Array, Int64Array};
-    use datafusion::arrow::datatypes::{DataType, Field, Schema};
-    use datafusion::arrow::record_batch::RecordBatch;
-    use datafusion::prelude::SessionContext;
-
-    use super::BITMAP_BYTES;
-
-    fn ctx() -> SessionContext {
-        let ctx = SessionContext::new();
-        crate::register_all(&ctx);
-        ctx
-    }
-
-    fn ctx_with_empty_bitmaps() -> SessionContext {
-        let ctx = ctx();
-        let schema = Arc::new(Schema::new(vec![Field::new("b", DataType::Binary, true)]));
-        let array: ArrayRef = Arc::new(BinaryArray::from(Vec::<Option<&[u8]>>::new()));
-        let batch = RecordBatch::try_new(schema, vec![array]).expect("empty binary batch");
-        ctx.register_batch("empty_bitmaps", batch)
-            .expect("register empty_bitmaps");
-        ctx
-    }
-
-    async fn batch(ctx: &SessionContext, sql: &str) -> RecordBatch {
-        let batches = ctx
-            .sql(sql)
-            .await
-            .expect("plan")
-            .collect()
-            .await
-            .expect("run");
-        assert_eq!(batches.len(), 1, "expected a single batch for {sql}");
-        batches.into_iter().next().expect("one batch")
-    }
-
-    fn binary_cell(batch: &RecordBatch, column: usize) -> Vec<u8> {
-        let schema = batch.schema();
-        let field = schema.field(column);
-        assert_eq!(field.data_type(), &DataType::Binary);
-        assert!(!field.is_nullable());
-        let array = batch
-            .column(column)
-            .as_any()
-            .downcast_ref::<BinaryArray>()
-            .expect("BinaryArray");
-        assert!(array.is_valid(0));
-        array.value(0).to_vec()
-    }
-
-    fn int64_cell(batch: &RecordBatch, column: usize) -> i64 {
-        let schema = batch.schema();
-        let field = schema.field(column);
-        assert_eq!(field.data_type(), &DataType::Int64);
-        assert!(!field.is_nullable());
-        let array = batch
-            .column(column)
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .expect("Int64Array");
-        assert!(array.is_valid(0));
-        array.value(0)
-    }
-
-    fn int32_cell(batch: &RecordBatch, column: usize) -> i32 {
-        let schema = batch.schema();
-        let field = schema.field(column);
-        assert_eq!(field.data_type(), &DataType::Int32);
-        assert!(!field.is_nullable());
-        let array = batch
-            .column(column)
-            .as_any()
-            .downcast_ref::<Int32Array>()
-            .expect("Int32Array");
-        assert!(array.is_valid(0));
-        array.value(0)
-    }
-
-    fn construct_fixture_bitmap() -> Vec<u8> {
-        let mut bits = vec![0_u8; BITMAP_BYTES];
-        bits[0] = 0x07;
-        bits[BITMAP_BYTES - 1] = 0x40;
-        bits
-    }
-
-    #[tokio::test]
-    async fn construct_agg_sets_bits_zero_one_two_and_last_and_ignores_null() {
-        let ctx = ctx();
-        let batch = batch(
-            &ctx,
-            "SELECT bitmap_construct_agg(bitmap_bit_position(x)) AS b, \
-             bitmap_count(bitmap_construct_agg(bitmap_bit_position(x))) AS c \
-             FROM VALUES (1), (2), (3), (32767), (NULL) AS t(x)",
-        )
-        .await;
-        assert_eq!(binary_cell(&batch, 0), construct_fixture_bitmap());
-        assert_eq!(int64_cell(&batch, 1), 4);
-    }
-
-    #[tokio::test]
-    async fn or_and_agg_fold_grouped_bitmaps() {
-        let ctx = ctx();
-        let batch = batch(
-            &ctx,
-            "SELECT bitmap_count(bitmap_or_agg(b)) AS o, \
-             bitmap_count(bitmap_and_agg(b)) AS a \
-             FROM (SELECT bitmap_construct_agg(bitmap_bit_position(x)) AS b \
-                   FROM VALUES (1, 1), (2, 1), (2, 2), (3, 2) AS t(x, g) \
-                   GROUP BY g)",
-        )
-        .await;
-        assert_eq!(int64_cell(&batch, 0), 3);
-        assert_eq!(int64_cell(&batch, 1), 1);
-    }
-
-    #[tokio::test]
-    async fn empty_input_construct_and_or_are_zeros_and_is_ones() {
-        let ctx = ctx();
-        let construct = batch(
-            &ctx,
-            "SELECT bitmap_construct_agg(bitmap_bit_position(x)) AS b \
-             FROM VALUES (1) AS t(x) WHERE false",
-        )
-        .await;
-        let empty = ctx_with_empty_bitmaps();
-        let or_agg = batch(&empty, "SELECT bitmap_or_agg(b) AS o FROM empty_bitmaps").await;
-        let and_agg = batch(&empty, "SELECT bitmap_and_agg(b) AS a FROM empty_bitmaps").await;
-        assert_eq!(binary_cell(&construct, 0), vec![0_u8; BITMAP_BYTES]);
-        assert_eq!(binary_cell(&or_agg, 0), vec![0_u8; BITMAP_BYTES]);
-        assert_eq!(binary_cell(&and_agg, 0), vec![0xff_u8; BITMAP_BYTES]);
-    }
-
-    #[tokio::test]
-    async fn and_agg_of_one_bitmap_has_length_4096() {
-        let ctx = ctx();
-        let batch = batch(
-            &ctx,
-            "SELECT length(bitmap_and_agg(b)) AS n \
-             FROM (SELECT bitmap_construct_agg(bitmap_bit_position(x)) AS b \
-                   FROM VALUES (1) AS t(x))",
-        )
-        .await;
-        let schema = batch.schema();
-        match schema.field(0).data_type() {
-            DataType::Int32 => assert_eq!(int32_cell(&batch, 0), 4096),
-            DataType::Int64 => assert_eq!(int64_cell(&batch, 0), 4096),
-            other => panic!("unexpected length type {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn out_of_range_position_names_invalid_bitmap_position() {
-        let ctx = ctx();
-        for sql in [
-            "SELECT bitmap_construct_agg(x) FROM VALUES (32768) AS t(x)",
-            "SELECT bitmap_construct_agg(x) FROM VALUES (-1) AS t(x)",
-        ] {
-            let error = ctx
-                .sql(sql)
-                .await
-                .expect("plan")
-                .collect()
-                .await
-                .expect_err("out of range must refuse");
-            let message = error.to_string();
-            assert!(
-                message.contains("[INVALID_BITMAP_POSITION]"),
-                "got {message}"
-            );
-            assert!(message.contains("32768 bits (4096 bytes)"), "got {message}");
-            assert!(message.contains("SQLSTATE: 22003"), "got {message}");
-        }
-        let batch = batch(
-            &ctx,
-            "SELECT bitmap_count(bitmap_construct_agg(x)) AS c FROM VALUES (32767) AS t(x)",
-        )
-        .await;
-        assert_eq!(int64_cell(&batch, 0), 1);
-    }
-
-    #[tokio::test]
-    async fn short_binary_or_and_normalize_to_4096() {
-        let ctx = ctx();
-        let schema = Arc::new(Schema::new(vec![Field::new("b", DataType::Binary, true)]));
-        let array: ArrayRef = Arc::new(BinaryArray::from(vec![Some(&b"\x01"[..])]));
-        let short = RecordBatch::try_new(schema, vec![array]).expect("short binary");
-        ctx.register_batch("short_bitmaps", short)
-            .expect("register short");
-        let or_agg = batch(
-            &ctx,
-            "SELECT length(bitmap_or_agg(b)) AS l, bitmap_count(bitmap_or_agg(b)) AS c \
-             FROM short_bitmaps",
-        )
-        .await;
-        match or_agg.schema().field(0).data_type() {
-            DataType::Int32 => assert_eq!(int32_cell(&or_agg, 0), 4096),
-            DataType::Int64 => assert_eq!(int64_cell(&or_agg, 0), 4096),
-            other => panic!("unexpected length type {other:?}"),
-        }
-        assert_eq!(int64_cell(&or_agg, 1), 1);
-        let and_agg = batch(
-            &ctx,
-            "SELECT length(bitmap_and_agg(b)) AS l, bitmap_count(bitmap_and_agg(b)) AS c \
-             FROM short_bitmaps",
-        )
-        .await;
-        match and_agg.schema().field(0).data_type() {
-            DataType::Int32 => assert_eq!(int32_cell(&and_agg, 0), 4096),
-            DataType::Int64 => assert_eq!(int64_cell(&and_agg, 0), 4096),
-            other => panic!("unexpected length type {other:?}"),
-        }
-        assert_eq!(int64_cell(&and_agg, 1), 1);
-        let mut long_bytes = vec![0_u8; BITMAP_BYTES + 1];
-        long_bytes[0] = 0x01;
-        long_bytes[BITMAP_BYTES] = 0x01;
-        let long_schema = Arc::new(Schema::new(vec![Field::new("b", DataType::Binary, true)]));
-        let long_array: ArrayRef = Arc::new(BinaryArray::from(vec![Some(long_bytes.as_slice())]));
-        let long = RecordBatch::try_new(long_schema, vec![long_array]).expect("long binary");
-        ctx.register_batch("long_bitmaps", long)
-            .expect("register long");
-        let long_agg = batch(
-            &ctx,
-            "SELECT length(bitmap_or_agg(b)) AS l FROM long_bitmaps",
-        )
-        .await;
-        match long_agg.schema().field(0).data_type() {
-            DataType::Int32 => assert_eq!(int32_cell(&long_agg, 0), 4096),
-            DataType::Int64 => assert_eq!(int64_cell(&long_agg, 0), 4096),
-            other => panic!("unexpected length type {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn unbounded_partition_window_answers() {
-        let ctx = ctx();
-        let batch = batch(
-            &ctx,
-            "SELECT bitmap_count(bitmap_construct_agg(x) OVER (PARTITION BY g)) AS c \
-             FROM VALUES (1, 1), (1, 2), (2, 3) AS t(g, x) ORDER BY g",
-        )
-        .await;
-        let array = batch
-            .column(0)
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .expect("Int64Array");
-        let counts: Vec<i64> = (0..array.len()).map(|index| array.value(index)).collect();
-        assert_eq!(counts, vec![2, 2, 1]);
-    }
-}
+mod tests;

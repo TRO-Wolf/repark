@@ -103,7 +103,7 @@ def test_and_agg_length_is_4096_int(spark: ReparkSession) -> None:
 
 
 def test_or_and_short_empty_and_long_normalize_to_4096(spark: ReparkSession) -> None:
-    """pins: fnp-6d/C-011"""
+    """pins: fnp-6d/C-011; pins: fnp-6d-followup-1/C-006."""
     cases = (
         (
             "SELECT length(bitmap_or_agg(b)) l, bitmap_count(bitmap_or_agg(b)) c "
@@ -125,7 +125,8 @@ def test_or_and_short_empty_and_long_normalize_to_4096(spark: ReparkSession) -> 
         ),
         (
             "SELECT length(bitmap_or_agg(b)) l FROM ("
-            "SELECT concat(bitmap_construct_agg(0), X'01') b FROM VALUES (1) AS t(x))",
+            "SELECT CAST(concat(bitmap_construct_agg(0), X'01') AS BINARY) b "
+            "FROM VALUES (1) AS t(x))",
             4096,
             None,
         ),

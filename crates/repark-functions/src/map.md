@@ -146,7 +146,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   22003. Sliding frames use the session WIN-SLIDE-1 rescan (no local
   `create_sliding_accumulator` refuse). GroupsAccumulator in `bitmap_agg/groups.rs`.
   pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
+  C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017. **FNP-6D-FOLLOWUP-1
+  (2026-09-15):** user-defined signatures with planning-time Spark refusals
+  (`DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`, BINARY/BIGINT wanted); strict
+  ANSI-on STRING-to-BIGINT parsing (`CAST_INVALID_INPUT`, SQLSTATE 22018) with
+  in-place `Int64` walks and direct `&[u8]` visits (no per-batch Vec, no payload
+  copies); numerics truncate as Spark, non-finite and out-of-range numerics raise
+  `CAST_OVERFLOW` (SQLSTATE 22003) detected per row from the source array;
+  `FixedSizeBinary` folds as BINARY.
+  pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004
 - `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
   compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable
@@ -712,3 +720,4 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
 First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](../map.md).
 - **DOOR-CONVERGE-1 rebase (2026-09-15):** `collection.rs` keeps main's `array_append` / `array_prepend` shims (ARRAY-NULL-1) beside this unit's `array_contains` / `size` modules; the round-2 `make_array` shim stays removed (R-10).
 - **FNP-11A R3 (2026-09-15):** `expr_fn::datediff` is the Spark `datediff` spelling. The function door routes two arguments to `date_diff` and three to `timestampdiff` through `temporal_ctor::date_alias` (pins: fnp-11a/C-019).
+- **FNP-6D-FOLLOWUP-1 rebase (2026-09-15, run 16a):** after #612 moved the Java text helpers into `java_double.rs`, `bitmap_agg.rs` imports `java_double_text` / `java_float_text` from `crate::java_double`; `json.rs` keeps `mod reader;` private as on main.

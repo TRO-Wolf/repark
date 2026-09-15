@@ -4481,6 +4481,28 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `[INVALID_BITMAP_POSITION]`, all-NULL identities, unbounded partition.
   pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009, C-011,
   C-012, C-013, C-014, C-015
+- [test_fnp_6d_followup_1.py](test_fnp_6d_followup_1.py) +
+  [fnp_6d_followup_1_spark_oracle.json](fnp_6d_followup_1_spark_oracle.json) —
+  **FNP-6D-FOLLOWUP-1 (2026-09-15):** SQL-door pins for the bitmap signature
+  followup against the copied live-PySpark-4.1.2 fixture (50 cells, `FU-*`):
+  OR/AND refuse every non-BINARY payload, construct refuses non-BIGINT payloads
+  and raises `CAST_INVALID_INPUT` on malformed STRING under ANSI-on, numerics and
+  trimmed strings answer Spark. Step 1 is red-first on the unfixed tree. Step 2
+  adds the `concat(BINARY, BINARY)` STRING-typing divergence pin (DOOR-CONVERGE-2,
+  run 16c) and adapts the FNP-6D C-011 arm to `CAST(concat(...) AS BINARY)` per
+  ruling D-5. Remediation round 2 appends the 24 `FU2-*` cells (recorded live on
+  PySpark 4.1.2, 2026-09-15, recorder `oracle_f6dfu2.py`): overflow raises,
+  overflow digit strings, `+1`, i64-max, grouped-malformed, and the fixed-binary
+  fold; pins assert each cell's message core. Door-SQL adaptations: `CAST(1 AS
+  INT)` (the door types bare `VALUES (1)` as BIGINT where Spark types INT),
+  `CAST('1e30' AS DOUBLE)` (the door rejects the `1e30D` literal), plain-column
+  instead of `length(...)` (planning fails before `length`), and the
+  registry-cited `t.x` qualifier inside nested calls. Round 2 drives every
+  refusal pin from its fixture cell id (message core extracted from the cell
+  text), pins the builder ANSI-off still-raises shape as the SET-ANSI-RUNTIME-1
+  divergence (C-005), and pins the FU2 overflow-string/i64-max/`+1` cells.
+  The FU2 fixed-binary fold pins `CAST(x AS BINARY)` answering count 3.
+  pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004, C-005, C-007
 - `test_fnp6_regexp.py` — **FNP-6a (2026-08-20):** `regexp_extract_all` / `regexp_substr`
   against Python's `re` as an independent oracle, the three no-match conventions Spark keeps
   apart, door agreement, and a pin tying `regexp_count` to `size(regexp_extract_all(...))` on an

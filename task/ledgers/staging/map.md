@@ -668,3 +668,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (D-3), and the BL-7 FIXED registry row (D-4) land in steps 2–3.
   `risk_tier: standard`. Branch `feat/java-double-str-1`.
   pins: java-double-str-1/C-001, C-002
+- [fnp-6d-followup-1-ledger.md](fnp-6d-followup-1-ledger.md) —
+  **FNP-6D-FOLLOWUP-1 (2026-09-15), in flight:** the bitmap aggregate signature
+  followup to merged #609 (run 15a Grok critic L-001/L-003) — OR/AND refuse every
+  non-BINARY payload, construct refuses non-BIGINT payloads and raises
+  `CAST_INVALID_INPUT` on malformed STRING under ANSI-on, against the copied
+  live-PySpark-4.1.2 fixture (`FU-*` cells). Step 1 is red-first; step 2 is
+  blocked on the concat-Utf8 ruling recorded in the ledger.
+  `risk_tier: standard`. Branch `feat/fnp-6d-followup-1`.
+  pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
