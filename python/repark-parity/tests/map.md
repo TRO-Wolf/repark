@@ -147,7 +147,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   widened-name pin now reads `example_inventory`, the post-exclusion view.
   pins: ex-31-inventory-plumbing/C-001, C-005
   **FNP-ALIAS-1 (2026-09-15):** 955 → 961 as `approxCountDistinct`, `shiftLeft`, `shiftRight`, `shiftRightUnsigned`, `toDegrees` and `toRadians` join the functions family (walked through `functions_agg.py` / `functions_bitwise.py` / `functions_math.py`, covered by `docs/examples/functions/deprecated_aliases.py`, so the backlog baseline is unchanged). pins: fnp-alias-1/C-001
-  **FNP-MISC-1 (2026-09-15):** 932 → 936 as `call_function`, `call_udf`, `arrow_udf` and `arrow_udtf` join the functions family (walked through `functions_byname.py` / `functions_arrow_udf.py`, covered by `docs/examples/functions/by_name_and_arrow_udfs.py`, so the backlog baseline is unchanged). pins: fnp-misc-1/C-001
+  **FNP-MISC-1 (2026-09-15):** 1006 → 1010 as `call_function`, `call_udf`, `arrow_udf` and `arrow_udtf` join the functions family (walked through `functions_byname.py` / `functions_arrow_udf.py`, covered by `docs/examples/functions/by_name_and_arrow_udfs.py`, so the backlog baseline is unchanged). pins: fnp-misc-1/C-001
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
   North Star sequence, F-17's measured shared-Puffin closure request, the live slate, the
   per-unit FNP remaining order (FNP-7a/7b delivered 2026-08-31; remaining FNP-9/10 → FNP-8
