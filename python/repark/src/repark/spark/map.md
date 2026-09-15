@@ -70,7 +70,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   — a field is encoded only from `StructType.fields` through
   `_field_descriptor`, so a `Left+StructField` class built without `.dataType`
   falls to the Python fallbacks and answers its non-field parent like base.
-  pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024, C-026, C-029..C-031, C-033
+  **TYPES-GEO-DDL-1 (2026-09-15):** `_descriptor_to_datatype` decodes the two
+  spatial tags (`geometry`/`geography` + srid, `-1` for Spark's `ANY`) into the
+  `types_bases.py` objects the JSON door already builds; no encoder arm is added,
+  so every other surface keeps its existing fallback or refusal bytes.
+  pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024, C-026, C-029..C-031, C-033; types-geo-ddl-1/C-002
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade

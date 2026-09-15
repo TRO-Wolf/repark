@@ -5,7 +5,10 @@ use regex::Regex;
 
 use std::borrow::Cow;
 
-use super::{DEFAULT_COLLATION, SparkDataType, SparkField, TypeTableError};
+use super::{
+    DEFAULT_COLLATION, GEOGRAPHY_SRIDS, GEOMETRY_SRIDS, SPATIAL_MIXED_SRID, SparkDataType,
+    SparkField, TypeTableError,
+};
 
 fn is_py_whitespace(character: char) -> bool {
     character.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&character) || character == '\u{85}'
@@ -185,6 +188,19 @@ fn atomic_type_names_contains(lower: &str) -> bool {
     atomic_type_from_name(lower).is_some()
 }
 
+fn parse_spatial_srid(text: &str, supported: &[i64]) -> Option<i64> {
+    let trimmed = py_trim(text);
+    if trimmed.eq_ignore_ascii_case("any") {
+        return Some(SPATIAL_MIXED_SRID);
+    }
+    if let Ok(srid) = parse_py_int(trimmed)
+        && supported.contains(&srid)
+    {
+        return Some(srid);
+    }
+    None
+}
+
 fn parse_atomic_token(token: &str) -> Result<Option<SparkDataType>, TypeTableError> {
     let stripped = py_trim(token);
     if stripped.is_empty() {
@@ -224,6 +240,20 @@ fn parse_atomic_token(token: &str) -> Result<Option<SparkDataType>, TypeTableErr
         };
         let precision = parse_py_int(precision_match.as_str())?;
         return Ok(Some(SparkDataType::Time { precision }));
+    }
+    if let Some(captures) = regex_fullmatch(r"(?i)\Ageometry\s*\(\s*([^()]*)\s*\)\z", stripped) {
+        let Some(inner_match) = captures.get(1) else {
+            return Ok(None);
+        };
+        return Ok(parse_spatial_srid(inner_match.as_str(), GEOMETRY_SRIDS)
+            .map(|srid| SparkDataType::Geometry { srid }));
+    }
+    if let Some(captures) = regex_fullmatch(r"(?i)\Ageography\s*\(\s*([^()]*)\s*\)\z", stripped) {
+        let Some(inner_match) = captures.get(1) else {
+            return Ok(None);
+        };
+        return Ok(parse_spatial_srid(inner_match.as_str(), GEOGRAPHY_SRIDS)
+            .map(|srid| SparkDataType::Geography { srid }));
     }
     if let Some(captures) = regex_fullmatch(r"(?i)\Astring\s+collate\s+(\w+)\z", stripped) {
         let Some(collation_match) = captures.get(1) else {

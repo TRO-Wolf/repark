@@ -83,6 +83,23 @@ def test_geo_ddl_error_cells() -> None:
             spark_types._parse_datatype_string(ddl)
 
 
+def test_geo_ddl_bridge_tags_both_ways() -> None:
+    """The bridge carries both spatial tags each direction.
+
+    pins: types-geo-ddl-1/C-002
+    """
+    from repark import _native
+
+    assert (
+        _native.simple_string_from_descriptor({"kind": "geometry", "srid": 4326})
+        == "geometry(4326)"
+    )
+    assert (
+        _native.simple_string_from_descriptor({"kind": "geography", "srid": -1}) == "geography(any)"
+    )
+    assert _native.ddl_token_from_descriptor({"kind": "geometry", "srid": 0}) == "GEOMETRY(0)"
+
+
 def test_geo_ddl_create_schema_string_refuses() -> None:
     """Cell ``G13-17`` parses but CREATE keeps the V3-GEO-1 column-use refusal.
 

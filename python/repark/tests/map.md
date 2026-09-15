@@ -2547,7 +2547,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `_parse_datatype_string`): value, `simpleString` and `json` for the 14 accept cells,
   the `ValueError: cannot parse datatype` refusal shape for the 7 `PARSE_SYNTAX_ERROR`
   cells, and the V3-GEO-1 column-use refusal through `createDataFrame(schema="…")` and
-  `spark.read.schema("…")` schema strings.
+  `spark.read.schema("…")` schema strings, plus the direct bridge tag-shape pin
+  (`simple_string_from_descriptor` / `ddl_token_from_descriptor` over hand-built
+  `{"kind", "srid"}` dicts).
   pins: types-geo-ddl-1/C-001, C-002, C-003, C-004, C-005
 - `test_types_x2_census.py` — X2 census: Row empty/unnamed repr + factory arity;
   createDataFrame LongType schema, nested list/struct/map, variable int arrays;

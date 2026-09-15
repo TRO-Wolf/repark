@@ -444,6 +444,10 @@ def _descriptor_to_datatype(descriptor: Any) -> Any:
             inverted_fields[descriptor[1]],
             inverted_fields[descriptor[2]],
         )
+    if kind == "geometry":
+        return t.GeometryType("ANY" if descriptor[1] == -1 else descriptor[1])
+    if kind == "geography":
+        return t.GeographyType("ANY" if descriptor[1] == -1 else descriptor[1])
     if kind == "array":
         return t.ArrayType(
             _descriptor_to_datatype(descriptor[1]),

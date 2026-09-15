@@ -83,6 +83,12 @@ fn spark_type_to_py(py: Python<'_>, data_type: &SparkDataType) -> PyResult<Py<Py
             .into_pyobject(py)?
             .into_any(),
         SparkDataType::Variant => (intern!(py, "variant"),).into_pyobject(py)?.into_any(),
+        SparkDataType::Geometry { srid } => (intern!(py, "geometry"), *srid)
+            .into_pyobject(py)?
+            .into_any(),
+        SparkDataType::Geography { srid } => (intern!(py, "geography"), *srid)
+            .into_pyobject(py)?
+            .into_any(),
         SparkDataType::Array {
             element,
             contains_null,
@@ -203,6 +209,12 @@ fn spark_type_from_py(obj: &Bound<'_, PyAny>) -> PyResult<SparkDataType> {
             end: dict_required(dict, intern!(py, "end"))?.extract()?,
         },
         "variant" => SparkDataType::Variant,
+        "geometry" => SparkDataType::Geometry {
+            srid: dict_required(dict, intern!(py, "srid"))?.extract()?,
+        },
+        "geography" => SparkDataType::Geography {
+            srid: dict_required(dict, intern!(py, "srid"))?.extract()?,
+        },
         "array" => SparkDataType::Array {
             element: Box::new(spark_type_from_py(&dict_required(
                 dict,

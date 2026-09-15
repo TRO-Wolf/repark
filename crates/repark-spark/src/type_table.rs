@@ -6,6 +6,9 @@ use datafusion::arrow::datatypes::{DataType as ArrowDataType, Field, Fields, Sch
 
 mod parse;
 
+#[cfg(test)]
+mod tests;
+
 pub use parse::{parse_ddl, sql_type_from_token};
 
 pub(crate) const SPARK_TYPE_NAME_MAX_DEPTH: usize = 32;
@@ -13,6 +16,12 @@ pub(crate) const SPARK_TYPE_NAME_MAX_DEPTH: usize = 32;
 pub(crate) const SPARK_TYPE_NAME_DEPTH_FALLBACK: &str = "...";
 
 pub const DEFAULT_COLLATION: &str = "UTF8_BINARY";
+
+pub const SPATIAL_MIXED_SRID: i64 = -1;
+
+pub(crate) const GEOMETRY_SRIDS: &[i64] = &[0, 3857, 4326];
+
+pub(crate) const GEOGRAPHY_SRIDS: &[i64] = &[4326];
 
 #[derive(Debug, Clone)]
 pub enum TypeTableError {
@@ -85,6 +94,12 @@ pub enum SparkDataType {
         end: String,
     },
     Variant,
+    Geometry {
+        srid: i64,
+    },
+    Geography {
+        srid: i64,
+    },
     Array {
         element: Box<SparkDataType>,
         contains_null: bool,
@@ -347,6 +362,12 @@ pub fn arrow_type_from_spark(data_type: &SparkDataType) -> Result<ArrowDataType,
             }
             ArrowDataType::Struct(Fields::from(arrow_fields))
         }
+        SparkDataType::Geometry { .. } | SparkDataType::Geography { .. } => {
+            return Err(TypeTableError::Message(format!(
+                "repark does not support the {} column type: spatial values have no Arrow representation (V3-GEO-1)",
+                simple_string(data_type)
+            )));
+        }
         _ => ArrowDataType::Utf8,
     })
 }
@@ -381,6 +402,8 @@ pub fn simple_string(data_type: &SparkDataType) -> String {
         SparkDataType::DayTimeInterval { start, end }
         | SparkDataType::YearMonthInterval { start, end } => interval_simple_string(start, end),
         SparkDataType::Variant => "variant".to_string(),
+        SparkDataType::Geometry { srid } => spatial_simple_string("geometry", *srid),
+        SparkDataType::Geography { srid } => spatial_simple_string("geography", *srid),
         SparkDataType::Array { element, .. } => format!("array<{}>", simple_string(element)),
         SparkDataType::Map { key, value, .. } => {
             format!("map<{},{}>", simple_string(key), simple_string(value))
@@ -395,6 +418,14 @@ pub fn simple_string(data_type: &SparkDataType) -> String {
         SparkDataType::Field(field) => {
             format!("{}:{}", field.name, simple_string(&field.data_type))
         }
+    }
+}
+
+fn spatial_simple_string(prefix: &str, srid: i64) -> String {
+    if srid == SPATIAL_MIXED_SRID {
+        format!("{prefix}(any)")
+    } else {
+        format!("{prefix}({srid})")
     }
 }
 
