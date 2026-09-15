@@ -1,16 +1,24 @@
 # `java_double/` — Java float spellings and the Spark-door float/string rewrites
 
 Parent `../java_double.rs` keeps the crate-visible surface (`with_java_double_text`,
-`java_double_text`, the `__repark_float_to_string__` and `__repark_format_float__`
-UDFs, the `SparkFloatStringify` analyzer rule) and re-exports the digit engine
-below, so `json/`, `string.rs`, `spark_length.rs` and `bitmap_agg.rs` keep importing
-from `crate::java_double`. The rule holds four float seats: longhand `CAST`/`TRY_CAST`
+`java_double_text`, the `__repark_float_to_string__`, `__repark_format_float__`
+and `__repark_parse_java_double__` / `__repark_parse_java_float__` UDFs, the
+`SparkFloatStringify` analyzer rule) and re-exports the digit engine below, so
+`json/`, `string.rs`, `spark_length.rs` and `bitmap_agg.rs` keep importing from
+`crate::java_double`. The rule holds five float seats: longhand `CAST`/`TRY_CAST`
 folds (with the Java-suffix strip), one-level literal propagation through
-projections, `%s`-verb float wrapping, and single-verb `%f`/`%F` routing to the
-HALF_UP shim. Round 2 (2026-09-15, L-004/L-001): `%F` parses only to refuse with
+projections, `%s`-verb float wrapping, single-verb `%f`/`%F` routing to the
+HALF_UP shim, and non-literal STRING to FLOAT/DOUBLE casts routing to the
+column parse kernel. Round 2 (2026-09-15, L-004/L-001): `%F` parses only to refuse with
 `Conversion = 'F'` (Java has no upper-float conversion); NaN renders bare `NaN`
 under every sign/space/paren flag while infinity keeps sign handling. L-002: `#`
 sets an ALT flag that appends `.` when precision is 0.
+
+- `parse_float.rs` — Round 2 (2026-09-15, L-003): the `__repark_parse_java_double__`
+  / `__repark_parse_java_float__` UDFs over one shared Spark-grammar text parser
+  (fast parse, trim plus one trailing-suffix strip, Arrow fallback, blank to NULL,
+  session ANSI at invoke). Non-literal STRING to FLOAT/DOUBLE casts route there;
+  literals keep the plan-time fold; TryCast stays on Arrow.
 
 - `dtoa.rs` — **JAVA-DOUBLE-FD-1 (2026-09-15):** the digit engine. Independent Rust
   implementation written from the published JDK 17 `FloatingDecimal` algorithm

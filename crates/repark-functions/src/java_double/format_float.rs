@@ -531,7 +531,7 @@ mod tests {
         assert_eq!(render("%#.0f", 2.5), "3.");
         assert_eq!(render("%#f", 1.0), "1.000000");
         assert_eq!(render("%.0f", 2.5), "3");
-        assert_eq!(render("%010.2f", -3.14159), "-000003.14");
+        assert_eq!(render("%010.2f", -3.14149), "-000003.14");
     }
 
     #[test]

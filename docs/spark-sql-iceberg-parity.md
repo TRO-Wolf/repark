@@ -2443,17 +2443,31 @@ the pin rather than obeying it.
   and the other DEGI accepting shapes answer their values on the SQL door and
   through facade `Column.cast`, with ANSI on and off; `CAST('0x10' AS DOUBLE)`
   raises `CAST_INVALID_INPUT` with ANSI on and answers NULL with ANSI off.
+  Real STRING columns (and string expressions like `repeat`) route through the
+  same Spark grammar in a Rust kernel: each row tries the fast parse first and
+  falls back to trim plus one trailing-suffix strip, then to Arrow's own parse,
+  so Arrow-accepted spellings keep Arrow's values; bad rows raise with ANSI on
+  and answer NULL with ANSI off. The native ANSI door keeps Arrow's cast.
+  Perf (5M plain-text column, release native, best of 3): kernel 0.048s against
+  Arrow runtime 0.081s before — no regression.
 - **Apache Spark** — `Double.parseDouble`/`Float.parseFloat` accept the same
   suffixed and padded shapes; hex text is refused (NULL with ANSI off).
   *(oracle: live — PySpark 4.1.2, 2026-09-15; DEGI cast cells in
-  `fixtures-batch10.json`.)*
+  `fixtures-batch10.json`; Q19 eight column cells in
+  `fixtures-batch19-critic-633.json`.)*
 - **Pin** —
   `python/repark/tests/test_java_double_fd_1.py::test_spark_door_cast_accepting_shapes`,
   `::test_spark_door_cast_accepting_shapes_nonansi`,
   `::test_facade_cast_accepting_shapes`,
   `::test_facade_cast_accepting_shapes_nonansi`, `::test_cast_hex_refused`,
   `::test_cast_hex_null_nonansi` and `::test_cast_suffix_float_target`
-  (value AND type on both doors).
+  (value AND type on both doors), plus the Q19 column cells
+  `::test_spark_door_cast_suffix_column_ansi_error`,
+  `::test_spark_door_cast_suffix_column_nonansi`,
+  `::test_spark_door_cast_suffix_column_ok`,
+  `::test_facade_cast_suffix_column_ansi_error`,
+  `::test_facade_cast_suffix_column_nonansi` and
+  `::test_facade_cast_suffix_column_ok`.
 - **Rationale** — FIXED 2026-09-15 (JAVA-DOUBLE-FD-1, clause C-006). The
   `spark_float_stringify` analyzer rule strips one trailing `d`/`D`/`f`/`F` from
   string literals after Arrow rejects them, folds `CAST`/`TRY_CAST` of suffixed

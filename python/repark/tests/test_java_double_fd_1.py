@@ -253,6 +253,85 @@ def test_spark_door_format_string_trailing_text_control(spark: ReparkSession) ->
     _check_string(table, "v", "3.14      |")
 
 
+_SFX_ROWS = [("1d",), ("1f",), ("1.5D",), ("-2.5F",), ("1dd",), ("0x10",)]
+_SFX_OK = "x IN ('1d','1f','1.5D','-2.5F')"
+
+
+def _sfx(session: ReparkSession) -> None:
+    session.createDataFrame(_SFX_ROWS, ["x"]).createOrReplaceTempView("sfx")
+
+
+def _check_float(table: pa.Table, column: str, expected: list) -> None:
+    values = table.column(column).to_pylist()
+    assert values == expected
+    assert table.schema.field(column).type == pa.float64()
+    assert table.schema.field(column).nullable is True
+
+
+def test_spark_door_cast_suffix_column_ansi_error(spark: ReparkSession) -> None:
+    """Q19-col-double-ansi: a bad row raises CAST_INVALID_INPUT on a real column."""
+    _sfx(spark)
+    with pytest.raises(Exception, match="CAST_INVALID_INPUT"):
+        spark.sql("SELECT CAST(x AS DOUBLE) AS v FROM sfx").to_arrow()
+
+
+def test_spark_door_cast_suffix_column_nonansi(spark_nonansi: ReparkSession) -> None:
+    """Q19-col-double-nonansi: bad rows answer NULL on a real column."""
+    _sfx(spark_nonansi)
+    table = _table(spark_nonansi.sql("SELECT CAST(x AS DOUBLE) AS v FROM sfx"))
+    _check_float(table, "v", [1.0, 1.0, 1.5, -2.5, None, None])
+
+
+def test_spark_door_cast_suffix_column_ok(spark: ReparkSession, spark_nonansi: ReparkSession) -> None:
+    """Q19 ok cells, both ANSI settings: suffixed text casts over real columns."""
+    for session in (spark, spark_nonansi):
+        _sfx(session)
+        table = _table(session.sql(f"SELECT CAST(x AS DOUBLE) AS v FROM sfx WHERE {_SFX_OK}"))
+        _check_float(table, "v", [1.0, 1.0, 1.5, -2.5])
+        table = _table(session.sql(f"SELECT CAST(x AS FLOAT) AS v FROM sfx WHERE {_SFX_OK}"))
+        assert table.column("v").to_pylist() == [1.0, 1.0, 1.5, -2.5]
+        assert table.schema.field("v").type == pa.float32()
+        assert table.schema.field("v").nullable is True
+        table = _table(session.sql("SELECT CAST(repeat('1d', 1) AS DOUBLE) AS v"))
+        _check_float(table, "v", [1.0])
+
+
+def test_facade_cast_suffix_column_ansi_error(spark: ReparkSession) -> None:
+    """Q19-col-double-ansi through Column.cast."""
+    _sfx(spark)
+    frame = spark.table("sfx").select(F.col("x").cast("double").alias("v"))
+    with pytest.raises(Exception, match="CAST_INVALID_INPUT"):
+        frame.to_arrow()
+
+
+def test_facade_cast_suffix_column_nonansi(spark_nonansi: ReparkSession) -> None:
+    """Q19-col-double-nonansi through Column.cast."""
+    _sfx(spark_nonansi)
+    frame = spark_nonansi.table("sfx").select(F.col("x").cast("double").alias("v"))
+    _check_float(_table(frame), "v", [1.0, 1.0, 1.5, -2.5, None, None])
+
+
+def test_facade_cast_suffix_column_ok(spark: ReparkSession, spark_nonansi: ReparkSession) -> None:
+    """Q19 ok cells, both ANSI settings, through Column.cast."""
+    for session in (spark, spark_nonansi):
+        _sfx(session)
+        frame = session.sql(f"SELECT x FROM sfx WHERE {_SFX_OK}").select(
+            F.col("x").cast("double").alias("v")
+        )
+        _check_float(_table(frame), "v", [1.0, 1.0, 1.5, -2.5])
+        frame = (
+            session.sql(f"SELECT x FROM sfx WHERE {_SFX_OK}")
+            .select(F.col("x").cast("float").alias("v"))
+        )
+        table = _table(frame)
+        assert table.column("v").to_pylist() == [1.0, 1.0, 1.5, -2.5]
+        assert table.schema.field("v").type == pa.float32()
+        frame = session.sql("SELECT repeat('1d', 1) AS x").select(
+            F.col("x").cast("double").alias("v")
+        )
+        _check_float(_table(frame), "v", [1.0])
+
+
 def test_spark_door_format_string_alt_forces_point(spark: ReparkSession) -> None:
     """Q19-fmt-8..13: # always prints the decimal point, HALF_UP first."""
     for literal, expected in [

@@ -1,6 +1,7 @@
 mod bigint;
 mod dtoa;
 mod format_float;
+mod parse_float;
 #[cfg(test)]
 mod tables_doubles;
 #[cfg(test)]
@@ -299,6 +300,16 @@ fn rewrite_float_cast(cast: Cast, schema: &DFSchema, ansi: bool) -> Result<Trans
         {
             return Ok(Transformed::yes(folded));
         }
+        if is_string_type(&source_type) && !matches!(cast.expr.as_ref(), Expr::Literal(_, _)) {
+            let parse = if target == DataType::Float32 {
+                parse_float::parse_java_float_udf()
+            } else {
+                parse_float::parse_java_double_udf()
+            };
+            return Ok(Transformed::yes(Expr::ScalarFunction(
+                ScalarFunction::new_udf(parse, vec![*cast.expr]),
+            )));
+        }
     }
     Ok(Transformed::no(Expr::Cast(cast)))
 }
@@ -325,19 +336,6 @@ fn spark_float_type_name(target: &DataType) -> &'static str {
     }
 }
 
-fn parse_float_text(trimmed: &str, target: &DataType) -> Option<ScalarValue> {
-    match target {
-        DataType::Float32 => trimmed
-            .parse::<f32>()
-            .ok()
-            .map(|value| ScalarValue::Float32(Some(value))),
-        _ => trimmed
-            .parse::<f64>()
-            .ok()
-            .map(|value| ScalarValue::Float64(Some(value))),
-    }
-}
-
 fn fold_utf8_to_float_literal(
     literal: &ScalarValue,
     text: &str,
@@ -347,25 +345,22 @@ fn fold_utf8_to_float_literal(
     if literal.cast_to(target).is_ok() {
         return Ok(None);
     }
-    let trimmed = text.trim();
-    if trimmed.is_empty() {
+    if parse_float::is_blank_text(text) {
         return Ok(Some(float_null_literal(target)));
     }
-    if let Some(value) = parse_float_text(trimmed, target) {
-        return Ok(Some(Expr::Literal(value, None)));
-    }
-    if let Some(stem) = trimmed.strip_suffix(|cell| matches!(cell, 'd' | 'D' | 'f' | 'F'))
-        && let Some(value) = parse_float_text(stem, target)
-    {
+    let parsed = match target {
+        DataType::Float32 => parse_float::parse_java_float_text::<f32>(text)
+            .map(|value| ScalarValue::Float32(Some(value))),
+        _ => parse_float::parse_java_float_text::<f64>(text)
+            .map(|value| ScalarValue::Float64(Some(value))),
+    };
+    if let Some(value) = parsed {
         return Ok(Some(Expr::Literal(value, None)));
     }
     if !ansi {
         return Ok(Some(float_null_literal(target)));
     }
-    Err(DataFusionError::Execution(format!(
-        "[CAST_INVALID_INPUT] The value '{text}' of the type \"STRING\" cannot be cast to \"{}\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
-        spark_float_type_name(target)
-    )))
+    Err(parse_float::cast_invalid_input(text, target))
 }
 
 fn rewrite_float_like(like: Like, schema: &DFSchema) -> Transformed<Expr> {
