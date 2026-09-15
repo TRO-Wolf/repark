@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
@@ -18,13 +19,13 @@ _CELLS: dict[str, dict[str, Any]] = {cell["id"]: cell for cell in _FIXTURE["cell
 OR_AND_REFUSALS: tuple[tuple[str, str, str, str], ...] = (
     (
         "FU-or-int",
-        "SELECT bitmap_or_agg(x) b FROM VALUES (1), (2) AS t(x)",
+        "SELECT bitmap_or_agg(x) b FROM VALUES (CAST(1 AS INT)), (CAST(2 AS INT)) AS t(x)",
         "bitmap_or_agg",
         "INT",
     ),
     (
         "FU-and-int",
-        "SELECT bitmap_and_agg(x) b FROM VALUES (1), (2) AS t(x)",
+        "SELECT bitmap_and_agg(x) b FROM VALUES (CAST(1 AS INT)), (CAST(2 AS INT)) AS t(x)",
         "bitmap_and_agg",
         "INT",
     ),
@@ -140,20 +141,17 @@ CONSTRUCT_MALFORMED: tuple[tuple[str, str, str], ...] = (
 CONSTRUCT_ANSWERS: tuple[tuple[str, str, int], ...] = (
     (
         "FU-construct-float",
-        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
-        "FROM VALUES (CAST(1.0 AS FLOAT)) AS t(x)",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST(1.0 AS FLOAT)) AS t(x)",
         1,
     ),
     (
         "FU-construct-float-frac",
-        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
-        "FROM VALUES (CAST(1.7 AS FLOAT)) AS t(x)",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST(1.7 AS FLOAT)) AS t(x)",
         1,
     ),
     (
         "FU-construct-double",
-        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
-        "FROM VALUES (CAST(2.0 AS DOUBLE)) AS t(x)",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST(2.0 AS DOUBLE)) AS t(x)",
         1,
     ),
     (
@@ -174,14 +172,12 @@ CONSTRUCT_ANSWERS: tuple[tuple[str, str, int], ...] = (
     ),
     (
         "construct-int",
-        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
-        "FROM VALUES (CAST(3 AS INT)) AS t(x)",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST(3 AS INT)) AS t(x)",
         1,
     ),
     (
         "construct-null-bigint",
-        "SELECT bitmap_count(bitmap_construct_agg(CAST(NULL AS BIGINT))) c "
-        "FROM VALUES (1) AS t(x)",
+        "SELECT bitmap_count(bitmap_construct_agg(CAST(NULL AS BIGINT))) c FROM VALUES (1) AS t(x)",
         0,
     ),
 )
@@ -276,3 +272,11 @@ def test_construct_agg_answers_numeric_trimmed_and_null(
     if cell_id in _CELLS:
         assert _CELLS[cell_id]["rows"] == [[want]]
     assert count_cell(spark, sql) == want
+
+
+def test_concat_binary_types_string_expected_divergence(spark: ReparkSession) -> None:
+    """pins: fnp-6d-followup-1/C-007; expected divergence DOOR-CONVERGE-2."""
+    table = spark.sql(
+        "SELECT concat(bitmap_construct_agg(0), X'01') b FROM VALUES (1) AS t(x)"
+    ).toArrow()
+    assert table.schema.field("b").type == pa.string()

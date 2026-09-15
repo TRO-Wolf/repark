@@ -146,7 +146,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   22003. Sliding frames use the session WIN-SLIDE-1 rescan (no local
   `create_sliding_accumulator` refuse). GroupsAccumulator in `bitmap_agg/groups.rs`.
   pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
+  C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017. **FNP-6D-FOLLOWUP-1
+  (2026-09-15):** user-defined signatures with planning-time Spark refusals
+  (`DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`, BINARY/BIGINT wanted); strict
+  ANSI-on STRING-to-BIGINT parsing (`CAST_INVALID_INPUT`, SQLSTATE 22018) shared
+  by both accumulators through `construct_positions`; numerics truncate as Spark.
+  pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004
 - `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
   compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable

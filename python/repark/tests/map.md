@@ -4487,8 +4487,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   followup against the copied live-PySpark-4.1.2 fixture (50 cells, `FU-*`):
   OR/AND refuse every non-BINARY payload, construct refuses non-BIGINT payloads
   and raises `CAST_INVALID_INPUT` on malformed STRING under ANSI-on, numerics and
-  trimmed strings answer Spark. Step 1 is red-first on the unfixed tree.
-  pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004
+  trimmed strings answer Spark. Step 1 is red-first on the unfixed tree. Step 2
+  adds the `concat(BINARY, BINARY)` STRING-typing divergence pin (DOOR-CONVERGE-2,
+  run 16c) and adapts the FNP-6D C-011 arm to `CAST(concat(...) AS BINARY)` per
+  ruling D-5.
+  pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004, C-007
 - `test_fnp6_regexp.py` — **FNP-6a (2026-08-20):** `regexp_extract_all` / `regexp_substr`
   against Python's `re` as an independent oracle, the three no-match conventions Spark keeps
   apart, door agreement, and a pin tying `regexp_count` to `size(regexp_extract_all(...))` on an

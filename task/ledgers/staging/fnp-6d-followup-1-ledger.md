@@ -41,6 +41,15 @@ semantics, padding, GroupsAccumulator, or window frames;
 `repark-functions`; the facade stays untouched. SHAPE RULE: pins answer PySpark 4.1.2
 on the SQL door against the recorded fixture cells.
 
+**D-5 (orchestrator ruling on the step-1 HALT, 2026-09-15):** option (a). OR/AND refuse
+every Utf8 payload per D-1. The single C-011 arm becomes
+`CAST(concat(bitmap_construct_agg(0), X'01') AS BINARY)` — a no-op in Spark, keeps the
+>4096-byte truncation coverage; the arm change is noted here (C-006 evidence) rather
+than in the frozen FNP-6D ledger. One registry row in the FNP-6D section records
+`concat(BINARY, BINARY)` typing STRING on the door (measured 2026-09-15, owner
+DOOR-CONVERGE-2, run 16c) with a one-cell pin asserting today's Utf8 shape as the
+expected divergence. `concat` itself is untouched.
+
 **Not in this unit:** `STATUS.md`, `briefs/next-sequence.md`, `Cargo.toml`,
 `Cargo.lock`, `pyproject.toml`, `uv.lock`, `.github/`, `functions*.py`,
 `python/repark/src/repark/spark/dataframe/**`, `column.py`, `session/**`,
@@ -78,6 +87,49 @@ Probed answers on the unfixed tree (every one contradicts the fixture cell):
 | construct NULL / CAST(NULL AS BIGINT) | count 0 | count 0 (already correct) |
 
 Baseline: `test_fnp_6d_bitmap_aggregates.py` → **10 passed in 0.68s** (C-006 red-first control).
+
+### Green (step 2, 2026-09-15, fixed tree, release native)
+
+`.venv/bin/python -m pytest python/repark/tests/test_fnp_6d_followup_1.py
+python/repark/tests/test_fnp_6d_bitmap_aggregates.py -q` → **39 passed in 0.52s**
+(29 followup incl. the DOOR-CONVERGE-2 divergence pin, 10 existing incl. the adapted
+C-011 `CAST(concat(...) AS BINARY)` arm, which answers length 4096 as Spark does).
+
+`cargo test -p repark-functions --lib bitmap_agg` → **13 passed, 0 failed** (8 carried
+FNP-6D kernel pins plus `or_agg_refuses_non_binary_with_spark_class`,
+`and_agg_refuses_non_binary_with_spark_class`,
+`construct_agg_refuses_non_bigint_with_spark_class`,
+`construct_agg_malformed_string_raises_cast_invalid_input`,
+`construct_agg_answers_numeric_trimmed_and_null`,
+`grouped_construct_agg_answers_trimmed_strings`).
+
+`cargo test -p repark-functions` (full crate) → **473 passed, 0 failed, 1 ignored**.
+
+`make verify` → exit 0 (56 ok suites; rust-file-size needed the sanctioned split of
+the test module into `bitmap_agg/tests.rs`: parent 516 lines, tests 526 lines).
+
+Door-measured refusal texts (2026-09-15, release):
+
+```text
+repark.errors.AnalysisException :: Error during planning:
+[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve "bitmap_or_agg(x)" due to
+data type mismatch: The first parameter requires the "BINARY" type, however "x" has
+the type "INT". SQLSTATE: 42K09
+repark.errors.AnalysisException :: Error during planning:
+[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve
+"bitmap_or_agg(bitmap_bit_position(t.x))" due to data type mismatch: The first
+parameter requires the "BINARY" type, however "bitmap_bit_position(t.x)" has the
+type "BIGINT". SQLSTATE: 42K09
+repark.errors.PySparkException :: Execution error: [CAST_INVALID_INPUT] The value
+'abc' of the type "STRING" cannot be cast to "BIGINT" because it is malformed.
+Correct the value as per the syntax, or change its target type. Use `try_cast` to
+tolerate malformed input and return NULL instead. SQLSTATE: 22018
+```
+
+Two door-typing notes the pins absorb (not product gaps): DataFusion types
+`VALUES (1)` as BIGINT where Spark types INT, so the INT cells pin
+`VALUES (CAST(1 AS INT))`; nested-call rendering qualifies the column (`t.x`),
+so the bit-position pins assert class plus type name (D-2 residual, registry row).
 
 ### Blocking conflict (needs a ruling before step 2)
 

@@ -125,7 +125,8 @@ def test_or_and_short_empty_and_long_normalize_to_4096(spark: ReparkSession) -> 
         ),
         (
             "SELECT length(bitmap_or_agg(b)) l FROM ("
-            "SELECT concat(bitmap_construct_agg(0), X'01') b FROM VALUES (1) AS t(x))",
+            "SELECT CAST(concat(bitmap_construct_agg(0), X'01') AS BINARY) b "
+            "FROM VALUES (1) AS t(x))",
             4096,
             None,
         ),

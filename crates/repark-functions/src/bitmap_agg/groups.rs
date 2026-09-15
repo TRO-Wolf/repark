@@ -1,14 +1,10 @@
-use std::sync::Arc;
-
 use arrow::array::{Array, ArrayRef, AsArray, BooleanArray};
-use arrow::compute::cast;
-use arrow::datatypes::{DataType, Int64Type};
 use datafusion::common::{Result, exec_err};
 use datafusion::logical_expr::{EmitTo, GroupsAccumulator};
 
 use super::{
-    BITMAP_BYTES, BitmapFold, coerce_bitmap_column, fold_incoming, identity_byte,
-    packed_bitmaps_to_array, set_bit,
+    BITMAP_BYTES, BitmapFold, coerce_bitmap_column, construct_positions, fold_incoming,
+    identity_byte, packed_bitmaps_to_array, set_bit,
 };
 
 pub(crate) struct BitmapGroupsAccumulator {
@@ -110,19 +106,16 @@ impl BitmapGroupsAccumulator {
         group_indices: &[usize],
         opt_filter: Option<&BooleanArray>,
     ) -> Result<()> {
-        let casted = if column.data_type() == &DataType::Int64 {
-            Arc::clone(column)
-        } else {
-            cast(column, &DataType::Int64)?
-        };
-        let positions = casted.as_primitive::<Int64Type>();
-        let values = positions.values();
+        let positions = construct_positions(column)?;
         for (row, group_index) in group_indices.iter().enumerate() {
-            if !row_is_active(opt_filter, positions.is_valid(row), row) {
+            let Some(position) = positions[row] else {
+                continue;
+            };
+            if !row_is_active(opt_filter, true, row) {
                 continue;
             }
             let start = group_index.saturating_mul(BITMAP_BYTES);
-            set_bit(&mut self.bits[start..start + BITMAP_BYTES], values[row])?;
+            set_bit(&mut self.bits[start..start + BITMAP_BYTES], position)?;
         }
         Ok(())
     }
