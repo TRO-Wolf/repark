@@ -4,6 +4,12 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [decimal-cache-1-ledger.md](decimal-cache-1-ledger.md) —
+  **DECIMAL-CACHE-1 (2026-09-15), in flight:** decimal arithmetic that overflows 38 digits refuses
+  `.eager()` / `.cache()` / `.persist()` — the physical batches do not carry the logical decimal field.
+  Rust seam fix plus cache-view conformance, oracle-cell pins, registry row.
+  `risk_tier: standard`. Branch `feat/decimal-cache-1`.
+  pins: decimal-cache-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [registry-16b-1-ledger.md](registry-16b-1-ledger.md) —
   **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
   CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live

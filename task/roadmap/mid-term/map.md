@@ -24,6 +24,11 @@ declines it (a dated ruling in the intake, then the archive).
   main per Q-R13-14) and ARRAY-NULL-1 (#581: null-preserving `array_append`/`array_prepend`, Spark's recursive element
   coercion measured on the oracle, session-zone µs temporal widening, S2-21 bars re-measured by the orchestrator).
   Rulings applied, decisions R14b-D-1..13, incidents, owner questions Q-R14b-1..6 with recommendations.
+- [decimal-cache-1-card-2026-09-15.md](decimal-cache-1-card-2026-09-15.md) — **card DECIMAL-CACHE-1 (2026-09-15,
+  owner report from a Windows 1.4.1 notebook, reproduced on the published 1.4.1 wheel):** decimal arithmetic
+  whose Spark result type needs the precision-overflow adjustment refuses `.eager()` / `.cache()` / `.persist()`
+  with `Mismatch between schema and batches` while `collect()` succeeds; the physical batches do not carry the
+  logical decimal field. Oracle `/tmp/oc-worker/qd-decimal/oracle-decimal-cells.json`. Not started.**
 - [ddl-depth-1-card-2026-09-14.md](ddl-depth-1-card-2026-09-14.md) — **card DDL-DEPTH-1 (2026-09-14, run 14b under
   owner ruling Q-R13-13, card only):** a nesting-depth cap on the DDL type parser at `SPARK_TYPE_NAME_MAX_DEPTH` with a
   typed refusal, measured on the Spark oracle first; no new refusal ships until the card runs.
