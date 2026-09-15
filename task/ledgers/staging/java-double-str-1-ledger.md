@@ -38,10 +38,10 @@ door; today they are DECIMAL). `lib.rs` registration hunks stay one added line e
 |---|---|---|---|---|
 | C-001 | Measurement census: every Spark-door and facade path that reaches Arrow's float→utf8 cast is named with the RePark answer per JD/BL7 cell on base `462c1eaf`. | Census section below, measured with the step-1 native build. | **PROVEN** | Census below (2026-09-15): SQL CAST, concat coercion, col.cast, selectExpr, length kernels all answer Arrow text; facade identical; native identical (kept by D-2). |
 | C-002 | Red pins both doors land in `python/repark/tests/test_java_double_str_1.py` and FAIL on the base tree; the gt1 pin flips to equality and fails with it. | Red pytest output pasted in evidence; green after step 2. | **PROVEN** | 5 failed / 2 passed 2026-09-15: `assert ['inf'] == ['Infinity']`, `assert ['10000000000.0'] == ['1.0E10']`, `assert ['10000000.0'] == ['1.0E7']`, `assert [3] == [8]`; gt1 flip: `assert ['inf'] == ['Infinity']`. The 2 passes are guards that hold on both trees (neg-zero paths already agree; native keeps Arrow by D-2). |
-| C-003 | D-1: `java_double_text` / `java_float_text` live in one shared module in `crates/repark-functions`; the JSON code imports from there; no second formatter exists. | `grep` shows exactly one definition site; `cargo test -p repark-functions` green. | OPEN | Awaits step 2. |
-| C-004 | D-2: on the Spark door and the facade every `CAST(<Float64\|Float32> AS Utf8\|Utf8View\|LargeUtf8)` answers Java text (SQL, `selectExpr`, `col.cast`), value AND type; native `repark.sql()` keeps Arrow text. | Step-1 pins green on Spark door + facade; native guard still green. | OPEN | Awaits step 2. |
-| C-005 | Shape rule, concat arm: SQL `concat` implicit coercion and `F.concat` answer Java text for DOUBLE/FLOAT inputs, value AND type. | Concat pins green both doors. | OPEN | Awaits step 2. |
-| C-006 | D-3: the owned `bit_length` / `octet_length` kernels stringify DOUBLE/FLOAT with the shared formatter. | Length pins green, incl. float `1.0E10` → 6. | OPEN | Awaits step 2. |
+| C-003 | D-1: `java_double_text` / `java_float_text` live in one shared module in `crates/repark-functions`; the JSON code imports from there; no second formatter exists. | `grep` shows exactly one definition site; `cargo test -p repark-functions` green. | **PROVEN** | `crates/repark-functions/src/java_double.rs` holds both; `json/reader.rs`, `decode.rs`, `to_json.rs` import from there; `grep java_double_text\|java_float_text` finds no other definition. `cargo test -p repark-functions --lib`: 463 passed. |
+| C-004 | D-2: on the Spark door and the facade every `CAST(<Float64\|Float32> AS Utf8\|Utf8View\|LargeUtf8)` answers Java text (SQL, `selectExpr`, `col.cast`), value AND type; native `repark.sql()` keeps Arrow text. | Step-1 pins green on Spark door + facade; native guard still green. | **PROVEN** | `SparkFloatToStringCast` in `analyzer_rules()` after `SparkExprSemantics`; `test_java_double_str_1.py` CAST/neg-zero/float/facade pins + flipped gt1 pin green (8 passed 2026-09-15); native guard still `inf`/`10000000.0`. `lib.rs` stays at its 175 ceiling (two one-line registration hunks paid by condensing the `approx_percentile_cont` binding 5→3). |
+| C-005 | Shape rule, concat arm: SQL `concat` implicit coercion and `F.concat` answer Java text for DOUBLE/FLOAT inputs, value AND type. | Concat pins green both doors. | **PROVEN** | `SparkConcat` coercion keeps `Float32`/`Float64`; the kernel formats via the shared module (arrays and scalars). Concat pins green both doors, typed `string`. |
+| C-006 | D-3: the owned `bit_length` / `octet_length` kernels stringify DOUBLE/FLOAT with the shared formatter. | Length pins green, incl. float `1.0E10` → 6. | **PROVEN** | Coercion keeps `Float32`/`Float64`; `byte_lengths` counts shared-formatter bytes. Length pins green incl. float `1.0E10` → 6, typed `int32`. |
 | C-007 | D-4: registry BL-7 reads FIXED 2026-09-15 (JAVA-DOUBLE-STR-1); the gt1 pin asserts equality. | Registry section + green gt1 pin. | OPEN | Pin flipped red in step 1; registry edit lands step 3. |
 | C-008 | Gates: `cargo test -p repark-functions`, clippy/fmt, full facade suite, parity harness green; COVERAGE_ATTESTATION filed. | Commands and counts in evidence. | OPEN | Awaits step 4. |
 
@@ -69,6 +69,15 @@ Native module built from base (`uvx maturin@1.14.1 develop --release`,
 | Length kernels | `bit_length(CAST('Infinity' AS DOUBLE))` | `24` | `64` (BL7-0) |
 | Length kernels | `octet_length(CAST('1.0E7' AS DOUBLE))` | `10` | `5` (BL7-5) |
 | Native door | `repark.sql CAST Infinity AS STRING` | `'inf'` | kept by D-2 (ADR-0002) |
+
+## Step-2 finding — `Double.MIN_VALUE` spells `4.9E-324`
+
+`CAST('4.9E-324' AS DOUBLE)` parses to the min subnormal; Rust shortest prints
+`5e-324` but the oracle (BL7-16, JD-cast-13) answers Java `4.9E-324` — Java's
+`FloatingDecimal` spells `Double.MIN_VALUE` longhand (both spellings round-trip).
+The shared formatter matches that exact bit pattern (1 / `0x8000_0000_0000_0001`);
+every other oracle cell agrees with shortest-plus-thresholds. No oracle cell covers
+`Float.MIN_VALUE` (`1.4E-45`), so the float path is untouched there.
 
 Out of scope observed: `createDataFrame` refuses non-finite floats
 (`PySparkTypeError: createDataFrame does not support infinite float values`), so the

@@ -24,6 +24,7 @@ mod groups_null_state;
 pub mod higher_order;
 pub mod instant_ts;
 pub mod integer_spark;
+mod java_double;
 mod java_regex;
 pub mod json;
 pub mod lambda_rebind;
@@ -79,11 +80,9 @@ pub fn register_all(ctx: &SessionContext) {
         ctx.register_udaf(udaf.as_ref().clone());
     }
     ctx.register_udaf(percentile_approx::percentile_approx_udaf().as_ref().clone());
-    ctx.register_udaf(
-        datafusion::functions_aggregate::approx_percentile_cont::approx_percentile_cont_udaf()
-            .as_ref()
-            .clone(),
-    );
+    let approx_cont =
+        datafusion::functions_aggregate::approx_percentile_cont::approx_percentile_cont_udaf();
+    ctx.register_udaf(approx_cont.as_ref().clone());
     for udwf in datafusion_spark::all_default_window_functions() {
         ctx.register_udwf(udwf.as_ref().clone());
     }
@@ -150,6 +149,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
         Arc::new(spark_nullability::SparkNullability),
         Arc::new(integer_spark::SparkIntegerOverflow),
         Arc::new(analyzer::SparkExprSemantics),
+        Arc::new(java_double::SparkFloatToStringCast),
     ];
     rules.extend(cardinality::analyzer_rules());
     rules.push(instant_ts::ltz_timestamp_cast_rule());

@@ -6,7 +6,9 @@ use std::sync::Arc;
 use datafusion::arrow::array::{Array, AsArray, Int64Array, StringBuilder};
 use datafusion::arrow::buffer::NullBuffer;
 use datafusion::arrow::compute::cast;
-use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Int64Type};
+use datafusion::arrow::datatypes::{
+    DataType, Field, FieldRef, Float32Type, Float64Type, Int64Type,
+};
 use datafusion::common::{DataFusionError, Result, ScalarValue, internal_err};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
@@ -89,7 +91,13 @@ impl ScalarUDFImpl for SparkConcat {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        Ok(vec![DataType::Utf8; arg_types.len()])
+        Ok(arg_types
+            .iter()
+            .map(|data_type| match data_type {
+                DataType::Float32 | DataType::Float64 => data_type.clone(),
+                _ => DataType::Utf8,
+            })
+            .collect())
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -164,15 +172,39 @@ fn cast_columnar_value_to_utf8(value: &ColumnarValue) -> Result<ColumnarValue> {
             if array.data_type() == &DataType::Utf8 {
                 return Ok(ColumnarValue::Array(Arc::clone(array)));
             }
-            let casted = cast(array.as_ref(), &DataType::Utf8)?;
-            Ok(ColumnarValue::Array(casted))
+            match array.data_type() {
+                DataType::Float64 => Ok(ColumnarValue::Array(Arc::new(
+                    crate::java_double::java_double_strings(array.as_primitive::<Float64Type>()),
+                ))),
+                DataType::Float32 => Ok(ColumnarValue::Array(Arc::new(
+                    crate::java_double::java_float_strings(array.as_primitive::<Float32Type>()),
+                ))),
+                _ => {
+                    let casted = cast(array.as_ref(), &DataType::Utf8)?;
+                    Ok(ColumnarValue::Array(casted))
+                }
+            }
         }
         ColumnarValue::Scalar(scalar) => {
             if matches!(scalar, ScalarValue::Utf8(_)) {
                 return Ok(ColumnarValue::Scalar(scalar.clone()));
             }
-            let casted = scalar.cast_to(&DataType::Utf8)?;
-            Ok(ColumnarValue::Scalar(casted))
+            match scalar {
+                ScalarValue::Float64(value) => Ok(ColumnarValue::Scalar(ScalarValue::Utf8(
+                    value
+                        .as_ref()
+                        .map(|item| crate::java_double::java_double_text(*item)),
+                ))),
+                ScalarValue::Float32(value) => Ok(ColumnarValue::Scalar(ScalarValue::Utf8(
+                    value
+                        .as_ref()
+                        .map(|item| crate::java_double::java_float_text(*item)),
+                ))),
+                _ => {
+                    let casted = scalar.cast_to(&DataType::Utf8)?;
+                    Ok(ColumnarValue::Scalar(casted))
+                }
+            }
         }
     }
 }
