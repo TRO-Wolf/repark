@@ -11,16 +11,19 @@ _Last updated: 2026-09-12._
 
 ## Release state
 
+**v1.4.2 (2026-09-15) — the second patch on 1.4.0, cut so DECIMAL-CACHE-1 (#632) reaches PyPI.**
+Decimal arithmetic that overflows 38 digits now types like PySpark 4.1.2 (`decimal(38,10) * 5` →
+`decimal(38,8)`) and materializes through `.eager()` / `.cache()` / `.persist()`; the cache view
+conforms every batch to the analyzed schema and names both fields when it cannot. Also carries the
+run-15 and run-16 parity families merged since v1.4.1, all additive under the API freeze.
+
 **v1.4.1 (2026-09-14) — the first patch on 1.4.0, cut so the five-leg wheel set reaches PyPI.**
 The v1.4.0 tag ran the single manylinux leg; the abi3 matrix (PLATFORM-1, #548/#552/#554) landed
 on `main` five hours after that tag. This tag publishes Windows x86_64, macOS arm64 and x86_64,
 and Linux aarch64 beside Linux x86_64 — each leg an import smoke and one collect, not a platform
 acceptance run (PLATFORM-2..4 stay slated for 1.6). It also carries everything merged since
-1.4.0, all additive under the API freeze: REPLACE-LINEAR-1 (one searched CASE per column),
-EAGER-OWN-1 and EAGER-BUDGET-1 (the cache-view handle and the session cache budget), ABS-EXPR-1,
-FACADE-2 steps 2–3, FACADE-3 steps 1–3, FACADE-4 and FACADE-5 step 0, CFG-2 steps 1–2, SILVER-S1,
-UNPIVOT-1 step 2, CAST-1 step 2, and the rustls advisory bump (RUSTSEC-2026-0285). Version SSOT
-at the Cargo workspace (`1.4.1`).
+1.4.0, all additive under the API freeze (REPLACE-LINEAR-1, EAGER-OWN-1, EAGER-BUDGET-1,
+ABS-EXPR-1, the FACADE-2..5 and CFG-2 steps, SILVER-S1, UNPIVOT-1, CAST-1, RUSTSEC-2026-0285).
 
 **v1.4.0 (2026-09-12) — the maintenance minor on 1.3**, additive under the API freeze (no frozen
 name or required parameter changed). Roadmap 1.4 closes: the maintenance policy shipped in 1.2 and
@@ -333,6 +336,6 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v1.4.1 cut 2026-09-14; the tag history is in [Release state](#release-state).
+**None.** v1.4.2 cut 2026-09-15; the tag history is in [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
