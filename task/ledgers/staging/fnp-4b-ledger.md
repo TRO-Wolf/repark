@@ -410,8 +410,28 @@ is the orchestrator's job.
 | C-021 | Round-5 slice 1: `__repark_suffix_literal__` provenance-marker UDF wraps string D/F/decimal operands so `FoldSparkNumericCasts` folds through it; display unwraps it; registered in `extension.rs`, binding `sql_context`, and the test harnesses. | lib suite green; D-suffix pins green | **PROVEN** | `cargo test -p repark-spark --lib` 970 passed 2026-09-15; map pins `src/map.md`, `column/map.md`. |
 | C-022 | Round-5 slice 2: `SparkProjectionDisplay` rewrites only the root projection and keeps explicit non-marker aliases. | lib suite green; selectExpr display pins green | **PROVEN** | Same lib run; `test_select_expr_backtick_ident` green; map pin `src/map.md`. |
 | C-023 | Round-5 slice 3: `-9223372036854775808L` folds the unary minus into the BIGINT region and answers `i64::MIN` non-null. | new pin red→green | **PROVEN** | `other_suffixes_keep_spark_types` LONG_MIN half; map pins `src/map.md`, `tests/map.md`. |
-| C-024 | Q1: the MERGE `t."_file"` emitter is found by one instrumented run and switched to backtick quoting, with a minimal MERGE-path pin. | pin red→green; v3 DV/merge/overwrite cascade re-checked | **OPEN** | Instrumented run pending. |
+| C-024 | Q1: the MERGE `t."_file"` emitter is found by one instrumented run and switched to backtick quoting, with a minimal MERGE-path pin. | pin red→green; v3 DV/merge/overwrite cascade re-checked | **OPEN** | Instrumented run done (see Q1 findings below); `merge_dialect.rs` pin green; `test_merge_into.py` 12/12 on the fresh native. Full facade re-check pending. |
 | C-025 | Q2: `INT[]` DDL form stays red-pinned and blocked on run 16b's `catalog_surface.py` fix. | red pin with test id listed, file untouched | **OPEN** | Hand-off recorded; 16b owns the file. |
 | C-026 | Q3: the `__repark_hof_array_field__` leak is diagnosed to display vs semantic cause before any fix. | leak origin named; fix or hand-off per ruling | **OPEN** | Diagnosis pending. |
 | C-027 | DF-PLAN-INTRO-CAST-1: flip + retire only if typed-literal work reds the pin. | pin state recorded; flip iff red | **OPEN** | Check pending. |
 | C-028 | Full-suite-only `getbit` + 8 v3 DV/legacy-delete failures re-checked after Q1. | each failure fixed or classified | **OPEN** | Re-check pending. |
+
+## Round 6 Q1 findings (2026-09-15, actor muse-spark-1.3-contributor)
+
+Instrumented run: temporary `eprintln` at the five MERGE-path `ctx.sql` sites
+(`stream_sql`, `source_column_names`, insert/rewrite/probe builders) plus a
+temporary Databricks-dialect MERGE probe, all removed after capture. The
+captured Stage A + rewrite statements quote identifiers with backticks or bare
+names — no double-quoted emitter exists in current source. Static sweep agrees:
+every `format!` SQL builder on the path uses bare engine names or
+`quote_ident_spark` (backtick); the one `"_file"` hit (`dv_close.rs:926`) is
+`#[cfg(test)]` on a Generic-dialect context.
+
+The facade reds (`t."_file"` c15, `t."id"` c15, `joined table` c76, one
+`No field named source`) all clear on a fresh release rebuild with zero source
+change: `test_merge_into.py` 8 failed → 12 passed. The 11:30 native predates
+the committed round-5 content, so round 5 reproduced against a stale binary.
+No emitter fix was needed; the D-2 guard pin is
+`crates/repark-iceberg/src/write/merge/tests/merge_dialect.rs` (four internal
+statements carry no `"` and parse under Databricks). C-024 stays OPEN until
+the full facade + v3 cascade re-check lands.

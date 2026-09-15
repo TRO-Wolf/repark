@@ -19,6 +19,9 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 - `merge.rs` — primary unit battery. **FNP-4B (2026-09-15):** MERGE internal-SQL
   expectations in backtick form (user names via `quote_ident`, fixed engine names bare).
   pins: fnp-4b/C-002
+- `merge_dialect.rs` — **FNP-4B round 6 (2026-09-15):** the four MERGE internal
+  statements carry no double-quoted identifier and parse under the Spark Databricks
+  dialect. pins: fnp-4b/C-024
 - `lineage.rs` — V3-7 rewrite-projection and scratch-schema pins for carried `_row_id`.
   pins: v3-7-merge-lineage/C-001
   **FNP-4B (2026-09-15):** projection expectations in backtick form. pins: fnp-4b/C-002
