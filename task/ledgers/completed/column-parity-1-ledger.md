@@ -146,4 +146,56 @@ VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
   metadata (stamp `{"k": "v"}`, replace `{"j": 1}`, cache `{"k": "v"}`, `to()` target override `{"tgt": "2"}` now answer Spark;
   `filter`, `select`, `withColumn`, `join`, `union`, parquet round trip and `to()` source-keep still `{}`), re-pinned the four
   Spark-matching positions and narrowed DF-METADATA-1 to the rest. pins: column-parity-1/C-009
+- R-6 (2026-09-15): no third critic round. Round 2's changes are a plan-time refusal (`repark_isnan` on struct/array/map) with
+  red-first pins, a validity-bitmap combine in the `update_fields` kernel measured 37.1 → 31.8 ms on 1e6 rows with 10 % null
+  parents and covered by the kernel's Rust tests, two registry pins (COL-GROUPKEY-NAME-1, COL-WITHFIELD-EMPTY-1) and the R-5
+  metadata correction verified position by position by the orchestrator.
+- R-7 (2026-09-15): gates on the release native module built from this branch: Rust tests for `update_fields` (19) and
+  `repark_isnan` (9), `make -k verify` green apart from this ledger's attestation (now written), full facade suite 6660 passed, parity
+  suite 757 passed; after R-5 the unit, DataFrame-A and registry pins pass (100 + 64).
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: column-parity-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card and the fifty-seven recorded PySpark 4.1.2 column cells; seven names pinned cell by cell, the SQL-door cells pinned as today's answers with BACKLOG rows where they diverge.
+      artifacts: [python/repark/tests/test_column_parity_1.py, python/repark/tests/facade_column_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Chained withField and dropFields in every order, nested paths, NULL top-level and intermediate structs, duplicate and case-folded field names, empty names, withField results inside filter, when, orderBy, groupBy and join conditions, isin with NULLs, NaN, empty lists, mixed Column operands and 10000 literals, isNaN on every atomic and nested type.
+      artifacts: [python/repark/tests/test_column_parity_1.py, python/repark/tests/test_column_parity_1_critic.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: The update_fields and repark_isnan UDFs return DataFusionError on every invalid input instead of panicking; make rust-panic-ban and clippy are green; return types are computed in return_field_from_args by applying the same sequential edit walk the kernel applies.
+      artifacts: [crates/repark-core/src/update_fields/udf.rs, crates/repark-core/src/isnan/udf.rs]
+    - id: AT-4
+      status: N/A
+      justification: Stateless scalar UDF kernels; no shared mutable state, locks or async.
+    - id: AT-5
+      status: N/A
+      justification: No authn/authz, deserialization, path, credential or network surface; no unsafe code.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Grok critic-logic round 1 (4 P1, 6 P2) led to ruling R-4 (UpdateFields in Rust); re-check PASS with 3 P2 fixed in round 2; the orchestrator corrected round 2's metadata repair (R-5).
+      artifacts: [task/ledgers/completed/column-parity-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: S2-21 Python perf reviewer round 1 found isin's OR chain quadratic with a native crash at 10000 literals; the native IN-list fixed it and the re-check measured no regression on untargeted select, withColumn and filter; round 2's bitmap combine cut the masked kernel path 37.1 to 31.8 ms.
+      artifacts: [crates/repark-core/src/update_fields/udf.rs]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark's contracts were read, not assumed - UpdateFields sequential semantics, pyspark/sql/column.py withField, dropFields, isin, isNaN, astype and name, DataFusion 54 ScalarUDF return_field_from_args and in_list.
+      artifacts: [crates/repark-core/src/update_fields/map.md, crates/repark-core/src/isnan/map.md]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Refusals carry Spark's classes (FIELD_NOT_FOUND, DATATYPE_MISMATCH.CANNOT_DROP_ALL_FIELDS, DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE, NOT_STR, NOT_COLUMN, NOT_DATATYPE_OR_STR); divergences are registry rows with pins (COL-DROPFIELDS-TYPE-1, COL-ISIN-TUPLE-1, COL-ISIN-1, SQL-IN-1, SQL-ISNAN-1, COL-WITHFIELD-EMPTY-1, COL-NAME-MULTI-1, COL-DOTTED-FIELD-1, COL-GROUPKEY-NAME-1, DF-METADATA-1 narrowed).
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation guards run - applying edits against the original struct reds the chain pins, an OR-chain isin reds the 10000-literal pin, a catch-all false isNaN reds the struct and array refusal pins, stripping alias metadata reds the DataFrame-A stamp pin.
+      artifacts: [python/repark/tests/test_column_parity_1_critic.py, python/repark/tests/test_df_surface_a_1.py]
+  complete: true
+```
 
