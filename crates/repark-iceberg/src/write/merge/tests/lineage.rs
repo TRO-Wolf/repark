@@ -25,7 +25,7 @@ fn rewrite_projection_carries_stored_row_id_and_nulls_last_updated_on_change() {
     };
     let projection = sql.rewrite_projection(&arrow_schema());
     assert!(
-        projection.contains("t.\"_row_id\" AS \"_row_id\""),
+        projection.contains("t.`_row_id` AS `_row_id`"),
         "survivors must keep stored _row_id, got: {projection}"
     );
     assert!(
@@ -34,7 +34,7 @@ fn rewrite_projection_carries_stored_row_id_and_nulls_last_updated_on_change() {
         "changed rows must write null last-updated, got: {projection}"
     );
     assert!(
-        !projection.contains(&format!("WHEN 0 THEN (t.\"{RESERVED_COL_NAME_ROW_ID}\")")),
+        !projection.contains(&format!("WHEN 0 THEN (t.`{RESERVED_COL_NAME_ROW_ID}`)")),
         "UPDATE SET must not rewrite _row_id, got: {projection}"
     );
 }

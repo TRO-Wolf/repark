@@ -47,7 +47,7 @@ def frame(spark: ReparkSession) -> object:
     return spark.sql(
         """
         SELECT 1 AS id, make_array(10, 20) AS a
-        UNION ALL SELECT 2, CAST(NULL AS BIGINT[])
+        UNION ALL SELECT 2, CAST(NULL AS ARRAY<BIGINT>)
         UNION ALL SELECT 3, make_array()
         UNION ALL SELECT 4, make_array(CAST(NULL AS BIGINT), 5)
         """
@@ -162,8 +162,8 @@ def test_explode_outer_multi_array_exact_type_bind(spark: ReparkSession) -> None
     frame = spark.sql(
         """
         SELECT 1 AS id,
-               CAST(NULL AS BIGINT[]) AS a,
-               CAST(NULL AS VARCHAR[]) AS data
+               CAST(NULL AS ARRAY<BIGINT>) AS a,
+               CAST(NULL AS ARRAY<VARCHAR>) AS data
         UNION ALL SELECT 2, make_array(1), make_array()
         UNION ALL SELECT 3, make_array(2), make_array('p', 'q')
         """
@@ -185,7 +185,7 @@ def test_explode_outer_field_named_explode_exact_bind(spark: ReparkSession) -> N
         """
         SELECT 1 AS id,
                make_array('s') AS explode,
-               CAST(NULL AS VARCHAR[]) AS a
+               CAST(NULL AS ARRAY<VARCHAR>) AS a
         """
     )
     out = frame.select(frame.id, F.explode_outer(frame.a).alias("e")).to_arrow()
@@ -210,7 +210,7 @@ def test_explode_outer_timestamp_element_type(spark: ReparkSession) -> None:
     """explode_outer NULL/empty guard must use TIMESTAMP not BIGINT fail-open."""
     frame = spark.sql(
         """
-        SELECT 1 AS id, CAST(NULL AS TIMESTAMP[]) AS a
+        SELECT 1 AS id, CAST(NULL AS ARRAY<TIMESTAMP>) AS a
         UNION ALL SELECT 2, make_array()
         UNION ALL SELECT 3, make_array(CAST('2020-01-01 00:00:00' AS TIMESTAMP))
         """
@@ -320,7 +320,7 @@ def test_explode_outer_nested_list_element_type(spark: ReparkSession) -> None:
     """
     frame = spark.sql(
         """
-        SELECT 1 AS id, CAST(NULL AS BIGINT[][]) AS a
+        SELECT 1 AS id, CAST(NULL AS ARRAY<ARRAY<BIGINT>>) AS a
         UNION ALL SELECT 2, make_array()
         UNION ALL SELECT 3, make_array(make_array(1, 2))
         """
@@ -385,7 +385,7 @@ def test_explode_hostile_subquery_column_name_not_sql(frame: object) -> None:
 
 def test_explode_array_of_struct_allowed(spark: ReparkSession) -> None:
     """Plain explode must not require outer element-type resolution."""
-    frame = spark.sql("SELECT 1 AS id, [{x: 10}, {x: 20}] AS a")
+    frame = spark.sql("SELECT 1 AS id, ARRAY[named_struct('x', 10), named_struct('x', 20)] AS a")
     out = frame.select(F.explode(frame.a).alias("e")).to_arrow()
     rows = out.to_pylist()
     assert rows == [{"e": {"x": 10}}, {"e": {"x": 20}}]
@@ -397,7 +397,7 @@ def test_explode_outer_coalesce_preserves_element_type(spark: ReparkSession) -> 
     """explode_outer on compound array expr must not fail-open CASE to BIGINT."""
     frame = spark.sql(
         """
-        SELECT 1 AS id, CAST(NULL AS VARCHAR[]) AS a
+        SELECT 1 AS id, CAST(NULL AS ARRAY<VARCHAR>) AS a
         UNION ALL SELECT 2, make_array()
         UNION ALL SELECT 3, make_array('p', 'q')
         """
@@ -593,7 +593,7 @@ def test_explode_nested_array_top_level_length_not_cardinality(spark: ReparkSess
         UNION ALL SELECT 2, make_array(make_array(1, 2))
         UNION ALL SELECT 3, make_array(make_array(), make_array(3))
         UNION ALL SELECT 4, make_array()
-        UNION ALL SELECT 5, CAST(NULL AS BIGINT[][])
+        UNION ALL SELECT 5, CAST(NULL AS ARRAY<ARRAY<BIGINT>>)
         """
     )
     exploded = frame.select(frame.id, F.explode(frame.a).alias("e")).orderBy("id")
@@ -1100,19 +1100,19 @@ def test_two_pass_explode_chain_survives_a_narrowing_projection(spark: ReparkSes
     tagged = legs.select("Legs", F.explode_outer("Tags").alias("Tags"), "id")
     # Struct extract between the passes — the leaf expression the optimizer rule wants to push.
     fields = tagged.selectExpr(
-        'CASE WHEN "Legs" IS NULL THEN NULL ELSE "Legs"."leg_id" END AS "Legs_leg_id"',
-        'CASE WHEN "Legs" IS NULL THEN NULL ELSE "Legs"."Fills" END AS "Legs_Fills"',
-        '"Tags" AS "Tags"',
-        '"id" AS "id"',
+        "CASE WHEN `Legs` IS NULL THEN NULL ELSE `Legs`.`leg_id` END AS `Legs_leg_id`",
+        "CASE WHEN `Legs` IS NULL THEN NULL ELSE `Legs`.`Fills` END AS `Legs_Fills`",
+        "`Tags` AS `Tags`",
+        "`id` AS `id`",
     )
     fills = fields.select(
         "Legs_leg_id", F.explode_outer("Legs_Fills").alias("Legs_Fills"), "Tags", "id"
     )
     wide = fills.selectExpr(
-        '"Legs_leg_id" AS "Legs_leg_id"',
-        'CASE WHEN "Legs_Fills" IS NULL THEN NULL ELSE "Legs_Fills"."f" END AS "Legs_Fills_f"',
-        '"Tags" AS "Tags"',
-        '"id" AS "id"',
+        "`Legs_leg_id` AS `Legs_leg_id`",
+        "CASE WHEN `Legs_Fills` IS NULL THEN NULL ELSE `Legs_Fills`.`f` END AS `Legs_Fills_f`",
+        "`Tags` AS `Tags`",
+        "`id` AS `id`",
     )
 
     whole = wide.to_arrow()

@@ -73,7 +73,8 @@ holds behavior observed from outside the crate.
   no Spark-only `<=>`), and
   `cross_door_g3e8_refusals_render_identically` (the permanent v1 valve: mixed AND/OR, nested,
   scalar, ANY/ALL, UPDATE NOT IN; IN / NOT IN / EXISTS /
-  correlated IN / UPDATE IN execute) plus executed columns
+  correlated IN / UPDATE IN execute; the quoted-target input uses backticks since FNP-4B —
+  double quotes are strings on the Spark door) plus executed columns
   `cross_door_g3e8_not_in_delete_executes_identically`,
   `cross_door_g3e8_exists_delete_executes_identically`,
   `cross_door_g3e8_correlated_in_delete_executes_identically`,
@@ -186,3 +187,4 @@ First checks: `cargo test -p repark-sql --test parser_productions`,
 `--test cross_door`, `--test ansi_door_values`, `--test ansi_door_join_null_keys`,
 `--test ansi_door_window_frames`, `--test ansi_door_float_agg`.
 Escalate to: [../map.md#debug](../map.md).
+- **FNP-4B remediation (2026-09-15):** one added comment line removed from `cross_door.rs`; ceiling ratcheted 1259 → 1258.

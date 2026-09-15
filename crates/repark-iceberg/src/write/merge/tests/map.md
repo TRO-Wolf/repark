@@ -16,9 +16,12 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   `execute_predicate_dml` on the same fixture deletes the newest id. Close-phase
   opens stay 0 (RP-9 hide pin). Scan stays 3×N (`PERF-SCAN-3PASS-1`).
   pins: rp-10-repin-f25/C-002
-- `merge.rs` — primary unit battery.
+- `merge.rs` — primary unit battery. **FNP-4B (2026-09-15):** MERGE internal-SQL
+  expectations in backtick form (user names via `quote_ident`, fixed engine names bare).
+  pins: fnp-4b/C-002
 - `lineage.rs` — V3-7 rewrite-projection and scratch-schema pins for carried `_row_id`.
   pins: v3-7-merge-lineage/C-001
+  **FNP-4B (2026-09-15):** projection expectations in backtick form. pins: fnp-4b/C-002
 - `nmbs.rs` — DML-A `WHEN NOT MATCHED BY SOURCE` SQL-fragment pins and skip_cardinality
   with an NMBS clause present.
   pins: dml-a-merge-not-matched-by-source/C-002, C-003, C-004, C-005

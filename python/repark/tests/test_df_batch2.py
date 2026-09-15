@@ -99,8 +99,8 @@ def test_unpivot_quotes_hostile_names_and_labels(spark: ReparkSession) -> None:
     assert _sql_string_literal(hostile_label) == "'a'' FROM other --'"
     assert _sql_string_literal(hostile_label) != f"'{hostile_label}'"
     hostile_out = 'x" AS y, 1 AS z --'
-    assert _quote_ident(hostile_out) == f'"{hostile_out.replace(chr(34), chr(34) * 2)}"'
-    assert _quote_ident(hostile_out) != f'"{hostile_out}"'
+    assert _quote_ident(hostile_out) == f"`{hostile_out.replace(chr(96), chr(96) * 2)}`"
+    assert _quote_ident(hostile_out) != f'"{hostile_out}"'  # naive double-quote form still differs
     # Missing hostile value column → schema analysis error (quoted), not free-SQL inject.
     with pytest.raises(AnalysisException, match=r"No field named|Schema error"):
         frame.unpivot("order", [hostile_label], "variable", "value").collect()

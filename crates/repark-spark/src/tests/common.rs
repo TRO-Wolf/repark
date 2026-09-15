@@ -112,8 +112,8 @@ async fn setup_with_owner_and_settings(
     let config = repark_functions::ansi::with_spark_ansi_config(config, ansi_enabled);
     let config = repark_core::with_session_owner(config, owner);
     let ctx = SessionContext::new_with_config(config);
-    // Production wiring: repark-session installs the Spark analyzer rules on every context.
     repark_functions::decimal_spark::register_spark_decimal_planner(&ctx);
+    ctx.register_udf(crate::spark_as_udf().as_ref().clone());
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
     }

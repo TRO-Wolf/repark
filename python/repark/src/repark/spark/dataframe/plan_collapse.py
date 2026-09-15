@@ -992,7 +992,7 @@ def _parse_count_distinct_simple_names(text: str) -> list[str] | None:
     )
     if case_match is not None:
         body = case_match.group(1).strip()
-    token = r'"?([A-Za-z_][A-Za-z0-9_]*)"?'
+    token = r'[`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?'
     if re.fullmatch(token, body) is not None:
         match = re.fullmatch(token, body)
         return [match.group(1)] if match is not None else None
@@ -1002,7 +1002,7 @@ def _parse_count_distinct_simple_names(text: str) -> list[str] | None:
     )
     if multi is None:
         return None
-    return re.findall(r'"?([A-Za-z_][A-Za-z0-9_]*)"?', body)
+    return re.findall(r'[`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?', body)
 
 
 def _global_agg_sql_parts(column: Column) -> tuple[str, str]:

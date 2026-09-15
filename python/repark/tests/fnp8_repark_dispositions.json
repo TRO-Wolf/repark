@@ -373,7 +373,7 @@
     "error_type": "AnalysisException"
   },
   "binding-struct-ansi_true-expr": {
-    "error": "Schema error: No field named x.n.",
+    "error": "Schema error: No field named x.n. Valid fields are id.",
     "error_type": "AnalysisException"
   },
   "binding-struct-ansi_true-column": {
@@ -579,7 +579,7 @@
     "error_type": "AnalysisException"
   },
   "binding-struct-ansi_false-expr": {
-    "error": "Schema error: No field named x.n.",
+    "error": "Schema error: No field named x.n. Valid fields are id.",
     "error_type": "AnalysisException"
   },
   "binding-struct-ansi_false-column": {

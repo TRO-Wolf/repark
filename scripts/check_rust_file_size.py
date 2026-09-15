@@ -82,7 +82,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split plan preparation from COW and MOR execution modules.",
     ),
     "crates/repark-iceberg/src/write/merge/tests/merge.rs": (
-        1068,
+        1065,
         "General MERGE behavior cases remain in one file-backed module.",
         "Split common plan cases from write-mode-specific cases.",
     ),
@@ -112,12 +112,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split DELETE and UPDATE scenario families with shared setup retained.",
     ),
     "crates/repark-python/src/column/mod.rs": (
-        1036,
+        1022,
         "PyO3 Column methods remain grouped in one binding module.",
         "Extract the remaining date or window method family.",
     ),
     "crates/repark-python/src/dataframe.rs": (
-        1019,
+        1017,
         "PyO3 DataFrame methods share one binding surface.",
         "Split action methods from plan-building methods without moving row work to Python.",
     ),
@@ -192,7 +192,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split statement families into production-aligned test modules.",
     ),
     "crates/repark-sql/tests/cross_door.rs": (
-        1259,
+        1258,
         "Cross-door parity cases share one integration battery.",
         "Split syntax-equivalence from deliberate-divergence cases.",
     ),

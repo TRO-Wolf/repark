@@ -179,6 +179,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
+- [fnp-4b-ledger.md](fnp-4b-ledger.md) —
+  **FNP-4B steps 1-2 + follow-up (2026-09-15), in flight:** the Spark-door dialect (`Dialect::Databricks`
+  for every Spark-door statement) and Spark expression strings — double-quoted STRING
+  literals with Spark escapes, backtick identifier quoting, numeric `D/F/S/Y/BD/L` suffixes, exponent literals as DOUBLE, backtick filter spans (BL-2),
+  the `escapedStringLiterals` build conf, and the out-of-range `\U` Java artifact.
+  `risk_tier: standard`. Branch `feat/fnp-4b-spark-dialect`.
+  pins: fnp-4b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - [orphan-s3tables-1-ledger.md](orphan-s3tables-1-ledger.md) —
   **ORPHAN-S3TABLES-1 step 1 (2026-09-12), in flight:** `remove_orphan_files` refuses loud
   on an `s3tables`-kind catalog before any IO — table buckets answer `ListObjectsV2` 405 —
