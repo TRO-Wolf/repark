@@ -4588,8 +4588,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   146 `DEG-*` cells both doors both ANSI plus `FU-and-float`, copied verbatim).
   Answers compare values, Arrow types and default names; refusals compare the class,
   required DOUBLE, type name and SQLSTATE; malformed STRING compares
-  `CAST_INVALID_INPUT` under ANSI and NULL with ANSI off.
-  pins: fnp-bitmap-facade-1/C-012, C-013, C-014
+  `CAST_INVALID_INPUT` under ANSI and NULL with ANSI off, and the no-CAST
+  construction pin (PYPERF-001).
+  pins: fnp-bitmap-facade-1/C-012, C-013, C-014, C-016
 - [test_fnp_6d_bitmap_aggregates.py](test_fnp_6d_bitmap_aggregates.py) — **FNP-6D
   (2026-09-15):** Spark SQL-door pins for `bitmap_construct_agg` / `bitmap_or_agg` /
   `bitmap_and_agg` against recorded oracle cells `F6D-*` and `B8-*` (values AND

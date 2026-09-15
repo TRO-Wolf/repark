@@ -49,7 +49,30 @@ answers 2), (5) the real red re-run, green pins, census and gates on the native-
 
 | C-011 | `degrees` / `radians` compute on a Rust kernel with thin facade binds (owner Q-15a-1 via G-2 R-7): new `call_scalar` dispatch arms reuse the engine's `degrees` / `radians` scalar UDFs; the facade wrappers are `_scalar` binds over a `double` cast keeping the `DEGREES(x)` / `RADIANS(x)` display names, the `toDegrees` / `toRadians` warnings, and every existing `fnp_alias_1_spark_oracle.json` pin green; `_rescaled` and the factor constants are deleted. | `test_fnp_alias_1.py` (55 pins, values/names/warnings/joins). | **PROVEN** | Reuse, not a new kernel: the engine UDF is `f64::to_degrees` / `f64::to_radians`, a single multiply by the correctly-rounded factor — the same operation the replaced Python multiply performed (D-7 of FNP-ALIAS-1). Evidence: all 55 alias pins green on the rebuilt native (Spark-recorded doubles, names, `FutureWarning` texts, semi/anti and ON-join behavior); a 4015-value sweep of kernel vs `x * (180.0/pi)` / `x * (pi/180.0)` answers 0 mismatches for both names. pins: fnp-bitmap-facade-1/C-011 |
 
-VERDICT: 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED.
+| C-012 | `F.degrees` / `F.radians` / `F.toDegrees` / `F.toRadians` answer Spark on the Python door and `degrees` / `radians` answer on the SQL door for every recorded answer shape: values, Arrow types and default names against the `DEG-*` cells (INT, BIGINT, DECIMAL, FLOAT, well-formed STRING, NULL). | `test_fnp_degrees_rust_1.py::test_answer_matches_oracle` (36 shapes). | **PROVEN** | Red first: 4 of the 36 failed pre-change (the SQL-door well-formed-STRING answers plus the SQL-door FLOAT answers, which DataFusion computed in f32). Green after the Spark-exact UDFs own both doors. pins: fnp-bitmap-facade-1/C-012 |
+| C-013 | Every recorded refusal shape refuses with Spark's class, DOUBLE requirement, type name and SQLSTATE on the recorded doors, both ANSI settings: BOOLEAN, DATE, TIMESTAMP and BINARY for all four facade spellings. The Python-door timestamp renders `TIMESTAMP_LTZ` (facade tz normalization) and is pinned as a named expected divergence. | `test_fnp_degrees_rust_1.py::test_refusal_matches_oracle` + `::test_refusal_ansi_off_still_refuses` + `::test_refusal_timestamp_ltz_is_expected_divergence`. | **PROVEN** | Red first: all 40 refusal pins failed pre-change (the facade answered BOOLEAN/timestamp shapes; the SQL door spoke DataFusion-native). The LTZ rendering is an input-door property (naive timestamps are not representable on the Python door: SQL literals and `createDataFrame` datetimes both arrive tz-aware), values and classes unaffected; ledger-only, no registry row. pins: fnp-bitmap-facade-1/C-013 |
+| C-014 | Malformed STRING raises `CAST_INVALID_INPUT` with the fixture body and `SQLSTATE: 22018` under ANSI and answers NULL with ANSI off, on both doors. | `test_fnp_degrees_rust_1.py::test_malformed_string_raises_cast_invalid_input` + `::test_malformed_string_ansi_off_answers_null`. | **PROVEN** | Red first: all 16 failed pre-change (facade Arrow cast error; SQL-door no-match). ANSI-off reaches live kernels (builder-ansi-off probe: `1/0` answers NULL), so the kernel reads `args.config_options` and the `-nonansi` NULL pins are real behavior, not a divergence. pins: fnp-bitmap-facade-1/C-014 |
+| C-015 | The bitmap facade pins the DATE refusals and the NaN/Infinity overflow shapes on the Python door, and the AND-FLOAT pin cites the recorded AND cell (L-007, L-009). | `test_fnp_bitmap_facade_1.py` DATE refusal rows + `::test_construct_agg_nan_and_inf_raise_cast_overflow`; `FU-and-float` in the facade fixture. | **PROVEN** | Green at first run (the critic verified the behaviors live; only the pins were missing). The AND-DATE row cites `FU-or-date`'s condition: no `FU-and-date` cell was recorded and none is fabricated; the message fragments are verified live on the AND path. pins: fnp-bitmap-facade-1/C-015 |
+| C-016 | The Python `double` cast is dropped from the wrappers (PYPERF-001) with behavior unchanged: bare `_scalar` binds keeping the display names and warnings. | `test_fnp_degrees_rust_1.py::test_wrapper_builds_without_cast_node` plus the full `C-012` + `fnp_alias_1` suites. | **PROVEN** | The construction pin captures extended `explain` for both wrappers on a DOUBLE frame and asserts zero `CAST` occurrences (UUID view names are hex-only so the match is stable). Red lineage: the pyperf report measured the pre-change optimized plan as `degrees(CAST(x AS Float64))` (physical `degrees(x@0)` either way — the optimizer strips it there, so the pin reads the logical section). Behavior invariance: 97 DEG + 55 alias pins green with identical values. pins: fnp-bitmap-facade-1/C-016 |
+
+VERDICT: 16 clauses, 16 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Correction to FNP-ALIAS-1
+
+FNP-ALIAS-1 attested that STRING `degrees` refuse at analysis. The `DEG-*-str-num` cells prove that attestation wrong for well-formed strings: Spark CASTS `'1.0'` to DOUBLE and answers `57.29577951308232` / `0.017453292519943295` on both doors, both ANSI settings. Only malformed STRING raises (ANSI) or nulls (ANSI-off). This ledger records the correction; the alias pins never covered a STRING input so nothing there changes.
+
+## Round-3 rulings and findings — dispositions
+
+| Ruling | Content | Disposition |
+|---|---|---|
+| L-006 (G-2, P1) | `F.degrees` / `F.radians` on BOOLEAN answered instead of refusing; the wrapper cast caused it. | Remediated by the Spark-exact UDFs: BOOLEAN refuses at planning, C-013. |
+| L-007 (G-2, P2) | DATE refusals and NaN/Inf overflow shapes held but were unpinned on the facade file. | Pinned, C-015; Infinity built through a SQL CAST frame (`createDataFrame` refuses infinite floats). |
+| L-008 (G-2, P2) | STRING/DATE error classes not Spark's; SQL door refused well-formed STRING. | Remediated: kernel casts STRING itself (ANSI switch inside), SQL door answers, C-012/C-014. |
+| L-009 (G-2, P3) | AND-FLOAT pin cited the OR cell. | The recorded `FU-and-float` cell joins the facade fixture and the pin cites it, C-015. |
+| PYPERF-001 (G-2, P2) | Drop the Python `column.cast("double")`. | Applied, C-016. |
+| PYPERF-002 (G-2, P3) | The by-name exception path is shared house behavior. | Ledger only: out of scope for this unit, no change. |
+| Q-15a-1 (owner) | DEGREES-RUST-1 done properly: Spark-exact UDF pair, user-defined coercion, same-UDF SQL registration and facade bind, no parser/planner edits. | Applied as specified; `ScalarFunctionArgs.config_options` carries the ANSI flag in this DataFusion version so no planner edit was needed. |
+| Q-15c-3 (owner) | Builder-config ANSI-off divergence shape if ANSI-off cannot reach the kernel. | Not needed: ANSI-off reaches live kernels, C-014 pins real NULLs. |
 
 ## Orchestrator rulings G-2 (run 16a) — dispositions
 
@@ -136,6 +159,13 @@ COVERAGE_ATTESTATION:
 | `crates/repark-python/src/column/function_dispatch.rs` (run 16a) | R-7: `degrees` / `radians` `call_scalar` arms onto the engine UDFs, beside the bitmap arms. |
 | `python/repark/src/repark/spark/functions_math.py` (run 16a) | R-7: thin `_scalar` binds over a `double` cast; `_rescaled`, the factor constants and the orphaned imports deleted. |
 | `crates/repark-python/src/column/map.md`, `python/repark/src/repark/spark/map.md`, `python/repark/tests/map.md` (run 16a) | R-7 lockstep: the dispatch-arm note, the `functions_math.py` implementation note, the `_rescaled` sentence. |
+| `crates/repark-functions/src/spark_degrees.rs` (round 3) | New: the Spark-exact `degrees` / `radians` UDF pair with unit tests (refused types, ANSI/legacy STRING, bit identity, single-multiply check). |
+| `crates/repark-functions/src/lib.rs`, `expr_fn.rs`, `bitmap_agg.rs` (round 3) | Registration + builders + rebind; `spark_type_name` shared `pub(crate)`; the root pays net-negative by inlining its single-use date-shim helper (171 lines vs the 175 ceiling). |
+| `crates/repark-python/src/column/function_dispatch.rs` (round 3) | The `degrees` / `radians` arms rebind to the Spark-exact UDFs. |
+| `python/repark/src/repark/spark/functions_math.py` (round 3) | The Python `double` cast is dropped (PYPERF-001). |
+| `python/repark/tests/test_fnp_degrees_rust_1.py` + `fnp_degrees_rust_1_spark_oracle.json` (round 3) | New: 96 DEG pins over the verbatim 146-cell orchestrator recording. |
+| `python/repark/tests/test_fnp_bitmap_facade_1.py` + facade fixture (round 3) | L-007 DATE/NaN/Inf pins; L-009 `FU-and-float` cell and citation. |
+| `crates/repark-functions/src/map.md`, `python/repark/src/repark/spark/map.md`, `python/repark/tests/map.md`, `crates/repark-python/src/column/map.md` (round 3) | Lockstep for the new module, the rebind, the cast drop and the new pin files. |
 
 No public API change beyond the three additive names: no crate dependency, no `Cargo.lock`
 edit, no `.github/` edit, no kernel change.

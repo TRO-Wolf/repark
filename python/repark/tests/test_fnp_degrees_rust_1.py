@@ -171,6 +171,16 @@ def test_refusal_matches_oracle(spark: ReparkSession, function: str, tag: str, d
         assert cell["message"].split(" SQLSTATE")[0] in message
 
 
+def test_wrapper_builds_without_cast_node(
+    spark: ReparkSession, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """pins: fnp-bitmap-facade-1/C-016"""
+    frame = spark.createDataFrame([(1.0,)], "x double")
+    frame.select(F.degrees("x")).explain(extended=True)
+    frame.select(F.radians("x")).explain(extended=True)
+    assert "CAST" not in capsys.readouterr().out
+
+
 @pytest.mark.parametrize("function", ["degrees", "radians", "toDegrees", "toRadians"])
 def test_refusal_timestamp_ltz_is_expected_divergence(spark: ReparkSession, function: str) -> None:
     """pins: fnp-bitmap-facade-1/C-013"""
