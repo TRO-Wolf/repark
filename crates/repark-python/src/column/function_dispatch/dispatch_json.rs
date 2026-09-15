@@ -1,4 +1,5 @@
 use datafusion::logical_expr::Expr;
+use datafusion::logical_expr::expr::ScalarFunction;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -54,6 +55,20 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 exprs[1].clone(),
                 exprs[2].clone(),
             )
+        }
+        "array_append" => {
+            need(2)?;
+            Expr::ScalarFunction(ScalarFunction::new_udf(
+                repark_functions::collection::spark_array_append_udf(),
+                vec![exprs[0].clone(), exprs[1].clone()],
+            ))
+        }
+        "array_prepend" => {
+            need(2)?;
+            Expr::ScalarFunction(ScalarFunction::new_udf(
+                repark_functions::collection::spark_array_prepend_udf(),
+                vec![exprs[0].clone(), exprs[1].clone()],
+            ))
         }
         "arrays_zip" => repark_functions::expr_fn::arrays_zip(exprs.clone()),
         "map_concat" => repark_functions::expr_fn::map_concat(exprs.clone()),
