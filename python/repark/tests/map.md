@@ -1690,6 +1690,29 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   octo C1: empty/neg-step multisets, bool reject, numPartitions < 1;
   octo C2: float step int() truncation + Arrow int64 physical / facade dtypes int;
   octo C3: range after stop raises.
+- `test_session_surface_1.py` + `facade_session_oracle.json` — **SESSION-SURFACE-1 step 1
+  (2026-09-14):** the 19-name SparkSession surface card against the live PySpark 4.1.2
+  classic oracle (local mode, UTC, recorded 2026-09-14). Tags round-trip plus empty/comma
+  validation and the `NOT_STR` declared divergence (SES-TAG-1); the three interrupt APIs
+  answer `[]` (SES-INTERRUPT-1); the five Connect-only names pin classic's
+  `ONLY_SUPPORTED_WITH_SPARK_CONNECT` string byte-for-byte; `readStream` / `streams` /
+  `dataSource` pin `NOT_IMPLEMENTED` declared refusals (SES-DECL-*); `addArtifact(s)` pin
+  `INVALID_MULTIPLE_ARGUMENT_CONDITIONS`, `FileNotFoundError` naming a missing path, the
+  driver-local pyfile copy plus one `sys.path` prepend, and the archive/file declared
+  refusals (SES-ARTIFACT-1); `profile` pins the method surface, the empty-collector no-ops
+  with Spark's `memory_profiler` warning, `VALUE_NOT_ALLOWED` on an unknown type and the
+  `render` declared refusal (SES-PROFILE-1); `tvf` pins the full method list, `range` /
+  `explode` / `explode_outer` / `stack` frames, `NOT_COLUMN` argument checks, and — as
+  deliberate go-red-when-they-land pins — today's function-level refusals for
+  `posexplode`, `json_tuple`, `inline`, `variant_explode` plus the `sql_keywords` /
+  `collations` / `python_worker_logs` `tvf.*` refusals (SES-TVF-1).
+  Critic round 1 adds pins for the artifact-dir `stop()` lifecycle (dir gone, exactly its
+  own `sys.path` entry removed, `sys.modules` untouched), the `Try(toLong)` id validation
+  (Unicode digits, whitespace, int64 overflow, non-str `NOT_STR`), the `hasattr` raise on
+  the declared properties, the no-path `addPyFile()` `TypeError`, the different-content
+  `DUPLICATED_ARTIFACT` arm, `render`'s `type`-check-first order, and `tvf.json_tuple`'s
+  string-literal-Column field conversion (R-4/R-5/R-6).
+  pins: session-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `test_column_x1_census.py` — X1: Column between/pow/string/bitwise/eqNullSafe/lit temporal + trig;
   octo C1: bitwiseOR/XOR values, lit(time)/lit(list)/empty array, hypot 3-4-5, dayname(date);
   octo C2: eqNullSafe(None), between inclusive/inverted;

@@ -1309,6 +1309,131 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED (R-3, 2026-09-14). repark has no SparkContext checkpoint
   directory and no reliable-storage checkpoint write; the in-memory materialization is
   the same-rows answer rather than a refusal the engine cannot honor anyway.
+### SES-TAG-1 — a non-str tag raises `[NOT_STR]` where Spark leaks a Py4J error
+- **repark** — `spark.addTag(5)` raises `PySparkTypeError` with condition `NOT_STR` and
+  parameters `{"arg_name": "tag", "arg_type": "int"}`, matching the facade's own
+  argument-validation taxonomy.
+- **Apache Spark** — the call leaks `py4j.Py4JException: Method addTag([class
+  java.lang.Integer]) does not exist` — a reflection error with no Spark error class, caught
+  only by `except py4j.protocol.Py4JError`. *(oracle: cell `addTag_not_str`.)*
+- **Pin** — `python/repark/tests/test_session_surface_1.py::test_add_tag_not_str_declared`
+- **Rationale** — DECLARED 2026-09-14 (ruling R-1). Reproducing a Py4J reflection leak
+  requires a JVM; the structured `NOT_STR` refusal carries the same information in repark's
+  error taxonomy. String tags themselves match Spark exactly: empty and comma-containing
+  tags raise `IllegalArgumentException` with Spark's own messages, and `getTags` returns a
+  fresh `set`.
+### SES-INTERRUPT-1 — the interrupt APIs answer `[]` and never cancel work
+- **repark** — `interruptAll()`, `interruptTag(tag)` and `interruptOperation(op_id)` return
+  `[]` unconditionally; `interruptOperation` validates the id as Java `Long.parseLong`
+  inside `Try` — ASCII digits with an optional leading `+`/`-`, no whitespace, inside the
+  signed 64-bit range — and raises `IllegalArgumentException`
+  `executionId must be a number in string form.` on any other string. A non-str `op_id`
+  raises `PySparkTypeError` `NOT_STR` `{"arg_name": "operationId", ...}`.
+- **Apache Spark** — returns the ids of the jobs or operations actually interrupted, `[]`
+  when nothing is running; the same `Try(toLong)` validation applies, and a non-str
+  `op_id` leaks a Py4J reflection error. *(oracle: cells `interruptAll`, `interruptTag`,
+  `interruptOperation`, `interruptOperation_numeric`.)*
+- **Pin** — `python/repark/tests/test_session_surface_1.py::test_interrupts_answer_empty_lists`,
+  `::test_interrupt_operation_java_long_validation`, `::test_interrupt_operation_non_str`
+- **Rationale** — DECLARED 2026-09-14 (ruling R-2). repark executes an action synchronously
+  on the calling thread and keeps no cancellable operation registry, so there is never
+  anything to interrupt: `[]` is Spark's own answer for an idle session, and an action
+  running on another thread is not cancelled — a real divergence only for concurrent
+  callers. The non-str `op_id` `NOT_STR` is a declared difference (ruling R-4,
+  2026-09-15): reproducing a Py4J reflection leak requires a JVM, and the structured
+  refusal carries the same information in repark's error taxonomy.
+### SES-DECL-readStream — no `DataStreamReader` without a streaming engine
+- **repark** — `spark.readStream` raises `PySparkNotImplementedError` with condition
+  `NOT_IMPLEMENTED` and parameters `{"feature": "readStream"}`.
+- **Apache Spark** — returns a `DataStreamReader` bound to the session's streaming context.
+  *(oracle: cell `readStream_type`.)*
+- **Pin** — `python/repark/tests/test_session_surface_1.py::test_read_stream_declared`,
+  `::test_declared_properties_raise_under_hasattr`
+- **Rationale** — DECLARED 2026-09-14. Structured Streaming needs an execution engine repark
+  does not have; the property refuses loudly rather than returning a hollow reader. Known
+  consequence (ruling R-5, 2026-09-15): because the refusal lives in the property getter,
+  `hasattr(spark, "readStream")` raises `NOT_IMPLEMENTED` rather than answering `False` —
+  the same shape classic's `client` property already has (it raises
+  `ONLY_SUPPORTED_WITH_SPARK_CONNECT`, not `AttributeError`).
+### SES-DECL-streams — no `StreamingQueryManager` without a streaming engine
+- **repark** — `spark.streams` raises `PySparkNotImplementedError` with condition
+  `NOT_IMPLEMENTED` and parameters `{"feature": "streams"}`.
+- **Apache Spark** — returns a `StreamingQueryManager` whose `active` is `[]` on an idle
+  session. *(oracle: cells `streams_type`, `streams_active`.)*
+- **Pin** — `python/repark/tests/test_session_surface_1.py::test_streams_declared`,
+  `::test_declared_properties_raise_under_hasattr`
+- **Rationale** — DECLARED 2026-09-14. Same engine gap as `readStream`; an `active == []`
+  facade would be a silent lie about query lifecycle support. The R-5 `hasattr`
+  consequence from the `readStream` row applies identically here.
+### SES-DECL-dataSource — the Python data source API is deferred
+- **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
+  `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.
+- **Apache Spark** — returns a `DataSourceRegistration` for registering Python data
+  sources. *(oracle: cell `dataSource`.)*
+- **Pin** — `python/repark/tests/test_session_surface_1.py::test_data_source_declared`,
+  `::test_declared_properties_raise_under_hasattr`
+- **Rationale** — DECLARED 2026-09-14. Reachable in principle (the registration plumbing is
+  Python-side), deferred until the data-source execution contract is scheduled. The R-5
+  `hasattr` consequence from the `readStream` row applies identically here.
+### SES-ARTIFACT-1 — `addArtifact(s)` supports driver-local `pyfile` copies only
+- **repark** — `addArtifact`/`addArtifacts` validate exactly like Spark: more than one of
+  `pyfile`/`archive`/`file` true raises `PySparkValueError` with condition
+  `INVALID_MULTIPLE_ARGUMENT_CONDITIONS`; a pre-existing artifact directory entry with
+  different contents raises `PySparkRuntimeError` `DUPLICATED_ARTIFACT`; `pyfile=True`
+  copies the file into a per-session artifact directory, prepends it to `sys.path` once,
+  raises `TypeError` `addPyFile() missing 1 required positional argument: 'path'` when no
+  path is given, and raises `FileNotFoundError` naming a missing path; `archive=True` and
+  `file=True` raise `NOT_IMPLEMENTED`; with no flags the call is Spark's own no-op
+  returning `None`. The per-session artifact directory dies with the session: `stop()`
+  removes the tree and exactly its own `sys.path` entry (never another session's), and —
+  like Spark — leaves already-imported modules in `sys.modules`.
+- **Apache Spark** — same validation order, then `addPyFile`/`addFile`/`addArchive` push the
+  artifact through the JVM `SparkContext`; on classic 4.1.2 the two-flags formatter itself
+  crashes with a bare `AssertionError` (`Undefined error message parameter for error class:
+  INVALID_MULTIPLE_ARGUMENT_CONDITIONS`). *(oracle: cells `addArtifact`,
+  `addArtifact_real`, `addArtifacts_two_flags`.)*
+  `python/repark/tests/test_session_surface_1.py::test_add_artifact_pyfile_lands_on_sys_path`,
+  `::test_add_artifact_missing_path`, `::test_add_artifacts_two_flags`,
+  `::test_add_artifacts_archive_and_file_declared`
+- **Rationale** — DECLARED 2026-09-14. Driver-local `pyfile` is honest plumbing repark can
+  carry (it only prepends `sys.path` on the driver); `file`/`archive` need distributed
+  artifact fetch machinery the engine does not have. repark keeps Spark's structured error
+  class for the two-flags case rather than reproducing classic's formatter crash — the
+  oracle records the crash for reference.
+### SES-PROFILE-1 — no UDF profiles are collected; `render` is declared
+- **repark** — `spark.profile` answers a `Profile` object with Spark's public method
+  surface (`show`, `dump`, `clear`, `render`, `profiler_collector`); `show`/`dump`/`clear`
+  no-op over an empty collector (with Spark's `memory_profiler` `UserWarning`), and
+  `render` runs Spark's `type` validation (`VALUE_NOT_ALLOWED`
+  `{"arg_name": "type", "allowed_values": "['perf', 'memory']"}`) before raising
+  `NOT_IMPLEMENTED` `{"feature": "profile.render"}`.
+- **Apache Spark** — accumulates perf and memory profiles of UDF executions; `show` prints
+  nothing when none exist. *(oracle: cells `profile_type`, `profile_methods`,
+  `profile_show`.)*
+- **Pin** — `python/repark/tests/test_session_surface_1.py::test_profile_surface`,
+  `::test_profile_show_dump_clear_noop`, `::test_profile_render_declared`
+- **Rationale** — DECLARED 2026-09-14 (ruling R-3). repark collects no UDF profiles, so the
+  collector-backed methods are honest no-ops; `render` is a declared refusal rather than a
+  stub that emits an empty report.
+### SES-TVF-1 — `tvf` methods that need missing engines refuse `NOT_IMPLEMENTED`
+- **repark** — `spark.tvf.sql_keywords()`, `spark.tvf.collations()` and
+  `spark.tvf.python_worker_logs()` raise `PySparkNotImplementedError` `NOT_IMPLEMENTED`
+  `{"feature": "tvf.<name>"}`. The generator methods delegate to `repark.spark.functions`
+  over a one-row `range(1)` select, so a function that is itself declared today rides its
+  own refusal (`posexplode`, `posexplode_outer`, `json_tuple`, `inline`, `inline_outer`,
+  `variant_explode`, `variant_explode_outer` at this date); `explode`, `explode_outer`,
+  `stack` and `range` answer frames.
+- **Apache Spark** — `tvf` is a `TableValuedFunction` whose methods answer the SQL
+  table-valued functions of the same names. *(oracle: cells `tvf_type`,
+  `tvf_methods_full`, `tvf_sql_keywords`, `tvf_collations`, `tvf_posexplode`,
+  `tvf_json_tuple`, `tvf_inline`, `tvf_variant_explode`.)*
+  `python/repark/tests/test_session_surface_1.py::test_tvf_sql_functions_declared_today`,
+  `::test_tvf_posexplode_declared_today`, `::test_tvf_json_tuple_declared_today`,
+  `::test_tvf_inline_and_variant_declared_today`
+- **Rationale** — DECLARED 2026-09-14. `sql_keywords`/`collations` need table functions in
+  the SQL engine; `python_worker_logs` needs Python-worker plumbing. The function-level
+  refusals are pinned *as refusals* so they go red — on purpose — when the functions
+  themselves land.
 
 ### CAT-FUNCS-1 — `listFunctions` / `getFunction` read the repark registry, not Spark's JVM one
 
