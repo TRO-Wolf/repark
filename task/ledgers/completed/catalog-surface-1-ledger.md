@@ -65,3 +65,63 @@ VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
 | `python3 scripts/check_example_coverage.py` | 949 names, 835 covered, 0 findings |
 | `python3 scripts/check_lib_py.py` | 688 files clean; session_core baseline 2304→2302 |
 | comment fence (`git diff --cached \| grep -P …`) | empty |
+
+## Orchestrator rulings after the re-check (run 15b, G-2)
+
+- R-8 (2026-09-15): the R-6 identity token reads `current-snapshot-id` through DESCRIBE TABLE EXTENDED on every
+  `spark.table` / `isCached` call for a name that holds a cache: measured 0.53 ms (actor) and 0.60 ms (critic) per call, under
+  the 1 ms bar; an uncached `spark.table` pays nothing extra. Recorded as a cost, not a finding; a cheaper native snapshot-id
+  accessor belongs to the FACADE roll-call.
+- R-9 (2026-09-15): the local facade gate showed 175 failures in `test_array_null_1*.py` / `test_functions_e.py`; the same files
+  pass (250 passed together with this unit's pins) on a release native module rebuilt at `main` e98e899d — they needed
+  ARRAY-NULL-1's Rust change (#581). Environmental.
+- R-10 (2026-09-15): Grok critic-logic round 1 found 1 P1 (stale cache after a same-session write) and 5 P2 + 1 P3, fixed under
+  R-6/R-7 by Devin; the same critic session re-checked every write door and answered PASS with no new finding. The S2-21
+  perf question (spark.table per-call cost) rode inside the critic brief and is answered by R-8.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: catalog-surface-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card and the fifty-one recorded PySpark 4.1.2 catalog cells; the thirteen names and their snake-case spellings are pinned cell by cell.
+      artifacts: [python/repark/tests/test_catalog_surface_1.py, python/repark/tests/facade_catalog_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Qualified, unqualified and case-folded names, a temp view shadowing a table, comments with commas brackets and equals, identity bucket truncate and time transforms, nested and NOT NULL createTable schemas, a missing namespace, every write door after cacheTable, an empty table's first snapshot, a metadata-only ALTER that keeps the cache.
+      artifacts: [python/repark/tests/test_catalog_surface_1.py]
+    - id: AT-3
+      status: N/A
+      justification: Python catalog plumbing over existing engine statements; no Rust, no unwrap.
+    - id: AT-4
+      status: ATTACKED
+      evidence: The held-cache map is per session and keyed by resolved identity; the token compare evicts under the same path refreshTable uses, so two doors never disagree about a cached name.
+      artifacts: [python/repark/src/repark/spark/catalog_surface.py]
+    - id: AT-5
+      status: ATTACKED
+      evidence: createTable renders options into TBLPROPERTIES through the sanctioned sql_string_literal helper (PR-245 inventory row added); identifiers quote through quote_ident.
+      artifacts: [python/repark-parity/tests/test_pr_245_revalidation_record.py]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Grok critic-logic round 1 NEEDS_REMEDIATION (1 P1, 5 P2, 1 P3) fixed under rulings R-6/R-7; the same critic session re-checked the rebased head (PASS, no new finding).
+      artifacts: [task/ledgers/completed/catalog-surface-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Facade suite (6437 passed, the 175 failures proven environmental under R-9), parity suite, ruff 0.15.22, check_lib_py, ledger lifecycle and grammar, docs links, example coverage with the four catalog examples executed; comment-ban grep zero hits.
+      artifacts: [docs/examples/catalog/cache_table.py, docs/examples/catalog/get_table.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark's contracts were read, not assumed - pyspark/sql/catalog.py Table, Column and Function shapes and the listFunctions pattern semantics; the recorded oracle for every return type and error class.
+      artifacts: [python/repark/src/repark/spark/catalog_surface.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every AnalysisException the module raises carries getCondition, parameters and SQLSTATE (R-7); declared differences are registry rows with pins (CAT-FUNCS-1, CAT-RECOVER-1, and the EX-IO-6 pin addition).
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation guards run - dropping the token compare reds every write-door pin, a case-sensitive temp-view lookup reds the TV1 pin, the first-comma regex reds the comment pins.
+      artifacts: [python/repark/tests/test_catalog_surface_1.py]
+  complete: true
+```
+
