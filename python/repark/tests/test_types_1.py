@@ -193,10 +193,10 @@ def test_narrowed_literal_in_array_struct_map() -> None:
     session = _session()
     frame = _seed(session)
     array = "SELECT array(1, 2) AS r"
-    assert _door_type(session, array) == ("list<element: int32>", False)
+    assert _door_type(session, array) == ("list<element: int32 not null>", False)
     assert session.sql(array).toArrow().column("r").to_pylist() == [[1, 2]]
     facade_array = frame.select(F.array(F.lit(1), F.lit(2)).alias("r"))
-    assert _frame_type(facade_array) == ("list<item: int32>", False)
+    assert _frame_type(facade_array) == ("list<item: int32 not null>", False)
     assert facade_array.toArrow().column("r").to_pylist() == [[1, 2], [1, 2], [1, 2]]
     struct = "SELECT struct(1, 'a') AS r"
     assert _door_type(session, struct) == ("struct<c0: int32, c1: string>", False)

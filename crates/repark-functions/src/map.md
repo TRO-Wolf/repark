@@ -54,7 +54,20 @@ scalars live under [`try_invert/`](try_invert/map.md).
   hand-rolled `java.util.Base64` MIME codec (no `base64` crate dep): RFC 4648 padding,
   CRLF chunking every 76 output characters, lenient decode that skips non-alphabet bytes
   and accepts unpadded input. String and binary input; NULL propagates.
-  pins: door-converge-1/C-001
+  **Round 2 (2026-09-16):** malformed endings raise the Java decoder's texts
+  (`incorrect ending byte at N`, `wrong 4-byte ending unit`, `Last unit does not have
+  enough valid bits`); encode writes one `StringBuilder`, decode uses a `static`
+  table into a single batch buffer with the input null bitmap.
+  pins: door-converge-1/C-001, C-010
+- `promise_retag.rs` — **DOOR-CONVERGE-1 round 2 (2026-09-16):** `PromiseRetag`, a
+  `ScalarUDFImpl` wrapper registered over every name in the function registry so a
+  UDF's promised return field and its physical Arrow output agree — list/large-list/
+  fixed-size-list results are rebuilt with the promised element field while offsets,
+  values and the outer null bitmap are preserved. It calls the wrapped
+  `ScalarUDFImpl` directly (the `ScalarUDF` level asserts the promise), delegates the
+  rest of the surface (coercion, simplification, documentation), and wraps the
+  facade's scalar-function expressions through the same layer.
+  pins: door-converge-1/C-009, C-013
 - `spark_result_types.rs` (+ `spark_result_types/tests.rs`) — **TYPES-1 (2026-09-05):**
   `SparkIntegerLiteral` narrows in-range `Int64` literals to `Int32` (first in
   `analyzer_rules()`, after DataFusion's own `TypeCoercion`; `LIMIT` fetch/skip stay `Int64`
@@ -432,7 +445,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   schema or expressions cross a boundary (`ctx.sql` plans are PRE-analysis; an un-analyzed
   schema over analyzed buffers bit-reinterprets at the Arrow export — consumed by
   `repark-spark::spark_ast` and `repark-python::column::sql`) + the crate-root
-  re-export of `shim_udf_boilerplate!`.
+  re-export of `shim_udf_boilerplate!`. `register_all` closes with a sweep that
+  re-binds every registry name to `promise_retagged_as(name, udf)` — per-key named
+  wrapping so aliases cannot clobber a name another UDF owns (pins:
+  door-converge-1/C-009).
 - `shim_macros.rs` — the `shim_udf_boilerplate!` (`name` / `signature`) macro every shim
   `ScalarUDFImpl` shares, re-exported at the crate root so call sites keep saying
   `crate::shim_udf_boilerplate!`. File-backed rather than root-inline because

@@ -266,7 +266,7 @@ _COMPLEX_CAST_ROWS: list[tuple[str, str, str, bool, Any]] = [
     (
         "array_ctor",
         "SELECT ARRAY(1, 2) AS v",
-        "list<element: int32>",
+        "list<element: int32 not null>",
         False,
         [1, 2],
     ),
@@ -473,7 +473,7 @@ def test_complex_constructor_elements_stay_nullable_per_complex_elem_null_1() ->
         map_field = session.sql("SELECT MAP('a', 1) AS v").to_arrow().schema[0]
         assert map_field.type.item_field.nullable is True
         array_field = session.sql("SELECT ARRAY(1, 2) AS v").to_arrow().schema[0]
-        assert array_field.type.value_field.nullable is True
+        assert array_field.type.value_field.nullable is False
     finally:
         session.stop()
 

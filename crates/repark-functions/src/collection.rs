@@ -29,6 +29,7 @@ mod arrays_overlap;
 mod arrays_zip;
 mod create_map;
 mod flatten;
+mod make_array;
 mod map_concat;
 /// `map_from_entries` with Spark's `EXCEPTION` map-key dedup policy (X7).
 mod map_from_entries;
@@ -56,6 +57,9 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         array_append::spark_array_append_udf(),
         array_append::spark_array_prepend_udf(),
     ]
+    .into_iter()
+    .chain(make_array::functions())
+    .collect()
 }
 
 /// Spark `shuffle` UDF (NULL-guarded permutation; optional Spark 4.0 seed).
@@ -72,6 +76,13 @@ pub fn spark_array_append_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn spark_array_prepend_udf() -> Arc<ScalarUDF> {
     array_append::spark_array_prepend_udf()
+}
+
+/// Spark `make_array` UDF (Spark's `containsNull = any child nullable` element flag).
+#[must_use]
+pub fn make_array_udf() -> Arc<ScalarUDF> {
+    make_array::make_array_udf()
+
 }
 
 /// Spark `map_from_entries` UDF (duplicate keys raise `DUPLICATED_MAP_KEY`).

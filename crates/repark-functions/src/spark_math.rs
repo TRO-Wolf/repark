@@ -2,14 +2,16 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use datafusion::arrow::array::{
-    Array, ArrayRef, AsArray, Float64Array, PrimitiveArray, PrimitiveBuilder, StringArray,
+    Array, ArrayRef, AsArray, PrimitiveArray, PrimitiveBuilder, StringArray,
 };
-use datafusion::arrow::compute::cast;
+use datafusion::arrow::buffer::{Buffer, OffsetBuffer, ScalarBuffer};
+use datafusion::arrow::compute::{binary, cast, try_unary, unary};
 use datafusion::arrow::datatypes::{
     ArrowNativeTypeOp, ArrowPrimitiveType, DataType, Decimal32Type, Decimal64Type, Decimal128Type,
     Decimal256Type, Field, FieldRef, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type,
     Int64Type,
 };
+use datafusion::arrow::error::ArrowError;
 use datafusion::common::{DataFusionError, Result, exec_err};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
@@ -104,6 +106,12 @@ impl ScalarUDFImpl for SparkAbs {
         };
         let ansi = crate::ansi::spark_ansi_enabled_from_options(&args.config_options);
         let array = arg.to_array(args.number_rows)?;
+        if matches!(
+            array.data_type(),
+            DataType::UInt8 | DataType::UInt16 | DataType::UInt32 | DataType::UInt64
+        ) {
+            return Ok(ColumnarValue::Array(array));
+        }
         Ok(ColumnarValue::Array(abs_typed(array.as_ref(), ansi)?))
     }
 }
@@ -167,15 +175,8 @@ impl ScalarUDFImpl for SparkHypot {
         };
         let left = float64_values(left)?;
         let right = float64_values(right)?;
-        let mut values = Vec::with_capacity(left.len());
-        for index in 0..left.len() {
-            if left.is_null(index) || right.is_null(index) {
-                values.push(None);
-            } else {
-                values.push(Some(left.value(index).hypot(right.value(index))));
-            }
-        }
-        Ok(ColumnarValue::Array(Arc::new(Float64Array::from(values))))
+        let out = binary::<Float64Type, Float64Type, _, Float64Type>(&left, &right, f64::hypot)?;
+        Ok(ColumnarValue::Array(Arc::new(out)))
     }
 }
 
@@ -244,16 +245,24 @@ impl ScalarUDFImpl for SparkBin {
         let array = arg.to_array(args.number_rows)?;
         let ints: ArrayRef = cast(&array, &DataType::Int64)?;
         let ints = ints.as_primitive::<Int64Type>();
-        let values: Vec<Option<String>> = (0..ints.len())
-            .map(|index| {
-                if ints.is_null(index) {
-                    None
-                } else {
-                    Some(format!("{:b}", ints.value(index).cast_unsigned()))
-                }
-            })
-            .collect();
-        Ok(ColumnarValue::Array(Arc::new(StringArray::from(values))))
+        let mut offsets = Vec::with_capacity(ints.len() + 1);
+        let mut values = Vec::new();
+        let mut digits = [0u8; 64];
+        offsets.push(0i32);
+        for index in 0..ints.len() {
+            if !ints.is_null(index) {
+                values.extend_from_slice(bin_render(ints.value(index), &mut digits));
+            }
+            offsets.push(i32::try_from(values.len()).map_err(|_| {
+                DataFusionError::Execution("'bin' output exceeds i32 offsets".to_string())
+            })?);
+        }
+        let rendered = StringArray::try_new(
+            OffsetBuffer::new(ScalarBuffer::from(offsets)),
+            Buffer::from(values),
+            ints.nulls().cloned(),
+        )?;
+        Ok(ColumnarValue::Array(Arc::new(rendered)))
     }
 }
 
@@ -309,16 +318,8 @@ impl ScalarUDFImpl for SparkRint {
         };
         let array = arg.to_array(args.number_rows)?;
         let doubles = float64_values(&array)?;
-        let values: Vec<Option<f64>> = (0..doubles.len())
-            .map(|index| {
-                if doubles.is_null(index) {
-                    None
-                } else {
-                    Some(doubles.value(index).round_ties_even())
-                }
-            })
-            .collect();
-        Ok(ColumnarValue::Array(Arc::new(Float64Array::from(values))))
+        let out = unary::<Float64Type, _, Float64Type>(&doubles, f64::round_ties_even);
+        Ok(ColumnarValue::Array(Arc::new(out)))
     }
 }
 
@@ -384,8 +385,14 @@ fn abs_typed(array: &dyn Array, ansi: bool) -> Result<ArrayRef> {
         DataType::Int16 => abs_primitive::<Int16Type>(array, ansi, "short"),
         DataType::Int32 => abs_primitive::<Int32Type>(array, ansi, "integer"),
         DataType::Int64 => abs_primitive::<Int64Type>(array, ansi, "long"),
-        DataType::Float32 => abs_primitive::<Float32Type>(array, ansi, "float"),
-        DataType::Float64 => abs_primitive::<Float64Type>(array, ansi, "double"),
+        DataType::Float32 => Ok(Arc::new(unary::<Float32Type, _, Float32Type>(
+            array.as_primitive(),
+            f32::abs,
+        ))),
+        DataType::Float64 => Ok(Arc::new(unary::<Float64Type, _, Float64Type>(
+            array.as_primitive(),
+            f64::abs,
+        ))),
         DataType::Decimal32(_, _) => abs_primitive::<Decimal32Type>(array, ansi, "decimal"),
         DataType::Decimal64(_, _) => abs_primitive::<Decimal64Type>(array, ansi, "decimal"),
         DataType::Decimal128(_, _) => abs_primitive::<Decimal128Type>(array, ansi, "decimal"),
@@ -410,6 +417,27 @@ where
     T::Native: ArrowNativeTypeOp,
 {
     let primitive = array.as_primitive::<T>();
+    if !ansi {
+        let result = unary::<T, _, T>(primitive, |value| {
+            if value.is_lt(T::Native::ZERO) {
+                value.neg_wrapping()
+            } else {
+                value
+            }
+        });
+        return Ok(Arc::new(result.with_data_type(array.data_type().clone())));
+    }
+    if let Ok(result) = try_unary::<T, _, T>(primitive, |value| {
+        if value.is_lt(T::Native::ZERO) {
+            value
+                .neg_checked()
+                .map_err(|_| ArrowError::ComputeError(kind.to_string()))
+        } else {
+            Ok(value)
+        }
+    }) {
+        return Ok(Arc::new(result.with_data_type(array.data_type().clone())));
+    }
     let mut builder = PrimitiveBuilder::<T>::with_capacity(primitive.len())
         .with_data_type(array.data_type().clone());
     for index in 0..primitive.len() {
@@ -419,16 +447,26 @@ where
         }
         let value = primitive.value(index);
         if value.is_lt(T::Native::ZERO) {
-            match value.neg_checked() {
-                Ok(result) => builder.append_value(result),
-                Err(_) if ansi => return Err(overflow_error(kind)),
-                Err(_) => builder.append_value(value.neg_wrapping()),
-            }
+            builder.append_value(value.neg_checked().map_err(|_| overflow_error(kind))?);
         } else {
             builder.append_value(value);
         }
     }
     Ok(Arc::new(builder.finish()))
+}
+
+fn bin_render(value: i64, digits: &mut [u8; 64]) -> &[u8] {
+    let mut bits = value.cast_unsigned();
+    let mut start = digits.len();
+    loop {
+        start -= 1;
+        digits[start] = b'0' + u8::try_from(bits & 1).unwrap_or_default();
+        bits >>= 1;
+        if bits == 0 {
+            break;
+        }
+    }
+    &digits[start..]
 }
 
 #[cfg(test)]

@@ -2870,20 +2870,23 @@ the pin rather than obeying it.
 
 ### COMPLEX-ELEM-NULL-1 — constructor element nullability does not propagate the child flag
 
-- **repark** — `STRUCT(1 AS a)` answers `struct<a: int32>` with a **nullable**
-  element; `MAP('a', 1)` answers `map<string, int32>` with a **nullable** value
-  field; `ARRAY(1, 2)` answers `list<element: int32>` with a **nullable** element.
-  (Top-level flags are Spark-equal since 2026-09-06, CAST-NULL-1.)
+- **repark** — `ARRAY(1, 2)` **FIXED 2026-09-16 (DOOR-CONVERGE-1):** answers
+  `list<element: int32 not null>` — the array constructors (`array`/`make_array`,
+  child names `element`/`item` kept distinct) declare Spark's `containsNull = any
+  constructor arg nullable` and retag the physical list to match. `STRUCT(1 AS a)`
+  still answers `struct<a: int32>` with a **nullable** element; `MAP('a', 1)` still
+  answers `map<string, int32>` with a **nullable** value field. (Top-level flags are
+  Spark-equal since 2026-09-06, CAST-NULL-1.)
 - **Apache Spark** — the same constructors answer `struct<a: int32 not null>`,
   `MapType(StringType(), IntegerType(), False)`, and `list<element: int32 not null>`:
   elements are non-null exactly when their children are. Values match.
   *(oracle: live PySpark 4.1.2, UTC, 2026-09-06.)*
 - **Pin** —
   `python/repark/tests/test_nullability_2.py::test_complex_constructor_elements_stay_nullable_per_complex_elem_null_1`
-  (red when fixed).
-- **Rationale** — BACKLOG. Element propagation needs type-rebuilding constructor
-  shims; the top-level rule (CAST-NULL-1) marks only the top field. Filed 2026-09-06
-  (NULLABILITY-2 round 2).
+  (array arm now green; still red-pins the STRUCT/MAP arms).
+- **Rationale** — PARTIALLY FIXED. The array arm is converged (DOOR-CONVERGE-1,
+  2026-09-16); the struct/map arms need the same type-rebuilding constructor shims.
+  Filed 2026-09-06 (NULLABILITY-2 round 2).
 
 ### CAST-MAP-SPELL-1 — `MAP<…>` target spelling refuses in CAST
 
@@ -4849,10 +4852,18 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `QQ==`, `'Apache'` → `QXBhY2hl`, empty and NULL unchanged. *(oracle: live PySpark 4.1.2 +
   Iceberg 1.11.0, 2026-09-03, EX-4 string-basics batch.)*
 - **Pin** — `python/repark/tests/test_door_converge_1.py::test_c001_base64_pads_and_chunks_on_both_doors`,
-  `test_c001_unbase64_lenient_decode_on_both_doors`, and
+  `test_c001_unbase64_lenient_decode_on_both_doors`,
+  `test_l001_unbase64_strict_endings_on_both_doors`, and
   `test_bl17_base64_padding.py::test_bl17_base64_applies_rfc4648_padding`.
 - **Rationale** — FIXED. History: the facade lowered `base64` to `encode(x, 'base64')` and
-  the door's kernel neither padded nor chunked.
+  the door's kernel neither padded nor chunked. Decode-error semantics added
+  2026-09-16 (DOOR-CONVERGE-1 round 2): `unbase64` now refuses malformed endings with
+  Java MIME-decoder text instead of silently truncating — alphabet characters after
+  padding (`'QQ==QQ'` → `Input byte array has incorrect ending byte at 5`), truncated
+  padding (`'QQ='` / `'=QQ'` → `Input byte array has wrong 4-byte ending unit`), and a
+  lone quantum (`'Q'` → `Last unit does not have enough valid bits`); `'QR'` → `b'A'`,
+  `'QQQ'` → `b'A\x04'`, interior whitespace still skipped (oracle cells
+  C6-unb64-after-pad/after-pad2/QQ=/Q/eq-first/QR/QQQ/space, C6-api-unb64).
 
 ### BL-18 — `approx_count_distinct` / `regr_count` derive nullable where Spark is non-null — **FIXED 2026-09-15 (DOOR-CONVERGE-1)**
 

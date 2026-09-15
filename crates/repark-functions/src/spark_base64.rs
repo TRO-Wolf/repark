@@ -2,6 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, ArrayRef, AsArray, BinaryArray, StringArray};
+use datafusion::arrow::buffer::{Buffer, OffsetBuffer, ScalarBuffer};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::{DataFusionError, Result, exec_err};
 use datafusion::logical_expr::{
@@ -10,6 +11,20 @@ use datafusion::logical_expr::{
 };
 
 const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+const fn decode_table() -> [i16; 256] {
+    let mut table = [-1i16; 256];
+    let mut index = 0usize;
+    while index < 64 {
+        table[ALPHABET[index] as usize] = index as i16;
+        index += 1;
+    }
+    table[b'=' as usize] = -2;
+    table
+}
+
+static DECODE_TABLE: [i16; 256] = decode_table();
 
 #[must_use]
 pub fn base64_udf() -> Arc<ScalarUDF> {
@@ -82,9 +97,24 @@ impl ScalarUDFImpl for SparkBase64 {
             return exec_err!("'base64' expects one argument");
         };
         let array = arg.to_array(args.number_rows)?;
-        let rows = bytes_column(&array)?;
-        let values: Vec<Option<String>> = rows.iter().map(|row| row.map(encode_mime)).collect();
-        Ok(ColumnarValue::Array(Arc::new(StringArray::from(values))))
+        let mut offsets = Vec::with_capacity(array.len() + 1);
+        let mut values = Vec::new();
+        offsets.push(0i32);
+        each_bytes(&array, |row| {
+            if let Some(bytes) = row {
+                encode_mime_into(bytes, &mut values);
+            }
+            offsets.push(i32::try_from(values.len()).map_err(|_| {
+                DataFusionError::Execution("'base64' output exceeds i32 offsets".to_string())
+            })?);
+            Ok(())
+        })?;
+        let encoded = StringArray::try_new(
+            OffsetBuffer::new(ScalarBuffer::from(offsets)),
+            Buffer::from(values),
+            array.logical_nulls(),
+        )?;
+        Ok(ColumnarValue::Array(Arc::new(encoded)))
     }
 }
 
@@ -144,16 +174,24 @@ impl ScalarUDFImpl for SparkUnBase64 {
             return exec_err!("'unbase64' expects one argument");
         };
         let array = arg.to_array(args.number_rows)?;
-        let rows = bytes_column(&array)?;
-        let decoded: Vec<Option<Vec<u8>>> = rows
-            .iter()
-            .map(|row| match row {
-                None => Ok(None),
-                Some(bytes) => decode_mime(bytes).map(Some),
-            })
-            .collect::<Result<_>>()?;
-        let values: Vec<Option<&[u8]>> = decoded.iter().map(|row| row.as_deref()).collect();
-        Ok(ColumnarValue::Array(Arc::new(BinaryArray::from(values))))
+        let mut offsets = Vec::with_capacity(array.len() + 1);
+        let mut values = Vec::new();
+        offsets.push(0i32);
+        each_bytes(&array, |row| {
+            if let Some(bytes) = row {
+                decode_mime_into(bytes, &mut values)?;
+            }
+            offsets.push(i32::try_from(values.len()).map_err(|_| {
+                DataFusionError::Execution("'unbase64' output exceeds i32 offsets".to_string())
+            })?);
+            Ok(())
+        })?;
+        let decoded = BinaryArray::try_new(
+            OffsetBuffer::new(ScalarBuffer::from(offsets)),
+            Buffer::from(values),
+            array.logical_nulls(),
+        )?;
+        Ok(ColumnarValue::Array(Arc::new(decoded)))
     }
 }
 
@@ -177,129 +215,128 @@ fn unexpected_input_type(name: &str, got: &DataType) -> DataFusionError {
     ))
 }
 
-fn bytes_column(array: &ArrayRef) -> Result<Vec<Option<&[u8]>>> {
-    let len = array.len();
+fn each_bytes(array: &ArrayRef, mut visit: impl FnMut(Option<&[u8]>) -> Result<()>) -> Result<()> {
     match array.data_type() {
         DataType::Utf8 => {
-            let column = array.as_string::<i32>();
-            Ok((0..len)
-                .map(|index| (!column.is_null(index)).then(|| column.value(index).as_bytes()))
-                .collect())
+            for row in array.as_string::<i32>() {
+                visit(row.map(str::as_bytes))?;
+            }
         }
         DataType::LargeUtf8 => {
-            let column = array.as_string::<i64>();
-            Ok((0..len)
-                .map(|index| (!column.is_null(index)).then(|| column.value(index).as_bytes()))
-                .collect())
+            for row in array.as_string::<i64>() {
+                visit(row.map(str::as_bytes))?;
+            }
         }
         DataType::Utf8View => {
-            let column = array.as_string_view();
-            Ok((0..len)
-                .map(|index| (!column.is_null(index)).then(|| column.value(index).as_bytes()))
-                .collect())
+            for row in array.as_string_view() {
+                visit(row.map(str::as_bytes))?;
+            }
         }
         DataType::Binary => {
-            let column = array.as_binary::<i32>();
-            Ok((0..len)
-                .map(|index| (!column.is_null(index)).then(|| column.value(index)))
-                .collect())
+            for row in array.as_binary::<i32>() {
+                visit(row)?;
+            }
         }
         DataType::LargeBinary => {
-            let column = array.as_binary::<i64>();
-            Ok((0..len)
-                .map(|index| (!column.is_null(index)).then(|| column.value(index)))
-                .collect())
+            for row in array.as_binary::<i64>() {
+                visit(row)?;
+            }
         }
         DataType::BinaryView => {
-            let column = array.as_binary_view();
-            Ok((0..len)
-                .map(|index| (!column.is_null(index)).then(|| column.value(index)))
-                .collect())
+            for row in array.as_binary_view() {
+                visit(row)?;
+            }
         }
-        DataType::Null => Ok(vec![None; len]),
-        other => exec_err!("'base64'/'unbase64' on unsupported type {other}"),
+        DataType::Null => {
+            for _ in 0..array.len() {
+                visit(None)?;
+            }
+        }
+        other => return exec_err!("'base64'/'unbase64' on unsupported type {other}"),
     }
+    Ok(())
 }
 
 #[allow(clippy::cast_possible_truncation)]
-fn encode_mime(bytes: &[u8]) -> String {
-    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4 + bytes.len() / 57 * 2);
-    let mut column = 0usize;
-    for chunk in bytes.chunks(3) {
-        let word = (u32::from(chunk[0]) << 16)
-            | (u32::from(*chunk.get(1).unwrap_or(&0)) << 8)
-            | u32::from(*chunk.get(2).unwrap_or(&0));
-        let sextets = [
-            ALPHABET[((word >> 18) & 63) as usize],
-            ALPHABET[((word >> 12) & 63) as usize],
-            if chunk.len() > 1 {
+fn encode_mime_into(bytes: &[u8], out: &mut Vec<u8>) {
+    let mut first_line = true;
+    for line in bytes.chunks(57) {
+        if first_line {
+            first_line = false;
+        } else {
+            out.extend_from_slice(b"\r\n");
+        }
+        for quad in line.chunks(3) {
+            let word = (u32::from(quad[0]) << 16)
+                | (u32::from(*quad.get(1).unwrap_or(&0)) << 8)
+                | u32::from(*quad.get(2).unwrap_or(&0));
+            out.push(ALPHABET[((word >> 18) & 63) as usize]);
+            out.push(ALPHABET[((word >> 12) & 63) as usize]);
+            out.push(if quad.len() > 1 {
                 ALPHABET[((word >> 6) & 63) as usize]
             } else {
                 b'='
-            },
-            if chunk.len() > 2 {
+            });
+            out.push(if quad.len() > 2 {
                 ALPHABET[(word & 63) as usize]
             } else {
                 b'='
-            },
-        ];
-        for ch in sextets {
-            if column == 76 {
-                out.push('\r');
-                out.push('\n');
-                column = 0;
-            }
-            out.push(char::from(ch));
-            column += 1;
+            });
         }
     }
-    out
 }
 
-#[allow(clippy::cast_possible_truncation)]
-fn decode_mime(bytes: &[u8]) -> Result<Vec<u8>> {
-    let mut table = [u8::MAX; 256];
-    for (index, symbol) in ALPHABET.iter().enumerate() {
-        table[usize::from(*symbol)] = u8::try_from(index).unwrap_or(u8::MAX);
-    }
-    let mut sextets = Vec::with_capacity(bytes.len());
-    for byte in bytes {
-        if *byte == b'=' {
-            break;
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn decode_mime_into(bytes: &[u8], out: &mut Vec<u8>) -> Result<()> {
+    let mut bits: u32 = 0;
+    let mut shiftto: i32 = 18;
+    let mut cursor = 0usize;
+    let limit = bytes.len();
+    while cursor < limit {
+        let value = DECODE_TABLE[usize::from(bytes[cursor])];
+        cursor += 1;
+        if value < 0 {
+            if value == -2 {
+                let missing_pad = shiftto == 6
+                    && (cursor == limit || {
+                        let next = bytes[cursor];
+                        cursor += 1;
+                        next != b'='
+                    });
+                if missing_pad || shiftto == 18 {
+                    return exec_err!("Input byte array has wrong 4-byte ending unit");
+                }
+                break;
+            }
+            continue;
         }
-        let value = table[usize::from(*byte)];
-        if value != u8::MAX {
-            sextets.push(value);
-        }
-    }
-    let mut out = Vec::with_capacity(sextets.len() * 3 / 4);
-    for group in sextets.chunks(4) {
-        let word = group
-            .iter()
-            .fold(0u32, |acc, symbol| (acc << 6) | u32::from(*symbol));
-        match group.len() {
-            4 => {
-                out.push((word >> 16) as u8);
-                out.push((word >> 8) as u8);
-                out.push(word as u8);
-            }
-            3 => {
-                let padded = word << 6;
-                out.push((padded >> 16) as u8);
-                out.push((padded >> 8) as u8);
-            }
-            2 => {
-                let padded = word << 12;
-                out.push((padded >> 16) as u8);
-            }
-            _ => {
-                return exec_err!(
-                    "unbase64: input ends with a single base64 digit, which cannot decode"
-                );
-            }
+        bits |= (value as u32) << shiftto;
+        shiftto -= 6;
+        if shiftto < 0 {
+            out.push((bits >> 16) as u8);
+            out.push((bits >> 8) as u8);
+            out.push(bits as u8);
+            shiftto = 18;
+            bits = 0;
         }
     }
-    Ok(out)
+    if shiftto == 6 {
+        out.push((bits >> 16) as u8);
+    } else if shiftto == 0 {
+        out.push((bits >> 16) as u8);
+        out.push((bits >> 8) as u8);
+    } else if shiftto == 12 {
+        return exec_err!("Last unit does not have enough valid bits");
+    }
+    while cursor < limit {
+        let value = DECODE_TABLE[usize::from(bytes[cursor])];
+        cursor += 1;
+        if value < 0 {
+            continue;
+        }
+        return exec_err!("Input byte array has incorrect ending byte at {cursor}");
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -323,6 +360,18 @@ mod tests {
             .unwrap_or_else(|error| panic!("exec {sql}: {error}"));
         ScalarValue::try_from_array(batches[0].column(0).as_ref(), 0)
             .unwrap_or_else(|error| panic!("scalar {sql}: {error}"))
+    }
+
+    async fn error_text(ctx: &SessionContext, sql: &str) -> String {
+        match ctx.sql(sql).await {
+            Err(error) => error.to_string(),
+            Ok(frame) => frame
+                .collect()
+                .await
+                .err()
+                .unwrap_or_else(|| panic!("{sql} should refuse"))
+                .to_string(),
+        }
     }
 
     #[tokio::test]
@@ -360,6 +409,9 @@ mod tests {
         for (sql, want) in [
             ("SELECT unbase64('U3Bhcms=')", b"Spark".as_slice()),
             ("SELECT unbase64('U3Bhcms')", b"Spark".as_slice()),
+            ("SELECT unbase64('QR')", b"A".as_slice()),
+            ("SELECT unbase64('QQQ')", b"A\x04".as_slice()),
+            ("SELECT unbase64('U3Bh cms=')", b"Spark".as_slice()),
             ("SELECT unbase64('!!')", b"".as_slice()),
         ] {
             assert_eq!(
@@ -376,5 +428,35 @@ mod tests {
             one(&ctx, "SELECT unbase64(CAST(NULL AS STRING))").await,
             ScalarValue::Binary(None)
         );
+    }
+
+    #[tokio::test]
+    async fn unbase64_refuses_bad_endings_with_java_text() {
+        let ctx = ctx();
+        for (sql, fragment) in [
+            (
+                "SELECT unbase64('QQ==QQ')",
+                "Input byte array has incorrect ending byte at 5",
+            ),
+            (
+                "SELECT unbase64('U3Bhcms=QQ')",
+                "Input byte array has incorrect ending byte at 9",
+            ),
+            (
+                "SELECT unbase64('QQ=')",
+                "Input byte array has wrong 4-byte ending unit",
+            ),
+            (
+                "SELECT unbase64('=QQ')",
+                "Input byte array has wrong 4-byte ending unit",
+            ),
+            (
+                "SELECT unbase64('Q')",
+                "Last unit does not have enough valid bits",
+            ),
+        ] {
+            let error = error_text(&ctx, sql).await;
+            assert!(error.contains(fragment), "{sql} -> {error}");
+        }
     }
 }

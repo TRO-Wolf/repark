@@ -2,7 +2,9 @@
 
 pins: door-converge-1/C-001, door-converge-1/C-002, door-converge-1/C-003,
 door-converge-1/C-004, door-converge-1/C-005, door-converge-1/C-006,
-door-converge-1/C-007, door-converge-1/C-008
+door-converge-1/C-007, door-converge-1/C-008, door-converge-1/C-010,
+door-converge-1/C-011, door-converge-1/C-012, door-converge-1/C-013,
+door-converge-1/C-014
 """
 
 from __future__ import annotations
@@ -80,6 +82,25 @@ def test_c001_unbase64_lenient_decode_on_both_doors(spark: ReparkSession) -> Non
         b"Spark",
         b"",
     ]
+
+
+def test_l001_unbase64_strict_endings_on_both_doors(spark: ReparkSession) -> None:
+    """Oracle C6-unb64-*: Java MIME decoder refuses bad endings, stays lenient."""
+    for query, fragment in (
+        ("SELECT unbase64('QQ==QQ') AS v", "incorrect ending byte at 5"),
+        ("SELECT unbase64('U3Bhcms=QQ') AS v", "incorrect ending byte at 9"),
+        ("SELECT unbase64('QQ=') AS v", "wrong 4-byte ending unit"),
+        ("SELECT unbase64('=QQ') AS v", "wrong 4-byte ending unit"),
+        ("SELECT unbase64('Q') AS v", "Last unit does not have enough valid bits"),
+    ):
+        with pytest.raises(PySparkException, match=fragment):
+            spark.sql(query).collect()
+    assert _sql_field(spark, "SELECT unbase64('QR') AS v")[2] == [b"A"]
+    assert _sql_field(spark, "SELECT unbase64('QQQ') AS v")[2] == [b"A\x04"]
+    assert _sql_field(spark, "SELECT unbase64('U3Bh cms=') AS v")[2] == [b"Spark"]
+    frame = spark.createDataFrame([("QQ==QQ",)], ["s"])
+    with pytest.raises(PySparkException, match="incorrect ending byte"):
+        frame.select(F.unbase64("s").alias("v")).collect()
 
 
 def test_c002_hypot_registers_rescaled_on_both_doors(spark: ReparkSession) -> None:
@@ -191,6 +212,85 @@ def test_c005_array_contains_three_valued_on_both_doors(spark: ReparkSession) ->
     assert table.column("v").to_pylist() == [None]
 
 
+def test_l002_array_contains_coerces_to_tightest_common_type(spark: ReparkSession) -> None:
+    """Oracle C6-ac-*: needle and element widen together, never needle down."""
+    assert _sql_field(
+        spark,
+        "SELECT array_contains(array(1,2), CAST(3 AS DOUBLE)/CAST(2 AS DOUBLE)) AS v",
+    ) == (pyarrow.bool_(), True, [False])
+    assert _sql_field(spark, "SELECT array_contains(array(1,2), CAST(2 AS DOUBLE)) AS v") == (
+        pyarrow.bool_(),
+        False,
+        [True],
+    )
+    assert _sql_field(
+        spark,
+        "SELECT array_contains(array(1,2), CAST(2147483648 AS BIGINT)) AS v",
+    ) == (pyarrow.bool_(), False, [False])
+    assert _sql_field(spark, "SELECT array_contains(array(1,2), CAST(1 AS BIGINT)) AS v") == (
+        pyarrow.bool_(),
+        False,
+        [True],
+    )
+    assert _sql_field(spark, "SELECT array_contains(array(1.5, 2.5), 2.5) AS v") == (
+        pyarrow.bool_(),
+        False,
+        [True],
+    )
+    assert _sql_field(spark, "SELECT array_contains(array(array(1), array(2)), array(2)) AS v") == (
+        pyarrow.bool_(),
+        False,
+        [True],
+    )
+    frame = spark.createDataFrame([([1, 2],)], "a array<int>")
+    assert frame.select(F.array_contains("a", 1.5).alias("v")).to_arrow().column(
+        "v"
+    ).to_pylist() == [False]
+    assert frame.select(F.array_contains("a", F.lit(2147483648)).alias("v")).to_arrow().column(
+        "v"
+    ).to_pylist() == [False]
+
+
+def test_l004_array_contains_empty_untyped_array_answers_false(
+    spark: ReparkSession,
+) -> None:
+    """Oracle C6-ac-empty-untyped: array() + int needle is False non-null."""
+    assert _sql_field(spark, "SELECT array_contains(array(), 1) AS v") == (
+        pyarrow.bool_(),
+        False,
+        [False],
+    )
+
+
+def test_l003_array_contains_diff_types_refuses_on_both_doors(
+    spark: ReparkSession,
+) -> None:
+    """Oracle C6-ac-string-needle/-int-in-strings/-api-ac-string/-string-off."""
+    with pytest.raises(AnalysisException, match=r"DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES"):
+        spark.sql("SELECT array_contains(array(1,2), '1') AS v").collect()
+    with pytest.raises(AnalysisException, match=r"DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES"):
+        spark.sql("SELECT array_contains(array('1','2'), 1) AS v").collect()
+    frame = spark.createDataFrame([([1, 2],)], "a array<int>")
+    with pytest.raises(AnalysisException, match=r"DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES"):
+        frame.select(F.array_contains("a", "1").alias("v")).collect()
+
+
+def test_l003_array_contains_diff_types_refuses_when_ansi_off() -> None:
+    """Oracle C6-ac-string-off: the refusal is planning-time, ANSI-independent."""
+    ansi_off = (
+        ReparkSession.builder.appName("door-converge-1-ac-off")
+        .config("spark.sql.ansi.enabled", "false")
+        .getOrCreate()
+    )
+    try:
+        with pytest.raises(AnalysisException, match=r"DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES"):
+            ansi_off.sql("SELECT array_contains(array(1,2), '1') AS v").collect()
+        with pytest.raises(AnalysisException, match=r"DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES"):
+            ansi_off.sql("SELECT array_contains(array('1','2'), 1) AS v").collect()
+    finally:
+        ansi_off.stop()
+
+
 def test_c006_count_aggregates_non_null_bigint_on_both_doors(spark: ReparkSession) -> None:
     """Oracle BL18-sql/-api/-sql-empty: approx_count_distinct + regr_count non-null."""
     table = spark.sql(
@@ -257,3 +357,36 @@ def test_c008_bin_rint_refuse_boolean_on_the_sql_door(spark: ReparkSession) -> N
         True,
         [2.0],
     )
+
+
+def test_l007_abs_wraps_signed_minima_when_ansi_off() -> None:
+    """Oracle C6-abs-off-*, C6-api-abs-off-tiny: ANSI off wraps, width kept."""
+    ansi_off = (
+        ReparkSession.builder.appName("door-converge-1-abs-off")
+        .config("spark.sql.ansi.enabled", "false")
+        .getOrCreate()
+    )
+    try:
+        for query, arrow_type, want in (
+            ("SELECT abs(CAST(-128 AS TINYINT)) AS v", pyarrow.int8(), [-128]),
+            ("SELECT abs(CAST(-32768 AS SMALLINT)) AS v", pyarrow.int16(), [-32768]),
+            (
+                "SELECT abs(CAST(-2147483648 AS INT)) AS v",
+                pyarrow.int32(),
+                [-2147483648],
+            ),
+            (
+                "SELECT abs(-9223372036854775808L) AS v",
+                pyarrow.int64(),
+                [-9223372036854775808],
+            ),
+            ("SELECT abs(CAST(-5 AS TINYINT)) AS v", pyarrow.int8(), [5]),
+        ):
+            assert _sql_field(ansi_off, query) == (arrow_type, False, want), query
+        frame = ansi_off.createDataFrame([(-128,)], "x tinyint")
+        table = frame.select(F.abs("x").alias("v")).to_arrow()
+        assert table.schema.field("v").type == pyarrow.int8()
+        assert table.schema.field("v").nullable is True
+        assert table.column("v").to_pylist() == [-128]
+    finally:
+        ansi_off.stop()

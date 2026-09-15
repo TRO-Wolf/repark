@@ -109,53 +109,36 @@ fn unexpected_input_type(name: &str, got: &DataType) -> DataFusionError {
 }
 
 fn size_inner(array: &ArrayRef) -> Result<ArrayRef> {
-    let len = array.len();
-    let mut values: Vec<Option<i32>> = Vec::with_capacity(len);
     match array.data_type() {
-        DataType::List(_) => {
-            let list = array.as_list::<i32>();
-            for index in 0..len {
-                if list.is_null(index) {
-                    values.push(None);
-                } else {
-                    values.push(Some(list.value_length(index)));
-                }
-            }
-        }
+        DataType::List(_) | DataType::FixedSizeList(_, _) => Ok(
+            datafusion::arrow::compute::kernels::length::length(array.as_ref())?,
+        ),
         DataType::LargeList(_) => {
             let list = array.as_list::<i64>();
-            for index in 0..len {
-                if list.is_null(index) {
-                    values.push(None);
-                } else {
-                    values.push(Some(
-                        i32::try_from(list.value_length(index)).unwrap_or(i32::MAX),
-                    ));
-                }
-            }
-        }
-        DataType::FixedSizeList(_, width) => {
-            for index in 0..len {
-                if array.is_null(index) {
-                    values.push(None);
-                } else {
-                    values.push(Some(*width));
-                }
-            }
+            let values: Vec<i32> = list
+                .offsets()
+                .windows(2)
+                .map(|pair| i32::try_from(pair[1] - pair[0]).unwrap_or(i32::MAX))
+                .collect();
+            Ok(Arc::new(Int32Array::new(
+                values.into(),
+                list.logical_nulls(),
+            )))
         }
         DataType::Map(_, _) => {
             let map = array.as_map();
-            for index in 0..len {
-                if map.is_null(index) {
-                    values.push(None);
-                } else {
-                    values.push(Some(map.value_length(index)));
-                }
-            }
+            let values: Vec<i32> = map
+                .offsets()
+                .windows(2)
+                .map(|pair| pair[1] - pair[0])
+                .collect();
+            Ok(Arc::new(Int32Array::new(
+                values.into(),
+                map.logical_nulls(),
+            )))
         }
-        other => return exec_err!("'size'/'cardinality' on unsupported type {other}"),
+        other => exec_err!("'size'/'cardinality' on unsupported type {other}"),
     }
-    Ok(Arc::new(Int32Array::from(values)))
 }
 
 #[cfg(test)]

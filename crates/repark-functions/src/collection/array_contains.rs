@@ -8,6 +8,8 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
+use super::array_insert::tightest_common;
+
 #[must_use]
 pub fn array_contains_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkArrayContains::new()).with_aliases(["array_has"]))
@@ -73,15 +75,23 @@ impl ScalarUDFImpl for SparkArrayContains {
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         match arg_types {
-            [haystack, needle] if needle == &DataType::Null => Err(null_type_error()),
-            [haystack, _] if haystack == &DataType::Null => Ok(vec![
-                DataType::List(Arc::new(Field::new_list_field(DataType::Null, true))),
-                DataType::Null,
+            [_, needle] if needle == &DataType::Null => Err(null_type_error()),
+            [haystack, needle] if haystack == &DataType::Null => Ok(vec![
+                DataType::List(Arc::new(Field::new_list_field(needle.clone(), true))),
+                needle.clone(),
             ]),
-            [haystack, _] => {
-                let element = list_element_type(haystack)
+            [haystack, needle] => {
+                let element = list_element_field(haystack)
                     .ok_or_else(|| unexpected_input_type("array_contains", haystack))?;
-                Ok(vec![haystack.clone(), element.clone()])
+                let widened = if element.data_type() == &DataType::Null {
+                    needle.clone()
+                } else if needle == element.data_type() {
+                    element.data_type().clone()
+                } else {
+                    tightest_common(element.data_type(), needle)
+                        .ok_or_else(|| diff_types_error(element.data_type(), needle))?
+                };
+                Ok(vec![widen_list(haystack, element, &widened), widened])
             }
             _ => exec_err!(
                 "'array_contains' expects two arguments, got {}",
@@ -102,13 +112,31 @@ impl ScalarUDFImpl for SparkArrayContains {
     }
 }
 
-fn list_element_type(data_type: &DataType) -> Option<&DataType> {
+fn list_element_field(data_type: &DataType) -> Option<&FieldRef> {
     match data_type {
         DataType::List(field) | DataType::LargeList(field) | DataType::FixedSizeList(field, _) => {
-            Some(field.data_type())
+            Some(field)
         }
         _ => None,
     }
+}
+
+fn widen_list(haystack: &DataType, element: &FieldRef, widened: &DataType) -> DataType {
+    let field = Field::new(element.name(), widened.clone(), element.is_nullable());
+    match haystack {
+        DataType::LargeList(_) => DataType::LargeList(Arc::new(field)),
+        DataType::FixedSizeList(_, width) => DataType::FixedSizeList(Arc::new(field), *width),
+        _ => DataType::List(Arc::new(field)),
+    }
+}
+
+fn diff_types_error(element: &DataType, needle: &DataType) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] Cannot resolve \
+         \"array_contains(<expr>, <expr>)\" due to data type mismatch: Input to \
+         `array_contains` should have been \"ARRAY\" followed by a value with same \
+         element type, but it's [\"ARRAY<{element}>\", \"{needle}\"]."
+    ))
 }
 
 fn unexpected_input_type(name: &str, got: &DataType) -> DataFusionError {

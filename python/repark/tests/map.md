@@ -225,8 +225,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `approx_count_distinct`/`regr_count` (non-null `bigint`, empty → 0),
   `ascii`/`length`/`character_length` (codepoint + binary bytes), and the BL-6
   SQL-door refusal class — all nine pins green on the converged kernels.
+  **Round 2 (2026-09-16):** `unbase64` raises the Java MIME-decoder texts on
+  malformed endings while `'QR'`/`'QQQ'`/whitespace/`'!!'` stay lenient;
+  `array_contains` coerces to the tightest common type (DOUBLE needle →
+  `False` NULLABLE, BIGINT in/out of range), refuses incompatible pairs with
+  `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` under ANSI on and off, and
+  answers `array_contains(array(), 1)` = `False` non-null; `abs` ANSI-off
+  wraps signed minima on a builder-configured session.
   pins: door-converge-1/C-001, C-002, C-003, C-004, C-005,
-  C-006, C-007, C-008
+  C-006, C-007, C-008, C-010, C-011, C-012, C-013, C-014
 - [test_abs_expr_1.py](test_abs_expr_1.py) — **ABS-EXPR-1 (2026-09-13):** `F.abs` /
   `F.cbrt` / `F.nullif` are one native `call_scalar` each — the depth-40 memory pin
   runs each chain in a subprocess under `RLIMIT_AS` (12 GB) with a per-level bound
@@ -849,7 +856,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `from_unixtime` always nullable like Spark 4.1.2. The array/struct/map cell flags
   converged non-null 2026-09-06 (NULLABILITY-2 round 2, Spark-equal); the live
   re-coercion leg's map flag cell caught up to that convergence on 2026-09-11
-  (NIGHTLY-LIVE-1 — the pin still expected the retired divergence).
+  (NIGHTLY-LIVE-1 — the pin still expected the retired divergence). The
+  `array(1, 2)` schema cells flipped to `list<element: int32 not null>` /
+  `list<item: int32 not null>` on 2026-09-16 (DOOR-CONVERGE-1 round 2 — Spark's
+  `containsNull = any child nullable`).
 - [test_date_fn_1.py](test_date_fn_1.py) — **DATE-FN-1 (2026-09-04):** Spark SQL `date()` Clock-flake fix (2026-09-05): the zero-arg pin asserts each door repeats one value per row and the two doors agree within one second, since the two statements run in different seconds (it straddled a second boundary in three CI runs).
   and `unix_timestamp` unit pins (timestamp / string / date / NULL; invalid string ANSI on
   and off; zero-arg `FROM range(3)` is three identical BIGINT rows on SQL and the facade).
@@ -908,7 +918,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   4.1.2 on the shared `spark_engine`.
   Round 2 (2026-09-06): complex casts propagate the child flag with non-null
   `STRUCT()`/`MAP()`/`ARRAY()` constructors (both ANSI modes, both doors, live leg);
-  the `MAP<…>` CAST spelling and constructor element flags stay pinned refusals;
+  the `MAP<…>` CAST spelling stays a pinned refusal and the constructor element
+  flags kept their pins — the `ARRAY` arm flipped to Spark-equal `not null`
+  elements on 2026-09-16 (DOOR-CONVERGE-1 round 2) while STRUCT/MAP remain the
+  backlog half of COMPLEX-ELEM-NULL-1;
   CSV `inferSchema` timestamps report instant `timestamp`; the footer boundary pins
   reads-at-60 / refuses-at-61; narrow logical widths pin today's wide labels.
   The CSV-infer live leg also pins JSON inference staying `string` on both engines.
@@ -4908,6 +4921,9 @@ alike — a disclosed round-8 residual, deliberately unpinned.
   in UTC with both ANSI settings. `fnp8_repark_dispositions.json` records each door
   schema or explicit refusal; residual reasons live in the parity registry.
   The live test remeasures the same goldens. pins: fnp-8/C-003, C-004, C-005, C-006
+  The eight `binding-{capture,shadow}` nested-array dispositions were re-recorded on
+  2026-09-16 with the converged `not null` element flags the oracle's embedded schema
+  already carried (DOOR-CONVERGE-1 round 2).
   `fnp8_error_oracle.json` retains the live arity, accumulator, and overflow measurements
   consumed by the same module; the SQL error pins remain in `lambda_door.rs`.
 

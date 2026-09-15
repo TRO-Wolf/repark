@@ -116,12 +116,102 @@ propagation; the chunked-shape pin holds type+value, nullability stays pinned on
 literal-input shapes. (3) `1e200` (no `D` suffix) parses as decimal scale -200, over the
 supported minimum — pinned via `CAST('1e200' AS DOUBLE)` like the card's `2.5D` note.
 
-## COVERAGE_ATTESTATION — DOOR-CONVERGE-1 — 2026-09-15
+## PROPOSITION LEDGER — DOOR-CONVERGE-1 round 2 (Grok logic critic + S2-21 perf review) — 2026-09-16
 
-- C-001..C-008 PROVEN: every clause's both-door pin is green on the rebuilt native module;
-  the measured divergences in the red-first run are each closed by a registered Spark
-  kernel the facade and the SQL door share (`door_parity_tests` passes 4/4 with the
-  divergence table ratcheted 22 → 14).
-- C-009 PROVEN: facade suite `pytest python/repark/tests -q` green (6123 passed, 6 flipped
-  recorded-answer pins updated in the same commits), `cargo test -p repark-functions
-  -p repark-python` green, clippy/fmt/size gates green.
+Oracle for this round: `fixtures-batch6.json` (live PySpark 4.1.2, `C6-*` cells, binding).
+Every logic fix landed red-first: the pin went up on the base tree, failed, then the kernel
+moved.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-010 | `unbase64` refuses malformed endings with `java.util.Base64` MIME-decoder text on both doors: alphabet after padding (`'QQ==QQ'` → `incorrect ending byte at 5`, `'U3Bhcms=QQ'` → `… at 9`), wrong 4-byte ending unit (`'QQ='`, `'=QQ'`), lone quantum (`'Q'` → `Last unit does not have enough valid bits`); still answers `'QR'` → `b'A'`, `'QQQ'` → `b'A\x04'`, skips interior space (cells C6-unb64-*, C6-api-unb64). | `test_l001_unbase64_strict_endings_on_both_doors` green. | PROVEN | Red (base tree): the lenient decoder stopped at the first pad and answered `b'A'` for `'QQ==QQ'` — silent truncation, no error. |
+| C-011 | `array_contains` coerces element and needle to their tightest common type: `array_contains(array(1,2), CAST(3 AS DOUBLE)/CAST(2 AS DOUBLE))` → `False` NULLABLE, `CAST(2 AS DOUBLE)` → `True` non-null, out-of-range BIGINT needle → `False` non-null, decimal and nested arrays still `True` (cells C6-ac-double-needle/hit, C6-ac-bigint-out/in, C6-api-ac-double/bigint, C6-ac-decimal, C6-ac-nested). | `test_l002_array_contains_coerces_to_tightest_common_type` green. | PROVEN | Red (base tree): `coerce_types` narrowed the needle to the element type — `3.0/2.0` cast DOUBLE→INT (1) answered `True` where Spark's DOUBLE comparison answers `False`. |
+| C-012 | STRING needle vs `array<int>` and INT needle vs `array<string>` refuse `[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES]` on both doors, ANSI on and off (cells C6-ac-string-needle, C6-ac-int-in-strings, C6-api-ac-string, C6-ac-string-off). | `test_l003_array_contains_diff_types_refuses_on_both_doors` + `_when_ansi_off` green. | PROVEN | Red (base tree): the needle was cast into the element type — `'x'`→NULL int — and the call answered NULL instead of refusing. |
+| C-013 | `array_contains(array(), 1)` → `False` non-null on both doors; the `NULL_TYPE` refusal fires only for an untyped NULL needle (cell C6-ac-empty-untyped). | `test_l004_array_contains_empty_untyped_array_answers_false` green. | PROVEN | Red (base tree): `array()`'s `Null` element coerced the needle to `Null`, which tripped the `NULL_TYPE` refusal — the call raised instead of answering `False`. |
+| C-014 | ANSI-off `abs` wraps signed minima with width kept: every signed minimum returns itself, `abs(CAST(-5 AS TINYINT))` → `5` tinyint; the facade column case stays nullable because its input column is (cells C6-abs-off-*, C6-api-abs-off-tiny). | `test_l007_abs_wraps_signed_minima_when_ansi_off` green (builder-configured `spark.sql.ansi.enabled=false` session). | PROVEN | Green on the fixed tree; the pin locks the existing wrap arm so a future ANSI-off regression goes red. |
+
+### Round-2 perf lines (S2-21 method, best of 3, same session, release build)
+
+`SELECT octet_length(base64(concat(repeat('x', 900), CAST(value AS STRING)))) FROM
+range(1000000)` vs `encode(…, 'base64pad')`; `unbase64`/`decode` over the same payload:
+
+```
+                    before (1a7302d8)   after (this tree)   DataFusion reference
+base64   900B:      1.039s              0.813s              encode 0.672–0.743s
+unbase64 900B:      1.139s              0.833s              decode 0.763–0.830s
+base64    90B:      0.545s              0.517s              encode 0.447–0.451s
+unbase64  90B:      0.486s              0.450s              decode 0.459–0.461s
+```
+
+`base64` writes into one `StringBuilder` (ASCII bytes, 57-byte input chunks per 76-char
+line); `unbase64` uses a `static` decode table and decodes straight into one batch buffer
+with offsets, reusing the input null bitmap. P2-1..P2-4: `abs` keeps the once-per-invoke
+ANSI flag and uses Arrow `try_unary` (ANSI on, with a non-null-MIN fallback scan) /
+`wrapping_abs` (ANSI off) and `Arc::clone`s unsigned inputs; `hypot`/`rint` use
+`Float64Array::unary` / a binary zip with OR-ed null buffers; `size` uses Arrow's `length`
+kernel on the dense path with input nulls copied; `bin` renders bits into a `StringBuilder`
+instead of `format!` per row.
+
+### Round-2 notes
+
+- L-008 (P3): runtime `spark.conf.set("spark.sql.ansi.enabled", …)` not moving kernels is
+  the SET-ANSI-RUNTIME-1 residue owned by unit sql-set-door-1 — recorded here only.
+- The array-constructor work (`array`/`make_array` Spark `containsNull`, one kernel per
+  spelling, `element` vs `item` child-field names) and the registry-wide `promise_retag`
+  alignment of planned vs physical Arrow fields ride in the same commit; the flipped
+  recorded answers (`test_types_1`, `test_nullability_2`, `fnp8` dispositions) match the
+  oracle's embedded `list<element: int32 not null>` schema.
+
+## COVERAGE_ATTESTATION — DOOR-CONVERGE-1 — 2026-09-16
+
+- C-001..C-008, C-010..C-014 PROVEN: every clause's both-door pin is green on the rebuilt
+  release native module (`16 passed` for `test_door_converge_1.py`); the measured
+  divergences in the red-first runs are each closed by a registered Spark kernel the
+  facade and the SQL door share (`door_parity_tests` keeps the divergence table at 14).
+- C-009 PROVEN: facade suite `pytest python/repark/tests -q` green, `cargo test -p
+  repark-functions -p repark-python` green, clippy/fmt/size gates green.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: door-converge-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against its fixture cell, not a paraphrase — C6-unb64-* error texts, C6-ac-* nullability and values, C6-abs-off-* widths; the array ctor's element-vs-item child naming and containsNull match Spark's CreateArray semantics, verified against the oracle's embedded schema in the fnp8 cells.
+      artifacts: [python/repark/tests/test_door_converge_1.py, fixtures-batch6.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundary inputs exercised — 'QQ=='/'QQ='/'=QQ'/'Q'/'QR'/'QQQ'/'!!' unbase64 endings, empty untyped array, out-of-range and in-range BIGINT needles, decimal and nested-array needles, signed minima of all four widths, ANSI on and off legs.
+      artifacts: [python/repark/tests/test_door_converge_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Failure paths pin Spark's classes and texts — Java MIME-decoder messages on decode errors, DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES on incompatible pairs, NULL_TYPE only for an untyped NULL needle; ANSI-off takes the same refusal (C6-ac-string-off).
+      artifacts: [python/repark/tests/test_door_converge_1.py]
+    - id: AT-4
+      status: N/A
+      justification: Kernels are pure row functions; no shared mutable state, no locks, no ordering assumptions. The static decode table is immutable.
+    - id: AT-5
+      status: N/A
+      justification: No auth, injection, secret, or deserialization surface — in-process Arrow kernels over typed input.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The promise_retag sweep aligns every registered scalar UDF's planned return field with its physical Arrow output (list element name/nullability, outer nullability); recorded-answer dispositions flipped only where the oracle's embedded schema proved the new shape (list<element: int32 not null>).
+      artifacts: [crates/repark-functions/src/promise_retag.rs, python/repark/tests/fnp8_repark_dispositions.json]
+    - id: AT-7
+      status: ATTACKED
+      evidence: P1-1/P1-2 measured before/after on 1M rows — base64 1.039s -> 0.813s and unbase64 1.139s -> 0.833s at 900B payloads, within ~1.2x of DataFusion's encode/decode; per-row String/Vec/table allocations removed (StringBuilder, static table, batch buffer with reused null bitmap).
+      artifacts: [crates/repark-functions/src/spark_base64.rs, crates/repark-functions/src/spark_math.rs, crates/repark-functions/src/collection/size.rs]
+    - id: AT-8
+      status: ATTACKED
+      evidence: DataFusion contracts honored — the wrapper invokes the inner ScalarUDFImpl directly so DF's own promise assertion is never bypassed against the corrected field; element_at's alias key binds only to repark's kernel (alias-clobber order dependence removed by per-key named wrapping); schema_name reproduces datafusion-sql's verbose alias text for alias-resolved calls.
+      artifacts: [crates/repark-functions/src/promise_retag.rs, crates/repark-functions/src/lib.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every refusal carries Spark's error class and Java's message text in the exception, so the failure is diagnosable from the error alone; no logging changes.
+      artifacts: [python/repark/tests/test_door_converge_1.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Pins-first held — the four round-2 reds failed on the base tree with the predicted behavior (silent truncation, needle-to-element narrowing, cast-instead-of-refuse, NULL_TYPE refusal on the empty array); every new branch has a naming input: pad-then-alphabet, truncated pad, lone quantum, untyped-empty vs NULL needle, ANSI on vs off.
+      artifacts: [python/repark/tests/test_door_converge_1.py, crates/repark-python/src/column/door_parity_tests.rs]
+  complete: true
+```
