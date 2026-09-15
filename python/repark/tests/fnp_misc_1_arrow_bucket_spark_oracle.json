@@ -1,0 +1,219 @@
+{
+ "cells": [
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "arrow_udf(lambda a: pc.add(a, 1), 'long') applied",
+   "name": "arrow_udf",
+   "rows": [
+    [
+     1
+    ],
+    [
+     11
+    ],
+    [
+     21
+    ],
+    [
+     31
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "<lambda>(v)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "arrow_udf decorator returnType=long applied",
+   "name": "arrow_udf",
+   "rows": [
+    [
+     0
+    ],
+    [
+     10
+    ],
+    [
+     20
+    ],
+    [
+     30
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "expr": "arrow_udf object type",
+   "name": "arrow_udf",
+   "rows": [
+    [
+     "<class 'function'>",
+     "<function <lambda>.<locals>.<lambda> at 0x7607522b4e00>"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "MISSING_AGGREGATION",
+   "error_type": "AnalysisException",
+   "expr": "arrow_udf grouped agg (pa.Array -> scalar)",
+   "full_text_tail": [
+    "[MISSING_AGGREGATION] The non-aggregating expression \"v\" is based on columns which are not participating in the GROUP BY clause.",
+    "Add the columns or the expression to the GROUP BY, aggregate the expression, or use \"any_value(v)\" if you do not care which of the values within a group is returned. SQLSTATE: 42803;",
+    "Aggregate [(id#0L % cast(2 as bigint))], [(id#0L % cast(2 as bigint)) AS g#8L, <lambda>(v#1L)#9L AS s#10L]",
+    "+- Project [id#0L, (id#0L * cast(10 as bigint)) AS v#1L]",
+    "   +- Range (0, 4, step=1, splits=Some(1))"
+   ],
+   "java_lines": [
+    "[MISSING_AGGREGATION] The non-aggregating expression \"v\" is based on columns which are not participating in the GROUP BY clause."
+   ],
+   "message": "[MISSING_AGGREGATION] The non-aggregating expression \"v\" is based on columns which are not participating in the GROUP BY clause.",
+   "name": "arrow_udf"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "expr": "arrow_udtf(Echo, returnType='id long') object",
+   "name": "arrow_udtf",
+   "rows": [
+    [
+     "<class 'pyspark.sql.udtf.UserDefinedTableFunction'>",
+     "<pyspark.sql.udtf.UserDefinedTableFunction object at 0x7607522b1fd0>"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "PythonException",
+   "expr": "arrow_udtf called with lit(1)",
+   "full_text_tail": [
+    "    yield from eval(*[a[o] for o in args_kwargs_offsets])",
+    "  File \"/tmp/oc-worker/pa/sparkarrow/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 2508, in evaluate",
+    "    for batch in convert_to_arrow(func(*args)):",
+    "  File \"/tmp/oc-worker/pa/sparkarrow/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 2498, in convert_to_arrow",
+    "    raise PySparkRuntimeError(",
+    "pyspark.errors.exceptions.base.PySparkRuntimeError: [UDTF_ARROW_TYPE_CONVERSION_ERROR] PyArrow UDTF must return an iterator of pyarrow.Table or pyarrow.RecordBatch objects."
+   ],
+   "java_lines": [],
+   "message": "",
+   "name": "arrow_udtf"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "select(bucket(lit(4), col('v')))",
+   "full_text_tail": [
+    "\t\tat org.apache.spark.sql.execution.SparkPlan.$anonfun$executeRDD$1(SparkPlan.scala:188)",
+    "\t\tat scala.util.Try$.apply(Try.scala:217)",
+    "\t\tat org.apache.spark.util.Utils$.doTryWithCallerStacktrace(Utils.scala:1392)",
+    "\t\tat org.apache.spark.util.LazyTry.tryT$lzycompute(LazyTry.scala:46)",
+    "\t\tat org.apache.spark.util.LazyTry.tryT(LazyTry.scala:46)",
+    "\t\t... 39 more"
+   ],
+   "java_lines": [
+    ": org.apache.spark.SparkException: [PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY] The expression \"bucket((boundreference() * 10))\" must be inside 'partitionedBy'. SQLSTATE: 42S23",
+    "\tSuppressed: org.apache.spark.util.Utils$OriginalTryStackTraceException: Full stacktrace of original doTryWithCallerStacktrace caller"
+   ],
+   "message": "An error occurred while calling o133.collectToPython.",
+   "name": "bucket"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "select(bucket(4, 'v'))",
+   "full_text_tail": [
+    "\t\tat org.apache.spark.sql.execution.SparkPlan.$anonfun$executeRDD$1(SparkPlan.scala:188)",
+    "\t\tat scala.util.Try$.apply(Try.scala:217)",
+    "\t\tat org.apache.spark.util.Utils$.doTryWithCallerStacktrace(Utils.scala:1392)",
+    "\t\tat org.apache.spark.util.LazyTry.tryT$lzycompute(LazyTry.scala:46)",
+    "\t\tat org.apache.spark.util.LazyTry.tryT(LazyTry.scala:46)",
+    "\t\t... 39 more"
+   ],
+   "java_lines": [
+    ": org.apache.spark.SparkException: [PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY] The expression \"bucket((boundreference() * 10))\" must be inside 'partitionedBy'. SQLSTATE: 42S23",
+    "\tSuppressed: org.apache.spark.util.Utils$OriginalTryStackTraceException: Full stacktrace of original doTryWithCallerStacktrace caller"
+   ],
+   "message": "An error occurred while calling o141.collectToPython.",
+   "name": "bucket"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "partitioning.bucket(4, 'v') select",
+   "full_text_tail": [
+    "\t\tat org.apache.spark.sql.execution.SparkPlan.$anonfun$executeRDD$1(SparkPlan.scala:188)",
+    "\t\tat scala.util.Try$.apply(Try.scala:217)",
+    "\t\tat org.apache.spark.util.Utils$.doTryWithCallerStacktrace(Utils.scala:1392)",
+    "\t\tat org.apache.spark.util.LazyTry.tryT$lzycompute(LazyTry.scala:46)",
+    "\t\tat org.apache.spark.util.LazyTry.tryT(LazyTry.scala:46)",
+    "\t\t... 39 more"
+   ],
+   "java_lines": [
+    ": org.apache.spark.SparkException: [PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY] The expression \"bucket((boundreference() * 10))\" must be inside 'partitionedBy'. SQLSTATE: 42S23",
+    "\tSuppressed: org.apache.spark.util.Utils$OriginalTryStackTraceException: Full stacktrace of original doTryWithCallerStacktrace caller"
+   ],
+   "message": "An error occurred while calling o149.collectToPython.",
+   "name": "bucket"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "sql SELECT bucket(4, v)",
+   "full_text_tail": [
+    "[UNRESOLVED_ROUTINE] Cannot resolve routine `bucket` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+   ],
+   "java_lines": [
+    "[UNRESOLVED_ROUTINE] Cannot resolve routine `bucket` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+   ],
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `bucket` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7",
+   "name": "bucket"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "sql SELECT bucket(4, 1)",
+   "full_text_tail": [
+    "[UNRESOLVED_ROUTINE] Cannot resolve routine `bucket` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+   ],
+   "java_lines": [
+    "[UNRESOLVED_ROUTINE] Cannot resolve routine `bucket` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+   ],
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `bucket` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7",
+   "name": "bucket"
+  }
+ ],
+ "pyarrow": "25.0.1",
+ "signatures": {
+  "arrow_udf": "(f=None, returnType=None, functionType=None)",
+  "arrow_udtf": "(cls: Optional[Type] = None, *, returnType: Union[pyspark.sql.types.StructType, str, NoneType] = None) -> Union[ForwardRef('UserDefinedTableFunction'), Callable[[Type], ForwardRef('UserDefinedTableFunction')]]",
+  "bucket": "(numBuckets: Union[pyspark.sql.column.Column, int], col: 'ColumnOrName') -> pyspark.sql.column.Column"
+ },
+ "spark_version": "4.1.2"
+}

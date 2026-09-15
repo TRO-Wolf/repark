@@ -161,6 +161,31 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `shiftLeft`/`shiftRight`/`shiftRightUnsigned` are the deprecated camelCase aliases of the
   Spark-equal snake_case kernels and warn Spark's exact `FutureWarning` on every call; they
   reach `functions.py` through this module's `install_into`. pins: fnp-alias-1/C-001, C-003
+  **FNP-MISC-1 (2026-09-15):** `bucket` folds a literal Column count to the int path,
+  including CAST(int-literal AS INT/SMALLINT/TINYINT/BIGINT); any other Column raises
+  `NOT_COLUMN_OR_INT`. Every call warns the Spark 4.1.2 `FutureWarning`; outside
+  `partitionedBy` the fragment refuses like the int form.
+  pins: fnp-misc-1/C-003, fnp-misc-1/L-003
+- `functions_agg.py` — aggregate-function re-exports.
+- `functions_bitwise.py` — bitwise scalar wrappers.
+- `functions_arrow_udf.py` — **FNP-MISC-1 (2026-09-15):** `arrow_udf` over the pandas
+  bridge (scalar / iterator / grouped forms chosen by type hints, or forced through
+  `functionType`) and `arrow_udtf` over the Python UDTF path. Round 2 runs arrow `eval`
+  once per RecordBatch with whole-column Arrays (`_eval_batch`, Tables projected onto
+  declared names, per-row `eval` refuses) through the additive `_map_arrow_udtf_batches`
+  branch in `udtf.py`, and streams the SCALAR_ITER adapter one batch at a time behind a
+  pull feeder. `pyarrow` stays optional: both entry points import it lazily and raise
+  Spark's `[PACKAGE_NOT_INSTALLED]` shape when it is absent. Installed onto `functions.py`
+  after `__all__` through `install_into`.
+  pins: fnp-misc-1/C-004, C-005, C-006, fnp-misc-1/F-1, fnp-misc-1/F-2, fnp-misc-1/L-002
+- `functions_byname.py` — **FNP-MISC-1 (2026-09-15):** `call_function` / `call_udf`
+  resolved at call time (session-registered UDF wins, else the engine scalar built by name,
+  else a `FACADE_ONLY_ROUTINE_NAMES` fallback, else `UNRESOLVED_ROUTINE`; dotted names raise
+  `REQUIRES_SINGLE_PART_NAMESPACE`; `BYNAME_NON_ROUTINE_NAMES` never resolve). Round 3 maps
+  engine arity failures to `WRONG_NUM_ARGS.WITHOUT_SUGGESTION` (exact counts in Spark's
+  words; ranged specs reuse the engine wording). Installed
+  onto `functions.py` after `__all__` through `install_into`.
+  pins: fnp-misc-1/C-002, fnp-misc-1/F-3, fnp-misc-1/F-4, fnp-misc-1/F-5, fnp-misc-1/L-004, fnp-misc-1/L-005, fnp-misc-1/L-010
 - `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9
   (2026-09-05):** `create_map`, `map_concat` and `array_insert` land here.
   pins: fnp-9-collections-json/C-006
@@ -372,7 +397,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `types.py` imports and re-exports every public
   name. pins: types-bases-1/C-001, C-002, C-003, C-004, C-006
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
-  calls, and Arrow expansion.
+  calls, and Arrow expansion. Round 2 adds the additive `_map_arrow_udtf_batches` branch
+  (arrow handlers run batch-wise; the plain path is unchanged).
+  pins: fnp-misc-1/F-1
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and
   partition expressions.
 
@@ -404,3 +431,5 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - Session implementation: [session/map.md](session/map.md)
 - Tests: [../../../tests/map.md](../../../tests/map.md)
 - Design: [../../../../../docs/design/python-facade.md](../../../../../docs/design/python-facade.md)
+- **FNP-MISC-1 (2026-09-15, on #597):** `functions_byname.py` classifies #597's camel-case aliases against PySpark 4.1.2 `call_function`: `shiftLeft` / `shiftRight` / `shiftRightUnsigned` resolve through Spark's case-insensitive builtin lookup (facade-only routine rows), while `approxCountDistinct` / `toDegrees` / `toRadians` raise `UNRESOLVED_ROUTINE` (non-routine rows).
+- **FNP-MISC-1 (2026-09-15, on ARRAY-NULL-1):** `array_append` / `array_prepend` leave `FACADE_ONLY_ROUTINE_NAMES`: since ARRAY-NULL-1 the engine resolves both names itself, so `call_function` reaches them through `_scalar` like any builtin.
