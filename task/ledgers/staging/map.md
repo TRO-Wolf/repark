@@ -4,6 +4,44 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [registry-16b-1-ledger.md](registry-16b-1-ledger.md) —
+  **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
+  CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live
+  PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
+  `risk_tier: standard`. Branch `docs/registry-16b-1`.
+  pins: registry-16b-1/C-001, C-002, C-003
+- [fnp-bitmap-facade-1-ledger.md](fnp-bitmap-facade-1-ledger.md) —
+  **FNP-BITMAP-FACADE-1 (2026-09-15), in flight:** the three FNP-6D bitmap aggregates
+  bind as Spark-facade names — `F.bitmap_construct_agg` / `F.bitmap_or_agg` /
+  `F.bitmap_and_agg` as one-line wrappers over `column._inner.aggregate(kind, False)`
+  through three new `unary_aggregate_udaf` arms (`mod bitmap_agg` flips `pub` for the
+  cross-crate path; `function_dispatch.rs` condenses its four `binary_expr` arms to stay
+  at the 1000-line ceiling). Rust UDAFs and SQL door untouched (FNP-6D, #609).
+  Round 15a: commits 1–3 in flight, HALT `native needed` before the green/census steps.
+  `risk_tier: standard`. Branch `feat/fnp-bitmap-facade-1`.
+  pins: fnp-bitmap-facade-1/C-001, C-002, C-003, C-004
+- [facade-5-ledger.md](facade-5-ledger.md) —
+  **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
+  split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
+  formatters, the audit §6 UNMEASURED cell), the renderer × truncation-rule pin
+  census, goldens for the pairs no §8 pin binds (recorded from base, mutation
+  proven), and the step-1 target — a measured format wall and its Rust move, or
+  the smallest byte-identical consolidation naming what stays for `eager.py`.
+  No product change under `python/repark/src/` or `crates/`.
+  `risk_tier: standard`. Branch `perf/facade-5-s0`.
+  pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [array-null-1-ledger.md](array-null-1-ledger.md) —
+  **ARRAY-NULL-1 (2026-09-14):** `F.array_append`/`F.array_prepend` lower through
+  `spark_array_append_udf`/`spark_array_prepend_udf` — a `ScalarUDF` that delegates
+  to DataFusion's kernel and grafts the input array's outer null buffer back
+  (route (a); the CASE route died at depth 40 and no lateral plan-level alias
+  exists). One native call per facade level: depth-40 RSS ~2.0 MB vs 577 MB at
+  depth 16 before; the SQL door answers the same arm in Spark `(array, element)`
+  order, and the depth-40 memory pin runs by default on both functions.
+  Measurement script: [array-null-1-spikes/](array-null-1-spikes/map.md).
+  `risk_tier: standard`. Branch `fix/array-null-1`.
+  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
+  L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
 - [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —
   **ABS-EXPR-1 (2026-09-13), in flight:** `F.abs` / `F.cbrt` / `F.nullif` lower to one
   native `call_scalar` each (`expr_fn::abs` / `cbrt` / `nullif`) — the facade `when(...)`
