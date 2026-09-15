@@ -193,3 +193,35 @@ def test_inner_join_on_degrees_both_sides_resolves_and_matches(spark: ReparkSess
     joined = left.join(right, F.degrees(left["x"]) == F.degrees(right["x"]))
     table = joined.select(left["k"].alias("lk"), right["k"].alias("rk")).to_arrow()
     assert table.to_pydict() == {"lk": [1], "rk": [10]}
+
+
+_SQL_SHIFT_ALIASES: tuple[tuple[str, str], ...] = (
+    ("shiftLeft", "shiftleft"),
+    ("shiftRight", "shiftright"),
+    ("shiftRightUnsigned", "shiftrightunsigned"),
+)
+
+
+@pytest.mark.parametrize(("alias_name", "sql_name"), _SQL_SHIFT_ALIASES)
+def test_negative_shift_matches_the_sql_oracle_values_and_types(
+    spark: ReparkSession, alias_name: str, sql_name: str
+) -> None:
+    """A negative count answers the SQL-door cell's values and types; names stay D-2's."""
+    cell = next(
+        cell
+        for cell in _oracle()["cells"]
+        if cell["door"] == "sql" and cell["name"] == sql_name and cell["ansi"]
+    )
+    with pytest.warns(FutureWarning):
+        column = getattr(F, alias_name)("i", -1)
+    result = spark.sql(FRAME).select(column)
+    assert result.schema.fields[0].dataType.simpleString() == cell["columns"][3]["type"]
+    assert [list(row) for row in result.collect()] == [[row[3]] for row in cell["rows"]]
+
+
+def test_column_num_bits_shifts_mask_like_java_on_int(spark: ReparkSession) -> None:
+    """A Column count masks like Java's ``& 31`` on INT: -1 shifts by 31 and 33 by 1."""
+    frame = spark.createDataFrame([(8, 1), (8, 2), (8, -1), (8, 33)], "i int, n int")
+    result = frame.select(F.shiftLeft("i", F.col("n")))
+    assert result.schema.fields[0].dataType.simpleString() == "int"
+    assert [list(row) for row in result.collect()] == [[16], [32], [0], [16]]
