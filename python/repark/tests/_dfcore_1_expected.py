@@ -672,11 +672,13 @@ EXPECTED_OVERLOADED_METHODS: dict[str, int] = {"head": 2}
 
 EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "cache_handle",
+    "cogroup",
     "colregex",
     "display",
     "eager",
     "explain",
     "export_errors",
+    "grouped_arrow",
     "grouped_udf",
     "polars_cells",
     "replace_expr",

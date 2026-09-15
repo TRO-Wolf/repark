@@ -10,9 +10,11 @@ import re
 import traceback
 import uuid
 import warnings
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from typing import Any, overload
 
+import repark.spark.dataframe.cogroup as cogroup_ops
+import repark.spark.dataframe.grouped_arrow as grouped_arrow
 import repark.spark.dataframe.grouped_udf as grouped_udf
 from repark.errors import (
     AnalysisException,
@@ -92,84 +94,6 @@ def _grouped_agg_pandas(pdf: Any, *, keys: list[str], specs: list[dict[str, Any]
         else:
             row[spec["out_name"]] = value
     return pd.DataFrame([row], columns=[*keys, *[spec["out_name"] for spec in specs]])
-
-
-def _apply_in_pandas_arrow_batches(
-    input_batches: Iterator[Any],
-    *,
-    user_func: Callable[[Any], Any],
-    key_names: list[str],
-    expected_names: list[str],
-    expected_arrow: Any,
-) -> Iterator[Any]:
-    """Run an applyInPandas callback for each streamed Arrow group."""
-    import pandas as pd
-    import pyarrow as pa
-
-    for group_table in grouped_udf._iter_apply_in_pandas_group_tables(input_batches, key_names):
-        pdf = group_table.to_pandas()
-        try:
-            out_pdf = user_func(pdf)
-        except PySparkException:
-            raise
-        except Exception as error:
-            detail = traceback.format_exc()
-            raise PySparkException(
-                f"applyInPandas user function raised {type(error).__name__}: {error}\n{detail}"
-            ) from error
-        if out_pdf is None:
-            raise PySparkException(
-                "applyInPandas user function must return a pandas.DataFrame (got None)"
-            )
-        if not isinstance(out_pdf, pd.DataFrame):
-            raise PySparkException(
-                "applyInPandas user function must return a pandas.DataFrame; "
-                f"got {type(out_pdf).__name__}"
-            )
-        # Validate names before casting so empty wrong frames cannot hide mismatches.
-        grouped_udf._validate_apply_in_pandas_result_columns(out_pdf, expected_names)
-        # Preserve the declared schema for Spark's accepted empty group result.
-        if len(out_pdf) == 0 and len(out_pdf.columns) == 0:
-            yield pa.RecordBatch.from_arrays(
-                [pa.array([], type=field.type) for field in expected_arrow],
-                schema=expected_arrow,
-            )
-            continue
-        try:
-            out_table = pa.Table.from_pandas(out_pdf, schema=expected_arrow, preserve_index=False)
-        except (
-            pa.ArrowInvalid,
-            pa.ArrowTypeError,
-            pa.ArrowNotImplementedError,
-            ValueError,
-            TypeError,
-            KeyError,
-        ) as error:
-            # Name conversion failures at the offending field instead of a later mismatch.
-            error_text = str(error)
-            if (
-                "Conversion failed" in error_text
-                or "not in range" in error_text
-                or "Could not convert" in error_text
-            ):
-                raise PySparkException(
-                    f"applyInPandas failed converting pandas output to declared schema: {error}"
-                ) from error
-            try:
-                out_table = pa.Table.from_pandas(out_pdf, preserve_index=False)
-            except Exception:
-                raise PySparkException(
-                    f"applyInPandas failed converting pandas output to Arrow: {error}"
-                ) from error
-        output_batches = out_table.to_batches()
-        if not output_batches:
-            # Keep zero-row output under the converted schema after name validation.
-            yield pa.RecordBatch.from_arrays(
-                [pa.array([], type=field.type) for field in out_table.schema],
-                schema=out_table.schema,
-            )
-        else:
-            yield from output_batches
 
 
 class GroupedData:
@@ -1016,7 +940,7 @@ class GroupedData:
 
         return sorted_parent.mapInArrow(
             functools.partial(
-                _apply_in_pandas_arrow_batches,
+                grouped_arrow._apply_in_pandas_arrow_batches,
                 user_func=func,
                 key_names=key_names,
                 expected_names=expected_names,
@@ -1026,6 +950,13 @@ class GroupedData:
         )
 
     apply_in_pandas = applyInPandas
+
+    apply = grouped_arrow.grouped_apply
+    applyInArrow = grouped_arrow.apply_in_arrow  # noqa: N815 — PySpark method name
+    cogroup = cogroup_ops.cogroup
+    applyInPandasWithState = grouped_arrow.apply_in_pandas_with_state  # noqa: N815
+    transformWithState = grouped_arrow.transform_with_state  # noqa: N815
+    transformWithStateInPandas = grouped_arrow.transform_with_state_in_pandas  # noqa: N815
 
 
 def _pivot_max_values(frame: DataFrame) -> int:

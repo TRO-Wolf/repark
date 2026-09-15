@@ -65,7 +65,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract one existing method region when a charter changes that responsibility.",
     ),
     "python/repark/src/repark/spark/dataframe/joins_columns.py": (
-        1238,
+        1169,
         "Join and column-selection helpers share one facade region.",
         "Split join planning from column projection helpers.",
     ),

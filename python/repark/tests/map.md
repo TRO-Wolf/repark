@@ -2055,6 +2055,35 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_mapinarrow_oracle.py (+ mapinarrow_oracle_funcs.py picklable helpers)` — live PySpark 4.1.2 mapInArrow oracle (named deliverable).
 - `test_applyinpandas.py` — U6 R-APPLYINPANDAS pins: single/multi-key values, null keys, empty input, global groupBy, StructType schema, schema name/type mismatch loud, empty wrong/partial/extra columns loud + zero-column empty ok (octo C1), user raise + traceback + cause + KeyboardInterrupt not wrapped, None return, non-callable, lazy until action + re-run, cache pins once, expression group key refused, cube/pivot refused, boundary-stitch multi-batch + null-type promote + empty-batch mid-stitch, engine orderBy key-contiguous stream seam, e2e multi-batch group calls-once (batch_size pinned to 8192 — the session default is 65536), schema cast overflow names column, empty group result schema ok, snake_alias, string schema types, multi-key null+empty-string; NaN keys group together, asserted on the group totals (DFCORE-1 critic r1 F1: the moved `_apply_in_pandas_scalar_key_equal` had no behavioural pin; the returned key is the pandas bridge's null).
 - `test_applyinpandas_oracle.py (+ applyinpandas_oracle_funcs.py picklable helpers)` — live PySpark 4.1.2 applyInPandas oracle (named deliverable): values, multi-key, null keys, empty input, global groupBy, schema-mismatch class, empty-wrong-columns class; skips cleanly without JVM.
+- `test_grouped_surface_1.py` + `facade_grouped_data_oracle.json` — **GROUPED-SURFACE-1
+  step 1 (2026-09-14):** the grouped facade surface driven cell-by-cell from the copied
+  live-PySpark oracle. `apply` runs a GROUPED_MAP pandas marker (built via the
+  `PandasUDFFunction` constructor — the `pandas_udf` front door keeps its existing
+  GROUPED_MAP construction refusal) behind Spark's deprecation `UserWarning`, and refuses
+  plain functions / SCALAR pandas UDFs / Columns with `INVALID_UDF_EVAL_TYPE` byte-exact;
+  `applyInArrow` answers `func(table)`, `func(key, table)` (key = tuple of
+  `pyarrow.Scalar`), and the `Iterator[pa.RecordBatch]` type-hinted form over DDL and
+  `StructType` schemas; worker-style result validation raises Spark's inner classes
+  (`UDF_RETURN_TYPE`, `RESULT_COLUMN_NAMES_MISMATCH`,
+  `RESULT_COLUMN_TYPES_MISMATCH` — Spark wraps them in `PythonException`; repark raises
+  the class, registry `GROUPED-ARROW-1`); `applyInArrow(5, ...)` is `NOT_CALLABLE`
+  (Spark crashes `UnboundLocalError` — the declared divergence is the same registry row);
+  expression group keys keep the `applyInPandas` refusal (BACKLOG `GROUPED-EXPRKEY-1`);
+  `cogroup` returns `PandasCogroupedOps` whose `applyInPandas`/`applyInArrow` merge-walk
+  both sorted sides — empty-side groups get an empty frame/table, `cogroup(DataFrame)` is
+  `NOT_EXPECTED_TYPE` (R-1; Spark accepts silently — `GROUPED-COGROUP-1`), key-count
+  mismatch raises the `requirement failed` text byte-exact, and a 200k-row two-side
+  cogroup never calls `collect`/`to_arrow` on a whole side; `applyInPandasWithState`
+  raises `_LEGACY_ERROR_TEMP_3176` byte-exact and `transformWithState*` raise
+  `NOT_IMPLEMENTED` (R-2; `GROUPED-DECL-*`).
+  pins: grouped-surface-1/C-001, C-002, C-003, C-004, C-005, C-006
+  Critic round 1 (2026-09-15): a 0-column 0-row Arrow result contributes no rows
+  for its group on the table, keyed-table, iterator, and cogrouped paths (L-001),
+  and the grouping scan's `as_py` runs once per contiguous run, never per row
+  (P2-1 under R-3 — `pyarrow.compute` run boundaries).
+  pins: grouped-surface-1/C-009
+  Registry rows, the fixture copy, and map/ledger/inventory lockstep for this unit are
+  proven by these pins and the frozen-surface tables. pins: grouped-surface-1/C-007
 - `test_pandas_udf.py` — U7 + **M5/M6** `@pandas_udf` pins: SCALAR select/withColumn + multi-UDF one-pass + octo C1–C8 harden pins retained; **SCALAR_ITER** basic/multi-arg/pass-through/wrong-batch-count + dual-UDF streams (octo M5 C5); **pure GROUPED_AGG** mean/global/multi-key+multi-arg + large-group stitch (octo M5 C7); **M6 mixed UDF+builtin** order-independent + global crossJoin + **null group-key null-safe join** (octo M6 C1); cube/rollup refuse (octo M5 C6) + hostile returnType refuse (octo M5 C1) + GROUPED_AGG-in-select refuse + SCALAR-in-agg refuse; **M6 windowed GROUPED_AGG** unbounded `partitionBy` + **null partition keys** + **select alias overwrite** last-wins (octo M6 C1/C2); **M7** ordered default frame (UNBOUNDED PRECEDING→CURRENT ROW running agg) + duck-typed `_frame_start`/`_frame_end` rowsBetween; GROUPED_MAP/WINDOW functionType tag still loud; PandasUDFType ints match PySpark 4.1.2 (200/201/202/204).
 - `test_pandas_udf_oracle.py (+ pandas_udf_oracle_funcs.py picklable helpers)` — live PySpark 4.1.2 pandas_udf oracle (named deliverable): SCALAR values/nulls/coercion/multi-arg/string/error/withColumn + **M5 SCALAR_ITER + pure GROUPED_AGG**; skips cleanly without JVM. Not Apache `test_pandas_udf*` census.
 - `test_explode_rewrite.py` — R-EXPLODE-REWRITE pins (null/empty, one-generator, posexplode*
