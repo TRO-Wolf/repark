@@ -1478,6 +1478,46 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   directories a metastore must re-discover. An unpartitioned Iceberg table has no
   recoverable directory structure, so the no-op is the truthful answer.
 
+### IO-BUCKET-1 — `bucketBy`/`sortBy` on an Iceberg table is a declared `NOT_IMPLEMENTED` refusal
+
+- **repark** — `DataFrameWriter.bucketBy(numBuckets, col, *cols)` / `sortBy(col, *cols)` record the
+  layout and return the writer; a non-int `numBuckets` raises `PySparkTypeError` `NOT_INT` at the
+  call; any path save with bucketing raises `AnalysisException` `_LEGACY_ERROR_TEMP_1312`
+  `'save' does not support bucketBy right now.`, `sortBy` without `bucketBy` raises
+  `SORT_BY_WITHOUT_BUCKETING`, and `numBuckets <= 0` or `> 100000` raises `INVALID_BUCKET_COUNT`
+  at the save; a bucket column absent from the frame raises `COLUMN_NOT_DEFINED_IN_TABLE`; a valid
+  `saveAsTable` with bucketing raises `PySparkNotImplementedError` `NOT_IMPLEMENTED` with
+  `{"feature": "bucketBy on an Iceberg table (use writeTo(...).partitionedBy(F.bucket(n, col)))"}`.
+- **Apache Spark** — writes Hive bucket files and records `Num Buckets` / `Bucket Columns` /
+  `Sort Columns` in `DESCRIBE EXTENDED`. *(oracle: recorded — cells `bucketBy_bad_num`,
+  `bucketBy_list`, `bucketBy_save`, `bucketBy_zero`, `bucketBy_missing_col`,
+  `sortBy_without_bucketBy`, `bucketBy_saveAsTable`.)*
+- **Pin** — `python/repark/tests/test_io_bucket_cluster_1.py` (`test_bucketBy_*`,
+  `test_sortBy_without_bucketBy_refused`)
+- **Rationale** — DECLARED 2026-09-14, Ruling R-1: Iceberg has no Hive bucketing, so the engine
+  cannot produce Spark's bucket file layout; the honest action-time answer is Spark's own
+  `NOT_IMPLEMENTED` shape pointing at `writeTo(...).partitionedBy(F.bucket(n, col))`. Every
+  call-time and save-time argument error in the path is Spark-equal.
+
+### IO-CLUSTER-1 — `clusterBy` on an Iceberg table is a declared `NOT_IMPLEMENTED` refusal
+
+- **repark** — `DataFrameWriter.clusterBy(*cols)` and `DataFrameWriterV2.clusterBy(col, *cols)`
+  record the clustering columns and return the writer; a path save ignores clustering and writes;
+  `saveAsTable` / V2 `create`/`replace`/`createOrReplace` raise `AnalysisException`
+  `SPECIFY_CLUSTER_BY_WITH_PARTITIONED_BY_IS_NOT_ALLOWED` (with `partitionBy`/`partitionedBy`) or
+  `SPECIFY_CLUSTER_BY_WITH_BUCKETING_IS_NOT_ALLOWED` (with `bucketBy`); otherwise they raise
+  `PySparkNotImplementedError` `NOT_IMPLEMENTED` with `{"feature": "clusterBy on an Iceberg table"}`.
+- **Apache Spark** — records the clustering columns in the created table (`DESCRIBE EXTENDED` shows
+  `# Clustering Information`), and answers `None` for a clustered V2 create on its session catalog.
+  *(oracle: recorded — cells `clusterBy_save`, `clusterBy_saveAsTable`, `clusterBy_with_partitionBy`,
+  `clusterBy_with_bucketBy`, `v2_clusterBy_type`, `v2_clusterBy_partitionedBy`,
+  `v2_clusterBy_create_session_catalog`.)*
+- **Pin** — `python/repark/tests/test_io_bucket_cluster_1.py` (`test_clusterBy_*`,
+  `test_v2_clusterBy_*`)
+- **Rationale** — DECLARED 2026-09-14, Ruling R-2: recording clustering columns would claim a
+  layout the engine never applies, so the table-write refusal names the feature. The conflict
+  errors and the path-write answer are Spark-equal.
+
 ---
 
 ## 6. How a row is added, mirrored and retired

@@ -61,6 +61,35 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   expressions (R-8). pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005,
   C-006, C-007, C-008
   **DF-TO-BINARY-1 (2026-09-14):** `test_to_binary_follows_reported_schema_df_to_binary_1` codifies that `to()` follows the facade's `string` report for a binary column (FACADE-4 D7/D19). pins: df-surface-a-1/C-008
+- [test_io_bucket_cluster_1.py](test_io_bucket_cluster_1.py) — **IO-BUCKET-CLUSTER-1
+  step 1 (2026-09-14):** the writer layout surface answers the fourteen `io.bucketBy_*`
+  / `io.sortBy_*` / `io.clusterBy_*` / `io.v2_clusterBy_*` cells of the committed
+  run-15b oracle ([facade_reader_writer_oracle.json](facade_reader_writer_oracle.json),
+  live PySpark 4.1.2) — `bucketBy`/`sortBy` argument checks (`NOT_INT` on `numBuckets`
+  at the call, list first columns, both spellings chain), the path-save refusals
+  (`_LEGACY_ERROR_TEMP_1312` on every path spelling, `SORT_BY_WITHOUT_BUCKETING`
+  without `bucketBy` at both doors — the cell measured `saveAsTable`, the card's rule
+  is stated without a door), the save-time checks (`INVALID_BUCKET_COUNT` at 0/-1/100001,
+  `COLUMN_NOT_DEFINED_IN_TABLE` with the backticked multipart name — repark's default
+  `spark_catalog.default` matches the oracle's), and the two declared refusals (R-1
+  `bucketBy`/R-2 `clusterBy` `NOT_IMPLEMENTED` with Spark's feature strings, table not
+  created). V2 `clusterBy` chains and refuses the `partitionedBy` conflict at
+  create/replace/createOrReplace and the Iceberg clustering record at create — where
+  Spark answered `None` by writing a non-Iceberg session-catalog table (declared,
+  registry IO-CLUSTER-1). Red on base `8cd6d1e6`: 13 of 14 pins
+  `AttributeError` (no `bucketBy`/`sortBy`/`clusterBy` on the writers); the C-004
+  regression guard (partitionBy CTAS + partition-filtered read) was green on base.
+  The fixture copy, the `docs/examples/io/writer_bucket_cluster.py` example (inventory
+  936 → 944 raw names), the registry rows IO-BUCKET-1 / IO-CLUSTER-1 in
+  docs/spark-sql-iceberg-parity.md §5, and the map/ledger lockstep are this unit's
+  C-003 deliverables, pinned here. pins: io-bucket-cluster-1/C-001, C-002, C-003, C-004
+- [facade_reader_writer_oracle.json](facade_reader_writer_oracle.json) —
+  **IO-BUCKET-CLUSTER-1 (2026-09-14):** the run-15b oracle for the reader/writer
+  facade, copied unchanged from the orchestrator's live PySpark 4.1.2 recording
+  (provenance line inside the file); holds the `bucketBy_*` / `sortBy_*` /
+  `clusterBy_*` / `v2_clusterBy_*` cells this unit pins plus the `text_*` / `xml_*` /
+  `orc_*` / `jdbc_*` / `na_replace_*` cells owned by other runs of the same oracle
+  recording.
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
   / `Row.index` answer the nine `row.*` cells of the committed run-15b oracle
   ([facade_row_oracle.json](facade_row_oracle.json), live PySpark 4.1.2) — value counts

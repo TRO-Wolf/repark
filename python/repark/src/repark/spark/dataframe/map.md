@@ -506,6 +506,31 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   DFCORE-3 (2026-09-07): `DataFrameStatFunctions.freqItems` delegates its refusal to
   `statistics._freq_items` (1113 → 1111, mirrored in the CAP-1 test); the class keeps
   the stat accessor shape. pins: dfcore-3/C-005, C-006
+  IO-BUCKET-CLUSTER-1 (2026-09-14): `bucketBy` / `sortBy` / `clusterBy` (v1) and
+  `clusterBy` (V2) bind here as thin delegates; the class carries the layout slots and
+  runs `writer_layout`'s checks at `save` / `saveAsTable` / V2 `create` / `replace` /
+  `createOrReplace`. The five module-level write helpers moved to `writer_layout.py`
+  and are re-imported here, so `core.py`'s import surface is unchanged
+  (1111 → 1105, mirrored in the CAP-1 test).
+  pins: io-bucket-cluster-1/C-001, C-002, C-004
+- `writer_layout.py` owns the writer layout bodies (IO-BUCKET-CLUSTER-1, 2026-09-14):
+  the `bucketBy` / `sortBy` / `clusterBy` state setters (Spark's `NOT_INT` on
+  `numBuckets` at the call, list first columns flattened), the action-time checks —
+  path saves refuse `_LEGACY_ERROR_TEMP_1312` and `SORT_BY_WITHOUT_BUCKETING`,
+  table writes refuse the clusterBy × partitionBy/bucketBy conflicts
+  (`SPECIFY_CLUSTER_BY_*`, SQLSTATE 42908), `INVALID_BUCKET_COUNT` (0/`>100000`),
+  and `COLUMN_NOT_DEFINED_IN_TABLE` for a bucket column absent from the frame — and
+  the two declared refusals: Ruling R-1 `NOT_IMPLEMENTED` for `bucketBy` on an
+  Iceberg table (registry IO-BUCKET-1; Iceberg has no Hive bucketing) and Ruling R-2
+  `NOT_IMPLEMENTED` for `clusterBy` on an Iceberg table (registry IO-CLUSTER-1; V2
+  actions check before resolving the table). This is argument checking and refusals,
+  not compute — correct under the Rust-first instruction (API plumbing). The module
+  also carries the write helpers moved out of `writer_readwriter.py`:
+  `_sql_option_escape`, `_normalize_write_compression`,
+  `_normalize_parquet_write_compression`, `_merge_path_write_tree`, and
+  `_dynamic_partition_sql` (re-imported by `writer_readwriter`, so
+  `core.py`'s import surface is unchanged).
+  pins: io-bucket-cluster-1/C-001, C-002
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`
@@ -897,6 +922,7 @@ that held the comment (pins: comment-core-1/C-003).
 | Cache-view ownership handle | [`cache_handle.py`](cache_handle.py) |
 | Plan rewrites and display | [`plan_collapse.py`](plan_collapse.py) |
 | Writes and statistics | [`writer_readwriter.py`](writer_readwriter.py) |
+| Writer layout bodies and write helpers | [`writer_layout.py`](writer_layout.py) |
 | Parent navigation | [`../map.md`](../map.md) |
 | Rust engine contracts | [`../../../../../../crates/repark-core/src/map.md`](../../../../../../crates/repark-core/src/map.md) |
 | Tests | [`../../../../tests/map.md`](../../../../tests/map.md) |
@@ -919,6 +945,10 @@ that held the comment (pins: comment-core-1/C-003).
   (pins: dfcore-2/C-006).
   DFCORE-3 (2026-09-07): `core.py` 5263→5060, `writer_readwriter.py` 1113→1111;
   `statistics.py` (261) stays below the source-size default (pins: dfcore-3/C-006).
+  IO-BUCKET-CLUSTER-1 (2026-09-14): `writer_readwriter.py` 1111→1105 — the binding
+  and check-call growth was paid by moving the five write helpers to
+  `writer_layout.py` (312, below the source-size default); both mirrored in the
+  CAP-1 test (pins: io-bucket-cluster-1/C-003).
   DFCORE-4a (2026-09-07): `core.py` 5060→4819; `sampling.py` (288) stays below the
   source-size default (pins: dfcore-4a/C-005).
   DFCORE-4b (2026-09-07): `core.py` 4819→4539; `display.py` (322) stays below the
