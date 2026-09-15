@@ -159,13 +159,13 @@ class Row:
         """Field-name membership (``"col" in row``); values are NOT searched (live PySpark)."""
         return item in self.__field_names
 
-    def count(self, value: Any) -> int:
+    def count(self, value: Any, /) -> int:
         """Count how many times ``value`` appears. pins: row-tuple-1/C-001."""
         if self.__factory:
             return self.__field_names.count(value)
         return self.__field_values.count(value)
 
-    def index(self, value: Any, start: int = 0, stop: int = sys.maxsize) -> int:
+    def index(self, value: Any, start: int = 0, stop: int = sys.maxsize, /) -> int:
         """First position of ``value`` from ``start`` to ``stop``. pins: row-tuple-1/C-002."""
         if self.__factory:
             return self.__field_names.index(value, start, stop)

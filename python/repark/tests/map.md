@@ -42,8 +42,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `4d6b1ab0`: all nine behavioral pins `PySparkAttributeError [ATTRIBUTE_NOT_SUPPORTED]`.
   Ruling R-1: repark does NOT become a tuple subclass here — the fixture's
   `isinstance_tuple` / `add` / `hash_eq` cells are out of scope, measured in the ledger.
-  Ruling R-2: no SQL door exists for these names.
-  pins: row-tuple-1/C-001, C-002, C-003
+  Ruling R-2: no SQL door exists for these names. Critic round 1 (2026-09-14, C-004):
+  L-001 `index` stop/negative-start tuple bounds, L-002 names+values never searched
+  together, L-003 the method wins attribute access over a same-named field (incl. a
+  collected `groupBy().count()` row), L-004 the EX-ROW-1 divergence arm (collected struct
+  cell counts as dict), L-005 / R-3 positional-only signatures (`TypeError` on keyword
+  calls). pins: row-tuple-1/C-001, C-002, C-003, C-004
 - [facade_row_oracle.json](facade_row_oracle.json) — **ROW-TUPLE-1 (2026-09-14):** the
   run-15b oracle for the Row facade, copied unchanged from the orchestrator's live
   PySpark 4.1.2 recording (provenance line inside the file); holds the `row.*` cells —
