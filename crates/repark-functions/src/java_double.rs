@@ -1,5 +1,6 @@
 mod bigint;
 mod dtoa;
+mod format_float;
 #[cfg(test)]
 mod tables_doubles;
 #[cfg(test)]
@@ -25,7 +26,7 @@ use datafusion::logical_expr::expr::{Like, ScalarFunction};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
     Case, Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs,
-    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
+    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, TryCast, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
 
@@ -123,13 +124,101 @@ fn rewrite_float_plan(plan: LogicalPlan, ansi: bool) -> Result<Transformed<Logic
     for input in plan.inputs() {
         schema.merge(input.schema());
     }
+    let literals = float_literal_inputs(&plan);
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_up(|node| rewrite_float_expr(node, &schema, ansi))?;
+        let rewritten = expr.transform_up(|node| {
+            let resolved = resolve_float_literal_input(node, &literals, &schema);
+            rewrite_float_expr(resolved.data, &schema, ansi)
+        })?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
+}
+
+fn float_literal_inputs(plan: &LogicalPlan) -> Vec<(String, ScalarValue)> {
+    let inputs = plan.inputs();
+    if inputs.len() != 1 {
+        return Vec::new();
+    }
+    let mut inner = inputs[0];
+    if let LogicalPlan::SubqueryAlias(alias) = inner {
+        inner = alias.input.as_ref();
+    }
+    let LogicalPlan::Projection(projection) = inner else {
+        return Vec::new();
+    };
+    let mut literals = Vec::new();
+    for expr in &projection.expr {
+        if let Expr::Alias(alias) = expr
+            && let Expr::Literal(literal, _) = alias.expr.as_ref()
+            && utf8_literal_text(literal).is_some()
+        {
+            if literals.iter().any(|(name, _)| name == &alias.name) {
+                literals.retain(|(name, _)| name != &alias.name);
+            } else {
+                literals.push((alias.name.clone(), literal.clone()));
+            }
+        }
+    }
+    literals
+}
+
+fn resolve_float_literal_input(
+    expr: Expr,
+    literals: &[(String, ScalarValue)],
+    schema: &DFSchema,
+) -> Transformed<Expr> {
+    let (target, inner) = match &expr {
+        Expr::Cast(cast) => (cast.field.data_type(), cast.expr.as_ref()),
+        Expr::TryCast(try_cast) => (try_cast.field.data_type(), try_cast.expr.as_ref()),
+        _ => return Transformed::no(expr),
+    };
+    if !matches!(target, DataType::Float32 | DataType::Float64) {
+        return Transformed::no(expr);
+    }
+    let Ok(source) = inner.get_type(schema) else {
+        return Transformed::no(expr);
+    };
+    if !is_string_type(&source) {
+        return Transformed::no(expr);
+    }
+    let column = match inner {
+        Expr::Column(column) => column,
+        Expr::ScalarFunction(function)
+            if function.func.name() == crate::decimal_cast::DECIMAL_CAST_NULLABLE_NAME
+                && let [argument] = function.args.as_slice()
+                && let Expr::Column(column) = argument =>
+        {
+            column
+        }
+        _ => return Transformed::no(expr),
+    };
+    let mut found = None;
+    for (name, literal) in literals {
+        if name == &column.name {
+            if found.is_some() {
+                return Transformed::no(expr);
+            }
+            found = Some(literal);
+        }
+    }
+    let Some(literal) = found else {
+        return Transformed::no(expr);
+    };
+    let literal = Expr::Literal(literal.clone(), None);
+    match expr {
+        Expr::Cast(cast) => Transformed::yes(Expr::Cast(Cast::new(
+            Box::new(literal),
+            cast.field.data_type().clone(),
+        ))),
+        Expr::TryCast(try_cast) => Transformed::yes(Expr::TryCast(TryCast::new(
+            Box::new(literal),
+            try_cast.field.data_type().clone(),
+        ))),
+        _ => Transformed::no(expr),
+    }
 }
 
 fn rewrite_float_expr(expr: Expr, schema: &DFSchema, ansi: bool) -> Result<Transformed<Expr>> {
@@ -139,6 +228,23 @@ fn rewrite_float_expr(expr: Expr, schema: &DFSchema, ansi: bool) -> Result<Trans
             let Ok(source_type) = try_cast.expr.get_type(schema) else {
                 return Ok(Transformed::no(Expr::TryCast(try_cast)));
             };
+            if is_string_type(&source_type)
+                && matches!(
+                    try_cast.field.data_type(),
+                    DataType::Float32 | DataType::Float64
+                )
+                && let Expr::Literal(literal, _) = try_cast.expr.as_ref()
+                && let Some(text) = utf8_literal_text(literal)
+            {
+                let target = try_cast.field.data_type().clone();
+                match fold_utf8_to_float_literal(literal, &text, &target, true) {
+                    Ok(Some(folded)) => return Ok(Transformed::yes(folded)),
+                    Ok(None) => return Ok(Transformed::no(Expr::TryCast(try_cast))),
+                    Err(_) => {
+                        return Ok(Transformed::yes(float_null_literal(&target)));
+                    }
+                }
+            }
             if !matches!(source_type, DataType::Float32 | DataType::Float64) {
                 return Ok(Transformed::no(Expr::TryCast(try_cast)));
             }
@@ -219,6 +325,19 @@ fn spark_float_type_name(target: &DataType) -> &'static str {
     }
 }
 
+fn parse_float_text(trimmed: &str, target: &DataType) -> Option<ScalarValue> {
+    match target {
+        DataType::Float32 => trimmed
+            .parse::<f32>()
+            .ok()
+            .map(|value| ScalarValue::Float32(Some(value))),
+        _ => trimmed
+            .parse::<f64>()
+            .ok()
+            .map(|value| ScalarValue::Float64(Some(value))),
+    }
+}
+
 fn fold_utf8_to_float_literal(
     literal: &ScalarValue,
     text: &str,
@@ -232,17 +351,12 @@ fn fold_utf8_to_float_literal(
     if trimmed.is_empty() {
         return Ok(Some(float_null_literal(target)));
     }
-    let parsed = match target {
-        DataType::Float32 => trimmed
-            .parse::<f32>()
-            .ok()
-            .map(|value| ScalarValue::Float32(Some(value))),
-        _ => trimmed
-            .parse::<f64>()
-            .ok()
-            .map(|value| ScalarValue::Float64(Some(value))),
-    };
-    if let Some(value) = parsed {
+    if let Some(value) = parse_float_text(trimmed, target) {
+        return Ok(Some(Expr::Literal(value, None)));
+    }
+    if let Some(stem) = trimmed.strip_suffix(|cell| matches!(cell, 'd' | 'D' | 'f' | 'F'))
+        && let Some(value) = parse_float_text(stem, target)
+    {
         return Ok(Some(Expr::Literal(value, None)));
     }
     if !ansi {
@@ -443,6 +557,18 @@ fn rewrite_format_string_args(function: ScalarFunction, schema: &DFSchema) -> Tr
     let Some(fmt) = scalar_string(&function.args[0]) else {
         return Transformed::no(Expr::ScalarFunction(function));
     };
+    if function.args.len() == 2
+        && format_float::parse_float_format(&fmt).is_some()
+        && matches!(
+            function.args[1].get_type(schema),
+            Ok(DataType::Float32 | DataType::Float64)
+        )
+    {
+        return Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
+            format_float::java_format_float_udf(),
+            vec![function.args[0].clone(), function.args[1].clone()],
+        )));
+    }
     if !format_uses_only_string_verbs(&fmt) {
         return Transformed::no(Expr::ScalarFunction(function));
     }
@@ -663,6 +789,142 @@ mod tests {
             .unwrap_err();
         let message = error.to_string();
         assert!(message.contains("CAST_INVALID_INPUT"), "{message}");
+    }
+
+    #[test]
+    fn rule_propagates_suffixed_literal_through_projection() {
+        use datafusion::logical_expr::{LogicalPlanBuilder, col};
+        for (text, ansi) in [("1d", true), ("1f", true), ("0x10", false)] {
+            for wrapped in [false, true] {
+                let inner = LogicalPlanBuilder::empty(false)
+                    .project(vec![
+                        Expr::Literal(ScalarValue::Utf8(Some(text.to_owned())), None).alias("x"),
+                    ])
+                    .unwrap()
+                    .build()
+                    .unwrap();
+                let cast_input = if wrapped {
+                    Expr::ScalarFunction(ScalarFunction::new_udf(
+                        crate::decimal_cast::spark_decimal_cast_nullable_udf(),
+                        vec![col("x")],
+                    ))
+                } else {
+                    col("x")
+                };
+                let outer = LogicalPlanBuilder::new(inner)
+                    .project(vec![
+                        Expr::Cast(Cast::new(Box::new(cast_input), DataType::Float64)).alias("r"),
+                    ])
+                    .unwrap()
+                    .build()
+                    .unwrap();
+                let analyzed = rewrite_float_plan(outer, ansi).unwrap().data;
+                let LogicalPlan::Projection(projection) = analyzed else {
+                    panic!("projection plan for {text}");
+                };
+                let [Expr::Alias(alias)] = projection.expr.as_slice() else {
+                    panic!("aliased projection for {text}");
+                };
+                match alias.expr.as_ref() {
+                    Expr::Literal(ScalarValue::Float64(Some(value)), _) => {
+                        assert_eq!(
+                            value.to_bits(),
+                            1.0f64.to_bits(),
+                            "{text} wrapped={wrapped}"
+                        );
+                    }
+                    Expr::Literal(ScalarValue::Float64(None), _) => {
+                        assert_eq!(text, "0x10", "{text} wrapped={wrapped}");
+                    }
+                    other => panic!("unexpected folded expr {other:?} for {text}"),
+                }
+            }
+        }
+    }
+
+    fn format_call(format: &str, arg: Expr) -> ScalarFunction {
+        ScalarFunction::new_udf(
+            datafusion_spark::function::string::format_string(),
+            vec![
+                Expr::Literal(ScalarValue::Utf8(Some(format.to_owned())), None),
+                arg,
+            ],
+        )
+    }
+
+    fn double_literal(value: f64) -> Expr {
+        Expr::Literal(ScalarValue::Float64(Some(value)), None)
+    }
+
+    #[test]
+    fn rule_routes_single_float_verb_to_half_up_shim() {
+        let schema = DFSchema::empty();
+        for format in ["%f", "%.2f", "%-+, (.4F"] {
+            let rewritten =
+                rewrite_format_string_args(format_call(format, double_literal(0.125)), &schema);
+            assert!(rewritten.transformed, "{format}");
+            let Expr::ScalarFunction(shimmed) = rewritten.data else {
+                panic!("shimmed call for {format}");
+            };
+            assert_eq!(shimmed.func.name(), "__repark_format_float__");
+            assert_eq!(shimmed.args.len(), 2);
+        }
+    }
+
+    #[test]
+    fn rule_leaves_other_format_calls_on_upstream() {
+        let schema = DFSchema::empty();
+        for call in [
+            format_call("%d", double_literal(0.125)),
+            format_call("%s %f", double_literal(0.125)),
+            format_call("%f %f", double_literal(0.125)),
+            format_call("%e", double_literal(0.125)),
+            format_call("%.3e", double_literal(0.125)),
+            format_call("%g", double_literal(0.125)),
+            format_call(
+                "%f",
+                Expr::Literal(ScalarValue::Utf8(Some("0.125".to_owned())), None),
+            ),
+        ] {
+            assert!(!rewrite_format_string_args(call, &schema).transformed);
+        }
+    }
+
+    #[test]
+    fn fold_utf8_to_float_accepts_java_type_suffix() {
+        for (text, target, expected) in [
+            ("1d", DataType::Float64, 1.0f64),
+            ("1f", DataType::Float64, 1.0f64),
+            ("1.5D", DataType::Float64, 1.5f64),
+            ("1e2d", DataType::Float64, 100.0f64),
+        ] {
+            let folded = fold_utf8_to_float_literal(&utf8_scalar(text), text, &target, true)
+                .unwrap()
+                .unwrap();
+            assert!(
+                matches!(folded, Expr::Literal(ScalarValue::Float64(Some(value)), _) if value.to_bits() == expected.to_bits()),
+                "{text}"
+            );
+        }
+        let folded = fold_utf8_to_float_literal(&utf8_scalar("1d"), "1d", &DataType::Float32, true)
+            .unwrap()
+            .unwrap();
+        assert!(matches!(
+            folded,
+            Expr::Literal(ScalarValue::Float32(Some(_)), _)
+        ));
+        let hex =
+            fold_utf8_to_float_literal(&utf8_scalar("0x10"), "0x10", &DataType::Float64, true)
+                .unwrap_err();
+        assert!(hex.to_string().contains("CAST_INVALID_INPUT"));
+        let hex_nulled =
+            fold_utf8_to_float_literal(&utf8_scalar("0x10"), "0x10", &DataType::Float64, false)
+                .unwrap()
+                .unwrap();
+        assert!(matches!(
+            hex_nulled,
+            Expr::Literal(ScalarValue::Float64(None), _)
+        ));
     }
 
     #[test]

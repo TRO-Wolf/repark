@@ -1,18 +1,24 @@
 use std::cmp::Ordering;
+use std::sync::LazyLock;
 
 const POW5_TABLE_LEN: usize = 346;
 const POW5_LIMBS: usize = 26;
 
-const fn pow5_table() -> [[u32; POW5_LIMBS]; POW5_TABLE_LEN] {
-    let mut table = [[0u32; POW5_LIMBS]; POW5_TABLE_LEN];
+#[allow(clippy::cast_possible_truncation)]
+fn low32(wide: u64) -> u32 {
+    wide as u32
+}
+
+fn pow5_table() -> Box<[[u32; POW5_LIMBS]]> {
+    let mut table = vec![[0u32; POW5_LIMBS]; POW5_TABLE_LEN].into_boxed_slice();
     table[0][0] = 1;
     let mut row = 1usize;
     while row < POW5_TABLE_LEN {
         let mut carry = 0u64;
         let mut limb = 0usize;
         while limb < POW5_LIMBS {
-            let wide = table[row - 1][limb] as u64 * 5 + carry;
-            table[row][limb] = wide as u32;
+            let wide = u64::from(table[row - 1][limb]) * 5 + carry;
+            table[row][limb] = low32(wide);
             carry = wide >> 32;
             limb += 1;
         }
@@ -21,7 +27,7 @@ const fn pow5_table() -> [[u32; POW5_LIMBS]; POW5_TABLE_LEN] {
     table
 }
 
-const POW5: [[u32; POW5_LIMBS]; POW5_TABLE_LEN] = pow5_table();
+static POW5: LazyLock<Box<[[u32; POW5_LIMBS]]>> = LazyLock::new(pow5_table);
 
 fn pow5_limbs(power: usize) -> Vec<u32> {
     if let Some(row) = POW5.get(power) {
@@ -30,13 +36,13 @@ fn pow5_limbs(power: usize) -> Vec<u32> {
     let mut limbs = vec![1u32];
     for _ in 0..power {
         let mut carry = 0u64;
-        for limb in limbs.iter_mut() {
-            let wide = *limb as u64 * 5 + carry;
-            *limb = wide as u32;
+        for limb in &mut limbs {
+            let wide = u64::from(*limb) * 5 + carry;
+            *limb = low32(wide);
             carry = wide >> 32;
         }
         if carry != 0 {
-            limbs.push(carry as u32);
+            limbs.push(low32(carry));
         }
     }
     limbs
@@ -66,7 +72,7 @@ impl FdBig {
     }
 
     pub(crate) fn value_of_mul_pow52(value: u64, power5: usize, power2: usize) -> Self {
-        let mut grown = Self::trimmed(vec![value as u32, (value >> 32) as u32]);
+        let mut grown = Self::trimmed(vec![low32(value), low32(value >> 32)]);
         grown.mul_limbs(&pow5_limbs(power5));
         grown.trim();
         grown.left_shift(power2);
@@ -95,14 +101,15 @@ impl FdBig {
         for (index, limb) in self.limbs.iter().enumerate() {
             let mut carry = 0u64;
             for (slot, other) in trimmed_factor.iter().enumerate() {
-                let wide = product[index + slot] as u64 + *limb as u64 * *other as u64 + carry;
-                product[index + slot] = wide as u32;
+                let wide =
+                    u64::from(product[index + slot]) + u64::from(*limb) * u64::from(*other) + carry;
+                product[index + slot] = low32(wide);
                 carry = wide >> 32;
             }
             let mut slot = index + trimmed_factor.len();
             while carry != 0 {
-                let wide = product[slot] as u64 + carry;
-                product[slot] = wide as u32;
+                let wide = u64::from(product[slot]) + carry;
+                product[slot] = low32(wide);
                 carry = wide >> 32;
                 slot += 1;
             }
@@ -112,12 +119,12 @@ impl FdBig {
 
     fn mul_small(&mut self, factor: u32) -> u32 {
         let mut carry = 0u64;
-        for limb in self.limbs.iter_mut() {
-            let wide = *limb as u64 * factor as u64 + carry;
-            *limb = wide as u32;
+        for limb in &mut self.limbs {
+            let wide = u64::from(*limb) * u64::from(factor) + carry;
+            *limb = low32(wide);
             carry = wide >> 32;
         }
-        carry as u32
+        low32(carry)
     }
 
     pub(crate) fn mult_by_10(&mut self) {
@@ -142,7 +149,7 @@ impl FdBig {
             return;
         }
         let mut carry = 0u32;
-        for limb in self.limbs.iter_mut() {
+        for limb in &mut self.limbs {
             let next = *limb >> (32 - bits);
             *limb = (*limb << bits) | carry;
             carry = next;
@@ -174,24 +181,27 @@ impl FdBig {
         let width = left.limbs.len().max(right.limbs.len()) + 1;
         let mut sum = vec![0u32; width];
         let mut carry = 0u64;
-        for index in 0..width {
-            let wide = *left.limbs.get(index).unwrap_or(&0) as u64
-                + *right.limbs.get(index).unwrap_or(&0) as u64
-                + carry;
-            sum[index] = wide as u32;
+        for ((slot, left_limb), right_limb) in sum
+            .iter_mut()
+            .zip(left.limbs.iter().chain(std::iter::repeat(&0u32)))
+            .zip(right.limbs.iter().chain(std::iter::repeat(&0u32)))
+        {
+            let wide = u64::from(*left_limb) + u64::from(*right_limb) + carry;
+            *slot = low32(wide);
             carry = wide >> 32;
         }
         self.cmp(&Self::trimmed(sum))
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     fn subtract(&mut self, subtrahend: &Self) {
         if self.limbs.len() < subtrahend.limbs.len() {
             self.limbs.resize(subtrahend.limbs.len(), 0);
         }
         let mut borrow = 0i64;
         for index in 0..self.limbs.len() {
-            let take = *subtrahend.limbs.get(index).unwrap_or(&0) as i64 + borrow;
-            let wide = self.limbs[index] as i64 - take;
+            let take = i64::from(*subtrahend.limbs.get(index).unwrap_or(&0)) + borrow;
+            let wide = i64::from(self.limbs[index]) - take;
             self.limbs[index] = wide as u32;
             borrow = i64::from(wide < 0);
         }
