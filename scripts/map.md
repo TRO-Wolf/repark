@@ -1,6 +1,6 @@
 # map — scripts/
 
-DF-SURFACE-A-1 critic round 1 (2026-09-14): `check_lib_py.py`
+DF-SURFACE-A-1 critic round 1 (2026-09-14): `check_lib_py.py` **SESSION-SURFACE-1 (2026-09-15, rebase onto #602):** `spark/session/session_core.py` row 2291 → 2290; EX-0 counts recounted after the Catalog merge. pins: session-surface-1/C-001
 `dataframe/core.py` 4041 → 4035 (ruling R-5 removes the `inputFiles` and
 `semanticHash` bindings; ruling R-6 removes the `_schema_override` slot,
 init line, and schema check). The CAP-1 parity mirror row moved with it.

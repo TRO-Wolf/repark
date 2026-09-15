@@ -73,6 +73,24 @@ network.
   `SparkSession.pandas_api`: both refuse loud with
   `UnsupportedOperationException` naming the supported route; neither name
   exists on live PySpark 4.1.2.
+- [tags_and_interrupts.py](tags_and_interrupts.py) — `SparkSession.addTag` /
+  `SparkSession.removeTag` / `SparkSession.getTags` / `SparkSession.clearTags`
+  round-trip over the per-session tag set (the empty-tag refusal checked too),
+  and `SparkSession.interruptAll` / `SparkSession.interruptTag` /
+  `SparkSession.interruptOperation` answer `[]` on the idle session.
+  pins: session-surface-1/C-001, C-002
+- [connect_only_and_declared.py](connect_only_and_declared.py) —
+  `SparkSession.client` / `SparkSession.copyFromLocalToFs` /
+  `SparkSession.registerProgressHandler` /
+  `SparkSession.removeProgressHandler` / `SparkSession.clearProgressHandlers`
+  refuse with `ONLY_SUPPORTED_WITH_SPARK_CONNECT`, and `SparkSession.readStream` /
+  `SparkSession.streams` / `SparkSession.dataSource` refuse `NOT_IMPLEMENTED`.
+  pins: session-surface-1/C-003, C-004
+- [artifacts_profile_tvf.py](artifacts_profile_tvf.py) —
+  `SparkSession.addArtifact` / `SparkSession.addArtifacts` copy a pyfile onto
+  `sys.path` (import asserted), `SparkSession.profile` no-ops over the empty
+  collector, and `SparkSession.tvf` answers `tvf.range` rows.
+  pins: session-surface-1/C-005, C-006, C-007
 - [sql_table.py](sql_table.py) — `SparkSession.sql` (filtered ordered select)
   and `SparkSession.table` (temp-view read plus the missing-name raise)
   (EX-26). The missing-table text is §7 `EX-IO-8`.
