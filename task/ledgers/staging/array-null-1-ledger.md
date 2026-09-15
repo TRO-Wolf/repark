@@ -361,6 +361,58 @@ release native, one process, `spark.sql.shuffle.partitions=1`:
 | base (main) | 19.38 ms |
 | landed round-4 build | 18.53 ms |
 
+### S2-21 round 3 remediation
+
+The round-3 perf re-check (`/tmp/oc-worker/g-revarr3/report.md`) measured the
+round-4 invoke-time conversion on a release native of f28c7dee. Three FIX
+findings — P1-1 (all-null short-circuit ran after conversion + `Tz` parse),
+P2-1 (date→LTZ / NTZ→LTZ localized per value through chrono and an
+intermediate `Vec<Option<i64>>`), P2-2 (unit-only timestamp rescale used the
+generic cast). Two compounding costs sat underneath all three: the short-
+circuit ordering itself, and — diagnosed on this round's instrumented build —
+every record batch's `ListArray::values()` points at the whole shared flat
+child, so a values-level conversion ran once per batch over the full 8e6
+elements (~16× the needed work on the 1e6×8 frame). `convert_list`/`convert_map`
+now slice the child to the batch's offset window and rebase the offsets;
+`localize_wall_column` writes into a `Vec<i64>` + `NullBufferBuilder` with a
+per-civil-day offset cache (`ZoneSpans`, falling back to
+`localize_wall_micros_in_zone` on transition/gap/overlap days);
+`rescale_timestamp_column` divides/multiplies the i64 buffer directly with
+constant-specialized factors (Arrow semantics: truncation toward zero,
+checked multiply → null on overflow).
+
+Bars: release native, one process, medians of 5, 1e6 rows × avg 8 inner,
+`spark.sql.shuffle.partitions=1`, `datafusion.execution.target_partitions=1`.
+"Round 3" is the reviewer's number; "before" is this tree before the round-6
+fix; "after" is the landed round-6 build.
+
+| Cell | Round 3 | Before | After | Bar | Result |
+|---|---:|---:|---:|---:|:--:|
+| 100% NULL identical-type facade (`list<int32>`) | 1.091 ms | 1.20 ms | 0.772 ms | ≤ 0.90 ms | PASS |
+| 100% NULL `array<int>` + bigint facade (`list<int64>`) | 162.77 ms | 154.4 ms | 0.807 ms | ≤ 2 ms | PASS |
+| `array<date32>` + timestamp facade → LTZ µs | 6 718.0 ms | 8 041.0 ms | 185.9 ms | ≤ 620 ms | PASS |
+| `array<timestamp[us]>` (NTZ) + timestamp facade → LTZ µs | 6 740.2 ms | 8 353.5 ms | 170.9 ms | ≤ 620 ms | PASS |
+| `array<timestamp[us]>` (NTZ) + timestamp SQL door → LTZ µs | 6 716.1 ms | — | 179.7 ms | ≤ 620 ms | PASS |
+| `array<timestamp[ns,tz=UTC]>` + timestamp → `list<ts[us,tz=UTC]>` | 1 386.0 ms | 1 388.4 ms | 35.4 ms | ≤ 55 ms | PASS |
+
+All-null cells return the typed NULL without copying values (null count and
+result type unchanged). RSS deltas on the temporal cells: 6.3–8.8 MB against
+76 000 000 B result nbytes (≤ 1.5×). A first-pass build that kept the
+un-windowed child conversion measured 3 451.8 ms (date→LTZ) / 2 451.7 ms
+(NTZ→LTZ) / 1 400.9 ms (ns→µs); instrumentation showed ~85 ms × ~16 batches
+spent converting the shared 8e6-element child — the window fix removed the
+amplification.
+
+Temporal oracle answers pinned unchanged (recorded before the change):
+date wall `2024-03-10` LA → `1710057600000000` µs, `2024-11-03` →
+`1730617200000000` µs; NTZ `2024-03-10 02:30` → `1710066600000000` µs,
+`2024-11-03 01:30` → `1730622600000000` µs; negative ns→µs truncates toward
+zero (`-1_500_000_001 → -1_500_000`, `-999 → 0`). New pins:
+`test_dst_transition_day_midnights`,
+`test_ntz_walls_in_skipped_and_repeated_hours`,
+`test_timestamp_ns_unit_rescale_truncates_like_arrow_cast`, plus Rust
+`timestamp_unit_rescale_truncates_toward_zero`.
+
 ### C-002 red-first memory pin
 
 Base tree `e147685b`, debug native (`make develop`). Worker: 1-row `a array<int>`
@@ -574,6 +626,7 @@ planner CAST, removed under validate-only `coerce_types`; see P3-A).
 - Q-13b-8: Grok S2-21 reviewer units run at 64 G with in-process RLIMIT_AS caps — applied.
 - Critic re-check L-5..L-11 (orchestrator, measured on the oracle): match Spark's recursive tightest common type; L-9 follows the oracle (widen to LTZ), not the critic's refusal.
 - Critic round 3 L-12 (orchestrator): Float16 participates as Spark FLOAT (float32) on the ladder; L-13 pinned as a product rule, L-14 residue.
+- S2-21 round 3 (orchestrator): all-null short-circuit before conversion; per-day/per-interval zone offsets; unit-only rescale — numeric bars in the ledger.
 
 ### Findings (run 14b)
 
@@ -598,6 +651,9 @@ planner CAST, removed under validate-only `coerce_types`; see P3-A).
 | L-13 struct field names matched case-insensitively under `spark.sql.caseSensitive=true` (product rule, unpinned) | PINNED — `test_struct_field_matching_ignores_case_sensitive` on both doors × both functions; residue row recorded; 3e788282 |
 | L-14 SQL `TIMESTAMP_NTZ'…'` literal is unimplemented (`UnsupportedOperationException`) | RESIDUE — door spelling gap outside this unit; NTZ cells pinned through the `array<timestamp_ntz>` schema path |
 | L-15 DF aliases still drop NULL arrays | RESIDUE — identical to L-4; no change |
+| P1-1 all-null short-circuit ran after conversion and the session `Tz` parse (162.8 ms on a 100% NULL widening cell) | FIXED — raw-input nullity check returns a typed NULL before `convert_columnar`; `Tz` parsed only when a conversion is actually needed; 0.772/0.807 ms vs the 0.90/2 ms bars; 52dfcef0 |
+| P2-1 date→LTZ/NTZ→LTZ localized per value through chrono plus an intermediate `Vec<Option<i64>>` (~6.7–8.4 s on 1e6×8) | FIXED — `ZoneSpans` caches the offset per civil day (per transition interval), writes `Vec<i64>` + `NullBufferBuilder` directly, falls back to `localize_wall_micros_in_zone` on transition/gap/overlap days; `convert_list`/`convert_map` convert only each batch's offset window (the ~16× shared-child amplification found on the instrumented build); 185.9/170.9 ms vs the 620 ms bar, DST pins unchanged; 52dfcef0 |
+| P2-2 unit-only timestamp rescale ran the generic Arrow cast (~1.39 s ns→µs) | FIXED — `rescale_timestamp_column` divides/multiplies the i64 buffer directly with constant-specialized factors; Arrow semantics kept (truncation toward zero, checked multiply → null); 35.4 ms vs the 55 ms bar; 52dfcef0 |
 
 ### Residue
 
@@ -687,6 +743,19 @@ Run 14b round 5 (L-12..L-15, on f28c7dee + this round's changes):
 - `make verify` → green.
 - Comment scan `git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' | grep -P '^\+\s*(//|#(?!\[|!\[| noqa))'` → printed nothing before each commit.
 
+Run 14b round 6 (S2-21 round-3 P1-1/P2-1/P2-2, on 378a6769 + this round's changes):
+
+- Temporal answers recorded before the code changed (LA session): date `2024-03-10` → `1710057600000000` µs, `2024-11-03` → `1730617200000000` µs, NTZ `2024-03-10 02:30` → `1710066600000000` µs, `2024-11-03 01:30` → `1730622600000000` µs; ns→µs `-1_500_000_001 → -1_500_000`, `-999 → 0` (truncation toward zero).
+- Before cells on this tree (release native): 1.20 ms / 154.4 ms / 8 041.0 ms / 8 353.5 ms / 1 388.4 ms (table above).
+- `cargo test -p repark-functions` → green (458 tests incl. `timestamp_unit_rescale_truncates_toward_zero`).
+- `cargo test -p repark-python door_parity` → green (4 tests; no `EXPECTED_DIVERGENCES` row added).
+- `cd python/repark && VIRTUAL_ENV=/tmp/g-arraynull/.venv ../../.venv/bin/maturin develop --release` → rebuilt with the round-6 changes.
+- `.venv/bin/python -m pytest` on both `test_array_null_1*.py` + every `grep -rln "array_append\|array_prepend"` file → green, 200 tests.
+- Depth-40 memory pin × 3 consecutive runs → green (deltas ~1.66 MB vs bound ~3.22 MB).
+- Perf bars after (medians of 5): 0.772 ms / 0.807 ms / 185.9 ms / 170.9 ms / 179.7 ms (sql) / 35.4 ms — all under the ruled bars; table above.
+- `make verify` → green.
+- Comment scan `git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' | grep -P '^\+\s*(//|#(?!\[|!\[| noqa))'` → printed nothing before each commit.
+
 ## Coverage attestation
 
 ```yaml
@@ -700,7 +769,7 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/array-null-1-ledger.md, task/ledgers/staging/array-null-1-spikes/before_after.py]
     - id: AT-2
       status: ATTACKED
-      evidence: Boundary cells exercised on both doors — NULL array, NULL element, empty array, nested array<int> element, int into array<bigint>, int into array<double>, string into array<int>, NULL element into a containsNull=False array, literal array, CAST(NULL AS ARRAY<INT>), a two-row all-null input column, and a sliced input whose NullBuffer carries a non-zero offset; the run-14b coercion oracle covers every widening pair (int ladder, →double, date↔timestamp both directions), every refusal family (string↔numeric, decimal vs anything/different precision, boolean, unequal nested) on both functions × both doors; the round-4 oracle adds recursive cells (array<float>+int incl. the 16777217 float-rounding value, nested arrays, map key/value widening, struct name/count/order/case, ntz↔ltz/date, 0001-01-01/9999-12-31 in an LA session compared as unix micros); round 5 adds the float16-as-FLOAT ladder pin (100000 → 100000.0, never Inf, over polars halffloat ingest) and the spark.sql.caseSensitive=true struct-matching pin; chain depths 1..100 measured.
+      evidence: Boundary cells exercised on both doors — NULL array, NULL element, empty array, nested array<int> element, int into array<bigint>, int into array<double>, string into array<int>, NULL element into a containsNull=False array, literal array, CAST(NULL AS ARRAY<INT>), a two-row all-null input column, and a sliced input whose NullBuffer carries a non-zero offset; the run-14b coercion oracle covers every widening pair (int ladder, →double, date↔timestamp both directions), every refusal family (string↔numeric, decimal vs anything/different precision, boolean, unequal nested) on both functions × both doors; the round-4 oracle adds recursive cells (array<float>+int incl. the 16777217 float-rounding value, nested arrays, map key/value widening, struct name/count/order/case, ntz↔ltz/date, 0001-01-01/9999-12-31 in an LA session compared as unix micros); round 5 adds the float16-as-FLOAT ladder pin (100000 → 100000.0, never Inf, over polars halffloat ingest) and the spark.sql.caseSensitive=true struct-matching pin; round 6 adds the DST-transition pins (2024-03-10/2024-11-03 date midnights, NTZ walls inside the skipped 02:30 and repeated 01:30 hours, LA session, unix-micro answers recorded before the code changed) and the negative pre-epoch ns→µs truncation pin (Arrow semantics: toward zero); chain depths 1..100 measured.
       artifacts: [python/repark/tests/test_array_null_1.py, python/repark/tests/test_array_null_1_coercion.py, crates/repark-functions/src/collection/array_append.rs, crates/repark-functions/src/collection/array_append/coerce.rs]
     - id: AT-3
       status: ATTACKED
