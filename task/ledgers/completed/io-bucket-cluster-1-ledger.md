@@ -99,3 +99,64 @@ prebuilt release one).
 | `python3 scripts/check_ledger_grammar.py` | only the missing-orchestrator COVERAGE_ATTESTATION finding may remain |
 | `typos` on changed files, commit-hook run | clean |
 | fence (`git diff --cached … \| grep -P '^\+\s*(//\|#(?!\[\|!\[\| noqa))'`) | empty before every commit |
+
+## Orchestrator rulings after the re-check (run 15b, G-2)
+
+- R-4 (2026-09-15): the Grok re-check found every round-1 finding fixed and two residuals — L-101 (P2): the `NOT_LIST_OF_STR`
+  refusal rendered its parameters instead of Spark's sentence; L-102 (P3): Spark checks the extra columns before the first. The
+  orchestrator fixed both red-first in the same commit that moved one `escape_sql_single_quotes` call in the PR-245 literal inventory
+  to `writer_layout.py` (the gate had gone red when round 1 moved `_sql_option_escape`). No further critic round: a message-text
+  and check-order fix verified line by line against `readwriter.py` 1526-1553. pins: io-bucket-cluster-1/C-006
+- R-5 (2026-09-15): the S2-21 perf reviewers do not run on this unit — argument checks and refusals, no data path.
+- R-6 (2026-09-15): the local facade failures in `test_array_null_1*.py` came from a stale native module; with the native rebuilt at
+  main e98e899d the facade suite passed (0 failed).
+
+| Clause | Proposition | Proof | Verdict | Evidence |
+|---|---|---|---|---|
+| C-006 | The re-check residuals answer Spark: `NOT_LIST_OF_STR` renders ``Argument `col` should be a list[str], got int.`` and a call with both an invalid first column and an invalid extra column names `cols`. | `test_not_list_of_str_message_and_extra_first_order`. | **PROVEN** | Red on 24639982 (1 failed: the message was `[NOT_LIST_OF_STR] arg_name='col', arg_type='int'`), green after (79 passed with the writer suites). pins: io-bucket-cluster-1/C-006 |
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: io-bucket-cluster-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card and the fourteen recorded PySpark 4.1.2 writer-layout cells; bucketBy, sortBy, clusterBy and the V2 clusterBy pinned cell by cell.
+      artifacts: [python/repark/tests/test_io_bucket_cluster_1.py, python/repark/tests/facade_reader_writer_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Non-int and out-of-range bucket counts, list and tuple first columns with and without extra columns, non-str names first and extra, empty lists, every path save door, saveAsTable, insertInto, clusterBy with partitionBy and bucketBy in both orders, V2 create, replace and createOrReplace.
+      artifacts: [python/repark/tests/test_io_bucket_cluster_1.py]
+    - id: AT-3
+      status: N/A
+      justification: Python argument checks and refusals; no Rust, no unwrap.
+    - id: AT-4
+      status: N/A
+      justification: Layout state lives on the per-call writer object; no shared state.
+    - id: AT-5
+      status: ATTACKED
+      evidence: Option values rendered into SQL still pass through the sanctioned escape helper, now counted in writer_layout.py by the PR-245 inventory.
+      artifacts: [python/repark-parity/tests/test_pr_245_revalidation_record.py]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Grok critic-logic round 1 (0 P1, 4 P2) fixed by GLM from a table; the re-check found all four fixed plus two residuals fixed by the orchestrator (R-4).
+      artifacts: [task/ledgers/completed/io-bucket-cluster-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Full facade suite on a native rebuilt at main e98e899d (0 failed), parity suite with the PR-245 inventory corrected, ruff 0.15.22, check_lib_py with writer_readwriter.py down 1111 to 1105, ledger lifecycle and grammar, docs links, example coverage with the writer example executed; comment-ban grep zero hits.
+      artifacts: [docs/examples/io/writer_bucket_cluster.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark's contracts were read, not assumed - pyspark/sql/readwriter.py bucketBy, sortBy and clusterBy argument checks, error-conditions.json templates, and the classic DataFrameWriter assertNotBucketed order read from the 4.1.2 bytecode by the critic.
+      artifacts: [python/repark/src/repark/spark/dataframe/writer_layout.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every refusal carries Spark's class, parameters and sentence; the two Iceberg layout refusals are dated registry rows IO-BUCKET-1 and IO-CLUSTER-1 with pins.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation guards run - checking col before cols reds the order pin, dropping the sentence reds the message pin, dropping the sort-column test reds the 1313 pins.
+      artifacts: [python/repark/tests/test_io_bucket_cluster_1.py]
+  complete: true
+```
+

@@ -503,6 +503,15 @@ else. The next pickup's `make ledger-archive` files everything here under
   No product change.
   `risk_tier: standard`. Branch `test/ice-spark-table-1`.
   pins: ice-spark-table-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [io-bucket-cluster-1-ledger.md](io-bucket-cluster-1-ledger.md) —
+  **IO-BUCKET-CLUSTER-1 step 1 (2026-09-14), in flight:** `DataFrameWriter.bucketBy` /
+  `sortBy` / `clusterBy` and `DataFrameWriterV2.clusterBy` bind on the writers with
+  bodies in the new `dataframe/writer_layout.py` — the fourteen run-15b oracle cells
+  (argument checks, path-save refusals, save-time checks, and the two declared
+  `NOT_IMPLEMENTED` refusals R-1/R-2, registry rows IO-BUCKET-1 / IO-CLUSTER-1).
+  `writer_readwriter.py` 1111 → 1105 (CAP-1 mirrored); example inventory 936 → 944.
+  `risk_tier: standard`. Branch `feat/io-bucket-cluster-1`.
+  pins: io-bucket-cluster-1/C-001, C-002, C-003, C-004
 - [ledger-reading-1-ledger.md](ledger-reading-1-ledger.md) —
   **LEDGER-READING-1 step 1 (2026-09-09), in flight:**   reading units may prove clauses on
   document evidence (R-10). A staging ledger whose first 40 lines carry the READING value of
