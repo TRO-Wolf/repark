@@ -262,3 +262,49 @@ def test_jdbc_non_postgres_urls_refuse_not_implemented(spark: SparkSession) -> N
         assert raised.value.getCondition() == "NOT_IMPLEMENTED"
         assert raised.value.getMessageParameters() == {"feature": "jdbc"}
         assert str(raised.value) == "[NOT_IMPLEMENTED] jdbc is not implemented."
+
+
+def _captured_jdbc_read(spark: SparkSession, url: str) -> dict[str, object]:
+    """Run one capture-probe of ``reader.jdbc(url, 't')`` against a fake session."""
+    captured: dict[str, object] = {}
+
+    class _FakeSession:
+        def read_postgres(self, **kwargs: object) -> object:
+            captured.update(kwargs)
+            raise RuntimeError("stop-after-capture")
+
+    reader = spark.read
+    reader._session = _FakeSession()  # type: ignore[assignment]
+    with pytest.raises(RuntimeError, match="stop-after-capture"):
+        reader.jdbc(url, "t")
+    return captured
+
+
+def test_jdbc_postgres_alias_url_reaches_read_postgres(spark: SparkSession) -> None:
+    """libpq's ``postgres://`` alias reaches read_postgres with the original url string.
+
+    L-002: main forwarded every URL verbatim and libpq accepts ``postgres://`` as an
+    alias of ``postgresql://``; the check is case-insensitive after stripping leading
+    whitespace and forwards the caller's string untouched.
+
+    pins: io-declared-1/C-008
+    """
+    for url in ("postgres://h/db", "POSTGRES://h/db", "  postgres://h/db"):
+        captured = _captured_jdbc_read(spark, url)
+        assert captured.get("url") == url
+        assert captured.get("dbtable") == "t"
+
+
+def test_jdbc_postgres_jdbc_scheme_still_refuses_not_implemented(spark: SparkSession) -> None:
+    """``jdbc:postgres://`` names no documented connector scheme and keeps refusing.
+
+    L-002: the connector's URL parser is not in this tree (the native entry defers),
+    so the documented scheme set governs — ``jdbc:postgresql://`` / ``postgresql://`` /
+    ``postgres://``.
+
+    pins: io-declared-1/C-008
+    """
+    with pytest.raises(PySparkNotImplementedError) as raised:
+        spark.read.jdbc("jdbc:postgres://h/db", "t")
+    assert raised.value.getCondition() == "NOT_IMPLEMENTED"
+    assert raised.value.getMessageParameters() == {"feature": "jdbc"}

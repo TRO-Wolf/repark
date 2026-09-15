@@ -73,9 +73,15 @@ def _jdbc_alias(camel: str, camel_value: Any, snake: str, snake_value: Any) -> A
 
 
 def _is_postgres_url(url: str) -> bool:
-    """Whether a JDBC URL names PostgreSQL (the driver the native connector serves)."""
-    lowered = str(url).strip().lower()
-    return lowered.startswith("jdbc:postgresql://") or lowered.startswith("postgresql://")
+    """Whether a JDBC URL names PostgreSQL (the driver the native connector serves).
+
+    libpq accepts ``postgres://`` as an alias of ``postgresql://``; the check is
+    case-insensitive after stripping leading whitespace and the caller's string is
+    forwarded untouched. ``jdbc:postgres://`` names no documented connector scheme
+    and refuses.
+    """
+    lowered = str(url).lstrip().lower()
+    return lowered.startswith(("jdbc:postgresql://", "postgresql://", "postgres://"))
 
 
 def reader_orc(
@@ -219,9 +225,10 @@ def writer_jdbc(
     mode: str | None = None,
     properties: dict[str, str] | None = None,
 ) -> None:
-    """Refuse JDBC writes after Spark's save-mode check. pins: io-declared-1/C-003"""
+    """Refuse JDBC writes after Spark's save-mode check. pins: io-declared-1/C-003, C-008"""
     _ = writer, url, table, properties
-    if mode is not None and mode not in _JDBC_SAVE_MODES:
+    lowered_mode = mode.lower() if isinstance(mode, str) else mode
+    if mode is not None and lowered_mode not in _JDBC_SAVE_MODES:
         _refuse_invalid_jdbc_mode(mode)
     _refuse("jdbc")
 

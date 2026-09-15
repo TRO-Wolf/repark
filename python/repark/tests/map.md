@@ -2304,7 +2304,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (dbtable-from-properties, the three teaching errors, the `read_postgres` delegation) behind
   Spark's signature with main's snake-case spellings as keyword-only aliases (both spellings
   of one parameter raise `TypeError`), pinned in `test_pg_jdbc_options.py` (restored main
-  pins plus the camelCase-capture, snake-alias, `TypeError`, and non-Postgres refusal pins);
+  pins plus the camelCase-capture, snake-alias, `TypeError`, and non-Postgres refusal pins).
+  Round 2 (critic L-001/L-002): the `write.jdbc` mode check lowercases like Spark's own
+  `mode(String)` — mixed-case valid spellings refuse `NOT_IMPLEMENTED`, invalid ones keep
+  the caller's spelling in the message — and libpq's `postgres://` alias reaches
+  `read_postgres` verbatim (case-insensitive after stripping leading whitespace;
+  `jdbc:postgres://` keeps refusing);
   `na.replace` delegates exactly to
   `DataFrame.replace` through the shared no-value sentinel: scalar/list/subset/None
   cells, `MIXED_TYPE_REPLACEMENT`, `ARGUMENT_REQUIRED` (omitted value over a non-dict
@@ -2314,7 +2319,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_pg_jdbc_options.py` ride this unit. The example for the new names is
   `docs/examples/io/io_declared_refusals.py`, the fixture and inventory updates are
   C-005, and the named-suite sweep is C-006.
-  pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `test_cache_persist.py` — **R-PERF-CACHE** + **r23 CACHE1**: cache/persist self + is_cached + storageLevel;
   second action after cache cheap; derived after materialize; unpersist; localCheckpoint;
   clearCache real drop (live + hand-registered `__repark_cache_*` prefix sweep + leaves

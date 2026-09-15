@@ -19,6 +19,16 @@ refusal, `DataFrameWriter.jdbc` stays declared with the `INVALID_SAVE_MODE` chec
 rewritten `test_pg_*` pins were restored to main's form (plus new camelCase / alias /
 `TypeError` / non-Postgres pins), and `IO-JDBC-1` was rewritten to the read/write split.
 
+**Critic round 1 (Grok logic critic on `5899a7a6`, run 15b; round 2 of this unit).** L-001
+and L-002 fixed (C-008): the `write.jdbc` mode check lowercases like Spark's own
+`DataFrameWriter.mode(String)`, and libpq's `postgres://` alias reaches `read_postgres`
+verbatim (scheme check case-insensitive after stripping leading whitespace over
+`jdbc:postgresql://` / `postgresql://` / `postgres://`; the undocumented
+`jdbc:postgres://` keeps refusing). Noted by the orchestrator, not fixed here: the
+partial-range teaching string now names camelCase identifiers, `format("jdbc")` still
+routes any URL to the Postgres connector (owner question), and `write.xml` has no
+`**options` in Spark.
+
 **Why now.** The 1.5 PySpark-parity campaign: every public name of PySpark 4.1.2's reader /
 writer / `na` surfaces answers Spark or carries a dated declared refusal with Spark's own
 error class. `orc`, `xml`, and `jdbc` had either a silent generic refusal (the writer's
@@ -43,8 +53,9 @@ out_of_scope_observed).
 | C-005 | The unit's rows land: registry `IO-ORC-1` / `IO-XML-1` / `IO-JDBC-1` at §5 end with oracle cell citations and dates; the fixture copy is byte-identical and listed in `python/repark/tests/map.md`; every new public name is enumerated and covered by a `docs/examples/io/` example with `COVERS`; the example, inventory, and exception counts re-measure green. | The registry diff; the maps; the gates. | **PROVEN** | Fixture copied byte-identical (25064 bytes, `cmp` clean) from run 15b and listed in `python/repark/tests/map.md`. Example `docs/examples/io/io_declared_refusals.py` covers all seven names and runs green standalone and under the gate's execution step. `--write-inventory` added exactly 6 rows (5 io + `DataFrameNaFunctions.replace`); `DataFrameReader.jdbc` left `exceptions.txt` (an example now covers it) and `EXCEPTIONS_BASELINE` ratcheted 2 → 1 with its pin; raw walk 955 → 961 pinned. API freeze (`build_api_freeze.py`) still matches — the freeze registers the packet rows, not the post-freeze additive names. pins: io-declared-1/C-005 |
 | C-006 | No regression: the touched surfaces' suites and the inventory gates stay green — `test_writer*.py`, `test_e2_readwriter.py`, `test_r1_read_formats.py`, `test_replace*.py`, `test_pg_*` offline pins, the CAP-1 size ratchet, the API freeze, and the full facade + parity suites on the final tree. | The gates table. | **PROVEN** | `test_writer.py` + `test_replace_linear_1.py` + `test_writer_v2.py` 70 passed; the five rewritten/adjacent files with the new module: 130 passed; `test_cap_1_source_file_line_cap.py` 23 passed after the ratchets (writer_readwriter 1111 → 1110 mirrored, the reader.py exception retires at 954); `build_api_freeze.py` exit 0; full facade suite and `python/repark-parity/tests` counts in §Gates. `STATUS.md` and `briefs/next-sequence.md` untouched. Rebased onto origin/main `5c172af0` mid-unit (R-3 round): the four conflicts resolved union-both-sides and the full suites re-run green (known environmental reds excluded — see §Gates). pins: io-declared-1/C-006 |
 | C-007 | R-3 (orchestrator, 2026-09-14, supersedes R-2 for the reader): `DataFrameReader.jdbc` reads PostgreSQL URLs (`jdbc:postgresql://`, `postgresql://`) with main's exact behaviour — the dbtable-from-properties resolution, the three `IllegalArgumentException` teaching errors (predicates with a range bag, partial range bag, empty predicates), and the `read_postgres` delegation with main's argument names — behind Spark's positional/camelCase signature with main's `lower_bound` / `upper_bound` / `num_partitions` / `connection_properties` spellings kept as keyword-only aliases (both spellings of one parameter raise `TypeError`); the body lives in `dataframe/io_declared.py` with `reader.py` binding only (954 lines, below the retired ceiling); every `write.jdbc` and every non-PostgreSQL driver URL stay declared (C-003). | The restored and new pins in `test_pg_jdbc_options.py`; `test_io_declared_1.py`'s rewritten reader pins; the registry `IO-JDBC-1` rewrite. | **PROVEN** | Red first: after rewriting the pins to the R-3 contract and before the body landed, `test_pg_jdbc_options.py` + `test_io_declared_1.py` ran **6 failed, 28 passed** — the restored `test_jdbc_predicates_xor_range` / `test_jdbc_empty_predicates_fails` / `test_jdbc_dbtable_from_properties_is_forwarded` and the new camelCase-capture, snake-alias, and both-spellings-`TypeError` pins (the two non-Postgres refusal pins were green-before: the declared refusal already fired for every URL). After the body landed: 34 passed. The two env-gated live call sites (`test_pg_acceptance.py`, `test_pg_jdbc_oracle.py`) are restored to main's `spark.read.jdbc` form (comments kept out of the added lines per the comment fence). `format('postgres')` capture pin kept as an additional pin. Registry `IO-JDBC-1` rewritten to the read/write split. pins: io-declared-1/C-007 |
+| C-008 | Critic round 1 (Grok logic critic, run 15b): (L-001) `DataFrameWriter.jdbc`'s mode check matches the way Spark's own `DataFrameWriter.mode(String)` does — lowercased before the six-name match — so the mixed-case spellings `Append`, `OVERWRITE`, `ErrorIfExists`, `ERROR`, `Ignore`, `DEFAULT` are valid and reach `NOT_IMPLEMENTED` `{"feature": "jdbc"}`, while `bogus`, `""`, and `"append "` still raise `INVALID_SAVE_MODE` with the caller's original spelling in the message and the `mode` parameter; (L-002) libpq's `postgres://` alias reaches `read_postgres` with the caller's original URL string, the scheme check being case-insensitive after stripping leading whitespace over `jdbc:postgresql://` / `postgresql://` / `postgres://`, and the undocumented `jdbc:postgres://` spelling keeps refusing. | `test_io_declared_1.py::test_writer_jdbc_mixed_case_modes_are_valid_then_refuse` / `…::test_writer_jdbc_invalid_modes_keep_the_caller_spelling`; `test_pg_jdbc_options.py::test_jdbc_postgres_alias_url_reaches_read_postgres` / `…::test_jdbc_postgres_jdbc_scheme_still_refuses_not_implemented`. | **PROVEN** | Red first: with the new pins in place and before the fixes, the pair ran **2 failed, 36 passed** — `test_writer_jdbc_mixed_case_modes_are_valid_then_refuse` (each mixed-case spelling answered `INVALID_SAVE_MODE` with `{"mode": "\"Append\""}…`) and `test_jdbc_postgres_alias_url_reaches_read_postgres` (`postgres://h/db` answered `NOT_IMPLEMENTED`); the invalid-spelling and `jdbc:postgres://` pins were green-before, matching the critic's own probe record. After the fixes: 38 passed. `jdbc:postgres://` follows the ruling's default because the connector's URL parser is not observable in this clone — the native entry defers ("not available in this build") and no parser exists in the repo's history — so the documented scheme set (`jdbc:postgresql://` / `postgresql://` / `postgres://`) governs. Registry `IO-JDBC-1` updated. pins: io-declared-1/C-008 |
 
-VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Per-name decision table
 
@@ -72,8 +83,14 @@ refusals and one delegation, no Python compute.
   arm is untouched (R-2/R-3 cover the `jdbc()` methods) and stays noted for the
   orchestrator.
 - **Writer `jdbc` mode set.** The six modes Spark's own `INVALID_SAVE_MODE` message names,
-  case-sensitive like `DataFrameWriter.mode()`; the message text comes from the
-  `writer_jdbc_mode_bad` cell with the mode substituted and quoted as the cell's params do.
+  matched on the lowercased mode (L-001, Spark's `DataFrameWriter.mode(String)` lowercases
+  with Locale.ROOT); the message text comes from the `writer_jdbc_mode_bad` cell with the
+  caller's original spelling substituted and quoted as the cell's params do.
+- **`jdbc:postgres://` refuses** (L-002 round): the connector's URL parser is not observable
+  in this clone — the native entry defers the postgres reader and no parser exists in the
+  repo's history — so the documented scheme set governs: `jdbc:postgresql://`,
+  `postgresql://`, and libpq's `postgres://` alias (case-insensitive, leading whitespace
+  stripped, URL forwarded verbatim); `jdbc:postgres://` is in no accepted set.
 - **`rowTag` "provided"** means the argument is not `None` or any `rowTag`-spelled key exists
   in the option map (case-insensitive); an empty string counts as provided.
 - **Pins rewritten** (all recorded above): the four orc pins in `test_e2_readwriter.py` /
@@ -93,3 +110,5 @@ refusals and one delegation, no Python compute.
 | Full suites, ruff, typos, ledger grammar, fence | §Gates of the handback; run on the final tree. |
 | R-3 round red first — `pytest test_pg_jdbc_options.py test_io_declared_1.py -q` after the pin rewrite, before the body landed | **6 failed, 28 passed** (`test_jdbc_predicates_xor_range`, `test_jdbc_empty_predicates_fails`, `test_jdbc_dbtable_from_properties_is_forwarded`, `test_jdbc_camel_case_keywords_reach_read_postgres`, `test_jdbc_snake_case_aliases_reach_read_postgres`, `test_jdbc_both_keyword_spellings_raise_typeerror` — the two non-Postgres refusal pins were green-before). |
 | R-3 round green — the same pair after the body landed | **34 passed**; `test_pg_acceptance.py` + `test_pg_jdbc_oracle.py` 6 passed (skip-loud without `REPARK_PG_DSN`); the example runs green with the `jdbc:mysql://` refusal arm. |
+| Round-2 red first — `pytest test_pg_jdbc_options.py test_io_declared_1.py -q` with the L-001/L-002 pins, before the fixes | **2 failed, 36 passed** (`test_writer_jdbc_mixed_case_modes_are_valid_then_refuse`, `test_jdbc_postgres_alias_url_reaches_read_postgres`); the invalid-spelling and `jdbc:postgres://` pins green-before. |
+| Round-2 green — the same pair after the fixes | **38 passed**. |

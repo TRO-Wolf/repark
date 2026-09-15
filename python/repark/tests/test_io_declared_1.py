@@ -204,6 +204,43 @@ def test_writer_jdbc_bad_mode_is_invalid_save_mode(spark: ReparkSession) -> None
     assert raised.value.getSqlState() == "42000"
 
 
+def test_writer_jdbc_mixed_case_modes_are_valid_then_refuse(spark: ReparkSession) -> None:
+    """Spark's mode(String) lowercases before matching; mixed-case valid modes refuse.
+
+    L-001: ``Append`` / ``OVERWRITE`` / ``ErrorIfExists`` / ``ERROR`` / ``Ignore`` /
+    ``DEFAULT`` are valid Spark save modes, so under R-2/R-3 they reach
+    ``NOT_IMPLEMENTED`` ``{"feature": "jdbc"}`` instead of ``INVALID_SAVE_MODE``.
+
+    pins: io-declared-1/C-008
+    """
+    for mode in ("Append", "OVERWRITE", "ErrorIfExists", "ERROR", "Ignore", "DEFAULT"):
+        with pytest.raises(PySparkNotImplementedError) as raised:
+            _kv_frame(spark).write.jdbc("jdbc:postgresql://127.0.0.1:1/x", "t", mode=mode)
+        _assert_not_implemented(raised.value, "jdbc")
+
+
+def test_writer_jdbc_invalid_modes_keep_the_caller_spelling(spark: ReparkSession) -> None:
+    """Invalid modes raise INVALID_SAVE_MODE naming the caller's original spelling.
+
+    L-001: ``bogus``, the empty string, and a padded valid word stay invalid after
+    lowercasing, and the message and ``mode`` parameter show them verbatim.
+
+    pins: io-declared-1/C-008
+    """
+    for mode in ("bogus", "", "append "):
+        with pytest.raises(AnalysisException) as raised:
+            _kv_frame(spark).write.jdbc("jdbc:postgresql://127.0.0.1:1/x", "t", mode=mode)
+        assert type(raised.value).__name__ == "AnalysisException"
+        assert raised.value.getCondition() == "INVALID_SAVE_MODE"
+        assert raised.value.getMessageParameters() == {"mode": f'"{mode}"'}
+        assert str(raised.value) == (
+            f'[INVALID_SAVE_MODE] The specified save mode "{mode}" is invalid. '
+            'Valid save modes include "append", "overwrite", "ignore", "error", '
+            '"errorifexists", and "default". SQLSTATE: 42000'
+        )
+        assert raised.value.getSqlState() == "42000"
+
+
 def test_writer_jdbc_refuses_after_the_mode_check(spark: ReparkSession) -> None:
     """DataFrameWriter.jdbc refuses NOT_IMPLEMENTED jdbc once the mode is valid.
 

@@ -576,7 +576,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   spellings of one parameter raise `TypeError`); a non-PostgreSQL URL refuses
   `NOT_IMPLEMENTED` at the dispatch, before any connection. `writer_jdbc` checks the
   save mode first and raises `INVALID_SAVE_MODE`
-  (SQLSTATE 42000, the live-Spark message) before refusing. The methods bind on the
+  (SQLSTATE 42000, the live-Spark message) before refusing. Round 2 (critic
+  L-001/L-002): the mode check lowercases before the six-name match like Spark's own
+  `mode(String)` — mixed-case valid spellings refuse `NOT_IMPLEMENTED`, invalid ones keep
+  the caller's spelling — and `_is_postgres_url` adds libpq's `postgres://` alias
+  (case-insensitive after stripping leading whitespace, URL forwarded verbatim;
+  `jdbc:postgres://` keeps refusing). The methods bind on the
   classes from `reader.py` and `writer_readwriter.py`, both at exact line ceilings.
   Python is correct here under the Rust-first instruction: a Rust ORC or XML
   reader/writer needs a new crate (owner question Q-15B-1), JDBC writes and
