@@ -14,7 +14,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, PySparkException
+from repark.errors import AnalysisException, ParseException, PySparkException
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark.dataframe import DataFrame
 
@@ -243,3 +243,9 @@ def test_unaliased_suffix_names_come_from_value_text(spark: ReparkSession) -> No
     assert table.schema.names == ["1.5"]
     table = _table(spark.range(1).select(F.expr("1.5BD")))
     assert table.schema.names == ["1.5BD"]
+
+
+def test_create_table_array_element_not_null_refuses_loudly(spark: ReparkSession) -> None:
+    """FNP-4B L-006 (Q17-18): ``ARRAY<INT NOT NULL>`` refuses loudly at parse."""
+    with pytest.raises(ParseException):
+        spark.sql("CREATE TABLE cta_nn (a ARRAY<INT NOT NULL>) USING iceberg").to_arrow()
