@@ -157,6 +157,7 @@ impl FloatFormat {
     const ZERO: u8 = 0x08;
     const GROUPING: u8 = 0x10;
     const PAREN: u8 = 0x20;
+    const ALT: u8 = 0x40;
 
     fn has(&self, flag: u8) -> bool {
         self.flags & flag != 0
@@ -181,7 +182,7 @@ pub(crate) fn parse_float_format(format: &str) -> Option<FloatFormat> {
             b'0' => spec.flags |= FloatFormat::ZERO,
             b',' => spec.flags |= FloatFormat::GROUPING,
             b'(' => spec.flags |= FloatFormat::PAREN,
-            b'#' => {}
+            b'#' => spec.flags |= FloatFormat::ALT,
             _ => break,
         }
         index += 1;
@@ -240,6 +241,9 @@ pub(crate) fn format_float_value(spec: &FloatFormat, value: f64) -> String {
         let mut fixed = half_up_fixed(value.abs(), spec.precision);
         if spec.has(FloatFormat::GROUPING) {
             insert_grouping(&mut fixed);
+        }
+        if spec.precision == 0 && spec.has(FloatFormat::ALT) {
+            fixed.push('.');
         }
         fixed
     } else if value.is_infinite() {
@@ -518,6 +522,16 @@ mod tests {
         assert_eq!(render("%f", f64::NAN), "NaN");
         assert_eq!(render("%f", -f64::NAN), "NaN");
         assert_eq!(render("%f", f64::NEG_INFINITY), "-Infinity");
+    }
+
+    #[test]
+    fn alt_flag_forces_the_decimal_point() {
+        assert_eq!(render("%#.0f", 1.0), "1.");
+        assert_eq!(render("%#.0f", 0.0), "0.");
+        assert_eq!(render("%#.0f", 2.5), "3.");
+        assert_eq!(render("%#f", 1.0), "1.000000");
+        assert_eq!(render("%.0f", 2.5), "3");
+        assert_eq!(render("%010.2f", -3.14159), "-000003.14");
     }
 
     #[test]

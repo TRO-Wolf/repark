@@ -251,3 +251,23 @@ def test_spark_door_format_string_trailing_text_control(spark: ReparkSession) ->
     """Q19-fmt-14: trailing literal text after one verb answers upstream."""
     table = _table(spark.sql("SELECT format_string('%-10.2f|', CAST('3.14159' AS DOUBLE)) AS v"))
     _check_string(table, "v", "3.14      |")
+
+
+def test_spark_door_format_string_alt_forces_point(spark: ReparkSession) -> None:
+    """Q19-fmt-8..13: # always prints the decimal point, HALF_UP first."""
+    for literal, expected in [
+        ("SELECT format_string('%#.0f', CAST('1.0' AS DOUBLE)) AS v", "1."),
+        ("SELECT format_string('%#.0f', CAST('0.0' AS DOUBLE)) AS v", "0."),
+        ("SELECT format_string('%#.0f', CAST('2.5' AS DOUBLE)) AS v", "3."),
+        ("SELECT format_string('%#f', CAST('1.0' AS DOUBLE)) AS v", "1.000000"),
+        ("SELECT format_string('%.0f', CAST('2.5' AS DOUBLE)) AS v", "3"),
+        ("SELECT format_string('%010.2f', CAST('-3.14159' AS DOUBLE)) AS v", "-000003.14"),
+    ]:
+        _check_string(_table(spark.sql(literal)), "v", expected)
+    frame = spark.range(1).select(
+        F.format_string("%#.0f", F.lit(2.5)).alias("v"),
+        F.format_string("%.0f", F.lit(2.5)).alias("w"),
+    )
+    table = _table(frame)
+    _check_string(table, "v", "3.")
+    _check_string(table, "w", "3")
