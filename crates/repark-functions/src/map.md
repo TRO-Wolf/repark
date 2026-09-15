@@ -662,3 +662,4 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
 | `date_trunc` returns the right instant with the wrong-looking wall clock | Expected if the viewer ignores the UTC annotation: ticks are Spark's instant, typed as `timestamp[us, tz=UTC]`. |
 
 First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](../map.md).
+- **DOOR-CONVERGE-1 rebase (2026-09-15):** `collection.rs` keeps main's `array_append` / `array_prepend` shims (ARRAY-NULL-1) beside this unit's `array_contains` / `size` modules; the round-2 `make_array` shim stays removed (R-10).

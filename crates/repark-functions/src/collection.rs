@@ -73,6 +73,7 @@ pub fn spark_array_append_udf() -> Arc<ScalarUDF> {
 pub fn spark_array_prepend_udf() -> Arc<ScalarUDF> {
     array_append::spark_array_prepend_udf()
 }
+
 /// Spark `map_from_entries` UDF (duplicate keys raise `DUPLICATED_MAP_KEY`).
 #[must_use]
 pub fn map_from_entries_udf() -> Arc<ScalarUDF> {
