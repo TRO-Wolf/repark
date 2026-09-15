@@ -4501,6 +4501,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusal pin from its fixture cell id (message core extracted from the cell
   text), pins the builder ANSI-off still-raises shape as the SET-ANSI-RUNTIME-1
   divergence (C-005), and pins the FU2 overflow-string/i64-max/`+1` cells.
+  The FU2 fixed-binary fold pins `CAST(x AS BINARY)` answering count 3.
   pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004, C-005, C-007
 - `test_fnp6_regexp.py` — **FNP-6a (2026-08-20):** `regexp_extract_all` / `regexp_substr`
   against Python's `re` as an independent oracle, the three no-match conventions Spark keeps

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use arrow::array::{Array, ArrayRef, AsArray, BinaryArray};
+use arrow::array::{Array, ArrayRef, AsArray, BinaryArray, Int64Array};
 use arrow::buffer::{Buffer, OffsetBuffer};
 use arrow::compute::cast;
 use arrow::datatypes::{
@@ -184,8 +184,7 @@ impl BitmapAccumulator {
     }
 
     fn update_bitmaps(&mut self, values: &ArrayRef) -> Result<()> {
-        let values = coerce_bitmap_column(values)?;
-        for_each_binary(&values, |incoming| {
+        for_each_binary(values, |incoming| {
             fold_incoming(&mut self.bits, incoming, self.fold);
             Ok(())
         })
@@ -196,20 +195,14 @@ fn bitmap_payload_signature() -> Signature {
     Signature::user_defined(Volatility::Immutable)
 }
 
-pub(crate) fn coerce_bitmap_column(values: &ArrayRef) -> Result<ArrayRef> {
-    match values.data_type() {
-        DataType::Binary => Ok(Arc::clone(values)),
-        DataType::LargeBinary | DataType::BinaryView => cast(values, &DataType::Binary)
-            .map_err(|error| DataFusionError::Execution(error.to_string())),
-        other => exec_err!("bitmap aggregate expected BINARY, got {other}"),
-    }
-}
-
 fn payload_allowed(fold: BitmapFold, data_type: &DataType) -> bool {
     match fold {
         BitmapFold::Or | BitmapFold::And => matches!(
             data_type,
-            DataType::Binary | DataType::LargeBinary | DataType::BinaryView
+            DataType::Binary
+                | DataType::LargeBinary
+                | DataType::BinaryView
+                | DataType::FixedSizeBinary(_)
         ),
         BitmapFold::Construct => matches!(
             data_type,
@@ -335,52 +328,41 @@ fn malformed_bigint_cast(value: &str) -> DataFusionError {
     ))
 }
 
-fn parse_bigint_cell(raw: &str) -> Result<i64> {
+pub(crate) fn parse_bigint_cell(raw: &str) -> Result<i64> {
     raw.trim()
         .parse::<i64>()
         .map_err(|_| malformed_bigint_cast(raw))
 }
 
-pub(crate) fn construct_positions(column: &ArrayRef) -> Result<Vec<Option<i64>>> {
-    if matches!(column.data_type(), DataType::Null) {
-        return Ok(vec![None; column.len()]);
-    }
-    if matches!(
-        column.data_type(),
-        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
-    ) {
-        let casted = cast(column, &DataType::Utf8)?;
-        let strings = casted.as_string::<i32>();
-        let mut positions = Vec::with_capacity(strings.len());
-        for row in 0..strings.len() {
-            if strings.is_null(row) {
-                positions.push(None);
-            } else {
-                positions.push(Some(parse_bigint_cell(strings.value(row))?));
-            }
-        }
-        return Ok(positions);
-    }
-    let casted = if column.data_type() == &DataType::Int64 {
-        Arc::clone(column)
+pub(crate) fn utf8_strings(column: &ArrayRef) -> Result<ArrayRef> {
+    if matches!(column.data_type(), DataType::Utf8) {
+        Ok(Arc::clone(column))
     } else {
-        cast(column, &DataType::Int64)?
-    };
-    let positions = casted.as_primitive::<Int64Type>();
-    for row in 0..positions.len() {
-        if positions.is_null(row) && !column.is_null(row) {
-            return Err(cast_overflow_error(column, row));
-        }
+        cast(column, &DataType::Utf8).map_err(|error| DataFusionError::Execution(error.to_string()))
     }
-    let mut result = Vec::with_capacity(positions.len());
-    for row in 0..positions.len() {
-        if positions.is_valid(row) {
-            result.push(Some(positions.value(row)));
-        } else {
-            result.push(None);
-        }
+}
+
+pub(crate) fn int64_positions(column: &ArrayRef) -> Result<ArrayRef> {
+    if matches!(column.data_type(), DataType::Int64) {
+        Ok(Arc::clone(column))
+    } else {
+        cast(column, &DataType::Int64)
+            .map_err(|error| DataFusionError::Execution(error.to_string()))
     }
-    Ok(result)
+}
+
+pub(crate) fn position_at(
+    source: &ArrayRef,
+    positions: &Int64Array,
+    row: usize,
+) -> Result<Option<i64>> {
+    if positions.is_valid(row) {
+        Ok(Some(positions.value(row)))
+    } else if source.is_null(row) {
+        Ok(None)
+    } else {
+        Err(cast_overflow_error(source, row))
+    }
 }
 
 fn cast_overflow_error(source: &ArrayRef, row: usize) -> DataFusionError {
@@ -500,24 +482,86 @@ pub(crate) fn fold_incoming(destination: &mut [u8], incoming: &[u8], fold: Bitma
 }
 
 pub(crate) fn update_positions_into(bits: &mut [u8], values: &ArrayRef) -> Result<()> {
-    for position in construct_positions(values)?.into_iter().flatten() {
-        set_bit(bits, position)?;
+    match values.data_type() {
+        DataType::Null => Ok(()),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
+            let strings = utf8_strings(values)?;
+            let strings = strings.as_string::<i32>();
+            if strings.null_count() == 0 {
+                for row in 0..strings.len() {
+                    set_bit(bits, parse_bigint_cell(strings.value(row))?)?;
+                }
+            } else {
+                for row in 0..strings.len() {
+                    if strings.is_valid(row) {
+                        set_bit(bits, parse_bigint_cell(strings.value(row))?)?;
+                    }
+                }
+            }
+            Ok(())
+        }
+        _ => {
+            let casted = int64_positions(values)?;
+            let positions = casted.as_primitive::<Int64Type>();
+            if positions.null_count() == 0 {
+                for &position in positions.values() {
+                    set_bit(bits, position)?;
+                }
+            } else {
+                for row in 0..positions.len() {
+                    if let Some(position) = position_at(values, positions, row)? {
+                        set_bit(bits, position)?;
+                    }
+                }
+            }
+            Ok(())
+        }
     }
-    Ok(())
 }
 
 pub(crate) fn for_each_binary(
     values: &ArrayRef,
     mut visit: impl FnMut(&[u8]) -> Result<()>,
 ) -> Result<()> {
-    let values = coerce_bitmap_column(values)?;
-    let array = values.as_binary::<i32>();
-    for index in 0..array.len() {
-        if array.is_valid(index) {
-            visit(array.value(index))?;
+    match values.data_type() {
+        DataType::Binary => {
+            let array = values.as_binary::<i32>();
+            for index in 0..array.len() {
+                if array.is_valid(index) {
+                    visit(array.value(index))?;
+                }
+            }
+            Ok(())
         }
+        DataType::LargeBinary => {
+            let array = values.as_binary::<i64>();
+            for index in 0..array.len() {
+                if array.is_valid(index) {
+                    visit(array.value(index))?;
+                }
+            }
+            Ok(())
+        }
+        DataType::BinaryView => {
+            let array = values.as_binary_view();
+            for index in 0..array.len() {
+                if array.is_valid(index) {
+                    visit(array.value(index))?;
+                }
+            }
+            Ok(())
+        }
+        DataType::FixedSizeBinary(_) => {
+            let array = values.as_fixed_size_binary();
+            for index in 0..array.len() {
+                if array.is_valid(index) {
+                    visit(array.value(index))?;
+                }
+            }
+            Ok(())
+        }
+        other => exec_err!("bitmap aggregate expected BINARY, got {other}"),
     }
-    Ok(())
 }
 
 pub(crate) fn packed_bitmaps_to_array(bits: Vec<u8>) -> Result<ArrayRef> {

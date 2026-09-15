@@ -311,6 +311,15 @@ def test_construct_agg_i64max_string_raises_bitmap_position(
     )
 
 
+def test_or_agg_folds_cast_binary_payload(spark: ReparkSession) -> None:
+    """pins: fnp-6d-followup-1/C-001."""
+    assert _CELLS["FU2-construct-fixedbin"]["rows"] == [[3]]
+    table = spark.sql(
+        "SELECT bitmap_count(bitmap_or_agg(CAST(x AS BINARY))) c FROM VALUES ('a') AS t(x)"
+    ).toArrow()
+    assert table.column("c").to_pylist() == [3]
+
+
 @pytest.mark.parametrize(
     ("cell_id", "sql", "want"),
     CONSTRUCT_ANSWERS,

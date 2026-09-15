@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, ArrayRef, BinaryArray, Int32Array, Int64Array};
+use datafusion::arrow::array::{
+    Array, ArrayRef, BinaryArray, FixedSizeBinaryArray, Int32Array, Int64Array,
+};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::prelude::SessionContext;
 
-use super::BITMAP_BYTES;
+use super::{BITMAP_BYTES, for_each_binary};
 
 fn ctx() -> SessionContext {
     let ctx = SessionContext::new();
@@ -608,4 +610,19 @@ async fn construct_agg_overflow_raises_on_grouped_and_window_paths() {
             "state missing for {sql}: {message}"
         );
     }
+}
+
+#[test]
+fn for_each_binary_visits_fixed_size_binary_without_copy() {
+    let array: ArrayRef = Arc::new(
+        FixedSizeBinaryArray::try_from_iter(vec![&[0x01u8, 0x02][..]].into_iter())
+            .expect("fixed size binary"),
+    );
+    let mut seen = Vec::new();
+    for_each_binary(&array, |bytes| {
+        seen.push(bytes.to_vec());
+        Ok(())
+    })
+    .expect("visit");
+    assert_eq!(seen, vec![vec![0x01u8, 0x02]]);
 }

@@ -11,8 +11,10 @@ the grouped path.
 - `groups.rs` — `BitmapGroupsAccumulator`: one `Vec<u8>` of `n_groups * 4096`,
   in-place OR/AND/`set_bit`, `evaluate`/`state` as one `BinaryArray` from that
   buffer. `convert_to_state` is not implemented (would be 4 KiB per input row).
-  The grouped construct path shares the parent's `construct_positions`, so grouped
-  STRING args parse strictly as Spark BIGINT under ANSI-on too.
+  The grouped construct path walks the parent's in-place `Int64` positions and
+  parses STRING cells straight into `set_bit` behind the group filter, so grouped
+  STRING args parse strictly as Spark BIGINT under ANSI-on too; binary arms visit
+  `&[u8]` with no cast.
   pins: fnp-6d/C-016, C-017; fnp-6d-followup-1/C-004
 - `tests.rs` — the module's `#[cfg(test)]` suite (moved out of `bitmap_agg.rs` by
   FNP-6D-FOLLOWUP-1 step 2 so the parent keeps the file-size ceiling): the FNP-6D

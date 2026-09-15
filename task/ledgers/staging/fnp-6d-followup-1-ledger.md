@@ -80,6 +80,16 @@ L-005 P3 → ledger only (arity stays a loud Execution error; a WRONG_NUM_ARGS s
 is out of this unit). L-006 P3: `FU2-construct-fixedbin` folds `CAST(x AS BINARY)`;
 `FixedSizeBinary` joins the OR/AND payload set with a direct visit arm, pinned
 (C-001).
+Perf P2-001/P2-002 ACCEPTED and applied: `construct_positions` (the
+`Vec<Option<i64>>`) is gone — the row accumulator and the grouped path walk the
+`Int64Array` in place behind one per-batch cast and parse STRING cells straight
+into `set_bit` (NULL skip and `CAST_INVALID_INPUT`/`CAST_OVERFLOW` kept);
+`for_each_binary` and the grouped fold visit `&[u8]` from Binary/LargeBinary/
+BinaryView/FixedSizeBinary with no cast (Binary keeps its zero-copy path).
+P3-001 (Utf8 `Arc::clone` via `utf8_strings`), P3-002 (single match, row
+`update_bitmaps` no longer pre-coerces), P3-003 (grouped filter checked before
+parse/position) all fell out of the P2 edits. `coerce_bitmap_column` and
+`construct_positions` are deleted with no outside users.
 
 **Not in this unit:** `STATUS.md`, `briefs/next-sequence.md`, `Cargo.toml`,
 `Cargo.lock`, `pyproject.toml`, `uv.lock`, `.github/`, `functions*.py`,
@@ -203,3 +213,126 @@ no HALT remains open.
 | release native `uvx maturin@1.14.1 develop --release` | installed repark-1.4.1 |
 | `.venv/bin/python -m pytest python/repark/tests/test_fnp_6d_followup_1.py python/repark/tests/test_fnp_6d_bitmap_aggregates.py -q` | 39 passed |
 | `make verify` | exit 0 (56 ok suites) |
+
+## Bench (remediation round 2, release native, 2M rows, medians of 5)
+
+Before (round-1 build) → after (reworked build), seconds:
+
+| Job | Before | After |
+|---|---|---|
+| construct_bigint_global | 0.006640 | 0.005170 |
+| construct_bigint_grouped | 0.021244 | 0.030516 |
+| construct_int_global | 0.008884 | 0.005863 |
+| construct_int_grouped | 0.023489 | 0.027372 |
+| construct_str_global | 0.021364 | 0.022170 |
+| construct_str_grouped | 0.035771 | 0.045505 |
+| construct_str_pad_global | 0.030421 | 0.033029 |
+| or_bin_global | 0.016265 | 0.022340 |
+| or_bin_grouped | 0.016587 | 0.026093 |
+| or_bin_view_global | 0.044855 | 0.022380 |
+| sum_bigint_global (control) | 0.003069 | 0.004491 |
+| count_bin_global (control) | 0.001003 | 0.001488 |
+| count_bin_grouped (control) | 0.001409 | 0.002218 |
+
+Reading: the two targeted paths win clearly — `or_bin_view_global` halves
+(0.0449 → 0.0224, P2-002 no-copy visit) and the numeric construct globals drop
+22–34% (P2-001 in-place walk). The slower cells sit inside this box's run-to-run
+noise: untouched controls moved the same way (`count_bin_global` +48%,
+`count_bin_grouped` +57%, `sum_bigint_global` +46% with zero code change), and the
+after-run samples spread wide (e.g. `construct_str_grouped`
+0.0377–0.0518). Ratios pasted by the harness after-run:
+`or_bin_view_global / or_bin_global` 1.002 (was 3.07),
+`construct_bigint_global / sum_bigint_global` 1.151.
+
+## Gates (remediation round 2, 2026-09-15)
+
+| Command | Result |
+|---|---|
+| `cargo test -p repark-functions --lib bitmap_agg` | 16 passed, 0 failed |
+| `cargo test -p repark-functions` | 476 passed, 0 failed, 1 ignored |
+| release native `uvx maturin@1.14.1 develop --release` (x2) | installed repark-1.4.1 |
+| `.venv/bin/python -m pytest python/repark/tests/test_fnp_6d_followup_1.py python/repark/tests/test_fnp_6d_bitmap_aggregates.py -q` | 52 passed |
+| bench before/after | medians above |
+| `make verify` | exit 0 (ledger-grammar clean) |
+
+## COVERAGE_ATTESTATION
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: fnp-6d-followup-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: >
+        Walked C-001..C-007 against the 50 FU-* plus 24 FU2-* recorded cells;
+        every refusal, answer, and error-class claim below names its cells.
+      artifacts: [python/repark/tests/test_fnp_6d_followup_1.py,
+        python/repark/tests/fnp_6d_followup_1_spark_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: >
+        Exercised null, empty string, malformed strings, i64-max/u64-max digit
+        strings, plus-sign, whitespace-padded, NaN, infinities, 1e30, huge
+        decimal, VOID, and all four binary physical types through the pins.
+      artifacts: [test_construct_agg_numeric_overflow_raises_cast_overflow,
+        test_construct_agg_malformed_string_raises_cast_invalid_input,
+        for_each_binary_visits_fixed_size_binary_without_copy]
+    - id: AT-3
+      status: ATTACKED
+      evidence: >
+        Distinguished refusal (42K09), malformed (22018), overflow (22003),
+        and out-of-bounds (22003) failures on the global, grouped, and window
+        paths; partial batches raise on the first bad row like Spark.
+      artifacts: [test_construct_agg_overflow_raises_on_grouped_and_window_paths,
+        test_construct_agg_i64max_string_raises_bitmap_position]
+    - id: AT-4
+      status: N/A
+      justification: >
+        Single-batch accumulators with no shared or mutable cross-batch state;
+        bitmap folds are order-insensitive by construction, so no race,
+        reentrancy, or ordering surface exists in this unit.
+    - id: AT-5
+      status: N/A
+      justification: >
+        No privileged action, credential, secret, or untrusted deserialization
+        in this unit; raised texts echo only the offending cell value exactly
+        as Spark does.
+    - id: AT-6
+      status: ATTACKED
+      evidence: >
+        Fold, padding, truncation, identity, and window-frame semantics are
+        unchanged (existing suite 10/10); the one adapted pin keeps the same
+        >4096-byte coverage in Spark-true form.
+      artifacts: [python/repark/tests/test_fnp_6d_bitmap_aggregates.py,
+        test_or_and_short_empty_and_long_normalize_to_4096]
+    - id: AT-7
+      status: ATTACKED
+      evidence: >
+        bench.py medians of 5 before and after on the release native with
+        untouched control jobs quantifying box noise; targeted paths improve,
+        the rest sit inside noise.
+      artifacts: [/tmp/oc-worker/qa-fu-perf/bench.json, Bench section above]
+    - id: AT-8
+      status: ATTACKED
+      evidence: >
+        Reused the crate java_double_text renderer (json::reader widened to
+        pub(crate), no new dependency, no Cargo change); every raised contract
+        matches the fixture text verbatim.
+      artifacts: [crates/repark-functions/src/bitmap_agg.rs,
+        crates/repark-functions/src/json.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: >
+        Raised texts carry class, value, required type, and SQLSTATE on the
+        door, verified by reading the planned and execution errors verbatim.
+      artifacts: [Green evidence door texts]
+    - id: AT-10
+      status: ATTACKED
+      evidence: >
+        Red-first runs prove the pins fail without the fix; every added branch
+        has a nameable flipping input, including the FixedSizeBinary visit arm
+        via a hand-built array.
+      artifacts: [25 failed then 52 passed, Red first and Green sections]
+  reattested: [AT-2, AT-3, AT-7, AT-8, AT-10]
+  complete: true
+```
