@@ -5160,6 +5160,90 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   signed the type, DOOR-CONVERGE-1 signed the nullability.
   pins: types-1/C-003, door-converge-1/C-006
 
+### DC2-CONCAT-1 — `concat` over arrays stringifies; Spark joins the arrays — **FIXED 2026-09-15 (DOOR-CONVERGE-2)**
+
+- **repark** — **FIXED 2026-09-15 (DOOR-CONVERGE-2).** `concat` is one UDF with
+  string, binary and array arms on both doors (`repark_functions::string::SparkConcat`;
+  the facade `PyColumn::concat` embeds the same UDF; `||` over equal lists reaches it
+  through an `array_concat` → `concat` analyzer rewrite): array elements widen to the
+  common type (`int`+`bigint` → `bigint`, `int`+`decimal(2,1)` → `decimal(11,1)`),
+  `containsNull` is the OR of the inputs, the result is nullable iff any input is,
+  any NULL array nulls the row, `binary` stays `binary`, and an array/string mix
+  refuses `DATATYPE_MISMATCH.DATA_DIFF_TYPES` (oracle cells Q12-0…Q12-16).
+- **Apache Spark** — `concat(array(1), array(2))` → `[1, 2]` (`array<int>`,
+  non-null); the full cell table is Q12-0…Q12-16. *(oracle: recorded PySpark 4.1.2
+  fixtures-batch12, 2026-09-15.)*
+- **Pin** — `python/repark/tests/test_door_converge_2.py::test_sql_cell` (`Q12-0…Q12-16`
+  legs), `test_facade_concat_arrays`, and the `concat_array` / `string` Rust unit pins.
+- **Rationale** — FIXED. History: the Spark-door shim coerced every argument to `Utf8`,
+  so arrays stringified (`'[1][2]'`).
+  pins: door-converge-2/C-001, C-005
+
+### DC2-REVERSE-1 — `reverse` over arrays reverses the stringified text — **FIXED 2026-09-15 (DOOR-CONVERGE-2)**
+
+- **repark** — **FIXED 2026-09-15 (DOOR-CONVERGE-2).** `reverse` is one array-aware
+  kernel on both doors (`repark_functions::spark_reverse::SparkReverse`, overwriting the
+  string-only DataFusion kernel; the facade arm moved to `dispatch_spark.rs`): element
+  order reverses with the element type, `containsNull` and nullability kept, NULL array
+  → NULL, `reverse('abc')` → `'cba'`, untyped `reverse(NULL)` → NULL `STRING`, other
+  types refuse `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` (oracle cells Q12-17…Q12-25).
+- **Apache Spark** — `reverse(array(1,2))` → `[2, 1]`; the full cell table is
+  Q12-17…Q12-25. *(oracle: recorded PySpark 4.1.2 fixtures-batch12, 2026-09-15.)*
+- **Pin** — `python/repark/tests/test_door_converge_2.py::test_sql_cell` (`Q12-17…Q12-25`
+  legs), `test_facade_reverse_arrays`, `test_facade_reverse_string`, and the
+  `spark_reverse` Rust unit pins.
+- **Rationale** — FIXED. History: the door resolved DataFusion's string `reverse`, so
+  arrays reversed as text (`']2 ,1['`).
+  pins: door-converge-2/C-002, C-005
+
+### DC2-SEQUENCE-1 — `sequence` is `Invalid function` on the Spark door — **FIXED 2026-09-15 (DOOR-CONVERGE-2)**
+
+- **repark** — **FIXED 2026-09-15 (DOOR-CONVERGE-2).** `sequence` is a registered Spark
+  kernel on both doors (`repark_functions::spark_sequence::SparkSequence`; the facade
+  arm moved to `dispatch_spark.rs`, replacing `nested_fn::gen_series`, with the
+  facade literal-expansion ceiling kept): integer widths kept, descending default
+  step, dates with a 1-day default and `INTERVAL MONTH` steps, timestamps with
+  interval steps, NULL bound/step → NULL with `containsNull=false`, zero or
+  wrong-sign steps raise with Spark's exact
+  `requirement failed: Illegal sequence boundaries: …` text on the base
+  `PySparkException` mapping, decimal bounds refuse
+  `DATATYPE_MISMATCH.SEQUENCE_WRONG_INPUT_TYPES`, and the plan-time
+  `ArrayCardinalityCeiling` still fires (oracle cells Q12-26…Q12-40). The oracle
+  class (`IllegalArgumentException`, G-2 Q3) stays OPEN: execution errors cross
+  Arrow IPC and remap in `dataframe/export_errors.py` (run 16b's fence) — P2
+  hand-off to run 16b, tracked in the unit ledger. Supersedes
+  FNP9-SEQUENCE-1 (descending count-down, illegal-step raise, SQL-door registration;
+  the date/timestamp stepping half too).
+- **Apache Spark** — `sequence(1, 3)` → `[1, 2, 3]` (`array<int>`); the full cell table
+  is Q12-26…Q12-40. *(oracle: recorded PySpark 4.1.2 fixtures-batch12, 2026-09-15.)*
+- **Pin** — `python/repark/tests/test_door_converge_2.py::test_sql_cell` (`Q12-26…Q12-40`
+  legs), `test_sql_error_cell` (`Q12-31`, `Q12-32`, `Q12-40`), `test_facade_sequence_column_stop`,
+  `test_facade_sequence_literals`,
+  `python/repark/tests/test_fnp_9_collections_json.py::test_sequence_descending_counts_down_and_illegal_step_raises`,
+  and the `spark_sequence` Rust unit pins.
+- **Rationale** — FIXED. History: the name was unregistered on the SQL door and the
+  facade lowered to `generate_series` (descending → `[]`, illegal step → `[]`).
+  pins: door-converge-2/C-003, C-005
+
+### DC2-SPLIT-1 — `split` is `Invalid function` on the Spark door — **FIXED 2026-09-15 (DOOR-CONVERGE-2)**
+
+- **repark** — **FIXED 2026-09-15 (DOOR-CONVERGE-2).** `split` is a registered Spark
+  kernel on the SQL door (`repark_functions::spark_split::SparkSplit`, Java-regex
+  pattern through the shared compile + stepping, `limit` > 0 caps with the remainder
+  last, `limit` ≤ 0 keeps trailing empties, empty pattern splits per character, NULL
+  in → NULL out, `containsNull=false`, numeric first argument casts to string)
+  with the Rust facade arm in `dispatch_spark.rs` (oracle cells Q12-41…Q12-55). The
+  Python `F.split` still raises `UnsupportedOperationException` — P2 hand-off to run
+  16a, recorded in the unit ledger.
+- **Apache Spark** — `split('a,b', ',')` → `['a', 'b']`; the full cell table is
+  Q12-41…Q12-55. *(oracle: recorded PySpark 4.1.2 fixtures-batch12, 2026-09-15.)*
+- **Pin** — `python/repark/tests/test_door_converge_2.py::test_sql_cell` (`Q12-41…Q12-55`
+  legs) and the `spark_split` Rust unit pins; `test_facade_split_refusal_handoff_16a`
+  guards the Python refusal until run 16a wires it.
+- **Rationale** — FIXED on the SQL door. History: the name was unregistered
+  (`Invalid function 'split'`).
+  pins: door-converge-2/C-004, C-005
+
 ### FN-INITCAP-1 — `initcap` starts a word at any non-alphanumeric — **FIXED 2026-09-04 (FN-FIX-2)**
 
 - **repark** — **FIXED 2026-09-04 (FN-FIX-2).** a word starts only after SPACE
@@ -7968,9 +8052,9 @@ field NAME.
   itself up in at plan time. The error class and message match; only the raise point differs.
   The same seam is why `F.expr("a + 1")` refuses (EX-FN-4).
 
-### FNP9-SEQUENCE-1 — a descending `sequence` answers `[]`; Spark counts down or raises
+### FNP9-SEQUENCE-1 — a descending `sequence` answers `[]`; Spark counts down or raises — **SUPERSEDED 2026-09-15 (DOOR-CONVERGE-2, see DC2-SEQUENCE-1)**
 
-- **repark** — `F.sequence` routes to DataFusion's `generate_series`. Ascending is Spark-equal:
+- **repark** — *Pre-fix record; superseded by DC2-SEQUENCE-1.* `F.sequence` routes to DataFusion's `generate_series`. Ascending is Spark-equal:
   `sequence(1, 5, 2)` is `[1, 3, 5]` and `sequence(1, 3)` is `[1, 2, 3]`. Descending is not:
   `sequence(5, 1)` answers `[]` and `sequence(1, 5, -1)` answers `[]`. The element type is
   `BIGINT` and the array is nullable. The Spark door has no `sequence` at all
