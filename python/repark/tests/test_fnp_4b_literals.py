@@ -349,6 +349,59 @@ def test_out_of_range_integer_suffix_raises(spark: ReparkSession) -> None:
         spark.sql("SELECT 40000S AS v").to_arrow()
 
 
+def test_signed_integer_suffix_minima_answer(spark: ReparkSession) -> None:
+    """L-002: ``-128Y`` / ``-32768S`` are the typed minima, non-null."""
+    cases = [
+        ("SELECT -128Y AS v", pa.int8(), [-128]),
+        ("SELECT -32768S AS v", pa.int16(), [-32768]),
+        ("SELECT -1Y AS v", pa.int8(), [-1]),
+        ("SELECT 127Y AS v", pa.int8(), [127]),
+        ("SELECT -1S AS v", pa.int16(), [-1]),
+        ("SELECT 32767S AS v", pa.int16(), [32767]),
+        ("SELECT -1L AS v", pa.int64(), [-1]),
+    ]
+    for sql, data_type, values in cases:
+        table = _table(spark.sql(sql))
+        assert table.column("v").to_pylist() == values, sql
+        assert table.schema.field("v").type == data_type, sql
+        assert table.schema.field("v").nullable is False, sql
+    with pytest.raises(Exception, match="INVALID_NUMERIC_LITERAL_RANGE"):
+        spark.sql("SELECT -129Y AS v").to_arrow()
+    with pytest.raises(Exception, match="INVALID_NUMERIC_LITERAL_RANGE"):
+        spark.sql("SELECT -32769S AS v").to_arrow()
+
+
+def test_signed_minima_on_all_doors(spark: ReparkSession) -> None:
+    """L-002: the minima answer on ``F.expr`` and ``selectExpr`` too."""
+    table = _table(spark.range(1).select(F.expr("-128Y").alias("v")))
+    assert table.column("v").to_pylist() == [-128]
+    assert table.schema.field("v").type == pa.int8()
+    assert table.schema.field("v").nullable is False
+    table = _table(spark.range(1).select(F.expr("-32768S").alias("v")))
+    assert table.column("v").to_pylist() == [-32768]
+    assert table.schema.field("v").type == pa.int16()
+    assert table.schema.field("v").nullable is False
+    table = _table(spark.range(1).selectExpr("-128Y AS v"))
+    assert table.column("v").to_pylist() == [-128]
+    assert table.schema.field("v").type == pa.int8()
+    assert table.schema.field("v").nullable is False
+    table = _table(spark.range(1).selectExpr("-32768S AS v"))
+    assert table.column("v").to_pylist() == [-32768]
+    assert table.schema.field("v").type == pa.int16()
+    assert table.schema.field("v").nullable is False
+
+
+def test_bigint_overflow_raises_invalid_numeric_literal(spark: ReparkSession) -> None:
+    """L-004: ``L`` overflow refuses at parse, not as an optimizer cast error."""
+    for sql in [
+        "SELECT 9223372036854775808L AS v",
+        "SELECT -9223372036854775809L AS v",
+        "SELECT -(9223372036854775808L) AS v",
+    ]:
+        with pytest.raises(Exception, match="INVALID_NUMERIC_LITERAL_RANGE"):
+            spark.sql(sql).to_arrow()
+
+
 def test_exponent_l_and_zero_x_are_unresolved_identifiers(spark: ReparkSession) -> None:
     """L9-1e3L / L9-0x1D: Spark reads these as identifiers, not typed literals."""
     with pytest.raises(Exception, match=r"1e3L|No field named"):
