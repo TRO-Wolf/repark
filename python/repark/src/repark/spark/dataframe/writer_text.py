@@ -132,44 +132,21 @@ def _text_partition_columns(writer: Any) -> list[str]:
     return resolved
 
 
-def _partition_dir_value(value: Any) -> str:
-    """Render one partition value for a hive directory name. pins: io-text-1/T-6"""
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    return str(value)
-
-
 def _write_partitioned_text(
     writer: Any, staging: Path, partition_columns: list[str], linesep: str
 ) -> None:
-    """Write one string column per hive leaf dir, dropping partition columns. pins: io-text-1/T-6"""
+    """Stream the frame once into hive leaf dirs (the engine renders keys). pins: io-text-1/U-1"""
     from repark import _native
-    from repark.errors import AnalysisException
-    from repark.spark import functions as F  # noqa: N812 — local import avoids cycle at module load
+    from repark.spark.session.session_time_zone import active_session_time_zone
 
     frame = writer._dataframe
-    partitioned = set(partition_columns)
-    remaining = [column for column in frame.columns if column not in partitioned]
-    if len(remaining) != 1:
-        raise AnalysisException(
-            "Text data source supports only a single column, "
-            f"and you have {len(remaining)} columns."
-        )
-    keys = frame.select(*partition_columns).distinct().collect()
-    for key in keys:
-        condition = None
-        leaf = staging
-        for column in partition_columns:
-            value = key[column]
-            if value is None:
-                predicate = F.col(column).is_null()
-                leaf = leaf / f"{column}=__HIVE_DEFAULT_PARTITION__"
-            else:
-                predicate = F.col(column) == value
-                leaf = leaf / f"{column}={_partition_dir_value(value)}"
-            condition = predicate if condition is None else (condition & predicate)
-        keyed = frame.filter(condition).drop(*partition_columns)
-        _native.write_text_frame(keyed._native_for_registration(), str(leaf), linesep)
+    _native.write_text_partitioned(
+        frame._native_for_registration(),
+        str(staging),
+        partition_columns,
+        linesep,
+        active_session_time_zone(),
+    )
 
 
 def _refuse_text_compression(writer: Any) -> None:

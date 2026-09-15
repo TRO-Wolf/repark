@@ -24,6 +24,9 @@ pub enum Error {
     #[error("{0}")]
     Analysis(String),
 
+    #[error("{0}")]
+    IllegalArgument(String),
+
     /// A session or catalog configuration error naming the invalid key.
     #[error("repark config error: {0}")]
     Config(String),
@@ -63,8 +66,8 @@ impl Error {
         match self {
             Error::Parse(_) => ErrorClass::Parse,
             Error::Analysis(_) => ErrorClass::Analysis,
+            Error::Config(_) | Error::IllegalArgument(_) => ErrorClass::IllegalArgument,
             Error::NotImplemented(_) => ErrorClass::Unsupported,
-            Error::Config(_) => ErrorClass::IllegalArgument,
             Error::CommitStateUnknown { .. } => ErrorClass::CommitStateUnknown,
             Error::DataFusion(_) | Error::Iceberg(_) => ErrorClass::Base,
         }

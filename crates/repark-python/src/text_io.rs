@@ -12,6 +12,7 @@ use crate::to_py_err;
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(read_text, module)?)?;
     module.add_function(wrap_pyfunction!(write_text_frame, module)?)?;
+    module.add_function(wrap_pyfunction!(write_text_partitioned, module)?)?;
     Ok(())
 }
 
@@ -49,6 +50,33 @@ pub fn write_text_frame(frame: &PyDataFrame, path: &str, line_sep: Option<String
                     frame.inner(),
                     Path::new(path),
                     separator.as_str(),
+                ))
+            })
+        })
+        .map_err(to_py_err)?;
+        Ok(())
+    })
+}
+
+#[pyfunction]
+#[pyo3(signature = (frame, path, partition_columns, line_sep=None, session_zone="UTC"))]
+pub fn write_text_partitioned(
+    frame: &PyDataFrame,
+    path: &str,
+    partition_columns: Vec<String>,
+    line_sep: Option<String>,
+    session_zone: &str,
+) -> PyResult<()> {
+    fenced_span!("py.write", "write_text_partitioned", {
+        let separator = line_sep.unwrap_or_else(|| "\n".to_string());
+        Python::attach(|py| {
+            py.detach(|| {
+                frame.runtime.block_on(repark_core::write_text_partitioned(
+                    frame.inner(),
+                    Path::new(path),
+                    separator.as_str(),
+                    &partition_columns,
+                    session_zone,
                 ))
             })
         })

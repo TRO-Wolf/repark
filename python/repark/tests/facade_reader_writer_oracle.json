@@ -702,6 +702,199 @@
     "raises": "AnalysisException"
    }
   },
+  "text_probe3_empty_linesep_class": {
+   "result": {
+    "condition": null,
+    "message": "requirement failed: 'lineSep' cannot be an empty string.",
+    "raises": "IllegalArgumentException",
+    "sqlstate": null
+   }
+  },
+  "text_probe3_failing_write_leaves": {
+   "result": {
+    "error": "SparkRuntimeException",
+    "exists": true,
+    "listing": []
+   }
+  },
+  "text_probe3_format_recursive_false": {
+   "result": {
+    "option_bool_false": [
+     "('top',)"
+    ],
+    "option_str_false": [
+     "('top',)"
+    ]
+   }
+  },
+  "text_probe3_glob_escaped_star": {
+   "result": {
+    "escaped": [
+     "('star',)"
+    ],
+    "unescaped": [
+     "('star',)",
+     "('x',)"
+    ]
+   }
+  },
+  "text_probe3_glob_matches_dirs": {
+   "result": {
+    "dir_glob": [
+     "('a1',)",
+     "('b1',)"
+    ],
+    "star": [
+     "('a1',)",
+     "('b1',)",
+     "('t',)"
+    ]
+   }
+  },
+  "text_probe3_missing_path_class": {
+   "result": {
+    "condition": "PATH_NOT_FOUND",
+    "message": "[PATH_NOT_FOUND] Path does not exist: file:/tmp/qb-iotext3-w9ia23x7/nope. SQLSTATE: 42K03",
+    "raises": "AnalysisException",
+    "sqlstate": "42K03"
+   }
+  },
+  "text_probe3_part_bool": {
+   "result": {
+    "listing": [
+     "_SUCCESS",
+     "k=false/part-*",
+     "k=true/part-*"
+    ],
+    "read": [
+     "('v1', 'true')",
+     "('v2', 'false')"
+    ],
+    "read_schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe3_part_date_ts": {
+   "result": null
+  },
+  "text_probe3_part_date_ts_double_int": {
+   "result": {
+    "listing": [
+     "_SUCCESS",
+     "d=2024-01-02/t=2024-01-02 08%3A04%3A05.12/f=2.5/i=7/part-*"
+    ],
+    "read": [
+     "('v1', datetime.date(2024, 1, 2), '2024-01-02 08:04:05.12', 2.5, 7)"
+    ],
+    "read_schema": "struct<value:string,d:date,t:string,f:double,i:int>"
+   }
+  },
+  "text_probe3_part_decimal": {
+   "result": {
+    "listing": [
+     "_SUCCESS",
+     "k=1.50/part-*"
+    ],
+    "read": [
+     "('v1', 1.5)"
+    ],
+    "read_schema": "struct<value:string,k:double>"
+   }
+  },
+  "text_probe3_part_empty_and_null": {
+   "result": {
+    "listing": [
+     "_SUCCESS",
+     "k=__HIVE_DEFAULT_PARTITION__/part-*",
+     "k=z/part-*"
+    ],
+    "read": [
+     "('v1', None)",
+     "('v2', None)",
+     "('v3', 'z')"
+    ],
+    "read_schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe3_part_read_types_inferred": {
+   "result": [
+    [
+     "value",
+     "string"
+    ],
+    [
+     "d",
+     "date"
+    ],
+    [
+     "t",
+     "string"
+    ],
+    [
+     "f",
+     "double"
+    ],
+    [
+     "i",
+     "int"
+    ]
+   ]
+  },
+  "text_probe3_part_slash": {
+   "result": {
+    "listing": [
+     "_SUCCESS",
+     "k=a%2Fb/part-*",
+     "k=c/part-*"
+    ],
+    "read": [
+     "('v1', 'a/b')",
+     "('v2', 'c')"
+    ],
+    "read_schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe3_part_specials": {
+   "result": {
+    "listing": [
+     "_SUCCESS",
+     "k=50%25/part-*",
+     "k=a b/part-*",
+     "k=c%3Ad/part-*",
+     "k=e%23f/part-*",
+     "k=g%3Fh/part-*",
+     "k=i%2Aj/part-*",
+     "k=k%5Cl/part-*",
+     "k=m%7Bn}/part-*",
+     "k=o%5Bp%5D/part-*",
+     "k=q%27r/part-*",
+     "k=x%3Dy/part-*",
+     "k=\u00e9/part-*"
+    ],
+    "read": [
+     "('1', 'x=y')",
+     "('10', 'o[p]')",
+     "('11', \"q'r\")",
+     "('12', '\u00e9')",
+     "('2', '50%')",
+     "('3', 'a b')",
+     "('4', 'c:d')",
+     "('5', 'e#f')",
+     "('6', 'g?h')",
+     "('7', 'i*j')",
+     "('8', 'k\\\\l')",
+     "('9', 'm{n}')"
+    ],
+    "read_schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe3_two_col_class": {
+   "result": {
+    "condition": "_LEGACY_ERROR_TEMP_1290",
+    "message": "Text data source supports only a single column, and you have 2 columns.",
+    "raises": "AnalysisException",
+    "sqlstate": null
+   }
+  },
   "text_read_dir_glob": {
    "result": {
     "kind": "int",

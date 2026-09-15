@@ -155,3 +155,38 @@ as `__HIVE_DEFAULT_PARTITION__`, else `str()`; per-name table flips
 was tried and reverted: every native failure check precedes staging creation
 and per-key checks are uniform, so no deterministic trigger reaches cleanup
 with staging present — the existing condition stands, disclosed, untested.
+
+## Follow-up round 3 (2026-09-15) — re-check remediation (run 16b)
+
+Orchestrator rebased `feat/io-text-1` onto PR #610's head (IO-DECLARED-1) and
+built the RELEASE module into the clone. Round-3 rulings U-1..U-11 recorded
+here as R-13..R-23. Oracle: `/tmp/oc-worker/qb-oracle/iotext_probe3_2026-09-15.json`
+(live PySpark 4.1.2, recorded 2026-09-15); every cell copied as
+`text_probe3_<cell>` into `python/repark/tests/facade_reader_writer_oracle.json`
+(`part_date_ts` keeps its null result verbatim) and the new pins read those
+cells. `text_io.rs` split: the partitioned fan-out moved to the new module
+`text_partition.rs` (337 + 823 lines, both under the 1000 ceiling).
+
+| R | Brief | Ruling and evidence |
+|---|---|---|
+| R-13 (U-1) | one-scan partitionBy | `write_text_partitioned` streams the frame once (`execute_stream`), routing each row to its leaf writer by rendered key; LRU cap `TEXT_PARTITION_WRITERS_CAP = 256` (evicted keys resume in a new `part-NNNNN.txt`); partition columns drop from the body; the Python wrapper passes names plus the session zone only. Measured file-backed 50 000 rows / 288 890 B (`/tmp/measure_part2.py`, scratch): k=1 wall 0.016 s rchar 0.28 MiB 1.00x, k=10 0.023 s 1.00x, k=100 0.038 s 1.00x (1.00x at k=1000 too). Pins: `test_text_probe3_part_*_listing` (6), Rust `text_partition_write_fans_out_one_scan`. |
+| R-14 (U-2) | Hive escaping + value text | Leaf names escape `"#%'*/:=?\{[]^`, DEL and `<0x20` as `%XX` uppercase; space, non-ASCII, `}` literal (cell listing is the authority). NULL and empty string write `__HIVE_DEFAULT_PARTITION__`. Decimal plain (`1.50`), bool lower-case, date `yyyy-MM-dd`, timestamp in the session zone trimmed (`03:04:05.12` — the probe's `08:04` embeds the probe box TZ, so the pin builds its instant via a session-zone SQL literal and asserts `03%3A04%3A05.12`), double/int plain. Decimal partition columns no longer touch Python `lit`. Pins: same six listing tests plus Rust `text_partition_escape_covers_hive_set`, `text_partition_decimal_renders_plain`. |
+
+Red-first (current head 54331f9f, before the R-13/R-14 fix):
+
+```text
+At index 1 diff: 'k=a/b/part-*' != 'k=a%2Fb/part-*'
+At index 1 diff: 'k=50%/part-*' != 'k=50%25/part-*'
+At index 1 diff: 'k=/part-*' != 'k=__HIVE_DEFAULT_PARTITION__/part-*'
+repark.errors.PySparkTypeError: lit() supports None, bool, int, float, str, date, datetime, time, list, tuple, ndarray, or Enum; got Decimal
+At index 1 diff: 'd=2024-01-02/t=2024-01-02 03:04:05.120000/f=2.5/i=7/part-*' != 'd=2024-01-02/t=2024-01-02 03%3A04%3A05.12/f=2.5/i=7/part-*'
+5 failed, 1 passed (bool listing already green)
+```
+
+Judgment calls round 3: an evicted LRU key resumes in a NEW part file (the
+ruling's "reopen in append mode with the next part number" is ambiguous; a new
+sequential part matches Spark's multi-part leaves); f32 rendering uses Rust
+`{}` (Spark `Double.toString` scientific-notation edge unpinned, disclosed);
+exotic partition types (Decimal256, intervals, nested) refuse loud naming the
+column and type; an empty partitioned frame writes no leaves (unpinned,
+disclosed).

@@ -54,7 +54,7 @@ fn spark_text_type_name(data_type: &DataType) -> String {
     }
 }
 
-fn text_unsupported_column(column: &str, data_type: &DataType) -> Error {
+pub(crate) fn text_unsupported_column(column: &str, data_type: &DataType) -> Error {
     Error::Analysis(format!(
         "[UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE] The Text datasource doesn't support the column `{column}` of the type \"{}\". SQLSTATE: 0A000",
         spark_text_type_name(data_type)

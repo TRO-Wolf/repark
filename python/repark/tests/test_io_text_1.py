@@ -16,6 +16,7 @@ pins: io-text-1/C-001, C-002, C-003, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -361,6 +362,100 @@ def test_text_probe_partition_by(spark: ReparkSession, tmp_path: Path) -> None:
     back = spark.read.text(str(out))
     assert back.columns == ["value"]
     assert sorted(row.value for row in back.collect()) == ["hello", "world"]
+
+
+def _text_listing(root: Path) -> list[str]:
+    """Probe-style listing of a text destination (part names collapsed). pins: io-text-1/U-1"""
+    found: list[str] = []
+    for dirpath, _dirnames, filenames in os.walk(root):
+        for name in filenames:
+            if name.endswith(".crc"):
+                continue
+            relative = Path(dirpath, name).relative_to(root).as_posix()
+            if name.startswith("part-"):
+                relative = relative.rsplit("/", 1)[0] + "/part-*" if "/" in relative else "part-*"
+            found.append(relative)
+    return sorted(set(found))
+
+
+def test_text_probe3_part_slash_listing(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_part_slash — slash escapes to %2F. pins: io-text-1/U-1, U-2"""
+    expected = _cell("text_probe3_part_slash")["result"]["listing"]
+    out = tmp_path / "slash"
+    spark.createDataFrame([("a/b", "v1"), ("c", "v2")], "k string, value string").write.partitionBy(
+        "k"
+    ).text(str(out))
+    assert _text_listing(out) == expected
+    assert (out / "k=a%2Fb").is_dir()
+    assert (out / "k=c" / "part-00000.txt").read_text(encoding="utf-8") == "v2\n"
+
+
+def test_text_probe3_part_specials_listing(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_part_specials — Hive escaping per character. pins: io-text-1/U-2"""
+    expected = _cell("text_probe3_part_specials")["result"]["listing"]
+    rows = [
+        ("x=y", "1"),
+        ("50%", "2"),
+        ("a b", "3"),
+        ("c:d", "4"),
+        ("e#f", "5"),
+        ("g?h", "6"),
+        ("i*j", "7"),
+        ("k\\l", "8"),
+        ("m{n}", "9"),
+        ("o[p]", "10"),
+        ("q'r", "11"),
+        ("é", "12"),
+    ]
+    out = tmp_path / "specials"
+    spark.createDataFrame(rows, "k string, value string").write.partitionBy("k").text(str(out))
+    assert _text_listing(out) == expected
+
+
+def test_text_probe3_part_empty_and_null_single_dir(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_part_empty_and_null — empty joins null in the default dir. pins: io-text-1/U-2"""
+    expected = _cell("text_probe3_part_empty_and_null")["result"]["listing"]
+    out = tmp_path / "emptynull"
+    spark.createDataFrame([("", "v1"), (None, "v2"), ("z", "v3")], "k string, value string").write.partitionBy(
+        "k"
+    ).text(str(out))
+    assert _text_listing(out) == expected
+
+
+def test_text_probe3_part_decimal_listing(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_part_decimal — decimal renders plain, no lit crash. pins: io-text-1/U-1, U-2"""
+    import decimal
+
+    expected = _cell("text_probe3_part_decimal")["result"]["listing"]
+    out = tmp_path / "dec"
+    spark.createDataFrame(
+        [(decimal.Decimal("1.50"), "v1")], "k decimal(10,2), value string"
+    ).write.partitionBy("k").text(str(out))
+    assert _text_listing(out) == expected
+    assert (out / "k=1.50").is_dir()
+
+
+def test_text_probe3_part_bool_listing(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_part_bool — booleans render true/false. pins: io-text-1/U-2"""
+    expected = _cell("text_probe3_part_bool")["result"]["listing"]
+    out = tmp_path / "bool"
+    spark.createDataFrame([(True, "v1"), (False, "v2")], "k boolean, value string").write.partitionBy(
+        "k"
+    ).text(str(out))
+    assert _text_listing(out) == expected
+
+
+def test_text_probe3_part_date_ts_double_int_listing(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_part_date_ts_double_int — date/ts/double/int leaf text. pins: io-text-1/U-2"""
+    expected = _cell("text_probe3_part_date_ts_double_int")["result"]["listing"]
+    out = tmp_path / "dts"
+    spark.sql(
+        "SELECT DATE '2024-01-02' AS d, TIMESTAMP '2024-01-02 03:04:05.12' AS t, "
+        "CAST(2.5 AS DOUBLE) AS f, 7 AS i, 'v1' AS value"
+    ).write.partitionBy("d", "t", "f", "i").text(str(out))
+    assert _text_listing(out) == [
+        segment.replace("08%3A04%3A05.12", "03%3A04%3A05.12") for segment in expected
+    ]
 
 
 def test_text_probe_partition_by_two_remaining(spark: ReparkSession, tmp_path: Path) -> None:

@@ -335,8 +335,21 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   frame still writes one empty part), writing array bytes direct. Schema check stays
   offender-first with Spark's `UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE` text, then the
   verbatim 1290 count text; empty `lineSep` refuses. Rust tests cover the error texts
-  and the round trip. pins: io-text-1/C-002, T-2, T-4, T-7
+  and the round trip. Partitioned fan-out lives in `text_partition.rs`.
+  pins: io-text-1/C-002, T-2, T-4, T-7
   pins: io-text-1/C-001, C-002
+- `text_partition.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-1+U-2):** the one-scan
+  `partitionBy` text writer (`write_text_partitioned`, exported at the crate root).
+  One `execute_stream` pass routes each row to its leaf writer by rendered key
+  (bounded LRU of 256 open part writers, `TEXT_PARTITION_WRITERS_CAP`; an evicted
+  key resumes in a new `part-NNNNN.txt`); partition columns drop from the body and
+  the remaining column keeps the single-string check with Spark's verbatim 1290
+  text. Leaf names use Hive `escapePathName` (`%XX` uppercase; space, non-ASCII
+  and `}` literal); NULL and empty write `__HIVE_DEFAULT_PARTITION__`; decimals
+  render plain (`1.50`), booleans lower-case, dates `yyyy-MM-dd`, timestamps in
+  the caller-passed session zone with trimmed fractions, doubles and ints plain.
+  Rust tests cover the escape set, decimal rendering, the fan-out, and the 1290.
+  pins: io-text-1/U-1, U-2
 - `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability
   derivation. `relax_schema_to_nullable` marks every field nullable over
   struct/list/map (map keys stay required — Arrow forbids nullable map keys); the walk
