@@ -699,7 +699,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   blocked on the concat-Utf8 ruling recorded in the ledger.
   `risk_tier: standard`. Branch `feat/fnp-6d-followup-1`.
   pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
-- [fnp-win-1-ledger.md](fnp-win-1-ledger.md) —
+- [fnp-win-1-ledger.md](../completed/fnp-win-1-ledger.md) —
   **FNP-WIN-1 (2026-09-15), in flight:** `window`, `window_time`,
   `session_window` answer PySpark 4.1.2 run-15a oracle cells on both doors —
   tumbling/sliding/`startTime` time windows, end-minus-one-microsecond
