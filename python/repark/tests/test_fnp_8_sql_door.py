@@ -317,8 +317,12 @@ def test_column_free_expr_parses_each_higher_order_form(
 
 
 def test_expr_column_reference_stays_the_ex_fn_4_refusal() -> None:
-    """F.expr column references remain the separately declared EX-FN-4 backlog."""
-    with pytest.raises(AnalysisException, match="No field named a"):
+    """F.expr column references remain the separately declared EX-FN-4 backlog.
+
+    The lambda shape still refuses at construction; only the needle moved under FNP-4B
+    (the eager analysis now reaches the transform arity check before the column bind).
+    """
+    with pytest.raises(AnalysisException, match="transform expected a list"):
         spark_functions.expr("transform(a, x -> x + 1)")
 
 

@@ -30,6 +30,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `_secrets.py` — secret-property classification and redacted runtime configuration
   listing. Explicit `get` calls do not redact values.
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.
+  **FNP-4B (2026-09-15):** `local_view_name` also strips backtick quoting (handles are
+  backticked since the D-2 quoter move). pins: fnp-4b/C-008
 - `_pyarrow.py` — **FACADE-1 (2026-09-12):** `require_pyarrow()` imports pyarrow or raises
   `ImportError` naming `repark[pyarrow]`. Package import does not load pyarrow.
   pins: facade-1/C-002

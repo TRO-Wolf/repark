@@ -6418,10 +6418,12 @@ field NAME.
 
 ### EX-FN-4 — column-referencing `expr` refuses; Spark binds the reference
 
-- **repark** — `F.expr("a + 1")` raises `AnalysisException: Schema error: No field named
-  a` at construction (the facade parses eagerly; the DataFrame-bound path is declared
-  missing on the facade). Column-free spellings are served: `expr("1 + 1")` answers 2
-  and `expr("make_date(2020, 1, 1)")` answers `2020-01-01`, both Spark-equal.
+- **repark** — `F.expr("a + 1")` defers the bind since FNP-4B (the C-003 contract):
+  construction succeeds and selecting against a frame with no `a` raises
+  `AnalysisException: Schema error: No field named a`. The lambda shape still refuses
+  at construction (`transform expected a list as first argument`). Column-free
+  spellings are served: `expr("1 + 1")` answers 2 and `expr("make_date(2020, 1, 1)")`
+  answers `2020-01-01`, both Spark-equal.
 - **Apache Spark** — `expr("a + 1")` over `(1,), (2,), (None,)` answers `[2, 3, None]`.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
 - **Pin** — `python/repark/tests/test_examples_functions_a.py::test_expr_column_reference_refuses`

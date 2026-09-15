@@ -434,16 +434,16 @@ def test_column_getitem_non_int_non_str_not_parent(spark: ReparkSession) -> None
 
 
 def test_column_getitem_str_sql_expr_quotes_hostile_ident() -> None:
-    """String keys are double-quoted in free-SQL; injection cannot widen."""
+    """String keys are backtick-quoted in free-SQL; injection cannot widen."""
     from repark.spark.functions import col
 
     hostile = col("id")["id OR true"]
     sql = hostile.sql_expr_part()
-    assert sql == '("id")."id OR true"'
-    assert " OR " not in sql.replace('"id OR true"', "")
+    assert sql == "(`id`).`id OR true`"
+    assert " OR " not in sql.replace("`id OR true`", "")
 
     quoted_quote = col("s")['a"b']
-    assert quoted_quote.sql_expr_part() == '("s")."a""b"'
+    assert quoted_quote.sql_expr_part() == '(`s`).`a"b`'
 
 
 def test_column_iter_raises_not_iterable() -> None:

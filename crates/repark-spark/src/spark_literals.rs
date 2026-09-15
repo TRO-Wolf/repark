@@ -118,11 +118,13 @@ pub fn canonicalize(sql: &str) -> Result<Cow<'_, str>> {
 /// # Errors
 /// # Errors [`DataFusionError::SQL`] with the lexer's line/column when the text does not tokenise.
 pub(crate) fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Cow<'_, str>> {
-    // No quote, no backslash, no suffixed number, no wildcard EXCLUDE: lexers agree, so borrow.
+    // No quote, no backslash, no suffixed number, no DROP TEMPORARY, no wildcard
+    // EXCLUDE: lexers agree, so borrow.
     if !sql.as_bytes().contains(&b'\'')
         && !sql.as_bytes().contains(&b'"')
         && !sql.as_bytes().contains(&b'\\')
         && !sql_may_have_numeric_suffix(sql)
+        && !sql_may_have_drop_temporary(sql)
         && !sql_may_have_wildcard_exclude(sql)
     {
         return Ok(Cow::Borrowed(sql));
@@ -136,6 +138,13 @@ pub(crate) fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Co
 /// True when `sql` may hold `* EXCLUDE (` (the Databricks lexer has no `EXCLUDE`).
 fn sql_may_have_wildcard_exclude(sql: &str) -> bool {
     sql.as_bytes().contains(&b'*') && sql.to_ascii_lowercase().contains("exclude")
+}
+
+/// True when `sql` holds a `DROP TEMPORARY` pair (valid Spark SQL the Databricks
+/// lexer rejects).
+fn sql_may_have_drop_temporary(sql: &str) -> bool {
+    let lower = sql.to_ascii_lowercase();
+    lower.contains("drop") && lower.contains("temporary")
 }
 
 /// True when `sql` holds a digit directly followed by a suffix letter (`1D`, `1.5BD`)
@@ -255,6 +264,7 @@ fn canonical_rewrite(sql: &str, keep_verbatim: bool) -> Result<Option<CanonicalR
     }
     let mut regions = plan_literal_regions(&tokens, keep_verbatim);
     regions.extend(crate::spark_rewrites::plan_suffix_regions(&tokens));
+    regions.extend(crate::spark_rewrites::plan_drop_temporary_regions(&tokens));
     regions.extend(crate::spark_rewrites::plan_wildcard_except_regions(&tokens));
     crate::spark_rewrites::plan_struct_field_regions(&tokens, sql, &mut regions);
     regions.sort_by_key(|region| (region.start.line, region.start.column));

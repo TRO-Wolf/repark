@@ -1,8 +1,8 @@
 //! Secondary Spark-door token rewrites over the shared lexer.
 //!
-//! The primary literal pass lives in [`crate::spark_literals`]; this module holds the three
+//! The primary literal pass lives in [`crate::spark_literals`]; this module holds the four
 //! rewrites that turn Spark-only spellings into DataFusion-plannable SQL: numeric literal
-//! suffixes, `* EXCLUDE` columns, and call-base struct field access.
+//! suffixes, `DROP TEMPORARY`, `* EXCLUDE` columns, and call-base struct field access.
 
 use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan};
 
@@ -97,6 +97,42 @@ fn suffix_replacement(digits: &str, target: &str) -> String {
     } else {
         format!("CAST({digits} AS {target})")
     }
+}
+
+/// Drop a `TEMPORARY` keyword directly after `DROP` (valid Spark SQL for `FUNCTION`
+/// and `VIEW`; the Databricks lexer has no `TEMPORARY`). DataFusion tracks no
+/// temp-ness through SQL, so the bare `DROP` keeps the statement's meaning.
+pub(crate) fn plan_drop_temporary_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
+    let mut regions = Vec::new();
+    let mut index = 0;
+    while index < tokens.len() {
+        let Token::Word(drop) = &tokens[index].token else {
+            index += 1;
+            continue;
+        };
+        if drop.quote_style.is_some() || !drop.value.eq_ignore_ascii_case("DROP") {
+            index += 1;
+            continue;
+        }
+        let candidate = skip_whitespace(tokens, index + 1);
+        let Some(Token::Word(temporary)) = tokens.get(candidate).map(|with_span| &with_span.token)
+        else {
+            index += 1;
+            continue;
+        };
+        if temporary.quote_style.is_some() || !temporary.value.eq_ignore_ascii_case("TEMPORARY") {
+            index += 1;
+            continue;
+        }
+        let word = &tokens[candidate];
+        regions.push(LiteralRegion {
+            start: word.span.start,
+            end: word.span.end,
+            replacement: String::new(),
+        });
+        index = candidate + 1;
+    }
+    regions
 }
 
 /// Rewrite `* EXCLUDE (…)` to `* EXCEPT (…)` (the Databricks lexer has no `EXCLUDE`).

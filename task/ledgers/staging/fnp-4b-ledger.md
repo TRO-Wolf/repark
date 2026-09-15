@@ -251,3 +251,53 @@ WHERE now read as string literals per BL-9 (intended D-1 consequence; live Spark
 double-quoted is a string literal — re-measured for BL-9 2026-09-15). Tests
 moved to the Spark-faithful backticked spelling; the `when` bare-form
 refusal half is untouched. No implementation change.
+
+## Slice-2 (2026-09-15): Q1/Q3/triage/DROP TEMPORARY; two fenced failures remain
+
+Q1 (display canonical form): both golden JSONs re-recorded through
+`REPARK_FACADE_2_RECORD_GOLDENS=1` — 202 + 35 keys changed, and a field-by-field
+before/after comparison proves zero diffs outside `join_sql`/`sql_expr`/
+`sql_expr_without_alias` (all pure `"` → backtick moves; display fields
+byte-identical, no leak). Inline `sql_expr`-family expectations moved the same
+way (`test_select_global_agg` 37 sites, e1/getitem hostile, unpivot
+`quote_ident`, writer_v2 partition transforms, the DROP/SELECT/INSERT expander,
+`_sql_table_ref` all four spellings — probed first). The doubled-quote pin became
+a wrap pin (backticks double only backticks). `merge_star` was a real
+failure of the same BL-9 family in test clothing: `ON t.id = s."ID"` reads
+qualifier + string now — bisected to `WHERE s."ID" = 1` (`No field named s`),
+fixed to ``s.`ID` ``; the ambiguous-case twin still raises loud untouched.
+
+Q3 (cache/eager): all 22 failures one shape — `` `__repark_cache_*` `` handle vs
+bare registered name in `local_view_name` comparisons. No leak: registrations,
+counts, and drops behave (53/53 matches the orchestrator's main-state count).
+`local_view_name` (`_temp_views.py`, in-fence) only stripped `"..."`; added the
+backtick branch plus a docstring correction. Green.
+
+EX-FN-4 pair: the C-003 deferred contract moved them. `F.expr("a + 1")`
+constructs and raises `No field named a` at use (probed) — examples pin rewritten
+to that contract. `transform(a, ...)` still refuses at construction with the
+transform-arity needle (eager analysis reaches it first) — fnp8 pin keeps the
+fence, needle updated. Registry EX-FN-4 row now states the deferred contract.
+`binding-struct-*-expr` dispositions gained the engine's `Valid fields are id`
+suffix (same class, F.expr binding path renders it); `-sql`/`-column` unchanged.
+
+Compat smoke: `DROP TEMPORARY FUNCTION [IF EXISTS]` is valid Spark SQL the
+Databricks lexer rejects (pyspark `temp_func` emits it; deterministic 3-test
+red). New `plan_drop_temporary_regions` token rewrite (`DROP TEMPORARY` →
+`DROP`; DataFusion tracks no temp-ness) with fast-path gate entry, red→green
+Rust pin (`IF EXISTS` missing-function no-op), smoke wrapper green. The bare
+(non-`IF EXISTS`) drop of a Python-registered function reports `Function does
+not exist` — the UDF-registry/engine gap, out of scope (smoke uses `IF EXISTS`).
+
+FENCED (needs owning-run clearance for `dataframe/joins_columns.py` +
+`dataframe/plan_collapse.py`; exact diff in the handback): the
+case-preserved `X` aggregate pair (`sum_alias_and_alias_lit`,
+`rebind_extended_afs`). Root cause: `F.sum("x").sql_expr` is now ``sum(`x`)``
+and the rebind patterns accept only `"?"` leaves — no match, no rebind, bare
+`x` misses `"X"` (`No field named ...x`, reproduced minimal). Blind patterns:
+`joins_columns.py` 668 (simple_af), 674/679/684 (collect forms), 742
+(first/last agg_name), 751 (first/last_value sql), 772 (binary_af), and
+`plan_collapse.py` 998/1008 (`_parse_count_distinct_simple_names` token — same
+family for `count(DISTINCT ...)`). The pivot path already accepts backticks.
+Prescription: accept `` [`"`]? `` at each leaf slot, keeping `"` (synthetic
+`sum("x")` still rebinds today). The two red tests are the pins.

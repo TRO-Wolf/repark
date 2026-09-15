@@ -323,6 +323,24 @@ async fn wildcard_exclude_reads_as_except() {
     );
 }
 
+/// `DROP TEMPORARY FUNCTION IF EXISTS` parses on the Spark door (valid Spark SQL;
+/// the Databricks lexer has no `TEMPORARY`) and is a no-op for a missing function.
+#[tokio::test]
+async fn drop_temporary_function_if_exists_is_a_noop() {
+    let ctx = production_ctx(false);
+    let batches = execute(
+        &ctx,
+        &CatalogRegistry::new(),
+        "DROP TEMPORARY FUNCTION IF EXISTS no_such_function_xyz",
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 0);
+}
+
 /// JD-exp-literal-types: exponent literals are DOUBLE, a plain decimal stays DECIMAL.
 #[tokio::test]
 async fn exponent_literal_is_double() {

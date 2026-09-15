@@ -1660,6 +1660,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   of a named attribute currently answers `select` with a
   `datafusion.public.__repark_cdf_<id>.<field>` qualifier; the golden stores the
   trailing field only (the UUID is session-local, not a display-string contract).
+  **FNP-4B (2026-09-15):** the `sql_expr` / `sql_expr_without_alias` / `join_sql` fields
+  re-recorded in backtick form through record mode; every display field verified
+  byte-identical field-by-field (202 + 35 keys changed, zero display diffs).
   pins: facade-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015
 - `test_facade_2_group2_no_python_assembly.py` — **FACADE-2 step 2 (2026-09-12):**
   AST walk of the named Group-2 methods on `column.py`; f-string / concat / `format` /
