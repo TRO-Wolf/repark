@@ -7339,19 +7339,26 @@ field NAME.
   **Supersedes EX-FN-2** (`posexplode` / `posexplode_outer`), whose EX-25 pin stays and whose
   mechanism is stated here.
 
-### FNP9-BYNAME-1 — `call_udf` / `call_function` refuse; Spark resolves the name at plan time
+### FNP9-BYNAME-1 — `call_udf` / `call_function` resolve at call time
 
-- **repark** — both names are absent from the facade (`AttributeError`).
+- **repark** — both names are built: a UDF registered through `spark.udf.register` on the
+  active session wins, otherwise the facade builtin of the lowercased name answers
+  (`F.call_function("ABS", col)` equals `F.abs(col)`; `F.call_function("sum", col)` stays a
+  grouped aggregate), otherwise `AnalysisException [UNRESOLVED_ROUTINE]` with Spark's message
+  and SQLSTATE, and dotted names raise `[REQUIRES_SINGLE_PART_NAMESPACE]` with Spark's
+  message. **FIXED 2026-09-15 (FNP-MISC-1).**
 - **Apache Spark** — `call_udf("name", col)` invokes a function registered through
   `spark.udf.register`, and `call_function("name", col)` invokes any resolvable function,
-  built-in or registered. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, FNP-9/10 batch.)*
-- **Pin** —
+  built-in or registered. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, FNP-9/10 batch;
+  re-measured 2026-09-14 in `python/repark/tests/fnp_misc_1_agg_spark_oracle.json`.)*
+- **Pin** — `python/repark/tests/test_fnp_misc_1.py` (the `call_function` / `call_udf` pins);
   `python/repark/tests/test_fnp_9_collections_json.py::test_fnp9_multi_column_and_by_name_names_stay_absent`
-- **Rationale** — BACKLOG, filed 2026-09-05. A facade `Column` is built without a session:
-  `PyColumn.call_scalar` resolves a closed match table in Rust, not a session function registry,
-  so an arbitrary name has nothing to look itself up in. The same seam is why `F.expr("a + 1")`
-  refuses (EX-FN-4). A registered UDF is reachable today through `spark.sql`. Closing this needs
-  a session-bound Column resolution step, not a dispatch arm.
+  no longer asserts absence for these two names (still pins `inline` / `inline_outer` absent).
+- **Rationale** — FIXED 2026-09-15 (FNP-MISC-1), filed BACKLOG 2026-09-05. Residual: resolution
+  happens when `call_function` / `call_udf` is called, not at analysis as in Spark — a facade
+  `Column` is built without a session, so an arbitrary name has no session registry to look
+  itself up in at plan time. The error class and message match; only the raise point differs.
+  The same seam is why `F.expr("a + 1")` refuses (EX-FN-4).
 
 ### FNP9-SEQUENCE-1 — a descending `sequence` answers `[]`; Spark counts down or raises
 
@@ -7669,6 +7676,112 @@ field NAME.
   already routes every stamp through `alias(metadata=)` so the dict flows the
   moment the native path accepts it.
   pins: df-surface-a-1/C-008
+### FNP-MISC-1-COMP-1 — `arrow_udf(...)` mid-expression composition refuses
+
+- **repark** — `UnsupportedOperationException`: `pandas_udf result cannot be used in
+  arithmetic (+) in repark v1 (facade projection-rewrite bridge only; not a Column
+  expression in the SQL plan). Materialize via select/withColumn, then apply further
+  expressions on that column. Mid-expression embedding is an M5-class seed.`
+- **Apache Spark** — `(plus("v") + 1)` answers `[[12], [None], [32]]` as `x int`.
+  *(oracle: `python/repark/tests/fnp_misc_1_arrow2_spark_oracle.json` cell `arrow_udf` /
+  `composed plus(v) + 1`, live PySpark 4.1.2, 2026-09-14.)*
+- **Pin** — `python/repark/tests/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udf_mid_expression_composition_refused`
+- **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1). Closing it needs bridge markers
+  to become Column expressions (`dataframe/**`, `column.py`), owned by another
+  orchestrator. The refusal is the pandas bridge's own, inherited by sharing its
+  machinery.
+  pins: fnp-misc-1/C-006
+
+### FNP-MISC-1-REGSQL-1 — `spark.udf.register` of an arrow UDF, then `spark.sql`
+
+- **repark** — `UnsupportedOperationException`: `spark.udf.register does not accept
+  pandas_udf callables in repark v1; register a classic scalar Python function (or use
+  F.udf). pandas_udf stays on the DataFrame path (M6).` (the arrow callable is a
+  `PandasUDFFunction`, so the existing name-based gate catches it).
+- **Apache Spark** — `spark.udf.register("arrow_plus", plus)` then
+  `SELECT arrow_plus(v)` answers `[[2], [None]]` as `x int`.
+  *(oracle: `python/repark/tests/fnp_misc_1_arrow2_spark_oracle.json` cell `arrow_udf` /
+  `register and sql`, live PySpark 4.1.2, 2026-09-14.)*
+- **Pin** — `python/repark/tests/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udf_register_then_sql_refused`
+- **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1). The SQL registry is
+  classic-scalar-only (`session/**`), owned by another orchestrator.
+  pins: fnp-misc-1/C-006
+
+### FNP-MISC-1-GRPSEL-1 — grouped arrow UDF in `select` raises a different AnalysisException
+
+- **repark** — `AnalysisException`: `GROUPED_AGG pandas_udf cannot be used in
+  select/withColumn without .over(Window.partitionBy(...)); use groupBy(...).agg(pandas_udf(...))
+  for non-window form, or attach an unbounded partition window via .over`.
+- **Apache Spark** — `AnalysisException [MISSING_AGGREGATION] The non-aggregating
+  expression "v" is based on columns which are not participating in the GROUP BY clause.`
+  *(oracle: `python/repark/tests/fnp_misc_1_arrow_bucket_spark_oracle.json` cell
+  `arrow_udf` / `arrow_udf grouped agg (pa.Array -> scalar)`, live PySpark 4.1.2,
+  2026-09-14.)*
+- **Pin** — `python/repark/tests/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udf_grouped_in_select_refused`
+- **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1). Both sides refuse loud with
+  `AnalysisException`; only the message differs, and matching it needs a `dataframe/**`
+  edit owned by another orchestrator.
+  pins: fnp-misc-1/C-006
+
+### FNP-MISC-1-UDTFARGS-1 — zero-arg call on an arrow UDTF whose `eval` takes arguments
+
+- **repark** — `PySparkException`: `UDTF UserDefinedTableFunction('Echo') eval() raised
+  TypeError: Echo.eval() missing 1 required positional argument: 'values'` plus traceback.
+- **Apache Spark** — `PySparkRuntimeError
+  [UDTF_EVAL_METHOD_ARGUMENTS_DO_NOT_MATCH_SIGNATURE] Failed to evaluate the
+  user-defined table function 'Echo' because the function arguments did not match the
+  expected signature of the 'eval' method (missing a required argument: 'a').`
+  *(oracle: `python/repark/tests/fnp_misc_1_arrow2_spark_oracle.json` cell `arrow_udtf` /
+  `decorator, no args`, live PySpark 4.1.2, 2026-09-14.)*
+- **Pin** — `python/repark/tests/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udtf_zero_arg_eval_mismatch_refused`
+- **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1). Matching the condition needs a
+  `udtf.py`-adjacent signature check at call time; the bridge text it emits is shared
+  UDTF-path behavior. Both sides refuse loud.
+  pins: fnp-misc-1/C-006
+
+### PERF-ARROW-UDF-1 — `arrow_udf` rides the pandas bridge (two extra copies per batch)
+
+- **repark** — scalar / iterator `arrow_udf` forms measure 1.42x / 1.45x the equivalent
+  `pandas_udf` on 1,000,000 rows (best of 5: 0.01058 s vs 0.00747 s). The pandas bridge in
+  `dataframe/udf_bridge.py` copies Arrow to pandas and back, and the arrow adapter adds a
+  second pandas-to-Arrow-to-pandas round trip per batch.
+- **Apache Spark** — the Arrow UDF path hands Arrow batches to the user function with no
+  pandas round trip.
+- **Pin** — `python/repark/tests/test_fnp_misc_1.py` holds the value and error cells
+  (no timing pin; CI timing would flake).
+- **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1 round 2, ruling D-5, accepted).
+  The zero-copy fix needs an Arrow-in/Arrow-out callback in `dataframe/udf_bridge.py`,
+  owned by another orchestrator; follow-up card PERF-ARROW-UDF-1.
+
+### FNP-MISC-1-NAN-1 — `arrow_udf` identity maps IEEE NaN to SQL NULL
+
+- **repark** — identity over DOUBLE `[1.5, NaN, NULL, 0.0]` answers
+  `[1.5, NULL, NULL, 0.0]`: the bridge converts the Arrow batch with the pandas nullable
+  `Float64` mapper before the adapter sees it, and pandas stores both NaN and null as
+  `<NA>`. The same collapse happens on `pandas_udf` identity (Spark-plausible there).
+- **Apache Spark** — `arrow_udf` hands the user a `pyarrow.Array` that keeps NaN distinct
+  from null, so identity answers `[1.5, NaN, NULL, 0.0]`.
+- **Pin** — `python/repark/tests/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udf_identity_collapses_nan_to_null`
+  (a Spark-correct NaN assertion reds against it by measurement, 2026-09-15).
+- **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1 round 2). Fixing it inside
+  `functions_arrow_udf.py` is impossible — the information is already lost when the
+  adapter runs; it needs the Arrow-in/Arrow-out callback from PERF-ARROW-UDF-1.
+  pins: fnp-misc-1/L-001
+
+### FNP-MISC-1-ALLNULL-1 — grouped-agg all-null integer group arrives as `double`
+
+- **repark** — a grouped-aggregate `arrow_udf` over an all-null INT group receives
+  `double [None, None]` while a non-null group of the same column receives `int32`:
+  the applyInPandas group Series for the empty group is float64, and `from_pandas`
+  follows it.
+- **Apache Spark** — the grouped `arrow_udf` receives an int array with nulls for every
+  group of an INT column.
+- **Pin** — `python/repark/tests/test_fnp_misc_1.py::test_fnp_misc_1_arrow_grouped_all_null_int_group_arrives_double`
+  (records `(len, type)` per group: `{(2, "double"), (1, "int32")}`).
+- **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1 round 2). Casting the group back
+  needs the input Arrow type at the adapter, which only the bridge schema knows
+  (`dataframe/**`, owned by another orchestrator).
+  pins: fnp-misc-1/L-007
 
 ## 8. Drop-in disclosure rationale
 

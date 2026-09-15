@@ -180,6 +180,7 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
   ruling S2-22).
   pins: ex-30-functions-remainder/C-003
 - [deprecated_aliases.py](deprecated_aliases.py) — FNP-ALIAS-1 (2026-09-15): the six deprecated PySpark alias names (`approxCountDistinct`, `shiftLeft`, `shiftRight`, `shiftRightUnsigned`, `toDegrees`, `toRadians`) answer their modern siblings' rows and warn Spark's exact `FutureWarning` text. pins: fnp-alias-1/C-001, C-003
+- [by_name_and_arrow_udfs.py](by_name_and_arrow_udfs.py) — FNP-MISC-1 (2026-09-15): `call_function` / `call_udf` answer the direct spellings (a builtin and a session-registered UDF), `arrow_udf` adds one over an Arrow array keeping NULL, and `arrow_udtf` counts rows out of one yielded Arrow table. pins: fnp-misc-1/C-002, C-004, C-005
 ## Pointers
 
 - Up: [../map.md](../map.md)

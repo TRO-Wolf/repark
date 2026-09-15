@@ -372,14 +372,16 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 
 def test_functions_all_matches_pre_split_inventory() -> None:
-    """Pre-split 360 names stay the prefix; FNP-15/16 then FNP-4c then FNP-7 append.
+    """Pre-split names stay the prefix; later families append in installer order.
 
     pins: fnp-15-16/C-016
     pins: fnp-4c-higher-order-kernels/C-011
     pins: fnp-7-try-inversions/C-013
     """
     from repark.spark.functions_agg import INSTALL_NAMES as AGG_INSTALL_NAMES
+    from repark.spark.functions_arrow_udf import ARROW_EXPORTS
     from repark.spark.functions_bitwise import INSTALL_NAMES as BITWISE_INSTALL_NAMES
+    from repark.spark.functions_byname import BYNAME_NAMES
     from repark.spark.functions_declared import DECLARED_REFUSE_NAMES
     from repark.spark.functions_json import FNP9_NAMES
     from repark.spark.functions_lambda import HIGHER_ORDER_EXPORTS
@@ -394,14 +396,21 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     tried = len(TRY_EXPORTS)
     json_names = len(FNP9_NAMES)
     alias_names = (*AGG_INSTALL_NAMES, *BITWISE_INSTALL_NAMES, *MATH_INSTALL_NAMES)
+    byname_names = len(BYNAME_NAMES)
     assert exported[:prefix] == _PRE_SPLIT_ALL
     assert exported[prefix : prefix + declared] == DECLARED_REFUSE_NAMES
     assert exported[prefix + declared : prefix + declared + higher] == HIGHER_ORDER_EXPORTS
     assert exported[prefix + declared + higher : prefix + declared + higher + tried] == TRY_EXPORTS
     json_start = prefix + declared + higher + tried
     assert exported[json_start : json_start + json_names] == FNP9_NAMES
-    assert exported[json_start + json_names :] == (*STACK_NAMES, *alias_names)
-    assert len(exported) == 360 + 62 + 10 + 12 + 8 + 1 + 6
+    stack_start = json_start + json_names
+    assert exported[stack_start : stack_start + len(STACK_NAMES)] == STACK_NAMES
+    alias_start = stack_start + len(STACK_NAMES)
+    assert exported[alias_start : alias_start + len(alias_names)] == alias_names
+    byname_start = alias_start + len(alias_names)
+    assert exported[byname_start : byname_start + byname_names] == BYNAME_NAMES
+    assert exported[byname_start + byname_names :] == ARROW_EXPORTS
+    assert len(exported) == 360 + 62 + 10 + 12 + 8 + 1 + 6 + byname_names + len(ARROW_EXPORTS)
 
 
 def test_every_all_name_resolves() -> None:

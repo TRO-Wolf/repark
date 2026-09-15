@@ -222,6 +222,17 @@ def _map_udtf_batches(
     """Expand one UDTF handler across streamed argument batches (mapInArrow body)."""
     import traceback
 
+    if getattr(handler_cls, "_repark_arrow_udtf", False):
+        yield from _map_arrow_udtf_batches(
+            batches,
+            handler_cls=handler_cls,
+            arg_count=arg_count,
+            field_names=field_names,
+            arrow_schema=arrow_schema,
+            surface=surface,
+        )
+        return
+
     handler = handler_cls()
     out_rows: list[tuple[Any, ...]] = []
     # start + eval share the same finally so terminate always runs after
@@ -273,6 +284,66 @@ def _map_udtf_batches(
                 ) from error
 
     yield _build_output_batch(out_rows, field_names, arrow_schema)
+
+
+def _map_arrow_udtf_batches(
+    batches: Iterator[Any],
+    *,
+    handler_cls: type[Any],
+    arg_count: int,
+    field_names: list[str],
+    arrow_schema: Any,
+    surface: str,
+) -> Iterator[Any]:
+    """Expand one Arrow UDTF handler batch-wise (eval once per RecordBatch)."""
+    import traceback
+
+    import pyarrow as pa
+
+    handler = handler_cls()
+    produced: list[Any] = []
+    try:
+        start = getattr(handler, "start", None)
+        if callable(start):
+            try:
+                start()
+            except Exception as error:
+                detail = traceback.format_exc()
+                raise PySparkException(
+                    f"UDTF {surface} start() raised {type(error).__name__}: {error}\n{detail}"
+                ) from error
+
+        for batch in batches:
+            arrays = tuple(batch.column(index) for index in range(arg_count))
+            try:
+                tables = handler._eval_batch(field_names, arrow_schema, surface, *arrays)
+            except PySparkException:
+                raise
+            except Exception as error:
+                detail = traceback.format_exc()
+                raise PySparkException(
+                    f"UDTF {surface} eval() raised {type(error).__name__}: {error}\n{detail}"
+                ) from error
+            produced.extend(tables)
+    finally:
+        terminate = getattr(handler, "terminate", None)
+        if callable(terminate):
+            try:
+                terminate()
+            except Exception as error:
+                detail = traceback.format_exc()
+                raise PySparkException(
+                    f"UDTF {surface} terminate() raised {type(error).__name__}: {error}\n{detail}"
+                ) from error
+
+    if not produced:
+        yield _build_output_batch([], field_names, arrow_schema)
+        return
+    combined = pa.concat_tables(produced).combine_chunks()
+    if combined.num_rows == 0:
+        yield _build_output_batch([], field_names, arrow_schema)
+        return
+    yield from combined.to_batches()
 
 
 def _execute_scalar_udtf(

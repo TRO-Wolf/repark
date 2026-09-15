@@ -1,0 +1,6255 @@
+{
+ "cells": [
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "any_value(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.any_value('v')",
+   "name": "any_value",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "any_value(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.any_value('v')",
+   "name": "any_value",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "any_value(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.any_value('v', True)",
+   "name": "any_value",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "any_value(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.any_value('v', True)",
+   "name": "any_value",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "any_value(s)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.any_value(col('s'), ignoreNulls=lit(True))",
+   "name": "any_value",
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "any_value(s)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.any_value(col('s'), ignoreNulls=lit(True))",
+   "name": "any_value",
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "any_value(v)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "any_value(v)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "first_value(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, any_value(v), any_value(v, true), first_value(v) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "any_value",
+   "rows": [
+    [
+     1,
+     10,
+     10,
+     10
+    ],
+    [
+     2,
+     5,
+     5,
+     5
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "any_value(v)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "any_value(v)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "first_value(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, any_value(v), any_value(v, true), first_value(v) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "any_value",
+   "rows": [
+    [
+     1,
+     10,
+     10,
+     10
+    ],
+    [
+     2,
+     5,
+     5,
+     5
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "max_by(k, v)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.max_by('k', 'v')",
+   "name": "max_by",
+   "rows": [
+    [
+     1,
+     "c"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "max_by(k, v)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.max_by('k', 'v')",
+   "name": "max_by",
+   "rows": [
+    [
+     1,
+     "c"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "max_by(s, d)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.max_by(col('s'), col('d'))",
+   "name": "max_by",
+   "rows": [
+    [
+     1,
+     "y"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "max_by(s, d)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.max_by(col('s'), col('d'))",
+   "name": "max_by",
+   "rows": [
+    [
+     1,
+     "y"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "max_by(v, o)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.max_by('v', 'o')",
+   "name": "max_by",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "max_by(v, o)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.max_by('v', 'o')",
+   "name": "max_by",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "max_by(k, v)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "max_by(s, d)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "max_by(v, o)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, max_by(k, v), max_by(s, d), max_by(v, o) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "max_by",
+   "rows": [
+    [
+     1,
+     "c",
+     "y",
+     10
+    ],
+    [
+     2,
+     null,
+     "z",
+     5
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "max_by(k, v)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "max_by(s, d)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "max_by(v, o)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, max_by(k, v), max_by(s, d), max_by(v, o) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "max_by",
+   "rows": [
+    [
+     1,
+     "c",
+     "y",
+     10
+    ],
+    [
+     2,
+     null,
+     "z",
+     5
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT max_by(k, v, 2) FROM FRAME",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `max_by` requires 2 parameters but the actual number is 3. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7",
+   "name": "max_by"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT max_by(k, v, 2) FROM FRAME",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `max_by` requires 2 parameters but the actual number is 3. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7",
+   "name": "max_by"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "min_by(k, v)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.min_by('k', 'v')",
+   "name": "min_by",
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "min_by(k, v)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.min_by('k', 'v')",
+   "name": "min_by",
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "min_by(s, d)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.min_by(col('s'), col('d'))",
+   "name": "min_by",
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "min_by(s, d)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.min_by(col('s'), col('d'))",
+   "name": "min_by",
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "min_by(v, o)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.min_by('v', 'o')",
+   "name": "min_by",
+   "rows": [
+    [
+     1,
+     20
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "min_by(v, o)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.min_by('v', 'o')",
+   "name": "min_by",
+   "rows": [
+    [
+     1,
+     20
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "min_by(k, v)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "min_by(s, d)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "min_by(v, o)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, min_by(k, v), min_by(s, d), min_by(v, o) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "min_by",
+   "rows": [
+    [
+     1,
+     "a",
+     "x",
+     20
+    ],
+    [
+     2,
+     null,
+     "z",
+     5
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "min_by(k, v)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "min_by(s, d)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "min_by(v, o)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, min_by(k, v), min_by(s, d), min_by(v, o) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "min_by",
+   "rows": [
+    [
+     1,
+     "a",
+     "x",
+     20
+    ],
+    [
+     2,
+     null,
+     "z",
+     5
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT min_by(k, v, 2) FROM FRAME",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `min_by` requires 2 parameters but the actual number is 3. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7",
+   "name": "min_by"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT min_by(k, v, 2) FROM FRAME",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `min_by` requires 2 parameters but the actual number is 3. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7",
+   "name": "min_by"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "max_by(k, g)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.max_by('k', 'g')",
+   "name": "max_by",
+   "rows": [
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "max_by(k, g)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.max_by('k', 'g')",
+   "name": "max_by",
+   "rows": [
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "percentile(v, 0.5, 1)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.percentile('v', 0.5)",
+   "name": "percentile",
+   "rows": [
+    [
+     1,
+     20.0
+    ],
+    [
+     2,
+     5.0
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "percentile(v, 0.5, 1)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.percentile('v', 0.5)",
+   "name": "percentile",
+   "rows": [
+    [
+     1,
+     20.0
+    ],
+    [
+     2,
+     5.0
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "percentile(d, array(0.25, 0.75), 1)",
+     "nullable": true,
+     "type": "array<double>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.percentile('d', [0.25, 0.75])",
+   "name": "percentile",
+   "rows": [
+    [
+     1,
+     [
+      -1.25,
+      2.0
+     ]
+    ],
+    [
+     2,
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "percentile(d, array(0.25, 0.75), 1)",
+     "nullable": true,
+     "type": "array<double>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.percentile('d', [0.25, 0.75])",
+   "name": "percentile",
+   "rows": [
+    [
+     1,
+     [
+      -1.25,
+      2.0
+     ]
+    ],
+    [
+     2,
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "percentile(v, 0.5, 2)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.percentile('v', 0.5, lit(2))",
+   "name": "percentile",
+   "rows": [
+    [
+     1,
+     20.0
+    ],
+    [
+     2,
+     5.0
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "percentile(v, 0.5, 2)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.percentile('v', 0.5, lit(2))",
+   "name": "percentile",
+   "rows": [
+    [
+     1,
+     20.0
+    ],
+    [
+     2,
+     5.0
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE",
+   "error_type": "AnalysisException",
+   "expr": "F.percentile('v', lit(1.5))",
+   "message": "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve \"percentile(v, 1.5, 1)\" due to data type mismatch: The percentage must be between [0.0, 1.0] (current value = 1.5D). SQLSTATE: 42K09;",
+   "name": "percentile"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE",
+   "error_type": "AnalysisException",
+   "expr": "F.percentile('v', lit(1.5))",
+   "message": "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve \"percentile(v, 1.5, 1)\" due to data type mismatch: The percentage must be between [0.0, 1.0] (current value = 1.5D). SQLSTATE: 42K09;",
+   "name": "percentile"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "percentile(v, 0.5, 1)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "percentile(d, array(0.25, 0.75), 1)",
+     "nullable": true,
+     "type": "array<double>"
+    },
+    {
+     "name": "percentile(v, 0.5, o)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, percentile(v, 0.5), percentile(d, array(0.25, 0.75)), percentile(v, 0.5, o) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "percentile",
+   "rows": [
+    [
+     1,
+     20.0,
+     [
+      -1.25,
+      2.0
+     ],
+     10.0
+    ],
+    [
+     2,
+     5.0,
+     [
+      0.0,
+      0.0
+     ],
+     5.0
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "percentile(v, 0.5, 1)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "percentile(d, array(0.25, 0.75), 1)",
+     "nullable": true,
+     "type": "array<double>"
+    },
+    {
+     "name": "percentile(v, 0.5, o)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, percentile(v, 0.5), percentile(d, array(0.25, 0.75)), percentile(v, 0.5, o) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "percentile",
+   "rows": [
+    [
+     1,
+     20.0,
+     [
+      -1.25,
+      2.0
+     ],
+     10.0
+    ],
+    [
+     2,
+     5.0,
+     [
+      0.0,
+      0.0
+     ],
+     5.0
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT percentile(v, 1.5) FROM FRAME",
+   "message": "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve \"percentile(v, 1.5, 1)\" due to data type mismatch: The percentage must be between [0.0, 1.0] (current value = 1.5D). SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "percentile"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT percentile(v, 1.5) FROM FRAME",
+   "message": "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve \"percentile(v, 1.5, 1)\" due to data type mismatch: The percentage must be between [0.0, 1.0] (current value = 1.5D). SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "percentile"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "CAST_INVALID_INPUT",
+   "error_type": "NumberFormatException",
+   "expr": "SELECT percentile(k, 0.5) FROM FRAME",
+   "message": "[CAST_INVALID_INPUT] The value 'a' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
+   "name": "percentile"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "percentile(k, 0.5, 1)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT percentile(k, 0.5) FROM FRAME",
+   "name": "percentile",
+   "rows": [
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "product(v)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.product('v')",
+   "name": "product",
+   "rows": [
+    [
+     1,
+     6000.0
+    ],
+    [
+     2,
+     5.0
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "product(v)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.product('v')",
+   "name": "product",
+   "rows": [
+    [
+     1,
+     6000.0
+    ],
+    [
+     2,
+     5.0
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "product(d)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.product('d')",
+   "name": "product",
+   "rows": [
+    [
+     1,
+     -15.0
+    ],
+    [
+     2,
+     0.0
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "product(d)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.product('d')",
+   "name": "product",
+   "rows": [
+    [
+     1,
+     -15.0
+    ],
+    [
+     2,
+     0.0
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "product(o)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.product('o')",
+   "name": "product",
+   "rows": [
+    [
+     1,
+     6.0
+    ],
+    [
+     2,
+     7.0
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "product(o)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.product('o')",
+   "name": "product",
+   "rows": [
+    [
+     1,
+     6.0
+    ],
+    [
+     2,
+     7.0
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT g, product(v), product(d), product(o) FROM FRAME GROUP BY g ORDER BY g",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `product` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 10",
+   "name": "product"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT g, product(v), product(d), product(o) FROM FRAME GROUP BY g ORDER BY g",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `product` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 10",
+   "name": "product"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT product(CAST(v AS DECIMAL(10,2))) FROM FRAME",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `product` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7",
+   "name": "product"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT product(CAST(v AS DECIMAL(10,2))) FROM FRAME",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `product` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7",
+   "name": "product"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT product(x) FROM VALUES (CAST(9223372036854775807 AS BIGINT)), (CAST(2 AS BIGINT)) AS u(x)",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `product` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7",
+   "name": "product"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT product(x) FROM VALUES (CAST(9223372036854775807 AS BIGINT)), (CAST(2 AS BIGINT)) AS u(x)",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `product` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7",
+   "name": "product"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "listagg(DISTINCT s, NULL)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.listagg_distinct('s')",
+   "name": "listagg_distinct",
+   "rows": [
+    [
+     1,
+     "xy"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "listagg(DISTINCT s, NULL)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.listagg_distinct('s')",
+   "name": "listagg_distinct",
+   "rows": [
+    [
+     1,
+     "xy"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "listagg(DISTINCT s, ,)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.listagg_distinct('s', lit(','))",
+   "name": "listagg_distinct",
+   "rows": [
+    [
+     1,
+     "x,y"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "listagg(DISTINCT s, ,)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.listagg_distinct('s', lit(','))",
+   "name": "listagg_distinct",
+   "rows": [
+    [
+     1,
+     "x,y"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "listagg(DISTINCT k, -)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.listagg_distinct(col('k'), '-')",
+   "name": "listagg_distinct",
+   "rows": [
+    [
+     1,
+     "c-b-a"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "listagg(DISTINCT k, -)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.listagg_distinct(col('k'), '-')",
+   "name": "listagg_distinct",
+   "rows": [
+    [
+     1,
+     "c-b-a"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT g, listagg_distinct(s), listagg_distinct(s, ',') FROM FRAME GROUP BY g ORDER BY g",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `listagg_distinct` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 10",
+   "name": "listagg_distinct"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT g, listagg_distinct(s), listagg_distinct(s, ',') FROM FRAME GROUP BY g ORDER BY g",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `listagg_distinct` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 10",
+   "name": "listagg_distinct"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "string_agg(DISTINCT s, NULL)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.string_agg_distinct('s')",
+   "name": "string_agg_distinct",
+   "rows": [
+    [
+     1,
+     "xy"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "string_agg(DISTINCT s, NULL)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.string_agg_distinct('s')",
+   "name": "string_agg_distinct",
+   "rows": [
+    [
+     1,
+     "xy"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "string_agg(DISTINCT s, ,)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.string_agg_distinct('s', lit(','))",
+   "name": "string_agg_distinct",
+   "rows": [
+    [
+     1,
+     "x,y"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "string_agg(DISTINCT s, ,)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.string_agg_distinct('s', lit(','))",
+   "name": "string_agg_distinct",
+   "rows": [
+    [
+     1,
+     "x,y"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "string_agg(DISTINCT k, -)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.string_agg_distinct(col('k'), '-')",
+   "name": "string_agg_distinct",
+   "rows": [
+    [
+     1,
+     "c-b-a"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "string_agg(DISTINCT k, -)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.string_agg_distinct(col('k'), '-')",
+   "name": "string_agg_distinct",
+   "rows": [
+    [
+     1,
+     "c-b-a"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT g, string_agg_distinct(s), string_agg_distinct(s, ',') FROM FRAME GROUP BY g ORDER BY g",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `string_agg_distinct` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 10",
+   "name": "string_agg_distinct"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT g, string_agg_distinct(s), string_agg_distinct(s, ',') FROM FRAME GROUP BY g ORDER BY g",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `string_agg_distinct` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 10",
+   "name": "string_agg_distinct"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "listagg(DISTINCT s, ,)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, listagg(DISTINCT s, ',') FROM FRAME GROUP BY g ORDER BY g",
+   "name": "listagg",
+   "rows": [
+    [
+     1,
+     "x,y"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "listagg(DISTINCT s, ,)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, listagg(DISTINCT s, ',') FROM FRAME GROUP BY g ORDER BY g",
+   "name": "listagg",
+   "rows": [
+    [
+     1,
+     "x,y"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "listagg(DISTINCT s, ,) WITHIN GROUP (ORDER BY s ASC NULLS FIRST)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, listagg(DISTINCT s, ',') WITHIN GROUP (ORDER BY s) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "listagg",
+   "rows": [
+    [
+     1,
+     "x,y"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "listagg(DISTINCT s, ,) WITHIN GROUP (ORDER BY s ASC NULLS FIRST)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, listagg(DISTINCT s, ',') WITHIN GROUP (ORDER BY s) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "listagg",
+   "rows": [
+    [
+     1,
+     "x,y"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "listagg(s, ,)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.listagg('s', ',')",
+   "name": "listagg",
+   "rows": [
+    [
+     1,
+     "x,y,x"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "listagg(s, ,)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.listagg('s', ',')",
+   "name": "listagg",
+   "rows": [
+    [
+     1,
+     "x,y,x"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "grouping_id()",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "sum(v)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "cube(g,k).agg(grouping_id())",
+   "name": "grouping_id",
+   "rows": [
+    [
+     null,
+     null,
+     3,
+     65
+    ],
+    [
+     null,
+     null,
+     2,
+     5
+    ],
+    [
+     null,
+     "a",
+     2,
+     10
+    ],
+    [
+     null,
+     "b",
+     2,
+     20
+    ],
+    [
+     null,
+     "c",
+     2,
+     30
+    ],
+    [
+     1,
+     null,
+     1,
+     60
+    ],
+    [
+     1,
+     "a",
+     0,
+     10
+    ],
+    [
+     1,
+     "b",
+     0,
+     20
+    ],
+    [
+     1,
+     "c",
+     0,
+     30
+    ],
+    [
+     2,
+     null,
+     1,
+     5
+    ],
+    [
+     2,
+     null,
+     0,
+     5
+    ],
+    [
+     3,
+     null,
+     1,
+     null
+    ],
+    [
+     3,
+     null,
+     0,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "grouping_id(g, k)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "rollup(g,k).agg(grouping_id('g','k'))",
+   "name": "grouping_id",
+   "rows": [
+    [
+     null,
+     null,
+     3
+    ],
+    [
+     1,
+     null,
+     1
+    ],
+    [
+     1,
+     "a",
+     0
+    ],
+    [
+     1,
+     "b",
+     0
+    ],
+    [
+     1,
+     "c",
+     0
+    ],
+    [
+     2,
+     null,
+     1
+    ],
+    [
+     2,
+     null,
+     0
+    ],
+    [
+     3,
+     null,
+     1
+    ],
+    [
+     3,
+     null,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "GROUPING_ID_COLUMN_MISMATCH",
+   "error_type": "AnalysisException",
+   "expr": "rollup(g,k).agg(grouping_id('k'))",
+   "message": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k#1966) does not match grouping columns (g#1965,k#1966). SQLSTATE: 42803",
+   "name": "grouping_id"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_GROUPING_EXPRESSION",
+   "error_type": "AnalysisException",
+   "expr": "groupBy(g).agg(grouping_id())",
+   "message": "[UNSUPPORTED_GROUPING_EXPRESSION] grouping()/grouping_id() can only be used with GroupingSets/Cube/Rollup. SQLSTATE: 42K0E;",
+   "name": "grouping_id"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "grouping_id()",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "sum(v)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "cube(g,k).agg(grouping_id())",
+   "name": "grouping_id",
+   "rows": [
+    [
+     null,
+     null,
+     3,
+     65
+    ],
+    [
+     null,
+     null,
+     2,
+     5
+    ],
+    [
+     null,
+     "a",
+     2,
+     10
+    ],
+    [
+     null,
+     "b",
+     2,
+     20
+    ],
+    [
+     null,
+     "c",
+     2,
+     30
+    ],
+    [
+     1,
+     null,
+     1,
+     60
+    ],
+    [
+     1,
+     "a",
+     0,
+     10
+    ],
+    [
+     1,
+     "b",
+     0,
+     20
+    ],
+    [
+     1,
+     "c",
+     0,
+     30
+    ],
+    [
+     2,
+     null,
+     1,
+     5
+    ],
+    [
+     2,
+     null,
+     0,
+     5
+    ],
+    [
+     3,
+     null,
+     1,
+     null
+    ],
+    [
+     3,
+     null,
+     0,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "grouping_id(g, k)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "rollup(g,k).agg(grouping_id('g','k'))",
+   "name": "grouping_id",
+   "rows": [
+    [
+     null,
+     null,
+     3
+    ],
+    [
+     1,
+     null,
+     1
+    ],
+    [
+     1,
+     "a",
+     0
+    ],
+    [
+     1,
+     "b",
+     0
+    ],
+    [
+     1,
+     "c",
+     0
+    ],
+    [
+     2,
+     null,
+     1
+    ],
+    [
+     2,
+     null,
+     0
+    ],
+    [
+     3,
+     null,
+     1
+    ],
+    [
+     3,
+     null,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "GROUPING_ID_COLUMN_MISMATCH",
+   "error_type": "AnalysisException",
+   "expr": "rollup(g,k).agg(grouping_id('k'))",
+   "message": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k#2042) does not match grouping columns (g#2041,k#2042). SQLSTATE: 42803",
+   "name": "grouping_id"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_GROUPING_EXPRESSION",
+   "error_type": "AnalysisException",
+   "expr": "groupBy(g).agg(grouping_id())",
+   "message": "[UNSUPPORTED_GROUPING_EXPRESSION] grouping()/grouping_id() can only be used with GroupingSets/Cube/Rollup. SQLSTATE: 42K0E;",
+   "name": "grouping_id"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "grouping_id()",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "grouping_id(g, k)",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "grouping(g)",
+     "nullable": false,
+     "type": "tinyint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, k, grouping_id(), grouping_id(g, k), grouping(g) FROM FRAME GROUP BY CUBE(g, k) ORDER BY g, k",
+   "name": "grouping_id",
+   "rows": [
+    [
+     null,
+     null,
+     3,
+     3,
+     1
+    ],
+    [
+     null,
+     null,
+     2,
+     2,
+     1
+    ],
+    [
+     null,
+     "a",
+     2,
+     2,
+     1
+    ],
+    [
+     null,
+     "b",
+     2,
+     2,
+     1
+    ],
+    [
+     null,
+     "c",
+     2,
+     2,
+     1
+    ],
+    [
+     1,
+     null,
+     1,
+     1,
+     0
+    ],
+    [
+     1,
+     "a",
+     0,
+     0,
+     0
+    ],
+    [
+     1,
+     "b",
+     0,
+     0,
+     0
+    ],
+    [
+     1,
+     "c",
+     0,
+     0,
+     0
+    ],
+    [
+     2,
+     null,
+     1,
+     1,
+     0
+    ],
+    [
+     2,
+     null,
+     0,
+     0,
+     0
+    ],
+    [
+     3,
+     null,
+     1,
+     1,
+     0
+    ],
+    [
+     3,
+     null,
+     0,
+     0,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "grouping_id()",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "grouping_id(g, k)",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "grouping(g)",
+     "nullable": false,
+     "type": "tinyint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, k, grouping_id(), grouping_id(g, k), grouping(g) FROM FRAME GROUP BY CUBE(g, k) ORDER BY g, k",
+   "name": "grouping_id",
+   "rows": [
+    [
+     null,
+     null,
+     3,
+     3,
+     1
+    ],
+    [
+     null,
+     null,
+     2,
+     2,
+     1
+    ],
+    [
+     null,
+     "a",
+     2,
+     2,
+     1
+    ],
+    [
+     null,
+     "b",
+     2,
+     2,
+     1
+    ],
+    [
+     null,
+     "c",
+     2,
+     2,
+     1
+    ],
+    [
+     1,
+     null,
+     1,
+     1,
+     0
+    ],
+    [
+     1,
+     "a",
+     0,
+     0,
+     0
+    ],
+    [
+     1,
+     "b",
+     0,
+     0,
+     0
+    ],
+    [
+     1,
+     "c",
+     0,
+     0,
+     0
+    ],
+    [
+     2,
+     null,
+     1,
+     1,
+     0
+    ],
+    [
+     2,
+     null,
+     0,
+     0,
+     0
+    ],
+    [
+     3,
+     null,
+     1,
+     1,
+     0
+    ],
+    [
+     3,
+     null,
+     0,
+     0,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_GROUPING_EXPRESSION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT g, grouping_id() FROM FRAME GROUP BY g",
+   "message": "[UNSUPPORTED_GROUPING_EXPRESSION] grouping()/grouping_id() can only be used with GroupingSets/Cube/Rollup. SQLSTATE: 42K0E; line 1 pos 10;",
+   "name": "grouping_id"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNSUPPORTED_GROUPING_EXPRESSION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT g, grouping_id() FROM FRAME GROUP BY g",
+   "message": "[UNSUPPORTED_GROUPING_EXPRESSION] grouping()/grouping_id() can only be used with GroupingSets/Cube/Rollup. SQLSTATE: 42K0E; line 1 pos 10;",
+   "name": "grouping_id"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "histogram_numeric(v, 2)",
+     "nullable": true,
+     "type": "array<struct<x:int,y:double>>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.histogram_numeric('v', lit(2))",
+   "name": "histogram_numeric",
+   "rows": [
+    [
+     1,
+     [
+      {
+       "row": {
+        "x": 10,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 25,
+        "y": 2.0
+       }
+      }
+     ]
+    ],
+    [
+     2,
+     [
+      {
+       "row": {
+        "x": 5,
+        "y": 1.0
+       }
+      }
+     ]
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "histogram_numeric(v, 2)",
+     "nullable": true,
+     "type": "array<struct<x:int,y:double>>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.histogram_numeric('v', lit(2))",
+   "name": "histogram_numeric",
+   "rows": [
+    [
+     1,
+     [
+      {
+       "row": {
+        "x": 10,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 25,
+        "y": 2.0
+       }
+      }
+     ]
+    ],
+    [
+     2,
+     [
+      {
+       "row": {
+        "x": 5,
+        "y": 1.0
+       }
+      }
+     ]
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "histogram_numeric(d, 3)",
+     "nullable": true,
+     "type": "array<struct<x:double,y:double>>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.histogram_numeric('d', lit(3))",
+   "name": "histogram_numeric",
+   "rows": [
+    [
+     1,
+     [
+      {
+       "row": {
+        "x": -4.0,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 1.5,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 2.5,
+        "y": 1.0
+       }
+      }
+     ]
+    ],
+    [
+     2,
+     [
+      {
+       "row": {
+        "x": 0.0,
+        "y": 1.0
+       }
+      }
+     ]
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "histogram_numeric(d, 3)",
+     "nullable": true,
+     "type": "array<struct<x:double,y:double>>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.histogram_numeric('d', lit(3))",
+   "name": "histogram_numeric",
+   "rows": [
+    [
+     1,
+     [
+      {
+       "row": {
+        "x": -4.0,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 1.5,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 2.5,
+        "y": 1.0
+       }
+      }
+     ]
+    ],
+    [
+     2,
+     [
+      {
+       "row": {
+        "x": 0.0,
+        "y": 1.0
+       }
+      }
+     ]
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "histogram_numeric(v, 2)",
+     "nullable": true,
+     "type": "array<struct<x:int,y:double>>"
+    },
+    {
+     "name": "histogram_numeric(d, 3)",
+     "nullable": true,
+     "type": "array<struct<x:double,y:double>>"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, histogram_numeric(v, 2), histogram_numeric(d, 3) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "histogram_numeric",
+   "rows": [
+    [
+     1,
+     [
+      {
+       "row": {
+        "x": 10,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 25,
+        "y": 2.0
+       }
+      }
+     ],
+     [
+      {
+       "row": {
+        "x": -4.0,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 1.5,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 2.5,
+        "y": 1.0
+       }
+      }
+     ]
+    ],
+    [
+     2,
+     [
+      {
+       "row": {
+        "x": 5,
+        "y": 1.0
+       }
+      }
+     ],
+     [
+      {
+       "row": {
+        "x": 0.0,
+        "y": 1.0
+       }
+      }
+     ]
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "histogram_numeric(v, 2)",
+     "nullable": true,
+     "type": "array<struct<x:int,y:double>>"
+    },
+    {
+     "name": "histogram_numeric(d, 3)",
+     "nullable": true,
+     "type": "array<struct<x:double,y:double>>"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, histogram_numeric(v, 2), histogram_numeric(d, 3) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "histogram_numeric",
+   "rows": [
+    [
+     1,
+     [
+      {
+       "row": {
+        "x": 10,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 25,
+        "y": 2.0
+       }
+      }
+     ],
+     [
+      {
+       "row": {
+        "x": -4.0,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 1.5,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 2.5,
+        "y": 1.0
+       }
+      }
+     ]
+    ],
+    [
+     2,
+     [
+      {
+       "row": {
+        "x": 5,
+        "y": 1.0
+       }
+      }
+     ],
+     [
+      {
+       "row": {
+        "x": 0.0,
+        "y": 1.0
+       }
+      }
+     ]
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT histogram_numeric(v, 1) FROM FRAME",
+   "message": "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve \"histogram_numeric(v, 1)\" due to data type mismatch: The nb must be between [2, 2147483647] (current value = 1). SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "histogram_numeric"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT histogram_numeric(v, 1) FROM FRAME",
+   "message": "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve \"histogram_numeric(v, 1)\" due to data type mismatch: The nb must be between [2, 2147483647] (current value = 1). SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "histogram_numeric"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "count_min_sketch(v, 0.5, 0.5, 1)",
+     "nullable": false,
+     "type": "binary"
+    }
+   ],
+   "door": "python",
+   "expr": "F.count_min_sketch('v', lit(0.5), lit(0.5), lit(1))",
+   "name": "count_min_sketch",
+   "rows": [
+    [
+     1,
+     {
+      "bytes_hex": "0000000100000000000000030000000100000004000000005d8d6ab90000000000000001000000000000000100000000000000000000000000000001"
+     }
+    ],
+    [
+     2,
+     {
+      "bytes_hex": "0000000100000000000000010000000100000004000000005d8d6ab90000000000000000000000000000000000000000000000010000000000000000"
+     }
+    ],
+    [
+     3,
+     {
+      "bytes_hex": "0000000100000000000000000000000100000004000000005d8d6ab90000000000000000000000000000000000000000000000000000000000000000"
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "count_min_sketch(v, 0.5, 0.5, 1)",
+     "nullable": false,
+     "type": "binary"
+    }
+   ],
+   "door": "python",
+   "expr": "F.count_min_sketch('v', lit(0.5), lit(0.5), lit(1))",
+   "name": "count_min_sketch",
+   "rows": [
+    [
+     1,
+     {
+      "bytes_hex": "0000000100000000000000030000000100000004000000005d8d6ab90000000000000001000000000000000100000000000000000000000000000001"
+     }
+    ],
+    [
+     2,
+     {
+      "bytes_hex": "0000000100000000000000010000000100000004000000005d8d6ab90000000000000000000000000000000000000000000000010000000000000000"
+     }
+    ],
+    [
+     3,
+     {
+      "bytes_hex": "0000000100000000000000000000000100000004000000005d8d6ab90000000000000000000000000000000000000000000000000000000000000000"
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "hex(count_min_sketch(v, 0.5, 0.5, 1))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, hex(count_min_sketch(v, 0.5D, 0.5D, 1)) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "count_min_sketch",
+   "rows": [
+    [
+     1,
+     "0000000100000000000000030000000100000004000000005D8D6AB90000000000000001000000000000000100000000000000000000000000000001"
+    ],
+    [
+     2,
+     "0000000100000000000000010000000100000004000000005D8D6AB90000000000000000000000000000000000000000000000010000000000000000"
+    ],
+    [
+     3,
+     "0000000100000000000000000000000100000004000000005D8D6AB90000000000000000000000000000000000000000000000000000000000000000"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "hex(count_min_sketch(v, 0.5, 0.5, 1))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, hex(count_min_sketch(v, 0.5D, 0.5D, 1)) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "count_min_sketch",
+   "rows": [
+    [
+     1,
+     "0000000100000000000000030000000100000004000000005D8D6AB90000000000000001000000000000000100000000000000000000000000000001"
+    ],
+    [
+     2,
+     "0000000100000000000000010000000100000004000000005D8D6AB90000000000000000000000000000000000000000000000010000000000000000"
+    ],
+    [
+     3,
+     "0000000100000000000000000000000100000004000000005D8D6AB90000000000000000000000000000000000000000000000000000000000000000"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "count_min_sketch(k, 0.5, 0.5, 1)",
+     "nullable": false,
+     "type": "binary"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT count_min_sketch(k, 0.5D, 0.5D, 1) FROM FRAME",
+   "name": "count_min_sketch",
+   "rows": [
+    [
+     {
+      "bytes_hex": "0000000100000000000000040000000100000004000000005d8d6ab90000000000000000000000000000000100000000000000010000000000000002"
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "count_min_sketch(k, 0.5, 0.5, 1)",
+     "nullable": false,
+     "type": "binary"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT count_min_sketch(k, 0.5D, 0.5D, 1) FROM FRAME",
+   "name": "count_min_sketch",
+   "rows": [
+    [
+     {
+      "bytes_hex": "0000000100000000000000040000000100000004000000005d8d6ab90000000000000000000000000000000100000000000000010000000000000002"
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "kurtosis(v)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.kurtosis('v')",
+   "name": "kurtosis",
+   "rows": [
+    [
+     1,
+     -1.5
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "kurtosis(v)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.kurtosis('v')",
+   "name": "kurtosis",
+   "rows": [
+    [
+     1,
+     -1.5
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "kurtosis(d)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.kurtosis('d')",
+   "name": "kurtosis",
+   "rows": [
+    [
+     1,
+     -1.5
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "kurtosis(d)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.kurtosis('d')",
+   "name": "kurtosis",
+   "rows": [
+    [
+     1,
+     -1.5
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "kurtosis(v)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "kurtosis(d)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, kurtosis(v), kurtosis(d) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "kurtosis",
+   "rows": [
+    [
+     1,
+     -1.5,
+     -1.5
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "kurtosis(v)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "kurtosis(d)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, kurtosis(v), kurtosis(d) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "kurtosis",
+   "rows": [
+    [
+     1,
+     -1.5,
+     -1.5
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "kurtosis(v)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT kurtosis(v) FROM FRAME",
+   "name": "kurtosis",
+   "rows": [
+    [
+     -1.4266015512783683
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "kurtosis(v)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT kurtosis(v) FROM FRAME",
+   "name": "kurtosis",
+   "rows": [
+    [
+     -1.4266015512783683
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "skewness(v)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.skewness('v')",
+   "name": "skewness",
+   "rows": [
+    [
+     1,
+     0.0
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "skewness(v)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.skewness('v')",
+   "name": "skewness",
+   "rows": [
+    [
+     1,
+     0.0
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "skewness(d)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.skewness('d')",
+   "name": "skewness",
+   "rows": [
+    [
+     1,
+     -0.642723256123866
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "skewness(d)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.skewness('d')",
+   "name": "skewness",
+   "rows": [
+    [
+     1,
+     -0.642723256123866
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "skewness(v)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "skewness(d)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, skewness(v), skewness(d) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "skewness",
+   "rows": [
+    [
+     1,
+     0.0,
+     -0.642723256123866
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "skewness(v)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "skewness(d)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, skewness(v), skewness(d) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "skewness",
+   "rows": [
+    [
+     1,
+     0.0,
+     -0.642723256123866
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "skewness(v)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT skewness(v) FROM FRAME",
+   "name": "skewness",
+   "rows": [
+    [
+     0.27803055565396284
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "skewness(v)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT skewness(v) FROM FRAME",
+   "name": "skewness",
+   "rows": [
+    [
+     0.27803055565396284
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "mode(k)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.mode('k')",
+   "name": "mode",
+   "rows": [
+    [
+     1,
+     "b"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "mode(k)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.mode('k')",
+   "name": "mode",
+   "rows": [
+    [
+     1,
+     "b"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "mode() WITHIN GROUP (ORDER BY s DESC)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.mode('s', True)",
+   "name": "mode",
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "mode() WITHIN GROUP (ORDER BY s DESC)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.mode('s', True)",
+   "name": "mode",
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "mode(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.mode(col('v'), deterministic=False)",
+   "name": "mode",
+   "rows": [
+    [
+     1,
+     30
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "mode(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.mode(col('v'), deterministic=False)",
+   "name": "mode",
+   "rows": [
+    [
+     1,
+     30
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "mode(k)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "mode() WITHIN GROUP (ORDER BY s DESC)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "mode() WITHIN GROUP (ORDER BY v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, mode(k), mode(s, true), mode() WITHIN GROUP (ORDER BY v DESC) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "mode",
+   "rows": [
+    [
+     1,
+     "b",
+     "x",
+     30
+    ],
+    [
+     2,
+     null,
+     "z",
+     5
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "mode(k)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "mode() WITHIN GROUP (ORDER BY s DESC)",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "mode() WITHIN GROUP (ORDER BY v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, mode(k), mode(s, true), mode() WITHIN GROUP (ORDER BY v DESC) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "mode",
+   "rows": [
+    [
+     1,
+     "b",
+     "x",
+     30
+    ],
+    [
+     2,
+     null,
+     "z",
+     5
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "mode(s)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT mode(s) FROM FRAME",
+   "name": "mode",
+   "rows": [
+    [
+     "x"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "mode(s)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT mode(s) FROM FRAME",
+   "name": "mode",
+   "rows": [
+    [
+     "x"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "typeof(v)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof('v')",
+   "name": "typeof",
+   "rows": [
+    [
+     "int"
+    ],
+    [
+     "int"
+    ],
+    [
+     "int"
+    ],
+    [
+     "int"
+    ],
+    [
+     "int"
+    ],
+    [
+     "int"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "typeof(v)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof('v')",
+   "name": "typeof",
+   "rows": [
+    [
+     "int"
+    ],
+    [
+     "int"
+    ],
+    [
+     "int"
+    ],
+    [
+     "int"
+    ],
+    [
+     "int"
+    ],
+    [
+     "int"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "typeof(array(v))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof(F.array('v'))",
+   "name": "typeof",
+   "rows": [
+    [
+     "array<int>"
+    ],
+    [
+     "array<int>"
+    ],
+    [
+     "array<int>"
+    ],
+    [
+     "array<int>"
+    ],
+    [
+     "array<int>"
+    ],
+    [
+     "array<int>"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "typeof(array(v))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof(F.array('v'))",
+   "name": "typeof",
+   "rows": [
+    [
+     "array<int>"
+    ],
+    [
+     "array<int>"
+    ],
+    [
+     "array<int>"
+    ],
+    [
+     "array<int>"
+    ],
+    [
+     "array<int>"
+    ],
+    [
+     "array<int>"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "typeof(struct(k, d))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof(F.struct('k', 'd'))",
+   "name": "typeof",
+   "rows": [
+    [
+     "struct<k:string,d:double>"
+    ],
+    [
+     "struct<k:string,d:double>"
+    ],
+    [
+     "struct<k:string,d:double>"
+    ],
+    [
+     "struct<k:string,d:double>"
+    ],
+    [
+     "struct<k:string,d:double>"
+    ],
+    [
+     "struct<k:string,d:double>"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "typeof(struct(k, d))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof(F.struct('k', 'd'))",
+   "name": "typeof",
+   "rows": [
+    [
+     "struct<k:string,d:double>"
+    ],
+    [
+     "struct<k:string,d:double>"
+    ],
+    [
+     "struct<k:string,d:double>"
+    ],
+    [
+     "struct<k:string,d:double>"
+    ],
+    [
+     "struct<k:string,d:double>"
+    ],
+    [
+     "struct<k:string,d:double>"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "typeof(map(k, d))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof(F.create_map('k', 'd'))",
+   "name": "typeof",
+   "rows": [
+    [
+     "map<string,double>"
+    ],
+    [
+     "map<string,double>"
+    ],
+    [
+     "map<string,double>"
+    ],
+    [
+     "map<string,double>"
+    ],
+    [
+     "map<string,double>"
+    ],
+    [
+     "map<string,double>"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "typeof(map(k, d))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof(F.create_map('k', 'd'))",
+   "name": "typeof",
+   "rows": [
+    [
+     "map<string,double>"
+    ],
+    [
+     "map<string,double>"
+    ],
+    [
+     "map<string,double>"
+    ],
+    [
+     "map<string,double>"
+    ],
+    [
+     "map<string,double>"
+    ],
+    [
+     "map<string,double>"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "typeof(NULL)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof(lit(None))",
+   "name": "typeof",
+   "rows": [
+    [
+     "void"
+    ],
+    [
+     "void"
+    ],
+    [
+     "void"
+    ],
+    [
+     "void"
+    ],
+    [
+     "void"
+    ],
+    [
+     "void"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "typeof(NULL)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof(lit(None))",
+   "name": "typeof",
+   "rows": [
+    [
+     "void"
+    ],
+    [
+     "void"
+    ],
+    [
+     "void"
+    ],
+    [
+     "void"
+    ],
+    [
+     "void"
+    ],
+    [
+     "void"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "typeof(current_timestamp())",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof(F.current_timestamp())",
+   "name": "typeof",
+   "rows": [
+    [
+     "timestamp"
+    ],
+    [
+     "timestamp"
+    ],
+    [
+     "timestamp"
+    ],
+    [
+     "timestamp"
+    ],
+    [
+     "timestamp"
+    ],
+    [
+     "timestamp"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "typeof(current_timestamp())",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof(F.current_timestamp())",
+   "name": "typeof",
+   "rows": [
+    [
+     "timestamp"
+    ],
+    [
+     "timestamp"
+    ],
+    [
+     "timestamp"
+    ],
+    [
+     "timestamp"
+    ],
+    [
+     "timestamp"
+    ],
+    [
+     "timestamp"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "typeof(1.5)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof(lit(1.5))",
+   "name": "typeof",
+   "rows": [
+    [
+     "double"
+    ],
+    [
+     "double"
+    ],
+    [
+     "double"
+    ],
+    [
+     "double"
+    ],
+    [
+     "double"
+    ],
+    [
+     "double"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "typeof(1.5)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.typeof(lit(1.5))",
+   "name": "typeof",
+   "rows": [
+    [
+     "double"
+    ],
+    [
+     "double"
+    ],
+    [
+     "double"
+    ],
+    [
+     "double"
+    ],
+    [
+     "double"
+    ],
+    [
+     "double"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "typeof(v)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(o)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(d)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(k)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(CAST(1 AS DECIMAL(10,2)))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(DATE '2024-01-01')",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(TIMESTAMP '2024-01-01 00:00:00')",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(X'01')",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(true)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(CAST(1 AS TINYINT))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(CAST(1 AS SMALLINT))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(CAST(1 AS FLOAT))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(NULL)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(array(1))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(map(a, 1))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(named_struct(a, 1, b, x))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(INTERVAL '1' DAY)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(INTERVAL '1' MONTH)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(CAST(x AS STRING))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(CAST(x AS STRING))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT typeof(v), typeof(o), typeof(d), typeof(k), typeof(CAST(1 AS DECIMAL(10,2))), typeof(DATE'2024-01-01'), typeof(TIMESTAMP'2024-01-01 00:00:00'), typeof(X'01'), typeof(true), typeof(CAST(1 AS TINYINT)), typeof(CAST(1 AS SMALLINT)), typeof(CAST(1 AS FLOAT)), typeof(NULL), typeof(array(1)), typeof(map('a', 1)), typeof(named_struct('a', 1, 'b', 'x')), typeof(INTERVAL 1 DAY), typeof(INTERVAL '1' MONTH), typeof(CAST('x' AS VARCHAR(3))), typeof(CAST('x' AS CHAR(3))) FROM FRAME LIMIT 1",
+   "name": "typeof",
+   "rows": [
+    [
+     "int",
+     "bigint",
+     "double",
+     "string",
+     "decimal(10,2)",
+     "date",
+     "timestamp",
+     "binary",
+     "boolean",
+     "tinyint",
+     "smallint",
+     "float",
+     "void",
+     "array<int>",
+     "map<string,int>",
+     "struct<a:int,b:string>",
+     "interval day",
+     "interval month",
+     "string",
+     "string"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "typeof(v)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(o)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(d)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(k)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(CAST(1 AS DECIMAL(10,2)))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(DATE '2024-01-01')",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(TIMESTAMP '2024-01-01 00:00:00')",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(X'01')",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(true)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(CAST(1 AS TINYINT))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(CAST(1 AS SMALLINT))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(CAST(1 AS FLOAT))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(NULL)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(array(1))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(map(a, 1))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(named_struct(a, 1, b, x))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(INTERVAL '1' DAY)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(INTERVAL '1' MONTH)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(CAST(x AS STRING))",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "typeof(CAST(x AS STRING))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT typeof(v), typeof(o), typeof(d), typeof(k), typeof(CAST(1 AS DECIMAL(10,2))), typeof(DATE'2024-01-01'), typeof(TIMESTAMP'2024-01-01 00:00:00'), typeof(X'01'), typeof(true), typeof(CAST(1 AS TINYINT)), typeof(CAST(1 AS SMALLINT)), typeof(CAST(1 AS FLOAT)), typeof(NULL), typeof(array(1)), typeof(map('a', 1)), typeof(named_struct('a', 1, 'b', 'x')), typeof(INTERVAL 1 DAY), typeof(INTERVAL '1' MONTH), typeof(CAST('x' AS VARCHAR(3))), typeof(CAST('x' AS CHAR(3))) FROM FRAME LIMIT 1",
+   "name": "typeof",
+   "rows": [
+    [
+     "int",
+     "bigint",
+     "double",
+     "string",
+     "decimal(10,2)",
+     "date",
+     "timestamp",
+     "binary",
+     "boolean",
+     "tinyint",
+     "smallint",
+     "float",
+     "void",
+     "array<int>",
+     "map<string,int>",
+     "struct<a:int,b:string>",
+     "interval day",
+     "interval month",
+     "string",
+     "string"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "monotonically_increasing_id()",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.monotonically_increasing_id()",
+   "name": "monotonically_increasing_id",
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "monotonically_increasing_id()",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.monotonically_increasing_id()",
+   "name": "monotonically_increasing_id",
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "m",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "repartition(2).select(mid)",
+   "name": "monotonically_increasing_id",
+   "rows": [
+    [
+     0,
+     0
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     1
+    ],
+    [
+     3,
+     8589934592
+    ],
+    [
+     4,
+     8589934594
+    ],
+    [
+     5,
+     8589934593
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "SPARK_PARTITION_ID()",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "range(4).select(spid)",
+   "name": "spark_partition_id",
+   "rows": [
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "input_file_name()",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "range(2).select(ifn)",
+   "name": "input_file_name",
+   "rows": [
+    [
+     ""
+    ],
+    [
+     ""
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "bigint"
+    },
+    {
+     "name": "m",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "repartition(2).select(mid)",
+   "name": "monotonically_increasing_id",
+   "rows": [
+    [
+     0,
+     0
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     1
+    ],
+    [
+     3,
+     8589934592
+    ],
+    [
+     4,
+     8589934594
+    ],
+    [
+     5,
+     8589934593
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "SPARK_PARTITION_ID()",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "range(4).select(spid)",
+   "name": "spark_partition_id",
+   "rows": [
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "input_file_name()",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "range(2).select(ifn)",
+   "name": "input_file_name",
+   "rows": [
+    [
+     ""
+    ],
+    [
+     ""
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "monotonically_increasing_id()",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT monotonically_increasing_id() FROM FRAME",
+   "name": "monotonically_increasing_id",
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "monotonically_increasing_id()",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT monotonically_increasing_id() FROM FRAME",
+   "name": "monotonically_increasing_id",
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "SPARK_PARTITION_ID()",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT spark_partition_id() FROM FRAME",
+   "name": "spark_partition_id",
+   "rows": [
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "SPARK_PARTITION_ID()",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT spark_partition_id() FROM FRAME",
+   "name": "spark_partition_id",
+   "rows": [
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "input_file_name()",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT input_file_name() FROM FRAME",
+   "name": "input_file_name",
+   "rows": [
+    [
+     ""
+    ],
+    [
+     ""
+    ],
+    [
+     ""
+    ],
+    [
+     ""
+    ],
+    [
+     ""
+    ],
+    [
+     ""
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "input_file_name()",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT input_file_name() FROM FRAME",
+   "name": "input_file_name",
+   "rows": [
+    [
+     ""
+    ],
+    [
+     ""
+    ],
+    [
+     ""
+    ],
+    [
+     ""
+    ],
+    [
+     ""
+    ],
+    [
+     ""
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "USER_RAISED_EXCEPTION",
+   "error_type": "SparkRuntimeException",
+   "expr": "F.raise_error(lit('boom'))",
+   "message": "[USER_RAISED_EXCEPTION] boom SQLSTATE: P0001",
+   "name": "raise_error"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "USER_RAISED_EXCEPTION",
+   "error_type": "SparkRuntimeException",
+   "expr": "F.raise_error(lit('boom'))",
+   "message": "[USER_RAISED_EXCEPTION] boom SQLSTATE: P0001",
+   "name": "raise_error"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "CASE WHEN (g > 5) THEN raise_error(USER_RAISED_EXCEPTION, map(errorMessage, boom)) ELSE g END",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.when(col('g') > 5, F.raise_error('boom')).otherwise(col('g'))",
+   "name": "raise_error",
+   "rows": [
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "CASE WHEN (g > 5) THEN raise_error(USER_RAISED_EXCEPTION, map(errorMessage, boom)) ELSE g END",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.when(col('g') > 5, F.raise_error('boom')).otherwise(col('g'))",
+   "name": "raise_error",
+   "rows": [
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "USER_RAISED_EXCEPTION",
+   "error_type": "SparkRuntimeException",
+   "expr": "F.raise_error(lit(None))",
+   "message": "[USER_RAISED_EXCEPTION] null SQLSTATE: P0001",
+   "name": "raise_error"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "USER_RAISED_EXCEPTION",
+   "error_type": "SparkRuntimeException",
+   "expr": "F.raise_error(lit(None))",
+   "message": "[USER_RAISED_EXCEPTION] null SQLSTATE: P0001",
+   "name": "raise_error"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "USER_RAISED_EXCEPTION",
+   "error_type": "SparkRuntimeException",
+   "expr": "SELECT raise_error('custom message') FROM FRAME",
+   "message": "[USER_RAISED_EXCEPTION] custom message SQLSTATE: P0001",
+   "name": "raise_error"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "USER_RAISED_EXCEPTION",
+   "error_type": "SparkRuntimeException",
+   "expr": "SELECT raise_error('custom message') FROM FRAME",
+   "message": "[USER_RAISED_EXCEPTION] custom message SQLSTATE: P0001",
+   "name": "raise_error"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "USER_RAISED_EXCEPTION",
+   "error_type": "SparkRuntimeException",
+   "expr": "SELECT raise_error(NULL)",
+   "message": "[USER_RAISED_EXCEPTION] null SQLSTATE: P0001",
+   "name": "raise_error"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "USER_RAISED_EXCEPTION",
+   "error_type": "SparkRuntimeException",
+   "expr": "SELECT raise_error(NULL)",
+   "message": "[USER_RAISED_EXCEPTION] null SQLSTATE: P0001",
+   "name": "raise_error"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "CASE WHEN (g > 5) THEN raise_error(USER_RAISED_EXCEPTION, map(errorMessage, x)) ELSE g END",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CASE WHEN g > 5 THEN raise_error('x') ELSE g END FROM FRAME",
+   "name": "raise_error",
+   "rows": [
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "CASE WHEN (g > 5) THEN raise_error(USER_RAISED_EXCEPTION, map(errorMessage, x)) ELSE g END",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CASE WHEN g > 5 THEN raise_error('x') ELSE g END FROM FRAME",
+   "name": "raise_error",
+   "rows": [
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "typeof(raise_error(USER_RAISED_EXCEPTION, map(errorMessage, x)))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT typeof(raise_error('x'))",
+   "name": "raise_error",
+   "rows": [
+    [
+     "void"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "typeof(raise_error(USER_RAISED_EXCEPTION, map(errorMessage, x)))",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT typeof(raise_error('x'))",
+   "name": "raise_error",
+   "rows": [
+    [
+     "void"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "abs(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_function('abs', col('v'))",
+   "name": "call_function",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ],
+    [
+     null
+    ],
+    [
+     30
+    ],
+    [
+     5
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "abs(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_function('abs', col('v'))",
+   "name": "call_function",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ],
+    [
+     null
+    ],
+    [
+     30
+    ],
+    [
+     5
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "abs(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_function('ABS', col('v'))",
+   "name": "call_function",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ],
+    [
+     null
+    ],
+    [
+     30
+    ],
+    [
+     5
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "abs(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_function('ABS', col('v'))",
+   "name": "call_function",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ],
+    [
+     null
+    ],
+    [
+     30
+    ],
+    [
+     5
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "F.call_function('no_such_fn', col('v'))",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `no_such_fn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883",
+   "name": "call_function"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "F.call_function('no_such_fn', col('v'))",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `no_such_fn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883",
+   "name": "call_function"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "upper(k)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_function('upper', 'k')",
+   "name": "call_function",
+   "rows": [
+    [
+     "A"
+    ],
+    [
+     "B"
+    ],
+    [
+     "B"
+    ],
+    [
+     "C"
+    ],
+    [
+     null
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "upper(k)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_function('upper', 'k')",
+   "name": "call_function",
+   "rows": [
+    [
+     "A"
+    ],
+    [
+     "B"
+    ],
+    [
+     "B"
+    ],
+    [
+     "C"
+    ],
+    [
+     null
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "REQUIRES_SINGLE_PART_NAMESPACE",
+   "error_type": "AnalysisException",
+   "expr": "F.call_function('system.builtin.abs', col('v'))",
+   "message": "[REQUIRES_SINGLE_PART_NAMESPACE] spark_catalog requires a single-part namespace, but got `system`.`builtin`. SQLSTATE: 42K05",
+   "name": "call_function"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "REQUIRES_SINGLE_PART_NAMESPACE",
+   "error_type": "AnalysisException",
+   "expr": "F.call_function('system.builtin.abs', col('v'))",
+   "message": "[REQUIRES_SINGLE_PART_NAMESPACE] spark_catalog requires a single-part namespace, but got `system`.`builtin`. SQLSTATE: 42K05",
+   "name": "call_function"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(v)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_function('sum', col('v'))",
+   "name": "call_function",
+   "rows": [
+    [
+     1,
+     60
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(v)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_function('sum', col('v'))",
+   "name": "call_function",
+   "rows": [
+    [
+     1,
+     60
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "plus_one_py(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_udf('plus_one_py', col('v'))",
+   "name": "call_udf",
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ],
+    [
+     null
+    ],
+    [
+     31
+    ],
+    [
+     6
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "plus_one_py(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_udf('plus_one_py', col('v'))",
+   "name": "call_udf",
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ],
+    [
+     null
+    ],
+    [
+     31
+    ],
+    [
+     6
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "abs(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_udf('abs', col('v'))",
+   "name": "call_udf",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ],
+    [
+     null
+    ],
+    [
+     30
+    ],
+    [
+     5
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "abs(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_udf('abs', col('v'))",
+   "name": "call_udf",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ],
+    [
+     null
+    ],
+    [
+     30
+    ],
+    [
+     5
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "F.call_udf('nope', col('v'))",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nope` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883",
+   "name": "call_udf"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "F.call_udf('nope', col('v'))",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nope` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883",
+   "name": "call_udf"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "plus_one_py(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_function('plus_one_py', col('v'))",
+   "name": "call_function",
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ],
+    [
+     null
+    ],
+    [
+     31
+    ],
+    [
+     6
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "plus_one_py(v)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.call_function('plus_one_py', col('v'))",
+   "name": "call_function",
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ],
+    [
+     null
+    ],
+    [
+     31
+    ],
+    [
+     6
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "select(bucket(lit(4), col('v')))",
+   "message": "An error occurred while calling o2652.collectToPython.",
+   "name": "bucket"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "select(bucket(4, 'v'))",
+   "message": "An error occurred while calling o2663.collectToPython.",
+   "name": "bucket"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "select(bucket(lit(4), col('v')))",
+   "message": "An error occurred while calling o2675.collectToPython.",
+   "name": "bucket"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "select(bucket(4, 'v'))",
+   "message": "An error occurred while calling o2686.collectToPython.",
+   "name": "bucket"
+  },
+  {
+   "doc_head": "\n    Creates an arrow user defined function.\n\n    Arrow UDFs are user defined functions that are executed by Spark using Arrow to transfer\n    and work with the data, which allows `pyarrow.Array` operations. An Arrow UDF is defined\n    using the `arrow_udf` as a decorator or to wrap the function, and no additional configuration\n    is required. An Arrow UDF behaves as a regular PySpark function API in general.\n\n    .. versionadded:: 4.1.0\n\n    Parameters\n    ----------\n    f : function, optional\n        user-defined function. A python function if used as a standalone function\n    returnType : ",
+   "door": "python",
+   "expr": "signature",
+   "name": "arrow_udf"
+  },
+  {
+   "doc_head": "Creates a PyArrow-native user defined table function (UDTF).\n\n    This function provides a PyArrow-native interface for UDTFs, where the eval method\n    receives PyArrow RecordBatches or Arrays and returns an Iterator of PyArrow Tables\n    or RecordBatches.\n    This enables true vectorized computation without row-by-row processing overhead.\n\n    .. versionadded:: 4.1.0\n\n    Parameters\n    ----------\n    cls : class, optional\n        the Python user-defined table function handler class.\n    returnType : :class:`pyspark.sql.types.StructType` or str, optional\n        the return type of the user-d",
+   "door": "python",
+   "expr": "signature",
+   "name": "arrow_udtf"
+  },
+  {
+   "door": "python",
+   "error_type": "ModuleNotFoundError",
+   "expr": "pyarrow importable",
+   "message": "No module named 'pyarrow'",
+   "name": "arrow_udf"
+  },
+  {
+   "door": "python",
+   "error_condition": "PACKAGE_NOT_INSTALLED",
+   "error_type": "PySparkImportError",
+   "expr": "arrow_udf(lambda a: a, 'long')",
+   "message": "[PACKAGE_NOT_INSTALLED] PyArrow >= 15.0.0 must be installed; however, it was not found.",
+   "name": "arrow_udf"
+  }
+ ],
+ "signatures": {
+  "any_value": "(col: 'ColumnOrName', ignoreNulls: Union[bool, pyspark.sql.column.Column, NoneType] = None) -> pyspark.sql.column.Column",
+  "arrow_udf": "(f=None, returnType=None, functionType=None)",
+  "arrow_udtf": "(cls: Optional[Type] = None, *, returnType: Union[pyspark.sql.types.StructType, str, NoneType] = None) -> Union[ForwardRef('UserDefinedTableFunction'), Callable[[Type], ForwardRef('UserDefinedTableFunction')]]",
+  "bucket": "(numBuckets: Union[pyspark.sql.column.Column, int], col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "call_function": "(funcName: str, *cols: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "call_udf": "(udfName: str, *cols: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "count_min_sketch": "(col: 'ColumnOrName', eps: Union[pyspark.sql.column.Column, float], confidence: Union[pyspark.sql.column.Column, float], seed: Union[pyspark.sql.column.Column, int, NoneType] = None) -> pyspark.sql.column.Column",
+  "grouping_id": "(*cols: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "histogram_numeric": "(col: 'ColumnOrName', nBins: pyspark.sql.column.Column) -> pyspark.sql.column.Column",
+  "input_file_name": "() -> pyspark.sql.column.Column",
+  "kurtosis": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "listagg": "(col: 'ColumnOrName', delimiter: Union[pyspark.sql.column.Column, str, bytes, NoneType] = None) -> pyspark.sql.column.Column",
+  "listagg_distinct": "(col: 'ColumnOrName', delimiter: Union[pyspark.sql.column.Column, str, bytes, NoneType] = None) -> pyspark.sql.column.Column",
+  "max_by": "(col: 'ColumnOrName', ord: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "min_by": "(col: 'ColumnOrName', ord: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "mode": "(col: 'ColumnOrName', deterministic: bool = False) -> pyspark.sql.column.Column",
+  "monotonically_increasing_id": "() -> pyspark.sql.column.Column",
+  "percentile": "(col: 'ColumnOrName', percentage: Union[pyspark.sql.column.Column, float, Sequence[float], Tuple[float, ...]], frequency: Union[pyspark.sql.column.Column, int] = 1) -> pyspark.sql.column.Column",
+  "product": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "raise_error": "(errMsg: Union[pyspark.sql.column.Column, str]) -> pyspark.sql.column.Column",
+  "skewness": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "spark_partition_id": "() -> pyspark.sql.column.Column",
+  "string_agg_distinct": "(col: 'ColumnOrName', delimiter: Union[pyspark.sql.column.Column, str, bytes, NoneType] = None) -> pyspark.sql.column.Column",
+  "typeof": "(col: 'ColumnOrName') -> pyspark.sql.column.Column"
+ },
+ "spark_version": "4.1.2"
+}
