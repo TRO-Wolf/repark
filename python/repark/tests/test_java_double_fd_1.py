@@ -282,7 +282,7 @@ def test_spark_door_cast_suffix_column_nonansi(spark_nonansi: ReparkSession) -> 
     _check_float(table, "v", [1.0, 1.0, 1.5, -2.5, None, None])
 
 
-def test_spark_door_cast_suffix_column_ok(spark: ReparkSession, spark_nonansi: ReparkSession) -> None:
+def test_q19_suffix_col_ok(spark: ReparkSession, spark_nonansi: ReparkSession) -> None:
     """Q19 ok cells, both ANSI settings: suffixed text casts over real columns."""
     for session in (spark, spark_nonansi):
         _sfx(session)
@@ -319,9 +319,8 @@ def test_facade_cast_suffix_column_ok(spark: ReparkSession, spark_nonansi: Repar
             F.col("x").cast("double").alias("v")
         )
         _check_float(_table(frame), "v", [1.0, 1.0, 1.5, -2.5])
-        frame = (
-            session.sql(f"SELECT x FROM sfx WHERE {_SFX_OK}")
-            .select(F.col("x").cast("float").alias("v"))
+        frame = session.sql(f"SELECT x FROM sfx WHERE {_SFX_OK}").select(
+            F.col("x").cast("float").alias("v")
         )
         table = _table(frame)
         assert table.column("v").to_pylist() == [1.0, 1.0, 1.5, -2.5]
