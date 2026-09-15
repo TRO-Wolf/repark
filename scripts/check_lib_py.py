@@ -115,7 +115,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split wrappers by indicator family while preserving exports.",
     ),
     "python/repark/src/repark/spark/types.py": (
-        1739,
+        1772,
         "Spark SQL type definitions and conversion helpers share one module.",
         "Split type declarations from parsing and conversion helpers.",
     ),

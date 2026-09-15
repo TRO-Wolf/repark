@@ -1027,7 +1027,10 @@ them, and the document is ordered by surface, never by date.
   (ANSI twin of the same name in `crates/repark-sql/src/v3/types.rs`; facade
   `python/repark/tests/test_v3_create_opt_in.py::test_v3_geometry_geography_variant_columns_refuse_naming_the_type`);
   facade type objects:
-  `python/repark/tests/test_types_bases_1.py::test_spatial_column_use_refuses_naming_the_type`
+  `python/repark/tests/test_types_bases_1.py::test_spatial_column_use_refuses_naming_the_type`;
+  user-schema door (reader `.schema` — repark has no `catalog.createTable` /
+  user-schema `writeTo` door):
+  `python/repark/tests/test_types_bases_1.py::test_spatial_reader_schema_refuses_naming_the_type`
 - **Rationale** — DECLARED, owner-dated 2026-08-25. Spatial types are fork work (F-15 → R89)
   with no consumer on the v1.0 path; the ruling keeps the gate honest instead of silent.
   Reversing it needs a new dated decision, and the landing reds the pin on purpose. `variant`

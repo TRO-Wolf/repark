@@ -2219,7 +2219,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   doors and the V3-GEO-1 column-use refusal, `UserDefinedType` cells plus the R-3
   `NOT_IMPLEMENTED` column-use refusal (TYPES-UDT-1), `types.Row` identity, and the
   `DataTypeSingleton` non-reproduction pin (R-2 out-of-scope observation).
-  pins: types-bases-1/C-001, C-002, C-003, C-004, C-005
+  Follow-up (critic round 1): the `_merge_type` mixed-SRID / spatial×String /
+  nested pins, the Spark-shaped `PointUdt` template table (`toInternal` /
+  `fromInternal` / `jsonValue` / `__eq__` / unhashable) and the base UDT
+  refusal features, the `{"type": "udt"}` `fromJson` refusal, the SRID/JSON
+  edge table (`GeometryType(False)`, `True` / float / string SRIDs, lowercase
+  `"any"`, the `ST_INVALID_ALGORITHM_VALUE` JSON form, CRS round trips), the
+  reader-schema V3-GEO-1 pin, and the door-blocked spatial DDL refusals
+  (Rust type table owns `fromDDL`; Spark's bare-token answer is UNMEASURED).
+  pins: types-bases-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_types_x2_census.py` — X2 census: Row empty/unnamed repr + factory arity;
   createDataFrame LongType schema, nested list/struct/map, variable int arrays;
   **octo:** explicit nested StructType/MapType/ArrayType(String) Arrow values (not

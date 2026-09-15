@@ -26,10 +26,13 @@ from repark.spark._type_table import (
     _ddl_order,
     _descriptor_to_datatype,
     _native_function,
-    _parse_datatype_string,
+)
+from repark.spark._type_table import (
+    _parse_datatype_string as _parse_datatype_string,
 )
 from repark.spark.row import Row
 from repark.spark.types_bases import (
+    _SIMPLE_STRING_FAST,
     AnsiIntervalType,
     AnyTimeType,
     AtomicType,
@@ -42,9 +45,10 @@ from repark.spark.types_bases import (
     NumericType,
     SpatialType,
     UserDefinedType,
-    _SIMPLE_STRING_FAST,
     _parse_spatial_json_token,
     _refuse_spatial_json_token,
+    _struct_from_internal,
+    _struct_to_internal,
 )
 
 # ==================================================================================================
@@ -767,6 +771,18 @@ class StructField(DataType):
             metadata,
         )
 
+    def needConversion(self) -> bool:  # noqa: N802
+        """Delegate to ``dataType`` (Spark ``StructField.needConversion``)."""
+        return self.dataType.needConversion()
+
+    def toInternal(self, obj: Any) -> Any:  # noqa: N802
+        """Delegate to ``dataType`` (Spark ``StructField.toInternal``)."""
+        return self.dataType.toInternal(obj)
+
+    def fromInternal(self, obj: Any) -> Any:  # noqa: N802
+        """Delegate to ``dataType`` (Spark ``StructField.fromInternal``)."""
+        return self.dataType.fromInternal(obj)
+
     def __eq__(self, other: object) -> bool:
         """Value equality on name, type, nullability (metadata ignored for schema eq)."""
         if not isinstance(other, StructField):
@@ -863,6 +879,18 @@ class StructType(DataType):
     def fieldNames(self) -> list[str]:  # noqa: N802 — PySpark camelCase
         """Field names in order (Spark ``fieldNames``)."""
         return list(self.names)
+
+    def needConversion(self) -> bool:  # noqa: N802
+        """True — Row / namedtuple converts into a tuple of field values (Spark)."""
+        return True
+
+    def toInternal(self, obj: Any) -> tuple[Any, ...] | None:  # noqa: N802
+        """Spark ``StructType.toInternal`` — dict / tuple / list / object → field tuple."""
+        return _struct_to_internal(self.names, self.fields, obj)
+
+    def fromInternal(self, obj: Any) -> Row | None:  # noqa: N802
+        """Spark ``StructType.fromInternal`` — field values → named :class:`Row`."""
+        return _struct_from_internal(self.names, self.fields, obj)
 
     def toDDL(self) -> str:  # noqa: N802 — PySpark camelCase
         """DDL field list (``a INT,b STRING NOT NULL``) — pure Python Spark 4 shape."""
@@ -1385,6 +1413,10 @@ def _merge_type(a: DataType, b: DataType, name: str | None = None) -> DataType:
         return a
     if isinstance(a, TimestampNTZType) and isinstance(b, TimestampType):
         return b
+    if isinstance(a, GeometryType) and isinstance(b, GeometryType) and a.srid != b.srid:
+        return GeometryType("ANY")
+    if isinstance(a, GeographyType) and isinstance(b, GeographyType) and a.srid != b.srid:
+        return GeographyType("ANY")
     # Spark AtomicType + StringType → StringType (map-key soft merge in test_merge_type).
     atomic = (
         ByteType,
@@ -1399,6 +1431,7 @@ def _merge_type(a: DataType, b: DataType, name: str | None = None) -> DataType:
         TimestampType,
         TimestampNTZType,
         DecimalType,
+        SpatialType,
     )
     if isinstance(a, atomic) and isinstance(b, StringType):
         return b

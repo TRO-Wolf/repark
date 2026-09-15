@@ -8,7 +8,7 @@ display answers are measured on live PySpark 4.1.2 and identical on repark;
 every example runs JVM-free. `types.repark_type_to_arrow` and
 `types.struct_type_from_arrow` are repark extensions (`hasattr` False on live
 PySpark 4.1.2, EX-22 leg 1) and are taught in
-[arrow_schema_roundtrip.py](arrow_schema_roundtrip.py). All 28 roster names are
+[arrow_schema_roundtrip.py](arrow_schema_roundtrip.py). All 40 roster names are
 covered; no `types` name measured divergent. Examples keep the house form: one
 module docstring, the `main()` one-liner, and bare helpers.
 
@@ -32,6 +32,13 @@ module docstring, the `main()` one-liner, and bare helpers.
   `fromDDL` parsing.
 - [arrow_schema_roundtrip.py](arrow_schema_roundtrip.py) — the two repark-only
   Arrow helpers.
+- [abstract_bases.py](abstract_bases.py) — the eight abstract bases
+  (AtomicType, NumericType, IntegralType, FractionalType, DatetimeType,
+  AnyTimeType, AnsiIntervalType, SpatialType), their `isinstance` answers, and
+  `types.Row`.
+- [spatial_and_udt.py](spatial_and_udt.py) — GeographyType / GeometryType
+  display answers and the `ST_INVALID_SRID_VALUE` refusal, plus
+  `UserDefinedType`.
 
 ## Pointers
 

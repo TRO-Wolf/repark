@@ -6,7 +6,9 @@ cycle: :mod:`repark.spark.types` imports and re-exports every public name.
 
 from __future__ import annotations
 
+import base64
 import json
+import pickle
 import re
 from types import MethodType
 from typing import Any, ClassVar, NoReturn
@@ -17,7 +19,6 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
-
 
 _SIMPLE_STRING_FAST: dict[type, str] = {}
 
@@ -392,37 +393,72 @@ class UserDefinedType(DataType):
         """Paired Scala UDT class name — Spark's default empty string."""
         return ""
 
+    @classmethod
+    def _cachedSqlType(cls) -> DataType:  # noqa: N802
+        """Cache ``sqlType()`` on the class (Spark ``_cachedSqlType``)."""
+        if not hasattr(cls, "_cached_sql_type"):
+            cls._cached_sql_type = cls.sqlType()
+        return cls._cached_sql_type  # type: ignore[attr-defined]
+
     def needConversion(self) -> bool:  # noqa: N802
         """UDTs serialize through ``sqlType()`` (Spark)."""
         return True
+
+    def toInternal(self, obj: Any) -> Any:  # noqa: N802
+        """``serialize`` then the cached ``sqlType()`` conversion (Spark template)."""
+        if obj is not None:
+            return self._cachedSqlType().toInternal(self.serialize(obj))
+        return None
+
+    def fromInternal(self, obj: Any) -> Any:  # noqa: N802
+        """Cached ``sqlType()`` conversion then ``deserialize`` (Spark template)."""
+        value = self._cachedSqlType().fromInternal(obj)
+        if value is not None:
+            return self.deserialize(value)
+        return None
+
+    def serialize(self, obj: Any) -> Any:
+        """Convert a user-type object into a SQL datum — base refuses like Spark."""
+        raise PySparkNotImplementedError(
+            "[NOT_IMPLEMENTED] toInternal() is not implemented.",
+            errorClass="NOT_IMPLEMENTED",
+            messageParameters={"feature": "toInternal()"},
+        )
+
+    def deserialize(self, datum: Any) -> Any:
+        """Convert a SQL datum into a user-type object — base refuses like Spark."""
+        raise PySparkNotImplementedError(
+            "[NOT_IMPLEMENTED] fromInternal() is not implemented.",
+            errorClass="NOT_IMPLEMENTED",
+            messageParameters={"feature": "fromInternal()"},
+        )
 
     def simpleString(self) -> str:  # noqa: N802
         """Spark renders ``udt``."""
         return "udt"
 
     def jsonValue(self) -> dict[str, Any]:  # noqa: N802
-        """Spark serializes through the JVM UDT registry — refused (TYPES-UDT-1)."""
-        raise PySparkNotImplementedError(
-            "[NOT_IMPLEMENTED] UserDefinedType is not implemented.",
-            errorClass="NOT_IMPLEMENTED",
-            messageParameters={"feature": "UserDefinedType"},
-        )
+        """Spark's UDT JSON dict — ``pyClass`` hits ``module()`` first."""
+        if self.scalaUDT():
+            return {
+                "type": "udt",
+                "class": self.scalaUDT(),
+                "pyClass": f"{self.module()}.{type(self).__name__}",
+                "sqlType": self.sqlType().jsonValue(),
+            }
+        payload = pickle.dumps(type(self))
+        return {
+            "type": "udt",
+            "pyClass": f"{self.module()}.{type(self).__name__}",
+            "serializedClass": base64.b64encode(payload).decode("utf8"),
+            "sqlType": self.sqlType().jsonValue(),
+        }
 
-    def toInternal(self, obj: Any) -> Any:  # noqa: N802
-        """Spark converts through ``sqlType()`` — refused (TYPES-UDT-1)."""
-        raise PySparkNotImplementedError(
-            "[NOT_IMPLEMENTED] sqlType() is not implemented.",
-            errorClass="NOT_IMPLEMENTED",
-            messageParameters={"feature": "sqlType()"},
-        )
+    def __eq__(self, other: object) -> bool:
+        """UDTs compare by class (Spark ``UserDefinedType.__eq__``)."""
+        return type(self) is type(other)
 
-    def fromInternal(self, obj: Any) -> Any:  # noqa: N802
-        """Spark converts through ``sqlType()`` — refused (TYPES-UDT-1)."""
-        raise PySparkNotImplementedError(
-            "[NOT_IMPLEMENTED] sqlType() is not implemented.",
-            errorClass="NOT_IMPLEMENTED",
-            messageParameters={"feature": "sqlType()"},
-        )
+    __hash__ = None
 
     def _engine_type(self) -> str:
         """Refuse column use through the TYPES-UDT-1 declared refusal."""
@@ -473,3 +509,46 @@ def _refuse_spatial_json_token(text: str) -> None:
         errorClass="CANNOT_PARSE_DATATYPE",
         messageParameters={"msg": text},
     )
+
+
+def _struct_to_internal(names: list[str], fields: list[Any], obj: Any) -> tuple[Any, ...] | None:
+    """Spark ``StructType.toInternal`` — dict / tuple / list / object → field tuple."""
+    if obj is None:
+        return None
+    flags = tuple(field.needConversion() for field in fields)
+    if isinstance(obj, dict):
+        values: Any = (obj.get(name) for name in names)
+    elif isinstance(obj, (tuple, list)):
+        values = iter(obj)
+    elif hasattr(obj, "__dict__"):
+        data = obj.__dict__
+        values = (data.get(name) for name in names)
+    else:
+        raise PySparkValueError(
+            f"[UNEXPECTED_TUPLE_WITH_STRUCT] Unexpected tuple {obj} with StructType.",
+            errorClass="UNEXPECTED_TUPLE_WITH_STRUCT",
+            messageParameters={"tuple": str(obj)},
+        )
+    if any(flags):
+        return tuple(
+            field.toInternal(value) if convert else value
+            for field, value, convert in zip(fields, values, flags, strict=False)
+        )
+    return tuple(values)
+
+
+def _struct_from_internal(names: list[str], fields: list[Any], obj: Any) -> Any:
+    """Spark ``StructType.fromInternal`` — field values → a named ``Row``."""
+    from repark.spark.row import Row
+
+    if obj is None or isinstance(obj, Row):
+        return obj
+    flags = tuple(field.needConversion() for field in fields)
+    if any(flags):
+        values = [
+            field.fromInternal(value) if convert else value
+            for field, value, convert in zip(fields, obj, flags, strict=False)
+        ]
+    else:
+        values = list(obj)
+    return Row.from_ordered_fields(names, values)

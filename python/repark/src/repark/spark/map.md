@@ -299,14 +299,23 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   shared dict populated here so the fast path survives the move), and
   `types.Row` re-exports `spark.row.Row`. DDL routing through the Rust table is
   unchanged — spatial DDL tokens stay refused pending the Rust spatial step.
-  pins: types-bases-1/C-001, C-003, C-005
+  Follow-up: `_merge_type` gains Spark's two mixed-SRID arms
+  (Geometry×Geometry / Geography×Geography with different `srid` → the `ANY`
+  form) plus `SpatialType` in the `StringType` soft-merge tuple;
+  `StructField` / `StructType` gain `needConversion` / `toInternal` /
+  `fromInternal` delegating to the shared helpers in `types_bases.py`.
+  pins: types-bases-1/C-001, C-003, C-005, C-006
 - `types_bases.py` — **TYPES-BASES-1 (2026-09-14):** `DataType` plus the Spark
   abstract bases (`AtomicType`, `NumericType`, `IntegralType`, `FractionalType`,
   `DatetimeType`, `AnyTimeType`, `AnsiIntervalType`, `SpatialType`),
   `GeographyType` / `GeometryType` with the vendored SRID→CRS table and Spark's
-  `ST_*` refusals, `UserDefinedType` (TYPES-UDT-1 declared refusal), and the
-  spatial JSON token helpers. `types.py` imports and re-exports every public
-  name. pins: types-bases-1/C-001, C-002, C-003, C-004
+  `ST_*` refusals, `UserDefinedType` (TYPES-UDT-1 declared refusal on column
+  use; the `serialize` / `deserialize` / `_cachedSqlType` / `toInternal` /
+  `fromInternal` / `jsonValue` / `__eq__` template follows Spark on a
+  subclass), the spatial JSON token helpers, and the shared
+  `_struct_to_internal` / `_struct_from_internal` conversion bodies.
+  `types.py` imports and re-exports every public
+  name. pins: types-bases-1/C-001, C-002, C-003, C-004, C-006
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
   calls, and Arrow expansion.
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and
