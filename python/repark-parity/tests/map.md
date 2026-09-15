@@ -112,6 +112,16 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   lists (dropped, renamed, appended, re-hosted, unmerged, cron removed, `pull_request`
   reachability) each fail. YAML read by indentation-aware regex, no PyYAML.
   pins: platform-1/C-001, C-002, C-003, C-004, C-005
+- `test_ex_0_example_coverage.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):** the raw-walk
+  count pin moved 936 → 944 with the eight new writer-layout inventory names
+  (`DataFrameWriter.bucketBy`/`bucket_by`/`sortBy`/`sort_by`/`clusterBy`/`cluster_by`,
+  `DataFrameWriterV2.clusterBy`/`cluster_by`); backlog and exceptions baselines hold.
+  pins: io-bucket-cluster-1/C-003
+- `test_cap_1_source_file_line_cap.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):**
+  `dataframe/writer_readwriter.py` mirror row 1111 → 1105 with the script baseline
+  (the bucketBy/sortBy/clusterBy bindings and action-check calls landed while the five
+  write helpers moved to the new `dataframe/writer_layout.py`, 312 lines below the
+  default). pins: io-bucket-cluster-1/C-003
 - `test_ex_0_example_coverage.py` — **EX-0 (2026-08-31):** the v0.7 example-drift
   gate: five-family enumerator, uncovered / stale-backlog / covered-in-backlog
   reds, backlog and exceptions baselines, COVERS-must-be-used, seed `COVERS`,
@@ -746,6 +756,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   counts: regenerate the tuples in the commit that ratchets a gate, then run this suite
   (`make py-test` — the suite is not in `preflight`; its CAP-1 file is, as
   `make py-test-parity-cap`, since PREFLIGHT-PARITY-1, 2026-09-09).
+  **IO-BUCKET-CLUSTER-1 (2026-09-15):** one `escape_sql_single_quotes` call moved with `_sql_option_escape` from `dataframe/writer_readwriter.py` (2 → 1) to the new `dataframe/writer_layout.py` (1); the inventory follows.
 | Symptom | First check |
 |---|---|
 | `test_datasets_manifest_types` reds | A schema field and its `manifest.json` row were edited one-sidedly; the failure names the family and class id |

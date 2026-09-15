@@ -45,6 +45,12 @@ directory carries the one-liner (verified by scan, EX-26 round 2).
   spelling is repark-only (`hasattr` False on live PySpark 4.1.2); the
   output listing is §7 `EX-IO-10`.
   pins: ex-26-io-session/C-007
+- [writer_bucket_cluster.py](writer_bucket_cluster.py) — `bucketBy` / `bucket_by`,
+  `sortBy` / `sort_by`, `clusterBy` / `cluster_by` (v1 and V2) chaining on a local
+  memory-catalog frame, with the two declared Iceberg refusals pinned at the
+  actions (§5 IO-BUCKET-1 Ruling R-1, IO-CLUSTER-1 Ruling R-2; the V2 create
+  arm records where Spark answered `None`). IO-BUCKET-CLUSTER-1 (2026-09-14).
+  pins: io-bucket-cluster-1/C-002
 - [writer_tables.py](writer_tables.py) — `saveAsTable` / `save_as_table` and
   `insertInto` / `insert_into`, positional insert included (EX-26). The snake
   spellings are repark-only; non-iceberg table formats are §7 `EX-IO-6`, the

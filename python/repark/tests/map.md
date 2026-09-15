@@ -61,6 +61,47 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   expressions (R-8). pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005,
   C-006, C-007, C-008
   **DF-TO-BINARY-1 (2026-09-14):** `test_to_binary_follows_reported_schema_df_to_binary_1` codifies that `to()` follows the facade's `string` report for a binary column (FACADE-4 D7/D19). pins: df-surface-a-1/C-008
+- [test_io_bucket_cluster_1.py](test_io_bucket_cluster_1.py) — **IO-BUCKET-CLUSTER-1
+  step 1 (2026-09-14):** the writer layout surface answers the fourteen `io.bucketBy_*`
+  / `io.sortBy_*` / `io.clusterBy_*` / `io.v2_clusterBy_*` cells of the committed
+  run-15b oracle ([facade_reader_writer_oracle.json](facade_reader_writer_oracle.json),
+  live PySpark 4.1.2) — `bucketBy`/`sortBy` argument checks (`NOT_INT` on `numBuckets`
+  at the call, list first columns, both spellings chain), the path-save refusals
+  (`_LEGACY_ERROR_TEMP_1312` on every path spelling, `SORT_BY_WITHOUT_BUCKETING`
+  without `bucketBy` at both doors — the cell measured `saveAsTable`, the card's rule
+  is stated without a door), the save-time checks (`INVALID_BUCKET_COUNT` at 0/-1/100001,
+  `COLUMN_NOT_DEFINED_IN_TABLE` with the backticked multipart name — repark's default
+  `spark_catalog.default` matches the oracle's), and the two declared refusals (R-1
+  `bucketBy`/R-2 `clusterBy` `NOT_IMPLEMENTED` with Spark's feature strings, table not
+  created). V2 `clusterBy` chains and refuses the `partitionedBy` conflict at
+  create/replace/createOrReplace and the Iceberg clustering record at create — where
+  Spark answered `None` by writing a non-Iceberg session-catalog table (declared,
+  registry IO-CLUSTER-1). Red on base `8cd6d1e6`: 13 of 14 pins
+  `AttributeError` (no `bucketBy`/`sortBy`/`clusterBy` on the writers); the C-004
+  regression guard (partitionBy CTAS + partition-filtered read) was green on base.
+  The fixture copy, the `docs/examples/io/writer_bucket_cluster.py` example (inventory
+  936 → 944 raw names), the registry rows IO-BUCKET-1 / IO-CLUSTER-1 in
+  docs/spark-sql-iceberg-parity.md §5, and the map/ledger lockstep are this unit's
+  C-003 deliverables, pinned here. pins: io-bucket-cluster-1/C-001, C-002, C-003, C-004
+  **Critic round 1 (2026-09-14, C-005):** the logic critic's four P2 findings plus
+  ruling R-3, all red-first (5 failed on the pre-fix tree) — L-001 empty
+  `clusterBy()`/`clusterBy([])` raises Spark's bare assert at the call (no table,
+  prior state kept); L-002 list/tuple `col` + extra `cols` → `CANNOT_SET_TOGETHER`
+  (`arg_list` names the type); L-003 non-str names → `NOT_LIST_OF_STR` (`col` vs
+  `cols`), empty list `col` → `IndexError("list index out of range")`; L-004 path
+  save with bucketBy AND sortBy → `_LEGACY_ERROR_TEMP_1313` (bucketBy alone stays
+  1312); Q-1/R-3 `insertInto` refuses bucketing (1312 / 1313 / SORT_BY_WITHOUT_BUCKETING)
+  while `clusterBy` keeps writing there. The round-1 chaining pin that passed
+  `bucket_by(2, ["a", "b"], "key")` was corrected — Spark refuses that shape.
+  pins: io-bucket-cluster-1/C-005
+  **Critic re-check L-101/L-102 (2026-09-15):** `NOT_LIST_OF_STR` carries Spark's rendered sentence and checks the extra columns before the first, as `readwriter.py` does. pins: io-bucket-cluster-1/C-006
+- [facade_reader_writer_oracle.json](facade_reader_writer_oracle.json) —
+  **IO-BUCKET-CLUSTER-1 (2026-09-14):** the run-15b oracle for the reader/writer
+  facade, copied unchanged from the orchestrator's live PySpark 4.1.2 recording
+  (provenance line inside the file); holds the `bucketBy_*` / `sortBy_*` /
+  `clusterBy_*` / `v2_clusterBy_*` cells this unit pins plus the `text_*` / `xml_*` /
+  `orc_*` / `jdbc_*` / `na_replace_*` cells owned by other runs of the same oracle
+  recording.
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
   / `Row.index` answer the nine `row.*` cells of the committed run-15b oracle
   ([facade_row_oracle.json](facade_row_oracle.json), live PySpark 4.1.2) — value counts
@@ -1280,6 +1321,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   memoizes `__slotnames__` and the warnings machinery records `__warningregistry__`,
   so raw sets vary with test order. Critic r1 F3 (2026-09-07): `MOVED_HELPERS` asserts each of
   the 17 moved names on core and on the package IS the leaf module's object, not a copy.
+  IO-BUCKET-CLUSTER-1 (2026-09-14): `EXPECTED_NEW_PACKAGE_SUBMODULES` gains
+  `writer_layout`. pins: io-bucket-cluster-1/C-005
   pins: dfcore-1/C-001, C-002, C-003, C-008
   DFCORE-2 (2026-09-07): the class dir loses exactly the four moved helpers; core and the
   package each gain exactly the two new module names; `MOVED_SELECT_HELPERS` pins each

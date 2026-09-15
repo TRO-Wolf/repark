@@ -725,6 +725,10 @@ io	DataFrameReader.schema
 io	DataFrameReader.sheet_names
 io	DataFrameReader.smartCsv
 io	DataFrameReader.table
+io	DataFrameWriter.bucketBy
+io	DataFrameWriter.bucket_by
+io	DataFrameWriter.clusterBy
+io	DataFrameWriter.cluster_by
 io	DataFrameWriter.csv
 io	DataFrameWriter.format
 io	DataFrameWriter.insertInto
@@ -739,7 +743,11 @@ io	DataFrameWriter.partition_by
 io	DataFrameWriter.save
 io	DataFrameWriter.saveAsTable
 io	DataFrameWriter.save_as_table
+io	DataFrameWriter.sortBy
+io	DataFrameWriter.sort_by
 io	DataFrameWriterV2.append
+io	DataFrameWriterV2.clusterBy
+io	DataFrameWriterV2.cluster_by
 io	DataFrameWriterV2.create
 io	DataFrameWriterV2.createOrReplace
 io	DataFrameWriterV2.create_or_replace

@@ -1,0 +1,1003 @@
+{
+ "cells": {
+  "bucketBy_bad_num": {
+   "error": {
+    "condition": "NOT_INT",
+    "message": "[NOT_INT] Argument `numBuckets` should be an int, got str.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkTypeError",
+     "PySparkException",
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "arg_name": "numBuckets",
+     "arg_type": "str"
+    },
+    "raises": "PySparkTypeError"
+   }
+  },
+  "bucketBy_list": {
+   "result": {
+    "kind": "str",
+    "value": "DataFrameWriter"
+   }
+  },
+  "bucketBy_missing_col": {
+   "error": {
+    "condition": "COLUMN_NOT_DEFINED_IN_TABLE",
+    "message": "[COLUMN_NOT_DEFINED_IN_TABLE] bucket column `zz` is not defined in table `spark_catalog`.`default`.`bk_missing`, defined table columns are: `key`, `a`, `b`. SQLSTATE: 42703",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "colName": "`zz`",
+     "colType": "bucket",
+     "tableCols": "`key`, `a`, `b`",
+     "tableName": "`spark_catalog`.`default`.`bk_missing`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "bucketBy_save": {
+   "error": {
+    "condition": "_LEGACY_ERROR_TEMP_1312",
+    "message": "'save' does not support bucketBy right now.",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "operation": "save"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "bucketBy_saveAsTable": {
+   "result": {
+    "columns": [
+     "col_name",
+     "data_type",
+     "comment"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(col_name='Num Buckets', data_type='2', comment='')",
+     "Row(col_name='Bucket Columns', data_type='[`a`]', comment='')",
+     "Row(col_name='Sort Columns', data_type='[`b`]', comment='')"
+    ],
+    "schema": "struct<col_name:string,data_type:string,comment:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {
+        "comment": "name of the column"
+       },
+       "name": "col_name",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {
+        "comment": "data type of the column"
+       },
+       "name": "data_type",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {
+        "comment": "comment of the column"
+       },
+       "name": "comment",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "bucketBy_zero": {
+   "error": {
+    "condition": "INVALID_BUCKET_COUNT",
+    "message": "[INVALID_BUCKET_COUNT] Number of buckets should be greater than 0 but less than or equal to bucketing.maxBuckets (`100000`). Got `0`. SQLSTATE: 22003",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "bucketingMaxBuckets": "100000",
+     "numBuckets": "0"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "clusterBy_save": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "clusterBy_saveAsTable": {
+   "result": {
+    "columns": [
+     "col_name",
+     "data_type",
+     "comment"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(col_name='# Clustering Information', data_type='', comment='')"
+    ],
+    "schema": "struct<col_name:string,data_type:string,comment:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {
+        "comment": "name of the column"
+       },
+       "name": "col_name",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {
+        "comment": "data type of the column"
+       },
+       "name": "data_type",
+       "nullable": false,
+       "type": "string"
+      },
+      {
+       "metadata": {
+        "comment": "comment of the column"
+       },
+       "name": "comment",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "clusterBy_with_bucketBy": {
+   "error": {
+    "condition": "SPECIFY_CLUSTER_BY_WITH_BUCKETING_IS_NOT_ALLOWED",
+    "message": "[SPECIFY_CLUSTER_BY_WITH_BUCKETING_IS_NOT_ALLOWED] Cannot specify both CLUSTER BY and CLUSTERED BY INTO BUCKETS. SQLSTATE: 42908",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {},
+    "raises": "AnalysisException"
+   }
+  },
+  "clusterBy_with_partitionBy": {
+   "error": {
+    "condition": "SPECIFY_CLUSTER_BY_WITH_PARTITIONED_BY_IS_NOT_ALLOWED",
+    "message": "[SPECIFY_CLUSTER_BY_WITH_PARTITIONED_BY_IS_NOT_ALLOWED] Cannot specify both CLUSTER BY and PARTITIONED BY. SQLSTATE: 42908",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {},
+    "raises": "AnalysisException"
+   }
+  },
+  "jdbc_read_no_driver": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling o918.jdbc.\n: java.sql.SQLException: No suitable driver\n\tat java.sql/java.sql.DriverManager.getDriver(DriverManager.java:299)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions.$anonfun$driverClass$2(JDBCOptions.scala:118)\n\tat scala.Option.getOrElse(Option.scala:201)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions.<init>(JDBCOptions.scala:118)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions.<init>(JDBCOptions.scala:42)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JdbcRelationProvider.createRelation(JdbcRelationProvider.scala:35)\n\tat org.apache.spark.sql.execution.datasources.DataSource.resolveRelation(DataSource.scala:364)\n\tat org.apache.spark.sql.catalyst.analysis.ResolveDataSource.org$apache$spark$sql$catalyst$analysis$ResolveDataSource$$loadV1BatchSource(ResolveDataSource.scala:143)\n\tat org.apache.spark.sql.catalyst.analysis.ResolveDataSource$$anonfun$apply$1.$anonfun$applyOrElse$2(ResolveDataSource.scala:61)\n\tat scala.Option.getOrElse(Option.scala:201)\n\tat org.apache.spark.sql.catalyst.analysis.ResolveDataSource$$anonfun$apply$1.applyOrElse(ResolveDataSource.scala:61)\n\tat org.apache.spark.sql.cat",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  },
+  "jdbc_write_no_driver": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling o914.jdbc.\n: java.sql.SQLException: No suitable driver\n\tat java.sql/java.sql.DriverManager.getDriver(DriverManager.java:299)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions.$anonfun$driverClass$2(JDBCOptions.scala:118)\n\tat scala.Option.getOrElse(Option.scala:201)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions.<init>(JDBCOptions.scala:118)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JdbcOptionsInWrite.<init>(JDBCOptions.scala:276)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JdbcOptionsInWrite.<init>(JDBCOptions.scala:280)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JdbcRelationProvider.createRelation(JdbcRelationProvider.scala:57)\n\tat org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand.run(SaveIntoDataSourceCommand.scala:55)\n\tat org.apache.spark.sql.execution.command.ExecutedCommandExec.sideEffectResult$lzycompute(commands.scala:79)\n\tat org.apache.spark.sql.execution.command.ExecutedCommandExec.sideEffectResult(commands.scala:77)\n\tat org.apache.spark.sql.execution.command.ExecutedCommandExec.executeCollect(commands.scala:88)\n\tat org.apache.spark.sql.execution.QueryExecution.$ano",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  },
+  "na_replace_basic": {
+   "result": {
+    "columns": [
+     "x",
+     "y"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(x=1, y='z')",
+     "Row(x=2, y='b')",
+     "Row(x=None, y='z')"
+    ],
+    "schema": "struct<x:int,y:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "y",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "na_replace_dict": {
+   "error": {
+    "condition": "MIXED_TYPE_REPLACEMENT",
+    "message": "[MIXED_TYPE_REPLACEMENT] Mixed type replacements are not supported.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkValueError",
+     "PySparkException",
+     "ValueError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {},
+    "raises": "PySparkValueError"
+   }
+  },
+  "na_replace_identity": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "na_replace_list": {
+   "result": {
+    "columns": [
+     "x",
+     "y"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(x=3, y='a')",
+     "Row(x=4, y='b')"
+    ],
+    "schema": "struct<x:int,y:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "y",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "na_replace_none_value": {
+   "result": {
+    "columns": [
+     "x",
+     "y"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(x=1, y=None)",
+     "Row(x=2, y='b')"
+    ],
+    "schema": "struct<x:int,y:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "y",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "na_replace_novalue_nondict": {
+   "error": {
+    "condition": "ARGUMENT_REQUIRED",
+    "message": "[ARGUMENT_REQUIRED] Argument `value` is required when `to_replace` is dict.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkTypeError",
+     "PySparkException",
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "arg_name": "value",
+     "condition": "`to_replace` is dict"
+    },
+    "raises": "PySparkTypeError"
+   }
+  },
+  "na_replace_subset": {
+   "result": {
+    "columns": [
+     "x",
+     "y"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(x=5, y='a')",
+     "Row(x=2, y='b')"
+    ],
+    "schema": "struct<x:int,y:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "y",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "orc_compression_default": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "zstd.orc"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "orc_format_save": {
+   "result": {
+    "columns": [
+     "key",
+     "a",
+     "b"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='x', a=1, b=2)",
+     "Row(key='y', a=3, b=4)"
+    ],
+    "schema": "struct<key:string,a:int,b:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "orc_nested_types": {
+   "result": {
+    "columns": [
+     "arr",
+     "m",
+     "s",
+     "d",
+     "ts",
+     "dec"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(arr=[1, 2], m={'k': 1}, s=Row(x=Decimal('1.5')), d=datetime.date(2024, 1, 2), ts=datetime.datetime(2023, 12, 31, 20, 2, 3), dec=Decimal('1.25'))"
+    ],
+    "schema": "struct<arr:array<int>,m:map<string,int>,s:struct<x:decimal(2,1)>,d:date,ts:timestamp,dec:decimal(10,2)>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "arr",
+       "nullable": true,
+       "type": {
+        "containsNull": true,
+        "elementType": "integer",
+        "type": "array"
+       }
+      },
+      {
+       "metadata": {},
+       "name": "m",
+       "nullable": true,
+       "type": {
+        "keyType": "string",
+        "type": "map",
+        "valueContainsNull": true,
+        "valueType": "integer"
+       }
+      },
+      {
+       "metadata": {},
+       "name": "s",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "x",
+          "nullable": true,
+          "type": "decimal(2,1)"
+         }
+        ],
+        "type": "struct"
+       }
+      },
+      {
+       "metadata": {},
+       "name": "d",
+       "nullable": true,
+       "type": "date"
+      },
+      {
+       "metadata": {},
+       "name": "ts",
+       "nullable": true,
+       "type": "timestamp"
+      },
+      {
+       "metadata": {},
+       "name": "dec",
+       "nullable": true,
+       "type": "decimal(10,2)"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "orc_roundtrip": {
+   "result": {
+    "columns": [
+     "key",
+     "a",
+     "b"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(key='x', a=1, b=2)",
+     "Row(key='y', a=3, b=4)"
+    ],
+    "schema": "struct<key:string,a:int,b:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "reader_jdbc_props": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling o1773.jdbc.\n: java.sql.SQLException: No suitable driver\n\tat java.sql/java.sql.DriverManager.getDriver(DriverManager.java:299)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions.$anonfun$driverClass$2(JDBCOptions.scala:118)\n\tat scala.Option.getOrElse(Option.scala:201)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions.<init>(JDBCOptions.scala:118)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions.<init>(JDBCOptions.scala:42)\n\tat org.apache.spark.sql.execution.datasources.jdbc.JdbcRelationProvider.createRelation(JdbcRelationProvider.scala:35)\n\tat org.apache.spark.sql.execution.datasources.DataSource.resolveRelation(DataSource.scala:364)\n\tat org.apache.spark.sql.catalyst.analysis.ResolveDataSource.org$apache$spark$sql$catalyst$analysis$ResolveDataSource$$loadV1BatchSource(ResolveDataSource.scala:143)\n\tat org.apache.spark.sql.catalyst.analysis.ResolveDataSource$$anonfun$apply$1.$anonfun$applyOrElse$2(ResolveDataSource.scala:61)\n\tat scala.Option.getOrElse(Option.scala:201)\n\tat org.apache.spark.sql.catalyst.analysis.ResolveDataSource$$anonfun$apply$1.applyOrElse(ResolveDataSource.scala:61)\n\tat org.apache.spark.sql.ca",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  },
+  "sortBy_without_bucketBy": {
+   "error": {
+    "condition": "SORT_BY_WITHOUT_BUCKETING",
+    "message": "[SORT_BY_WITHOUT_BUCKETING] sortBy must be used together with bucketBy. SQLSTATE: 42601",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {},
+    "raises": "AnalysisException"
+   }
+  },
+  "text_compression": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "txt.gz"
+     },
+     {
+      "kind": "str",
+      "value": "txt.gz"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "text_linesep": {
+   "result": {
+    "columns": [
+     "value"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(value='a')",
+     "Row(value='b')",
+     "Row(value='c')"
+    ],
+    "schema": "struct<value:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "value",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "text_multi_col": {
+   "error": {
+    "condition": "UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE",
+    "message": "[UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE] The Text datasource doesn't support the column `a` of the type \"INT\". SQLSTATE: 0A000",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "columnName": "`a`",
+     "columnType": "\"INT\"",
+     "format": "Text"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "text_non_string": {
+   "error": {
+    "condition": "UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE",
+    "message": "[UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE] The Text datasource doesn't support the column `id` of the type \"BIGINT\". SQLSTATE: 0A000",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "columnName": "`id`",
+     "columnType": "\"BIGINT\"",
+     "format": "Text"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "text_read_dir_glob": {
+   "result": {
+    "kind": "int",
+    "value": 4
+   }
+  },
+  "text_read_file": {
+   "result": {
+    "columns": [
+     "value"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(value='x')",
+     "Row(value='')",
+     "Row(value='y')",
+     "Row(value='z')"
+    ],
+    "schema": "struct<value:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "value",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "text_read_schema": {
+   "result": {
+    "kind": "str",
+    "value": "struct<value:string>"
+   }
+  },
+  "text_roundtrip": {
+   "result": {
+    "columns": [
+     "value"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(value='')",
+     "Row(value='a')",
+     "Row(value='b c')"
+    ],
+    "schema": "struct<value:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "value",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "text_wholetext": {
+   "result": {
+    "columns": [
+     "value"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(value='a\\nb\\n')"
+    ],
+    "schema": "struct<value:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "value",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "text_write_mode_error": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "text_write_null_row_file": {
+   "result": {
+    "kind": "str",
+    "value": "'a\\n\\n'"
+   }
+  },
+  "v2_clusterBy_create_session_catalog": {
+   "result": {
+    "kind": "NoneType",
+    "value": null
+   }
+  },
+  "v2_clusterBy_partitionedBy": {
+   "error": {
+    "condition": "SPECIFY_CLUSTER_BY_WITH_PARTITIONED_BY_IS_NOT_ALLOWED",
+    "message": "[SPECIFY_CLUSTER_BY_WITH_PARTITIONED_BY_IS_NOT_ALLOWED] Cannot specify both CLUSTER BY and PARTITIONED BY. SQLSTATE: 42908",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {},
+    "raises": "AnalysisException"
+   }
+  },
+  "v2_clusterBy_type": {
+   "result": {
+    "kind": "str",
+    "value": "DataFrameWriterV2"
+   }
+  },
+  "writer_jdbc_mode_bad": {
+   "error": {
+    "condition": "INVALID_SAVE_MODE",
+    "message": "[INVALID_SAVE_MODE] The specified save mode \"bogus\" is invalid. Valid save modes include \"append\", \"overwrite\", \"ignore\", \"error\", \"errorifexists\", and \"default\". SQLSTATE: 42000",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "mode": "\"bogus\""
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "xml_nested_write": {
+   "result": {
+    "kind": "str",
+    "value": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<rs>\n    <r>\n        <a>1</a>\n        <s>\n            <x>2</x>\n            <y>3</y>\n            <y>4</y>\n        </s>\n    </r>\n</rs>"
+   }
+  },
+  "xml_no_rowtag_write": {
+   "error": {
+    "condition": "XML_ROW_TAG_MISSING",
+    "message": "[XML_ROW_TAG_MISSING] `rowTag` option is required for reading/writing files in XML format. SQLSTATE: 42KDF",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "rowTag": "`rowTag`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "xml_read_attrs": {
+   "result": {
+    "columns": [
+     "_id",
+     "price",
+     "title"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(_id=1, price=1.5, title='A')",
+     "Row(_id=2, price=None, title='B')"
+    ],
+    "schema": "struct<_id:bigint,price:double,title:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "_id",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "price",
+       "nullable": true,
+       "type": "double"
+      },
+      {
+       "metadata": {},
+       "name": "title",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "xml_read_default_rowtag": {
+   "error": {
+    "condition": "XML_ROW_TAG_MISSING",
+    "message": "[XML_ROW_TAG_MISSING] `rowTag` option is required for reading/writing files in XML format. SQLSTATE: 42KDF",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "rowTag": "`rowTag`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "xml_read_no_rowtag": {
+   "error": {
+    "condition": "PATH_NOT_FOUND",
+    "message": "[PATH_NOT_FOUND] Path does not exist: file:/tmp/pb-oracle-46jxsy0_/xml2. SQLSTATE: 42K03",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "path": "file:/tmp/pb-oracle-46jxsy0_/xml2"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "xml_roundtrip": {
+   "result": {
+    "columns": [
+     "a",
+     "b",
+     "key"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(a=1, b=2, key='x')",
+     "Row(a=3, b=4, key='y')"
+    ],
+    "schema": "struct<a:bigint,b:bigint,key:string>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "key",
+       "nullable": true,
+       "type": "string"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "xml_write_default_ok": {
+   "result": {
+    "kind": "str",
+    "value": ".xml"
+   }
+  }
+ },
+ "oracle": "PySpark 4.1.2 classic, local[2], spark.sql.session.timeZone=UTC, recorded 2026-09-14 (run 15b); probe at /tmp/oc-worker/run15b/oracle/cells.py + cells2.py"
+}

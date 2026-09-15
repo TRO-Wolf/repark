@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, overload
 
 import repark.spark.dataframe.statistics as statistics
+import repark.spark.dataframe.writer_layout as writer_layout
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
@@ -72,7 +73,17 @@ class DataFrameWriter:
     stages and swaps output safely.
     """
 
-    __slots__ = ("_dataframe", "_format", "_mode", "_options", "_partition_columns")
+    __slots__ = (
+        "_bucket_columns",
+        "_cluster_columns",
+        "_dataframe",
+        "_format",
+        "_mode",
+        "_num_buckets",
+        "_options",
+        "_partition_columns",
+        "_sort_columns",
+    )
 
     _VALID_MODES = ("append", "overwrite", "error", "errorifexists", "ignore")
     _PATH_MODES = ("append", "overwrite", "error", "errorifexists", "ignore")
@@ -108,6 +119,10 @@ class DataFrameWriter:
         self._format = "iceberg"
         self._mode = "error"
         self._partition_columns: list[str] = []
+        self._num_buckets: int | None = None
+        self._bucket_columns: list[str] = []
+        self._sort_columns: list[str] = []
+        self._cluster_columns: list[str] = []
         self._options: dict[str, str] = {}
 
     def format(self, source: str) -> DataFrameWriter:
@@ -165,6 +180,29 @@ class DataFrameWriter:
 
     partition_by = partitionBy
 
+    def bucketBy(  # noqa: N802 — PySpark method name
+        self,
+        numBuckets: int,  # noqa: N803 — PySpark param name
+        col: str | list[str],
+        *cols: str,
+    ) -> DataFrameWriter:
+        """Set Hive bucketing columns; every table write refuses them (Ruling R-1)."""
+        return writer_layout.bucket_by(self, numBuckets, col, *cols)
+
+    bucket_by = bucketBy
+
+    def sortBy(self, col: str | list[str], *cols: str) -> DataFrameWriter:  # noqa: N802 — PySpark method name
+        """Set per-bucket sort columns; refused without bucketBy at the write action."""
+        return writer_layout.sort_by(self, col, *cols)
+
+    sort_by = sortBy
+
+    def clusterBy(self, *cols: str) -> DataFrameWriter:  # noqa: N802 — PySpark method name
+        """Set clustering columns; refused for Iceberg table writes (Ruling R-2)."""
+        return writer_layout.cluster_by(self, *cols)
+
+    cluster_by = clusterBy
+
     def saveAsTable(self, name: str) -> None:  # noqa: N802 — PySpark method name
         """Persist an Iceberg table using CTAS or by-name insert/overwrite semantics.
 
@@ -177,7 +215,11 @@ class DataFrameWriter:
                 "repark.write supports only format('iceberg') for saveAsTable, "
                 f"got {self._format!r}"
             )
+        writer_layout.assert_no_cluster_conflicts(self)
+        writer_layout.assert_no_sort_without_bucketing(self)
         qualified, table_ref = _resolve_writer_table(self._dataframe, name)
+        writer_layout.assert_bucket_spec_valid_for_table_write(self, qualified)
+        writer_layout.refuse_bucketed_or_clustered_table_write(self, qualified)
         session = self._dataframe._session
         normalized_mode = "error" if self._mode == "errorifexists" else self._mode
         if not session.table_exists(qualified):
@@ -209,6 +251,7 @@ class DataFrameWriter:
             raise PySparkValueError(
                 f"repark.write supports only format('iceberg') for insertInto, got {self._format!r}"
             )
+        writer_layout.refuse_bucketed_action(self, "insertInto")
         _qualified, table_ref = _resolve_writer_table(self._dataframe, name)
         if overwrite is None:
             overwrite = self._mode == "overwrite"
@@ -340,6 +383,7 @@ class DataFrameWriter:
                     break
         if path is None:
             raise AnalysisException("'path' is not specified.")
+        writer_layout.refuse_bucketed_action(self, "save")
         if self._format not in self._PATH_FORMATS:
             if self._format == "iceberg":
                 raise AnalysisException(
@@ -763,89 +807,26 @@ class DataFrameWriter:
             session.drop_temp_view(view_name)
 
 
-def _sql_option_escape(value: str) -> str:
-    """Escape a single-quoted COPY OPTIONS value."""
-    return escape_sql_single_quotes(str(value))
-
-
-def _normalize_write_compression(raw: str) -> str:
-    """Map Spark compression names to DataFusion CSV or JSON compression tokens."""
-    lowered = str(raw).strip().lower()
-    if lowered in {"", "none", "uncompressed"}:
-        return "uncompressed"
-    if lowered in {"gzip", "gz"}:
-        return "gzip"
-    if lowered in {"bzip2", "bz2"}:
-        return "bzip2"
-    if lowered == "xz":
-        return "xz"
-    if lowered in {"zstd", "zst"}:
-        return "zstd"
-    raise AnalysisException(
-        f"unsupported write compression {raw!r}; "
-        "repark supports gzip, bzip2, xz, zstd, none/uncompressed"
-    )
-
-
-def _normalize_parquet_write_compression(raw: str) -> str:
-    """Map Spark Parquet compression names to DataFusion tokens."""
-    lowered = str(raw).strip().lower()
-    if lowered in {"", "none", "uncompressed"}:
-        return "uncompressed"
-    if lowered == "snappy":
-        return "snappy"
-    if lowered in {"gzip", "gz"}:
-        return "gzip(6)"
-    if lowered in {"zstd", "zst"}:
-        return "zstd(3)"
-    if lowered == "lz4":
-        return "lz4"
-    if lowered.startswith("gzip(") or lowered.startswith("zstd(") or lowered.startswith("brotli("):
-        return lowered
-    raise AnalysisException(
-        f"unsupported parquet write compression {raw!r}; "
-        "repark supports snappy, gzip, zstd, lz4, none/uncompressed"
-    )
-
-
-def _merge_path_write_tree(staging: Any, destination: Any) -> None:
-    """Merge a staged COPY tree into a destination without replacing existing parts."""
-    import shutil
-
-    staging_path = Path(staging)
-    destination_path = Path(destination)
-    destination_path.mkdir(parents=True, exist_ok=True)
-    if not staging_path.is_dir():
-        target = destination_path / staging_path.name
-        if target.exists():
-            target = destination_path / f"part-append-{uuid.uuid4().hex[:12]}{staging_path.suffix}"
-        shutil.move(str(staging_path), str(target))
-        return
-    for item in staging_path.iterdir():
-        target = destination_path / item.name
-        if item.is_dir():
-            _merge_path_write_tree(item, target)
-            continue
-        if target.exists():
-            target = destination_path / f"part-append-{uuid.uuid4().hex[:12]}{item.suffix}"
-        shutil.move(str(item), str(target))
-
-
-def _dynamic_partition_sql(dataframe: DataFrame, table_ref: str) -> str:
-    """Return `` PARTITION (a, b)`` from ``{table}.partitions``, or `` PARTITION ()``."""
-    native = dataframe._session.sql(f"SELECT * FROM {table_ref}.partitions LIMIT 0")
-    schema = DataFrame(native, dataframe._session, dataframe._alive_token).schema
-    dtype = schema["partition"].dataType if "partition" in schema.names else None
-    names = list(dtype.names) if isinstance(dtype, StructType) else []
-    if not names:
-        return " PARTITION ()"
-    return " PARTITION (" + ", ".join(_quote_ident_sql(name) for name in names) + ")"
+from repark.spark.dataframe.writer_layout import (  # noqa: E402
+    _dynamic_partition_sql,
+    _merge_path_write_tree,
+    _normalize_parquet_write_compression,
+    _normalize_write_compression,
+    _sql_option_escape,
+)
 
 
 class DataFrameWriterV2:
     """Build V2 Iceberg CTAS, append, partition overwrite, and partition-transform writes."""
 
-    __slots__ = ("_dataframe", "_partition_exprs", "_properties", "_provider", "_table")
+    __slots__ = (
+        "_cluster_columns",
+        "_dataframe",
+        "_partition_exprs",
+        "_properties",
+        "_provider",
+        "_table",
+    )
 
     def __init__(self, dataframe: DataFrame, table: str) -> None:
         """Bind a source DataFrame and validate its target name; resolution occurs per action."""
@@ -855,6 +836,7 @@ class DataFrameWriterV2:
         self._provider = "iceberg"
         self._properties: dict[str, str] = {}
         self._partition_exprs: list[str] = []
+        self._cluster_columns: list[str] = []
 
     def _resolved_table(self) -> tuple[str, str]:
         """Qualify + quote under the session's **current** catalog/NS (action-time)."""
@@ -888,9 +870,17 @@ class DataFrameWriterV2:
 
     partitioned_by = partitionedBy
 
+    def clusterBy(self, col: str, *cols: str) -> DataFrameWriterV2:  # noqa: N802 — PySpark method name
+        """Set clustering columns; refused at create and replace (Ruling R-2)."""
+        return writer_layout.v2_cluster_by(self, col, *cols)
+
+    cluster_by = clusterBy
+
     def create(self) -> None:
         """Create the table, failing if it already exists and rejecting tightened frames."""
         self._dataframe._ensure_alive()
+        writer_layout.assert_v2_cluster_conflicts(self)
+        writer_layout.refuse_clustered_table_write(self)
         session = self._dataframe._session
         qualified, _table_ref = self._resolved_table()
         if session.table_exists(qualified):
@@ -905,6 +895,8 @@ class DataFrameWriterV2:
     def createOrReplace(self) -> None:  # noqa: N802 — PySpark method name
         """Create or replace the table, rejecting tightened frames."""
         self._dataframe._ensure_alive()
+        writer_layout.assert_v2_cluster_conflicts(self)
+        writer_layout.refuse_clustered_table_write(self)
         self._dataframe._refuse_tightened_iceberg_create()
         self._run_ctas(or_replace=True)
 
@@ -913,6 +905,8 @@ class DataFrameWriterV2:
     def replace(self) -> None:
         """Replace an existing table, failing if it does not exist or the frame is tightened."""
         self._dataframe._ensure_alive()
+        writer_layout.assert_v2_cluster_conflicts(self)
+        writer_layout.refuse_clustered_table_write(self)
         session = self._dataframe._session
         qualified, _table_ref = self._resolved_table()
         if not session.table_exists(qualified):
