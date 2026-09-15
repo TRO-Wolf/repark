@@ -3272,6 +3272,9 @@ the pin rather than obeying it.
   (`_CAST_FLAG_ROWS`, red when fixed), and
   `python/repark/tests/test_df_surface_a_1.py::test_to_narrow_reports_logical_width_1`
   (the same collapse seen through `DataFrame.to`, oracle cell `to_narrow`).
+  IO-TEXT-1 (2026-09-15): a user schema typing a text partition column `float` / `smallint` / `tinyint` reads the exact
+  values and reports the wide label — `python/repark/tests/test_io_text_2.py::test_text_probe6_float_schema_float`,
+  `…::test_text_probe6_int_schema_smallint`, `…::test_text_probe6_int_schema_tinyint` (red when fixed).
 - **Rationale** — BACKLOG. Filed 2026-09-06 (NULLABILITY-2 round 2).
 
 ### FLOAT-AGG-1 — sum of catastrophic-cancellation float vector
@@ -6052,6 +6055,8 @@ Shared roster pin for every heading:
   for binary → string. *(oracle: documented — `Dataset.to` store assignment; the binary → string value is UNMEASURED on a
   live Spark, recorded for the next oracle round.)*
 - **Pin** — `python/repark/tests/test_df_surface_a_1.py::test_to_binary_follows_reported_schema_df_to_binary_1`
+- **Pin (IO-TEXT-1, 2026-09-15)** — a user schema typing a text partition column `binary` reads the raw bytes and reports
+  `string`: `python/repark/tests/test_io_text_2.py::test_text_probe6_int_schema_binary` (red when fixed).
 - **Rationale** — BACKLOG, filed by DF-SURFACE-A-1 (run 15b) from the critic re-check finding L-101. The root is the
   binary report on the scan surface, which FACADE-4 step 0 put to the owner as question 2 (keep `string` where the
   physically decoded column is described, or report `binary`). `to()` reconciles against the reported schema by design;

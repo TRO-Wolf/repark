@@ -530,6 +530,12 @@ Arrow types are exact (Float32, Int16, Int8, Binary) and the native
 key does not. The four pins are written against the oracle cells and held
 out of the tree until the shared-layer ruling lands.
 
+**R-39 (orchestrator, run 16b, 2026-09-15; closes Q1).** The schema-label collapse is already registered: LOGICAL-WIDTH-1
+(Int8 / Int16 report `int`, Float32 reports `double`; BACKLOG 2026-09-06) and DF-TO-BINARY-1 (binary reports `string`). The four pins
+land now through `_width_divergence_pin`: exact columns and rows from the Spark cell, today's reported schema, and an assertion that it
+still differs from Spark's, so each reds when the width fix lands; both registry rows list them. The facade-wide fix stays with those
+rows. The orchestrator wrote the pins because the round left none on disk.
+
 ## Round-6 coverage addendum (2026-09-15, R-37/R-38)
 
 Oracle: `iotext_probe6_2026-09-15.json` (live PySpark 4.1.2, run 16b,
