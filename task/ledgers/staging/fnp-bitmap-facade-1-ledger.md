@@ -154,3 +154,9 @@ edit, no `.github/` edit, no kernel change.
   this commit carries that ledger's departure move to `completed/`, which #623 omitted.
 - Owner ruling Q-15a-1 (DEGREES-RUST-1) is applied by rider R-7; owner ruling Q-15a-5 (the
   `len(set(__all__)) == len(__all__)` uniqueness pin) is applied by R-6.
+- Orchestrator gate fixes on the rebuilt branch (release native from `d6753ec5`, 2026-09-15 11:46):
+  `make verify` failed only on `ruff format` of `test_fnp_bitmap_facade_1.py` (whitespace from the
+  cherry-pick resolution), and `test_fnp_misc_1_byname_allowlist_covers_facade` failed because
+  R-7 moved `degrees` / `radians` onto engine UDFs, so the derived by-name allowlist no longer
+  classifies them as facade-only. Both names left `FACADE_ONLY_ROUTINE_NAMES`; the four pin files
+  re-ran green.

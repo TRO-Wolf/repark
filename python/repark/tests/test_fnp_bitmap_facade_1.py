@@ -334,9 +334,7 @@ def test_construct_agg_float_fraction_answers_position_one(spark: ReparkSession)
     """pins: fnp-bitmap-facade-1/R-3"""
     assert _FOLLOWUP_CELLS["FU-construct-float-frac"]["rows"] == [[1]]
     frame = spark.createDataFrame([(1.7,)], "x float")
-    counted = frame.select(
-        F.bitmap_count(F.bitmap_construct_agg("x")).alias("c")
-    ).toArrow()
+    counted = frame.select(F.bitmap_count(F.bitmap_construct_agg("x")).alias("c")).toArrow()
     assert counted.column("c").to_pylist() == [1]
     bits = _bitmap_column(frame.select(F.bitmap_construct_agg("x").alias("b")).toArrow(), "b")
     assert bits[0] == 0x02 and bits[1:] == bytes(BITMAP_BYTES - 1)
@@ -355,8 +353,7 @@ def test_call_function_construct_over_bit_position_matches_fixture(
         F.bitmap_construct_agg(F.bitmap_bit_position(F.col("x"))).alias("b")
     ).toArrow()
     door = spark.sql(
-        "SELECT bitmap_construct_agg(bitmap_bit_position(x)) AS b "
-        "FROM fnp_facade1_call_construct"
+        "SELECT bitmap_construct_agg(bitmap_bit_position(x)) AS b FROM fnp_facade1_call_construct"
     ).toArrow()
     bits = _bitmap_column(via_call, "b")
     assert bits == _bitmap_column(via_facade, "b")
@@ -439,10 +436,14 @@ def test_unbounded_window_matches_fixture(spark: ReparkSession) -> None:
     """pins: fnp-bitmap-facade-1/R-4"""
     frame = spark.createDataFrame([(1, 1), (1, 2), (2, 3)], "g int, x int")
     window = Window.partitionBy("g")
-    ordered = frame.select(
-        F.col("g"),
-        F.bitmap_count(F.bitmap_construct_agg(F.col("x")).over(window)).alias("c"),
-    ).orderBy("g").toArrow()
+    ordered = (
+        frame.select(
+            F.col("g"),
+            F.bitmap_count(F.bitmap_construct_agg(F.col("x")).over(window)).alias("c"),
+        )
+        .orderBy("g")
+        .toArrow()
+    )
     frame.createOrReplaceTempView("fnp_facade1_window_unbounded")
     door = spark.sql(
         "SELECT g, bitmap_count(bitmap_construct_agg(x) OVER (PARTITION BY g)) AS c "
