@@ -56,20 +56,29 @@ const INSIGNIFICANT_DIGITS_NUMBER: [i32; 64] = [
 ];
 
 fn insignificant_digits_for_pow2(power: i32) -> i32 {
-    if power > 1 && (power as usize) < INSIGNIFICANT_DIGITS_NUMBER.len() {
-        INSIGNIFICANT_DIGITS_NUMBER[power as usize]
+    if power > 1
+        && let Ok(index) = usize::try_from(power)
+        && let Some(digits) = INSIGNIFICANT_DIGITS_NUMBER.get(index)
+    {
+        *digits
     } else {
         0
     }
 }
 
+#[allow(
+    clippy::approx_constant,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
 fn estimate_dec_exp(fract_bits: u64, bin_exp: i32) -> i32 {
     let probe = f64::from_bits(EXP_ONE | (fract_bits & SIGNIF_MASK));
-    let guess = (probe - 1.5) * 0.289529654 + 0.176091259 + f64::from(bin_exp) * 0.301029995663981;
+    let guess =
+        (probe - 1.5) * 0.289_529_654 + 0.176_091_259 + f64::from(bin_exp) * 0.301_029_995_663_981;
     let guess_bits = guess.to_bits();
     let exponent = ((guess_bits & EXP_MASK) >> EXP_SHIFT) as i32 - DOUBLE_EXP_BIAS;
     let negative = guess_bits & SIGN_BIT != 0;
-    if exponent >= 0 && exponent < EXP_SHIFT {
+    if (0..EXP_SHIFT).contains(&exponent) {
         let mask = SIGNIF_MASK >> exponent;
         let kept = (guess_bits & SIGNIF_MASK) | FRACT_HOB;
         let rounded = (kept >> (EXP_SHIFT - exponent)) as i32;
@@ -104,6 +113,11 @@ struct Dtoa {
 }
 
 impl Dtoa {
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::similar_names
+    )]
     fn develop_long_digits(&mut self, mut dec_exponent: i32, mut lvalue: i64, insignificant: i32) {
         if insignificant != 0 {
             let power = LONG_5_POW[insignificant as usize].wrapping_shl(insignificant as u32);
@@ -168,6 +182,7 @@ impl Dtoa {
         self.digits[index] += 1;
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     fn first_digit(
         &mut self,
         ndigit: &mut usize,
@@ -188,12 +203,12 @@ impl Dtoa {
         }
     }
 
+    #[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
     fn dtoa(&mut self, bin_exp: i32, mut fract_bits: u64, n_significant_bits: i32) {
         let tail_zeros = fract_bits.trailing_zeros() as i32;
         let n_fract_bits = EXP_SHIFT + 1 - tail_zeros;
         let n_tiny_bits = (n_fract_bits - bin_exp - 1).max(0);
-        if bin_exp <= MAX_SMALL_BIN_EXP
-            && bin_exp >= MIN_SMALL_BIN_EXP
+        if (MIN_SMALL_BIN_EXP..=MAX_SMALL_BIN_EXP).contains(&bin_exp)
             && (n_tiny_bits as usize) < LONG_5_POW.len()
             && (n_fract_bits + N_5_BITS[n_tiny_bits as usize]) < 64
             && n_tiny_bits == 0
@@ -276,6 +291,12 @@ impl Dtoa {
         );
     }
 
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_sign_loss,
+        clippy::too_many_arguments
+    )]
     fn dtoa_int(
         &mut self,
         fract_bits: u64,
@@ -313,10 +334,16 @@ impl Dtoa {
             self.digits[ndigit] = b'0'.wrapping_add(quotient as u8);
             ndigit += 1;
         }
-        let low_digit_difference = (value.wrapping_shl(1).wrapping_sub(tens)) as i64;
+        let low_digit_difference = i64::from(value.wrapping_shl(1).wrapping_sub(tens));
         self.finish(dec_exp, ndigit, high, low, low_digit_difference);
     }
 
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_sign_loss,
+        clippy::too_many_arguments
+    )]
     fn dtoa_long(
         &mut self,
         fract_bits: u64,
@@ -358,6 +385,12 @@ impl Dtoa {
         self.finish(dec_exp, ndigit, high, low, low_digit_difference);
     }
 
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_sign_loss,
+        clippy::too_many_arguments
+    )]
     fn dtoa_big(
         &mut self,
         fract_bits: u64,
@@ -429,6 +462,7 @@ impl Dtoa {
         }
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     fn layout<'a>(&self, composed: &'a mut [u8; 32]) -> &'a str {
         let mut pos = 0usize;
         if self.negative {
@@ -513,6 +547,7 @@ impl Dtoa {
     }
 }
 
+#[allow(clippy::cast_possible_wrap)]
 fn dtoa_double_bits(bits: u64) -> Dtoa {
     let negative = bits & SIGN_BIT != 0;
     let mut fract_bits = bits & SIGNIF_MASK;
@@ -536,6 +571,7 @@ fn dtoa_double_bits(bits: u64) -> Dtoa {
     converter
 }
 
+#[allow(clippy::cast_possible_wrap)]
 fn dtoa_float_bits(bits: u32) -> Dtoa {
     let negative = bits & (1 << 31) != 0;
     let mut fract_bits = bits & 0x007f_ffff;
@@ -557,7 +593,7 @@ fn dtoa_float_bits(bits: u32) -> Dtoa {
     };
     converter.dtoa(
         bin_exp - SINGLE_EXP_BIAS,
-        (fract_bits as u64) << (EXP_SHIFT - SINGLE_EXP_SHIFT),
+        u64::from(fract_bits) << (EXP_SHIFT - SINGLE_EXP_SHIFT),
         n_significant_bits,
     );
     converter
@@ -596,7 +632,7 @@ pub fn with_java_float_text<R>(value: f32, render: impl FnOnce(&str) -> R) -> R 
         return render("Infinity");
     }
     let bits = value.to_bits();
-    if bits & 0x7fff_ffff == 0 {
+    if bits.trailing_zeros() >= 31 {
         if value.is_sign_negative() {
             return render("-0.0");
         }
