@@ -146,6 +146,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `enumerate_public_surface` walk still ships them (frozen API, still callable); the
   widened-name pin now reads `example_inventory`, the post-exclusion view.
   pins: ex-31-inventory-plumbing/C-001, C-005
+  **FNP-ALIAS-1 (2026-09-15):** 932 → 938 as `approxCountDistinct`, `shiftLeft`, `shiftRight`, `shiftRightUnsigned`, `toDegrees` and `toRadians` join the functions family (walked through `functions_agg.py` / `functions_bitwise.py` / `functions_math.py`, covered by `docs/examples/functions/deprecated_aliases.py`, so the backlog baseline is unchanged). pins: fnp-alias-1/C-001
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
   North Star sequence, F-17's measured shared-Puffin closure request, the live slate, the
   per-unit FNP remaining order (FNP-7a/7b delivered 2026-08-31; remaining FNP-9/10 → FNP-8

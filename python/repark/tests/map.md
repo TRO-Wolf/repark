@@ -643,7 +643,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   join origin like `bitwise_not`. **L-002 (same round):** the SQL-door negative-count shift
   cells replay on the Python door (values and types; names stay D-2's) and the Column-`numBits`
   shape pins Java's `& 31` masking on INT.
-  pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve

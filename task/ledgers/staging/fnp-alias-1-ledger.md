@@ -76,7 +76,7 @@ the base the card's C-004 builds on.
 | C-004 | Facade `degrees`/`radians` answer Spark's values bit-exactly, display `DEGREES(x)`/`RADIANS(x)`, accept INT input, and the SQL door's degrees/radians values are unchanged. | `test_fnp_alias_1.py` degrees/radians cells + `test_sql_door_degrees_radians_values_match_the_spark_oracle`. | **PROVEN** | The card's named route — `_scalar("degrees", …)` — has no `call_scalar` dispatch arm (measured: `call_scalar: unsupported function "degrees"`), and Rust is fenced, so the wrapper builds the same kernel arithmetic as a one-multiply plan by the precomputed `180.0/pi` / `pi/180` doubles (the `dayname`/`monthname` rewrap pattern, homes per D-1: `functions_math.py`). All 12 facade degrees/radians oracle cells and the SQL-door value cell are green, floats exact (`179.9998479605043` now; `F.degrees('i')` answers instead of raising `[ARITHMETIC_OVERFLOW]`); the SQL door's values and types are pinned unchanged. Registry row `FNP-ALIAS-DEGREES-1` filed FIXED (D-5). Deviation from the named mechanism flagged for ratification (Q-2). pins: fnp-alias-1/C-004 |
 | C-005 | No regression on the functions suites. | The card's gates: `test_fnp_alias_1.py` + `test_functions_a/b/c.py`; plus `test_functions_f.py` and `test_functions_split_identity.py` (both edited here) and the full facade suite. | **PROVEN** | Card gates 79 passed; the six functions suites + the CAP-1 mirror: 112 passed; full `python/repark/tests`: **6119 passed, 368 skipped, 0 failed** (run in two passes — the suite minus `test_aws_acceptance.py`, which skips its 10 legs offline). The `__all__` surface pin moved 453→459; both deferred-absent censuses ratcheted down; the ceilings moved by recorded shrink only (1962→1960, 2247→2237, mirrored in CAP-1). pins: fnp-alias-1/C-005 |
 | C-006 | Registry row + maps. | `docs/spark-sql-iceberg-parity.md` §7 `FNP-ALIAS-DEGREES-1`; map.md lockstep in every touched directory; ledger evidence complete. | **PROVEN** | The registry row is filed in the FN-* style with the `live PySpark 4.1.2, 2026-09-14` oracle line. Maps updated in-lockstep in the same commits: `python/repark/tests/map.md` (new test + fixture + census/surface ratchet notes), `python/repark/src/repark/spark/map.md` (three module entries + the move note), `scripts/map.md` and `python/repark-parity/tests/map.md` (ceiling ratchets), `task/ledgers/staging/map.md` (this ledger). pins: fnp-alias-1/C-006 |
-| C-007 | The unit's review round ran on the merge head: a Grok critic-logic pass and an S2-21 Python performance pass, every P1/P2 remediated or ruled in this ledger, and AT-1..AT-10 attested from their evidence. | Reports `/tmp/oc-worker/pa-alias-crit/report.md` and `/tmp/oc-worker/pa-alias-perf/report.md`; dispositions recorded here. | **OPEN** | Launched by the orchestrator on 2026-09-15 after rulings D-6/D-7 and the example-coverage fix (`docs/examples/functions/deprecated_aliases.py`, the `INSTALL_NAMES` bindings in `scripts/check_example_coverage.py`); closes with the COVERAGE_ATTESTATION block. |
+| C-007 | The unit's review round ran on the merge head: a Grok critic-logic pass and an S2-21 Python performance pass, every P1/P2 remediated or ruled in this ledger, and AT-1..AT-10 attested from their evidence. | Reports `/tmp/oc-worker/pa-alias-crit/report.md` (critic-logic, $0.70) and `/tmp/oc-worker/pa-alias-perf/report.md` (S2-21, $0.49). | **PROVEN** | S2-21 performance: clean, no P1/P2/P3 — facade `degrees` is 0.986 of base end-to-end on 10M rows (median of 15), the isolated kernel 0.779, construction 0.847; alias `warnings.warn` costs 4 % under default filters. Critic-logic: L-001 (P1, `_rescaled` dropped the origin and `join_sql_expr`, so `F.degrees(right['k'])` after a semi join bound the left column) REMEDIATED by GLM in `5fdbc63b` with the semi-join raise pins and an inner-join ON pin; L-002 (P2, negative shift counts unpinned on the Python door) REMEDIATED in `06295f7b`. The critic's mutation of `_DEGREES_PER_RADIAN` reds `F.degrees(col('rad'))` and `F.toDegrees(col('rad'))`. pins: fnp-alias-1/C-007 |
 
 ## Critic-logic findings (crit-logic-1, 2026-09-15) — dispositions
 
@@ -118,4 +118,49 @@ the base the card's C-004 builds on.
   wants the literal engine-scalar call, it is a two-arm Rust dispatch change plus moving the
   wrappers back.
 
-VERDICT: 7 clauses, 6 PROVEN, 1 OPEN, 0 REJECTED.
+VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: fnp-alias-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the tree by the Grok critic-logic pass - six names present and exported, sum_distinct and sumDistinct absent per D-6, 24 Python-door cells plus six warning texts plus six signatures green, degrees and radians bit-equal to Java's constants and to the SQL door.
+      artifacts: [python/repark/tests/test_fnp_alias_1.py, task/ledgers/staging/fnp-alias-1-ledger.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: degrees and radians over tinyint, smallint, int, bigint at 2^53 and 2^53+1, decimal(38,10), float, double, NULL, NaN, +-inf and -0.0; shifts with negative, 31, 32, 33 and 64 counts and a Column count; approxCountDistinct over empty and NULL-only groups with valid and invalid rsd; the semi-join right reference that exposed L-001.
+      artifacts: [python/repark/tests/test_fnp_alias_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Fail-loud paths - boolean and string degrees refuse at analysis, degrees().over() refuses, and after L-001 a right reference after leftsemi raises MISSING_ATTRIBUTES like F.abs instead of failing open.
+      artifacts: [python/repark/src/repark/spark/functions_math.py, python/repark/tests/test_fnp_alias_1.py]
+    - id: AT-4
+      status: N/A
+      justification: No shared mutable state, locks or concurrent writers - the alias wrappers are pure Column construction plus warnings.warn.
+    - id: AT-5
+      status: N/A
+      justification: No authentication, secrets, parsers or unsafe code; identifier quoting is the existing path.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The origin and join_sql contract of the new rewrap against _scalar and the replaced arithmetic form (L-001, remediated and pinned on semi and inner joins); facade against SQL-door bit identity on the oracle frame; INT and TINYINT promotion to double.
+      artifacts: [python/repark/tests/test_fnp_alias_1.py, python/repark/tests/test_g4b_semi_join.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: S2-21 Python performance review measured facade degrees end to end on 10M rows (0.986 of base, median of 15), the isolated projection (0.779), 100k Column constructions (0.847) and the alias warning cost (1.04x default filters); no finding.
+      artifacts: [task/ledgers/staging/fnp-alias-1-ledger.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: inspect.signature names and defaults against the recorded PySpark signatures, FutureWarning category and exact text with stacklevel 2, __all__ install_into once each, and the deprecated_aliases example exiting 0 under check_example_coverage --require-execute.
+      artifacts: [python/repark/tests/test_fnp_alias_1.py, docs/examples/functions/deprecated_aliases.py, scripts/check_example_coverage.py]
+    - id: AT-9
+      status: N/A
+      justification: No new log, metric or alarm path; the FutureWarning is the diagnostic and is pinned by text.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutating _DEGREES_PER_RADIAN in a scratch copy reds F.degrees(col('rad')) and F.toDegrees(col('rad')); pins compare collect() output against the live-Spark fixture, not the fixture against itself; the L-001 and L-002 pins were red before their fixes.
+      artifacts: [python/repark/tests/test_fnp_alias_1.py]
+  complete: true
+```
+
