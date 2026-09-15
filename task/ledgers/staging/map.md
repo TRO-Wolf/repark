@@ -6,11 +6,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Contents
 - [fnp-alias-1-ledger.md](fnp-alias-1-ledger.md) —
-  **FNP-ALIAS-1 (2026-09-15), in flight:** the eight PySpark alias names over existing kernels
-  (`sum_distinct`/`sumDistinct`, `approxCountDistinct`, the camelCase shifts, `toDegrees`/
+  **FNP-ALIAS-1 (2026-09-15), in flight:** six PySpark alias names over existing kernels
+  (`approxCountDistinct`, the camelCase shifts, `toDegrees`/
   `toRadians`) and the facade `degrees`/`radians` fix, oracle-driven against live PySpark 4.1.2
-  (recorded 2026-09-14). `sum_distinct`/`sumDistinct` blocked on a native distinct-aggregate
-  builder (Rust fenced); the delivered six names, their warning messages, and the
+  (recorded 2026-09-14). `sum_distinct`/`sumDistinct` moved to FNP-AGG-1 (ruling D-6); the delivered six names, their warning messages, and the
   degrees/radians fix are pinned. `risk_tier: standard`. Branch `feat/fnp-alias-1`.
   pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [facade-5-ledger.md](facade-5-ledger.md) —
