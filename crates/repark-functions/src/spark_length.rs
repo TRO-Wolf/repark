@@ -7,6 +7,7 @@ use datafusion::arrow::array::{Array, ArrayRef, AsArray, Int32Array};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{
     DataType, Decimal32Type, Decimal64Type, Decimal128Type, Decimal256Type, Field, FieldRef,
+    Float32Type, Float64Type,
 };
 use datafusion::common::{DataFusionError, Result, exec_err};
 use datafusion::logical_expr::{
@@ -185,7 +186,9 @@ fn coerce_length_arg(arg_types: &[DataType]) -> Result<Vec<DataType>> {
         | DataType::Decimal32(_, _)
         | DataType::Decimal64(_, _)
         | DataType::Decimal128(_, _)
-        | DataType::Decimal256(_, _) => inner.clone(),
+        | DataType::Decimal256(_, _)
+        | DataType::Float32
+        | DataType::Float64 => inner.clone(),
         _ => DataType::Utf8,
     };
     Ok(vec![coerced])
@@ -242,6 +245,34 @@ fn byte_lengths(array: &dyn Array) -> Result<Int32Array> {
         | DataType::Decimal64(_, scale)
         | DataType::Decimal128(_, scale)
         | DataType::Decimal256(_, scale) => decimal_byte_lengths(array, *scale),
+        DataType::Float64 => {
+            let primitive = array.as_primitive::<Float64Type>();
+            let mut lengths = Vec::with_capacity(primitive.len());
+            for index in 0..primitive.len() {
+                if primitive.is_null(index) {
+                    lengths.push(None);
+                } else {
+                    lengths.push(Some(spark_int_len(
+                        crate::java_double::java_double_text_len(primitive.value(index)),
+                    )?));
+                }
+            }
+            Ok(Int32Array::from(lengths))
+        }
+        DataType::Float32 => {
+            let primitive = array.as_primitive::<Float32Type>();
+            let mut lengths = Vec::with_capacity(primitive.len());
+            for index in 0..primitive.len() {
+                if primitive.is_null(index) {
+                    lengths.push(None);
+                } else {
+                    lengths.push(Some(spark_int_len(
+                        crate::java_double::java_float_text_len(primitive.value(index)),
+                    )?));
+                }
+            }
+            Ok(Int32Array::from(lengths))
+        }
         _ => {
             let as_utf8: ArrayRef = cast(array, &DataType::Utf8)?;
             utf8_byte_lengths(as_utf8.as_ref())

@@ -11,7 +11,8 @@ use datafusion::arrow::buffer::{NullBuffer, OffsetBuffer};
 use datafusion::arrow::datatypes::{DataType, Field, Fields};
 use datafusion::common::{Result, exec_err};
 
-use super::reader::{JsonValue, java_double_text, json_number_text, write_compact};
+use super::reader::{JsonValue, json_number_text, write_compact};
+use crate::java_double::java_double_text;
 
 pub(crate) struct DecodeContext {
     pub zone: Tz,

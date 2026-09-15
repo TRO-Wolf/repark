@@ -2235,19 +2235,53 @@ the pin rather than obeying it.
   `F.bin` still lowers as `bin(CAST(col AS BIGINT))` in `functions*.py`, outside this
   unit's fence.
 
-### BL-7 — `bit_length` / `octet_length` stringify DOUBLE with Arrow float formatting
+### BL-7 — DOUBLE/FLOAT stringify as Java does — **FIXED 2026-09-15 (JAVA-DOUBLE-STR-1)**
 
-- **repark** — a DOUBLE input to the owned length kernel is stringified by the Arrow
-  `float64 → utf8` cast: `CAST('Infinity' AS DOUBLE)` becomes `'inf'` (octet_length 3) and
-  `1.0E21` becomes `'1e21'` (octet_length 4). Mainstream values agree with Spark (`1.0` → 3,
-  `12.5` → 4).
+- **repark** — **FIXED 2026-09-15 (JAVA-DOUBLE-STR-1).** The Spark door and the
+  facade stringify `FLOAT`/`DOUBLE` via Java `Double.toString` / `Float.toString`:
+  `CAST(<float> AS STRING)` is rewritten to the embedded
+  `__repark_float_to_string__` UDF (SQL, `selectExpr`, `F.expr`, `col.cast`),
+  `concat` coercion and the owned `bit_length` / `octet_length` kernels use the
+  same shared formatter (`crates/repark-functions/src/java_double.rs`, moved out
+  of the JSON reader). `CAST('Infinity' AS DOUBLE)` is `'Infinity'`
+  (octet_length 8), `1.0E21` is `'1.0E21'` (octet_length 6). The native ANSI
+  door (`repark.sql()`) keeps Arrow formatting (ADR-0002).
 - **Apache Spark** — stringifies via Java `Double.toString`: `'Infinity'` (octet_length 8),
-  `'1.0E21'` (octet_length 6). *(oracle: live — PySpark 4.1.2, 2026-08-19.)*
-- **Pin** — `python/repark/tests/test_functions_gt1.py::test_sql_door_double_infinity_stringify_is_named_divergence`
-  (codifies today's `3`; the fix reds it on purpose).
-- **Rationale** — BACKLOG, intent to FIX (Java-shaped double formatting in the decimal-style
-  path, GT1-FIX round-3 ruling R3-4). The divergence is confined to the E-notation thresholds and
-  the Infinity/NaN spellings; the common numeric range already matches.
+  `'1.0E21'` (octet_length 6). *(oracle: live — PySpark 4.1.2, 2026-08-19;
+  cells `BL7-*` in `fixtures-batch1.json`, `JD-*` in `fixtures-batch4.json`.)*
+- **Pin** — `python/repark/tests/test_java_double_str_1.py` (CAST, `TRY_CAST`,
+  `concat`, `col.cast`/`selectExpr`/`try_cast`, `array_join`, `format_string` `%s`,
+  LIKE, `CASE`/`coalesce` mixes, length kernels, native-door guard — value AND type)
+  and `python/repark/tests/test_functions_gt1.py::test_sql_door_double_infinity_stringify_is_named_divergence`
+  (now equality).
+- **Rationale** — FIXED 2026-09-15 (JAVA-DOUBLE-STR-1; GT1-FIX round-3 ruling R3-4).
+  Round 2 the same day widened the shapes: `TRY_CAST`, `array_join`, `format_string`
+  `%s`/`printf`, `LIKE`, `VARCHAR`/`CHAR`, `CASE`/`coalesce` mixes (which raise
+  `CAST_INVALID_INPUT` for bad string literals), `Float.MIN_VALUE` (`1.4E-45`),
+  and the allocation-free formatter. Residual: `createDataFrame` still refuses
+  non-finite floats (pre-existing, out of this unit's scope); the JDK-longhand
+  cells live in [JAVA-DOUBLE-FD-1](#java-double-fd-1--cells-where-jdk-17-floatdoubletostring-is-not-the-shortest-round-trip-form).
+
+### JAVA-DOUBLE-FD-1 — cells where JDK 17 float/Double.toString is not the shortest round-trip form
+
+- **repark** — renders the shortest decimal that round-trips: `8.41E21` renders
+  `8.41E21`, `1.0E23` renders `1.0E23`. `format_string('%.2f', 0.125)` renders
+  `0.12` (DataFusion banker's rounding) where Java `Formatter` (HALF_UP) renders
+  `0.13`.
+- **Apache Spark** — JDK 17's `FloatingDecimal` is NOT the shortest repr and answers
+  `8.409999999999999E21` and `9.999999999999999E22` for the same two doubles; Java
+  `Formatter` answers `0.13`. *(oracle: live — PySpark 4.1.2, 2026-09-15;
+  cells `J10-fd-8.41E21`, `J10-fd-more`, `J10-format-string-f` in
+  `fixtures-batch10.json`.)*
+- **Pin** —
+  `python/repark/tests/test_java_double_str_1.py::test_spark_door_jdk_longhand_backlog`
+  and `::test_spark_door_format_string_f_is_todays_answer` (codify today's answers).
+- **Rationale** — BACKLOG, filed 2026-09-15 (JAVA-DOUBLE-STR-1 round 2, ruling R-11).
+  Closing it means porting JDK 17 `FloatingDecimal`'s digit generation (and Java
+  `Formatter` HALF_UP fixed-point), not tuning a format string. The equal cells
+  (`2.0E-3` → `0.002`, `5.0E-324` → `4.9E-324`, `2.2250738585072014E-308`,
+  `9.007199254740993E15` → `9.007199254740992E15`, `1.1`) pin the equality side in
+  `::test_spark_door_jdk_longhand_cells`.
 
 
 > **TZ-1 — timestamp extraction ignores the session zone — was CLOSED IN PART and CONVERTED on
@@ -7817,11 +7851,12 @@ field NAME.
   of whose surface is a silent `[]` should be closed once rather than twice. The pin codifies
   today's behaviour; the fix unit updates the pin rather than obeys it.
 
-### FNP10-JAVA-DOUBLE-TEXT-1 — four `Double.toString` spellings where the JDK is not shortest
+### FNP10-JAVA-DOUBLE-TEXT-1 — `Double.toString` spellings where the JDK is not shortest
 
 - **repark** — `to_json` and `get_json_object` render a double through the shortest decimal that
-  round-trips: `4.9E-324` renders `5.0E-324`, `8.41E21` renders `8.41E21`, `1.0E23` renders
-  `1.0E23`, and a FLOAT `1.4E-45` renders `1.0E-45`.
+  round-trips, except the min subnormals, which spell `4.9E-324` / `1.4E-45` since
+  JAVA-DOUBLE-STR-1 (2026-09-15, shared formatter): `8.41E21` renders `8.41E21`
+  and `1.0E23` renders `1.0E23`.
 - **Apache Spark** — JDK 17's `FloatingDecimal` is NOT the shortest repr and answers
   `4.9E-324`, `8.409999999999999E21`, `9.999999999999999E22` and `1.4E-45` for the same four
   values. Every other measured double agrees, including `1.0E20`, `3.0`, `0.1`, `1.0E-7`,
@@ -7829,12 +7864,16 @@ field NAME.
   FNP-9/10 round 2.)*
 - **Pin** —
   `python/repark/tests/test_fnp_9_collections_json.py::test_to_json_double_text_diverges_on_the_jdk_legacy_spellings`
+  (two divergent cells pinned; the min-subnormal cells are equalities since 2026-09-15).
 - **Rationale** — BACKLOG, filed 2026-09-06 by the FNP-9/10 round-1 critic (finding F13). Closing
   it means porting `FloatingDecimal.toJavaFormatString` — the pre-JDK-19 dragon variant, which
-  emits an extra digit for a specific class of values — not tuning a format string. The four
-  cells are pinned so the divergence is a stated limit rather than a surprise, and the C-004
+  emits an extra digit for a specific class of values — not tuning a format string. The cells
+  are pinned so the divergence is a stated limit rather than a surprise, and the C-004
   clause that once claimed "doubles take `Double.toString`" is narrowed to say which values it
-  covers.
+  covers. **Update 2026-09-15 (JAVA-DOUBLE-STR-1):** the `4.9E-324` cell converged through the
+  shared Java formatter (exact `Double.MIN_VALUE` bit-pattern match, required by oracle cells
+  BL7-16 / JD-cast-13); round 2 the `1.4E-45` cell converged the same way (J10-float-min).
+  The two remaining cells stay BACKLOG, and the Spark-door CAST path shares that residual.
 
 ### FNP10-FROM-JSON-DDL-1 — `from_json` refuses an INTERVAL field in its schema
 
