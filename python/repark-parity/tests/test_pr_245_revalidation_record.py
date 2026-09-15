@@ -59,6 +59,7 @@ _SQL_LITERAL_CALLS = {
     "python/repark-parity/bench/write/runner.py": {"sql_string_literal": 1},
     "python/repark/src/repark/spark/catalog.py": {"sql_string_literal": 1},
     "python/repark/src/repark/spark/catalog_surface.py": {"sql_string_literal": 2},
+    "python/repark/src/repark/spark/column.py": {"_sql_string_literal": 1},
     "python/repark/src/repark/spark/dataframe/core.py": {"_sql_string_literal": 1},
     "python/repark/src/repark/spark/dataframe/writer_layout.py": {"escape_sql_single_quotes": 1},
     "python/repark/src/repark/spark/dataframe/writer_readwriter.py": {

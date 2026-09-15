@@ -382,14 +382,13 @@ def test_name_metadata(spark: ReparkSession) -> None:
 
 
 def test_name_multi(spark: ReparkSession) -> None:
-    """``explode(map).name("k", "v")`` — repark unnest refuses maps (COL-NAME-1).
+    """``explode(arr).name("k", "v")`` keeps the first name (COL-NAME-MULTI-1).
 
-    pins: column-parity-1/C-002 (name_multi); divergence COL-NAME-1
+    pins: column-parity-1/C-002 (name_multi); divergence COL-NAME-MULTI-1
     """
-    with pytest.raises(AnalysisException):
-        _base_df(spark).select(
-            F.explode(F.map_from_arrays(F.array(F.lit(1)), F.array(F.lit(2)))).name("k", "v")
-        )
+    frame = spark.createDataFrame([([1, 2],)], "arr array<int>")
+    out = frame.select(F.explode("arr").name("k", "v"))
+    _assert_frame(out, ["k"], "struct<k:int>", [{"k": 1}, {"k": 2}])
 
 
 def test_outer_repr(spark: ReparkSession) -> None:
@@ -803,9 +802,20 @@ def test_isnan_sql_string(spark: ReparkSession) -> None:
     assert "isnan" in str(raised.value)
 
 
-def test_no_sql_spelling_for_struct_edit_names() -> None:
+def test_no_sql_spelling_for_struct_edit_names(spark: ReparkSession) -> None:
     """``withField``/``dropFields``/``astype``/``name``/``outer`` have no SQL spelling.
 
     pins: column-parity-1/C-006
     """
-    assert True
+    spark.createDataFrame(
+        [(1, (1, "x"))], "i int, st struct<a:int,b:string>"
+    ).createOrReplaceTempView("column_parity_1_struct_names")
+    for sql in [
+        "SELECT withField(st, 'c', 1) FROM column_parity_1_struct_names",
+        "SELECT dropFields(st, 'b') FROM column_parity_1_struct_names",
+        "SELECT astype(i, 'string') FROM column_parity_1_struct_names",
+        "SELECT name(i, 'x') FROM column_parity_1_struct_names",
+        "SELECT outer(i) FROM column_parity_1_struct_names",
+    ]:
+        with pytest.raises(AnalysisException, match="Invalid function"):
+            spark.sql(sql)

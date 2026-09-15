@@ -119,15 +119,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   overlay records each view's registration object for staleness checks; the file
   stays on its exact baseline (4044 → 4043, ratcheted down).
   pins: catalog-surface-1/C-009
-  COLUMN-PARITY-1 step 1 (2026-09-14): `select` and `filter` resolve pending
-  `withField`/`dropFields` columns (built in `spark.column_fields`) against the frame's
-  analyzed `logical_schema_fields()` — the struct is rebuilt through `getField` +
-  `PyColumn.make_struct` under `when(source.isNotNull(), …)` so NULL structs stay NULL,
-  and a `("item", key)` op recorded by `__getitem__`/`getField` applies after the
-  rebuild. `DataFrame` gains `_field_metadata`: `Column.name(..., metadata=…)` stores it
-  and `schema` overlays it on the projected `StructField`. `__str__` moved to
-  `column_fields` for baseline headroom and the module binds here for the select-hook
-  import. pins: column-parity-1/C-002, C-004, C-005
+  COLUMN-PARITY-1 step 1 (2026-09-14): `DataFrame` gains `_field_metadata`:
+  `Column.name(..., metadata=…)` stores it and `schema` overlays it on the projected
+  `StructField`. `__str__` moved to `column_fields` for baseline headroom and the
+  module binds here for the metadata helpers.
+  **Critic round (2026-09-14, R-4):** the select/filter struct-edit resolve hooks are
+  deleted — `withField` / `dropFields` are native `update_fields` expressions, so no
+  boundary rewrite runs. pins: column-parity-1/C-002, C-004, C-005, C-008
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`.
 - `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
   PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,

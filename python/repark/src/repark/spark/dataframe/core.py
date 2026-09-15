@@ -1256,7 +1256,6 @@ class DataFrame:
                 if "__REPARK_QCOL_" not in local_sql:
                     return self._spawn_preserving_identity(self._plan().filter_sql(local_sql))
             predicate = self._rebind_origin_column(condition)
-            predicate = _column_fields.resolve_struct_edit_column(self, predicate)
             return self._spawn_preserving_identity(self._plan().filter(predicate._inner))
         if isinstance(condition, str):
             quoted = self._quote_filter_sql_identifiers(condition)
@@ -1424,9 +1423,6 @@ class DataFrame:
                 h1_origin_map = None
         else:
             projected = [_collapse_identity_projection_alias(column) for column in projected]
-        projected = [
-            _column_fields.resolve_struct_edit_column(self, column) for column in projected
-        ]
         aggregate_flags = [bool(column._is_aggregate) for column in projected]
         if aggregate_flags and any(aggregate_flags):
             if generators:

@@ -3312,16 +3312,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-09-14): the `Column` surface pins driven by the recorded PySpark 4.1.2 oracle
   fixture (`col.*` cells) — `isin` (list/set flattening, tuple refusal
   `UNSUPPORTED_FEATURE.LITERAL_TYPE`, NULL/NaN/empty-list semantics, Column operands,
-  ANSI cast refusal on type-mismatched members, `(i IN (1, 2))` naming), `isNaN` /
-  `F.isnan` (DOUBLE coercion, string input cast error), `astype` (name preservation,
-  `NOT_DATATYPE_OR_STR`), `name` (alias + `metadata=` on the projected StructField,
-  multi-name refusal pin COL-NAME-MULTI-1), `outer` (`lazy(...)` marker + plain-select
-  passthrough), `withField` / `dropFields` (select-boundary deferred struct rebuild:
-  add/replace/case/dup/nested/null-parent cells, `NOT_STR` / `NOT_COLUMN` /
+  ANSI cast refusal on type-mismatched members COL-ISIN-1, `(i IN (1, 2))` naming, one
+  native `IN`-list with a 10 000-literal pin), `isNaN` (engine `repark_isnan` dispatch:
+  float NaN mask, string strict-DOUBLE coercion, date/timestamp/boolean false),
+  `astype` (name preservation, `NOT_DATATYPE_OR_STR`), `name` (alias + `metadata=` on
+  the projected StructField, later alias without metadata drops it, multi-name
+  first-name-wins pin COL-NAME-MULTI-1), `outer` (`lazy(...)` marker + plain-select
+  passthrough), `withField` / `dropFields` (native `update_fields` engine expression:
+  add/replace/case/dup/nested/null-parent cells, sequential chains, filter / `when` /
+  `orderBy` / `groupBy` / join / nested-value composition, `NOT_STR` / `NOT_COLUMN` /
   `FIELD_NOT_FOUND` / `DATATYPE_MISMATCH.*` error shapes, `update_fields(...)` naming,
-  `getField` after edit), and the four SQL-door cells (`IN` NULL + mixed-type backlog
-  SQL-IN-1, `isnan` numeric + string backlog SQL-ISNAN-1). pins: column-parity-1/C-001,
-  C-002, C-003, C-004, C-005, C-006
+  `getField` after edit, `caseSensitive` conf no-effect pin), and the four SQL-door
+  cells (`IN` NULL + mixed-type error-class backlog SQL-IN-1, `isnan` numeric + string
+  backlog SQL-ISNAN-1, no-spelling refusal pins). pins: column-parity-1/C-001,
+  C-002, C-003, C-004, C-005, C-006, C-008
+- `test_column_parity_1_critic.py` — **COLUMN-PARITY-1 critic round** (2026-09-14,
+  R-4): the 13 L-001..L-010 + wide-`isin` pins in their own module (the oracle file
+  stays under its line ceiling) — sequential `withField`/`dropFields` chains,
+  filter / `when` / `orderBy` / `groupBy` / join / nested-value composition, `isNaN`
+  on date/timestamp/boolean, metadata drop on re-alias, `caseSensitive` no-effect,
+  10 000-literal `isin`. pins: column-parity-1/C-008
 - `test_columns.py` — **U2:** `SELECT 7.0 AS a` is DECIMAL(2,1); Column `/` stays float64
   3.5 (`test_division_is_float`); **R-2 A7:** SQL `SELECT 7.0 / 2.0` is decimal128(8,6)
   (`test_sql_float_literal_division_is_decimal`). The Column / expression surface (WG1): the seven `types` objects → engine

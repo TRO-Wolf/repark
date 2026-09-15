@@ -23,6 +23,7 @@ from repark.errors import (
 )
 from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_sql_field_ident
+from repark.spark._idents import sql_string_literal as _sql_string_literal
 
 if TYPE_CHECKING:
     from repark.spark.types import DataType
@@ -68,9 +69,6 @@ class Column:
         "_spark_display",
         "_sql_expr",
         "_stable_name",
-        "_struct_edit_display",
-        "_struct_edit_source",
-        "_struct_edits",
         "_when_pairs",
         # Retained after ``.over(WindowSpec)`` for adjacent same-spec withColumn(s) merge.
         "_window_spec",
@@ -103,9 +101,6 @@ class Column:
         window_spec: WindowSpec | None = None,
         alias_metadata: dict[str, Any] | None = None,
         outer: bool = False,
-        struct_edit_source: Column | None = None,
-        struct_edits: list[Any] | None = None,
-        struct_edit_display: str | None = None,
     ) -> None:
         """Wrap a native ``PyColumn`` (a Rust pyclass, hence untyped), carrying sort markers.
 
@@ -216,9 +211,6 @@ class Column:
         self._window_spec = window_spec
         self._alias_metadata = dict(alias_metadata) if alias_metadata else None
         self._outer = bool(outer)
-        self._struct_edit_source = struct_edit_source
-        self._struct_edits = list(struct_edits) if struct_edits is not None else None
-        self._struct_edit_display = struct_edit_display
 
     def sql_expr_part(self) -> str:
         """SQL fragment for embedding this column into a generated SQL statement."""
@@ -950,11 +942,8 @@ class Column:
             join_sql_expr=self._join_sql_expr,
             g2_range_order_names=self._g2_range_order_names,
             window_spec=self._window_spec,
-            alias_metadata=metadata if metadata is not None else self._alias_metadata,
+            alias_metadata=metadata,
             outer=self._outer,
-            struct_edit_source=self._struct_edit_source,
-            struct_edits=self._struct_edits,
-            struct_edit_display=self._struct_edit_display,
         )
 
     def __iter__(self) -> None:
@@ -975,15 +964,10 @@ class Column:
         ``PySparkValueError`` / ``SLICE_WITH_STEP`` (Apache classic). Open-bound slices
         (``None`` start and/or stop) raise the same ``substr`` type errors classic raises
         — never invent defaults. Index/key paths lower via native
-        ``array_element`` / ``get_field`` / ``getitem`` where possible. On a pending
-        ``withField``/``dropFields`` column the access is recorded on the edit list and
-        applied after the struct rebuild at the select boundary instead.
+        ``array_element`` / ``get_field`` / ``getitem`` where possible.
         """
         self._reject_nested_generator("__getitem__")
         from repark.spark.functions import lit
-
-        if self._struct_edits is not None:
-            return _column_fields.extend_struct_item(self, key)
 
         if isinstance(key, slice):
             if key.step is not None:
@@ -1025,6 +1009,9 @@ class Column:
                 parts[0],
                 spark_display=parts[1],
                 sql_expr=parts[2],
+                join_sql_expr=_native.PyColumnParts.field_join_sql(
+                    self.sql_expr_part(), _sql_string_literal(key)
+                ),
                 projection_name=parts[1],
                 has_free_attribute=self._has_free_attribute,
                 is_foldable=self._is_foldable and not self._is_aggregate,
@@ -1386,9 +1373,6 @@ class Column:
             window_spec=self._window_spec,
             alias_metadata=self._alias_metadata,
             outer=self._outer,
-            struct_edit_source=self._struct_edit_source,
-            struct_edits=self._struct_edits,
-            struct_edit_display=self._struct_edit_display,
         )
 
     between = _column_fields.between

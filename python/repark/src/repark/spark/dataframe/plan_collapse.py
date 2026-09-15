@@ -130,11 +130,8 @@ def _strip_internal_tighten_metadata(table: Any) -> Any:
 
 
 def _collapse_identity_projection_alias(column: Column) -> Column:
-    """Collapse nested identity aliases before the projection alias gate.
-
-    Pending ``withField``/``dropFields`` columns pass through untouched.
-    """
-    if column._projection_name is None or column._struct_edits is not None:
+    """Collapse nested identity aliases before the projection alias gate."""
+    if column._projection_name is None:
         return column
     try:
         peeled_inner = column._inner.collapse_identity_aliases()

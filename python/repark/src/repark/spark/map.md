@@ -130,6 +130,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `column.py` — lazy expression objects, type gates, aliases, field access, generators,
   aggregates, windows, casts, and Spark-compatible operator behavior. Column identity
   metadata preserves join and duplicate-name semantics.
+  **COLUMN-PARITY-1 critic round (2026-09-14):** struct field access carries a second,
+  join-ON SQL fragment in bracket form (`(child)['field']`, literal via
+  `sql_string_literal`, rendered by `PyColumnParts.field_join_sql`) — this DataFusion
+  version refuses dot access on parenthesized expressions, so join conditions over
+  `getField` (plain or `update_fields`) now parse. Free-SQL `sql_expr` keeps the dot
+  form byte-identical (goldens + hostile-ident pin unchanged). A later `alias`/`name`
+  without `metadata=` drops earlier metadata (Spark builds a new alias).
+  pins: column-parity-1/C-008
   **FACADE-2 step 2 (2026-09-12):** Group-2 operator/method families make one
   `_native.PyColumnParts` call per operation; display/SQL/join text is rendered in
   `crates/repark-python/src/column/display.rs`. The public `Column` class, `__slots__`,
@@ -140,12 +148,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `column_fields.py` — **COLUMN-PARITY-1 (2026-09-14):** method bodies bound on
   `Column` (kept out of `column.py`, which is at its exact line baseline):
   `between` / `eqNullSafe` (extracted for headroom), `isin`, `isNaN`, `astype`,
-  `name`, `outer`, `withField`, `dropFields`, and the deferred struct-edit resolver
-  `resolve_struct_edit_column` — `withField` / `dropFields` build a pending column
-  carrying `(source, edits, display)` that `DataFrame.select` / `filter` resolve
-  against the frame's analyzed `logical_schema_fields()` (schema-aware, no row pull),
-  rebuilding the struct through `getField` + `make_struct` + `when(is_not_null)` so a
-  NULL parent stays NULL. pins: column-parity-1/C-001, C-002, C-003, C-004, C-005
+  `name`, `outer`, `withField`, `dropFields`.
+  **Critic round (2026-09-14, R-4):** `isin` builds one native `IN`-list expression
+  (empty list → `lit(False)`), `isNaN` calls the `repark_isnan` engine UDF, and
+  `withField` / `dropFields` build the `update_fields` engine expression immediately
+  (one `PyColumnParts` call each, chains nest) — the deferred select-boundary
+  resolver is deleted, so filter / `when` / `orderBy` / `groupBy` / join / nested
+  positions compose. pins: column-parity-1/C-001, C-002, C-003, C-004, C-005, C-008
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

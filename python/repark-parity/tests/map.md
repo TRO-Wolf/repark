@@ -206,6 +206,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   The unit's docs half rides the same file: the release policy section, the discharged facade
   ruling, the north-star line and the STATUS line are each asserted here, so a docs rollback
   is red. (pins: api-freeze/C-001, C-002, C-003, C-004)
+  **COLUMN-PARITY-1 critic round (2026-09-14):** `build_api_freeze.py` follows
+  `alias = _module.func` class bindings to the defining module (instance arg dropped),
+  so the sanctioned `column_fields` split keeps `Column.between` / `Column.eqNullSafe`
+  param pins exact; binding targets join the scratch-tree sources. pins: column-parity-1/C-007
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
@@ -236,6 +240,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   set. pins: h3-spill-1/C-001, maint-policy-1/C-030
 - `test_cap_1_source_file_line_cap.py` — **GROUPED-SURFACE-1 step 1 (2026-09-14):** `dataframe/joins_columns.py` mirror row 1238 → 1169 with the script baseline (the Arrow-batch apply bridge moved byte-identical into the new `dataframe/grouped_arrow.py`; the grouped-surface bindings are one-line class aliases). pins: grouped-surface-1/C-007
 - `test_ex_0_example_coverage.py` — **GROUPED-SURFACE-1 step 1 (2026-09-14):** the enumerated public surface moves 948 → 954 as `GroupedData.apply`, `GroupedData.applyInArrow`, `GroupedData.cogroup`, `GroupedData.applyInPandasWithState`, `GroupedData.transformWithState`, `GroupedData.transformWithStateInPandas`, `PandasCogroupedOps.applyInPandas` and `PandasCogroupedOps.applyInArrow` join the dataframe family; `docs/examples/dataframe/grouped_udfs.py` covers all eight, so `check-example-coverage` stays clean. pins: grouped-surface-1/C-007
+  COLUMN-PARITY-1 critic round (2026-09-14): the inventory gains
+  `spark/column.py` `_sql_string_literal` 1 — struct field access renders its join-ON
+  bracket key through the helper rather than an f-string. pins: column-parity-1/C-007
+- `test_cap_1_source_file_line_cap.py` — **COLUMN-PARITY-1 critic round (2026-09-14):** `spark/column.py` row 1548 → 1532, `dataframe/core.py` row 4044 → 4040 and `dataframe/plan_collapse.py` row 1057 → 1054 with the script baselines (the deferred struct-edit machinery is deleted for the native `update_fields` design; struct field access gains a join-ON bracket fragment). pins: column-parity-1/C-007
 - `test_cap_1_source_file_line_cap.py` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `repark-core/src/session/tests/session.rs` row 1412 → 1407 in both tables (the ambiguous-commit classification pins moved to `session/tests/commit_unknown.rs`). pins: ice-commit-unknown-1/C-001
 - `test_cap_1_source_file_line_cap.py` — **DF-SURFACE-A-1 critic round 1 (2026-09-14):** `dataframe/core.py` row 4041 → 4035 with the script baseline (rulings R-5/R-6 removed the `inputFiles`/`semanticHash` bindings and the `_schema_override` slot). pins: df-surface-a-1/C-008
 - `test_cap_1_source_file_line_cap.py` — **DF-SURFACE-A-1 step 1 (2026-09-14):** `dataframe/core.py` row 4044 → 4041 with the script baseline (the `localCheckpoint` body moved to `dataframe/surface_a.py`; the nine surface-a names bind one line each and `_schema_override` lands for `to`/`withMetadata`). pins: df-surface-a-1/C-006
@@ -291,6 +299,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): `dataframe/plan_collapse.py` row 1168 → 1057 and `session/session_core.py` row 2411 → 2410 with the script baseline (ratchet DOWN; the spellers live in the new `dataframe/polars_cells.py`, the key plumbing in `session_configuration.py`). pins: display-polars-1/C-005
 - `test_cap_1_source_file_line_cap.py` — DF-EAGER-1 step 2 (2026-09-09): `dataframe/core.py` row 4525 → 4487 with the script baseline; `.eager()`/`.compute()`/`.lazy()` and the cache-guard trio live in the new `dataframe/eager.py`, so the row ratchets DOWN. pins: df-eager-1/C-001
 - `test_cap_1_source_file_line_cap.py` — SQL-DESCRIBE-1 (2026-09-09): `repark-python/src/dataframe.rs` row 1126 → 1084 with the script baseline; the DDL element spelling moved to `repark-spark`. pins: sql-describe-1/C-003
+- `test_ex_0_example_coverage.py` — **COLUMN-PARITY-1 critic round (2026-09-14):** the enumerated public surface moves 930 → 937 and the column family 40 → 47 as the seven `Column` methods (`isin`, `isNaN`, `astype`, `name`, `outer`, `withField`, `dropFields`) join the surface; `docs/examples/column/struct_fields.py` covers all seven, so `check-example-coverage` stays clean. pins: column-parity-1/C-007
 - `test_ex_0_example_coverage.py` — **DF-EAGER-1 step 3 (2026-09-09):** the enumerated public surface moves 923 → 926 as `DataFrame.eager`, `DataFrame.compute` and `DataFrame.lazy` join the dataframe family (923 is CFG-1 step 3's count, merged first); `docs/examples/dataframe/lazy_and_eager.py` covers all three, so `check-example-coverage` stays clean. This pin is in the parity suite, which `make preflight` does not run — a PR that adds a public name must run the parity suite before pushing, and two such PRs open at once each carry their own count until one merges. pins: df-eager-1/C-001
 - `test_ex_0_example_coverage.py` — **FNP-9/10 (2026-09-06):** the enumerated public surface
   moves 913 → 921 as the eight built `F.*` names join `functions.py`'s `__all__` through

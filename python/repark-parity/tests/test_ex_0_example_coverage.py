@@ -339,7 +339,7 @@ def test_ex_1_class_surfaces_are_enumerated_with_their_counts() -> None:
     families: dict[str, int] = {}
     for family, _name in rows:
         families[family] = families.get(family, 0) + 1
-    assert families["column"] == 40
+    assert families["column"] == 47
     assert families["window"] == 22
     assert families["catalog"] == 54
     assert families["types"] == 46

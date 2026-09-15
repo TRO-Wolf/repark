@@ -690,6 +690,19 @@ impl PyColumnParts {
     }
 
     #[staticmethod]
+    fn field_join_sql(child_sql: &str, key_literal: &str) -> PyResult<String> {
+        fenced!("ColumnParts.field_join_sql", {
+            let mut out = String::with_capacity(child_sql.len() + key_literal.len() + 4);
+            out.push('(');
+            out.push_str(child_sql);
+            out.push_str(")[");
+            out.push_str(key_literal);
+            out.push(']');
+            Ok(out)
+        })
+    }
+
+    #[staticmethod]
     fn call_scalar(
         name: &str,
         inners: Vec<PyColumn>,

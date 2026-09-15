@@ -32,7 +32,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **COLUMN-PARITY-1 critic round (2026-09-14):** `update_fields` (struct expr + op-tag /
   path literals + `with` values → `update_fields(st, WithField(..))` /
   `dropfield()` display), `repark_isnan` (`isnan(child)` display), and `in_list`
-  (`(left IN (..))` display) follow the same one-call 4-tuple shape.
+  (`(left IN (..))` display) follow the same one-call 4-tuple shape, plus the
+  string-only `field_join_sql` helper for the join-ON bracket fragment.
   pins: column-parity-1/C-008
   **FACADE-2 step 3 (2026-09-13):** `call_scalar` renders the generic `name(args)` call —
   the shared helper every `F.<fn>(...)` builder routes through — as a 4-tuple

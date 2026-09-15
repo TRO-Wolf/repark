@@ -8030,6 +8030,18 @@ field NAME.
   literal-list coercion belongs to the SQL parser/planner surface, which this unit is
   fenced out of (run 15c owns it tonight); the pin codifies today's refusal so the fix
   reds it on purpose.
+### SQL-IN-1 — a mixed-type `IN` list refuses with a different error class
+- **repark** — `spark.sql("select 'a' in ('a', 1) e")` raises a DataFusion/Arrow cast
+  error (`Cannot cast string 'a' ...` family): the `IN` list refuses to unify `Utf8`
+  and `Int64` members.
+- **Apache Spark** — the same query also errors, with `CAST_INVALID_INPUT` /
+  `NumberFormatException` (`The value 'a' of the type "STRING" cannot be cast to
+  "BIGINT"`). *(oracle: live PySpark 4.1.2, 2026-09-14, `sql_in_mixed`.)*
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1, corrected
+  2026-09-14 by unit column-parity-1 (critic L-006): both engines refuse this cell,
+  so the row is an error-class divergence (repark's `Cannot cast` vs Spark's
+  `CAST_INVALID_INPUT`), not a success divergence. The pin asserts today's class and
+  message; a Spark-aligned `CAST_INVALID_INPUT` fix reds it on purpose.
 ### SQL-ISNAN-1 — `isnan` on a SQL string literal refuses Utf8
 - **repark** — `spark.sql("SELECT isnan('a')")` raises an analysis/execution error
   because `isnan` receives a `Utf8` argument; the SQL-door `isnan` does not coerce the
@@ -8064,6 +8076,23 @@ field NAME.
 - **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. Multi-name
   aliasing names generator outputs, which belongs to the generator select-path; the
   pin codifies today's refusal so the fix reds it on purpose.
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. The `update_fields`
+  engine expression requires addressable field names, so an empty name cannot reach
+  the kernel unchanged; the `col{index}` substitution is the engine's own convention
+  for nameless fields and keeps the update usable.
+### COL-NAME-MULTI-1 — `Column.name("k", "v")` keeps the first name
+- **repark** — `F.explode("arr").name("k", "v")` keeps the first name: one column
+  `k` with the exploded rows (`struct<k:int>`, `[{k: 1}, {k: 2}]`).
+- **Apache Spark** — `explode(map).name("k", "v")` aliases the two generator output
+  columns (`Row(k=1, v=2)` per input row). *(oracle: live PySpark 4.1.2, 2026-09-14,
+  `name_multi`.)*
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1, corrected
+  2026-09-14 by unit column-parity-1 (critic L-005): the old pin ran
+  `explode` of a map, which fails in unnest before `name` runs, so a real
+  multi-name fix would not red it. The pin now runs `explode` of an array (which
+  works today) and asserts today's first-name-wins answer exactly, so honoring the
+  second name reds it on purpose. The map-explode oracle cell stays Spark's answer
+  for the generator surface.
 ### COL-DOTTED-FIELD-1 — `col("st.a")` does not resolve a dotted nested field
 - **repark** — `col("st.a")` resolves as one top-level identifier and raises
   `AnalysisException` (`No field named st.a`) at select; nested access spells
@@ -8074,8 +8103,23 @@ field NAME.
 - **Pin** — `python/repark/tests/test_column_parity_1.py::test_withfield_nested_replace`
 - **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. Dotted-name
   resolution lives in column-name binding, outside this unit's fence; `withField`
-  itself walks dotted `fieldName` paths through `getField` reconstruction and is
-  unaffected.
+  itself walks dotted `fieldName` paths inside the `update_fields` engine expression
+  and is unaffected.
+
+### COL-ISIN-1 — DataFrame-door `isin` ANSI cast failure message
+
+- **repark** — `s.isin(1)` / `i.isin("1", "x")` fail at collect with a DataFusion/Arrow
+  cast error (`Cannot cast ...` family) on the malformed member.
+- **Apache Spark** — the same calls fail with `CAST_INVALID_INPUT` /
+  `NumberFormatException` (`The value 'c' of the type "STRING" cannot be cast to
+  "BIGINT"`). *(oracle: live PySpark 4.1.2, 2026-09-14, `isin_string_vs_int`,
+  `isin_int_vs_string`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_isin_string_vs_int`
+  and `::test_isin_int_vs_string`
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit column-parity-1 (critic L-008).
+  Both engines refuse the malformed ANSI coercion; only the error class and message
+  diverge. The pins assert today's class and message; a Spark-aligned
+  `CAST_INVALID_INPUT` fix reds them on purpose.
 
 ## 8. Drop-in disclosure rationale
 
