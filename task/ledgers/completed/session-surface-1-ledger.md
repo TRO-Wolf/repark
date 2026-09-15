@@ -66,3 +66,61 @@ already-Rust `repark.spark.functions` calls. No new kernel, planner rule or rend
 exists in this card, so there is nothing to move into Rust.
 
 VERDICT: 10 clauses, 10 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Orchestrator rulings after the re-check (run 15b, G-2)
+
+- R-7 (2026-09-15): Grok critic-logic round 1 found 1 P1 (a stopped session's artifact directory stayed on disk and on
+  `sys.path`) and 6 P2; Devin fixed them under R-4..R-6; the same critic session re-checked the rebased head and answered PASS.
+  Its only new note is L-101 (P3): `ReparkSession` has no interpreter-exit finalizer, so a process that exits without `stop()`
+  leaves the artifact `mkdtemp` tree for the OS to clean — recorded, not fixed (no finalizer existed to extend).
+- R-8 (2026-09-15): the S2-21 perf reviewers do not run on this unit — tags, interrupts, refusals, a per-session artifact copy and
+  tvf wrappers over existing functions; no data path.
+- R-9 (2026-09-15): the earlier local facade failures in `test_array_null_1*.py` came from a stale native module; with the native
+  rebuilt at main e98e899d the unit's pins and those files pass together (58 passed), and the full gates ran green.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: session-surface-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card and the forty-seven recorded PySpark 4.1.2 session cells; all nineteen names pinned, the five Connect-only refusals byte for byte.
+      artifacts: [python/repark/tests/test_session_surface_1.py, python/repark/tests/facade_session_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Tag validation order and isolation across sessions, Try(toLong) id validation (Unicode and full-width digits, int64 bounds, signs, whitespace), artifact adds with the same basename and different content, pathless adds, stop twice and via the context manager, profile.render type check order, tvf arguments and today's refusing wrappers.
+      artifacts: [python/repark/tests/test_session_surface_1.py]
+    - id: AT-3
+      status: N/A
+      justification: Python session plumbing; no Rust, no unwrap.
+    - id: AT-4
+      status: ATTACKED
+      evidence: Tags and the artifact directory are per session on the alive token; stop removes exactly that session's sys.path entry and directory and leaves a peer session's untouched.
+      artifacts: [python/repark/src/repark/spark/session/session_surface.py]
+    - id: AT-5
+      status: ATTACKED
+      evidence: addArtifact copies user files into a private mkdtemp directory, refuses a different file under an existing basename (DUPLICATED_ARTIFACT) and removes the directory on stop; archive and file artifacts stay declared refusals.
+      artifacts: [python/repark/src/repark/spark/session/session_surface.py, docs/spark-sql-iceberg-parity.md]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Grok critic-logic round 1 NEEDS_REMEDIATION (1 P1, 6 P2) fixed under rulings R-4..R-6; the same critic session re-checked the head (PASS, one P3 note recorded as R-7).
+      artifacts: [task/ledgers/completed/session-surface-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Full facade and parity suites green on a release native built at main e98e899d, ruff 0.15.22, check_lib_py with session_core.py held at its baseline, ledger lifecycle and grammar, docs links, example coverage with the three session examples executed; comment-ban grep zero hits.
+      artifacts: [docs/examples/session/tags_and_interrupts.py, docs/examples/session/connect_only_and_declared.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark's contracts were read, not assumed - pyspark/sql/session.py tag, interrupt, artifact and Connect-only members, pyspark/sql/tvf.py, pyspark/sql/profiler.py, and the interrupt id validation read from the classic SparkSession bytecode by the critic.
+      artifacts: [python/repark/src/repark/spark/session/session_surface.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Refusals carry Spark's classes and texts (ONLY_SUPPORTED_WITH_SPARK_CONNECT, NOT_IMPLEMENTED, INVALID_MULTIPLE_ARGUMENT_CONDITIONS, DUPLICATED_ARTIFACT, VALUE_NOT_ALLOWED); declared differences are the SES-* registry rows with pins.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation guards run - leaving the artifact directory on stop reds the lifecycle pins, a Unicode-digit regex reds the id table, skipping the render type check reds the order pin.
+      artifacts: [python/repark/tests/test_session_surface_1.py]
+  complete: true
+```
+

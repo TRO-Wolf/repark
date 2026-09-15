@@ -722,6 +722,14 @@ else. The next pickup's `make ledger-archive` files everything here under
   and root `map.md` sentence); the cutover rows naming the Glue replace refusal are
   stamped FIXED at `edc38c6a`. `risk_tier: standard`. Branch `chore/repin-rp-20`.
   pins: rp-20/C-001, C-002, C-003
+- [session-surface-1-ledger.md](session-surface-1-ledger.md) —
+  **SESSION-SURFACE-1 step 1 (2026-09-14), in flight:** the 19-name SparkSession
+  surface card — job tags, the interrupt trio, the five Connect-only names,
+  `readStream`/`streams`/`dataSource`, `addArtifact(s)`, `profile` and `tvf` —
+  implemented or dated-declared in `session/session_surface.py` against the
+  PySpark 4.1.2 classic oracle; eight `SES-*` registry rows filed.
+  `risk_tier: standard`. Branch `feat/session-surface-1`.
+  pins: session-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 - [sql-harden-1-cutover-shapes-ledger.md](sql-harden-1-cutover-shapes-ledger.md) — Unit ledger — SQL-HARDEN-1 · the cutover pipeline cutover Iceberg SQL shapes
 - [sql-harden-2-cow-shapes-ledger.md](sql-harden-2-cow-shapes-ledger.md) — Unit ledger — SQL-HARDEN-2 · copy-on-write cutover shapes
