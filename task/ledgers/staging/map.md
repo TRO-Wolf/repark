@@ -16,8 +16,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `F.bitmap_and_agg` as one-line wrappers over `column._inner.aggregate(kind, False)`
   through three new `unary_aggregate_udaf` arms (`mod bitmap_agg` flips `pub` for the
   cross-crate path; `function_dispatch.rs` condenses its four `binary_expr` arms to stay
-  at the 1000-line ceiling). Rust UDAFs and SQL door untouched (FNP-6D, #609).
-  Round 15a: commits 1–3 in flight, HALT `native needed` before the green/census steps.
+  under its file-size ceiling). Rust UDAFs and SQL door untouched (FNP-6D, #609).
+  Round 15a complete: red re-run on the base facade with the native (9 failed), ten green
+  facade pins, byname `FACADE_ONLY_ROUTINE_NAMES` rows with the `call_function` bytes pin,
+  example executed under `--require-execute`, EX-0 1010 → 1013, registry flipped,
+  all four clauses PROVEN.
   `risk_tier: standard`. Branch `feat/fnp-bitmap-facade-1`.
   pins: fnp-bitmap-facade-1/C-001, C-002, C-003, C-004
 - [facade-5-ledger.md](facade-5-ledger.md) —
