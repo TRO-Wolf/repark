@@ -3,7 +3,7 @@
 **Date:** 2026-09-14 · **Branch:** `feat/df-plan-introspect-1` · **Base:** `origin/main`
 `efcb14efa30ad360503ad1c9b9da2527a923041a` · **Model:** Muse Spark (muse-spark-1.3-contributor) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
-**Registry:** EX-DF-11 unchanged (`sameSemantics` stays handle identity; the hash implication is measured in §5).
+**Registry:** EX-DF-11 FIXED 2026-09-15 by round 3 (R-9: `sameSemantics` answers plan equality).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
@@ -139,14 +139,56 @@ construction-identity note. Spark itself answers unequal hashes with
 `planintro_local_data_same_data_same_semantics` are both false), so
 construction identity is Spark-equal, not a divergence.
 
-**Known boundary (dated 2026-09-15, unmeasured on both engines).** The
-comparison canonicalization strips a column-side int cast only when it lands on
-the literal's own width, so an explicit *narrowing* cast that happens to match
-the literal width (`CAST(big_col AS INT) > <Int32 literal>`) hashes like the
-plain comparison. No pin covers it and no oracle cell measures it; a future
-cell deciding it either way reopens exactly `comparison_column`.
-
 VERDICT (whole ledger, 2026-09-15 round 2): 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Follow-up round 3 — 2026-09-15 (R-9..R-11, plan-equality sameSemantics plus user-cast rule)
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-011 | The cast probe answers hold on both fields: the alias twin, the same-frame filter twin, the Column-vs-SQL int filter, and the literal-width pair answer true/true; the string cast, the SQL-door narrowing cast, the Column-door narrowing cast, and the widening cast answer false/false. | `test_semantichash_cast_cells_match_oracle` over the eight `planintro_cast_*` cells, red first on the round-2 head, plus `sameSemantics` asserts on the twelve round-2 cells. | **PROVEN** | 36/36 green on the rebuilt release module. Red first is the orchestrator-recorded round-2 answers (`planintro_cast_repark_2026-09-15.txt`): `narrow_cast_vs_plain_col` and `widen_cast_vs_plain_col` answer `equal_hash` true against the oracle false, and every `sameSemantics` answers `False` against oracle `True` on the twin arms. pins: df-plan-introspect-1/C-011 |
+| C-012 | `dataframe/core.py` holds its ceiling with ruff clean after the `sameSemantics` move. | `uvx ruff@0.15.22 check python/repark` plus `format --check`, and both ceiling tables ratcheted to the real count. | **PROVEN** | `ruff check` and `format --check` clean; `core.py` 4027 → 4014 in `scripts/check_lib_py.py` and the CAP-1 mirror, with the `scripts/map.md` note. pins: df-plan-introspect-1/C-012 |
+
+**R-9 (shape rule; retires EX-DF-11, recorded as ordered).** `sameSemantics`
+answers Spark's plan equality: true exactly when the two analyzed plans produce
+the same canonical byte stream in Rust. The binding hashes nothing twice: one
+`ByteSink` pass per plan collects the same bytes the `DefaultHasher` pass
+collects, and equality compares the streams, never the 32-bit fold alone. The
+NOT_DATAFRAME type gate stays. The method body moves to
+`dataframe/plan_introspect.py` behind the one-line class binding, with native
+`same_semantics(left, right, lineages)` in `repark-core` and `repark-python`.
+Alias twins, same-frame filter twins, Column-vs-SQL int filters, and
+literal-width pairs answer true; narrowing, widening, and string casts answer
+false; independently built local frames stay false by construction identity
+(cell `planintro_local_data_same_data_same_semantics`). EX-DF-11 flips to
+FIXED 2026-09-15 with its pin renamed to
+`test_same_semantics_alias_plan_equality`; the one `docs/examples` sameSemantics
+example still passes unchanged (its False arms are local-frame twins, still
+false by construction identity). The `range(5)` twin arm in `test_c5_census_r7`
+flips to True as the same rule requires.
+
+**R-10 (recorded as ordered).** A cast the user wrote is part of the plan and
+is never stripped or folded; only analyzer-inserted coercion (and literal-width
+differences between the SQL parser and the Column API) normalizes. The round-2
+width rule is retired: the strip now consults the pre-analysis plan
+structurally, per comparison, as (column, operator, literal value). A column
+cast beside a bare literal in pre-analysis is user-shaped and blocks the strip;
+a cast beside a cast literal (the SQL door coerces both sides up front, measured
+in the debug trace) or no pre-analysis cast at all is coercion and still
+strips. The old "Known boundary" paragraph is deleted: the narrowing cells pin
+the decided behavior. Remaining boundary (dated 2026-09-15): a user cast on
+both sides of one comparison (`CAST(a AS BIGINT) > CAST(5 AS BIGINT)`) reads as
+coercion-shaped and still strips; no oracle cell covers that spelling.
+
+**R-11 (recorded as ordered).** The R-9 move frees the lines the wrapped import
+needs: `core.py` 4027 → 4014, ratcheted DOWN in both tables with the
+`scripts/map.md` note.
+
+**Timings (release native, 2026-09-15, depth-200 chained Column filters).**
+`semanticHash` median 0.0055s over 11 samples (0.0054–0.0056s, digest
+`920142959`); `sameSemantics` on the same depth-200 pair median 0.0110s over 11
+samples (0.0109–0.0111s, two analyzer passes plus the byte compare).
+
+VERDICT (whole ledger, 2026-09-15 round 3): 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -154,43 +196,43 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Clauses C-008/C-009/C-010 walked against the twelve recorded L-102 probe cells; four pins red on the round-1 head with the assert lines pasted above, all green after; every earlier clause re-green in the same run.
+      evidence: Clauses C-011/C-012 walked against the eight recorded cast-probe cells plus the twelve round-2 cells; red first is the orchestrator-recorded round-2 answers (two equal_hash trues against oracle falses, every sameSemantics false against oracle trues), all green after; every earlier clause re-green in the same 36/36 run.
       artifacts: [python/repark/tests/test_df_plan_introspect_1.py, python/repark/tests/facade_dataframe_surface_oracle.json, crates/repark-core/src/plan_introspect.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: String, Column, and SQL filter spellings; where-vs-filter; filter-then-select; filtered views through both doors; identity selects named/cols/star on both doors; reorder, rename, subset, expression, and string-cast selects that must stay distinct; Iceberg scan with live rows answering [].
-      artifacts: [python/repark/tests/test_df_plan_introspect_1.py]
+      evidence: Narrowing and widening casts on the Column door and narrowing on the SQL door stay distinct from the plain column; alias twins, same-frame filter twins, Column-vs-SQL int filters, and literal-width pairs answer equal; string casts stay distinct; reorder/rename/subset/expression selects stay distinct; local-frame twins stay unequal by construction identity; range twins answer equal.
+      artifacts: [python/repark/tests/test_df_plan_introspect_1.py, python/repark/tests/test_c5_census_r7.py, python/repark/tests/test_examples_dataframe_c.py]
     - id: AT-3
       status: ATTACKED
-      evidence: Analyzer failure still maps to the engine error with no panic path (no unwrap in production code); stopped-session and non-DataFrame sameSemantics behavior unchanged and still covered by the round-1 null reports.
-      artifacts: [crates/repark-core/src/plan_introspect.rs]
+      evidence: Analyzer failure still maps to the engine error with no panic path (no unwrap in production code); the NOT_DATAFRAME gate moved with the body and both spellings still raise it; stopped-session behavior covered by _ensure_alive on both frames.
+      artifacts: [crates/repark-core/src/plan_introspect.rs, python/repark/src/repark/spark/dataframe/plan_introspect.py]
     - id: AT-4
       status: ATTACKED
-      evidence: No shared mutable state added; the GIL stays detached across analyze plus streaming hash; DefaultHasher stays process-seeded with the MemTable construction-identity boundary unchanged and re-pinned green.
+      evidence: No shared mutable state added; the GIL stays detached across analyze plus streaming hash on both same_semantics arms; the MemTable construction-identity boundary unchanged and re-pinned green.
       artifacts: [crates/repark-python/src/plan_introspect.rs, python/repark/tests/test_df_plan_introspect_1.py]
     - id: AT-5
       status: ATTACKED
-      evidence: No new input surface (same two doors, facade untouched); the cast fold is total with a structural fallthrough for non-int and unrepresentable casts, pinned by the string-cast assert.
+      evidence: No new input surface (same two doors, same signatures plus the documented plan-equality semantic); the user-shaped block fires only on int column-vs-literal comparisons with a bare pre-analysis literal, with a structural fallthrough everywhere else, pinned by the string-cast and both-sides note.
       artifacts: [crates/repark-core/src/plan_introspect.rs]
     - id: AT-6
       status: ATTACKED
-      evidence: Every hash this round moves is re-pinned (35/35 green, including all C-001/C-002/C-006 pins); the fold only fires on value-preserving int casts and the comparison strip only on casts landing on the literal width; the explicit-narrowing corner is declared above, not absorbed.
+      evidence: Every hash this round moves is re-pinned (36/36 green, including all C-001/C-002/C-006/C-008/C-009 pins unchanged); only the two Column-door cast cells change hash, exactly the oracle falses; the both-sides-user-cast corner is declared in R-10, not absorbed.
       artifacts: [python/repark/tests/test_df_plan_introspect_1.py]
     - id: AT-7
       status: ATTACKED
-      evidence: Depth-200 chained-filter median 0.0047s on the release native (linear analyzer cost, streaming hasher kept, no intermediate string); hasher state stays fixed-size with no per-node allocation growth.
+      evidence: Depth-200 chained-filter semanticHash median 0.0055s and sameSemantics median 0.0110s on the release native (linear analyzer cost times two passes plus the byte compare, streaming hasher kept, no intermediate string).
       artifacts: [task/ledgers/staging/df-plan-introspect-1-ledger.md]
     - id: AT-8
       status: ATTACKED
-      evidence: No dependency change (Cargo.toml, Cargo.lock, pyproject.toml, uv.lock, .github untouched); facade signatures unchanged; DataFusion analyzer API used exactly as the round-1 view arm already did.
-      artifacts: [crates/repark-core/src/plan_introspect.rs, python/repark/src/repark/spark/dataframe/plan_introspect.py]
+      evidence: No dependency change (Cargo.toml, Cargo.lock, pyproject.toml, uv.lock, .github untouched); DataFusion TreeNode/analyzer APIs used as the session guards already do; ceilings ratcheted down, never up.
+      artifacts: [crates/repark-core/src/plan_introspect.rs, scripts/check_lib_py.py, python/repark-parity/tests/test_cap_1_source_file_line_cap.py]
     - id: AT-9
       status: ATTACKED
-      evidence: Every new pin prints both hashes on failure (the red lines above came straight from that output); the ledger keeps the fail-before record next to the ruling.
+      evidence: Every new pin prints both hashes and both sameSemantics on failure; the ledger keeps the orchestrator-recorded fail-before file next to the ruling.
       artifacts: [python/repark/tests/test_df_plan_introspect_1.py, task/ledgers/staging/df-plan-introspect-1-ledger.md]
     - id: AT-10
       status: ATTACKED
-      evidence: Four pins red before the fix, green after; every added branch names its triggering input (Alias arm by select of names, literal-cast fold by string/SQL int filters, comparison canonicalization by the Column-door filter, qualifier strip by the SQL door, reorder/rename/subset/expression fallthrough by the non-identity test).
+      evidence: Two equal_hash pins and every twin-arm sameSemantics pin red before the fix, green after; every added branch names its triggering input (user-shaped block by the narrowing/widening cells, coercion passthrough by the SQL-door cells, literal fold by the literal-width cell, ByteSink compare by the alias/filter twins).
       artifacts: [python/repark/tests/test_df_plan_introspect_1.py, crates/repark-core/src/plan_introspect.rs]
   complete: true
 ```

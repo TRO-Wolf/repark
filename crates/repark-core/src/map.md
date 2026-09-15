@@ -198,7 +198,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   false, so an H-3 number can never come from a debug build.
   pins: perf-dynflatten-1-measure/C-002
 - `plan_introspect.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-14; follow-ups 2026-09-15,
-  rounds 1–2):** two plan-introspection kernels over a `DataFrame`'s plan.
+  rounds 1–3):** three plan-introspection kernels over a `DataFrame`'s plan.
   `input_files` walks the built (never executed) physical plan and collects every
   `FileScanConfig` file-group entry behind a `DataSourceExec`, rendered as the
   object store names it (`file:///` for local paths, remote schemes unchanged) and
@@ -216,14 +216,17 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   same-named alias) and subquery aliases strip; integer-literal casts fold to the
   target width, and an integer comparison between a column (through int-widening
   casts only) and an integer literal hashes as operator plus bare name plus `i128`
-  value, so the string, Column, and SQL doors hash one filter one way (a cast on
-  the column side strips only when it lands on the literal's own width). The fold
-  keeps the low 32 bits of the digest as a signed int. Depth-200 chained-filter
-  hash medians 0.0047s on the always-analyze build against 0.0001s with the
-  analyze-skip and 0.4143s before the follow-up (2026-09-15, release module). The
-  Iceberg scan exec exposes table and snapshot only, never materialized data files,
-  so Iceberg frames answer empty.
-  pins: df-plan-introspect-1/C-001, C-002, C-006, C-007, C-008, C-009, C-010
+  value, so the string, Column, and SQL doors hash one filter one way. A column
+  cast the user wrote (a cast beside a bare literal in the pre-analysis plan)
+  blocks that strip, so narrowing and widening casts hash apart from the plain
+  column; casts the analyzer or the SQL door inserted for coercion still strip.
+  `same_semantics` compares the canonical analyzed-plan byte streams (never the
+  32-bit fold alone). The fold keeps the low 32 bits of the digest as a signed
+  int. Depth-200 chained-filter hash medians 0.0047s on the always-analyze build
+  against 0.0001s with the analyze-skip and 0.4143s before the follow-up
+  (2026-09-15, release module). The Iceberg scan exec exposes table and snapshot
+  only, never materialized data files, so Iceberg frames answer empty.
+  pins: df-plan-introspect-1/C-001, C-002, C-006, C-007, C-008, C-009, C-010, C-011
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast first to repark-iceberg's `CommitStateUnknownError`

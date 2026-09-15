@@ -28,12 +28,12 @@ def spark() -> Iterator[ReparkSession]:
     session.stop()
 
 
-def test_same_semantics_alias_divergence(spark: ReparkSession) -> None:
-    """sameSemantics answers handle identity: True on self, False on the aliased twin (EX-DF-11)."""
+def test_same_semantics_alias_plan_equality(spark: ReparkSession) -> None:
+    """sameSemantics answers plan equality: True on self and on the aliased twin (EX-DF-11)."""
     frame = spark.createDataFrame(SIX_ROWS, ["g", "k", "v"])
     assert frame.sameSemantics(frame) is True
     assert frame.same_semantics(frame) is True
-    assert frame.sameSemantics(frame.alias("x")) is False
+    assert frame.sameSemantics(frame.alias("x")) is True
 
 
 def test_replace_unsubset_arms(spark: ReparkSession) -> None:

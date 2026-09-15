@@ -1233,6 +1233,54 @@
     "value": 1
    }
   },
+  "planintro_cast_alias_twin": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_cast_cast_to_string_vs_plain": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_cast_filter_twin_same_frame": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_cast_int_col_lit_vs_sql": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_cast_literal_long_vs_int": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_cast_narrow_cast_vs_plain_col": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_cast_narrow_cast_vs_plain_sql": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_cast_widen_cast_vs_plain_col": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
   "planintro_cube_rollup_cube_rows": {
    "result": {
     "kind": "int",

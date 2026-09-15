@@ -94,7 +94,7 @@ pub use stack::{
 };
 pub use update_fields::{register_update_fields, update_fields_call, update_fields_udf};
 mod plan_introspect;
-pub use plan_introspect::{input_files, semantic_hash};
+pub use plan_introspect::{input_files, same_semantics, semantic_hash};
 
 #[must_use]
 pub fn built_with_debug_assertions() -> bool {

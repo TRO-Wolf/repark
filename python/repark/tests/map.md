@@ -127,9 +127,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (reordered stays unequal), non-identity selects that stay projections, and the
   Iceberg `[]` scan — four red on the round-1
   head, all green after; the cells' `sameSemantics` values are transcribed but
-  unpinned because `sameSemantics` stays handle identity per EX-DF-11. The example,
+  unpinned because `sameSemantics` stays handle identity per EX-DF-11. Follow-up
+  round 3 (2026-09-15, rulings R-9/R-10/R-11) adds eight `planintro_cast_*` cells
+  from the cast probe and pins both fields of every one, pins the twelve round-2
+  cells' `sameSemantics` values now that the name answers plan equality
+  (EX-DF-11 FIXED), and ratchets `core.py` 4027 → 4014. The example,
   the inventory refresh, and this entry close the coverage loop.
-  pins: df-plan-introspect-1/C-003, C-006, C-008, C-009, C-010
+  pins: df-plan-introspect-1/C-003, C-006, C-008, C-009, C-010, C-011, C-012
   The touched DataFrame suites and the lint, format, clippy, and coverage gates
   stay green. pins: df-plan-introspect-1/C-004
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
@@ -680,7 +684,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ex-22-types-writerv2/C-003, C-005
 - [test_examples_dataframe_c.py](test_examples_dataframe_c.py) — **EX-18 (2026-09-04):**
   the seven divergence pins for the DataFrame-c example batch — the `sameSemantics`
-  alias arm answers handle identity where Spark answers plan equality (EX-DF-11),
+  alias arm answers plan equality like Spark (EX-DF-11, FIXED 2026-09-15 by
+  DF-PLAN-INTROSPECT-1 round 3),
   `replace` without subset now replaces typed cells per column (EX-DF-12, FIXED by
   REPLACE-LINEAR-1 2026-09-14),
   `sample`'s stable seeded set where Spark's keyword-seed spelling drops the seed and
@@ -1609,7 +1614,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   nested access (array/map/struct) Arrow value+type; `try_cast` display + null-on-fail +
   LongType Arrow int64; `cast`/`try_cast` `NOT_DATATYPE_OR_STR`; `transform` chain +
   `NOT_CALLABLE`/`NOT_COLUMN` gates; `F.when` + chained `.when` str→`NOT_COLUMN`;
-  `DataFrame.sameSemantics`/`same_semantics` non-DF→`NOT_DATAFRAME` + handle-identity pins.
+  `DataFrame.sameSemantics`/`same_semantics` non-DF→`NOT_DATAFRAME` + plan-equality pins
+  (range twins equal since DF-PLAN-INTROSPECT-1 round 3).
   (**octo C1:** type gates + missing pins + sameSemantics honesty; **octo C2:** getItem
   Arrow int/string type pins.)
 - `test_udf.py` / `test_udf_oracle.py` / `udf_oracle_funcs.py` — **U8 classic scalar Python

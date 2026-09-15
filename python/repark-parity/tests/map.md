@@ -1,5 +1,11 @@
 # map — python/repark-parity/tests
 
+DF-PLAN-INTROSPECT-1 follow-up round 3 (2026-09-15, R-11): CAP-1 mirror row
+ratcheted down with the code — `dataframe/core.py` 4027 → 4014 (the
+`sameSemantics` body moves to `dataframe/plan_introspect.py`). The
+`check_lib_py.py` exception row moved in the same commit; no row raised.
+pins: df-plan-introspect-1/C-012
+
 TYPES-BASES-1 (2026-09-14): CAP-1 mirror row ratcheted down with the code —
 `spark/types.py` 1834→1791 after the abstract bases, spatial types,
 `UserDefinedType`, and spatial token helpers moved to `spark/types_bases.py`.

@@ -1713,7 +1713,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   group entry as `file:///` URIs in first-appearance order; a local frame answers
   `[]`. `semanticHash()` hashes the always-analyzed logical plan (view inlining,
   qualifier strip, identity-projection passthrough, integer-comparison
-  canonicalization) folded to a Java int. An Iceberg table scan answers `[]` like
+  canonicalization) folded to a Java int. A user-written cast stays in the plan;
+  only analyzer-inserted coercion normalizes. An Iceberg table scan answers `[]` like
   Spark, and a manifest-backed file list is not offered. Independently built local
   frames hash by construction identity, like Spark.
 - **Apache Spark** — `inputFiles` collects file relations only, so an Iceberg table
@@ -1727,8 +1728,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `…::test_semantichash_df_filter_matches_sql_where`,
   `…::test_semantichash_identity_selects_match_frame`
 - **Rationale** — IMPLEMENTED 2026-09-15 (DF-PLAN-INTROSPECT-1 follow-up round 2,
-  rulings R-6/R-7/R-8). `sameSemantics` stays handle identity per EX-DF-11; the hash
-  carries the equality.
+  rulings R-6/R-7/R-8). FIXED 2026-09-15 (follow-up round 3, ruling R-9):
+  `sameSemantics` now answers plan equality per EX-DF-11 instead of handle identity.
 
 ### IO-ORC-1 — the ORC reader and writer names are a declared `NOT_IMPLEMENTED` refusal
 
@@ -6846,19 +6847,24 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — filed 2026-09-04 by EX-16 round 3 from the round-1 review-gap entry; FIXED the
   same day by DF-PRINTSCHEMA-1. The example's `rstrip` arm holds on both engines either way.
 
-### EX-DF-11 — `sameSemantics` answers handle identity on an aliased twin; Spark answers plan equality
+### EX-DF-11 — `sameSemantics` answers plan equality — **FIXED 2026-09-15, DF-PLAN-INTROSPECT-1**
 
-- **repark** — `sameSemantics` is best-effort native-handle identity: `frame.sameSemantics(frame)`
-  answers `True`, while `frame.sameSemantics(frame.alias("x"))` answers `False` because `alias`
-  spawns a new handle. The self, identical-recreate, and filtered-twin arms measured Spark-equal.
+- **repark** — `sameSemantics` compares the canonical analyzed-plan byte streams in Rust:
+  `frame.sameSemantics(frame)` and `frame.sameSemantics(frame.alias("x"))` answer `True`;
+  independently built same-data local frames answer `False` by construction identity, like
+  Spark. The identical-recreate and filtered-twin arms measured Spark-equal.
 - **Apache Spark** — the aliased twin carries the same logical plan, so
   `frame.sameSemantics(frame.alias("x"))` answers `True`; the identical-recreate and
   filtered-twin arms answer `False` like repark. *(oracle: live PySpark 4.1.2, ANSI on,
-  2026-09-04, EX-18 DataFrame-c batch, six-row `g/k/v` frame.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_same_semantics_alias_divergence`
-- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
-  covered by the agreeing arms; this row records the alias arm until repark compares plans the
-  way Spark does.
+  2026-09-04, EX-18 DataFrame-c batch, six-row `g/k/v` frame; re-measured 2026-09-15 on the
+  `a int, big bigint, b string` parquet probe
+  `planintro_cast_probe_2026-09-15.json`: alias, filter-twin, int-literal-door, and
+  literal-width twins true; narrowing, widening, and string casts false.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_same_semantics_alias_plan_equality`
+- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. FIXED 2026-09-15
+  (DF-PLAN-INTROSPECT-1 follow-up round 3, ruling R-9): the method body moved to
+  `dataframe/plan_introspect.py` behind a native `same_semantics` comparison, so the alias
+  arm answers plan equality the way Spark does. History: handle identity until R-9.
 
 ### EX-DF-12 — `replace` outside the subset arm casts or raises; Spark replaces typed cells — **FIXED 2026-09-14, REPLACE-LINEAR-1**
 

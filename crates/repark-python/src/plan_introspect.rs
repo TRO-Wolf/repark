@@ -11,6 +11,7 @@ use crate::{datafusion_to_py_err, to_py_err};
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(input_files, module)?)?;
     module.add_function(wrap_pyfunction!(semantic_hash, module)?)?;
+    module.add_function(wrap_pyfunction!(same_semantics, module)?)?;
     Ok(())
 }
 
@@ -44,5 +45,34 @@ fn semantic_hash(
             definitions.insert(name.clone(), definition);
         }
         py.detach(|| repark_core::semantic_hash(&state, &plan, &definitions).map_err(to_py_err))
+    })
+}
+
+#[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
+#[pyfunction]
+fn same_semantics(
+    py: Python<'_>,
+    left: &PyDataFrame,
+    right: &PyDataFrame,
+    lineages: HashMap<String, Bound<'_, PyDataFrame>>,
+) -> PyResult<bool> {
+    fenced!("plan_introspect.same_semantics", {
+        let (state_left, plan_left) = left.df.clone().into_parts();
+        let (state_right, plan_right) = right.df.clone().into_parts();
+        let mut definitions = HashMap::with_capacity(lineages.len());
+        for (name, lineage) in &lineages {
+            let definition: LogicalPlan = lineage.borrow().df.clone().into_parts().1;
+            definitions.insert(name.clone(), definition);
+        }
+        py.detach(|| {
+            repark_core::same_semantics(
+                &state_left,
+                &plan_left,
+                &state_right,
+                &plan_right,
+                &definitions,
+            )
+            .map_err(to_py_err)
+        })
     })
 }

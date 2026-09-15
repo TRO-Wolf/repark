@@ -41,3 +41,28 @@ def semanticHash(frame: DataFrame) -> int:  # noqa: N802
 
     native = frame._lineage_inner if frame._lineage_inner is not None else frame._plan()
     return int(_native.semantic_hash(native, _cache_lineages(frame)))
+
+
+def sameSemantics(frame: DataFrame, other: Any) -> bool:  # noqa: N802
+    """Whether ``other`` carries the same analyzed plan (PySpark ``DataFrame.sameSemantics``)."""
+    from repark.errors import PySparkTypeError
+    from repark.spark.dataframe.core import DataFrame as _Frame
+
+    if not isinstance(other, _Frame):
+        raise PySparkTypeError(
+            errorClass="NOT_DATAFRAME",
+            messageParameters={
+                "arg_name": "other",
+                "arg_type": type(other).__name__,
+            },
+        )
+    frame._ensure_alive()
+    other._ensure_alive()
+    from repark import _native
+
+    left = frame._lineage_inner if frame._lineage_inner is not None else frame._plan()
+    right = other._lineage_inner if other._lineage_inner is not None else other._plan()
+    lineages = _cache_lineages(frame)
+    for name, lineage in _cache_lineages(other).items():
+        lineages.setdefault(name, lineage)
+    return bool(_native.same_semantics(left, right, lineages))

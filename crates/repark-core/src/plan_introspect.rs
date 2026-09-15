@@ -6,6 +6,7 @@ use std::sync::Arc;
 use arrow::datatypes::DataType;
 use datafusion::common::ScalarValue;
 use datafusion::common::TableReference;
+use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::datasource::listing::ListingTable;
 use datafusion::datasource::memory::MemTable;
 use datafusion::datasource::physical_plan::FileScanConfig;
@@ -63,6 +64,30 @@ fn render_uri(object_store_url: &ObjectStoreUrl, location: &ObjectPath) -> Strin
 struct Ctx<'a, S: BuildHasher> {
     state: &'a SessionState,
     lineages: &'a HashMap<String, LogicalPlan, S>,
+    user_comparisons: HashSet<(String, String, i128)>,
+}
+
+struct ByteSink(Vec<u8>);
+
+impl Hasher for ByteSink {
+    fn finish(&self) -> u64 {
+        0
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        self.0.extend_from_slice(bytes);
+    }
+    fn write_u8(&mut self, value: u8) {
+        self.0.push(value);
+    }
+    fn write_u32(&mut self, value: u32) {
+        self.0.extend_from_slice(&value.to_le_bytes());
+    }
+    fn write_usize(&mut self, value: usize) {
+        self.0.extend_from_slice(&(value as u64).to_le_bytes());
+    }
+    fn write_i128(&mut self, value: i128) {
+        self.0.extend_from_slice(&value.to_le_bytes());
+    }
 }
 
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
@@ -71,10 +96,134 @@ pub fn semantic_hash<S: BuildHasher>(
     plan: &LogicalPlan,
     lineages: &HashMap<String, LogicalPlan, S>,
 ) -> crate::Result<i64> {
-    let ctx = Ctx { state, lineages };
+    let ctx = Ctx {
+        state,
+        lineages,
+        user_comparisons: user_shaped_comparisons(plan),
+    };
     let mut hash = DefaultHasher::new();
     hash_plan(plan, &ctx, &mut hash)?;
     Ok(fold_hash(hash.finish()))
+}
+
+#[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
+pub fn same_semantics<S: BuildHasher>(
+    state_a: &SessionState,
+    plan_a: &LogicalPlan,
+    state_b: &SessionState,
+    plan_b: &LogicalPlan,
+    lineages: &HashMap<String, LogicalPlan, S>,
+) -> crate::Result<bool> {
+    Ok(canonical_bytes(state_a, plan_a, lineages)? == canonical_bytes(state_b, plan_b, lineages)?)
+}
+
+fn canonical_bytes<S: BuildHasher>(
+    state: &SessionState,
+    plan: &LogicalPlan,
+    lineages: &HashMap<String, LogicalPlan, S>,
+) -> crate::Result<Vec<u8>> {
+    let ctx = Ctx {
+        state,
+        lineages,
+        user_comparisons: user_shaped_comparisons(plan),
+    };
+    let analyzed = ctx
+        .state
+        .analyzer()
+        .execute_and_check(plan.clone(), ctx.state.config_options(), |_, _| {})
+        .map_err(crate::engine_err)?;
+    let mut sink = ByteSink(Vec::new());
+    write_plan(&analyzed, &ctx, &mut sink);
+    Ok(sink.0)
+}
+
+fn user_shaped_comparisons(plan: &LogicalPlan) -> HashSet<(String, String, i128)> {
+    let mut out = HashSet::new();
+    collect_user_shaped_comparisons(plan, &mut out);
+    out
+}
+
+fn unwrap_casts(expr: &Expr) -> (&Expr, bool) {
+    match expr {
+        Expr::Cast(cast) => {
+            let (inner, _) = unwrap_casts(&cast.expr);
+            (inner, true)
+        }
+        Expr::TryCast(cast) => {
+            let (inner, _) = unwrap_casts(&cast.expr);
+            (inner, true)
+        }
+        _ => (expr, false),
+    }
+}
+
+fn record_user_shaped(binary: &BinaryExpr, out: &mut HashSet<(String, String, i128)>) {
+    match binary.op {
+        Operator::Eq
+        | Operator::NotEq
+        | Operator::Lt
+        | Operator::LtEq
+        | Operator::Gt
+        | Operator::GtEq => {}
+        _ => return,
+    }
+    let operator = format!("{:?}", binary.op);
+    for (column_side, literal_side) in [&binary.left, &binary.right]
+        .iter()
+        .zip([&binary.right, &binary.left])
+    {
+        let (column_inner, column_cast) = unwrap_casts(column_side);
+        let (literal_inner, literal_cast) = unwrap_casts(literal_side);
+        if !column_cast || literal_cast {
+            continue;
+        }
+        if let Expr::Column(column) = column_inner
+            && let Expr::Literal(value, _) = literal_inner
+            && let Some(bits) = scalar_int_value(value)
+        {
+            out.insert((column.name.clone(), operator.clone(), bits));
+        }
+    }
+}
+
+fn collect_expr_comparisons(expr: &Expr, out: &mut HashSet<(String, String, i128)>) {
+    let _ = expr.apply(|node| {
+        if let Expr::BinaryExpr(binary) = node {
+            record_user_shaped(binary, out);
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+    let _ = expr.apply(|node| {
+        match node {
+            Expr::Exists(exists) => {
+                collect_user_shaped_comparisons(&exists.subquery.subquery, out);
+            }
+            Expr::InSubquery(query) => {
+                collect_user_shaped_comparisons(&query.subquery.subquery, out);
+            }
+            Expr::ScalarSubquery(query) => {
+                collect_user_shaped_comparisons(&query.subquery, out);
+            }
+            _ => {}
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+}
+
+fn collect_user_shaped_comparisons(plan: &LogicalPlan, out: &mut HashSet<(String, String, i128)>) {
+    for expr in plan.expressions() {
+        collect_expr_comparisons(&expr, out);
+    }
+    if let LogicalPlan::TableScan(scan) = plan
+        && let Ok(provider) =
+            datafusion::datasource::default_table_source::source_as_provider(&scan.source)
+        && let Some(view) = provider.downcast_ref::<ViewTable>()
+    {
+        collect_user_shaped_comparisons(view.logical_plan(), out);
+    }
+    for child in plan.inputs() {
+        collect_user_shaped_comparisons(child, out);
+    }
 }
 
 fn fold_hash(finished: u64) -> i64 {
@@ -85,7 +234,7 @@ fn fold_hash(finished: u64) -> i64 {
 fn hash_plan<S: BuildHasher>(
     plan: &LogicalPlan,
     ctx: &Ctx<'_, S>,
-    hash: &mut DefaultHasher,
+    hash: &mut impl Hasher,
 ) -> crate::Result<()> {
     let analyzed = ctx
         .state
@@ -96,12 +245,12 @@ fn hash_plan<S: BuildHasher>(
     Ok(())
 }
 
-fn write_str(hash: &mut DefaultHasher, value: &str) {
+fn write_str(hash: &mut impl Hasher, value: &str) {
     hash.write_usize(value.len());
     hash.write(value.as_bytes());
 }
 
-fn write_opt_usize(value: Option<usize>, hash: &mut DefaultHasher) {
+fn write_opt_usize(value: Option<usize>, hash: &mut impl Hasher) {
     match value {
         None => hash.write_u8(0),
         Some(size) => {
@@ -111,11 +260,11 @@ fn write_opt_usize(value: Option<usize>, hash: &mut DefaultHasher) {
     }
 }
 
-fn write_debug(hash: &mut DefaultHasher, value: &impl std::fmt::Debug) {
+fn write_debug(hash: &mut impl Hasher, value: &impl std::fmt::Debug) {
     hash.write(format!("{value:?}").as_bytes());
 }
 
-fn write_norm_ident(hash: &mut DefaultHasher, value: &str) {
+fn write_norm_ident(hash: &mut impl Hasher, value: &str) {
     if !value.contains("_repark_") {
         write_str(hash, value);
         return;
@@ -144,7 +293,7 @@ fn write_norm_ident(hash: &mut DefaultHasher, value: &str) {
     hash.write(&out);
 }
 
-fn write_norm_table(hash: &mut DefaultHasher, reference: &TableReference) {
+fn write_norm_table(hash: &mut impl Hasher, reference: &TableReference) {
     match reference {
         TableReference::Bare { table } => {
             let name: &str = table;
@@ -174,7 +323,7 @@ fn write_norm_table(hash: &mut DefaultHasher, reference: &TableReference) {
     }
 }
 
-fn write_column_ref(hash: &mut DefaultHasher, name: &str) {
+fn write_column_ref(hash: &mut impl Hasher, name: &str) {
     hash.write_u8(0);
     write_norm_ident(hash, name);
 }
@@ -229,7 +378,10 @@ fn comparison_column<'a>(expr: &'a Expr, literal_kind: &DataType) -> Option<&'a 
     }
 }
 
-fn comparison_key(binary: &BinaryExpr) -> Option<(&str, i128)> {
+fn comparison_key<'a>(
+    binary: &'a BinaryExpr,
+    user_comparisons: &HashSet<(String, String, i128)>,
+) -> Option<(&'a str, i128)> {
     match binary.op {
         Operator::Eq
         | Operator::NotEq
@@ -241,11 +393,13 @@ fn comparison_key(binary: &BinaryExpr) -> Option<(&str, i128)> {
     }
     if let Some((bits, kind)) = comparison_literal(&binary.right)
         && let Some(name) = comparison_column(&binary.left, &kind)
+        && !user_comparisons.contains(&(name.to_string(), format!("{:?}", binary.op), bits))
     {
         return Some((name, bits));
     }
     if let Some((bits, kind)) = comparison_literal(&binary.left)
         && let Some(name) = comparison_column(&binary.right, &kind)
+        && !user_comparisons.contains(&(name.to_string(), format!("{:?}", binary.op), bits))
     {
         return Some((name, bits));
     }
@@ -316,7 +470,7 @@ fn is_passthrough(exprs: &[Expr], input: &LogicalPlan) -> bool {
         .all(|(expr, field)| passthrough_name(expr) == Some(field.name().as_str()))
 }
 
-fn write_plan<S: BuildHasher>(plan: &LogicalPlan, ctx: &Ctx<'_, S>, hash: &mut DefaultHasher) {
+fn write_plan<S: BuildHasher>(plan: &LogicalPlan, ctx: &Ctx<'_, S>, hash: &mut impl Hasher) {
     match plan {
         LogicalPlan::Projection(node) => {
             if is_passthrough(&node.expr, &node.input) {
@@ -386,7 +540,7 @@ fn write_plan<S: BuildHasher>(plan: &LogicalPlan, ctx: &Ctx<'_, S>, hash: &mut D
     }
 }
 
-fn write_plan_leaf<S: BuildHasher>(plan: &LogicalPlan, ctx: &Ctx<'_, S>, hash: &mut DefaultHasher) {
+fn write_plan_leaf<S: BuildHasher>(plan: &LogicalPlan, ctx: &Ctx<'_, S>, hash: &mut impl Hasher) {
     match plan {
         LogicalPlan::TableScan(scan) => {
             if let Some(view) = cache_view_name(&scan.table_name)
@@ -447,7 +601,7 @@ fn write_plan_leaf<S: BuildHasher>(plan: &LogicalPlan, ctx: &Ctx<'_, S>, hash: &
 fn write_table_source<S: BuildHasher>(
     source: &Arc<dyn TableSource>,
     ctx: &Ctx<'_, S>,
-    hash: &mut DefaultHasher,
+    hash: &mut impl Hasher,
 ) {
     let provider = datafusion::datasource::default_table_source::source_as_provider(source);
     let Ok(provider) = provider else {
@@ -485,13 +639,13 @@ fn write_table_source<S: BuildHasher>(
     }
 }
 
-fn write_exprs<S: BuildHasher>(exprs: &[Expr], ctx: &Ctx<'_, S>, hash: &mut DefaultHasher) {
+fn write_exprs<S: BuildHasher>(exprs: &[Expr], ctx: &Ctx<'_, S>, hash: &mut impl Hasher) {
     for expr in exprs {
         write_expr(expr, ctx, hash);
     }
 }
 
-fn write_opt_expr<S: BuildHasher>(expr: Option<&Expr>, ctx: &Ctx<'_, S>, hash: &mut DefaultHasher) {
+fn write_opt_expr<S: BuildHasher>(expr: Option<&Expr>, ctx: &Ctx<'_, S>, hash: &mut impl Hasher) {
     match expr {
         None => hash.write_u8(0),
         Some(inner) => {
@@ -501,13 +655,13 @@ fn write_opt_expr<S: BuildHasher>(expr: Option<&Expr>, ctx: &Ctx<'_, S>, hash: &
     }
 }
 
-fn write_sort<S: BuildHasher>(sort: &SortExpr, ctx: &Ctx<'_, S>, hash: &mut DefaultHasher) {
+fn write_sort<S: BuildHasher>(sort: &SortExpr, ctx: &Ctx<'_, S>, hash: &mut impl Hasher) {
     hash.write_u8(u8::from(sort.asc));
     hash.write_u8(u8::from(sort.nulls_first));
     write_expr(&sort.expr, ctx, hash);
 }
 
-fn write_expr<S: BuildHasher>(expr: &Expr, ctx: &Ctx<'_, S>, hash: &mut DefaultHasher) {
+fn write_expr<S: BuildHasher>(expr: &Expr, ctx: &Ctx<'_, S>, hash: &mut impl Hasher) {
     match expr {
         Expr::Alias(alias) => {
             hash.write(b"Alias");
@@ -522,7 +676,7 @@ fn write_expr<S: BuildHasher>(expr: &Expr, ctx: &Ctx<'_, S>, hash: &mut DefaultH
             write_debug(hash, value);
         }
         Expr::BinaryExpr(binary) => {
-            if let Some((name, bits)) = comparison_key(binary) {
+            if let Some((name, bits)) = comparison_key(binary, &ctx.user_comparisons) {
                 hash.write(b"Cmp");
                 write_debug(hash, &binary.op);
                 write_norm_ident(hash, name);
@@ -552,13 +706,13 @@ fn write_wrapped<S: BuildHasher>(
     tag: &[u8],
     inner: &Expr,
     ctx: &Ctx<'_, S>,
-    hash: &mut DefaultHasher,
+    hash: &mut impl Hasher,
 ) {
     hash.write(tag);
     write_expr(inner, ctx, hash);
 }
 
-fn write_expr_compound<S: BuildHasher>(expr: &Expr, ctx: &Ctx<'_, S>, hash: &mut DefaultHasher) {
+fn write_expr_compound<S: BuildHasher>(expr: &Expr, ctx: &Ctx<'_, S>, hash: &mut impl Hasher) {
     match expr {
         Expr::Between(between) => {
             hash.write(b"Between");
@@ -645,7 +799,7 @@ fn write_expr_compound<S: BuildHasher>(expr: &Expr, ctx: &Ctx<'_, S>, hash: &mut
     }
 }
 
-fn write_expr_function<S: BuildHasher>(expr: &Expr, ctx: &Ctx<'_, S>, hash: &mut DefaultHasher) {
+fn write_expr_function<S: BuildHasher>(expr: &Expr, ctx: &Ctx<'_, S>, hash: &mut impl Hasher) {
     match expr {
         Expr::ScalarFunction(function) => {
             hash.write(b"ScalarFunction");
@@ -712,7 +866,7 @@ fn write_expr_function<S: BuildHasher>(expr: &Expr, ctx: &Ctx<'_, S>, hash: &mut
     }
 }
 
-fn write_data_type(kind: &DataType, hash: &mut DefaultHasher) {
+fn write_data_type(kind: &DataType, hash: &mut impl Hasher) {
     write_debug(hash, kind);
 }
 

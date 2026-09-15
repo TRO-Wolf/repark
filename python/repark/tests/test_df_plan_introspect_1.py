@@ -377,9 +377,7 @@ def test_inputfiles_uri_form(spark: ReparkSession, tmp_path: Path) -> None:
 def _ab_scan(spark: ReparkSession, tmp_path: Path):
     """Write the oracle's two-row a/b frame and register view ``plan_intro_ab``."""
     target = str(tmp_path / "t.parquet")
-    spark.createDataFrame([(1, "x"), (2, "y")], "a int, b string").coalesce(1).write.parquet(
-        target
-    )
+    spark.createDataFrame([(1, "x"), (2, "y")], "a int, b string").coalesce(1).write.parquet(target)
     frame = spark.read.parquet(target)
     frame.createOrReplaceTempView("plan_intro_ab")
     return frame
@@ -391,33 +389,48 @@ def test_semantichash_df_filter_matches_sql_where(spark: ReparkSession, tmp_path
     planintro_where_vs_filter."""
     frame = _ab_scan(spark, tmp_path)
     try:
-        string_filtered = frame.filter("a > 1").semanticHash()
-        via_sql = spark.sql("SELECT * FROM plan_intro_ab WHERE a > 1").semanticHash()
-        assert (string_filtered == via_sql) == _cell("planintro_df_filter_vs_sql_where")[
-            "result"
-        ]["equal_hash"]
-        col_filtered = frame.filter(F.col("a") > 1).semanticHash()
-        assert (col_filtered == via_sql) == _cell("planintro_df_filter_col_vs_sql_where")[
-            "result"
-        ]["equal_hash"]
-        assert (frame.where("a > 1").semanticHash() == string_filtered) == _cell(
+        string_frame = frame.filter("a > 1")
+        via_sql = spark.sql("SELECT * FROM plan_intro_ab WHERE a > 1")
+        assert (string_frame.semanticHash() == via_sql.semanticHash()) == _cell(
+            "planintro_df_filter_vs_sql_where"
+        )["result"]["equal_hash"]
+        assert (
+            string_frame.sameSemantics(via_sql)
+            == _cell("planintro_df_filter_vs_sql_where")["result"]["sameSemantics"]
+        )
+        col_frame = frame.filter(F.col("a") > 1)
+        assert (col_frame.semanticHash() == via_sql.semanticHash()) == _cell(
+            "planintro_df_filter_col_vs_sql_where"
+        )["result"]["equal_hash"]
+        assert (
+            col_frame.sameSemantics(via_sql)
+            == _cell("planintro_df_filter_col_vs_sql_where")["result"]["sameSemantics"]
+        )
+        where_frame = frame.where("a > 1")
+        assert (where_frame.semanticHash() == string_frame.semanticHash()) == _cell(
             "planintro_where_vs_filter"
         )["result"]["equal_hash"]
+        assert (
+            where_frame.sameSemantics(string_frame)
+            == _cell("planintro_where_vs_filter")["result"]["sameSemantics"]
+        )
     finally:
         spark.catalog.dropTempView("plan_intro_ab")
 
 
-def test_semantichash_filter_then_select_matches_sql(
-    spark: ReparkSession, tmp_path: Path
-) -> None:
+def test_semantichash_filter_then_select_matches_sql(spark: ReparkSession, tmp_path: Path) -> None:
     """pins: df-plan-introspect-1/C-008 — cell planintro_filter_then_select_vs_sql."""
     frame = _ab_scan(spark, tmp_path)
     try:
-        left = frame.filter("a > 1").select("a", "b").semanticHash()
-        right = spark.sql("SELECT a, b FROM plan_intro_ab WHERE a > 1").semanticHash()
-        assert (left == right) == _cell("planintro_filter_then_select_vs_sql")["result"][
-            "equal_hash"
-        ]
+        left = frame.filter("a > 1").select("a", "b")
+        right = spark.sql("SELECT a, b FROM plan_intro_ab WHERE a > 1")
+        assert (left.semanticHash() == right.semanticHash()) == _cell(
+            "planintro_filter_then_select_vs_sql"
+        )["result"]["equal_hash"]
+        assert (
+            left.sameSemantics(right)
+            == _cell("planintro_filter_then_select_vs_sql")["result"]["sameSemantics"]
+        )
     finally:
         spark.catalog.dropTempView("plan_intro_ab")
 
@@ -436,32 +449,53 @@ def test_semantichash_view_over_filtered_matches_frame(
         assert (via_sql.semanticHash() == filtered.semanticHash()) == _cell(
             "planintro_view_over_filtered_sql"
         )["result"]["equal_hash"]
+        assert (
+            via_sql.sameSemantics(filtered)
+            == _cell("planintro_view_over_filtered_sql")["result"]["sameSemantics"]
+        )
         assert (via_table.semanticHash() == filtered.semanticHash()) == _cell(
             "planintro_view_over_filtered_table"
         )["result"]["equal_hash"]
+        assert (
+            via_table.sameSemantics(filtered)
+            == _cell("planintro_view_over_filtered_table")["result"]["sameSemantics"]
+        )
     finally:
         spark.catalog.dropTempView("plan_intro_vf")
         spark.catalog.dropTempView("plan_intro_ab")
 
 
-def test_semantichash_identity_selects_match_frame(
-    spark: ReparkSession, tmp_path: Path
-) -> None:
+def test_semantichash_identity_selects_match_frame(spark: ReparkSession, tmp_path: Path) -> None:
     """pins: df-plan-introspect-1/C-009 — identity selects match the frame on the DF door.
     Cells: planintro_select_all_named_vs_df, planintro_select_cols_vs_df,
     planintro_select_star_vs_df."""
     frame = _ab_scan(spark, tmp_path)
     try:
         base = frame.semanticHash()
-        assert (frame.select("a", "b").semanticHash() == base) == _cell(
-            "planintro_select_all_named_vs_df"
-        )["result"]["equal_hash"]
-        assert (frame.select(F.col("a"), F.col("b")).semanticHash() == base) == _cell(
-            "planintro_select_cols_vs_df"
-        )["result"]["equal_hash"]
-        assert (frame.select("*").semanticHash() == base) == _cell(
-            "planintro_select_star_vs_df"
-        )["result"]["equal_hash"]
+        named = frame.select("a", "b")
+        assert (named.semanticHash() == base) == _cell("planintro_select_all_named_vs_df")[
+            "result"
+        ]["equal_hash"]
+        assert (
+            named.sameSemantics(frame)
+            == _cell("planintro_select_all_named_vs_df")["result"]["sameSemantics"]
+        )
+        cols = frame.select(F.col("a"), F.col("b"))
+        assert (cols.semanticHash() == base) == _cell("planintro_select_cols_vs_df")["result"][
+            "equal_hash"
+        ]
+        assert (
+            cols.sameSemantics(frame)
+            == _cell("planintro_select_cols_vs_df")["result"]["sameSemantics"]
+        )
+        star = frame.select("*")
+        assert (star.semanticHash() == base) == _cell("planintro_select_star_vs_df")["result"][
+            "equal_hash"
+        ]
+        assert (
+            star.sameSemantics(frame)
+            == _cell("planintro_select_star_vs_df")["result"]["sameSemantics"]
+        )
     finally:
         spark.catalog.dropTempView("plan_intro_ab")
 
@@ -472,12 +506,22 @@ def test_semantichash_sql_selects_match_frame(spark: ReparkSession, tmp_path: Pa
     frame = _ab_scan(spark, tmp_path)
     try:
         base = frame.semanticHash()
-        assert (spark.sql("SELECT a, b FROM plan_intro_ab").semanticHash() == base) == _cell(
-            "planintro_sql_select_named_vs_df"
-        )["result"]["equal_hash"]
-        assert (spark.sql("SELECT * FROM plan_intro_ab").semanticHash() == base) == _cell(
-            "planintro_sql_select_star_vs_df"
-        )["result"]["equal_hash"]
+        sql_named = spark.sql("SELECT a, b FROM plan_intro_ab")
+        assert (sql_named.semanticHash() == base) == _cell("planintro_sql_select_named_vs_df")[
+            "result"
+        ]["equal_hash"]
+        assert (
+            sql_named.sameSemantics(frame)
+            == _cell("planintro_sql_select_named_vs_df")["result"]["sameSemantics"]
+        )
+        sql_star = spark.sql("SELECT * FROM plan_intro_ab")
+        assert (sql_star.semanticHash() == base) == _cell("planintro_sql_select_star_vs_df")[
+            "result"
+        ]["equal_hash"]
+        assert (
+            sql_star.sameSemantics(frame)
+            == _cell("planintro_sql_select_star_vs_df")["result"]["sameSemantics"]
+        )
     finally:
         spark.catalog.dropTempView("plan_intro_ab")
 
@@ -486,9 +530,14 @@ def test_semantichash_reordered_select_differs(spark: ReparkSession, tmp_path: P
     """pins: df-plan-introspect-1/C-009 — cell planintro_select_reordered_vs_df."""
     frame = _ab_scan(spark, tmp_path)
     try:
-        assert (frame.select("b", "a").semanticHash() == frame.semanticHash()) == _cell(
+        reordered = frame.select("b", "a")
+        assert (reordered.semanticHash() == frame.semanticHash()) == _cell(
             "planintro_select_reordered_vs_df"
         )["result"]["equal_hash"]
+        assert (
+            reordered.sameSemantics(frame)
+            == _cell("planintro_select_reordered_vs_df")["result"]["sameSemantics"]
+        )
     finally:
         spark.catalog.dropTempView("plan_intro_ab")
 
@@ -502,9 +551,7 @@ def test_inputfiles_iceberg_scan_is_empty(spark: ReparkSession) -> None:
     assert frame.inputFiles() == []
 
 
-def test_semantichash_non_identity_selects_differ(
-    spark: ReparkSession, tmp_path: Path
-) -> None:
+def test_semantichash_non_identity_selects_differ(spark: ReparkSession, tmp_path: Path) -> None:
     """pins: df-plan-introspect-1/C-009 — a rename, a subset, and an expression stay projections."""
     frame = _ab_scan(spark, tmp_path)
     try:
@@ -512,8 +559,71 @@ def test_semantichash_non_identity_selects_differ(
         assert frame.select(F.col("a").alias("z")).semanticHash() != base
         assert frame.select("a").semanticHash() != base
         assert frame.select((F.col("a") + 1).alias("a")).semanticHash() != base
-        assert spark.sql("SELECT CAST('1' AS INT)").semanticHash() != spark.sql(
-            "SELECT 1"
-        ).semanticHash()
+        assert (
+            spark.sql("SELECT CAST('1' AS INT)").semanticHash()
+            != spark.sql("SELECT 1").semanticHash()
+        )
     finally:
         spark.catalog.dropTempView("plan_intro_ab")
+
+
+def _cast_scan(spark: ReparkSession, tmp_path: Path):
+    """Write the cast probe's ``a int, big bigint, b string`` frame and register view ``v``."""
+    target = str(tmp_path / "t.parquet")
+    spark.createDataFrame(
+        [(1, 5000000000, "x"), (2, 7, "y")], "a int, big bigint, b string"
+    ).write.parquet(target)
+    frame = spark.read.parquet(target)
+    frame.createOrReplaceTempView("v")
+    return frame
+
+
+def test_semantichash_cast_cells_match_oracle(spark: ReparkSession, tmp_path: Path) -> None:
+    """pins: df-plan-introspect-1/C-011 — every ``planintro_cast_*`` cell, both fields."""
+    frame = _cast_scan(spark, tmp_path)
+    try:
+        pairs = [
+            (
+                "planintro_cast_narrow_cast_vs_plain_col",
+                frame.filter(F.col("big").cast("int") > 5),
+                frame.filter(F.col("big") > 5),
+            ),
+            (
+                "planintro_cast_narrow_cast_vs_plain_sql",
+                spark.sql("SELECT * FROM v WHERE CAST(big AS INT) > 5"),
+                spark.sql("SELECT * FROM v WHERE big > 5"),
+            ),
+            (
+                "planintro_cast_widen_cast_vs_plain_col",
+                frame.filter(F.col("a").cast("bigint") > 5),
+                frame.filter(F.col("a") > 5),
+            ),
+            (
+                "planintro_cast_int_col_lit_vs_sql",
+                frame.filter(F.col("a") > 5),
+                spark.sql("SELECT * FROM v WHERE a > 5"),
+            ),
+            ("planintro_cast_alias_twin", frame.alias("x"), frame),
+            (
+                "planintro_cast_filter_twin_same_frame",
+                frame.filter("a > 1"),
+                frame.filter("a > 1"),
+            ),
+            (
+                "planintro_cast_cast_to_string_vs_plain",
+                frame.filter(F.col("a").cast("string") == "1"),
+                frame.filter(F.col("a") == 1),
+            ),
+            (
+                "planintro_cast_literal_long_vs_int",
+                frame.filter(F.col("big") > F.lit(5)),
+                frame.filter(F.col("big") > F.lit(5).cast("bigint")),
+            ),
+        ]
+        for name, left, right in pairs:
+            assert (left.semanticHash() == right.semanticHash()) == _cell(name)["result"][
+                "equal_hash"
+            ]
+            assert left.sameSemantics(right) == _cell(name)["result"]["sameSemantics"]
+    finally:
+        spark.catalog.dropTempView("v")

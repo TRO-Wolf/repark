@@ -918,26 +918,7 @@ class DataFrame:
     foreachPartition = surface_b.foreachPartition  # noqa: N815
     observe = surface_b.observe
 
-    def sameSemantics(self, other: DataFrame) -> bool:  # noqa: N802 — PySpark camelCase
-        """Whether ``other`` has the same logical semantics (PySpark ``DataFrame.sameSemantics``).
-
-        Type-gates non-DataFrame arguments with ``NOT_DATAFRAME`` (Apache
-        ``test_same_semantics_error``). Positive path is **best-effort identity of the native
-        handle** (``self._inner is other._inner``) — not Catalyst plan isomorphism and not
-        plan-text equality (no stable plan printer on the native surface yet).
-        """
-        if not isinstance(other, DataFrame):
-            raise PySparkTypeError(
-                errorClass="NOT_DATAFRAME",
-                messageParameters={
-                    "arg_name": "other",
-                    "arg_type": type(other).__name__,
-                },
-            )
-        self._ensure_alive()
-        other._ensure_alive()
-        return self._inner is other._inner
-
+    sameSemantics = plan_introspect.sameSemantics  # noqa: N815
     same_semantics = sameSemantics
 
     @property
