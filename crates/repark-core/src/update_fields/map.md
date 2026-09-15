@@ -15,8 +15,9 @@ Spark `UpdateFields` as a DataFusion `ScalarUDF` named `update_fields` for the
   top-level struct → `DATATYPE_MISMATCH.CANNOT_DROP_ALL_FIELDS`, non-struct →
   `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`). The kernel rebuilds the `StructArray`
   from input children and value arrays, masking every output child with the parent
-  validity so a NULL struct (top or intermediate) stays NULL through field extraction.
-  pins: column-parity-1/C-008
+  validity so a NULL struct (top or intermediate) stays NULL through field extraction;
+  the mask ANDs the validity bitmaps onto shared value buffers (no `nullif`
+  `Vec<bool>` roundtrip). pins: column-parity-1/C-008, C-009
 - [`tests.rs`](tests.rs) — plan/exec pins: sequential replace-after-add, drop-after-add,
   add-after-drop order, nested chains, NULL-parent masking, duplicates, case folding,
   empty-name `col{index}`, all three error classes.

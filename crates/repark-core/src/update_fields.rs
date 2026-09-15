@@ -5,6 +5,7 @@ mod udf;
 use datafusion::logical_expr::Expr;
 use datafusion::prelude::SessionContext;
 
+pub(crate) use udf::spark_sql_type;
 pub use udf::update_fields_udf;
 
 #[must_use]

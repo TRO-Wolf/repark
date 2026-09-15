@@ -150,12 +150,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   plus `update_fields_call` / `register_update_fields`, registered on the session in
   `session/df_guards.rs`. Sequential edit application at plan and exec time with
   parent-validity masking so NULL structs stay NULL through field extraction.
-  pins: column-parity-1/C-008
+  Re-check round 2 (2026-09-15): the mask ANDs validity bitmaps onto shared value
+  buffers; `spark_sql_type` is shared `pub(crate)` for the `isnan` refusal below.
+  pins: column-parity-1/C-008, C-009
 - `isnan.rs` (+ [isnan/](isnan/map.md)) — **COLUMN-PARITY-1 (2026-09-14, critic round):**
   the `repark_isnan` scalar UDF plus `repark_isnan_call` / `register_repark_isnan`,
   registered on the session in `session/df_guards.rs`. Float/string test the DOUBLE
-  value (strict cast, malformed errors); all other types answer false.
-  pins: column-parity-1/C-008
+  value (strict cast, malformed errors). Re-check round 2 (2026-09-15): struct, array
+  and map refuse at plan time with `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`; all
+  other non-float types answer false.
+  pins: column-parity-1/C-008, C-009
 - `dynamic_flatten.rs` (+ `dynamic_flatten/`) — **DF1 native `dynamic_flatten`:** free
   function over a DataFusion `DataFrame` (no frame newtype). Structs first (null-safe
   `get_field` Project, never DF struct `unnest_columns`), then lists one-at-a-time in

@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use arrow::array::{
-    Array, ArrayRef, BooleanArray, Date32Array, Float64Array, Int32Array, StringArray,
+    Array, ArrayRef, BooleanArray, Date32Array, Float64Array, Int32Array, ListArray, MapArray,
+    StringArray, StructArray,
 };
-use arrow::datatypes::{DataType, Field, Schema};
+use arrow::datatypes::{DataType, Field, Int32Type, Schema};
 use arrow::record_batch::RecordBatch;
 use datafusion::prelude::{Expr, SessionContext, col, lit};
 
@@ -112,4 +113,98 @@ async fn literal_nan_answers_true() {
     )
     .await;
     assert_eq!(out, vec![true]);
+}
+
+async fn plan_err(batch: RecordBatch, arg: Expr) -> String {
+    match test_context()
+        .read_batch(batch)
+        .expect("read_batch")
+        .select(vec![repark_isnan_call(arg).alias("r")])
+    {
+        Err(error) => error.to_string(),
+        Ok(frame) => match frame.collect().await {
+            Err(error) => error.to_string(),
+            Ok(_) => panic!("expected an error"),
+        },
+    }
+}
+
+#[tokio::test]
+async fn struct_refuses_at_plan() {
+    let st = StructArray::from(vec![
+        (
+            Arc::new(Field::new("a", DataType::Int32, true)),
+            Arc::new(Int32Array::from(vec![Some(1), None])) as ArrayRef,
+        ),
+        (
+            Arc::new(Field::new("b", DataType::Utf8, true)),
+            Arc::new(StringArray::from(vec![Some("x"), None])) as ArrayRef,
+        ),
+    ]);
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![Field::new(
+            "st",
+            DataType::Struct(st.fields().clone()),
+            true,
+        )])),
+        vec![Arc::new(st) as ArrayRef],
+    )
+    .expect("batch");
+    let error = plan_err(batch, col("st")).await;
+    assert!(
+        error.contains("DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"),
+        "pins: column-parity-1/C-009: {error}"
+    );
+    assert!(error.contains("isnan(st)"), "{error}");
+    assert!(error.contains("STRUCT<a: INT, b: STRING>"), "{error}");
+}
+
+#[tokio::test]
+async fn array_refuses_at_plan() {
+    let arr = ListArray::from_iter_primitive::<Int32Type, Vec<Option<i32>>, _>(vec![
+        Some(vec![Some(1), Some(2)]),
+        None,
+    ]);
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![Field::new(
+            "arr",
+            arr.data_type().clone(),
+            true,
+        )])),
+        vec![Arc::new(arr) as ArrayRef],
+    )
+    .expect("batch");
+    let error = plan_err(batch, col("arr")).await;
+    assert!(
+        error.contains("DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"),
+        "pins: column-parity-1/C-009: {error}"
+    );
+    assert!(error.contains("isnan(arr)"), "{error}");
+    assert!(error.contains("ARRAY<INT>"), "{error}");
+}
+
+#[tokio::test]
+async fn map_refuses_at_plan() {
+    let map = MapArray::new_from_strings(
+        ["a", "b"].into_iter(),
+        &Int32Array::from(vec![Some(1), Some(2)]),
+        &[0, 1, 2],
+    )
+    .expect("map");
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![Field::new(
+            "m",
+            map.data_type().clone(),
+            true,
+        )])),
+        vec![Arc::new(map) as ArrayRef],
+    )
+    .expect("batch");
+    let error = plan_err(batch, col("m")).await;
+    assert!(
+        error.contains("DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"),
+        "{error}"
+    );
+    assert!(error.contains("isnan(m)"), "{error}");
+    assert!(error.contains("MAP<STRING, INT>"), "{error}");
 }

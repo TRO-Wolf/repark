@@ -1,9 +1,8 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use arrow::array::{Array, ArrayRef, AsArray, BooleanArray, StructArray};
+use arrow::array::{Array, ArrayRef, AsArray, StructArray, make_array};
 use arrow::buffer::NullBuffer;
-use arrow::compute::nullif;
 use arrow::datatypes::{DataType, Field, FieldRef, Fields};
 use datafusion::common::{DataFusionError, Result, exec_datafusion_err, exec_err, plan_err};
 use datafusion::logical_expr::{
@@ -212,12 +211,17 @@ fn mask_with_parent_nulls(child: ArrayRef, parent_nulls: Option<&NullBuffer>) ->
     if valid.null_count() == 0 {
         return Ok(child);
     }
-    let mask = BooleanArray::from(
-        (0..child.len())
-            .map(|row| valid.is_null(row))
-            .collect::<Vec<_>>(),
-    );
-    Ok(nullif(child.as_ref(), &mask)?)
+    let data = child.to_data();
+    if data.data_type() == &DataType::Null {
+        return Ok(child);
+    }
+    let combined = match data.nulls() {
+        Some(existing) => NullBuffer::new(existing.inner() & valid.inner()),
+        None => valid.clone(),
+    };
+    Ok(make_array(
+        data.into_builder().nulls(Some(combined)).build()?,
+    ))
 }
 
 fn edit_field_name(name: &str, index: usize) -> String {
@@ -235,7 +239,7 @@ fn cannot_drop_all_fields(call: &str) -> DataFusionError {
     ))
 }
 
-fn spark_sql_type(data_type: &DataType) -> String {
+pub(crate) fn spark_sql_type(data_type: &DataType) -> String {
     match data_type {
         DataType::Boolean => "BOOLEAN".to_string(),
         DataType::Int8 => "TINYINT".to_string(),

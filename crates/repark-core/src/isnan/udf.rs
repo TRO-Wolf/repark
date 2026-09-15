@@ -4,7 +4,7 @@ use std::sync::Arc;
 use arrow::array::{Array, AsArray, BooleanArray, BooleanBuilder};
 use arrow::compute::{CastOptions, cast_with_options};
 use arrow::datatypes::{DataType, Field, FieldRef, Float64Type};
-use datafusion::common::{Result, exec_err};
+use datafusion::common::{Result, exec_err, plan_err};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
@@ -44,6 +44,64 @@ impl Hash for ReparkIsNan {
     }
 }
 
+fn spark_container_type(data_type: &DataType) -> String {
+    match data_type {
+        DataType::Struct(fields) => {
+            let inner = fields
+                .iter()
+                .map(|field| {
+                    format!(
+                        "{}: {}",
+                        field.name(),
+                        spark_container_type(field.data_type())
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("STRUCT<{inner}>")
+        }
+        DataType::List(field)
+        | DataType::LargeList(field)
+        | DataType::ListView(field)
+        | DataType::LargeListView(field)
+        | DataType::FixedSizeList(field, _) => {
+            format!("ARRAY<{}>", spark_container_type(field.data_type()))
+        }
+        DataType::Map(entry, _) => match entry.data_type() {
+            DataType::Struct(pair) if pair.len() == 2 => format!(
+                "MAP<{}, {}>",
+                spark_container_type(pair[0].data_type()),
+                spark_container_type(pair[1].data_type())
+            ),
+            _ => "MAP".to_string(),
+        },
+        other => crate::update_fields::spark_sql_type(other),
+    }
+}
+
+fn refuse_container_arg(field: &FieldRef) -> Result<()> {
+    if !matches!(
+        field.data_type(),
+        DataType::Struct(_)
+            | DataType::List(_)
+            | DataType::LargeList(_)
+            | DataType::ListView(_)
+            | DataType::LargeListView(_)
+            | DataType::FixedSizeList(_, _)
+            | DataType::Map(_, _)
+    ) {
+        return Ok(());
+    }
+    plan_err!(
+        "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"isnan({})\" due to data \
+         type mismatch: The argument requires a numeric or string type, however \"{}\" has the \
+         type \"{}\". SQLSTATE: 42K09",
+        field.name(),
+        field.name(),
+        spark_container_type(field.data_type())
+    )
+}
+
 fn nan_mask(casted: &dyn Array) -> BooleanArray {
     let values = casted.as_primitive::<Float64Type>();
     let mut builder = BooleanBuilder::with_capacity(values.len());
@@ -70,7 +128,10 @@ impl ScalarUDFImpl for ReparkIsNan {
         Ok(DataType::Boolean)
     }
 
-    fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {
+    fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
+        if let Some(first) = args.arg_fields.first() {
+            refuse_container_arg(first)?;
+        }
         Ok(Arc::new(Field::new(REPARK_ISNAN, DataType::Boolean, false)))
     }
 
