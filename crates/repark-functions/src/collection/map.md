@@ -67,7 +67,9 @@ needed.
   `Binary`, nested lists widen element-wise), `containsNull` is the OR of the inputs, any NULL
   array nulls the row, and a non-array sibling refuses `DATATYPE_MISMATCH.DATA_DIFF_TYPES`
   with Spark's `ARRAY<INT>` / `STRING` type names. Row assembly is one `MutableArrayData`
-  over the widened values plus recomputed offsets. pins: door-converge-2/C-001
+  over the widened values plus recomputed offsets. `coerce_types` validates but never
+  casts (same provisional-`Int64` sandwich as `sequence`: widths resolve post-narrowing,
+  the kernel casts internally). pins: door-converge-2/C-001
 - `array_append.rs` — **ARRAY-NULL-1 (2026-09-14):** `spark_array_append_udf` /
   `spark_array_prepend_udf`. Each delegates to DataFusion's native kernel and then grafts
   the input array's outer `NullBuffer` onto the result — the kernels drop it, so a NULL

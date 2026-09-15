@@ -12,7 +12,6 @@ use super::array_insert::tightest_common;
 #[derive(Debug)]
 pub(crate) struct ArrayConcatPlan {
     pub(crate) result: DataType,
-    pub(crate) coerced: Vec<DataType>,
 }
 
 pub(crate) fn is_list_family(data_type: &DataType) -> bool {
@@ -118,8 +117,7 @@ pub(crate) fn plan_array_concat(arg_types: &[DataType]) -> Result<ArrayConcatPla
     }
     let element = Arc::new(Field::new("element", widened, contains_null));
     let result = DataType::List(Arc::clone(&element));
-    let coerced = vec![result.clone(); arg_types.len()];
-    Ok(ArrayConcatPlan { result, coerced })
+    Ok(ArrayConcatPlan { result })
 }
 
 fn data_diff_types(arg_types: &[DataType], _offender: &DataType) -> DataFusionError {
@@ -368,6 +366,36 @@ mod tests {
         assert_eq!(
             batches[0].column(0).data_type(),
             &DataType::List(Arc::new(Field::new("element", DataType::Int64, true)))
+        );
+        let scalar = ScalarValue::try_from_array(batches[0].column(0).as_ref(), 0).expect("scalar");
+        let ScalarValue::List(values) = &scalar else {
+            panic!("expected list, got {scalar:?}");
+        };
+        let row = values.value(0);
+        let inner = row
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::Int64Array>()
+            .expect("widened values");
+        assert_eq!(inner.values(), &[1, 2]);
+    }
+
+    #[tokio::test]
+    async fn concat_decimal_widen_matches_spark_range_scale() {
+        let ctx = ctx();
+        let batches = ctx
+            .sql("SELECT concat(array(1), array(CAST(1.5 AS DECIMAL(2, 1))))")
+            .await
+            .expect("plan decimal widen")
+            .collect()
+            .await
+            .expect("execute decimal widen");
+        assert_eq!(
+            batches[0].column(0).data_type(),
+            &DataType::List(Arc::new(Field::new(
+                "element",
+                DataType::Decimal128(11, 1),
+                true
+            )))
         );
     }
 }

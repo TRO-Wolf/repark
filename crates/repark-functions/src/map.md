@@ -588,7 +588,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   widen through `collection/concat_array.rs` (common element type, OR `containsNull`, NULL
   array → NULL row, `DATA_DIFF_TYPES` on a non-array sibling); any-`Binary` args stay
   `Binary`; everything else keeps the `Utf8` path. The facade `PyColumn::concat` embeds the
-  same UDF, so both doors resolve one kernel. pins: door-converge-2/C-001
+  same UDF, so both doors resolve one kernel. The array coerce validates but never casts
+  (provisional widths resolve post-narrowing). pins: door-converge-2/C-001
 - `spark_split.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `split`
   (Java-regex pattern through the shared `compile_spark_regex` + `collect_matches`
   stepping, `limit` > 0 caps with the remainder last, `limit` ≤ 0 keeps trailing

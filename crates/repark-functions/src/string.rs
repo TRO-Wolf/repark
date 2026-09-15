@@ -385,7 +385,8 @@ impl ScalarUDFImpl for SparkConcat {
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         if arg_types.iter().any(crate::collection::is_list_family) {
-            return Ok(crate::collection::plan_array_concat(arg_types)?.coerced);
+            crate::collection::plan_array_concat(arg_types)?;
+            return Ok(arg_types.to_vec());
         }
         if arg_types.iter().any(crate::collection::is_binary_family) {
             return Ok(vec![DataType::Binary; arg_types.len()]);
