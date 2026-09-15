@@ -331,8 +331,12 @@ fn bounded_scale(value: i32, precision: i32) -> i8 {
 mod tests {
     use super::*;
 
+    use std::sync::Arc;
+
     use datafusion::arrow::array::{Array, Decimal128Array};
+    use datafusion::arrow::datatypes::{Field, Schema};
     use datafusion::arrow::record_batch::RecordBatch;
+    use datafusion::datasource::MemTable;
     use datafusion::prelude::SessionContext;
 
     use crate::analyze_eagerly;
@@ -632,6 +636,94 @@ mod tests {
             once.schema().field(0).data_type(),
             twice.schema().field(0).data_type()
         );
+    }
+
+    fn price_memtable_schema() -> Arc<Schema> {
+        Arc::new(Schema::new(vec![Field::new(
+            "price",
+            DataType::Decimal128(38, 10),
+            true,
+        )]))
+    }
+
+    fn price_memtable_ctx() -> SessionContext {
+        let context = ctx();
+        let array = Decimal128Array::from(vec![Some(1_765_600_000_000_i128)])
+            .with_precision_and_scale(38, 10)
+            .expect("price fixture keeps (38,10)");
+        let batch = RecordBatch::try_new(price_memtable_schema(), vec![Arc::new(array)])
+            .expect("price fixture batch");
+        let table =
+            MemTable::try_new(price_memtable_schema(), vec![vec![batch]]).expect("price memtable");
+        context
+            .register_table("v", Arc::new(table))
+            .expect("register price fixture");
+        context
+    }
+
+    #[tokio::test]
+    async fn measure_cache_seam_logical_vs_physical_decimal_field() {
+        let context = price_memtable_ctx();
+        for sql in [
+            "SELECT price * 5 AS n FROM v",
+            "SELECT price + 1 AS n FROM v",
+            "SELECT price * price AS n FROM v",
+        ] {
+            let frame = context.sql(sql).await.expect("plan decimal probe");
+            let analyzed = analyze_eagerly(&context.state(), frame.logical_plan().clone())
+                .expect("analyze decimal probe");
+            let logical = analyzed.schema().as_arrow().field(0).clone();
+            let batches = frame.collect().await.expect("collect decimal probe");
+            let physical = batches[0].schema().field(0).clone();
+            eprintln!("{sql}\nlogical {logical:?}\nphysical {physical:?}");
+        }
+        for (label, operator, literal) in [
+            (
+                "facade * Int32(5)",
+                Operator::Multiply,
+                Expr::Literal(ScalarValue::Int32(Some(5)), None),
+            ),
+            (
+                "facade * Int64(5)",
+                Operator::Multiply,
+                Expr::Literal(ScalarValue::Int64(Some(5)), None),
+            ),
+            (
+                "facade + Int32(1)",
+                Operator::Plus,
+                Expr::Literal(ScalarValue::Int32(Some(1)), None),
+            ),
+        ] {
+            let frame = context
+                .table("v")
+                .await
+                .expect("read price fixture")
+                .select(vec![
+                    datafusion::logical_expr::binary_expr(
+                        datafusion::logical_expr::col("price"),
+                        operator,
+                        literal,
+                    )
+                    .alias("n"),
+                ])
+                .expect("project facade probe");
+            let unanalyzed = frame.schema().as_arrow().field(0).clone();
+            let analyzed = analyze_eagerly(&context.state(), frame.logical_plan().clone())
+                .expect("analyze facade probe");
+            let logical = analyzed.schema().as_arrow().field(0).clone();
+            let outcome = frame.collect().await;
+            match outcome {
+                Ok(batches) => {
+                    let physical = batches[0].schema().field(0).clone();
+                    eprintln!(
+                        "{label}\nunanalyzed {unanalyzed:?}\nlogical {logical:?}\nphysical {physical:?}"
+                    );
+                }
+                Err(error) => {
+                    eprintln!("{label}\nlogical {logical:?}\ncollect refused: {error}");
+                }
+            }
+        }
     }
 
     #[tokio::test]

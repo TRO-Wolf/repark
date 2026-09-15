@@ -389,6 +389,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   narrowed `(20,0)`-over-`Int32` shape and keeps `(10,0)`-over-`Int32` user casts declared.
   Ledger: `task/v2-dec-u3u4-ledger.md`.
   pins: types-1/C-002
+  **DECIMAL-CACHE-1 (2026-09-15):** measurement-only so far — the test-only
+  `measure_cache_seam_logical_vs_physical_decimal_field` records unanalyzed, analyzed and
+  physical fields per probe (facade plans pin the unanalyzed `(38,10)` schema; facade
+  `* Int32(5)` analyzes to `(38,6)` where the oracle demands `(38,8)`).
+  pins: decimal-cache-1/C-001
 - `decimal_spark.rs` — **R-2:** `SparkDecimalRewrite` (A5 slot: clean `decimal / decimal`
   before `SparkExprSemantics`; UDF owns `/0`) + `SparkDecimalExprPlanner` (DEC-8
   compute-with-clamp) + checked `+`/`−` (DEC-6, reads `SparkAnsiConfig`). Registered
