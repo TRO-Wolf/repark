@@ -270,12 +270,43 @@ above are the third and fourth passes on it.
 
 `types.py` exact baseline moved 1772 → 1792, still below main's 1834.
 
+## Round-5 remediation record (L-010..L-011)
+
+The critic-logic re-check round 3
+(`/tmp/oc-worker/f-crit4s1c/report.md`) filed two P1 families, both
+fixed this round:
+
+- **L-010** — `repark_type_to_arrow` read `.precision`/`.scale` before
+  the `_arrow_order` pick, crashing `Left+DecimalType` MI classes built
+  without decimal attrs. The descriptor now builds first and the C-028
+  wide-decimal envelope guard keys on the descriptor's `decimal` kind —
+  the attributes are touched exactly when base's chain reaches the
+  Decimal arm.
+- **L-011** — `_datatype_to_descriptor` encoded any
+  `isinstance(StructField)` with no order hit as a field and read
+  `.dataType`. The arm is deleted; a field is encoded only from
+  `StructType.fields`, and an unorderable `StructField`-derived object
+  falls to the Python fallbacks like base.
+
+Micro `repark_type_to_arrow` re-measure after the reorder (same ABAB
+protocol, two passes; pass 1 drift-flagged on flat7 base halves, pass 2
+clean):
+
+| schema | base µs | branch µs | Δ | round-4 figure |
+|---|---:|---:|---:|---:|
+| flat7 | 9.35 | 10.11 | +8.2 % | +29.4 % |
+| wide50 | 59.89 | 57.82 | −3.5 % | −3.2 % |
+| nested3 | 23.12 | 19.02 | −17.7 % | −16.5 % |
+
+The reorder added one `descriptor.get("kind")` lookup per call; every
+cell stays inside the round-4 envelope and orders under the 1 ms bar.
+
 ## Thinned line counts
 
 | file | step-0 lines | step-1 lines | Δ |
 |---|---:|---:|---:|
 | `spark/types.py` | 1834 | 1792 | −42 |
-| `spark/_type_table.py` | — | 582 | +582 (new) |
+| `spark/_type_table.py` | — | 580 | +580 (new) |
 | `spark/_csv_smart.py` | 899 | 875 | −24 |
 | `session/timestamp_type.py` | 97 | 94 | −3 |
 | `session/create_dataframe_values.py` | 569 | 568 | −1 |

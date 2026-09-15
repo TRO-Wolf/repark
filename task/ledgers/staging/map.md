@@ -203,7 +203,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   correctness consolidation — one Rust `type_table` owns Arrow ↔ Spark
   descriptor ↔ DDL semantics with every surface keeping its step-0 answer
   byte-for-byte — plus the S2-21 remediation findings table (P1-DTYPES, P2-DICT,
-  P3-*) and the round-2 census alignment (corrected D1–D24 pins, R2-P3
+  P3-*), the critic-logic remediation chains (L-001..L-011 → C-020..C-033),
+  and the round-2 census alignment (corrected D1–D24 pins, R2-P3
   dispositions marked).
   `risk_tier: standard`. Branch `perf/facade-4-s1`.
   pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019

@@ -402,15 +402,17 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   base on every schema, the real `toDDL` series (PY-P3-003 mislabel
   fixed), error-path shapes verified, and the thinned line counts
   (`types.py` 1834→1792 under R14b-D-2 and L-007..L-009,
-  `_type_table.py` +582 new).
+  `_type_table.py` +580 new).
   Records the round-2 `dtypes` breach (+13–15.5 %) and its literal-method
   restoration, plus the regex-compile regression found and fixed inside
   the step. **Round 4:** the post-L-007..L-009 re-measure — every surface
   cell inside ±5 % or faster (`dtypes` −14.9 %/−15.9 %/−44.9 %), worst
   per-call conversion +13.9 µs (`toDDL` wide50), and the debug-native
   measurement caveat (a 663 MB debug `.so` briefly shadowed the release
-  native and inflated every native-touching cell 3–6×).
-  pins: facade-4/C-014, C-016, C-018, C-026, C-027, C-029..C-031
+  native and inflated every native-touching cell 3–6×). **Round 5:** the
+  post-L-010/L-011 `repark_type_to_arrow` micro re-measure — flat7 +8.2 %,
+  wide50 −3.5 %, nested3 −17.7 % vs the round-4 envelope.
+  pins: facade-4/C-014, C-016, C-018, C-026, C-027, C-029..C-033
 - [eager-own-1-2026-09-13/](eager-own-1-2026-09-13/map.md) — **EAGER-OWN-1
   steps 0+1 (2026-09-13):** the bare-`eager()` retention before/after pair —
   ten bare `eager()` calls on the deterministic 1e6-row × 25-column TA
