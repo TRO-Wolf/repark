@@ -267,3 +267,75 @@ RELEASE module at each group commit.
 - Globs (U-4/U-5/U-6/U-8): falsy format-door flag, escaped star, one-leaf
   dir globs, once-parse patterns, explicit-stack walk (100k expand+count
   0.44–0.52 s wall, R-20). Pins: three probe3 tests plus the Rust glob tests.
+
+## Follow-up round 4 (2026-09-15) — probe4 rulings (run 16b)
+
+Oracle: `/tmp/oc-worker/qb-oracle/iotext_probe4_2026-09-15.json`
+(live PySpark 4.1.2, recorded 2026-09-15, script `probe_iotext4.py` beside
+it); every cell copied as `text_probe4_<cell>` into
+`python/repark/tests/facade_reader_writer_oracle.json` (16 cells, `meta`
+excluded) and the new pins read those cells. The measurement overturned two
+critic claims — today's behaviour is kept and pinned: `lead_zero_and_plain`,
+`lead_zero_only`, `plus_sign` (Spark infers int 7 for `k=007` and `k=+7`;
+L-201 CLOSED) and `glob_star_over_partitioned`, `glob_k_eq_star` (a glob with
+no basePath discovers no partition column on Spark; L-205 CLOSED as filed).
+
+| R | Brief | Ruling and evidence |
+|---|---|---|
+| R-24 (W-1) | user schema is the data schema | The scan takes the user fields as `(name, simpleString)` pairs into the engine (`text_schema.rs`, bound in `repark-python/text_io.rs`); discovered partition columns are still appended after the data columns (`schema("value string")` → `value, k`; a renamed single string field keeps its name and `k` follows); a schema that names a partition column supplies that column's type and position stays data-first (`k string, value string` answers `value, k`); a partition value that does not cast to the user's type raises `INVALID_PARTITION_VALUE` with the template message, condition set, sqlstate 42846. Pins: `test_text_probe4_schema_value_only`, `_renamed`, `_with_partition`, `_partition_first`, `_with_partition_int` (condition plus sqlstate; the value letter follows the template, see judgment calls). |
+| R-25 (W-2) | mixed layout answers partitioned leaves | When a directory holds both `k=v` partition directories and plain data files at the root, the scan keeps only the partitioned leaves (the root file is ignored, no error), matching today's cell. Implemented as a filter in `expand_text_paths` (`keep_partitioned_only`) before discovery. Pin: `test_text_probe4_mixed_layout`. The round-3 Rust test `text_dir_descends_partition_dirs_only` flipped to `["hello"]`. |
+| R-26 (W-3) | conflicting names refuse before any row | Leaves at the same level with different partition column names raise `CONFLICTING_PARTITION_COLUMN_NAMES` with Spark's message head (the "Conflicting partition column names detected:" block listing each name list), condition set, sqlstate KD009, before any row is read. Detection groups name lists by depth in `discover_partitions`; the message templates the offending leaf dirs as `file:` URIs. Pins: Rust `partition_discovery_refuses_conflicting_names_at_same_depth` plus `test_text_probe4_conflicting_names` (head, both lists, sqlstate, condition). |
+| R-27 (W-4) | glob with basePath discovers under the base | A glob with `basePath` discovers partition columns from `k=v` segments under the base path; a glob without it still discovers nothing (L-205 as filed). `basePath` rides the semantic gate only on the text door (`reader.py`) and reaches the engine as `base_path`; glob and directory expansions discover relative to it. Pins: `test_text_probe4_glob_with_basepath` plus the two bare-glob pins staying `value`-only. |
+| R-28 (W-5 + L-201 + L-205) | pin today's inference and bare globs | `negative` int, `int_overflow_to_bigint` bigint, `decimal_text` double already passed and are now pinned; `lead_zero_and_plain`, `lead_zero_only`, `plus_sign` pin int 7 (L-201 CLOSED, `parse::<i32>` kept); `glob_star_over_partitioned`, `glob_k_eq_star` pin `value`-only (L-205 CLOSED as filed). Pins: six `test_text_probe4_*` result tests. |
+| R-29 (V-1) | evicted keys append to the same part | Past the 256-writer cap an evicted key reopens its existing `part-00000.txt` in append mode instead of minting a new part number (`partition_leaf_writer` keeps one path per key in `parts`). Measurement (`/tmp/measure_v1.py`, scratch, RELEASE .so): shuffled k=1000, 200k rows → 1000 leaves, 1000 part files, 1 per leaf, 200000 rows, wall 1.736 s, `_SUCCESS` present. Pin: Rust `text_partition_evicted_key_appends_to_same_part` (300 keys round-robin × 4, one part per leaf, row count). |
+| R-30 (V-2) | iterative partition-dir walk | `push_text_dir` walks an explicit `Vec` stack (no recursion), preserving sorted order, hidden skips, and `=`-only descent; the brace expander keeps its depth-16 cap. No new pin: the existing `text_dir_descends_partition_dirs_only` and limit/glob suites cover the walk. |
+| R-31 (residue) | perf P3 lines with the reviewer's numbers | memchr absent (`scan_universal` still a byte loop; 1 GiB count 838–908 MiB/s hot); writer two `write_all` per row plus 8 KiB `BufWriter` (4 KiB write 808 MiB/s); glob matcher `Vec<char>` per candidate plus matched `PathBuf` clones (0.50 s per 100 k); `discover_partitions` re-parses without a unique-value table (three typed parses per file for an int key); `partition_values` cloned into each of 8 scan partitions (~3.8 KiB RSS per file at 100 k); per-row key `Vec<String>` plus `format!` plus escape plus `touched.insert` (drowned by `creat` past the cap, gone under V-1 append). |
+
+Red-first round 4 (new pins vs pre-fix RELEASE .so at 4a7ec5a1, `/tmp/probe4_current.py`):
+
+```text
+schema 'value string' -> ['value'] struct<value:string> [Row(value='world'), Row(value='hello')]
+schema 'line string' -> ['line'] struct<line:string>
+schema 'value string, k string' RAISES AnalysisException: text schema must be a single string field
+schema 'k string, value string' RAISES AnalysisException: text schema must be a single string field
+schema 'value string, k int' RAISES AnalysisException: text schema must be a single string field
+mix ['value', 'k'] [('hello', 'x'), ('top', None)]
+conf ['value', 'k', 'n'] [Row(value='kx', k='x', n=None), Row(value='ny', k=None, n='y')]
+basepath RAISES AnalysisException reader option 'basePath' is not supported
+```
+
+Judgment calls round 4: the `INVALID_PARTITION_VALUE` letter reports the
+first sorted failure (`'x'` here; the probe shows `'y'`) — the pin asserts
+the template, condition and sqlstate, not the letter; runtime partition
+errors use `Error::Iceberg` for its clean `PySparkException` mapping (the
+`DataFusion` variant prefixes every message); user partition types cover
+string/int/bigint/double/date and refuse any other spelling loud; an
+all-partition user schema defaults the data name to `value`; `basePath` is
+honored only on the text door; `text_scan.rs` crossed the 1000-line ceiling
+(1121) and split the user-schema overlay into the new module
+`text_schema.rs` (995 + 136) instead of taking an exception row.
+
+## Round-4 coverage addendum (2026-09-15, R-24..R-31)
+
+Oracle: `iotext_probe4_2026-09-15.json` (live PySpark 4.1.2, run 16b); every
+cell copied as `text_probe4_<cell>` into
+`python/repark/tests/facade_reader_writer_oracle.json`, and every round-4 pin
+reads those cells (no hand-computed expectations except the templated
+`file:` dirs and the `INVALID` letter noted above). Red-first runs sit beside
+their rows above; `make verify` plus `test_io_text_1.py` 69/69 green on the
+RELEASE module.
+
+- User schema as data schema (W-1): value-only, renamed, with-partition,
+  partition-first orders, int-cast refusal with condition plus sqlstate. The
+  overlay lives in the engine (`text_schema.rs`); the facade passes names
+  plus `simpleString` pairs only.
+- Mixed plus conflicting layouts (W-2/W-3): root files drop out beside
+  partitioned leaves; same-level name lists refuse with the head, both
+  lists, condition plus sqlstate before any row.
+- Globs plus basePath (W-4/L-205): bare globs stay `value`-only as filed;
+  `basePath` restores `k` under the base path.
+- Inference pins (W-5/L-201): leading-zero and plus-sign ints, negative int,
+  bigint boundary, decimal-as-double.
+- Writer cap (V-1): append-on-evict holds one part per leaf past 256
+  (k=1000 shuffled 200k rows: 1000 leaves, 1000 files, wall 1.736 s).
+- Walk (V-2): explicit-stack partition-dir walk; brace depth-16 cap kept.

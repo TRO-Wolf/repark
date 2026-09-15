@@ -1878,12 +1878,15 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **repark** — `df.write.partitionBy(...).text(path)` writes the hive layout
   in one engine scan (round 3, ruling U-1); read-back discovers the keys
   (`struct<value:string>` plus inferred directory columns — IO-TEXT-PARTDISC-1,
-  FIXED 2026-09-15).
+  FIXED 2026-09-15). Past the 256-writer cap an evicted key reopens its
+  `part-00000.txt` in append mode (round 4, ruling V-1), so a shuffled
+  write holds one part file per leaf.
 - **Apache Spark** — writes `key=value/` leaf dirs with `part-*` files inside.
 - **Pin** — `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
   (leaf bytes plus `_SUCCESS`) and `::test_text_probe_partition_by_two_remaining`
   (the verbatim 1290 text, destination absent, plus its `_LEGACY_ERROR_TEMP_1290`
-  condition — round 3, ruling U-10).
+  condition — round 3, ruling U-10); `crates/repark-core/src/text_partition.rs::text_partition_evicted_key_appends_to_same_part`
+  (300 keys round-robin past the cap hold one part per leaf — round 4, ruling V-1).
 - **Rationale** — FIXED, 2026-09-15 (io-text-1 follow-up).
   pins: io-text-1/T-6
 
@@ -8731,19 +8734,33 @@ field NAME.
   `__HIVE_DEFAULT_PARTITION__` → NULL, types inferred int → bigint →
   double (decimal strings land double) → date `yyyy-MM-dd` → string
   (timestamps and booleans stay string, per the probe3 cells); a leaf path
-  read adds no column.
+  read adds no column. A user schema is the data schema with the directory
+  columns still appended after it (round 4, ruling W-1: `value string` →
+  `value, k`, a renamed single field keeps its name, a named `k` supplies
+  its type with data first, a bad cast answers `INVALID_PARTITION_VALUE`
+  `42846`); root files drop out beside partitioned leaves (W-2);
+  same-level name lists refuse `CONFLICTING_PARTITION_COLUMN_NAMES`
+  `KD009` before any row (W-3); a glob alone discovers nothing while a
+  glob with `basePath` discovers under the base path (W-4, `L-205`
+  pinned as filed).
 - **Apache Spark** — partition discovery adds the directory columns
   (`(value, k)` rows on the probe's `partition_by` read-back).
-  *(oracle: live PySpark 4.1.2, probes `partition_by` + probe3 `part_*`, 2026-09-15.)*
+  *(oracle: live PySpark 4.1.2, probes `partition_by` + probe3 `part_*` + probe4 `text_probe4_*`, 2026-09-15.)*
 - **Pin** —
   `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
   plus `test_text_probe3_part_*_read` (slash, specials, empty/null,
-  decimal, bool, date/ts/double/int rows, schemas and dtypes).
+  decimal, bool, date/ts/double/int rows, schemas and dtypes) plus
+  `test_text_probe4_schema_*` (value-only, renamed, with-partition,
+  partition-first, int-cast refusal), `::test_text_probe4_mixed_layout`,
+  `::test_text_probe4_conflicting_names`, `::test_text_probe4_glob_with_basepath`
+  and the `L-201`/`L-205` pins (`lead_zero_*`, `plus_sign`, bare globs stay
+  `value`-only).
 - **Rationale** — FIXED, 2026-09-15 (io-text-1 round 3, ruling U-3).
   Discovery lives in the engine module `partition_discovery` (leaf files +
   root in, schema + per-file values out; IO-ORC-1 reuses it) with the shared
-  batch materialization beside it.
-  pins: io-text-1/T-6, U-3
+  batch materialization beside it; the user-schema overlay lives in the new
+  engine module `text_schema` beside the scan (round 4, ruling W-1).
+  pins: io-text-1/T-6, U-3, W-1, W-2, W-3, W-4
 
 ## 8. Drop-in disclosure rationale
 
