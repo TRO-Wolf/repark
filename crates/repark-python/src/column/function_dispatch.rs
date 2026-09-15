@@ -629,6 +629,9 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             repark_functions::expr_fn::shiftrightunsigned(exprs[0].clone(), exprs[1].clone())
         }
+        "split" => {
+            return dispatch_spark::call_scalar_expr(name, exprs);
+        }
         "split_part" => {
             need(3)?;
             repark_functions::expr_fn::split_part(

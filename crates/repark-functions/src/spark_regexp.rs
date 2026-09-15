@@ -475,9 +475,9 @@ fn invoke_extract_all(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
             None => builder.append(false),
             Some((text, regex, raw_group)) => {
                 let group = validate_group_index(raw_group, regex, "regexp_extract_all")?;
-                for found in collect_matches(text, regex)? {
+                for (start, _) in collect_matches(text, regex)? {
                     let captured = regex
-                        .captures_at(text, found.start())
+                        .captures_at(text, start)
                         .and_then(|caps| caps.get(group).map(|m| m.as_str().to_owned()));
                     match captured {
                         Some(value) => builder.values().append_value(value),
@@ -551,14 +551,15 @@ fn matches_at_mid_surrogate_index(pattern: &Regex) -> bool {
 }
 
 /// Collect matches with Java's empty-after-non-empty stepping.
-fn collect_matches<'text>(text: &'text str, pattern: &Regex) -> Result<Vec<regex::Match<'text>>> {
+pub(crate) fn collect_matches(text: &str, pattern: &Regex) -> Result<Vec<(usize, usize)>> {
     let mut found_all = Vec::new();
     if pattern.as_str().is_empty() {
         let boundaries = text
             .char_indices()
             .map(|(offset, _)| offset)
             .chain([text.len()]);
-        found_all.extend(boundaries.filter_map(|offset| pattern.find_at(text, offset)));
+        let at = |offset| pattern.find_at(text, offset).map(|m| (m.start(), m.end()));
+        found_all.extend(boundaries.filter_map(at));
         return Ok(found_all);
     }
     let mut byte = 0usize;
@@ -569,7 +570,7 @@ fn collect_matches<'text>(text: &'text str, pattern: &Regex) -> Result<Vec<regex
         let Some(found) = pattern.find_at(text, byte) else {
             break;
         };
-        found_all.push(found);
+        found_all.push((found.start(), found.end()));
         if found_all.len() > usize::try_from(i32::MAX).unwrap_or(usize::MAX) {
             return Err(count_overflow());
         }

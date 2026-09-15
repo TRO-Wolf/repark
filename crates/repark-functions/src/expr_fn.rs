@@ -351,6 +351,11 @@ pub fn sequence(args: Vec<Expr>) -> Expr {
 }
 
 #[must_use]
+pub fn split(text: Expr, pattern: Expr, limit: Expr) -> Expr {
+    call(crate::spark_split::split_udf(), vec![text, pattern, limit])
+}
+
+#[must_use]
 pub fn base64(arg: Expr) -> Expr {
     call(crate::spark_base64::base64_udf(), vec![arg])
 }

@@ -177,6 +177,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 - `sequence` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the
   facade shares the SQL door's kernel with the literal-expansion ceiling kept.
   pins: door-converge-2/C-003
+- `split` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the Rust
+  arm is ready, but Python `F.split` raises before reaching it (run 16a owns that half).
+  pins: door-converge-2/C-004
 - Window frames use Spark-relative offsets. Count-like unsigned results are cast to signed types.
 - Unknown scalar, aggregate, cast, or window names fail with typed Python exceptions.
 

@@ -14,11 +14,6 @@ use datafusion::logical_expr::{
 };
 
 #[must_use]
-pub fn functions() -> Vec<Arc<ScalarUDF>> {
-    vec![reverse_udf()]
-}
-
-#[must_use]
 pub fn reverse_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkReverse::new()))
 }

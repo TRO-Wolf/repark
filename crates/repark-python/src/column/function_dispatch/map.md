@@ -33,6 +33,9 @@ unit — so a new family gets a child module and the parent's default arm falls 
   converged arms (replacing the `nested_fn::gen_series` lowering) with the facade literal
   expansion ceiling kept.
   pins: door-converge-2/C-003
+  **DOOR-CONVERGE-2 (2026-09-15):** `split` joins the converged arms (2–3 args, `-1`
+  default limit); the Python `F.split` refusal sits above it, owned by run 16a.
+  pins: door-converge-2/C-004
 
 ## Pointers
 

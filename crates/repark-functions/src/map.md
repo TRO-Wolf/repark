@@ -589,6 +589,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   array → NULL row, `DATA_DIFF_TYPES` on a non-array sibling); any-`Binary` args stay
   `Binary`; everything else keeps the `Utf8` path. The facade `PyColumn::concat` embeds the
   same UDF, so both doors resolve one kernel. pins: door-converge-2/C-001
+- `spark_split.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `split`
+  (Java-regex pattern through the shared `compile_spark_regex` + `collect_matches`
+  stepping, `limit` > 0 caps with the remainder last, `limit` ≤ 0 keeps trailing
+  empties, empty pattern splits per character, NULL in → NULL out, numeric first
+  argument casts to string). The facade arm lives in `dispatch_spark.rs`, but the Python
+  `F.split` still raises `UnsupportedOperationException` before reaching it — P2 hand-off
+  to run 16a. pins: door-converge-2/C-004
 - `spark_sequence.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `sequence`
   (int widths kept, descending default step, dates with 1-day default and month steps,
   timestamps with interval steps, NULL bound/step → NULL with `containsNull=false`, zero

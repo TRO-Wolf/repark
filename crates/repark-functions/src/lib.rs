@@ -48,6 +48,7 @@ pub mod spark_regexp_match;
 pub mod spark_result_types;
 pub mod spark_reverse;
 pub mod spark_sequence;
+pub mod spark_split;
 pub mod spark_split_part;
 pub mod spark_year_pad;
 pub mod string;
@@ -126,8 +127,6 @@ pub fn register_all(ctx: &SessionContext) {
         .chain(spark_initcap::functions())
         .chain(spark_chr::functions())
         .chain(spark_elt::functions())
-        .chain(spark_reverse::functions())
-        .chain(spark_sequence::functions())
     {
         ctx.register_udf(udf.as_ref().clone());
     }

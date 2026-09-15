@@ -62,6 +62,24 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::reverse(exprs[0].clone())
         }
+        "split" => {
+            if exprs.len() != 2 && exprs.len() != 3 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 2 or 3 args, got {}",
+                    exprs.len()
+                )));
+            }
+            let limit = if exprs.len() >= 3 {
+                exprs[2].clone()
+            } else {
+                datafusion::logical_expr::lit(-1i32)
+            };
+            Ok(repark_functions::expr_fn::split(
+                exprs[0].clone(),
+                exprs[1].clone(),
+                limit,
+            ))
+        }
         "sequence" | "generate_series" | "gen_series" => {
             if exprs.len() < 2 {
                 return Err(PyValueError::new_err(format!(

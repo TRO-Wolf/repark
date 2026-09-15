@@ -24,6 +24,8 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![
         substring_udf(),
         concat_udf(),
+        crate::spark_reverse::reverse_udf(),
+        crate::spark_split::split_udf(),
         crate::spark_length::bit_length_udf(),
         crate::spark_length::octet_length_udf(),
         crate::spark_regexp::regexp_count_udf(),
