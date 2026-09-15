@@ -4553,12 +4553,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   still returns the engine's `UInt64`. Fixing the door turns this test red on purpose.
 
 - [test_fnp_bitmap_facade_1.py](test_fnp_bitmap_facade_1.py) — **FNP-BITMAP-FACADE-1
-  (2026-09-15, in flight):** the facade pins for `F.bitmap_construct_agg` /
-  `F.bitmap_or_agg` / `F.bitmap_and_agg` — name/signature presence, Python-door bytes and
-  counts equal to the SQL door and to the oracle fixture (global, grouped, NULL skipped,
-  empty and all-NULL identities, STRING→BIGINT coercion, `bitmap_count` over each result,
-  one sliding `Window.rowsBetween` cell), and the `[INVALID_BITMAP_POSITION]` error cell.
-  Red on the base tree; green after the native with the commit-2 dispatch arms lands.
+  (2026-09-15):** the facade pins for `F.bitmap_construct_agg` / `F.bitmap_or_agg` /
+  `F.bitmap_and_agg` — name/signature presence, Python-door bytes and counts equal to the
+  SQL door and to the oracle fixture (global, grouped, NULL skipped, empty and all-NULL
+  identities, STRING→BIGINT coercion, `bitmap_count` over each result, one sliding
+  `Window.rowsBetween` cell), the `[INVALID_BITMAP_POSITION]` error cell, and
+  `F.call_function` routing for all three names (bytes equal to the wrappers and the SQL
+  door). Red on the base facade (9 failed with the native present), 10 passed after.
   pins: fnp-bitmap-facade-1/C-001, C-002, C-003
 - [fnp_bitmap_facade_1_spark_oracle.json](fnp_bitmap_facade_1_spark_oracle.json) —
   **FNP-BITMAP-FACADE-1 (2026-09-15):** the 21 live PySpark 4.1.2 oracle cells this unit

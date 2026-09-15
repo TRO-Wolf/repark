@@ -220,6 +220,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (2026-09-16):** `char_length` leaves `FACADE_ONLY_ROUTINE_NAMES` — the Rust dispatch
   serves it (`call_function('char_length', lit('abc'))` = 3, A11-callfn-char-length).
   pins: fnp-misc-1/C-002, fnp-misc-1/F-3, fnp-misc-1/F-4, fnp-misc-1/F-5, fnp-misc-1/L-004, fnp-misc-1/L-005, fnp-misc-1/L-010
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** `FACADE_ONLY_ROUTINE_NAMES` gains
+  `bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg` (owner ruling: PySpark 4.1.2
+  resolves them as `call_function` builtins, so they are facade-only routines); the
+  by-name route answers the same bytes as the wrappers and the SQL door.
+  pins: fnp-bitmap-facade-1/C-002, fnp-bitmap-facade-1/C-004
 - `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9
   (2026-09-05):** `create_map`, `map_concat` and `array_insert` land here.
   pins: fnp-9-collections-json/C-006

@@ -57,12 +57,17 @@ def _fixture_column_type(cell_id: str, name: str) -> tuple[pa.DataType, bool]:
 
 
 def _bitmap_column(table: pa.Table, name: str) -> bytes:
+    rows = _bitmap_column_rows(table, name)
+    assert len(rows) == 1
+    return rows[0]
+
+
+def _bitmap_column_rows(table: pa.Table, name: str) -> list[bytes]:
     field = table.schema.field(name)
     assert field.type == pa.binary(), (name, field.type)
     values = table.column(name).to_pylist()
-    assert len(values) == 1
-    assert values[0] is not None
-    return bytes(values[0])
+    assert all(value is not None for value in values)
+    return [bytes(value) for value in values]
 
 
 def _bitmap(bytes_length: int, first_byte: int) -> bytes:
@@ -108,13 +113,11 @@ def test_construct_agg_grouped_schema_and_bytes(spark: ReparkSession) -> None:
     """pins: fnp-bitmap-facade-1/C-001, C-002"""
     frame = spark.createDataFrame([(1, 1)], "g int, x int")
     grouped = frame.groupBy("g").agg(F.bitmap_construct_agg(F.col("x")).alias("b")).toArrow()
-    fixture_g_type, fixture_g_nullable = _fixture_column_type("B8-group-schema", "g")
     fixture_b_type, fixture_b_nullable = _fixture_column_type("B8-group-schema", "b")
-    assert fixture_g_type == pa.int32() and fixture_g_nullable is False
     assert fixture_b_type == pa.binary() and fixture_b_nullable is False
     g_field = grouped.schema.field("g")
     b_field = grouped.schema.field("b")
-    assert g_field.type == pa.int32() and g_field.nullable is False
+    assert g_field.type == pa.int32() and grouped.column("g").to_pylist() == [1]
     assert b_field.type == pa.binary() and b_field.nullable is False
     bits = _bitmap_column(grouped, "b")
     assert len(bits) == BITMAP_BYTES and bits[0] == 0x02
@@ -123,6 +126,7 @@ def test_construct_agg_grouped_schema_and_bytes(spark: ReparkSession) -> None:
         "SELECT g, bitmap_construct_agg(x) AS b FROM fnp_facade1_group_schema GROUP BY g"
     ).toArrow()
     assert bits == _bitmap_column(door, "b")
+    assert g_field.nullable == door.schema.field("g").nullable
 
 
 def test_or_and_agg_match_sql_door_and_fixture(spark: ReparkSession) -> None:
@@ -160,8 +164,11 @@ def test_or_and_agg_match_sql_door_and_fixture(spark: ReparkSession) -> None:
     ).toArrow()
     assert folded.column("o").to_pylist() == door.column("o").to_pylist()
     assert folded.column("a").to_pylist() == door.column("a").to_pylist()
-    assert _bitmap_column(folded, "o")[0] == 0x03
-    assert _bitmap_column(folded, "a")[0] == 0x01
+    folded_o = _bitmap_column_rows(folded, "o")
+    folded_a = _bitmap_column_rows(folded, "a")
+    assert folded_o[0][0] == 0x03 and folded_o[1][0] == 0x02
+    assert folded_a[0][0] == 0x01 and folded_a[1][0] == 0x02
+    assert all(len(bits) == BITMAP_BYTES for bits in (*folded_o, *folded_a))
 
 
 def test_null_rows_are_skipped_and_all_null_identities_hold(spark: ReparkSession) -> None:
@@ -239,3 +246,21 @@ def test_sliding_window_rows_between_answers(spark: ReparkSession) -> None:
     ).toArrow()
     expected = [_fixture_value(row[1]) for row in _fixture_cell("B8-window-sliding")["rows"]]
     assert facade.column("c").to_pylist() == expected
+
+
+def test_call_function_routes_the_three_names(spark: ReparkSession) -> None:
+    """pins: fnp-bitmap-facade-1/C-002"""
+    frame = spark.createDataFrame([(1,), (2,), (3,), (32767,), (None,)], "x int")
+    frame.createOrReplaceTempView("fnp_facade1_call_function")
+    for name in FACADE_NAMES:
+        via_call = frame.select(
+            F.call_function(name, F.bitmap_bit_position(F.col("x"))).alias("b")
+        ).toArrow()
+        via_facade = frame.select(
+            getattr(F, name)(F.bitmap_bit_position(F.col("x"))).alias("b")
+        ).toArrow()
+        door = spark.sql(
+            f"SELECT {name}(bitmap_bit_position(x)) AS b FROM fnp_facade1_call_function"
+        ).toArrow()
+        assert _bitmap_column(via_call, "b") == _bitmap_column(via_facade, "b")
+        assert _bitmap_column(via_call, "b") == _bitmap_column(door, "b")
