@@ -1275,3 +1275,8 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
   `test_fnp_win_1.py` 1209 → 1314 (the `C2-L002`/`C2-L003` pins). No new
   exception row; the CAP-1 mirror rows move with them, counts still 38/32.
   pins: fnp-win-1/C-004
+- **FNP-WIN-1 (2026-09-15, verification round 2, L-001):**
+  `check_rust_file_size.py` moves `analyzer/time_window/mod.rs` 1338 → 1416
+  (provenance recursion plus rule tests); `check_lib_py.py` moves
+  `test_fnp_win_1.py` 1314 → 1415 (the `C2-L001` pins). Ratchets only.
+  pins: fnp-win-1/C-003

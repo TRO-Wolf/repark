@@ -9717,6 +9717,107 @@
      "3"
     ]
    ]
+  },
+  {
+   "id": "C2-L001-struct-plain",
+   "door": "python",
+   "error_type": "AnalysisException",
+   "condition": "_LEGACY_ERROR_TEMP_3101",
+   "message": "The input is not a correct window column: window_time(w#2);"
+  },
+  {
+   "id": "C2-L001-struct-filter",
+   "door": "python",
+   "error_type": "AnalysisException",
+   "condition": "_LEGACY_ERROR_TEMP_3101",
+   "message": "The input is not a correct window column: window_time(w#2);"
+  },
+  {
+   "id": "C2-L001-struct-limit",
+   "door": "python",
+   "error_type": "AnalysisException",
+   "condition": "_LEGACY_ERROR_TEMP_3101",
+   "message": "The input is not a correct window column: window_time(w#2);"
+  },
+  {
+   "id": "C2-L001-struct-orderby",
+   "door": "python",
+   "error_type": "AnalysisException",
+   "condition": "_LEGACY_ERROR_TEMP_3101",
+   "message": "The input is not a correct window column: window_time(w#2);"
+  },
+  {
+   "id": "C2-L001-struct-distinct",
+   "door": "python",
+   "error_type": "AnalysisException",
+   "condition": "_LEGACY_ERROR_TEMP_3101",
+   "message": "The input is not a correct window column: window_time(w#2);"
+  },
+  {
+   "id": "C2-L001-struct-crossjoin",
+   "door": "python",
+   "error_type": "AnalysisException",
+   "condition": "_LEGACY_ERROR_TEMP_3101",
+   "message": "The input is not a correct window column: window_time(w#2);"
+  },
+  {
+   "id": "C2-L001-struct-union",
+   "door": "python",
+   "error_type": "AnalysisException",
+   "condition": "_LEGACY_ERROR_TEMP_3101",
+   "message": "The input is not a correct window column: window_time(w#2);"
+  },
+  {
+   "id": "C2-L001-namedstruct-where",
+   "door": "sql",
+   "error_type": "AnalysisException",
+   "condition": "_LEGACY_ERROR_TEMP_3101",
+   "message": "The input is not a correct window column: window_time(w#14);"
+  },
+  {
+   "id": "C2-L001-view-where",
+   "door": "sql",
+   "error_type": "AnalysisException",
+   "condition": "_LEGACY_ERROR_TEMP_3101",
+   "message": "The input is not a correct window column: window_time(w#2);"
+  },
+  {
+   "id": "C2-L001-real-window-filter",
+   "door": "python",
+   "schema": [
+    [
+     "wt",
+     "string",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "2026-09-15 14:09:59.999999"
+    ],
+    [
+     "2026-09-15 14:19:59.999999"
+    ]
+   ]
+  },
+  {
+   "id": "C2-L001-real-window-where",
+   "door": "sql",
+   "schema": [
+    [
+     "wt",
+     "string",
+     true
+    ]
+   ],
+   "rows": [
+    [
+     "2026-09-15 14:09:59.999999"
+    ],
+    [
+     "2026-09-15 14:19:59.999999"
+    ]
+   ]
   }
  ],
  "signatures": {

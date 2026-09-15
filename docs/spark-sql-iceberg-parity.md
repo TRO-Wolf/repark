@@ -1116,7 +1116,9 @@ them, and the document is ordered by surface, never by date.
   `end` timestamps answers `end` minus one microsecond. The analyzer
   provenance rule refuses a `named_struct` call argument and any projection
   that defines the column as a non-window expression (including through temp
-  views, which unfold to their defining projection), but an opaque scan has no
+  views, which unfold to their defining projection, and through Filter /
+  Limit / Sort / Distinct / Join / Union nodes, which recurse into the
+  defining input since round 2), but an opaque scan has no
   defining expression to inspect.
 - **Apache Spark** — `window_time` requires a window-typed column and refuses
   any other struct with `[_LEGACY_ERROR_TEMP_3101] The input is not a correct
