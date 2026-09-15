@@ -19,6 +19,11 @@ sets an ALT flag that appends `.` when precision is 0.
   (fast parse, trim plus one trailing-suffix strip, Arrow fallback, blank to NULL,
   session ANSI at invoke). Non-literal STRING to FLOAT/DOUBLE casts route there;
   literals keep the plan-time fold; TryCast stays on Arrow.
+  Round 2 P2 (2026-09-15): the shim renders through `format_float_value_into`
+  into two reused batch scratches plus a 24 B/row `StringBuilder`; `to_json`
+  float rows and reader `NonFinite` write through `with_java_double_text`;
+  both string builders reserve 24 B/row. Per-row limb/digit buffers and the
+  `dtoa_big` heap path stay as recorded residue.
 
 - `dtoa.rs` — **JAVA-DOUBLE-FD-1 (2026-09-15):** the digit engine. Independent Rust
   implementation written from the published JDK 17 `FloatingDecimal` algorithm

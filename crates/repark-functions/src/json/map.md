@@ -48,7 +48,8 @@ round-trip destroys.
 - `to_json.rs` — `to_json` over STRUCT / ARRAY / MAP. A NULL **struct field** is omitted; a NULL
   **map value** is written as `null` — the asymmetry is Spark's, measured. Binary is base64,
   timestamps render in the session zone with three fraction digits, decimals keep their scale,
-  and NaN/Infinity are JSON strings. pins: fnp-9-collections-json/C-004
+  and NaN/Infinity are JSON strings. Round 2 (2026-09-15, P2-4): float rows render
+  through `with_java_double_text` into the row buffer. pins: fnp-9-collections-json/C-004
 - `ddl.rs` — the DDL schema parser `from_json` reads. Accepts a bare field list
   (`a INT, b STRING`) and a full type (`STRUCT<…>` / `ARRAY<…>` / `MAP<…>` / a primitive),
   case-insensitively, with backticked names — a doubled backtick inside one is the escape, which

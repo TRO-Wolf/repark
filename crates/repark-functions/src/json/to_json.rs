@@ -15,7 +15,7 @@ use datafusion::logical_expr::{
 };
 
 use super::reader::write_escaped;
-use crate::java_double::{java_double_text, java_float_text};
+use crate::java_double::{with_java_double_text, with_java_float_text};
 use crate::session_time_zone::session_time_zone_from_options;
 use crate::timestamp_cast::parse_session_zone;
 
@@ -141,11 +141,11 @@ fn write_scalar(array: &dyn Array, row: usize, out: &mut String, zone: Tz) -> bo
         }
         DataType::Float32 => {
             let value = array.as_primitive::<Float32Type>().value(row);
-            write_number(&java_float_text(value), value.is_finite(), out);
+            with_java_float_text(value, |text| write_number(text, value.is_finite(), out));
         }
         DataType::Float64 => {
             let value = array.as_primitive::<Float64Type>().value(row);
-            write_number(&java_double_text(value), value.is_finite(), out);
+            with_java_double_text(value, |text| write_number(text, value.is_finite(), out));
         }
         DataType::Utf8 => write_escaped(array.as_string::<i32>().value(row), out),
         DataType::LargeUtf8 => write_escaped(array.as_string::<i64>().value(row), out),

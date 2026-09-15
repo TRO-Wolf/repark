@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, AsArray, StringArray};
+use datafusion::arrow::array::{Array, AsArray, StringArray, StringBuilder};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Float32Type, Float64Type};
 use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err};
 use datafusion::logical_expr::{
@@ -91,18 +91,27 @@ impl ScalarUDFImpl for JavaFormatFloat {
         if spec.upper {
             return exec_err!("Conversion = 'F'");
         }
-        let rendered = match values_arg {
+        let row_count = match values_arg {
+            ColumnarValue::Array(array) => array.len(),
+            ColumnarValue::Scalar(_) => 1,
+        };
+        let mut builder = StringBuilder::with_capacity(row_count, row_count * 24);
+        let mut number = String::new();
+        let mut row = String::new();
+        match values_arg {
             ColumnarValue::Array(array) => match array.data_type() {
-                DataType::Float32 => array
-                    .as_primitive::<Float32Type>()
-                    .iter()
-                    .map(|value| Some(render_maybe_null(&spec, value.map(f64::from))))
-                    .collect::<Vec<_>>(),
-                DataType::Float64 => array
-                    .as_primitive::<Float64Type>()
-                    .iter()
-                    .map(|value| Some(render_maybe_null(&spec, value)))
-                    .collect::<Vec<_>>(),
+                DataType::Float32 => {
+                    for value in array.as_primitive::<Float32Type>() {
+                        push_rendered(&spec, value.map(f64::from), &mut number, &mut row);
+                        builder.append_value(&row);
+                    }
+                }
+                DataType::Float64 => {
+                    for value in array.as_primitive::<Float64Type>() {
+                        push_rendered(&spec, value, &mut number, &mut row);
+                        builder.append_value(&row);
+                    }
+                }
                 other => {
                     return exec_err!(
                         "'{}' expects a FLOAT or DOUBLE argument, got {other}",
@@ -110,9 +119,12 @@ impl ScalarUDFImpl for JavaFormatFloat {
                     );
                 }
             },
-            ColumnarValue::Scalar(scalar) => vec![Some(render_scalar(&spec, scalar)?)],
-        };
-        Ok(ColumnarValue::Array(Arc::new(StringArray::from(rendered))))
+            ColumnarValue::Scalar(scalar) => {
+                push_scalar(&spec, scalar, &mut number, &mut row)?;
+                builder.append_value(&row);
+            }
+        }
+        Ok(ColumnarValue::Array(Arc::new(builder.finish())))
     }
 }
 
@@ -127,18 +139,35 @@ fn is_string_type(data_type: &DataType) -> bool {
     )
 }
 
-fn render_maybe_null(spec: &FloatFormat, value: Option<f64>) -> String {
-    match value {
-        Some(value) => format_float_value(spec, value),
-        None => "null".to_owned(),
+fn push_rendered(spec: &FloatFormat, value: Option<f64>, number: &mut String, row: &mut String) {
+    if let Some(value) = value {
+        format_float_value_into(spec, value, number, row);
+    } else {
+        row.clear();
+        row.push_str("null");
     }
 }
 
-fn render_scalar(spec: &FloatFormat, scalar: &ScalarValue) -> Result<String> {
+fn push_scalar(
+    spec: &FloatFormat,
+    scalar: &ScalarValue,
+    number: &mut String,
+    row: &mut String,
+) -> Result<()> {
     match scalar {
-        ScalarValue::Float32(value) => Ok(render_maybe_null(spec, (*value).map(f64::from))),
-        ScalarValue::Float64(value) => Ok(render_maybe_null(spec, *value)),
-        ScalarValue::Null => Ok("null".to_owned()),
+        ScalarValue::Float32(value) => {
+            push_rendered(spec, (*value).map(f64::from), number, row);
+            Ok(())
+        }
+        ScalarValue::Float64(value) => {
+            push_rendered(spec, *value, number, row);
+            Ok(())
+        }
+        ScalarValue::Null => {
+            row.clear();
+            row.push_str("null");
+            Ok(())
+        }
         other => exec_err!("'__repark_format_float__' got unsupported scalar {other}"),
     }
 }
@@ -220,55 +249,52 @@ pub(crate) fn parse_float_format(format: &str) -> Option<FloatFormat> {
     Some(spec)
 }
 
-pub(crate) fn format_float_value(spec: &FloatFormat, value: f64) -> String {
-    let mut prefix = String::new();
-    let mut suffix = String::new();
-    if !value.is_nan() {
-        if value.is_sign_negative() {
-            if spec.has(FloatFormat::PAREN) {
-                prefix.push('(');
-                suffix.push(')');
-            } else {
-                prefix.push('-');
-            }
-        } else if spec.has(FloatFormat::PLUS) {
-            prefix.push('+');
-        } else if spec.has(FloatFormat::SPACE) {
-            prefix.push(' ');
-        }
-    }
-    let number = if value.is_finite() {
-        let mut fixed = half_up_fixed(value.abs(), spec.precision);
+fn format_float_value_into(spec: &FloatFormat, value: f64, number: &mut String, row: &mut String) {
+    number.clear();
+    if value.is_finite() {
+        half_up_fixed_into(value.abs(), spec.precision, number);
         if spec.has(FloatFormat::GROUPING) {
-            insert_grouping(&mut fixed);
+            insert_grouping(number);
         }
         if spec.precision == 0 && spec.has(FloatFormat::ALT) {
-            fixed.push('.');
+            number.push('.');
         }
-        fixed
     } else if value.is_infinite() {
-        "Infinity".to_owned()
+        number.push_str("Infinity");
     } else {
-        "NaN".to_owned()
+        number.push_str("NaN");
+    }
+    let (prefix, suffix): (Option<char>, Option<char>) = if value.is_nan() {
+        (None, None)
+    } else if value.is_sign_negative() {
+        if spec.has(FloatFormat::PAREN) {
+            (Some('('), Some(')'))
+        } else {
+            (Some('-'), None)
+        }
+    } else if spec.has(FloatFormat::PLUS) {
+        (Some('+'), None)
+    } else if spec.has(FloatFormat::SPACE) {
+        (Some(' '), None)
+    } else {
+        (None, None)
     };
+    let content_len = usize::from(prefix.is_some()) + number.len() + usize::from(suffix.is_some());
+    let pad = spec.width.saturating_sub(content_len);
+    let zero = spec.has(FloatFormat::ZERO) && value.is_finite() && !spec.has(FloatFormat::LEFT);
+    row.clear();
+    if !spec.has(FloatFormat::LEFT) && !zero {
+        row.extend(std::iter::repeat_n(' ', pad));
+    }
+    row.extend(prefix);
+    if zero {
+        row.extend(std::iter::repeat_n('0', pad));
+    }
+    row.push_str(number);
+    row.extend(suffix);
     if spec.has(FloatFormat::LEFT) {
-        let mut full = prefix + &number + &suffix;
-        while full.len() < spec.width {
-            full.push(' ');
-        }
-        return full;
+        row.extend(std::iter::repeat_n(' ', pad));
     }
-    if spec.has(FloatFormat::ZERO) && value.is_finite() {
-        while prefix.len() + number.len() + suffix.len() < spec.width {
-            prefix.push('0');
-        }
-        return prefix + &number + &suffix;
-    }
-    let mut full = prefix + &number + &suffix;
-    while full.len() < spec.width {
-        full = " ".to_owned() + &full;
-    }
-    full
 }
 
 fn insert_grouping(fixed: &mut String) {
@@ -285,7 +311,7 @@ fn insert_grouping(fixed: &mut String) {
 }
 
 #[allow(clippy::cast_possible_truncation)]
-fn half_up_fixed(abs: f64, precision: usize) -> String {
+fn half_up_fixed_into(abs: f64, precision: usize, out: &mut String) {
     debug_assert!(abs.is_finite() && !abs.is_sign_negative());
     let bits = abs.to_bits();
     let raw_exp = ((bits >> 52) & 0x7FF) as i32;
@@ -298,12 +324,12 @@ fn half_up_fixed(abs: f64, precision: usize) -> String {
     if exp2 >= 0 {
         let mut limbs = vec![significand];
         shift_left(&mut limbs, exp2.unsigned_abs());
-        let mut int_text = decimal_text(&mut limbs);
+        out.push_str(&decimal_text(&mut limbs));
         if precision > 0 {
-            int_text.push('.');
-            int_text.extend(std::iter::repeat_n('0', precision));
+            out.push('.');
+            out.extend(std::iter::repeat_n('0', precision));
         }
-        return int_text;
+        return;
     }
     let shift = exp2.unsigned_abs();
     let int_part = if shift >= 64 { 0 } else { significand >> shift };
@@ -332,14 +358,13 @@ fn half_up_fixed(abs: f64, precision: usize) -> String {
             digits[position] = 0;
         }
     }
-    let mut out = int_text;
+    out.push_str(&int_text);
     if !digits.is_empty() {
         out.push('.');
         for digit in digits {
             out.push((b'0' + digit) as char);
         }
     }
-    out
 }
 
 fn add_one_decimal(text: &str) -> String {
@@ -475,7 +500,10 @@ mod tests {
 
     fn render(format: &str, value: f64) -> String {
         let spec = parse_float_format(format).unwrap();
-        format_float_value(&spec, value)
+        let mut number = String::new();
+        let mut row = String::new();
+        format_float_value_into(&spec, value, &mut number, &mut row);
+        row
     }
 
     #[test]

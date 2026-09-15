@@ -660,7 +660,7 @@ pub fn java_float_text_len(value: f32) -> usize {
 }
 
 pub(crate) fn java_double_strings(values: &Float64Array) -> StringArray {
-    let mut builder = StringBuilder::with_capacity(values.len(), values.len() * 8);
+    let mut builder = StringBuilder::with_capacity(values.len(), values.len() * 24);
     for index in 0..values.len() {
         if values.is_null(index) {
             builder.append_null();
@@ -672,7 +672,7 @@ pub(crate) fn java_double_strings(values: &Float64Array) -> StringArray {
 }
 
 pub(crate) fn java_float_strings(values: &Float32Array) -> StringArray {
-    let mut builder = StringBuilder::with_capacity(values.len(), values.len() * 8);
+    let mut builder = StringBuilder::with_capacity(values.len(), values.len() * 24);
     for index in 0..values.len() {
         if values.is_null(index) {
             builder.append_null();
