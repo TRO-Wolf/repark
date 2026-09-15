@@ -200,6 +200,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   DF-PLAN-INTROSPECT-1 under ruling R-5.
   `risk_tier: standard`. Branch `feat/df-surface-a-1`.
   pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [df-surface-b-1-ledger.md](df-surface-b-1-ledger.md) —
+  **DF-SURFACE-B-1 (2026-09-14), in flight:** `DataFrame.foreach` /
+  `foreachPartition` / `observe` and `Observation` on the facade. Driver-side
+  callable execution and the second aggregation pass are DECLARED
+  (`DF-FOREACH-1`, `DF-OBSERVE-1`). Branch `feat/df-surface-b-1`.
+  pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [dfcore-1-ledger.md](dfcore-1-ledger.md) —
   **DFCORE-1 (2026-09-07), in flight:** leaf helpers out of `core.py` — Arrow cell
   conversion to `rows_export.py`, export-error mapping to new `export_errors.py`,

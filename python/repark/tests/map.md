@@ -2218,6 +2218,25 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark (flat / nested struct / array / `level=1` exact captures) plus the live leg;
   red-first 4 red of 4.
   pins: df-printschema-1-trailing-newline/C-002, C-003, C-004
+- [test_df_surface_b_1.py](test_df_surface_b_1.py) +
+  [facade_dataframe_surface_oracle.json](facade_dataframe_surface_oracle.json) —
+  **DF-SURFACE-B-1 step 1 (2026-09-14):** `foreach` / `foreachPartition` /
+  `observe` / `Observation` driven from the run-15b cells `df.foreach*` /
+  `df.observe*` / `df.observation*`. `foreach` streams `Row`s through
+  `toLocalIterator` and returns `None`; a non-callable `f` raises `NOT_CALLABLE`
+  at the call and a user exception propagates unchanged (registry `DF-FOREACH-1`).
+  `foreachPartition` calls `f` once per Arrow batch, including once on an empty
+  frame. `Observation("")` / non-str name / empty exprs / reuse / bad first
+  argument raise Spark's classes; a non-aggregate expr raises
+  `INVALID_OBSERVED_METRICS.NON_AGGREGATE_FUNC_ARG_IS_ATTRIBUTE` at the first
+  action; `obs.get` after one action is the metric dict and later actions do not
+  re-agg (registry `DF-OBSERVE-1`). Critic round 1 (L-001..L-007) under ruling
+  R-5 adds the shared-attachment contract: peek actions, transform descendants,
+  and map-bridge peeks fill the observed frame's full metrics exactly once;
+  concurrent sibling observations fill independently; literal metrics are
+  allowed; non-`Column` exprs refuse `NOT_LIST_OF_COLUMN` at `observe`.
+  pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **Re-check L-101..L-103 (2026-09-15):** `explain` and `createOrReplaceTempView` no longer fill an Observation (plan-only work), `tail(0)` fills like `take(0)`, and a write still fills. pins: df-surface-b-1/C-008
 - `test_df_stream_batch_1.py` + `facade_dataframe_streaming_declared_oracle.json` —
   **DF-STREAM-BATCH-1 step 1 (2026-09-14):** the streaming-named DataFrame surface on a
   batch frame, driven cell-by-cell from the live-PySpark oracle copy. `writeStream`

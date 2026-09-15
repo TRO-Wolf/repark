@@ -13,6 +13,7 @@ from __future__ import annotations
 from repark.spark.catalog import Catalog
 from repark.spark.column import Column
 from repark.spark.dataframe import DataFrame, GroupedData
+from repark.spark.observation import Observation
 from repark.spark.row import Row
 from repark.spark.session import DataFrameReader, ReparkSession, SparkSession
 from repark.spark.sql import functions, types, window
@@ -25,6 +26,7 @@ __all__ = [
     "DataFrame",
     "DataFrameReader",
     "GroupedData",
+    "Observation",
     "Row",
     "SparkSession",
     "Window",
@@ -42,7 +44,6 @@ _PYSPARK_SQL_ABSENT: frozenset[str] = frozenset(
         "HiveContext",
         "UDFRegistration",
         "UDTFRegistration",
-        "Observation",
         "DataFrameNaFunctions",
         "DataFrameStatFunctions",
         "VariantVal",

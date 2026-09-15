@@ -80,6 +80,11 @@ and ``semanticHash`` leave the branch for a Rust plan-introspection unit and
 the ``_schema_override`` sticker is deleted — ``schema`` reports whatever the
 engine's plan reports (the narrow-width divergence is registry
 LOGICAL-WIDTH-1).
+DF-SURFACE-B-1 (2026-09-14): ``foreach``, ``foreachPartition``, and ``observe``
+bind on the class from ``surface_b.py`` — ``EXPECTED_DATAFRAME_DIR`` gains those
+three names and ``_observations``; ``core`` and the package each gain exactly
+the one new module name ``surface_b``.
+pins: df-surface-b-1/C-006
 """
 
 from __future__ import annotations

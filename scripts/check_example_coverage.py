@@ -66,6 +66,7 @@ COLUMN_SOURCE = "python/repark/src/repark/spark/column.py"
 WINDOW_SOURCE = "python/repark/src/repark/spark/window.py"
 CATALOG_SOURCE = "python/repark/src/repark/spark/catalog.py"
 ROW_SOURCE = "python/repark/src/repark/spark/row.py"
+OBSERVATION_SOURCE = "python/repark/src/repark/spark/observation.py"
 DATAFRAME_CORE_SOURCE = "python/repark/src/repark/spark/dataframe/core.py"
 DATAFRAME_JOINS_SOURCE = "python/repark/src/repark/spark/dataframe/joins_columns.py"
 DATAFRAME_ACTIONS_SOURCE = "python/repark/src/repark/spark/dataframe/actions_export.py"
@@ -168,7 +169,7 @@ REPARK_ROOTED_KINDS: frozenset[str] = frozenset(
         KIND_LOCAL,
     }
 )
-CLASS_ROOT_KINDS: dict[str, str] = {"Window": KIND_WINDOW}
+CLASS_ROOT_KINDS: dict[str, str] = {"Window": KIND_WINDOW, "Observation": KIND_LOCAL}
 CHILD_ENV_DROP: frozenset[str] = frozenset({"PYTHONPATH", "PYTHONSTARTUP", "PYTHONHOME"})
 
 CLASS_SURFACES: tuple[tuple[str, str, str, str, str | None], ...] = (
@@ -176,6 +177,7 @@ CLASS_SURFACES: tuple[tuple[str, str, str, str, str | None], ...] = (
     ("dataframe", "GroupedData", DATAFRAME_JOINS_SOURCE, "GroupedData", None),
     ("dataframe", "DataFrameNaFunctions", DATAFRAME_ACTIONS_SOURCE, "DataFrameNaFunctions", None),
     ("dataframe", "DataFrameStatFunctions", WRITER_SOURCE, "DataFrameStatFunctions", None),
+    ("dataframe", "Observation", OBSERVATION_SOURCE, "Observation", None),
     ("io", "DataFrameReader", READER_SOURCE, "DataFrameReader", None),
     ("io", "DataFrameWriter", WRITER_SOURCE, "DataFrameWriter", None),
     ("io", "DataFrameWriterV2", WRITER_SOURCE, "DataFrameWriterV2", None),

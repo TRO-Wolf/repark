@@ -541,6 +541,27 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `writer_readwriter.py` holds its exact 1105 baseline.
   pins: io-bucket-cluster-1/C-005
   **Re-check (2026-09-15):** `_unpack_column_args` checks `cols` before `col` and raises `NOT_LIST_OF_STR` with Spark's sentence through `_refuse_not_list_of_str`.
+- `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1,
+- `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1, **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down. pins: df-surface-b-1/C-008
+  2026-09-14), bound on the class from `core.py` at the exact ceiling. `foreach`
+  streams `f(row)` through `toLocalIterator`; `foreachPartition` calls `f` once per
+  Arrow batch with a `Row` iterator (an empty frame still calls `f` once).
+  `observe` records a shared `_ObservedMetricsAttachment`
+  `(observation, exprs, observed_frame)` on the returned frame; every descendant
+  references the same object (`_spawn` merges attachments from all parents).
+  `fill_on_action` is the single fill helper, called from `_action_inner` (every
+  action that reaches it), from `_consume_map_in_arrow_batches` (every map-bridge
+  peek in `take`, `isEmpty`, `show`, `repr`, `_repr_html`), and from `take` (the
+  `take(0)` early return). The fill runs `observed_frame.agg(*exprs)` once —
+  never on the actioned descendant or a `limit(n)` frame — under a per-attachment
+  lock + in-progress flag, so a re-entrant `agg().collect()` is skipped and a
+  concurrent fill of a different attachment is not. Literal metrics are allowed;
+  an attribute outside an aggregate refuses `INVALID_OBSERVED_METRICS` at the
+  first action; a non-`Column` expr refuses `NOT_LIST_OF_COLUMN` at `observe`.
+  Driver-side callable execution and the second aggregation pass are DECLARED
+  (`DF-FOREACH-1`, `DF-OBSERVE-1`).
+  pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-007
+  **Re-check (2026-09-15):** a thread-local suppression keeps plan-only work from filling an Observation — `register_view_without_fill` (temp views, EXPLAIN's scratch view) and `rows_without_fill` (EXPLAIN's rows); `empty_rows_after_fill` answers `tail(0)`. `core.py` swaps its three call sites line for line; writers register through the session method directly and still fill.
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`
@@ -933,6 +954,8 @@ that held the comment (pins: comment-core-1/C-003).
 | Plan rewrites and display | [`plan_collapse.py`](plan_collapse.py) |
 | Writes and statistics | [`writer_readwriter.py`](writer_readwriter.py) |
 | Writer layout bodies and write helpers | [`writer_layout.py`](writer_layout.py) |
+| `foreach` / `foreachPartition` / `observe` | [`surface_b.py`](surface_b.py) |
+| `foreach` / `foreachPartition` / `observe` | [`surface_b.py`](surface_b.py) |
 | Parent navigation | [`../map.md`](../map.md) |
 | Rust engine contracts | [`../../../../../../crates/repark-core/src/map.md`](../../../../../../crates/repark-core/src/map.md) |
 | Tests | [`../../../../tests/map.md`](../../../../tests/map.md) |
