@@ -22,6 +22,11 @@ mod shuffle;
 
 mod array_append;
 mod array_contains;
+mod concat_array;
+pub(crate) use concat_array::{
+    all_list_args, invoke_array_concat, is_binary_family, is_list_family, plan_array_concat,
+    spark_type_name,
+};
 mod array_insert;
 mod array_position;
 mod array_sort;
@@ -53,6 +58,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         array_insert::array_insert_udf(),
         arrays_zip::arrays_zip_udf(),
         map_concat::map_concat_udf(),
+        crate::spark_sequence::sequence_udf(),
         array_append::spark_array_append_udf(),
         array_append::spark_array_prepend_udf(),
     ]

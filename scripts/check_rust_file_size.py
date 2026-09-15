@@ -52,7 +52,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split by ordering source while preserving public-entry coverage.",
     ),
     "crates/repark-functions/src/analyzer.rs": (
-        1142,
+        1150,
         "Spark analyzer rewrites remain grouped in one rule implementation.",
         "Extract a cohesive rewrite family when that family next changes.",
     ),
@@ -112,7 +112,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split DELETE and UPDATE scenario families with shared setup retained.",
     ),
     "crates/repark-python/src/column/mod.rs": (
-        1052,
+        1036,
         "PyO3 Column methods remain grouped in one binding module.",
         "Extract the remaining date or window method family.",
     ),

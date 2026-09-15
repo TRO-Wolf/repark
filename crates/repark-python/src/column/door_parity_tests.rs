@@ -73,6 +73,13 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
          reaches `element_at`; the door's own `array_element` returns NULL for a valid index, \
          which is an engine defect on a non-Spark spelling",
     ),
+    (
+        "generate_series",
+        FacadeShape::Kernel(2),
+        "facade generate_series/gen_series are sequence aliases resolving SparkSequence; the SQL \
+         door keeps DataFusion's native generate_series, whose table-function callers \
+         (df_guard, spill, pg_acceptance) depend on the native spelling",
+    ),
 ];
 
 /// Scalar spellings covered by the explicit guard.
@@ -89,6 +96,9 @@ const SCALAR_NAMES: &[(&str, usize)] = &[
     ("ascii", 1),
     ("length", 1),
     ("character_length", 1),
+    ("reverse", 1),
+    ("sequence", 2),
+    ("split", 2),
     ("to_timestamp", 1),
     ("crc32", 1),
     ("sha1", 1),
@@ -170,9 +180,10 @@ fn facade_avg_is_the_repark_retracting_kernel_not_datafusion_core() {
 fn expected_divergences_are_all_still_real() {
     assert_eq!(
         EXPECTED_DIVERGENCES.len(),
-        14,
+        15,
         "DOOR-CONVERGE-1 closed abs/ascii/base64/unbase64/length/character_length/size/\
-         array_contains — both doors now resolve the same kernel; ratchet 22 → 14"
+         array_contains — both doors now resolve the same kernel; ratchet 22 → 14. \
+         DOOR-CONVERGE-2 adds generate_series (facade sequence-alias vs door native) → 15"
     );
     let ctx = registered_session();
     let mut already_fixed = Vec::new();

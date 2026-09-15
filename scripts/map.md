@@ -124,6 +124,14 @@ sites so `replace` binds duplicate-name equi-join output by relation qualifier
 — P2-3; the join-side aliasing, qualifier assignment, and plan-metadata
 propagation live in `dataframe/replace_expr.py`). The CAP-1 parity mirror row
 moved with it.
+DOOR-CONVERGE-2 C-001 (2026-09-15): `check_rust_file_size.py`
+`repark-python/src/column/mod.rs` 1052 → 1036 (the facade `concat` CASE-guard body
+deleted for the door-converged kernel embed).
+pins: door-converge-2/C-001
+DOOR-CONVERGE-2 C-005/C-006 (2026-09-15, G-2 Q1 one-time grant R-1 under Q-15c-4):
+`check_rust_file_size.py` `repark-functions/src/analyzer.rs` 1142 → 1150 (the
+`array_concat` → `concat` analyzer arm for Q12-16 outer nullability).
+pins: door-converge-2/C-001
 pins: replace-linear-1/C-004
 REPLACE-LINEAR-1 step 1 (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4089 → 4054 (the `DataFrame.replace` body — validation,

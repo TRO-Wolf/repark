@@ -67,6 +67,14 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Tra
             )))
         }
         Expr::ScalarFunction(function)
+            if function.func.name() == "array_concat"
+                && crate::collection::all_list_args(&function.args, schema) =>
+        {
+            Ok(Transformed::yes(Expr::ScalarFunction(
+                ScalarFunction::new_udf(crate::string::concat_udf(), function.args),
+            )))
+        }
+        Expr::ScalarFunction(function)
             if function.func.name() == "overlay" && function.args.len() == 4 =>
         {
             Ok(overlay::rewrite(function))

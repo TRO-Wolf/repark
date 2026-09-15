@@ -61,6 +61,19 @@ needed.
   Output `ListArray` from inner values + mapped offsets (no per-row concat).
   `#[ignore = "1e6-row release bench"]` `one_million_rows_within_three_times_datafusion` (≤ 3× DataFusion).
   pins: fn-fix-1-registry-rows/C-002
+- `concat_array.rs` — **DOOR-CONVERGE-2 (2026-09-15):** the array arm of the door-converged
+  `concat` UDF (`string.rs` keeps the name; this module holds the helpers). Element types fold
+  through `array_insert::tightest_common` (text pairs normalize to `Utf8`, binary pairs to
+  `Binary`, nested lists widen element-wise), `containsNull` is the OR of the inputs, any NULL
+  array nulls the row, and a non-array sibling refuses `DATATYPE_MISMATCH.DATA_DIFF_TYPES`
+  with Spark's `ARRAY<INT>` / `STRING` type names. Row assembly is one `MutableArrayData`
+  over the widened values plus recomputed offsets. `coerce_types` validates but never
+  casts (same provisional-`Int64` sandwich as `sequence`: widths resolve post-narrowing,
+  the kernel casts internally). `all_list_args` is the analyzer's gate for the
+  `array_concat` → `concat` rewrite (every argument list-shaped or NULL).
+  pins: door-converge-2/C-001
+  **Round 3 (2026-09-15):** the `MutableArrayData` capacity is the total child length
+  (P3-trivial hint, no behavior change). pins: door-converge-2/C-009
 - `array_append.rs` — **ARRAY-NULL-1 (2026-09-14):** `spark_array_append_udf` /
   `spark_array_prepend_udf`. Each delegates to DataFusion's native kernel and then grafts
   the input array's outer `NullBuffer` onto the result — the kernels drop it, so a NULL

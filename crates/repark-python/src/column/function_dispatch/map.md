@@ -26,6 +26,20 @@ unit — so a new family gets a child module and the parent's default arm falls 
   for the same kernel `register_all` installs on the SQL door — one kernel per name on
   both doors.
   pins: door-converge-1/C-001..C-008
+  **DOOR-CONVERGE-2 (2026-09-15):** `reverse` joins the converged arms (the facade's old
+  DataFusion-core lowering answered strings only).
+  pins: door-converge-2/C-002
+  **DOOR-CONVERGE-2 (2026-09-15):** `sequence` / `generate_series` / `gen_series` join the
+  converged arms (replacing the `nested_fn::gen_series` lowering) with the facade literal
+  expansion ceiling kept.
+  pins: door-converge-2/C-003
+  **DOOR-CONVERGE-2 (2026-09-15):** `split` joins the converged arms (2–3 args, `-1`
+  default limit); the Python `F.split` refusal sits above it, owned by run 16a.
+  pins: door-converge-2/C-004
+  **DOOR-CONVERGE-2 G-2 (2026-09-15):** the three single-name converged arms merge into
+  the converge-1 arm (one pattern list, identical bodies), and the `sequence` arm body
+  moves to `sequence_expr` (the `call_scalar_expr` 100-line ceiling holds).
+  pins: door-converge-2/C-005
 
 ## Pointers
 

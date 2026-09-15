@@ -215,7 +215,6 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "skewness",
     "some",
     "spark_partition_id",
-    "split",
     "st_asbinary",
     "st_geogfromwkb",
     "st_geomfromwkb",

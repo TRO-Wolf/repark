@@ -92,6 +92,7 @@ repo.
   ~16 live sites (Rust refusal messages, facade docstrings, facade tests), and indexed in
   [../repo-manifest.toml](../repo-manifest.toml) so a move is a red gate. A row without a live pin
   is not admitted.
+  DOOR-CONVERGE-2 (#622, 2026-09-15): rows DC2-CONCAT-1 / DC2-REVERSE-1 / DC2-SEQUENCE-1 / DC2-SPLIT-1, BACKLOG JAVA-REGEX-FEATURES-1, and the FNP-6D residual `concat(BINARY, BINARY)` now converged.
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

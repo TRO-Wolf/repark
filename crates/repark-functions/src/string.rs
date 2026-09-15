@@ -4,8 +4,8 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use datafusion::arrow::array::{
-    Array, ArrayRef, AsArray, GenericListArray, Int64Array, OffsetSizeTrait, StringArray,
-    StringBuilder, as_fixed_size_list_array, as_large_list_array, as_list_array,
+    Array, ArrayRef, AsArray, BinaryBuilder, GenericListArray, Int64Array, OffsetSizeTrait,
+    StringArray, StringBuilder, as_fixed_size_list_array, as_large_list_array, as_list_array,
 };
 use datafusion::arrow::buffer::NullBuffer;
 use datafusion::arrow::compute::{can_cast_types, cast};
@@ -24,6 +24,8 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![
         substring_udf(),
         concat_udf(),
+        crate::spark_reverse::reverse_udf(),
+        crate::spark_split::split_udf(),
         crate::spark_length::bit_length_udf(),
         crate::spark_length::octet_length_udf(),
         crate::spark_regexp::regexp_count_udf(),
@@ -363,16 +365,32 @@ impl Hash for SparkConcat {
 impl ScalarUDFImpl for SparkConcat {
     crate::shim_udf_boilerplate!("concat");
 
-    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        Ok(DataType::Utf8)
+    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        spark_concat_return(arg_types)
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let declared: Vec<DataType> = args
+            .arg_fields
+            .iter()
+            .map(|field| field.data_type().clone())
+            .collect();
         let nullable = args.arg_fields.iter().any(|field| field.is_nullable());
-        Ok(Arc::new(Field::new("concat", DataType::Utf8, nullable)))
+        Ok(Arc::new(Field::new(
+            "concat",
+            spark_concat_return(&declared)?,
+            nullable,
+        )))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        if arg_types.iter().any(crate::collection::is_list_family) {
+            crate::collection::plan_array_concat(arg_types)?;
+            return Ok(arg_types.to_vec());
+        }
+        if !arg_types.is_empty() && arg_types.iter().all(crate::collection::is_binary_family) {
+            return Ok(vec![DataType::Binary; arg_types.len()]);
+        }
         Ok(arg_types
             .iter()
             .map(|data_type| match data_type {
@@ -383,8 +401,22 @@ impl ScalarUDFImpl for SparkConcat {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        spark_concat_utf8(args)
+        match args.return_field.data_type() {
+            DataType::List(_) => crate::collection::invoke_array_concat(args),
+            DataType::Binary => spark_concat_binary(args),
+            _ => spark_concat_utf8(args),
+        }
     }
+}
+
+fn spark_concat_return(arg_types: &[DataType]) -> Result<DataType> {
+    if arg_types.iter().any(crate::collection::is_list_family) {
+        return Ok(crate::collection::plan_array_concat(arg_types)?.result);
+    }
+    if !arg_types.is_empty() && arg_types.iter().all(crate::collection::is_binary_family) {
+        return Ok(DataType::Binary);
+    }
+    Ok(DataType::Utf8)
 }
 
 /// Null-mask resolution for Spark any-NULL → NULL concat semantics.
@@ -444,7 +476,58 @@ fn spark_concat_utf8(args: ScalarFunctionArgs) -> Result<ColumnarValue> {
     };
     let result = concat_func.invoke_with_args(kernel_args)?;
     let result = cast_columnar_value_to_utf8(&result)?;
-    apply_null_mask(result, null_mask)
+    apply_null_mask(result, null_mask, ScalarValue::Utf8(None))
+}
+
+fn spark_concat_binary(args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+    let ScalarFunctionArgs {
+        args: arg_values,
+        number_rows,
+        ..
+    } = args;
+
+    if arg_values.is_empty() {
+        return Ok(ColumnarValue::Scalar(ScalarValue::Binary(Some(Vec::new()))));
+    }
+
+    let null_mask = compute_null_mask(&arg_values, number_rows)?;
+    if matches!(null_mask, NullMaskResolution::ReturnNull) {
+        return Ok(ColumnarValue::Scalar(ScalarValue::Binary(None)));
+    }
+
+    let arrays = ColumnarValue::values_to_arrays(&arg_values)?;
+    let mut binaries = Vec::with_capacity(arrays.len());
+    for array in &arrays {
+        let shaped = if array.data_type() == &DataType::Binary {
+            Arc::clone(array)
+        } else {
+            cast(array.as_ref(), &DataType::Binary)?
+        };
+        binaries.push(shaped);
+    }
+    let row_count = binaries.first().map_or(0, Array::len);
+    let mut builder = BinaryBuilder::with_capacity(row_count, 0);
+    for row in 0..row_count {
+        let mut piece: Vec<u8> = Vec::new();
+        let mut row_null = false;
+        for binary in &binaries {
+            if binary.is_null(row) {
+                row_null = true;
+                break;
+            }
+            piece.extend_from_slice(binary.as_binary::<i32>().value(row));
+        }
+        if row_null {
+            builder.append_null();
+        } else {
+            builder.append_value(&piece);
+        }
+    }
+    apply_null_mask(
+        ColumnarValue::Array(Arc::new(builder.finish())),
+        null_mask,
+        ScalarValue::Binary(None),
+    )
 }
 
 /// Cast a [`ColumnarValue`] to `Utf8` (arrays via compute cast; scalars via `ScalarValue` cast).
@@ -534,9 +617,13 @@ fn compute_null_mask(args: &[ColumnarValue], number_rows: usize) -> Result<NullM
 }
 
 /// Apply the Spark any-NULL mask onto a concat result that is already `Utf8`.
-fn apply_null_mask(result: ColumnarValue, null_mask: NullMaskResolution) -> Result<ColumnarValue> {
+fn apply_null_mask(
+    result: ColumnarValue,
+    null_mask: NullMaskResolution,
+    null_scalar: ScalarValue,
+) -> Result<ColumnarValue> {
     match (result, null_mask) {
-        (_, NullMaskResolution::ReturnNull) => Ok(ColumnarValue::Scalar(ScalarValue::Utf8(None))),
+        (_, NullMaskResolution::ReturnNull) => Ok(ColumnarValue::Scalar(null_scalar)),
         (scalar @ ColumnarValue::Scalar(_), NullMaskResolution::NoMask) => Ok(scalar),
         (ColumnarValue::Array(array), NullMaskResolution::Apply(null_mask)) => {
             let combined_nulls = NullBuffer::union(array.nulls(), Some(&null_mask));
@@ -708,249 +795,4 @@ fn spark_substring(value: &str, position: i64, length: Option<i64>) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    use datafusion::arrow::array::StringArray;
-    use datafusion::prelude::SessionContext;
-
-    fn ctx() -> SessionContext {
-        let ctx = SessionContext::new();
-        for udf in functions() {
-            ctx.register_udf(udf.as_ref().clone());
-        }
-        for rule in crate::analyzer_rules() {
-            ctx.add_analyzer_rule(rule);
-        }
-        ctx
-    }
-
-    /// Full registry path: `datafusion-spark` first, then repark shims (name overwrite wins).
-    fn ctx_register_all() -> SessionContext {
-        let ctx = SessionContext::new();
-        crate::register_all(&ctx);
-        for rule in crate::analyzer_rules() {
-            ctx.add_analyzer_rule(rule);
-        }
-        ctx
-    }
-
-    async fn one(ctx: &SessionContext, sql: &str) -> Option<String> {
-        let batches = ctx
-            .sql(sql)
-            .await
-            .unwrap_or_else(|error| panic!("plan `{sql}`: {error}"))
-            .collect()
-            .await
-            .unwrap_or_else(|error| panic!("execute `{sql}`: {error}"));
-        let column = batches[0].column(0);
-        let strings = column
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .unwrap_or_else(|| panic!("expected Utf8 for {sql}, got {:?}", column.data_type()));
-        strings.is_valid(0).then(|| strings.value(0).to_string())
-    }
-
-    /// Optional release measurement, enabled with `REPARK_PERF_MEASURE=1`.
-    #[test]
-    #[allow(clippy::cast_precision_loss)] // ns/row report only
-    fn perf_measure_substring_char_indices() {
-        if std::env::var_os("REPARK_PERF_MEASURE").as_deref() != Some(std::ffi::OsStr::new("1")) {
-            eprintln!("PERF-03 skipped (set REPARK_PERF_MEASURE=1 to run 1M-row measurement)");
-            return;
-        }
-        let rows = 1_000_000usize;
-        let sample = "αβγδεζηθικλμνξοπρστυφχψωhello世界";
-        let start = std::time::Instant::now();
-        let mut sink = 0usize;
-        for index in 0..rows {
-            let out = spark_substring(sample, 2, Some(8));
-            sink ^= out.len().wrapping_add(index);
-        }
-        let elapsed = start.elapsed();
-        let ns_new = elapsed.as_nanos() as f64 / rows as f64;
-        eprintln!(
-            "PERF-03 substring_char_indices rows={rows} total_ms={:.3} ns_per_row={ns_new:.3} sink={sink}",
-            elapsed.as_secs_f64() * 1000.0
-        );
-        let start_baseline = std::time::Instant::now();
-        let mut sink_baseline = 0usize;
-        for index in 0..rows {
-            let chars: Vec<char> = sample.chars().collect();
-            let total = i64::try_from(chars.len()).unwrap_or(i64::MAX);
-            let start_index = 2_i64 - 1;
-            let end = start_index.saturating_add(8);
-            let lower = usize::try_from(start_index.clamp(0, total)).unwrap_or(0);
-            let upper = usize::try_from(end.clamp(0, total)).unwrap_or(0);
-            let out: String = if lower >= upper {
-                String::new()
-            } else {
-                chars[lower..upper].iter().collect()
-            };
-            sink_baseline ^= out.len().wrapping_add(index);
-        }
-        let elapsed_baseline = start_baseline.elapsed();
-        let ns_old = elapsed_baseline.as_nanos() as f64 / rows as f64;
-        eprintln!(
-            "PERF-03 substring_vec_char_baseline rows={rows} total_ms={:.3} ns_per_row={ns_old:.3} sink={sink_baseline}",
-            elapsed_baseline.as_secs_f64() * 1000.0
-        );
-        let _ = (sink, sink_baseline, ns_new, ns_old);
-    }
-
-    #[tokio::test]
-    async fn substring_spark_edge_positions() {
-        let ctx = ctx();
-        let cases: &[(&str, &str)] = &[
-            ("substr('hello', 0, 3)", "hel"),
-            ("substring('hello', -3, 2)", "ll"),
-            ("substring('hello', -7, 3)", "h"),
-            ("substr('hello', 1, 3)", "hel"),
-            ("substring('hello', 2, 3)", "ell"),
-            ("substr('hello', 2)", "ello"),
-            ("substring('hello', -2)", "lo"),
-            ("substr('hello', 9, 3)", ""),
-            ("substring('hello', 1, 0)", ""),
-            ("substr('hello', 1, -1)", ""),
-            ("substring('', 1, 2)", ""),
-        ];
-        for (call, expected) in cases {
-            assert_eq!(
-                one(&ctx, &format!("SELECT {call}")).await.as_deref(),
-                Some(*expected),
-                "{call}"
-            );
-        }
-    }
-
-    #[tokio::test]
-    async fn substring_nulls_and_multibyte() {
-        let ctx = ctx();
-        assert_eq!(
-            one(&ctx, "SELECT substr(CAST(NULL AS STRING), 1, 2)").await,
-            None
-        );
-        assert_eq!(one(&ctx, "SELECT substr('ab', NULL, 2)").await, None);
-        assert_eq!(
-            one(&ctx, "SELECT substring('héllo', 2, 3)")
-                .await
-                .as_deref(),
-            Some("éll")
-        );
-    }
-
-    #[tokio::test]
-    async fn concat_coalesce_null_empty_returns_utf8() {
-        let ctx = ctx();
-        assert_eq!(
-            one(
-                &ctx,
-                "SELECT concat(coalesce(CAST(NULL AS VARCHAR), ''), 'x')"
-            )
-            .await
-            .as_deref(),
-            Some("x")
-        );
-        assert_eq!(
-            one(
-                &ctx,
-                "SELECT concat(concat(coalesce(CAST(NULL AS VARCHAR), ''), ', '), 'Ann')"
-            )
-            .await
-            .as_deref(),
-            Some(", Ann")
-        );
-    }
-
-    #[tokio::test]
-    async fn concat_any_null_propagates() {
-        let ctx = ctx();
-        assert_eq!(
-            one(&ctx, "SELECT concat('a', CAST(NULL AS VARCHAR), 'b')").await,
-            None
-        );
-    }
-
-    #[tokio::test]
-    async fn concat_basic_and_zero_arg() {
-        let ctx = ctx();
-        assert_eq!(
-            one(&ctx, "SELECT concat('store', 'A')").await.as_deref(),
-            Some("storeA")
-        );
-        assert_eq!(one(&ctx, "SELECT concat()").await.as_deref(), Some(""));
-    }
-
-    #[tokio::test]
-    async fn concat_result_physical_type_is_utf8() {
-        let ctx = ctx();
-        let batches = ctx
-            .sql("SELECT concat(coalesce(CAST(NULL AS VARCHAR), ''), 'id') AS id")
-            .await
-            .expect("plan concat coalesce")
-            .collect()
-            .await
-            .expect("execute concat coalesce");
-        assert_eq!(batches[0].column(0).data_type(), &DataType::Utf8);
-    }
-
-    #[tokio::test]
-    async fn concat_array_any_null_propagates_per_row() {
-        let ctx = ctx_register_all();
-        let batches = ctx
-            .sql(
-                "SELECT concat(a, b) AS j FROM (VALUES
-                    ('x', CAST(NULL AS VARCHAR)),
-                    ('y', 'z'),
-                    (CAST(NULL AS VARCHAR), 'w')
-                ) AS t(a, b)",
-            )
-            .await
-            .expect("plan array concat")
-            .collect()
-            .await
-            .expect("execute array concat");
-        assert_eq!(batches[0].num_rows(), 3);
-        let column = batches[0].column(0);
-        assert_eq!(column.data_type(), &DataType::Utf8);
-        let strings = column
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .expect("Utf8 StringArray");
-        assert!(!strings.is_valid(0), "row0 any-NULL must be NULL");
-        assert_eq!(strings.value(1), "yz");
-        assert!(!strings.is_valid(2), "row2 any-NULL must be NULL");
-    }
-
-    #[tokio::test]
-    async fn concat_register_all_overwrites_datafusion_spark() {
-        assert!(
-            datafusion_spark::all_default_scalar_functions()
-                .iter()
-                .any(|udf| udf.name() == "concat"),
-            "datafusion-spark must still ship concat for this overwrite pin to mean anything"
-        );
-        let ctx = ctx_register_all();
-        let batches = ctx
-            .sql("SELECT concat(coalesce(CAST(NULL AS VARCHAR), ''), 'x') AS id")
-            .await
-            .expect("plan under register_all")
-            .collect()
-            .await
-            .expect("execute under register_all");
-        assert_eq!(batches[0].column(0).data_type(), &DataType::Utf8);
-        assert_eq!(
-            one(
-                &ctx,
-                "SELECT concat(coalesce(CAST(NULL AS VARCHAR), ''), 'x')"
-            )
-            .await
-            .as_deref(),
-            Some("x")
-        );
-        assert_eq!(
-            one(&ctx, "SELECT concat(1, 2)").await.as_deref(),
-            Some("12")
-        );
-    }
-}
+mod tests;

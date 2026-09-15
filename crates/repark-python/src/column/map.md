@@ -146,8 +146,14 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   reverted the `array`/`make_array` `containsNull` declaration and the registry-wide
   promise retag to DOOR-CONVERGE-2 (fixtures-batch7) — literal-haystack
   `array_contains` nullability is the residual that rides on them.
+  **DOOR-CONVERGE-2 (2026-09-15):** `reverse`, `sequence` and `split` join
+  `SCALAR_NAMES` (the C-006 ratchet); `concat` stays out — variadic, no fixed arity.
+  `generate_series` joins `EXPECTED_DIVERGENCES` instead (table 14 → 15): the facade
+  keeps it as a `sequence` alias on `SparkSequence` while the SQL door keeps DataFusion's
+  native spelling for its table-function callers — C-003's reroute exposed the split,
+  overwriting the door would break `FROM generate_series` users.
   pins: door-converge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014
+  C-009, C-010, C-011, C-012, C-013, C-014; pins: door-converge-2/C-006
   **ABS-EXPR-1 (2026-09-13):** `EXPECTED_DIVERGENCES` gains `abs` — the facade's core
   `checked_abs` raises on integer-min (Spark ANSI-on answer); the door's `SparkAbs`
   wraps because repark never sets `execution.enable_ansi_mode` — measured on typed
@@ -168,7 +174,18 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   declared-absent). pins: fnp-15-16/C-001
 - Higher-order lambda variables are resolved against the consuming DataFrame schema.
 - Nested higher-order functions refuse loudly rather than producing an invalid plan.
-- `concat` propagates NULL and returns Spark-compatible UTF-8 output.
+- `concat` embeds the door-converged `repark_functions::string::concat_udf` (DOOR-CONVERGE-2):
+  string, binary and array arms with any-NULL → NULL, one kernel on both doors.
+  pins: door-converge-2/C-001
+- `reverse` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the
+  facade shares the SQL door's array-aware kernel instead of the string-only lowering.
+  pins: door-converge-2/C-002
+- `sequence` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the
+  facade shares the SQL door's kernel with the literal-expansion ceiling kept.
+  pins: door-converge-2/C-003
+- `split` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the Rust
+  arm is ready, but Python `F.split` raises before reaching it (run 16a owns that half).
+  pins: door-converge-2/C-004
 - Window frames use Spark-relative offsets. Count-like unsigned results are cast to signed types.
 - Unknown scalar, aggregate, cast, or window names fail with typed Python exceptions.
 

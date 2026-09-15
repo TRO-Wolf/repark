@@ -267,6 +267,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `approx_count_distinct`/`regr_count` (non-null `bigint`, empty → 0),
   `ascii`/`length`/`character_length` (codepoint + binary bytes), and the BL-6
   SQL-door refusal class — all nine pins green on the converged kernels.
+- [test_door_converge_2.py](test_door_converge_2.py) — **DOOR-CONVERGE-2 (2026-09-15):**
+  both-door oracle pins for the four clause names — `concat` over arrays (element
+  widening, OR `containsNull`, NULL propagation, `||` over arrays, `DATA_DIFF_TYPES`
+  on an array/string mix), `reverse` over arrays (order, type, nullability kept),
+  `sequence` (widths, descending default step, date/timestamp stepping, NULL → NULL,
+  illegal-step raise, `SEQUENCE_WRONG_INPUT_TYPES`), and `split` on the SQL door
+  (Java regex, limit semantics, per-character empty-pattern split) — Q12-0…Q12-55
+  legs plus facade value/type/nullability legs, the illegal-step text pin (oracle
+  class OPEN, run-16b hand-off) and the run-16a `F.split` red-when-wired refusal
+  guard. pins: door-converge-2/C-001, C-002, C-003, C-004, C-005
+  **Round 3 (2026-09-15):** critic cells Q15-0…Q15-19 (month steps from the start,
+  STRING+BINARY concat, `\Q…\E` + loud feature refusals, limit equivalence,
+  code-point empty splits, column/literal cap refusals) with the Q15 id sequence
+  realigned to the oracle, a real nested-column `reverse` pin on both doors, and
+  scalar/limit/LRU perf-equivalence legs.
+  pins: door-converge-2/C-007, C-008, C-009
   **Round 2 (2026-09-16):** `unbase64` raises the Java MIME-decoder texts on
   malformed endings while `'QR'`/`'QQQ'`/whitespace/`'!!'` stay lenient;
   `array_contains` coerces to the tightest common type (DOUBLE needle →
@@ -4559,6 +4575,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `''` on no match, NULL-in NULL-out, `REGEX_GROUP_INDEX` naming `regexp_extract`, POSIX union,
   `\p{L}`, non-ASCII/empty edges, lookbehind refusal; round 2: non-matching input answers
   `''` for any idx on both doors). pins: fn-regexp-extract-1/C-002, C-003
+  **DOOR-CONVERGE-2 round 3 (2026-09-15):** the lookbehind refusal names the feature
+  (`unsupported Java regular expression feature 'lookbehind'`). pins: door-converge-2/C-008
 
 - `test_fnp_9_collections_json.py` — **FNP-9/10 (2026-09-05):** the collections and JSON
   families on both Spark-facade doors against the live PySpark 4.1.2 oracle — `get_json_object`
@@ -4576,7 +4594,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   empty-struct pruning, `array_insert` type widening, the leading-zero / non-finite / null-root /
   non-STRING-argument rules, the non-finite and timestamp decode forms, and the `sequence` pin
   the registry had cited but nobody had written.
-  pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **DOOR-CONVERGE-2 (2026-09-15):** the descending-`sequence` pin now expects the
+  converged behavior (count-down, illegal-step raise) — registry DC2-SEQUENCE-1
+  supersedes FNP9-SEQUENCE-1.
+  pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008;
+  pins: door-converge-2/C-003
 
 - `test_parity_live_fnp9.py::test_live_fnp9_collections_json` — **FNP-9/10 (2026-09-05):** the
   fifteen answer cells and four raising cells this unit pinned, re-derived from live Spark
@@ -5186,3 +5208,4 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 - **FNP-11A (2026-09-15):** `fnp11a_r2_spark_oracle.json` is excluded from the typos gate in `.typos.toml`: it records verbatim live-PySpark 4.1.2 messages, one of them truncated mid-word by the recorder, and recorded evidence is never hand-edited.
 - **FNP-11A R3 intake (2026-09-15):** `test_fnp11a_temporal.py` now runs every SQL-door `timestamp_add` / `timestamp_diff` oracle cell (L-005) with the bare unit keyword quoted (`BARE_UNIT_CALL`), since bare keywords stay EX-FN-27 and `test_bare_timestampadd_unit_refuses` keeps that pinned. Only the `TIMESTAMP_NTZ'…'` literal cell stays in `D4_BLOCKED_SQL` (the SQL parser has no such type). `test_timestampdiff_ntz_pair_answers_days` runs that pair's end value through `make_timestamp_ntz` instead of diffing a column with itself (L-006).
 - **FNP-11A (2026-09-15):** `test_functions_split_identity.py` pins the eleven-name FNP-11A tail after `ARROW_EXPORTS`. `test_catalog_surface_1.py::test_list_functions_shape` (unique names) and `test_fnp_misc_1.py::test_fnp_misc_1_byname_allowlist_covers_facade` caught the duplicate install and are green again.
+- **DOOR-CONVERGE-2 (#622, 2026-09-15, orchestrator):** `test_fnp_6d_followup_1.py::test_concat_binary_types_string_expected_divergence` is renamed `test_concat_binary_types_binary_converged_door_converge_2` and flipped to `pa.binary()`, because `concat(BINARY, BINARY)` now converges on Spark's BINARY (oracle Q12-13). Run 16a filed the pin to go red on this convergence (ruling R-16c-11). pins: door-converge-2/C-001

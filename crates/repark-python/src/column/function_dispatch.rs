@@ -328,9 +328,10 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             }
             repark_functions::expr_fn::from_unixtime(exprs.clone())
         }
-        "reverse" => {
-            need(1)?;
-            expr_fn::reverse(exprs[0].clone())
+        "abs" | "hypot" | "bin" | "rint" | "base64" | "unbase64" | "size" | "cardinality"
+        | "array_contains" | "array_has" | "ascii" | "length" | "character_length"
+        | "char_length" | "reverse" | "sequence" | "generate_series" | "gen_series" | "split" => {
+            return dispatch_spark::call_scalar_expr(name, exprs);
         }
         "repeat" => {
             need(2)?;
@@ -469,18 +470,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "map_entries" => {
             need(1)?;
             nested_fn::map_entries(exprs[0].clone())
-        }
-        "sequence" | "generate_series" | "gen_series" => {
-            need_at_least(2)?;
-            let step = if exprs.len() >= 3 {
-                exprs[2].clone()
-            } else {
-                lit(1i64)
-            };
-            let check_args = vec![exprs[0].clone(), exprs[1].clone(), step.clone()];
-            repark_functions::cardinality::refuse_facade_literal_expansion("sequence", &check_args)
-                .map_err(crate::datafusion_to_py_err)?;
-            nested_fn::gen_series(exprs[0].clone(), exprs[1].clone(), step)
         }
         "elt" => {
             need_at_least(2)?;
@@ -888,11 +877,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "bitmap_count" => {
             need(1)?;
             repark_functions::expr_fn::bitmap_count(exprs[0].clone())
-        }
-        "abs" | "hypot" | "bin" | "rint" | "base64" | "unbase64" | "size" | "cardinality"
-        | "array_contains" | "array_has" | "ascii" | "length" | "character_length"
-        | "char_length" => {
-            return dispatch_spark::call_scalar_expr(name, exprs);
         }
         other => return dispatch_json::call_scalar_expr(other, exprs),
     };

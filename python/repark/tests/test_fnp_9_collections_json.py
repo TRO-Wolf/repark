@@ -5,7 +5,7 @@ from decimal import Decimal
 import pyarrow as pa
 import pytest
 
-from repark.errors import UnsupportedOperationException
+from repark.errors import PySparkException, UnsupportedOperationException
 from repark.spark import functions as F  # noqa: N812
 
 DOCUMENT = '{"a": 1, "b": "hi", "c": {"d": [1, 2]}}'
@@ -844,17 +844,17 @@ def test_map_concat_answers_sparks_own_map_spelling_on_the_sql_door() -> None:
     assert single[2][0] == [("a", 1)]
 
 
-def test_sequence_descending_answers_empty() -> None:
-    """A measured divergence this unit filed rather than built (FNP9-SEQUENCE-1)."""
+def test_sequence_descending_counts_down_and_illegal_step_raises() -> None:
+    """DOOR-CONVERGE-2 closed FNP9-SEQUENCE-1: descending counts down, illegal steps raise."""
     frame = _session().sql("SELECT 1 AS one")
     ascending = _column(frame.select(F.sequence(F.lit(1), F.lit(5), F.lit(2)).alias("r")))
     assert ascending[2] == [[1, 3, 5]]
     descending = _column(frame.select(F.sequence(F.lit(5), F.lit(1)).alias("r")))
-    assert descending[2] == [[]]
-    illegal = _column(frame.select(F.sequence(F.lit(1), F.lit(5), F.lit(-1)).alias("r")))
-    assert illegal[2] == [[]]
-    with pytest.raises(Exception, match="Invalid function 'sequence'"):
-        _session().sql("SELECT sequence(1, 5, 2) AS r").collect()
+    assert descending[2] == [[5, 4, 3, 2, 1]]
+    with pytest.raises(PySparkException, match="Illegal sequence boundaries: 1 to 5 by -1"):
+        _column(frame.select(F.sequence(F.lit(1), F.lit(5), F.lit(-1)).alias("r")))
+    door = _column(_session().sql("SELECT sequence(1, 5, 2) AS r"))
+    assert door[2] == [[1, 3, 5]]
 
 
 def test_to_json_double_text_diverges_on_the_jdk_legacy_spellings() -> None:
