@@ -247,7 +247,7 @@ def test_spark_door_format_string_s_uses_java_text(spark: ReparkSession) -> None
 
 
 def test_spark_door_format_string_f_is_todays_answer(spark: ReparkSession) -> None:
-    """%f stays DataFusion fixed-point (0.125 rounds to 0.12, not Java HALF_UP 0.13)."""
+    """%f rounds HALF_UP like Java Formatter (JAVA-DOUBLE-FD-1 FIXED)."""
     table = _table(
         spark.sql(
             "SELECT format_string('%f', CAST('1.0E7' AS DOUBLE)) AS a, "
@@ -255,7 +255,7 @@ def test_spark_door_format_string_f_is_todays_answer(spark: ReparkSession) -> No
         )
     )
     assert table.column("a").to_pylist() == ["10000000.000000"]
-    assert table.column("b").to_pylist() == ["0.12"]
+    assert table.column("b").to_pylist() == ["0.13"]
 
 
 def test_spark_door_float_min_max(spark: ReparkSession) -> None:
@@ -372,15 +372,15 @@ def test_spark_door_jdk_longhand_cells(spark: ReparkSession) -> None:
 
 
 def test_spark_door_jdk_longhand_backlog(spark: ReparkSession) -> None:
-    """JDK-longhand cells the shortest formatter does not spell (JAVA-DOUBLE-FD-1)."""
+    """JDK-longhand cells answer FloatingDecimal text (JAVA-DOUBLE-FD-1 FIXED)."""
     table = _table(
         spark.sql(
             "SELECT CAST(CAST('8.41E21' AS DOUBLE) AS STRING) AS a, "
             "CAST(CAST('1.0E23' AS DOUBLE) AS STRING) AS b"
         )
     )
-    assert table.column("a").to_pylist() == ["8.41E21"]
-    assert table.column("b").to_pylist() == ["1.0E23"]
+    assert table.column("a").to_pylist() == ["8.409999999999999E21"]
+    assert table.column("b").to_pylist() == ["9.999999999999999E22"]
 
 
 def test_spark_door_array_join_null_shapes(spark: ReparkSession) -> None:

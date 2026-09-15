@@ -4728,6 +4728,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **DOOR-CONVERGE-2 (2026-09-15):** the descending-`sequence` pin now expects the
   converged behavior (count-down, illegal-step raise) — registry DC2-SEQUENCE-1
   supersedes FNP9-SEQUENCE-1.
+  **JAVA-DOUBLE-FD-1 (2026-09-15):** the `to_json` JDK-spelling pin now expects the
+  converged longhand cells (`8.409999999999999E21`, `9.999999999999999E22`) —
+  registry FNP10-JAVA-DOUBLE-TEXT-1 is FIXED.
   pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008;
   pins: door-converge-2/C-003
 
@@ -5307,6 +5310,8 @@ through `core` or the package. pins: eager-budget-1/C-010
   (`LIKE`, `VARCHAR`/`CHAR`, `CASE`/`coalesce` mixes raising `CAST_INVALID_INPUT`),
   and the JAVA-DOUBLE-FD-1 backlog pins — value AND type throughout.
   pins: java-double-str-1/C-009, C-010, C-011, C-012, C-013, C-014
+  **JAVA-DOUBLE-FD-1 close-out (2026-09-15):** the backlog pins flipped to equality —
+  longhand cells answer FloatingDecimal text, `%f` answers HALF_UP `0.13`.
 - [test_java_double_fd_1.py](test_java_double_fd_1.py) — **JAVA-DOUBLE-FD-1
   (2026-09-15):** JDK-longhand DOUBLE/FLOAT text, Java `Formatter` HALF_UP
   `%.Nf`, and Java-suffixed STRING-to-DOUBLE/FLOAT casts, measured against
