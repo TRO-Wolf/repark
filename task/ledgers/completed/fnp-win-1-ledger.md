@@ -191,6 +191,43 @@ states why in one line.
   `return_type`, `return_field_from_args`) sees literal values, so the
   prefix cannot be raised from this unit's code. Recorded as a one-line note
   on WIN-2, not fixed; DataFusion and the session error mapping untouched.
+- D-31 (verification round 2, L-003 P1): a dynamic-gap row joins while its
+  timestamp is at or before the running maximum of the session's ends, not
+  the previous row's end. The per-row leg replaces `lag(end)` with
+  `max(end) OVER (PARTITION BY keys ORDER BY time ROWS BETWEEN UNBOUNDED
+  PRECEDING AND 1 PRECEDING)`; the first row frames empty (NULL) and starts
+  a session, and equality merges via the existing strict-`Gt` flag. The
+  static leg is unchanged: sorted input plus a fixed gap makes the lag end
+  equal the running maximum, so it already follows the same rule (static
+  pins green untouched). Partitioning by the grouping keys is unchanged
+  (S2-21). Rust pin
+  `dynamic_gap_chains_on_the_running_end_across_batches` splits the
+  discriminator across two batches in one partition; Python pins
+  `test_crit2_dynamic_gap_chains_on_running_end` on both doors.
+- D-32 (verification round 2, L-001 P1): `windowed_column` recurses unary
+  nodes (Filter, Limit, Sort, Distinct, Repartition, Subquery,
+  SubqueryAlias) into their input and Join into the single child owning the
+  column (zero or two owners refuse), while Union requires every branch
+  windowed. Aggregate / TableScan / Window stay answering (grouped window
+  columns, the WIN-3 opaque scan); every other node refuses (fail closed).
+  The grouped-window-behind-filter/WHERE answers and the WIN-3 residual are
+  pinned unchanged; every `C2-L001-*` cell is pinned.
+- D-33 (verification round 2, L-002 P2): pins only. Naive datetimes in
+  `createDataFrame` land as session-zone walls in RePark (measured:
+  naive 10:00 reads back 10:00 in a UTC session), while the recorder's
+  America/New_York driver shifted its naive literals into UTC (January
+  +5 h, September +4 h). The pins therefore build the shifted walls
+  directly, reproducing Spark's instants rather than its literal text.
+- D-34 (verification round 2, L-004 P3): two session specs refuse with
+  Spark's `[_LEGACY_ERROR_TEMP_1039]` text on both doors. The analyzer and
+  SQL-staging sites share one constant from `spark_session_window.rs`; the
+  Python door checks `check_single_session_spec` in the binding's
+  `aggregate` before plan build, because both markers alias to
+  `session_window` and DataFusion's duplicate-name error fires first. The
+  DataFusion rule-name / planning prefix may precede the text (same
+  standing rule as D-30); the pins assert condition plus text. Identical
+  twin specs are out of scope: they still hit the duplicate-name error,
+  fail-loud either way.
 
 ## PROPOSITION LEDGER — FNP-WIN-1 — 2026-09-15
 
@@ -585,3 +622,45 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_fnp_win_1.py, crates/repark-functions/src/analyzer/time_window/mod.rs]
   complete: true
 ```
+
+## 9. Verification round 2 (2026-09-15, run 16a critic-logic cycle 2)
+
+Second Grok critic (`crit2/report.md` over the pre-rebase head) plus the
+orchestrator's live re-recording (`win_crit2_spark_oracle.json`, recorder
+`oracle_win_crit2.py`, 25 `C2-*` cells, PySpark 4.1.2) and dispositions
+(`dispositions-r2.md`). Three finding commits plus this paper commit:
+
+- L-003 P1 (oracle-upgraded): `C2-L003-discriminator` puts
+  `(10:00,'60 minutes'), (10:10,'1 minute'), (10:20,'5 minutes')` in one
+  session to 11:00 count 3; RePark answered two. The per-row leg now flags
+  against `max(end)` over preceding rows per key (D-31). Red pre-fix
+  (two sessions `[10:00,11:00)` c=2 + `[10:20,10:25)` c=1), green post-fix
+  on both doors; the Rust two-batch pin fails with the `lag(end)` leg
+  restored and passes with the running maximum.
+- L-001 P1: `windowed_column` recursed only Projection / SubqueryAlias
+  (D-32). Red pre-fix (the struct shapes answer instead of refusing from
+  the filter shape on, `DID NOT RAISE`), green post-fix on every
+  `C2-L001-*` cell; the grouped-window-behind-filter /
+  WHERE answers and the WIN-3 residual stay pinned. The Rust unary-shape
+  pin fails with the catch-all restored to `true`.
+- L-002 P2: pins only — all ten month-end/leap cells green pre-fix and
+  post-fix. Naive `createDataFrame` datetimes land as session-zone walls
+  (measured 10:00 → 10:00 in a UTC session); the pins build the recorder's
+  shifted UTC walls directly (January +5 h, September +4 h, D-33).
+- L-004 P3: two specs died as duplicate-name (Python) / RePark-only text
+  (SQL). Both doors now refuse with Spark's `[_LEGACY_ERROR_TEMP_1039]`
+  text (D-34). Red pre-fix on both doors, green post-fix.
+
+Gates (this round, release native rebuilt from the head tree): `cargo
+test -p repark-functions time_window` 47 passed; `session_window` 8
+passed; `cargo test -p repark-spark --lib time_window` 16 passed; the
+pytest quintet (`test_fnp_win_1`, `test_functions_split_identity`,
+`test_functions_c`, `test_fnp_misc_1`, `test_fnp_bitmap_facade_1`) 161
+passed; the parity trio (example coverage, api freeze, CAP-1) 71 passed;
+both size gates clean with no new exception row (38/32 counts hold);
+`check_example_coverage --require-execute` green (1053 names, 940
+covered, 112 backlog, 1 exception, 240 examples); `ruff format --check
+.` clean; `make verify` exit 0. Follow-up inside this round: clippy
+pedantic `missing_errors_doc` on the new `check_single_session_spec`
+(one `# Errors` doc section, no behavior change) and `cargo fmt` /
+`ruff format` reflows, all folded before the head commit.
