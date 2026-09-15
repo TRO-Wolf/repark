@@ -456,6 +456,13 @@ else. The next pickup's `make ledger-archive` files everything here under
   Round 2: idx validated only inside the match arm; §7 `FN-REGEX-LOOKAROUND-1` filed;
   facade 2-arg widening disclosed.
   pins: fn-regexp-extract-1/C-001, C-002, C-003, C-004
+- [fnp-4b-ledger.md](fnp-4b-ledger.md) —
+  **FNP-4B steps 1-2 + follow-up (2026-09-15), in flight:** the Spark-door dialect (`Dialect::Databricks`
+  for every Spark-door statement) and Spark expression strings — double-quoted STRING
+  literals with Spark escapes, backtick identifier quoting, numeric `D/F/S/Y/BD/L` suffixes, exponent literals as DOUBLE, backtick filter spans (BL-2),
+  the `escapedStringLiterals` build conf, and the out-of-range `\U` Java artifact.
+  `risk_tier: standard`. Branch `feat/fnp-4b-spark-dialect`.
+  pins: fnp-4b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - [fnp-6d-followup-1-ledger.md](fnp-6d-followup-1-ledger.md) — Unit ledger — FNP-6D-FOLLOWUP-1 · bitmap aggregate signatures
 - [fnp-6d-ledger.md](fnp-6d-ledger.md) —
   **FNP-6D (2026-09-15), in flight:** Spark `bitmap_construct_agg` / `bitmap_or_agg` /
