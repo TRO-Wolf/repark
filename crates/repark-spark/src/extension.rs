@@ -18,10 +18,6 @@ pub(crate) fn apply_spark_float_as_decimal(mut config: SessionConfig) -> Session
 }
 
 /// Spark-door parser dialect (FNP-4): use Databricks parsing for Spark higher-order functions.
-#[expect(
-    dead_code,
-    reason = "wired by FNP-4b once internal SQL is dialect-independent"
-)]
 pub(crate) fn apply_spark_parser_dialect(mut config: SessionConfig) -> SessionConfig {
     config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
     config
@@ -47,7 +43,7 @@ impl SessionExtension for SparkExtension {
         let config =
             repark_functions::timestamp_type::with_spark_timestamp_type(config, timestamp_type);
         let config = apply_spark_float_as_decimal(config);
-        // The one crossing point.
+        let config = apply_spark_parser_dialect(config);
         Ok(repark_functions::session_time_zone::with_session_time_zone(
             config,
             session.session_time_zone.id(),

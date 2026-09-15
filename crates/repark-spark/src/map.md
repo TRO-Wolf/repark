@@ -357,9 +357,10 @@ part of that section's pin — changing either one changes both.
 | Time-travel span scanning | `time_travel.rs` (pin half: `repark-core/src/time_travel.rs`) |
 | See what this door ships vs deliberately does NOT | `matrix.rs` (the Q13 surface matrix) |
 
-**FNP-4a — `apply_spark_parser_dialect` is present but not wired.** Generated SQL still uses ANSI
-double-quoted identifiers, which Spark parsing treats as string literals. Fix that write-path
-contract before enabling the helper.
+**FNP-4B (2026-09-15), in flight:** `apply_spark_parser_dialect` is wired in
+`SparkExtension::configure` (step 1 of the card); generated SQL still uses ANSI double-quoted
+identifiers, which the Databricks lexer reads as string literals — D-2 moves that write-path
+contract to backticks. Ledger: `task/ledgers/staging/fnp-4b-ledger.md`.
 
 ## Pointers
 
