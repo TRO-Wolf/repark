@@ -895,6 +895,196 @@
     "sqlstate": null
    }
   },
+  "text_probe4_conflicting_names": {
+   "error": {
+    "condition": "CONFLICTING_PARTITION_COLUMN_NAMES",
+    "message": "[CONFLICTING_PARTITION_COLUMN_NAMES] Conflicting partition column names detected:\n\n\tPartition column name list #0: k\n\tPartition column name list #1: n\n\nFor partitioned table directories, data files should only live in leaf directories.\nAnd directories at the same level should have the same partition column name.\nPlease check the following directories for unexpected files or inconsistent partition column names:\n\n\tfile:/tmp/qb-iotext4-a3qguimr/conf/k=x\n\tfile:/tmp/qb-iotext4-a3qguimr/conf/n=y SQLSTATE: KD009",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "KD009"
+   }
+  },
+  "text_probe4_decimal_text": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('dec', 1.5)"
+    ],
+    "schema": "struct<value:string,k:double>"
+   }
+  },
+  "text_probe4_glob_k_eq_star": {
+   "result": {
+    "columns": [
+     "value"
+    ],
+    "rows": [
+     "('hello',)",
+     "('world',)"
+    ],
+    "schema": "struct<value:string>"
+   }
+  },
+  "text_probe4_glob_star_over_partitioned": {
+   "result": {
+    "columns": [
+     "value"
+    ],
+    "rows": [
+     "('hello',)",
+     "('world',)"
+    ],
+    "schema": "struct<value:string>"
+   }
+  },
+  "text_probe4_glob_with_basepath": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('hello', 'x')",
+     "('world', 'y')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe4_int_overflow_to_bigint": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('big', 2147483648)"
+    ],
+    "schema": "struct<value:string,k:bigint>"
+   }
+  },
+  "text_probe4_lead_zero_and_plain": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('lead', 7)",
+     "('seven', 7)"
+    ],
+    "schema": "struct<value:string,k:int>"
+   }
+  },
+  "text_probe4_lead_zero_only": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('lead', 7)"
+    ],
+    "schema": "struct<value:string,k:int>"
+   }
+  },
+  "text_probe4_mixed_layout": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('hello', 'x')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe4_negative": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('neg', -7)"
+    ],
+    "schema": "struct<value:string,k:int>"
+   }
+  },
+  "text_probe4_plus_sign": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('plus', 7)"
+    ],
+    "schema": "struct<value:string,k:int>"
+   }
+  },
+  "text_probe4_schema_partition_first": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('hello', 'x')",
+     "('world', 'y')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe4_schema_renamed": {
+   "result": {
+    "columns": [
+     "line",
+     "k"
+    ],
+    "rows": [
+     "('hello', 'x')",
+     "('world', 'y')"
+    ],
+    "schema": "struct<line:string,k:string>"
+   }
+  },
+  "text_probe4_schema_value_only": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('hello', 'x')",
+     "('world', 'y')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe4_schema_with_partition": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('hello', 'x')",
+     "('world', 'y')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe4_schema_with_partition_int": {
+   "error": {
+    "condition": "INVALID_PARTITION_VALUE",
+    "message": "[INVALID_PARTITION_VALUE] Failed to cast value 'y' to data type \"INT\" for partition column `k`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "42846"
+   }
+  },
   "text_read_dir_glob": {
    "result": {
     "kind": "int",

@@ -731,3 +731,213 @@ def test_text_sql_door_pins_today_refusal(spark: ReparkSession, tmp_path: Path) 
     with pytest.raises(AnalysisException) as raised:
         spark.sql(f"SELECT * FROM text.`{target}`").collect()
     assert "not found" in str(raised.value)
+
+
+def _write_partitioned_us(spark: ReparkSession, out: Path) -> None:
+    """Write the probe4 user-schema fixture. pins: io-text-1/W-1"""
+    spark.createDataFrame(
+        [("x", "hello"), ("y", "world")], "k string, value string"
+    ).write.partitionBy("k").text(str(out))
+
+
+def test_text_probe4_lead_zero_and_plain(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_lead_zero_and_plain — 007 infers int 7. pins: io-text-1/L-201"""
+    expected = _cell("text_probe4_lead_zero_and_plain")["result"]
+    root = tmp_path / "lead"
+    (root / "k=007").mkdir(parents=True)
+    (root / "k=7").mkdir(parents=True)
+    (root / "k=007" / "part-00000.txt").write_text("lead\n", encoding="utf-8")
+    (root / "k=7" / "part-00000.txt").write_text("seven\n", encoding="utf-8")
+    back = spark.read.text(str(root))
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_lead_zero_only(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_lead_zero_only — lone 007 infers int 7. pins: io-text-1/L-201"""
+    expected = _cell("text_probe4_lead_zero_only")["result"]
+    root = tmp_path / "leadonly"
+    (root / "k=007").mkdir(parents=True)
+    (root / "k=007" / "part-00000.txt").write_text("lead\n", encoding="utf-8")
+    back = spark.read.text(str(root))
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_plus_sign(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_plus_sign — +7 infers int 7. pins: io-text-1/L-201"""
+    expected = _cell("text_probe4_plus_sign")["result"]
+    root = tmp_path / "plus"
+    (root / "k=+7").mkdir(parents=True)
+    (root / "k=+7" / "part-00000.txt").write_text("plus\n", encoding="utf-8")
+    back = spark.read.text(str(root))
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_negative(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_negative — -7 stays int. pins: io-text-1/W-5"""
+    expected = _cell("text_probe4_negative")["result"]
+    root = tmp_path / "neg"
+    (root / "k=-7").mkdir(parents=True)
+    (root / "k=-7" / "part-00000.txt").write_text("neg\n", encoding="utf-8")
+    back = spark.read.text(str(root))
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_int_overflow_to_bigint(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_int_overflow_to_bigint — 2**31 lands bigint. pins: io-text-1/W-5"""
+    expected = _cell("text_probe4_int_overflow_to_bigint")["result"]
+    root = tmp_path / "big"
+    (root / "k=2147483648").mkdir(parents=True)
+    (root / "k=2147483648" / "part-00000.txt").write_text("big\n", encoding="utf-8")
+    back = spark.read.text(str(root))
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_decimal_text(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_decimal_text — 1.50 lands double 1.5. pins: io-text-1/W-5"""
+    expected = _cell("text_probe4_decimal_text")["result"]
+    root = tmp_path / "dec"
+    (root / "k=1.50").mkdir(parents=True)
+    (root / "k=1.50" / "part-00000.txt").write_text("dec\n", encoding="utf-8")
+    back = spark.read.text(str(root))
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_schema_value_only(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_schema_value_only — data schema keeps k. pins: io-text-1/W-1"""
+    expected = _cell("text_probe4_schema_value_only")["result"]
+    out = tmp_path / "us"
+    _write_partitioned_us(spark, out)
+    back = spark.read.schema("value string").text(str(out))
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_schema_renamed(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_schema_renamed — renamed data keeps k. pins: io-text-1/W-1"""
+    expected = _cell("text_probe4_schema_renamed")["result"]
+    out = tmp_path / "us"
+    _write_partitioned_us(spark, out)
+    back = spark.read.schema("line string").text(str(out))
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_schema_with_partition(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_schema_with_partition — named k supplies its type. pins: io-text-1/W-1"""
+    expected = _cell("text_probe4_schema_with_partition")["result"]
+    out = tmp_path / "us"
+    _write_partitioned_us(spark, out)
+    back = spark.read.schema("value string, k string").text(str(out))
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_schema_partition_first(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_schema_partition_first — data stays first. pins: io-text-1/W-1"""
+    expected = _cell("text_probe4_schema_partition_first")["result"]
+    out = tmp_path / "us"
+    _write_partitioned_us(spark, out)
+    back = spark.read.schema("k string, value string").text(str(out))
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_schema_with_partition_int(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_schema_with_partition_int — bad cast names INT. pins: io-text-1/W-1"""
+    from repark.errors import PySparkException
+
+    expected = _cell("text_probe4_schema_with_partition_int")["error"]
+    out = tmp_path / "us"
+    _write_partitioned_us(spark, out)
+    with pytest.raises(PySparkException) as raised:
+        spark.read.schema("value string, k int").text(str(out)).collect()
+    assert str(raised.value).startswith("[INVALID_PARTITION_VALUE] Failed to cast value '")
+    assert '\' to data type "INT" for partition column `k`' in str(raised.value)
+    assert str(raised.value).endswith("SQLSTATE: 42846")
+    assert raised.value.getCondition() == expected["condition"]
+    assert raised.value.getSqlState() == expected["sqlstate"]
+
+
+def test_text_probe4_mixed_layout(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_mixed_layout — root files drop out. pins: io-text-1/W-2"""
+    expected = _cell("text_probe4_mixed_layout")["result"]
+    mix = tmp_path / "mix"
+    mix.mkdir()
+    (mix / "top.txt").write_text("top\n", encoding="utf-8")
+    (mix / "k=x").mkdir()
+    (mix / "k=x" / "part-00000.txt").write_text("hello\n", encoding="utf-8")
+    back = spark.read.text(str(mix))
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_conflicting_names(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_conflicting_names — same-level names refuse. pins: io-text-1/W-3"""
+    from repark.errors import PySparkException
+
+    expected = _cell("text_probe4_conflicting_names")["error"]
+    conf = tmp_path / "conf"
+    (conf / "k=x").mkdir(parents=True)
+    (conf / "n=y").mkdir(parents=True)
+    (conf / "k=x" / "part-00000.txt").write_text("kx\n", encoding="utf-8")
+    (conf / "n=y" / "part-00000.txt").write_text("ny\n", encoding="utf-8")
+    with pytest.raises(PySparkException) as raised:
+        spark.read.text(str(conf)).collect()
+    assert str(raised.value).startswith(
+        "[CONFLICTING_PARTITION_COLUMN_NAMES] Conflicting partition column names detected:"
+    )
+    assert "Partition column name list #0: k" in str(raised.value)
+    assert "Partition column name list #1: n" in str(raised.value)
+    assert str(raised.value).endswith("SQLSTATE: KD009")
+    assert raised.value.getCondition() == expected["condition"]
+    assert raised.value.getSqlState() == expected["sqlstate"]
+
+
+def test_text_probe4_glob_star_over_partitioned(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_glob_star_over_partitioned — bare glob keeps value. pins: io-text-1/L-205"""
+    expected = _cell("text_probe4_glob_star_over_partitioned")["result"]
+    out = tmp_path / "us"
+    _write_partitioned_us(spark, out)
+    back = spark.read.text(str(out) + "/*")
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_glob_k_eq_star(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_glob_k_eq_star — k=* keeps value only. pins: io-text-1/L-205"""
+    expected = _cell("text_probe4_glob_k_eq_star")["result"]
+    out = tmp_path / "us"
+    _write_partitioned_us(spark, out)
+    back = spark.read.text(str(out) + "/k=*")
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])
+
+
+def test_text_probe4_glob_with_basepath(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe4_glob_with_basepath — basePath restores k. pins: io-text-1/W-4"""
+    expected = _cell("text_probe4_glob_with_basepath")["result"]
+    out = tmp_path / "us"
+    _write_partitioned_us(spark, out)
+    back = spark.read.option("basePath", str(out)).text(str(out) + "/k=*")
+    assert back.columns == expected["columns"]
+    assert back.schema.simpleString() == expected["schema"]
+    assert sorted(repr(tuple(row)) for row in back.collect()) == sorted(expected["rows"])

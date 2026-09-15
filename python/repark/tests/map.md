@@ -1892,7 +1892,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   condition; `test_text_probe3_missing_path_class` asserts `PATH_NOT_FOUND` plus
   `getSqlState`; `test_text_probe3_failing_write_leaves` pins no staging left
   behind a failed write.
-  pins: io-text-1/C-001, C-002, C-003, C-004, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9, U-1, U-2, U-3, U-4, U-5, U-6, U-9, U-10, U-11
+  **Round 4 (2026-09-15, W-1..W-5, V-1, V-2):** the probe4 cells land as
+  `text_probe4_*`; `test_text_probe4_schema_*` pins the data-schema overlay
+  (value-only, renamed, with-partition, partition-first, int-cast refusal
+  with condition plus sqlstate); `test_text_probe4_mixed_layout` pins root
+  files dropping out; `test_text_probe4_conflicting_names` pins the
+  same-level refusal; `test_text_probe4_glob_with_basepath` pins `basePath`
+  discovery with the bare globs staying `value`-only (L-205 as filed);
+  `lead_zero_*`, `plus_sign`, `negative`, `int_overflow_to_bigint`,
+  `decimal_text` pin today's inference (L-201 closed).
+  pins: io-text-1/C-001, C-002, C-003, C-004, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9, U-1, U-2, U-3, U-4, U-5, U-6, U-9, U-10, U-11, W-1, W-2, W-3, W-4, W-5, V-1, V-2
 - `test_column_x1_census.py` — X1: Column between/pow/string/bitwise/eqNullSafe/lit temporal + trig;
   octo C1: bitwiseOR/XOR values, lit(time)/lit(list)/empty array, hypot 3-4-5, dayname(date);
   octo C2: eqNullSafe(None), between inclusive/inverted;
