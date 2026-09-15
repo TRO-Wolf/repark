@@ -4621,10 +4621,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   double-quoted STRING literals with Spark escapes and the `F.expr` / `filter` / `where` /
   `selectExpr` expression-string door sharing the same lexer, on the Arrow path (value AND type).
   Critic: `selectExpr("`my col` + 1")` display `(my col + 1)`; struct-dot display
-  `named_struct(a, 1).a`. pins: fnp-4b/C-001, C-003, C-014, C-015
+  `named_struct(a, 1).a`.
+  **Round 7 (2026-09-15):** the `F.expr` backtick pin carries a strict xfail for
+  16a per R-16c-10. pins: fnp-4b/C-001, C-003, C-014, C-015, C-029
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
-  packing marker. pins: fnp-4b/C-026
+  packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips
+  it on the fix. pins: fnp-4b/C-026
 - `test_fnp_8_sql_door.py` — **FNP-8 (2026-09-07), in flight:** the fifteen accepted
   higher-order callable forms through the Column door, Spark SQL, and column-free `F.expr`.
   It fences the separately BACKLOGed EX-FN-4 column-reference refusal, pins Spark-equal public

@@ -10,6 +10,8 @@ pins: fnp-4b/C-026
 
 from __future__ import annotations
 
+import pytest
+
 from repark import ReparkSession
 
 
@@ -18,6 +20,10 @@ def _session() -> ReparkSession:
     return ReparkSession.builder.appName("fnp-4b-hof-display").getOrCreate()
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="hand-off to run 16a: FNP-4B C-026 selectExpr leaks the HOF packing marker",
+)
 def test_select_expr_transform_display_hides_the_packing_marker() -> None:
     """Q3 red pin: selectExpr transform display carries no packing marker."""
     spark = _session()
