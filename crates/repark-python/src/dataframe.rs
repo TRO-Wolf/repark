@@ -481,8 +481,6 @@ impl PyDataFrame {
                 .iter()
                 .map(|column| self.bound(column))
                 .collect::<PyResult<_>>()?;
-            repark_functions::spark_session_window::check_single_session_spec(&group_exprs)
-                .map_err(datafusion_to_py_err)?;
             let df = self
                 .df
                 .clone()

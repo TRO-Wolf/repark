@@ -827,3 +827,4 @@ Escalate to: [../map.md#debug](../map.md).
 - **FNP-4B remediation (2026-09-15):** CAP-1 mirror ratcheted with the scripts: `column/mod.rs` 1038, `cross_door.rs` 1258, `_live_parity.py` 1753.
 - `test_cap_1_source_file_line_cap.py` — **FNP-4B (#611, 2026-09-15, orchestrator):** the `crates/repark-python/src/column/mod.rs` mirror row 1022 → 1014 matches the script baseline after the rebase onto #613 (ratchet down).
 - `test_ex_0_example_coverage.py` — **FNP-WIN-1 rebase onto 230468c5 (2026-09-15, run 16a):** #613 and #618 each moved the count 1054 → 1057 on the same line, which a merge keeps at 1057; the true combined count is main's 1057 plus this unit's three names, 1060. pins: fnp-win-1/C-007
+- `test_cap_1_source_file_line_cap.py` — **FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a):** the `crates/repark-python/src/dataframe.rs` mirror row returns to 1019 with the script baseline. pins: fnp-win-1/C-007

@@ -81,7 +81,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/tests/test_display_styles.py", 1175),
     ("python/repark/tests/test_dynamic_flatten.py", 1618),
     ("python/repark/tests/test_explode_rewrite.py", 1135),
-    ("python/repark/tests/test_fnp_win_1.py", 1415),
+    ("python/repark/tests/test_fnp_win_1.py", 1449),
     ("python/repark/tests/test_interchange_parity.py", 1533),
     ("python/repark/tests/test_join_parity.py", 1232),
     ("python/repark/tests/test_mapinarrow.py", 1578),
