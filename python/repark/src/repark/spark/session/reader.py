@@ -880,7 +880,8 @@ class DataFrameReader:
                     "(Iceberg time travel)"
                 )
             if lowered in _UNSUPPORTED_SEMANTIC_READER_OPTIONS:
-                # Incremental-read bounds get a targeted message (future seed).
+                if lowered == "basepath" and fmt == "text":
+                    continue
                 if lowered in {"start-snapshot-id", "end-snapshot-id"}:
                     raise AnalysisException(
                         f"reader option {key!r} is not supported by repark yet "

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 
 use arrow::array::{Array, ArrayBuilder, ArrayRef, RecordBatch, StringBuilder};
-use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
+use arrow::datatypes::{DataType, Field, SchemaRef};
 use async_trait::async_trait;
 use datafusion::catalog::Session;
 use datafusion::common::exec_datafusion_err;
@@ -21,6 +21,7 @@ use datafusion::physical_plan::{ExecutionPlan, RecordBatchStream, SendableRecord
 use datafusion::prelude::DataFrame;
 use futures::Stream;
 
+use crate::text_schema::apply_user_text_schema;
 use crate::{Error, Result, engine_err};
 
 const TEXT_BATCH_ROWS: usize = 8192;
@@ -29,13 +30,6 @@ const TEXT_READ_CHUNK: usize = 65536;
 
 const TEXT_SCAN_PARTITIONS: usize = 8;
 
-fn text_schema_with_partitions(partitions: &[Field]) -> SchemaRef {
-    let mut fields = Vec::with_capacity(partitions.len() + 1);
-    fields.push(Field::new("value", DataType::Utf8, true));
-    fields.extend(partitions.iter().cloned());
-    Arc::new(Schema::new(fields))
-}
-
 fn is_remote_path(path: &str) -> bool {
     path.starts_with("s3://") || path.starts_with("s3a://")
 }
@@ -43,44 +37,47 @@ fn is_remote_path(path: &str) -> bool {
 use crate::partition_discovery::{
     DiscoveredPartitions, PartitionValue, TextRowSink, canonical_partition_text,
     discover_partitions, emit_text_row, finish_partition_columns, order_batch_columns,
-    plan_partition_slots,
+    partition_path_specs, plan_partition_slots,
 };
 use crate::text_glob::{expand_text_glob, has_glob_meta, is_hidden_name};
 
 fn push_text_dir(dir: &Path, display: &str, out: &mut Vec<PathBuf>) -> Result<()> {
-    let entries = std::fs::read_dir(dir).map_err(|error| {
-        Error::Analysis(format!(
-            "text read cannot list directory {display:?}: {error}"
-        ))
-    })?;
-    let mut ordered: Vec<std::fs::DirEntry> = Vec::new();
-    for entry in entries {
-        ordered.push(entry.map_err(|error| {
-            Error::Analysis(format!(
-                "text read cannot list directory {display:?}: {error}"
-            ))
-        })?);
-    }
-    ordered.sort_by_key(std::fs::DirEntry::path);
-    for entry in &ordered {
-        if is_hidden_name(&entry.file_name()) {
-            continue;
-        }
-        let candidate = entry.path();
-        let kind = entry.file_type().map_err(|error| {
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(current) = stack.pop() {
+        let entries = std::fs::read_dir(&current).map_err(|error| {
             Error::Analysis(format!(
                 "text read cannot list directory {display:?}: {error}"
             ))
         })?;
-        if kind.is_file() || (kind.is_symlink() && candidate.is_file()) {
-            out.push(candidate);
-        } else if kind.is_dir()
-            && entry
-                .file_name()
-                .to_str()
-                .is_some_and(|name| name.contains('='))
-        {
-            push_text_dir(&candidate, display, out)?;
+        let mut ordered: Vec<std::fs::DirEntry> = Vec::new();
+        for entry in entries {
+            ordered.push(entry.map_err(|error| {
+                Error::Analysis(format!(
+                    "text read cannot list directory {display:?}: {error}"
+                ))
+            })?);
+        }
+        ordered.sort_by_key(std::fs::DirEntry::path);
+        for entry in ordered.into_iter().rev() {
+            if is_hidden_name(&entry.file_name()) {
+                continue;
+            }
+            let candidate = entry.path();
+            let kind = entry.file_type().map_err(|error| {
+                Error::Analysis(format!(
+                    "text read cannot list directory {display:?}: {error}"
+                ))
+            })?;
+            if kind.is_file() || (kind.is_symlink() && candidate.is_file()) {
+                out.push(candidate);
+            } else if kind.is_dir()
+                && entry
+                    .file_name()
+                    .to_str()
+                    .is_some_and(|name| name.contains('='))
+            {
+                stack.push(candidate);
+            }
         }
     }
     Ok(())
@@ -92,7 +89,23 @@ fn missing_text_path(path: &str) -> Error {
     ))
 }
 
-pub(crate) fn expand_text_paths(path: &str) -> Result<(Vec<PathBuf>, DiscoveredPartitions)> {
+fn keep_partitioned_only(root: &Path, files: Vec<PathBuf>) -> Vec<PathBuf> {
+    let any = files
+        .iter()
+        .any(|file| !partition_path_specs(root, file).is_empty());
+    if !any {
+        return files;
+    }
+    files
+        .into_iter()
+        .filter(|file| !partition_path_specs(root, file).is_empty())
+        .collect()
+}
+
+pub(crate) fn expand_text_paths(
+    path: &str,
+    base_path: Option<&str>,
+) -> Result<(Vec<PathBuf>, DiscoveredPartitions)> {
     if is_remote_path(path) {
         return Err(Error::Analysis(format!(
             "text read over {path:?} is not supported by repark yet (local files and directories only)"
@@ -102,6 +115,12 @@ pub(crate) fn expand_text_paths(path: &str) -> Result<(Vec<PathBuf>, DiscoveredP
         let files = expand_text_glob(path)?;
         if files.is_empty() {
             return Err(missing_text_path(path));
+        }
+        if let Some(base) = base_path {
+            let root = Path::new(base);
+            let kept = keep_partitioned_only(root, files);
+            let partitions = discover_partitions(root, &kept)?;
+            return Ok((kept, partitions));
         }
         return Ok((files, DiscoveredPartitions::default()));
     }
@@ -113,8 +132,15 @@ pub(crate) fn expand_text_paths(path: &str) -> Result<(Vec<PathBuf>, DiscoveredP
         let mut files: Vec<PathBuf> = Vec::new();
         push_text_dir(fs_path, path, &mut files)?;
         files.sort();
-        let partitions = discover_partitions(fs_path, &files);
-        return Ok((files, partitions));
+        if let Some(base) = base_path {
+            let root = Path::new(base);
+            let kept = keep_partitioned_only(root, files);
+            let partitions = discover_partitions(root, &kept)?;
+            return Ok((kept, partitions));
+        }
+        let kept = keep_partitioned_only(fs_path, files);
+        let partitions = discover_partitions(fs_path, &kept)?;
+        return Ok((kept, partitions));
     }
     Err(missing_text_path(path))
 }
@@ -615,20 +641,24 @@ impl crate::ReparkSession {
         path: &str,
         wholetext: bool,
         line_sep: Option<&str>,
+        user_schema: Option<Vec<(String, String)>>,
+        base_path: Option<&str>,
     ) -> Result<DataFrame> {
         if line_sep.is_some_and(str::is_empty) {
             return Err(Error::Analysis(
                 "text lineSep must be a non-empty string".to_string(),
             ));
         }
-        let (files, partitions) = expand_text_paths(path)?;
+        let (files, partitions) = expand_text_paths(path, base_path)?;
+        let (schema, fields, values) =
+            apply_user_text_schema(files.clone(), partitions, user_schema)?;
         let provider = Arc::new(TextTableProvider {
             files,
             wholetext,
             line_sep: line_sep.map(str::to_string),
-            schema: text_schema_with_partitions(&partitions.fields),
-            partition_fields: partitions.fields,
-            partition_values: partitions.values,
+            schema,
+            partition_fields: fields,
+            partition_values: values,
         });
         self.context().read_table(provider).map_err(engine_err)
     }
@@ -637,6 +667,7 @@ impl crate::ReparkSession {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::text_schema::text_schema_with_partitions;
     use arrow::array::Array;
 
     fn test_session() -> crate::ReparkSession {
@@ -676,7 +707,7 @@ mod tests {
         std::fs::write(&path, "x\n\ny\r\nz").unwrap();
         let session = test_session();
         let frame = session
-            .read_text(path.to_str().unwrap(), false, None)
+            .read_text(path.to_str().unwrap(), false, None, None, None)
             .await
             .unwrap();
         let rows = text_rows(&frame).await;
@@ -694,7 +725,7 @@ mod tests {
         std::fs::write(&path, "a;b;c").unwrap();
         let session = test_session();
         let frame = session
-            .read_text(path.to_str().unwrap(), false, Some(";"))
+            .read_text(path.to_str().unwrap(), false, Some(";"), None, None)
             .await
             .unwrap();
         let rows = text_rows(&frame).await;
@@ -709,7 +740,7 @@ mod tests {
         std::fs::write(&path, "a\nb\n").unwrap();
         let session = test_session();
         let frame = session
-            .read_text(path.to_str().unwrap(), true, None)
+            .read_text(path.to_str().unwrap(), true, None, None, None)
             .await
             .unwrap();
         let rows = text_rows(&frame).await;
@@ -723,7 +754,7 @@ mod tests {
         std::fs::write(&path, "a\rb\rc").unwrap();
         let session = test_session();
         let frame = session
-            .read_text(path.to_str().unwrap(), false, None)
+            .read_text(path.to_str().unwrap(), false, None, None, None)
             .await
             .unwrap();
         assert_eq!(text_values(&frame).await, vec!["a", "b", "c"]);
@@ -738,7 +769,7 @@ mod tests {
         std::fs::write(&path, &bytes).unwrap();
         let session = test_session();
         let frame = session
-            .read_text(path.to_str().unwrap(), false, None)
+            .read_text(path.to_str().unwrap(), false, None, None, None)
             .await
             .unwrap();
         let rows = text_rows(&frame).await;
@@ -754,7 +785,7 @@ mod tests {
         std::fs::write(&path, "x\n\n").unwrap();
         let session = test_session();
         let frame = session
-            .read_text(path.to_str().unwrap(), false, None)
+            .read_text(path.to_str().unwrap(), false, None, None, None)
             .await
             .unwrap();
         assert_eq!(text_values(&frame).await, vec!["", "x"]);
@@ -767,7 +798,7 @@ mod tests {
         std::fs::write(&path, "").unwrap();
         let session = test_session();
         let frame = session
-            .read_text(path.to_str().unwrap(), false, None)
+            .read_text(path.to_str().unwrap(), false, None, None, None)
             .await
             .unwrap();
         assert!(text_rows(&frame).await.is_empty());
@@ -780,7 +811,7 @@ mod tests {
         std::fs::write(&path, b"ok\n\xff\xfe\nmore\ncafe\xe2\x82").unwrap();
         let session = test_session();
         let frame = session
-            .read_text(path.to_str().unwrap(), false, None)
+            .read_text(path.to_str().unwrap(), false, None, None, None)
             .await
             .unwrap();
         let rows = text_rows(&frame).await;
@@ -793,7 +824,7 @@ mod tests {
         let session = test_session();
         let missing = std::env::temp_dir().join("repark-no-such-text-path-1290");
         let Err(error) = session
-            .read_text(missing.to_str().unwrap(), false, None)
+            .read_text(missing.to_str().unwrap(), false, None, None, None)
             .await
         else {
             panic!("a missing path must refuse the text read");
@@ -810,7 +841,10 @@ mod tests {
     #[tokio::test]
     async fn text_empty_line_sep_refuses() {
         let session = test_session();
-        let Err(error) = session.read_text("any.txt", false, Some("")).await else {
+        let Err(error) = session
+            .read_text("any.txt", false, Some(""), None, None)
+            .await
+        else {
             panic!("an empty lineSep must refuse the text read");
         };
         assert!(error.to_string().contains("lineSep"));
@@ -831,7 +865,7 @@ mod tests {
         let session = test_session();
         let pattern = dir.path().join("*.txt");
         let frame = session
-            .read_text(pattern.to_str().unwrap(), false, None)
+            .read_text(pattern.to_str().unwrap(), false, None, None, None)
             .await
             .unwrap();
         assert_eq!(
@@ -849,7 +883,7 @@ mod tests {
         let session = test_session();
         let pattern = dir.path().join("list_?.txt");
         let frame = session
-            .read_text(pattern.to_str().unwrap(), false, None)
+            .read_text(pattern.to_str().unwrap(), false, None, None, None)
             .await
             .unwrap();
         assert_eq!(text_values(&frame).await, vec!["one", "two"]);
@@ -863,7 +897,7 @@ mod tests {
         let session = test_session();
         let pattern = dir.path().join("foo[bar].txt");
         let frame = session
-            .read_text(pattern.to_str().unwrap(), false, None)
+            .read_text(pattern.to_str().unwrap(), false, None, None, None)
             .await
             .unwrap();
         assert_eq!(text_values(&frame).await, vec!["b-class"]);
@@ -881,10 +915,10 @@ mod tests {
         std::fs::write(keyed.join("part-00000.txt"), "hello\n").unwrap();
         let session = test_session();
         let frame = session
-            .read_text(dir.path().to_str().unwrap(), false, None)
+            .read_text(dir.path().to_str().unwrap(), false, None, None, None)
             .await
             .unwrap();
-        assert_eq!(text_values(&frame).await, vec!["hello", "top"]);
+        assert_eq!(text_values(&frame).await, vec!["hello"]);
     }
 
     #[tokio::test]
@@ -894,7 +928,7 @@ mod tests {
         std::fs::write(&path, "a\nb\nc\nd\ne\n").unwrap();
         let session = test_session();
         let frame = session
-            .read_text(path.to_str().unwrap(), false, None)
+            .read_text(path.to_str().unwrap(), false, None, None, None)
             .await
             .unwrap();
         let limited = frame.limit(0, Some(2)).unwrap();
@@ -956,7 +990,7 @@ mod tests {
 
     #[test]
     fn text_expand_paths_missing_reports_not_found() {
-        let error = expand_text_paths("/no/such/repark-text-path").unwrap_err();
+        let error = expand_text_paths("/no/such/repark-text-path", None).unwrap_err();
         assert!(error.to_string().starts_with("[PATH_NOT_FOUND]"));
         assert!(error.to_string().contains("SQLSTATE: 42K03"));
     }

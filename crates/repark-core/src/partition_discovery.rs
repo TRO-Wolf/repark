@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -9,6 +10,8 @@ use arrow::array::{
 use arrow::datatypes::{DataType, Field};
 use chrono::NaiveDate;
 use datafusion::error::DataFusionError;
+
+use crate::Error;
 
 const HIVE_DEFAULT_PARTITION: &str = "__HIVE_DEFAULT_PARTITION__";
 
@@ -56,7 +59,7 @@ fn unescape_partition_value(raw: &str) -> String {
     String::from_utf8(out).unwrap_or_else(|_| raw.to_string())
 }
 
-fn partition_path_specs(root: &Path, file: &Path) -> Vec<(String, Option<String>)> {
+pub(crate) fn partition_path_specs(root: &Path, file: &Path) -> Vec<(String, Option<String>)> {
     let relative = file.strip_prefix(root).unwrap_or(file);
     let Some(parent) = relative.parent() else {
         return Vec::new();
@@ -262,14 +265,57 @@ pub(crate) fn order_batch_columns(
     Ok(columns)
 }
 
+pub(crate) fn user_partition_type(name: &str) -> Option<(DataType, &'static str)> {
+    match name {
+        "string" => Some((DataType::Utf8, "STRING")),
+        "int" | "integer" => Some((DataType::Int32, "INT")),
+        "bigint" | "long" => Some((DataType::Int64, "BIGINT")),
+        "double" => Some((DataType::Float64, "DOUBLE")),
+        "date" => Some((DataType::Date32, "DATE")),
+        _ => None,
+    }
+}
+
+pub(crate) fn cast_raw_partition_value(raw: &str, data_type: &DataType) -> Option<PartitionValue> {
+    match data_type {
+        DataType::Int32 => raw.parse::<i32>().ok().map(PartitionValue::Int32),
+        DataType::Int64 => raw.parse::<i64>().ok().map(PartitionValue::Int64),
+        DataType::Float64 => raw.parse::<f64>().ok().map(PartitionValue::Float64),
+        DataType::Date32 => NaiveDate::parse_from_str(raw, "%Y-%m-%d")
+            .ok()
+            .and_then(|date| {
+                i32::try_from(
+                    date.signed_duration_since(NaiveDate::from_ymd_opt(1970, 1, 1)?)
+                        .num_days(),
+                )
+                .ok()
+            })
+            .map(PartitionValue::Date32),
+        _ => Some(PartitionValue::Text(raw.to_string())),
+    }
+}
+
+pub(crate) fn invalid_partition_message(raw: &str, display: &str, column: &str) -> String {
+    format!(
+        "[INVALID_PARTITION_VALUE] Failed to cast value '{raw}' to data type \"{display}\" for partition column `{column}`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846"
+    )
+}
+
 #[allow(clippy::missing_errors_doc)]
-pub(crate) fn discover_partitions(root: &Path, files: &[PathBuf]) -> DiscoveredPartitions {
+pub(crate) fn discover_partitions(
+    root: &Path,
+    files: &[PathBuf],
+) -> Result<DiscoveredPartitions, Error> {
+    let mut by_depth: HashMap<usize, Vec<Vec<String>>> = HashMap::new();
+    let mut dir_by_depth: HashMap<usize, Vec<PathBuf>> = HashMap::new();
     let mut names: Vec<String> = Vec::new();
     let mut raws: HashMap<String, Vec<String>> = HashMap::new();
     let mut per_file: HashMap<PathBuf, HashMap<String, Option<String>>> = HashMap::new();
     for file in files {
         let mut seen: HashMap<String, Option<String>> = HashMap::new();
+        let mut keys: Vec<String> = Vec::new();
         for (key, value) in partition_path_specs(root, file) {
+            keys.push(key.clone());
             if !raws.contains_key(&key) {
                 names.push(key.clone());
                 raws.insert(key.clone(), Vec::new());
@@ -281,7 +327,50 @@ pub(crate) fn discover_partitions(root: &Path, files: &[PathBuf]) -> DiscoveredP
             }
             seen.insert(key, value);
         }
+        if !keys.is_empty() {
+            let depth = keys.len();
+            let entry = by_depth.entry(depth).or_default();
+            if !entry.contains(&keys) {
+                entry.push(keys);
+                dir_by_depth.entry(depth).or_default().push(
+                    file.parent()
+                        .map_or_else(|| root.to_path_buf(), Path::to_path_buf),
+                );
+            }
+        }
         per_file.insert(file.clone(), seen);
+    }
+    let mut bad: Option<(Vec<Vec<String>>, Vec<PathBuf>)> = None;
+    for (depth, lists) in &by_depth {
+        if lists.len() > 1 {
+            let dirs = dir_by_depth.get(depth).cloned().unwrap_or_default();
+            if bad.is_none() {
+                bad = Some((lists.clone(), dirs));
+            }
+        }
+    }
+    if let Some((lists, dirs)) = bad {
+        let mut message = String::from(
+            "[CONFLICTING_PARTITION_COLUMN_NAMES] Conflicting partition column names detected:\n\n",
+        );
+        for (index, keys) in lists.iter().enumerate() {
+            let _ = writeln!(
+                message,
+                "\tPartition column name list #{index}: {}",
+                keys.join(", ")
+            );
+        }
+        message.push_str(
+            "\nFor partitioned table directories, data files should only live in leaf directories.\nAnd directories at the same level should have the same partition column name.\nPlease check the following directories for unexpected files or inconsistent partition column names:\n\n",
+        );
+        for (index, dir) in dirs.iter().enumerate() {
+            if index > 0 {
+                message.push('\n');
+            }
+            let _ = write!(message, "\tfile:{}", dir.display());
+        }
+        message.push_str(" SQLSTATE: KD009");
+        return Err(Error::Iceberg(message));
     }
     let mut fields = Vec::with_capacity(names.len());
     let mut types: HashMap<String, DataType> = HashMap::new();
@@ -315,7 +404,7 @@ pub(crate) fn discover_partitions(root: &Path, files: &[PathBuf]) -> DiscoveredP
         }
         values.insert(file.clone(), row);
     }
-    DiscoveredPartitions { fields, values }
+    Ok(DiscoveredPartitions { fields, values })
 }
 
 #[cfg(test)]
@@ -347,7 +436,7 @@ mod tests {
             leaf(&root, &["d=2024-01-02", "t=a"], "part-00000.txt"),
             leaf(&root, &["d=2024-01-03", "t=b"], "part-00000.txt"),
         ];
-        let discovered = discover_partitions(&root, &files);
+        let discovered = discover_partitions(&root, &files).unwrap();
         assert_eq!(
             discovered
                 .fields
@@ -376,7 +465,7 @@ mod tests {
             leaf(&root, &["k=7"], "part-00001.txt"),
             leaf(&root, &["n=1.50", "b=true"], "part-00000.txt"),
         ];
-        let discovered = discover_partitions(&root, &files);
+        let discovered = discover_partitions(&root, &files).unwrap();
         assert_eq!(discovered.values[&files[0]][0], PartitionValue::Null);
         assert_eq!(discovered.values[&files[1]][0], PartitionValue::Int32(7));
         let names: Vec<String> = discovered
@@ -402,7 +491,7 @@ mod tests {
     fn partition_discovery_ignores_leaf_paths_without_base() {
         let root = PathBuf::from("/root/k=x");
         let files = vec![leaf(&root, &[], "part-00000.txt")];
-        let discovered = discover_partitions(&root, &files);
+        let discovered = discover_partitions(&root, &files).unwrap();
         assert!(discovered.fields.is_empty());
         assert_eq!(discovered.values[&files[0]], Vec::new());
     }
@@ -414,11 +503,61 @@ mod tests {
             leaf(&root, &["k=3000000000"], "part-00000.txt"),
             leaf(&root, &["k=9"], "part-00001.txt"),
         ];
-        let discovered = discover_partitions(&root, &files);
+        let discovered = discover_partitions(&root, &files).unwrap();
         assert_eq!(discovered.fields[0].data_type(), &DataType::Int64);
         assert_eq!(
             discovered.values[&files[0]][0],
             PartitionValue::Int64(3_000_000_000)
+        );
+    }
+
+    #[test]
+    fn partition_discovery_refuses_conflicting_names_at_same_depth() {
+        let root = PathBuf::from("/root");
+        let files = vec![
+            leaf(&root, &["k=x"], "part-00000.txt"),
+            leaf(&root, &["n=y"], "part-00000.txt"),
+        ];
+        let error = discover_partitions(&root, &files).unwrap_err();
+        let text = error.to_string();
+        assert!(text.starts_with("[CONFLICTING_PARTITION_COLUMN_NAMES]"));
+        assert!(text.contains("Partition column name list #0: k"));
+        assert!(text.contains("Partition column name list #1: n"));
+        assert!(text.contains("SQLSTATE: KD009"));
+    }
+
+    #[test]
+    fn partition_user_type_maps_probe_shapes() {
+        assert_eq!(
+            user_partition_type("string"),
+            Some((DataType::Utf8, "STRING"))
+        );
+        assert_eq!(user_partition_type("int"), Some((DataType::Int32, "INT")));
+        assert_eq!(
+            user_partition_type("bigint"),
+            Some((DataType::Int64, "BIGINT"))
+        );
+        assert_eq!(
+            user_partition_type("double"),
+            Some((DataType::Float64, "DOUBLE"))
+        );
+        assert_eq!(
+            user_partition_type("date"),
+            Some((DataType::Date32, "DATE"))
+        );
+        assert_eq!(user_partition_type("boolean"), None);
+        assert_eq!(
+            cast_raw_partition_value("007", &DataType::Int32),
+            Some(PartitionValue::Int32(7))
+        );
+        assert_eq!(
+            cast_raw_partition_value("+7", &DataType::Int32),
+            Some(PartitionValue::Int32(7))
+        );
+        assert_eq!(cast_raw_partition_value("y", &DataType::Int32), None);
+        assert_eq!(
+            invalid_partition_message("y", "INT", "k"),
+            "[INVALID_PARTITION_VALUE] Failed to cast value 'y' to data type \"INT\" for partition column `k`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846"
         );
     }
 }

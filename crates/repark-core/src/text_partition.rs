@@ -514,7 +514,7 @@ fn partition_write_layout(
 fn partition_leaf_writer<'a>(
     open: &'a mut HashMap<Vec<String>, (BufWriter<File>, PathBuf)>,
     touched: &mut HashMap<Vec<String>, u64>,
-    next_part: &mut HashMap<Vec<String>, usize>,
+    parts: &mut HashMap<Vec<String>, PathBuf>,
     created: &mut HashSet<Vec<String>>,
     dir: &Path,
     key: &[String],
@@ -538,29 +538,42 @@ fn partition_leaf_writer<'a>(
             }
             touched.remove(&victim);
         }
-        let index = next_part.get(key).copied().unwrap_or(0);
-        let mut leaf = dir.to_path_buf();
-        for segment in key {
-            leaf.push(segment);
-        }
-        if !created.contains(key) {
-            std::fs::create_dir_all(&leaf).map_err(|error| {
+        if let Some(part) = parts.get(key) {
+            let file = std::fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(part)
+                .map_err(|error| {
+                    Error::Analysis(format!(
+                        "text write cannot append {}: {error}",
+                        part.display()
+                    ))
+                })?;
+            open.insert(key.to_owned(), (BufWriter::new(file), part.clone()));
+        } else {
+            let mut leaf = dir.to_path_buf();
+            for segment in key {
+                leaf.push(segment);
+            }
+            if !created.contains(key) {
+                std::fs::create_dir_all(&leaf).map_err(|error| {
+                    Error::Analysis(format!(
+                        "text write cannot create directory {}: {error}",
+                        leaf.display()
+                    ))
+                })?;
+                created.insert(key.to_owned());
+            }
+            let part = leaf.join("part-00000.txt");
+            let file = File::create(&part).map_err(|error| {
                 Error::Analysis(format!(
-                    "text write cannot create directory {}: {error}",
-                    leaf.display()
+                    "text write cannot create {}: {error}",
+                    part.display()
                 ))
             })?;
-            created.insert(key.to_owned());
+            parts.insert(key.to_owned(), part.clone());
+            open.insert(key.to_owned(), (BufWriter::new(file), part));
         }
-        let part = leaf.join(format!("part-{index:05}.txt"));
-        let file = File::create(&part).map_err(|error| {
-            Error::Analysis(format!(
-                "text write cannot create {}: {error}",
-                part.display()
-            ))
-        })?;
-        open.insert(key.to_owned(), (BufWriter::new(file), part));
-        next_part.insert(key.to_owned(), index + 1);
     }
     touched.insert(key.to_owned(), tick);
     open.get_mut(key).ok_or_else(|| {
@@ -600,7 +613,7 @@ pub async fn write_text_partitioned(
     let mut stream = frame.clone().execute_stream().await.map_err(engine_err)?;
     let mut open: HashMap<Vec<String>, (BufWriter<File>, PathBuf)> = HashMap::new();
     let mut touched: HashMap<Vec<String>, u64> = HashMap::new();
-    let mut next_part: HashMap<Vec<String>, usize> = HashMap::new();
+    let mut parts: HashMap<Vec<String>, PathBuf> = HashMap::new();
     let mut created: HashSet<Vec<String>> = HashSet::new();
     let mut tick = 0u64;
     while let Some(batch) = stream.next().await {
@@ -634,7 +647,7 @@ pub async fn write_text_partitioned(
             let (writer, part) = partition_leaf_writer(
                 &mut open,
                 &mut touched,
-                &mut next_part,
+                &mut parts,
                 &mut created,
                 dir,
                 &key,
@@ -796,5 +809,50 @@ mod tests {
             "Text data source supports only a single column, and you have 2 columns."
         );
         assert!(!target.exists());
+    }
+
+    #[tokio::test]
+    async fn text_partition_evicted_key_appends_to_same_part() {
+        let session = test_session();
+        let mut values: Vec<String> = Vec::new();
+        for round in 0..4 {
+            for key in 0..300 {
+                values.push(format!("('k{key}', 'r{round}-{key}')"));
+            }
+        }
+        let query = format!(
+            "SELECT * FROM (VALUES {}) AS t(k, value)",
+            values.join(", ")
+        );
+        let frame = session.sql(&query).await.unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("out");
+        write_text_partitioned(&frame, &target, "\n", &[String::from("k")], "UTC")
+            .await
+            .unwrap();
+        let mut leaves = 0usize;
+        let mut files = 0usize;
+        let mut rows = 0usize;
+        for entry in std::fs::read_dir(&target).unwrap() {
+            let entry = entry.unwrap();
+            if !entry.file_type().unwrap().is_dir() {
+                continue;
+            }
+            leaves += 1;
+            let mut parts = 0usize;
+            for leaf in std::fs::read_dir(entry.path()).unwrap() {
+                let leaf = leaf.unwrap();
+                if leaf.path().extension().is_some_and(|ext| ext == "txt") {
+                    parts += 1;
+                    let body = std::fs::read_to_string(leaf.path()).unwrap();
+                    rows += body.lines().count();
+                }
+            }
+            assert_eq!(parts, 1);
+            files += parts;
+        }
+        assert_eq!(leaves, 300);
+        assert_eq!(files, 300);
+        assert_eq!(rows, 1200);
     }
 }

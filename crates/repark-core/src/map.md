@@ -329,7 +329,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   projections; the scanner stops appending at the row limit and emits at once.
   `ReparkSession::read_text` lives here
   as an inherent impl so `session.rs` keeps its size; Rust tests cover the split arms,
-  the globs, the limit, and the error texts.
+  the globs, the limit, and the error texts. **Round 4 (2026-09-15, W-1..W-4,
+  V-2):** the user-schema overlay lives in `text_schema.rs` (this module passes
+  the pairs plus `basePath` through); partitioned leaves win over root files;
+  bare globs discover nothing while `basePath` globs discover beneath the base;
+  the partition-dir walk is an explicit stack.
 - `text_glob.rs` — **IO-TEXT-1 follow-up (2026-09-15):** hand-written Hadoop glob
   matcher (`*?[]{}`, no `/` crossing, char-aware, brace nesting capped, no new
   dependency) with matcher unit tests. **Round 3 (2026-09-15, U-5/U-6):** each
@@ -356,19 +360,31 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (`TextRowSink`/`emit_text_row`, stops at the row limit), and the batch
   finishers (`finish_partition_columns`, `order_batch_columns`). Unit tests
   cover unescape, order, default→NULL, inference, leaf paths, bigint.
-  pins: io-text-1/U-3
+  **Round 4 (2026-09-15, W-1/W-3):** same-depth name lists refuse
+  `CONFLICTING_PARTITION_COLUMN_NAMES` `KD009`; beside them the user-type
+  parser (`user_partition_type`: string/int/bigint/double/date),
+  the raw caster (`cast_raw_partition_value`), and the
+  `INVALID_PARTITION_VALUE` `42846` message builder.
+  pins: io-text-1/U-3, W-1, W-3
 - `text_partition.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-1+U-2):** the one-scan
   `partitionBy` text writer (`write_text_partitioned`, exported at the crate root).
   One `execute_stream` pass routes each row to its leaf writer by rendered key
-  (bounded LRU of 256 open part writers, `TEXT_PARTITION_WRITERS_CAP`; an evicted
-  key resumes in a new `part-NNNNN.txt`); partition columns drop from the body and
+  (bounded LRU of 256 open part writers, `TEXT_PARTITION_WRITERS_CAP`; round 4,
+  ruling V-1: an evicted key reopens its `part-00000.txt` in append mode, so a
+  shuffled write holds one part per leaf); partition columns drop from the body and
   the remaining column keeps the single-string check with Spark's verbatim 1290
   text. Leaf names use Hive `escapePathName` (`%XX` uppercase; space, non-ASCII
   and `}` literal); NULL and empty write `__HIVE_DEFAULT_PARTITION__`; decimals
   render plain (`1.50`), booleans lower-case, dates `yyyy-MM-dd`, timestamps in
   the caller-passed session zone with trimmed fractions, doubles and ints plain.
-  Rust tests cover the escape set, decimal rendering, the fan-out, and the 1290.
-  pins: io-text-1/U-1, U-2
+  Rust tests cover the escape set, decimal rendering, the fan-out, the 1290,
+  and the append-on-evict row count.
+  pins: io-text-1/U-1, U-2, V-1
+- `text_schema.rs` — **IO-TEXT-1 round 4 (2026-09-15, W-1):** the user-schema
+  overlay beside the scan (split from `text_scan.rs` at the 1000-line ceiling):
+  the user schema is the data schema with discovered columns appended after it,
+  named partition types override inference, bad casts refuse
+  `INVALID_PARTITION_VALUE` `42846`. pins: io-text-1/W-1
 - `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability
   derivation. `relax_schema_to_nullable` marks every field nullable over
   struct/list/map (map keys stay required — Arrow forbids nullable map keys); the walk

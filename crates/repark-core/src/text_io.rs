@@ -309,7 +309,7 @@ mod tests {
         let part = target.join("part-00000.txt");
         assert_eq!(std::fs::read_to_string(&part).unwrap(), "a\n\n");
         let back = session
-            .read_text(target.to_str().unwrap(), false, None)
+            .read_text(target.to_str().unwrap(), false, None, None, None)
             .await
             .unwrap();
         let rows = text_rows(&back).await;

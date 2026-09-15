@@ -31,6 +31,7 @@ mod text_glob;
 mod text_io;
 mod text_partition;
 mod text_scan;
+mod text_schema;
 mod time_travel;
 mod update_fields;
 

@@ -17,12 +17,14 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 #[pyfunction]
-#[pyo3(signature = (session, path, wholetext=false, line_sep=None))]
+#[pyo3(signature = (session, path, wholetext=false, line_sep=None, user_schema=None, base_path=None))]
 pub fn read_text(
     session: &PyReparkSession,
     path: &str,
     wholetext: bool,
     line_sep: Option<String>,
+    user_schema: Option<Vec<(String, String)>>,
+    base_path: Option<String>,
 ) -> PyResult<PyDataFrame> {
     fenced_span!("py.read", "read_text", {
         let dataframe = Python::attach(|py| {
@@ -31,6 +33,8 @@ pub fn read_text(
                     path,
                     wholetext,
                     line_sep.as_deref(),
+                    user_schema,
+                    base_path.as_deref(),
                 ))
             })
         })

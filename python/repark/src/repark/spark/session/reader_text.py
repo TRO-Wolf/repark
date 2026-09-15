@@ -54,6 +54,8 @@ def load_text(reader: Any, path: str | Path | list[str] | None) -> DataFrame:
     _reject_text_encoding(reader)
     wholetext = reader._option_bool("wholetext", default=False)
     linesep = reader._option_str("linesep")
+    base_path = _text_base_path(reader)
+    user_schema = _text_user_schema(reader)
     inner = reader._session._ensure_alive()
     token = reader._session._alive_token
     if isinstance(path, list):
@@ -61,27 +63,63 @@ def load_text(reader: Any, path: str | Path | list[str] | None) -> DataFrame:
             from repark.errors import AnalysisException
 
             raise AnalysisException("Text load requires a non-empty path list")
-        frames = [_read_one(inner, token, str(item), wholetext, linesep) for item in path]
+        frames = [
+            _read_one(inner, token, str(item), wholetext, linesep, user_schema, base_path)
+            for item in path
+        ]
         frame = frames[0]
         for extra in frames[1:]:
             frame = frame.union(extra)
     else:
-        frame = _read_one(inner, token, str(path), wholetext, linesep)
-    return _apply_text_schema(reader, frame)
+        frame = _read_one(inner, token, str(path), wholetext, linesep, user_schema, base_path)
+    return frame
 
 
-def _read_one(inner: Any, token: Any, path: str, wholetext: bool, linesep: str | None) -> DataFrame:
+def _read_one(
+    inner: Any,
+    token: Any,
+    path: str,
+    wholetext: bool,
+    linesep: str | None,
+    user_schema: list[tuple[str, str]] | None,
+    base_path: str | None,
+) -> DataFrame:
     """Read one file or directory through the Rust text scan. pins: io-text-1/C-001"""
     from repark import _native
-    from repark.errors import AnalysisException
+    from repark.errors import AnalysisException, PySparkException
     from repark.spark._integral import attach_error_condition
 
     try:
-        return DataFrame(_native.read_text(inner, path, wholetext, linesep), inner, token)
+        return DataFrame(
+            _native.read_text(inner, path, wholetext, linesep, user_schema, base_path),
+            inner,
+            token,
+        )
     except AnalysisException as error:
         if str(error).startswith("[PATH_NOT_FOUND]"):
             attach_error_condition(error, "PATH_NOT_FOUND", "42K03")
         raise
+    except PySparkException as error:
+        if str(error).startswith("[CONFLICTING_PARTITION_COLUMN_NAMES]"):
+            attach_error_condition(error, "CONFLICTING_PARTITION_COLUMN_NAMES", "KD009")
+        elif str(error).startswith("[INVALID_PARTITION_VALUE]"):
+            attach_error_condition(error, "INVALID_PARTITION_VALUE", "42846")
+        raise
+
+
+def _text_base_path(reader: Any) -> str | None:
+    """Return the basePath option for partition discovery under a glob. pins: io-text-1/W-4"""
+    return reader._option_str("basepath")
+
+
+def _text_user_schema(reader: Any) -> list[tuple[str, str]] | None:
+    """Return the user schema as data-schema name/type pairs for the engine. pins: io-text-1/W-1"""
+    if reader._schema is None:
+        return None
+    return [
+        (str(field["name"]), str(field["dataType"].simpleString()))
+        for field in _schema_fields(reader._schema)
+    ]
 
 
 def _drop_falsy_recursive_lookup(reader: Any) -> None:
@@ -104,20 +142,3 @@ def _reject_text_encoding(reader: Any) -> None:
         raise AnalysisException(
             f"reader option encoding={encoding!r} is not supported (only UTF-8)"
         )
-
-
-def _apply_text_schema(reader: Any, frame: DataFrame) -> DataFrame:
-    """Project a single-string user schema, or refuse anything wider. pins: io-text-1/C-001"""
-    from repark.spark import functions as F  # noqa: N812 — local import avoids cycle at module load
-    from repark.spark.types import StringType
-
-    if reader._schema is None:
-        return frame
-    fields = _schema_fields(reader._schema)
-    if len(fields) != 1 or not isinstance(fields[0]["dataType"], StringType):
-        from repark.errors import AnalysisException
-
-        raise AnalysisException(
-            "text schema must be a single string field (the scan only serves struct<value:string>)"
-        )
-    return frame.select(F.col("value").cast("string").alias(fields[0]["name"]))
