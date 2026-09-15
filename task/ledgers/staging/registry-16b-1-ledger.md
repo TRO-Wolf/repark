@@ -78,4 +78,5 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: Each pin asserts today's divergent answer, so the fix that closes its row turns it red, which the registry's retirement rule requires.
       artifacts: [python/repark/tests/test_registry_16b_1.py]
+  complete: true
 ```
