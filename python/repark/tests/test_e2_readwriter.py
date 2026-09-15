@@ -350,27 +350,27 @@ def test_drop_expander_does_not_rewrite_non_drop_sql(spark: ReparkSession) -> No
     """
     bare_drop = "DROP TABLE IF EXISTS bare_x"
     expanded_drop = spark._expand_bare_table_names_in_sql(bare_drop)
-    assert expanded_drop == 'DROP TABLE IF EXISTS "glue_catalog"."default"."bare_x"'
+    assert expanded_drop == "DROP TABLE IF EXISTS `glue_catalog`.`default`.`bare_x`"
 
     multi_drop = "DROP TABLE IF EXISTS bare_a, bare_b"
     expanded_multi = spark._expand_bare_table_names_in_sql(multi_drop)
     assert expanded_multi == (
-        'DROP TABLE IF EXISTS "glue_catalog"."default"."bare_a", "glue_catalog"."default"."bare_b"'
+        "DROP TABLE IF EXISTS `glue_catalog`.`default`.`bare_a`, `glue_catalog`.`default`.`bare_b`"
     )
 
     plain_drop = "DROP TABLE bare_y"
     assert spark._expand_bare_table_names_in_sql(plain_drop) == (
-        'DROP TABLE "glue_catalog"."default"."bare_y"'
+        "DROP TABLE `glue_catalog`.`default`.`bare_y`"
     )
 
     select_sql = "SELECT * FROM bare_x"
     assert spark._expand_bare_table_names_in_sql(select_sql) == (
-        'SELECT * FROM "glue_catalog"."default"."bare_x"'
+        "SELECT * FROM `glue_catalog`.`default`.`bare_x`"
     )
 
     insert_sql = "INSERT INTO bare_x VALUES (1)"
     assert spark._expand_bare_table_names_in_sql(insert_sql) == (
-        'INSERT INTO "glue_catalog"."default"."bare_x" VALUES (1)'
+        "INSERT INTO `glue_catalog`.`default`.`bare_x` VALUES (1)"
     )
 
     drop_view_sql = "DROP VIEW IF EXISTS bare_x"

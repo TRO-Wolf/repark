@@ -20,8 +20,12 @@ mod normalize;
 mod ref_ddl;
 mod router;
 mod spark_ast;
-mod spark_literals;
+pub mod spark_literals;
+mod spark_rewrites;
 mod spark_type_names;
+mod spark_typed;
+
+pub use spark_typed::{FoldSparkNumericCasts, SparkProjectionDisplay, spark_as_udf};
 mod time_travel;
 mod truncate;
 pub mod type_table;

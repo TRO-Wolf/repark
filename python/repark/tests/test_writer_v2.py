@@ -178,14 +178,14 @@ def test_partition_transform_quotes_identity_arg() -> None:
 
     If quoting regresses, hostile fragments re-enter PARTITIONED BY unescaped.
     """
-    assert F.years("event_date")._partition_transform == 'years("event_date")'
-    assert F.months(F.col("ts"))._partition_transform == 'months("ts")'
-    assert F.days("d")._partition_transform == 'days("d")'
-    assert F.hours("h")._partition_transform == 'hours("h")'
-    assert F.bucket(4, "id")._partition_transform == 'bucket(4, "id")'
+    assert F.years("event_date")._partition_transform == "years(`event_date`)"
+    assert F.months(F.col("ts"))._partition_transform == "months(`ts`)"
+    assert F.days("d")._partition_transform == "days(`d`)"
+    assert F.hours("h")._partition_transform == "hours(`h`)"
+    assert F.bucket(4, "id")._partition_transform == "bucket(4, `id`)"
     # Quote-escape: embedded " becomes "" inside the identifier.
-    assert F.years('x"; DROP')._partition_transform == 'years("x""; DROP")'
-    assert F.bucket(8, 'x"; DROP')._partition_transform == 'bucket(8, "x""; DROP")'
+    assert F.years('x"; DROP')._partition_transform == 'years(`x"; DROP`)'
+    assert F.bucket(8, 'x"; DROP')._partition_transform == 'bucket(8, `x"; DROP`)'
 
 
 # DataFrameWriterV2

@@ -816,13 +816,13 @@ def test_sql_udf_where_type_token_column_names(spark: SparkSession) -> None:
 
 
 def test_sql_udf_where_quoted_from_column(spark: SparkSession) -> None:
-    """Quoted residual column ``\"from\"`` must project under UDF WHERE (F-E1-2)."""
+    """Backtick-quoted residual column ``from`` must project under UDF WHERE (F-E1-2)."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     # Engine-accepted quoted identifier as a real column name.
     frame = spark.createDataFrame([(1, "keep"), (2, "drop")], "a long, from string")
     frame.createOrReplaceTempView("t_u10_fromcol")
     out = spark.sql(
-        "SELECT a FROM t_u10_fromcol WHERE my_double(a) > 0 AND \"from\" = 'keep'"
+        "SELECT a FROM t_u10_fromcol WHERE my_double(a) > 0 AND `from` = 'keep'"
     ).to_arrow()
     assert _multiset(_rows(out)) == _multiset([{"a": 1}])
     assert all("__repark_sql_udf" not in name for name in out.column_names)
@@ -1109,13 +1109,13 @@ def test_sql_udf_where_date_timestamp_typed_literal_residual(
     frame_date = spark.createDataFrame([(1, 10), (2, 20)], "a long, date long")
     frame_date.createOrReplaceTempView("t_u11_date_col")
     out_col = spark.sql(
-        'SELECT a FROM t_u11_date_col WHERE my_double(a) > 0 AND "date" = 10'
+        "SELECT a FROM t_u11_date_col WHERE my_double(a) > 0 AND `date` = 10"
     ).to_arrow()
     assert _multiset(_rows(out_col)) == _multiset([{"a": 1}])
 
 
 def test_sql_udf_where_quoted_and_column(spark: SparkSession) -> None:
-    """Quoted residual column ``\"and\"`` must not break the boolean AND keyword.
+    """Backtick-quoted residual column ``and`` must not break the boolean AND keyword.
 
     The identifier rewriter can case-steal ``AND`` beside a column named ``and``; residual
     projection must temp-alias it so the residual parses. Never leak ``__repark_sql_udf_*``.
@@ -1123,17 +1123,17 @@ def test_sql_udf_where_quoted_and_column(spark: SparkSession) -> None:
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1, 5), (2, 9)], "a long, and long")
     frame.createOrReplaceTempView("t_u11_and")
-    out = spark.sql('SELECT a FROM t_u11_and WHERE my_double(a) > 0 AND "and" = 5').to_arrow()
+    out = spark.sql("SELECT a FROM t_u11_and WHERE my_double(a) > 0 AND `and` = 5").to_arrow()
     assert _multiset(_rows(out)) == _multiset([{"a": 1}])
     assert all("__repark_sql_udf" not in name for name in out.column_names)
 
 
 def test_sql_udf_where_quoted_or_column(spark: SparkSession) -> None:
-    """Quoted residual column ``\"or\"`` with boolean OR must not filter-steal."""
+    """Backtick-quoted residual column ``or`` with boolean OR must not filter-steal."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1, 5), (0, 9)], "a long, or long")
     frame.createOrReplaceTempView("t_u11_or")
-    out = spark.sql('SELECT a FROM t_u11_or WHERE my_double(a) > 0 OR "or" = 9').to_arrow()
+    out = spark.sql("SELECT a FROM t_u11_or WHERE my_double(a) > 0 OR `or` = 9").to_arrow()
     # my_double(1)=2>0 → keep; my_double(0)=0 not >0 but or=9 → keep.
     assert _multiset(_rows(out)) == _multiset([{"a": 1}, {"a": 0}])
     assert all("__repark_sql_udf" not in name for name in out.column_names)
@@ -1151,7 +1151,7 @@ def test_sql_udf_where_bare_when_column_refuses_or_requires_quote(
     frame = spark.createDataFrame([(1, 5), (2, 9)], "a long, when long")
     frame.createOrReplaceTempView("t_u11_when")
     # Quoted form is the legal path.
-    out = spark.sql('SELECT a FROM t_u11_when WHERE my_double(a) > 0 AND "when" = 5').to_arrow()
+    out = spark.sql("SELECT a FROM t_u11_when WHERE my_double(a) > 0 AND `when` = 5").to_arrow()
     assert _multiset(_rows(out)) == _multiset([{"a": 1}])
     assert all("__repark_sql_udf" not in name for name in out.column_names)
     # Bare form must not succeed with wrong rows (loud refuse or empty/analysis is OK).

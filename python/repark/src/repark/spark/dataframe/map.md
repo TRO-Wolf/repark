@@ -869,7 +869,8 @@ that held the comment (pins: comment-core-1/C-003).
   rewrite uses `origin_plan_id` and `origin_field`, not this fragment.
 - `_quote_filter_sql_identifiers`: Do not rewrite function names or SQL boolean and
   null literals. Protect single-quoted SQL string literals, then double-quoted idents
-  inside the rest.
+  inside the rest. **FNP-4B (2026-09-15):** backtick-quoted spans are protected exactly
+  like double-quoted spans (BL-2 FIXED); schema-bound idents quote with backticks.
 - `_rebind_stable_name_column`: Origin pins a specific side/engine field — skip
   bare-name rebind. Sort markers force a new Column and keep sticky bits; prefer the
   bound's schema-quoted `sql_expr` so cube/rollup free-SQL SELECT quotes reserved
@@ -1069,3 +1070,4 @@ that held the comment (pins: comment-core-1/C-003).
 EAGER-BUDGET-1 review round (2026-09-13): `eager.py::_cache_conf_lookup` matches cache budget keys
 case-insensitively, like the `repark.cache.retained_bytes` intercept: any spelling in the unset tomb disables the key,
 and when two spellings coexist the last one set wins (runtime layer over builder). pins: eager-budget-1/C-004
+- **FNP-4B (2026-09-15, run 15b cleared):** the aggregate rebind leaf matchers in `joins_columns.py` (simple / collect / first-last / binary forms) and `plan_collapse.py` (`_parse_count_distinct_simple_names`) accept a backtick or a double-quoted leaf, so `sum(`x`)` rebinds after internal SQL moved to backtick quoting. pins: `test_select_global_agg.py::test_select_case_preserved_sum_alias_and_alias_lit`, `::test_select_case_preserved_rebind_extended_afs`.

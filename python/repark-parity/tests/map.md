@@ -224,6 +224,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
+  **FNP-4B (2026-09-15):** the `test_sqp_1_string_literals.py` hash re-baselined for the BL-9/BL-12
+  FIXED flips (the old pins documented this red→green).
   H3-SPILL-1 (2026-09-05): the literal-helper inventory gains
   `bench/spill/cell_worker.py` `sql_string_literal` 1 — the spill harness escapes its own
   warehouse path into `CREATE NAMESPACE … LOCATION`, so it uses the helper rather than a
@@ -244,6 +246,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `spark/column.py` `_sql_string_literal` 1 — struct field access renders its join-ON
   bracket key through the helper rather than an f-string. pins: column-parity-1/C-007
 - `test_cap_1_source_file_line_cap.py` — **COLUMN-PARITY-1 critic round (2026-09-14):** `spark/column.py` row 1548 → 1532, `dataframe/core.py` row 4044 → 4040 and `dataframe/plan_collapse.py` row 1057 → 1054 with the script baselines (the deferred struct-edit machinery is deleted for the native `update_fields` design; struct field access gains a join-ON bracket fragment). pins: column-parity-1/C-007
+- `test_cap_1_source_file_line_cap.py` — **FNP-4B (2026-09-15):** the three Rust rows
+1068 → 1065 / 1052 → 1040 / 1084 → 1082 and the `_live_parity.py` row 1778 → 1763 in
+both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b/C-009, C-010
 - `test_cap_1_source_file_line_cap.py` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `repark-core/src/session/tests/session.rs` row 1412 → 1407 in both tables (the ambiguous-commit classification pins moved to `session/tests/commit_unknown.rs`). pins: ice-commit-unknown-1/C-001
 - `test_cap_1_source_file_line_cap.py` — **DF-SURFACE-A-1 critic round 1 (2026-09-14):** `dataframe/core.py` row 4041 → 4035 with the script baseline (rulings R-5/R-6 removed the `inputFiles`/`semanticHash` bindings and the `_schema_override` slot). pins: df-surface-a-1/C-008
 - `test_cap_1_source_file_line_cap.py` — **DF-SURFACE-A-1 step 1 (2026-09-14):** `dataframe/core.py` row 4044 → 4041 with the script baseline (the `localCheckpoint` body moved to `dataframe/surface_a.py`; the nine surface-a names bind one line each and `_schema_override` lands for `to`/`withMetadata`). pins: df-surface-a-1/C-006
@@ -787,3 +792,4 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 First checks: `PYTHONPATH=python/repark-parity/src pytest python/repark-parity/tests -q`.
 Escalate to: [../map.md#debug](../map.md).
+- **FNP-4B remediation (2026-09-15):** CAP-1 mirror ratcheted with the scripts: `column/mod.rs` 1038, `cross_door.rs` 1258, `_live_parity.py` 1753.

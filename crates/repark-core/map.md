@@ -74,6 +74,8 @@ honestly"). SQL routing and session-build registration are seam-inverted
   `create_namespace` and both SQL doors' `IF NOT EXISTS` paths.
 - `src/idents.rs` — table-identifier segment parse + path-escape refuse (delegates to
   `repark_iceberg::write::idents::path_escape_kind` — single-source needles).
+  **FNP-4B (2026-09-15):** doubled-quote unescaping generalized to the quote char, so
+  backtick-quoted segments unescape doubled backticks.
 - `src/object_store_s3.rs` — `s3://` / `s3a://` `read_parquet` support:
   `AwsConfigCredentialProvider` (aws-config default chain → `object_store::CredentialProvider`),
   `build_amazon_s3_store`, `register_bucket_store` (one store under BOTH scheme URLs),

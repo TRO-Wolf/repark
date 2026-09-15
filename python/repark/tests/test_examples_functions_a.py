@@ -46,10 +46,16 @@ def test_encode_decode_charset_refuses(spark: ReparkSession) -> None:
         frame.select(F.decode(F.unbase64(F.lit("QUI=")), "utf-8")).collect()
 
 
-def test_expr_column_reference_refuses() -> None:
-    """expr with a column reference refuses; Spark binds it (EX-FN-4)."""
+def test_expr_column_reference_refuses(spark: ReparkSession) -> None:
+    """expr with a column reference defers binding (EX-FN-4); use without the column refuses.
+
+    Construction succeeds since FNP-4B (the C-003 deferred contract — Spark binds the
+    reference at use); selecting against a frame with no ``a`` raises ``No field named a``.
+    """
+    column = F.expr("a + 1")
+    frame = spark.createDataFrame([(1,)], "b long")
     with pytest.raises(AnalysisException, match="No field named a"):
-        F.expr("a + 1")
+        frame.select(column.alias("v")).to_arrow()
 
 
 def test_format_number_refuses() -> None:

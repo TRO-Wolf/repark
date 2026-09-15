@@ -41,7 +41,7 @@ def test_merge_star_conforms_case_differing_source_by_name(spark: ReparkSession)
         f"MERGE INTO {TABLE} AS t "
         f'USING (SELECT 1 AS "ID", \'updated\' AS "NAME" '
         f'       UNION ALL SELECT 3 AS "ID", \'c\' AS "NAME") AS s '
-        f'ON t.id = s."ID" '
+        f"ON t.id = s.`ID` "
         f"WHEN MATCHED THEN UPDATE SET * "
         f"WHEN NOT MATCHED THEN INSERT *"
     )

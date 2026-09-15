@@ -18,10 +18,6 @@ pub(crate) fn apply_spark_float_as_decimal(mut config: SessionConfig) -> Session
 }
 
 /// Spark-door parser dialect (FNP-4): use Databricks parsing for Spark higher-order functions.
-#[expect(
-    dead_code,
-    reason = "wired by FNP-4b once internal SQL is dialect-independent"
-)]
 pub(crate) fn apply_spark_parser_dialect(mut config: SessionConfig) -> SessionConfig {
     config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
     config
@@ -47,7 +43,10 @@ impl SessionExtension for SparkExtension {
         let config =
             repark_functions::timestamp_type::with_spark_timestamp_type(config, timestamp_type);
         let config = apply_spark_float_as_decimal(config);
-        // The one crossing point.
+        let config = apply_spark_parser_dialect(config);
+        let verbatim =
+            crate::spark_literals::escaped_string_literals_from_config_map(session.conf)?;
+        let config = crate::spark_literals::with_escaped_string_literals_config(config, verbatim);
         Ok(repark_functions::session_time_zone::with_session_time_zone(
             config,
             session.session_time_zone.id(),
@@ -66,11 +65,14 @@ impl SessionExtension for SparkExtension {
     /// # Errors Whatever the composed [`TaExtension`] returns.
     fn register(&self, ctx: &SessionContext) -> datafusion::error::Result<()> {
         repark_functions::register_all(ctx);
+        ctx.register_udf(crate::spark_typed::spark_as_udf().as_ref().clone());
         // WI-2: the plain-INSERT ANSI store-assignment gate, BEFORE the Spark expression semantics.
         ctx.add_analyzer_rule(Arc::new(repark_iceberg::InsertStoreAssignment));
         for rule in repark_functions::analyzer_rules() {
             ctx.add_analyzer_rule(rule);
         }
+        ctx.add_analyzer_rule(Arc::new(crate::spark_typed::FoldSparkNumericCasts));
+        ctx.add_analyzer_rule(Arc::new(crate::spark_typed::SparkProjectionDisplay));
         ctx.add_analyzer_rule(Arc::new(repark_core::StackRewrite));
         TaExtension.register(ctx)
     }
