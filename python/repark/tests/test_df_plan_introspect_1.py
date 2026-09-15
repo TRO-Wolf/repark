@@ -841,3 +841,34 @@ def test_semantichash_cast_cells_match_oracle(spark: ReparkSession, tmp_path: Pa
             assert left.sameSemantics(right) == _cell(name)["result"]["sameSemantics"]
     finally:
         spark.catalog.dropTempView("v")
+
+
+def test_semantichash_sql_door_user_widening_cast_divergence(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """SQL-door user widening casts hash like the plain column today (DF-PLAN-INTRO-CAST-1).
+
+    pins: df-plan-introspect-1/C-015
+    """
+    path = str(tmp_path / "cast_div.parquet")
+    spark.createDataFrame([(1, 10), (2, 20)], "x int, y int").write.parquet(path)
+    spark.read.parquet(path).createOrReplaceTempView("planintro_cast_div")
+    pairs = (
+        (
+            "planintro_r4_sql_cast_in_filter_vs_plain",
+            "SELECT * FROM planintro_cast_div WHERE CAST(x AS BIGINT) > 1",
+            "SELECT * FROM planintro_cast_div WHERE x > 1",
+        ),
+        (
+            "planintro_r4_sql_cast_in_case_vs_plain",
+            "SELECT CASE WHEN CAST(x AS BIGINT) > 1 THEN 1 ELSE 0 END c FROM planintro_cast_div",
+            "SELECT CASE WHEN x > 1 THEN 1 ELSE 0 END c FROM planintro_cast_div",
+        ),
+    )
+    for cell, cast_sql, plain_sql in pairs:
+        cast_frame = spark.sql(cast_sql)
+        plain_frame = spark.sql(plain_sql)
+        assert _cell(cell)["result"]["equal_hash"] is False
+        assert _cell(cell)["result"]["sameSemantics"] is False
+        assert cast_frame.semanticHash() == plain_frame.semanticHash()
+        assert cast_frame.sameSemantics(plain_frame)

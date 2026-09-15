@@ -113,6 +113,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   inventory refresh, maps in lockstep. `risk_tier: standard`. Branch
   `feat/df-plan-introspect-1`.
   pins: df-plan-introspect-1/C-001, C-002, C-003, C-004
+  Round 4 + R-19 (2026-09-15): relation identity, comparison and AND/OR canonicalization, overflow literals,
+  the inputFiles memo; the SQL-door widening-cast pair is registry DF-PLAN-INTRO-CAST-1.
 - [df-colregex-1-ledger.md](df-colregex-1-ledger.md) —
   **DF-COLREGEX-1 step 1 (2026-09-11), in flight:** `colRegex`/`col_regex` reach the
   measured Spark contract — a backticked pattern returns the `RegexColumn` marker

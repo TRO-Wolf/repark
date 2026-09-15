@@ -196,7 +196,7 @@ VERDICT (whole ledger, 2026-09-15 round 3): 11 clauses, 11 PROVEN, 0 OPEN, 0 REJ
 |---|---|---|---|---|
 | C-013 | The round-4 pins hold: relation-identity join pairs differ on both doors (critic A–E, row counts differ), swapped comparisons and AND/OR reorderings equate, overflow literals equate across doors and differ from the wrapped literal, DF-door user casts block, and the cheap null-report arms hold. | Six new `test_df_plan_introspect_1.py` tests over ten pinned `planintro_r4_*` cells plus ruling-driven asserts, with all round-2/round-3 pins re-green in the same run. | **PROVEN** | 43/43 green on the rebuilt release module (36 prior plus 7 new, one belonging to C-014). The two `planintro_r4_sql_cast_*` cells are transcribed but unpinned by C-015. pins: df-plan-introspect-1/C-013 |
 | C-014 | Repeated `inputFiles` on one frame answers identical lists from a per-handle memo, at least 5x faster on a 2k-file directory; a new frame over the same path lists again. | `test_inputfiles_memo_answers_identical_lists_fast` with hardlinked 2k-file directory. | **PROVEN** | Green in the same 43/43 run. Measured 0.0437s first call against 0.000029s second call (1520x, 2026-09-15, release module). pins: df-plan-introspect-1/C-014 |
-| C-015 | A SQL-door widening user cast (`CAST(x AS BIGINT) > 1`, and the CASE form) hashes apart from the plain column. | Cells `planintro_r4_sql_cast_in_filter_vs_plain`, `planintro_r4_sql_cast_in_case_vs_plain` (false/false). | **OPEN** | Unachievable in the hashing layer (see R-13): the Spark door returns already-analyzed plans whose plain and user-cast shapes are byte-identical. The cells are transcribed; no pin asserts them. Question Q1 in the round handback. |
+| C-015 | The SQL-door widening user cast (`CAST(x AS BIGINT) > 1`, and the CASE form) is a recorded divergence: repark answers equal hashes and `sameSemantics` True where Spark answers False, with its registry row and a pin on today's answer. | Cells `planintro_r4_sql_cast_in_filter_vs_plain`, `planintro_r4_sql_cast_in_case_vs_plain` (Spark false/false); registry DF-PLAN-INTRO-CAST-1. | **PROVEN** | Ruling R-19 (orchestrator, run 16b). `test_semantichash_sql_door_user_widening_cast_divergence` passes on the round-4 head and reds when the SQL door types integer literals as INT before coercion. pins: df-plan-introspect-1/C-015 |
 
 **R-12 (L-201, P1, recorded as ordered).** A column reference hashes by the
 relation it resolves to, never by its bare name alone. `plan_canonical.rs`
@@ -275,7 +275,9 @@ Column filters: `semanticHash` median 0.0060s over 11 samples (0.0060–0.0061s)
 passes plus the byte compare). A 20-way `AND` chain hashes in median 0.0006s
 over 11 samples. Round 3 measured 0.0055s/0.0110s on a quieter box; same class.
 
-VERDICT (whole ledger, 2026-09-15 round 4): 14 clauses, 13 PROVEN, 1 OPEN, 0 REJECTED.
+**R-19 (orchestrator, run 16b, 2026-09-15; closes Q1).** The Spark door types the literal `1` as BIGINT and coerces the column before the hasher sees the plan, so no hashing rule can separate `CAST(x AS BIGINT) > 1` from `x > 1` there. Disposition: a recorded divergence, registry row DF-PLAN-INTRO-CAST-1 beside DF-PLAN-INTRO-1, pinned on today's equal answers; the fix is SQL-door literal typing in the SQL planner (the seam FNP9-ARRAY-INSERT-BIGINT-1 names), and run 16c was told the pin reds when that lands. The DataFrame-door half of R-13 stays fixed. The round-4 commit's missing Authored-By trailer was added by the orchestrator (message only).
+
+VERDICT (whole ledger, 2026-09-15 round 4 + R-19): 14 clauses, 14 PROVEN, 0 OPEN, 0 REJECTED.
 
 ```yaml
 COVERAGE_ATTESTATION:

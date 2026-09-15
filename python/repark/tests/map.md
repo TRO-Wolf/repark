@@ -142,6 +142,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: df-plan-introspect-1/C-003, C-006, C-008, C-009, C-010, C-011, C-012, C-013, C-014
   The touched DataFrame suites and the lint, format, clippy, and coverage gates
   stay green. pins: df-plan-introspect-1/C-004
+  **R-19 (2026-09-15):** `test_semantichash_sql_door_user_widening_cast_divergence` pins the SQL-door
+  widening-cast pair as registry DF-PLAN-INTRO-CAST-1 (today's equal answers; reds when the Spark door types
+  integer literals as INT before coercion). pins: df-plan-introspect-1/C-015
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
   / `Row.index` answer the nine `row.*` cells of the committed run-15b oracle
   ([facade_row_oracle.json](facade_row_oracle.json), live PySpark 4.1.2) — value counts

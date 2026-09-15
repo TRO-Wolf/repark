@@ -1731,6 +1731,23 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   rulings R-6/R-7/R-8). FIXED 2026-09-15 (follow-up round 3, ruling R-9):
   `sameSemantics` now answers plan equality per EX-DF-11 instead of handle identity.
 
+### DF-PLAN-INTRO-CAST-1 — on the SQL door a user widening cast hashes like the plain column — **BACKLOG 2026-09-15**
+
+- **repark** — `spark.sql("SELECT * FROM t WHERE CAST(x AS BIGINT) > 1")` and `… WHERE x > 1` (and the same pair
+  inside a `CASE WHEN`) answer equal `semanticHash` values and `sameSemantics` True over an INT column `x`. The Spark
+  door types the literal `1` as BIGINT and coerces the column, so both spellings reach the hasher as byte-identical
+  analyzed plans. On the DataFrame door `col("x").cast("bigint") > 1` and `col("x") > 1` hash apart, as Spark does.
+- **Apache Spark** — the literal is INT, the plain comparison stays INT, and the user's `Cast` stays in the analyzed
+  plan: both pairs answer unequal hashes and `sameSemantics` False. *(oracle: live PySpark 4.1.2, 2026-09-15, cells
+  `planintro_r4_sql_cast_in_filter_vs_plain`, `planintro_r4_sql_cast_in_case_vs_plain` in
+  `facade_dataframe_surface_oracle.json`.)*
+- **Pin** — `python/repark/tests/test_df_plan_introspect_1.py::test_semantichash_sql_door_user_widening_cast_divergence`
+- **Rationale** — BACKLOG, filed by DF-PLAN-INTROSPECT-1 round 4 (ruling R-19). The hash cannot tell identical inputs
+  apart; the fix is SQL-door integer literal typing (the seam FNP9-ARRAY-INSERT-BIGINT-1 names: literals narrow in
+  `SparkIntegerLiteral` only after coercion), owned by the SQL planner. The pin reds when that lands; retire this row
+  in the same change.
+  pins: df-plan-introspect-1/C-015
+
 ### IO-ORC-1 — the ORC reader and writer names are a declared `NOT_IMPLEMENTED` refusal
 
 - **repark** — `DataFrameReader.orc(path, mergeSchema, pathGlobFilter, recursiveFileLookup,
