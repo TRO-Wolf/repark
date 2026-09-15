@@ -1,5 +1,3 @@
-//! Text format read/write bindings over the engine scan and writer.
-
 use std::path::Path;
 use std::sync::Arc;
 
@@ -11,18 +9,12 @@ use crate::fence::fenced_span;
 use crate::session::PyReparkSession;
 use crate::to_py_err;
 
-/// Register the text read/write functions on the native module.
-/// # Errors
-/// Returns `PyErr` if a function cannot be added to the module.
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(read_text, module)?)?;
     module.add_function(wrap_pyfunction!(write_text_frame, module)?)?;
     Ok(())
 }
 
-/// Read a text file or directory as one `value` string column.
-/// # Errors
-/// Maps engine analysis / I/O errors through the exception taxonomy.
 #[pyfunction]
 #[pyo3(signature = (session, path, wholetext=false, line_sep=None))]
 pub fn read_text(
@@ -46,9 +38,6 @@ pub fn read_text(
     })
 }
 
-/// Write one collected frame as `part-*.txt` files under an existing staging dir.
-/// # Errors
-/// Maps engine analysis / I/O errors through the exception taxonomy.
 #[pyfunction]
 #[pyo3(signature = (frame, path, line_sep=None))]
 pub fn write_text_frame(frame: &PyDataFrame, path: &str, line_sep: Option<String>) -> PyResult<()> {

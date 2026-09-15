@@ -1,5 +1,3 @@
-//! Spark `text` file-format scan and writer over local files.
-
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
@@ -29,7 +27,6 @@ const TEXT_BATCH_ROWS: usize = 1024;
 
 const TEXT_READ_CHUNK: usize = 65536;
 
-/// The Spark text schema: one nullable string column named `value`.
 fn text_schema() -> SchemaRef {
     Arc::new(Schema::new(vec![Field::new("value", DataType::Utf8, true)]))
 }
@@ -43,12 +40,6 @@ fn is_hidden_name(name: &std::ffi::OsStr) -> bool {
         .is_some_and(|text| text.starts_with('.') || text.starts_with('_'))
 }
 
-/// Resolve a text read path to sorted data files.
-///
-/// A file reads alone; a directory reads every non-hidden regular file in sorted order
-/// (Spark skips `_` / `.` sidecars the same way). Globs and remote paths fail loud.
-/// # Errors
-/// Returns [`Error::Analysis`] for remote paths, globs, missing paths, and unreadable dirs.
 pub(crate) fn expand_text_paths(path: &str) -> Result<Vec<PathBuf>> {
     if is_remote_path(path) {
         return Err(Error::Analysis(format!(
@@ -94,7 +85,6 @@ pub(crate) fn expand_text_paths(path: &str) -> Result<Vec<PathBuf>> {
     )))
 }
 
-/// Render an Arrow type with the Spark SQL name the text error text carries.
 fn spark_text_type_name(data_type: &DataType) -> String {
     match data_type {
         DataType::Null => "VOID".to_string(),
@@ -135,7 +125,6 @@ fn spark_text_type_name(data_type: &DataType) -> String {
     }
 }
 
-/// Build Spark's `UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE` text for one column.
 fn text_unsupported_column(column: &str, data_type: &DataType) -> Error {
     Error::Analysis(format!(
         "[UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE] The Text datasource doesn't support the column `{column}` of the type \"{}\". SQLSTATE: 0A000",
@@ -143,10 +132,6 @@ fn text_unsupported_column(column: &str, data_type: &DataType) -> Error {
     ))
 }
 
-/// Require exactly one string column before any byte is written.
-/// # Errors
-/// Returns [`Error::Analysis`] naming the first non-string column (Spark's text),
-/// or a column-count refusal when every column is a string but there is not one.
 fn check_text_write_schema(schema: &DFSchema) -> Result<()> {
     let mut offender: Option<(&str, &DataType)> = None;
     for field in schema.fields() {
@@ -176,9 +161,6 @@ fn check_text_write_schema(schema: &DFSchema) -> Result<()> {
     )))
 }
 
-/// Render one collected batch as optional strings (NULL stays empty at the writer).
-/// # Errors
-/// Returns [`DataFusionError::Internal`] when the checked column is not a string array.
 fn text_batch_values(batch: &RecordBatch) -> DataFusionResult<Vec<Option<String>>> {
     let column = batch.column(0);
     let len = batch.num_rows();
@@ -242,10 +224,7 @@ fn text_batch_values(batch: &RecordBatch) -> DataFusionResult<Vec<Option<String>
     Ok(rows)
 }
 
-/// Write one collected frame as `part-*.txt` files (NULL rows write empty lines).
-/// # Errors
-/// Returns [`Error::Analysis`] before any write when the schema is not one string
-/// column, and on any file-system failure while writing.
+#[allow(clippy::missing_errors_doc)]
 pub async fn write_text_frame(frame: &DataFrame, dir: &Path, line_sep: &str) -> Result<()> {
     check_text_write_schema(frame.schema())?;
     let batches = frame.clone().collect().await.map_err(engine_err)?;
@@ -296,7 +275,6 @@ pub async fn write_text_frame(frame: &DataFrame, dir: &Path, line_sep: &str) -> 
     Ok(())
 }
 
-/// Streaming text table: one partition walks every file in sorted order.
 #[derive(Debug, Clone)]
 pub(crate) struct TextTableProvider {
     files: Vec<PathBuf>,
@@ -351,7 +329,6 @@ impl TableProvider for TextTableProvider {
     }
 }
 
-/// One streaming partition over the text files.
 #[derive(Debug)]
 struct TextPartition {
     files: Vec<PathBuf>,
@@ -391,7 +368,6 @@ impl PartitionStream for TextPartition {
     }
 }
 
-/// Decode one line piece as UTF-8 (repark reads UTF-8 text only).
 fn decode_piece(bytes: &[u8], path: &Path) -> DataFusionResult<String> {
     String::from_utf8(bytes.to_vec()).map_err(|_| {
         DataFusionError::Execution(format!(
@@ -401,7 +377,6 @@ fn decode_piece(bytes: &[u8], path: &Path) -> DataFusionResult<String> {
     })
 }
 
-/// A line stream over local files: chunked reads, bounded batches, one row per line.
 struct TextLineStream {
     files: Vec<PathBuf>,
     file_index: usize,
@@ -616,14 +591,11 @@ impl RecordBatchStream for TextLineStream {
 }
 
 impl crate::ReparkSession {
-    /// Read a text file or directory as one `value` string column.
-    /// # Errors
-    /// Returns [`Error::Analysis`] for an empty separator, a remote or glob or missing
-    /// path, and for unreadable directories; [`Error::DataFusion`] on plan failure.
     #[expect(
         clippy::unused_async,
         reason = "symmetric with read_csv/read_json; remote reads will await"
     )]
+    #[allow(clippy::missing_errors_doc)]
     pub async fn read_text(
         &self,
         path: &str,

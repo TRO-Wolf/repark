@@ -58,7 +58,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   undeclared-name refusal maps through `to_py_err`), and `session_source_ping` re-resolves
   then calls `NamedSource::ping` so the connector-pending refusal keeps its engine class.
   pins: cfg-2/C-013, C-014, C-015 |
-| [`text_io.rs`](text_io.rs) | **IO-TEXT-1 (2026-09-14):** the text read/write bindings — two free `#[pyfunction]`s
+| [`text_io.rs`](text_io.rs) | **IO-TEXT-1 (2026-09-14):** the text read/write bindings — two free `#[pyfunction]`s **IO-TEXT-1 (2026-09-15, orchestrator):** `text_io.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
   (the `session_sources` shape, since pyo3 allows one `#[pymethods]` block per type):
   `read_text` drives `ReparkSession::read_text` and wraps the frame with the session
   runtime, `write_text_frame` drives `repark_core::write_text_frame` with a newline

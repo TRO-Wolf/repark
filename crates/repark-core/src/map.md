@@ -315,7 +315,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: nullability-2/C-006
   pins: csv-infer-perf-1/C-002, C-005
   pins: torture-1/C-018, C-020
-- `text_io.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan and writer. The scan
+- `text_io.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan and writer. The scan **IO-TEXT-1 (2026-09-15, orchestrator):** `text_io.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
   is a `TableProvider` over sorted local files (hidden `_`/`.` sidecars skipped; globs,
   remote paths, and missing paths refuse loud) serving one nullable `value` Utf8 column
   through `StreamingTableExec` with one partition: universal `\n`/`\r\n`/`\r` splitting
