@@ -1,14 +1,21 @@
-"""IO-TEXT-1 round 5 — probe5 oracle pins for the X-1/X-2/X-3 follow-up.
+"""IO-TEXT-1 round 5 — probe5 oracle pins for the X-1/X-2/X-3 follow-up —
+plus round 6 probe6 pins for the Y-2 overlay types.
 
 Oracle cells live in ``facade_reader_writer_oracle.json`` as
 ``text_probe5_<cell>`` (live PySpark 4.1.2, recorded 2026-09-15, script
-``probe_iotext5.py`` beside the probe JSON). Result cells pin columns plus
+``probe_iotext5.py`` beside the probe JSON) and ``text_probe6_<cell>``
+(live PySpark 4.1.2, recorded 2026-09-15, script ``probe_iotext6.py``
+beside the probe JSON). Result cells pin columns plus
 schema simpleString plus Row reprs; the two layout cells pin the
 ``CONFLICTING_PARTITION_COLUMN_NAMES`` refusal before any row is read; the
 timestamp cell pins midnight in the session zone with an instant cross-check
-against the oracle wall. The X-4 fallback pins live at the end of this file.
+against the oracle wall. The X-4 fallback pins live at the end of this file;
+the Y-2 overlay pins follow them: boolean results, the four refusals
+(boolean bad, smallint over `1.50`, timestamp_ntz, array), with the
+float/smallint/tinyint/binary result pins held out until the shared
+schema-display layer reports exact keys (ledger R-38).
 
-pins: io-text-1/X-1, X-2, X-3
+pins: io-text-1/X-1, X-2, X-3, Y-2
 """
 
 from __future__ import annotations
@@ -240,6 +247,104 @@ def test_text_probe5_nonleaf_success_marker_only(spark: ReparkSession, tmp_path:
     (root / "k=x" / "_SUCCESS").write_text("", encoding="utf-8")
     (root / "k=x" / "n=1" / "part-00000.txt").write_text("leaf\n", encoding="utf-8")
     _result_pin(spark.read.text(str(root)), "text_probe5_nonleaf_success_marker_only")
+
+
+def _write_kbool(tmp_path: Path) -> Path:
+    """Lay out k=true/k=TRUE/k=false leaves for the probe6 boolean pins."""
+    root = tmp_path / "kbool"
+    for leaf, body in (("k=true", "t\n"), ("k=TRUE", "T\n"), ("k=false", "f\n")):
+        (root / leaf).mkdir(parents=True)
+        (root / leaf / "part-00000.txt").write_text(body, encoding="utf-8")
+    return root
+
+
+def _error_pin(spark: Any, ddl: str, root: Path, cell: str, value: str, display: str) -> None:
+    """Pin an INVALID_PARTITION_VALUE refusal against its oracle cell."""
+    from repark.errors import PySparkException
+
+    expected = _cell(cell)["error"]
+    with pytest.raises(PySparkException) as raised:
+        spark.read.schema(ddl).text(str(root)).collect()
+    assert str(raised.value).startswith("[INVALID_PARTITION_VALUE] Failed to cast value '")
+    assert f"'{value}' to data type \"{display}\" for partition column `k`" in str(raised.value)
+    assert str(raised.value).endswith("SQLSTATE: 42846")
+    assert raised.value.getCondition() == expected["condition"]
+    assert raised.value.getSqlState() == expected["sqlstate"]
+
+
+def test_text_probe6_bool_inferred(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe6_bool_inferred — boolean-looking dirs stay string. pins: io-text-1/Y-2"""
+    _result_pin(spark.read.text(str(_write_kbool(tmp_path))), "text_probe6_bool_inferred")
+
+
+def test_text_probe6_bool_schema_boolean(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe6_bool_schema_boolean — k boolean parses any case. pins: io-text-1/Y-2"""
+    _result_pin(
+        spark.read.schema("value string, k boolean").text(str(_write_kbool(tmp_path))),
+        "text_probe6_bool_schema_boolean",
+    )
+
+
+def test_text_probe6_bool_schema_boolean_bad(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe6_bool_schema_boolean_bad — yes refuses as BOOLEAN. pins: io-text-1/Y-2"""
+    root = tmp_path / "kboolbad"
+    (root / "k=yes").mkdir(parents=True)
+    (root / "k=yes" / "part-00000.txt").write_text("y\n", encoding="utf-8")
+    _error_pin(
+        spark,
+        "value string, k boolean",
+        root,
+        "text_probe6_bool_schema_boolean_bad",
+        "yes",
+        "BOOLEAN",
+    )
+
+
+def test_text_probe6_float_schema_smallint(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe6_float_schema_smallint — 1.50 refuses as SMALLINT. pins: io-text-1/Y-2"""
+    root = tmp_path / "kfloat"
+    (root / "k=1.50").mkdir(parents=True)
+    (root / "k=1.50" / "part-00000.txt").write_text("f\n", encoding="utf-8")
+    _error_pin(
+        spark,
+        "value string, k smallint",
+        root,
+        "text_probe6_float_schema_smallint",
+        "1.50",
+        "SMALLINT",
+    )
+
+
+def _write_kint(tmp_path: Path) -> Path:
+    """Lay out a k=7 leaf for the probe6 smallint/tinyint/binary/ntz/array pins."""
+    root = tmp_path / "kint"
+    (root / "k=7").mkdir(parents=True)
+    (root / "k=7" / "part-00000.txt").write_text("i\n", encoding="utf-8")
+    return root
+
+
+def test_text_probe6_int_schema_timestamp_ntz(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe6_int_schema_timestamp_ntz — 7 refuses TIMESTAMP_NTZ. pins: io-text-1/Y-2"""
+    _error_pin(
+        spark,
+        "value string, k timestamp_ntz",
+        _write_kint(tmp_path),
+        "text_probe6_int_schema_timestamp_ntz",
+        "7",
+        "TIMESTAMP_NTZ",
+    )
+
+
+def test_text_probe6_int_schema_array(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe6_int_schema_array — 7 refuses as ARRAY<INT>. pins: io-text-1/Y-2"""
+    _error_pin(
+        spark,
+        "value string, k array<int>",
+        _write_kint(tmp_path),
+        "text_probe6_int_schema_array",
+        "7",
+        "ARRAY<INT>",
+    )
 
 
 def test_text_partition_fallback_holds_one_part_per_leaf(

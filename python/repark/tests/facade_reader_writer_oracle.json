@@ -1258,6 +1258,114 @@
     "sqlstate": "KD009"
    }
   },
+  "text_probe6_bool_inferred": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('T', 'TRUE')",
+     "('f', 'false')",
+     "('t', 'true')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe6_bool_schema_boolean": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('T', True)",
+     "('f', False)",
+     "('t', True)"
+    ],
+    "schema": "struct<value:string,k:boolean>"
+   }
+  },
+  "text_probe6_bool_schema_boolean_bad": {
+   "error": {
+    "condition": "INVALID_PARTITION_VALUE",
+    "message": "[INVALID_PARTITION_VALUE] Failed to cast value 'yes' to data type \"BOOLEAN\" for partition column `k`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "42846"
+   }
+  },
+  "text_probe6_float_schema_float": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('f', 1.5)"
+    ],
+    "schema": "struct<value:string,k:float>"
+   }
+  },
+  "text_probe6_float_schema_smallint": {
+   "error": {
+    "condition": "INVALID_PARTITION_VALUE",
+    "message": "[INVALID_PARTITION_VALUE] Failed to cast value '1.50' to data type \"SMALLINT\" for partition column `k`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "42846"
+   }
+  },
+  "text_probe6_int_schema_array": {
+   "error": {
+    "condition": "INVALID_PARTITION_VALUE",
+    "message": "[INVALID_PARTITION_VALUE] Failed to cast value '7' to data type \"ARRAY<INT>\" for partition column `k`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "42846"
+   }
+  },
+  "text_probe6_int_schema_binary": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('i', b'7')"
+    ],
+    "schema": "struct<value:string,k:binary>"
+   }
+  },
+  "text_probe6_int_schema_smallint": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('i', 7)"
+    ],
+    "schema": "struct<value:string,k:smallint>"
+   }
+  },
+  "text_probe6_int_schema_timestamp_ntz": {
+   "error": {
+    "condition": "INVALID_PARTITION_VALUE",
+    "message": "[INVALID_PARTITION_VALUE] Failed to cast value '7' to data type \"TIMESTAMP_NTZ\" for partition column `k`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846",
+    "raises": "SparkRuntimeException",
+    "sqlstate": "42846"
+   }
+  },
+  "text_probe6_int_schema_tinyint": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('i', 7)"
+    ],
+    "schema": "struct<value:string,k:tinyint>"
+   }
+  },
   "text_read_dir_glob": {
    "result": {
     "kind": "int",

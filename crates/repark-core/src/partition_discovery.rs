@@ -5,8 +5,9 @@ use std::sync::Arc;
 
 use arrow::array::timezone::Tz;
 use arrow::array::{
-    Array, ArrayBuilder, ArrayRef, Date32Builder, Decimal128Builder, Float64Builder, Int32Builder,
-    Int64Builder, StringArray, StringBuilder, TimestampMicrosecondArray,
+    Array, ArrayBuilder, ArrayRef, BinaryBuilder, BooleanBuilder, Date32Builder, Decimal128Builder,
+    Float32Builder, Float64Builder, Int8Builder, Int16Builder, Int32Builder, Int64Builder,
+    StringArray, StringBuilder, TimestampMicrosecondArray, new_null_array,
 };
 use arrow::datatypes::{DataType, Field, TimeUnit};
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, TimeZone as _};
@@ -19,9 +20,14 @@ const HIVE_DEFAULT_PARTITION: &str = "__HIVE_DEFAULT_PARTITION__";
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum PartitionValue {
     Null,
+    Boolean(bool),
+    Int8(i8),
+    Int16(i16),
     Int32(i32),
     Int64(i64),
+    Float32(f32),
     Float64(f64),
+    Binary(Vec<u8>),
     Date32(i32),
     Decimal128(i128, i8),
     TimestampMicros(i64),
@@ -131,9 +137,14 @@ fn parse_partition_value(text: &str, data_type: &DataType) -> PartitionValue {
 pub(crate) fn canonical_partition_text(value: &PartitionValue) -> Option<String> {
     match value {
         PartitionValue::Null => None,
+        PartitionValue::Boolean(flag) => Some(flag.to_string()),
+        PartitionValue::Int8(number) => Some(number.to_string()),
+        PartitionValue::Int16(number) => Some(number.to_string()),
         PartitionValue::Int32(number) => Some(number.to_string()),
         PartitionValue::Int64(number) => Some(number.to_string()),
+        PartitionValue::Float32(number) => Some(number.to_string()),
         PartitionValue::Float64(number) => Some(number.to_string()),
+        PartitionValue::Binary(bytes) => String::from_utf8(bytes.clone()).ok(),
         PartitionValue::Date32(days) => Some(days.to_string()),
         PartitionValue::Decimal128(scaled, scale) => {
             crate::text_partition::decimal_plain_text(*scaled, *scale).ok()
@@ -246,9 +257,33 @@ pub(crate) fn finish_partition_columns(
         let taken: StringArray = builder.finish();
         let taken = taken.slice(0, count);
         let column: ArrayRef = match data_type {
+            DataType::Boolean => finish_partition_numbers!(taken, BooleanBuilder, bool),
+            DataType::Int8 => finish_partition_numbers!(taken, Int8Builder, i8),
+            DataType::Int16 => finish_partition_numbers!(taken, Int16Builder, i16),
             DataType::Int32 => finish_partition_numbers!(taken, Int32Builder, i32),
             DataType::Int64 => finish_partition_numbers!(taken, Int64Builder, i64),
+            DataType::Float32 => finish_partition_numbers!(taken, Float32Builder, f32),
             DataType::Float64 => finish_partition_numbers!(taken, Float64Builder, f64),
+            DataType::Binary => {
+                let mut out = BinaryBuilder::new();
+                for index in 0..taken.len() {
+                    if taken.is_null(index) {
+                        out.append_null();
+                    } else {
+                        out.append_value(taken.value(index).as_bytes());
+                    }
+                }
+                Arc::new(out.finish())
+            }
+            DataType::List(_) | DataType::Map(_, _) | DataType::Struct(_) => {
+                let live = (0..taken.len()).any(|index| !taken.is_null(index));
+                if live {
+                    return Err(DataFusionError::Execution(
+                        "partition value does not match its inferred type".to_string(),
+                    ));
+                }
+                new_null_array(data_type, taken.len())
+            }
             DataType::Date32 => finish_partition_numbers!(taken, Date32Builder, i32),
             DataType::Decimal128(precision, scale) => {
                 let mut out = Decimal128Builder::new();
@@ -387,13 +422,43 @@ pub(crate) fn user_partition_type(name: &str, session_zone: &str) -> Option<(Dat
         "int" | "integer" => Some((DataType::Int32, String::from("INT"))),
         "bigint" | "long" => Some((DataType::Int64, String::from("BIGINT"))),
         "double" => Some((DataType::Float64, String::from("DOUBLE"))),
+        "boolean" => Some((DataType::Boolean, String::from("BOOLEAN"))),
+        "float" => Some((DataType::Float32, String::from("FLOAT"))),
+        "smallint" => Some((DataType::Int16, String::from("SMALLINT"))),
+        "tinyint" => Some((DataType::Int8, String::from("TINYINT"))),
+        "binary" => Some((DataType::Binary, String::from("BINARY"))),
         "date" => Some((DataType::Date32, String::from("DATE"))),
         "timestamp" => Some((
             DataType::Timestamp(TimeUnit::Microsecond, Some(session_zone.into())),
             String::from("TIMESTAMP"),
         )),
-        _ => parse_decimal_user_type(name),
+        "timestamp_ntz" => Some((
+            DataType::Timestamp(TimeUnit::Microsecond, None),
+            String::from("TIMESTAMP_NTZ"),
+        )),
+        _ => parse_decimal_user_type(name).or_else(|| parse_array_user_type(name)),
     }
+}
+
+fn parse_array_user_type(name: &str) -> Option<(DataType, String)> {
+    let inner = name.strip_prefix("array<")?.strip_suffix('>')?;
+    let item = match inner {
+        "boolean" => DataType::Boolean,
+        "tinyint" => DataType::Int8,
+        "smallint" => DataType::Int16,
+        "int" | "integer" => DataType::Int32,
+        "bigint" | "long" => DataType::Int64,
+        "float" => DataType::Float32,
+        "double" => DataType::Float64,
+        "string" => DataType::Utf8,
+        "binary" => DataType::Binary,
+        "date" => DataType::Date32,
+        _ => return None,
+    };
+    Some((
+        DataType::List(Arc::new(Field::new("item", item, true))),
+        format!("ARRAY<{}>", inner.to_uppercase()),
+    ))
 }
 
 fn parse_decimal_user_type(name: &str) -> Option<(DataType, String)> {
@@ -417,9 +482,23 @@ pub(crate) fn cast_raw_partition_value(
     zone: Tz,
 ) -> Option<PartitionValue> {
     match data_type {
+        DataType::Boolean => {
+            if raw.eq_ignore_ascii_case("true") {
+                Some(PartitionValue::Boolean(true))
+            } else if raw.eq_ignore_ascii_case("false") {
+                Some(PartitionValue::Boolean(false))
+            } else {
+                None
+            }
+        }
+        DataType::Int8 => raw.parse::<i8>().ok().map(PartitionValue::Int8),
+        DataType::Int16 => raw.parse::<i16>().ok().map(PartitionValue::Int16),
         DataType::Int32 => raw.parse::<i32>().ok().map(PartitionValue::Int32),
         DataType::Int64 => raw.parse::<i64>().ok().map(PartitionValue::Int64),
+        DataType::Float32 => raw.parse::<f32>().ok().map(PartitionValue::Float32),
         DataType::Float64 => raw.parse::<f64>().ok().map(PartitionValue::Float64),
+        DataType::Binary => Some(PartitionValue::Binary(raw.as_bytes().to_vec())),
+        DataType::List(_) | DataType::Map(_, _) | DataType::Struct(_) => None,
         DataType::Date32 => NaiveDate::parse_from_str(raw, "%Y-%m-%d")
             .ok()
             .and_then(|date| {
@@ -755,7 +834,6 @@ mod tests {
             user_partition_type("decimal(10,2)", "UTC"),
             Some((DataType::Decimal128(10, 2), String::from("DECIMAL(10,2)")))
         );
-        assert_eq!(user_partition_type("boolean", "UTC"), None);
         assert_eq!(user_partition_type("decimal(0,0)", "UTC"), None);
         assert_eq!(user_partition_type("decimal(10,11)", "UTC"), None);
         assert_eq!(
@@ -800,6 +878,95 @@ mod tests {
         assert_eq!(
             invalid_partition_message("y", "INT", "k"),
             "[INVALID_PARTITION_VALUE] Failed to cast value 'y' to data type \"INT\" for partition column `k`. Ensure the value matches the expected data type for this partition column. SQLSTATE: 42846"
+        );
+    }
+
+    #[test]
+    fn partition_user_type_maps_probe6_shapes() {
+        assert_eq!(
+            user_partition_type("boolean", "UTC"),
+            Some((DataType::Boolean, String::from("BOOLEAN")))
+        );
+        assert_eq!(
+            user_partition_type("float", "UTC"),
+            Some((DataType::Float32, String::from("FLOAT")))
+        );
+        assert_eq!(
+            user_partition_type("smallint", "UTC"),
+            Some((DataType::Int16, String::from("SMALLINT")))
+        );
+        assert_eq!(
+            user_partition_type("tinyint", "UTC"),
+            Some((DataType::Int8, String::from("TINYINT")))
+        );
+        assert_eq!(
+            user_partition_type("binary", "UTC"),
+            Some((DataType::Binary, String::from("BINARY")))
+        );
+        assert_eq!(
+            user_partition_type("timestamp_ntz", "UTC"),
+            Some((
+                DataType::Timestamp(TimeUnit::Microsecond, None),
+                String::from("TIMESTAMP_NTZ")
+            ))
+        );
+        assert_eq!(
+            user_partition_type("array<int>", "UTC"),
+            Some((
+                DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
+                String::from("ARRAY<INT>")
+            ))
+        );
+        assert_eq!(user_partition_type("map<string,int>", "UTC"), None);
+        assert_eq!(user_partition_type("struct<x:int>", "UTC"), None);
+        assert_eq!(user_partition_type("array<array<int>>", "UTC"), None);
+        assert_eq!(
+            cast_raw_partition_value("TRUE", &DataType::Boolean, utc_zone()),
+            Some(PartitionValue::Boolean(true))
+        );
+        assert_eq!(
+            cast_raw_partition_value("false", &DataType::Boolean, utc_zone()),
+            Some(PartitionValue::Boolean(false))
+        );
+        assert_eq!(
+            cast_raw_partition_value("yes", &DataType::Boolean, utc_zone()),
+            None
+        );
+        assert_eq!(
+            cast_raw_partition_value("1.50", &DataType::Float32, utc_zone()),
+            Some(PartitionValue::Float32(1.5))
+        );
+        assert_eq!(
+            cast_raw_partition_value("1.50", &DataType::Int16, utc_zone()),
+            None
+        );
+        assert_eq!(
+            cast_raw_partition_value("7", &DataType::Int16, utc_zone()),
+            Some(PartitionValue::Int16(7))
+        );
+        assert_eq!(
+            cast_raw_partition_value("7", &DataType::Int8, utc_zone()),
+            Some(PartitionValue::Int8(7))
+        );
+        assert_eq!(
+            cast_raw_partition_value("7", &DataType::Binary, utc_zone()),
+            Some(PartitionValue::Binary(vec![b'7']))
+        );
+        assert_eq!(
+            cast_raw_partition_value(
+                "7",
+                &DataType::Timestamp(TimeUnit::Microsecond, None),
+                utc_zone()
+            ),
+            None
+        );
+        assert_eq!(
+            cast_raw_partition_value(
+                "7",
+                &DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
+                utc_zone()
+            ),
+            None
         );
     }
 }

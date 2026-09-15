@@ -1909,7 +1909,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   non-leaf dirs read the leaf. **(X-4):** `test_text_partition_fallback_*`
   pins one part per leaf with full row sets past 256 keys; pin docstrings
   stay within the line limit.
-  pins: io-text-1/C-001, C-002, C-003, C-004, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9, U-1, U-2, U-3, U-4, U-5, U-6, U-9, U-10, U-11, W-1, W-2, W-3, W-4, W-5, V-1, V-2, X-1, X-2, X-3, X-4
+  **Round 6 (2026-09-15, Y-2):** the probe6 cells land as `text_probe6_*`
+  in `test_io_text_2.py`: boolean overlay (case-insensitive parse, `yes`
+  refuses) and timestamp_ntz / array / smallint-over-`1.50` refusals with
+  Spark's uppercase display; the pins read columns, schema simpleString, and
+  Row reprs (result pins) or text, condition, and sqlstate (refusal pins) off
+  the oracle cells. The float/smallint/tinyint/binary result pins are held
+  out until the shared schema-display layer reports exact keys (ledger R-38).
+  pins: io-text-1/C-001, C-002, C-003, C-004, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9, U-1, U-2, U-3, U-4, U-5, U-6, U-9, U-10, U-11, W-1, W-2, W-3, W-4, W-5, V-1, V-2, X-1, X-2, X-3, X-4, Y-2
 - `test_column_x1_census.py` — X1: Column between/pow/string/bitwise/eqNullSafe/lit temporal + trig;
   octo C1: bitwiseOR/XOR values, lit(time)/lit(list)/empty array, hypot 3-4-5, dayname(date);
   octo C2: eqNullSafe(None), between inclusive/inverted;

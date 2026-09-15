@@ -1881,11 +1881,14 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   FIXED 2026-09-15). Past the 256-writer cap an evicted key reopens its
   `part-00000.txt` in append mode (round 4, ruling V-1), so a shuffled
   write holds one part file per leaf. Past 256 distinct keys the tail diverts
-  to the sorted single-writer fallback (round 5, ruling X-4): the remaining
-  rows sort by the partition columns through a spill-capable DataFusion sort
-  and append key by key onto each key's existing part file — shuffled
-  k=1000/200k falls from 2.07 s and ~200k opens to 0.29 s and 1256 opens,
-  k=10000/1M from 12.47 s and ~1M opens to 1.58 s and 10256 opens.
+  to the sorted single-writer fallback (round 5, ruling X-4; round 6, ruling
+  Y-1): the remaining stream enters a DataFusion sort through a
+  single-partition source under the session task context — session pool and
+  disk manager, so the sort spills under the session memory limit — and
+  appends key by key from the sort output stream onto each key's existing
+  part file with nothing collected. Shuffled k=1000/200k runs 0.156 s at
+  152 MiB peak, fat 50k x 4 KiB runs 0.443 s at 533 MiB peak (round-5 build:
+  0.219 s / 232 MiB and 1.587 s / 730 MiB with zero spill files).
 - **Apache Spark** — writes `key=value/` leaf dirs with `part-*` files inside.
 - **Pin** — `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
   (leaf bytes plus `_SUCCESS`) and `::test_text_probe_partition_by_two_remaining`
@@ -1894,9 +1897,12 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   (300 keys round-robin past the cap hold one part per leaf — round 4, ruling V-1,
   now via the fallback); `crates/repark-core/src/text_partition_fallback.rs::text_partition_fallback_holds_one_part_per_leaf`
   plus `::text_partition_fallback_keeps_below_cap_path` (round 5, ruling X-4)
+  plus `::text_partition_fallback_spills_under_small_memory_limit` (round 6,
+  ruling Y-1: 16 MiB pool over a 54 MiB tail spills and writes every row, one
+  part per key)
   and `python/repark/tests/test_io_text_2.py::test_text_partition_fallback_holds_one_part_per_leaf`.
 - **Rationale** — FIXED, 2026-09-15 (io-text-1 follow-up).
-  pins: io-text-1/T-6, X-4
+  pins: io-text-1/T-6, X-4, Y-1
 
 ---
 
@@ -8758,10 +8764,16 @@ field NAME.
   `CONFLICTING_PARTITION_COLUMN_NAMES` before any row while `_`-prefixed
   markers never count as data files; per-file values ride one `Arc` into
   every scan partition (ruling X-5: `count()` over 100k files falls from
-  ~3.6 KiB to ~1.3 KiB RSS per file).
+  ~3.6 KiB to ~1.3 KiB RSS per file). Round 6 (ruling Y-2): a named column
+  also parses boolean (case-insensitive, anything else refuses), float,
+  smallint, tinyint (strict, so `1.50` refuses as SMALLINT), binary (raw
+  UTF-8 bytes), timestamp_ntz, and `array<primitive>` — the last two miss
+  with Spark's uppercase display (`TIMESTAMP_NTZ`, `ARRAY<INT>`) as
+  `INVALID_PARTITION_VALUE` 42846; map/struct stay unsupported-type
+  refusals; inferred boolean-looking directories stay string.
 - **Apache Spark** — partition discovery adds the directory columns
   (`(value, k)` rows on the probe's `partition_by` read-back).
-  *(oracle: live PySpark 4.1.2, probes `partition_by` + probe3 `part_*` + probe4 `text_probe4_*` + probe5 `text_probe5_*`, 2026-09-15.)*
+  *(oracle: live PySpark 4.1.2, probes `partition_by` + probe3 `part_*` + probe4 `text_probe4_*` + probe5 `text_probe5_*` + probe6 `text_probe6_*`, 2026-09-15.)*
 - **Pin** —
   `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
   plus `test_text_probe3_part_*_read` (slash, specials, empty/null,
@@ -8772,13 +8784,16 @@ field NAME.
   and the `L-201`/`L-205` pins (`lead_zero_*`, `plus_sign`, bare globs stay
   `value`-only) plus `python/repark/tests/test_io_text_2.py::test_text_probe5_*`
   (raw-text overlay, uneven-depth and non-leaf refusals, marker-only layout,
-  fallback layout — round 5, rulings X-1, X-2, X-3, X-4).
+  fallback layout — round 5, rulings X-1, X-2, X-3, X-4) plus
+  `::test_text_probe6_*` (boolean overlay and results, the four uppercase
+  refusals — round 6, ruling Y-2; the float/smallint/tinyint/binary result
+  pins wait on the shared schema-display keys, ledger R-38).
 - **Rationale** — FIXED, 2026-09-15 (io-text-1 round 3, ruling U-3).
   Discovery lives in the engine module `partition_discovery` (leaf files +
   root in, schema + per-file values out; IO-ORC-1 reuses it) with the shared
   batch materialization beside it; the user-schema overlay lives in the new
   engine module `text_schema` beside the scan (round 4, ruling W-1).
-  pins: io-text-1/T-6, U-3, W-1, W-2, W-3, W-4, X-1, X-2, X-3, X-4, X-5
+  pins: io-text-1/T-6, U-3, W-1, W-2, W-3, W-4, X-1, X-2, X-3, X-4, X-5, Y-1, Y-2
 
 ## 8. Drop-in disclosure rationale
 

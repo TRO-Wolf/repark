@@ -372,7 +372,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   unescaped texts beside the inferred values; name lists that differ at any
   depth refuse through one shared message builder; user types gain decimal
   and session-zone timestamp with canonical decimal/timestamp text.
-  pins: io-text-1/U-3, W-1, W-3, X-1, X-2, X-3
+  **Round 6 (2026-09-15, Y-2):** user types gain boolean (case-insensitive,
+  anything else refuses), float, smallint, tinyint, binary (raw UTF-8 bytes),
+  timestamp_ntz (no zone), and `array<primitive>` (always refuses as
+  `INVALID_PARTITION_VALUE` with Spark's uppercase display); map/struct stay
+  unsupported-type refusals.
+  pins: io-text-1/U-3, W-1, W-3, X-1, X-2, X-3, Y-2
 - `text_partition.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-1+U-2):** the one-scan
   `partitionBy` text writer (`write_text_partitioned`, exported at the crate root).
   One `execute_stream` pass routes each row to its leaf writer by rendered key
