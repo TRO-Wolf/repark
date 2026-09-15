@@ -18,6 +18,14 @@ unit — so a new family gets a child module and the parent's default arm falls 
   `ScalarFunction::new_udf` over the null-preserving `spark_array_*_udf` shims — one
   native call per facade level, Spark `(array, element)` order.
   pins: fnp-9-collections-json/C-006, C-007, array-null-1/C-003
+  pins: fnp-9-collections-json/C-006, C-007
+- `dispatch_spark.rs` — **DOOR-CONVERGE-1 (2026-09-15):** the converged scalar arms —
+  `abs`, `hypot`, `bin`, `rint`, `base64`, `unbase64`, `size`, `cardinality`,
+  `array_contains` / `array_has`, `ascii`, `length` / `character_length` /
+  `char_length`. Each enforces arity and calls the `repark_functions::expr_fn` builder
+  for the same kernel `register_all` installs on the SQL door — one kernel per name on
+  both doors.
+  pins: door-converge-1/C-001..C-008
 
 ## Pointers
 

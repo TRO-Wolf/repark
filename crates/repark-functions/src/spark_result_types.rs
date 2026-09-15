@@ -121,6 +121,23 @@ pub fn signed_aggregate_functions() -> Vec<Arc<AggregateUDF>> {
     ]
 }
 
+#[must_use]
+pub fn approx_count_distinct_udaf() -> Arc<AggregateUDF> {
+    Arc::new(AggregateUDF::new_from_impl(SignedAggregate::new(Arc::new(
+        approx_distinct_udaf()
+            .as_ref()
+            .clone()
+            .with_aliases(["approx_count_distinct"]),
+    ))))
+}
+
+#[must_use]
+pub fn regr_count_signed_udaf() -> Arc<AggregateUDF> {
+    Arc::new(AggregateUDF::new_from_impl(SignedAggregate::new(
+        regr_count_udaf(),
+    )))
+}
+
 #[derive(Debug)]
 struct SignedAggregate {
     inner: Arc<AggregateUDF>,
@@ -161,6 +178,14 @@ impl AggregateUDFImpl for SignedAggregate {
 
     fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
         Ok(DataType::Int64)
+    }
+
+    fn is_nullable(&self) -> bool {
+        false
+    }
+
+    fn default_value(&self, _data_type: &DataType) -> Result<ScalarValue> {
+        Ok(ScalarValue::Int64(Some(0)))
     }
 
     fn accumulator(&self, acc_args: AccumulatorArgs) -> Result<Box<dyn Accumulator>> {

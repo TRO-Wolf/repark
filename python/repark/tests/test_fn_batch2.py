@@ -87,7 +87,7 @@ def test_string_batch2_values_and_types(spark: ReparkSession) -> None:
     assert row["fis"] == 2
     assert row["loc"] == 2
     assert row["pos"] == 2
-    assert row["b64"] == "aGk"
+    assert row["b64"] == "aGk="
     assert pa.types.is_integer(table.schema.field("lv").type) or pa.types.is_floating(
         table.schema.field("lv").type
     )

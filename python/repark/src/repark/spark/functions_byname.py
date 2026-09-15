@@ -53,7 +53,6 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "bool_and",
     "bool_or",
     "char",
-    "char_length",
     "coalesce",
     "collect_list",
     "collect_set",

@@ -21,26 +21,6 @@ enum FacadeShape {
 
 const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
     (
-        "abs",
-        FacadeShape::Kernel(1),
-        "facade expr_fn::abs is checked_abs — raises on integer-min, matching Spark ANSI-on; \
-         the door's datafusion-spark SparkAbs reads execution.enable_ansi_mode, which repark \
-         never sets, so the door wraps on every signed minimum — measured on typed int8/int16/\
-         int32/int64 columns and CASTs: abs(x) returns the input minimum unchanged \
-         (-128 / -32768 / -2147483648 / -9223372036854775808)",
-    ),
-    (
-        "ascii",
-        FacadeShape::Kernel(1),
-        "facade expr_fn::ascii vs datafusion-spark ascii — codepoint vs byte on non-ASCII",
-    ),
-    (
-        "base64",
-        FacadeShape::Kernel(1),
-        "facade lowers to encode(x, 'base64'); spark kernel chunks at 76 chars",
-    ),
-    ("unbase64", FacadeShape::Kernel(1), "mirror of base64"),
-    (
         "ceil",
         FacadeShape::Kernel(1),
         "DF-core ceil is float-first; spark ceil carries the decimal target-scale arm",
@@ -53,26 +33,11 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
         "DF-core round vs spark HALF_UP with a decimal target scale",
     ),
     (
-        "length",
-        FacadeShape::Kernel(1),
-        "DF-core length is chars; spark length is chars for string, bytes for binary",
-    ),
-    (
-        "character_length",
-        FacadeShape::Kernel(1),
-        "alias of length",
-    ),
-    (
         "like",
         FacadeShape::Composed,
         "DF-core LIKE vs spark like with an explicit escape argument",
     ),
     ("ilike", FacadeShape::Composed, "mirror of like"),
-    (
-        "size",
-        FacadeShape::Kernel(1),
-        "DF-core cardinality vs spark size with spark.sql.legacy.sizeOfNull",
-    ),
     (
         "sec",
         FacadeShape::Composed,
@@ -88,11 +53,6 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
         "array_repeat",
         FacadeShape::Kernel(2),
         "DF-core array_repeat vs spark array_repeat on negative counts",
-    ),
-    (
-        "array_contains",
-        FacadeShape::Kernel(2),
-        "DF-core array_has vs spark array_contains three-valued null",
     ),
     (
         "date_part",
@@ -117,6 +77,18 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
 
 /// Scalar spellings covered by the explicit guard.
 const SCALAR_NAMES: &[(&str, usize)] = &[
+    ("abs", 1),
+    ("hypot", 2),
+    ("bin", 1),
+    ("rint", 1),
+    ("base64", 1),
+    ("unbase64", 1),
+    ("size", 1),
+    ("cardinality", 1),
+    ("array_contains", 2),
+    ("ascii", 1),
+    ("length", 1),
+    ("character_length", 1),
     ("to_timestamp", 1),
     ("crc32", 1),
     ("sha1", 1),
@@ -198,9 +170,9 @@ fn facade_avg_is_the_repark_retracting_kernel_not_datafusion_core() {
 fn expected_divergences_are_all_still_real() {
     assert_eq!(
         EXPECTED_DIVERGENCES.len(),
-        22,
-        "ABS-EXPR-1 lowered F.abs to a real kernel, exposing the door's wrapping SparkAbs; \
-         ratchet 21 → 22"
+        14,
+        "DOOR-CONVERGE-1 closed abs/ascii/base64/unbase64/length/character_length/size/\
+         array_contains — both doors now resolve the same kernel; ratchet 22 → 14"
     );
     let ctx = registered_session();
     let mut already_fixed = Vec::new();

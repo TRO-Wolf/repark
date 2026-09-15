@@ -216,14 +216,44 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_replace_duplicate_name_join_columns` pins P2-3 (qualifier-bound multi-name
   equi-join output, both `x` columns rewritten, `subset=["x"]` still AMBIGUOUS).
   pins: replace-linear-1/C-001, C-002, C-003, C-004, C-005
+- [test_door_converge_1.py](test_door_converge_1.py) — **DOOR-CONVERGE-1 (2026-09-15):**
+  both-door oracle pins for the eight clause names — `base64`/`unbase64` (padding,
+  76-char CRLF chunking, lenient decode of `'!!'`/unpadded), `hypot` (rescaled
+  `f64::hypot`, inf-over-NaN, NULL propagation), `abs` (ANSI `[ARITHMETIC_OVERFLOW]` on
+  every signed minimum, width kept), `size`/`cardinality` (NULL-in NULL-int out),
+  `array_contains` (three-valued NULL + `DATATYPE_MISMATCH.NULL_TYPE` needle),
+  `approx_count_distinct`/`regr_count` (non-null `bigint`, empty → 0),
+  `ascii`/`length`/`character_length` (codepoint + binary bytes), and the BL-6
+  SQL-door refusal class — all nine pins green on the converged kernels.
+  **Round 2 (2026-09-16):** `unbase64` raises the Java MIME-decoder texts on
+  malformed endings while `'QR'`/`'QQQ'`/whitespace/`'!!'` stay lenient;
+  `array_contains` coerces to the tightest common type (DOUBLE needle →
+  `False` NULLABLE, BIGINT in/out of range), refuses incompatible pairs with
+  `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` under ANSI on and off, and
+  answers `array_contains(array(), 1)` = `False`; `abs` ANSI-off
+  wraps signed minima on a builder-configured session.
+  **Round 3 (2026-09-15):** ruling R-10 reverted the array-constructor
+  `containsNull` change and the registry-wide promise retag to DOOR-CONVERGE-2;
+  under ruling R-13 the literal-haystack nullability legs of `test_l002`/`test_l004`
+  pin today's `nullable=True` as recorded divergence ARRAY-LITERAL-CONTAINSNULL-1
+  and flip back to Spark's non-null when that unit lands. `test_element_at_alias_1_*`
+  codifies today's `element_at` resolution against the alias-clobber hazard
+  (ELEMENT-AT-ALIAS-1).
+  **Round 5 (2026-09-16):** `abs` takes Spark's implicit STRING→DOUBLE cast on both
+  doors — `test_c003_abs_casts_string_to_double_on_both_doors` pins `abs('-1')` =
+  1.0 double nullable and CAST_INVALID_INPUT on `'x'` literal and column inputs
+  (fixtures-batch11.json A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x).
+  pins: door-converge-1/C-001, C-002, C-003, C-004, C-005,
+  C-006, C-007, C-008, C-010, C-011, C-012, C-013, C-014
 - [test_abs_expr_1.py](test_abs_expr_1.py) — **ABS-EXPR-1 (2026-09-13):** `F.abs` /
   `F.cbrt` / `F.nullif` are one native `call_scalar` each — the depth-40 memory pin
   runs each chain in a subprocess under `RLIMIT_AS` (12 GB) with a per-level bound
   exit, bounded by 2× the flat `F.sqrt` delta; the answer pins encode the live
   PySpark 4.1.2 oracle cells on the Arrow path (value AND type: tinyint keeps int8
   and raises at min, decimal keeps (10,3), `cbrt` int exact / `-0.0` signed /
-  double for every numeric input). `test_abs_door_parity_integer_min` value-pins the
-  recorded divergence — facade raises at int-min, `SELECT abs(x)` wraps. Pin docstrings
+  double for every numeric input). `test_abs_door_parity_integer_min` pins parity —
+  both doors raise `[ARITHMETIC_OVERFLOW]` at int-min under ANSI (DOOR-CONVERGE-1
+  2026-09-15; the pin previously recorded the door's wrap). Pin docstrings
   stay one line under the 100-column ruff limit (clause ids first, then the claim).
   pins: abs-expr-1/C-001, C-002, C-003, C-004
 - [test_perf_unpivot_1.py](test_perf_unpivot_1.py) — **PERF-UNPIVOT-1 step 1 (2026-09-12):**
@@ -461,8 +491,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_pr_245_revalidation.py` — PR #245 public-door revalidation for Spark string literals,
   binary casts, parser limits, and facade controls.
 - [test_bl15_bl16_math_divergences.py](test_bl15_bl16_math_divergences.py) — **BL-15 FIXED
-  (LOG1P-1, 2026-09-02):** `F.expm1` is the precise kernel (`math.expm1`); BL-16 hypot
-  still overflows to `inf` at extreme magnitude. pins: log1p-1-precise-kernels/C-005
+  (LOG1P-1, 2026-09-02):** `F.expm1` is the precise kernel (`math.expm1`); **BL-16 FIXED
+  (DOOR-CONVERGE-1, 2026-09-15):** `hypot` rescales like Spark —
+  `hypot(1e200,1e200)` → `1.4142135623730951e+200` on both doors.
+  pins: log1p-1-precise-kernels/C-005, door-converge-1/C-002
 - [test_fn_arrays_divergence.py](test_fn_arrays_divergence.py) — **FN-FIX-1 (2026-09-03):** (module docstring is the forced one-liner; the EX-8 and FN-FIX-1 pins are cited on this row, not in the file)
   Spark-equal array pins — FN-ARRAYPOS-1 not-found `0`, FN-ARRAYSORT-1 NULLs last,
   FN-ARRAYSOVERLAP-1 three-valued, FN-FLATTEN-1 NULL sub-array → NULL row.
@@ -497,10 +529,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the
   session-scoped `spark_engine`. Oracle live PySpark 4.1.2.
   pins: log1p-1-precise-kernels/C-001, C-002, C-004
-- [test_bl17_base64_padding.py](test_bl17_base64_padding.py) — **BL-17 (2026-09-03):**
-  codifies today's unpadded `F.base64` (`'Spark'` → `U3Bhcms`, `'A'` → `QQ`) so a
-  padded kernel reds the pin; Spark 4.1.2 is `U3Bhcms=` / `QQ==`. Measured by EX-4.
-  pins: ex-4-functions-strings-a/C-001
+- [test_bl17_base64_padding.py](test_bl17_base64_padding.py) — **BL-17 FIXED
+  (DOOR-CONVERGE-1, 2026-09-15):** pins Spark's RFC 4648 padded answers on both doors
+  (`'Spark'` → `U3Bhcms=`, `'A'` → `QQ==`, `'Apache'` → `QXBhY2hl`). Measured by EX-4.
+  pins: ex-4-functions-strings-a/C-001, door-converge-1/C-001
 - [test_fn_initcap_divergence.py](test_fn_initcap_divergence.py) — **FN-FIX-2 (2026-09-04):**
   FN-INITCAP-1. `initcap` starts a word only after SPACE (`'a-b'` → `'A-b'`).
   pins: fn-fix-2-string-rows/C-003
@@ -822,9 +854,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins — INT literals and arithmetic in both ANSI modes, BIGINT count-likes, the INT rank
   family, session-zone STRING `from_unixtime` with the format argument, EXPLAIN plan-cast
   pins, ANSI-door stock-type controls, and seven live-oracle legs behind
-  `REPARK_PARITY_LIVE=1` (full-match shapes, an approx/regr nullability carve-out, an
-  ANSI-off overflow leg, from_unixtime extremes, a grouping type carve-out, re-coercion
-  shapes). Round 4 adds CASE/COALESCE/IF/array/struct/map/UNION/DECIMAL re-coercion cells,
+  `REPARK_PARITY_LIVE=1` (full-match shapes, an ANSI-off overflow leg, from_unixtime
+  extremes, a grouping type carve-out, re-coercion shapes; the approx/regr nullability
+  carve-out retired when DOOR-CONVERGE-1 made both non-null, 2026-09-15).
+  Round 4 adds CASE/COALESCE/IF/array/struct/map/UNION/DECIMAL re-coercion cells,
   TINYINT/SMALLINT sums, `ntile(BIGINT)` and grouping acceptances (TY-7/8/9/10), and
   wrapped-year from_unixtime cells. Round 5 adds negative 3- and 4-digit-year
   from_unixtime cells (default, `yyyy`, `yy`) on both doors plus a New York cell.
@@ -893,7 +926,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   4.1.2 on the shared `spark_engine`.
   Round 2 (2026-09-06): complex casts propagate the child flag with non-null
   `STRUCT()`/`MAP()`/`ARRAY()` constructors (both ANSI modes, both doors, live leg);
-  the `MAP<…>` CAST spelling and constructor element flags stay pinned refusals;
+  the `MAP<…>` CAST spelling stays a pinned refusal and the constructor element
+  flags kept their pins (all three arms stay the backlog of COMPLEX-ELEM-NULL-1 —
+  the 2026-09-16 array-arm flip was reverted 2026-09-15 under DOOR-CONVERGE-1
+  ruling R-10 and handed to DOOR-CONVERGE-2);
   CSV `inferSchema` timestamps report instant `timestamp`; the footer boundary pins
   reads-at-60 / refuses-at-61; narrow logical widths pin today's wide labels.
   The CSV-infer live leg also pins JSON inference staying `string` on both engines.
@@ -4524,7 +4560,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   registry shadow and scan pins, sha2/bitwise/log/ntile shape pins, allowlist sync),
   NaN-collapse and all-null-group BACKLOG pins, CAST-fold, and tightened pins. Round 3
   maps engine arity failures to `WRONG_NUM_ARGS` with sha2/abs/substring pins plus a
-  type-mismatch guard.
+  type-mismatch guard. **DOOR-CONVERGE-1 round 5 (2026-09-16):** the abs type-mismatch
+  pin now asserts CAST_INVALID_INPUT plus a `lit('-1')` → 1.0 value leg
+  (fixtures-batch11.json A11-callfn-abs-x, A11-sql-abs-1), and `char_length` derives
+  out of the facade-only by-name allowlist (A11-callfn-char-length).
   pins: fnp-misc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, fnp-misc-1/F-1, fnp-misc-1/F-2, fnp-misc-1/F-3, fnp-misc-1/F-4, fnp-misc-1/F-5, fnp-misc-1/L-001, fnp-misc-1/L-002, fnp-misc-1/L-003, fnp-misc-1/L-004, fnp-misc-1/L-005, fnp-misc-1/L-007, fnp-misc-1/L-008, fnp-misc-1/L-010
 - `fnp_misc_1_agg_spark_oracle.json`, `fnp_misc_1_arrow2_spark_oracle.json`,
   `fnp_misc_1_arrow_bucket_spark_oracle.json` — **FNP-MISC-1 (2026-09-15):** the orchestrator's
