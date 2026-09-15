@@ -16,7 +16,8 @@ the grouped path.
   pins: fnp-6d/C-016, C-017; fnp-6d-followup-1/C-004
 - `tests.rs` — the module's `#[cfg(test)]` suite (moved out of `bitmap_agg.rs` by
   FNP-6D-FOLLOWUP-1 step 2 so the parent keeps the file-size ceiling): the FNP-6D
-  answer pins plus the followup refusal/answer pins over the `FU-*` cells.
+  answer pins plus the followup refusal/answer pins over the `FU-*` cells, and the
+  round-2 `CAST_OVERFLOW` pins over the `FU2-*` cells (global, grouped, window).
   pins: fnp-6d/C-001, C-002, C-003, C-004, C-011, C-013, C-014, C-015;
   fnp-6d-followup-1/C-001, C-002, C-003, C-004
 

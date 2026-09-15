@@ -4490,7 +4490,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   trimmed strings answer Spark. Step 1 is red-first on the unfixed tree. Step 2
   adds the `concat(BINARY, BINARY)` STRING-typing divergence pin (DOOR-CONVERGE-2,
   run 16c) and adapts the FNP-6D C-011 arm to `CAST(concat(...) AS BINARY)` per
-  ruling D-5.
+  ruling D-5. Remediation round 2 appends the 24 `FU2-*` cells (recorded live on
+  PySpark 4.1.2, 2026-09-15, recorder `oracle_f6dfu2.py`): overflow raises,
+  overflow digit strings, `+1`, i64-max, grouped-malformed, and the fixed-binary
+  fold; pins assert each cell's message core. Door-SQL adaptations: `CAST(1 AS
+  INT)` (the door types bare `VALUES (1)` as BIGINT where Spark types INT),
+  `CAST('1e30' AS DOUBLE)` (the door rejects the `1e30D` literal), plain-column
+  instead of `length(...)` (planning fails before `length`), and the
+  registry-cited `t.x` qualifier inside nested calls.
   pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004, C-007
 - `test_fnp6_regexp.py` — **FNP-6a (2026-08-20):** `regexp_extract_all` / `regexp_substr`
   against Python's `re` as an independent oracle, the three no-match conventions Spark keeps

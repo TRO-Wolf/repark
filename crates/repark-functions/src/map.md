@@ -150,7 +150,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (2026-09-15):** user-defined signatures with planning-time Spark refusals
   (`DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`, BINARY/BIGINT wanted); strict
   ANSI-on STRING-to-BIGINT parsing (`CAST_INVALID_INPUT`, SQLSTATE 22018) shared
-  by both accumulators through `construct_positions`; numerics truncate as Spark.
+  by both accumulators through `construct_positions`; numerics truncate as Spark,
+  non-finite and out-of-range numerics raise `CAST_OVERFLOW` (SQLSTATE 22003)
+  detected per batch from the source array.
   pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004
 - `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern

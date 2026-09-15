@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -190,6 +191,57 @@ def spark() -> Iterator[ReparkSession]:
     session.stop()
 
 
+_CLASS_RE = re.compile(r"\[(DATATYPE_MISMATCH\.[A-Z_]+|CAST_[A-Z_]+)\]")
+_REQUIRED_RE = re.compile(r'The first parameter requires the "(BINARY|BIGINT)" type')
+_TYPE_RE = re.compile(r'has the type "([^"]+)"')
+_STATE_RE = re.compile(r"SQLSTATE: (\d+)")
+_OVERFLOW_VALUE_RE = re.compile(r'The value (\S+) of the type "([A-Z0-9(),]+)" cannot be cast to "BIGINT"')
+_STRING_VALUE_RE = re.compile(
+    r'The value \'([^\']*)\' of the type "STRING" cannot be cast to "BIGINT"'
+)
+_CALL_RE = re.compile(r'Cannot resolve "(bitmap_(?:or|and|construct)_agg)\(')
+
+
+def _refusal_needles(cell_id: str) -> list[str]:
+    """Extract the fixture message core needles for cell_id."""
+    cell = _CELLS[cell_id]
+    message = str(cell["message"])
+    class_match = _CLASS_RE.search(message)
+    state_match = _STATE_RE.search(message)
+    assert class_match is not None, f"no class in {cell_id}"
+    assert state_match is not None, f"no SQLSTATE in {cell_id}"
+    needles = [class_match.group(0), f"SQLSTATE: {state_match.group(1)}"]
+    required_match = _REQUIRED_RE.search(message)
+    if required_match is not None:
+        needles.append(required_match.group(0))
+    type_match = _TYPE_RE.search(message)
+    if type_match is not None:
+        needles.append(f'has the type "{type_match.group(1)}"')
+    overflow_match = _OVERFLOW_VALUE_RE.search(message)
+    if overflow_match is not None:
+        needles.append(
+            f"The value {overflow_match.group(1)} of the type "
+            f'"{overflow_match.group(2)}" cannot be cast to "BIGINT"'
+        )
+    string_match = _STRING_VALUE_RE.search(message)
+    if string_match is not None:
+        needles.append(
+            f'The value \'{string_match.group(1)}\' of the type "STRING" '
+            f'cannot be cast to "BIGINT"'
+        )
+    return needles
+
+
+def _assert_fixture_core(spark: ReparkSession, cell_id: str, sql: str) -> None:
+    """Run sql and assert the door error carries the fixture cell core."""
+    message = refuse_text(spark, sql)
+    call_match = _CALL_RE.search(str(_CELLS[cell_id].get("message", "")))
+    if call_match is not None:
+        assert f'Cannot resolve "{call_match.group(1)}(' in message
+    for needle in _refusal_needles(cell_id):
+        assert needle in message
+
+
 def refuse_text(spark: ReparkSession, sql: str) -> str:
     """Run sql and return its error text, failing the test when sql answers."""
     with pytest.raises(Exception) as caught:
@@ -280,3 +332,65 @@ def test_concat_binary_types_string_expected_divergence(spark: ReparkSession) ->
         "SELECT concat(bitmap_construct_agg(0), X'01') b FROM VALUES (1) AS t(x)"
     ).toArrow()
     assert table.schema.field("b").type == pa.string()
+
+
+OVERFLOW_CASES: tuple[tuple[str, str], ...] = (
+    (
+        "FU2-construct-nan-double",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
+        "FROM VALUES (CAST('NaN' AS DOUBLE)) AS t(x)",
+    ),
+    (
+        "FU2-construct-inf-double",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
+        "FROM VALUES (CAST('Infinity' AS DOUBLE)) AS t(x)",
+    ),
+    (
+        "FU2-construct-neginf-double",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
+        "FROM VALUES (CAST('-Infinity' AS DOUBLE)) AS t(x)",
+    ),
+    (
+        "FU2-construct-nan-float",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
+        "FROM VALUES (CAST('NaN' AS FLOAT)) AS t(x)",
+    ),
+    (
+        "FU2-construct-big-double",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
+        "FROM VALUES (CAST('1e30' AS DOUBLE)) AS t(x)",
+    ),
+    (
+        "FU2-construct-decimal-big",
+        "SELECT bitmap_count(bitmap_construct_agg(x)) c "
+        "FROM VALUES (CAST('99999999999999999999' AS DECIMAL(20,0))) AS t(x)",
+    ),
+)
+
+
+@pytest.mark.parametrize(
+    ("cell_id", "sql"),
+    OVERFLOW_CASES,
+    ids=[row[0] for row in OVERFLOW_CASES],
+)
+def test_construct_agg_numeric_overflow_raises_cast_overflow(
+    spark: ReparkSession, cell_id: str, sql: str
+) -> None:
+    """pins: fnp-6d-followup-1/C-004."""
+    _assert_fixture_core(spark, cell_id, sql)
+
+
+def test_construct_agg_overflow_raises_on_grouped_and_window_paths(
+    spark: ReparkSession,
+) -> None:
+    """pins: fnp-6d-followup-1/C-004."""
+    grouped = (
+        "SELECT g, bitmap_count(bitmap_construct_agg(x)) c "
+        "FROM VALUES (1, CAST('NaN' AS DOUBLE)) AS t(g, x) GROUP BY g"
+    )
+    windowed = (
+        "SELECT bitmap_count(bitmap_construct_agg(x) OVER ()) c "
+        "FROM VALUES (CAST('NaN' AS DOUBLE)) AS t(x)"
+    )
+    for sql in (grouped, windowed):
+        _assert_fixture_core(spark, "FU2-construct-nan-double", sql)

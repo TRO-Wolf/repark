@@ -524,3 +524,88 @@ async fn grouped_construct_agg_answers_trimmed_strings() {
     .await;
     assert_eq!(int64_cell(&batch, 0), 2);
 }
+
+#[tokio::test]
+async fn construct_agg_nonfinite_and_huge_numerics_raise_cast_overflow() {
+    let ctx = ctx();
+    let cases = [
+        (
+            "SELECT bitmap_count(bitmap_construct_agg(x)) FROM VALUES \
+             (CAST('NaN' AS DOUBLE)) AS t(x)",
+            "NaN",
+            "DOUBLE",
+        ),
+        (
+            "SELECT bitmap_count(bitmap_construct_agg(x)) FROM VALUES \
+             (CAST('Infinity' AS DOUBLE)) AS t(x)",
+            "Infinity",
+            "DOUBLE",
+        ),
+        (
+            "SELECT bitmap_count(bitmap_construct_agg(x)) FROM VALUES \
+             (CAST('-Infinity' AS DOUBLE)) AS t(x)",
+            "-Infinity",
+            "DOUBLE",
+        ),
+        (
+            "SELECT bitmap_count(bitmap_construct_agg(x)) FROM VALUES \
+             (CAST('NaN' AS FLOAT)) AS t(x)",
+            "NaN",
+            "FLOAT",
+        ),
+        (
+            "SELECT bitmap_count(bitmap_construct_agg(x)) FROM VALUES \
+             (CAST('1e30' AS DOUBLE)) AS t(x)",
+            "1.0E30D",
+            "DOUBLE",
+        ),
+        (
+            "SELECT bitmap_count(bitmap_construct_agg(x)) FROM VALUES \
+             (CAST('99999999999999999999' AS DECIMAL(20,0))) AS t(x)",
+            "99999999999999999999BD",
+            "DECIMAL(20,0)",
+        ),
+    ];
+    for (sql, value, spark_type) in cases {
+        let message = plan_error(&ctx, sql).await;
+        assert!(
+            message.contains("[CAST_OVERFLOW]"),
+            "class missing for {sql}: {message}"
+        );
+        assert!(
+            message.contains(&format!(
+                "The value {value} of the type \"{spark_type}\" cannot be cast to \"BIGINT\""
+            )),
+            "value missing for {sql}: {message}"
+        );
+        assert!(
+            message.contains("SQLSTATE: 22003"),
+            "state missing for {sql}: {message}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn construct_agg_overflow_raises_on_grouped_and_window_paths() {
+    let ctx = ctx();
+    for sql in [
+        "SELECT g, bitmap_count(bitmap_construct_agg(x)) AS c \
+         FROM VALUES (1, CAST('NaN' AS DOUBLE)) AS t(g, x) GROUP BY g",
+        "SELECT bitmap_count(bitmap_construct_agg(x) OVER ()) AS c \
+         FROM VALUES (CAST('NaN' AS DOUBLE)) AS t(x)",
+    ] {
+        let message = plan_error(&ctx, sql).await;
+        assert!(
+            message.contains("[CAST_OVERFLOW]"),
+            "class missing for {sql}: {message}"
+        );
+        assert!(
+            message.contains("The value NaN of the type \"DOUBLE\" cannot be cast to \"BIGINT\""),
+            "value missing for {sql}: {message}"
+        );
+        assert!(
+            message.contains("SQLSTATE: 22003"),
+            "state missing for {sql}: {message}"
+        );
+    }
+}

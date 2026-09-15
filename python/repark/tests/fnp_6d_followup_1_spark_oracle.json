@@ -545,6 +545,289 @@
      1
     ]
    ]
+  },
+  {
+   "id": "FU2-construct-nan-double",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST('NaN' AS DOUBLE)) AS t(x)",
+   "ansi": "true",
+   "error_type": "ArithmeticException",
+   "condition": "CAST_OVERFLOW",
+   "message": "[CAST_OVERFLOW] The value NaN of the type \"DOUBLE\" cannot be cast to \"BIGINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+  },
+  {
+   "id": "FU2-construct-nan-double-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST('NaN' AS DOUBLE)) AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU2-construct-inf-double",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST('Infinity' AS DOUBLE)) AS t(x)",
+   "ansi": "true",
+   "error_type": "ArithmeticException",
+   "condition": "CAST_OVERFLOW",
+   "message": "[CAST_OVERFLOW] The value Infinity of the type \"DOUBLE\" cannot be cast to \"BIGINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+  },
+  {
+   "id": "FU2-construct-inf-double-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST('Infinity' AS DOUBLE)) AS t(x)",
+   "ansi": "false",
+   "error_type": "ArrayIndexOutOfBoundsException",
+   "condition": "INVALID_BITMAP_POSITION",
+   "message": "[INVALID_BITMAP_POSITION] The 0-indexed bitmap position 9223372036854775807 is out of bounds. The bitmap has 32768 bits (4096 bytes). SQLSTATE: 22003"
+  },
+  {
+   "id": "FU2-construct-neginf-double",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST('-Infinity' AS DOUBLE)) AS t(x)",
+   "ansi": "true",
+   "error_type": "ArithmeticException",
+   "condition": "CAST_OVERFLOW",
+   "message": "[CAST_OVERFLOW] The value -Infinity of the type \"DOUBLE\" cannot be cast to \"BIGINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+  },
+  {
+   "id": "FU2-construct-neginf-double-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST('-Infinity' AS DOUBLE)) AS t(x)",
+   "ansi": "false",
+   "error_type": "ArrayIndexOutOfBoundsException",
+   "condition": "INVALID_BITMAP_POSITION",
+   "message": "[INVALID_BITMAP_POSITION] The 0-indexed bitmap position -9223372036854775808 is out of bounds. The bitmap has 32768 bits (4096 bytes). SQLSTATE: 22003"
+  },
+  {
+   "id": "FU2-construct-nan-float",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST('NaN' AS FLOAT)) AS t(x)",
+   "ansi": "true",
+   "error_type": "ArithmeticException",
+   "condition": "CAST_OVERFLOW",
+   "message": "[CAST_OVERFLOW] The value NaN of the type \"FLOAT\" cannot be cast to \"BIGINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+  },
+  {
+   "id": "FU2-construct-nan-float-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST('NaN' AS FLOAT)) AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU2-construct-big-double",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (1e30D) AS t(x)",
+   "ansi": "true",
+   "error_type": "ArithmeticException",
+   "condition": "CAST_OVERFLOW",
+   "message": "[CAST_OVERFLOW] The value 1.0E30D of the type \"DOUBLE\" cannot be cast to \"BIGINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+  },
+  {
+   "id": "FU2-construct-big-double-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (1e30D) AS t(x)",
+   "ansi": "false",
+   "error_type": "ArrayIndexOutOfBoundsException",
+   "condition": "INVALID_BITMAP_POSITION",
+   "message": "[INVALID_BITMAP_POSITION] The 0-indexed bitmap position 9223372036854775807 is out of bounds. The bitmap has 32768 bits (4096 bytes). SQLSTATE: 22003"
+  },
+  {
+   "id": "FU2-construct-str-overflow",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('9223372036854775808') AS t(x)",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '9223372036854775808' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "FU2-construct-str-overflow-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('9223372036854775808') AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "id": "FU2-construct-str-u64",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('18446744073709551615') AS t(x)",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value '18446744073709551615' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "FU2-construct-str-u64-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('18446744073709551615') AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "id": "FU2-construct-str-i64max",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('9223372036854775807') AS t(x)",
+   "ansi": "true",
+   "error_type": "ArrayIndexOutOfBoundsException",
+   "condition": "INVALID_BITMAP_POSITION",
+   "message": "[INVALID_BITMAP_POSITION] The 0-indexed bitmap position 9223372036854775807 is out of bounds. The bitmap has 32768 bits (4096 bytes). SQLSTATE: 22003"
+  },
+  {
+   "id": "FU2-construct-str-i64max-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('9223372036854775807') AS t(x)",
+   "ansi": "false",
+   "error_type": "ArrayIndexOutOfBoundsException",
+   "condition": "INVALID_BITMAP_POSITION",
+   "message": "[INVALID_BITMAP_POSITION] The 0-indexed bitmap position 9223372036854775807 is out of bounds. The bitmap has 32768 bits (4096 bytes). SQLSTATE: 22003"
+  },
+  {
+   "id": "FU2-construct-str-plus",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('+1') AS t(x)",
+   "ansi": "true",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU2-construct-str-plus-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES ('+1') AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "FU2-construct-decimal-big",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST('99999999999999999999' AS DECIMAL(20,0))) AS t(x)",
+   "ansi": "true",
+   "error_type": "ArithmeticException",
+   "condition": "CAST_OVERFLOW",
+   "message": "[CAST_OVERFLOW] The value 99999999999999999999BD of the type \"DECIMAL(20,0)\" cannot be cast to \"BIGINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+  },
+  {
+   "id": "FU2-construct-decimal-big-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (CAST('99999999999999999999' AS DECIMAL(20,0))) AS t(x)",
+   "ansi": "false",
+   "error_type": "ArrayIndexOutOfBoundsException",
+   "condition": "INVALID_BITMAP_POSITION",
+   "message": "[INVALID_BITMAP_POSITION] The 0-indexed bitmap position 7766279631452241919 is out of bounds. The bitmap has 32768 bits (4096 bytes). SQLSTATE: 22003"
+  },
+  {
+   "id": "FU2-construct-str-grouped-bad",
+   "sql": "SELECT g, bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (1, '1'), (2, 'abc') AS t(g, x) GROUP BY g",
+   "ansi": "true",
+   "error_type": "NumberFormatException",
+   "condition": "CAST_INVALID_INPUT",
+   "message": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  {
+   "id": "FU2-construct-str-grouped-bad-nonansi",
+   "sql": "SELECT g, bitmap_count(bitmap_construct_agg(x)) c FROM VALUES (1, '1'), (2, 'abc') AS t(g, x) GROUP BY g",
+   "ansi": "false",
+   "schema": [
+    [
+     "g",
+     "int",
+     false
+    ],
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     0
+    ]
+   ]
+  },
+  {
+   "id": "FU2-construct-fixedbin",
+   "sql": "SELECT bitmap_count(bitmap_or_agg(CAST(x AS BINARY))) c FROM VALUES ('a') AS t(x)",
+   "ansi": "true",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     3
+    ]
+   ]
+  },
+  {
+   "id": "FU2-construct-fixedbin-nonansi",
+   "sql": "SELECT bitmap_count(bitmap_or_agg(CAST(x AS BINARY))) c FROM VALUES ('a') AS t(x)",
+   "ansi": "false",
+   "schema": [
+    [
+     "c",
+     "bigint",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     3
+    ]
+   ]
   }
  ]
 }

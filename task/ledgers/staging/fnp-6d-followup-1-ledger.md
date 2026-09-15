@@ -50,6 +50,17 @@ than in the frozen FNP-6D ledger. One registry row in the FNP-6D section records
 DOOR-CONVERGE-2, run 16c) with a one-cell pin asserting today's Utf8 shape as the
 expected divergence. `concat` itself is untouched.
 
+**D-6 (orchestrator rulings, remediation round 2, 2026-09-15).**
+L-001 P1 CONFIRMED: non-finite and out-of-range numerics raise `[CAST_OVERFLOW]`
+with the per-cell value rendering (`NaN`, `Infinity`, `-Infinity`, `1.0E30D`,
+`99999999999999999999BD`) and type (`DOUBLE`/`FLOAT`/`DECIMAL(20,0)`); 1.7 → 1 stays.
+Overflow is detected per batch from the source array (non-null source, null cast
+result); Arrow's safe cast stays global. Pinned on the global, grouped, and window
+paths (C-004). The `1.0E30D` rendering reuses the crate's `java_double_text`
+(`json::reader`, visibility widened to `pub(crate)`); no live-PySpark re-measure
+exists in-lane (no pyspark module), so the recorded FU2 cells are the truth and the
+pins assert their message core verbatim.
+
 **Not in this unit:** `STATUS.md`, `briefs/next-sequence.md`, `Cargo.toml`,
 `Cargo.lock`, `pyproject.toml`, `uv.lock`, `.github/`, `functions*.py`,
 `python/repark/src/repark/spark/dataframe/**`, `column.py`, `session/**`,

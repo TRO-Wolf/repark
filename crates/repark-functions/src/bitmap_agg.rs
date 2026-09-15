@@ -3,8 +3,12 @@ use std::sync::Arc;
 use arrow::array::{Array, ArrayRef, AsArray, BinaryArray};
 use arrow::buffer::{Buffer, OffsetBuffer};
 use arrow::compute::cast;
-use arrow::datatypes::{DataType, Field, FieldRef, Int64Type};
+use arrow::datatypes::{
+    DataType, Decimal128Type, Decimal256Type, Field, FieldRef, Float32Type, Float64Type, Int64Type,
+};
 use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err, plan_err};
+
+use crate::json::reader::{java_double_text, java_float_text};
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::utils::format_state_name;
 use datafusion::logical_expr::{
@@ -363,6 +367,11 @@ pub(crate) fn construct_positions(column: &ArrayRef) -> Result<Vec<Option<i64>>>
         cast(column, &DataType::Int64)?
     };
     let positions = casted.as_primitive::<Int64Type>();
+    for row in 0..positions.len() {
+        if positions.is_null(row) && !column.is_null(row) {
+            return Err(cast_overflow_error(column, row));
+        }
+    }
     let mut result = Vec::with_capacity(positions.len());
     for row in 0..positions.len() {
         if positions.is_valid(row) {
@@ -372,6 +381,53 @@ pub(crate) fn construct_positions(column: &ArrayRef) -> Result<Vec<Option<i64>>>
         }
     }
     Ok(result)
+}
+
+fn cast_overflow_error(source: &ArrayRef, row: usize) -> DataFusionError {
+    let (value, spark_type) = overflow_cell_text(source, row);
+    DataFusionError::Execution(format!(
+        "[CAST_OVERFLOW] The value {value} of the type \"{spark_type}\" cannot be cast to \
+         \"BIGINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL \
+         instead. SQLSTATE: 22003"
+    ))
+}
+
+fn overflow_cell_text(source: &ArrayRef, row: usize) -> (String, String) {
+    match source.data_type() {
+        DataType::Float64 => {
+            let value = source.as_primitive::<Float64Type>().value(row);
+            let text = java_double_text(value);
+            let text = if value.is_finite() {
+                format!("{text}D")
+            } else {
+                text
+            };
+            (text, "DOUBLE".to_string())
+        }
+        DataType::Float32 => {
+            let value = source.as_primitive::<Float32Type>().value(row);
+            let text = java_float_text(value);
+            let text = if value.is_finite() {
+                format!("{text}F")
+            } else {
+                text
+            };
+            (text, "FLOAT".to_string())
+        }
+        DataType::Decimal128(_, _) => {
+            let text = source.as_primitive::<Decimal128Type>().value_as_string(row);
+            (format!("{text}BD"), spark_type_name(source.data_type()))
+        }
+        DataType::Decimal256(_, _) => {
+            let text = source.as_primitive::<Decimal256Type>().value_as_string(row);
+            (format!("{text}BD"), spark_type_name(source.data_type()))
+        }
+        _ => (
+            ScalarValue::try_from_array(source, row)
+                .map_or_else(|_| "invalid".to_string(), |scalar| scalar.to_string()),
+            spark_type_name(source.data_type()),
+        ),
+    }
 }
 
 pub(crate) fn identity_byte(fold: BitmapFold) -> u8 {
