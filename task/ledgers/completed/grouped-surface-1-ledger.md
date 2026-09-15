@@ -59,3 +59,58 @@ VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
 | `GroupedData.applyInPandasWithState` | declared | Spark's own batch refusal `_LEGACY_ERROR_TEMP_3176`; every repark frame is batch. |
 | `GroupedData.transformWithState` | declared | Structured Streaming state stores are unreachable (R-2). |
 | `GroupedData.transformWithStateInPandas` | declared | Same state-store dependency (R-2). |
+
+## Rulings (orchestrator, G-2)
+
+- R-4 (2026-09-15): perf P2-2 (one `Table.from_batches` per group in the applyInArrow table form), P2-3 (tiny-group RSS from the
+  mapInArrow action listing every output batch), P3-1 (the `concat_tables` promote fallback stays) and P3-2 (the pre-existing
+  mapInArrow action materializes UDF output) are recorded, not fixed: the iterator form is the zero-concat path and P2-3/P3-2 live in
+  the unchanged mapInArrow action.
+- R-5 (2026-09-15): the critic's UNMEASURED cases (INT vs BIGINT and INT vs DOUBLE cogroup pairing, Decimal NaN keys, the inner
+  PythonException message tail) need a live JVM; they are recorded, and `GROUPED-ARROW-1` already declares the wrapper split.
+- R-6 (2026-09-15): the re-check PASSED with no new findings; no further critic round.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: grouped-surface-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card and the recorded PySpark 4.1.2 grouped-data cells; the three state names are declared with Spark's classes.
+      artifacts: [python/repark/tests/test_grouped_surface_1.py, python/repark/tests/facade_grouped_data_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: NULL and NaN keys (adjacent, across a batch edge, next to each other), -0.0 and 0.0, one-row and empty batches, multi-column keys, dictionary strings, decimal128/256, timestamps with and without tz, struct/list/map fallback, a null-typed first batch, empty frames, empty cogroup sides, 0-column empty Arrow results.
+      artifacts: [python/repark/tests/test_grouped_surface_1.py]
+    - id: AT-3
+      status: N/A
+      justification: Python facade plumbing around the user's callable; no Rust, no unwrap.
+    - id: AT-4
+      status: N/A
+      justification: No shared mutable state; each action walks its own streams.
+    - id: AT-5
+      status: N/A
+      justification: No authn/authz, deserialization, path, credential or network surface; the callbacks are the user's own code.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Grok critic-logic round 1 (0 P1, 1 P2 L-001) and a Python perf reviewer (0 P1, P2-1 per-row key scan) went back to the actor under R-3; the re-check compared the new boundary scan with the round-1 comparator on 27 key shapes and PASSED.
+      artifacts: [task/ledgers/completed/grouped-surface-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Full facade suite 6692 passed (5 test_sql_set_door_1.py timezone reds are the clone's stale native and pass on CI), parity suite 757 passed, ruff 0.15.22, check_lib_py, example coverage, typos; comment-ban grep zero hits.
+      artifacts: [docs/examples/dataframe/grouped_udfs.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark's worker contracts were read, not assumed - pyspark/worker.py verify_arrow_result and wrap_grouped_map_arrow_udf, group_ops.py for apply, cogroup and the state names.
+      artifacts: [python/repark/src/repark/spark/dataframe/grouped_arrow.py, python/repark/src/repark/spark/dataframe/cogroup.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Refusals carry Spark's classes and texts (INVALID_UDF_EVAL_TYPE, NOT_EXPECTED_TYPE, _LEGACY_ERROR_TEMP_3176, NOT_IMPLEMENTED, RESULT_COLUMN_* and UDF_RETURN_TYPE); declared differences have registry rows with pins.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation guards run - the as_py spy reds a per-row revert (20 vs 1000 calls, 10000 vs 20000), the cogroup collect/to_arrow spy reds a whole-side read, the 0-column pin reds without the empty-accept skip.
+      artifacts: [python/repark/tests/test_grouped_surface_1.py]
+  complete: true
+```
+

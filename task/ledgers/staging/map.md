@@ -4,20 +4,6 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
-- [grouped-surface-1-ledger.md](grouped-surface-1-ledger.md) —
-  **GROUPED-SURFACE-1 step 1 (2026-09-14), in flight:** `GroupedData.apply`,
-  `applyInArrow`, `cogroup` + `PandasCogroupedOps` answer live-PySpark 4.1.2 over
-  the shared Arrow group bridge (`grouped_arrow.py`, `cogroup.py` bound one line
-  each on the class; `_apply_in_pandas_arrow_batches` moves out of
-  `joins_columns.py`, 1238 → 1169); the three state names are dated refusals
-  (`_LEGACY_ERROR_TEMP_3176` byte-exact, `NOT_IMPLEMENTED` × 2). Registry:
-  `GROUPED-ARROW-1`, `GROUPED-COGROUP-1`, `GROUPED-DECL-*` DECLARED,
-  `GROUPED-EXPRKEY-1` BACKLOG. Critic round 1 (2026-09-15): L-001's 0-column
-  empty-accept drop is fixed on all four Arrow paths and R-3 moves run-boundary
-  detection to `pyarrow.compute` (`as_py` once per run, per-row fallback for
-  nested key types). `risk_tier: standard`. Branch `feat/grouped-surface-1`.
-  pins: grouped-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
