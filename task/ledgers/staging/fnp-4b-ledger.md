@@ -549,3 +549,21 @@ COVERAGE_ATTESTATION (round 7 extension, 2026-09-15):
     - C-029 HANDED-OFF by strict xfail (artifacts:
       python/repark/tests/test_fnp_4b_spark_dialect.py)
 ```
+
+## Round 7 gates (2026-09-15, actor muse-spark-1.3-contributor)
+
+1. `cargo test -p repark-spark --lib create_table::`: 15 passed, 0 failed
+   (red-first pin + untouched `rejects_unsupported_array`). `cargo test
+   -p repark-iceberg --lib`: 434 passed, 0 failed.
+2. `make rust-clippy`: clean (after the explicit-iter-loop fixup).
+3. `make verify`: rc 0 (3249 passed, 0 failed; includes rust-fmt-check,
+   crate-dag, lib-rs, file-size, lib-py, conventions, docstrings, manifest,
+   ledger lifecycle + grammar).
+4. Release native rebuilt on the head tree (`maturin develop --release`);
+   binary matches source.
+5. Full facade `.venv/bin/python -m pytest python/repark/tests -q
+   -p no:cacheprovider`: 7648 passed, 0 failed, 367 skipped, 2 xfailed
+   (the two R-16c-10 strict xfails).
+6. Parity `PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest
+   python/repark-parity/tests -q`: 757 passed, 2 skipped, 12 xfailed, rc 0.
+7. `make check-ledgers` and `make check-map-sync`: clean.
