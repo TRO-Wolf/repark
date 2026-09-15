@@ -296,7 +296,7 @@ rust-panic-ban` green.
 
 - The branch rebased onto `11ae1595` (after #605, #607, #608, #609). Conflicts were the
   `python/repark-parity/tests/map.md` and `scripts/map.md` row tails (both rows kept) and
-  the EX-0 enumerator count: main's 1035 plus this unit's 11 names gives 1046.
+  the EX-0 enumerator count: main's count plus this unit's 11 names (1046 on 11ae1595, 1052 on 7bcb68de after #610).
 - Owner ruling Q-15c-4 (2026-09-15, size baselines ratchet-only): after the rebase
   `scripts/check_example_coverage.py` measured two lines over the default ceiling.
   The orchestrator reflowed two lines of its module docstring instead of adding an
