@@ -114,7 +114,12 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   plans and guards before target creation or publication, then returns the lazy SELECT frame.
   Later execution performs the SELECT. **CUTOVER-SCHEMA-1 (2026-09-04):** CTAS derives Iceberg
   requiredness from the relaxed query schema (optional throughout on parquet reads), so the
-  R-D refusal above sees the Spark-equal derivation. Tests:
+  R-D refusal above sees the Spark-equal derivation. **ICE-COMMIT-UNKNOWN-1 (2026-09-14):**
+  `create_first_service_managed` skips `drop_table` and returns the original error
+  unwrapped on `is_commit_state_unknown` — the possibly-landed create is never
+  abort-dropped; definite kinds keep the drop-and-explain abort.
+  pins: ice-commit-unknown-1/C-001, C-003, C-004
+  Tests:
   [create_table/map.md](create_table/map.md).
 - `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`
   (V3-2: `'2'` and `'3'` stored at parse; execute applies the session opt-in),

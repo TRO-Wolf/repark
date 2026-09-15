@@ -441,23 +441,33 @@ perfectly good read.
   `repark.errors.CommitStateUnknownException`, a `PySparkException` subclass whose instance
   carries the attempted commit's `engine.operation-id` as `exc.operation_id` (`None` on
   commit paths that mint no id). Every definite commit failure — a `CatalogCommitConflicts`
-  retry-budget exhaustion included — still raises the base `PySparkException`.
+  retry-budget exhaustion included — still raises the base `PySparkException`. On a
+  service-managed CTAS (S3 Tables, create-first) an ambiguous commit is never abort-dropped
+  and the original error surfaces unwrapped — the possibly-landed table stays for the
+  operator — while a definite write failure still drops the created table as before.
 - **Apache Spark** — Java Iceberg raises `CommitStateUnknownException` for the same condition;
   PySpark surfaces it as a JVM-wrapped `PySparkException` with no dedicated Python class, so
   `except PySparkException` compatibility is the parity contract and the subclass is additive.
   *(oracle: documented.)*
 - **Statement shapes.** The id rides every commit RePark mints `engine.operation-id` for:
-  CTAS and the repark `append` path (`commit_append`), `MERGE` and repark identity
-  DELETE/UPDATE (`snapshot_commit.rs` — predicate DML commits through the MERGE arms),
-  `INSERT OVERWRITE` (whole-table and `PARTITION` forms), `TRUNCATE`. Commits the fork owns
-  end to end — `INSERT INTO` passthrough and non-allowlisted DELETE/UPDATE through
-  `iceberg-datafusion`, plus non-data DDL — mint no id and carry `None`.
+  service-managed CTAS (S3 Tables) and the repark `append` path (`commit_append`), `MERGE`
+  and repark identity DELETE/UPDATE (`snapshot_commit.rs` — predicate DML commits through
+  the MERGE arms), `INSERT OVERWRITE` (whole-table and `PARTITION` forms), `TRUNCATE`.
+  Staged CTAS/REPLACE on warehouse catalogs (Glue — `StagedTableTransaction` publishes
+  through `publish_create_table`/`publish_replace_table` with no snapshot properties in the
+  fork at `edc38c6a`) carries `None`, as do commits the fork owns end to end — `INSERT INTO`
+  passthrough and non-allowlisted DELETE/UPDATE through `iceberg-datafusion`, plus non-data
+  DDL.
 - **Airflow guidance** — alert on the class itself; constrain automatic retry to `MERGE` and
   `CTAS IF NOT EXISTS` (Q-ICE-7) — never an append, a replace or an overwrite, whose retry
   duplicates rows when the unconfirmed first attempt did land.
 - **Pin** — `crates/repark-core/src/session/tests/commit_unknown.rs` (stamped + unwrapped
   classification), `crates/repark-iceberg/src/write/merge/tests/commit_unknown.rs` (the
-  surfaced id equals the id the transaction attempted to stamp; one `update_table` attempt),
+  surfaced id equals the id the transaction attempted to stamp; one `update_table` attempt;
+  written files stay on disk),
+  `crates/repark-spark/src/tests/service_managed_ctas.rs` + the native-door twin in
+  `crates/repark-sql/src/create_table/tests.rs` (no abort-drop on unknown, stamped id on
+  the service-managed path, `operation_id: None` on the staged publish path),
   `crates/repark-python/src/tests.rs` (class + `operation_id` attribute),
   `python/repark/tests/test_errors.py` (hierarchy + re-export identity).
 - **Rationale** — FIXED (ICE-COMMIT-UNKNOWN-1, 2026-09-14). The assessment's retry contract

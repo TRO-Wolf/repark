@@ -143,6 +143,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   persisted — Java's `CommitStateUnknownException` rethrow-before-cleanup rule);
   reclaim is orphan-file maintenance. Per-file `FileIO::delete` failures
   `tracing::warn` and never mask the original commit error.
+  **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the keep-set is now pinned by real-file
+  pins in `tests/commit_unknown.rs` — mutation-proven (deleting the early return
+  reds both).
+  pins: ice-commit-unknown-1/C-003, C-007
 - `not_matched_by_source.rs` — **DML-A:** `WHEN NOT MATCHED BY SOURCE` types, SQL
   fragments, full-snapshot path listing, MOR work SQL. COW rewrite applies the arm
   through `rewrite_column` ELSE / combined DELETE.

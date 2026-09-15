@@ -448,6 +448,9 @@ pub(crate) async fn execute_ctas_service_managed(
     .await;
 
     if let Err(write_err) = write_result {
+        if repark_iceberg::write::is_commit_state_unknown(&write_err) {
+            return Err(write_err);
+        }
         return Err(match catalog.drop_table(&table_ident).await {
             Ok(()) => DataFusionError::Execution(format!(
                 "CTAS into `{}` failed after the table was created (service-managed location); \

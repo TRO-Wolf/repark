@@ -46,12 +46,12 @@ fn to_py_err(err: repark_core::Error) -> PyErr {
                 _ => None,
             };
             let raised = CommitStateUnknownException::new_err(message);
-            Python::attach(
-                |py| match raised.value(py).setattr("operation_id", operation_id) {
-                    Ok(()) => raised,
-                    Err(failure) => failure,
-                },
-            )
+            Python::attach(|py| {
+                if let Err(failure) = raised.value(py).setattr("operation_id", operation_id) {
+                    tracing::warn!(error = %failure, "operation_id setattr failed");
+                }
+                raised
+            })
         }
         ErrorClass::Base => PySparkException::new_err(message),
     }

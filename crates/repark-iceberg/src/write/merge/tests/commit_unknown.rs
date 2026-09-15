@@ -15,7 +15,10 @@ use iceberg::{
 use tempfile::TempDir;
 use uuid::Uuid;
 
-use super::super::{OPERATION_ID_PROP, WRITE_MERGE_ISOLATION_LEVEL, commit, commit_row_delta};
+use super::super::{
+    OPERATION_ID_PROP, WRITE_MERGE_ISOLATION_LEVEL, commit, commit_row_delta, write_data_files,
+};
+use super::occ_conflict::{id_batch, path_exists};
 use crate::write::CommitStateUnknownError;
 use crate::write::concurrency::WriteConcurrency;
 
@@ -345,4 +348,55 @@ async fn merge_row_delta_commit_unknown_surfaces_the_stamped_operation_id() {
         reloaded.metadata().current_snapshot().is_none(),
         "the commit did not land: no snapshot may appear"
     );
+}
+
+#[tokio::test]
+async fn merge_overwrite_commit_unknown_leaves_written_files_on_disk() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (injector, catalog, ident) = setup(&warehouse).await;
+    let table = catalog.load_table(&ident).await.expect("load table");
+    let written = write_data_files(&table, vec![id_batch(&[99])])
+        .await
+        .expect("stage real data files before the commit");
+    assert!(!written.is_empty(), "the writer must produce files");
+    let error = commit(&catalog, &table, None, vec![], written.clone())
+        .await
+        .expect_err("the unknown commit outcome must surface");
+    assert_unknown_commit(&injector, error);
+    for file in &written {
+        assert!(
+            path_exists(&table, file.file_path()).await,
+            "a possibly-committed file must stay on disk: {}",
+            file.file_path()
+        );
+    }
+}
+
+#[tokio::test]
+async fn merge_row_delta_commit_unknown_leaves_written_files_on_disk() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (injector, catalog, ident) = setup(&warehouse).await;
+    let table = catalog.load_table(&ident).await.expect("load table");
+    let written = write_data_files(&table, vec![id_batch(&[98])])
+        .await
+        .expect("stage real data files before the commit");
+    assert!(!written.is_empty(), "the writer must produce files");
+    let error = commit_row_delta(
+        &catalog,
+        &table,
+        None,
+        vec![],
+        written.clone(),
+        WriteConcurrency::new(1).expect("write concurrency"),
+    )
+    .await
+    .expect_err("the unknown commit outcome must surface");
+    assert_unknown_commit(&injector, error);
+    for file in &written {
+        assert!(
+            path_exists(&table, file.file_path()).await,
+            "a possibly-committed file must stay on disk: {}",
+            file.file_path()
+        );
+    }
 }

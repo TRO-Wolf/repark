@@ -214,7 +214,7 @@ fn default_concurrency() -> crate::write::concurrency::WriteConcurrency {
     crate::write::concurrency::WriteConcurrency::default()
 }
 
-fn id_batch(values: &[i32]) -> RecordBatch {
+pub(super) fn id_batch(values: &[i32]) -> RecordBatch {
     let schema = Arc::new(ArrowSchema::new(vec![Field::new(
         "id",
         DataType::Int32,
@@ -239,7 +239,7 @@ async fn current_snapshot(
         .clone()
 }
 
-async fn path_exists(table: &Table, path: &str) -> bool {
+pub(super) async fn path_exists(table: &Table, path: &str) -> bool {
     table.file_io().exists(path).await.expect("FileIO exists")
 }
 

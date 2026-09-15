@@ -16,6 +16,13 @@ opt-in; end-to-end pins live in [`../v3/create.rs`](../v3/create.rs).
   `timestamptz_ns` columns — the end-to-end pins live in
   [`../v3/types.rs`](../v3/types.rs) (pins: v3-6-v3-types/C-003). The tightened-CTAS refusal is pinned in
   [`../../tests/declared_sorted_tighten.rs`](../../tests/declared_sorted_tighten.rs).
+  **ICE-COMMIT-UNKNOWN-1 (2026-09-14):**
+  `service_managed_ctas_commit_state_unknown_keeps_table_and_surfaces_class` — the
+  native-door twin of the repark-spark pin: a delegating catalog answers
+  `CommitStateUnknown` from `update_table` after capturing the stamped
+  `engine.operation-id`; `drop_table` is never called, the table stays, and `engine_err`
+  classifies to `Error::CommitStateUnknown` with the minted id.
+  pins: ice-commit-unknown-1/C-001, C-003, C-004
 
 ## Pointers
 

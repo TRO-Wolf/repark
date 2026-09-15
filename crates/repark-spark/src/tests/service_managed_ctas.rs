@@ -3,9 +3,17 @@ use super::super::*;
 use super::common::*;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 type BoxedCatalogFuture<'a, T> = Pin<Box<dyn Future<Output = iceberg::Result<T>> + Send + 'a>>;
+
+#[derive(Debug, Clone, Copy)]
+enum CommitInjection {
+    None,
+    UpdateTable(iceberg::ErrorKind),
+    PublishCreate(iceberg::ErrorKind),
+}
 
 /// Mirrors the fork's service-assigned location contract and can fail at commit time.
 #[derive(Debug)]
@@ -14,17 +22,19 @@ struct ServiceManagedTestCatalog {
     service_root: String,
     create_table_calls: AtomicUsize,
     drop_table_calls: AtomicUsize,
-    fail_update_table: bool,
+    injected: CommitInjection,
+    stamped_operation_id: Mutex<Option<String>>,
 }
 
 impl ServiceManagedTestCatalog {
-    fn new(inner: Arc<dyn Catalog>, service_root: String, fail_update_table: bool) -> Self {
+    fn new(inner: Arc<dyn Catalog>, service_root: String, injected: CommitInjection) -> Self {
         Self {
             inner,
             service_root,
             create_table_calls: AtomicUsize::new(0),
             drop_table_calls: AtomicUsize::new(0),
-            fail_update_table,
+            injected,
+            stamped_operation_id: Mutex::new(None),
         }
     }
 
@@ -34,6 +44,14 @@ impl ServiceManagedTestCatalog {
 
     fn drop_table_calls(&self) -> usize {
         self.drop_table_calls.load(Ordering::SeqCst)
+    }
+
+    fn captured_operation_id(&self) -> String {
+        self.stamped_operation_id
+            .lock()
+            .expect("capture lock")
+            .clone()
+            .expect("the commit must stamp an engine.operation-id")
     }
 }
 
@@ -220,16 +238,28 @@ impl Catalog for ServiceManagedTestCatalog {
 
     fn update_table<'life0, 'async_trait>(
         &'life0 self,
-        commit: iceberg::TableCommit,
+        mut commit: iceberg::TableCommit,
     ) -> BoxedCatalogFuture<'async_trait, iceberg::table::Table>
     where
         'life0: 'async_trait,
         Self: 'async_trait,
     {
         Box::pin(async move {
-            if self.fail_update_table {
+            if let CommitInjection::UpdateTable(kind) = self.injected {
+                let stamped = commit
+                    .take_updates()
+                    .iter()
+                    .find_map(|update| match update {
+                        iceberg::TableUpdate::AddSnapshot { snapshot } => snapshot
+                            .summary()
+                            .additional_properties
+                            .get(repark_iceberg::write::merge::OPERATION_ID_PROP)
+                            .cloned(),
+                        _ => None,
+                    });
+                *self.stamped_operation_id.lock().expect("capture lock") = stamped;
                 return Err(iceberg::Error::new(
-                    iceberg::ErrorKind::Unexpected,
+                    kind,
                     "injected commit failure on update_table (service-managed abort pin)",
                 ));
             }
@@ -246,7 +276,15 @@ impl Catalog for ServiceManagedTestCatalog {
         'life0: 'async_trait,
         Self: 'async_trait,
     {
-        self.inner.publish_create_table(table)
+        Box::pin(async move {
+            if let CommitInjection::PublishCreate(kind) = self.injected {
+                return Err(iceberg::Error::new(
+                    kind,
+                    "injected commit failure on publish_create_table (staged abort pin)",
+                ));
+            }
+            self.inner.publish_create_table(table).await
+        })
     }
 
     fn publish_replace_table<'life0, 'async_trait>(
@@ -266,7 +304,48 @@ impl Catalog for ServiceManagedTestCatalog {
 /// A context + registry.
 async fn setup_service_managed(
     wh: &TempDir,
-    fail_update_table: bool,
+    injected: CommitInjection,
+) -> (
+    SessionContext,
+    CatalogRegistry,
+    Arc<ServiceManagedTestCatalog>,
+) {
+    let (ctx, catalogs, svc) = setup_wrapped(
+        wh,
+        injected,
+        "svc",
+        LocationPolicy::ServiceManagedLocation,
+        HashMap::new(),
+    )
+    .await;
+    (ctx, catalogs, svc)
+}
+
+async fn setup_staged(
+    wh: &TempDir,
+    injected: CommitInjection,
+) -> (
+    SessionContext,
+    CatalogRegistry,
+    Arc<ServiceManagedTestCatalog>,
+) {
+    let warehouse = wh.path().to_str().unwrap().to_string();
+    setup_wrapped(
+        wh,
+        injected,
+        "glue_like",
+        LocationPolicy::RequireExplicitLocation,
+        HashMap::from([("location".to_string(), format!("{warehouse}/staged-sales"))]),
+    )
+    .await
+}
+
+async fn setup_wrapped(
+    wh: &TempDir,
+    injected: CommitInjection,
+    catalog_name: &str,
+    policy: LocationPolicy,
+    namespace_properties: HashMap<String, String>,
 ) -> (
     SessionContext,
     CatalogRegistry,
@@ -284,13 +363,16 @@ async fn setup_service_managed(
             .unwrap(),
     );
     inner
-        .create_namespace(&NamespaceIdent::new("sales".to_string()), HashMap::new())
+        .create_namespace(
+            &NamespaceIdent::new("sales".to_string()),
+            namespace_properties,
+        )
         .await
         .unwrap();
     let svc = Arc::new(ServiceManagedTestCatalog::new(
         inner,
         format!("{warehouse}/svc-assigned"),
-        fail_update_table,
+        injected,
     ));
     let handle: Arc<dyn Catalog> = svc.clone();
 
@@ -298,17 +380,13 @@ async fn setup_service_managed(
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
     }
-    repark_iceberg::catalog::register_iceberg_catalog(&ctx, "svc", handle.clone())
+    repark_iceberg::catalog::register_iceberg_catalog(&ctx, catalog_name, handle.clone())
         .await
         .unwrap();
     register_source(&ctx, "src", &[(1, "a"), (2, "b"), (3, "c")]);
 
     let mut catalogs = CatalogRegistry::new();
-    catalogs.insert(
-        "svc".to_string(),
-        handle,
-        LocationPolicy::ServiceManagedLocation,
-    );
+    catalogs.insert(catalog_name.to_string(), handle, policy);
     (ctx, catalogs, svc)
 }
 
@@ -320,7 +398,7 @@ fn sales_ident(table: &str) -> TableIdent {
 #[tokio::test]
 async fn ctas_service_managed_creates_first_appends_and_reads_back() {
     let wh = TempDir::new().unwrap();
-    let (ctx, catalogs, svc) = setup_service_managed(&wh, false).await;
+    let (ctx, catalogs, svc) = setup_service_managed(&wh, CommitInjection::None).await;
     execute(
         &ctx,
         &catalogs,
@@ -357,7 +435,7 @@ async fn ctas_service_managed_creates_first_appends_and_reads_back() {
 #[tokio::test]
 async fn ctas_service_managed_partitioned_fans_out_and_reads_back() {
     let wh = TempDir::new().unwrap();
-    let (ctx, catalogs, svc) = setup_service_managed(&wh, false).await;
+    let (ctx, catalogs, svc) = setup_service_managed(&wh, CommitInjection::None).await;
     execute(
         &ctx,
         &catalogs,
@@ -386,7 +464,7 @@ async fn ctas_service_managed_partitioned_fans_out_and_reads_back() {
 #[tokio::test]
 async fn ctas_service_managed_empty_select_creates_table_without_snapshot() {
     let wh = TempDir::new().unwrap();
-    let (ctx, catalogs, svc) = setup_service_managed(&wh, false).await;
+    let (ctx, catalogs, svc) = setup_service_managed(&wh, CommitInjection::None).await;
     execute(
         &ctx,
         &catalogs,
@@ -407,7 +485,11 @@ async fn ctas_service_managed_empty_select_creates_table_without_snapshot() {
 #[tokio::test]
 async fn ctas_service_managed_commit_failure_drops_the_created_table() {
     let wh = TempDir::new().unwrap();
-    let (ctx, catalogs, svc) = setup_service_managed(&wh, true).await;
+    let (ctx, catalogs, svc) = setup_service_managed(
+        &wh,
+        CommitInjection::UpdateTable(iceberg::ErrorKind::Unexpected),
+    )
+    .await;
     let err = execute(
         &ctx,
         &catalogs,
@@ -431,11 +513,94 @@ async fn ctas_service_managed_commit_failure_drops_the_created_table() {
     );
 }
 
+#[tokio::test]
+async fn ctas_service_managed_commit_state_unknown_keeps_table_and_surfaces_class() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs, svc) = setup_service_managed(
+        &wh,
+        CommitInjection::UpdateTable(iceberg::ErrorKind::CommitStateUnknown),
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE svc.sales.t USING iceberg AS SELECT * FROM src",
+    )
+    .await
+    .expect_err("the ambiguous commit outcome must surface");
+    assert_eq!(svc.create_table_calls(), 1, "the create happened");
+    assert_eq!(
+        svc.drop_table_calls(),
+        0,
+        "an ambiguous commit is NOT abort-dropped — the create may have landed"
+    );
+    assert!(
+        catalogs["svc"]
+            .table_exists(&sales_ident("t"))
+            .await
+            .unwrap(),
+        "the possibly-committed table stays for the operator (or an IF NOT EXISTS retry)"
+    );
+    match repark_core::engine_err(error) {
+        repark_core::Error::CommitStateUnknown {
+            operation_id,
+            message,
+        } => {
+            assert!(
+                message.contains("injected commit failure"),
+                "the original commit error message survives: {message}"
+            );
+            assert_eq!(
+                operation_id.as_deref(),
+                Some(svc.captured_operation_id().as_str()),
+                "the exception carries the operation id the commit attempted to stamp"
+            );
+        }
+        other => panic!("expected Error::CommitStateUnknown, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn ctas_staged_commit_state_unknown_surfaces_class_without_operation_id() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs, svc) = setup_staged(
+        &wh,
+        CommitInjection::PublishCreate(iceberg::ErrorKind::CommitStateUnknown),
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE glue_like.sales.t USING iceberg AS SELECT * FROM src",
+    )
+    .await
+    .expect_err("the ambiguous publish must surface");
+    assert_eq!(
+        svc.create_table_calls(),
+        0,
+        "the staged path publishes, it never create_table's"
+    );
+    assert_eq!(
+        svc.drop_table_calls(),
+        0,
+        "the staged path never abort-drops"
+    );
+    match repark_core::engine_err(error) {
+        repark_core::Error::CommitStateUnknown { operation_id, .. } => {
+            assert_eq!(
+                operation_id, None,
+                "the staged publish path mints no engine.operation-id"
+            );
+        }
+        other => panic!("expected Error::CommitStateUnknown, got {other:?}"),
+    }
+}
+
 /// P5.
 #[tokio::test]
 async fn ctas_or_replace_on_service_managed_existing_table_stays_staged_replace() {
     let wh = TempDir::new().unwrap();
-    let (ctx, catalogs, svc) = setup_service_managed(&wh, false).await;
+    let (ctx, catalogs, svc) = setup_service_managed(&wh, CommitInjection::None).await;
     execute(
         &ctx,
         &catalogs,
@@ -466,7 +631,7 @@ async fn ctas_or_replace_on_service_managed_existing_table_stays_staged_replace(
 #[tokio::test]
 async fn ctas_service_managed_from_view_typed_batches_round_trips() {
     let warehouse = TempDir::new().unwrap();
-    let (ctx, catalogs, svc) = setup_service_managed(&warehouse, false).await;
+    let (ctx, catalogs, svc) = setup_service_managed(&warehouse, CommitInjection::None).await;
     register_view_typed_source(&ctx, "viewsrc");
     execute(
         &ctx,

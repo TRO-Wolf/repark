@@ -38,7 +38,7 @@ pub mod testing_support;
 pub mod truncate;
 pub mod writer_props;
 
-pub use commit_error::{CommitStateUnknownError, commit_err};
+pub use commit_error::{CommitStateUnknownError, commit_err, is_commit_state_unknown};
 pub use snapshot_refs::{
     SnapshotRefKind, SnapshotRefRetention, create_or_replace_snapshot_ref, create_snapshot_ref,
     create_snapshot_ref_with_retention, drop_snapshot_ref, replace_snapshot_ref,

@@ -60,3 +60,30 @@ pub(crate) fn operation_id_and_summary() -> (String, HashMap<String, String>) {
     let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), operation_id.clone())]);
     (operation_id, summary)
 }
+
+#[must_use]
+pub fn is_commit_state_unknown(error: &DataFusionError) -> bool {
+    let mut current = error;
+    for _ in 0..MAX_PEEL_DEPTH {
+        match current {
+            DataFusionError::External(inner) => {
+                return inner.downcast_ref::<CommitStateUnknownError>().is_some()
+                    || inner
+                        .downcast_ref::<iceberg::Error>()
+                        .is_some_and(|err| err.kind() == ErrorKind::CommitStateUnknown);
+            }
+            DataFusionError::Context(_, inner) | DataFusionError::Diagnostic(_, inner) => {
+                current = &**inner;
+            }
+            DataFusionError::Shared(inner) => current = &**inner,
+            DataFusionError::Collection(errors) => match errors.first() {
+                Some(first) => current = first,
+                None => return false,
+            },
+            _ => return false,
+        }
+    }
+    false
+}
+
+const MAX_PEEL_DEPTH: usize = 32;
