@@ -29,6 +29,10 @@ unit — so a new family gets a child module and the parent's default arm falls 
   **DOOR-CONVERGE-2 (2026-09-15):** `reverse` joins the converged arms (the facade's old
   DataFusion-core lowering answered strings only).
   pins: door-converge-2/C-002
+  **DOOR-CONVERGE-2 (2026-09-15):** `sequence` / `generate_series` / `gen_series` join the
+  converged arms (replacing the `nested_fn::gen_series` lowering) with the facade literal
+  expansion ceiling kept.
+  pins: door-converge-2/C-003
 
 ## Pointers
 

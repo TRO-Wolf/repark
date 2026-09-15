@@ -174,6 +174,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 - `reverse` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the
   facade shares the SQL door's array-aware kernel instead of the string-only lowering.
   pins: door-converge-2/C-002
+- `sequence` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the
+  facade shares the SQL door's kernel with the literal-expansion ceiling kept.
+  pins: door-converge-2/C-003
 - Window frames use Spark-relative offsets. Count-like unsigned results are cast to signed types.
 - Unknown scalar, aggregate, cast, or window names fail with typed Python exceptions.
 

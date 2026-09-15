@@ -506,7 +506,7 @@ fn days_in_month(year: i32, month: u32) -> Option<u32> {
     Some(first_of_next.pred_opt()?.day())
 }
 
-fn spark_add_months(date: NaiveDate, months: i32) -> Option<NaiveDate> {
+pub(crate) fn spark_add_months(date: NaiveDate, months: i32) -> Option<NaiveDate> {
     let source_month_index = date
         .year()
         .checked_mul(12)?

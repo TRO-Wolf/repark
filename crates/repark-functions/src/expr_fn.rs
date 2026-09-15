@@ -346,6 +346,11 @@ pub fn reverse(arg: Expr) -> Expr {
 }
 
 #[must_use]
+pub fn sequence(args: Vec<Expr>) -> Expr {
+    call(crate::spark_sequence::sequence_udf(), args)
+}
+
+#[must_use]
 pub fn base64(arg: Expr) -> Expr {
     call(crate::spark_base64::base64_udf(), vec![arg])
 }

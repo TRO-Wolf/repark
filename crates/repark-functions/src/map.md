@@ -589,6 +589,18 @@ scalars live under [`try_invert/`](try_invert/map.md).
   array → NULL row, `DATA_DIFF_TYPES` on a non-array sibling); any-`Binary` args stay
   `Binary`; everything else keeps the `Utf8` path. The facade `PyColumn::concat` embeds the
   same UDF, so both doors resolve one kernel. pins: door-converge-2/C-001
+- `spark_sequence.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `sequence`
+  (int widths kept, descending default step, dates with 1-day default and month steps,
+  timestamps with interval steps, NULL bound/step → NULL with `containsNull=false`, zero
+  or wrong-sign step raises Spark's `Illegal sequence boundaries` text, decimal bounds
+  refuse `SEQUENCE_WRONG_INPUT_TYPES`). `coerce_types` validates but never casts: the
+  built-in `type_coercion` runs before `spark_integer_literal` narrowing, so a widening
+  coerce would shield provisional `Int64` literals behind `CAST`s and defeat the narrow —
+  widths resolve in the return type after narrowing, and the kernel casts internally.
+  Month stepping reuses `datetime::spark_add_months` (now `pub(crate)`). The facade arm
+  moved to `dispatch_spark.rs` with the `refuse_facade_literal_expansion` ceiling kept;
+  the plan-time `ArrayCardinalityCeiling` still fires on the `sequence` name.
+  pins: door-converge-2/C-003
 - `spark_reverse.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `reverse`
   (overwrites the string-only DataFusion kernel): arrays reverse element order with the
   element type, `containsNull` and nullability kept; strings reverse by character; untyped
