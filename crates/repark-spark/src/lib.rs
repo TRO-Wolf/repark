@@ -25,7 +25,10 @@ mod spark_rewrites;
 mod spark_type_names;
 mod spark_typed;
 
-pub use spark_typed::{FoldSparkNumericCasts, SparkProjectionDisplay, spark_as_udf};
+pub use spark_typed::{
+    FoldSparkNumericCasts, SUFFIX_LITERAL_NAME, SparkProjectionDisplay, spark_as_udf,
+    suffix_literal_udf,
+};
 mod time_travel;
 mod truncate;
 pub mod type_table;

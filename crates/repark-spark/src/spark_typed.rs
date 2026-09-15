@@ -43,8 +43,17 @@ fn fold_expr(expr: Expr) -> Transformed<Expr> {
     let Expr::Cast(cast) = &expr else {
         return Transformed::no(expr);
     };
-    let Expr::Literal(scalar, _) = cast.expr.as_ref() else {
-        return Transformed::no(expr);
+    let scalar = match cast.expr.as_ref() {
+        Expr::Literal(scalar, _) => scalar,
+        Expr::ScalarFunction(function)
+            if function.func.name() == SUFFIX_LITERAL_NAME && function.args.len() == 1 =>
+        {
+            let Expr::Literal(scalar, _) = &function.args[0] else {
+                return Transformed::no(expr);
+            };
+            scalar
+        }
+        _ => return Transformed::no(expr),
     };
     let is_string = matches!(
         scalar,
@@ -180,6 +189,12 @@ fn spark_display_inner(expr: &Expr) -> String {
             .args
             .first()
             .map_or_else(|| expr.schema_name().to_string(), spark_display),
+        Expr::ScalarFunction(function) if function.func.name() == SUFFIX_LITERAL_NAME => {
+            function.args.first().map_or_else(
+                || expr.schema_name().to_string(),
+                spark_display,
+            )
+        }
         other => other.schema_name().to_string(),
     }
 }
@@ -333,4 +348,74 @@ impl ScalarUDFImpl for SparkAs {
 #[must_use]
 pub fn spark_as_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkAs::new()))
+}
+
+pub const SUFFIX_LITERAL_NAME: &str = "__repark_suffix_literal__";
+
+#[derive(Debug)]
+struct SuffixLiteral {
+    signature: Signature,
+}
+
+impl SuffixLiteral {
+    fn new() -> Self {
+        Self {
+            signature: Signature::any(1, Volatility::Immutable),
+        }
+    }
+}
+
+impl PartialEq for SuffixLiteral {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SuffixLiteral {}
+
+impl Hash for SuffixLiteral {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        SUFFIX_LITERAL_NAME.hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SuffixLiteral {
+    fn name(&self) -> &str {
+        SUFFIX_LITERAL_NAME
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        arg_types.first().cloned().ok_or_else(|| {
+            DataFusionError::Plan(format!("'{SUFFIX_LITERAL_NAME}' expects one argument"))
+        })
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
+        let first = args.arg_fields.first().ok_or_else(|| {
+            DataFusionError::Plan(format!("'{SUFFIX_LITERAL_NAME}' expects one argument"))
+        })?;
+        Ok(Field::new(
+            SUFFIX_LITERAL_NAME,
+            first.data_type().clone(),
+            true,
+        )
+        .into())
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        args.args.first().cloned().ok_or_else(|| {
+            DataFusionError::Execution(format!(
+                "'{SUFFIX_LITERAL_NAME}' expects one argument"
+            ))
+        })
+    }
+}
+
+#[must_use]
+pub fn suffix_literal_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SuffixLiteral::new()))
 }

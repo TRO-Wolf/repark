@@ -114,6 +114,7 @@ async fn setup_with_owner_and_settings(
     let ctx = SessionContext::new_with_config(config);
     repark_functions::decimal_spark::register_spark_decimal_planner(&ctx);
     ctx.register_udf(crate::spark_as_udf().as_ref().clone());
+    ctx.register_udf(crate::suffix_literal_udf().as_ref().clone());
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
     }

@@ -150,10 +150,19 @@ fn suffix_target(token: &Token) -> Option<&'static str> {
     }
 }
 
+fn float_replacement(digits: &str) -> String {
+    let operand = decimal_cast_operand(digits);
+    if operand.starts_with('\'') {
+        format!("CAST({}({operand}) AS FLOAT)", crate::SUFFIX_LITERAL_NAME)
+    } else {
+        format!("CAST({operand} AS FLOAT)")
+    }
+}
+
 fn suffix_replacement(digits: &str, target: &str, signed: &str) -> Result<String> {
     match target {
         "DOUBLE" => Ok(double_replacement(digits)),
-        "FLOAT" => Ok(format!("CAST({} AS FLOAT)", decimal_cast_operand(digits))),
+        "FLOAT" => Ok(float_replacement(digits)),
         "SMALLINT" => integer_suffix_replacement(
             digits,
             signed,
@@ -202,7 +211,12 @@ fn invalid_numeric_literal_range(token: &str) -> DataFusionError {
 }
 
 fn double_replacement(digits: &str) -> String {
-    format!("CAST({} AS DOUBLE)", decimal_cast_operand(digits))
+    let operand = decimal_cast_operand(digits);
+    if operand.starts_with('\'') {
+        format!("CAST({}({operand}) AS DOUBLE)", crate::SUFFIX_LITERAL_NAME)
+    } else {
+        format!("CAST({operand} AS DOUBLE)")
+    }
 }
 
 fn decimal_cast_operand(digits: &str) -> String {
@@ -221,7 +235,10 @@ fn decimal_suffix_replacement(digits: &str) -> Result<String> {
     if precision == 0 || precision > 38 || scale < 0 || i32::from(scale) > i32::from(precision) {
         return Err(invalid_numeric_literal_range(&format!("{digits}BD")));
     }
-    Ok(format!("CAST({plain} AS DECIMAL({precision},{scale}))"))
+    Ok(format!(
+        "CAST({}({plain}) AS DECIMAL({precision},{scale}))",
+        crate::SUFFIX_LITERAL_NAME
+    ))
 }
 
 fn decimal_plain_and_precision(digits: &str) -> Option<(String, u8, i8)> {

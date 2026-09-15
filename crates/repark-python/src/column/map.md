@@ -149,6 +149,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **FNP-4B critic (2026-09-15):** `parse_unresolved_expr` reuses the eager `SessionContext`
   instead of building a second one after analysis fails. `sql_context` installs
   `FoldSparkNumericCasts`, `SparkProjectionDisplay`, and `__repark_spark_as__`.
+  **Round 5 (2026-09-15):** `sql_context` also installs
+  `__repark_suffix_literal__`. pins: fnp-4b/C-021
   **FNP-8 repair (2026-09-07):** the throwaway context builds its standard analyzer vector with
   the same pre-coercion HOF preparation as a normal Spark session. pins: fnp-8/C-003, C-004
   **FNP-8-REVIEW (2026-09-07):** the nested-HOF refusal names the Column door as the

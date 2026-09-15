@@ -841,7 +841,8 @@ mod location_translation_tests {
         assert_eq!(
             canonical.as_ref(),
             "SELECT CAST(1000000 AS DOUBLE), CAST(100 AS DOUBLE), CAST(0.001 AS DOUBLE), \
-             CAST(1000000000000000000000 AS DOUBLE), CAST('4.9E-324' AS DOUBLE), 1.5"
+             CAST(1000000000000000000000 AS DOUBLE), \
+             CAST(__repark_suffix_literal__('4.9E-324') AS DOUBLE), 1.5"
         );
     }
 
@@ -851,8 +852,10 @@ mod location_translation_tests {
             canonicalize("SELECT 1.5BD, 10BD, 0.001BD, 1.5e2BD").expect("canonicalizes");
         assert_eq!(
             canonical.as_ref(),
-            "SELECT CAST(1.5 AS DECIMAL(2,1)), CAST(10 AS DECIMAL(2,0)), \
-             CAST(0.001 AS DECIMAL(3,3)), CAST(150 AS DECIMAL(3,0))"
+            "SELECT CAST(__repark_suffix_literal__(1.5) AS DECIMAL(2,1)), \
+             CAST(__repark_suffix_literal__(10) AS DECIMAL(2,0)), \
+             CAST(__repark_suffix_literal__(0.001) AS DECIMAL(3,3)), \
+             CAST(__repark_suffix_literal__(150) AS DECIMAL(3,0))"
         );
     }
 
