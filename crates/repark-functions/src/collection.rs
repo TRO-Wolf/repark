@@ -22,6 +22,10 @@ mod shuffle;
 
 mod array_append;
 mod array_contains;
+mod concat_array;
+pub(crate) use concat_array::{
+    invoke_array_concat, is_binary_family, is_list_family, plan_array_concat,
+};
 mod array_insert;
 mod array_position;
 mod array_sort;

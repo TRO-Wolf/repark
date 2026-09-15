@@ -302,30 +302,14 @@ impl PyColumn {
     }
 
     /// String concatenation of the arguments (PySpark `concat(*cols)`).
-    ///
-    /// PySpark's `concat` **propagates NULL**: if *any* argument is NULL the result is NULL.
-    /// DataFusion's `concat` instead treats a NULL argument as the empty string and skips it, so
-    /// the raw `concat` diverges. We wrap it in a `CASE WHEN (arg1 IS NULL OR … OR argN IS NULL)
-    /// THEN NULL ELSE concat(args) END` guard so the any-null → NULL semantics match Spark.
     #[staticmethod]
     pub fn concat(columns: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("Column.concat", {
+            use datafusion::logical_expr::expr::ScalarFunction;
             let exprs: Vec<Expr> = columns.iter().map(PyColumn::expr).collect();
-            // Match Spark's Utf8 result and keep both CASE arms at one Arrow type.
-            let concatenated = Expr::Cast(Cast::new(
-                Box::new(datafusion::functions::expr_fn::concat(exprs.clone())),
-                DataType::Utf8,
-            ));
-            let any_null = exprs.into_iter().map(Expr::is_null).reduce(Expr::or);
-            Ok(match any_null {
-                None => Self::from_expr(concatenated),
-                Some(any_null) => Self::from_expr(Expr::Case(Case::new(
-                    None,
-                    // Keep the NULL arm at the same Utf8 type as the concatenated value.
-                    vec![(Box::new(any_null), Box::new(lit(ScalarValue::Utf8(None))))],
-                    Some(Box::new(concatenated)),
-                ))),
-            })
+            Ok(Self::from_expr(Expr::ScalarFunction(
+                ScalarFunction::new_udf(repark_functions::string::concat_udf(), exprs),
+            )))
         })
     }
 

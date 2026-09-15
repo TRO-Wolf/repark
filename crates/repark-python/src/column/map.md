@@ -168,7 +168,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   declared-absent). pins: fnp-15-16/C-001
 - Higher-order lambda variables are resolved against the consuming DataFrame schema.
 - Nested higher-order functions refuse loudly rather than producing an invalid plan.
-- `concat` propagates NULL and returns Spark-compatible UTF-8 output.
+- `concat` embeds the door-converged `repark_functions::string::concat_udf` (DOOR-CONVERGE-2):
+  string, binary and array arms with any-NULL → NULL, one kernel on both doors.
+  pins: door-converge-2/C-001
 - Window frames use Spark-relative offsets. Count-like unsigned results are cast to signed types.
 - Unknown scalar, aggregate, cast, or window names fail with typed Python exceptions.
 

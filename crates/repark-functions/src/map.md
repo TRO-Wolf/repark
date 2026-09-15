@@ -584,6 +584,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the float-stringify rule for float-element lists) joins through the same
   stack formatter; string and other leaves mirror the upstream kernel.
   pins: java-double-str-1/C-010
+  **DOOR-CONVERGE-2 (2026-09-15):** one UDF, three arms by argument family — all-array args
+  widen through `collection/concat_array.rs` (common element type, OR `containsNull`, NULL
+  array → NULL row, `DATA_DIFF_TYPES` on a non-array sibling); any-`Binary` args stay
+  `Binary`; everything else keeps the `Utf8` path. The facade `PyColumn::concat` embeds the
+  same UDF, so both doors resolve one kernel. pins: door-converge-2/C-001
 - `instant_ts.rs` — overwrite `now` / `current_timestamp` / `to_timestamp` with Arrow
   `Timestamp(µs, UTC)`. Zoneless LTZ inputs (`TIMESTAMP '…'`,
   zoneless `to_timestamp`, `CAST(str|date|ntz AS TIMESTAMP)`) in the session zone; a

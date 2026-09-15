@@ -4,8 +4,8 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use datafusion::arrow::array::{
-    Array, ArrayRef, AsArray, GenericListArray, Int64Array, OffsetSizeTrait, StringArray,
-    StringBuilder, as_fixed_size_list_array, as_large_list_array, as_list_array,
+    Array, ArrayRef, AsArray, BinaryBuilder, GenericListArray, Int64Array, OffsetSizeTrait,
+    StringArray, StringBuilder, as_fixed_size_list_array, as_large_list_array, as_list_array,
 };
 use datafusion::arrow::buffer::NullBuffer;
 use datafusion::arrow::compute::{can_cast_types, cast};
@@ -363,16 +363,31 @@ impl Hash for SparkConcat {
 impl ScalarUDFImpl for SparkConcat {
     crate::shim_udf_boilerplate!("concat");
 
-    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        Ok(DataType::Utf8)
+    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        spark_concat_return(arg_types)
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let declared: Vec<DataType> = args
+            .arg_fields
+            .iter()
+            .map(|field| field.data_type().clone())
+            .collect();
         let nullable = args.arg_fields.iter().any(|field| field.is_nullable());
-        Ok(Arc::new(Field::new("concat", DataType::Utf8, nullable)))
+        Ok(Arc::new(Field::new(
+            "concat",
+            spark_concat_return(&declared)?,
+            nullable,
+        )))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        if arg_types.iter().any(crate::collection::is_list_family) {
+            return Ok(crate::collection::plan_array_concat(arg_types)?.coerced);
+        }
+        if arg_types.iter().any(crate::collection::is_binary_family) {
+            return Ok(vec![DataType::Binary; arg_types.len()]);
+        }
         Ok(arg_types
             .iter()
             .map(|data_type| match data_type {
@@ -383,8 +398,22 @@ impl ScalarUDFImpl for SparkConcat {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        spark_concat_utf8(args)
+        match args.return_field.data_type() {
+            DataType::List(_) => crate::collection::invoke_array_concat(args),
+            DataType::Binary => spark_concat_binary(args),
+            _ => spark_concat_utf8(args),
+        }
     }
+}
+
+fn spark_concat_return(arg_types: &[DataType]) -> Result<DataType> {
+    if arg_types.iter().any(crate::collection::is_list_family) {
+        return Ok(crate::collection::plan_array_concat(arg_types)?.result);
+    }
+    if arg_types.iter().any(crate::collection::is_binary_family) {
+        return Ok(DataType::Binary);
+    }
+    Ok(DataType::Utf8)
 }
 
 /// Null-mask resolution for Spark any-NULL → NULL concat semantics.
@@ -444,7 +473,58 @@ fn spark_concat_utf8(args: ScalarFunctionArgs) -> Result<ColumnarValue> {
     };
     let result = concat_func.invoke_with_args(kernel_args)?;
     let result = cast_columnar_value_to_utf8(&result)?;
-    apply_null_mask(result, null_mask)
+    apply_null_mask(result, null_mask, ScalarValue::Utf8(None))
+}
+
+fn spark_concat_binary(args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+    let ScalarFunctionArgs {
+        args: arg_values,
+        number_rows,
+        ..
+    } = args;
+
+    if arg_values.is_empty() {
+        return Ok(ColumnarValue::Scalar(ScalarValue::Binary(Some(Vec::new()))));
+    }
+
+    let null_mask = compute_null_mask(&arg_values, number_rows)?;
+    if matches!(null_mask, NullMaskResolution::ReturnNull) {
+        return Ok(ColumnarValue::Scalar(ScalarValue::Binary(None)));
+    }
+
+    let arrays = ColumnarValue::values_to_arrays(&arg_values)?;
+    let mut binaries = Vec::with_capacity(arrays.len());
+    for array in &arrays {
+        let shaped = if array.data_type() == &DataType::Binary {
+            Arc::clone(array)
+        } else {
+            cast(array.as_ref(), &DataType::Binary)?
+        };
+        binaries.push(shaped);
+    }
+    let row_count = binaries.first().map_or(0, |array| array.len());
+    let mut builder = BinaryBuilder::with_capacity(row_count, 0);
+    for row in 0..row_count {
+        let mut piece: Vec<u8> = Vec::new();
+        let mut row_null = false;
+        for binary in &binaries {
+            if binary.is_null(row) {
+                row_null = true;
+                break;
+            }
+            piece.extend_from_slice(binary.as_binary::<i32>().value(row));
+        }
+        if row_null {
+            builder.append_null();
+        } else {
+            builder.append_value(&piece);
+        }
+    }
+    apply_null_mask(
+        ColumnarValue::Array(Arc::new(builder.finish())),
+        null_mask,
+        ScalarValue::Binary(None),
+    )
 }
 
 /// Cast a [`ColumnarValue`] to `Utf8` (arrays via compute cast; scalars via `ScalarValue` cast).
@@ -534,9 +614,13 @@ fn compute_null_mask(args: &[ColumnarValue], number_rows: usize) -> Result<NullM
 }
 
 /// Apply the Spark any-NULL mask onto a concat result that is already `Utf8`.
-fn apply_null_mask(result: ColumnarValue, null_mask: NullMaskResolution) -> Result<ColumnarValue> {
+fn apply_null_mask(
+    result: ColumnarValue,
+    null_mask: NullMaskResolution,
+    null_scalar: ScalarValue,
+) -> Result<ColumnarValue> {
     match (result, null_mask) {
-        (_, NullMaskResolution::ReturnNull) => Ok(ColumnarValue::Scalar(ScalarValue::Utf8(None))),
+        (_, NullMaskResolution::ReturnNull) => Ok(ColumnarValue::Scalar(null_scalar)),
         (scalar @ ColumnarValue::Scalar(_), NullMaskResolution::NoMask) => Ok(scalar),
         (ColumnarValue::Array(array), NullMaskResolution::Apply(null_mask)) => {
             let combined_nulls = NullBuffer::union(array.nulls(), Some(&null_mask));
@@ -920,6 +1004,25 @@ mod tests {
         assert!(!strings.is_valid(0), "row0 any-NULL must be NULL");
         assert_eq!(strings.value(1), "yz");
         assert!(!strings.is_valid(2), "row2 any-NULL must be NULL");
+    }
+
+    #[tokio::test]
+    async fn concat_binary_stays_binary() {
+        let ctx = ctx_register_all();
+        let batches = ctx
+            .sql("SELECT concat(unbase64('QQ=='), unbase64('Qg==')) AS v")
+            .await
+            .expect("plan binary concat")
+            .collect()
+            .await
+            .expect("execute binary concat");
+        assert_eq!(batches[0].column(0).data_type(), &DataType::Binary);
+        let values = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::BinaryArray>()
+            .expect("BinaryArray");
+        assert_eq!(values.value(0), b"AB");
     }
 
     #[tokio::test]
