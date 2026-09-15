@@ -1883,7 +1883,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   dtypes; the old `test_text_probe_partition_by` asserts `['value', 'k']`. The fixture
   row and registry rows are the docs half, and the neighboring reader/writer suites
   stay green around it.
-  pins: io-text-1/C-001, C-002, C-003, C-004, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9, U-1, U-2, U-3
+  **(U-4..U-6):** `test_text_probe3_format_recursive_false` pins the falsy flag
+  reading like omitted; `test_text_probe3_glob_escaped_star` pins the literal-star
+  read; `test_text_probe3_glob_matches_dirs` pins the one-leaf-level dir globs.
+  pins: io-text-1/C-001, C-002, C-003, C-004, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9, U-1, U-2, U-3, U-4, U-5, U-6
 - `test_column_x1_census.py` — X1: Column between/pow/string/bitwise/eqNullSafe/lit temporal + trig;
   octo C1: bitwiseOR/XOR values, lit(time)/lit(list)/empty array, hypot 3-4-5, dayname(date);
   octo C2: eqNullSafe(None), between inclusive/inverted;

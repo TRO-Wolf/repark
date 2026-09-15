@@ -332,7 +332,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the globs, the limit, and the error texts.
 - `text_glob.rs` — **IO-TEXT-1 follow-up (2026-09-15):** hand-written Hadoop glob
   matcher (`*?[]{}`, no `/` crossing, char-aware, brace nesting capped, no new
-  dependency) with matcher unit tests. pins: io-text-1/T-5
+  dependency) with matcher unit tests. **Round 3 (2026-09-15, U-5/U-6):** each
+  pattern parses once to per-segment tokens (the old `match_segment`/`match_glob`
+  pair is deleted); `\`-escaped meta matches literally, and a pattern whose last
+  segment names a directory lists one leaf level through an iterative walk.
+  pins: io-text-1/T-5, U-5, U-6
 - `text_io.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` writer.
   **Follow-up (2026-09-15):** the writer streams `execute_stream` batches into
   sequential `part-*.txt` (NULL rows write empty lines, every row terminated; an empty

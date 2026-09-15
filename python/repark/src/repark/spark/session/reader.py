@@ -412,6 +412,8 @@ class DataFrameReader:
         fmt = (self._format or "").strip().lower()
         if fmt in {"orc", "xml"}:
             _io_declared.refuse_reader_load_format(self, fmt)
+        if fmt == "text":
+            _reader_text._drop_falsy_recursive_lookup(self)
         # Postgres/JDBC options are intentional; skip the parquet/iceberg semantic gate for them.
         if fmt not in {"postgres", "postgresql", "jdbc"}:
             self._reject_unsupported_semantic_options()

@@ -8,17 +8,8 @@ pub(crate) fn is_hidden_name(name: &std::ffi::OsStr) -> bool {
 }
 
 pub(crate) fn has_glob_meta(path: &str) -> bool {
-    let mut escaped = false;
-    for byte in path.bytes() {
-        if escaped {
-            escaped = false;
-        } else if byte == b'\\' {
-            escaped = true;
-        } else if matches!(byte, b'*' | b'?' | b'[' | b'{') {
-            return true;
-        }
-    }
-    false
+    path.bytes()
+        .any(|byte| matches!(byte, b'*' | b'?' | b'[' | b'{'))
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -156,12 +147,6 @@ fn match_tokens(tokens: &[GlobToken], text: &[char]) -> bool {
     token_at == tokens.len()
 }
 
-fn match_segment(pattern: &str, text: &str) -> bool {
-    let tokens = parse_glob_segment(pattern);
-    let chars: Vec<char> = text.chars().collect();
-    match_tokens(&tokens, &chars)
-}
-
 fn expand_braces(pattern: &str) -> Vec<String> {
     expand_braces_inner(pattern, 0)
 }
@@ -247,27 +232,34 @@ fn expand_braces_inner(pattern: &str, depth: usize) -> Vec<String> {
     out
 }
 
-fn match_glob(pattern: &str, candidate: &str) -> bool {
-    expand_braces(pattern).iter().any(|expanded| {
-        let wants: Vec<&str> = expanded.split('/').collect();
-        let gots: Vec<&str> = candidate.split('/').collect();
-        wants.len() == gots.len()
+fn parse_glob_patterns(pattern: &str) -> Vec<Vec<Vec<GlobToken>>> {
+    expand_braces(pattern)
+        .iter()
+        .map(|expanded| {
+            expanded
+                .split('/')
+                .map(parse_glob_segment)
+                .collect::<Vec<Vec<GlobToken>>>()
+        })
+        .collect()
+}
+
+fn match_glob_with_dirs(patterns: &[Vec<Vec<GlobToken>>], candidate: &str) -> bool {
+    let gots: Vec<&str> = candidate.split('/').collect();
+    let texts: Vec<Vec<char>> = gots.iter().map(|text| text.chars().collect()).collect();
+    patterns.iter().any(|wants| {
+        (gots.len() == wants.len() || gots.len() == wants.len() + 1)
             && wants
                 .iter()
-                .zip(gots.iter())
-                .all(|pair| match_segment(pair.0, pair.1))
+                .zip(texts.iter())
+                .all(|pair| match_tokens(pair.0, pair.1))
     })
 }
 
 fn split_glob_base(pattern: &str) -> (PathBuf, String) {
-    let mut escaped = false;
     let mut meta_at: Option<usize> = None;
     for (at, byte) in pattern.bytes().enumerate() {
-        if escaped {
-            escaped = false;
-        } else if byte == b'\\' {
-            escaped = true;
-        } else if matches!(byte, b'*' | b'?' | b'[' | b'{') {
+        if matches!(byte, b'*' | b'?' | b'[' | b'{') {
             meta_at = Some(at);
             break;
         }
@@ -285,34 +277,37 @@ fn split_glob_base(pattern: &str) -> (PathBuf, String) {
 }
 
 fn collect_glob_files(dir: &Path, display: &str, out: &mut Vec<PathBuf>) -> Result<()> {
-    let entries = std::fs::read_dir(dir).map_err(|error| {
-        Error::Analysis(format!(
-            "text read cannot list directory {display:?}: {error}"
-        ))
-    })?;
-    let mut ordered: Vec<std::fs::DirEntry> = Vec::new();
-    for entry in entries {
-        ordered.push(entry.map_err(|error| {
-            Error::Analysis(format!(
-                "text read cannot list directory {display:?}: {error}"
-            ))
-        })?);
-    }
-    ordered.sort_by_key(std::fs::DirEntry::path);
-    for entry in &ordered {
-        if is_hidden_name(&entry.file_name()) {
-            continue;
-        }
-        let candidate = entry.path();
-        let kind = entry.file_type().map_err(|error| {
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(current) = stack.pop() {
+        let entries = std::fs::read_dir(&current).map_err(|error| {
             Error::Analysis(format!(
                 "text read cannot list directory {display:?}: {error}"
             ))
         })?;
-        if kind.is_dir() {
-            collect_glob_files(&candidate, display, out)?;
-        } else if kind.is_file() || (kind.is_symlink() && candidate.is_file()) {
-            out.push(candidate);
+        let mut ordered: Vec<std::fs::DirEntry> = Vec::new();
+        for entry in entries {
+            ordered.push(entry.map_err(|error| {
+                Error::Analysis(format!(
+                    "text read cannot list directory {display:?}: {error}"
+                ))
+            })?);
+        }
+        ordered.sort_by_key(std::fs::DirEntry::path);
+        for entry in ordered.into_iter().rev() {
+            if is_hidden_name(&entry.file_name()) {
+                continue;
+            }
+            let candidate = entry.path();
+            let kind = entry.file_type().map_err(|error| {
+                Error::Analysis(format!(
+                    "text read cannot list directory {display:?}: {error}"
+                ))
+            })?;
+            if kind.is_dir() {
+                stack.push(candidate);
+            } else if kind.is_file() || (kind.is_symlink() && candidate.is_file()) {
+                out.push(candidate);
+            }
         }
     }
     Ok(())
@@ -325,6 +320,7 @@ pub(crate) fn expand_text_glob(pattern: &str) -> Result<Vec<PathBuf>> {
     }
     let mut candidates: Vec<PathBuf> = Vec::new();
     collect_glob_files(&base, pattern, &mut candidates)?;
+    let parsed = parse_glob_patterns(&wanted);
     let base_prefix = base.to_string_lossy().replace('\\', "/");
     let mut matched: Vec<PathBuf> = Vec::new();
     for candidate in &candidates {
@@ -333,7 +329,7 @@ pub(crate) fn expand_text_glob(pattern: &str) -> Result<Vec<PathBuf>> {
             .strip_prefix(base_prefix.as_str())
             .unwrap_or(text.as_str())
             .trim_start_matches('/');
-        if match_glob(&wanted, relative) {
+        if match_glob_with_dirs(&parsed, relative) {
             matched.push(candidate.clone());
         }
     }
@@ -347,24 +343,29 @@ mod tests {
 
     #[test]
     fn glob_segment_star_question() {
-        assert!(match_segment("*.txt", "a.txt"));
-        assert!(match_segment("*.txt", ".txt"));
-        assert!(!match_segment("*.txt", "a.log"));
-        assert!(!match_segment("*.txt", "a/b.txt"));
-        assert!(match_segment("list_?.txt", "list_1.txt"));
-        assert!(!match_segment("list_?.txt", "list_12.txt"));
+        let parsed = parse_glob_patterns("*.txt");
+        assert!(match_glob_with_dirs(&parsed, "a.txt"));
+        assert!(match_glob_with_dirs(&parsed, ".txt"));
+        assert!(!match_glob_with_dirs(&parsed, "a.log"));
+        assert!(!match_glob_with_dirs(&parsed, "a/b.txt"));
+        let parsed = parse_glob_patterns("list_?.txt");
+        assert!(match_glob_with_dirs(&parsed, "list_1.txt"));
+        assert!(!match_glob_with_dirs(&parsed, "list_12.txt"));
     }
 
     #[test]
     fn glob_segment_class() {
-        assert!(match_segment("foo[bar].txt", "foob.txt"));
-        assert!(match_segment("foo[bar].txt", "fooa.txt"));
-        assert!(!match_segment("foo[bar].txt", "foo[.txt"));
-        assert!(!match_segment("foo[bar].txt", "foo[bar].txt"));
-        assert!(match_segment("v[0-9].txt", "v7.txt"));
-        assert!(!match_segment("v[0-9].txt", "vx.txt"));
-        assert!(match_segment("v[^0-9].txt", "vx.txt"));
-        assert!(!match_segment("v[^0-9].txt", "v7.txt"));
+        let parsed = parse_glob_patterns("foo[bar].txt");
+        assert!(match_glob_with_dirs(&parsed, "foob.txt"));
+        assert!(match_glob_with_dirs(&parsed, "fooa.txt"));
+        assert!(!match_glob_with_dirs(&parsed, "foo[.txt"));
+        assert!(!match_glob_with_dirs(&parsed, "foo[bar].txt"));
+        let parsed = parse_glob_patterns("v[0-9].txt");
+        assert!(match_glob_with_dirs(&parsed, "v7.txt"));
+        assert!(!match_glob_with_dirs(&parsed, "vx.txt"));
+        let parsed = parse_glob_patterns("v[^0-9].txt");
+        assert!(match_glob_with_dirs(&parsed, "vx.txt"));
+        assert!(!match_glob_with_dirs(&parsed, "v7.txt"));
     }
 
     #[test]
@@ -373,13 +374,52 @@ mod tests {
             expand_braces("{a,b}.txt"),
             vec!["a.txt".to_string(), "b.txt".to_string()]
         );
-        assert!(match_glob("{a,b}/*.txt", "b/f.txt"));
-        assert!(!match_glob("{a,b}/*.txt", "c/f.txt"));
+        let parsed = parse_glob_patterns("{a,b}/*.txt");
+        assert!(match_glob_with_dirs(&parsed, "b/f.txt"));
+        assert!(!match_glob_with_dirs(&parsed, "c/f.txt"));
     }
 
     #[test]
     fn glob_star_star_matches_within_segment() {
-        assert!(match_glob("**/*.txt", "a/b.txt"));
-        assert!(!match_glob("**/*.txt", "a/b/c.txt"));
+        let parsed = parse_glob_patterns("**/*.txt");
+        assert!(match_glob_with_dirs(&parsed, "a/b.txt"));
+        assert!(!match_glob_with_dirs(&parsed, "a/b/c.txt"));
+    }
+
+    #[test]
+    fn glob_escaped_star_matches_literal_star() {
+        assert!(has_glob_meta("a\\*b.txt"));
+        let parsed = parse_glob_patterns("a\\*b.txt");
+        assert!(match_glob_with_dirs(&parsed, "a*b.txt"));
+        assert!(!match_glob_with_dirs(&parsed, "aab.txt"));
+        assert!(!match_glob_with_dirs(&parsed, "ab.txt"));
+    }
+
+    #[test]
+    fn glob_segment_matching_dir_lists_one_leaf_level() {
+        let parsed = parse_glob_patterns("d*");
+        assert!(match_glob_with_dirs(&parsed, "d1/a.txt"));
+        assert!(!match_glob_with_dirs(&parsed, "top.txt"));
+        let parsed = parse_glob_patterns("*");
+        assert!(match_glob_with_dirs(&parsed, "top.txt"));
+        assert!(match_glob_with_dirs(&parsed, "d1/a.txt"));
+        assert!(!match_glob_with_dirs(&parsed, "d1/nested/a.txt"));
+    }
+
+    #[test]
+    fn glob_walk_collects_nested_files_without_recursion() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("d1").join("nested")).unwrap();
+        std::fs::write(dir.path().join("top.txt"), "t").unwrap();
+        std::fs::write(dir.path().join("d1").join("a.txt"), "a").unwrap();
+        std::fs::write(
+            dir.path().join("d1").join("nested").join("deep.txt"),
+            "deep",
+        )
+        .unwrap();
+        let mut out = Vec::new();
+        collect_glob_files(dir.path(), "walk", &mut out).unwrap();
+        out.sort();
+        assert_eq!(out.len(), 3);
     }
 }

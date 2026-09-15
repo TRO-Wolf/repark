@@ -15,6 +15,7 @@ pins: io-text-1/C-001, C-002, C-003, T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 from pathlib import Path
@@ -391,9 +392,9 @@ def test_text_probe3_part_specials_read(spark: ReparkSession, tmp_path: Path) ->
 def test_text_probe3_part_empty_and_null_read(spark: ReparkSession, tmp_path: Path) -> None:
     """cell text_probe3_part_empty_and_null — the default dir reads NULL. pins: io-text-1/U-3"""
     out = tmp_path / "emptynull"
-    spark.createDataFrame([("", "v1"), (None, "v2"), ("z", "v3")], "k string, value string").write.partitionBy(
-        "k"
-    ).text(str(out))
+    spark.createDataFrame(
+        [("", "v1"), (None, "v2"), ("z", "v3")], "k string, value string"
+    ).write.partitionBy("k").text(str(out))
     back = spark.read.text(str(out))
     assert back.columns == ["value", "k"]
     assert sorted((row.value, row.k) for row in back.collect()) == [
@@ -423,9 +424,9 @@ def test_text_probe3_part_bool_read(spark: ReparkSession, tmp_path: Path) -> Non
     """cell text_probe3_part_bool — booleans stay strings. pins: io-text-1/U-3"""
     expected = _cell("text_probe3_part_bool")["result"]
     out = tmp_path / "bool"
-    spark.createDataFrame([(True, "v1"), (False, "v2")], "k boolean, value string").write.partitionBy(
-        "k"
-    ).text(str(out))
+    spark.createDataFrame(
+        [(True, "v1"), (False, "v2")], "k boolean, value string"
+    ).write.partitionBy("k").text(str(out))
     back = spark.read.text(str(out))
     assert back.columns == ["value", "k"]
     assert sorted((row.value, row.k) for row in back.collect()) == [("v1", "true"), ("v2", "false")]
@@ -433,10 +434,9 @@ def test_text_probe3_part_bool_read(spark: ReparkSession, tmp_path: Path) -> Non
 
 
 def test_text_probe3_part_date_ts_double_int_read(spark: ReparkSession, tmp_path: Path) -> None:
-    """cell text_probe3_part_date_ts_double_int — inferred date/string/double/int. pins: io-text-1/U-3"""
+    """cell text_probe3_part_date_ts_double_int — inferred types. pins: io-text-1/U-3"""
     import datetime
 
-    expected = _cell("text_probe3_part_date_ts_double_int")["result"]
     out = tmp_path / "dts"
     spark.sql(
         "SELECT DATE '2024-01-02' AS d, TIMESTAMP '2024-01-02 03:04:05.12' AS t, "
@@ -450,6 +450,59 @@ def test_text_probe3_part_date_ts_double_int_read(spark: ReparkSession, tmp_path
     assert [tuple(pair) for pair in back.dtypes] == [
         tuple(pair) for pair in _cell("text_probe3_part_read_types_inferred")["result"]
     ]
+
+
+def _cell_values(name: str, key: str) -> list[str]:
+    """First-column values from one probe3 cell's repr rows. pins: io-text-1/U-4"""
+    return sorted(ast.literal_eval(item)[0] for item in _cell(name)["result"][key])
+
+
+def _text_glob_fixture(root: Path) -> None:
+    """Recreate the probe globdir fixture. pins: io-text-1/U-6"""
+    root.mkdir()
+    (root / "top.txt").write_text("t\n", encoding="utf-8")
+    (root / "d1").mkdir()
+    (root / "d1" / "a.txt").write_text("a1\n", encoding="utf-8")
+    (root / "d2").mkdir()
+    (root / "d2" / "b.txt").write_text("b1\n", encoding="utf-8")
+
+
+def test_text_probe3_format_recursive_false(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_format_recursive_false — falsy flag. pins: io-text-1/U-4"""
+    root = tmp_path / "rf"
+    root.mkdir()
+    (root / "sub").mkdir()
+    (root / "top.txt").write_text("top\n", encoding="utf-8")
+    (root / "sub" / "in.txt").write_text("in\n", encoding="utf-8")
+    for flag, key in ((False, "option_bool_false"), ("false", "option_str_false")):
+        back = spark.read.format("text").option("recursiveFileLookup", flag).load(str(root))
+        assert sorted(row.value for row in back.collect()) == _cell_values(
+            "text_probe3_format_recursive_false", key
+        )
+
+
+def test_text_probe3_glob_escaped_star(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_glob_escaped_star — backslash escapes the star. pins: io-text-1/U-5"""
+    root = tmp_path / "plain"
+    root.mkdir()
+    (root / "a*b.txt").write_text("star\n", encoding="utf-8")
+    (root / "axb.txt").write_text("x\n", encoding="utf-8")
+    back = spark.read.text(str(root / "a\\*b.txt"))
+    assert sorted(row.value for row in back.collect()) == _cell_values(
+        "text_probe3_glob_escaped_star", "escaped"
+    )
+
+
+def test_text_probe3_glob_matches_dirs(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe3_glob_matches_dirs — dir globs list one leaf level. pins: io-text-1/U-6"""
+    root = tmp_path / "glob"
+    _text_glob_fixture(root)
+    assert sorted(row.value for row in spark.read.text(str(root / "d*")).collect()) == (
+        _cell_values("text_probe3_glob_matches_dirs", "dir_glob")
+    )
+    assert sorted(row.value for row in spark.read.text(str(root / "*")).collect()) == (
+        _cell_values("text_probe3_glob_matches_dirs", "star")
+    )
 
 
 def test_text_probe_partition_by(spark: ReparkSession, tmp_path: Path) -> None:
@@ -518,17 +571,17 @@ def test_text_probe3_part_specials_listing(spark: ReparkSession, tmp_path: Path)
 
 
 def test_text_probe3_part_empty_and_null_single_dir(spark: ReparkSession, tmp_path: Path) -> None:
-    """cell text_probe3_part_empty_and_null — empty joins null in the default dir. pins: io-text-1/U-2"""
+    """cell text_probe3_part_empty_and_null — empty joins null. pins: io-text-1/U-2"""
     expected = _cell("text_probe3_part_empty_and_null")["result"]["listing"]
     out = tmp_path / "emptynull"
-    spark.createDataFrame([("", "v1"), (None, "v2"), ("z", "v3")], "k string, value string").write.partitionBy(
-        "k"
-    ).text(str(out))
+    spark.createDataFrame(
+        [("", "v1"), (None, "v2"), ("z", "v3")], "k string, value string"
+    ).write.partitionBy("k").text(str(out))
     assert _text_listing(out) == expected
 
 
 def test_text_probe3_part_decimal_listing(spark: ReparkSession, tmp_path: Path) -> None:
-    """cell text_probe3_part_decimal — decimal renders plain, no lit crash. pins: io-text-1/U-1, U-2"""
+    """cell text_probe3_part_decimal — decimal renders plain. pins: io-text-1/U-1, U-2"""
     import decimal
 
     expected = _cell("text_probe3_part_decimal")["result"]["listing"]
@@ -544,14 +597,14 @@ def test_text_probe3_part_bool_listing(spark: ReparkSession, tmp_path: Path) -> 
     """cell text_probe3_part_bool — booleans render true/false. pins: io-text-1/U-2"""
     expected = _cell("text_probe3_part_bool")["result"]["listing"]
     out = tmp_path / "bool"
-    spark.createDataFrame([(True, "v1"), (False, "v2")], "k boolean, value string").write.partitionBy(
-        "k"
-    ).text(str(out))
+    spark.createDataFrame(
+        [(True, "v1"), (False, "v2")], "k boolean, value string"
+    ).write.partitionBy("k").text(str(out))
     assert _text_listing(out) == expected
 
 
 def test_text_probe3_part_date_ts_double_int_listing(spark: ReparkSession, tmp_path: Path) -> None:
-    """cell text_probe3_part_date_ts_double_int — date/ts/double/int leaf text. pins: io-text-1/U-2"""
+    """cell text_probe3_part_date_ts_double_int — leaf text. pins: io-text-1/U-2"""
     expected = _cell("text_probe3_part_date_ts_double_int")["result"]["listing"]
     out = tmp_path / "dts"
     spark.sql(
