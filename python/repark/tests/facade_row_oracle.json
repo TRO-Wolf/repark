@@ -1,0 +1,107 @@
+{
+ "cells": {
+  "add": {
+   "result": {
+    "items": [
+     {
+      "kind": "int",
+      "value": 1
+     },
+     {
+      "kind": "int",
+      "value": 2
+     }
+    ],
+    "kind": "tuple"
+   }
+  },
+  "count": {
+   "result": {
+    "kind": "int",
+    "value": 2
+   }
+  },
+  "count_factory": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "count_missing": {
+   "result": {
+    "kind": "int",
+    "value": 0
+   }
+  },
+  "count_nan": {
+   "result": {
+    "kind": "int",
+    "value": 0
+   }
+  },
+  "hash_eq": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "index": {
+   "result": {
+    "kind": "int",
+    "value": 0
+   }
+  },
+  "index_factory": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "index_missing": {
+   "error": {
+    "condition": null,
+    "message": "tuple.index(x): x not in tuple",
+    "module": "builtins",
+    "mro": [
+     "ValueError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "ValueError"
+   }
+  },
+  "index_start": {
+   "result": {
+    "kind": "int",
+    "value": 2
+   }
+  },
+  "isinstance_tuple": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "len": {
+   "result": {
+    "kind": "int",
+    "value": 2
+   }
+  },
+  "positional_count": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "types_row_is_sql_row": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  }
+ },
+ "oracle": "PySpark 4.1.2 classic, local[2], spark.sql.session.timeZone=UTC, recorded 2026-09-14 (run 15b); probe at /tmp/oc-worker/run15b/oracle/cells.py + cells2.py"
+}
