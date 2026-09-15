@@ -587,8 +587,7 @@ mod type_mapping_tests {
         let angle = |inner: SqlDataType| {
             SqlDataType::Array(ArrayElemTypeDef::AngleBracket(Box::new(inner)))
         };
-        let Type::List(list) = sql_type_to_iceberg(&angle(SqlDataType::Int(None))).unwrap()
-        else {
+        let Type::List(list) = sql_type_to_iceberg(&angle(SqlDataType::Int(None))).unwrap() else {
             panic!("expected list");
         };
         assert_eq!(list.element_field.name, "element");
