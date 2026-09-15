@@ -4719,16 +4719,15 @@ through `core` or the package. pins: eager-budget-1/C-010
 
 - `test_sql_set_door_1.py` — **SQL-SET-DOOR-1 (2026-09-14):** the `SET`/`RESET`/`SET TIME ZONE`
   SQL-door pins for registry `B-TZ-5`, measured against `fixtures-batch1.json` cells
-  `BTZ5-0`…`BTZ5-19` (PySpark 4.1.2). Result frames assert on the `to_arrow` path — value AND
-  Arrow type AND field nullability (non-null `key`/`value`; the four-column `SET -v`; the
-  zero-column `RESET`). The pinned divergences are the facade's recorded contract, not stubs:
-  `SET spark.sql.session.timeZone` is accepted but echoes the live session zone (TZ-3),
-  `SET spark.sql.ansi.enabled` stores but `1/0` still raises `DIVIDE_BY_ZERO`
-  (SET-ANSI-RUNTIME-1), and `SET TIME ZONE LOCAL` is a dated DECLARED refusal (SET-TZ-LOCAL-1).
-  `SET datafusion.*` stays on the engine path so `RuntimeConfig`'s SQL forwarder cannot loop.
-  Edge pins cover the parser-side rulings: `RESET ALL` clears like bare `RESET` (not a key
-  named `ALL`), `SET x = 1; SET y = 2` defers to the engine instead of mis-storing
-  `1; SET y = 2`, `--`/`/* … */` comments outside literals strip like Spark's parser while
-  `;` inside a quoted value stays part of it, an unterminated quote defers to the engine's
-  tokenizer error, and bare `SET`/`SET -v` mask secret-shaped values as `***`.
-  pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-006
+  `BTZ5-0`…`BTZ5-19` and `fixtures-batch5.json` cells `S5-*` (PySpark 4.1.2). Result frames
+  assert on the `to_arrow` path — value AND Arrow type AND field nullability. Residues:
+  timezone SET echoes the live session zone (TZ-3), `spark.sql.ansi.enabled` stores but
+  `1/0` still raises `DIVIDE_BY_ZERO` (SET-ANSI-RUNTIME-1), `SET TIME ZONE LOCAL` is a
+  dated DECLARED refusal (SET-TZ-LOCAL-1). Round-3 pins: ZoneId.of offset zones (L-001),
+  case-sensitive keys (L-002), `SET CATALOG`/`NAMESPACE` vs unintercepted `SET ROLE`
+  (L-003), Spark default redaction regex on key-or-value (L-004), TZ-3 + G15 collation
+  RESET (L-005), positive shuffle.partitions (L-006), boolean `1`/`yes`/`TRUE` (N-1),
+  RESET restores a builder-seeded value (N-2), `SET k TO v` is `[INVALID_SET_SYNTAX]`
+  (N-3), backtick keys / double-quoted TIME ZONE / INTERVAL / empty value (N-4),
+  SQLSTATE suffixes (N-5), and a long SELECT is not intercepted (P1).
+  pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014

@@ -653,4 +653,4 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (`CANNOT_MODIFY_STATIC_CONFIG`, `INVALID_CONF_VALUE.TIME_ZONE`, `INVALID_CONF_VALUE.TYPE_MISMATCH`),
   `SET TIME ZONE LOCAL` a dated refusal, and the D-4 measurement recorded — timezone and ANSI are
   accepted-but-not-applied residues (TZ-3, SET-ANSI-RUNTIME-1). `risk_tier: standard`.
-  Branch `feat/sql-set-door-1`. pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-005, C-006
+  Branch `feat/sql-set-door-1`. pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014

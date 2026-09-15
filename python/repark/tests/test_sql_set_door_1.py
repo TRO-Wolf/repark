@@ -20,6 +20,7 @@ from repark import ReparkSession
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
+    ParseException,
     PySparkException,
     UnsupportedOperationException,
 )
@@ -88,16 +89,14 @@ def test_set_key_read_of_a_never_set_key_answers_undefined() -> None:
 
 
 def test_set_session_time_zone_is_accepted_but_not_applied() -> None:
-    """``SET spark.sql.session.timeZone = <zone>`` stores nothing — residue TZ-3.
-
-    Spark applies the zone and echoes ``America/New_York`` (BTZ5-2/3); repark's runtime
-    ``conf.set`` of the build-time zone knob is accepted without effect, so the honest
-    answer is the zone the live engine session actually has — ``UTC``.
-    """
+    """``SET spark.sql.session.timeZone`` echoes live UTC; Spark would apply NY — TZ-3."""
     spark = _session()
     schema, rows = _set_and_get(spark, "SET spark.sql.session.timeZone = America/New_York")
     _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
     assert spark.conf.get(SESSION_TIME_ZONE_KEY) == "UTC"
+    tz_schema, tz_rows = _arrow(spark.sql("SELECT current_timezone() tz"))
+    assert tz_schema.field("tz").nullable is False
+    assert tz_rows == [{"tz": "UTC"}]
     spark.stop()
 
 
@@ -131,6 +130,7 @@ def test_set_quoted_time_zone_value_refuses_with_spark_error() -> None:
     assert "''Asia/Tokyo''" in message
     assert 'config "spark.sql.session.timeZone"' in message
     assert "Cannot resolve the given timezone" in message
+    assert "SQLSTATE: 22022" in message
     spark.stop()
 
 
@@ -143,6 +143,7 @@ def test_set_unresolvable_time_zone_refuses_with_spark_error() -> None:
     assert "[INVALID_CONF_VALUE.TIME_ZONE]" in message
     assert "'Invalid/Zone'" in message
     assert "Cannot resolve the given timezone" in message
+    assert "SQLSTATE: 22022" in message
     spark.stop()
 
 
@@ -169,8 +170,8 @@ def test_reset_key_returns_an_empty_frame() -> None:
     schema, rows = _set_and_get(spark, "RESET spark.sql.ansi.enabled")
     assert len(schema) == 0
     assert rows == []
-    with pytest.raises(PySparkException, match="DIVIDE_BY_ZERO"):
-        spark.sql("SELECT 1/0 d").to_arrow()
+    _, rows = _set_and_get(spark, "SET spark.sql.ansi.enabled")
+    assert rows == [{"key": "spark.sql.ansi.enabled", "value": "<undefined>"}]
     spark.stop()
 
 
@@ -228,17 +229,33 @@ def test_comments_strip_like_the_spark_parser() -> None:
 
 
 def test_set_listing_masks_secret_shaped_values() -> None:
-    """Bare ``SET`` and ``SET -v`` mask secret-shaped values as ``***`` like ``getAll``."""
+    """SET k=v is raw; SET k / SET / SET -v redact key-or-value — S5-secret-* / S5-listing."""
     spark = _session()
-    _set_and_get(spark, "SET spark.my.api.password = hunter2")
+    redacted = "*********(redacted)"
+    schema, rows = _set_and_get(spark, "SET spark.my.api.password = hunter2")
+    _kv_frame_assertion(rows, schema, [("spark.my.api.password", "hunter2")])
+    schema, rows = _set_and_get(spark, "SET spark.plain2 = mypassword")
+    _kv_frame_assertion(rows, schema, [("spark.plain2", "mypassword")])
+    schema, rows = _set_and_get(spark, "SET spark.x.token = abc")
+    _kv_frame_assertion(rows, schema, [("spark.x.token", "abc")])
+    schema, rows = _set_and_get(spark, "SET spark.hadoop.fs.s3a.access.key = AKIAEXAMPLE")
+    _kv_frame_assertion(rows, schema, [("spark.hadoop.fs.s3a.access.key", "AKIAEXAMPLE")])
+    _set_and_get(spark, "SET spark.foo.my_key = visible-nonsecret")
     _set_and_get(spark, "SET repark.plain = visible")
-    _, rows = _set_and_get(spark, "SET")
-    assert {row["key"]: row["value"] for row in rows} == {
-        "repark.plain": "visible",
-        "spark.my.api.password": "***",
-    }
-    _, verbose_rows = _set_and_get(spark, "SET -v")
-    assert {row["key"]: row["value"] for row in verbose_rows}["spark.my.api.password"] == "***"
+    schema, rows = _set_and_get(spark, "SET spark.my.api.password")
+    _kv_frame_assertion(rows, schema, [("spark.my.api.password", redacted)])
+    schema, rows = _set_and_get(spark, "SET spark.plain2")
+    _kv_frame_assertion(rows, schema, [("spark.plain2", redacted)])
+    listed = {row["key"]: row["value"] for row in _set_and_get(spark, "SET")[1]}
+    assert listed["spark.my.api.password"] == redacted
+    assert listed["spark.plain2"] == redacted
+    assert listed["spark.foo.my_key"] == redacted
+    assert listed["spark.hadoop.fs.s3a.access.key"] == redacted
+    assert listed["spark.x.token"] == redacted
+    assert listed["repark.plain"] == "visible"
+    verbose = {row["key"]: row["value"] for row in _set_and_get(spark, "SET -v")[1]}
+    assert verbose["spark.hadoop.fs.s3a.access.key"] == redacted
+    assert verbose["spark.foo.my_key"] == redacted
     spark.stop()
 
 
@@ -250,6 +267,7 @@ def test_set_static_sql_conf_refuses_with_spark_error() -> None:
     message = str(caught.value)
     assert "[CANNOT_MODIFY_STATIC_CONFIG]" in message
     assert '"spark.sql.warehouse.dir"' in message
+    assert "SQLSTATE: 46110" in message
     spark.stop()
 
 
@@ -279,6 +297,7 @@ def test_set_time_zone_literal_with_an_unresolvable_zone_refuses() -> None:
     message = str(caught.value)
     assert "[INVALID_CONF_VALUE.TIME_ZONE]" in message
     assert "'Mars/Olympus_Mons'" in message
+    assert "SQLSTATE: 22022" in message
     spark.stop()
 
 
@@ -300,6 +319,7 @@ def test_set_shuffle_partitions_non_integer_refuses_with_spark_error() -> None:
     assert "'abc'" in message
     assert '"spark.sql.shuffle.partitions"' in message
     assert "'int'" in message
+    assert "SQLSTATE: 22022" in message
     spark.stop()
 
 
@@ -345,8 +365,232 @@ def test_datafusion_key_set_passes_through_to_the_engine() -> None:
 
 
 def test_unrecognised_statement_goes_to_the_engine_unchanged() -> None:
-    """A statement outside the D-1 shapes reaches the engine — same refusal as before."""
+    """``SET k TO v`` raises ParseException and stores nothing — S5-set-to."""
     spark = _session()
-    with pytest.raises(PySparkException):
-        spark.sql("SET spark.sql.shuffle.partitions TO 2").to_arrow()
+    with pytest.raises(ParseException) as caught:
+        spark.sql("SET spark.sql.shuffle.partitions TO 2")
+    assert "[INVALID_SET_SYNTAX]" in str(caught.value)
+    _, rows = _set_and_get(spark, "SET spark.sql.shuffle.partitions")
+    assert rows == [{"key": "spark.sql.shuffle.partitions", "value": "<undefined>"}]
+    spark.stop()
+
+
+def test_offset_zone_plus05_is_accepted() -> None:
+    """``SET TIME ZONE '+05'`` accepts; echo is TZ-3 UTC not Spark's +05 — S5-tz-plus05."""
+    spark = _session()
+    schema, rows = _set_and_get(spark, "SET TIME ZONE '+05'")
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    _, tz_rows = _arrow(spark.sql("SELECT current_timezone() tz"))
+    assert tz_rows == [{"tz": "UTC"}]
+    spark.stop()
+
+
+def test_offset_zone_key_plus05_is_accepted() -> None:
+    """``SET spark.sql.session.timeZone = +05`` accepts — S5-tz-key-plus05."""
+    spark = _session()
+    schema, rows = _set_and_get(spark, "SET spark.sql.session.timeZone = +05")
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    spark.stop()
+
+
+def test_offset_zone_plus5_is_accepted() -> None:
+    """``SET TIME ZONE '+5'`` accepts like ZoneId.of — S5-tz-plus5."""
+    spark = _session()
+    schema, rows = _set_and_get(spark, "SET TIME ZONE '+5'")
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    spark.stop()
+
+
+def test_offset_zone_plus1800_is_accepted() -> None:
+    """``SET TIME ZONE '+18:00'`` is the ZoneId offset ceiling — S5-tz-plus1800."""
+    spark = _session()
+    schema, rows = _set_and_get(spark, "SET TIME ZONE '+18:00'")
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    spark.stop()
+
+
+def test_offset_zone_plus1801_refuses_with_time_zone_class() -> None:
+    """``SET TIME ZONE '+18:01'`` refuses TIME_ZONE — S5-tz-plus1801."""
+    spark = _session()
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.sql("SET TIME ZONE '+18:01'")
+    message = str(caught.value)
+    assert "[INVALID_CONF_VALUE.TIME_ZONE]" in message
+    assert "'+18:01'" in message
+    assert "SQLSTATE: 22022" in message
+    spark.stop()
+
+
+def test_offset_zone_gmt_plus8_is_accepted() -> None:
+    """``SET spark.sql.session.timeZone = GMT+8`` accepts — S5-tz-gmt8."""
+    spark = _session()
+    schema, rows = _set_and_get(spark, "SET spark.sql.session.timeZone = GMT+8")
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    spark.stop()
+
+
+def test_uppercase_conf_keys_are_case_sensitive() -> None:
+    """Uppercase SET keys store as written and do not shadow lowercase — S5-upper-*."""
+    spark = (
+        ReparkSession.builder.appName("sql-set-door-1-upper")
+        .config("spark.sql.shuffle.partitions", "8")
+        .getOrCreate()
+    )
+    schema, rows = _set_and_get(spark, "SET SPARK.SQL.WAREHOUSE.DIR = /tmp/x")
+    _kv_frame_assertion(rows, schema, [("SPARK.SQL.WAREHOUSE.DIR", "/tmp/x")])
+    schema, rows = _set_and_get(spark, "SET SPARK.SQL.SHUFFLE.PARTITIONS = abc")
+    _kv_frame_assertion(rows, schema, [("SPARK.SQL.SHUFFLE.PARTITIONS", "abc")])
+    schema, rows = _set_and_get(spark, "SET SPARK.SQL.SESSION.TIMEZONE = Invalid/Zone")
+    _kv_frame_assertion(rows, schema, [("SPARK.SQL.SESSION.TIMEZONE", "Invalid/Zone")])
+    schema, rows = _set_and_get(spark, "SET SPARK.SQL.SHUFFLE.PARTITIONS = 3")
+    _kv_frame_assertion(rows, schema, [("SPARK.SQL.SHUFFLE.PARTITIONS", "3")])
+    schema, rows = _set_and_get(spark, "SET spark.sql.shuffle.partitions")
+    _kv_frame_assertion(rows, schema, [("spark.sql.shuffle.partitions", "8")])
+    schema, rows = _set_and_get(spark, "SET SPARK.SQL.SHUFFLE.PARTITIONS")
+    _kv_frame_assertion(rows, schema, [("SPARK.SQL.SHUFFLE.PARTITIONS", "3")])
+    spark.stop()
+
+
+def test_set_catalog_and_namespace_are_conf_reads() -> None:
+    """Bare SET CATALOG / SET NAMESPACE answer ``<undefined>`` — S5-set-catalog/namespace."""
+    spark = _session()
+    schema, rows = _set_and_get(spark, "SET CATALOG")
+    _kv_frame_assertion(rows, schema, [("CATALOG", "<undefined>")])
+    schema, rows = _set_and_get(spark, "SET NAMESPACE")
+    _kv_frame_assertion(rows, schema, [("NAMESPACE", "<undefined>")])
+    spark.stop()
+
+
+def test_set_role_is_not_intercepted() -> None:
+    """Bare SET ROLE reaches the engine and stores nothing — S5-set-role."""
+    spark = _session()
+    with pytest.raises(ParseException) as caught:
+        spark.sql("SET ROLE")
+    message = str(caught.value)
+    assert "[INVALID_STATEMENT_OR_CLAUSE]" not in message
+    assert "equals sign or TO" in message
+    assert spark.conf.get("ROLE", "<undefined>") == "<undefined>"
+    spark.stop()
+
+
+def test_set_time_zone_literal_america_new_york_is_tz3() -> None:
+    """``SET TIME ZONE 'America/New_York'`` echoes UTC; Spark would echo NY — TZ-3 / L-005."""
+    spark = _session()
+    schema, rows = _set_and_get(spark, "SET TIME ZONE 'America/New_York'")
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    _, tz_rows = _arrow(spark.sql("SELECT current_timezone() tz"))
+    assert tz_rows == [{"tz": "UTC"}]
+    spark.stop()
+
+
+def test_reset_collation_key_is_g15_refusal() -> None:
+    """RESET of a collation key stays the G15 valve — S5-collation-reset."""
+    spark = _session()
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql("RESET spark.sql.session.collation.default")
+    assert "collation" in str(caught.value).lower()
+    spark.stop()
+
+
+def test_shuffle_partitions_must_be_positive() -> None:
+    """``spark.sql.shuffle.partitions`` of -1 or 0 raises REQUIREMENT — S5-neg/zero-partitions."""
+    spark = _session()
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.sql("SET spark.sql.shuffle.partitions = -1")
+    message = str(caught.value)
+    assert "[INVALID_CONF_VALUE.REQUIREMENT]" in message
+    assert "'-1'" in message
+    assert "must be positive" in message
+    assert "SQLSTATE: 22022" in message
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.sql("SET spark.sql.shuffle.partitions = 0")
+    message = str(caught.value)
+    assert "[INVALID_CONF_VALUE.REQUIREMENT]" in message
+    assert "'0'" in message
+    assert "SQLSTATE: 22022" in message
+    _, rows = _set_and_get(spark, "SET spark.sql.shuffle.partitions")
+    assert rows == [{"key": "spark.sql.shuffle.partitions", "value": "<undefined>"}]
+    spark.stop()
+
+
+def test_boolean_typed_key_refuses_1_and_yes_and_keeps_true() -> None:
+    """Boolean conf: 1/yes TYPE_MISMATCH; TRUE stores as written — S5-bool-*."""
+    spark = _session()
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.sql("SET spark.sql.ansi.enabled = 1")
+    message = str(caught.value)
+    assert "[INVALID_CONF_VALUE.TYPE_MISMATCH]" in message
+    assert "'1'" in message
+    assert "'boolean'" in message
+    assert "SQLSTATE: 22022" in message
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.sql("SET spark.sql.ansi.enabled = yes")
+    message = str(caught.value)
+    assert "'yes'" in message
+    assert "'boolean'" in message
+    assert "SQLSTATE: 22022" in message
+    schema, rows = _set_and_get(spark, "SET spark.sql.ansi.enabled = TRUE")
+    _kv_frame_assertion(rows, schema, [("spark.sql.ansi.enabled", "TRUE")])
+    spark.stop()
+
+
+def test_reset_restores_a_builder_seeded_value() -> None:
+    """RESET of a builder-seeded key restores the builder value — S5-builder-after-reset."""
+    spark = (
+        ReparkSession.builder.appName("sql-set-door-1-builder")
+        .config("spark.sql.shuffle.partitions", "8")
+        .getOrCreate()
+    )
+    schema, rows = _set_and_get(spark, "SET spark.sql.shuffle.partitions")
+    _kv_frame_assertion(rows, schema, [("spark.sql.shuffle.partitions", "8")])
+    _set_and_get(spark, "SET spark.sql.shuffle.partitions = 2")
+    schema, rows = _set_and_get(spark, "RESET spark.sql.shuffle.partitions")
+    assert len(schema) == 0
+    assert rows == []
+    schema, rows = _set_and_get(spark, "SET spark.sql.shuffle.partitions")
+    _kv_frame_assertion(rows, schema, [("spark.sql.shuffle.partitions", "8")])
+    spark.stop()
+
+
+def test_backtick_quoted_key_is_stored_unquoted() -> None:
+    """Backtick-quoted SET key stores unquoted — S5-quoted-key."""
+    spark = _session()
+    schema, rows = _set_and_get(spark, "SET `spark.sql.shuffle.partitions` = 4")
+    _kv_frame_assertion(rows, schema, [("spark.sql.shuffle.partitions", "4")])
+    spark.stop()
+
+
+def test_set_time_zone_double_quoted_literal() -> None:
+    """``SET TIME ZONE \"UTC\"`` is recognised — S5-tz-dq."""
+    spark = _session()
+    schema, rows = _set_and_get(spark, 'SET TIME ZONE "UTC"')
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    spark.stop()
+
+
+def test_set_time_zone_interval_hour_to_minute() -> None:
+    """INTERVAL '+08:00' HOUR TO MINUTE is recognised; echo is TZ-3 UTC — S5-tz-interval."""
+    spark = _session()
+    schema, rows = _set_and_get(spark, "SET TIME ZONE INTERVAL '+08:00' HOUR TO MINUTE")
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    spark.stop()
+
+
+def test_empty_value_and_value_containing_equals() -> None:
+    """Empty SET value is ''; a value containing '=' stays whole — S5-empty-value."""
+    spark = _session()
+    schema, rows = _set_and_get(spark, "SET spark.empty.value = ")
+    _kv_frame_assertion(rows, schema, [("spark.empty.value", "")])
+    schema, rows = _set_and_get(spark, "SET spark.eq.value = a=b")
+    _kv_frame_assertion(rows, schema, [("spark.eq.value", "a=b")])
+    spark.stop()
+
+
+def test_long_select_is_not_intercepted() -> None:
+    """A long SELECT is not treated as SET/RESET — P1-SET-FULLSCAN."""
+    spark = _session()
+    padding = " " * 20000
+    table = spark.sql(f"SELECT 1{padding}AS x").to_arrow()
+    assert table.schema.names == ["x"]
+    assert table.to_pylist() == [{"x": 1}]
     spark.stop()

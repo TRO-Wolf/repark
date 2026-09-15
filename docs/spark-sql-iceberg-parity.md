@@ -964,8 +964,10 @@ them, and the document is ordered by surface, never by date.
   `…::test_apache_sql_conf_context_manager_round_trips_the_session_zone`;
   `…::test_getorcreate_reuse_with_an_invalid_zone_warns_and_does_not_raise` (the same laxness on
   the reuse path); the SQL-door half is pinned by
-  `python/repark/tests/test_sql_set_door_1.py::test_set_session_time_zone_is_accepted_but_not_applied`
-  and `…::test_set_time_zone_literal_returns_the_pair`
+  `python/repark/tests/test_sql_set_door_1.py::test_set_session_time_zone_is_accepted_but_not_applied`,
+  `…::test_set_time_zone_literal_returns_the_pair`, and
+  `…::test_set_time_zone_literal_america_new_york_is_tz3` (echo and `current_timezone()`
+  stay the live session zone; Spark would apply `America/New_York`)
 - **Rationale** — DECLARED, and evidence-driven: refusing the call reds the pinned Apache drop-in
   test `test_create_dataframe_from_pandas_with_dst`, which sets this key through PySpark's own
   `sql_conf` helper. Accepting keeps drop-in source compatibility; not storing keeps `conf.get`
@@ -992,7 +994,8 @@ them, and the document is ordered by surface, never by date.
   `UnsupportedOperationException` naming this row and pointing at the two spellings that do
   set the zone (`SET TIME ZONE '<iana-id>'`, `ReparkSession.builder.config`). The refusal is
   dated 2026-09-15 (SQL-SET-DOOR-1). Every other `SET TIME ZONE '<zone>'` spelling is served —
-  IANA ids and `±HH[:MM]` fixed offsets, the grammar the engine's `Tz::from_str` accepts.
+  IANA ids and Java `ZoneId.of` offset forms (`+05`, `+5`, `+18:00`, `GMT+8`; `+18:01`
+  refuses), including double-quoted literals and `INTERVAL '+HH:MM' HOUR TO MINUTE`.
 - **Apache Spark** — resolves `LOCAL` to the host machine's local timezone and applies it.
   *(oracle: documented — the claim here is the refusal, not a value.)*
 - **Pin** —
@@ -1439,18 +1442,27 @@ the pin rather than obeying it.
 > `SET TIME ZONE` statement family ahead of the engine and runs it through the session's
 > `RuntimeConfig` — a SQL `SET` has exactly the effect `spark.conf.set` of the same key has.
 > `SET k = v` and `SET k` answer the `(key, value)` pair with Spark's non-nullable string
-> fields; `RESET` / `RESET k` answer the zero-column frame; bare `SET` lists the runtime-set
-> keys sorted with secret-shaped values masked, and `SET -v` adds the empty `meaning` /
-> `Since version` columns. `SELECT current_timezone()` resolves and answers the session
-> zone as a non-null string. Spark-class errors the conf layer cannot raise are produced
-> on the door: `CANNOT_MODIFY_STATIC_CONFIG` (`AnalysisException`),
-> `INVALID_CONF_VALUE.TIME_ZONE` and `INVALID_CONF_VALUE.TYPE_MISMATCH`
-> (`IllegalArgumentException`). `datafusion.*` keys still reach the engine, and
-> `spark.wap.*` keeps REF-3's fail-closed refusal. Measured against `fixtures-batch1.json`
-> cells `BTZ5-0`…`BTZ5-19` (PySpark 4.1.2). What the door does **not** change rides the
-> recorded residue rows: the runtime session-zone set is accepted but neither validated,
-> stored nor applied ([TZ-3](#tz-3--a-runtime-confset-of-the-session-zone-is-accepted-neither-validated-nor-applied)
-> — extended to the SQL door), `spark.sql.ansi.enabled` stores but does not apply
+> fields; `RESET` / `RESET k` answer the zero-column frame (`RESET k` restores a
+> builder-seeded value when one exists); bare `SET` lists the runtime-set keys sorted,
+> and `SET -v` adds the empty `meaning` / `Since version` columns. Redaction on
+> `SET k` / bare `SET` / `SET -v` uses Spark's default `spark.redaction.regex`
+> `(?i)secret|password|token|access[.]key` against the **key or the value**, replacing
+> the value with `*********(redacted)`; the `SET k = v` echo is the raw value.
+> Offset zones follow Java `ZoneId.of`: `+05`, `+5`, `+18:00`, `GMT+8` are accepted;
+> `+18:01` refuses `[INVALID_CONF_VALUE.TIME_ZONE]`. `SELECT current_timezone()`
+> resolves and answers the session zone as a non-null string. Spark-class errors the
+> conf layer cannot raise are produced on the door: `CANNOT_MODIFY_STATIC_CONFIG`
+> (`AnalysisException`, `SQLSTATE: 46110`), `INVALID_CONF_VALUE.TIME_ZONE` /
+> `TYPE_MISMATCH` / `REQUIREMENT` (`IllegalArgumentException`, `SQLSTATE: 22022`),
+> and `SET key TO value` as `ParseException` `[INVALID_SET_SYNTAX]`. `datafusion.*`
+> keys still reach the engine, `spark.wap.*` keeps REF-3's fail-closed refusal, and
+> bare `SET ROLE` is not intercepted. Measured against `fixtures-batch1.json` cells
+> `BTZ5-0`…`BTZ5-19` and `fixtures-batch5.json` cells `S5-*` (PySpark 4.1.2). What the
+> door does **not** change rides the recorded residue rows: the runtime session-zone
+> set is accepted but neither stored nor applied
+> ([TZ-3](#tz-3--a-runtime-confset-of-the-session-zone-is-accepted-neither-validated-nor-applied)
+> — extended to the SQL door; offset-zone **acceptance** is not application),
+> `spark.sql.ansi.enabled` stores but does not apply
 > ([SET-ANSI-RUNTIME-1](#set-ansi-runtime-1--a-runtime-set-of-sparksqlansienabled-stores-but-does-not-apply)),
 > and `SET TIME ZONE LOCAL` is a dated DECLARED refusal
 > ([SET-TZ-LOCAL-1](#set-tz-local-1--set-time-zone-local-is-refused-repark-never-reads-the-host-zone)).

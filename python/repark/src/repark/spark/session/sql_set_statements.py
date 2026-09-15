@@ -3,36 +3,20 @@
 ``ReparkSession.sql`` hands the recognised D-1 shapes here before the engine sees them:
 ``SET``, ``SET -v``, ``SET <key>``, ``SET <key> = <value>`` (the value is the raw text
 after ``=``, trimmed, quotes kept — Spark refuses ``'Asia/Tokyo'`` with its quotes,
-cell BTZ5-4), ``RESET``, ``RESET <key>``, ``SET TIME ZONE '<zone>'`` and
-``SET TIME ZONE LOCAL``. Keywords are case-insensitive; surrounding whitespace and one
-trailing ``;`` are tolerated. ``--`` and ``/* … */`` comments outside string literals are
-stripped before matching (Spark's parser does the same), a statement with a real second
-``;`` or an unterminated quote defers to the engine, and anything else returns ``None`` so
-the statement reaches the engine unchanged — including every ``datafusion.*`` key and
-every ``spark.wap.*`` assignment/unset. The ``datafusion.*`` exclusion is load-bearing:
-``RuntimeConfig.set`` forwards those keys through this same SQL entry point, so
-intercepting them would loop.
-The ``spark.wap.*`` exclusion is fail-closed: repark does not implement WAP, and the
-engine's refusal (not a silent conf store) is the pinned answer (REF-3). ``RESET`` of a
-collation key refuses through ``refuse_collation_session_key``, mirroring the engine's
-G15 valve that this interception would otherwise bypass.
+cell BTZ5-4), backtick-quoted keys, ``RESET``, ``RESET <key>``, ``SET TIME ZONE``
+with a single-quoted, double-quoted, or ``INTERVAL '+HH:MM' HOUR TO MINUTE`` zone,
+and ``SET TIME ZONE LOCAL``. Keywords are case-insensitive; surrounding whitespace
+and one trailing ``;`` are tolerated. A leading-trivia scan returns ``None`` before
+any whole-query copy when the first keyword is not ``SET``/``RESET``. ``SET ROLE``
+is not intercepted. ``SET key TO value`` raises ``ParseException``
+``[INVALID_SET_SYNTAX]``. Offset zones follow Java ``ZoneId.of`` (cells S5-tz-*).
 
-Every read/write goes through the session's ``RuntimeConfig`` (``conf.set``/``get``/
-``unset``), so a SQL ``SET`` has exactly the effect ``spark.conf.set`` has today — the
-D-4 contract. Two recorded residues ride that contract unchanged: the runtime timezone
-key is accepted but neither stored nor applied (registry TZ-3 — the result row echoes
-the zone the live session actually has, never a state ``conf.get`` would contradict),
-and ``spark.sql.ansi.enabled`` is stored but not applied (registry SET-ANSI-RUNTIME-1).
-Errors the conf layer cannot raise are produced here with Spark's classes and message
-shapes (minus the recorded no-SQLSTATE delta): ``CANNOT_MODIFY_STATIC_CONFIG`` as
-``AnalysisException``, ``INVALID_CONF_VALUE.TIME_ZONE`` and ``INVALID_CONF_VALUE.TYPE_MISMATCH``
-as ``IllegalArgumentException``, and ``SET TIME ZONE LOCAL`` as a dated
-``UnsupportedOperationException`` refusal (SET-TZ-LOCAL-1 — repark never reads the host
-zone).
-
-Result frames are ``pyarrow`` tables materialised through the MemTable seam, which is
-the construction that preserves the non-nullable ``key``/``value`` fields and the
-zero-column ``RESET`` answer.
+Every read/write goes through the session's ``RuntimeConfig``. Residues: TZ-3,
+SET-ANSI-RUNTIME-1, SET-TZ-LOCAL-1. ``RESET <key>`` restores a builder-seeded
+value when one exists. Redaction on ``SET k`` / ``SET`` / ``SET -v`` uses Spark's
+default ``spark.redaction.regex`` against the key or the value; ``SET k = v``
+echoes the raw value. Invalid-conf messages carry ``SQLSTATE: 22022``;
+``CANNOT_MODIFY_STATIC_CONFIG`` carries ``SQLSTATE: 46110``.
 """
 
 from __future__ import annotations
@@ -44,16 +28,19 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
+    ParseException,
     UnsupportedOperationException,
 )
-from repark.spark._secrets import prop_key_is_secret as _prop_key_is_secret
 from repark.spark.session.create_dataframe_rows import _materialize_arrow_as_memtable_frame
 from repark.spark.session.session_configuration import (
     _SQLCONF_STATIC_KEYS,
     _looks_like_datafusion_conf_key,
 )
 from repark.spark.session.session_time_zone import SESSION_TIME_ZONE_KEY
-from repark.spark.session.sql_relations import _sql_mask_strings_and_comments
+from repark.spark.session.sql_relations import (
+    _split_leading_sql_trivia,
+    _sql_mask_strings_and_comments,
+)
 from repark.spark.types import refuse_collation_session_key
 
 if TYPE_CHECKING:
@@ -62,23 +49,35 @@ if TYPE_CHECKING:
 
 _UNDEFINED_CONF_VALUE = "<undefined>"
 
-_SECRET_MASK = "***"
+_REDACTED_VALUE = "*********(redacted)"
 
-_FIXED_OFFSET_ZONE_RE = re.compile(r"[+-](?:\d{2}|\d{4}|\d{2}:\d{2})")
+_REDACTION_RE = re.compile(r"(?i)secret|password|token|access[.]key")
 
 _INT_VALUE_RE = re.compile(r"[+-]?\d+")
 
+_SQLSTATE_INVALID_CONF = " SQLSTATE: 22022"
+
+_SQLSTATE_STATIC_CONFIG = " SQLSTATE: 46110"
+
+_KEY_TOKEN = r"(?:`(?P<quoted_key>[^`]+)`|(?P<plain_key>[A-Za-z0-9_.][A-Za-z0-9_.\-]*))"
+
+_SET_TIME_ZONE_INTERVAL_RE = re.compile(
+    r"SET\s+TIME\s+ZONE\s+INTERVAL\s+'(?P<zone>[^']*)'\s+HOUR\s+TO\s+MINUTE\Z",
+    re.IGNORECASE,
+)
 _SET_TIME_ZONE_RE = re.compile(
-    r"SET\s+TIME\s+ZONE\s+(?P<zone>'(?:[^']|'')*'|LOCAL)\Z", re.IGNORECASE
+    r"SET\s+TIME\s+ZONE\s+(?P<zone>'(?:[^']|'')*'|\"(?:[^\"]|\"\")*\"|LOCAL)\Z",
+    re.IGNORECASE,
 )
 _SET_VERBOSE_RE = re.compile(r"SET\s+-v\Z", re.IGNORECASE)
 _SET_ASSIGN_RE = re.compile(
-    r"SET\s+(?P<key>[A-Za-z0-9_.][A-Za-z0-9_.\-]*)\s*=\s*(?P<value>.*)\Z",
+    rf"SET\s+{_KEY_TOKEN}\s*=\s*(?P<value>.*)\Z",
     re.IGNORECASE | re.DOTALL,
 )
-_SET_READ_RE = re.compile(r"SET\s+(?P<key>[A-Za-z0-9_.][A-Za-z0-9_.\-]*)\Z", re.IGNORECASE)
+_SET_READ_RE = re.compile(rf"SET\s+{_KEY_TOKEN}\Z", re.IGNORECASE)
 _SET_BARE_RE = re.compile(r"SET\Z", re.IGNORECASE)
-_RESET_KEY_RE = re.compile(r"RESET\s+(?P<key>[A-Za-z0-9_.][A-Za-z0-9_.\-]*)\Z", re.IGNORECASE)
+_SET_TO_RE = re.compile(rf"SET\s+{_KEY_TOKEN}\s+TO\b", re.IGNORECASE)
+_RESET_KEY_RE = re.compile(rf"RESET\s+{_KEY_TOKEN}\Z", re.IGNORECASE)
 _RESET_BARE_RE = re.compile(r"RESET\Z", re.IGNORECASE)
 
 _TYPED_VALUE_KINDS: dict[str, str] = {
@@ -90,34 +89,53 @@ _BOOLEAN_VALUE_TEXTS: frozenset[str] = frozenset({"true", "false"})
 
 _WAP_SESSION_KEY_PREFIX = "spark.wap."
 
+_ZONE_PREFIXES: tuple[str, ...] = ("GMT", "UTC", "UT")
+
+_INVALID_SET_SYNTAX = (
+    "[INVALID_SET_SYNTAX] Expected format is 'SET', 'SET key', or 'SET key=value'. "
+    "If you want to include special characters in key, or include keyword in "
+    "unquoted values, please use quotes."
+)
+
 
 def try_sql_set_statement(session: ReparkSession, query: str) -> DataFrame | None:
     """Answer a recognised ``SET``/``RESET`` statement, or ``None`` to defer to the engine."""
-    text, balanced = _strip_sql_comments(query.strip())
+    _, body = _split_leading_sql_trivia(query)
+    if not body:
+        return None
+    token_end = 0
+    length = len(body)
+    while token_end < length and not body[token_end].isspace() and body[token_end] != ";":
+        token_end += 1
+    if body[:token_end].upper() not in ("SET", "RESET"):
+        return None
+    text, balanced = _strip_sql_comments(body)
     if not balanced:
         return None
     text = text.strip()
     if text.endswith(";"):
         text = text[:-1].rstrip()
-    if ";" in _sql_mask_strings_and_comments(text):
+    if ";" in text and ";" in _sql_mask_strings_and_comments(text):
         return None
-    words = text.split(None, 1)
-    if not words or words[0].upper() not in ("SET", "RESET"):
-        return None
+    interval_match = _SET_TIME_ZONE_INTERVAL_RE.fullmatch(text)
+    if interval_match is not None:
+        return _apply_set_time_zone(session, interval_match.group("zone"), quoted=False)
     time_zone_match = _SET_TIME_ZONE_RE.fullmatch(text)
     if time_zone_match is not None:
-        return _apply_set_time_zone(session, time_zone_match.group("zone"))
+        return _apply_set_time_zone(session, time_zone_match.group("zone"), quoted=True)
     if _SET_VERBOSE_RE.fullmatch(text):
         return _listing_frame(session, verbose=True)
     assign_match = _SET_ASSIGN_RE.fullmatch(text)
     if assign_match is not None:
-        key = assign_match.group("key")
+        key = _matched_key(assign_match)
         if _looks_like_datafusion_conf_key(key) or _is_wap_session_key(key):
             return None
         return _apply_set(session, key, assign_match.group("value").strip())
     read_match = _SET_READ_RE.fullmatch(text)
     if read_match is not None:
-        key = read_match.group("key")
+        key = _matched_key(read_match)
+        if key.upper() == "ROLE":
+            return None
         if _looks_like_datafusion_conf_key(key):
             return None
         return _read_frame(session, key)
@@ -125,17 +143,26 @@ def try_sql_set_statement(session: ReparkSession, query: str) -> DataFrame | Non
         return _listing_frame(session, verbose=False)
     reset_key_match = _RESET_KEY_RE.fullmatch(text)
     if reset_key_match is not None:
-        key = reset_key_match.group("key")
+        key = _matched_key(reset_key_match)
         if _looks_like_datafusion_conf_key(key) or _is_wap_session_key(key):
             return None
         if key.upper() == "ALL":
             return _reset_all(session)
-        refuse_collation_session_key(key)
-        session.conf.unset(key)
+        _restore_or_unset(session, key)
         return _empty_frame(session)
     if _RESET_BARE_RE.fullmatch(text):
         return _reset_all(session)
+    if _SET_TO_RE.search(text):
+        raise ParseException(_INVALID_SET_SYNTAX)
     return None
+
+
+def _matched_key(match: re.Match[str]) -> str:
+    """Return the unquoted conf key from a SET/RESET match."""
+    quoted = match.group("quoted_key")
+    if quoted is not None:
+        return quoted
+    return match.group("plain_key") or ""
 
 
 def _is_wap_session_key(key: str) -> bool:
@@ -187,7 +214,7 @@ def _apply_set(session: ReparkSession, key: str, value: str) -> DataFrame:
     if key in _SQLCONF_STATIC_KEYS:
         raise AnalysisException(
             f"[CANNOT_MODIFY_STATIC_CONFIG] Cannot modify the value of the static Spark "
-            f'config: "{key}".'
+            f'config: "{key}".{_SQLSTATE_STATIC_CONFIG}'
         )
     _refuse_unless_resolvable_zone(key, value)
     _refuse_unless_typed(key, value)
@@ -195,8 +222,8 @@ def _apply_set(session: ReparkSession, key: str, value: str) -> DataFrame:
     return _pair_frame(session, [(key, session.conf.get(key))])
 
 
-def _apply_set_time_zone(session: ReparkSession, literal: str) -> DataFrame:
-    """Apply ``SET TIME ZONE '<zone>'`` as a ``spark.sql.session.timeZone`` set."""
+def _apply_set_time_zone(session: ReparkSession, literal: str, *, quoted: bool) -> DataFrame:
+    """Apply ``SET TIME ZONE`` as a ``spark.sql.session.timeZone`` set."""
     if literal.upper() == "LOCAL":
         raise UnsupportedOperationException(
             '"SET TIME ZONE LOCAL" is a DECLARED refusal (registry SET-TZ-LOCAL-1, '
@@ -204,7 +231,7 @@ def _apply_set_time_zone(session: ReparkSession, literal: str) -> DataFrame:
             "the zone explicitly with SET TIME ZONE '<iana-id>' or "
             'ReparkSession.builder.config("spark.sql.session.timeZone", "<iana-id>").'
         )
-    zone = literal[1:-1].replace("''", "'")
+    zone = _unquote_zone_literal(literal) if quoted else literal
     if not _resolves_as_session_zone(zone):
         raise IllegalArgumentException(_time_zone_error(zone))
     session.conf.set(SESSION_TIME_ZONE_KEY, zone)
@@ -212,28 +239,54 @@ def _apply_set_time_zone(session: ReparkSession, literal: str) -> DataFrame:
     return _pair_frame(session, [(SESSION_TIME_ZONE_KEY, effective)])
 
 
+def _unquote_zone_literal(literal: str) -> str:
+    """Strip matching quotes from a SET TIME ZONE literal; doubled quotes become one."""
+    if len(literal) >= 2 and literal[0] == "'" and literal[-1] == "'":
+        return literal[1:-1].replace("''", "'")
+    if len(literal) >= 2 and literal[0] == '"' and literal[-1] == '"':
+        return literal[1:-1].replace('""', '"')
+    return literal
+
+
 def _read_frame(session: ReparkSession, key: str) -> DataFrame:
     """Answer ``SET <key>`` — the effective conf value, or ``<undefined>`` when unset."""
-    return _pair_frame(session, [(key, session.conf.get(key, _UNDEFINED_CONF_VALUE))])
+    value = session.conf.get(key, _UNDEFINED_CONF_VALUE)
+    return _pair_frame(session, [(key, _redact_conf_value(key, value))])
 
 
 def _listing_frame(session: ReparkSession, *, verbose: bool) -> DataFrame:
     """Answer ``SET`` / ``SET -v`` — one row per runtime-set key, sorted by key."""
     rows = sorted(
-        (key, _SECRET_MASK if _prop_key_is_secret(key) else value)
-        for key, value in session.conf._store().items()
+        (key, _redact_conf_value(key, value)) for key, value in session.conf._store().items()
     )
     if verbose:
         return _verbose_frame(session, rows)
     return _pair_frame(session, rows)
 
 
+def _redact_conf_value(key: str, value: str) -> str:
+    """Redact when Spark's default ``spark.redaction.regex`` matches the key or value."""
+    if _REDACTION_RE.search(key) is not None or _REDACTION_RE.search(value) is not None:
+        return _REDACTED_VALUE
+    return value
+
+
 def _reset_all(session: ReparkSession) -> DataFrame:
-    """Apply ``RESET`` — unset every runtime-set key; answer the empty frame."""
+    """Apply ``RESET`` — restore builder values or unset every runtime-set key."""
     conf = session.conf
     for key in list(conf._store()):
-        conf.unset(key)
+        _restore_or_unset(session, key)
     return _empty_frame(session)
+
+
+def _restore_or_unset(session: ReparkSession, key: str) -> None:
+    """RESET one key: restore a builder-seeded value, otherwise ``conf.unset``."""
+    refuse_collation_session_key(key)
+    builder_value = session._builder_config.get(key)
+    if builder_value is not None:
+        session.conf.set(key, builder_value)
+        return
+    session.conf.unset(key)
 
 
 def _refuse_unless_resolvable_zone(key: str, value: str) -> None:
@@ -243,26 +296,68 @@ def _refuse_unless_resolvable_zone(key: str, value: str) -> None:
 
 
 def _refuse_unless_typed(key: str, value: str) -> None:
-    """Raise ``INVALID_CONF_VALUE.TYPE_MISMATCH`` for the typed keys this door touches."""
+    """Raise Spark typed-conf errors for the keys this door validates."""
     expected = _TYPED_VALUE_KINDS.get(key)
-    if expected == "int" and _INT_VALUE_RE.fullmatch(value) is None:
-        raise IllegalArgumentException(_type_mismatch_error(key, value, expected))
+    if expected == "int":
+        if _INT_VALUE_RE.fullmatch(value) is None:
+            raise IllegalArgumentException(_type_mismatch_error(key, value, expected))
+        if int(value) <= 0:
+            raise IllegalArgumentException(_requirement_error(key, value))
+        return
     if expected == "boolean" and value.lower() not in _BOOLEAN_VALUE_TEXTS:
         raise IllegalArgumentException(_type_mismatch_error(key, value, expected))
 
 
 def _resolves_as_session_zone(value: str) -> bool:
-    """Whether ``value`` resolves as a zone — IANA id or a ``±HH[:MM]`` fixed offset."""
-    offset_match = _FIXED_OFFSET_ZONE_RE.fullmatch(value)
-    if offset_match is not None:
-        digits = value[1:].replace(":", "")
-        seconds = int(digits[:2]) * 3600 + int(digits[2:]) * 60
-        return seconds < 86400
+    """Whether ``value`` is a Java ``ZoneId.of`` IANA id or GMT/UTC/UT/offset form."""
+    if not value:
+        return False
     try:
         ZoneInfo(value)
     except (ZoneInfoNotFoundError, ValueError):
+        pass
+    else:
+        return True
+    upper = value.upper()
+    for prefix in _ZONE_PREFIXES:
+        if upper == prefix:
+            return True
+        if upper.startswith(prefix) and len(value) > len(prefix) and value[len(prefix)] in "+-":
+            return _offset_is_java_zone_id(value[len(prefix) :])
+    return _offset_is_java_zone_id(value)
+
+
+def _offset_is_java_zone_id(value: str) -> bool:
+    """Whether ``value`` is a Java ``ZoneOffset`` spelling inside ±18:00."""
+    if value in ("Z", "z"):
+        return True
+    if len(value) < 2 or value[0] not in "+-":
         return False
-    return True
+    body = value[1:]
+    hours = 0
+    minutes = 0
+    seconds = 0
+    if re.fullmatch(r"\d{1,2}", body):
+        hours = int(body)
+    elif re.fullmatch(r"\d{2}:\d{2}", body):
+        hours = int(body[:2])
+        minutes = int(body[3:])
+    elif re.fullmatch(r"\d{4}", body):
+        hours = int(body[:2])
+        minutes = int(body[2:])
+    elif re.fullmatch(r"\d{2}:\d{2}:\d{2}", body):
+        hours = int(body[:2])
+        minutes = int(body[3:5])
+        seconds = int(body[6:])
+    elif re.fullmatch(r"\d{6}", body):
+        hours = int(body[:2])
+        minutes = int(body[2:4])
+        seconds = int(body[4:])
+    else:
+        return False
+    if minutes > 59 or seconds > 59 or hours > 18:
+        return False
+    return hours < 18 or (minutes == 0 and seconds == 0)
 
 
 def _time_zone_error(value: str) -> str:
@@ -270,6 +365,7 @@ def _time_zone_error(value: str) -> str:
     return (
         f"[INVALID_CONF_VALUE.TIME_ZONE] The value '{value}' in the config "
         f'"{SESSION_TIME_ZONE_KEY}" is invalid. Cannot resolve the given timezone.'
+        f"{_SQLSTATE_INVALID_CONF}"
     )
 
 
@@ -278,6 +374,16 @@ def _type_mismatch_error(key: str, value: str, expected: str) -> str:
     return (
         f"[INVALID_CONF_VALUE.TYPE_MISMATCH] The value '{value}' in the config "
         f"\"{key}\" is invalid. It should be a/an '{expected}' value."
+        f"{_SQLSTATE_INVALID_CONF}"
+    )
+
+
+def _requirement_error(key: str, value: str) -> str:
+    """Spark's ``INVALID_CONF_VALUE.REQUIREMENT`` message for a non-positive int."""
+    return (
+        f"[INVALID_CONF_VALUE.REQUIREMENT] The value '{value}' in the config "
+        f'"{key}" is invalid. The value of {key} must be positive'
+        f"{_SQLSTATE_INVALID_CONF}"
     )
 
 
