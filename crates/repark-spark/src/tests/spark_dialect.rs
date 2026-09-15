@@ -429,6 +429,40 @@ async fn signed_integer_suffix_minima_answer() {
 }
 
 #[tokio::test]
+async fn unaliased_suffix_names_come_from_value_text() {
+    let ctx = production_ctx(false);
+    for (sql, name) in [
+        ("SELECT 1.5BD", "1.5"),
+        ("SELECT 1e200D", "1.0E200"),
+        ("SELECT 2.5D", "2.5"),
+        ("SELECT 1D", "1.0"),
+        ("SELECT 1L", "1"),
+        ("SELECT 1.5F", "1.5"),
+        ("SELECT 1Y", "1"),
+        ("SELECT 1S", "1"),
+        ("SELECT -128Y", "-128"),
+        ("SELECT -0.0BD", "-0.0"),
+        ("SELECT * FROM (SELECT 1.5BD) t", "1.5"),
+        ("SELECT * FROM (SELECT 1e200D) t", "1.0E200"),
+        ("SELECT * FROM (SELECT 1D) t", "1"),
+    ] {
+        let (batch, _, _) = one_cell(&ctx, sql).await;
+        assert_eq!(batch.schema().field(0).name(), name, "{sql}");
+    }
+    let batches = execute(
+        &ctx,
+        &CatalogRegistry::new(),
+        "SELECT * FROM (SELECT 1D UNION ALL SELECT 2D) t",
+    )
+    .await
+    .unwrap_or_else(|error| panic!("union of suffix literals failed: {error}"))
+    .collect()
+    .await
+    .unwrap();
+    assert_eq!(batches[0].schema().field(0).name(), "1");
+}
+
+#[tokio::test]
 async fn bigint_overflow_is_invalid_numeric_literal() {
     let ctx = production_ctx(false);
     for sql in [

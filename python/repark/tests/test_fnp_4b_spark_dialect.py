@@ -195,3 +195,48 @@ def test_expr_backtick_column_reference_binds_the_frame_column(
     assert table.column(0).to_pylist() == [4, 6]
     assert pa.types.is_int64(table.schema.field(0).type)
     assert table.schema.field(0).name == "(my col * 2)"
+
+
+def test_nested_suffix_literal_hides_the_provenance_marker(
+    spark: ReparkSession, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """L-001: no ``__repark_`` marker in columns, Arrow names, or explain."""
+    cases = [
+        ("SELECT * FROM (SELECT 1.5BD) t", "1.5"),
+        ("WITH c AS (SELECT 1.5BD) SELECT * FROM c", "1.5"),
+        ("SELECT * FROM (SELECT 1e200D) t", "1.0E200"),
+    ]
+    for sql, name in cases:
+        frame = spark.sql(sql)
+        assert frame.columns == [name], sql
+        table = _table(frame)
+        assert table.schema.names == [name], sql
+        assert "__repark_" not in table.schema.names[0], sql
+    frame = spark.sql("SELECT * FROM (SELECT 1.5BD) t")
+    frame.explain()
+    assert "__repark_" not in capsys.readouterr().out
+
+
+def test_unaliased_suffix_names_come_from_value_text(spark: ReparkSession) -> None:
+    """L-003: unaliased root suffix names are Spark value text, not dumps."""
+    cases = [
+        ("SELECT 1.5BD", "1.5"),
+        ("SELECT 1e200D", "1.0E200"),
+        ("SELECT 2.5D", "2.5"),
+        ("SELECT 1D", "1.0"),
+        ("SELECT 1L", "1"),
+        ("SELECT 1.5F", "1.5"),
+        ("SELECT 1Y", "1"),
+        ("SELECT 1S", "1"),
+        ("SELECT -128Y", "-128"),
+        ("SELECT -0.0BD", "-0.0"),
+        ("SELECT * FROM (SELECT 1D) t", "1"),
+        ("SELECT * FROM (SELECT 1D UNION ALL SELECT 2D) t", "1"),
+    ]
+    for sql, name in cases:
+        table = _table(spark.sql(sql))
+        assert table.schema.names == [name], sql
+    table = _table(spark.range(1).selectExpr("1.5BD"))
+    assert table.schema.names == ["1.5"]
+    table = _table(spark.range(1).select(F.expr("1.5BD")))
+    assert table.schema.names == ["1.5BD"]
