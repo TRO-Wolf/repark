@@ -9,11 +9,13 @@ from typing import Any
 
 import pytest
 
+import repark.spark.functions as F  # noqa: N812
 from repark import ReparkSession
 from repark.errors import (
     AnalysisException,
     PySparkNotImplementedError,
     PySparkTypeError,
+    PySparkValueError,
 )
 
 _ORACLE: dict[str, Any] = json.loads(
@@ -83,7 +85,7 @@ def test_bucket_by_accepts_list_first_column_and_returns_writer(
     assert type(listed).__name__ == _ORACLE["bucketBy_list"]["result"]["value"]
     writer = frame.write
     assert writer.bucketBy(2, "a") is writer
-    assert writer.bucket_by(2, ["a", "b"], "key") is writer
+    assert writer.bucket_by(2, ["a", "b"]) is writer
 
 
 def test_bucketed_path_save_refused(spark: ReparkSession, tmp_path: Path) -> None:
@@ -268,6 +270,142 @@ def test_v2_cluster_by_create_refused_ruling_r2(spark: ReparkSession) -> None:
     assert not spark.catalog.tableExists("v2c")
     with pytest.raises(PySparkNotImplementedError):
         frame.writeTo("v2c5").cluster_by("a").createOrReplace()
+
+
+def test_cluster_by_empty_call_refuses_at_the_call(spark: ReparkSession) -> None:
+    """Empty clusterBy raises Spark's bare assert at the call; no table, state kept.
+
+    pins: io-bucket-cluster-1/C-005
+    """
+    frame = _kv_frame(spark)
+    for call in (
+        lambda: frame.write.clusterBy(),
+        lambda: frame.write.clusterBy([]),
+        lambda: frame.write.clusterBy(()),
+    ):
+        with pytest.raises(
+            AssertionError, match=r"clusterBy needs one or more clustering columns\."
+        ):
+            call()
+    assert not spark.catalog.tableExists("empty_cl")
+    writer = frame.write
+    writer.clusterBy("a")
+    with pytest.raises(AssertionError, match=r"clusterBy needs one or more clustering columns\."):
+        writer.clusterBy()
+    with pytest.raises(PySparkNotImplementedError) as raised_kept:
+        writer.saveAsTable("cl_cleared")
+    assert raised_kept.value.getCondition() == "NOT_IMPLEMENTED"
+    assert not spark.catalog.tableExists("cl_cleared")
+
+
+def test_bucket_by_list_with_extra_cols_refuses(spark: ReparkSession) -> None:
+    """A list/tuple first column with extra cols raises CANNOT_SET_TOGETHER at the call.
+
+    pins: io-bucket-cluster-1/C-005
+    """
+    frame = _kv_frame(spark)
+    with pytest.raises(PySparkValueError) as raised:
+        frame.write.bucketBy(2, ["a"], "b")
+    assert raised.value.getCondition() == "CANNOT_SET_TOGETHER"
+    assert raised.value.getMessageParameters() == {"arg_list": "`col` of type list and `cols`"}
+    assert (
+        str(raised.value)
+        == "[CANNOT_SET_TOGETHER] `col` of type list and `cols` should not be set together."
+    )
+    with pytest.raises(PySparkValueError) as raised_tuple:
+        frame.write.bucketBy(2, ("a", "b"), "key")
+    assert raised_tuple.value.getMessageParameters() == {
+        "arg_list": "`col` of type tuple and `cols`"
+    }
+    with pytest.raises(PySparkValueError) as raised_sort:
+        frame.write.sortBy(["a"], "b")
+    assert raised_sort.value.getCondition() == "CANNOT_SET_TOGETHER"
+    with pytest.raises(PySparkValueError) as raised_snake:
+        frame.write.bucket_by(2, ["a"], "b")
+    assert raised_snake.value.getCondition() == "CANNOT_SET_TOGETHER"
+
+
+def test_bucket_by_non_str_names_refused(spark: ReparkSession) -> None:
+    """Non-str column names raise NOT_LIST_OF_STR at the call; an empty list is IndexError.
+
+    pins: io-bucket-cluster-1/C-005
+    """
+    frame = _kv_frame(spark)
+    for bad_col, arg_type in ((1, "int"), (None, "NoneType"), (F.col("a"), "Column")):
+        with pytest.raises(PySparkTypeError) as raised_col:
+            frame.write.bucketBy(2, bad_col)
+        assert raised_col.value.getCondition() == "NOT_LIST_OF_STR"
+        assert raised_col.value.getMessageParameters() == {
+            "arg_name": "col",
+            "arg_type": arg_type,
+        }
+    with pytest.raises(PySparkTypeError) as raised_sort:
+        frame.write.sortBy(1)
+    assert raised_sort.value.getMessageParameters() == {"arg_name": "col", "arg_type": "int"}
+    with pytest.raises(PySparkTypeError) as raised_extra:
+        frame.write.bucketBy(2, "a", 1)
+    assert raised_extra.value.getMessageParameters() == {"arg_name": "cols", "arg_type": "int"}
+    with pytest.raises(PySparkTypeError) as raised_member:
+        frame.write.bucketBy(2, ["a", 1])
+    assert raised_member.value.getMessageParameters() == {"arg_name": "cols", "arg_type": "int"}
+    for call in (
+        lambda: frame.write.bucketBy(2, []),
+        lambda: frame.write.sortBy([]),
+    ):
+        with pytest.raises(IndexError, match="list index out of range"):
+            call()
+
+
+def test_bucketed_and_sorted_path_save_refused_1313(
+    spark: ReparkSession,
+    tmp_path: Path,
+) -> None:
+    """A path save with bucketBy AND sortBy raises _LEGACY_ERROR_TEMP_1313 (L-004).
+
+    pins: io-bucket-cluster-1/C-005
+    """
+    frame = _kv_frame(spark)
+    with pytest.raises(AnalysisException) as raised:
+        frame.write.bucketBy(2, "a").sortBy("b").parquet(str(tmp_path / "bs1"))
+    assert raised.value.getCondition() == "_LEGACY_ERROR_TEMP_1313"
+    assert raised.value.getMessageParameters() == {"operation": "save"}
+    assert str(raised.value) == "'save' does not support bucketBy and sortBy right now."
+    for call in (
+        lambda: frame.write.bucketBy(2, "a").sortBy("b").save(str(tmp_path / "bs2")),
+        lambda: frame.write.bucketBy(2, "a").sortBy("b").csv(str(tmp_path / "bs3")),
+        lambda: frame.write.bucketBy(2, "a").sortBy("b").json(str(tmp_path / "bs4")),
+        lambda: frame.write.bucketBy(2, "a").sortBy("b").format("text").save(str(tmp_path / "bs5")),
+    ):
+        with pytest.raises(AnalysisException) as raised_arm:
+            call()
+        assert raised_arm.value.getCondition() == "_LEGACY_ERROR_TEMP_1313"
+        assert str(raised_arm.value) == "'save' does not support bucketBy and sortBy right now."
+    with pytest.raises(AnalysisException) as raised_bucket_only:
+        frame.write.bucketBy(2, "a").parquet(str(tmp_path / "b1"))
+    _assert_error_cell(raised_bucket_only.value, "bucketBy_save")
+
+
+def test_insert_into_refuses_bucketing(spark: ReparkSession) -> None:
+    """insertInto refuses bucketing (Ruling R-3); clusterBy still writes there (Q-1).
+
+    pins: io-bucket-cluster-1/C-005
+    """
+    frame = _kv_frame(spark)
+    frame.write.saveAsTable("q1_t")
+    with pytest.raises(AnalysisException) as raised:
+        frame.write.bucketBy(2, "a").insertInto("q1_t")
+    assert raised.value.getCondition() == "_LEGACY_ERROR_TEMP_1312"
+    assert raised.value.getMessageParameters() == {"operation": "insertInto"}
+    assert str(raised.value) == "'insertInto' does not support bucketBy right now."
+    with pytest.raises(AnalysisException) as raised_both:
+        frame.write.bucketBy(2, "a").sortBy("b").insertInto("q1_t")
+    assert raised_both.value.getCondition() == "_LEGACY_ERROR_TEMP_1313"
+    assert str(raised_both.value) == "'insertInto' does not support bucketBy and sortBy right now."
+    with pytest.raises(AnalysisException) as raised_sort:
+        frame.write.sortBy("a").insertInto("q1_t")
+    _assert_error_cell(raised_sort.value, "sortBy_without_bucketBy")
+    assert frame.write.clusterBy("a").insertInto("q1_t") is None
+    assert spark.sql("SELECT key FROM q1_t").to_arrow().num_rows == 4
 
 
 def test_partitioned_save_as_table_still_writes(spark: ReparkSession) -> None:

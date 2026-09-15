@@ -7,7 +7,12 @@ from pathlib import Path
 from types import MethodType
 from typing import TYPE_CHECKING, Any, NoReturn
 
-from repark.errors import AnalysisException, PySparkNotImplementedError, PySparkTypeError
+from repark.errors import (
+    AnalysisException,
+    PySparkNotImplementedError,
+    PySparkTypeError,
+    PySparkValueError,
+)
 from repark.spark._idents import escape_sql_single_quotes
 from repark.spark._integral import (
     _attached_error_class,
@@ -38,6 +43,24 @@ def _raise_analysis(
     error.getMessageParameters = MethodType(_attached_message_parameters, error)
     error.getSqlState = MethodType(_attached_sql_state, error)
     raise error
+
+
+def _raise_operation_not_support_bucketing(operation: str) -> NoReturn:
+    """Raise Spark's ``_LEGACY_ERROR_TEMP_1312`` for a bucketed action."""
+    _raise_analysis(
+        f"'{operation}' does not support bucketBy right now.",
+        "_LEGACY_ERROR_TEMP_1312",
+        message_parameters={"operation": operation},
+    )
+
+
+def _raise_operation_not_support_bucketing_and_sorting(operation: str) -> NoReturn:
+    """Raise Spark's ``_LEGACY_ERROR_TEMP_1313`` for a bucketed and sorted action."""
+    _raise_analysis(
+        f"'{operation}' does not support bucketBy and sortBy right now.",
+        "_LEGACY_ERROR_TEMP_1313",
+        message_parameters={"operation": operation},
+    )
 
 
 def _raise_sort_by_without_bucketing() -> NoReturn:
@@ -77,15 +100,33 @@ def _bucketed(writer: DataFrameWriter | DataFrameWriterV2) -> bool:
     return writer._num_buckets is not None
 
 
-def _normalize_column_list(col: Any, cols: tuple[Any, ...]) -> list[str]:
-    """Flatten Spark's ``(col, *cols)`` column spellings into a name list."""
-    names: list[str] = []
-    for item in (col, *cols):
-        if isinstance(item, (list, tuple)):
-            names.extend(str(name) for name in item)
-        else:
-            names.append(str(item))
-    return names
+def _unpack_column_args(col: Any, cols: tuple[Any, ...]) -> tuple[str, ...]:
+    """Unpack Spark's ``(col, *cols)`` shape, raising its list/tuple and str errors."""
+    if isinstance(col, (list, tuple)):
+        if len(cols) > 0:
+            raise PySparkValueError(
+                f"[CANNOT_SET_TOGETHER] `col` of type {type(col).__name__} and `cols` "
+                "should not be set together.",
+                errorClass="CANNOT_SET_TOGETHER",
+                messageParameters={"arg_list": f"`col` of type {type(col).__name__} and `cols`"},
+            )
+        first = col[0]
+        rest = tuple(col[1:])
+    else:
+        first = col
+        rest = cols
+    if not isinstance(first, str):
+        raise PySparkTypeError(
+            errorClass="NOT_LIST_OF_STR",
+            messageParameters={"arg_name": "col", "arg_type": type(first).__name__},
+        )
+    for item in rest:
+        if not isinstance(item, str):
+            raise PySparkTypeError(
+                errorClass="NOT_LIST_OF_STR",
+                messageParameters={"arg_name": "cols", "arg_type": type(item).__name__},
+            )
+    return (first, *rest)
 
 
 def _backticked_table_name(qualified: str) -> str:
@@ -94,7 +135,7 @@ def _backticked_table_name(qualified: str) -> str:
 
 
 def bucket_by(writer: DataFrameWriter, num_buckets: Any, col: Any, *cols: Any) -> DataFrameWriter:
-    """Record Hive bucketing columns after Spark's ``NOT_INT`` check; chain the writer."""
+    """Record Hive bucketing columns after Spark's call-time checks; chain the writer."""
     if not isinstance(num_buckets, int):
         raise PySparkTypeError(
             f"[NOT_INT] Argument `numBuckets` should be an int, got {type(num_buckets).__name__}.",
@@ -105,19 +146,22 @@ def bucket_by(writer: DataFrameWriter, num_buckets: Any, col: Any, *cols: Any) -
             },
         )
     writer._num_buckets = num_buckets
-    writer._bucket_columns = _normalize_column_list(col, cols)
+    writer._bucket_columns = list(_unpack_column_args(col, cols))
     return writer
 
 
 def sort_by(writer: DataFrameWriter, col: Any, *cols: Any) -> DataFrameWriter:
-    """Record per-bucket sort columns; validation happens at the write action."""
-    writer._sort_columns = _normalize_column_list(col, cols)
+    """Record per-bucket sort columns after Spark's call-time checks."""
+    writer._sort_columns = list(_unpack_column_args(col, cols))
     return writer
 
 
 def cluster_by(writer: DataFrameWriter, *cols: Any) -> DataFrameWriter:
-    """Record clustering columns; validation happens at the write action."""
-    writer._cluster_columns = _normalize_column_list(cols[0], cols[1:]) if cols else []
+    """Record clustering columns; Spark's bare assert refuses an empty call."""
+    if len(cols) == 1 and isinstance(cols[0], (list, tuple)):
+        cols = tuple(cols[0])
+    assert len(cols) > 0, "clusterBy needs one or more clustering columns."
+    writer._cluster_columns = [str(item) for item in cols]
     return writer
 
 
@@ -132,14 +176,12 @@ def v2_cluster_by(writer: DataFrameWriterV2, col: Any, *cols: Any) -> DataFrameW
     return writer
 
 
-def refuse_bucketed_path_save(writer: DataFrameWriter) -> None:
-    """Refuse a bucketed or sorted path save with Spark's save-time errors."""
+def refuse_bucketed_action(writer: DataFrameWriter, operation: str) -> None:
+    """Refuse a bucketed or sorted non-catalog action (Spark's ``assertNotBucketed``)."""
     if _bucketed(writer):
-        _raise_analysis(
-            "'save' does not support bucketBy right now.",
-            "_LEGACY_ERROR_TEMP_1312",
-            message_parameters={"operation": "save"},
-        )
+        if writer._sort_columns:
+            _raise_operation_not_support_bucketing_and_sorting(operation)
+        _raise_operation_not_support_bucketing(operation)
     if writer._sort_columns:
         _raise_sort_by_without_bucketing()
 
@@ -221,6 +263,13 @@ def refuse_clustered_table_write(
         errorClass="NOT_IMPLEMENTED",
         messageParameters={"feature": feature},
     )
+
+
+def refuse_bucketed_or_clustered_table_write(writer: DataFrameWriter, qualified_table: str) -> None:
+    """Run the table-write bucketing and clustering checks in Spark's order."""
+    assert_bucket_spec_valid_for_table_write(writer, qualified_table)
+    refuse_bucketed_table_write(writer)
+    refuse_clustered_table_write(writer)
 
 
 def assert_v2_cluster_conflicts(writer: DataFrameWriterV2) -> None:

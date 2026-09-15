@@ -219,8 +219,7 @@ class DataFrameWriter:
         writer_layout.assert_no_sort_without_bucketing(self)
         qualified, table_ref = _resolve_writer_table(self._dataframe, name)
         writer_layout.assert_bucket_spec_valid_for_table_write(self, qualified)
-        writer_layout.refuse_bucketed_table_write(self)
-        writer_layout.refuse_clustered_table_write(self)
+        writer_layout.refuse_bucketed_or_clustered_table_write(self, qualified)
         session = self._dataframe._session
         normalized_mode = "error" if self._mode == "errorifexists" else self._mode
         if not session.table_exists(qualified):
@@ -252,6 +251,7 @@ class DataFrameWriter:
             raise PySparkValueError(
                 f"repark.write supports only format('iceberg') for insertInto, got {self._format!r}"
             )
+        writer_layout.refuse_bucketed_action(self, "insertInto")
         _qualified, table_ref = _resolve_writer_table(self._dataframe, name)
         if overwrite is None:
             overwrite = self._mode == "overwrite"
@@ -383,7 +383,7 @@ class DataFrameWriter:
                     break
         if path is None:
             raise AnalysisException("'path' is not specified.")
-        writer_layout.refuse_bucketed_path_save(self)
+        writer_layout.refuse_bucketed_action(self, "save")
         if self._format not in self._PATH_FORMATS:
             if self._format == "iceberg":
                 raise AnalysisException(

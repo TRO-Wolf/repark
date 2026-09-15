@@ -531,6 +531,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_dynamic_partition_sql` (re-imported by `writer_readwriter`, so
   `core.py`'s import surface is unchanged).
   pins: io-bucket-cluster-1/C-001, C-002
+  Critic round 1 (2026-09-14): `_unpack_column_args` enforces Spark's call-time
+  order — `CANNOT_SET_TOGETHER` for a list/tuple `col` with extra `cols`, the
+  `col[0]` `IndexError` for an empty list, `NOT_LIST_OF_STR` (`col` then `cols`);
+  `cluster_by` unpacks a single list/tuple and runs Spark's bare assert on an
+  empty call; `refuse_bucketed_action(writer, operation)` serves both path saves
+  and `insertInto` (1312 alone, 1313 with sortBy, then SORT_BY_WITHOUT_BUCKETING);
+  `refuse_bucketed_or_clustered_table_write` merges the table-write checks so
+  `writer_readwriter.py` holds its exact 1105 baseline.
+  pins: io-bucket-cluster-1/C-005
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`

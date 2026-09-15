@@ -1480,40 +1480,62 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 
 ### IO-BUCKET-1 — `bucketBy`/`sortBy` on an Iceberg table is a declared `NOT_IMPLEMENTED` refusal
 
-- **repark** — `DataFrameWriter.bucketBy(numBuckets, col, *cols)` / `sortBy(col, *cols)` record the
-  layout and return the writer; a non-int `numBuckets` raises `PySparkTypeError` `NOT_INT` at the
-  call; any path save with bucketing raises `AnalysisException` `_LEGACY_ERROR_TEMP_1312`
-  `'save' does not support bucketBy right now.`, `sortBy` without `bucketBy` raises
-  `SORT_BY_WITHOUT_BUCKETING`, and `numBuckets <= 0` or `> 100000` raises `INVALID_BUCKET_COUNT`
-  at the save; a bucket column absent from the frame raises `COLUMN_NOT_DEFINED_IN_TABLE`; a valid
-  `saveAsTable` with bucketing raises `PySparkNotImplementedError` `NOT_IMPLEMENTED` with
+- **repark** — `DataFrameWriter.bucketBy(numBuckets, col, *cols)` / `sortBy(col, *cols)` run
+  Spark's call-time checks (`NOT_INT` on a non-int `numBuckets`, `CANNOT_SET_TOGETHER` for a
+  list/tuple `col` together with extra `cols`, `NOT_LIST_OF_STR` for non-str names, an
+  `IndexError` for an empty list `col`) and return the writer; a path save or `insertInto` with
+  bucketing raises `AnalysisException` `_LEGACY_ERROR_TEMP_1312`
+  `'<operation>' does not support bucketBy right now.`, with `sortBy` as well
+  `_LEGACY_ERROR_TEMP_1313` `'<operation>' does not support bucketBy and sortBy right now.`,
+  and `sortBy` without `bucketBy` raises `SORT_BY_WITHOUT_BUCKETING`; `numBuckets <= 0` or
+  `> 100000` raises `INVALID_BUCKET_COUNT` at the save; a bucket column absent from the frame
+  raises `COLUMN_NOT_DEFINED_IN_TABLE`; a valid `saveAsTable` with bucketing raises
+  `PySparkNotImplementedError` `NOT_IMPLEMENTED` with
   `{"feature": "bucketBy on an Iceberg table (use writeTo(...).partitionedBy(F.bucket(n, col)))"}`.
 - **Apache Spark** — writes Hive bucket files and records `Num Buckets` / `Bucket Columns` /
-  `Sort Columns` in `DESCRIBE EXTENDED`. *(oracle: recorded — cells `bucketBy_bad_num`,
-  `bucketBy_list`, `bucketBy_save`, `bucketBy_zero`, `bucketBy_missing_col`,
-  `sortBy_without_bucketBy`, `bucketBy_saveAsTable`.)*
-- **Pin** — `python/repark/tests/test_io_bucket_cluster_1.py` (`test_bucketBy_*`,
-  `test_sortBy_without_bucketBy_refused`)
+  `Sort Columns` in `DESCRIBE EXTENDED`; its classic writer's `assertNotBucketed("save")` /
+  `assertNotBucketed("insertInto")` raise the same 1312/1313/SORT_BY errors on those doors.
+  *(oracle: recorded — cells `bucketBy_bad_num`, `bucketBy_list`, `bucketBy_save`, `bucketBy_zero`,
+  `bucketBy_missing_col`, `sortBy_without_bucketBy`, `bucketBy_saveAsTable`; the 1313 and
+  `insertInto` shapes read from Spark 4.1.2's `readwriter.py` and classic-writer bytecode by the
+  critic round.)*
+- **Pin** — `python/repark/tests/test_io_bucket_cluster_1.py::test_bucket_by_rejects_non_int_num_buckets`,
+  `::test_bucket_by_accepts_list_first_column_and_returns_writer`,
+  `::test_bucketed_path_save_refused`, `::test_sort_by_without_bucket_by_refused`,
+  `::test_bucket_by_count_bounds_refused_at_save`, `::test_bucket_by_missing_column_refused`,
+  `::test_bucket_by_save_as_table_refused_ruling_r1`,
+  `::test_bucket_by_list_with_extra_cols_refuses`, `::test_bucket_by_non_str_names_refused`,
+  `::test_bucketed_and_sorted_path_save_refused_1313`, `::test_insert_into_refuses_bucketing`
 - **Rationale** — DECLARED 2026-09-14, Ruling R-1: Iceberg has no Hive bucketing, so the engine
   cannot produce Spark's bucket file layout; the honest action-time answer is Spark's own
   `NOT_IMPLEMENTED` shape pointing at `writeTo(...).partitionedBy(F.bucket(n, col))`. Every
-  call-time and save-time argument error in the path is Spark-equal.
+  call-time and save-time argument error in the path is Spark-equal. Critic round 1 (2026-09-14)
+  corrected the path/`insertInto` classes (1312 alone, 1313 with `sortBy`) and added Spark's
+  call-time list/str checks.
 
 ### IO-CLUSTER-1 — `clusterBy` on an Iceberg table is a declared `NOT_IMPLEMENTED` refusal
 
 - **repark** — `DataFrameWriter.clusterBy(*cols)` and `DataFrameWriterV2.clusterBy(col, *cols)`
-  record the clustering columns and return the writer; a path save ignores clustering and writes;
-  `saveAsTable` / V2 `create`/`replace`/`createOrReplace` raise `AnalysisException`
+  record the clustering columns and return the writer; an empty call (`clusterBy()`,
+  `clusterBy([])`) raises Spark's bare `AssertionError`
+  `"clusterBy needs one or more clustering columns."` at the call; a path save ignores clustering
+  and writes; `saveAsTable` / V2 `create`/`replace`/`createOrReplace` raise `AnalysisException`
   `SPECIFY_CLUSTER_BY_WITH_PARTITIONED_BY_IS_NOT_ALLOWED` (with `partitionBy`/`partitionedBy`) or
   `SPECIFY_CLUSTER_BY_WITH_BUCKETING_IS_NOT_ALLOWED` (with `bucketBy`); otherwise they raise
   `PySparkNotImplementedError` `NOT_IMPLEMENTED` with `{"feature": "clusterBy on an Iceberg table"}`.
 - **Apache Spark** — records the clustering columns in the created table (`DESCRIBE EXTENDED` shows
-  `# Clustering Information`), and answers `None` for a clustered V2 create on its session catalog.
+  `# Clustering Information`), answers `None` for a clustered V2 create on its session catalog, and
+  refuses an empty `clusterBy` with the same bare assert.
   *(oracle: recorded — cells `clusterBy_save`, `clusterBy_saveAsTable`, `clusterBy_with_partitionBy`,
   `clusterBy_with_bucketBy`, `v2_clusterBy_type`, `v2_clusterBy_partitionedBy`,
-  `v2_clusterBy_create_session_catalog`.)*
-- **Pin** — `python/repark/tests/test_io_bucket_cluster_1.py` (`test_clusterBy_*`,
-  `test_v2_clusterBy_*`)
+  `v2_clusterBy_create_session_catalog`; the empty-call assert read from Spark 4.1.2's
+  `readwriter.py` by the critic round.)*
+- **Pin** — `python/repark/tests/test_io_bucket_cluster_1.py::test_cluster_by_path_save_writes_and_ignores_clustering`,
+  `::test_cluster_by_save_as_table_refused_ruling_r2`,
+  `::test_cluster_by_conflicts_refused_at_save_as_table`, `::test_v2_cluster_by_returns_writer`,
+  `::test_v2_cluster_by_with_partitioned_by_refused_at_actions`,
+  `::test_v2_cluster_by_create_refused_ruling_r2`,
+  `::test_cluster_by_empty_call_refuses_at_the_call`
 - **Rationale** — DECLARED 2026-09-14, Ruling R-2: recording clustering columns would claim a
   layout the engine never applies, so the table-write refusal names the feature. The conflict
   errors and the path-write answer are Spark-equal.

@@ -83,6 +83,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   936 → 944 raw names), the registry rows IO-BUCKET-1 / IO-CLUSTER-1 in
   docs/spark-sql-iceberg-parity.md §5, and the map/ledger lockstep are this unit's
   C-003 deliverables, pinned here. pins: io-bucket-cluster-1/C-001, C-002, C-003, C-004
+  **Critic round 1 (2026-09-14, C-005):** the logic critic's four P2 findings plus
+  ruling R-3, all red-first (5 failed on the pre-fix tree) — L-001 empty
+  `clusterBy()`/`clusterBy([])` raises Spark's bare assert at the call (no table,
+  prior state kept); L-002 list/tuple `col` + extra `cols` → `CANNOT_SET_TOGETHER`
+  (`arg_list` names the type); L-003 non-str names → `NOT_LIST_OF_STR` (`col` vs
+  `cols`), empty list `col` → `IndexError("list index out of range")`; L-004 path
+  save with bucketBy AND sortBy → `_LEGACY_ERROR_TEMP_1313` (bucketBy alone stays
+  1312); Q-1/R-3 `insertInto` refuses bucketing (1312 / 1313 / SORT_BY_WITHOUT_BUCKETING)
+  while `clusterBy` keeps writing there. The round-1 chaining pin that passed
+  `bucket_by(2, ["a", "b"], "key")` was corrected — Spark refuses that shape.
+  pins: io-bucket-cluster-1/C-005
 - [facade_reader_writer_oracle.json](facade_reader_writer_oracle.json) —
   **IO-BUCKET-CLUSTER-1 (2026-09-14):** the run-15b oracle for the reader/writer
   facade, copied unchanged from the orchestrator's live PySpark 4.1.2 recording
@@ -1309,6 +1320,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   memoizes `__slotnames__` and the warnings machinery records `__warningregistry__`,
   so raw sets vary with test order. Critic r1 F3 (2026-09-07): `MOVED_HELPERS` asserts each of
   the 17 moved names on core and on the package IS the leaf module's object, not a copy.
+  IO-BUCKET-CLUSTER-1 (2026-09-14): `EXPECTED_NEW_PACKAGE_SUBMODULES` gains
+  `writer_layout`. pins: io-bucket-cluster-1/C-005
   pins: dfcore-1/C-001, C-002, C-003, C-008
   DFCORE-2 (2026-09-07): the class dir loses exactly the four moved helpers; core and the
   package each gain exactly the two new module names; `MOVED_SELECT_HELPERS` pins each
