@@ -644,3 +644,17 @@ this tree (best of 3, release native): 10k `F.expr("a + 1")` 2.33s → 0.72s
 suffix minima, struct, and loud-missing-column shapes re-probed; 10 threads
 × 200 concurrent constructions clean. `column/mod.rs` baseline 1022 → 1014.
 The three other per-call runtimes in `mod.rs` stay (separate paths).
+
+Slice E — P2-2 (`crates/repark-spark/src/spark_literals.rs`): the numeric-suffix
+fast path no longer fires on a bare digit+`.`; it fires on digit/`.` + suffix
+letter or exponent. The `.`+`e` arm keeps `1.e2` on the rewrite path (a plain
+digit+letter guard would miss it and mistype it decimal). Timings on this tree
+(best of 5, release native): 200-col int aliases 17.2ms, 200-col bare decimals
+20.4ms (was 20.5ms), 200-col `D` suffix 26.7ms — the remaining decimal/int gap
+is DataFusion-side (decimal literal handling), not the tokenize: guard
+booleans verified directly (`1.5` skips, `1.e2`/`1.5D` fire). `F.expr`
+unchanged (71µs plain). Pins: `1.e2` in the Rust typed-literals loop and the
+facade cases; `numeric_suffix_guard_skips_bare_decimals` holds the fire/skip
+contract so a future guard widening shows up as a test, not silent slowness.
+P3-1 (lowercase allocs), P3-2 (the remaining per-expr clone in the root display
+loop), P3-3 (`starts_with` regex compiles) recorded, not implemented.

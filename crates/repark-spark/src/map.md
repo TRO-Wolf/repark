@@ -157,7 +157,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `escaped_string_literals_from_config_map` / `with_escaped_string_literals_config` /
   `escaped_verbatim_from_options`); `pub` so the binding's `filter_sql` path reuses it.
   Location maps in `apply_regions` are built only when a downstream parser error needs
-  them. pins: fnp-4b/C-001, C-004, C-005, C-006, C-020
+  them. **FNP-4B round 8 (2026-09-15):** the numeric-suffix fast path fires on
+  digit/`.` + suffix letter or exponent (`1.e2` stays on the rewrite path); bare
+  decimals skip the tokenize. The 200-column decimal gap is DataFusion-side.
+  pins: fnp-4b/C-001, C-004, C-005, C-006, C-020
 - `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
   `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),

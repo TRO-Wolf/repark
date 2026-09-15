@@ -354,6 +354,7 @@ def test_typed_numeric_literals_are_non_null(spark: ReparkSession) -> None:
         ("SELECT .5D AS v", pa.float64(), [0.5]),
         ("SELECT 5.D AS v", pa.float64(), [5.0]),
         ("SELECT 1E-2D AS v", pa.float64(), [0.01]),
+        ("SELECT 1.e2 AS v", pa.float64(), [100.0]),
         ("SELECT 1e3 AS v", pa.float64(), [1000.0]),
         ("SELECT 1.5F AS v", pa.float32(), [1.5]),
         ("SELECT 10L AS v", pa.int64(), [10]),
