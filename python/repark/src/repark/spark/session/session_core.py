@@ -1068,11 +1068,7 @@ class ReparkSession:
             )
         return self.sql(query)
 
-    def create_dataframe(
-        self,
-        data: Any,
-        schema: Any = None,
-    ) -> DataFrame:
+    def create_dataframe(self, data: Any, schema: Any = None) -> DataFrame:
         """Build a :class:`DataFrame` from rows (PySpark ``createDataFrame``).
 
         Promotes this session to process-active (Spark parity). Accepts:
@@ -1927,6 +1923,10 @@ class ReparkSession:
         if auto_warehouse is not None:
             with contextlib.suppress(Exception):
                 auto_warehouse.cleanup()
+        artifact_dir = self._alive_token.pop("artifact_dir", None)
+        if artifact_dir is not None:
+            with contextlib.suppress(Exception):
+                _session_surface.cleanup_artifact_dir(artifact_dir)
         self._inner = None
 
     class Builder:

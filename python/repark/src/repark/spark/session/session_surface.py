@@ -29,7 +29,10 @@ if TYPE_CHECKING:
     from repark.spark.dataframe import DataFrame
     from repark.spark.session.session_core import ReparkSession
 
-_EXECUTION_ID_RE = re.compile(r"[+-]?\d+")
+_EXECUTION_ID_RE = re.compile(r"[+-]?[0-9]+")
+
+_LONG_MIN = -(2**63)
+_LONG_MAX = 2**63 - 1
 
 _MEMORY_PROFILER_WARNING = (
     "Install the 'memory_profiler' library in the cluster to enable memory profiling"
@@ -77,6 +80,14 @@ def _require_column_arg(arg: object, arg_name: str) -> None:
             errorClass="NOT_COLUMN",
             messageParameters={"arg_name": arg_name, "arg_type": type(arg).__name__},
         )
+
+
+def _string_literal_value(column: Column) -> str | None:
+    """Unquote a ``lit(<str>)`` column; ``None`` when it is not a string literal."""
+    sql_expr = column.sql_expr_part()
+    if len(sql_expr) < 2 or not sql_expr.startswith("'") or not sql_expr.endswith("'"):
+        return None
+    return sql_expr[1:-1].replace("''", "'").replace("\\\\", "\\")
 
 
 def _refuse_profile_type() -> NoReturn:
@@ -151,7 +162,13 @@ def interrupt_operation(session: ReparkSession, op_id: str) -> list[str]:
     pins: session-surface-1/C-002
     """
     session._ensure_alive()
-    if not isinstance(op_id, str) or _EXECUTION_ID_RE.fullmatch(op_id) is None:
+    if not isinstance(op_id, str):
+        raise PySparkTypeError(
+            f"[NOT_STR] Argument `operationId` should be a str, got {type(op_id).__name__}.",
+            errorClass="NOT_STR",
+            messageParameters={"arg_name": "operationId", "arg_type": type(op_id).__name__},
+        )
+    if _EXECUTION_ID_RE.fullmatch(op_id) is None or not _LONG_MIN <= int(op_id) <= _LONG_MAX:
         raise IllegalArgumentException("executionId must be a number in string form.")
     return []
 
@@ -255,6 +272,13 @@ def _artifact_dir(session: ReparkSession) -> str:
     return str(root)
 
 
+def cleanup_artifact_dir(root: str) -> None:
+    """Remove one session's artifact directory and its one ``sys.path`` entry."""
+    if root in sys.path:
+        sys.path.remove(root)
+    shutil.rmtree(root, ignore_errors=True)
+
+
 def add_artifacts(
     session: ReparkSession,
     *path: str,
@@ -284,6 +308,8 @@ def add_artifacts(
         _not_implemented("addArtifacts(file=True)")
     if not pyfile:
         return
+    if not path:
+        raise TypeError("addPyFile() missing 1 required positional argument: 'path'")
     root = _artifact_dir(session)
     for artifact_path in path:
         normalized = str(Path(artifact_path).resolve())
@@ -441,7 +467,9 @@ class Profile:
 
     def render(self, id: int, *, type: str | None = None, renderer: Any = None) -> Any:
         """Declared: no UDF profiles exist to render. pins: session-surface-1/C-006"""
-        _ = (id, type, renderer)
+        _ = (id, renderer)
+        if type is not None and type not in ("perf", "memory"):
+            _refuse_profile_type()
         _not_implemented("profile.render")
 
 
@@ -533,9 +561,29 @@ class TableValuedFunction:
                 messageParameters={"item": "field"},
             )
         _require_column_arg(input, "input")
+        field_names: list[str] = []
         for field in fields:
-            _require_column_arg(field, "fields")
-        return self._generator_variadic("json_tuple", input, *fields)
+            if not isinstance(field, Column):
+                raise PySparkTypeError(
+                    f"[NOT_COLUMN] Argument `fields` should be a Column, "
+                    f"got {type(field).__name__}.",
+                    errorClass="NOT_COLUMN",
+                    messageParameters={
+                        "arg_name": "fields",
+                        "arg_type": type(field).__name__,
+                    },
+                )
+            value = _string_literal_value(field)
+            if value is None:
+                raise PySparkTypeError(
+                    "[NOT_STR] Argument `fields` should be a str, got Column.",
+                    errorClass="NOT_STR",
+                    messageParameters={"arg_name": "fields", "arg_type": "Column"},
+                )
+            field_names.append(value)
+        import repark.spark.functions as functions
+
+        return self._session.range(1).select(functions.json_tuple(input, *field_names))
 
     def stack(self, n: Column, *fields: Column) -> DataFrame:
         """PySpark ``tvf.stack`` — the ``StackCall`` lowers inside ``select``.

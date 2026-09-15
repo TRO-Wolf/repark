@@ -1324,49 +1324,69 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   fresh `set`.
 ### SES-INTERRUPT-1 — the interrupt APIs answer `[]` and never cancel work
 - **repark** — `interruptAll()`, `interruptTag(tag)` and `interruptOperation(op_id)` return
-  `[]` unconditionally; `interruptOperation` still validates that the id is numeric in
-  string form (`IllegalArgumentException` `executionId must be a number in string form.`).
+  `[]` unconditionally; `interruptOperation` validates the id as Java `Long.parseLong`
+  inside `Try` — ASCII digits with an optional leading `+`/`-`, no whitespace, inside the
+  signed 64-bit range — and raises `IllegalArgumentException`
+  `executionId must be a number in string form.` on any other string. A non-str `op_id`
+  raises `PySparkTypeError` `NOT_STR` `{"arg_name": "operationId", ...}`.
 - **Apache Spark** — returns the ids of the jobs or operations actually interrupted, `[]`
-  when nothing is running. *(oracle: cells `interruptAll`, `interruptTag`,
+  when nothing is running; the same `Try(toLong)` validation applies, and a non-str
+  `op_id` leaks a Py4J reflection error. *(oracle: cells `interruptAll`, `interruptTag`,
   `interruptOperation`, `interruptOperation_numeric`.)*
-- **Pin** — `python/repark/tests/test_session_surface_1.py::test_interrupts_answer_empty_lists`
+- **Pin** — `python/repark/tests/test_session_surface_1.py::test_interrupts_answer_empty_lists`,
+  `::test_interrupt_operation_java_long_validation`, `::test_interrupt_operation_non_str`
 - **Rationale** — DECLARED 2026-09-14 (ruling R-2). repark executes an action synchronously
   on the calling thread and keeps no cancellable operation registry, so there is never
   anything to interrupt: `[]` is Spark's own answer for an idle session, and an action
   running on another thread is not cancelled — a real divergence only for concurrent
-  callers.
+  callers. The non-str `op_id` `NOT_STR` is a declared difference (ruling R-4,
+  2026-09-15): reproducing a Py4J reflection leak requires a JVM, and the structured
+  refusal carries the same information in repark's error taxonomy.
 ### SES-DECL-readStream — no `DataStreamReader` without a streaming engine
 - **repark** — `spark.readStream` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "readStream"}`.
 - **Apache Spark** — returns a `DataStreamReader` bound to the session's streaming context.
   *(oracle: cell `readStream_type`.)*
-- **Pin** — `python/repark/tests/test_session_surface_1.py::test_read_stream_declared`
+- **Pin** — `python/repark/tests/test_session_surface_1.py::test_read_stream_declared`,
+  `::test_declared_properties_raise_under_hasattr`
 - **Rationale** — DECLARED 2026-09-14. Structured Streaming needs an execution engine repark
-  does not have; the property refuses loudly rather than returning a hollow reader.
+  does not have; the property refuses loudly rather than returning a hollow reader. Known
+  consequence (ruling R-5, 2026-09-15): because the refusal lives in the property getter,
+  `hasattr(spark, "readStream")` raises `NOT_IMPLEMENTED` rather than answering `False` —
+  the same shape classic's `client` property already has (it raises
+  `ONLY_SUPPORTED_WITH_SPARK_CONNECT`, not `AttributeError`).
 ### SES-DECL-streams — no `StreamingQueryManager` without a streaming engine
 - **repark** — `spark.streams` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "streams"}`.
 - **Apache Spark** — returns a `StreamingQueryManager` whose `active` is `[]` on an idle
   session. *(oracle: cells `streams_type`, `streams_active`.)*
-- **Pin** — `python/repark/tests/test_session_surface_1.py::test_streams_declared`
+- **Pin** — `python/repark/tests/test_session_surface_1.py::test_streams_declared`,
+  `::test_declared_properties_raise_under_hasattr`
 - **Rationale** — DECLARED 2026-09-14. Same engine gap as `readStream`; an `active == []`
-  facade would be a silent lie about query lifecycle support.
+  facade would be a silent lie about query lifecycle support. The R-5 `hasattr`
+  consequence from the `readStream` row applies identically here.
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.
 - **Apache Spark** — returns a `DataSourceRegistration` for registering Python data
   sources. *(oracle: cell `dataSource`.)*
-- **Pin** — `python/repark/tests/test_session_surface_1.py::test_data_source_declared`
+- **Pin** — `python/repark/tests/test_session_surface_1.py::test_data_source_declared`,
+  `::test_declared_properties_raise_under_hasattr`
 - **Rationale** — DECLARED 2026-09-14. Reachable in principle (the registration plumbing is
-  Python-side), deferred until the data-source execution contract is scheduled.
+  Python-side), deferred until the data-source execution contract is scheduled. The R-5
+  `hasattr` consequence from the `readStream` row applies identically here.
 ### SES-ARTIFACT-1 — `addArtifact(s)` supports driver-local `pyfile` copies only
 - **repark** — `addArtifact`/`addArtifacts` validate exactly like Spark: more than one of
   `pyfile`/`archive`/`file` true raises `PySparkValueError` with condition
   `INVALID_MULTIPLE_ARGUMENT_CONDITIONS`; a pre-existing artifact directory entry with
   different contents raises `PySparkRuntimeError` `DUPLICATED_ARTIFACT`; `pyfile=True`
   copies the file into a per-session artifact directory, prepends it to `sys.path` once,
-  and raises `FileNotFoundError` naming a missing path; `archive=True` and `file=True`
-  raise `NOT_IMPLEMENTED`; with no flags the call is Spark's own no-op returning `None`.
+  raises `TypeError` `addPyFile() missing 1 required positional argument: 'path'` when no
+  path is given, and raises `FileNotFoundError` naming a missing path; `archive=True` and
+  `file=True` raise `NOT_IMPLEMENTED`; with no flags the call is Spark's own no-op
+  returning `None`. The per-session artifact directory dies with the session: `stop()`
+  removes the tree and exactly its own `sys.path` entry (never another session's), and —
+  like Spark — leaves already-imported modules in `sys.modules`.
 - **Apache Spark** — same validation order, then `addPyFile`/`addFile`/`addArchive` push the
   artifact through the JVM `SparkContext`; on classic 4.1.2 the two-flags formatter itself
   crashes with a bare `AssertionError` (`Undefined error message parameter for error class:
@@ -1384,7 +1404,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **repark** — `spark.profile` answers a `Profile` object with Spark's public method
   surface (`show`, `dump`, `clear`, `render`, `profiler_collector`); `show`/`dump`/`clear`
   no-op over an empty collector (with Spark's `memory_profiler` `UserWarning`), and
-  `render` raises `NOT_IMPLEMENTED` `{"feature": "profile.render"}`.
+  `render` runs Spark's `type` validation (`VALUE_NOT_ALLOWED`
+  `{"arg_name": "type", "allowed_values": "['perf', 'memory']"}`) before raising
+  `NOT_IMPLEMENTED` `{"feature": "profile.render"}`.
 - **Apache Spark** — accumulates perf and memory profiles of UDF executions; `show` prints
   nothing when none exist. *(oracle: cells `profile_type`, `profile_methods`,
   `profile_show`.)*

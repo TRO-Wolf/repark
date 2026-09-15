@@ -393,3 +393,187 @@ def test_tvf_json_tuple_requires_a_field(spark: ReparkSession) -> None:
         spark.tvf.json_tuple(F.lit("{}"))
     assert raised.value.getCondition() == "CANNOT_BE_EMPTY"
     assert raised.value.getMessageParameters() == {"item": "field"}
+
+
+def test_artifact_dir_dies_with_the_session(tmp_path: Path) -> None:
+    """L-001 — stop() removes the artifact dir and exactly its sys.path entry.
+
+    pins: session-surface-1/C-010
+    """
+    _reset_active_session_for_tests()
+    first = ReparkSession.builder.appName("ses-artifacts-a").getOrCreate()
+    second = first.newSession()
+    mod_a = tmp_path / "ses_stop_mod_a.py"
+    mod_a.write_text("A = 1\n", encoding="utf-8")
+    mod_b = tmp_path / "ses_stop_mod_b.py"
+    mod_b.write_text("B = 2\n", encoding="utf-8")
+    try:
+        first.addArtifact(str(mod_a), pyfile=True)
+        second.addArtifact(str(mod_b), pyfile=True)
+        dir_a = first._alive_token["artifact_dir"]
+        dir_b = second._alive_token["artifact_dir"]
+        assert dir_a != dir_b
+        assert dir_a in sys.path
+        assert dir_b in sys.path
+        first.stop()
+        assert not Path(dir_a).exists()
+        assert dir_a not in sys.path
+        assert Path(dir_b).exists()
+        assert dir_b in sys.path
+        second.stop()
+        assert not Path(dir_b).exists()
+        assert dir_b not in sys.path
+    finally:
+        first.stop()
+        second.stop()
+        _reset_active_session_for_tests()
+
+
+def test_artifact_module_survives_stop_in_sys_modules(tmp_path: Path) -> None:
+    """L-001 — stop() never evicts sys.modules (Spark keeps loaded modules too).
+
+    pins: session-surface-1/C-010
+    """
+    _reset_active_session_for_tests()
+    session = ReparkSession.builder.appName("ses-artifacts-keep").getOrCreate()
+    try:
+        mod = tmp_path / "ses_stop_keep_mod.py"
+        mod.write_text("MARKER = 9\n", encoding="utf-8")
+        session.addArtifact(str(mod), pyfile=True)
+        importlib.invalidate_caches()
+        loaded = importlib.import_module("ses_stop_keep_mod")
+        session.stop()
+        assert sys.modules["ses_stop_keep_mod"].MARKER == 9
+        assert loaded.MARKER == 9
+    finally:
+        sys.modules.pop("ses_stop_keep_mod", None)
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+@pytest.mark.parametrize(
+    "op_id,valid",
+    [
+        ("١٢٣", False),
+        ("２", False),  # noqa: RUF001
+        ("9223372036854775808", False),
+        ("-9223372036854775808", True),
+        ("9223372036854775807", True),
+        (" 1", False),
+        ("1 ", False),
+        ("", False),
+        ("+42", True),
+    ],
+)
+def test_interrupt_operation_java_long_validation(
+    spark: ReparkSession, op_id: str, valid: bool
+) -> None:
+    """L-002 — validation is Try(toLong), not a Unicode-digit regex.
+
+    pins: session-surface-1/C-010
+    """
+    if valid:
+        assert spark.interruptOperation(op_id) == []
+    else:
+        with pytest.raises(IllegalArgumentException) as raised:
+            spark.interruptOperation(op_id)
+        assert str(raised.value) == _cell("interruptOperation")["error"]["message"]
+
+
+def test_interrupt_operation_non_str(spark: ReparkSession) -> None:
+    """L-002 / R-4 — a non-str op_id is NOT_STR where Spark leaks Py4J.
+
+    pins: session-surface-1/C-010
+    """
+    with pytest.raises(PySparkTypeError) as raised:
+        spark.interruptOperation(1)  # type: ignore[arg-type]
+    assert raised.value.getCondition() == "NOT_STR"
+    assert raised.value.getMessageParameters() == {
+        "arg_name": "operationId",
+        "arg_type": "int",
+    }
+
+
+def test_declared_properties_raise_under_hasattr(spark: ReparkSession) -> None:
+    """L-003 / R-5 — declared-refusal getters raise through ``hasattr`` too.
+
+    pins: session-surface-1/C-010
+    """
+    for name, feature in (
+        ("readStream", "readStream"),
+        ("streams", "streams"),
+        ("dataSource", "dataSource"),
+    ):
+        with pytest.raises(PySparkNotImplementedError) as raised:
+            hasattr(spark, name)
+        assert raised.value.getMessageParameters() == {"feature": feature}
+    with pytest.raises(PySparkRuntimeError):
+        hasattr(spark, "client")
+
+
+def test_add_artifact_pyfile_without_path_raises_type_error(spark: ReparkSession) -> None:
+    """L-004 — Spark's own addPyFile arity error, before any dir or sys.path change.
+
+    pins: session-surface-1/C-010
+    """
+    path_before = list(sys.path)
+    for call in (spark.addArtifact, spark.addArtifacts):
+        with pytest.raises(
+            TypeError, match=r"addPyFile\(\) missing 1 required positional argument: 'path'"
+        ):
+            call(pyfile=True)
+    assert "artifact_dir" not in spark._alive_token
+    assert sys.path == path_before
+
+
+def test_add_artifact_duplicate_basename_different_content(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """L-005 — SES-ARTIFACT-1's DUPLICATED_ARTIFACT arm. pins: session-surface-1/C-010"""
+    left_dir = tmp_path / "left"
+    right_dir = tmp_path / "right"
+    left_dir.mkdir()
+    right_dir.mkdir()
+    left = left_dir / "mod_dup_art.py"
+    right = right_dir / "mod_dup_art.py"
+    left.write_text("X = 1\n", encoding="utf-8")
+    right.write_text("X = 2\n", encoding="utf-8")
+    spark.addArtifact(str(left), pyfile=True)
+    with pytest.raises(PySparkRuntimeError) as raised:
+        spark.addArtifacts(str(right), pyfile=True)
+    assert raised.value.getCondition() == "DUPLICATED_ARTIFACT"
+    assert raised.value.getMessageParameters() == {"normalized_path": str(right.resolve())}
+
+
+def test_profile_render_type_check_precedes_the_refusal(spark: ReparkSession) -> None:
+    """L-006 — Spark's VALUE_NOT_ALLOWED on ``type`` runs before the declared refusal.
+
+    pins: session-surface-1/C-010
+    """
+    with pytest.raises(PySparkValueError) as raised:
+        spark.profile.render(0, type="bogus")
+    assert raised.value.getCondition() == "VALUE_NOT_ALLOWED"
+    assert raised.value.getMessageParameters() == {
+        "arg_name": "type",
+        "allowed_values": "['perf', 'memory']",
+    }
+    with pytest.raises(PySparkNotImplementedError):
+        spark.profile.render(0, type="perf")
+    with pytest.raises(PySparkNotImplementedError):
+        spark.profile.render(0)
+
+
+def test_tvf_json_tuple_field_columns(spark: ReparkSession) -> None:
+    """L-007 / R-6 — string-literal Columns become str fields; non-literal refuses.
+
+    pins: session-surface-1/C-010
+    """
+    with pytest.raises(UnsupportedOperationException, match="json_tuple"):
+        spark.tvf.json_tuple(F.lit('{"a":1,"b":2}'), F.lit("a"), F.lit("b"))
+    with pytest.raises(PySparkTypeError) as raised:
+        spark.tvf.json_tuple(F.lit('{"a":1}'), F.col("a"))
+    assert raised.value.getCondition() == "NOT_STR"
+    assert raised.value.getMessageParameters()["arg_name"] == "fields"
+    with pytest.raises(PySparkTypeError) as raised:
+        spark.tvf.json_tuple(F.lit('{"a":1}'), "a")  # type: ignore[arg-type]
+    assert raised.value.getCondition() == "NOT_COLUMN"
