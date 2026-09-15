@@ -29,6 +29,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `case_when` moves `.expr` out of its arm pairs like `PyColumn::case_when`, and every
   `wrap_*` builder pre-sizes its `String` instead of `format!`.
   pins: facade-2/C-008, C-009, C-010, C-011, C-012, C-013
+  **COLUMN-PARITY-1 critic round (2026-09-14):** `update_fields` (struct expr + op-tag /
+  path literals + `with` values → `update_fields(st, WithField(..))` /
+  `dropfield()` display), `repark_isnan` (`isnan(child)` display), and `in_list`
+  (`(left IN (..))` display) follow the same one-call 4-tuple shape.
+  pins: column-parity-1/C-008
   **FACADE-2 step 3 (2026-09-13):** `call_scalar` renders the generic `name(args)` call —
   the shared helper every `F.<fn>(...)` builder routes through — as a 4-tuple
   `(PyColumn, spark_display, sql_expr, join_sql_expr)` with an optional display

@@ -354,6 +354,129 @@ impl PyColumnParts {
     }
 
     #[staticmethod]
+    fn update_fields(
+        inner: &PyColumn,
+        ops: Vec<String>,
+        paths: Vec<String>,
+        values: Vec<PyColumn>,
+        struct_parts: (&str, &str, &str),
+        value_parts: Vec<(String, String, String)>,
+    ) -> PyResult<RenderedParts> {
+        fenced!("ColumnParts.update_fields", {
+            if ops.len() != paths.len() {
+                return Err(PyValueError::new_err(
+                    "update_fields ops and paths must match",
+                ));
+            }
+            let mut args = Vec::with_capacity(1 + ops.len() * 2 + values.len());
+            args.push(inner.expr());
+            let mut values = values.into_iter();
+            let mut value_parts = value_parts.iter();
+            let (struct_display, struct_sql, struct_join) = struct_parts;
+            let mut display = format!("update_fields({struct_display}");
+            let mut sql = format!("update_fields({struct_sql}");
+            let mut join = format!("update_fields({struct_join}");
+            for (op, path) in ops.iter().zip(&paths) {
+                args.push(lit(op.clone()));
+                args.push(lit(path.clone()));
+                let quoted = path.replace('\'', "''");
+                match op.as_str() {
+                    "with" => {
+                        let value = values.next().ok_or_else(|| {
+                            PyValueError::new_err("update_fields 'with' op needs a value")
+                        })?;
+                        let (value_display, value_sql, value_join) =
+                            value_parts.next().ok_or_else(|| {
+                                PyValueError::new_err("update_fields 'with' op needs value parts")
+                            })?;
+                        args.push(value.expr());
+                        let _ = std::fmt::Write::write_fmt(
+                            &mut display,
+                            format_args!(", WithField({value_display})"),
+                        );
+                        let _ = std::fmt::Write::write_fmt(
+                            &mut sql,
+                            format_args!(", 'with', '{quoted}', {value_sql}"),
+                        );
+                        let _ = std::fmt::Write::write_fmt(
+                            &mut join,
+                            format_args!(", 'with', '{quoted}', {value_join}"),
+                        );
+                    }
+                    "drop" => {
+                        display.push_str(", dropfield()");
+                        let _ = std::fmt::Write::write_fmt(
+                            &mut sql,
+                            format_args!(", 'drop', '{quoted}'"),
+                        );
+                        let _ = std::fmt::Write::write_fmt(
+                            &mut join,
+                            format_args!(", 'drop', '{quoted}'"),
+                        );
+                    }
+                    other => {
+                        return Err(PyValueError::new_err(format!(
+                            "update_fields op must be 'with' or 'drop', got {other}"
+                        )));
+                    }
+                }
+            }
+            display.push(')');
+            sql.push(')');
+            join.push(')');
+            if values.next().is_some() || value_parts.next().is_some() {
+                return Err(PyValueError::new_err(
+                    "update_fields value lists must match the 'with' op count",
+                ));
+            }
+            let native = PyColumn::from_expr(repark_core::update_fields_call(args));
+            Ok((native, display, sql, Some(join)))
+        })
+    }
+
+    #[staticmethod]
+    fn repark_isnan(inner: &PyColumn, child_parts: (&str, &str, &str)) -> PyResult<RenderedParts> {
+        fenced!("ColumnParts.repark_isnan", {
+            let (child_display, child_sql, child_join) = child_parts;
+            Ok((
+                PyColumn::from_expr(repark_core::repark_isnan_call(inner.expr())),
+                format!("isnan({child_display})"),
+                format!("repark_isnan({child_sql})"),
+                Some(format!("repark_isnan({child_join})")),
+            ))
+        })
+    }
+
+    #[staticmethod]
+    fn in_list(
+        inner: &PyColumn,
+        values: Vec<PyColumn>,
+        left_parts: (&str, &str, &str),
+        right_parts: Vec<(String, String, String)>,
+    ) -> PyResult<RenderedParts> {
+        fenced!("ColumnParts.in_list", {
+            if values.len() != right_parts.len() {
+                return Err(PyValueError::new_err("in_list values and parts must match"));
+            }
+            let exprs = values.iter().map(PyColumn::expr).collect();
+            let native = PyColumn::from_expr(inner.expr().in_list(exprs, false));
+            let wrap = |left: &str, rights: &[&str]| -> String {
+                format!("({left} IN ({}))", rights.join(", "))
+            };
+            let displays: Vec<&str> = right_parts.iter().map(|part| part.0.as_str()).collect();
+            let sqls: Vec<&str> = right_parts.iter().map(|part| part.1.as_str()).collect();
+            let joins: Vec<&str> = right_parts.iter().map(|part| part.2.as_str()).collect();
+            let (left_display, left_sql, left_join) = left_parts;
+            Ok((
+                native,
+                wrap(left_display, &displays),
+                wrap(left_sql, &sqls),
+                Some(wrap(left_join, &joins)),
+            ))
+        })
+    }
+
+    #[staticmethod]
     fn substr(
         inner: &PyColumn,
         start: &PyColumn,
