@@ -5047,6 +5047,21 @@ Shared roster pin for every heading:
   the same SRID → CRS table as `types_bases.py`; the run's Rust fence did not include `repark-spark` tonight. Spatial
   column use stays `V3-GEO-1`. The pins codify today's refusal and red when the arm lands.
 
+### DF-TO-BINARY-1 — `DataFrame.to` follows the facade's `string` report for a binary column — **BACKLOG 2026-09-14**
+
+- **repark** — a `binary` column reports `string` through `df.schema` / `dtypes` (FACADE-4 census rows D7 and D19), so
+  `df.to(StructType([StructField("b", StringType())]))` is treated as identity and keeps the `bytes` values under a field
+  that reports `string`, while `df.to(StructType([StructField("b", BinaryType())]))` refuses with
+  `INVALID_COLUMN_OR_FIELD_DATA_TYPE` (source reported `STRING`).
+- **Apache Spark** — the column is `binary`: `to(binary)` is identity; `to(string)` follows Spark's store-assignment rule
+  for binary → string. *(oracle: documented — `Dataset.to` store assignment; the binary → string value is UNMEASURED on a
+  live Spark, recorded for the next oracle round.)*
+- **Pin** — `python/repark/tests/test_df_surface_a_1.py::test_to_binary_follows_reported_schema_df_to_binary_1`
+- **Rationale** — BACKLOG, filed by DF-SURFACE-A-1 (run 15b) from the critic re-check finding L-101. The root is the
+  binary report on the scan surface, which FACADE-4 step 0 put to the owner as question 2 (keep `string` where the
+  physically decoded column is described, or report `binary`). `to()` reconciles against the reported schema by design;
+  it changes with that ruling, and this pin reds on purpose when it does.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued

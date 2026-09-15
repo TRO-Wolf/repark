@@ -123,3 +123,60 @@ re-derives this.
 | Full facade suite / full parity suite / `uvx ruff@0.15.22` check + format / `typos` | recorded in the final commit's handback gates table |
 
 VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Orchestrator rulings after the re-check (run 15b, G-2)
+
+- R-10 (2026-09-14): re-check finding L-101 (binary → string `to()` keeps bytes under a string schema) is a consequence of
+  FACADE-4 census rows D7/D19 — the facade reports a binary column as `string` — and of FACADE-4 owner question 2. No
+  product change in this unit; today's answer is pinned and filed as registry row `DF-TO-BINARY-1` (BACKLOG).
+- R-11 (2026-09-14): the local facade gate on the rebased head showed 175 failures in `test_array_null_1.py`,
+  `test_array_null_1_coercion.py` and `test_functions_e.py`. The same 175 fail on a pristine `origin/main` worktree with the
+  same native module: they need ARRAY-NULL-1's Rust change (#581, merged after this clone's native was built). They are
+  environmental; CI builds its own native module.
+- R-12 (2026-09-14): the S2-21 perf reviewers do not run on this unit — schema reconciliation builds one projection per
+  call and the remaining names are plumbing; no data path is added.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: df-surface-a-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card and the recorded PySpark 4.1.2 cells for the seven names that stay; the two moved names (inputFiles, semanticHash) are listed as moved to DF-PLAN-INTROSPECT-1.
+      artifacts: [python/repark/tests/test_df_surface_a_1.py, python/repark/tests/facade_dataframe_surface_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: to() over every atomic to string pair, refused pairs, decimal widening and narrowing, nested struct / array / map identity and by-name reconciliation, NULL and empty arrays and maps, arrays of structs, maps of structs, a missing non-nullable field, binary columns; sparkSession across newSession promotion for every constructor path; withMetadata at every transformation position.
+      artifacts: [python/repark/tests/test_df_surface_a_1.py]
+    - id: AT-3
+      status: N/A
+      justification: Python facade plumbing composing existing engine expressions; no Rust, no unwrap, no I/O.
+    - id: AT-4
+      status: N/A
+      justification: No shared mutable state, threads or async; the owning-session reference rides the frame's existing alive token.
+    - id: AT-5
+      status: N/A
+      justification: No authn/authz, deserialization, path, credential or network surface.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Grok critic-logic round 1 NEEDS_REMEDIATION (7 P1, 3 P2) answered by rulings R-5..R-9 and a Devin fix round; the same critic session re-checked the head (PASS, one new P2 L-101 disposed by R-10).
+      artifacts: [task/ledgers/completed/df-surface-a-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Facade suite on the release native module with the 175 environmental failures proven on pristine main (R-11), parity suite, ruff 0.15.22, check_lib_py, ledger lifecycle and grammar, docs links, example coverage with both examples executed; comment-ban grep zero hits; core.py baseline moved down 4044 to 4035.
+      artifacts: [docs/examples/dataframe/schema_reconcile.py, docs/examples/dataframe/session_and_checkpoint.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark's contracts were read, not assumed - pyspark/sql/dataframe.py DataFrame.to (store assignment, metadata keep rule, the long to string doctest), classic dataframe.py sparkSession, withMetadata and executionInfo, and the FACADE-4 census for the binary report.
+      artifacts: [python/repark/src/repark/spark/dataframe/surface_a.py, docs/spark-sql-iceberg-parity.md]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Refusals carry Spark's classes and texts with attached conditions (INVALID_COLUMN_OR_FIELD_DATA_TYPE, NULLABLE_COLUMN_OR_FIELD, UNRESOLVED_COLUMN.WITH_SUGGESTION, NOT_STRUCT, CLASSIC_OPERATION_NOT_SUPPORTED_ON_DF); the engine-side losses are registry rows with pins that red on a fix (DF-METADATA-1, DF-TO-BINARY-1, LOGICAL-WIDTH-1).
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation guards run - restoring a schema sticker reds the LOGICAL-WIDTH-1 and DF-METADATA-1 pins, following the active session reds the newSession pin, narrowing the string rule reds the long to string doctest pin.
+      artifacts: [python/repark/tests/test_df_surface_a_1.py]
+  complete: true
+```
+

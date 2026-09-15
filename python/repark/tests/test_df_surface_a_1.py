@@ -15,6 +15,7 @@ from repark.spark.functions import col
 from repark.spark.session import SparkSession
 from repark.spark.types import (
     ArrayType,
+    BinaryType,
     DecimalType,
     IntegerType,
     LongType,
@@ -117,6 +118,18 @@ def test_to_store_assignment_atomic_to_string(spark: ReparkSession) -> None:
     assert dates.to(StructType([StructField("d", StringType())])).collect()[0][0] == "2024-06-15"
     decs = spark.createDataFrame([(Decimal("1.50"),)], "d decimal(10,2)")
     assert decs.to(StructType([StructField("d", StringType())])).collect()[0][0] == "1.50"
+
+
+def test_to_binary_follows_reported_schema_df_to_binary_1(spark: ReparkSession) -> None:
+    """to() keeps bytes under a string field for a binary column. pins: df-surface-a-1/C-008"""
+    frame = spark.createDataFrame([(b"hi",)], "b binary")
+    assert frame.schema.simpleString() == "struct<b:string>"
+    as_string = frame.to(StructType([StructField("b", StringType())]))
+    assert as_string.schema.simpleString() == "struct<b:string>"
+    assert as_string.collect()[0][0] == b"hi"
+    with pytest.raises(AnalysisException) as caught:
+        frame.to(StructType([StructField("b", BinaryType())])).collect()
+    assert "INVALID_COLUMN_OR_FIELD_DATA_TYPE" in str(caught.value)
 
 
 def test_to_store_assignment_refusals(spark: ReparkSession) -> None:

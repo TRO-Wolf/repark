@@ -60,6 +60,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `named_struct`/`transform`/`transform_values`/`transform_keys` engine
   expressions (R-8). pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005,
   C-006, C-007, C-008
+  **DF-TO-BINARY-1 (2026-09-14):** `test_to_binary_follows_reported_schema_df_to_binary_1` codifies that `to()` follows the facade's `string` report for a binary column (FACADE-4 D7/D19). pins: df-surface-a-1/C-008
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
   / `Row.index` answer the nine `row.*` cells of the committed run-15b oracle
   ([facade_row_oracle.json](facade_row_oracle.json), live PySpark 4.1.2) — value counts
