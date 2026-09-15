@@ -1,5 +1,26 @@
 # map — scripts/
 
+FACADE-4 step-1 remediation round 4 (2026-09-14, L-007..L-009):
+`check_lib_py.py` `spark/types.py` 1772 → 1793 (increase — base's container
+`simpleString`/`_engine_type`/`jsonValue` dispatch bodies and the
+`_SIMPLE_STRING_FAST` table came back for byte-identical MRO/override
+answers; still below main's 1834 ceiling). The CAP-1 parity mirror row moved
+with it.
+pins: facade-4/C-029, C-031
+FACADE-4 step-1 remediation round 3 (2026-09-14, ruling R14b-D-2):
+`check_lib_py.py` `spark/types.py` 1610 → 1772 (increase — the per-class
+literal `simpleString`/`_engine_type` methods came back for the `dtypes`
+surface bar; still below main's 1834 ceiling).
+pins: facade-4/C-016
+FACADE-4 step-1 remediation round 2 (2026-09-14): `check_lib_py.py`
+`spark/types.py` 1639 → 1610 (the parse residue and conversion fallbacks
+moved to `spark/_type_table.py`).
+pins: facade-4/C-020
+FACADE-4 step-1 remediation (2026-09-14): `check_lib_py.py` `spark/types.py`
+1833 → 1639 (the descriptor bridge — encode/decode, tree walks, token
+fallbacks, and the atomic answer table — moved to `spark/_type_table.py` for
+P1-DTYPES).
+pins: facade-4/C-016
 REPLACE-LINEAR-1 step 1 critic round (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4054 → 4044 (the `_join_qualifiers` slot plus minimal call
 sites so `replace` binds duplicate-name equi-join output by relation qualifier
@@ -13,6 +34,13 @@ key-family filtering, and the flat searched-CASE build — moved to the new
 `dataframe/replace_expr.py`). The `python/` map rows and ledger move in the
 same commit.
 pins: replace-linear-1/C-001, C-002
+FACADE-4 step 1 (2026-09-14): `check_lib_py.py` `spark/types.py` 1834 → 1833
+(the conversion functions thin to checks plus one native call over the shared
+Rust table; ~280 lines of per-class `simpleString`/`_engine_type` overrides and
+the Python DDL parser came out, descriptor helpers and residue paths went in);
+`check_rust_file_size.py` `repark-python/src/dataframe.rs` 1084 → 1019
+(`arrow_type_key` delegates to `repark_spark::type_table::logical_type_key`).
+pins: facade-4/C-014
 EAGER-BUDGET-1 step 2 (2026-09-13): `check_lib_py.py`
 `dataframe/core.py` 4094 → 4089 (the cache-budget resolver consolidated to
 `eager.py`'s shared parser and the `cache()`/`persist()` docstrings trimmed).

@@ -1,8 +1,6 @@
 use datafusion::arrow::datatypes::DataType as ArrowDataType;
 
-const SPARK_TYPE_NAME_MAX_DEPTH: usize = 32;
-
-const SPARK_TYPE_NAME_DEPTH_FALLBACK: &str = "...";
+use crate::type_table::{ArrowNameSurface, arrow_name_at_depth};
 
 #[must_use]
 pub fn spark_ddl_type_name(data_type: &ArrowDataType) -> String {
@@ -11,68 +9,13 @@ pub fn spark_ddl_type_name(data_type: &ArrowDataType) -> String {
 
 #[must_use]
 pub fn spark_ddl_type_name_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
-    if depth >= SPARK_TYPE_NAME_MAX_DEPTH {
-        return SPARK_TYPE_NAME_DEPTH_FALLBACK.to_string();
-    }
-    match data_type {
-        ArrowDataType::Int8 => "tinyint".to_string(),
-        ArrowDataType::Int16 => "smallint".to_string(),
-        ArrowDataType::Int32
-        | ArrowDataType::UInt8
-        | ArrowDataType::UInt16
-        | ArrowDataType::UInt32 => "int".to_string(),
-        ArrowDataType::Int64 | ArrowDataType::UInt64 => "bigint".to_string(),
-        ArrowDataType::Float16 | ArrowDataType::Float32 => "float".to_string(),
-        ArrowDataType::Float64 => "double".to_string(),
-        ArrowDataType::Boolean => "boolean".to_string(),
-        ArrowDataType::Utf8 | ArrowDataType::LargeUtf8 | ArrowDataType::Utf8View => {
-            "string".to_string()
-        }
-        ArrowDataType::Binary | ArrowDataType::LargeBinary | ArrowDataType::BinaryView => {
-            "binary".to_string()
-        }
-        ArrowDataType::Date32 | ArrowDataType::Date64 => "date".to_string(),
-        ArrowDataType::Timestamp(_, None) => "timestamp_ntz".to_string(),
-        ArrowDataType::Timestamp(_, Some(_)) => "timestamp".to_string(),
-        ArrowDataType::Decimal128(precision, scale)
-        | ArrowDataType::Decimal256(precision, scale) => {
-            format!("decimal({precision},{scale})")
-        }
-        ArrowDataType::List(field)
-        | ArrowDataType::LargeList(field)
-        | ArrowDataType::FixedSizeList(field, _) => {
-            format!(
-                "array<{}>",
-                spark_ddl_type_name_at_depth(field.data_type(), depth + 1)
-            )
-        }
-        ArrowDataType::Map(entries, _) => {
-            if let ArrowDataType::Struct(fields) = entries.data_type()
-                && fields.len() >= 2
-            {
-                let key = spark_ddl_type_name_at_depth(fields[0].data_type(), depth + 1);
-                let value = spark_ddl_type_name_at_depth(fields[1].data_type(), depth + 1);
-                return format!("map<{key},{value}>");
-            }
-            format!("{data_type:?}")
-        }
-        ArrowDataType::Struct(fields) => {
-            let parts: Vec<String> = fields
-                .iter()
-                .map(|field| {
-                    let child = spark_ddl_type_name_at_depth(field.data_type(), depth + 1);
-                    format!("{}:{child}", field.name())
-                })
-                .collect();
-            format!("struct<{}>", parts.join(","))
-        }
-        other => format!("{other:?}"),
-    }
+    arrow_name_at_depth(data_type, ArrowNameSurface::Describe, depth)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::type_table::{SPARK_TYPE_NAME_DEPTH_FALLBACK, SPARK_TYPE_NAME_MAX_DEPTH};
     use datafusion::arrow::datatypes::{Field, TimeUnit};
     use std::sync::Arc;
 

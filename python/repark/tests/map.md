@@ -566,7 +566,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   import — doomed-path cheapening for the real-base fallback bar).
   NULLABILITY-2 round 3 re-hashed `_promote_csv_string_types` (timestamp candidate + clock guard).
   FACADE-1 re-hashed `_arrow_table_from_raw_tuples_fast`, `_create_dataframe_from_rows_inner`,
-  and `_materialize_arrow_as_memtable_frame`. pins: facade-1/C-001, C-002
+  and `_materialize_arrow_as_memtable_frame`.
+  FACADE-4 round 5 corrected `_data_type_to_sql_type` to the hash of the body
+  committed in `a3424513` (`204ad7a…` was a stale mid-edit value).
+  pins: facade-1/C-001, C-002
   CSV-INFER-PERF-1 re-hashed `_promote_csv_string_types` (one `try_cast` failure-count agg)
   and `_CSV_NATIVE_OPTION_KEYS` (`utf8_columns`). Round 2 restored `_CSV_NATIVE_OPTION_KEYS`
   (internal `utf8_columns` no longer in the public native-key set) and re-hashed
@@ -574,7 +577,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Round 5 re-hashed `_promote_csv_string_types` (boolean fail is Spark `true`/`false` tokens,
   not Arrow `try_cast`). TORTURE-1 step 3 re-hashed `_CSV_NATIVE_OPTION_KEYS` and
   `_JSON_NATIVE_OPTION_KEYS` (`flag_secret_columns`).
-  pins: csv-infer-perf-1/C-002, C-005
+  FACADE-4 step 1 re-hashed `_data_type_to_sql_type` and `_sql_type_to_arrow` —
+  the only two bodies that moved (flat atomic tokens now resolve through the
+  shared Rust table; decimal, nested and collation-refusal paths stay Python).
+  Round 2 re-hashed the same two bodies (`_data_type_to_sql_type` gained the
+  SQL-marker leaf; `_sql_type_to_arrow` binds through `_native_function`).
+  pins: csv-infer-perf-1/C-002, C-005; facade-4/C-014, C-022, C-026
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
@@ -1786,6 +1794,65 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   by a one-line mutation recorded in
   `task/ledgers/staging/facade-5-ledger.md`.
   pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  Remediation (2026-09-14): `test_atomic_tokens_agree_with_rust_table` pins every
+  atomic class's Python `simpleString`/`_engine_type` answer to the shared Rust
+  table's (P1-DTYPES); lives here because the census-pin file sits at the
+  file-size ceiling.
+  pins: facade-4/C-016
+- `test_facade_4_census_pins.py` — **FACADE-4 step 1 (2026-09-14):** one
+  parametrised case per census row — all 11 Agree rows and every disagreement
+  D1–D24 — asserting the answer each conversion table gives TODAY across every
+  surface the row names: facade `_arrow_type_to_repark` / `repark_type_to_arrow`
+  / `fromDDL` / `toDDL` / `struct_type_from_arrow` (including `containsNull`,
+  `valueContainsNull` and field-nullability answers), `_csv_smart` rung +
+  `rung_to_spark_type`/`rung_to_engine_cast`/`rung_to_sql_cast`, and the reader
+  lattice (`logical_schema_fields` type_key, `df.schema`, `dtypes`, csv
+  `inferSchema`, `DESCRIBE TABLE`, NTZ session conf). These are
+  characterization pins for S1's no-answer-change contract: they are green on
+  the step-0 base and any moved surface must keep them green byte-for-byte.
+  Mutation proof on this base: `TimestampNTZType()` → `TimestampType()` reds
+  D1; `DecimalType(arrow_type.precision, arrow_type.scale)` → `DecimalType(10,
+  2)` reds D6; `field.nullable` → `True` reds D15.
+  pins: facade-4/C-009
+  Round-2 census alignment (2026-09-14, R2-P3-1/2/5): D1 carries only the Arrow
+  `timestamp[us]` input; D2 gains the `_csv_smart` rung leg measured under an
+  NTZ session (`rung_ntz`); `uint64` moves from D10 to new D22; D17 gains a raw
+  Arrow `map` with a non-null value field; D20 already probes `dictionary`
+  through the reader lattice; D21 gains the reader leg; D23 pins the offset
+  literal `string`-rung vs `timestamp`-infer split and D24 the 38-digit
+  `decimal(38,0)`-rung vs `double`-infer split; A9–A11 pin the `timestamp[s]`,
+  Arrow `string` and 39-digit-literal agrees.
+  pins: facade-4/C-017
+- `test_facade_4_step1_remediation.py` — **FACADE-4 step-1 remediation round 2
+  (2026-09-14):** byte-identity repro pins for the critic-logic findings
+  L-001..L-005 and the Python-reviewer agreement checks — a 25-class
+  pass-through-subclass golden recorded from the base release
+  (`simpleString`/`typeName`/`_engine_type`/`jsonValue`/`toDDL`-leaf per
+  class), beyond-i64 DDL integer parameters (atomic and field-list spellings),
+  `isinstance` SQL-marker leaves for foreign subclasses, `repr`-byte refusal
+  messages for control and non-printable code points, Arrow nesting-depth
+  fallbacks at 63/64/70 on both directions, the wide-decimal FFI-envelope
+  fallback, and the csv rung engine/SQL-cast token agreement.
+  **Round 4 (2026-09-14):** byte-identity repro pins for the critic-logic
+  re-check findings L-007/L-008/L-009 — `StructField` subclass `simpleString`
+  overrides composing inside `StructType`/`ArrayType`/`MapType` and nested
+  trees, `simpleString` overrides on `DayTimeIntervalType`/
+  `YearMonthIntervalType` and generic leaves reaching the `toDDL` leaf and
+  nested containers, and the multiple-inheritance matrix (`Dual`,
+  `Dual2`, `Dual3`, `ArrInt` and friends) across `simpleString`/`typeName`/
+  `_engine_type`/`jsonValue`/`json`/`toDDL`/`_data_type_to_sql_type`/
+  `repark_type_to_arrow`/`createDataFrame` schema — every answer recorded
+  from the base release, plus an override pin on each of the five
+  dynamic-answer classes. Each fix carries a pasted scratch-mutation red.
+  **Round 5 (2026-09-14):** byte-identity repro pins for the critic-logic
+  re-check round-3 findings L-010/L-011 — all 15 `Left+DecimalType` pairs
+  plus `DualDec` and the `StringType+DecimalType+IntegerType` triple through
+  `repark_type_to_arrow` (the envelope guard runs only after the
+  `_arrow_order` pick), and all five `Left+StructField` pairs plus
+  `DualField` through `repark_type_to_arrow`, wrap `toDDL`, and nested
+  Array/Map/direct SQL (a field is encoded only from `StructType.fields`).
+  Each fix carries a pasted scratch-mutation red.
+  pins: facade-4/C-020, C-021, C-022, C-023, C-024, C-027, C-028, C-029..C-033
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

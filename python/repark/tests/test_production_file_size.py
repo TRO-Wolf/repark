@@ -175,7 +175,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_create_dataframe_from_rows_inner": (
         "da2e9ea58faf29ec3444a6244f6fc7b046dbbafddb4277ece7220f46364b4e97"
     ),
-    "_data_type_to_sql_type": ("1633f6159213794bb60b2c6c6bfb633273d9b9242ac991365d1685b8613a78a4"),
+    "_data_type_to_sql_type": ("11700558ed382c6afd246a844a563658cd22374aa53ea4922760f4fa251391b7"),
     "_datetime64_unit_from_dtype": (
         "addd824624710a22a898d6f94862268f5e06e8f6d3c482674ee44e425765e04f"
     ),
@@ -363,7 +363,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_sql_top_level_keyword_index": (
         "8d33d0dfa976fc6e0b6140838507e8d5aaaadf6283ccae14c0927fe3c2baffff"
     ),
-    "_sql_type_to_arrow": ("df5b483b8762fe442b4630d8e6bc66ab8f623d1789257aec5b1694f17578e73e"),
+    "_sql_type_to_arrow": ("77602c6bdc9c506058f13227e805d92525ded00006773633fb7bcae35010c9d9"),
     "_sql_udf_arg_is_simple": ("db0b84f0ee3d3410bbb660ac228ab85a8be365f5d17f4ba9623fc7d7ff982bce"),
     "_sql_udf_call_match_key": ("e5d8292341262271b9099a26080982055c0ca1a77274f75f738e458a1e045e99"),
     "_sql_udf_clean_exception": (

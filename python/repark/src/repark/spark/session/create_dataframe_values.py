@@ -458,90 +458,86 @@ def _parse_create_dataframe_schema(
 def _data_type_to_sql_type(data_type: Any) -> str:
     """Map a repark :class:`~repark.types.DataType` to a SQL cast target for VALUES cells."""
 
+    from repark.spark._type_table import (
+        _atomic_token,
+        _native_function,
+        _primary_class,
+        _sql_order,
+    )
     from repark.spark.types import (
         ArrayType,
-        BinaryType,
-        BooleanType,
-        ByteType,
         CharType,
-        DateType,
-        DecimalType,
-        DoubleType,
-        FloatType,
-        IntegerType,
-        LongType,
         MapType,
-        NullType,
-        ShortType,
         StringType,
         StructType,
-        TimestampNTZType,
-        TimestampType,
         VarcharType,
+        _datatype_to_descriptor,
+        refuse_evaluated_collation,
     )
 
-    if isinstance(data_type, IntegerType):
-        return "INT"
+    primary = _primary_class(data_type, _sql_order())
 
-    if isinstance(data_type, LongType):
-        return "BIGINT"
-
-    if isinstance(data_type, ShortType):
-        return "SMALLINT"
-
-    if isinstance(data_type, ByteType):
-        return "TINYINT"
-
-    if isinstance(data_type, DoubleType):
-        return "DOUBLE"
-
-    if isinstance(data_type, FloatType):
-        return "FLOAT"
-
-    if isinstance(data_type, BooleanType):
-        return "BOOLEAN"
-
-    if isinstance(data_type, (StringType, CharType, VarcharType)):
-        # STRING (not VARCHAR): fromDDL re-parses nested engine markers and does not treat
-        # bare VARCHAR as string (only string / str / varchar(n)) — VARCHAR here silently
-        # degrades nested string fields to pa.string().
-
-        # G15: a non-binary StringType collation would be silently stripped here
-        # (engine token is always STRING) — that is the silently-wrong-count path.
+    if primary is StringType or primary is CharType or primary is VarcharType:
         if isinstance(data_type, StringType):
-            from repark.spark.types import refuse_evaluated_collation
-
             refuse_evaluated_collation(data_type)
-
         return "STRING"
 
-    if isinstance(data_type, BinaryType):
-        return "BINARY"
+    if primary is ArrayType or primary is MapType or primary is StructType:
+        _sql_refuse_collation(data_type)
+        descriptor = _datatype_to_descriptor(data_type, _sql_order())
+        if descriptor is not None:
+            return _native_function("sql_marker_from_descriptor")(descriptor)
+        return _sql_type_token_python(data_type)
 
-    if isinstance(data_type, DateType):
-        return "DATE"
+    marker = _atomic_token(data_type, 2, _sql_order())
 
-    if isinstance(data_type, TimestampType):
-        return "TIMESTAMP"
+    if marker is not None:
+        return marker
 
-    if isinstance(data_type, TimestampNTZType):
-        return "TIMESTAMP_NTZ"
+    engine = getattr(data_type, "_engine_type", None)
 
-    if isinstance(data_type, DecimalType):
-        return f"DECIMAL({data_type.precision},{data_type.scale})"
+    if callable(engine):
+        return str(engine())
 
-    if isinstance(data_type, NullType):
-        # HONOR the requested void instead of silently substituting VARCHAR — the schema the
-        # caller asked for must be the schema they get. VOID round-trips end to end:
-        # ``_sql_type_to_arrow`` maps it to ``pa.null()``, the engine accepts
-        # ``CAST(NULL AS VOID)`` on the empty-frame seed, and the DF-2 void machinery
-        # (drop_null_lists / make_array(NULL)) already handles ``array<void>``.
+    raise PySparkTypeError(
+        f"createDataFrame schema field type {type(data_type).__name__} is not supported"
+    )
 
-        return "VOID"
+
+def _sql_refuse_collation(data_type: Any) -> None:
+    """Refuse nested non-binary collations along base's SQL-marker isinstance order."""
+
+    from repark.spark._type_table import _primary_class, _sql_order
+    from repark.spark.types import (
+        ArrayType,
+        MapType,
+        StringType,
+        StructType,
+        refuse_evaluated_collation,
+    )
+
+    primary = _primary_class(data_type, _sql_order())
+
+    if primary is StringType and isinstance(data_type, StringType):
+        refuse_evaluated_collation(data_type)
+
+    if primary is ArrayType:
+        _sql_refuse_collation(data_type.elementType)
+    elif primary is MapType:
+        _sql_refuse_collation(data_type.keyType)
+        _sql_refuse_collation(data_type.valueType)
+    elif primary is StructType:
+        for field in data_type.fields:
+            _sql_refuse_collation(field.dataType)
+
+
+def _sql_type_token_python(data_type: Any) -> str:
+    """SQL cast marker for descriptors the table cannot see (unknown subtype inside)."""
+
+    from repark.spark._type_table import _atomic_token, _sql_order
+    from repark.spark.types import ArrayType, MapType, StructType
 
     if isinstance(data_type, ArrayType):
-        # Nested complex types are applied via Arrow schema (engine_types marker below).
-
         return f"ARRAY<{_data_type_to_sql_type(data_type.elementType)}>"
 
     if isinstance(data_type, MapType):
@@ -557,7 +553,10 @@ def _data_type_to_sql_type(data_type: Any) -> str:
 
         return f"STRUCT<{inner}>"
 
-    # Fallback: engine string if present.
+    marker = _atomic_token(data_type, 2, _sql_order())
+
+    if marker is not None:
+        return marker
 
     engine = getattr(data_type, "_engine_type", None)
 

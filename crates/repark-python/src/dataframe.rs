@@ -144,81 +144,16 @@ impl PyDataFrame {
 }
 
 /// Max nesting depth for Arrow list/map type-key formatting.
+#[cfg(test)]
 const ARROW_TYPE_KEY_MAX_DEPTH: usize = 32;
 
 /// Terminal token when [`ARROW_TYPE_KEY_MAX_DEPTH`] is exhausted.
+#[cfg(test)]
 const ARROW_TYPE_KEY_DEPTH_FALLBACK: &str = "...";
 
 /// Map an Arrow data type onto a short repark facade type key for `StructType` construction.
 fn arrow_type_key(data_type: &ArrowDataType) -> String {
-    arrow_type_key_at_depth(data_type, 0)
-}
-
-/// Depth-bounded implementation of [`arrow_type_key`].
-fn arrow_type_key_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
-    if depth >= ARROW_TYPE_KEY_MAX_DEPTH {
-        return ARROW_TYPE_KEY_DEPTH_FALLBACK.to_string();
-    }
-    match data_type {
-        // Collapse top-level integer and float widths to Spark's `int` and `double` keys.
-        ArrowDataType::Int8
-        | ArrowDataType::Int16
-        | ArrowDataType::Int32
-        | ArrowDataType::UInt8
-        | ArrowDataType::UInt16
-        | ArrowDataType::UInt32 => "int".to_string(),
-        ArrowDataType::Int64 | ArrowDataType::UInt64 => "long".to_string(),
-        ArrowDataType::Float16 | ArrowDataType::Float32 | ArrowDataType::Float64 => {
-            "double".to_string()
-        }
-        ArrowDataType::Boolean => "boolean".to_string(),
-        ArrowDataType::Utf8
-        | ArrowDataType::LargeUtf8
-        | ArrowDataType::Utf8View
-        | ArrowDataType::Binary
-        | ArrowDataType::LargeBinary
-        | ArrowDataType::BinaryView => "string".to_string(),
-        ArrowDataType::Date32 | ArrowDataType::Date64 => "date".to_string(),
-        ArrowDataType::Timestamp(_, None) => "timestamp_ntz".to_string(),
-        ArrowDataType::Timestamp(_, Some(_)) => "timestamp".to_string(),
-        ArrowDataType::Decimal128(precision, scale)
-        | ArrowDataType::Decimal256(precision, scale) => {
-            format!("decimal({precision},{scale})")
-        }
-        // List variants use Spark's `array<element>` syntax.
-        ArrowDataType::List(field)
-        | ArrowDataType::LargeList(field)
-        | ArrowDataType::FixedSizeList(field, _) => {
-            let element = repark_spark::spark_ddl_type_name_at_depth(field.data_type(), depth + 1);
-            format!("array<{element}>")
-        }
-        ArrowDataType::Map(entries, _) => {
-            // Map entries are a struct of (key, value).
-            if let ArrowDataType::Struct(fields) = entries.data_type()
-                && fields.len() >= 2
-            {
-                let key =
-                    repark_spark::spark_ddl_type_name_at_depth(fields[0].data_type(), depth + 1);
-                let value =
-                    repark_spark::spark_ddl_type_name_at_depth(fields[1].data_type(), depth + 1);
-                return format!("map<{key},{value}>");
-            }
-            format!("{data_type:?}")
-        }
-        // Nested structs use Spark's field-name and child-type syntax, not Debug formatting.
-        ArrowDataType::Struct(fields) => {
-            let parts: Vec<String> = fields
-                .iter()
-                .map(|field| {
-                    let child =
-                        repark_spark::spark_ddl_type_name_at_depth(field.data_type(), depth + 1);
-                    format!("{}:{child}", field.name())
-                })
-                .collect();
-            format!("struct<{}>", parts.join(","))
-        }
-        other => format!("{other:?}"),
-    }
+    repark_spark::type_table::logical_type_key(data_type)
 }
 
 // Transform methods return a fresh `PyDataFrame`; pyclass args arrive by value from Python.

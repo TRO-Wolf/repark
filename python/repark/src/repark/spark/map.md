@@ -19,6 +19,56 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `_csv_smart.py` — deterministic CSV preparation and schema inference. It handles
   BOMs, preambles, delimiter/header detection, ragged rows, and typed inference with
   explicit fallback to string.
+  **FACADE-4 step 1 (2026-09-14):** `rung_to_spark_type` / `rung_to_engine_cast` /
+  `rung_to_sql_cast` read the shared Rust table (`csv_rung_descriptor`,
+  `csv_sql_cast_token`); the rung answers are unchanged (D3–D5 stay pinned).
+  **Round 2 (PY-P2-003):** `rung_to_engine_cast` answers `csv_engine_token`
+  straight from `csv_rung_type` — no `DataType` construction; all three binds
+  go through the cached `_type_table._native_function`.
+  pins: facade-4/C-013, C-027
+- `_type_table.py` — Python-side descriptor bridge for the shared Rust type table:
+  the class→row answer table (descriptor head, `simpleString`, `_engine_type`),
+  descriptor encode/decode, tree walks, and the container-token fallbacks for
+  foreign `DataType` subtypes. Class references resolve lazily so `types.py` keeps
+  a one-directional import.
+  **FACADE-4 step-1 remediation (2026-09-14, P1-DTYPES):** atomic token answers are
+  Python-side constants/parameter derivations byte-identical to the Rust table
+  (pinned in `test_facade_4_census_pins.py`); nested trees compose over them in
+  Python because a per-column descriptor FFI (~15 µs for nested3's `mid`) cannot
+  meet the +5 % `dtypes` bar.
+  P2-DICT follow-through: the descriptor decode caches its kind→class and
+  class→head maps and the `types` module handle — the first landing rebuilt a
+  19-row map per recursive node and re-imported `types` per call (~30 µs on a
+  7-node nested decode, regressing `df.schema` +50 %).
+  **FACADE-4 step-1 remediation round 2 (2026-09-14):** the row table grows to
+  five per-class answers (descriptor head, `simpleString`, `_engine_type`, SQL
+  marker, DDL marker) resolved by an MRO scan so pass-through subclasses keep
+  the base answer (`_inherited_type_name` reproduces the dynamic
+  `type(self).typeName()` fallback); `_leaf_ddl` dispatches nested DDL leaves
+  the same way. `_parse_datatype_string` keeps a Python
+  residue (`_parse_datatype_string_python` + `_parse_field_list`) for integer
+  parameters beyond i64 and non-printable text whose refusal `repr` bytes
+  differ from Rust's; `_native_function` caches lazy native lookups.
+  **Round 2 (PY-P2-002):** `_descriptor_to_datatype` decodes the tagged-tuple
+  wire shape (`("kind", …)`) the bridge now emits — positional indexing, no
+  per-node dict lookups.
+  **Round 4 (2026-09-14, L-008/L-009):** base answers each surface with a
+  different resolution — MRO for `simpleString`-style answers, an
+  integer-first `isinstance` order for Arrow and SQL markers, and a
+  string-first order for DDL. `_arrow_order`/`_sql_order`/`_ddl_order` cache
+  the three orders; `_primary_class` picks the first matching class in an
+  order (exact tabled classes and exact containers short-circuit);
+  `_atomic_token`'s `order` parameter switches its subclass scan from MRO to
+  the surface order; `_datatype_to_descriptor` propagates `None` upward so
+  unknown subtrees reach the Python fallbacks in one walk, and struct members
+  build through `_field_descriptor`. `_leaf_ddl`/`_ddl_token_python` keep the
+  DDL fallback on `data_type.simpleString().upper()` so `simpleString`
+  overrides (intervals and every other leaf) survive nested.
+  **Round 5 (2026-09-14, L-011):** the `isinstance(StructField)` arm is deleted
+  — a field is encoded only from `StructType.fields` through
+  `_field_descriptor`, so a `Left+StructField` class built without `.dataType`
+  falls to the Python fallbacks and answers its non-field parent like base.
+  pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024, C-026, C-029..C-031, C-033
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
@@ -195,6 +245,48 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   estimators and feature/evaluation surfaces live in [ml/map.md](ml/map.md).
 - `types.py` — Spark SQL data types, DDL/JSON conversion, schema inspection, interval
   support, metadata, and Python-value verification.
+  **FACADE-4 step 1 (2026-09-14):** the conversion surfaces
+  (`fromDDL`/`_parse_datatype_string`, `StructType.toDDL`, `_arrow_type_to_repark`,
+  `struct_type_from_arrow`, `repark_type_to_arrow`) thin to descriptor build + one
+  `_native` call over `repark_spark::type_table`; the public classes and
+  `isinstance` identity are unchanged. `simpleString`/`_engine_type` answer from
+  the `_type_table.py` row table (P1-DTYPES: per-column descriptor FFI regressed
+  `dtypes` +106 % on wide50). Python residue: descriptor trees containing a
+  foreign `DataType` subtype, decimals outside the Arrow FFI scale envelope,
+  collation refusal policy, and the `json`/`fromJson` surface.
+  **Remediation round 2 (2026-09-14):** `_parse_datatype_string` moved to
+  `_type_table.py` (Python parse for beyond-i64 parameters and non-printable
+  text); parameterised `jsonValue` formats locally; `repark_type_to_arrow`
+  checks the decimal FFI bound first and falls back to
+  `_repark_type_to_arrow_python` on any FFI export failure (Arrow nesting-depth
+  ceilings); the FFI-covered wide-decimal pre-walks are gone; native calls bind
+  through the cached `_type_table._native_function`.
+  **Remediation round 3 (2026-09-14, ruling R14b-D-2):** the per-class literal
+  `simpleString`/`_engine_type` methods are restored on every atomic class
+  exactly as base had them (the five dynamic-answer classes and `DataType`
+  keep `type(self).typeName()` bodies) — the row-table dict path was ~0.24 µs
+  per leaf against base's ~0.05 µs method call, and `dtypes` breached the
+  surface bar. `_atomic_token` still answers for nested composition, foreign
+  subclasses and the SQL/DDL marker columns; the MRO mutation still turns the
+  marker pins red.
+  **Remediation round 4 (2026-09-14, L-007/L-008/L-009):** `DataType.simpleString`
+  answers from `_SIMPLE_STRING_FAST` for exact classes then falls back to
+  `type(self).typeName()` — the five dynamic-answer classes lose their literal
+  methods so multiple-inheritance MRO matches base; `DataType._engine_type`
+  delegates to `self.simpleString()`. `ArrayType`/`MapType`/`StructField`/
+  `StructType` get base's `simpleString`/`_engine_type` bodies back so child
+  and field overrides compose (a `StructField.simpleString` override survives
+  inside `StructType`, `ArrayType` and `MapType`); the parameterized
+  `jsonValue`s dispatch through `self.simpleString()` again. `StructType.toDDL`
+  and `repark_type_to_arrow` pass their surface orders into
+  `_type_table`'s descriptor build.
+  **Remediation round 5 (2026-09-14, L-010):** `repark_type_to_arrow` builds
+  the descriptor before the C-028 wide-decimal envelope guard and keys the
+  guard on the descriptor's `decimal` kind — `.precision`/`.scale` are read
+  only after the `_arrow_order` pick resolves to `DecimalType`, so a
+  `Left+DecimalType` class without decimal attrs keeps base's left-parent
+  Arrow answer instead of crashing.
+  pins: facade-4/C-011, C-012, C-014, C-015, C-016, C-020..C-024, C-028..C-033
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
   calls, and Arrow expansion.
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and
