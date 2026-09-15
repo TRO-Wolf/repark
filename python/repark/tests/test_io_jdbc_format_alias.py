@@ -1,4 +1,4 @@
-"""Pins for registry row IO-JDBC-FORMAT-1: ``format("jdbc")`` skips the URL dispatch ``read.jdbc`` applies."""
+"""Pins for IO-JDBC-FORMAT-1: ``format("jdbc")`` skips the ``read.jdbc`` URL dispatch."""
 
 from __future__ import annotations
 
@@ -16,7 +16,11 @@ def spark() -> SparkSession:
 
 @pytest.mark.parametrize(
     "url",
-    ["jdbc:mysql://localhost/db", "jdbc:sqlserver://localhost;databaseName=db", "jdbc:postgres://h/db"],
+    [
+        "jdbc:mysql://localhost/db",
+        "jdbc:sqlserver://localhost;databaseName=db",
+        "jdbc:postgres://h/db",
+    ],
 )
 def test_format_jdbc_non_postgres_url_reaches_the_postgres_option_checks(
     spark: SparkSession, url: str

@@ -5078,4 +5078,4 @@ through `core` or the package. pins: eager-budget-1/C-010
   (`LIKE`, `VARCHAR`/`CHAR`, `CASE`/`coalesce` mixes raising `CAST_INVALID_INPUT`),
   and the JAVA-DOUBLE-FD-1 backlog pins — value AND type throughout.
   pins: java-double-str-1/C-009, C-010, C-011, C-012, C-013, C-014
-- `test_io_jdbc_format_alias.py` — **IO-JDBC-FORMAT-1 (2026-09-15, run 16c, owner ruling Q-15B-4):** codifies that `spark.read.format("jdbc")` sends a `jdbc:mysql://` / `jdbc:sqlserver://` / `jdbc:postgres://` URL to the PostgreSQL option checks where `spark.read.jdbc` refuses `NOT_IMPLEMENTED`; reds when the 1.6 connector work applies the URL dispatch to the alias.
+- `test_io_jdbc_format_alias.py` — **IO-JDBC-FORMAT-1 (2026-09-15, run 16c, owner ruling Q-15B-4):** codifies that `spark.read.format("jdbc")` sends a `jdbc:mysql://` / `jdbc:sqlserver://` / `jdbc:postgres://` URL to the PostgreSQL option checks where `spark.read.jdbc` refuses `NOT_IMPLEMENTED`; reds when the 1.6 connector work applies the URL dispatch to the alias. Module docstring kept under the 100-column ruff limit.
