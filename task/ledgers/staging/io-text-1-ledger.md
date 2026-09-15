@@ -70,10 +70,11 @@ COVERAGE_ATTESTATION:
   complete: true
   reattested: [AT-1, AT-2, AT-3, AT-4, AT-6, AT-7, AT-8, AT-10]
   round6: [AT-1, AT-3, AT-4, AT-6, AT-8, AT-10]
+  round7: [AT-1, AT-3, AT-4, AT-6, AT-10]
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Clauses C-001..C-004 walked against behavior; the follow-up rulings R-1..R-12 each carry pins against the live probes in facade_iotext_probe_2026-09-15.json, and the retired refusal pins flipped by replacement. Round 5 reattests R-32..R-36 against iotext_probe5_2026-09-15.json (raw-text overlay, cross-depth refusals, sorted fallback, shared values). Round 6 reattests R-37/R-38 against iotext_probe6_2026-09-15.json (streaming spill-capable fallback sort, boolean/float/smallint/tinyint/binary/timestamp_ntz/array overlay).
+      evidence: Clauses C-001..C-004 walked against behavior; the follow-up rulings R-1..R-12 each carry pins against the live probes in facade_iotext_probe_2026-09-15.json, and the retired refusal pins flipped by replacement. Round 5 reattests R-32..R-36 against iotext_probe5_2026-09-15.json (raw-text overlay, cross-depth refusals, sorted fallback, shared values). Round 6 reattests R-37/R-38 against iotext_probe6_2026-09-15.json (streaming spill-capable fallback sort, boolean/float/smallint/tinyint/binary/timestamp_ntz/array overlay). Round 7 reattests R-40/R-41 against iotext_probe7_2026-09-15.json (zone-free timestamp_ntz walls, session-zone timestamp walls, timestamp inference, pool-sized fallback tail).
       artifacts: [task/ledgers/staging/io-text-1-ledger.md, python/repark/tests/test_io_text_1.py, python/repark/tests/test_io_text_2.py]
     - id: AT-2
       status: ATTACKED
@@ -81,11 +82,11 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_io_text_1.py, crates/repark-core/src/text_scan.rs, crates/repark-core/src/text_glob.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: Every refusal pins its text and the destination state (1290, UNSUPPORTED, PATH_NOT_FOUND, lineSep, encoding, compression, modes); the old code's failure paths precede staging creation, so no litter arises — a cleanup widening with no deterministic trigger was tried and reverted, disclosed above. Round 5 reattests the cross-depth CONFLICTING_PARTITION_COLUMN_NAMES refusal (plan-time, both name lists, KD009) and the kept INVALID_PARTITION_VALUE on raw text. Round 6 reattests INVALID_PARTITION_VALUE 42846 with Spark's uppercase displays (BOOLEAN, SMALLINT, TIMESTAMP_NTZ, ARRAY<INT>) and keeps the unsupported-type refusal for map/struct.
+      evidence: Every refusal pins its text and the destination state (1290, UNSUPPORTED, PATH_NOT_FOUND, lineSep, encoding, compression, modes); the old code's failure paths precede staging creation, so no litter arises — a cleanup widening with no deterministic trigger was tried and reverted, disclosed above. Round 5 reattests the cross-depth CONFLICTING_PARTITION_COLUMN_NAMES refusal (plan-time, both name lists, KD009) and the kept INVALID_PARTITION_VALUE on raw text. Round 6 reattests INVALID_PARTITION_VALUE 42846 with Spark's uppercase displays (BOOLEAN, SMALLINT, TIMESTAMP_NTZ, ARRAY<INT>) and keeps the unsupported-type refusal for map/struct. Round 7 reattests the inference step (space wall timestamps, T and fractional walls stay string) beside the untouched refusal texts.
       artifacts: [python/repark/tests/test_io_text_1.py, python/repark/tests/test_io_text_2.py, crates/repark-core/src/text_io.rs, crates/repark-core/src/partition_discovery.rs]
     - id: AT-4
       status: ATTACKED
-      evidence: Cross-partition order is channel-nondeterministic like Spark, so order pins sort; partitions own disjoint file groups with no shared mutable state; single-file order is exact. The GIL stays released via the unchanged detach bindings. Round 5 reattests the fallback multiset pins past the cap and the one-Arc value share across the 8 scan partitions. Round 6 reattests the batch-by-batch single-writer walk over the sort output stream (nothing collected) and the spill pin under a 16 MiB pool.
+      evidence: Cross-partition order is channel-nondeterministic like Spark, so order pins sort; partitions own disjoint file groups with no shared mutable state; single-file order is exact. The GIL stays released via the unchanged detach bindings. Round 5 reattests the fallback multiset pins past the cap and the one-Arc value share across the 8 scan partitions. Round 6 reattests the batch-by-batch single-writer walk over the sort output stream (nothing collected) and the spill pin under a 16 MiB pool. Round 7 reattests the pool-sized rechunk (deep copies, measure-verify) and the pool-capped spill reservation over the same walk.
       artifacts: [python/repark/tests/test_io_text_1.py, python/repark/tests/test_io_text_2.py, crates/repark-core/src/text_scan.rs, crates/repark-core/src/text_partition_fallback.rs]
     - id: AT-5
       status: ATTACKED
@@ -93,7 +94,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/text_glob.rs, python/repark/tests/test_io_text_1.py]
     - id: AT-6
       status: ATTACKED
-      evidence: Round trips are byte-exact including null-as-empty and lossy codepoints; partitioned leaves match the probe listing byte for byte; part names changed from batch-indexed to sequential with no consumer depending on the old gaps; read-side partition discovery is a filed BACKLOG row, not papered over. Round 5 reattests one part per leaf under the sorted fallback (measured 0.29 s / 1.58 s) and the IO-TEXT registry rows for X-1..X-4. Round 6 reattests one part per leaf under the streaming sort (shuffled k=1000/200k 0.156 s / 152 MiB, fat 50k x 4 KiB 0.443 s / 533 MiB) and the IO-TEXT registry rows for Y-1/Y-2.
+      evidence: Round trips are byte-exact including null-as-empty and lossy codepoints; partitioned leaves match the probe listing byte for byte; part names changed from batch-indexed to sequential with no consumer depending on the old gaps; read-side partition discovery is a filed BACKLOG row, not papered over. Round 5 reattests one part per leaf under the sorted fallback (measured 0.29 s / 1.58 s) and the IO-TEXT registry rows for X-1..X-4. Round 6 reattests one part per leaf under the streaming sort (shuffled k=1000/200k 0.156 s / 152 MiB, fat 50k x 4 KiB 0.443 s / 533 MiB) and the IO-TEXT registry rows for Y-1/Y-2. Round 7 reattests one part per leaf over 500k x 4 KiB past the cap (128 MiB: 18.9 s / 378 MiB / 40 spills; 512 MiB: 17.3 s / 708 MiB / 8 spills) and the IO-TEXT registry rows for Z-1/Z-2.
       artifacts: [python/repark/tests/test_io_text_1.py, python/repark/tests/test_io_text_2.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-7
       status: ATTACKED
@@ -109,7 +110,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_io_text_1.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Five Python-side probe pins fail with the facade stashed and the two retired refusal pins red by replacement; the Rust pins assert messages the old code never produced; new branches (brace expansion, class negation, partition leaves, limit cut-off, empty projection) each have a nameable input in the suite. Round 5 reattests 8 red probe5 pins plus 2 red Rust conflict pins pre-fix (X-4's layout pins pass before and after by design; the strace open counts are its red). Round 6 reattests 9 red probe6 pins pre-fix (the boolean-inferred control passes; every other Y-2 pin fails with the unsupported-type text) plus the expanded Rust type/cast asserts; the new spill pin asserts a post-fix observable (spill count above zero) whose pre-fix red is the reviewer's 710 MiB / zero-spill measurement.
+      evidence: Five Python-side probe pins fail with the facade stashed and the two retired refusal pins red by replacement; the Rust pins assert messages the old code never produced; new branches (brace expansion, class negation, partition leaves, limit cut-off, empty projection) each have a nameable input in the suite. Round 5 reattests 8 red probe5 pins plus 2 red Rust conflict pins pre-fix (X-4's layout pins pass before and after by design; the strace open counts are its red). Round 6 reattests 9 red probe6 pins pre-fix (the boolean-inferred control passes; every other Y-2 pin fails with the unsupported-type text) plus the expanded Rust type/cast asserts; the new spill pin asserts a post-fix observable (spill count above zero) whose pre-fix red is the reviewer's 710 MiB / zero-spill measurement. Round 7 reattests the oversized-batch pin red pre-fix (ResourcesExhausted with the split disabled, same class as the perf P2) and green post-fix, the NTZ wall pins red pre-fix per the critic's live 05:00/08:04:05 measurement, and the inference pin red pre-fix by the missing arm.
       artifacts: [python/repark/tests/test_io_text_1.py, python/repark/tests/test_io_text_2.py, crates/repark-core/src/text_scan.rs, crates/repark-core/src/text_glob.rs, crates/repark-core/src/text_io.rs, crates/repark-core/src/partition_discovery.rs]
 ```
 
@@ -555,3 +556,59 @@ Row reprs; refusal pins take the full text, condition, and sqlstate).
 - Registry: IO-TEXT-PART-1 and IO-TEXT-PARTDISC-1 updated in place for
   Y-1/Y-2; the COVERAGE_ATTESTATION block reattests what this round touched.
   The four schema-display pins wait on the shared-layer ruling (Q1).
+
+## Follow-up round 7 — Z-1 zone-free walls + Z-2 pool-sized tail (run 16b)
+
+Oracle: `iotext_probe7_2026-09-15.json` (live PySpark 4.1.2 in a
+`spark.sql.session.timeZone=America/New_York` session, run 16b,
+`probe_iotext7.py` beside it); every result cell copied as
+`text_probe7_<cell>` into
+`python/repark/tests/facade_reader_writer_oracle.json` (`meta` and the
+`session_tz` config echo left out, as round 6 left out probe6 `meta`),
+and the round-7 pins read those cells through a New York builder session.
+Timestamp pins compare `rows_as_string` (the engine `CAST(k AS STRING)`
+in the session zone) wherever the Python repr depends on the machine
+zone. No HALT: the probe3 fractional-string cell and the probe7
+space-wall timestamp cell both hold under one rule (below), verified by
+the full gate run.
+
+| R | Brief | Ruling and evidence |
+|---|---|---|
+| R-40 (Z-1) | a user `timestamp_ntz` parses the raw unescaped text as a zone-free wall clock | `cast_raw_partition_value` splits the timestamp arm: `Some(zone)` keeps X-1's session-zone parse, `None` parses through the new engine module `partition_timestamp` (`parse_wall_naive` carries the exact X-1 grammar — date-only, space/`T`, optional fraction — and `parse_timestamp_ntz_micros` stamps the naive wall as UTC micros), so `2024-01-02` is naive midnight and both wall forms are 03:04:05 in any session zone. Discovery inference gains the timestamp step after date in Spark's order (integral, fractional, date, timestamp, string): exactly `yyyy-MM-dd HH:mm:ss` infers session-zone `timestamp`; the `T` and fractional walls stay `string`, so the probe3 `2024-01-02 08:04:05.12` string pin and the probe7 space-wall timestamp pin hold together. `discover_partitions` and `expand_text_paths` take the session zone (inferred timestamps parse zoned, LTZ semantics); `parse_timestamp_micros_zone` delegates its wall parse to the shared function, behavior unchanged. New code and its tests live in `partition_timestamp` (`partition_discovery.rs` keeps its ceiling with wiring only). Pins: Rust `partition_timestamp` battery (naive midnight/walls/refusals, zoned walls unchanged, discovery types and values under New York) plus Python `test_text_probe7_*` (3 NTZ result pins, 3 LTZ string pins, date/string inferred result pins, 1 inferred-timestamp string pin). Pre-fix red is the critic's live measurement on this code (NY session answered 05:00 and 08:04:05) and, for inference, the missing arm (the space wall inferred `string`). |
+| R-41 (Z-2) | a partitioned write that falls back to the sorted tail must spill, not fail, when the rows fit | `append_remaining_sorted` reads the pool size from the session runtime (`task_ctx.memory_pool().memory_limit()`; unbounded pools keep the old path untouched), caps the fallback sort's spill reservation at the session's `datafusion.execution.sort_spill_reservation_bytes` bounded by the pool (via a cloned session config on a derived task context), and re-chunks the tail so one batch plus the reservation fits: at most a third of the post-reservation budget per batch (one part batch, two parts the sorter's documented 2x working copy, plus producer headroom). Oversized batches split by rows and materialize through multi-input `concat_batches` — single-input `concat` returns a shallow slice that keeps the parent's buffers, which the first version proved (a 917-row chunk still reported the 33 MiB parent) — with measure-verify against DataFusion's own `get_record_batch_memory_size` so builder slack re-splits instead of failing the first grow. `write_text_partitioned` returns the sort spill count (zero when the fallback never runs); the binding and all callers compile unchanged. Pins: Rust `text_partition_fallback_spills_fat_tail_under_session_pool` (500k x 4 KiB shuffled past the cap, 1024-row batches, lazy 8-partition generator: 128 MiB pool completes with spill 40, one part per key, every row; same at 512 MiB with spill 8), `text_partition_fallback_splits_pool_busting_batches` (one 192 MiB batch under 128 MiB: completes with spill — ResourcesExhausted with the split disabled, same class as the perf P2), `tail_rechunk_splits_only_oversized_batches` (chunk measures, row preservation). Measured on this box: 128 MiB 18.9 s / 378 MiB peak, 512 MiB 17.3 s / 708 MiB peak. |
+
+Judgment calls round 7: timestamp inference accepts exactly the space
+wall with no fraction — the only rule the two oracle cells jointly
+support (probe7 space wall timestamps, probe3 fractional wall strings,
+probe7 `T` wall strings); wider fractional forms stay `string` until a
+probe measures them. The e2e pool test uses an 8-partition lazy
+generator, not a 64-way fan-out: `execute_stream` over a many-partition
+plan inserts `CoalescePartitionsExec`, which parks up to two 4 KiB-row
+batches per sender outside any spill path, so a 64-way default-partition
+producer can overfill a 128/512 MiB pool before the sorter holds a byte
+— no consumer-side rechunk can bound producer in-flight, and the Python
+128M/512M failures match that shape (7–8 MiB wanted, ~1.5% free). That
+oversubscription is session-config level and stands as residue, stated
+here, not absorbed. The `usize` return on `write_text_partitioned`
+replaces the discarded `let _spilled`, nothing else.
+
+## Round-7 coverage addendum (2026-09-15, R-40/R-41)
+
+Oracle: `iotext_probe7_2026-09-15.json` (live PySpark 4.1.2, New York
+session, `probe_iotext7.py` beside it); every result cell copied as
+`text_probe7_<cell>` into
+`python/repark/tests/facade_reader_writer_oracle.json`, and the round-7
+pins read those cells (NTZ result pins take columns, schema simpleString,
+and Row reprs; LTZ and inferred-timestamp pins take columns, schema, and
+`rows_as_string`).
+
+- Zone-free walls (Z-1): `timestamp_ntz` overlay reads naive midnight and
+  naive 03:04:05 under New York while `timestamp` keeps the session wall;
+  the space wall infers session-zone `timestamp`, the `T` and fractional
+  walls stay `string`, date still infers `date`.
+- Pool-sized tail (Z-2): the tail re-chunks from the session pool with a
+  pool-capped spill reservation (500k x 4 KiB: 18.9 s / 378 MiB / 40
+  spills at 128 MiB, 17.3 s / 708 MiB / 8 spills at 512 MiB); the
+  oversized-batch pin is red without the split and green with it.
+- Registry: IO-TEXT-PART-1 and IO-TEXT-PARTDISC-1 updated in place for
+  Z-1/Z-2; the COVERAGE_ATTESTATION block reattests what this round touched.

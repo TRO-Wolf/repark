@@ -1889,6 +1889,15 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   part file with nothing collected. Shuffled k=1000/200k runs 0.156 s at
   152 MiB peak, fat 50k x 4 KiB runs 0.443 s at 533 MiB peak (round-5 build:
   0.219 s / 232 MiB and 1.587 s / 730 MiB with zero spill files).
+  Round 7 (ruling Z-2): the tail stream re-chunks into batches sized from
+  the session pool (one batch plus the sort spill reservation fits, a third
+  each for the batch, the sorter's 2x working copy, and producer headroom)
+  with deep copies so a sliced parent never inflates the sort accounting,
+  and the fallback sort runs under a task context whose spill reservation
+  is the session's capped to the pool; 500k x 4 KiB shuffled past the cap
+  completes under a 128 MiB pool (18.9 s / 378 MiB peak, 40 spills, one
+  part per key, every row) and under a 512 MiB pool (17.3 s / 708 MiB
+  peak, 8 spills).
 - **Apache Spark** — writes `key=value/` leaf dirs with `part-*` files inside.
 - **Pin** — `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
   (leaf bytes plus `_SUCCESS`) and `::test_text_probe_partition_by_two_remaining`
@@ -1900,9 +1909,15 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   plus `::text_partition_fallback_spills_under_small_memory_limit` (round 6,
   ruling Y-1: 16 MiB pool over a 54 MiB tail spills and writes every row, one
   part per key)
+  plus `::text_partition_fallback_spills_fat_tail_under_session_pool` (round 7,
+  ruling Z-2: 500k x 4 KiB shuffled past the cap completes with spill, one
+  part per key, every row, at 128 MiB and 512 MiB pools)
+  plus `::text_partition_fallback_splits_pool_busting_batches` and
+  `::tail_rechunk_splits_only_oversized_batches` (round 7, ruling Z-2: the
+  rechunk contract — red without the split, green with it)
   and `python/repark/tests/test_io_text_2.py::test_text_partition_fallback_holds_one_part_per_leaf`.
 - **Rationale** — FIXED, 2026-09-15 (io-text-1 follow-up).
-  pins: io-text-1/T-6, X-4, Y-1
+  pins: io-text-1/T-6, X-4, Y-1, Z-2
 
 ---
 
@@ -8751,8 +8766,10 @@ field NAME.
   `struct<value:string>` plus the directory columns in directory order
   (`['value', 'k']` in `test_text_probe_partition_by`), `%XX` unescaped,
   `__HIVE_DEFAULT_PARTITION__` → NULL, types inferred int → bigint →
-  double (decimal strings land double) → date `yyyy-MM-dd` → string
-  (timestamps and booleans stay string, per the probe3 cells); a leaf path
+  double (decimal strings land double) → date `yyyy-MM-dd` → timestamp
+  (exactly `yyyy-MM-dd HH:mm:ss`; the fractional and `T` walls stay
+  string, per the probe3 and probe7 cells) → string (booleans stay
+  string, per the probe3 cells); a leaf path
   read adds no column. A user schema is the data schema with the directory
   columns still appended after it (round 4, ruling W-1: `value string` →
   `value, k`, a renamed single field keeps its name, a named `k` supplies
@@ -8775,10 +8792,16 @@ field NAME.
   UTF-8 bytes), timestamp_ntz, and `array<primitive>` — the last two miss
   with Spark's uppercase display (`TIMESTAMP_NTZ`, `ARRAY<INT>`) as
   `INVALID_PARTITION_VALUE` 42846; map/struct stay unsupported-type
-  refusals; inferred boolean-looking directories stay string.
+  refusals; inferred boolean-looking directories stay string. Round 7
+  (ruling Z-1): a named `timestamp_ntz` column parses the raw unescaped
+  text as a zone-free wall clock (date-only is naive midnight; the space
+  and `T` walls keep 03:04:05 in any session zone) while `timestamp`
+  keeps the session-zone wall; the space wall infers session-zone
+  `timestamp` under Spark's order (integral, fractional, date,
+  timestamp, string).
 - **Apache Spark** — partition discovery adds the directory columns
   (`(value, k)` rows on the probe's `partition_by` read-back).
-  *(oracle: live PySpark 4.1.2, probes `partition_by` + probe3 `part_*` + probe4 `text_probe4_*` + probe5 `text_probe5_*` + probe6 `text_probe6_*`, 2026-09-15.)*
+  *(oracle: live PySpark 4.1.2, probes `partition_by` + probe3 `part_*` + probe4 `text_probe4_*` + probe5 `text_probe5_*` + probe6 `text_probe6_*` + probe7 `text_probe7_*` (America/New_York session), 2026-09-15.)*
 - **Pin** —
   `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
   plus `test_text_probe3_part_*_read` (slash, specials, empty/null,
@@ -8792,13 +8815,18 @@ field NAME.
   fallback layout — round 5, rulings X-1, X-2, X-3, X-4) plus
   `::test_text_probe6_*` (boolean overlay and results, the four uppercase
   refusals — round 6, ruling Y-2; the float/smallint/tinyint/binary result
-  pins wait on the shared schema-display keys, ledger R-38).
+  pins ride the shared schema-display divergence keys, ledger R-39) plus
+  `::test_text_probe7_*` (zone-free `timestamp_ntz` walls, session-zone
+  `timestamp` walls, timestamp inference — round 7, ruling Z-1).
 - **Rationale** — FIXED, 2026-09-15 (io-text-1 round 3, ruling U-3).
   Discovery lives in the engine module `partition_discovery` (leaf files +
   root in, schema + per-file values out; IO-ORC-1 reuses it) with the shared
   batch materialization beside it; the user-schema overlay lives in the new
-  engine module `text_schema` beside the scan (round 4, ruling W-1).
-  pins: io-text-1/T-6, U-3, W-1, W-2, W-3, W-4, X-1, X-2, X-3, X-4, X-5, Y-1, Y-2
+  engine module `text_schema` beside the scan (round 4, ruling W-1); the
+  zone-free wall parser and the timestamp-inference predicate live in the
+  new engine module `partition_timestamp` beside discovery (round 7,
+  ruling Z-1).
+  pins: io-text-1/T-6, U-3, W-1, W-2, W-3, W-4, X-1, X-2, X-3, X-4, X-5, Y-1, Y-2, Z-1
 
 ## 8. Drop-in disclosure rationale
 
