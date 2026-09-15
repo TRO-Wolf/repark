@@ -1185,6 +1185,346 @@
     "kind": "list"
    }
   },
+  "planintro_cached_hash_cache_keeps_hash": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_cached_hash_cached_differ": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_cached_hash_filter_child_on_cached_equals_uncached_child": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_cached_hash_uncached_differ": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_cached_input_files_cached_after_action_len": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "planintro_cached_input_files_cached_before_action_len": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "planintro_cached_input_files_filter_child_len": {
+   "result": {
+    "kind": "int",
+    "value": 0
+   }
+  },
+  "planintro_cached_input_files_uncached_len": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "planintro_cast_alias_twin": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_cast_cast_to_string_vs_plain": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_cast_filter_twin_same_frame": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_cast_int_col_lit_vs_sql": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_cast_literal_long_vs_int": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_cast_narrow_cast_vs_plain_col": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_cast_narrow_cast_vs_plain_sql": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_cast_widen_cast_vs_plain_col": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_cube_rollup_cube_rows": {
+   "result": {
+    "kind": "int",
+    "value": 7
+   }
+  },
+  "planintro_cube_rollup_equal_hash": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "planintro_cube_rollup_rollup_rows": {
+   "result": {
+    "kind": "int",
+    "value": 5
+   }
+  },
+  "planintro_df_filter_col_vs_sql_where": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_df_filter_vs_sql_where": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_filter_then_select_vs_sql": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_hex_names_equal_hash": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "planintro_local_data_different_data_equal_hash": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "planintro_local_data_different_data_same_semantics": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "planintro_local_data_same_data_equal_hash": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "planintro_local_data_same_data_same_semantics": {
+   "result": {
+    "kind": "bool",
+    "value": false
+   }
+  },
+  "planintro_r4_and_order": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_r4_eq_swap": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_r4_join_ax_bx_vs_ax_ax_df": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_r4_join_ax_bx_vs_ax_ax_sql": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_r4_overflow_lit_sql_vs_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_r4_overflow_vs_wrapped_df": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_r4_sql_cast_in_case_vs_plain": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_r4_sql_cast_in_filter_vs_plain": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_r4_swap_cols": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_r4_swap_lit_left_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_r4_swap_lit_left_df_vs_sql": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_r4_swap_lit_left_sql": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_select_all_named_vs_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_select_cols_vs_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_select_reordered_vs_df": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_select_star_vs_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_sql_select_named_vs_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_sql_select_star_vs_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_temp_view_sql_equal_hash": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_temp_view_sql_input_files_len": {
+   "result": {
+    "kind": "int",
+    "value": 1
+   }
+  },
+  "planintro_temp_view_sql_same_semantics": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_temp_view_table_equal_hash": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_temp_view_table_same_semantics": {
+   "result": {
+    "kind": "bool",
+    "value": true
+   }
+  },
+  "planintro_uri_form_files": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "file:///tmp/pb-oracle-pi-_7809xge/pq_a/part-00000-34d8d730-93d9-4c1c-b4e7-bee43c66b44f-c000.snappy.parquet"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "planintro_uri_form_prefix": {
+   "result": {
+    "items": [
+     {
+      "kind": "str",
+      "value": "file:///tmp/"
+     }
+    ],
+    "kind": "list"
+   }
+  },
+  "planintro_view_over_filtered_sql": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_view_over_filtered_table": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_where_vs_filter": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
   "registerTempTable": {
    "result": {
     "columns": [

@@ -149,6 +149,7 @@ dataframe	DataFrame.groupingSets
 dataframe	DataFrame.grouping_sets
 dataframe	DataFrame.head
 dataframe	DataFrame.hint
+dataframe	DataFrame.inputFiles
 dataframe	DataFrame.intersect
 dataframe	DataFrame.intersectAll
 dataframe	DataFrame.intersect_all
@@ -194,6 +195,7 @@ dataframe	DataFrame.schema
 dataframe	DataFrame.select
 dataframe	DataFrame.selectExpr
 dataframe	DataFrame.select_expr
+dataframe	DataFrame.semanticHash
 dataframe	DataFrame.show
 dataframe	DataFrame.sort
 dataframe	DataFrame.sortWithinPartitions

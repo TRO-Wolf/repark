@@ -129,6 +129,11 @@ one-liner.
   (EX-26). Repark extension, no Spark analog (`hasattr` measured False on live
   PySpark 4.1.2).
   pins: ex-26-io-session/C-013
+- [plan_introspect.py](plan_introspect.py) — `DataFrame.inputFiles` (empty on a local
+  frame, one `file://` URI on a parquet read) and `DataFrame.semanticHash`
+  (equal plans and alias spellings agree, `range(3)` vs `range(4)` differ, SQL-door
+  aliases agree), DF-PLAN-INTROSPECT-1.
+  pins: df-plan-introspect-1/C-003
 
 Divergent names and arms stay on the backlog with §7 registry rows
 ([EX-DF-2](../../spark-sql-iceberg-parity.md) … [EX-DF-17](../../spark-sql-iceberg-parity.md)), pinned in

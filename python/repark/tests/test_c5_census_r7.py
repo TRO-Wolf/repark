@@ -193,11 +193,9 @@ def test_same_semantics_non_dataframe_raises(spark: ReparkSession) -> None:
 def test_same_semantics_identity_true(spark: ReparkSession) -> None:
     left = spark.range(5)
     right = spark.range(5)
-    # Best-effort native-handle identity (not Catalyst isomorphism).
     assert left.sameSemantics(left) is True
     assert left.same_semantics(left) is True
-    # Two independent range(5) frames do not share `_inner` → False.
-    assert left.sameSemantics(right) is False
+    assert left.sameSemantics(right) is True
     assert isinstance(left.sameSemantics(right), bool)
 
 

@@ -187,6 +187,17 @@ else. The next pickup's `make ledger-archive` files everything here under
   implement D-1..D-3 in `core.py` (`_explain_text` + the method body) plus the guide
   paragraph. `risk_tier: standard`. Branch `feat/df-explain-1`.
   pins: df-explain-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [df-plan-introspect-1-ledger.md](df-plan-introspect-1-ledger.md) —
+  **DF-PLAN-INTROSPECT-1 (2026-09-14), in flight:** `DataFrame.inputFiles` /
+  `DataFrame.semanticHash` land in Rust (`crates/repark-core/src/plan_introspect.rs`:
+  physical file-group walk plus analyzed-logical canonical hash, thinnest
+  `repark-python` free-function binding, one-line facade delegations with `core.py`
+  held at its exact baseline). Nineteen pins on the release module, example plus
+  inventory refresh, maps in lockstep. `risk_tier: standard`. Branch
+  `feat/df-plan-introspect-1`.
+  pins: df-plan-introspect-1/C-001, C-002, C-003, C-004
+  Round 4 + R-19 (2026-09-15): relation identity, comparison and AND/OR canonicalization, overflow literals,
+  the inputFiles memo; the SQL-door widening-cast pair is registry DF-PLAN-INTRO-CAST-1.
 - [df-printschema-1-trailing-newline-ledger.md](df-printschema-1-trailing-newline-ledger.md) — Unit ledger — DF-PRINTSCHEMA-1 · printSchema prints Spark's trailing blank line
 - [df-stream-batch-1-ledger.md](df-stream-batch-1-ledger.md) —
   **DF-STREAM-BATCH-1 step 1 (2026-09-14), in flight:** the streaming-named DataFrame

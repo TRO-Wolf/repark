@@ -105,6 +105,46 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `orc_*` / `jdbc_*` / `na_replace_*` cells owned by other runs of the same oracle
   recording.
   **COLUMN-PARITY-1 (2026-09-15):** with `alias(name, metadata=)` surfacing on `schema`, the stamp, replace, cache and `to()` target-override positions answer Spark and are re-pinned; DF-METADATA-1 narrows to the transform positions and `to()` source-keep. pins: df-surface-a-1/C-008
+- [test_df_plan_introspect_1.py](test_df_plan_introspect_1.py) —
+  **DF-PLAN-INTROSPECT-1 (2026-09-14):** `DataFrame.inputFiles` /
+  `DataFrame.semanticHash` answer PySpark 4.1.2 in Rust, driven by the committed
+  run-15b oracle ([facade_dataframe_surface_oracle.json](facade_dataframe_surface_oracle.json)).
+  `inputFiles` pins the four oracle cells plus a `", "`/bracket filename surviving as
+  one URI, an overlapping-name join listing both sides, csv/json reads, a glob, a
+  cache-kept lineage, and the SQL door; the oracle's `part-` filename is Spark's
+  writer naming, repark writes its own names. `semanticHash` pins the five oracle
+  cells plus literals, column order, limits, CAST widths, two file paths, and
+  batch-size independence; the fold keeps the low 32 bits as a signed int. Red on
+  base `efcb14ef`: all nineteen pins `PySparkAttributeError
+  [ATTRIBUTE_NOT_SUPPORTED]`. Follow-up (2026-09-15) pins eight C-006 tests over
+  twenty-three `planintro_*` probe cells: local-frame construction identity, the
+  cache-keeps-hash lineage round-trip, cached `inputFiles` lengths, cube/rollup
+  discrimination, hex column names, temp-view equality, and the URI form — five red
+  on the pre-follow-up implementation, three green, all green after. Follow-up round
+  2 (2026-09-15, rulings R-6/R-7/R-8) adds twelve `planintro_*` oracle cells from the
+  orchestrator's L-102 probe and eight tests: DF filter / `where` / filter-then-select
+  against SQL `WHERE`, views over filtered frames, identity selects on both doors
+  (reordered stays unequal), non-identity selects that stay projections, and the
+  Iceberg `[]` scan — four red on the round-1
+  head, all green after; the cells' `sameSemantics` values are transcribed but
+  unpinned because `sameSemantics` stays handle identity per EX-DF-11. Follow-up
+  round 3 (2026-09-15, rulings R-9/R-10/R-11) adds eight `planintro_cast_*` cells
+  from the cast probe and pins both fields of every one, pins the twelve round-2
+  cells' `sameSemantics` values now that the name answers plan equality
+  (EX-DF-11 FIXED), and ratchets `core.py` 4027 → 4014. The example,
+  the inventory refresh, and this entry close the coverage loop. Follow-up round
+  4 (2026-09-15, rulings R-12..R-18) adds twelve `planintro_r4_*` cells from the
+  r4 probe and pins both fields of ten (the two SQL-door widening-cast cells are
+  transcribed but unpinned — eager analysis unifies them before the hash, OPEN
+  C-015), pins the critic A–E join pairs with row-count inequality, the OR-swap
+  and IN-order arms, the DF-door cast arms, the cheap null-report arms, and the
+  per-handle `inputFiles` memo timing (2k files, second call 1520x).
+  pins: df-plan-introspect-1/C-003, C-006, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+  The touched DataFrame suites and the lint, format, clippy, and coverage gates
+  stay green. pins: df-plan-introspect-1/C-004
+  **R-19 (2026-09-15):** `test_semantichash_sql_door_user_widening_cast_divergence` pins the SQL-door
+  widening-cast pair as registry DF-PLAN-INTRO-CAST-1 (today's equal answers; reds when the Spark door types
+  integer literals as INT before coercion). pins: df-plan-introspect-1/C-015
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
   / `Row.index` answer the nine `row.*` cells of the committed run-15b oracle
   ([facade_row_oracle.json](facade_row_oracle.json), live PySpark 4.1.2) — value counts
@@ -653,7 +693,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ex-22-types-writerv2/C-003, C-005
 - [test_examples_dataframe_c.py](test_examples_dataframe_c.py) — **EX-18 (2026-09-04):**
   the seven divergence pins for the DataFrame-c example batch — the `sameSemantics`
-  alias arm answers handle identity where Spark answers plan equality (EX-DF-11),
+  alias arm answers plan equality like Spark (EX-DF-11, FIXED 2026-09-15 by
+  DF-PLAN-INTROSPECT-1 round 3),
   `replace` without subset now replaces typed cells per column (EX-DF-12, FIXED by
   REPLACE-LINEAR-1 2026-09-14),
   `sample`'s stable seeded set where Spark's keyword-seed spelling drops the seed and
@@ -1408,6 +1449,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   default ceiling, so the `EXPECTED_*` tables split into
   [_dfcore_1_expected.py](_dfcore_1_expected.py) — the gate's sanctioned out.
   pins: eager-own-1/C-002
+  DF-PLAN-INTROSPECT-1 (2026-09-14): the class dir gains exactly `inputFiles`
+  and `semanticHash` (one-line bindings over `plan_introspect.py`); package and
+  core each gain exactly `plan_introspect` behind the new module import.
+  pins: df-plan-introspect-1/C-004
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.
@@ -1578,7 +1623,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   nested access (array/map/struct) Arrow value+type; `try_cast` display + null-on-fail +
   LongType Arrow int64; `cast`/`try_cast` `NOT_DATATYPE_OR_STR`; `transform` chain +
   `NOT_CALLABLE`/`NOT_COLUMN` gates; `F.when` + chained `.when` str→`NOT_COLUMN`;
-  `DataFrame.sameSemantics`/`same_semantics` non-DF→`NOT_DATAFRAME` + handle-identity pins.
+  `DataFrame.sameSemantics`/`same_semantics` non-DF→`NOT_DATAFRAME` + plan-equality pins
+  (range twins equal since DF-PLAN-INTROSPECT-1 round 3).
   (**octo C1:** type gates + missing pins + sameSemantics honesty; **octo C2:** getItem
   Arrow int/string type pins.)
 - `test_udf.py` / `test_udf_oracle.py` / `udf_oracle_funcs.py` — **U8 classic scalar Python

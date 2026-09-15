@@ -1,5 +1,11 @@
 # map — python/repark-parity/tests
 
+DF-PLAN-INTROSPECT-1 follow-up round 3 (2026-09-15, R-11): CAP-1 mirror row
+ratcheted down with the code — `dataframe/core.py` 4027 → 4014 (the
+`sameSemantics` body moves to `dataframe/plan_introspect.py`). The
+`check_lib_py.py` exception row moved in the same commit; no row raised.
+pins: df-plan-introspect-1/C-012
+
 TYPES-BASES-1 (2026-09-14): CAP-1 mirror row ratcheted down with the code —
 `spark/types.py` 1834→1791 after the abstract bases, spatial types,
 `UserDefinedType`, and spatial token helpers moved to `spark/types_bases.py`.
@@ -320,6 +326,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   **DF-SURFACE-A-1 (2026-09-14):** 932 → 939 and the dataframe family 153 → 160 as `DataFrame.to`, `withMetadata`, `registerTempTable`, `checkpoint`, `sparkSession`, `isLocal` and `executionInfo` join the enumerated surface (all covered by `docs/examples/dataframe/schema_reconcile.py` and `docs/examples/dataframe/session_and_checkpoint.py`; `inputFiles` and `semanticHash` left the unit under R-5 to the future Rust unit DF-PLAN-INTROSPECT-1; backlog baseline unchanged). pins: df-surface-a-1/C-008
   **SESSION-SURFACE-1 step 1 (2026-09-14):** 930 → 949 as the 19 card names join the session family — the tag quartet, the interrupt trio, the five Connect-only names, `readStream`/`streams`/`dataSource`, `addArtifact`/`addArtifacts`, `profile`, `tvf` — all covered by the three new `docs/examples/session/` scripts, so the backlog baseline is unchanged. pins: session-surface-1/C-009
   **SESSION-SURFACE-1 step 1 (2026-09-14):** 948 → 967 as the 19 card names join the session family — the tag quartet, the interrupt trio, the five Connect-only names, `readStream`/`streams`/`dataSource`, `addArtifact`/`addArtifacts`, `profile`, `tvf` — all covered by the three new `docs/examples/session/` scripts, so the backlog baseline is unchanged. pins: session-surface-1/C-009
+- `test_ex_0_example_coverage.py` — **DF-PLAN-INTROSPECT-1 (2026-09-14):** the enumerated public surface moves 961 → 963 and the dataframe family 164 → 166 as `DataFrame.inputFiles` and `DataFrame.semanticHash` join the enumerated surface through the one-line class-body delegations (both covered by `docs/examples/dataframe/plan_introspect.py`, so the backlog baseline is unchanged). pins: df-plan-introspect-1/C-003
+- `test_ex_0_example_coverage.py` — **DF-PLAN-INTROSPECT-1 (2026-09-15, rebase onto main after #605–#609):** the enumerated public surface moves 1035 → 1037 (1041 → 1043 after #610) with `DataFrame.inputFiles` and `DataFrame.semanticHash` (measured on the rebased tree). pins: df-plan-introspect-1/C-004
 - `test_cap_1_source_file_line_cap.py` — **MAINT-POLICY-1 audit fix (2026-09-10):** `session/session_core.py` row 2305 → 2304 with the script baseline; `_temp_view_home_ref` moves to `catalog_resolution.py` to pay for the `run_maintenance` class-body declaration. pins: maint-policy-1/C-030
 - `test_cap_1_source_file_line_cap.py` — **FNP-ALIAS-1 (2026-09-15):** the `functions_expr.py` row ratchets 955 → 961 and the `functions.py` row 1962 → 1960 with the script baselines (`degrees`/`radians` move to `functions_math.py`, which sits under the default ceiling; the tail gains a third module-handle line for the new `install_into` modules, paid by one narration comment). pins: fnp-alias-1/C-001, C-004, C-006
 - `test_cap_1_source_file_line_cap.py` — REVIEW-FIX-6 (2026-09-10): `dataframe/core.py` row 4487 → 4486 with the script baseline; the four-line both-set guard is paid for by five moved comment lines, their facts moved to `python/repark/src/repark/spark/dataframe/map.md`. pins: review-fix-6/C-004
@@ -333,6 +341,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `_live_parity.py` row 1877 → 1778 with the script baseline when the three
   converged nullability disclosures retire.
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. PERF-APPROXPCT-1 (2026-09-05): `repark-python/src/column/mod.rs` 1053 → 1052 with the script baseline.
+- `test_cap_1_source_file_line_cap.py` — **DF-PLAN-INTROSPECT-1 (2026-09-15, rebase onto #610/#612):** `dataframe/core.py` row 4014 → 4015 with the script baseline (the wrapped import gains `replace_expr`). pins: df-plan-introspect-1/C-004
   **CSV-INFER-PERF-1 (2026-09-06):** `session.rs` exception retired (1002 → 988, under the default); the `_RUST_BASELINES` row is deleted. Round 2: `reader.py` 1026 → 1022 in both tables.
   pins: csv-infer-perf-1/C-006
   DF-PRINTSCHEMA-1 (2026-09-04): the `dataframe/core.py` row ratchets 6371 → 6368 with the gate table.

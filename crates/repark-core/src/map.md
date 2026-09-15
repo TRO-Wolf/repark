@@ -197,6 +197,50 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `cfg!(debug_assertions)`. The measurement runner refuses to write a report unless it is
   false, so an H-3 number can never come from a debug build.
   pins: perf-dynflatten-1-measure/C-002
+- `plan_canonical.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-15, round 4):** the
+  expression-canonicalization half of the hash, split out when the expression
+  family outgrew `plan_introspect.rs`. `RelTable` numbers scans and subquery
+  aliases in walk order (view-backed scans expand inline, cache-view scans
+  expand through the lineage map, leafless aliases take an ordinal of their
+  own) and resolves every column reference to `(relation ordinal, column
+  name)`; the comparison strip consults the pre-analysis user-cast set (a
+  column-side cast beside a bare literal whose value fits the native leaf type
+  blocks, coercion still strips); binary comparisons canonicalize operand
+  order with operator flips and `AND`/`OR` chains flatten and sort.
+  pins: df-plan-introspect-1/C-013, C-015
+- `plan_introspect.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-14; follow-ups 2026-09-15,
+  rounds 1–4):** three plan-introspection kernels over a `DataFrame`'s plan.
+  `input_files` walks the built (never executed) physical plan and collects every
+  `FileScanConfig` file-group entry behind a `DataSourceExec`, rendered as the
+  object store names it (`file:///` for local paths, remote schemes unchanged) and
+  de-duplicated in first-appearance order; a plan with no file scan answers empty.
+  `semantic_hash` always analyzes first, then streams the analyzed plan into a
+  process-seeded hasher with no intermediate string: output alias names are
+  skipped, column names hash with hex runs of 8+ normalized to `#`, every column
+  reference hashes as its resolved relation ordinal plus its name (see
+  `plan_canonical.rs`), scan-level pushed-down filters are not hashed
+  (the `Filter` node above carries them), file scans fingerprint by listing-table
+  paths, `generate_series` by bounds, memtables by construction identity
+  (independently built frames never share a hash, same data or not — Spark answers
+  the same), cube / rollup / grouping sets by distinct tags, and cache-view scans
+  expand through the caller-supplied lineage map while other temp-view scans expand
+  inline. Identity projections (each output the input column in order, bare or
+  same-named alias) and subquery aliases strip; integer-literal casts fold to the
+  target width, and an integer comparison between a column (through int-widening
+  casts only) and an integer literal hashes as operator plus bare name plus `i128`
+  value, so the string, Column, and SQL doors hash one filter one way. A column
+  cast the user wrote (a cast beside a bare literal in the pre-analysis plan
+  whose value fits the native leaf type) blocks that strip, so narrowing and
+  DF-door widening casts hash apart from the plain
+  column; casts the analyzer or the SQL door inserted for coercion still strip
+  (a SQL-door widening cast is indistinguishable from coercion after eager
+  analysis — OPEN C-015).
+  `same_semantics` compares the canonical analyzed-plan byte streams (never the
+  32-bit fold alone). The fold keeps the low 32 bits of the digest as a signed
+  int. Depth-200 chained-filter hash medians 0.0060s on the always-analyze build
+  (2026-09-15, release module, round 4). The Iceberg scan exec exposes table and snapshot
+  only, never materialized data files, so Iceberg frames answer empty.
+  pins: df-plan-introspect-1/C-001, C-002, C-006, C-007, C-008, C-009, C-010, C-011, C-013, C-014
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast first to repark-iceberg's `CommitStateUnknownError`

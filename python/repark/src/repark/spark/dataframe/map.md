@@ -188,6 +188,25 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   narrow-width divergence `to(…smallint)` reports is LOGICAL-WIDTH-1).
   pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005
   **COLUMN-PARITY-1 (2026-09-15):** `to()` and `withMetadata` keep passing `alias(name, metadata=)`; with the column overlay the stamp, replace, cache and `to()` target-override positions answer Spark, and DF-METADATA-1 narrows to the positions a plan transform still loses (an earlier plain-rename repair in this branch was reverted).
+- `plan_introspect.py` owns the DF-PLAN-INTROSPECT-1 method bodies (2026-09-14;
+  follow-up 2026-09-15) behind the one-line class bindings: `inputFiles` lists
+  source files through the native `input_files` walk (cache reads the stashed
+  `_lineage_inner`, checkpoint answers the truncated empty list) and `semanticHash`
+  hashes the analyzed logical plan through the native `semantic_hash` fold, passing
+  the live cache-view lineage map (view name to pre-cache native plan, gathered from
+  the session token's tracked cache frames). `core.py` keeps its exact baseline by
+  absorbing the two binding lines into one collapsed validation raise. Follow-up
+  round 2 (2026-09-15, R-6/R-7/R-8) needs no facade change: the bodies already pass
+  the analyzed plan plus lineages through. Follow-up round 3 (2026-09-15, R-9/R-10):
+  `sameSemantics` moves here behind the one-line class binding and compares the
+  canonical analyzed-plan streams through native `same_semantics` (a user-written
+  cast stays in the plan; only analyzer-inserted coercion normalizes); `core.py`
+  ratchets 4027 → 4014. Follow-up round 4 (2026-09-15, R-17): `inputFiles`
+  memoizes per frame in a `WeakKeyDictionary` from frame to `(id(native),
+  files)` with native-identity validation and copy-out answers, so repeated
+  calls skip the re-plan plus re-listing while a new frame over the same path
+  lists again.
+  pins: df-plan-introspect-1/C-001, C-002, C-006, C-008, C-009, C-010, C-011, C-013, C-014
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
   `toLocalIterator`. Two converters live here: `rows_from_arrow_table_python` is the unchanged
   pure-Python path and stays the correctness oracle, and `rows_from_arrow_table` adds the
@@ -840,8 +859,8 @@ that held the comment (pins: comment-core-1/C-003).
 - `unpersist`: `blocking` is signature parity; a single-node drop is always synchronous.
 - `localCheckpoint`: `storageLevel` is accepted for signature parity and ignored
   (single-node MemTable only). `eager` is live.
-- `sameSemantics`: Best-effort identity of the native `PyDataFrame` object, not full
-  semantic equality.
+- `sameSemantics`: Plan equality over the canonical analyzed-plan stream (R-9);
+  independently built local frames still answer `False` by construction identity.
 - `declare_sorted`: Caching redirects the scan; declare the source before caching. Bind
   with the same case-insensitive overlay as `select`. Re-resolve the table source after
   re-register, or the declaring frame never sees the elision.

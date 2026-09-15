@@ -1708,6 +1708,45 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   metrics are a second aggregation pass over the same plan. Blocking `get` is not
   an honest single-node answer, so repark raises Spark's own `NO_OBSERVE_BEFORE_GET`
   in both the never-attached and attached-but-no-action cases.
+### DF-PLAN-INTRO-1 — `inputFiles` lists scan files; `semanticHash` hashes the analyzed plan
+- **repark** — `inputFiles()` walks the built physical plan and lists every file-scan
+  group entry as `file:///` URIs in first-appearance order; a local frame answers
+  `[]`. `semanticHash()` hashes the always-analyzed logical plan (view inlining,
+  qualifier strip, identity-projection passthrough, integer-comparison
+  canonicalization) folded to a Java int. A user-written cast stays in the plan;
+  only analyzer-inserted coercion normalizes. An Iceberg table scan answers `[]` like
+  Spark, and a manifest-backed file list is not offered. Independently built local
+  frames hash by construction identity, like Spark.
+- **Apache Spark** — `inputFiles` collects file relations only, so an Iceberg table
+  scan (V2 FileScan) answers `[]`; independently built same-data twins answer unequal
+  hashes with `sameSemantics` false. *(oracle: recorded — cells
+  `planintro_local_data_same_data_equal_hash`,
+  `planintro_local_data_same_data_same_semantics`,
+  `planintro_df_filter_vs_sql_where`, `planintro_select_all_named_vs_df` and the
+  sibling `planintro_*` cells in `facade_dataframe_surface_oracle.json`.)*
+- **Pin** — `python/repark/tests/test_df_plan_introspect_1.py::test_inputfiles_iceberg_scan_is_empty`,
+  `…::test_semantichash_df_filter_matches_sql_where`,
+  `…::test_semantichash_identity_selects_match_frame`
+- **Rationale** — IMPLEMENTED 2026-09-15 (DF-PLAN-INTROSPECT-1 follow-up round 2,
+  rulings R-6/R-7/R-8). FIXED 2026-09-15 (follow-up round 3, ruling R-9):
+  `sameSemantics` now answers plan equality per EX-DF-11 instead of handle identity.
+
+### DF-PLAN-INTRO-CAST-1 — on the SQL door a user widening cast hashes like the plain column — **BACKLOG 2026-09-15**
+
+- **repark** — `spark.sql("SELECT * FROM t WHERE CAST(x AS BIGINT) > 1")` and `… WHERE x > 1` (and the same pair
+  inside a `CASE WHEN`) answer equal `semanticHash` values and `sameSemantics` True over an INT column `x`. The Spark
+  door types the literal `1` as BIGINT and coerces the column, so both spellings reach the hasher as byte-identical
+  analyzed plans. On the DataFrame door `col("x").cast("bigint") > 1` and `col("x") > 1` hash apart, as Spark does.
+- **Apache Spark** — the literal is INT, the plain comparison stays INT, and the user's `Cast` stays in the analyzed
+  plan: both pairs answer unequal hashes and `sameSemantics` False. *(oracle: live PySpark 4.1.2, 2026-09-15, cells
+  `planintro_r4_sql_cast_in_filter_vs_plain`, `planintro_r4_sql_cast_in_case_vs_plain` in
+  `facade_dataframe_surface_oracle.json`.)*
+- **Pin** — `python/repark/tests/test_df_plan_introspect_1.py::test_semantichash_sql_door_user_widening_cast_divergence`
+- **Rationale** — BACKLOG, filed by DF-PLAN-INTROSPECT-1 round 4 (ruling R-19). The hash cannot tell identical inputs
+  apart; the fix is SQL-door integer literal typing (the seam FNP9-ARRAY-INSERT-BIGINT-1 names: literals narrow in
+  `SparkIntegerLiteral` only after coercion), owned by the SQL planner. The pin reds when that lands; retire this row
+  in the same change.
+  pins: df-plan-introspect-1/C-015
 
 ### IO-ORC-1 — the ORC reader and writer names are a declared `NOT_IMPLEMENTED` refusal
 
@@ -6825,19 +6864,24 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — filed 2026-09-04 by EX-16 round 3 from the round-1 review-gap entry; FIXED the
   same day by DF-PRINTSCHEMA-1. The example's `rstrip` arm holds on both engines either way.
 
-### EX-DF-11 — `sameSemantics` answers handle identity on an aliased twin; Spark answers plan equality
+### EX-DF-11 — `sameSemantics` answers plan equality — **FIXED 2026-09-15, DF-PLAN-INTROSPECT-1**
 
-- **repark** — `sameSemantics` is best-effort native-handle identity: `frame.sameSemantics(frame)`
-  answers `True`, while `frame.sameSemantics(frame.alias("x"))` answers `False` because `alias`
-  spawns a new handle. The self, identical-recreate, and filtered-twin arms measured Spark-equal.
+- **repark** — `sameSemantics` compares the canonical analyzed-plan byte streams in Rust:
+  `frame.sameSemantics(frame)` and `frame.sameSemantics(frame.alias("x"))` answer `True`;
+  independently built same-data local frames answer `False` by construction identity, like
+  Spark. The identical-recreate and filtered-twin arms measured Spark-equal.
 - **Apache Spark** — the aliased twin carries the same logical plan, so
   `frame.sameSemantics(frame.alias("x"))` answers `True`; the identical-recreate and
   filtered-twin arms answer `False` like repark. *(oracle: live PySpark 4.1.2, ANSI on,
-  2026-09-04, EX-18 DataFrame-c batch, six-row `g/k/v` frame.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_same_semantics_alias_divergence`
-- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
-  covered by the agreeing arms; this row records the alias arm until repark compares plans the
-  way Spark does.
+  2026-09-04, EX-18 DataFrame-c batch, six-row `g/k/v` frame; re-measured 2026-09-15 on the
+  `a int, big bigint, b string` parquet probe
+  `planintro_cast_probe_2026-09-15.json`: alias, filter-twin, int-literal-door, and
+  literal-width twins true; narrowing, widening, and string casts false.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_same_semantics_alias_plan_equality`
+- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. FIXED 2026-09-15
+  (DF-PLAN-INTROSPECT-1 follow-up round 3, ruling R-9): the method body moved to
+  `dataframe/plan_introspect.py` behind a native `same_semantics` comparison, so the alias
+  arm answers plan equality the way Spark does. History: handle identity until R-9.
 
 ### EX-DF-12 — `replace` outside the subset arm casts or raises; Spark replaces typed cells — **FIXED 2026-09-14, REPLACE-LINEAR-1**
 
