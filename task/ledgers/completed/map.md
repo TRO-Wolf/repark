@@ -581,6 +581,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   refusals, one delegation, one restored connector path, no Rust change.
   `risk_tier: standard`. Branch `feat/io-declared-1`.
   pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [java-double-str-1-ledger.md](java-double-str-1-ledger.md) — Unit ledger — JAVA-DOUBLE-STR-1 · DOUBLE/FLOAT stringify as Java does
 - [ledger-reading-1-ledger.md](ledger-reading-1-ledger.md) —
   **LEDGER-READING-1 step 1 (2026-09-09), in flight:**   reading units may prove clauses on
   document evidence (R-10). A staging ledger whose first 40 lines carry the READING value of

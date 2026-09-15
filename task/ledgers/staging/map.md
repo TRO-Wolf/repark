@@ -653,7 +653,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `SET TIME ZONE LOCAL` a dated refusal, and the D-4 measurement recorded — timezone and ANSI are
   accepted-but-not-applied residues (TZ-3, SET-ANSI-RUNTIME-1). `risk_tier: standard`.
   Branch `feat/sql-set-door-1`. pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
-- [java-double-str-1-ledger.md](java-double-str-1-ledger.md) —
+- [java-double-str-1-ledger.md](../completed/java-double-str-1-ledger.md) —
   **JAVA-DOUBLE-STR-1 step 1 (2026-09-15), in flight:** DOUBLE/FLOAT stringify as
   Java does (registry BL-7) — the base-tree census of every Spark-door and facade
   path reaching Arrow float→utf8 text plus red pins on both doors
