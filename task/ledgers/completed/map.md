@@ -412,6 +412,14 @@ else. The next pickup's `make ledger-archive` files everything here under
   `collect()` raises `MemoryError`. Seven mutations, seven kills. `risk_tier: elevated`.
   Branch `harden/h3-spill-residue-1`, PR #401.
   pins: h3-spill-residue-1/C-001, C-002, C-003, C-004, C-005
+- [ice-commit-unknown-1-ledger.md](ice-commit-unknown-1-ledger.md) —
+  **ICE-COMMIT-UNKNOWN-1 (2026-09-14), in flight:** `ErrorKind::CommitStateUnknown` maps to a
+  dedicated `CommitStateUnknownException(PySparkException)` carrying the commit's
+  `engine.operation-id` — a new `Error::CommitStateUnknown { message, operation_id }` variant,
+  a new `ErrorClass`, a `CommitStateUnknownError` wrapper stamped at the six RePark mint sites,
+  and the registry/inventory rows naming the Airflow alert + retry boundary.
+  `risk_tier: standard`. Branch `feat/ice-commit-unknown-1`.
+  pins: ice-commit-unknown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [ice-gold-twice-1-ledger.md](ice-gold-twice-1-ledger.md) —
   **ICE-GOLD-TWICE-1 (2026-09-14), in flight:** the replace path into the nightly —
   `_acceptance_replace.run_create_or_replace_twice` (3-row CTAS seed, two

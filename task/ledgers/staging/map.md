@@ -5,14 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [ice-commit-unknown-1-ledger.md](ice-commit-unknown-1-ledger.md) —
-  **ICE-COMMIT-UNKNOWN-1 (2026-09-14), in flight:** `ErrorKind::CommitStateUnknown` maps to a
-  dedicated `CommitStateUnknownException(PySparkException)` carrying the commit's
-  `engine.operation-id` — a new `Error::CommitStateUnknown { message, operation_id }` variant,
-  a new `ErrorClass`, a `CommitStateUnknownError` wrapper stamped at the six RePark mint sites,
-  and the registry/inventory rows naming the Airflow alert + retry boundary.
-  `risk_tier: standard`. Branch `feat/ice-commit-unknown-1`.
-  pins: ice-commit-unknown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
