@@ -529,35 +529,29 @@ currentDate = current_date  # noqa: N816
 
 
 def to_date(col: Column | str, format: str | None = None) -> Column:
-    """Parse/cast to date (PySpark ``functions.to_date``).
-
-    A bare ``str`` is a **column name** (Spark ColumnOrName), not a date literal. Pass
-    ``lit("2020-01-02")`` for a string literal. ``format=`` is refused until Java-pattern
-    parity is wired (engine uses Chrono ``%Y`` rather than Spark ``yyyy``).
-    """
-    if format is not None:
-        from repark.errors import UnsupportedOperationException
-
-        raise UnsupportedOperationException(
-            "to_date(format=...) is not supported yet "
-            "(engine Chrono patterns ≠ Spark Java patterns; use format-less to_date or SQL)"
+    """Parse/cast to date (PySpark ``functions.to_date``)."""
+    if isinstance(format, Column):
+        raise PySparkTypeError(
+            "[NOT_ITERABLE] Column is not iterable.",
+            errorClass="NOT_ITERABLE",
+            messageParameters={"objectName": "Column"},
         )
-    return _scalar("to_date", col)
+    if format is None:
+        return _scalar("to_date", col)
+    return _scalar("to_date", col, format, lit_indices=frozenset({1}))
 
 
 def to_timestamp(col: Column | str, format: str | None = None) -> Column:
-    """Parse/cast to timestamp (PySpark ``functions.to_timestamp``).
-
-    A bare ``str`` is a **column name**. ``format=`` refused (same Chrono/Java gap as to_date).
-    """
-    if format is not None:
-        from repark.errors import UnsupportedOperationException
-
-        raise UnsupportedOperationException(
-            "to_timestamp(format=...) is not supported yet "
-            "(engine Chrono patterns ≠ Spark Java patterns; use format-less to_timestamp or SQL)"
+    """Parse/cast to timestamp (PySpark ``functions.to_timestamp``)."""
+    if isinstance(format, Column):
+        raise PySparkTypeError(
+            "[NOT_ITERABLE] Column is not iterable.",
+            errorClass="NOT_ITERABLE",
+            messageParameters={"objectName": "Column"},
         )
-    return _scalar("to_timestamp", col)
+    if format is None:
+        return _scalar("to_timestamp", col)
+    return _scalar("to_timestamp", col, format, lit_indices=frozenset({1}))
 
 
 def from_unixtime(col: Column | str | int, format: str | None = None) -> Column:
@@ -606,15 +600,21 @@ def months_between(date1: Column | str, date2: Column | str, roundOff: bool = Tr
     return impl_between(date1, date2, roundOff)
 
 
-def unix_timestamp(timestamp: Column | str | None = None, format: str | None = None) -> Column:
+def unix_timestamp(
+    timestamp: Column | str | None = None, format: str | None = "yyyy-MM-dd HH:mm:ss"
+) -> Column:
     """Epoch seconds (PySpark ``functions.unix_timestamp``)."""
-    if format is not None:
-        raise UnsupportedOperationException(
-            "functions.unix_timestamp format argument is not supported yet"
+    if isinstance(format, Column):
+        raise PySparkTypeError(
+            "[NOT_ITERABLE] Column is not iterable.",
+            errorClass="NOT_ITERABLE",
+            messageParameters={"objectName": "Column"},
         )
     if timestamp is None:
         return _scalar("unix_timestamp")
-    return _scalar("unix_timestamp", timestamp)
+    if format is None:
+        return _scalar("unix_timestamp", timestamp)
+    return _scalar("unix_timestamp", timestamp, format, lit_indices=frozenset({1}))
 
 
 def hash(*cols: Column | str) -> Column:

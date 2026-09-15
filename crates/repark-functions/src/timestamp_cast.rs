@@ -349,7 +349,10 @@ struct SparkToDate {
 impl SparkToDate {
     fn new() -> Self {
         Self {
-            signature: Signature::any(1, Volatility::Volatile),
+            signature: Signature::one_of(
+                vec![TypeSignature::Any(1), TypeSignature::Any(2)],
+                Volatility::Volatile,
+            ),
         }
     }
 }
@@ -382,6 +385,9 @@ impl ScalarUDFImpl for SparkToDate {
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+        if arrays.len() == 2 {
+            return crate::java_datetime::to_date_with_format(&arrays[0], &arrays[1], &args);
+        }
         let dates = invoke_local_dates(&arrays[0], args.config_options.as_ref())?;
         Ok(ColumnarValue::Array(dates))
     }
@@ -444,7 +450,11 @@ impl SparkUnixTimestamp {
     fn new() -> Self {
         Self {
             signature: Signature::one_of(
-                vec![TypeSignature::Nullary, TypeSignature::Any(1)],
+                vec![
+                    TypeSignature::Nullary,
+                    TypeSignature::Any(1),
+                    TypeSignature::Any(2),
+                ],
                 Volatility::Volatile,
             ),
             aliases: vec!["to_unix_timestamp".to_string()],
@@ -592,7 +602,7 @@ fn current_unix_seconds() -> Result<i64> {
     })
 }
 
-fn unix_seconds_from_timestamp(array: &dyn Array) -> Result<Int64Array> {
+pub(crate) fn unix_seconds_from_timestamp(array: &dyn Array) -> Result<Int64Array> {
     let unit = argument_time_unit("unix_timestamp", array.data_type())?;
     let per_second = ticks_per_second(unit);
     Ok(timestamp_ticks(array)?
@@ -635,6 +645,9 @@ fn invoke_unix_timestamp(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
         return Ok(ColumnarValue::Scalar(ScalarValue::Int64(Some(seconds))));
     }
     let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+    if arrays.len() == 2 {
+        return crate::java_datetime::unix_seconds_with_format(&arrays[0], &arrays[1], args);
+    }
     let input = &arrays[0];
     let ansi = spark_ansi_enabled_from_options(args.config_options.as_ref());
     let seconds = match input.data_type() {

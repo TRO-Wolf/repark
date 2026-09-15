@@ -128,3 +128,46 @@ INTERVAL 0 DAY` staying `date` (2 cells), and 4 bare-`current_time` answers
   translated to Arrow time64 assertions (no `typeof` on the SQL door, the
   FNP-11A R2 precedent); Python `tm`-column value cells run on the TIME frame,
   `UNRESOLVED_COLUMN` error cells on the plain frame.
+
+## 3. Step-2 record (2026-09-15, run 16a round 2)
+
+One Java-pattern parser in Rust per D-1: `crates/repark-functions/src/java_datetime.rs`
+(997 lines, under the 1,000 ceiling), shared by `to_date` / `to_timestamp` /
+`unix_timestamp` with a format. It tokenizes `yyyy`, `yy`, `M`, `MM`, `MMM`,
+`MMMM`, `d`, `H`, `h`, `m`, `s`, `S` (widths 1–9), `a`, quoted literals and
+separators; an unquoted `Y` run refuses
+`[INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION]`; every
+other failure renders Spark's `[CANNOT_PARSE_TIMESTAMP]` text (ANSI) or NULL
+(non-ANSI). Reuses the `CANNOT_PARSE_TIMESTAMP` precedent in
+`timestamp_cast.rs`; month-name matching mirrors `try_to_date` (self-contained
+tables, no `convert.rs` churn). Constant patterns compile once per batch
+(`FormatPlan::Shared`, per-row fallback); each input column casts once per
+batch (D-6). `to_timestamp` returns LTZ in the session zone, `unix_timestamp`
+seconds from the parsed wall clock, `to_date` the wall DATE. Non-string inputs
+with a format keep the 1-arg path (covers `unix_timestamp(dt, 'yyyy')` =
+midnight of the date). `to_timestamp` 1-arg malformed strings translate to
+Spark's `[CAST_INVALID_INPUT]` under ANSI and NULL otherwise. Python-only
+logic: none (Rust first holds; the facade binds names, `lit(format)` shapes
+and the `NOT_ITERABLE` refusal for a Column format). Frozen names per D-2:
+required parameters unchanged (`unix_timestamp` default widened `None` →
+`'yyyy-MM-dd HH:mm:ss'` to the recorded oracle spelling; required set stays
+empty so the freeze holds).
+
+Per-name pin counts (both doors, both ANSI settings, both zones):
+`to_date` 22/22, `to_timestamp` 42/44, `unix_timestamp` 28/28 green; facade
+signatures match for all three names (C-001 partial). Rust unit tests beside
+the parser: 11 (`java_datetime::tests::*`); `cargo test -p repark-functions`
+572 passed, 0 failed, 1 ignored. Census per D-4: no name added or stubbed, so
+the deferred tuples, split-identity tail, EX-0 count and example walk are
+untouched; the `test_chrono_java_format_refusal` pin in `test_fn_batch3.py`
+became `test_java_datetime_patterns_parse` (the refusal it pinned is gone),
+plus a Python-door quoted-`T` assertion. `functions_expr.py` held at exactly
+2235 lines (cap-1 neutral).
+
+Residuals for later steps (registry untouched until step 7): cells 129/130
+(`to_timestamp(…, "yyyy-MM-dd'T'HH:mm:ss")`, SQL door) stay red — the SQL layer
+parses `"…"` as an identifier (`AnsiDialect` in `crates/repark-sql`), a
+parser/dialect edit D-3 assigns to run 16c; the kernel path is pinned on the
+Python door per the D-10 precedent, no HALT. All other reds in the pin file
+are step 3–7 names (`to_timestamp_ltz/ntz`, `try_to_timestamp`, TIME family,
+`to_char` family, `make_timestamp` keywords, BL-13/BL-14).

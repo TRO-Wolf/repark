@@ -2520,7 +2520,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   class, message and params (`sqlExpr`/`paramIndex`/`inputSql`/`inputType`/
   `requiredType`), not `PySparkTypeError`.
   pins: perf-approxpct-1/C-002
-- `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.
+- `test_fn_batch3.py` — R-FN-BATCH3 datetime + Java-pattern parsing (FNP-11B step 2
+  answers `to_date` / `to_timestamp` with formats) + loud census.
 - `test_fn_batch2.py` (octo C1: exact overlay/slice pins)` — **R-FN-BATCH2**: strings/collection value+type+null pins; loud census
   (soundex/sentences/arrays_zip/map_from_arrays/locate pos / array_join null_replacement).
 

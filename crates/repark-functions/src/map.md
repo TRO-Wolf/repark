@@ -689,6 +689,19 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (alias `to_unix_timestamp`). Zero-arg `unix_timestamp()` is a scalar epoch so a
   three-row input yields three identical BIGINT values.
   pins: date-fn-1-spark-date-spelling/C-002, C-003
+- `java_datetime.rs` — **FNP-11B step 2 (2026-09-15):** the one shared Java-datetime-pattern
+  parser (card D-1) behind `to_date` / `to_timestamp` / `unix_timestamp` with a format.
+  Tokenizes `yyyy`/`yy`/`M`/`MM`/`MMM`/`MMMM`/`d`/`H`/`h`/`m`/`s`/`S`/quoted literals;
+  an unquoted `Y` run refuses
+  `[INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION]`; other failures
+  render Spark's `[CANNOT_PARSE_TIMESTAMP]` text under ANSI and NULL otherwise. Constant
+  patterns compile once per batch (`FormatPlan::Shared`, per-row fallback); each input
+  column is cast once per batch. Batch entry points `to_date_with_format` /
+  `stamps_with_format_column` / `unix_seconds_with_format`; non-string inputs keep the
+  1-arg path with the format ignored. `to_timestamp` 1-arg malformed strings translate to
+  `[CAST_INVALID_INPUT]` under ANSI and NULL otherwise. SQL-door double-quoted pattern
+  literals stay a run-16c parser seam (cells 129/130).
+  pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`. pins: types-1/C-006
 - `collection.rs` — `SparkElementAt` (`element_at`; public `element_at_udf()` for the facade embed):

@@ -254,6 +254,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   mirror). `functions.py` ratchets 1962 → 1960: the two re-export entries move between its
   import blocks, the tail gains a third module-handle line for the new `install_into` modules,
   paid by one narration comment line.
+  **FNP-11B step 2 (2026-09-15):** `to_date` / `to_timestamp` / `unix_timestamp` stop
+  refusing `format=` and bind it as a literal (`lit_indices={1}`); a Column format raises
+  `NOT_ITERABLE`; `unix_timestamp` takes Spark's default `'yyyy-MM-dd HH:mm:ss'`. The file
+  holds exactly 2235 lines. pins: fnp-11b/C-001, C-002
 - `functions_stack.py` — **PERF-UNPIVOT-1 (2026-09-12):** `F.stack` / `StackCall` /
   `select_with_stack_if_present`. Installed last onto `functions.py`. pins: perf-unpivot-1/C-004
 - `functions_json.py` — **FNP-10 (2026-09-05):** the JSON wrappers (`get_json_object`,

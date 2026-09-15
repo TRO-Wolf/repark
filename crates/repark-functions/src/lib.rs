@@ -24,6 +24,7 @@ mod groups_null_state;
 pub mod higher_order;
 pub mod instant_ts;
 pub mod integer_spark;
+pub mod java_datetime;
 mod java_double;
 mod java_regex;
 pub mod json;

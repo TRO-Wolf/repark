@@ -86,6 +86,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   Spark-exact `repark_functions::expr_fn::degrees` / `radians` pair, which carries the
   refusals and the ANSI switch the engine UDFs lack.
   pins: fnp-bitmap-facade-1/C-011, C-012, C-013, C-014
+  **FNP-11B step 2 (2026-09-15):** the `to_date` arm takes 1 or 2 args
+  (`expr_fn::to_date` widens to `Vec<Expr>`); `unix_timestamp` takes 0 to 2.
+  pins: fnp-11b/C-002, C-003
 - [`function_dispatch/dispatch_json.rs`](function_dispatch/dispatch_json.rs) —
   **FNP-9/10 (2026-09-05):** arms for
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
