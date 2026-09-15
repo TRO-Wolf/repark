@@ -30,7 +30,7 @@ parse is in scope).
 | C-001 | `SparkDataType::Geometry { srid }` / `Geography { srid }` variants (mixed form as Spark's `any`, stored as `-1` matching `SpatialType.MIXED_SRID`) parse in `parse_atomic_token` for exactly the oracle accept cells, refusing the rest with the existing `cannot parse datatype` `ValueError`; the supported-SRID sets live once in Rust. | `cargo test -p repark-spark type_table` arms for every cell + `test_types_geo_ddl_1.py::test_geo_ddl_parse_cells` / `::test_geo_ddl_error_cells` on both DDL doors. | **PROVEN** | Red-first in `a7330a74` (`ValueError: cannot parse datatype: 'g geography(4326)'`). Green after: `type_table::tests::spatial_ddl_accept_cells_parse` + `::spatial_ddl_refuse_cells_keep_parse_error` (4/4 in the `type_table` filter run) and `test_geo_ddl_parse_cells` / `::test_geo_ddl_error_cells` on `DataType.fromDDL` and `_parse_datatype_string` (value, `simpleString`, `json`, `repr` equal to the cell; the 7 `PARSE_SYNTAX_ERROR` cells keep the `ValueError` shape). |
 | C-002 | `type_bridge.rs` carries the two tags both ways so `DataType.fromDDL`, `_parse_datatype_string`, `createDataFrame(schema="…")` parsing and `spark.read.schema("…")` parsing answer the Python objects the JSON door already builds (value AND `simpleString` AND `json` equal to the cell). | Same Python pins as C-001 (both doors share the one Rust parse) + the C-003 schema-string pins. | **PROVEN** | `test_geo_ddl_bridge_tags_both_ways` pins the wire shape directly (`simple_string_from_descriptor({"kind": "geometry", "srid": 4326})` → `"geometry(4326)"`, `geography/-1` → `"geography(any)"`, `ddl_token_from_descriptor(geometry/0)` → `"GEOMETRY(0)"`). The Python decode arm landed in `_type_table.py::_descriptor_to_datatype` (the bridge's Python half); no encoder arm was added, so every other surface keeps its fallback/refusal bytes; `types.py` / `types_bases.py` untouched. |
 | C-003 | The Arrow mapping in `type_table.rs`: no Arrow type carries a spatial column today, so the new variants refuse `arrow_type_from_spark` loudly instead of falling into the `Utf8` catch-all; a schema string with a spatial field used to CREATE data keeps today's `UnsupportedOperationException` column-use refusal. | `test_types_geo_ddl_1.py::test_geo_ddl_create_schema_string_refuses` + `::test_geo_ddl_reader_schema_string_refuses`; existing V3-GEO-1 pins stay green. | **PROVEN** | Red-first in `a7330a74` (both tests died at the parse step). Green after: `spatial_arrow_mapping_refuses_naming_the_type` plus both Python refusal tests (`createDataFrame([], "a int, g geography(4326)")` and `read.schema("g geography(4326)").csv().collect()` refuse `UnsupportedOperationException` naming `geography(4326)`). Measured: Arrow defines no spatial type (`spark_type_from_arrow` correctly has no arm); the new `arrow_type_from_spark` arms refuse instead of the silent `Utf8` catch-all. Existing V3-GEO-1 pins green (`test_types_bases_1.py` 77 passed; only the two C-004 BACKLOG pins red). |
-| C-004 | The two BACKLOG pins flip to equality with the cell ids; registry TYPES-GEO-DDL-1 → FIXED 2026-09-15 with the pins. | `test_types_bases_1.py::test_geometry_ddl_door_blocked` + `::test_spatial_ddl_door_blocked` rewritten; `docs/spark-sql-iceberg-parity.md` row. | **OPEN** | Flip lands after the parse arm; the old refusal docstrings move to this ledger's C-001 evidence. |
+| C-004 | The two BACKLOG pins flip to equality with the cell ids; registry TYPES-GEO-DDL-1 → FIXED 2026-09-15 with the pins. | `test_types_bases_1.py::test_geometry_ddl_door_answers` + `::test_spatial_ddl_door_answers`; `docs/spark-sql-iceberg-parity.md` row. | **PROVEN** | Renamed (not just re-asserted — `door_blocked` would lie) and green: `geo_ddl` repr plus struct equality; three parses plus the two surviving bare-token refusals. The pins reddened on the implementation tree before the flip (2 failed, 77 passed) and pass after. Registry row rewritten FIXED 2026-09-15 with the full pin list. |
 | C-005 | Rust unit tests in `crates/repark-spark` for every cell; Python pins in `python/repark/tests/test_types_geo_ddl_1.py`. | `cargo test -p repark-spark type_table` + the committed Python file (red-first, committed before the fix). | **PROVEN** | Python half committed red in `a7330a74`; Rust half (`type_table/tests.rs`, file-backed `#[cfg(test)]` module, 4 tests over all 21 cells) green in the `type_table` filter run; Python file 5/5 on the rebuilt release native. |
 
 ## Rulings
@@ -53,4 +53,48 @@ FAILED test_geo_ddl_reader_schema_string_refuses
 `test_geo_ddl_error_cells` (the 7 `PARSE_SYNTAX_ERROR` cells) passes on the base tree: the refusal shape the
 fix must preserve.
 
-VERDICT: 5 clauses, 4 PROVEN, 1 OPEN, 0 REJECTED.
+VERDICT: 5 clauses, 5 PROVEN, 0 OPEN, 0 REJECTED.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: types-geo-ddl-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card and the twenty-one recorded PySpark 4.1.2 DDL cells; both DDL doors (`DataType.fromDDL`, `_parse_datatype_string`) assert value, simpleString and json per accept cell, not one representative case.
+      artifacts: [python/repark/tests/test_types_geo_ddl_1.py, python/repark/tests/fixtures-batch13-geo.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Refusal cells (geography(0/3857), bare tokens, unknown SRID, -1, CRS string), case variants (`GEOMETRY`, `ANY`), inner whitespace, nesting in struct/array/map/field-list, the mixed `any` marker, and the still-refusing CREATE/reader schema-string doors.
+      artifacts: [python/repark/tests/test_types_geo_ddl_1.py, crates/repark-spark/src/type_table/tests.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: No unwrap/expect in product code (the new arms use let-else and combinators); test-only unwrap covered by `allow-unwrap-in-tests`; `rust-panic-ban` runs in the gate set.
+      artifacts: [crates/repark-spark/src/type_table/parse.rs, crates/repark-spark/src/type_table.rs]
+    - id: AT-4
+      status: N/A
+      justification: Pure parse over immutable input; the only shared state is the pre-existing process-local regex cache.
+    - id: AT-5
+      status: N/A
+      justification: No authn/authz, network or credential surface; DDL text in, descriptor out.
+    - id: AT-6
+      status: N/A
+      justification: No delegated critic round in this single-round lane; the adversarial check is the red-first pins (failed before, pass after) plus the BACKLOG pins reddening on the implementation tree before their flip.
+    - id: AT-7
+      status: ATTACKED
+      evidence: `cargo test -p repark-spark type_table`, `cargo test -p repark-python --lib`, `make verify`, the facade suite and the `-k "ddl or types or schema"` selection, all green on the release native; ruff 0.15.22 clean; comment-ban grep empty on every commit.
+      artifacts: [python/repark/tests/test_types_geo_ddl_1.py, python/repark/tests/test_types_bases_1.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: The oracle fixture is a verbatim copy of the recorded PySpark 4.1.2 cells (`cmp` identical); error-cell messages were never asserted beyond the class-shaped refusal the facade already owns, per the card.
+      artifacts: [python/repark/tests/fixtures-batch13-geo.json]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Accept cells answer Spark's value and type; refusal cells keep `ValueError: cannot parse datatype`; column use keeps `UnsupportedOperationException` naming the type (V3-GEO-1); the Arrow mapping refuses naming the type instead of silent `Utf8`.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red-first mutation proof — the new pins failed on the base tree (`cannot parse datatype: 'g geography(4326)'`) and pass after; the flipped BACKLOG pins failed on the implementation tree before the flip and pass after.
+      artifacts: [python/repark/tests/test_types_geo_ddl_1.py, python/repark/tests/test_types_bases_1.py]
+  complete: true
+```
