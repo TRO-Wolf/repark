@@ -190,49 +190,136 @@ samples (0.0109–0.0111s, two analyzer passes plus the byte compare).
 
 VERDICT (whole ledger, 2026-09-15 round 3): 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED.
 
+## Follow-up round 4 — 2026-09-15 (R-12..R-18, relation identity plus comparison canonicalization)
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-013 | The round-4 pins hold: relation-identity join pairs differ on both doors (critic A–E, row counts differ), swapped comparisons and AND/OR reorderings equate, overflow literals equate across doors and differ from the wrapped literal, DF-door user casts block, and the cheap null-report arms hold. | Six new `test_df_plan_introspect_1.py` tests over ten pinned `planintro_r4_*` cells plus ruling-driven asserts, with all round-2/round-3 pins re-green in the same run. | **PROVEN** | 43/43 green on the rebuilt release module (36 prior plus 7 new, one belonging to C-014). The two `planintro_r4_sql_cast_*` cells are transcribed but unpinned by C-015. pins: df-plan-introspect-1/C-013 |
+| C-014 | Repeated `inputFiles` on one frame answers identical lists from a per-handle memo, at least 5x faster on a 2k-file directory; a new frame over the same path lists again. | `test_inputfiles_memo_answers_identical_lists_fast` with hardlinked 2k-file directory. | **PROVEN** | Green in the same 43/43 run. Measured 0.0437s first call against 0.000029s second call (1520x, 2026-09-15, release module). pins: df-plan-introspect-1/C-014 |
+| C-015 | A SQL-door widening user cast (`CAST(x AS BIGINT) > 1`, and the CASE form) hashes apart from the plain column. | Cells `planintro_r4_sql_cast_in_filter_vs_plain`, `planintro_r4_sql_cast_in_case_vs_plain` (false/false). | **OPEN** | Unachievable in the hashing layer (see R-13): the Spark door returns already-analyzed plans whose plain and user-cast shapes are byte-identical. The cells are transcribed; no pin asserts them. Question Q1 in the round handback. |
+
+**R-12 (L-201, P1, recorded as ordered).** A column reference hashes by the
+relation it resolves to, never by its bare name alone. `plan_canonical.rs`
+builds a relation table over the analyzed plan in walk order: a `TableScan`
+(except a view-backed scan, which expands inline, and a cache-view scan, which
+expands through the lineage map) takes the next ordinal and records its table
+name plus its output field types; a `SubqueryAlias` maps its alias to the first
+leaf inside it, or to an ordinal of its own when it wraps no scan; an
+unqualified column resolves to the single leaf whose schema carries its name,
+else a sentinel. Every `Column`/`OuterReferenceColumn` writes
+`(relation ordinal, column name)`, and the `Cmp` arm carries the ordinal too, so
+a view name, a SQL alias, and a DataFrame alias resolving to the same input
+still hash equal while `a.x = b.x` and `a.x = a.x` hash apart. The critic inputs
+A–E are pinned with row-count inequality (their row counts differ, so Spark
+answers false by its own docstring). Multi-leaf operand swaps stay in walk
+order: a swapped comparison whose operands hold different subqueries keeps
+different ordinals (beyond the oracle, noted not absorbed).
+
+**R-13 (L-202, recorded as ordered, DF door PROVEN, SQL-door widening OPEN as
+C-015).** A cast the user wrote blocks the comparison strip; analyzer and
+planner coercion still strips. The pre-analysis walk is restored in
+`plan_canonical.rs` (`user_shaped_comparisons`, consulted by `comparison_key`
+on the analyzed plan exactly as R-10 shaped it) with two tightened rules: the
+literal side must be bare (a cast literal is planner coercion, measured on the
+Spark door), and the literal value must fit the column's native leaf type
+(an out-of-range literal proves the column cast is coercion, R-16). The R-10
+both-sides exception is superseded: a both-sides user cast now blocks, which
+matches Spark's analyzed plan and has no oracle cell. The DF door keeps every
+user cast (verified: Column-API casts block in filters and in CASE/WHEN). The
+SQL-door widening pair cannot block: the Spark door returns eagerly-analyzed
+plans (`analyze_eagerly` in `crates/repark-spark/src/spark_ast.rs`), and the
+analyzer's type coercion unifies `x > 1` and `CAST(x AS BIGINT) > 1` into the
+identical `CAST(ta.x AS BIGINT) > <literal>` shape before the hasher runs
+(measured pre/analyzed predicate pairs on parquet plus `?table?` views through
+the full Spark stack: identical both times, hashes equal). No hash-layer
+function distinguishes identical inputs; the repair needs planner/analyzer
+provenance owned by other runs, or a disposal ruling — Q1. SQL-door narrowing
+casts still block (the analyzer cannot unify those shapes) and stay pinned by
+C-011.
+
+**R-14 (L-203, recorded as ordered).** Binary comparisons canonicalize like
+Spark's Canonicalize: each operand renders to its canonical bytes and the
+lesser byte string goes first, flipping `Lt`/`Gt`/`LtEq`/`GtEq` on a swap and
+keeping `Eq`/`NotEq`/`IsDistinctFrom`/`IsNotDistinctFrom` as-is. The `Cmp` arm
+uses the canonical operator too, so `1 < a` and `a > 1` strip to one form. All
+other operators keep their written order.
+
+**R-15 (recorded as ordered).** Commutative `AND`/`OR` chains flatten and sort
+their canonical operand bytes; `IN`-list order is pinned intact and every
+non-commutative operator keeps its order.
+
+**R-16 (L-204, recorded as ordered).** An Int32 column against an out-of-range
+literal strips on both doors (the fits rule reads the non-fitting value as
+coercion), so both hash one `Cmp`; the wrapped literal keeps its own value and
+stays distinct. Falls out of the R-13 rule, pinned both fields both cells.
+
+**R-17 (P2-3, recorded as ordered).** `inputFiles` memoizes per DataFrame
+handle: `plan_introspect.py` keeps a `WeakKeyDictionary` from the Python frame
+to `(id(native), files)`, validates the native identity on hit, and returns
+copies. A new frame over the same path lists again (C-014 proves it). The memo
+is caching next to `_cache_lineages`, not a kernel, so no Rust seam changed;
+the RUST FIRST boundary is unchanged. No leak (weak keys) and no ABA (the live
+frame keeps its native alive, so the id is stable).
+
+**R-18 (P2-1, recorded not fixed).** The chained-`withColumn` tower stays
+super-linear by the S2-21 numbers (50/100/200/400 deep: 18/84/444/3080 ms hash,
+about double for `sameSemantics`): every call analyzes and walks the whole
+tower, and building the tower costs far more than hashing it. A layer-digest
+rewrite would fight R-6, so the hashing does not change for it. P3-1 (the URI
+clone) and P3-3 (the two `Vec<u8>` streams, bounded and plateaued per the
+re-check) are ledger lines only.
+
+**Timings (release native, 2026-09-15, box load 14–20).** Depth-200 chained
+Column filters: `semanticHash` median 0.0060s over 11 samples (0.0060–0.0061s);
+`sameSemantics` on the same pair median 0.0120s over 11 samples (two analyzer
+passes plus the byte compare). A 20-way `AND` chain hashes in median 0.0006s
+over 11 samples. Round 3 measured 0.0055s/0.0110s on a quieter box; same class.
+
+VERDICT (whole ledger, 2026-09-15 round 4): 14 clauses, 13 PROVEN, 1 OPEN, 0 REJECTED.
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: df-plan-introspect-1
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Clauses C-011/C-012 walked against the eight recorded cast-probe cells plus the twelve round-2 cells; red first is the orchestrator-recorded round-2 answers (two equal_hash trues against oracle falses, every sameSemantics false against oracle trues), all green after; every earlier clause re-green in the same 36/36 run.
-      artifacts: [python/repark/tests/test_df_plan_introspect_1.py, python/repark/tests/facade_dataframe_surface_oracle.json, crates/repark-core/src/plan_introspect.rs]
+      evidence: Clauses C-013/C-014 walked against the twelve recorded r4 probe cells (ten pinned both fields, two SQL-cast cells transcribed but unpinned under OPEN C-015) plus the critic A–E inputs and null-report arms; red first is the prior build's four failures (three C-008 door-equality pins plus the C-011 loop int-door pair) after the first R-13 cut, all green after the bare-literal correction; every earlier clause re-green in the same 43/43 run.
+      artifacts: [python/repark/tests/test_df_plan_introspect_1.py, python/repark/tests/facade_dataframe_surface_oracle.json, crates/repark-core/src/plan_canonical.rs, crates/repark-core/src/plan_introspect.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: Narrowing and widening casts on the Column door and narrowing on the SQL door stay distinct from the plain column; alias twins, same-frame filter twins, Column-vs-SQL int filters, and literal-width pairs answer equal; string casts stay distinct; reorder/rename/subset/expression selects stay distinct; local-frame twins stay unequal by construction identity; range twins answer equal.
+      evidence: Relation-identity join pairs differ on both doors with row-count inequality; swapped comparisons and AND/OR reorderings equate while IN-list order stays put; overflow literals equate across doors and differ from the wrapped literal; DF-door user casts block in filters and CASE/WHEN; narrowing casts stay distinct; alias twins, same-frame filter twins, Column-vs-SQL int filters, literal-width pairs, view-over-filtered, cache children, memtable-identity, and range twins all re-green.
       artifacts: [python/repark/tests/test_df_plan_introspect_1.py, python/repark/tests/test_c5_census_r7.py, python/repark/tests/test_examples_dataframe_c.py]
     - id: AT-3
       status: ATTACKED
-      evidence: Analyzer failure still maps to the engine error with no panic path (no unwrap in production code); the NOT_DATAFRAME gate moved with the body and both spellings still raise it; stopped-session behavior covered by _ensure_alive on both frames.
-      artifacts: [crates/repark-core/src/plan_introspect.rs, python/repark/src/repark/spark/dataframe/plan_introspect.py]
+      evidence: Analyzer failure still maps to the engine error with no panic path (no unwrap or expect in production code, tests only); the NOT_DATAFRAME gate and _ensure_alive behavior untouched; stopped-session and bad-frame behavior unchanged.
+      artifacts: [crates/repark-core/src/plan_canonical.rs, crates/repark-core/src/plan_introspect.rs, python/repark/src/repark/spark/dataframe/plan_introspect.py]
     - id: AT-4
       status: ATTACKED
-      evidence: No shared mutable state added; the GIL stays detached across analyze plus streaming hash on both same_semantics arms; the MemTable construction-identity boundary unchanged and re-pinned green.
-      artifacts: [crates/repark-python/src/plan_introspect.rs, python/repark/tests/test_df_plan_introspect_1.py]
+      evidence: No shared mutable Rust state added (the relation table is per call); the GIL stays detached across analyze plus streaming hash on both same_semantics arms; the new inputFiles memo is GIL-serialized module state keyed weakly by frame with native-identity validation and copy-out answers; the MemTable construction-identity boundary unchanged and re-pinned green.
+      artifacts: [crates/repark-python/src/plan_introspect.rs, python/repark/src/repark/spark/dataframe/plan_introspect.py, python/repark/tests/test_df_plan_introspect_1.py]
     - id: AT-5
       status: ATTACKED
-      evidence: No new input surface (same two doors, same signatures plus the documented plan-equality semantic); the user-shaped block fires only on int column-vs-literal comparisons with a bare pre-analysis literal, with a structural fallthrough everywhere else, pinned by the string-cast and both-sides note.
-      artifacts: [crates/repark-core/src/plan_introspect.rs]
+      evidence: No new input surface (same two doors, same signatures plus the documented plan-equality semantic); the user-shaped block fires only on int column-vs-literal comparisons with a bare pre-analysis literal whose value fits the native leaf type, with a structural fallthrough everywhere else; the both-sides corner now blocks (declared in R-13, unpinned by any cell).
+      artifacts: [crates/repark-core/src/plan_canonical.rs]
     - id: AT-6
       status: ATTACKED
-      evidence: Every hash this round moves is re-pinned (36/36 green, including all C-001/C-002/C-006/C-008/C-009 pins unchanged); only the two Column-door cast cells change hash, exactly the oracle falses; the both-sides-user-cast corner is declared in R-10, not absorbed.
+      evidence: Every hash this round moves is re-pinned (43/43 green, including all C-001/C-002/C-006/C-008/C-009/C-011 pins unchanged); the two SQL-door cast cells keep their hashes with no pin (declared OPEN in C-015, not absorbed); the R-10 both-sides quirk now blocks without a cell either way.
       artifacts: [python/repark/tests/test_df_plan_introspect_1.py]
     - id: AT-7
       status: ATTACKED
-      evidence: Depth-200 chained-filter semanticHash median 0.0055s and sameSemantics median 0.0110s on the release native (linear analyzer cost times two passes plus the byte compare, streaming hasher kept, no intermediate string).
+      evidence: Depth-200 chained-filter semanticHash median 0.0060s and sameSemantics median 0.0120s on the release native (linear analyzer cost times two passes plus the byte compare, streaming hasher kept, no intermediate string); a 20-way AND chain hashes in median 0.0006s; the memo answers a 2k-file second call in 0.000029s against 0.0437s first.
       artifacts: [task/ledgers/staging/df-plan-introspect-1-ledger.md]
     - id: AT-8
       status: ATTACKED
-      evidence: No dependency change (Cargo.toml, Cargo.lock, pyproject.toml, uv.lock, .github untouched); DataFusion TreeNode/analyzer APIs used as the session guards already do; ceilings ratcheted down, never up.
-      artifacts: [crates/repark-core/src/plan_introspect.rs, scripts/check_lib_py.py, python/repark-parity/tests/test_cap_1_source_file_line_cap.py]
+      evidence: No dependency change (Cargo.toml, Cargo.lock, pyproject.toml, uv.lock, .github untouched); DataFusion TreeNode/analyzer/schema APIs used as the session guards already do; the expression writers moved to a new module under the default ceiling while plan_introspect.rs shrank, lib.rs stays under its 150-line ceiling, no baseline raised.
+      artifacts: [crates/repark-core/src/plan_canonical.rs, crates/repark-core/src/plan_introspect.rs, scripts/check_lib_py.py, python/repark-parity/tests/test_cap_1_source_file_line_cap.py]
     - id: AT-9
       status: ATTACKED
-      evidence: Every new pin prints both hashes and both sameSemantics on failure; the ledger keeps the orchestrator-recorded fail-before file next to the ruling.
+      evidence: Every new pin prints both hashes and both sameSemantics on failure; the ledger keeps the orchestrator-recorded fail-before files (critic r3 report, r4 probe JSON, perf r3 report) next to the rulings that cite them.
       artifacts: [python/repark/tests/test_df_plan_introspect_1.py, task/ledgers/staging/df-plan-introspect-1-ledger.md]
     - id: AT-10
       status: ATTACKED
-      evidence: Two equal_hash pins and every twin-arm sameSemantics pin red before the fix, green after; every added branch names its triggering input (user-shaped block by the narrowing/widening cells, coercion passthrough by the SQL-door cells, literal fold by the literal-width cell, ByteSink compare by the alias/filter twins).
-      artifacts: [python/repark/tests/test_df_plan_introspect_1.py, crates/repark-core/src/plan_introspect.rs]
+      evidence: Four pins red before the fix, green after; every added branch names its triggering input (relation ordinals by the join cells, user-shaped block by the DF cast cells plus fits by the overflow cells, canonical operand order by the swap cells, chain sort by the and_order cell, memo by the 2k-file timing).
+      artifacts: [python/repark/tests/test_df_plan_introspect_1.py, crates/repark-core/src/plan_canonical.rs]
   complete: true
 ```

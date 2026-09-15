@@ -1347,6 +1347,78 @@
     "value": false
    }
   },
+  "planintro_r4_and_order": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_r4_eq_swap": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_r4_join_ax_bx_vs_ax_ax_df": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_r4_join_ax_bx_vs_ax_ax_sql": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_r4_overflow_lit_sql_vs_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_r4_overflow_vs_wrapped_df": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_r4_sql_cast_in_case_vs_plain": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_r4_sql_cast_in_filter_vs_plain": {
+   "result": {
+    "equal_hash": false,
+    "sameSemantics": false
+   }
+  },
+  "planintro_r4_swap_cols": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_r4_swap_lit_left_df": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_r4_swap_lit_left_df_vs_sql": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
+  "planintro_r4_swap_lit_left_sql": {
+   "result": {
+    "equal_hash": true,
+    "sameSemantics": true
+   }
+  },
   "planintro_select_all_named_vs_df": {
    "result": {
     "equal_hash": true,

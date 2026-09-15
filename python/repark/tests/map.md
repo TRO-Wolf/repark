@@ -132,8 +132,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   from the cast probe and pins both fields of every one, pins the twelve round-2
   cells' `sameSemantics` values now that the name answers plan equality
   (EX-DF-11 FIXED), and ratchets `core.py` 4027 → 4014. The example,
-  the inventory refresh, and this entry close the coverage loop.
-  pins: df-plan-introspect-1/C-003, C-006, C-008, C-009, C-010, C-011, C-012
+  the inventory refresh, and this entry close the coverage loop. Follow-up round
+  4 (2026-09-15, rulings R-12..R-18) adds twelve `planintro_r4_*` cells from the
+  r4 probe and pins both fields of ten (the two SQL-door widening-cast cells are
+  transcribed but unpinned — eager analysis unifies them before the hash, OPEN
+  C-015), pins the critic A–E join pairs with row-count inequality, the OR-swap
+  and IN-order arms, the DF-door cast arms, the cheap null-report arms, and the
+  per-handle `inputFiles` memo timing (2k files, second call 1520x).
+  pins: df-plan-introspect-1/C-003, C-006, C-008, C-009, C-010, C-011, C-012, C-013, C-014
   The touched DataFrame suites and the lint, format, clippy, and coverage gates
   stay green. pins: df-plan-introspect-1/C-004
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`

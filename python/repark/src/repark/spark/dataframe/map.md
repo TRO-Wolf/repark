@@ -201,8 +201,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `sameSemantics` moves here behind the one-line class binding and compares the
   canonical analyzed-plan streams through native `same_semantics` (a user-written
   cast stays in the plan; only analyzer-inserted coercion normalizes); `core.py`
-  ratchets 4027 → 4014.
-  pins: df-plan-introspect-1/C-001, C-002, C-006, C-008, C-009, C-010, C-011
+  ratchets 4027 → 4014. Follow-up round 4 (2026-09-15, R-17): `inputFiles`
+  memoizes per frame in a `WeakKeyDictionary` from frame to `(id(native),
+  files)` with native-identity validation and copy-out answers, so repeated
+  calls skip the re-plan plus re-listing while a new frame over the same path
+  lists again.
+  pins: df-plan-introspect-1/C-001, C-002, C-006, C-008, C-009, C-010, C-011, C-013, C-014
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
   `toLocalIterator`. Two converters live here: `rows_from_arrow_table_python` is the unchanged
   pure-Python path and stays the correctness oracle, and `rows_from_arrow_table` adds the

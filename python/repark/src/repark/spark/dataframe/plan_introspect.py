@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import weakref
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
+
+_INPUT_FILES_MEMO: weakref.WeakKeyDictionary[Any, tuple[int, list[str]]] = (
+    weakref.WeakKeyDictionary()
+)
 
 
 def _cache_lineages(frame: DataFrame) -> dict[str, Any]:
@@ -31,7 +36,12 @@ def inputFiles(frame: DataFrame) -> list[str]:  # noqa: N802
     from repark import _native
 
     native = frame._lineage_inner if frame._lineage_inner is not None else frame._plan()
-    return list(_native.input_files(native))
+    hit = _INPUT_FILES_MEMO.get(frame)
+    if hit is not None and hit[0] == id(native):
+        return list(hit[1])
+    files = list(_native.input_files(native))
+    _INPUT_FILES_MEMO[frame] = (id(native), files)
+    return list(files)
 
 
 def semanticHash(frame: DataFrame) -> int:  # noqa: N802

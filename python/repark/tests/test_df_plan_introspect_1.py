@@ -578,6 +578,220 @@ def _cast_scan(spark: ReparkSession, tmp_path: Path):
     return frame
 
 
+def _ab2_scan(spark: ReparkSession, tmp_path: Path):
+    """Write the round-4 ``ta (x int, y int)`` / ``tb (x int, z int)`` frames."""
+    first = str(tmp_path / "r4a")
+    second = str(tmp_path / "r4b")
+    spark.createDataFrame([(1, 10), (2, 20)], "x int, y int").write.parquet(first)
+    spark.createDataFrame([(1, 100), (3, 300)], "x int, z int").write.parquet(second)
+    left = spark.read.parquet(first)
+    right = spark.read.parquet(second)
+    left.createOrReplaceTempView("ta")
+    right.createOrReplaceTempView("tb")
+    return left, right
+
+
+def test_semantichash_r4_join_relation_pairs_differ(spark: ReparkSession, tmp_path: Path) -> None:
+    """pins: df-plan-introspect-1/C-013 (R-12) — a column hashes by its resolved relation.
+
+    Critic inputs A-E: ``a.x = b.x`` and ``a.x = a.x`` spellings hash apart on
+    both doors, and the row counts differ, so ``sameSemantics`` is false.
+    """
+    left, right = _ab2_scan(spark, tmp_path)
+    try:
+        across_sql = spark.sql("SELECT ta.x, tb.z FROM ta JOIN tb ON ta.x = tb.x")
+        same_sql = spark.sql("SELECT ta.x, tb.z FROM ta JOIN tb ON ta.x = ta.x")
+        assert (across_sql.semanticHash() == same_sql.semanticHash()) == _cell(
+            "planintro_r4_join_ax_bx_vs_ax_ax_sql"
+        )["result"]["equal_hash"]
+        assert (
+            across_sql.sameSemantics(same_sql)
+            == _cell("planintro_r4_join_ax_bx_vs_ax_ax_sql")["result"]["sameSemantics"]
+        )
+        assert len(across_sql.collect()) != len(same_sql.collect())
+        across_df = left.join(right, left["x"] == right["x"]).select(left["x"], right["z"])
+        same_df = left.join(right, left["x"] == left["x"]).select(left["x"], right["z"])
+        assert (across_df.semanticHash() == same_df.semanticHash()) == _cell(
+            "planintro_r4_join_ax_bx_vs_ax_ax_df"
+        )["result"]["equal_hash"]
+        assert (
+            across_df.sameSemantics(same_df)
+            == _cell("planintro_r4_join_ax_bx_vs_ax_ax_df")["result"]["sameSemantics"]
+        )
+        assert len(across_df.collect()) != len(same_df.collect())
+        self_across = spark.sql("SELECT * FROM ta a JOIN ta b ON a.x = b.x")
+        self_same = spark.sql("SELECT * FROM ta a JOIN ta b ON a.x = a.x")
+        assert self_across.semanticHash() != self_same.semanticHash()
+        assert not self_across.sameSemantics(self_same)
+        assert len(self_across.collect()) != len(self_same.collect())
+        filter_across = spark.sql("SELECT * FROM ta JOIN tb ON ta.x = tb.x WHERE ta.y < tb.z")
+        filter_same = spark.sql("SELECT * FROM ta JOIN tb ON ta.x = tb.x WHERE ta.y < ta.y")
+        assert filter_across.semanticHash() != filter_same.semanticHash()
+        assert not filter_across.sameSemantics(filter_same)
+        assert len(filter_across.collect()) != len(filter_same.collect())
+        project_across = spark.sql("SELECT ta.y AS ly, tb.z AS ry FROM ta JOIN tb ON ta.x = tb.x")
+        project_same = spark.sql("SELECT ta.y AS ly, ta.y AS ry FROM ta JOIN tb ON ta.x = tb.x")
+        assert project_across.semanticHash() != project_same.semanticHash()
+        assert not project_across.sameSemantics(project_same)
+        assert project_across.collect() != project_same.collect()
+    finally:
+        spark.catalog.dropTempView("ta")
+        spark.catalog.dropTempView("tb")
+
+
+def test_semantichash_r4_swaps_match_oracle(spark: ReparkSession, tmp_path: Path) -> None:
+    """pins: df-plan-introspect-1/C-013 (R-14) — swapped comparisons canonicalize, both fields."""
+    left, _ = _ab2_scan(spark, tmp_path)
+    try:
+        pairs = [
+            (
+                "planintro_r4_swap_lit_left_sql",
+                spark.sql("SELECT * FROM ta WHERE 5 < x"),
+                spark.sql("SELECT * FROM ta WHERE x > 5"),
+            ),
+            (
+                "planintro_r4_swap_lit_left_df",
+                left.filter(F.lit(1) < F.col("x")),
+                left.filter(F.col("x") > 1),
+            ),
+            (
+                "planintro_r4_swap_lit_left_df_vs_sql",
+                left.filter(F.lit(1) < F.col("x")),
+                spark.sql("SELECT * FROM ta WHERE x > 1"),
+            ),
+            (
+                "planintro_r4_swap_cols",
+                left.filter(F.col("x") < F.col("y")),
+                left.filter(F.col("y") > F.col("x")),
+            ),
+            (
+                "planintro_r4_eq_swap",
+                left.filter(F.col("x") == 1),
+                left.filter(F.lit(1) == F.col("x")),
+            ),
+        ]
+        for name, first, second in pairs:
+            assert (first.semanticHash() == second.semanticHash()) == _cell(name)["result"][
+                "equal_hash"
+            ]
+            assert first.sameSemantics(second) == _cell(name)["result"]["sameSemantics"]
+    finally:
+        spark.catalog.dropTempView("ta")
+        spark.catalog.dropTempView("tb")
+
+
+def test_semantichash_r4_logic_order_matches_oracle(spark: ReparkSession, tmp_path: Path) -> None:
+    """pins: df-plan-introspect-1/C-013 (R-15) — commutative AND/OR chains canonicalize."""
+    left, _ = _ab2_scan(spark, tmp_path)
+    try:
+        first = left.filter((F.col("x") > 1) & (F.col("y") > 1))
+        second = left.filter((F.col("y") > 1) & (F.col("x") > 1))
+        assert (first.semanticHash() == second.semanticHash()) == _cell("planintro_r4_and_order")[
+            "result"
+        ]["equal_hash"]
+        assert (
+            first.sameSemantics(second)
+            == _cell("planintro_r4_and_order")["result"]["sameSemantics"]
+        )
+        or_first = left.filter((F.col("x") > 1) | (F.col("y") > 100))
+        or_second = left.filter((F.col("y") > 100) | (F.col("x") > 1))
+        assert or_first.semanticHash() == or_second.semanticHash()
+        assert or_first.sameSemantics(or_second)
+        in_first = left.filter(F.col("x").isin(1, 2))
+        in_second = left.filter(F.col("x").isin(2, 1))
+        assert in_first.semanticHash() != in_second.semanticHash()
+    finally:
+        spark.catalog.dropTempView("ta")
+        spark.catalog.dropTempView("tb")
+
+
+def test_semantichash_r4_overflow_matches_oracle(spark: ReparkSession, tmp_path: Path) -> None:
+    """pins: df-plan-introspect-1/C-013 (R-16) — out-of-range literals compare as Int64."""
+    left, _ = _ab2_scan(spark, tmp_path)
+    try:
+        wide_sql = spark.sql("SELECT * FROM ta WHERE x > 5000000000")
+        wide_df = left.filter(F.col("x") > 5000000000)
+        assert (wide_sql.semanticHash() == wide_df.semanticHash()) == _cell(
+            "planintro_r4_overflow_lit_sql_vs_df"
+        )["result"]["equal_hash"]
+        assert (
+            wide_sql.sameSemantics(wide_df)
+            == _cell("planintro_r4_overflow_lit_sql_vs_df")["result"]["sameSemantics"]
+        )
+        wrapped = left.filter(F.col("x") > 705032704)
+        assert (wide_df.semanticHash() == wrapped.semanticHash()) == _cell(
+            "planintro_r4_overflow_vs_wrapped_df"
+        )["result"]["equal_hash"]
+        assert (
+            wide_df.sameSemantics(wrapped)
+            == _cell("planintro_r4_overflow_vs_wrapped_df")["result"]["sameSemantics"]
+        )
+    finally:
+        spark.catalog.dropTempView("ta")
+        spark.catalog.dropTempView("tb")
+
+
+def test_semantichash_r4_df_cast_blocks_strip(spark: ReparkSession, tmp_path: Path) -> None:
+    """pins: df-plan-introspect-1/C-013 (R-13 DF door) — a DF-door user cast stays in the plan."""
+    left, _ = _ab2_scan(spark, tmp_path)
+    try:
+        plain = left.filter(F.col("x") > 1)
+        cast = left.filter(F.col("x").cast("bigint") > 1)
+        assert plain.semanticHash() != cast.semanticHash()
+        assert not plain.sameSemantics(cast)
+        plain_case = left.select(F.when(F.col("x") > 1, 1).otherwise(0).alias("c"))
+        cast_case = left.select(F.when(F.col("x").cast("bigint") > 1, 1).otherwise(0).alias("c"))
+        assert plain_case.semanticHash() != cast_case.semanticHash()
+        assert not plain_case.sameSemantics(cast_case)
+    finally:
+        spark.catalog.dropTempView("ta")
+        spark.catalog.dropTempView("tb")
+
+
+def test_inputfiles_memo_answers_identical_lists_fast(spark: ReparkSession, tmp_path: Path) -> None:
+    """pins: df-plan-introspect-1/C-014 (R-17) — repeated ``inputFiles`` answers from the memo."""
+    import os
+    import time
+
+    seed_dir = str(tmp_path / "memo" / "seed")
+    spark.createDataFrame([(1,)], "a int").coalesce(1).write.parquet(seed_dir)
+    seed = next(Path(seed_dir).iterdir())
+    for index in range(1999):
+        os.link(seed, Path(seed_dir, f"f{index:05d}.parquet"))
+    frame = spark.read.parquet(seed_dir)
+    started = time.perf_counter()
+    first = frame.inputFiles()
+    first_elapsed = time.perf_counter() - started
+    assert len(first) == 2000
+    started = time.perf_counter()
+    second = frame.inputFiles()
+    second_elapsed = time.perf_counter() - started
+    assert second == first
+    assert second_elapsed * 5 < first_elapsed
+    fresh = spark.read.parquet(seed_dir)
+    assert sorted(fresh.inputFiles()) == sorted(first)
+
+
+def test_semantichash_r4_null_report_pairs(spark: ReparkSession, tmp_path: Path) -> None:
+    """pins: df-plan-introspect-1/C-013 (null-report arms) — critic pairs, cheap arms."""
+    left, right = _ab2_scan(spark, tmp_path)
+    try:
+        assert (
+            left.filter(F.col("x") > 1).semanticHash()
+            != left.filter(F.col("x") > 1.0).semanticHash()
+        )
+        via_sql = spark.sql("SELECT * FROM ta WHERE x IS NULL")
+        via_df = left.filter(F.col("x").isNull())
+        assert via_sql.semanticHash() == via_df.semanticHash()
+        assert via_sql.sameSemantics(via_df)
+        using = left.join(right, "x")
+        on_expr = left.join(right, left.x == right.x)
+        assert using.semanticHash() != on_expr.semanticHash()
+    finally:
+        spark.catalog.dropTempView("ta")
+        spark.catalog.dropTempView("tb")
+
+
 def test_semantichash_cast_cells_match_oracle(spark: ReparkSession, tmp_path: Path) -> None:
     """pins: df-plan-introspect-1/C-011 — every ``planintro_cast_*`` cell, both fields."""
     frame = _cast_scan(spark, tmp_path)
