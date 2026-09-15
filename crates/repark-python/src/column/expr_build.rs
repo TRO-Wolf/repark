@@ -158,6 +158,7 @@ pub(super) fn sql_context(
         .build();
     let context = SessionContext::new_with_state(state);
     context.register_udf(repark_spark::spark_as_udf().as_ref().clone());
+    context.register_udf(repark_spark::suffix_literal_udf().as_ref().clone());
     Ok(context)
 }
 

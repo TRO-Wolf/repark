@@ -165,12 +165,17 @@ pins: rp-4-fork-repin/C-005, C-006
   and call-base struct field access (chained
   `.s.a` extracts the named_struct value and wraps `__repark_spark_as__` so selectExpr
   display is `named_struct(a, 1).a` and nullability follows the value).
-  pins: fnp-4b/C-001, C-004, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  **Round 5 (2026-09-15):** D/F/decimal rewrites wrap a string operand in
+  `__repark_suffix_literal__` so the fold still sees the literal.
+  pins: fnp-4b/C-001, C-004, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-021
 - `spark_typed.rs` — **FNP-4B critic (2026-09-15):** `FoldSparkNumericCasts` folds
   `CAST('1e200' AS DOUBLE)` to a non-null Float64 literal; `SparkProjectionDisplay`
   aliases unaliased projections whose DataFusion names carry `Int64(` /
   `datafusion.public` / backticks to Spark display (`(my col + 1)`); `__repark_spark_as__`
-  is the identity UDF that carries a Spark display name. pins: fnp-4b/C-012, C-014, C-015, C-019, C-020
+  is the identity UDF that carries a Spark display name.
+  **Round 5 (2026-09-15):** `__repark_suffix_literal__` is the companion
+  provenance-marker UDF with fold-through and display unwrapping, registered in
+  `extension.rs` and the binding `sql_context`. pins: fnp-4b/C-012, C-014, C-015, C-019, C-020, C-021
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in;
   `Model: Grok 4.6 xHigh`);

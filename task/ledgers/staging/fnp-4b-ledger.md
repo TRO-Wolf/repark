@@ -3,7 +3,7 @@
 **Retires:** this ledger moves to `../completed/` in the unit's last commit.
 This file closes when FNP-4B merges, or when the owner closes the slate row.
 
-**Unit:** fnp-4b · **Date:** 2026-09-15 · **Model:** grok-4.6 · **Branch:** `feat/fnp-4b-spark-dialect`
+**Unit:** fnp-4b · **Date:** 2026-09-15 · **Model:** grok-4.6 (rounds 1–5) · muse-spark-1.3-contributor (round 6, run 16c) · **Branch:** `feat/fnp-4b-spark-dialect`
 **Card:** FNP-4B — the Spark-door dialect and Spark expression strings (run 15c, 2026-09-14).
 **Path:** STANDARD.
 
@@ -387,3 +387,31 @@ COVERAGE_ATTESTATION:
       evidence: Mutation pins cover dialect (`count("v")` vs count(`v`)), BD precision, unresolved 1e3L/0x1D, FROM-less DELETE rewrite, and red-first L9 flips.
       artifacts: [crates/repark-spark/src/tests/spark_dialect.rs, crates/repark-spark/src/tests/lambda_door.rs]
 ```
+
+## Round 6 (2026-09-15, run 16c, G-2 rulings on the round-5 HALT)
+
+Actor: muse-spark-1.3-contributor. The round-5 fix set (9 files, uncommitted at
+pickup) is protected first: `cargo test -p repark-spark --lib` 970 passed 0
+failed, comment-ban grep empty, committed as 3 slices below. No scratch probes
+exist (`scratch_*.rs` absent, `tests/mod.rs` unreferenced). Base clone
+`/tmp/pc-cv2-base` kept for base-state comparisons this round only; its removal
+is the orchestrator's job.
+
+| Question | Orchestrator ruling | Disposition |
+|---|---|---|
+| Q1 MERGE `t."_file"` | CONTINUE: one instrumented run captures the internal MERGE/DV/overwrite SQL, the emitter switches to backtick quoting, minimal MERGE repro pinned. STOP→BLOCKED if the emitter sits outside the fence. | C-024 |
+| Q2 `catalog_surface.py` `INT[]` | HAND-OFF to run 16b: this unit does not touch the file; red pin stays with the test id. | C-025 |
+| Q3 `__repark_hof_array_field__` leak | DIAGNOSE FIRST: display-rule cause fixed here, semantic cause handed to 16a; no display band-aid. | C-026 |
+| DF-PLAN-INTRO-CAST-1 | Conditional: flip to PySpark `False` + retire the row only if typed-literal work reds the pin; else untouched. | C-027 |
+| `getbit` full-suite-only + 8 v3 DV/legacy-delete | Re-check after the Q1 fix; else classified as in round 5. | C-028 |
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-021 | Round-5 slice 1: `__repark_suffix_literal__` provenance-marker UDF wraps string D/F/decimal operands so `FoldSparkNumericCasts` folds through it; display unwraps it; registered in `extension.rs`, binding `sql_context`, and the test harnesses. | lib suite green; D-suffix pins green | **PROVEN** | `cargo test -p repark-spark --lib` 970 passed 2026-09-15; map pins `src/map.md`, `column/map.md`. |
+| C-022 | Round-5 slice 2: `SparkProjectionDisplay` rewrites only the root projection and keeps explicit non-marker aliases. | lib suite green; selectExpr display pins green | **PROVEN** | Same lib run; `test_select_expr_backtick_ident` green; map pin `src/map.md`. |
+| C-023 | Round-5 slice 3: `-9223372036854775808L` folds the unary minus into the BIGINT region and answers `i64::MIN` non-null. | new pin red→green | **PROVEN** | `other_suffixes_keep_spark_types` LONG_MIN half; map pins `src/map.md`, `tests/map.md`. |
+| C-024 | Q1: the MERGE `t."_file"` emitter is found by one instrumented run and switched to backtick quoting, with a minimal MERGE-path pin. | pin red→green; v3 DV/merge/overwrite cascade re-checked | **OPEN** | Instrumented run pending. |
+| C-025 | Q2: `INT[]` DDL form stays red-pinned and blocked on run 16b's `catalog_surface.py` fix. | red pin with test id listed, file untouched | **OPEN** | Hand-off recorded; 16b owns the file. |
+| C-026 | Q3: the `__repark_hof_array_field__` leak is diagnosed to display vs semantic cause before any fix. | leak origin named; fix or hand-off per ruling | **OPEN** | Diagnosis pending. |
+| C-027 | DF-PLAN-INTRO-CAST-1: flip + retire only if typed-literal work reds the pin. | pin state recorded; flip iff red | **OPEN** | Check pending. |
+| C-028 | Full-suite-only `getbit` + 8 v3 DV/legacy-delete failures re-checked after Q1. | each failure fixed or classified | **OPEN** | Re-check pending. |

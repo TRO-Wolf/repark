@@ -66,6 +66,7 @@ impl SessionExtension for SparkExtension {
     fn register(&self, ctx: &SessionContext) -> datafusion::error::Result<()> {
         repark_functions::register_all(ctx);
         ctx.register_udf(crate::spark_typed::spark_as_udf().as_ref().clone());
+        ctx.register_udf(crate::spark_typed::suffix_literal_udf().as_ref().clone());
         // WI-2: the plain-INSERT ANSI store-assignment gate, BEFORE the Spark expression semantics.
         ctx.add_analyzer_rule(Arc::new(repark_iceberg::InsertStoreAssignment));
         for rule in repark_functions::analyzer_rules() {

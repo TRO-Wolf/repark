@@ -36,6 +36,7 @@ fn production_ctx(keep_verbatim: bool) -> SessionContext {
     let ctx = SessionContext::new_with_state(state);
     repark_functions::register_all(&ctx);
     ctx.register_udf(crate::spark_as_udf().as_ref().clone());
+    ctx.register_udf(crate::suffix_literal_udf().as_ref().clone());
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
     }
