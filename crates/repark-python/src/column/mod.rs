@@ -202,14 +202,15 @@ impl PyColumn {
 
     /// A SQL-string expression (PySpark `expr(sql)` / `F.expr`).
     ///
-    /// Parses `sql` on a throwaway context provisioned with `repark_functions::register_all` +
-    /// `analyzer_rules()` (same function surface as a repark session), plans `SELECT (<sql>)`,
-    /// then runs the analyzer **eagerly** (`repark_functions::analyze_eagerly`) before
-    /// extracting the projection expression. The extracted [`Expr`] therefore already carries
-    /// the Spark rewrites (integer `/` → both-operands-double, div-by-zero `nullif`,
-    /// planner-embedded `substr` → shim, …) *and* their post-analysis types — so both the
-    /// values and the schema a consumer `DataFrame` exports over Arrow match `spark.sql`. The
-    /// rules are idempotent, so the consumer session's own analysis pass is a no-op on this
+    /// Parses `sql` on the shared process-wide expr context provisioned with
+    /// `repark_functions::register_all` + `analyzer_rules()` (same function surface as a
+    /// repark session), plans `SELECT (<sql>)`, then runs the analyzer **eagerly**
+    /// (`repark_functions::analyze_eagerly`) before extracting the projection expression.
+    /// The extracted [`Expr`] therefore already carries the Spark rewrites (integer `/` →
+    /// both-operands-double, div-by-zero `nullif`, planner-embedded `substr` → shim, …)
+    /// *and* their post-analysis types — so both the values and the schema a consumer
+    /// `DataFrame` exports over Arrow match `spark.sql`. The rules are idempotent, so the
+    /// consumer session's own analysis pass is a no-op on this
     ///
     /// # Errors
     /// Returns `ParseException` for invalid SQL and `AnalysisException` for unresolved columns.
@@ -220,19 +221,10 @@ impl PyColumn {
             repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
             let context =
                 expr_build::sql_context(sql, true).map_err(crate::datafusion_to_py_err)?;
-            repark_functions::register_all(&context);
-            for rule in repark_functions::analyzer_rules() {
-                context.add_analyzer_rule(rule);
-            }
             let canonical = repark_spark::spark_literals::canonicalize(sql)
                 .map_err(crate::datafusion_to_py_err)?;
             let select_sql = format!("SELECT ({}) AS _repark_expr", canonical.as_ref());
-            let runtime = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .map_err(|err| {
-                    PyValueError::new_err(format!("could not start expr runtime: {err}"))
-                })?;
+            let runtime = crate::session::shared_runtime()?;
             let planned = expr_build::plan_expr_column(&context, &select_sql, canonical.as_ref());
             let expr = runtime.block_on(planned)?;
             Ok(Self::from_expr(expr))

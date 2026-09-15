@@ -137,6 +137,9 @@ DOOR-CONVERGE-2 C-001 (2026-09-15): `check_rust_file_size.py`
 `repark-python/src/column/mod.rs` 1052 → 1036 (the facade `concat` CASE-guard body
 deleted for the door-converged kernel embed).
 pins: door-converge-2/C-001
+FNP-4B round 8 (2026-09-15): `check_rust_file_size.py`
+`repark-python/src/column/mod.rs` 1022 → 1014 (`F.expr` per-call context build,
+rule appends, and runtime move into the shared expr path).
 DOOR-CONVERGE-2 C-005/C-006 (2026-09-15, G-2 Q1 one-time grant R-1 under Q-15c-4):
 `check_rust_file_size.py` `repark-functions/src/analyzer.rs` 1142 → 1150 (the
 `array_concat` → `concat` analyzer arm for Q12-16 outer nullability).

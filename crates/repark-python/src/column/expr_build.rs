@@ -1,7 +1,7 @@
 //! Expression-construction helpers for [`super::PyColumn`].
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
@@ -138,19 +138,30 @@ pub(super) fn strip_outer_alias(expr: Expr) -> Expr {
     }
 }
 
+static EXPR_CONTEXT: OnceLock<SessionContext> = OnceLock::new();
+
 pub(super) fn sql_context(
-    sql: &str,
+    _sql: &str,
     _normalize_idents: bool,
 ) -> datafusion::error::Result<SessionContext> {
+    if let Some(context) = EXPR_CONTEXT.get() {
+        return Ok(context.clone());
+    }
+    let context = build_expr_context()?;
+    let _ = EXPR_CONTEXT.set(context.clone());
+    Ok(context)
+}
+
+fn build_expr_context() -> datafusion::error::Result<SessionContext> {
     let mut config = SessionConfig::new();
-    config.options_mut().sql_parser.dialect =
-        repark_spark::dialect_for_executing_parse(sql, datafusion::config::Dialect::Databricks);
+    config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
     config.options_mut().sql_parser.enable_ident_normalization = false;
     let mut rules = repark_functions::analyzer_rules_with_higher_order_preparation(
         datafusion::optimizer::Analyzer::new().rules,
     )?;
     rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
     rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
+    rules.extend(repark_functions::analyzer_rules());
     let state = SessionStateBuilder::new()
         .with_config(config)
         .with_default_features()
@@ -159,6 +170,7 @@ pub(super) fn sql_context(
     let context = SessionContext::new_with_state(state);
     context.register_udf(repark_spark::spark_as_udf().as_ref().clone());
     context.register_udf(repark_spark::suffix_literal_udf().as_ref().clone());
+    repark_functions::register_all(&context);
     Ok(context)
 }
 

@@ -66,7 +66,7 @@ static SHARED_RUNTIME: OnceLock<EngineRuntime> = OnceLock::new();
 /// Return the process-wide multi-thread Tokio runtime, initializing it on first use.
 /// # Errors
 /// Returns `RuntimeError` if the Tokio runtime fails to build on the first call.
-fn shared_runtime() -> PyResult<Arc<Runtime>> {
+pub(crate) fn shared_runtime() -> PyResult<Arc<Runtime>> {
     if let Some(runtime) = SHARED_RUNTIME.get() {
         return Ok(Arc::clone(runtime.runtime()));
     }

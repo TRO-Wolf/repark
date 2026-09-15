@@ -632,3 +632,15 @@ SQL-door `MAP<...>` stay loud `ParseException`s from the Databricks dialect
 array pin, whose `listColumns` contract is unchanged, and the existing
 `test_create_table_map_struct_refuse_loudly`. Round-8 pin docstrings say
 `Round-8 L-00N` to keep them apart from the earlier critic's L-numbers.
+
+Slice D — P2-1 (`crates/repark-python/src/column/expr_build.rs`,
+`column/mod.rs`, `session.rs`): `F.expr` serves a process-wide cached
+`SessionContext` (fixed Databricks dialect — `dialect_for_executing_parse`
+with a Databricks session is constant — rules and `register_all` baked in
+once, in the previous per-call order) and blocks on the shared engine
+runtime instead of building a current-thread runtime per call. Timings on
+this tree (best of 3, release native): 10k `F.expr("a + 1")` 2.33s → 0.72s
+(233 → 72 µs/call); 10k `F.expr("1.5D + a")` 2.42s → 0.84s. Column-binding,
+suffix minima, struct, and loud-missing-column shapes re-probed; 10 threads
+× 200 concurrent constructions clean. `column/mod.rs` baseline 1022 → 1014.
+The three other per-call runtimes in `mod.rs` stay (separate paths).
