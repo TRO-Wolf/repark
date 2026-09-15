@@ -103,7 +103,7 @@ one-liner.
 - [grouped_pivot.py](grouped_pivot.py) — `GroupedData.pivot` (explicit values, discovery,
   multi-aggregate naming) and `applyInPandas` / `apply_in_pandas` (the per-group pandas
   bridge).
-- [schema_reconcile.py](schema_reconcile.py) — `DataFrame.to` / `withMetadata` /
+- [schema_reconcile.py](schema_reconcile.py) — `DataFrame.to` / `withMetadata` / **COLUMN-PARITY-1 (2026-09-15, rebase onto #604):** the stamped `withMetadata` check expects Spark's `{"k": "v"}` — the column unit's native path surfaces the dict, and the example's old `{}` expectation failed CI's executed-example gate. pins: column-parity-1/C-008
   `registerTempTable`: reorder+cast reconciliation, the metadata stamp's
   current `{}` readback (backlog DF-METADATA-1), and the deprecated temp-view
   register inside `warnings.catch_warnings()` (DF-SURFACE-A-1).

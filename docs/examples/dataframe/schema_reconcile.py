@@ -33,8 +33,8 @@ def main() -> None:
         stamped = frame.withMetadata("a", {"k": "v"})
         if stamped.columns != ["key", "a", "b"]:
             raise SystemExit(f"withMetadata columns {stamped.columns!r}")
-        if stamped.schema["a"].metadata != {}:
-            raise SystemExit("withMetadata metadata survives (DF-METADATA-1 says it drops today)")
+        if stamped.schema["a"].metadata != {"k": "v"}:
+            raise SystemExit(f"withMetadata metadata {stamped.schema['a'].metadata!r}")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", FutureWarning)
             result = frame.registerTempTable("rtt_ex")
