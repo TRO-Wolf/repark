@@ -30,6 +30,10 @@ function-registry + analyzer-rule installation + the composed
   the LIKE/CASE/coalesce pins prove the seat) and proves every other default rule remains ordered;
   `analyzer_configuration_refuses_a_missing_type_coercion_rule` pins the loud failure.
   pins: fnp-8/C-003, C-004
+  **DECIMAL-CACHE-1 (2026-09-15):** the same contract test now pins a third pre-coercion
+  seat, `spark_decimal_precision` immediately before `type_coercion` (name kept so the
+  FNP-8 citation still resolves); the facade `* Int32` min-precision pins prove the seat.
+  pins: decimal-cache-1/C-002
 
 ## Pointers
 
