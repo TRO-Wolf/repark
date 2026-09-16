@@ -134,3 +134,53 @@ path and stays until the build step replaces it.
 | `uvx ruff@0.15.22 format --check` on the new test file | clean |
 | comment-ban grep over the diff | empty |
 | typos gate | the fixture joins `fnp11a_r2_spark_oracle.json` in `.typos.toml` extend-exclude: recorded AES hex evidence trips the spell gate and is never hand-edited |
+
+## Step 2 (run 18a, 2026-09-16) — rebuild + re-measured base
+
+Rulings applied: D-6, D-7 (mask-first order noted; AES crates are a LATER round per
+run-18a Dependencies — this round adds no dependency), D-8, D-9, R-17a-6 (like/ilike
+escapeChar is LIT-DECIMAL-1's; `test_c009_bl6_like_escape_facade` and DIV-like-1 go
+`xfail(strict=True)`; D-9 keeps only bin/rint BOOLEAN refusal decided in the Rust
+UDF coercion, Python pre-cast deleted, Q-17a-2), R-17a-17 (no bare `1000` in any
+map.md), R-17a-19 (kernels as submodules: `spark_math/bround.rs`,
+`spark_math/conv.rs`, `string/mask.rs`, `string/format_number.rs`; `spark_hash.rs`
+stays top-level — no existing module owns hashing — with the shared Spark display
+renderer as `pub(crate)` in `expr_fn.rs`; zero `lib.rs` churn otherwise),
+Q-17a-2 (every raise/cast/coerce/branch lives in the Rust kernel), Q-15c-4
+(baselines only move down; facade display reuses default `_scalar` naming with
+defaults materialized as `lit` args so no explicit display strings are needed).
+The audit-repark-parity triage reminder fired on the 227-red; the red is this
+unit's chartered step-1 state (pins over recorded fixtures, all verdicts OPEN),
+not a parity-live nightly regression, so the brief's step order governs.
+
+Base on the rebuilt release native
+(`maturin develop --release` from this branch, 2026-09-16):
+`PYTHONPATH=python/repark/src .venv/bin/python -m pytest
+python/repark/tests/test_fnp_math_1.py -q` → **227 failed, 16 passed**,
+identical to the step-1 base. The 16 greens are the same controls (8 C-001
+stub-signature presence, C-006 frame control, C-007 fixture integrity, 4
+DOOR-CONVERGE-1 SQL refusals, 2 accepted bin/rint facade values).
+
+Measured integration facts (probed live, 2026-09-16): the `spark_split` kernel
+is registered via `string::functions()` (#622) and the facade already routes
+`split` through `dispatch_spark::call_scalar_expr`, so D-8 needs only the facade
+destub; `bin`/`rint` kernels already refuse BOOLEAN with
+`DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` in `coerce_types` (#616) — only the
+Python pre-casts hide it; `SELECT bin(1)` renders `bin(Int64(1))` and
+`BL6-sql-2` demands `bin(1)` nullable false, so `bin` needs a `schema_name`
+override; `2.5D` still ParserErrors (run 18c fence — BL6-sql-3 goes xfail);
+every new name needs a Spark-style `schema_name` override (defaults appended:
+`bround(d, 0)`, `mask(masked, X, x, n, NULL)`, `split(csvs, ,, -1)`) with
+validate-only `coerce_types` so user-written `CAST` nodes survive for naming;
+`ReturnFieldArgs.scalar_arguments` carries the scale literal for `bround`
+decimal typing; `ScalarFunctionArgs.config_options` carries the ANSI flag for
+`conv` overflow; `split` nullability is foldable-literal-false else true per
+Q12-41…55; Spark `hash` verified empirically against the fixture — Murmur3
+`mix`/`fmix` with seed 42, `hashInt` for ints/booleans-as-1/0, `hashLong` for
+longs/compact-decimal-unscaled (both verified: bigint 1 and dec 12345.6789
+match), timestamps-micros still a hypothesis the pins will verify,
+zero-doubles normalized to
+`hashLong(0)`, strings/binaries as UTF-8 bytes in 4-byte LE words with each
+tail byte mixed individually then `fmix(h, numBytes)` (4/4 string cells —
+plain Guava tail handling does NOT match); chained per argument starting at 42
+with NULLs skipped.
