@@ -573,7 +573,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   merged into one file set (partition fields union by name, values Null-padded),
   so a list answers exactly like a directory; listings keep `*.orc` names only
   (repo bookkeeping is never data; a directly addressed file still
-  footer-checks). pins: io-orc-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  footer-checks). **Round 3:** the filter is reverted (R-18b-12 — the scan reads
+  every match, hidden names only); `OrcPartition::execute` streams batches from
+  the ArrowReader through `OrcBatchStream` (R-18b-14, text_scan pattern), never
+  a collected Vec. pins: io-orc-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `orc_schema.rs` — **IO-ORC-1 (2026-09-16):** the ORC schema half beside the scan:
   footer-attribute mapping (LONG→`timestamp_ntz`, instant→UTC-stamped `timestamp`,
   local-tz-kind→naive, recursive through struct/list/map), schema union by name under

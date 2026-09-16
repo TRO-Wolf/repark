@@ -255,7 +255,11 @@ pub(crate) fn apply_user_orc_schema(
                 )));
             }
             None => {
-                exprs.push(source.alias(name));
+                return Err(Error::Analysis(format!(
+                    "orc read cannot apply schema type `{kind}` to column `{}` of type {}",
+                    found.name(),
+                    found.data_type()
+                )));
             }
         }
     }

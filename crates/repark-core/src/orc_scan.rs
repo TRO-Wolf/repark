@@ -1,7 +1,9 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 
 use arrow::array::timezone::Tz;
 use arrow::array::{
@@ -16,10 +18,10 @@ use datafusion::datasource::{TableProvider, TableType};
 use datafusion::error::{DataFusionError, Result as DataFusionResult};
 use datafusion::execution::TaskContext;
 use datafusion::logical_expr::{Expr, TableProviderFilterPushDown};
-use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::{PartitionStream, StreamingTableExec};
-use datafusion::physical_plan::{ExecutionPlan, SendableRecordBatchStream};
+use datafusion::physical_plan::{ExecutionPlan, RecordBatchStream, SendableRecordBatchStream};
 use datafusion::prelude::DataFrame;
+use futures::Stream;
 use orc_rust::projection::ProjectionMask;
 use orc_rust::schema::TimestampPrecision;
 use orc_rust::{ArrowReader, ArrowReaderBuilder};
@@ -131,11 +133,6 @@ fn keep_modified(
     Ok(kept)
 }
 
-fn is_orc_data_file(name: &std::ffi::OsStr) -> bool {
-    name.to_str()
-        .is_some_and(|text| text.len() > 4 && text[text.len() - 4..].eq_ignore_ascii_case(".orc"))
-}
-
 fn push_orc_dir(dir: &Path, display: &str, recursive: bool, out: &mut Vec<PathBuf>) -> Result<()> {
     let mut stack = vec![dir.to_path_buf()];
     while let Some(current) = stack.pop() {
@@ -164,9 +161,7 @@ fn push_orc_dir(dir: &Path, display: &str, recursive: bool, out: &mut Vec<PathBu
                 ))
             })?;
             if kind.is_file() || (kind.is_symlink() && candidate.is_file()) {
-                if is_orc_data_file(&entry.file_name()) {
-                    out.push(candidate);
-                }
+                out.push(candidate);
             } else if kind.is_dir() {
                 let partitioned = entry
                     .file_name()
@@ -233,11 +228,7 @@ fn expand_single_orc_path(
     }
     if has_glob_meta(path) {
         let files = expand_text_glob(path)?;
-        let data: Vec<PathBuf> = files
-            .into_iter()
-            .filter(|file| file.file_name().is_some_and(is_orc_data_file))
-            .collect();
-        return base_or_default_partitions(data, options, session_zone);
+        return base_or_default_partitions(files, options, session_zone);
     }
     let fs_path = Path::new(path);
     if fs_path.is_file() {
@@ -506,17 +497,169 @@ impl PartitionStream for OrcPartition {
     }
 
     fn execute(&self, _ctx: Arc<TaskContext>) -> SendableRecordBatchStream {
-        let outcome = self.read_partitions();
-        match outcome {
-            Ok(batches) => Box::pin(RecordBatchStreamAdapter::new(
-                Arc::clone(&self.output_schema),
-                futures::stream::iter(batches.into_iter().map(Ok)),
-            )),
-            Err(error) => Box::pin(RecordBatchStreamAdapter::new(
-                Arc::clone(&self.output_schema),
-                futures::stream::once(futures::future::ready(Err(error))),
-            )),
+        Box::pin(OrcBatchStream {
+            files: self.files.clone(),
+            file_index: 0,
+            current: None,
+            data_schema: Arc::clone(&self.data_schema),
+            need_data: self.need_data.clone(),
+            need_parts: self.need_parts.clone(),
+            part_types: self.part_types.clone(),
+            output_schema: Arc::clone(&self.output_schema),
+            order: self.order.clone(),
+            partition_values: Arc::clone(&self.partition_values),
+            limit: self.limit,
+            emitted: 0,
+            done: false,
+        })
+    }
+}
+
+struct OrcOpenFile {
+    path: PathBuf,
+    reader: ArrowReader<File>,
+    writer_zone: Option<Tz>,
+    values: Vec<PartitionValue>,
+}
+
+struct OrcBatchStream {
+    files: Vec<PathBuf>,
+    file_index: usize,
+    current: Option<OrcOpenFile>,
+    data_schema: SchemaRef,
+    need_data: Vec<usize>,
+    need_parts: Vec<usize>,
+    part_types: Vec<DataType>,
+    output_schema: SchemaRef,
+    order: Vec<OrcOutput>,
+    partition_values: Arc<HashMap<PathBuf, Vec<PartitionValue>>>,
+    limit: Option<usize>,
+    emitted: usize,
+    done: bool,
+}
+
+impl OrcBatchStream {
+    fn open_next(&mut self) -> DataFusionResult<()> {
+        let file = self.files[self.file_index].clone();
+        self.file_index += 1;
+        let writer_zone: Option<Tz> = file_writer_tz(&file).and_then(|name| name.parse().ok());
+        let (names, _) = orc_projection_names(&file, &self.need_data, &self.data_schema)?;
+        let source = File::open(&file).map_err(|error| {
+            DataFusionError::Execution(format!("orc read cannot open {}: {error}", file.display()))
+        })?;
+        let reader = ArrowReaderBuilder::try_new(source)
+            .map_err(|error| {
+                DataFusionError::Execution(orc_footer_error(&file, &format!("{error}")).to_string())
+            })?
+            .with_timestamp_precision(TimestampPrecision::Microsecond);
+        let root = reader.file_metadata().root_data_type().clone();
+        let mask = ProjectionMask::named_roots(&root, &names);
+        let values = self
+            .partition_values
+            .get(&file)
+            .cloned()
+            .unwrap_or_default();
+        let stream: ArrowReader<File> = reader
+            .with_projection(mask)
+            .with_batch_size(ORC_BATCH_ROWS)
+            .build();
+        self.current = Some(OrcOpenFile {
+            path: file,
+            reader: stream,
+            writer_zone,
+            values,
+        });
+        Ok(())
+    }
+
+    fn next_batch(&mut self) -> DataFusionResult<Option<RecordBatch>> {
+        loop {
+            if self.done {
+                return Ok(None);
+            }
+            if self.limit.is_some_and(|max| self.emitted >= max) {
+                self.done = true;
+                return Ok(None);
+            }
+            if self.current.is_none() {
+                if self.file_index >= self.files.len() {
+                    self.done = true;
+                    return Ok(None);
+                }
+                if let Err(error) = self.open_next() {
+                    self.done = true;
+                    return Err(error);
+                }
+                continue;
+            }
+            let batch = match self.current.as_mut().and_then(|open| open.reader.next()) {
+                None => {
+                    self.current = None;
+                    continue;
+                }
+                Some(Err(error)) => {
+                    let path = self.current.as_ref().map(|open| open.path.clone());
+                    self.done = true;
+                    return Err(DataFusionError::Execution(format!(
+                        "orc read of {} failed: {error}",
+                        path.as_ref()
+                            .map(|path| path.display().to_string())
+                            .unwrap_or_default()
+                    )));
+                }
+                Some(Ok(batch)) => batch,
+            };
+            if batch.num_rows() == 0 {
+                continue;
+            }
+            let mut rows = batch.num_rows();
+            if let Some(max) = self.limit {
+                let remaining = max.saturating_sub(self.emitted);
+                if remaining == 0 {
+                    self.done = true;
+                    return Ok(None);
+                }
+                rows = rows.min(remaining);
+            }
+            let batch = batch.slice(0, rows);
+            let open = self.current.as_ref().ok_or_else(|| {
+                DataFusionError::Internal("orc scan lost its open file".to_string())
+            })?;
+            let aligned =
+                align_orc_batch(&batch, &self.data_schema, &self.need_data, open.writer_zone)?;
+            let parts =
+                part_arrays_for_rows(&open.values, &self.need_parts, &self.part_types, rows)?;
+            let assembled = assemble_orc_batch(
+                &aligned,
+                &self.need_data,
+                &parts,
+                &self.need_parts,
+                &self.order,
+                &self.output_schema,
+            )?;
+            self.emitted += rows;
+            if self.limit.is_some_and(|max| self.emitted >= max) {
+                self.done = true;
+            }
+            return Ok(Some(assembled));
         }
+    }
+}
+
+impl Stream for OrcBatchStream {
+    type Item = DataFusionResult<RecordBatch>;
+
+    fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        match self.next_batch() {
+            Ok(batch) => Poll::Ready(batch.map(Ok)),
+            Err(error) => Poll::Ready(Some(Err(error))),
+        }
+    }
+}
+
+impl RecordBatchStream for OrcBatchStream {
+    fn schema(&self) -> SchemaRef {
+        Arc::clone(&self.output_schema)
     }
 }
 
@@ -799,74 +942,6 @@ fn assemble_orc_batch(
         }
     }
     RecordBatch::try_new(Arc::clone(output_schema), columns).map_err(DataFusionError::from)
-}
-
-impl OrcPartition {
-    fn read_partitions(&self) -> DataFusionResult<Vec<RecordBatch>> {
-        let mut out: Vec<RecordBatch> = Vec::new();
-        let mut emitted = 0usize;
-        let empty_values: Vec<PartitionValue> = Vec::new();
-        for file in &self.files {
-            if self.limit.is_some_and(|max| emitted >= max) {
-                break;
-            }
-            let writer_zone: Option<Tz> = file_writer_tz(file).and_then(|name| name.parse().ok());
-            let (names, _) = orc_projection_names(file, &self.need_data, &self.data_schema)?;
-            let source = File::open(file).map_err(|error| {
-                DataFusionError::Execution(format!(
-                    "orc read cannot open {}: {error}",
-                    file.display()
-                ))
-            })?;
-            let reader = ArrowReaderBuilder::try_new(source)
-                .map_err(|error| {
-                    DataFusionError::Execution(
-                        orc_footer_error(file, &format!("{error}")).to_string(),
-                    )
-                })?
-                .with_timestamp_precision(TimestampPrecision::Microsecond);
-            let root = reader.file_metadata().root_data_type().clone();
-            let mask = ProjectionMask::named_roots(&root, &names);
-            let values = self.partition_values.get(file).unwrap_or(&empty_values);
-            let stream: ArrowReader<File> = reader
-                .with_projection(mask)
-                .with_batch_size(ORC_BATCH_ROWS)
-                .build();
-            for batch in stream {
-                let batch = batch.map_err(|error| {
-                    DataFusionError::Execution(format!(
-                        "orc read of {} failed: {error}",
-                        file.display()
-                    ))
-                })?;
-                if batch.num_rows() == 0 {
-                    continue;
-                }
-                let mut rows = batch.num_rows();
-                if let Some(max) = self.limit {
-                    let remaining = max.saturating_sub(emitted);
-                    if remaining == 0 {
-                        break;
-                    }
-                    rows = rows.min(remaining);
-                }
-                let batch = batch.slice(0, rows);
-                let aligned =
-                    align_orc_batch(&batch, &self.data_schema, &self.need_data, writer_zone)?;
-                let parts = part_arrays_for_rows(values, &self.need_parts, &self.part_types, rows)?;
-                out.push(assemble_orc_batch(
-                    &aligned,
-                    &self.need_data,
-                    &parts,
-                    &self.need_parts,
-                    &self.order,
-                    &self.output_schema,
-                )?);
-                emitted += rows;
-            }
-        }
-        Ok(out)
-    }
 }
 
 impl crate::ReparkSession {

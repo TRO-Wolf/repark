@@ -291,14 +291,24 @@ def test_orc_reader_signature_bad_arg(spark: ReparkSession) -> None:
 
 
 def test_orc_merge_schema_off_dir(spark: ReparkSession) -> None:
-    """cell orc_merge_schema_off_dir — no merge keeps the first schema. pins: io-orc-1/C-006"""
-    _frame_pin(spark.read.orc(f"{FIXTURES}/m*").orderBy("id"), "orc_merge_schema_off_dir")
+    """cell orc_merge_schema_off_dir — recorded with m* over m1/ and m2/ only. pins: io-orc-1/C-006"""
+    _frame_pin(spark.read.orc(f"{FIXTURES}/m?").orderBy("id"), "orc_merge_schema_off_dir")
+
+
+def test_orc_glob_non_orc_match_refuses(spark: ReparkSession) -> None:
+    """m* over the fixture dir refuses naming the map.md match. pins: io-orc-1/C-006"""
+    from repark.errors import AnalysisException
+
+    with pytest.raises(AnalysisException) as raised:
+        spark.read.orc(f"{FIXTURES}/m*")
+    assert raised.value.getCondition() == "FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER"
+    assert "map.md" in str(raised.value)
 
 
 def test_orc_list_matches_glob_without_merge(spark: ReparkSession) -> None:
     """A differing-schema list answers one scan like the glob. pins: io-orc-1/C-006"""
     listed = spark.read.orc([f"{FIXTURES}/m1", f"{FIXTURES}/m2"]).orderBy("id")
-    globbed = spark.read.orc(f"{FIXTURES}/m*").orderBy("id")
+    globbed = spark.read.orc(f"{FIXTURES}/m?").orderBy("id")
     assert listed.columns == globbed.columns == ["id"]
     assert listed.schema.simpleString() == globbed.schema.simpleString()
     assert [repr(row) for row in listed.collect()] == [repr(row) for row in globbed.collect()]
@@ -389,6 +399,18 @@ def test_orc_user_schema_wrong_type(spark: ReparkSession) -> None:
     _frame_pin(
         spark.read.schema("id string").orc(f"{FIXTURES}/m2"),
         "orc_user_schema_wrong_type",
+    )
+
+
+@pytest.mark.parametrize("wanted", ["map<string,int>", "struct<x:int>", "char(3)"])
+def test_orc_user_schema_unapplied_type_refuses(spark: ReparkSession, wanted: str) -> None:
+    """An unparsed user-schema type refuses with field, type, file type. pins: io-orc-1/C-007"""
+    from repark.errors import AnalysisException
+
+    with pytest.raises(AnalysisException) as raised:
+        spark.read.schema(f"s {wanted}").orc(f"{FIXTURES}/typed")
+    assert str(raised.value) == (
+        f"orc read cannot apply schema type `{wanted}` to column `s` of type Utf8"
     )
 
 
