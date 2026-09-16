@@ -164,6 +164,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
   `SHOW TABLES` conf-gated), each `sql()` as one eager commit boundary with no multi-statement
   atomicity and no promised transaction API, and catalog visibility after DDL (list-on-access
   guarantees + free-SQL OOB residual). Every claim cites a real test or pinned refusal by name.
+- [collation-fnp-13.md](collation-fnp-13.md) — **FNP-13 collation design note (2026-09-15, run 16c, owner ruling Q-15c-5):** Spark 4.1.2 collation semantics measured (55 live cells), RePark's G15 refusal inventory, the Arrow-metadata carrier and analyzer-rule design, slices FNP-13a–d, and owner question Q-16c-2 (ICU4X `icu_collator`).
 
 **A campaign design leaves this directory when its campaign closes.** The Agent-Agnostic Front-Door
 design (settled 2026-08-08, implemented by FD-1…FD-5) moved to
