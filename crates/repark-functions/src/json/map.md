@@ -76,7 +76,9 @@ round-trip destroys.
   struct-field-only). A repeated object key is last-wins. A number decoded into STRING takes
   `json_number_text`, so `1.50` becomes `1.5`. `decimal_units` scales the token TEXT, rounds
   HALF_UP at the declared scale and answers NULL when the result is wider than the precision.
-  pins: fnp-9-collections-json/C-005
+  **Remediation (run 18a):** `decimal_units` is `pub(crate)` so the `csv` module reuses the
+  same scaler for `from_csv` `DECIMAL` tokens.
+  pins: fnp-9-collections-json/C-005, fnp-gen-1/L-005
 - `from_json.rs` — the `from_json` UDF: result type from the foldable schema argument, options
   read from a foldable MAP. **Round 2 (2026-09-06, findings F1/F4/F5/F6/F17):** FAILFAST and
   `_corrupt_record` both read `decode.rs`'s bad-record flag; an empty or whitespace document is

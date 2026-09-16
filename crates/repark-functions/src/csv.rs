@@ -306,18 +306,22 @@ fn stamp_micros(naive: chrono::NaiveDateTime, zone: Option<Tz>) -> Option<i64> {
     }
 }
 
+const DEFAULT_STAMP_OFFSET: [&str; 2] = ["%Y-%m-%dT%H:%M:%S%.f%#z", "%Y-%m-%d %H:%M:%S%.f%#z"];
+
+const DEFAULT_STAMP_NAIVE: [&str; 4] = [
+    "%Y-%m-%dT%H:%M:%S%.f",
+    "%Y-%m-%d %H:%M:%S%.f",
+    "%Y-%m-%dT%H:%M",
+    "%Y-%m-%d %H:%M",
+];
+
 pub(crate) fn default_timestamp_micros(text: &str, zone: Option<Tz>) -> Option<i64> {
-    for pattern in ["%Y-%m-%dT%H:%M:%S%.f%#z", "%Y-%m-%d %H:%M:%S%.f%#z"] {
+    for pattern in DEFAULT_STAMP_OFFSET {
         if let Ok(found) = chrono::DateTime::parse_from_str(text, pattern) {
             return Some(found.timestamp_micros());
         }
     }
-    for pattern in [
-        "%Y-%m-%dT%H:%M:%S%.f",
-        "%Y-%m-%d %H:%M:%S%.f",
-        "%Y-%m-%dT%H:%M",
-        "%Y-%m-%d %H:%M",
-    ] {
+    for pattern in DEFAULT_STAMP_NAIVE {
         if let Ok(naive) = chrono::NaiveDateTime::parse_from_str(text, pattern) {
             return stamp_micros(naive, zone);
         }
@@ -328,6 +332,16 @@ pub(crate) fn default_timestamp_micros(text: &str, zone: Option<Tz>) -> Option<i
             .and_then(|naive| stamp_micros(naive, zone));
     }
     None
+}
+
+#[must_use]
+pub(crate) fn infers_as_timestamp(text: &str) -> bool {
+    DEFAULT_STAMP_OFFSET
+        .iter()
+        .any(|pattern| chrono::DateTime::parse_from_str(text, pattern).is_ok())
+        || DEFAULT_STAMP_NAIVE
+            .iter()
+            .any(|pattern| chrono::NaiveDateTime::parse_from_str(text, pattern).is_ok())
 }
 
 pub(crate) fn parse_dated_token(

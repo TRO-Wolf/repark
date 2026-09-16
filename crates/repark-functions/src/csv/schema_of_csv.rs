@@ -11,13 +11,11 @@ use datafusion::logical_expr::{
 };
 
 use super::{
-    CsvOptions, options_from_map, parse_csv_date, parse_csv_timestamp, read_options_array,
-    string_column,
+    CsvOptions, infers_as_timestamp, options_from_map, parse_csv_date, parse_csv_timestamp,
+    read_options_array, string_column,
 };
 
 pub(crate) const SCHEMA_OF_CSV_UDF: &str = "schema_of_csv";
-
-const TIMESTAMP_PATTERNS: [&str; 2] = ["yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd HH:mm:ss"];
 
 #[must_use]
 pub fn schema_of_csv_udf() -> Arc<ScalarUDF> {
@@ -44,40 +42,40 @@ fn infer_timestamp(token: &str, options: &CsvOptions) -> bool {
     if let Some(format) = options.timestamp_format.as_deref() {
         return parse_csv_timestamp(token, Some(format)).is_some();
     }
-    TIMESTAMP_PATTERNS
-        .iter()
-        .any(|pattern| parse_csv_timestamp(token, Some(pattern)).is_some())
+    infers_as_timestamp(token)
 }
 
-fn infer_token(token: &str, options: &CsvOptions) -> &'static str {
+fn infer_token(token: &str, options: &CsvOptions) -> String {
     if token.is_empty() {
-        return "STRING";
+        return "STRING".to_string();
     }
     if integer_shape(token) {
         if token.parse::<i32>().is_ok() {
-            return "INT";
+            return "INT".to_string();
         }
         if token.parse::<i64>().is_ok() {
-            return "BIGINT";
+            return "BIGINT".to_string();
         }
-        if token.parse::<f64>().is_ok() {
-            return "DOUBLE";
-        }
-        return "STRING";
+        let digits = token.strip_prefix(['+', '-']).unwrap_or(token).len();
+        return format!("DECIMAL({},0)", digits.min(38));
     }
-    if !token.contains('_') && token.parse::<f64>().is_ok() {
-        return "DOUBLE";
+    let plain = token
+        .strip_suffix(['f', 'F', 'd', 'D'])
+        .filter(|rest| !rest.is_empty())
+        .unwrap_or(token);
+    if !token.contains('_') && plain.parse::<f64>().is_ok() {
+        return "DOUBLE".to_string();
     }
     if infer_timestamp(token, options) {
-        return "TIMESTAMP";
+        return "TIMESTAMP".to_string();
     }
     if matches!(token.to_ascii_lowercase().as_str(), "true" | "false") {
-        return "BOOLEAN";
+        return "BOOLEAN".to_string();
     }
     if parse_csv_date(token, options.date_format.as_deref()).is_some() {
-        return "DATE";
+        return "DATE".to_string();
     }
-    "STRING"
+    "STRING".to_string()
 }
 
 pub(crate) fn infer_csv_schema(csv: &str, options: &CsvOptions) -> Result<String> {
@@ -265,6 +263,21 @@ mod tests {
             .expect("ladder"),
             "STRUCT<_c0: INT, _c1: STRING, _c2: DOUBLE, _c3: BOOLEAN, _c4: DATE, _c5: TIMESTAMP, \
              _c6: STRING, _c7: DOUBLE, _c8: BIGINT>"
+        );
+    }
+
+    #[test]
+    fn schema_of_csv_infers_fractional_zulu_short_stamps_big_integers_and_float_suffix() {
+        let options = CsvOptions::default();
+        assert_eq!(
+            infer_csv_schema(
+                "2024-01-01 10:00:00.1,2024-01-01T10:00:00Z,2024-01-01T10:00:00,1.0E10,\
+                 123456789012345678901234,2024-01-01 10:00,1.5f,01/02/2024",
+                &options
+            )
+            .expect("ladder"),
+            "STRUCT<_c0: TIMESTAMP, _c1: TIMESTAMP, _c2: TIMESTAMP, _c3: DOUBLE, \
+             _c4: DECIMAL(24,0), _c5: TIMESTAMP, _c6: DOUBLE, _c7: STRING>"
         );
     }
 

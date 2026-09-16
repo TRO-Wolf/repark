@@ -4,7 +4,7 @@ use datafusion::logical_expr::ScalarUDF;
 use datafusion::prelude::SessionContext;
 
 pub(crate) mod ddl;
-mod decode;
+pub(crate) mod decode;
 mod from_json;
 mod path;
 mod reader;

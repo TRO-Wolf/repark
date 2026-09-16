@@ -61,6 +61,13 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   `TIMESTAMP` field, and fall back to the legacy parser only when the pattern
   itself does not compile.
   pins: fnp-gen-1/L-002, L-003, L-004, PERF-001, PERF-002, PERF-006
+- `from_csv.rs` / `schema_of_csv.rs` — **Remediation (run 18a):** `DECIMAL`
+  tokens run through `from_json`'s `decimal_units` scaler (HALF_UP, scientific
+  notation, precision overflow to NULL); the inference ladder gains fractional
+  and `Z` stamps, `yyyy-MM-dd HH:mm`, `DECIMAL(n,0)` past `BIGINT` (capped at
+  precision 38) and a `1.5f`-style float suffix to `DOUBLE`, sharing the default
+  stamp shapes with the parser (date-only stays `DATE`).
+  pins: fnp-gen-1/L-005, R-18a-14
 - `schema_of_csv.rs` — the `schema_of_csv` scalar UDF plus its `#[cfg(test)]`
   pins (the Spark `CSVInferSchema` ladder and renderer, the quoted separator, the
   `sep` option, the empty-document `INTERNAL_ERROR` defect, NULL, non-string

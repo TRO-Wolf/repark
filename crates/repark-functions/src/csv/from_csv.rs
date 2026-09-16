@@ -20,6 +20,7 @@ use super::{
     string_column, token_is_null, unsupported_datatype,
 };
 use crate::json::ddl::parse_schema;
+use crate::json::decode::decimal_units;
 use crate::session_time_zone::session_time_zone_from_options;
 use crate::timestamp_cast::parse_session_zone;
 
@@ -416,8 +417,8 @@ fn append_token(
                 return null_token(|| inner.append_null());
             }
         }
-        (FieldBuilder::Decimal(inner), DataType::Decimal128(_, scale)) => {
-            if let Some(value) = parse_decimal(token, *scale) {
+        (FieldBuilder::Decimal(inner), DataType::Decimal128(precision, scale)) => {
+            if let Some(value) = decimal_units(token, *precision, *scale) {
                 inner.append_value(value);
             } else {
                 return null_token(|| inner.append_null());
@@ -430,37 +431,6 @@ fn append_token(
         }
     }
     false
-}
-
-fn parse_decimal(token: &str, scale: i8) -> Option<i128> {
-    let token = token.strip_prefix('+').unwrap_or(token);
-    let (negative, digits) = match token.strip_prefix('-') {
-        Some(rest) => (true, rest),
-        None => (false, token),
-    };
-    let (whole, fraction) = match digits.split_once('.') {
-        Some((whole, fraction)) => (whole, fraction),
-        None => (digits, ""),
-    };
-    if whole.is_empty() && fraction.is_empty() {
-        return None;
-    }
-    if !whole.chars().all(|found| found.is_ascii_digit())
-        || !fraction.chars().all(|found| found.is_ascii_digit())
-    {
-        return None;
-    }
-    let scale_usize = usize::try_from(scale).ok()?;
-    let mut scaled = format!("{whole}{fraction}");
-    if fraction.len() > scale_usize {
-        return None;
-    }
-    scaled.push_str(&"0".repeat(scale_usize - fraction.len()));
-    let mut value: i128 = scaled.parse().ok()?;
-    if negative {
-        value = -value;
-    }
-    Some(value)
 }
 
 fn decode_records(
@@ -653,6 +623,17 @@ mod tests {
         assert_eq!(
             first("SELECT from_csv('7,\"q,r\",1e3', 'a INT, b STRING, c DOUBLE')"),
             "{a:7,b:q,r,c:1000.0}"
+        );
+    }
+
+    #[test]
+    fn decimal_tokens_round_half_up_take_exponents_and_null_on_overflow() {
+        assert_eq!(
+            first(
+                "SELECT from_csv('1.239,1e2,123456.7,-0.005', 'd DECIMAL(5,2), e DECIMAL(10,2), \
+                 f DECIMAL(5,2), g DECIMAL(5,2)')"
+            ),
+            "{d:1.24,e:100.00,f:,g:-0.01}"
         );
     }
 
