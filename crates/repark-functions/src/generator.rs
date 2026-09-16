@@ -617,8 +617,9 @@ fn one_element_null_list(list_type: &DataType) -> Result<Expr> {
     match list_type {
         DataType::List(field) => {
             let values = new_null_array(field.data_type(), 1);
+            let nullable = Arc::new(Field::new(field.name(), field.data_type().clone(), true));
             let array = ListArray::new(
-                Arc::clone(field),
+                nullable,
                 OffsetBuffer::from_lengths([1_usize]),
                 values,
                 None,

@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, ArrayRef};
+use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::{Result, ScalarValue, exec_err};
 use datafusion::logical_expr::{
@@ -61,6 +62,21 @@ fn values_buffer_is_empty(array: &ArrayRef) -> bool {
     }
 }
 
+fn widen_seed_to_int64(seed: &ColumnarValue) -> Result<ColumnarValue> {
+    match seed {
+        ColumnarValue::Scalar(ScalarValue::Int32(Some(value))) => Ok(ColumnarValue::Scalar(
+            ScalarValue::Int64(Some(i64::from(*value))),
+        )),
+        ColumnarValue::Scalar(ScalarValue::Int32(None)) => {
+            Ok(ColumnarValue::Scalar(ScalarValue::Int64(None)))
+        }
+        ColumnarValue::Array(array) if array.data_type() == &DataType::Int32 => Ok(
+            ColumnarValue::Array(cast(array.as_ref(), &DataType::Int64)?),
+        ),
+        other => Ok(other.clone()),
+    }
+}
+
 impl ScalarUDFImpl for ReparkShuffle {
     fn name(&self) -> &'static str {
         "shuffle"
@@ -107,7 +123,14 @@ impl ScalarUDFImpl for ReparkShuffle {
             }
             _ => {}
         }
-        self.inner.inner().invoke_with_args(args)
+        let mut call_args = args.args.clone();
+        if let Some(seed) = call_args.get_mut(1) {
+            *seed = widen_seed_to_int64(seed)?;
+        }
+        self.inner.inner().invoke_with_args(ScalarFunctionArgs {
+            args: call_args,
+            ..args
+        })
     }
 }
 
@@ -241,5 +264,32 @@ mod tests {
             })
         };
         assert_eq!(permute(), permute());
+    }
+
+    #[test]
+    fn int32_seed_widens_to_int64_before_delegating() {
+        let values = Arc::new(Int32Array::from(vec![1, 2, 3, 4, 5, 6, 7, 8]));
+        let array: ArrayRef = Arc::new(ListArray::new(
+            int_list_field(),
+            OffsetBuffer::new(vec![0, 8].into()),
+            values,
+            None,
+        ));
+        let udf = ReparkShuffle::new();
+        let field = Arc::new(Field::new("s", DataType::List(int_list_field()), true));
+        let seed_field = Arc::new(Field::new("seed", DataType::Int32, false));
+        let invoke_seeded = |seed: ColumnarValue| {
+            udf.invoke_with_args(ScalarFunctionArgs {
+                args: vec![ColumnarValue::Array(Arc::clone(&array)), seed],
+                arg_fields: vec![Arc::clone(&field), Arc::clone(&seed_field)],
+                number_rows: 1,
+                return_field: Arc::clone(&field),
+                config_options: Arc::new(ConfigOptions::default()),
+            })
+            .expect("seeded shuffle must succeed")
+        };
+        let narrow = invoke_seeded(ColumnarValue::Scalar(ScalarValue::Int32(Some(7))));
+        let wide = invoke_seeded(ColumnarValue::Scalar(ScalarValue::Int64(Some(7))));
+        assert_eq!(format!("{narrow:?}"), format!("{wide:?}"));
     }
 }

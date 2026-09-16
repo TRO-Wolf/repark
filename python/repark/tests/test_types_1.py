@@ -66,13 +66,13 @@ def test_literal_select_width_follows_spark(text: str, want: str) -> None:
 
 
 def test_literal_values_width_follows_spark() -> None:
-    """pins: types-1/C-001 — VALUES literals type INT; nullability stays the residue."""
+    """pins: types-1/C-001 — VALUES literals type INT; literal rows are non-null."""
     table = _session().sql("SELECT * FROM (VALUES (1), (2147483648)) AS t(v)").toArrow()
     field = table.schema.field("v")
     assert str(field.type) == "int64"
     narrow = _session().sql("SELECT * FROM (VALUES (1), (2)) AS t(v)").toArrow()
     assert str(narrow.schema.field("v").type) == "int32"
-    assert narrow.schema.field("v").nullable is True
+    assert narrow.schema.field("v").nullable is False
 
 
 @pytest.mark.parametrize("value", [1, -5])
@@ -193,10 +193,10 @@ def test_narrowed_literal_in_array_struct_map() -> None:
     session = _session()
     frame = _seed(session)
     array = "SELECT array(1, 2) AS r"
-    assert _door_type(session, array) == ("list<element: int32>", False)
+    assert _door_type(session, array) == ("list<element: int32 not null>", False)
     assert session.sql(array).toArrow().column("r").to_pylist() == [[1, 2]]
     facade_array = frame.select(F.array(F.lit(1), F.lit(2)).alias("r"))
-    assert _frame_type(facade_array) == ("list<item: int32>", False)
+    assert _frame_type(facade_array) == ("list<element: int32 not null>", False)
     assert facade_array.toArrow().column("r").to_pylist() == [[1, 2], [1, 2], [1, 2]]
     struct = "SELECT struct(1, 'a') AS r"
     assert _door_type(session, struct) == ("struct<c0: int32, c1: string>", False)

@@ -792,10 +792,13 @@ them, and the document is ordered by surface, never by date.
   `Decimal('2.5')`.
 - **Apache Spark** — parses the literal as `DECIMAL(2,1)` and widens the integer into it, yielding
   `decimal128(11,1)` / non-null with `Decimal('1.0')`, `Decimal('2.5')`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_union_distinct.py::test_union_inline_decimal_literal_diverges_from_spark`
-- **Rationale** — DECLARED, with narrow impact: stored Iceberg `DECIMAL` columns coerce
-  faithfully; only inline decimal *literals* differ. The pin asserts repark's actual output **and**
-  asserts that the recorded Spark golden still does not match, so a future convergence reds it.
+- **Pin** — `python/repark/tests/test_union_distinct.py::test_union_inline_decimal_literal_matches_spark`
+  (pins: door-converge-2b/C-005)
+- **Rationale** — FIXED 2026-09-16 (DOOR-CONVERGE-2b): literal VALUES rows went
+  non-null (PG-values-alias), so the union is `decimal128(11,1)` non-null like
+  Spark. Narrow impact as before: stored Iceberg `DECIMAL` columns coerce
+  faithfully; only inline decimal *literals* differed. The pin asserts the
+  recorded Spark golden directly.
   **Dated 2026-08-13 (W-2 U2 / #84):** U2 landed. The declaration is revisited and **kept**:
   after `parse_float_as_decimal=true`, `VALUES (2.5)` is `DECIMAL(2,1)` and `VALUES (1)` is
   still Int64, so the union is `decimal128(21,1)` **nullable** vs Spark `decimal128(11,1)`
@@ -811,6 +814,11 @@ them, and the document is ordered by surface, never by date.
   the union is `decimal128(11,1)` like Spark. The declaration is revisited and **kept**
   on nullability only (**nullable** vs Spark **non-null**).
   pins: types-1/C-002
+  **Dated 2026-09-16 (DOOR-CONVERGE-2b):** the nullability half converged —
+  literal VALUES rows are non-null (PG-values-alias), so the union is
+  `decimal128(11,1)` **non-null** like Spark. The declaration is revisited and
+  **closed**; the pin asserts the Spark golden directly.
+  pins: door-converge-2b/C-005
 
 ### TY-4 — `createDataFrame` widens Arrow int32 to int64
 
@@ -2989,8 +2997,8 @@ the pin rather than obeying it.
 > `crates/repark-spark/src/tests/decimal.rs::pin_literal_1_23_infers_decimal128_3_2_i128` +
 > `crates/repark-spark/src/extension/tests.rs::configure_makes_bare_1_23_decimal128_3_2`.
 > A fixed defect gets this dated note, never a live divergence row.
-> [TY-3](#ty-3--an-inline-sql-decimal-literal) (inline-`VALUES` union width) stays
-> DECLARED — see its dated 2026-08-13 note.
+> [TY-3](#ty-3--an-inline-sql-decimal-literal) (inline-`VALUES` union width) closed
+> 2026-09-16 (DOOR-CONVERGE-2b) — see its dated note.
 
 > **DEC-2 — `DECIMAL / DECIMAL` result precision and scale — FIXED (2026-08-14, V-2 U4b / #99).**
 > `/` now takes Spark's `resultDecimalType` through a `repark-functions` UDF
@@ -3592,7 +3600,9 @@ the pin rather than obeying it.
 
 - **repark** — `STRUCT(1 AS a)` answers `struct<a: int32>` with a **nullable**
   element; `MAP('a', 1)` answers `map<string, int32>` with a **nullable** value
-  field; `ARRAY(1, 2)` answers `list<element: int32>` with a **nullable** element.
+  field; `ARRAY(1, 2)` answers `list<element: int32 not null>` with a
+  **non-null** element — the array arm closed 2026-09-16 (DOOR-CONVERGE-2b),
+  the struct/map arms stay open.
   (Top-level flags are Spark-equal since 2026-09-06, CAST-NULL-1.)
 - **Apache Spark** — the same constructors answer `struct<a: int32 not null>`,
   `MapType(StringType(), IntegerType(), False)`, and `list<element: int32 not null>`:
@@ -3600,7 +3610,9 @@ the pin rather than obeying it.
   *(oracle: live PySpark 4.1.2, UTC, 2026-09-06.)*
 - **Pin** —
   `python/repark/tests/test_nullability_2.py::test_complex_constructor_elements_stay_nullable_per_complex_elem_null_1`
-  (red when fixed).
+  (struct/map legs still pin nullable; the array leg flipped to non-null with
+  the fix) plus the N7 suite in
+  `python/repark/tests/test_door_converge_2b.py` (pins: door-converge-2b/C-005).
 - **Rationale** — BACKLOG. Element propagation needs type-rebuilding constructor
   shims; the top-level rule (CAST-NULL-1) marks only the top field. Filed 2026-09-06
   (NULLABILITY-2 round 2). The array arm and the registry-wide promise retag were
@@ -3610,7 +3622,9 @@ the pin rather than obeying it.
   traced to main advancing past the branch base (`fix(array-null-1)`, `44ca3aea`,
   repark-owned `array_append`/`array_prepend`), not to the retag. The same
   literal-constructor flag surfaces through `array_contains` result nullability —
-  see ARRAY-LITERAL-CONTAINSNULL-1.
+  see ARRAY-LITERAL-CONTAINSNULL-1. The array arm is FIXED (the repark `array`
+  kernel declares `containsNull` from the args, DOOR-CONVERGE-2b 2026-09-16);
+  struct/map arms stay BACKLOG.
 
 ### ELEMENT-AT-ALIAS-1 — alias re-registration can clobber a dedicated binding
 

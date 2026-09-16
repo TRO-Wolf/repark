@@ -303,7 +303,7 @@ def test_avg_grouped_small_value_and_type() -> None:
     table = _session().sql(SQL_GROUPED_SMALL).toArrow()
     assert table.column("k").to_pylist() == ["a", "b", "c"]
     assert table.column("a").to_pylist() == [2.0, 4.0, None]
-    assert _sig(table) == [("k", "string", True), ("a", "double", True)]
+    assert _sig(table) == [("k", "string", False), ("a", "double", True)]
 
 
 def test_avg_grouped_small_dataframe_door() -> None:
@@ -328,7 +328,7 @@ def test_avg_decimal128_grouped_type_and_values() -> None:
     """pins: perf-agg-avg-1/C-003."""
     table = _session().sql(SQL_DECIMAL_GROUPED).toArrow()
     assert _sig(table) == [
-        ("k", "int32", True),
+        ("k", "int32", False),
         ("a", "decimal128(14, 6)", True),
     ]
     assert table.column("a").to_pylist() == [Decimal("1.650000"), Decimal("3.300000")]
@@ -389,7 +389,7 @@ def test_avg_all_null_group_is_null() -> None:
     """pins: perf-agg-avg-1/C-003."""
     table = _session().sql(SQL_ALL_NULL_GROUP).toArrow()
     assert table.column("a").to_pylist() == [None, 1.0]
-    assert _sig(table) == [("k", "string", True), ("a", "double", True)]
+    assert _sig(table) == [("k", "string", False), ("a", "double", True)]
 
 
 def test_avg_single_distinct_answers() -> None:
@@ -428,7 +428,7 @@ def test_avg_grouped_float_drift_within_spark() -> None:
     """pins: perf-agg-avg-1/C-003; types-1/C-001 (VALUES k is int32 on Spark)."""
     table = _session().sql(SQL_FLOAT_DRIFT_GROUPED).toArrow()
     assert table.column("a").to_pylist() == [153846153846153.84]
-    assert _sig(table) == [("k", "int32", True), ("a", "double", True)]
+    assert _sig(table) == [("k", "int32", False), ("a", "double", True)]
     assert table.column("a").to_pylist() == pytest.approx([SPARK_FLOAT_DRIFT_GROUPED], rel=1e-12)
 
 
@@ -440,7 +440,7 @@ def test_avg_decimal_sumwrap_records_divergence() -> None:
     spark = _session()
     grouped_try = spark.sql(SQL_DECIMAL_SUMWRAP_GROUPED_TRY).toArrow()
     assert grouped_try.column("a").to_pylist() == [Decimal("0.0000")]
-    assert _sig(grouped_try) == [("k", "int32", True), ("a", "decimal128(38, 4)", True)]
+    assert _sig(grouped_try) == [("k", "int32", False), ("a", "decimal128(38, 4)", True)]
     grouped = spark.sql(SQL_DECIMAL_SUMWRAP_GROUPED).toArrow()
     assert grouped.column("a").to_pylist() == [Decimal("0.0000")]
     native_grouped = repark.sql(SQL_DECIMAL_SUMWRAP_GROUPED).to_arrow()
@@ -450,7 +450,7 @@ def test_avg_decimal_sumwrap_records_divergence() -> None:
     assert _sig(native_global) == [("a", "decimal128(38, 4)", True)]
     nonzero_try = spark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED_TRY).toArrow()
     assert nonzero_try.column("a").to_pylist() == [Decimal("100000.0000")]
-    assert _sig(nonzero_try) == [("k", "int32", True), ("a", "decimal128(38, 4)", True)]
+    assert _sig(nonzero_try) == [("k", "int32", False), ("a", "decimal128(38, 4)", True)]
     nonzero = spark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED).toArrow()
     assert nonzero.column("a").to_pylist() == [Decimal("100000.0000")]
     native_nonzero = repark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED).to_arrow()
@@ -462,7 +462,7 @@ def test_avg_decimal_sumwrap_records_divergence() -> None:
     assert frame_avg.column("a").to_pylist() == [Decimal("100000.0000")]
     window_try = spark.sql(SQL_DECIMAL_SUMWRAP_WINDOW_TRY).toArrow()
     assert window_try.column("a").to_pylist() == [None, None, None, Decimal("0.0000")]
-    assert _sig(window_try) == [("id", "int32", True), ("a", "decimal128(38, 4)", True)]
+    assert _sig(window_try) == [("id", "int32", False), ("a", "decimal128(38, 4)", True)]
     with pytest.raises(PySparkException, match="Arithmetic Overflow"):
         spark.sql(SQL_DECIMAL_SUMWRAP_WINDOW).toArrow()
 
@@ -483,7 +483,7 @@ def test_window_frame_avg_control() -> None:
     """pins: perf-agg-avg-1/C-002."""
     table = _session().sql(SQL_WINDOW_SLIDING).toArrow()
     assert table.column("a").to_pylist() == [1.0, 1.5, 2.0, 4.0]
-    assert _sig(table) == [("id", "int32", True), ("a", "double", True)]
+    assert _sig(table) == [("id", "int32", False), ("a", "double", True)]
 
 
 def test_many_groups_answers_match_pinned_checksum(tmp_path: Path) -> None:

@@ -22,6 +22,10 @@ needed.
   `coerce_types` + Spark return field (input list shape and nullability kept) —
   the upstream signature coerced the array to `List(item Int64)` before literal
   narrowing. pins: door-converge-2b/C-005
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** the `Int32` seed widens to `Int64`
+  at invoke (the pass-through coercion dropped DataFusion's seed cast);
+  `Utf8`/`LargeUtf8`/`Utf8View` widen to `Utf8` in `wider_pair` (Spark has one
+  string type). pins: door-converge-2b/C-004, C-005
 - `map_from_entries.rs` — **X7:** `map_from_entries` under Spark's `EXCEPTION` map-key dedup
   policy (duplicate keys raise rather than last-wins).
 - `array_position.rs` — **FN-FIX-1:** not-found → `0`; NULL only for NULL array/needle.

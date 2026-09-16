@@ -145,15 +145,13 @@ compile fix was needed. Comment grep over the round-1 diff prints nothing;
 
 Every clause verdict returns to OPEN until step 4 re-verifies it.
 
-| Clause | Round-2 verdict | Re-measure basis |
-|---|---|---|
-| C-001 | OPEN | Q16-0…8, 11, 12, 15, 16, 20 + DIV-round/R-round legs green in the 120, unaudited |
-| C-002 | OPEN | Q16-9/10/13/14/17/18/19 + DIV-ceil/R-ceil legs green in the 120, unaudited |
-| C-003 | OPEN | DIV-date_part/R-date-part-sec/Q16-21…25 legs green in the 120, unaudited |
-| C-004 | OPEN | R-array/Q16-26…31/DIV-slice legs green in the 120, unaudited |
-| C-005 | OPEN | N7-0…32 + PG legs green in the 120, unaudited |
-| C-006 | OPEN | DIV-like/Q16-32…39 legs green in the 120, unaudited |
-| C-007 | OPEN | ratchet 15 → 4 present in tree, parity tests not yet run |
+- Clause C-001 — OPEN — Q16-0…8, 11, 12, 15, 16, 20 plus DIV-round/R-round legs green in the 120, unaudited.
+- Clause C-002 — OPEN — Q16-9/10/13/14/17/18/19 plus DIV-ceil/R-ceil legs green in the 120, unaudited.
+- Clause C-003 — OPEN — DIV-date_part/R-date-part-sec/Q16-21…25 legs green in the 120, unaudited.
+- Clause C-004 — OPEN — R-array/Q16-26…31/DIV-slice legs green in the 120, unaudited.
+- Clause C-005 — OPEN — N7-0…32 plus PG legs green in the 120, unaudited.
+- Clause C-006 — OPEN — DIV-like/Q16-32…39 legs green in the 120, unaudited.
+- Clause C-007 — OPEN — ratchet 15 → 4 present in tree, parity tests not yet run.
 
 ## Round 2 step-2 audit — rule violations in round 1's diff
 
@@ -233,12 +231,73 @@ fixture cells with new legs (date-alias breadth DIV-date_part-0…5,
 DIV-slice-4, DIV-array_repeat-0/1/3, DIV-array_contains-0/2, DIV-size-1/3,
 facade `dow`); no cell needed a residue row.
 
-| Clause | Verdict | Evidence |
-|---|---|---|
-| C-001 | PROVEN | Q16-0…8, 11, 12, 15, 16, 20 + DIV-round-0…5 + R-round-a/b/d + facade round leg; 134 green |
-| C-002 | PROVEN | Q16-9/10/13/14/17/18/19 + DIV-ceil-0…6 + R-ceil-a/b/c + facade ceil/floor legs; 134 green |
-| C-003 | PROVEN | Q16-21…25 + R-date-sec-b + new DIV-date_part-0…5 + epoch/nanosecond/unknown refusals + facade SECOND/dow legs; 134 green |
-| C-004 | PROVEN | Q16-26…31 + R-array-a…d + DIV-slice-0/1/4 + slice start/length refusals; 134 green |
-| C-005 | PROVEN | N7-0…32 + PG-is-distinct/not-distinct/map-access + VALUES test + new DIV-size/array_repeat/array_contains legs + facade array legs; 134 green. ARRAY-LITERAL-CONTAINSNULL-1 stays closed via the repark `array` kernel |
-| C-006 | PROVEN | Q16-32…39 (incl. Q16-37 NULL) + DIV-like-0…4 + Q16-35/36 refusals + facade 2-arg legs; 134 green. 3-arg facade stays P2 with run 18a |
-| C-007 | PROVEN | Ratchet 15 → 4 in tree; `door_parity_tests` green inside `cargo test -p repark-python --lib` (75 passed) |
+- Clause C-001 — PROVEN — Q16-0…8, 11, 12, 15, 16, 20 plus DIV-round-0…5 plus R-round-a/b/d plus facade round leg; 134 green.
+- Clause C-002 — PROVEN — Q16-9/10/13/14/17/18/19 plus DIV-ceil-0…6 plus R-ceil-a/b/c plus facade ceil/floor legs; 134 green.
+- Clause C-003 — PROVEN — Q16-21…25 plus R-date-sec-b plus new DIV-date_part-0…5 plus epoch/nanosecond/unknown refusals plus facade SECOND/dow legs; 134 green.
+- Clause C-004 — PROVEN — Q16-26…31 plus R-array-a…d plus DIV-slice-0/1/4 plus slice start/length refusals; 134 green.
+- Clause C-005 — PROVEN — N7-0…32 plus PG-is-distinct/not-distinct/map-access plus VALUES test plus new DIV-size/array_repeat/array_contains legs plus facade array legs; 134 green. ARRAY-LITERAL-CONTAINSNULL-1 stays closed via the repark `array` kernel.
+- Clause C-006 — PROVEN — Q16-32…39 (incl. Q16-37 NULL) plus DIV-like-0…4 plus Q16-35/36 refusals plus facade 2-arg legs; 134 green. 3-arg facade stays P2 with run 18a.
+- Clause C-007 — PROVEN — ratchet 15 → 4 in tree; `door_parity_tests` green inside `cargo test -p repark-python --lib` (75 passed).
+
+## Round 2 step-6 facade triage — 2026-09-16 (muse-spark-1.3-contributor)
+
+Whole facade suite, first run on the reconciled tree: 56 failed, 9291
+passed, 367 skipped. Every failure triaged below. Root pattern: round 1's
+kernels improved Spark behavior (nullability, widths, refusals) on a tree
+whose pins still recorded the old shapes, plus three round-1 kernel defects
+and two out-of-scope product gaps. My round-2 rule deletion changes no door
+behavior (the deleted rule was already filtered from every door rule set;
+verified identical sets), so no failure below traces to it.
+
+Kernel defects fixed here (all in-fence, per-function, with unit tests):
+
+- `wider_pair` refused `Utf8`+`Utf8View` mixes (`DATATYPE_MISMATCH.CREATE_ARRAY`)
+  Spark coerces: all three Spark string spellings widen to `Utf8` now, with
+  two `spark_common_element` rows. Fixed the four binding-string FNP8 cells.
+- Facade 2-arg `like`/`ilike` dispatched to the UDF, deferring the
+  trailing-escape refusal to execution (`PySparkException`); the SQL door
+  refuses at analysis (`AnalysisException`). Two-arg arms build `Expr::Like`
+  again (one merged arm, file stays under ceiling); 3-arg keeps the UDF.
+  Fixed the three `fn-like-escend` cells.
+- `ReparkShuffle` pass-through coercion dropped DataFusion's `Int32`→`Int64`
+  seed cast: the wrapper widens the seed at invoke (array operand untouched).
+  Fixed the shuffle seed cell.
+- `posexplode_outer`/`inline_outer` built the one-NULL-element fallback list
+  reusing the input's now-non-null `element` field: export panicked
+  (`Non-nullable field ... cannot contain nulls`). The fallback carries a
+  nullable copy of the field now. Fixed both TVF cells.
+
+Stale pins tightened to Spark truth (widths/values untouched; each verified
+against its oracle fixture or the Spark Arrow schema in `fnp8_spark_oracle.json`):
+
+- BL-20 `LIT-SQL-32`/`LIT2-PY-02`/bare-`array` V-001: nullable `item` →
+  non-null `element` (N7-0).
+- `types-1` VALUES nullability + `array` legs; `test_complex_cast` array_ctor;
+  `COMPLEX-ELEM-NULL-1` array leg (struct/map stay BACKLOG).
+- Seven `perf-agg-avg-1` group-key flags across six tests (keys over literal
+  rows are non-null).
+- Eight FNP8 binding capture/shadow dispositions re-measured live (values
+  already equal the Spark rows; nullability converged).
+- TY-3 closed: the union is `decimal128(11,1)` non-null like Spark; the pin
+  asserts the golden directly (the test's own tripwire demanded the revisit).
+- `test_production_file_size` re-hash of `_match_from_or_join_keyword`
+  (round-1's DISTINCT-FROM guard); cap_1 mirror row records the round-1
+  `analyzer.rs` shrink 1150 → 1122; one registry self-link anchor kept stable.
+
+P2 hand-offs out of this unit's scope (recorded, not fixed):
+
+- P2 union-path (4 `fnp_gen_1` cells): SQL UNION does not unify nested
+  nullability — `List(non-null Struct)` vs `List(Struct)` errors in
+  `optimize_projections` where Spark unifies to nullable. Needs union-branch
+  unification in set-op planning; no narrow fix on the kernel side (the
+  literal array is Spark-right).
+- P2 ML owner (~20 ML cells): `python/repark/spark/ml` lowers vector
+  extraction to SQL `array_element(...)`, which this unit's gate-tested
+  stub refuses with `UNRESOLVED_ROUTINE` (Spark has no such function;
+  `EXPECTED_DIVERGENCES` pins door-refuses/facade-`element_at`). ML must
+  move its lowering to `element_at`, honoring its 0-based `enumerate` and
+  out-of-range-NULL reliance (`base.py`).
+
+Residual for FNP-8: HOF kernels export the `item` field name while live
+Spark exports `element` (decoded from `fnp8_spark_oracle.json` schemas);
+nullability now matches. Renaming HOF kernels is FNP-8's call.

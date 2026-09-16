@@ -25,7 +25,7 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-core/src/dynamic_flatten/tests.rs", 1442),
     ("crates/repark-core/src/session/tests/session.rs", 1407),
     ("crates/repark-core/tests/declared_sorted.rs", 1348),
-    ("crates/repark-functions/src/analyzer.rs", 1150),
+    ("crates/repark-functions/src/analyzer.rs", 1122),
     ("crates/repark-functions/src/analyzer/time_window/mod.rs", 1416),
     ("crates/repark-functions/src/datetime.rs", 1699),
     ("crates/repark-functions/src/spark_time_window.rs", 1125),

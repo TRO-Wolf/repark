@@ -37,7 +37,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   through `__repark_gen_field`, which unions the parent struct's validity into the
   child so a NULL element emits NULL fields rather than Arrow defaults; the outer
   spellings normalize NULL/empty inputs to a one-NULL-element list so `preserve_nulls`
-  emits Spark's all-NULL row. Intended-non-nullable outputs wrap in the
+  emits Spark's all-NULL row; the NULL list carries a nullable copy of the
+  element field (**DOOR-CONVERGE-2b** round 2, 2026-09-16 — reusing the
+  input's now-non-null field panicked at Arrow export).
+  pins: door-converge-2b/C-005. Intended-non-nullable outputs wrap in the
   `__repark_spark_nonnull__` schema marker (value-preserving). A single `AS name` or
   `__repark_gen_alias` name list must match the output arity or the rewrite raises
   `[COLUMN_ALIASES_MISMATCH]`; two generators, a `stack` call, an explode-path

@@ -66,9 +66,19 @@ fn list_element(data_type: &DataType) -> Option<&Arc<Field>> {
     }
 }
 
+fn is_spark_string(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
 fn wider_pair(left: &DataType, right: &DataType) -> Option<DataType> {
     if left == right {
         return Some(left.clone());
+    }
+    if is_spark_string(left) && is_spark_string(right) {
+        return Some(DataType::Utf8);
     }
     if *left == DataType::Null {
         return Some(right.clone());
@@ -201,6 +211,11 @@ mod tests {
             (
                 &[DataType::Int32, DataType::Float32],
                 Some(DataType::Float32),
+            ),
+            (&[DataType::Utf8, DataType::Utf8View], Some(DataType::Utf8)),
+            (
+                &[DataType::Utf8View, DataType::LargeUtf8],
+                Some(DataType::Utf8),
             ),
         ];
         for (inputs, expected) in cases {

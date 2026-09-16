@@ -221,13 +221,14 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 exprs[1].clone(),
             )
         }
-        "like" => {
+        "like" | "ilike" => {
             need_at_least(2)?;
-            repark_functions::expr_fn::like(exprs.clone())
-        }
-        "ilike" => {
-            need_at_least(2)?;
-            repark_functions::expr_fn::ilike(exprs.clone())
+            match (name, exprs.len()) {
+                ("like", 2) => exprs[0].clone().like(exprs[1].clone()),
+                ("ilike", 2) => exprs[0].clone().ilike(exprs[1].clone()),
+                ("like", _) => repark_functions::expr_fn::like(exprs.clone()),
+                _ => repark_functions::expr_fn::ilike(exprs.clone()),
+            }
         }
         "regexp_like" => {
             need(2)?;

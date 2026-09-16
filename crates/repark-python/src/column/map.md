@@ -109,6 +109,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `array_remove` and `array_union` arms embed the `repark_functions::expr_fn`
   kernels the SQL door registers — one kernel on both doors.
   pins: door-converge-2b/C-001, C-002, C-003, C-004, C-005, C-006
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** 2-arg `like`/`ilike` build
+  `Expr::Like` again (the UDF route deferred the trailing-escape refusal to
+  execution; the analyzer refuses at analysis). 3-arg keeps the UDF.
+  pins: door-converge-2b/C-006
 - [`function_dispatch/dispatch_json.rs`](function_dispatch/dispatch_json.rs) —
   **FNP-9/10 (2026-09-05):** arms for
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
