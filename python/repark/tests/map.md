@@ -845,6 +845,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   FACADE-4 round 5 corrected `_data_type_to_sql_type` to the hash of the body
   committed in `a3424513` (`204ad7a…` was a stale mid-edit value).
   pins: facade-1/C-001, C-002
+  SET-ANSI-RUNTIME-1 (2026-09-15) re-hashed `_SQLCONF_DEFAULTS` (the ANSI default entry).
+  pins: set-ansi-runtime-1/C-005
   CSV-INFER-PERF-1 re-hashed `_promote_csv_string_types` (one `try_cast` failure-count agg)
   and `_CSV_NATIVE_OPTION_KEYS` (`utf8_columns`). Round 2 restored `_CSV_NATIVE_OPTION_KEYS`
   (internal `utf8_columns` no longer in the public native-key set) and re-hashed
@@ -3853,7 +3855,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (DATE extraction and leap-day DATE arithmetic are session-zone independent on both engines) and
   are UNCHANGED by the fix — which is the half of the claim an all-disclosure corpus could never
   make. Also carries the conf-surface pins: the `UTC` default, the builder round trip, the
-  accepted-but-neither-validated-nor-applied runtime `conf.set`/`unset` disclosure, the reuse
+  runtime `conf.set`/`unset` that validates and applies (SET-ANSI-RUNTIME-1 FIXED, 2026-09-15;
+  TZ-3 FIXED with it — the old accepted-but-neither-validated-nor-applied disclosure is deleted),
+  the `sql_conf`-shaped round trip that moves the engine at each step, the reuse
   path's deliberate laxness (an invalid zone on a second `getOrCreate` warns, never raises), the
   whitespace normalization that keeps `conf.get` on the engine's trimmed zone, and the engine's
   build-time refusal of an unknown or blank zone. Rows go through the facade `sql()` door or (for
@@ -5371,10 +5375,11 @@ through `core` or the package. pins: eager-budget-1/C-010
 - `test_sql_set_door_1.py` — **SQL-SET-DOOR-1 (2026-09-14):** the `SET`/`RESET`/`SET TIME ZONE`
   SQL-door pins for registry `B-TZ-5`, measured against `fixtures-batch1.json` cells
   `BTZ5-0`…`BTZ5-19` and `fixtures-batch5.json` cells `S5-*` (PySpark 4.1.2). Result frames
-  assert on the `to_arrow` path — value AND Arrow type AND field nullability. Residues:
-  timezone SET echoes the live session zone (TZ-3), `spark.sql.ansi.enabled` stores but
-  `1/0` still raises `DIVIDE_BY_ZERO` (SET-ANSI-RUNTIME-1), `SET TIME ZONE LOCAL` is a
-  dated DECLARED refusal (SET-TZ-LOCAL-1). Round-3 pins: ZoneId.of offset zones (L-001),
+  assert on the `to_arrow` path — value AND Arrow type AND field nullability.
+  **SET-ANSI-RUNTIME-1 (2026-09-15):** the two knob SETs validate in Rust and apply
+  (TZ-3 / SET-ANSI-RUNTIME-1 FIXED — the old echo-UTC / stores-but-raises pins flipped in
+  place). Residue: `SET TIME ZONE LOCAL` is a dated DECLARED refusal (SET-TZ-LOCAL-1).
+  Round-3 pins: ZoneId.of offset zones (L-001),
   case-sensitive keys (L-002), `SET CATALOG`/`NAMESPACE` vs unintercepted `SET ROLE`
   (L-003), Spark default redaction regex on key-or-value (L-004), TZ-3 + G15 collation
   RESET (L-005), positive shuffle.partitions (L-006), boolean `1`/`yes`/`TRUE` (N-1),
@@ -5382,6 +5387,23 @@ through `core` or the package. pins: eager-budget-1/C-010
   (N-3), backtick keys / double-quoted TIME ZONE / INTERVAL / empty value (N-4),
   SQLSTATE suffixes (N-5), and a long SELECT is not intercepted (P1).
   pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- `test_set_ansi_runtime_1.py` — **SET-ANSI-RUNTIME-1 round 1 (2026-09-15):** runtime
+  `SET` / `spark.conf.set` of `spark.sql.ansi.enabled` and `spark.sql.session.timeZone`
+  apply to the live session through a per-query config snapshot (owner Q-15c-3),
+  measured against `fixtures-batch16-dc2rest-setansi.json` S16-* cells (one ordered
+  session), `fixtures-batch5.json` S5-* cells and `fixtures-batch1.json` BTZ5-* cells
+  (PySpark 4.1.2). ANSI binds at frame analysis (S16-0 stale frame keeps the raise);
+  zone value expressions answer the frame-build zone while `current_timezone()` folds
+  at collect (S16-6 pins the build-zone answer as narrow residue SET-ANSI-RUNTIME-2).
+  pins: set-ansi-runtime-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `test_runtime_zone_spellings_1.py` — **SET-ANSI-RUNTIME-1 review P1 (R-17c-4, 2026-09-15;
+  R-17c-6 batch-17 oracle):** one case per oracle cell — OK cells apply on both doors with
+  value-bearing answers (`from_unixtime(0)`, its string cast and hour) and raw-text echo;
+  refusal cells (`+18:01`, `gmt+8`, `z`, padded, unknown) refuse on both doors with the raw
+  text echoed; `+05:30:30` refuses as declared divergence SET-ANSI-RUNTIME-4;
+  `selectExpr("current_timezone()")` pins the Rust-reachable expression path for
+  the 17a hand-off (`F.current_timezone()` still binds a Python literal).
+  pins: set-ansi-runtime-1/C-002
 - **FNP-MISC-1 (2026-09-15):** `test_fnp_misc_1.py::test_fnp_misc_1_call_function_on_camel_case_aliases_matches_spark` pins `call_function` on #597's six camel-case aliases to the measured Spark 4.1.2 answers (pins: fnp-misc-1/F-4).
 
 - [test_java_double_str_1.py](test_java_double_str_1.py) — **JAVA-DOUBLE-STR-1

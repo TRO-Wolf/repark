@@ -650,7 +650,9 @@ impl crate::ReparkSession {
                 "text lineSep must be a non-empty string".to_string(),
             ));
         }
-        let zone = self.session_time_zone().id();
+        let session_zone = self.session_time_zone();
+        let canonical = crate::canonical_session_zone_id(session_zone.id());
+        let zone = canonical.as_str();
         let (files, partitions) = expand_text_paths(path, base_path, zone)?;
         let (schema, fields, values) =
             apply_user_text_schema(files.clone(), partitions, user_schema, zone)?;

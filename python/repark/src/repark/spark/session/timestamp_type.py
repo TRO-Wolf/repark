@@ -4,7 +4,7 @@ The key is spelled **exactly once** on each side of the boundary: :data:`TIMESTA
 here and ``repark_functions::timestamp_type::SPARK_SQL_TIMESTAMP_TYPE_KEY`` in the engine.
 There is no alternate spelling.
 
-**One truth at build, store-only at runtime (ansi.enabled precedent).** The engine
+**One truth at build, store-only at runtime.** The engine
 resolves the value once in ``SparkExtension.configure``. ``spark.conf.get`` /
 ``spark.conf.set`` round-trip on the facade store; a runtime set does **not** re-resolve
 the analyzer / DDL mapping. NTZ opt-in is ``ReparkSession.builder.config(KEY,

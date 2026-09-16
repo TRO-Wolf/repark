@@ -307,7 +307,7 @@ impl ReparkSessionBuilder {
             conf_dump: Arc::new(conf_dump),
             registered_s3_buckets: Arc::new(Mutex::new(HashSet::new())),
             s3_region_override: Arc::new(s3_region_override),
-            session_time_zone: Arc::new(session_time_zone),
+            runtime_zone: Arc::new(RwLock::new(Arc::new(session_time_zone))),
             temp_view_home: Arc::new(temp_view_home),
             postgres_catalog_names: Arc::new(RwLock::new(HashSet::new())),
             aws_signaled,
@@ -340,8 +340,7 @@ pub struct ReparkSession {
     registered_s3_buckets: Arc<Mutex<HashSet<String>>>,
     /// Optional explicit region for `s3`/`s3a` reads.
     s3_region_override: Arc<Option<String>>,
-    /// The session timezone, parsed and validated ONCE at [`ReparkSessionBuilder::build`].
-    session_time_zone: Arc<SessionTimeZone>,
+    runtime_zone: Arc<RwLock<Arc<SessionTimeZone>>>,
     /// R6-1: where this session's temp views live, captured once at builder `build`.
     temp_view_home: Arc<TempViewHome>,
     /// E-2: whether this session signaled AWS use at build time.
@@ -370,10 +369,13 @@ impl ReparkSession {
         self.backend.session_context()
     }
 
-    /// Return the validated session timezone resolved during [`ReparkSessionBuilder::build`].
     #[must_use]
-    pub fn session_time_zone(&self) -> &SessionTimeZone {
-        &self.session_time_zone
+    pub fn session_time_zone(&self) -> Arc<SessionTimeZone> {
+        Arc::clone(&RwLock::read(&self.runtime_zone).unwrap_or_else(PoisonError::into_inner))
+    }
+
+    pub fn set_runtime_zone(&self, zone: SessionTimeZone) {
+        *RwLock::write(&self.runtime_zone).unwrap_or_else(PoisonError::into_inner) = Arc::new(zone);
     }
 
     #[must_use]

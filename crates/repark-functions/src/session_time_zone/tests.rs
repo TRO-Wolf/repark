@@ -1,5 +1,7 @@
 //! Pins for the session-zone CARRIER: it carries, and it is not a second way to set the zone.
 
+use std::str::FromStr;
+
 use datafusion::common::config::{ConfigExtension, ConfigOptions, ExtensionOptions};
 use datafusion::prelude::{SessionConfig, SessionContext};
 
@@ -55,6 +57,38 @@ fn the_carrier_refuses_to_be_set_and_names_the_one_authoritative_key() {
         DEFAULT_EXTRACTION_TIME_ZONE,
         "a refused set must not have moved the carrier"
     );
+}
+
+#[test]
+fn set_zone_swaps_the_live_value_for_a_validated_runtime_set() {
+    let mut carrier = SessionTimeZoneConfig::default();
+    carrier.set_zone("Asia/Tokyo");
+    assert_eq!(carrier.zone(), "Asia/Tokyo");
+    assert_eq!(carrier.display(), "Asia/Tokyo");
+    carrier.set_zone("UTC");
+    assert_eq!(carrier.zone(), "UTC");
+    assert_eq!(carrier.display(), "UTC");
+}
+
+#[test]
+fn set_zone_keeps_the_raw_echo_and_canonicalizes_the_reader() {
+    for (raw, canonical) in canonical_zone_table() {
+        let mut carrier = SessionTimeZoneConfig::default();
+        carrier.set_zone(&raw);
+        assert_eq!(carrier.display(), raw);
+        assert_eq!(carrier.zone(), canonical);
+        assert!(arrow::array::timezone::Tz::from_str(carrier.zone()).is_ok());
+    }
+}
+
+fn canonical_zone_table() -> Vec<(String, String)> {
+    include_str!("../../../repark-core/src/session_time_zone/canonical_zone_table.txt")
+        .lines()
+        .filter_map(|line| {
+            let (raw, canonical) = line.split_once(" => ")?;
+            Some((raw.to_string(), canonical.to_string()))
+        })
+        .collect()
 }
 
 #[test]

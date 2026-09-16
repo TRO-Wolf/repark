@@ -170,7 +170,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split partition transforms from temporal and type-conversion cases.",
     ),
     "python/repark/tests/test_session_timezone_parity.py": (
-        1328,
+        1318,
         "Session-timezone parity cases share one module.",
         "Split casts from date functions and window behavior.",
     ),

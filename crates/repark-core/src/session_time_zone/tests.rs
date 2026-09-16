@@ -144,3 +144,104 @@ async fn session_clone_shares_the_resolved_zone() {
     assert_eq!(cloned.session_time_zone(), session.session_time_zone());
     assert_eq!(cloned.session_time_zone().id(), "Asia/Tokyo");
 }
+
+#[test]
+fn runtime_values_accept_iana_and_java_offset_forms() {
+    for zone in [
+        "UTC",
+        "GMT",
+        "UT",
+        "America/New_York",
+        "Asia/Tokyo",
+        "+05",
+        "+5",
+        "+0530",
+        "+053000",
+        "+05:30",
+        "+05:30:00",
+        "+08:00",
+        "+18:00",
+        "+18:00:00",
+        "+180000",
+        "GMT+8",
+        "UTC+5",
+        "UT+3",
+        "Z",
+    ] {
+        let parsed = parse_runtime_session_zone_value(zone)
+            .unwrap_or_else(|error| panic!("runtime must accept {zone:?}: {error}"));
+        assert_eq!(parsed.id(), zone);
+    }
+}
+
+#[test]
+fn runtime_values_refuse_past_the_java_range_with_sparks_message() {
+    for zone in [
+        "+18:01",
+        "+19:00",
+        "+05:30:30",
+        "+053025",
+        "+05:30:01",
+        "Not/AZone",
+        "Mars/Olympus_Mons",
+        "Invalid/Zone",
+        "gmt+8",
+        "z",
+        "gmt",
+        "",
+        "   ",
+        "  Asia/Tokyo  ",
+        "'Asia/Tokyo'",
+    ] {
+        let error =
+            parse_runtime_session_zone_value(zone).expect_err("runtime must refuse the zone");
+        let message = error.to_string();
+        assert!(
+            message.contains("[INVALID_CONF_VALUE.TIME_ZONE]"),
+            "refusal must carry Spark's class: {message}"
+        );
+        assert!(
+            message.contains(SESSION_TIME_ZONE_KEY),
+            "refusal must name the conf key: {message}"
+        );
+        assert!(
+            message.contains(&format!("'{zone}'")),
+            "refusal must echo the raw value: {message}"
+        );
+        assert!(
+            message.contains("SQLSTATE: 22022"),
+            "refusal must carry the SQLSTATE: {message}"
+        );
+        assert!(
+            matches!(error, repark_common::Error::IllegalArgument(_)),
+            "a refused runtime VALUE is IllegalArgument (-> IllegalArgumentException): {error:?}"
+        );
+    }
+}
+
+#[test]
+fn canonical_zone_id_maps_java_forms_to_arrow_forms() {
+    for (raw, canonical) in canonical_zone_table() {
+        assert_eq!(canonical_session_zone_id(&raw), canonical, "raw {raw:?}");
+    }
+    assert_eq!(canonical_session_zone_id("+18:01"), "+18:01");
+}
+
+fn canonical_zone_table() -> Vec<(String, String)> {
+    include_str!("canonical_zone_table.txt")
+        .lines()
+        .filter_map(|line| {
+            let (raw, canonical) = line.split_once(" => ")?;
+            Some((raw.to_string(), canonical.to_string()))
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn stored_runtime_zone_is_live_on_the_session_and_its_clones() {
+    let session = ReparkSession::builder().build().unwrap();
+    assert_eq!(session.session_time_zone().id(), "UTC");
+    session.set_runtime_zone(parse_runtime_session_zone_value("Asia/Tokyo").unwrap());
+    assert_eq!(session.session_time_zone().id(), "Asia/Tokyo");
+    assert_eq!(session.clone().session_time_zone().id(), "Asia/Tokyo");
+}

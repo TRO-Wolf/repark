@@ -269,6 +269,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   bracket key through the helper rather than an f-string. pins: column-parity-1/C-007
 - `test_cap_1_source_file_line_cap.py` — **COLUMN-PARITY-1 critic round (2026-09-14):** `spark/column.py` row 1548 → 1532, `dataframe/core.py` row 4044 → 4040 and `dataframe/plan_collapse.py` row 1057 → 1054 with the script baselines (the deferred struct-edit machinery is deleted for the native `update_fields` design; struct field access gains a join-ON bracket fragment). pins: column-parity-1/C-007
 - `test_cap_1_source_file_line_cap.py` — **FNP-11A (2026-09-15):** the `functions_expr.py` row ratchets 1010 → 1021 with the script baseline (the destubbed `make_timestamp` forwarder keeps the frozen 1.0 signature, D-10). pins: fnp-11a/C-001
+- `test_cap_1_source_file_line_cap.py` — **SET-ANSI-RUNTIME-1 (2026-09-15):** the `tests/test_session_timezone_parity.py` mirror row 1328 → 1318 with the script baseline (the applied-contract flips are net-negative). pins: set-ansi-runtime-1/C-005
 - `test_cap_1_source_file_line_cap.py` — **FNP-4B (2026-09-15):** the three Rust rows
 1068 → 1065 / 1052 → 1040 / 1084 → 1082 and the `_live_parity.py` row 1778 → 1763 in
 both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b/C-009, C-010

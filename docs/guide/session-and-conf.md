@@ -74,8 +74,8 @@ Exception: Configuration property nope.nope is not set.
 
 That last line matters more than it looks: **a key you never set is not readable back, even when
 the engine has a default for it.** Only the keys in the session's defaults table (below) answer
-`conf.get` without a prior `set`. `spark.sql.ansi.enabled` is the one that catches people — see
-its section.
+`conf.get` without a prior `set` — `spark.sql.session.timeZone` and `spark.sql.ansi.enabled`
+are both in that table, so they always read back.
 
 `conf.isModifiable(key)` reports Spark's static/dynamic split (`spark.sql.warehouse.dir` is
 `False`; `spark.sql.shuffle.partitions` is `True`). `conf.unset(key)` removes a stored value.
@@ -85,7 +85,8 @@ nothing":
 
 | Tier | Where it takes effect | Examples |
 |---|---|---|
-| **Build-time engine knob** | resolved inside `getOrCreate()`; a later `conf.set` does not move it | `spark.sql.session.timeZone`, `spark.sql.ansi.enabled`, `spark.sql.shuffle.partitions`, `repark.memory.limit.gb`, `spark.sql.timestampType` |
+| **Build-time engine knob** | resolved inside `getOrCreate()`; a later `conf.set` does not move it | `spark.sql.shuffle.partitions`, `repark.memory.limit.gb`, `spark.sql.timestampType` |
+| **Runtime-applied session knob** | validated in Rust and written to the live session; fresh queries answer it | `spark.sql.session.timeZone`, `spark.sql.ansi.enabled` |
 | **Live DataFusion config** | forwarded to the running engine as `SET <key> = <value>` | anything under the `datafusion.` prefix |
 | **Facade-local** | stored on the session, read by the facade | `spark.app.name`, `repark.display.style`, and any key repark does not claim |
 
@@ -142,6 +143,7 @@ answers `conf.get` for on a session that never set it. Today:
 ```python
 for key in (
     "spark.sql.session.timeZone",
+    "spark.sql.ansi.enabled",
     "spark.sql.pyspark.inferNestedDictAsStruct.enabled",
     "spark.sql.sources.partitionOverwriteMode",
     "spark.sql.timestampType",
@@ -151,6 +153,7 @@ for key in (
 
 ```text
 spark.sql.session.timeZone = UTC
+spark.sql.ansi.enabled = true
 spark.sql.pyspark.inferNestedDictAsStruct.enabled = true
 spark.sql.sources.partitionOverwriteMode = STATIC
 spark.sql.timestampType = TIMESTAMP_LTZ
@@ -212,19 +215,18 @@ utc.sql("SELECT hour(TIMESTAMP '2026-03-01 05:30:00Z') AS h").collect()
 [Row(h=5)]
 ```
 
-A **runtime** `conf.set` of this key is a different story. It is accepted (so a drop-in script, and
-PySpark's own `sql_conf` helper, still run), it warns **once per process**, and it is neither
-validated nor stored — `conf.get` keeps reporting the zone the engine really has:
+A **runtime** `conf.set` of this key applies to the live session (fixed 2026-09-15): the
+value validates in Rust and fresh queries answer the new zone, while frames built before the set
+keep the snapshot they were analysed under. An invalid zone refuses before anything is stored:
 
 ```python
-spark.conf.set("spark.sql.session.timeZone", "Europe/Paris")   # warns once, does nothing
-spark.conf.get("spark.sql.session.timeZone")                   # still the build-time zone
+spark.conf.set("spark.sql.session.timeZone", "Europe/Paris")   # applies to fresh queries
+spark.conf.get("spark.sql.session.timeZone")                   # Europe/Paris
 ```
 
-repark is knowingly laxer than PySpark on this one key (PySpark raises on an invalid zone here);
-the warning says so, and the whole shape is registry row
-[TZ-3](../spark-sql-iceberg-parity.md#tz-3--a-runtime-confset-of-the-session-zone-is-accepted-neither-validated-nor-applied).
-The zone is validated exactly once, in the engine, at build.
+The whole shape is registry row
+[TZ-3](../spark-sql-iceberg-parity.md#tz-3--a-runtime-confset-of-the-session-zone-validates-and-applies--fixed-2026-09-15).
+The builder path still validates in the engine at build.
 
 What the zone reaches — and what it does not — is documented in the module that owns the key,
 `python/repark/src/repark/spark/session/session_time_zone.py`. Timestamp behavior in general has
@@ -253,7 +255,7 @@ raise under ANSI (`ARITHMETIC_OVERFLOW`; F-Y10-1, 2026-08-30) for INT/BIGINT;
 Decimal overflow is DEC-6 (FIXED). Do not read "ANSI on" as "every arithmetic fault
 raises" — float `/ 0` on the ANSI door is still IEEE Inf (F-Y10-2).
 
-It is a **build-time carrier**: set it on the builder, not at runtime.
+It is set on the builder **or** at runtime — both reach the engine:
 
 ```python
 lax = ReparkSession.builder.config("spark.sql.ansi.enabled", "false").getOrCreate()
@@ -264,10 +266,20 @@ lax.sql("SELECT 1 / 0 AS q").collect()
 [Row(q=None)]
 ```
 
-The key is **not** in the defaults table, so on a session that never set it `conf.get` raises
-`Configuration property spark.sql.ansi.enabled is not set.` even though the engine's answer is
-`true`. Use `spark.conf.get("spark.sql.ansi.enabled", "true")` if you need a value in a log line,
-and read the engine as the source of truth (`crates/repark-functions/src/ansi.rs`).
+```python
+spark.sql("SET spark.sql.ansi.enabled = false")   # or spark.conf.set(...)
+spark.sql("SELECT 1 / 0 AS q").collect()
+```
+
+```text
+[Row(q=None)]
+```
+
+The key **is** in the defaults table (`true`, the Spark 4 default), so `conf.get` always reads
+back; `RESET`/`unset` fall back to that default, applied. An invalid runtime value refuses
+before anything is stored. The flag binds when a frame is analysed — a frame built before the
+SET keeps the snapshot it was built under. Registry row
+[SET-ANSI-RUNTIME-1](../spark-sql-iceberg-parity.md#set-ansi-runtime-1--a-runtime-set-of-sparksqlansienabled-applies--fixed-2026-09-15).
 
 This flag belongs to the **Spark door only**. The native `repark.sql()` door has its own semantics
 — see [sql-doors.md](sql-doors.md).

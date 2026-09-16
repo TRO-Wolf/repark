@@ -15,6 +15,7 @@ mod logical_names;
 mod ml;
 mod plan_introspect;
 mod session;
+mod session_runtime;
 mod session_sources;
 mod text_io;
 mod type_bridge;
@@ -134,6 +135,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     logical_names::register(module)?;
     ml::register(module)?;
     plan_introspect::register(module)?;
+    session_runtime::register(module)?;
     session_sources::register(module)?;
     text_io::register(module)?;
     type_bridge::register(module)?;

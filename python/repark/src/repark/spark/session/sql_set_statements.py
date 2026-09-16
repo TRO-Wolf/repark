@@ -11,8 +11,10 @@ any whole-query copy when the first keyword is not ``SET``/``RESET``. ``SET ROLE
 is not intercepted. ``SET key TO value`` raises ``ParseException``
 ``[INVALID_SET_SYNTAX]``. Offset zones follow Java ``ZoneId.of`` (cells S5-tz-*).
 
-Every read/write goes through the session's ``RuntimeConfig``. Residues: TZ-3,
-SET-ANSI-RUNTIME-1, SET-TZ-LOCAL-1. ``RESET <key>`` restores a builder-seeded
+Every read/write goes through the session's ``RuntimeConfig``. ``spark.sql.ansi.enabled``
+and ``spark.sql.session.timeZone`` validate in Rust and apply to the live session
+(registry SET-ANSI-RUNTIME-1 FIXED); anything they refuse raises before anything is stored.
+Residue: SET-TZ-LOCAL-1. ``RESET <key>`` restores a builder-seeded
 value when one exists. Redaction on ``SET k`` / ``SET`` / ``SET -v`` uses Spark's
 default ``spark.redaction.regex`` against the key or the value; ``SET k = v``
 echoes the raw value. Invalid-conf messages carry ``SQLSTATE: 22022``;
@@ -23,7 +25,6 @@ from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from repark.errors import (
     AnalysisException,
@@ -31,12 +32,17 @@ from repark.errors import (
     ParseException,
     UnsupportedOperationException,
 )
+from repark import _native
 from repark.spark.session.create_dataframe_rows import _materialize_arrow_as_memtable_frame
 from repark.spark.session.session_configuration import (
+    SPARK_SQL_ANSI_ENABLED_KEY,
     _SQLCONF_STATIC_KEYS,
     _looks_like_datafusion_conf_key,
 )
-from repark.spark.session.session_time_zone import SESSION_TIME_ZONE_KEY
+from repark.spark.session.session_time_zone import (
+    SESSION_TIME_ZONE_KEY,
+    refresh_session_zone_canonical,
+)
 from repark.spark.session.sql_relations import (
     _split_leading_sql_trivia,
     _sql_mask_strings_and_comments,
@@ -82,14 +88,9 @@ _RESET_BARE_RE = re.compile(r"RESET\Z", re.IGNORECASE)
 
 _TYPED_VALUE_KINDS: dict[str, str] = {
     "spark.sql.shuffle.partitions": "int",
-    "spark.sql.ansi.enabled": "boolean",
 }
 
-_BOOLEAN_VALUE_TEXTS: frozenset[str] = frozenset({"true", "false"})
-
 _WAP_SESSION_KEY_PREFIX = "spark.wap."
-
-_ZONE_PREFIXES: tuple[str, ...] = ("GMT", "UTC", "UT")
 
 _INVALID_SET_SYNTAX = (
     "[INVALID_SET_SYNTAX] Expected format is 'SET', 'SET key', or 'SET key=value'. "
@@ -216,7 +217,6 @@ def _apply_set(session: ReparkSession, key: str, value: str) -> DataFrame:
             f"[CANNOT_MODIFY_STATIC_CONFIG] Cannot modify the value of the static Spark "
             f'config: "{key}".{_SQLSTATE_STATIC_CONFIG}'
         )
-    _refuse_unless_resolvable_zone(key, value)
     _refuse_unless_typed(key, value)
     session.conf.set(key, value)
     return _pair_frame(session, [(key, session.conf.get(key))])
@@ -232,8 +232,6 @@ def _apply_set_time_zone(session: ReparkSession, literal: str, *, quoted: bool) 
             'ReparkSession.builder.config("spark.sql.session.timeZone", "<iana-id>").'
         )
     zone = _unquote_zone_literal(literal) if quoted else literal
-    if not _resolves_as_session_zone(zone):
-        raise IllegalArgumentException(_time_zone_error(zone))
     session.conf.set(SESSION_TIME_ZONE_KEY, zone)
     effective = session.conf.get(SESSION_TIME_ZONE_KEY)
     return _pair_frame(session, [(SESSION_TIME_ZONE_KEY, effective)])
@@ -284,15 +282,17 @@ def _restore_or_unset(session: ReparkSession, key: str) -> None:
     refuse_collation_session_key(key)
     builder_value = session._builder_config.get(key)
     if builder_value is not None:
+        if key in (SESSION_TIME_ZONE_KEY, SPARK_SQL_ANSI_ENABLED_KEY):
+            inner = session._ensure_alive()
+            _native.restore_runtime_config(inner, key, builder_value)
+            session.conf._unset_keys().discard(key)
+            session.conf._store()[key] = builder_value
+            if key == SESSION_TIME_ZONE_KEY:
+                refresh_session_zone_canonical(session)
+            return
         session.conf.set(key, builder_value)
         return
     session.conf.unset(key)
-
-
-def _refuse_unless_resolvable_zone(key: str, value: str) -> None:
-    """Raise ``INVALID_CONF_VALUE.TIME_ZONE`` when the zone key carries a bad zone."""
-    if key == SESSION_TIME_ZONE_KEY and not _resolves_as_session_zone(value):
-        raise IllegalArgumentException(_time_zone_error(value))
 
 
 def _refuse_unless_typed(key: str, value: str) -> None:
@@ -303,70 +303,6 @@ def _refuse_unless_typed(key: str, value: str) -> None:
             raise IllegalArgumentException(_type_mismatch_error(key, value, expected))
         if int(value) <= 0:
             raise IllegalArgumentException(_requirement_error(key, value))
-        return
-    if expected == "boolean" and value.lower() not in _BOOLEAN_VALUE_TEXTS:
-        raise IllegalArgumentException(_type_mismatch_error(key, value, expected))
-
-
-def _resolves_as_session_zone(value: str) -> bool:
-    """Whether ``value`` is a Java ``ZoneId.of`` IANA id or GMT/UTC/UT/offset form."""
-    if not value:
-        return False
-    try:
-        ZoneInfo(value)
-    except (ZoneInfoNotFoundError, ValueError):
-        pass
-    else:
-        return True
-    upper = value.upper()
-    for prefix in _ZONE_PREFIXES:
-        if upper == prefix:
-            return True
-        if upper.startswith(prefix) and len(value) > len(prefix) and value[len(prefix)] in "+-":
-            return _offset_is_java_zone_id(value[len(prefix) :])
-    return _offset_is_java_zone_id(value)
-
-
-def _offset_is_java_zone_id(value: str) -> bool:
-    """Whether ``value`` is a Java ``ZoneOffset`` spelling inside ±18:00."""
-    if value in ("Z", "z"):
-        return True
-    if len(value) < 2 or value[0] not in "+-":
-        return False
-    body = value[1:]
-    hours = 0
-    minutes = 0
-    seconds = 0
-    if re.fullmatch(r"\d{1,2}", body):
-        hours = int(body)
-    elif re.fullmatch(r"\d{2}:\d{2}", body):
-        hours = int(body[:2])
-        minutes = int(body[3:])
-    elif re.fullmatch(r"\d{4}", body):
-        hours = int(body[:2])
-        minutes = int(body[2:])
-    elif re.fullmatch(r"\d{2}:\d{2}:\d{2}", body):
-        hours = int(body[:2])
-        minutes = int(body[3:5])
-        seconds = int(body[6:])
-    elif re.fullmatch(r"\d{6}", body):
-        hours = int(body[:2])
-        minutes = int(body[2:4])
-        seconds = int(body[4:])
-    else:
-        return False
-    if minutes > 59 or seconds > 59 or hours > 18:
-        return False
-    return hours < 18 or (minutes == 0 and seconds == 0)
-
-
-def _time_zone_error(value: str) -> str:
-    """Spark's ``INVALID_CONF_VALUE.TIME_ZONE`` message for one refused value."""
-    return (
-        f"[INVALID_CONF_VALUE.TIME_ZONE] The value '{value}' in the config "
-        f'"{SESSION_TIME_ZONE_KEY}" is invalid. Cannot resolve the given timezone.'
-        f"{_SQLSTATE_INVALID_CONF}"
-    )
 
 
 def _type_mismatch_error(key: str, value: str, expected: str) -> str:

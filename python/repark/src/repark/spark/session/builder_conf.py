@@ -6,10 +6,13 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
 from typing import Any
 
+from repark import _native
 from repark.spark.session import _funcs as _session_funcs
 from repark.spark.session.session_configuration import (
+    SPARK_SQL_ANSI_ENABLED_KEY,
     _DISPLAY_INT_DEFAULTS,
     _RETAINED_CACHE_BYTES_KEY,
+    _SQLCONF_DEFAULTS,
     _builder_display_int,
     _display_token_key,
     _normalize_display_int,
@@ -17,7 +20,10 @@ from repark.spark.session.session_configuration import (
     _retained_cache_bytes_value,
     _sync_display_int_into_builder_config,
 )
-from repark.spark.session.session_time_zone import warn_runtime_session_time_zone_not_applied
+from repark.spark.session.session_time_zone import (
+    SESSION_TIME_ZONE_KEY,
+    refresh_session_zone_canonical,
+)
 from repark.spark.session.timestamp_type import TIMESTAMP_TYPE_KEY, parse_timestamp_type
 
 for _name in dir(_session_funcs):
@@ -110,10 +116,10 @@ class RuntimeConfig:
     ``datafusion.runtime.temp_directory`` is build-time only; a runtime set refuses
     loud and names ``TMPDIR`` (the DiskManager is fixed after ``build()``).
 
-    The session timezone is build-time too: a runtime set/unset is accepted, warned
-    once, and not applied (PySpark's ``sql_conf`` context manager sets this key, so a
-    raise would break a drop-in script). The value is deliberately NOT stored, so
-    ``conf.get`` reports the zone the live engine session really has (default ``UTC``).
+    ``spark.sql.ansi.enabled`` and ``spark.sql.session.timeZone`` apply to the live
+    session immediately: the value is validated in Rust and written to the running engine,
+    so fresh queries answer it while frames built before the set keep the snapshot they were
+    analysed under. An invalid value refuses before anything is stored.
     """
 
     __slots__ = ("_session",)
@@ -149,7 +155,7 @@ class RuntimeConfig:
         (use ``datafusion.runtime.memory_limit`` to re-size the pool). Setting
         ``repark.display.style`` drives the live session's display style.
         """
-        self._session._ensure_alive()
+        inner = self._session._ensure_alive()
         if not isinstance(key, str):
             raise PySparkTypeError(
                 errorClass="NOT_STR",
@@ -184,11 +190,10 @@ class RuntimeConfig:
             )
         # Build-time FairSpillPool size is not runtime-mutable via conf (one truth).
         _refuse_runtime_memory_limit_gb(key)
-        # The zone is resolved once at session build. PySpark scripts (and Apache's `sql_conf`
-        # context manager) set this key at runtime, so the call is accepted but NOT stored —
-        # `conf.get` keeps reporting the zone the live engine session actually has. Warns once.
-        if warn_runtime_session_time_zone_not_applied(key, stacklevel=3):
-            return
+        if key in (SESSION_TIME_ZONE_KEY, SPARK_SQL_ANSI_ENABLED_KEY):
+            _native.set_runtime_config(inner, key, text)
+            if key == SESSION_TIME_ZONE_KEY:
+                refresh_session_zone_canonical(self._session)
         if _looks_like_datafusion_conf_key(key):
             _forward_datafusion_conf(self._session, key, text)
         # conf.set("repark.display.style", …) must drive show() — not only the conf map.
@@ -303,13 +308,15 @@ class RuntimeConfig:
         ``repark.display.style`` also resets the live session style to the default
         ``polars`` so ``conf.get`` / ``session.display_style`` / ``show()`` stay lockstep.
         """
-        self._session._ensure_alive()
+        inner = self._session._ensure_alive()
         if isinstance(key, str) and key.lower() == _RETAINED_CACHE_BYTES_KEY:
             _refuse_read_only_conf_key(key)
-        # The zone always has a value (resolved at build), so there is nothing to unset;
-        # tombstoning would make conf.get report a zone the live session does not have.
-        # Accepted, warned once, no state change — same as `set`.
-        if warn_runtime_session_time_zone_not_applied(key, stacklevel=3):
+        if key in (SESSION_TIME_ZONE_KEY, SPARK_SQL_ANSI_ENABLED_KEY):
+            self._store().pop(key, None)
+            self._unset_keys().add(key)
+            _native.set_runtime_config(inner, key, _SQLCONF_DEFAULTS[key])
+            if key == SESSION_TIME_ZONE_KEY:
+                refresh_session_zone_canonical(self._session)
             return
         if key.lower() == _DISPLAY_STYLE_KEY:
             store = self._store()

@@ -61,7 +61,8 @@ impl ExtensionOptions for SparkAnsiConfig {
     fn set(&mut self, key: &str, _value: &str) -> Result<()> {
         Err(DataFusionError::Configuration(format!(
             "`{}.{key}` is not a settable option: ANSI mode is set with \
-             `{SPARK_SQL_ANSI_ENABLED_KEY}` on the session builder and is fixed at session build",
+             `{SPARK_SQL_ANSI_ENABLED_KEY}` on the session builder; change it at runtime with \
+             `SET spark.sql.ansi.enabled`",
             Self::PREFIX
         )))
     }
@@ -96,6 +97,21 @@ where
     match config.get(SPARK_SQL_ANSI_ENABLED_KEY) {
         Some(raw) => parse_spark_sql_ansi_enabled(raw),
         None => Ok(DEFAULT_SPARK_SQL_ANSI_ENABLED),
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn parse_runtime_spark_sql_ansi_enabled(raw: &str) -> Result<bool> {
+    if raw.eq_ignore_ascii_case("true") {
+        Ok(true)
+    } else if raw.eq_ignore_ascii_case("false") {
+        Ok(false)
+    } else {
+        Err(DataFusionError::Configuration(format!(
+            "[INVALID_CONF_VALUE.TYPE_MISMATCH] The value '{raw}' in the config \
+             \"{SPARK_SQL_ANSI_ENABLED_KEY}\" is invalid. It should be a/an 'boolean' value. \
+             SQLSTATE: 22022"
+        )))
     }
 }
 
@@ -239,6 +255,36 @@ mod tests {
         assert!(!parse_spark_sql_ansi_enabled("false").unwrap());
         assert!(!parse_spark_sql_ansi_enabled("FALSE").unwrap());
         assert!(!parse_spark_sql_ansi_enabled("0").unwrap());
+    }
+
+    #[test]
+    fn runtime_parse_accepts_only_true_false_case_insensitive() {
+        assert!(parse_runtime_spark_sql_ansi_enabled("true").unwrap());
+        assert!(parse_runtime_spark_sql_ansi_enabled("TRUE").unwrap());
+        assert!(parse_runtime_spark_sql_ansi_enabled("True").unwrap());
+        assert!(!parse_runtime_spark_sql_ansi_enabled("false").unwrap());
+        assert!(!parse_runtime_spark_sql_ansi_enabled("FALSE").unwrap());
+    }
+
+    #[test]
+    fn runtime_parse_refuses_1_yes_and_padded_with_sparks_message() {
+        for raw in ["1", "yes", "0", "no", " true ", "maybe"] {
+            let error = parse_runtime_spark_sql_ansi_enabled(raw)
+                .expect_err("runtime must refuse the value");
+            let message = error.to_string();
+            assert!(
+                message.contains("[INVALID_CONF_VALUE.TYPE_MISMATCH]"),
+                "refusal must carry Spark's class: {message}"
+            );
+            assert!(
+                message.contains(SPARK_SQL_ANSI_ENABLED_KEY),
+                "refusal must name the key: {message}"
+            );
+            assert!(
+                message.contains("SQLSTATE: 22022"),
+                "refusal must carry the SQLSTATE: {message}"
+            );
+        }
     }
 
     #[test]

@@ -247,6 +247,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `--brief` / `--followup`. `risk_tier: standard`. Branch
   `sepmo/e2-compact-packets`.
   pins: sepmo-e2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [set-ansi-runtime-1-ledger.md](set-ansi-runtime-1-ledger.md) —
+  **SET-ANSI-RUNTIME-1 round 1 (2026-09-15), in flight:** runtime `SET` and
+  `spark.conf.set` of `spark.sql.ansi.enabled` and `spark.sql.session.timeZone`
+  apply to the live session through a per-query config snapshot (owner Q-15c-3).
+  Round 1 covers C-001…C-005; BL-11 (C-006) is round 2. `risk_tier: standard`.
+  Branch `feat/set-ansi-runtime-1`.
+  pins: set-ansi-runtime-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [silver-s0-ledger.md](silver-s0-ledger.md) —
   **SILVER-S0 (2026-09-12), in flight:** READING unit — contract and storage
   feasibility for the deterministic silver-layer compiler (epic §17 S-0).

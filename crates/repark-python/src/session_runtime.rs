@@ -1,0 +1,125 @@
+use datafusion::error::DataFusionError;
+use pyo3::prelude::*;
+use repark_core::{Error, ReparkSession, Result, SESSION_TIME_ZONE_KEY};
+use repark_functions::ansi::{
+    SPARK_SQL_ANSI_ENABLED_KEY, SparkAnsiConfig, parse_runtime_spark_sql_ansi_enabled,
+    parse_spark_sql_ansi_enabled,
+};
+use repark_functions::session_time_zone::SessionTimeZoneConfig;
+
+use crate::fence::fenced_span;
+use crate::session::PyReparkSession;
+use crate::to_py_err;
+
+#[pyfunction]
+pub fn set_runtime_config(
+    session: PyRef<'_, PyReparkSession>,
+    key: &str,
+    value: &str,
+) -> PyResult<()> {
+    fenced_span!("py.session", "set_runtime_config", {
+        apply_runtime_config(&session.session, key, value, true).map_err(to_py_err)
+    })
+}
+
+#[pyfunction]
+pub fn restore_runtime_config(
+    session: PyRef<'_, PyReparkSession>,
+    key: &str,
+    value: &str,
+) -> PyResult<()> {
+    fenced_span!("py.session", "restore_runtime_config", {
+        apply_runtime_config(&session.session, key, value, false).map_err(to_py_err)
+    })
+}
+
+pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
+    module.add_function(wrap_pyfunction!(set_runtime_config, module)?)?;
+    module.add_function(wrap_pyfunction!(restore_runtime_config, module)?)?;
+    module.add_function(wrap_pyfunction!(session_zone_canonical, module)?)?;
+    Ok(())
+}
+
+#[pyfunction]
+pub fn session_zone_canonical(session: PyRef<'_, PyReparkSession>) -> PyResult<String> {
+    fenced_span!("py.session", "session_zone_canonical", {
+        let zone = session.session.session_time_zone();
+        Ok(repark_core::canonical_session_zone_id(zone.id()))
+    })
+}
+
+fn apply_runtime_config(
+    session: &ReparkSession,
+    key: &str,
+    value: &str,
+    strict_boolean: bool,
+) -> Result<()> {
+    if key == SPARK_SQL_ANSI_ENABLED_KEY {
+        let parsed = if strict_boolean {
+            parse_runtime_spark_sql_ansi_enabled(value)
+        } else {
+            parse_spark_sql_ansi_enabled(value)
+        };
+        let enabled =
+            parsed.map_err(|error| Error::IllegalArgument(configuration_message(error)))?;
+        write_ansi_flag(session, enabled)?;
+        return Ok(());
+    }
+    if key == SESSION_TIME_ZONE_KEY {
+        let zone = repark_core::parse_runtime_session_zone_value(value)?;
+        write_session_zone(session, zone)?;
+        return Ok(());
+    }
+    Err(Error::IllegalArgument(format!(
+        "set_runtime_config refuses unknown key {key:?} (served: \
+         {SPARK_SQL_ANSI_ENABLED_KEY:?}, {SESSION_TIME_ZONE_KEY:?})"
+    )))
+}
+
+fn configuration_message(error: DataFusionError) -> String {
+    match error {
+        DataFusionError::Configuration(message) => message,
+        other => other.to_string(),
+    }
+}
+
+fn write_ansi_flag(session: &ReparkSession, enabled: bool) -> Result<()> {
+    let state_lock = session.context().state_ref();
+    let mut state = state_lock.write();
+    let carrier = state
+        .config_mut()
+        .options_mut()
+        .extensions
+        .get_mut::<SparkAnsiConfig>();
+    match carrier {
+        Some(carrier) => {
+            carrier.enabled = enabled;
+            Ok(())
+        }
+        None => Err(Error::IllegalArgument(format!(
+            "set_runtime_config refuses {SPARK_SQL_ANSI_ENABLED_KEY:?}: \
+             the live session has no Spark ANSI carrier"
+        ))),
+    }
+}
+
+fn write_session_zone(session: &ReparkSession, zone: repark_core::SessionTimeZone) -> Result<()> {
+    let state_lock = session.context().state_ref();
+    let mut state = state_lock.write();
+    let carrier = state
+        .config_mut()
+        .options_mut()
+        .extensions
+        .get_mut::<SessionTimeZoneConfig>();
+    match carrier {
+        Some(carrier) => {
+            carrier.set_zone(zone.id());
+            session.set_runtime_zone(zone);
+            Ok(())
+        }
+        None => Err(Error::IllegalArgument(format!(
+            "set_runtime_config refuses {SESSION_TIME_ZONE_KEY:?}: \
+             the live session has no session-zone carrier"
+        ))),
+    }
+}
