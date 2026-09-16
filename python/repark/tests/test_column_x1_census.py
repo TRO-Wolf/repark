@@ -9,6 +9,7 @@ import pytest
 
 from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
+from repark.errors import AnalysisException
 from repark.spark.column import Column
 from repark.spark.session import _reset_active_session_for_tests
 from repark.spark.types import IntegerType, LongType
@@ -130,13 +131,29 @@ def test_lit_time_list_and_empty_array(spark: ReparkSession) -> None:
 
 
 def test_hour_minute_second_on_time(spark: ReparkSession) -> None:
-    """Apache test_hour|minute|second — extractors on lit(time)."""
+    """hour/minute/second refuse a TIME input as PySpark 4.1.2 does; TIMESTAMP still answers.
+
+    pins: fnp-11b/C-005
+    Cells HT-00..HT-04 of fnp11b_hour_time_spark_oracle.json, recorded live on
+    PySpark 4.1.2. The earlier form of this pin asserted 12/34/56, which is the
+    behaviour of a Spark without a TIME type; 4.1.2 has one and all three
+    extractors raise UNSUPPORTED_TIME_TYPE on both doors.
+
+    One recorded divergence rides here: Spark types lit(datetime.time(...)) as
+    time(6) (HT-00) where repark types it string. The extractor outcome is
+    Spark-equal either way, and this assert goes red when the lit path gains a
+    TIME type, which is when the registry row retires.
+    """
     frame = spark.range(1).select(F.lit(datetime.time(12, 34, 56)).alias("time"))
-    assert frame.select(F.hour(frame.time)).collect()[0][0] == 12
-    assert frame.select(F.hour("time")).collect()[0][0] == 12
-    assert frame.select(F.minute(frame.time)).collect()[0][0] == 34
-    assert frame.select(F.second(frame.time)).collect()[0][0] == 56
-    # Timestamp path still works.
+    assert frame.schema["time"].dataType.simpleString() == "string"
+    assert frame.collect()[0][0] == datetime.time(12, 34, 56)
+    for extractor in (F.hour, F.minute, F.second):
+        with pytest.raises(AnalysisException) as caught:
+            frame.select(extractor(frame.time)).collect()
+        assert "UNSUPPORTED_TIME_TYPE" in str(caught.value)
+    with pytest.raises(AnalysisException) as caught_name:
+        frame.select(F.hour("time")).collect()
+    assert "UNSUPPORTED_TIME_TYPE" in str(caught_name.value)
     ts = spark.range(1).select(F.lit(datetime.datetime(2017, 11, 6, 15, 16, 17)).alias("ts"))
     assert ts.select(F.hour("ts")).collect()[0][0] == 15
 

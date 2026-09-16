@@ -5590,3 +5590,13 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `ERR-UNRESOLVED-COL-1`; BL-14's ten `date_plus_interval` cells and the two `try_avg` NULL-interval
   cells, both run 17c's; and the `typeof` cells blocked on the `TIMESTAMP_NTZ` literal and the
   unowned `binary` name). pins: fnp-11b/C-008
+- `test_column_x1_census.py` — **FNP-11B orchestrator fix-up (2026-09-16, run 17a):**
+  `test_hour_minute_second_on_time` asserted `hour`/`minute`/`second` over `lit(datetime.time(...))`
+  returning 12/34/56. That is a Spark without a TIME type; **PySpark 4.1.2 raises
+  `UNSUPPORTED_TIME_TYPE` for all three on both doors**, measured live into
+  `fnp11b_hour_time_spark_oracle.json` (HT-00…HT-04, HT-SQL-00…05) after this unit's TIME-family
+  refusals turned the old pin red in the facade suite. The pin is inverted to Spark's measured
+  behaviour and carries one recorded divergence: Spark types `lit(datetime.time(...))` as `time(6)`
+  where repark types it `string` (the collected value round-trips to `datetime.time` either way, and
+  the extractor outcome is Spark-equal). That assert goes red when the lit path gains a TIME type,
+  which is when the registry row retires. pins: fnp-11b/C-005

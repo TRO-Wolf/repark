@@ -739,3 +739,25 @@ C-008 evidence moves to the xfail conversion, the seven §7 Pin lines that cited
 the deleted divergence dicts, and the freeze-builder work. C-002/C-003/C-004
 stay OPEN (strict-xfail residuals, owners named). C-006 stays OPEN (BL-14
 unimplemented). No COVERAGE_ATTESTATION while any clause is OPEN.
+
+## 10. Orchestrator fix-up after the facade gate (2026-09-16, run 17a)
+
+The full facade suite — which this unit's own pin set does not include — caught the one cross-unit
+regression the unit suite missed: `test_column_x1_census.py::test_hour_minute_second_on_time`,
+which asserted `hour` / `minute` / `second` over `lit(datetime.time(12, 34, 56))` returning
+12 / 34 / 56.
+
+Rather than assume either side was right, the orchestrator recorded the shape live on
+PySpark 4.1.2 into `python/repark/tests/fnp11b_hour_time_spark_oracle.json` (11 cells). Spark
+**raises `UNSUPPORTED_TIME_TYPE` for all three extractors on both doors** (HT-01…HT-04,
+HT-SQL-01…HT-SQL-03), and `make_time` / `to_time` refuse identically (HT-SQL-04/05). The old pin
+asserted behaviour Spark does not have — it reads as a port of an Apache test written for a Spark
+without a TIME type. It is inverted to Spark's measured behaviour, citing the cells. Retiring a
+pin is part of implementing the thing it pinned.
+
+One residual is recorded on the same pin: Spark types `lit(datetime.time(...))` as `time(6)`
+(HT-00) where repark types it `string`. The collected value round-trips to `datetime.time` on
+both, and the extractor outcome is Spark-equal, so this is a typing divergence in the `lit` path,
+not a behaviour divergence; it belongs to the type table rather than to a function kernel. The
+assert is written so it goes red when the lit path gains a TIME type, which is when the row
+retires. pins: fnp-11b/C-005
