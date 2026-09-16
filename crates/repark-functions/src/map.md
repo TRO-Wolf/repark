@@ -1042,3 +1042,58 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   `OffsetBuffer` from the measured lengths, and the `as_list_array` panic-downcast at the call site
   became an `exec_err`. Regression pin: `ordinality_packs_positions_for_a_sliced_list`.
   pins: fnp-gen-1/C-002
+- **FNP-AGG-1 step 2 (2026-09-16):** `any_value.rs` (first-value freeze with an
+  occupied flag; 1- and 2-arg SQL, display always `any_value(v)`),
+  **run 18a (2026-09-16):** the 2-arg flag must be a boolean literal, checked in
+  `accumulator()` against the physical arg so both doors raise Spark's
+  `[_LEGACY_ERROR_TEMP_1210]` (a Python-side fold cannot serve the SQL door),
+  `max_min_by.rs` (parameterized `max_by` / `min_by` over a shared `OrdKey`
+  ordering; NULL ords skipped, NULL values kept; 3-arg SQL raises Spark's
+  `[WRONG_NUM_ARGS.WITHOUT_SUGGESTION]` from `return_type`), `moments.rs`
+  (Spark `CentralMomentAgg` row update plus Chan parallel merge; NULL when the
+  count is below 2 or the variance is 0), `mode.rs` (insertion-ordered counts;
+  last-wins ties, smallest-wins with `deterministic` or `WITHIN GROUP`, whose
+  sort key the planner prepends to the args; Spark's `mode() WITHIN GROUP`
+  display), `product.rs` (facade-only `__repark_product`, `double` out, SQL
+  `product` stays `UNRESOLVED_ROUTINE`), **run 18a (2026-09-16):** display
+  `product(v)`, and a `UserDefined` signature whose `coerce_types` maps string
+  input to `DOUBLE` so the engine's own ANSI-aware `CAST` refuses malformed
+  strings under ANSI and nulls them otherwise (the kernel never branches on a
+  value). All register through `aggregate::functions()` as `pub use` re-exports
+  (no new `pub mod` line).
+  **FNP-AGG-1 run 18a step 3 (2026-09-16):** `percentile.rs` (exact Spark
+  percentile with linear interpolation; scalar and array percentages, literal and
+  column frequency; range and negative-frequency refusals in Spark wording; two-
+  partition merge test).
+  **FNP-AGG-1 run 18a step 3b (2026-09-16):** `string_distinct.rs` (one
+  parameterized kernel behind `__repark_listagg_distinct` /
+  `__repark_string_agg_distinct`; reverse-scan dedup, NULL delimiter
+  concatenates bare, all-NULL answers NULL, non-literal delimiter refused;
+  cross-partition merge appends unseen values in arrival order, pinned by a
+  reverse-order merge test).
+  **FNP-AGG-1 run 18a step 3c (2026-09-16):** `histogram_numeric.rs` (Spark
+  `NumericHistogram`: closest-pair merge with last-wins ties, `x` keeps the
+  input numeric type, `y` is double; raw values in state so merge is exact;
+  `nBins` below 2 refused with Spark's `VALUE_OUT_OF_RANGE`).
+  **FNP-AGG-1 run 18a step 3d (2026-09-16):** `grouping.rs` (`__repark_grouping`
+  UDAF aliased `grouping`, `grouping_id` UDAF, and the `ResolveGroupingId`
+  analyzer rule: bitmask from the plan's grouping sets, `Int8` / `Int64` out,
+  canonical `grouping(g)` display, both error classes in Spark wording; the
+  rule also normalizes the planner's qualified projection alias, rebuilding
+  the projection so the cached schema follows the renamed exprs). The custom
+  kernel wins over DataFusion 54.1's builtin `grouping` UDAF and its
+  `ResolveGroupingFunction` because only the custom path answers Spark's
+  `tinyint` with the unqualified display and refuses outside grouping sets,
+  while the builtin answers `Int32` qualified and accepts plain `GROUP BY`;
+  pinned by the `GROUPING SETS` and cube tests asserting type and name.
+  **FNP-AGG-1 run 18a step 7 (2026-09-16):** `count_min_sketch.rs` (byte-exact
+  Spark `CountMinSketchImpl`: `java.util.Random` seeds, multiplicative long
+  buckets, per-tail-byte Murmur double hashing for strings, big-endian V1
+  serialization; integral / string / binary input, NULLs skipped, empty input
+  answers the empty sketch; incompatible-merge refusal in Spark wording;
+  two-partition merge test; fixture-hex and oracle dimension-grid pins).
+  Step 8 marks the UDAF non-nullable (`is_nullable` false, matching Spark's
+  `CountMinSketchAgg`; empty input answers the empty sketch, never NULL).
+  Step 10 clears the slice's own clippy lints (fold-plus-`write!` hex helper
+  in tests, `?` arms in `grouping.rs`); behavior unchanged.
+  pins: fnp-agg-1/C-002, C-003, C-004, C-005

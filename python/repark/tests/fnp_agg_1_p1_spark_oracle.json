@@ -1,0 +1,718 @@
+{
+ "cells": [
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "any_value(v)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "1",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select(F.any_value('v'), F.lit(1))",
+   "name": "any_value",
+   "rows": [
+    [
+     5,
+     1
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "any_value(d)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "1",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select(F.any_value('d', ignoreNulls=True), F.lit(1))",
+   "name": "any_value",
+   "rows": [
+    [
+     0.0,
+     1
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "any_value(s)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "df.groupBy('g').agg(F.any_value('s', F.lit(True))).orderBy('g')",
+   "name": "any_value",
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "_LEGACY_ERROR_TEMP_1210",
+   "error_type": "AnalysisException",
+   "expr": "df.select(F.any_value('v', F.col('g') > 0))",
+   "message": "The second argument in any_value should be a boolean literal.",
+   "name": "any_value"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "_LEGACY_ERROR_TEMP_1210",
+   "error_type": "AnalysisException",
+   "expr": "df.select(F.any_value('v', F.lit(None).cast('boolean')))",
+   "message": "The second argument in any_value should be a boolean literal.",
+   "name": "any_value"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "any_value(v) OVER (PARTITION BY g ORDER BY k ASC NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select('g','k', F.any_value('v', True).over(Window.partitionBy('g').orderBy('k'))).orderBy('g','k')",
+   "name": "any_value",
+   "rows": [
+    [
+     1,
+     "a",
+     10
+    ],
+    [
+     1,
+     "b",
+     10
+    ],
+    [
+     1,
+     "b",
+     10
+    ],
+    [
+     1,
+     "c",
+     10
+    ],
+    [
+     2,
+     null,
+     5
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "any_value((v + 1))",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select(F.any_value(col('v') + 1, True))",
+   "name": "any_value",
+   "rows": [
+    [
+     6
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "product(v)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "1",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select(F.product('v'), F.lit(1))",
+   "name": "product",
+   "rows": [
+    [
+     30000.0,
+     1
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "product((v + 1))",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select(F.product(col('v') + 1))",
+   "name": "product",
+   "rows": [
+    [
+     42966.0
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "product((d * 2))",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "df.groupBy('g').agg(F.product(col('d') * 2)).orderBy('g')",
+   "name": "product",
+   "rows": [
+    [
+     1,
+     -120.0
+    ],
+    [
+     2,
+     0.0
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "CAST_INVALID_INPUT",
+   "error_type": "NumberFormatException",
+   "expr": "df.select(F.product('s'))",
+   "message": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
+   "name": "product"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "product(v) OVER (PARTITION BY g ORDER BY k ASC NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select('g', F.product('v').over(Window.partitionBy('g').orderBy('k'))).orderBy('g','k')",
+   "name": "product",
+   "rows": [
+    [
+     1,
+     "a",
+     10.0
+    ],
+    [
+     1,
+     "b",
+     200.0
+    ],
+    [
+     1,
+     "b",
+     200.0
+    ],
+    [
+     1,
+     "c",
+     6000.0
+    ],
+    [
+     2,
+     null,
+     5.0
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "_LEGACY_ERROR_TEMP_1210",
+   "error_type": "AnalysisException",
+   "expr": "SELECT any_value(v, g > 0) FROM FRAME",
+   "message": "The second argument in any_value should be a boolean literal.; line 1 pos 7",
+   "name": "any_value"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "any_value(v)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "1",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT any_value(v), 1 FROM FRAME",
+   "name": "any_value",
+   "rows": [
+    [
+     5,
+     1
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "_LEGACY_ERROR_TEMP_1210",
+   "error_type": "AnalysisException",
+   "expr": "SELECT any_value(v, CAST(NULL AS BOOLEAN)) FROM FRAME",
+   "message": "The second argument in any_value should be a boolean literal.; line 1 pos 7",
+   "name": "any_value"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "any_value(v)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "1",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select(F.any_value('v'), F.lit(1))",
+   "name": "any_value",
+   "rows": [
+    [
+     5,
+     1
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "any_value(d)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "1",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select(F.any_value('d', ignoreNulls=True), F.lit(1))",
+   "name": "any_value",
+   "rows": [
+    [
+     0.0,
+     1
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "any_value(s)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "df.groupBy('g').agg(F.any_value('s', F.lit(True))).orderBy('g')",
+   "name": "any_value",
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "z"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "_LEGACY_ERROR_TEMP_1210",
+   "error_type": "AnalysisException",
+   "expr": "df.select(F.any_value('v', F.col('g') > 0))",
+   "message": "The second argument in any_value should be a boolean literal.",
+   "name": "any_value"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "_LEGACY_ERROR_TEMP_1210",
+   "error_type": "AnalysisException",
+   "expr": "df.select(F.any_value('v', F.lit(None).cast('boolean')))",
+   "message": "The second argument in any_value should be a boolean literal.",
+   "name": "any_value"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "any_value(v) OVER (PARTITION BY g ORDER BY k ASC NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select('g','k', F.any_value('v', True).over(Window.partitionBy('g').orderBy('k'))).orderBy('g','k')",
+   "name": "any_value",
+   "rows": [
+    [
+     1,
+     "a",
+     10
+    ],
+    [
+     1,
+     "b",
+     10
+    ],
+    [
+     1,
+     "b",
+     10
+    ],
+    [
+     1,
+     "c",
+     10
+    ],
+    [
+     2,
+     null,
+     5
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "any_value((v + 1))",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select(F.any_value(col('v') + 1, True))",
+   "name": "any_value",
+   "rows": [
+    [
+     6
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "product(v)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "1",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select(F.product('v'), F.lit(1))",
+   "name": "product",
+   "rows": [
+    [
+     30000.0,
+     1
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "product((v + 1))",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select(F.product(col('v') + 1))",
+   "name": "product",
+   "rows": [
+    [
+     42966.0
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "product((d * 2))",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "df.groupBy('g').agg(F.product(col('d') * 2)).orderBy('g')",
+   "name": "product",
+   "rows": [
+    [
+     1,
+     -120.0
+    ],
+    [
+     2,
+     0.0
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "product(s)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select(F.product('s'))",
+   "name": "product",
+   "rows": [
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "product(v) OVER (PARTITION BY g ORDER BY k ASC NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "df.select('g', F.product('v').over(Window.partitionBy('g').orderBy('k'))).orderBy('g','k')",
+   "name": "product",
+   "rows": [
+    [
+     1,
+     "a",
+     10.0
+    ],
+    [
+     1,
+     "b",
+     200.0
+    ],
+    [
+     1,
+     "b",
+     200.0
+    ],
+    [
+     1,
+     "c",
+     6000.0
+    ],
+    [
+     2,
+     null,
+     5.0
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "_LEGACY_ERROR_TEMP_1210",
+   "error_type": "AnalysisException",
+   "expr": "SELECT any_value(v, g > 0) FROM FRAME",
+   "message": "The second argument in any_value should be a boolean literal.; line 1 pos 7",
+   "name": "any_value"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "any_value(v)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "1",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT any_value(v), 1 FROM FRAME",
+   "name": "any_value",
+   "rows": [
+    [
+     5,
+     1
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "_LEGACY_ERROR_TEMP_1210",
+   "error_type": "AnalysisException",
+   "expr": "SELECT any_value(v, CAST(NULL AS BOOLEAN)) FROM FRAME",
+   "message": "The second argument in any_value should be a boolean literal.; line 1 pos 7",
+   "name": "any_value"
+  }
+ ],
+ "frame": "SELECT * FROM VALUES (1, 'a', 10, CAST(1.5 AS DOUBLE), 'x', CAST(3 AS BIGINT)), (1, 'b', 20, CAST(2.5 AS DOUBLE), 'y', CAST(1 AS BIGINT)), (1, 'b', NULL, CAST(NULL AS DOUBLE), NULL, CAST(2 AS BIGINT)), (1, 'c', 30, CAST(-4.0 AS DOUBLE), 'x', CAST(NULL AS BIGINT)), (2, NULL, 5, CAST(0.0 AS DOUBLE), 'z', CAST(7 AS BIGINT)), (3, NULL, NULL, CAST(NULL AS DOUBLE), NULL, CAST(NULL AS BIGINT)) AS t(g, k, v, d, s, o)",
+ "partitions": "repartition(2, 'g')",
+ "spark_version": "4.1.2"
+}

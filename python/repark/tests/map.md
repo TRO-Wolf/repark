@@ -6,6 +6,7 @@ CC-2 close: S3 Tables location-guard phrase kept contiguous in `test_aws_accepta
 
 **FNP-11A D-10 (2026-09-15, orchestrator):** `test_fnp11a_temporal.py` adds `test_make_timestamp_keeps_its_frozen_signature` and the EX-FN-28 residual pin `test_make_timestamp_date_time_keywords_refused_by_the_frozen_signature`, and its cell filter skips the facade `make_timestamp(date=…)` cells; `test_functions_d.py` drops the seven implemented temporal names from its deferred census (`to_timestamp_ltz` / `to_timestamp_ntz` stay for FNP-11B); `test_fn_batch3.py` drops the `make_timestamp` stub refusal; `test_functions_split_identity.py` counts `FNP11A_EXPORTS` after the stack names; `test_functions_gt2.py` pins Spark's `'2 years'` interval string (EX-FN-19 FIXED). pins: fnp-11a/C-001, C-002
 **FNP-11B step 3 (2026-09-15, run 16a):** the deferred census is gone (`to_timestamp_ltz` / `to_timestamp_ntz` answer, presence pin in its place); `test_fn_batch3.py` answers `try_to_timestamp` instead of refusing it; the split-identity tail follows the thirteen-name installer tuple with no edit; `test_examples_functions_b.py` retires the `try_to_timestamp` refusal pin (EX-FN-20 FIXED). pins: fnp-11b/C-002, C-007
+**FNP-AGG-1 step 2 (2026-09-16, run 17a):** `test_fn_batch4.py` drops the `skewness` / `kurtosis` / `mode` stub refusals (shipped); `test_functions_split_identity.py` counts `FNPAGG1_EXPORTS` after the window names. pins: fnp-agg-1/C-002, C-006
 
 ## Purpose
 
@@ -851,6 +852,42 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusals).
   Step 1 is red on the base tree; steps 2–4 turn the pins green in name order.
   pins: fnp-win-1/C-001, C-002, C-003, C-004, C-005, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015
+- [test_fnp_agg_1.py](test_fnp_agg_1.py) + `fnp_agg_1_spark_oracle.json` —
+  **FNP-AGG-1 step 1 (2026-09-15), red-first:** the orchestrator's live PySpark 4.1.2
+  recording (2026-09-14, 202 cells over the shared frame, both ANSI settings, with
+  `signatures` for the facade names) copied verbatim, plus two-door pins over the card's
+  fourteen names on that frame and the `sum_distinct` / `sumDistinct` pins replayed from
+  `fnp_alias_1_spark_oracle.json` on its own frame. Value pins compare column name, Spark
+  type, rows exactly, and nullability except the VALUES group key; error pins assert
+  Spark's own condition, including the `UNRESOLVED_ROUTINE` refusals the SQL door must
+  keep. Red on the base tree: 162 failed, 4 passed (the `kurtosis`/`skewness` signature
+  pins and the 2 pre-existing `listagg` Python cells).
+  **FNP-AGG-1 run 18a step 3d (2026-09-16):** grouping pins apply R-18a-9 (the
+  `*args` branch compares by name), R-18a-10 (order-insensitive within runs tied
+  on every sort key) and R-18a-11 (the SQL `tinyint` label strict-xfails to
+  LOGICAL-WIDTH-1); new pins prove the Python cube and the `GROUPING SETS` shape
+  reach `ResolveGroupingId` by type and name.
+  **FNP-AGG-1 run 18a step 8 (2026-09-16):** sketch pins apply R-18a-16 (the
+  `binary` label strict-xfails to LOGICAL-WIDTH-1, run 18b) and R-18a-17 (the
+  SQL-door Debug-alias names strict-xfail to the planner surface, run 18c);
+  values, nullability and the clean schema halves stay strict. Step 9 keeps
+  two dedicated strict-xfail tests (binary-type, SQL names) beside the split
+  order-insensitive value comparator; card roll-call lives in the ledger.
+  pins: fnp-agg-1/C-001, C-002, C-003, C-004
+- [test_fnp_agg_1_p1.py](test_fnp_agg_1_p1.py) +
+  `fnp_agg_1_p1_spark_oracle.json` — **FNP-AGG-1 run 18a (2026-09-16):** thirty
+  live PySpark 4.1.2 cells (recorded 2026-09-16 over the unit frame repartitioned
+  by `g`, both ANSI settings) for the two door-split P1s: `any_value` with a lit
+  companion, grouped, expression and window shapes plus the boolean-literal refusals
+  on both doors, and `product` with a lit companion, expression, grouped-expression
+  and window shapes plus the ANSI string refusal. Ungrouped `any_value` values are
+  partition-scan-order dependent, so those cells pin name, type and nullability
+  exactly and the value as membership in the frame's non-null candidates; all other
+  cells pin exactly.
+  pins: fnp-agg-1/C-002, C-003, C-004
+  **FNP-AGG-1 run 18a (2026-09-16):** the two `product` window cells (11, 26) are
+  `xfail(strict=True)` — the trailing sort by the unprojected `k` is run 18b's
+  `orderBy` seam (registry `FNP-AGG-1-18A`).
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
@@ -1026,6 +1063,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   TINYINT/SMALLINT sums, `ntile(BIGINT)` and grouping acceptances (TY-7/8/9/10), and
   wrapped-year from_unixtime cells. Round 5 adds negative 3- and 4-digit-year
   from_unixtime cells (default, `yyyy`, `yy`) on both doors plus a New York cell.
+  **FNP-AGG-1 run 18a step 3d (2026-09-16):** the grouping pins move off the
+  builtin's `Int32` to the kernel's `Int8` (values and plain-`GROUP BY`
+  acceptance unchanged; live carve-out now pins the (`int8`, `int8`) pair).
   pins: types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   Green implementation (2026-09-05): narrowing after `TypeCoercion` with a closing
   coercion pass, `LIMIT` fetch/skip exempt, plain-`INSERT` INT→BIGINT conform,
@@ -5913,3 +5953,12 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   name was missing; this unit lands the kernel, so both pins now assert the name resolves and raises
   Spark 4.1.2's own `[INTERNAL_ERROR]` / `XX000` for the empty literal (R-18a-3, measured). The tripwire
   did its job: it went red the moment the name landed. pins: fnp-gen-1/C-004, unresolved-routine-1/C-006
+- `fnp_agg_1_mode_tie_spark_oracle.json` — **FNP-AGG-1 critic round (2026-09-16, run 17a):** seven
+  live PySpark 4.1.2 cells settling `mode`'s frequency-tie behaviour, which the unit's own fixture
+  did not cover and a critic raised as a possible P1. On a group where 10, 20 and 30 each appear
+  once: `F.mode('v', True)` and `SELECT mode(v, true)` both answer **10, the smallest** — which is
+  what `mode.rs`'s `extremum(false)` already does, so the claim is **refuted**. The explicit
+  orderings are separate and also match: `mode() WITHIN GROUP (ORDER BY v DESC)` answers 30 and
+  `ORDER BY v` answers 10. The `DESC` text in the 2-arg form's display name is cosmetic, not
+  semantic. This turns `deterministic_ties_pick_smallest` from an author's assertion into an
+  oracle-backed one. pins: fnp-agg-1/C-002

@@ -59,9 +59,7 @@ F.kll_sketch_merge_float
 F.kll_sketch_to_string_bigint
 F.kll_sketch_to_string_double
 F.kll_sketch_to_string_float
-F.kurtosis
 F.make_timestamp
-F.mode
 F.monotonically_increasing_id
 F.months_between
 F.parse_json
@@ -73,7 +71,6 @@ F.schema_of_variant
 F.schema_of_variant_agg
 F.schema_of_xml
 F.sentences
-F.skewness
 F.spark_partition_id
 F.split
 F.st_asbinary

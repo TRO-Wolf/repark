@@ -11,7 +11,7 @@ use datafusion::functions_aggregate::array_agg::array_agg_udaf;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::logical_expr::expr::{Alias, Cast, NullTreatment, WindowFunction};
 use datafusion::logical_expr::{
-    Case, Expr, ExprFunctionExt, Operator, WindowFunctionDefinition, binary_expr, lit,
+    AggregateUDF, Case, Expr, ExprFunctionExt, Operator, WindowFunctionDefinition, binary_expr, lit,
 };
 use datafusion::prelude::{SessionConfig, SessionContext};
 use datafusion::scalar::ScalarValue;
@@ -19,6 +19,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use super::PyColumn;
+use crate::fence::fenced;
 
 /// Preserve Spark's `±Inf` result at an exact zero reciprocal-trig divisor.
 pub(super) fn reciprocal_trig_or_inf(divisor: Expr) -> Expr {
@@ -315,6 +316,13 @@ impl PyColumn {
         Ok(Self::from_expr(expr))
     }
 
+    /// Build a `grouping_id` aggregate over exactly the given columns (possibly none).
+    pub(super) fn grouping_id_call(args: Vec<Expr>) -> PyResult<Expr> {
+        let udaf = super::function_dispatch::nary_aggregate_udaf("grouping_id")?;
+        let arity = args.len();
+        Ok(cast_unsigned_count_to_signed(&udaf, arity, udaf.call(args)))
+    }
+
     /// Build a single count-distinct argument, nulling multi-column tuples when any field is NULL.
     pub(super) fn count_distinct_argument(args: Vec<Expr>) -> PyResult<Expr> {
         if args.len() == 1 {
@@ -335,6 +343,23 @@ impl PyColumn {
             when_then_expr: vec![(Box::new(all_present), Box::new(packed))],
             else_expr: None,
         }))
+    }
+}
+
+#[pyfunction]
+pub(crate) fn grouping_id_column(args: Vec<PyColumn>) -> PyResult<PyColumn> {
+    fenced!("grouping_id_column", {
+        let exprs = args.iter().map(PyColumn::expr).collect::<Vec<_>>();
+        Ok(PyColumn::from_expr(PyColumn::grouping_id_call(exprs)?))
+    })
+}
+
+pub(super) fn cast_unsigned_count_to_signed(udaf: &AggregateUDF, arity: usize, expr: Expr) -> Expr {
+    match udaf.return_type(&vec![DataType::Int64; arity]) {
+        Ok(returned) if returned.is_unsigned_integer() => {
+            Expr::Cast(Cast::new(Box::new(expr), DataType::Int64))
+        }
+        _ => expr,
     }
 }
 

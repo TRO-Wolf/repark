@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::DataType;
 use datafusion::functions_aggregate::bit_and_or_xor::{bit_and_udaf, bit_or_udaf, bit_xor_udaf};
 use datafusion::functions_aggregate::correlation::corr_udaf;
 use datafusion::functions_aggregate::covariance::{covar_pop_udaf, covar_samp_udaf};
@@ -18,7 +17,7 @@ use datafusion::functions_aggregate::stddev::{stddev_pop_udaf, stddev_udaf};
 use datafusion::functions_aggregate::string_agg::string_agg_udaf;
 use datafusion::functions_aggregate::sum::sum_udaf;
 use datafusion::functions_aggregate::variance::{var_pop_udaf, var_samp_udaf};
-use datafusion::logical_expr::expr::{Cast, ScalarFunction};
+use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{AggregateUDF, Expr, Operator, binary_expr, lit};
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
@@ -946,9 +945,13 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "bitmap_construct_agg" => repark_functions::bitmap_agg::bitmap_construct_agg_udaf(),
         "bitmap_or_agg" => repark_functions::bitmap_agg::bitmap_or_agg_udaf(),
         "bitmap_and_agg" => repark_functions::bitmap_agg::bitmap_and_agg_udaf(),
+        "kurtosis" | "skewness" => repark_functions::aggregate::moment_udaf(kind),
+        "mode" => repark_functions::aggregate::mode_udaf(),
+        "product" => repark_functions::aggregate::product_udaf(),
         "approx_count_distinct" | "approx_distinct" => {
             repark_functions::spark_result_types::approx_count_distinct_udaf()
         }
+        "any_value" => repark_functions::aggregate::any_value_udaf(),
         "grouping" => grouping_udaf(),
         other => {
             return Err(PyValueError::new_err(format!(
@@ -959,18 +962,10 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
     Ok(udaf)
 }
 
-/// Cast an aggregate whose declared return type is unsigned to `Int64`.
-pub(super) fn cast_unsigned_count_to_signed(udaf: &AggregateUDF, arity: usize, expr: Expr) -> Expr {
-    match udaf.return_type(&vec![DataType::Int64; arity]) {
-        Ok(returned) if returned.is_unsigned_integer() => {
-            Expr::Cast(Cast::new(Box::new(expr), DataType::Int64))
-        }
-        _ => expr,
-    }
-}
+pub(super) use super::expr_build::cast_unsigned_count_to_signed;
 
-/// Binary aggregate UDAF for [`super::PyColumn::aggregate_binary`].
-pub(super) fn binary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
+/// N-ary aggregate UDAF for [`super::PyColumn::aggregate_binary`].
+pub(super) fn nary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
     let udaf = match kind {
         "corr" => corr_udaf(),
         "covar_pop" => covar_pop_udaf(),
@@ -985,6 +980,15 @@ pub(super) fn binary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "regr_sxy" => regr_sxy_udaf(),
         "regr_syy" => regr_syy_udaf(),
         "string_agg" | "listagg" => string_agg_udaf(),
+        "max_by" | "min_by" => repark_functions::aggregate::max_min_by_udaf(kind == "max_by"),
+        "any_value" => repark_functions::aggregate::any_value_udaf(),
+        "mode" => repark_functions::aggregate::mode_udaf(),
+        "percentile" => repark_functions::aggregate::percentile_udaf(),
+        "listagg_distinct" => repark_functions::aggregate::string_distinct_udaf(true),
+        "string_agg_distinct" => repark_functions::aggregate::string_distinct_udaf(false),
+        "histogram_numeric" => repark_functions::aggregate::histogram_numeric_udaf(),
+        "grouping_id" => repark_functions::aggregate::grouping_id_udaf(),
+        "count_min_sketch" => repark_functions::aggregate::count_min_sketch_udaf(),
         other_kind => {
             return Err(PyValueError::new_err(format!(
                 "unknown binary aggregate {other_kind:?}"

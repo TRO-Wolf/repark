@@ -8110,16 +8110,20 @@ field NAME.
   `GeneratorRewrite` arm answer both doors; the s34 pins hold every measured
   cell. Filed 2026-09-05 from the EX-25 measurement.
 
-### EX-FN-9 — `kurtosis` / `skewness` / `mode` refuse; Spark aggregates them
+### EX-FN-9 — `kurtosis` / `skewness` / `mode` refuse; Spark aggregates them — **FIXED 2026-09-16 (FNP-AGG-1)**
 
-- **repark** — all three raise `UnsupportedOperationException` (`functions.<name> is not
-  supported yet (engine gap; disclosed R-FN-BATCH4)`).
+- **repark** — **FIXED 2026-09-16 (FNP-AGG-1).** All three aggregate on both doors
+  (`kurtosis` 8/8, `skewness` 8/8, `mode` 10/10 card cells green); the old
+  `UnsupportedOperationException` refusal is gone.
 - **Apache Spark** — over `[1, 2, 2, 3, 4, 5]` (NULL skipped): kurtosis is
   `-1.1517159763313605`, skewness is `0.3053162697580512`, mode is `2`. *(oracle: live
-  PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_moment_aggregates_refuse`
-- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. All three names
-  stay on the example backlog until the moment kernels land.
+  PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch; FNP-AGG-1 oracle: live PySpark 4.1.2,
+  both ANSI settings, 2026-09-14.)*
+- **Pin** — `python/repark/tests/test_fnp_agg_1.py` card cells for `kurtosis`,
+  `skewness` and `mode` (superseding
+  `python/repark/tests/test_examples_functions_a.py::test_moment_aggregates_refuse`)
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement; closed 2026-09-16
+  by FNP-AGG-1 run 18a per unit charter D-3.
 
 ### EX-FN-10 — `make_timestamp` refuses; Spark builds the timestamp — **FIXED 2026-09-15 (FNP-11A)**
 
@@ -9611,6 +9615,80 @@ field NAME.
   *width* is decided by the static integral type rather than by the value. Ranked above the individual
   width rows: literal typing sits upstream of a large family of casts and comparisons, so the wrong type
   propagates silently wherever the result width or precision is observable.
+
+### FNP-AGG-1-18A — `orderBy` cannot sort by a column outside the projection
+
+- **repark** — `df.select('g', F.product('v').over(Window.partitionBy('g').orderBy('k'))).orderBy('g',
+  'k')` fails with `A column with name 'k' cannot be resolved`: sort keys resolve against the
+  projected columns only. The window itself is green (values and the
+  `product(v) OVER (PARTITION BY g ORDER BY k ASC NULLS FIRST RANGE BETWEEN UNBOUNDED
+  PRECEDING AND CURRENT ROW)` display); only the trailing sort by the unprojected ordering
+  column fails. The same failure answers `F.sum('v')` in the same shape, so the seam is
+  `DataFrame.orderBy`, not the `product` kernel.
+- **Apache Spark** — the sort resolves `k` against the input and answers the running-product
+  rows (10.0, 200.0, 200.0, 6000.0, 24.0, NULL under the fixture frame).
+  *(oracle: live PySpark 4.1.2, 2026-09-16, `python/repark/tests/fnp_agg_1_p1_spark_oracle.json`
+  cells 11 and 26.)*
+- **Pin** — `python/repark/tests/test_fnp_agg_1_p1.py` exact cells 11 and 26 are
+  `xfail(strict=True)` naming the seam; the xfail reds the day `orderBy` carries hidden
+  sort keys.
+- **Rationale** — BACKLOG, owned by run 18b (`dataframe/**`, `column.py` are its files):
+  sorting by an unprojected column needs the sort key carried through the plan, which is
+  dataframe surgery outside this unit. pins: fnp-agg-1/C-003
+
+### FNP-AGG-1-18B — SQL-door `grouping` reports `int`, Spark reports `tinyint`
+
+- **repark** — `SELECT g, k, grouping_id(), grouping_id(g, k), grouping(g) FROM
+  FRAME GROUP BY CUBE(g, k)` answers the right names, values and nullability with
+  Arrow `int8` for `grouping(g)`, but the facade reports the label `int`: the
+  engine-to-facade `arrow_type_key` collapses `Int8`/`Int16` (LOGICAL-WIDTH-1).
+- **Apache Spark** — the same query reports `tinyint` for `grouping(g)`.
+  *(oracle: live PySpark 4.1.2, 2026-09-14, `python/repark/tests/fnp_agg_1_spark_oracle.json`
+  SQL grouping cells.)*
+- **Pin** — `python/repark/tests/test_fnp_agg_1.py::test_sql_grouping_reports_tinyint`
+  is `xfail(strict=True)` naming the seam; the xfail reds the day the facade reports
+  the narrow width.
+- **Rationale** — BACKLOG, owned by run 18b's type-table slice (LOGICAL-WIDTH-1):
+  emitting narrow widths from the type table flips the `test_nullability_2`,
+  `test_df_surface_a_1` and `test_io_text_2` red-when-fixed pins, which is a unit
+  of its own. pins: fnp-agg-1/C-003
+
+### FNP-AGG-1-18C — sketch columns report `string`, Spark reports `binary`
+
+- **repark** — `count_min_sketch` answers byte-exact sketch bytes on both doors, but the
+  facade reports the label `string`: the engine-to-facade `arrow_type_key` maps
+  `Binary` / `LargeBinary` / `BinaryView` to `string` (LOGICAL-WIDTH-1). The kernel
+  returns Arrow `Binary`; only the schema label diverges.
+- **Apache Spark** — the same calls report `binary` for the sketch columns.
+  *(oracle: live PySpark 4.1.2, 2026-09-14,
+  `python/repark/tests/fnp_agg_1_spark_oracle.json` `count_min_sketch` cells.)*
+- **Pin** — `python/repark/tests/test_fnp_agg_1.py::test_sketch_binary_type_matches_oracle`
+  is `xfail(strict=True)` naming the seam; the xfail reds the day the facade reports
+  binary.
+- **Rationale** — BACKLOG, owned by run 18b's type-table slice (LOGICAL-WIDTH-1): flipping
+  the `LogicalKey` Binary arm in `crates/repark-spark/src/type_table.rs`
+  (`logical_type_key`) moves every binary schema pin and is a unit of its own. Hand-off
+  recorded R-18a-16. pins: fnp-agg-1/C-002, C-003
+
+### FNP-AGG-1-18D — SQL-door sketch names carry the Debug alias, Spark names canonically
+
+- **repark** — `SELECT g, hex(count_min_sketch(v, 0.5D, 0.5D, 1)) FROM FRAME GROUP BY g`
+  answers exact values with the projection aliased
+  `hex(count_min_sketch(v, Decimal128(Some(5),1,1), Decimal128(Some(5),1,1), 1))`: the
+  planner names the aggregate output by Debug-rendering CAST / decimal literal arguments.
+  The same wart names builtin `SELECT sum(v + 0.5)` as `sum(t.v + Decimal128(Some(5),1,1))`,
+  so the seam is engine-global naming, not the sketch kernel (whose `schema_name`
+  renders `0.5`).
+- **Apache Spark** — the same queries name the columns
+  `hex(count_min_sketch(v, 0.5, 0.5, 1))` and `count_min_sketch(k, 0.5, 0.5, 1)`.
+  *(oracle: live PySpark 4.1.2, 2026-09-14,
+  `python/repark/tests/fnp_agg_1_spark_oracle.json` `count_min_sketch` cells.)*
+- **Pin** — `python/repark/tests/test_fnp_agg_1.py::test_sql_door_sketch_names_match_oracle`
+  is `xfail(strict=True)` naming the seam; the xfail reds the day the planner names
+  decimal literal arguments canonically.
+- **Rationale** — BACKLOG, owned by run 18c's planner surface: canonical naming of
+  decimal literal arguments inside aggregate calls is planner surgery outside this unit.
+  Hand-off recorded R-18a-17. pins: fnp-agg-1/C-003
 
 ## 8. Drop-in disclosure rationale
 

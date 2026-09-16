@@ -194,3 +194,10 @@ See [crate navigation](../map.md), [Column navigation](column/map.md), and
 `repark_core::built_with_debug_assertions()`, so the measurement harness can prove a release
 build instead of guessing from the shared-object size.
 pins: perf-dynflatten-1-measure/C-002
+
+**FNP-AGG-1 step 2 (2026-09-16):** `lib.rs` maps DataFusion unknown-function plan
+errors to Spark's `[UNRESOLVED_ROUTINE]` condition at the binding door.
+pins: fnp-agg-1/C-004
+**FNP-AGG-1 run 18a step 3d (2026-09-16):** `lib.rs` registers the
+`grouping_id_column` binding for the thin `F.grouping_id` facade.
+pins: fnp-agg-1/C-002

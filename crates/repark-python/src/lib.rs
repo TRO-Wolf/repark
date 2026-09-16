@@ -38,10 +38,29 @@ pub use exceptions::{
     PySparkException, UnsupportedOperationException,
 };
 
+fn unresolved_routine(message: &str) -> Option<&str> {
+    let (_, tail) = message.split_once("Invalid function '")?;
+    let (name, _) = tail.split_once('\'')?;
+    if name.is_empty()
+        || !name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+    {
+        return None;
+    }
+    Some(name)
+}
+
 /// Convert a crate error to its PySpark-shaped Python exception.
 #[allow(clippy::needless_pass_by_value)]
 fn to_py_err(err: repark_core::Error) -> PyErr {
     let message = err.to_string();
+    if let Some(routine) = unresolved_routine(&message) {
+        return AnalysisException::new_err(format!(
+            "[UNRESOLVED_ROUTINE] Cannot resolve routine `{routine}` on search path \
+             [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883"
+        ));
+    }
     match err.exception_class() {
         ErrorClass::Parse => ParseException::new_err(message),
         ErrorClass::Analysis => AnalysisException::new_err(message),
@@ -141,6 +160,10 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     dataframe_fill::register(module)?;
     dataframe_stack::register(module)?;
     dataframe_stats::register(module)?;
+    module.add_function(wrap_pyfunction!(
+        column::expr_build::grouping_id_column,
+        module
+    )?)?;
     cache_budget::register(module)?;
     catalog_census::register(module)?;
     cdf_infer::register(module)?;

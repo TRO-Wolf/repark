@@ -1,5 +1,16 @@
 # map — python/repark-parity/tests
 
+**FNP-AGG-1 run 18a (2026-09-16):** EX-0 count 1082 → 1090 (four pre-existing
+drift rows present at `8d99217b` plus `F.percentile`, `F.listagg_distinct`,
+`F.string_agg_distinct`, `F.histogram_numeric`; verified added-only, no
+removals).
+pins: fnp-agg-1/C-006, C-007
+
+**FNP-AGG-1 step 2 (2026-09-16, run 17a):** EX-0 count 1074 → 1078 (the four new
+aggregates); the CAP-1 mirror rows move with the code (`functions.py` 1984 →
+1985, `functions_expr.py` 2220 → 2233) with the `check_lib_py.py` rows.
+pins: fnp-agg-1/C-006, C-007
+
 DF-PLAN-INTROSPECT-1 follow-up round 3 (2026-09-15, R-11): CAP-1 mirror row
 ratcheted down with the code — `dataframe/core.py` 4027 → 4014 (the
 `sameSemantics` body moves to `dataframe/plan_introspect.py`). The
@@ -175,6 +186,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   **FNP-11B remediation round 1 (2026-09-16):** `functions_expr.py` mirror row
   2237 → 2220 with the script baseline (the `make_timestamp` forwarder becomes a
   direct re-export). pins: fnp-11b/C-007
+- `test_cap_1_source_file_line_cap.py` — **FNP-AGG-1 run 18a (2026-09-16):**
+  `functions_expr.py` mirror row 2233 → measured 2211 with the script baseline
+  (the rebase left the old count; R-18a-1). pins: fnp-agg-1/C-007
 - `test_ex_0_example_coverage.py` — **DF-SURFACE-B-1 (2026-09-14):** the enumerated
   public surface moves 948 → 952 as `DataFrame.foreach`,
   `DataFrame.foreachPartition`, `DataFrame.observe`, and `Observation.get` join

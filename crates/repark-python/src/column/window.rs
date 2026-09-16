@@ -1,9 +1,10 @@
 //! Window-UDF constructors and Spark `rowsBetween` / `rangeBetween` frame translation.
 
 use datafusion::arrow::datatypes::DataType;
-use datafusion::logical_expr::expr::WindowFunction;
+use datafusion::common::TableReference;
+use datafusion::logical_expr::expr::{Alias, WindowFunction};
 use datafusion::logical_expr::{
-    Cast, Expr, ExprFunctionExt, WindowFrame, WindowFrameBound, WindowFrameUnits,
+    AggregateUDF, Cast, Expr, ExprFunctionExt, WindowFrame, WindowFrameBound, WindowFrameUnits,
     WindowFunctionDefinition,
 };
 use datafusion::scalar::ScalarValue;
@@ -50,6 +51,26 @@ pub(super) fn build_over_expression(expr: &Expr, spec: OverSpec) -> PyResult<Exp
         other => single_wrapped_aggregate(other),
     };
     let target = wrapped.as_ref().unwrap_or(inner);
+    let spark_window_alias: Option<String> = match target {
+        Expr::AggregateFunction(agg) if spark_named_window_udaf(&agg.func) => {
+            let head = agg.func.schema_name(&agg.params).map_err(|err| {
+                PyValueError::new_err(format!("could not name window expression: {err}"))
+            })?;
+            Some(format!(
+                "{head} OVER ({})",
+                spark_over_clause(
+                    &partition_by,
+                    &order_by,
+                    &order_ascending,
+                    &order_nulls_first,
+                    frame_units.as_deref(),
+                    frame_start,
+                    frame_end,
+                )
+            ))
+        }
+        _ => None,
+    };
     let window_expr = match target {
         Expr::WindowFunction(_) => target.clone(),
         Expr::AggregateFunction(agg) => window_from_aggregate(agg),
@@ -95,6 +116,10 @@ pub(super) fn build_over_expression(expr: &Expr, spec: OverSpec) -> PyResult<Exp
         }
         None => built,
     };
+    let windowed = match spark_window_alias {
+        Some(name) => Expr::Alias(Alias::new(windowed, None::<TableReference>, name)),
+        None => windowed,
+    };
     Ok(match cast_type {
         Some(data_type) => Expr::Cast(Cast::new(Box::new(windowed), data_type)),
         None => windowed,
@@ -124,6 +149,85 @@ impl PyColumn {
             args.iter().map(PyColumn::expr).collect(),
         )))
     }
+}
+
+fn spark_named_window_udaf(func: &AggregateUDF) -> bool {
+    matches!(func.name(), "any_value" | "__repark_product")
+}
+
+fn unqualified_window_key(expr: &Expr) -> String {
+    match expr {
+        Expr::Column(column) => column.name.clone(),
+        other => other.schema_name().to_string(),
+    }
+}
+
+fn spark_frame_bound(bound: i64) -> String {
+    if bound == i64::MIN {
+        return "UNBOUNDED PRECEDING".to_string();
+    }
+    if bound == i64::MAX {
+        return "UNBOUNDED FOLLOWING".to_string();
+    }
+    if bound == 0 {
+        return "CURRENT ROW".to_string();
+    }
+    if bound < 0 {
+        return format!("{} PRECEDING", bound.unsigned_abs());
+    }
+    format!("{bound} FOLLOWING")
+}
+
+fn spark_over_clause(
+    partition_by: &[PyColumn],
+    order_by: &[PyColumn],
+    order_ascending: &[bool],
+    order_nulls_first: &[bool],
+    frame_units: Option<&str>,
+    frame_start: Option<i64>,
+    frame_end: Option<i64>,
+) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if !partition_by.is_empty() {
+        let keys = partition_by
+            .iter()
+            .map(|column| unqualified_window_key(&column.expr()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        parts.push(format!("PARTITION BY {keys}"));
+    }
+    if !order_by.is_empty() {
+        let keys = order_by
+            .iter()
+            .zip(order_ascending.iter())
+            .zip(order_nulls_first.iter())
+            .map(|((column, ascending), nulls_first)| {
+                let direction = if *ascending { "ASC" } else { "DESC" };
+                let nulls = if *nulls_first {
+                    "NULLS FIRST"
+                } else {
+                    "NULLS LAST"
+                };
+                format!(
+                    "{} {direction} {nulls}",
+                    unqualified_window_key(&column.expr())
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        parts.push(format!("ORDER BY {keys}"));
+    }
+    if let (Some(units), Some(start), Some(end)) = (frame_units, frame_start, frame_end) {
+        parts.push(format!(
+            "{} BETWEEN {} AND {}",
+            units.to_ascii_uppercase(),
+            spark_frame_bound(start),
+            spark_frame_bound(end)
+        ));
+    } else if !order_by.is_empty() {
+        parts.push("RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW".to_string());
+    }
+    parts.join(" ")
 }
 
 /// Build a DataFusion [`WindowFrame`] from Spark-relative offsets.

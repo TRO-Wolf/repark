@@ -345,7 +345,7 @@ def test_length_family_is_int(name: str, want: int) -> None:
 
 
 def test_grouping_in_rollup_and_sets_answers_int() -> None:
-    """pins: types-1/C-004 — grouping under ROLLUP and GROUPING SETS answers INT."""
+    """pins: types-1/C-004 — grouping under ROLLUP and GROUPING SETS answers TINYINT."""
     session = _session()
     frame = _seed(session)
     for query in [
@@ -353,10 +353,10 @@ def test_grouping_in_rollup_and_sets_answers_int() -> None:
         "SELECT i, grouping(i) AS r FROM types1_probe "
         "GROUP BY GROUPING SETS ((i), ()) ORDER BY i NULLS LAST",
     ]:
-        assert _door_type(session, query) == ("int32", False)
+        assert _door_type(session, query) == ("int8", False)
         assert session.sql(query).toArrow().column("r").to_pylist() == [0, 0, 0, 1]
     rolled = frame.rollup("i").agg(F.grouping("i").alias("r"))
-    assert _frame_type(rolled) == ("int32", False)
+    assert _frame_type(rolled) == ("int8", False)
     assert sorted(rolled.toArrow().column("r").to_pylist()) == [0, 0, 0, 1]
 
 
@@ -365,7 +365,7 @@ def test_grouping_under_plain_group_by_is_accepted() -> None:
     session = _session()
     _seed(session)
     query = "SELECT grouping(i) AS r FROM types1_probe GROUP BY i"
-    assert _door_type(session, query) == ("int32", False)
+    assert _door_type(session, query) == ("int8", False)
     assert session.sql(query).toArrow().column("r").to_pylist() == [0, 0, 0]
 
 
@@ -813,7 +813,7 @@ def test_live_from_unixtime_extremes_match_the_oracle(spark_engine: lp.Engine) -
 def test_live_grouping_sets_match_on_value_with_type_carve_out(
     spark_engine: lp.Engine,
 ) -> None:
-    """pins: types-1/C-004 — grouping values match; the (int32, int8) pair is pinned (TY-8)."""
+    """pins: types-1/C-004 — grouping values match; the (int8, int8) pair is pinned (TY-8)."""
     session = _session()
     _seed(session)
     _seed_oracle(spark_engine)
@@ -825,6 +825,6 @@ def test_live_grouping_sets_match_on_value_with_type_carve_out(
     ]:
         mine = _live_type(engine, query)
         spark = _live_type(spark_engine, query)
-        assert (mine[0], spark[0]) == ("int32", "int8")
+        assert (mine[0], spark[0]) == ("int8", "int8")
         assert mine[1] is spark[1] is False
         assert mine[2] == spark[2]

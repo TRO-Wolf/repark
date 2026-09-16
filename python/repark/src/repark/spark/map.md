@@ -217,6 +217,27 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   reaching the FNP-6D Rust UDAFs through the three new `unary_aggregate_udaf` arms, and
   installing through this module's `INSTALL_NAMES`. pins: fnp-bitmap-facade-1/C-001, C-002
 - `functions_agg.py` — aggregate-function re-exports.
+- `functions_agg_1.py` — FNP-AGG-1 step-2 aggregates installed onto `functions.py`
+  `__all__` through this module's `install_into`: `any_value` over the `SparkAnyValue`
+  UDAF (run 18a binds both doors to that kernel; `ignoreNulls` passes through as a
+  Column and the literal check lives in the kernel), `max_by` / `min_by` over the new
+  binary UDAFs, facade-only `product` over the internal product UDAF; `kurtosis` /
+  `skewness` / `mode` are destubbed in place in `functions_expr.py`.
+  pins: fnp-agg-1/C-001, C-002
+  **FNP-AGG-1 run 18a (2026-09-16):** `product` keeps the `product(...)` display
+  while `sql_expr` / `join_sql_expr` name the engine kernel `__repark_product`.
+  Step 3 adds `percentile` over the new kernel (scalar, list and Column
+  percentages; int or Column frequency; both doors name `percentile`).
+  Step 3b adds `listagg_distinct` / `string_agg_distinct` over the shared
+  kernel (str, bytes, Column or None delimiter; display names the Spark
+  spelling, `sql_expr` names the internal kernel so raw SQL stays refused).
+  Step 3c adds `histogram_numeric` over the new kernel (int or Column bins;
+  both doors name `histogram_numeric`). Step 3d adds `grouping_id` over the new
+  kernel (zero or more columns; display names the Spark spelling) and registers
+  the name for by-name resolution. Step 7 adds `count_min_sketch` over the new
+  kernel (column plus numeric or Column eps / confidence, int / Column / None
+  seed with a random default; both doors name `count_min_sketch`).
+  pins: fnp-agg-1/C-002, C-003
 - `functions_bitwise.py` — bitwise scalar wrappers.
 - `functions_arrow_udf.py` — **FNP-MISC-1 (2026-09-15):** `arrow_udf` over the pandas
   bridge (scalar / iterator / grouped forms chosen by type hints, or forced through

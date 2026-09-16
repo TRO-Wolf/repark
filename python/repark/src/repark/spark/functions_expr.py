@@ -1281,7 +1281,7 @@ def _binary_aggregate(name: str, col1: Column | str, col2: Column | str) -> Colu
     right, right_part = _aggregate_argument(col2)
     agg_name = f"{name}({left_part}, {right_part})"
     return Column(
-        left._inner.aggregate_binary(name, right._inner),
+        left._inner.aggregate_binary(name, [right._inner]),
         agg_name=agg_name,
         sql_expr=f"{name}({left.sql_expr_part()}, {right.sql_expr_part()})",
         spark_display=agg_name,
@@ -1515,20 +1515,31 @@ def random(seed: int | None = None) -> Column:
     return rand(seed)
 
 
-def skewness(col: Column | str) -> Column:
-    """Unsupported because the engine has no ``skewness`` function."""
+def _unary_aggregate(name: str, col: Column | str) -> Column:
+    """A one-column aggregate named the way PySpark names it."""
 
-    raise UnsupportedOperationException(
-        "functions.skewness is not supported yet (engine gap; disclosed R-FN-BATCH4)"
+    column, part = _aggregate_argument(col)
+    agg_name = f"{name}({part})"
+    return Column(
+        column._inner.aggregate(name, False),
+        agg_name=agg_name,
+        sql_expr=f"{name}({column.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
     )
+
+
+def skewness(col: Column | str) -> Column:
+    """Skewness of a group as ``DoubleType`` (PySpark ``functions.skewness``)."""
+
+    return _unary_aggregate("skewness", col)
 
 
 def kurtosis(col: Column | str) -> Column:
-    """Unsupported because the engine has no ``kurtosis`` function."""
+    """Excess kurtosis of a group as ``DoubleType`` (PySpark ``functions.kurtosis``)."""
 
-    raise UnsupportedOperationException(
-        "functions.kurtosis is not supported yet (engine gap; disclosed R-FN-BATCH4)"
-    )
+    return _unary_aggregate("kurtosis", col)
 
 
 def percentile_approx(
@@ -1581,12 +1592,14 @@ def approx_percentile(
     return percentile_approx(col, percentage, accuracy)
 
 
-def mode(col: Column | str) -> Column:
-    """Unsupported because the engine has no ``mode`` function."""
+def mode(col: Column | str, deterministic: bool = False) -> Column:
+    """Most frequent value of a group (PySpark ``functions.mode``)."""
 
-    raise UnsupportedOperationException(
-        "functions.mode is not supported yet (engine gap; disclosed R-FN-BATCH4)"
-    )
+    if deterministic:
+        from repark.spark.functions_agg_1 import _mode_deterministic
+
+        return _mode_deterministic(col)
+    return _unary_aggregate("mode", col)
 
 
 def monotonically_increasing_id() -> Column:

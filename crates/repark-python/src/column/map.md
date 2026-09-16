@@ -144,6 +144,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   pins: abs-expr-1/C-001, C-002
 - [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection.
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
+  **FNP-AGG-1 run 18a (2026-09-16):** `cast_unsigned_count_to_signed` moved here
+  from `function_dispatch.rs` (same body, re-exported there) so the dispatch file
+  stays under its ceiling with the new `any_value` arms. pins: fnp-agg-1/C-002
   **WIN-SLIDE-1 (2026-09-04):** `single_wrapped_aggregate` / `replace_wrapped_aggregate` let
   `Column.over` push a window spec INTO the one aggregate inside a scalar wrapper. `F.collect_list`
   and `F.collect_set` build Spark's empty-group semantics as
@@ -190,6 +193,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `rangeBetween(-2, 0)` over an `IntegerType` or `DoubleType` key answered the cumulative column.
   `ROWS` / `GROUPS` bounds stay `UInt64`, which is already the coercion target.
   Registry: `WIN-RANGE-DF-1`. pins: win-slide-1/C-003
+  **FNP-AGG-1 run 18a (2026-09-16):** windowed `any_value` is aliased to Spark's
+  display (`any_value(v) OVER (PARTITION BY …)` with the default ordered frame
+  rendered `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`); the product step
+  extends the alias to `__repark_product` (display head `product(v)`); other kernels
+  keep the native display. pins: fnp-agg-1/C-002, C-003
 - [`door_parity_tests.rs`](door_parity_tests.rs) pins standalone facade UDF behavior against SQL.
   **DOOR-CONVERGE-1 (2026-09-15):** `EXPECTED_DIVERGENCES` ratchets 22 → 14 — `abs`,
   `hypot`, `bin`, `rint`, `base64`, `unbase64`, `size`, `cardinality`,
@@ -280,3 +288,18 @@ sync after changes.
 - Up: [src map](../map.md)
 - Crate: [repark-python map](../../map.md)
 - **FNP-4B remediation (2026-09-15):** `expr_build.rs` / `mod.rs` added code comments removed (ruling 2026-08-26); `mod.rs` ceiling ratcheted 1040 → 1038.
+- **FNP-AGG-1 step 2 (2026-09-16):** `function_dispatch.rs` gains ADD-only arms
+  (`kurtosis`/`skewness`, `mode`, `product` unary; `max_by`/`min_by`, `mode`
+  binary) reaching the new `repark-functions` aggregates.
+  pins: fnp-agg-1/C-002, C-003
+- **FNP-AGG-1 run 18a (2026-09-16):** ADD-only `any_value` arms (unary and binary)
+  onto `any_value_udaf()`; existing arms untouched.
+  Step 3 renames `binary_aggregate_udaf` to `nary_aggregate_udaf` (value column
+  plus N argument columns; same call sites, arity from the built args) and adds
+  the `percentile` arm; `mod.rs` holds at 1014 with no baseline change.
+  Step 3b adds the `listagg_distinct` / `string_agg_distinct` arms onto the
+  shared kernel. Step 3c adds the `histogram_numeric` arm. Step 3d adds the
+  `grouping_id` arm (n-ary, possibly zero columns) plus the `grouping_id_column`
+  binding behind the unsigned-to-signed cast. Step 8 adds the `count_min_sketch`
+  arm (n-ary, value plus three literal columns) onto the shared kernel.
+  pins: fnp-agg-1/C-002, C-003, C-004

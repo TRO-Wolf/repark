@@ -30,5 +30,11 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     ));
     rules.push(Arc::new(crate::analyzer::time_window::SparkSessionWindow));
     rules.push(Arc::new(crate::generator::GeneratorRewrite));
+    rules.push(grouping_rule());
     rules
+}
+
+#[must_use]
+pub fn grouping_rule() -> Arc<dyn AnalyzerRule + Send + Sync> {
+    Arc::new(crate::grouping::ResolveGroupingId)
 }

@@ -284,6 +284,7 @@ functions	F.acos
 functions	F.acosh
 functions	F.add_months
 functions	F.aggregate
+functions	F.any_value
 functions	F.approxCountDistinct
 functions	F.approx_count_distinct
 functions	F.approx_percentile
@@ -444,6 +445,7 @@ functions	F.greatest
 functions	F.grouping
 functions	F.hash
 functions	F.hex
+functions	F.histogram_numeric
 functions	F.hll_sketch_agg
 functions	F.hll_sketch_estimate
 functions	F.hll_union
@@ -503,6 +505,7 @@ functions	F.length
 functions	F.levenshtein
 functions	F.like
 functions	F.listagg
+functions	F.listagg_distinct
 functions	F.lit
 functions	F.ln
 functions	F.localtimestamp
@@ -533,10 +536,12 @@ functions	F.map_keys
 functions	F.map_values
 functions	F.map_zip_with
 functions	F.max
+functions	F.max_by
 functions	F.md5
 functions	F.mean
 functions	F.median
 functions	F.min
+functions	F.min_by
 functions	F.minute
 functions	F.mode
 functions	F.monotonically_increasing_id
@@ -562,6 +567,7 @@ functions	F.pandas_udf
 functions	F.parse_json
 functions	F.parse_url
 functions	F.percent_rank
+functions	F.percentile
 functions	F.percentile_approx
 functions	F.pi
 functions	F.pmod
@@ -572,6 +578,7 @@ functions	F.positive
 functions	F.pow
 functions	F.power
 functions	F.printf
+functions	F.product
 functions	F.quarter
 functions	F.quote
 functions	F.radians
@@ -658,6 +665,7 @@ functions	F.stddev_pop
 functions	F.stddev_samp
 functions	F.str_to_map
 functions	F.string_agg
+functions	F.string_agg_distinct
 functions	F.struct
 functions	F.substr
 functions	F.substring

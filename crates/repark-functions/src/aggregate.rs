@@ -21,10 +21,35 @@ use datafusion::logical_expr::{
 
 use crate::avg_groups;
 
+pub use crate::any_value::any_value_udaf;
+pub use crate::count_min_sketch::count_min_sketch_udaf;
+pub use crate::grouping::{grouping_id_udaf, grouping_udaf};
+pub use crate::histogram_numeric::histogram_numeric_udaf;
+pub use crate::max_min_by::max_min_by_udaf;
+pub use crate::mode::mode_udaf;
+pub use crate::moments::moment_udaf;
+pub use crate::percentile::percentile_udaf;
+pub use crate::product::product_udaf;
+pub use crate::string_distinct::string_distinct_udaf;
+
 /// Register repark `avg` [`AggregateUDF`] instances after `datafusion-spark` (name overwrite).
 #[must_use]
 pub fn functions() -> Vec<Arc<AggregateUDF>> {
     let mut functions = vec![avg_udaf(), try_avg_udaf(), crate::count_if::count_if_udaf()];
+    functions.push(crate::any_value::any_value_udaf());
+    functions.push(crate::max_min_by::max_min_by_udaf(true));
+    functions.push(crate::max_min_by::max_min_by_udaf(false));
+    functions.push(crate::moments::moment_udaf("kurtosis"));
+    functions.push(crate::moments::moment_udaf("skewness"));
+    functions.push(crate::mode::mode_udaf());
+    functions.push(crate::percentile::percentile_udaf());
+    functions.push(crate::product::product_udaf());
+    functions.push(crate::count_min_sketch::count_min_sketch_udaf());
+    functions.push(crate::string_distinct::string_distinct_udaf(true));
+    functions.push(crate::string_distinct::string_distinct_udaf(false));
+    functions.push(crate::histogram_numeric::histogram_numeric_udaf());
+    functions.push(crate::grouping::grouping_udaf());
+    functions.push(crate::grouping::grouping_id_udaf());
     functions.extend(crate::bitmap_agg::functions());
     functions.extend(crate::spark_result_types::signed_aggregate_functions());
     functions

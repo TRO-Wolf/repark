@@ -98,16 +98,6 @@ def test_json_tuple_answers(spark: ReparkSession) -> None:
     ]
 
 
-def test_moment_aggregates_refuse() -> None:
-    """kurtosis, skewness and mode refuse; Spark aggregates them (EX-FN-9)."""
-    with pytest.raises(UnsupportedOperationException, match="kurtosis"):
-        F.kurtosis("x")
-    with pytest.raises(UnsupportedOperationException, match="skewness"):
-        F.skewness("x")
-    with pytest.raises(UnsupportedOperationException, match="mode"):
-        F.mode("x")
-
-
 def test_make_timestamp_answers(spark: ReparkSession) -> None:
     """make_timestamp builds the timestamp from parts (EX-FN-10, FIXED FNP-11A)."""
     frame = spark.createDataFrame(
