@@ -92,9 +92,10 @@ def test_escaped_string_literals_flag_has_no_carrier(spark: ReparkSession) -> No
 
 
 def test_numeric_to_binary_refuses(spark: ReparkSession) -> None:
-    """BL-11 (registry §7). ``CAST(1 AS BINARY)`` refuses in every mode; repark has no ANSI-off
-    big-endian encoding path — reds when that path lands."""
-    with pytest.raises((AnalysisException, PySparkException), match=r"DATATYPE_MISMATCH"):
+    """BL-11 (registry §7). ``CAST(1 AS BINARY)`` refuses with ANSI on (the session default)
+    carrying ``CAST_WITH_CONF_SUGGESTION``; the ANSI-off big-endian encoding path lives in
+    ``test_bl_11_numeric_binary.py``."""
+    with pytest.raises((AnalysisException, PySparkException), match="CAST_WITH_CONF_SUGGESTION"):
         spark.sql("SELECT CAST(1 AS BINARY) AS b").to_arrow()
 
 

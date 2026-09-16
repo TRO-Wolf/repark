@@ -139,9 +139,11 @@ pins: rp-4-fork-repin/C-005, C-006
   two-part spellings that resolve into an Iceberg catalog via `SET
   datafusion.catalog.default_catalog` (Z-1). Untightened `CREATE VIEW` behaviour is
   unchanged (that it persists an Iceberg table at all predates this branch). **SQP-1:**
-  `rewrite_binary_casts` maps `CAST(x AS BINARY)` → `BYTEA`; `refuse_illegal_binary_cast` refuses a
-  numeric/bool/date/decimal source on the planned tree (Spark `DATATYPE_MISMATCH`, else silent
-  int→bytes), threading the cast kind (module doc for the message contract).
+  `rewrite_binary_casts` maps `CAST(x AS BINARY)` → `BYTEA` (plain DataFusion cannot plan
+  `BINARY`); the `→ BINARY` verdict lives in `repark-functions` `IntToBinaryCast`, which the
+  eager analyze below runs, so the door still fails illegal casts at build. **BL-11
+  (2026-09-16):** the old plan-walk refusal is deleted in favour of that single verdict —
+  it never saw the native `DataFrame` path, which builds `Expr::Cast` directly.
 - `spark_literals.rs` — **SQP-1:** `canonicalize(sql) -> Cow<str>`, the front-door pass that rewrites
   Spark string-literal escapes once (rule table, dialect, design in the module doc). Sole caller
   `router::execute_with_read_only` (grep-pinned); DataFusion-native `COPY` / `CREATE EXTERNAL TABLE`

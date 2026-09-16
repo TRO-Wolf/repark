@@ -63,6 +63,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/array-null-1`.
   pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
   L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
+- [bl-11-numeric-binary-ledger.md](bl-11-numeric-binary-ledger.md) —
+  **BL-11 (2026-09-16), in flight:** numeric to BINARY under runtime ANSI (batch-17
+  oracle): ANSI-off big-endian encode of the integrals via the `IntToBinaryCast`
+  analyzer rule, ANSI-on integral refusal with `CAST_WITH_CONF_SUGGESTION`, the
+  never-castable sources refusing in both modes. `risk_tier: standard`.
+  Branch `feat/bl-11-numeric-binary`.
+  pins: bl-11-numeric-binary/C-001, C-002, C-003, C-004, C-005, C-006
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →

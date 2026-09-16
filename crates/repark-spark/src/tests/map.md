@@ -169,6 +169,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
+- `cast_binary_ansi.rs` — **BL-11 (2026-09-16):** the ANSI-dimmed door pins — integral encode
+  as big-endian bytes of natural width with value, Arrow type and nullability when ANSI is
+  off; `CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals when ANSI is on;
+  `CAST_WITHOUT_SUGGESTION` for the never-castable sources in both modes and for `TRY_CAST`.
+  pins: bl-11-numeric-binary/C-001, C-002, C-003
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
   `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`

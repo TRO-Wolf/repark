@@ -4,12 +4,10 @@ use std::ops::ControlFlow;
 use std::sync::Arc;
 
 use datafusion::arrow::datatypes::DataType as ArrowDataType;
-use datafusion::common::DFSchema;
-use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::config::Dialect;
-use datafusion::error::{DataFusionError, Result};
+use datafusion::error::Result;
 use datafusion::execution::SessionState;
-use datafusion::logical_expr::expr::{Alias, Exists, InSubquery};
+use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::{Cast, Expr as DataFusionExpr, ExprSchemable, LogicalPlan, WriteOp};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::parser::{ResetStatement, Statement as DfStatement};
@@ -66,8 +64,6 @@ pub(crate) async fn execute_passthrough(
     } else {
         plan
     };
-    // SQP-1: refuse an illegal `→ BINARY` cast before the eager analyze.
-    refuse_illegal_binary_cast(&plan)?;
     // Refuse local CREATE EXTERNAL and COPY TO before eager execution unless explicitly allowed.
     local_fs_ddl::refuse_local_filesystem_plan(ctx, catalogs, &plan)?;
     // Apply the shared create guard to the plan the sink will register.
@@ -318,136 +314,6 @@ impl VisitorMut for BinaryCastToBytea {
             *data_type = DataType::Bytea;
         }
         ControlFlow::Continue(())
-    }
-}
-
-/// Refuse a cast to Arrow `Binary` whose input type Spark refuses (SQP-1 / B2–B7).
-/// # Errors
-/// Returns Plan carrying Spark `DATATYPE_MISMATCH`; it folds to `AnalysisException` at PyO3.
-fn refuse_illegal_binary_cast(plan: &LogicalPlan) -> Result<()> {
-    match find_illegal_binary_cast(plan) {
-        Some(offender) => Err(illegal_binary_cast_error(&offender)),
-        None => Ok(()),
-    }
-}
-
-/// An illegal `→ BINARY` cast the walk found.
-struct IllegalBinaryCast {
-    source: ArrowDataType,
-    is_try_cast: bool,
-}
-
-/// The first cast-to-`Binary` in `plan` whose source Spark refuses, or `None`.
-fn find_illegal_binary_cast(plan: &LogicalPlan) -> Option<IllegalBinaryCast> {
-    let mut offender = None;
-    let _ = plan.apply(|node| {
-        let schema = crate::insert_overwrite::expr_typing_schema(node);
-        let _ = node.apply_expressions(|expr| {
-            if let Some(found) = expr_illegal_binary_cast_source(expr, schema.as_ref()) {
-                offender = Some(found);
-                return Ok(TreeNodeRecursion::Stop);
-            }
-            Ok(TreeNodeRecursion::Continue)
-        });
-        if offender.is_some() {
-            return Ok(TreeNodeRecursion::Stop);
-        }
-        Ok(TreeNodeRecursion::Continue)
-    });
-    offender
-}
-
-/// The illegal `→ Binary` cast inside `expr` (or a subquery hanging off it), or `None`.
-fn expr_illegal_binary_cast_source(
-    expr: &DataFusionExpr,
-    schema: &DFSchema,
-) -> Option<IllegalBinaryCast> {
-    let mut offender = None;
-    let _ = expr.apply(|node| {
-        let cast_input = match node {
-            DataFusionExpr::Cast(cast) => Some((cast.expr.as_ref(), cast.field.data_type(), false)),
-            DataFusionExpr::TryCast(cast) => {
-                Some((cast.expr.as_ref(), cast.field.data_type(), true))
-            }
-            _ => None,
-        };
-        if let Some((input, &ArrowDataType::Binary, is_try_cast)) = cast_input
-            && let Ok(source) = input.get_type(schema)
-            && !is_binary_castable_source(&source)
-        {
-            offender = Some(IllegalBinaryCast {
-                source,
-                is_try_cast,
-            });
-            return Ok(TreeNodeRecursion::Stop);
-        }
-        if let DataFusionExpr::ScalarSubquery(subquery)
-        | DataFusionExpr::Exists(Exists { subquery, .. })
-        | DataFusionExpr::InSubquery(InSubquery { subquery, .. }) = node
-            && let Some(found) = find_illegal_binary_cast(&subquery.subquery)
-        {
-            offender = Some(found);
-            return Ok(TreeNodeRecursion::Stop);
-        }
-        Ok(TreeNodeRecursion::Continue)
-    });
-    offender
-}
-
-/// True for the source types Spark allows to cast to `BINARY`.
-fn is_binary_castable_source(data_type: &ArrowDataType) -> bool {
-    matches!(
-        data_type,
-        ArrowDataType::Utf8
-            | ArrowDataType::LargeUtf8
-            | ArrowDataType::Utf8View
-            | ArrowDataType::Binary
-            | ArrowDataType::LargeBinary
-            | ArrowDataType::BinaryView
-            | ArrowDataType::Null
-    )
-}
-
-/// Build Spark's refusal for an illegal `→ BINARY` cast, naming the source type.
-fn illegal_binary_cast_error(offender: &IllegalBinaryCast) -> DataFusionError {
-    let source_name = spark_source_type_name(&offender.source);
-    if is_spark_integer(&offender.source) && !offender.is_try_cast {
-        DataFusionError::Plan(format!(
-            "[DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION] due to data type mismatch: cannot cast \
-             \"{source_name}\" to \"BINARY\" with ANSI mode on. SQLSTATE: 42K09"
-        ))
-    } else {
-        DataFusionError::Plan(format!(
-            "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] due to data type mismatch: cannot cast \
-             \"{source_name}\" to \"BINARY\". SQLSTATE: 42K09"
-        ))
-    }
-}
-
-/// The Arrow integer types whose `→ BINARY` refusal carries `CAST_WITH_CONF_SUGGESTION`.
-fn is_spark_integer(data_type: &ArrowDataType) -> bool {
-    matches!(
-        data_type,
-        ArrowDataType::Int8 | ArrowDataType::Int16 | ArrowDataType::Int32 | ArrowDataType::Int64
-    )
-}
-
-/// The Spark SQL type name a `→ BINARY` refusal quotes for `source`.
-fn spark_source_type_name(source: &ArrowDataType) -> String {
-    match source {
-        ArrowDataType::Int8 => "TINYINT".to_string(),
-        ArrowDataType::Int16 => "SMALLINT".to_string(),
-        ArrowDataType::Int32 => "INT".to_string(),
-        ArrowDataType::Int64 => "BIGINT".to_string(),
-        ArrowDataType::Float32 => "FLOAT".to_string(),
-        ArrowDataType::Float64 => "DOUBLE".to_string(),
-        ArrowDataType::Boolean => "BOOLEAN".to_string(),
-        ArrowDataType::Date32 | ArrowDataType::Date64 => "DATE".to_string(),
-        ArrowDataType::Decimal128(precision, scale)
-        | ArrowDataType::Decimal256(precision, scale) => format!("DECIMAL({precision},{scale})"),
-        ArrowDataType::Timestamp(_, None) => "TIMESTAMP_NTZ".to_string(),
-        ArrowDataType::Timestamp(_, Some(_)) => "TIMESTAMP".to_string(),
-        other => other.to_string(),
     }
 }
 

@@ -876,7 +876,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   out-of-range-`\U` pin asserts the two-char Java artifact (renamed `..._is_two_replacements`);
   the BL-10 pin still guards the default-`false` door, the `true` carrier living in
   `test_fnp_4b_literals.py`. Byte-frozen by `test_pr_245_revalidation_record.py`; hash re-baselined
-  with this unit (ledger).
+  with this unit (ledger), and again by BL-11 (2026-09-16) for the in-place ANSI-on flip of
+  `test_numeric_to_binary_refuses`.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
   wipes rows, stamps `operation=delete`, time-travels to the pre-truncate snapshot;
   missing table is `TABLE_OR_VIEW_NOT_FOUND`; a view is `EXPECT_TABLE_NOT_VIEW`;
@@ -1626,6 +1627,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_a3_cast_vocab.py` — **r24 A3 QUAL-03:** parametrized cast/try_cast over every
   (octo C4-Q-001: try_cast byte/short overflow → NULL; strict cast fail-loud);
   `types.py` primitive that claims cast + aliases; native residual → `AnalysisException`.
+  **BL-11 (2026-09-16):** the `binary` row casts from the STRING source, not the LONG one —
+  ANSI-on `BIGINT → BINARY` refuses per the oracle, and the file's source comment is frozen
+  by the no-comment rule, so this row carries the reason.
 - `test_a3_secrets_redaction.py` — **r24 A3 SEC-04:** `_secrets.prop_key_is_secret` needles
   (conformance inventory covers every Rust arm + `bucket`/`arn` `_key` exclusions; octo C1-SEC-001);
   getAll isolation pin (octo C2-Q-002);
@@ -5421,6 +5425,13 @@ through `core` or the package. pins: eager-budget-1/C-010
   `selectExpr("current_timezone()")` pins the Rust-reachable expression path for
   the 17a hand-off (`F.current_timezone()` still binds a Python literal).
   pins: set-ansi-runtime-1/C-002
+- `test_bl_11_numeric_binary.py` — **BL-11 (2026-09-16):** numeric to BINARY under runtime
+  ANSI, measured against `fixtures-batch17-bl11-binary.json` B11-* cells (PySpark 4.1.2):
+  ANSI-off integral encode as big-endian bytes of natural width, ANSI-on integral refusal
+  with `CAST_WITH_CONF_SUGGESTION`, the never-castable sources refusing in both modes with
+  `CAST_WITHOUT_SUGGESTION`; value AND Arrow type AND nullability on both doors. The file's
+  C-001…C-005 pins are the evidence the registry BL-11 FIXED cites.
+  pins: bl-11-numeric-binary/C-001, C-002, C-003, C-004, C-005, C-006
 - **FNP-MISC-1 (2026-09-15):** `test_fnp_misc_1.py::test_fnp_misc_1_call_function_on_camel_case_aliases_matches_spark` pins `call_function` on #597's six camel-case aliases to the measured Spark 4.1.2 answers (pins: fnp-misc-1/F-4).
 
 - [test_java_double_str_1.py](test_java_double_str_1.py) — **JAVA-DOUBLE-STR-1
