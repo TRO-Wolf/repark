@@ -2107,6 +2107,45 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — FIXED, 2026-09-15 (io-text-1 follow-up).
   pins: io-text-1/T-6, X-4, Y-1, Z-2
 
+### DF-SUBQUERY-1 — `scalar` / `exists` / `lateralJoin` / `asTable` over `Column.outer`
+
+- **repark** — **FIXED 2026-09-15.** `DataFrame.scalar` / `exists` build
+  `Expr::ScalarSubquery` / `Expr::Exists` in Rust; `lateralJoin` wraps the right plan in
+  `LogicalPlan::Subquery` over scope-resolved expressions; `asTable` returns a `TableArg`
+  value object consumed by the UDTF table-argument path and the SQL `TABLE(name)`
+  spelling. `Column.outer` lowers to `OuterReferenceColumn`; scope resolution is
+  innermost-first, which reproduces the Spark classic quirk where an unqualified
+  `F.col("dept") == F.col("dept").outer()` binds BOTH sides inside the subquery
+  (`exists_correlated` keeps all four emp rows; `lateral_basic` answers the cross
+  product) while qualified `d.dept = e.dept` correlates. Multi-column scalar refuses at
+  construction (`INVALID_SUBQUERY_EXPRESSION.SCALAR_SUBQUERY_RETURN_MORE_THAN_ONE_OUTPUT_COLUMN`,
+  SQLSTATE 42823); multi-row scalar raises `SCALAR_SUBQUERY_TOO_MANY_ROWS` / SQLSTATE
+  21000 at execution through a `__repark_single_row` guard aggregate. EXISTS in a
+  projection lowers to a count-comparison boolean that keeps the plan's field name
+  (`exists()` unaliased); outer references under a generator or any non-Filter /
+  non-root-Projection node refuse `UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE`,
+  SQLSTATE 0A000. A `SubqueryAlias` on the lateral right is carried through the
+  projection hoist — hoisted outputs keep the `t.` qualifier, so the ordinary SQL
+  spelling `LATERAL (…) t` with qualified `t.dbl` references answers (round-3 fix,
+  2026-09-16); a correlated `LIMIT` inside a scalar subplan is stripped before the
+  guard wraps it, so correlated `LIMIT 1` answers a per-group pick instead of dying
+  in physical planning. Residuals measured against the same oracle: (a) the
+  optimizer-raised `CORRELATED_REFERENCE` refusal carries Spark's condition and
+  SQLSTATE in the message text but `getCondition()` is not populated on the
+  engine-wrapped exception, and the message's `sqlExprs` parameter quotes repark's
+  internal array id where the `lateral_tvf_like` cell records Spark rendering
+  `explode(array(id, sal))`; (b) `spark.tvf.explode` reports the exploded column
+  nullable where Spark reports non-nullable (pre-existing tvf path, unchanged
+  here).
+- **Apache Spark** — PySpark 4.1.2 classic; all four methods implemented per the
+  recorded probe (`probe_dfsubq.py`, run 16b, 2026-09-15).
+- **Pin** — `python/repark/tests/test_df_subquery_1.py` (every `scalar_*`, `exists_*`,
+  `lateral_*`, `astable_*`, `outer_*` cell of `facade_df_subquery_oracle.json`);
+  `crates/repark-core/src/session/tests/subquery.rs` (rule-level pins).
+- **Rationale** — FIXED. The `getCondition` gap on engine-raised refusals and the
+  tvf-explode nullability are recorded residuals, not silent gaps.
+  pins: df-subquery-1/C-001..C-007
+
 ---
 
 ## 6. How a row is added, mirrored and retired

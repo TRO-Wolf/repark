@@ -36,8 +36,8 @@ async fn bare_session_keeps_leaf_expression_pushdown_enabled() {
     );
 }
 
-/// The wrapper replaces `push_down_leaf_projections` under the same name and order; all other
-/// DataFusion rules remain unchanged.
+/// The wrapper replaces `push_down_leaf_projections` under the same name and order; the three
+/// `repark_*` subquery rules splice in at their pinned slots (DF-SUBQUERY-1), checked below.
 #[tokio::test]
 async fn bare_session_without_extension_scopes_leaf_projection_pushdown() {
     let session = ReparkSession::new().unwrap();
@@ -52,9 +52,29 @@ async fn bare_session_without_extension_scopes_leaf_projection_pushdown() {
         .iter()
         .map(|rule| rule.name().to_string())
         .collect();
+    let mut expected = stock.clone();
+    let scalar_to_join = expected
+        .iter()
+        .position(|name| name == "scalar_subquery_to_join")
+        .expect("scalar_subquery_to_join is a stock rule");
+    expected.splice(
+        scalar_to_join..scalar_to_join,
+        [
+            "repark_projection_exists".to_string(),
+            "repark_scalar_subquery_guard".to_string(),
+        ],
+    );
+    let decorrelate_lateral = expected
+        .iter()
+        .position(|name| name == "decorrelate_lateral_join")
+        .expect("decorrelate_lateral_join is a stock rule");
+    expected.insert(
+        decorrelate_lateral,
+        "repark_lateral_projection_hoist".to_string(),
+    );
     assert_eq!(
-        installed, stock,
-        "exactly the DataFusion rule list, in DataFusion's order, under DataFusion's names"
+        installed, expected,
+        "the DataFusion rule list plus repark's three subquery rules at their pinned slots"
     );
     let wrapped = state
         .optimizers()

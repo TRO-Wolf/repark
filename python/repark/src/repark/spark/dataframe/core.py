@@ -36,6 +36,7 @@ from repark.spark.dataframe import (
     replace_expr,
     statistics,
     streaming_batch,
+    subquery,
     surface_a,
     surface_b,
 )
@@ -61,9 +62,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _vertical_show_warned = False
-
 _writer_v2_option_warned = False
-
 _STOPPED_MESSAGE = "Cannot call methods on a stopped ReparkSession"
 
 _SQL_LITERAL_KEYWORDS = frozenset({"true", "false", "null"})
@@ -912,7 +911,6 @@ class DataFrame:
         return surface_a.isStreaming(self)
 
     is_streaming = isStreaming
-
     rdd, plot, writeStream, pandas_api = streaming_batch.DECLARED_MEMBERS  # noqa: N815
     withWatermark = with_watermark = streaming_batch.with_watermark  # noqa: N815
     dropDuplicatesWithinWatermark = streaming_batch.drop_duplicates_within_watermark  # noqa: N815
@@ -920,9 +918,11 @@ class DataFrame:
     foreach = surface_b.foreach
     foreachPartition = surface_b.foreachPartition  # noqa: N815
     observe = surface_b.observe
-
-    sameSemantics = plan_introspect.sameSemantics  # noqa: N815
-    same_semantics = sameSemantics
+    sameSemantics = same_semantics = plan_introspect.sameSemantics  # noqa: N815
+    scalar = subquery.scalar
+    exists = subquery.exists
+    lateralJoin = subquery.lateralJoin  # noqa: N815
+    asTable = subquery.asTable  # noqa: N815
 
     @property
     def storageLevel(self) -> Any:  # noqa: N802 — PySpark property name
@@ -2253,7 +2253,6 @@ class DataFrame:
         print(self.schema.treeString(max_depth))
 
     print_schema = printSchema
-
     __str__ = _column_fields.dataframe_str
 
     def __repr__(self) -> str:
@@ -2337,8 +2336,9 @@ class DataFrame:
                 f"DataFrame.alias requires a bare SQL identifier, got {alias!r}"
             )
         self._session.create_or_replace_temp_view(name, self._plan())
-        home_ref = home_view_ref(self._session, name)
-        child = self._spawn(self._session.sql(f"SELECT * FROM {home_ref}"))
+        from repark import _native
+
+        child = self._spawn(_native.subquery_alias(self._plan(), name))
         if self._display_names is not None and self._engine_names is not None:
             child._display_names = list(self._display_names)
             child._engine_names = list(self._engine_names)
@@ -3514,7 +3514,7 @@ class DataFrame:
             return self._rebind_origin_column(self._rebind_stable_name_column(item))
         if isinstance(item, str):
             return self._bind_schema_column(item)
-        raise PySparkTypeError(f"expected a column name (str) or Column, got {type(item).__name__}")
+        raise _column_fields.column_or_str_error(item)
 
     def _cross_join_enabled(self) -> bool:
         """Return the effective cross-join setting from runtime or builder configuration."""

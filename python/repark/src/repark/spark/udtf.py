@@ -1,7 +1,8 @@
-"""User-defined table functions for scalar literal arguments.
+"""User-defined table functions for scalar literal and ``TABLE``-argument calls.
 
 Construction validates Spark UDTF errors. Calls and SQL registration use the Arrow bridge;
-non-literal, table-argument, and LATERAL forms remain explicitly unsupported.
+non-literal Column args and LATERAL forms remain explicitly unsupported. A single
+``df.asTable()`` / ``TABLE(name)`` argument feeds each row to ``eval`` as a ``Row``.
 """
 
 from __future__ import annotations
@@ -27,9 +28,8 @@ _LATERAL_BLOCKED_MESSAGE = (
 )
 
 _TABLE_ARG_BLOCKED_MESSAGE = (
-    "table-argument UDTF is not supported in repark v1 (U12 phase-2 is scalar-arg "
-    "only). Pass foldable lit(...) / Python scalars, or register + "
-    "SELECT * FROM name(lit_args). LATERAL / TABLE args stay blocked."
+    "table arguments must be a DataFrame or df.asTable() TableArg; "
+    "LATERAL-correlated UDTF stays blocked"
 )
 
 _NON_LITERAL_BLOCKED_MESSAGE = (
@@ -393,7 +393,9 @@ class UserDefinedTableFunction:
 
     Construction validates handlers (Spark ``INVALID_UDTF_*``). Call with foldable
     scalar args produces a :class:`~repark.dataframe.DataFrame` via mapInArrow.
-    LATERAL / table-arg forms refuse loud.
+    A single ``TableArg`` (``df.asTable()``) feeds each table row to ``eval`` as a
+    ``Row``, honoring ``partitionBy`` / ``orderBy`` / ``withSinglePartition``.
+    LATERAL stays blocked.
     """
 
     __slots__ = ("_name", "_return_type", "deterministic", "func")
@@ -437,8 +439,34 @@ class UserDefinedTableFunction:
                 "SparkSession (call builder.getOrCreate() first)"
             )
         surface = f"UserDefinedTableFunction({self._name!r})"
-        scalar_columns = [_coerce_scalar_arg(arg, surface=surface) for arg in args]
         return_struct = _resolve_return_struct(self._return_type, name=self._name)
+        table_positions = [index for index, arg in enumerate(args) if _is_table_arg(arg)]
+        if len(table_positions) > 1:
+            raise UnsupportedOperationException(
+                f"{surface}: at most one table argument is supported per UDTF call"
+            )
+        if table_positions:
+            from repark.spark.table_arg import _as_table_arg, _execute_table_udtf
+
+            layout: list[tuple[str, int | None]] = []
+            scalar_columns: list[Any] = []
+            for arg in args:
+                if _is_table_arg(arg):
+                    table_arg = _as_table_arg(arg, surface=surface)
+                    layout.append(("table", None))
+                else:
+                    scalar_columns.append(_coerce_scalar_arg(arg, surface=surface))
+                    layout.append(("scalar", len(scalar_columns) - 1))
+            return _execute_table_udtf(
+                session=session,
+                handler_cls=self.func,
+                return_struct=return_struct,
+                layout=layout,
+                table_arg=table_arg,
+                scalar_columns=scalar_columns,
+                surface=surface,
+            )
+        scalar_columns = [_coerce_scalar_arg(arg, surface=surface) for arg in args]
         return _execute_scalar_udtf(
             session=session,
             handler_cls=self.func,
@@ -516,8 +544,10 @@ def udtf(
     """Create a Python UDTF (PySpark ``functions.udtf``) — decorator / direct form.
 
     Construction validates the handler (Spark ``INVALID_UDTF_*``). Invocation with
-    scalar lit args produces a DataFrame via mapInArrow. ``spark.udtf.register``
-    enables ``SELECT * FROM name(lit_args)``. LATERAL / table-arg stay blocked.
+    scalar lit args produces a DataFrame via mapInArrow; a single ``df.asTable()``
+    table argument feeds each row to ``eval`` as a ``Row``. ``spark.udtf.register``
+    enables ``SELECT * FROM name(lit_args)`` / ``name(TABLE(view))``. LATERAL stays
+    blocked.
 
     Forms::
 
@@ -646,6 +676,85 @@ def _split_sql_literal_args(args_blob: str) -> list[Any]:
     return values
 
 
+_TABLE_ARG_HEAD_RE = re.compile(r"(?is)\bTABLE\s*\(\s*([A-Za-z_][A-Za-z0-9_.]*)\s*\)")
+_TABLE_CLAUSE_RE = re.compile(r"(?is)^\s*(PARTITION\s+BY|ORDER\s+BY|WITH\s+SINGLE\s+PARTITION)\b")
+_TABLE_CLAUSE_COL_RE = re.compile(r"(?is)^\s*([A-Za-z_][A-Za-z0-9_.]*)")
+_TABLE_ORDER_MOD_RE = re.compile(r"(?is)^\s+(ASC|DESC)(\s+NULLS\s+(FIRST|LAST))?")
+
+
+def _consume_table_clause_cols(blob: str, cursor: int, target: list[str]) -> int:
+    """Consume a comma-separated identifier list after PARTITION/ORDER BY."""
+    while True:
+        column_match = _TABLE_CLAUSE_COL_RE.match(blob[cursor:])
+        if column_match is None:
+            return cursor
+        target.append(column_match.group(1))
+        cursor += column_match.end()
+        modifier = _TABLE_ORDER_MOD_RE.match(blob[cursor:])
+        if modifier is not None:
+            cursor += modifier.end()
+        rest = blob[cursor:].lstrip()
+        if not rest.startswith(","):
+            return cursor
+        following = rest[1:]
+        if (
+            _TABLE_ARG_HEAD_RE.match(following)
+            or _TABLE_CLAUSE_RE.match(following)
+            or _TABLE_CLAUSE_COL_RE.match(following) is None
+        ):
+            return cursor
+        cursor += len(blob[cursor:]) - len(rest) + 1
+
+
+def _split_sql_call_args(args_blob: str, session: Any) -> list[Any]:
+    """Parse UDTF call args — ``TABLE(name) [clauses]`` become ``TableArg``, rest literals."""
+    if _TABLE_ARG_HEAD_RE.search(args_blob) is None:
+        return _split_sql_literal_args(args_blob)
+    from repark.spark.table_arg import TableArg
+
+    args: list[Any] = []
+    cursor = 0
+    literal_start = 0
+    while True:
+        match = _TABLE_ARG_HEAD_RE.search(args_blob, cursor)
+        if match is None:
+            break
+        literal_text = args_blob[literal_start : match.start()].strip().rstrip(",")
+        if literal_text:
+            args.extend(_split_sql_literal_args(literal_text))
+        cursor = match.end()
+        partition_cols: list[str] = []
+        order_cols: list[str] = []
+        single = False
+        while True:
+            clause = _TABLE_CLAUSE_RE.match(args_blob[cursor:])
+            if clause is None:
+                break
+            keyword = clause.group(1).upper()
+            cursor += clause.end()
+            if keyword.startswith("WITH"):
+                single = True
+                continue
+            target = partition_cols if keyword.startswith("PARTITION") else order_cols
+            cursor = _consume_table_clause_cols(args_blob, cursor, target)
+        table_arg = TableArg(session.table(match.group(1)))
+        if single:
+            table_arg = table_arg.withSinglePartition()
+        if partition_cols:
+            table_arg = table_arg.partitionBy(*partition_cols)
+        if order_cols:
+            table_arg = table_arg.orderBy(*order_cols)
+        args.append(table_arg)
+        rest = args_blob[cursor:].lstrip()
+        if rest.startswith(","):
+            cursor = len(args_blob) - len(rest) + 1
+        literal_start = cursor
+    tail = args_blob[literal_start:].strip()
+    if tail:
+        args.extend(_split_sql_literal_args(tail))
+    return args
+
+
 def _strip_sql_comments(text: str) -> str:
     """Remove ``--`` line comments and ``/* */`` block comments (best-effort)."""
     without_block = re.sub(r"/\*.*?\*/", " ", text, flags=re.DOTALL)
@@ -712,11 +821,11 @@ def try_sql_registered_udtf(session: Any, query: str) -> Any | None:
             select_list = match.group("select").strip()
             args_blob = match.group("args")
             try:
-                python_args = _split_sql_literal_args(args_blob)
+                python_args = _split_sql_call_args(args_blob, session)
             except PySparkTypeError as error:
                 raise UnsupportedOperationException(
                     f"UDTF SQL {registered_name}(…): {error}. Only scalar SQL literals "
-                    "are supported in U12 FROM-udtf rewrite."
+                    "and TABLE(view) arguments are supported in the FROM-udtf rewrite."
                 ) from error
 
             frame = entry(*python_args)

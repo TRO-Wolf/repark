@@ -137,6 +137,11 @@ one-liner.
   (equal plans and alias spellings agree, `range(3)` vs `range(4)` differ, SQL-door
   aliases agree), DF-PLAN-INTROSPECT-1.
   pins: df-plan-introspect-1/C-003
+- [subquery.py](subquery.py) — `DataFrame.scalar` / `exists` / `lateralJoin` /
+  `asTable` over `Column.outer` (DF-SUBQUERY-1): the uncorrelated scalar broadcast,
+  an uncorrelated `exists` filter, a qualified-correlated lateral join, and a
+  `TableArg` partition/order chain — the arms where the engines agree.
+  pins: df-subquery-1/C-007
 
 Divergent names and arms stay on the backlog with §7 registry rows
 ([EX-DF-2](../../spark-sql-iceberg-parity.md) … [EX-DF-17](../../spark-sql-iceberg-parity.md)), pinned in
