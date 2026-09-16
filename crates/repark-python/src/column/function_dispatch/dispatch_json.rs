@@ -25,6 +25,20 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         Ok(())
     };
     let expr = match name {
+        "posexplode" | "posexplode_outer" | "inline" | "inline_outer" | "__repark_gen_alias" => {
+            need_at_least(1)?;
+            let udf_name: &'static str = match name {
+                "posexplode" => "posexplode",
+                "posexplode_outer" => "posexplode_outer",
+                "inline" => "inline",
+                "inline_outer" => "inline_outer",
+                _ => "__repark_gen_alias",
+            };
+            Expr::ScalarFunction(ScalarFunction::new_udf(
+                repark_functions::generator::generator_udf(udf_name),
+                exprs.clone(),
+            ))
+        }
         "get_json_object" => {
             need(2)?;
             repark_functions::expr_fn::get_json_object(exprs[0].clone(), exprs[1].clone())

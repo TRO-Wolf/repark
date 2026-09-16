@@ -81,18 +81,26 @@ fn key_value_types(arg_types: &[DataType]) -> Result<(DataType, DataType)> {
     Ok((key, value))
 }
 
-fn map_type(key: DataType, value: DataType) -> DataType {
+fn map_type(key: DataType, value: DataType, value_contains_null: bool) -> DataType {
     DataType::Map(
         Arc::new(Field::new(
             "entries",
             DataType::Struct(Fields::from(vec![
                 Field::new("keys", key, false),
-                Field::new("values", value, true),
+                Field::new("values", value, value_contains_null),
             ])),
             false,
         )),
         false,
     )
+}
+
+fn value_contains_null(arg_fields: &[FieldRef]) -> bool {
+    arg_fields
+        .iter()
+        .skip(1)
+        .step_by(2)
+        .any(|field| field.is_nullable())
 }
 
 fn null_key(key: &ScalarValue) -> datafusion::error::DataFusionError {
@@ -120,7 +128,7 @@ impl ScalarUDFImpl for SparkCreateMap {
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
         let (key, value) = key_value_types(arg_types)?;
-        Ok(map_type(key, value))
+        Ok(map_type(key, value, true))
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
@@ -129,9 +137,10 @@ impl ScalarUDFImpl for SparkCreateMap {
             .iter()
             .map(|field| field.data_type().clone())
             .collect();
+        let (key, value) = key_value_types(&types)?;
         Ok(Arc::new(Field::new(
             self.name(),
-            self.return_type(&types)?,
+            map_type(key, value, value_contains_null(args.arg_fields)),
             false,
         )))
     }
@@ -154,7 +163,11 @@ impl ScalarUDFImpl for SparkCreateMap {
                 .map(|field| field.data_type().clone())
                 .collect::<Vec<_>>(),
         )?;
-        let entries_field = match map_type(key_type.clone(), value_type.clone()) {
+        let entries_field = match map_type(
+            key_type.clone(),
+            value_type.clone(),
+            value_contains_null(&args.arg_fields),
+        ) {
             DataType::Map(field, _) => field,
             other => return exec_err!("'create_map' could not build its MAP type, got {other}"),
         };

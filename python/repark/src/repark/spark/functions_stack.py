@@ -97,7 +97,10 @@ def _select_with_stack(frame: Any, expanded: list[Any], call: StackCall) -> Any:
     from repark.spark.column import Column as FrameColumn
 
     passthrough = [item for item in expanded if item is not call]
-    if any(getattr(item, "_generator", None) for item in passthrough):
+    if any(
+        getattr(item, "_generator", None) or getattr(item, "_repark_generator", None)
+        for item in passthrough
+    ):
         raise AnalysisException(
             "Only one generator allowed per select list "
             "(Spark: only one explode/posexplode family generator)"

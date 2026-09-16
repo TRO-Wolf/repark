@@ -88,6 +88,9 @@ fn refusal_message(name: &str) -> Option<String> {
         other if CSV_XML_XPATH.binary_search(&other).is_ok() => {
             Some(format!("{other} {CSV_XML_XPATH_REASON}"))
         }
+        other if XML_PARSE.binary_search(&other).is_ok() => {
+            Some(format!("{other} {XML_PARSE_REASON}"))
+        }
         other if VARIANT.binary_search(&other).is_ok() => Some(format!("{other} {VARIANT_REASON}")),
         other if GEOSPATIAL.binary_search(&other).is_ok() => {
             Some(format!("{other} {GEOSPATIAL_REASON}"))
@@ -139,6 +142,12 @@ const SKETCHES: &[&str] = &[
 const CSV_XML_XPATH_REASON: &str = "is reachable without a JVM and is deferred by cost: the \
      xpath family needs an XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's \
      csv and xml modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath).";
+
+const XML_PARSE: &[&str] = &["from_xml", "schema_of_xml"];
+
+const XML_PARSE_REASON: &str = "is reachable without a JVM and is deferred by cost: an XML \
+     parser matching Spark's javax.xml kernel is a new dependency this unit may not add \
+     (owner ruling 2026-09-15). See docs/spark-sql-iceberg-parity.md (FNP-16-csv-xml-xpath).";
 
 const CSV_XML_XPATH: &[&str] = &[
     "to_csv",
@@ -198,6 +207,7 @@ pub(crate) fn armed_names() -> Vec<&'static str> {
     let mut names: Vec<&'static str> = FNP15.to_vec();
     names.extend(SKETCHES.iter().copied());
     names.extend(CSV_XML_XPATH.iter().copied());
+    names.extend(XML_PARSE.iter().copied());
     names.extend(VARIANT.iter().copied());
     names.extend(GEOSPATIAL.iter().copied());
     names

@@ -87,6 +87,14 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   **FNP-8-REVIEW round 2 (2026-09-07):** both HOF lineage walks resolve through every
   plan node a literal reaches; detail lives with the module in
   [`src/map.md`](src/map.md). pins: fnp-8-review/C-009, C-010
+- `src/generator.rs` — **FNP-GEN-1 step 2 (2026-09-16):** the `posexplode` /
+  `posexplode_outer` / `inline` / `inline_outer` placeholder UDFs plus the `GeneratorRewrite`
+  analyzer rule that turns a `Projection` carrying them into `Unnest`-based plans
+  (ordinality via the internal `__repark_gen_ordinality` UDF unnested in parallel with
+  the values, struct fields via the null-propagating `__repark_gen_field` UDF, outer
+  variants via a CASE + `preserve_nulls` one-NULL guard, select-list position and
+  one-generator/alias-arity/aggregate-input refusals enforced in the rule); registered
+  in `analyzer_rules()` after the closing `TypeCoercion`. pins: fnp-gen-1/C-001, C-002
 - `src/decimal_precision.rs` — **V-2 / DEC U3+U4a:** Spark `DecimalPrecision` rule (integer-literal
   min-precision on `+ − *`; add/sub/mul 38-clamp via CAST-after). `/` formula and DEC-8
   plan-refuse live in `decimal_spark.rs`. Ledger: `task/v2-dec-u3u4-ledger.md`.

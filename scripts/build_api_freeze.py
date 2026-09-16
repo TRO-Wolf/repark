@@ -34,6 +34,7 @@ FUNCTION_DEF_SOURCES: tuple[str, ...] = (
     "python/repark/src/repark/spark/functions_datetime.py",
     "python/repark/src/repark/spark/functions_declared.py",
     "python/repark/src/repark/spark/functions_expr.py",
+    "python/repark/src/repark/spark/functions_generators.py",
     "python/repark/src/repark/spark/functions_lambda.py",
     "python/repark/src/repark/spark/functions_math.py",
     "python/repark/src/repark/spark/functions_session.py",

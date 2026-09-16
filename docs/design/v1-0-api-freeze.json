@@ -3131,13 +3131,13 @@
     {
      "name": "F.posexplode",
      "required_params": [
-      "column"
+      "col"
      ]
     },
     {
      "name": "F.posexplode_outer",
      "required_params": [
-      "column"
+      "col"
      ]
     },
     {

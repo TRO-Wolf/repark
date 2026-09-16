@@ -12,7 +12,6 @@ from repark import functions as F  # noqa: N812
 from repark.errors import (
     AnalysisException,
     ParseException,
-    UnsupportedOperationException,
 )
 from repark.spark.types import (
     ArrayType,
@@ -85,18 +84,19 @@ def test_two_generators_rejected(frame: object) -> None:
         frame.select(F.explode(frame.a), F.explode_outer(frame.a)).collect()
 
 
-def test_posexplode_stops_loud(frame: object) -> None:
-    with pytest.raises(UnsupportedOperationException, match="posexplode") as raised:
-        F.posexplode(frame.a)
-    # Message must not embed a rotting DataFusion major.
-    assert "DataFusion 52" not in str(raised.value)
-    assert "52.x" not in str(raised.value)
+def test_posexplode_answers_pos_and_col(frame: object) -> None:
+    """posexplode emits pos/col through the analyzer rewrite (fnp-gen-1)."""
+    out = frame.select(frame.id, F.posexplode(frame.a)).to_arrow()
+    got = {(row["id"], row["pos"], row["col"]) for row in out.to_pylist()}
+    assert got == {(1, 0, 10), (1, 1, 20), (4, 0, None), (4, 1, 5)}
 
 
-def test_posexplode_outer_stops_loud(frame: object) -> None:
-    """posexplode_outer must STOP loud (not a silent stub)."""
-    with pytest.raises(UnsupportedOperationException, match="posexplode_outer"):
-        F.posexplode_outer(frame.a)
+def test_posexplode_outer_keeps_null_and_empty(frame: object) -> None:
+    """posexplode_outer keeps a NULL row for NULL and empty arrays."""
+    out = frame.select(frame.id, F.posexplode_outer(frame.a)).to_arrow()
+    got = {(row["id"], row["pos"], row["col"]) for row in out.to_pylist()}
+    want = {(1, 0, 10), (1, 1, 20), (2, None, None), (3, None, None), (4, 0, None), (4, 1, 5)}
+    assert got == want
 
 
 def test_explode_alone_select(frame: object) -> None:
@@ -428,9 +428,10 @@ def test_explode_size_sibling_uses_engine_cardinality(frame: object) -> None:
     assert table.schema.field("e").type == pa.int64()
 
 
-def test_explode_on_sql_functions_export_and_posexplode_stop() -> None:
-    """``repark.sql.functions`` must re-export explode* (sed-swap)."""
+def test_explode_on_sql_functions_export_and_posexplode_export() -> None:
+    """``repark.sql.functions`` must re-export explode*/posexplode* (sed-swap)."""
     import repark.spark.functions as canonical
+    from repark.spark.column import Column
     from repark.spark.sql import functions as sql_functions
 
     for name in ("explode", "explode_outer", "posexplode", "posexplode_outer"):
@@ -438,11 +439,8 @@ def test_explode_on_sql_functions_export_and_posexplode_stop() -> None:
         assert name in sql_functions.__all__, name
         assert getattr(sql_functions, name) is getattr(canonical, name), name
 
-    # posexplode STOP must fire on the sed-swap import path too.
-    with pytest.raises(UnsupportedOperationException, match="posexplode"):
-        sql_functions.posexplode("a")
-    with pytest.raises(UnsupportedOperationException, match="posexplode_outer"):
-        sql_functions.posexplode_outer("a")
+    assert isinstance(sql_functions.posexplode("a"), Column)
+    assert isinstance(sql_functions.posexplode_outer("a"), Column)
 
 
 def test_explode_nested_ops_refuse_loud(frame: object) -> None:

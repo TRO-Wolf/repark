@@ -30,12 +30,19 @@ def test_arrays_zip_names_its_fields_by_position(spark: ReparkSession) -> None:
     assert [field.name for field in table.schema.field("v").type.value_type] == ["0", "1"]
 
 
-def test_posexplode_pair_refuses() -> None:
-    """posexplode and posexplode_outer refuse; Spark emits pos/col rows (EX-FN-2)."""
-    with pytest.raises(UnsupportedOperationException, match="posexplode"):
-        F.posexplode("a")
-    with pytest.raises(UnsupportedOperationException, match="posexplode_outer"):
-        F.posexplode_outer("a")
+def test_posexplode_pair_answers(spark: ReparkSession) -> None:
+    """posexplode and posexplode_outer emit pos/col rows (EX-FN-2 fixed, fnp-gen-1)."""
+    frame = spark.createDataFrame([([1, 2],), (None,), ([],)], "a ARRAY<INT>")
+    assert frame.select(F.posexplode("a")).toArrow().to_pylist() == [
+        {"pos": 0, "col": 1},
+        {"pos": 1, "col": 2},
+    ]
+    assert frame.select(F.posexplode_outer("a")).toArrow().to_pylist() == [
+        {"pos": 0, "col": 1},
+        {"pos": 1, "col": 2},
+        {"pos": None, "col": None},
+        {"pos": None, "col": None},
+    ]
 
 
 def test_encode_decode_charset_refuses(spark: ReparkSession) -> None:

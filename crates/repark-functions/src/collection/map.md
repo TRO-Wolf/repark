@@ -50,7 +50,11 @@ needed.
   reaches only the facade through `expr_fn::create_map`. Its own kernel rather than DataFusion's
   `map(make_array, make_array)` lowering, which cannot mix a scalar key with a column value.
   Non-nullable result, `NULL_MAP_KEY` on a null key, `DUPLICATED_MAP_KEY` on a repeat.
-  pins: fnp-9-collections-json/C-006
+  **FNP-GEN-1 step 2 (2026-09-16):** `return_field_from_args` and `invoke_with_args`
+  now derive the map's `values` field nullability from the value arguments —
+  Spark's `valueContainsNull` is false when every value expression is non-nullable,
+  which `posexplode`'s `value` column needs to stay non-nullable.
+  pins: fnp-9-collections-json/C-006, fnp-gen-1/C-002
 - `array_sort.rs` — **FN-FIX-1:** `array_sort` NULLs LAST; `sort_array` Spark order
   (asc NULLS FIRST, desc NULLS LAST).
   pins: fn-fix-1-registry-rows/C-002

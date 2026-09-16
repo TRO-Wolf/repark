@@ -123,6 +123,18 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   (`DataFrameWriter.bucketBy`/`bucket_by`/`sortBy`/`sort_by`/`clusterBy`/`cluster_by`,
   `DataFrameWriterV2.clusterBy`/`cluster_by`); backlog and exceptions baselines hold.
   pins: io-bucket-cluster-1/C-003
+- `test_ex_0_example_coverage.py` — **FNP-GEN-1 step 2 (2026-09-16):** the
+  enumerated public surface moves 1062 → 1064 as `F.inline` and
+  `F.inline_outer` join `__all__` through the generator installer;
+  `docs/examples/functions/{posexplode,inline}.py` cover the four names and
+  the backlog baseline ratchets 112 → 110.
+  pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 2 (2026-09-16):**
+  mirror rows ratchet `functions_expr.py` 2235 → 2213 and
+  `test_explode_rewrite.py` 1135 → 1133; a short-lived
+  `scripts/check_example_coverage.py` row was removed when the script was
+  compacted back under the default ceiling; python_approved stays 32.
+  pins: fnp-gen-1/C-006
 - `test_cap_1_source_file_line_cap.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):**
   `dataframe/writer_readwriter.py` mirror row 1111 → 1105 with the script baseline
   (the bucketBy/sortBy/clusterBy bindings and action-check calls landed while the five

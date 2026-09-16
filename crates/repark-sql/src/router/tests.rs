@@ -188,7 +188,7 @@ async fn temp_views_delegate() {
 async fn execute_refuses_every_armed_declared_name() {
     let ctx = native_ctx();
     let names = crate::declared_refuse::armed_names();
-    assert_eq!(names.len(), 62, "roster is 6 unreachable plus 56 deferred");
+    assert_eq!(names.len(), 64, "roster is 6 unreachable plus 58 deferred");
     for name in names {
         let error = run(&ctx, &format!("SELECT {name}(1)"))
             .await

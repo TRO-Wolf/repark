@@ -85,7 +85,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split by function family while preserving the public re-export surface.",
     ),
     "python/repark/src/repark/spark/functions_expr.py": (
-        2220,
+        2198,
         "Expression-building function families share one module.",
         "Split string, collection, or predicate expression families.",
     ),
@@ -130,7 +130,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split structural flattening from list and refusal scenarios.",
     ),
     "python/repark/tests/test_explode_rewrite.py": (
-        1135,
+        1133,
         "Explode rewrite shapes share one test battery.",
         "Split scalar, nested, and multiple-generator scenarios.",
     ),

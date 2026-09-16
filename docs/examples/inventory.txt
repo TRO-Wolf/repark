@@ -454,6 +454,8 @@ functions	F.hypot
 functions	F.ifnull
 functions	F.ilike
 functions	F.initcap
+functions	F.inline
+functions	F.inline_outer
 functions	F.input_file_block_length
 functions	F.input_file_block_start
 functions	F.input_file_name

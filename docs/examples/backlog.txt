@@ -65,8 +65,6 @@ F.mode
 F.monotonically_increasing_id
 F.months_between
 F.parse_json
-F.posexplode
-F.posexplode_outer
 F.raise_error
 F.reflect
 F.replace

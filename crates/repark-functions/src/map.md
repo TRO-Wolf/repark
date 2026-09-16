@@ -22,9 +22,34 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `declared_refuse.rs` — FNP-15/16 parse-altitude refusals for Spark function names this
   engine will not build. Spark door and `F.expr` / `filter_sql` call `refuse_in_statement` /
   `refuse_in_sql`. FNP-15 names are unreachable; FNP-16 sketches (32) are armed as
-  deferred-by-cost; CSV/XML/XPath (11), VARIANT (8), and geospatial (5) likewise.
-  `armed_names()` is 62.
-  pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-013
+  deferred-by-cost; CSV/XML/XPath (11), VARIANT (8), geospatial (5), and the XML pair
+  `from_xml` / `schema_of_xml` (FNP-GEN-1 D-6, dated 2026-09-15, message names
+  `FNP-16-csv-xml-xpath`) likewise. `armed_names()` is 64.
+  pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-013, fnp-gen-1/C-002, C-003
+- `generator.rs` — **FNP-GEN-1 step 2 (2026-09-16):** placeholder `ScalarUDF`s for
+  `posexplode` / `posexplode_outer` / `inline` / `inline_outer` plus the
+  `__repark_gen_alias` marker that carries multi-name aliases out of the facade, and
+  `GeneratorRewrite`, the analyzer rule that rewrites a `Projection` holding exactly one
+  generator call into inner-projection → one multi-column `Unnest` →
+  final-projection, splicing the generated columns at the call's select-list position.
+  `posexplode` gets `pos` from the internal `__repark_gen_ordinality` UDF (positions per
+  list element) unnested in parallel with the values; `inline` reads struct fields
+  through `__repark_gen_field`, which unions the parent struct's validity into the
+  child so a NULL element emits NULL fields rather than Arrow defaults; the outer
+  spellings normalize NULL/empty inputs to a one-NULL-element list so `preserve_nulls`
+  emits Spark's all-NULL row. Intended-non-nullable outputs wrap in the
+  `__repark_spark_nonnull__` schema marker (value-preserving). A single `AS name` or
+  `__repark_gen_alias` name list must match the output arity or the rewrite raises
+  `[COLUMN_ALIASES_MISMATCH]`; two generators, a `stack` call, an explode-path
+  `__repark_arr_*` temp alias, or a sibling column carrying a reserved
+  `__repark_gen_*` name all refuse `Only one generator allowed per select list`;
+  a generator argument that is or references an aggregate output refuses
+  `[MISSING_GROUP_BY]`; nested calls and non-container inputs refuse
+  `[UNSUPPORTED_GENERATOR]`-class. Registered from `lib.rs::register_all`; the rule
+  registers at the tail of `analyzer_rules()` in `registration.rs`, after the closing
+  `TypeCoercion`. The `#[cfg(test)]` suite lives in [`generator/tests.rs`](generator/tests.rs)
+  (moved out in remediation round 1 so this file keeps the size ceiling).
+  pins: fnp-gen-1/C-002, C-003, C-005
 - `spark_length.rs` — **GT1-FIX G5 / A3 / R3-1:** Spark `bit_length` /
   `octet_length`. Stringifies non-binary; BINARY pass-through (including
   Dictionary(_, Binary)); refuses ARRAY/STRUCT/MAP; decimal scale-padded
@@ -319,7 +344,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `registration.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the `analyzer_rules()`
   home moved out of `lib.rs` so the crate root stays under its `check_lib_rs`
   ceiling; `SparkSessionWindow` registers beside the window rules.
-  pins: fnp-win-1/C-004, C-008
+  **FNP-GEN-1 step 2 (2026-09-16):** `generator::GeneratorRewrite` joins the tail
+  of the list, after the closing `TypeCoercion`, so the rule sees post-coercion
+  projections on both doors.
+  pins: fnp-win-1/C-004, C-008, fnp-gen-1/C-002, C-003
 - `lib.rs` — crate-root stays at **182** under `check_lib_rs` (D-8 one-time
   FNP-WIN-1 grant; step 4 moved the `analyzer_rules()` home to
   `registration.rs`).

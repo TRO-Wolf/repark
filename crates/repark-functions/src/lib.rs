@@ -22,6 +22,7 @@ pub mod decimal_spark;
 pub mod declared_refuse;
 pub mod expr_fn;
 pub mod format_version;
+pub mod generator;
 mod groups_null_state;
 pub mod higher_order;
 pub mod instant_ts;
@@ -111,6 +112,9 @@ pub fn register_all(ctx: &SessionContext) {
         ctx.register_udf(udf.as_ref().clone());
     }
     for udf in collection::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
+    for udf in generator::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
     for udf in json::functions() {

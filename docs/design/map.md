@@ -94,6 +94,10 @@ changing a decision here means a new dated design pass, not an in-place edit.
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `CommitStateUnknownException` joins the error row
   (frozen_names 888 → 889) — the additive move D-4 names.
   pins: ice-commit-unknown-1/C-002
+  **FNP-GEN-1 step 2 (2026-09-16):** the frozen `posexplode` / `posexplode_outer`
+  required parameter renames `column` → `col` to match PySpark 4.1.2 (D-13), and
+  `build_api_freeze.py` reads the new `functions_generators.py` def source.
+  pins: fnp-gen-1/C-001
 
 - [session-api.md](session-api.md) — the phase-1 repark-core Session API design (settled
   2026-08-06): the three-crate layout (`repark-common` / `repark-iceberg` / `repark-core`), the
