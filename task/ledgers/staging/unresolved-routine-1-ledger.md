@@ -59,7 +59,7 @@ contract, not one row per name.
 | C-003 | The Python door: `F.expr`, `selectExpr`, string `filter` answer the same class; `F.call_function` stays green. Cells UR-PY-00…03. | Same pin file, py-door section. | PROVEN | `F.expr` maps with the fragment, `filter` with the predicate, `selectExpr` rides the core seam (class green); `call_function` untouched and green. H-003 stands. pins: unresolved-routine-1/C-003. §2. |
 | C-004 | The three out-of-shape classes: TVF implemented at the same seam; LATERAL VIEW and `system.builtin` recorded. | TVF pin UR-SQL-17; BACKLOG rows for the rest as decided. | PROVEN | TVF four-sentence pin green; `system.builtin` → `REQUIRES_SINGLE_PART_NAMESPACE` pin green. LATERAL VIEW stays a disclosure pin; its BACKLOG row lands in step 7. pins: unresolved-routine-1/C-004. §2. |
 | C-005 | Blanket, not per name: a Rust unit test maps an arbitrary unknown name; one pin iterates ≥20 Spark-unknown names. | In-module Rust test + parametrized facade pin. | PROVEN | 14 in-module tests (`arbitrary_unknown_name_maps_blanket` uses a name from no list); 22-name facade blanket pin green. No name list in the implementation. pins: unresolved-routine-1/C-005. §2. |
-| C-006 | Every existing `Invalid function` assertion for a Spark-unknown name now asserts the Spark class; names Spark has are listed. | Retired pins + the two ledger lists. | OPEN | Files: `test_fnp11b_typeof.py`, `test_fnp7_try_inversions.py`, `test_functions_gt2.py`, `test_filter_predicate_rewrite.py` (docstring only, no assertion), `test_w0_window_bench_smoke.py`, `test_fnp_gen_1.py` (negative assertion, untouched), `test_column_parity_1.py`, Rust `keyword_lower.rs` / `bare_nullary.rs`. |
+| C-006 | Every existing `Invalid function` assertion for a Spark-unknown name now asserts the Spark class; names Spark has are listed. | Retired pins + the two ledger lists. | PROVEN | Files: `test_fnp11b_typeof.py`, `test_fnp7_try_inversions.py`, `test_functions_gt2.py`, `test_filter_predicate_rewrite.py` (docstring only, no assertion), `test_w0_window_bench_smoke.py`, `test_fnp_gen_1.py` (negative assertion, untouched), `test_column_parity_1.py`, Rust `keyword_lower.rs` / `bare_nullary.rs`. Verification critic (Grok 4.6, head `05c94c2f`) L-004 CLOSED: no retired assertion claims Spark's class for a name Spark has; `schema_of_csv` is an explicit divergence tripwire (UR3-SQL-13). |
 | C-007 | Registry: BL-19 → FIXED with pins; residue rows dated. | `docs/spark-sql-iceberg-parity.md` rows. | PROVEN | BL-19 FIXED with pins; BL-19-POS-SELX (H-001) and BL-19-LATERAL-1 BACKLOG rows dated 2026-09-16; FNP-11B-TYPEOF-BINARY-1 reworded to the new shape. pins: unresolved-routine-1/C-007. |
 
 ## 1. Red-first record (base `33c87cbf`, release native from base, 2026-09-16)
@@ -303,3 +303,70 @@ its guarded refusal changed shape under this unit (`Invalid function` →
 `UNRESOLVED_ROUTINE`) without the kernel landing. Repaired narrowly in step 6
 (marker retired, refusal pins the new class, kernel-landing signal preserved);
 see §3.
+
+## Orchestrator close-out — run 18c, 2026-09-16
+
+**Rulings applied:** Q-17c-3 (owner: the blanket refusal is a 1.5 card ahead of more names), Q-17a-2 (the refusal is decided in
+Rust), Q-17a-4 (whole facade + whole parity suites at the gate), Q-17b-1 (commit as its own step). R-18c-O1 (orchestrator, G-2):
+L-005's string `filter` / `where` and `selectExpr` fragment positions ship as the dated residue rows BL-19-POS-FILTER and
+BL-19-POS-SELX — the class and message are right on those doors, and the original fragment text only exists in
+`dataframe/core.py`, run 18b's file today; the verification critic judged the hand-off honest.
+
+**Verification critic** (Grok 4.6, read-only, head `05c94c2f`): L-001, L-002, L-003, L-004, L-006, ORCH-001, PERF-001 CLOSED;
+PERF-002 NOT CLOSED as V-001 (P3): a non-parse miss still formats the DataFusion error twice — ledger note, no product impact.
+Nested block comments are the one unmeasured decoy shape.
+
+**Orchestrator gate re-run** (rebased head `05c94c2f`, release native): `make verify` rc 0; `make rust-clippy` rc 0; release native
+rc 0; the whole parity suite rc 0 (757 passed, 2 skipped, 12 xfailed); example coverage rc 0; the whole facade suite 9105 passed,
+1 failed — `test_h3_spill_matrix.py::test_a_pool_refusal_is_the_documented_spark_shaped_exception[window_unbounded-64M]`, a
+memory-pool refusal case under box load, unrelated to this unit; the file re-run alone: 24 passed. Comment-ban grep 0 hits;
+forbidden-trailer grep 0 hits. Main moved during the unit (#653 NEVER-OOM-PANIC-1): one conflict in
+`crates/repark-core/src/lib.rs` re-exports, resolved by keeping both sides.
+
+**Names Spark has that the SQL door lacks, handed to run 18a:** `schema_of_csv` (see the tripwire); the retired-assertion table
+above lists the rest.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: unresolved-routine-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every in-scope oracle cell (UR-SQL, UR-PY, UR3-SQL, UR3-PY) is pinned with the full Spark message; red on base, green on the head.
+      artifacts: [python/repark/tests/test_unresolved_routine_1.py, python/repark/tests/unresolved_routine_1_spark_oracle.json]
+    - id: AT-2
+      status: N/A
+      justification: No numeric result; the error path is formatted only when a query already fails.
+    - id: AT-3
+      status: ATTACKED
+      evidence: Decoys in strings and comments, quoted and dotted names, multi-byte text, nested unknown calls and wrong-arity calls were attacked by two critic rounds and measured on Spark.
+      artifacts: [crates/repark-core/src/unknown_routine.rs]
+    - id: AT-4
+      status: N/A
+      justification: No shared state or ordering; the mapper is a pure function of the SQL text and the error.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, environment read or secret.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Arity and parse errors bypass the mapper (UR3-SQL-14/15 guard pins), so a known function's error is never rewritten.
+      artifacts: [python/repark/tests/test_unresolved_routine_1.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: One tokenizer pass only on the failure path; the success path is unchanged (both S2-21 reads).
+      artifacts: [crates/repark-core/src/error_map.rs]
+    - id: AT-8
+      status: ATTACKED
+      evidence: No dependency or workflow edit; size ceilings moved down only.
+      artifacts: [scripts/check_rust_file_size.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The refusal names the routine, the search path, SQLSTATE and the position, as Spark prints them.
+      artifacts: [crates/repark-core/src/unknown_routine.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red-first runs are pasted for both rounds (round 2 — 8 failed, 58 passed on 63f40f67).
+      artifacts: [task/ledgers/staging/unresolved-routine-1-ledger.md]
+  reattested: []
+  complete: true
+```
