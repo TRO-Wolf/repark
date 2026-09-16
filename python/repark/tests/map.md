@@ -955,9 +955,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   for residue BL-20-OVF. `div` / unary `~` stay unpinned (SPARK-SQL-GRAMMAR-1
   residues). Remediation round 1 (2026-09-16) adds the 13 LIT2 cells, the
   LIT2 overflow error pins, and the critic L-001 `F.expr` door-agreement
-  table (mixed-width SQL answered identically on both doors).
+  table (mixed-width SQL answered identically on both doors). Round 3
+  (2026-09-16) adds the V-001 probe table: parenthesized `-(2147483648)`
+  stays bigint inside `transform` / `filter` / `transform_keys` on both
+  doors, matching LIT2-SQL-03.
   pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: sql-literal-typing-1/L-001, L-002, L-003
+  pins: sql-literal-typing-1/V-001
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
   wipes rows, stamps `operation=delete`, time-travels to the pre-truncate snapshot;
   missing table is `TABLE_OR_VIEW_NOT_FOUND`; a view is `EXPECT_TABLE_NOT_VIEW`;

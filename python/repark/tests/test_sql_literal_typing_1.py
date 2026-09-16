@@ -263,6 +263,33 @@ def test_fexpr_mixed_width_matches_sql_door() -> None:
         assert observed.column("v").to_pylist() == expected.column("v").to_pylist(), text
 
 
+def test_hof_parenthesized_int_min_stays_bigint_on_both_doors() -> None:
+    """A parenthesized ``-(2147483648)`` stays bigint inside HOFs too.
+
+    ``HigherOrderPreparation`` used to fold it through the shared
+    provisional-integer helper while the top-level door answered bigint
+    (LIT2-SQL-03). Both doors must answer the Spark-true widths here.
+
+    pins: sql-literal-typing-1/V-001
+    """
+    session = _spark()
+    cases = (
+        ("transform(array(-(2147483648)), x -> x)", pa.list_(pa.int64())),
+        ("array(-(2147483648))", pa.list_(pa.int64())),
+        ("filter(array(-(2147483648), 1), x -> x < 0)", pa.list_(pa.int64())),
+        (
+            "transform_keys(map(-(2147483648), 1), (k, v) -> k)",
+            pa.map_(pa.int64(), pa.int32()),
+        ),
+    )
+    for text, expected_type in cases:
+        expected = session.sql(f"SELECT {text} AS v").to_arrow()
+        observed = session.range(1).select(F.expr(text).alias("v")).to_arrow()
+        assert expected.schema.field("v").type == expected_type, text
+        assert observed.schema.field("v").type == expected_type, text
+        assert observed.column("v").to_pylist() == expected.column("v").to_pylist(), text
+
+
 def test_tinyint_overflow_wrap_is_declared() -> None:
     """``CAST(127 AS TINYINT) + CAST(1 AS TINYINT)`` wraps to -128, declared.
 
