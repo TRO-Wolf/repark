@@ -5798,3 +5798,11 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   the moment those kernels land the pin **XPASSes and fails** and the step-3 round has to retire it.
   A red-first pin for later work in the same unit is still a residual: strict-xfail it, do not leave
   it failing. pins: fnp-gen-1/C-004
+- [facade_df_metadata_col_oracle.json](facade_df_metadata_col_oracle.json) — **DF-METADATA-COL-1
+  (2026-09-16):** the 48 live-PySpark 4.1.2 cells for `DataFrame.metadataColumn` and the
+  hidden `_metadata` file-source struct — 34 run-18b cells
+  (`/tmp/oc-worker/run18b/oracle/metadata_spark_2026-09-16.json`, probe `probe_metadata.py`,
+  parquet / csv / json / text / partitioned parquet) plus the 14 run-16b `metadata_*` cells
+  (`dfrust3_probe_2026-09-15.json`); values verified identical after merge, `{ROOT}`
+  substituted by the probes. Recorded evidence, never hand-edited.
+  pins: df-metadata-col-1/M-1, M-2, M-3, M-4, M-5

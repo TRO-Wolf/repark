@@ -1,0 +1,326 @@
+{
+ "json_csv": {
+  "result": "'{\"fields\":[{\"metadata\":{\"__file_source_metadata_col\":true,\"__metadata_col\":\"_metadata\"},\"name\":\"_metadata\",\"nullable\":false,\"type\":{\"fields\":[{\"metadata\":{},\"name\":\"file_path\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_name\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_size\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_start\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_length\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_modification_time\",\"nullable\":false,\"type\":\"timestamp\"}],\"type\":\"struct\"}}],\"type\":\"struct\"}'"
+ },
+ "json_json": {
+  "result": "'{\"fields\":[{\"metadata\":{\"__file_source_metadata_col\":true,\"__metadata_col\":\"_metadata\"},\"name\":\"_metadata\",\"nullable\":false,\"type\":{\"fields\":[{\"metadata\":{},\"name\":\"file_path\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_name\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_size\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_start\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_length\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_modification_time\",\"nullable\":false,\"type\":\"timestamp\"}],\"type\":\"struct\"}}],\"type\":\"struct\"}'"
+ },
+ "json_parquet": {
+  "result": "'{\"fields\":[{\"metadata\":{\"__file_source_metadata_col\":true,\"__metadata_col\":\"_metadata\"},\"name\":\"_metadata\",\"nullable\":false,\"type\":{\"fields\":[{\"metadata\":{},\"name\":\"file_path\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_name\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_size\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_start\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_length\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_modification_time\",\"nullable\":false,\"type\":\"timestamp\"},{\"metadata\":{},\"name\":\"row_index\",\"nullable\":false,\"type\":\"long\"}],\"type\":\"struct\"}}],\"type\":\"struct\"}'"
+ },
+ "json_parquet_partitioned": {
+  "result": "'{\"fields\":[{\"metadata\":{\"__file_source_metadata_col\":true,\"__metadata_col\":\"_metadata\"},\"name\":\"_metadata\",\"nullable\":false,\"type\":{\"fields\":[{\"metadata\":{},\"name\":\"file_path\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_name\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_size\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_start\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_length\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_modification_time\",\"nullable\":false,\"type\":\"timestamp\"},{\"metadata\":{},\"name\":\"row_index\",\"nullable\":false,\"type\":\"long\"}],\"type\":\"struct\"}}],\"type\":\"struct\"}'"
+ },
+ "json_text": {
+  "result": "'{\"fields\":[{\"metadata\":{\"__file_source_metadata_col\":true,\"__metadata_col\":\"_metadata\"},\"name\":\"_metadata\",\"nullable\":false,\"type\":{\"fields\":[{\"metadata\":{},\"name\":\"file_path\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_name\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_size\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_start\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_length\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_modification_time\",\"nullable\":false,\"type\":\"timestamp\"}],\"type\":\"struct\"}}],\"type\":\"struct\"}'"
+ },
+ "metadata_after_filter": {
+  "result": "struct<_metadata.file_size:bigint>"
+ },
+ "metadata_arg_none": {
+  "error": {
+   "condition": "NOT_STR",
+   "message": "[NOT_STR] Argument `colName` should be a str, got NoneType.",
+   "raises": "PySparkTypeError"
+  }
+ },
+ "metadata_arg_type": {
+  "error": {
+   "condition": "NOT_STR",
+   "message": "[NOT_STR] Argument `colName` should be a str, got int.",
+   "params": {
+    "arg_name": "colName",
+    "arg_type": "int"
+   },
+   "raises": "PySparkTypeError",
+   "sqlstate": null
+  }
+ },
+ "metadata_bad_name_select": {
+  "error": {
+   "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `file_path` cannot be resolved. Did you mean one of the following? [`_metadata`]. SQLSTATE: 42703",
+   "raises": "AnalysisException"
+  }
+ },
+ "metadata_col_after_agg": {
+  "error": {
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] Resolved attribute(s) \"_metadata\" missing from \"s\", \"count\" in operator !Project [_metadata#12].  SQLSTATE: XX000;\n!Project [_metadata#12]\n+- Aggregate [s#4], [s#4, count(1) AS count#72L]\n   +- Relation [i#3,s#4,_metadata#12] parquet\n",
+   "raises": "AnalysisException"
+  }
+ },
+ "metadata_col_after_join": {
+  "error": {
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] Resolved attribute(s) \"_metadata\" missing from \"i\", \"s\", \"s\" in operator !Project [_metadata#12.file_name AS _metadata.file_name#70].  SQLSTATE: XX000;\n!Project [_metadata#12.file_name AS _metadata.file_name#70]\n+- Project [i#3, s#4, s#6]\n   +- Join Inner, (i#3 = i#5)\n      :- Relation [i#3,s#4,_metadata#12] parquet\n      +- Relation [i#5,s#6] csv\n",
+   "raises": "AnalysisException"
+  }
+ },
+ "metadata_col_after_select": {
+  "result": "'struct<_metadata:struct<file_path:string,file_name:string,file_size:bigint,file_block_start:bigint,file_block_length:bigint,file_modification_time:timestamp,row_index:bigint>>'"
+ },
+ "metadata_col_after_select_named": {
+  "result": "['file_name']"
+ },
+ "metadata_col_repr": {
+  "result": "Column<'_metadata'>"
+ },
+ "metadata_csv": {
+  "result": "skip"
+ },
+ "metadata_fields_full": {
+  "result": "{\"fields\":[{\"metadata\":{\"__file_source_metadata_col\":true,\"__metadata_col\":\"_metadata\"},\"name\":\"_metadata\",\"nullable\":false,\"type\":{\"fields\":[{\"metadata\":{},\"name\":\"file_path\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_name\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_size\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_start\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_length\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_modification_time\",\"nullable\":false,\"type\":\"timestamp\"},{\"metadata\":{},\"name\":\"row_index\",\"nullable\":false,\"type\":\"long\"}],\"type\":\"struct\"}}],\"type\":\"struct\"}"
+ },
+ "metadata_missing": {
+  "error": {
+   "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `nope` cannot be resolved. Did you mean one of the following? [`_metadata`]. SQLSTATE: 42703",
+   "params": {
+    "objectName": "`nope`",
+    "proposal": "`_metadata`"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42703"
+  }
+ },
+ "metadata_missing_lazy": {
+  "error": {
+   "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `nope` cannot be resolved. Did you mean one of the following? [`_metadata`]. SQLSTATE: 42703",
+   "params": {
+    "objectName": "`nope`",
+    "proposal": "`_metadata`"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42703"
+  }
+ },
+ "metadata_on_local": {
+  "error": {
+   "condition": "UNRESOLVED_COLUMN.WITHOUT_SUGGESTION",
+   "message": "[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION] A column, variable, or function parameter with name `_metadata` cannot be resolved.  SQLSTATE: 42703",
+   "params": {
+    "objectName": "`_metadata`"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42703"
+  }
+ },
+ "metadata_on_range": {
+  "error": {
+   "condition": "UNRESOLVED_COLUMN.WITHOUT_SUGGESTION",
+   "message": "[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION] A column, variable, or function parameter with name `_metadata` cannot be resolved.  SQLSTATE: 42703",
+   "raises": "AnalysisException"
+  }
+ },
+ "metadata_on_sql_values": {
+  "error": {
+   "condition": "UNRESOLVED_COLUMN.WITHOUT_SUGGESTION",
+   "message": "[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION] A column, variable, or function parameter with name `_metadata` cannot be resolved.  SQLSTATE: 42703; line 1 pos 0",
+   "raises": "AnalysisException"
+  }
+ },
+ "metadata_parquet_field": {
+  "result": {
+   "rows": [
+    "Row(f='part-00001-37999181-64c8-4e91-8253-cf736e792ad2-c000.snappy.parquet')"
+   ],
+   "schema": "struct<_metadata.file_name:string>"
+  }
+ },
+ "metadata_parquet_select": {
+  "result": {
+   "names": [
+    "_metadata"
+   ],
+   "schema": "struct<_metadata:struct<file_path:string,file_name:string,file_size:bigint,file_block_start:bigint,file_block_length:bigint,file_modification_time:timestamp,row_index:bigint>>"
+  }
+ },
+ "metadata_regular_col": {
+  "error": {
+   "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `i` cannot be resolved. Did you mean one of the following? [`_metadata`]. SQLSTATE: 42703",
+   "params": {
+    "objectName": "`i`",
+    "proposal": "`_metadata`"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42703"
+  }
+ },
+ "metadata_repr_name": {
+  "error": {
+   "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `file_path` cannot be resolved. Did you mean one of the following? [`_metadata`]. SQLSTATE: 42703",
+   "raises": "AnalysisException"
+  }
+ },
+ "metadata_row_index": {
+  "result": "struct<_metadata.row_index:bigint>"
+ },
+ "metadata_select_star_hidden": {
+  "result": [
+   "i",
+   "s"
+  ]
+ },
+ "metadata_string_select": {
+  "result": "struct<file_path:string>"
+ },
+ "metadata_user_column_shadow": {
+  "result": {
+   "columns": [
+    "_metadata"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "('x',)"
+   ],
+   "simpleString": "struct<_metadata:string>"
+  }
+ },
+ "metadata_user_column_shadow_mc": {
+  "error": {
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] Resolved attribute(s) \"__metadata\" missing from \"i\", \"_metadata\" in operator !Project [__metadata#86].  SQLSTATE: XX000;\n!Project [__metadata#86]\n+- Relation [i#82,_metadata#83] parquet\n",
+   "raises": "AnalysisException"
+  }
+ },
+ "mtime_type": {
+  "result": "'struct<file_modification_time:timestamp>'"
+ },
+ "names_csv": {
+  "result": "['i', 's', 'file_name', 'file_size']"
+ },
+ "names_json": {
+  "result": "['i', 's', 'file_name', 'file_size']"
+ },
+ "names_parquet": {
+  "result": "['i', 's', 'file_name', 'file_size']"
+ },
+ "names_parquet_partitioned": {
+  "result": "['i', 's', 'file_name', 'file_size']"
+ },
+ "names_text": {
+  "result": "['value', 'file_name', 'file_size']"
+ },
+ "row_index_parquet": {
+  "result": {
+   "columns": [
+    "i",
+    "ri"
+   ],
+   "nullable": [
+    true,
+    false
+   ],
+   "rows": [
+    "(1, 0)",
+    "(2, 1)",
+    "(3, 2)"
+   ],
+   "simpleString": "struct<i:int,ri:bigint>"
+  }
+ },
+ "schema_csv": {
+  "result": "'struct<_metadata:struct<file_path:string,file_name:string,file_size:bigint,file_block_start:bigint,file_block_length:bigint,file_modification_time:timestamp>>'"
+ },
+ "schema_json": {
+  "result": "'struct<_metadata:struct<file_path:string,file_name:string,file_size:bigint,file_block_start:bigint,file_block_length:bigint,file_modification_time:timestamp>>'"
+ },
+ "schema_parquet": {
+  "result": "'struct<_metadata:struct<file_path:string,file_name:string,file_size:bigint,file_block_start:bigint,file_block_length:bigint,file_modification_time:timestamp,row_index:bigint>>'"
+ },
+ "schema_parquet_partitioned": {
+  "result": "'struct<_metadata:struct<file_path:string,file_name:string,file_size:bigint,file_block_start:bigint,file_block_length:bigint,file_modification_time:timestamp,row_index:bigint>>'"
+ },
+ "schema_text": {
+  "result": "'struct<_metadata:struct<file_path:string,file_name:string,file_size:bigint,file_block_start:bigint,file_block_length:bigint,file_modification_time:timestamp>>'"
+ },
+ "sql_local_metadata": {
+  "error": {
+   "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `_metadata` cannot be resolved. Did you mean one of the following? [`a`]. SQLSTATE: 42703; line 1 pos 7;\n'Project ['_metadata]\n+- SubqueryAlias v\n   +- LocalRelation [a#102]\n",
+   "raises": "AnalysisException"
+  }
+ },
+ "sql_path_metadata": {
+  "result": {
+   "columns": [
+    "i",
+    "ri"
+   ],
+   "nullable": [
+    true,
+    false
+   ],
+   "rows": [
+    "(1, 0)",
+    "(2, 1)",
+    "(3, 2)"
+   ],
+   "simpleString": "struct<i:int,ri:bigint>"
+  }
+ },
+ "sql_star_hidden": {
+  "result": "['i', 's']"
+ },
+ "sql_view_metadata": {
+  "error": {
+   "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `_metadata`.`file_name` cannot be resolved. Did you mean one of the following? [`pv`.`i`, `pv`.`s`]. SQLSTATE: 42703; line 1 pos 10;\n'Project [i#3, '_metadata.file_name LIKE %.parquet AS ok#91]\n+- SubqueryAlias pv\n   +- View (`pv`, [i#3, s#4])\n      +- Relation [i#3,s#4] parquet\n",
+   "raises": "AnalysisException"
+  }
+ },
+ "values_csv": {
+  "result": {
+   "columns": [
+    "i",
+    "file_block_start",
+    "file_block_length",
+    "path_prefix"
+   ],
+   "nullable": [
+    true,
+    false,
+    false,
+    false
+   ],
+   "rows": [
+    "(1, 0, 16, 'file:/')",
+    "(2, 0, 16, 'file:/')",
+    "(3, 0, 16, 'file:/')"
+   ],
+   "simpleString": "struct<i:int,file_block_start:bigint,file_block_length:bigint,path_prefix:string>"
+  }
+ },
+ "values_parquet": {
+  "result": {
+   "columns": [
+    "i",
+    "file_path",
+    "file_block_start",
+    "row_index",
+    "size_positive",
+    "fname_ok"
+   ],
+   "nullable": [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "rows": [
+    "(1, 'file:{ROOT}/p/part-00000-b463805b-51d8-416a-b9c3-cd0bed029e3f-c000.snappy.parquet', 0, 0, True, True)",
+    "(2, 'file:{ROOT}/p/part-00000-b463805b-51d8-416a-b9c3-cd0bed029e3f-c000.snappy.parquet', 0, 1, True, True)",
+    "(3, 'file:{ROOT}/p/part-00000-b463805b-51d8-416a-b9c3-cd0bed029e3f-c000.snappy.parquet', 0, 2, True, True)"
+   ],
+   "simpleString": "struct<i:int,file_path:string,file_block_start:bigint,row_index:bigint,size_positive:boolean,fname_ok:boolean>"
+  }
+ }
+}

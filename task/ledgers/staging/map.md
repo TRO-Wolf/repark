@@ -807,3 +807,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   clauses OPEN). No product code in step 1.
   `risk_tier: standard`. Branch `feat/fnp-11b-temporal-formats`.
   pins: fnp-11b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [df-metadata-col-1-ledger.md](df-metadata-col-1-ledger.md) —
+  **DF-METADATA-COL-1 (2026-09-16), in flight:** `DataFrame.metadataColumn` and the
+  hidden `_metadata` file-source struct — marker-wrapped file scans, reference-driven
+  per-file UNION augmentation with `row_index` behind one partition per file, Spark
+  `UNRESOLVED_COLUMN` / `MISSING_ATTRIBUTES` conditions, the SQL path-table door as
+  BACKLOG `SQL-METADATA-COL-1`. Oracle: 48 live-PySpark 4.1.2 cells
+  (`python/repark/tests/facade_df_metadata_col_oracle.json`: 34 run-18b cells plus the
+  14 run-16b `metadata_*` cells). Step 1: ledger, fixture, red before-table.
+  `risk_tier: standard`. Branch `feat/df-metadata-col-1`.
+  pins: df-metadata-col-1/M-1, M-2, M-3, M-4, M-5, C-006, C-007
