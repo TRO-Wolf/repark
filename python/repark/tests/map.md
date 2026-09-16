@@ -5496,7 +5496,10 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
   pins: fnp-11a/C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [test_fnp11a_r2.py](test_fnp11a_r2.py) — round-2 finding pins over the run-15a
   oracle: finding coverage (L-001..L-011) plus the zero-arg asymmetry and
-  shortest-call-shape pins; the cached session stops on teardown.
+  shortest-call-shape pins; the cached session stops on teardown. **Run 17c (2026-09-16):**
+  the `BARE_UNIT` translation regex is retired — `spark-sql-grammar-1`/C-008 makes the bare
+  datetime-unit keywords run natively on the SQL door, so rewriting them to the quoted
+  spelling would now hide the behaviour under test.
   pins: fnp-11a/C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - [test_fnp11a_temporal.py](test_fnp11a_temporal.py) — one parametrized test per door
   over the card's thirteen names: facade-signature parity (C-001), Python-door and
@@ -5526,7 +5529,9 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
   on the recorded door: SQL cells assert the Arrow string value, Python cells
   run over an `i INT, s STRING, d DOUBLE, b BOOLEAN` frame, the signature cell
   pins the one-required-column shape, and the arity cells pin Spark's
-  `WRONG_NUM_ARGS` text. Five cells pin as blocked with the seam named
+  `WRONG_NUM_ARGS` text. **Run 17c (2026-09-16):** the NTZ-literal seam pin asserts Spark's
+  `[UNSUPPORTED_TIMESTAMP_NTZ]` class, which `spark-sql-grammar-1`/C-005 now carries, in place
+  of DataFusion's `Unsupported SQL type` text. Five cells pin as blocked with the seam named
   (`TIMESTAMP_NTZ` literal and the three unit-less interval spellings stay
   17c's; the `binary` function name is unowned). pins: fnp-11b/C-005
 - **FNP-11A (2026-09-15):** `test_functions_split_identity.py` pins the eleven-name FNP-11A tail after `ARROW_EXPORTS`. `test_catalog_surface_1.py::test_list_functions_shape` (unique names) and `test_fnp_misc_1.py::test_fnp_misc_1_byname_allowlist_covers_facade` caught the duplicate install and are green again.
