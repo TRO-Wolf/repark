@@ -888,6 +888,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **FNP-AGG-1 run 18a (2026-09-16):** the two `product` window cells (11, 26) are
   `xfail(strict=True)` — the trailing sort by the unprojected `k` is run 18b's
   `orderBy` seam (registry `FNP-AGG-1-18A`).
+- [test_fnp_agg_1_critic.py](test_fnp_agg_1_critic.py) +
+  `fnp_agg_1_critic_spark_oracle.json` — **FNP-AGG-1 remediation (2026-09-16):**
+  fifteen live-PySpark 4.1.2 cells answering the Grok reviews: `grouping_id`
+  exact-order refusals and the `GROUPING SETS` value cell on both doors, four
+  `histogram_numeric` cells (unsorted, seven-int, three-partition, doubles),
+  three DISTINCT-order cells. DISTINCT elements compare as a multiset
+  (R-18a-21); the cube `grouping_id()` cell compares rows as a multiset (the
+  plan shape shows rare nondeterministic output order, another slice's seam).
+  pins: fnp-agg-1/C-002, C-003, C-004
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve

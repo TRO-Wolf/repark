@@ -487,3 +487,36 @@ merge pin green); C-006 OPEN pending the step-10 gates; C-007 PROVEN
 
 VERDICT: 7 clauses, 3 PROVEN, 4 OPEN, 0 REJECTED (step-9 evidence
 above; the only in-card OPEN driver is the R-18a-18 sum carry).
+
+## Remediation (run 18a, on main 62dd17ef) — Grok reviews and gate reds
+
+State: the unit's sixteen commits squashed onto origin/main `a8b9c2dc` as
+`62dd17ef` (carries #654 UNRESOLVED_ROUTINE-1, #655 LOGICAL-WIDTH-1, #657
+FNP-GEN-1). Gate on the squash is red: 42 card pins, the EX-0 enumerator,
+and `make verify` on example coverage (`F.count_min_sketch`,
+`F.grouping_id`). Reviewers: logic (1 P1 C3-001 grouping_id subset-accept,
+2 P2 C3-002 histogram ties, C3-003 listagg multi-batch), rustperf (P1
+histogram O(n^3) + comment ban, P2 percentile map / listagg alloc / sketch
+buffer, P3 grouping 2^n + panic edges), pyperf (P2 mode flag fold +
+join/thread).
+
+| Id | Ruling |
+|---|---|
+| R-18a-19 | `grouping_id(args)` accepted only when args equal the grouping-column list exactly, in order; otherwise `GROUPING_ID_COLUMN_MISMATCH` with Spark's message shape, both doors. `rollup_subset_matches_its_set` pinned the wrong accept and is fixed. |
+| R-18a-20 | `histogram_numeric` rewritten as Hive `NumericHistogram`: state at most `nBins` sorted (center, count) bins; each insert adds a bin and merges the closest adjacent pair when over `nBins`; `merge_batch` inserts the other state's bins the same way. Measured cells green, two-partition merge test kept. |
+| R-18a-21 | DISTINCT listagg element order is not a contract: first-occurrence scan order; fixture pins compare delimiter-split elements as a multiset. Closes rustperf-004 (no per-row `String` for seen values). |
+| R-18a-22 | The two new `///` doc comments (`count_min_sketch.rs` over `count_min_sketch_udaf`, `column/` over the `grouping_id` builder) are removed; a `missing_docs` lint is answered by narrowing visibility, never by documenting. |
+| R-18a-23 | `percentile` state coalesces equal values (value to summed frequency); `evaluate` sorts once without cloning; `count_min_sketch` hashes into a stack/reused buffer, no per-row `Vec`. |
+| R-18a-24 | `F.mode(col, deterministic)` passes `deterministic` as a boolean literal Column (no Python branch on its value) and threads `join_sql_expr` plus `**_thread_origin(column)`. |
+| R-18a-25 | `hex` return-field nullability follows its argument (Spark's `Hex` is nullable exactly when its child is); pinned by the fixture cell plus a nullable-argument control. The Q3 premise was backwards: the fixture records `nullable: False`. |
+| R-18a-26 | Gate reds: (a) 20 sum pins to strict xfail R-18a-18; (b) XPASS strict xfails unmarked, bent `int` expectations corrected to the fixture; (c) 2 `any_value` duplicate-name cells to strict xfail naming the 18c seam; (d) SQL `listagg` registration if planner-acceptable else strict xfail to 18c; (e) histogram SQL `map`-vs-`row` fixed in-slice or strict-xfailed naming the seam; (f) the two `assert True == False` at line 204 fixed; (g) `count_min_sketch` + `grouping_id` examples with COVERS rows, inventory regenerated, EX-0 count set to measured. |
+
+Step 1 (fixture + red-first pins): `fnp_agg_1_critic_spark_oracle.json`
+copied verbatim (15 cells, Spark 4.1.2); `test_fnp_agg_1_critic.py` pins
+every cell. Red on arrival: 10 failed, 5 passed — the 5 grouping exact-order
+refusals (R-18a-19), the 4 histogram cells (R-18a-20; the three-partition
+cell is additionally unreproducible single-node, see step 3). Green on
+arrival: the GROUPING SETS refusal and value cells, all three DISTINCT cells
+(multiset already passes both scan orders), the cube `grouping_id()` cell
+(rows as a multiset — the plan shape shows rare nondeterministic output
+order across processes, an engine sort-stability seam outside this slice).
