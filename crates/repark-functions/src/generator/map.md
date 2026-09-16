@@ -20,3 +20,7 @@ single generator call in a `Projection` into list `Unnest` plans on both doors.
 ## Pointers
 
 - Up: [../map.md](../map.md)
+- **Verification-critic fix-up (2026-09-16, run 17a):** `tests.rs` gains
+  `ordinality_packs_positions_for_a_sliced_list`, the regression pin for V-002 — `ordinality` used
+  to clone the input's offset buffer while packing positions from 0, so a sliced `ListArray` whose
+  first offset is not 0 panicked in `ListArray::new`. pins: fnp-gen-1/C-002

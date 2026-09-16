@@ -2204,6 +2204,15 @@ condition the mirror exists to make impossible.
 
 ---
 
+- **GEN-ALIAS-1** (2026-09-16, run 17a, BACKLOG) — on the **SQL door**, a user `AS name` around a
+  multi-column generator (`posexplode`, `inline`) whose alias text begins with the call's own
+  rendering (`posexplode(` …) is mistaken for a NamePreserver-restored display alias and dropped, so
+  the door answers with default names where Spark raises `COLUMN_ALIASES_MISMATCH`; the Python door
+  raises correctly. The seam is the textual `starts_with(funcname + "(")` test in
+  `crates/repark-functions/src/generator.rs::peel_generator`, which needs a non-textual marker on
+  restored aliases to close — a change to the name-restoration path, not to the generator rewrite.
+  Found by the FNP-GEN-1 verification critic (V-001). pins: fnp-gen-1/C-003
+
 ## 7. Known Spark-parity divergences (BACKLOG)
 
 Differences we intend to close. Each pin **codifies today's behavior** so the fix reds it on

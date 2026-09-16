@@ -245,3 +245,22 @@ kernels land the pins XPASS and fail, which forces that round to retire them ins
 leaving them marked. The unit ships steps 1–2 (`posexplode`, `posexplode_outer`, `inline`,
 `inline_outer` answering on both doors, and `from_xml` / `schema_of_xml` as dated declared
 refusals); the three parser names stay OPEN in the clause table. pins: fnp-gen-1/C-004
+
+## Verification critic and its two residuals (2026-09-16, run 17a)
+
+A Grok verification critic on the remediated head found **every one of the five P1s CLOSED** and no
+new P1. It filed two P2 residuals; the orchestrator raised one of them and fixed it:
+
+- **V-002, raised to P1 and fixed.** `ordinality` cloned the input's offset buffer while packing
+  positions densely from 0. Arrow's `ListArray::slice` slices offsets but keeps the whole values
+  buffer, so a sliced list with a non-zero first offset made `ListArray::new` **panic**. A panic is
+  not a P2 in a repository with a panic-ban gate, and a sliced `ListArray` is ordinary in execution
+  (after a limit, a take, a concat) even though no oracle cell or unit frame produces one. Fixed
+  with a fresh `OffsetBuffer` built from the measured lengths, plus an `exec_err` in place of the
+  `as_list_array` panic downcast, pinned by `ordinality_packs_positions_for_a_sliced_list`.
+- **V-001, accepted as a residual.** `peel_generator` tells a user `AS` from a NamePreserver-restored
+  display alias with a `starts_with(funcname + "(")` prefix test, so a user alias whose text happens
+  to look like the call is dropped on the SQL door while the Python door still raises
+  `COLUMN_ALIASES_MISMATCH`. It needs a non-textual marker for restored aliases to close properly,
+  which is a change to the name-restoration path rather than to this unit. Recorded here and in the
+  registry with the seam named. pins: fnp-gen-1/C-003

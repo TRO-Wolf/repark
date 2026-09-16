@@ -393,3 +393,36 @@ fn posexplode_of_a_scalar_is_refused() {
         "{error}"
     );
 }
+
+#[test]
+fn ordinality_packs_positions_for_a_sliced_list() {
+    use datafusion::arrow::array::{Int64Builder, ListBuilder};
+    let mut builder = ListBuilder::new(Int64Builder::new());
+    for row in [vec![10_i64, 11, 12], vec![20, 21], vec![30, 31, 32, 33]] {
+        for value in row {
+            builder.values().append_value(value);
+        }
+        builder.append(true);
+    }
+    let full = builder.finish();
+    let sliced = full.slice(1, 2);
+    let positions = super::ordinality(&sliced);
+    assert_eq!(positions.len(), 2);
+    assert_eq!(positions.offsets().first().copied(), Some(0));
+    let first: Vec<i32> = positions
+        .value(0)
+        .as_any()
+        .downcast_ref::<datafusion::arrow::array::Int32Array>()
+        .unwrap()
+        .values()
+        .to_vec();
+    assert_eq!(first, vec![0, 1]);
+    let second: Vec<i32> = positions
+        .value(1)
+        .as_any()
+        .downcast_ref::<datafusion::arrow::array::Int32Array>()
+        .unwrap()
+        .values()
+        .to_vec();
+    assert_eq!(second, vec![0, 1, 2, 3]);
+}

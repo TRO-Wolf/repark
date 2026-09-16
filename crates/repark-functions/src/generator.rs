@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, Int32Builder, ListArray, as_list_array, new_null_array};
+use datafusion::arrow::array::{Array, Int32Builder, ListArray, new_null_array};
 use datafusion::arrow::buffer::OffsetBuffer;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::config::ConfigOptions;
@@ -154,7 +154,9 @@ impl ScalarUDFImpl for GeneratorOrdinality {
         };
         match first {
             ColumnarValue::Array(array) => {
-                let list = as_list_array(array.as_ref());
+                let Some(list) = array.as_any().downcast_ref::<ListArray>() else {
+                    return exec_err!("'{GENERATOR_ORDINALITY_UDF}' requires a list argument");
+                };
                 Ok(ColumnarValue::Array(Arc::new(ordinality(list))))
             }
             ColumnarValue::Scalar(ScalarValue::List(list)) => Ok(ColumnarValue::Scalar(
@@ -289,14 +291,20 @@ impl ScalarUDFImpl for GeneratorField {
 
 fn ordinality(list: &ListArray) -> ListArray {
     let mut values = Int32Builder::with_capacity(list.values().len());
+    let mut offsets: Vec<i32> = Vec::with_capacity(list.len() + 1);
+    let mut running: i32 = 0;
+    offsets.push(running);
     for window in list.offsets().windows(2) {
-        for position in 0..(window[1] - window[0]) {
+        let length = window[1] - window[0];
+        for position in 0..length {
             values.append_value(position);
         }
+        running += length;
+        offsets.push(running);
     }
     ListArray::new(
         Arc::new(Field::new("item", DataType::Int32, false)),
-        list.offsets().clone(),
+        OffsetBuffer::new(offsets.into()),
         Arc::new(values.finish()),
         list.nulls().cloned(),
     )

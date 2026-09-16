@@ -1007,3 +1007,12 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
 - **FNP-11A R3 (2026-09-15):** `expr_fn::datediff` is the Spark `datediff` spelling. The function door routes two arguments to `date_diff` and three to `timestampdiff` through `temporal_ctor::date_alias` (pins: fnp-11a/C-019).
 - **FNP-6D-FOLLOWUP-1 rebase (2026-09-15, run 16a):** after #612 moved the Java text helpers into `java_double.rs`, `bitmap_agg.rs` imports `java_double_text` / `java_float_text` from `crate::java_double`; `json.rs` keeps `mod reader;` private as on main.
 - **FNP-WIN-1 squash onto 4bd43fc8 (2026-09-15, run 16a):** `lib.rs` drops its `use std::sync::Arc;` — `analyzer_rules()` and its `Arc<dyn AnalyzerRule>` list now live in `registration.rs`, so the crate root no longer names `Arc` (clippy `-D warnings`).
+- **FNP-GEN-1 verification-critic fix-up (2026-09-16, run 17a):** `generator.rs::ordinality` packed
+  positions densely from 0 but **cloned the input's offset buffer**. Arrow's `ListArray::slice`
+  keeps the whole values buffer and slices only the offsets, so a sliced list whose first offset is
+  not 0 gave `offsets.last() > values.len()` and `ListArray::new` **panicked**. The unit's own
+  frames and every oracle cell are unsliced with first offset 0, so no pin reached it; a slice
+  arrives in ordinary execution after a limit, a take or a concat. It now builds a fresh
+  `OffsetBuffer` from the measured lengths, and the `as_list_array` panic-downcast at the call site
+  became an `exec_err`. Regression pin: `ordinality_packs_positions_for_a_sliced_list`.
+  pins: fnp-gen-1/C-002
