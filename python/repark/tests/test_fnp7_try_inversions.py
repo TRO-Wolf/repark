@@ -409,6 +409,6 @@ def test_try_names_unresolved_on_ansi_sql_door() -> None:
     import repark
 
     for name in TRY_NAMES:
-        with pytest.raises(Exception, match="Invalid function") as caught:
+        with pytest.raises(Exception, match="UNRESOLVED_ROUTINE") as caught:
             repark.sql(f"SELECT {name}(1)").to_arrow()
         assert name in str(caught.value)

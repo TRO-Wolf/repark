@@ -797,6 +797,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   RED, findings F-001/F-002). C-009 OPEN per R-17c-7. Branch
   `feat/spark-sql-grammar-1`.
   pins: spark-sql-grammar-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- [unresolved-routine-1-ledger.md](unresolved-routine-1-ledger.md) —
+  **UNRESOLVED-ROUTINE-1 (2026-09-16), in flight:** every unknown routine
+  refuses with Spark's `UNRESOLVED_ROUTINE` on both doors (Q-17c-3) — ledger with
+  the card rulings plus R-18c-1/R-18c-2/R-18c-3, the red-first table (41
+  failed, 4 passed on the base) and the C-006/C-007 close. All clauses PROVEN;
+  residue rows BL-19-POS-SELX and BL-19-LATERAL-1 filed. Branch
+  `feat/unresolved-routine-1`.
+  pins: unresolved-routine-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **Remediation round 1 (2026-09-16):** token-based call-site matching (L-001 /
+  L-002 / L-003), the `schema_of_csv` divergence tripwire (L-004), UR3 pins,
+  residue row BL-19-POS-FILTER, hand-offs H-004/H-005. All clauses stay PROVEN.
+  pins: unresolved-routine-1/C-001, C-002, C-003, C-006, C-007
 - [fnp-11b-ledger.md](fnp-11b-ledger.md) —
   **FNP-11B step 1 (2026-09-15), in flight:** datetime format parsing, the TIME
   family, BL-13 and BL-14 — ledger with D-1…D-10 (card D-1…D-6, run-16a D-7…D-10

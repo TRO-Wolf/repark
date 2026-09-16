@@ -9434,7 +9434,8 @@ field NAME.
 
 ### FNP-11B-TYPEOF-BINARY-1 — `typeof(binary(…))` names an unowned function
 
-- **repark** — the cell raises `Invalid function` naming `binary`.
+- **repark** — the cell raises `[UNRESOLVED_ROUTINE]` naming `binary` (Spark-shaped
+  since 2026-09-16, UNRESOLVED-ROUTINE-1; still unowned).
 - **Apache Spark** — the oracle records the cell as `binary`.
   *(oracle: live PySpark 4.1.2, 2026-09-15, `python/repark/tests/fnp11b_typeof_spark_oracle.json`
   cell TYPEOF-SQL-24.)*
@@ -9457,23 +9458,78 @@ field NAME.
   must survive planning before any kernel or spelling table can use it.
   pins: fnp-11b/C-005
 
-### BL-19 — an unknown function on the SQL door refuses as "Invalid function", not `UNRESOLVED_ROUTINE`
+### BL-19 — an unknown function on the SQL door refuses as "Invalid function", not `UNRESOLVED_ROUTINE` — **FIXED 2026-09-16 (UNRESOLVED-ROUTINE-1)**
 
-- **repark** — `spark.sql("SELECT nosuchfn(1)")` raises `Error during planning: Invalid function
-  'nosuchfn'.` The class, the SQLSTATE and the message shape are all DataFusion's, not Spark's. Because
-  this is the blanket path for *every* name the door does not know, each unimplemented Spark function
-  currently refuses in the wrong shape — one contract, not one row per name.
+- **repark** — **FIXED 2026-09-16 (UNRESOLVED-ROUTINE-1).** Every unknown routine refuses with
+  Spark's shape on both doors: `spark.sql("SELECT nosuchfn(1)")` raises `[UNRESOLVED_ROUTINE]
+  Cannot resolve routine ``nosuchfn`` on search path [``system``.``builtin``,
+  ``system``.``session``, ``spark_catalog``.``default``]. SQLSTATE: 42883; line 1 pos 7`.
+  The blanket mapping (`crates/repark-core/src/unknown_routine.rs`, reached from core `sql_with`,
+  `F.expr` and string `filter`) keeps the user's case, quotes each part of a multi-part name,
+  answers `REQUIRES_SINGLE_PART_NAMESPACE` for the `system.builtin` qualifier, and renders the
+  four-sentence `UNRESOLVABLE_TABLE_VALUED_FUNCTION` for unknown TVFs — each with Spark's
+  `line L pos P`.
 - **Apache Spark** — `[UNRESOLVED_ROUTINE] Cannot resolve routine ``nosuchfn`` on search path
   [``system``.``builtin``, ``system``.``session``, ``spark_catalog``.``default``]. SQLSTATE: 42883; line 1 pos 7`.
   The same class and shape answer an unknown bare name, an unknown quoted name, and an unknown datetime
   unit used as a routine (`FORTNIGHT`).
-  *(oracle: `<pyspark-4.1.2-oracle>` — measured by run 17c, 2026-09-16.)*
-- **Pin** — none yet; the divergence is recorded ahead of its unit.
-- **Rationale** — BACKLOG, contract-level. Found by run 17c while measuring the SPARK-SQL-GRAMMAR-1 cells
-  (`FORTNIGHT` → `UNRESOLVED_ROUTINE`, batch-14 Q14-35). It is listed before any further individual
-  function names because fixing the blanket path corrects every missing name at once, whereas adding names
-  one at a time never corrects the shape. The refusal is loud in both engines, so the risk is disclosure
-  fidelity rather than a wrong answer.
+  *(oracle: live PySpark 4.1.2, 2026-09-16,
+  `python/repark/tests/unresolved_routine_1_spark_oracle.json` cells UR-SQL-00…17, UR-PY-00…03.)*
+- **Pin** — `python/repark/tests/test_unresolved_routine_1.py` (full-message SQL-door cells,
+  py-door cells, the 22-name blanket pin) plus 14 in-module Rust tests in `unknown_routine.rs`.
+- **Rationale** — FIXED, contract-level (Q-17c-3: one fix corrects every missing name at once).
+  History: recorded BACKLOG by run 17c while measuring the SPARK-SQL-GRAMMAR-1 cells
+  (`FORTNIGHT` → `UNRESOLVED_ROUTINE`, batch-14 Q14-35); the refusal is loud in both engines,
+  so the risk was disclosure fidelity rather than a wrong answer. Residue: `selectExpr`
+  answers the wrapped-`SELECT` position (BL-19-POS-SELX); engine `AnalysisException`
+  accessors stay `None` by pinned contract (ledger H-002).
+
+### BL-19-POS-SELX — `selectExpr` reports the wrapped-`SELECT` position, not the fragment position
+
+- **repark** — `spark.range(1).selectExpr("nosuchfn(id)")` raises `[UNRESOLVED_ROUTINE]` with
+  `line 1 pos 7` (the name's span in the wrapped `SELECT nosuchfn(id) FROM <view>` the facade
+  plans), where Spark reports `line 1 pos 0` relative to the fragment.
+- **Apache Spark** — `[UNRESOLVED_ROUTINE] Cannot resolve routine ``nosuchfn`` on search path
+  [``system``.``builtin``, ``system``.``session``, ``spark_catalog``.``default``]. SQLSTATE: 42883;
+  line 1 pos 0`.
+  *(oracle: live PySpark 4.1.2, 2026-09-16,
+  `python/repark/tests/unresolved_routine_1_spark_oracle.json` cell UR-PY-02.)*
+- **Pin** — `python/repark/tests/test_unresolved_routine_1.py::test_py_door_select_expr_answers_spark_class`
+  (class plus search path plus SQLSTATE; the position is the wrapped one).
+- **Rationale** — BACKLOG, dated 2026-09-16. The Rust seam only sees the wrapped statement; the
+  fragment-relative rewrite belongs to the facade (`dataframe/core.py`, run 18b's file — P2
+  hand-off H-001 in the unit ledger). The class is pinned from Rust so the residue is one
+  number, not a shape.
+
+### BL-19-POS-FILTER — string `filter`/`where` report the quoted-rewrite position, not the fragment position
+
+- **repark** — `spark.range(1).filter("id = nosuchfn(1)")` raises `[UNRESOLVED_ROUTINE]` with
+  `line 1 pos 7` (the name's span in the identifier-quoted `` `"id" = nosuchfn(1)` `` the facade
+  plans), where Spark reports `line 1 pos 5` relative to the user fragment; same for
+  `where("id = 1 AND nosuchfn(id) = 1")` (pos 13 vs 11).
+- **Apache Spark** — `[UNRESOLVED_ROUTINE] Cannot resolve routine ``nosuchfn`` on search path
+  [``system``.``builtin``, ``system``.``session``, ``spark_catalog``.``default``]. SQLSTATE: 42883;
+  line 1 pos 5` (UR3-PY-00) and `… line 1 pos 11` (UR3-PY-03).
+  *(oracle: live PySpark 4.1.2, 2026-09-16,
+  `python/repark/tests/unresolved_routine_1_spark_oracle.json` cells UR3-PY-00, UR3-PY-03.)*
+- **Pin** — `python/repark/tests/test_unresolved_routine_1.py::test_py_door_filter_fragments_answer_spark_class`
+  (class plus search path plus SQLSTATE; the position is the quoted one).
+- **Rationale** — BACKLOG, dated 2026-09-16. The native `filter_sql` seam only sees the quoted
+  predicate; recovering the fragment offset would require the original text, which only the
+  facade call (`dataframe/core.py`, run 18b's file — P2 hand-off H-004 in the unit ledger) can
+  pass. The class is pinned from Rust so the residue is one number, not a shape.
+
+### BL-19-LATERAL-1 — an unknown LATERAL VIEW generator refuses without Spark's `ROUTINE_NOT_FOUND`
+
+- **repark** — `SELECT x FROM range(1) LATERAL VIEW nosuchgen(array(1)) g AS x` raises
+  `UnsupportedOperationException: This feature is not implemented: LATERAL VIEWS`.
+- **Apache Spark** — `[ROUTINE_NOT_FOUND] The routine ``default``.``nosuchgen`` cannot be found. ... SQLSTATE: 42883; line 1 pos 23`.
+  *(oracle: live PySpark 4.1.2, 2026-09-16,
+  `python/repark/tests/unresolved_routine_1_spark_oracle.json` cell UR-SQL-16.)*
+- **Pin** — `python/repark/tests/test_unresolved_routine_1.py::test_sql_door_lateral_view_generator_stays_backlogged`.
+- **Rationale** — BACKLOG, dated 2026-09-16. LATERAL VIEW parses under SPARK-SQL-GRAMMAR-1's C-009,
+  which is not on main; the class can only land with that parse. The refusal is loud in both
+  engines.
 
 ### BL-20 — `INT + TINYINT` types as BIGINT on the SQL door; Spark says INT, and repark's two doors disagree
 

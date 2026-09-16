@@ -242,6 +242,10 @@ def test_classify_sliding_refuse_beats_generic_not_implemented() -> None:
     )
     assert classify_exception_text(sliding) == OUTCOME_REFUSE
     assert classify_exception_text("Error: invalid function foo") == OUTCOME_ABSENT
+    assert (
+        classify_exception_text("[UNRESOLVED_ROUTINE] Cannot resolve routine `any`")
+        == OUTCOME_ABSENT
+    )
     assert classify_exception_text("ResourcesExhausted: memory limit") == OUTCOME_OOM
     assert classify_exception_text("something else went wrong") == OUTCOME_ERROR
     assert registry_heading("collect_list") == "### WIN-SLIDE-collect_list —"

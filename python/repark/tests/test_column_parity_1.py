@@ -818,7 +818,7 @@ def test_no_sql_spelling_for_struct_edit_names(spark: ReparkSession) -> None:
         "SELECT name(i, 'x') FROM column_parity_1_struct_names",
         "SELECT outer(i) FROM column_parity_1_struct_names",
     ]:
-        with pytest.raises(AnalysisException, match="Invalid function"):
+        with pytest.raises(AnalysisException, match="UNRESOLVED_ROUTINE"):
             spark.sql(sql)
 
 

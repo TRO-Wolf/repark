@@ -179,6 +179,10 @@ FNP-11B step 4 (2026-09-15): `check_rust_file_size.py`
 `repark-functions/src/datetime.rs` 1700 → 1699 (the hour/minute/second TIME
 refusal rewrite of the superseded answering pin, net −1 line).
 pins: fnp-11b/C-005
+UNRESOLVED-ROUTINE-1 (2026-09-16): `check_rust_file_size.py`
+`repark-python/src/column/mod.rs` 1014 → 1013 (the `SELECT (…) AS _repark_expr`
+wrapper moved into `plan_expr_column`, net −1 line).
+pins: unresolved-routine-1/C-003
 REPLACE-LINEAR-1 step 1 (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4089 → 4054 (the `DataFrame.replace` body — validation,
 key-family filtering, and the flat searched-CASE build — moved to the new

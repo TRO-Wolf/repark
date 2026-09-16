@@ -854,7 +854,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
-  names are unresolved (`Invalid function`). **FNP-11B step 4 (2026-09-15):**
+  names are unresolved (`UNRESOLVED_ROUTINE`, blanket since 2026-09-16).
+  **FNP-11B step 4 (2026-09-15):**
   interval `try_avg` answers Spark's average (the `[FNP-11]` refusal pin is
   retired for `test_try_avg_interval_answers`, which also pins the try-NULL /
   avg-raise overflow split). pins: fnp-11b/C-006
@@ -917,6 +918,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Then C-010 (bare nullary both directions), C-003 (RLIKE lowering), C-004 (LTZ
   cast), C-005 (NTZ refusal naming TZ-6) and the C-006 struct-dot pin.
   pins: spark-sql-grammar-1/C-003, C-004, C-005, C-006, C-008, C-010
+- [test_unresolved_routine_1.py](test_unresolved_routine_1.py) +
+  [unresolved_routine_1_spark_oracle.json](unresolved_routine_1_spark_oracle.json) —
+  **UNRESOLVED-ROUTINE-1 (2026-09-16):** every unknown routine refuses with Spark's
+  full message on both doors — SQL cells UR-SQL-00…04/06…13/15, the
+  `system.builtin` namespace cell, the TVF cell, the LATERAL VIEW backlog
+  disclosure, the `typeof` control, py cells UR-PY-00…03, and the ≥20-name
+  blanket pin. The C-006 assertion retirements and the C-007 registry close
+  anchor here.
+  pins: unresolved-routine-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **Remediation round 1 (2026-09-16):** UR3 decoy cells (literals, comments,
+  quoted multi-part names, nesting, code-point positions), the `schema_of_csv`
+  divergence tripwire, the found-arity and double-quote guards, and the py
+  fragment class pins.
+  pins: unresolved-routine-1/C-001, C-002, C-003, C-006
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
   **FNP-4B (2026-09-15):** BL-9 and BL-12 FIXED — the double-quoted pin asserts a STRING and the
@@ -5778,6 +5793,10 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   carries the marker into the message). The three ansi-True `LATERAL VIEW`
   cells stay unpinned, blocked on run 16c (D-7). Red on base `bee2cde3`:
   32 failed, 5 signature pins already green on matching stubs.
+  **UNRESOLVED-ROUTINE-1 remediation round 1 (2026-09-16):** the uninferable
+  `schema_of_csv` pin is an explicit DIVERGENCE tripwire (Spark HAS the name;
+  the door refuses until run 18a lands it).
+  pins: unresolved-routine-1/C-006
   **Step 2 (2026-09-16):** the frame rebuilds as `SELECT CAST(...) UNION ALL`
   because `VALUES` yields nullable `id` and `bigint` arrays where the oracle
   records non-nullable `int`; row comparison is order-insensitive because the

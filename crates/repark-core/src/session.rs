@@ -28,7 +28,7 @@ pub(crate) use crate::error_map::{EngineErrorKind, classify_datafusion_error};
 #[cfg(test)]
 pub(crate) use crate::idents::reject_path_escape_segment;
 use crate::{
-    engine_err, iceberg_err, json_read_options_from_map, object_store_s3,
+    engine_err, engine_err_for_sql, iceberg_err, json_read_options_from_map, object_store_s3,
     parse_table_identifier_segments, resolve_s3_region_override,
 };
 
@@ -414,7 +414,7 @@ impl ReparkSession {
                 query,
             )
             .await
-            .map_err(engine_err)
+            .map_err(|error| engine_err_for_sql(query, error))
     }
 
     /// Register an Iceberg [`Catalog`] as both a DataFusion provider and session write handle.

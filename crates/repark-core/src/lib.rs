@@ -38,6 +38,7 @@ mod text_scan;
 mod text_schema;
 mod time_travel;
 mod transpose;
+mod unknown_routine;
 mod update_fields;
 
 // --- The Session surface (v1 names, courtesy `Session` alias).
@@ -84,11 +85,12 @@ pub use time_travel::{
 pub use lineage_columns::{LineagePins, prepare_lineage_sql, sql_mentions_lineage_columns};
 
 // --- Error surface: the classifier fold + the seed re-export (bindings import one crate).
-pub use error_map::engine_err;
+pub use error_map::{engine_err, engine_err_for_sql};
 pub use pool_refusals::{
     PoolRefusalLog, REFUSAL_CONTAINMENT_NOTE, RefusalRecordingPool, pool_refusal_log,
 };
 pub use repark_common::{Error, ErrorClass, Result};
+pub use unknown_routine::map_unknown_routine_message;
 
 // === SE-1 tightenNulls ===
 pub use sorted_view::{

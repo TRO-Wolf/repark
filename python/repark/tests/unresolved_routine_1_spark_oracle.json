@@ -1,0 +1,347 @@
+{
+ "spark_version": "4.1.2",
+ "oracle": "live PySpark 4.1.2, 2026-09-16: /tmp/oc-worker/sc/oracle/b2-oracle.json UR cells (round 1) + /tmp/oc-worker/sc/oracle/ur3-oracle.json UR3 cells (round 2, batch sc18-ur3); UC/RX cells belong to other units",
+ "cells": [
+  {
+   "id": "UR-SQL-00",
+   "door": "sql",
+   "expr": "SELECT nosuchfn(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR-SQL-01",
+   "door": "sql",
+   "expr": "SELECT `nosuchfn`(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR-SQL-02",
+   "door": "sql",
+   "expr": "SELECT NoSuchFn(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `NoSuchFn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR-SQL-03",
+   "door": "sql",
+   "expr": "SELECT nosuchfn()",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR-SQL-04",
+   "door": "sql",
+   "expr": "SELECT spark_catalog.default.nosuchfn(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `spark_catalog`.`default`.`nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR-SQL-05",
+   "door": "sql",
+   "expr": "SELECT system.builtin.nosuchfn(1)",
+   "outcome": "error",
+   "error_class": "REQUIRES_SINGLE_PART_NAMESPACE",
+   "message": "[REQUIRES_SINGLE_PART_NAMESPACE] spark_catalog requires a single-part namespace, but got `system`.`builtin`. SQLSTATE: 42K05"
+  },
+  {
+   "id": "UR-SQL-06",
+   "door": "sql",
+   "expr": "SELECT abs(nosuchfn(1))",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 11"
+  },
+  {
+   "id": "UR-SQL-07",
+   "door": "sql",
+   "expr": "SELECT 1 WHERE nosuchfn(1) = 1",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 15"
+  },
+  {
+   "id": "UR-SQL-08",
+   "door": "sql",
+   "expr": "SELECT nosuchfn(id) FROM range(3) GROUP BY id",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR-SQL-09",
+   "door": "sql",
+   "expr": "SELECT nosuchfn(1) OVER ()",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR-SQL-10",
+   "door": "sql",
+   "expr": "SELECT fortnight(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `fortnight` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR-SQL-11",
+   "door": "sql",
+   "expr": "SELECT   nosuchfn(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 9"
+  },
+  {
+   "id": "UR-SQL-12",
+   "door": "sql",
+   "expr": "SELECT 1,\n nosuchfn(2)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 2 pos 1"
+  },
+  {
+   "id": "UR-SQL-13",
+   "door": "sql",
+   "expr": "SELECT nosuch.fn(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuch`.`fn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR-SQL-14",
+   "door": "sql",
+   "expr": "SELECT typeof(1)",
+   "schema": "struct<typeof(1):string>",
+   "rows": [
+    [
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "UR-SQL-15",
+   "door": "sql",
+   "expr": "SELECT count(nosuchfn(1))",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 13"
+  },
+  {
+   "id": "UR-SQL-16",
+   "door": "sql",
+   "expr": "SELECT x FROM range(1) LATERAL VIEW nosuchgen(array(1)) g AS x",
+   "outcome": "error",
+   "error_class": "ROUTINE_NOT_FOUND",
+   "message": "[ROUTINE_NOT_FOUND] The routine `default`.`nosuchgen` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema and catalog, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP ... IF EXISTS. SQLSTATE: 42883; line 1 pos 23"
+  },
+  {
+   "id": "UR-SQL-17",
+   "door": "sql",
+   "expr": "SELECT * FROM nosuchtvf(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVABLE_TABLE_VALUED_FUNCTION",
+   "message": "[UNRESOLVABLE_TABLE_VALUED_FUNCTION] Could not resolve `nosuchtvf` to a table-valued function.\nPlease make sure that `nosuchtvf` is defined as a table-valued function and that all required parameters are provided correctly.\nIf `nosuchtvf` is not defined, please create the table-valued function before using it.\nFor more information about defining table-valued functions, please refer to the Apache Spark documentation. SQLSTATE: 42883; line 1 pos 14"
+  },
+  {
+   "id": "UR-PY-00",
+   "door": "py",
+   "expr": "spark.range(1).select(F.call_function('nosuchfn', F.lit(1)))",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883"
+  },
+  {
+   "id": "UR-PY-01",
+   "door": "py",
+   "expr": "spark.range(1).select(F.expr('nosuchfn(1)'))",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 0"
+  },
+  {
+   "id": "UR-PY-02",
+   "door": "py",
+   "expr": "spark.range(1).selectExpr('nosuchfn(id)')",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 0"
+  },
+  {
+   "id": "UR-PY-03",
+   "door": "py",
+   "expr": "spark.range(1).filter('nosuchfn(id) = 1')",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 0"
+  },
+  {
+   "id": "UR3-SQL-00",
+   "door": "sql",
+   "expr": "SELECT 'NoSuchFn', nosuchfn(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 19"
+  },
+  {
+   "id": "UR3-SQL-01",
+   "door": "sql",
+   "expr": "SELECT 'nosuchfn(', nosuchfn(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 20"
+  },
+  {
+   "id": "UR3-SQL-02",
+   "door": "sql",
+   "expr": "SELECT /* nosuchfn( */ nosuchfn(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 23"
+  },
+  {
+   "id": "UR3-SQL-03",
+   "door": "sql",
+   "expr": "SELECT -- nosuchfn(\n nosuchfn(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 2 pos 1"
+  },
+  {
+   "id": "UR3-SQL-04",
+   "door": "sql",
+   "expr": "SELECT `system`.`builtin`.`nosuchfn`(1)",
+   "outcome": "error",
+   "error_class": "REQUIRES_SINGLE_PART_NAMESPACE",
+   "message": "[REQUIRES_SINGLE_PART_NAMESPACE] spark_catalog requires a single-part namespace, but got `system`.`builtin`. SQLSTATE: 42K05"
+  },
+  {
+   "id": "UR3-SQL-05",
+   "door": "sql",
+   "expr": "SELECT `nosuch`.`fn`(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuch`.`fn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR3-SQL-06",
+   "door": "sql",
+   "expr": "SELECT `spark_catalog`.`default`.`nosuchfn`(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `spark_catalog`.`default`.`nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR3-SQL-07",
+   "door": "sql",
+   "expr": "SELECT `nosuch.fn`(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuch.fn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR3-SQL-08",
+   "door": "sql",
+   "expr": "SELECT '\u00e9', nosuchfn(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 12"
+  },
+  {
+   "id": "UR3-SQL-09",
+   "door": "sql",
+   "expr": "SELECT '\ud83d\ude00', nosuchfn(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 12"
+  },
+  {
+   "id": "UR3-SQL-10",
+   "door": "sql",
+   "expr": "SELECT nosuchfn(1), nosuchfn(2)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR3-SQL-11",
+   "door": "sql",
+   "expr": "SELECT abs(1), NOSUCHFN(nosuchfn(1))",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `NOSUCHFN` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 15"
+  },
+  {
+   "id": "UR3-SQL-12",
+   "door": "sql",
+   "expr": "SELECT nosuchfnx(1)",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfnx` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+  },
+  {
+   "id": "UR3-SQL-13",
+   "door": "sql",
+   "expr": "SELECT schema_of_csv('')",
+   "schema": "struct<schema_of_csv():string>",
+   "outcome": "error",
+   "error_class": null,
+   "message": "An error occurred while calling o151.collectToPython.\n: org.apache.spark.SparkException: [INTERNAL_ERROR] The Spark SQL phase optimization failed with an internal error. You hit a bug in Spark or the Spark plugins you use. Please, report this bug to the corresponding communities or vendors, and provide the full stack trace. SQLSTATE: XX000\n\tat org.apache.spark.SparkException$.internalError(SparkException.scala:107)\n\tat org.apache.spark.sql.execution.QueryExecution$.toInternalError(QueryExecution.scala:706)\n\tat org.apache.spark.sql.execution.QueryExecution$.withInternalError(QueryExecution.scala:719)\n\tat org.apache.spark.sql.execution.QueryExecution.$anonfun$executePhase$1(QueryExecution.scala:330)\n\tat org.apache.spark.sql.SparkSession.withActive(SparkSession.scala:804)\n\tat org.apache.spark.sql.execution.QueryExecution.executePhase(QueryExecution.scala:329)\n\tat org.apache.spark.sql.execution.QueryExecution.$anonfun$lazyOptimizedPlan$1(QueryExecution.scala:245)\n\tat scala.util.Try$.apply(Try.scala:217)\n\tat org.apache.spark.util.Utils$.doTryWithCallerStacktrace(Utils.scala:1392)\n\tat org.apache.spark.util.LazyTry.tryT$lzycompute(LazyTry.scala:46)\n\tat org.apache.spark.util.LazyTry.tryT(LazyTry.scala:46)\n\tat org.apache.spark.util.LazyTry.get(LazyTry.scala:58)\n\tat org.apache.spark.sql.execution.QueryExecution.optimizedPlan(QueryExecution.scala:259)\n\tat org.apache.spark.sql.execution.QueryExecution.assertOptimized(QueryExecution.scala:261)\n\tat org.apache.spark.sql.execution.QueryExecution.$anonfun$lazyExecutedPlan$1(QueryExecution.scala:281)\n\tat scala.util.Try$.apply(Try.scala:217)\n\tat org.apache.spark.util.Utils$.getTryWithCallerStacktrace(Utils.scala:1453)\n\tat org.apache.spark.util.LazyTry.get(LazyTry.scala:58)\n\tat org.apache.spark.sql.execution.QueryExecution.executedPlan(QueryExecution.scala:295)\n\tat org.apache.spark.sql.execution.QueryExecution.simpleString(QueryExecution.scala:349)\n\tat org.apache.spark.sql.execution.QueryExecution.org$apache$spark$sql$execution$QueryEx"
+  },
+  {
+   "id": "UR3-SQL-14",
+   "door": "sql",
+   "expr": "SELECT abs(1, 2)",
+   "outcome": "error",
+   "error_class": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `abs` requires 1 parameters but the actual number is 2. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7"
+  },
+  {
+   "id": "UR3-SQL-15",
+   "door": "sql",
+   "expr": "SELECT \"nosuchfn\"(1)",
+   "outcome": "error",
+   "error_class": "PARSE_SYNTAX_ERROR",
+   "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near '\"nosuchfn\"'. SQLSTATE: 42601 (line 1, pos 7)\n\n== SQL ==\nSELECT \"nosuchfn\"(1)\n-------^^^\n"
+  },
+  {
+   "id": "UR3-PY-00",
+   "door": "py",
+   "expr": "spark.range(1).filter('id = nosuchfn(1)')",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 5"
+  },
+  {
+   "id": "UR3-PY-01",
+   "door": "py",
+   "expr": "spark.range(1).selectExpr('id', 'id + nosuchfn(1)')",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 5"
+  },
+  {
+   "id": "UR3-PY-02",
+   "door": "py",
+   "expr": "spark.range(1).select(F.expr('  nosuchfn(1)'))",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 2"
+  },
+  {
+   "id": "UR3-PY-03",
+   "door": "py",
+   "expr": "spark.range(1).where(\"id = 1 AND nosuchfn(id) = 1\")",
+   "outcome": "error",
+   "error_class": "UNRESOLVED_ROUTINE",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `nosuchfn` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 11"
+  }
+ ]
+}

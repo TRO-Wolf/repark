@@ -122,7 +122,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split DELETE and UPDATE scenario families with shared setup retained.",
     ),
     "crates/repark-python/src/column/mod.rs": (
-        1014,
+        1013,
         "PyO3 Column methods remain grouped in one binding module.",
         "Extract the remaining date or window method family.",
     ),

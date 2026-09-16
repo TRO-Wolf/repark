@@ -811,6 +811,8 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   int64 `approx_count_distinct`, fourteen planning-absent names after TYPES-1
   planned `count_if`, result model fields, scratch delete in `finally`, no
   retry on the error path, WIN-SLIDE registry headings).
+  **UNRESOLVED-ROUTINE-1 (2026-09-16):** the classifier pin also covers Spark's
+  `UNRESOLVED_ROUTINE` absence shape. pins: unresolved-routine-1/C-006
   **WIN-SLIDE-1 (2026-09-04):** the thirteen moved from `REFUSING_SLIDING_NAMES` (now empty) to
   `RESCANNED_SLIDING_NAMES`; two pins were added —
   `test_every_rescanned_name_has_a_fixed_registry_row` (each name keeps its `WIN-SLIDE-<name>`
@@ -865,6 +867,7 @@ Escalate to: [../map.md#debug](../map.md).
 - `test_cap_1_source_file_line_cap.py` — **DOOR-CONVERGE-2 (#622, 2026-09-15):** the `crates/repark-python/src/column/mod.rs` mirror row 1052 → 1036 matches the script baseline (ratchet down). The `analyzer.rs` row 1142 → 1150 is the one-time grant R-1 (Q-15c-4).
 - **FNP-4B remediation (2026-09-15):** CAP-1 mirror ratcheted with the scripts: `column/mod.rs` 1038, `cross_door.rs` 1258, `_live_parity.py` 1753.
 - `test_cap_1_source_file_line_cap.py` — **FNP-4B (#611, 2026-09-15, orchestrator):** the `crates/repark-python/src/column/mod.rs` mirror row 1022 → 1014 matches the script baseline after the rebase onto #613 (ratchet down).
+- `test_cap_1_source_file_line_cap.py` — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the `crates/repark-python/src/column/mod.rs` mirror row 1014 → 1013 matches the script baseline (the `SELECT` wrapper move, ratchet down). pins: unresolved-routine-1/C-003
 - `test_ex_0_example_coverage.py` — **FNP-WIN-1 rebase onto 230468c5 (2026-09-15, run 16a):** #613 and #618 each moved the count 1054 → 1057 on the same line, which a merge keeps at 1057; the true combined count is main's 1057 plus this unit's three names, 1060. pins: fnp-win-1/C-007
 - `test_cap_1_source_file_line_cap.py` — **FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a):** the `crates/repark-python/src/dataframe.rs` mirror row returns to 1019 with the script baseline. pins: fnp-win-1/C-007
 - `test_ex_0_example_coverage.py` — **FNP-11B rebase onto 0355ef5e (2026-09-15, run 17a):** the branch and main each moved the count 1057 → 1059 on the same line, which the replay keeps at 1059; the true combined count is main's 1059 plus this unit's two examples, 1061. pins: fnp-11b/C-007

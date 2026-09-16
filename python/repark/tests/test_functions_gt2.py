@@ -315,7 +315,7 @@ def test_shuffle_null_array_is_null_not_a_panic(spark: ReparkSession) -> None:
     assert [None if row is None else sorted(row) for row in rows] == [[1, 2], None, [3]]
 
     # Entry-point matrix row 2: not reachable. Recorded, not silently skipped.
-    with pytest.raises(AnalysisException, match="Invalid function 'shuffle'"):
+    with pytest.raises(AnalysisException, match="UNRESOLVED_ROUTINE"):
         repark_sql("SELECT shuffle(CAST(NULL AS ARRAY<INT>)) AS s").to_arrow()
 
 
