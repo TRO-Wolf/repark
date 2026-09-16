@@ -6,7 +6,7 @@
     "rows": [
       "Row(_1=b'\\x00\\x01')"
     ],
-    "schema": "struct<_1:string>"
+    "schema": "struct<_1:binary>"
   },
   "bin_bytes": {
     "nullable": [
@@ -15,7 +15,7 @@
     "rows": [
       "Row(_1=b'\\x00\\x01')"
     ],
-    "schema": "struct<_1:string>"
+    "schema": "struct<_1:binary>"
   },
   "bin_memoryview": {
     "nullable": [
@@ -24,7 +24,7 @@
     "rows": [
       "Row(_1=b'\\x00\\x01')"
     ],
-    "schema": "struct<_1:string>"
+    "schema": "struct<_1:binary>"
   },
   "bin_none_mix": {
     "nullable": [
@@ -34,7 +34,7 @@
       "Row(_1=None)",
       "Row(_1=b'ab')"
     ],
-    "schema": "struct<_1:string>"
+    "schema": "struct<_1:binary>"
   },
   "dec_explicit_ddl": {
     "nullable": [
@@ -1086,7 +1086,7 @@
     "rows": [
       "Row(_1=b'ab')"
     ],
-    "schema": "struct<_1:string>"
+    "schema": "struct<_1:binary>"
   },
   "tup_bytes_only": {
     "nullable": [
@@ -1096,7 +1096,7 @@
       "Row(_1=b'ab')",
       "Row(_1=b'cd')"
     ],
-    "schema": "struct<_1:string>"
+    "schema": "struct<_1:binary>"
   },
   "tup_date_only": {
     "nullable": [
@@ -1213,7 +1213,7 @@
     "rows": [
       "Row(_1=b'ab')"
     ],
-    "schema": "struct<_1:string>"
+    "schema": "struct<_1:binary>"
   },
   "tup_mixed_bytes_bytearray": {
     "nullable": [
@@ -1223,7 +1223,7 @@
       "Row(_1=b'ab')",
       "Row(_1=b'cd')"
     ],
-    "schema": "struct<_1:string>"
+    "schema": "struct<_1:binary>"
   },
   "tup_namedtuple": {
     "nullable": [
@@ -1264,7 +1264,7 @@
       "Row(_1=None)",
       "Row(_1=b'x')"
     ],
-    "schema": "struct<_1:string>"
+    "schema": "struct<_1:binary>"
   },
   "tup_none_date": {
     "nullable": [

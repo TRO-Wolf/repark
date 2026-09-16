@@ -5826,3 +5826,12 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `iceberg_desc` / `iceberg_rows` / `ddl_collect_types` / `ddl_collect_values` /
   `todf_toPandas` / `typename_strings`). Every pin in `test_logical_width_1.py` names its cell.
   pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- `test_logical_width_1.py` + `facade_logical_width_oracle.json` —
+  **LOGICAL-WIDTH-1 (2026-09-16):** Spark's logical widths on both doors, 20 pins driven
+  from the named live-PySpark cells — DDL-string / StructType / inference / nested /
+  collect guards, the SQL door, Python cast, arithmetic (plus the `ARITH-FLOAT-INT-1`
+  float-by-int divergence pin), aggregates, union, fillna widths and values, the float-fill
+  width invariant, parquet and Iceberg round trips (narrow ints widen to int at the
+  boundary, matching Spark), the `schema.json()` bytes, the `DF-LIT-BINARY-1` lit(bytes)
+  refusal guard, the `cast_schema` BL-11 guard, and the typename spellings.
+  pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009

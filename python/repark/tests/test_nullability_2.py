@@ -104,13 +104,13 @@ _CAST_FLAG_ROWS: list[tuple[str, str, bool, str]] = [
         "ts_to_short_o2",
         "SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS SMALLINT) AS v",
         True,
-        "int",
+        "smallint",
     ),
     (
         "ts_to_byte_o2",
         "SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS TINYINT) AS v",
         True,
-        "int",
+        "tinyint",
     ),
 ]
 
@@ -403,9 +403,9 @@ def test_cast_nullability_matches_spark() -> None:
 def test_narrow_logical_widths_report_wide_per_logical_width_1() -> None:
     session = _spark_session("true")
     try:
-        assert session.sql("SELECT CAST(1 AS SMALLINT) AS v").dtypes == [("v", "int")]
-        assert session.sql("SELECT CAST(1 AS TINYINT) AS v").dtypes == [("v", "int")]
-        assert session.sql("SELECT CAST(1.5 AS FLOAT) AS v").dtypes == [("v", "double")]
+        assert session.sql("SELECT CAST(1 AS SMALLINT) AS v").dtypes == [("v", "smallint")]
+        assert session.sql("SELECT CAST(1 AS TINYINT) AS v").dtypes == [("v", "tinyint")]
+        assert session.sql("SELECT CAST(1.5 AS FLOAT) AS v").dtypes == [("v", "float")]
     finally:
         session.stop()
 

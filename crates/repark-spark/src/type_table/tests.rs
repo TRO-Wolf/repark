@@ -1,4 +1,41 @@
-use super::{SPATIAL_MIXED_SRID, SparkDataType, arrow_type_from_spark, parse_ddl, simple_string};
+use super::{
+    ArrowNameSurface, SPATIAL_MIXED_SRID, SparkDataType, arrow_name_at_depth,
+    arrow_type_from_spark, logical_type_key, parse_ddl, simple_string,
+};
+use datafusion::arrow::datatypes::DataType as ArrowDataType;
+
+#[test]
+fn logical_key_reports_spark_narrow_widths() {
+    for (data_type, expected) in [
+        (ArrowDataType::Int8, "byte"),
+        (ArrowDataType::Int16, "short"),
+        (ArrowDataType::Int32, "int"),
+        (ArrowDataType::Int64, "long"),
+        (ArrowDataType::Float32, "float"),
+        (ArrowDataType::Float64, "double"),
+        (ArrowDataType::Binary, "binary"),
+        (ArrowDataType::LargeBinary, "binary"),
+        (ArrowDataType::BinaryView, "binary"),
+    ] {
+        assert_eq!(logical_type_key(&data_type), expected);
+    }
+}
+
+#[test]
+fn describe_keeps_spark_ddl_spellings_for_narrow_widths() {
+    for (data_type, expected) in [
+        (ArrowDataType::Int8, "tinyint"),
+        (ArrowDataType::Int16, "smallint"),
+        (ArrowDataType::Int64, "bigint"),
+        (ArrowDataType::Float32, "float"),
+        (ArrowDataType::Binary, "binary"),
+    ] {
+        assert_eq!(
+            arrow_name_at_depth(&data_type, ArrowNameSurface::Describe, 0),
+            expected
+        );
+    }
+}
 
 const PARSE_CELLS: &[(&str, &str)] = &[
     ("g geometry(4326)", "struct<g:geometry(4326)>"),

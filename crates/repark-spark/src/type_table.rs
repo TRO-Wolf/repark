@@ -134,14 +134,14 @@ pub fn arrow_name_at_depth(
             if surface == describe {
                 "tinyint".to_string()
             } else {
-                "int".to_string()
+                "byte".to_string()
             }
         }
         ArrowDataType::Int16 => {
             if surface == describe {
                 "smallint".to_string()
             } else {
-                "int".to_string()
+                "short".to_string()
             }
         }
         ArrowDataType::Int32
@@ -155,24 +155,14 @@ pub fn arrow_name_at_depth(
                 "long".to_string()
             }
         }
-        ArrowDataType::Float16 | ArrowDataType::Float32 => {
-            if surface == describe {
-                "float".to_string()
-            } else {
-                "double".to_string()
-            }
-        }
+        ArrowDataType::Float16 | ArrowDataType::Float32 => "float".to_string(),
         ArrowDataType::Float64 => "double".to_string(),
         ArrowDataType::Boolean => "boolean".to_string(),
         ArrowDataType::Utf8 | ArrowDataType::LargeUtf8 | ArrowDataType::Utf8View => {
             "string".to_string()
         }
         ArrowDataType::Binary | ArrowDataType::LargeBinary | ArrowDataType::BinaryView => {
-            if surface == describe {
-                "binary".to_string()
-            } else {
-                "string".to_string()
-            }
+            "binary".to_string()
         }
         ArrowDataType::Date32 | ArrowDataType::Date64 => "date".to_string(),
         ArrowDataType::Timestamp(_, None) => "timestamp_ntz".to_string(),

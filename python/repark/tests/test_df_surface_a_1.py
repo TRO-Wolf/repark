@@ -67,11 +67,11 @@ def test_to_reorders_casts_and_wins_schema_spelling(spark: ReparkSession) -> Non
 
 
 def test_to_narrow_reports_logical_width_1(spark: ReparkSession) -> None:
-    """pins: df-surface-a-1/C-001 — cell to_narrow; LOGICAL-WIDTH-1 codifies today's int answer."""
+    """pins: df-surface-a-1/C-001 — cell to_narrow; logical-width-1/C-010 narrow label."""
     narrowed = _kv(spark).to(StructType([StructField("a", ShortType())]))
     assert narrowed.columns == _cell("to_narrow")["result"]["columns"]
     assert [repr(row) for row in narrowed.collect()] == _cell("to_narrow")["result"]["rows"]
-    assert narrowed.schema.simpleString() == "struct<a:int>"
+    assert narrowed.schema.simpleString() == "struct<a:smallint>"
 
 
 def test_to_missing_nullable_field_fills_null(spark: ReparkSession) -> None:
@@ -121,15 +121,15 @@ def test_to_store_assignment_atomic_to_string(spark: ReparkSession) -> None:
 
 
 def test_to_binary_follows_reported_schema_df_to_binary_1(spark: ReparkSession) -> None:
-    """to() keeps bytes under a string field for a binary column. pins: df-surface-a-1/C-008"""
+    """to(binary) is identity; to(string) follows the cast. pins: df-surface-a-1/C-008, logical-width-1/C-010"""
     frame = spark.createDataFrame([(b"hi",)], "b binary")
-    assert frame.schema.simpleString() == "struct<b:string>"
+    assert frame.schema.simpleString() == "struct<b:binary>"
+    as_binary = frame.to(StructType([StructField("b", BinaryType())]))
+    assert as_binary.schema.simpleString() == "struct<b:binary>"
+    assert as_binary.collect()[0][0] == b"hi"
     as_string = frame.to(StructType([StructField("b", StringType())]))
     assert as_string.schema.simpleString() == "struct<b:string>"
-    assert as_string.collect()[0][0] == b"hi"
-    with pytest.raises(AnalysisException) as caught:
-        frame.to(StructType([StructField("b", BinaryType())])).collect()
-    assert "INVALID_COLUMN_OR_FIELD_DATA_TYPE" in str(caught.value)
+    assert as_string.collect()[0][0] == "hi"
 
 
 def test_to_store_assignment_refusals(spark: ReparkSession) -> None:

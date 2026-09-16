@@ -498,7 +498,7 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
                 (
                     "reader",
                     _pa(pa.binary()),
-                    ([("c", "string", True)], "struct<c:string>", [("c", "string")]),
+                    ([("c", "binary", True)], "struct<c:binary>", [("c", "binary")]),
                 ),
                 ("csv_infer", "DEADBEEF", [("c", "string")]),
                 ("describe", "a_bin", "binary"),
@@ -512,7 +512,7 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
                 (
                     "reader",
                     _pa(pa.float32()),
-                    ([("c", "double", True)], "struct<c:double>", [("c", "double")]),
+                    ([("c", "float", True)], "struct<c:float>", [("c", "float")]),
                 ),
                 ("describe", "a_float", "float"),
             ],
@@ -523,11 +523,15 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
             [
                 ("arrow_in", pa.int8(), "ByteType:tinyint"),
                 ("arrow_in", pa.int16(), "ShortType:smallint"),
-                ("reader", _pa(pa.int8()), ([("c", "int", True)], "struct<c:int>", [("c", "int")])),
+                (
+                    "reader",
+                    _pa(pa.int8()),
+                    ([("c", "byte", True)], "struct<c:tinyint>", [("c", "tinyint")]),
+                ),
                 (
                     "reader",
                     _pa(pa.int16()),
-                    ([("c", "int", True)], "struct<c:int>", [("c", "int")]),
+                    ([("c", "short", True)], "struct<c:smallint>", [("c", "smallint")]),
                 ),
                 ("describe", "a_tiny", "int"),
                 ("describe", "a_small", "int"),
@@ -685,8 +689,8 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
             "Iceberg Float32 DESCRIBE vs dtypes",
             [
                 ("describe", "a_float", "float"),
-                ("table_dtypes", "a_float", "double"),
-                ("table_key", "a_float", "double"),
+                ("table_dtypes", "a_float", "float"),
+                ("table_key", "a_float", "float"),
             ],
         ),
         (
@@ -694,8 +698,8 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
             "Iceberg Binary DESCRIBE vs dtypes",
             [
                 ("describe", "a_bin", "binary"),
-                ("table_dtypes", "a_bin", "string"),
-                ("table_key", "a_bin", "string"),
+                ("table_dtypes", "a_bin", "binary"),
+                ("table_key", "a_bin", "binary"),
             ],
         ),
         (

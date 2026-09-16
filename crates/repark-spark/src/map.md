@@ -366,6 +366,12 @@ pins: rp-4-fork-repin/C-005, C-006
   Round 2: `spatial_srid_supported` validates inbound bridge SRIDs (mixed form
   included) so no Spark-impossible spelling builds.
   pins: facade-4/C-010, C-019, C-020; types-geo-ddl-1/C-001, C-003
+  **LOGICAL-WIDTH-1 (2026-09-16):** the `LogicalKey` arms answer Spark's narrow
+  widths (Int8→`byte`, Int16→`short`, Float16|Float32→`float`,
+  Binary family→`binary`); both surfaces survive because `bigint`/`long`,
+  `smallint`/`short` and `tinyint`/`byte` still differ. `logical_type_key` keeps
+  its single caller (`repark-python::dataframe::arrow_type_key`).
+  pins: logical-width-1/C-001, C-002, C-003, C-005, C-006, C-007
 - `type_table/parse.rs` — the text→descriptor half of the table, split out at the
   file-size ceiling: DDL and SQL-token parsing (`parse_ddl`,
   `sql_type_from_token`, field lists, `decimal(p,s)` and interval spellings) with

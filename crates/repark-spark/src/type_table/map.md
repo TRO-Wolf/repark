@@ -32,3 +32,8 @@ ceiling.
   Round 2 adds `spatial_srid_follows_spark_integer_value_grammar` (leading
   zeros parse; underscore, plus-sign and fullwidth SRIDs refuse).
   pins: types-geo-ddl-1/C-001, C-003, C-005
+  **LOGICAL-WIDTH-1 (2026-09-16):** `logical_key_reports_spark_narrow_widths`
+  (Int8→`byte`, Int16→`short`, Float32→`float`, Binary family→`binary`) and
+  `describe_keeps_spark_ddl_spellings_for_narrow_widths` (the `tinyint` /
+  `smallint` / `bigint` spellings stay).
+  pins: logical-width-1/C-001, C-002
