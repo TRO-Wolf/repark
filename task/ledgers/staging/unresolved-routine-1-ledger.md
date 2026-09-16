@@ -192,6 +192,25 @@ per the card's edit-only-the-assertion rule.
 
 - H-001 (P2 → run 18b): `selectExpr` fragment-relative `line 1 pos 0` needs a
   facade edit in `dataframe/core.py` (fenced here). Rust pins the class.
+  Round-2 evidence it cannot come from Rust: `SELECT nosuchfn(id) FROM range(3)`
+  answers absolute pos 7 (UR-SQL-08) while the wrapped selectExpr twin answers
+  fragment-relative pos 0 (UR-PY-02 round 1) — same Rust-visible shape, so the
+  relativization needs the fragment boundary only the facade has. UR3-PY-01
+  (`SELECT id, id + nosuchfn(1) FROM <view>`, Spark pos 5 in the second
+  fragment) pins the class from Rust.
+- H-004 (P2 → run 18b): string `filter`/`where` fragment positions need the
+  original predicate in `dataframe/core.py` (`filter`, line ~1254, fenced here):
+  pass it to the native `filter_sql` alongside the quoted text (e.g. an extra
+  parameter) and map the error against it; keep planning the quoted text.
+  Rust-only recovery is impossible: quoting wraps bare schema idents in `"…"` but
+  preserves pre-quoted spans, so original `id = nosuchfn(1)` (Spark pos 5,
+  UR3-PY-00) and a hypothetical pre-quoted original `"id" = nosuchfn(1)` (name
+  at fragment offset 7 by the same fragment rule) reach Rust as the
+  byte-identical `"id" = nosuchfn(1)`. Rust pins
+  the class (UR3-PY-00/03); registry row BL-19-POS-FILTER filed.
+- H-005 (note → runs 18a/18b): `functions_byname.py` (H-003) and
+  `catalog_surface.py` keep Python-side message builders (PYPERF-001/002);
+  delegating them to the Rust path is their owners' call, not this unit's.
 - H-002 (P2 → error-surface owner): engine `AnalysisException.getCondition()` /
   `getSqlState()` parsing the `[CLASS]` / `SQLSTATE:` out of the message.
 - H-003 (note → run 18a): `functions_byname._resolve_routine` can delegate to
@@ -203,6 +222,25 @@ per the card's edit-only-the-assertion rule.
   while `spark.sql("SELECT spark_catalog.default.nosuchfn(1)")` raises
   `UNRESOLVED_ROUTINE`. Also measured: an all-caps `SYSTEM.BUILTIN` qualifier
   renders recovered-case `` `SYSTEM`.`BUILTIN` `` (unmeasured by the oracle).
+
+## Remediation round 1 (2026-09-16, critic-logic + perf reads on `63f40f67`)
+
+| Id | Disposition | Evidence |
+|---|---|---|
+| L-001 | FIX in this round | Spelling now comes from the matched call-site ident values only; string-literal case no longer leaks (UR3-SQL-00 pin). |
+| L-002 | FIX in this round | Call sites match on sqlparser word tokens (strings/comments are never words); nested unknowns resolve to the outer call DataFusion names (UR3-SQL-01/02/03/11 pins). |
+| L-003 | FIX in this round | Name structure comes from the SQL ident values (single dotted quoted ident stays one part); the error text is only a flattened lookup key; backticked `system.builtin` reaches REQUIRES (UR3-SQL-04/05/06/07 pins). |
+| L-004 | FIX in this round | `schema_of_csv` pin reframed as an explicit divergence tripwire (Spark HAS the name, UR3-SQL-13); every other retired assertion re-checked name by name, table below. |
+| L-005 | PARTIAL: F.expr fragment positions proven (UR3-PY-02); filter/where and selectExpr fragment positions HANDED OFF (H-004/H-001 — the original text is behind fenced call sites, see H-004) | UR3-PY-00/01/03 class pins green; BL-19-POS-FILTER row filed; BL-19-POS-SELX stays open. |
+| L-006 | PINNED (was already correct) | `chars().count()` kept; UR3-SQL-08/09 pins (é/😀 both pos 12). |
+| PERF-001/002 | FOLLOWS from the rewrite | Single lazy token pass, first match wins, no hit Vec; boundaries structural. |
+| PERF-003/PYPERF-003 | NOTED | Each seam formats the DataFusion error exactly once already. |
+| PYPERF-001/002 | HAND-OFF rows (H-003/H-005) | `functions_byname.py` / `catalog_surface.py` are 18a/18b files; no edit. |
+| ORCH-001 | FIX in this round | `engine_err_for_sql` moved above the `engine_err` doc comment; no new doc. |
+| UR3-SQL-14/15 | GUARD pins | Arity errors and parse errors bypass the mapper (critic null report); pins hold that. |
+| RED (round 2) | `.venv/bin/python -m pytest python/repark/tests/test_unresolved_routine_1.py -q -p no:cacheprovider` → 8 failed, 58 passed on `63f40f67`. The 8 are UR3-SQL-00…07 (literal-case leak, three decoy positions, backticked REQUIRES class, two backticked renders, dotted-quotient structure); UR3-SQL-08…15 and all UR3-PY pins already hold (guards for the rewrite). |
+
+Retired-assertion re-check (L-004 table): `binary` — Spark HAS (TYPEOF-SQL-24 ok), pin records repark's refusal, docstring claims blockage only; `try_*` ×12 — Spark HAS, ANSI-door unresolved pins, no Spark-shape claim; `shuffle`-over-NULL — Spark HAS shuffle, ANSI unreachability pin, Spark-door answers beside it; `withField`/`dropFields`/`astype`/`name`/`outer` — Spark SQL lacks the names, true-shape pins; `schema_of_csv` — Spark HAS (UR3-SQL-13 execution error), reframed tripwire above; w0 absents — planning-miss disjunct, classifier needle added (F-004).
 
 ## 5. Gates (step 8, 2026-09-16, release native rebuilt after the final Rust edit)
 

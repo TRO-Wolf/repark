@@ -927,6 +927,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   blanket pin. The C-006 assertion retirements and the C-007 registry close
   anchor here.
   pins: unresolved-routine-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **Remediation round 1 (2026-09-16):** UR3 decoy cells (literals, comments,
+  quoted multi-part names, nesting, code-point positions), the `schema_of_csv`
+  divergence tripwire, the found-arity and double-quote guards, and the py
+  fragment class pins.
+  pins: unresolved-routine-1/C-001, C-002, C-003, C-006
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
   **FNP-4B (2026-09-15):** BL-9 and BL-12 FIXED — the double-quoted pin asserts a STRING and the

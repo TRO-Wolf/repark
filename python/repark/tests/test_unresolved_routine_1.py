@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 from repark import SparkSession
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException, ParseException, UnsupportedOperationException
 from repark.spark import functions as F  # noqa: N812
 
 ORACLE = "unresolved_routine_1_spark_oracle.json"
@@ -169,3 +169,109 @@ def test_expected_fixture_cells_are_present() -> None:
     for cell_id in ("UR-PY-00", "UR-PY-01", "UR-PY-02", "UR-PY-03"):
         assert cells[cell_id]["door"] == "py"
     assert _expected("UR-SQL-00").endswith("; line 1 pos 7")
+
+
+UR3_SQL_CELLS: tuple[str, ...] = (
+    "UR3-SQL-00",
+    "UR3-SQL-01",
+    "UR3-SQL-02",
+    "UR3-SQL-03",
+    "UR3-SQL-04",
+    "UR3-SQL-05",
+    "UR3-SQL-06",
+    "UR3-SQL-07",
+    "UR3-SQL-08",
+    "UR3-SQL-09",
+    "UR3-SQL-10",
+    "UR3-SQL-11",
+    "UR3-SQL-12",
+)
+
+
+@pytest.mark.parametrize("cell_id", UR3_SQL_CELLS)
+def test_sql_door_decoy_cells_match_spark_message(spark: Any, cell_id: str) -> None:
+    """Decoy literals, comments, quotes and nesting refuse Spark-shaped.
+
+    pins: unresolved-routine-1/C-001, C-002
+    """
+    cell = _cells()[cell_id]
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(cell["expr"]).collect()
+    assert str(caught.value) == cell["message"]
+
+
+def test_sql_door_schema_of_csv_is_divergence_tripwire(spark: Any) -> None:
+    """Spark HAS schema_of_csv; repark refuses until 18a lands the name.
+
+    pins: unresolved-routine-1/C-006
+    """
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("SELECT schema_of_csv('')").collect()
+    assert "UNRESOLVED_ROUTINE" in str(caught.value)
+
+
+def test_sql_door_found_function_arity_is_not_rewritten(spark: Any) -> None:
+    """A found name with wrong arity keeps its own error class.
+
+    pins: unresolved-routine-1/C-001
+    """
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("SELECT abs(1, 2)").collect()
+    assert "UNRESOLVED_ROUTINE" not in str(caught.value)
+
+
+def test_sql_door_double_quoted_name_stays_parse_error(spark: Any) -> None:
+    """Double-quoted routine names refuse at parse on both doors.
+
+    pins: unresolved-routine-1/C-001
+    """
+    with pytest.raises(ParseException):
+        spark.sql('SELECT "nosuchfn"(1)').collect()
+
+
+def test_py_door_leading_space_fragment_positions(spark: Any) -> None:
+    """F.expr positions inside the given fragment text.
+
+    pins: unresolved-routine-1/C-002, C-003
+    """
+    cell = _cells()["UR3-PY-02"]
+    with pytest.raises(AnalysisException) as caught:
+        frame = eval(cell["expr"], {"spark": spark, "F": F})
+        frame.collect()
+    assert str(caught.value) == cell["message"]
+
+
+@pytest.mark.parametrize("cell_id", ("UR3-PY-00", "UR3-PY-03"))
+def test_py_door_filter_fragments_answer_spark_class(spark: Any, cell_id: str) -> None:
+    """Filter fragments answer the class; positions need 18b.
+
+    pins: unresolved-routine-1/C-003
+    """
+    cell = _cells()[cell_id]
+    with pytest.raises(AnalysisException, match=r"\[UNRESOLVED_ROUTINE\]") as caught:
+        frame = eval(cell["expr"], {"spark": spark, "F": F})
+        frame.collect()
+    assert "Cannot resolve routine `nosuchfn` on search path" in str(caught.value)
+    assert "SQLSTATE: 42883" in str(caught.value)
+
+
+def test_py_door_select_expr_fragment_answers_spark_class(spark: Any) -> None:
+    """Multi-fragment selectExpr answers the class; position is 18b.
+
+    pins: unresolved-routine-1/C-003
+    """
+    cell = _cells()["UR3-PY-01"]
+    with pytest.raises(AnalysisException, match=r"\[UNRESOLVED_ROUTINE\]") as caught:
+        frame = eval(cell["expr"], {"spark": spark, "F": F})
+        frame.collect()
+    assert "Cannot resolve routine `nosuchfn` on search path" in str(caught.value)
+    assert "SQLSTATE: 42883" in str(caught.value)
+
+
+def test_remediation_fixture_cells_are_present() -> None:
+    """The oracle copy carries every round-2 cell id."""
+    cells = _cells()
+    for cell_id in (*UR3_SQL_CELLS, "UR3-SQL-13", "UR3-SQL-14", "UR3-SQL-15"):
+        assert cells[cell_id]["door"] == "sql"
+    for cell_id in ("UR3-PY-00", "UR3-PY-01", "UR3-PY-02", "UR3-PY-03"):
+        assert cells[cell_id]["door"] == "py"
