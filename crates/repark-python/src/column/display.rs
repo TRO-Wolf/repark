@@ -166,7 +166,7 @@ fn wrap_field_sql(child: &str, quoted_field: &str) -> String {
     out
 }
 
-fn wrap_cast(keyword: &str, child: &str, spark_type: &str) -> String {
+pub(crate) fn wrap_cast(keyword: &str, child: &str, spark_type: &str) -> String {
     let mut out = String::with_capacity(keyword.len() + child.len() + spark_type.len() + 6);
     out.push_str(keyword);
     out.push('(');

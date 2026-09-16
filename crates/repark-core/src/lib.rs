@@ -12,6 +12,7 @@ mod freq_items;
 mod idents;
 mod isnan;
 mod lineage_columns;
+mod na_fill;
 mod named_sources;
 mod namespace_create;
 mod nlj_build_reset;
@@ -72,6 +73,7 @@ pub use config_file::config_file_pairs;
 pub use config_file::maintenance::{
     MaintenancePolicy, TablePolicy, parse_duration, parse_maintenance_policy,
 };
+pub use na_fill::{FillBuild, na_fill_expr};
 pub use named_sources::{NamedSource, SourceRow};
 pub use namespace_create::refuse_contradictory_namespace_location;
 pub use session_owner::{DescribeOwnerConfig, session_owner_snapshot, with_session_owner};

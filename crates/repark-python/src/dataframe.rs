@@ -127,7 +127,7 @@ impl PyDataFrame {
     }
 
     /// Post-analysis Arrow schema without executing the plan (metadata only).
-    fn analyzed_arrow_schema_native(&self) -> PyResult<SchemaRef> {
+    pub(crate) fn analyzed_arrow_schema_native(&self) -> PyResult<SchemaRef> {
         if let Some(schema) = self.analyzed_schema.get() {
             return Ok(Arc::clone(schema));
         }
