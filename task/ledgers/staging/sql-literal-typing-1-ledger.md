@@ -216,3 +216,48 @@ passes (full list in §2).
   lands.
 - `div` / `~`: out of scope, named in the BL-20 registry row as still open
   (SPARK-SQL-GRAMMAR-1 C-001/C-002 own them).
+
+## 6. Remediation round 1 (2026-09-16, head `996094c8` rebased, red commit `e94d57bb`)
+
+Critic-logic, rustperf and pyperf reads over the 8 round-1 commits; the 13
+measured LIT2 cells (`/tmp/oc-worker/sc/oracle/lit2-oracle.json`, batch
+`sc18-lit2`) appended verbatim to the fixture. Red on the round-1 build: 10
+fail (LIT2-SQL-00/01/02, LIT2-SQL-03, LIT2-PY-00…04,
+`test_fexpr_mixed_width_matches_sql_door`); LIT2-SQL-04/05/06/07 already
+green and guard the fix. LIT2-SQL-06 carries
+`conf: {spark.sql.ansi.enabled: false}`, matching the wrap it records; the
+other LIT2 cells carry no conf (ANSI on), so no oracle conflict exists with
+LIT-SQL-22/53.
+
+- R-18c-4 (this lane): L-002 is a plan-construction check, not an analyzer
+  order gap. `to_field` verifies ScalarFunction arguments
+  (`verify_function_arguments`) while the logical plan is built, before every
+  analyzer rule runs — seating the narrowing first cannot reach it. The fix
+  follows the `add_months` house pattern: shadow UDFs whose `coerce_types`
+  accepts every integer width (literals narrow in the early rule first;
+  explicit widths coerce to Int32 exactly like `add_months` already does).
+- R-18c-5 (this lane): `insert_literal_rule_before_coercion` keeps its name
+  and seats the rule first among the pre-coercion rules (before
+  `higher_order_preparation`, falling back to `type_coercion`). One shared
+  function serves the session door and the `F.expr` door.
+- R-18c-6 (this lane): the late `SparkIntegerLiteral` leaves both Spark
+  doors (it is subsumed by the early rule) but stays in
+  `repark_functions::analyzer_rules()` for the non-door test contexts that
+  never seat the early rule. Removal is also what keeps L-003 fixed: the
+  late fold would re-fold the parenthesized form after coercion.
+- R-18c-7 (this lane): PERF-004 and the two pyperf P3s are ledger notes and
+  hand-off rows; the Python files belong to runs 18a/18b and are not edited
+  here.
+
+| Finding | Disposition | Evidence |
+|---|---|---|
+| L-001 (P1) | FIXED | `build_expr_context` seats the early rule through the shared insert function; `test_fexpr_mixed_width_matches_sql_door` plus LIT2-PY-00…04 green. |
+| L-002 (P2) | FIXED | `DateOffset` (`date_add`/`date_sub`) and `Factorial` shadows accept integer widths in `coerce_types` and delegate kernels upstream; LIT2-SQL-00/01/02 green. The whole upstream `Exact(Int32)` family was surveyed: the only strict-Exact int UDFs repark does not already shadow are these three (`add_months`, `make_date`, `sequence` have local UDFs). |
+| L-003 (P2) | FIXED | The `Negative` fold is gone: only the lexer-level negative token (planned as a negative `Int64` literal) narrows; `-(2147483648)` stays `Negative(Int64)` → bigint. LIT2-SQL-03/04/05/07 green. |
+| PERF-001 (P2) | FIXED | Plan-level apply pre-check skips the walk when no narrowable literal exists; `recompute_schema` and `resolve_lambda_variables` run only after a real transform, the latter only with a higher-order function on the node. Shapes (a)/(b)/(c)/(d) before/after below. |
+| PERF-002 (P2) | FIXED | `rewrite_values` applies over `&Expr` first and clones a row only when a cell changes. |
+| PERF-003 (P3) | FIXED | `Union` rebuilds only when a child schema field type moved. |
+| PERF-005 (P3) | FIXED | Late `SparkIntegerLiteral` uninstalled on both Spark doors; full facade plus parity suites green. |
+| PERF-004 (P3) | NOTED | Mixed-width hash joins keep a per-row `CAST AS Int64`: Spark-true (unsuffixed `1` is INT), a join/kernel change, not a literal-typing change. `CAST(1 AS BIGINT)` recovers the old kernel. |
+| pyperf P3 (udtf) | HAND-OFF | No 15+ digit token present in `udtf.py` at this head; run 18a to confirm against the read. |
+| pyperf P3 (functions) | HAND-OFF | The `CAST(... AS INT)` foldable workarounds in `functions.py` (`add_months`, `date_add`) are engine-redundant now that the shadows accept Int64; runs 18a/18b own removal. |

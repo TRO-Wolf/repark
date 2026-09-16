@@ -98,6 +98,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   itself so a malformed value raises `[CAST_INVALID_INPUT]` under ANSI (NULL under
   ANSI-off) instead of a bare Arrow cast error (fixtures-batch11.json
   A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x).
+  **SQL-LITERAL-TYPING-1 remediation round 1 (2026-09-16):** `Factorial`
+  shadows upstream `factorial` the same way (`user_defined` + integer widths
+  down to Int32, kernel delegated to `spark_factorial`) so `factorial(5)`
+  survives plan construction. Unit tests pin the literal, the explicit
+  `CAST(5 AS BIGINT)`, and the text refusal.
+  pins: sql-literal-typing-1/L-002
   pins: door-converge-1/C-002, C-003, C-008
 - `spark_base64.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `base64` / `unbase64` — a
   hand-rolled `java.util.Base64` MIME codec (no `base64` crate dep): RFC 4648 padding,

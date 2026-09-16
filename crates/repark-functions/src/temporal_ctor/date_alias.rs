@@ -12,6 +12,7 @@ use datafusion::logical_expr::{
 };
 use datafusion_spark::function::datetime::date_add::SparkDateAdd;
 use datafusion_spark::function::datetime::date_diff::SparkDateDiff;
+use datafusion_spark::function::datetime::date_sub::SparkDateSub;
 
 use super::adddiff::{timestampadd_udf, timestampdiff_udf};
 use super::plan_error;
@@ -22,13 +23,28 @@ pub fn dateadd_udf() -> Arc<ScalarUDF> {
 }
 
 #[must_use]
+pub fn date_add_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::new_from_impl(DateOffset::add()))
+}
+
+#[must_use]
+pub fn date_sub_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::new_from_impl(DateOffset::sub()))
+}
+
+#[must_use]
 pub fn datediff_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::new_from_impl(DateDiffRoute::new()))
 }
 
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
-    vec![dateadd_udf(), datediff_udf()]
+    vec![
+        dateadd_udf(),
+        datediff_udf(),
+        date_add_udf(),
+        date_sub_udf(),
+    ]
 }
 
 fn routed(
@@ -80,7 +96,7 @@ impl DateAddRoute {
     fn new() -> Self {
         Self {
             signature: Signature::user_defined(Volatility::Immutable),
-            two: Arc::new(ScalarUDF::new_from_impl(SparkDateAdd::new())),
+            two: date_add_udf(),
             three: timestampadd_udf(),
         }
     }
@@ -199,6 +215,98 @@ impl ScalarUDFImpl for DateDiffRoute {
     }
 }
 
+#[derive(Debug)]
+struct DateOffset {
+    name: &'static str,
+    signature: Signature,
+    inner: Arc<ScalarUDF>,
+}
+
+impl DateOffset {
+    fn add() -> Self {
+        Self {
+            name: "date_add",
+            signature: Signature::user_defined(Volatility::Immutable),
+            inner: Arc::new(ScalarUDF::new_from_impl(SparkDateAdd::new())),
+        }
+    }
+
+    fn sub() -> Self {
+        Self {
+            name: "date_sub",
+            signature: Signature::user_defined(Volatility::Immutable),
+            inner: Arc::new(ScalarUDF::new_from_impl(SparkDateSub::new())),
+        }
+    }
+}
+
+impl PartialEq for DateOffset {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for DateOffset {}
+
+impl Hash for DateOffset {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+    }
+}
+
+impl ScalarUDFImpl for DateOffset {
+    fn name(&self) -> &str {
+        self.name
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Date32)
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        self.inner.return_field_from_args(args)
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        let [start, days] = arg_types else {
+            return Err(plan_error(format!(
+                "'{}' expects (start_date, num_days), got {} argument(s)",
+                self.name(),
+                arg_types.len()
+            )));
+        };
+        if !matches!(start, DataType::Date32 | DataType::Null) {
+            return Err(plan_error(format!(
+                "'{}' cannot accept a start date of type {start}",
+                self.name()
+            )));
+        }
+        match days {
+            DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::Null => Ok(vec![DataType::Date32, DataType::Int32]),
+            other => Err(plan_error(format!(
+                "'{}' num_days must be an integer, got {other}",
+                self.name()
+            ))),
+        }
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        self.inner.invoke_with_args(args)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use datafusion::prelude::{SessionConfig, SessionContext};
@@ -278,6 +386,39 @@ mod tests {
             .await,
             vec!["4".to_string()]
         );
+    }
+
+    #[tokio::test]
+    async fn date_add_accepts_unsuffixed_literal_days() {
+        let ctx = ctx_with(true, "UTC");
+        assert_eq!(
+            one(&ctx, "SELECT date_add(DATE'2024-01-05', 1) AS v").await,
+            vec!["2024-01-06".to_string()]
+        );
+        assert_eq!(
+            one(&ctx, "SELECT dateadd(DATE'2024-01-05', 1) AS v").await,
+            vec!["2024-01-06".to_string()]
+        );
+    }
+
+    #[tokio::test]
+    async fn date_sub_accepts_unsuffixed_literal_days() {
+        let ctx = ctx_with(true, "UTC");
+        assert_eq!(
+            one(&ctx, "SELECT date_sub(DATE'2024-01-05', 1) AS v").await,
+            vec!["2024-01-04".to_string()]
+        );
+    }
+
+    #[tokio::test]
+    async fn date_add_refuses_text_days() {
+        let ctx = ctx_with(true, "UTC");
+        let error = ctx
+            .sql("SELECT date_add(DATE'2024-01-05', 'x') AS v")
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("num_days must be an integer"), "{error}");
     }
 
     #[tokio::test]

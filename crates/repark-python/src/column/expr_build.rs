@@ -157,12 +157,13 @@ fn build_expr_context() -> datafusion::error::Result<SessionContext> {
     let mut config = SessionConfig::new();
     config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
     config.options_mut().sql_parser.enable_ident_normalization = false;
-    let mut rules = repark_functions::analyzer_rules_with_higher_order_preparation(
+    let rules = repark_functions::analyzer_rules_with_higher_order_preparation(
         datafusion::optimizer::Analyzer::new().rules,
     )?;
+    let mut rules = repark_spark::spark_literal_typing::insert_literal_rule_before_coercion(rules)?;
     rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
     rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
-    rules.extend(repark_functions::analyzer_rules());
+    rules.extend(repark_spark::spark_literal_typing::spark_door_post_coercion_rules());
     let state = SessionStateBuilder::new()
         .with_config(config)
         .with_default_features()

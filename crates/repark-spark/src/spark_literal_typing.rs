@@ -24,16 +24,28 @@ impl AnalyzerRule for SparkIntegralLiteral {
     }
 }
 
-pub(crate) fn insert_literal_rule_before_coercion(
+pub fn insert_literal_rule_before_coercion(
     mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
 ) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
-    let Some(position) = rules.iter().position(|rule| rule.name() == "type_coercion") else {
+    let position = rules
+        .iter()
+        .position(|rule| rule.name() == "higher_order_preparation")
+        .or_else(|| rules.iter().position(|rule| rule.name() == "type_coercion"));
+    let Some(position) = position else {
         return Err(DataFusionError::Plan(
             "spark integral literals require the default type_coercion analyzer rule".to_string(),
         ));
     };
     rules.insert(position, Arc::new(SparkIntegralLiteral));
     Ok(rules)
+}
+
+#[must_use]
+pub fn spark_door_post_coercion_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
+    repark_functions::analyzer_rules()
+        .into_iter()
+        .filter(|rule| rule.name() != "spark_integer_literal")
+        .collect()
 }
 
 fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
@@ -126,21 +138,8 @@ pub(crate) fn spark_integral_literal(expr: Expr) -> Result<Transformed<Expr>> {
                 meta,
             )))
         }
-        Expr::Negative(inner) => Ok(fold_negative_int_min(*inner)),
         other => Ok(Transformed::no(other)),
     }
-}
-
-fn fold_negative_int_min(inner: Expr) -> Transformed<Expr> {
-    if let Expr::Literal(ScalarValue::Int64(Some(value)), meta) = &inner
-        && *value == i64::from(i32::MAX) + 1
-    {
-        return Transformed::yes(Expr::Literal(
-            ScalarValue::Int32(Some(i32::MIN)),
-            meta.clone(),
-        ));
-    }
-    Transformed::no(Expr::Negative(Box::new(inner)))
 }
 
 fn decimal_digits(mut value: u64) -> u8 {
@@ -259,17 +258,11 @@ mod tests {
     }
 
     #[test]
-    fn negative_int_min_folds() {
-        let transformed = spark_integral_literal(Expr::Negative(Box::new(Expr::Literal(
-            ScalarValue::Int64(Some(i64::from(i32::MAX) + 1)),
-            None,
-        ))))
-        .unwrap();
-        assert!(transformed.transformed);
-        assert_eq!(
-            transformed.data,
-            Expr::Literal(ScalarValue::Int32(Some(i32::MIN)), None)
-        );
+    fn parenthesized_negative_int_min_stays_bigint() {
+        let inner = Expr::Literal(ScalarValue::Int64(Some(i64::from(i32::MAX) + 1)), None);
+        let transformed = spark_integral_literal(Expr::Negative(Box::new(inner.clone()))).unwrap();
+        assert!(!transformed.transformed);
+        assert_eq!(transformed.data, Expr::Negative(Box::new(inner)));
     }
 
     #[derive(Debug, Default)]
@@ -301,9 +294,52 @@ mod tests {
     }
 
     #[test]
+    fn insert_order_seats_rule_before_hof_preparation() {
+        let rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
+            Arc::new(StubRule("first")),
+            Arc::new(StubRule("higher_order_preparation")),
+            Arc::new(StubRule("spark_decimal_precision")),
+            Arc::new(TypeCoercion::new()),
+        ];
+        let ordered = insert_literal_rule_before_coercion(rules).unwrap();
+        let names: Vec<&str> = ordered.iter().map(|rule| rule.name()).collect();
+        assert_eq!(
+            names,
+            vec![
+                "first",
+                "spark_integral_literal",
+                "higher_order_preparation",
+                "spark_decimal_precision",
+                "type_coercion",
+            ]
+        );
+    }
+
+    #[test]
     fn insert_without_coercion_errors() {
         let rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![Arc::new(StubRule("only"))];
         assert!(insert_literal_rule_before_coercion(rules).is_err());
+    }
+
+    #[tokio::test]
+    async fn udf_arguments_narrow_before_coercion() {
+        use datafusion::prelude::SessionContext;
+        let ctx = SessionContext::new();
+        repark_functions::register_all(&ctx);
+        let plan = ctx
+            .state()
+            .create_logical_plan("SELECT factorial(5) AS v")
+            .await
+            .unwrap();
+        let config = ctx.state().config_options().clone();
+        let analyzed = SparkIntegralLiteral.analyze(plan, &config).unwrap();
+        let observed = format!("{:?}", analyzed.expressions());
+        assert!(
+            observed.contains("Int32(5)"),
+            "factorial argument must narrow before coercion, got {observed}"
+        );
+        let coerced = TypeCoercion::new().analyze(analyzed, &config).unwrap();
+        assert_eq!(coerced.schema().field(0).data_type(), &DataType::Int64);
     }
 
     #[tokio::test]

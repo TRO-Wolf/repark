@@ -143,6 +143,12 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   bool/string still refuse (no numeric coercion).
   pins: abs-expr-1/C-001, C-002
 - [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection.
+  **SQL-LITERAL-TYPING-1 remediation round 1 (2026-09-16):** `build_expr_context`
+  seats the early integral-literal rule through the shared
+  `insert_literal_rule_before_coercion` and installs the post-coercion rules
+  minus the subsumed late integer rule, so the `F.expr` door types mixed-width
+  SQL exactly like the session door.
+  pins: sql-literal-typing-1/L-001
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
   **WIN-SLIDE-1 (2026-09-04):** `single_wrapped_aggregate` / `replace_wrapped_aggregate` let
   `Column.over` push a window spec INTO the one aggregate inside a scalar wrapper. `F.collect_list`

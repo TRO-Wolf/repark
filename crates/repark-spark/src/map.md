@@ -221,6 +221,13 @@ pins: rp-4-fork-repin/C-005, C-006
   Unit tests beside the change cover the mapping, the refusal shape, the
   insert order and the union refresh.
   pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-007
+  **Remediation round 1 (2026-09-16):** the seat moved first among the
+  pre-coercion rules (before `higher_order_preparation`); the `Negative`
+  fold is gone so only the lexer-level negative token narrows and
+  `-(2147483648)` stays bigint (LIT2-SQL-03/04); the late
+  `SparkIntegerLiteral` is uninstalled on both Spark doors
+  (`spark_door_post_coercion_rules`, the early rule subsumes it).
+  pins: sql-literal-typing-1/L-001, L-002, L-003
 - `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
   `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),
