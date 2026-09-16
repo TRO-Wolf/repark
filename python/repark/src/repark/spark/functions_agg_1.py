@@ -317,16 +317,21 @@ def product(col: Column | str) -> Column:
     )
 
 
-def _mode_deterministic(col: Column | str) -> Column:
-    """Deterministic ``mode`` lowered as a two-argument aggregate."""
+def _mode_with_flag(col: Column | str, deterministic: bool | Column) -> Column:
+    """Shared ``mode`` builder: the flag always issues a two-argument aggregate."""
+    flag = lit(deterministic) if isinstance(deterministic, bool) else deterministic
     column, part = _aggregate_argument(col)
-    flag = lit(True)
-    agg_name = f"mode() WITHIN GROUP (ORDER BY {part} DESC)"
+    if deterministic is True:
+        agg_name = f"mode() WITHIN GROUP (ORDER BY {part} DESC)"
+    else:
+        agg_name = f"mode({part})"
     return Column(
         column._inner.aggregate_binary("mode", [flag._inner]),
         agg_name=agg_name,
         sql_expr=f"mode({column.sql_expr_part()}, {flag.sql_expr_part()})",
+        join_sql_expr=f"mode({column.join_sql_part()}, {flag.join_sql_part()})",
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
+        **_thread_origin(column),
     )

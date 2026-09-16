@@ -39,8 +39,75 @@ pub fn rint_udf() -> Arc<ScalarUDF> {
 }
 
 #[must_use]
+pub fn hex_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkHexArgumentNullable::new()))
+}
+
+#[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
-    vec![abs_udf(), hypot_udf(), bin_udf(), rint_udf()]
+    vec![abs_udf(), hypot_udf(), bin_udf(), rint_udf(), hex_udf()]
+}
+
+#[derive(Debug)]
+struct SparkHexArgumentNullable {
+    inner: Arc<ScalarUDF>,
+}
+
+impl SparkHexArgumentNullable {
+    fn new() -> Self {
+        Self {
+            inner: datafusion_spark::function::math::hex(),
+        }
+    }
+}
+
+impl PartialEq for SparkHexArgumentNullable {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkHexArgumentNullable {}
+
+impl Hash for SparkHexArgumentNullable {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkHexArgumentNullable {
+    fn name(&self) -> &'static str {
+        "hex"
+    }
+
+    fn signature(&self) -> &Signature {
+        self.inner.signature()
+    }
+
+    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        self.inner.return_type(arg_types)
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
+        let first = args.arg_fields.first().ok_or_else(|| {
+            DataFusionError::Plan("'hex' expects exactly one argument".to_string())
+        })?;
+        let arg_types = args
+            .arg_fields
+            .iter()
+            .map(|field| field.data_type().clone())
+            .collect::<Vec<_>>();
+        Ok(Field::new(
+            self.name(),
+            self.inner.return_type(&arg_types)?,
+            first.is_nullable(),
+        )
+        .into())
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        self.inner.invoke_with_args(args)
+    }
 }
 
 #[derive(Debug)]
@@ -623,6 +690,31 @@ mod tests {
             one(&ctx, "SELECT rint(CAST(3.5 AS DOUBLE))").await,
             ScalarValue::Float64(Some(4.0))
         );
+    }
+
+    #[tokio::test]
+    async fn hex_answers_values_and_follows_argument_nullability() {
+        let ctx = ctx();
+        assert_eq!(
+            one(&ctx, "SELECT hex('a')").await,
+            ScalarValue::Utf8(Some("61".to_string()))
+        );
+        let literal = ctx
+            .sql("SELECT hex('a')")
+            .await
+            .expect("plan")
+            .collect()
+            .await
+            .expect("exec");
+        assert!(!literal[0].schema().field(0).is_nullable());
+        let nullable = ctx
+            .sql("SELECT hex(CAST(NULL AS VARCHAR))")
+            .await
+            .expect("plan")
+            .collect()
+            .await
+            .expect("exec");
+        assert!(nullable[0].schema().field(0).is_nullable());
     }
 
     #[tokio::test]

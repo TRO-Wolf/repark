@@ -1592,14 +1592,13 @@ def approx_percentile(
     return percentile_approx(col, percentage, accuracy)
 
 
-def mode(col: Column | str, deterministic: bool = False) -> Column:
+def mode(col: Column | str, deterministic: bool | Column = False) -> Column:
     """Most frequent value of a group (PySpark ``functions.mode``)."""
+    if isinstance(deterministic, (bool, Column)):
+        from repark.spark.functions_agg_1 import _mode_with_flag
 
-    if deterministic:
-        from repark.spark.functions_agg_1 import _mode_deterministic
-
-        return _mode_deterministic(col)
-    return _unary_aggregate("mode", col)
+        return _mode_with_flag(col, deterministic)
+    raise PySparkTypeError(f"mode flag must be bool or Column, got {type(deterministic).__name__}")
 
 
 def monotonically_increasing_id() -> Column:

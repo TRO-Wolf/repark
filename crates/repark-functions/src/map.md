@@ -1107,7 +1107,9 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   Step 10 clears the slice's own clippy lints (fold-plus-`write!` hex helper
   in tests, `?` arms in `grouping.rs`); behavior unchanged. Remediation
   R-18a-23: string/binary hashing inlines the Murmur pair per row (no
-  per-row `Vec`). Remediation
+  per-row `Vec`). Remediation R-18a-25: `hex` is our own UDF wrapping the
+  upstream kernel, overriding only the return field so nullability follows
+  the argument. Remediation
   (R-18a-19): `grouping_id` args must equal the grouping columns exactly in
   order, else `GROUPING_ID_COLUMN_MISMATCH` in Spark's message shape; the
   wrong-accept unit test is inverted and the `///` over

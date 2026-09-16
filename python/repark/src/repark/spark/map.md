@@ -224,6 +224,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   binary UDAFs, facade-only `product` over the internal product UDAF; `kurtosis` /
   `skewness` / `mode` are destubbed in place in `functions_expr.py`.
   pins: fnp-agg-1/C-001, C-002
+  **Remediation R-18a-24:** `mode` takes `deterministic` as a boolean literal
+  Column (no Python branch on its value) and threads `join_sql_expr` plus the
+  column origin; the shared builder lives in `functions_agg_1.py` as
+  `_mode_with_flag`, keeping `functions_expr.py` line-neutral.
   **FNP-AGG-1 run 18a (2026-09-16):** `product` keeps the `product(...)` display
   while `sql_expr` / `join_sql_expr` name the engine kernel `__repark_product`.
   Step 3 adds `percentile` over the new kernel (scalar, list and Column

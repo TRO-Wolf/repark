@@ -352,7 +352,7 @@ pub fn bin(arg: Expr) -> Expr {
 /// Spark `hex(expr)` — hex string of a number, string, or binary (from `datafusion-spark`).
 #[must_use]
 pub fn hex(arg: Expr) -> Expr {
-    spark_math::hex(arg)
+    call(crate::spark_math::hex_udf(), vec![arg])
 }
 
 /// Spark `unhex(expr)` — hex string to binary (from `datafusion-spark`).

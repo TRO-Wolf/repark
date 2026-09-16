@@ -1,5 +1,8 @@
 # map — scripts/
 
+FNP-AGG-1 remediation (2026-09-16): `check_lib_py.py` ratchets
+`functions_expr.py` 2191 → 2190 (the `mode` rework is net-negative).
+pins: fnp-agg-1/C-007
 FNP-AGG-1 run 18a step 3c (2026-09-16): `check_example_coverage.py`
 `BACKLOG_BASELINE` 108 → 105 (three covered names left the backlog file before
 this run without a recount; the file holds 105 named lines).
