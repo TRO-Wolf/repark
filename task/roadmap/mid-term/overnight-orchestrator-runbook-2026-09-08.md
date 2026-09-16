@@ -254,6 +254,33 @@ Brief every worker with this sentence beside the comment ban and the attribution
   `icu_collator` approved for collation slice 13c only (Q-16c-2).
 
 
+### Standing instructions — the day run of 2026-09-16 (owner, morning)
+
+- **Rust first, the decision sentence (Q-17a-2).** A decision that raises, casts, coerces or branches on a
+  value is a kernel too — if the SQL door cannot reach it, it is in the wrong place; Python holds names,
+  argument shapes and API plumbing only. Four of run 17's nine P1s were a decision taken in Python that the
+  SQL door never made. Brief every worker with this sentence beside the Rust-first paragraph above.
+- **Gates run the whole suites (Q-17a-4).** Every gate runs the whole facade suite and the whole parity suite
+  on a release native; a chain script that runs a hand-picked subset is a rehearsal and is fixed before it is
+  used. Run 17a's local gate passed on three parity files and CI failed the fourth.
+- **The commit is a numbered step (Q-17b-1).** A worker brief states "commit" as its own imperative numbered
+  step and the orchestrator checks `git log` at each hand-back; one Devin round finished a 35-file unit and
+  did not commit.
+- **Box rules.** Drop `target/debug` from the build clone after every gate that pushes — the debug artefacts
+  of `make verify`, `cargo test` and `make py-test-facade` alone took a clone past the 60 G stop (Q-17a-3).
+  `LimitNOFILE=65536` on every `systemd-run --user` launch; two `make verify` reds were file-descriptor
+  exhaustion at the 1024 soft limit (Q-17b-2). The lane launcher proceeds after ten minutes of box-wide cargo
+  activity with a logged line instead of waiting for an idle box (Q-17c-6).
+- **Mixed-tier slates split by card clarity (Q-17b-5):** the unit with the clearest card on Devin, the
+  exploratory one on Muse, so the comparison has a same-night control. The day run of 2026-09-16 runs Muse
+  contributor on every unit (owner, morning).
+- **Rulings applied under "all of the recommendations are solid" (2026-09-16 morning):** #625's door-split
+  P1s open run 18a (Q-17a-1); BL-20 integral literal typing and BL-19 `UNRESOLVED_ROUTINE` are 1.5 cards and
+  run 18c's first two units (Q-17c-2, Q-17c-3); NEVER-OOM-PANIC-1, the panic that reached the Python boundary
+  under memory pressure, is a defect card scheduled for run 18b (Q-17c-7); SUBQ-CELLS-1 is a 20-minute
+  follow-up (Q-17b-3); sub-minute fixed offsets stay DECLARED in 1.5 with a 1.6 card (Q-17c-1); a shared leaf
+  crate waits for a third case (Q-17c-4); the BL-11 encoder cost is a perf card (Q-17c-5).
+
 ## 6. Decision authority (G-2)
 
 May decide alone, logging a new `D-n` row in the card and a line in the ledger:
