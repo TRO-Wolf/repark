@@ -1,0 +1,326 @@
+{
+ "spark_version": "4.1.2",
+ "cells": [
+  {
+   "id": "TYPEOF-SQL-00",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(1)",
+   "typeof": "int",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-01",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(1L)",
+   "typeof": "bigint",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-02",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(1S)",
+   "typeof": "smallint",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-03",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(1Y)",
+   "typeof": "tinyint",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-04",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(1.5)",
+   "typeof": "decimal(2,1)",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-05",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(1.5BD)",
+   "typeof": "decimal(2,1)",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-06",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(1.0D)",
+   "typeof": "double",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-07",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(1.0F)",
+   "typeof": "float",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-08",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof('x')",
+   "typeof": "string",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-09",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(true)",
+   "typeof": "boolean",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-10",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(NULL)",
+   "typeof": "void",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-11",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(DATE'2020-01-01')",
+   "typeof": "date",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-12",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(TIMESTAMP'2020-01-01 00:00:00')",
+   "typeof": "timestamp",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-13",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(TIMESTAMP_NTZ'2020-01-01 00:00:00')",
+   "typeof": "timestamp_ntz",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-14",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(INTERVAL 1 DAY)",
+   "typeof": "interval day",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-15",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(INTERVAL 1 YEAR)",
+   "typeof": "interval year",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-16",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(INTERVAL '1' MONTH)",
+   "typeof": "interval month",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-17",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(X'0102')",
+   "typeof": "binary",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-18",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(array(1,2))",
+   "typeof": "array<int>",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-19",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(map('a',1))",
+   "typeof": "map<string,int>",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-20",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(named_struct('a',1))",
+   "typeof": "struct<a:int>",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-21",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(CAST(NULL AS STRING))",
+   "typeof": "string",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-22",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(CAST(1 AS DECIMAL(10,4)))",
+   "typeof": "decimal(10,4)",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-23",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(1E10)",
+   "typeof": "double",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-24",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(binary('ab'))",
+   "typeof": "binary",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-25",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(array())",
+   "typeof": "array<void>",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-26",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(CAST(NULL AS ARRAY<INT>))",
+   "typeof": "array<int>",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-27",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(current_date())",
+   "typeof": "date",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SQL-28",
+   "kind": "typeof_sql",
+   "expr": "SELECT typeof(current_timestamp())",
+   "typeof": "timestamp",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-PY-i",
+   "kind": "typeof_python",
+   "expr": "F.typeof(F.col('i'))",
+   "typeof": "int",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-PY-s",
+   "kind": "typeof_python",
+   "expr": "F.typeof(F.col('s'))",
+   "typeof": "string",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-PY-d",
+   "kind": "typeof_python",
+   "expr": "F.typeof(F.col('d'))",
+   "typeof": "double",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-PY-b",
+   "kind": "typeof_python",
+   "expr": "F.typeof(F.col('b'))",
+   "typeof": "boolean",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-PY-lit_dec",
+   "kind": "typeof_python",
+   "expr": "F.typeof(F.lit(Decimal('1.5')))",
+   "typeof": "decimal(2,1)",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-PY-lit_int",
+   "kind": "typeof_python",
+   "expr": "F.typeof(F.lit(1))",
+   "typeof": "int",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-PY-lit_none",
+   "kind": "typeof_python",
+   "expr": "F.typeof(F.lit(None))",
+   "typeof": "void",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-PY-arr",
+   "kind": "typeof_python",
+   "expr": "F.typeof(F.array(F.lit(1),F.lit(2)))",
+   "typeof": "array<int>",
+   "schema": "struct<t:string>",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-SIG",
+   "kind": "signature",
+   "expr": "inspect.signature(F.typeof)",
+   "signature": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+   "outcome": "ok"
+  },
+  {
+   "id": "TYPEOF-ERR-00",
+   "kind": "typeof_arity",
+   "expr": "SELECT typeof()",
+   "outcome": "error",
+   "error": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `typeof` requires 1 parameters but the actual number is 0. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7",
+   "error_class": "AnalysisException",
+   "condition": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION"
+  },
+  {
+   "id": "TYPEOF-ERR-01",
+   "kind": "typeof_arity",
+   "expr": "SELECT typeof(1,2)",
+   "outcome": "error",
+   "error": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `typeof` requires 1 parameters but the actual number is 2. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7",
+   "error_class": "AnalysisException",
+   "condition": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION"
+  }
+ ]
+}

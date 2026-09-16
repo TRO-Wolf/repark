@@ -18,11 +18,23 @@ FNP11A_EXPORTS: tuple[str, ...] = (
     "localtimestamp",
     "timestamp_add",
     "timestamp_diff",
+    "to_timestamp_ltz",
+    "to_timestamp_ntz",
+    "make_time",
+    "to_time",
+    "time_diff",
+    "time_trunc",
+    "current_time",
+    "typeof",
+    "to_char",
+    "to_varchar",
+    "to_number",
+    "to_binary",
 )
 
 
 def install_into(namespace: dict[str, Any], all: list[str]) -> None:
-    """Expose the FNP-11A names on ``repark.spark.functions`` (see functions_try)."""
+    """Expose the temporal names on ``repark.spark.functions`` (see functions_try)."""
     from repark.spark import functions_temporal as module
 
     for name in FNP11A_EXPORTS:
@@ -69,17 +81,19 @@ def _timestamp_parts(
 
 
 def make_timestamp(
-    years: Column | str | int,
-    months: Column | str | int,
-    days: Column | str | int,
-    hours: Column | str | int,
-    mins: Column | str | int,
-    secs: Column | str | float,
+    years: Column | str | int | None = None,
+    months: Column | str | int | None = None,
+    days: Column | str | int | None = None,
+    hours: Column | str | int | None = None,
+    mins: Column | str | int | None = None,
+    secs: Column | str | float | None = None,
     timezone: Column | str | None = None,
+    date: Column | str | None = None,
+    time: Column | str | None = None,
 ) -> Column:
-    """Build a session-zone timestamp from parts under the frozen 1.0 signature."""
+    """Build a timestamp from parts or a date plus a time (PySpark ``functions.make_timestamp``)."""
     return _timestamp_parts(
-        "make_timestamp", years, months, days, hours, mins, secs, timezone, None, None
+        "make_timestamp", years, months, days, hours, mins, secs, timezone, date, time
     )
 
 
@@ -217,3 +231,73 @@ def timestamp_add(unit: str | Column, quantity: Column | str | int, ts: Column |
 def timestamp_diff(unit: str | Column, start: Column | str, end: Column | str) -> Column:
     """Whole units between two timestamps (unit is case-insensitive)."""
     return _scalar("timestampdiff", unit, start, end, lit_indices=frozenset({0}))
+
+
+def to_timestamp_ltz(timestamp: Column | str, format: Column | str | None = None) -> Column:
+    """Parse to a session-zone timestamp, with an optional Java datetime pattern."""
+    if format is None:
+        return _scalar("to_timestamp_ltz", timestamp)
+    return _scalar("to_timestamp_ltz", timestamp, format, lit_indices=frozenset({1}))
+
+
+def to_timestamp_ntz(timestamp: Column | str, format: Column | str | None = None) -> Column:
+    """Parse to a zone-free timestamp, with an optional Java datetime pattern."""
+    if format is None:
+        return _scalar("to_timestamp_ntz", timestamp)
+    return _scalar("to_timestamp_ntz", timestamp, format, lit_indices=frozenset({1}))
+
+
+def make_time(hour: Column | str, minute: Column | str, second: Column | str) -> Column:
+    """Build a time (PySpark ``functions.make_time``; the default session refuses TIME)."""
+    return _scalar("make_time", hour, minute, second)
+
+
+def to_time(str: Column | str, format: Column | str | None = None) -> Column:
+    """Parse a time (PySpark ``functions.to_time``; the default session refuses TIME)."""
+    if format is None:
+        return _scalar("to_time", str)
+    return _scalar("to_time", str, format, lit_indices=frozenset({1}))
+
+
+def time_diff(unit: Column | str, start: Column | str, end: Column | str) -> Column:
+    """Time units between two times (PySpark ``functions.time_diff``; TIME is refused)."""
+    return _scalar("time_diff", unit, start, end)
+
+
+def time_trunc(unit: Column | str, time: Column | str) -> Column:
+    """Truncate a time to the unit (PySpark ``functions.time_trunc``; TIME is refused)."""
+    return _scalar("time_trunc", unit, time)
+
+
+def current_time(precision: int | None = None) -> Column:
+    """Session-zone wall clock as ``time(6)`` (PySpark ``functions.current_time``)."""
+    if precision is None:
+        return _scalar("current_time")
+    return _scalar("current_time", precision)
+
+
+def typeof(col: Column | str) -> Column:
+    """Spark type name of the value (PySpark ``functions.typeof``)."""
+    return _scalar("typeof", col)
+
+
+def to_char(col: Column | str, format: Column | str) -> Column:
+    """Format a number, timestamp or binary value (PySpark ``functions.to_char``)."""
+    return _scalar("to_char", col, format, lit_indices=frozenset({1}))
+
+
+def to_varchar(col: Column | str, format: Column | str) -> Column:
+    """Format a number, timestamp or binary value (PySpark ``functions.to_varchar``)."""
+    return _scalar("to_varchar", col, format, lit_indices=frozenset({1}))
+
+
+def to_number(col: Column | str, format: Column | str) -> Column:
+    """Parse text with an Oracle-style format (PySpark ``functions.to_number``)."""
+    return _scalar("to_number", col, format, lit_indices=frozenset({1}))
+
+
+def to_binary(col: Column | str, format: Column | str | None = None) -> Column:
+    """Decode text as hex, base64 or utf-8 bytes (PySpark ``functions.to_binary``)."""
+    if format is None:
+        return _scalar("to_binary", col)
+    return _scalar("to_binary", col, format, lit_indices=frozenset({1}))

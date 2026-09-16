@@ -11,6 +11,7 @@ import datetime
 import enum
 import math
 import warnings
+from decimal import Decimal
 from typing import Any
 
 from repark import _native
@@ -39,12 +40,33 @@ def col(name: str) -> Column:
     )
 
 
+def _lit_decimal(value: Decimal) -> Column:
+    """A decimal literal with Spark's inferred precision and scale."""
+    if not value.is_finite():
+        raise PySparkTypeError(f"lit() supports finite decimals; got {value}")
+    parts = value.as_tuple()
+    scale = -parts.exponent if parts.exponent < 0 else 0
+    width = len(parts.digits) + (parts.exponent if parts.exponent > 0 else 0)
+    precision = width if width > scale else scale
+    text = str(value)
+    inner = lit(text).cast(f"decimal({precision},{scale})")._inner
+    return Column(
+        inner,
+        spark_display=text,
+        projection_name=text,
+        stable_name=False,
+        sql_expr=f"CAST({sql_string_literal(text)} AS DECIMAL({precision},{scale}))",
+        is_foldable=True,
+    )
+
+
 def lit(value: Any) -> Column:
     """A literal column from a Python scalar (PySpark ``functions.lit``).
 
     Supports ``None`` (SQL NULL), ``bool``, ``int``, ``float``, ``str``,
     ``datetime.date`` / ``datetime.datetime`` / ``datetime.time``, ``enum.Enum``
-    (uses ``.value``), ``list`` / ``tuple`` (array), and 1-D ``numpy.ndarray``
+    (uses ``.value``), ``decimal.Decimal`` (decimal with inferred precision and
+    scale), ``list`` / ``tuple`` (array), and 1-D ``numpy.ndarray``
     (array with Spark element type from dtype — E2). Marked foldable so
     ``df.select(F.sum("x"), F.lit(1))`` is a global aggregate (Spark allows constants
     beside aggregates, not ``[MISSING_GROUP_BY]``.
@@ -114,10 +136,12 @@ def lit(value: Any) -> Column:
             sql_expr=result.sql_expr_part(),
             is_foldable=True,
         )
+    if isinstance(value, Decimal):
+        return _lit_decimal(value)
     if not isinstance(value, (type(None), bool, int, float, str)):
         raise PySparkTypeError(
             f"lit() supports None, bool, int, float, str, date, datetime, time, list, tuple, "
-            f"ndarray, or Enum; got {type(value).__name__}"
+            f"ndarray, Decimal, or Enum; got {type(value).__name__}"
         )
     display = _lit_spark_display(value)
     return Column(

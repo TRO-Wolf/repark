@@ -8,7 +8,7 @@ use arrow::datatypes::{
     ArrowNativeType, DECIMAL32_MAX_PRECISION, DECIMAL32_MAX_SCALE, DECIMAL64_MAX_PRECISION,
     DECIMAL64_MAX_SCALE, DECIMAL128_MAX_PRECISION, DECIMAL128_MAX_SCALE, DECIMAL256_MAX_PRECISION,
     DECIMAL256_MAX_SCALE, DataType, Decimal32Type, Decimal64Type, Decimal128Type, Decimal256Type,
-    DecimalType, Field, FieldRef, Float64Type, Int64Type, IntervalUnit,
+    DecimalType, Field, FieldRef, Float64Type, Int64Type, IntervalUnit, TimeUnit,
 };
 use datafusion::common::types::{NativeType, logical_float64};
 use datafusion::common::{Result, ScalarValue, exec_err, not_impl_err};
@@ -66,21 +66,31 @@ fn numeric_avg_signatures() -> Vec<TypeSignature> {
     ]
 }
 
+fn interval_avg_signatures() -> Vec<TypeSignature> {
+    vec![
+        TypeSignature::Exact(vec![DataType::Interval(IntervalUnit::YearMonth)]),
+        TypeSignature::Exact(vec![DataType::Interval(IntervalUnit::DayTime)]),
+        TypeSignature::Exact(vec![DataType::Interval(IntervalUnit::MonthDayNano)]),
+        TypeSignature::Exact(vec![DataType::Duration(TimeUnit::Second)]),
+        TypeSignature::Exact(vec![DataType::Duration(TimeUnit::Millisecond)]),
+        TypeSignature::Exact(vec![DataType::Duration(TimeUnit::Microsecond)]),
+        TypeSignature::Exact(vec![DataType::Duration(TimeUnit::Nanosecond)]),
+    ]
+}
+
 impl SparkAvgWithRetract {
     fn new() -> Self {
+        let mut signatures = numeric_avg_signatures();
+        signatures.extend(interval_avg_signatures());
         Self {
-            signature: Signature::one_of(numeric_avg_signatures(), Volatility::Immutable),
+            signature: Signature::one_of(signatures, Volatility::Immutable),
             null_on_overflow: false,
         }
     }
 
     fn try_avg() -> Self {
         let mut signatures = numeric_avg_signatures();
-        signatures.extend([
-            TypeSignature::Exact(vec![DataType::Interval(IntervalUnit::YearMonth)]),
-            TypeSignature::Exact(vec![DataType::Interval(IntervalUnit::DayTime)]),
-            TypeSignature::Exact(vec![DataType::Interval(IntervalUnit::MonthDayNano)]),
-        ]);
+        signatures.extend(interval_avg_signatures());
         Self {
             signature: Signature::one_of(signatures, Volatility::Immutable),
             null_on_overflow: true,
@@ -103,12 +113,11 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
     }
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        if matches!(arg_types.first(), Some(DataType::Interval(_))) {
-            return Err(datafusion::common::DataFusionError::Plan(
-                "[FNP-11] try_avg(INTERVAL) is deferred to the FNP-11 temporal family (2026-08-31). \
-                 Spark 4.1.2 returns interval day to second; RePark does not average intervals."
-                    .to_string(),
-            ));
+        if matches!(
+            arg_types.first(),
+            Some(DataType::Interval(_) | DataType::Duration(_))
+        ) {
+            return Ok(DataType::Interval(IntervalUnit::MonthDayNano));
         }
         match arg_types.first() {
             Some(DataType::Decimal32(precision, scale)) => Ok(DataType::Decimal32(
@@ -188,10 +197,10 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
                 target_scale: *target_scale,
                 null_on_overflow: self.null_on_overflow,
             })),
-            (DataType::Interval(_), _) => Err(datafusion::common::DataFusionError::Plan(
-                "[FNP-11] try_avg(INTERVAL) is deferred to the FNP-11 temporal family (2026-08-31). \
-                 Spark 4.1.2 returns interval day to second; RePark does not average intervals."
-                    .to_string(),
+            (DataType::Interval(_) | DataType::Duration(_), _) => Ok(Box::new(
+                crate::interval_avg::IntervalAvgAccumulator::with_null_on_overflow(
+                    self.null_on_overflow,
+                ),
             )),
             (data_type, return_type) => {
                 not_impl_err!("AvgAccumulator for ({data_type} --> {return_type})")
@@ -212,6 +221,12 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
     }
 
     fn state_fields(&self, args: StateFieldsArgs) -> Result<Vec<FieldRef>> {
+        if matches!(
+            args.input_fields[0].data_type(),
+            DataType::Interval(_) | DataType::Duration(_)
+        ) {
+            return Ok(crate::interval_avg::interval_state_fields());
+        }
         if args.input_fields[0].data_type().is_decimal() {
             Ok(vec![
                 Arc::new(Field::new(
@@ -884,19 +899,50 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn try_avg_interval_refuses_fnp11() {
+    async fn try_avg_interval_answers_spark_average() {
         let ctx = SessionContext::new();
         crate::register_all(&ctx);
-        let error = match ctx.sql("SELECT try_avg(INTERVAL 1 DAY) AS a").await {
+        let batches = ctx
+            .sql("SELECT try_avg(v) AS a FROM (VALUES (INTERVAL 1 DAY), (INTERVAL 2 DAY)) AS x(v)")
+            .await
+            .expect("plan try_avg interval")
+            .collect()
+            .await
+            .expect("execute try_avg interval");
+        let column = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<arrow::array::IntervalMonthDayNanoArray>()
+            .expect("interval try_avg");
+        assert!(!column.is_null(0));
+        let value = column.value(0);
+        assert_eq!(
+            (value.months, value.days, value.nanoseconds),
+            (0, 1, 43_200_000_000_000)
+        );
+    }
+
+    #[tokio::test]
+    async fn try_avg_interval_overflow_is_null_and_avg_raises() {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let sql = "SELECT try_avg(v) AS a FROM (VALUES (INTERVAL '106751991' DAY), \
+             (INTERVAL '106751991' DAY)) AS x(v)";
+        let batches = ctx
+            .sql(sql)
+            .await
+            .expect("plan try_avg interval overflow")
+            .collect()
+            .await
+            .expect("execute try_avg interval overflow");
+        assert!(batches[0].column(0).is_null(0));
+        let error = match ctx.sql(sql.replace("try_avg", "avg").as_str()).await {
             Err(error) => error.to_string(),
             Ok(frame) => match frame.collect().await {
                 Ok(_) => "executed".to_string(),
                 Err(error) => error.to_string(),
             },
         };
-        assert!(
-            error.contains("[FNP-11] try_avg(INTERVAL)") && error.contains("2026-08-31"),
-            "{error}"
-        );
+        assert!(error.contains("[INTERVAL_ARITHMETIC_OVERFLOW"), "{error}");
     }
 }

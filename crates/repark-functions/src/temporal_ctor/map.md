@@ -12,6 +12,9 @@ parser change (EX-FN-27, run 15c owns the parser).
 - [`make.rs`](make.rs) — `MakeTimestamp` zoned/ltz/ntz kernels (numeric and
   `(date, time[, zone])` forms, leap-second rollover, Java year range, nanos
   magnitude gate; scalar zones resolve once, numeric columns precast once).
+  **FNP-11B step 6 (2026-09-15):** the time reader takes `HH:MM:SS[.ffffff]`
+  strings (facade `lit(time)` arrives as text) beside TIME values; garbage
+  raises, mirroring the date reader's malformed path. pins: fnp-11b/C-002.
 - [`adddiff.rs`](adddiff.rs) — `timestampadd` (calendar months and days in the
   session zone, exact durations below the day; the result keeps the input
   family, so `timestamp_ntz` in answers `timestamp_ntz` with no zone shift)

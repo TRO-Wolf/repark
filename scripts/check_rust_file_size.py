@@ -62,7 +62,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract the window_time grouping rule once its provenance check stabilizes.",
     ),
     "crates/repark-functions/src/datetime.rs": (
-        1700,
+        1699,
         "Calendar and timestamp Spark-semantics functions share one module.",
         "Split calendar extractors from timezone-aware timestamp functions.",
     ),

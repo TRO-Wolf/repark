@@ -5,6 +5,7 @@ accuracy contracts restored in condensed form (see the unit ledger's findings di
 CC-2 close: S3 Tables location-guard phrase kept contiguous in `test_aws_acceptance.py`.
 
 **FNP-11A D-10 (2026-09-15, orchestrator):** `test_fnp11a_temporal.py` adds `test_make_timestamp_keeps_its_frozen_signature` and the EX-FN-28 residual pin `test_make_timestamp_date_time_keywords_refused_by_the_frozen_signature`, and its cell filter skips the facade `make_timestamp(date=…)` cells; `test_functions_d.py` drops the seven implemented temporal names from its deferred census (`to_timestamp_ltz` / `to_timestamp_ntz` stay for FNP-11B); `test_fn_batch3.py` drops the `make_timestamp` stub refusal; `test_functions_split_identity.py` counts `FNP11A_EXPORTS` after the stack names; `test_functions_gt2.py` pins Spark's `'2 years'` interval string (EX-FN-19 FIXED). pins: fnp-11a/C-001, C-002
+**FNP-11B step 3 (2026-09-15, run 16a):** the deferred census is gone (`to_timestamp_ltz` / `to_timestamp_ntz` answer, presence pin in its place); `test_fn_batch3.py` answers `try_to_timestamp` instead of refusing it; the split-identity tail follows the thirteen-name installer tuple with no edit; `test_examples_functions_b.py` retires the `try_to_timestamp` refusal pin (EX-FN-20 FIXED). pins: fnp-11b/C-002, C-007
 
 ## Purpose
 
@@ -634,9 +635,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ex-16-dataframe-b/C-001
 - [test_examples_functions_b.py](test_examples_functions_b.py) — **EX-28 (2026-09-06):**
   the two divergence pins for the F.* scalar-remainder batch — `try_to_timestamp`
-  refuses (EX-FN-20) and the `unix_timestamp` format argument refuses (EX-FN-21,
-  BACKLOG ARM on a covered name). Both pin at call time; the registry rows are
-  `EX-FN-20` and `EX-FN-21`. **EX-30 (2026-09-11):** three more pins for the F.*
+  refuses (EX-FN-20); the `unix_timestamp` format-argument refusal pin (EX-FN-21) was
+  retired 2026-09-15 when FNP-11B step 2 parsed the pattern — its oracle cells now pin in
+  `test_fnp11b_temporal_formats.py`. The registry row is `EX-FN-20`. **FNP-11B step 3
+  (2026-09-15):** the `try_to_timestamp` refusal pin is retired too — the tolerant
+  kernel answers, pinned by the oracle cells. **EX-30 (2026-09-11):** three more pins for the F.*
   remainder — `from_xml` and `schema_of_xml` refuse as E1 stubs (EX-FN-22) and the
   `udf` / `pandas_udf` factories answer typed UDF objects where Spark 4.1.2 answers
   plain functions (EX-FN-23, BACKLOG ARM on covered names).
@@ -812,7 +815,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
-  names are unresolved (`Invalid function`). Interval `try_avg` refuses `[FNP-11]` (2026-08-31).
+  names are unresolved (`Invalid function`). **FNP-11B step 4 (2026-09-15):**
+  interval `try_avg` answers Spark's average (the `[FNP-11]` refusal pin is
+  retired for `test_try_avg_interval_answers`, which also pins the try-NULL /
+  avg-raise overflow split). pins: fnp-11b/C-006
   DATE + HOUR (24 HOUR included) promotes to timestamp; INTERVAL day-time Duration-max
   overflow is NULL on both signs of the bound; DATE + 0 HOUR stays date (BL-14, recorded).
   pins: fnp-7-try-inversions/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
@@ -1422,6 +1428,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **FNP-WIN-1 step 3 (2026-09-15):** `window_time` ships and leaves the
   deferred census (`session_window` stays for step 4).
   pins: fnp-win-1/C-007
+- [test_functions_d.py](test_functions_d.py) — **FNP-11B step 4 (2026-09-15):**
+  `test_fn_d_time_family_names_are_present` pins the six new TIME names.
+  **FNP-11B step 5 (2026-09-15):** `test_fn_d_to_char_family_names_are_present`
+  pins the four destubbed formatting names.
+  pins: fnp-11b/C-001, C-007
 - [test_functions_d.py](test_functions_d.py) — FN-D (2026-08-15): datetime wrappers
   through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias names resolve
   + one behavior case. `unix_seconds` pins toward-zero vs TZ-5 CAST floor.
@@ -1437,6 +1448,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **FNP-ALIAS-1 (2026-09-15):** the camelCase shift aliases ship
   (`functions_bitwise.py` install), so the three leave this census; behavior and
   warnings are pinned in `test_fnp_alias_1.py`. pins: fnp-alias-1/C-001, C-003
+  **FNP-11B step 5 (2026-09-15):** `to_number` / `to_binary` destub onto the
+  raising `try_invert::strict` kernels, so both leave the deferred-absence
+  list and its pin retires with them; behavior pins in
+  `test_fnp11b_temporal_formats.py`. pins: fnp-11b/C-001, C-007
 - [test_version_ssot.py](test_version_ssot.py) — version SSOT pins (release PR): `__version__` == distribution version, PEP 440 release shape, past the 0.0.1 name-reservation era. Guards the `dynamic = ["version"]` maturin wiring.
 - `test_partition_value_audit.py` + `_record_partition_value_goldens.py` — **V-4
   (2026-08-13):** write-path partition-key VALUE audit vs live Spark 4.1.2 + Iceberg.
@@ -2643,7 +2658,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   class, message and params (`sqlExpr`/`paramIndex`/`inputSql`/`inputType`/
   `requiredType`), not `PySparkTypeError`.
   pins: perf-approxpct-1/C-002
-- `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.
+- `test_fn_batch3.py` — R-FN-BATCH3 datetime + Java-pattern parsing (FNP-11B step 2
+  answers `to_date` / `to_timestamp` with formats; step 3 answers `try_to_timestamp`
+  with NULLs) + loud census.
 - `test_fn_batch2.py` (octo C1: exact overlay/slice pins)` — **R-FN-BATCH2**: strings/collection value+type+null pins; loud census
   (soundex/sentences/arrays_zip/map_from_arrays/locate pos / array_join null_replacement).
 
@@ -5475,6 +5492,18 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
   pins: fnp-11a/C-001, C-002, C-003, C-004, C-005, C-007
 - **FNP-11A (2026-09-15):** `fnp11a_r2_spark_oracle.json` is excluded from the typos gate in `.typos.toml`: it records verbatim live-PySpark 4.1.2 messages, one of them truncated mid-word by the recorder, and recorded evidence is never hand-edited.
 - **FNP-11A R3 intake (2026-09-15):** `test_fnp11a_temporal.py` now runs every SQL-door `timestamp_add` / `timestamp_diff` oracle cell (L-005) with the bare unit keyword quoted (`BARE_UNIT_CALL`), since bare keywords stay EX-FN-27 and `test_bare_timestampadd_unit_refuses` keeps that pinned. Only the `TIMESTAMP_NTZ'…'` literal cell stays in `D4_BLOCKED_SQL` (the SQL parser has no such type). `test_timestampdiff_ntz_pair_answers_days` runs that pair's end value through `make_timestamp_ntz` instead of diffing a column with itself (L-006).
+- **FNP-11B step 6 (2026-09-15):** the EX-FN-28 refusal pins retire into answering
+  pins (`test_make_timestamp_date_time_keywords_answer` on both doors,
+  `test_make_timestamp_keeps_its_frozen_signature` on the widened shape) under
+  owner ruling Q-15a-3. pins: fnp-11a/C-001, C-002; fnp-11b/C-001, C-002
+- [test_fnp11b_typeof.py](test_fnp11b_typeof.py) — **FNP-11B step 6 (2026-09-15):**
+  one pin per cell of the verbatim `fnp11b_typeof_spark_oracle.json` (40 cells)
+  on the recorded door: SQL cells assert the Arrow string value, Python cells
+  run over an `i INT, s STRING, d DOUBLE, b BOOLEAN` frame, the signature cell
+  pins the one-required-column shape, and the arity cells pin Spark's
+  `WRONG_NUM_ARGS` text. Five cells pin as blocked with the seam named
+  (`TIMESTAMP_NTZ` literal and the three unit-less interval spellings stay
+  17c's; the `binary` function name is unowned). pins: fnp-11b/C-005
 - **FNP-11A (2026-09-15):** `test_functions_split_identity.py` pins the eleven-name FNP-11A tail after `ARROW_EXPORTS`. `test_catalog_surface_1.py::test_list_functions_shape` (unique names) and `test_fnp_misc_1.py::test_fnp_misc_1_byname_allowlist_covers_facade` caught the duplicate install and are green again.
 - **DOOR-CONVERGE-2 (#622, 2026-09-15, orchestrator):** `test_fnp_6d_followup_1.py::test_concat_binary_types_string_expected_divergence` is renamed `test_concat_binary_types_binary_converged_door_converge_2` and flipped to `pa.binary()`, because `concat(BINARY, BINARY)` now converges on Spark's BINARY (oracle Q12-13). Run 16a filed the pin to go red on this convergence (ruling R-16c-11). pins: door-converge-2/C-001
 - `test_fnp_bitmap_facade_1.py` — **run 16a rebuild (2026-09-15):** `ruff format` normalizes the whitespace left by the cherry-pick conflict resolution onto #623; no pin changed. pins: fnp-bitmap-facade-1/C-011
@@ -5510,3 +5539,44 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 - **FNP-4B R-16c-13 (2026-09-15, orchestrator):** `test_create_table_array_element_not_null_refuses_loudly` (L-006, oracle Q17-18: Spark also refuses `ARRAY<INT NOT NULL>`) moves from run 16b's `test_catalog_surface_1.py` into `test_fnp_4b_spark_dialect.py`, inside this unit's fence. pins: fnp-4b/C-025
 - **FNP-4B (#611, 2026-09-15, orchestrator):** `test_fnp_bitmap_facade_1.py::test_sql_door_qualifier_leak_is_expected_divergence` keeps its `spark.sql` half (the DataFusion qualifier still leaks) and its `selectExpr` half now asserts Spark's `bitmap_construct_agg(x)`, because FNP-4B's root-projection display names converged that door. Run 16a filed the pin to go red on convergence (ruling R-16c-14). pins: fnp-4b/C-022
 - `test_fnp_win_1.py` — **FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a):** `test_crit2_two_session_specs_refuse` pins Spark's `C2-L004` cell on both doors, the SQL door's `1039` text, and the Python door's duplicate-name error as registry WIN-4. pins: fnp-win-1/C-004
+FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
+
+- [fnp11b_spark_oracle.json](fnp11b_spark_oracle.json) — filtered oracle for the
+  card: 315 cells from `/tmp/oc-worker/pa-11b/fnp11_spark_oracle.json` (the
+  card names with `time_type_enabled == spark_default`, plus the
+  `make_timestamp` Python `date=` cells for Q-15a-3) and 22 cells from
+  `/tmp/oc-worker/pa-math/o245_spark_oracle.json` (the `to_char` /
+  `to_varchar` / `to_number` / `to_binary` cells, D-7); signatures carried over
+  for the C-001 pin. Recorded evidence is never hand-edited.
+  pins: fnp-11b/C-002, C-003, C-004, C-005, C-006
+- [test_fnp11b_temporal_formats.py](test_fnp11b_temporal_formats.py) — one
+  parametrized test per door over the 337 fixture cells: facade-signature
+  parity (C-001), Python-door and SQL-door oracle equality (C-002/C-003),
+  Spark error conditions and message prefixes on both ANSI settings (C-004),
+  the TIME-family refusals with `current_time` answering (C-005), and BL-13 /
+  BL-14 (C-006). SQL `typeof(current_time…)` cells run translated to Arrow
+  time64 assertions (no `typeof` on the SQL door); Python `tm` value cells run
+  on the TIME frame while `UNRESOLVED_COLUMN` cells stay on the plain frame.
+  **FNP-11B step 4 (2026-09-15):** the TIME frame builds through lazy `F.expr`
+  (eager `session.sql` would trip the new CAST-to-TIME analyzer guard at
+  setup); Python error cells reading `tm` and the three poisoned
+  `current_time` nests replay on the TIME frame; `rows_as_string` cells assert
+  the CAST text ahead of the error branch with the recorder's trailing `--`
+  stripped and a scalar-subquery wrap.
+  **FNP-11B step 5 (2026-09-15):** block-2 SQL cells name the math frame view
+  bare (`FROM (view)` never parsed on either engine); the two year-month
+  `try_avg` `rows_as_string` cells pin as the dated divergence R-17a-16 rules
+  (spelled-out `2 months` against the oracle's `INTERVAL '0-2' YEAR TO MONTH`).
+  **FNP-11B step 7 (2026-09-15):** the five `make_timestamp`
+  `UNRESOLVED_COLUMN` cells pin as the dated divergence R-17a-22 rules (the
+  oracle condition asserted, then the measured `Schema error` head; the
+  valid-fields tail stays unpinned).
+  pins: fnp-11b/C-001, C-002, C-003, C-004, C-005, C-006
+- **FNP-11B registry pass (2026-09-15, run 17a):** the pins in `test_fnp11b_temporal_formats.py` and
+  `test_fnp11b_typeof.py` are the proof paths behind this unit's rows in the divergence registry —
+  `EX-FN-20`, `EX-FN-21` and `EX-FN-28` flipped to FIXED, `BL-13` rewritten to its new shape, and
+  seven §7 residual rows each naming its seam and owner (the year-month `try_avg` rendering under
+  R-17a-16; the five `make_timestamp` `UNRESOLVED_COLUMN` cells under R-17a-22, carried over as
+  `ERR-UNRESOLVED-COL-1`; BL-14's ten `date_plus_interval` cells and the two `try_avg` NULL-interval
+  cells, both run 17c's; and the `typeof` cells blocked on the `TIMESTAMP_NTZ` literal and the
+  unowned `binary` name). pins: fnp-11b/C-008

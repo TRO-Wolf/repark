@@ -2976,14 +2976,7 @@
     },
     {
      "name": "F.make_timestamp",
-     "required_params": [
-      "years",
-      "months",
-      "days",
-      "hours",
-      "mins",
-      "secs"
-     ]
+     "required_params": []
     },
     {
      "name": "F.make_valid_utf8",

@@ -41,7 +41,15 @@ repo.
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
   table (one row per dedicated bump PR; started 2026-08-15; live pin RP-11 `189a73ed` on 2026-09-04).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
-  single home for how repark differs from Apache Spark. **FNP-6D FIXED 2026-09-15:**
+  single home for how repark differs from Apache Spark. **FNP-11B registry pass (2026-09-15, run 17a):**
+  `EX-FN-20`, `EX-FN-21` and `EX-FN-28` flip to FIXED with their pin paths and `BL-13` is rewritten
+  to its new shape (ledger D-18); seven §7 residual rows are appended, each naming the seam and its
+  owner — the year-month `try_avg` rendering (R-17a-16, one Arrow `MonthDayNano` carries both ANSI
+  `YEAR TO MONTH` and `CalendarInterval`; the types slice owns the split), the five `make_timestamp`
+  `UNRESOLVED_COLUMN` cells (R-17a-22, engine-wide, carry-over `ERR-UNRESOLVED-COL-1`), BL-14's ten
+  `date_plus_interval` cells and the two `try_avg` NULL-interval cells (the SQL planner and the
+  INTERVAL DAY dialect, run 17c), and the `typeof` cells blocked on the `TIMESTAMP_NTZ` literal and
+  the unowned `binary` name. pins: fnp-11b/C-008 **FNP-6D FIXED 2026-09-15:**
   `bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg` on the SQL door; sliding
   frames use WIN-SLIDE-1 rescan. **FN-FIX-1 round 3:**
   `FN-APPROXPCT-ACC-1` and `PERF-APPROXPCT-1` BACKLOG (both FIXED 2026-09-05 by

@@ -5364,18 +5364,23 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 ### BL-13 — `try_avg(INTERVAL)` refuses pending FNP-11
 
-- **repark** — `try_avg(INTERVAL 1 DAY)` is a plan error naming `[FNP-11]` and the date
-  2026-08-31. The function is registered (not an absent name) and the refuse is loud. `avg`
-  of an interval stays the pre-existing Decimal/Float64 signature miss. DATE/TIMESTAMP ±
-  INTERVAL and INTERVAL / numeric on `try_add` / `try_divide` compute.
+- **repark** — **PARTLY FIXED 2026-09-15 (FNP-11B step 4).** `try_avg` of DAY-TIME
+  intervals answers (`INTERVAL 1 DAY` averages; overflow answers NULL on `try_avg` and
+  raises on `avg`). YEAR-MONTH averages render the spelled-out form (§7 row
+  FNP-11B-YM-AVG-1) and the NULL-input SQL cells do not parse (§7 row
+  FNP-11B-NULL-AVG-1). DATE/TIMESTAMP ± INTERVAL and INTERVAL / numeric on
+  `try_add` / `try_divide` compute.
 - **Apache Spark** — `try_avg(INTERVAL)` returns interval day to second. A huge interval
-  overflows `INTERVAL_ARITHMETIC_OVERFLOW` on both `avg` and `try_avg` (2026-08-31 oracle
-  4.1.2; `try_avg` is not NULL-on-interval-overflow).
-  *(oracle: live PySpark 4.1.2, 2026-08-31.)*
-- **Pin** — `python/repark/tests/test_fnp7_try_inversions.py::test_try_avg_interval_refuses_fnp11`
-- **Rationale** — BACKLOG, intent to FIX with **FNP-11**. Averaging intervals is temporal
-  entanglement (month vs day-time fields, overflow class), not a try_* inversion. Silent NULL
-  is not acceptable; the dated message is the holding contract until FNP-11 lands.
+  answers NULL on `try_avg` and raises `INTERVAL_ARITHMETIC_OVERFLOW` on `avg`
+  (2026-09-14 fixture and the 2026-09-15 live probe agree; the 2026-08-31 claim that
+  `try_avg` is not NULL-on-overflow is stale).
+  *(oracle: live PySpark 4.1.2, 2026-09-14 fixture, 2026-09-15 probe.)*
+- **Pin** — `python/repark/tests/test_fnp7_try_inversions.py::test_try_avg_interval_answers`
+  (day-time average, try-NULL on overflow, avg raise)
+- **Rationale** — BACKLOG, intent to close with **FNP-11**. Averaging intervals is temporal
+  entanglement (month vs day-time fields, overflow class), not a try_* inversion. The
+  day-time kernel landed in FNP-11B step 4; the YEAR-MONTH renderer seam (run 17b) and the
+  NULL-interval dialect seam (run 17c) stay open.
 
 ### BL-14 — `DATE + INTERVAL 0 HOUR` stays date (a zero sub-day interval loses its unit)
 
@@ -8019,31 +8024,39 @@ field NAME.
 - **Rationale** — BACKLOG ARM, filed 2026-09-05 from the EX-25 measurement; the display arm
   closed 2026-09-15 as a side effect of the FNP-11A interval CAST rule.
 
-### EX-FN-20 — `try_to_timestamp` refuses; Spark answers the timestamp or NULL
+### EX-FN-20 — `try_to_timestamp` refuses; Spark answers the timestamp or NULL — **FIXED 2026-09-15 (FNP-11B)**
 
-- **repark** — `F.try_to_timestamp("s")` raises `UnsupportedOperationException:
-  functions.try_to_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)`.
+- **repark** — **FIXED 2026-09-15 (FNP-11B step 3).** `F.try_to_timestamp("s")`
+  answers the session-zone instant and NULL where `to_timestamp` raises, under both ANSI
+  settings, with and without a Java datetime pattern, through the shared step-2 Rust
+  parser with the ANSI flag cloned off. The no-format arms keep their example
+  coverage: `"2024-06-15 12:00:00"` answers `2024-06-15T12:00:00`, `"garbage"`
+  and NULL answer NULL.
 - **Apache Spark** — `"2024-06-15 12:00:00"` answers `2024-06-15T12:00:00`; `"not-a-timestamp"`
-  and NULL answer NULL. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_try_to_timestamp_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-28 measurement. The name stays on the
-  example backlog until the engine grows the tolerant timestamp parse.
+  and NULL answer NULL. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch;
+  FNP-11B oracle: live PySpark 4.1.2, both ANSI settings, UTC and America/New_York, 2026-09-15.)*
+- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+  (the `try_to_timestamp` cells, both doors)
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-28 measurement; closed
+  2026-09-15 by FNP-11B step 3, which retired the refusal pin
+  `test_examples_functions_b.py::test_try_to_timestamp_refuses`.
 
-### EX-FN-21 — `unix_timestamp` format argument refuses; Spark parses the pattern
+### EX-FN-21 — `unix_timestamp` format argument refuses; Spark parses the pattern — **FIXED 2026-09-15 (FNP-11B)**
 
-- **repark** — `F.unix_timestamp("s", "yyyy-MM-dd")` raises `UnsupportedOperationException:
-  functions.unix_timestamp format argument is not supported yet`. The no-format arms agree
-  with Spark and carry the example coverage: `"2024-06-15 12:00:00"` answers `1718452800`,
-  `"1970-01-01 00:00:00"` answers `0`, NULL answers NULL, and a timestamp column of the same
-  noon instant answers `1718452800`. Zero-argument `unix_timestamp()` is a current-epoch int,
-  stable across rows of one query.
+- **repark** — **FIXED 2026-09-15 (FNP-11B step 2).** `F.unix_timestamp("s", "yyyy-MM-dd")`
+  parses Java datetime patterns through the Rust `java_datetime` parser on both doors; the
+  default format is Spark's `yyyy-MM-dd HH:mm:ss`. The no-format arms keep their example
+  coverage: `"2024-06-15 12:00:00"` answers `1718452800`, `"1970-01-01 00:00:00"` answers
+  `0`, NULL answers NULL.
 - **Apache Spark** — `unix_timestamp("2024-06-15", "yyyy-MM-dd")` answers `1718409600`;
-  `"1970-01-02"` answers `86400`; NULL answers NULL. The no-format arms agree with the repark
-  answers above. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_unix_timestamp_format_refuses`
-- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-28 measurement. The name stays
-  covered by the no-format arms; this row records the format argument until the parser
-  accepts Spark's pattern.
+  `"1970-01-02"` answers `86400`; NULL answers NULL. *(oracle: live PySpark 4.1.2, ANSI on,
+  UTC, 2026-09-06, EX-28 batch; FNP-11B oracle: live PySpark 4.1.2, both ANSI settings, UTC
+  and America/New_York, 2026-09-15.)*
+- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+  (the `unix_timestamp` cells, both doors)
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-28 measurement; closed
+  2026-09-15 by FNP-11B step 2, which retired the refusal pin
+  `test_examples_functions_b.py::test_unix_timestamp_format_refuses`.
 
 ### EX-FN-22 — `from_xml` / `schema_of_xml` refuse as E1 stubs; Spark parses and infers XML
 
@@ -8138,21 +8151,27 @@ field NAME.
   means a SQL parser/planner change (run 15c owns the parser), out of scope for FNP-11A.
 
 
-### EX-FN-28 — facade `make_timestamp(date=, time=)` refuses: the frozen 1.0 signature keeps `years` … `secs` required
+### EX-FN-28 — facade `make_timestamp(date=, time=)` answers after the Q-15a-3 widening — **FIXED 2026-09-15 (FNP-11B)**
 
-- **repark** — `F.make_timestamp(date=…, time=…)` raises `TypeError` (missing required positional arguments). The
-  facade keeps the signature frozen in `docs/design/v1-0-api-freeze.json` (`years`, `months`, `days`, `hours`,
-  `mins`, `secs` required, `timezone` optional). The SQL door answers the same form:
-  `make_timestamp(DATE'2014-12-28', TIME'06:30:45.887')` returns the timestamp, and the 6- and 7-argument forms
-  answer on both doors.
+- **repark** — `F.make_timestamp` carries PySpark 4.1.2's all-optional signature
+  (`years`, `months`, `days`, `hours`, `mins`, `secs`, `timezone`, `date`, `time`, every
+  default `None`) and the `(date, time[, timezone])` keyword form answers on the Python
+  door; string times parse as `HH:MM:SS[.ffffff]`. The freeze register records the
+  widening (`required_params` empty, regenerated by `scripts/build_api_freeze.py`
+  under owner ruling Q-15a-3). The 6- and 7-argument numeric forms answer on both
+  doors unchanged.
 - **Apache Spark** — PySpark 4.1.2 declares every parameter optional so the `(date, time[, timezone])` keyword form
   works on the Python door. *(oracle: live PySpark 4.1.2, 2026-09-14, `fnp11_spark_oracle.json` signatures and the
   `F.make_timestamp(date=…, time=F.expr("TIME'…'"))` cells.)*
-- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_make_timestamp_date_time_keywords_refused_by_the_frozen_signature`,
-  `…::test_make_timestamp_keeps_its_frozen_signature`.
-- **Rationale** — BACKLOG 2026-09-15, owner question. Widening a frozen name's required parameters is a signature change
-  the API freeze register records as a break (rule J1); the unit keeps the register untouched and asks the owner
-  whether to widen `make_timestamp` to Spark's all-optional signature in a freeze-update PR.
+- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_make_timestamp_date_time_keywords_answer`,
+  `…::test_make_timestamp_keeps_its_frozen_signature`,
+  `python/repark/tests/test_fnp11b_temporal_formats.py` `make_timestamp` cells (19 cells,
+  both ANSI settings; the five `UNRESOLVED_COLUMN` cells pin as dated divergence per
+  owner ruling R-17a-22, 2026-09-15, pointing at carry-over ERR-UNRESOLVED-COL-1 —
+  §7 row FNP-11B-UNRESOLVED-1).
+- **Rationale** — BACKLOG 2026-09-15, owner ruling Q-15a-3 applied 2026-09-15: the
+  freeze-update PR widened the frozen name and regenerated the register in the same
+  commit.
 
 ### H3-SPILL-NLJ-1 — a nested-loop join at a tight pool refuses like every other operator — **FIXED 2026-09-06, H3-SPILL-RESIDUE-1**
 
@@ -9071,6 +9090,103 @@ field NAME.
   new engine module `partition_timestamp` beside discovery (round 7,
   ruling Z-1).
   pins: io-text-1/T-6, U-3, W-1, W-2, W-3, W-4, X-1, X-2, X-3, X-4, X-5, Y-1, Y-2, Z-1
+
+### FNP-11B-YM-AVG-1 — `try_avg` of YEAR-MONTH intervals renders the spelled-out form
+
+- **repark** — `try_avg` over `INTERVAL '1' MONTH` / `INTERVAL '2' MONTH` answers the
+  average month count rendered `2 months` on both ANSI settings. The identical Arrow
+  `MonthDayNano` value already pins to `2 months` under EX-FN-19, so one renderer cannot
+  spell both.
+- **Apache Spark** — the CAST-to-STRING text is `INTERVAL '0-2' YEAR TO MONTH` (a direct
+  collect hits `[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented`).
+  *(oracle: live PySpark 4.1.2, 2026-09-14 fixture.)*
+- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+  cells 187/188 through `DIVERGED_2026_09_15_ROWS_AS_STRING` (asserts the oracle text, then
+  the `2 months` answer).
+- **Rationale** — BACKLOG, owner ruling R-17a-16 (2026-09-15): one Arrow `MonthDayNano`
+  carries both ANSI `YEAR TO MONTH` and `CalendarInterval`, so one renderer cannot spell
+  both; the fix is a separate YEAR-MONTH interval type in the Rust type table, owned by the
+  types slice (run 17b).
+  pins: fnp-11b/C-006
+
+### FNP-11B-UNRESOLVED-1 — `make_timestamp` over a missing column answers a bare schema error
+
+- **repark** — `F.make_timestamp(date=col('dt'), time=col('tm'))` over the frame raises
+  `Schema error: No field named tm. …` on both ANSI settings and both zones (cells 0–3);
+  the string-name form `date='dt', time='tm'` raises the same (cell 4).
+- **Apache Spark** — `[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function
+  parameter with name `tm` cannot be resolved. Did you mean one of the following? […]`
+  with an edit-distance-ranked proposal list.
+  *(oracle: live PySpark 4.1.2, 2026-09-14 fixture.)*
+- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+  cells 0–4 through `DIVERGED_2026_09_15_UNRESOLVED_COLUMN` (asserts the oracle condition,
+  then the schema-error head; the valid-fields tail stays unpinned).
+- **Rationale** — BACKLOG, owner ruling R-17a-22 (2026-09-15): Spark's proposal list is
+  ranked by edit distance, so a schema-order rule mistypes three of the seven SQL cells;
+  the fix reproduces the ranking across every plan node on both doors as carry-over
+  ERR-UNRESOLVED-COL-1 (seeded by `/tmp/oc-worker/ra-11b4/unresolved_column_spark_oracle.json`),
+  and the exception taxonomy stays untouched here.
+  pins: fnp-11b/C-004
+
+### FNP-11B-BL14-1 — `DATE +` sub-day `INTERVAL` stays date (BL-14's ten cells)
+
+- **repark** — the ten `date_plus_interval` cells answer Date32 (see BL-14: `INTERVAL 0 HOUR`
+  and `INTERVAL 0 DAY` plan to an identical `MonthDayNano`, so the unit is lost before the
+  kernel).
+- **Apache Spark** — the same cells type `timestamp` (midnight wall); the calendar day agrees.
+  *(oracle: live PySpark 4.1.2, 2026-09-14 fixture.)*
+- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+  cells 197–200 and 203–208 (red for run 17c).
+- **Rationale** — BACKLOG, run 17c's SQL-planner seam (D-33): the promotion needs the literal's
+  unit where it is still visible, upstream of the `MonthDayNano` representation.
+  pins: fnp-11b/C-006
+
+### FNP-11B-NULL-AVG-1 — `try_avg` over `CAST(NULL AS INTERVAL DAY)` does not parse
+
+- **repark** — the two NULL `try_avg` cells (191/192) stay red on the SQL door:
+  `CAST(NULL AS INTERVAL DAY)` does not parse. The NULL semantic itself is pinned at the
+  kernel (`interval_avg::tests::all_null_input_is_null`).
+- **Apache Spark** — the same cells answer one NULL `interval day to second` row.
+  *(oracle: live PySpark 4.1.2, 2026-09-14 fixture.)*
+- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+  cells 191/192 (red for run 17c).
+- **Rationale** — BACKLOG, run 17c's INTERVAL DAY dialect seam (D-3, D-17).
+  pins: fnp-11b/C-006
+
+### FNP-11B-TYPEOF-NTZ-1 — `typeof(TIMESTAMP_NTZ'…')` is blocked on the dialect seam
+
+- **repark** — the cell raises `Unsupported SQL type` naming `TIMESTAMP_NTZ`.
+- **Apache Spark** — the oracle records the cell as `timestamp_ntz`.
+  *(oracle: live PySpark 4.1.2, 2026-09-15, `python/repark/tests/fnp11b_typeof_spark_oracle.json`
+  cell TYPEOF-SQL-13.)*
+- **Pin** — `python/repark/tests/test_fnp11b_typeof.py::test_typeof_ntz_literal_is_blocked_on_the_dialect_seam`.
+- **Rationale** — BACKLOG, run 17c's grammar seam (D-36).
+  pins: fnp-11b/C-005
+
+### FNP-11B-TYPEOF-BINARY-1 — `typeof(binary(…))` names an unowned function
+
+- **repark** — the cell raises `Invalid function` naming `binary`.
+- **Apache Spark** — the oracle records the cell as `binary`.
+  *(oracle: live PySpark 4.1.2, 2026-09-15, `python/repark/tests/fnp11b_typeof_spark_oracle.json`
+  cell TYPEOF-SQL-24.)*
+- **Pin** — `python/repark/tests/test_fnp11b_typeof.py::test_typeof_binary_function_owner_is_recorded`.
+- **Rationale** — BACKLOG (D-36): neither matrix owns the `binary` function name and no
+  registry row names it, so no unit is assigned yet; the pin reds when an owner lands it.
+  pins: fnp-11b/C-005
+
+### FNP-11B-TYPEOF-INTERVAL-1 — `typeof` of an INTERVAL literal is blocked on the unit seam
+
+- **repark** — `typeof(INTERVAL 1 DAY)` / `INTERVAL 1 YEAR` / `INTERVAL '1' MONTH` raise
+  `not implemented`, naming `MonthDayNano`: the day, year and month literals all arrive
+  unit-less.
+- **Apache Spark** — the oracle records `interval day to second`, `interval year to month`
+  and `interval year to month`.
+  *(oracle: live PySpark 4.1.2, 2026-09-15, `python/repark/tests/fnp11b_typeof_spark_oracle.json`
+  cells TYPEOF-SQL-14/15/16.)*
+- **Pin** — `python/repark/tests/test_fnp11b_typeof.py::test_typeof_interval_spelling_is_blocked_on_the_unit_seam`.
+- **Rationale** — BACKLOG (D-35): the same run-17c unit seam as BL-14 — the literal's unit
+  must survive planning before any kernel or spelling table can use it.
+  pins: fnp-11b/C-005
 
 ## 8. Drop-in disclosure rationale
 

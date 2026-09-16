@@ -1,6 +1,8 @@
 # map — scripts/
 
 SET-ANSI-RUNTIME-1 (2026-09-15): `check_lib_py.py` ratchets `tests/test_session_timezone_parity.py` 1328 → 1318 (the applied-contract flips are net-negative). pins: set-ansi-runtime-1/C-005
+FNP-11B step 6 (2026-09-15, run 17a): `check_lib_py.py` sets `functions.py` 1960 → 1984 (the `lit` decimal arm) and `functions_expr.py` 2235 → 2237 (the `make_timestamp` widening, ruff-format ratchets two lines back) with the CAP-1 mirror; the duplicate table in `test_cap_1_source_file_line_cap.py` moves with it. pins: fnp-11b/C-001, C-005
+
 DF-PLAN-INTROSPECT-1 (2026-09-15, rebase onto main after #610/#612): `check_lib_py.py` sets `dataframe/core.py` 4014 → 4015 with the CAP-1 mirror — the wrapped `repark.spark.dataframe` import gains `replace_expr` from #610; still below main's 4027. pins: df-plan-introspect-1/C-004
 DF-PLAN-INTROSPECT-1 follow-up round 3 (2026-09-15, R-11): `check_lib_py.py`
 `dataframe/core.py` 4027 → 4014 (the `sameSemantics` body moves to
@@ -33,6 +35,9 @@ FNP-WIN-1 (2026-09-15, run 16a-2): `check_example_coverage.py` walks `functions_
 `INSTALL_NAMES` export tuple, so the three window names that module installs at import are in
 the AST walk, not only in the live `__all__`. The added source line is paid by a `COVERS`-paragraph
 reflow, so the script stays at the default line ceiling — no exception row (owner ruling Q-15c-4).
+FNP-11B step 3 (2026-09-15, run 16a): `BACKLOG_BASELINE` 112 → 111
+(`F.try_to_timestamp` covered); the file sits exactly on the default line ceiling, so the step-3
+names ride the existing `FNP11A_EXPORTS` binding — see the ledger (D-12).
 DF-SURFACE-A-1 critic round 1 (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4041 → 4035 (ruling R-5 removes the `inputFiles` and
 `semanticHash` bindings; ruling R-6 removes the `_schema_override` slot,
@@ -150,6 +155,10 @@ DOOR-CONVERGE-2 C-005/C-006 (2026-09-15, G-2 Q1 one-time grant R-1 under Q-15c-4
 `array_concat` → `concat` analyzer arm for Q12-16 outer nullability).
 pins: door-converge-2/C-001
 pins: replace-linear-1/C-004
+FNP-11B step 4 (2026-09-15): `check_rust_file_size.py`
+`repark-functions/src/datetime.rs` 1700 → 1699 (the hour/minute/second TIME
+refusal rewrite of the superseded answering pin, net −1 line).
+pins: fnp-11b/C-005
 REPLACE-LINEAR-1 step 1 (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4089 → 4054 (the `DataFrame.replace` body — validation,
 key-family filtering, and the flat searched-CASE build — moved to the new
@@ -1295,3 +1304,4 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
   call); `check_lib_py.py` moves `test_fnp_win_1.py` 1415 → 1454 (the
   `C2-L004` pin). Ratchets only. pins: fnp-win-1/C-004
 FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` puts `crates/repark-python/src/dataframe.rs` back at 1019 after the round-2 binding pre-check was reverted (owner ruling Q-15c-4); `check_lib_py.py` ratchets `python/repark/tests/test_fnp_win_1.py` down 1454 → 1449.
+- **FNP-11B step-4 orchestrator fix-up (2026-09-15, run 17a):** the step-3 row's numeral phrase is reworded to "sits exactly on the default line ceiling". CAP-1's prose pin forbids the literal old default in any carrier `map.md`, so the numeral reds `test_cap_1_prose_and_navigation_name_the_generalized_gate`; the fact is unchanged. pins: fnp-11b/C-007

@@ -4,7 +4,7 @@ use std::sync::Arc;
 use arrow::array::{Array, ArrayRef, TimestampMicrosecondArray};
 use arrow::compute::cast;
 use arrow::datatypes::{DataType, Field, FieldRef, TimeUnit};
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature, Volatility,
@@ -85,6 +85,24 @@ fn time_to_day_micros(array: &dyn Array, row: usize) -> Result<Option<i64>> {
                 .downcast_ref::<arrow::array::Time64MicrosecondArray>()
                 .ok_or_else(|| super::exec_error("time cast failed".to_string()))?;
             Ok(Some(values.value(row)))
+        }
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
+            let casted = cast(array, &DataType::Utf8)
+                .map_err(|_| super::exec_error("string cast did not yield Utf8".to_string()))?;
+            let values = casted
+                .as_any()
+                .downcast_ref::<arrow::array::StringArray>()
+                .ok_or_else(|| super::exec_error("string cast did not yield Utf8".to_string()))?;
+            let text = values.value(row);
+            let moment = chrono::NaiveTime::parse_from_str(text, "%H:%M:%S%.f").map_err(|_| {
+                super::exec_error(format!(
+                    "make_timestamp time expects 'HH:MM:SS[.ffffff]', got {text:?}"
+                ))
+            })?;
+            Ok(Some(
+                i64::from(moment.num_seconds_from_midnight()) * 1_000_000
+                    + i64::from(moment.nanosecond() / 1_000),
+            ))
         }
         DataType::Null => Ok(None),
         other => Err(super::plan_error(format!(

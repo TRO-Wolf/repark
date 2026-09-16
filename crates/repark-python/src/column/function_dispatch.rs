@@ -290,13 +290,18 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             expr_fn::current_date()
         }
         "to_date" => {
-            need(1)?;
-            repark_functions::expr_fn::to_date(exprs[0].clone())
+            if exprs.len() != 1 && exprs.len() != 2 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 1 or 2 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::to_date(exprs.clone())
         }
         "unix_timestamp" | "to_unix_timestamp" => {
-            if exprs.len() > 1 {
+            if exprs.len() > 2 {
                 return Err(PyValueError::new_err(format!(
-                    "call_scalar({name}) expects 0 or 1 args, got {}",
+                    "call_scalar({name}) expects 0 to 2 args, got {}",
                     exprs.len()
                 )));
             }
@@ -305,6 +310,26 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "to_timestamp" => {
             need_at_least(1)?;
             repark_functions::expr_fn::to_timestamp(exprs.clone())
+        }
+        "to_timestamp_ltz" => {
+            need_at_least(1)?;
+            if exprs.len() > 2 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 1 or 2 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::to_timestamp_ltz(exprs.clone())
+        }
+        "to_timestamp_ntz" => {
+            need_at_least(1)?;
+            if exprs.len() > 2 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 1 or 2 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::to_timestamp_ntz(exprs.clone())
         }
         "from_unixtime" => {
             need_at_least(1)?;
@@ -489,6 +514,22 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "hour" => {
             need(1)?;
             repark_functions::expr_fn::hour(exprs[0].clone())
+        }
+        "make_time" | "to_time" | "time_diff" | "time_trunc" => {
+            repark_functions::expr_fn::time_family_refusal(name, exprs.clone())
+        }
+        "current_time" => {
+            if exprs.len() > 1 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 0 or 1 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::current_time(exprs.clone())
+        }
+        "typeof" => {
+            need(1)?;
+            repark_functions::expr_fn::spark_typeof(exprs[0].clone())
         }
         "minute" => {
             need(1)?;
@@ -722,7 +763,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             repark_functions::expr_fn::try_element_at(exprs[0].clone(), exprs[1].clone())
         }
-        "try_to_date" | "try_to_binary" | "try_to_time" => {
+        "try_to_date" | "try_to_binary" | "try_to_time" | "try_to_timestamp" => {
             need_at_least(1)?;
             if exprs.len() > 2 {
                 return Err(PyValueError::new_err(format!(
@@ -733,12 +774,16 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             match name {
                 "try_to_date" => repark_functions::expr_fn::try_to_date(exprs.clone()),
                 "try_to_binary" => repark_functions::expr_fn::try_to_binary(exprs.clone()),
+                "try_to_timestamp" => repark_functions::expr_fn::try_to_timestamp(exprs.clone()),
                 _ => repark_functions::expr_fn::try_to_time(exprs.clone()),
             }
         }
         "try_to_number" => {
             need(2)?;
             repark_functions::expr_fn::try_to_number(exprs[0].clone(), exprs[1].clone())
+        }
+        "to_number" | "to_binary" | "to_char" | "to_varchar" => {
+            repark_functions::expr_fn::to_char_family(name, exprs.clone())
         }
         "assert_true" => {
             need_at_least(1)?;

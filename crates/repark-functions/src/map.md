@@ -525,7 +525,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   struct CAST.
   pins: nullability-2/C-001, C-002, C-004
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
-  rule, installed on BOTH doors via `install_shared_analyzer_rules` (the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts).
+  rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts).
   installer calls it in place of the integer-only one — same line count, so the
   session map needs no ratchet): `CAST(bool AS DECIMAL(p,s))` becomes a
   precision-carrying UDF (true → 1, false → 0 at scale; per-row nulls). The UDF
@@ -796,8 +796,66 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (alias `to_unix_timestamp`). Zero-arg `unix_timestamp()` is a scalar epoch so a
   three-row input yields three identical BIGINT values.
   pins: date-fn-1-spark-date-spelling/C-002, C-003
+- `java_datetime.rs` — **FNP-11B step 2 (2026-09-15):** the one shared Java-datetime-pattern
+  parser (card D-1) behind `to_date` / `to_timestamp` / `unix_timestamp` with a format.
+  Tokenizes `yyyy`/`yy`/`M`/`MM`/`MMM`/`MMMM`/`d`/`H`/`h`/`m`/`s`/`S`/quoted literals;
+  an unquoted `Y` run refuses
+  `[INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION]`; other failures
+  render Spark's `[CANNOT_PARSE_TIMESTAMP]` text under ANSI and NULL otherwise. Constant
+  patterns compile once per batch (`FormatPlan::Shared`, per-row fallback); each input
+  column is cast once per batch. Batch entry points `to_date_with_format` /
+  `stamps_with_format_column` / `unix_seconds_with_format`; non-string inputs keep the
+  1-arg path with the format ignored. `to_timestamp` 1-arg malformed strings translate to
+  `[CAST_INVALID_INPUT]` under ANSI and NULL otherwise. SQL-door double-quoted pattern
+  literals stay a run-16c parser seam (cells 129/130).
+  pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`. pins: types-1/C-006
+- `timestamp_ltz_ntz.rs` — **FNP-11B step 3 (2026-09-15):** `to_timestamp_ltz` /
+  `to_timestamp_ntz` / `try_to_timestamp` on the step-2 parser (card D-1, no new
+  parser). `to_timestamp_ltz` forwards both arities to the `to_timestamp` kernel;
+  `try_to_timestamp` forwards with the ANSI extension cloned off so data errors
+  answer NULL under both ANSI settings while pattern refusals still raise.
+  `to_timestamp_ntz` emits naive walls: the format arm reuses the
+  `plan_format_column` / `parse_wall_or_null` primitives through a module-local
+  walls helper (the `stamps_with_format_column` loop stays untouched behind its
+  pins, and `java_datetime.rs` sits 3 lines under its ceiling), while the 1-arg
+  arm strips a zone/offset suffix and round-trips the wall through the
+  `to_timestamp` kernel before un-localizing, so offset strings keep their
+  written wall and malformed strings retarget `[CAST_INVALID_INPUT]` at the
+  `TIMESTAMP_NTZ` name. pins: fnp-11b/C-002, C-003, C-004;
+  `timestamp_ltz_ntz::tests::*`.
+- `time_family.rs` — **FNP-11B step 4 (2026-09-15):** the TIME family behind one
+  refusal kernel (`TimeRefusal`, unconditional `[UNSUPPORTED_TIME_TYPE]`) serving
+  `make_time` / `to_time` / `time_diff` / `time_trunc` on both doors;
+  `CurrentTime` answering session-zone `time64[ns]` with Spark's
+  `[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE]` past precision 6; `SparkTypeof`
+  spelling Arrow types the way Spark does (`time(6)`, `timestamp_ntz`);
+  `DatePartWithoutTime` wrapping the `datetime.rs` hour/minute/second kernels so
+  a TIME input refuses while timestamps answer (the file's own
+  `hour_minute_second_accept_time_and_timestamp` pin is rewritten to the
+  refusal, net −1 line with the ceiling row ratcheted 1700 to 1699);
+  `TimeCastGuard` analyzer rule refusing any
+  `CAST`/`TryCast` to TIME whose inner is not a string literal, which is also
+  what poisons plans reading the TIME frame. `TIME'…'` literals stay literal
+  casts and answer; `CAST('str' AS TIME)` answers where Spark raises (residual).
+  Registration folds into `instant_ts::functions()`; the guard wires into
+  `install_shared_analyzer_rules`. pins: fnp-11b/C-002, C-003, C-004, C-005;
+  `time_family::tests::*`.
+  **FNP-11B step 6 (2026-09-15):** `SparkTypeof` spells `array<…>` / `map<…>` /
+  `struct<…>` recursively through the same table (no second table; the
+  `repark-spark` renderer stays uncalled across the crate edge) and wrong arity
+  raises Spark's `[WRONG_NUM_ARGS.WITHOUT_SUGGESTION]` verbatim.
+  pins: fnp-11b/C-005.
+- `interval_avg.rs` — **FNP-11B step 4 (2026-09-15, BL-13):** the
+  `IntervalAvgAccumulator` behind `avg` / `try_avg` over interval and duration
+  inputs (Spark `Long`-micros accumulation with checked adds, round-half-away
+  division, `MonthDayNano` out). Overflow answers NULL on `try_avg` and raises
+  Spark's `[INTERVAL_ARITHMETIC_OVERFLOW.WITH_SUGGESTION]` on `avg`; all-NULL
+  answers NULL; mixed month/day-time inputs follow the overflow arm. `aggregate.rs`
+  only gains the signature/return-type/accumulator/state-fields arms; the
+  `[FNP-11]` refusals are gone. pins: fnp-11b/C-006;
+  `interval_avg::tests::*`, `aggregate::tests::*`.
 - `collection.rs` — `SparkElementAt` (`element_at`; public `element_at_udf()` for the facade embed):
   arrays are 1-based / negative-from-end / OOB → NULL
   with index 0 → error (Spark `INVALID_INDEX_OF_ZERO`); maps return the plain value-or-NULL
@@ -871,6 +929,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `bit_length`, regexp/split functions, `shuffle`, `map_from_entries`, and `str_to_map`, so facade
   columns remain self-contained without a `SessionContext`.
   **TYPES-1 (2026-09-05):** `from_unixtime` builder over the new UDF. pins: types-1/C-006
+  **FNP-11B step 5 (2026-09-15):** `to_char_family` builder dispatching the
+  four formatting names onto the `try_invert::strict` kernels by name.
+  pins: fnp-11b/C-001, C-002
 
 Facade builders embed the same kernels registered by the SQL door, including `to_timestamp`, `avg`,
 the additional `datafusion-spark` functions, and map builders; keep both dispatch surfaces aligned.
