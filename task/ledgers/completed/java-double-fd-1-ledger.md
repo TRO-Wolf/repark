@@ -249,3 +249,32 @@ of divergence is made without an oracle cell.
 `suffix_marker` pins) green; `make rust-clippy` clean; `make verify` rc 0;
 release native rebuilt after the last Rust edit; pytest runs pasted below in
 the hand-back.
+
+### Critic-logic verdict — run 17c (Grok 4.6, read-only, 2026-09-15)
+
+Report `/tmp/oc-worker/rc-crit633-report.md`, 20 turns, $0.45. Scope: the `origin/main` merge
+`e0c8b2c3` and the fix `1d8635a1`. **No P1, no P2.** Two P3 residuals, recorded here per the run-17
+method (P1/P2 to the actor, P3 to the ledger):
+
+- **P3-1** `SuffixLiteral::return_field_from_args` (`crates/repark-spark/src/spark_typed.rs`) still
+  hard-codes `nullable = true`; the fix works around it in `rewrite_float_cast` instead of correcting
+  the field. The critic judges that the right layer, because owner ruling Q-15c-6 forbids a UDF
+  return-field retag and `FoldSparkNumericCasts` is the door meant to turn marker+CAST into a non-null
+  literal. Measured non-null after the fix: `1L`, `1Y`, `1S`, `1BD`, `1.5BD`, `1e2BD`, `2.5D`, `1.5F`,
+  `1e20D`, `1e37D`, `1e38D`, `1e200D`. Residual: a `CAST(__repark_suffix_literal__(…) AS …)` that
+  `FoldSparkNumericCasts` does not fold would still carry `;N`; not observed on any shape #611 emits.
+- **P3-2** `is_suffix_literal_call` matches the UDF name only, while `FoldSparkNumericCasts` also
+  requires one argument and a `Literal`. A hand-written `CAST(__repark_suffix_literal__(x) AS DOUBLE)`
+  over a column therefore skips the parse kernel. The wire name is internal and #611 never emits the
+  marker over a column, so this is not a shipping path; the guard is deliberately not broadened until a
+  caller needs it.
+
+Also confirmed by the critic: the merge resolution is loss-free (the `pub` surface #611 widened is
+reachable at the same paths), the `TryCast` arm's lack of the same guard is correct by construction,
+and the comment ban is clean on the delta.
+
+**UNMEASURED, carried as an owner question (Q-17c-1):** `1e400D`, `-1e400D`, `1e-400D`, `1e39F` and
+`3.5e38F` answer `inf` / `0.0` / `-0.0` non-null on this build, consistent with Java `Double.parseDouble`
+and with the recorded Spark JSON cell `{"a":1e400}` → `"Infinity"`, but no live PySpark 4.1.2 SQL cell
+for those spellings exists in the tree and no JVM was started for them. They are pinned at today's
+answer, not against a measured oracle.
