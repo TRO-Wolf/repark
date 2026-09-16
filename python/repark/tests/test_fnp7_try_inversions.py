@@ -380,10 +380,22 @@ def test_try_divide_interval_by_numeric() -> None:
     assert zero.column("v").to_pylist() == [None]
 
 
-def test_try_avg_interval_refuses_fnp11() -> None:
-    """pins: fnp-7-try-inversions/C-018"""
-    with pytest.raises(PySparkException, match=r"\[FNP-11\] try_avg\(INTERVAL\).*2026-08-31"):
-        _sql_arrow("SELECT try_avg(INTERVAL 1 DAY) AS v")
+def test_try_avg_interval_answers() -> None:
+    """pins: fnp-7-try-inversions/C-018; fnp-11b/C-006"""
+    day_and_half = _sql_arrow(
+        "SELECT try_avg(v) AS v FROM (VALUES (INTERVAL 1 DAY), (INTERVAL 2 DAY)) AS x(v)"
+    )
+    assert _interval_days(day_and_half.column("v").to_pylist()[0]) == 1
+    overflow = _sql_arrow(
+        "SELECT try_avg(v) AS v FROM (VALUES (INTERVAL '106751991' DAY),"
+        " (INTERVAL '106751991' DAY)) AS x(v)"
+    )
+    assert overflow.column("v").to_pylist() == [None]
+    with pytest.raises(PySparkException, match=r"\[INTERVAL_ARITHMETIC_OVERFLOW"):
+        _sql_arrow(
+            "SELECT avg(v) AS v FROM (VALUES (INTERVAL '106751991' DAY),"
+            " (INTERVAL '106751991' DAY)) AS x(v)"
+        )
 
 
 def test_try_names_are_present() -> None:

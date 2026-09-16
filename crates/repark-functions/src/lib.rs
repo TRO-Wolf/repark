@@ -10,6 +10,8 @@ pub mod ansi;
 mod avg_groups;
 pub mod bitmap_agg;
 pub mod bool_decimal;
+mod interval_avg;
+pub use bool_decimal::install_shared_analyzer_rules;
 pub mod cardinality;
 pub mod collection;
 pub mod count_if;
@@ -25,6 +27,7 @@ pub mod higher_order;
 pub mod instant_ts;
 mod int_to_binary;
 pub mod integer_spark;
+pub mod java_datetime;
 pub mod java_double;
 mod java_regex;
 pub mod json;
@@ -59,7 +62,9 @@ pub mod spark_window_time;
 pub mod spark_year_pad;
 pub mod string;
 pub mod temporal_ctor;
+pub mod time_family;
 pub mod timestamp_cast;
+pub mod timestamp_ltz_ntz;
 pub mod timestamp_type;
 pub mod try_invert;
 pub mod url;
@@ -142,11 +147,6 @@ pub fn register_all(ctx: &SessionContext) {
     higher_order::register(ctx);
     decimal_spark::register_spark_decimal_planner(ctx);
     integer_spark::register_spark_integer_planner(ctx);
-}
-
-pub fn install_shared_analyzer_rules(ctx: &SessionContext) {
-    integer_spark::install_integer_overflow(ctx);
-    bool_decimal::install_bool_decimal_cast(ctx);
 }
 
 /// Run Spark analyzer rules until schema changes reach the `TypeCoercion` fixpoint.

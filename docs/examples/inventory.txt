@@ -376,6 +376,7 @@ functions	F.current_catalog
 functions	F.current_database
 functions	F.current_date
 functions	F.current_schema
+functions	F.current_time
 functions	F.current_timestamp
 functions	F.current_timezone
 functions	F.current_user
@@ -508,6 +509,7 @@ functions	F.ltrim
 functions	F.make_date
 functions	F.make_dt_interval
 functions	F.make_interval
+functions	F.make_time
 functions	F.make_timestamp
 functions	F.make_timestamp_ltz
 functions	F.make_timestamp_ntz
@@ -662,6 +664,8 @@ functions	F.theta_sketch_agg
 functions	F.theta_sketch_estimate
 functions	F.theta_union
 functions	F.theta_union_agg
+functions	F.time_diff
+functions	F.time_trunc
 functions	F.timestamp_add
 functions	F.timestamp_diff
 functions	F.timestamp_micros
@@ -669,12 +673,19 @@ functions	F.timestamp_millis
 functions	F.timestamp_seconds
 functions	F.toDegrees
 functions	F.toRadians
+functions	F.to_binary
+functions	F.to_char
 functions	F.to_csv
 functions	F.to_date
 functions	F.to_json
+functions	F.to_number
+functions	F.to_time
 functions	F.to_timestamp
+functions	F.to_timestamp_ltz
+functions	F.to_timestamp_ntz
 functions	F.to_unix_timestamp
 functions	F.to_utc_timestamp
+functions	F.to_varchar
 functions	F.to_variant_object
 functions	F.to_xml
 functions	F.transform
@@ -706,6 +717,7 @@ functions	F.try_to_timestamp
 functions	F.try_url_decode
 functions	F.try_validate_utf8
 functions	F.try_variant_get
+functions	F.typeof
 functions	F.ucase
 functions	F.udf
 functions	F.udtf

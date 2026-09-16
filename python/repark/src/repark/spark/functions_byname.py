@@ -249,7 +249,6 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "try_parse_json",
     "try_reflect",
     "try_sum",
-    "try_to_timestamp",
     "try_variant_get",
     "ucase",
     "unix_millis",

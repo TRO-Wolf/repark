@@ -18,6 +18,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
         Arc::new(crate::java_double::SparkFloatStringify),
     ];
     rules.extend(crate::cardinality::analyzer_rules());
+    rules.push(crate::time_family::time_cast_guard_rule());
     rules.push(crate::instant_ts::ltz_timestamp_cast_rule());
     rules.push(crate::temporal_ctor::interval_string_cast_rule());
     rules.push(Arc::new(TypeCoercion::new()));

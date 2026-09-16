@@ -2,6 +2,7 @@
 
 mod arith;
 mod convert;
+mod strict;
 mod temporal;
 
 use std::sync::Arc;
@@ -11,6 +12,7 @@ use datafusion::prelude::SessionContext;
 
 pub use arith::{try_add_udf, try_divide_udf, try_mod_udf, try_multiply_udf, try_subtract_udf};
 pub use convert::{try_to_binary_udf, try_to_date_udf, try_to_number_udf, try_to_time_udf};
+pub use strict::{to_binary_udf, to_char_udf, to_number_udf, to_varchar_udf};
 
 /// Scalar `try_*` kernels this unit registers (aggregates `try_sum` / `try_avg` register elsewhere).
 #[must_use]
@@ -25,6 +27,10 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         try_to_number_udf(),
         try_to_binary_udf(),
         try_to_time_udf(),
+        to_number_udf(),
+        to_binary_udf(),
+        to_char_udf(),
+        to_varchar_udf(),
     ]
 }
 

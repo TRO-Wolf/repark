@@ -4,7 +4,7 @@ use std::sync::Arc;
 use arrow::array::{Array, ArrayRef, TimestampMicrosecondArray};
 use arrow::compute::cast;
 use arrow::datatypes::{DataType, Field, FieldRef, TimeUnit};
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature, Volatility,
@@ -85,6 +85,24 @@ fn time_to_day_micros(array: &dyn Array, row: usize) -> Result<Option<i64>> {
                 .downcast_ref::<arrow::array::Time64MicrosecondArray>()
                 .ok_or_else(|| super::exec_error("time cast failed".to_string()))?;
             Ok(Some(values.value(row)))
+        }
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
+            let casted = cast(array, &DataType::Utf8)
+                .map_err(|_| super::exec_error("string cast did not yield Utf8".to_string()))?;
+            let values = casted
+                .as_any()
+                .downcast_ref::<arrow::array::StringArray>()
+                .ok_or_else(|| super::exec_error("string cast did not yield Utf8".to_string()))?;
+            let text = values.value(row);
+            let moment = chrono::NaiveTime::parse_from_str(text, "%H:%M:%S%.f").map_err(|_| {
+                super::exec_error(format!(
+                    "make_timestamp time expects 'HH:MM:SS[.ffffff]', got {text:?}"
+                ))
+            })?;
+            Ok(Some(
+                i64::from(moment.num_seconds_from_midnight()) * 1_000_000
+                    + i64::from(moment.nanosecond() / 1_000),
+            ))
         }
         DataType::Null => Ok(None),
         other => Err(super::plan_error(format!(
@@ -302,6 +320,49 @@ fn precast_zone(array: &ArrayRef) -> Result<ArrayRef> {
     )
 }
 
+fn precast_date(array: &ArrayRef) -> Result<ArrayRef> {
+    let error = || {
+        super::plan_error(format!(
+            "temporal constructor expects a DATE argument, got {}",
+            array.data_type()
+        ))
+    };
+    if matches!(array.data_type(), DataType::Date32 | DataType::Null)
+        || array.null_count() == array.len()
+    {
+        return Ok(Arc::clone(array));
+    }
+    let target = match array.data_type() {
+        DataType::Date64 => DataType::Date32,
+        DataType::Timestamp(_, _) => DataType::Timestamp(TimeUnit::Microsecond, None),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => DataType::Utf8,
+        _ => return Err(error()),
+    };
+    super::precast_column(array, &target, error())
+}
+
+fn precast_time(array: &ArrayRef) -> Result<ArrayRef> {
+    let error = || {
+        super::plan_error(format!(
+            "temporal constructor expects a TIME argument, got {}",
+            array.data_type()
+        ))
+    };
+    if matches!(
+        array.data_type(),
+        DataType::Time64(TimeUnit::Microsecond) | DataType::Null
+    ) || array.null_count() == array.len()
+    {
+        return Ok(Arc::clone(array));
+    }
+    let target = match array.data_type() {
+        DataType::Time32(_) | DataType::Time64(_) => DataType::Time64(TimeUnit::Microsecond),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => DataType::Utf8,
+        _ => return Err(error()),
+    };
+    super::precast_column(array, &target, error())
+}
+
 fn precast_make_args(arrays: &[ArrayRef], has_zone: bool) -> Result<Vec<ArrayRef>> {
     if arrays.len() <= 3 {
         let data = arrays.len() - usize::from(has_zone);
@@ -309,10 +370,12 @@ fn precast_make_args(arrays: &[ArrayRef], has_zone: bool) -> Result<Vec<ArrayRef
             .iter()
             .enumerate()
             .map(|(index, array)| {
-                if index < data {
-                    Ok(Arc::clone(array))
-                } else {
+                if index >= data {
                     precast_zone(array)
+                } else if index == 0 {
+                    precast_date(array)
+                } else {
+                    precast_time(array)
                 }
             })
             .collect()

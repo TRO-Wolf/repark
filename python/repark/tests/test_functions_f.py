@@ -145,22 +145,3 @@ def test_uuid_type_and_uniqueness(spark: ReparkSession) -> None:
 
 
 # Deferred names stay absent (no stubs)
-
-
-@pytest.mark.parametrize(
-    "name",
-    [
-        # Numeric FORMAT-string conversions. DataFusion's to_char is a false friend — its own doc
-        # says numeric formatting is unsupported — so these need real kernels (FNP-12).
-        # try_* inversions of to_number / to_binary shipped in FNP-7; the raising names stay here.
-        "to_number",
-        "to_binary",
-    ],
-)
-def test_deferred_fn_f_names_are_absent(name: str) -> None:
-    """Names FN-F left absent, with the reason each is still absent.
-
-    RATCHETS DOWN. ``assert_true`` shipped off this list (FNP-6c) — a raise kernel over the
-    pattern ``ansi.rs`` already established. Behavior: ``test_fnp6_validate.py``.
-    """
-    assert not hasattr(F, name)

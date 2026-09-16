@@ -1,0 +1,91 @@
+{
+ "spark_version": "4.1.2",
+ "cells": [
+  {
+   "id": "HT-00",
+   "expr": "F.lit(datetime.time(12,34,56))",
+   "schema": "struct<time:time(6)>",
+   "value": "12:34:56",
+   "outcome": "ok"
+  },
+  {
+   "id": "HT-01",
+   "expr": "hour(col)",
+   "outcome": "error",
+   "error": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "error_class": "AnalysisException",
+   "condition": "UNSUPPORTED_TIME_TYPE"
+  },
+  {
+   "id": "HT-02",
+   "expr": "hour('time')",
+   "outcome": "error",
+   "error": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "error_class": "AnalysisException",
+   "condition": "UNSUPPORTED_TIME_TYPE"
+  },
+  {
+   "id": "HT-03",
+   "expr": "minute(col)",
+   "outcome": "error",
+   "error": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "error_class": "AnalysisException",
+   "condition": "UNSUPPORTED_TIME_TYPE"
+  },
+  {
+   "id": "HT-04",
+   "expr": "second(col)",
+   "outcome": "error",
+   "error": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "error_class": "AnalysisException",
+   "condition": "UNSUPPORTED_TIME_TYPE"
+  },
+  {
+   "id": "HT-SQL-00",
+   "expr": "SELECT typeof(TIME '12:34:56')",
+   "schema": "struct<typeof(TIME '12:34:56'):string>",
+   "value": "time(6)",
+   "outcome": "ok"
+  },
+  {
+   "id": "HT-SQL-01",
+   "expr": "SELECT hour(TIME '12:34:56')",
+   "outcome": "error",
+   "error": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "error_class": "AnalysisException",
+   "condition": "UNSUPPORTED_TIME_TYPE"
+  },
+  {
+   "id": "HT-SQL-02",
+   "expr": "SELECT minute(TIME '12:34:56')",
+   "outcome": "error",
+   "error": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "error_class": "AnalysisException",
+   "condition": "UNSUPPORTED_TIME_TYPE"
+  },
+  {
+   "id": "HT-SQL-03",
+   "expr": "SELECT second(TIME '12:34:56')",
+   "outcome": "error",
+   "error": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "error_class": "AnalysisException",
+   "condition": "UNSUPPORTED_TIME_TYPE"
+  },
+  {
+   "id": "HT-SQL-04",
+   "expr": "SELECT make_time(12,34,56)",
+   "outcome": "error",
+   "error": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "error_class": "AnalysisException",
+   "condition": "UNSUPPORTED_TIME_TYPE"
+  },
+  {
+   "id": "HT-SQL-05",
+   "expr": "SELECT to_time('12:34:56')",
+   "outcome": "error",
+   "error": "[UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000",
+   "error_class": "AnalysisException",
+   "condition": "UNSUPPORTED_TIME_TYPE"
+  }
+ ]
+}

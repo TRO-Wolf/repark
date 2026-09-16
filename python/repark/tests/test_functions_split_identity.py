@@ -378,7 +378,10 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     pins: fnp-4c-higher-order-kernels/C-011
     pins: fnp-7-try-inversions/C-013
     pins: fnp-win-1/C-007
-    FNP-11A appends its eleven new temporal names before the window names.
+    FNP-11A appends its eleven new temporal names before FNP-WIN-1's window
+    names; FNP-11B then appends to the same installer tuple — step 3 the LTZ and
+    NTZ timestamp parsers, step 4 the TIME family plus typeof, step 5 the
+    to_char family.
     """
     from repark.spark.functions_agg import INSTALL_NAMES as AGG_INSTALL_NAMES
     from repark.spark.functions_arrow_udf import ARROW_EXPORTS

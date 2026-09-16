@@ -140,11 +140,34 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   **FNP-WIN-1 (2026-09-15, verification round 2, L-004):** mirror rows move
   to `dataframe.rs` 1021, `test_fnp_win_1.py` 1454, counts still 38/32.
   pins: fnp-win-1/C-004
+  default). pins: io-bucket-cluster-1/C-003
+- `test_cap_1_source_file_line_cap.py` — **FNP-11B step 6 (2026-09-15):**
+  `functions.py` mirror row 1960 → 1984 and `functions_expr.py` 2235 → 2237
+  with the script baseline. pins: fnp-11b/C-001, C-005
+  **FNP-11B remediation round 1 (2026-09-16):** `functions_expr.py` mirror row
+  2237 → 2220 with the script baseline (the `make_timestamp` forwarder becomes a
+  direct re-export). pins: fnp-11b/C-007
 - `test_ex_0_example_coverage.py` — **DF-SURFACE-B-1 (2026-09-14):** the enumerated
   public surface moves 948 → 952 as `DataFrame.foreach`,
   `DataFrame.foreachPartition`, `DataFrame.observe`, and `Observation.get` join
   the dataframe family; `docs/examples/dataframe/foreach_observe.py` covers them.
   pins: df-surface-b-1/C-005
+- `test_ex_0_example_coverage.py` — **FNP-11B step 3 (2026-09-15):** the enumerated
+  public surface moves 1057 → 1059 as `F.to_timestamp_ltz` / `F.to_timestamp_ntz`
+  join the functions family; `docs/examples/functions/timestamp_ltz_ntz.py` covers
+  them with `F.try_to_timestamp`.
+  pins: fnp-11b/C-007
+- `test_ex_0_example_coverage.py` — **FNP-11B step 4 (2026-09-15):** the enumerated
+  public surface moves 1061 → 1067 as the TIME family (`F.make_time` /
+  `F.to_time` / `F.time_diff` / `F.time_trunc` / `F.current_time` / `F.typeof`)
+  joins the functions family; `docs/examples/functions/time_family.py` covers
+  them (answers for `current_time` / `typeof`, refusal asserts for the rest).
+  pins: fnp-11b/C-007
+- `test_ex_0_example_coverage.py` — **FNP-11B step 5 (2026-09-15):** the enumerated
+  public surface moves 1067 → 1071 as the to_char family (`F.to_char` /
+  `F.to_varchar` / `F.to_number` / `F.to_binary`) joins the functions family;
+  `docs/examples/functions/to_char_family.py` covers them (answers plus the
+  two strict-twin refusal asserts). pins: fnp-11b/C-007
 - `test_ex_0_example_coverage.py` — **EX-0 (2026-08-31):** the v0.7 example-drift
   gate: five-family enumerator, uncovered / stale-backlog / covered-in-backlog
   reds, backlog and exceptions baselines, COVERS-must-be-used, seed `COVERS`,
@@ -830,3 +853,9 @@ Escalate to: [../map.md#debug](../map.md).
 - `test_cap_1_source_file_line_cap.py` — **FNP-4B (#611, 2026-09-15, orchestrator):** the `crates/repark-python/src/column/mod.rs` mirror row 1022 → 1014 matches the script baseline after the rebase onto #613 (ratchet down).
 - `test_ex_0_example_coverage.py` — **FNP-WIN-1 rebase onto 230468c5 (2026-09-15, run 16a):** #613 and #618 each moved the count 1054 → 1057 on the same line, which a merge keeps at 1057; the true combined count is main's 1057 plus this unit's three names, 1060. pins: fnp-win-1/C-007
 - `test_cap_1_source_file_line_cap.py` — **FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a):** the `crates/repark-python/src/dataframe.rs` mirror row returns to 1019 with the script baseline. pins: fnp-win-1/C-007
+- `test_ex_0_example_coverage.py` — **FNP-11B rebase onto 0355ef5e (2026-09-15, run 17a):** the branch and main each moved the count 1057 → 1059 on the same line, which the replay keeps at 1059; the true combined count is main's 1059 plus this unit's two examples, 1061. pins: fnp-11b/C-007
+- `test_pr_245_revalidation_record.py` — **FNP-11B (2026-09-16, run 17a):** the shipped
+  `sql_string_literal` call inventory moves `functions.py` 4 → 5. The new call is the decimal
+  literal this unit's `to_char` / `to_number` family builds — `CAST(<literal> AS DECIMAL(p,s))` —
+  routed through the escaping helper, which is the direction this census exists to enforce.
+  pins: fnp-11b/C-007

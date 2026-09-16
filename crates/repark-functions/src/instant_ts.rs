@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use arrow::array::timezone::Tz;
-use arrow::array::{Array, AsArray};
+use arrow::array::{Array, ArrayRef, AsArray, StringArray, TimestampMicrosecondArray};
 use arrow::datatypes::TimestampMicrosecondType;
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, TimeUnit};
@@ -42,6 +42,15 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         current_timestamp_udf(),
         to_timestamp_udf(),
         current_timezone_udf(),
+        crate::timestamp_ltz_ntz::to_timestamp_ltz_udf(),
+        crate::timestamp_ltz_ntz::to_timestamp_ntz_udf(),
+        crate::timestamp_ltz_ntz::try_to_timestamp_udf(),
+        crate::time_family::make_time_udf(),
+        crate::time_family::to_time_udf(),
+        crate::time_family::time_diff_udf(),
+        crate::time_family::time_trunc_udf(),
+        crate::time_family::current_time_udf(),
+        crate::time_family::type_of_udf(),
     ]
 }
 
@@ -198,21 +207,107 @@ impl ScalarUDFImpl for SparkToTimestamp {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let zone_id = session_time_zone_from_options(args.config_options.as_ref());
-        let zone = parse_extraction_zone(zone_id)?;
-        if args.args.len() == 1
-            && let Some(localized) = try_localize_date_or_ntz(&args.args[0], zone)?
-        {
-            return Ok(localized);
+        if args.args.len() >= 2 {
+            return invoke_to_timestamp_with_format(self, &args);
         }
-        let strings = args.args.first().and_then(columnar_utf8_strings);
-        let produced = self.inner.invoke_with_args(args)?;
-        let ltz = cast_columnar_to_ltz(produced)?;
-        match strings {
-            Some(texts) => localize_zoneless_string_ticks(ltz, &texts, zone),
-            None => Ok(ltz),
+        invoke_single(self, args)
+    }
+}
+
+fn invoke_single(spark: &SparkToTimestamp, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+    let zone_id = session_time_zone_from_options(args.config_options.as_ref());
+    let zone = parse_extraction_zone(zone_id)?;
+    if args.args.len() == 1
+        && let Some(localized) = try_localize_date_or_ntz(&args.args[0], zone)?
+    {
+        return Ok(localized);
+    }
+    let strings = args.args.first().and_then(columnar_utf8_strings);
+    let ansi = crate::ansi::spark_ansi_enabled_from_options(args.config_options.as_ref());
+    match spark.inner.invoke_with_args(args) {
+        Ok(produced) => {
+            let ltz = cast_columnar_to_ltz(produced)?;
+            match strings {
+                Some(texts) => localize_zoneless_string_ticks(ltz, &texts, zone),
+                None => Ok(ltz),
+            }
+        }
+        Err(error) => {
+            let Some(texts) = strings else {
+                return Err(error);
+            };
+            translate_malformed_strings(spark, &texts, ansi)
         }
     }
+}
+
+fn translate_malformed_strings(
+    spark: &SparkToTimestamp,
+    texts: &[Option<String>],
+    ansi: bool,
+) -> Result<ColumnarValue> {
+    if !ansi {
+        let nulls =
+            TimestampMicrosecondArray::from(vec![None::<i64>; texts.len()]).with_timezone("UTC");
+        return Ok(ColumnarValue::Array(Arc::new(nulls)));
+    }
+    Err(datafusion::common::DataFusionError::Execution(
+        malformed_timestamp_text(
+            first_malformed_string(spark, texts)
+                .as_deref()
+                .unwrap_or("invalid"),
+        ),
+    ))
+}
+
+fn malformed_timestamp_text(value: &str) -> String {
+    format!(
+        "[CAST_INVALID_INPUT] The value '{value}' of the type \"STRING\" cannot be cast to \
+         \"TIMESTAMP\" because it is malformed. Correct the value as per the syntax, or change \
+         its target type. Use `try_cast` to tolerate malformed input and return NULL instead. \
+         SQLSTATE: 22018"
+    )
+}
+
+fn first_malformed_string(spark: &SparkToTimestamp, texts: &[Option<String>]) -> Option<String> {
+    for text in texts.iter().flatten() {
+        let probe: ArrayRef = Arc::new(StringArray::from(vec![Some(text.as_str())]));
+        let field: FieldRef = Arc::new(Field::new("to_timestamp", ltz_timestamp_type(), true));
+        let probe_args = ScalarFunctionArgs {
+            args: vec![ColumnarValue::Array(probe)],
+            arg_fields: vec![field.clone()],
+            number_rows: 1,
+            return_field: field,
+            config_options: Arc::new(ConfigOptions::default()),
+        };
+        if spark.inner.invoke_with_args(probe_args).is_err() {
+            return Some(text.clone());
+        }
+    }
+    texts.iter().flatten().next().cloned()
+}
+
+fn invoke_to_timestamp_with_format(
+    spark: &SparkToTimestamp,
+    args: &ScalarFunctionArgs,
+) -> Result<ColumnarValue> {
+    if args.args.len() > 2 {
+        return exec_err!(
+            "'to_timestamp' expects 1 or 2 arguments, got {}",
+            args.args.len()
+        );
+    }
+    let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+    if !matches!(
+        arrays[0].data_type(),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    ) {
+        let mut single = args.clone();
+        single.args.truncate(1);
+        single.arg_fields.truncate(1);
+        return invoke_single(spark, single);
+    }
+    crate::java_datetime::stamps_with_format_column(&arrays[0], &arrays[1], args)
 }
 
 fn parse_extraction_zone(zone_id: &str) -> Result<Tz> {
@@ -251,6 +346,13 @@ fn ends_with_numeric_offset(text: &str) -> bool {
             continue;
         }
         if !suffix[1].is_ascii_digit() || !suffix[2].is_ascii_digit() {
+            continue;
+        }
+        let wall = &text[..length - suffix_len];
+        let has_time = wall
+            .bytes()
+            .any(|byte| byte == b':' || byte == b'T' || byte == b't' || byte == b' ');
+        if !has_time {
             continue;
         }
         match suffix_len {

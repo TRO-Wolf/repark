@@ -752,15 +752,16 @@ async fn last_day_and_date_add_over_a_timestamp_still_refuse() {
 async fn time_arguments_never_move_with_the_session_zone() {
     for zone in [NEW_YORK, TOKYO, "UTC"] {
         let session = session_at(zone);
-        let (_, columns) = int_columns(
-            &session,
-            "SELECT hour(TIME '13:45:07'), minute(TIME '13:45:07'), second(TIME '13:45:07')",
-        )
-        .await;
-        assert_eq!(
-            (columns[0].clone(), columns[1].clone(), columns[2].clone()),
-            (vec![13], vec![45], vec![7]),
-            "TIME extraction must not move under {zone}"
+        let error = match session.sql("SELECT hour(TIME '13:45:07')").await {
+            Err(error) => error.to_string(),
+            Ok(frame) => match frame.collect().await {
+                Err(error) => error.to_string(),
+                Ok(_) => "executed".to_string(),
+            },
+        };
+        assert!(
+            error.contains("[UNSUPPORTED_TIME_TYPE]"),
+            "TIME extraction must refuse under {zone}: {error}"
         );
     }
 }
