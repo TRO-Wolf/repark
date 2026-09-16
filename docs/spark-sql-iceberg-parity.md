@@ -3686,7 +3686,48 @@ the pin rather than obeying it.
   IO-TEXT-1 (2026-09-15): a user schema typing a text partition column `float` / `smallint` / `tinyint` reads the exact
   values and reports the wide label — `python/repark/tests/test_io_text_2.py::test_text_probe6_float_schema_float`,
   `…::test_text_probe6_int_schema_smallint`, `…::test_text_probe6_int_schema_tinyint` (red when fixed).
-- **Rationale** — BACKLOG. Filed 2026-09-06 (NULLABILITY-2 round 2).
+- **Rationale** — IMPLEMENTED 2026-09-16 (LOGICAL-WIDTH-1 round 1, owner ruling Q-16b-3).
+  Filed 2026-09-06 (NULLABILITY-2 round 2). The fix is the `LogicalKey` arms of
+  `arrow_name_at_depth` (`crates/repark-spark/src/type_table.rs`): Int8→`byte`,
+  Int16→`short`, Float16|Float32→`float`, Binary|LargeBinary|BinaryView→`binary`; the
+  `Describe` surface is unchanged. `fillna` casts the fill literal to the column's own
+  width (`python/repark/src/repark/spark/dataframe/actions_export.py`, over the Rust
+  `lit` / `cast` / `coalesce` kernels). An Iceberg round trip answers `sh:int, ti:int,
+  price:float, b:binary` — the narrow-int widening matches Spark, which has no
+  smallint/tinyint at the Iceberg boundary either. Nullability divergences (`fillna`
+  non-null, Iceberg all-nullable) are recorded in the unit ledger, out of scope per W-7;
+  `toPandas` dtypes unmeasured (no pandas in the oracle env).
+- **Pin** — `python/repark/tests/test_logical_width_1.py` (20 pins over
+  `python/repark/tests/facade_logical_width_oracle.json`, 22 live cells, 2026-09-15).
+  Reclassified narrow: `test_nullability_2.py` narrow-width and `_CAST_FLAG_ROWS` asserts,
+  `test_df_surface_a_1.py::test_to_narrow…` and `test_to_binary…`, the facade-3
+  `bin_*`/`tup_*` goldens, facade-4 census D7/D8/D9/D18/D19, io-text-2 probe6
+  float/smallint/tinyint/binary.
+
+### DF-LIT-BINARY-1 — `F.lit(bytes)` refuses — **BACKLOG 2026-09-16**
+
+- **repark** — `F.lit(b"ab")` raises `PySparkTypeError` (`lit() supports …; got bytes`).
+- **Apache Spark** — answers a `binary` literal column (non-nullable).
+  *(oracle: live PySpark 4.1.2, UTC, `facade_logical_width_oracle.json` cell `lit_width`,
+  2026-09-15.)*
+- **Pin** —
+  `python/repark/tests/test_logical_width_1.py::test_lit_bytes_refuses_df_lit_binary_1`
+  (asserts today's refusal plus the Spark target dtypes; red when fixed).
+- **Rationale** — BACKLOG, filed 2026-09-16 (LOGICAL-WIDTH-1 round 1). The bytes arm needs
+  `python/repark/src/repark/spark/functions.py::lit`, owned by run 18a today, ahead of the
+  Rust `PyColumn::literal` arm; no silent stub per the shape rule.
+
+### ARITH-FLOAT-INT-1 — `float * int` answers float32, Spark answers double — **BACKLOG 2026-09-16**
+
+- **repark** — `(F.col("f") * 2)` over a `float` column answers Arrow `float` (Float32).
+- **Apache Spark** — widens float-by-int to `double` (cell `arith_width`, `f2: double`).
+  *(oracle: live PySpark 4.1.2, UTC, `facade_logical_width_oracle.json`, 2026-09-15.)*
+- **Pin** —
+  `python/repark/tests/test_logical_width_1.py::test_float_times_int_literal_divergence_arith_float_int_1`
+  (holds the tree `float` answer against the recorded `double`; red when fixed).
+- **Rationale** — BACKLOG, filed 2026-09-16 (LOGICAL-WIDTH-1 round 1, finding F-1). Needs a
+  DataFusion binary-arithmetic coercion rule (float × int → float64); a display change
+  cannot serve it. Exposed when the widened display stopped masking the engine type.
 
 ### FLOAT-AGG-1 — sum of catastrophic-cancellation float vector
 
@@ -6469,22 +6510,25 @@ Shared roster pin for every heading:
 - **Rationale** — FIXED, by TYPES-GEO-DDL-1 (run 16c) on the BACKLOG row TYPES-BASES-1 filed (run 15b); the two
   BACKLOG pins flipped to equality in the same change. Spatial column use stays `V3-GEO-1` (DECLARED).
 
-### DF-TO-BINARY-1 — `DataFrame.to` follows the facade's `string` report for a binary column — **BACKLOG 2026-09-14**
+### DF-TO-BINARY-1 — `DataFrame.to` follows the facade's `string` report for a binary column — **FIXED 2026-09-16 (LOGICAL-WIDTH-1)**
 
-- **repark** — a `binary` column reports `string` through `df.schema` / `dtypes` (FACADE-4 census rows D7 and D19), so
-  `df.to(StructType([StructField("b", StringType())]))` is treated as identity and keeps the `bytes` values under a field
-  that reports `string`, while `df.to(StructType([StructField("b", BinaryType())]))` refuses with
-  `INVALID_COLUMN_OR_FIELD_DATA_TYPE` (source reported `STRING`).
+- **repark** — a `binary` column reports `binary` through `df.schema` / `dtypes`, so
+  `df.to(StructType([StructField("b", BinaryType())]))` is identity and keeps the `bytes`
+  values, while `df.to(StructType([StructField("b", StringType())]))` follows the
+  store-assignment rule (BinaryType is atomic, StringType is a string type) through the
+  engine cast. The pre-fix shape (string report, binary target refused) is gone with the
+  report it followed.
 - **Apache Spark** — the column is `binary`: `to(binary)` is identity; `to(string)` follows Spark's store-assignment rule
   for binary → string. *(oracle: documented — `Dataset.to` store assignment; the binary → string value is UNMEASURED on a
   live Spark, recorded for the next oracle round.)*
 - **Pin** — `python/repark/tests/test_df_surface_a_1.py::test_to_binary_follows_reported_schema_df_to_binary_1`
-- **Pin (IO-TEXT-1, 2026-09-15)** — a user schema typing a text partition column `binary` reads the raw bytes and reports
-  `string`: `python/repark/tests/test_io_text_2.py::test_text_probe6_int_schema_binary` (red when fixed).
-- **Rationale** — BACKLOG, filed by DF-SURFACE-A-1 (run 15b) from the critic re-check finding L-101. The root is the
-  binary report on the scan surface, which FACADE-4 step 0 put to the owner as question 2 (keep `string` where the
-  physically decoded column is described, or report `binary`). `to()` reconciles against the reported schema by design;
-  it changes with that ruling, and this pin reds on purpose when it does.
+  (rewritten 2026-09-16: binary identity keeps bytes; string target follows the cast).
+- **Pin (IO-TEXT-1, 2026-09-15)** — a user schema typing a text partition column `binary` reads the raw bytes and now
+  reports `binary`: `python/repark/tests/test_io_text_2.py::test_text_probe6_int_schema_binary`.
+- **Rationale** — FIXED 2026-09-16 (LOGICAL-WIDTH-1 round 1): the binary report landed, so
+  `to()` reconciles binary→binary as identity. Filed by DF-SURFACE-A-1 (run 15b) from the
+  critic re-check finding L-101. The binary → string VALUE stays tree-measured until the
+  next oracle round records it on a live Spark.
 
 ### Surfaced, awaiting pins — not yet rows
 
