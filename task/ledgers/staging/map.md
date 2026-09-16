@@ -18,6 +18,22 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Oracle: run-16b PySpark 4.1.2 cells (`freq_*`, `transpose_*`).
   `risk_tier: standard`. Branch `feat/df-rust-3`.
   pins: df-rust-3/C-001, C-002, C-003, C-004, C-005, C-006
+- [df-subquery-1-ledger.md](df-subquery-1-ledger.md) —
+  **DF-SUBQUERY-1 (2026-09-15), in flight:** `DataFrame.scalar` / `.exists` /
+  `.lateralJoin` / `.asTable` over `Column.outer` — `Expr::ScalarSubquery`,
+  `Expr::Exists`, `OuterReferenceColumn` and `LogicalPlan::Subquery` built in
+  Rust (repark-python + repark-core), EXISTS-in-projection and
+  lateral-projection-hoist rewrites in the core optimizer list, the
+  `SCALAR_SUBQUERY_TOO_MANY_ROWS` execution guard, `TableArg` + the UDTF
+  table-argument path, and the Spark-classic unqualified-resolution quirk
+  pinned both ways. Round 3 (2026-09-16): the Grok reviews' four P2s — the
+  hoist keeps the right side's `SubqueryAlias` qualifier, a correlated
+  `LIMIT` is stripped into `__repark_any_row` / `__repark_single_row`, the
+  `lateral_tvf_like` pin's claim is narrowed to what it reads with both
+  residuals disclosed, and `how="left"` gains a red-capable qualified pin;
+  P-201..P-206 / Y-1..Y-3 recorded as residue.
+  `risk_tier: standard`. Branch `feat/df-subquery-1`.
+  pins: df-subquery-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
@@ -761,6 +777,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   verdicts. `risk_tier: standard`. Branch
   `feat/fnp-win-1`.
   pins: fnp-win-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+- [spark-sql-grammar-1-ledger.md](spark-sql-grammar-1-ledger.md) —
+  **SPARK-SQL-GRAMMAR-1 step 1 (2026-09-16), in flight:** Spark operators,
+  keywords and type names on the SQL door — ledger with the card rulings plus
+  R-17c-3/R-17c-6/R-17c-7 and the re-measure table (1 ALREADY-GREEN, the rest
+  RED, findings F-001/F-002). C-009 OPEN per R-17c-7. Branch
+  `feat/spark-sql-grammar-1`.
+  pins: spark-sql-grammar-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [fnp-11b-ledger.md](fnp-11b-ledger.md) —
   **FNP-11B step 1 (2026-09-15), in flight:** datetime format parsing, the TIME
   family, BL-13 and BL-14 — ledger with D-1…D-10 (card D-1…D-6, run-16a D-7…D-10

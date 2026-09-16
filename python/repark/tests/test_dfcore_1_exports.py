@@ -114,6 +114,12 @@ DF-RUST-3 (2026-09-16): ``freqItems`` and ``transpose`` join ``DataFrame`` —
 import, so the bottom E402 line drops it) and ``transpose`` binds
 ``surface_a.transpose``, so ``EXPECTED_DATAFRAME_DIR`` gains exactly those two
 names and neither surface list changes.
+DF-SUBQUERY-1 (2026-09-15): the four subquery-surface methods (``scalar``,
+``exists``, ``lateralJoin``, ``asTable``) bind on the class from
+``subquery.DECLARED_MEMBERS`` — one tuple-assign line so the example-coverage
+walk sees them — so ``EXPECTED_DATAFRAME_DIR`` gains exactly those four names;
+``core`` and the package each gain exactly the one new module name ``subquery``.
+pins: df-subquery-1/C-007
 """
 
 from __future__ import annotations

@@ -2107,6 +2107,45 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — FIXED, 2026-09-15 (io-text-1 follow-up).
   pins: io-text-1/T-6, X-4, Y-1, Z-2
 
+### DF-SUBQUERY-1 — `scalar` / `exists` / `lateralJoin` / `asTable` over `Column.outer`
+
+- **repark** — **FIXED 2026-09-15.** `DataFrame.scalar` / `exists` build
+  `Expr::ScalarSubquery` / `Expr::Exists` in Rust; `lateralJoin` wraps the right plan in
+  `LogicalPlan::Subquery` over scope-resolved expressions; `asTable` returns a `TableArg`
+  value object consumed by the UDTF table-argument path and the SQL `TABLE(name)`
+  spelling. `Column.outer` lowers to `OuterReferenceColumn`; scope resolution is
+  innermost-first, which reproduces the Spark classic quirk where an unqualified
+  `F.col("dept") == F.col("dept").outer()` binds BOTH sides inside the subquery
+  (`exists_correlated` keeps all four emp rows; `lateral_basic` answers the cross
+  product) while qualified `d.dept = e.dept` correlates. Multi-column scalar refuses at
+  construction (`INVALID_SUBQUERY_EXPRESSION.SCALAR_SUBQUERY_RETURN_MORE_THAN_ONE_OUTPUT_COLUMN`,
+  SQLSTATE 42823); multi-row scalar raises `SCALAR_SUBQUERY_TOO_MANY_ROWS` / SQLSTATE
+  21000 at execution through a `__repark_single_row` guard aggregate. EXISTS in a
+  projection lowers to a count-comparison boolean that keeps the plan's field name
+  (`exists()` unaliased); outer references under a generator or any non-Filter /
+  non-root-Projection node refuse `UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE`,
+  SQLSTATE 0A000. A `SubqueryAlias` on the lateral right is carried through the
+  projection hoist — hoisted outputs keep the `t.` qualifier, so the ordinary SQL
+  spelling `LATERAL (…) t` with qualified `t.dbl` references answers (round-3 fix,
+  2026-09-16); a correlated `LIMIT` inside a scalar subplan is stripped before the
+  guard wraps it, so correlated `LIMIT 1` answers a per-group pick instead of dying
+  in physical planning. Residuals measured against the same oracle: (a) the
+  optimizer-raised `CORRELATED_REFERENCE` refusal carries Spark's condition and
+  SQLSTATE in the message text but `getCondition()` is not populated on the
+  engine-wrapped exception, and the message's `sqlExprs` parameter quotes repark's
+  internal array id where the `lateral_tvf_like` cell records Spark rendering
+  `explode(array(id, sal))`; (b) `spark.tvf.explode` reports the exploded column
+  nullable where Spark reports non-nullable (pre-existing tvf path, unchanged
+  here).
+- **Apache Spark** — PySpark 4.1.2 classic; all four methods implemented per the
+  recorded probe (`probe_dfsubq.py`, run 16b, 2026-09-15).
+- **Pin** — `python/repark/tests/test_df_subquery_1.py` (every `scalar_*`, `exists_*`,
+  `lateral_*`, `astable_*`, `outer_*` cell of `facade_df_subquery_oracle.json`);
+  `crates/repark-core/src/session/tests/subquery.rs` (rule-level pins).
+- **Rationale** — FIXED. The `getCondition` gap on engine-raised refusals and the
+  tvf-explode nullability are recorded residuals, not silent gaps.
+  pins: df-subquery-1/C-001..C-007
+
 ---
 
 ## 6. How a row is added, mirrored and retired
@@ -2832,6 +2871,19 @@ the pin rather than obeying it.
 > (now an equality row) and
 > `crates/repark-spark/tests/session_timezone.rs::a_naive_ntz_timestamp_is_not_shifted_by_the_session_zone`.
 > **Residual:** `spark.sql.timestampType` (opt-in default-NTZ) is not implemented (Q10).
+>
+> **Dated note (2026-09-16, SPARK-SQL-GRAMMAR-1 C-005):** the `TIMESTAMP_NTZ`
+> *type name* on the SQL door (`TIMESTAMP_NTZ '…'` literals,
+> `CAST(x AS TIMESTAMP_NTZ)`) still refuses — now as
+> `[UNSUPPORTED_TIMESTAMP_NTZ]`, naming this row — because no tz-naive Arrow
+> CAST path exists in the engine (rewriting onto `TIMESTAMP WITHOUT TIME ZONE`
+> plans tz-aware, measured 2026-09-16). A naive CAST kernel or analyzer rule is
+> `repark-functions` work, outside this unit's fence. The literal does not parse
+> yet, so #606's `D4_BLOCKED_SQL` cell
+> (`timestampdiff(DAY, ntz, TIMESTAMP_NTZ'2024-03-11 01:00:00')`) stays blocked
+> and this unit does not touch that skip set.
+> **Pin:** `python/repark/tests/test_spark_sql_grammar_1.py::test_pg_ntz_literal_refuses`
+> and `…::test_pg_ntz_cast_refuses`.
 
 ### TZ-7 — a zoneless TIMESTAMP input is read as UTC, not as a session-zone wall clock
 
@@ -3361,18 +3413,21 @@ the pin rather than obeying it.
 - **Rationale** — FIXED. History: the `regex` crate honoured POSIX `[[:alpha:]]`.
 - **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `[[:alpha:]x]` matches `'x'` and `'fox'` via `rlike`/`regexp_like` on both engines; neighbouring `regexp_extract` answers since FN-REGEXP-EXTRACT-1 (2026-09-04) — the former refusal pin is now `test_fn_regex_posix_class.py::test_regexp_extract_answers_on_both_doors` (FINDING F-FN-FIX-2-CTRL-1-1's flag superseded; Spark `'alpha'`/`''` control measured 2026-09-04); the SQL `RLIKE` keyword gap is filed as FN-RLIKE-KEYWORD-1.
 
-### FN-RLIKE-KEYWORD-1 — SQL `RLIKE` keyword refuses; the `regexp_like(...)` spelling answers
+### FN-RLIKE-KEYWORD-1 — SQL `RLIKE` keyword refuses; the `regexp_like(...)` spelling answers — **FIXED 2026-09-16 (SPARK-SQL-GRAMMAR-1 C-003)**
 
-- **repark** — `SELECT 'x' RLIKE '[[:alpha:]x]'` raises
-  `UnsupportedOperationException: This feature is not implemented: Unsupported ast node in
-  sqltorel: RLike`. The function spelling
-  `SELECT regexp_like('x', '[[:alpha:]x]')` answers `True`.
+- **repark** — the SQL door lowers `x RLIKE p` onto `regexp_like(x, p)` and
+  `x NOT RLIKE p` onto `NOT regexp_like(x, p)`
+  (`crates/repark-spark/src/keyword_lower.rs`), answering Spark-equal on
+  `spark.sql` and `selectExpr`.
 - **Apache Spark** — the keyword statement answers `True` (also `True` for `'fox'`).
-  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, FN-FIX-2-CTRL-1 round 3.)*
-- **Pin** — `python/repark/tests/test_fn_regex_posix_class.py::test_sql_rlike_keyword_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the FN-FIX-2-CTRL-1 round-3 measurement. Only
-  the SQL keyword stays unsupported; `rlike` / `regexp_like` / SQL `regexp_like` answer
-  Spark-equal per FN-REGEX-POSIX-1.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, FN-FIX-2-CTRL-1 round 3;
+  fixtures-batch3 PG-rlike.)*
+- **Pin** — `python/repark/tests/test_spark_sql_grammar_1.py::test_pg_rlike` and
+  `…::test_pg_not_rlike` (the retired
+  `python/repark/tests/test_fn_regex_posix_class.py::test_sql_rlike_keyword_refuses`
+  refusal pin).
+- **Rationale** — BACKLOG, filed 2026-09-04 from the FN-FIX-2-CTRL-1 round-3 measurement. Closed
+  2026-09-16 by the SQL-door lowering.
 
 ### FN-REGEX-LOOKAROUND-1 — Java look-around refuses on every regexp kernel
 
@@ -8208,17 +8263,25 @@ field NAME.
 - **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closing it
   means folding literal-only UDF calls in the planner, not touching the kernels.
 
-### EX-FN-25 — bare `localtimestamp` answers the call; Spark raises UNRESOLVED_COLUMN
+### EX-FN-25 — bare `localtimestamp` answers the call; Spark raises UNRESOLVED_COLUMN — **FIXED 2026-09-16 (SPARK-SQL-GRAMMAR-1 C-010)**
 
-- **repark** — `SELECT localtimestamp` (no parentheses) answers the current session-zone
-  wall clock as `timestamp_ntz`, non-null: the engine resolves a bare nullary function
-  name as a call.
+- **repark** — a bare nullary name Spark refuses (`localtimestamp`, `current_catalog`,
+  `current_database`, `current_schema`, `current_timezone`, `now`) raises Spark's
+  `UNRESOLVED_COLUMN` class on the SQL door
+  (`crates/repark-spark/src/bare_nullary.rs` maps the planner's missing-field error):
+  `WITH_SUGGESTION` with candidates when the query has a frame, `WITHOUT_SUGGESTION`
+  frameless — both shapes matching live PySpark 4.1.2 (FNP-11A batch for the frameless
+  shape, batch-14 for the framed shape). A real column of the same name still wins
+  (the map only fires on the missing-field error).
 - **Apache Spark** — the same text raises `[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION]`; only
   `localtimestamp()` with parentheses answers. *(oracle: live PySpark 4.1.2, ANSI on, UTC,
   2026-09-14, FNP-11A batch.)*
-- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_bare_localtimestamp_answers_call`
-- **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closing it
-  means a SQL parser/planner change (run 15c owns the parser), out of scope for FNP-11A.
+- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_bare_localtimestamp_refuses`
+  (the retired `test_bare_localtimestamp_answers_call` pin) and the Q14-0/8/10/12/18/20
+  legs in `python/repark/tests/test_spark_sql_grammar_1.py`.
+- **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closed
+  2026-09-16 by the SQL-door error map; the `BARE_NULLARY_SQL` skip retired in the
+  same commit.
 
 ### EX-FN-26 — naive Python datetime literals read as UTC; Spark reads the driver zone
 
@@ -8235,18 +8298,41 @@ field NAME.
 - **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Matching
   Spark would mean reading the driver zone, which the server-prep disciplines forbid.
 
-### EX-FN-27 — bare-unit `timestampadd` / `timestampdiff` keywords refuse; Spark parses them
+### EX-FN-27 — bare-unit `timestampadd` / `timestampdiff` keywords refuse; Spark parses them — **FIXED 2026-09-16 (SPARK-SQL-GRAMMAR-1 C-008)**
 
-- **repark** — `SELECT timestampadd(YEAR, 1, TIMESTAMP'2024-01-01 00:00:00')` raises
-  `AnalysisException: Schema error: No field named year`: the bare unit parses as a column
-  reference. The string-unit spelling `timestampadd('YEAR', …)` answers on both doors, and
-  the Python door (`F.timestamp_add("YEAR", …)`) answers.
+- **repark** — the SQL door rewrites the bare unit keyword to the string unit the
+  kernels take (`crates/repark-spark/src/bare_unit.rs`): `timestampadd(DAY, 1, ts)`,
+  `timestampdiff(HOUR, a, b)` and the three-argument `dateadd` / `datediff` aliases
+  answer on `spark.sql` and `selectExpr`. A quoted unit refuses
+  `[INVALID_PARAMETER_VALUE.DATETIME_UNIT]` and an unknown unit refuses
+  `[UNRESOLVED_ROUTINE]`, both matching live PySpark 4.1.2 (batch-14 Q14-26/Q14-35).
 - **Apache Spark** — the bare-unit spellings parse (the unit is a keyword, not a column)
   and answer. *(oracle: live PySpark 4.1.2, both ANSI settings, UTC and
-  America/New_York, 2026-09-14, FNP-11A batch.)*
-- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_bare_timestampadd_unit_refuses`
-- **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closing it
-  means a SQL parser/planner change (run 15c owns the parser), out of scope for FNP-11A.
+  America/New_York, 2026-09-14, FNP-11A batch; batch-14 nullary-units fixture for
+  the quoted/unknown-unit refusals.)*
+- **Pin** — `python/repark/tests/test_spark_sql_grammar_1.py` (Q14-22…40 PG-tsadd /
+  PG-tsdiff / PG-dateadd / PG-datediff-unit legs, both ANSI settings) and
+  `python/repark/tests/test_fnp11a_temporal.py::test_bare_timestampadd_unit_answers`
+  (the retired `test_bare_timestampadd_unit_refuses` pin).
+- **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closed
+  2026-09-16 by the SQL-door rewrite; the `BARE_UNIT_NAMES` workaround and the refusal
+  pin retired in the same commit.
+
+### SQL-GRAMMAR-LATERAL-1 — same-SELECT-list lateral column alias refuses; Spark answers
+
+- **repark** — `SELECT 1 AS a, a + 1 AS b` raises `AnalysisException: Schema error:
+  No field named a`: the planner does not expand a lateral same-level alias. The
+  CTE (`WITH t AS (SELECT 1 AS a) SELECT a, a + 1 AS b FROM t`) and subquery
+  spellings answer `(1, 2)` — but type `b` as `int64`, where Spark says `int`
+  (the F-002 width family, owned upstream).
+- **Apache Spark** — the lateral alias answers `(1, 2)`, both `int` non-null.
+  *(oracle: live PySpark 4.1.2, fixtures-batch3 PG-lateral-alias.)*
+- **Pin** — none yet: the PG-lateral-alias cell is unpinned until the expansion
+  lands (this row is the dated declaration).
+- **Rationale** — DECLARED 2026-09-16 by SPARK-SQL-GRAMMAR-1 C-007 per the card's
+  own budget rule (the seam is a same-level alias-expansion analyzer rule with
+  scoping and shadowing, more than a projection rewrite). Next unit owns the
+  rule plus the `b`-width half.
 
 
 ### EX-FN-28 — facade `make_timestamp(date=, time=)` answers after the Q-15a-3 widening — **FIXED 2026-09-15 (FNP-11B)**

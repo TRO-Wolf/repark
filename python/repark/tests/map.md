@@ -907,6 +907,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   dropped — `catalog_surface.session_table` is the resolved-identity door).
   pins: csv-infer-perf-1/C-002, C-005; facade-4/C-014, C-022, C-026;
   catalog-surface-1/C-008
+- [test_spark_sql_grammar_1.py](test_spark_sql_grammar_1.py) — **SPARK-SQL-GRAMMAR-1
+  (2026-09-16):** SQL-door pins for Spark operators, keywords and type names —
+  value AND Arrow type/nullability through ``spark.sql`` (``selectExpr`` legs ride
+  the same router), both ANSI settings. C-008 lands first: bare datetime-unit
+  keywords, the quoted-unit and unknown-unit refusals, two-argument ``datediff``.
+  Then C-010 (bare nullary both directions), C-003 (RLIKE lowering), C-004 (LTZ
+  cast), C-005 (NTZ refusal naming TZ-6) and the C-006 struct-dot pin.
+  pins: spark-sql-grammar-1/C-003, C-004, C-005, C-006, C-008, C-010
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
   **FNP-4B (2026-09-15):** BL-9 and BL-12 FIXED — the double-quoted pin asserts a STRING and the
@@ -1787,10 +1795,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `"or"` filter-boolean-steal pins; bare `when` pin-refuse (quoted works; no leak).
 - `test_udtf.py` — **r23 C6 / U12 UDTF scalar-arg phase-2 core:** `@udtf` /
   lit-call multi-row expand (Arrow value+type); `spark.udtf.register` +
-  `SELECT * FROM name(lit_args)` rewrite; column-subset SELECT; LATERAL /
-  non-literal / table-arg refuse-loud; validation errorClasses held
+  `SELECT * FROM name(lit_args)` rewrite; column-subset SELECT; non-literal
+  Column args refuse-loud; validation errorClasses held
   (`INVALID_UDTF_*` / `CANNOT_REGISTER_UDTF`); reserved name refuse;
   `functions.udtf` export; empty-eval empty schema; half-wired scalar guard.
+  **DF-SUBQUERY-1 (2026-09-15):** the table-arg pin flips from refuse-loud to
+  execute — `Echo(frame)` feeds each input `Row` to `eval` through the
+  `table_arg.py` path (`test_udtf_table_arg_feeds_rows`).
   **octo C1 pins:** name-in-string/comment no-hijack; JOIN table-factor refuse;
   unclosed SQL string refuse; eval arity mismatch; multi-arg/NULL/TRUE/FALSE/case
   SQL; zero-arg + bad register name.
@@ -5525,21 +5536,30 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
   pins: fnp-11a/C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [test_fnp11a_r2.py](test_fnp11a_r2.py) — round-2 finding pins over the run-15a
   oracle: finding coverage (L-001..L-011) plus the zero-arg asymmetry and
-  shortest-call-shape pins; the cached session stops on teardown.
+  shortest-call-shape pins; the cached session stops on teardown. **Run 17c (2026-09-16):**
+  the `BARE_UNIT` translation regex is retired — `spark-sql-grammar-1`/C-008 makes the bare
+  datetime-unit keywords run natively on the SQL door, so rewriting them to the quoted
+  spelling would now hide the behaviour under test.
   pins: fnp-11a/C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - [test_fnp11a_temporal.py](test_fnp11a_temporal.py) — one parametrized test per door
   over the card's thirteen names: facade-signature parity (C-001), Python-door and
   SQL-door oracle equality (C-002/C-003), Spark error conditions and message prefixes
-  on both ANSI settings (C-004), and try_* NULL semantics (C-005). String units
-  match in any case and NTZ pairs ignore the session zone (C-003). The 45 `tm`-column
-  cells are out of scope (D-9) and the two NTZ-literal SQL cells are blocked on the
-  run-15c parser (D-4, pinned on the Python door instead). Literal-only cells skip
-  the nullability assert (EX-FN-24, Spark folds them); bare `localtimestamp` is
-  excluded (EX-FN-25); naive-literal zone and bare-unit refusal carry explicit pins
-  (EX-FN-26, EX-FN-27).
+  on both ANSI settings (C-004), and try_* NULL semantics (C-005). Bare units
+  match in any case and NTZ pairs ignore the session zone (C-003).
+  **SPARK-SQL-GRAMMAR-1 (2026-09-16):** the `BARE_UNIT_NAMES` workaround and the
+  bare-unit refusal pin retired into answering pins (EX-FN-27 FIXED); the
+  `BARE_NULLARY_SQL` skip retired into the bare-`localtimestamp` refusal pin
+  (EX-FN-25 FIXED); quoted-unit SQL spellings converted to bare (Spark refuses
+  quoted). The 45 `tm`-column cells are out of scope (D-9) and the two
+  NTZ-literal SQL cells are blocked on the run-15c parser (D-4, pinned on the
+  Python door instead). Literal-only cells skip the nullability assert (EX-FN-24,
+  Spark folds them); naive-literal zone carries its explicit pin (EX-FN-26).
   pins: fnp-11a/C-001, C-002, C-003, C-004, C-005, C-007
 - **FNP-11A (2026-09-15):** `fnp11a_r2_spark_oracle.json` is excluded from the typos gate in `.typos.toml`: it records verbatim live-PySpark 4.1.2 messages, one of them truncated mid-word by the recorder, and recorded evidence is never hand-edited.
 - **FNP-11A R3 intake (2026-09-15):** `test_fnp11a_temporal.py` now runs every SQL-door `timestamp_add` / `timestamp_diff` oracle cell (L-005) with the bare unit keyword quoted (`BARE_UNIT_CALL`), since bare keywords stay EX-FN-27 and `test_bare_timestampadd_unit_refuses` keeps that pinned. Only the `TIMESTAMP_NTZ'…'` literal cell stays in `D4_BLOCKED_SQL` (the SQL parser has no such type). `test_timestampdiff_ntz_pair_answers_days` runs that pair's end value through `make_timestamp_ntz` instead of diffing a column with itself (L-006).
+- **SPARK-SQL-GRAMMAR-1 (2026-09-16):** the R3 quoting workaround above is retired —
+  bare keywords parse on the door now (EX-FN-27 FIXED) and
+  `test_bare_timestampadd_unit_refuses` became `test_bare_timestampadd_unit_answers`.
 - **FNP-11B step 6 (2026-09-15):** the EX-FN-28 refusal pins retire into answering
   pins (`test_make_timestamp_date_time_keywords_answer` on both doors,
   `test_make_timestamp_keeps_its_frozen_signature` on the widened shape) under
@@ -5549,7 +5569,9 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
   on the recorded door: SQL cells assert the Arrow string value, Python cells
   run over an `i INT, s STRING, d DOUBLE, b BOOLEAN` frame, the signature cell
   pins the one-required-column shape, and the arity cells pin Spark's
-  `WRONG_NUM_ARGS` text. Five cells pin as blocked with the seam named
+  `WRONG_NUM_ARGS` text. **Run 17c (2026-09-16):** the NTZ-literal seam pin asserts Spark's
+  `[UNSUPPORTED_TIMESTAMP_NTZ]` class, which `spark-sql-grammar-1`/C-005 now carries, in place
+  of DataFusion's `Unsupported SQL type` text. Five cells pin as blocked with the seam named
   (`TIMESTAMP_NTZ` literal and the three unit-less interval spellings stay
   17c's; the `binary` function name is unowned). pins: fnp-11b/C-005
 - **FNP-11A (2026-09-15):** `test_functions_split_identity.py` pins the eleven-name FNP-11A tail after `ARROW_EXPORTS`. `test_catalog_surface_1.py::test_list_functions_shape` (unique names) and `test_fnp_misc_1.py::test_fnp_misc_1_byname_allowlist_covers_facade` caught the duplicate install and are green again.
@@ -5648,3 +5670,36 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   where repark types it `string` (the collected value round-trips to `datetime.time` either way, and
   the extractor outcome is Spark-equal). That assert goes red when the lit path gains a TIME type,
   which is when the registry row retires. pins: fnp-11b/C-005
+- [test_df_subquery_1.py](test_df_subquery_1.py) — **DF-SUBQUERY-1 (2026-09-15):** every
+  `scalar_*` / `exists_*` / `lateral_*` / `astable_*` / `outer_*` cell of
+  `facade_df_subquery_oracle.json` on the Python door, plus the `scalar_sql` /
+  `exists_sql` / `lateral_sql` cells on the SQL door — and the card's two named
+  SQL-door gap spellings (EXISTS in a projection; LATERAL with an outer ref in the
+  SELECT list), both of which answer through the repark-core rules, so no
+  `DF-SUBQUERY-SQL-1` row was needed: values, schemas, nullability,
+  projection names (`scalarsubquery()` / `exists()` unaliased), display strings, the
+  inner-scope-wins unqualified-`outer()` quirk, the conditioned error cells
+  (`SCALAR_SUBQUERY_RETURN_MORE_THAN_ONE_OUTPUT_COLUMN` 42823,
+  `SCALAR_SUBQUERY_TOO_MANY_ROWS` 21000, `UNSUPPORTED_JOIN_TYPE` / `NOT_STR` /
+  `NOT_DATAFRAME` / `NOT_COLUMN_OR_STR` argument shapes, the `TableArg` ordering
+  guards), `spark.tvf.explode` and the `TABLE(...)` UDTF argument spellings, and the
+  `CORRELATED_REFERENCE` refusal under `explode` (a registered residual: the
+  optimizer-raised message carries Spark's condition text and SQLSTATE but
+  `getCondition()` is not populated on the wrapped exception, and the message's
+  `sqlExprs` parameter quotes repark's internal array id rather than Spark's
+  `explode(array(id, sal))` — the pin reads only condition/head/SQLSTATE). The
+  pre-existing `spark.tvf.explode` nullable-vs-non-nullable gap is pinned as-is,
+  not silently re-matched. **Round-3 (2026-09-16):** the aliased LATERAL
+  spellings — `LATERAL (…) t`, `WHERE t.dbl > 10`, `JOIN LATERAL (…) t ON`,
+  DataFrame `on=col("dbl") > 10`, and a still-correlated right under `t` — pin
+  the hoist's preserved `SubqueryAlias` qualifier; a correlated `LIMIT 1`
+  scalar (DataFrame + SQL doors) pins the any-row pick against an unmeasured
+  cell; and `how="left"` gains a qualified-alias pin whose 4-row/NULL-right
+  answer goes red on an `inner` revert.
+  pins: df-subquery-1/C-001..C-007
+- [facade_df_subquery_oracle.json](facade_df_subquery_oracle.json) — **DF-SUBQUERY-1
+  (2026-09-15):** the live-PySpark 4.1.2 cells (`probe_dfsubq.py`, run 16b, recorded
+  2026-09-15) over `emp(id, dept, sal)` / `dept(dept, budget)`: scalar, exists,
+  lateral-join, asTable/TableArg, and `Column.outer` arms plus the error cells.
+  Recorded evidence, never hand-edited.
+  pins: df-subquery-1/C-007

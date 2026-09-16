@@ -142,6 +142,14 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `DEAD_DATAFUSION_54_1_KEYS` (today only `datafusion.execution.coalesce_batches`,
   which 54.1.0 defines but no engine path reads) with its refusal constructor;
   the build sweep in `session.rs` enforces it. Pins: `tests/conf_unread.rs`.
+  **DF-SUBQUERY-1 (2026-09-15):** `df_guards.rs` declares `subquery/`'s module,
+  registers the `__repark_single_row` guard UDAF on every core session beside
+  `stack`/`repark_isnan`, and inserts `repark_projection_exists` +
+  `repark_scalar_subquery_guard` just ahead of `scalar_subquery_to_join` and
+  `repark_lateral_projection_hoist` just ahead of `decorrelate_lateral_join` in the
+  recommended-rule order. `session.rs` re-exports `resolve_bound_expr` /
+  `resolve_scoped_expr` / `resolve_subquery_plan` for the binding layer.
+  pins: df-subquery-1/C-001, C-002, C-004
 - `tests/df_guard.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   cohort pushed that file past the 1500-line ceiling (the sanctioned "split the module" out, not
   an EXCEPTIONS row). Guard 1: a bare no-extension session carries the scalar-subquery config
@@ -214,6 +222,21 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `df_guards/` (see [df_guards/map.md](df_guards/map.md)) because it is the third DF-54.1 guard
   and because `../session.rs` is at its file-size baseline and may not gain a `mod` line.
   pins: win-slide-1/C-001, C-002, C-005, C-006, C-007
+- `df_guards/subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery —
+  outer-reference scope resolution plus three optimizer rules and the
+  `__repark_single_row` guard UDAF, all installed on every core session through
+  `df_guards.rs` (see [df_guards/map.md](df_guards/map.md) for the full design note).
+  Round 3 (2026-09-16): `__repark_any_row` joins the guard family for a stripped
+  correlated `LIMIT 1`, and the projection hoist carries a `SubqueryAlias`
+  qualifier through to its lifted outputs.
+  Pins: `tests/subquery.rs` and `python/repark/tests/test_df_subquery_1.py`.
+  pins: df-subquery-1/C-001, C-002, C-003, C-004
+- `tests/subquery.rs` — **DF-SUBQUERY-1:** plan-level pins for the three subquery
+  rules: the scalar guard wraps a non-singleton subplan and leaves a zero-group
+  `count(*)` aggregate untouched, the lateral hoist lifts a `Subquery`-wrapped right
+  projection and refuses a correlated `Unnest`, and the EXISTS-in-projection rewrite
+  keeps the plan's field name.
+  pins: df-subquery-1/C-001, C-002, C-004
 - `tests/window_rescan.rs` — **WIN-SLIDE-1:** the capability pins — a throwaway aggregate with no
   `retract_batch`, registered at test time, answers over a sliding frame and plans as a re-scan;
   `sum` keeps DataFusion's sliding accumulator; an ever-expanding frame is never rewritten; an

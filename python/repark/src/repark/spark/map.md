@@ -175,6 +175,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (one `PyColumnParts` call each, chains nest) — the deferred select-boundary
   resolver is deleted, so filter / `when` / `orderBy` / `groupBy` / join / nested
   positions compose. pins: column-parity-1/C-001, C-002, C-003, C-004, C-005, C-008
+  **DF-SUBQUERY-1 (2026-09-15):** `outer()` marks the column through the native
+  `column_outer` (`Expr::OuterReferenceColumn`), and `column_or_str_error` is the
+  shared `NOT_COLUMN_OR_STR` raise `_column_of` uses for `TableArg` and other
+  non-column arguments. pins: df-subquery-1/C-003, C-005
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.
@@ -509,10 +513,25 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_struct_to_internal` / `_struct_from_internal` conversion bodies.
   `types.py` imports and re-exports every public
   name. pins: types-bases-1/C-001, C-002, C-003, C-004, C-006
+- `table_arg.py` — **DF-SUBQUERY-1 (2026-09-15):** `TableArg`, the value object
+  `DataFrame.asTable()` returns, with exactly Spark's public surface
+  (`partitionBy` / `orderBy` / `withSinglePartition`) and Spark's ordering guards
+  (`orderBy` before a partitioning call refuses; a second partitioning call
+  refuses). `select` rejects it `NOT_COLUMN_OR_STR` like any non-column.
+  The file also owns the table-argument UDTF execution path
+  (`_as_table_arg` / `_map_table_udtf_batches` / `_execute_table_udtf`, split out of
+  `udtf.py` at its file-size ceiling): partition keys group input rows into fresh
+  handler instances, `orderBy` sorts in-partition ascending nulls-first, and scalar
+  call args broadcast as lit-appended columns through `mapInArrow`.
+  pins: df-subquery-1/C-005
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
   calls, and Arrow expansion. Round 2 adds the additive `_map_arrow_udtf_batches` branch
-  (arrow handlers run batch-wise; the plain path is unchanged).
-  pins: fnp-misc-1/F-1
+  (arrow handlers run batch-wise; the plain path is unchanged). **DF-SUBQUERY-1
+  (2026-09-15):** `__call__` detects a `TableArg`/DataFrame argument and hands off to
+  `table_arg.py`'s execution path, and `try_sql_registered_udtf` parses `TABLE(name)
+  [PARTITION BY …] [ORDER BY …] [WITH SINGLE PARTITION]` call arguments so the SQL
+  door reaches the same path.
+  pins: fnp-misc-1/F-1; df-subquery-1/C-005
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and
   partition expressions.
 

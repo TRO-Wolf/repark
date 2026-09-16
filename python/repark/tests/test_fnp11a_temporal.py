@@ -63,9 +63,6 @@ SPARK_PA_TYPE: dict[str, str] = {
 NTZ_NAMES: frozenset[str] = frozenset({"make_timestamp_ntz", "try_make_timestamp_ntz"})
 FROZEN_SIGNATURE_NAMES: frozenset[str] = frozenset({"make_timestamp"})
 TYPEOF_TOKEN: re.Pattern[str] = re.compile(r"\btypeof\b")
-BARE_UNIT_NAMES: frozenset[str] = frozenset({"timestamp_add", "timestamp_diff"})
-BARE_UNIT_CALL: re.Pattern[str] = re.compile(r"^(\w+)\(([A-Z]+),")
-BARE_NULLARY_SQL: frozenset[str] = frozenset({"localtimestamp"})
 LIT_ZONE_EXPRS: frozenset[str] = frozenset(
     {"F.timestamp_diff('HOUR', lit(datetime.datetime(2024, 1, 1)), col('ts'))"}
 )
@@ -93,8 +90,6 @@ def _pinned_cells() -> list[dict[str, Any]]:
         if cell["door"] == "sql" and cell["expr"] in D4_BLOCKED_SQL:
             continue
         if cell["name"] in NTZ_NAMES and cell.get("error_condition") == "UNSUPPORTED_TIME_TYPE":
-            continue
-        if cell["door"] == "sql" and cell["expr"] in BARE_NULLARY_SQL:
             continue
         if cell["door"] == "python" and cell["expr"] in LIT_ZONE_EXPRS:
             continue
@@ -268,8 +263,6 @@ def _sql_table(session: ReparkSession, expr: str) -> pa.Table:
 def _run_cell(cell: dict[str, Any]) -> None:
     """Run one fixture cell on its door and assert the Spark answer."""
     session = _session(bool(cell["ansi"]), cell["tz"])
-    if cell["door"] == "sql" and cell["name"] in BARE_UNIT_NAMES:
-        cell = {**cell, "expr": BARE_UNIT_CALL.sub(r"\1('\2',", cell["expr"])}
     if "error_condition" in cell and cell["error_condition"] not in ("NOT_IMPLEMENTED",):
         try:
             if cell["door"] == "sql":
@@ -385,37 +378,37 @@ def test_timestampdiff_ntz_pair_answers_days() -> None:
     """pins: fnp-11a/C-003."""
     session = _session(True, "UTC")
     end = "make_timestamp_ntz(2024, 3, 11, 1, 0, 0)"
-    text = f"SELECT timestampdiff('DAY', ntz, {end}) FROM {FRAME_VIEW}"
+    text = f"SELECT timestampdiff(DAY, ntz, {end}) FROM {FRAME_VIEW}"
     table = session.sql(text).toArrow().rename_columns(["v"])
     assert table.column("v").to_pylist() == [0, None]
     assert str(table.schema.field("v").type) == "int64"
 
 
-def test_timestampadd_string_unit_sql_matches_oracle() -> None:
-    """pins: fnp-11a/C-003."""
+def test_timestampadd_bare_unit_sql_matches_oracle() -> None:
+    """pins: fnp-11a/C-003 (bare spelling per spark-sql-grammar-1/C-008)."""
     session = _session(True, "UTC")
-    table = session.sql(f"SELECT timestampadd('DAY', 1, ts) FROM {FRAME_VIEW}").toArrow()
+    table = session.sql(f"SELECT timestampadd(DAY, 1, ts) FROM {FRAME_VIEW}").toArrow()
     assert str(table.schema.field(0).type) == "timestamp[us, tz=UTC]"
     actual = [_actual_scalar(item, "timestamp", "UTC") for item in table.column(0).to_pylist()]
     assert actual[0] == _box_local_to_instant(datetime.datetime(2024, 3, 10, 21, 30, 0))
     assert actual[1] is None
 
 
-def test_timestampdiff_string_unit_sql_matches_oracle() -> None:
-    """pins: fnp-11a/C-003."""
+def test_timestampdiff_bare_unit_sql_matches_oracle() -> None:
+    """pins: fnp-11a/C-003 (bare spelling per spark-sql-grammar-1/C-008)."""
     session = _session(True, "UTC")
-    text = f"SELECT timestampdiff('HOUR', TIMESTAMP'2024-03-11 01:00:00', ts) FROM {FRAME_VIEW}"
+    text = f"SELECT timestampdiff(HOUR, TIMESTAMP'2024-03-11 01:00:00', ts) FROM {FRAME_VIEW}"
     table = session.sql(text).toArrow()
     assert str(table.schema.field(0).type) == "int64"
     assert table.column(0).to_pylist() == [-23, None]
 
 
-def test_string_units_match_in_any_case() -> None:
-    """pins: fnp-11a/C-003."""
+def test_bare_units_match_in_any_case() -> None:
+    """pins: fnp-11a/C-003 (bare spelling per spark-sql-grammar-1/C-008)."""
     session = _session(True, "America/New_York")
     for unit in ("day", "Day", "DAY"):
         table = session.sql(
-            f"SELECT timestampadd('{unit}', 1, TIMESTAMP'2024-03-10 01:30:00') AS v"
+            f"SELECT timestampadd({unit}, 1, TIMESTAMP'2024-03-10 01:30:00') AS v"
         ).toArrow()
         assert str(table.schema.field("v").type) == "timestamp[us, tz=UTC]"
         instant = table.column("v").to_pylist()[0].astimezone(datetime.UTC)
@@ -423,7 +416,7 @@ def test_string_units_match_in_any_case() -> None:
     for unit in ("hour", "Hour", "HOUR"):
         table = session.sql(
             "SELECT timestampdiff("
-            f"'{unit}', TIMESTAMP'2024-03-10 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS v"
+            f"{unit}, TIMESTAMP'2024-03-10 01:30:00', TIMESTAMP'2024-03-11 01:30:00') AS v"
         ).toArrow()
         assert table.column("v").to_pylist() == [24]
 
@@ -433,12 +426,12 @@ def test_ntz_pair_ignores_session_zone() -> None:
     for tz in ("UTC", "America/New_York"):
         session = _session(True, tz)
         added = session.sql(
-            "SELECT timestampadd('DAY', 1, make_timestamp_ntz(2024, 3, 10, 1, 30, 0)) AS v"
+            "SELECT timestampadd(DAY, 1, make_timestamp_ntz(2024, 3, 10, 1, 30, 0)) AS v"
         ).toArrow()
         assert str(added.schema.field("v").type) == "timestamp[us]"
         assert added.column("v").to_pylist() == [datetime.datetime(2024, 3, 11, 1, 30, 0)]
         diffed = session.sql(
-            "SELECT timestampdiff('DAY', make_timestamp_ntz(2024, 3, 10, 1, 30, 0), "
+            "SELECT timestampdiff(DAY, make_timestamp_ntz(2024, 3, 10, 1, 30, 0), "
             "make_timestamp_ntz(2024, 3, 11, 1, 30, 0)) AS v"
         ).toArrow()
         assert diffed.column("v").to_pylist() == [1]
@@ -478,24 +471,24 @@ def test_folded_literals_stay_nullable() -> None:
     assert interval_table.schema.field(0).nullable is True
 
 
-def test_bare_timestampadd_unit_refuses() -> None:
-    """pins: fnp-11a/C-003 (EX-FN-27)."""
+def test_bare_timestampadd_unit_answers() -> None:
+    """pins: fnp-11a/C-003 (EX-FN-27, FIXED by spark-sql-grammar-1/C-008)."""
     session = _session(True, "UTC")
-    with pytest.raises(AnalysisException, match="No field named year"):
-        session.sql("SELECT timestampadd(YEAR, 1, TIMESTAMP'2024-01-01 00:00:00')")
-    with pytest.raises(AnalysisException, match="No field named year"):
-        session.sql(
-            "SELECT timestampdiff(YEAR, TIMESTAMP'2020-01-15 12:00:00', "
-            "TIMESTAMP'2024-01-15 12:00:00')"
-        )
+    add_table = session.sql(
+        "SELECT timestampadd(YEAR, 1, TIMESTAMP'2024-01-01 00:00:00')"
+    ).toArrow()
+    assert add_table.column(0).to_pylist() == [datetime.datetime(2025, 1, 1, tzinfo=datetime.UTC)]
+    diff_table = session.sql(
+        "SELECT timestampdiff(YEAR, TIMESTAMP'2020-01-15 12:00:00', TIMESTAMP'2024-01-15 12:00:00')"
+    ).toArrow()
+    assert diff_table.column(0).to_pylist() == [4]
 
 
-def test_bare_localtimestamp_answers_call() -> None:
-    """pins: fnp-11a/C-004 (EX-FN-25)."""
+def test_bare_localtimestamp_refuses() -> None:
+    """pins: fnp-11a/C-004 (EX-FN-25, FIXED by spark-sql-grammar-1/C-010)."""
     session = _session(True, "UTC")
-    table = session.sql("SELECT localtimestamp").toArrow()
-    assert str(table.schema.field(0).type) == SPARK_PA_TYPE["timestamp_ntz"]
-    assert table.column(0).to_pylist()[0] is not None
+    with pytest.raises(AnalysisException, match=r"\[UNRESOLVED_COLUMN\.WITHOUT_SUGGESTION\]"):
+        session.sql("SELECT localtimestamp")
 
 
 def test_make_timestamp_keeps_its_frozen_signature() -> None:

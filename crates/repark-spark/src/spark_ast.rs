@@ -27,6 +27,16 @@ pub(crate) async fn execute_passthrough(
     catalogs: &CatalogRegistry,
     sql: &str,
 ) -> Result<DataFrame> {
+    execute_passthrough_inner(ctx, catalogs, sql)
+        .await
+        .map_err(crate::keyword_lower::map_door_keyword_errors)
+}
+
+async fn execute_passthrough_inner(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> Result<DataFrame> {
     let state = ctx.state();
     let session_dialect = state.config().options().sql_parser.dialect;
     let dialect = crate::dialect_for_executing_parse(sql, session_dialect);
@@ -48,6 +58,9 @@ pub(crate) async fn execute_passthrough(
             crate::time_window::wrap_time_window_grouping(inner)?;
             // SQP-1: rewrite `CAST` to `BYTEA`.
             rewrite_binary_casts(inner);
+            crate::bare_unit::rewrite_bare_datetime_units(inner)?;
+            crate::bare_nullary::demote_refusing_nullary_calls(inner);
+            crate::keyword_lower::lower_spark_keywords(inner);
             // R1: DataFusion accepts only SingleQuotedString inside INTERVAL frame bounds.
             window_range::quote_unquoted_interval_range_bounds(inner);
             may_have_bare_range_bound = window_range::statement_has_bare_range_bound(inner);
@@ -230,6 +243,9 @@ async fn restate_range_frames_and_replan(
         apply_spark_order_by_defaults(inner);
         // Keep the BINARY→BYTEA rewrite in lockstep: this re-parse starts from the original SQL.
         rewrite_binary_casts(inner);
+        crate::bare_unit::rewrite_bare_datetime_units(inner)?;
+        crate::bare_nullary::demote_refusing_nullary_calls(inner);
+        crate::keyword_lower::lower_spark_keywords(inner);
         window_range::quote_unquoted_interval_range_bounds(inner);
         rewrite(inner);
     }

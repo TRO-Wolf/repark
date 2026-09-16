@@ -2,7 +2,6 @@
 
 import pytest
 
-from repark.errors import UnsupportedOperationException
 from repark.spark import ReparkSession
 from repark.spark import functions as F  # noqa: N812
 
@@ -75,14 +74,12 @@ def test_bracket_posix_class_with_extra_literal_matches(value: str) -> None:
 
 
 @pytest.mark.parametrize("value", ["x", "fox"])
-def test_sql_rlike_keyword_refuses(value: str) -> None:
-    """FN-RLIKE-KEYWORD-1: SQL RLIKE keyword refuses. pins: fn-fix-2-ctrl-1-controls/C-002"""
+def test_sql_rlike_keyword_answers(value: str) -> None:
+    """FN-RLIKE-KEYWORD-1: SQL RLIKE keyword answers. pins: fn-fix-2-ctrl-1-controls/C-002"""
     repark = ReparkSession.builder.appName("fn-rlike-keyword").master("local[1]").getOrCreate()
     try:
-        with pytest.raises(
-            UnsupportedOperationException, match="Unsupported ast node in sqltorel: RLike"
-        ):
-            repark.sql(f"SELECT '{value}' RLIKE '[[:alpha:]x]'").collect()
+        table = repark.sql(f"SELECT '{value}' RLIKE '[[:alpha:]x]'").to_arrow()
+        assert table.column(0).to_pylist() == [True]
     finally:
         repark.stop()
 

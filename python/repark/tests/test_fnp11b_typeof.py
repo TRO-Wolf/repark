@@ -146,7 +146,7 @@ def test_typeof_ntz_literal_is_blocked_on_the_dialect_seam() -> None:
     session = _session()
     with pytest.raises(Exception, match="TIMESTAMP_NTZ") as caught:
         session.sql(cell["expr"]).toArrow()
-    assert "Unsupported SQL type" in str(caught.value)
+    assert "[UNSUPPORTED_TIMESTAMP_NTZ]" in str(caught.value)
 
 
 def test_typeof_binary_function_owner_is_recorded() -> None:

@@ -39,6 +39,7 @@ mod late_catalogs;
 mod spill;
 mod temp_views;
 
+pub use df_guards::subquery::{resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan};
 use df_guards::{
     DEAD_DATAFUSION_54_1_KEYS, apply_df_54_1_config_guards, context_with_df_54_1_rule_guards,
     dead_datafusion_54_1_refusal,
