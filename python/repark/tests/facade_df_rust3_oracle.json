@@ -829,7 +829,7 @@
    "columns": [
     "key",
     "ok",
-    "��"
+    "\ufffd\ufffd"
    ],
    "nullable": [
     false,
@@ -837,9 +837,9 @@
     true
    ],
    "rows": [
-    "{'key': 'a', 'ok': 2, '��': 1}"
+    "{'key': 'a', 'ok': 2, '\ufffd\ufffd': 1}"
    ],
-   "schema": "struct<key:string,ok:int,��:int>"
+   "schema": "struct<key:string,ok:int,\ufffd\ufffd:int>"
   }
  },
  "transpose_binary_invalid_utf8_repr": {
@@ -860,7 +860,7 @@
     ]
    ],
    [
-    "��",
+    "\ufffd\ufffd",
     [
      65533,
      65533
@@ -882,6 +882,132 @@
     "{'key': 'a', 'ok': 2}"
    ],
    "schema": "struct<key:string,ok:int>"
+  }
+ },
+ "freq_map_dup_default": {
+  "result": {
+   "columns": [
+    "m_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'m_freqItems': [{'a': 1}, {'a': 1}]}"
+   ],
+   "schema": "struct<m_freqItems:array<map<string,int>>>"
+  }
+ },
+ "freq_map_dup_cap1": {
+  "result": {
+   "columns": [
+    "m_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'m_freqItems': []}"
+   ],
+   "schema": "struct<m_freqItems:array<map<string,int>>>"
+  }
+ },
+ "freq_map_distinct_default": {
+  "result": {
+   "columns": [
+    "m_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'m_freqItems': [{'a': 1}, {'b': 2}]}"
+   ],
+   "schema": "struct<m_freqItems:array<map<string,int>>>"
+  }
+ },
+ "freq_array_dup_default": {
+  "result": {
+   "columns": [
+    "a_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'a_freqItems': [[1, 2]]}"
+   ],
+   "schema": "struct<a_freqItems:array<array<int>>>"
+  }
+ },
+ "freq_array_dup_cap1": {
+  "result": {
+   "columns": [
+    "a_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'a_freqItems': [[1, 2]]}"
+   ],
+   "schema": "struct<a_freqItems:array<array<int>>>"
+  }
+ },
+ "freq_struct_dup_cap1": {
+  "result": {
+   "columns": [
+    "s_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'s_freqItems': [{'x': 1, 'y': 'x'}]}"
+   ],
+   "schema": "struct<s_freqItems:array<struct<x:int,y:string>>>"
+  }
+ },
+ "freq_struct_with_map_default": {
+  "result": {
+   "columns": [
+    "s_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'s_freqItems': [{'x': 'x', 'm': {'a': 1}}]}"
+   ],
+   "schema": "struct<s_freqItems:array<struct<x:string,m:map<string,int>>>>"
+  }
+ },
+ "freq_array_of_map_default": {
+  "result": {
+   "columns": [
+    "a_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'a_freqItems': [[{'a': 1}]]}"
+   ],
+   "schema": "struct<a_freqItems:array<array<map<string,int>>>>"
+  }
+ },
+ "freq_map_of_map_default": {
+  "result": {
+   "columns": [
+    "m_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'m_freqItems': [{'a': {'b': 1}}, {'a': {'b': 1}}]}"
+   ],
+   "schema": "struct<m_freqItems:array<map<string,map<string,int>>>>"
   }
  }
 }

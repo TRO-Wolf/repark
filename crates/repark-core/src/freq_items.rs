@@ -121,6 +121,7 @@ impl PartialEq for FreqKey {
             }
             (ScalarValue::Float32(Some(left)), ScalarValue::Float32(Some(right))) => left == right,
             (ScalarValue::Float64(Some(left)), ScalarValue::Float64(Some(right))) => left == right,
+            (ScalarValue::Map(_), _) | (_, ScalarValue::Map(_)) => false,
             _ => self.0 == other.0,
         }
     }
@@ -382,5 +383,31 @@ mod tests {
         acc.add(FreqKey(ScalarValue::Float64(None)), 1);
         acc.add(FreqKey(ScalarValue::Float64(None)), 1);
         assert_eq!(acc.counts.len(), 1);
+    }
+
+    fn map_key() -> FreqKey {
+        let map = arrow::array::MapArray::new_from_strings(
+            ["a"].into_iter(),
+            &arrow::array::Int32Array::from(vec![Some(1)]),
+            &[0, 1],
+        )
+        .expect("map");
+        FreqKey(ScalarValue::Map(Arc::new(map)))
+    }
+
+    #[test]
+    fn map_keys_never_equal_at_default_capacity() {
+        let mut acc = accumulator(4);
+        acc.add(map_key(), 1);
+        acc.add(map_key(), 1);
+        assert_eq!(acc.counts.len(), 2);
+    }
+
+    #[test]
+    fn map_keys_evict_each_other_at_capacity_one() {
+        let mut acc = accumulator(1);
+        acc.add(map_key(), 1);
+        acc.add(map_key(), 1);
+        assert!(acc.counts.is_empty());
     }
 }

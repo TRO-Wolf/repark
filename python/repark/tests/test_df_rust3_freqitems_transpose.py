@@ -1,7 +1,7 @@
 """DF-RUST-3 — freqItems / transpose pins driven by the live PySpark 4.1.2 oracle.
 
 pins: df-rust-3/C-001, df-rust-3/C-002, df-rust-3/C-003, df-rust-3/C-004,
-df-rust-3/C-007, df-rust-3/C-008, df-rust-3/C-009
+df-rust-3/C-007, df-rust-3/C-008, df-rust-3/C-009, df-rust-3/C-010
 """
 
 from __future__ import annotations
@@ -452,6 +452,43 @@ def test_freq_nested_float_keys(spark: ReparkSession) -> None:
     _check_result(arrays_nan.freqItems(["ar"], 1.0), "freq_array_nan_cap1")
     structs = spark.createDataFrame([(Row(f=nan),), (Row(f=nan),)], "st struct<f:double>")
     _check_result(structs.freqItems(["st"], 1.0), "freq_struct_nan_cap1")
+
+
+def test_freq_map_keys_never_equal(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-010 — map keys are never equal: no dedupe, cap1 evicts."""
+    frame = spark.createDataFrame([({"a": 1},), ({"a": 1},)], "m map<string,int>")
+    _check_result(frame.freqItems(["m"]), "freq_map_dup_default")
+    _check_result(frame.freqItems(["m"], 1.0), "freq_map_dup_cap1")
+    _check_result(
+        spark.createDataFrame(
+            [({"a": {"b": 1}},), ({"a": {"b": 1}},)], "m map<string,map<string,int>>"
+        ).freqItems(["m"]),
+        "freq_map_of_map_default",
+    )
+    _check_result(
+        spark.createDataFrame([({"a": 1},), ({"b": 2},)], "m map<string,int>").freqItems(["m"]),
+        "freq_map_distinct_default",
+    )
+
+
+def test_freq_nested_map_keys_dedupe(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-010 — a map inside a struct/array key still dedupes by content."""
+    structs = spark.createDataFrame(
+        [(("x", {"a": 1}),), (("x", {"a": 1}),)],
+        "s struct<x:string,m:map<string,int>>",
+    )
+    _check_result(structs.freqItems(["s"]), "freq_struct_with_map_default")
+    arrays = spark.createDataFrame([([{"a": 1}],), ([{"a": 1}],)], "a array<map<string,int>>")
+    _check_result(arrays.freqItems(["a"]), "freq_array_of_map_default")
+
+
+def test_freq_container_keys_dedupe(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-010 — array/struct keys still compare by content."""
+    arrays = spark.createDataFrame([([1, 2],), ([1, 2],)], "a array<int>")
+    _check_result(arrays.freqItems(["a"]), "freq_array_dup_default")
+    _check_result(arrays.freqItems(["a"], 1.0), "freq_array_dup_cap1")
+    structs = spark.createDataFrame([((1, "x"),), ((1, "x"),)], "s struct<x:int,y:string>")
+    _check_result(structs.freqItems(["s"], 1.0), "freq_struct_dup_cap1")
 
 
 def test_freq_case_insensitive_requested_spelling(spark: ReparkSession) -> None:
