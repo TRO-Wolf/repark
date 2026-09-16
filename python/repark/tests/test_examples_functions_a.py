@@ -72,10 +72,14 @@ def test_format_number_refuses() -> None:
         F.format_number("x", 2)
 
 
-def test_from_csv_refuses() -> None:
-    """from_csv refuses; Spark parses the row struct (EX-FN-6)."""
-    with pytest.raises(UnsupportedOperationException, match="from_csv"):
-        F.from_csv("line", "a INT, b STRING")
+def test_from_csv_answers(spark: ReparkSession) -> None:
+    """from_csv parses the row struct (EX-FN-6 fixed, fnp-gen-1)."""
+    frame = spark.createDataFrame([("1,hello",), ("2,",), (None,)], "line STRING")
+    assert frame.select(F.from_csv("line", "a INT, b STRING").alias("v")).toArrow().to_pylist() == [
+        {"v": {"a": 1, "b": "hello"}},
+        {"v": {"a": 2, "b": None}},
+        {"v": None},
+    ]
 
 
 def test_hash_refuses() -> None:
@@ -84,10 +88,14 @@ def test_hash_refuses() -> None:
         F.hash("n")
 
 
-def test_json_tuple_refuses() -> None:
-    """json_tuple refuses; Spark projects the string fields (EX-FN-8)."""
-    with pytest.raises(UnsupportedOperationException, match="json_tuple"):
-        F.json_tuple("line", "a", "b")
+def test_json_tuple_answers(spark: ReparkSession) -> None:
+    """json_tuple projects the string fields (EX-FN-8 fixed, fnp-gen-1)."""
+    frame = spark.createDataFrame([('{"a": 1, "b": 2}',), ("{bad",), (None,)], "line STRING")
+    assert frame.select(F.json_tuple("line", "a", "b")).toArrow().to_pylist() == [
+        {"c0": "1", "c1": "2"},
+        {"c0": None, "c1": None},
+        {"c0": None, "c1": None},
+    ]
 
 
 def test_moment_aggregates_refuse() -> None:
@@ -151,10 +159,12 @@ def test_replace_dollar_arm_answers_backslash(spark: ReparkSession) -> None:
     assert [row["v"] for row in rows] == ["\\" * 3]
 
 
-def test_schema_of_csv_refuses() -> None:
-    """schema_of_csv refuses; Spark infers the struct (EX-FN-16)."""
-    with pytest.raises(UnsupportedOperationException, match="schema_of_csv"):
-        F.schema_of_csv("line")
+def test_schema_of_csv_answers(spark: ReparkSession) -> None:
+    """schema_of_csv infers the struct (EX-FN-16 fixed, fnp-gen-1)."""
+    frame = spark.createDataFrame([("x",)], "s STRING")
+    assert frame.select(F.schema_of_csv("1,hello").alias("v")).toArrow().to_pylist() == [
+        {"v": "STRUCT<_c0: INT, _c1: STRING>"}
+    ]
 
 
 def test_sentences_refuses() -> None:

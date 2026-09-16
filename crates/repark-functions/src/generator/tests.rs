@@ -426,3 +426,49 @@ fn ordinality_packs_positions_for_a_sliced_list() {
         .to_vec();
     assert_eq!(second, vec![0, 1, 2, 3]);
 }
+
+#[test]
+fn json_tuple_projects_one_string_column_per_field() {
+    let (names, rows) = run(
+        r#"SELECT json_tuple('{"a":1,"b":"x","c":{"d":2},"e":[1,2],"f":null,"g":1.50,"h":true}', 'a', 'b', 'c', 'e', 'f', 'g', 'h', 'zz')"#,
+    )
+    .unwrap();
+    assert_eq!(names, ["c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7"]);
+    assert_eq!(
+        rows,
+        [
+            "Utf8(\"1\")|Utf8(\"x\")|Utf8(\"{\"d\":2}\")|Utf8(\"[1,2]\")|Utf8(NULL)|Utf8(\"1.5\")|Utf8(\"true\")|Utf8(NULL)"
+        ]
+    );
+}
+
+#[test]
+fn json_tuple_nulls_every_field_for_a_non_object_document() {
+    for document in ["CAST(NULL AS STRING)", "'[1,2]'", "'{\"a\":1'"] {
+        let (names, rows) = run(&format!("SELECT json_tuple({document}, 'a', 'a')")).unwrap();
+        assert_eq!(names, ["c0", "c1"]);
+        assert_eq!(rows, ["Utf8(NULL)|Utf8(NULL)"]);
+    }
+    let (_, rows) = run(r#"SELECT json_tuple('{"A":9,"a":10}', 'a', 'A')"#).unwrap();
+    assert_eq!(rows, [r#"Utf8("10")|Utf8("9")"#]);
+}
+
+#[test]
+fn json_tuple_refuses_a_non_string_argument() {
+    let error = run("SELECT json_tuple(id, 'a') FROM t").unwrap_err();
+    assert!(
+        format!("{error}").contains("DATATYPE_MISMATCH.NON_STRING_TYPE"),
+        "{error}"
+    );
+    let error = run("SELECT json_tuple('{\"a\":1}', NULL)").unwrap_err();
+    assert!(
+        format!("{error}").contains("DATATYPE_MISMATCH.NON_STRING_TYPE"),
+        "{error}"
+    );
+}
+
+#[test]
+fn json_tuple_refuses_a_single_argument() {
+    let error = run(r#"SELECT json_tuple('{"a":1}')"#).unwrap_err();
+    assert!(format!("{error}").contains("WRONG_NUM_ARGS"), "{error}");
+}

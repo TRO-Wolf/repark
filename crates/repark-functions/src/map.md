@@ -49,6 +49,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   registers at the tail of `analyzer_rules()` in `registration.rs`, after the closing
   `TypeCoercion`. The `#[cfg(test)]` suite lives in [`generator/tests.rs`](generator/tests.rs)
   (moved out in remediation round 1 so this file keeps the size ceiling).
+  **Step 2 (run 18a):** `json_tuple` joins the rule — its site carries every argument
+  (the document plus the field expressions), non-string arguments refuse
+  `[DATATYPE_MISMATCH.NON_STRING_TYPE]` and fewer than two arguments refuse
+  `[WRONG_NUM_ARGS]`, both with Spark's message shape. The expansion computes one
+  `STRUCT<c0..cN>` per row through the internal `__repark_json_tuple` kernel (one
+  parse per row, no unnest) and reads the fields back through `__repark_gen_field`.
+  A lone alias on a single output is ignored and any other count mismatch raises
+  `[UDTF_ALIAS_NUMBER_MISMATCH]`, both per the s34 oracle; the other four names keep
+  `[COLUMN_ALIASES_MISMATCH]`.
   pins: fnp-gen-1/C-002, C-003, C-005
 - `spark_length.rs` — **GT1-FIX G5 / A3 / R3-1:** Spark `bit_length` /
   `octet_length`. Stringifies non-binary; BINARY pass-through (including
@@ -193,7 +202,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `SessionContext`. Each
   kernel carries its own `#[cfg(test)] mod tests` running the measured cells through a
   `SessionContext`.
-  pins: fnp-9-collections-json/C-002, C-003, C-004, C-005
+  **Remediation (run 18a):** `tuple.rs` holds scalar field names once per batch;
+  detail lives in `json/map.md`.
+  pins: fnp-9-collections-json/C-002, C-003, C-004, C-005, fnp-gen-1/PERF-003
 - `count_if.rs` — **TYPES-1 (2026-09-05):** SQL-door `count_if` aggregate UDF answering
   `Int64`. pins: types-1/C-003
 - `bitmap_agg.rs` (+ [`bitmap_agg/`](bitmap_agg/map.md)) — **FNP-6D (2026-09-15,
@@ -347,7 +358,22 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **FNP-GEN-1 step 2 (2026-09-16):** `generator::GeneratorRewrite` joins the tail
   of the list, after the closing `TypeCoercion`, so the rule sees post-coercion
   projections on both doors.
-  pins: fnp-win-1/C-004, C-008, fnp-gen-1/C-002, C-003
+  **Step 3 (run 18a):** `csv::fold::CsvFold` registers before `TypeCoercion`, so a
+  literal options map still carries its declared types when the rule reads the
+  parse mode; the `csv` module registers its UDFs in `lib.rs` beside the other
+  families.
+  **Step 4a (run 18a):** `csv::schema_of_csv` joins the `csv::functions()`
+  registry with the Spark `CSVInferSchema` ladder; folding lands in step 4b.
+  **Step 4b (run 18a):** `CsvFold` folds the literal call and unaliases it inside
+  `from_csv`; `from_csv` answers a `Null` placeholder until the fold lands, and
+  `expr_fn` gains the `schema_of_csv` builder the Python dispatch arm uses.
+  **Gate pass (run 18a):** the round's `csv` code is clippy-clean under
+  `-D warnings`; `expr_fn::from_csv` / `schema_of_csv` carry `#[must_use]`.
+  **Remediation (run 18a):** the `csv` root owns the session-zone stamp helpers
+  (`CsvStampParsers`, the default stamp ladder, `infers_as_timestamp`); detail
+  lives in `csv/map.md`.
+  pins: fnp-win-1/C-004, C-008, fnp-gen-1/C-002, C-003, C-004, C-006, L-002, L-003,
+  L-004, L-005, R-18a-14, PERF-001, PERF-002, PERF-004, PERF-005, PERF-006
 - `lib.rs` — crate-root stays at **182** under `check_lib_rs` (D-8 one-time
   FNP-WIN-1 grant; step 4 moved the `analyzer_rules()` home to
   `registration.rs`).

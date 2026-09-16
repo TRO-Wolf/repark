@@ -27,7 +27,14 @@ unit — so a new family gets a child module and the parent's default arm falls 
   `repark_functions::generator::generator_udf`, and the `__repark_gen_alias` arm
   embeds the marker the facade's `_GeneratorColumn.alias` uses to carry
   multi-name output aliases into `generator::GeneratorRewrite`.
-  pins: fnp-gen-1/C-002, C-003
+  **Step 2 (run 18a):** the `json_tuple` arm embeds the same placeholder with two
+  or more arguments; the facade builds it through `_GeneratorColumn` so the
+  rewrite peels it like the other four.
+  **Step 3 (run 18a):** the `from_csv` arm builds `expr_fn::from_csv` over the
+  `csv` scalar kernel with two or more arguments.
+  **Step 4b (run 18a):** the `schema_of_csv` arm builds `expr_fn::schema_of_csv`
+  over the `csv` inference kernel with one or more arguments.
+  pins: fnp-gen-1/C-002, C-003, C-004
 - `dispatch_spark.rs` — **DOOR-CONVERGE-1 (2026-09-15):** the converged scalar arms —
   `abs`, `hypot`, `bin`, `rint`, `base64`, `unbase64`, `size`, `cardinality`,
   `array_contains` / `array_has`, `ascii`, `length` / `character_length` /
