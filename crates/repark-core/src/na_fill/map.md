@@ -17,4 +17,4 @@ column type from the plan schema in Rust, so neither door can drift from it.
 
 - Up: [src map](../map.md)
 - Facade: `python/repark/src/repark/spark/dataframe/actions_export.py`
-- Binding: `crates/repark-python/src/dataframe.rs` (`PyDataFrame::fill_expr_for_column`)
+- Binding: `crates/repark-python/src/dataframe_fill.rs` (free `fill_expr_for_column`)
