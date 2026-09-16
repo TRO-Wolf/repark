@@ -146,9 +146,19 @@ passes (full list in §2).
   day once the oracle decode showed INT.
 - Files owned by other units touched (announced): `test_types_1.py` (TY-7
   twins), `test_fnp_8_sql_door.py` (null_element row), `test_cutover_schema_1.py`
-  (CTAS width cell), `fnp8_repark_dispositions.json` (2 re-measured schemas).
+  (CTAS width cell), `fnp8_repark_dispositions.json` (2 re-measured schemas),
+  `crates/repark-sql/tests/cross_door.rs` (2 bodies spell literals BIGINT).
   Each change moves the pin toward the recorded Spark answer; nothing else in
   those files was edited.
+- Native-door follow-up (hand-off, not absorbed): the native door still answers
+  Int64 for `SELECT 1` while the Spark door now answers Int32 — the ANSI side of
+  the chartered literal-width split (F-Y10-1 decided it, TYPES-1 kept it for
+  catalog rows). Narrowing native needs the rule installed for core sessions,
+  but the rule lives in `repark-spark` and the DAG forbids core depending on
+  the door crate — a home question for its own card, with native pins.
+  Recorded as BACKLOG row BL-20-NATIVE. The two `cross_door.rs`
+  schema-equality tests keep testing CTAS/MERGE mechanics with explicit BIGINT
+  literals; their mutation coverage is unchanged.
 
 ## 3. Design (Rust-first per Q-17a-2)
 

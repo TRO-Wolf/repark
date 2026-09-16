@@ -178,7 +178,7 @@ def test_coalesce_with_bigint_stays_wide_on_both_doors() -> None:
 
 
 def test_coalesce_with_int_answers_int_on_repark() -> None:
-    """pins: types-1/C-001 — COALESCE of INT and a narrowed literal answers INT (TY-7, FIXED by sql-literal-typing-1)."""
+    """pins: types-1/C-001 — COALESCE of INT and a narrowed literal answers INT (TY-7)."""
     session = _session()
     query = "SELECT COALESCE(CAST(NULL AS INT), 1) AS r"
     assert _door_type(session, query) == ("int32", False)

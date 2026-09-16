@@ -120,7 +120,7 @@ async fn cross_door_ctas_produces_the_same_table_content_and_schema() {
     make_namespace(&ansi, false).await;
     make_namespace(&spark, true).await;
 
-    let body = "SELECT 1 AS id, 'a' AS label UNION ALL SELECT 2 AS id, 'b' AS label";
+    let body = "SELECT CAST(1 AS BIGINT) AS id, 'a' AS label UNION ALL SELECT CAST(2 AS BIGINT) AS id, 'b' AS label";
     ansi.session
         .sql(&format!("CREATE TABLE ice.sales.orders AS {body}"))
         .await
@@ -356,9 +356,9 @@ async fn cross_door_merge_produces_the_same_result_table() {
     make_namespace(&spark, true).await;
 
     let merge = "MERGE INTO ice.sales.orders AS t \
-                 USING (SELECT 2 AS id, 'B' AS label UNION ALL \
-                        SELECT 3 AS id, 'C' AS label UNION ALL \
-                        SELECT 9 AS id, 'N' AS label) AS s \
+                 USING (SELECT CAST(2 AS BIGINT) AS id, 'B' AS label UNION ALL \
+                        SELECT CAST(3 AS BIGINT) AS id, 'C' AS label UNION ALL \
+                        SELECT CAST(9 AS BIGINT) AS id, 'N' AS label) AS s \
                  ON t.id = s.id \
                  WHEN MATCHED AND s.label = 'C' THEN DELETE \
                  WHEN MATCHED THEN UPDATE SET label = s.label \
@@ -368,9 +368,9 @@ async fn cross_door_merge_produces_the_same_result_table() {
         door.session
             .sql(
                 "CREATE TABLE ice.sales.orders AS \
-                 SELECT 1 AS id, 'a' AS label UNION ALL \
-                 SELECT 2 AS id, 'b' AS label UNION ALL \
-                 SELECT 3 AS id, 'c' AS label",
+                 SELECT CAST(1 AS BIGINT) AS id, 'a' AS label UNION ALL \
+                 SELECT CAST(2 AS BIGINT) AS id, 'b' AS label UNION ALL \
+                 SELECT CAST(3 AS BIGINT) AS id, 'c' AS label",
             )
             .await
             .expect("CTAS");

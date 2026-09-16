@@ -9628,6 +9628,22 @@ field NAME.
   width to keep: the fix is checked Int8/Int16 `+`/`-`/`*` kernels with the `S`-suffixed error
   shape, new kernels in `repark-functions`. Split from BL-20, which the literal typing closed.
 
+### BL-20-NATIVE — the ANSI side of the chartered literal-width split
+
+- **repark** — `SELECT 1 AS id` answers Int64 on the native (`repark.sql()`) door and Int32 on
+  the Spark door since SQL-LITERAL-TYPING-1. The `SparkIntegralLiteral` rule installs only
+  from `SparkExtension::configure_analyzer_rules`; the native builder uses no extension, and
+  the rule cannot move to `repark-core` without inverting the crate DAG.
+- **Apache Spark / Trino** — the Spark side is oracle-pinned by SQL-LITERAL-TYPING-1. The
+  ANSI Int64 is the chartered split (F-Y10-1 decided it, TYPES-1 kept it for catalog-behavior
+  rows, which spell `CAST(... AS BIGINT)`); whether Trino-oracle work should retire the ANSI
+  side is not measured here.
+- **Pin** — none yet; the two `cross_door.rs` schema-equality tests that incidentally covered
+  the shape now spell their literals `CAST(... AS BIGINT)` so they keep testing CTAS/MERGE
+  mechanics, not literal widths.
+- **Rationale** — BACKLOG, filed 2026-09-16 (SQL-LITERAL-TYPING-1 residue). Unifying needs the
+  rule installed for core sessions (home question belongs to that card) plus native-door pins.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without

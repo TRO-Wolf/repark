@@ -1043,6 +1043,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   converged non-null 2026-09-06 (NULLABILITY-2 round 2, Spark-equal); the live
   re-coercion leg's map flag cell caught up to that convergence on 2026-09-11
   (NIGHTLY-LIVE-1 — the pin still expected the retired divergence).
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the TY-7 twin now answers `int32` (pre-coercion
+  narrowing closed the mechanism); the live twin asserts the `(int32, int32)` pair.
+  pins: sql-literal-typing-1/C-002
 - [test_date_fn_1.py](test_date_fn_1.py) — **DATE-FN-1 (2026-09-04):** Spark SQL `date()` Clock-flake fix (2026-09-05): the zero-arg pin asserts each door repeats one value per row and the two doors agree within one second, since the two statements run in different seconds (it straddled a second boundary in three CI runs).
   and `unix_timestamp` unit pins (timestamp / string / date / NULL; invalid string ANSI on
   and off; zero-arg `FROM range(3)` is three identical BIGINT rows on SQL and the facade).
