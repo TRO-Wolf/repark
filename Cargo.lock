@@ -5046,6 +5046,7 @@ dependencies = [
  "iceberg",
  "iceberg-datafusion",
  "object_store",
+ "orc-rust",
  "parquet",
  "repark-common",
  "repark-iceberg",

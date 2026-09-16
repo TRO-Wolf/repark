@@ -35,7 +35,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   (the four Ballista crates and, since the BALLISTA-M2-A seed of 2026-09-11, `datafusion-proto` are
   pinned `=54.1.0` and consumed only behind `repark-distributed`'s `cluster` feature);
   workspace lints (`unsafe_code = "forbid"`) and the clippy `disallowed-methods` panic/spawn bans
-  are in force. The iceberg* `[patch.crates-io]` family is a single shared `rev` (five lines);
+  are in force. **IO-ORC-1 (2026-09-16):** `orc-rust 0.8.0` (`default-features = false`, sync
+  reader) in `[workspace.dependencies]` for the read-only ORC scan (owner ruling Q-15B-1).
+  The iceberg* `[patch.crates-io]` family is a single shared `rev` (five lines);
   each dedicated bump is one row in the [docs/fork-sync.md](docs/fork-sync.md) pin-history table.
   **RP-1 (2026-08-23):** `5e7b2e4` (F-0 / F-1 / F-2 / F-8a); DataFusion family frozen.
   **RP-2 (2026-08-27):** `ce92a7bf` (F-3 / F-5 / F-13 / F-7 U1+U2); DataFusion family frozen.

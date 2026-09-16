@@ -32,6 +32,8 @@ honestly"). SQL routing and session-build registration are seam-inverted
   S3-read stack (`object_store`, `aws-config`, `aws-credential-types`, `async-trait`, `url`), plus
   `tokio` — added phase-3 PR-3 solely to NAME `EngineRuntime` (EC-5); core still constructs no
   runtime and never blocks. No new package resolves: DataFusion already pulls tokio into the lock.
+  **IO-ORC-1 (2026-09-16):** also `orc-rust 0.8.0` (workspace, sync reader) for the read-only ORC
+  scan (`src/orc_scan.rs`); already locked via `datafusion-orc`, so the lock gains only the edge.
 - `src/silver.rs` + [src/silver/](src/silver/map.md) — typed `SilverPlan` (SILVER-S1):
   strict TOML parse, closed enums, canonical identity, deterministic explain. Public from
   this crate, not wired to Python. Unstable until SIL-1..SIL-10.
