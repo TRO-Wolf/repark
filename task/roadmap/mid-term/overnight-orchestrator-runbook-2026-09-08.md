@@ -230,6 +230,30 @@ states why in one line. This applies to the parity campaign of 1.5 (runs 15+) as
 FACADE roll-call: the census names are added in Rust so the switchover never has to move them.
 Brief every worker with this sentence beside the comment ban and the attribution rule.
 
+### Standing instructions — the day and night runs of 2026-09-15 (owner, evening)
+
+- **Actor tier mix.** The owner's evening ruling (2026-09-15): every orchestrator runs at least two of its
+  units with Devin SWE-2 as the actor and the rest with Muse Spark 1.3 contributor; the report compares the
+  two tiers (rounds, edits made, rounds lost, wall time). Grok 4.6 stays the reviewer tier — critic-logic, the
+  two S2-21 perf reads, and a verification critic on the remediated head before the PR opens. GLM only for
+  build-free mechanical sweeps. Never a critic on Opus.
+- **Second build clone.** Allowed while `df -h /` shows more than **200 G** free (Q-16a-2, down from 250 G).
+  It may share the first clone's cargo target directory only under a `flock` around every cargo / maturin
+  invocation, because concurrent builds of different trees into one target produce bogus "cannot find
+  function" errors (run 15c); otherwise a per-lane target (Q-16b-2).
+- **Merge order across concurrent runs.** One shared queue file (`/tmp/oc-worker/run16/merge-queue.txt`):
+  append `<PR> <run> <HH:MM>` when the PR is green and rebased, merge only when the line is first, delete
+  the line when the merge lands; a line older than 45 minutes whose PR is not merging may be moved to the
+  end with a note (Q-15a-2). The GitHub merge-queue setting is the owner's later change.
+- **Alternates.** A thin clone made with `--shared` or `--reference` depends on its build clone's objects;
+  delete dependents first (`grep -l <build> /tmp/*/.git/objects/info/alternates`).
+- **Rulings applied under "go with recommendations" (2026-09-15 evening):** posexplode's second output is
+  named `col` like Spark (Q-16a-1); FNP-4B's typed literals close the `semanticHash` literal gap (Q-16b-1);
+  LOGICAL-WIDTH-1 scheduled (Q-16b-3); IO-TEXT-PART-POOL-1 follow-up (Q-16b-4); `fancy-regex` approved as the
+  fallback engine for Java lookaround, backreferences and possessive quantifiers (Q-16c-1); ICU4X
+  `icu_collator` approved for collation slice 13c only (Q-16c-2).
+
+
 ## 6. Decision authority (G-2)
 
 May decide alone, logging a new `D-n` row in the card and a line in the ledger:

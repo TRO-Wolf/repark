@@ -74,7 +74,7 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   `B-MOR-3` FIXED 2026-09-03 (owner ruling: build). The v1.0 tag is what remains.
   pins: v1-gate-audit/C-001, C-002, C-004
   pins: v3-cov-statement-coverage/C-005
-- [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) — **the release roadmap Q&A row 2026-09-15 (morning): the run-14 and run-15 owner rulings, every recommendation as ruled, and run 16 on Muse contributor builders.
+- [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) — **the release roadmap Q&A row 2026-09-15 (morning): the run-14 and run-15 owner rulings, every recommendation as ruled, and run 16 on Muse contributor builders. Q&A row 2026-09-15 (evening): v1.4.2, the run-16 rulings, the Devin/Muse actor mix.
   (owner-set 2026-08-29):** every tag from v0.6 to 3.0 with the owner's rulings folded in.
   Pre-1.0 is the shipped v0.6 DML remainder; 1.1–1.4 (was v0.7–v0.10) are example docs, the
   torture suite, Never-OOM, and `repark.toml`; 1.5–1.13 (was 1.1–1.9) are parity, connectors,
