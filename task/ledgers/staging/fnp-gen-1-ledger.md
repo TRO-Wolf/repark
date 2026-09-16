@@ -264,3 +264,37 @@ new P1. It filed two P2 residuals; the orchestrator raised one of them and fixed
   `COLUMN_ALIASES_MISMATCH`. It needs a non-textual marker for restored aliases to close properly,
   which is a change to the name-restoration path rather than to this unit. Recorded here and in the
   registry with the seam named. pins: fnp-gen-1/C-003
+
+## Step 3-4 (run 18a, 2026-09-16) — R-18a-1..R-18a-6 applied, red-first pins
+
+Branch `feat/fnp-gen-1-s3` off `origin/main 33c87cbf`. Actor: muse-spark-1.3-contributor.
+
+### Rulings applied this round
+
+| Id | Ruling | Applied |
+|---|---|---|
+| R-18a-1 | (brief mechanics) Step order, red-first pins, commit-per-slice, handback.json. | Whole round. |
+| R-18a-2 | Every argument check (foldability, literal schema, parse mode, options map shape, alias count, field types) decided in Rust so both doors raise the same condition (Q-17a-2); the facade binds names and packs `options` into a `map()` literal Column, never inspects a value. | Steps 2-4 kernels; facade holds names/shapes only. |
+| R-18a-3 | `schema_of_csv('')` raises condition `INTERNAL_ERROR`, SQLSTATE `XX000`, on both doors; registry records it as matching a Spark defect; the pin asserts the condition. | Step 4 kernel + pins S2/S8 + registry row. |
+| R-18a-4 | `json_tuple` joins `GeneratorRewrite` in `generator.rs`; field extraction is a Rust kernel parsing each row once for all N fields; reuse the crate's JSON machinery and DDL parser; no new dependencies. | Step 2 kernel (`json/tuple.rs`) + rewrite arm. |
+| R-18a-5 | `LATERAL VIEW json_tuple` cells stay unpinned, blocked on run 18c's parser (D-7). Extended: the SQL `AS (x, y)` UDTF-alias cells and the call-result `.c` cell hit DataFusion SQL seams (`select.rs` multiple-alias refusal; `expr` dot access on non-string exprs) owned by run 18c, so they pin `xfail(strict=True)` with registry rows and retire with 18c. | Step 1 pins J7/J8/C18 + registry. |
+| R-18a-6 | `from_csv` tokenizer follows Spark's univocity defaults; reuse the reader-path CSV tokenizer if one exists, else a small kernel tokenizer; cast each input column once per batch. | Step 3 kernel (no shared reader-path tokenizer found; small kernel tokenizer). |
+
+### Step 1 red summary
+
+Copied `/tmp/oc-worker/sa-gen3/fnp_gen_1_s34_spark_oracle.json` verbatim to
+`python/repark/tests/fnp_gen_1_s34_spark_oracle.json` (`cmp` identical, 80 cells = 40
+ansi pairs; ansi-True/False expectations identical on rows, columns, conditions and
+root causes), listed in `python/repark/tests/map.md`, pinned by
+`python/repark/tests/test_fnp_gen_1_s34.py` (40 tests, one per ansi pair, recorder
+lambdas from `o_gen34.py` beside each behavior).
+
+`PYTHONPATH=python/repark/src .venv/bin/python -m pytest python/repark/tests/test_fnp_gen_1_s34.py -q`
+on the unfixed tree: **36 failed, 1 passed, 3 xfailed**. The pass is
+`test_python_door_json_tuple_zero_fields_refuses` (the E1 `CANNOT_BE_EMPTY` facade
+shape predates the kernel; the pin locks it via `getCondition()`). The xfails are the
+three 18c-blocked pins (J7/J8/C18). Per-name red causes: `json_tuple` Python —
+stub `UnsupportedOperationException`; SQL — upstream struct shape; `from_csv` /
+`schema_of_csv` Python — stub refusals, SQL — `Invalid function`; error pins carry
+the stub/`Invalid function` text instead of the oracle condition.
+pins: fnp-gen-1/C-002, C-003, C-004, C-005

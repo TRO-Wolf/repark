@@ -5846,3 +5846,22 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   to-string-from-binary regression guards.
   pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009;
   pins: logical-width-1/C-010, C-011, C-013, C-014, C-015, C-016
+- [fnp_gen_1_s34_spark_oracle.json](fnp_gen_1_s34_spark_oracle.json) —
+  **FNP-GEN-1 steps 3–4 (2026-09-16, run 18a):** the 80 cells (40 ansi pairs) over the
+  six-row `(id, js, csvrow)` frame for `json_tuple`, `from_csv` and `schema_of_csv` on both
+  doors, copied verbatim from the orchestrator's live PySpark 4.1.2 recording
+  `/tmp/oc-worker/sa-gen3/fnp_gen_1_s34_spark_oracle.json` (recorder
+  `/tmp/oc-worker/sa-gen3/o_gen34.py`, 2026-09-16 09:30); `spark_version` 4.1.2 kept.
+  Recorded evidence, never hand-edited.
+  pins: fnp-gen-1/C-002, C-003, C-004, C-005
+- [test_fnp_gen_1_s34.py](test_fnp_gen_1_s34.py) — **FNP-GEN-1 steps 3–4 (2026-09-16, run
+  18a):** red-first two-door pins over every cell of the s34 fixture, one test per
+  ansi pair with the recorder's lambda beside each behavior: `json_tuple` values, alias
+  shapes and the `CANNOT_BE_EMPTY` / `UDTF_ALIAS_NUMBER_MISMATCH` /
+  `NON_STRING_TYPE` / `WRONG_NUM_ARGS` errors (C-002/C-003), `from_csv` PERMISSIVE
+  rows, FAILFAST, `DROPMALFORMED`, corrupt-record, foldable-schema, `dateFormat`,
+  unknown-option and the schema/input/option errors (C-002/C-003/C-004), and the
+  `schema_of_csv` ladder, `sep` option and foldability errors with the dated
+  `INTERNAL_ERROR` match (C-004, R-18a-3). The SQL `AS (x, y)` and call-result
+  `.c` pins stay `xfail(strict=True)`, blocked on run 18c's parser seam (R-18a-5).
+  pins: fnp-gen-1/C-002, C-003, C-004, C-005
