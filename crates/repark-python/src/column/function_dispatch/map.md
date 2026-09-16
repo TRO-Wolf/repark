@@ -49,6 +49,9 @@ unit — so a new family gets a child module and the parent's default arm falls 
   the converge-1 arm (one pattern list, identical bodies), and the `sequence` arm body
   moves to `sequence_expr` (the `call_scalar_expr` 100-line ceiling holds).
   pins: door-converge-2/C-005
+  **FNP-MATH-1 step 2 (2026-09-16, run 18a):** `bround` joins the converged arms (1–2
+  args, default scale 0) over `spark_math::call_bround`.
+  pins: fnp-math-1/C-002, C-003
 
 ## Pointers
 

@@ -384,7 +384,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (the DOUBLE literal coerces before the multiply, so no ANSI overflow). Display is Spark's
   `DEGREES(x)`/`RADIANS(x)` via the `dayname`-style rewrap. `toDegrees`/`toRadians` are the
   deprecated aliases and warn Spark's exact `FutureWarning`; they reach `functions.py`
-  through this module's `install_into`. **crit-logic-1 L-001 (2026-09-15):** `_rescaled`
+  through this module's `install_into`. **FNP-MATH-1 step 2 (2026-09-16, run 18a):**
+  `bround(col, scale=None)` joins `INSTALL_NAMES` (thin `_scalar` bind, scale default
+  materialized as `0` so the display reads Spark's `bround(d, 0)`); the installer path
+  keeps `functions.py` untouched under its ceiling. pins: fnp-math-1/C-001, C-002
+  **crit-logic-1 L-001 (2026-09-15):** `_rescaled`
   threads join origin like every house wrapper — `join_sql_expr` from the multiply result and
   `**_thread_origin(column)` — so a right-parent column after semi/anti raises
   `MISSING_ATTRIBUTES` instead of silently binding the left, and a two-sided `degrees` ON

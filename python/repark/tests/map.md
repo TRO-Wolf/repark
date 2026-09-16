@@ -5868,4 +5868,7 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   split facade half with containsNull (C-008), the BL-6 facade half (C-009).
   The shared frame grafts `ts` per row with a `CASE` because a `VALUES` list
   carrying TIMESTAMP fails to execute on the base tree (ledger § out-of-scope).
+  **FNP-MATH-1 step 2 (2026-09-16, run 18a):** `_spark_simple_to_arrow` maps boolean
+  to `pa.bool_()` (`pa.boolean()` is absent in pyarrow 25 and failed every value pin
+  at the helper); the `bround` cells go green on the rebuilt native.
   pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
