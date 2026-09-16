@@ -133,10 +133,9 @@ def test_tojson_and_global_temp_loud(spark: ReparkSession) -> None:
     # R-PIVOT: pivot returns GroupedData (W5 done-signal).
     pivoted = frame.groupBy("x").pivot("x", [1])
     assert pivoted is not None
-    # G1: approxQuantile / stat.corr are live (property form). Loud residual is freqItems.
+    # G1: approxQuantile / stat.corr / stat.freqItems are live (property form).
     quantiles = frame.approxQuantile("x", [0.5], 0.0)
     assert isinstance(quantiles, list) and len(quantiles) == 1
     corr_frame = spark.range(5).selectExpr("id AS a", "id * 2 AS b")
     assert abs(corr_frame.stat.corr("a", "b") - 1.0) < 1e-9
-    with pytest.raises(UnsupportedOperationException, match="freqItems"):
-        frame.stat.freqItems(["x"])
+    assert frame.stat.freqItems(["x"]).collect()[0][0] == [1]

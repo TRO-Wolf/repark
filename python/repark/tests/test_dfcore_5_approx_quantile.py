@@ -15,7 +15,6 @@ from repark.errors import (
     PySparkException,
     PySparkTypeError,
     PySparkValueError,
-    UnsupportedOperationException,
 )
 from repark.spark.dataframe.core import DataFrame
 from repark.spark.session import ReparkSession, _reset_active_session_for_tests
@@ -323,14 +322,11 @@ def test_crosstab_absent_pair_fills_zero(spark: ReparkSession) -> None:
         assert rows["b"][missing] == 0
 
 
-def test_freq_items_refusal_matches_full_message(spark: ReparkSession) -> None:
-    """C-004: the freqItems refusal pins its full text (DFCORE-3 F2)."""
+def test_freq_items_answers_frequent_values(spark: ReparkSession) -> None:
+    """DF-RUST-3: the DFCORE-3 refusal is retired; stat.freqItems answers the table."""
     frame = spark.range(3)
-    with pytest.raises(
-        UnsupportedOperationException,
-        match=re.escape("DataFrame.stat.freqItems is not supported yet (disclosed R-DF-BATCH2)"),
-    ):
-        frame.stat.freqItems(["id"])
+    row = frame.stat.freqItems(["id"]).collect()[0]
+    assert sorted(row["id_freqItems"]) == [0, 1, 2]
 
 
 def test_sample_fraction_refusal_matches_full_message(spark: ReparkSession) -> None:

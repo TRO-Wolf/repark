@@ -10,6 +10,7 @@ mod collect_rows;
 mod column;
 mod dataframe;
 mod dataframe_stack;
+mod dataframe_stats;
 mod fence;
 mod logical_names;
 mod ml;
@@ -128,6 +129,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         module.py().get_type::<CommitStateUnknownException>(),
     )?;
     dataframe_stack::register(module)?;
+    dataframe_stats::register(module)?;
     cache_budget::register(module)?;
     catalog_census::register(module)?;
     cdf_infer::register(module)?;

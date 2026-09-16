@@ -8,6 +8,7 @@ mod dialect;
 mod dynamic_flatten;
 mod error_map;
 mod extension;
+mod freq_items;
 mod idents;
 mod isnan;
 mod lineage_columns;
@@ -35,6 +36,7 @@ mod text_partition_fallback;
 mod text_scan;
 mod text_schema;
 mod time_travel;
+mod transpose;
 mod update_fields;
 
 // --- The Session surface (v1 names, courtesy `Session` alias).
@@ -96,10 +98,14 @@ pub use datafusion::prelude::DataFrame;
 
 // --- Plan-rewrite kernels (no DataFrame newtype).
 pub use dynamic_flatten::{DynamicFlattenOptions, dynamic_flatten};
+pub use freq_items::{FREQ_ITEMS_OUTPUT_PREFIX, freq_items};
 pub use isnan::{register_repark_isnan, repark_isnan_call, repark_isnan_udf};
 pub use stack::{
     StackLabels, StackQueryPlanner, StackRewrite, apply_labeled_stack, apply_stack, register_stack,
     stack_udf,
+};
+pub use transpose::{
+    SparkTransposeError, TRANSPOSE_OUTPUT_PREFIX, TransposeError, TransposeOutcome, transpose_frame,
 };
 pub use update_fields::{register_update_fields, update_fields_call, update_fields_udf};
 mod plan_canonical;

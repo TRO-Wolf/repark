@@ -18,7 +18,6 @@ DataFrame.intersect_all
 DataFrame.toJSON
 DataFrameReader.excel
 DataFrameReader.sheet_names
-DataFrameStatFunctions.freqItems
 DataFrameWriterV2.overwrite
 F.arrays_zip
 F.base64
