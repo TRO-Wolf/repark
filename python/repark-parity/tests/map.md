@@ -129,6 +129,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):**
+  mirror row ratchets `functions_expr.py` 2198 → 2195 with the script baseline.
+  pins: fnp-math-1/C-001, C-005
 - `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 2 (2026-09-16):**
   mirror rows ratchet `functions_expr.py` 2235 → 2213 and
   `test_explode_rewrite.py` 1135 → 1133; a short-lived

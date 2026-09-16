@@ -222,3 +222,25 @@ nothing on clean (exit 1) so never chain it with `&&`.
 Unpinned choices: `+` sign accepted Java-style; numerics cast to string
 (Spark implicit cast); booleans and other types refuse requiring STRING;
 negative `fromBase` answers NULL; NULL base answers NULL.
+
+## Step 4 (run 18a) — `hash` evidence
+
+Kernel `crates/repark-functions/src/spark_hash.rs` (new top-level module —
+R-17a-19 weighed: no existing module owns hashing, the `murmur3_x86_32` in
+`random.rs` uses Guava tail handling which the fixture disproves for strings;
+`lib.rs` gains one `pub mod` line plus one chain-registration line),
+registered, facade-routed, facade destubbed to one `_scalar` call, `hash`
+dropped from `FACADE_ONLY_ROUTINE_NAMES`.
+`test_fnp_math_1.py -k hash` value pins green except the two 12-column SQL
+statements, which go `xfail(strict=True)` — `CAST(-0.0 AS DOUBLE)` plans
+identical to `CAST(0.0 AS DOUBLE)` on this tree (reproduced bare:
+`SELECT -0.0, 0.0` fails projection-name uniqueness), a run-18c planner seam;
+registry row EX-FN-7-RESID-1 records it. The other 10 SQL columns verify
+byte-exact via `/tmp/hash_sql_check.py` (scratch, all OK — including
+`hash(ts)`, confirming timestamps hash as micros). Frame fidelity fix in the
+test file: `arr_i` replays as `array<int>` (Spark's recorded type); the bare
+`array(10, 20)` replayed as `array<bigint>`, whose elements hash as longs.
+Unpinned choices: `UInt64` values hash by bit pattern; wide decimals hash
+their LE bytes; maps fold entries in storage order; structs fold fields;
+exotic scalars hash their string cast; `Float` widens through the double
+shape; NaN hashes by Java `doubleToLongBits` canonical bits.

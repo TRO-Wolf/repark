@@ -109,7 +109,6 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "from_xml",
     "get",
     "grouping",
-    "hash",
     "hll_sketch_agg",
     "hll_sketch_estimate",
     "hll_union",

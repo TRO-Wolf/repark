@@ -1,5 +1,8 @@
 # map — scripts/
 
+FNP-MATH-1 step 4 (2026-09-16, run 18a): `check_lib_py.py` ratchets
+`functions_expr.py` 2198 → 2195 (the `hash` destub is net-negative) with the
+CAP-1 mirror. pins: fnp-math-1/C-001, C-005
 SET-ANSI-RUNTIME-1 (2026-09-15): `check_lib_py.py` ratchets `tests/test_session_timezone_parity.py` 1328 → 1318 (the applied-contract flips are net-negative). pins: set-ansi-runtime-1/C-005
 FNP-11B remediation round 1 (2026-09-16, run 17a): `check_lib_py.py` sets `functions_expr.py` 2237 → 2220 (the `make_timestamp` forwarder becomes a direct re-export) with the CAP-1 mirror; `build_api_freeze.py` follows module-level `from`-import aliases when reading required params (`aliased_function_signatures`) and carries the alias targets in `source_paths` so scratch trees resolve them — the regenerated register keeps `F.make_timestamp` at `[]` and corrects `F.udtf` from `null` to `[]`. pins: fnp-11b/C-007, C-008
 
