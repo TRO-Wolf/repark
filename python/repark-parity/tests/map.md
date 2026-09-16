@@ -877,3 +877,6 @@ Escalate to: [../map.md#debug](../map.md).
   **measurement**, not arithmetic — `len(rows)` 1078 read from the failing assert, backlog 108 read
   from `check_example_coverage.py`'s own report. Both sides of the rebase had moved both counts, and
   a measured count is exact where an arithmetic one only usually is. pins: fnp-gen-1/C-007
+- **FNP-GEN-1 rebase onto #647 (2026-09-16, orchestrating session):** the same recipe a second
+  time — `len(rows)` 1082 read from the failing assert on a fresh release native, backlog 108 read
+  from `check_example_coverage.py`'s report (unchanged). pins: fnp-gen-1/C-007
