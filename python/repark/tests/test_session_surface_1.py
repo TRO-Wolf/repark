@@ -26,7 +26,6 @@ from repark.errors import (
     PySparkRuntimeError,
     PySparkTypeError,
     PySparkValueError,
-    UnsupportedOperationException,
 )
 from repark.spark.session import _reset_active_session_for_tests
 
@@ -338,13 +337,13 @@ def test_tvf_posexplode_answers(spark: ReparkSession) -> None:
     assert outer.to_arrow().to_pylist() == [{"pos": 0, "col": "a"}]
 
 
-def test_tvf_json_tuple_declared_today(spark: ReparkSession) -> None:
-    """cell tvf_json_tuple — the json_tuple kernel refusal rides through.
+def test_tvf_json_tuple_answers_today(spark: ReparkSession) -> None:
+    """cell tvf_json_tuple — the json_tuple kernel answers through (fnp-gen-1).
 
     pins: session-surface-1/C-007
     """
-    with pytest.raises(UnsupportedOperationException, match="json_tuple"):
-        spark.tvf.json_tuple(F.lit('{"a":1,"b":2}'), F.lit("a"), F.lit("b"))
+    frame = spark.tvf.json_tuple(F.lit('{"a":1,"b":2}'), F.lit("a"), F.lit("b"))
+    assert frame.to_arrow().to_pylist() == [{"c0": "1", "c1": "2"}]
 
 
 def test_tvf_inline_and_variant_declared_today(spark: ReparkSession) -> None:
@@ -567,8 +566,8 @@ def test_tvf_json_tuple_field_columns(spark: ReparkSession) -> None:
 
     pins: session-surface-1/C-010
     """
-    with pytest.raises(UnsupportedOperationException, match="json_tuple"):
-        spark.tvf.json_tuple(F.lit('{"a":1,"b":2}'), F.lit("a"), F.lit("b"))
+    frame = spark.tvf.json_tuple(F.lit('{"a":1,"b":2}'), F.lit("a"), F.lit("b"))
+    assert frame.to_arrow().to_pylist() == [{"c0": "1", "c1": "2"}]
     with pytest.raises(PySparkTypeError) as raised:
         spark.tvf.json_tuple(F.lit('{"a":1}'), F.col("a"))
     assert raised.value.getCondition() == "NOT_STR"

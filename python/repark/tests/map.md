@@ -1991,6 +1991,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `inline` / `inline_outer` go-red pins flipped to answer pins — the tvf facade
   delegates to the live `F.` generators; `json_tuple` and `variant_explode` keep
   their declared refusals. pins: session-surface-1/C-007, fnp-gen-1/C-002
+  **FNP-GEN-1 step 5 (2026-09-16, run 18a):** `tvf.json_tuple` flips the same way —
+  `test_tvf_json_tuple_declared_today` becomes `test_tvf_json_tuple_answers_today`
+  and the field-columns pin asserts the `c0`/`c1` frame; `variant_explode` keeps
+  its declared refusals. pins: session-surface-1/C-007, C-010, fnp-gen-1/C-002
   Critic round 1 adds pins for the artifact-dir `stop()` lifecycle (dir gone, exactly its
   own `sys.path` entry removed, `sys.modules` untouched), the `Try(toLong)` id validation
   (Unicode digits, whitespace, int64 overflow, non-str `NOT_STR`), the `hasattr` raise on
@@ -4964,6 +4968,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   retires into FNP9-ARRAYS-ZIP-NAMES-1) and `test_schema_of_pair_refuses` becomes
   `test_schema_of_csv_refuses` (EX-FN-16 narrows — `schema_of_json` left that row when the
   kernel landed). pins: fnp-9-collections-json/C-003, C-006
+  **FNP-GEN-1 step 5 (2026-09-16, run 18a):** the `from_csv` / `json_tuple` /
+  `schema_of_csv` refusal pins become answer pins (EX-FN-6 / EX-FN-8 / EX-FN-16
+  answer both doors). pins: fnp-gen-1/C-002, C-003, C-004
 - `test_functions_split_identity.py` — **FNP-9/10 (2026-09-05):** the installer chain appends
   `functions_json.FNP9_NAMES` LAST, so the pre-split, declared-absent, higher-order and `try_*`
   blocks keep their positions and the count moves 444 → 452.
@@ -5853,6 +5860,7 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `_check_schema_and_rows` shape (same fixture contract — the direct `to_pylist`
   comparison could never pass). The `schema_of_csv` marks stay strict until
   step 4.
+  **Step 5 (run 18a):** the four `schema_of_csv` marks retire with the kernel.
 - [fnp_gen_1_s34_spark_oracle.json](fnp_gen_1_s34_spark_oracle.json) —
   **FNP-GEN-1 steps 3–4 (2026-09-16, run 18a):** the 80 cells (40 ansi pairs) over the
   six-row `(id, js, csvrow)` frame for `json_tuple`, `from_csv` and `schema_of_csv` on both

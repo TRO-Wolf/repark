@@ -292,12 +292,6 @@ def test_python_door_from_csv_failfast_raises_the_parse_error(spark: ReparkSessi
     assert "not supported yet" not in str(excinfo.value)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 @pytest.mark.parametrize("options", [None, {"sep": "|"}])
 def test_python_door_schema_of_csv_infers_the_ddl(spark: ReparkSession, options: Any) -> None:
     """A foldable CSV literal infers Spark's DDL string on the Python door."""
@@ -310,12 +304,6 @@ def test_python_door_schema_of_csv_infers_the_ddl(spark: ReparkSession, options:
     _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_sql_door_schema_of_csv_non_foldable_raises(spark: ReparkSession) -> None:
     """A non-foldable column raises ``DATATYPE_MISMATCH.NON_FOLDABLE_INPUT``."""
     (cell,) = [cell for cell in _cells("schema_of_csv", "sql") if "csvrow" in cell["expr"]]
