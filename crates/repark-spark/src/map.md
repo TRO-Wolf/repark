@@ -226,7 +226,11 @@ pins: rp-4-fork-repin/C-005, C-006
   fold is gone so only the lexer-level negative token narrows and
   `-(2147483648)` stays bigint (LIT2-SQL-03/04); the late
   `SparkIntegerLiteral` is uninstalled on both Spark doors
-  (`spark_door_post_coercion_rules`, the early rule subsumes it).
+  (`spark_door_post_coercion_rules`, the early rule subsumes it). A plan-level
+  apply pre-check skips literal-free plans; `recompute_schema` runs only after
+  a real transform, `resolve_lambda_variables` only with a higher-order
+  function on the node; `Values` clones rows only on change; `Union` rebuilds
+  only on a moved child type.
   pins: sql-literal-typing-1/L-001, L-002, L-003
 - `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /

@@ -15,6 +15,9 @@ pub struct SparkIntegralLiteral;
 
 impl AnalyzerRule for SparkIntegralLiteral {
     fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+        if !plan_may_narrow(&plan)? {
+            return Ok(plan);
+        }
         plan.transform_up_with_subqueries(rewrite_plan).data()
     }
 
@@ -48,6 +51,54 @@ pub fn spark_door_post_coercion_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Syn
         .collect()
 }
 
+fn plan_may_narrow(plan: &LogicalPlan) -> Result<bool> {
+    let mut found = false;
+    plan.apply_with_subqueries(|node| {
+        node.apply_expressions(|expr| {
+            expr.apply(|leaf| {
+                if is_narrowable_literal(leaf) {
+                    found = true;
+                    return Ok(TreeNodeRecursion::Stop);
+                }
+                Ok(TreeNodeRecursion::Continue)
+            })?;
+            if found {
+                return Ok(TreeNodeRecursion::Stop);
+            }
+            Ok(TreeNodeRecursion::Continue)
+        })
+    })?;
+    Ok(found)
+}
+
+fn node_has_higher_order(plan: &LogicalPlan) -> Result<bool> {
+    let mut found = false;
+    plan.apply_expressions(|expr| {
+        expr.apply(|leaf| {
+            if matches!(leaf, Expr::HigherOrderFunction(_)) {
+                found = true;
+                return Ok(TreeNodeRecursion::Stop);
+            }
+            Ok(TreeNodeRecursion::Continue)
+        })?;
+        if found {
+            return Ok(TreeNodeRecursion::Stop);
+        }
+        Ok(TreeNodeRecursion::Continue)
+    })?;
+    Ok(found)
+}
+
+fn is_narrowable_literal(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Literal(ScalarValue::Int64(_), _)
+            | Expr::Literal(ScalarValue::UInt64(_), _)
+            | Expr::Literal(ScalarValue::Decimal128(_, _, _), _)
+            | Expr::Literal(ScalarValue::Decimal256(_, _, _), _)
+    )
+}
+
 fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     if let LogicalPlan::Values(values) = plan {
         return rewrite_values(values);
@@ -56,6 +107,18 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         return Ok(Transformed::no(plan));
     }
     if let LogicalPlan::Union(union) = plan {
+        let stale = union.inputs.iter().any(|input| {
+            let merged = union.schema.fields();
+            let mine = input.schema().fields();
+            mine.len() != merged.len()
+                || mine
+                    .iter()
+                    .zip(merged.iter())
+                    .any(|(mine, merged)| mine.data_type() != merged.data_type())
+        });
+        if !stale {
+            return Ok(Transformed::no(LogicalPlan::Union(union)));
+        }
         let rebuilt = Union::try_new_with_loose_types(union.inputs)?;
         return Ok(Transformed::yes(LogicalPlan::Union(rebuilt)));
     }
@@ -65,17 +128,25 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         let rewritten = expr.transform_up(spark_integral_literal)?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
-    let narrowed_flag = transformed.transformed;
+    if !transformed.transformed {
+        return Ok(transformed);
+    }
     let narrowed = transformed.map_data(LogicalPlan::recompute_schema)?.data;
+    if !node_has_higher_order(&narrowed)? {
+        return Ok(Transformed::yes(narrowed));
+    }
     let resolved = narrowed.resolve_lambda_variables()?;
     Ok(Transformed::new(
         resolved.data,
-        narrowed_flag || resolved.transformed,
+        true,
         TreeNodeRecursion::Continue,
     ))
 }
 
 fn rewrite_values(values: Values) -> Result<Transformed<LogicalPlan>> {
+    if !values_may_narrow(&values)? {
+        return Ok(Transformed::no(LogicalPlan::Values(values)));
+    }
     let mut changed = false;
     let mut rows = Vec::with_capacity(values.values.len());
     for row in &values.values {
@@ -92,6 +163,25 @@ fn rewrite_values(values: Values) -> Result<Transformed<LogicalPlan>> {
     }
     let rebuilt = LogicalPlanBuilder::values(rows)?.build()?;
     Ok(Transformed::yes(rebuilt.resolve_lambda_variables().data()?))
+}
+
+fn values_may_narrow(values: &Values) -> Result<bool> {
+    let mut found = false;
+    for row in &values.values {
+        for expr in row {
+            expr.apply(|leaf| {
+                if is_narrowable_literal(leaf) {
+                    found = true;
+                    return Ok(TreeNodeRecursion::Stop);
+                }
+                Ok(TreeNodeRecursion::Continue)
+            })?;
+            if found {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(found)
 }
 
 pub(crate) fn spark_integral_literal(expr: Expr) -> Result<Transformed<Expr>> {
@@ -340,6 +430,63 @@ mod tests {
         );
         let coerced = TypeCoercion::new().analyze(analyzed, &config).unwrap();
         assert_eq!(coerced.schema().field(0).data_type(), &DataType::Int64);
+    }
+
+    #[test]
+    fn narrowable_kinds_cover_the_rewrite_match() {
+        assert!(is_narrowable_literal(&Expr::Literal(
+            ScalarValue::Int64(Some(1)),
+            None
+        )));
+        assert!(is_narrowable_literal(&Expr::Literal(
+            ScalarValue::UInt64(Some(1)),
+            None
+        )));
+        assert!(is_narrowable_literal(&Expr::Literal(
+            ScalarValue::Decimal128(Some(1), 39, 0),
+            None
+        )));
+        assert!(is_narrowable_literal(&Expr::Literal(
+            ScalarValue::Decimal256(Some(i256::from(1)), 39, 0),
+            None
+        )));
+        assert!(!is_narrowable_literal(&Expr::Literal(
+            ScalarValue::Int32(Some(1)),
+            None
+        )));
+        assert!(!is_narrowable_literal(&Expr::Negative(Box::new(
+            Expr::Literal(ScalarValue::Int64(Some(1)), None)
+        ))));
+    }
+
+    #[tokio::test]
+    async fn rewrite_plan_reports_no_transform_without_narrowing() {
+        use datafusion::prelude::SessionContext;
+        let ctx = SessionContext::new();
+        let plan = ctx
+            .state()
+            .create_logical_plan("SELECT 'a' AS v")
+            .await
+            .unwrap();
+        let rewritten = rewrite_plan(plan).unwrap();
+        assert!(!rewritten.transformed);
+        assert_eq!(
+            rewritten.data.schema().field(0).data_type(),
+            &DataType::Utf8
+        );
+    }
+
+    #[tokio::test]
+    async fn rewrite_plan_leaves_a_clean_union_unbuilt() {
+        use datafusion::prelude::SessionContext;
+        let ctx = SessionContext::new();
+        let plan = ctx
+            .state()
+            .create_logical_plan("SELECT 'a' AS v UNION ALL SELECT 'b'")
+            .await
+            .unwrap();
+        let rewritten = rewrite_plan(plan).unwrap();
+        assert!(!rewritten.transformed);
     }
 
     #[tokio::test]
