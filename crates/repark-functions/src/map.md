@@ -253,19 +253,25 @@ scalars live under [`try_invert/`](try_invert/map.md).
   matching still delegates to the DFA where fancy has no hard node, so routing alone
   changes no value).
   Dangling `\1`…`\7` read as Java octal; `${…}` drops out of replacements before engine
-  expansion (Spark's SQL substitution empties it); non-constant lookbehind normalizes
-  (`+` to single, `{n,m}` to alternation, nullable to `(?=)` / `(?!)`). Invalid patterns
+  expansion (Spark's SQL substitution empties it); lookbehind answers semantically
+  (see `spark_regex_lookbehind.rs`): no textual rewrite. A numbered backref to a named
+  group numericizes (`\1` to a named group 1 reads as `\k<...>` does); when a numeric
+  backref meets any named group, fancy-regex would refuse, so names strip to numbers.
+  Invalid patterns
   raise Spark's `INVALID_PARAMETER_VALUE.PATTERN` naming the caller (`split` keeps its
-  long-standing text). Overrun is disjunctive: backtrack budget 100M, or a
+  long-standing text). Overrun is disjunctive: backtrack budget 100M, a lookbehind
+  search budget per call, or a
   catastrophic-class pattern (unbounded-quantified group over alternation or nested
   loops) on a haystack over 10000 bytes (Java's recursive matcher overflows there —
   measured `StackOverflowError` at 40000). pins: java-regex-features-1/C-001 … C-005,
   C-007 (plain patterns stay on the DFA path)
 - `spark_regex_lookbehind.rs` — **JAVA-REGEX-FEATURES-1 (2026-09-16):** the
-  non-constant lookbehind normalization the engine runs before the scan
-  (file-size split from `spark_regex_engine.rs`): `+` collapses to single,
-  `{n,m}` expands to alternation, nullable bodies become `(?=)` / `(?!)`, with a
-  syntactic nullability walk. pins: java-regex-features-1/C-001
+  semantic lookbehind the engine compiles instead of normalizing (file-size split
+  from `spark_regex_engine.rs`): each `(?<=X)`/`(?<!X)` becomes a `()` marker in a
+  skeleton pattern, and a match verifies X against the text ending at the marker by
+  scanning start positions down from it (bounded by X's static max length, else to
+  zero; Java group numbering kept, interior refs refuse loud).
+  pins: java-regex-features-1/C-001
   **Step 6:** split invalids name the translated pattern with the engine detail
   (the `Q15-13` text leg). pins: java-regex-features-1/C-008
   **Step 7:** scanners are char-aware with `\Q…\E` skipping (no single-byte emits,

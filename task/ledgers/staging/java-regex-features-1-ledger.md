@@ -239,13 +239,13 @@ exactly `text[s..p]` for some s ≤ p.
 | ID | Disposition | Evidence |
 |---|---|---|
 | L-001/PERF-001/PERF-002 | FIX, narrowed (see FD-1) | `RX3-SQL-00…05` answer on the rebuilt native; `RX-SQL-18`/`RX2-SQL-01` stay false; `RX2-SQL-00` still refuses with the same `overrun` text. |
-| L-002/L-003/L-004/L-007/PERF-003/PERF-007 | FIX semantic lookbehind | `RX3-SQL-06…12/15/16/17/26` pinned; Rust unit tests per shape; PERF-007 dissolves (no expansion; `{1,40}` compiles as its own regex). Timing in the step-3 commit. |
-| L-005 | FIX `\N`→`\k<name>` rewrite | `RX3-SQL-13/14` pinned; Rust unit test. |
-| L-006 | FIX count/match agreement; replace/split DECLARED | `RX3-SQL-18/19/22/23` pinned; `RX3-SQL-20/21` pin today's UTF-8 answer under new DECLARED row JAVA-REGEX-FEATURES-1-R2. |
+| L-002/L-003/L-004/L-007/PERF-003/PERF-007 | FIX semantic lookbehind (R-18c-O8) | `RX3-SQL-06…12/15/16/17/26` green on the rebuilt native; 7 Rust unit tests per shape; PERF-007 dissolves (no expansion; `{1,40}` compiles as its own regex). Match loop in Rust around the engine: lookbehinds become `()` markers in a skeleton, X verifies against the text ending at the marker (greedy overshoot forced the slice; `$`/`\b` at the cut read end-of-assertion, unpinned, noted). 1M-attempt search budget per call, loud `overrun`, proven by its own trip pin. |
+| L-005 | FIX strip-names-when-mixed | `RX3-SQL-13/14` green; Rust unit test. Raw fancy-regex 0.11 refuses numbered backrefs beside any named group, so a mixed pattern strips names to numbers (pure-named patterns keep names; `$name` in a mixed-pattern replacement then reads empty, unpinned, noted). |
+| L-006 | IN PROGRESS | Step-4 commit lands it. |
 | RX3-SQL-24 | PIN (already correct) | `REGEX_GROUP_INDEX` byte-matches Spark; error-leg pin. |
 | RX3-SQL-25 | PIN value false | Repark and Spark agree (`false`); residue row R1 stays open for `RX2-SQL-12`. |
-| PERF-004 | FIX if trivial (skip `${}` copy when no `$`) | Ledger C-007 re-measured. |
-| PERF-005 | FIX if trivial (single-pass fancy replace) | Same. |
+| PERF-004 | IN PROGRESS | Step-4 commit lands it. |
+| PERF-005 | IN PROGRESS | Step-4 commit lands it. |
 | PERF-006 | LEDGER NOTE | 10× budget scales just-under-budget rows ~10×; numbers below. |
 | PYPERF-001 | HAND-OFF, no edit (fence) | Registry row naming the `F.split` call and cell. |
 
@@ -267,7 +267,9 @@ Step outcomes: step 1 red `8726d6fd` (17 fail / 8 pass as predicted); step 2
 `RX3-SQL-00…05` green on the rebuilt native, `RX2-SQL-00` still `overrun`,
 `RX-SQL-18`/`RX2-SQL-01` still `false`, full file 73 pass / 13 fail with the
 13 all in step-3/4 scope; `cargo test -p repark-functions --lib spark_regex`
-37 pass (trip pin still trips at 100M, ~2 s).
+37 pass (trip pin still trips at 100M, ~2 s). Step 3: RX3 lookbehind/backref
+legs green (only 19/23 L-006 red remain); engine suite 32 pass; full lib
+suite 765 pass.
 
 FD-2 (forced, measured): `RX3-SQL-03` (`a*(?=b)` on 10001 a's, Spark `false`)
 needs ~60M backtrack pops (limit sweep 10M→200M: trips through 30M, `false`

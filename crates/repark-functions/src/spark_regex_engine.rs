@@ -9,6 +9,7 @@ pub(crate) const CATASTROPHIC_HAYSTACK_MAX: usize = 10_000;
 pub(crate) enum Engine {
     Plain,
     Fancy,
+    Lookbehind,
 }
 
 #[derive(Clone)]
@@ -18,10 +19,21 @@ pub(crate) struct SparkRegex {
     catastrophic: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum SparkEngine {
     Plain(Regex),
     Fancy(fancy_regex::Regex),
+    Lookbehind(crate::spark_regex_lookbehind::LookbehindCompiled),
+}
+
+pub(crate) type Spans = Vec<Option<(usize, usize)>>;
+
+fn exact_or_none(spans: Spans, start: usize, end: usize) -> Option<Spans> {
+    if spans.first().copied().flatten() == Some((start, end)) {
+        Some(spans)
+    } else {
+        None
+    }
 }
 
 impl std::fmt::Debug for SparkRegex {
@@ -29,6 +41,8 @@ impl std::fmt::Debug for SparkRegex {
         formatter
             .debug_struct("SparkRegex")
             .field("pattern", &self.java_pattern)
+            .field("catastrophic", &self.catastrophic)
+            .field("engine", &self.engine)
             .finish()
     }
 }
@@ -36,33 +50,88 @@ impl std::fmt::Debug for SparkRegex {
 pub(crate) fn compile_spark_regex(pattern: &str, fn_name: &str) -> Result<SparkRegex> {
     let groups = count_groups(pattern);
     let rewritten = rewrite_out_of_range_octal(pattern, groups);
-    let normalized = crate::spark_regex_lookbehind::normalize_lookbehind(&rewritten);
-    let Some(outcome) = scan_pattern(&normalized) else {
+    let renamed = crate::spark_regex_lookbehind::normalize_backrefs(&rewritten, groups);
+    if let Some(plan) = crate::spark_regex_lookbehind::plan_lookbehind(&renamed) {
+        let plan = plan.map_err(|_| {
+            invalid_pattern_error(fn_name, pattern, &translate_pattern(&renamed), None)
+        })?;
+        return compile_lookbehind(pattern, fn_name, &plan);
+    }
+    let Some(outcome) = scan_pattern(&renamed) else {
         return Err(invalid_pattern_error(
             fn_name,
             pattern,
-            &translate_pattern(&normalized),
+            &translate_pattern(&renamed),
             None,
         ));
     };
-    let translated = translate_pattern(&normalized);
-    let engine = if outcome.fancy {
-        fancy_regex::RegexBuilder::new(&translated)
+    let translated = translate_pattern(&renamed);
+    let engine = compile_engine(&translated, pattern, fn_name, outcome.fancy)?;
+    Ok(SparkRegex {
+        engine,
+        java_pattern: pattern.to_owned(),
+        catastrophic: outcome.catastrophic,
+    })
+}
+
+fn compile_engine(
+    translated: &str,
+    java_pattern: &str,
+    fn_name: &str,
+    fancy: bool,
+) -> Result<SparkEngine> {
+    if fancy {
+        fancy_regex::RegexBuilder::new(translated)
             .backtrack_limit(FANCY_BACKTRACK_LIMIT)
             .build()
             .map(SparkEngine::Fancy)
             .map_err(|error| {
-                invalid_pattern_error(fn_name, pattern, &translated, Some(error.to_string()))
-            })?
+                invalid_pattern_error(fn_name, java_pattern, translated, Some(error.to_string()))
+            })
     } else {
-        Regex::new(&translated)
+        Regex::new(translated)
             .map(SparkEngine::Plain)
             .map_err(|error| {
-                invalid_pattern_error(fn_name, pattern, &translated, Some(error.to_string()))
-            })?
+                invalid_pattern_error(fn_name, java_pattern, translated, Some(error.to_string()))
+            })
+    }
+}
+
+fn compile_lookbehind(
+    pattern: &str,
+    fn_name: &str,
+    plan: &crate::spark_regex_lookbehind::LookbehindPlan,
+) -> Result<SparkRegex> {
+    let Some(outcome) = scan_pattern(&plan.skeleton) else {
+        return Err(invalid_pattern_error(
+            fn_name,
+            pattern,
+            &translate_pattern(&plan.skeleton),
+            None,
+        ));
     };
+    let translated = translate_pattern(&plan.skeleton);
+    let skeleton = SparkRegex {
+        engine: compile_engine(&translated, pattern, fn_name, outcome.fancy)?,
+        java_pattern: pattern.to_owned(),
+        catastrophic: outcome.catastrophic,
+    };
+    let mut assertions = Vec::with_capacity(plan.assertions.len());
+    for assertion in &plan.assertions {
+        assertions.push(crate::spark_regex_lookbehind::Assertion {
+            marker: assertion.marker,
+            negative: assertion.negative,
+            max_len: assertion.max_len,
+            body: compile_spark_regex(&assertion.body, fn_name)?,
+        });
+    }
     Ok(SparkRegex {
-        engine,
+        engine: SparkEngine::Lookbehind(crate::spark_regex_lookbehind::LookbehindCompiled {
+            skeleton: Box::new(skeleton),
+            assertions,
+            group_map: plan.group_map.clone(),
+            named: plan.named.clone(),
+        }),
         java_pattern: pattern.to_owned(),
         catastrophic: outcome.catastrophic,
     })
@@ -91,7 +160,7 @@ fn invalid_pattern_error(
     }
 }
 
-fn overrun_error(java_pattern: &str, budget: &str, limit: usize) -> DataFusionError {
+pub(crate) fn overrun_error(java_pattern: &str, budget: &str, limit: usize) -> DataFusionError {
     DataFusionError::Execution(format!(
         "regex overrun on pattern '{java_pattern}': exceeded {budget} (limit {limit})"
     ))
@@ -189,11 +258,7 @@ fn scan_pattern(pattern: &str) -> Option<ScanOutcome> {
                 }
                 index += 1;
             }
-            b'*' | b'+' => {
-                outcome.fancy = outcome.fancy || bytes.get(index + 1) == Some(&b'+');
-                index += 1;
-            }
-            b'?' => {
+            b'*' | b'+' | b'?' => {
                 outcome.fancy = outcome.fancy || bytes.get(index + 1) == Some(&b'+');
                 index += 1;
             }
@@ -269,11 +334,7 @@ fn body_has_branch_or_loop(bytes: &[u8]) -> bool {
             }
             b'[' => index = skip_class(bytes, index).saturating_sub(1),
             b'|' | b'*' | b'+' => return true,
-            b'{' => {
-                if is_unbounded_repetition(bytes, index) {
-                    return true;
-                }
-            }
+            b'{' if is_unbounded_repetition(bytes, index) => return true,
             _ => {}
         }
         index += 1;
@@ -513,6 +574,7 @@ impl SparkRegex {
         match self.engine {
             SparkEngine::Plain(_) => Engine::Plain,
             SparkEngine::Fancy(_) => Engine::Fancy,
+            SparkEngine::Lookbehind(_) => Engine::Lookbehind,
         }
     }
 
@@ -529,7 +591,9 @@ impl SparkRegex {
 
     fn overrun(&self, error: fancy_regex::Error) -> DataFusionError {
         match self.engine {
-            SparkEngine::Fancy(_) => runtime_error(&self.java_pattern, error),
+            SparkEngine::Fancy(_) | SparkEngine::Lookbehind(_) => {
+                runtime_error(&self.java_pattern, error)
+            }
             SparkEngine::Plain(_) => {
                 DataFusionError::Internal("plain regex has no runtime failure".to_owned())
             }
@@ -540,6 +604,7 @@ impl SparkRegex {
         match &self.engine {
             SparkEngine::Plain(regex) => regex.as_str().is_empty(),
             SparkEngine::Fancy(regex) => regex.as_str().is_empty(),
+            SparkEngine::Lookbehind(compiled) => compiled.skeleton.is_empty_pattern(),
         }
     }
 
@@ -547,6 +612,7 @@ impl SparkRegex {
         match &self.engine {
             SparkEngine::Plain(regex) => regex.captures_len(),
             SparkEngine::Fancy(regex) => regex.captures_len(),
+            SparkEngine::Lookbehind(compiled) => compiled.group_map.len(),
         }
     }
 
@@ -555,6 +621,10 @@ impl SparkRegex {
         match &self.engine {
             SparkEngine::Plain(regex) => Ok(regex.is_match(text)),
             SparkEngine::Fancy(regex) => regex.is_match(text).map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => {
+                let mut budget = crate::spark_regex_lookbehind::SearchBudget::budget();
+                Ok(compiled.verified_from(text, 0, &mut budget)?.is_some())
+            }
         }
     }
 
@@ -568,6 +638,12 @@ impl SparkRegex {
                 .find(text)
                 .map(|matched| matched.map(|found| (found.start(), found.end())))
                 .map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => {
+                let mut budget = crate::spark_regex_lookbehind::SearchBudget::budget();
+                Ok(compiled
+                    .verified_from(text, 0, &mut budget)?
+                    .map(|matched| matched.span))
+            }
         }
     }
 
@@ -591,6 +667,88 @@ impl SparkRegex {
                     })
                 })
                 .map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => {
+                let mut budget = crate::spark_regex_lookbehind::SearchBudget::budget();
+                Ok(compiled
+                    .verified_from(text, start, &mut budget)?
+                    .and_then(|matched| compiled.capture_java(&matched, group, text)))
+            }
+        }
+    }
+
+    pub(crate) fn captures_spans(&self, text: &str, start: usize) -> Result<Spans> {
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex.captures_at(text, start).map_or_else(
+                || vec![None; regex.captures_len()],
+                |caps| {
+                    caps.iter()
+                        .map(|found| found.map(|matched| (matched.start(), matched.end())))
+                        .collect()
+                },
+            )),
+            SparkEngine::Fancy(regex) => regex
+                .captures_from_pos(text, start)
+                .map(|caps| {
+                    caps.map_or_else(
+                        || vec![None; regex.captures_len()],
+                        |captures| {
+                            captures
+                                .iter()
+                                .map(|found| found.map(|matched| (matched.start(), matched.end())))
+                                .collect()
+                        },
+                    )
+                })
+                .map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => {
+                let mut budget = crate::spark_regex_lookbehind::SearchBudget::budget();
+                Ok(compiled
+                    .verified_from(text, start, &mut budget)?
+                    .map_or_else(
+                        || vec![None; compiled.group_map.len()],
+                        |matched| matched.skel,
+                    ))
+            }
+        }
+    }
+
+    pub(crate) fn match_exact_spans(
+        &self,
+        text: &str,
+        start: usize,
+        end: usize,
+        budget: &mut crate::spark_regex_lookbehind::SearchBudget,
+    ) -> Result<Option<Spans>> {
+        budget.take(&self.java_pattern)?;
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex.captures_at(text, start).and_then(|caps| {
+                let spans: Spans = caps
+                    .iter()
+                    .map(|found| found.map(|matched| (matched.start(), matched.end())))
+                    .collect();
+                exact_or_none(spans, start, end)
+            })),
+            SparkEngine::Fancy(regex) => regex
+                .captures_from_pos(text, start)
+                .map(|caps| {
+                    caps.and_then(|captures| {
+                        let spans: Spans = captures
+                            .iter()
+                            .map(|found| found.map(|matched| (matched.start(), matched.end())))
+                            .collect();
+                        exact_or_none(spans, start, end)
+                    })
+                })
+                .map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => Ok(compiled
+                .verified_from(text, start, budget)?
+                .and_then(|matched| {
+                    if matched.span == (start, end) {
+                        Some(compiled.java_spans(&matched.skel))
+                    } else {
+                        None
+                    }
+                })),
         }
     }
 
@@ -603,6 +761,12 @@ impl SparkRegex {
                 .find_from_pos(text, start)
                 .map(|matched| matched.map(|found| (found.start(), found.end())))
                 .map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => {
+                let mut budget = crate::spark_regex_lookbehind::SearchBudget::budget();
+                Ok(compiled
+                    .verified_from(text, start, &mut budget)?
+                    .map(|matched| matched.span))
+            }
         }
     }
 
@@ -617,6 +781,7 @@ impl SparkRegex {
                     matched.is_some_and(|found| found.start() == MID_SURROGATE_PROBE_OFFSET)
                 })
                 .map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => compiled.skeleton.matches_at_mid_surrogate_index(),
         }
     }
 
@@ -748,6 +913,42 @@ impl SparkRegex {
                         Err(error) => return Err(self.overrun(error)),
                     }
                     last = end;
+                }
+                out.push_str(&text[last..]);
+                Ok(out)
+            }
+            SparkEngine::Lookbehind(compiled) => {
+                let mut out = String::with_capacity(text.len());
+                let mut last = 0usize;
+                let mut replaced = 0usize;
+                let mut budget = crate::spark_regex_lookbehind::SearchBudget::budget();
+                let mut byte = 0usize;
+                loop {
+                    if byte > text.len() {
+                        break;
+                    }
+                    let Some(matched) = compiled.verified_from(text, byte, &mut budget)? else {
+                        break;
+                    };
+                    replaced += 1;
+                    if replaced > usize::try_from(i32::MAX).unwrap_or(usize::MAX) {
+                        return Err(count_overflow());
+                    }
+                    let (start, end) = matched.span;
+                    out.push_str(&text[last..start]);
+                    compiled.expand_verified(&mut out, &matched, &stripped, text);
+                    last = end;
+                    if start == end {
+                        if start == text.len() {
+                            break;
+                        }
+                        let Some(character) = text[start..].chars().next() else {
+                            break;
+                        };
+                        byte = start + character.len_utf8();
+                    } else {
+                        byte = end;
+                    }
                 }
                 out.push_str(&text[last..]);
                 Ok(out)

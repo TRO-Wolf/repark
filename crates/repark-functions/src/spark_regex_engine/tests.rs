@@ -59,9 +59,6 @@ fn fancy_features_route_fancy() {
     for pattern in [
         "a(?=b)",
         "a(?!b)",
-        "(?<=a)b",
-        "(?<!a)b",
-        "(?<=a*)b",
         "(a)\\1",
         "(?<x>a)\\k<x>",
         "^a*+a$",
@@ -71,6 +68,26 @@ fn fancy_features_route_fancy() {
         "(a|b)\\1",
     ] {
         assert!(matches!(engine_of(pattern), Engine::Fancy), "{pattern}");
+    }
+}
+
+#[test]
+fn lookbehind_patterns_route_lookbehind() {
+    for pattern in [
+        "(?<=a)b",
+        "(?<!a)b",
+        "(?<=a*)b",
+        "(?<=ab+)c",
+        "(?<=ab{2,4})c",
+        "(?<=a.+)c",
+        "(?<=a{2,})b",
+        "(?<=(a){1,2})(b)(c)",
+        "(?<=a+b)",
+        "(?<=a*b)",
+        "(?<=.*x)a",
+        "(?<=a)(?<!b)b",
+    ] {
+        assert_eq!(engine_of(pattern), Engine::Lookbehind, "{pattern}");
     }
 }
 
@@ -284,4 +301,80 @@ fn fancy_captures_answer_groups() {
         compiled.capture_at("xaay", found.0, 0).expect("runs"),
         Some("aa".to_owned())
     );
+}
+
+#[test]
+fn semantic_lookbehind_multi_char_atoms() {
+    assert!(is_match("(?<=ab+)c", "abbbc"));
+    assert!(!is_match("(?<=ab+)c", "ac"));
+    assert!(!is_match("(?<!ab+)c", "abbbc"));
+    assert!(is_match("(?<=ab{2,4})c", "xabbc"));
+    assert!(!is_match("(?<=ab{2,4})c", "xabc"));
+    assert!(is_match("(?<=a.+)c", "axyzc"));
+    assert!(!is_match("(?<=a.+)c", "ac"));
+}
+
+#[test]
+fn semantic_lookbehind_open_minimum() {
+    assert!(is_match("(?<=a{2,})b", "aab"));
+    assert!(!is_match("(?<=a{2,})b", "ab"));
+    assert!(!is_match("(?<=a{2,})b", "b"));
+}
+
+#[test]
+fn semantic_lookbehind_keeps_group_numbers() {
+    let compiled = compile_spark_regex("(?<=(a){1,2})(b)(c)", "regexp_extract").expect("compiles");
+    assert_eq!(compiled.captures_len(), 4);
+    let found = compiled.find_first("aabc").expect("runs").expect("found");
+    assert_eq!(
+        compiled.capture_at("aabc", found.0, 2).expect("runs"),
+        Some("b".to_owned())
+    );
+    assert_eq!(
+        compiled.capture_at("aabc", found.0, 3).expect("runs"),
+        Some("c".to_owned())
+    );
+}
+
+#[test]
+fn semantic_lookbehind_concatenated_bodies() {
+    assert!(is_match("(?<=a+b)", "aab"));
+    assert!(is_match("(?<=a+b)", "ab"));
+    assert!(!is_match("(?<=a+b)", "aa"));
+    assert!(is_match("(?<=a*b)", "aab"));
+    assert!(is_match("(?<=a*b)", "ab"));
+    assert!(is_match("(?<=.*x)a", "xab"));
+    assert!(!is_match("(?<=.*x)a", "ab"));
+    assert!(is_match("(?<=a)(?<!b)b", "ab"));
+    assert!(!is_match("(?<=a)(?<!b)b", "bb"));
+}
+
+#[test]
+fn numbered_backref_to_named_group() {
+    assert!(is_match("(?<x>a)\\1", "aa"));
+    assert!(!is_match("(?<x>a)\\1", "ab"));
+    assert!(is_match("(?<x>a)\\k<x>(b)\\2", "aabb"));
+    assert!(!is_match("(?<x>a)\\k<x>(b)\\2", "aaab"));
+}
+
+#[test]
+fn backref_into_lookbehind_body_refuses_loud() {
+    let error = compile_spark_regex("(?<=(a))b\\1", "rlike").expect_err("rejects");
+    assert!(
+        error
+            .to_string()
+            .contains("INVALID_PARAMETER_VALUE.PATTERN"),
+        "{error}"
+    );
+}
+
+#[test]
+fn lookbehind_search_budget_trips_loud() {
+    let compiled = compile_spark_regex("(?<=a{1,100}b)a", "rlike").expect("compiles");
+    let error = compiled
+        .is_match(&"a".repeat(20_000))
+        .expect_err("overruns");
+    let message = error.to_string();
+    assert!(message.contains("overrun"), "{message}");
+    assert!(message.contains("lookbehind search budget"), "{message}");
 }
