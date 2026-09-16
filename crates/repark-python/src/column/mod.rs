@@ -223,9 +223,8 @@ impl PyColumn {
                 expr_build::sql_context(sql, true).map_err(crate::datafusion_to_py_err)?;
             let canonical = repark_spark::spark_literals::canonicalize(sql)
                 .map_err(crate::datafusion_to_py_err)?;
-            let select_sql = format!("SELECT ({}) AS _repark_expr", canonical.as_ref());
             let runtime = crate::session::shared_runtime()?;
-            let planned = expr_build::plan_expr_column(&context, &select_sql, canonical.as_ref());
+            let planned = expr_build::plan_expr_column(&context, canonical.as_ref(), sql);
             let expr = runtime.block_on(planned)?;
             Ok(Self::from_expr(expr))
         })

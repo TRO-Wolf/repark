@@ -350,7 +350,7 @@ impl PyDataFrame {
         fenced!("PyDataFrame.filter_sql", {
             repark_spark::refuse_sql_fragment(predicate).map_err(datafusion_to_py_err)?;
             let expr = crate::column::expr_build::parse_canonical_predicate(&self.df, predicate)
-                .map_err(datafusion_to_py_err)?;
+                .map_err(|error| crate::unknown_routine_to_py_err(predicate, error))?;
             let df = self.df.clone().filter(expr).map_err(datafusion_to_py_err)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })

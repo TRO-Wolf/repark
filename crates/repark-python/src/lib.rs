@@ -69,6 +69,14 @@ pub(crate) fn datafusion_to_py_err(err: DataFusionError) -> PyErr {
     to_py_err(repark_core::engine_err(err))
 }
 
+#[allow(clippy::needless_pass_by_value)]
+pub(crate) fn unknown_routine_to_py_err(sql: &str, err: DataFusionError) -> PyErr {
+    match repark_core::map_unknown_routine_message(sql, &err.to_string()) {
+        Some(message) => to_py_err(repark_core::Error::Analysis(message)),
+        None => datafusion_to_py_err(err),
+    }
+}
+
 /// Install the optional environment-gated tracing subscriber once at module import.
 fn try_init_repark_tracing() {
     use std::sync::Once;

@@ -168,6 +168,12 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   and `PyColumn.sql` blocks on the shared engine runtime: 10k `F.expr` 2.33s → 0.72s.
   **Round 5 (2026-09-15):** `sql_context` also installs
   `__repark_suffix_literal__`. pins: fnp-4b/C-021
+  **UNRESOLVED-ROUTINE-1 (2026-09-16):** `plan_expr_column` builds the
+  `SELECT (…) AS _repark_expr` wrapper inside and maps failures with the
+  original fragment (`unknown_routine_to_py_err`, so `F.expr` positions at the
+  fragment); `parse_canonical_predicate` stays verbatim and `filter_sql` maps
+  with the predicate. `mod.rs` ceiling ratcheted 1014 → 1013 (wrapper move).
+  pins: unresolved-routine-1/C-003
   **FNP-8 repair (2026-09-07):** the throwaway context builds its standard analyzer vector with
   the same pre-coercion HOF preparation as a normal Spark session. pins: fnp-8/C-003, C-004
   **FNP-8-REVIEW (2026-09-07):** the nested-HOF refusal names the Column door as the

@@ -48,10 +48,11 @@ pub(crate) fn parse_canonical_predicate(
 
 pub(crate) async fn plan_expr_column(
     context: &SessionContext,
-    select_sql: &str,
     canonical: &str,
+    original: &str,
 ) -> PyResult<Expr> {
-    let plan = match context.sql(select_sql).await {
+    let select_sql = format!("SELECT ({canonical}) AS _repark_expr");
+    let plan = match context.sql(&select_sql).await {
         Ok(frame) => {
             match repark_functions::analyze_eagerly(&context.state(), frame.logical_plan().clone())
             {
@@ -59,18 +60,18 @@ pub(crate) async fn plan_expr_column(
                 Err(error) => {
                     if missing_column(&error).is_some() {
                         return parse_unresolved_expr(context, canonical)
-                            .map_err(crate::datafusion_to_py_err);
+                            .map_err(|inner| crate::unknown_routine_to_py_err(original, inner));
                     }
-                    return Err(crate::datafusion_to_py_err(error));
+                    return Err(crate::unknown_routine_to_py_err(original, error));
                 }
             }
         }
         Err(error) => {
             if missing_column(&error).is_some() {
                 return parse_unresolved_expr(context, canonical)
-                    .map_err(crate::datafusion_to_py_err);
+                    .map_err(|inner| crate::unknown_routine_to_py_err(original, inner));
             }
-            return Err(crate::datafusion_to_py_err(error));
+            return Err(crate::unknown_routine_to_py_err(original, error));
         }
     };
     let expr = strip_outer_alias(extract_projection_expr(&plan)?);

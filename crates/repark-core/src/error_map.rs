@@ -61,6 +61,18 @@ pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorK
 /// Convert one DataFusion error into the crate-wide [`Error`] taxonomy.
 #[allow(clippy::needless_pass_by_value)]
 #[must_use]
+pub fn engine_err_for_sql(sql: &str, err: DataFusionError) -> Error {
+    if !matches!(classify_datafusion_error(&err), EngineErrorKind::Parse)
+        && let Some(message) =
+            crate::unknown_routine::map_unknown_routine_message(sql, &err.to_string())
+    {
+        return Error::Analysis(message);
+    }
+    engine_err(err)
+}
+
+#[allow(clippy::needless_pass_by_value)]
+#[must_use]
 pub fn engine_err(err: DataFusionError) -> Error {
     match classify_datafusion_error(&err) {
         EngineErrorKind::Parse => Error::Parse(err.to_string()),

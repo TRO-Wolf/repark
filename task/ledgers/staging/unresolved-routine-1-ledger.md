@@ -54,11 +54,11 @@ contract, not one row per name.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The SQL door refuses every unknown scalar/aggregate/window routine as `AnalysisException` carrying `[UNRESOLVED_ROUTINE]`, the name rendered per door rules, the search path, `SQLSTATE: 42883`. Cells UR-SQL-00…04, 06…13, 15. | `test_unresolved_routine_1.py` full-message pins per cell. | OPEN | RED §1. Seam: sql-text-aware mapping of DataFusion's `Invalid function` at the native `sql` boundary. Name case and position recover from the SQL text because DataFusion folds to lowercase. |
-| C-002 | The query context `; line L pos P` answers per cell. | Same pins assert the position suffix. | OPEN | Reachable: sqlparser is not needed — the routine-name span is found by a case-insensitive call-site search in the original SQL text. `F.expr`/`filter` search the fragment (pos 0); `selectExpr` needs the facade (R-18c-2, H-001). |
-| C-003 | The Python door: `F.expr`, `selectExpr`, string `filter` answer the same class; `F.call_function` stays green. Cells UR-PY-00…03. | Same pin file, py-door section. | OPEN | RED §1 (`F.call_function` already green). `F.expr` maps in `PyColumn::sql`, `filter` in `filter_sql`, both Rust. `functions_byname.py` can delegate to the Rust path — hand-off H-003 to run 18a, not an edit. |
-| C-004 | The three out-of-shape classes: TVF implemented at the same seam; LATERAL VIEW and `system.builtin` recorded. | TVF pin UR-SQL-17; BACKLOG rows for the rest as decided. | OPEN | RED §1. TVF is the same seam (`table function 'x' not found` at `session.sql`). `system.builtin` (UR-SQL-05) is the same seam too and is implemented, not backlogged — one measured shape. LATERAL VIEW parses in another unit — BACKLOG only. |
-| C-005 | Blanket, not per name: a Rust unit test maps an arbitrary unknown name; one pin iterates ≥20 Spark-unknown names. | In-module Rust test + parametrized facade pin. | OPEN | No name list anywhere in the implementation; the 20-name pin guards the blanket. |
+| C-001 | The SQL door refuses every unknown scalar/aggregate/window routine as `AnalysisException` carrying `[UNRESOLVED_ROUTINE]`, the name rendered per door rules, the search path, `SQLSTATE: 42883`. Cells UR-SQL-00…04, 06…13, 15. | `test_unresolved_routine_1.py` full-message pins per cell. | PROVEN | `unknown_routine.rs` + `engine_err_for_sql` at the core `sql_with` choke point; 14 SQL pins green on the rebuilt release native (45 passed total). pins: unresolved-routine-1/C-001. §2. |
+| C-002 | The query context `; line L pos P` answers per cell. | Same pins assert the position suffix. | PROVEN | All recorded positions answer, incl. nested (pos 11), whitespace (pos 9), multi-line (line 2 pos 1), backticked (pos 7 at the quote) and both fragments (pos 0). Residue: `selectExpr` answers pos 7 of its wrapped `SELECT` — H-001 to run 18b, registry row BL-19-POS-SELX in step 7. pins: unresolved-routine-1/C-002. §2. |
+| C-003 | The Python door: `F.expr`, `selectExpr`, string `filter` answer the same class; `F.call_function` stays green. Cells UR-PY-00…03. | Same pin file, py-door section. | PROVEN | `F.expr` maps with the fragment, `filter` with the predicate, `selectExpr` rides the core seam (class green); `call_function` untouched and green. H-003 stands. pins: unresolved-routine-1/C-003. §2. |
+| C-004 | The three out-of-shape classes: TVF implemented at the same seam; LATERAL VIEW and `system.builtin` recorded. | TVF pin UR-SQL-17; BACKLOG rows for the rest as decided. | PROVEN | TVF four-sentence pin green; `system.builtin` → `REQUIRES_SINGLE_PART_NAMESPACE` pin green. LATERAL VIEW stays a disclosure pin; its BACKLOG row lands in step 7. pins: unresolved-routine-1/C-004. §2. |
+| C-005 | Blanket, not per name: a Rust unit test maps an arbitrary unknown name; one pin iterates ≥20 Spark-unknown names. | In-module Rust test + parametrized facade pin. | PROVEN | 14 in-module tests (`arbitrary_unknown_name_maps_blanket` uses a name from no list); 22-name facade blanket pin green. No name list in the implementation. pins: unresolved-routine-1/C-005. §2. |
 | C-006 | Every existing `Invalid function` assertion for a Spark-unknown name now asserts the Spark class; names Spark has are listed. | Retired pins + the two ledger lists. | OPEN | Files: `test_fnp11b_typeof.py`, `test_fnp7_try_inversions.py`, `test_functions_gt2.py`, `test_filter_predicate_rewrite.py` (docstring only, no assertion), `test_w0_window_bench_smoke.py`, `test_fnp_gen_1.py` (negative assertion, untouched), `test_column_parity_1.py`, Rust `keyword_lower.rs` / `bare_nullary.rs`. |
 | C-007 | Registry: BL-19 → FIXED with pins; residue rows dated. | `docs/spark-sql-iceberg-parity.md` rows. | OPEN | BL-19-POS-SELX (selectExpr fragment position, hand-off H-001) plus LATERAL VIEW BACKLOG row if not already rowed. |
 
@@ -106,9 +106,39 @@ target varies per name (`cosh`, `count`, `try_validate_utf8` in the probe), so
 the name parser reads up to the closing quote and ignores the tail. The blanket
 pin asserts only the message prefix plus the position suffix for this reason.
 
-## 2. Implementation record
+## 2. Implementation record (steps 4–5, 2026-09-16)
 
-(to be filled in steps 4–5: module, seams, position search, TVF/REQUIRES shapes.)
+New module `crates/repark-core/src/unknown_routine.rs` (string-level, no SQL
+parse): `map_unknown_routine_message(sql, message)` matches DataFusion's
+`Invalid function 'dotted.name'` (any tail, including the `\nDid you mean`
+suggestion) and `table function 'name' not found`, and renders Spark's shape.
+Name case and the `line L pos P` span recover from the caller SQL text with a
+case-insensitive call-site search (name followed by `(`; quoted names position
+at the opening backtick), because DataFusion folds names to lowercase. The
+`system.builtin` qualifier alone renders `REQUIRES_SINGLE_PART_NAMESPACE`
+without a position (the one measured shape, R-18c-3); every other dotted shape
+quotes each part under `UNRESOLVED_ROUTINE`. TVF renders Spark's four-sentence
+`UNRESOLVED_TABLE_VALUED_FUNCTION` with the same position rule.
+
+Seams (one choke point per door, all with the caller's text): core `sql_with`
+maps through `engine_err_for_sql` (covers `spark.sql`, the ANSI door, and
+`selectExpr`'s wrapped `SELECT` — class green, fragment position stays H-001);
+`F.expr` maps in `plan_expr_column` with the original fragment (the `SELECT`
+wrapper is now built inside, so `column/mod.rs` shrinks one line and its size
+row ratchets 1014 → 1013); string `filter` maps in `filter_sql` with the
+predicate (`dataframe.rs` line count unchanged). `session.rs` (PyO3) is
+untouched — the core seam covers it.
+
+Finding F-002: `DataFusionError::Plan` displays with an `Error during planning: `
+prefix (datafusion-common 54.1 `error.rs`), so the fragment doors must map
+string → `Error::Analysis` → `PyErr` directly (`unknown_routine_to_py_err` in
+`repark-python/lib.rs`); round-tripping through a fresh `Plan` re-adds the
+prefix. The first build reded `UR-PY-01/03` and `UR-SQL-01` on exactly these two
+points (prefix; backtick pos 8 vs 7); both fixed in the second build; the pin file runs 45 passed on the rebuilt
+release native (2026-09-16).
+
+`bare_unit.rs` keeps its position-less refusal (grammar unit's match-pin stays
+green; out of this card's recorded cells).
 
 ## 3. C-006 retirement record
 

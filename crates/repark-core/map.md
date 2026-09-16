@@ -107,7 +107,15 @@ honestly"). SQL routing and session-build registration are seam-inverted
   and appends key by key with one open writer, reusing the fan-out's
   leaf-writer and body row. pins: io-text-1/X-4
 - `src/error_map.rs` — DataFusion/iceberg error folds into `repark_common::Error`; public
-  `engine_err` (the single `DataFusionError → Error` classifier).
+  `engine_err` (the single `DataFusionError → Error` classifier) plus `engine_err_for_sql`
+  (the `sql_with` choke point: unknown-routine messages reshape before classification).
+- `src/unknown_routine.rs` — **UNRESOLVED-ROUTINE-1 (2026-09-16):** string-level
+  reshape of DataFusion's `Invalid function 'dotted.name'` and
+  `table function 'name' not found` into Spark's `UNRESOLVED_ROUTINE`,
+  `REQUIRES_SINGLE_PART_NAMESPACE` (the measured `system.builtin` qualifier only)
+  and `UNRESOLVABLE_TABLE_VALUED_FUNCTION`, with name case and `line L pos P`
+  recovered from the caller SQL text; 14 in-module tests incl. the blanket
+  arbitrary-name case. pins: unresolved-routine-1/C-001, C-002, C-004, C-005
 - `src/namespace_create.rs` — G-6 Q1 location-conflict predicate shared by Session
   `create_namespace` and both SQL doors' `IF NOT EXISTS` paths.
 - `src/idents.rs` — table-identifier segment parse + path-escape refuse (delegates to

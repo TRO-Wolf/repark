@@ -274,6 +274,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `MAX_ERROR_PEEL_DEPTH`), everything else → base `Error::DataFusion`. Postgres/excel folds are
   deferred with their crates. Also `resolve_s3_region_override` (dual-key S3 read-region
   override; identical values collapse, different values fail loud naming both keys).
+  **UNRESOLVED-ROUTINE-1 (2026-09-16):** `engine_err_for_sql` reshapes unknown-routine
+  texts before classification (never for `Parse`), so `sql_with` answers Spark's shape
+  on every dialect. pins: unresolved-routine-1/C-001
+- `unknown_routine.rs` — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
+  (see [../map.md](../map.md)).
 - `pool_refusals.rs` — **H3-SPILL-RESIDUE-1 (2026-09-06):** `PoolRefusalLog` (a refusal counter
   plus the engine's own last refusal text), `RefusalRecordingPool` (a `MemoryPool` decorator that
   delegates every method to the inner `FairSpillPool` — name, `Display`, `memory_limit`, both
