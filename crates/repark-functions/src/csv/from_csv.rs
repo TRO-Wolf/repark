@@ -4,7 +4,8 @@ use std::sync::Arc;
 use datafusion::arrow::array::{
     Array, ArrayRef, BinaryBuilder, BooleanBuilder, Date32Builder, Decimal128Builder,
     Float32Builder, Float64Builder, Int8Builder, Int16Builder, Int32Builder, Int64Builder,
-    NullBufferBuilder, StringArray, StringBuilder, StructArray, TimestampMicrosecondBuilder,
+    NullArray, NullBufferBuilder, StringArray, StringBuilder, StructArray,
+    TimestampMicrosecondBuilder,
 };
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Fields};
 use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err, plan_err};
@@ -14,10 +15,13 @@ use datafusion::logical_expr::{
 };
 
 use super::{
-    CsvMode, CsvOptions, options_from_map, parse_csv_date, parse_csv_timestamp, read_options_array,
-    split_csv_record, string_column, token_is_null, unsupported_datatype,
+    CsvMode, CsvOptions, CsvStampParsers, non_string_literal_schema, options_from_map,
+    parse_dated_token, parse_stamp_token, read_options_array, split_csv_record, stamp_parsers,
+    string_column, token_is_null, unsupported_datatype,
 };
 use crate::json::ddl::parse_schema;
+use crate::session_time_zone::session_time_zone_from_options;
+use crate::timestamp_cast::parse_session_zone;
 
 pub(crate) const FROM_CSV_UDF: &str = "from_csv";
 
@@ -198,22 +202,48 @@ impl ScalarUDFImpl for SparkFromCsv {
         if args.args.len() < 2 || args.args.len() > 3 {
             return Err(wrong_num_args(args.args.len()));
         }
-        let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+        let arrays = ColumnarValue::values_to_arrays(&args.args[..1])?;
         let documents = string_column(&arrays[0])?;
-        let schemas = string_column(&arrays[1])?;
-        if schemas.is_null(0) {
-            return plan_err!(
-                "[INVALID_SCHEMA.NON_STRING_LITERAL] The input schema is not a valid schema \
-                 string. The input expression must be string literal and not null."
-            );
-        }
-        let (_, fields) = csv_struct_type(schemas.value(0))?;
-        let options = if arrays.len() == 3 {
-            read_options_array(&arrays[2])?
-        } else {
-            CsvOptions::default()
+        let schema_text = match &args.args[1] {
+            ColumnarValue::Scalar(scalar)
+                if matches!(
+                    scalar,
+                    ScalarValue::Utf8(_) | ScalarValue::LargeUtf8(_) | ScalarValue::Utf8View(_)
+                ) =>
+            {
+                literal_text(Some(scalar)).ok_or_else(non_string_literal_schema)?
+            }
+            _ => {
+                let rest = ColumnarValue::values_to_arrays(&args.args[1..2])?;
+                if rest[0].is_empty() {
+                    return Ok(ColumnarValue::Array(Arc::new(NullArray::new(
+                        documents.len(),
+                    ))));
+                }
+                let schemas = string_column(&rest[0])?;
+                if schemas.is_null(0) {
+                    return Err(non_string_literal_schema());
+                }
+                schemas.value(0).to_string()
+            }
         };
-        decode_records(&documents, &fields, &options)
+        let (_, fields) = csv_struct_type(&schema_text)?;
+        let options = match args.args.get(2) {
+            None => CsvOptions::default(),
+            Some(ColumnarValue::Scalar(scalar @ ScalarValue::Map(_))) => options_from_map(scalar)?,
+            Some(_) => {
+                let rest = ColumnarValue::values_to_arrays(&args.args[2..3])?;
+                if rest[0].is_empty() {
+                    CsvOptions::default()
+                } else {
+                    read_options_array(&rest[0])?
+                }
+            }
+        };
+        let zone =
+            parse_session_zone(session_time_zone_from_options(args.config_options.as_ref()))?;
+        let parsers = stamp_parsers(&options, zone);
+        decode_records(&documents, &fields, &options, &parsers)
     }
 }
 
@@ -252,9 +282,9 @@ fn field_builder(data_type: &DataType, capacity: usize) -> FieldBuilder {
         DataType::Date32 | DataType::Date64 => {
             FieldBuilder::Date32(Date32Builder::with_capacity(capacity))
         }
-        DataType::Timestamp(_, _) => {
-            FieldBuilder::Timestamp(TimestampMicrosecondBuilder::with_capacity(capacity))
-        }
+        DataType::Timestamp(_, zone) => FieldBuilder::Timestamp(
+            TimestampMicrosecondBuilder::with_capacity(capacity).with_timezone_opt(zone.clone()),
+        ),
         DataType::Decimal128(precision, scale) => match Decimal128Builder::with_capacity(capacity)
             .with_precision_and_scale(*precision, *scale)
         {
@@ -312,6 +342,7 @@ fn append_token(
     data_type: &DataType,
     token: &str,
     options: &CsvOptions,
+    formats: &CsvStampParsers,
 ) -> bool {
     if token_is_null(token, options) {
         append_null(builder);
@@ -367,7 +398,7 @@ fn append_token(
         }
         (FieldBuilder::Utf8(inner), _) => inner.append_value(token),
         (FieldBuilder::Date32(inner), _) => {
-            if let Some(date) = parse_csv_date(token, options.date_format.as_deref()) {
+            if let Some(date) = parse_dated_token(token, options, formats) {
                 let epoch = chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap_or(date);
                 if let Ok(days) = i32::try_from(date.signed_duration_since(epoch).num_days()) {
                     inner.append_value(days);
@@ -378,14 +409,8 @@ fn append_token(
                 return null_token(|| inner.append_null());
             }
         }
-        (FieldBuilder::Timestamp(inner), _) => {
-            if let Some(micros) = parse_csv_timestamp(
-                token,
-                options
-                    .timestamp_format
-                    .as_deref()
-                    .or(options.date_format.as_deref()),
-            ) {
+        (FieldBuilder::Timestamp(inner), DataType::Timestamp(_, zone)) => {
+            if let Some(micros) = parse_stamp_token(token, zone.as_ref(), options, formats) {
                 inner.append_value(micros);
             } else {
                 return null_token(|| inner.append_null());
@@ -442,6 +467,7 @@ fn decode_records(
     documents: &StringArray,
     fields: &[(String, DataType)],
     options: &CsvOptions,
+    formats: &CsvStampParsers,
 ) -> Result<ColumnarValue> {
     let corrupt_index = options
         .corrupt_record_column
@@ -480,7 +506,7 @@ fn decode_records(
                 malformed = true;
                 continue;
             };
-            let bad = append_token(builder, data_type, token, options);
+            let bad = append_token(builder, data_type, token, options, formats);
             if bad {
                 malformed = true;
                 shown.push("null".to_string());
@@ -665,6 +691,47 @@ mod tests {
             .expect("scalar")
             .to_string();
         assert_eq!(shown, "{a:,b:row}");
+    }
+
+    #[test]
+    fn empty_documents_answer_an_empty_struct() {
+        use datafusion::arrow::array::{Array, ArrayRef, StringArray};
+        use datafusion::common::config::ConfigOptions;
+        use datafusion::logical_expr::{ColumnarValue, ScalarFunctionArgs};
+        use std::sync::Arc;
+        let documents: ArrayRef = Arc::new(StringArray::from(Vec::<&str>::new()));
+        let udf = super::from_csv_udf();
+        let (output, _) = super::csv_struct_type("a INT").expect("schema");
+        let args = ScalarFunctionArgs {
+            args: vec![
+                ColumnarValue::Array(documents),
+                ColumnarValue::Scalar(datafusion::common::ScalarValue::Utf8(Some(
+                    "a INT".to_string(),
+                ))),
+            ],
+            arg_fields: vec![],
+            number_rows: 0,
+            return_field: Arc::new(datafusion::arrow::datatypes::Field::new(
+                "from_csv", output, true,
+            )),
+            config_options: Arc::new(ConfigOptions::new()),
+        };
+        let decoded = udf.invoke_with_args(args).expect("empty decodes");
+        let ColumnarValue::Array(array) = decoded else {
+            panic!("from_csv answers an array");
+        };
+        assert_eq!(array.len(), 0);
+        assert_eq!(
+            array.data_type(),
+            &datafusion::arrow::datatypes::DataType::Struct(
+                vec![Arc::new(datafusion::arrow::datatypes::Field::new(
+                    "a",
+                    datafusion::arrow::datatypes::DataType::Int32,
+                    true
+                ))]
+                .into()
+            )
+        );
     }
 
     #[test]

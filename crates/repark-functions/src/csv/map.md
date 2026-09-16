@@ -49,6 +49,18 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   `return_field_from_args` refuses a non-STRING corrupt column with
   `[INVALID_CORRUPT_RECORD_TYPE]` at analysis on both doors.
   pins: fnp-gen-1/L-001, R-18a-13
+- `from_csv.rs` / `csv.rs` — **Remediation (run 18a):** `invoke_with_args` reads
+  the schema and options off the `ColumnarValue::Scalar` (a 0-length schema array
+  answers an empty `Null` frame instead of indexing row 0) and only the document
+  column goes through `values_to_arrays`; naive `TIMESTAMP` values localize in
+  the session zone while `TIMESTAMP_NTZ` stays wall-clock, and `TIMESTAMP`
+  builders carry the field's zone. Default stamps try the offset then the naive
+  then the date-only chrono shapes shared with `from_json`; `dateFormat` /
+  `timestampFormat` compile once per invoke through the shared Java pattern
+  machinery (`CsvStampParsers`), never fall back to `dateFormat` for a
+  `TIMESTAMP` field, and fall back to the legacy parser only when the pattern
+  itself does not compile.
+  pins: fnp-gen-1/L-002, L-003, L-004, PERF-001, PERF-002, PERF-006
 - `schema_of_csv.rs` — the `schema_of_csv` scalar UDF plus its `#[cfg(test)]`
   pins (the Spark `CSVInferSchema` ladder and renderer, the quoted separator, the
   `sep` option, the empty-document `INTERNAL_ERROR` defect, NULL, non-string

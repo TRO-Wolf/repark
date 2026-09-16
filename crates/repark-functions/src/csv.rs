@@ -1,9 +1,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use datafusion::arrow::array::timezone::Tz;
 use datafusion::arrow::array::{Array, AsArray, StringArray};
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::{Result, ScalarValue, plan_err};
+
+use crate::datetime::localize_wall_micros_in_zone;
+use crate::java_datetime::{ParsedPattern, compile_java_pattern, parse_wall_text};
 
 pub(crate) mod fold;
 pub(crate) mod from_csv;
@@ -271,6 +275,92 @@ fn parse_csv_datetime(text: &str, format: Option<&str>) -> Option<DateParts> {
         return None;
     }
     Some(parts)
+}
+
+pub(crate) struct CsvStampParsers {
+    pub(crate) date: Option<ParsedPattern>,
+    pub(crate) timestamp: Option<ParsedPattern>,
+    pub(crate) zone: Tz,
+}
+
+#[must_use]
+pub(crate) fn stamp_parsers(options: &CsvOptions, zone: Tz) -> CsvStampParsers {
+    CsvStampParsers {
+        date: options
+            .date_format
+            .as_deref()
+            .and_then(|pattern| compile_java_pattern(pattern).ok()),
+        timestamp: options
+            .timestamp_format
+            .as_deref()
+            .and_then(|pattern| compile_java_pattern(pattern).ok()),
+        zone,
+    }
+}
+
+fn stamp_micros(naive: chrono::NaiveDateTime, zone: Option<Tz>) -> Option<i64> {
+    let wall = naive.and_utc().timestamp_micros();
+    match zone {
+        Some(zone) => localize_wall_micros_in_zone(wall, zone),
+        None => Some(wall),
+    }
+}
+
+pub(crate) fn default_timestamp_micros(text: &str, zone: Option<Tz>) -> Option<i64> {
+    for pattern in ["%Y-%m-%dT%H:%M:%S%.f%#z", "%Y-%m-%d %H:%M:%S%.f%#z"] {
+        if let Ok(found) = chrono::DateTime::parse_from_str(text, pattern) {
+            return Some(found.timestamp_micros());
+        }
+    }
+    for pattern in [
+        "%Y-%m-%dT%H:%M:%S%.f",
+        "%Y-%m-%d %H:%M:%S%.f",
+        "%Y-%m-%dT%H:%M",
+        "%Y-%m-%d %H:%M",
+    ] {
+        if let Ok(naive) = chrono::NaiveDateTime::parse_from_str(text, pattern) {
+            return stamp_micros(naive, zone);
+        }
+    }
+    if let Ok(date) = chrono::NaiveDate::parse_from_str(text, "%Y-%m-%d") {
+        return date
+            .and_hms_opt(0, 0, 0)
+            .and_then(|naive| stamp_micros(naive, zone));
+    }
+    None
+}
+
+pub(crate) fn parse_dated_token(
+    token: &str,
+    options: &CsvOptions,
+    parsers: &CsvStampParsers,
+) -> Option<chrono::NaiveDate> {
+    if let Some(pattern) = parsers.date.as_ref() {
+        return parse_wall_text(token, pattern)
+            .ok()
+            .and_then(|wall| wall.to_naive())
+            .map(|naive| naive.date());
+    }
+    parse_csv_date(token, options.date_format.as_deref())
+}
+
+pub(crate) fn parse_stamp_token(
+    token: &str,
+    field_zone: Option<&Arc<str>>,
+    options: &CsvOptions,
+    parsers: &CsvStampParsers,
+) -> Option<i64> {
+    let zone = field_zone.map(|_| parsers.zone);
+    if let Some(pattern) = parsers.timestamp.as_ref() {
+        return parse_wall_text(token, pattern)
+            .ok()
+            .and_then(|wall| wall.to_naive())
+            .and_then(|naive| stamp_micros(naive, zone));
+    }
+    if let Some(format) = options.timestamp_format.as_deref() {
+        return parse_csv_timestamp(token, Some(format));
+    }
+    default_timestamp_micros(token, zone)
 }
 
 pub(crate) fn read_options_array(array: &datafusion::arrow::array::ArrayRef) -> Result<CsvOptions> {
