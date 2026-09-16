@@ -5346,6 +5346,15 @@ through `core` or the package. pins: eager-budget-1/C-010
   (N-3), backtick keys / double-quoted TIME ZONE / INTERVAL / empty value (N-4),
   SQLSTATE suffixes (N-5), and a long SELECT is not intercepted (P1).
   pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- `test_set_ansi_runtime_1.py` — **SET-ANSI-RUNTIME-1 round 1 (2026-09-15):** runtime
+  `SET` / `spark.conf.set` of `spark.sql.ansi.enabled` and `spark.sql.session.timeZone`
+  apply to the live session through a per-query config snapshot (owner Q-15c-3),
+  measured against `fixtures-batch16-dc2rest-setansi.json` S16-* cells (one ordered
+  session), `fixtures-batch5.json` S5-* cells and `fixtures-batch1.json` BTZ5-* cells
+  (PySpark 4.1.2). ANSI binds at frame analysis (S16-0 stale frame keeps the raise);
+  zone value expressions answer the frame-build zone while `current_timezone()` folds
+  at collect (S16-6 pins the build-zone answer as narrow residue SET-ANSI-RUNTIME-2).
+  pins: set-ansi-runtime-1/C-001, C-002, C-003, C-004, C-005, C-006
 - **FNP-MISC-1 (2026-09-15):** `test_fnp_misc_1.py::test_fnp_misc_1_call_function_on_camel_case_aliases_matches_spark` pins `call_function` on #597's six camel-case aliases to the measured Spark 4.1.2 answers (pins: fnp-misc-1/F-4).
 
 - [test_java_double_str_1.py](test_java_double_str_1.py) — **JAVA-DOUBLE-STR-1
