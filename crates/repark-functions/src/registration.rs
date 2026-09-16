@@ -1,0 +1,30 @@
+use std::sync::Arc;
+
+use datafusion::optimizer::AnalyzerRule;
+use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
+
+#[must_use]
+pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
+    let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
+        Arc::new(crate::decimal_precision::SparkNegateNullDecimal),
+        Arc::new(crate::spark_result_types::SparkIntegerLiteral),
+        Arc::new(crate::lambda_rebind::LambdaRebind),
+        Arc::new(crate::decimal_precision::SparkDecimalPrecision),
+        Arc::new(crate::decimal_spark::SparkDecimalRewrite),
+        Arc::new(crate::spark_nullability::SparkNullability),
+        Arc::new(crate::integer_spark::SparkIntegerOverflow),
+        Arc::new(crate::analyzer::SparkExprSemantics),
+        Arc::new(crate::java_double::SparkFloatStringify),
+    ];
+    rules.extend(crate::cardinality::analyzer_rules());
+    rules.push(crate::instant_ts::ltz_timestamp_cast_rule());
+    rules.push(crate::temporal_ctor::interval_string_cast_rule());
+    rules.push(Arc::new(TypeCoercion::new()));
+    rules.push(Arc::new(crate::lambda_rebind::LambdaRebind));
+    rules.push(Arc::new(crate::analyzer::time_window::SparkTimeWindow));
+    rules.push(Arc::new(
+        crate::analyzer::time_window::SparkWindowTimeGrouping,
+    ));
+    rules.push(Arc::new(crate::analyzer::time_window::SparkSessionWindow));
+    rules
+}

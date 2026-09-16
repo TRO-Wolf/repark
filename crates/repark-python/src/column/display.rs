@@ -1,4 +1,5 @@
 use datafusion::arrow::datatypes::DataType;
+use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{Case, Cast, Expr, TryCast, lit};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -733,6 +734,50 @@ impl PyColumnParts {
                 wrap_call(name, &sql_parts),
                 Some(wrap_call(name, &join_parts)),
             ))
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (time, window, slide = None, start = None))]
+    fn time_window(
+        time: &PyColumn,
+        window: &str,
+        slide: Option<&str>,
+        start: Option<&str>,
+    ) -> PyResult<PyColumn> {
+        fenced!("ColumnParts.time_window", {
+            let slide = match (slide, start) {
+                (None, Some(_)) => Some(window),
+                (slide, _) => slide,
+            };
+            let mut args = vec![time.expr(), lit(window)];
+            if let Some(slide) = slide {
+                args.push(lit(slide));
+            }
+            if let Some(start) = start {
+                args.push(lit(start));
+            }
+            let call = Expr::ScalarFunction(ScalarFunction::new_udf(
+                repark_functions::spark_time_window::window_udf(),
+                args,
+            ));
+            Ok(PyColumn::from_expr(call.alias(
+                repark_functions::spark_time_window::WINDOW_OUTPUT_NAME,
+            )))
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (time, gap))]
+    fn session_window(time: &PyColumn, gap: &PyColumn) -> PyResult<PyColumn> {
+        fenced!("ColumnParts.session_window", {
+            let call = Expr::ScalarFunction(ScalarFunction::new_udf(
+                repark_functions::spark_session_window::session_window_udf(),
+                vec![time.expr(), gap.expr()],
+            ));
+            Ok(PyColumn::from_expr(call.alias(
+                repark_functions::spark_session_window::SESSION_OUTPUT_NAME,
+            )))
         })
     }
 

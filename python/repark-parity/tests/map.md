@@ -127,7 +127,19 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `dataframe/writer_readwriter.py` mirror row 1111 → 1105 with the script baseline
   (the bucketBy/sortBy/clusterBy bindings and action-check calls landed while the five
   write helpers moved to the new `dataframe/writer_layout.py`, 312 lines below the
-  default). pins: io-bucket-cluster-1/C-003
+  default). pins: io-bucket-cluster-1/C-003 **FNP-WIN-1 (2026-09-15, remediation
+  round 16a):** mirror rows for `time_window/mod.rs` 1268,
+  `spark_time_window.rs` 1125, `test_fnp_win_1.py` 1209, counts 38/32
+  (`datetime.rs` keeps 1700 per audit S-2). pins: fnp-win-1/C-008
+  **FNP-WIN-1 (2026-09-15, verification round 2, L-002/L-003):** mirror rows
+  move to `time_window/mod.rs` 1338, `test_fnp_win_1.py` 1314, counts still
+  38/32 (ratchets only, no new row). pins: fnp-win-1/C-004
+  **FNP-WIN-1 (2026-09-15, verification round 2, L-001):** mirror rows move
+  to `time_window/mod.rs` 1416, `test_fnp_win_1.py` 1415, counts still
+  38/32. pins: fnp-win-1/C-003
+  **FNP-WIN-1 (2026-09-15, verification round 2, L-004):** mirror rows move
+  to `dataframe.rs` 1021, `test_fnp_win_1.py` 1454, counts still 38/32.
+  pins: fnp-win-1/C-004
 - `test_ex_0_example_coverage.py` — **DF-SURFACE-B-1 (2026-09-14):** the enumerated
   public surface moves 948 → 952 as `DataFrame.foreach`,
   `DataFrame.foreachPartition`, `DataFrame.observe`, and `Observation.get` join
@@ -172,6 +184,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   **FNP-11A (2026-09-15):** 1010 → 1021 as the eleven temporal names installed by `functions_temporal.py` join the walked functions family (covered by `docs/examples/functions/temporal_constructors.py`, so the backlog baseline is unchanged). pins: fnp-11a/C-001
   **FNP-BITMAP-FACADE-1 (2026-09-15):** 1010 → 1013 as `bitmap_construct_agg`, `bitmap_or_agg` and `bitmap_and_agg` join the functions family (walked through `functions_bitwise.py`'s `INSTALL_NAMES`, covered by `docs/examples/functions/bitmap_aggregates.py`, so the backlog baseline is unchanged). pins: fnp-bitmap-facade-1/C-004
   **FNP-BITMAP-FACADE-1 (2026-09-15):** 1018 → 1021 as `bitmap_construct_agg`, `bitmap_or_agg` and `bitmap_and_agg` join the functions family (walked through `functions_bitwise.py`'s `INSTALL_NAMES`, covered by `docs/examples/functions/bitmap_aggregates.py`, so the backlog baseline is unchanged). pins: fnp-bitmap-facade-1/C-004
+  **FNP-WIN-1 (2026-09-15):** 1052 → 1055 as `window`, `window_time` and `session_window` installed by `functions_window.py` join the walked functions family (covered by `docs/examples/functions/time_windows.py`, so the backlog baseline is unchanged). pins: fnp-win-1/C-002, C-003, C-004
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
   North Star sequence, F-17's measured shared-Puffin closure request, the live slate, the
   per-unit FNP remaining order (FNP-7a/7b delivered 2026-08-31; remaining FNP-9/10 → FNP-8
@@ -814,3 +827,5 @@ Escalate to: [../map.md#debug](../map.md).
 - `test_cap_1_source_file_line_cap.py` — **DOOR-CONVERGE-2 (#622, 2026-09-15):** the `crates/repark-python/src/column/mod.rs` mirror row 1052 → 1036 matches the script baseline (ratchet down). The `analyzer.rs` row 1142 → 1150 is the one-time grant R-1 (Q-15c-4).
 - **FNP-4B remediation (2026-09-15):** CAP-1 mirror ratcheted with the scripts: `column/mod.rs` 1038, `cross_door.rs` 1258, `_live_parity.py` 1753.
 - `test_cap_1_source_file_line_cap.py` — **FNP-4B (#611, 2026-09-15, orchestrator):** the `crates/repark-python/src/column/mod.rs` mirror row 1022 → 1014 matches the script baseline after the rebase onto #613 (ratchet down).
+- `test_ex_0_example_coverage.py` — **FNP-WIN-1 rebase onto 230468c5 (2026-09-15, run 16a):** #613 and #618 each moved the count 1054 → 1057 on the same line, which a merge keeps at 1057; the true combined count is main's 1057 plus this unit's three names, 1060. pins: fnp-win-1/C-007
+- `test_cap_1_source_file_line_cap.py` — **FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a):** the `crates/repark-python/src/dataframe.rs` mirror row returns to 1019 with the script baseline. pins: fnp-win-1/C-007
