@@ -238,6 +238,96 @@ def _raise_unresolved_column(name: str, names: list[str]) -> None:
     raise error
 
 
+def _bind_native_condition(error: BaseException) -> None:
+    """Bind Spark structured-error methods when a native error carried a condition."""
+    if getattr(error, "_spark_error_class", None) is None:
+        return
+    error.getErrorClass = MethodType(_attached_error_class, error)
+    error.getCondition = MethodType(_attached_error_class, error)
+    error.getMessageParameters = MethodType(_attached_message_parameters, error)
+    error.getSqlState = MethodType(_attached_sql_state, error)
+
+
+def _transpose_index_name(column: Column) -> str:
+    """Return the resolved display name a Column index argument refers to."""
+    name = column._projection_name
+    if isinstance(name, str) and name:
+        return name
+    return column.spark_display_part()
+
+
+def _transpose_max_values(frame: DataFrame) -> int:
+    """Return the configured transpose row limit (``spark.sql.transposeMaxValues``)."""
+    token = getattr(frame, "_alive_token", {}) or {}
+    key = "spark.sql.transposeMaxValues"
+    tombs = token.get("runtime_conf_unset")
+    if isinstance(tombs, (set, frozenset, list, tuple)) and any(
+        str(item).casefold() == key.casefold() for item in tombs
+    ):
+        return 500
+    for source in ("runtime_conf", "builder_config"):
+        store = token.get(source)
+        if isinstance(store, dict):
+            raw = store.get(key)
+            if raw is not None:
+                try:
+                    return int(str(raw))
+                except (TypeError, ValueError):
+                    return 500
+    return 500
+
+
+def transpose(frame: DataFrame, indexColumn: Column | str | None = None) -> DataFrame:  # noqa: N803
+    """Transpose rows to columns around an index column (PySpark ``DataFrame.transpose``).
+
+    pins: df-rust-3/C-003.
+    """
+    frame._ensure_alive()
+    names = frame.columns
+    if indexColumn is None:
+        index_display = names[0] if names else ""
+    elif isinstance(indexColumn, str):
+        index_display = indexColumn
+    elif isinstance(indexColumn, Column):
+        index_display = _transpose_index_name(indexColumn)
+    else:
+        raise PySparkTypeError(
+            message="[NOT_COLUMN_OR_STR] Argument `indexColumn` should be a Column or str, "
+            f"got {type(indexColumn).__name__}.",
+            errorClass="NOT_COLUMN_OR_STR",
+            messageParameters={
+                "arg_name": "indexColumn",
+                "arg_type": type(indexColumn).__name__,
+            },
+        )
+    if index_display not in names:
+        folded = index_display.casefold()
+        hits = [name for name in names if name.casefold() == folded]
+        if len(hits) != 1:
+            _raise_unresolved_column(index_display, sorted(names))
+        index_display = hits[0]
+    index_engine = frame._engine_field_for_display(index_display)
+    engine_names = frame._engine_names if frame._engine_names is not None else names
+    display_names = frame._display_names if frame._display_names is not None else names
+    index_position = engine_names.index(index_engine)
+    key_names = [
+        display for position, display in enumerate(display_names) if position != index_position
+    ]
+    from repark import _native
+
+    try:
+        native, output_names = _native.transpose(
+            frame._plan(), index_engine, key_names, _transpose_max_values(frame)
+        )
+    except AnalysisException as error:
+        _bind_native_condition(error)
+        raise
+    child = frame._spawn(native)
+    child._engine_names = [f"__repark_transpose_{index}" for index in range(len(output_names))]
+    child._display_names = output_names
+    return child
+
+
 def withMetadata(frame: DataFrame, columnName: str, metadata: dict) -> DataFrame:  # noqa: N802 N803
     """Replace one field's metadata (PySpark ``DataFrame.withMetadata``). pins: C-002."""
     frame._ensure_alive()

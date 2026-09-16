@@ -21,6 +21,11 @@ crates; this crate owns the Python boundary and the PyO3/Arrow FFI `unsafe` boun
 - [`src/dataframe.rs`](src/dataframe.rs) provides immutable plans, actions, transforms, and lazy
   Arrow C Stream export. **FNP-4B (2026-09-15):** `filter_sql` canonicalizes the predicate with
   the Spark-door lexer and maps downstream locations back; `F.expr` contexts parse Databricks.
+- [`src/dataframe_stats.rs`](src/dataframe_stats.rs) — **DF-RUST-3 (2026-09-15):** the
+  `freq_items` and `transpose` pyfunctions over `PyDataFrame` (the `dataframe_stack`
+  `#[pyfunction]` pattern — one `#[pymethods]` block per class). `transpose` returns the
+  display-name overlay with the frame and attaches `_spark_error_class` /
+  `_spark_message_parameters` / `_spark_sql_state` on the raised exception.
 - [`src/collect_rows.rs`](src/collect_rows.rs) materializes Arrow record batches as Python value
   tuples for `collect`. It imports the batch back through the Arrow C Data Interface
   (`__arrow_c_array__`) and converts only the cell kinds whose `to_pylist` mapping is

@@ -166,6 +166,43 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   PySpark 4.1.2 recording (provenance line inside the file); holds the `row.*` cells —
   the nine this unit pins plus `isinstance_tuple` / `add` / `hash_eq` / `len` /
   `types_row_is_sql_row`.
+- [facade_df_rust3_oracle.json](facade_df_rust3_oracle.json) — **DF-RUST-3 (2026-09-15):**
+  the run-16b oracle for `DataFrame.freqItems` / `DataFrameStatFunctions.freqItems` /
+  `DataFrame.transpose`, copied unchanged from the orchestrator's live PySpark 4.1.2
+  recordings (`freq_*` / `transpose_*` cells of `dfrust3_probe_2026-09-15.json` plus the
+  four `*_tuple` duplicate-name cells of `dfsubq_probe_2026-09-15.json`); freqItems result
+  arrays are Spark hash-map order — pins compare them sorted. The `transpose_sql` cell
+  records Spark's own `PARSE_SYNTAX_ERROR` (no SQL door); the `metadata_*` cells belong to
+  a later unit and are not carried. Round 2 (2026-09-16) adds the run-17b cells: six
+  float-key cells (`freq_signed_zero_*`, `freq_nan_keys_*`, `freq_two_pos_zero_cap1`),
+  the nested-float cells (`freq_array_pm_zero_cap1`, `freq_array_nan_cap1`,
+  `freq_struct_nan_cap1`), and the binary index cells (`transpose_binary_invalid_utf8`,
+  `transpose_binary_invalid_utf8_repr`, `transpose_binary_null_index`). Round 3
+  (2026-09-16) adds the run-17b map-key cells (`freq_map_dup_default`,
+  `freq_map_dup_cap1`, `freq_map_distinct_default`, `freq_array_dup_default`,
+  `freq_array_dup_cap1`, `freq_struct_dup_cap1`) plus the nested-map boundary
+  cells measured in-round (`freq_map_of_map_default`, `freq_struct_with_map_default`,
+  `freq_array_of_map_default`). Round 4 (2026-09-16) adds the run-17b null-map cells
+  (`freq_null_map_default`, `freq_null_map_cap1`, `freq_null_and_value_map_default`,
+  `freq_empty_map_default`).
+- [test_df_rust3_freqitems_transpose.py](test_df_rust3_freqitems_transpose.py) —
+  **DF-RUST-3 (2026-09-15):** the pins driving every `freq_*` / `transpose_*` cell of the
+  fixture above — argument shapes (`NOT_LIST_OR_TUPLE`, `NOT_ITERABLE`, `NOT_FLOAT`, the
+  `[1e-4, 1]` support bound with Scala's `Double.toString` rendering), result shapes
+  (`<name>_freqItems` `array<T>` non-nullable, duplicates, empty frames, `freqItems([])`
+  row count, complex element types), the transpose kernel (`key` + sorted index columns,
+  null/duplicate index rows, `key`-name clash, empty and single-column frames), and the
+  three Spark error classes (`TRANSPOSE_INVALID_INDEX_COLUMN`,
+  `TRANSPOSE_NO_LEAST_COMMON_TYPE`, `TRANSPOSE_EXCEED_ROW_LIMIT`); the file runs
+  inside the no-regression suite of C-006 alongside the flipped refusal pins. Round 2
+  (2026-09-16) adds the float-key equality pins (signed-zero collapse, NaN non-equality,
+  Float32, nested array/struct bit-exact), the binary index U+FFFD pins, and the
+  name-resolution pins (duplicates/order, case-insensitive requested spelling,
+  display-overlay rename). Round 3 (2026-09-16) adds the map-key identity pins
+  (top-level maps never equal) with the array/struct/nested-map dedupe regression
+  guards. Round 4 (2026-09-16) adds the null-map pin (a NULL in a map column is a
+  NULL key, not a never-equal map key).
+  pins: df-rust-3/C-001, C-002, C-003, C-004, C-006, C-007, C-008, C-009, C-010, C-011
 - [test_ice_spark_table_1.py](test_ice_spark_table_1.py) — **ICE-SPARK-TABLE-1
   (2026-09-14):** RePark writes into a table **Spark created** — the G-3 / G-4-Spark-half
   standing requirement (inventory §8 ruling 6). Always-run: the committed

@@ -1088,7 +1088,7 @@ class DataFrameStatFunctions:
         return self._dataframe.crosstab(col1, col2)
 
     def freqItems(self, cols: list[str], support: float | None = None) -> DataFrame:  # noqa: N802
-        """Reject frequent-item discovery because it is not implemented."""
+        """Return frequent items by delegating to the DataFrame."""
         return statistics._freq_items(self._dataframe, cols, support)
 
     def sampleBy(  # noqa: N802 — PySpark camelCase
