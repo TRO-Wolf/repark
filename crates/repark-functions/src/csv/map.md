@@ -23,6 +23,21 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   `DROPMALFORMED` mode on a readable literal options map with
   `[PARSE_MODE_UNSUPPORTED]`; every other check is type-based in the kernels.
   pins: fnp-gen-1/C-003
+- `fold.rs` — **Step 4b (run 18a):** the rule also folds a literal
+  `schema_of_csv` call into its DDL string, aliased `schema_of_csv(<csv text>)`.
+  It peels the `__repark_spark_nonnull__` shim `SparkNullability` wraps around a
+  `map`/`make_array` options call, folds through the name-preserving outer alias
+  that shim leaves behind, and reads the options map in its pre-coercion
+  (`map(k, v, …)`) or post-coercion (`map(make_array, make_array)`) shape. A
+  `from_csv` schema that is still not a literal after the fold raises
+  `[INVALID_SCHEMA.NON_STRING_LITERAL]` here, so the kernel answers a `Null`
+  placeholder meanwhile and the rebuilt `Projection` (also `Aggregate`/`Window`)
+  carries the struct type. Non-foldable input raises
+  `[DATATYPE_MISMATCH.NON_FOLDABLE_INPUT]`, a NULL literal
+  `[DATATYPE_MISMATCH.UNEXPECTED_NULL]`, a non-string literal
+  `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]`, and an empty document the
+  `[INTERNAL_ERROR]` defect.
+  pins: fnp-gen-1/C-004
 - `schema_of_csv.rs` — the `schema_of_csv` scalar UDF plus its `#[cfg(test)]`
   pins (the Spark `CSVInferSchema` ladder and renderer, the quoted separator, the
   `sep` option, the empty-document `INTERNAL_ERROR` defect, NULL, non-string

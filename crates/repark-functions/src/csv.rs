@@ -107,6 +107,14 @@ pub(crate) fn options_from_map(scalar: &ScalarValue) -> Result<CsvOptions> {
     options_from_entries(&entries)
 }
 
+pub(crate) fn non_string_literal_schema() -> datafusion::common::DataFusionError {
+    datafusion::common::DataFusionError::Plan(
+        "[INVALID_SCHEMA.NON_STRING_LITERAL] The input schema is not a valid schema string. The \
+         input expression must be string literal and not null."
+            .to_string(),
+    )
+}
+
 pub(crate) fn options_from_entries(entries: &HashMap<String, String>) -> Result<CsvOptions> {
     let mut options = CsvOptions::default();
     for (name, value) in entries {

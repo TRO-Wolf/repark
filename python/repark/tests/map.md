@@ -5869,6 +5869,9 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   rows, FAILFAST, `DROPMALFORMED`, corrupt-record, foldable-schema, `dateFormat`,
   unknown-option and the schema/input/option errors (C-002/C-003/C-004), and the
   `schema_of_csv` ladder, `sep` option and foldability errors with the dated
-  `INTERNAL_ERROR` match (C-004, R-18a-3). The SQL `AS (x, y)` and call-result
-  `.c` pins stay `xfail(strict=True)`, blocked on run 18c's parser seam (R-18a-5).
+  `INTERNAL_ERROR` match (C-004, R-18a-3). The two Python `schema_of_csv` value
+  pins take `limit(1)`: the oracle captured a frameless one-row select while the
+  pins select over the six-row frame (step 4b pin correction). The SQL `AS (x, y)`
+  and call-result `.c` pins stay `xfail(strict=True)`, blocked on run 18c's
+  parser seam (R-18a-5).
   pins: fnp-gen-1/C-002, C-003, C-004, C-005

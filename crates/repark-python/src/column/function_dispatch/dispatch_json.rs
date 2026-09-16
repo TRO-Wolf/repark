@@ -50,6 +50,10 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need_at_least(2)?;
             repark_functions::expr_fn::from_csv(exprs.clone())
         }
+        "schema_of_csv" => {
+            need_at_least(1)?;
+            repark_functions::expr_fn::schema_of_csv(exprs.clone())
+        }
         "get_json_object" => {
             need(2)?;
             repark_functions::expr_fn::get_json_object(exprs[0].clone(), exprs[1].clone())

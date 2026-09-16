@@ -443,13 +443,15 @@ def from_xml(
 
 
 def schema_of_csv(csv: Column | str, options: dict[str, str] | None = None) -> Column:
-    """Infer CSV schema as DDL (PySpark ``functions.schema_of_csv``). E1 type pre-check only."""
-    _ = options
+    """Infer CSV schema as DDL (PySpark ``functions.schema_of_csv``)."""
     _require_column_or_str(csv, "csv")
-
-    raise UnsupportedOperationException(
-        "functions.schema_of_csv is not supported yet (disclosed E1)"
-    )
+    document = csv if isinstance(csv, Column) else lit(csv)
+    shown = csv if isinstance(csv, str) else document.spark_wrap_display_part()
+    name = f"schema_of_csv({shown})"
+    if options is None:
+        return _scalar("schema_of_csv", document, display=name)
+    pairs = [item for pair in options.items() for item in (lit(pair[0]), lit(pair[1]))]
+    return _scalar("schema_of_csv", document, _scalar("create_map", *pairs), display=name)
 
 
 def schema_of_json(json: Column | str, options: dict[str, str] | None = None) -> Column:

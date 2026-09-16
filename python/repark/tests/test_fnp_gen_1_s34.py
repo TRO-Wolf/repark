@@ -364,8 +364,10 @@ def test_python_door_schema_of_csv_type_ladder(spark: ReparkSession) -> None:
     cells = _pair(
         "schema_of_csv", "python", "1,abc,2.5,true,2024-01-01,2024-01-01 10:00:00,,1e3,99999999999"
     )
-    result = spark.sql(S34_FRAME).select(
-        F.schema_of_csv("1,abc,2.5,true,2024-01-01,2024-01-01 10:00:00,,1e3,99999999999")
+    result = (
+        spark.sql(S34_FRAME)
+        .select(F.schema_of_csv("1,abc,2.5,true,2024-01-01,2024-01-01 10:00:00,,1e3,99999999999"))
+        .limit(1)
     )
     _check_value_cells(result, cells)
 
@@ -407,7 +409,7 @@ def test_python_door_schema_of_csv_non_string_refuses(spark: ReparkSession) -> N
 def test_python_door_schema_of_csv_quoted_field(spark: ReparkSession) -> None:
     """A quoted comma stays one STRING token; ``1.0`` infers DOUBLE."""
     cells = _pair("schema_of_csv", "python", "'\"a,b\",1.0'")
-    result = spark.sql(S34_FRAME).select(F.schema_of_csv('"a,b",1.0'))
+    result = spark.sql(S34_FRAME).select(F.schema_of_csv('"a,b",1.0')).limit(1)
     _check_value_cells(result, cells)
 
 

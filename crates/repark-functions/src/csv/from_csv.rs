@@ -135,10 +135,7 @@ impl ScalarUDFImpl for SparkFromCsv {
         let schema_text = match literal_text(args.scalar_arguments[1]) {
             Some(text) => text,
             None => {
-                return plan_err!(
-                    "[INVALID_SCHEMA.NON_STRING_LITERAL] The input schema is not a valid schema \
-                     string. The input expression must be string literal and not null."
-                );
+                return Ok(Arc::new(Field::new(self.name(), DataType::Null, true)));
             }
         };
         if !is_string_type(args.arg_fields[0].data_type()) {

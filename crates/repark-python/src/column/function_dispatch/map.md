@@ -32,6 +32,8 @@ unit — so a new family gets a child module and the parent's default arm falls 
   rewrite peels it like the other four.
   **Step 3 (run 18a):** the `from_csv` arm builds `expr_fn::from_csv` over the
   `csv` scalar kernel with two or more arguments.
+  **Step 4b (run 18a):** the `schema_of_csv` arm builds `expr_fn::schema_of_csv`
+  over the `csv` inference kernel with one or more arguments.
   pins: fnp-gen-1/C-002, C-003, C-004
 - `dispatch_spark.rs` — **DOOR-CONVERGE-1 (2026-09-15):** the converged scalar arms —
   `abs`, `hypot`, `bin`, `rint`, `base64`, `unbase64`, `size`, `cardinality`,
