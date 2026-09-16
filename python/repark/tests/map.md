@@ -5883,3 +5883,27 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   and call-result `.c` pins stay `xfail(strict=True)`, blocked on run 18c's
   parser seam (R-18a-5).
   pins: fnp-gen-1/C-002, C-003, C-004, C-005
+- [fnp_gen_1_s34_critic_spark_oracle.json](fnp_gen_1_s34_critic_spark_oracle.json) —
+  **FNP-GEN-1 remediation (2026-09-16, run 18a):** the 34 critic cells (ansi pairs,
+  two session zones where it matters) over `from_csv` default/`timestampFormat`/
+  `TIMESTAMP_NTZ` timestamps, corrupt-record width and middle placement, the
+  non-STRING corrupt-column refusal, DECIMAL rounding, the zero-row frame, the
+  `schema_of_csv` inference ladder and lenient `json_tuple` trailing content, copied
+  verbatim from the orchestrator's live PySpark 4.1.2 recording
+  `/tmp/oc-worker/sa-gen3/fnp_gen_1_s34_critic_spark_oracle.json` (recorder
+  `/tmp/oc-worker/sa-gen3/o_gen34_crit.py`); `spark_version` 4.1.2 kept.
+  Recorded evidence, never hand-edited.
+  pins: fnp-gen-1/L-001, L-002, L-003, L-004, L-005, R-18a-13, R-18a-14
+- [test_fnp_gen_1_s34_critic.py](test_fnp_gen_1_s34_critic.py) — **FNP-GEN-1
+  remediation (2026-09-16, run 18a):** red-first pins over every critic cell, one
+  test per behavior against both ansi cells: default timestamps in UTC and
+  America/New_York via runtime `conf.set` (epochs plus wall clocks read off the
+  whole struct, since `F.col("s.t1")` nested access is unpinned surface),
+  `timestampFormat`, `TIMESTAMP_NTZ`, the SQL-door timestamp value, corrupt width
+  with trailing and middle corrupt columns, the non-STRING corrupt refusal on both
+  doors (plus a well-formed-row case proving analysis-time refusal), DECIMAL
+  rendering, the zero-row frame, the inference ladder and lenient trailing
+  `json_tuple`. The exact-expr SQL timestamp pins stay `xfail(strict=True)`,
+  blocked on run 18c's dot-access seam (R-18a-5); struct-to-string casts stay
+  Python-side because the engine has no struct-to-string cast.
+  pins: fnp-gen-1/L-001, L-002, L-003, L-004, L-005, R-18a-13, R-18a-14

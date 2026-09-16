@@ -427,3 +427,40 @@ COVERAGE_ATTESTATION:
       evidence: Pins cited in the tests map and the csv maps; the clause rows above carry the red runs (step 1) and the green runs (steps 2-5 plus the gate pass); verdict 7/7 PROVEN.
       artifacts: [task/ledgers/staging/fnp-gen-1-ledger.md, python/repark/tests/map.md, crates/repark-functions/src/csv/map.md]
 ```
+
+## Remediation (run 18a, 2026-09-16) — R-18a-13..R-18a-15, critic L-001..L-005 + PERF-001..009
+
+Branch `feat/fnp-gen-1-s3` rebased onto `origin/main 02abfd0e` by the orchestrator
+(diff-of-diffs empty). Actor: muse-spark-1.3-contributor.
+
+### Remediation step 1 red summary
+
+Copied `/tmp/oc-worker/sa-gen3/fnp_gen_1_s34_critic_spark_oracle.json` verbatim to
+`python/repark/tests/fnp_gen_1_s34_critic_spark_oracle.json` (`cmp` identical, 34
+cells; ansi-True/False expectations identical; timestamp cells doubled across the
+UTC and America/New_York session zones), listed in `python/repark/tests/map.md`,
+pinned by `python/repark/tests/test_fnp_gen_1_s34_critic.py` (16 tests, one per
+behavior, each asserting both ansi cells; zones via runtime `conf.set`).
+
+`.venv/bin/python -m pytest python/repark/tests/test_fnp_gen_1_s34_critic.py -q`
+on the unfixed tree: **12 failed, 3 passed, 1 xfailed**. Green at red:
+`test_python_door_from_csv_extra_token_without_corrupt_column` (PERMISSIVE already
+drops the extra token), `test_python_door_from_csv_empty_frame` (no panic through the engine on any
+empty variant probed; the kernel-level guard lands in step 3 with a Rust unit test
+that invokes the kernel directly on a 0-length input) and
+`test_python_door_json_tuple_trailing_content` (the shared JSON
+reader is already lenient about trailing bytes; the pin locks it). The xfail is the
+exact-expr SQL timestamp pin, blocked on run 18c's dot-access seam (R-18a-5
+extended). Per-finding red causes: L-001 — extra token dropped with NULL corrupt
+column, middle corrupt column misaligns tokens (`the corrupt record column is a
+string field` at execution); L-002 — default TIMESTAMP parses date-only so every
+stamp field is NULL; L-004 — naive stamps stored as UTC micros (invisible while
+L-002 NULLs them); R-18a-13 — non-STRING corrupt column raises at execution, not
+analysis; L-005 — extra scale digits and `1e2` NULL instead of rounding, and the
+engine has no struct-to-string cast so the oracle's struct rendering pins
+Python-side; L-003 — kernel indexes row 0 of a broadcast scalar (Rust-level; the
+Python empty-frame pin passes through the engine short-circuit); R-18a-14 —
+ladder infers `STRUCT<_c0: STRING, _c1: STRING, _c2: TIMESTAMP, _c3: DOUBLE,
+_c4: DOUBLE, _c5: STRING, _c6: STRING, _c7: STRING>` (no fractional/`Z` stamps, no
+`DECIMAL(24,0)`, `1.5f` not DOUBLE).
+pins: fnp-gen-1/L-001, L-002, L-003, L-004, L-005, R-18a-13, R-18a-14
