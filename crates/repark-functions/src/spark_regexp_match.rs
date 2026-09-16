@@ -10,9 +10,8 @@ use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     TypeSignature, Volatility,
 };
-use regex::Regex;
 
-use crate::spark_regexp::compile_spark_regex;
+use crate::spark_regex_engine::{SparkRegex, compile_spark_regex};
 
 #[must_use]
 pub fn regexp_like_udf() -> Arc<ScalarUDF> {
@@ -76,11 +75,12 @@ fn utf8_array(array: &ArrayRef) -> Result<ArrayRef> {
 }
 
 fn compile_cached<'cache>(
-    cache: &'cache mut HashMap<String, Regex>,
+    cache: &'cache mut HashMap<String, SparkRegex>,
     pattern: &str,
-) -> Result<&'cache Regex> {
+    fn_name: &str,
+) -> Result<&'cache SparkRegex> {
     if !cache.contains_key(pattern) {
-        cache.insert(pattern.to_owned(), compile_spark_regex(pattern)?);
+        cache.insert(pattern.to_owned(), compile_spark_regex(pattern, fn_name)?);
     }
     cache
         .get(pattern)
@@ -161,15 +161,15 @@ impl ScalarUDFImpl for SparkRegexpLike {
         let strings = strings.as_string::<i32>();
         let patterns = utf8_array(&arrays[1])?;
         let patterns = patterns.as_string::<i32>();
-        let mut cache: HashMap<String, Regex> = HashMap::new();
+        let mut cache: HashMap<String, SparkRegex> = HashMap::new();
         let mut builder = BooleanBuilder::with_capacity(strings.len());
         for row in 0..strings.len() {
             if strings.is_null(row) || patterns.is_null(row) {
                 builder.append_null();
                 continue;
             }
-            let regex = compile_cached(&mut cache, patterns.value(row))?;
-            builder.append_value(regex.is_match(strings.value(row)));
+            let regex = compile_cached(&mut cache, patterns.value(row), self.name())?;
+            builder.append_value(regex.is_match(strings.value(row))?);
         }
         Ok(ColumnarValue::Array(Arc::new(builder.finish())))
     }
@@ -235,18 +235,16 @@ impl ScalarUDFImpl for SparkRegexpReplace {
         let patterns = patterns.as_string::<i32>();
         let replacements = utf8_array(&arrays[2])?;
         let replacements = replacements.as_string::<i32>();
-        let mut cache: HashMap<String, Regex> = HashMap::new();
+        let mut cache: HashMap<String, SparkRegex> = HashMap::new();
         let mut values: Vec<Option<String>> = Vec::with_capacity(strings.len());
         for row in 0..strings.len() {
             if strings.is_null(row) || patterns.is_null(row) || replacements.is_null(row) {
                 values.push(None);
                 continue;
             }
-            let regex = compile_cached(&mut cache, patterns.value(row))?;
+            let regex = compile_cached(&mut cache, patterns.value(row), "regexp_replace")?;
             values.push(Some(
-                regex
-                    .replace_all(strings.value(row), replacements.value(row))
-                    .into_owned(),
+                regex.replace_all(strings.value(row), replacements.value(row))?,
             ));
         }
         Ok(ColumnarValue::Array(Arc::new(StringArray::from(values))))

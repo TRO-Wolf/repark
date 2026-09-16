@@ -24,14 +24,14 @@ cells belong to other units.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Positive/negative lookahead, bounded and unbounded lookbehind answer Spark on every regex name (`rlike`/`regexp`/`regexp_like`, `regexp_extract`, `regexp_extract_all`, `regexp_replace`, `regexp_count`, `regexp_instr`, `regexp_substr`, `split`). | `python/repark/tests/test_java_regex_features_1.py` pins over RX-SQL-00…02/07/08/10/11/20, RX2-SQL-02/07…09/13/20…24 plus Rust unit tests beside the kernel. | OPEN | Red-first output pasted below. |
-| C-002 | Numbered (`\1`) and named (`\k<x>`) backreferences answer Spark in match and in replace (`$1`, `$1$1`). | Pins over RX-SQL-03/06/12/21/23, RX2-SQL-10…12/14/26 plus Rust unit tests. | OPEN | Red-first output pasted below. |
-| C-003 | Possessive quantifiers (`*+`, `++`, `?+`, `{n,m}+`) and atomic groups (`(?>…)`) answer Spark. | Pins over RX-SQL-04/05/09, RX2-SQL-04/05/18/19 plus Rust unit tests. | OPEN | Red-first output pasted below. |
-| C-004 | The fancy engine runs under an explicit backtrack limit; a repark overrun raises a loud execution error naming the pattern and the limit; RX2-SQL-00 errors (never silent NULL/false); RX-SQL-18 and RX2-SQL-01 answer `false` within 2 s. | Limit number + timings in this ledger; overrun pin over RX2-SQL-00 and a synthetic exponential cell. | OPEN | Design D-3/D-4 recorded below; numbers pending. |
-| C-005 | Invalid patterns in the fallback grammar raise Spark's `[INVALID_PARAMETER_VALUE.PATTERN]` class naming the function. | Pins over RX2-SQL-16/17/25 with the byte-exact Spark message. | OPEN | Red-first output pasted below. |
-| C-006 | The Python door (`Column.rlike`, `F.regexp_extract`, `F.regexp_replace`) answers through the same Rust kernel with no Python change. | Pins over RX-PY-00…02 plus one Python-door leg per remaining name. | OPEN | No Python edit planned. |
-| C-007 | A pattern the `regex` crate handles costs the same as before (dispatch overhead ~zero). | Before/after release-native timings on 1e6 rows in this ledger. | OPEN | Baseline (main native, 2026-09-16): rlike-plain 0.019 s, count-plain 0.034 s, replace-plain 0.048 s, best of 3. |
-| C-008 | Registry `JAVA-REGEX-FEATURES-1` → FIXED, `JAVA-REGEX-BACKTRACK-1` DECLARED dated 2026-09-16 quoting Spark's `StackOverflowError`; the Q15-10…12 refusal legs flip to values. | Registry diff + `test_door_converge_2.py` diff. | OPEN | Q15-13 (`split('ab', '[')`) stays: fast-path invalid text unchanged. |
+| C-001 | Positive/negative lookahead, bounded and unbounded lookbehind answer Spark on every regex name (`rlike`/`regexp`/`regexp_like`, `regexp_extract`, `regexp_extract_all`, `regexp_replace`, `regexp_count`, `regexp_instr`, `regexp_substr`, `split`). | `python/repark/tests/test_java_regex_features_1.py` pins over RX-SQL-00…02/07/08/10/11/20, RX2-SQL-02/07…09/13/20…24 plus Rust unit tests beside the kernel. | **PROVEN** | 61/61 pins green on the rebuilt release native; b2 probe diffs 0. `crates/repark-functions/src/spark_regex_engine.rs` implements selection + walks; 21 Rust unit tests green; full crate suite 754 passed. |
+| C-002 | Numbered (`\1`) and named (`\k<x>`) backreferences answer Spark in match and in replace (`$1`, `$1$1`). | Pins over RX-SQL-03/06/12/21/23, RX2-SQL-10/11/14/26 plus Rust unit tests. | **PROVEN** | All green except RX2-SQL-12, which becomes residue row JAVA-REGEX-FEATURES-1-R1 with an honest `_divergence` pin: fancy-regex compares backreferences case-sensitively even under `(?i)` (verified at the Rust level against raw fancy-regex), while Java compares case-insensitively. RX2-SQL-11 stays a value pin (false on both). |
+| C-003 | Possessive quantifiers (`*+`, `++`, `?+`, `{n,m}+`) and atomic groups (`(?>…)`) answer Spark. | Pins over RX-SQL-04/05/09, RX2-SQL-04/05/18/19 plus Rust unit tests. | **PROVEN** | All green, both doors where bound. |
+| C-004 | The fancy engine runs under an explicit backtrack limit; a repark overrun raises a loud execution error naming the pattern and the limit; RX2-SQL-00 errors (never silent NULL/false); RX-SQL-18 and RX2-SQL-01 answer `false` within 2 s. | Limit number + timings in this ledger; overrun pin over RX2-SQL-00 and a synthetic exponential cell. | **PROVEN** | `FANCY_BACKTRACK_LIMIT = 10_000_000`, `FANCY_LOOP_HAYSTACK_MAX = 10_000`. RX-SQL-18 / RX2-SQL-01 answer `false` in ~0.001 s best-of-5 on the release native (fancy delegates easy repeats to the DFA, so the budget never binds them). RX2-SQL-00 raises `regex overrun on pattern '(a|b)*c': exceeded looping-pattern haystack (limit 10000)` (pinned by match `overrun`). The Rust `backtrack_budget_trips_on_hard_exponential` pin (`(a+)+b(?=c)` on 25 a's) proves the budget tripwire fires and names pattern + limit. |
+| C-005 | Invalid patterns in the fallback grammar raise Spark's `[INVALID_PARAMETER_VALUE.PATTERN]` class naming the function. | Pins over RX-SQL-13/14, RX2-SQL-16/17/25 with the Spark message. | **PROVEN** | RX2-SQL-16/17 byte-exact per `msg.py` (EQ). All regexp-family invalids (fast and fallback) raise the class — the oracle demands it for `(`/`a{2,1}`/`a{` too. One documented formatting delta: RX2-SQL-25 echoes the kernel-received pattern `(a)\k<x>` (1 backslash) where Spark echoes the SQL-literal spelling `(a)\\k<x>` (NE on `msg.py`); the class, names and SQLSTATE match. `split` keeps its long-standing text (no oracle cell pins its Spark shape). |
+| C-006 | The Python door (`Column.rlike`, `F.regexp_extract`, `F.regexp_replace`) answers through the same Rust kernel with no Python change. | Pins over RX-PY-00…02 plus one Python-door leg per remaining name. | **PROVEN** | RX-PY cells plus `test_python_door_fancy_match_names`, `test_python_door_fancy_extract_names`, `test_python_door_null_pattern_stays_null` green. Zero Python edits. P2 hand-off to run 18a: `F.split` still raises `UnsupportedOperationException` (`functions_expr.py:579`, disclosed R-FN-BATCH1) — the `F.split` leg was dropped; split stays pinned on the SQL door. |
+| C-007 | A pattern the `regex` crate handles costs the same as before (dispatch overhead ~zero). | Before/after release-native timings on 1e6 rows in this ledger. | OPEN | Baseline (main native, 2026-09-16): rlike-plain 0.019 s, count-plain 0.034 s, replace-plain 0.048 s, best of 3. After-numbers pending (step 6). |
+| C-008 | Registry `JAVA-REGEX-FEATURES-1` → FIXED, `JAVA-REGEX-BACKTRACK-1` DECLARED dated 2026-09-16 quoting Spark's `StackOverflowError`; the Q15-10…12 refusal legs flip to values. | Registry diff + `test_door_converge_2.py` diff. | OPEN | Q15-13 (`split('ab', '[')`) stays: split invalid text unchanged. Pending (step 6). |
 
 **Red-first evidence (2026-09-16, main native rebuilt step 0):** the probe
 `<clone>/.venv/bin/python /tmp/oc-worker/sc/oracle/rp.py <oracle> RX` reports 20 diffs on b2
@@ -96,10 +96,34 @@ query kill. Full per-cell output in the step-2 commit message.
 - D-6 cost: release-native before/after timings over the three 1e6-row queries in
   `/tmp/cost_regex.py` (throwaway probe, not committed); numbers in the C-007 row.
 
+## Findings recorded during implementation (2026-09-16)
+
+- F-1 delegation: fancy-regex 0.11 marks a repeat over easy children as delegable
+  (`src/analyze.rs`: `Repeat` inherits the child's hardness), so nested-quantifier
+  patterns such as `(a+)+b` run on the DFA and never touch the backtrack budget. The
+  budget binds only patterns with a hard node (lookaround, backreference, atomic),
+  which is why RX-SQL-18 / RX2-SQL-01 answer in ~1 ms. Verified by timing on the
+  release native and by the trip pin, which uses `(a+)+b(?=c)` (the trailing
+  lookaround forces the repeat into the VM).
+- F-2 `(?i)` backreferences: raw fancy-regex compares a backreference case-sensitively
+  even under `(?i)` (Rust-level probe, no translation involved), while Java compares
+  case-insensitively. No rewrite can fix this without reimplementing backtracking
+  search, so RX2-SQL-12 becomes residue row JAVA-REGEX-FEATURES-1-R1 with a
+  `_divergence` pin. Case-insensitive matching itself works (`(?i)ab` on `AB` true).
+- F-3 `regexp_substr` nullability was hardcoded true while every sibling UDF follows
+  the arguments; fixed to `any_arg_nullable` in the same file (RX-SQL-09/RX2-SQL-24
+  pin nullable false now).
+- F-4 `F.split` still raises `UnsupportedOperationException` before reaching the
+  kernel (disclosed R-FN-BATCH1, run 16a/18a territory, outside this unit's fence):
+  recorded as a P2 hand-off, the `F.split` leg dropped, split pinned on the SQL door.
+- F-5 `RX-SQL-18` / `RX2-SQL-01` pin nullable true: the nullability rides in on
+  `repeat(...)` (another unit's kernel); `rlike` propagates correctly (NULL legs pin
+  true, literal legs pin false).
+
 ## Gates
 
 | Command | Result |
 |---|---|
 | (pending) | — |
 
-## VERDICT: 8 clauses, 0 PROVEN, 8 OPEN, 0 REJECTED (round 1, step 1).
+## VERDICT: 8 clauses, 6 PROVEN, 2 OPEN, 0 REJECTED (round 1, step 4).

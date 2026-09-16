@@ -3,6 +3,8 @@ use super::*;
 use datafusion::arrow::array::AsArray;
 use datafusion::prelude::SessionContext;
 
+use crate::spark_regex_engine::compile_spark_regex;
+
 fn ctx() -> SessionContext {
     let ctx = SessionContext::new();
     ctx.register_udf(regexp_count_udf().as_ref().clone());
@@ -167,28 +169,29 @@ async fn register_all_overwrites_datafusion() {
 
 #[test]
 fn java_find_loop_matches_spark_zero_width() {
-    let digits = compile_spark_regex("[0-9]*").expect("digits");
-    assert_eq!(count_non_overlapping("2026-08-19", &digits).expect("c"), 6);
-    let stars = compile_spark_regex("b*").expect("b*");
-    assert_eq!(count_non_overlapping("abc", &stars).expect("c"), 4);
-    let a_star = compile_spark_regex("a*").expect("a*");
-    assert_eq!(count_non_overlapping("🐈", &a_star).expect("c"), 3);
+    let digits = compile_spark_regex("[0-9]*", "regexp_count").expect("digits");
+    assert_eq!(digits.count_non_overlapping("2026-08-19").expect("c"), 6);
+    let stars = compile_spark_regex("b*", "regexp_count").expect("b*");
+    assert_eq!(stars.count_non_overlapping("abc").expect("c"), 4);
+    let a_star = compile_spark_regex("a*", "regexp_count").expect("a*");
+    assert_eq!(a_star.count_non_overlapping("🐈").expect("c"), 3);
     // R4-1: empty `is_match` overcounts start-anchored patterns at a mid-surrogate index.
-    let caret = compile_spark_regex("^").expect("caret");
-    assert!(!matches_at_mid_surrogate_index(&caret));
-    assert_eq!(count_non_overlapping("🐈", &caret).expect("c"), 1);
-    let caret_digits = compile_spark_regex(r"^\d*").expect("caret digits");
-    assert_eq!(
-        count_non_overlapping("🐈2026", &caret_digits).expect("c"),
-        1
+    let caret = compile_spark_regex("^", "regexp_count").expect("caret");
+    assert!(!caret.matches_at_mid_surrogate_index().expect("probe"));
+    assert_eq!(caret.count_non_overlapping("🐈").expect("c"), 1);
+    let caret_digits = compile_spark_regex(r"^\d*", "regexp_count").expect("caret digits");
+    assert_eq!(caret_digits.count_non_overlapping("🐈2026").expect("c"), 1);
+    let multiline_caret = compile_spark_regex("(?m)^", "regexp_count").expect("multiline caret");
+    assert!(
+        !multiline_caret
+            .matches_at_mid_surrogate_index()
+            .expect("probe")
     );
-    let multiline_caret = compile_spark_regex("(?m)^").expect("multiline caret");
-    assert!(!matches_at_mid_surrogate_index(&multiline_caret));
     assert_eq!(
-        count_non_overlapping("🐈\n🐈", &multiline_caret).expect("c"),
+        multiline_caret.count_non_overlapping("🐈\n🐈").expect("c"),
         2
     );
-    assert!(matches_at_mid_surrogate_index(&a_star));
+    assert!(a_star.matches_at_mid_surrogate_index().expect("probe"));
 }
 
 #[tokio::test]
