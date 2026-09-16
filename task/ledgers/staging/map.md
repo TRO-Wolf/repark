@@ -731,6 +731,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   verdicts. `risk_tier: standard`. Branch
   `feat/fnp-win-1`.
   pins: fnp-win-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+- [spark-sql-grammar-1-ledger.md](spark-sql-grammar-1-ledger.md) —
+  **SPARK-SQL-GRAMMAR-1 step 1 (2026-09-16), in flight:** Spark operators,
+  keywords and type names on the SQL door — ledger with the card rulings plus
+  R-17c-3/R-17c-6/R-17c-7 and the re-measure table (1 ALREADY-GREEN, the rest
+  RED, findings F-001/F-002). C-009 OPEN per R-17c-7. Branch
+  `feat/spark-sql-grammar-1`.
+  pins: spark-sql-grammar-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [fnp-11b-ledger.md](fnp-11b-ledger.md) —
   **FNP-11B step 1 (2026-09-15), in flight:** datetime format parsing, the TIME
   family, BL-13 and BL-14 — ledger with D-1…D-10 (card D-1…D-6, run-16a D-7…D-10

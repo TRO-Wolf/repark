@@ -1,0 +1,110 @@
+# Charter ledger — SPARK-SQL-GRAMMAR-1 · Spark operators, keywords and type names on the SQL door
+
+**Date:** 2026-09-16 · **Branch:** `feat/spark-sql-grammar-1` · **Base:** `origin/main`
+`0ef060af` · **Model:** muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. **risk_tier: standard.**
+
+**Retires:** this ledger moves to `../completed/` in this unit's last commit.
+
+**Hand-off note to run 17a (read first):** `python/repark/tests/test_fnp11a_temporal.py`
+is 17a's file. This unit's only sanctioned edit there is removing the three skip
+sets it closes: `BARE_UNIT_NAMES` handling (line 271), `D4_BLOCKED_SQL` (line 93),
+`BARE_NULLARY_SQL` (line 97). The removal lands in this unit's C-008 / C-005 /
+C-010 commits with the flipped cells as live pins. If a set stays skipped, this
+unit did not close it and the file is otherwise untouched.
+
+**Why now.** The SQL door parses Spark SQL with the Databricks dialect (FNP-4B
+#611) but Spark-only operators (`>>>`, `div`), keywords (`RLIKE`, bare unit
+names, bare nullary names), type names (`TIMESTAMP_LTZ`, `TIMESTAMP_NTZ`) and
+planner seams (lateral alias, struct-dot) still refuse or mis-answer against
+PySpark 4.1.2. This unit lowers each onto the registered kernels or refuses loud
+with Spark's class, one pin per construct.
+
+**Not in this unit:** the generator kernels (16a's FNP-GEN-1, C-009's
+prerequisite); `functions*.py`, `dataframe/**`, `column.py`, `catalog.py`,
+`session/**` (runs 16a/16b); any new kernel in `crates/repark-functions` except
+the missing shift kernel the card names.
+
+## Rulings recorded at open
+
+- Q-15c-6 (owner): a narrow fix and a pin per construct. No registry-wide
+  wrapper that re-binds every UDF's return field.
+- Q-15c-4 (owner): size baselines move only downward. No one-time increase is
+  taken in this round; a file that would grow past its ceiling is split instead.
+- Batch-14 correction to C-010: bare `localtimestamp` refuses on Spark
+  (`UNRESOLVED_COLUMN.WITH_SUGGESTION`, Q14-0), so registry EX-FN-25 (RePark
+  resolving bare `localtimestamp` as a call) is RePark over-accepting. The fix
+  is the refusal, and #606's `BARE_NULLARY_SQL` skip flips to an error pin.
+- R-17c-3 (orchestrator): the docstring-presence gate is Python-only, so no Rust
+  `///` is ever gate-required. The comment ban holds for Rust doc comments
+  without exception. Their content lives in `map.md`.
+- R-17c-6 (orchestrator): Spark's acceptance set is the specification in BOTH
+  directions. RePark may not refuse a spelling Spark accepts, nor accept one
+  Spark refuses. Bare nullary names that Spark refuses must refuse here; the
+  ones it resolves must resolve. Cells outside every fixture are UNMEASURED,
+  never guessed.
+- R-17c-7 (orchestrator, G-2, 2026-09-16): C-009 is OPEN for the run because
+  FNP-GEN-1 is not on main.
+- Skill `audit-repark-parity` v1.0 was read before measuring. Step-1 deviation,
+  recorded as a stop condition: no JVM may start on this lane, so the live
+  PySpark oracle is NOT re-run. The recorded fixtures named in the step are the
+  spec. Every RePark-side value below was observed live on a release native
+  built from this branch's base (`maturin develop --release`, repark-1.4.2).
+
+## PROPOSITION LEDGER — SPARK-SQL-GRAMMAR-1 — 2026-09-16
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-001 | `-8 >>> 1` answers `2147483644` int non-null on the SQL door. | `test_spark_sql_grammar_1.py` PG-ushift cell (value, Arrow type, nullability). | OPEN | RED on base: `ParserError("No infix parser for token ShiftRight")`. §1. |
+| C-002 | `7 div 2` answers `3` bigint nullable on the SQL door. | PG-div cell in the same pin file. | OPEN | RED on base: `ParserError` on the `div` keyword. §1. |
+| C-003 | `'abc' RLIKE '^a'` and `NOT RLIKE` lower onto `regexp_like`. | PG-rlike cells plus the negated form in the same pin file. | OPEN | RED on base: `Unsupported ast node in sqltorel: RLike`. §1. |
+| C-004 | `CAST(x AS TIMESTAMP_LTZ)` answers `TIMESTAMP`. | PG-ltz-cast cell in the same pin file. | OPEN | RED on base: `Unsupported SQL type TIMESTAMP_LTZ`. §1. |
+| C-005 | `TIMESTAMP_NTZ '…'` / `CAST(x AS TIMESTAMP_NTZ)` parse onto the tz-naive Arrow path with Spark's value, or refuse loud naming TZ-6 with the TZ-6 row extended. `timestampdiff(DAY, ntz, TIMESTAMP_NTZ'…')` leaves `D4_BLOCKED_SQL`. | PG-ntz-lit / PG-ntz-cast cells, or the dated refusal plus the extended row. | OPEN | RED on base: `Unsupported SQL type TIMESTAMP_NTZ`. TZ-6 ruling read before choosing. §1. |
+| C-006 | `named_struct('a', 1).a` answers `1` int non-null. | PG-struct-dot cell in the same pin file. | OPEN | ALREADY-GREEN on base: `v:int32:nullable=False rows=[{'v': 1}]`. Pin still to file. §1. |
+| C-007 | `SELECT 1 AS a, a + 1 AS b` answers `(1, 2)` both int non-null, or DECLARES with a registry row naming the planner seam. | PG-lateral-alias cell, or the dated refusal plus the new row. | OPEN | RED on base: `Schema error: No field named a`. Seam measured in step 2. §1. |
+| C-008 | Bare unit spellings `timestampadd(DAY, 1, ts)`, `timestampdiff(HOUR, a, b)`, `dateadd(DAY, …)`, `datediff(HOUR, a, b)` rewrite onto the #606 kernels; quoted units refuse `INVALID_PARAMETER_VALUE.DATETIME_UNIT`; unknown units refuse `UNRESOLVED_ROUTINE`; 2-arg `datediff` stays `int`. Closes EX-FN-27. | Q14-22…40 cells plus PG-tsadd/tsdiff/dateadd/datediff-unit in the same pin file; `BARE_UNIT_NAMES` skip removed. | OPEN | RED on base: bare units read as columns (`No field named day/hour/…`); quoted `'DAY'` answers where Spark refuses; `FORTNIGHT` reads as a column where Spark raises `UNRESOLVED_ROUTINE`. §1. |
+| C-009 | `LATERAL VIEW [OUTER] <generator>(…) <alias> AS <cols>` answers the run-15a oracle cells. | The lateral-15a cells in the same pin file. | OPEN | R-17c-7: FNP-GEN-1 is not on main (`git log origin/main --oneline | grep -i fnp-gen` empty, 2026-09-16). Generators are 16a's; this lane never implements them. |
+| C-010 | Bare nullary keywords follow Spark both directions: `current_date`, `current_timestamp`, `current_user`, `user`, `session_user` resolve; `localtimestamp`, `current_catalog`, `current_database`, `current_schema`, `current_timezone`, `now` refuse `UNRESOLVED_COLUMN.WITH_SUGGESTION`; parenthesised forms resolve with Spark's type and nullability. | Q14-0…21 cells in the same pin file; `BARE_NULLARY_SQL` skip flipped to the error pin. | OPEN | Mixed on base: bare `localtimestamp` over-accepts (EX-FN-25, must become the refusal); `current_date`/`current_timestamp` bare resolve; `current_user`/`user`/`session_user`/`current_catalog`/`current_database`/`current_schema` answer neither bare nor parenthesised (`No field named` / `Invalid function`) — new kernels, 17a's fence half, likely a hand-off. §1. |
+
+VERDICT: 10 clauses, 0 PROVEN, 10 OPEN, 0 REJECTED. No COVERAGE_ATTESTATION:
+no clause is proven yet, so attesting would be false.
+
+## 1. Red-first record (base `0ef060af`, release native rebuilt 2026-09-16)
+
+Probe `/tmp/remeasure_grammar1.py` (scratch, outside the repo) over `spark.sql`,
+session zone UTC, ANSI off.
+`PG-suffix` cells need FNP-4B literal suffixes and are not this card's clauses;
+`PG-qualify`, `PG-nested-bt`, `PG-is-distinct`, `PG-values-alias`,
+`PG-map-access` are likewise out of scope and were not run.
+
+| Cell | Oracle (Spark 4.1.2) | RePark on base | State |
+|---|---|---|---|
+| PG-ushift | `a=2147483644 b=-4 c=8`, int non-null | `ParseException: No infix parser for token ShiftRight` | RED (C-001) |
+| PG-div | `a=3` bigint nullable, `b=1` int | `ParseException` on `div` | RED (C-002) |
+| PG-rlike | `True` boolean | `Unsupported ast node in sqltorel: RLike` (both signs) | RED (C-003) |
+| PG-ltz-cast | `timestamp` nullable | `Unsupported SQL type TIMESTAMP_LTZ` | RED (C-004) |
+| PG-ntz-lit / PG-ntz-cast | `timestamp_ntz` | `Unsupported SQL type TIMESTAMP_NTZ` | RED (C-005) |
+| PG-struct-dot | `1` int non-null | `v:int32:nullable=False rows=[{'v': 1}]` | ALREADY-GREEN (C-006) |
+| PG-lateral-alias | `(1, 2)` int non-null | `Schema error: No field named a` | RED (C-007) |
+| PG-tsadd/tsdiff/dateadd/datediff-unit | timestamp / bigint answers | `No field named day/hour` | RED (C-008) |
+| Q14-0 bare `localtimestamp` | refuses `UNRESOLVED_COLUMN.WITH_SUGGESTION` | answers `timestamp[us]` non-null | RED, over-accept (C-010, EX-FN-25) |
+| Q14-2/3 `current_date` bare/paren | `date` non-null | `date32` nullable=True | RED on nullability (C-010) |
+| Q14-4/5 `current_timestamp` bare/paren | `timestamp` non-null | `timestamp[us,tz=UTC]` non-null | GREEN value+type (C-010, pin to file) |
+| Q14-6/14/16 bare `current_user`/`user`/`session_user` | `string` non-null | `No field named` | RED (C-010, needs kernels) |
+| Q14-7/15/17 paren forms | `string` non-null | `Invalid function` | RED (C-010, needs kernels) |
+| Q14-8/10/12 bare catalog/database/schema | refuse `UNRESOLVED_COLUMN` | `No field named` (wrong shape) | RED shape (C-010) |
+| Q14-9/11/13 paren forms | `spark_catalog`/`default`/`default` | `Invalid function` | RED (C-010, needs kernels) |
+| Q14-18 bare `current_timezone` | refuses `UNRESOLVED_COLUMN` | `No field named` (wrong shape) | RED shape (C-010) |
+| Q14-19 `current_timezone()` | `string` non-null `'UTC'` | `string` non-null `'UTC'` | GREEN (C-010, pin to file) |
+| Q14-20 bare `now` | refuses `UNRESOLVED_COLUMN` | `No field named` (wrong shape) | RED shape (C-010) |
+| Q14-1 `localtimestamp()` / Q14-21 `now()` | `timestamp_ntz` / `timestamp` non-null | `timestamp[us]` non-null / `timestamp[us,tz=UTC]` non-null | Q14-21 GREEN; Q14-1 type question: RePark `localtimestamp()` is tz-naive `timestamp[us]`, Spark calls it `timestamp_ntz` (C-010, measure in step 2) |
+| Q14-22…25/27…32/36…40 bare units | timestamp/bigint answers | `No field named <unit>` | RED (C-008) |
+| Q14-26 quoted `'DAY'` | refuses `INVALID_PARAMETER_VALUE.DATETIME_UNIT` | answers `timestamp` | RED, over-accept (C-008) |
+| Q14-33 `date_add(a, 1)` | `date` | not run cleanly (probe frame typed `ta` as timestamp; re-pin with a date frame in step 2) | UNMEASURED, re-pin |
+| Q14-34 `datediff(b, a)` 2-arg | `int` | not run cleanly (same probe mistype; re-pin) | UNMEASURED, re-pin |
+| Q14-35 `FORTNIGHT` | refuses `UNRESOLVED_ROUTINE` | `No field named fortnight` (wrong shape) | RED shape (C-008) |
+| D4 `timestampdiff(DAY, ntz, TIMESTAMP_NTZ'…')` | blocked on the literal | `Unsupported SQL type TIMESTAMP_NTZ` | RED (C-005) |
+| `SELECT nosuchfn(1)` | Spark `UNRESOLVED_ROUTINE` | `Invalid function 'nosuchfn'. Did you mean 'to_char'?` | Finding F-001: blanket unknown-function shape differs; existing pins assert `Invalid function` (`test_functions_gt2.py:318`, `test_column_parity_1.py:821`), so no blanket rewrite on this lane — Q14-35 is closed per-construct instead. |
+| `typeof(1 + CAST(1 AS TINYINT))` | `int` | `bigint` | Finding F-002, filed, not fixed here: upstream literal typing owns it. No grammar pin encodes `bigint` as correct. |
+
+Full probe output is pasted in the step-1 commit message body for the record.
