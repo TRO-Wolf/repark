@@ -236,7 +236,7 @@ per the card's edit-only-the-assertion rule.
 | PERF-001/002 | FOLLOWS from the rewrite | Single lazy token pass, first match wins, no hit Vec; boundaries structural. |
 | PERF-003/PYPERF-003 | NOTED | Each seam formats the DataFusion error exactly once already. |
 | PYPERF-001/002 | HAND-OFF rows (H-003/H-005) | `functions_byname.py` / `catalog_surface.py` are 18a/18b files; no edit. |
-| ORCH-001 | FIX in this round | `engine_err_for_sql` moved above the `engine_err` doc comment; no new doc. |
+| ORCH-001 | FIX in this round | `engine_err_for_sql` moved above the `engine_err` doc comment; no new doc. The pre-commit comment grep shows exactly one `+///` line, which is that pre-existing doc comment relocated by the move — no new comment in code. |
 | UR3-SQL-14/15 | GUARD pins | Arity errors and parse errors bypass the mapper (critic null report); pins hold that. |
 | RED (round 2) | `.venv/bin/python -m pytest python/repark/tests/test_unresolved_routine_1.py -q -p no:cacheprovider` → 8 failed, 58 passed on `63f40f67`. The 8 are UR3-SQL-00…07 (literal-case leak, three decoy positions, backticked REQUIRES class, two backticked renders, dotted-quotient structure); UR3-SQL-08…15 and all UR3-PY pins already hold (guards for the rewrite). |
 

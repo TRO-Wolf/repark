@@ -370,7 +370,10 @@ def test_sql_door_schema_of_csv_non_foldable_raises(spark: ReparkSession) -> Non
 
 
 def test_sql_door_schema_of_csv_uninferable_literal_raises(spark: ReparkSession) -> None:
-    """Spark itself refuses the uninferable literal, so the door must raise, not answer."""
+    """DIVERGENCE tripwire: Spark HAS schema_of_csv (live 4.1.2 UR3-SQL-13 fails at
+    execution with a JVM error, not UNRESOLVED_ROUTINE); repark lacks the name (run
+    18a owns it), so the SQL door refuses UNRESOLVED_ROUTINE until the kernel lands
+    and this test goes red. Listed under names Spark has that the SQL door lacks."""
     (cell,) = [cell for cell in _cells("schema_of_csv", "sql") if "csvrow" not in cell["expr"]]
     assert "error_type" in cell
     with pytest.raises(Exception) as excinfo:

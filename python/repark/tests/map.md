@@ -5793,6 +5793,10 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   carries the marker into the message). The three ansi-True `LATERAL VIEW`
   cells stay unpinned, blocked on run 16c (D-7). Red on base `bee2cde3`:
   32 failed, 5 signature pins already green on matching stubs.
+  **UNRESOLVED-ROUTINE-1 remediation round 1 (2026-09-16):** the uninferable
+  `schema_of_csv` pin is an explicit DIVERGENCE tripwire (Spark HAS the name;
+  the door refuses until run 18a lands it).
+  pins: unresolved-routine-1/C-006
   **Step 2 (2026-09-16):** the frame rebuilds as `SELECT CAST(...) UNION ALL`
   because `VALUES` yields nullable `id` and `bigint` arrays where the oracle
   records non-nullable `int`; row comparison is order-insensitive because the
