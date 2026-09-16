@@ -611,3 +611,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   no longer facade-only and `test_fnp_misc_1_byname_allowlist_covers_facade` derives them out of the
   set. The full facade suite caught it — the unit's own pin set does not include that census.
   pins: fnp-gen-1/C-005
+- **FNP-GEN-1 step 7 (2026-09-16, run 18a):** `functions_byname.py` drops
+  `json_tuple` / `from_csv` / `schema_of_csv` from `FACADE_ONLY_ROUTINE_NAMES`
+  for the same reason — the dispatch now resolves all three on the Rust kernels.
+  The full facade suite caught it again. pins: fnp-gen-1/C-002, C-006
