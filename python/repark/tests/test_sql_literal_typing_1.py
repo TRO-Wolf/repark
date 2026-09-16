@@ -274,9 +274,15 @@ def test_hof_parenthesized_int_min_stays_bigint_on_both_doors() -> None:
     """
     session = _spark()
     cases = (
-        ("transform(array(-(2147483648)), x -> x)", pa.list_(pa.int64())),
+        (
+            "transform(array(-(2147483648)), x -> x)",
+            pa.list_(pa.field("item", pa.int64(), nullable=False)),
+        ),
         ("array(-(2147483648))", pa.list_(pa.int64())),
-        ("filter(array(-(2147483648), 1), x -> x < 0)", pa.list_(pa.int64())),
+        (
+            "filter(array(-(2147483648), 1), x -> x < 0)",
+            pa.list_(pa.field("element", pa.int64(), nullable=False)),
+        ),
         (
             "transform_keys(map(-(2147483648), 1), (k, v) -> k)",
             pa.map_(pa.int64(), pa.int32()),

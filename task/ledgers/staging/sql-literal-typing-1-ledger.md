@@ -290,3 +290,24 @@ LIT-SQL-22/53.
 | PERF-004 (P3) | NOTED | Mixed-width hash joins keep a per-row `CAST AS Int64`: Spark-true (unsuffixed `1` is INT), a join/kernel change, not a literal-typing change. `CAST(1 AS BIGINT)` recovers the old kernel. |
 | pyperf P3 (udtf) | HAND-OFF | No 15+ digit token present in `udtf.py` at this head; run 18a to confirm against the read. |
 | pyperf P3 (functions) | HAND-OFF | The `CAST(... AS INT)` foldable workarounds in `functions.py` (`add_months`, `date_add`) are engine-redundant now that the shadows accept Int64; runs 18a/18b own removal. |
+
+## 8. Round 3 — V-001 (2026-09-16, head `a51dc153` rebased)
+
+Verification critic finding, confirmed live before the fix:
+`transform(array(-(2147483648)), x -> x)` answered `array<int>` while the
+bare form answered `array<bigint>`. The shared provisional-integer helper
+still folded `Negative(Int64(2^31))` to INT, and `HigherOrderPreparation`
+calls it on lambda bodies and value constructors (the late rule's removal
+did not reach this path). Fix mirrors L-003: the fold is gone from the
+shared helper — one narrowing path, only the lexer-level negative token
+narrows. Red pin `test_hof_parenthesized_int_min_stays_bigint_on_both_doors`
+(`transform` / bare `array` / `filter` / `transform_keys`, SQL door plus
+`F.expr` door agreement, bigint widths with Spark-true element
+nullability); Rust unit test `parenthesized_negative_two_to_31_stays_int64`
+at the shared helper. No other caller of the helper exists outside
+`lambda_rebind.rs` and the late rule, and no existing pin names a folded
+parenthesized form.
+
+| Finding | Disposition | Evidence |
+|---|---|---|
+| V-001 (P2) | FIXED | 77/77 pins green on the rebuilt release native; `cargo test -p repark-functions --lib`, `cargo test -p repark-spark --lib`, `make rust-clippy` green; the brief's `-k` gate slice green (see §9). |

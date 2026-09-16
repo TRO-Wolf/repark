@@ -125,6 +125,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `regr_count` answer non-null `bigint`, `0` on empty input. pins: door-converge-1/C-006
   **FNP-8 (2026-09-07):** exposes the existing single-node provisional-integer narrowing inside
   the crate so HOF preparation can reuse it without changing global literal or overflow rules.
+  **SQL-LITERAL-TYPING-1 round 3 (2026-09-16):** the `Negative` fold is gone
+  from the shared helper, so a parenthesized `-(2147483648)` stays bigint in
+  lambda bodies and constructors exactly as on the top-level door
+  (LIT2-SQL-03); only the lexer-level negative token narrows.
+  pins: sql-literal-typing-1/V-001
 - `lambda_rebind.rs` — **FNP-8 (2026-09-06):** `LambdaRebind`, in `analyzer_rules()`
   twice — right after `SparkIntegerLiteral` and last. Two passes over lambda bindings: it
   packs a multi-parameter lambda body that leaves a parameter unreferenced into the

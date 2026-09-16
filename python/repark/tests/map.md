@@ -958,7 +958,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   table (mixed-width SQL answered identically on both doors). Round 3
   (2026-09-16) adds the V-001 probe table: parenthesized `-(2147483648)`
   stays bigint inside `transform` / `filter` / `transform_keys` on both
-  doors, matching LIT2-SQL-03.
+  doors, matching LIT2-SQL-03. `transform` / `filter` over literal arrays pin
+  non-nullable bigint elements; the bare `array(...)` form pins nullable ones.
   pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: sql-literal-typing-1/L-001, L-002, L-003
   pins: sql-literal-typing-1/V-001

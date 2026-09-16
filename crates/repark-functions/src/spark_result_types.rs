@@ -89,21 +89,8 @@ pub(crate) fn narrow_provisional_integer_literal(expr: Expr) -> Transformed<Expr
         Expr::Literal(ScalarValue::Int64(None), meta) => {
             Transformed::yes(Expr::Literal(ScalarValue::Int32(None), meta))
         }
-        Expr::Negative(inner) => fold_negative_int_min(*inner),
         other => Transformed::no(other),
     }
-}
-
-fn fold_negative_int_min(inner: Expr) -> Transformed<Expr> {
-    if let Expr::Literal(ScalarValue::Int64(Some(value)), meta) = &inner
-        && *value == i64::from(i32::MAX) + 1
-    {
-        return Transformed::yes(Expr::Literal(
-            ScalarValue::Int32(Some(i32::MIN)),
-            meta.clone(),
-        ));
-    }
-    Transformed::no(Expr::Negative(Box::new(inner)))
 }
 
 #[must_use]
