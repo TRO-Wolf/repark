@@ -236,6 +236,11 @@ docs-only, so no rebuild was needed — the RELEASE module already matches this 
 | round-2 whole parity | 757 passed, 2 skipped, 12 xfailed — exit 0 |
 | round-2 `cargo test -p repark-core na_fill` | 8 passed |
 | round-2 differential probe | 20 keys, 0 diffs |
+| round-3 `make verify` | exit 0 (one mid-round red: ruff E501 on two new pin lines, wrapped, `py-lint` re-run clean, full `verify` re-run green; no Rust changed so no RELEASE rebuild) |
+| round-3 unit file `test_logical_width_1.py` | 30 passed (20 prior + 5 grouped + 4 guards + exact ARITH BACKLOG; red-first: 5 grouped fail with the fix stashed, guards green pre/post by construction) |
+| round-3 whole facade | 9064 passed, 372 skipped, 34 xfailed — exit 0 (this round nets +10 pins, 0 skips: unit files 55 passed, 0 skipped; the residual passed/skip delta vs the round-2 pre-rebase figure is main movement plus run-to-run skip variance — the spill-matrix file passes 24/24 in isolation with no skip machinery, and the full run has zero failures) |
+| round-3 whole parity | 757 passed, 2 skipped, 12 xfailed — exit 0 |
+| round-3 core.py exact baseline | 4015 lines held (first fix draft grew +3, rewritten line-neutral; hook caught it pre-commit) |
 
 ## Questions
 
@@ -304,10 +309,10 @@ COVERAGE_ATTESTATION:
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-013 | Zero-arg `groupBy(g).sum()/avg()/mean()/min()/max()` on the R3 probe frame keep sh/ti/f with Spark's columns, dtypes and values (cells `grouped_sum_noargs`, `grouped_avg_noargs`, `grouped_mean_noargs`, `grouped_min_noargs`, `grouped_max_noargs`). | Five pins from the five cells, red-first on this head. | **OPEN** | Red confirmed 2026-09-16 on this head (narrow measures dropped; `sum` answers only `g,sum(g),sum(d)`). |
-| C-014 | No other logical-key consumer mis-branches on byte/short/float/binary; the sweep list names every checked consumer and each fix carries a cell pin. | §Round-3 sweep + regression pins from cells `describe_narrow`, `summary_narrow`, `na_fill_float_col`, `na_replace_narrow`. | **OPEN** | Sweep runs after the C-013 fix. |
-| C-015 | `ARITH-FLOAT-INT-1` is exact: its pin asserts today's dtypes AND today's `fplus` value against cells `float_arith_values` + `float_arith_sql` (both doors), red when the coercion lands; the registry row names the value divergence and the likely home. | Exact BACKLOG pin + registry row edit. | **OPEN** | Spark `fplus` 2.100000023841858 vs tree 2.0999999046325684; `*`/`-` values coincide. |
-| C-016 | The `to(string)`-over-binary pin points at cell `to_string_from_binary` and the DF-TO-BINARY-1 "tree-measured" sentence cites it. | Pin + registry row edit. | **OPEN** | Branch already answers `'hi'`; cell `cast_string_from_binary` likewise matches. |
+| C-013 | Zero-arg `groupBy(g).sum()/avg()/mean()/min()/max()` on the R3 probe frame keep sh/ti/f with Spark's columns, dtypes and values (cells `grouped_sum_noargs`, `grouped_avg_noargs`, `grouped_mean_noargs`, `grouped_min_noargs`, `grouped_max_noargs`). | Five pins from the five cells, red-first on this head. | **PROVEN** | Red-first: all five fail with the fix stashed (narrow measures dropped), green with it; named aggregates already carried Spark's result types (sum→bigint/double, avg→double, min/max keep width), so the keep-set was the whole fix. pins: logical-width-1/C-013 |
+| C-014 | No other logical-key consumer mis-branches on byte/short/float/binary; the sweep list names every checked consumer and each fix carries a cell pin. | §Round-3 sweep + regression pins from cells `describe_narrow`, `summary_narrow`, `na_fill_float_col`, `na_replace_narrow`. | **PROVEN** | 16-consumer sweep: sole mis-branch was C-013; six regression-guard pins green pre- and post-fix (sorted-row helper — the probe sorts rows). pins: logical-width-1/C-014 |
+| C-015 | `ARITH-FLOAT-INT-1` is exact: its pin asserts today's dtypes AND today's `fplus` value against cells `float_arith_values` + `float_arith_sql` (both doors), red when the coercion lands; the registry row names the value divergence and the likely home. | Exact BACKLOG pin + registry row edit. | **PROVEN** | Pin holds tree dtypes + tree `fplus` 2.0999999046325684 vs Spark 2.100000023841858 on both doors; registry row names binary-arithmetic coercion (run 18c). pins: logical-width-1/C-015 |
+| C-016 | The `to(string)`-over-binary pin points at cell `to_string_from_binary` and the DF-TO-BINARY-1 "tree-measured" sentence cites it. | Pin + registry row edit. | **PROVEN** | `to(string)` + `cast(string)` pinned to both cells; DF-TO-BINARY-1 retires the tree-measured sentence. pins: logical-width-1/C-016 |
 
 ## Round-3 sweep
 
@@ -333,4 +338,4 @@ Every Python and Rust consumer comparing a logical type key against a literal se
 | Rust `na_fill.rs`, `collect_rows.rs`, display/construct | checked, no change — Arrow-physical, no logical-key keep-sets. |
 | `na.drop`, `union`/`unionByName`, `toPandas`, UDF returns, cache, writers | checked, no change — no type-key branch (critic probes). |
 
-VERDICT: 12 clauses, 12 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 16 clauses, 16 PROVEN, 0 OPEN, 0 REJECTED.

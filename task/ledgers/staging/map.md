@@ -822,7 +822,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [logical-width-1-ledger.md](logical-width-1-ledger.md) —
   **LOGICAL-WIDTH-1 step 1 (2026-09-16), in flight:** Spark's logical widths on the facade —
   ledger with the card rulings W-1..W-7 plus owner rulings Q-16b-3/Q-17a-2/Q-17a-4, the
-  Spark-cell fixture (`python/repark/tests/facade_logical_width_oracle.json`: 22 width cells)
-  and the red-first pins (`test_logical_width_1.py`, red on the base). Branch
+  Spark-cell fixture (`python/repark/tests/facade_logical_width_oracle.json`: 22 width cells
+  plus 13 round-3 cells) and the red-first pins (`test_logical_width_1.py`, red on the
+  base); round 2 moved the fillna width decision into `repark_core::na_fill_expr`
+  (R-18b-4); round 3 fixed the zero-arg grouped keep-set (R-18b-5), made
+  `ARITH-FLOAT-INT-1` exact (R-18b-6) and pinned `to(string)`-over-binary (R-18b-8). Branch
   `feat/logical-width-1`.
-  pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-013, C-014, C-015, C-016
