@@ -1,7 +1,7 @@
 # Unit ledger — DOOR-CONVERGE-2b · decimal-scale rounding, `date_part` seconds, literal widths, element nullability, 3-arg `like`
 
 **Date:** 2026-09-15 · **Branch:** `feat/door-kernel-converge-2b` · **Base:** `origin/main` (`bae1d587`)
-**Model:** swe-2-high · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Model:** swe-2-high, muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
@@ -119,3 +119,63 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_door_converge_2b.py]
   complete: true
 ```
+
+## Round 2 re-measure — 2026-09-16 (muse-spark-1.3-contributor)
+
+Rebuilt the release native from this tree (`maturin develop --release`,
+`CARGO_TARGET_DIR=/tmp/sc-build/target`) and re-ran the pins. The tree
+compiles clean after the rebase onto SQL-LITERAL-TYPING-1 (`527bbedf`); no
+compile fix was needed. Comment grep over the round-1 diff prints nothing;
+`make check-rust-file-size` (604 files) and `scripts/check_lib_py.py`
+(761 files) are clean; `EXPECTED_DIVERGENCES` moves down only (15 → 4).
+
+- `test_door_converge_2b.py`: **120 passed** on the rebuilt native.
+- `test_sql_literal_typing_1.py` (BL-20): **3 failed, 74 passed** —
+  `LIT-SQL-32`, `LIT2-PY-02`, `test_hof_parenthesized_int_min_stays_bigint_on_both_doors`.
+  All three are the same shape conflict: round 1's repark `array` kernel
+  answers `list<element: T not null>` where BL-20's pins spell DF-native
+  `list<item: T>` (nullable). Widths and values agree; only the element
+  field name and nullability differ. The N7 oracle (live PySpark 4.1.2)
+  records `array(1, 2)` as elementType integer, containsNull false, so the
+  kernel shape is Spark truth and the three BL-20 expectations are stale
+  translator spellings (their oracle JSON records display `array<int>` plus
+  rows only, never an Arrow field name or nullability). Class per the
+  parity-audit skill: stale claim, repaired by tightening the three pins to
+  the oracle-measured shape in step 3; widths and values unchanged.
+
+Every clause verdict returns to OPEN until step 4 re-verifies it.
+
+| Clause | Round-2 verdict | Re-measure basis |
+|---|---|---|
+| C-001 | OPEN | Q16-0…8, 11, 12, 15, 16, 20 + DIV-round/R-round legs green in the 120, unaudited |
+| C-002 | OPEN | Q16-9/10/13/14/17/18/19 + DIV-ceil/R-ceil legs green in the 120, unaudited |
+| C-003 | OPEN | DIV-date_part/R-date-part-sec/Q16-21…25 legs green in the 120, unaudited |
+| C-004 | OPEN | R-array/Q16-26…31/DIV-slice legs green in the 120, unaudited |
+| C-005 | OPEN | N7-0…32 + PG legs green in the 120, unaudited |
+| C-006 | OPEN | DIV-like/Q16-32…39 legs green in the 120, unaudited |
+| C-007 | OPEN | ratchet 15 → 4 present in tree, parity tests not yet run |
+
+## Round 2 step-2 audit — rule violations in round 1's diff
+
+- Comments: `git diff 527bbedf..0d2332af -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml`
+  piped through the ban grep prints nothing. Clean.
+- Size ceilings: both gates clean (see above). The
+  `scripts/check_rust_file_size.py` baseline moves 1150 → 1122, down only. Clean.
+- `EXPECTED_DIVERGENCES`: removals only, 15 → 4 (`sec`, `csc`,
+  `array_element`, `generate_series`). Down only. Clean.
+- Q-15c-6 (no registry-wide retag wrapper): the `spark_nullability.rs`
+  additions are per-construct arms inside the existing `SparkNullability`
+  rule (`rewrite_values_schema` for literal VALUES rows, `IsDistinctFrom`
+  beside the existing `IsNotDistinctFrom` wrap). No UDF return-field
+  rebinding. Clean.
+- Q-17a-2 (`sql_relations._from_is_distinct_from_operand`): this guard
+  stays in Python. It branches on SQL text (whether the word FROM opens a
+  table clause), not on a value — it is session-layer parsing plumbing, and
+  the scanner it guards has no Rust counterpart (the Rust SQL door tokenizes
+  `IS [NOT] DISTINCT FROM` as an operator and never had the bug). The
+  value-side half (non-null boolean wrap) is already a Rust analyzer arm in
+  `spark_nullability.rs`. Moving the guard alone to Rust is not possible
+  without moving the whole Python relation scanner it protects.
+- P2 hand-off to run 18a (`functions*.py`): kept — facade `F.bround` and
+  3-argument `F.like`/`F.ilike` remain theirs; this unit pins the
+  Rust-reachable facade path only.
