@@ -36,7 +36,16 @@ pub fn restore_runtime_config(
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(set_runtime_config, module)?)?;
     module.add_function(wrap_pyfunction!(restore_runtime_config, module)?)?;
+    module.add_function(wrap_pyfunction!(session_zone_canonical, module)?)?;
     Ok(())
+}
+
+#[pyfunction]
+pub fn session_zone_canonical(session: PyRef<'_, PyReparkSession>) -> PyResult<String> {
+    fenced_span!("py.session", "session_zone_canonical", {
+        let zone = session.session.session_time_zone();
+        Ok(repark_core::canonical_session_zone_id(zone.id()))
+    })
 }
 
 fn apply_runtime_config(

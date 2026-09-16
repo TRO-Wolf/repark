@@ -61,7 +61,8 @@ impl ExtensionOptions for SparkAnsiConfig {
     fn set(&mut self, key: &str, _value: &str) -> Result<()> {
         Err(DataFusionError::Configuration(format!(
             "`{}.{key}` is not a settable option: ANSI mode is set with \
-             `{SPARK_SQL_ANSI_ENABLED_KEY}` on the session builder and is fixed at session build",
+             `{SPARK_SQL_ANSI_ENABLED_KEY}` on the session builder; change it at runtime with \
+             `SET spark.sql.ansi.enabled`",
             Self::PREFIX
         )))
     }

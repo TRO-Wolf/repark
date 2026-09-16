@@ -75,7 +75,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   (SQL-DESCRIBE-1 D-3); `long` stays local for `printSchema`. pins: sql-describe-1/C-003 |
 | [`column/`](column/map.md) | Immutable expressions, scalar functions, aggregates, and windows.
   `PyColumn.sql` also runs the FNP-15/16 declared-function valve (`refuse_declared_function_in_sql`). |
-| [`session_runtime.rs`](session_runtime.rs) | **SET-ANSI-RUNTIME-1 (2026-09-15):** two free `#[pyfunction]`s taking `PyRef<'_, PyReparkSession>` (the `session_sources` shape): `set_runtime_config` (strict gate) and `restore_runtime_config` (builder-lenient, for `RESET`), each writing the live `SessionContext` carrier plus the session zone snapshot. Comment-free per R-17c-3. pins: set-ansi-runtime-1/C-001, C-002, C-003 |
+| [`session_runtime.rs`](session_runtime.rs) | **SET-ANSI-RUNTIME-1 (2026-09-15):** two free `#[pyfunction]`s taking `PyRef<'_, PyReparkSession>` (the `session_sources` shape): `set_runtime_config` (strict gate) and `restore_runtime_config` (builder-lenient, for `RESET`), each writing the live `SessionContext` carrier plus the session zone snapshot. Comment-free per R-17c-3. pins: set-ansi-runtime-1/C-001, C-002, C-003 **R-17c-4:** plus `session_zone_canonical` (reads the snapshot companion for the facade cache; infallible, no lock beyond the snapshot read). pins: set-ansi-runtime-1/C-002 |
   **FACADE-2 step 2 (2026-09-12):** `column/display.rs` (`PyColumnParts`) renders Group-2
   display/SQL/join strings. pins: facade-2/C-008, C-009 |
 | [`collect_rows.rs`](collect_rows.rs) | Arrow batch → Python value tuples for `collect`.

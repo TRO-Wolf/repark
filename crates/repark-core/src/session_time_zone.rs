@@ -110,32 +110,59 @@ fn is_java_offset_zone(value: &str) -> bool {
         return false;
     }
     let body = &bytes[1..];
-    let (hours, minutes, seconds) = match body.len() {
-        1 | 2 if body.iter().all(u8::is_ascii_digit) => (decimal_pair(body, 0, body.len()), 0, 0),
+    let (hours, minutes) = match body.len() {
+        1 | 2 if body.iter().all(u8::is_ascii_digit) => (decimal_pair(body, 0, body.len()), 0),
         4 if body.iter().all(u8::is_ascii_digit) => {
-            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2), 0)
+            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2))
         }
-        6 if body.iter().all(u8::is_ascii_digit) => (
-            decimal_pair(body, 0, 2),
-            decimal_pair(body, 2, 2),
-            decimal_pair(body, 4, 2),
-        ),
         5 if body[2] == b':' && is_digit_pair(body, 0) && is_digit_pair(body, 3) => {
-            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2), 0)
-        }
-        8 if body[2] == b':' && body[5] == b':' => {
-            if !(is_digit_pair(body, 0) && is_digit_pair(body, 3) && is_digit_pair(body, 6)) {
-                return false;
-            }
-            (
-                decimal_pair(body, 0, 2),
-                decimal_pair(body, 3, 2),
-                decimal_pair(body, 6, 2),
-            )
+            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2))
         }
         _ => return false,
     };
-    minutes <= 59 && seconds <= 59 && hours <= 18 && (hours < 18 || (minutes == 0 && seconds == 0))
+    minutes <= 59 && hours <= 18 && (hours < 18 || minutes == 0)
+}
+
+#[must_use]
+pub fn canonical_session_zone_id(raw: &str) -> String {
+    let trimmed = raw.trim();
+    if trimmed == "Z" || trimmed == "z" {
+        return DEFAULT_SESSION_TIME_ZONE.to_string();
+    }
+    for prefix in ["GMT", "UTC", "UT"] {
+        if trimmed.len() < prefix.len()
+            || !trimmed.as_bytes()[..prefix.len()].eq_ignore_ascii_case(prefix.as_bytes())
+        {
+            continue;
+        }
+        if trimmed.len() == prefix.len() {
+            return DEFAULT_SESSION_TIME_ZONE.to_string();
+        }
+        let rest = &trimmed[prefix.len()..];
+        if matches!(rest.as_bytes().first(), Some(b'+' | b'-')) {
+            return normalize_java_offset(rest);
+        }
+        return trimmed.to_string();
+    }
+    if matches!(trimmed.as_bytes().first(), Some(b'+' | b'-')) && is_java_offset_zone(trimmed) {
+        return normalize_java_offset(trimmed);
+    }
+    trimmed.to_string()
+}
+
+fn normalize_java_offset(signed: &str) -> String {
+    let body = &signed.as_bytes()[1..];
+    let (hours, minutes) = match body.len() {
+        1 | 2 if body.iter().all(u8::is_ascii_digit) => (decimal_pair(body, 0, body.len()), 0),
+        4 if body.iter().all(u8::is_ascii_digit) => {
+            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2))
+        }
+        5 if body[2] == b':' && is_digit_pair(body, 0) && is_digit_pair(body, 3) => {
+            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2))
+        }
+        _ => return signed.to_string(),
+    };
+    format!("{}{hours:02}:{minutes:02}", &signed[..1])
 }
 
 fn is_java_prefixed_zone(value: &str) -> bool {

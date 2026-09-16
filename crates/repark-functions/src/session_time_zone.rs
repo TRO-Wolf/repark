@@ -24,26 +24,108 @@ const AUTHORITATIVE_KEY: &str = "spark.sql.session.timeZone";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionTimeZoneConfig {
     zone: String,
+    display: String,
 }
 
 impl Default for SessionTimeZoneConfig {
     fn default() -> Self {
         Self {
             zone: DEFAULT_EXTRACTION_TIME_ZONE.to_string(),
+            display: DEFAULT_EXTRACTION_TIME_ZONE.to_string(),
         }
     }
 }
 
 impl SessionTimeZoneConfig {
-    /// The zone id the extractors resolve instants in (`UTC`, `America/New_York`, `+05:30`).
     #[must_use]
     pub fn zone(&self) -> &str {
         &self.zone
     }
 
-    pub fn set_zone(&mut self, zone: &str) {
-        self.zone = zone.to_string();
+    #[must_use]
+    pub fn display(&self) -> &str {
+        &self.display
     }
+
+    pub fn set_zone(&mut self, zone: &str) {
+        let trimmed = zone.trim();
+        self.display = trimmed.to_string();
+        self.zone = canonical_zone_id(trimmed);
+    }
+}
+
+fn canonical_zone_id(trimmed: &str) -> String {
+    if trimmed == "Z" || trimmed == "z" {
+        return DEFAULT_EXTRACTION_TIME_ZONE.to_string();
+    }
+    for prefix in ["GMT", "UTC", "UT"] {
+        if trimmed.len() < prefix.len()
+            || !trimmed.as_bytes()[..prefix.len()].eq_ignore_ascii_case(prefix.as_bytes())
+        {
+            continue;
+        }
+        if trimmed.len() == prefix.len() {
+            return DEFAULT_EXTRACTION_TIME_ZONE.to_string();
+        }
+        let rest = &trimmed[prefix.len()..];
+        if matches!(rest.as_bytes().first(), Some(b'+' | b'-')) {
+            return normalize_java_offset(rest);
+        }
+        return trimmed.to_string();
+    }
+    if matches!(trimmed.as_bytes().first(), Some(b'+' | b'-')) && is_java_offset(trimmed) {
+        return normalize_java_offset(trimmed);
+    }
+    trimmed.to_string()
+}
+
+fn is_java_offset(value: &str) -> bool {
+    if value == "Z" || value == "z" {
+        return true;
+    }
+    let bytes = value.as_bytes();
+    if bytes.len() < 2 || (bytes[0] != b'+' && bytes[0] != b'-') {
+        return false;
+    }
+    let body = &bytes[1..];
+    let (hours, minutes) = match body.len() {
+        1 | 2 if body.iter().all(u8::is_ascii_digit) => (decimal_pair(body, 0, body.len()), 0),
+        4 if body.iter().all(u8::is_ascii_digit) => {
+            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2))
+        }
+        5 if body[2] == b':' && is_digit_pair(body, 0) && is_digit_pair(body, 3) => {
+            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2))
+        }
+        _ => return false,
+    };
+    minutes <= 59 && hours <= 18 && (hours < 18 || minutes == 0)
+}
+
+fn is_digit_pair(body: &[u8], offset: usize) -> bool {
+    body[offset].is_ascii_digit() && body[offset + 1].is_ascii_digit()
+}
+
+fn decimal_pair(body: &[u8], offset: usize, width: usize) -> u32 {
+    let mut number = 0;
+    for byte in &body[offset..offset + width] {
+        number = number * 10 + u32::from(byte - b'0');
+    }
+    number
+}
+
+fn normalize_java_offset(signed: &str) -> String {
+    let body = &signed.as_bytes()[1..];
+    let (hours, minutes) = match body.len() {
+        1 | 2 if body.iter().all(u8::is_ascii_digit) => (decimal_pair(body, 0, body.len()), 0),
+        4 if body.iter().all(u8::is_ascii_digit) => {
+            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2))
+        }
+        5 if body[2] == b':' && is_digit_pair(body, 0) && is_digit_pair(body, 3) => {
+            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2))
+        }
+        _ => return signed.to_string(),
+    };
+    format!("{}{hours:02}:{minutes:02}", &signed[..1])
 }
 
 impl ConfigExtension for SessionTimeZoneConfig {
@@ -68,7 +150,8 @@ impl ExtensionOptions for SessionTimeZoneConfig {
     fn set(&mut self, key: &str, _value: &str) -> Result<()> {
         Err(DataFusionError::Configuration(format!(
             "`{}.{key}` is not a settable option: the session timezone is set with \
-             `{AUTHORITATIVE_KEY}` on the session builder and is fixed at session build",
+             `{AUTHORITATIVE_KEY}` on the session builder; change it at runtime with \
+             `SET spark.sql.session.timeZone`",
             Self::PREFIX
         )))
     }
@@ -82,9 +165,9 @@ impl ExtensionOptions for SessionTimeZoneConfig {
 /// Attach the resolved session zone to a [`SessionConfig`] from the Spark door's `configure` hook.
 #[must_use]
 pub fn with_session_time_zone(config: SessionConfig, zone: &str) -> SessionConfig {
-    config.with_option_extension(SessionTimeZoneConfig {
-        zone: zone.to_string(),
-    })
+    let mut carrier = SessionTimeZoneConfig::default();
+    carrier.set_zone(zone);
+    config.with_option_extension(carrier)
 }
 
 /// Read the session zone back out of live config options — the extractors' one accessor.
@@ -94,6 +177,14 @@ pub fn session_time_zone_from_options(options: &ConfigOptions) -> &str {
         .extensions
         .get::<SessionTimeZoneConfig>()
         .map_or(DEFAULT_EXTRACTION_TIME_ZONE, SessionTimeZoneConfig::zone)
+}
+
+#[must_use]
+pub fn session_time_zone_display_from_options(options: &ConfigOptions) -> &str {
+    options
+        .extensions
+        .get::<SessionTimeZoneConfig>()
+        .map_or(DEFAULT_EXTRACTION_TIME_ZONE, SessionTimeZoneConfig::display)
 }
 
 #[derive(Debug)]
@@ -145,7 +236,7 @@ impl ScalarUDFImpl for CurrentTimezone {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let zone = session_time_zone_from_options(args.config_options.as_ref());
+        let zone = session_time_zone_display_from_options(args.config_options.as_ref());
         Ok(ColumnarValue::Scalar(ScalarValue::Utf8(Some(
             zone.to_string(),
         ))))

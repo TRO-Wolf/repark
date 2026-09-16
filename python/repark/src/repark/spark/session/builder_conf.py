@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
 from typing import Any
 
+from repark import _native
 from repark.spark.session import _funcs as _session_funcs
 from repark.spark.session.session_configuration import (
     SPARK_SQL_ANSI_ENABLED_KEY,
@@ -19,7 +20,10 @@ from repark.spark.session.session_configuration import (
     _retained_cache_bytes_value,
     _sync_display_int_into_builder_config,
 )
-from repark.spark.session.session_time_zone import SESSION_TIME_ZONE_KEY
+from repark.spark.session.session_time_zone import (
+    SESSION_TIME_ZONE_KEY,
+    refresh_session_zone_canonical,
+)
 from repark.spark.session.timestamp_type import TIMESTAMP_TYPE_KEY, parse_timestamp_type
 
 for _name in dir(_session_funcs):
@@ -151,7 +155,7 @@ class RuntimeConfig:
         (use ``datafusion.runtime.memory_limit`` to re-size the pool). Setting
         ``repark.display.style`` drives the live session's display style.
         """
-        self._session._ensure_alive()
+        inner = self._session._ensure_alive()
         if not isinstance(key, str):
             raise PySparkTypeError(
                 errorClass="NOT_STR",
@@ -187,9 +191,11 @@ class RuntimeConfig:
         # Build-time FairSpillPool size is not runtime-mutable via conf (one truth).
         _refuse_runtime_memory_limit_gb(key)
         if key in (SESSION_TIME_ZONE_KEY, SPARK_SQL_ANSI_ENABLED_KEY):
-            from repark import _native
-
-            _native.set_runtime_config(self._session._ensure_alive(), key, text)
+            if key == SESSION_TIME_ZONE_KEY:
+                text = text.strip()
+            _native.set_runtime_config(inner, key, text)
+            if key == SESSION_TIME_ZONE_KEY:
+                refresh_session_zone_canonical(self._session)
         if _looks_like_datafusion_conf_key(key):
             _forward_datafusion_conf(self._session, key, text)
         # conf.set("repark.display.style", …) must drive show() — not only the conf map.
@@ -304,15 +310,15 @@ class RuntimeConfig:
         ``repark.display.style`` also resets the live session style to the default
         ``polars`` so ``conf.get`` / ``session.display_style`` / ``show()`` stay lockstep.
         """
-        self._session._ensure_alive()
+        inner = self._session._ensure_alive()
         if isinstance(key, str) and key.lower() == _RETAINED_CACHE_BYTES_KEY:
             _refuse_read_only_conf_key(key)
         if key in (SESSION_TIME_ZONE_KEY, SPARK_SQL_ANSI_ENABLED_KEY):
-            from repark import _native
-
             self._store().pop(key, None)
             self._unset_keys().add(key)
-            _native.set_runtime_config(self._session._ensure_alive(), key, _SQLCONF_DEFAULTS[key])
+            _native.set_runtime_config(inner, key, _SQLCONF_DEFAULTS[key])
+            if key == SESSION_TIME_ZONE_KEY:
+                refresh_session_zone_canonical(self._session)
             return
         if key.lower() == _DISPLAY_STYLE_KEY:
             store = self._store()

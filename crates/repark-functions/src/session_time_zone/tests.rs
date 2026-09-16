@@ -1,5 +1,7 @@
 //! Pins for the session-zone CARRIER: it carries, and it is not a second way to set the zone.
 
+use std::str::FromStr;
+
 use datafusion::common::config::{ConfigExtension, ConfigOptions, ExtensionOptions};
 use datafusion::prelude::{SessionConfig, SessionContext};
 
@@ -62,8 +64,32 @@ fn set_zone_swaps_the_live_value_for_a_validated_runtime_set() {
     let mut carrier = SessionTimeZoneConfig::default();
     carrier.set_zone("Asia/Tokyo");
     assert_eq!(carrier.zone(), "Asia/Tokyo");
+    assert_eq!(carrier.display(), "Asia/Tokyo");
     carrier.set_zone("UTC");
     assert_eq!(carrier.zone(), "UTC");
+    assert_eq!(carrier.display(), "UTC");
+}
+
+#[test]
+fn set_zone_keeps_the_raw_echo_and_canonicalizes_the_reader() {
+    for (raw, canonical) in [
+        ("+5", "+05:00"),
+        ("+05", "+05:00"),
+        ("+0530", "+05:30"),
+        ("GMT+8", "+08:00"),
+        ("gmt+8", "+08:00"),
+        ("UT+3", "+03:00"),
+        ("Z", "UTC"),
+        ("z", "UTC"),
+        ("UTC", "UTC"),
+        ("America/New_York", "America/New_York"),
+    ] {
+        let mut carrier = SessionTimeZoneConfig::default();
+        carrier.set_zone(raw);
+        assert_eq!(carrier.display(), raw);
+        assert_eq!(carrier.zone(), canonical);
+        assert!(arrow::array::timezone::Tz::from_str(carrier.zone()).is_ok());
+    }
 }
 
 #[test]

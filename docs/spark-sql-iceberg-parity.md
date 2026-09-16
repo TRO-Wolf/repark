@@ -2315,18 +2315,25 @@ the pin rather than obeying it.
   there is no collect-time fold to move. Reproducing Spark's late binding needs a
   restructuring of constant folding outside this unit's fence.
 
-### SET-ANSI-RUNTIME-3 — unparsable string casts raise even with ANSI off
+### SET-ANSI-RUNTIME-3 — most failing casts raise even with ANSI off
 
-- **repark** — `CAST('x' AS INT)` raises (`simplify_expressions` cast error) with ANSI off
-  at build AND at runtime alike: the string-cast path never reads the ANSI flag.
-- **Apache Spark** — answers NULL with ANSI off. *(oracle: measured —
-  `fixtures-batch16-dc2rest-setansi.json` cell S16-2, PySpark 4.1.2.)*
+- **repark** — with ANSI off (at build AND at runtime alike), only these follow the flag:
+  `1/0` and `1%0` answer NULL, `2147483647 + 1` wraps, `CAST('x' AS DOUBLE)` answers NULL.
+  Every other failing cast raises the `simplify_expressions` Arrow cast error: `CAST('x' AS
+  INT / BIGINT / DATE / BOOLEAN / DECIMAL)`, `CAST('' AS INT)`, `CAST('1.5' AS INT)`,
+  `CAST(128 AS TINYINT)`, `CAST(2147483648 AS INT)` — literal, subquery-folded, and real-column
+  shapes alike. The cast-failure path never reads the ANSI flag.
+- **Apache Spark** — answers NULL for all of the above with ANSI off. *(oracle: measured —
+  `fixtures-batch16-dc2rest-setansi.json` cell S16-2, PySpark 4.1.2; breadth measured
+  2026-09-15 on this native, identical at build and at runtime.)*
 - **Pin** —
   `python/repark/tests/test_set_ansi_runtime_1.py::test_s16_2_cast_x_still_raises_string_cast_residue`
-- **Rationale** — DECLARED narrow residue. Measured identical with ANSI off at build, so the
-  snapshot cannot deliver the oracle cell; fixing the cast kernel/analyzer is outside this
-  unit's fence (carriers only). Division (S16-1) is the live proof fresh queries read the
-  runtime flag.
+- **Rationale** — DECLARED residue, broader than first drawn (2026-09-15 review: the row claimed
+  only the string-cast case; the measured list above replaces it). Identical with ANSI off at
+  build, so the snapshot cannot deliver these cells; fixing the cast kernel/analyzer is outside
+  this unit's fence (carriers only). Division (S16-1) is the live proof fresh queries read the
+  runtime flag. C-001 stays PROVEN: its proposition covers division, the F-API division leg, and
+  the stale-frame binding — all pinned green; no clause ever promised cast breadth.
 
 ### DBT-CTASCLAUSE-1 — `LOCATION`, `OPTIONS` and `CLUSTERED BY` are refused on an Iceberg CTAS
 

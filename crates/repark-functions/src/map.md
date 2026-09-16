@@ -365,6 +365,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   runtime gate: case-insensitive `true`/`false` only — `1`/`yes`/padded values refuse
   with Spark's `INVALID_CONF_VALUE.TYPE_MISMATCH`; the lenient builder parser is frozen).
   The function carries `#[allow(clippy::missing_errors_doc)]` (R-17c-3: no Rust `///`).
+  Its carrier `set` refusal now points at the runtime `SET` spelling.
   pins: set-ansi-runtime-1/C-001
 - `session_time_zone.rs` (+ `session_time_zone/`) — the carrier that brings the
   resolved session timezone to the extractors. A `ConfigExtension` with a two-segment `PREFIX`
@@ -385,6 +386,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Pins: `session_time_zone::tests::current_timezone_*`.
   **SET-ANSI-RUNTIME-1 (2026-09-15):** `SessionTimeZoneConfig::set_zone` swaps the live
   carrier value after the session's runtime gate already accepted it (no re-validation).
+  Its carrier `set` refusal now points at the runtime `SET TIME ZONE` spelling.
+  **R-17c-4:** the carrier holds `display` (raw echo) + canonical `zone` (extractor reader).
   pins: set-ansi-runtime-1/C-002
 - `datetime.rs` — session-zone semantics are type-driven (`coerce_date_arg` /
   `coerce_to_timestamp_micros` /

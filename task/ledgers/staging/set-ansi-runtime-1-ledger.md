@@ -41,6 +41,45 @@ Run 16b owns `dataframe/**`, `column.py`, `catalog.py` and the unfolding CONF-UN
   lived in the crate maps, topped up with the ±18:00 ordering reason and the
   `Error::IllegalArgument` variant); the two public `Result` entry points take
   `#[allow(clippy::missing_errors_doc)]` (attribute, not a comment — the IO-TEXT-1 precedent).
+- **R-17c-4 (orchestrator, G-2, 2026-09-15):**
+
+  > The runtime zone snapshot carries **two** values: the **Spark-visible text** exactly as the user set it,
+  > which is what `conf.get`, `SET -v` and `current_timezone()` report (the S5 cells pin that echo and it
+  > must not change), and a **canonical companion** — an id Arrow `Tz::from_str` and Python `ZoneInfo` both
+  > accept — which every value-bearing consumer uses. The canonicalisation happens ONCE, in Rust, at the
+  > gate, when the value is validated; no consumer is taught the Java grammar, and no consumer re-parses
+  > the raw text. A value that validates but cannot be canonicalised is a refusal at the SET, not a stored
+  > value: it is better to refuse than to accept and then explode.
+
+  Applied with one fence-driven adjustment: the canonicaliser is duplicated in the two crates that
+  fill the carrier (`repark-core` for the snapshot/binding/text-scan, `repark-functions` for the
+  carrier fill both doors share), because `repark-functions` cannot depend on `repark-core` and the
+  builder fill site (`repark-spark` extension) is out of fence. Both copies are pinned by the same
+  table and the duality is recorded in both maps.
+- **P2-logic-4 lock order (round 17c, assessed, downgraded to P3):** no inversion exists. The write
+  path holds the DataFusion state write guard while taking the zone snapshot write guard (one
+  direction only); every read path takes the snapshot guard alone and `session_time_zone()` drops
+  it before returning (`Arc::clone` under the guard, guard released at return), so `read_text`'s
+  later `read_table` never nests inside it. Nobody holds the snapshot guard while wanting the
+  state guard — deadlock needs a cycle and there is none. No test added (nothing to pin).
+- **P2-logic-2 hand-off to run 17a:** `F.current_timezone()` still binds a Python literal
+  (`functions_datetime.py`, via `active_session_time_zone()`) instead of the native
+  `current_timezone` UDF, so a pre-built `F.current_timezone()` column keeps the build zone while
+  the SQL door follows the SET. `functions*.py` is 17a-owned; this unit pins the SQL door plus the
+  Rust-reachable expression path (`test_select_expr_binds_the_zone_at_analysis`) and changes nothing
+  there.
+- **P3 records (round 17c):** unset-with-builder-`false` applies the registered default (`true`),
+  not the builder value — behaviour kept, CONF-UNSET-1 is the authority, and the C-003 proposition
+  below is reworded to match; S16-5 (builder `true`) does not demand otherwise. Mixed-case key
+  spellings skip the native gate by exact match and store facade-only (Spark key matching is
+  case-sensitive on the measured cells; no cell covers mixed case — UNMEASURED, no change).
+  Per-call `from repark import _native` hoisted to module top in `builder_conf.py` and
+  `sql_set_statements.py` (no cycle: the extension module loads independently, verified by
+  import), and `set`/`unset`/`_restore_or_unset` take one `_ensure_alive()` handle. The
+  `RwLock`+`Arc::clone` snapshot read sits on session setup paths, not a kernel path — no change.
+  `hour(string)` (e.g. `hour(from_unixtime(0))`) extracts zone-blind (0 under Tokyo at build too);
+  `hour()` over genuine instants and over `CAST(string AS TIMESTAMP)` follows the zone — pins use
+  the latter form; the string form belongs to the extraction area, out of fence.
 - **Third measured deviation, S16-2 (round 17c):** `CAST('x' AS INT)` still raises after the SET.
   Measured identical with ANSI off at BUILD (literal, subquery and real-column shapes all raise
   the same `simplify_expressions` cast error), so the string-cast path never reads the ANSI flag
@@ -59,7 +98,7 @@ Run 16b owns `dataframe/**`, `column.py`, `catalog.py` and the unfolding CONF-UN
 |---|---|---|---|---|
 | C-001 | `conf.set("spark.sql.ansi.enabled","false")` then fresh `SELECT 1/0` answers NULL (double, nullable); the same through `SET`; `true` restores `DIVIDE_BY_ZERO`; `F.lit(1)/F.lit(0)` on a post-SET frame follows; a frame built pre-SET keeps the raise (S16-0). | `test_s16_0_stale_frame_keeps_divide_by_zero`, `test_s16_1_fresh_division_answers_null_after_set`, `test_s16_3_conf_set_true_restores_raise`, `test_s16_4_unset_with_builder_true_raises`, `test_c001_f_api_division_follows_runtime_ansi`, `test_btz5_7_8_set_false_then_null`, `test_btz5_9_10_reset_then_raise` | **PROVEN** | `test_set_ansi_runtime_1.py` 22/22 green on the rebuilt release native; S16-2 renamed to `test_s16_2_cast_x_still_raises_string_cast_residue` (third deviation above, residue row SET-ANSI-RUNTIME-3) and no longer counts toward this clause. |
 | C-002 | `conf.set("spark.sql.session.timeZone","Asia/Tokyo")` then `current_timezone()`, `from_unixtime(0)`, `CAST(TIMESTAMP … AS STRING)` follow the new zone on both doors; `SET TIME ZONE` the same; invalid zone refuses `INVALID_CONF_VALUE.TIME_ZONE` at the SET with nothing stored; `conf.get` reports the applied value. S16-6 pins exactly, including the one-element `current_timezone()` residue. | `test_s16_6_stale_frame_split_binding`, `test_s16_7_fresh_query_follows_new_zone`, `test_s16_8_conf_set_zone_applies`, `test_s16_9_conf_set_invalid_zone_refuses`, `test_s16_10_set_ansi_maybe_refuses`, `test_s16_11_reset_zone_restores_builder`, `test_c002_f_api_zone_follows`, `test_btz5_2_3_set_zone_then_current_timezone`, `test_btz5_5_refused_set_moves_nothing`, `test_s5_zone_cells_apply` | **PROVEN** | Same green run; S16-6 green pre- and post-change for the pinned reason (build-zone snapshot). Narrow residue row SET-ANSI-RUNTIME-2 in the registry. |
-| C-003 | `RESET` / `conf.unset` restore the builder-seeded value, applied; with no builder value the registered default applies (`true` / `UTC`). | `test_s16_5_get_after_unset_reports_builder_true`, `test_reset_restores_builder_ansi_applied`, S16-4/S16-11 | **PROVEN** | Same green run; `test_sql_set_door_1.py` RESET pins green (flipped where the old residue showed). Reuse-with-differing-ANSI still soft-folds facade-only: known narrow residue, `session_core.py` untouched per Q-15c-4. |
+| C-003 | `RESET` restores the builder-seeded value, applied; `conf.unset` applies the registered default (`true` / `UTC`) per CONF-UNSET-1, even over a builder value. | `test_s16_5_get_after_unset_reports_builder_true`, `test_reset_restores_builder_ansi_applied`, S16-4/S16-11 | **PROVEN** | Same green run; `test_sql_set_door_1.py` RESET pins green (flipped where the old residue showed). Reuse-with-differing-ANSI still soft-folds facade-only: known narrow residue, `session_core.py` untouched per Q-15c-4. |
 | C-004 | The native ANSI door (`repark.sql()`) is unaffected by Spark-session runtime sets. | `test_c004_native_door_ignores_spark_runtime_sets` | **PROVEN** | Same green run. |
 | C-005 | Registry TZ-3 and SET-ANSI-RUNTIME-1 read FIXED with pins; every pin that codified the old residue flips in place. | Flipped pins in `test_sql_set_door_1.py` (module docstring + 9 tests) and `test_session_timezone_parity.py` (2 tests), registry rows, `make verify` rc 0 | **PROVEN** | 9 + 2 flips landed; TZ-3 / SET-ANSI-RUNTIME-1 rows read FIXED; new residue rows SET-ANSI-RUNTIME-2 / -3; guides (`session-and-conf.md`, `troubleshooting.md`) trued up; `make verify` rc 0 (gates below). `check_lib_py` ratchet 1328→1318 logged. |
 | C-006 | Round 2: BL-11 numeric→BINARY under runtime ANSI off. | — | **OPEN** | Out of this step by card order; prerequisite (runtime ANSI carrier) delivered here. |
@@ -105,6 +144,22 @@ residue row against Spark's `Asia/Tokyo`. Native-door `SELECT 1/0` raises
 `PySparkException: Arrow error: Divide by zero error` (DataFusion's own class,
 not Spark's) — pinned as the C-004 answer.
 
+## Red-first, P1 spelling pins (round 17c review follow-up)
+
+`python/repark/tests/test_runtime_zone_spellings_1.py` (new): 4 tests, run against the
+pre-fix release native — 4 failed, 0 passed. The value pins failed with the reviewers'
+measured error (`session timezone "+5" could not be resolved at query time` on
+`from_unixtime(0)`; `ZoneInfoNotFoundError` on the `createDataFrame` path); the seconds
+pins failed with `DID NOT RAISE` (the gate accepted what no consumer could resolve).
+The echo halves passed pre-fix, which is exactly the hole: the old pins never reached a
+value assertion. Post-fix run: 5 passed (4 spelling tests plus the `selectExpr`
+analysis-binding pin).
+
+Padded SET (P2-logic-3): the store now keeps the trimmed zone text in both places, so
+`conf.get` and the engine never differ. The S5 cells all use unpadded values, so no cell
+decides padding; the ruling's parenthetical does ("Spark-visible text" is what Spark would
+report, i.e. trimmed) — followed.
+
 ## Gates
 
 - `cargo test -p repark-core session` — 151 passed, 0 failed (one parked-test fix: sign-led
@@ -129,3 +184,10 @@ not Spark's) — pinned as the C-004 answer.
   `make rust-clippy` green (two `#[allow(clippy::missing_errors_doc)]` attributes);
   `cargo test -p repark-core session` 151 passed; `cargo test -p repark-functions -- ansi
   session_time_zone` green; release native rebuilt; pins 65 passed; `make verify` rc 0.
+- Follow-up (PR #639 review, R-17c-4): `cargo test -p repark-core session` 152 passed;
+  `cargo test -p repark-functions -- ansi session_time_zone` green (58 zone incl. the new
+  echo/canonical split test); `make rust-clippy` green; spelling pins
+  (`test_runtime_zone_spellings_1.py`, 5) green after 4-failed red-first; touched suites
+  (spellings + set_ansi_runtime_1 + sql_set_door_1 + session_timezone_parity) 116 passed;
+  keyword sweep 956 passed, 112 skipped; `make verify` rc 0; release native rebuilt after
+  the last Rust edit. The orchestrator re-runs `make preflight` and the parity suite.

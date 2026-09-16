@@ -28,6 +28,18 @@ authoritative key spelling, and the resolved value reaching engine session state
     the IANA check: Arrow alone would accept `+18:01`, and a sign-led value that fails the
     offset arm never falls through to it. A stored runtime zone is what `session_time_zone`
     reports, on the session and its clones. pins: set-ansi-runtime-1/C-002
+  - **canonical companion (R-17c-4, 2026-09-15):** `canonical_session_zone_id` maps the raw
+    snapshot text to the id every value-bearing consumer parses — measured against Arrow
+    `Tz::from_str` and Python `ZoneInfo` (which takes IANA names plus `UTC`/`GMT` only, never
+    an offset). Table, decided by measurement: `Z`/`z`→`UTC`; bare `GMT`/`UTC`/`UT` (any
+    case)→`UTC`; `+5`/`+05`→`+05:00`; `+0530`→`+05:30`; `+HH:MM` unchanged; `GMT+8`/`gmt+8`→
+    `+08:00`; `UT+3`→`+03:00`; IANA (incl `Etc/GMT+8`) unchanged; Arrow-only builder forms
+    (e.g. `+18:01`) pass through (Arrow parses them; Python reads them as a fixed offset).
+    Seconds forms (`+05:30:30`, `+18:00:00`) have no Arrow form: the gate refuses them since
+    this round (narrowed `is_java_offset_zone`; no pin ever covered them). The same mapping is
+    duplicated in the functions-carrier fill (`repark-functions` cannot depend on this crate
+    and the builder fill site is out of fence); both copies pin the identical table.
+    pins: set-ansi-runtime-1/C-002
 
 Deliberately NOT here: extraction implementation. H-1a split B owns extractor pins; this map covers
 parsing, one spelling, and resolved session state.

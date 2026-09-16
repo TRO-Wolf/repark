@@ -25,6 +25,11 @@ session timezone (`spark.sql.session.timeZone`) down to the calendar extractors 
   - **runtime swap** — SET-ANSI-RUNTIME-1 (2026-09-15): `set_zone_swaps_the_live_value_for_a_validated_runtime_set`
     (the binding calls it only after the session's runtime gate accepted the value, so it
     stores without re-validating). pins: set-ansi-runtime-1/C-002
+  - **echo/canonical split** — R-17c-4 (2026-09-15): the carrier holds `display` (raw text,
+    what `current_timezone()` answers) and `zone` (canonical companion, what the extractors
+    read); `set_zone`/`with_session_time_zone` canonicalise via the in-crate copy of the
+    core table (`set_zone_keeps_the_raw_echo_and_canonicalizes_the_reader` pins the table
+    and Arrow-acceptance of every canonical). pins: set-ansi-runtime-1/C-002
 
 Deliberately NOT here: the extraction SEMANTICS. What `year` / `hour` / `date_trunc` actually
 answer under a zone is pinned end-to-end on real sessions in

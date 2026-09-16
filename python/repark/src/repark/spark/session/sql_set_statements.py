@@ -32,13 +32,17 @@ from repark.errors import (
     ParseException,
     UnsupportedOperationException,
 )
+from repark import _native
 from repark.spark.session.create_dataframe_rows import _materialize_arrow_as_memtable_frame
 from repark.spark.session.session_configuration import (
     SPARK_SQL_ANSI_ENABLED_KEY,
     _SQLCONF_STATIC_KEYS,
     _looks_like_datafusion_conf_key,
 )
-from repark.spark.session.session_time_zone import SESSION_TIME_ZONE_KEY
+from repark.spark.session.session_time_zone import (
+    SESSION_TIME_ZONE_KEY,
+    refresh_session_zone_canonical,
+)
 from repark.spark.session.sql_relations import (
     _split_leading_sql_trivia,
     _sql_mask_strings_and_comments,
@@ -279,11 +283,12 @@ def _restore_or_unset(session: ReparkSession, key: str) -> None:
     builder_value = session._builder_config.get(key)
     if builder_value is not None:
         if key in (SESSION_TIME_ZONE_KEY, SPARK_SQL_ANSI_ENABLED_KEY):
-            from repark import _native
-
-            _native.restore_runtime_config(session._ensure_alive(), key, builder_value)
+            inner = session._ensure_alive()
+            _native.restore_runtime_config(inner, key, builder_value)
             session.conf._unset_keys().discard(key)
             session.conf._store()[key] = builder_value
+            if key == SESSION_TIME_ZONE_KEY:
+                refresh_session_zone_canonical(session)
             return
         session.conf.set(key, builder_value)
         return
