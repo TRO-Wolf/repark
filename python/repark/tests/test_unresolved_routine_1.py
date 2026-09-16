@@ -201,13 +201,14 @@ def test_sql_door_decoy_cells_match_spark_message(spark: Any, cell_id: str) -> N
 
 
 def test_sql_door_schema_of_csv_is_divergence_tripwire(spark: Any) -> None:
-    """Spark HAS schema_of_csv; repark refuses until 18a lands the name.
+    """Spark HAS schema_of_csv; since FNP-GEN-1 steps 3-4 the name resolves and never refuses.
 
     pins: unresolved-routine-1/C-006
     """
     with pytest.raises(AnalysisException) as caught:
         spark.sql("SELECT schema_of_csv('')").collect()
-    assert "UNRESOLVED_ROUTINE" in str(caught.value)
+    assert "UNRESOLVED_ROUTINE" not in str(caught.value)
+    assert "[INTERNAL_ERROR]" in str(caught.value)
 
 
 def test_sql_door_found_function_arity_is_not_rewritten(spark: Any) -> None:

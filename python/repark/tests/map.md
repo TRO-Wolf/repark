@@ -5908,3 +5908,8 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   Python-side because the engine has no struct-to-string cast. Step 6 formats the
   file with the pinned `ruff format` (no semantic change).
   pins: fnp-gen-1/L-001, L-002, L-003, L-004, L-005, R-18a-13, R-18a-14
+- `test_fnp_gen_1.py`, `test_unresolved_routine_1.py` — **FNP-GEN-1 rebase onto #654 (2026-09-16, run
+  18a):** #654 turned the `schema_of_csv('')` SQL pin into an `UNRESOLVED_ROUTINE` tripwire because the
+  name was missing; this unit lands the kernel, so both pins now assert the name resolves and raises
+  Spark 4.1.2's own `[INTERNAL_ERROR]` / `XX000` for the empty literal (R-18a-3, measured). The tripwire
+  did its job: it went red the moment the name landed. pins: fnp-gen-1/C-004, unresolved-routine-1/C-006
