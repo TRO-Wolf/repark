@@ -28,6 +28,10 @@ FNP-11A (2026-09-15, orchestrator): `check_example_coverage.py` walks `functions
 the AST walk, not only in the live `__all__`.
 FNP-11A rebase (2026-09-15, run 16a): `check_example_coverage.py` stays at the default line ceiling
 — two docstring lines reflowed after the rebase, no exception row (owner ruling Q-15c-4).
+FNP-WIN-1 (2026-09-15, run 16a-2): `check_example_coverage.py` walks `functions_window.py` and its
+`INSTALL_NAMES` export tuple, so the three window names that module installs at import are in
+the AST walk, not only in the live `__all__`. The added source line is paid by a `COVERS`-paragraph
+reflow, so the script stays at the default line ceiling — no exception row (owner ruling Q-15c-4).
 DF-SURFACE-A-1 critic round 1 (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4041 → 4035 (ruling R-5 removes the `inputFiles` and
 `semanticHash` bindings; ruling R-6 removes the `_schema_override` slot,
@@ -1004,7 +1008,11 @@ repark-parity slice.
   only; empty at phase-1 PR-A; rows so far: `repark-functions` — registration glue
   (ceiling 175 after U5 `pub mod ansi;` — Q10 kept 175 by net-zero crate-doc, and FN-GT2 X8
   kept 175 again by sanctioned out (1): `pub mod url;` + its `register_all` loop went in while
-  the `shim_udf_boilerplate!` body went out to `src/shim_macros.rs`, measured 168, no raise),
+  the `shim_udf_boilerplate!` body went out to `src/shim_macros.rs`, measured 168, no raise;
+  FNP-WIN-1 step 2 raised 175 → 180 and step 3 180 → 182, both via sanctioned
+  out (2) with stated reasons in the row; the audit (F-1) moved the step-3
+  measurement note off the ceiling line into the reason string, per the
+  comment ban),
   `repark-python` — the 180-line PyO3 crate root, a MANIFEST (module decls incl. the
   file-backed `exceptions` taxonomy module, the two error folds, the `#[pymodule]`
   registration) that already uses the sanctioned file-backed test module (phase-3 PR-3, EC-10;
@@ -1264,3 +1272,25 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
 [../map.md#debug](../map.md).
 - **FNP-11A (2026-09-15, on 440b2773):** `check_lib_py.py` ratchets `functions_expr.py` to 2235 lines, the FNP-11A forwarder trim landing on top of main's baseline.
 - **FNP-4B remediation (2026-09-15):** size ceilings set to the real line counts (`check_rust_file_size.py`: `column/mod.rs` 1038, `cross_door.rs` 1258; `check_lib_py.py`: `_live_parity.py` 1753).
+- **FNP-WIN-1 (2026-09-15, remediation round 16a):** `check_rust_file_size.py`
+  records `analyzer/time_window/mod.rs` 1268 and `spark_time_window.rs` 1125
+  (window rules, kernels, and their tests); `check_lib_py.py` records
+  `test_fnp_win_1.py` 1209 (critic pins). The CAP-1 mirror rows and counts
+  (38/32) move with them. `datetime.rs` keeps 1700 (audit S-2; the month
+  helper lives in `spark_session_window.rs`). pins: fnp-win-1/C-008
+- **FNP-WIN-1 (2026-09-15, verification round 2, L-002/L-003):**
+  `check_rust_file_size.py` moves `analyzer/time_window/mod.rs` 1268 → 1338
+  (the running-end chaining test); `check_lib_py.py` moves
+  `test_fnp_win_1.py` 1209 → 1314 (the `C2-L002`/`C2-L003` pins). No new
+  exception row; the CAP-1 mirror rows move with them, counts still 38/32.
+  pins: fnp-win-1/C-004
+- **FNP-WIN-1 (2026-09-15, verification round 2, L-001):**
+  `check_rust_file_size.py` moves `analyzer/time_window/mod.rs` 1338 → 1416
+  (provenance recursion plus rule tests); `check_lib_py.py` moves
+  `test_fnp_win_1.py` 1314 → 1415 (the `C2-L001` pins). Ratchets only.
+  pins: fnp-win-1/C-003
+- **FNP-WIN-1 (2026-09-15, verification round 2, L-004):**
+  `repark-python/src/dataframe.rs` 1019 → 1021 (the two-spec pre-check
+  call); `check_lib_py.py` moves `test_fnp_win_1.py` 1415 → 1454 (the
+  `C2-L004` pin). Ratchets only. pins: fnp-win-1/C-004
+FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` puts `crates/repark-python/src/dataframe.rs` back at 1019 after the round-2 binding pre-check was reverted (owner ruling Q-15c-4); `check_lib_py.py` ratchets `python/repark/tests/test_fnp_win_1.py` down 1454 → 1449.

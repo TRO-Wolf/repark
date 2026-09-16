@@ -47,6 +47,7 @@ pub(crate) async fn execute_passthrough(
             // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
             crate::refuse_dml_subquery_predicate_in_statement(inner)?;
             apply_spark_order_by_defaults(inner);
+            crate::time_window::wrap_time_window_grouping(inner)?;
             // SQP-1: rewrite `CAST` to `BYTEA`.
             rewrite_binary_casts(inner);
             // R1: DataFusion accepts only SingleQuotedString inside INTERVAL frame bounds.
