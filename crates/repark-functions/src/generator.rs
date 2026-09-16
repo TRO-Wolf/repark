@@ -549,7 +549,7 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
                 })
                 .unwrap_or(false)
     };
-    if args.iter().any(|arg| references_aggr(arg)) {
+    if args.iter().any(&references_aggr) {
         return plan_err!(
             "[MISSING_GROUP_BY] The query does not include a GROUP BY clause. Add GROUP BY or \
              turn it into the window functions using OVER clauses."

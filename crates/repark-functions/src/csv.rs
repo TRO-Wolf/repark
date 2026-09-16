@@ -49,11 +49,12 @@ impl Default for CsvOptions {
 
 fn single_char(name: &str, value: &str) -> Result<char> {
     let mut chars = value.chars();
-    match (chars.next(), chars.next()) {
-        (Some(found), None) => Ok(found),
-        _ => plan_err!(
+    if let (Some(found), None) = (chars.next(), chars.next()) {
+        Ok(found)
+    } else {
+        plan_err!(
             "[INVALID_OPTIONS.WRONG_OPTION_VALUE] Incorrect option value '{value}' for option '{name}'."
-        ),
+        )
     }
 }
 
@@ -122,7 +123,7 @@ pub(crate) fn options_from_entries(entries: &HashMap<String, String>) -> Result<
             "sep" | "delimiter" => options.sep = single_char(name, value)?,
             "quote" => options.quote = single_char(name, value)?,
             "escape" => options.escape = single_char(name, value)?,
-            "nullValue" => options.null_value = value.clone(),
+            "nullValue" => options.null_value.clone_from(value),
             "dateFormat" => options.date_format = Some(value.clone()),
             "timestampFormat" => options.timestamp_format = Some(value.clone()),
             "mode" => {
@@ -246,11 +247,11 @@ fn parse_csv_datetime(text: &str, format: Option<&str>) -> Option<DateParts> {
             let value: i32 = digits.parse().ok()?;
             match found {
                 'y' => parts.year = value,
-                'M' => parts.month = value as u32,
-                'd' => parts.day = value as u32,
-                'H' => parts.hour = value as u32,
-                'm' => parts.minute = value as u32,
-                's' => parts.second = value as u32,
+                'M' => parts.month = u32::try_from(value).ok()?,
+                'd' => parts.day = u32::try_from(value).ok()?,
+                'H' => parts.hour = u32::try_from(value).ok()?,
+                'm' => parts.minute = u32::try_from(value).ok()?,
+                's' => parts.second = u32::try_from(value).ok()?,
                 _ => return None,
             }
             text_bytes = rest;
@@ -332,8 +333,7 @@ fn render_complex_type(data_type: &DataType) -> String {
                 .join(", ");
             format!("STRUCT<{rendered}>")
         }
-        DataType::Utf8 => "STRING".to_string(),
-        DataType::LargeUtf8 | DataType::Utf8View => "STRING".to_string(),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => "STRING".to_string(),
         DataType::Int8 | DataType::UInt8 => "TINYINT".to_string(),
         DataType::Int16 | DataType::UInt16 => "SMALLINT".to_string(),
         DataType::Int32 => "INT".to_string(),

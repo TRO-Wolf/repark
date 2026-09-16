@@ -405,6 +405,7 @@ def from_csv(
 ) -> Column:
     """Parse a CSV string column (PySpark ``functions.from_csv``)."""
     _require_column_or_str(col, "col")
+    _require_column_or_str(schema, "schema")
     head = _column_argument(col)
     text = lit(schema) if isinstance(schema, str) else _column_argument(schema)
     name = f"from_csv({head.spark_wrap_display_part()})"

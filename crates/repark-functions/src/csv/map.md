@@ -38,6 +38,10 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]`, and an empty document the
   `[INTERNAL_ERROR]` defect.
   pins: fnp-gen-1/C-004
+- `from_csv.rs` — **Step 7 (run 18a):** gate pass only — the token arms parse
+  straight into their target width and the null-mark shares one helper; answers
+  are unchanged.
+  pins: fnp-gen-1/C-006
 - `schema_of_csv.rs` — the `schema_of_csv` scalar UDF plus its `#[cfg(test)]`
   pins (the Spark `CSVInferSchema` ladder and renderer, the quoted separator, the
   `sep` option, the empty-document `INTERNAL_ERROR` defect, NULL, non-string

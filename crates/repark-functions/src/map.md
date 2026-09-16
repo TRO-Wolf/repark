@@ -365,7 +365,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **Step 4b (run 18a):** `CsvFold` folds the literal call and unaliases it inside
   `from_csv`; `from_csv` answers a `Null` placeholder until the fold lands, and
   `expr_fn` gains the `schema_of_csv` builder the Python dispatch arm uses.
-  pins: fnp-win-1/C-004, C-008, fnp-gen-1/C-002, C-003, C-004
+  **Gate pass (run 18a):** the round's `csv` code is clippy-clean under
+  `-D warnings`; `expr_fn::from_csv` / `schema_of_csv` carry `#[must_use]`.
+  pins: fnp-win-1/C-004, C-008, fnp-gen-1/C-002, C-003, C-004, C-006
 - `lib.rs` — crate-root stays at **182** under `check_lib_rs` (D-8 one-time
   FNP-WIN-1 grant; step 4 moved the `analyzer_rules()` home to
   `registration.rs`).

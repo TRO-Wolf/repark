@@ -6,7 +6,7 @@ use datafusion::arrow::array::{
     Float32Builder, Float64Builder, Int8Builder, Int16Builder, Int32Builder, Int64Builder,
     NullBufferBuilder, StringArray, StringBuilder, StructArray, TimestampMicrosecondBuilder,
 };
-use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Fields, TimeUnit};
+use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Fields};
 use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err, plan_err};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
@@ -44,7 +44,7 @@ fn is_string_type(data_type: &DataType) -> bool {
 fn literal_text(scalar: Option<&ScalarValue>) -> Option<String> {
     match scalar {
         Some(ScalarValue::Utf8(value) | ScalarValue::LargeUtf8(value)) => value.clone(),
-        Some(ScalarValue::Utf8View(Some(value))) => Some(value.to_string()),
+        Some(ScalarValue::Utf8View(Some(value))) => Some(value.clone()),
         _ => None,
     }
 }
@@ -58,7 +58,7 @@ pub(crate) fn csv_struct_type(schema_text: &str) -> Result<(DataType, Vec<(Strin
         );
     };
     let mut fields: Vec<(String, DataType)> = Vec::with_capacity(parsed.len());
-    for field in parsed.iter() {
+    for field in &parsed {
         let data_type = field.data_type();
         if matches!(
             data_type,
@@ -132,16 +132,12 @@ impl ScalarUDFImpl for SparkFromCsv {
         if args.arg_fields.len() < 2 || args.arg_fields.len() > 3 {
             return Err(wrong_num_args(args.arg_fields.len()));
         }
-        let schema_text = match literal_text(args.scalar_arguments[1]) {
-            Some(text) => text,
-            None => {
-                return Ok(Arc::new(Field::new(self.name(), DataType::Null, true)));
-            }
+        let Some(schema_text) = literal_text(args.scalar_arguments[1]) else {
+            return Ok(Arc::new(Field::new(self.name(), DataType::Null, true)));
         };
         if !is_string_type(args.arg_fields[0].data_type()) {
-            let name = args.arg_fields[0].name().to_string();
             return Err(input_type_error(
-                &name,
+                args.arg_fields[0].name(),
                 &schema_text,
                 args.arg_fields[0].data_type(),
             ));
@@ -244,10 +240,7 @@ fn field_builder(data_type: &DataType, capacity: usize) -> FieldBuilder {
         DataType::Date32 | DataType::Date64 => {
             FieldBuilder::Date32(Date32Builder::with_capacity(capacity))
         }
-        DataType::Timestamp(TimeUnit::Microsecond, _)
-        | DataType::Timestamp(TimeUnit::Millisecond, _)
-        | DataType::Timestamp(TimeUnit::Second, _)
-        | DataType::Timestamp(TimeUnit::Nanosecond, _) => {
+        DataType::Timestamp(_, _) => {
             FieldBuilder::Timestamp(TimestampMicrosecondBuilder::with_capacity(capacity))
         }
         DataType::Decimal128(precision, scale) => match Decimal128Builder::with_capacity(capacity)
@@ -297,6 +290,11 @@ fn finish_builder(builder: &mut FieldBuilder) -> ArrayRef {
     }
 }
 
+fn null_token(mark: impl FnOnce()) -> bool {
+    mark();
+    true
+}
+
 fn append_token(
     builder: &mut FieldBuilder,
     data_type: &DataType,
@@ -311,92 +309,81 @@ fn append_token(
         (FieldBuilder::Boolean(inner), _) => match token.to_ascii_lowercase().as_str() {
             "true" => inner.append_value(true),
             "false" => inner.append_value(false),
-            _ => {
-                inner.append_null();
-                return true;
-            }
+            _ => return null_token(|| inner.append_null()),
         },
-        (FieldBuilder::Int8(inner), _) => match token.parse::<i64>() {
-            Ok(value) if i8::try_from(value).is_ok() => {
-                inner.append_value(value as i8);
+        (FieldBuilder::Int8(inner), _) => {
+            if let Ok(value) = token.parse::<i8>() {
+                inner.append_value(value);
+            } else {
+                return null_token(|| inner.append_null());
             }
-            _ => {
-                inner.append_null();
-                return true;
+        }
+        (FieldBuilder::Int16(inner), _) => {
+            if let Ok(value) = token.parse::<i16>() {
+                inner.append_value(value);
+            } else {
+                return null_token(|| inner.append_null());
             }
-        },
-        (FieldBuilder::Int16(inner), _) => match token.parse::<i64>() {
-            Ok(value) if i16::try_from(value).is_ok() => {
-                inner.append_value(value as i16);
+        }
+        (FieldBuilder::Int32(inner), _) => {
+            if let Ok(value) = token.parse::<i32>() {
+                inner.append_value(value);
+            } else {
+                return null_token(|| inner.append_null());
             }
-            _ => {
-                inner.append_null();
-                return true;
+        }
+        (FieldBuilder::Int64(inner), _) => {
+            if let Ok(value) = token.parse::<i64>() {
+                inner.append_value(value);
+            } else {
+                return null_token(|| inner.append_null());
             }
-        },
-        (FieldBuilder::Int32(inner), _) => match token.parse::<i64>() {
-            Ok(value) if i32::try_from(value).is_ok() => {
-                inner.append_value(value as i32);
+        }
+        (FieldBuilder::Float32(inner), _) => {
+            if let Ok(value) = token.parse::<f32>() {
+                inner.append_value(value);
+            } else {
+                return null_token(|| inner.append_null());
             }
-            _ => {
-                inner.append_null();
-                return true;
+        }
+        (FieldBuilder::Float64(inner), _) => {
+            if let Ok(value) = token.parse::<f64>() {
+                inner.append_value(value);
+            } else {
+                return null_token(|| inner.append_null());
             }
-        },
-        (FieldBuilder::Int64(inner), _) => match token.parse::<i64>() {
-            Ok(value) => inner.append_value(value),
-            _ => {
-                inner.append_null();
-                return true;
-            }
-        },
-        (FieldBuilder::Float32(inner), _) => match token.parse::<f64>() {
-            Ok(value) => inner.append_value(value as f32),
-            _ => {
-                inner.append_null();
-                return true;
-            }
-        },
-        (FieldBuilder::Float64(inner), _) => match token.parse::<f64>() {
-            Ok(value) => inner.append_value(value),
-            _ => {
-                inner.append_null();
-                return true;
-            }
-        },
+        }
         (FieldBuilder::Utf8(inner), _) => inner.append_value(token),
         (FieldBuilder::Date32(inner), _) => {
-            match parse_csv_date(token, options.date_format.as_deref()) {
-                Some(date) => {
-                    let epoch = chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap_or(date);
-                    inner.append_value(date.signed_duration_since(epoch).num_days() as i32);
+            if let Some(date) = parse_csv_date(token, options.date_format.as_deref()) {
+                let epoch = chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap_or(date);
+                if let Ok(days) = i32::try_from(date.signed_duration_since(epoch).num_days()) {
+                    inner.append_value(days);
+                } else {
+                    return null_token(|| inner.append_null());
                 }
-                None => {
-                    inner.append_null();
-                    return true;
-                }
+            } else {
+                return null_token(|| inner.append_null());
             }
         }
         (FieldBuilder::Timestamp(inner), _) => {
-            let format = options
-                .timestamp_format
-                .as_deref()
-                .or(options.date_format.as_deref());
-            match parse_csv_timestamp(token, format) {
-                Some(micros) => inner.append_value(micros),
-                None => {
-                    inner.append_null();
-                    return true;
-                }
+            if let Some(micros) = parse_csv_timestamp(
+                token,
+                options
+                    .timestamp_format
+                    .as_deref()
+                    .or(options.date_format.as_deref()),
+            ) {
+                inner.append_value(micros);
+            } else {
+                return null_token(|| inner.append_null());
             }
         }
         (FieldBuilder::Decimal(inner), DataType::Decimal128(_, scale)) => {
-            match parse_decimal(token, *scale) {
-                Some(value) => inner.append_value(value),
-                None => {
-                    inner.append_null();
-                    return true;
-                }
+            if let Some(value) = parse_decimal(token, *scale) {
+                inner.append_value(value);
+            } else {
+                return null_token(|| inner.append_null());
             }
         }
         (FieldBuilder::Binary(inner), _) => inner.append_value(token.as_bytes()),
@@ -455,7 +442,7 @@ fn decode_records(
     let mut validity = NullBufferBuilder::new(documents.len());
     for row in 0..documents.len() {
         if documents.is_null(row) {
-            for builder in builders.iter_mut() {
+            for builder in &mut builders {
                 append_null(builder);
             }
             validity.append_null();
@@ -485,7 +472,7 @@ fn decode_records(
             } else if token_is_null(token, options) {
                 shown.push("null".to_string());
             } else {
-                shown.push(token.to_string());
+                shown.push((*token).clone());
             }
         }
         if options.mode == CsvMode::FailFast && malformed {
@@ -508,7 +495,7 @@ fn decode_records(
         }
     }
     let mut columns: Vec<ArrayRef> = Vec::with_capacity(builders.len());
-    for builder in builders.iter_mut() {
+    for builder in &mut builders {
         columns.push(finish_builder(builder));
     }
     let names: Vec<FieldRef> = fields

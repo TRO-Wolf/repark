@@ -278,6 +278,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **Step 4b (run 18a):** `schema_of_csv` stops refusing and binds its CSV literal
   plus an optional options dict the same way; the output name keeps Spark's
   `schema_of_csv(<csv text>)` form. pins: fnp-gen-1/C-003, C-004
+  **Gate pass (run 18a):** `from_csv` checks its schema argument with the
+  conditioned `NOT_COLUMN_OR_STR` bar. pins: fnp-gen-1/C-006
   **ABS-EXPR-1 (2026-09-13):** `cbrt` and `nullif` are one native `_scalar` call each
   (`expr_fn::cbrt` / `expr_fn::nullif`); both `when(...)` rewrites embedded their child
   more than once per level (cbrt 3×, nullif 2×). `nvl2` stays a `when` — each child is

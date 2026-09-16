@@ -151,7 +151,7 @@ impl ScalarUDFImpl for SparkSchemaOfCsv {
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        if args.arg_fields.len() < 1 || args.arg_fields.len() > 2 {
+        if args.arg_fields.is_empty() || args.arg_fields.len() > 2 {
             return Err(wrong_num_args(args.arg_fields.len()));
         }
         if !is_string_type(args.arg_fields[0].data_type())
@@ -191,14 +191,14 @@ impl ScalarUDFImpl for SparkSchemaOfCsv {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        if arg_types.len() < 1 || arg_types.len() > 2 {
+        if arg_types.is_empty() || arg_types.len() > 2 {
             return Err(wrong_num_args(arg_types.len()));
         }
         Ok(arg_types.to_vec())
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        if args.args.len() < 1 || args.args.len() > 2 {
+        if args.args.is_empty() || args.args.len() > 2 {
             return Err(wrong_num_args(args.args.len()));
         }
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
@@ -279,7 +279,7 @@ mod tests {
     #[test]
     fn schema_of_csv_applies_the_sep_option_before_inference() {
         assert_eq!(
-            shown(r#"SELECT schema_of_csv('1|x', map('sep', '|'))"#),
+            shown("SELECT schema_of_csv('1|x', map('sep', '|'))"),
             "STRUCT<_c0: INT, _c1: STRING>"
         );
     }

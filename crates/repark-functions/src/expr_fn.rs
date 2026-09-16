@@ -800,10 +800,12 @@ pub fn from_json(args: Vec<Expr>) -> Expr {
     call(crate::json::from_json_udf(), args)
 }
 
+#[must_use]
 pub fn from_csv(args: Vec<Expr>) -> Expr {
     call(crate::csv::from_csv::from_csv_udf(), args)
 }
 
+#[must_use]
 pub fn schema_of_csv(args: Vec<Expr>) -> Expr {
     call(crate::csv::schema_of_csv::schema_of_csv_udf(), args)
 }

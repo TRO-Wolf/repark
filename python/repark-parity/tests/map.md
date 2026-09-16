@@ -147,6 +147,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mirror row ratchets `functions_expr.py` 2175 → 2177 with
   `scripts/check_lib_py.py`.
   pins: fnp-gen-1/C-004
+- `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 7 (2026-09-16, run 18a):**
+  mirror row ratchets `functions_expr.py` 2177 → 2178 with
+  `scripts/check_lib_py.py`.
+  pins: fnp-gen-1/C-006
 - `test_cap_1_source_file_line_cap.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):**
   `dataframe/writer_readwriter.py` mirror row 1111 → 1105 with the script baseline
   (the bucketBy/sortBy/clusterBy bindings and action-check calls landed while the five

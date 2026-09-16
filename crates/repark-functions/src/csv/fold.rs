@@ -26,7 +26,7 @@ fn literal_text(scalar: &datafusion::common::ScalarValue) -> Option<String> {
     match scalar {
         datafusion::common::ScalarValue::Utf8(value)
         | datafusion::common::ScalarValue::LargeUtf8(value) => value.clone(),
-        datafusion::common::ScalarValue::Utf8View(Some(value)) => Some(value.to_string()),
+        datafusion::common::ScalarValue::Utf8View(Some(value)) => Some(value.clone()),
         _ => None,
     }
 }
@@ -53,12 +53,12 @@ fn unexpected_null() -> DataFusionError {
     )
 }
 
-fn unexpected_input_type(data_type: datafusion::arrow::datatypes::DataType) -> DataFusionError {
+fn unexpected_input_type(data_type: &datafusion::arrow::datatypes::DataType) -> DataFusionError {
     DataFusionError::Plan(format!(
         "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"schema_of_csv\" due to data \
          type mismatch: The first parameter requires the \"STRING\" type, however the input has \
          the type \"{}\". SQLSTATE: 42K09",
-        spark_type_name(&data_type)
+        spark_type_name(data_type)
     ))
 }
 
@@ -84,9 +84,9 @@ fn fold_literal_text(scalar: &ScalarValue) -> Result<String> {
             Some(value) => Ok(value.clone()),
             None => Err(unexpected_null()),
         },
-        ScalarValue::Utf8View(Some(value)) => Ok(value.to_string()),
+        ScalarValue::Utf8View(Some(value)) => Ok(value.clone()),
         ScalarValue::Utf8View(None) | ScalarValue::Null => Err(unexpected_null()),
-        _ => Err(unexpected_input_type(scalar.data_type())),
+        _ => Err(unexpected_input_type(&scalar.data_type())),
     }
 }
 
@@ -106,11 +106,12 @@ fn fold_cast_text(cast: &Cast) -> Result<String> {
             | datafusion::arrow::datatypes::DataType::LargeUtf8
             | datafusion::arrow::datatypes::DataType::Utf8View
     ) {
-        return Err(unexpected_input_type(scalar.data_type()));
+        return Err(unexpected_input_type(&scalar.data_type()));
     }
     match scalar {
-        ScalarValue::Utf8(Some(value)) | ScalarValue::LargeUtf8(Some(value)) => Ok(value.clone()),
-        ScalarValue::Utf8View(Some(value)) => Ok(value.to_string()),
+        ScalarValue::Utf8(Some(value))
+        | ScalarValue::LargeUtf8(Some(value))
+        | ScalarValue::Utf8View(Some(value)) => Ok(value.clone()),
         _ => Ok(scalar.to_string()),
     }
 }
@@ -147,7 +148,7 @@ fn fold_schema_options(arg: &Expr) -> Result<Option<super::CsvOptions>> {
 }
 
 fn fold_schema_of_csv(function: &ScalarFunction) -> Result<Option<Expr>> {
-    if function.args.len() < 1 || function.args.len() > 2 {
+    if function.args.is_empty() || function.args.len() > 2 {
         return Ok(None);
     }
     let text = fold_schema_text(&function.args[0])?;
@@ -219,13 +220,12 @@ fn fold_csv_call(expr: Expr) -> Result<Transformed<Expr>> {
             None => Ok(Transformed::no(Expr::ScalarFunction(function))),
         },
         Expr::Alias(alias) => {
-            if let Expr::Alias(inner) = alias.expr.as_ref() {
-                if matches!(inner.expr.as_ref(), Expr::Literal(_, _))
-                    && inner.name.starts_with("schema_of_csv(")
-                    && alias.name.starts_with("schema_of_csv(")
-                {
-                    return Ok(Transformed::yes(Expr::Alias(inner.clone())));
-                }
+            if let Expr::Alias(inner) = alias.expr.as_ref()
+                && matches!(inner.expr.as_ref(), Expr::Literal(_, _))
+                && inner.name.starts_with("schema_of_csv(")
+                && alias.name.starts_with("schema_of_csv(")
+            {
+                return Ok(Transformed::yes(Expr::Alias(inner.clone())));
             }
             let Expr::ScalarFunction(function) = alias.expr.as_ref() else {
                 return Ok(Transformed::no(Expr::Alias(alias)));
@@ -351,7 +351,7 @@ impl AnalyzerRule for CsvFold {
         Ok(transformed.data)
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "csv_fold"
     }
 }
