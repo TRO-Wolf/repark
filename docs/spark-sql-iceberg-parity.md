@@ -2144,6 +2144,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `crates/repark-core/src/session/tests/subquery.rs` (rule-level pins).
 - **Rationale** — FIXED. The `getCondition` gap on engine-raised refusals and the
   tvf-explode nullability are recorded residuals, not silent gaps.
+  2026-09-16 (SUBQ-CELLS-1): the six wanted cells are measured and pinned.
   pins: df-subquery-1/C-001..C-007
 
 ---
