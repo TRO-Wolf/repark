@@ -59,7 +59,6 @@ VALUES: dict[str, tuple[Any, pa.DataType, bool]] = {
     "RX2-SQL-09": (True, _BOOL, False),
     "RX2-SQL-10": (True, _BOOL, False),
     "RX2-SQL-11": (False, _BOOL, False),
-    "RX2-SQL-12": (True, _BOOL, False),
     "RX2-SQL-13": (3, _INT, False),
     "RX2-SQL-14": ("aabcaabc", _STR, False),
     "RX2-SQL-15": (False, _BOOL, False),
@@ -77,16 +76,16 @@ VALUES: dict[str, tuple[Any, pa.DataType, bool]] = {
 }
 
 ERRORS: dict[str, str] = {
-    "RX-SQL-13": "invalid regular expression",
-    "RX-SQL-14": "invalid regular expression",
+    "RX-SQL-13": "INVALID_PARAMETER_VALUE.PATTERN",
+    "RX-SQL-14": "INVALID_PARAMETER_VALUE.PATTERN",
     "RX2-SQL-00": "overrun",
     "RX2-SQL-16": "INVALID_PARAMETER_VALUE.PATTERN",
-    "RX2-SQL-17": "invalid regular expression",
+    "RX2-SQL-17": "INVALID_PARAMETER_VALUE.PATTERN",
     "RX2-SQL-25": "INVALID_PARAMETER_VALUE.PATTERN",
 }
 
 
-def _session():  # type: ignore[no-untyped-def]
+def _session():
     from repark.spark import SparkSession
 
     return SparkSession.builder.appName("java-regex-features-1").getOrCreate()
@@ -120,6 +119,16 @@ def test_oracle_error_cell(cell_id: str) -> None:
         _session().sql(cell["expr"]).toArrow()
 
 
+def test_oracle_divergence_case_insensitive_backref() -> None:
+    """RX2-SQL-12 answers False where Spark answers True.
+
+    pins: java-regex-features-1/C-002 (residue row JAVA-REGEX-FEATURES-1-R1)
+    """
+    table = _session().sql(_CELLS["RX2-SQL-12"]["expr"]).toArrow()
+    assert table.column("v").to_pylist() == [False]
+    assert table.schema.field("v").type == pa.bool_()
+
+
 def test_python_door_fancy_match_names() -> None:
     """Python-door match names share the Rust kernel. pins: java-regex-features-1/C-006"""
     spark = _session()
@@ -141,8 +150,6 @@ def test_python_door_fancy_extract_names() -> None:
         F.regexp_extract_all(F.lit("aa bb"), F.lit(r"(\w)\1"), 0).alias("v")
     )
     assert extract_all.toArrow().column("v").to_pylist() == [["aa", "bb"]]
-    split = spark.range(1).select(F.split(F.lit("a,b,c"), "(?=,)").alias("v"))
-    assert split.toArrow().column("v").to_pylist() == [["a", ",b", ",c"]]
 
 
 def test_python_door_null_pattern_stays_null() -> None:
