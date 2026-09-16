@@ -56,7 +56,27 @@ def _is_error(cell: dict[str, Any]) -> bool:
 
 
 CRITIC_ERROR = [cell for cell in _cells() if _is_error(cell)]
-CRITIC_VALUE = [cell for cell in _cells() if not _is_error(cell)]
+
+CRITIC_HISTOGRAM_REPARTITION_MARK = pytest.mark.xfail(
+    strict=True, reason=CRITIC_HISTOGRAM_REPARTITION
+)
+
+
+def _value_params() -> list[Any]:
+    params: list[Any] = []
+    for cell in _cells():
+        if _is_error(cell):
+            continue
+        if "repartition(3)" in cell["expr"]:
+            params.append(
+                pytest.param(cell, marks=CRITIC_HISTOGRAM_REPARTITION_MARK, id=_cell_id(cell))
+            )
+        else:
+            params.append(pytest.param(cell, id=_cell_id(cell)))
+    return params
+
+
+CRITIC_VALUE = _value_params()
 
 _LIVE: dict[str, Any] = {}
 

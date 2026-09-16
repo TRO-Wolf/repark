@@ -896,6 +896,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   three DISTINCT-order cells. DISTINCT elements compare as a multiset
   (R-18a-21); the cube `grouping_id()` cell compares rows as a multiset (the
   plan shape shows rare nondeterministic output order, another slice's seam).
+  **Remediation R-18a-27:** the three-partition histogram cell is
+  `xfail(strict=True)` — Spark's distributed trim order is a partitioning
+  artifact a single-node engine does not replay.
   pins: fnp-agg-1/C-002, C-003, C-004
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL

@@ -125,49 +125,40 @@ fn bin_value_type(input: &DataType) -> DataType {
 
 #[derive(Debug, Clone, Copy)]
 struct Bin {
-    sum: f64,
+    center: f64,
     count: f64,
 }
 
 impl Bin {
-    fn center(self) -> f64 {
-        self.sum / self.count
-    }
-
     fn merged(self, other: Self) -> Self {
+        let total = self.count + other.count;
         Self {
-            sum: self.sum + other.sum,
-            count: self.count + other.count,
+            center: self.center * (self.count / total) + other.center * (other.count / total),
+            count: total,
         }
     }
 }
 
-fn reduce_bins(values: &[f64], nbins: usize) -> Vec<Bin> {
-    let mut bins = values
+fn insert_bin(bins: &mut Vec<Bin>, center: f64, count: f64, nbins: usize) {
+    let position = bins
         .iter()
-        .map(|value| Bin {
-            sum: *value,
-            count: 1.0,
-        })
-        .collect::<Vec<_>>();
+        .position(|bin| center.total_cmp(&bin.center).is_le())
+        .unwrap_or(bins.len());
+    bins.insert(position, Bin { center, count });
     while bins.len() > nbins {
-        let mut best = (0, 1);
+        let mut best = 0;
         let mut best_distance = f64::INFINITY;
-        for left in 0..bins.len() {
-            for right in (left + 1)..bins.len() {
-                let distance = (bins[left].center() - bins[right].center()).abs();
-                if distance <= best_distance {
-                    best_distance = distance;
-                    best = (left, right);
-                }
+        for index in 0..bins.len() - 1 {
+            let distance = (bins[index + 1].center - bins[index].center).abs();
+            if distance <= best_distance {
+                best_distance = distance;
+                best = index;
             }
         }
-        let merged = bins[best.0].merged(bins[best.1]);
-        bins[best.0] = merged;
-        bins.remove(best.1);
+        let merged = bins[best].merged(bins[best + 1]);
+        bins[best] = merged;
+        bins.remove(best + 1);
     }
-    bins.sort_by(|left, right| left.center().total_cmp(&right.center()));
-    bins
 }
 
 impl AggregateUDFImpl for SparkHistogramNumeric {
@@ -247,9 +238,16 @@ impl AggregateUDFImpl for SparkHistogramNumeric {
     }
 
     fn state_fields(&self, _args: StateFieldsArgs) -> Result<Vec<FieldRef>> {
-        let items = Arc::new(Field::new("item", DataType::Float64, true));
+        let bin = DataType::Struct(
+            vec![
+                Field::new("x", DataType::Float64, true),
+                Field::new("y", DataType::Float64, true),
+            ]
+            .into(),
+        );
+        let items = Arc::new(Field::new("item", bin, true));
         Ok(vec![Arc::new(Field::new(
-            format_state_name(self.name(), "values"),
+            format_state_name(self.name(), "bins"),
             DataType::List(items),
             true,
         ))])
@@ -258,7 +256,7 @@ impl AggregateUDFImpl for SparkHistogramNumeric {
 
 #[derive(Debug)]
 struct HistogramAccumulator {
-    values: Vec<f64>,
+    bins: Vec<Bin>,
     nbins: usize,
     value_type: DataType,
 }
@@ -266,7 +264,7 @@ struct HistogramAccumulator {
 impl HistogramAccumulator {
     fn new(nbins: usize, value_type: DataType) -> Self {
         Self {
-            values: Vec::new(),
+            bins: Vec::new(),
             nbins,
             value_type,
         }
@@ -275,10 +273,27 @@ impl HistogramAccumulator {
 
 impl Accumulator for HistogramAccumulator {
     fn state(&mut self) -> Result<Vec<ScalarValue>> {
-        let values = Float64Array::from(self.values.clone());
+        let centers =
+            Float64Array::from(self.bins.iter().map(|bin| bin.center).collect::<Vec<_>>());
+        let counts = Float64Array::from(self.bins.iter().map(|bin| bin.count).collect::<Vec<_>>());
+        let bins = StructArray::new(
+            vec![
+                Arc::new(Field::new("x", DataType::Float64, true)),
+                Arc::new(Field::new("y", DataType::Float64, true)),
+            ]
+            .into(),
+            vec![Arc::new(centers), Arc::new(counts)],
+            None,
+        );
         Ok(vec![ScalarValue::List(Arc::new(single_row_list(
-            Arc::new(values),
-            DataType::Float64,
+            Arc::new(bins),
+            DataType::Struct(
+                vec![
+                    Field::new("x", DataType::Float64, true),
+                    Field::new("y", DataType::Float64, true),
+                ]
+                .into(),
+            ),
         )))])
     }
 
@@ -296,7 +311,7 @@ impl Accumulator for HistogramAccumulator {
             if doubles.is_null(row) {
                 continue;
             }
-            self.values.push(doubles.value(row));
+            insert_bin(&mut self.bins, doubles.value(row), 1.0, self.nbins);
         }
         Ok(())
     }
@@ -315,22 +330,41 @@ impl Accumulator for HistogramAccumulator {
             let group_values = values.value(group);
             let group_values = group_values
                 .as_any()
+                .downcast_ref::<StructArray>()
+                .ok_or_else(|| {
+                    DataFusionError::Plan("histogram_numeric state must hold bins".to_string())
+                })?;
+            let centers = group_values
+                .column(0)
+                .as_any()
                 .downcast_ref::<Float64Array>()
                 .ok_or_else(|| {
                     DataFusionError::Plan("histogram_numeric state must hold doubles".to_string())
                 })?;
-            for row in 0..group_values.len() {
-                if group_values.is_null(row) {
+            let counts = group_values
+                .column(1)
+                .as_any()
+                .downcast_ref::<Float64Array>()
+                .ok_or_else(|| {
+                    DataFusionError::Plan("histogram_numeric state must hold doubles".to_string())
+                })?;
+            for row in 0..centers.len() {
+                if centers.is_null(row) || counts.is_null(row) {
                     continue;
                 }
-                self.values.push(group_values.value(row));
+                insert_bin(
+                    &mut self.bins,
+                    centers.value(row),
+                    counts.value(row),
+                    self.nbins,
+                );
             }
         }
         Ok(())
     }
 
     fn evaluate(&mut self) -> Result<ScalarValue> {
-        if self.values.is_empty() {
+        if self.bins.is_empty() {
             return Ok(ScalarValue::List(Arc::new(ListArray::new_null(
                 Arc::new(Field::new(
                     "item",
@@ -346,9 +380,9 @@ impl Accumulator for HistogramAccumulator {
                 1,
             ))));
         }
-        let bins = reduce_bins(&self.values, self.nbins);
-        let centers = Float64Array::from(bins.iter().map(|bin| bin.center()).collect::<Vec<_>>());
-        let heights = Float64Array::from(bins.iter().map(|bin| bin.count).collect::<Vec<_>>());
+        let centers =
+            Float64Array::from(self.bins.iter().map(|bin| bin.center).collect::<Vec<_>>());
+        let heights = Float64Array::from(self.bins.iter().map(|bin| bin.count).collect::<Vec<_>>());
         let centers: ArrayRef = Arc::new(centers);
         let axis = cast(&centers, &self.value_type).map_err(|err| {
             DataFusionError::Plan(format!("histogram_numeric axis must cast back: {err}"))
@@ -376,7 +410,7 @@ impl Accumulator for HistogramAccumulator {
     }
 
     fn size(&self) -> usize {
-        self.values.len() * 8 + 64
+        self.bins.len() * 16 + 64
     }
 }
 
@@ -476,6 +510,73 @@ mod tests {
             .downcast_ref::<Float64Array>()
             .expect("doubles");
         assert_eq!(axis.values(), &[-4.0, 1.5, 2.5]);
+    }
+
+    #[tokio::test]
+    async fn merge_inserts_weighted_bins_in_order() {
+        let mut first = HistogramAccumulator::new(2, DataType::Float64);
+        first
+            .update_batch(&[Arc::new(Float64Array::from(vec![30.0])) as ArrayRef])
+            .expect("update");
+        let mut second = HistogramAccumulator::new(2, DataType::Float64);
+        second
+            .update_batch(&[Arc::new(Float64Array::from(vec![10.0, 20.0])) as ArrayRef])
+            .expect("update");
+        let mut merged = HistogramAccumulator::new(2, DataType::Float64);
+        for state in [
+            first.state().expect("state"),
+            second.state().expect("state"),
+        ] {
+            let arrays = state
+                .iter()
+                .map(|scalar| scalar.to_array_of_size(1).expect("state array"))
+                .collect::<Vec<_>>();
+            merged.merge_batch(&arrays).expect("merge");
+        }
+        assert_eq!(
+            merged
+                .bins
+                .iter()
+                .map(|bin| (bin.center, bin.count))
+                .collect::<Vec<_>>(),
+            vec![(10.0, 1.0), (25.0, 2.0)]
+        );
+    }
+
+    #[tokio::test]
+    async fn int_axis_truncates_toward_zero() {
+        let batch = run(
+            &ctx(),
+            "SELECT histogram_numeric(v, 3) FROM (VALUES (5), (1), (9), (3), (7), (2), (8), (4), (6), (0)) AS t(v)",
+        )
+        .await;
+        let lists = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<ListArray>()
+            .expect("ListArray");
+        let row = lists.value(0);
+        let structs = row
+            .as_any()
+            .downcast_ref::<StructArray>()
+            .expect("StructArray");
+        let axis = structs
+            .column(0)
+            .as_any()
+            .downcast_ref::<arrow::array::Int64Array>()
+            .expect("ints");
+        let heights = structs
+            .column(1)
+            .as_any()
+            .downcast_ref::<Float64Array>()
+            .expect("doubles");
+        assert_eq!(
+            (0..axis.len())
+                .map(|row| axis.value(row))
+                .collect::<Vec<_>>(),
+            vec![1, 4, 7]
+        );
+        assert_eq!(heights.values(), &[3.0, 3.0, 4.0]);
     }
 
     #[tokio::test]

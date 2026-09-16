@@ -1074,7 +1074,12 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   **FNP-AGG-1 run 18a step 3c (2026-09-16):** `histogram_numeric.rs` (Spark
   `NumericHistogram`: closest-pair merge with last-wins ties, `x` keeps the
   input numeric type, `y` is double; raw values in state so merge is exact;
-  `nBins` below 2 refused with Spark's `VALUE_OUT_OF_RANGE`).
+  `nBins` below 2 refused with Spark's `VALUE_OUT_OF_RANGE`). Remediation
+  R-18a-20: true Hive shape — state holds at most `nBins` sorted
+  `(center, count)` bins, each insert merges the closest adjacent pair when
+  over budget, `merge_batch` inserts the other's bins the same way; merged
+  center is `x1 * (y1 / total) + x2 * (y2 / total)` (matches Spark to the
+  ulp); int axis truncates toward zero.
   **FNP-AGG-1 run 18a step 3d (2026-09-16):** `grouping.rs` (`__repark_grouping`
   UDAF aliased `grouping`, `grouping_id` UDAF, and the `ResolveGroupingId`
   analyzer rule: bitmask from the plan's grouping sets, `Int8` / `Int64` out,
