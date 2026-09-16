@@ -241,11 +241,15 @@ exactly `text[s..p]` for some s ≤ p.
 | L-001/PERF-001/PERF-002 | FIX, narrowed (see FD-1) | `RX3-SQL-00…05` answer on the rebuilt native; `RX-SQL-18`/`RX2-SQL-01` stay false; `RX2-SQL-00` still refuses with the same `overrun` text. |
 | L-002/L-003/L-004/L-007/PERF-003/PERF-007 | FIX semantic lookbehind (R-18c-O8) | `RX3-SQL-06…12/15/16/17/26` green on the rebuilt native; 7 Rust unit tests per shape; PERF-007 dissolves (no expansion; `{1,40}` compiles as its own regex). Match loop in Rust around the engine: lookbehinds become `()` markers in a skeleton, X verifies against the text ending at the marker (greedy overshoot forced the slice; `$`/`\b` at the cut read end-of-assertion, unpinned, noted). 1M-attempt search budget per call, loud `overrun`, proven by its own trip pin. |
 | L-005 | FIX strip-names-when-mixed | `RX3-SQL-13/14` green; Rust unit test. Raw fancy-regex 0.11 refuses numbered backrefs beside any named group, so a mixed pattern strips names to numbers (pure-named patterns keep names; `$name` in a mixed-pattern replacement then reads empty, unpinned, noted). |
-| L-006 | IN PROGRESS | Step-4 commit lands it. |
+| L-006 | FIX collect walks the mid-surrogate step; replace/split DECLARED R2 | `RX3-SQL-18/19/22/23` green; Rust unit test pins count/collect agreement (3/4); `RX3-SQL-20/21` pin today's UTF-8 answers (`XX😀X`, `['','','😀','']`) under new parity row R2. |
+| RX3-SQL-24 | PIN (already correct) | `REGEX_GROUP_INDEX` error leg green, byte-identical shape to Spark. |
+| RX3-SQL-25 | PIN value false | Repark and Spark agree; R1 stays open for `RX2-SQL-12`. |
 | RX3-SQL-24 | PIN (already correct) | `REGEX_GROUP_INDEX` byte-matches Spark; error-leg pin. |
 | RX3-SQL-25 | PIN value false | Repark and Spark agree (`false`); residue row R1 stays open for `RX2-SQL-12`. |
-| PERF-004 | IN PROGRESS | Step-4 commit lands it. |
-| PERF-005 | IN PROGRESS | Step-4 commit lands it. |
+| PERF-004 | FIX borrow when no `$` | One-line `template` borrow; C-007 re-measured in step 5. |
+| PERF-005 | NOT TAKEN | A captures-iterator pass would bypass the pinned walk (mid-surrogate, verify, overflow); the second pass is the price of the pinned semantic. |
+| PERF-006 | NOTE | 10× budget scales just-under-budget rows ~10× before tripping; the trip pin still trips (~2 s at 100M). |
+| PYPERF-001 | HAND-OFF, no edit | Parity-doc row names `F.split` (`functions_expr.py`) and owner run 18a. |
 | PERF-006 | LEDGER NOTE | 10× budget scales just-under-budget rows ~10×; numbers below. |
 | PYPERF-001 | HAND-OFF, no edit (fence) | Registry row naming the `F.split` call and cell. |
 
@@ -269,7 +273,8 @@ Step outcomes: step 1 red `8726d6fd` (17 fail / 8 pass as predicted); step 2
 13 all in step-3/4 scope; `cargo test -p repark-functions --lib spark_regex`
 37 pass (trip pin still trips at 100M, ~2 s). Step 3: RX3 lookbehind/backref
 legs green (only 19/23 L-006 red remain); engine suite 32 pass; full lib
-suite 765 pass.
+suite 765 pass. Step 4: file 87 pass (86 + R2 declared); engine suite 46
+pass; R2 + PYPERF-001 + BACKTRACK-1/FIXED-refresh registry rows.
 
 FD-2 (forced, measured): `RX3-SQL-03` (`a*(?=b)` on 10001 a's, Spark `false`)
 needs ~60M backtrack pops (limit sweep 10M→200M: trips through 30M, `false`

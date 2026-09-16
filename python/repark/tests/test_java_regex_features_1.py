@@ -154,6 +154,25 @@ def test_oracle_divergence_case_insensitive_backref() -> None:
     assert table.schema.field("v").type == pa.bool_()
 
 
+def test_oracle_divergence_lone_surrogate_replace_split() -> None:
+    """RX3-SQL-20/21 pin today's UTF-8 answer where Spark makes lone surrogates.
+
+    Spark splits the pair and inserts between the halves (`X?X?X`,
+    `['?', '?', '']` with `?` a lone surrogate); a UTF-8 string cannot carry
+    those, so the engine inserts at the representable positions instead.
+
+    pins: java-regex-features-1/C-002 (residue row JAVA-REGEX-FEATURES-1-R2)
+    """
+    replace = _session().sql(_CELLS["RX3-SQL-20"]["expr"]).toArrow()
+    assert replace.column("v").to_pylist() == ["XX\U0001F600X"]
+    assert replace.schema.field("v").type == pa.string()
+    split = _session().sql(_CELLS["RX3-SQL-21"]["expr"]).toArrow()
+    assert split.column("v").to_pylist() == [["", "", "\U0001F600", ""]]
+    assert split.schema.field("v").type == pa.list_(
+        pa.field("element", pa.string(), nullable=False)
+    )
+
+
 def test_python_door_fancy_match_names() -> None:
     """Python-door match names share the Rust kernel. pins: java-regex-features-1/C-006"""
     spark = _session()

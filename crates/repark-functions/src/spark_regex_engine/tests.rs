@@ -378,3 +378,24 @@ fn lookbehind_search_budget_trips_loud() {
     assert!(message.contains("overrun"), "{message}");
     assert!(message.contains("lookbehind search budget"), "{message}");
 }
+
+#[test]
+fn zero_width_matches_step_supplementary_chars() {
+    let compiled = compile_spark_regex("(?=)", "regexp_count").expect("compiles");
+    assert_eq!(compiled.count_non_overlapping("😀").expect("runs"), 3);
+    assert_eq!(
+        compiled
+            .collect_matches("😀", usize::MAX)
+            .expect("runs")
+            .len(),
+        3
+    );
+    assert_eq!(compiled.count_non_overlapping("😀x").expect("runs"), 4);
+    assert_eq!(
+        compiled
+            .collect_matches("😀x", usize::MAX)
+            .expect("runs")
+            .len(),
+        4
+    );
+}

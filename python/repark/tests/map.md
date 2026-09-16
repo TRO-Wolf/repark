@@ -4977,6 +4977,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   true: the nullability rides in on `repeat(...)` (another unit's kernel), while
   `rlike` itself propagates correctly. `RX3-SQL-20/21` pin today's UTF-8 answer as DECLARED row R2 (lone surrogates are unrepresentable).
   pins: java-regex-features-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **Remediation round 1 (2026-09-16):** `RX3-SQL-00…26` join the fixture and the
+  value/error legs (group-index leg pins `REGEX_GROUP_INDEX`); the R2 declared
+  test pins `XX😀X` / `['', '', '😀', '']`.
 
 - `test_fnp_9_collections_json.py` — **FNP-9/10 (2026-09-05):** the collections and JSON
   families on both Spark-facade doors against the live PySpark 4.1.2 oracle — `get_json_object`

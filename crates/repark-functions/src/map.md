@@ -263,7 +263,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   search budget per call, or a
   catastrophic-class pattern (unbounded-quantified group over alternation or nested
   loops) on a haystack over 10000 bytes (Java's recursive matcher overflows there —
-  measured `StackOverflowError` at 40000). pins: java-regex-features-1/C-001 … C-005,
+  measured `StackOverflowError` at 40000). Match collection walks the same
+  mid-surrogate step as counting, so zero-width counts agree on supplementary text;
+  the replace template borrows when no `$` is present.
+  pins: java-regex-features-1/C-001 … C-005,
   C-007 (plain patterns stay on the DFA path)
 - `spark_regex_lookbehind.rs` — **JAVA-REGEX-FEATURES-1 (2026-09-16):** the
   semantic lookbehind the engine compiles instead of normalizing (file-size split

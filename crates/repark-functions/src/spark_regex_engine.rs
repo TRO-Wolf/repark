@@ -796,19 +796,39 @@ impl SparkRegex {
             return Ok(found_all);
         }
         if self.is_empty_pattern() {
-            for offset in text
-                .char_indices()
-                .map(|(offset, _)| offset)
-                .chain([text.len()])
-            {
+            for (offset, character) in text.char_indices() {
                 if let Some(found) = self.find_from(text, offset)? {
                     found_all.push(found);
+                    if character.len_utf16() == 2 {
+                        found_all.push(found);
+                    }
                 }
+            }
+            if let Some(found) = self.find_from(text, text.len())? {
+                found_all.push(found);
             }
             return Ok(found_all);
         }
         let mut byte = 0usize;
+        let mut mid_surrogate = false;
         loop {
+            if mid_surrogate {
+                if self.matches_at_mid_surrogate_index()? {
+                    found_all.push((byte, byte));
+                    if found_all.len() >= max_matches {
+                        break;
+                    }
+                    if found_all.len() > usize::try_from(i32::MAX).unwrap_or(usize::MAX) {
+                        return Err(count_overflow());
+                    }
+                }
+                let Some(character) = text.get(byte..).and_then(|rest| rest.chars().next()) else {
+                    break;
+                };
+                byte += character.len_utf8();
+                mid_surrogate = false;
+                continue;
+            }
             if byte > text.len() {
                 break;
             }
@@ -829,7 +849,12 @@ impl SparkRegex {
                 let Some(character) = text[found.0..].chars().next() else {
                     break;
                 };
-                byte = found.0 + character.len_utf8();
+                if character.len_utf16() == 2 {
+                    mid_surrogate = true;
+                    byte = found.0;
+                } else {
+                    byte = found.0 + character.len_utf8();
+                }
             } else {
                 byte = found.1;
             }
@@ -897,19 +922,23 @@ impl SparkRegex {
 
     pub(crate) fn replace_all(&self, text: &str, replacement: &str) -> Result<String> {
         self.check_wire(text)?;
-        let stripped = strip_dollar_braces(replacement);
+        let stripped;
+        let template = if replacement.contains('$') {
+            stripped = strip_dollar_braces(replacement);
+            stripped.as_str()
+        } else {
+            replacement
+        };
         match &self.engine {
-            SparkEngine::Plain(regex) => {
-                Ok(regex.replace_all(text, stripped.as_str()).into_owned())
-            }
+            SparkEngine::Plain(regex) => Ok(regex.replace_all(text, template).into_owned()),
             SparkEngine::Fancy(regex) => {
                 let mut out = String::with_capacity(text.len());
                 let mut last = 0usize;
                 for (start, end) in self.collect_matches(text, usize::MAX)? {
                     out.push_str(&text[last..start]);
                     match regex.captures_from_pos(text, start) {
-                        Ok(Some(caps)) => caps.expand(&stripped, &mut out),
-                        Ok(None) => out.push_str(&stripped),
+                        Ok(Some(caps)) => caps.expand(template, &mut out),
+                        Ok(None) => out.push_str(template),
                         Err(error) => return Err(self.overrun(error)),
                     }
                     last = end;
@@ -936,7 +965,7 @@ impl SparkRegex {
                     }
                     let (start, end) = matched.span;
                     out.push_str(&text[last..start]);
-                    compiled.expand_verified(&mut out, &matched, &stripped, text);
+                    compiled.expand_verified(&mut out, &matched, template, text);
                     last = end;
                     if start == end {
                         if start == text.len() {

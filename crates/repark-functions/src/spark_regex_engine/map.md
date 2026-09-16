@@ -20,6 +20,9 @@ operations both engines serve.
   the long-standing `Q15-13` text leg stays green. pins: java-regex-features-1/C-008
   **Step 7:** unicode and quoting regression pins; the routing test cites the
   cost clause. pins: java-regex-features-1/C-001, C-007
+  **Remediation round 1 (2026-09-16):** collect walks the mid-surrogate step so
+  zero-width counts agree on supplementary text; the replace template borrows when
+  no `$` is present. pins: java-regex-features-1/C-002
 
 ## Pointers
 
