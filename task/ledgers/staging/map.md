@@ -805,6 +805,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   residue rows BL-19-POS-SELX and BL-19-LATERAL-1 filed. Branch
   `feat/unresolved-routine-1`.
   pins: unresolved-routine-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **Remediation round 1 (2026-09-16):** token-based call-site matching (L-001 /
+  L-002 / L-003), the `schema_of_csv` divergence tripwire (L-004), UR3 pins,
+  residue row BL-19-POS-FILTER, hand-offs H-004/H-005. All clauses stay PROVEN.
+  pins: unresolved-routine-1/C-001, C-002, C-003, C-006, C-007
 - [fnp-11b-ledger.md](fnp-11b-ledger.md) —
   **FNP-11B step 1 (2026-09-15), in flight:** datetime format parsing, the TIME
   family, BL-13 and BL-14 — ledger with D-1…D-10 (card D-1…D-6, run-16a D-7…D-10

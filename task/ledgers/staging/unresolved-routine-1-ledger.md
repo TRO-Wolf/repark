@@ -165,13 +165,15 @@ per the card's edit-only-the-assertion rule.
   `bare_nullary.rs::non_schema_error_passes_through`: fixtures swapped to a
   genuinely unrelated `Plan` error — the old-shape blessing moves to
   `unknown_routine.rs` tests, which pin the new shape.
-- W-0 bench classifier (`python/repark-parity/bench/windows/classify.py`, outside
-  this lane's fence — one needle, announced to the bench owner): Finding F-004 —
-  the full-suite run showed `live_absent == ()` because the absent needles only
-  knew DataFusion's `invalid function`; Spark's `UNRESOLVED_ROUTINE` filed as
-  `error`. The `_ABSENT_NEEDLES` gain `unresolved_routine` (the old needle stays,
-  still pinned), plus one classifier pin in `test_w0_window_bench.py`. Without
-  this, the C-006 w0 edit alone leaves the suite red.
+- W-0 bench classifier (round-1 F-004, still load-bearing): the full-suite run
+  had shown `live_absent == ()` because the absent needles only knew DataFusion's
+  `invalid function`; round 1 added the `unresolved_routine` needle (the old
+  needle stays, still pinned) plus one classifier pin in `test_w0_window_bench.py`
+  (`python/repark-parity/bench/windows/classify.py` is outside this lane's fence —
+  announced to the bench owner in round 1). Round 2 re-verified them against the
+  token rewrite (`test_remaining_absents_fail_at_planning` green standalone and in
+  both full runs) and changed nothing there; a redundant re-application in this
+  round was a no-op (blame: `63f40f67a`).
 
 ### names Spark has that the SQL door lacks
 
@@ -241,6 +243,35 @@ per the card's edit-only-the-assertion rule.
 | RED (round 2) | `.venv/bin/python -m pytest python/repark/tests/test_unresolved_routine_1.py -q -p no:cacheprovider` → 8 failed, 58 passed on `63f40f67`. The 8 are UR3-SQL-00…07 (literal-case leak, three decoy positions, backticked REQUIRES class, two backticked renders, dotted-quotient structure); UR3-SQL-08…15 and all UR3-PY pins already hold (guards for the rewrite). |
 
 Retired-assertion re-check (L-004 table): `binary` — Spark HAS (TYPEOF-SQL-24 ok), pin records repark's refusal, docstring claims blockage only; `try_*` ×12 — Spark HAS, ANSI-door unresolved pins, no Spark-shape claim; `shuffle`-over-NULL — Spark HAS shuffle, ANSI unreachability pin, Spark-door answers beside it; `withField`/`dropFields`/`astype`/`name`/`outer` — Spark SQL lacks the names, true-shape pins; `schema_of_csv` — Spark HAS (UR3-SQL-13 execution error), reframed tripwire above; w0 absents — planning-miss disjunct, classifier needle added (F-004).
+
+## Remediation round 1 — gates (2026-09-16)
+
+- `cargo test -p repark-core --lib` → exit 0: 552 passed, 0 failed, 1 ignored
+  (26 `unknown_routine` tests, one per decoy shape).
+- `make rust-clippy` → exit 0, Finished, no errors.
+- `make verify` → exit 0, zero failure markers (dag, sizes, lib-py, conventions,
+  docstrings, ledgers, grammar, compaction, links all clean).
+- Release native: rebuilt after the final Rust edit; mtime-proofed current
+  afterwards (no tracked `.rs`/`.toml` newer than the `.so` in the worktree),
+  so no second rebuild.
+- Pin file: 66 passed on the rebuilt native (45 round-1 + 21 round-2).
+- `PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest
+  python/repark-parity/tests -q` → exit 0: 757 passed, 2 skipped, 12 xfailed.
+- `.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider` →
+  see F-005.
+
+Finding F-005 (facade full-suite stability under box load, not this unit): the
+first attempt stalled 24+ min at 85% with the worker idle on a futex (zero
+failures to that point; owned run, killed). Head slice (303 files) then ran
+7952 passed, tail slice (45 files) 1152 passed, both exit 0 — the stall does
+not reproduce and no slice implicates this unit's paths. Second full attempt:
+9103 passed with one failure in
+`test_h3_spill_matrix.py::test_a_pool_refusal_is_the_documented_spark_shaped_exception[window_unbounded-64M]`
+(`Failed: DID NOT RAISE`), a 64M-pool threshold test: it passed round-1's full
+run and passes standalone 7/7, and this unit cannot suppress a refusal (the
+mapper only reshapes raised errors carrying the routine markers). Third full
+attempt → exit 0: 9104 passed, 367 skipped, 33 xfailed — the clean single line;
+the flake never reproduced outside load.
 
 ## 5. Gates (step 8, 2026-09-16, release native rebuilt after the final Rust edit)
 

@@ -9501,6 +9501,24 @@ field NAME.
   hand-off H-001 in the unit ledger). The class is pinned from Rust so the residue is one
   number, not a shape.
 
+### BL-19-POS-FILTER — string `filter`/`where` report the quoted-rewrite position, not the fragment position
+
+- **repark** — `spark.range(1).filter("id = nosuchfn(1)")` raises `[UNRESOLVED_ROUTINE]` with
+  `line 1 pos 7` (the name's span in the identifier-quoted `` `"id" = nosuchfn(1)` `` the facade
+  plans), where Spark reports `line 1 pos 5` relative to the user fragment; same for
+  `where("id = 1 AND nosuchfn(id) = 1")` (pos 13 vs 11).
+- **Apache Spark** — `[UNRESOLVED_ROUTINE] Cannot resolve routine ``nosuchfn`` on search path
+  [``system``.``builtin``, ``system``.``session``, ``spark_catalog``.``default``]. SQLSTATE: 42883;
+  line 1 pos 5` (UR3-PY-00) and `… line 1 pos 11` (UR3-PY-03).
+  *(oracle: live PySpark 4.1.2, 2026-09-16,
+  `python/repark/tests/unresolved_routine_1_spark_oracle.json` cells UR3-PY-00, UR3-PY-03.)*
+- **Pin** — `python/repark/tests/test_unresolved_routine_1.py::test_py_door_filter_fragments_answer_spark_class`
+  (class plus search path plus SQLSTATE; the position is the quoted one).
+- **Rationale** — BACKLOG, dated 2026-09-16. The native `filter_sql` seam only sees the quoted
+  predicate; recovering the fragment offset would require the original text, which only the
+  facade call (`dataframe/core.py`, run 18b's file — P2 hand-off H-004 in the unit ledger) can
+  pass. The class is pinned from Rust so the residue is one number, not a shape.
+
 ### BL-19-LATERAL-1 — an unknown LATERAL VIEW generator refuses without Spark's `ROUTINE_NOT_FOUND`
 
 - **repark** — `SELECT x FROM range(1) LATERAL VIEW nosuchgen(array(1)) g AS x` raises
