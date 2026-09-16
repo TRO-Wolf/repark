@@ -669,5 +669,219 @@
    "raises": "AnalysisException",
    "sqlstate": "54006"
   }
+ },
+ "freq_signed_zero_cap1": {
+  "result": {
+   "columns": [
+    "d_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'d_freqItems': [0.0]}"
+   ],
+   "schema": "struct<d_freqItems:array<double>>"
+  }
+ },
+ "freq_signed_zero_default": {
+  "result": {
+   "columns": [
+    "d_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'d_freqItems': [0.0]}"
+   ],
+   "schema": "struct<d_freqItems:array<double>>"
+  }
+ },
+ "freq_signed_zero_cap2_with_one": {
+  "result": {
+   "columns": [
+    "d_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'d_freqItems': [0.0, 1.0]}"
+   ],
+   "schema": "struct<d_freqItems:array<double>>"
+  }
+ },
+ "freq_signed_zero_float_cap1": {
+  "result": {
+   "columns": [
+    "d_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'d_freqItems': [0.0]}"
+   ],
+   "schema": "struct<d_freqItems:array<float>>"
+  }
+ },
+ "freq_nan_keys_cap1": {
+  "result": {
+   "columns": [
+    "d_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'d_freqItems': []}"
+   ],
+   "schema": "struct<d_freqItems:array<double>>"
+  }
+ },
+ "freq_two_pos_zero_cap1": {
+  "result": {
+   "columns": [
+    "d_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'d_freqItems': [0.0]}"
+   ],
+   "schema": "struct<d_freqItems:array<double>>"
+  }
+ },
+ "freq_nan_keys_default": {
+  "result": {
+   "columns": [
+    "d_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'d_freqItems': [nan, nan]}"
+   ],
+   "schema": "struct<d_freqItems:array<double>>"
+  }
+ },
+ "freq_signed_zero_neg_first_default": {
+  "result": {
+   "columns": [
+    "d_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'d_freqItems': [-0.0]}"
+   ],
+   "schema": "struct<d_freqItems:array<double>>"
+  }
+ },
+ "freq_array_pm_zero_cap1": {
+  "result": {
+   "columns": [
+    "ar_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'ar_freqItems': []}"
+   ],
+   "schema": "struct<ar_freqItems:array<array<double>>>"
+  }
+ },
+ "freq_array_nan_cap1": {
+  "result": {
+   "columns": [
+    "ar_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'ar_freqItems': [[nan]]}"
+   ],
+   "schema": "struct<ar_freqItems:array<array<double>>>"
+  }
+ },
+ "freq_struct_nan_cap1": {
+  "result": {
+   "columns": [
+    "st_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'st_freqItems': [{'f': nan}]}"
+   ],
+   "schema": "struct<st_freqItems:array<struct<f:double>>>"
+  }
+ },
+ "transpose_binary_invalid_utf8": {
+  "result": {
+   "columns": [
+    "key",
+    "ok",
+    "��"
+   ],
+   "nullable": [
+    false,
+    true,
+    true
+   ],
+   "rows": [
+    "{'key': 'a', 'ok': 2, '��': 1}"
+   ],
+   "schema": "struct<key:string,ok:int,��:int>"
+  }
+ },
+ "transpose_binary_invalid_utf8_repr": {
+  "result": [
+   [
+    "key",
+    [
+     107,
+     101,
+     121
+    ]
+   ],
+   [
+    "ok",
+    [
+     111,
+     107
+    ]
+   ],
+   [
+    "��",
+    [
+     65533,
+     65533
+    ]
+   ]
+  ]
+ },
+ "transpose_binary_null_index": {
+  "result": {
+   "columns": [
+    "key",
+    "ok"
+   ],
+   "nullable": [
+    false,
+    true
+   ],
+   "rows": [
+    "{'key': 'a', 'ok': 2}"
+   ],
+   "schema": "struct<key:string,ok:int>"
+  }
  }
 }

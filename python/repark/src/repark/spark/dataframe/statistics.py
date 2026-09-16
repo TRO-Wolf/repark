@@ -398,20 +398,30 @@ def _freq_items(
     if not names:
         return frame.select()
     available = frame.columns
-    resolved: list[str] = []
+    available_set = set(available)
+    folded_first: dict[str, str] = {}
+    for candidate in available:
+        folded_first.setdefault(candidate.casefold(), candidate)
+    by_display: dict[str, list[str]] = {}
+    if frame._display_names is not None and frame._engine_names is not None:
+        for display_name, engine_name in zip(
+            frame._display_names, frame._engine_names, strict=True
+        ):
+            by_display.setdefault(display_name, []).append(engine_name)
+    engines: list[str] = []
     for name in names:
-        if name not in available:
-            folded = name.casefold()
-            hits = [candidate for candidate in available if candidate.casefold() == folded]
-            if not hits:
+        target = name
+        if name not in available_set:
+            hit = folded_first.get(name.casefold())
+            if hit is None:
                 _raise_unresolved_column(name, sorted(available))
-            name = hits[0]
-        resolved.append(name)
-    engines = [frame._engine_field_for_display(display) for display in resolved]
+            target = hit
+        matches = by_display.get(target, [])
+        engines.append(matches[0] if len(matches) == 1 else frame._engine_field_for_display(target))
     from repark import _native
 
     native = _native.freq_items(frame._plan(), engines, int(1.0 / support_value))
     child = frame._spawn(native)
     child._engine_names = [f"__repark_freq_items_{index}" for index in range(len(engines))]
-    child._display_names = [f"{display}_freqItems" for display in resolved]
+    child._display_names = [f"{name}_freqItems" for name in names]
     return child

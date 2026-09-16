@@ -297,7 +297,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `statistics.py` owns the statistics bodies behind the public wrappers (DFCORE-3,
   moved from `core.py` and `DataFrameStatFunctions.freqItems`; DF-RUST-3, 2026-09-15:
   `freqItems` runs the `FreqItemCounter` UDAF through `frame._plan().freq_items` —
-  the R-DF-BATCH2 refusal is retired, EX-DF-19 flips to FIXED). `summary` computes every
+  the R-DF-BATCH2 refusal is retired, EX-DF-19 flips to FIXED; round-2 remediation
+  2026-09-16: name resolution builds one `available`/`folded`/`by_display` lookup
+  once, keeps requested spelling on case-insensitive hits, and `_java_double` is
+  recorded duplication against the repark-functions renderer, Y-3). `summary` computes every
   requested statistic for every target column in chunked native aggregate passes over
   the frame's own plan (`aggregate([], exprs)` on quoted engine-field refs — no SQL
   text, no temp view — one plan per ~50 columns, chunk results cross-joined on a

@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::sync::Arc;
 
-use arrow::array::{ArrayRef, StringArray, new_empty_array};
+use arrow::array::{Array, ArrayRef, StringArray, new_empty_array};
 use arrow::compute::cast;
 use arrow::datatypes::{DataType, Field, FieldRef, IntervalUnit, Schema, SchemaRef, TimeUnit};
 use arrow::record_batch::{RecordBatch, RecordBatchOptions};
@@ -186,15 +186,39 @@ fn build_output(
             })
     });
     sort_failure?;
-    let index_strings = cast(&concat_column(collected, index_position)?, &DataType::Utf8)?;
-    let index_names = index_strings
-        .as_any()
-        .downcast_ref::<StringArray>()
-        .ok_or_else(|| {
-            TransposeError::Engine(Error::Analysis(
-                "transpose index cast to string did not produce Utf8".to_string(),
-            ))
-        })?;
+    let index_names: Vec<String> = match fields[index_position].data_type() {
+        DataType::Binary
+        | DataType::LargeBinary
+        | DataType::FixedSizeBinary(_)
+        | DataType::BinaryView => index_scalars
+            .iter()
+            .map(|scalar| match scalar {
+                ScalarValue::Binary(Some(bytes))
+                | ScalarValue::LargeBinary(Some(bytes))
+                | ScalarValue::FixedSizeBinary(_, Some(bytes))
+                | ScalarValue::BinaryView(Some(bytes)) => {
+                    Ok(String::from_utf8_lossy(bytes).into_owned())
+                }
+                other => Err(TransposeError::Engine(Error::Analysis(format!(
+                    "transpose binary index produced non-binary scalar {other:?}"
+                )))),
+            })
+            .collect::<std::result::Result<Vec<String>, TransposeError>>()?,
+        _ => {
+            let index_strings = cast(&concat_column(collected, index_position)?, &DataType::Utf8)?;
+            let names = index_strings
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .ok_or_else(|| {
+                    TransposeError::Engine(Error::Analysis(
+                        "transpose index cast to string did not produce Utf8".to_string(),
+                    ))
+                })?;
+            (0..names.len())
+                .map(|row| names.value(row).to_string())
+                .collect()
+        }
+    };
     let common_arrow = common_type.to_arrow();
     let mut value_columns: Vec<ArrayRef> = Vec::with_capacity(fields.len().saturating_sub(1));
     for position in 0..fields.len() {
@@ -224,7 +248,7 @@ fn build_output(
             common_arrow.clone(),
             true,
         )));
-        display_names.push(index_names.value(*row).to_string());
+        display_names.push(index_names[*row].clone());
         if output_rows == 0 {
             out_columns.push(new_empty_array(&common_arrow));
             continue;

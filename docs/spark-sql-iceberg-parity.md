@@ -1821,20 +1821,38 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `NOT_LIST_OR_TUPLE`, a `Column` element raises `NOT_ITERABLE`, `support` outside `[1e-4, 1]`
   raises `IllegalArgumentException` with the `requirement failed: Support must be in [1e-4, 1]`
   message (Java-double rendering), and a non-float `support` raises `PySparkTypeError`
-  `NOT_FLOAT`. An unknown column raises `UNRESOLVED_COLUMN.WITH_SUGGESTION`.
+  `NOT_FLOAT`. An unknown column raises `UNRESOLVED_COLUMN.WITH_SUGGESTION`. Frequency-map
+  keys compare with primitive IEEE `==` on floats — `+0.0` and `-0.0` are one key (the
+  first-inserted spelling survives) and every `NaN` row equals nothing, so a NaN insert
+  always misses and is appended (at capacity it takes the eviction branch, which is how two
+  NaNs at capacity 1 answer `[]` and two NaNs at the default capacity answer `[nan, nan]`).
+  Floats nested inside `array`/`struct` keys keep bit-exact equality (`[nan]` equals `[nan]`,
+  `[0.0]` does not equal `[-0.0]`), matching Spark's boxed-container `equals`. A
+  case-insensitive `cols` hit keeps the requested spelling in the output name
+  (`freqItems(["I"])` → `I_freqItems`).
 - **Apache Spark** — same answers on the same inputs; the array order is likewise unspecified.
   Spark classic rejects `support=1` (int) with a Py4J `TypeError`; Spark Connect accepts it as
-  float — repark follows Connect and records the divergence. *(oracle: recorded — cells
-  `freq_default`, `freq_support_05`, `freq_stat`, `freq_support_one`, `freq_empty_df`,
-  `freq_many_distinct`, `freq_struct_col`, `freq_array_col`, `freq_bool_date`,
-  `freq_decimal_ts`, `freq_dup_col`, `freq_string_arg`, `freq_col_obj`, `freq_support_tiny`,
-  `freq_support_gt_one`, `freq_missing_col`, `freq_empty_cols` in
+  float — repark follows Connect and records the divergence. Spark's counter is a
+  `mutable.Map[Any, Long]` keyed by `BoxesRunTime` equality: primitive `==` for numbers,
+  `equals` for containers, and identity for `MapData` — so Spark never dedupes map keys at
+  all (two identical `{a: 1}` rows answer `[{'a': 1}, {'a': 1}]`), while repark's map keys
+  dedupe by content today; that divergence is open in the DF-RUST-3 ledger (C-010). *(oracle:
+  recorded — cells `freq_default`, `freq_support_05`, `freq_stat`, `freq_support_one`,
+  `freq_empty_df`, `freq_many_distinct`, `freq_struct_col`, `freq_array_col`,
+  `freq_bool_date`, `freq_decimal_ts`, `freq_dup_col`, `freq_string_arg`, `freq_col_obj`,
+  `freq_support_tiny`, `freq_support_gt_one`, `freq_missing_col`, `freq_empty_cols`,
+  `freq_signed_zero_cap1`, `freq_signed_zero_default`, `freq_signed_zero_cap2_with_one`,
+  `freq_signed_zero_float_cap1`, `freq_signed_zero_neg_first_default`, `freq_nan_keys_cap1`,
+  `freq_nan_keys_default`, `freq_two_pos_zero_cap1`, `freq_array_pm_zero_cap1`,
+  `freq_array_nan_cap1`, `freq_struct_nan_cap1` in
   `python/repark/tests/facade_df_rust3_oracle.json`.)*
 - **Pin** — `python/repark/tests/test_df_rust3_freqitems_transpose.py` (freq pins),
   `python/repark/tests/test_examples_dataframe_d.py::test_stat_freq_items_answers`
-- **Rationale** — IMPLEMENTED 2026-09-15 (DF-RUST-3, rulings R-1..R-6). Recorded divergences:
-  int `support` is accepted as float (the classic Py4JError is a bridge artefact, R-4); result
-  array order is unspecified on both engines (hash map).
+- **Rationale** — IMPLEMENTED 2026-09-15 (DF-RUST-3, rulings R-1..R-6); float-key equality
+  remediated 2026-09-16 (R-9). Recorded divergences: int `support` is accepted as float (the
+  classic Py4JError is a bridge artefact, R-4); result array order is unspecified on both
+  engines (hash map); map keys dedupe by content where Spark never dedupes them (ledger
+  C-010, ruling pending).
 
 ### DF-TRANSPOSE-1 — `transpose` runs the `ResolveTranspose` algorithm as an eager Rust kernel
 
@@ -1849,7 +1867,11 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   no common type raises `TRANSPOSE_NO_LEAST_COMMON_TYPE` `42K09` naming the first failing pair,
   an overflow raises `TRANSPOSE_EXCEED_ROW_LIMIT` `54006`, and an unknown index name raises
   `UNRESOLVED_COLUMN.WITH_SUGGESTION`. `spark.sql` has no door: `TRANSPOSE` answers
-  `PARSE_SYNTAX_ERROR` in Spark 4.1.2 too.
+  `PARSE_SYNTAX_ERROR` in Spark 4.1.2 too. Binary index values decode to column names with
+  lossy UTF-8 — each invalid byte becomes one U+FFFD replacement character (the bytes
+  `0xFF 0xFE` render as the two-codepoint name `U+FFFD U+FFFD`), matching Spark's
+  `UTF8String.fromBytes`; a column name is never the empty string unless the index value
+  really is one.
 - **Apache Spark** — same answers; the equal-key column order under duplicate index values is
   unspecified. *(oracle: recorded — cells `transpose_default`, `transpose_index`,
   `transpose_index_col_obj`, `transpose_int_index`, `transpose_bool_float_index`,
@@ -1857,13 +1879,16 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `transpose_nulls_values`, `transpose_key_col_clash`, `transpose_mixed_types`,
   `transpose_map_value`, `transpose_empty`, `transpose_single_col`, `transpose_array_index`,
   `transpose_incompatible`, `transpose_index_other`, `transpose_long_decimal`,
-  `transpose_missing_index`, `transpose_too_many`, `transpose_sql` in
+  `transpose_missing_index`, `transpose_too_many`, `transpose_sql`,
+  `transpose_binary_invalid_utf8`, `transpose_binary_invalid_utf8_repr`,
+  `transpose_binary_null_index` in
   `python/repark/tests/facade_df_rust3_oracle.json`.)*
 - **Pin** — `python/repark/tests/test_df_rust3_freqitems_transpose.py` (transpose pins)
-- **Rationale** — IMPLEMENTED 2026-09-15 (DF-RUST-3, rulings R-7/R-8). One recorded divergence:
-  the duplicate-index dict view accepts either legal value order because Spark's own
-  `Row.asDict` last-wins result depends on an unspecified equal-key column order; the tuple
-  cells pin the positional truth.
+- **Rationale** — IMPLEMENTED 2026-09-15 (DF-RUST-3, rulings R-7/R-8); the U+FFFD binary
+  index rendering landed 2026-09-16 (R-10). One recorded divergence: the duplicate-index
+  dict view accepts either legal value order because Spark's own `Row.asDict` last-wins
+  result depends on an unspecified equal-key column order; the tuple cells pin the
+  positional truth.
 
 ### DF-PLAN-INTRO-1 — `inputFiles` lists scan files; `semanticHash` hashes the analyzed plan
 - **repark** — `inputFiles()` walks the built physical plan and lists every file-scan

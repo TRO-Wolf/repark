@@ -1,6 +1,7 @@
 # Charter ledger — DF-RUST-3 · `DataFrame.freqItems` / `DataFrameStatFunctions.freqItems` / `DataFrame.transpose`
 
-**Date:** 2026-09-15 · **Branch:** `feat/df-rust-3` · **Base:** `0355ef5e` · **Model:**
+**Date:** 2026-09-15 (round 1), 2026-09-16 (round 2 remediation) · **Branch:**
+`feat/df-rust-3` · **Base:** `0355ef5e` (round 1), `a2bffafa` (round 2) · **Model:**
 swe-2-high · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 **Registry:** `DF-FREQITEMS-1` and `DF-TRANSPOSE-1`, appended beside DF-FOREACH-1 /
@@ -35,8 +36,12 @@ belong to other runs today. The `metadata_*` oracle cells belong to a later unit
 | C-004 | `transpose` errors: non-atomic index → `AnalysisException` `TRANSPOSE_INVALID_INDEX_COLUMN` `42804` with `reason` `Index column must be of atomic type, but found: ArrayType(IntegerType,true)` (`transpose_array_index`, Catalyst type-name rendering); no tightest common type → `TRANSPOSE_NO_LEAST_COMMON_TYPE` `42K09` naming the first failing pair in frame order (`transpose_incompatible` `"INT"`/`"STRING"`, `transpose_index_other` `"STRING"`/`"INT"`, `transpose_long_decimal` `"BIGINT"`/`"DECIMAL(5,2)"`); >500 index rows → `TRANSPOSE_EXCEED_ROW_LIMIT` `54006` (`transpose_too_many`, params `config`/`maxValues`); unknown index name → `UNRESOLVED_COLUMN.WITH_SUGGESTION` `42703` (`transpose_missing_index`). | The error pins in the same module. | **PROVEN** | Rust embeds `[CONDITION] … SQLSTATE:`; `surface_a.transpose` catches and attaches `_spark_error_class` / `_spark_message_parameters` / `_spark_sql_state` so `getErrorClass`/`getMessageParameters`/`getSqlState` answer the fixture exactly. |
 | C-005 | The unit's rows land: registry `DF-FREQITEMS-1` / `DF-TRANSPOSE-1` appended (the F-4 support-type divergence note and the hash-order note recorded); the old `freqItems` refusal and its pins flipped; `docs/examples/dataframe/` example with `COVERS` for the three public names; inventory and EX-0 count bumped by exactly the added names; `EXPECTED_DATAFRAME_DIR` gains `freqItems`/`transpose`, `EXPECTED_NEW_PACKAGE_SUBMODULES` and `EXPECTED_NEW_CORE_SUBMODULES` gain the new module(s); every touched `map.md` in lockstep. | The registry diff, the maps, the gates. | **PROVEN** | EX-DF-19 flipped to `FIXED 2026-09-15 (DF-RUST-3)`; registry rows DF-FREQITEMS-1/DF-TRANSPOSE-1 appended; `docs/examples/dataframe/freq_items_transpose.py` covers all three names (EXAMPLE-OK); inventory +2, backlog −1 (baseline 111), EX-0 raw walk 1059 → 1061; `EXPECTED_DATAFRAME_DIR` gained both names; `core.py` held at 4015, `writer_readwriter.py` at 1101. |
 | C-006 | No regression: `test_dfcore_1_exports.py`, the freqItems refusal pins' replacements, `make verify`, `cargo test -p repark-core`, the facade files that touch statistics/writer paths, and the parity suite stay green on the rebuilt release native. | The gates table. | **PROVEN** | See the gates table: unit file 54 passed, exports 10 passed, facade suite 8314 passed, `cargo test --locked --workspace` green, parity suite 757 passed, `make ci` clean. |
+| C-007 | `freqItems` key equality is IEEE `==` for `Float32`/`Float64` only (R-9): `+0.0` and `-0.0` are one key with the first-inserted spelling surviving; every `NaN` row equals nothing — the insert always happens and the lookup always misses — so two NaNs at capacity 1 answer `[]` and at the default capacity answer `[nan, nan]`; `Float32` behaves identically. Nested floats keep bit-exact equality inside `array`/`struct` keys (`[nan]` == `[nan]`, `[0.0]` != `[-0.0]`, `{a: nan}` == `{a: nan}`), matching Spark's boxed-container `equals`; NULL still dedupes. | `python/repark/tests/test_df_rust3_freqitems_transpose.py` float-key pins over fixture cells `freq_signed_zero_cap1`, `freq_signed_zero_default`, `freq_signed_zero_cap2_with_one`, `freq_signed_zero_float_cap1`, `freq_signed_zero_neg_first_default`, `freq_nan_keys_cap1`, `freq_nan_keys_default`, `freq_two_pos_zero_cap1`, `freq_array_pm_zero_cap1`, `freq_array_nan_cap1`, `freq_struct_nan_cap1`; Rust unit tests in `freq_items.rs`. | **PROVEN** | `FreqKey(ScalarValue)` wraps the accumulator key: `PartialEq` uses IEEE `==` on `Float32`/`Float64` (`self == other`, so NaN != NaN and `0.0 == -0.0`), `Hash` canonicalises `+0.0`/`-0.0` to `+0.0` bits; every other type delegates to `ScalarValue` semantics so nested containers keep bitwise equality. Red-first on `a2bffafa`: `test_freq_signed_zero_collapses` `[]` vs `[0.0]`; `test_freq_signed_zero_first_key_kept` `[-0.0, 0.0]` vs `[-0.0]`; `test_freq_signed_zero_float` `[]` vs `[0.0]`; `test_freq_nan_keys` `[nan]` vs `[]`. All green after. |
+| C-008 | `transpose` renders a binary index column name by lossy UTF-8 decode (R-10): each invalid byte becomes one U+FFFD replacement character, so `bytes([0xFF, 0xFE])` answers the two-codepoint name `U+FFFD U+FFFD` (cells `transpose_binary_invalid_utf8`, `transpose_binary_invalid_utf8_repr`); a NULL binary index row is dropped before naming and contributes no column (cell `transpose_binary_null_index`); a name is never `''` unless the index value really is empty. | The transpose pins in the same module over the three fixture cells. | **PROVEN** | `build_output` in `transpose.rs` now decodes `Binary`/`LargeBinary`/`FixedSizeBinary`/`BinaryView` index values via `String::from_utf8_lossy` instead of `value()` (which returned `""` on invalid UTF-8); null index rows were already filtered upstream — pinned by `transpose_binary_null_index` (`['key', 'b']` only). Red-first on `a2bffafa`: `test_transpose_binary_invalid_utf8` answered `''`. All green after. |
+| C-009 | `_freq_items` resolves requested names with one lookup structure built once (R-11): `available` set + `folded` display-name map + display→engine overlay; duplicate requested names keep duplicate columns in request order; a case-insensitive hit keeps the requested spelling in the output name (`freqItems(["I"])` → `I_freqItems`, measured on Spark 4.1.2); the `UNRESOLVED_COLUMN` suggestion list stays the sorted `available` proposal (`freq_missing_col` byte-exact); display-overlay renames still resolve to the right engine field. | `test_freq_name_lookup` (duplicates/order), `test_freq_case_insensitive_requested_spelling`, `test_freq_display_overlay`, `test_freq_missing_col` in the same module. | **PROVEN** | One pass builds `available`, `folded`, `by_display`; resolution is O(names + columns). Red-first on `a2bffafa`: `test_freq_case_insensitive_requested_spelling` answered `i_freqItems` instead of `I_freqItems`. All green after. |
+| C-010 | Map keys in `freqItems` do not dedupe in Spark 4.1.2 (`mutable.Map[Any, Long]` keys are `MapData` objects whose equality is identity): two identical `{a: 1}` rows answer `[{'a': 1}, {'a': 1}]` at the default capacity and `[]` at capacity 1. repark dedupes `ScalarValue::Map` keys by content today, answering `[{'a': 1}]` and `[{'a': 1}]`. | Ruling needed: mimic identity (never dedupe map keys) or accept the divergence. | **OPEN** | Measured 2026-09-16 on live Spark 4.1.2 (`map_dup_default` → `[{'a': 1}, {'a': 1}]`, `map_dup_cap1` → `[]`, `map_nan_cap1` → `[]`); repark answers `[{'a': 1}]` / `[{'a': 1}]` / `[]`. Fixing it inside `FreqKey` is a one-arm change (map keys never equal), but the R-9 ruling scoped equality changes to `Float32`/`Float64` only and said HALT on any other nested divergence — so it is recorded here and asked in the hand-back. The `freq_map_dup_default` / `freq_map_dup_cap1` fixture cells are recorded but the tests assert repark's current answer until a ruling lands. |
 
-VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED (delivered 2026-09-15).
+VERDICT: 10 clauses, 9 PROVEN, 1 OPEN (C-010 map-key dedupe ruling pending), 0 REJECTED (round 2 remediation 2026-09-16).
 
 ## Per-name decision table
 
@@ -88,6 +93,39 @@ VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED (delivered 2026-09-15).
   else 500 (`TRANSPOSE_EXCEED_ROW_LIMIT` `54006`); no SQL door (PARSE_SYNTAX_ERROR in
   Spark too — nothing pinned, no grammar added); facade signature
   `transpose(self, indexColumn: ColumnOrName | None = None)`.
+- R-9 (round 2, L-101, binding): the accumulator's key equality for `Float32`/`Float64`
+  is IEEE `==` — `+0.0`/`-0.0` one key, every `NaN` equal to nothing (insert always
+  happens, lookup always misses, exactly like Spark's `mutable.Map` insert-miss). No
+  other type's equality changes; nested float keys were to be measured and any divergence
+  halted on. Implemented as `FreqKey` in `freq_items.rs`; the nested measurement matched
+  Spark for `array`/`struct` (bit-exact) but found a separate `Map`-key divergence,
+  recorded as open clause C-010.
+- R-10 (round 2, L-103, binding): binary index values decode to column names lossily —
+  one U+FFFD per invalid byte (`UTF8String.fromBytes` semantics); never `''` unless the
+  value is empty; null index rows are dropped before naming (pinned, not assumed).
+  Implemented via `String::from_utf8_lossy` in `transpose.rs`.
+- R-11 (round 2, Y-1, binding): `_freq_items` builds one lookup structure once —
+  O(names + columns) — preserving duplicates, request order, the sorted suggestion list,
+  and (measured during the round) the requested spelling of a case-insensitive hit.
+- R-12 (round 2, record only): the review's perf findings are residue — no code change.
+  See "Round 2 residue" below.
+
+## Round 2 residue (recorded, no code change)
+
+- **P-101** (Rust perf, P2): the accumulator boxes a `ScalarValue` per row and allocates
+  an owned key per Utf8/Binary row. Spark's own counter boxes into a `mutable.Map[Any,
+  Long]` per row — repark is in Spark's class; reviewer's isolated floor measured ~66e6
+  rows/s for Int32 and ~28e6 rows/s for String. Recorded; no change.
+- **P-102** (Rust perf, P2): the min-scan is O(capacity) on a miss at capacity and
+  `merge` can reach O(P·C²) when P disjoint full maps merge at support 1e-4 (C=10000).
+  Spark's `CollectFrequentItems.add` performs the same linear `minBy` scan — repark is
+  in Spark's class; at the default support 0.01 (C=100) the merge term is negligible.
+  Recorded; no change.
+- **Y-2** (Python perf, P3): one extra PyO3 crossing for the schema fetch before the
+  kernel call. Recorded; no change.
+- **Y-3** (Python perf, P3): `statistics._java_double` duplicates the Rust Java-double
+  renderer in `repark-functions`. Recorded in the Rust-first roll-call as known
+  duplication; moving it would touch a file another run owns tonight. No change.
 
 ## Rust-first roll-call
 
@@ -99,7 +137,10 @@ VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED (delivered 2026-09-15).
   raw index scalars; the index→string display names are formatted in `repark-python` via
   `repark_functions::java_double` (the Java-double text lives in repark-functions and the
   DAG has no repark-core → repark-functions edge). Python binds the name and resolves the
-  index argument only.
+  index argument only. Known duplication (Y-3, recorded 2026-09-16): the facade's
+  `statistics._java_double` re-renders the Java-double string for the `support` error
+  message in Python; it stays until the run that owns that file can route it through the
+  binding.
 - Error conditions: Rust errors embed `[CONDITION] … SQLSTATE:` in the message; the facade
   catches and attaches `_spark_error_class` / `_spark_message_parameters` /
   `_spark_sql_state` (the surface_a / `_integral` pattern).
@@ -127,13 +168,15 @@ VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED (delivered 2026-09-15).
 
 | gate | result |
 |---|---|
-| Red first — unit test file on the base tree | 44 failed on the base tree (missing names / refused calls), all green after the implementation |
-| `cargo test --locked --workspace` | green — repark-core 504 passed incl. the new `freq_items`/`transpose` unit tests |
-| Release native rebuild + unit file | `maturin develop --release` clean; unit file 54 passed |
-| `test_dfcore_1_exports.py` | 10 passed |
-| `make verify` | green — `make ci` ran every structural gate clean (fmt, clippy both lists, crate-DAG, lib-rs, file-size, lib-py, conventions, docstrings, example-coverage 1054/942/111, manifest, ledger lifecycle + grammar, docs, owner-ruling, parity-live, matrix-liveness, ruff, taplo, typos) |
-| `make py-test-facade` | 8314 passed, 372 skipped, 2 xfailed |
-| parity suite `python/repark-parity/tests` | 757 passed, 2 skipped, 12 xfailed (EX-0 raw-walk pin moved 1059 → 1061) |
+| Red first — unit test file on the base tree (round 1) | 44 failed on the base tree (missing names / refused calls), all green after the implementation |
+| Red first — new pins on `a2bffafa` (round 2) | 6 failed: `test_freq_signed_zero_collapses` `[]` vs `[0.0]`, `test_freq_signed_zero_first_key_kept` `[-0.0, 0.0]` vs `[-0.0]`, `test_freq_signed_zero_float` `[]` vs `[0.0]`, `test_freq_nan_keys` `[nan]` vs `[]`, `test_freq_case_insensitive_requested_spelling` `i_freqItems` vs `I_freqItems`, `test_transpose_binary_invalid_utf8` `''` vs `` — all green after the fixes |
+| `cargo test -p repark-core freq` / `transpose` (round 2) | green — `freq` filter 12 passed incl. the signed-zero/NaN float-key tests; `transpose` filter 10 passed |
+| `cargo test --locked --workspace` | green — repark-core 504 passed incl. the new `freq_items`/`transpose` unit tests (round 2: 514 passed) |
+| Release native rebuild + unit file | `maturin develop --release` clean; unit file 63 passed (round 2) |
+| `test_dfcore_1_exports.py` | 10 passed (round 2: green alongside the unit file, 63 total) |
+| `make verify` | green — every structural gate clean (fmt, clippy both lists, crate-DAG, lib-rs, file-size, lib-py, conventions, docstrings, example-coverage 1057/945/111, manifest, ledger lifecycle + grammar, docs, owner-ruling, parity-live, matrix-liveness, ruff, taplo, typos); re-run green on 2026-09-16 after the round-2 diff |
+| `make py-test-facade` | 8314 passed, 372 skipped, 2 xfailed (round 1); 8428 passed, 367 skipped, 2 xfailed (round 2) |
+| parity suite `python/repark-parity/tests` | 757 passed, 2 skipped, 12 xfailed (EX-0 raw-walk pin moved 1059 → 1061); same counts re-confirmed 2026-09-16 |
 | comment fence | clean — no code comments added; rationale lives in this ledger and the touched `map.md` rows |
 
 ## Coverage attestation
@@ -142,11 +185,11 @@ VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED (delivered 2026-09-15).
 COVERAGE_ATTESTATION:
   - id: AT-1
     status: ATTACKED
-    evidence: Red-first on the base tree (44 failures) proved every pin binds a real surface; the FreqItemCounter add/merge and ResolveTranspose tightest-common-type/row-limit semantics were read from spark-sql_2.13-4.1.2.jar bytecode and the Spark 4.1.2 source, and each oracle cell drives a fixture-keyed assertion rather than a guessed answer.
+    evidence: Red-first on the base tree (44 failures) and again on the round-1 head `a2bffafa` (6 failures covering signed-zero collapse, NaN non-equality, case-insensitive display spelling and the invalid-UTF-8 index name) proved every pin binds a real surface; the FreqItemCounter/CollectFrequentItems add/merge and ResolveTranspose tightest-common-type/row-limit semantics were read from spark-sql_2.13-4.1.2.jar bytecode, and each oracle cell drives a fixture-keyed assertion rather than a guessed answer.
     artifacts: [python/repark/tests/test_df_rust3_freqitems_transpose.py, python/repark/tests/facade_df_rust3_oracle.json]
   - id: AT-2
     status: ATTACKED
-    evidence: All 17 freq_* cells and all 19 transpose_* cells asserted — argument shapes, nulls, empty frames, complex element types, duplicate names/columns, support bounds, index resolution, sort order, and every conditioned error with class, params and sqlstate.
+    evidence: Every freq_* and transpose_* fixture cell asserted — argument shapes, nulls, empty frames, complex element types, duplicate names/columns, support bounds, index resolution, sort order, float-key equality (signed zero, NaN, Float32, nested array/struct), binary index lossy decode, and every conditioned error with class, params and sqlstate.
     artifacts: [python/repark/tests/test_df_rust3_freqitems_transpose.py, python/repark/tests/facade_df_rust3_oracle.json]
   - id: AT-3
     status: ATTACKED
@@ -171,11 +214,11 @@ COVERAGE_ATTESTATION:
     artifacts: [crates/repark-python/src/dataframe_stats.rs, python/repark/src/repark/spark/dataframe/statistics.py, python/repark/src/repark/spark/dataframe/surface_a.py]
   - id: AT-9
     status: ATTACKED
-    evidence: Every measured divergence is recorded rather than hidden: R-4 int-support acceptance (Connect semantics, not Py4JError) and the unspecified hash-map/equal-key orders are written into the DF-FREQITEMS-1/DF-TRANSPOSE-1 registry rows; the dict cells accept either legal equal-key variant while tuple cells pin positional truth.
+    evidence: Every measured divergence is recorded rather than hidden: R-4 int-support acceptance (Connect semantics, not Py4JError), the unspecified hash-map/equal-key orders, and the IEEE-`==` float-key rule plus U+FFFD index rendering are written into the DF-FREQITEMS-1/DF-TRANSPOSE-1 registry rows; the dict cells accept either legal equal-key variant while tuple cells pin positional truth; the round-2 nested measurement found Spark never dedupes map keys where repark does — that divergence is open clause C-010 (ruling requested in the hand-back), not a silent stub.
     artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_df_rust3_freqitems_transpose.py]
   - id: AT-10
     status: ATTACKED
-    evidence: The four old refusal pins flipped to positive assertions in the same commit (test_df_batch2.py, test_g1_stat_and_expander.py, test_dfcore_5_approx_quantile.py, test_examples_dataframe_d.py); the full facade suite (8314 passed) and parity suite (757 passed) run the neighbours.
+    evidence: The four old refusal pins flipped to positive assertions in the same commit (test_df_batch2.py, test_g1_stat_and_expander.py, test_dfcore_5_approx_quantile.py, test_examples_dataframe_d.py); the full facade suite and parity suite run the neighbours (round-2 counts in the gates table).
     artifacts: [python/repark/tests/test_df_batch2.py, python/repark/tests/test_examples_dataframe_d.py, python/repark/tests/test_dfcore_1_exports.py]
 complete: true
 ```

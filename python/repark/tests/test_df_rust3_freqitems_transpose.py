@@ -1,6 +1,7 @@
 """DF-RUST-3 — freqItems / transpose pins driven by the live PySpark 4.1.2 oracle.
 
-pins: df-rust-3/C-001, df-rust-3/C-002, df-rust-3/C-003, df-rust-3/C-004
+pins: df-rust-3/C-001, df-rust-3/C-002, df-rust-3/C-003, df-rust-3/C-004,
+df-rust-3/C-007, df-rust-3/C-008, df-rust-3/C-009
 """
 
 from __future__ import annotations
@@ -409,6 +410,79 @@ def test_transpose_row_limit_conf(spark: ReparkSession) -> None:
         assert len(result.columns) == 2001
     finally:
         spark.conf.unset("spark.sql.transposeMaxValues")
+
+
+def test_freq_signed_zero_collapses(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-007 — IEEE == float keys: +0.0 and -0.0 are one key."""
+    frame = spark.createDataFrame([(0.0,), (-0.0,)], "d double")
+    _check_result(frame.freqItems(["d"], 1.0), "freq_signed_zero_cap1")
+    _check_result(frame.freqItems(["d"]), "freq_signed_zero_default")
+    frame2 = spark.createDataFrame([(0.0,), (-0.0,), (1.0,)], "d double")
+    _check_result(frame2.freqItems(["d"], 0.5), "freq_signed_zero_cap2_with_one")
+    frame3 = spark.createDataFrame([(0.0,), (0.0,)], "d double")
+    _check_result(frame3.freqItems(["d"], 1.0), "freq_two_pos_zero_cap1")
+
+
+def test_freq_signed_zero_first_key_kept(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-007 — the first-inserted -0.0 survives as the key."""
+    frame = spark.createDataFrame([(-0.0,), (0.0,)], "d double")
+    _check_result(frame.freqItems(["d"]), "freq_signed_zero_neg_first_default")
+
+
+def test_freq_signed_zero_float(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-007 — IEEE == covers Float32 keys as well."""
+    frame = spark.createDataFrame([(0.0,), (-0.0,)], "d float")
+    _check_result(frame.freqItems(["d"], 1.0), "freq_signed_zero_float_cap1")
+
+
+def test_freq_nan_keys(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-007 — NaN equals nothing: evicted at cap1, duplicated otherwise."""
+    nan = float("nan")
+    frame = spark.createDataFrame([(nan,), (nan,)], "d double")
+    _check_result(frame.freqItems(["d"], 1.0), "freq_nan_keys_cap1")
+    _check_result(frame.freqItems(["d"]), "freq_nan_keys_default")
+
+
+def test_freq_nested_float_keys(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-007 — nested floats keep bit-exact equality inside containers."""
+    nan = float("nan")
+    arrays = spark.createDataFrame([([0.0],), ([-0.0],)], "ar array<double>")
+    _check_result(arrays.freqItems(["ar"], 1.0), "freq_array_pm_zero_cap1")
+    arrays_nan = spark.createDataFrame([([nan],), ([nan],)], "ar array<double>")
+    _check_result(arrays_nan.freqItems(["ar"], 1.0), "freq_array_nan_cap1")
+    structs = spark.createDataFrame([(Row(f=nan),), (Row(f=nan),)], "st struct<f:double>")
+    _check_result(structs.freqItems(["st"], 1.0), "freq_struct_nan_cap1")
+
+
+def test_freq_case_insensitive_requested_spelling(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-009 — case-insensitive resolve keeps the requested spelling."""
+    frame = spark.createDataFrame([(1, "a"), (2, "b"), (1, "a")], "i int, s string")
+    result = frame.freqItems(["I"], 1.0)
+    assert result.columns == ["I_freqItems"]
+    assert [row.asDict() for row in result.collect()] == [{"I_freqItems": [1]}]
+
+
+def test_freq_renamed_overlay(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-009 — display->engine overlay resolves renamed columns once."""
+    frame = spark.createDataFrame([(1, "a"), (2, "b"), (1, "a")], "i int, s string")
+    result = frame.withColumnRenamed("i", "j").freqItems(["j"], 1.0)
+    assert result.columns == ["j_freqItems"]
+    assert [row.asDict() for row in result.collect()] == [{"j_freqItems": [1]}]
+
+
+def test_transpose_binary_invalid_utf8(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-008 — invalid UTF-8 index bytes render as U+FFFD."""
+    frame = spark.createDataFrame([(b"\xff\xfe", 1), (b"ok", 2)], "k binary, a int")
+    result = frame.transpose()
+    _check_result(result, "transpose_binary_invalid_utf8", sort_arrays=False)
+    codepoints = _cell("transpose_binary_invalid_utf8_repr")["result"]
+    assert [[name, [ord(char) for char in name]] for name in result.columns] == codepoints
+
+
+def test_transpose_binary_null_index(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-008 — null binary index rows are dropped before naming."""
+    frame = spark.createDataFrame([(None, 1), (b"ok", 2)], "k binary, a int")
+    _check_result(frame.transpose(), "transpose_binary_null_index", sort_arrays=False)
 
 
 def test_freq_items_is_on_both_doors(spark: ReparkSession) -> None:

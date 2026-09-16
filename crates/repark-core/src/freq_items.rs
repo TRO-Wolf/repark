@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use arrow::array::{Array, ArrayRef, AsArray};
@@ -109,10 +110,55 @@ impl AggregateUDFImpl for FreqItems {
     }
 }
 
+#[derive(Debug)]
+struct FreqKey(ScalarValue);
+
+impl PartialEq for FreqKey {
+    fn eq(&self, other: &Self) -> bool {
+        match (&self.0, &other.0) {
+            (ScalarValue::Float16(Some(left)), ScalarValue::Float16(Some(right))) => {
+                left.to_f64() == right.to_f64()
+            }
+            (ScalarValue::Float32(Some(left)), ScalarValue::Float32(Some(right))) => left == right,
+            (ScalarValue::Float64(Some(left)), ScalarValue::Float64(Some(right))) => left == right,
+            _ => self.0 == other.0,
+        }
+    }
+}
+
+impl Eq for FreqKey {}
+
+impl Hash for FreqKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match &self.0 {
+            ScalarValue::Float16(Some(value)) => {
+                canonical_float_bits(value.to_f64()).hash(state);
+            }
+            ScalarValue::Float32(Some(value)) => {
+                canonical_float_bits(f64::from(*value)).hash(state);
+            }
+            ScalarValue::Float64(Some(value)) => {
+                canonical_float_bits(*value).hash(state);
+            }
+            _ => self.0.hash(state),
+        }
+    }
+}
+
+fn canonical_float_bits(value: f64) -> u64 {
+    if value == 0.0 {
+        0.0f64.to_bits()
+    } else if value.is_nan() {
+        f64::NAN.to_bits()
+    } else {
+        value.to_bits()
+    }
+}
+
 struct FreqItemsAccumulator {
     datatype: DataType,
     capacity: usize,
-    counts: HashMap<ScalarValue, i64>,
+    counts: HashMap<FreqKey, i64>,
 }
 
 impl fmt::Debug for FreqItemsAccumulator {
@@ -126,7 +172,7 @@ impl fmt::Debug for FreqItemsAccumulator {
 }
 
 impl FreqItemsAccumulator {
-    fn add(&mut self, key: ScalarValue, count: i64) {
+    fn add(&mut self, key: FreqKey, count: i64) {
         if let Some(existing) = self.counts.get_mut(&key) {
             *existing += count;
             return;
@@ -157,7 +203,7 @@ impl Accumulator for FreqItemsAccumulator {
         let values = &values[0];
         for index in 0..values.len() {
             let key = ScalarValue::try_from_array(values.as_ref(), index)?.compacted();
-            self.add(key, 1);
+            self.add(FreqKey(key), 1);
         }
         Ok(())
     }
@@ -178,14 +224,14 @@ impl Accumulator for FreqItemsAccumulator {
                 else {
                     continue;
                 };
-                self.add(key, count);
+                self.add(FreqKey(key), count);
             }
         }
         Ok(())
     }
 
     fn state(&mut self) -> DataFusionResult<Vec<ScalarValue>> {
-        let keys: Vec<ScalarValue> = self.counts.keys().cloned().collect();
+        let keys: Vec<ScalarValue> = self.counts.keys().map(|key| key.0.clone()).collect();
         let counts: Vec<ScalarValue> = self
             .counts
             .values()
@@ -198,7 +244,7 @@ impl Accumulator for FreqItemsAccumulator {
     }
 
     fn evaluate(&mut self) -> DataFusionResult<ScalarValue> {
-        let keys: Vec<ScalarValue> = self.counts.keys().cloned().collect();
+        let keys: Vec<ScalarValue> = self.counts.keys().map(|key| key.0.clone()).collect();
         Ok(ScalarValue::List(ScalarValue::new_list(
             &keys,
             &self.datatype,
@@ -223,8 +269,12 @@ mod tests {
         }
     }
 
-    fn int(value: i32) -> ScalarValue {
-        ScalarValue::Int32(Some(value))
+    fn int(value: i32) -> FreqKey {
+        FreqKey(ScalarValue::Int32(Some(value)))
+    }
+
+    fn double(value: f64) -> FreqKey {
+        FreqKey(ScalarValue::Float64(Some(value)))
     }
 
     #[test]
@@ -277,5 +327,60 @@ mod tests {
             acc.add(int(value), 1);
         }
         assert!(acc.counts.is_empty());
+    }
+
+    #[test]
+    fn signed_zero_keys_collapse_to_first_inserted() {
+        let mut acc = accumulator(4);
+        acc.add(double(-0.0), 1);
+        acc.add(double(0.0), 1);
+        assert_eq!(acc.counts.len(), 1);
+        assert_eq!(acc.counts.get(&double(0.0)), Some(&2));
+        assert_eq!(acc.counts.get(&double(-0.0)), Some(&2));
+        assert!(
+            acc.counts
+                .keys()
+                .any(|key| matches!(key.0, ScalarValue::Float64(Some(v)) if v.is_sign_negative()))
+        );
+    }
+
+    #[test]
+    fn signed_zero_keys_collapse_at_capacity() {
+        let mut acc = accumulator(1);
+        acc.add(double(0.0), 1);
+        acc.add(double(-0.0), 1);
+        assert_eq!(acc.counts, HashMap::from([(double(0.0), 2)]));
+    }
+
+    #[test]
+    fn float32_signed_zero_keys_collapse() {
+        let mut acc = accumulator(1);
+        acc.add(FreqKey(ScalarValue::Float32(Some(0.0))), 1);
+        acc.add(FreqKey(ScalarValue::Float32(Some(-0.0))), 1);
+        assert_eq!(acc.counts.len(), 1);
+    }
+
+    #[test]
+    fn nan_keys_never_equal() {
+        let mut acc = accumulator(4);
+        acc.add(double(f64::NAN), 1);
+        acc.add(double(f64::NAN), 1);
+        assert_eq!(acc.counts.len(), 2);
+    }
+
+    #[test]
+    fn nan_keys_evict_each_other_at_capacity() {
+        let mut acc = accumulator(1);
+        acc.add(double(f64::NAN), 1);
+        acc.add(double(f64::NAN), 1);
+        assert!(acc.counts.is_empty());
+    }
+
+    #[test]
+    fn null_float_keys_dedupe() {
+        let mut acc = accumulator(4);
+        acc.add(FreqKey(ScalarValue::Float64(None)), 1);
+        acc.add(FreqKey(ScalarValue::Float64(None)), 1);
+        assert_eq!(acc.counts.len(), 1);
     }
 }
