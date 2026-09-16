@@ -1,10 +1,28 @@
-use core::fmt::Write as _;
+mod bigint;
+mod dtoa;
+mod format_float;
+mod parse_float;
+#[cfg(test)]
+mod tables_doubles;
+#[cfg(test)]
+mod tables_floats;
+#[cfg(test)]
+mod tests_corpus;
+#[cfg(test)]
+mod tests_suffix_marker;
+
+pub(crate) use dtoa::{java_double_strings, java_float_strings, with_java_double_text};
+pub use dtoa::{
+    java_double_text, java_double_text_len, java_float_text, java_float_text_len,
+    with_java_float_text,
+};
+
+pub const SUFFIX_LITERAL_NAME: &str = "__repark_suffix_literal__";
+
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{
-    Array, AsArray, Float32Array, Float64Array, StringArray, StringBuilder,
-};
+use datafusion::arrow::array::{Array, AsArray};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Float32Type, Float64Type};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
@@ -13,251 +31,9 @@ use datafusion::logical_expr::expr::{Like, ScalarFunction};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
     Case, Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs,
-    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
+    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, TryCast, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
-
-pub(crate) const JAVA_FLOAT_TEXT_MAX_LEN: usize = 32;
-
-struct SliceWriter<'a> {
-    buf: &'a mut [u8],
-    pos: usize,
-}
-
-impl core::fmt::Write for SliceWriter<'_> {
-    fn write_str(&mut self, text: &str) -> core::fmt::Result {
-        let end = self.pos + text.len();
-        if end > self.buf.len() {
-            return Err(core::fmt::Error);
-        }
-        self.buf[self.pos..end].copy_from_slice(text.as_bytes());
-        self.pos = end;
-        Ok(())
-    }
-}
-
-pub(crate) fn with_java_double_text<R>(value: f64, render: impl FnOnce(&str) -> R) -> R {
-    if value.is_nan() {
-        return render("NaN");
-    }
-    if value.is_infinite() {
-        if value.is_sign_negative() {
-            return render("-Infinity");
-        }
-        return render("Infinity");
-    }
-    let bits = value.to_bits();
-    if bits == 1 || bits == 0x8000_0000_0000_0001 {
-        if value.is_sign_negative() {
-            return render("-4.9E-324");
-        }
-        return render("4.9E-324");
-    }
-    let mut shortest = [0u8; 64];
-    let mut writer = SliceWriter {
-        buf: &mut shortest,
-        pos: 0,
-    };
-    let _ = write!(writer, "{value:e}");
-    let len = writer.pos;
-    let mut composed = [0u8; JAVA_FLOAT_TEXT_MAX_LEN];
-    render(compose_from_shortest(
-        &shortest[..len],
-        value.is_sign_negative(),
-        &mut composed,
-    ))
-}
-
-pub fn with_java_float_text<R>(value: f32, render: impl FnOnce(&str) -> R) -> R {
-    if value.is_nan() {
-        return render("NaN");
-    }
-    if value.is_infinite() {
-        if value.is_sign_negative() {
-            return render("-Infinity");
-        }
-        return render("Infinity");
-    }
-    let bits = value.to_bits();
-    if bits == 1 || bits == 0x8000_0001 {
-        if value.is_sign_negative() {
-            return render("-1.4E-45");
-        }
-        return render("1.4E-45");
-    }
-    let mut shortest = [0u8; 64];
-    let mut writer = SliceWriter {
-        buf: &mut shortest,
-        pos: 0,
-    };
-    let _ = write!(writer, "{value:e}");
-    let len = writer.pos;
-    let mut composed = [0u8; JAVA_FLOAT_TEXT_MAX_LEN];
-    render(compose_from_shortest(
-        &shortest[..len],
-        value.is_sign_negative(),
-        &mut composed,
-    ))
-}
-
-fn compose_from_shortest<'a>(
-    shortest: &[u8],
-    negative: bool,
-    composed: &'a mut [u8; JAVA_FLOAT_TEXT_MAX_LEN],
-) -> &'a str {
-    let body = match shortest.first() {
-        Some(b'-') => &shortest[1..],
-        _ => shortest,
-    };
-    let Some(exp_mark) = body.iter().position(|byte| *byte == b'e') else {
-        return copy_bytes(body, composed);
-    };
-    let (mantissa, exponent_text) = body.split_at(exp_mark);
-    let exponent = parse_exponent(&exponent_text[1..]);
-    let mut digits = [0u8; 24];
-    let mut digit_len = 0usize;
-    for byte in mantissa {
-        if byte.is_ascii_digit() && digit_len < digits.len() {
-            digits[digit_len] = *byte;
-            digit_len += 1;
-        }
-    }
-    if digit_len == 0 {
-        return copy_bytes(body, composed);
-    }
-    let mut pos = 0usize;
-    if negative {
-        composed[0] = b'-';
-        pos = 1;
-    }
-    if (-3..=6).contains(&exponent) {
-        pos = write_plain_decimal(&digits[..digit_len], exponent, composed, pos);
-    } else {
-        composed[pos] = digits[0];
-        pos += 1;
-        composed[pos] = b'.';
-        pos += 1;
-        if digit_len > 1 {
-            let tail = &digits[1..digit_len];
-            composed[pos..pos + tail.len()].copy_from_slice(tail);
-            pos += tail.len();
-        } else {
-            composed[pos] = b'0';
-            pos += 1;
-        }
-        composed[pos] = b'E';
-        pos += 1;
-        let exp_text = &exponent_text[1..];
-        composed[pos..pos + exp_text.len()].copy_from_slice(exp_text);
-        pos += exp_text.len();
-    }
-    str::from_utf8(&composed[..pos]).unwrap_or("")
-}
-
-fn parse_exponent(text: &[u8]) -> i32 {
-    let (digits, negative) = match text.first() {
-        Some(b'-') => (&text[1..], true),
-        Some(b'+') => (&text[1..], false),
-        _ => (text, false),
-    };
-    let mut value: i32 = 0;
-    for byte in digits {
-        if !byte.is_ascii_digit() {
-            break;
-        }
-        value = value
-            .saturating_mul(10)
-            .saturating_add(i32::from(*byte - b'0'));
-    }
-    if negative { -value } else { value }
-}
-
-fn write_plain_decimal(
-    digits: &[u8],
-    exponent: i32,
-    composed: &mut [u8; JAVA_FLOAT_TEXT_MAX_LEN],
-    mut pos: usize,
-) -> usize {
-    if exponent < 0 {
-        composed[pos] = b'0';
-        composed[pos + 1] = b'.';
-        pos += 2;
-        let zeros = usize::try_from(-exponent - 1).unwrap_or(0);
-        for _ in 0..zeros {
-            composed[pos] = b'0';
-            pos += 1;
-        }
-        composed[pos..pos + digits.len()].copy_from_slice(digits);
-        pos + digits.len()
-    } else {
-        let point = usize::try_from(exponent + 1).unwrap_or(0);
-        if point >= digits.len() {
-            composed[pos..pos + digits.len()].copy_from_slice(digits);
-            pos += digits.len();
-            for _ in 0..point - digits.len() {
-                composed[pos] = b'0';
-                pos += 1;
-            }
-            composed[pos] = b'.';
-            composed[pos + 1] = b'0';
-            pos + 2
-        } else {
-            composed[pos..pos + point].copy_from_slice(&digits[..point]);
-            pos += point;
-            composed[pos] = b'.';
-            pos += 1;
-            let rest = &digits[point..];
-            composed[pos..pos + rest.len()].copy_from_slice(rest);
-            pos + rest.len()
-        }
-    }
-}
-
-fn copy_bytes<'a>(text: &[u8], composed: &'a mut [u8; JAVA_FLOAT_TEXT_MAX_LEN]) -> &'a str {
-    let len = text.len().min(composed.len());
-    composed[..len].copy_from_slice(&text[..len]);
-    str::from_utf8(&composed[..len]).unwrap_or("")
-}
-
-pub fn java_double_text(value: f64) -> String {
-    with_java_double_text(value, str::to_owned)
-}
-
-pub fn java_float_text(value: f32) -> String {
-    with_java_float_text(value, str::to_owned)
-}
-
-pub fn java_double_text_len(value: f64) -> usize {
-    with_java_double_text(value, str::len)
-}
-
-pub fn java_float_text_len(value: f32) -> usize {
-    with_java_float_text(value, str::len)
-}
-
-pub(crate) fn java_double_strings(values: &Float64Array) -> StringArray {
-    let mut builder = StringBuilder::with_capacity(values.len(), values.len() * 8);
-    for index in 0..values.len() {
-        if values.is_null(index) {
-            builder.append_null();
-        } else {
-            with_java_double_text(values.value(index), |text| builder.append_value(text));
-        }
-    }
-    builder.finish()
-}
-
-pub(crate) fn java_float_strings(values: &Float32Array) -> StringArray {
-    let mut builder = StringBuilder::with_capacity(values.len(), values.len() * 8);
-    for index in 0..values.len() {
-        if values.is_null(index) {
-            builder.append_null();
-        } else {
-            with_java_float_text(values.value(index), |text| builder.append_value(text));
-        }
-    }
-    builder.finish()
-}
 
 pub(crate) fn spark_float_to_string_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkFloatToString::new()))
@@ -353,13 +129,101 @@ fn rewrite_float_plan(plan: LogicalPlan, ansi: bool) -> Result<Transformed<Logic
     for input in plan.inputs() {
         schema.merge(input.schema());
     }
+    let literals = float_literal_inputs(&plan);
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_up(|node| rewrite_float_expr(node, &schema, ansi))?;
+        let rewritten = expr.transform_up(|node| {
+            let resolved = resolve_float_literal_input(node, &literals, &schema);
+            rewrite_float_expr(resolved.data, &schema, ansi)
+        })?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
+}
+
+fn float_literal_inputs(plan: &LogicalPlan) -> Vec<(String, ScalarValue)> {
+    let inputs = plan.inputs();
+    if inputs.len() != 1 {
+        return Vec::new();
+    }
+    let mut inner = inputs[0];
+    if let LogicalPlan::SubqueryAlias(alias) = inner {
+        inner = alias.input.as_ref();
+    }
+    let LogicalPlan::Projection(projection) = inner else {
+        return Vec::new();
+    };
+    let mut literals = Vec::new();
+    for expr in &projection.expr {
+        if let Expr::Alias(alias) = expr
+            && let Expr::Literal(literal, _) = alias.expr.as_ref()
+            && utf8_literal_text(literal).is_some()
+        {
+            if literals.iter().any(|(name, _)| name == &alias.name) {
+                literals.retain(|(name, _)| name != &alias.name);
+            } else {
+                literals.push((alias.name.clone(), literal.clone()));
+            }
+        }
+    }
+    literals
+}
+
+fn resolve_float_literal_input(
+    expr: Expr,
+    literals: &[(String, ScalarValue)],
+    schema: &DFSchema,
+) -> Transformed<Expr> {
+    let (target, inner) = match &expr {
+        Expr::Cast(cast) => (cast.field.data_type(), cast.expr.as_ref()),
+        Expr::TryCast(try_cast) => (try_cast.field.data_type(), try_cast.expr.as_ref()),
+        _ => return Transformed::no(expr),
+    };
+    if !matches!(target, DataType::Float32 | DataType::Float64) {
+        return Transformed::no(expr);
+    }
+    let Ok(source) = inner.get_type(schema) else {
+        return Transformed::no(expr);
+    };
+    if !is_string_type(&source) {
+        return Transformed::no(expr);
+    }
+    let column = match inner {
+        Expr::Column(column) => column,
+        Expr::ScalarFunction(function)
+            if function.func.name() == crate::decimal_cast::DECIMAL_CAST_NULLABLE_NAME
+                && let [argument] = function.args.as_slice()
+                && let Expr::Column(column) = argument =>
+        {
+            column
+        }
+        _ => return Transformed::no(expr),
+    };
+    let mut found = None;
+    for (name, literal) in literals {
+        if name == &column.name {
+            if found.is_some() {
+                return Transformed::no(expr);
+            }
+            found = Some(literal);
+        }
+    }
+    let Some(literal) = found else {
+        return Transformed::no(expr);
+    };
+    let literal = Expr::Literal(literal.clone(), None);
+    match expr {
+        Expr::Cast(cast) => Transformed::yes(Expr::Cast(Cast::new(
+            Box::new(literal),
+            cast.field.data_type().clone(),
+        ))),
+        Expr::TryCast(try_cast) => Transformed::yes(Expr::TryCast(TryCast::new(
+            Box::new(literal),
+            try_cast.field.data_type().clone(),
+        ))),
+        _ => Transformed::no(expr),
+    }
 }
 
 fn rewrite_float_expr(expr: Expr, schema: &DFSchema, ansi: bool) -> Result<Transformed<Expr>> {
@@ -369,6 +233,23 @@ fn rewrite_float_expr(expr: Expr, schema: &DFSchema, ansi: bool) -> Result<Trans
             let Ok(source_type) = try_cast.expr.get_type(schema) else {
                 return Ok(Transformed::no(Expr::TryCast(try_cast)));
             };
+            if is_string_type(&source_type)
+                && matches!(
+                    try_cast.field.data_type(),
+                    DataType::Float32 | DataType::Float64
+                )
+                && let Expr::Literal(literal, _) = try_cast.expr.as_ref()
+                && let Some(text) = utf8_literal_text(literal)
+            {
+                let target = try_cast.field.data_type().clone();
+                match fold_utf8_to_float_literal(literal, &text, &target, true) {
+                    Ok(Some(folded)) => return Ok(Transformed::yes(folded)),
+                    Ok(None) => return Ok(Transformed::no(Expr::TryCast(try_cast))),
+                    Err(_) => {
+                        return Ok(Transformed::yes(float_null_literal(&target)));
+                    }
+                }
+            }
             if !matches!(source_type, DataType::Float32 | DataType::Float64) {
                 return Ok(Transformed::no(Expr::TryCast(try_cast)));
             }
@@ -405,6 +286,13 @@ fn is_string_type(data_type: &DataType) -> bool {
     )
 }
 
+fn is_suffix_literal_call(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::ScalarFunction(function) if function.func.name() == SUFFIX_LITERAL_NAME
+    )
+}
+
 fn rewrite_float_cast(cast: Cast, schema: &DFSchema, ansi: bool) -> Result<Transformed<Expr>> {
     let Ok(source_type) = cast.expr.get_type(schema) else {
         return Ok(Transformed::no(Expr::Cast(cast)));
@@ -422,6 +310,19 @@ fn rewrite_float_cast(cast: Cast, schema: &DFSchema, ansi: bool) -> Result<Trans
             && let Some(folded) = fold_utf8_to_float_literal(literal, &text, &target, ansi)?
         {
             return Ok(Transformed::yes(folded));
+        }
+        if is_string_type(&source_type)
+            && !matches!(cast.expr.as_ref(), Expr::Literal(_, _))
+            && !is_suffix_literal_call(cast.expr.as_ref())
+        {
+            let parse = if target == DataType::Float32 {
+                parse_float::parse_java_float_udf()
+            } else {
+                parse_float::parse_java_double_udf()
+            };
+            return Ok(Transformed::yes(Expr::ScalarFunction(
+                ScalarFunction::new_udf(parse, vec![*cast.expr]),
+            )));
         }
     }
     Ok(Transformed::no(Expr::Cast(cast)))
@@ -458,18 +359,13 @@ fn fold_utf8_to_float_literal(
     if literal.cast_to(target).is_ok() {
         return Ok(None);
     }
-    let trimmed = text.trim();
-    if trimmed.is_empty() {
+    if parse_float::is_blank_text(text) {
         return Ok(Some(float_null_literal(target)));
     }
     let parsed = match target {
-        DataType::Float32 => trimmed
-            .parse::<f32>()
-            .ok()
+        DataType::Float32 => parse_float::parse_java_float_text::<f32>(text)
             .map(|value| ScalarValue::Float32(Some(value))),
-        _ => trimmed
-            .parse::<f64>()
-            .ok()
+        _ => parse_float::parse_java_float_text::<f64>(text)
             .map(|value| ScalarValue::Float64(Some(value))),
     };
     if let Some(value) = parsed {
@@ -478,10 +374,7 @@ fn fold_utf8_to_float_literal(
     if !ansi {
         return Ok(Some(float_null_literal(target)));
     }
-    Err(DataFusionError::Execution(format!(
-        "[CAST_INVALID_INPUT] The value '{text}' of the type \"STRING\" cannot be cast to \"{}\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
-        spark_float_type_name(target)
-    )))
+    Err(parse_float::cast_invalid_input(text, target))
 }
 
 fn rewrite_float_like(like: Like, schema: &DFSchema) -> Transformed<Expr> {
@@ -673,6 +566,18 @@ fn rewrite_format_string_args(function: ScalarFunction, schema: &DFSchema) -> Tr
     let Some(fmt) = scalar_string(&function.args[0]) else {
         return Transformed::no(Expr::ScalarFunction(function));
     };
+    if function.args.len() == 2
+        && format_float::parse_float_format(&fmt).is_some()
+        && matches!(
+            function.args[1].get_type(schema),
+            Ok(DataType::Float32 | DataType::Float64)
+        )
+    {
+        return Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
+            format_float::java_format_float_udf(),
+            vec![function.args[0].clone(), function.args[1].clone()],
+        )));
+    }
     if !format_uses_only_string_verbs(&fmt) {
         return Transformed::no(Expr::ScalarFunction(function));
     }
@@ -780,6 +685,7 @@ fn rewrite_array_join_arg(function: ScalarFunction, schema: &DFSchema) -> Transf
 #[cfg(test)]
 mod tests {
     use super::*;
+    use datafusion::arrow::array::{Float32Array, Float64Array};
 
     #[test]
     fn double_text_matches_java_thresholds() {
@@ -892,6 +798,142 @@ mod tests {
             .unwrap_err();
         let message = error.to_string();
         assert!(message.contains("CAST_INVALID_INPUT"), "{message}");
+    }
+
+    #[test]
+    fn rule_propagates_suffixed_literal_through_projection() {
+        use datafusion::logical_expr::{LogicalPlanBuilder, col};
+        for (text, ansi) in [("1d", true), ("1f", true), ("0x10", false)] {
+            for wrapped in [false, true] {
+                let inner = LogicalPlanBuilder::empty(false)
+                    .project(vec![
+                        Expr::Literal(ScalarValue::Utf8(Some(text.to_owned())), None).alias("x"),
+                    ])
+                    .unwrap()
+                    .build()
+                    .unwrap();
+                let cast_input = if wrapped {
+                    Expr::ScalarFunction(ScalarFunction::new_udf(
+                        crate::decimal_cast::spark_decimal_cast_nullable_udf(),
+                        vec![col("x")],
+                    ))
+                } else {
+                    col("x")
+                };
+                let outer = LogicalPlanBuilder::new(inner)
+                    .project(vec![
+                        Expr::Cast(Cast::new(Box::new(cast_input), DataType::Float64)).alias("r"),
+                    ])
+                    .unwrap()
+                    .build()
+                    .unwrap();
+                let analyzed = rewrite_float_plan(outer, ansi).unwrap().data;
+                let LogicalPlan::Projection(projection) = analyzed else {
+                    panic!("projection plan for {text}");
+                };
+                let [Expr::Alias(alias)] = projection.expr.as_slice() else {
+                    panic!("aliased projection for {text}");
+                };
+                match alias.expr.as_ref() {
+                    Expr::Literal(ScalarValue::Float64(Some(value)), _) => {
+                        assert_eq!(
+                            value.to_bits(),
+                            1.0f64.to_bits(),
+                            "{text} wrapped={wrapped}"
+                        );
+                    }
+                    Expr::Literal(ScalarValue::Float64(None), _) => {
+                        assert_eq!(text, "0x10", "{text} wrapped={wrapped}");
+                    }
+                    other => panic!("unexpected folded expr {other:?} for {text}"),
+                }
+            }
+        }
+    }
+
+    fn format_call(format: &str, arg: Expr) -> ScalarFunction {
+        ScalarFunction::new_udf(
+            datafusion_spark::function::string::format_string(),
+            vec![
+                Expr::Literal(ScalarValue::Utf8(Some(format.to_owned())), None),
+                arg,
+            ],
+        )
+    }
+
+    fn double_literal(value: f64) -> Expr {
+        Expr::Literal(ScalarValue::Float64(Some(value)), None)
+    }
+
+    #[test]
+    fn rule_routes_single_float_verb_to_half_up_shim() {
+        let schema = DFSchema::empty();
+        for format in ["%f", "%.2f", "%-+, (.4F"] {
+            let rewritten =
+                rewrite_format_string_args(format_call(format, double_literal(0.125)), &schema);
+            assert!(rewritten.transformed, "{format}");
+            let Expr::ScalarFunction(shimmed) = rewritten.data else {
+                panic!("shimmed call for {format}");
+            };
+            assert_eq!(shimmed.func.name(), "__repark_format_float__");
+            assert_eq!(shimmed.args.len(), 2);
+        }
+    }
+
+    #[test]
+    fn rule_leaves_other_format_calls_on_upstream() {
+        let schema = DFSchema::empty();
+        for call in [
+            format_call("%d", double_literal(0.125)),
+            format_call("%s %f", double_literal(0.125)),
+            format_call("%f %f", double_literal(0.125)),
+            format_call("%e", double_literal(0.125)),
+            format_call("%.3e", double_literal(0.125)),
+            format_call("%g", double_literal(0.125)),
+            format_call(
+                "%f",
+                Expr::Literal(ScalarValue::Utf8(Some("0.125".to_owned())), None),
+            ),
+        ] {
+            assert!(!rewrite_format_string_args(call, &schema).transformed);
+        }
+    }
+
+    #[test]
+    fn fold_utf8_to_float_accepts_java_type_suffix() {
+        for (text, target, expected) in [
+            ("1d", DataType::Float64, 1.0f64),
+            ("1f", DataType::Float64, 1.0f64),
+            ("1.5D", DataType::Float64, 1.5f64),
+            ("1e2d", DataType::Float64, 100.0f64),
+        ] {
+            let folded = fold_utf8_to_float_literal(&utf8_scalar(text), text, &target, true)
+                .unwrap()
+                .unwrap();
+            assert!(
+                matches!(folded, Expr::Literal(ScalarValue::Float64(Some(value)), _) if value.to_bits() == expected.to_bits()),
+                "{text}"
+            );
+        }
+        let folded = fold_utf8_to_float_literal(&utf8_scalar("1d"), "1d", &DataType::Float32, true)
+            .unwrap()
+            .unwrap();
+        assert!(matches!(
+            folded,
+            Expr::Literal(ScalarValue::Float32(Some(_)), _)
+        ));
+        let hex =
+            fold_utf8_to_float_literal(&utf8_scalar("0x10"), "0x10", &DataType::Float64, true)
+                .unwrap_err();
+        assert!(hex.to_string().contains("CAST_INVALID_INPUT"));
+        let hex_nulled =
+            fold_utf8_to_float_literal(&utf8_scalar("0x10"), "0x10", &DataType::Float64, false)
+                .unwrap()
+                .unwrap();
+        assert!(matches!(
+            hex_nulled,
+            Expr::Literal(ScalarValue::Float64(None), _)
+        ));
     }
 
     #[test]

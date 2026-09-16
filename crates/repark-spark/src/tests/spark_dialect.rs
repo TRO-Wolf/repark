@@ -187,6 +187,33 @@ async fn out_of_range_u_keeps_java_artifact() {
 }
 
 #[tokio::test]
+async fn suffix_literals_above_decimal38_stay_nonnull_at_analysis() {
+    let ctx = production_ctx(false);
+    for sql in [
+        "SELECT 1e38D AS v",
+        "SELECT 1e200D AS v",
+        "SELECT 1e38F AS v",
+    ] {
+        let canonical = crate::spark_literals::canonicalize_verbatim(sql, false)
+            .unwrap()
+            .into_owned();
+        let plan = ctx
+            .state()
+            .create_logical_plan(&canonical)
+            .await
+            .unwrap_or_else(|error| panic!("`{sql}` plan: {error}"));
+        let analyzed = repark_functions::analyze_eagerly(&ctx.state(), plan)
+            .unwrap_or_else(|error| panic!("`{sql}` analyze: {error}"));
+        let field = analyzed.schema().fields().first().unwrap().clone();
+        assert!(
+            !field.is_nullable(),
+            "{sql}: {}",
+            analyzed.display_indent_schema()
+        );
+    }
+}
+
+#[tokio::test]
 async fn d_suffix_is_double() {
     let ctx = production_ctx(false);
     let (batch, data_type, _) = one_cell(&ctx, "SELECT rint(2.5D) AS v").await;

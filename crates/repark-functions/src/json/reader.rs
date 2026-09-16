@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::Write;
 
-use crate::java_double::java_double_text;
+use crate::java_double::{java_double_text, with_java_double_text};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum JsonValue<'a> {
@@ -326,7 +326,9 @@ pub(crate) fn write_compact(value: &JsonValue<'_>, out: &mut String) {
         JsonValue::Bool(true) => out.push_str("true"),
         JsonValue::Bool(false) => out.push_str("false"),
         JsonValue::Number(raw) => out.push_str(&json_number_text(raw)),
-        JsonValue::NonFinite(value) => write_escaped(&java_double_text(*value), out),
+        JsonValue::NonFinite(value) => {
+            with_java_double_text(*value, |text| write_escaped(text, out));
+        }
         JsonValue::Text(text) => write_escaped(text, out),
         JsonValue::Array(items) => {
             out.push('[');

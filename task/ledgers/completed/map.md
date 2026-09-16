@@ -645,6 +645,23 @@ else. The next pickup's `make ledger-archive` files everything here under
   Round 7 + R-42 (2026-09-15): zone-free timestamp_ntz, pool-sized fallback tail; a tight-pool refusal is registry IO-TEXT-PART-POOL-1.
   `risk_tier: standard`. Branch `feat/io-text-1`.
   pins: io-text-1/C-001, C-002, C-003, C-004, T-1..T-9, P-1..P-3
+- [java-double-fd-1-ledger.md](java-double-fd-1-ledger.md) —
+  **JAVA-DOUBLE-FD-1 (2026-09-15), closed:** JDK 17 `FloatingDecimal` Rust port
+  answers the longhand DOUBLE/FLOAT cells byte-equal (29,451 + 9,976 corpus
+  rows), single-verb `%f`/`%F` renders HALF_UP, Java-suffixed casts fold on both
+  doors with ANSI on and off; registry FIXED rows JAVA-DOUBLE-FD-1,
+  JAVA-DOUBLE-CAST-SUFFIX-1 and FNP10-JAVA-DOUBLE-TEXT-1. Perf: SQL-door
+  0.082s → 0.035s, facade 0.049s → 0.031s (5M rows, best of 3), inside #612's
+  bar. Residue: `%e`/`%g`/`%a` and multi-verb `%f` stay on upstream.
+  **Fix round 1 (2026-09-15, R-17c-2):** the #611 rebase regressed
+  >DECIMAL(38) suffix-literal nullability — `SparkFloatStringify` routed the
+  marker cast to `__repark_parse_java_double__` before `FoldSparkNumericCasts`
+  could fold it non-null; `rewrite_float_cast` now exempts the
+  `__repark_suffix_literal__` marker (name single-sourced in repark-functions,
+  re-exported by repark-spark).
+  `risk_tier: standard`. Branch `feat/java-double-fd-1`.
+  pins: java-double-fd-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [java-double-fd-1-ledger.md](java-double-fd-1-ledger.md) — Unit ledger — JAVA-DOUBLE-FD-1 · JDK 17 FloatingDecimal port for DOUBLE/FLOAT text
 - [java-double-str-1-ledger.md](java-double-str-1-ledger.md) — Unit ledger — JAVA-DOUBLE-STR-1 · DOUBLE/FLOAT stringify as Java does
 - [ledger-reading-1-ledger.md](ledger-reading-1-ledger.md) —
   **LEDGER-READING-1 step 1 (2026-09-09), in flight:**   reading units may prove clauses on
