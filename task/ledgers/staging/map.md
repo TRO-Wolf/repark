@@ -4,7 +4,6 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
-- [registry-16b-1-ledger.md](../completed/registry-16b-1-ledger.md) —
 - [fnp-agg-1-ledger.md](fnp-agg-1-ledger.md) —
   **FNP-AGG-1 step 1 (2026-09-15), in flight:** ledger, the copied live-PySpark 4.1.2
   oracle fixture and the red-first two-door pins for the fourteen missing-aggregate names
