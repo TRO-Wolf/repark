@@ -16,7 +16,6 @@ from repark.errors import (
     IllegalArgumentException,
     PySparkTypeError,
     PySparkValueError,
-    UnsupportedOperationException,
 )
 from repark.spark.session import ReparkSession, _reset_active_session_for_tests
 
@@ -160,10 +159,10 @@ def test_stat_approx_quantile_probability_domain(spark: ReparkSession) -> None:
         frame.stat.approxQuantile("a", [float("nan")], 0.0)
 
 
-def test_stat_freq_items_still_loud(spark: ReparkSession) -> None:
+def test_stat_freq_items_answers(spark: ReparkSession) -> None:
     frame = spark.range(3)
-    with pytest.raises(UnsupportedOperationException, match="freqItems"):
-        frame.stat.freqItems(["id"])
+    row = frame.stat.freqItems(["id"]).collect()[0]
+    assert sorted(row["id_freqItems"]) == [0, 1, 2]
 
 
 def test_e2e_bare_update_delete_public_sql(spark: ReparkSession) -> None:

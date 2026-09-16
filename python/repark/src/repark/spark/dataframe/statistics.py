@@ -324,9 +324,94 @@ def _crosstab(frame: DataFrame, col1: str, col2: str) -> DataFrame:
     return pivoted.na.fill(0)
 
 
-def _freq_items(frame: DataFrame, cols: list[str], support: float | None = None) -> DataFrame:
-    """Reject frequent-item discovery because it is not implemented."""
-    del cols, support
-    raise UnsupportedOperationException(
-        "DataFrame.stat.freqItems is not supported yet (disclosed R-DF-BATCH2)"
-    )
+def _java_double(value: float) -> str:
+    """Render a float the way Java ``Double.toString`` would."""
+    number = float(value)
+    magnitude = abs(number)
+    if number == 0.0 or (1e-3 <= magnitude < 1e7):
+        text = repr(number)
+        return text if "." in text else f"{text}.0"
+    sign = "-" if number < 0 else ""
+    mantissa, _, exponent = repr(number).partition("e")
+    if exponent:
+        mantissa = mantissa.lstrip("-")
+        mantissa = mantissa if "." in mantissa else f"{mantissa}.0"
+        return f"{sign}{mantissa}E{int(exponent)}"
+    fraction = mantissa.split(".", 1)[1]
+    zeros = len(fraction) - len(fraction.lstrip("0"))
+    digits = mantissa.lstrip("-").replace(".", "").lstrip("0") or "0"
+    if magnitude < 1.0:
+        exponent_value = -(zeros + 1)
+    else:
+        exponent_value = len(mantissa.lstrip("-").split(".", 1)[0]) - 1
+    tail = digits[1:] or "0"
+    return f"{sign}{digits[0]}.{tail}E{exponent_value}"
+
+
+def freqItems(  # noqa: N802
+    frame: DataFrame, cols: list[str] | tuple[str, ...], support: float | None = None
+) -> DataFrame:
+    """Frequent items per column (PySpark ``DataFrame.freqItems``). pins: df-rust-3/C-001."""
+    return _freq_items(frame, cols, support)
+
+
+def _freq_items(
+    frame: DataFrame,
+    cols: list[str] | tuple[str, ...],
+    support: float | None = None,
+) -> DataFrame:
+    """Frequent items per column (PySpark ``DataFrame.freqItems``). pins: df-rust-3/C-001."""
+    from repark.errors import IllegalArgumentException, PySparkTypeError
+    from repark.spark.dataframe.surface_a import _raise_unresolved_column
+
+    frame._ensure_alive()
+    if not isinstance(cols, (list, tuple)):
+        raise PySparkTypeError(
+            message="[NOT_LIST_OR_TUPLE] Argument `cols` should be a list or tuple, "
+            f"got {type(cols).__name__}.",
+            errorClass="NOT_LIST_OR_TUPLE",
+            messageParameters={"arg_name": "cols", "arg_type": type(cols).__name__},
+        )
+    names = list(cols)
+    for name in names:
+        if not isinstance(name, str):
+            raise PySparkTypeError(
+                message=f"[NOT_ITERABLE] {type(name).__name__} is not iterable.",
+                errorClass="NOT_ITERABLE",
+                messageParameters={"objectName": type(name).__name__},
+            )
+    if support is None:
+        support = 0.01
+    if isinstance(support, bool) or not isinstance(support, (int, float)):
+        raise PySparkTypeError(
+            message="[NOT_FLOAT] Argument `support` should be a float, "
+            f"got {type(support).__name__}.",
+            errorClass="NOT_FLOAT",
+            messageParameters={"arg_name": "support", "arg_type": type(support).__name__},
+        )
+    support_value = float(support)
+    if not (1e-4 <= support_value <= 1.0):
+        raise IllegalArgumentException(
+            "requirement failed: Support must be in [1e-4, 1], "
+            f"but got {_java_double(support_value)}."
+        )
+    if not names:
+        return frame.select()
+    available = frame.columns
+    resolved: list[str] = []
+    for name in names:
+        if name not in available:
+            folded = name.casefold()
+            hits = [candidate for candidate in available if candidate.casefold() == folded]
+            if not hits:
+                _raise_unresolved_column(name, sorted(available))
+            name = hits[0]
+        resolved.append(name)
+    engines = [frame._engine_field_for_display(display) for display in resolved]
+    from repark import _native
+
+    native = _native.freq_items(frame._plan(), engines, int(1.0 / support_value))
+    child = frame._spawn(native)
+    child._engine_names = [f"__repark_freq_items_{index}" for index in range(len(engines))]
+    child._display_names = [f"{display}_freqItems" for display in resolved]
+    return child

@@ -57,6 +57,9 @@ one-liner.
   `repartitionById`: every partitioning call keeps the row multiset and count.
 - [rollup_stat.py](rollup_stat.py) — `rollup` grouping sets with the grand total, and the
   `stat` accessor's `crosstab` cells.
+- [freq_items_transpose.py](freq_items_transpose.py) — `freqItems` on both doors (the
+  `DataFrame` name and `stat.freqItems`) and `transpose` on an index column.
+  pins: df-rust-3/C-001, C-003
 - [replace_sample.py](replace_sample.py) — `replace` (scalar and dict, subset-scoped),
   `sample` (fraction 1.0), and `sampleBy` (the 1.0 and 0.0 strata arms).
 - [same_semantics.py](same_semantics.py) — `sameSemantics` / `same_semantics`: one object

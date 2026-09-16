@@ -1,7 +1,8 @@
 """Divergence pins for the EX-19 DataFrame-d and EX-29 class-remainder batches.
 
-Registry §7 rows EX-DF-18/19, EX-ROW-1 (EX-19), the EX-DF-1 arm extension (EX-29), and the
-EX-DF-4 describe/string-column pins flipped to Spark's answer by DF-DESCRIBE-STR-1.
+Registry §7 rows EX-DF-18, EX-ROW-1 (EX-19), the EX-DF-1 arm extension (EX-29), the
+EX-DF-19 stat.freqItems arm landed by DF-RUST-3, and the EX-DF-4 describe/string-column
+pins flipped to Spark's answer by DF-DESCRIBE-STR-1.
 """
 
 from __future__ import annotations
@@ -14,7 +15,6 @@ from repark import ReparkSession
 from repark.errors import (
     AnalysisException,
     PySparkValueError,
-    UnsupportedOperationException,
 )
 from repark.spark import functions as F  # noqa: N812
 
@@ -35,11 +35,16 @@ def test_with_columns_renamed_duplicate_names_divergence(spark: ReparkSession) -
         frame.with_columns_renamed({"g": "k", "k": "k"})
 
 
-def test_stat_freq_items_refuses(spark: ReparkSession) -> None:
-    """stat.freqItems refuses loudly; Spark answers the frequent-item table (EX-DF-19)."""
-    frame = spark.createDataFrame([(1, 10.0), (2, 20.0), (3, 40.0)], ["k", "v"])
-    with pytest.raises(UnsupportedOperationException, match="freqItems"):
-        frame.stat.freqItems(["k", "v"])
+def test_stat_freq_items_answers(spark: ReparkSession) -> None:
+    """stat.freqItems answers the frequent-item table like Spark (EX-DF-19, DF-RUST-3)."""
+    frame = spark.createDataFrame(
+        [(1, 50.0), (2, 20.0), (3, 40.0), (1, 10.0), (2, 30.0)], ["k", "v"]
+    )
+    result = frame.stat.freqItems(["k", "v"])
+    assert result.columns == ["k_freqItems", "v_freqItems"]
+    row = result.collect()[0]
+    assert sorted(row["k_freqItems"]) == [1, 2, 3]
+    assert sorted(row["v_freqItems"]) == [10.0, 20.0, 30.0, 40.0, 50.0]
 
 
 def test_row_asdict_recursive_false_struct_divergence(spark: ReparkSession) -> None:

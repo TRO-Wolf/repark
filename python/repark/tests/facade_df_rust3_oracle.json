@@ -1,0 +1,673 @@
+{
+ "freq_array_col": {
+  "result": {
+   "columns": [
+    "ar_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'ar_freqItems': [[1, 2]]}"
+   ],
+   "schema": "struct<ar_freqItems:array<array<int>>>"
+  }
+ },
+ "freq_bool_date": {
+  "result": {
+   "columns": [
+    "b_freqItems",
+    "dt_freqItems"
+   ],
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    "{'b_freqItems': [True], 'dt_freqItems': [datetime.date(2024, 1, 1)]}"
+   ],
+   "schema": "struct<b_freqItems:array<boolean>,dt_freqItems:array<date>>"
+  }
+ },
+ "freq_col_obj": {
+  "error": {
+   "condition": "NOT_ITERABLE",
+   "message": "[NOT_ITERABLE] Column is not iterable.",
+   "params": {
+    "objectName": "Column"
+   },
+   "raises": "PySparkTypeError",
+   "sqlstate": null
+  }
+ },
+ "freq_decimal_ts": {
+  "result": {
+   "columns": [
+    "dec_freqItems",
+    "ts_freqItems",
+    "bin_freqItems"
+   ],
+   "nullable": [
+    false,
+    false,
+    false
+   ],
+   "rows": [
+    "{'dec_freqItems': [Decimal('1.50')], 'ts_freqItems': [datetime.datetime(2024, 1, 1, 0, 0)], 'bin_freqItems': [b'\\x01\\x02']}"
+   ],
+   "schema": "struct<dec_freqItems:array<decimal(10,2)>,ts_freqItems:array<timestamp>,bin_freqItems:array<binary>>"
+  }
+ },
+ "freq_default": {
+  "result": {
+   "columns": [
+    "i_freqItems",
+    "s_freqItems"
+   ],
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    "{'i_freqItems': [1, 2, 3], 's_freqItems': ['a', 'b', None]}"
+   ],
+   "schema": "struct<i_freqItems:array<int>,s_freqItems:array<string>>"
+  }
+ },
+ "freq_dup_col": {
+  "result": {
+   "columns": [
+    "i_freqItems",
+    "i_freqItems"
+   ],
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    "{'i_freqItems': [1, 2, 3]}"
+   ],
+   "schema": "struct<i_freqItems:array<int>,i_freqItems:array<int>>"
+  }
+ },
+ "freq_dup_col_tuple": {
+  "result": {
+   "columns": [
+    "i_freqItems",
+    "i_freqItems"
+   ],
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    "([1, 2], [1, 2])"
+   ],
+   "schema": "struct<i_freqItems:array<int>,i_freqItems:array<int>>"
+  }
+ },
+ "freq_empty_cols": {
+  "result": {
+   "columns": [],
+   "nullable": [],
+   "rows": [
+    "{}",
+    "{}",
+    "{}",
+    "{}",
+    "{}"
+   ],
+   "schema": "struct<>"
+  }
+ },
+ "freq_empty_df": {
+  "result": {
+   "columns": [
+    "i_freqItems",
+    "s_freqItems"
+   ],
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    "{'i_freqItems': [], 's_freqItems': []}"
+   ],
+   "schema": "struct<i_freqItems:array<int>,s_freqItems:array<string>>"
+  }
+ },
+ "freq_many_distinct": {
+  "result": {
+   "columns": [
+    "id_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'id_freqItems': []}"
+   ],
+   "schema": "struct<id_freqItems:array<bigint>>"
+  }
+ },
+ "freq_missing_col": {
+  "error": {
+   "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `zz` cannot be resolved. Did you mean one of the following? [`d`, `i`, `s`]. SQLSTATE: 42703;\n'Aggregate [collect_frequent_items('zz, 100, 0, 0) AS zz_freqItems#141]\n+- LogicalRDD [i#0, s#1, d#2], false\n",
+   "params": {
+    "objectName": "`zz`",
+    "proposal": "`d`, `i`, `s`"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42703"
+  }
+ },
+ "freq_stat": {
+  "result": {
+   "columns": [
+    "i_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'i_freqItems': [1]}"
+   ],
+   "schema": "struct<i_freqItems:array<int>>"
+  }
+ },
+ "freq_string_arg": {
+  "error": {
+   "condition": "NOT_LIST_OR_TUPLE",
+   "message": "[NOT_LIST_OR_TUPLE] Argument `cols` should be a list or tuple, got str.",
+   "params": {
+    "arg_name": "cols",
+    "arg_type": "str"
+   },
+   "raises": "PySparkTypeError",
+   "sqlstate": null
+  }
+ },
+ "freq_struct_col": {
+  "result": {
+   "columns": [
+    "st_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'st_freqItems': [{'x': 1}]}"
+   ],
+   "schema": "struct<st_freqItems:array<struct<x:int>>>"
+  }
+ },
+ "freq_support_05": {
+  "result": {
+   "columns": [
+    "i_freqItems",
+    "s_freqItems",
+    "d_freqItems"
+   ],
+   "nullable": [
+    false,
+    false,
+    false
+   ],
+   "rows": [
+    "{'i_freqItems': [1], 's_freqItems': ['a'], 'd_freqItems': [2.0]}"
+   ],
+   "schema": "struct<i_freqItems:array<int>,s_freqItems:array<string>,d_freqItems:array<double>>"
+  }
+ },
+ "freq_support_gt_one": {
+  "error": {
+   "condition": null,
+   "message": "requirement failed: Support must be in [1e-4, 1], but got 1.5.",
+   "params": null,
+   "raises": "IllegalArgumentException",
+   "sqlstate": null
+  }
+ },
+ "freq_support_int": {
+  "error": {
+   "message": "An error occurred while calling o171.freqItems. Trace:\npy4j.Py4JException: Method freqItems([class scala.collection.immutable.$colon$colon, class java.lang.Integer]) does not exist\n\tat py4j.reflection.ReflectionEngine.getMethod(ReflectionEngine.java:321)\n\tat py4j.reflection.ReflectionEngine.getMethod(ReflectionEngine.java:329)\n\tat py4j.Gateway.invoke(Gateway.java:274)\n\tat py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:79)\n\tat py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)\n\tat py4j.ClientS",
+   "raises": "Py4JError"
+  }
+ },
+ "freq_support_one": {
+  "result": {
+   "columns": [
+    "i_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'i_freqItems': [1]}"
+   ],
+   "schema": "struct<i_freqItems:array<int>>"
+  }
+ },
+ "freq_support_str": {
+  "error": {
+   "message": "An error occurred while calling o174.freqItems. Trace:\npy4j.Py4JException: Method freqItems([class scala.collection.immutable.$colon$colon, class java.lang.String]) does not exist\n\tat py4j.reflection.ReflectionEngine.getMethod(ReflectionEngine.java:321)\n\tat py4j.reflection.ReflectionEngine.getMethod(ReflectionEngine.java:329)\n\tat py4j.Gateway.invoke(Gateway.java:274)\n\tat py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:79)\n\tat py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)\n\tat py4j.ClientSe",
+   "raises": "Py4JError"
+  }
+ },
+ "freq_support_tiny": {
+  "error": {
+   "condition": null,
+   "message": "requirement failed: Support must be in [1e-4, 1], but got 1.0E-5.",
+   "params": null,
+   "raises": "IllegalArgumentException",
+   "sqlstate": null
+  }
+ },
+ "freq_tuple": {
+  "result": {
+   "columns": [
+    "s_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'s_freqItems': ['a', 'b', None]}"
+   ],
+   "schema": "struct<s_freqItems:array<string>>"
+  }
+ },
+ "meta": {
+  "by": "run 16b orchestrator",
+  "recorded": "2026-09-15",
+  "sources": [
+   "dfrust3_probe_2026-09-15.json",
+   "dfsubq_probe_2026-09-15.json (tuple cells)"
+  ],
+  "spark": "4.1.2"
+ },
+ "transpose_array_index": {
+  "error": {
+   "condition": "TRANSPOSE_INVALID_INDEX_COLUMN",
+   "message": "[TRANSPOSE_INVALID_INDEX_COLUMN] Invalid index column for TRANSPOSE because: Index column must be of atomic type, but found: ArrayType(IntegerType,true) SQLSTATE: 42804",
+   "params": {
+    "reason": "Index column must be of atomic type, but found: ArrayType(IntegerType,true)"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42804"
+  }
+ },
+ "transpose_bool_float_index": {
+  "result": {
+   "columns": [
+    "key",
+    "0.5",
+    "1.5"
+   ],
+   "nullable": [
+    false,
+    true,
+    true
+   ],
+   "rows": [
+    "{'key': 'a', '0.5': 2, '1.5': 1}"
+   ],
+   "schema": "struct<key:string,0.5:int,1.5:int>"
+  }
+ },
+ "transpose_default": {
+  "result": {
+   "columns": [
+    "key",
+    "x",
+    "y"
+   ],
+   "nullable": [
+    false,
+    true,
+    true
+   ],
+   "rows": [
+    "{'key': 'a', 'x': 1, 'y': 3}",
+    "{'key': 'b', 'x': 2, 'y': 4}"
+   ],
+   "schema": "struct<key:string,x:int,y:int>"
+  }
+ },
+ "transpose_default_tuple": {
+  "result": {
+   "columns": [
+    "key",
+    "x",
+    "y"
+   ],
+   "nullable": [
+    false,
+    true,
+    true
+   ],
+   "rows": [
+    "('a', 1, 3)",
+    "('b', 2, 4)"
+   ],
+   "schema": "struct<key:string,x:int,y:int>"
+  }
+ },
+ "transpose_dup_index": {
+  "result": {
+   "columns": [
+    "key",
+    "x",
+    "x"
+   ],
+   "nullable": [
+    false,
+    true,
+    true
+   ],
+   "rows": [
+    "{'key': 'a', 'x': 1}"
+   ],
+   "schema": "struct<key:string,x:int,x:int>"
+  }
+ },
+ "transpose_dup_index_tuple": {
+  "result": {
+   "columns": [
+    "key",
+    "x",
+    "x"
+   ],
+   "nullable": [
+    false,
+    true,
+    true
+   ],
+   "rows": [
+    "('a', 1, 2)"
+   ],
+   "schema": "struct<key:string,x:int,x:int>"
+  }
+ },
+ "transpose_empty": {
+  "result": {
+   "columns": [
+    "key"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'key': 'a'}",
+    "{'key': 'b'}"
+   ],
+   "schema": "struct<key:string>"
+  }
+ },
+ "transpose_incompatible": {
+  "error": {
+   "condition": "TRANSPOSE_NO_LEAST_COMMON_TYPE",
+   "message": "[TRANSPOSE_NO_LEAST_COMMON_TYPE] Transpose requires non-index columns to share a least common type, but \"INT\" and \"STRING\" do not. SQLSTATE: 42K09",
+   "params": {
+    "dt1": "\"INT\"",
+    "dt2": "\"STRING\""
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42K09"
+  }
+ },
+ "transpose_index": {
+  "result": {
+   "columns": [
+    "key",
+    "x",
+    "y"
+   ],
+   "nullable": [
+    false,
+    true,
+    true
+   ],
+   "rows": [
+    "{'key': 'a', 'x': 1, 'y': 3}",
+    "{'key': 'b', 'x': 2, 'y': 4}"
+   ],
+   "schema": "struct<key:string,x:int,y:int>"
+  }
+ },
+ "transpose_index_col_obj": {
+  "result": {
+   "columns": [
+    "key",
+    "x",
+    "y"
+   ],
+   "nullable": [
+    false,
+    true,
+    true
+   ],
+   "rows": [
+    "{'key': 'a', 'x': 1, 'y': 3}",
+    "{'key': 'b', 'x': 2, 'y': 4}"
+   ],
+   "schema": "struct<key:string,x:int,y:int>"
+  }
+ },
+ "transpose_index_names_order": {
+  "result": {
+   "columns": [
+    "key",
+    "a",
+    "m",
+    "z"
+   ],
+   "nullable": [
+    false,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "{'key': 'a', 'a': 2, 'm': 3, 'z': 1}"
+   ],
+   "schema": "struct<key:string,a:int,m:int,z:int>"
+  }
+ },
+ "transpose_index_other": {
+  "error": {
+   "condition": "TRANSPOSE_NO_LEAST_COMMON_TYPE",
+   "message": "[TRANSPOSE_NO_LEAST_COMMON_TYPE] Transpose requires non-index columns to share a least common type, but \"STRING\" and \"INT\" do not. SQLSTATE: 42K09",
+   "params": {
+    "dt1": "\"STRING\"",
+    "dt2": "\"INT\""
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42K09"
+  }
+ },
+ "transpose_int_index": {
+  "result": {
+   "columns": [
+    "key",
+    "1",
+    "2"
+   ],
+   "nullable": [
+    false,
+    true,
+    true
+   ],
+   "rows": [
+    "{'key': 'a', '1': 3, '2': 1}",
+    "{'key': 'b', '1': 6, '2': 5}"
+   ],
+   "schema": "struct<key:string,1:int,2:int>"
+  }
+ },
+ "transpose_key_col_clash": {
+  "result": {
+   "columns": [
+    "key",
+    "key"
+   ],
+   "nullable": [
+    false,
+    true
+   ],
+   "rows": [
+    "{'key': 1}"
+   ],
+   "schema": "struct<key:string,key:int>"
+  }
+ },
+ "transpose_key_col_clash_tuple": {
+  "result": {
+   "columns": [
+    "key",
+    "key"
+   ],
+   "nullable": [
+    false,
+    true
+   ],
+   "rows": [
+    "('key', 1)"
+   ],
+   "schema": "struct<key:string,key:int>"
+  }
+ },
+ "transpose_long_decimal": {
+  "error": {
+   "condition": "TRANSPOSE_NO_LEAST_COMMON_TYPE",
+   "message": "[TRANSPOSE_NO_LEAST_COMMON_TYPE] Transpose requires non-index columns to share a least common type, but \"BIGINT\" and \"DECIMAL(5,2)\" do not. SQLSTATE: 42K09",
+   "params": {
+    "dt1": "\"BIGINT\"",
+    "dt2": "\"DECIMAL(5,2)\""
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42K09"
+  }
+ },
+ "transpose_map_value": {
+  "result": {
+   "columns": [
+    "key",
+    "x"
+   ],
+   "nullable": [
+    false,
+    true
+   ],
+   "rows": [
+    "{'key': 'm', 'x': {1: 2}}"
+   ],
+   "schema": "struct<key:string,x:map<int,int>>"
+  }
+ },
+ "transpose_missing_index": {
+  "error": {
+   "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+   "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `zz` cannot be resolved. Did you mean one of the following? [`a`, `b`, `k`]. SQLSTATE: 42703;\n'UnresolvedTranspose ['zz]\n+- LogicalRDD [k#315, a#316, b#317], false\n",
+   "params": {
+    "objectName": "`zz`",
+    "proposal": "`a`, `b`, `k`"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42703"
+  }
+ },
+ "transpose_mixed_types": {
+  "result": {
+   "columns": [
+    "key",
+    "x"
+   ],
+   "nullable": [
+    false,
+    true
+   ],
+   "rows": [
+    "{'key': 'a', 'x': 1.0}",
+    "{'key': 'b', 'x': 2.5}"
+   ],
+   "schema": "struct<key:string,x:double>"
+  }
+ },
+ "transpose_null_index": {
+  "result": {
+   "columns": [
+    "key",
+    "x"
+   ],
+   "nullable": [
+    false,
+    true
+   ],
+   "rows": [
+    "{'key': 'a', 'x': 1}"
+   ],
+   "schema": "struct<key:string,x:int>"
+  }
+ },
+ "transpose_nulls_values": {
+  "result": {
+   "columns": [
+    "key",
+    "x",
+    "y"
+   ],
+   "nullable": [
+    false,
+    true,
+    true
+   ],
+   "rows": [
+    "{'key': 'a', 'x': None, 'y': 3}",
+    "{'key': 'b', 'x': 2, 'y': None}"
+   ],
+   "schema": "struct<key:string,x:int,y:int>"
+  }
+ },
+ "transpose_single_col": {
+  "result": {
+   "columns": [
+    "key",
+    "x",
+    "y"
+   ],
+   "nullable": [
+    false,
+    true,
+    true
+   ],
+   "rows": [],
+   "schema": "struct<key:string,x:string,y:string>"
+  }
+ },
+ "transpose_sql": {
+  "error": {
+   "condition": "PARSE_SYNTAX_ERROR",
+   "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'TRANSPOSE': extra input 'TRANSPOSE'. SQLSTATE: 42601 (line 1, pos 63)\n\n== SQL ==\nSELECT * FROM VALUES ('x', 1, 2), ('y', 3, 4) AS t(k, a, b) |> TRANSPOSE\n---------------------------------------------------------------^^^\n",
+   "params": {
+    "error": "'TRANSPOSE'",
+    "hint": ": extra input 'TRANSPOSE'"
+   },
+   "raises": "ParseException",
+   "sqlstate": "42601"
+  }
+ },
+ "transpose_too_many": {
+  "error": {
+   "condition": "TRANSPOSE_EXCEED_ROW_LIMIT",
+   "message": "[TRANSPOSE_EXCEED_ROW_LIMIT] Number of rows exceeds the allowed limit of 500 for TRANSPOSE. If this was intended, set spark.sql.transposeMaxValues to at least the current row count. SQLSTATE: 54006",
+   "params": {
+    "config": "spark.sql.transposeMaxValues",
+    "maxValues": "500"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "54006"
+  }
+ }
+}

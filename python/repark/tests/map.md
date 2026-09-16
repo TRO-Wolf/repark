@@ -166,6 +166,25 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   PySpark 4.1.2 recording (provenance line inside the file); holds the `row.*` cells —
   the nine this unit pins plus `isinstance_tuple` / `add` / `hash_eq` / `len` /
   `types_row_is_sql_row`.
+- [facade_df_rust3_oracle.json](facade_df_rust3_oracle.json) — **DF-RUST-3 (2026-09-15):**
+  the run-16b oracle for `DataFrame.freqItems` / `DataFrameStatFunctions.freqItems` /
+  `DataFrame.transpose`, copied unchanged from the orchestrator's live PySpark 4.1.2
+  recordings (`freq_*` / `transpose_*` cells of `dfrust3_probe_2026-09-15.json` plus the
+  four `*_tuple` duplicate-name cells of `dfsubq_probe_2026-09-15.json`); freqItems result
+  arrays are Spark hash-map order — pins compare them sorted. The `transpose_sql` cell
+  records Spark's own `PARSE_SYNTAX_ERROR` (no SQL door); the `metadata_*` cells belong to
+  a later unit and are not carried.
+- [test_df_rust3_freqitems_transpose.py](test_df_rust3_freqitems_transpose.py) —
+  **DF-RUST-3 (2026-09-15):** the pins driving every `freq_*` / `transpose_*` cell of the
+  fixture above — argument shapes (`NOT_LIST_OR_TUPLE`, `NOT_ITERABLE`, `NOT_FLOAT`, the
+  `[1e-4, 1]` support bound with Scala's `Double.toString` rendering), result shapes
+  (`<name>_freqItems` `array<T>` non-nullable, duplicates, empty frames, `freqItems([])`
+  row count, complex element types), the transpose kernel (`key` + sorted index columns,
+  null/duplicate index rows, `key`-name clash, empty and single-column frames), and the
+  three Spark error classes (`TRANSPOSE_INVALID_INDEX_COLUMN`,
+  `TRANSPOSE_NO_LEAST_COMMON_TYPE`, `TRANSPOSE_EXCEED_ROW_LIMIT`); the file runs
+  inside the no-regression suite of C-006 alongside the flipped refusal pins.
+  pins: df-rust-3/C-001, C-002, C-003, C-004, C-006
 - [test_ice_spark_table_1.py](test_ice_spark_table_1.py) — **ICE-SPARK-TABLE-1
   (2026-09-14):** RePark writes into a table **Spark created** — the G-3 / G-4-Spark-half
   standing requirement (inventory §8 ruling 6). Always-run: the committed

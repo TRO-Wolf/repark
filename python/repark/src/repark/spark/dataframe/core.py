@@ -34,6 +34,7 @@ from repark.spark.dataframe import (
     cache_handle,
     plan_introspect,
     replace_expr,
+    statistics,
     streaming_batch,
     surface_a,
     surface_b,
@@ -891,6 +892,8 @@ class DataFrame:
     registerTempTable = surface_a.registerTempTable  # noqa: N815
     to = surface_a.to
     withMetadata = surface_a.withMetadata  # noqa: N815
+    transpose = surface_a.transpose
+    freqItems = statistics.freqItems  # noqa: N815
     executionInfo = property(surface_a.executionInfo)  # noqa: N815
     sparkSession = property(surface_a.sparkSession)  # noqa: N815
     inputFiles = plan_introspect.inputFiles  # noqa: N815
@@ -3246,10 +3249,7 @@ class DataFrame:
         else:
             order_cols = [self._bind_schema_column(name) for name in resolved]
         window = Window.partitionBy(*order_cols).orderBy(*order_cols)
-        ranked = self.with_column(
-            "__repark_dd_rn",
-            F.row_number().over(window),
-        )
+        ranked = self.with_column("__repark_dd_rn", F.row_number().over(window))
         filtered = ranked.filter(F.col("__repark_dd_rn") == F.lit(1))
         return filtered.drop("__repark_dd_rn")
 
@@ -4000,7 +4000,7 @@ from repark.spark.dataframe.grouped_udf import (  # noqa: E402
     _iter_apply_in_pandas_group_tables,
     _validate_apply_in_pandas_result_columns,
 )
-from repark.spark.dataframe import statistics, udf_projection, udf_window_projection  # noqa: E402
+from repark.spark.dataframe import udf_projection, udf_window_projection  # noqa: E402
 from repark.spark.dataframe import display, sampling  # noqa: E402
 from repark.spark.dataframe.eager import _resolve_cache_budgets  # noqa: E402
 from repark.spark.dataframe.sampling import _coerce_sample_seed  # noqa: E402

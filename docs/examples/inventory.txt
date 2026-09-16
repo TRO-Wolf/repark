@@ -142,6 +142,7 @@ dataframe	DataFrame.filter
 dataframe	DataFrame.first
 dataframe	DataFrame.foreach
 dataframe	DataFrame.foreachPartition
+dataframe	DataFrame.freqItems
 dataframe	DataFrame.groupBy
 dataframe	DataFrame.group_by
 dataframe	DataFrame.groupby
@@ -223,6 +224,7 @@ dataframe	DataFrame.to_numpy
 dataframe	DataFrame.to_pandas
 dataframe	DataFrame.to_polars
 dataframe	DataFrame.transform
+dataframe	DataFrame.transpose
 dataframe	DataFrame.union
 dataframe	DataFrame.unionAll
 dataframe	DataFrame.unionByName

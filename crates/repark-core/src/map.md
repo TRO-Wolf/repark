@@ -145,6 +145,21 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `UnpivotExec`, `apply_stack`, the labeled describe door `apply_labeled_stack` /
   `StackLabels`, marker `stack` UDF, Spark-door `StackRewrite`.
   pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- `freq_items.rs` — **DF-RUST-3 (2026-09-15):** Spark's `FreqItemCounter` as a
+  DataFusion `AggregateUDFImpl` + `Accumulator` over `HashMap<ScalarValue, i64>` —
+  capacity `floor(1/support)`, the KSP add/merge (negative-remainder branch keeps
+  reduced entries), eval dumps keys with no threshold filter, null keys counted.
+  `freq_items` runs one aggregate over the named columns and answers the
+  `<name>_freqItems` projection.
+  pins: df-rust-3/C-001, C-002
+- `transpose.rs` — **DF-RUST-3 (2026-09-15):** the `ResolveTranspose` algorithm as an
+  eager kernel (`transpose_frame`): filter null index rows, enforce
+  `spark.sql.transposeMaxValues`, collect once, stable-sort ascending on the raw index
+  scalar, cast value cells to the `findTightestCommonType` result, and build the
+  `key` + one-column-per-index-row matrix over a `MemTable`. Conditioned errors
+  (`TRANSPOSE_INVALID_INDEX_COLUMN`, `TRANSPOSE_NO_LEAST_COMMON_TYPE`,
+  `TRANSPOSE_EXCEED_ROW_LIMIT`) carry `[CONDITION] … SQLSTATE:` in the message.
+  pins: df-rust-3/C-003, C-004
 - `update_fields.rs` (+ [update_fields/](update_fields/map.md)) — **COLUMN-PARITY-1
   (2026-09-14, critic round):** Spark `UpdateFields` as the `update_fields` scalar UDF
   plus `update_fields_call` / `register_update_fields`, registered on the session in

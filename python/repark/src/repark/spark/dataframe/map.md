@@ -187,6 +187,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   belongs to a Rust unit) and the `_schema_override` sticker (R-6 — the
   narrow-width divergence `to(…smallint)` reports is LOGICAL-WIDTH-1).
   pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005
+  DF-RUST-3 (2026-09-15): `transpose` joins the surface here — the facade resolves the
+  index argument (str / `Column` / None → first display column), reads
+  `spark.sql.transposeMaxValues` off the session conf, calls the native `transpose`
+  kernel, and attaches `_spark_error_class` / `_spark_message_parameters` /
+  `_spark_sql_state` from the conditioned engine error. pins: df-rust-3/C-003, C-004
   **COLUMN-PARITY-1 (2026-09-15):** `to()` and `withMetadata` keep passing `alias(name, metadata=)`; with the column overlay the stamp, replace, cache and `to()` target-override positions answer Spark, and DF-METADATA-1 narrows to the positions a plan transform still loses (an earlier plain-rename repair in this branch was reverted).
 - `plan_introspect.py` owns the DF-PLAN-INTROSPECT-1 method bodies (2026-09-14;
   follow-up 2026-09-15) behind the one-line class bindings: `inputFiles` lists
@@ -289,8 +294,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   window result. The ordered path carries partition, order, and UDF inputs plus every
   source column on the group frame, overwrites same-name sources, and projects caller
   order last-wins. pins: dfcore-2/C-005
-- `statistics.py` owns the seven statistics bodies behind the public wrappers (DFCORE-3,
-  moved from `core.py` and `DataFrameStatFunctions.freqItems`). `summary` computes every
+- `statistics.py` owns the statistics bodies behind the public wrappers (DFCORE-3,
+  moved from `core.py` and `DataFrameStatFunctions.freqItems`; DF-RUST-3, 2026-09-15:
+  `freqItems` runs the `FreqItemCounter` UDAF through `frame._plan().freq_items` —
+  the R-DF-BATCH2 refusal is retired, EX-DF-19 flips to FIXED). `summary` computes every
   requested statistic for every target column in chunked native aggregate passes over
   the frame's own plan (`aggregate([], exprs)` on quoted engine-field refs — no SQL
   text, no temp view — one plan per ~50 columns, chunk results cross-joined on a
@@ -612,6 +619,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   DFCORE-3 (2026-09-07): `DataFrameStatFunctions.freqItems` delegates its refusal to
   `statistics._freq_items` (1113 → 1111, mirrored in the CAP-1 test); the class keeps
   the stat accessor shape. pins: dfcore-3/C-005, C-006
+  DF-RUST-3 (2026-09-15): `freqItems` delegates the live call to the same
+  `statistics._freq_items` body — line-neutral against the exact 1101 baseline.
+  pins: df-rust-3/C-001, C-005
   IO-BUCKET-CLUSTER-1 (2026-09-14): `bucketBy` / `sortBy` / `clusterBy` (v1) and
   `clusterBy` (V2) bind here as thin delegates; the class carries the layout slots and
   runs `writer_layout`'s checks at `save` / `saveAsTable` / V2 `create` / `replace` /
@@ -1154,6 +1164,12 @@ that held the comment (pins: comment-core-1/C-003).
   EAGER-OWN-1 step 1 (2026-09-13): `core.py` 4117→4094 — the ownership wiring is a
   net minus because `_warn_storage_level_cosmetic_once` moved to `cache_handle.py`
   (169 lines, below the source-size default). pins: eager-own-1/C-002
+  DF-RUST-3 (2026-09-15): `core.py` stays at its exact 4015 baseline — the
+  `freqItems` and `transpose` class bindings are one line each, paid for by a
+  moved `statistics` import and collapsed adjacent statements; `statistics.py`
+  332→415 and `surface_a.py` 328→416, both below the source-size default;
+  `writer_readwriter.py` holds its exact 1101 baseline.
+  pins: df-rust-3/C-005
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.
 

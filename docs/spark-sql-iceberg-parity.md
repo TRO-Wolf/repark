@@ -1808,6 +1808,63 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   metrics are a second aggregation pass over the same plan. Blocking `get` is not
   an honest single-node answer, so repark raises Spark's own `NO_OBSERVE_BEFORE_GET`
   in both the never-attached and attached-but-no-action cases.
+### DF-FREQITEMS-1 — `freqItems` runs Spark's `FreqItemCounter` in Rust; int `support` is accepted as float
+
+- **repark** — `DataFrame.freqItems(cols, support=None)` and
+  `DataFrameStatFunctions.freqItems(cols, support=None)` share one body and answer one row of
+  `array<T>` columns named `<name>_freqItems` (nullable false, element type and duplicates
+  preserved, null keys counted). The kernel is a DataFusion UDAF in `repark-core` implementing
+  Spark's `FreqItemCounter` exactly: capacity `floor(1/support)`, the Karp–Schenker–Papadimitriou
+  add/merge, and a final key dump with no support-threshold filter — result arrays come back in
+  unspecified hash-map order. `freqItems([])` answers the frame's row count of empty rows; an
+  empty frame answers one row of empty arrays. `cols` a str raises `PySparkTypeError`
+  `NOT_LIST_OR_TUPLE`, a `Column` element raises `NOT_ITERABLE`, `support` outside `[1e-4, 1]`
+  raises `IllegalArgumentException` with the `requirement failed: Support must be in [1e-4, 1]`
+  message (Java-double rendering), and a non-float `support` raises `PySparkTypeError`
+  `NOT_FLOAT`. An unknown column raises `UNRESOLVED_COLUMN.WITH_SUGGESTION`.
+- **Apache Spark** — same answers on the same inputs; the array order is likewise unspecified.
+  Spark classic rejects `support=1` (int) with a Py4J `TypeError`; Spark Connect accepts it as
+  float — repark follows Connect and records the divergence. *(oracle: recorded — cells
+  `freq_default`, `freq_support_05`, `freq_stat`, `freq_support_one`, `freq_empty_df`,
+  `freq_many_distinct`, `freq_struct_col`, `freq_array_col`, `freq_bool_date`,
+  `freq_decimal_ts`, `freq_dup_col`, `freq_string_arg`, `freq_col_obj`, `freq_support_tiny`,
+  `freq_support_gt_one`, `freq_missing_col`, `freq_empty_cols` in
+  `python/repark/tests/facade_df_rust3_oracle.json`.)*
+- **Pin** — `python/repark/tests/test_df_rust3_freqitems_transpose.py` (freq pins),
+  `python/repark/tests/test_examples_dataframe_d.py::test_stat_freq_items_answers`
+- **Rationale** — IMPLEMENTED 2026-09-15 (DF-RUST-3, rulings R-1..R-6). Recorded divergences:
+  int `support` is accepted as float (the classic Py4JError is a bridge artefact, R-4); result
+  array order is unspecified on both engines (hash map).
+
+### DF-TRANSPOSE-1 — `transpose` runs the `ResolveTranspose` algorithm as an eager Rust kernel
+
+- **repark** — `DataFrame.transpose(indexColumn=None)` answers a `key` string non-null first
+  column plus one nullable column per non-null index row, sorted ascending on the raw index
+  value (stable; duplicate index values keep a column each and duplicate output names are
+  allowed), value cells cast to the tightest common type of the non-index columns per
+  `AnsiTypeCoercion.findTightestCommonType`. The kernel is `transpose_frame` in `repark-core`:
+  filter null index rows, enforce `spark.sql.transposeMaxValues` (default 500), collect once,
+  sort, build the matrix over a `MemTable`. `indexColumn` accepts `str`, `Column`, or `None`
+  (default first column); a non-atomic index raises `TRANSPOSE_INVALID_INDEX_COLUMN` `42804`,
+  no common type raises `TRANSPOSE_NO_LEAST_COMMON_TYPE` `42K09` naming the first failing pair,
+  an overflow raises `TRANSPOSE_EXCEED_ROW_LIMIT` `54006`, and an unknown index name raises
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION`. `spark.sql` has no door: `TRANSPOSE` answers
+  `PARSE_SYNTAX_ERROR` in Spark 4.1.2 too.
+- **Apache Spark** — same answers; the equal-key column order under duplicate index values is
+  unspecified. *(oracle: recorded — cells `transpose_default`, `transpose_index`,
+  `transpose_index_col_obj`, `transpose_int_index`, `transpose_bool_float_index`,
+  `transpose_index_names_order`, `transpose_dup_index`, `transpose_null_index`,
+  `transpose_nulls_values`, `transpose_key_col_clash`, `transpose_mixed_types`,
+  `transpose_map_value`, `transpose_empty`, `transpose_single_col`, `transpose_array_index`,
+  `transpose_incompatible`, `transpose_index_other`, `transpose_long_decimal`,
+  `transpose_missing_index`, `transpose_too_many`, `transpose_sql` in
+  `python/repark/tests/facade_df_rust3_oracle.json`.)*
+- **Pin** — `python/repark/tests/test_df_rust3_freqitems_transpose.py` (transpose pins)
+- **Rationale** — IMPLEMENTED 2026-09-15 (DF-RUST-3, rulings R-7/R-8). One recorded divergence:
+  the duplicate-index dict view accepts either legal value order because Spark's own
+  `Row.asDict` last-wins result depends on an unspecified equal-key column order; the tuple
+  cells pin the positional truth.
+
 ### DF-PLAN-INTRO-1 — `inputFiles` lists scan files; `semanticHash` hashes the analyzed plan
 - **repark** — `inputFiles()` walks the built physical plan and lists every file-scan
   group entry as `file:///` URIs in first-appearance order; a local frame answers
@@ -7486,19 +7543,20 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   the non-colliding arms, where the engines agree; this row records the colliding-map arm until
   repark can materialize duplicate column names the way Spark does.
 
-### EX-DF-19 — `stat.freqItems` refuses; Spark answers the frequent-item table
+### EX-DF-19 — `stat.freqItems` answers the frequent-item table — **FIXED 2026-09-15 (DF-RUST-3)**
 
-- **repark** — `DataFrame.stat.freqItems(cols, support)` raises
-  `UnsupportedOperationException: DataFrame.stat.freqItems is not supported yet (disclosed
-  R-DF-BATCH2)`.
+- **repark** — `DataFrame.stat.freqItems(cols, support)` answers columns
+  `['k_freqItems', 'v_freqItems']` and the row `([1, 2, 3], [50.0, 20.0, 40.0, 10.0, 30.0])`
+  on the five-row `k`/`v` frame at the default 1% support, up to unspecified hash-map order.
+  `DataFrame.freqItems` shares the same body; the kernel is Spark's `FreqItemCounter` as a
+  DataFusion UDAF in `repark-core`.
 - **Apache Spark** — `stat.freqItems(["k", "v"])` on a five-row `k`/`v` frame answers columns
   `['k_freqItems', 'v_freqItems']` and the row `([1, 2, 3], [50.0, 20.0, 40.0, 10.0, 30.0])` at
   the default 1% support. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-19 DataFrame-d
   batch; null-free five-row `k`/`v` frame.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_d.py::test_stat_freq_items_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-19 measurement. A refusal is documented
-  as a refusal, never as an example that swallows it; the name stays on the example backlog until
-  frequent-item discovery lands.
+- **Pin** — `python/repark/tests/test_examples_dataframe_d.py::test_stat_freq_items_answers`
+- **Rationale** — FIXED 2026-09-15 (DF-RUST-3). History: the name raised the disclosed
+  `UnsupportedOperationException` (R-DF-BATCH2) until the Rust `FreqItemCounter` UDAF landed.
 
 ### PERF-APPROXQUANTILE-1 — `approxQuantile` collects once per frame, not once per column × probability — **FIXED 2026-09-07 (DFCORE-5)**
 

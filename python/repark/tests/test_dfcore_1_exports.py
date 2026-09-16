@@ -109,6 +109,11 @@ from the R-5 Rust unit as one-line class bindings over ``plan_introspect.py``,
 so ``EXPECTED_DATAFRAME_DIR`` gains exactly those two names; ``core`` and the
 package each gain exactly the one new module name ``plan_introspect``.
 pins: df-plan-introspect-1/C-004
+DF-RUST-3 (2026-09-16): ``freqItems`` and ``transpose`` join ``DataFrame`` —
+``freqItems`` binds ``statistics.freqItems`` (the module moves to the top
+import, so the bottom E402 line drops it) and ``transpose`` binds
+``surface_a.transpose``, so ``EXPECTED_DATAFRAME_DIR`` gains exactly those two
+names and neither surface list changes.
 """
 
 from __future__ import annotations
