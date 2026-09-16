@@ -271,6 +271,15 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   refusal naming `FNP-16-csv-xml-xpath` (owner ruling D-6, 2026-09-15), verbatim the
   same `{name} is reachable without a JVM …` string the armed parse-altitude refusal
   raises on both SQL doors. pins: fnp-gen-1/C-002, C-003
+  **FNP-GEN-1 step 3 (2026-09-16, run 18a):** `from_csv` stops refusing and binds
+  its schema string as a literal and its options dict as a `create_map` of literals
+  (built inline — `functions_collections` imports this module, so the facade cannot
+  import `create_map` back); the output name keeps Spark's first-argument form.
+  **Step 4b (run 18a):** `schema_of_csv` stops refusing and binds its CSV literal
+  plus an optional options dict the same way; the output name keeps Spark's
+  `schema_of_csv(<csv text>)` form. pins: fnp-gen-1/C-003, C-004
+  **Gate pass (run 18a):** `from_csv` checks its schema argument with the
+  conditioned `NOT_COLUMN_OR_STR` bar. pins: fnp-gen-1/C-006
   **ABS-EXPR-1 (2026-09-13):** `cbrt` and `nullif` are one native `_scalar` call each
   (`expr_fn::cbrt` / `expr_fn::nullif`); both `when(...)` rewrites embedded their child
   more than once per level (cbrt 3×, nullif 2×). `nvl2` stays a `when` — each child is
@@ -302,7 +311,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `scripts/check_example_coverage.py` reads, and
   `install_into` runs at the tail of `functions.py`'s installer chain; `posexplode` /
   `posexplode_outer` are additionally imported statically into `functions.py` because
-  their `__all__` rows predate the installer. pins: fnp-gen-1/C-001, C-002, C-003
+  their `__all__` rows predate the installer. **Step 2 (run 18a):** `json_tuple` joins
+  this module — its stub leaves `functions_expr.py` and it is imported statically
+  beside `posexplode` / `posexplode_outer`, keeping its presplit `__all__` row, so
+  `GENERATOR_NAMES` keeps only the four step-2 names. A lone `.alias('x')` on one
+  field is ignored and a wrong count raises `UDTF_ALIAS_NUMBER_MISMATCH`, both decided
+  by the rewrite. pins: fnp-gen-1/C-001, C-002, C-003
 - `functions_json.py` — **FNP-10 (2026-09-05):** the JSON wrappers (`get_json_object`,
   `json_array_length`, `json_object_keys`, `to_json`, `from_json`). Its `install_into` also
   re-exports the collection constructors from `functions_collections`, so the whole FNP-9/10
@@ -597,3 +611,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   no longer facade-only and `test_fnp_misc_1_byname_allowlist_covers_facade` derives them out of the
   set. The full facade suite caught it — the unit's own pin set does not include that census.
   pins: fnp-gen-1/C-005
+- **FNP-GEN-1 step 7 (2026-09-16, run 18a):** `functions_byname.py` drops
+  `json_tuple` / `from_csv` / `schema_of_csv` from `FACADE_ONLY_ROUTINE_NAMES`
+  for the same reason — the dispatch now resolves all three on the Rust kernels.
+  The full facade suite caught it again. pins: fnp-gen-1/C-002, C-006

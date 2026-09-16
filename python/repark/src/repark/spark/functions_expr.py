@@ -403,18 +403,16 @@ def from_csv(
     schema: Column | str,
     options: dict[str, str] | None = None,
 ) -> Column:
-    """Parse a CSV string column (PySpark ``functions.from_csv``).
-
-    E1: type pre-check only (``NOT_COLUMN_OR_STR`` on ``schema``). Happy path is loud-
-    unsupported until a CSV parse kernel lands.
-    """
-    _ = options
+    """Parse a CSV string column (PySpark ``functions.from_csv``)."""
     _require_column_or_str(col, "col")
     _require_column_or_str(schema, "schema")
-
-    raise UnsupportedOperationException(
-        "functions.from_csv is not supported yet (CSV parse kernel deferred; disclosed E1)"
-    )
+    head = _column_argument(col)
+    text = lit(schema) if isinstance(schema, str) else _column_argument(schema)
+    name = f"from_csv({head.spark_wrap_display_part()})"
+    if options is None:
+        return _scalar("from_csv", head, text, display=name)
+    pairs = [item for pair in options.items() for item in (lit(pair[0]), lit(pair[1]))]
+    return _scalar("from_csv", head, text, _scalar("create_map", *pairs), display=name)
 
 
 def from_xml(
@@ -446,13 +444,15 @@ def from_xml(
 
 
 def schema_of_csv(csv: Column | str, options: dict[str, str] | None = None) -> Column:
-    """Infer CSV schema as DDL (PySpark ``functions.schema_of_csv``). E1 type pre-check only."""
-    _ = options
+    """Infer CSV schema as DDL (PySpark ``functions.schema_of_csv``)."""
     _require_column_or_str(csv, "csv")
-
-    raise UnsupportedOperationException(
-        "functions.schema_of_csv is not supported yet (disclosed E1)"
-    )
+    document = csv if isinstance(csv, Column) else lit(csv)
+    shown = csv if isinstance(csv, str) else document.spark_wrap_display_part()
+    name = f"schema_of_csv({shown})"
+    if options is None:
+        return _scalar("schema_of_csv", document, display=name)
+    pairs = [item for pair in options.items() for item in (lit(pair[0]), lit(pair[1]))]
+    return _scalar("schema_of_csv", document, _scalar("create_map", *pairs), display=name)
 
 
 def schema_of_json(json: Column | str, options: dict[str, str] | None = None) -> Column:
@@ -474,26 +474,6 @@ def schema_of_xml(xml: Column | str, options: dict[str, str] | None = None) -> C
         "schema_of_xml is reachable without a JVM and is deferred by cost: an XML parser "
         "matching Spark's javax.xml kernel is a new dependency this unit may not add "
         "(owner ruling 2026-09-15). See docs/spark-sql-iceberg-parity.md (FNP-16-csv-xml-xpath)."
-    )
-
-
-def json_tuple(col: Column | str, *fields: str) -> Column:
-    """Extract JSON fields as a row (PySpark ``functions.json_tuple``).
-
-    E1: empty ``fields`` raises ``CANNOT_BE_EMPTY`` (Apache ``test_json_tuple_empty_fields``
-    pins the message text via assertRaisesRegex).
-    """
-    if len(fields) == 0:
-        # Apache test_json_tuple_empty_fields asserts message text via assertRaisesRegex
-        raise PySparkValueError(
-            "At least one field must be specified",
-            errorClass="CANNOT_BE_EMPTY",
-            messageParameters={"item": "field"},
-        )
-    _require_column_or_str(col, "col")
-
-    raise UnsupportedOperationException(
-        "functions.json_tuple is not supported yet (JSON tuple kernel deferred; disclosed E1)"
     )
 
 

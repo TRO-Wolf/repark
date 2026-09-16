@@ -1,0 +1,929 @@
+{
+ "cells": [
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "t1_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t1_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t2_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t2_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t3_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t3_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t4_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t4_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t5_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t5_str",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('2024-01-01 10:00:00,2024-01-01T10:00:00.123,2024-01-01,2024-01-01 10:00:00+02:00,2024/01/01 10:00'), 't1 TIMESTAMP, t2 TIMESTAMP, t3 TIMESTAMP, t4 TIMESTAMP, t5 TIMESTAMP') -> each field cast long and string",
+   "name": "from_csv",
+   "rows": [
+    [
+     1704103200,
+     "2024-01-01 10:00:00",
+     1704103200,
+     "2024-01-01 10:00:00.123",
+     1704067200,
+     "2024-01-01 00:00:00",
+     1704096000,
+     "2024-01-01 08:00:00",
+     null,
+     null
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "str",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('2024/01/01 10:00'), 't TIMESTAMP', {'timestampFormat': 'yyyy/MM/dd HH:mm'}) -> long,string",
+   "name": "from_csv",
+   "rows": [
+    [
+     1704103200,
+     "2024-01-01 10:00:00"
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "str",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('2024-01-01 10:00:00'), 't TIMESTAMP_NTZ') -> string",
+   "name": "from_csv",
+   "rows": [
+    [
+     "2024-01-01 10:00:00"
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "epoch",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CAST(from_csv('2024-01-01 10:00:00', 't TIMESTAMP').t AS BIGINT)",
+   "name": "from_csv",
+   "rows": [
+    [
+     1704103200
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "t1_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t1_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t2_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t2_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t3_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t3_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t4_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t4_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t5_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t5_str",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('2024-01-01 10:00:00,2024-01-01T10:00:00.123,2024-01-01,2024-01-01 10:00:00+02:00,2024/01/01 10:00'), 't1 TIMESTAMP, t2 TIMESTAMP, t3 TIMESTAMP, t4 TIMESTAMP, t5 TIMESTAMP') -> each field cast long and string",
+   "name": "from_csv",
+   "rows": [
+    [
+     1704103200,
+     "2024-01-01 10:00:00",
+     1704103200,
+     "2024-01-01 10:00:00.123",
+     1704067200,
+     "2024-01-01 00:00:00",
+     1704096000,
+     "2024-01-01 08:00:00",
+     null,
+     null
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "str",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('2024/01/01 10:00'), 't TIMESTAMP', {'timestampFormat': 'yyyy/MM/dd HH:mm'}) -> long,string",
+   "name": "from_csv",
+   "rows": [
+    [
+     1704103200,
+     "2024-01-01 10:00:00"
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "str",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('2024-01-01 10:00:00'), 't TIMESTAMP_NTZ') -> string",
+   "name": "from_csv",
+   "rows": [
+    [
+     "2024-01-01 10:00:00"
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "epoch",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CAST(from_csv('2024-01-01 10:00:00', 't TIMESTAMP').t AS BIGINT)",
+   "name": "from_csv",
+   "rows": [
+    [
+     1704103200
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "t1_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t1_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t2_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t2_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t3_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t3_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t4_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t4_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t5_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t5_str",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('2024-01-01 10:00:00,2024-01-01T10:00:00.123,2024-01-01,2024-01-01 10:00:00+02:00,2024/01/01 10:00'), 't1 TIMESTAMP, t2 TIMESTAMP, t3 TIMESTAMP, t4 TIMESTAMP, t5 TIMESTAMP') -> each field cast long and string",
+   "name": "from_csv",
+   "rows": [
+    [
+     1704121200,
+     "2024-01-01 10:00:00",
+     1704121200,
+     "2024-01-01 10:00:00.123",
+     1704085200,
+     "2024-01-01 00:00:00",
+     1704096000,
+     "2024-01-01 03:00:00",
+     null,
+     null
+    ]
+   ],
+   "session_time_zone": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "str",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('2024/01/01 10:00'), 't TIMESTAMP', {'timestampFormat': 'yyyy/MM/dd HH:mm'}) -> long,string",
+   "name": "from_csv",
+   "rows": [
+    [
+     1704121200,
+     "2024-01-01 10:00:00"
+    ]
+   ],
+   "session_time_zone": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "str",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('2024-01-01 10:00:00'), 't TIMESTAMP_NTZ') -> string",
+   "name": "from_csv",
+   "rows": [
+    [
+     "2024-01-01 10:00:00"
+    ]
+   ],
+   "session_time_zone": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "epoch",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CAST(from_csv('2024-01-01 10:00:00', 't TIMESTAMP').t AS BIGINT)",
+   "name": "from_csv",
+   "rows": [
+    [
+     1704121200
+    ]
+   ],
+   "session_time_zone": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "t1_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t1_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t2_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t2_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t3_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t3_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t4_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t4_str",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "t5_epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "t5_str",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('2024-01-01 10:00:00,2024-01-01T10:00:00.123,2024-01-01,2024-01-01 10:00:00+02:00,2024/01/01 10:00'), 't1 TIMESTAMP, t2 TIMESTAMP, t3 TIMESTAMP, t4 TIMESTAMP, t5 TIMESTAMP') -> each field cast long and string",
+   "name": "from_csv",
+   "rows": [
+    [
+     1704121200,
+     "2024-01-01 10:00:00",
+     1704121200,
+     "2024-01-01 10:00:00.123",
+     1704085200,
+     "2024-01-01 00:00:00",
+     1704096000,
+     "2024-01-01 03:00:00",
+     null,
+     null
+    ]
+   ],
+   "session_time_zone": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "epoch",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "str",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('2024/01/01 10:00'), 't TIMESTAMP', {'timestampFormat': 'yyyy/MM/dd HH:mm'}) -> long,string",
+   "name": "from_csv",
+   "rows": [
+    [
+     1704121200,
+     "2024-01-01 10:00:00"
+    ]
+   ],
+   "session_time_zone": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "str",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('2024-01-01 10:00:00'), 't TIMESTAMP_NTZ') -> string",
+   "name": "from_csv",
+   "rows": [
+    [
+     "2024-01-01 10:00:00"
+    ]
+   ],
+   "session_time_zone": "America/New_York"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "epoch",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT CAST(from_csv('2024-01-01 10:00:00', 't TIMESTAMP').t AS BIGINT)",
+   "name": "from_csv",
+   "rows": [
+    [
+     1704121200
+    ]
+   ],
+   "session_time_zone": "America/New_York"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "from_csv(1,abc,2.5,EXTRA)",
+     "nullable": false,
+     "type": "struct<a:int,b:string,c:double,_corrupt_record:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('1,abc,2.5,EXTRA'), 'a INT, b STRING, c DOUBLE, _corrupt_record STRING', {'columnNameOfCorruptRecord': '_corrupt_record'})",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "_corrupt_record": "1,abc,2.5,EXTRA",
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     }
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "from_csv(1,abc,2.5,EXTRA)",
+     "nullable": false,
+     "type": "struct<a:int,b:string,c:double>"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('1,abc,2.5,EXTRA'), 'a INT, b STRING, c DOUBLE')",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     }
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "from_csv(1,x)",
+     "nullable": false,
+     "type": "struct<a:int,_corrupt_record:string,b:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('1,x'), 'a INT, _corrupt_record STRING, b STRING', {'columnNameOfCorruptRecord': '_corrupt_record'})",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "_corrupt_record": null,
+       "a": 1,
+       "b": "x"
+      }
+     }
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "from_csv(q,x,y)",
+     "nullable": false,
+     "type": "struct<a:int,_corrupt_record:string,b:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('q,x,y'), 'a INT, _corrupt_record STRING, b STRING', {'columnNameOfCorruptRecord': '_corrupt_record'})",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "_corrupt_record": "q,x,y",
+       "a": null,
+       "b": "x"
+      }
+     }
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "INVALID_CORRUPT_RECORD_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "from_csv(lit('q'), 'a INT, _corrupt_record INT', {'columnNameOfCorruptRecord': '_corrupt_record'})",
+   "message": "[INVALID_CORRUPT_RECORD_TYPE] The column `_corrupt_record` for corrupt records must have the nullable STRING type, but got \"INT\". SQLSTATE: 42804",
+   "name": "from_csv",
+   "root_cause": "[INVALID_CORRUPT_RECORD_TYPE] The column `_corrupt_record` for corrupt records must have the nullable STRING type, but got \"INT\". SQLSTATE: 42804",
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "CAST(from_csv(1.239,1e2,123456.7,-0.005) AS STRING)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('1.239,1e2,123456.7,-0.005'), 'd DECIMAL(5,2), e DECIMAL(10,2), f DECIMAL(5,2), g DECIMAL(5,2)')",
+   "name": "from_csv",
+   "rows": [
+    [
+     "{1.24, 100.00, null, -0.01}"
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "from_csv(concat(1, CAST(id AS STRING)))",
+     "nullable": false,
+     "type": "struct<a:int>"
+    }
+   ],
+   "door": "python",
+   "expr": "spark.range(0).select(from_csv(lit('1'), 'a INT'))",
+   "name": "from_csv",
+   "rows": [],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "schema_of_csv(2024-01-01 10:00:00.1,2024-01-01T10:00:00Z,2024-01-01T10:00:00,1.0E10,123456789012345678901234,2024-01-01 10:00,1.5f,01/02/2024)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "schema_of_csv('2024-01-01 10:00:00.1,2024-01-01T10:00:00Z,2024-01-01T10:00:00,1.0E10,123456789012345678901234,2024-01-01 10:00,1.5f,01/02/2024')",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: TIMESTAMP, _c1: TIMESTAMP, _c2: TIMESTAMP, _c3: DOUBLE, _c4: DECIMAL(24,0), _c5: TIMESTAMP, _c6: DOUBLE, _c7: STRING>"
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "json_tuple(lit('{\"a\":1} trailing'), 'a') / ('{\"a\":1}{\"b\":2}')",
+   "name": "json_tuple",
+   "rows": [
+    [
+     "1"
+    ],
+    [
+     "1"
+    ],
+    [
+     "2"
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "from_csv(1,abc,2.5,EXTRA)",
+     "nullable": false,
+     "type": "struct<a:int,b:string,c:double,_corrupt_record:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('1,abc,2.5,EXTRA'), 'a INT, b STRING, c DOUBLE, _corrupt_record STRING', {'columnNameOfCorruptRecord': '_corrupt_record'})",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "_corrupt_record": "1,abc,2.5,EXTRA",
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     }
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "from_csv(1,abc,2.5,EXTRA)",
+     "nullable": false,
+     "type": "struct<a:int,b:string,c:double>"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('1,abc,2.5,EXTRA'), 'a INT, b STRING, c DOUBLE')",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     }
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "from_csv(1,x)",
+     "nullable": false,
+     "type": "struct<a:int,_corrupt_record:string,b:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('1,x'), 'a INT, _corrupt_record STRING, b STRING', {'columnNameOfCorruptRecord': '_corrupt_record'})",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "_corrupt_record": null,
+       "a": 1,
+       "b": "x"
+      }
+     }
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "from_csv(q,x,y)",
+     "nullable": false,
+     "type": "struct<a:int,_corrupt_record:string,b:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('q,x,y'), 'a INT, _corrupt_record STRING, b STRING', {'columnNameOfCorruptRecord': '_corrupt_record'})",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "_corrupt_record": "q,x,y",
+       "a": null,
+       "b": "x"
+      }
+     }
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "INVALID_CORRUPT_RECORD_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "from_csv(lit('q'), 'a INT, _corrupt_record INT', {'columnNameOfCorruptRecord': '_corrupt_record'})",
+   "message": "[INVALID_CORRUPT_RECORD_TYPE] The column `_corrupt_record` for corrupt records must have the nullable STRING type, but got \"INT\". SQLSTATE: 42804",
+   "name": "from_csv",
+   "root_cause": "[INVALID_CORRUPT_RECORD_TYPE] The column `_corrupt_record` for corrupt records must have the nullable STRING type, but got \"INT\". SQLSTATE: 42804",
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "CAST(from_csv(1.239,1e2,123456.7,-0.005) AS STRING)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "from_csv(lit('1.239,1e2,123456.7,-0.005'), 'd DECIMAL(5,2), e DECIMAL(10,2), f DECIMAL(5,2), g DECIMAL(5,2)')",
+   "name": "from_csv",
+   "rows": [
+    [
+     "{1.24, 100.00, null, -0.01}"
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "from_csv(concat(1, CAST(id AS STRING)))",
+     "nullable": false,
+     "type": "struct<a:int>"
+    }
+   ],
+   "door": "python",
+   "expr": "spark.range(0).select(from_csv(lit('1'), 'a INT'))",
+   "name": "from_csv",
+   "rows": [],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "schema_of_csv(2024-01-01 10:00:00.1,2024-01-01T10:00:00Z,2024-01-01T10:00:00,1.0E10,123456789012345678901234,2024-01-01 10:00,1.5f,01/02/2024)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "schema_of_csv('2024-01-01 10:00:00.1,2024-01-01T10:00:00Z,2024-01-01T10:00:00,1.0E10,123456789012345678901234,2024-01-01 10:00,1.5f,01/02/2024')",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: TIMESTAMP, _c1: TIMESTAMP, _c2: TIMESTAMP, _c3: DOUBLE, _c4: DECIMAL(24,0), _c5: TIMESTAMP, _c6: DOUBLE, _c7: STRING>"
+    ]
+   ],
+   "session_time_zone": "UTC"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "json_tuple(lit('{\"a\":1} trailing'), 'a') / ('{\"a\":1}{\"b\":2}')",
+   "name": "json_tuple",
+   "rows": [
+    [
+     "1"
+    ],
+    [
+     "1"
+    ],
+    [
+     "2"
+    ]
+   ],
+   "session_time_zone": "UTC"
+  }
+ ],
+ "spark_version": "4.1.2"
+}

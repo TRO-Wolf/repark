@@ -1,0 +1,2376 @@
+{
+ "cells": [
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c1",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c2",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c3",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c4",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c5",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c6",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c7",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, json_tuple(js, 'a','b','c','e','f','g','h','zz'))",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "x",
+     "{\"d\":2}",
+     "[1,2]",
+     null,
+     "1.5",
+     "true",
+     null
+    ],
+    [
+     2,
+     "2",
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     4,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     5,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     6,
+     "10",
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c1",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, json_tuple(js, 'a', 'a'))",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "1"
+    ],
+    [
+     2,
+     "2",
+     "2"
+    ],
+    [
+     3,
+     null,
+     null
+    ],
+    [
+     4,
+     null,
+     null
+    ],
+    [
+     5,
+     null,
+     null
+    ],
+    [
+     6,
+     "10",
+     "10"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "CANNOT_BE_EMPTY",
+   "error_type": "PySparkValueError",
+   "expr": "select(json_tuple(js))",
+   "message": "[CANNOT_BE_EMPTY] At least one field must be specified.",
+   "name": "json_tuple",
+   "root_cause": "[CANNOT_BE_EMPTY] At least one field must be specified."
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UDTF_ALIAS_NUMBER_MISMATCH",
+   "error_type": "AnalysisException",
+   "expr": "select(json_tuple(js, 'a').alias('x', 'y'))",
+   "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF.",
+   "name": "json_tuple",
+   "root_cause": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(json_tuple(js, 'a', 'b').alias('x', 'y'))",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "x"
+    ],
+    [
+     2,
+     "2",
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ],
+    [
+     4,
+     null,
+     null
+    ],
+    [
+     5,
+     null,
+     null
+    ],
+    [
+     6,
+     "10",
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:int,b:string,c:double>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', 'a INT, b STRING, c DOUBLE')",
+   "name": "from_csv",
+   "rows": [
+    [
+     1,
+     {
+      "row": {
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "row": {
+       "a": null,
+       "b": "y",
+       "c": null
+      }
+     }
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     {
+      "row": {
+       "a": null,
+       "b": null,
+       "c": null
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "row": {
+       "a": 7,
+       "b": "q,r",
+       "c": 1000.0
+      }
+     }
+    ],
+    [
+     6,
+     {
+      "row": {
+       "a": 8,
+       "b": null,
+       "c": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "F.from_csv('csvrow', 'a INT, b INT', {'mode': 'FAILFAST'})",
+   "message": "An error occurred while calling o124.collectToPython.",
+   "name": "from_csv",
+   "root_cause": ": org.apache.spark.SparkException: [MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION] Malformed records are detected in record parsing: [1,null]."
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "PARSE_MODE_UNSUPPORTED",
+   "error_type": "AnalysisException",
+   "expr": "F.from_csv('csvrow', 'a INT, b INT', {'mode': 'DROPMALFORMED'})",
+   "message": "[PARSE_MODE_UNSUPPORTED] The function `from_csv` doesn't support the DROPMALFORMED mode. Acceptable modes are PERMISSIVE and FAILFAST. SQLSTATE: 42601",
+   "name": "from_csv",
+   "root_cause": "[PARSE_MODE_UNSUPPORTED] The function `from_csv` doesn't support the DROPMALFORMED mode. Acceptable modes are PERMISSIVE and FAILFAST. SQLSTATE: 42601"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:string,b:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', 'a STRING', {'nullValue': 'abc', 'quote': \"'\"})",
+   "name": "from_csv",
+   "rows": [
+    [
+     1,
+     {
+      "row": {
+       "a": "1",
+       "b": null
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "row": {
+       "a": "x",
+       "b": "y"
+      }
+     }
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     {
+      "row": {
+       "a": null,
+       "b": null
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "row": {
+       "a": "7",
+       "b": "q,r"
+      }
+     }
+    ],
+    [
+     6,
+     {
+      "row": {
+       "a": "8",
+       "b": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:int,b:string,c:double,_corrupt_record:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', 'a INT, b STRING, c DOUBLE, _corrupt_record STRING', {'columnNameOfCorruptRecord': '_corrupt_record'})",
+   "name": "from_csv",
+   "rows": [
+    [
+     1,
+     {
+      "row": {
+       "_corrupt_record": null,
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "row": {
+       "_corrupt_record": "x,y,z",
+       "a": null,
+       "b": "y",
+       "c": null
+      }
+     }
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     {
+      "row": {
+       "_corrupt_record": null,
+       "a": null,
+       "b": null,
+       "c": null
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "row": {
+       "_corrupt_record": null,
+       "a": 7,
+       "b": "q,r",
+       "c": 1000.0
+      }
+     }
+    ],
+    [
+     6,
+     {
+      "row": {
+       "_corrupt_record": "8",
+       "a": 8,
+       "b": null,
+       "c": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<_c0:int,_c1:string,_c2:double>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', F.schema_of_csv('1,abc,2.5'))",
+   "name": "from_csv",
+   "rows": [
+    [
+     1,
+     {
+      "row": {
+       "_c0": 1,
+       "_c1": "abc",
+       "_c2": 2.5
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "row": {
+       "_c0": null,
+       "_c1": "y",
+       "_c2": null
+      }
+     }
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     {
+      "row": {
+       "_c0": null,
+       "_c1": null,
+       "_c2": null
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "row": {
+       "_c0": 7,
+       "_c1": "q,r",
+       "_c2": 1000.0
+      }
+     }
+    ],
+    [
+     6,
+     {
+      "row": {
+       "_c0": 8,
+       "_c1": null,
+       "_c2": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "from_csv(1,2024)",
+     "nullable": false,
+     "type": "struct<a:int,b:date>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', 'a INT, b DATE', {'dateFormat': 'yyyy'})",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": {
+        "repr": "datetime.date(2024, 1, 1)"
+       }
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": {
+        "repr": "datetime.date(2024, 1, 1)"
+       }
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": {
+        "repr": "datetime.date(2024, 1, 1)"
+       }
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": {
+        "repr": "datetime.date(2024, 1, 1)"
+       }
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": {
+        "repr": "datetime.date(2024, 1, 1)"
+       }
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": {
+        "repr": "datetime.date(2024, 1, 1)"
+       }
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "INVALID_SCHEMA.NON_STRING_LITERAL",
+   "error_type": "AnalysisException",
+   "expr": "F.from_csv('csvrow', col('csvrow'))",
+   "message": "[INVALID_SCHEMA.NON_STRING_LITERAL] The input schema \"csvrow\" is not a valid schema string. The input expression must be string literal and not null. SQLSTATE: 42K07",
+   "name": "from_csv",
+   "root_cause": "[INVALID_SCHEMA.NON_STRING_LITERAL] The input schema \"csvrow\" is not a valid schema string. The input expression must be string literal and not null. SQLSTATE: 42K07"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "PARSE_SYNTAX_ERROR",
+   "error_type": "AnalysisException",
+   "expr": "F.from_csv('csvrow', 'not a schema !!')",
+   "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'a'. SQLSTATE: 42601",
+   "name": "from_csv",
+   "root_cause": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'a'. SQLSTATE: 42601"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.from_csv('id', 'a INT')",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"from_csv(id)\" due to data type mismatch: The first parameter requires the \"STRING\" type, however \"id\" has the type \"INT\". SQLSTATE: 42K09;",
+   "name": "from_csv",
+   "root_cause": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"from_csv(id)\" due to data type mismatch: The first parameter requires the \"STRING\" type, however \"id\" has the type \"INT\". SQLSTATE: 42K09;"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:int>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', 'a INT', {'bogus': 'x'})",
+   "name": "from_csv",
+   "rows": [
+    [
+     1,
+     {
+      "row": {
+       "a": 1
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "row": {
+       "a": 7
+      }
+     }
+    ],
+    [
+     6,
+     {
+      "row": {
+       "a": 8
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_DATATYPE",
+   "error_type": "UnsupportedOperationException",
+   "expr": "F.from_csv('csvrow', 'a ARRAY<INT>')",
+   "message": "[UNSUPPORTED_DATATYPE] Unsupported data type \"ARRAY<INT>\". SQLSTATE: 0A000",
+   "name": "from_csv",
+   "root_cause": "[UNSUPPORTED_DATATYPE] Unsupported data type \"ARRAY<INT>\". SQLSTATE: 0A000"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "schema_of_csv(1,abc,2.5,true,2024-01-01,2024-01-01 10:00:00,,1e3,99999999999)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.schema_of_csv('1,abc,2.5,true,2024-01-01,2024-01-01 10:00:00,,1e3,99999999999')",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: INT, _c1: STRING, _c2: DOUBLE, _c3: BOOLEAN, _c4: DATE, _c5: TIMESTAMP, _c6: STRING, _c7: DOUBLE, _c8: BIGINT>"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "F.schema_of_csv('')",
+   "message": "An error occurred while calling o283.collectToPython.",
+   "name": "schema_of_csv",
+   "root_cause": ": org.apache.spark.SparkException: [INTERNAL_ERROR] The Spark SQL phase optimization failed with an internal error. You hit a bug in Spark or the Spark plugins you use. Please, report this bug to the corresponding communities or vendors, and provide the full stack trace. SQLSTATE: XX000"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "DATATYPE_MISMATCH.NON_FOLDABLE_INPUT",
+   "error_type": "AnalysisException",
+   "expr": "F.schema_of_csv(col('csvrow'))",
+   "message": "[DATATYPE_MISMATCH.NON_FOLDABLE_INPUT] Cannot resolve \"schema_of_csv(csvrow)\" due to data type mismatch: the input `csv` should be a foldable \"STRING\" expression; however, got \"csvrow\". SQLSTATE: 42K09;",
+   "name": "schema_of_csv",
+   "root_cause": "[DATATYPE_MISMATCH.NON_FOLDABLE_INPUT] Cannot resolve \"schema_of_csv(csvrow)\" due to data type mismatch: the input `csv` should be a foldable \"STRING\" expression; however, got \"csvrow\". SQLSTATE: 42K09;"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "DATATYPE_MISMATCH.UNEXPECTED_NULL",
+   "error_type": "AnalysisException",
+   "expr": "F.schema_of_csv(lit(None).cast('string'))",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_NULL] Cannot resolve \"schema_of_csv(CAST(NULL AS STRING))\" due to data type mismatch: The csv must not be null. SQLSTATE: 42K09;",
+   "name": "schema_of_csv",
+   "root_cause": "[DATATYPE_MISMATCH.UNEXPECTED_NULL] Cannot resolve \"schema_of_csv(CAST(NULL AS STRING))\" due to data type mismatch: The csv must not be null. SQLSTATE: 42K09;"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.schema_of_csv(lit(5))",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"schema_of_csv(5)\" due to data type mismatch: The first parameter requires the \"STRING\" type, however \"5\" has the type \"INT\". SQLSTATE: 42K09;",
+   "name": "schema_of_csv",
+   "root_cause": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"schema_of_csv(5)\" due to data type mismatch: The first parameter requires the \"STRING\" type, however \"5\" has the type \"INT\". SQLSTATE: 42K09;"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "schema_of_csv(\"a,b\",1.0)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.schema_of_csv('\"a,b\",1.0', {'inferSchema': 'false'})",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: STRING, _c1: DOUBLE>"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c1",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c2",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, json_tuple(js, 'a', 'c', 'e') FROM FRAME ORDER BY id",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "{\"d\":2}",
+     "[1,2]"
+    ],
+    [
+     2,
+     "2",
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ],
+    [
+     4,
+     null,
+     null,
+     null
+    ],
+    [
+     5,
+     null,
+     null,
+     null
+    ],
+    [
+     6,
+     "10",
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT json_tuple(js, 'a') AS (x) FROM FRAME",
+   "name": "json_tuple",
+   "rows": [
+    [
+     "1"
+    ],
+    [
+     "2"
+    ],
+    [
+     null
+    ],
+    [
+     null
+    ],
+    [
+     null
+    ],
+    [
+     "10"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT json_tuple(js, 'a', 'b') AS (x, y) FROM FRAME",
+   "name": "json_tuple",
+   "rows": [
+    [
+     "1",
+     "x"
+    ],
+    [
+     "2",
+     null
+    ],
+    [
+     null,
+     null
+    ],
+    [
+     null,
+     null
+    ],
+    [
+     null,
+     null
+    ],
+    [
+     "10",
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.NON_STRING_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT json_tuple(js, id) FROM FRAME",
+   "message": "[DATATYPE_MISMATCH.NON_STRING_TYPE] Cannot resolve \"json_tuple(js, id)\" due to data type mismatch: all arguments of the function `json_tuple` must be strings. SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "json_tuple",
+   "root_cause": "[DATATYPE_MISMATCH.NON_STRING_TYPE] Cannot resolve \"json_tuple(js, id)\" due to data type mismatch: all arguments of the function `json_tuple` must be strings. SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.NON_STRING_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT json_tuple(js, NULL) FROM FRAME",
+   "message": "[DATATYPE_MISMATCH.NON_STRING_TYPE] Cannot resolve \"json_tuple(js, NULL)\" due to data type mismatch: all arguments of the function `json_tuple` must be strings. SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "json_tuple",
+   "root_cause": "[DATATYPE_MISMATCH.NON_STRING_TYPE] Cannot resolve \"json_tuple(js, NULL)\" due to data type mismatch: all arguments of the function `json_tuple` must be strings. SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT json_tuple(js) FROM FRAME",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `json_tuple` requires > 1 parameters but the actual number is 1. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605",
+   "name": "json_tuple",
+   "root_cause": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `json_tuple` requires > 1 parameters but the actual number is 1. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "SELECT from_csv(csvrow, 'a INT, b INT', map('mode', 'FAILFAST')) FROM FRAME",
+   "message": "An error occurred while calling o383.collectToPython.",
+   "name": "from_csv",
+   "root_cause": ": org.apache.spark.SparkException: [MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION] Malformed records are detected in record parsing: [1,null]."
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "s",
+     "nullable": true,
+     "type": "struct<a:int,b:string,c:double>"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, from_csv(csvrow, 'a INT, b STRING, c DOUBLE') AS s FROM FRAME ORDER BY id",
+   "name": "from_csv",
+   "rows": [
+    [
+     1,
+     {
+      "row": {
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "row": {
+       "a": null,
+       "b": "y",
+       "c": null
+      }
+     }
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     {
+      "row": {
+       "a": null,
+       "b": null,
+       "c": null
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "row": {
+       "a": 7,
+       "b": "q,r",
+       "c": 1000.0
+      }
+     }
+    ],
+    [
+     6,
+     {
+      "row": {
+       "a": 8,
+       "b": null,
+       "c": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "INVALID_SCHEMA.NON_STRING_LITERAL",
+   "error_type": "AnalysisException",
+   "expr": "SELECT from_csv(csvrow, csvrow) FROM FRAME",
+   "message": "[INVALID_SCHEMA.NON_STRING_LITERAL] The input schema \"csvrow\" is not a valid schema string. The input expression must be string literal and not null. SQLSTATE: 42K07; line 1 pos 7",
+   "name": "from_csv",
+   "root_cause": "[INVALID_SCHEMA.NON_STRING_LITERAL] The input schema \"csvrow\" is not a valid schema string. The input expression must be string literal and not null. SQLSTATE: 42K07; line 1 pos 7"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT from_csv(csvrow) FROM FRAME",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `from_csv` requires [2, 3] parameters but the actual number is 1. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7",
+   "name": "from_csv",
+   "root_cause": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `from_csv` requires [2, 3] parameters but the actual number is 1. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "INVALID_OPTIONS.NON_STRING_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT from_csv(csvrow, 'a INT', map('sep', 1)) FROM FRAME",
+   "message": "[INVALID_OPTIONS.NON_STRING_TYPE] Invalid options: A type of keys and values in `map()` must be string, but got \"MAP<STRING, INT>\". SQLSTATE: 42K06; line 1 pos 7",
+   "name": "from_csv",
+   "root_cause": "[INVALID_OPTIONS.NON_STRING_TYPE] Invalid options: A type of keys and values in `map()` must be string, but got \"MAP<STRING, INT>\". SQLSTATE: 42K06; line 1 pos 7"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "FIELD_NOT_FOUND",
+   "error_type": "AnalysisException",
+   "expr": "SELECT from_csv(csvrow, schema_of_csv('1,abc,2.5')).c FROM FRAME ORDER BY 1",
+   "message": "[FIELD_NOT_FOUND] No such struct field `c` in `_c0`, `_c1`, `_c2`. SQLSTATE: 42704",
+   "name": "from_csv",
+   "root_cause": "[FIELD_NOT_FOUND] No such struct field `c` in `_c0`, `_c1`, `_c2`. SQLSTATE: 42704"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "schema_of_csv(1,abc,2.5,true,2024-01-01)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT schema_of_csv('1,abc,2.5,true,2024-01-01')",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: INT, _c1: STRING, _c2: DOUBLE, _c3: BOOLEAN, _c4: DATE>"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "SELECT schema_of_csv('')",
+   "message": "An error occurred while calling o438.collectToPython.",
+   "name": "schema_of_csv",
+   "root_cause": ": org.apache.spark.SparkException: [INTERNAL_ERROR] The Spark SQL phase optimization failed with an internal error. You hit a bug in Spark or the Spark plugins you use. Please, report this bug to the corresponding communities or vendors, and provide the full stack trace. SQLSTATE: XX000"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "schema_of_csv(1|x)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT schema_of_csv('1|x', map('sep', '|'))",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: INT, _c1: STRING>"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.UNEXPECTED_NULL",
+   "error_type": "AnalysisException",
+   "expr": "SELECT schema_of_csv(NULL)",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_NULL] Cannot resolve \"schema_of_csv(NULL)\" due to data type mismatch: The csv must not be null. SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "schema_of_csv",
+   "root_cause": "[DATATYPE_MISMATCH.UNEXPECTED_NULL] Cannot resolve \"schema_of_csv(NULL)\" due to data type mismatch: The csv must not be null. SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "INVALID_OPTIONS.NON_MAP_FUNCTION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT schema_of_csv('a', 'b')",
+   "message": "[INVALID_OPTIONS.NON_MAP_FUNCTION] Invalid options: Must use the `map()` function for options. SQLSTATE: 42K06; line 1 pos 7",
+   "name": "schema_of_csv",
+   "root_cause": "[INVALID_OPTIONS.NON_MAP_FUNCTION] Invalid options: Must use the `map()` function for options. SQLSTATE: 42K06; line 1 pos 7"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c1",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c2",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c3",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c4",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c5",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c6",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c7",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, json_tuple(js, 'a','b','c','e','f','g','h','zz'))",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "x",
+     "{\"d\":2}",
+     "[1,2]",
+     null,
+     "1.5",
+     "true",
+     null
+    ],
+    [
+     2,
+     "2",
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     4,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     5,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     6,
+     "10",
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c1",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, json_tuple(js, 'a', 'a'))",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "1"
+    ],
+    [
+     2,
+     "2",
+     "2"
+    ],
+    [
+     3,
+     null,
+     null
+    ],
+    [
+     4,
+     null,
+     null
+    ],
+    [
+     5,
+     null,
+     null
+    ],
+    [
+     6,
+     "10",
+     "10"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "CANNOT_BE_EMPTY",
+   "error_type": "PySparkValueError",
+   "expr": "select(json_tuple(js))",
+   "message": "[CANNOT_BE_EMPTY] At least one field must be specified.",
+   "name": "json_tuple",
+   "root_cause": "[CANNOT_BE_EMPTY] At least one field must be specified."
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UDTF_ALIAS_NUMBER_MISMATCH",
+   "error_type": "AnalysisException",
+   "expr": "select(json_tuple(js, 'a').alias('x', 'y'))",
+   "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF.",
+   "name": "json_tuple",
+   "root_cause": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(json_tuple(js, 'a', 'b').alias('x', 'y'))",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "x"
+    ],
+    [
+     2,
+     "2",
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ],
+    [
+     4,
+     null,
+     null
+    ],
+    [
+     5,
+     null,
+     null
+    ],
+    [
+     6,
+     "10",
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:int,b:string,c:double>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', 'a INT, b STRING, c DOUBLE')",
+   "name": "from_csv",
+   "rows": [
+    [
+     1,
+     {
+      "row": {
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "row": {
+       "a": null,
+       "b": "y",
+       "c": null
+      }
+     }
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     {
+      "row": {
+       "a": null,
+       "b": null,
+       "c": null
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "row": {
+       "a": 7,
+       "b": "q,r",
+       "c": 1000.0
+      }
+     }
+    ],
+    [
+     6,
+     {
+      "row": {
+       "a": 8,
+       "b": null,
+       "c": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "F.from_csv('csvrow', 'a INT, b INT', {'mode': 'FAILFAST'})",
+   "message": "An error occurred while calling o553.collectToPython.",
+   "name": "from_csv",
+   "root_cause": ": org.apache.spark.SparkException: [MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION] Malformed records are detected in record parsing: [1,null]."
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "PARSE_MODE_UNSUPPORTED",
+   "error_type": "AnalysisException",
+   "expr": "F.from_csv('csvrow', 'a INT, b INT', {'mode': 'DROPMALFORMED'})",
+   "message": "[PARSE_MODE_UNSUPPORTED] The function `from_csv` doesn't support the DROPMALFORMED mode. Acceptable modes are PERMISSIVE and FAILFAST. SQLSTATE: 42601",
+   "name": "from_csv",
+   "root_cause": "[PARSE_MODE_UNSUPPORTED] The function `from_csv` doesn't support the DROPMALFORMED mode. Acceptable modes are PERMISSIVE and FAILFAST. SQLSTATE: 42601"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:string,b:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', 'a STRING', {'nullValue': 'abc', 'quote': \"'\"})",
+   "name": "from_csv",
+   "rows": [
+    [
+     1,
+     {
+      "row": {
+       "a": "1",
+       "b": null
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "row": {
+       "a": "x",
+       "b": "y"
+      }
+     }
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     {
+      "row": {
+       "a": null,
+       "b": null
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "row": {
+       "a": "7",
+       "b": "q,r"
+      }
+     }
+    ],
+    [
+     6,
+     {
+      "row": {
+       "a": "8",
+       "b": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:int,b:string,c:double,_corrupt_record:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', 'a INT, b STRING, c DOUBLE, _corrupt_record STRING', {'columnNameOfCorruptRecord': '_corrupt_record'})",
+   "name": "from_csv",
+   "rows": [
+    [
+     1,
+     {
+      "row": {
+       "_corrupt_record": null,
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "row": {
+       "_corrupt_record": "x,y,z",
+       "a": null,
+       "b": "y",
+       "c": null
+      }
+     }
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     {
+      "row": {
+       "_corrupt_record": null,
+       "a": null,
+       "b": null,
+       "c": null
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "row": {
+       "_corrupt_record": null,
+       "a": 7,
+       "b": "q,r",
+       "c": 1000.0
+      }
+     }
+    ],
+    [
+     6,
+     {
+      "row": {
+       "_corrupt_record": "8",
+       "a": 8,
+       "b": null,
+       "c": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<_c0:int,_c1:string,_c2:double>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', F.schema_of_csv('1,abc,2.5'))",
+   "name": "from_csv",
+   "rows": [
+    [
+     1,
+     {
+      "row": {
+       "_c0": 1,
+       "_c1": "abc",
+       "_c2": 2.5
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "row": {
+       "_c0": null,
+       "_c1": "y",
+       "_c2": null
+      }
+     }
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     {
+      "row": {
+       "_c0": null,
+       "_c1": null,
+       "_c2": null
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "row": {
+       "_c0": 7,
+       "_c1": "q,r",
+       "_c2": 1000.0
+      }
+     }
+    ],
+    [
+     6,
+     {
+      "row": {
+       "_c0": 8,
+       "_c1": null,
+       "_c2": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "from_csv(1,2024)",
+     "nullable": false,
+     "type": "struct<a:int,b:date>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', 'a INT, b DATE', {'dateFormat': 'yyyy'})",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": {
+        "repr": "datetime.date(2024, 1, 1)"
+       }
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": {
+        "repr": "datetime.date(2024, 1, 1)"
+       }
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": {
+        "repr": "datetime.date(2024, 1, 1)"
+       }
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": {
+        "repr": "datetime.date(2024, 1, 1)"
+       }
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": {
+        "repr": "datetime.date(2024, 1, 1)"
+       }
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": {
+        "repr": "datetime.date(2024, 1, 1)"
+       }
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "INVALID_SCHEMA.NON_STRING_LITERAL",
+   "error_type": "AnalysisException",
+   "expr": "F.from_csv('csvrow', col('csvrow'))",
+   "message": "[INVALID_SCHEMA.NON_STRING_LITERAL] The input schema \"csvrow\" is not a valid schema string. The input expression must be string literal and not null. SQLSTATE: 42K07",
+   "name": "from_csv",
+   "root_cause": "[INVALID_SCHEMA.NON_STRING_LITERAL] The input schema \"csvrow\" is not a valid schema string. The input expression must be string literal and not null. SQLSTATE: 42K07"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "PARSE_SYNTAX_ERROR",
+   "error_type": "AnalysisException",
+   "expr": "F.from_csv('csvrow', 'not a schema !!')",
+   "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'a'. SQLSTATE: 42601",
+   "name": "from_csv",
+   "root_cause": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'a'. SQLSTATE: 42601"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.from_csv('id', 'a INT')",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"from_csv(id)\" due to data type mismatch: The first parameter requires the \"STRING\" type, however \"id\" has the type \"INT\". SQLSTATE: 42K09;",
+   "name": "from_csv",
+   "root_cause": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"from_csv(id)\" due to data type mismatch: The first parameter requires the \"STRING\" type, however \"id\" has the type \"INT\". SQLSTATE: 42K09;"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:int>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', 'a INT', {'bogus': 'x'})",
+   "name": "from_csv",
+   "rows": [
+    [
+     1,
+     {
+      "row": {
+       "a": 1
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "row": {
+       "a": 7
+      }
+     }
+    ],
+    [
+     6,
+     {
+      "row": {
+       "a": 8
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "UNSUPPORTED_DATATYPE",
+   "error_type": "UnsupportedOperationException",
+   "expr": "F.from_csv('csvrow', 'a ARRAY<INT>')",
+   "message": "[UNSUPPORTED_DATATYPE] Unsupported data type \"ARRAY<INT>\". SQLSTATE: 0A000",
+   "name": "from_csv",
+   "root_cause": "[UNSUPPORTED_DATATYPE] Unsupported data type \"ARRAY<INT>\". SQLSTATE: 0A000"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "schema_of_csv(1,abc,2.5,true,2024-01-01,2024-01-01 10:00:00,,1e3,99999999999)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.schema_of_csv('1,abc,2.5,true,2024-01-01,2024-01-01 10:00:00,,1e3,99999999999')",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: INT, _c1: STRING, _c2: DOUBLE, _c3: BOOLEAN, _c4: DATE, _c5: TIMESTAMP, _c6: STRING, _c7: DOUBLE, _c8: BIGINT>"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "F.schema_of_csv('')",
+   "message": "An error occurred while calling o712.collectToPython.",
+   "name": "schema_of_csv",
+   "root_cause": ": org.apache.spark.SparkException: [INTERNAL_ERROR] The Spark SQL phase optimization failed with an internal error. You hit a bug in Spark or the Spark plugins you use. Please, report this bug to the corresponding communities or vendors, and provide the full stack trace. SQLSTATE: XX000"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "DATATYPE_MISMATCH.NON_FOLDABLE_INPUT",
+   "error_type": "AnalysisException",
+   "expr": "F.schema_of_csv(col('csvrow'))",
+   "message": "[DATATYPE_MISMATCH.NON_FOLDABLE_INPUT] Cannot resolve \"schema_of_csv(csvrow)\" due to data type mismatch: the input `csv` should be a foldable \"STRING\" expression; however, got \"csvrow\". SQLSTATE: 42K09;",
+   "name": "schema_of_csv",
+   "root_cause": "[DATATYPE_MISMATCH.NON_FOLDABLE_INPUT] Cannot resolve \"schema_of_csv(csvrow)\" due to data type mismatch: the input `csv` should be a foldable \"STRING\" expression; however, got \"csvrow\". SQLSTATE: 42K09;"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "DATATYPE_MISMATCH.UNEXPECTED_NULL",
+   "error_type": "AnalysisException",
+   "expr": "F.schema_of_csv(lit(None).cast('string'))",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_NULL] Cannot resolve \"schema_of_csv(CAST(NULL AS STRING))\" due to data type mismatch: The csv must not be null. SQLSTATE: 42K09;",
+   "name": "schema_of_csv",
+   "root_cause": "[DATATYPE_MISMATCH.UNEXPECTED_NULL] Cannot resolve \"schema_of_csv(CAST(NULL AS STRING))\" due to data type mismatch: The csv must not be null. SQLSTATE: 42K09;"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "F.schema_of_csv(lit(5))",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"schema_of_csv(5)\" due to data type mismatch: The first parameter requires the \"STRING\" type, however \"5\" has the type \"INT\". SQLSTATE: 42K09;",
+   "name": "schema_of_csv",
+   "root_cause": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"schema_of_csv(5)\" due to data type mismatch: The first parameter requires the \"STRING\" type, however \"5\" has the type \"INT\". SQLSTATE: 42K09;"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "schema_of_csv(\"a,b\",1.0)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.schema_of_csv('\"a,b\",1.0', {'inferSchema': 'false'})",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: STRING, _c1: DOUBLE>"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c1",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c2",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, json_tuple(js, 'a', 'c', 'e') FROM FRAME ORDER BY id",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "{\"d\":2}",
+     "[1,2]"
+    ],
+    [
+     2,
+     "2",
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ],
+    [
+     4,
+     null,
+     null,
+     null
+    ],
+    [
+     5,
+     null,
+     null,
+     null
+    ],
+    [
+     6,
+     "10",
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT json_tuple(js, 'a') AS (x) FROM FRAME",
+   "name": "json_tuple",
+   "rows": [
+    [
+     "1"
+    ],
+    [
+     "2"
+    ],
+    [
+     null
+    ],
+    [
+     null
+    ],
+    [
+     null
+    ],
+    [
+     "10"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT json_tuple(js, 'a', 'b') AS (x, y) FROM FRAME",
+   "name": "json_tuple",
+   "rows": [
+    [
+     "1",
+     "x"
+    ],
+    [
+     "2",
+     null
+    ],
+    [
+     null,
+     null
+    ],
+    [
+     null,
+     null
+    ],
+    [
+     null,
+     null
+    ],
+    [
+     "10",
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.NON_STRING_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT json_tuple(js, id) FROM FRAME",
+   "message": "[DATATYPE_MISMATCH.NON_STRING_TYPE] Cannot resolve \"json_tuple(js, id)\" due to data type mismatch: all arguments of the function `json_tuple` must be strings. SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "json_tuple",
+   "root_cause": "[DATATYPE_MISMATCH.NON_STRING_TYPE] Cannot resolve \"json_tuple(js, id)\" due to data type mismatch: all arguments of the function `json_tuple` must be strings. SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.NON_STRING_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT json_tuple(js, NULL) FROM FRAME",
+   "message": "[DATATYPE_MISMATCH.NON_STRING_TYPE] Cannot resolve \"json_tuple(js, NULL)\" due to data type mismatch: all arguments of the function `json_tuple` must be strings. SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "json_tuple",
+   "root_cause": "[DATATYPE_MISMATCH.NON_STRING_TYPE] Cannot resolve \"json_tuple(js, NULL)\" due to data type mismatch: all arguments of the function `json_tuple` must be strings. SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT json_tuple(js) FROM FRAME",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `json_tuple` requires > 1 parameters but the actual number is 1. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605",
+   "name": "json_tuple",
+   "root_cause": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `json_tuple` requires > 1 parameters but the actual number is 1. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "SELECT from_csv(csvrow, 'a INT, b INT', map('mode', 'FAILFAST')) FROM FRAME",
+   "message": "An error occurred while calling o812.collectToPython.",
+   "name": "from_csv",
+   "root_cause": ": org.apache.spark.SparkException: [MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION] Malformed records are detected in record parsing: [1,null]."
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "s",
+     "nullable": true,
+     "type": "struct<a:int,b:string,c:double>"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, from_csv(csvrow, 'a INT, b STRING, c DOUBLE') AS s FROM FRAME ORDER BY id",
+   "name": "from_csv",
+   "rows": [
+    [
+     1,
+     {
+      "row": {
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "row": {
+       "a": null,
+       "b": "y",
+       "c": null
+      }
+     }
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     {
+      "row": {
+       "a": null,
+       "b": null,
+       "c": null
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "row": {
+       "a": 7,
+       "b": "q,r",
+       "c": 1000.0
+      }
+     }
+    ],
+    [
+     6,
+     {
+      "row": {
+       "a": 8,
+       "b": null,
+       "c": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "INVALID_SCHEMA.NON_STRING_LITERAL",
+   "error_type": "AnalysisException",
+   "expr": "SELECT from_csv(csvrow, csvrow) FROM FRAME",
+   "message": "[INVALID_SCHEMA.NON_STRING_LITERAL] The input schema \"csvrow\" is not a valid schema string. The input expression must be string literal and not null. SQLSTATE: 42K07; line 1 pos 7",
+   "name": "from_csv",
+   "root_cause": "[INVALID_SCHEMA.NON_STRING_LITERAL] The input schema \"csvrow\" is not a valid schema string. The input expression must be string literal and not null. SQLSTATE: 42K07; line 1 pos 7"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT from_csv(csvrow) FROM FRAME",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `from_csv` requires [2, 3] parameters but the actual number is 1. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7",
+   "name": "from_csv",
+   "root_cause": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `from_csv` requires [2, 3] parameters but the actual number is 1. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605; line 1 pos 7"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "INVALID_OPTIONS.NON_STRING_TYPE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT from_csv(csvrow, 'a INT', map('sep', 1)) FROM FRAME",
+   "message": "[INVALID_OPTIONS.NON_STRING_TYPE] Invalid options: A type of keys and values in `map()` must be string, but got \"MAP<STRING, INT>\". SQLSTATE: 42K06; line 1 pos 7",
+   "name": "from_csv",
+   "root_cause": "[INVALID_OPTIONS.NON_STRING_TYPE] Invalid options: A type of keys and values in `map()` must be string, but got \"MAP<STRING, INT>\". SQLSTATE: 42K06; line 1 pos 7"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "FIELD_NOT_FOUND",
+   "error_type": "AnalysisException",
+   "expr": "SELECT from_csv(csvrow, schema_of_csv('1,abc,2.5')).c FROM FRAME ORDER BY 1",
+   "message": "[FIELD_NOT_FOUND] No such struct field `c` in `_c0`, `_c1`, `_c2`. SQLSTATE: 42704",
+   "name": "from_csv",
+   "root_cause": "[FIELD_NOT_FOUND] No such struct field `c` in `_c0`, `_c1`, `_c2`. SQLSTATE: 42704"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "schema_of_csv(1,abc,2.5,true,2024-01-01)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT schema_of_csv('1,abc,2.5,true,2024-01-01')",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: INT, _c1: STRING, _c2: DOUBLE, _c3: BOOLEAN, _c4: DATE>"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "SELECT schema_of_csv('')",
+   "message": "An error occurred while calling o867.collectToPython.",
+   "name": "schema_of_csv",
+   "root_cause": ": org.apache.spark.SparkException: [INTERNAL_ERROR] The Spark SQL phase optimization failed with an internal error. You hit a bug in Spark or the Spark plugins you use. Please, report this bug to the corresponding communities or vendors, and provide the full stack trace. SQLSTATE: XX000"
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "schema_of_csv(1|x)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT schema_of_csv('1|x', map('sep', '|'))",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: INT, _c1: STRING>"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.UNEXPECTED_NULL",
+   "error_type": "AnalysisException",
+   "expr": "SELECT schema_of_csv(NULL)",
+   "message": "[DATATYPE_MISMATCH.UNEXPECTED_NULL] Cannot resolve \"schema_of_csv(NULL)\" due to data type mismatch: The csv must not be null. SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "schema_of_csv",
+   "root_cause": "[DATATYPE_MISMATCH.UNEXPECTED_NULL] Cannot resolve \"schema_of_csv(NULL)\" due to data type mismatch: The csv must not be null. SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "INVALID_OPTIONS.NON_MAP_FUNCTION",
+   "error_type": "AnalysisException",
+   "expr": "SELECT schema_of_csv('a', 'b')",
+   "message": "[INVALID_OPTIONS.NON_MAP_FUNCTION] Invalid options: Must use the `map()` function for options. SQLSTATE: 42K06; line 1 pos 7",
+   "name": "schema_of_csv",
+   "root_cause": "[INVALID_OPTIONS.NON_MAP_FUNCTION] Invalid options: Must use the `map()` function for options. SQLSTATE: 42K06; line 1 pos 7"
+  }
+ ],
+ "frame": "SELECT * FROM VALUES (1, '{\"a\":1,\"b\":\"x\",\"c\":{\"d\":2},\"e\":[1,2],\"f\":null,\"g\":1.50,\"h\":true,\"a2\":\"q\"}', '1,abc,2.5'), (2, '{\"a\":\"2\"}', 'x,y,z'), (3, NULL, NULL), (4, '[1,2]', ',,'), (5, '{\"a\":1', '7,\"q,r\",1e3'), (6, '{\"A\":9,\"a\":10}', '8') AS t(id, js, csvrow)",
+ "spark_version": "4.1.2"
+}

@@ -534,12 +534,25 @@ def test_fnp9_multi_column_and_by_name_names_are_live(name: str) -> None:
     assert isinstance(getattr(F, name)("arrs"), Column)
 
 
-def test_json_tuple_still_refuses_on_the_facade() -> None:
-    """The SQL door answers one struct where Spark projects N columns."""
-    with pytest.raises(UnsupportedOperationException, match="json_tuple"):
-        F.json_tuple(F.lit(DOCUMENT), "a")
-    door = _sql("SELECT json_tuple(j, 'a', 'b') AS r FROM fnp9", "r")
-    assert door[0] == pa.struct([pa.field("c0", pa.string()), pa.field("c1", pa.string())])
+def test_json_tuple_answers_on_both_doors() -> None:
+    """FNP-GEN-1 step 2 builds the residue: Spark's N string columns on both doors."""
+    frame = _frame()
+    door = _session().sql("SELECT json_tuple(j, 'a', 'b') FROM fnp9")
+    assert [field.name for field in door.schema.fields] == ["c0", "c1"]
+    assert door.to_arrow().to_pylist() == [
+        {"c0": "1", "c1": "hi"},
+        {"c0": "2", "c1": None},
+        {"c0": None, "c1": None},
+        {"c0": None, "c1": None},
+    ]
+    column = frame.select(F.json_tuple("j", "a", "b"))
+    assert [field.name for field in column.schema.fields] == ["c0", "c1"]
+    assert column.to_arrow().to_pylist() == [
+        {"c0": "1", "c1": "hi"},
+        {"c0": "2", "c1": None},
+        {"c0": None, "c1": None},
+        {"c0": None, "c1": None},
+    ]
 
 
 def test_every_built_name_is_exported_from_the_facade() -> None:

@@ -212,12 +212,6 @@ def test_python_door_posexplode_multi_alias(spark: ReparkSession) -> None:
     _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_python_door_json_tuple_four_fields(spark: ReparkSession) -> None:
     """Four fields answer ``c0``..``c3`` as strings with NULL for the missing field."""
     (cell,) = [cell for cell in _cells("json_tuple", "python") if "zz" in cell["expr"]]
@@ -225,12 +219,6 @@ def test_python_door_json_tuple_four_fields(spark: ReparkSession) -> None:
     _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_python_door_json_tuple_single_field_keeps_spark_name(spark: ReparkSession) -> None:
     """One field answers a single ``c0`` string column on the Python door."""
     (cell,) = [cell for cell in _cells("json_tuple", "python") if "zz" not in cell["expr"]]
@@ -238,12 +226,6 @@ def test_python_door_json_tuple_single_field_keeps_spark_name(spark: ReparkSessi
     _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_sql_door_json_tuple_three_fields(spark: ReparkSession) -> None:
     """Three fields answer ``c0``..``c2`` as strings on the SQL door."""
     (cell,) = [cell for cell in _cells("json_tuple", "sql") if "js," in cell["expr"]]
@@ -251,12 +233,6 @@ def test_sql_door_json_tuple_three_fields(spark: ReparkSession) -> None:
     _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_sql_door_json_tuple_invalid_json_answers_null(spark: ReparkSession) -> None:
     """Invalid JSON answers NULL instead of raising on the SQL door."""
     (cell,) = [cell for cell in _cells("json_tuple", "sql") if "js," not in cell["expr"]]
@@ -264,12 +240,6 @@ def test_sql_door_json_tuple_invalid_json_answers_null(spark: ReparkSession) -> 
     _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_python_door_from_csv_parses_the_struct(spark: ReparkSession) -> None:
     """A DDL schema parses each row into a struct with PERMISSIVE bad-field NULLs."""
     cells = [cell for cell in _cells("from_csv", "python") if "FAILFAST" not in cell["expr"]]
@@ -282,17 +252,9 @@ def test_python_door_from_csv_parses_the_struct(spark: ReparkSession) -> None:
             )
         else:
             result = spark.sql(FRAME).select(F.from_csv("csvrow", schema))
-        assert result.schema.fields[0].dataType.simpleString() == cell["columns"][0]["type"]
-        assert result.schema.fields[0].nullable == cell["columns"][0]["nullable"]
-        assert result.to_arrow().to_pylist() == _want_rows(cell)
+        _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_sql_door_from_csv_parses_three_structs(spark: ReparkSession) -> None:
     """The SQL door parses the column struct, the ``sep`` struct and the bad-field struct."""
     (cell,) = _cells("from_csv", "sql")
@@ -300,15 +262,14 @@ def test_sql_door_from_csv_parses_three_structs(spark: ReparkSession) -> None:
     assert [field.dataType.simpleString() for field in result.schema.fields] == [
         column["type"] for column in cell["columns"]
     ]
-    assert result.to_arrow().to_pylist() == _want_rows(cell)
+    names = [field.name for field in result.schema.fields]
+    actual_rows = sorted(
+        ([_norm(row[name]) for name in names] for row in result.to_arrow().to_pylist()),
+        key=_row_key,
+    )
+    assert actual_rows == sorted(_want_rows(cell), key=_row_key)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_from_csv_struct_carries_arrow_int32_and_double(spark: ReparkSession) -> None:
     """The parsed struct is Arrow ``int32``/``string``/``float64`` on both doors."""
     want = pa.struct(
@@ -320,12 +281,6 @@ def test_from_csv_struct_carries_arrow_int32_and_double(spark: ReparkSession) ->
     assert door.to_arrow().schema.field("r").type == want
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_python_door_from_csv_failfast_raises_the_parse_error(spark: ReparkSession) -> None:
     """FAILFAST raises the parse error at execution, never the stub refusal."""
     (cell,) = [cell for cell in _cells("from_csv", "python") if "FAILFAST" in cell["expr"]]
@@ -337,12 +292,6 @@ def test_python_door_from_csv_failfast_raises_the_parse_error(spark: ReparkSessi
     assert "not supported yet" not in str(excinfo.value)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 @pytest.mark.parametrize("options", [None, {"sep": "|"}])
 def test_python_door_schema_of_csv_infers_the_ddl(spark: ReparkSession, options: Any) -> None:
     """A foldable CSV literal infers Spark's DDL string on the Python door."""
@@ -355,12 +304,6 @@ def test_python_door_schema_of_csv_infers_the_ddl(spark: ReparkSession, options:
     _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_sql_door_schema_of_csv_non_foldable_raises(spark: ReparkSession) -> None:
     """A non-foldable column raises ``DATATYPE_MISMATCH.NON_FOLDABLE_INPUT``."""
     (cell,) = [cell for cell in _cells("schema_of_csv", "sql") if "csvrow" in cell["expr"]]
@@ -370,15 +313,13 @@ def test_sql_door_schema_of_csv_non_foldable_raises(spark: ReparkSession) -> Non
 
 
 def test_sql_door_schema_of_csv_uninferable_literal_raises(spark: ReparkSession) -> None:
-    """DIVERGENCE tripwire: Spark HAS schema_of_csv (live 4.1.2 UR3-SQL-13 fails at
-    execution with a JVM error, not UNRESOLVED_ROUTINE); repark lacks the name (run
-    18a owns it), so the SQL door refuses UNRESOLVED_ROUTINE until the kernel lands
-    and this test goes red. Listed under names Spark has that the SQL door lacks."""
+    """Spark 4.1.2 raises INTERNAL_ERROR for the empty literal (R-18a-3); the door raises it too."""
     (cell,) = [cell for cell in _cells("schema_of_csv", "sql") if "csvrow" not in cell["expr"]]
     assert "error_type" in cell
     with pytest.raises(Exception) as excinfo:
         spark.sql(cell["expr"]).collect()
-    assert "UNRESOLVED_ROUTINE" in str(excinfo.value)
+    assert "[INTERNAL_ERROR]" in str(excinfo.value)
+    assert "SQLSTATE: XX000" in str(excinfo.value)
 
 
 def test_generator_keeps_select_list_position(spark: ReparkSession) -> None:

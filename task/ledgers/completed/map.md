@@ -509,6 +509,14 @@ else. The next pickup's `make ledger-archive` files everything here under
   all four clauses PROVEN.
   `risk_tier: standard`. Branch `feat/fnp-bitmap-facade-1`.
   pins: fnp-bitmap-facade-1/C-001, C-002, C-003, C-004
+- [fnp-gen-1-ledger.md](fnp-gen-1-ledger.md) —
+  **FNP-GEN-1 step 1 (2026-09-15), in flight:** the 1.5 Spark-parity generators and
+  semi-structured parsers (`inline`, `posexplode`, `json_tuple`, `from_csv`,
+  `schema_of_csv`, plus the D-6 declared XML refusal) — ledger with D-1…D-7,
+  the 62-cell oracle subset, and the red-first two-door pins (32 failed, 5
+  signature pins already green on base `bee2cde3`). No product code in step 1.
+  `risk_tier: standard`. Branch `feat/fnp-gen-1`.
+  pins: fnp-gen-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [fnp-misc-1-ledger.md](fnp-misc-1-ledger.md) —
   **FNP-MISC-1 (2026-09-15), in flight:** `call_function` / `call_udf` by-name resolution,
   `arrow_udf` / `arrow_udtf` over the pandas/UDTF bridges, and `bucket` with a Column

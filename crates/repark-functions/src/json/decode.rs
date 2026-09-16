@@ -621,7 +621,7 @@ fn build_decimal(rows: &[Option<&JsonValue<'_>>], precision: u8, scale: i8) -> R
     })
 }
 
-fn decimal_units(raw: &str, precision: u8, scale: i8) -> Option<i128> {
+pub(crate) fn decimal_units(raw: &str, precision: u8, scale: i8) -> Option<i128> {
     let (negative, body) = match raw.strip_prefix('-') {
         Some(rest) => (true, rest),
         None => (false, raw.strip_prefix('+').unwrap_or(raw)),

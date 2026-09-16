@@ -1555,15 +1555,16 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `spark.tvf.python_worker_logs()` raise `PySparkNotImplementedError` `NOT_IMPLEMENTED`
   `{"feature": "tvf.<name>"}`. The generator methods delegate to `repark.spark.functions`
   over a one-row `range(1)` select, so a function that is itself declared today rides its
-  own refusal (`posexplode`, `posexplode_outer`, `json_tuple`, `inline`, `inline_outer`,
-  `variant_explode`, `variant_explode_outer` at this date); `explode`, `explode_outer`,
-  `stack` and `range` answer frames.
+  own refusal (`posexplode`, `posexplode_outer`, `inline`, `inline_outer`,
+  `variant_explode`, `variant_explode_outer` at this date — `json_tuple` left this
+  list 2026-09-16 when its kernel landed under FNP-GEN-1 run 18a); `explode`,
+  `explode_outer`, `stack` and `range` answer frames.
 - **Apache Spark** — `tvf` is a `TableValuedFunction` whose methods answer the SQL
   table-valued functions of the same names. *(oracle: cells `tvf_type`,
   `tvf_methods_full`, `tvf_sql_keywords`, `tvf_collations`, `tvf_posexplode`,
   `tvf_json_tuple`, `tvf_inline`, `tvf_variant_explode`.)*
   `python/repark/tests/test_session_surface_1.py::test_tvf_sql_functions_declared_today`,
-  `::test_tvf_posexplode_declared_today`, `::test_tvf_json_tuple_declared_today`,
+  `::test_tvf_posexplode_declared_today`, `::test_tvf_json_tuple_answers_today`,
   `::test_tvf_inline_and_variant_declared_today`
 - **Rationale** — DECLARED 2026-09-14. `sql_keywords`/`collations` need table functions in
   the SQL engine; `python_worker_logs` needs Python-worker plumbing. The function-level
@@ -8073,15 +8074,17 @@ field NAME.
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
   on the example backlog until the engine grows the grouping renderer.
 
-### EX-FN-6 — `from_csv` refuses; Spark parses the row struct
+### EX-FN-6 — `from_csv` answers; Spark parses the row struct
 
-- **repark** — `F.from_csv("line", "a INT, b STRING")` raises `UnsupportedOperationException:
-  functions.from_csv is not supported yet (CSV parse kernel deferred; disclosed E1)`.
+- **repark** — `F.from_csv("line", "a INT, b STRING")` parses each row into a
+  struct: `"1,hello"` answers `(1, "hello")`; `"2,"` answers `(2, None)`; NULL
+  answers NULL. A literal `schema_of_csv` call folds as the schema argument.
 - **Apache Spark** — `"1,hello"` answers `(1, "hello")`; `"2,"` answers `(2, None)`; NULL
   answers NULL. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_from_csv_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
-  on the example backlog until the CSV parse kernel lands.
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_from_csv_answers`
+- **Rationale** — FIXED 2026-09-16 (FNP-GEN-1 run 18a): the Rust scalar kernel plus
+  the `CsvFold` options rule answer both doors; the s34 pins hold every measured
+  cell. Filed 2026-09-05 from the EX-25 measurement.
 
 ### EX-FN-7 — `hash` refuses; Spark answers the Murmur3 ints
 
@@ -8094,16 +8097,18 @@ field NAME.
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
   on the example backlog until the engine grows the hash kernel.
 
-### EX-FN-8 — `json_tuple` refuses; Spark projects the string fields
+### EX-FN-8 — `json_tuple` answers; Spark projects the string fields
 
-- **repark** — `F.json_tuple("line", "a", "b")` raises `UnsupportedOperationException:
-  functions.json_tuple is not supported yet (JSON tuple kernel deferred; disclosed E1)`.
+- **repark** — `F.json_tuple("line", "a", "b")` projects one string column per
+  field: `'{"a": 1, "b": 2}'` answers `("1", "2")` (strings, not ints); malformed
+  JSON and NULL answer `(NULL, NULL)`.
 - **Apache Spark** — `'{"a": 1, "b": 2}'` answers `("1", "2")` (strings, not ints); malformed
   JSON and NULL answer `(NULL, NULL)`. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05,
   EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_json_tuple_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
-  on the example backlog until the JSON tuple kernel lands.
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_json_tuple_answers`
+- **Rationale** — FIXED 2026-09-16 (FNP-GEN-1 run 18a): the Rust kernel plus the
+  `GeneratorRewrite` arm answer both doors; the s34 pins hold every measured
+  cell. Filed 2026-09-05 from the EX-25 measurement.
 
 ### EX-FN-9 — `kurtosis` / `skewness` / `mode` refuse; Spark aggregates them
 
@@ -8193,18 +8198,21 @@ field NAME.
   class, as `translate.py`'s map row anticipated). The name stays on the example backlog:
   teaching repark's plain-string spelling would teach code Spark analysis-refuses.
 
-### EX-FN-16 — `schema_of_csv` refuses; Spark infers the struct
+### EX-FN-16 — `schema_of_csv` answers; Spark infers the struct
 
-- **repark** — `F.schema_of_csv("line")` raises `UnsupportedOperationException:
-  functions.schema_of_csv is not supported yet (disclosed E1)`.
+- **repark** — `F.schema_of_csv("1,hello")` answers `"STRUCT<_c0: INT, _c1: STRING>"`
+  (likewise with an explicit `sep` option). It takes a foldable literal, not a column:
+  a column raises `DATATYPE_MISMATCH.NON_FOLDABLE_INPUT`, and `schema_of_csv('')`
+  matches Spark's `INTERNAL_ERROR` defect.
 - **Apache Spark** — `schema_of_csv("1,hello")` answers `"STRUCT<_c0: INT, _c1: STRING>"`
   (likewise with an explicit `sep` option). It takes a foldable literal, not a column.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_schema_of_csv_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. **Narrowed 2026-09-05
-  (FNP-9/10):** `schema_of_json` left this row — the kernel landed and the name answers Spark's
-  DDL on both doors. `schema_of_csv` stays: its family is FNP-16's declared-by-cost CSV
-  sub-project, not a missing inference kernel.
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_schema_of_csv_answers`
+- **Rationale** — FIXED 2026-09-16 (FNP-GEN-1 run 18a): the Rust inference kernel plus
+  the `CsvFold` literal fold answer both doors; the s34 pins hold every measured cell,
+  including the `INTERNAL_ERROR` defect match. Filed 2026-09-05 from the EX-25
+  measurement. **Narrowed 2026-09-05 (FNP-9/10):** `schema_of_json` left this row first —
+  the kernel landed and the name answers Spark's DDL on both doors.
 
 ### EX-FN-17 — `sentences` refuses; Spark nests words by sentence
 
@@ -9805,7 +9813,8 @@ oracle is involved.
   1.0 engine matching `javax.xml.xpath`. `datafusion-spark`'s `csv` and `xml` modules are
   empty. `from_xml` / `schema_of_xml` joined this row's armed refusal under owner ruling
   D-6 (FNP-GEN-1, 2026-09-15) and name the row in their refusal; `from_csv` /
-  `schema_of_csv` still refuse as E1 stubs pending their own kernels.
+  `schema_of_csv` left this row 2026-09-16 when their kernels landed under
+  FNP-GEN-1 run 18a (EX-FN-6 / EX-FN-16 answer both doors).
 - **Apache Spark** — parses CSV/XML and evaluates XPath 1.0 over XML strings.
   *(oracle: documented.)*
 - **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_csv_xml_xpath_facade_refuses_deferred_by_cost`,

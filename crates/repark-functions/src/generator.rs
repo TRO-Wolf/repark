@@ -19,11 +19,13 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::lit;
 
+mod json_tuple;
+
 pub(crate) const GENERATOR_ALIAS_UDF: &str = "__repark_gen_alias";
 const GENERATOR_ORDINALITY_UDF: &str = "__repark_gen_ordinality";
 const GENERATOR_FIELD_UDF: &str = "__repark_gen_field";
 
-const GENERATOR_FIELD: &str = "__repark_gen_out";
+pub(crate) const GENERATOR_FIELD: &str = "__repark_gen_out";
 const GENERATOR_POS_FIELD: &str = "__repark_gen_pos";
 const GENERATOR_COL_FIELD: &str = "__repark_gen_col";
 const GENERATOR_KEY_FIELD: &str = "__repark_gen_key";
@@ -170,12 +172,12 @@ impl ScalarUDFImpl for GeneratorOrdinality {
 }
 
 #[derive(Debug)]
-struct GeneratorField {
+pub(crate) struct GeneratorField {
     signature: Signature,
 }
 
 impl GeneratorField {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             signature: Signature::any(2, Volatility::Immutable),
         }
@@ -322,6 +324,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         generator_udf("posexplode_outer"),
         generator_udf("inline"),
         generator_udf("inline_outer"),
+        generator_udf("json_tuple"),
         generator_udf(GENERATOR_ALIAS_UDF),
     ]
 }
@@ -330,6 +333,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
 enum GeneratorKind {
     PosExplode { outer: bool },
     Inline { outer: bool },
+    JsonTuple,
 }
 
 impl GeneratorKind {
@@ -339,12 +343,14 @@ impl GeneratorKind {
             Self::PosExplode { outer: true } => "posexplode_outer",
             Self::Inline { outer: false } => "inline",
             Self::Inline { outer: true } => "inline_outer",
+            Self::JsonTuple => "json_tuple",
         }
     }
 
     fn outer(self) -> bool {
         match self {
             Self::PosExplode { outer } | Self::Inline { outer } => outer,
+            Self::JsonTuple => false,
         }
     }
 }
@@ -355,17 +361,18 @@ fn generator_kind(name: &str) -> Option<GeneratorKind> {
         "posexplode_outer" => Some(GeneratorKind::PosExplode { outer: true }),
         "inline" => Some(GeneratorKind::Inline { outer: false }),
         "inline_outer" => Some(GeneratorKind::Inline { outer: true }),
+        "json_tuple" => Some(GeneratorKind::JsonTuple),
         _ => None,
     }
 }
 
-type GeneratorSite = (GeneratorKind, Expr, Option<Vec<String>>);
+type GeneratorSite = (GeneratorKind, Vec<Expr>, Option<Vec<String>>);
 
 #[derive(Debug)]
-struct OutputSpec {
-    member: String,
-    name: String,
-    nullable: bool,
+pub(crate) struct OutputSpec {
+    pub(crate) member: String,
+    pub(crate) name: String,
+    pub(crate) nullable: bool,
 }
 
 #[derive(Debug, Default)]
@@ -470,6 +477,12 @@ fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
             let Some(kind) = generator_kind(function.func.name()) else {
                 return Ok(None);
             };
+            if matches!(kind, GeneratorKind::JsonTuple) {
+                if function.args.len() < 2 {
+                    return Err(crate::json::tuple::wrong_num_args(function.args.len()));
+                }
+                return Ok(Some((kind, function.args.clone(), None)));
+            }
             if function.args.len() != 1 {
                 return plan_err!(
                     "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] '{}' expects 1 argument, got {}",
@@ -477,7 +490,7 @@ fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
                     function.args.len()
                 );
             }
-            Ok(Some((kind, function.args[0].clone(), None)))
+            Ok(Some((kind, vec![function.args[0].clone()], None)))
         }
         _ => Ok(None),
     }
@@ -506,10 +519,10 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
             }
         }
     }
-    let Some((site_index, (kind, arg, alias_names))) = site else {
+    let Some((site_index, (kind, args, alias_names))) = site else {
         return Ok(Transformed::no(plan));
     };
-    if contains_generator(&arg) {
+    if args.iter().any(contains_generator) {
         return plan_err!(
             "[UNSUPPORTED_GENERATOR] The generator argument cannot contain another generator"
         );
@@ -536,7 +549,7 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
                 })
                 .unwrap_or(false)
     };
-    if references_aggr(&arg) {
+    if args.iter().any(&references_aggr) {
         return plan_err!(
             "[MISSING_GROUP_BY] The query does not include a GROUP BY clause. Add GROUP BY or \
              turn it into the window functions using OVER clauses."
@@ -572,7 +585,7 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         projection,
         site_index,
         kind,
-        &arg,
+        &args,
         alias_names.as_deref(),
     )?))
 }
@@ -735,14 +748,20 @@ fn rewrite_projection(
     projection: &Projection,
     site_index: usize,
     kind: GeneratorKind,
-    arg: &Expr,
+    args: &[Expr],
     alias_names: Option<&[String]>,
 ) -> Result<LogicalPlan> {
+    let Some(arg) = args.first() else {
+        return plan_err!("generator rewrite lost the generator argument");
+    };
     let input_schema = projection.input.schema().clone();
     let arg_type = arg.get_type(input_schema.as_ref())?;
     let outer = kind.outer();
     let cond = arg.clone().is_null().or(cardinality_of(arg).eq(lit(0_i32)));
     let (lists, mut outputs, flatten_struct) = match kind {
+        GeneratorKind::JsonTuple => {
+            return json_tuple::rewrite_json_tuple(projection, site_index, args, alias_names);
+        }
         GeneratorKind::Inline { .. } => {
             let list_arg = normalize_list(arg.clone(), &arg_type)?;
             (
