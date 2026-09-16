@@ -187,6 +187,7 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
 - [deprecated_aliases.py](deprecated_aliases.py) — FNP-ALIAS-1 (2026-09-15): the six deprecated PySpark alias names (`approxCountDistinct`, `shiftLeft`, `shiftRight`, `shiftRightUnsigned`, `toDegrees`, `toRadians`) answer their modern siblings' rows and warn Spark's exact `FutureWarning` text. pins: fnp-alias-1/C-001, C-003
 - [by_name_and_arrow_udfs.py](by_name_and_arrow_udfs.py) — FNP-MISC-1 (2026-09-15): `call_function` / `call_udf` answer the direct spellings (a builtin and a session-registered UDF), `arrow_udf` adds one over an Arrow array keeping NULL, and `arrow_udtf` counts rows out of one yielded Arrow table. pins: fnp-misc-1/C-002, C-004, C-005
 - [temporal_constructors.py](temporal_constructors.py) — FNP-11A (2026-09-15): the temporal constructors on valid and out-of-range parts, the `try_` forms, `timestamp_diff` / `timestamp_add` hour and day arithmetic, `convert_timezone`, `localtimestamp`, and `try_make_interval` overflow answering NULL. pins: fnp-11a/C-001, C-002
+- [time_windows.py](time_windows.py) — FNP-WIN-1 (2026-09-15): three rows into ten-minute `window` buckets with end-minus-microsecond `window_time` values, and into five-minute `session_window` sessions with counts [1, 2]. pins: fnp-win-1/C-002, C-003, C-004
 ## Pointers
 
 - Up: [../map.md](../map.md)

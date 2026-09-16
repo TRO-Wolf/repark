@@ -71,6 +71,13 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 vec![exprs[0].clone(), exprs[1].clone()],
             ))
         }
+        "window_time" => {
+            need(1)?;
+            Expr::ScalarFunction(ScalarFunction::new_udf(
+                repark_functions::spark_window_time::window_time_udf(),
+                vec![exprs[0].clone()],
+            ))
+        }
         "arrays_zip" => repark_functions::expr_fn::arrays_zip(exprs.clone()),
         "map_concat" => repark_functions::expr_fn::map_concat(exprs.clone()),
         "create_map" => repark_functions::expr_fn::create_map(exprs.clone()),
