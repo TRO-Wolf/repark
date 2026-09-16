@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -148,40 +149,68 @@ pub(crate) fn options_from_entries(entries: &HashMap<String, String>) -> Result<
     Ok(options)
 }
 
-pub(crate) fn split_csv_record(text: &str, options: &CsvOptions) -> Vec<String> {
-    let mut tokens: Vec<String> = Vec::new();
+fn take_owned(current: &mut String, owned: &mut bool, text: &str, start: usize, index: usize) {
+    if !*owned {
+        current.push_str(&text[start..index]);
+        *owned = true;
+    }
+}
+
+pub(crate) fn split_csv_record<'text>(
+    text: &'text str,
+    options: &CsvOptions,
+) -> Vec<Cow<'text, str>> {
+    let mut tokens: Vec<Cow<'_, str>> = Vec::new();
     let mut current = String::new();
-    let mut chars = text.chars().peekable();
+    let mut owned = false;
+    let mut start = 0usize;
     let mut quoted = false;
-    while let Some(found) = chars.next() {
+    let mut chars = text.char_indices().peekable();
+    while let Some((index, found)) = chars.next() {
         if quoted {
             if found == options.escape {
-                if let Some(escaped) = chars.next() {
+                if let Some((_, escaped)) = chars.next() {
+                    take_owned(&mut current, &mut owned, text, start, index);
                     current.push(escaped);
                 }
             } else if found == options.quote {
-                if chars.peek() == Some(&options.quote) {
+                if chars.peek().map(|(_, next)| *next) == Some(options.quote) {
                     chars.next();
+                    take_owned(&mut current, &mut owned, text, start, index);
                     current.push(options.quote);
                 } else {
+                    take_owned(&mut current, &mut owned, text, start, index);
                     quoted = false;
                 }
             } else {
+                take_owned(&mut current, &mut owned, text, start, index);
                 current.push(found);
             }
         } else if found == options.sep {
-            tokens.push(std::mem::take(&mut current));
+            if owned {
+                tokens.push(Cow::Owned(std::mem::take(&mut current)));
+                owned = false;
+            } else {
+                tokens.push(Cow::Borrowed(&text[start..index]));
+            }
+            start = index + found.len_utf8();
         } else if found == options.quote {
+            take_owned(&mut current, &mut owned, text, start, index);
             quoted = true;
         } else if found == options.escape {
-            if let Some(escaped) = chars.next() {
+            take_owned(&mut current, &mut owned, text, start, index);
+            if let Some((_, escaped)) = chars.next() {
                 current.push(escaped);
             }
-        } else {
+        } else if owned {
             current.push(found);
         }
     }
-    tokens.push(current);
+    if owned {
+        tokens.push(Cow::Owned(current));
+    } else {
+        tokens.push(Cow::Borrowed(&text[start..]));
+    }
     tokens
 }
 

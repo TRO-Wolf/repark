@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, ArrayRef, AsArray, StringArray, StringBuilder, StructArray};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
-use datafusion::common::{Result, plan_err};
+use datafusion::common::{Result, ScalarValue, plan_err};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
@@ -60,6 +60,26 @@ fn append_tuple_value(builder: &mut StringBuilder, value: &JsonValue<'_>) {
             write_compact(other, &mut rendered);
             builder.append_value(&rendered);
         }
+    }
+}
+
+enum FieldName {
+    Shared(Option<String>),
+    Column(usize),
+}
+
+fn scalar_name(scalar: &ScalarValue) -> Result<Option<String>> {
+    match scalar {
+        ScalarValue::Utf8(value) | ScalarValue::LargeUtf8(value) | ScalarValue::Utf8View(value) => {
+            Ok(value.clone())
+        }
+        ScalarValue::Null => Ok(None),
+        _ => match scalar.cast_to(&DataType::Utf8)? {
+            ScalarValue::Utf8(value)
+            | ScalarValue::LargeUtf8(value)
+            | ScalarValue::Utf8View(value) => Ok(value.clone()),
+            _ => Ok(None),
+        },
     }
 }
 
@@ -125,13 +145,29 @@ impl ScalarUDFImpl for SparkJsonTuple {
         if args.args.len() < 2 {
             return Err(wrong_num_args(args.args.len()));
         }
-        let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-        let documents = text_array(&arrays[0])?;
-        let mut fields: Vec<StringArray> = Vec::with_capacity(arrays.len() - 1);
-        for array in &arrays[1..] {
-            fields.push(text_array(array)?);
+        let mut array_args: Vec<ColumnarValue> = Vec::with_capacity(args.args.len());
+        let mut names: Vec<FieldName> = Vec::with_capacity(args.args.len() - 1);
+        let mut columned = 0usize;
+        array_args.push(args.args[0].clone());
+        for arg in &args.args[1..] {
+            match arg {
+                ColumnarValue::Scalar(scalar) => {
+                    names.push(FieldName::Shared(scalar_name(scalar)?));
+                }
+                ColumnarValue::Array(_) => {
+                    names.push(FieldName::Column(columned));
+                    columned += 1;
+                    array_args.push(arg.clone());
+                }
+            }
         }
-        let mut builders: Vec<StringBuilder> = (0..fields.len())
+        let arrays = ColumnarValue::values_to_arrays(&array_args)?;
+        let documents = text_array(&arrays[0])?;
+        let mut columns: Vec<StringArray> = Vec::with_capacity(arrays.len() - 1);
+        for array in &arrays[1..] {
+            columns.push(text_array(array)?);
+        }
+        let mut builders: Vec<StringBuilder> = (0..names.len())
             .map(|_| StringBuilder::with_capacity(documents.len(), documents.len() * 8))
             .collect();
         for row in 0..documents.len() {
@@ -144,10 +180,15 @@ impl ScalarUDFImpl for SparkJsonTuple {
                 }
             };
             for (index, builder) in builders.iter_mut().enumerate() {
-                let name = if fields[index].is_null(row) {
-                    None
-                } else {
-                    Some(fields[index].value(row))
+                let name = match &names[index] {
+                    FieldName::Shared(text) => text.as_deref(),
+                    FieldName::Column(position) => {
+                        if columns[*position].is_null(row) {
+                            None
+                        } else {
+                            Some(columns[*position].value(row))
+                        }
+                    }
                 };
                 match (&object, name) {
                     (Some(entries), Some(key)) => {
@@ -160,7 +201,7 @@ impl ScalarUDFImpl for SparkJsonTuple {
                 }
             }
         }
-        let DataType::Struct(output) = json_tuple_output(fields.len()) else {
+        let DataType::Struct(output) = json_tuple_output(names.len()) else {
             return plan_err!("'{JSON_TUPLE_UDF}' builds a struct output");
         };
         let columns: Vec<ArrayRef> = builders

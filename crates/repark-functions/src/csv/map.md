@@ -68,6 +68,11 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   precision 38) and a `1.5f`-style float suffix to `DOUBLE`, sharing the default
   stamp shapes with the parser (date-only stays `DATE`).
   pins: fnp-gen-1/L-005, R-18a-14
+- `csv.rs` / `from_csv.rs` — **Remediation (run 18a):** the tokenizer borrows
+  unquoted fields (`Cow`, allocating only for quoted/escaped ones) and the
+  FAILFAST payload rebuilds on scratch builders for the single malformed row, so
+  the PERMISSIVE path carries no payload copy; answers are unchanged.
+  pins: fnp-gen-1/PERF-004, PERF-005
 - `schema_of_csv.rs` — the `schema_of_csv` scalar UDF plus its `#[cfg(test)]`
   pins (the Spark `CSVInferSchema` ladder and renderer, the quoted separator, the
   `sep` option, the empty-document `INTERNAL_ERROR` defect, NULL, non-string

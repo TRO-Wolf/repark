@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
@@ -447,6 +448,57 @@ fn decode_records(
         .iter()
         .map(|(_, data_type)| field_builder(data_type, documents.len()))
         .collect();
+    let decode_row = |tokens: &[Cow<'_, str>],
+                      record: &str,
+                      builders: &mut [FieldBuilder],
+                      mut shown: Option<&mut Vec<String>>|
+     -> Result<bool> {
+        let data_count = fields.len() - usize::from(corrupt_index.is_some());
+        let mut malformed = tokens.len() != data_count;
+        let mut data_pos = 0;
+        for (index, ((_, data_type), builder)) in fields.iter().zip(builders.iter_mut()).enumerate()
+        {
+            if Some(index) == corrupt_index {
+                if let Some(shown) = shown.as_deref_mut() {
+                    shown.push("null".to_string());
+                }
+                continue;
+            }
+            let token = tokens.get(data_pos);
+            data_pos += 1;
+            let Some(token) = token else {
+                append_null(builder);
+                if let Some(shown) = shown.as_deref_mut() {
+                    shown.push("null".to_string());
+                }
+                malformed = true;
+                continue;
+            };
+            let bad = append_token(builder, data_type, token, options, formats);
+            if bad {
+                malformed = true;
+            }
+            if let Some(shown) = shown.as_deref_mut() {
+                if bad || token_is_null(token, options) {
+                    shown.push("null".to_string());
+                } else {
+                    shown.push(token.to_string());
+                }
+            }
+        }
+        let mark = malformed && options.mode == CsvMode::Permissive;
+        if let Some(index) = corrupt_index {
+            if mark {
+                let FieldBuilder::Utf8(inner) = &mut builders[index] else {
+                    return plan_err!("the corrupt record column is a string field");
+                };
+                inner.append_value(record);
+            } else {
+                append_null(&mut builders[index]);
+            }
+        }
+        Ok(malformed)
+    };
     let mut validity = NullBufferBuilder::new(documents.len());
     for row in 0..documents.len() {
         if documents.is_null(row) {
@@ -457,52 +509,21 @@ fn decode_records(
             continue;
         }
         validity.append_non_null();
-        let tokens = split_csv_record(documents.value(row), options);
-        let data_count = fields.len() - usize::from(corrupt_index.is_some());
-        let mut malformed = tokens.len() != data_count;
-        let mut shown: Vec<String> = Vec::with_capacity(fields.len());
-        let mut data_pos = 0;
-        for (index, ((_, data_type), builder)) in fields.iter().zip(builders.iter_mut()).enumerate()
-        {
-            if Some(index) == corrupt_index {
-                shown.push("null".to_string());
-                continue;
-            }
-            let token = tokens.get(data_pos);
-            data_pos += 1;
-            let Some(token) = token else {
-                append_null(builder);
-                shown.push("null".to_string());
-                malformed = true;
-                continue;
-            };
-            let bad = append_token(builder, data_type, token, options, formats);
-            if bad {
-                malformed = true;
-                shown.push("null".to_string());
-            } else if token_is_null(token, options) {
-                shown.push("null".to_string());
-            } else {
-                shown.push((*token).clone());
-            }
-        }
+        let record = documents.value(row);
+        let tokens = split_csv_record(record, options);
+        let malformed = decode_row(&tokens, record, &mut builders, None)?;
         if options.mode == CsvMode::FailFast && malformed {
+            let mut scratch: Vec<FieldBuilder> = fields
+                .iter()
+                .map(|(_, data_type)| field_builder(data_type, 1))
+                .collect();
+            let mut shown: Vec<String> = Vec::with_capacity(fields.len());
+            decode_row(&tokens, record, &mut scratch, Some(&mut shown))?;
             return exec_err!(
                 "[MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION] Malformed records are detected \
                  in record parsing: [{}].",
                 shown.join(",")
             );
-        }
-        let mark = malformed && options.mode == CsvMode::Permissive;
-        if let Some(index) = corrupt_index {
-            if mark {
-                let FieldBuilder::Utf8(inner) = &mut builders[index] else {
-                    return plan_err!("the corrupt record column is a string field");
-                };
-                inner.append_value(documents.value(row));
-            } else {
-                append_null(&mut builders[index]);
-            }
         }
     }
     let mut columns: Vec<ArrayRef> = Vec::with_capacity(builders.len());

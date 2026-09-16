@@ -202,7 +202,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `SessionContext`. Each
   kernel carries its own `#[cfg(test)] mod tests` running the measured cells through a
   `SessionContext`.
-  pins: fnp-9-collections-json/C-002, C-003, C-004, C-005
+  **Remediation (run 18a):** `tuple.rs` holds scalar field names once per batch;
+  detail lives in `json/map.md`.
+  pins: fnp-9-collections-json/C-002, C-003, C-004, C-005, fnp-gen-1/PERF-003
 - `count_if.rs` — **TYPES-1 (2026-09-05):** SQL-door `count_if` aggregate UDF answering
   `Int64`. pins: types-1/C-003
 - `bitmap_agg.rs` (+ [`bitmap_agg/`](bitmap_agg/map.md)) — **FNP-6D (2026-09-15,
@@ -371,7 +373,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`CsvStampParsers`, the default stamp ladder, `infers_as_timestamp`); detail
   lives in `csv/map.md`.
   pins: fnp-win-1/C-004, C-008, fnp-gen-1/C-002, C-003, C-004, C-006, L-002, L-003,
-  L-004, L-005, R-18a-14, PERF-001, PERF-002, PERF-006
+  L-004, L-005, R-18a-14, PERF-001, PERF-002, PERF-004, PERF-005, PERF-006
 - `lib.rs` — crate-root stays at **182** under `check_lib_rs` (D-8 one-time
   FNP-WIN-1 grant; step 4 moved the `analyzer_rules()` home to
   `registration.rs`).

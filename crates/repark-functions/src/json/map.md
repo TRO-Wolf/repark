@@ -48,7 +48,9 @@ round-trip destroys.
   `STRUCT<c0..cN: STRING>` read back through `__repark_gen_field`, so a NULL document
   stays NULL down the final projection. The `#[cfg(test)]` module covers the render
   table, the NULL/malformed/non-object rows and a sliced `StringArray` input.
-  pins: fnp-gen-1/C-002, C-003
+  **Remediation (run 18a):** literal field names stay one shared value per batch
+  (`FieldName::Shared`); only a column-typed name goes through a `StringArray`.
+  pins: fnp-gen-1/C-002, C-003, PERF-003
 - `schema_of.rs` — `schema_of_json`. Non-nullable STRING; struct fields sort alphabetically; a
   lone JSON null infers STRING while a null beside a typed sibling merges away; an integer wider
   than `i64` infers `DECIMAL(digits,0)`. A malformed document raises. **Round 2 (2026-09-06,
