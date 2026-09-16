@@ -214,3 +214,34 @@ facade never emits (facade suite 42 green); the real narrowed-reselect /
 second-hop test stays. Deviation: `schema_parquet_partitioned` left green, not
 strict-xfailed — a strict xfail on a passing test reds the suite; the
 partitioned `_metadata` struct answers its own fields per R-18b-10's last line.
+
+## Residue row — derived-expression nullability (R-18b-9, open)
+
+`endswith(...)` / `substring(...)` over non-nullable `_metadata` fields answer
+nullable `True`; live PySpark 4.1.2 answers `False` (non-null in, non-null
+out). Root cause read from the vendored tree: DataFusion 54 default
+`return_field_from_args` (`datafusion-expr-54.1.0/src/udf.rs:677-686`) marks
+every scalar-function result nullable. Fixing it is function-nullability work
+in run 18a's files, out of this unit like LOGICAL-WIDTH-1 W-7. Disposition:
+`test_parquet_values` / `test_csv_values` pin columns, `simpleString`, exact
+`_metadata`-field nullability, and all row values; only the derived columns'
+nullable flags go uncompared. One sentence mirrors this in registry row
+DF-METADATA-COL-1.
+
+## Round 3 fix notes (alias root cause, extractions)
+
+The M-3 row failures were optimizer `push_down_leaf_projections`
+`DuplicateUnqualifiedField i`, not nullability: the facade binds every select
+string as a quoted same-name alias (`col("\"i\"").alias("i")`), and a redundant
+same-name alias on a plain column in the lower of two stacked projections
+trips the rule on the hop above (proven by a 4-variant Rust matrix: only
+lower-level aliases fail; widen passthrough, casts, UDF shape, and UNION all
+exonerated). Fix at the planning boundary (`ensure.rs`): drop a top-level
+`Alias(Column)` when the column is unqualified and names match, and emit the
+widen passthrough as a bare column. End-to-end: 44 green, 2 xfailed.
+Mechanical fallout in the same slices: `sequence_branch` / `empty_branch` /
+`collect_hits` leave `augment.rs` (pedantic `too_many_lines`); test-only
+re-exports moved out of the module root (non-test builds warn); audit skill
+note: divergences re-measured live this round (derived True-vs-False,
+partitioned `['i']`-vs-`['i','s']`) and filed as this residue plus BACKLOG
+IO-PARQUET-PARTITION-DISCOVERY-1, no new findings.

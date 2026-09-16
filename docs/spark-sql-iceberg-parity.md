@@ -9046,6 +9046,33 @@ field NAME.
   when the stamp, replace, cache and target-override pins went red on purpose. The rest is engine-side field-metadata plumbing
   through plan transforms.
   pins: df-surface-a-1/C-008
+### DF-METADATA-COL-1 — hidden `_metadata` file-source struct plus `DataFrame.metadataColumn` — **FIXED 2026-09-16**
+
+- **repark** — parquet/csv/json/text scans answer a hidden `_metadata` struct
+  (`file_path`, `file_name`, `file_size`, `file_block_start`,
+  `file_block_length`, `file_modification_time`, plus parquet-only
+  `row_index`), every field non-nullable; `DataFrame.metadataColumn`
+  projects it after a dropping select, a filter, and withColumn chains. A
+  redundant same-name alias on a plain column drops at the planning boundary:
+  stacked projections over the per-file UNION used to fail optimizer
+  `push_down_leaf_projections` with `DuplicateUnqualifiedField`. One
+  divergence stays: `endswith(...)` / `substring(...)` over metadata fields
+  answer nullable where Spark propagates non-null (R-18b-9, function
+  nullability, out of scope as in LOGICAL-WIDTH-1 W-7).
+- **Apache Spark** — the same struct with the same field nullability, and the
+  derived functions propagate non-null over non-null inputs.
+  *(oracle: `python/repark/tests/facade_df_metadata_col_oracle.json` cells
+  `schema_*` / `names_*` / `values_*` / `metadata_*`, live PySpark 4.1.2,
+  2026-09-16.)*
+- **Pin** —
+  `python/repark/tests/test_df_metadata_col_1.py` (44 green;
+  `test_star_plus_fields_names_partitioned` strict-xfailed under
+  IO-PARQUET-PARTITION-DISCOVERY-1; the SQL path-table door strict-xfailed
+  under SQL-METADATA-COL-1).
+- **Rationale** — FIXED, filed 2026-09-16 (DF-METADATA-COL-1). The
+  derived-expression nullability residue stays open as function-nullability
+  work.
+  pins: df-metadata-col-1/M-1, M-2, M-3, M-4, M-5
 ### FNP-MISC-1-COMP-1 — `arrow_udf(...)` mid-expression composition refuses
 ### SQL-IN-1 — a mixed-type `IN` list refuses with a different error class
 
@@ -9292,6 +9319,22 @@ field NAME.
   facade `projection_name`; `select` of the same expression already uses the facade
   display.
 
+### IO-PARQUET-PARTITION-DISCOVERY-1 — parquet reads of hive-partitioned dirs drop the partition column — **BACKLOG 2026-09-16**
+
+- **repark** — `spark.read.parquet` over an `s=.../` layout answers the file
+  columns only (`['i']` measured on the tree); the hive key never appears, so
+  `select("*", ...)` cannot project it. The `_metadata` struct on the same
+  read still answers its own fields.
+- **Apache Spark** — partition discovery appends the key (`['i', 's',
+  'file_name', 'file_size']` per oracle cell `names_parquet_partitioned`).
+  *(oracle: `python/repark/tests/facade_df_metadata_col_oracle.json` cell
+  `names_parquet_partitioned`, live PySpark 4.1.2, 2026-09-16.)*
+- **Pin** —
+  `python/repark/tests/test_df_metadata_col_1.py::test_star_plus_fields_names_partitioned`
+  (strict xfail).
+- **Rationale** — BACKLOG, filed 2026-09-16 (DF-METADATA-COL-1 ruling
+  R-18b-10). The base parquet read drops the key on main; that read path owns
+  the fix.
 ### IO-TEXT-PARTDISC-1 — text reads of partitioned dirs discover the keys
 
 - **repark** — `spark.read.text` over a `key=value/` layout answers

@@ -68,8 +68,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [facade_df_metadata_col_oracle.json](facade_df_metadata_col_oracle.json) —
   **DF-METADATA-COL-1 (2026-09-16):** the hidden `_metadata` struct pins driven
   by the copied live-PySpark-4.1.2 fixture (M-1 shape, M-2 names, M-3 values,
-  M-4 `metadataColumn`, M-5 errors). Derived `endswith`/`substring` nullability
-  and partitioned names stay strict-xfailed per R-18b-9/R-18b-10.
+  M-4 `metadataColumn`, M-5 errors). Value cells pin columns, `simpleString`,
+  exact `_metadata`-field nullability, and rows; derived-column nullability
+  goes uncompared per R-18b-9, partitioned names stay strict-xfailed per
+  R-18b-10.
   pins: df-metadata-col-1/M-1, M-2, M-3, M-4, M-5
 - [test_io_bucket_cluster_1.py](test_io_bucket_cluster_1.py) — **IO-BUCKET-CLUSTER-1
   step 1 (2026-09-14):** the writer layout surface answers the fourteen `io.bucketBy_*`

@@ -5,9 +5,11 @@ use arrow::datatypes::{DataType, Field, Schema};
 use datafusion::catalog::default_table_source::{provider_as_source, source_as_provider};
 use datafusion::datasource::memory::MemTable;
 use datafusion::logical_expr::{Expr, JoinType, LogicalPlan, LogicalPlanBuilder, TableScan, col};
-use datafusion::prelude::{DataFrame, SessionContext, lit};
+use datafusion::prelude::{DataFrame, SessionContext};
 
+use super::ensure::{hidden_field_or_reject, rewrite_metadata_refs};
 use super::scan::FileMetadataScan;
+use super::udf::metadata_outer_field;
 use super::*;
 
 fn memory_scan(names: &[(&str, DataType, bool)]) -> TableScan {

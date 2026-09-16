@@ -76,6 +76,17 @@ pub(crate) fn hidden_field_or_reject(
     None
 }
 
+pub(crate) fn drop_redundant_column_alias(expr: Expr) -> Expr {
+    if let Expr::Alias(alias) = &expr
+        && let Expr::Column(column) = alias.expr.as_ref()
+        && column.relation.is_none()
+        && column.name == alias.name
+    {
+        return alias.expr.as_ref().clone();
+    }
+    expr
+}
+
 pub(crate) fn rewrite_metadata_refs(
     exprs: Vec<Expr>,
     hidden: &str,
@@ -199,7 +210,7 @@ fn widen_projections(
                     .has_column_with_unqualified_name(hidden)
                     && !node.schema().has_column_with_unqualified_name(hidden)
                 {
-                    expr.push(col(hidden).alias(hidden));
+                    expr.push(col(hidden));
                 }
                 let rebuilt = LogicalPlanBuilder::from(Arc::clone(&projection.input))
                     .project(expr)?
@@ -282,6 +293,7 @@ pub async fn ensure_file_metadata(
             } else {
                 augmented
             };
+            let exprs = exprs.into_iter().map(drop_redundant_column_alias).collect();
             let rewritten = rewrite_metadata_refs(exprs, hidden, with_row_index)?;
             Ok((widened, rewritten))
         }
@@ -292,6 +304,7 @@ pub async fn ensure_file_metadata(
             } else {
                 plan
             };
+            let exprs = exprs.into_iter().map(drop_redundant_column_alias).collect();
             let rewritten = rewrite_metadata_refs(exprs, hidden, with_row_index)?;
             Ok((widened, rewritten))
         }

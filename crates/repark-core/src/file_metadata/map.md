@@ -22,8 +22,8 @@ DF-METADATA-COL-1 round 3; behavior unchanged by the move.
   `row_index`, and the exact-schema finish. pins: df-metadata-col-1/M-1,
   M-3
 - [`ensure.rs`](ensure.rs) — `ensure_file_metadata`, the `_metadata`
-  reference rewrite, hidden passthrough widening, and scan marking. pins:
-  df-metadata-col-1/M-2, M-4
+  reference rewrite, hidden passthrough widening, the redundant same-name
+  alias drop, and scan marking. pins: df-metadata-col-1/M-2, M-4
 - [`error.rs`](error.rs) — `FileMetadataError`: unresolved column,
   missing-attribute, and engine failure shapes. pins:
   df-metadata-col-1/M-5

@@ -596,7 +596,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   with a `_metadata` passthrough so narrowed plans reselect. Join/aggregate stay
   `MISSING_ATTRIBUTES` refusals. Round 3 splits the root into
   `file_metadata/{status,error,udf,augment,ensure}.rs` under the 1000-line
-  ceiling, behavior unchanged. pins: df-metadata-col-1/M-1, M-2, M-3, M-4
+  ceiling, behavior unchanged. The boundary drops redundant same-name column
+  aliases and the widen passthrough is a bare column (optimizer
+  `push_down_leaf_projections`). pins: df-metadata-col-1/M-1, M-2, M-3, M-4
 - `catalog_state.rs` — the engine-side `CatalogRegistry` (iceberg `Catalog` handles by name) +
   `LocationPolicy` (staged-CTAS location resolution: `RequireExplicitLocation` /
   `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the root resolves once

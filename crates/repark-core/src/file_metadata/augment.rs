@@ -76,6 +76,52 @@ fn cast_to_field(expr: Expr, field: &Field) -> Expr {
     Expr::Cast(Cast::new(Box::new(expr), field.data_type().clone())).alias(field.name())
 }
 
+fn sequence_branch(
+    funneled: LogicalPlan,
+    reread_names: &[String],
+    with_row_index: bool,
+) -> Result<(LogicalPlan, Expr)> {
+    if !with_row_index {
+        return Ok((funneled, lit(ScalarValue::Null)));
+    }
+    let windowed = LogicalPlanBuilder::from(funneled)
+        .window(vec![row_number_udwf().call(vec![])])
+        .map_err(engine_err)?
+        .build()
+        .map_err(engine_err)?;
+    let output_name = windowed
+        .schema()
+        .fields()
+        .iter()
+        .next_back()
+        .map(|field| field.name().clone())
+        .ok_or_else(|| {
+            engine_err(datafusion::error::DataFusionError::Internal(
+                "row_number window produced no output field".to_string(),
+            ))
+        })?;
+    let stepped = Expr::BinaryExpr(datafusion::logical_expr::expr::BinaryExpr {
+        left: Box::new(Expr::Cast(Cast::new(
+            Box::new(col(output_name)),
+            DataType::Int64,
+        ))),
+        op: Operator::Minus,
+        right: Box::new(lit(1_i64)),
+    })
+    .alias("__repark_row_index");
+    let passthrough = reread_names
+        .iter()
+        .map(col)
+        .chain(std::iter::once(stepped))
+        .collect::<Vec<_>>();
+    let sequenced = LogicalPlanBuilder::from(windowed)
+        .project(passthrough)
+        .map_err(engine_err)?
+        .build()
+        .map_err(engine_err)?;
+    Ok((sequenced, col("__repark_row_index")))
+}
+
 async fn build_file_branch(
     context: &SessionContext,
     kind: &FileKind,
@@ -120,46 +166,7 @@ async fn build_file_branch(
         .map_err(engine_err)?
         .build()
         .map_err(engine_err)?;
-    let (sequenced, row_index) = if with_row_index {
-        let windowed = LogicalPlanBuilder::from(funneled)
-            .window(vec![row_number_udwf().call(vec![])])
-            .map_err(engine_err)?
-            .build()
-            .map_err(engine_err)?;
-        let output_name = windowed
-            .schema()
-            .fields()
-            .iter()
-            .next_back()
-            .map(|field| field.name().clone())
-            .ok_or_else(|| {
-                engine_err(datafusion::error::DataFusionError::Internal(
-                    "row_number window produced no output field".to_string(),
-                ))
-            })?;
-        let stepped = Expr::BinaryExpr(datafusion::logical_expr::expr::BinaryExpr {
-            left: Box::new(Expr::Cast(Cast::new(
-                Box::new(col(output_name)),
-                DataType::Int64,
-            ))),
-            op: Operator::Minus,
-            right: Box::new(lit(1_i64)),
-        })
-        .alias("__repark_row_index");
-        let passthrough = reread_names
-            .iter()
-            .map(col)
-            .chain(std::iter::once(stepped))
-            .collect::<Vec<_>>();
-        let sequenced = LogicalPlanBuilder::from(windowed)
-            .project(passthrough)
-            .map_err(engine_err)?
-            .build()
-            .map_err(engine_err)?;
-        (sequenced, col("__repark_row_index"))
-    } else {
-        (funneled, lit(ScalarValue::Null))
-    };
+    let (sequenced, row_index) = sequence_branch(funneled, &reread_names, with_row_index)?;
     let mut udf_args = vec![
         lit(hit.file_path.clone()),
         lit(hit.file_name.clone()),
@@ -232,6 +239,62 @@ fn exact_output_schema(
     fields.push((None, metadata_outer_field(with_row_index)));
     DFSchema::new_with_metadata(fields, HashMap::new())
 }
+fn empty_branch(
+    plan: &LogicalPlan,
+    data_fields: &[Field],
+    partition_fields: &[Field],
+    with_row_index: bool,
+) -> std::result::Result<LogicalPlan, FileMetadataError> {
+    let false_plan = LogicalPlanBuilder::from(plan.clone())
+        .filter(lit(false))
+        .map_err(|error| FileMetadataError::engine(error.to_string()))?
+        .build()
+        .map_err(|error| FileMetadataError::engine(error.to_string()))?;
+    let mut projections = data_fields
+        .iter()
+        .map(|field| cast_to_field(col(field.name()), field))
+        .collect::<Vec<_>>();
+    for field in partition_fields {
+        projections.push(cast_to_field(lit(ScalarValue::Null), field));
+    }
+    let mut dummy_args = vec![
+        lit(String::new()),
+        lit(String::new()),
+        lit(0_i64),
+        lit(0_i64),
+        lit(0_i64),
+        lit(ScalarValue::TimestampNanosecond(
+            Some(0),
+            Some("UTC".into()),
+        )),
+    ];
+    if with_row_index {
+        dummy_args.push(lit(0_i64));
+    }
+    projections.push(file_metadata_call(dummy_args, with_row_index).alias(METADATA_COLUMN_NAME));
+    LogicalPlanBuilder::from(false_plan)
+        .project(projections)
+        .map_err(|error| FileMetadataError::engine(error.to_string()))?
+        .build()
+        .map_err(|error| FileMetadataError::engine(error.to_string()))
+}
+
+async fn collect_hits(
+    state: &SessionState,
+    plan: &LogicalPlan,
+    scan: &TableScan,
+    kind: &FileKind,
+) -> std::result::Result<Vec<FileHit>, FileMetadataError> {
+    if let FileKind::Text = kind {
+        return text_file_hits(scan);
+    }
+    let probe = DataFrame::new(state.clone(), plan.clone());
+    let physical = probe.create_physical_plan().await.map_err(|error| {
+        FileMetadataError::engine(format!("metadata file listing failed: {error}"))
+    })?;
+    Ok(collect_file_hits(&physical))
+}
+
 pub(crate) async fn augment_scan(
     state: &SessionState,
     plan: &LogicalPlan,
@@ -239,16 +302,7 @@ pub(crate) async fn augment_scan(
     kind: &FileKind,
 ) -> std::result::Result<LogicalPlan, FileMetadataError> {
     let with_row_index = matches!(kind, FileKind::Parquet);
-    let hits = match kind {
-        FileKind::Text => text_file_hits(scan)?,
-        _ => {
-            let probe = DataFrame::new(state.clone(), plan.clone());
-            let physical = probe.create_physical_plan().await.map_err(|error| {
-                FileMetadataError::engine(format!("metadata file listing failed: {error}"))
-            })?;
-            collect_file_hits(&physical)
-        }
-    };
+    let hits = collect_hits(state, plan, scan, kind).await?;
     let context = SessionContext::new_with_state(state.clone());
     let source_schema = scan.source.schema();
     let data_fields = source_schema
@@ -269,41 +323,12 @@ pub(crate) async fn augment_scan(
         .unwrap_or_default();
     let mut branches = Vec::with_capacity(hits.len().max(1));
     if hits.is_empty() {
-        let false_plan = LogicalPlanBuilder::from(plan.clone())
-            .filter(lit(false))
-            .map_err(|error| FileMetadataError::engine(error.to_string()))?
-            .build()
-            .map_err(|error| FileMetadataError::engine(error.to_string()))?;
-        let mut projections = data_fields
-            .iter()
-            .map(|field| cast_to_field(col(field.name()), field))
-            .collect::<Vec<_>>();
-        for field in &partition_fields {
-            projections.push(cast_to_field(lit(ScalarValue::Null), field));
-        }
-        let mut dummy_args = vec![
-            lit(String::new()),
-            lit(String::new()),
-            lit(0_i64),
-            lit(0_i64),
-            lit(0_i64),
-            lit(ScalarValue::TimestampNanosecond(
-                Some(0),
-                Some("UTC".into()),
-            )),
-        ];
-        if with_row_index {
-            dummy_args.push(lit(0_i64));
-        }
-        projections
-            .push(file_metadata_call(dummy_args, with_row_index).alias(METADATA_COLUMN_NAME));
-        branches.push(
-            LogicalPlanBuilder::from(false_plan)
-                .project(projections)
-                .map_err(|error| FileMetadataError::engine(error.to_string()))?
-                .build()
-                .map_err(|error| FileMetadataError::engine(error.to_string()))?,
-        );
+        branches.push(empty_branch(
+            plan,
+            &data_fields,
+            &partition_fields,
+            with_row_index,
+        )?);
     } else {
         for hit in &hits {
             let branch = build_file_branch(

@@ -25,6 +25,7 @@ one-liner.
   `declare_sorted`: verified sorted input, refused unsorted input. No Spark analog.
 - [inspect_cache.py](inspect_cache.py) — `columns`, `dtypes`, `count`, `cache`,
   `coalesce`, and `explain` (plan print asserted non-empty, never text-pinned).
+- [metadata_column.py](metadata_column.py) — `metadataColumn` over a parquet scan: file-name projection and per-file `row_index` values. pins: df-metadata-col-1/M-4
 - [lazy_and_eager.py](lazy_and_eager.py) — `eager` (new frame, source uncached),
   `compute` (the same object as `eager`), and `lazy` (`self` on a lazy frame, a copy
   answering the same rows on an eager one). pins: df-eager-1/C-001, C-002, C-003, C-004
