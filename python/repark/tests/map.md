@@ -7657,4 +7657,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   **FNP-MATH-1 step 2 (2026-09-16, run 18a):** `_spark_simple_to_arrow` maps boolean
   to `pa.bool_()` (`pa.boolean()` is absent in pyarrow 25 and failed every value pin
   at the helper); the `bround` cells go green on the rebuilt native.
+  **FNP-MATH-1 step 4 (2026-09-16, run 18a):** the frame renders `arr_i` as
+  `array<int>` (Spark's recorded element type; the replay had `array<bigint>`,
+  which hashes differently per element); the 12-column SQL hash SELECT goes
+  `xfail(strict)` on the run-18c `-0.0` planner seam (registry EX-FN-7-RESID-1).
   pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009

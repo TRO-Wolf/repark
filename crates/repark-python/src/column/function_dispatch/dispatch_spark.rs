@@ -80,6 +80,14 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             }
             repark_functions::spark_math::call_conv(exprs)
         }
+        "hash" => {
+            if exprs.is_empty() {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects at least 1 arg, got 0"
+                )));
+            }
+            repark_functions::spark_hash::call_hash(exprs)
+        }
         "split" => {
             if exprs.len() != 2 && exprs.len() != 3 {
                 return Err(PyValueError::new_err(format!(

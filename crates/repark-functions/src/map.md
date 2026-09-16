@@ -928,6 +928,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   closed-form counts reserve up front at native width with a scalar fast path. The int/date/
   timestamp row kernels live in `spark_sequence/rows.rs` (file-size split, move-only).
   pins: door-converge-2/C-007, C-009
+- `spark_hash.rs` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):** Spark Murmur3
+  `hash` kernel (seed 42; per-type `mix`/`fmix` shapes verified against the fixture;
+  strings as LE words with per-byte tails; arrays/structs/maps fold; always `int`,
+  never NULL) with its Rust tests. pins: fnp-math-1/C-002, C-003, C-005
 - `spark_reverse.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `reverse`
   (overwrites the string-only DataFusion kernel): arrays reverse element order with the
   element type, `containsNull` and nullability kept; strings reverse by character; untyped

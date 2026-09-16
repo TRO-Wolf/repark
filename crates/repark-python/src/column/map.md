@@ -261,6 +261,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 - `bround` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a): the
   name joins the door-converged list (one line — the parent file sits at its ceiling) and the
   arm builds `spark_math::call_bround` over 1–2 args. pins: fnp-math-1/C-002, C-003
+- `hash` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a): the
+  name joins the same list and the arm builds `spark_hash::call_hash` (1+ args).
+  pins: fnp-math-1/C-002, C-003, C-005
 - `conv` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a): the
   name joins the same one-line list growth and the arm builds `spark_math::call_conv`
   over 3 args. pins: fnp-math-1/C-002, C-003, C-004

@@ -55,7 +55,7 @@ _FRAME_VALUES = (
     "'Hello World. How are you?', 'a,b,,c', '100', 'abcd-EFG-123', '{\"a\":1}', "
     "'1,abc,2.5', '<p/>', "
     "array(named_struct('x', 1, 'y', 'p'), named_struct('x', 2, 'y', 'q')), "
-    "array(10, 20), 'k1'), "
+    "array(CAST(10 AS INT), CAST(20 AS INT)), 'k1'), "
     "(2, CAST(NULL AS DOUBLE), CAST(3.5 AS DOUBLE), CAST(NULL AS DECIMAL(10,4)), "
     "CAST(NULL AS STRING), CAST(NULL AS STRING), 'zz', CAST(NULL AS STRING), "
     "CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING), "
@@ -401,9 +401,27 @@ def test_c004_f14_aes_error_cells_python_door(
     assert condition in str(excinfo.value), cell_id
 
 
+_HASH_SQL_XFAIL = (
+    "run 18c owns the SQL planner -0.0 fold: CAST(-0.0 AS DOUBLE) plans identical "
+    "to CAST(0.0 AS DOUBLE), so the 12-column hash SELECT fails projection-name "
+    "uniqueness before any kernel runs; registry EX-FN-7-RESID-1"
+)
+
+
+def _c005_param(key: str) -> Any:
+    """Wrap one C-005 key, strict-xfailing the SQL hash SELECT it cannot reach."""
+    if key.startswith("hash|sql|"):
+        return pytest.param(key, marks=pytest.mark.xfail(strict=True, reason=_HASH_SQL_XFAIL))
+    return pytest.param(key)
+
+
 @pytest.mark.parametrize(
     "key",
-    [k for k, c in _O245_BY_KEY.items() if c.get("rows") is not None and c["name"] in _C005_NAMES],
+    [
+        _c005_param(k)
+        for k, c in _O245_BY_KEY.items()
+        if c.get("rows") is not None and c["name"] in _C005_NAMES
+    ],
 )
 def test_c005_o245_exact_hash_aes_cells(spark: ReparkSession, key: str) -> None:
     """Pin one o245 hash or AES cell byte-exact on its recorded door and ANSI setting."""

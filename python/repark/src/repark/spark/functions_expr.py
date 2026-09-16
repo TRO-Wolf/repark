@@ -601,11 +601,8 @@ def unix_timestamp(
 
 
 def hash(*cols: Column | str) -> Column:
-    """Unsupported: engine has no Spark ``hash`` (xxhash-style)."""
-
-    raise UnsupportedOperationException(
-        "functions.hash is not supported yet (engine gap; disclosed R-FN-BATCH1)"
-    )
+    """Murmur3 hash with Spark ``hash`` names and types."""
+    return _scalar("hash", *cols)
 
 
 def struct(*cols: Column | str) -> Column:
