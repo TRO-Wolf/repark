@@ -242,8 +242,8 @@ declines it (a dated ruling in the intake, then the archive).
   Q-16b-1..4, the Rust-first roll-call, and the carry-overs DF-RUST-3, DF-SUBQUERY-1, IO-ORC-1, DF-METADATA-COL-1 with their oracles.
 - [overnight-report-2026-09-15-16c.md](overnight-report-2026-09-15-16c.md) — run 16c day report (2026-09-15): the SQL door, the type table and the registry backlog of the 1.5 Spark-parity campaign — census slice, per-PR table with reviewer verdicts and costs, oracle batches 12–19, rulings R-16c-1…17, owner questions Q-16c-1/2, hand-offs, the Rust-first roll-call.
 - [overnight-report-2026-09-16-17a.md](overnight-report-2026-09-16-17a.md) — run 17a (the functions slice) of the
-  2026-09-15/16 overnight: census **37 → 20** missing names, #618 FNP-WIN-1, #627 FNP-11B and #629 FNP-GEN-1 merged
-  tree-equal and #625 FNP-AGG-1 handed over green-with-findings; the **Devin SWE-2 vs Muse contributor** comparison the
+  2026-09-15/16 overnight: census **37 → 22** missing names on `main`, #618 FNP-WIN-1 and #627 FNP-11B merged tree-equal,
+  #629 FNP-GEN-1 gated fully green and handed over, #625 FNP-AGG-1 handed over green-with-findings; the **Devin SWE-2 vs Muse contributor** comparison the
   owner asked for; five live oracles recorded (decimal literals, `typeof`, `UNRESOLVED_COLUMN`, `hour`-on-TIME, the `mode`
   tie); rulings R-17a-1…29 including the deferral of an engine-wide error taxonomy against a worker's lean; owner questions
   Q-17a-1…4; the Rust-first roll-call; and the carry-over unit ERR-UNRESOLVED-COL-1.
