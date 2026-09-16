@@ -55,14 +55,6 @@ def _result_pin(frame: Any, cell: str) -> None:
     assert sorted(repr(tuple(row)) for row in frame.collect()) == sorted(expected["rows"])
 
 
-def _width_divergence_pin(frame: Any, cell: str, reported_schema: str) -> None:
-    expected = _cell(cell)["result"]
-    assert frame.columns == expected["columns"]
-    assert sorted(repr(tuple(row)) for row in frame.collect()) == sorted(expected["rows"])
-    assert frame.schema.simpleString() == reported_schema
-    assert reported_schema != expected["schema"]
-
-
 @pytest.fixture
 def spark() -> Any:
     _reset_active_session_for_tests()
@@ -350,38 +342,34 @@ def _write_kfloat(tmp_path: Path) -> Path:
 
 
 def test_text_probe6_float_schema_float(spark: ReparkSession, tmp_path: Path) -> None:
-    """float overlay: exact value, wide label (LOGICAL-WIDTH-1). pins: io-text-1/Y-2"""
-    _width_divergence_pin(
+    """Float overlay, narrow label. pins: io-text-1/Y-2; pins: logical-width-1/C-010"""
+    _result_pin(
         spark.read.schema("value string, k float").text(str(_write_kfloat(tmp_path))),
         "text_probe6_float_schema_float",
-        "struct<value:string,k:double>",
     )
 
 
 def test_text_probe6_int_schema_smallint(spark: ReparkSession, tmp_path: Path) -> None:
-    """smallint overlay: exact value, wide label (LOGICAL-WIDTH-1). pins: io-text-1/Y-2"""
-    _width_divergence_pin(
+    """Smallint overlay, narrow label. pins: io-text-1/Y-2; pins: logical-width-1/C-010"""
+    _result_pin(
         spark.read.schema("value string, k smallint").text(str(_write_kint(tmp_path))),
         "text_probe6_int_schema_smallint",
-        "struct<value:string,k:int>",
     )
 
 
 def test_text_probe6_int_schema_tinyint(spark: ReparkSession, tmp_path: Path) -> None:
-    """tinyint overlay: exact value, wide label (LOGICAL-WIDTH-1). pins: io-text-1/Y-2"""
-    _width_divergence_pin(
+    """Tinyint overlay, narrow label. pins: io-text-1/Y-2; pins: logical-width-1/C-010"""
+    _result_pin(
         spark.read.schema("value string, k tinyint").text(str(_write_kint(tmp_path))),
         "text_probe6_int_schema_tinyint",
-        "struct<value:string,k:int>",
     )
 
 
 def test_text_probe6_int_schema_binary(spark: ReparkSession, tmp_path: Path) -> None:
-    """binary overlay: exact bytes, string label (DF-TO-BINARY-1). pins: io-text-1/Y-2"""
-    _width_divergence_pin(
+    """Binary overlay, narrow label. pins: io-text-1/Y-2; pins: logical-width-1/C-010"""
+    _result_pin(
         spark.read.schema("value string, k binary").text(str(_write_kint(tmp_path))),
         "text_probe6_int_schema_binary",
-        "struct<value:string,k:string>",
     )
 
 

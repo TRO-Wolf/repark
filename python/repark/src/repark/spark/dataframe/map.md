@@ -132,6 +132,16 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   (`replace_expr._NO_VALUE`) — PySpark's `<no value>` default — so `na.replace(x)`
   over a non-dict `to_replace` raises `ARGUMENT_REQUIRED` while an explicit `None`
   value null-replaces. pins: io-declared-1/C-004
+  LOGICAL-WIDTH-1 (2026-09-16): `fill` casts the fill literal to the column's own
+  width (`byte`/`short`/`int`/`long`/`float`/`double`, Spark's cast-the-literal rule)
+  so `fillna` never widens the schema; the display-overlay key map knows the narrow
+  keys too. pins: logical-width-1/C-004
+  LOGICAL-WIDTH-1 round 2 (2026-09-16, R-12): the cast decision and the coalesce move
+  to `repark_core::na_fill_expr` via free `fill_expr_for_column`; `_fill_expr_for_bound`
+  keeps the probe literal, the `F.coalesce` composition and the identity/alias wrapper;
+  dead `_fill_expr` goes away while `_type_keys` stays as a schema reader pinned by
+  `test_mapinarrow_unpersist_action_then_plan_child`. The cast texts unpack as one
+  nested unit. pins: logical-width-1/C-012
 - `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
   PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,
   same-type-group `MIXED_TYPE_REPLACEMENT`, subset resolution through
@@ -553,7 +563,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `applyInPandasWithState`, `transformWithState`, and `transformWithStateInPandas` bind on the
   class as module-function aliases (one line each); `_apply_in_pandas_arrow_batches` moved to
   `grouped_arrow.py` (1238 → 1169, mirrored in the CAP-1 test and `check_lib_py.py`).
-  pins: dfcore-1/C-006, C-007, grouped-surface-1/C-007
+  LOGICAL-WIDTH-1 round 3 (2026-09-16): the zero-arg `sum`/`avg`/`mean`/`min`/`max`
+  keep-set (`core._is_numeric_type_key`) covers the narrow widths
+  (byte/short/float), matching Spark's NumericType.
+  pins: dfcore-1/C-006, C-007, grouped-surface-1/C-007; pins: logical-width-1/C-013
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
   DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the module keeps the show

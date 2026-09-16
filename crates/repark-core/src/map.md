@@ -157,6 +157,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `freq_items` runs one aggregate over the named columns
   and answers the `<name>_freqItems` projection.
   pins: df-rust-3/C-001, C-002, C-007, C-010, C-011
+- `na_fill.rs` (+ [na_fill/](na_fill/map.md)) — **LOGICAL-WIDTH-1 (2026-09-16, round 2,
+  R-12):** `na_fill_expr` builds the `na.fill` replacement in Rust — the fill literal is
+  cast to the target column's own Arrow type for every integer/uint/float width (Spark's
+  cast-the-literal rule, float-into-int truncates) and left uncast otherwise, then
+  `coalesce`d under the bound expression. The column type is read from the plan schema
+  (engine name, display-name fallback, last duplicate wins); a miss leaves the literal
+  uncast. File-backed pins: `na_fill/tests.rs`.
+  pins: logical-width-1/C-012
 - `transpose.rs` — **DF-RUST-3 (2026-09-15):** the `ResolveTranspose` algorithm as an
   eager kernel (`transpose_frame`): filter null index rows, enforce
   `spark.sql.transposeMaxValues`, collect once, stable-sort ascending on the raw index

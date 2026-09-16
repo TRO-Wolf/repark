@@ -1,0 +1,1245 @@
+{
+ "agg_width": {
+  "result": {
+   "dtypes": [
+    [
+     "s",
+     "bigint"
+    ],
+    [
+     "a",
+     "double"
+    ],
+    [
+     "m",
+     "tinyint"
+    ],
+    [
+     "n",
+     "float"
+    ]
+   ],
+   "json_types": [
+    "long",
+    "double",
+    "byte",
+    "float"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "printSchema": "root\n |-- s: long (nullable = true)\n |-- a: double (nullable = true)\n |-- m: byte (nullable = true)\n |-- n: float (nullable = true)\n\n",
+   "simpleString": "struct<s:bigint,a:double,m:tinyint,n:float>"
+  }
+ },
+ "arith_width": {
+  "result": {
+   "dtypes": [
+    [
+     "st",
+     "smallint"
+    ],
+    [
+     "f2",
+     "double"
+    ],
+    [
+     "fd",
+     "double"
+    ]
+   ],
+   "json_types": [
+    "short",
+    "double",
+    "double"
+   ],
+   "nullable": [
+    true,
+    true,
+    true
+   ],
+   "printSchema": "root\n |-- st: short (nullable = true)\n |-- f2: double (nullable = true)\n |-- fd: double (nullable = true)\n\n",
+   "simpleString": "struct<st:smallint,f2:double,fd:double>"
+  }
+ },
+ "cast_schema": {
+  "error": {
+   "condition": "DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION",
+   "message": "[DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION] Cannot resolve \"CAST(id AS BINARY)\" due to data type mismatch: cannot cast \"BIGINT\" to \"BINARY\" with ANSI mode on.\nIf you have to cast \"BIGINT\" to \"BINARY\", you can set \"spark.sql.ansi.enabled\" as 'false'. SQLSTATE: 42K09;\n'Project [cast(id#36L as smallint) AS sh#37, cast(id#36L as tinyint) AS ti#38, cast(id#36L as float) AS f#39, cast(id#36L as binary) AS b#40]\n+- Range (0, 1, step=1, splits=Some(2))\n",
+   "raises": "AnalysisException"
+  }
+ },
+ "cast_string_from_binary": {
+  "result": {
+   "columns": [
+    "b"
+   ],
+   "dtypes": [
+    [
+     "b",
+     "string"
+    ]
+   ],
+   "rows": [
+    "('hi',)"
+   ]
+  }
+ },
+ "ddl_collect_types": {
+  "result": [
+   [
+    "int",
+    "int",
+    "float",
+    "float",
+    "bytes",
+    "str",
+    "int",
+    "int"
+   ],
+   [
+    "NoneType",
+    "NoneType",
+    "NoneType",
+    "NoneType",
+    "NoneType",
+    "NoneType",
+    "NoneType",
+    "NoneType"
+   ]
+  ]
+ },
+ "ddl_collect_values": {
+  "result": [
+   [
+    "3",
+    "1",
+    "1.5",
+    "2.5",
+    "b'ab'",
+    "'x'",
+    "7",
+    "8"
+   ],
+   [
+    "None",
+    "None",
+    "None",
+    "None",
+    "None",
+    "None",
+    "None",
+    "None"
+   ]
+  ]
+ },
+ "ddl_schema": {
+  "result": {
+   "dtypes": [
+    [
+     "sh",
+     "smallint"
+    ],
+    [
+     "ti",
+     "tinyint"
+    ],
+    [
+     "f",
+     "float"
+    ],
+    [
+     "d",
+     "double"
+    ],
+    [
+     "b",
+     "binary"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "i",
+     "int"
+    ],
+    [
+     "l",
+     "bigint"
+    ]
+   ],
+   "json_types": [
+    "short",
+    "byte",
+    "float",
+    "double",
+    "binary",
+    "string",
+    "integer",
+    "long"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "printSchema": "root\n |-- sh: short (nullable = true)\n |-- ti: byte (nullable = true)\n |-- f: float (nullable = true)\n |-- d: double (nullable = true)\n |-- b: binary (nullable = true)\n |-- s: string (nullable = true)\n |-- i: integer (nullable = true)\n |-- l: long (nullable = true)\n\n",
+   "simpleString": "struct<sh:smallint,ti:tinyint,f:float,d:double,b:binary,s:string,i:int,l:bigint>"
+  }
+ },
+ "describe_narrow": {
+  "result": {
+   "columns": [
+    "summary",
+    "g",
+    "sh",
+    "ti",
+    "f",
+    "d"
+   ],
+   "dtypes": [
+    [
+     "summary",
+     "string"
+    ],
+    [
+     "g",
+     "string"
+    ],
+    [
+     "sh",
+     "string"
+    ],
+    [
+     "ti",
+     "string"
+    ],
+    [
+     "f",
+     "string"
+    ],
+    [
+     "d",
+     "string"
+    ]
+   ],
+   "rows": [
+    "('count', '2', '2', '2', '2', '2')",
+    "('max', '1', '4', '2', '2.25', '2.5')",
+    "('mean', '1.0', '3.5', '1.5', '1.875', '1.5')",
+    "('min', '1', '3', '1', '1.5', '0.5')",
+    "('stddev', '0.0', '0.7071067811865476', '0.7071067811865476', '0.5303300858899106', '1.4142135623730951')"
+   ]
+  }
+ },
+ "fillna_values": {
+  "result": [
+   [
+    "3",
+    "1",
+    "1.5",
+    "2.5",
+    "b'ab'",
+    "'x'",
+    "7",
+    "8"
+   ],
+   [
+    "0",
+    "0",
+    "0.0",
+    "0.0",
+    "None",
+    "None",
+    "0",
+    "0"
+   ]
+  ]
+ },
+ "fillna_width": {
+  "result": {
+   "dtypes": [
+    [
+     "sh",
+     "smallint"
+    ],
+    [
+     "ti",
+     "tinyint"
+    ],
+    [
+     "f",
+     "float"
+    ],
+    [
+     "d",
+     "double"
+    ],
+    [
+     "b",
+     "binary"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "i",
+     "int"
+    ],
+    [
+     "l",
+     "bigint"
+    ]
+   ],
+   "json_types": [
+    "short",
+    "byte",
+    "float",
+    "double",
+    "binary",
+    "string",
+    "integer",
+    "long"
+   ],
+   "nullable": [
+    true,
+    true,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true
+   ],
+   "printSchema": "root\n |-- sh: short (nullable = true)\n |-- ti: byte (nullable = true)\n |-- f: float (nullable = false)\n |-- d: double (nullable = false)\n |-- b: binary (nullable = true)\n |-- s: string (nullable = true)\n |-- i: integer (nullable = true)\n |-- l: long (nullable = true)\n\n",
+   "simpleString": "struct<sh:smallint,ti:tinyint,f:float,d:double,b:binary,s:string,i:int,l:bigint>"
+  }
+ },
+ "float_arith_sql": {
+  "result": {
+   "columns": [
+    "f2",
+    "fi",
+    "fplus",
+    "ff"
+   ],
+   "dtypes": [
+    [
+     "f2",
+     "double"
+    ],
+    [
+     "fi",
+     "double"
+    ],
+    [
+     "fplus",
+     "double"
+    ],
+    [
+     "ff",
+     "float"
+    ]
+   ],
+   "rows": [
+    "(2.200000047683716, 2.200000047683716, 2.100000023841858, 2.200000047683716)"
+   ]
+  }
+ },
+ "float_arith_values": {
+  "result": {
+   "columns": [
+    "f2",
+    "fi",
+    "fplus",
+    "fminus",
+    "f2d",
+    "fdiv",
+    "ff"
+   ],
+   "dtypes": [
+    [
+     "f2",
+     "double"
+    ],
+    [
+     "fi",
+     "double"
+    ],
+    [
+     "fplus",
+     "double"
+    ],
+    [
+     "fminus",
+     "double"
+    ],
+    [
+     "f2d",
+     "double"
+    ],
+    [
+     "fdiv",
+     "double"
+    ],
+    [
+     "ff",
+     "float"
+    ]
+   ],
+   "rows": [
+    "(2.200000047683716, 2.200000047683716, 2.100000023841858, 0.10000002384185791, 2.200000047683716, 0.550000011920929, 2.200000047683716)"
+   ]
+  }
+ },
+ "grouped_avg_noargs": {
+  "result": {
+   "columns": [
+    "g",
+    "avg(g)",
+    "avg(sh)",
+    "avg(ti)",
+    "avg(f)",
+    "avg(d)"
+   ],
+   "dtypes": [
+    [
+     "g",
+     "int"
+    ],
+    [
+     "avg(g)",
+     "double"
+    ],
+    [
+     "avg(sh)",
+     "double"
+    ],
+    [
+     "avg(ti)",
+     "double"
+    ],
+    [
+     "avg(f)",
+     "double"
+    ],
+    [
+     "avg(d)",
+     "double"
+    ]
+   ],
+   "rows": [
+    "(1, 1.0, 3.5, 1.5, 1.875, 1.5)"
+   ]
+  }
+ },
+ "grouped_max_noargs": {
+  "result": {
+   "columns": [
+    "g",
+    "max(g)",
+    "max(sh)",
+    "max(ti)",
+    "max(f)",
+    "max(d)"
+   ],
+   "dtypes": [
+    [
+     "g",
+     "int"
+    ],
+    [
+     "max(g)",
+     "int"
+    ],
+    [
+     "max(sh)",
+     "smallint"
+    ],
+    [
+     "max(ti)",
+     "tinyint"
+    ],
+    [
+     "max(f)",
+     "float"
+    ],
+    [
+     "max(d)",
+     "double"
+    ]
+   ],
+   "rows": [
+    "(1, 1, 4, 2, 2.25, 2.5)"
+   ]
+  }
+ },
+ "grouped_mean_noargs": {
+  "result": {
+   "columns": [
+    "g",
+    "avg(g)",
+    "avg(sh)",
+    "avg(ti)",
+    "avg(f)",
+    "avg(d)"
+   ],
+   "dtypes": [
+    [
+     "g",
+     "int"
+    ],
+    [
+     "avg(g)",
+     "double"
+    ],
+    [
+     "avg(sh)",
+     "double"
+    ],
+    [
+     "avg(ti)",
+     "double"
+    ],
+    [
+     "avg(f)",
+     "double"
+    ],
+    [
+     "avg(d)",
+     "double"
+    ]
+   ],
+   "rows": [
+    "(1, 1.0, 3.5, 1.5, 1.875, 1.5)"
+   ]
+  }
+ },
+ "grouped_min_noargs": {
+  "result": {
+   "columns": [
+    "g",
+    "min(g)",
+    "min(sh)",
+    "min(ti)",
+    "min(f)",
+    "min(d)"
+   ],
+   "dtypes": [
+    [
+     "g",
+     "int"
+    ],
+    [
+     "min(g)",
+     "int"
+    ],
+    [
+     "min(sh)",
+     "smallint"
+    ],
+    [
+     "min(ti)",
+     "tinyint"
+    ],
+    [
+     "min(f)",
+     "float"
+    ],
+    [
+     "min(d)",
+     "double"
+    ]
+   ],
+   "rows": [
+    "(1, 1, 3, 1, 1.5, 0.5)"
+   ]
+  }
+ },
+ "grouped_sum_noargs": {
+  "result": {
+   "columns": [
+    "g",
+    "sum(g)",
+    "sum(sh)",
+    "sum(ti)",
+    "sum(f)",
+    "sum(d)"
+   ],
+   "dtypes": [
+    [
+     "g",
+     "int"
+    ],
+    [
+     "sum(g)",
+     "bigint"
+    ],
+    [
+     "sum(sh)",
+     "bigint"
+    ],
+    [
+     "sum(ti)",
+     "bigint"
+    ],
+    [
+     "sum(f)",
+     "double"
+    ],
+    [
+     "sum(d)",
+     "double"
+    ]
+   ],
+   "rows": [
+    "(1, 2, 7, 3, 3.75, 3.0)"
+   ]
+  }
+ },
+ "iceberg_desc": {
+  "result": [
+   [
+    "id",
+    "bigint",
+    null
+   ],
+   [
+    "i",
+    "int",
+    null
+   ],
+   [
+    "sh",
+    "int",
+    null
+   ],
+   [
+    "ti",
+    "int",
+    null
+   ],
+   [
+    "price",
+    "float",
+    null
+   ],
+   [
+    "dprice",
+    "double",
+    null
+   ],
+   [
+    "amount",
+    "decimal(10,2)",
+    null
+   ],
+   [
+    "big",
+    "decimal(28,6)",
+    null
+   ],
+   [
+    "name",
+    "string",
+    null
+   ],
+   [
+    "flag",
+    "boolean",
+    null
+   ],
+   [
+    "ts",
+    "timestamp",
+    null
+   ],
+   [
+    "ts_ntz",
+    "timestamp_ntz",
+    null
+   ],
+   [
+    "d",
+    "date",
+    null
+   ],
+   [
+    "b",
+    "binary",
+    null
+   ],
+   [
+    "arr",
+    "array<int>",
+    null
+   ],
+   [
+    "m",
+    "map<string,int>",
+    null
+   ],
+   [
+    "s",
+    "struct<x:int,y:string>",
+    null
+   ]
+  ]
+ },
+ "iceberg_rows": {
+  "result": [
+   [
+    "1",
+    "3",
+    "1",
+    "1.5",
+    "b'ab'"
+   ],
+   [
+    "2",
+    "None",
+    "None",
+    "None",
+    "None"
+   ]
+  ]
+ },
+ "iceberg_schema": {
+  "result": {
+   "dtypes": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "i",
+     "int"
+    ],
+    [
+     "sh",
+     "int"
+    ],
+    [
+     "ti",
+     "int"
+    ],
+    [
+     "price",
+     "float"
+    ],
+    [
+     "dprice",
+     "double"
+    ],
+    [
+     "amount",
+     "decimal(10,2)"
+    ],
+    [
+     "big",
+     "decimal(28,6)"
+    ],
+    [
+     "name",
+     "string"
+    ],
+    [
+     "flag",
+     "boolean"
+    ],
+    [
+     "ts",
+     "timestamp"
+    ],
+    [
+     "ts_ntz",
+     "timestamp_ntz"
+    ],
+    [
+     "d",
+     "date"
+    ],
+    [
+     "b",
+     "binary"
+    ],
+    [
+     "arr",
+     "array<int>"
+    ],
+    [
+     "m",
+     "map<string,int>"
+    ],
+    [
+     "s",
+     "struct<x:int,y:string>"
+    ]
+   ],
+   "json_types": [
+    "long",
+    "integer",
+    "integer",
+    "integer",
+    "float",
+    "double",
+    "decimal",
+    "decimal",
+    "string",
+    "boolean",
+    "timestamp",
+    "timestamp_ntz",
+    "date",
+    "binary",
+    "array",
+    "map",
+    "struct"
+   ],
+   "nullable": [
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "printSchema": "root\n |-- id: long (nullable = false)\n |-- i: integer (nullable = true)\n |-- sh: integer (nullable = true)\n |-- ti: integer (nullable = true)\n |-- price: float (nullable = true)\n |-- dprice: double (nullable = true)\n |-- amount: decimal(10,2) (nullable = true)\n |-- big: decimal(28,6) (nullable = true)\n |-- name: string (nullable = true)\n |-- flag: boolean (nullable = true)\n |-- ts: timestamp (nullable = true)\n |-- ts_ntz: timestamp_ntz (nullable = true)\n |-- d: date (nullable = true)\n |-- b: binary (nullable = true)\n |-- arr: array (nullable = true)\n |    |-- element: integer (containsNull = true)\n |-- m: map (nullable = true)\n |    |-- key: string\n |    |-- value: integer (valueContainsNull = true)\n |-- s: struct (nullable = true)\n |    |-- x: integer (nullable = true)\n |    |-- y: string (nullable = true)\n\n",
+   "simpleString": "struct<id:bigint,i:int,sh:int,ti:int,price:float,dprice:double,amount:decimal(10,2),big:decimal(28,6),name:string,flag:boolean,ts:timestamp,ts_ntz:timestamp_ntz,d:date,b:binary,arr:array<int>,m:map<string,int>,s:struct<x:int,y:string>>"
+  }
+ },
+ "infer_schema": {
+  "result": {
+   "dtypes": [
+    [
+     "i",
+     "bigint"
+    ],
+    [
+     "f",
+     "double"
+    ],
+    [
+     "b",
+     "binary"
+    ],
+    [
+     "t",
+     "boolean"
+    ],
+    [
+     "s",
+     "string"
+    ]
+   ],
+   "json_types": [
+    "long",
+    "double",
+    "binary",
+    "boolean",
+    "string"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "printSchema": "root\n |-- i: long (nullable = true)\n |-- f: double (nullable = true)\n |-- b: binary (nullable = true)\n |-- t: boolean (nullable = true)\n |-- s: string (nullable = true)\n\n",
+   "simpleString": "struct<i:bigint,f:double,b:binary,t:boolean,s:string>"
+  }
+ },
+ "lit_width": {
+  "result": {
+   "dtypes": [
+    [
+     "f",
+     "double"
+    ],
+    [
+     "b",
+     "binary"
+    ]
+   ],
+   "json_types": [
+    "double",
+    "binary"
+   ],
+   "nullable": [
+    false,
+    false
+   ],
+   "printSchema": "root\n |-- f: double (nullable = false)\n |-- b: binary (nullable = false)\n\n",
+   "simpleString": "struct<f:double,b:binary>"
+  }
+ },
+ "meta": {
+  "engine": "PySpark 4.1.2",
+  "probe": "/tmp/oc-worker/run18b/oracle/probe_lw_r3.py",
+  "recorded": "2026-09-16",
+  "round": 3
+ },
+ "na_fill_float_col": {
+  "result": {
+   "columns": [
+    "f",
+    "sh"
+   ],
+   "dtypes": [
+    [
+     "f",
+     "float"
+    ],
+    [
+     "sh",
+     "smallint"
+    ]
+   ],
+   "rows": [
+    "(1.7000000476837158, 1)"
+   ]
+  }
+ },
+ "na_replace_narrow": {
+  "result": {
+   "columns": [
+    "sh",
+    "f"
+   ],
+   "dtypes": [
+    [
+     "sh",
+     "smallint"
+    ],
+    [
+     "f",
+     "float"
+    ]
+   ],
+   "rows": [
+    "(9, 1.5)"
+   ]
+  }
+ },
+ "nested_schema": {
+  "result": {
+   "dtypes": [
+    [
+     "s",
+     "struct<sh:smallint,f:float,b:binary>"
+    ],
+    [
+     "arr",
+     "array<smallint>"
+    ],
+    [
+     "m",
+     "map<string,float>"
+    ]
+   ],
+   "json_types": [
+    "struct",
+    "array",
+    "map"
+   ],
+   "nullable": [
+    true,
+    true,
+    true
+   ],
+   "printSchema": "root\n |-- s: struct (nullable = true)\n |    |-- sh: short (nullable = true)\n |    |-- f: float (nullable = true)\n |    |-- b: binary (nullable = true)\n |-- arr: array (nullable = true)\n |    |-- element: short (containsNull = true)\n |-- m: map (nullable = true)\n |    |-- key: string\n |    |-- value: float (valueContainsNull = true)\n\n",
+   "simpleString": "struct<s:struct<sh:smallint,f:float,b:binary>,arr:array<smallint>,m:map<string,float>>"
+  }
+ },
+ "schema_json": {
+  "result": "{\"fields\":[{\"metadata\":{},\"name\":\"sh\",\"nullable\":true,\"type\":\"short\"},{\"metadata\":{},\"name\":\"ti\",\"nullable\":true,\"type\":\"byte\"},{\"metadata\":{},\"name\":\"f\",\"nullable\":true,\"type\":\"float\"},{\"metadata\":{},\"name\":\"d\",\"nullable\":true,\"type\":\"double\"},{\"metadata\":{},\"name\":\"b\",\"nullable\":true,\"type\":\"binary\"},{\"metadata\":{},\"name\":\"s\",\"nullable\":true,\"type\":\"string\"},{\"metadata\":{},\"name\":\"i\",\"nullable\":true,\"type\":\"integer\"},{\"metadata\":{},\"name\":\"l\",\"nullable\":true,\"type\":\"long\"}],\"type\":\"struct\"}"
+ },
+ "sql_cast": {
+  "result": {
+   "dtypes": [
+    [
+     "a",
+     "smallint"
+    ],
+    [
+     "b",
+     "tinyint"
+    ],
+    [
+     "c",
+     "float"
+    ],
+    [
+     "d",
+     "binary"
+    ]
+   ],
+   "json_types": [
+    "short",
+    "byte",
+    "float",
+    "binary"
+   ],
+   "nullable": [
+    false,
+    false,
+    false,
+    false
+   ],
+   "printSchema": "root\n |-- a: short (nullable = false)\n |-- b: byte (nullable = false)\n |-- c: float (nullable = false)\n |-- d: binary (nullable = false)\n\n",
+   "simpleString": "struct<a:smallint,b:tinyint,c:float,d:binary>"
+  }
+ },
+ "sql_describe": {
+  "result": [
+   [
+    1,
+    1.5,
+    "b'ab'"
+   ]
+  ]
+ },
+ "struct_schema": {
+  "result": {
+   "dtypes": [
+    [
+     "sh",
+     "smallint"
+    ],
+    [
+     "ti",
+     "tinyint"
+    ],
+    [
+     "f",
+     "float"
+    ],
+    [
+     "b",
+     "binary"
+    ]
+   ],
+   "json_types": [
+    "short",
+    "byte",
+    "float",
+    "binary"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "printSchema": "root\n |-- sh: short (nullable = true)\n |-- ti: byte (nullable = true)\n |-- f: float (nullable = true)\n |-- b: binary (nullable = true)\n\n",
+   "simpleString": "struct<sh:smallint,ti:tinyint,f:float,b:binary>"
+  }
+ },
+ "summary_narrow": {
+  "result": {
+   "columns": [
+    "summary",
+    "sh",
+    "ti",
+    "f"
+   ],
+   "dtypes": [
+    [
+     "summary",
+     "string"
+    ],
+    [
+     "sh",
+     "string"
+    ],
+    [
+     "ti",
+     "string"
+    ],
+    [
+     "f",
+     "string"
+    ]
+   ],
+   "rows": [
+    "('count', '2', '2', '2')",
+    "('max', '4', '2', '2.25')",
+    "('min', '3', '1', '1.5')"
+   ]
+  }
+ },
+ "to_string_from_binary": {
+  "result": {
+   "columns": [
+    "b"
+   ],
+   "dtypes": [
+    [
+     "b",
+     "string"
+    ]
+   ],
+   "rows": [
+    "('hi',)"
+   ]
+  }
+ },
+ "todf_toPandas": {
+  "error": {
+   "condition": "PACKAGE_NOT_INSTALLED",
+   "message": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+   "raises": "PySparkImportError"
+  }
+ },
+ "typename_strings": {
+  "result": {
+   "BinaryType": "binary",
+   "ByteType": "tinyint",
+   "DoubleType": "double",
+   "FloatType": "float",
+   "IntegerType": "int",
+   "ShortType": "smallint"
+  }
+ },
+ "union_width": {
+  "result": {
+   "dtypes": [
+    [
+     "sh",
+     "smallint"
+    ],
+    [
+     "ti",
+     "tinyint"
+    ],
+    [
+     "f",
+     "float"
+    ],
+    [
+     "d",
+     "double"
+    ],
+    [
+     "b",
+     "binary"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "i",
+     "int"
+    ],
+    [
+     "l",
+     "bigint"
+    ]
+   ],
+   "json_types": [
+    "short",
+    "byte",
+    "float",
+    "double",
+    "binary",
+    "string",
+    "integer",
+    "long"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "printSchema": "root\n |-- sh: short (nullable = true)\n |-- ti: byte (nullable = true)\n |-- f: float (nullable = true)\n |-- d: double (nullable = true)\n |-- b: binary (nullable = true)\n |-- s: string (nullable = true)\n |-- i: integer (nullable = true)\n |-- l: long (nullable = true)\n\n",
+   "simpleString": "struct<sh:smallint,ti:tinyint,f:float,d:double,b:binary,s:string,i:int,l:bigint>"
+  }
+ },
+ "write_read_parquet": {
+  "result": {
+   "dtypes": [
+    [
+     "sh",
+     "smallint"
+    ],
+    [
+     "ti",
+     "tinyint"
+    ],
+    [
+     "f",
+     "float"
+    ],
+    [
+     "d",
+     "double"
+    ],
+    [
+     "b",
+     "binary"
+    ],
+    [
+     "s",
+     "string"
+    ],
+    [
+     "i",
+     "int"
+    ],
+    [
+     "l",
+     "bigint"
+    ]
+   ],
+   "json_types": [
+    "short",
+    "byte",
+    "float",
+    "double",
+    "binary",
+    "string",
+    "integer",
+    "long"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "printSchema": "root\n |-- sh: short (nullable = true)\n |-- ti: byte (nullable = true)\n |-- f: float (nullable = true)\n |-- d: double (nullable = true)\n |-- b: binary (nullable = true)\n |-- s: string (nullable = true)\n |-- i: integer (nullable = true)\n |-- l: long (nullable = true)\n\n",
+   "simpleString": "struct<sh:smallint,ti:tinyint,f:float,d:double,b:binary,s:string,i:int,l:bigint>"
+  }
+ }
+}

@@ -19,6 +19,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   moved, not cloned, back to Python. Child fragments (including Python `str`/`repr` and
   `_idents` quoting) are inputs; Rust only concatenates. Byte identity with the pre-move
   Python f-strings is the contract (card D-1).
+  **LOGICAL-WIDTH-1 (2026-09-16, round 2, R-12):** `wrap_cast` is `pub(crate)` so the
+  the free `fill_expr_for_column` binding renders the fill literal's cast texts with
+  the same renderer `Column.cast` uses. pins: logical-width-1/C-012
   **Step-2b remediation (2026-09-12, review F1–F5):** operand parts extract as borrowed
   `&str` tuples, not owned `String`s — PyO3 borrows the UTF-8 cache instead of copying the
   growing SQL fragments across the boundary per op. `alias` returns a 2-tuple

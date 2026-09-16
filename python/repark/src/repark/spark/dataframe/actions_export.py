@@ -68,28 +68,49 @@ class DataFrameNaFunctions:
         return self._fill_scalar(value, names)
 
     def _type_keys(self) -> dict[str, str]:
-        """Return native type keys by engine field name for width-preserving casts."""
+        """Return native type keys by engine field name for schema readers."""
         return {
             name: type_key for name, type_key, _ in self._dataframe._inner.logical_schema_fields()
         }
 
-    def _fill_expr_for_bound(self, bound: Column, value: Any, type_key: str) -> Column:
+    def _fill_expr_for_bound(
+        self, bound: Column, value: Any, field_name: str, fallback_name: str
+    ) -> Column:
         """Build a fill expression while preserving origin identity across projections."""
+        from repark import _native
         from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
-        literal = F.lit(value)
-        if (
-            type_key in ("int", "long")
-            and isinstance(value, (int, float))
-            and not isinstance(value, bool)
-        ):
-            literal = literal.cast(type_key)
+        probe = F.lit(value)
+        filled_inner, cast_literal = _native.fill_expr_for_column(
+            self._dataframe._inner,
+            bound._inner,
+            field_name,
+            fallback_name,
+            probe._inner,
+            (
+                probe.spark_display_part(),
+                probe.sql_expr_part(),
+                probe.join_sql_part(),
+            ),
+        )
+        if cast_literal is None:
+            literal = probe
+        else:
+            lit_inner, (display, sql, join) = cast_literal
+            literal = Column(
+                lit_inner,
+                spark_display=display,
+                projection_name=display,
+                sql_expr=sql,
+                join_sql_expr=join,
+                is_foldable=True,
+            )
         filled = F.coalesce(bound, literal)
         display = bound._projection_name or bound.spark_display_part()
         if bound._origin_plan_id is None or bound._origin_field is None:
             return filled.alias(display) if display else filled
         return Column(
-            filled._inner.alias(display),
+            filled_inner.alias(display),
             spark_display=display,
             projection_name=display,
             stable_name=True,
@@ -98,16 +119,6 @@ class DataFrameNaFunctions:
             join_sql_expr=(f"coalesce({bound.join_sql_part()}, {literal.join_sql_part()})"),
             origin_plan_id=bound._origin_plan_id,
             origin_field=bound._origin_field,
-        )
-
-    def _fill_expr(self, column_name: str, value: Any, type_key: str) -> Column:
-        """Build a fill expression that preserves integer width and mixed-case field binding.
-
-        Spark truncates numeric replacements for integer columns. A quoted schema bind keeps
-        requested-spelling projections resolvable.
-        """
-        return self._fill_expr_for_bound(
-            self._dataframe._bind_schema_column(column_name), value, type_key
         )
 
     def _fill_dict(self, replacements: dict[str, Any]) -> DataFrame:
@@ -119,7 +130,6 @@ class DataFrameNaFunctions:
                     f"A column with name `{column_name}` cannot be resolved for fillna; "
                     f"available columns: {sorted(known)}"
                 )
-        type_keys = self._type_keys()
         # One projection preserves the frame's display and engine-name pairing.
         projections: list[Column | str] = []
         for bound in self._dataframe._iter_bound_columns():
@@ -128,10 +138,11 @@ class DataFrameNaFunctions:
             # Match the bound display name to its engine field.
             if bound._sql_expr is not None and bound._sql_expr.startswith('"'):
                 engine = bound._sql_expr.strip('"').replace('""', '"')
-            type_key = type_keys.get(engine or display, type_keys.get(display, ""))
             if display in replacements:
                 projections.append(
-                    self._fill_expr_for_bound(bound, replacements[display], type_key)
+                    self._fill_expr_for_bound(
+                        bound, replacements[display], engine or display, display
+                    )
                 )
             else:
                 projections.append(bound)
@@ -140,16 +151,16 @@ class DataFrameNaFunctions:
     def _fill_scalar(self, value: Any, subset: list[str] | None) -> DataFrame:
         """Fill scalar-compatible columns in one projection."""
         target_columns = set(self._columns_for_fill_value(value, subset))
-        type_keys = self._type_keys()
         projections: list[Column] = []
         for bound in self._dataframe._iter_bound_columns():
             display = bound._projection_name or bound.spark_display_part()
             engine = None
             if bound._sql_expr is not None and bound._sql_expr.startswith('"'):
                 engine = bound._sql_expr.strip('"').replace('""', '"')
-            type_key = type_keys.get(engine or display, type_keys.get(display, ""))
             if display in target_columns:
-                projections.append(self._fill_expr_for_bound(bound, value, type_key))
+                projections.append(
+                    self._fill_expr_for_bound(bound, value, engine or display, display)
+                )
             else:
                 projections.append(bound)
         return self._dataframe.select(*projections)
@@ -200,14 +211,18 @@ class DataFrameNaFunctions:
             }
             from repark.spark.types import (
                 BooleanType,
+                ByteType,
                 DoubleType,
                 FloatType,
                 IntegerType,
                 LongType,
+                ShortType,
                 StringType,
             )
 
             key_to_cls = {
+                "byte": ByteType,
+                "short": ShortType,
                 "int": IntegerType,
                 "long": LongType,
                 "double": DoubleType,

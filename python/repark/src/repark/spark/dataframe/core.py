@@ -218,12 +218,12 @@ def _register_cache_frame(alive_token: dict[str, Any], frame: DataFrame) -> None
 
 
 def _is_numeric_type_key(type_key: str) -> bool:
-    """Whether a native logical type key is a Spark ``NumericType`` (int / long / double / decimal).
+    """Whether a native logical type key is a Spark ``NumericType``.
 
-    Drives the zero-arg ``GroupedData`` shortcuts (``groupBy(g).sum()`` aggregates every numeric
-    column) and the na-fill width-preserving path.
+    Drives the zero-arg ``GroupedData`` shortcuts over every numeric column.
     """
-    return type_key in {"int", "long", "double"} or type_key.startswith("decimal(")
+    keys = {"byte", "short", "int", "long", "float", "double"}
+    return type_key in keys or type_key.startswith("decimal(")
 
 
 def _normalize_subset(
