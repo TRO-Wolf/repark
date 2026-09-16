@@ -52,6 +52,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
         .with_query_planner(Arc::new(crate::stack::StackQueryPlanner))
         .with_optimizer_rules(unnest_safe_optimizer_rules())
         .with_analyzer_rules(analyzer_rules)
+        .with_physical_optimizer_rule(Arc::new(crate::nlj_build_reset::NljBuildSideReset))
         .build();
     let context = SessionContext::new_with_state(state);
     crate::stack::register_stack(&context);

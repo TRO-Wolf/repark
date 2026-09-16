@@ -27,6 +27,12 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   pins: conf-unread-1/C-007
 - `df_guard.rs` — seven DataFusion 54.1 guard pins.
 - `namespace_create.rs` — `create_namespace` location-guard pins (G-6 Q1 / R-6).
+- `nlj_tight_pool.rs` — **NEVER-OOM-PANIC-1 (2026-09-16):** the tight-pool nested-loop-join
+  loop pin. The plan shape is guarded (`NestedLoopJoinExec` in `EXPLAIN`), every one of ten
+  iterations runs `EXPLAIN ANALYZE` under an 8 MiB pool with 4 partitions, each iteration
+  proves its own tightness (the pool recorded a refusal), and each outcome is either success
+  (spilled) or the typed `Resources exhausted … fair(` refusal — never a panic payload.
+  pins: never-oom-panic-1/C-003, C-006
 - `a13.rs` — `file://` warehouse fallback-root pin.
 - `pool_refusals.rs` — **H3-SPILL-RESIDUE-1 (2026-09-06):** the wiring pins. A bounded
   `build()` installs a pool that still reports `MemoryLimit::Finite` and now carries a refusal

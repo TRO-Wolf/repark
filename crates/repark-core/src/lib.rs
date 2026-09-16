@@ -14,6 +14,7 @@ mod isnan;
 mod lineage_columns;
 mod named_sources;
 mod namespace_create;
+mod nlj_build_reset;
 mod object_store_s3;
 mod partition_discovery;
 mod partition_timestamp;

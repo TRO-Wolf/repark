@@ -286,6 +286,21 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   refusal that caused the panic instead of a bug report. The decorator is the only way to see a
   refusal from outside DataFusion — the pool trait has no hook.
   pins: h3-spill-residue-1/C-002, C-003
+  **NEVER-OOM-PANIC-1 (2026-09-16):** `nlj_build_reset.rs` now removes the nested-loop-join
+  double-execute at the root, so this path spills (or refuses typed) and no longer reaches
+  the containment; the log stays as the tightness proof and the containment stays for the
+  other allow-listed fallback paths.
+- `nlj_build_reset.rs` — **NEVER-OOM-PANIC-1 (2026-09-16):** the physical-optimizer rule
+  `NljBuildSideReset` (appended last, so the enforcer's `RepartitionExec` is already under
+  the build side) plus the wrapper exec `NljBuildSideExec`. The rule wraps each
+  `NestedLoopJoinExec` left child once (idempotent); the wrapper's `execute` runs a
+  `reset_plan_states` clone of its child, so the OOM fallback's second `execute(0)` meets
+  fresh `RepartitionExec` channels and really spills instead of hitting
+  `expect("partition not used yet")` and poisoning the shared once-future. Properties,
+  schema, partitioning, fetch and limit-pushdown support delegate to the inner plan;
+  `metrics` is `None` (per-execute clones own theirs). Wired in
+  `session/df_guards.rs::context_with_df_54_1_rule_guards`.
+  pins: never-oom-panic-1/C-004, C-005, C-006
 - `catalog_config.rs` — the `spark.sql.catalog.<name>.*` → `Vec<CatalogSpec { name, kind,
   props }>` parser (`parse_catalog_specs`, pure/AWS-free). Both prefixes share one keyspace
   (cross-spelling duplicates collapse when identical, fail loud otherwise). Rules: bare
