@@ -3820,7 +3820,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (DATE extraction and leap-day DATE arithmetic are session-zone independent on both engines) and
   are UNCHANGED by the fix — which is the half of the claim an all-disclosure corpus could never
   make. Also carries the conf-surface pins: the `UTC` default, the builder round trip, the
-  accepted-but-neither-validated-nor-applied runtime `conf.set`/`unset` disclosure, the reuse
+  runtime `conf.set`/`unset` that validates and applies (SET-ANSI-RUNTIME-1 FIXED, 2026-09-15;
+  TZ-3 FIXED with it — the old accepted-but-neither-validated-nor-applied disclosure is deleted),
+  the `sql_conf`-shaped round trip that moves the engine at each step, the reuse
   path's deliberate laxness (an invalid zone on a second `getOrCreate` warns, never raises), the
   whitespace normalization that keeps `conf.get` on the engine's trimmed zone, and the engine's
   build-time refusal of an unknown or blank zone. Rows go through the facade `sql()` door or (for
@@ -5335,10 +5337,11 @@ through `core` or the package. pins: eager-budget-1/C-010
 - `test_sql_set_door_1.py` — **SQL-SET-DOOR-1 (2026-09-14):** the `SET`/`RESET`/`SET TIME ZONE`
   SQL-door pins for registry `B-TZ-5`, measured against `fixtures-batch1.json` cells
   `BTZ5-0`…`BTZ5-19` and `fixtures-batch5.json` cells `S5-*` (PySpark 4.1.2). Result frames
-  assert on the `to_arrow` path — value AND Arrow type AND field nullability. Residues:
-  timezone SET echoes the live session zone (TZ-3), `spark.sql.ansi.enabled` stores but
-  `1/0` still raises `DIVIDE_BY_ZERO` (SET-ANSI-RUNTIME-1), `SET TIME ZONE LOCAL` is a
-  dated DECLARED refusal (SET-TZ-LOCAL-1). Round-3 pins: ZoneId.of offset zones (L-001),
+  assert on the `to_arrow` path — value AND Arrow type AND field nullability.
+  **SET-ANSI-RUNTIME-1 (2026-09-15):** the two knob SETs validate in Rust and apply
+  (TZ-3 / SET-ANSI-RUNTIME-1 FIXED — the old echo-UTC / stores-but-raises pins flipped in
+  place). Residue: `SET TIME ZONE LOCAL` is a dated DECLARED refusal (SET-TZ-LOCAL-1).
+  Round-3 pins: ZoneId.of offset zones (L-001),
   case-sensitive keys (L-002), `SET CATALOG`/`NAMESPACE` vs unintercepted `SET ROLE`
   (L-003), Spark default redaction regex on key-or-value (L-004), TZ-3 + G15 collation
   RESET (L-005), positive shuffle.partitions (L-006), boolean `1`/`yes`/`TRUE` (N-1),

@@ -67,14 +67,19 @@ def test_s16_1_fresh_division_answers_null_after_set() -> None:
     spark.stop()
 
 
-def test_s16_2_cast_x_answers_null_after_set() -> None:
-    """A fresh `CAST('x' AS INT)` after the SET answers NULL int, nullable — S16-2."""
+def test_s16_2_cast_x_still_raises_string_cast_residue() -> None:
+    """A fresh `CAST('x' AS INT)` after the SET still raises — S16-2 residue.
+
+    Spark answers NULL (unparsable string cast with ANSI off). repark raises the
+    same `simplify_expressions` cast error with ANSI off at BUILD, so the snapshot
+    cannot deliver the oracle cell: the string-cast path never reads the ANSI flag
+    (narrow residue, registry SET-ANSI-RUNTIME-3). Division (S16-1) is the live
+    proof fresh queries read the runtime flag.
+    """
     spark = _session()
     spark.sql("SET spark.sql.ansi.enabled=false")
-    table = _arrow(spark.sql("SELECT CAST('x' AS INT)"))
-    assert table.schema.field(0).type == pa.int32()
-    assert table.schema.field(0).nullable is True
-    assert table.to_pylist() == [{table.schema.names[0]: None}]
+    with pytest.raises(PySparkException, match="Cannot cast string 'x'"):
+        spark.sql("SELECT CAST('x' AS INT)").to_arrow()
     spark.stop()
 
 

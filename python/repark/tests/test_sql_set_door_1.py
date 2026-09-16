@@ -2,11 +2,10 @@
 
 Every recognised shape runs ``spark.conf.set``/``get``/``unset`` underneath, so the SQL door
 inherits the facade's recorded contract: a runtime set of ``spark.sql.session.timeZone`` or
-``spark.sql.ansi.enabled`` is accepted and stored (timezone: accepted but not stored) yet not
-applied to the live engine — the pinned divergences below point at registry rows TZ-3 and
-SET-ANSI-RUNTIME-1 rather than at Spark's applied behaviour. Result frames are asserted on the
-``to_arrow`` path (value AND Arrow type AND field nullability). Error classes and message
-needles mirror live PySpark 4.1.2 minus the recorded no-SQLSTATE delta.
+``spark.sql.ansi.enabled`` validates in Rust and applies to the live session
+(registry SET-ANSI-RUNTIME-1 FIXED, 2026-09-15; TZ-3 FIXED with it). Result frames are
+asserted on the ``to_arrow`` path (value AND Arrow type AND field nullability). Error classes
+and message needles mirror live PySpark 4.1.2 minus the recorded no-SQLSTATE delta.
 """
 
 from __future__ import annotations
@@ -88,15 +87,15 @@ def test_set_key_read_of_a_never_set_key_answers_undefined() -> None:
     spark.stop()
 
 
-def test_set_session_time_zone_is_accepted_but_not_applied() -> None:
-    """``SET spark.sql.session.timeZone`` echoes live UTC; Spark would apply NY — TZ-3."""
+def test_set_session_time_zone_key_applies() -> None:
+    """``SET spark.sql.session.timeZone`` applies NY like Spark — SET-ANSI-RUNTIME-1 FIXED."""
     spark = _session()
     schema, rows = _set_and_get(spark, "SET spark.sql.session.timeZone = America/New_York")
-    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
-    assert spark.conf.get(SESSION_TIME_ZONE_KEY) == "UTC"
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "America/New_York")])
+    assert spark.conf.get(SESSION_TIME_ZONE_KEY) == "America/New_York"
     tz_schema, tz_rows = _arrow(spark.sql("SELECT current_timezone() tz"))
     assert tz_schema.field("tz").nullable is False
-    assert tz_rows == [{"tz": "UTC"}]
+    assert tz_rows == [{"tz": "America/New_York"}]
     spark.stop()
 
 
@@ -147,19 +146,20 @@ def test_set_unresolvable_time_zone_refuses_with_spark_error() -> None:
     spark.stop()
 
 
-def test_set_ansi_enabled_stores_but_does_not_apply() -> None:
-    """``SET spark.sql.ansi.enabled = false`` stores the flag — residue SET-ANSI-RUNTIME-1.
+def test_set_ansi_enabled_applies() -> None:
+    """``SET spark.sql.ansi.enabled = false`` applies — SET-ANSI-RUNTIME-1 FIXED.
 
-    Spark then answers ``1/0`` as NULL (BTZ5-8); repark's ANSI flag is installed at session
-    build, so the stored value never reaches the engine and ``1/0`` still raises
-    ``DIVIDE_BY_ZERO`` — pinned as the measured divergence.
+    Spark answers ``1/0`` as NULL (BTZ5-8); the runtime flag now reaches the engine,
+    so a fresh query answers NULL double, nullable, on the Arrow path.
     """
     spark = _session()
     schema, rows = _set_and_get(spark, "SET spark.sql.ansi.enabled = false")
     _kv_frame_assertion(rows, schema, [("spark.sql.ansi.enabled", "false")])
     assert spark.conf.get("spark.sql.ansi.enabled") == "false"
-    with pytest.raises(PySparkException, match="DIVIDE_BY_ZERO"):
-        spark.sql("SELECT 1/0 d").to_arrow()
+    table = spark.sql("SELECT 1/0 d").to_arrow()
+    assert table.schema.field("d").type == pa.float64()
+    assert table.schema.field("d").nullable is True
+    assert table.to_pylist() == [{"d": None}]
     spark.stop()
 
 
@@ -376,36 +376,36 @@ def test_unrecognised_statement_goes_to_the_engine_unchanged() -> None:
 
 
 def test_offset_zone_plus05_is_accepted() -> None:
-    """``SET TIME ZONE '+05'`` accepts; echo is TZ-3 UTC not Spark's +05 — S5-tz-plus05."""
+    """``SET TIME ZONE '+05'`` applies like ZoneId.of — S5-tz-plus05."""
     spark = _session()
     schema, rows = _set_and_get(spark, "SET TIME ZONE '+05'")
-    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "+05")])
     _, tz_rows = _arrow(spark.sql("SELECT current_timezone() tz"))
-    assert tz_rows == [{"tz": "UTC"}]
+    assert tz_rows == [{"tz": "+05"}]
     spark.stop()
 
 
 def test_offset_zone_key_plus05_is_accepted() -> None:
-    """``SET spark.sql.session.timeZone = +05`` accepts — S5-tz-key-plus05."""
+    """``SET spark.sql.session.timeZone = +05`` applies — S5-tz-key-plus05."""
     spark = _session()
     schema, rows = _set_and_get(spark, "SET spark.sql.session.timeZone = +05")
-    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "+05")])
     spark.stop()
 
 
 def test_offset_zone_plus5_is_accepted() -> None:
-    """``SET TIME ZONE '+5'`` accepts like ZoneId.of — S5-tz-plus5."""
+    """``SET TIME ZONE '+5'`` applies like ZoneId.of — S5-tz-plus5."""
     spark = _session()
     schema, rows = _set_and_get(spark, "SET TIME ZONE '+5'")
-    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "+5")])
     spark.stop()
 
 
 def test_offset_zone_plus1800_is_accepted() -> None:
-    """``SET TIME ZONE '+18:00'`` is the ZoneId offset ceiling — S5-tz-plus1800."""
+    """``SET TIME ZONE '+18:00'`` applies at the ZoneId offset ceiling — S5-tz-plus1800."""
     spark = _session()
     schema, rows = _set_and_get(spark, "SET TIME ZONE '+18:00'")
-    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "+18:00")])
     spark.stop()
 
 
@@ -422,10 +422,10 @@ def test_offset_zone_plus1801_refuses_with_time_zone_class() -> None:
 
 
 def test_offset_zone_gmt_plus8_is_accepted() -> None:
-    """``SET spark.sql.session.timeZone = GMT+8`` accepts — S5-tz-gmt8."""
+    """``SET spark.sql.session.timeZone = GMT+8`` applies — S5-tz-gmt8."""
     spark = _session()
     schema, rows = _set_and_get(spark, "SET spark.sql.session.timeZone = GMT+8")
-    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "GMT+8")])
     spark.stop()
 
 
@@ -473,13 +473,13 @@ def test_set_role_is_not_intercepted() -> None:
     spark.stop()
 
 
-def test_set_time_zone_literal_america_new_york_is_tz3() -> None:
-    """``SET TIME ZONE 'America/New_York'`` echoes UTC; Spark would echo NY — TZ-3 / L-005."""
+def test_set_time_zone_literal_america_new_york_applies() -> None:
+    """``SET TIME ZONE 'America/New_York'`` echoes and answers NY — SET-ANSI-RUNTIME-1 FIXED."""
     spark = _session()
     schema, rows = _set_and_get(spark, "SET TIME ZONE 'America/New_York'")
-    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "America/New_York")])
     _, tz_rows = _arrow(spark.sql("SELECT current_timezone() tz"))
-    assert tz_rows == [{"tz": "UTC"}]
+    assert tz_rows == [{"tz": "America/New_York"}]
     spark.stop()
 
 
@@ -569,10 +569,10 @@ def test_set_time_zone_double_quoted_literal() -> None:
 
 
 def test_set_time_zone_interval_hour_to_minute() -> None:
-    """INTERVAL '+08:00' HOUR TO MINUTE is recognised; echo is TZ-3 UTC — S5-tz-interval."""
+    """INTERVAL '+08:00' HOUR TO MINUTE is recognised and applies — S5-tz-interval."""
     spark = _session()
     schema, rows = _set_and_get(spark, "SET TIME ZONE INTERVAL '+08:00' HOUR TO MINUTE")
-    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "UTC")])
+    _kv_frame_assertion(rows, schema, [(SESSION_TIME_ZONE_KEY, "+08:00")])
     spark.stop()
 
 

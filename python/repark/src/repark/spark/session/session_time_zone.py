@@ -12,21 +12,13 @@ construction. It follows that:
 * ``ReparkSession.builder.config(SESSION_TIME_ZONE_KEY, "America/New_York")`` is the way to set
   it; an unknown zone fails loud (``IllegalArgumentException``) at ``getOrCreate``.
 * ``spark.conf.get(SESSION_TIME_ZONE_KEY)`` reports the zone the live engine session actually
-  has, defaulting to :data:`DEFAULT_SESSION_TIME_ZONE`; a runtime ``set`` never moves it, and
-  the builder value is whitespace-normalized (:func:`normalize_session_time_zone_config`) so a
+  has, defaulting to :data:`DEFAULT_SESSION_TIME_ZONE`; the builder value is
+  whitespace-normalized (:func:`normalize_session_time_zone_config`) so a
   padded ``.config(...)`` value cannot make the facade report a string the engine trimmed away.
-* ``spark.conf.set(SESSION_TIME_ZONE_KEY, …)`` at runtime is **accepted for source
-  compatibility, warned once, and NEITHER VALIDATED NOR APPLIED**
-  (:func:`warn_runtime_session_time_zone_not_applied`) — the ``.master(...)`` shape (OTH-010),
-  not the memory-pool refusal shape. Validation happens exactly once, at session build.
-
-  *Why accepted rather than refused.* The pinned Apache test
-  ``DataFrameCreationTests.test_create_dataframe_from_pandas_with_dst`` in
-  ``pyspark.sql.tests.test_creation`` sets this key through PySpark's own ``sql_conf``
-  context manager, so a raise turns a passing drop-in script red. What the repo refuses is a
-  *lying* conf, so the value is deliberately
-  **not stored**: ``conf.get`` keeps reporting the engine's real zone, and the divergence is a
-  visible warning instead of a silent split-brain.
+* ``spark.conf.set(SESSION_TIME_ZONE_KEY, …)`` at runtime **validates and applies
+  immediately** through the native setter: an unknown zone refuses
+  (``IllegalArgumentException``) before anything is stored, and a valid zone moves fresh
+  queries while frames built before the set keep the snapshot they were analysed under.
 
 **Declared divergence on the default.** PySpark defaults this key to the JVM's local zone, so a
 job produces different wall clocks on two hosts. repark defaults to ``UTC`` for reproducibility
@@ -45,7 +37,6 @@ is **not** shifted. ``CAST(ts AS DATE)`` / ``to_date(ts)`` take the date in this
 from __future__ import annotations
 
 import datetime
-import warnings
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
@@ -78,50 +69,6 @@ def normalize_session_time_zone_config(config: MutableMapping[str, str | None]) 
     raw = config.get(SESSION_TIME_ZONE_KEY)
     if isinstance(raw, str):
         config[SESSION_TIME_ZONE_KEY] = raw.strip()
-
-
-_runtime_session_time_zone_warned = False
-
-
-def warn_runtime_session_time_zone_not_applied(key: str, *, stacklevel: int = 2) -> bool:
-    """Handle a runtime ``conf.set`` of the build-time session-timezone key.
-
-    Returns ``True`` when ``key`` IS that knob — the caller must then accept the call and store
-    nothing, so ``conf.get`` keeps reporting the zone the live engine session actually has.
-    Returns ``False`` for every other key (including a differently-cased lookalike, which is not
-    this knob and is left to the ordinary unknown-key path).
-
-    The value is **neither validated nor applied**: validation is the engine's, and it happens
-    exactly once, at session build. An unknown zone passed to the runtime setter is therefore not
-    refused here — repark is knowingly laxer than PySpark 4.1.2 on that one point (Spark raises
-    ``[INVALID_CONF_VALUE.TIME_ZONE]``), because refusing reds the pinned Apache drop-in test that
-    drives this whole shape. The warning says so in as many words, so a caller who typo'd a zone
-    reads it in the message rather than inferring it from a silent no-op.
-
-    Emits that disclosure at most once **per process** — not per session — the same shape as
-    the ``.master(...)`` and arrow-batch-sentinel disclosures (OTH-010): a migrated PySpark
-    script calls this setter and must not explode, but it must also not be told the zone
-    changed. The once-per-process scope means a second session in the same interpreter gets a
-    silent no-op; that is the deliberate cost of the OTH-010 idiom (registry row TZ-3).
-    """
-    if key != SESSION_TIME_ZONE_KEY:
-        return False
-    global _runtime_session_time_zone_warned
-    if not _runtime_session_time_zone_warned:
-        warnings.warn(
-            f"config {key!r} is accepted for source compatibility but NOT applied at runtime, and "
-            f"its value is NOT validated: the session timezone is resolved AND validated exactly "
-            f"once, at getOrCreate (default {DEFAULT_SESSION_TIME_ZONE!r}), so this session keeps "
-            f"the zone it was built with, conf.get keeps reporting it, and an unknown zone passed "
-            f"here is neither refused nor stored. To change the zone — and to have the value "
-            f"checked against the engine's zone database — build a session with "
-            f"ReparkSession.builder.config({key!r}, 'America/New_York'). This disclosure is "
-            f"emitted once per process.",
-            UserWarning,
-            stacklevel=stacklevel,
-        )
-        _runtime_session_time_zone_warned = True
-    return True
 
 
 def active_session_time_zone() -> str:

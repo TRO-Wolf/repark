@@ -1155,75 +1155,65 @@ def test_session_timezone_conf_is_readable_back_and_defaults_to_utc() -> None:
     configured.stop()
 
 
-def test_runtime_conf_set_of_the_session_zone_is_accepted_but_not_applied() -> None:
-    """A runtime `conf.set` / `conf.unset` of the zone: accepted (drop-in), never a lying read.
+def test_runtime_conf_set_of_the_session_zone_applies() -> None:
+    """A runtime `conf.set` / `conf.unset` of the zone validates and applies — TZ-3 FIXED.
 
-    repark resolves the zone once at session build, but refusing the runtime call would break
-    pinned Apache drop-in tests (PySpark's `sql_conf` helper sets it), so the call is accepted
-    with a one-time disclosure — the value is NOT stored, so `conf.get` keeps reporting the zone
-    the live engine session actually has. The value is also NOT VALIDATED (validation is the
-    engine's, at build) — a knowing laxness, so the warning text must SAY the value is
-    unvalidated and the garbage leg is pinned.
+    A valid zone moves `conf.get` and fresh `current_timezone()` queries at once; an
+    unresolvable zone refuses `IllegalArgumentException` before anything is stored, so the
+    session keeps answering the previous zone; `unset` falls back to the registered default
+    (`UTC`), applied.
     """
-    import warnings
+    from repark.errors import IllegalArgumentException
 
-    from repark.spark.session import session_time_zone as tz_module
-
-    tz_module._runtime_session_time_zone_warned = False  # re-arm the once-per-process disclosure
     session = _session_at(ZONE_TOKYO)
-    disclosure = "accepted for source compatibility but NOT applied"
-    with pytest.warns(UserWarning, match=disclosure) as rec:
-        session.conf.set(SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK)
-    assert "its value is NOT validated" in str(rec[0].message), (
-        "the disclosure must say the value is unvalidated, not only unapplied — that is the one "
-        "point on which repark is laxer than PySpark here"
-    )
-    assert session.conf.get(SESSION_TIME_ZONE_KEY) == ZONE_TOKYO, (
-        "an unapplied runtime set must never move the facade away from the engine's real zone"
-    )
+    session.conf.set(SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK)
+    assert session.conf.get(SESSION_TIME_ZONE_KEY) == ZONE_NEW_YORK
+    assert session.sql("SELECT current_timezone() tz").to_arrow().to_pylist() == [
+        {"tz": ZONE_NEW_YORK}
+    ]
 
-    # A zone the ENGINE would refuse at build is accepted here, silently after the first warning
-    # (the disclosure is once per PROCESS). Pinned so the laxness cannot change unnoticed.
-    with warnings.catch_warnings():
-        warnings.simplefilter("error", UserWarning)  # a second warning would raise here
+    with pytest.raises(IllegalArgumentException, match=r"\[INVALID_CONF_VALUE\.TIME_ZONE\]"):
         session.conf.set(SESSION_TIME_ZONE_KEY, "Mars/Olympus_Mons")
-    assert session.conf.get(SESSION_TIME_ZONE_KEY) == ZONE_TOKYO, (
-        "an invalid runtime zone is neither validated nor stored — conf.get stays on the engine's"
+    assert session.conf.get(SESSION_TIME_ZONE_KEY) == ZONE_NEW_YORK, (
+        "a refused runtime zone stores nothing — conf.get stays on the applied zone"
     )
+    assert session.sql("SELECT current_timezone() tz").to_arrow().to_pylist() == [
+        {"tz": ZONE_NEW_YORK}
+    ]
 
     session.conf.unset(SESSION_TIME_ZONE_KEY)
-    assert session.conf.get(SESSION_TIME_ZONE_KEY) == ZONE_TOKYO, (
-        "unset must not tombstone the zone into the default either — the session still has one"
-    )
-    assert session.conf.getAll[SESSION_TIME_ZONE_KEY] == ZONE_TOKYO
+    assert session.conf.get(SESSION_TIME_ZONE_KEY) == "UTC"
+    assert session.conf.getAll[SESSION_TIME_ZONE_KEY] == "UTC"
+    assert session.sql("SELECT current_timezone() tz").to_arrow().to_pylist() == [{"tz": "UTC"}]
     session.stop()
 
 
 def test_apache_sql_conf_context_manager_round_trips_the_session_zone() -> None:
     """PySpark's `sql_conf` helper shape: read the old value, set a new one, restore it.
 
-    Every step must work on repark (accepted, warned, not applied) and the zone must be
-    unchanged at the end — that is what keeps the pinned Apache test green.
+    Every step applies on repark now: the middle set moves fresh queries to Los Angeles,
+    and restoring the previous value moves them back — that is what keeps the pinned Apache
+    test green, with the engine following each step instead of ignoring it.
     """
-    import warnings
-
     import repark
-    from repark.spark.session import session_time_zone as tz_module
 
-    tz_module._runtime_session_time_zone_warned = True  # disclosure already made; keep it quiet
     session = _session_at(ZONE_NEW_YORK)
     previous = session.conf.get(SESSION_TIME_ZONE_KEY, None)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        session.conf.set(SESSION_TIME_ZONE_KEY, "America/Los_Angeles")
-        try:
-            assert repark.ReparkSession.getActiveSession() is session
-        finally:
-            if previous is None:
-                session.conf.unset(SESSION_TIME_ZONE_KEY)
-            else:
-                session.conf.set(SESSION_TIME_ZONE_KEY, previous)
+    session.conf.set(SESSION_TIME_ZONE_KEY, "America/Los_Angeles")
+    try:
+        assert repark.ReparkSession.getActiveSession() is session
+        assert session.sql("SELECT current_timezone() tz").to_arrow().to_pylist() == [
+            {"tz": "America/Los_Angeles"}
+        ]
+    finally:
+        if previous is None:
+            session.conf.unset(SESSION_TIME_ZONE_KEY)
+        else:
+            session.conf.set(SESSION_TIME_ZONE_KEY, previous)
     assert session.conf.get(SESSION_TIME_ZONE_KEY) == ZONE_NEW_YORK
+    assert session.sql("SELECT current_timezone() tz").to_arrow().to_pylist() == [
+        {"tz": ZONE_NEW_YORK}
+    ]
     session.stop()
 
 
