@@ -955,7 +955,10 @@ them, and the document is ordered by surface, never by date.
 - **Apache Spark** — applies the new zone to the live session immediately, and validates it:
   the same call raises `[INVALID_CONF_VALUE.TIME_ZONE] … SQLSTATE: 22022`. *(oracle: recorded —
   observed against live PySpark 4.1.2 while authoring the unit; re-measured 2026-09-15 in
-  `fixtures-batch16-dc2rest-setansi.json` S16-6…S16-11.)*
+  `fixtures-batch16-dc2rest-setansi.json` S16-6…S16-11 and 2026-09-15 night in
+  `fixtures-batch17-zone-spellings.json`: `ZoneId` matching is case-sensitive (`GMT+8` yes,
+  `gmt+8` no; `Z` yes, `z` no), surrounding whitespace is not trimmed (padded refuses with
+  the raw text echoed), seconds-precision offsets are accepted (`+05:30:30`, `+18:00:00`).)*
 - **Pin** — `python/repark/tests/test_session_timezone_parity.py::test_runtime_conf_set_of_the_session_zone_applies`
   (valid leg, invalid leg, unset leg);
   `…::test_apache_sql_conf_context_manager_round_trips_the_session_zone` (each step moves the
@@ -991,8 +994,9 @@ them, and the document is ordered by surface, never by date.
   `UnsupportedOperationException` naming this row and pointing at the two spellings that do
   set the zone (`SET TIME ZONE '<iana-id>'`, `ReparkSession.builder.config`). The refusal is
   dated 2026-09-15 (SQL-SET-DOOR-1). Every other `SET TIME ZONE '<zone>'` spelling is served —
-  IANA ids and Java `ZoneId.of` offset forms (`+05`, `+5`, `+18:00`, `GMT+8`; `+18:01`
-  refuses), including double-quoted literals and `INTERVAL '+HH:MM' HOUR TO MINUTE`.
+  IANA ids and Java `ZoneId.of` offset forms (`+05`, `+5`, `+18:00`, `+18:00:00`, `GMT+8`;
+  `+18:01` refuses; `+05:30:30` refuses as declared divergence SET-ANSI-RUNTIME-4),
+  including double-quoted literals and `INTERVAL '+HH:MM' HOUR TO MINUTE`.
 - **Apache Spark** — resolves `LOCAL` to the host machine's local timezone and applies it.
   *(oracle: documented — the claim here is the refusal, not a value.)*
 - **Pin** —
@@ -2318,9 +2322,11 @@ the pin rather than obeying it.
 ### SET-ANSI-RUNTIME-3 — most failing casts raise even with ANSI off
 
 - **repark** — with ANSI off (at build AND at runtime alike), only these follow the flag:
-  `1/0` and `1%0` answer NULL, `2147483647 + 1` wraps, `CAST('x' AS DOUBLE)` answers NULL.
+  `1/0` and `1%0` answer NULL, `2147483647 + 1` wraps, `CAST('x' AS DOUBLE)` and
+  `CAST('x' AS FLOAT)` answer NULL.
   Every other failing cast raises the `simplify_expressions` Arrow cast error: `CAST('x' AS
-  INT / BIGINT / DATE / BOOLEAN / DECIMAL)`, `CAST('' AS INT)`, `CAST('1.5' AS INT)`,
+  INT / BIGINT / SMALLINT / DATE / TIMESTAMP / BOOLEAN / DECIMAL)`, `CAST('' AS INT)`,
+  `CAST('1.5' AS INT)`, `CAST('2024-13-45' AS DATE)`, `CAST('abc' AS DECIMAL(10,2))`,
   `CAST(128 AS TINYINT)`, `CAST(2147483648 AS INT)` — literal, subquery-folded, and real-column
   shapes alike. The cast-failure path never reads the ANSI flag.
 - **Apache Spark** — answers NULL for all of the above with ANSI off. *(oracle: measured —
@@ -2329,11 +2335,34 @@ the pin rather than obeying it.
 - **Pin** —
   `python/repark/tests/test_set_ansi_runtime_1.py::test_s16_2_cast_x_still_raises_string_cast_residue`
 - **Rationale** — DECLARED residue, broader than first drawn (2026-09-15 review: the row claimed
-  only the string-cast case; the measured list above replaces it). Identical with ANSI off at
-  build, so the snapshot cannot deliver these cells; fixing the cast kernel/analyzer is outside
-  this unit's fence (carriers only). Division (S16-1) is the live proof fresh queries read the
-  runtime flag. C-001 stays PROVEN: its proposition covers division, the F-API division leg, and
-  the stale-frame binding — all pinned green; no clause ever promised cast breadth.
+  only the string-cast case; the measured list above replaces it; 2026-09-15 night review adds
+  `CAST('x' AS FLOAT)` to the follow-list and the remaining targets to the raise-list).
+  Identical with ANSI off at build, so the snapshot cannot deliver these cells; fixing the cast
+  kernel/analyzer is outside this unit's fence (carriers only). Division (S16-1) is the live
+  proof fresh queries read the runtime flag. C-001 stays PROVEN: its proposition covers
+  division, the F-API division leg, and the stale-frame binding — all pinned green; no clause
+  ever promised cast breadth.
+
+### SET-ANSI-RUNTIME-4 — sub-minute fixed offsets: Spark accepts, RePark refuses
+
+- **repark** — `conf.set("spark.sql.session.timeZone", "+05:30:30")` (and the SQL `SET`
+  spellings) refuse `[INVALID_CONF_VALUE.TIME_ZONE]` before anything is stored; the session
+  keeps answering the previous zone. Zero-seconds forms (`+18:00:00`, `+053000`, `+05:30:00`)
+  are accepted and canonicalise to `±HH:MM` with identical instants.
+- **Apache Spark** — accepts `+05:30:30` and answers values in +5h30m30s (`from_unixtime(0)` →
+  `1970-01-01 05:30:30`). *(oracle: measured — `fixtures-batch17-zone-spellings.json`,
+  PySpark 4.1.2.)*
+- **Pin** —
+  `python/repark/tests/test_runtime_zone_spellings_1.py::test_batch17_nonzero_seconds_is_declared_divergence`
+- **Rationale** — DATED DECLARED divergence (2026-09-15): Spark accepts, RePark refuses, said
+  aloud here and never silent. The proof that implementation needs an out-of-fence change:
+  Arrow `Tz::from_str` is the sole zone parse on every value-bearing engine path —
+  `timestamp_cast.rs::parse_session_zone`, `datetime.rs::extraction_time_zone`, and
+  `spark_from_unixtime.rs` (via `parse_session_zone`) — and `Tz` has no seconds-offset
+  representation (measured: the frozen builder parse, which is `Tz::from_str` verbatim,
+  refuses these spellings at build). Carrying +5:30:30 needs offset arithmetic outside `Tz`
+  in all three files, which this unit's fence (carriers only) forbids; the refusal message
+  stays the standard gate text and this row states the true reason.
 
 ### DBT-CTASCLAUSE-1 — `LOCATION`, `OPTIONS` and `CLUSTERED BY` are refused on an Iceberg CTAS
 

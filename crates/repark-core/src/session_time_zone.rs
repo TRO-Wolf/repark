@@ -80,29 +80,34 @@ where
 
 #[allow(clippy::missing_errors_doc)]
 pub fn parse_runtime_session_zone_value(raw: &str) -> Result<SessionTimeZone> {
-    let trimmed = raw.trim();
-    let sign_led = trimmed
+    if raw.is_empty() || raw.len() != raw.trim().len() {
+        return Err(invalid_runtime_zone(raw));
+    }
+    let sign_led = raw
         .as_bytes()
         .first()
         .is_some_and(|byte| *byte == b'+' || *byte == b'-');
-    let accepted = !trimmed.is_empty()
-        && (is_java_offset_zone(trimmed)
-            || is_java_prefixed_zone(trimmed)
-            || (!sign_led && Tz::from_str(trimmed).is_ok()));
+    let accepted = is_java_offset_zone(raw)
+        || is_java_prefixed_zone(raw)
+        || (!sign_led && Tz::from_str(raw).is_ok());
     if accepted {
         return Ok(SessionTimeZone {
-            id: trimmed.to_string(),
+            id: raw.to_string(),
         });
     }
-    Err(Error::IllegalArgument(format!(
-        "[INVALID_CONF_VALUE.TIME_ZONE] The value '{trimmed}' in the config \
+    Err(invalid_runtime_zone(raw))
+}
+
+fn invalid_runtime_zone(raw: &str) -> Error {
+    Error::IllegalArgument(format!(
+        "[INVALID_CONF_VALUE.TIME_ZONE] The value '{raw}' in the config \
          \"{SESSION_TIME_ZONE_KEY}\" is invalid. Cannot resolve the given timezone. \
          SQLSTATE: 22022"
-    )))
+    ))
 }
 
 fn is_java_offset_zone(value: &str) -> bool {
-    if value == "Z" || value == "z" {
+    if value == "Z" {
         return true;
     }
     let bytes = value.as_bytes();
@@ -110,29 +115,44 @@ fn is_java_offset_zone(value: &str) -> bool {
         return false;
     }
     let body = &bytes[1..];
-    let (hours, minutes) = match body.len() {
-        1 | 2 if body.iter().all(u8::is_ascii_digit) => (decimal_pair(body, 0, body.len()), 0),
+    let (hours, minutes, seconds) = match body.len() {
+        1 | 2 if body.iter().all(u8::is_ascii_digit) => (decimal_pair(body, 0, body.len()), 0, 0),
         4 if body.iter().all(u8::is_ascii_digit) => {
-            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2))
+            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2), 0)
         }
         5 if body[2] == b':' && is_digit_pair(body, 0) && is_digit_pair(body, 3) => {
-            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2))
+            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2), 0)
+        }
+        6 if body.iter().all(u8::is_ascii_digit) => {
+            let seconds = decimal_pair(body, 4, 2);
+            if seconds != 0 {
+                return false;
+            }
+            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2), 0)
+        }
+        8 if body[2] == b':' && body[5] == b':' => {
+            if !(is_digit_pair(body, 0) && is_digit_pair(body, 3) && is_digit_pair(body, 6)) {
+                return false;
+            }
+            let seconds = decimal_pair(body, 6, 2);
+            if seconds != 0 {
+                return false;
+            }
+            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2), 0)
         }
         _ => return false,
     };
-    minutes <= 59 && hours <= 18 && (hours < 18 || minutes == 0)
+    minutes <= 59 && seconds <= 59 && hours <= 18 && (hours < 18 || (minutes == 0 && seconds == 0))
 }
 
 #[must_use]
 pub fn canonical_session_zone_id(raw: &str) -> String {
     let trimmed = raw.trim();
-    if trimmed == "Z" || trimmed == "z" {
+    if trimmed == "Z" {
         return DEFAULT_SESSION_TIME_ZONE.to_string();
     }
     for prefix in ["GMT", "UTC", "UT"] {
-        if trimmed.len() < prefix.len()
-            || !trimmed.as_bytes()[..prefix.len()].eq_ignore_ascii_case(prefix.as_bytes())
-        {
+        if !trimmed.starts_with(prefix) {
             continue;
         }
         if trimmed.len() == prefix.len() {
@@ -160,6 +180,18 @@ fn normalize_java_offset(signed: &str) -> String {
         5 if body[2] == b':' && is_digit_pair(body, 0) && is_digit_pair(body, 3) => {
             (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2))
         }
+        6 if body.iter().all(u8::is_ascii_digit) && decimal_pair(body, 4, 2) == 0 => {
+            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2))
+        }
+        8 if body[2] == b':'
+            && body[5] == b':'
+            && is_digit_pair(body, 0)
+            && is_digit_pair(body, 3)
+            && is_digit_pair(body, 6)
+            && decimal_pair(body, 6, 2) == 0 =>
+        {
+            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2))
+        }
         _ => return signed.to_string(),
     };
     format!("{}{hours:02}:{minutes:02}", &signed[..1])
@@ -167,9 +199,7 @@ fn normalize_java_offset(signed: &str) -> String {
 
 fn is_java_prefixed_zone(value: &str) -> bool {
     for prefix in ["GMT", "UTC", "UT"] {
-        if value.len() < prefix.len()
-            || !value.as_bytes()[..prefix.len()].eq_ignore_ascii_case(prefix.as_bytes())
-        {
+        if !value.starts_with(prefix) {
             continue;
         }
         if value.len() == prefix.len() {

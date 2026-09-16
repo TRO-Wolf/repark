@@ -5393,12 +5393,12 @@ through `core` or the package. pins: eager-budget-1/C-010
   zone value expressions answer the frame-build zone while `current_timezone()` folds
   at collect (S16-6 pins the build-zone answer as narrow residue SET-ANSI-RUNTIME-2).
   pins: set-ansi-runtime-1/C-001, C-002, C-003, C-004, C-005, C-006
-- `test_runtime_zone_spellings_1.py` — **SET-ANSI-RUNTIME-1 review P1 (R-17c-4, 2026-09-15):**
-  every Java-only zone spelling (`+5`, `GMT+8`, `gmt+8`, `UT+3`, `Z`, `z`) sets at runtime
-  and then asserts value-bearing answers (`from_unixtime(0)`, its string cast and hour) on
-  both doors, the naive-datetime `createDataFrame` instant/wall pair, and the raw-text echo;
-  the seconds spellings (`+05:30:30`, `+18:00:00`, no Arrow form) refuse at the SET storing
-  nothing; `selectExpr("current_timezone()")` pins the Rust-reachable expression path for
+- `test_runtime_zone_spellings_1.py` — **SET-ANSI-RUNTIME-1 review P1 (R-17c-4, 2026-09-15;
+  R-17c-6 batch-17 oracle):** one case per oracle cell — OK cells apply on both doors with
+  value-bearing answers (`from_unixtime(0)`, its string cast and hour) and raw-text echo;
+  refusal cells (`+18:01`, `gmt+8`, `z`, padded, unknown) refuse on both doors with the raw
+  text echoed; `+05:30:30` refuses as declared divergence SET-ANSI-RUNTIME-4;
+  `selectExpr("current_timezone()")` pins the Rust-reachable expression path for
   the 17a hand-off (`F.current_timezone()` still binds a Python literal).
   pins: set-ansi-runtime-1/C-002
 - **FNP-MISC-1 (2026-09-15):** `test_fnp_misc_1.py::test_fnp_misc_1_call_function_on_camel_case_aliases_matches_spark` pins `call_function` on #597's six camel-case aliases to the measured Spark 4.1.2 answers (pins: fnp-misc-1/F-4).

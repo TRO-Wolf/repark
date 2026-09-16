@@ -149,15 +149,23 @@ async fn session_clone_shares_the_resolved_zone() {
 fn runtime_values_accept_iana_and_java_offset_forms() {
     for zone in [
         "UTC",
+        "GMT",
+        "UT",
         "America/New_York",
         "Asia/Tokyo",
         "+05",
         "+5",
         "+0530",
+        "+053000",
         "+05:30",
+        "+05:30:00",
         "+08:00",
         "+18:00",
+        "+18:00:00",
+        "+180000",
         "GMT+8",
+        "UTC+5",
+        "UT+3",
         "Z",
     ] {
         let parsed = parse_runtime_session_zone_value(zone)
@@ -172,13 +180,17 @@ fn runtime_values_refuse_past_the_java_range_with_sparks_message() {
         "+18:01",
         "+19:00",
         "+05:30:30",
-        "+18:00:00",
         "+053025",
+        "+05:30:01",
         "Not/AZone",
         "Mars/Olympus_Mons",
         "Invalid/Zone",
+        "gmt+8",
+        "z",
+        "gmt",
         "",
         "   ",
+        "  Asia/Tokyo  ",
         "'Asia/Tokyo'",
     ] {
         let error =
@@ -193,6 +205,10 @@ fn runtime_values_refuse_past_the_java_range_with_sparks_message() {
             "refusal must name the conf key: {message}"
         );
         assert!(
+            message.contains(&format!("'{zone}'")),
+            "refusal must echo the raw value: {message}"
+        );
+        assert!(
             message.contains("SQLSTATE: 22022"),
             "refusal must carry the SQLSTATE: {message}"
         );
@@ -205,33 +221,20 @@ fn runtime_values_refuse_past_the_java_range_with_sparks_message() {
 
 #[test]
 fn canonical_zone_id_maps_java_forms_to_arrow_forms() {
-    for (raw, canonical) in [
-        ("Z", "UTC"),
-        ("z", "UTC"),
-        ("UTC", "UTC"),
-        ("GMT", "UTC"),
-        ("gmt", "UTC"),
-        ("UT", "UTC"),
-        ("+5", "+05:00"),
-        ("+05", "+05:00"),
-        ("+0530", "+05:30"),
-        ("+05:30", "+05:30"),
-        ("+08:00", "+08:00"),
-        ("+18:00", "+18:00"),
-        ("-05", "-05:00"),
-        ("-05:30", "-05:30"),
-        ("GMT+8", "+08:00"),
-        ("gmt+8", "+08:00"),
-        ("UT+3", "+03:00"),
-        ("GMT-8", "-08:00"),
-        ("America/New_York", "America/New_York"),
-        ("Asia/Tokyo", "Asia/Tokyo"),
-        ("Etc/GMT+8", "Etc/GMT+8"),
-        ("+18:01", "+18:01"),
-        ("  Asia/Tokyo  ", "Asia/Tokyo"),
-    ] {
-        assert_eq!(canonical_session_zone_id(raw), canonical, "raw {raw:?}");
+    for (raw, canonical) in canonical_zone_table() {
+        assert_eq!(canonical_session_zone_id(&raw), canonical, "raw {raw:?}");
     }
+    assert_eq!(canonical_session_zone_id("+18:01"), "+18:01");
+}
+
+fn canonical_zone_table() -> Vec<(String, String)> {
+    include_str!("canonical_zone_table.txt")
+        .lines()
+        .filter_map(|line| {
+            let (raw, canonical) = line.split_once(" => ")?;
+            Some((raw.to_string(), canonical.to_string()))
+        })
+        .collect()
 }
 
 #[tokio::test]

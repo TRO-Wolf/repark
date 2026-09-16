@@ -388,7 +388,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   carrier value after the session's runtime gate already accepted it (no re-validation).
   Its carrier `set` refusal now points at the runtime `SET TIME ZONE` spelling.
   **R-17c-4:** the carrier holds `display` (raw echo) + canonical `zone` (extractor reader).
-  pins: set-ansi-runtime-1/C-002
+  **R-17c-6:** the in-crate canonicaliser mirrors the core gate (exact-case prefixes,
+  zero-seconds to `±HH:MM`) and asserts the same shared table. pins: set-ansi-runtime-1/C-002
 - `datetime.rs` — session-zone semantics are type-driven (`coerce_date_arg` /
   `coerce_to_timestamp_micros` /
   `coerce_to_date32`: `Timestamp(_, Some(_))` is an LTZ instant; `Timestamp(_, None)` is NTZ

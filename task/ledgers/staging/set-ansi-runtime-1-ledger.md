@@ -56,6 +56,37 @@ Run 16b owns `dataframe/**`, `column.py`, `catalog.py` and the unfolding CONF-UN
   carrier fill both doors share), because `repark-functions` cannot depend on `repark-core` and the
   builder fill site (`repark-spark` extension) is out of fence. Both copies are pinned by the same
   table and the duality is recorded in both maps.
+- **R-17c-6 (orchestrator, G-2, 2026-09-15) — corrects R-17c-4, whose last sentence
+  ("a value that validates but cannot be canonicalised is refused at the SET") is SUPERSEDED
+  where Spark accepts the value:**
+
+  > **Spark's acceptance set is the specification, in both directions.** R-17c-4's "a value that validates
+  > but cannot be canonicalised is refused at the SET" was written without a measurement and is wrong where
+  > Spark accepts the value: RePark may not refuse a spelling Spark accepts, and may not accept one Spark
+  > refuses. Concretely: **`ZoneId` matching is case-sensitive** (`GMT+8` and `Z` yes; `gmt+8` and `z` no);
+  > **surrounding whitespace is NOT trimmed** — `"  Asia/Tokyo  "` is a refusal, so the P2-logic-3
+  > "store the trimmed value" change is reverted, and with padded input refused the RuntimeConfig/engine
+  > disagreement it was fixing cannot arise; and **sub-minute and seconds-precision offsets are accepted**
+  > (`+05:30:30` → +5h30m30s, `+18:00:00` → +18h), with `±18:00` still the outer bound.
+  >
+  > If a fixed-offset zone cannot be expressed as a string Arrow `Tz` accepts, the canonical companion
+  > carries the **offset itself** (seconds east of UTC) rather than a string, and the consumers apply it —
+  > the companion's job is to be usable, not to be a `Tz` string. Implement this; the shape rule prefers
+  > implementing over declaring. **Only if you prove in the ledger that the consumers genuinely cannot
+  > carry a seconds offset without a change outside this unit's fence** may `+05:30:30` / `+18:00:00`
+  > become a DATED DECLARED divergence — and then it is an explicit registry row citing these cells and
+  > saying "Spark accepts, RePark refuses", never a silent refusal.
+
+  Applied: case-sensitivity and no-trim in full; `+18:00:00` implemented (canonical `+18:00`,
+  value-identical); `+05:30:30` proven unimplementable in-fence (proof in the RUNTIME-4 row:
+  `Tz::from_str` is the sole parse in `timestamp_cast.rs::parse_session_zone`,
+  `datetime.rs::extraction_time_zone` and `spark_from_unixtime.rs`, all out of fence, and `Tz`
+  has no seconds-offset representation — the frozen builder parse, `Tz::from_str` verbatim,
+  refuses these spellings at build) → DATED DECLARED divergence row SET-ANSI-RUNTIME-4, refusal
+  at the SET with nothing stored. The shared canonical table
+  (`session_time_zone/canonical_zone_table.txt`, asserted by both crates' tests) closes P3
+  dual-table drift. Builder whitespace normalization stays (frozen path; Spark builder padding
+  is UNMEASURED — no cell covers it).
 - **P2-logic-4 lock order (round 17c, assessed, downgraded to P3):** no inversion exists. The write
   path holds the DataFusion state write guard while taking the zone snapshot write guard (one
   direction only); every read path takes the snapshot guard alone and `session_time_zone()` drops
@@ -155,10 +186,17 @@ The echo halves passed pre-fix, which is exactly the hole: the old pins never re
 value assertion. Post-fix run: 5 passed (4 spelling tests plus the `selectExpr`
 analysis-binding pin).
 
-Padded SET (P2-logic-3): the store now keeps the trimmed zone text in both places, so
-`conf.get` and the engine never differ. The S5 cells all use unpadded values, so no cell
-decides padding; the ruling's parenthetical does ("Spark-visible text" is what Spark would
-report, i.e. trimmed) — followed.
+Padded SET (P2-logic-3, SUPERSEDED by R-17c-6): the trim change is reverted — padded
+input now refuses at the gate with the raw text echoed, so no torn pair can arise.
+Oracle batch-17 cell 14 (`"  Asia/Tokyo  "` refuses) decides it; the S5 cells are all
+unpadded. Builder whitespace normalization is untouched (frozen path).
+
+Batch-17 red-first (this round, pre-fix native): the rewritten
+`test_runtime_zone_spellings_1.py` — 4 failed, 2 passed. Failures, one per divergent
+cell: `+18:00:00` OK-cell refused at SET; `gmt+8` and `z` refusal-cells accepted;
+padded accepted-then-stored; the `createDataFrame` matrix failed at the `+18:00:00`
+`conf.set`. The `+05:30:30` divergence pin passed pre- and post-fix (refusal stands,
+now documented). Post-fix: 6 passed. Five oracle cells closed against the fixture.
 
 ## Gates
 
@@ -191,3 +229,10 @@ report, i.e. trimmed) — followed.
   (spellings + set_ansi_runtime_1 + sql_set_door_1 + session_timezone_parity) 116 passed;
   keyword sweep 956 passed, 112 skipped; `make verify` rc 0; release native rebuilt after
   the last Rust edit. The orchestrator re-runs `make preflight` and the parity suite.
+- Follow-up (batch-17 oracle, R-17c-6): `cargo test -p repark-core session` 152 passed;
+  `cargo test -p repark-functions -- ansi session_time_zone` green (58 zone, shared table
+  asserted by both crates); `make rust-clippy` green; oracle pins
+  (`test_runtime_zone_spellings_1.py`, 6) green after 4-failed red-first; touched suites
+  117 passed; keyword sweep 957 passed, 112 skipped; `make verify` rc 0; release native
+  rebuilt after the last Rust edit.
+  Clause verdicts unchanged: C-001…C-005 PROVEN, C-006 OPEN (round 2).

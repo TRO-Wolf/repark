@@ -55,13 +55,11 @@ impl SessionTimeZoneConfig {
 }
 
 fn canonical_zone_id(trimmed: &str) -> String {
-    if trimmed == "Z" || trimmed == "z" {
+    if trimmed == "Z" {
         return DEFAULT_EXTRACTION_TIME_ZONE.to_string();
     }
     for prefix in ["GMT", "UTC", "UT"] {
-        if trimmed.len() < prefix.len()
-            || !trimmed.as_bytes()[..prefix.len()].eq_ignore_ascii_case(prefix.as_bytes())
-        {
+        if !trimmed.starts_with(prefix) {
             continue;
         }
         if trimmed.len() == prefix.len() {
@@ -80,7 +78,7 @@ fn canonical_zone_id(trimmed: &str) -> String {
 }
 
 fn is_java_offset(value: &str) -> bool {
-    if value == "Z" || value == "z" {
+    if value == "Z" {
         return true;
     }
     let bytes = value.as_bytes();
@@ -88,17 +86,34 @@ fn is_java_offset(value: &str) -> bool {
         return false;
     }
     let body = &bytes[1..];
-    let (hours, minutes) = match body.len() {
-        1 | 2 if body.iter().all(u8::is_ascii_digit) => (decimal_pair(body, 0, body.len()), 0),
+    let (hours, minutes, seconds) = match body.len() {
+        1 | 2 if body.iter().all(u8::is_ascii_digit) => (decimal_pair(body, 0, body.len()), 0, 0),
         4 if body.iter().all(u8::is_ascii_digit) => {
-            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2))
+            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2), 0)
         }
         5 if body[2] == b':' && is_digit_pair(body, 0) && is_digit_pair(body, 3) => {
-            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2))
+            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2), 0)
+        }
+        6 if body.iter().all(u8::is_ascii_digit) => {
+            let seconds = decimal_pair(body, 4, 2);
+            if seconds != 0 {
+                return false;
+            }
+            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2), 0)
+        }
+        8 if body[2] == b':' && body[5] == b':' => {
+            if !(is_digit_pair(body, 0) && is_digit_pair(body, 3) && is_digit_pair(body, 6)) {
+                return false;
+            }
+            let seconds = decimal_pair(body, 6, 2);
+            if seconds != 0 {
+                return false;
+            }
+            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2), 0)
         }
         _ => return false,
     };
-    minutes <= 59 && hours <= 18 && (hours < 18 || minutes == 0)
+    minutes <= 59 && seconds <= 59 && hours <= 18 && (hours < 18 || (minutes == 0 && seconds == 0))
 }
 
 fn is_digit_pair(body: &[u8], offset: usize) -> bool {
@@ -121,6 +136,18 @@ fn normalize_java_offset(signed: &str) -> String {
             (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2))
         }
         5 if body[2] == b':' && is_digit_pair(body, 0) && is_digit_pair(body, 3) => {
+            (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2))
+        }
+        6 if body.iter().all(u8::is_ascii_digit) && decimal_pair(body, 4, 2) == 0 => {
+            (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2))
+        }
+        8 if body[2] == b':'
+            && body[5] == b':'
+            && is_digit_pair(body, 0)
+            && is_digit_pair(body, 3)
+            && is_digit_pair(body, 6)
+            && decimal_pair(body, 6, 2) == 0 =>
+        {
             (decimal_pair(body, 0, 2), decimal_pair(body, 3, 2))
         }
         _ => return signed.to_string(),

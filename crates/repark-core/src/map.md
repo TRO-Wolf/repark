@@ -670,6 +670,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `Error::IllegalArgument`). **R-17c-4:** `canonical_session_zone_id` (the companion every
   value consumer parses; the snapshot keeps the raw echo) and the seconds-form refusal;
   `text_scan.rs` reads the canonical id. pins: set-ansi-runtime-1/C-002
+  **R-17c-6 (batch-17 oracle):** `ZoneId` matching is case-sensitive, padded input refuses
+  with the raw text echoed, zero-seconds forms canonicalise to `±HH:MM`, nonzero-seconds
+  stays refused (divergence SET-ANSI-RUNTIME-4); the shared table lives beside the parser.
+  pins: set-ansi-runtime-1/C-002
   and `ReparkSession::set_runtime_zone` (the live zone behind `RwLock<Arc<_>>`, shared by
   clones; `session_time_zone` now returns the snapshot `Arc`). Pedantic-clean (nested
   or-patterns, method-ref digit checks).

@@ -72,24 +72,23 @@ fn set_zone_swaps_the_live_value_for_a_validated_runtime_set() {
 
 #[test]
 fn set_zone_keeps_the_raw_echo_and_canonicalizes_the_reader() {
-    for (raw, canonical) in [
-        ("+5", "+05:00"),
-        ("+05", "+05:00"),
-        ("+0530", "+05:30"),
-        ("GMT+8", "+08:00"),
-        ("gmt+8", "+08:00"),
-        ("UT+3", "+03:00"),
-        ("Z", "UTC"),
-        ("z", "UTC"),
-        ("UTC", "UTC"),
-        ("America/New_York", "America/New_York"),
-    ] {
+    for (raw, canonical) in canonical_zone_table() {
         let mut carrier = SessionTimeZoneConfig::default();
-        carrier.set_zone(raw);
+        carrier.set_zone(&raw);
         assert_eq!(carrier.display(), raw);
         assert_eq!(carrier.zone(), canonical);
         assert!(arrow::array::timezone::Tz::from_str(carrier.zone()).is_ok());
     }
+}
+
+fn canonical_zone_table() -> Vec<(String, String)> {
+    include_str!("../../../repark-core/src/session_time_zone/canonical_zone_table.txt")
+        .lines()
+        .filter_map(|line| {
+            let (raw, canonical) = line.split_once(" => ")?;
+            Some((raw.to_string(), canonical.to_string()))
+        })
+        .collect()
 }
 
 #[test]

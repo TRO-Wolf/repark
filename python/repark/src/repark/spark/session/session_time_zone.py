@@ -15,8 +15,9 @@ consumer re-parses the raw text. It follows that:
 * ``ReparkSession.builder.config(SESSION_TIME_ZONE_KEY, "America/New_York")`` seeds the zone;
   an unknown zone fails loud (``IllegalArgumentException``) at ``getOrCreate``.
 * ``spark.conf.get(SESSION_TIME_ZONE_KEY)`` reports the raw text the live engine session was
-  given, defaulting to :data:`DEFAULT_SESSION_TIME_ZONE`; builder and runtime values are
-  whitespace-normalized so a padded set cannot leave the facade and the engine disagreeing.
+  given, defaulting to :data:`DEFAULT_SESSION_TIME_ZONE`; the builder value is
+  whitespace-normalized while a padded runtime set refuses, so the facade and the engine
+  never disagree.
 * ``spark.conf.set(SESSION_TIME_ZONE_KEY, …)`` at runtime **validates and applies
   immediately** through the native setter: an unknown zone refuses
   (``IllegalArgumentException``) before anything is stored, and a valid zone moves fresh
