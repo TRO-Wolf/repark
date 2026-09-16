@@ -97,6 +97,6 @@ def test_remaining_absents_fail_at_planning(gate_run: Any) -> None:
     for name in roster.ABSENT_PLANNING_NAMES:
         row = next(item for item in gate_run.probe if item.name == name)
         text = row.message or ""
-        assert "Error during planning" in text or "Invalid function" in text
+        assert "Error during planning" in text or "UNRESOLVED_ROUTINE" in text
         assert "retract_batch" not in text
         assert "sliding accumulator" not in text.lower()

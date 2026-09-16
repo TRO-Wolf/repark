@@ -854,7 +854,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
-  names are unresolved (`Invalid function`). **FNP-11B step 4 (2026-09-15):**
+  names are unresolved (`UNRESOLVED_ROUTINE`, blanket since 2026-09-16).
+  **FNP-11B step 4 (2026-09-15):**
   interval `try_avg` answers Spark's average (the `[FNP-11]` refusal pin is
   retired for `test_try_avg_interval_answers`, which also pins the try-NULL /
   avg-raise overflow split). pins: fnp-11b/C-006

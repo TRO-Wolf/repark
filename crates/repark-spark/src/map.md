@@ -159,6 +159,10 @@ pins: rp-4-fork-repin/C-005, C-006
   (rewrite pre-plan, map around the whole passthrough) and the range-frame
   restatement. 8 in-module tests.
   pins: spark-sql-grammar-1/C-010
+  **UNRESOLVED-ROUTINE-1 (2026-09-16):** `non_schema_error_passes_through` now
+  fixtures a genuinely unrelated `Plan` error — unknown names reshape in
+  `repark-core::unknown_routine`, not here.
+  pins: unresolved-routine-1/C-006
 - `keyword_lower.rs` — **SPARK-SQL-GRAMMAR-1 C-003/C-004/C-005 (2026-09-16):**
   Spark-only keyword lowerings onto registered kernels. `x RLIKE p` becomes
   `regexp_like(x, p)` (`NOT RLIKE` becomes `NOT regexp_like`); `CAST(x AS
@@ -169,6 +173,10 @@ pins: rp-4-fork-repin/C-005, C-006
   map chains after the nullary map around the whole passthrough. 6 in-module
   tests.
   pins: spark-sql-grammar-1/C-003, C-004, C-005
+  **UNRESOLVED-ROUTINE-1 (2026-09-16):** `unrelated_errors_pass_through` now
+  fixtures a genuinely unrelated `Plan` error — unknown names reshape in
+  `repark-core::unknown_routine`, not here.
+  pins: unresolved-routine-1/C-006
 - `bare_unit.rs` — **SPARK-SQL-GRAMMAR-1 C-008 (2026-09-16):** the pre-plan rewrite
   for bare datetime-unit keywords. A bare `DAY` in a 3-argument `timestampadd` /
   `timestampdiff` / `dateadd` / `datediff` call becomes the `'DAY'` string literal the

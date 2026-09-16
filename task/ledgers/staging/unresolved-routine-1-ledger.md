@@ -140,17 +140,40 @@ release native (2026-09-16).
 `bare_unit.rs` keeps its position-less refusal (grammar unit's match-pin stays
 green; out of this card's recorded cells).
 
-## 3. C-006 retirement record
+## 3. C-006 retirement record (step 6, 2026-09-16)
 
-(to be filled in step 6.)
+Assertion-only edits (`Invalid function` → `UNRESOLVED_ROUTINE`); docstrings and
+test intent unchanged. `test_fnp_gen_1.py:384` is a negative assertion
+(`Invalid function` must NOT appear) and is untouched. `test_filter_predicate_rewrite.py:218`
+is docstring prose about DataFusion case-sensitivity with no assertion — untouched
+per the card's edit-only-the-assertion rule.
 
 ### pins retired — announce to run 18a
 
-(to be filled in step 6: each file + test.)
+- `test_fnp11b_typeof.py::test_typeof_binary_function_owner_is_recorded`
+  (TYPEOF-SQL-24, `binary` — Spark has the name; still blocked, new shape).
+- `test_fnp7_try_inversions.py::test_try_names_unresolved_on_ansi_sql_door`
+  (all twelve `TRY_NAMES`, ANSI door — Spark has every name; still unresolved).
+- `test_functions_gt2.py` shuffle-NULL planning pin (line 318 — the empty-array
+  and `F.shuffle` answer pins beside it are untouched).
+- `test_column_parity_1.py::test_no_sql_spelling_for_struct_edit_names`
+  (`withField`/`dropFields`/`astype`/`name`/`outer` — Spark SQL has none of these
+  names, so the new class is the true Spark shape, not just a reword).
+- `test_w0_window_bench_smoke.py::test_remaining_absents_fail_at_planning`
+  (planning-miss disjunct is now `UNRESOLVED_ROUTINE`).
+- Rust `keyword_lower.rs::unrelated_errors_pass_through` and
+  `bare_nullary.rs::non_schema_error_passes_through`: fixtures swapped to a
+  genuinely unrelated `Plan` error — the old-shape blessing moves to
+  `unknown_routine.rs` tests, which pin the new shape.
 
 ### names Spark has that the SQL door lacks
 
-(to be filled in step 6.)
+- `binary` (TYPEOF-SQL-24 answers `binary` on Spark).
+- `try_add`, `try_avg`, `try_divide`, `try_element_at`, `try_mod`,
+  `try_multiply`, `try_subtract`, `try_sum`, `try_to_binary`, `try_to_date`,
+  `try_to_number`, `try_to_time` (all twelve `TRY_NAMES`).
+- `shuffle` over a NULL-typed argument (`shuffle(CAST(NULL AS ARRAY<INT>))`;
+  populated and empty arrays answer on both doors already).
 
 ## 4. Hand-offs
 

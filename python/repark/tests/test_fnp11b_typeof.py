@@ -154,7 +154,7 @@ def test_typeof_binary_function_owner_is_recorded() -> None:
     cell = _cell_by_id("TYPEOF-SQL-24")
     assert cell["typeof"] == "binary"
     session = _session()
-    with pytest.raises(Exception, match="Invalid function") as caught:
+    with pytest.raises(Exception, match="UNRESOLVED_ROUTINE") as caught:
         session.sql(cell["expr"]).toArrow()
     assert "binary" in str(caught.value)
 

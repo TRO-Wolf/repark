@@ -171,7 +171,7 @@ mod tests {
 
     #[test]
     fn non_schema_error_passes_through() {
-        let error = DataFusionError::Plan("Invalid function 'now'.".to_string());
+        let error = DataFusionError::Plan("No field named 'revenue'.".to_string());
         let text = error.to_string();
         assert_eq!(map_bare_nullary_column_error(error).to_string(), text);
     }

@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn unrelated_errors_pass_through() {
-        let error = DataFusionError::Plan("Invalid function 'nosuchfn'.".to_string());
+        let error = DataFusionError::Plan("No field named 'revenue'.".to_string());
         let text = error.to_string();
         assert_eq!(map_door_keyword_errors(error).to_string(), text);
     }
