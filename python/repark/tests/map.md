@@ -64,6 +64,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   expressions (R-8). pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005,
   C-006, C-007, C-008
   **DF-TO-BINARY-1 (2026-09-14):** `test_to_binary_follows_reported_schema_df_to_binary_1` codifies that `to()` follows the facade's `string` report for a binary column (FACADE-4 D7/D19). pins: df-surface-a-1/C-008
+- [test_df_metadata_col_1.py](test_df_metadata_col_1.py) +
+  [facade_df_metadata_col_oracle.json](facade_df_metadata_col_oracle.json) —
+  **DF-METADATA-COL-1 (2026-09-16):** the hidden `_metadata` struct pins driven
+  by the copied live-PySpark-4.1.2 fixture (M-1 shape, M-2 names, M-3 values,
+  M-4 `metadataColumn`, M-5 errors). Derived `endswith`/`substring` nullability
+  and partitioned names stay strict-xfailed per R-18b-9/R-18b-10.
+  pins: df-metadata-col-1/M-1, M-2, M-3, M-4, M-5
 - [test_io_bucket_cluster_1.py](test_io_bucket_cluster_1.py) — **IO-BUCKET-CLUSTER-1
   step 1 (2026-09-14):** the writer layout surface answers the fourteen `io.bucketBy_*`
   / `io.sortBy_*` / `io.clusterBy_*` / `io.v2_clusterBy_*` cells of the committed

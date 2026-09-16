@@ -8,6 +8,7 @@ mod dialect;
 mod dynamic_flatten;
 mod error_map;
 mod extension;
+mod file_metadata;
 mod freq_items;
 mod idents;
 mod isnan;
@@ -101,6 +102,11 @@ pub use spark_nullable::relax_schema_to_nullable;
 
 // --- Frame handle: DataFusion `DataFrame` re-exported — no wrapper (design §3 / O-6).
 pub use datafusion::prelude::DataFrame;
+pub use file_metadata::{
+    FILE_SOURCE_METADATA_KEY, FileKind, FileMetadataError, FileMetadataStatus, METADATA_COL_KEY,
+    METADATA_COLUMN_NAME, SHADOW_METADATA_COLUMN_NAME, ensure_file_metadata,
+    expr_mentions_file_metadata, file_metadata_status,
+};
 
 // --- Plan-rewrite kernels (no DataFrame newtype).
 pub use dynamic_flatten::{DynamicFlattenOptions, dynamic_flatten};

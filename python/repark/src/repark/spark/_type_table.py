@@ -570,12 +570,58 @@ def _parse_datatype_string_python(text: str) -> Any:
     return t._parse_complex_or_atomic(stripped)
 
 
+_NOT_NULL_SUFFIX = re.compile(r"\s+NOT\s+NULL\s*$", re.IGNORECASE)
+_NOT_NULL_ANYWHERE = re.compile(r"\bNOT\s+NULL\b", re.IGNORECASE)
+
+
+def _split_not_null(type_text: str) -> tuple[str, bool]:
+    """Split a trailing ``NOT NULL`` marker, returning the bare type and nullability."""
+    stripped = _NOT_NULL_SUFFIX.sub("", type_text).strip()
+    return stripped, stripped == type_text.strip()
+
+
+def _parse_not_null_datatype(text: str) -> Any:
+    """Parse a ``struct<…>`` carrying Spark ``NOT NULL`` field markers."""
+    t = _types()
+    stripped = text.strip()
+    if not stripped[:7].lower() == "struct<" or not stripped.endswith(">"):
+        return _parse_datatype_string_inner(stripped)
+    fields: list[Any] = []
+    for part in t._split_top_level(stripped[len("struct<") : -1], ","):
+        part = part.strip()
+        if not part:
+            continue
+        colon_match = _FIELD_NAME_COLON.match(part)
+        if colon_match is not None:
+            name = colon_match.group(1).strip().strip('`"')
+            type_text = colon_match.group(2)
+        else:
+            tokens = part.split(None, 1)
+            if len(tokens) != 2:
+                raise ValueError(f"cannot parse field: {part!r}")
+            name, type_text = tokens[0].strip().strip('`"'), tokens[1]
+        bare, nullable = _split_not_null(type_text)
+        if bare[:7].lower() == "struct<" and bare.endswith(">"):
+            data_type = _parse_not_null_datatype(bare)
+        else:
+            data_type = _parse_datatype_string(bare)
+        fields.append(t.StructField(name, data_type, nullable))
+    return t.StructType(fields)
+
+
 def _parse_datatype_string(text: str) -> Any:
     """Parse a DDL / simpleString type or field list via the Rust type table.
 
     Parameters beyond ``i64`` and non-printable text leave the Rust path for base's Python
     parse, so value, ``simpleString`` and refusal bytes equal base.
     """
+    if _NOT_NULL_ANYWHERE.search(text) is not None:
+        return _parse_not_null_datatype(text)
+    return _parse_datatype_string_inner(text)
+
+
+def _parse_datatype_string_inner(text: str) -> Any:
+    """Parse without the ``NOT NULL`` pre-step (recursion and fallback target)."""
     if not text.isprintable() and not ("geometry" in text.lower() or "geography" in text.lower()):
         return _parse_datatype_string_python(text)
     try:

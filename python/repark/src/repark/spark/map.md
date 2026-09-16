@@ -33,6 +33,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   descriptor encode/decode, tree walks, and the container-token fallbacks for
   foreign `DataType` subtypes. Class references resolve lazily so `types.py` keeps
   a one-directional import.
+  **DF-METADATA-COL-1 (2026-09-16):** `NOT NULL` struct markers parse to non-nullable fields for the stamped `_metadata` bridge. pins: df-metadata-col-1/M-1
   **FACADE-4 step-1 remediation (2026-09-14, P1-DTYPES):** atomic token answers are
   Python-side constants/parameter derivations byte-identical to the Rust table
   (pinned in `test_facade_4_census_pins.py`); nested trees compose over them in

@@ -11,7 +11,7 @@ use datafusion::functions_aggregate::array_agg::array_agg_udaf;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::logical_expr::expr::{Alias, Cast, NullTreatment, WindowFunction};
 use datafusion::logical_expr::{
-    Case, Expr, ExprFunctionExt, Operator, WindowFunctionDefinition, binary_expr, lit,
+    Case, Expr, ExprFunctionExt, Operator, WindowFunctionDefinition, binary_expr, col, lit,
 };
 use datafusion::prelude::{SessionConfig, SessionContext};
 use datafusion::scalar::ScalarValue;
@@ -172,6 +172,10 @@ fn build_expr_context() -> datafusion::error::Result<SessionContext> {
     context.register_udf(repark_spark::suffix_literal_udf().as_ref().clone());
     repark_functions::register_all(&context);
     Ok(context)
+}
+
+pub(crate) fn metadata_field_expr(hidden: &str, field: &str) -> Expr {
+    datafusion::functions::core::get_field().call(vec![col(hidden), lit(field)])
 }
 
 /// Collapse nested `Alias` layers to one outer rename.

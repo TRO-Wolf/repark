@@ -10,7 +10,7 @@ use arrow::array::{Array, ArrayBuilder, ArrayRef, RecordBatch, StringBuilder};
 use arrow::datatypes::{DataType, Field, SchemaRef};
 use async_trait::async_trait;
 use datafusion::catalog::Session;
-use datafusion::common::exec_datafusion_err;
+use datafusion::common::{ScalarValue, exec_datafusion_err};
 use datafusion::datasource::{TableProvider, TableType};
 use datafusion::error::{DataFusionError, Result as DataFusionResult};
 use datafusion::execution::TaskContext;
@@ -231,6 +231,66 @@ impl TableProvider for TextTableProvider {
             false,
             limit,
         )?))
+    }
+}
+
+impl TextTableProvider {
+    pub(crate) fn for_single_file(&self, file: &str) -> Arc<Self> {
+        Arc::new(Self {
+            files: vec![PathBuf::from(file)],
+            wholetext: self.wholetext,
+            line_sep: self.line_sep.clone(),
+            schema: Arc::clone(&self.schema),
+            partition_fields: self.partition_fields.clone(),
+            partition_values: Arc::clone(&self.partition_values),
+        })
+    }
+
+    pub(crate) fn metadata_partition_fields(&self) -> Vec<Field> {
+        self.partition_fields.clone()
+    }
+
+    pub(crate) fn metadata_files(&self) -> Vec<(PathBuf, Vec<ScalarValue>)> {
+        self.files
+            .iter()
+            .map(|file| {
+                let values = self
+                    .partition_fields
+                    .iter()
+                    .enumerate()
+                    .map(|(index, _)| {
+                        self.partition_values
+                            .get(file)
+                            .and_then(|row| row.get(index))
+                            .map(partition_value_to_scalar)
+                            .unwrap_or(ScalarValue::Null)
+                    })
+                    .collect();
+                (file.clone(), values)
+            })
+            .collect()
+    }
+}
+
+fn partition_value_to_scalar(value: &PartitionValue) -> ScalarValue {
+    match value {
+        PartitionValue::Null => ScalarValue::Null,
+        PartitionValue::Boolean(flag) => ScalarValue::Boolean(Some(*flag)),
+        PartitionValue::Int8(number) => ScalarValue::Int8(Some(*number)),
+        PartitionValue::Int16(number) => ScalarValue::Int16(Some(*number)),
+        PartitionValue::Int32(number) => ScalarValue::Int32(Some(*number)),
+        PartitionValue::Int64(number) => ScalarValue::Int64(Some(*number)),
+        PartitionValue::Float32(number) => ScalarValue::Float32(Some(*number)),
+        PartitionValue::Float64(number) => ScalarValue::Float64(Some(*number)),
+        PartitionValue::Binary(bytes) => ScalarValue::Binary(Some(bytes.clone())),
+        PartitionValue::Date32(days) => ScalarValue::Date32(Some(*days)),
+        PartitionValue::Decimal128(number, scale) => {
+            ScalarValue::Decimal128(Some(*number), 38, *scale)
+        }
+        PartitionValue::TimestampMicros(micros) => {
+            ScalarValue::TimestampMicrosecond(Some(*micros), None)
+        }
+        PartitionValue::Text(text) => ScalarValue::Utf8(Some(text.clone())),
     }
 }
 
@@ -664,7 +724,8 @@ impl crate::ReparkSession {
             partition_fields: fields,
             partition_values: Arc::new(values),
         });
-        self.context().read_table(provider).map_err(engine_err)
+        let frame = self.context().read_table(provider).map_err(engine_err)?;
+        crate::file_metadata::mark_file_scan(frame, crate::file_metadata::FileKind::Text)
     }
 }
 

@@ -133,6 +133,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   live-buffer seed (`live_cache_buffer_set`) live in `session/temp_views.rs` and
   `session/cache_budget.rs` — this file is unchanged.
   pins: eager-budget-1/C-005, C-007
+  **DF-METADATA-COL-1 (2026-09-16):** parquet/csv/json/text readers wrap scans with `file_metadata::mark_file_scan`. pins: df-metadata-col-1/M-1
 - `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
   (`repark.describe` prefix, `owner`, default `unknown`), the build-time
   `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the
@@ -368,7 +369,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: nullability-2/C-006
   pins: csv-infer-perf-1/C-002, C-005
   pins: torture-1/C-018, C-020
-- `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
+- `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead. **DF-METADATA-COL-1 (2026-09-16):** `for_single_file` / `metadata_files` / `metadata_partition_fields` serve the per-file text augmentation. pins: df-metadata-col-1/M-1, M-3
   A `TableProvider` over sorted local files, plain dirs (hidden `_`/`.` skipped,
   `key=value` dirs descended), and Hadoop globs (see `text_glob.rs`), serving one
   nullable `value` Utf8 column through `StreamingTableExec` over at most 8 contiguous
@@ -586,6 +587,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **FNP-8 (2026-09-07):** the analyzer hook receives the core-owned guarded rule list and returns
   it unchanged by default. The Spark door uses it to insert one HOF preparation rule before the
   first default type-coercion pass. pins: fnp-8/C-003, C-004
+- `file_metadata.rs` (+ [`file_metadata/`](file_metadata/map.md)) — **DF-METADATA-COL-1
+  (2026-09-16):** the hidden per-file `_metadata` struct on parquet/csv/json/text
+  scans. `mark_file_scan` wraps a file scan in the delegating `FileMetadataScan`
+  marker; `ensure_file_metadata` replaces the marker with a per-file UNION (one
+  partition per file, `row_number() - 1` per-file `row_index` on parquet) wrapped
+  in the table-name plus realized-marker aliases, and widens upper projections
+  with a `_metadata` passthrough so narrowed plans reselect. Join/aggregate stay
+  `MISSING_ATTRIBUTES` refusals. Round 3 splits the root into
+  `file_metadata/{status,error,udf,augment,ensure}.rs` under the 1000-line
+  ceiling, behavior unchanged. pins: df-metadata-col-1/M-1, M-2, M-3, M-4
 - `catalog_state.rs` — the engine-side `CatalogRegistry` (iceberg `Catalog` handles by name) +
   `LocationPolicy` (staged-CTAS location resolution: `RequireExplicitLocation` /
   `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the root resolves once

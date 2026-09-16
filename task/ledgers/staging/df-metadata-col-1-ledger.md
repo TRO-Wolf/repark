@@ -113,6 +113,17 @@ Reads flow `DataFrameReader.*` → `crates/repark-python/src/session.rs`
 6. **Perf.** `count()` never references `_metadata`: no augmentation, identical plan.
    1e6-row before/after in step 5.
 
+## §3 Red-first (base `02abfd0e`, `test_df_metadata_col_1.py`, 46 pins)
+
+`40 failed, 5 passed, 1 xfailed`. Green-before: `metadata_user_column_shadow`,
+`metadata_select_star_hidden`, `sql_star_hidden`, `sql_view_metadata`,
+`sql_local_metadata` (today's shapes, kept as pins). The strict xfail
+`test_sql_path_metadata` holds today's `not found` door answer. Representative reds:
+`AnalysisException: A column with name '_metadata' cannot be resolved` (facade
+strings), `Schema error: No field named _metadata…` (native `F.col`), and
+`[ATTRIBUTE_NOT_SUPPORTED] Attribute 'metadataColumn' is not supported` (every
+`metadataColumn` use).
+
 ## §1 Before-table (base `02abfd0e`, probe repark mode, `/tmp/meta-before/`)
 
 `metadata_user_column_shadow` GREEN (user column resolves), `sql_star_hidden` GREEN.
@@ -145,3 +156,61 @@ residuals, not questions — R-6/R-7.)
 (Step 6, once every clause is PROVEN.)
 
 VERDICT: 7 clauses, 0 PROVEN, 7 OPEN, 0 REJECTED.
+
+## Round 2 end-of-turn note (2026-09-16, step budget exhausted, work continues round 3)
+
+Status: 3 reds remain in `test_df_metadata_col_1.py`; all else green per round-2 start
+(42 passed / 3 failed / 1 xfailed). The `DuplicateUnqualifiedField i` failure is GONE
+(widen/strip-qualifier work holds); remaining reds diagnosed live this round:
+
+1. `test_parquet_values` — nullability index 5 only: `endswith` answers True, oracle
+   False. `test_csv_values` — index 3 only: `substring` answers True, oracle False.
+   Root cause read from vendored source: DataFusion 54 default
+   `return_field_from_args` (`datafusion-expr-54.1.0/src/udf.rs:677-686`) marks every
+   scalar-function result nullable; Spark propagates (non-null inputs -> non-null).
+   Sanctioned fix path is the `SparkNullability` analyzer
+   (`crates/repark-functions/src/spark_nullability.rs`, NULLABILITY-2 precedent):
+   wrap `ends_with` / `substring` calls in `spark_nonnull_udf` when DF says nullable
+   and no argument field is nullable. `substring` reaches the `SparkSubstring` shim
+   via `analyzer.rs:64`; `ends_with` has no shim (DF builtin), so the analyzer wrap
+   covers both uniformly. OPEN: whether `spark_nullability.rs` is inside the brief's
+   "Rust registry" ownership ban (`registration.rs` surely is; the analyzer-rule file
+   arguably is not) — asked as handback Q1.
+2. `test_star_plus_fields_names_partitioned` — bare `spark.read.parquet(pp)` reports
+   `['i']`; partition column `s` is missing at READ time (before any select), so the
+   facade `"*"`-via-`self.columns` expansion cannot include it. M-1 shape tests never
+   assert bare columns, only the `_metadata` select schema, so this passed unnoticed.
+   OPEN: partition discovery looks like backlog IO-PARQUET-PARTITION-DISCOVERY-1
+   scope — asked as handback Q2 (implement here vs strict-xfail).
+3. Mechanics note: one `edit_file` append to
+   `crates/repark-core/src/file_metadata/tests.rs` (untracked file) verified present
+   by `grep -c` then absent two commands later with no intervening writer; no
+   concurrent worker on this tree (`ps` shows other lanes on other checkouts). Bash
+   heredoc writes persist; round 3 should prefer them and re-verify edits. No
+   build was started and no half-fix was committed; tree otherwise as round 2 found it.
+
+## Round 3 notes (2026-09-16, finishing round)
+
+Rulings recorded: R-18b-9 (derived `endswith`/`substring` nullability is
+function-nullability work, out of scope as in LOGICAL-WIDTH-1 W-7; compare
+`_metadata` field nullability exactly, columns/types/rows for derived, residue
+row in ledger plus one registry sentence; no analyzer in this unit), R-18b-10
+(base parquet read drops the hive partition column on main; `names_` /
+`schema_parquet_partitioned` stay strict-xfail under BACKLOG
+IO-PARQUET-PARTITION-DISCOVERY-1; partitioned `_metadata` fields stay green).
+A-2: all 18 added `///` lines removed (14 in `dataframe_file_metadata.rs`, 4 in
+tracked diffs); two pedantic `# Errors` sites now carry
+`#[allow(clippy::missing_errors_doc)]`; pre-existing docs restored verbatim
+after a bad bulk strip. A-3: `file_metadata.rs` (1027) split into
+`file_metadata/{status,error,udf,augment,ensure}.rs` (root is 28 lines of
+`mod`/`pub use`); `dataframe.rs` baseline ratcheted 1016 to 1014 for the
+comment-strip shrink. Commit fold: the size hook scans the tree
+(`pass_filenames: false`), so no commit could land before the split; the
+`refactor(...)` commit folded into the `feat(...)` commit, split verified
+instead. Removed three `debug_*` Rust scratch tests plus the `chain` helper:
+they build explicitly-aliased stacked projections that trip DataFusion's
+`push_down_leaf_projections` (`DuplicateUnqualifiedField i`), a shape the
+facade never emits (facade suite 42 green); the real narrowed-reselect /
+second-hop test stays. Deviation: `schema_parquet_partitioned` left green, not
+strict-xfailed — a strict xfail on a passing test reds the suite; the
+partitioned `_metadata` struct answers its own fields per R-18b-10's last line.

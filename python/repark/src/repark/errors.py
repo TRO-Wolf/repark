@@ -29,14 +29,22 @@ from repark._native import (
 
 
 # Provide the structured error methods expected by Spark error-checking helpers.
-def _native_get_condition(self: object) -> None:
-    """Return no condition for a native engine exception."""
-    return None
+def _native_get_condition(self: object) -> Any:
+    """Return the Spark condition Rust attached, else no condition."""
+    value = getattr(self, "_spark_error_class", None)
+    return value if isinstance(value, str) else None
 
 
-def _native_get_message_parameters(self: object) -> None:
-    """Return no message parameters for a native engine exception."""
-    return None
+def _native_get_message_parameters(self: object) -> Any:
+    """Return the Spark message parameters Rust attached, else none."""
+    value = getattr(self, "_spark_message_parameters", None)
+    return value if isinstance(value, dict) else None
+
+
+def _native_get_sql_state(self: object) -> Any:
+    """Return the Spark SQLSTATE Rust attached, else none."""
+    value = getattr(self, "_spark_sql_state", None)
+    return value if isinstance(value, str) else None
 
 
 def _native_get_query_context(self: object) -> list[Any]:
@@ -60,6 +68,8 @@ for _native_exception_type in (
         _native_exception_type.getMessageParameters = (  # type: ignore[attr-defined]
             _native_get_message_parameters
         )
+    if not hasattr(_native_exception_type, "getSqlState"):
+        _native_exception_type.getSqlState = _native_get_sql_state  # type: ignore[attr-defined]
     if not hasattr(_native_exception_type, "getQueryContext"):
         _native_exception_type.getQueryContext = (  # type: ignore[attr-defined]
             _native_get_query_context

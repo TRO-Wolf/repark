@@ -139,7 +139,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   DoubleType, computed in f64); the multiply coerces f32/int/decimal to f64 while
   bool/string still refuse (no numeric coercion).
   pins: abs-expr-1/C-001, C-002
-- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection.
+- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **DF-METADATA-COL-1 (2026-09-16):** `metadata_field_expr` builds hidden `_metadata` field access. pins: df-metadata-col-1/M-2
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
   **WIN-SLIDE-1 (2026-09-04):** `single_wrapped_aggregate` / `replace_wrapped_aggregate` let
   `Column.over` push a window spec INTO the one aggregate inside a scalar wrapper. `F.collect_list`

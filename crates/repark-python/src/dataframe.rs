@@ -21,6 +21,7 @@ use tokio::runtime::Runtime;
 
 use crate::arrow_export::StreamingBatchReader;
 use crate::column::PyColumn;
+use crate::dataframe_file_metadata as file_metadata;
 use crate::fence::{fenced, fenced_span};
 use crate::{datafusion_to_py_err, to_py_err};
 
@@ -99,7 +100,7 @@ pub struct PyDataFrame {
 
 impl PyDataFrame {
     /// Bind a column's lambda variables to this frame schema before planning.
-    fn bound(&self, column: &PyColumn) -> PyResult<Expr> {
+    pub(crate) fn bound(&self, column: &PyColumn) -> PyResult<Expr> {
         column
             .expr()
             .resolve_lambda_variables(self.df.schema())
@@ -152,7 +153,7 @@ const ARROW_TYPE_KEY_MAX_DEPTH: usize = 32;
 const ARROW_TYPE_KEY_DEPTH_FALLBACK: &str = "...";
 
 /// Map an Arrow data type onto a short repark facade type key for `StructType` construction.
-fn arrow_type_key(data_type: &ArrowDataType) -> String {
+pub(crate) fn arrow_type_key(data_type: &ArrowDataType) -> String {
     repark_spark::type_table::logical_type_key(data_type)
 }
 
@@ -172,6 +173,11 @@ impl PyDataFrame {
             py.detach(|| self.runtime.block_on(self.df.clone().count()))
                 .map_err(datafusion_to_py_err)
         })
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn file_metadata_hidden_name(&self) -> PyResult<Option<String>> {
+        file_metadata::hidden_name(self)
     }
 
     /// Column names from the **analyzed** logical schema — **no plan execution**.
@@ -200,7 +206,8 @@ impl PyDataFrame {
                 .map(|field| {
                     (
                         field.name().clone(),
-                        arrow_type_key(field.data_type()),
+                        file_metadata::metadata_struct_type_key(field)
+                            .unwrap_or_else(|| arrow_type_key(field.data_type())),
                         field.is_nullable(),
                     )
                 })
@@ -319,10 +326,9 @@ impl PyDataFrame {
     /// Returns `RuntimeError` if the resulting plan cannot be built (e.g.
     pub fn with_column(&self, name: &str, column: PyColumn) -> PyResult<Self> {
         fenced!("PyDataFrame.with_column", {
-            let df = self
-                .df
-                .clone()
-                .with_column(name, self.bound(&column)?)
+            let (frame, expression) = file_metadata::ensure_bound(self, &column, "column")?;
+            let df = frame
+                .with_column(name, expression)
                 .map_err(datafusion_to_py_err)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
@@ -333,11 +339,8 @@ impl PyDataFrame {
     /// Returns `RuntimeError` if the predicate cannot be planned.
     pub fn filter(&self, predicate: PyColumn) -> PyResult<Self> {
         fenced!("PyDataFrame.filter", {
-            let df = self
-                .df
-                .clone()
-                .filter(self.bound(&predicate)?)
-                .map_err(datafusion_to_py_err)?;
+            let (frame, expression) = file_metadata::ensure_bound(self, &predicate, "predicate")?;
+            let df = frame.filter(expression).map_err(datafusion_to_py_err)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }
@@ -365,11 +368,8 @@ impl PyDataFrame {
                 .iter()
                 .map(|column| self.bound(column))
                 .collect::<PyResult<_>>()?;
-            let df = self
-                .df
-                .clone()
-                .select(expressions)
-                .map_err(datafusion_to_py_err)?;
+            let (frame, expressions) = file_metadata::ensure_planned(self, expressions)?;
+            let df = frame.select(expressions).map_err(datafusion_to_py_err)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }
@@ -412,11 +412,8 @@ impl PyDataFrame {
                     Ok(self.bound(column)?.sort(is_ascending, nulls_first))
                 })
                 .collect::<PyResult<Vec<_>>>()?;
-            let df = self
-                .df
-                .clone()
-                .sort(sort_expressions)
-                .map_err(datafusion_to_py_err)?;
+            let (frame, sort_expressions) = file_metadata::ensure_sorts(self, sort_expressions)?;
+            let df = frame.sort(sort_expressions).map_err(datafusion_to_py_err)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }

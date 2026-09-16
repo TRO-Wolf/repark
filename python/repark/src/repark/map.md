@@ -33,7 +33,7 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
   `StrictBool | None` field (not an extra): a non-bool value refuses as
   `ValidationError`, `true`/`false` renders only when set, and every other property
   stays a string extra. pins: cfg-2/C-018
-- `errors.py` — PySpark-shaped exception taxonomy (does not move).
+- `errors.py` — PySpark-shaped exception taxonomy (does not move). **DF-METADATA-COL-1 (2026-09-16):** native exceptions surface the Rust-attached condition, message parameters, and SQLSTATE (`getSqlState` added). pins: df-metadata-col-1/M-5
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** re-exports `CommitStateUnknownException`
   (`PySparkException` subclass, `operation_id` attribute) for the ambiguous-commit alert
   class. pins: ice-commit-unknown-1/C-002

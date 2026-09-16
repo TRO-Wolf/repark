@@ -18,6 +18,7 @@ use crate::config_file::maintenance::MaintenancePolicy;
 use crate::config_file::sources::SourceSpec;
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
 use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension};
+use crate::file_metadata::{FileKind, mark_file_scan};
 use crate::session_owner::{session_owner_snapshot, with_session_owner};
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
 use crate::temp_view::{TempViewHome, build_temp_view_home};
@@ -780,9 +781,10 @@ impl ReparkSession {
         if let Some((_scheme, bucket)) = object_store_s3::parse_s3_bucket(path) {
             self.ensure_s3_bucket_registered(&bucket)?;
         }
-        crate::spark_nullable::read_parquet_nullable(self.context(), path)
+        let frame = crate::spark_nullable::read_parquet_nullable(self.context(), path)
             .await
-            .map_err(engine_err)
+            .map_err(engine_err)?;
+        mark_file_scan(frame, FileKind::Parquet)
     }
 
     /// Read a CSV file or directory using a case-insensitive Spark option map.
@@ -796,7 +798,11 @@ impl ReparkSession {
         if let Some((_scheme, bucket)) = object_store_s3::parse_s3_bucket(path) {
             self.ensure_s3_bucket_registered(&bucket)?;
         }
-        crate::read_options::read_csv_path(self.context(), path, options).await
+        let frame = crate::read_options::read_csv_path(self.context(), path, options).await?;
+        let kind = FileKind::Csv {
+            options: options.clone(),
+        };
+        mark_file_scan(frame, kind)
     }
 
     /// Read a JSON file or directory using Spark multiline semantics.
@@ -818,7 +824,10 @@ impl ReparkSession {
             .await
             .map_err(engine_err)?;
         crate::read_options::apply_secret_column_flag(flag, frame.schema().as_ref())?;
-        Ok(frame)
+        let kind = FileKind::Json {
+            options: options.clone(),
+        };
+        mark_file_scan(frame, kind)
     }
 
     /// Read an Iceberg catalog table, optionally pinned to a snapshot / ref / timestamp.

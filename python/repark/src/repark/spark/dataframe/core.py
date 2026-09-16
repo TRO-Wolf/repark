@@ -32,6 +32,7 @@ from repark.spark.column import Column, _bound_generator_array, sort_nulls_first
 from repark.spark.column_fields import column_window_spec as _column_window_spec
 from repark.spark.dataframe import (
     cache_handle,
+    metadata_column,
     plan_introspect,
     replace_expr,
     statistics,
@@ -893,6 +894,7 @@ class DataFrame:
     withMetadata = surface_a.withMetadata  # noqa: N815
     transpose = surface_a.transpose
     freqItems = statistics.freqItems  # noqa: N815
+    metadataColumn = metadata_column.metadataColumn  # noqa: N815
     executionInfo = property(surface_a.executionInfo)  # noqa: N815
     sparkSession = property(surface_a.sparkSession)  # noqa: N815
     inputFiles = plan_introspect.inputFiles  # noqa: N815
@@ -3412,9 +3414,7 @@ class DataFrame:
                 f"empty_as_null must be bool, got {type(empty_as_null).__name__}",
             )
         if isinstance(max_depth, bool) or not isinstance(max_depth, int):
-            raise PySparkTypeError(
-                f"max_depth must be int, got {type(max_depth).__name__}",
-            )
+            raise PySparkTypeError(f"max_depth must be int, got {type(max_depth).__name__}")
         if max_depth < 0:
             raise PySparkValueError(f"max_depth must be >= 0, got {max_depth}")
 
@@ -3513,7 +3513,7 @@ class DataFrame:
         if isinstance(item, Column):
             return self._rebind_origin_column(self._rebind_stable_name_column(item))
         if isinstance(item, str):
-            return self._bind_schema_column(item)
+            return metadata_column.bind_if_file_metadata(self, item)
         raise _column_fields.column_or_str_error(item)
 
     def _cross_join_enabled(self) -> bool:

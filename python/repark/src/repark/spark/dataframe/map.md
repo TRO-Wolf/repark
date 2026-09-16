@@ -126,6 +126,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **Critic round (2026-09-14, R-4):** the select/filter struct-edit resolve hooks are
   deleted — `withField` / `dropFields` are native `update_fields` expressions, so no
   boundary rewrite runs. pins: column-parity-1/C-002, C-004, C-005, C-008
+  **DF-METADATA-COL-1 (2026-09-16):** `metadataColumn` re-exports the new
+  `metadata_column` helper; string `_column_of` routes `_metadata`-dotted names
+  through its binder. pins: df-metadata-col-1/M-2, M-4
+- `metadata_column.py` — `metadataColumn(name)` plus `bind_if_file_metadata`:
+  dotted `_metadata.<field>` strings become struct-field projections.
+  pins: df-metadata-col-1/M-2, M-4
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   IO-DECLARED-1 (2026-09-14): `replace` joins the missing-data surface as the exact
   `DataFrame.replace` delegation with the same no-value sentinel

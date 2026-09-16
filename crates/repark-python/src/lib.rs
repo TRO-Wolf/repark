@@ -9,6 +9,7 @@ mod cdf_infer;
 mod collect_rows;
 mod column;
 mod dataframe;
+mod dataframe_file_metadata;
 mod dataframe_stack;
 mod dataframe_stats;
 mod fence;
@@ -129,6 +130,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         "CommitStateUnknownException",
         module.py().get_type::<CommitStateUnknownException>(),
     )?;
+    dataframe_file_metadata::register(module)?;
     dataframe_stack::register(module)?;
     dataframe_stats::register(module)?;
     cache_budget::register(module)?;
