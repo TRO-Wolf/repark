@@ -1,25 +1,51 @@
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::error::{DataFusionError, Result as DataFusionResult};
 use datafusion::execution::TaskContext;
+use datafusion::logical_expr::JoinType;
 use datafusion::physical_optimizer::PhysicalOptimizerRule;
 use datafusion::physical_plan::execution_plan::{PlanProperties, reset_plan_states};
 use datafusion::physical_plan::joins::NestedLoopJoinExec;
 use datafusion::physical_plan::metrics::MetricsSet;
 use datafusion::physical_plan::{
-    DisplayAs, DisplayFormatType, ExecutionPlan, SendableRecordBatchStream,
+    DisplayAs, DisplayFormatType, ExecutionPlan, ExecutionPlanProperties, SendableRecordBatchStream,
 };
+
+use crate::pool_refusals::{REFUSAL_CONTAINMENT_NOTE, pool_refusal_log};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum BuildSidePolicy {
+    Spill,
+    RefuseFallback,
+}
+
+impl BuildSidePolicy {
+    pub(crate) fn for_join(join_type: &JoinType, right_partitions: usize) -> Self {
+        let left_family = matches!(
+            join_type,
+            JoinType::Left | JoinType::LeftSemi | JoinType::LeftAnti | JoinType::LeftMark
+        );
+        if left_family && right_partitions > 1 {
+            Self::RefuseFallback
+        } else {
+            Self::Spill
+        }
+    }
+}
 
 #[derive(Debug)]
 pub(crate) struct NljBuildSideExec {
     inner: Arc<dyn ExecutionPlan>,
     properties: Arc<PlanProperties>,
+    policy: BuildSidePolicy,
+    executes: AtomicUsize,
 }
 
 impl NljBuildSideExec {
-    fn new(inner: Arc<dyn ExecutionPlan>) -> Self {
+    fn new(inner: Arc<dyn ExecutionPlan>, policy: BuildSidePolicy) -> Self {
         let source = inner.properties();
         let properties = PlanProperties::new(
             source.equivalence_properties().clone(),
@@ -32,7 +58,20 @@ impl NljBuildSideExec {
         Self {
             inner,
             properties: Arc::new(properties),
+            policy,
+            executes: AtomicUsize::new(0),
         }
+    }
+
+    pub(crate) fn policy(&self) -> BuildSidePolicy {
+        self.policy
+    }
+
+    fn fallback_refusal(context: &TaskContext) -> Option<DataFusionError> {
+        let recorded = pool_refusal_log(context.memory_pool().as_ref())?.last_refusal()?;
+        Some(DataFusionError::ResourcesExhausted(format!(
+            "{recorded}\n{REFUSAL_CONTAINMENT_NOTE}"
+        )))
     }
 }
 
@@ -76,7 +115,7 @@ impl ExecutionPlan for NljBuildSideExec {
                 children.len()
             ))
         })?;
-        Ok(Arc::new(Self::new(child)))
+        Ok(Arc::new(Self::new(child, self.policy)))
     }
 
     fn execute(
@@ -84,6 +123,12 @@ impl ExecutionPlan for NljBuildSideExec {
         partition: usize,
         context: Arc<TaskContext>,
     ) -> DataFusionResult<SendableRecordBatchStream> {
+        if self.executes.fetch_add(1, Ordering::AcqRel) > 0
+            && self.policy == BuildSidePolicy::RefuseFallback
+            && let Some(refusal) = Self::fallback_refusal(&context)
+        {
+            return Err(refusal);
+        }
         let fresh = reset_plan_states(Arc::clone(&self.inner))?;
         fresh.execute(partition, context)
     }
@@ -104,9 +149,10 @@ impl ExecutionPlan for NljBuildSideExec {
     }
 
     fn with_fetch(&self, limit: Option<usize>) -> Option<Arc<dyn ExecutionPlan>> {
+        let policy = self.policy;
         self.inner
             .with_fetch(limit)
-            .map(|inner| Arc::new(Self::new(inner)) as Arc<dyn ExecutionPlan>)
+            .map(|inner| Arc::new(Self::new(inner, policy)) as Arc<dyn ExecutionPlan>)
     }
 
     fn fetch(&self) -> Option<usize> {
@@ -124,9 +170,13 @@ impl PhysicalOptimizerRule for NljBuildSideReset {
         _config: &ConfigOptions,
     ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
         plan.transform_up(|plan| {
-            if plan.downcast_ref::<NestedLoopJoinExec>().is_none() {
+            let Some(join) = plan.downcast_ref::<NestedLoopJoinExec>() else {
                 return Ok(Transformed::no(plan));
-            }
+            };
+            let policy = BuildSidePolicy::for_join(
+                join.join_type(),
+                join.right().output_partitioning().partition_count(),
+            );
             let children = plan.children().into_iter().cloned().collect::<Vec<_>>();
             let Ok([left, right]): Result<[Arc<dyn ExecutionPlan>; 2], _> = children.try_into()
             else {
@@ -135,7 +185,7 @@ impl PhysicalOptimizerRule for NljBuildSideReset {
             if left.downcast_ref::<NljBuildSideExec>().is_some() {
                 return Ok(Transformed::no(plan));
             }
-            let wrapped = Arc::new(NljBuildSideExec::new(left)) as Arc<dyn ExecutionPlan>;
+            let wrapped = Arc::new(NljBuildSideExec::new(left, policy)) as Arc<dyn ExecutionPlan>;
             plan.with_new_children(vec![wrapped, right])
                 .map(Transformed::yes)
         })
@@ -247,7 +297,10 @@ mod tests {
 
     #[tokio::test]
     async fn the_wrapper_runs_a_one_shot_child_twice() {
-        let plan = Arc::new(NljBuildSideExec::new(repartitioned(empty_input())));
+        let plan = Arc::new(NljBuildSideExec::new(
+            repartitioned(empty_input()),
+            BuildSidePolicy::Spill,
+        ));
         let context = Arc::new(TaskContext::default());
         for _ in 0..2 {
             let stream = plan
@@ -267,11 +320,13 @@ mod tests {
         let join = rewritten
             .downcast_ref::<NestedLoopJoinExec>()
             .expect("the join node survives the rule");
-        assert!(
-            join.children()[0]
-                .downcast_ref::<NljBuildSideExec>()
-                .is_some(),
-            "the left (build) child is wrapped"
+        let wrapped = join.children()[0]
+            .downcast_ref::<NljBuildSideExec>()
+            .expect("the left (build) child is wrapped");
+        assert_eq!(
+            wrapped.policy(),
+            BuildSidePolicy::Spill,
+            "an inner join with one right partition spills"
         );
         assert!(
             join.children()[1]
@@ -319,7 +374,10 @@ mod tests {
     #[test]
     fn the_wrapper_delegates_properties_and_limit_pushdown() {
         let inner = repartitioned(empty_input());
-        let wrapped: Arc<dyn ExecutionPlan> = Arc::new(NljBuildSideExec::new(Arc::clone(&inner)));
+        let wrapped: Arc<dyn ExecutionPlan> = Arc::new(NljBuildSideExec::new(
+            Arc::clone(&inner),
+            BuildSidePolicy::Spill,
+        ));
         assert_eq!(
             wrapped.schema(),
             inner.schema(),
@@ -341,9 +399,130 @@ mod tests {
             "the wrapper keeps limit-pushdown support"
         );
         assert_eq!(wrapped.children().len(), 1, "the wrapper is unary");
-        Arc::new(NljBuildSideExec::new(Arc::clone(&inner)))
-            .with_new_children(vec![])
-            .expect_err("a child count other than one refuses");
+        Arc::new(NljBuildSideExec::new(
+            Arc::clone(&inner),
+            BuildSidePolicy::Spill,
+        ))
+        .with_new_children(vec![])
+        .expect_err("a child count other than one refuses");
+    }
+
+    fn join_with(join_type: JoinType, right_partitions: usize) -> Arc<dyn ExecutionPlan> {
+        let schema = Arc::new(Schema::new(vec![Field::new("id", DataType::Int32, true)]));
+        let empty: Vec<Vec<arrow::array::RecordBatch>> = vec![Vec::new(); right_partitions];
+        let right =
+            datafusion::physical_plan::test::TestMemoryExec::try_new_exec(&empty, schema, None)
+                .expect("a multi-partition memory right side builds");
+        Arc::new(
+            NestedLoopJoinExec::try_new(empty_input(), right, None, &join_type, None)
+                .expect("a filter-free nested-loop join builds"),
+        )
+    }
+
+    fn wrapped_policy(plan: Arc<dyn ExecutionPlan>) -> BuildSidePolicy {
+        let rule = NljBuildSideReset;
+        let rewritten = rule
+            .optimize(plan, &ConfigOptions::new())
+            .expect("the rule applies");
+        let join = rewritten
+            .downcast_ref::<NestedLoopJoinExec>()
+            .expect("the join node survives the rule");
+        join.children()[0]
+            .downcast_ref::<NljBuildSideExec>()
+            .expect("the build child is wrapped")
+            .policy()
+    }
+
+    #[test]
+    fn the_rule_refuses_only_the_left_family_past_one_right_partition() {
+        use BuildSidePolicy::{RefuseFallback, Spill};
+        let cases = [
+            (JoinType::Inner, 1, Spill),
+            (JoinType::Inner, 4, Spill),
+            (JoinType::Left, 1, Spill),
+            (JoinType::Left, 4, RefuseFallback),
+            (JoinType::LeftSemi, 1, Spill),
+            (JoinType::LeftSemi, 4, RefuseFallback),
+            (JoinType::LeftAnti, 1, Spill),
+            (JoinType::LeftAnti, 4, RefuseFallback),
+            (JoinType::LeftMark, 1, Spill),
+            (JoinType::LeftMark, 4, RefuseFallback),
+            (JoinType::Right, 4, Spill),
+            (JoinType::RightSemi, 4, Spill),
+            (JoinType::RightAnti, 4, Spill),
+            (JoinType::RightMark, 4, Spill),
+            (JoinType::Full, 1, Spill),
+            (JoinType::Full, 4, Spill),
+        ];
+        for (join_type, right_partitions, expected) in cases {
+            assert_eq!(
+                wrapped_policy(join_with(join_type, right_partitions)),
+                expected,
+                "the policy must split exactly on the documented set"
+            );
+        }
+    }
+
+    fn refusing_context() -> Arc<TaskContext> {
+        use datafusion::execution::memory_pool::{FairSpillPool, MemoryConsumer, MemoryPool};
+        use datafusion::execution::runtime_env::RuntimeEnvBuilder;
+
+        use crate::pool_refusals::{PoolRefusalLog, RefusalRecordingPool};
+        let log = Arc::new(PoolRefusalLog::default());
+        let pool: Arc<dyn MemoryPool> = Arc::new(RefusalRecordingPool::new(
+            Arc::new(FairSpillPool::new(64 * 1024 * 1024)),
+            Arc::clone(&log),
+        ));
+        MemoryConsumer::new("probe")
+            .register(&pool)
+            .try_grow(1024 * 1024 * 1024)
+            .expect_err("one gigabyte does not fit sixty-four megabytes");
+        let runtime = RuntimeEnvBuilder::new()
+            .with_memory_pool(pool)
+            .build_arc()
+            .expect("a test runtime builds");
+        Arc::new(TaskContext::default().with_runtime(runtime))
+    }
+
+    #[tokio::test]
+    async fn the_second_execute_refuses_typed_when_the_fallback_is_unsafe() {
+        let plan = Arc::new(NljBuildSideExec::new(
+            repartitioned(two_partition_input()),
+            BuildSidePolicy::RefuseFallback,
+        ));
+        let context = refusing_context();
+        let first = plan
+            .execute(0, Arc::clone(&context))
+            .expect("the load execute succeeds");
+        drain_rows(first).await;
+        let error = match plan.execute(0, Arc::clone(&context)) {
+            Ok(_) => panic!("the fallback execute must not produce rows"),
+            Err(error) => error,
+        };
+        let message = error.to_string();
+        assert!(
+            message.to_lowercase().contains("resources exhausted") && message.contains("fair("),
+            "the refusal is the genuine pool text, got: {message}"
+        );
+        assert!(
+            message.contains("the bounded memory pool refused this plan"),
+            "the refusal carries the containment disclosure, got: {message}"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_second_execute_spills_when_no_refusal_was_recorded() {
+        let plan = Arc::new(NljBuildSideExec::new(
+            repartitioned(two_partition_input()),
+            BuildSidePolicy::RefuseFallback,
+        ));
+        let context = Arc::new(TaskContext::default());
+        for _ in 0..2 {
+            let stream = plan
+                .execute(0, Arc::clone(&context))
+                .expect("no recorded refusal means nothing to refuse with");
+            drain_rows(stream).await;
+        }
     }
 
     #[tokio::test]
@@ -361,7 +540,7 @@ mod tests {
             )
             .expect("a repartition over memory builds"),
         );
-        let wrapped = NljBuildSideExec::new(single);
+        let wrapped = NljBuildSideExec::new(single, BuildSidePolicy::Spill);
         let context = Arc::new(TaskContext::default());
         for _ in 0..2 {
             let stream = wrapped

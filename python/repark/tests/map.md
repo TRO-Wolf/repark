@@ -3209,8 +3209,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   count(*)/sum(id)/content-digest or the message. INNER/RIGHT-family legs assert tight ==
   wide values; LEFT-family legs assert the typed refusal with the containment disclosure
   (FULL without it — the upstream-disabled shape refuses with the genuine pool text); LEFT
-  and LEFT ANTI at one partition assert spilled values equal the wide run.
-  pins: never-oom-panic-1/C-011, C-012
+  and LEFT ANTI at one partition assert spilled values equal the wide run. The round-2
+  residue (empty build-side metrics, reset cost, spill replay) is ledger-only.
+  pins: never-oom-panic-1/C-011, C-012, C-013
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set

@@ -12,7 +12,7 @@ use datafusion::prelude::DataFrame;
 use futures::StreamExt;
 use pyo3::types::{PyAnyMethods, PyCapsule, PyCapsuleMethods};
 use pyo3::{Bound, PyAny, PyResult, Python};
-use repark_core::PoolRefusalLog;
+use repark_core::{PoolRefusalLog, REFUSAL_CONTAINMENT_NOTE};
 use tokio::runtime::Runtime;
 
 use crate::dataframe::STREAM_POLL_NO_DETACH;
@@ -31,11 +31,6 @@ const CONTAINABLE_PANIC_PAYLOADS: &[&str] = &[
     "right bitmap should be available",
     "without Active spill state",
 ];
-
-const REFUSAL_CONTAINMENT_NOTE: &str = concat!(
-    "REPARK: the bounded memory pool refused this plan; the engine did not survive that ",
-    "refusal, so repark reports the refusal itself."
-);
 
 #[derive(Debug)]
 struct ContainedPoolRefusal(String);

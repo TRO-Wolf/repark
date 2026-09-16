@@ -7,6 +7,11 @@ use datafusion::execution::memory_pool::{
     MemoryConsumer, MemoryLimit, MemoryPool, MemoryReservation,
 };
 
+pub const REFUSAL_CONTAINMENT_NOTE: &str = concat!(
+    "REPARK: the bounded memory pool refused this plan; the engine did not survive that ",
+    "refusal, so repark reports the refusal itself."
+);
+
 #[derive(Debug, Default)]
 pub struct PoolRefusalLog {
     refusals: AtomicU64,

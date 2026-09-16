@@ -290,6 +290,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   double-execute at the root, so this path spills (or refuses typed) and no longer reaches
   the containment; the log stays as the tightness proof and the containment stays for the
   other allow-listed fallback paths.
+  **Round 2 (2026-09-16):** also home to `REFUSAL_CONTAINMENT_NOTE`, moved here from the
+  export reader so the fallback refusal and the containment rewrite share one string.
 - `nlj_build_reset.rs` — **NEVER-OOM-PANIC-1 (2026-09-16):** the physical-optimizer rule
   `NljBuildSideReset` (appended last, so the enforcer's `RepartitionExec` is already under
   the build side) plus the wrapper exec `NljBuildSideExec`. The rule wraps each
@@ -302,6 +304,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `Internal` error, pinned. Wired in
   `session/df_guards.rs::context_with_df_54_1_rule_guards`.
   pins: never-oom-panic-1/C-004, C-005, C-006
+  **Round 2 (2026-09-16):** the wrapper carries a `BuildSidePolicy` the rule reads off the
+  join (`NljBuildSideExec` counts its executes; only the first is the in-memory load, the
+  second is always the fallback re-execute). `BuildSidePolicy::for_join` refuses the
+  fallback for DataFusion 54.1's documented unsafe set (LEFT, LEFT SEMI, LEFT ANTI, LEFT
+  MARK with more than one right partition): the second execute returns `ResourcesExhausted`
+  built from the session's own recorded pool text plus `REFUSAL_CONTAINMENT_NOTE` (moved to
+  `pool_refusals.rs` so the export reader reuses the one string), never a row. Every other
+  shape spills, including single-right-partition left-family joins. With no recorded refusal
+  the wrapper spills rather than fabricate. `metrics()` stays `None` (residue R-02).
+  pins: never-oom-panic-1/C-011, C-012, C-013
 - `catalog_config.rs` — the `spark.sql.catalog.<name>.*` → `Vec<CatalogSpec { name, kind,
   props }>` parser (`parse_catalog_specs`, pure/AWS-free). Both prefixes share one keyspace
   (cross-spelling duplicates collapse when identical, fail loud otherwise). Rules: bare
