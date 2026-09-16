@@ -15,6 +15,7 @@ mod dataframe_stats;
 mod fence;
 mod logical_names;
 mod ml;
+mod orc_io;
 mod plan_introspect;
 mod session;
 mod session_runtime;
@@ -147,6 +148,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     collect_rows::register(module)?;
     logical_names::register(module)?;
     ml::register(module)?;
+    orc_io::register(module)?;
     plan_introspect::register(module)?;
     session_runtime::register(module)?;
     session_sources::register(module)?;

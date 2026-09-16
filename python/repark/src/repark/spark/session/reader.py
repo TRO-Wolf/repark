@@ -6,7 +6,11 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
 from typing import Any
 
-from repark.spark.session import _funcs as _session_funcs, reader_text as _reader_text
+from repark.spark.session import (
+    _funcs as _session_funcs,
+    reader_orc as _reader_orc,
+    reader_text as _reader_text,
+)
 from repark.spark.session.session_core import ReparkSession
 from repark.spark.dataframe import io_declared as _io_declared
 
@@ -357,7 +361,7 @@ class DataFrameReader:
             return self._session.read_iceberg_table(table_name, **travel)
         return self._session.table(table_name)
 
-    orc = _io_declared.reader_orc
+    orc = _reader_orc.orc
     xml = _io_declared.reader_xml
     jdbc = _io_declared.reader_jdbc
 
@@ -410,12 +414,14 @@ class DataFrameReader:
                 self.option(key, value)
 
         fmt = (self._format or "").strip().lower()
-        if fmt in {"orc", "xml"}:
+        if fmt == "xml":
             _io_declared.refuse_reader_load_format(self, fmt)
         if fmt == "text":
             _reader_text._drop_falsy_recursive_lookup(self)
         # Postgres/JDBC options are intentional; skip the parquet/iceberg semantic gate for them.
-        if fmt not in {"postgres", "postgresql", "jdbc"}:
+        # ORC carries its own file options (mergeSchema, pathGlobFilter, …); the blanket gate
+        # would refuse names the scan implements.
+        if fmt not in {"postgres", "postgresql", "jdbc", "orc"}:
             self._reject_unsupported_semantic_options()
         if not fmt:
             raise AnalysisException(
@@ -448,6 +454,8 @@ class DataFrameReader:
             return self._session.read_iceberg_table(str(effective_path))
         if fmt == "text":
             return _reader_text.load_text(self, effective_path)
+        if fmt == "orc":
+            return _reader_orc.load_orc(self, effective_path)
         if fmt in {"postgres", "postgresql", "jdbc"}:
             return self._load_postgres()
         # Truncate hostile/long format strings in the error.
@@ -949,7 +957,7 @@ class DataFrameReader:
     def schema(self, schema: Any) -> DataFrameReader:
         """Set a user schema for the next load (PySpark ``DataFrameReader.schema``).
 
-        Applied on CSV/JSON reads (cast + rename). Parquet still rejects a set schema at load.
+        Applied on CSV/JSON/ORC reads (cast + rename). Parquet still rejects a set schema at load.
         Accepts :class:`~repark.types.StructType`, a DDL field-list string, or a list of
         :class:`~repark.types.StructField`.
         """

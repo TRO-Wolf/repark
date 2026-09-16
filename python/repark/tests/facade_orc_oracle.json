@@ -1,0 +1,694 @@
+{
+ "meta": {
+  "by": "run 16b orchestrator",
+  "fixtures": "{FIX}",
+  "recorded": "2026-09-15",
+  "session_tz": "UTC unless the cell sets it",
+  "spark": "4.1.2"
+ },
+ "orc_case_insensitive_col": {
+  "result": {
+   "columns": [
+    "I",
+    "S"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a')",
+    "(2, None)"
+   ],
+   "schema": "struct<I:int,S:string>"
+  }
+ },
+ "orc_codec_brotli": {
+  "error": {
+   "message": "An error occurred while calling o178.orc.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 44.0 failed 1 times, most recent failure: Lost task 0.0 in stage 44.0 (TID 35) (localhost executor driver): java.lang.NoClassDefFoundError: com/aayushatharva/brotli4j/Brotli4jLoader",
+   "raises": "Py4JJavaError"
+  }
+ },
+ "orc_codec_lz4": {
+  "result": {
+   "files": [
+    "part-00000-bec4f8b3-63ef-40a9-a137-6ba06db78e63-c000.lz4.orc"
+   ],
+   "read": {
+    "columns": [
+     "id"
+    ],
+    "nullable": [
+     true
+    ],
+    "rows": [
+     "(0,)",
+     "(1,)",
+     "(2,)"
+    ],
+    "schema": "struct<id:bigint>"
+   }
+  }
+ },
+ "orc_codec_lzo": {
+  "result": {
+   "files": [
+    "part-00000-32d6ee45-8765-4c48-ab2f-65a683b55097-c000.lzo.orc"
+   ],
+   "read": {
+    "columns": [
+     "id"
+    ],
+    "nullable": [
+     true
+    ],
+    "rows": [
+     "(0,)",
+     "(1,)",
+     "(2,)"
+    ],
+    "schema": "struct<id:bigint>"
+   }
+  }
+ },
+ "orc_codec_none": {
+  "result": {
+   "files": [
+    "part-00000-ace183f2-5729-4195-b976-8520693ceafe-c000.orc"
+   ],
+   "read": {
+    "columns": [
+     "id"
+    ],
+    "nullable": [
+     true
+    ],
+    "rows": [
+     "(0,)",
+     "(1,)",
+     "(2,)"
+    ],
+    "schema": "struct<id:bigint>"
+   }
+  }
+ },
+ "orc_codec_snappy": {
+  "result": {
+   "files": [
+    "part-00000-7accf09c-ca79-4dd7-86a6-b07d2d80a955-c000.snappy.orc"
+   ],
+   "read": {
+    "columns": [
+     "id"
+    ],
+    "nullable": [
+     true
+    ],
+    "rows": [
+     "(0,)",
+     "(1,)",
+     "(2,)"
+    ],
+    "schema": "struct<id:bigint>"
+   }
+  }
+ },
+ "orc_codec_uncompressed": {
+  "result": {
+   "files": [
+    "part-00000-8d57fa23-4681-47ee-ba70-a49835cbc513-c000.orc"
+   ],
+   "read": {
+    "columns": [
+     "id"
+    ],
+    "nullable": [
+     true
+    ],
+    "rows": [
+     "(0,)",
+     "(1,)",
+     "(2,)"
+    ],
+    "schema": "struct<id:bigint>"
+   }
+  }
+ },
+ "orc_codec_zlib": {
+  "result": {
+   "files": [
+    "part-00000-7a84a7ea-1f73-4c44-b078-6e9a3ca01216-c000.zlib.orc"
+   ],
+   "read": {
+    "columns": [
+     "id"
+    ],
+    "nullable": [
+     true
+    ],
+    "rows": [
+     "(0,)",
+     "(1,)",
+     "(2,)"
+    ],
+    "schema": "struct<id:bigint>"
+   }
+  }
+ },
+ "orc_codec_zstd": {
+  "result": {
+   "files": [
+    "part-00000-be52fb4b-8f50-4976-bb8f-5cf128aacc1c-c000.zstd.orc"
+   ],
+   "read": {
+    "columns": [
+     "id"
+    ],
+    "nullable": [
+     true
+    ],
+    "rows": [
+     "(0,)",
+     "(1,)",
+     "(2,)"
+    ],
+    "schema": "struct<id:bigint>"
+   }
+  }
+ },
+ "orc_count": {
+  "result": 2
+ },
+ "orc_empty_dir": {
+  "error": {
+   "condition": "UNABLE_TO_INFER_SCHEMA",
+   "message": "[UNABLE_TO_INFER_SCHEMA] Unable to infer schema for ORC. It must be specified manually. SQLSTATE: 42KD9",
+   "params": {
+    "format": "ORC"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42KD9"
+  }
+ },
+ "orc_filter_pushdown": {
+  "result": {
+   "columns": [
+    "i",
+    "s"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(2, None)"
+   ],
+   "schema": "struct<i:int,s:string>"
+  }
+ },
+ "orc_glob_filter": {
+  "result": {
+   "columns": [
+    "id"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "(0,)",
+    "(1,)"
+   ],
+   "schema": "struct<id:bigint>"
+  }
+ },
+ "orc_glob_filter_nomatch": {
+  "error": {
+   "condition": "UNABLE_TO_INFER_SCHEMA",
+   "message": "[UNABLE_TO_INFER_SCHEMA] Unable to infer schema for ORC. It must be specified manually. SQLSTATE: 42KD9",
+   "params": {
+    "format": "ORC"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42KD9"
+  }
+ },
+ "orc_ignore_corrupt": {
+  "error": {
+   "condition": "UNABLE_TO_INFER_SCHEMA",
+   "message": "[UNABLE_TO_INFER_SCHEMA] Unable to infer schema for ORC. It must be specified manually. SQLSTATE: 42KD9",
+   "params": {
+    "format": "ORC"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42KD9"
+  }
+ },
+ "orc_input_files": {
+  "result": [
+   "part"
+  ]
+ },
+ "orc_merge_schema_kw": {
+  "error": {
+   "message": "DataFrameReader.orc() got multiple values for argument 'mergeSchema'",
+   "raises": "TypeError"
+  }
+ },
+ "orc_merge_schema_off_dir": {
+  "result": {
+   "columns": [
+    "id"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "(0,)",
+    "(0,)",
+    "(1,)",
+    "(1,)"
+   ],
+   "schema": "struct<id:bigint>"
+  }
+ },
+ "orc_merge_schema_on": {
+  "error": {
+   "condition": null,
+   "message": "For input string: \"{FIX}/m2\"",
+   "params": null,
+   "raises": "IllegalArgumentException",
+   "sqlstate": null
+  }
+ },
+ "orc_missing_path": {
+  "error": {
+   "condition": "PATH_NOT_FOUND",
+   "message": "[PATH_NOT_FOUND] Path does not exist: file:{FIX}/does_not_exist. SQLSTATE: 42K03",
+   "params": {
+    "path": "file:{FIX}/does_not_exist"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42K03"
+  }
+ },
+ "orc_modified_after_past": {
+  "result": {
+   "columns": [
+    "id"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "(0,)",
+    "(1,)"
+   ],
+   "schema": "struct<id:bigint>"
+  }
+ },
+ "orc_modified_before_past": {
+  "error": {
+   "condition": "UNABLE_TO_INFER_SCHEMA",
+   "message": "[UNABLE_TO_INFER_SCHEMA] Unable to infer schema for ORC. It must be specified manually. SQLSTATE: 42KD9",
+   "params": {
+    "format": "ORC"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42KD9"
+  }
+ },
+ "orc_nested_no_recursive": {
+  "error": {
+   "condition": "UNABLE_TO_INFER_SCHEMA",
+   "message": "[UNABLE_TO_INFER_SCHEMA] Unable to infer schema for ORC. It must be specified manually. SQLSTATE: 42KD9",
+   "params": {
+    "format": "ORC"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42KD9"
+  }
+ },
+ "orc_nested_recursive": {
+  "result": {
+   "columns": [
+    "id"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "(0,)"
+   ],
+   "schema": "struct<id:bigint>"
+  }
+ },
+ "orc_not_orc_file": {
+  "error": {
+   "message": "An error occurred while calling o323.orc.\n: org.apache.spark.SparkException: [FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER] Encountered error while reading file file:{FIX}/notorc/x.orc. Could not read footer. Please ensure that the file is in either ORC or Parquet format.\nIf not, please convert it to a valid format. If the file is in the valid format, please check if it is corrupt.\nIf it is, you can choose to either ignore it or fix the corruption. SQLSTATE: KD001",
+   "raises": "Py4JJavaError"
+  }
+ },
+ "orc_partition_basepath": {
+  "result": {
+   "columns": [
+    "a",
+    "k"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'x')"
+   ],
+   "schema": "struct<a:int,k:string>"
+  }
+ },
+ "orc_partition_leaf": {
+  "result": {
+   "columns": [
+    "a"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "(1,)"
+   ],
+   "schema": "struct<a:int>"
+  }
+ },
+ "orc_partitioned_read": {
+  "result": {
+   "columns": [
+    "a",
+    "k"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'x')",
+    "(2, 'y')"
+   ],
+   "schema": "struct<a:int,k:string>"
+  }
+ },
+ "orc_path_glob": {
+  "result": {
+   "columns": [
+    "id"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "(0,)",
+    "(1,)",
+    "(2,)"
+   ],
+   "schema": "struct<id:bigint>"
+  }
+ },
+ "orc_reader_list_arg": {
+  "result": {
+   "columns": [
+    "id"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "(0,)",
+    "(0,)",
+    "(1,)",
+    "(1,)"
+   ],
+   "schema": "struct<id:bigint>"
+  }
+ },
+ "orc_reader_signature_bad_arg": {
+  "error": {
+   "message": "An error occurred while calling z:org.apache.spark.api.python.PythonUtils.toSeq. Trace:\npy4j.Py4JException: Method toSeq([class java.lang.Integer]) does not exist",
+   "raises": "Py4JError"
+  }
+ },
+ "orc_select_one": {
+  "result": {
+   "columns": [
+    "y",
+    "arr"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(None, None)",
+    "('z', [1, 2])"
+   ],
+   "schema": "struct<y:string,arr:array<int>>"
+  }
+ },
+ "orc_sql_create_using": {
+  "result": {
+   "columns": [
+    "id"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "(0,)",
+    "(1,)"
+   ],
+   "schema": "struct<id:bigint>"
+  }
+ },
+ "orc_sql_door": {
+  "result": {
+   "columns": [
+    "id"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "(0,)",
+    "(1,)"
+   ],
+   "schema": "struct<id:bigint>"
+  }
+ },
+ "orc_sql_door_missing": {
+  "error": {
+   "condition": "PATH_NOT_FOUND",
+   "message": "[PATH_NOT_FOUND] Path does not exist: file:{FIX}/nope. SQLSTATE: 42K03",
+   "params": {
+    "path": "file:{FIX}/nope"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42K03"
+  }
+ },
+ "orc_ts_session_tz": {
+  "result": {
+   "columns": [
+    "i",
+    "ts",
+    "tsntz",
+    "ts_s"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, datetime.datetime(2024, 1, 1, 22, 4, 5, 123456), datetime.datetime(2024, 1, 2, 3, 4, 5), '2024-01-01 22:04:05.123456')",
+    "(2, None, None, None)"
+   ],
+   "schema": "struct<i:int,ts:timestamp,tsntz:timestamp_ntz,ts_s:string>"
+  }
+ },
+ "orc_two_paths": {
+  "error": {
+   "condition": null,
+   "message": "For input string: \"{FIX}/m2\"",
+   "params": null,
+   "raises": "IllegalArgumentException",
+   "sqlstate": null
+  }
+ },
+ "orc_typed": {
+  "result": {
+   "columns": [
+    "i",
+    "l",
+    "sm",
+    "ti",
+    "s",
+    "d",
+    "f",
+    "b",
+    "dt",
+    "ts",
+    "tsntz",
+    "dec",
+    "dec38",
+    "bin",
+    "arr",
+    "m",
+    "st",
+    "ch",
+    "vc"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 10, 1, 2, 'a', 1.5, 2.5, True, datetime.date(2024, 1, 2), datetime.datetime(2024, 1, 1, 22, 4, 5, 123456), datetime.datetime(2024, 1, 2, 3, 4, 5), Decimal('12.34'), Decimal('1234567890123.4567'), b'\\x01\\x02', [1, 2], {'k': 1}, Row(x=1, y='z'), 'ab', 'cd')",
+    "(2, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None)"
+   ],
+   "schema": "struct<i:int,l:bigint,sm:smallint,ti:tinyint,s:string,d:double,f:float,b:boolean,dt:date,ts:timestamp,tsntz:timestamp_ntz,dec:decimal(10,2),dec38:decimal(38,4),bin:binary,arr:array<int>,m:map<string,int>,st:struct<x:int,y:string>,ch:string,vc:string>"
+  }
+ },
+ "orc_typed_format_load": {
+  "result": {
+   "columns": [
+    "i",
+    "l",
+    "sm",
+    "ti",
+    "s",
+    "d",
+    "f",
+    "b",
+    "dt",
+    "ts",
+    "tsntz",
+    "dec",
+    "dec38",
+    "bin",
+    "arr",
+    "m",
+    "st",
+    "ch",
+    "vc"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 10, 1, 2, 'a', 1.5, 2.5, True, datetime.date(2024, 1, 2), datetime.datetime(2024, 1, 1, 22, 4, 5, 123456), datetime.datetime(2024, 1, 2, 3, 4, 5), Decimal('12.34'), Decimal('1234567890123.4567'), b'\\x01\\x02', [1, 2], {'k': 1}, Row(x=1, y='z'), 'ab', 'cd')",
+    "(2, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None)"
+   ],
+   "schema": "struct<i:int,l:bigint,sm:smallint,ti:tinyint,s:string,d:double,f:float,b:boolean,dt:date,ts:timestamp,tsntz:timestamp_ntz,dec:decimal(10,2),dec38:decimal(38,4),bin:binary,arr:array<int>,m:map<string,int>,st:struct<x:int,y:string>,ch:string,vc:string>"
+  }
+ },
+ "orc_user_schema_missing_col": {
+  "result": {
+   "columns": [
+    "id",
+    "nope"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(0, None)",
+    "(1, None)"
+   ],
+   "schema": "struct<id:bigint,nope:int>"
+  }
+ },
+ "orc_user_schema_subset": {
+  "result": {
+   "columns": [
+    "extra"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "('0',)",
+    "('1',)"
+   ],
+   "schema": "struct<extra:string>"
+  }
+ },
+ "orc_user_schema_wrong_type": {
+  "result": {
+   "columns": [
+    "id"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "('0',)",
+    "('1',)"
+   ],
+   "schema": "struct<id:string>"
+  }
+ },
+ "orc_zero_rows": {
+  "result": {
+   "files": [
+    "._SUCCESS.crc",
+    ".part-00000-497cf25a-5098-44e7-bb1e-2e2e3502ee97-c000.zstd.orc.crc",
+    "_SUCCESS",
+    "part-00000-497cf25a-5098-44e7-bb1e-2e2e3502ee97-c000.zstd.orc"
+   ],
+   "read": {
+    "columns": [
+     "id"
+    ],
+    "nullable": [
+     true
+    ],
+    "rows": [],
+    "schema": "struct<id:bigint>"
+   }
+  }
+ }
+}

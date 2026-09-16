@@ -17,6 +17,9 @@ mod named_sources;
 mod namespace_create;
 mod nlj_build_reset;
 mod object_store_s3;
+mod orc_footer;
+mod orc_scan;
+mod orc_schema;
 mod partition_discovery;
 mod partition_timestamp;
 mod pool_refusals;
@@ -130,6 +133,7 @@ pub fn built_with_debug_assertions() -> bool {
 // v1's two `#[cfg(test)] pub(crate) use` companions live in `session.rs` — the module split
 pub(crate) use error_map::{iceberg_err, resolve_s3_region_override};
 pub(crate) use idents::parse_table_identifier_segments;
+pub use orc_scan::OrcReadOptions;
 pub(crate) use read_options::json_read_options_from_map;
 pub use text_io::write_text_frame;
 pub use text_partition::write_text_partitioned;

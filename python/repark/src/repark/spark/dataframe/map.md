@@ -599,9 +599,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `udf_bridge.py` owns action-time pandas, classic, and Arrow UDF callbacks without importing
   `DataFrame` at module scope. DFCORE-2 (2026-09-07) keeps callback execution here; only the
   projection rewrites moved out. pins: dfcore-2/C-005
-- `io_declared.py` owns the orc / xml declared-refusal bodies and the `jdbc` reader-writer
-  surface (IO-DECLARED-1, 2026-09-14; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1). `reader_orc`,
-  `reader_xml`, `writer_orc`, and `writer_xml` carry
+- `io_declared.py` owns the orc-write / xml declared-refusal bodies and the `jdbc` reader-writer
+  surface (IO-DECLARED-1, 2026-09-14; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1).
+  **IO-ORC-1 (2026-09-16):** the orc reader refusal is deleted (the read side is a real
+  scan in `session/reader_orc.py`); `reader_xml`, `writer_orc`, and `writer_xml` carry
   Spark 4.1.2's signatures and raise `PySparkNotImplementedError` `NOT_IMPLEMENTED`
   with the feature parameter at the call; `xml` runs Spark's own `rowTag` check first
   (argument or option map, case-insensitive) and raises `XML_ROW_TAG_MISSING`

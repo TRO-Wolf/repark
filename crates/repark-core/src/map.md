@@ -415,6 +415,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pair is deleted); `\`-escaped meta matches literally, and a pattern whose last
   segment names a directory lists one leaf level through an iterative walk.
   pins: io-text-1/T-5, U-5, U-6
+  **IO-ORC-1 (2026-09-16):** adds `match_file_name_glob` (one-segment match for the
+  ORC `pathGlobFilter`); the matcher itself is unchanged. pins: io-orc-1/C-006
 - `text_io.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` writer.
   **Follow-up (2026-09-15):** the writer streams `execute_stream` batches into
   sequential `part-*.txt` (NULL rows write empty lines, every row terminated; an empty
@@ -554,6 +556,25 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   region + credentials into an `AmazonS3` (the ONLY AWS-touching fn); `register_bucket_store`
   puts one store under BOTH `s3://bucket` and `s3a://bucket`; `parse_s3_bucket` /
   `is_s3_scheme` route paths. Tests register an `InMemory` store to prove routing AWS-free.
+- `orc_footer.rs` — **IO-ORC-1 (2026-09-16):** the ORC footer attributes orc-rust drops:
+  tail/postscript parse, block-framed decompress in all five codecs, and a minimal
+  protobuf field walk returning per-column `spark.sql.catalyst.type` values plus the
+  uniform stripe writer timezone (mixed zones read as absent). Best-effort: any decode
+  failure yields an empty map and the normal footer validation errors surface.
+  pins: io-orc-1/C-002
+- `orc_scan.rs` — **IO-ORC-1 (2026-09-16):** the read-only ORC scan over orc-rust 0.8.0
+  (owner ruling Q-15B-1). `OrcReadOptions` carries mergeSchema, pathGlobFilter,
+  recursiveFileLookup, modifiedBefore/After, basePath, ignoreCorruptFiles, and the user
+  schema; paths reuse `text_glob` plus partition discovery; the `TableProvider`
+  projects through `ProjectionMask` and converts columns recursively (instant columns
+  undo the stripe writer zone per file). Schema inference and the user-schema overlay
+  live beside it in `orc_schema.rs` (split at the 1000-line ceiling).
+  pins: io-orc-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `orc_schema.rs` — **IO-ORC-1 (2026-09-16):** the ORC schema half beside the scan:
+  footer-attribute mapping (LONG→`timestamp_ntz`, instant→UTC-stamped `timestamp`,
+  local-tz-kind→naive, recursive through struct/list/map), schema union by name under
+  mergeSchema, and the user-schema select (case-insensitive names, missing→NULL,
+  int→string arm, other mismatches loud). pins: io-orc-1/C-002, C-006, C-007
 - `backend.rs` — the `ExecutionBackend` seam + `SingleNodeBackend`, its only implementation. One
   method, returning the concrete DataFusion `SessionContext`: the **trait boundary** is the
   load-bearing part, not the surface, which would have to widen (with its call sites) before a

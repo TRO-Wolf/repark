@@ -1,6 +1,7 @@
-"""The declared orc/xml/jdbc IO refusals and the ``na.replace`` delegation.
+"""The declared orc-write/xml/jdbc IO refusals and the ``na.replace`` delegation.
 
-pins: io-declared-1/C-001, C-002, C-003, C-004, C-005
+pins: io-declared-1/C-001, C-002, C-003, C-004, C-005; io-orc-1/C-010 (the orc read
+arm moved to ``orc_read.py`` when the read side became a real scan)
 """
 
 from __future__ import annotations
@@ -17,7 +18,6 @@ from repark.errors import (
 )
 
 COVERS: list[str] = [
-    "DataFrameReader.orc",
     "DataFrameReader.xml",
     "DataFrameReader.jdbc",
     "DataFrameWriter.orc",
@@ -57,7 +57,6 @@ def main() -> None:
     try:
         frame = repark.createDataFrame([(1, "a"), (2, "b")], "x int, y string")
         reader = repark.read
-        _expect_refusal(lambda: reader.orc("/tmp/unused-io-declared/orc"), "orc")
         _expect_row_tag_missing(lambda: reader.xml("/tmp/unused-io-declared/xml"))
         _expect_refusal(lambda: reader.xml("/tmp/unused-io-declared/xml", rowTag="row"), "xml")
         _expect_refusal(lambda: reader.jdbc("jdbc:mysql://127.0.0.1:1/x", "t"), "jdbc")

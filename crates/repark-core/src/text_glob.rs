@@ -313,6 +313,14 @@ fn collect_glob_files(dir: &Path, display: &str, out: &mut Vec<PathBuf>) -> Resu
     Ok(())
 }
 
+pub(crate) fn match_file_name_glob(pattern: &str, name: &str) -> bool {
+    let parsed = parse_glob_patterns(pattern);
+    let text: Vec<char> = name.chars().collect();
+    parsed
+        .iter()
+        .any(|wants| wants.len() == 1 && match_tokens(&wants[0], &text))
+}
+
 pub(crate) fn expand_text_glob(pattern: &str) -> Result<Vec<PathBuf>> {
     let (base, wanted) = split_glob_base(pattern);
     if !base.is_dir() {
