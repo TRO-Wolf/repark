@@ -110,6 +110,11 @@ passes (full list in §2).
 - Registry commit: BL-20 → FIXED with pin names and the oracle path, new
   BACKLOG row BL-20-OVF carrying C-005 with the seam named, `div` / `~`
   named as SPARK-SQL-GRAMMAR-1 residues. C-007 PROVEN.
+- Gate fallout (announced): `extension/tests.rs`
+  `analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion`
+  pinned the old three-seat pre-coercion order, so the new fourth seat failed
+  it. Updated to the new contract (name kept) with an `extension/map.md` row;
+  no behavior assertion changed, only the seating this card owns.
 
 ## 3. Design (Rust-first per Q-17a-2)
 

@@ -38,6 +38,10 @@ function-registry + analyzer-rule installation + the composed
   `spark_negate_null_decimal` through (first in `analyzer_rules()`, not a pre-coercion
   insert, so the seating contract is unchanged).
   pins: decimal-cache-1/C-012
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the same contract test now pins a fourth
+  pre-coercion seat, `spark_integral_literal` immediately before `type_coercion`
+  (name kept); the BL-20 door pins prove the seat.
+  pins: sql-literal-typing-1/C-001, C-002, C-007
 
 ## Pointers
 
