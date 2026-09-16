@@ -321,3 +321,24 @@ string-typed NULL value answers all-NULL fields, per the fixture cells.
 2 xfailed (18c). Neighbor suites (`test_fnp_gen_1`, `test_explode_rewrite`,
 `test_fnp_9_collections_json`) green.
 pins: fnp-gen-1/C-002, C-003
+
+### Step 3 green summary (run 18a): `from_csv` kernel + options rule
+
+`crates/repark-functions/src/csv.rs` (options, univocity-default tokenizer, Java
+date-pattern reader) plus `csv/from_csv.rs` (the struct kernel: PERMISSIVE
+null-pads and parses typed fields, FAILFAST throws the decoded row, the corrupt
+column captures whole records, NULL documents answer NULL structs, output
+nullability follows the input) plus `csv/fold.rs` (`CsvFold` before
+`TypeCoercion`, refusing `DROPMALFORMED` on readable literal options maps with
+`[PARSE_MODE_UNSUPPORTED]`). All other argument checks are type- or
+literal-based in `return_field_from_args`, so both doors raise the same
+condition (R-18a-2). The DDL parser's `Execution`-flavored errors convert to
+`Plan` at the CSV boundary so a bad DDL raises `AnalysisException`, not
+`PySparkException`. The facade binds the schema as a literal and packs options
+into an inline `create_map` (`functions_collections` imports this module, so the
+facade cannot import `create_map` back); the output name keeps Spark's
+first-argument form. `test_fnp_gen_1.py` retires its four `from_csv` marks; the
+foldable-schema s34 pin stays red until step 4 registers `schema_of_csv`.
+`cargo test -p repark-functions --lib`: 744 passed. s34 `from_csv` pins: 16
+passed, 1 xfailed (18c), 1 red (step-4 C10).
+pins: fnp-gen-1/C-002, C-003, C-004

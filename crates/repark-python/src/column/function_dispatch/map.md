@@ -30,7 +30,9 @@ unit — so a new family gets a child module and the parent's default arm falls 
   **Step 2 (run 18a):** the `json_tuple` arm embeds the same placeholder with two
   or more arguments; the facade builds it through `_GeneratorColumn` so the
   rewrite peels it like the other four.
-  pins: fnp-gen-1/C-002, C-003
+  **Step 3 (run 18a):** the `from_csv` arm builds `expr_fn::from_csv` over the
+  `csv` scalar kernel with two or more arguments.
+  pins: fnp-gen-1/C-002, C-003, C-004
 - `dispatch_spark.rs` — **DOOR-CONVERGE-1 (2026-09-15):** the converged scalar arms —
   `abs`, `hypot`, `bin`, `rint`, `base64`, `unbase64`, `size`, `cardinality`,
   `array_contains` / `array_has`, `ascii`, `length` / `character_length` /

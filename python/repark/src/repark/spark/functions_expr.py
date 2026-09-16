@@ -403,18 +403,15 @@ def from_csv(
     schema: Column | str,
     options: dict[str, str] | None = None,
 ) -> Column:
-    """Parse a CSV string column (PySpark ``functions.from_csv``).
-
-    E1: type pre-check only (``NOT_COLUMN_OR_STR`` on ``schema``). Happy path is loud-
-    unsupported until a CSV parse kernel lands.
-    """
-    _ = options
+    """Parse a CSV string column (PySpark ``functions.from_csv``)."""
     _require_column_or_str(col, "col")
-    _require_column_or_str(schema, "schema")
-
-    raise UnsupportedOperationException(
-        "functions.from_csv is not supported yet (CSV parse kernel deferred; disclosed E1)"
-    )
+    head = _column_argument(col)
+    text = lit(schema) if isinstance(schema, str) else _column_argument(schema)
+    name = f"from_csv({head.spark_wrap_display_part()})"
+    if options is None:
+        return _scalar("from_csv", head, text, display=name)
+    pairs = [item for pair in options.items() for item in (lit(pair[0]), lit(pair[1]))]
+    return _scalar("from_csv", head, text, _scalar("create_map", *pairs), display=name)
 
 
 def from_xml(

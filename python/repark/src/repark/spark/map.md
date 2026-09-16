@@ -271,6 +271,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   refusal naming `FNP-16-csv-xml-xpath` (owner ruling D-6, 2026-09-15), verbatim the
   same `{name} is reachable without a JVM …` string the armed parse-altitude refusal
   raises on both SQL doors. pins: fnp-gen-1/C-002, C-003
+  **FNP-GEN-1 step 3 (2026-09-16, run 18a):** `from_csv` stops refusing and binds
+  its schema string as a literal and its options dict as a `create_map` of literals
+  (built inline — `functions_collections` imports this module, so the facade cannot
+  import `create_map` back); the output name keeps Spark's first-argument form.
+  `schema_of_csv` stays a stub until step 4. pins: fnp-gen-1/C-003, C-004
   **ABS-EXPR-1 (2026-09-13):** `cbrt` and `nullif` are one native `_scalar` call each
   (`expr_fn::cbrt` / `expr_fn::nullif`); both `when(...)` rewrites embedded their child
   more than once per level (cbrt 3×, nullif 2×). `nvl2` stays a `when` — each child is

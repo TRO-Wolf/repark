@@ -5848,6 +5848,11 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   pins: logical-width-1/C-010, C-011, C-013, C-014, C-015, C-016
   **Step 2 (run 18a):** the four `json_tuple` marks retire with the kernel; the eight
   `from_csv` / `schema_of_csv` marks stay strict until steps 3–4.
+  **Step 3 (run 18a):** the four `from_csv` marks retire with the kernel; the two
+  `from_csv` value pins fix their row comparison to the file's own
+  `_check_schema_and_rows` shape (same fixture contract — the direct `to_pylist`
+  comparison could never pass). The `schema_of_csv` marks stay strict until
+  step 4.
 - [fnp_gen_1_s34_spark_oracle.json](fnp_gen_1_s34_spark_oracle.json) —
   **FNP-GEN-1 steps 3–4 (2026-09-16, run 18a):** the 80 cells (40 ansi pairs) over the
   six-row `(id, js, csvrow)` frame for `json_tuple`, `from_csv` and `schema_of_csv` on both

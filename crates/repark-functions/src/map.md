@@ -356,7 +356,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **FNP-GEN-1 step 2 (2026-09-16):** `generator::GeneratorRewrite` joins the tail
   of the list, after the closing `TypeCoercion`, so the rule sees post-coercion
   projections on both doors.
-  pins: fnp-win-1/C-004, C-008, fnp-gen-1/C-002, C-003
+  **Step 3 (run 18a):** `csv::fold::CsvFold` registers before `TypeCoercion`, so a
+  literal options map still carries its declared types when the rule reads the
+  parse mode; the `csv` module registers its UDFs in `lib.rs` beside the other
+  families.
+  pins: fnp-win-1/C-004, C-008, fnp-gen-1/C-002, C-003, C-004
 - `lib.rs` — crate-root stays at **182** under `check_lib_rs` (D-8 one-time
   FNP-WIN-1 grant; step 4 moved the `analyzer_rules()` home to
   `registration.rs`).

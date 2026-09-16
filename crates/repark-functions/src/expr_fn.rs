@@ -800,6 +800,10 @@ pub fn from_json(args: Vec<Expr>) -> Expr {
     call(crate::json::from_json_udf(), args)
 }
 
+pub fn from_csv(args: Vec<Expr>) -> Expr {
+    call(crate::csv::from_csv::from_csv_udf(), args)
+}
+
 #[must_use]
 pub fn array_insert(array: Expr, position: Expr, value: Expr) -> Expr {
     call(

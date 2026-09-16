@@ -3,7 +3,7 @@ use std::sync::Arc;
 use datafusion::logical_expr::ScalarUDF;
 use datafusion::prelude::SessionContext;
 
-mod ddl;
+pub(crate) mod ddl;
 mod decode;
 mod from_json;
 mod path;

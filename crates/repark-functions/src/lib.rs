@@ -15,6 +15,7 @@ pub use bool_decimal::install_shared_analyzer_rules;
 pub mod cardinality;
 pub mod collection;
 pub mod count_if;
+pub mod csv;
 pub mod datetime;
 pub mod decimal_cast;
 pub mod decimal_precision;
@@ -112,6 +113,9 @@ pub fn register_all(ctx: &SessionContext) {
         ctx.register_udf(udf.as_ref().clone());
     }
     for udf in collection::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
+    for udf in csv::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
     for udf in generator::functions() {

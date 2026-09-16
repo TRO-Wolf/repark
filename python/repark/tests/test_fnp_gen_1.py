@@ -240,12 +240,6 @@ def test_sql_door_json_tuple_invalid_json_answers_null(spark: ReparkSession) -> 
     _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_python_door_from_csv_parses_the_struct(spark: ReparkSession) -> None:
     """A DDL schema parses each row into a struct with PERMISSIVE bad-field NULLs."""
     cells = [cell for cell in _cells("from_csv", "python") if "FAILFAST" not in cell["expr"]]
@@ -258,17 +252,9 @@ def test_python_door_from_csv_parses_the_struct(spark: ReparkSession) -> None:
             )
         else:
             result = spark.sql(FRAME).select(F.from_csv("csvrow", schema))
-        assert result.schema.fields[0].dataType.simpleString() == cell["columns"][0]["type"]
-        assert result.schema.fields[0].nullable == cell["columns"][0]["nullable"]
-        assert result.to_arrow().to_pylist() == _want_rows(cell)
+        _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_sql_door_from_csv_parses_three_structs(spark: ReparkSession) -> None:
     """The SQL door parses the column struct, the ``sep`` struct and the bad-field struct."""
     (cell,) = _cells("from_csv", "sql")
@@ -276,15 +262,14 @@ def test_sql_door_from_csv_parses_three_structs(spark: ReparkSession) -> None:
     assert [field.dataType.simpleString() for field in result.schema.fields] == [
         column["type"] for column in cell["columns"]
     ]
-    assert result.to_arrow().to_pylist() == _want_rows(cell)
+    names = [field.name for field in result.schema.fields]
+    actual_rows = sorted(
+        ([_norm(row[name]) for name in names] for row in result.to_arrow().to_pylist()),
+        key=_row_key,
+    )
+    assert actual_rows == sorted(_want_rows(cell), key=_row_key)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_from_csv_struct_carries_arrow_int32_and_double(spark: ReparkSession) -> None:
     """The parsed struct is Arrow ``int32``/``string``/``float64`` on both doors."""
     want = pa.struct(
@@ -296,12 +281,6 @@ def test_from_csv_struct_carries_arrow_int32_and_double(spark: ReparkSession) ->
     assert door.to_arrow().schema.field("r").type == want
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_python_door_from_csv_failfast_raises_the_parse_error(spark: ReparkSession) -> None:
     """FAILFAST raises the parse error at execution, never the stub refusal."""
     (cell,) = [cell for cell in _cells("from_csv", "python") if "FAILFAST" in cell["expr"]]
