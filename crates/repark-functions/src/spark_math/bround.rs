@@ -244,7 +244,9 @@ macro_rules! impl_integral_bround {
                     if $ansi {
                         return Err(crate::spark_math::overflow_error("bround"));
                     }
-                    out.append_value(quotient.wrapping_mul(back) as $native);
+                    let wrapped = quotient.wrapping_mul(back);
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    out.append_value(wrapped as $native);
                 }
             }
         }
@@ -488,14 +490,13 @@ fn apply_decimal_bround(
         let divisor = POW10_I128[usize::try_from(shift).unwrap_or(38)];
         let quotient = round_half_even_quotient(values.value(row), divisor);
         let back = POW10_I128[usize::try_from(back_shift).unwrap_or(0)];
-        match quotient.checked_mul(back) {
-            Some(exact) => out.push(Some(exact)),
-            None => {
-                if ansi {
-                    return Err(crate::spark_math::overflow_error("bround"));
-                }
-                out.push(None);
+        if let Some(exact) = quotient.checked_mul(back) {
+            out.push(Some(exact));
+        } else {
+            if ansi {
+                return Err(crate::spark_math::overflow_error("bround"));
             }
+            out.push(None);
         }
     }
     let shaped =
@@ -535,7 +536,7 @@ mod tests {
     async fn bround_double_ties_even() {
         let ctx = ctx();
         for (sql, want) in [
-            ("SELECT bround(CAST(2.5 AS DOUBLE))", 2.0),
+            ("SELECT bround(CAST(2.5 AS DOUBLE))", 2.0f64),
             ("SELECT bround(CAST(3.5 AS DOUBLE), 0)", 4.0),
             ("SELECT bround(CAST(-2.5 AS DOUBLE), 0)", -2.0),
             ("SELECT bround(CAST(0.125 AS DOUBLE), 2)", 0.12),
@@ -543,7 +544,7 @@ mod tests {
         ] {
             let batches = batches_of(&ctx, sql).await;
             let values = batches[0].column(0).as_primitive::<Float64Type>().clone();
-            assert_eq!(values.value(0), want, "{sql}");
+            assert_eq!(values.value(0).to_bits(), want.to_bits(), "{sql}");
         }
     }
 

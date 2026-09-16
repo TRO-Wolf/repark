@@ -244,3 +244,32 @@ Unpinned choices: `UInt64` values hash by bit pattern; wide decimals hash
 their LE bytes; maps fold entries in storage order; structs fold fields;
 exotic scalars hash their string cast; `Float` widens through the double
 shape; NaN hashes by Java `doubleToLongBits` canonical bits.
+
+## Clippy fixup (run 18a, 2026-09-16) — `-D warnings` green
+
+`cargo clippy --locked --workspace --all-targets -- -D warnings
+-A clippy::disallowed_methods` (the `rust-clippy` gate) red 46 diagnostics
+across the unit's new kernels, all new-code lints: `cast_possible_truncation` /
+`cast_sign_loss` / `cast_possible_wrap` on Murmur bit mixes, decimal scale
+rendering and the bround legacy-wrap macro (intentional wraps use
+`cast_signed()` / `cast_unsigned()` or a per-site `#[allow]`, the
+`aggregate.rs:283` precedent); `too_many_lines` splits `hash_array_value`
+into `hash_text_value` / `hash_time_value` and the float arms out of
+`render_with_scale`; `single_match`, `map_unwrap_or`, `useless_conversion`,
+`float_cmp_strict` (bround ties go `to_bits`) and `unreadable_literal`
+repaired. `dispatch_spark.rs::call_scalar_expr` over 100 lines splits the
+math arms into `math_expr`, mirroring `sequence_expr`. No behavior change:
+`cargo test -p repark-functions --lib` stays 742 passed before and after.
+
+## Step 5 (run 18a) — `format_number` evidence
+
+Kernel `crates/repark-functions/src/string/format_number.rs` (new submodule of
+`string.rs`, the R-17a-19 shape), registered via `string::functions()`, facade
+arm through the door-converged list + `dispatch_spark.rs`, thin facade
+`format_number` in `functions_expr.py` (the `d` scale rides `lit_indices`) +
+`FACADE_ONLY_ROUTINE_NAMES` drop.
+`test_fnp_math_1.py -k format_number` → 7 fixture cells green on both doors
+under both ANSI settings; the kernel's Rust test beside
+`string/format_number.rs` passes (`string::` suite 11 passed, mask lands
+next); comment-ban grep over the diff empty; `functions_expr.py` baseline
+ratchets 2195 → 2192 in `check_lib_py.py` and the CAP-1 mirror.

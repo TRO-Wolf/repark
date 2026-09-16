@@ -81,12 +81,13 @@ fn fmix(hash: u32, length: u32) -> u32 {
 }
 
 fn hash_int(value: i32, seed: u32) -> u32 {
-    fmix(mix(seed, value as u32), 4)
+    fmix(mix(seed, value.cast_unsigned()), 4)
 }
 
 fn hash_long(value: i64, seed: u32) -> u32 {
-    let low = value as u32;
-    let high = ((value >> 32) as i32) as u32;
+    let bits = value.cast_unsigned();
+    #[allow(clippy::cast_possible_truncation)]
+    let (low, high) = (bits as u32, (bits >> 32) as u32);
     fmix(mix(mix(seed, low), high), 8)
 }
 
@@ -100,6 +101,7 @@ fn hash_bytes_murmur(data: &[u8], seed: u32) -> u32 {
     for byte in &data[full..] {
         hash = mix(hash, u32::from(*byte));
     }
+    #[allow(clippy::cast_possible_truncation)]
     fmix(hash, data.len() as u32)
 }
 
@@ -107,9 +109,9 @@ fn hash_double(value: f64, seed: u32) -> u32 {
     if value == 0.0 {
         hash_long(0, seed)
     } else if value.is_nan() {
-        hash_long(0x7ff8_0000_0000_0000u64 as i64, seed)
+        hash_long(0x7ff8_0000_0000_0000u64.cast_signed(), seed)
     } else {
-        hash_long(value.to_bits() as i64, seed)
+        hash_long(value.to_bits().cast_signed(), seed)
     }
 }
 
@@ -128,79 +130,8 @@ fn plan_hash(arg_types: &[DataType]) -> Result<()> {
     Ok(())
 }
 
-fn hash_array_value(array: &ArrayRef, row: usize, seed: u32) -> Result<u32> {
+fn hash_text_value(array: &ArrayRef, row: usize, seed: u32) -> Result<u32> {
     match array.data_type() {
-        DataType::Null => Ok(seed),
-        DataType::Boolean => {
-            let values = array.as_boolean();
-            Ok(hash_int(i32::from(values.value(row)), seed))
-        }
-        DataType::Int8 => {
-            let values = array.as_primitive::<datafusion::arrow::datatypes::Int8Type>();
-            Ok(hash_int(i32::from(values.value(row)), seed))
-        }
-        DataType::Int16 => {
-            let values = array.as_primitive::<datafusion::arrow::datatypes::Int16Type>();
-            Ok(hash_int(i32::from(values.value(row)), seed))
-        }
-        DataType::Int32 => {
-            let values = array.as_primitive::<Int32Type>();
-            Ok(hash_int(values.value(row), seed))
-        }
-        DataType::Int64 => {
-            let values = array.as_primitive::<datafusion::arrow::datatypes::Int64Type>();
-            Ok(hash_long(values.value(row), seed))
-        }
-        DataType::UInt8 => {
-            let values = array.as_primitive::<datafusion::arrow::datatypes::UInt8Type>();
-            Ok(hash_int(i32::from(values.value(row)), seed))
-        }
-        DataType::UInt16 => {
-            let values = array.as_primitive::<datafusion::arrow::datatypes::UInt16Type>();
-            Ok(hash_int(i32::from(values.value(row)), seed))
-        }
-        DataType::UInt32 => {
-            let values = array.as_primitive::<datafusion::arrow::datatypes::UInt32Type>();
-            Ok(hash_int(values.value(row) as i32, seed))
-        }
-        DataType::UInt64 => {
-            let values = array.as_primitive::<datafusion::arrow::datatypes::UInt64Type>();
-            Ok(hash_long(values.value(row) as i64, seed))
-        }
-        DataType::Float32 => {
-            let values = array.as_primitive::<datafusion::arrow::datatypes::Float32Type>();
-            Ok(hash_float(values.value(row), seed))
-        }
-        DataType::Float64 => {
-            let values = array.as_primitive::<datafusion::arrow::datatypes::Float64Type>();
-            Ok(hash_double(values.value(row), seed))
-        }
-        DataType::Decimal32(_, _) => {
-            let values = array.as_primitive::<Decimal32Type>();
-            Ok(hash_decimal_compact(i64::from(values.value(row)), seed))
-        }
-        DataType::Decimal64(_, _) => {
-            let values = array.as_primitive::<Decimal64Type>();
-            Ok(hash_decimal_compact(values.value(row), seed))
-        }
-        DataType::Decimal128(_, _) => {
-            let values = array.as_primitive::<Decimal128Type>();
-            match i64::try_from(values.value(row)) {
-                Ok(compact) => Ok(hash_decimal_compact(compact, seed)),
-                Err(_) => Ok(hash_bytes_murmur(&values.value(row).to_le_bytes(), seed)),
-            }
-        }
-        DataType::Decimal256(_, _) => {
-            let values = array
-                .as_any()
-                .downcast_ref::<Decimal256Array>()
-                .ok_or_else(|| {
-                    datafusion::common::DataFusionError::Execution(
-                        "hash needs decimal256 values".to_owned(),
-                    )
-                })?;
-            Ok(hash_bytes_murmur(&values.value(row).to_le_bytes(), seed))
-        }
         DataType::Utf8 => {
             let values = array
                 .as_any()
@@ -256,7 +187,7 @@ fn hash_array_value(array: &ArrayRef, row: usize, seed: u32) -> Result<u32> {
                 })?;
             Ok(hash_bytes_murmur(values.value(row), seed))
         }
-        DataType::BinaryView => {
+        _ => {
             let values = array
                 .as_any()
                 .downcast_ref::<datafusion::arrow::array::BinaryViewArray>()
@@ -267,20 +198,28 @@ fn hash_array_value(array: &ArrayRef, row: usize, seed: u32) -> Result<u32> {
                 })?;
             Ok(hash_bytes_murmur(values.value(row), seed))
         }
+    }
+}
+
+fn hash_time_value(array: &ArrayRef, row: usize, seed: u32) -> u32 {
+    match array.data_type() {
         DataType::Date32 => {
             let values = array.as_primitive::<datafusion::arrow::datatypes::Date32Type>();
-            Ok(hash_int(values.value(row), seed))
+            hash_int(values.value(row), seed)
         }
         DataType::Date64 => {
             let values = array.as_primitive::<datafusion::arrow::datatypes::Date64Type>();
-            Ok(hash_int(
-                values.value(row).div_euclid(86_400_000) as i32,
-                seed,
-            ))
+            #[allow(clippy::cast_possible_truncation)]
+            let days = values.value(row).div_euclid(86_400_000) as i32;
+            hash_int(days, seed)
         }
-        DataType::Timestamp(unit, _) => {
+        _ => {
             use datafusion::arrow::datatypes::{
                 TimestampMillisecondType, TimestampNanosecondType, TimestampSecondType,
+            };
+            let unit = match array.data_type() {
+                DataType::Timestamp(unit, _) => unit,
+                _ => &TimeUnit::Microsecond,
             };
             let micros = match unit {
                 TimeUnit::Second => {
@@ -300,17 +239,98 @@ fn hash_array_value(array: &ArrayRef, row: usize, seed: u32) -> Result<u32> {
                     values.value(row).div_euclid(1_000)
                 }
             };
-            Ok(hash_long(micros, seed))
+            hash_long(micros, seed)
+        }
+    }
+}
+
+fn hash_array_value(array: &ArrayRef, row: usize, seed: u32) -> Result<u32> {
+    match array.data_type() {
+        DataType::Null => Ok(seed),
+        DataType::Boolean => {
+            let values = array.as_boolean();
+            Ok(hash_int(i32::from(values.value(row)), seed))
+        }
+        DataType::Int8 => {
+            let values = array.as_primitive::<datafusion::arrow::datatypes::Int8Type>();
+            Ok(hash_int(i32::from(values.value(row)), seed))
+        }
+        DataType::Int16 => {
+            let values = array.as_primitive::<datafusion::arrow::datatypes::Int16Type>();
+            Ok(hash_int(i32::from(values.value(row)), seed))
+        }
+        DataType::Int32 => {
+            let values = array.as_primitive::<Int32Type>();
+            Ok(hash_int(values.value(row), seed))
+        }
+        DataType::Int64 => {
+            let values = array.as_primitive::<datafusion::arrow::datatypes::Int64Type>();
+            Ok(hash_long(values.value(row), seed))
+        }
+        DataType::UInt8 => {
+            let values = array.as_primitive::<datafusion::arrow::datatypes::UInt8Type>();
+            Ok(hash_int(i32::from(values.value(row)), seed))
+        }
+        DataType::UInt16 => {
+            let values = array.as_primitive::<datafusion::arrow::datatypes::UInt16Type>();
+            Ok(hash_int(i32::from(values.value(row)), seed))
+        }
+        DataType::UInt32 => {
+            let values = array.as_primitive::<datafusion::arrow::datatypes::UInt32Type>();
+            Ok(hash_int(values.value(row).cast_signed(), seed))
+        }
+        DataType::UInt64 => {
+            let values = array.as_primitive::<datafusion::arrow::datatypes::UInt64Type>();
+            Ok(hash_long(values.value(row).cast_signed(), seed))
+        }
+        DataType::Float32 => {
+            let values = array.as_primitive::<datafusion::arrow::datatypes::Float32Type>();
+            Ok(hash_float(values.value(row), seed))
+        }
+        DataType::Float64 => {
+            let values = array.as_primitive::<datafusion::arrow::datatypes::Float64Type>();
+            Ok(hash_double(values.value(row), seed))
+        }
+        DataType::Decimal32(_, _) => {
+            let values = array.as_primitive::<Decimal32Type>();
+            Ok(hash_decimal_compact(i64::from(values.value(row)), seed))
+        }
+        DataType::Decimal64(_, _) => {
+            let values = array.as_primitive::<Decimal64Type>();
+            Ok(hash_decimal_compact(values.value(row), seed))
+        }
+        DataType::Decimal128(_, _) => {
+            let values = array.as_primitive::<Decimal128Type>();
+            match i64::try_from(values.value(row)) {
+                Ok(compact) => Ok(hash_decimal_compact(compact, seed)),
+                Err(_) => Ok(hash_bytes_murmur(&values.value(row).to_le_bytes(), seed)),
+            }
+        }
+        DataType::Decimal256(_, _) => {
+            let values = array
+                .as_any()
+                .downcast_ref::<Decimal256Array>()
+                .ok_or_else(|| {
+                    datafusion::common::DataFusionError::Execution(
+                        "hash needs decimal256 values".to_owned(),
+                    )
+                })?;
+            Ok(hash_bytes_murmur(&values.value(row).to_le_bytes(), seed))
+        }
+        DataType::Utf8
+        | DataType::LargeUtf8
+        | DataType::Utf8View
+        | DataType::Binary
+        | DataType::LargeBinary
+        | DataType::BinaryView => hash_text_value(array, row, seed),
+        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _) => {
+            Ok(hash_time_value(array, row, seed))
         }
         DataType::List(_)
         | DataType::LargeList(_)
         | DataType::FixedSizeList(_, _)
         | DataType::Struct(_)
         | DataType::Map(_, _) => hash_nested_value(array, row, seed),
-        DataType::Dictionary(_, _) => {
-            let shaped = cast(array.as_ref(), &DataType::Utf8)?;
-            hash_array_value(&shaped, row, seed)
-        }
         _ => {
             let shaped = cast(array.as_ref(), &DataType::Utf8)?;
             hash_array_value(&shaped, row, seed)
@@ -331,7 +351,7 @@ fn hash_nested_value(array: &ArrayRef, row: usize, seed: u32) -> Result<u32> {
         }
         DataType::FixedSizeList(_, _) => {
             let lists = datafusion::arrow::array::as_fixed_size_list_array(array.as_ref());
-            let width = lists.value_length() as usize;
+            let width = usize::try_from(lists.value_length()).unwrap_or(0);
             let values = lists.values();
             let mut hash = seed;
             for index in 0..width {
@@ -366,7 +386,9 @@ fn hash_nested_value(array: &ArrayRef, row: usize, seed: u32) -> Result<u32> {
             let offsets = maps.offsets();
             let entries = maps.entries();
             let mut hash = seed;
-            for index in offsets[row] as usize..offsets[row + 1] as usize {
+            let start = usize::try_from(offsets[row]).unwrap_or(0);
+            let end = usize::try_from(offsets[row + 1]).unwrap_or(0);
+            for index in start..end {
                 if !entries.is_null(index) {
                     for column in entries.columns() {
                         if !column.is_null(index) {
@@ -452,7 +474,7 @@ impl ScalarUDFImpl for SparkHash {
         for array in &arrays {
             hash_column_values(array, &mut hashes)?;
         }
-        let out: Vec<i32> = hashes.iter().map(|hash| *hash as i32).collect();
+        let out: Vec<i32> = hashes.iter().map(|hash| (*hash).cast_signed()).collect();
         Ok(ColumnarValue::Array(Arc::new(
             datafusion::arrow::array::Int32Array::from(out),
         )))
@@ -523,23 +545,23 @@ mod tests {
     #[tokio::test]
     async fn hash_answers_fixture_ints() {
         let ctx = ctx();
-        assert_eq!(int_values(&ctx, "SELECT hash(1)").await, vec![-559580957]);
+        assert_eq!(int_values(&ctx, "SELECT hash(1)").await, vec![-559_580_957]);
         assert_eq!(
             int_values(&ctx, "SELECT hash(CAST(1 AS BIGINT))").await,
-            vec![-1712319331]
+            vec![-1_712_319_331]
         );
         assert_eq!(int_values(&ctx, "SELECT hash(NULL)").await, vec![42]);
         assert_eq!(
             int_values(&ctx, "SELECT hash(true)").await,
-            vec![-559580957]
+            vec![-559_580_957]
         );
         assert_eq!(
             int_values(&ctx, "SELECT hash(CAST(0.0 AS DOUBLE))").await,
-            vec![-1670924195]
+            vec![-1_670_924_195]
         );
         assert_eq!(
             int_values(&ctx, "SELECT hash(CAST(-0.0 AS DOUBLE))").await,
-            vec![-1670924195]
+            vec![-1_670_924_195]
         );
     }
 

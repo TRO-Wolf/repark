@@ -890,6 +890,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the float-stringify rule for float-element lists) joins through the same
   stack formatter; string and other leaves mirror the upstream kernel.
   pins: java-double-str-1/C-010
+  **FNP-MATH-1 step 5 (2026-09-16, run 18a):** `string/format_number.rs` joins
+  `functions()` with the `format_number` grouping renderer. pins: fnp-math-1/C-002, C-003
   **DOOR-CONVERGE-2 (2026-09-15):** one UDF, three arms by argument family — all-array args
   widen through `collection/concat_array.rs` (common element type, OR `containsNull`, NULL
   array → NULL row, `DATA_DIFF_TYPES` on a non-array sibling); any-`Binary` args stay
@@ -931,7 +933,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `spark_hash.rs` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):** Spark Murmur3
   `hash` kernel (seed 42; per-type `mix`/`fmix` shapes verified against the fixture;
   strings as LE words with per-byte tails; arrays/structs/maps fold; always `int`,
-  never NULL) with its Rust tests. pins: fnp-math-1/C-002, C-003, C-005
+  never NULL) with its Rust tests. Text/binary arms live in `hash_text_value`,
+  date/time arms in `hash_time_value` (clippy `too_many_lines` split, same shapes).
+  pins: fnp-math-1/C-002, C-003, C-005
 - `spark_reverse.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `reverse`
   (overwrites the string-only DataFusion kernel): arrays reverse element order with the
   element type, `containsNull` and nullability kept; strings reverse by character; untyped

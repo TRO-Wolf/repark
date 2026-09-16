@@ -48,6 +48,9 @@ ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): two more shrink-only ratchets be
 
 ICE-WRITE-OPTIONS-1 run 22b rebase over #682 / #687 / #678 (2026-09-18): `check_lib_py.py` sets `writer_readwriter.py` 1102 → 1095 (main's column-list and `static_overwrite` writer merged with this unit's options funnel; the static flag rides the options native, Q-22b-WO-1) with the CAP-1 mirror; the mirror keeps this unit's `append.rs` 1819 and main's `merge/mod.rs` 1773. pins: ice-write-options-1/C-014
 
+FNP-MATH-1 step 5 (2026-09-16, run 18a): `check_lib_py.py` ratchets
+`functions_expr.py` 2195 → 2192 (the `format_number` destub is net-negative)
+with the CAP-1 mirror. pins: fnp-math-1/C-001, C-002, C-003
 FNP-MATH-1 step 4 (2026-09-16, run 18a): `check_lib_py.py` ratchets
 `functions_expr.py` 2198 → 2195 (the `hash` destub is net-negative) with the
 CAP-1 mirror. pins: fnp-math-1/C-001, C-005

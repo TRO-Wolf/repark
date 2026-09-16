@@ -8,7 +8,8 @@
 
 - [`bround.rs`](bround.rs) — Spark `bround` HALF_EVEN kernel (double, decimal,
   integral; negative scale; Spark result types and display names) with its Rust
-  tests. pins: fnp-math-1/C-002, C-003
+  tests. The legacy-wrap `as` cast in `impl_integral_bround` is intentional
+  (Spark wraps on overflow; ANSI raises first). pins: fnp-math-1/C-002, C-003
 - [`conv.rs`](conv.rs) — Spark `NumberConverter` kernel (signed output on negative
   `toBase`, stop-at-invalid-digit parsing, out-of-range bases answer NULL, u64
   overflow saturates or raises `[ARITHMETIC_OVERFLOW]` from the ANSI carrier)
