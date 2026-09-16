@@ -563,7 +563,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `applyInPandasWithState`, `transformWithState`, and `transformWithStateInPandas` bind on the
   class as module-function aliases (one line each); `_apply_in_pandas_arrow_batches` moved to
   `grouped_arrow.py` (1238 → 1169, mirrored in the CAP-1 test and `check_lib_py.py`).
-  pins: dfcore-1/C-006, C-007, grouped-surface-1/C-007
+  LOGICAL-WIDTH-1 round 3 (2026-09-16): the zero-arg `sum`/`avg`/`mean`/`min`/`max`
+  keep-set (`core._is_numeric_type_key`) covers the narrow widths
+  (byte/short/float), matching Spark's NumericType.
+  pins: dfcore-1/C-006, C-007, grouped-surface-1/C-007; pins: logical-width-1/C-013
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
   DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the module keeps the show

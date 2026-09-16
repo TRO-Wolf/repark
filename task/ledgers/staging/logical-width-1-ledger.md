@@ -112,6 +112,37 @@ Note (not a clause): `toPandas` dtypes unmeasured — Spark cell `todf_toPandas`
   display-overlay name matching — name binding, never a value — one ledger line, no move.
   Behaviour frozen: cells `fillna_width` / `fillna_values` and every fillna pin stay green.
   Touch nothing outside A-1 this round.
+- R-13 = R-18b-5 (orchestrator, round 3, binding): L-301 CONFIRMED — zero-arg
+  `groupBy(...).sum()/avg()/mean()/min()/max()` drop smallint/tinyint/float because
+  `_is_numeric_type_key` (`core.py`) knows only int/long/double/decimal. Spark includes
+  every NumericType (cells `grouped_sum_noargs`, `grouped_avg_noargs`,
+  `grouped_mean_noargs`, `grouped_min_noargs`, `grouped_max_noargs`: sum(smallint)→bigint,
+  sum(float)→double, min/max keep the width, avg→double). Fix the predicate and pin all
+  five cells red-first. Then grep every other Python and Rust consumer comparing a
+  logical type key against a literal set; any consumer mis-branching on
+  byte/short/float/binary is fixed this round with a cell pin (cells `describe_narrow`,
+  `summary_narrow`, `na_fill_float_col`, `na_replace_narrow` measured, matching on this
+  branch — pinned as regression guards). Every checked consumer listed in §Round-3 sweep.
+  Predicates that are type decisions the SQL door could own stay narrow with a Rust-first
+  roll-call line; the move to Rust is its own card.
+- R-14 = R-18b-6 (orchestrator, round 3, binding): L-302 CONFIRMED and NARROWED — Spark
+  types `f*2`, `f*i`, `f+1`, `f-1` double and computes them widened to double; repark
+  computes Float32. Values coincide for `*`/`-` on the probe but DIFFER for `f + 1`
+  (Spark 2.100000023841858, repark 2.0999999046325684) on both doors (cells
+  `float_arith_values`, `float_arith_sql`). Pre-existing engine coercion divergence, owned
+  by the SQL/type-coercion lane (run 18c), not a display fix. `ARITH-FLOAT-INT-1` stays
+  BACKLOG but made exact: its pin asserts today's dtypes AND today's `fplus` value
+  against the two Spark cells (red when fixed), both doors; the registry row names the
+  value divergence, the cells, and the likely home (binary arithmetic coercion: float
+  with an integral operand promotes to double).
+- R-15 = R-18b-8 (orchestrator, round 3, binding): L-303 RESOLVED — Spark
+  `to(StructType([StructField("b", StringType())]))` over `b binary` answers `'hi'`
+  (cell `to_string_from_binary`; `cast_string_from_binary` likewise). The pin points at
+  the cell; the DF-TO-BINARY-1 row's "tree-measured" sentence is updated to cite it.
+- R-16 = R-18b-7 (orchestrator, round 3, recorded): Rust perf PASS and Python perf PASS
+  (P3s only — ledger residue rows, citing
+  `/tmp/oc-worker/run18b/reviews/perf-lw-rust-report.md` and `perf-lw-py-report.md`).
+  No product change follows; recorded here so the residue rows are not re-litigated.
 
 ## Rust-first roll-call
 
@@ -124,6 +155,7 @@ Note (not a clause): `toPandas` dtypes unmeasured — Spark cell `todf_toPandas`
 | fillna texts (`coalesce(...)` / `CAST(... AS ...)` wrapper strings) | Rust binding renders cast text via `wrap_cast`; Python composes `coalesce(...)` from child parts (plumbing) | Byte-identity with round-1 proven by the /tmp differential probe, not by review. |
 | `DataFrame.schema` key decode (`short`/`byte`/…) | already in `core.py` (Python, pre-existing) | Name/shape plumbing over `logical_schema_fields`. |
 | `F.lit(bytes)` refusal text | `functions.py` (run 18a, untouched) | API plumbing owned by another lane; BACKLOG row. |
+| Grouped zero-arg numeric keep-set | `core.py::_is_numeric_type_key` (Python, round 3 per R-18b-5) | Single-caller display keep-set over LogicalKey tokens, not an engine rule; the SQL door owns no grouped-shortcut path, so a Rust move is its own card. |
 
 ## Red-first
 
@@ -267,5 +299,38 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_logical_width_1.py]
   complete: true
 ```
+
+## Round 3 (2026-09-16, R-18b-5..8) — proposition deltas
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-013 | Zero-arg `groupBy(g).sum()/avg()/mean()/min()/max()` on the R3 probe frame keep sh/ti/f with Spark's columns, dtypes and values (cells `grouped_sum_noargs`, `grouped_avg_noargs`, `grouped_mean_noargs`, `grouped_min_noargs`, `grouped_max_noargs`). | Five pins from the five cells, red-first on this head. | **OPEN** | Red confirmed 2026-09-16 on this head (narrow measures dropped; `sum` answers only `g,sum(g),sum(d)`). |
+| C-014 | No other logical-key consumer mis-branches on byte/short/float/binary; the sweep list names every checked consumer and each fix carries a cell pin. | §Round-3 sweep + regression pins from cells `describe_narrow`, `summary_narrow`, `na_fill_float_col`, `na_replace_narrow`. | **OPEN** | Sweep runs after the C-013 fix. |
+| C-015 | `ARITH-FLOAT-INT-1` is exact: its pin asserts today's dtypes AND today's `fplus` value against cells `float_arith_values` + `float_arith_sql` (both doors), red when the coercion lands; the registry row names the value divergence and the likely home. | Exact BACKLOG pin + registry row edit. | **OPEN** | Spark `fplus` 2.100000023841858 vs tree 2.0999999046325684; `*`/`-` values coincide. |
+| C-016 | The `to(string)`-over-binary pin points at cell `to_string_from_binary` and the DF-TO-BINARY-1 "tree-measured" sentence cites it. | Pin + registry row edit. | **OPEN** | Branch already answers `'hi'`; cell `cast_string_from_binary` likewise matches. |
+
+## Round-3 sweep
+
+Every Python and Rust consumer comparing a logical type key against a literal set
+(2026-09-16, this head; critic §1 re-attacked plus wider greps):
+
+| Consumer | Verdict |
+|---|---|
+| `core.py::_is_numeric_type_key` (only caller: `joins_columns._numeric_column_names`) | **FIXED** — now byte/short/int/long/float/double/decimal; LogicalKey vocabulary only, deliberately (no caller passes Describe spellings). |
+| `core.py::DataFrame.schema` key decode | checked, no change — arms for all four keys present. |
+| `core.py::explode_outer` element type | checked, no change — Describe surface, both vocabularies mapped. |
+| `core.py::repartitionById` integer check | checked, no change — integer family only, correct by contract. |
+| `joins_columns.py::_pivot_column_engine_type` | checked, no change — passes the key through; probe works. |
+| `actions_export.py::_type_keys` + overlay `key_to_cls` | checked, no change — byte/short/float arms present (R-12). |
+| `replace_expr.py` family switch + `lit(value).cast(type_key)` | checked, no change — physical Arrow family; cell `na_replace_narrow` matches. |
+| `plan_collapse.py::_G2_RANGE_NUMERIC_DTYPES` | checked, no change — both vocabularies. |
+| `plan_collapse.py` element-debug mapping | checked, no change — both vocabularies. |
+| `statistics.py` describe/summary (`numeric_types` tuple) | checked, no change — schema DataTypes incl. Byte/Short/Float; cells `describe_narrow`, `summary_narrow` match. |
+| `polars_cells.py::_style_type_label` | checked, no change — both vocabularies in both styles. |
+| `_type_table.py::_descriptor_to_datatype` | checked, no change — descriptor kinds, not logical keys. |
+| `reader_support.py::_CSV_TYPED_DTYPES` / leftover candidates | checked, no change — CSV-infer path over Describe spellings; typed-schema reads report correctly (critic probe). |
+| Rust `expr_build` / `type_bridge` / `type_table/parse` / `alter` key matches | checked, no change — both vocabularies everywhere. |
+| Rust `na_fill.rs`, `collect_rows.rs`, display/construct | checked, no change — Arrow-physical, no logical-key keep-sets. |
+| `na.drop`, `union`/`unionByName`, `toPandas`, UDF returns, cache, writers | checked, no change — no type-key branch (critic probes). |
 
 VERDICT: 12 clauses, 12 PROVEN, 0 OPEN, 0 REJECTED.

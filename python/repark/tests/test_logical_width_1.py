@@ -320,3 +320,84 @@ def test_typename_spellings_logical_width_1() -> None:
     assert BinaryType().simpleString() == result["BinaryType"]
     assert DoubleType().simpleString() == result["DoubleType"]
     assert IntegerType().simpleString() == result["IntegerType"]
+
+
+_R3_ROWS = [
+    (1, 3, 1, 1.5, 2.5, b"x"),
+    (1, 4, 2, 2.25, 0.5, b"y"),
+]
+_R3_DDL = "g int, sh smallint, ti tinyint, f float, d double, b binary"
+
+
+@pytest.fixture
+def narrow_mixed(spark: ReparkSession) -> object:
+    """Two-row frame with smallint/tinyint/float measures plus wide controls."""
+    return spark.createDataFrame(_R3_ROWS, _R3_DDL)
+
+
+def _assert_cell_frame(frame: object, name: str) -> None:
+    """Assert columns, dtypes and collected rows against the named Spark cell."""
+    result = _cell(name)["result"]
+    assert frame.columns == result["columns"]
+    assert frame.dtypes == [tuple(pair) for pair in result["dtypes"]]
+    assert sorted(repr(tuple(row)) for row in frame.collect()) == sorted(result["rows"])
+
+
+def test_grouped_sum_noargs_keeps_narrow_widths_logical_width_1(
+    narrow_mixed: object,
+) -> None:
+    """pins: logical-width-1/C-013 — cell grouped_sum_noargs."""
+    _assert_cell_frame(narrow_mixed.groupBy("g").sum(), "grouped_sum_noargs")
+
+
+def test_grouped_avg_noargs_keeps_narrow_widths_logical_width_1(
+    narrow_mixed: object,
+) -> None:
+    """pins: logical-width-1/C-013 — cell grouped_avg_noargs."""
+    _assert_cell_frame(narrow_mixed.groupBy("g").avg(), "grouped_avg_noargs")
+
+
+def test_grouped_mean_noargs_keeps_narrow_widths_logical_width_1(
+    narrow_mixed: object,
+) -> None:
+    """pins: logical-width-1/C-013 — cell grouped_mean_noargs."""
+    _assert_cell_frame(narrow_mixed.groupBy("g").mean(), "grouped_mean_noargs")
+
+
+def test_grouped_min_noargs_keeps_narrow_widths_logical_width_1(
+    narrow_mixed: object,
+) -> None:
+    """pins: logical-width-1/C-013 — cell grouped_min_noargs."""
+    _assert_cell_frame(narrow_mixed.groupBy("g").min(), "grouped_min_noargs")
+
+
+def test_grouped_max_noargs_keeps_narrow_widths_logical_width_1(
+    narrow_mixed: object,
+) -> None:
+    """pins: logical-width-1/C-013 — cell grouped_max_noargs."""
+    _assert_cell_frame(narrow_mixed.groupBy("g").max(), "grouped_max_noargs")
+
+
+def test_describe_narrow_matches_spark_logical_width_1(narrow_mixed: object) -> None:
+    """pins: logical-width-1/C-014 — cell describe_narrow (regression guard)."""
+    _assert_cell_frame(narrow_mixed.describe(), "describe_narrow")
+
+
+def test_summary_narrow_matches_spark_logical_width_1(narrow_mixed: object) -> None:
+    """pins: logical-width-1/C-014 — cell summary_narrow (regression guard)."""
+    _assert_cell_frame(
+        narrow_mixed.select("sh", "ti", "f").summary("count", "min", "max"),
+        "summary_narrow",
+    )
+
+
+def test_fillna_float_keeps_narrow_widths_logical_width_1(spark: ReparkSession) -> None:
+    """pins: logical-width-1/C-014 — cell na_fill_float_col (regression guard)."""
+    frame = spark.createDataFrame([(None, None)], "f float, sh smallint")
+    _assert_cell_frame(frame.fillna(1.7), "na_fill_float_col")
+
+
+def test_replace_narrow_matches_spark_logical_width_1(spark: ReparkSession) -> None:
+    """pins: logical-width-1/C-014 — cell na_replace_narrow (regression guard)."""
+    frame = spark.createDataFrame([(1, 1.5)], "sh smallint, f float")
+    _assert_cell_frame(frame.replace(1, 9), "na_replace_narrow")

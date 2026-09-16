@@ -5824,15 +5824,22 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `sql_cast` / `sql_describe` / `arith_width` / `agg_width` / `union_width` / `fillna_width` /
   `fillna_values` / `lit_width` / `schema_json` / `write_read_parquet` / `iceberg_schema` /
   `iceberg_desc` / `iceberg_rows` / `ddl_collect_types` / `ddl_collect_values` /
-  `todf_toPandas` / `typename_strings`). Every pin in `test_logical_width_1.py` names its cell.
-  pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  `todf_toPandas` / `typename_strings`), plus the round-3 grouped-keep-set recording of
+  `/tmp/oc-worker/run18b/oracle/probe_lw_r3.py` (9 cells: `grouped_sum_noargs` /
+  `grouped_avg_noargs` / `grouped_mean_noargs` / `grouped_min_noargs` /
+  `grouped_max_noargs` / `describe_narrow` / `summary_narrow` / `na_fill_float_col` /
+  `na_replace_narrow`). Every pin in `test_logical_width_1.py` names its cell.
+  pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009;
+  pins: logical-width-1/C-013, C-014
 - `test_logical_width_1.py` + `facade_logical_width_oracle.json` —
-  **LOGICAL-WIDTH-1 (2026-09-16):** Spark's logical widths on both doors, 20 pins driven
+  **LOGICAL-WIDTH-1 (2026-09-16):** Spark's logical widths on both doors, 29 pins driven
   from the named live-PySpark cells — DDL-string / StructType / inference / nested /
   collect guards, the SQL door, Python cast, arithmetic (plus the `ARITH-FLOAT-INT-1`
-  float-by-int divergence pin), aggregates, union, fillna widths and values, the float-fill
-  width invariant, parquet and Iceberg round trips (narrow ints widen to int at the
-  boundary, matching Spark), the `schema.json()` bytes, the `DF-LIT-BINARY-1` lit(bytes)
-  refusal guard, the `cast_schema` BL-11 guard, and the typename spellings.
+  float-by-int divergence pin), aggregates, zero-arg grouped sum/avg/mean/min/max over
+  the narrow widths, union, fillna widths and values, the float-fill width invariant,
+  parquet and Iceberg round trips (narrow ints widen to int at the boundary, matching
+  Spark), the `schema.json()` bytes, the `DF-LIT-BINARY-1` lit(bytes) refusal guard,
+  the `cast_schema` BL-11 guard, the typename spellings, and the
+  describe/summary/fillna-float/replace-narrow regression guards.
   pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009;
-  pins: logical-width-1/C-010, C-011
+  pins: logical-width-1/C-010, C-011, C-013, C-014

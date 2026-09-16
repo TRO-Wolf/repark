@@ -180,6 +180,51 @@
    "simpleString": "struct<sh:smallint,ti:tinyint,f:float,d:double,b:binary,s:string,i:int,l:bigint>"
   }
  },
+ "describe_narrow": {
+  "result": {
+   "columns": [
+    "summary",
+    "g",
+    "sh",
+    "ti",
+    "f",
+    "d"
+   ],
+   "dtypes": [
+    [
+     "summary",
+     "string"
+    ],
+    [
+     "g",
+     "string"
+    ],
+    [
+     "sh",
+     "string"
+    ],
+    [
+     "ti",
+     "string"
+    ],
+    [
+     "f",
+     "string"
+    ],
+    [
+     "d",
+     "string"
+    ]
+   ],
+   "rows": [
+    "('count', '2', '2', '2', '2', '2')",
+    "('max', '1', '4', '2', '2.25', '2.5')",
+    "('mean', '1.0', '3.5', '1.5', '1.875', '1.5')",
+    "('min', '1', '3', '1', '1.5', '0.5')",
+    "('stddev', '0.0', '0.7071067811865476', '0.7071067811865476', '0.5303300858899106', '1.4142135623730951')"
+   ]
+  }
+ },
  "fillna_values": {
   "result": [
    [
@@ -262,6 +307,211 @@
    ],
    "printSchema": "root\n |-- sh: short (nullable = true)\n |-- ti: byte (nullable = true)\n |-- f: float (nullable = false)\n |-- d: double (nullable = false)\n |-- b: binary (nullable = true)\n |-- s: string (nullable = true)\n |-- i: integer (nullable = true)\n |-- l: long (nullable = true)\n\n",
    "simpleString": "struct<sh:smallint,ti:tinyint,f:float,d:double,b:binary,s:string,i:int,l:bigint>"
+  }
+ },
+ "grouped_avg_noargs": {
+  "result": {
+   "columns": [
+    "g",
+    "avg(g)",
+    "avg(sh)",
+    "avg(ti)",
+    "avg(f)",
+    "avg(d)"
+   ],
+   "dtypes": [
+    [
+     "g",
+     "int"
+    ],
+    [
+     "avg(g)",
+     "double"
+    ],
+    [
+     "avg(sh)",
+     "double"
+    ],
+    [
+     "avg(ti)",
+     "double"
+    ],
+    [
+     "avg(f)",
+     "double"
+    ],
+    [
+     "avg(d)",
+     "double"
+    ]
+   ],
+   "rows": [
+    "(1, 1.0, 3.5, 1.5, 1.875, 1.5)"
+   ]
+  }
+ },
+ "grouped_max_noargs": {
+  "result": {
+   "columns": [
+    "g",
+    "max(g)",
+    "max(sh)",
+    "max(ti)",
+    "max(f)",
+    "max(d)"
+   ],
+   "dtypes": [
+    [
+     "g",
+     "int"
+    ],
+    [
+     "max(g)",
+     "int"
+    ],
+    [
+     "max(sh)",
+     "smallint"
+    ],
+    [
+     "max(ti)",
+     "tinyint"
+    ],
+    [
+     "max(f)",
+     "float"
+    ],
+    [
+     "max(d)",
+     "double"
+    ]
+   ],
+   "rows": [
+    "(1, 1, 4, 2, 2.25, 2.5)"
+   ]
+  }
+ },
+ "grouped_mean_noargs": {
+  "result": {
+   "columns": [
+    "g",
+    "avg(g)",
+    "avg(sh)",
+    "avg(ti)",
+    "avg(f)",
+    "avg(d)"
+   ],
+   "dtypes": [
+    [
+     "g",
+     "int"
+    ],
+    [
+     "avg(g)",
+     "double"
+    ],
+    [
+     "avg(sh)",
+     "double"
+    ],
+    [
+     "avg(ti)",
+     "double"
+    ],
+    [
+     "avg(f)",
+     "double"
+    ],
+    [
+     "avg(d)",
+     "double"
+    ]
+   ],
+   "rows": [
+    "(1, 1.0, 3.5, 1.5, 1.875, 1.5)"
+   ]
+  }
+ },
+ "grouped_min_noargs": {
+  "result": {
+   "columns": [
+    "g",
+    "min(g)",
+    "min(sh)",
+    "min(ti)",
+    "min(f)",
+    "min(d)"
+   ],
+   "dtypes": [
+    [
+     "g",
+     "int"
+    ],
+    [
+     "min(g)",
+     "int"
+    ],
+    [
+     "min(sh)",
+     "smallint"
+    ],
+    [
+     "min(ti)",
+     "tinyint"
+    ],
+    [
+     "min(f)",
+     "float"
+    ],
+    [
+     "min(d)",
+     "double"
+    ]
+   ],
+   "rows": [
+    "(1, 1, 3, 1, 1.5, 0.5)"
+   ]
+  }
+ },
+ "grouped_sum_noargs": {
+  "result": {
+   "columns": [
+    "g",
+    "sum(g)",
+    "sum(sh)",
+    "sum(ti)",
+    "sum(f)",
+    "sum(d)"
+   ],
+   "dtypes": [
+    [
+     "g",
+     "int"
+    ],
+    [
+     "sum(g)",
+     "bigint"
+    ],
+    [
+     "sum(sh)",
+     "bigint"
+    ],
+    [
+     "sum(ti)",
+     "bigint"
+    ],
+    [
+     "sum(f)",
+     "double"
+    ],
+    [
+     "sum(d)",
+     "double"
+    ]
+   ],
+   "rows": [
+    "(1, 2, 7, 3, 3.75, 3.0)"
+   ]
   }
  },
  "iceberg_desc": {
@@ -551,6 +801,48 @@
    "simpleString": "struct<f:double,b:binary>"
   }
  },
+ "na_fill_float_col": {
+  "result": {
+   "columns": [
+    "f",
+    "sh"
+   ],
+   "dtypes": [
+    [
+     "f",
+     "float"
+    ],
+    [
+     "sh",
+     "smallint"
+    ]
+   ],
+   "rows": [
+    "(1.7000000476837158, 1)"
+   ]
+  }
+ },
+ "na_replace_narrow": {
+  "result": {
+   "columns": [
+    "sh",
+    "f"
+   ],
+   "dtypes": [
+    [
+     "sh",
+     "smallint"
+    ],
+    [
+     "f",
+     "float"
+    ]
+   ],
+   "rows": [
+    "(9, 1.5)"
+   ]
+  }
+ },
  "nested_schema": {
   "result": {
    "dtypes": [
@@ -663,6 +955,39 @@
    ],
    "printSchema": "root\n |-- sh: short (nullable = true)\n |-- ti: byte (nullable = true)\n |-- f: float (nullable = true)\n |-- b: binary (nullable = true)\n\n",
    "simpleString": "struct<sh:smallint,ti:tinyint,f:float,b:binary>"
+  }
+ },
+ "summary_narrow": {
+  "result": {
+   "columns": [
+    "summary",
+    "sh",
+    "ti",
+    "f"
+   ],
+   "dtypes": [
+    [
+     "summary",
+     "string"
+    ],
+    [
+     "sh",
+     "string"
+    ],
+    [
+     "ti",
+     "string"
+    ],
+    [
+     "f",
+     "string"
+    ]
+   ],
+   "rows": [
+    "('count', '2', '2', '2')",
+    "('max', '4', '2', '2.25')",
+    "('min', '3', '1', '1.5')"
+   ]
   }
  },
  "todf_toPandas": {
