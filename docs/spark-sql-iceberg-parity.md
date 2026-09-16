@@ -8166,7 +8166,7 @@ field NAME.
 - **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_make_timestamp_date_time_keywords_answer`,
   `…::test_make_timestamp_keeps_its_frozen_signature`,
   `python/repark/tests/test_fnp11b_temporal_formats.py` `make_timestamp` cells (19 cells,
-  both ANSI settings; the five `UNRESOLVED_COLUMN` cells pin as dated divergence per
+  both ANSI settings; the five `UNRESOLVED_COLUMN` cells are strict-xfail pins per
   owner ruling R-17a-22, 2026-09-15, pointing at carry-over ERR-UNRESOLVED-COL-1 —
   §7 row FNP-11B-UNRESOLVED-1).
 - **Rationale** — BACKLOG 2026-09-15, owner ruling Q-15a-3 applied 2026-09-15: the
@@ -9101,8 +9101,8 @@ field NAME.
   collect hits `[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented`).
   *(oracle: live PySpark 4.1.2, 2026-09-14 fixture.)*
 - **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
-  cells 187/188 through `DIVERGED_2026_09_15_ROWS_AS_STRING` (asserts the oracle text, then
-  the `2 months` answer).
+  cells 187/188 through `STRICT_XFAIL_CELLS` (strict xfail against the oracle text; the
+  engine renders `2 months`).
 - **Rationale** — BACKLOG, owner ruling R-17a-16 (2026-09-15): one Arrow `MonthDayNano`
   carries both ANSI `YEAR TO MONTH` and `CalendarInterval`, so one renderer cannot spell
   both; the fix is a separate YEAR-MONTH interval type in the Rust type table, owned by the
@@ -9119,8 +9119,8 @@ field NAME.
   with an edit-distance-ranked proposal list.
   *(oracle: live PySpark 4.1.2, 2026-09-14 fixture.)*
 - **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
-  cells 0–4 through `DIVERGED_2026_09_15_UNRESOLVED_COLUMN` (asserts the oracle condition,
-  then the schema-error head; the valid-fields tail stays unpinned).
+  cells 0–4 through `STRICT_XFAIL_CELLS` (strict xfail against the oracle condition; the
+  engine answers a bare schema error).
 - **Rationale** — BACKLOG, owner ruling R-17a-22 (2026-09-15): Spark's proposal list is
   ranked by edit distance, so a schema-order rule mistypes three of the seven SQL cells;
   the fix reproduces the ranking across every plan node on both doors as carry-over
@@ -9136,7 +9136,7 @@ field NAME.
 - **Apache Spark** — the same cells type `timestamp` (midnight wall); the calendar day agrees.
   *(oracle: live PySpark 4.1.2, 2026-09-14 fixture.)*
 - **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
-  cells 197–200 and 203–208 (red for run 17c).
+  cells 197–200 and 203–208 (strict xfail for run 17c).
 - **Rationale** — BACKLOG, run 17c's SQL-planner seam (D-33): the promotion needs the literal's
   unit where it is still visible, upstream of the `MonthDayNano` representation.
   pins: fnp-11b/C-006
@@ -9149,7 +9149,7 @@ field NAME.
 - **Apache Spark** — the same cells answer one NULL `interval day to second` row.
   *(oracle: live PySpark 4.1.2, 2026-09-14 fixture.)*
 - **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
-  cells 191/192 (red for run 17c).
+  cells 191/192 (strict xfail for run 17c).
 - **Rationale** — BACKLOG, run 17c's INTERVAL DAY dialect seam (D-3, D-17).
   pins: fnp-11b/C-006
 

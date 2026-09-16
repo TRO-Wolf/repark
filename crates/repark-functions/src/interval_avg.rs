@@ -23,10 +23,11 @@ pub(crate) fn interval_overflow() -> DataFusionError {
 
 #[derive(Debug, Default)]
 pub(crate) struct IntervalAvgAccumulator {
-    months: i64,
-    micros: i64,
+    wide_months: i128,
+    wide_micros: i128,
     count: u64,
     overflowed: bool,
+    merged_overflow: bool,
     null_on_overflow: bool,
 }
 
@@ -38,44 +39,38 @@ impl IntervalAvgAccumulator {
         }
     }
 
+    fn narrow_sums(&self) -> Option<(i64, i64)> {
+        if self.merged_overflow {
+            return None;
+        }
+        i64::try_from(self.wide_months)
+            .ok()
+            .zip(i64::try_from(self.wide_micros).ok())
+    }
+
+    fn refresh_overflow(&mut self) {
+        self.overflowed = self.narrow_sums().is_none();
+    }
+
     fn add_value(&mut self, months: i64, micros: i64) {
-        if self.overflowed {
-            return;
-        }
-        match self
-            .months
-            .checked_add(months)
-            .zip(self.micros.checked_add(micros))
-        {
-            Some((months, micros)) => {
-                self.months = months;
-                self.micros = micros;
-                self.count += 1;
-            }
-            None => {
-                self.overflowed = true;
-            }
-        }
+        self.wide_months += i128::from(months);
+        self.wide_micros += i128::from(micros);
+        self.count += 1;
+        self.refresh_overflow();
     }
 
     fn sub_value(&mut self, months: i64, micros: i64) {
-        if self.overflowed {
-            return;
-        }
-        match self
-            .months
-            .checked_sub(months)
-            .zip(self.micros.checked_sub(micros))
-        {
-            Some((months, micros)) => {
-                self.months = months;
-                self.micros = micros;
-                self.count = self.count.saturating_sub(1);
-            }
-            None => {
-                self.overflowed = true;
-            }
-        }
+        self.wide_months -= i128::from(months);
+        self.wide_micros -= i128::from(micros);
+        self.count = self.count.saturating_sub(1);
+        self.refresh_overflow();
+    }
+
+    fn merge_sums(&mut self, months: i64, micros: i64, count: u64) {
+        self.wide_months += i128::from(months);
+        self.wide_micros += i128::from(micros);
+        self.count += count;
+        self.refresh_overflow();
     }
 
     fn failure(&self) -> Result<Option<IntervalMonthDayNano>> {
@@ -92,13 +87,16 @@ impl IntervalAvgAccumulator {
         if self.count == 0 {
             return Ok(None);
         }
-        if self.micros == 0 {
-            let months = round_half_away(self.months, self.count)?;
+        let (months, micros) = self.narrow_sums().ok_or_else(|| {
+            DataFusionError::Execution("avg interval: sums escaped narrow range".to_string())
+        })?;
+        if micros == 0 {
+            let months = round_half_away(months, self.count)?;
             let months = i32::try_from(months).map_err(|_| interval_overflow())?;
             return Ok(Some(IntervalMonthDayNano::new(months, 0, 0)));
         }
-        if self.months == 0 {
-            let micros = round_half_away(self.micros, self.count)?;
+        if months == 0 {
+            let micros = round_half_away(micros, self.count)?;
             let days = micros.div_euclid(MICROS_PER_DAY_I64);
             let nanos = micros.rem_euclid(MICROS_PER_DAY_I64) * 1_000;
             let days = i32::try_from(days).map_err(|_| interval_overflow())?;
@@ -135,118 +133,126 @@ fn duration_micros(value: i64, unit: TimeUnit) -> Result<i64> {
     .ok_or_else(interval_overflow)
 }
 
-fn duration_array_micros(array: &ArrayRef, index: usize, unit: TimeUnit) -> Result<i64> {
-    let raw = match unit {
-        TimeUnit::Second => array
-            .as_any()
-            .downcast_ref::<DurationSecondArray>()
-            .map(|values| values.value(index)),
-        TimeUnit::Millisecond => array
-            .as_any()
-            .downcast_ref::<DurationMillisecondArray>()
-            .map(|values| values.value(index)),
-        TimeUnit::Microsecond => array
-            .as_any()
-            .downcast_ref::<DurationMicrosecondArray>()
-            .map(|values| values.value(index)),
-        TimeUnit::Nanosecond => array
-            .as_any()
-            .downcast_ref::<DurationNanosecondArray>()
-            .map(|values| values.value(index)),
-    }
-    .ok_or_else(|| DataFusionError::Execution("avg interval: duration mistyped".to_string()))?;
-    duration_micros(raw, unit)
+fn typed_values<'a, T: 'static>(array: &'a ArrayRef, what: &str) -> Result<&'a T> {
+    array
+        .as_any()
+        .downcast_ref::<T>()
+        .ok_or_else(|| DataFusionError::Execution(format!("avg interval: {what} mistyped")))
 }
 
-fn read_parts(array: &ArrayRef, index: usize) -> Result<Option<(i64, i64)>> {
-    if array.is_null(index) {
-        return Ok(None);
-    }
-    match array.data_type() {
-        DataType::Interval(IntervalUnit::MonthDayNano) => {
-            let values = array
-                .as_any()
-                .downcast_ref::<IntervalMonthDayNanoArray>()
-                .ok_or_else(|| {
-                    DataFusionError::Execution("avg interval: month-day-nano mistyped".to_string())
-                })?;
-            month_day_nano_parts(&values.value(index)).map(Some)
-        }
-        DataType::Interval(IntervalUnit::YearMonth) => {
-            let values = array.as_any().downcast_ref::<Int32Array>().ok_or_else(|| {
-                DataFusionError::Execution("avg interval: year-month mistyped".to_string())
-            })?;
-            Ok(Some((i64::from(values.value(index)), 0)))
-        }
-        DataType::Interval(IntervalUnit::DayTime) => {
-            let values = array.as_any().downcast_ref::<Int64Array>().ok_or_else(|| {
-                DataFusionError::Execution("avg interval: day-time mistyped".to_string())
-            })?;
-            let micros = values
-                .value(index)
-                .checked_mul(1_000)
-                .ok_or_else(interval_overflow)?;
-            Ok(Some((0, micros)))
-        }
-        DataType::Duration(unit) => {
-            duration_array_micros(array, index, *unit).map(|micros| Some((0, micros)))
-        }
-        other => Err(DataFusionError::Execution(format!(
-            "avg interval: unsupported input {other}"
-        ))),
-    }
-}
-
-fn state_values(states: &[ArrayRef]) -> Result<(Option<(i64, i64)>, u64)> {
-    let months = states[0]
-        .as_any()
-        .downcast_ref::<Int64Array>()
-        .ok_or_else(|| DataFusionError::Execution("avg interval state mistyped".to_string()))?;
-    let micros = states[1]
-        .as_any()
-        .downcast_ref::<Int64Array>()
-        .ok_or_else(|| DataFusionError::Execution("avg interval state mistyped".to_string()))?;
-    let counts = states[2]
-        .as_any()
-        .downcast_ref::<Int64Array>()
-        .ok_or_else(|| DataFusionError::Execution("avg interval state mistyped".to_string()))?;
-    let count = u64::try_from(counts.value(0).max(0)).map_err(|_| {
+fn state_count(counts: &Int64Array, row: usize) -> Result<u64> {
+    u64::try_from(counts.value(row).max(0)).map_err(|_| {
         DataFusionError::Execution("avg interval state count out of range".to_string())
-    })?;
-    if months.is_null(0) || micros.is_null(0) {
-        return Ok((None, count));
-    }
-    Ok((Some((months.value(0), micros.value(0))), count))
+    })
 }
 
-fn merge_sums(accumulator: &mut IntervalAvgAccumulator, months: i64, micros: i64, count: u64) {
-    if accumulator.overflowed {
-        accumulator.count += count;
-        return;
+impl IntervalAvgAccumulator {
+    fn ingest(&mut self, parts: (i64, i64), add: bool) {
+        if add {
+            self.add_value(parts.0, parts.1);
+        } else {
+            self.sub_value(parts.0, parts.1);
+        }
     }
-    if let Some((months, micros)) = accumulator
-        .months
-        .checked_add(months)
-        .zip(accumulator.micros.checked_add(micros))
-    {
-        accumulator.months = months;
-        accumulator.micros = micros;
-        accumulator.count += count;
-    } else {
-        accumulator.overflowed = true;
-        accumulator.count += count;
+
+    fn apply_month_day_nanos(
+        &mut self,
+        values: &IntervalMonthDayNanoArray,
+        add: bool,
+    ) -> Result<()> {
+        for index in 0..values.len() {
+            if !values.is_null(index) {
+                self.ingest(month_day_nano_parts(&values.value(index))?, add);
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_year_months(&mut self, values: &Int32Array, add: bool) {
+        for index in 0..values.len() {
+            if !values.is_null(index) {
+                self.ingest((i64::from(values.value(index)), 0), add);
+            }
+        }
+    }
+
+    fn apply_day_times(&mut self, values: &Int64Array, add: bool) -> Result<()> {
+        for index in 0..values.len() {
+            if !values.is_null(index) {
+                let micros = values
+                    .value(index)
+                    .checked_mul(1_000)
+                    .ok_or_else(interval_overflow)?;
+                self.ingest((0, micros), add);
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_durations(&mut self, array: &ArrayRef, unit: TimeUnit, add: bool) -> Result<()> {
+        match unit {
+            TimeUnit::Second => {
+                let values = typed_values::<DurationSecondArray>(array, "duration")?;
+                for index in 0..values.len() {
+                    if !values.is_null(index) {
+                        self.ingest((0, duration_micros(values.value(index), unit)?), add);
+                    }
+                }
+            }
+            TimeUnit::Millisecond => {
+                let values = typed_values::<DurationMillisecondArray>(array, "duration")?;
+                for index in 0..values.len() {
+                    if !values.is_null(index) {
+                        self.ingest((0, duration_micros(values.value(index), unit)?), add);
+                    }
+                }
+            }
+            TimeUnit::Microsecond => {
+                let values = typed_values::<DurationMicrosecondArray>(array, "duration")?;
+                for index in 0..values.len() {
+                    if !values.is_null(index) {
+                        self.ingest((0, duration_micros(values.value(index), unit)?), add);
+                    }
+                }
+            }
+            TimeUnit::Nanosecond => {
+                let values = typed_values::<DurationNanosecondArray>(array, "duration")?;
+                for index in 0..values.len() {
+                    if !values.is_null(index) {
+                        self.ingest((0, duration_micros(values.value(index), unit)?), add);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_batch(&mut self, array: &ArrayRef, add: bool) -> Result<()> {
+        match array.data_type() {
+            DataType::Interval(IntervalUnit::MonthDayNano) => {
+                let values = typed_values::<IntervalMonthDayNanoArray>(array, "month-day-nano")?;
+                self.apply_month_day_nanos(values, add)
+            }
+            DataType::Interval(IntervalUnit::YearMonth) => {
+                let values = typed_values::<Int32Array>(array, "year-month")?;
+                self.apply_year_months(values, add);
+                Ok(())
+            }
+            DataType::Interval(IntervalUnit::DayTime) => {
+                let values = typed_values::<Int64Array>(array, "day-time")?;
+                self.apply_day_times(values, add)
+            }
+            DataType::Duration(unit) => self.apply_durations(array, *unit, add),
+            other => Err(DataFusionError::Execution(format!(
+                "avg interval: unsupported input {other}"
+            ))),
+        }
     }
 }
 
 impl Accumulator for IntervalAvgAccumulator {
     fn update_batch(&mut self, values: &[ArrayRef]) -> Result<()> {
-        let array = &values[0];
-        for index in 0..array.len() {
-            if let Some((months, micros)) = read_parts(array, index)? {
-                self.add_value(months, micros);
-            }
-        }
-        Ok(())
+        self.apply_batch(&values[0], true)
     }
 
     fn evaluate(&mut self) -> Result<ScalarValue> {
@@ -261,39 +267,39 @@ impl Accumulator for IntervalAvgAccumulator {
         let count = i64::try_from(self.count).map_err(|_| {
             DataFusionError::Execution("avg interval state count out of range".to_string())
         })?;
-        if self.overflowed {
-            return Ok(vec![
+        match self.narrow_sums() {
+            Some((months, micros)) => Ok(vec![
+                ScalarValue::Int64(Some(months)),
+                ScalarValue::Int64(Some(micros)),
+                ScalarValue::Int64(Some(count)),
+            ]),
+            None => Ok(vec![
                 ScalarValue::Int64(None),
                 ScalarValue::Int64(None),
                 ScalarValue::Int64(Some(count)),
-            ]);
+            ]),
         }
-        Ok(vec![
-            ScalarValue::Int64(Some(self.months)),
-            ScalarValue::Int64(Some(self.micros)),
-            ScalarValue::Int64(Some(count)),
-        ])
     }
 
     fn merge_batch(&mut self, states: &[ArrayRef]) -> Result<()> {
-        let (sums, count) = state_values(states)?;
-        if let Some((months, micros)) = sums {
-            merge_sums(self, months, micros, count);
-        } else {
-            self.overflowed = true;
-            self.count += count;
+        let months = typed_values::<Int64Array>(&states[0], "state months")?;
+        let micros = typed_values::<Int64Array>(&states[1], "state micros")?;
+        let counts = typed_values::<Int64Array>(&states[2], "state counts")?;
+        for row in 0..months.len() {
+            let count = state_count(counts, row)?;
+            if months.is_null(row) || micros.is_null(row) {
+                self.merged_overflow = true;
+                self.count += count;
+                self.refresh_overflow();
+            } else {
+                self.merge_sums(months.value(row), micros.value(row), count);
+            }
         }
         Ok(())
     }
 
     fn retract_batch(&mut self, values: &[ArrayRef]) -> Result<()> {
-        let array = &values[0];
-        for index in 0..array.len() {
-            if let Some((months, micros)) = read_parts(array, index)? {
-                self.sub_value(months, micros);
-            }
-        }
-        Ok(())
+        self.apply_batch(&values[0], false)
     }
 
     fn supports_retract_batch(&self) -> bool {
@@ -404,5 +410,117 @@ mod tests {
         ])) as ArrayRef;
         let value = evaluated(evaluate(&values, true).expect("duration average"));
         assert_eq!((value.months, value.days, value.nanoseconds), (0, 1, 0));
+    }
+
+    fn state_column(values: Vec<Option<i64>>) -> ArrayRef {
+        Arc::new(Int64Array::from(values)) as ArrayRef
+    }
+
+    fn merge_states(states: &[Vec<ScalarValue>], null_on_overflow: bool) -> IntervalAvgAccumulator {
+        let columns: Vec<ArrayRef> = (0..3)
+            .map(|column| {
+                state_column(
+                    states
+                        .iter()
+                        .map(|state| match &state[column] {
+                            ScalarValue::Int64(value) => *value,
+                            other => panic!("interval state mistyped: {other}"),
+                        })
+                        .collect(),
+                )
+            })
+            .collect();
+        let mut merged = IntervalAvgAccumulator::with_null_on_overflow(null_on_overflow);
+        merged.merge_batch(&columns).expect("merge states");
+        merged
+    }
+
+    #[test]
+    fn merge_batch_consumes_every_state_row() {
+        let first = month_day_nanos(vec![IntervalMonthDayNano::new(0, 1, 0)]);
+        let second = month_day_nanos(vec![IntervalMonthDayNano::new(0, 2, 0)]);
+        let mut left = IntervalAvgAccumulator::with_null_on_overflow(true);
+        left.update_batch(std::slice::from_ref(&first))
+            .expect("left update");
+        let mut right = IntervalAvgAccumulator::with_null_on_overflow(true);
+        right
+            .update_batch(std::slice::from_ref(&second))
+            .expect("right update");
+        let states = vec![
+            left.state().expect("left state"),
+            right.state().expect("right state"),
+        ];
+        let mut merged = merge_states(&states, true);
+        let value = evaluated(merged.evaluate().expect("merged average"));
+        assert_eq!(
+            (value.months, value.days, value.nanoseconds),
+            (0, 1, 43_200_000_000_000)
+        );
+        let merged_state = merged.state().expect("merged state");
+        match &merged_state[2] {
+            ScalarValue::Int64(Some(count)) => assert_eq!(*count, 2),
+            other => panic!("merged count mistyped: {other}"),
+        }
+    }
+
+    #[test]
+    fn merge_batch_propagates_overflow_from_any_row() {
+        let finite = month_day_nanos(vec![IntervalMonthDayNano::new(0, 1, 0)]);
+        let huge = month_day_nanos(vec![
+            IntervalMonthDayNano::new(0, 106_751_991, 0),
+            IntervalMonthDayNano::new(0, 106_751_991, 0),
+        ]);
+        let mut left = IntervalAvgAccumulator::with_null_on_overflow(true);
+        left.update_batch(std::slice::from_ref(&finite))
+            .expect("finite update");
+        let mut right = IntervalAvgAccumulator::with_null_on_overflow(true);
+        right
+            .update_batch(std::slice::from_ref(&huge))
+            .expect("huge update");
+        for states in [
+            vec![
+                left.state().expect("left state"),
+                right.state().expect("right state"),
+            ],
+            vec![
+                right.state().expect("right state"),
+                left.state().expect("left state"),
+            ],
+        ] {
+            let mut merged = merge_states(&states, true);
+            let ScalarValue::IntervalMonthDayNano(value) =
+                merged.evaluate().expect("merged overflow")
+            else {
+                panic!("merged overflow mistyped");
+            };
+            assert!(value.is_none());
+        }
+    }
+
+    #[test]
+    fn retract_batch_restores_finite_sums_after_overflow_leaves() {
+        let huge = month_day_nanos(vec![
+            IntervalMonthDayNano::new(0, 106_751_991, 0),
+            IntervalMonthDayNano::new(0, 106_751_991, 0),
+        ]);
+        let mut accumulator = IntervalAvgAccumulator::with_null_on_overflow(true);
+        accumulator
+            .update_batch(std::slice::from_ref(&huge))
+            .expect("overflow update");
+        let ScalarValue::IntervalMonthDayNano(overflowed) =
+            accumulator.evaluate().expect("overflowed average")
+        else {
+            panic!("overflowed average mistyped");
+        };
+        assert!(overflowed.is_none());
+        let leaving = month_day_nanos(vec![IntervalMonthDayNano::new(0, 106_751_991, 0)]);
+        accumulator
+            .retract_batch(std::slice::from_ref(&leaving))
+            .expect("retract leaving row");
+        let value = evaluated(accumulator.evaluate().expect("restored average"));
+        assert_eq!(
+            (value.months, value.days, value.nanoseconds),
+            (0, 106_751_991, 0)
+        );
     }
 }

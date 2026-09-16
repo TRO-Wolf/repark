@@ -1,6 +1,8 @@
 # map — scripts/
 
 SET-ANSI-RUNTIME-1 (2026-09-15): `check_lib_py.py` ratchets `tests/test_session_timezone_parity.py` 1328 → 1318 (the applied-contract flips are net-negative). pins: set-ansi-runtime-1/C-005
+FNP-11B remediation round 1 (2026-09-16, run 17a): `check_lib_py.py` sets `functions_expr.py` 2237 → 2220 (the `make_timestamp` forwarder becomes a direct re-export) with the CAP-1 mirror; `build_api_freeze.py` follows module-level `from`-import aliases when reading required params (`aliased_function_signatures`) and carries the alias targets in `source_paths` so scratch trees resolve them — the regenerated register keeps `F.make_timestamp` at `[]` and corrects `F.udtf` from `null` to `[]`. pins: fnp-11b/C-007, C-008
+
 FNP-11B step 6 (2026-09-15, run 17a): `check_lib_py.py` sets `functions.py` 1960 → 1984 (the `lit` decimal arm) and `functions_expr.py` 2235 → 2237 (the `make_timestamp` widening, ruff-format ratchets two lines back) with the CAP-1 mirror; the duplicate table in `test_cap_1_source_file_line_cap.py` moves with it. pins: fnp-11b/C-001, C-005
 
 DF-PLAN-INTROSPECT-1 (2026-09-15, rebase onto main after #610/#612): `check_lib_py.py` sets `dataframe/core.py` 4014 → 4015 with the CAP-1 mirror — the wrapped `repark.spark.dataframe` import gains `replace_expr` from #610; still below main's 4027. pins: df-plan-introspect-1/C-004

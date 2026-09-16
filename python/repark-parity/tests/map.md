@@ -144,6 +144,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **FNP-11B step 6 (2026-09-15):**
   `functions.py` mirror row 1960 → 1984 and `functions_expr.py` 2235 → 2237
   with the script baseline. pins: fnp-11b/C-001, C-005
+  **FNP-11B remediation round 1 (2026-09-16):** `functions_expr.py` mirror row
+  2237 → 2220 with the script baseline (the `make_timestamp` forwarder becomes a
+  direct re-export). pins: fnp-11b/C-007
 - `test_ex_0_example_coverage.py` — **DF-SURFACE-B-1 (2026-09-14):** the enumerated
   public surface moves 948 → 952 as `DataFrame.foreach`,
   `DataFrame.foreachPartition`, `DataFrame.observe`, and `Observation.get` join

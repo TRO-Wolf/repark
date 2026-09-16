@@ -4,7 +4,9 @@ use std::sync::Arc;
 
 use arrow::array::timezone::Tz;
 use datafusion::arrow::array::cast::AsArray;
-use datafusion::arrow::array::{Array, BinaryBuilder, Decimal128Builder, StringBuilder};
+use datafusion::arrow::array::{
+    Array, ArrayRef, BinaryBuilder, Decimal128Builder, StringArray, StringBuilder,
+};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, TimeUnit, TimestampMicrosecondType};
 use datafusion::common::{Result, ScalarValue, exec_err};
@@ -143,21 +145,31 @@ impl ScalarUDFImpl for SparkToNumber {
         };
         let mut builder = Decimal128Builder::with_capacity(input.len())
             .with_data_type(DataType::Decimal128(precision, scale));
+        let mut format_cache: Option<(String, NumberFormat)> = None;
         for row in 0..input.len() {
             if input.is_null(row) || format.is_null(row) {
                 builder.append_null();
                 continue;
             }
             let pattern = format.value(row);
-            let parsed = parse_number_format(pattern)
-                .map_err(|error| DataFusionError::Execution(error.to_string()))?;
-            let Some(value) = apply_number_format(input.value(row), &parsed) else {
+            let format_miss = format_cache
+                .as_ref()
+                .is_none_or(|(saved, _)| saved.as_str() != pattern);
+            if format_miss {
+                let parsed = parse_number_format(pattern)
+                    .map_err(|error| DataFusionError::Execution(error.to_string()))?;
+                format_cache = Some((pattern.to_string(), parsed));
+            }
+            let Some((_, parsed)) = format_cache.as_ref() else {
+                return exec_err!("to_number lost its cached format");
+            };
+            let Some(value) = apply_number_format(input.value(row), parsed) else {
                 return Err(DataFusionError::Execution(mismatch_text(
                     pattern,
                     input.value(row),
                 )));
             };
-            builder.append_value(rescale_number(value, &parsed, scale)?);
+            builder.append_value(rescale_number(value, parsed, scale)?);
         }
         Ok(ColumnarValue::Array(Arc::new(builder.finish())))
     }
@@ -245,7 +257,9 @@ impl ScalarUDFImpl for SparkToBinary {
             .get(1)
             .map(|array| string_array(array.as_ref()))
             .transpose()?;
-        let mut builder = BinaryBuilder::new();
+        let bytes = input.get_array_memory_size();
+        let mut builder = BinaryBuilder::with_capacity(input.len(), bytes / input.len().max(1));
+        let mut format_cache: Option<(String, Option<BinaryKind>)> = None;
         for row in 0..input.len() {
             if input.is_null(row) {
                 builder.append_null();
@@ -259,23 +273,44 @@ impl ScalarUDFImpl for SparkToBinary {
                 Some(array) => array.value(row),
                 None => "hex",
             };
-            let lowered = raw.to_ascii_lowercase();
-            let decoded = match lowered.as_str() {
-                "hex" => decode_hex(input.value(row)),
-                "utf-8" | "utf8" | "binary" => Some(input.value(row).as_bytes().to_vec()),
-                "base64" => decode_base64(input.value(row)),
-                _ => {
+            let format_miss = format_cache
+                .as_ref()
+                .is_none_or(|(saved, _)| saved.as_str() != raw);
+            if format_miss {
+                let kind = match raw.to_ascii_lowercase().as_str() {
+                    "hex" => Some(BinaryKind::Hex),
+                    "utf-8" | "utf8" | "binary" => Some(BinaryKind::Utf8),
+                    "base64" => Some(BinaryKind::Base64),
+                    _ => None,
+                };
+                format_cache = Some((raw.to_string(), kind));
+            }
+            let Some((_, kind)) = format_cache.as_ref() else {
+                return exec_err!("to_binary lost its cached format");
+            };
+            match kind {
+                Some(BinaryKind::Utf8) => builder.append_value(input.value(row).as_bytes()),
+                Some(BinaryKind::Hex) => match decode_hex(input.value(row)) {
+                    Some(bytes) => builder.append_value(bytes),
+                    None => {
+                        return Err(DataFusionError::Execution(conversion_text(
+                            input.value(row),
+                            raw,
+                        )));
+                    }
+                },
+                Some(BinaryKind::Base64) => match decode_base64(input.value(row)) {
+                    Some(bytes) => builder.append_value(bytes),
+                    None => {
+                        return Err(DataFusionError::Execution(conversion_text(
+                            input.value(row),
+                            raw,
+                        )));
+                    }
+                },
+                None => {
                     return Err(DataFusionError::Execution(unknown_binary_format_text(
                         "to_binary",
-                        raw,
-                    )));
-                }
-            };
-            match decoded {
-                Some(bytes) => builder.append_value(bytes),
-                None => {
-                    return Err(DataFusionError::Execution(conversion_text(
-                        input.value(row),
                         raw,
                     )));
                 }
@@ -283,6 +318,13 @@ impl ScalarUDFImpl for SparkToBinary {
         }
         Ok(ColumnarValue::Array(Arc::new(builder.finish())))
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BinaryKind {
+    Hex,
+    Utf8,
+    Base64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -578,6 +620,69 @@ struct SparkToChar {
     signature: Signature,
 }
 
+enum CharInput {
+    Stamped(ArrayRef),
+    Bytes(ArrayRef),
+    Text(ArrayRef),
+    Decimal(ArrayRef, i8),
+    Float(ArrayRef),
+    Null,
+}
+
+impl CharInput {
+    fn resolve(input: &ArrayRef, stamped: Option<&ArrayRef>, name: &str) -> Result<Self> {
+        match input.data_type() {
+            DataType::Timestamp(_, _) | DataType::Date32 | DataType::Date64 => {
+                let Some(stamped) = stamped else {
+                    return exec_err!("to_char promised timestamps");
+                };
+                Ok(Self::Stamped(Arc::clone(stamped)))
+            }
+            DataType::Binary | DataType::LargeBinary | DataType::FixedSizeBinary(_) => {
+                Ok(Self::Bytes(cast(input.as_ref(), &DataType::Binary)?))
+            }
+            DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
+                Ok(Self::Text(cast(input.as_ref(), &DataType::Utf8)?))
+            }
+            DataType::Decimal128(_, scale) => Ok(Self::Decimal(Arc::clone(input), *scale)),
+            DataType::Float16 | DataType::Float32 | DataType::Float64 => {
+                Ok(Self::Float(cast(input.as_ref(), &DataType::Float64)?))
+            }
+            DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64 => Ok(Self::Decimal(
+                cast(input.as_ref(), &DataType::Decimal128(38, 0))?,
+                0,
+            )),
+            DataType::Null => Ok(Self::Null),
+            other => exec_err!("'{name}' cannot format {other}"),
+        }
+    }
+}
+
+fn char_estimate(input: &ArrayRef, format: &StringArray) -> usize {
+    if matches!(
+        input.data_type(),
+        DataType::Binary | DataType::LargeBinary | DataType::FixedSizeBinary(_)
+    ) {
+        return input.get_array_memory_size() * 2 / input.len().max(1);
+    }
+    (0..format.len())
+        .find_map(|row| {
+            if format.is_null(row) {
+                None
+            } else {
+                Some(format.value(row).len())
+            }
+        })
+        .unwrap_or(16)
+}
+
 impl SparkToChar {
     fn new(name: &'static str) -> Self {
         Self {
@@ -683,18 +788,24 @@ impl ScalarUDFImpl for SparkToChar {
             _ => None,
         };
         let mut cached: Option<(String, Vec<JavaPatternToken>)> = None;
-        let mut out = StringBuilder::with_capacity(arrays[0].len(), 0);
+        let mut prepared: Option<CharInput> = None;
+        let mut mask_cache: Option<(String, Mask)> = None;
+        let estimate = char_estimate(&arrays[0], format);
+        let mut out = StringBuilder::with_capacity(arrays[0].len(), arrays[0].len() * estimate);
         for row in 0..arrays[0].len() {
             if arrays[0].is_null(row) || format.is_null(row) {
                 out.append_null();
                 continue;
             }
+            let input = match prepared.as_ref() {
+                Some(input) => input,
+                None => {
+                    prepared.insert(CharInput::resolve(&arrays[0], stamped.as_ref(), self.name)?)
+                }
+            };
             let pattern = format.value(row);
-            match arrays[0].data_type() {
-                DataType::Timestamp(_, _) | DataType::Date32 | DataType::Date64 => {
-                    let Some(stamped) = stamped.as_ref() else {
-                        return exec_err!("to_char promised timestamps");
-                    };
+            match input {
+                CharInput::Stamped(stamped) => {
                     let stamps = stamped.as_primitive::<TimestampMicrosecondType>();
                     render_temporal_row(
                         stamps,
@@ -706,50 +817,43 @@ impl ScalarUDFImpl for SparkToChar {
                         &mut out,
                     )?;
                 }
-                DataType::Binary | DataType::LargeBinary | DataType::FixedSizeBinary(_) => {
-                    let bytes = cast(arrays[0].as_ref(), &DataType::Binary)?;
+                CharInput::Bytes(bytes) => {
                     let bytes = bytes.as_binary::<i32>();
                     out.append_value(render_binary(bytes.value(row), pattern, self.name)?);
                 }
-                DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
-                    let text = cast(arrays[0].as_ref(), &DataType::Utf8)?;
+                CharInput::Text(text) => {
                     let text = string_array(text.as_ref())?;
                     out.append_value(text.value(row));
                 }
-                DataType::Decimal128(_, _) => {
-                    let whole =
-                        arrays[0].as_primitive::<datafusion::arrow::datatypes::Decimal128Type>();
-                    let DataType::Decimal128(_, scale) = arrays[0].data_type() else {
-                        return exec_err!("to_char promised Decimal128");
+                CharInput::Decimal(whole, scale) => {
+                    let mask_miss = mask_cache
+                        .as_ref()
+                        .is_none_or(|(saved, _)| saved.as_str() != pattern);
+                    if mask_miss {
+                        mask_cache = Some((pattern.to_string(), parse_mask(pattern)?));
+                    }
+                    let Some((_, mask)) = mask_cache.as_ref() else {
+                        return exec_err!("to_char lost its cached mask");
                     };
-                    let mask = parse_mask(pattern)?;
-                    out.append_value(render_decimal_value(whole.value(row), *scale, &mask)?);
+                    let whole =
+                        whole.as_primitive::<datafusion::arrow::datatypes::Decimal128Type>();
+                    out.append_value(render_decimal_value(whole.value(row), *scale, mask)?);
                 }
-                DataType::Float16 | DataType::Float32 | DataType::Float64 => {
-                    let numbers = cast(arrays[0].as_ref(), &DataType::Float64)?;
+                CharInput::Float(numbers) => {
+                    let mask_miss = mask_cache
+                        .as_ref()
+                        .is_none_or(|(saved, _)| saved.as_str() != pattern);
+                    if mask_miss {
+                        mask_cache = Some((pattern.to_string(), parse_mask(pattern)?));
+                    }
+                    let Some((_, mask)) = mask_cache.as_ref() else {
+                        return exec_err!("to_char lost its cached mask");
+                    };
                     let numbers =
                         numbers.as_primitive::<datafusion::arrow::datatypes::Float64Type>();
-                    let mask = parse_mask(pattern)?;
-                    out.append_value(render_float_value(numbers.value(row), &mask));
+                    out.append_value(render_float_value(numbers.value(row), mask));
                 }
-                DataType::Int8
-                | DataType::Int16
-                | DataType::Int32
-                | DataType::Int64
-                | DataType::UInt8
-                | DataType::UInt16
-                | DataType::UInt32
-                | DataType::UInt64 => {
-                    let numbers = cast(arrays[0].as_ref(), &DataType::Decimal128(38, 0))?;
-                    let numbers =
-                        numbers.as_primitive::<datafusion::arrow::datatypes::Decimal128Type>();
-                    let mask = parse_mask(pattern)?;
-                    out.append_value(render_decimal_value(numbers.value(row), 0, &mask)?);
-                }
-                DataType::Null => out.append_null(),
-                other => {
-                    return exec_err!("'{}' cannot format {other}", self.name());
-                }
+                CharInput::Null => out.append_null(),
             }
         }
         Ok(ColumnarValue::Array(Arc::new(out.finish())))

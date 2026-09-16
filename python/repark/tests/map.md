@@ -5571,6 +5571,16 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `UNRESOLVED_COLUMN` cells pin as the dated divergence R-17a-22 rules (the
   oracle condition asserted, then the measured `Schema error` head; the
   valid-fields tail stays unpinned).
+  **FNP-11B remediation round 1 (2026-09-16):** the R-17a-16 and R-17a-22
+  divergence branches are gone; all nineteen ruled residuals are strict-xfail
+  params (`STRICT_XFAIL_CELLS`, each reason naming ruling, registry row and
+  owner) so the file is green and a landed fix XPASS-fails. New pins:
+  `test_to_timestamp_ntz_date_only_string_parses_midnight` (L-002, both doors,
+  both ANSI settings, both zones), `test_cast_to_time_refuses_on_both_doors`
+  (L-004, build-time refusal on both doors),
+  `test_try_avg_sliding_frame_retracts_leaving_rows` (L-003),
+  `test_current_time_beside_aggregate_is_global_agg` (PYPERF-001),
+  `test_bare_format_string_is_a_column_reference` (PYPERF-003).
   pins: fnp-11b/C-001, C-002, C-003, C-004, C-005, C-006
 - **FNP-11B registry pass (2026-09-15, run 17a):** the pins in `test_fnp11b_temporal_formats.py` and
   `test_fnp11b_typeof.py` are the proof paths behind this unit's rows in the divergence registry —

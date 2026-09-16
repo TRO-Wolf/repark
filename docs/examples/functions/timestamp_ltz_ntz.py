@@ -22,7 +22,7 @@ def main() -> None:
         frame = repark.createDataFrame([("2016-12-31 00:12:00",), ("garbage",), (None,)], ["s"])
         tolerant = frame.select(
             F.try_to_timestamp("s").cast("string").alias("ts"),
-            F.try_to_timestamp("s", "yyyy-MM-dd HH:mm:ss").cast("string").alias("fmt"),
+            F.try_to_timestamp("s", F.lit("yyyy-MM-dd HH:mm:ss")).cast("string").alias("fmt"),
         ).collect()
         rows = [row["ts"] for row in tolerant]
         print(f"F.try_to_timestamp: {rows!r}")
@@ -44,8 +44,8 @@ def main() -> None:
             raise SystemExit(f"to_timestamp_ntz ntz {row['ntz']!r}")
         patterned = repark.createDataFrame([("31/12/2016 10:30",)], ["s"])
         shaped = patterned.select(
-            F.to_timestamp_ltz("s", "dd/MM/yyyy HH:mm").cast("string").alias("ltz"),
-            F.to_timestamp_ntz("s", "dd/MM/yyyy HH:mm").alias("ntz"),
+            F.to_timestamp_ltz("s", F.lit("dd/MM/yyyy HH:mm")).cast("string").alias("ltz"),
+            F.to_timestamp_ntz("s", F.lit("dd/MM/yyyy HH:mm")).alias("ntz"),
         ).collect()[0]
         if shaped["ltz"] != "2016-12-31 10:30:00":
             raise SystemExit(f"to_timestamp_ltz pattern ltz {shaped['ltz']!r}")

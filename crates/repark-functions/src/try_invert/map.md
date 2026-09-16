@@ -44,6 +44,11 @@ pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-009, C-01
   per input kind (timestamps answer non-nullable like `date_format`, `utf-8` binary arms
   stay nullable). pins: fnp-11b/C-002, C-003, C-004, C-005;
   `strict::tests::*`.
+  **FNP-11B remediation round 1 (2026-09-16):** `to_char` resolves its input arm
+  once (lazily, so all-null unknown inputs still answer null) with one cached
+  mask and a sized builder; `to_number` / `to_binary` cache one format and
+  `to_binary` sizes its builder — answers unchanged, only allocations move.
+  pins: fnp-11b/C-006, C-007.
 
 ## I want to...
 

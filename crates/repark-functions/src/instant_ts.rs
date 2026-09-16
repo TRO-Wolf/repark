@@ -348,6 +348,13 @@ fn ends_with_numeric_offset(text: &str) -> bool {
         if !suffix[1].is_ascii_digit() || !suffix[2].is_ascii_digit() {
             continue;
         }
+        let wall = &text[..length - suffix_len];
+        let has_time = wall
+            .bytes()
+            .any(|byte| byte == b':' || byte == b'T' || byte == b't' || byte == b' ');
+        if !has_time {
+            continue;
+        }
         match suffix_len {
             3 => return true,
             5 if suffix[3].is_ascii_digit() && suffix[4].is_ascii_digit() => return true,

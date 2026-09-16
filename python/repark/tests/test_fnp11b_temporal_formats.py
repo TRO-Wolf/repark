@@ -209,30 +209,9 @@ def _actual_scalar(value: Any, spark_type: str) -> Any:
     return value
 
 
-DIVERGED_2026_09_15_UNRESOLVED_COLUMN: dict[int, str] = {
-    0: "Schema error: No field named tm.",
-    1: "Schema error: No field named tm.",
-    2: "Schema error: No field named tm.",
-    3: "Schema error: No field named tm.",
-    4: "Schema error: No field named tm.",
-}
-"""Dated divergence pins per R-17a-22: DataFusion answers a bare schema error
-for the missing ``tm`` column while the oracle raises
-``[UNRESOLVED_COLUMN.WITH_SUGGESTION]`` with an edit-distance-ranked proposal
-list. A schema-order rule would mistype three of the seven SQL cells, so the
-fix reproduces Spark's ranking across both doors as ERR-UNRESOLVED-COL-1 and
-the taxonomy stays untouched here. Each pin records the oracle condition it
-diverges from. The valid-fields tail stays unpinned; only the head is stable."""
-
-
 def _assert_error_cell(cell: dict[str, Any], failure: Exception) -> None:
     """A raising cell carries Spark's condition and Spark's message prefix."""
     text = str(failure)
-    index = PINNED_CELLS.index(cell)
-    if index in DIVERGED_2026_09_15_UNRESOLVED_COLUMN:
-        assert cell["error_condition"] == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-        assert text.startswith(DIVERGED_2026_09_15_UNRESOLVED_COLUMN[index])
-        return
     condition = cell["error_condition"] or ""
     assert f"[{condition}]" in text
     prefix = (cell["message"] or "").split(".")[0]
@@ -349,17 +328,6 @@ def _strip_recording_comment(expr: str) -> str:
     return expr
 
 
-DIVERGED_2026_09_15_ROWS_AS_STRING: dict[int, list[str]] = {
-    187: ["2 months"],
-    188: ["2 months"],
-}
-"""Dated divergence pins per R-17a-16: one Arrow MonthDayNano stores both ANSI
-YEAR TO MONTH intervals and Spark CalendarIntervals, so the year-month try_avg
-CAST text renders spelled out while the oracle spells INTERVAL '0-2' YEAR TO
-MONTH. The fix is a YEAR-MONTH interval type in the types slice, not a kernel.
-Each pin records the oracle text it diverges from."""
-
-
 def _assert_interval_rows_as_string(session: ReparkSession, cell: dict[str, Any]) -> None:
     """A collect-failing interval cell answers Spark's CAST text on its door."""
     if cell["door"] == "sql":
@@ -370,11 +338,6 @@ def _assert_interval_rows_as_string(session: ReparkSession, cell: dict[str, Any]
         frame = session.table(FRAME_VIEW)
         table = frame.select(column.cast("string").alias("v")).toArrow()
     actual = list(table.column(0).to_pylist())
-    index = PINNED_CELLS.index(cell)
-    if index in DIVERGED_2026_09_15_ROWS_AS_STRING:
-        assert cell["rows_as_string"] == ["INTERVAL '0-2' YEAR TO MONTH"]
-        assert actual == DIVERGED_2026_09_15_ROWS_AS_STRING[index]
-        return
     assert actual == cell["rows_as_string"]
 
 
@@ -491,7 +454,100 @@ def _signature_default(parameter: inspect.Parameter) -> str:
     return repr(parameter.default).split(" ")[0]
 
 
-@pytest.mark.parametrize("cell", PINNED_CELLS, ids=_cell_id)
+STRICT_XFAIL_CELLS: dict[int, str] = {
+    0: "R-17a-22 divergence, registry FNP-11B-UNRESOLVED-1, owner ERR-UNRESOLVED-COL-1",
+    1: "R-17a-22 divergence, registry FNP-11B-UNRESOLVED-1, owner ERR-UNRESOLVED-COL-1",
+    2: "R-17a-22 divergence, registry FNP-11B-UNRESOLVED-1, owner ERR-UNRESOLVED-COL-1",
+    3: "R-17a-22 divergence, registry FNP-11B-UNRESOLVED-1, owner ERR-UNRESOLVED-COL-1",
+    4: "R-17a-22 divergence, registry FNP-11B-UNRESOLVED-1, owner ERR-UNRESOLVED-COL-1",
+    187: "R-17a-16 divergence, registry FNP-11B-YM-AVG-1, owner run 17b types slice",
+    188: "R-17a-16 divergence, registry FNP-11B-YM-AVG-1, owner run 17b types slice",
+    191: "NULL INTERVAL DAY seam, registry FNP-11B-NULL-AVG-1, owner run 17c",
+    192: "NULL INTERVAL DAY seam, registry FNP-11B-NULL-AVG-1, owner run 17c",
+    197: "BL-14 seam, registry FNP-11B-BL14-1, owner run 17c",
+    198: "BL-14 seam, registry FNP-11B-BL14-1, owner run 17c",
+    199: "BL-14 seam, registry FNP-11B-BL14-1, owner run 17c",
+    200: "BL-14 seam, registry FNP-11B-BL14-1, owner run 17c",
+    203: "BL-14 seam, registry FNP-11B-BL14-1, owner run 17c",
+    204: "BL-14 seam, registry FNP-11B-BL14-1, owner run 17c",
+    205: "BL-14 seam, registry FNP-11B-BL14-1, owner run 17c",
+    206: "BL-14 seam, registry FNP-11B-BL14-1, owner run 17c",
+    207: "BL-14 seam, registry FNP-11B-BL14-1, owner run 17c",
+    208: "BL-14 seam, registry FNP-11B-BL14-1, owner run 17c",
+}
+"""Strict-xfail pins for the ruled residuals: each names its ruling, its
+registry row and its owning slice. Strict is the point — when the owner lands
+the fix the pin goes XPASS and fails, which retires the residual."""
+
+
+def _cell_param(cell: dict[str, Any]) -> Any:
+    """One pytest param per fixture cell, xfail-marked for ruled residuals."""
+    index = PINNED_CELLS.index(cell)
+    reason = STRICT_XFAIL_CELLS.get(index)
+    if reason is None:
+        return pytest.param(cell, id=_cell_id(cell))
+    mark = pytest.mark.xfail(strict=True, reason=reason)
+    return pytest.param(cell, marks=mark, id=_cell_id(cell))
+
+
+@pytest.mark.parametrize("cell", [_cell_param(cell) for cell in PINNED_CELLS])
 def test_door_cell_matches_oracle(cell: dict[str, Any]) -> None:
     """pins: fnp-11b/C-002, C-003, C-004, C-005, C-006."""
     _run_cell(cell)
+
+
+def test_current_time_beside_aggregate_is_global_agg() -> None:
+    """PYPERF-001: ``current_time()`` beside an aggregate is a global aggregation."""
+    session = _session(True, "UTC")
+    frame = session.table(FRAME_VIEW)
+    table = frame.select(F.sum("n").alias("total"), F.current_time().alias("now")).toArrow()
+    assert table.num_rows == 1
+    assert table.column(1).to_pylist()[0] is not None
+
+
+def test_try_avg_sliding_frame_retracts_leaving_rows() -> None:
+    """L-003: a sliding try_avg answers the live frame, not a sticky overflow."""
+    session = _session(True, "UTC")
+    table = session.sql(
+        "SELECT try_avg(v) OVER (ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS w"
+        " FROM (VALUES (INTERVAL '1' DAY), (INTERVAL '2' DAY)) AS x(v)"
+    ).toArrow()
+    assert table.column(0).to_pylist() == [
+        pa.MonthDayNano((0, 1, 0)),
+        pa.MonthDayNano((0, 1, 43_200_000_000_000)),
+    ]
+
+
+def test_bare_format_string_is_a_column_reference() -> None:
+    """PYPERF-003: a bare format string names a column, per live PySpark 4.1.2."""
+    session = _session(True, "UTC")
+    frame = session.table(FRAME_VIEW)
+    with pytest.raises(Exception, match="dd/MM/yyyy HH:mm"):
+        frame.select(F.to_timestamp_ltz("fmt_str", "dd/MM/yyyy HH:mm").alias("v")).toArrow()
+    with pytest.raises(Exception, match="9999"):
+        frame.select(F.to_char("n", "9999.99").alias("v")).toArrow()
+    with pytest.raises(Exception, match="yyyy-MM-dd HH:mm:ss"):
+        frame.select(F.try_to_timestamp("ts_str", "yyyy-MM-dd HH:mm:ss").alias("v")).toArrow()
+
+
+def test_cast_to_time_refuses_on_both_doors() -> None:
+    """L-004: the same CAST-to-TIME text refuses UNSUPPORTED_TIME_TYPE at build on both doors."""
+    session = _session(True, "UTC")
+    with pytest.raises(Exception, match="UNSUPPORTED_TIME_TYPE"):
+        session.sql("SELECT CAST(NULL AS TIME)")
+    with pytest.raises(Exception, match="UNSUPPORTED_TIME_TYPE"):
+        F.expr("CAST(NULL AS TIME)")
+
+
+@pytest.mark.parametrize("ansi", [True, False])
+@pytest.mark.parametrize("zone", ["UTC", "America/New_York"])
+def test_to_timestamp_ntz_date_only_string_parses_midnight(ansi: bool, zone: str) -> None:
+    """L-002: a date-only string is never an offset; live PySpark 4.1.2 answers midnight."""
+    session = _session(ansi, zone)
+    table = session.sql("SELECT to_timestamp_ntz('2020-01-01')").toArrow()
+    assert table.column(0).to_pylist() == [datetime.datetime(2020, 1, 1)]
+    frame = session.range(1)
+    column = F.to_timestamp_ntz(F.lit("2016-12-31"))
+    assert frame.select(column.alias("v")).toArrow().column(0).to_pylist() == [
+        datetime.datetime(2016, 12, 31)
+    ]

@@ -320,6 +320,49 @@ fn precast_zone(array: &ArrayRef) -> Result<ArrayRef> {
     )
 }
 
+fn precast_date(array: &ArrayRef) -> Result<ArrayRef> {
+    let error = || {
+        super::plan_error(format!(
+            "temporal constructor expects a DATE argument, got {}",
+            array.data_type()
+        ))
+    };
+    if matches!(array.data_type(), DataType::Date32 | DataType::Null)
+        || array.null_count() == array.len()
+    {
+        return Ok(Arc::clone(array));
+    }
+    let target = match array.data_type() {
+        DataType::Date64 => DataType::Date32,
+        DataType::Timestamp(_, _) => DataType::Timestamp(TimeUnit::Microsecond, None),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => DataType::Utf8,
+        _ => return Err(error()),
+    };
+    super::precast_column(array, &target, error())
+}
+
+fn precast_time(array: &ArrayRef) -> Result<ArrayRef> {
+    let error = || {
+        super::plan_error(format!(
+            "temporal constructor expects a TIME argument, got {}",
+            array.data_type()
+        ))
+    };
+    if matches!(
+        array.data_type(),
+        DataType::Time64(TimeUnit::Microsecond) | DataType::Null
+    ) || array.null_count() == array.len()
+    {
+        return Ok(Arc::clone(array));
+    }
+    let target = match array.data_type() {
+        DataType::Time32(_) | DataType::Time64(_) => DataType::Time64(TimeUnit::Microsecond),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => DataType::Utf8,
+        _ => return Err(error()),
+    };
+    super::precast_column(array, &target, error())
+}
+
 fn precast_make_args(arrays: &[ArrayRef], has_zone: bool) -> Result<Vec<ArrayRef>> {
     if arrays.len() <= 3 {
         let data = arrays.len() - usize::from(has_zone);
@@ -327,10 +370,12 @@ fn precast_make_args(arrays: &[ArrayRef], has_zone: bool) -> Result<Vec<ArrayRef
             .iter()
             .enumerate()
             .map(|(index, array)| {
-                if index < data {
-                    Ok(Arc::clone(array))
-                } else {
+                if index >= data {
                     precast_zone(array)
+                } else if index == 0 {
+                    precast_date(array)
+                } else {
+                    precast_time(array)
                 }
             })
             .collect()

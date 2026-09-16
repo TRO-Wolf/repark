@@ -4630,7 +4630,7 @@
     },
     {
      "name": "F.udtf",
-     "required_params": null
+     "required_params": []
     },
     {
      "name": "F.user",

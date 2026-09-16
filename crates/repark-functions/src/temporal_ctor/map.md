@@ -15,6 +15,10 @@ parser change (EX-FN-27, run 15c owns the parser).
   **FNP-11B step 6 (2026-09-15):** the time reader takes `HH:MM:SS[.ffffff]`
   strings (facade `lit(time)` arrives as text) beside TIME values; garbage
   raises, mirroring the date reader's malformed path. pins: fnp-11b/C-002.
+  **FNP-11B remediation round 1 (2026-09-16):** the 2/3-arg arm precasts DATE
+  to `Date32` and TIME to `Time64(µs)` once, with the row readers' casts and
+  error texts; all-null and `Null` inputs still pass through.
+  pins: fnp-11b/C-006, C-007.
 - [`adddiff.rs`](adddiff.rs) — `timestampadd` (calendar months and days in the
   session zone, exact durations below the day; the result keeps the input
   family, so `timestamp_ntz` in answers `timestamp_ntz` with no zone shift)

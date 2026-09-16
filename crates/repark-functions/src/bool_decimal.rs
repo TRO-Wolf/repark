@@ -28,7 +28,6 @@ pub fn install_bool_decimal_cast(ctx: &SessionContext) {
 pub fn install_shared_analyzer_rules(ctx: &SessionContext) {
     crate::integer_spark::install_integer_overflow(ctx);
     install_bool_decimal_cast(ctx);
-    crate::time_family::install_time_cast_guard(ctx);
 }
 
 #[derive(Debug, Default)]

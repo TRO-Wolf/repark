@@ -383,7 +383,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   all-optional signature under owner ruling Q-15a-3 (the freeze register
   regenerates in the same commit); the live def in `functions_expr.py` widens
   identically and forwards to this one.
-  pins: fnp-11a/C-001, C-015; fnp-11b/C-001, C-002, C-005
+  **FNP-11B remediation round 1 (2026-09-16):** `functions_expr.py` drops the
+  `make_timestamp` forwarder for a direct re-export of this def (identical
+  signatures; the freeze builder follows the alias); `ColumnOrName` format
+  positions (`to_timestamp_ltz/ntz`, `to_time`, `to_char/varchar/number`,
+  `to_binary`, `try_to_timestamp`) stop forcing string formats to literals so a
+  bare string is a column reference as Spark measures it, while the
+  `str`-typed formats keep `lit_indices`; `current_time` passes `foldable=True`.
+  pins: fnp-11a/C-001, C-015; fnp-11b/C-001, C-002, C-005, C-007
 - `functions_math.py` — mathematical and trigonometric wrappers.
   clause binds each side. **DEGREES-RUST-1 (2026-09-15, owner Q-15a-1):** `degrees` /
   `radians` move onto the engine's scalar UDFs through new `call_scalar` dispatch arms —

@@ -525,7 +525,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   struct CAST.
   pins: nullability-2/C-001, C-002, C-004
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
-  rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts).
+  rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the
   session map needs no ratchet): `CAST(bool AS DECIMAL(p,s))` becomes a
   precision-carrying UDF (true → 1, false → 0 at scale; per-row nulls). The UDF
@@ -840,8 +840,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   what poisons plans reading the TIME frame. `TIME'…'` literals stay literal
   casts and answer; `CAST('str' AS TIME)` answers where Spark raises (residual).
   Registration folds into `instant_ts::functions()`; the guard wires into
-  `install_shared_analyzer_rules`. pins: fnp-11b/C-002, C-003, C-004, C-005;
+  `analyzer_rules()` since remediation round 1 (both doors refuse the same
+  CAST-to-TIME text at build). pins: fnp-11b/C-002, C-003, C-004, C-005;
   `time_family::tests::*`.
+  **FNP-11B remediation round 1 (2026-09-16):** `interval_avg` keeps exact-width
+  (`i128`) sums with the overflow flag recomputed per add/subtract/merge and
+  merges every state row (L-001, L-003); `to_char` resolves its input arm once
+  with one cached mask; `make` precasts DATE/TIME once for the 2/3-arg arm;
+  `to_number`/`to_binary` cache one format; `ntz_single` strips through one
+  builder. PERF-001 stays per-row: the batch forward is unsound against the
+  inner batch-atomic error (see the ledger). pins: fnp-11b/C-006, C-007.
   **FNP-11B step 6 (2026-09-15):** `SparkTypeof` spells `array<…>` / `map<…>` /
   `struct<…>` recursively through the same table (no second table; the
   `repark-spark` renderer stays uncalled across the crate edge) and wrong arity

@@ -82,13 +82,13 @@ oracle; edits to `dataframe/**`, `column.py`, `session/**`, `catalog.py`,
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | Every card name is present on `repark.spark.functions` with PySpark 4.1.2's parameter names, order and defaults (frozen names unchanged per D-2; `make_timestamp` all-optional per D-8). | `test_fnp11b_temporal_formats.py::test_facade_signatures_match_spark`, red on the base. | PROVEN | Step-7 gates green; the freeze pin holds the widening. §8. |
-| C-002 | The Python-door fixture cells answer Spark-equal (values, types, nullability) on both ANSI settings and both zones. | `test_fnp11b_temporal_formats.py` python-door cells, red on the base. | OPEN | All green except cells 0–4, which are the dated divergence ruled in R-17a-22 (Spark ranks `UNRESOLVED_COLUMN` suggestions by edit distance; engine-wide, filed as ERR-UNRESOLVED-COL-1). Registry row appended; the clause stays OPEN because the proposition as written is not fully met. §8. |
-| C-003 | The SQL-door fixture cells answer Spark-equal on both ANSI settings and both zones. | `test_fnp11b_temporal_formats.py` sql-door cells, red on the base. | OPEN | All green except cells 187/188 (the R-17a-16 year-month rendering divergence) and 191/192, 197–200, 203–208 (run 17c's INTERVAL DAY dialect and BL-14 planner seams). Registry rows appended; the clause stays OPEN because the proposition as written is not fully met. §8. |
+| C-002 | The Python-door fixture cells answer Spark-equal (values, types, nullability) on both ANSI settings and both zones. | `test_fnp11b_temporal_formats.py` python-door cells, red on the base. | OPEN | Cells 0–4 are strict-xfail pins per R-17a-22 (ERR-UNRESOLVED-COL-1); the rest answer Spark-equal on both ANSI settings and both zones. §8, §9. |
+| C-003 | The SQL-door fixture cells answer Spark-equal on both ANSI settings and both zones. | `test_fnp11b_temporal_formats.py` sql-door cells, red on the base. | OPEN | Cells 187/188 (R-17a-16) and 191/192, 197–200, 203–208 (run 17c) are strict-xfail pins; the rest answer Spark-equal. §8, §9. |
 | C-004 | Error cells raise Spark's condition in brackets with Spark's message prefix on both doors under both ANSI settings. | The error-cell legs of the door tests. | OPEN | All green except cells 0–4 (R-17a-22, ERR-UNRESOLVED-COL-1). Registry row appended; the clause stays OPEN because the proposition as written is not fully met. §8. |
 | C-005 | TIME-family refusals are Spark-equal: `make_time`, `to_time`, `time_diff`, `time_trunc` and `hour(<TIME>)` raise `[UNSUPPORTED_TIME_TYPE]`; `current_time` answers `time(6)` with `current_time(7)` raising `[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE]`. | The TIME-family cells plus the `typeof` translation legs. | PROVEN | The TIME-family refusals and `current_time` are Spark-equal on both doors, and `test_fnp11b_typeof.py` is 40/40 green; the five blocked pins name seams outside this clause's proposition (17c's `TIMESTAMP_NTZ` literal, the unowned `binary` name). §8. |
-| C-006 | BL-13 `try_avg(INTERVAL)` answers Spark's average interval (DAY-TIME and YEAR-MONTH) with `[INTERVAL_ARITHMETIC_OVERFLOW]` on overflow; BL-14 promotes `DATE +` sub-day `INTERVAL` to `timestamp` (or names the run-16c planner seam per D-10). | The `try_avg`/`avg`/`date_plus_interval` cells. | OPEN | Day-time average, try-NULL on overflow, avg-raise and the kernel NULL semantic PROVEN; YEAR-MONTH render, NULL-input SQL parse and BL-14 are ruled residuals for run 17b/17c. §8. |
-| C-007 | No regression and census pins: the touched suites stay green; `test_functions_d.py`, `test_fn_batch3.py`, `test_functions_split_identity.py`, the EX-0 count and the example-coverage walk move with the new names plus a `docs/examples/functions/` example. | The gate runs in step 7. | PROVEN | Full step-7 run green: 761 passed with only the 12 named 17c residuals; parity 71 passed; EX-0 holds 1071. §8. |
-| C-008 | Registry rows `EX-FN-20`/`EX-FN-21`/`EX-FN-28`/`BL-13`/`BL-14` flip to FIXED with the new pin paths, one row per residual divergence is appended in §7, and every touched `map.md` is in lockstep. | `docs/spark-sql-iceberg-parity.md` diff; `make check-map-sync`. | PROVEN | True flips verified with pin paths; BL-13 rewritten rather than flipped per D-18 because its proposition changed shape; seven §7 residual rows appended, each naming its owner; maps in lockstep. §8. |
+| C-006 | BL-13 `try_avg(INTERVAL)` answers Spark's average interval (DAY-TIME and YEAR-MONTH) with `[INTERVAL_ARITHMETIC_OVERFLOW]` on overflow; BL-14 promotes `DATE +` sub-day `INTERVAL` to `timestamp` (or names the run-16c planner seam per D-10). | The `try_avg`/`avg`/`date_plus_interval` cells. | OPEN | Day-time average, try-NULL on overflow, avg-raise, the kernel NULL semantic, multi-partition merge (L-001) and sliding retract (L-003) are proven; YEAR-MONTH render, NULL-input SQL parse and BL-14 stay ruled residuals for run 17b/17c. §8, §9. |
+| C-007 | No regression and census pins: the touched suites stay green; `test_functions_d.py`, `test_fn_batch3.py`, `test_functions_split_identity.py`, the EX-0 count and the example-coverage walk move with the new names plus a `docs/examples/functions/` example. | The gate runs in step 7. | PROVEN | Remediation run: 762 passed, 19 xfailed, 0 failed; parity green; EX-0 holds 1071; `functions_expr.py` baseline ratcheted 2237 → 2220. §9. |
+| C-008 | Registry rows `EX-FN-20`/`EX-FN-21`/`EX-FN-28`/`BL-13`/`BL-14` flip to FIXED with the new pin paths, one row per residual divergence is appended in §7, and every touched `map.md` is in lockstep. | `docs/spark-sql-iceberg-parity.md` diff; `make check-map-sync`. | PROVEN | Step-7 pass plus remediation: xfails replace the divergence dicts (Pin lines updated), freeze builder follows aliases with a byte-identical make_timestamp row. §8, §9. |
 
 VERDICT: 8 clauses, 4 PROVEN, 4 OPEN, 0 REJECTED. No COVERAGE_ATTESTATION and the ledger stays in `staging/`: four clauses carry dated, registry-rowed divergences owned by other slices (R-17a-16, R-17a-22 / ERR-UNRESOLVED-COL-1, and run 17c's BL-14 and INTERVAL DAY seams), so their propositions as written are not fully met. Every such clause is OPEN rather than dressed as proven; the unit ships its green work and names what it did not close.
 
@@ -584,3 +584,158 @@ residual (191/192 NULL-interval, ten BL-14); parity
 111 backlog, 243 examples); `check_rust_file_size.py` 561 clean;
 `check_lib_py.py` 745 clean; `ruff format --check .` 997 formatted;
 `make verify` exit 0.
+
+## 9. Remediation round 1 (2026-09-16, run 17a — critic-logic and S2-21 perf reads)
+
+Live oracle measurements behind this round (banner: PySpark 4.1.2,
+`America/New_York`, 2026-09-16): `to_timestamp_ntz('2016-12-31')` and
+`('2020-01-01')` answer midnight NTZ; a bare format string on a `ColumnOrName`
+format parameter (`F.to_timestamp_ltz("fmt_str", "dd/MM/yyyy HH:mm")`,
+`F.to_char("dec", "9999.99")`) raises `[UNRESOLVED_COLUMN.WITH_SUGGESTION]`
+while the `F.lit(...)` form parses.
+
+Dispositions. Fixed: L-001, L-002, L-003, L-004, PERF-002, PERF-003, PERF-005,
+PERF-006, PERF-007, PERF-008, PERF-009, PYPERF-001, PYPERF-002, PYPERF-003.
+Ruled out with evidence: PERF-001 (the batch forward is unsound — see below).
+Deferred with owner: PERF-004 (a `GroupsAccumulator` is a new execution path
+for a rare shape; needs its own measured unit, no correctness impact).
+Ledger only: L-005, PERF-010, PERF-011, PERF-012, PERF-013, PYPERF-004,
+PYPERF-005 (one line each below).
+
+L-001 (P1, wrong multi-partition averages): `merge_batch` looped no state rows
+and read only row 0. The fix iterates every state row and merges each row's
+sums, count and overflow flag. Red proof (new pins on unfixed code):
+`merge_batch_consumes_every_state_row ... FAILED`,
+`merge_batch_propagates_overflow_from_any_row ... FAILED`,
+`test result: FAILED. 6 passed; 2 failed`. Green after: 9/9
+`interval_avg` tests. Pin doubles as the shipped-before defect-class guard:
+two partitions in, one merged average out, for the sum, the count and the
+overflow flag in both row orders.
+
+L-003 (P2, sticky overflow): sums are now exact-width (`i128`) with the
+overflow flag recomputed from narrowability on every add, subtract and merge,
+so retracting the overflowing input restores the finite state. A merged
+overflow row stays sticky by design — the state encoding carries NULL sums, so
+its magnitude is unrecoverable across the merge boundary; the flag records
+that, not a second bug. Pins: `retract_batch_restores_finite_sums_after_
+overflow_leaves` (Rust) and `test_try_avg_sliding_frame_retracts_leaving_rows`
+(SQL `ROWS BETWEEN 1 PRECEDING AND CURRENT ROW`, answering 1 day then 1.5
+days). PERF-005 rode in the same rewrite (one downcast per batch arm instead
+of one per row); the pre-existing cells are its correctness pins.
+
+L-002 (P1, date-only strip): `wall_without_zone` now strips a numeric offset
+only when the preceding wall carries a time marker (`:`, `T`, `t` or space), so
+`2020-01-01` is never read as `2020-01` plus offset `-01`. Red proof (new pin
+on the pre-fix native): all four
+`test_to_timestamp_ntz_date_only_string_parses_midnight` legs FAILED. The NY
+legs then exposed the same trap in `instant_ts.rs::ends_with_numeric_offset`,
+which fed `localize_zoneless_string_ticks` a false carries-timezone and shifted
+midnight to 19:00 the prior day; the identical guard there closes it (that file
+is FNP-11A's, touched only for this shared defect class). Pins: the Python
+four-door matrix plus `ntz_date_only_string_parses_midnight` (Rust); the
+pre-existing `ntz_drops_a_numeric_offset_and_keeps_the_wall` proves legit
+offsets still strip.
+
+L-004 (P1, raised from P2): `time_cast_guard_rule()` is now pushed in
+`analyzer_rules()`, so the F.expr parse context refuses the same CAST-to-TIME
+text the session door refuses; `install_time_cast_guard` leaves
+`install_shared_analyzer_rules` (every remaining consumer also installs the
+extension, verified by grep — one install, no double rule) and the
+now-unused installer is deleted. Red proof: `F.expr("CAST(NULL AS TIME)")`
+constructed on the pre-fix native (pin FAILED) and raises
+`[UNSUPPORTED_TIME_TYPE]` after. Audit result: `ltz_timestamp_cast_rule` and
+`interval_string_cast_rule` were already in `analyzer_rules()`; the
+`BoolDecimalCast` / `SparkIntegerOverflow` installs stay session-only — other
+units' rules, not this unit's need, moving them is their owners' call
+(recorded, not done). The tm-frame setup survives because its fragment carries
+the free column `y` (unresolved-column path, no eager analysis); the
+string-literal carve-out is untouched (`CAST('12:34:56' AS TIME)` constructs).
+
+PERF-001 (P1) is NOT closed — the suggested fix is unsound, and the suite
+proves it. The batch forward returns whatever `invoke_single` returns for the
+whole batch; on any garbage row DataFusion's `ToTimestampFunc` errors the batch
+and `translate_malformed_strings` (ANSI-off) answers all-NULL, so accepting the
+batch nulls valid rows beside garbage. Evidence:
+`try_keeps_valid_rows_beside_garbage` and
+`ntz_without_ansi_keeps_valid_rows_beside_garbage` FAILED under the batch
+forward (row 0 answered 0/NULL instead of `1483143120000000`) and pass on the
+restored per-row loop. The per-row re-entry is load-bearing row-level error
+isolation, not just slowness; the real fix is a row-granular error contract in
+the inner function (FNP-11A's `instant_ts`), routed to that owner. Those two
+tests are the pins.
+
+PERF-002 (P1): `to_char` resolves its input arm once (lazily on the first
+non-null row, so all-null unknown-typed inputs still answer null instead of
+erroring — behavior identical), casts once, and caches one compiled mask shared
+by the numeric arms beside the temporal arm's existing cache. PERF-009 rode
+along (`StringBuilder` data capacity from the first pattern length, input bytes
+for binary). Correctness pins: the block-2 fixture cells (both doors, both ANSI
+settings) unchanged and green.
+
+PERF-003 (P1): `precast_make_args` precasts DATE to `Date32` (`Date64` converts;
+`Timestamp` narrows to microseconds; text normalizes to `Utf8`) and TIME to
+`Time64(µs)` once for the 2/3-arg arm, using the same casts and the same error
+texts the row readers used; all-null and `Null` inputs still pass through, and
+`date_to_ymd` itself is untouched (shared with `wall_fields`). Correctness pins:
+the 19 `make_timestamp` cells on both doors.
+
+PERF-006: `to_number` caches one compiled format beside the row loop.
+PERF-007: `to_binary` caches one lowered format, sizes its builder from the
+input bytes, and appends utf-8 payloads without the extra copy; `decode_hex`
+internals stay (shared with `convert.rs`, out of scope). PERF-008:
+`ntz_single` builds the stripped array through one `StringBuilder` instead of
+three copies. Correctness pins for all three: the `to_char`-family and NTZ
+fixture cells, green unchanged.
+
+PYPERF-001: `current_time()` and `current_time(precision)` pass
+`foldable=True` (the `current_date` house pattern); pin
+`test_current_time_beside_aggregate_is_global_agg` was red with
+`[MISSING_GROUP_BY]` before. `localtimestamp()` keeps the same shape — FNP-11A's
+call (recorded, not done). PYPERF-002: `functions_expr.make_timestamp` is now a
+direct re-export of `functions_temporal.make_timestamp` (identical signatures,
+verified); the freeze builder learned module-level alias following
+(`aliased_function_signatures` plus `aliased_source_paths` so scratch trees
+carry the targets) and the regenerated register is byte-identical for
+`F.make_timestamp` (`required_params: []`). That pass also closed a real gap:
+`F.udtf` moves from `null` to `[]`, which its all-optional definition confirms.
+`months_between` keeps its hop — FNP-11A's call. PYPERF-003: the `ColumnOrName`
+format wrappers (`to_timestamp_ltz/ntz`, `to_time`, `to_char/varchar/number`,
+`to_binary`, `try_to_timestamp`) no longer force string formats to literals, so
+a bare string is a column reference exactly as the live measurement shows; the
+`str`-typed formats (`to_date`, `to_timestamp`, `unix_timestamp`) keep
+`lit_indices`. Pin `test_bare_format_string_is_a_column_reference` was red
+before (patterns parsed) and raises after; `docs/examples/functions/
+timestamp_ltz_ntz.py` now passes its patterns as `F.lit(...)`.
+
+P3 ledger lines. L-005: 5-digit years with `yyyy` fail exact-width parsing;
+Java accepts minimum width 4 — unmeasured conjecture, needs a live cell before
+any change. PERF-010: double `to_naive()` per Shared parse — negligible beside
+localize. PERF-011: triple pattern walk, batch-paid once on Shared. PERF-012:
+`walls_with_format` side vector before the builder. PERF-013: numeric `to_char`
+intermediate strings and zero-capacity base64. PYPERF-004: per-call
+`frozenset({1})` rebuilds across 49 house-wide sites — needs its own sweep, not
+a passenger. PYPERF-005: omitted numeric `make_timestamp` parts NULL-pad via
+`lit(None)`; whether Spark zero-fills is unmeasured conjecture, and a 3-arg
+numeric form collides with date/time/tz. D-21 (`CAST('str' AS TIME)`) stays
+deferred: plain-door probes do not reproduce an answering shape.
+
+Remediation gates (2026-09-16, rebuilt release native):
+`cargo test -p repark-functions --lib` 700 passed 0 failed 1 ignored;
+`make rust-clippy` clean; `maturin develop --release` installed repark-1.4.2;
+pytest over the unit's pin files plus `test_functions_d.py`,
+`test_fn_batch3.py`, `test_functions_split_identity.py`,
+`test_fnp7_try_inversions.py`, `test_examples_functions_a.py`,
+`test_examples_functions_b.py`, `test_fnp11a_temporal.py` — 762 passed,
+19 xfailed, 0 failed; parity `test_api_freeze.py` 22 passed,
+`test_ex_0_example_coverage.py` and `test_cap_1_source_file_line_cap.py` green;
+`check_example_coverage.py --require-execute` exit 0;
+`check_rust_file_size.py` clean; `check_lib_py.py` clean after ratcheting
+`functions_expr.py` 2237 → 2220 with the CAP-1 mirror and a `scripts/map.md`
+row; `ruff format --check .` clean; `make verify` exit 0;
+`check_ledger_grammar.py` clean.
+
+Clause movement in this round: C-007 evidence moves to the remediation counts;
+C-008 evidence moves to the xfail conversion, the seven §7 Pin lines that cited
+the deleted divergence dicts, and the freeze-builder work. C-002/C-003/C-004
+stay OPEN (strict-xfail residuals, owners named). C-006 stays OPEN (BL-14
+unimplemented). No COVERAGE_ATTESTATION while any clause is OPEN.

@@ -3,7 +3,9 @@ use std::sync::Arc;
 
 use arrow::array::timezone::Tz;
 use chrono::{DateTime, NaiveDateTime, TimeZone};
-use datafusion::arrow::array::{Array, ArrayRef, AsArray, StringArray, TimestampMicrosecondArray};
+use datafusion::arrow::array::{
+    Array, ArrayRef, AsArray, StringArray, StringBuilder, TimestampMicrosecondArray,
+};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{
     DataType, Date32Type, Field, FieldRef, TimestampMicrosecondType,
@@ -346,8 +348,12 @@ fn wall_without_zone(text: &str) -> &str {
             5 => head[3].is_ascii_digit() && head[4].is_ascii_digit(),
             _ => head[3] == b':' && head[4].is_ascii_digit() && head[5].is_ascii_digit(),
         };
-        if zoned {
-            return trimmed[..trimmed.len() - width].trim_end();
+        let wall = &trimmed[..trimmed.len() - width];
+        let has_time = wall
+            .bytes()
+            .any(|byte| byte == b':' || byte == b'T' || byte == b't' || byte == b' ');
+        if zoned && has_time {
+            return wall.trim_end();
         }
     }
     text
@@ -385,16 +391,16 @@ fn ntz_single(input: &ArrayRef, args: &ScalarFunctionArgs) -> Result<ColumnarVal
         DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
             let texts = cast(input.as_ref(), &DataType::Utf8)?;
             let texts = texts.as_string::<i32>();
-            let mut owned: Vec<Option<String>> = Vec::with_capacity(texts.len());
+            let mut stripped =
+                StringBuilder::with_capacity(texts.len(), texts.get_array_memory_size());
             for row in 0..texts.len() {
                 if texts.is_null(row) {
-                    owned.push(None);
+                    stripped.append_null();
                 } else {
-                    owned.push(Some(wall_without_zone(texts.value(row)).to_string()));
+                    stripped.append_value(wall_without_zone(texts.value(row)));
                 }
             }
-            let refs: Vec<Option<&str>> = owned.iter().map(|cell| cell.as_deref()).collect();
-            let stripped = StringArray::from(refs);
+            let stripped = stripped.finish();
             let ansi = spark_ansi_enabled_from_options(args.config_options.as_ref());
             let instants =
                 ltz_of_strings(&stripped, args, !ansi).map_err(|error| retarget_to_ntz(&error))?;
@@ -533,6 +539,25 @@ mod tests {
             .column(0)
             .as_primitive::<TimestampMicrosecondType>()
             .value(0)
+    }
+
+    #[tokio::test]
+    async fn ntz_date_only_string_parses_midnight() {
+        let midnight = chrono::NaiveDate::from_ymd_opt(2020, 1, 1)
+            .expect("midnight date")
+            .and_hms_opt(0, 0, 0)
+            .expect("midnight time")
+            .and_utc()
+            .timestamp_micros();
+        let ctx = ctx_at("UTC");
+        let table = ctx
+            .sql("SELECT to_timestamp_ntz('2020-01-01') AS ts")
+            .await
+            .expect("ntz date-only")
+            .collect()
+            .await
+            .expect("collect");
+        assert_eq!(ticks(&table[0]), midnight);
     }
 
     #[tokio::test]

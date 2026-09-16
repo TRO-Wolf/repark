@@ -12,7 +12,6 @@ use datafusion::logical_expr::{
     ScalarUDFImpl, Signature, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
-use datafusion::prelude::SessionContext;
 
 use crate::datetime::local_datetime_from_micros;
 use crate::temporal_ctor::resolve_session_zone;
@@ -508,10 +507,6 @@ impl AnalyzerRule for TimeCastGuard {
     fn name(&self) -> &str {
         "time_cast_guard"
     }
-}
-
-pub(crate) fn install_time_cast_guard(ctx: &SessionContext) {
-    ctx.add_analyzer_rule(time_cast_guard_rule());
 }
 
 #[cfg(test)]

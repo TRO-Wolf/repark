@@ -33,6 +33,7 @@ from repark.spark.functions import (
     date_format,
     lit,
 )
+from repark.spark.functions_temporal import make_timestamp as make_timestamp
 from repark.spark.types import StructType
 
 
@@ -1144,8 +1145,7 @@ def try_to_timestamp(col: Column | str, format: Column | str | None = None) -> C
     """Parse to a timestamp, answering NULL where ``to_timestamp`` would raise."""
     if format is None:
         return _scalar("try_to_timestamp", col)
-    target = lit(format) if isinstance(format, str) else format
-    return _scalar("try_to_timestamp", col, target)
+    return _scalar("try_to_timestamp", col, format)
 
 
 def to_utc_timestamp(timestamp: Column | str, tz: str) -> Column:
@@ -1156,23 +1156,6 @@ def to_utc_timestamp(timestamp: Column | str, tz: str) -> Column:
 def from_utc_timestamp(timestamp: Column | str, tz: str) -> Column:
     """Render a UTC instant in ``tz`` (PySpark ``functions.from_utc_timestamp``)."""
     return _scalar("from_utc_timestamp", timestamp, tz, lit_indices=frozenset({1}))
-
-
-def make_timestamp(
-    years: Column | str | int | None = None,
-    months: Column | str | int | None = None,
-    days: Column | str | int | None = None,
-    hours: Column | str | int | None = None,
-    mins: Column | str | int | None = None,
-    secs: Column | str | float | None = None,
-    timezone: Column | str | None = None,
-    date: Column | str | None = None,
-    time: Column | str | None = None,
-) -> Column:
-    """Build a timestamp from parts or a date plus a time (PySpark ``functions.make_timestamp``)."""
-    from repark.spark import functions_temporal as temporal
-
-    return temporal.make_timestamp(years, months, days, hours, mins, secs, timezone, date, time)
 
 
 # Aggregate, statistic, hash, and identifier wrappers.
