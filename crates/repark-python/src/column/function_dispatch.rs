@@ -343,7 +343,8 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "abs" | "hypot" | "bin" | "rint" | "base64" | "unbase64" | "size" | "cardinality"
         | "array_contains" | "array_has" | "ascii" | "length" | "character_length"
-        | "char_length" | "reverse" | "sequence" | "generate_series" | "gen_series" | "split" => {
+        | "char_length" | "reverse" | "sequence" | "generate_series" | "gen_series" | "split"
+        | "bround" => {
             return dispatch_spark::call_scalar_expr(name, exprs);
         }
         "repeat" => {

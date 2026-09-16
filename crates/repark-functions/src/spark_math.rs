@@ -18,6 +18,9 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
+mod bround;
+pub use bround::{bround_udf, call_bround};
+
 #[must_use]
 pub fn abs_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkAbs::new()))
@@ -45,13 +48,16 @@ pub fn factorial_udf() -> Arc<ScalarUDF> {
 
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
+<<<<<<< HEAD
     vec![
         abs_udf(),
         hypot_udf(),
         bin_udf(),
         rint_udf(),
         factorial_udf(),
+        bround_udf(),
     ]
+>>>>>>> 04cebd25 (fnp-math-1 step 2 (run 18a): bround answers PySpark 4.1.2 on both doors)
 }
 
 #[derive(Debug)]
@@ -407,7 +413,11 @@ fn acceptable_double(data_type: &DataType) -> bool {
     ) || unwrap_dict(data_type).is_numeric()
 }
 
-fn unexpected_input_type(name: &str, required: &str, got: &DataType) -> DataFusionError {
+pub(crate) fn unexpected_input_type(
+    name: &str,
+    required: &str,
+    got: &DataType,
+) -> DataFusionError {
     DataFusionError::Plan(format!(
         "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"{name}(<expr>)\" due to \
          data type mismatch: The first parameter requires the \"{required}\" type, however \
@@ -416,7 +426,7 @@ fn unexpected_input_type(name: &str, required: &str, got: &DataType) -> DataFusi
     ))
 }
 
-fn spark_type_name(data_type: &DataType) -> String {
+pub(crate) fn spark_type_name(data_type: &DataType) -> String {
     match data_type {
         DataType::Boolean => "BOOLEAN".to_string(),
         DataType::Int8 => "TINYINT".to_string(),
@@ -442,7 +452,7 @@ fn float64_values(array: &ArrayRef) -> Result<PrimitiveArray<Float64Type>> {
     Ok(casted.as_primitive::<Float64Type>().clone())
 }
 
-fn overflow_error(kind: &str) -> DataFusionError {
+pub(crate) fn overflow_error(kind: &str) -> DataFusionError {
     DataFusionError::Execution(format!(
         "[ARITHMETIC_OVERFLOW] {kind} overflow. If necessary set \"spark.sql.ansi.enabled\" \
          to \"false\" to bypass this error."

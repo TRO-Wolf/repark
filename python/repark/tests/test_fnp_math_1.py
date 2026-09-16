@@ -122,7 +122,7 @@ def _spark_simple_to_arrow(text: str) -> pa.DataType:
         "double": pa.float64(),
         "string": pa.string(),
         "int": pa.int32(),
-        "boolean": pa.boolean(),
+        "boolean": pa.bool_(),
         "binary": pa.binary(),
     }[text]
 

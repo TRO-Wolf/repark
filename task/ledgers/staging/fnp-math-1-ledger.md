@@ -184,3 +184,23 @@ zero-doubles normalized to
 tail byte mixed individually then `fmix(h, numBytes)` (4/4 string cells —
 plain Guava tail handling does NOT match); chained per argument starting at 42
 with NULLs skipped.
+
+## Step 2 (run 18a) — `bround` evidence
+
+Kernel `crates/repark-functions/src/spark_math/bround.rs` (submodule, R-17a-19;
+listed in `spark_math/map.md` + crate `map.md`), registered via
+`spark_math::functions()`, facade arm through the door-converged list +
+`dispatch_spark.rs` (the #622 pattern; the one-line list edit is the
+`function_dispatch.rs` ADD, D-1/D-8), thin facade `bround` in
+`functions_math.py` + `INSTALL_NAMES` (no `functions.py` churn, Q-15c-4).
+`test_fnp_math_1.py -k bround` → 11 passed on the rebuilt release native.
+Test-plumbing fix in the same commit: `_spark_simple_to_arrow` used
+`pa.boolean()`, absent in pyarrow 25 (`pa.bool_()`), which failed every value
+pin at the helper regardless of kernels. Measured rule: `bround` is always
+nullable, even over literal inputs (`bround(CAST(25 AS INT), -1)` records
+True) — literal-only `split` folds to non-nullable instead (Q12-41), so each
+kernel carries its own measured nullability. Unpinned choices: non-integral
+`bround` input refuses with `DATATYPE_MISMATCH` requiring DOUBLE (rint
+precedent); integral overflow errors `[ARITHMETIC_OVERFLOW]` under ANSI and
+wraps otherwise; NULL scale answers NULL; Decimal32/64/256 and Float16 refuse
+(all recorded decimal cells are Decimal128).

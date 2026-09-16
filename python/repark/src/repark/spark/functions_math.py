@@ -9,6 +9,11 @@ from repark.spark.column import Column
 from repark.spark.functions import _as_column_arg, _scalar
 
 
+def bround(col: Column | str, scale: Column | int | None = None) -> Column:
+    """Banker's rounding with Spark ``bround`` names and types."""
+    return _scalar("bround", col, 0 if scale is None else scale)
+
+
 def bin(col: Column | str) -> Column:
     """Binary string of a long (PySpark ``functions.bin``).
 
@@ -176,7 +181,7 @@ def toRadians(col: Column | str) -> Column:  # noqa: N802
     return radians(col)
 
 
-INSTALL_NAMES: tuple[str, ...] = ("toDegrees", "toRadians")
+INSTALL_NAMES: tuple[str, ...] = ("toDegrees", "toRadians", "bround")
 
 
 def install_into(namespace: dict[str, Any], exported: list[str]) -> None:

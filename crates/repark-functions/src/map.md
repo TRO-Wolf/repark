@@ -102,8 +102,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   names/hex (`'Infinityd'`, `'infd'`, `'1dd'`, `'0x10'`) keep today's refuse/NULL. The shared
   SQL `CAST` kernel is untouched. pins: fnp-bitmap-facade-1/C-012, C-013, C-014,
   C-017, C-018
-- `spark_math.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `abs` / `hypot` / `bin` /
-  `rint` kernels shared by both doors. `abs` keeps the input width, refuses BOOLEAN, and
+- `spark_math.rs` + [`spark_math/`](spark_math/map.md) — **DOOR-CONVERGE-1
+  (2026-09-15):** Spark `abs` / `hypot` / `bin` / `rint` kernels shared by both
+  doors. **FNP-MATH-1 (2026-09-16, run 18a):** `spark_math/bround.rs` adds the
+  `bround` HALF_EVEN kernel (double, decimal, integral; negative scale; Spark
+  result types; `scalar_arguments` scale literal; always-nullable display field).
+  `abs` keeps the input width, refuses BOOLEAN, and
   reads the ANSI carrier (`repark.ansi` extension via
   `ansi::spark_ansi_enabled_from_options`) to raise Spark-shaped `[ARITHMETIC_OVERFLOW]`
   on signed minima. `hypot` is rescaled `f64::hypot` (infinity over NaN). `bin` / `rint`

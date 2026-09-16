@@ -62,6 +62,15 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::reverse(exprs[0].clone())
         }
+        "bround" => {
+            if exprs.len() != 1 && exprs.len() != 2 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 1 or 2 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::spark_math::call_bround(exprs)
+        }
         "split" => {
             if exprs.len() != 2 && exprs.len() != 3 {
                 return Err(PyValueError::new_err(format!(
