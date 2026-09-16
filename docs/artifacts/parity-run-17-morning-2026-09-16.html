@@ -1,0 +1,286 @@
+<title>Spark Parity Run 17</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F2F5F7;
+    --paper: #FFFFFF;
+    --ink: #1A2430;
+    --ink-soft: #55616D;
+    --line: #D6DEE5;
+    --accent: #0E6C88;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #DCEBF1;
+    --good: #2A7A4B;
+    --good-soft: #DDEFE3;
+    --warn: #A86A10;
+    --warn-soft: #F6E8CF;
+    --bad: #B0372A;
+    --bad-soft: #F5DCD8;
+    --hold: #5A6470;
+    --hold-soft: #E4E8EC;
+    --bar: #9CC5D4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1418;
+      --paper: #151D23;
+      --ink: #E4EAEF;
+      --ink-soft: #A3AFB9;
+      --line: #27333C;
+      --accent: #4DB1CF;
+      --accent-ink: #0B1519;
+      --accent-soft: #163541;
+      --good: #63C48A;
+      --good-soft: #163425;
+      --warn: #E0A64A;
+      --warn-soft: #3A2C12;
+      --bad: #EE7A6C;
+      --bad-soft: #3E1D19;
+      --hold: #9AA6B1;
+      --hold-soft: #232D35;
+      --bar: #2B5F70;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1418;
+    --paper: #151D23;
+    --ink: #E4EAEF;
+    --ink-soft: #A3AFB9;
+    --line: #27333C;
+    --accent: #4DB1CF;
+    --accent-ink: #0B1519;
+    --accent-soft: #163541;
+    --good: #63C48A;
+    --good-soft: #163425;
+    --warn: #E0A64A;
+    --warn-soft: #3A2C12;
+    --bad: #EE7A6C;
+    --bad-soft: #3E1D19;
+    --hold: #9AA6B1;
+    --hold-soft: #232D35;
+    --bar: #2B5F70;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 36px 24px 72px; }
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 18px; margin-bottom: 28px; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  h1 {
+    font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: 34px;
+    line-height: 1.1;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  h2 {
+    font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    margin: 36px 0 12px;
+    text-wrap: balance;
+  }
+  .lede { color: var(--ink-soft); margin: 0; max-width: 66ch; }
+  .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0 4px; }
+  .tile { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; }
+  .tile .n {
+    font-family: "IBM Plex Sans Condensed", sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tile .l { font-size: 12px; color: var(--ink-soft); margin-top: 6px; letter-spacing: 0.02em; }
+  .tbl { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 500;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: var(--ground);
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: "IBM Plex Mono", monospace; font-size: 13.5px; }
+  .chip { display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; padding: 1px 8px; border-radius: 3px; white-space: nowrap; }
+  .chip.good { background: var(--good-soft); color: var(--good); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); }
+  .chip.hold { background: var(--hold-soft); color: var(--hold); }
+  .chip.acc { background: var(--accent-soft); color: var(--accent); }
+  code, .mono { font-family: "IBM Plex Mono", monospace; font-size: 13px; }
+  .bars { display: grid; gap: 8px; margin: 10px 0 0; }
+  .bar { display: grid; grid-template-columns: 170px 1fr 120px; align-items: center; gap: 12px; font-size: 13.5px; }
+  .bar .track { height: 12px; background: var(--hold-soft); border-radius: 2px; position: relative; overflow: hidden; }
+  .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--bar); }
+  .bar .done { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+  .bar .v { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink-soft); text-align: right; font-variant-numeric: tabular-nums; }
+  .legend { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; }
+  .legend i { display: inline-block; width: 12px; height: 10px; vertical-align: -1px; margin-right: 4px; border-radius: 2px; }
+  ol, ul { padding-left: 22px; margin: 8px 0; }
+  li { margin: 5px 0; }
+  li b { font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 14px 16px; }
+  .card h3 { font-family: "IBM Plex Sans Condensed", sans-serif; font-size: 16px; margin: 0 0 8px; font-weight: 600; }
+  .card p { margin: 0 0 6px; font-size: 14px; }
+  .note { border-left: 3px solid var(--warn); padding: 8px 14px; background: var(--paper); border-radius: 0 4px 4px 0; font-size: 14px; margin: 14px 0; }
+  footer { margin-top: 44px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 12.5px; }
+  @media (max-width: 640px) {
+    .strip { grid-template-columns: 1fr 1fr; }
+    .grid2 { grid-template-columns: 1fr; }
+    .bar { grid-template-columns: 110px 1fr 80px; }
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">RePark · 1.5 Spark-parity campaign · morning of 2026-09-16</p>
+  <h1>Spark Parity Run 17</h1>
+  <p class="lede">The second overnight of the 1.5 parity campaign and the first with Devin SWE-2 beside Muse on the actor tier. Three Opus orchestrators, one slice each, all exited inside the window by 07:14 EDT. Nine unit PRs merged to main, three run reports followed, and one gated unit is finishing under the orchestrating session this morning.</p>
+  <div class="strip">
+    <div class="tile"><div class="n">9</div><div class="l">unit PRs merged to main overnight</div></div>
+    <div class="tile"><div class="n">37 → 22</div><div class="l">function names missing; 20 once #629 lands</div></div>
+    <div class="tile"><div class="n">114 / 115</div><div class="l">DataFrame names present; metadataColumn left</div></div>
+    <div class="tile"><div class="n">$16</div><div class="l">worker spend, all Grok review; Devin and Muse free</div></div>
+  </div>
+</header>
+
+<h2>Census against PySpark 4.1.2</h2>
+<div class="bars">
+  <div class="bar"><span>functions (509)</span><div class="track"><div class="fill" style="width:96.1%"></div><div class="done" style="width:95.7%"></div></div><span class="v">22 missing · 20 queued</span></div>
+  <div class="bar"><span>DataFrame (115)</span><div class="track"><div class="done" style="width:99.1%"></div></div><span class="v">1 missing</span></div>
+  <div class="bar"><span>Reader / Writer / NA (34)</span><div class="track"><div class="done" style="width:100%"></div></div><span class="v">complete</span></div>
+  <div class="bar"><span>Column · GroupedData · Catalog · Session</span><div class="track"><div class="done" style="width:100%"></div></div><span class="v">complete</span></div>
+  <div class="bar"><span>registry backlog rows</span><div class="track"><div class="fill" style="width:45.4%"></div></div><span class="v">154 of 339 rows</span></div>
+</div>
+<p class="legend"><i style="background:var(--accent)"></i>present on main at 07:15 EDT &nbsp; <i style="background:var(--bar)"></i>after the queued PR lands, or, for the registry, the share of rows still marked BACKLOG. A name counts when it is on the facade and answers Spark on both doors, or is a dated declared refusal with Spark's error class.</p>
+
+<div class="tbl" style="margin-top:14px">
+<table>
+  <tr><th>Slice</th><th class="num">Run start</th><th class="num">Main at 07:15</th><th class="num">After #629</th><th>Moved by</th></tr>
+  <tr><td>functions missing</td><td class="num">37</td><td class="num">22</td><td class="num">20</td><td>#618 window family (3), #627 datetime and TIME (12), #629 inline pair (2)</td></tr>
+  <tr><td>DataFrame missing</td><td class="num">7</td><td class="num">1</td><td class="num">1</td><td>#640 freqItems and transpose, #647 scalar, exists, lateralJoin, asTable</td></tr>
+  <tr><td>registry BACKLOG rows</td><td class="num">158</td><td class="num">154</td><td class="num">154</td><td>#639 runtime SET, #641 BL-11, TZ-3 fixed; four new honest rows opened</td></tr>
+  <tr><td>registry FIXED rows</td><td class="num">88</td><td class="num">94</td><td class="num">94</td><td>same units</td></tr>
+</table>
+</div>
+
+<h2>Merged overnight</h2>
+<div class="tbl">
+<table>
+  <tr><th>PR</th><th>Unit</th><th>Run</th><th>Builder</th><th>Review</th></tr>
+  <tr><td class="mono">#618</td><td>window, window_time, session_window on both doors</td><td>17a</td><td>Muse (run 16a), rebased and re-gated</td><td>2 critics, Rust and Python perf</td></tr>
+  <tr><td class="mono">#633</td><td>DOUBLE and FLOAT text byte-identical to JDK 17 (FloatingDecimal port)</td><td>17c</td><td>Devin</td><td>logic 0 P1</td></tr>
+  <tr><td class="mono">#639</td><td>runtime SET of ANSI mode and the session time zone applies to the live session</td><td>17c</td><td>Muse ×4</td><td>1 shared P1, two verification passes</td></tr>
+  <tr><td class="mono">#627</td><td>datetime formats, the TIME family, to_char family, typeof, make_timestamp widening</td><td>17a</td><td>Muse ×5, one resumed session</td><td>5 P1 remediated, verification clean</td></tr>
+  <tr><td class="mono">#641</td><td>numeric to BINARY under ANSI off, Spark's conf-suggesting refusal</td><td>17c</td><td>Muse ×2</td><td>0 P1, 3 P2</td></tr>
+  <tr><td class="mono">#642</td><td>registry rows BL-19 and BL-20 (docs)</td><td>17c</td><td>orchestrator</td><td>none</td></tr>
+  <tr><td class="mono">#640</td><td>freqItems and transpose as Rust kernels</td><td>17b</td><td>Devin ×4</td><td>P1 on signed-zero keys, settled by measurement</td></tr>
+  <tr><td class="mono">#644</td><td>RLIKE, TIMESTAMP_LTZ/NTZ, struct dot-access, bare datetime units in SQL</td><td>17c</td><td>Muse ×1</td><td>cut off by the stop time</td></tr>
+  <tr><td class="mono">#647</td><td>scalar, exists, lateralJoin, asTable; subquery decorrelation in Rust</td><td>17b</td><td>Devin ×3</td><td>3 Grok reads, verification clean</td></tr>
+</table>
+</div>
+<p class="legend">Run reports: #645 (17c) merged 06:37, #646 (17a) and #648 (17b) in the merge queue. The DECIMAL-CACHE-1 release v1.4.2 from yesterday evening is untouched by any of this.</p>
+
+<h2>Devin against Muse, the comparison you asked for</h2>
+<div class="tbl">
+<table>
+  <tr><th></th><th>Devin SWE-2 (free tier)</th><th>Muse Spark 1.3 contributor</th><th>Grok 4.6 reviewers</th></tr>
+  <tr><td>rounds tonight</td><td class="num">12</td><td class="num">12</td><td class="num">27</td></tr>
+  <tr><td>wall time</td><td class="num">693 min</td><td class="num">2205 steps</td><td class="num">$16.26</td></tr>
+  <tr><td>rounds lost</td><td>0 to the provider; 1 to a turn stall (resumed)</td><td class="num">0</td><td>1 turn-1 stall, resumed</td></tr>
+  <tr><td>units merged</td><td>#633, #640, #647</td><td>#618, #627, #639, #641, #644</td><td>every merged PR reviewed</td></tr>
+  <tr><td>diff quality</td><td>clean; trailer byte-exact; no comment-ban hit; hand-back counts accurate every time</td><td>round 1 of SET-ANSI added 33 doc comments; BL-11 claimed verify rc 0 when it was rc 2; never wrote a hand-back file</td><td>nine P1s from $7 on 17a alone; the freqItems P1 was real with the wrong reasoning</td></tr>
+  <tr><td>working style</td><td>reads for about 50 minutes before the first edit, then lands the change in one pass; read Spark bytecode with javap unprompted</td><td>commits per clause group, sustains long resumed sessions, moves fast, over-reports</td><td>read-only clones, no edits</td></tr>
+  <tr><td>failure mode</td><td>batches: one round finished a 35-file unit and did not commit; another ran 5 hours with no commit</td><td>claims about code outside its own diff were false twice, each disproved with one command</td><td>argues from reasoning where a measurement was needed</td></tr>
+</table>
+</div>
+<div class="note">All three orchestrators reached the same recommendation independently: keep the mix. Devin takes the bounded, clearly carded units with the commit written as an imperative numbered step. Muse takes breadth, with every gate line re-run by the orchestrator as an audit rather than trusted. Grok stays the reviewer tier, and every reviewer claim about behaviour is measured on live Spark before it becomes a ruling.</div>
+
+<h2>In flight and carried over</h2>
+<div class="tbl">
+<table>
+  <tr><th>Item</th><th>State at 07:45</th><th>Next</th></tr>
+  <tr><td class="mono">#629 FNP-GEN-1</td><td><span class="chip acc">gating</span> steps 1 and 2: posexplode and inline pairs on both doors, XML declared; rebased onto main by the orchestrating session, EX-0 count re-measured</td><td>merges through the queue when the release-native gate is green; steps 3 and 4 (json_tuple, from_csv, schema_of_csv) are 13 strict xfails waiting for their kernels</td></tr>
+  <tr><td class="mono">#625 FNP-AGG-1</td><td><span class="chip warn">handed over</span> seven aggregates answer, logic and Rust perf found no P1; two Python-perf P1s are the door-split defect</td><td>first item of the next run: move the two decisions into Rust, then steps 3 to 5</td></tr>
+  <tr><td class="mono">#628 FNP-MATH-1</td><td><span class="chip hold">draft</span> step 1 committed</td><td>bround, conv, hash, format_number, the split facade half, then AES on RustCrypto</td></tr>
+  <tr><td class="mono">#643 DOOR-CONVERGE-2b</td><td><span class="chip hold">parked</span> Devin round 1, never gated</td><td>next 17c-shaped run resumes it from the parked branch</td></tr>
+  <tr><td>LIT-DECIMAL-1</td><td><span class="chip hold">step 1</span> branch pushed this morning so the clone could go; found that the SQL door answers decimal(39,0) for a 39-digit literal where Spark refuses</td><td>step 2: the Rust literal path and the like escape argument</td></tr>
+  <tr><td>LOGICAL-WIDTH-1</td><td><span class="chip good">carded and oracled</span> the engine already carries int16, int8, float32 and binary end to end; the divergence is four match arms in the type table plus one widening cast</td><td>the cheapest high-value item on the desk; one small unit</td></tr>
+  <tr><td>SUBQ-CELLS-1</td><td>five subquery cells measured on live Spark, repark matches all five</td><td>20-minute follow-up folding them into the oracle</td></tr>
+  <tr><td>BL-19, BL-20</td><td>registry rows filed: unknown functions refuse as Invalid function, not UNRESOLVED_ROUTINE; the SQL door types INT plus TINYINT as BIGINT</td><td>two 1.5 cards, both ahead of adding more names</td></tr>
+  <tr><td>Never-OOM guard</td><td>a Rust panic reached the Python boundary under memory pressure on CI for a docs-only PR</td><td>a defect card, not a flake</td></tr>
+  <tr><td>Not opened tonight</td><td>IO-ORC-1, DF-METADATA-COL-1, WITHCOLUMNS-NESTED-1, TODF-REF-1, IO-TEXT-PART-POOL-1, JAVA-REGEX-FEATURES-1, collation 13a and 13b, ERR-UNRESOLVED-COL-1</td><td>briefs and oracles are ready under the run17b desk and the 16c cards</td></tr>
+</table>
+</div>
+
+<h2>Owner questions, with the recommendation to take</h2>
+<div class="grid2">
+  <div class="card">
+    <h3>Process</h3>
+    <ul>
+      <li><b>Q-17a-2</b> add one sentence to the Rust-first rule: a decision that raises, casts or branches on a value is a kernel too, and if the SQL door cannot reach it, it is in the wrong place. Four of nine P1s tonight were this. <span class="chip good">yes</span></li>
+      <li><b>Q-17b-1</b> brief the commit as an imperative numbered step for Devin. <span class="chip good">yes</span></li>
+      <li><b>Q-17b-5</b> split each slate, clearest card on Devin, exploratory unit on Muse, so the comparison stops leaning on a cross-night baseline. <span class="chip good">yes</span></li>
+      <li><b>Q-17a-4</b> fix the inherited chain template to run the whole parity suite, not three files. <span class="chip good">yes</span></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Box mechanics</h3>
+    <ul>
+      <li><b>Q-17a-3</b> drop target/debug after each gate as a rule; a build clone hit 80 G on debug artefacts alone. <span class="chip good">yes</span></li>
+      <li><b>Q-17b-2</b> LimitNOFILE=65536 on every systemd-run launch; two verify reds were fd exhaustion. Already applied to this morning's gate. <span class="chip good">yes</span></li>
+      <li><b>Q-17c-6</b> the launcher waits for a box-wide idle cargo; count this orchestrator's builds instead, with a logged timeout. <span class="chip good">yes</span></li>
+      <li><b>Q-17b-4</b> the 40 G clone the run could not remove is gone; 425 G free. <span class="chip hold">done</span></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Product, 1.5</h3>
+    <ul>
+      <li><b>Q-17c-2</b> BL-20, the SQL door's integral literal typing disagrees with the Python door on a measured Spark answer. A 1.5 card, high. <span class="chip good">yes</span></li>
+      <li><b>Q-17c-3</b> BL-19, UNRESOLVED_ROUTINE is a blanket contract; one fix corrects every missing name. A 1.5 card ahead of more names. <span class="chip good">yes</span></li>
+      <li><b>Q-17c-7</b> the panic at the Python boundary under memory pressure: a defect card in the Never-OOM guard, priority above new names. <span class="chip good">yes</span></li>
+      <li><b>Q-17a-1</b> #625's two door-split P1s open the next run. <span class="chip good">yes</span></li>
+      <li><b>Q-17b-3</b> SUBQ-CELLS-1 as a 20-minute follow-up. <span class="chip good">yes</span></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Deferred or declared</h3>
+    <ul>
+      <li><b>Q-17c-1</b> sub-minute fixed offsets stay a dated declared divergence in 1.5; a 1.6 card carries offsets as seconds east of UTC. <span class="chip hold">defer</span></li>
+      <li><b>Q-17c-4</b> a shared leaf crate for code both repark-core and repark-functions need: wait for a third case. <span class="chip hold">defer</span></li>
+      <li><b>Q-17c-5</b> the BL-11 encoder's 1.5× per-row cost, about a millisecond per million rows: a perf card, not a blocker. <span class="chip hold">defer</span></li>
+      <li><b>Day run today</b> a run 18 in the same three-slice shape, 12 hours, Devin and Muse split per Q-17b-5, opening with #629 steps 3 and 4, #625's P1s, BL-19, BL-20, LOGICAL-WIDTH-1 and the Never-OOM card. <span class="chip acc">your call</span></li>
+    </ul>
+  </div>
+</div>
+
+<h2>What the night taught</h2>
+<ul>
+  <li><b>Reviewer reasoning is not a measurement, in both directions.</b> The freqItems signed-zero P1 was real but argued from doubleToLongBits; live Spark showed primitive equality, the opposite on both counts. A critic's P1 about mode's tie behaviour was refuted by the same method. A pin already on main asserted hour(lit(time)) returns 12; Spark raises UNSUPPORTED_TIME_TYPE on both doors.</li>
+  <li><b>A gate that is a subset of CI is a rehearsal.</b> A local gate of three hand-picked parity files let a census pin through to CI; the chain template gets the whole suite.</li>
+  <li><b>The merge queue is read with a literal head -1.</b> A comment line at the top stalled every merge for thirteen minutes; entries now sort above the notes.</li>
+  <li><b>Thin clones borrow objects.</b> A clone made with --shared depends on its build clone; delete dependents first, and never a running run's lanes.</li>
+  <li><b>Measure the blast radius before carding a type change.</b> LOGICAL-WIDTH-1 looked cross-cutting and turned out to be four match arms once the engine's real behaviour was probed.</li>
+</ul>
+
+<footer>Sources: task/roadmap/mid-term/overnight-report-2026-09-16-17a.md, -17b.md, -17c.md; the worker runs.tsv files; the merge queue. Times are EDT. Written by the orchestrating session on the morning of 2026-09-16.</footer>
+</div>
