@@ -75,7 +75,7 @@ def test_bracket_posix_class_with_extra_literal_matches(value: str) -> None:
 
 @pytest.mark.parametrize("value", ["x", "fox"])
 def test_sql_rlike_keyword_answers(value: str) -> None:
-    """FN-RLIKE-KEYWORD-1: SQL RLIKE keyword answers (FIXED by spark-sql-grammar-1/C-003). pins: fn-fix-2-ctrl-1-controls/C-002"""
+    """FN-RLIKE-KEYWORD-1: SQL RLIKE keyword answers. pins: fn-fix-2-ctrl-1-controls/C-002"""
     repark = ReparkSession.builder.appName("fn-rlike-keyword").master("local[1]").getOrCreate()
     try:
         table = repark.sql(f"SELECT '{value}' RLIKE '[[:alpha:]x]'").to_arrow()

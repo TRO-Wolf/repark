@@ -5501,16 +5501,22 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 - [test_fnp11a_temporal.py](test_fnp11a_temporal.py) — one parametrized test per door
   over the card's thirteen names: facade-signature parity (C-001), Python-door and
   SQL-door oracle equality (C-002/C-003), Spark error conditions and message prefixes
-  on both ANSI settings (C-004), and try_* NULL semantics (C-005). String units
-  match in any case and NTZ pairs ignore the session zone (C-003). The 45 `tm`-column
-  cells are out of scope (D-9) and the two NTZ-literal SQL cells are blocked on the
-  run-15c parser (D-4, pinned on the Python door instead). Literal-only cells skip
-  the nullability assert (EX-FN-24, Spark folds them); bare `localtimestamp` is
-  excluded (EX-FN-25); naive-literal zone and bare-unit refusal carry explicit pins
-  (EX-FN-26, EX-FN-27).
+  on both ANSI settings (C-004), and try_* NULL semantics (C-005). Bare units
+  match in any case and NTZ pairs ignore the session zone (C-003).
+  **SPARK-SQL-GRAMMAR-1 (2026-09-16):** the `BARE_UNIT_NAMES` workaround and the
+  bare-unit refusal pin retired into answering pins (EX-FN-27 FIXED); the
+  `BARE_NULLARY_SQL` skip retired into the bare-`localtimestamp` refusal pin
+  (EX-FN-25 FIXED); quoted-unit SQL spellings converted to bare (Spark refuses
+  quoted). The 45 `tm`-column cells are out of scope (D-9) and the two
+  NTZ-literal SQL cells are blocked on the run-15c parser (D-4, pinned on the
+  Python door instead). Literal-only cells skip the nullability assert (EX-FN-24,
+  Spark folds them); naive-literal zone carries its explicit pin (EX-FN-26).
   pins: fnp-11a/C-001, C-002, C-003, C-004, C-005, C-007
 - **FNP-11A (2026-09-15):** `fnp11a_r2_spark_oracle.json` is excluded from the typos gate in `.typos.toml`: it records verbatim live-PySpark 4.1.2 messages, one of them truncated mid-word by the recorder, and recorded evidence is never hand-edited.
 - **FNP-11A R3 intake (2026-09-15):** `test_fnp11a_temporal.py` now runs every SQL-door `timestamp_add` / `timestamp_diff` oracle cell (L-005) with the bare unit keyword quoted (`BARE_UNIT_CALL`), since bare keywords stay EX-FN-27 and `test_bare_timestampadd_unit_refuses` keeps that pinned. Only the `TIMESTAMP_NTZ'…'` literal cell stays in `D4_BLOCKED_SQL` (the SQL parser has no such type). `test_timestampdiff_ntz_pair_answers_days` runs that pair's end value through `make_timestamp_ntz` instead of diffing a column with itself (L-006).
+- **SPARK-SQL-GRAMMAR-1 (2026-09-16):** the R3 quoting workaround above is retired —
+  bare keywords parse on the door now (EX-FN-27 FIXED) and
+  `test_bare_timestampadd_unit_refuses` became `test_bare_timestampadd_unit_answers`.
 - **FNP-11B step 6 (2026-09-15):** the EX-FN-28 refusal pins retire into answering
   pins (`test_make_timestamp_date_time_keywords_answer` on both doors,
   `test_make_timestamp_keeps_its_frozen_signature` on the widened shape) under

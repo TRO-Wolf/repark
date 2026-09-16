@@ -60,9 +60,7 @@ def test_pg_tsadd_bare_unit(spark: ReparkSession) -> None:
     ``test_fnp11a_temporal.py``).
     """
     table = _table(spark, "SELECT timestampadd(DAY, 1, TIMESTAMP'2024-01-01 00:00:00') AS v")
-    assert table.column("v").to_pylist() == [
-        datetime.datetime(2024, 1, 2, tzinfo=datetime.UTC)
-    ]
+    assert table.column("v").to_pylist() == [datetime.datetime(2024, 1, 2, tzinfo=datetime.UTC)]
     assert table.schema.field("v").type == pa.timestamp("us", tz="UTC")
     assert table.schema.field("v").nullable is True
 
@@ -82,9 +80,7 @@ def test_pg_tsdiff_bare_unit(spark: ReparkSession) -> None:
 def test_pg_dateadd_bare_unit(spark: ReparkSession) -> None:
     """PG-dateadd: three-argument ``dateadd(DAY, 1, ts)`` aliases the add answer."""
     table = _table(spark, "SELECT dateadd(DAY, 1, TIMESTAMP'2024-01-01 00:00:00') AS v")
-    assert table.column("v").to_pylist() == [
-        datetime.datetime(2024, 1, 2, tzinfo=datetime.UTC)
-    ]
+    assert table.column("v").to_pylist() == [datetime.datetime(2024, 1, 2, tzinfo=datetime.UTC)]
     assert table.schema.field("v").type == pa.timestamp("us", tz="UTC")
     assert table.schema.field("v").nullable is True
 
@@ -208,9 +204,7 @@ def test_q14_bare_refusing_names(spark: ReparkSession, name: str) -> None:
 @pytest.mark.parametrize("name", Q14_REFUSING_BARE)
 def test_q14_bare_refusing_names_frameless(spark: ReparkSession, name: str) -> None:
     """The same refusals carry WITHOUT_SUGGESTION with no frame to suggest from."""
-    with pytest.raises(
-        AnalysisException, match=r"\[UNRESOLVED_COLUMN\.WITHOUT_SUGGESTION\]"
-    ):
+    with pytest.raises(AnalysisException, match=r"\[UNRESOLVED_COLUMN\.WITHOUT_SUGGESTION\]"):
         _table(spark, f"SELECT {name} AS v")
 
 

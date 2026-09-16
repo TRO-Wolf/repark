@@ -385,7 +385,7 @@ def test_timestampdiff_ntz_pair_answers_days() -> None:
 
 
 def test_timestampadd_bare_unit_sql_matches_oracle() -> None:
-    """pins: fnp-11a/C-003 (bare spelling per spark-sql-grammar-1/C-008; Spark refuses the quoted unit)."""
+    """pins: fnp-11a/C-003 (bare spelling per spark-sql-grammar-1/C-008)."""
     session = _session(True, "UTC")
     table = session.sql(f"SELECT timestampadd(DAY, 1, ts) FROM {FRAME_VIEW}").toArrow()
     assert str(table.schema.field(0).type) == "timestamp[us, tz=UTC]"
@@ -395,7 +395,7 @@ def test_timestampadd_bare_unit_sql_matches_oracle() -> None:
 
 
 def test_timestampdiff_bare_unit_sql_matches_oracle() -> None:
-    """pins: fnp-11a/C-003 (bare spelling per spark-sql-grammar-1/C-008; Spark refuses the quoted unit)."""
+    """pins: fnp-11a/C-003 (bare spelling per spark-sql-grammar-1/C-008)."""
     session = _session(True, "UTC")
     text = f"SELECT timestampdiff(HOUR, TIMESTAMP'2024-03-11 01:00:00', ts) FROM {FRAME_VIEW}"
     table = session.sql(text).toArrow()
@@ -404,7 +404,7 @@ def test_timestampdiff_bare_unit_sql_matches_oracle() -> None:
 
 
 def test_bare_units_match_in_any_case() -> None:
-    """pins: fnp-11a/C-003 (bare spelling per spark-sql-grammar-1/C-008; Spark refuses the quoted unit)."""
+    """pins: fnp-11a/C-003 (bare spelling per spark-sql-grammar-1/C-008)."""
     session = _session(True, "America/New_York")
     for unit in ("day", "Day", "DAY"):
         table = session.sql(
@@ -477,12 +477,9 @@ def test_bare_timestampadd_unit_answers() -> None:
     add_table = session.sql(
         "SELECT timestampadd(YEAR, 1, TIMESTAMP'2024-01-01 00:00:00')"
     ).toArrow()
-    assert add_table.column(0).to_pylist() == [
-        datetime.datetime(2025, 1, 1, tzinfo=datetime.UTC)
-    ]
+    assert add_table.column(0).to_pylist() == [datetime.datetime(2025, 1, 1, tzinfo=datetime.UTC)]
     diff_table = session.sql(
-        "SELECT timestampdiff(YEAR, TIMESTAMP'2020-01-15 12:00:00', "
-        "TIMESTAMP'2024-01-15 12:00:00')"
+        "SELECT timestampdiff(YEAR, TIMESTAMP'2020-01-15 12:00:00', TIMESTAMP'2024-01-15 12:00:00')"
     ).toArrow()
     assert diff_table.column(0).to_pylist() == [4]
 
