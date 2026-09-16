@@ -741,7 +741,7 @@ mod tests {
     async fn sequence_null_bound_answers_null_with_empty_contains() {
         let ctx = ctx();
         let batches = ctx
-            .sql("SELECT sequence(1, CAST(NULL AS INT))")
+            .sql("SELECT sequence(CAST(1 AS INT), CAST(NULL AS INT))")
             .await
             .expect("plan null bound")
             .collect()

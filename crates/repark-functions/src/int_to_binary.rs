@@ -296,7 +296,6 @@ mod tests {
     fn ctx_with_ansi(enabled: bool) -> SessionContext {
         let config = crate::ansi::with_spark_ansi_config(SessionConfig::new(), enabled);
         let ctx = SessionContext::new_with_config(config);
-        ctx.add_analyzer_rule(Arc::new(crate::spark_result_types::SparkIntegerLiteral));
         ctx.add_analyzer_rule(Arc::new(IntToBinaryCast));
         ctx
     }
@@ -334,7 +333,7 @@ mod tests {
             (vec![Some(vec![0x00, 0x01])], DataType::Binary, false)
         );
         assert_eq!(
-            bytes_of(&ctx, "SELECT CAST(1 AS BYTEA) AS b").await,
+            bytes_of(&ctx, "SELECT CAST(CAST(1 AS INT) AS BYTEA) AS b").await,
             (
                 vec![Some(vec![0x00, 0x00, 0x00, 0x01])],
                 DataType::Binary,
@@ -342,7 +341,7 @@ mod tests {
             )
         );
         assert_eq!(
-            bytes_of(&ctx, "SELECT CAST(-1 AS BYTEA) AS b").await,
+            bytes_of(&ctx, "SELECT CAST(CAST(-1 AS INT) AS BYTEA) AS b").await,
             (
                 vec![Some(vec![0xff, 0xff, 0xff, 0xff])],
                 DataType::Binary,
@@ -350,7 +349,7 @@ mod tests {
             )
         );
         assert_eq!(
-            bytes_of(&ctx, "SELECT CAST(305419896 AS BYTEA) AS b").await,
+            bytes_of(&ctx, "SELECT CAST(CAST(305419896 AS INT) AS BYTEA) AS b").await,
             (
                 vec![Some(vec![0x12, 0x34, 0x56, 0x78])],
                 DataType::Binary,
@@ -433,7 +432,7 @@ mod tests {
         for (sql, source) in [
             ("SELECT CAST(CAST(1 AS TINYINT) AS BYTEA) AS b", "TINYINT"),
             ("SELECT CAST(CAST(1 AS SMALLINT) AS BYTEA) AS b", "SMALLINT"),
-            ("SELECT CAST(1 AS BYTEA) AS b", "INT"),
+            ("SELECT CAST(CAST(1 AS INT) AS BYTEA) AS b", "INT"),
             ("SELECT CAST(CAST(1 AS BIGINT) AS BYTEA) AS b", "BIGINT"),
             ("SELECT CAST(CAST(NULL AS INT) AS BYTEA) AS b", "INT"),
         ] {
@@ -475,7 +474,7 @@ mod tests {
         let ctx = ctx_with_ansi(false);
         let plan = ctx
             .state()
-            .create_logical_plan("SELECT CAST(1 AS BYTEA) AS b")
+            .create_logical_plan("SELECT CAST(CAST(1 AS INT) AS BYTEA) AS b")
             .await
             .unwrap();
         let once = crate::analyze_eagerly(&ctx.state(), plan).unwrap();
@@ -486,7 +485,9 @@ mod tests {
             "a second analysis must not rewrap the encoder"
         );
         assert_eq!(
-            bytes_of(&ctx, "SELECT CAST(1 AS BYTEA) AS b").await.0,
+            bytes_of(&ctx, "SELECT CAST(CAST(1 AS INT) AS BYTEA) AS b")
+                .await
+                .0,
             vec![Some(vec![0x00, 0x00, 0x00, 0x01])]
         );
     }

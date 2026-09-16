@@ -93,6 +93,9 @@ needed.
   pins: door-converge-2/C-001
   **Round 3 (2026-09-15):** the `MutableArrayData` capacity is the total child length
   (P3-trivial hint, no behavior change). pins: door-converge-2/C-009
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** the pipe and decimal-widen tests
+  spell `CAST(n AS INT)` explicitly (the deleted late narrowing rule used to
+  provide the `Int32`). pins: door-converge-2b/C-004
 - `array_append.rs` — **ARRAY-NULL-1 (2026-09-14):** `spark_array_append_udf` /
   `spark_array_prepend_udf`. Each delegates to DataFusion's native kernel and then grafts
   the input array's outer `NullBuffer` onto the result — the kernels drop it, so a NULL

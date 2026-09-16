@@ -50,9 +50,18 @@ async fn int_to_binary_encodes_big_endian_widths_when_ansi_off() {
     for (expr, expected) in [
         ("CAST(CAST(1 AS TINYINT) AS BINARY)", vec![0x01]),
         ("CAST(CAST(1 AS SMALLINT) AS BINARY)", vec![0x00, 0x01]),
-        ("CAST(1 AS BINARY)", vec![0x00, 0x00, 0x00, 0x01]),
-        ("CAST(-1 AS BINARY)", vec![0xff, 0xff, 0xff, 0xff]),
-        ("CAST(305419896 AS BINARY)", vec![0x12, 0x34, 0x56, 0x78]),
+        (
+            "CAST(CAST(1 AS INT) AS BINARY)",
+            vec![0x00, 0x00, 0x00, 0x01],
+        ),
+        (
+            "CAST(CAST(-1 AS INT) AS BINARY)",
+            vec![0xff, 0xff, 0xff, 0xff],
+        ),
+        (
+            "CAST(CAST(305419896 AS INT) AS BINARY)",
+            vec![0x12, 0x34, 0x56, 0x78],
+        ),
         (
             "CAST(CAST(1 AS BIGINT) AS BINARY)",
             vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
@@ -110,8 +119,8 @@ async fn int_casts_refuse_with_conf_suggestion_and_remedy_when_ansi_on() {
     for (expr, source) in [
         ("CAST(CAST(1 AS TINYINT) AS BINARY)", "TINYINT"),
         ("CAST(CAST(1 AS SMALLINT) AS BINARY)", "SMALLINT"),
-        ("CAST(1 AS BINARY)", "INT"),
-        ("CAST(-1 AS BINARY)", "INT"),
+        ("CAST(CAST(1 AS INT) AS BINARY)", "INT"),
+        ("CAST(CAST(-1 AS INT) AS BINARY)", "INT"),
         ("CAST(CAST(1 AS BIGINT) AS BINARY)", "BIGINT"),
         ("CAST(CAST(NULL AS INT) AS BINARY)", "INT"),
     ] {

@@ -49,7 +49,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   init/merge width mismatch carries `DATATYPE_MISMATCH`, the index is non-nullable,
   over-long lambdas pin DataFusion's plan-time text as the named divergence, and the
   oracle edge rows (null-key raise, void map, VALUES `Int32`, overflow wrap) close the
-  door. The resumed repair tests use the same pre-coercion preparation vector as a public Spark
+  door (**DOOR-CONVERGE-2b** round 2, 2026-09-16: `hof_ctx` inserts the pre-coercion
+  narrowing rule door-like; the deleted late rule used to narrow `VALUES`
+  literals post-hoc. pins: door-converge-2b/C-004). The resumed repair tests
+  use the same pre-coercion preparation vector as a public Spark
   session. They pin `exists` nullability, indexed-transform Arrow width and nested nullability,
   NULL and empty aggregate inputs, explicit `BIGINT`, non-HOF structural identity, and the
   inherited nullable-element Column width. Explicit lambda-body overflow keeps its existing wrap.
@@ -174,6 +177,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   off; `CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals when ANSI is on;
   `CAST_WITHOUT_SUGGESTION` for the never-castable sources in both modes and for `TRY_CAST`.
   pins: bl-11-numeric-binary/C-001, C-002, C-003
+  (**DOOR-CONVERGE-2b** round 2, 2026-09-16: width and source-name cases spell
+  `CAST(n AS INT)` explicitly. pins: door-converge-2b/C-004)
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
   `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`
@@ -387,6 +392,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **TYPES-1 (2026-09-05):** CTAS-inferred integer literals are `Int32` (Spark `int`) on
   the Iceberg/Arrow path — the CTAS guard reads its literal column as `Int32`.
   pins: types-1/C-001.
+  (**DOOR-CONVERGE-2b** round 2, 2026-09-16: the `files` CTAS spells
+  `CAST(42 AS INT)` explicitly. pins: door-converge-2b/C-004)
   **MW-4b:** Glue-shaped `table_exists` — 4-part
   `.snapshots`/`.files` rewrites to `$` despite hierarchical `DataInvalid`; Unexpected
   and single-level DataInvalid stay fatal), `normalize`, `local_fs_ddl`,

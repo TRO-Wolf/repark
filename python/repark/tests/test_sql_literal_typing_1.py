@@ -147,7 +147,7 @@ OK_SQL_CASES: list[tuple[str, str, pa.DataType]] = [
     ("LIT-SQL-29", "v", pa.int8()),
     ("LIT-SQL-30", "v", pa.int32()),
     ("LIT-SQL-31", "v", pa.int32()),
-    ("LIT-SQL-32", "v", pa.list_(pa.int32())),
+    ("LIT-SQL-32", "v", pa.list_(pa.field("element", pa.int32(), nullable=False))),
     ("LIT-SQL-33", "v", pa.int32()),
     ("LIT-SQL-34", "v", pa.bool_()),
     ("LIT-SQL-35", "v", pa.decimal128(20, 0)),
@@ -186,7 +186,7 @@ OK_PY_CASES: list[tuple[str, str, pa.DataType]] = [
     ("LIT-PY-09", "v", pa.int64()),
     ("LIT2-PY-00", "v", pa.int32()),
     ("LIT2-PY-01", "v", pa.int32()),
-    ("LIT2-PY-02", "v", pa.list_(pa.int32())),
+    ("LIT2-PY-02", "v", pa.list_(pa.field("element", pa.int32(), nullable=False))),
     ("LIT2-PY-03", "v", pa.date32()),
     ("LIT2-PY-04", "v", pa.int32()),
 ]
@@ -278,7 +278,7 @@ def test_hof_parenthesized_int_min_stays_bigint_on_both_doors() -> None:
             "transform(array(-(2147483648)), x -> x)",
             pa.list_(pa.field("item", pa.int64(), nullable=False)),
         ),
-        ("array(-(2147483648))", pa.list_(pa.int64())),
+        ("array(-(2147483648))", pa.list_(pa.field("element", pa.int64(), nullable=False))),
         (
             "filter(array(-(2147483648), 1), x -> x < 0)",
             pa.list_(pa.field("element", pa.int64(), nullable=False)),

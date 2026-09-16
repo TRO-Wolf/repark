@@ -979,7 +979,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-09-16) adds the V-001 probe table: parenthesized `-(2147483648)`
   stays bigint inside `transform` / `filter` / `transform_keys` on both
   doors, matching LIT2-SQL-03. `transform` / `filter` over literal arrays pin
-  non-nullable bigint elements; the bare `array(...)` form pins nullable ones.
+  non-nullable bigint elements; the bare `array(...)` form pins non-nullable
+  bigint elements too (**DOOR-CONVERGE-2b** round 2, 2026-09-16: LIT-SQL-32,
+  LIT2-PY-02 and the bare-`array` V-001 case tightened from the DF-native
+  nullable-`item` spelling to the N7-oracle `element` non-null shape —
+  all-literal args are `containsNull=false` in Spark; widths and values
+  unchanged).
   pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: sql-literal-typing-1/L-001, L-002, L-003
   pins: sql-literal-typing-1/V-001

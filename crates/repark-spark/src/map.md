@@ -214,7 +214,8 @@ pins: rp-4-fork-repin/C-005, C-006
   from `SparkExtension::configure_analyzer_rules` immediately before the first
   `type_coercion`, so DataFusion's own coercion then produces Spark's promotion
   with no per-operator retag. Skips `Limit` plans, rebuilds `Values` rows. The
-  late `SparkIntegerLiteral` stays (idempotent no-op afterwards). The rule
+  late `SparkIntegerLiteral` is deleted (**DOOR-CONVERGE-2b** round 2,
+  2026-09-16); this is the one narrowing rule. The rule
   recurses with subqueries, re-resolves lambda variables after narrowing, and
   re-derives union schemas from their inputs, so the first coercion sees one
   consistent narrow world (else it cements Int64 around lambdas and unions).
@@ -227,8 +228,8 @@ pins: rp-4-fork-repin/C-005, C-006
   seat; the true cause was the `recompute_schema` skip leaving stale parent
   schemas, fixed by always recomputing); the `Negative` fold is gone so only
   the lexer-level negative token narrows and `-(2147483648)` stays bigint
-  (LIT2-SQL-03/04); the late `SparkIntegerLiteral` is uninstalled on both
-  Spark doors (`spark_door_post_coercion_rules`, the early rule subsumes it).
+  (LIT2-SQL-03/04); the late `SparkIntegerLiteral` is deleted outright
+  (**DOOR-CONVERGE-2b** round 2, 2026-09-16 — the early rule subsumed it).
   A plan-level apply pre-check skips literal-free plans;
   `resolve_lambda_variables` runs only with a higher-order function on the
   node (`recompute_schema` stays unconditional: gating it left stale parent

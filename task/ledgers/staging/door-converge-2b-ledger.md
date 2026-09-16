@@ -179,3 +179,44 @@ Every clause verdict returns to OPEN until step 4 re-verifies it.
 - P2 hand-off to run 18a (`functions*.py`): kept — facade `F.bround` and
   3-argument `F.like`/`F.ilike` remain theirs; this unit pins the
   Rust-reachable facade path only.
+
+## Round 2 step-3 reconciliation — 2026-09-16 (muse-spark-1.3-contributor)
+
+D-1 superseded: the branch note described the late `SparkIntegerLiteral`
+pass running after the first `TypeCoercion`. BL-20 (`527bbedf`) added the
+pre-coercion `SparkIntegralLiteral` on both Spark doors and filtered the
+late rule out of the post-coercion set, so the late rule ran nowhere at
+runtime (the native door installs no repark rules). This step deletes it:
+one narrowing rule remains.
+
+- Deleted `SparkIntegerLiteral` (struct, `rewrite_plan`, `rewrite_values`)
+  from `spark_result_types.rs`; the `narrow_provisional_integer_*` helpers
+  stay for HOF preparation. Dropped from `registration.rs`. The
+  `spark_door_post_coercion_rules` filter is gone (set is unfiltered now).
+- `spark_result_types/tests.rs`: rule dropped from the context; the two
+  rule-dependent tests (`select_one_answers_int32`,
+  `values_one_answers_int32`) removed — untyped-width coverage lives in
+  BL-20's suite, signed-width coverage stays.
+- `integer_spark.rs`: the three `untyped_*` tests removed as superseded
+  (their premise is door narrowing, owned by BL-20; the Int32 overflow
+  kernel stays covered by the adjacent `int32_add_*` tests).
+- Explicit `CAST(n AS INT)` spellings where a test's subject is the kernel,
+  not narrowing: `int_to_binary.rs` (6 sites), `spark_reverse.rs`,
+  `spark_sequence.rs`, `collection/concat_array.rs` (3 sites),
+  `tests/cast_binary_ansi.rs` (5 sites), `tests/metadata_tables.rs` (CTAS).
+- `tests/lambda_door.rs` HOF context now inserts the early rule
+  pre-coercion, mirroring `SparkExtension`; `tests/spark_ast.rs` context
+  likewise. The shared catalog `setup` in `tests/common.rs` is untouched:
+  one test depended on its incidental narrowing (fixed by spelling), and
+  the full suite is green without perturbing it.
+- BL-20 stale pins tightened to the oracle shape (widths/values
+  unchanged): `LIT-SQL-32`, `LIT2-PY-02` and the bare-`array` V-001 case
+  now expect `element` non-null, per N7-0 (`array(1, 2)` containsNull
+  false). The BL-20 oracle JSON records display `array<int>` plus rows
+  only, so nothing oracle-measured moves. `test_sql_literal_typing_1.py`
+  sits outside this unit's fence; the 3-line correction is recorded here
+  and in `python/repark/tests/map.md` for orchestrator routing.
+- Suites after rebuild: `test_door_converge_2b.py` 120 passed,
+  `test_sql_literal_typing_1.py` 77 passed; `cargo test -p
+  repark-functions --lib` 739 passed; `-p repark-spark --lib` 1044
+  passed; `-p repark-python --lib` 75 passed.

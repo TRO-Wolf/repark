@@ -631,33 +631,6 @@ mod tests {
         assert_eq!(name, "x + Int64(1)", "unaliased x+1 name: {name}");
     }
 
-    /// pins: f-y10-1-int-overflow/C-001, C-002
-    #[tokio::test]
-    async fn untyped_one_plus_one_is_int32() {
-        let ctx = ctx();
-        let batch = batch(&ctx, "SELECT 1 + 1 AS v").await;
-        assert_eq!(int32_cell(&batch), Some(2));
-    }
-
-    /// pins: f-y10-1-int-overflow/C-001, C-002
-    #[tokio::test]
-    async fn untyped_int_max_plus_one_raises_under_default_ansi() {
-        let ctx = ctx();
-        let error = collect_error(&ctx, "SELECT 2147483647 + 1 AS v").await;
-        assert!(
-            error.contains("ARITHMETIC_OVERFLOW"),
-            "INTMAX+1 must not widen, got {error}"
-        );
-    }
-
-    /// pins: f-y10-1-int-overflow/C-001, C-002
-    #[tokio::test]
-    async fn untyped_int_max_plus_one_wraps_when_ansi_false() {
-        let ctx = ctx_legacy();
-        let batch = batch(&ctx, "SELECT 2147483647 + 1 AS v").await;
-        assert_eq!(int32_cell(&batch), Some(-2_147_483_648));
-    }
-
     /// pins: f-y10-1-int-overflow/C-002
     #[tokio::test]
     async fn int32_add_max_plus_one_raises_under_default_ansi() {

@@ -124,11 +124,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   table into a single batch buffer with the input null bitmap.
   pins: door-converge-1/C-001, C-010
 - `spark_result_types.rs` (+ `spark_result_types/tests.rs`) — **TYPES-1 (2026-09-05):**
-  `SparkIntegerLiteral` narrows in-range `Int64` literals to `Int32` (first in
-  `analyzer_rules()`, after DataFusion's own `TypeCoercion`; `LIMIT` fetch/skip stay `Int64`
-  for the physical planner), `SignedAggregate` casts `regr_count`/`approx_distinct` to
+  `SignedAggregate` casts `regr_count`/`approx_distinct` to
   `Int64`, `SignedWindow` casts the rank family to `Int32`.
   pins: types-1/C-001, C-003, C-005, C-007
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** the late `SparkIntegerLiteral`
+  rule is deleted; literal narrowing lives only in `repark-spark`'s
+  pre-coercion `SparkIntegralLiteral`, and the shared
+  `narrow_provisional_integer_*` helpers stay for HOF preparation.
+  pins: door-converge-2b/C-004
   **DOOR-CONVERGE-1 (2026-09-15):** `SignedAggregate` additionally declares
   `is_nullable() = false` with `default_value = 0` — `approx_count_distinct` /
   `regr_count` answer non-null `bigint`, `0` on empty input. pins: door-converge-1/C-006
@@ -140,7 +143,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (LIT2-SQL-03); only the lexer-level negative token narrows.
   pins: sql-literal-typing-1/V-001
 - `lambda_rebind.rs` — **FNP-8 (2026-09-06):** `LambdaRebind`, in `analyzer_rules()`
-  twice — right after `SparkIntegerLiteral` and last. Two passes over lambda bindings: it
+  twice — first and last. Two passes over lambda bindings: it
   packs a multi-parameter lambda body that leaves a parameter unreferenced into the
   facade's own `named_struct` + `get_field("__hof_body")` shape (the physical planner
   remaps by referenced position, so an `(x, i)` body mentioning only `i` would read the
@@ -526,8 +529,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `decimal_precision.rs` — **V-2 / DEC U3+U4a:** `SparkDecimalPrecision` analyzer rule.
   U3: integer-literal `fromLiteral` (`DECIMAL(digits,0)`) on `+ − *` only (typed INT
   columns untouched). U4a: CAST-after add/sub/mul clamp (`allowPrecisionLoss=true`).
-  `/` formula, DEC-8, and DEC-6 live in `decimal_spark.rs`. Inserted **second** in
-  `analyzer_rules()` (after `SparkIntegerLiteral`, before `SparkDecimalRewrite` then
+  `/` formula, DEC-8, and DEC-6 live in `decimal_spark.rs`. Inserted **first** in
+  `analyzer_rules()` (before `SparkDecimalRewrite` then
   `SparkExprSemantics`). **TYPES-1 (2026-09-05):** the default-cast check accepts the
   narrowed `(20,0)`-over-`Int32` shape and keeps `(10,0)`-over-`Int32` user casts declared.
   Ledger: `task/v2-dec-u3u4-ledger.md`.
@@ -604,8 +607,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `CAST-BOOL-DEC-1`.
   pins: nullability-2/C-003
 - `int_to_binary.rs` — **BL-11 (2026-09-16):** the `IntToBinaryCast` analyzer rule,
-  slotted after `SparkExprSemantics` so `SparkIntegerLiteral` has already narrowed bare
-  literals: a `CAST(<integral> AS BINARY)` becomes the `__repark_int_to_binary__` UDF
+  slotted after `SparkExprSemantics`: a `CAST(<integral> AS BINARY)` becomes the `__repark_int_to_binary__` UDF
   (big-endian bytes of natural width, NULL propagates, nullability follows the input)
   only when ANSI is off; the same rule refuses every other `→ BINARY` cast with Spark's
   `DATATYPE_MISMATCH` (`CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals
@@ -642,12 +644,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`log1p` / `expm1`) — later registration wins a
   name clash) + Q1 percentile aliases + `datetime::functions()` date shims (the
   single-use helper is inlined; the root stays under its ceiling) +
-  `analyzer_rules()` (`SparkIntegerLiteral` → `LambdaRebind` → `SparkDecimalPrecision` →
+  `analyzer_rules()` (`LambdaRebind` → `SparkDecimalPrecision` →
   `SparkDecimalRewrite` → `SparkIntegerOverflow` → Spark semantics +
-  cardinality + instant_ts + a closing `TypeCoercion` — the narrowing runs after
-  DataFusion's own coercion and re-opens mixes, so the closing pass shuts them before the
-  next rule (pins: types-1/C-007) + `LambdaRebind` twice — after the integer narrowing
-  and final (pins: fnp-8/C-004); the
+  cardinality + instant_ts + a closing `TypeCoercion` (pins: types-1/C-007) +
+  `LambdaRebind` twice — first and final (pins: fnp-8/C-004); the
   session installs them via the Spark door's `SessionExtension`;
   error conversion one layer up is `repark-core`) + `register_spark_decimal_planner` +
   `register_spark_integer_planner` +
@@ -831,10 +831,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (int widths kept, descending default step, dates with 1-day default and month steps,
   timestamps with interval steps, NULL bound/step → NULL with `containsNull=false`, zero
   or wrong-sign step raises Spark's `Illegal sequence boundaries` text, decimal bounds
-  refuse `SEQUENCE_WRONG_INPUT_TYPES`). `coerce_types` validates but never casts: the
-  built-in `type_coercion` runs before `spark_integer_literal` narrowing, so a widening
-  coerce would shield provisional `Int64` literals behind `CAST`s and defeat the narrow —
-  widths resolve in the return type after narrowing, and the kernel casts internally.
+  refuse `SEQUENCE_WRONG_INPUT_TYPES`). `coerce_types` validates but never casts: a
+  widening coerce would shield provisional `Int64` literals behind `CAST`s and defeat
+  the pre-coercion narrow — widths resolve in the return type after narrowing, and the
+  kernel casts internally.
   Month stepping reuses `datetime::spark_add_months` (now `pub(crate)`). The facade arm
   moved to `dispatch_spark.rs` with the `refuse_facade_literal_expansion` ceiling kept;
   the plan-time `ArrayCardinalityCeiling` still fires on the `sequence` name.

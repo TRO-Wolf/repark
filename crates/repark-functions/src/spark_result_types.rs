@@ -5,73 +5,21 @@ use std::sync::Arc;
 use datafusion::arrow::array::{Array, ArrayRef};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
-use datafusion::common::config::ConfigOptions;
-use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
+use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::common::{DataFusionError, Result, ScalarValue};
 use datafusion::functions_aggregate::approx_distinct::approx_distinct_udaf;
 use datafusion::functions_aggregate::regr::regr_count_udaf;
 use datafusion::functions_window::ntile::ntile_udwf;
 use datafusion::functions_window::rank::{dense_rank_udwf, rank_udwf};
 use datafusion::functions_window::row_number::row_number_udwf;
-use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::function::{
     AccumulatorArgs, PartitionEvaluatorArgs, StateFieldsArgs, WindowUDFFieldArgs,
 };
 use datafusion::logical_expr::window_state::WindowAggState;
 use datafusion::logical_expr::{
-    Accumulator, AggregateUDF, AggregateUDFImpl, Expr, LogicalPlan, LogicalPlanBuilder,
-    PartitionEvaluator, Signature, Values, WindowUDF, WindowUDFImpl,
+    Accumulator, AggregateUDF, AggregateUDFImpl, Expr, PartitionEvaluator, Signature, WindowUDF,
+    WindowUDFImpl,
 };
-use datafusion::optimizer::AnalyzerRule;
-
-#[derive(Debug, Default)]
-pub struct SparkIntegerLiteral;
-
-impl AnalyzerRule for SparkIntegerLiteral {
-    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(rewrite_plan).data()
-    }
-
-    #[allow(clippy::unnecessary_literal_bound)]
-    fn name(&self) -> &str {
-        "spark_integer_literal"
-    }
-}
-
-fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
-    if let LogicalPlan::Values(values) = plan {
-        return rewrite_values(values);
-    }
-    if matches!(plan, LogicalPlan::Limit(_)) {
-        return Ok(Transformed::no(plan));
-    }
-    let name_preserver = NamePreserver::new(&plan);
-    let transformed = plan.map_expressions(|expr| {
-        let saved_name = name_preserver.save(&expr);
-        let rewritten = narrow_provisional_integer_literals(expr)?;
-        Ok(rewritten.update_data(|node| saved_name.restore(node)))
-    })?;
-    transformed.map_data(LogicalPlan::recompute_schema)
-}
-
-fn rewrite_values(values: Values) -> Result<Transformed<LogicalPlan>> {
-    let mut changed = false;
-    let mut rows = Vec::with_capacity(values.values.len());
-    for row in &values.values {
-        let mut narrowed_row = Vec::with_capacity(row.len());
-        for expr in row {
-            let narrowed = narrow_provisional_integer_literals(expr.clone())?;
-            changed |= narrowed.transformed;
-            narrowed_row.push(narrowed.data);
-        }
-        rows.push(narrowed_row);
-    }
-    if !changed {
-        return Ok(Transformed::no(LogicalPlan::Values(values)));
-    }
-    let rebuilt = LogicalPlanBuilder::values(rows)?.build()?;
-    Ok(Transformed::yes(rebuilt))
-}
 
 pub(crate) fn narrow_provisional_integer_literals(expr: Expr) -> Result<Transformed<Expr>> {
     expr.transform_up(|node| Ok(narrow_provisional_integer_literal(node)))

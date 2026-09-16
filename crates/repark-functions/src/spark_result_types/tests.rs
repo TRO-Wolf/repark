@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use datafusion::arrow::array::AsArray;
 use datafusion::arrow::datatypes::{DataType, Int32Type, Int64Type};
 use datafusion::arrow::record_batch::RecordBatch;
@@ -9,11 +7,10 @@ use datafusion::logical_expr::Expr;
 use datafusion::optimizer::Analyzer;
 use datafusion::prelude::SessionContext;
 
-use super::{SparkIntegerLiteral, signed_aggregate_functions, signed_window_functions};
+use super::{signed_aggregate_functions, signed_window_functions};
 
 fn ctx_with_types() -> SessionContext {
-    let mut rules = Analyzer::new().rules;
-    rules.push(Arc::new(SparkIntegerLiteral));
+    let rules = Analyzer::new().rules;
     let state = SessionStateBuilder::new()
         .with_default_features()
         .with_analyzer_rules(rules)
@@ -71,21 +68,6 @@ fn parenthesized_negative_two_to_31_stays_int64() {
 fn int32_literals_pass_through() {
     let narrow = Expr::Literal(ScalarValue::Int32(Some(7)), None);
     assert_eq!(rewrite_once(narrow.clone()), narrow);
-}
-
-#[tokio::test]
-async fn select_one_answers_int32() {
-    let ctx = ctx_with_types();
-    let batch = batch(&ctx, "SELECT 1 AS v").await;
-    assert_eq!(batch.schema().field(0).data_type(), &DataType::Int32);
-    assert_eq!(batch.num_rows(), 1);
-}
-
-#[tokio::test]
-async fn values_one_answers_int32() {
-    let ctx = ctx_with_types();
-    let batch = batch(&ctx, "SELECT * FROM (VALUES (1), (2)) AS t(v)").await;
-    assert_eq!(batch.schema().field(0).data_type(), &DataType::Int32);
 }
 
 #[tokio::test]

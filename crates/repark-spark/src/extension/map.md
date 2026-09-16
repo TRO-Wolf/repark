@@ -45,9 +45,11 @@ function-registry + analyzer-rule installation + the composed
   **Remediation round 1 (2026-09-16):** the seat stays fourth, immediately
   before `type_coercion` (a first-among-pre-coercion seat was measured and
   reverted with the 24 broken FNP-8 HOF pins as evidence). `register`
-  installs the post-coercion rules minus the subsumed late
-  `spark_integer_literal`.
+  installs the post-coercion rules.
   pins: sql-literal-typing-1/L-001, L-002
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** the late rule is deleted, so the
+  post-coercion set is `analyzer_rules()` unfiltered; one narrowing rule remains.
+  pins: door-converge-2b/C-004
 
 ## Pointers
 
