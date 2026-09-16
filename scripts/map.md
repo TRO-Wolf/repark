@@ -1331,3 +1331,7 @@ FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` p
   new exception row on a **gate script** is ratchet erosion, so the module docstring's EX-1
   closed-set paragraph was reflowed instead: the file is back at the default ceiling and the
   row is gone. Compact before you except. pins: fnp-gen-1/C-007
+- **FNP-GEN-1 rebase onto #640 (2026-09-16, run 17a):** `check_example_coverage.py`'s
+  `BACKLOG_BASELINE` is set to the count the script itself reports (108), not to an arithmetic
+  combination of the two sides' values. Both sides of the rebase had moved it; a measured count is
+  exact where an arithmetic one is only usually right. pins: fnp-gen-1/C-007

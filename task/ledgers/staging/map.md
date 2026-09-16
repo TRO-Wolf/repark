@@ -219,23 +219,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   dispositions marked).
   `risk_tier: standard`. Branch `perf/facade-4-s1`.
   pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
-- [facade-5-ledger.md](facade-5-ledger.md) —
-  **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
-  split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
-  formatters, the audit §6 UNMEASURED cell), the renderer × truncation-rule pin
-  census, goldens for the pairs no §8 pin binds (recorded from base, mutation
-  proven), and the step-1 target — a measured format wall and its Rust move, or
-  the smallest byte-identical consolidation naming what stays for `eager.py`.
   No product change under `python/repark/src/` or `crates/`.
   `risk_tier: standard`. Branch `perf/facade-5-s0`.
   pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [facade-5-ledger.md](facade-5-ledger.md) —
-  **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
-  split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
-  formatters, the audit §6 UNMEASURED cell), the renderer × truncation-rule pin
-  census, goldens for the pairs no §8 pin binds (recorded from base, mutation
-  proven), and the step-1 target — a measured format wall and its Rust move, or
-  the smallest byte-identical consolidation naming what stays for `eager.py`.
   No product change under `python/repark/src/` or `crates/`.
   `risk_tier: standard`. Branch `perf/facade-5-s0`.
   pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

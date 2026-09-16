@@ -873,3 +873,7 @@ Escalate to: [../map.md#debug](../map.md).
   literal this unit's `to_char` / `to_number` family builds — `CAST(<literal> AS DECIMAL(p,s))` —
   routed through the escaping helper, which is the direction this census exists to enforce.
   pins: fnp-11b/C-007
+- **FNP-GEN-1 rebase onto #640 (2026-09-16, run 17a):** EX-0 and the example backlog are set from
+  **measurement**, not arithmetic — `len(rows)` 1078 read from the failing assert, backlog 108 read
+  from `check_example_coverage.py`'s own report. Both sides of the rebase had moved both counts, and
+  a measured count is exact where an arithmetic one only usually is. pins: fnp-gen-1/C-007
