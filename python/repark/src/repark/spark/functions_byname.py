@@ -181,8 +181,6 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "percentile_approx",
     "pi",
     "pmod",
-    "posexplode",
-    "posexplode_outer",
     "positive",
     "printf",
     "quarter",

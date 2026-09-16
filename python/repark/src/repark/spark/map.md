@@ -591,3 +591,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - **DOOR-CONVERGE-2 (#622, 2026-09-15, orchestrator):** `functions_byname.py` `FACADE_ONLY_ROUTINE_NAMES` drops `split`: the facade dispatch now resolves `split` on the Spark kernel, so it is no longer a measured engine gap (`test_fnp_misc_1_byname_allowlist_covers_facade`; ruling R-16c-11, run 16a told). `F.split` itself stays run 16a's hand-off. pins: door-converge-2/C-005
 - **DEGREES-RUST-1 by-name drift (2026-09-15, run 16a):** `degrees` / `radians` leave `functions_byname.py`'s `FACADE_ONLY_ROUTINE_NAMES` — once they bind engine scalar UDFs, `call_function` resolves them in the engine, so the derived allowlist no longer lists them as facade-only. pins: fnp-bitmap-facade-1/C-011
 - **FNP-11B step 3 (2026-09-15):** `try_to_timestamp` leaves `FACADE_ONLY_ROUTINE_NAMES` for the same reason — the facade dispatch now resolves it on the tolerant-timestamp kernel. pins: fnp-11b/C-007
+- **FNP-GEN-1 orchestrator fix-up (2026-09-16, run 17a):** `functions_byname.py` drops `posexplode`
+  and `posexplode_outer` from `FACADE_ONLY_ROUTINE_NAMES`. That tuple lists names reachable **only**
+  from the facade; this unit's `GeneratorRewrite` makes both answer on the SQL door too, so they are
+  no longer facade-only and `test_fnp_misc_1_byname_allowlist_covers_facade` derives them out of the
+  set. The full facade suite caught it — the unit's own pin set does not include that census.
+  pins: fnp-gen-1/C-005
