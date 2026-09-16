@@ -650,7 +650,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - **octo C1-Q-004:** `perf_measure_date_format_compile_once` /
   `perf_measure_substring_char_indices` gated on `REPARK_PERF_MEASURE=1` (not default suite tax).
 - **octo C2-Q-001:** `compile_java_pattern` apostrophe/punct edges + unterminated-quote Err pin.
-- `java_double.rs` — **JAVA-DOUBLE-STR-1 (2026-09-15):** the single home of
+- `java_double.rs` + `java_double/` — **JAVA-DOUBLE-FD-1 port (2026-09-15):**
+  `dtoa.rs` (independent JDK 17 `FloatingDecimal` port) + `bigint.rs` (ported
+  `FDBigInteger`), `tests_corpus.rs` (byte-equality over
+  `REPARK_JDK17_TOSTRING_CORPUS`, green on all 39,427 rows) with full
+  `tables_doubles.rs` (82 non-shortest + 100 random) / `tables_floats.rs`
+  (579 non-shortest + 100 random). `format_float.rs` (C-003:
+  `__repark_format_float__` exact-decimal HALF_UP for single-verb `%f`/`%F`);
+  the rule also folds Java-suffixed string literals to DOUBLE/FLOAT with
+  one-level projection propagation (C-006).
+  **JAVA-DOUBLE-STR-1 (2026-09-15):** the single home of
   Java float spellings — `java_double_text` / `java_float_text` (moved from
   `json/reader.rs`; `reader.rs`, `decode.rs` and `to_json.rs` import from here,
   so no second formatter exists) plus the Spark-door `CAST(<FLOAT|DOUBLE> AS
@@ -666,12 +675,19 @@ scalars live under [`try_invert/`](try_invert/map.md).
   caller stack buffers (`with_java_double_text` / `with_java_float_text`, len
   helpers for the length kernels) so no per-value `String` is allocated; the
   rule is now `SparkFloatStringify` with `TRY_CAST`, `LIKE`, `CASE`,
-  `format_string` `%s`-only and `array_join` arms plus bad-literal folding to
+  `format_string` `%s`-only and single-verb `%f` arms, `array_join`, suffixed-literal
+  folding and one-level projection propagation, non-literal STRING to FLOAT/DOUBLE
+  casts routed to the column parse kernel, plus bad-literal folding to
   `CAST_INVALID_INPUT` (ANSI on) or `NULL`. It rides pre-coercion (one slot in
   the shared insertion) and post-coercion (in `analyzer_rules()`); both seats
   are idempotent. The JDK-longhand remainder is JAVA-DOUBLE-FD-1.
   **FNP-4B round 8 (2026-09-15):** the text helpers are `pub` (module `pub`) so the
   Spark door names suffix-literal fields from value text.
+  **JAVA-DOUBLE-FD-1 fix round 1 (2026-09-15, R-17c-2):** `rewrite_float_cast`
+  exempts `CAST(__repark_suffix_literal__(…) AS FLOAT|DOUBLE)` from the
+  non-literal parse-kernel route so the door's `FoldSparkNumericCasts` still
+  folds it to a non-null literal; `SUFFIX_LITERAL_NAME` is the `pub` single
+  source here that repark-spark re-exports.
   pins: java-double-str-1/C-003, C-004, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - `string.rs` — `SparkSubstring` (`substring`, alias `substr`; audit #6): Spark's
   `UTF8String.substringSQL` character-based semantics — pos 0 acts as 1, negative pos counts

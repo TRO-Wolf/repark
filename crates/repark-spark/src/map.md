@@ -183,6 +183,11 @@ pins: rp-4-fork-repin/C-005, C-006
   **Round 5 (2026-09-15):** `__repark_suffix_literal__` is the companion
   provenance-marker UDF with fold-through and display unwrapping, registered in
   `extension.rs` and the binding `sql_context`.
+  **JAVA-DOUBLE-FD-1 fix round 1 (2026-09-15, R-17c-2):** `SUFFIX_LITERAL_NAME`
+  is a re-export of `repark_functions::java_double::SUFFIX_LITERAL_NAME` — the
+  marker's single source lives in the capability crate because
+  `SparkFloatStringify` must recognize the token and the DAG forbids a
+  functions→spark edge.
   **Round 5 (2026-09-15):** `SparkProjectionDisplay` rewrites only the root
   projection and keeps explicit non-marker aliases.
   **Round 6 (2026-09-15):** `cargo fmt` applied.

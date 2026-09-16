@@ -31,6 +31,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   signed refusals, `L` overflow parse refusal (three shapes), `-0.0BD` control,
   unaliased root/nested/union suffix names from value text, `1.e2` rewrite shape,
   and the numeric-suffix guard fire/skip contract.
+  **JAVA-DOUBLE-FD-1 fix round 1 (2026-09-15):** the analyzed-schema pin —
+  `1e38D` / `1e200D` / `1e38F` answer `Float64`/`Float32` non-null at ANALYSIS
+  (before the optimizer's literal fold), pinning the marker-cast exemption in
+  `repark_functions::java_double::rewrite_float_cast` that lets
+  `FoldSparkNumericCasts` see the `CAST(__repark_suffix_literal__ …)` shape.
 - `lambda_door.rs` — **FNP-8 (2026-09-06):** the eleven higher-order names through
   `crate::execute` with `x -> y` syntax — both `transform`/`filter` arities, `exists` as a
   function (not the subquery keyword), `forall` on empty, `aggregate` with and without

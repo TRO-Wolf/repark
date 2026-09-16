@@ -2508,24 +2508,71 @@ the pin rather than obeying it.
 
 ### JAVA-DOUBLE-FD-1 — cells where JDK 17 float/Double.toString is not the shortest round-trip form
 
-- **repark** — renders the shortest decimal that round-trips: `8.41E21` renders
-  `8.41E21`, `1.0E23` renders `1.0E23`. `format_string('%.2f', 0.125)` renders
-  `0.12` (DataFusion banker's rounding) where Java `Formatter` (HALF_UP) renders
-  `0.13`.
+- **repark** — renders JDK 17 `FloatingDecimal` text: `8.41E21` renders
+  `8.409999999999999E21`, `1.0E23` renders `9.999999999999999E22`.
+  `format_string('%.2f', 0.125)` renders `0.13` (Java `Formatter` HALF_UP).
 - **Apache Spark** — JDK 17's `FloatingDecimal` is NOT the shortest repr and answers
   `8.409999999999999E21` and `9.999999999999999E22` for the same two doubles; Java
   `Formatter` answers `0.13`. *(oracle: live — PySpark 4.1.2, 2026-09-15;
   cells `J10-fd-8.41E21`, `J10-fd-more`, `J10-format-string-f` in
   `fixtures-batch10.json`.)*
+- **Pin** — (now equality)
+  `python/repark/tests/test_java_double_str_1.py::test_spark_door_jdk_longhand_backlog`,
+  `::test_spark_door_jdk_longhand_cells` and
+  `::test_spark_door_format_string_f_is_todays_answer`, plus
+  `python/repark/tests/test_java_double_fd_1.py` (JDK-longhand SQL door and facade
+  `col` casts, `%f`/`%.2f` HALF_UP on both doors, every DEGI cast cell both doors
+  for value AND type with ANSI on and off, hex-refuse/hex-null, FLOAT suffix
+  target) and
+  `python/repark/tests/test_fnp_9_collections_json.py::test_to_json_double_text_diverges_on_the_jdk_legacy_spellings`
+  (`to_json` shares the formatter; now equality).
+- **Rationale** — FIXED 2026-09-15 (JAVA-DOUBLE-FD-1). A Rust port of JDK 17
+  `FloatingDecimal` digit generation (`dtoa` fast/`FDBigInteger` slow paths in
+  `crates/repark-functions/src/java_double/`) answers the longhand cells, and a
+  `__repark_format_float__` shim answers single-verb `%f`/`%F` with exact-decimal
+  HALF_UP. Perf (5M `rand()` doubles, best of 3, release native): SQL-door
+  `CAST(d AS STRING)` 0.082s → 0.035s, facade `col.cast` 0.049s → 0.031s; both
+  far inside #612's 1.54x Arrow-cast bar (same-box Arrow `pc.cast` 0.496s).
+  Residue: multi-verb or non-float `%f` formats stay on DataFusion semantics;
+  `%e`/`%g`/`%a` stay unclaimed.
+
+### JAVA-DOUBLE-CAST-SUFFIX-1 — Java type-suffixed text casts to DOUBLE/FLOAT
+
+- **repark** — `CAST('1d' AS DOUBLE)`, `CAST('1.5D' AS DOUBLE)`, `CAST('1f' AS FLOAT)`
+  and the other DEGI accepting shapes answer their values on the SQL door and
+  through facade `Column.cast`, with ANSI on and off; `CAST('0x10' AS DOUBLE)`
+  raises `CAST_INVALID_INPUT` with ANSI on and answers NULL with ANSI off.
+  Real STRING columns (and string expressions like `repeat`) route through the
+  same Spark grammar in a Rust kernel: each row tries the fast parse first and
+  falls back to trim plus one trailing-suffix strip, then to Arrow's own parse,
+  so Arrow-accepted spellings keep Arrow's values; bad rows raise with ANSI on
+  and answer NULL with ANSI off. The native ANSI door keeps Arrow's cast.
+  Perf (5M plain-text column, release native, best of 3): kernel 0.048s against
+  Arrow runtime 0.081s before — no regression.
+- **Apache Spark** — `Double.parseDouble`/`Float.parseFloat` accept the same
+  suffixed and padded shapes; hex text is refused (NULL with ANSI off).
+  *(oracle: live — PySpark 4.1.2, 2026-09-15; DEGI cast cells in
+  `fixtures-batch10.json`; Q19 eight column cells in
+  `fixtures-batch19-critic-633.json`.)*
 - **Pin** —
-  `python/repark/tests/test_java_double_str_1.py::test_spark_door_jdk_longhand_backlog`
-  and `::test_spark_door_format_string_f_is_todays_answer` (codify today's answers).
-- **Rationale** — BACKLOG, filed 2026-09-15 (JAVA-DOUBLE-STR-1 round 2, ruling R-11).
-  Closing it means porting JDK 17 `FloatingDecimal`'s digit generation (and Java
-  `Formatter` HALF_UP fixed-point), not tuning a format string. The equal cells
-  (`2.0E-3` → `0.002`, `5.0E-324` → `4.9E-324`, `2.2250738585072014E-308`,
-  `9.007199254740993E15` → `9.007199254740992E15`, `1.1`) pin the equality side in
-  `::test_spark_door_jdk_longhand_cells`.
+  `python/repark/tests/test_java_double_fd_1.py::test_spark_door_cast_accepting_shapes`,
+  `::test_spark_door_cast_accepting_shapes_nonansi`,
+  `::test_facade_cast_accepting_shapes`,
+  `::test_facade_cast_accepting_shapes_nonansi`, `::test_cast_hex_refused`,
+  `::test_cast_hex_null_nonansi` and `::test_cast_suffix_float_target`
+  (value AND type on both doors), plus the Q19 column cells
+  `::test_spark_door_cast_suffix_column_ansi_error`,
+  `::test_spark_door_cast_suffix_column_nonansi`,
+  `::test_spark_door_cast_suffix_column_ok`,
+  `::test_facade_cast_suffix_column_ansi_error`,
+  `::test_facade_cast_suffix_column_nonansi` and
+  `::test_facade_cast_suffix_column_ok`.
+- **Rationale** — FIXED 2026-09-15 (JAVA-DOUBLE-FD-1, clause C-006). The
+  `spark_float_stringify` analyzer rule strips one trailing `d`/`D`/`f`/`F` from
+  string literals after Arrow rejects them, folds `CAST`/`TRY_CAST` of suffixed
+  literals, and propagates one level through projections (including the
+  nullability-wrapper shape) so `Column.cast` folds before the optimizer inlines
+  it. Runtime (non-literal) string columns keep Arrow cast semantics.
 
 
 > **TZ-1 — timestamp extraction ignores the session zone — was CLOSED IN PART and CONVERTED on
@@ -8355,27 +8402,27 @@ field NAME.
 
 ### FNP10-JAVA-DOUBLE-TEXT-1 — `Double.toString` spellings where the JDK is not shortest
 
-- **repark** — `to_json` and `get_json_object` render a double through the shortest decimal that
-  round-trips, except the min subnormals, which spell `4.9E-324` / `1.4E-45` since
-  JAVA-DOUBLE-STR-1 (2026-09-15, shared formatter): `8.41E21` renders `8.41E21`
-  and `1.0E23` renders `1.0E23`.
+- **repark** — `to_json` and `get_json_object` render a double through JDK 17
+  `FloatingDecimal` text since JAVA-DOUBLE-FD-1 (2026-09-15, shared formatter):
+  `8.41E21` renders `8.409999999999999E21` and `1.0E23` renders
+  `9.999999999999999E22`, alongside the converged min subnormals `4.9E-324` /
+  `1.4E-45`.
 - **Apache Spark** — JDK 17's `FloatingDecimal` is NOT the shortest repr and answers
   `4.9E-324`, `8.409999999999999E21`, `9.999999999999999E22` and `1.4E-45` for the same four
   values. Every other measured double agrees, including `1.0E20`, `3.0`, `0.1`, `1.0E-7`,
   NaN and Infinity. *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
   FNP-9/10 round 2.)*
-- **Pin** —
-  `python/repark/tests/test_fnp_9_collections_json.py::test_to_json_double_text_diverges_on_the_jdk_legacy_spellings`
-  (two divergent cells pinned; the min-subnormal cells are equalities since 2026-09-15).
-- **Rationale** — BACKLOG, filed 2026-09-06 by the FNP-9/10 round-1 critic (finding F13). Closing
-  it means porting `FloatingDecimal.toJavaFormatString` — the pre-JDK-19 dragon variant, which
-  emits an extra digit for a specific class of values — not tuning a format string. The cells
-  are pinned so the divergence is a stated limit rather than a surprise, and the C-004
-  clause that once claimed "doubles take `Double.toString`" is narrowed to say which values it
-  covers. **Update 2026-09-15 (JAVA-DOUBLE-STR-1):** the `4.9E-324` cell converged through the
-  shared Java formatter (exact `Double.MIN_VALUE` bit-pattern match, required by oracle cells
-  BL7-16 / JD-cast-13); round 2 the `1.4E-45` cell converged the same way (J10-float-min).
-  The two remaining cells stay BACKLOG, and the Spark-door CAST path shares that residual.
+- **Pin** — (now equality)
+  `python/repark/tests/test_fnp_9_collections_json.py::test_to_json_double_text_diverges_on_the_jdk_legacy_spellings`.
+- **Rationale** — FIXED 2026-09-15 (JAVA-DOUBLE-FD-1 closed it). Filing history:
+  BACKLOG 2026-09-06 by the FNP-9/10 round-1 critic (finding F13); closing it meant
+  porting `FloatingDecimal.toJavaFormatString`, which FD-1 landed as a Rust port
+  behind the shared formatter. **Update 2026-09-15 (JAVA-DOUBLE-STR-1):** the
+  `4.9E-324` cell converged through the shared Java formatter (exact
+  `Double.MIN_VALUE` bit-pattern match, required by oracle cells BL7-16 /
+  JD-cast-13); round 2 the `1.4E-45` cell converged the same way (J10-float-min).
+  **Update 2026-09-15 (JAVA-DOUBLE-FD-1):** the two remaining cells converged
+  through the same port; the Spark-door CAST path shares the fix.
 
 ### FNP10-FROM-JSON-DDL-1 — `from_json` refuses an INTERVAL field in its schema
 
