@@ -67,7 +67,7 @@ def test_to_reorders_casts_and_wins_schema_spelling(spark: ReparkSession) -> Non
 
 
 def test_to_narrow_reports_logical_width_1(spark: ReparkSession) -> None:
-    """pins: df-surface-a-1/C-001 — cell to_narrow; logical-width-1/C-010 narrow label."""
+    """pins: df-surface-a-1/C-001 — cell to_narrow; pins: logical-width-1/C-010 narrow label."""
     narrowed = _kv(spark).to(StructType([StructField("a", ShortType())]))
     assert narrowed.columns == _cell("to_narrow")["result"]["columns"]
     assert [repr(row) for row in narrowed.collect()] == _cell("to_narrow")["result"]["rows"]
@@ -121,7 +121,10 @@ def test_to_store_assignment_atomic_to_string(spark: ReparkSession) -> None:
 
 
 def test_to_binary_follows_reported_schema_df_to_binary_1(spark: ReparkSession) -> None:
-    """to(binary) is identity; to(string) follows the cast. pins: df-surface-a-1/C-008, logical-width-1/C-010"""
+    """Binary to() is identity; the string target follows the cast.
+
+    pins: df-surface-a-1/C-008; pins: logical-width-1/C-010
+    """
     frame = spark.createDataFrame([(b"hi",)], "b binary")
     assert frame.schema.simpleString() == "struct<b:binary>"
     as_binary = frame.to(StructType([StructField("b", BinaryType())]))

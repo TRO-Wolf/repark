@@ -60,17 +60,17 @@ parser/dialect/router in `crates/repark-spark` (run 18c) beyond `type_table.rs` 
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The Python door reports the four widths: `createDataFrame` with a DDL string and with a `StructType` answers `dtypes` smallint/tinyint/float/binary, `simpleString` struct spellings, `json_types` short/byte/float/binary, `printSchema` short/byte/float/binary, and `schema.json()` short/byte/float/binary. | `test_logical_width_1.py` ddl/struct/schema-json pins from cells `ddl_schema`, `struct_schema`, `schema_json`. | OPEN | Red-first run §Red-first. |
-| C-002 | The SQL door reports the four widths: `spark.sql("SELECT CAST(1 AS SMALLINT) a, …")` answers `.dtypes` / `.schema` smallint/tinyint/float/binary, and `DESCRIBE TABLE` answers are unchanged. | sql-cast + describe pins from cells `sql_cast`, `sql_describe`. | OPEN | Red-first run §Red-first. |
-| C-003 | Widths survive cast, arithmetic, aggregates and union (`arith_width`: `smallint+tinyint→smallint`, `float*2→float`; `agg_width`: `max(tinyint)→tinyint`, `min(float)→float`; `union_width`; `cast_schema` guard). | arith/agg/union/cast pins from the same-named cells. | OPEN | Red-first run §Red-first. |
-| C-004 | `fillna(0)` keeps `smallint, tinyint, float` (cell `fillna_width`) with Spark's values (cell `fillna_values`). | fillna pins from both cells. | OPEN | No Rust fillna builder exists (M-4(a)); fix extends the `_fill_expr_for_bound` cast arms over the Rust `lit`/`cast`/`coalesce` kernels (R-9). |
-| C-005 | Inference: Python `int→bigint`, `float→double`, `bytes→binary` (cell `infer_schema`); nested widths already green, pinned as guard (cell `nested_schema`); `collect()` value types/values already green, pinned as guards (cells `ddl_collect_types`, `ddl_collect_values`). | infer/nested/collect pins. | OPEN | Inference already builds `pa.binary()`; only the label was wrong. |
-| C-006 | A parquet write/read round trip keeps the four widths (cell `write_read_parquet`). | parquet pin. | OPEN | |
-| C-007 | An Iceberg round trip (memory catalog + warehouse, per `probe_width.py` repark mode) answers `sh:int, ti:int, price:float, b:binary` with the recorded rows. | iceberg pins from Spark cells `iceberg_schema`/`iceberg_desc`/`iceberg_rows` + repark cell `iceberg_roundtrip`. | OPEN | Spark widens narrow ints at the Iceberg boundary too — the `int` answer is Spark-matching, not a residual. |
-| C-008 | `F.lit(b"ab")` keeps today's `PySparkTypeError`, pinned; registry row `DF-LIT-BINARY-1` (BACKLOG) records the gap with the pin. | lit pin from cell `lit_width` (error cell). | OPEN | The bytes arm needs `functions.py` (run 18a); not edited (R-8). |
-| C-009 | The `cast_schema` ANSI refusal stays: `CAST(bigint AS BINARY)` raises `DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION` (BL-11, W-6 withdrawn). | refusal pin from cell `cast_schema` (error cell). | OPEN | Re-measured on this tree 2026-09-16 (M-4(d)). |
-| C-010 | Blast radius (W-3): base vs M-2-fix-alone suite lists written here; every changed pin classified (i) asserted the wrong widened answer, re-measured against a named Spark cell, or (ii) product regressed, product fixed. No pin updated without a named cell. | §Blast-radius lists + the reclassified-pin table. | OPEN | Base runs §Gates. Halt line: ~40 pins. |
-| C-011 | Registry rows `LOGICAL-WIDTH-1` (implemented) + `DF-LIT-BINARY-1` (BACKLOG) appended inside their section, never reordered; every gate in the preamble green with real exit codes and counts; COVERAGE_ATTESTATION complete. | Registry diff; §Gates. | OPEN | Rebase before every gate run; keep BOTH sides on conflict. |
+| C-001 | The Python door reports the four widths: `createDataFrame` with a DDL string and with a `StructType` answers `dtypes` smallint/tinyint/float/binary, `simpleString` struct spellings, `json_types` short/byte/float/binary, `printSchema` short/byte/float/binary, and `schema.json()` short/byte/float/binary. | `test_logical_width_1.py` ddl/struct/schema-json pins from cells `ddl_schema`, `struct_schema`, `schema_json`. | **PROVEN** | Red 2026-09-16: 13 failed on the stashed base (incl. all C-001 pins); green with the fix. `schema.json()` byte-equals the cell. pins: logical-width-1/C-001 |
+| C-002 | The SQL door reports the four widths: `spark.sql("SELECT CAST(1 AS SMALLINT) a, …")` answers `.dtypes` / `.schema` smallint/tinyint/float/binary, and `DESCRIBE TABLE` answers are unchanged. | sql-cast + describe pins from cells `sql_cast`, `sql_describe`. | **PROVEN** | Red on base, green with the fix. DESCRIBE pins re-run green (`spark_ddl_type_name` Rust battery + census describe rows + Iceberg describe subset). pins: logical-width-1/C-002 |
+| C-003 | Widths survive cast, arithmetic, aggregates and union (`arith_width`: `smallint+tinyint→smallint`; `agg_width`: `max(tinyint)→tinyint`, `min(float)→float`; `union_width`; `cast_schema` guard). | arith/agg/union/cast pins from the same-named cells. | **PROVEN** | `st` smallint, `fd` double, agg/union full-cell match. EXCEPTION: `float*2` answers `float`, Spark records `double` — finding F-1, BACKLOG `ARITH-FLOAT-INT-1` with divergence pin, not absorbed. pins: logical-width-1/C-003 |
+| C-004 | `fillna(0)` keeps `smallint, tinyint, float` (cell `fillna_width`) with Spark's values (cell `fillna_values`). | fillna pins from both cells. | **PROVEN** | dtypes AND values byte-match both cells with the fix. `fillna(1.5)` keeps widths with toward-zero truncation (Spark's cast-the-literal rule; values tree-measured, no cell). pins: logical-width-1/C-004 |
+| C-005 | Inference: Python `int→bigint`, `float→double`, `bytes→binary` (cell `infer_schema`); nested widths already green, pinned as guard (cell `nested_schema`); `collect()` value types/values already green, pinned as guards (cells `ddl_collect_types`, `ddl_collect_values`). | infer/nested/collect pins. | **PROVEN** | Full-cell match on all five pins. Inference built `pa.binary()` all along; only the label was wrong. pins: logical-width-1/C-005 |
+| C-006 | A parquet write/read round trip keeps the four widths (cell `write_read_parquet`). | parquet pin. | **PROVEN** | Full-cell dtypes + simpleString match. pins: logical-width-1/C-006 |
+| C-007 | An Iceberg round trip (memory catalog + warehouse, per `probe_width.py` repark mode) answers `sh:int, ti:int, price:float, b:binary` with the recorded rows. | iceberg pins from Spark cells `iceberg_schema`/`iceberg_desc`/`iceberg_rows` + repark cell `iceberg_roundtrip`. | **PROVEN** | dtypes per-column vs `iceberg_schema`, both rows (incl. the all-NULL row) vs `iceberg_rows`, DESCRIBE types vs `iceberg_desc`. Zero Iceberg-path edits — the fix closed it. The `int` answer is Spark-matching (no narrow ints in Iceberg), not residual. pins: logical-width-1/C-007 |
+| C-008 | `F.lit(b"ab")` keeps today's `PySparkTypeError`, pinned; registry row `DF-LIT-BINARY-1` (BACKLOG) records the gap with the pin. | lit pin from cell `lit_width` (error cell). | **PROVEN** | Refusal text pinned byte-exact; the Spark target dtypes (`f:double, b:binary`) asserted from the cell as the fix target. `functions.py` untouched (R-8). pins: logical-width-1/C-008 |
+| C-009 | The `cast_schema` ANSI refusal stays: `CAST(bigint AS BINARY)` raises `DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION` (BL-11, W-6 withdrawn). | refusal pin from cell `cast_schema` (error cell). | **PROVEN** | Refusal at collect with the cell's condition + cannot-cast sentence + conf remedy. pins: logical-width-1/C-009 |
+| C-010 | Blast radius (W-3): base vs M-2-fix-alone suite lists written here; every changed pin classified (i) asserted the wrong widened answer, re-measured against a named Spark cell, or (ii) product regressed, product fixed. No pin updated without a named cell. | §Blast-radius lists + the reclassified-pin table. | **PROVEN** | 14 changed pins, all class (i) with named cells (§Blast-radius table); zero class (ii); parity untouched. New-pin red run: 13 failed / 7 passed on the stashed base (the 7: nested/collect guards, sql_describe values, the float-fill invariant, lit + cast guards, typename spellings — green by construction). pins: logical-width-1/C-010 |
+| C-011 | Registry rows `LOGICAL-WIDTH-1` (implemented) + `DF-LIT-BINARY-1` (BACKLOG) appended inside their section, never reordered; every gate in the preamble green with real exit codes and counts; COVERAGE_ATTESTATION complete. | Registry diff; §Gates. | **PROVEN** | Rows landed (`LOGICAL-WIDTH-1` implemented, `DF-LIT-BINARY-1` + `ARITH-FLOAT-INT-1` BACKLOG, `DF-TO-BINARY-1` closed by the report fix); rebased onto `a92a68db` conflict-free before the gates. pins: logical-width-1/C-011 |
 
 Note (not a clause): `toPandas` dtypes unmeasured — Spark cell `todf_toPandas` records
 `PACKAGE_NOT_INSTALLED`; repark main answers float64/object per its own file. No pin.
@@ -168,17 +168,83 @@ row `ARITH-FLOAT-INT-1` with a red-when-fixed divergence pin. `st` (smallint) an
 
 ## Gates
 
-(TODO: every gate with real exit codes and counts.)
+Final tree after rebase onto `a92a68db` (2026-09-16; the two upstream commits are
+docs-only, so no rebuild was needed — the RELEASE module already matches this tree):
+
+| gate | result |
+|---|---|
+| `make verify` | exit 0 (lint, format, clippy, Rust tests, map/ledger grammar) |
+| unit file `test_logical_width_1.py` | 20 passed |
+| reclassified files (`test_nullability_2.py`, `test_df_surface_a_1.py`, `test_facade_4_census_pins.py`, `test_facade_3_create_dataframe_goldens.py`, `test_io_text_2.py`) | 137 passed with the unit file (117 + 20), 6 skipped |
+| whole facade `.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider` | 9055 passed, 367 skipped, 34 xfailed — exit 0 |
+| whole parity `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q` | 757 passed, 2 skipped, 12 xfailed — exit 0 |
+| `cargo test -p repark-spark` | 1025 passed, 0 failed, 4 ignored |
+| comment-ban `grep -P '^\+\s*(//|#(?!\[|!\[\| noqa))'` before every commit | empty every time |
+| red-first new pins on stashed base | 13 failed, 7 passed (guards green by construction) |
+| base suites (W-3) | facade 9035 passed exit 0; parity 756 passed + 1 self-inflicted docs-link fail (untracked fixture/ledger), resolved at commit |
+| M-2-fix-alone suites (W-3) | facade 14 failed / 9021 passed; parity unchanged; all 14 class (i) |
 
 ## Questions
 
-(None yet.)
+(None — no HALT. The two card ambiguities resolved by measurement: no Rust fillna
+builder exists (R-9), and `lit(bytes)` cannot land without run 18a's file (R-8).)
+
+## Out-of-scope measurements (W-7, M-4(e))
+
+- `fillna(0)` nullability: Spark cell `fillna_width` records `sh/ti` nullable true;
+  repark answers non-nullable (coalesce with a literal folds nullability away). Recorded,
+  not chased (W-7). The pin asserts dtypes + values only.
+- Iceberg round-trip nullability: Spark `iceberg_schema` records `id` non-nullable; repark
+  answers all-nullable. Recorded, not chased (W-7).
+- `toPandas`: Spark cell `todf_toPandas` is `PACKAGE_NOT_INSTALLED` — unmeasured, no pin
+  (M-4(e)). Repoint to the next oracle round with pandas installed.
+- `to(string)` on a binary column answers `'hi'` (engine cast) — tree-measured; the VALUE
+  is unrecorded on live Spark (DF-TO-BINARY-1 notes it for the next oracle round).
 
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: logical-width-1
-  categories: []
-  complete: false
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card M-1..M-5, rulings W-1..W-7 and the recorded PySpark 4.1.2 width cells; the M-1/M-4(a) claims verified by measurement on this tree (engine int16/int8/float/binary; no Rust fillna builder), and the card's float*2-matches-Spark claim REFUTED by cell arith_width (finding F-1, filed ARITH-FLOAT-INT-1).
+      artifacts: [python/repark/tests/test_logical_width_1.py, python/repark/tests/facade_logical_width_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: DDL-string, StructType and inferred frames; SQL-door CAST and hex literal; Python-door cast; arithmetic, aggregates, union; scalar, dict and float fillna; parquet and Iceberg round trips; schema.json bytes; lit(bytes) refusal; ANSI cast-to-binary refusal; typename spellings; DESCRIBE unchanged on both surfaces.
+      artifacts: [python/repark/tests/test_logical_width_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Rust tests logical_key_reports_spark_narrow_widths + describe_keeps_spark_ddl_spellings_for_narrow_widths in type_table/tests.rs; full repark-spark suite 1025 passed; no unwrap/expect added (make verify clippy clean).
+      artifacts: [crates/repark-spark/src/type_table/tests.rs]
+    - id: AT-4
+      status: N/A
+      justification: Pure type-label and literal-cast changes; no shared mutable state, no new tasks or locks.
+    - id: AT-5
+      status: ATTACKED
+      evidence: No endpoint, file or catalog write added — parquet/Iceberg pins write only to tmp_path warehouses; the refusals (lit, ANSI cast) raise before any plan executes.
+      artifacts: [python/repark/tests/test_logical_width_1.py]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Single-agent round, no critic phase ordered; self-review caught the D9 key-vocabulary slip (byte/short keys vs tinyint/smallint labels) and the iceberg d-vs-date name collision before the gates.
+      artifacts: [task/ledgers/staging/logical-width-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Final tree, rebased onto a92a68db: make verify exit 0; facade 9055 passed, 367 skipped, 34 xfailed, exit 0; parity 757 passed, 2 skipped, 12 xfailed, exit 0; unit file 20 passed; repark-spark Rust suite 1025 passed; comment-ban grep zero hits. Counts in §Gates.
+      artifacts: [python/repark/tests/test_logical_width_1.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Every Spark expectation comes from facade_logical_width_oracle.json (byte-identical copy of the run-17b live recording, cmp clean); the three tree-measured values (fillna(1.5) truncation, to(string) 'hi', lit refusal text) are labelled tree-measured in §Out-of-scope measurements, never presented as oracle.
+      artifacts: [python/repark/tests/facade_logical_width_oracle.json]
+    - id: AT-9
+      status: ATTACKED
+      evidence: LOGICAL-WIDTH-1 implemented with cell citations; DF-LIT-BINARY-1 and ARITH-FLOAT-INT-1 BACKLOG with red-when-fixed pins; DF-TO-BINARY-1 closed by the report fix with the unmeasured value noted; no silent stubs.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation guards observed — stashing the LogicalKey fix reddened 13 pins (red-first run); restoring the int/long-only fill arm reddened both fillna pins (2 failed, 18 deselected); the lit BACKLOG guard asserts the refusal text, so a bytes arm without retiring it reds.
+      artifacts: [python/repark/tests/test_logical_width_1.py]
+  complete: true
 ```
 
-VERDICT: 11 clauses, 0 PROVEN, 11 OPEN, 0 REJECTED.
+VERDICT: 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED.

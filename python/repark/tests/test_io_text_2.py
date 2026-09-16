@@ -342,7 +342,7 @@ def _write_kfloat(tmp_path: Path) -> Path:
 
 
 def test_text_probe6_float_schema_float(spark: ReparkSession, tmp_path: Path) -> None:
-    """float overlay: exact value, narrow label. pins: io-text-1/Y-2, logical-width-1/C-010"""
+    """Float overlay, narrow label. pins: io-text-1/Y-2; pins: logical-width-1/C-010"""
     _result_pin(
         spark.read.schema("value string, k float").text(str(_write_kfloat(tmp_path))),
         "text_probe6_float_schema_float",
@@ -350,7 +350,7 @@ def test_text_probe6_float_schema_float(spark: ReparkSession, tmp_path: Path) ->
 
 
 def test_text_probe6_int_schema_smallint(spark: ReparkSession, tmp_path: Path) -> None:
-    """smallint overlay: exact value, narrow label. pins: io-text-1/Y-2, logical-width-1/C-010"""
+    """Smallint overlay, narrow label. pins: io-text-1/Y-2; pins: logical-width-1/C-010"""
     _result_pin(
         spark.read.schema("value string, k smallint").text(str(_write_kint(tmp_path))),
         "text_probe6_int_schema_smallint",
@@ -358,7 +358,7 @@ def test_text_probe6_int_schema_smallint(spark: ReparkSession, tmp_path: Path) -
 
 
 def test_text_probe6_int_schema_tinyint(spark: ReparkSession, tmp_path: Path) -> None:
-    """tinyint overlay: exact value, narrow label. pins: io-text-1/Y-2, logical-width-1/C-010"""
+    """Tinyint overlay, narrow label. pins: io-text-1/Y-2; pins: logical-width-1/C-010"""
     _result_pin(
         spark.read.schema("value string, k tinyint").text(str(_write_kint(tmp_path))),
         "text_probe6_int_schema_tinyint",
@@ -366,7 +366,7 @@ def test_text_probe6_int_schema_tinyint(spark: ReparkSession, tmp_path: Path) ->
 
 
 def test_text_probe6_int_schema_binary(spark: ReparkSession, tmp_path: Path) -> None:
-    """binary overlay: exact bytes, narrow label. pins: io-text-1/Y-2, logical-width-1/C-010"""
+    """Binary overlay, narrow label. pins: io-text-1/Y-2; pins: logical-width-1/C-010"""
     _result_pin(
         spark.read.schema("value string, k binary").text(str(_write_kint(tmp_path))),
         "text_probe6_int_schema_binary",

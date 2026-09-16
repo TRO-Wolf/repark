@@ -16,7 +16,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import AnalysisException
-from repark.spark.sql import functions as F
+from repark.spark.sql import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark.types import (
     BinaryType,
     ByteType,
@@ -144,8 +144,7 @@ def test_sql_door_collects_narrow_values_logical_width_1(spark: ReparkSession) -
     """pins: logical-width-1/C-002 — cell sql_describe."""
     rows = spark.sql("SELECT CAST(1 AS SMALLINT) a, CAST(1.5 AS FLOAT) c, X'6162' d").collect()
     assert [
-        [value if not isinstance(value, bytes) else repr(value) for value in row]
-        for row in rows
+        [value if not isinstance(value, bytes) else repr(value) for value in row] for row in rows
     ] == _cell("sql_describe")["result"]
 
 
@@ -208,9 +207,9 @@ def test_fillna_keeps_narrow_widths_logical_width_1(wide: object) -> None:
     result = _cell("fillna_width")["result"]
     assert filled.dtypes == [tuple(pair) for pair in result["dtypes"]]
     assert filled.schema.simpleString() == result["simpleString"]
-    assert [[repr(value) for value in row] for row in filled.collect()] == _cell(
-        "fillna_values"
-    )["result"]
+    assert [[repr(value) for value in row] for row in filled.collect()] == _cell("fillna_values")[
+        "result"
+    ]
 
 
 def test_fillna_float_value_keeps_column_widths_logical_width_1(wide: object) -> None:
@@ -266,9 +265,9 @@ def test_iceberg_roundtrip_matches_spark_boundary_logical_width_1(
     for name, dtype in table.dtypes:
         assert spark_by_name[name] == dtype
     narrow = table.orderBy("id").select("id", "sh", "ti", "price", "b")
-    assert [[repr(value) for value in row] for row in narrow.collect()] == _cell(
-        "iceberg_rows"
-    )["result"]
+    assert [[repr(value) for value in row] for row in narrow.collect()] == _cell("iceberg_rows")[
+        "result"
+    ]
     spark_desc = {row[0]: row[1] for row in _cell("iceberg_desc")["result"]}
     for row in spark.sql("DESCRIBE TABLE hc.ns.w2").collect():
         assert spark_desc[row[0]] == row[1]
@@ -300,7 +299,7 @@ def test_cast_bigint_to_binary_refuses_under_ansi_logical_width_1(
         ).collect()
     assert _cell("cast_schema")["error"]["condition"] in str(caught.value)
     assert 'cannot cast "BIGINT" to "BINARY" with ANSI mode on' in str(caught.value)
-    assert '"spark.sql.ansi.enabled" as \'false\'' in str(caught.value)
+    assert "\"spark.sql.ansi.enabled\" as 'false'" in str(caught.value)
 
 
 def test_typename_spellings_logical_width_1() -> None:

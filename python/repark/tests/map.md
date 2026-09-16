@@ -5834,4 +5834,5 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   width invariant, parquet and Iceberg round trips (narrow ints widen to int at the
   boundary, matching Spark), the `schema.json()` bytes, the `DF-LIT-BINARY-1` lit(bytes)
   refusal guard, the `cast_schema` BL-11 guard, and the typename spellings.
-  pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009;
+  pins: logical-width-1/C-010, C-011
