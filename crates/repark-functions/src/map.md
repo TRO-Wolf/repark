@@ -318,6 +318,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **SET-ANSI-RUNTIME-1 (2026-09-15):** `parse_runtime_spark_sql_ansi_enabled` (the
   runtime gate: case-insensitive `true`/`false` only — `1`/`yes`/padded values refuse
   with Spark's `INVALID_CONF_VALUE.TYPE_MISMATCH`; the lenient builder parser is frozen).
+  The function carries `#[allow(clippy::missing_errors_doc)]` (R-17c-3: no Rust `///`).
   pins: set-ansi-runtime-1/C-001
 - `session_time_zone.rs` (+ `session_time_zone/`) — the carrier that brings the
   resolved session timezone to the extractors. A `ConfigExtension` with a two-segment `PREFIX`

@@ -145,10 +145,6 @@ async fn session_clone_shares_the_resolved_zone() {
     assert_eq!(cloned.session_time_zone().id(), "Asia/Tokyo");
 }
 
-// === Runtime values (`SET` / `conf.set`) =====================================================
-
-/// The runtime gate accepts what Java `ZoneId.of` accepts: IANA ids plus the offset forms the
-/// `SET`-door cells pin (`+05`, `+5`, `+18:00`, `GMT+8`, `+08:00`, `Z`).
 #[test]
 fn runtime_values_accept_iana_and_java_offset_forms() {
     for zone in [
@@ -170,8 +166,6 @@ fn runtime_values_accept_iana_and_java_offset_forms() {
     }
 }
 
-/// The runtime gate refuses what Java refuses: past ±18:00, unknown ids, blanks, quoted values.
-/// Arrow alone would accept `+18:01`, so the offset arm runs before the IANA check.
 #[test]
 fn runtime_values_refuse_past_the_java_range_with_sparks_message() {
     for zone in [
@@ -206,7 +200,6 @@ fn runtime_values_refuse_past_the_java_range_with_sparks_message() {
     }
 }
 
-/// A stored runtime zone is what `session_time_zone` reports, on the session and its clones.
 #[tokio::test]
 async fn stored_runtime_zone_is_live_on_the_session_and_its_clones() {
     let session = ReparkSession::builder().build().unwrap();

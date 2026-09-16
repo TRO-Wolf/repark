@@ -1,5 +1,3 @@
-//! Runtime `SET` application for the two live session knobs (binding half).
-
 use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
 use repark_core::{Error, ReparkSession, Result, SESSION_TIME_ZONE_KEY};
@@ -13,9 +11,6 @@ use crate::fence::fenced_span;
 use crate::session::PyReparkSession;
 use crate::to_py_err;
 
-/// Apply one runtime conf value to the live session (Spark `SET` / `conf.set`).
-/// # Errors
-/// Returns `IllegalArgumentException` with Spark's message for a refused value.
 #[pyfunction]
 pub fn set_runtime_config(
     session: PyRef<'_, PyReparkSession>,
@@ -27,9 +22,6 @@ pub fn set_runtime_config(
     })
 }
 
-/// Re-apply a builder-seeded value (`RESET` restore path, builder-lenient booleans).
-/// # Errors
-/// Returns `IllegalArgumentException` with Spark's message for a refused value.
 #[pyfunction]
 pub fn restore_runtime_config(
     session: PyRef<'_, PyReparkSession>,
@@ -41,7 +33,6 @@ pub fn restore_runtime_config(
     })
 }
 
-/// Register the runtime-config functions on the native module.
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(set_runtime_config, module)?)?;
     module.add_function(wrap_pyfunction!(restore_runtime_config, module)?)?;

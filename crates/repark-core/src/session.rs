@@ -340,7 +340,6 @@ pub struct ReparkSession {
     registered_s3_buckets: Arc<Mutex<HashSet<String>>>,
     /// Optional explicit region for `s3`/`s3a` reads.
     s3_region_override: Arc<Option<String>>,
-    /// The live session zone: the build value until a runtime `SET` swaps the `Arc`.
     runtime_zone: Arc<RwLock<Arc<SessionTimeZone>>>,
     /// R6-1: where this session's temp views live, captured once at builder `build`.
     temp_view_home: Arc<TempViewHome>,
@@ -370,15 +369,11 @@ impl ReparkSession {
         self.backend.session_context()
     }
 
-    /// Return the live session timezone (the build value until a runtime `SET` swaps it).
     #[must_use]
     pub fn session_time_zone(&self) -> Arc<SessionTimeZone> {
         Arc::clone(&RwLock::read(&self.runtime_zone).unwrap_or_else(PoisonError::into_inner))
     }
 
-    /// Swap the live session zone after a validated runtime `SET` (the doors call this with
-    /// the value [`parse_runtime_session_zone_value`](crate::parse_runtime_session_zone_value)
-    /// already accepted, so this stores without re-validating).
     pub fn set_runtime_zone(&self, zone: SessionTimeZone) {
         *RwLock::write(&self.runtime_zone).unwrap_or_else(PoisonError::into_inner) = Arc::new(zone);
     }

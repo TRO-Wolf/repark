@@ -34,6 +34,13 @@ Run 16b owns `dataframe/**`, `column.py`, `catalog.py` and the unfolding CONF-UN
   `missing_errors_doc` clippy would fail without the `# Errors` sections). The parked Rust keeps
   only those; the facade half is net-negative prose (one `#`-comment pair added mid-round was
   deleted before commit, its reason living in the session `map.md` row instead).
+- **R-17c-3 (orchestrator, 2026-09-15): the docstring-presence gate is Python-only
+  (`scripts/check_docstring_presence.py` SCAN_ROOTS), so no Rust `///` is ever gate-required; the
+  comment ban applies to Rust doc comments without exception, and their content lives in `map.md`.
+  Applied in the follow-up commit: all 35 added Rust comment lines deleted (their facts already
+  lived in the crate maps, topped up with the ±18:00 ordering reason and the
+  `Error::IllegalArgument` variant); the two public `Result` entry points take
+  `#[allow(clippy::missing_errors_doc)]` (attribute, not a comment — the IO-TEXT-1 precedent).
 - **Third measured deviation, S16-2 (round 17c):** `CAST('x' AS INT)` still raises after the SET.
   Measured identical with ANSI off at BUILD (literal, subquery and real-column shapes all raise
   the same `simplify_expressions` cast error), so the string-cast path never reads the ANSI flag
@@ -118,3 +125,7 @@ not Spark's) — pinned as the C-004 answer.
   CAP-1 mirror row for the same ratchet, moved 1328→1318 with the script baseline; rerun green.
 - COVERAGE_ATTESTATION: every clause C-001…C-005 names its pins in the table above; C-006 stays
   OPEN as round 2 by card order.
+- Follow-up (R-17c-3, comment strip): 35 added Rust comment lines deleted, maps topped up;
+  `make rust-clippy` green (two `#[allow(clippy::missing_errors_doc)]` attributes);
+  `cargo test -p repark-core session` 151 passed; `cargo test -p repark-functions -- ansi
+  session_time_zone` green; release native rebuilt; pins 65 passed; `make verify` rc 0.

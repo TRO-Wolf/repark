@@ -99,10 +99,7 @@ where
     }
 }
 
-/// Parse a RUNTIME `spark.sql.ansi.enabled` value (Spark `SET` / `conf.set`).
-/// # Errors
-/// Any value outside case-insensitive `true` / `false`, with Spark's
-/// `INVALID_CONF_VALUE.TYPE_MISMATCH` message (so `1`, `yes` and padded values refuse).
+#[allow(clippy::missing_errors_doc)]
 pub fn parse_runtime_spark_sql_ansi_enabled(raw: &str) -> Result<bool> {
     if raw.eq_ignore_ascii_case("true") {
         Ok(true)

@@ -78,10 +78,7 @@ where
     }
 }
 
-/// Parse and validate a RUNTIME [`SESSION_TIME_ZONE_KEY`] value (Spark `SET` / `conf.set`).
-/// # Errors
-/// [`Error::IllegalArgument`] with Spark's `INVALID_CONF_VALUE.TIME_ZONE` message when the
-/// value is blank or unresolvable.
+#[allow(clippy::missing_errors_doc)]
 pub fn parse_runtime_session_zone_value(raw: &str) -> Result<SessionTimeZone> {
     let trimmed = raw.trim();
     let sign_led = trimmed
@@ -104,9 +101,6 @@ pub fn parse_runtime_session_zone_value(raw: &str) -> Result<SessionTimeZone> {
     )))
 }
 
-/// Whether `value` is a Java `ZoneOffset` spelling inside ±18:00 (`Z`, `+H`, `+HH`, `+HHMM`,
-/// `+HH:MM`, `+HHMMSS`, `+HH:MM:SS`). A leading-sign string that fails here must not fall
-/// through to the IANA check: Arrow accepts offsets past ±18:00 that Java refuses.
 fn is_java_offset_zone(value: &str) -> bool {
     if value == "Z" || value == "z" {
         return true;
@@ -144,7 +138,6 @@ fn is_java_offset_zone(value: &str) -> bool {
     minutes <= 59 && seconds <= 59 && hours <= 18 && (hours < 18 || (minutes == 0 && seconds == 0))
 }
 
-/// Whether `value` is a bare `GMT` / `UTC` / `UT` id or one carrying a signed offset.
 fn is_java_prefixed_zone(value: &str) -> bool {
     for prefix in ["GMT", "UTC", "UT"] {
         if value.len() < prefix.len()
@@ -163,12 +156,10 @@ fn is_java_prefixed_zone(value: &str) -> bool {
     false
 }
 
-/// Whether two bytes at `offset` are ASCII digits.
 fn is_digit_pair(body: &[u8], offset: usize) -> bool {
     body[offset].is_ascii_digit() && body[offset + 1].is_ascii_digit()
 }
 
-/// Parse two ASCII digits at `offset` as a decimal number.
 fn decimal_pair(body: &[u8], offset: usize, width: usize) -> u32 {
     let mut number = 0;
     for byte in &body[offset..offset + width] {

@@ -666,7 +666,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **SET-ANSI-RUNTIME-1 (2026-09-15):** `parse_runtime_session_zone_value` (the runtime
   gate: IANA ids plus Java `ZoneOffset` / `GMT|UTC|UT`-prefixed forms inside ±18:00 —
   a sign-led value that fails the offset arm never falls through to Arrow, which accepts
-  past ±18:00 that Java refuses; refusals carry Spark's `INVALID_CONF_VALUE.TIME_ZONE`)
+  past ±18:00 that Java refuses; refusals carry Spark's `INVALID_CONF_VALUE.TIME_ZONE` as
+  `Error::IllegalArgument`)
   and `ReparkSession::set_runtime_zone` (the live zone behind `RwLock<Arc<_>>`, shared by
   clones; `session_time_zone` now returns the snapshot `Arc`). Pedantic-clean (nested
   or-patterns, method-ref digit checks).

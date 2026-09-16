@@ -41,8 +41,6 @@ impl SessionTimeZoneConfig {
         &self.zone
     }
 
-    /// Swap the live zone after a validated runtime `SET` (the value was already accepted by
-    /// the session's runtime gate, so this stores without re-validating).
     pub fn set_zone(&mut self, zone: &str) {
         self.zone = zone.to_string();
     }

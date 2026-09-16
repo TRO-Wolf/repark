@@ -21,9 +21,12 @@ authoritative key spelling, and the resolved value reaching engine session state
     `ReparkSession::session_time_zone`; an invalid zone fails the BUILD (not a later query); a
     session clone shares the resolved zone.
   - **runtime values** — SET-ANSI-RUNTIME-1 (2026-09-15): `parse_runtime_session_zone_value`
-    accepts IANA ids plus Java `ZoneOffset` / `GMT|UTC|UT`-prefixed forms inside ±18:00 and
-    refuses past ±18:00, unknown ids, blanks and quoted values with Spark's
-    `INVALID_CONF_VALUE.TIME_ZONE`; a stored runtime zone is what `session_time_zone`
+    accepts what Java `ZoneId.of` accepts (IANA ids plus `+05`, `+5`, `+18:00`, `GMT+8`,
+    `+08:00`, `Z`) and refuses what Java refuses (past ±18:00, unknown ids, blanks, quoted
+    values) with Spark's `INVALID_CONF_VALUE.TIME_ZONE` as `Error::IllegalArgument` (the
+    variant that reaches Python as `IllegalArgumentException`). The offset arm runs BEFORE
+    the IANA check: Arrow alone would accept `+18:01`, and a sign-led value that fails the
+    offset arm never falls through to it. A stored runtime zone is what `session_time_zone`
     reports, on the session and its clones. pins: set-ansi-runtime-1/C-002
 
 Deliberately NOT here: extraction implementation. H-1a split B owns extractor pins; this map covers
