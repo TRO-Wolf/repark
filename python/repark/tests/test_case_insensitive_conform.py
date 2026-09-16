@@ -53,7 +53,7 @@ def test_merge_star_conforms_case_differing_source_by_name(spark: ReparkSession)
         {"id": 3, "name": "c"},
     ]
     # Value AND Arrow type on the export path (to_arrow), never show.
-    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("id").type == pa.int32()
     assert table.schema.field("name").type == pa.string()
 
 

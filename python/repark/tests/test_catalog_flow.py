@@ -89,7 +89,7 @@ def test_ctas_partitioned_by_end_to_end(spark: ReparkSession) -> None:
         {"id": 2, "category": "b"},
         {"id": 3, "category": "a"},
     ]
-    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("id").type == pa.int32()
     assert table.schema.field("category").type == pa.string()
 
     # A partition-predicate read returns exactly the matching partition's rows.
@@ -131,7 +131,7 @@ def test_merge_partitioned_by_end_to_end(spark: ReparkSession) -> None:
         {"id": 3, "name": "c"},
         {"id": 4, "name": "dee"},
     ]
-    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("id").type == pa.int32()
     assert table.schema.field("name").type == pa.string()
 
     # The inserted row (id=4) landed in its own partition — a partition-predicate read returns it

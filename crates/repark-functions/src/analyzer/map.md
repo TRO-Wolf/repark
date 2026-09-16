@@ -15,6 +15,10 @@ under its `check_rust_file_size` ceiling and each matrix has one home.
   unconsumed escape char is `DataFusionError::Plan` `[INVALID_FORMAT.ESC_AT_THE_END]`
   SQLSTATE 42601. Foldable literals only. pins: fn-fix-2-string-rows/C-002
 - `overlay.rs` — `overlay(..., -1)` drops the Spark default length to the 3-arg form.
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the `-1` match sees through one compiler
+  `CAST` (early Int32 narrowing makes the first coercion wrap the literal before
+  this rewrite runs; Spark treats every `-1` length as omit).
+  pins: sql-literal-typing-1/C-002
 - `time_window/` — **FNP-WIN-1 (2026-09-15):** `SparkTimeWindow`, the
   `TimeWindowing` equivalent. Bare `window(...)` group/projection keys take the
   `window` name (explicit aliases win); sliding calls expand one row per

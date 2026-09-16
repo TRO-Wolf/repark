@@ -36,13 +36,15 @@ fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_
         .expect("HOF preparation is installed");
     assert_eq!(configured_names[position + 1], "spark_float_stringify");
     assert_eq!(configured_names[position + 2], "spark_decimal_precision");
-    assert_eq!(configured_names[position + 3], "type_coercion");
+    assert_eq!(configured_names[position + 3], "spark_integral_literal");
+    assert_eq!(configured_names[position + 4], "type_coercion");
     let without_insertions: Vec<String> = configured_names
         .into_iter()
         .filter(|name| {
             name != "higher_order_preparation"
                 && name != "spark_float_stringify"
                 && name != "spark_decimal_precision"
+                && name != "spark_integral_literal"
                 && name != "spark_negate_null_decimal"
         })
         .collect();

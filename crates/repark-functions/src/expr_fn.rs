@@ -365,7 +365,7 @@ pub fn unhex(arg: Expr) -> Expr {
 #[must_use]
 pub fn factorial(arg: Expr) -> Expr {
     let arg = Expr::Cast(Cast::new(Box::new(arg), DataType::Int32));
-    spark_math::factorial(arg)
+    call(crate::spark_math::factorial_udf(), vec![arg])
 }
 
 #[must_use]

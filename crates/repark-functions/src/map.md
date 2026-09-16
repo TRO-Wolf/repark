@@ -107,6 +107,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   itself so a malformed value raises `[CAST_INVALID_INPUT]` under ANSI (NULL under
   ANSI-off) instead of a bare Arrow cast error (fixtures-batch11.json
   A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x).
+  **SQL-LITERAL-TYPING-1 remediation round 1 (2026-09-16):** `Factorial`
+  shadows upstream `factorial` the same way (`user_defined` + integer widths
+  down to Int32, kernel delegated to `spark_factorial`) so `factorial(5)`
+  survives plan construction. Unit tests pin the literal, the explicit
+  `CAST(5 AS BIGINT)`, and the text refusal.
+  pins: sql-literal-typing-1/L-002
   pins: door-converge-1/C-002, C-003, C-008
 - `spark_base64.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `base64` / `unbase64` — a
   hand-rolled `java.util.Base64` MIME codec (no `base64` crate dep): RFC 4648 padding,
@@ -128,6 +134,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `regr_count` answer non-null `bigint`, `0` on empty input. pins: door-converge-1/C-006
   **FNP-8 (2026-09-07):** exposes the existing single-node provisional-integer narrowing inside
   the crate so HOF preparation can reuse it without changing global literal or overflow rules.
+  **SQL-LITERAL-TYPING-1 round 3 (2026-09-16):** the `Negative` fold is gone
+  from the shared helper, so a parenthesized `-(2147483648)` stays bigint in
+  lambda bodies and constructors exactly as on the top-level door
+  (LIT2-SQL-03); only the lexer-level negative token narrows.
+  pins: sql-literal-typing-1/V-001
 - `lambda_rebind.rs` — **FNP-8 (2026-09-06):** `LambdaRebind`, in `analyzer_rules()`
   twice — right after `SparkIntegerLiteral` and last. Two passes over lambda bindings: it
   packs a multi-parameter lambda body that leaves a parameter unreferenced into the
@@ -1004,6 +1015,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **FNP-11B step 5 (2026-09-15):** `to_char_family` builder dispatching the
   four formatting names onto the `try_invert::strict` kernels by name.
   pins: fnp-11b/C-001, C-002
+  **SQL-LITERAL-TYPING-1 remediation round 1 (2026-09-16):** the `factorial`
+  builder embeds the `Factorial` shadow UDF (not upstream's), keeping the
+  facade kernel identical to the SQL-door registration; the door-parity test
+  holds it. pins: sql-literal-typing-1/L-002
 
 Facade builders embed the same kernels registered by the SQL door, including `to_timestamp`, `avg`,
 the additional `datafusion-spark` functions, and map builders; keep both dispatch surfaces aligned.

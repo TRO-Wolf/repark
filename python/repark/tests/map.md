@@ -414,6 +414,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **DISPLAY-LAZY-1 step 1** (2026-09-10): `test_repr_of_eager_frame_skips_count_and_matches_lazy_table`
   asserts the lazy schema header with zero counts and the eager data table over the same
   header box, also with zero counts. pins: display-lazy-1/C-002
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the mapInArrow leg declares `id INT`
+  (two-row fixture narrows; Spark validates the declared schema the same way).
 - [test_eager_budget_1.py](test_eager_budget_1.py) — **EAGER-BUDGET-1 step 1 (2026-09-13):**
   the D-2 retained-bytes and read-only-conf pins. C-002 `conf.get` reports the native
   distinct-buffer total: `cache()` alone leaves it at 0, the first action raises it, an
@@ -446,6 +448,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Review round (2026-09-13):** C-008 repinned to `main`'s exact contract — the 3-row
   UNION refuses at `max_bytes=100` with the main-measured `312` integer, admits at 312,
   refuses at 311; a live-cache-view scan under both budgets refuses with the per-result
+  message.
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the fixture narrows to Int32, so the contract
+  re-measures to `300` (admits at 300, refuses at 299) — 12 bytes lighter, as expected.
   message. C-004 gains case-insensitive budget-key pins (mixed-case `set`/`unset`,
   last-set-wins, runtime-over-builder). L-004 pins SQL `SET repark.cache.*` — re-pinned by
   SQL-SET-DOOR-1 (2026-09-14) from the pre-door `config namespace "repark"` error to the
@@ -940,6 +945,24 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_fnp_4b_literals.py`. Byte-frozen by `test_pr_245_revalidation_record.py`; hash re-baselined
   with this unit (ledger), and again by BL-11 (2026-09-16) for the in-place ANSI-on flip of
   `test_numeric_to_binary_refuses`.
+- [test_sql_literal_typing_1.py](test_sql_literal_typing_1.py) — **SQL-LITERAL-TYPING-1
+  (2026-09-16):** BL-20 pins over the verbatim 64-cell oracle
+  (`sql_literal_typing_1_spark_oracle.json`) — one case per in-scope cell id,
+  recorded rows plus the Arrow type from `to_arrow().schema` (typeof cells pin
+  the name too), Spark error class plus message where recorded. Red on base:
+  19 failed, 44 passed; green after the `spark_literal_typing.rs` fix
+  (63 passed). LIT-SQL-52 is a declared-divergence pin holding the -128 wrap
+  for residue BL-20-OVF. `div` / unary `~` stay unpinned (SPARK-SQL-GRAMMAR-1
+  residues). Remediation round 1 (2026-09-16) adds the 13 LIT2 cells, the
+  LIT2 overflow error pins, and the critic L-001 `F.expr` door-agreement
+  table (mixed-width SQL answered identically on both doors). Round 3
+  (2026-09-16) adds the V-001 probe table: parenthesized `-(2147483648)`
+  stays bigint inside `transform` / `filter` / `transform_keys` on both
+  doors, matching LIT2-SQL-03. `transform` / `filter` over literal arrays pin
+  non-nullable bigint elements; the bare `array(...)` form pins nullable ones.
+  pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: sql-literal-typing-1/L-001, L-002, L-003
+  pins: sql-literal-typing-1/V-001
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
   wipes rows, stamps `operation=delete`, time-travels to the pre-truncate snapshot;
   missing table is `TABLE_OR_VIEW_NOT_FOUND`; a view is `EXPECT_TABLE_NOT_VIEW`;
@@ -1033,6 +1056,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   converged non-null 2026-09-06 (NULLABILITY-2 round 2, Spark-equal); the live
   re-coercion leg's map flag cell caught up to that convergence on 2026-09-11
   (NIGHTLY-LIVE-1 — the pin still expected the retired divergence).
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the TY-7 twin now answers `int32` (pre-coercion
+  narrowing closed the mechanism); the live twin asserts the `(int32, int32)` pair.
+  pins: sql-literal-typing-1/C-002
 - [test_date_fn_1.py](test_date_fn_1.py) — **DATE-FN-1 (2026-09-04):** Spark SQL `date()` Clock-flake fix (2026-09-05): the zero-arg pin asserts each door repeats one value per row and the two doors agree within one second, since the two statements run in different seconds (it straddled a second boundary in three CI runs).
   and `unix_timestamp` unit pins (timestamp / string / date / NULL; invalid string ANSI on
   and off; zero-arg `FROM range(3)` is three identical BIGINT rows on SQL and the facade).
@@ -2444,6 +2470,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pin that proves the defect was the plan shape, not the flatten helper).
   **FNP-4B (2026-09-15):** fixtures use the angle nested-array spelling (`ARRAY<BIGINT>`,
   never postfix) and `ARRAY[named_struct(...)]` (Spark refuses brace literals).
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the pre-aliased `x` reads Int32 (fixture literal
+  narrows); `e` stays Int64 (union with the explicit `ARRAY<BIGINT>`).
 - `test_datasets_facade.py` — **conductor-18 DS-4 (2026-08-16):** facade pins for the five
   torture-dataset families generated by `python/repark-parity/datasets/<family>` at seeded
   `small()` scale (64 rows / seed 42 — never the 1M CLI default), written to `tmp_path` and
@@ -2672,6 +2700,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `withSchemaEvolution` refuses loud; equi-join sugar unit pin. Arrow path for row sets.
   **FNP-4B (2026-09-15):** the render pin asserts backtick quoting (both doors read backticks as
   identifiers; double quotes are strings on the Spark door).
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the upsert pins read `id` Int32
+  (seed literals narrow; Spark-equal).
 - `test_merge_scan_prune_semantics.py` — **MG-1 (2026-08-15):** MERGE residual-probe
   hardening pins (r1/M1 Utf8→INT 2-row upsert; r2/M6 BIGINT 3e9 vs INT no-abort;
   r3/M5 `t.city = 'Zürich'` battery shape + backtick `` t.`Zürich` `` column;
@@ -3528,6 +3558,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (the pre-existing real-Glue-DB shape, built via `WITH DBPROPERTIES`) resolves for CTAS through
   the facade: data lands under it (empty rglob ⟺ the fallback read is gone and the memory catalog
   silently fell back to $TMPDIR), value + Arrow type on `to_arrow`.
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the partitioned CTAS/MERGE pins read `id` Int32
+  (fixture literals narrow; Spark-equal).
 - `test_namespace_location_guard.py` — **R-6 / G-6 Q1 (2026-08-14):** one facade
   pin, memory catalog, `repark.sql`-era imports. `spark.create_namespace` four
   shapes: create-new, same-location idempotent, contradictory location raises
@@ -3647,6 +3679,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (NOT Analysis/Parse — WG-3). Every value check is on the `to_arrow` export path with the Arrow
   **type** pinned too (never `show`). **r25 T2:** `test_bare_sql_branch_tag_replace_round_trip`
   (CREATE OR REPLACE / bare REPLACE BRANCH|TAG success on facade; supersedes refuse-loud pin).
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the eager-DML pins read `id` Int32
+  (fixture literals narrow; Spark-equal).
 - `test_case_insensitive_conform.py` — WG-4 (BUG-007): case-insensitive by-name column conform
   through the real facade. A `MERGE … UPDATE SET * / INSERT *` whose source frame spells its columns
   in a different case than the target conforms by name (value AND Arrow type via `to_arrow`); two
@@ -3654,6 +3688,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   predicate/explicit references are DataFusion-resolved — a disclosed follow-up; the source column is
   named explicitly in `ON` here so the test pins the CONFORM, not that resolution.)
   **FNP-4B (2026-09-15):** the `ON` qualifier uses backticks (BL-9); ruff-format only after.
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the MERGE-conformance pin reads `id` Int32
+  (source literals narrow; Spark-equal).
 - `test_filter_predicate_rewrite.py` — **audit G2**: the SQL-string filter-predicate identifier
   rewriter. FNP-4B critic: double-quoted span is a STRING literal (renamed pin
   `test_explicitly_double_quoted_span_is_a_string_literal`). pins: fnp-4b/C-018
@@ -3688,6 +3724,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `filter_keyword_literal_false_column`) and both remaining disclosed divergences carry live
   `DISCLOSURES` legs (the backtick one converged under FNP-4B and left the roster); the remaining goldens (function-call skip, `null` keyword, mixed-case
   survival) are **hand-derived from that same oracle session with no standing live leg**.
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the `year`/`YEAR` pins read Int32
+  (fixture literals narrow; Spark-equal).
   **Disclosed divergences characterized here** (behaviour fixes are out of charter) — the
   semantics live in the divergence registry, this map links:
   [`../../../docs/spark-sql-iceberg-parity.md`](../../../docs/spark-sql-iceberg-parity.md) §3
@@ -4800,8 +4838,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   higher-order callable forms through the Column door, Spark SQL, and column-free `F.expr`.
   It fences the separately BACKLOGed EX-FN-4 column-reference refusal, pins Spark-equal public
   `exists` nullability, and records indexed-transform width and nested nullability on four measured
-  shapes. Only a pre-analyzed nullable-element Column source keeps the inherited Int64 width. NULL
-  and empty aggregate inputs pin Int32 across all three paths; explicit `BIGINT` stays Int64.
+  shapes. **SQL-LITERAL-TYPING-1 (2026-09-16):** all four shapes read Int32 on every door
+  (the old nullable-element Column Int64 was the same Int64-literal widening; Spark's index
+  is INT). NULL and empty aggregate inputs pin Int32 across all three paths; explicit
+  `BIGINT` stays Int64.
 - `test_parity_live_fnp8.py` — **FNP-8 (2026-09-07), in flight:** ANSI-on/off indexed
   `transform` Arrow cells through Column RePark, SQL RePark, and live Spark. It names the
   per-door width and nested nullability against the measured Spark cell. A second live detector
@@ -5781,6 +5821,17 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `simpleString` converted to the fixture's `schema` key, `columns` / `nullable` /
   `rows` verbatim, existing cells untouched.
   pins: df-subquery-1/C-007
+- [sql_literal_typing_1_spark_oracle.json](sql_literal_typing_1_spark_oracle.json) —
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the 64 cells of the BL-20 literal-typing
+  batch (`LIT-SQL-00…53`, `LIT-PY-00…09`), copied verbatim from the
+  orchestrator's live PySpark 4.1.2 recording
+  `/tmp/oc-worker/sc/oracle/bl20-oracle.json` (batch `sc18-bl20-literal-typing`,
+  measured 2026-09-16); `spark_version` 4.1.2 kept. Recorded evidence, never
+  hand-edited. Remediation round 1 appends the 13 LIT2 cells verbatim from
+  `/tmp/oc-worker/sc/oracle/lit2-oracle.json` (batch `sc18-lit2`, measured
+  2026-09-16), existing cells untouched.
+  pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: sql-literal-typing-1/L-001, L-002, L-003
 - [fnp_gen_1_spark_oracle.json](fnp_gen_1_spark_oracle.json) —
   **FNP-GEN-1 step 1 (2026-09-15):** the 62 cells of the nine card names
   (`inline`, `inline_outer`, `posexplode`, `posexplode_outer`, `json_tuple`,

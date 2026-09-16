@@ -32,6 +32,13 @@ parser change (EX-FN-27, run 15c owns the parser).
 - [`date_alias.rs`](date_alias.rs) — `dateadd`/`datediff` arity routes (2 args
   keep the `datafusion-spark` `date_add`/`date_diff` kernels through their own
   coercion and simplify paths, 3 args answer `timestampadd`/`timestampdiff`).
+  **SQL-LITERAL-TYPING-1 remediation round 1 (2026-09-16):** `DateOffset`
+  shadows `date_add`/`date_sub` with `Signature::user_defined` + `coerce_types`
+  accepting every integer width down to Int32 (the upstream `Exact` signatures
+  refuse parser-Int64 literals at plan construction, before any analyzer rule
+  runs), delegating kernels upstream; the 2-arg `dateadd` route now targets
+  the shadow. Unit tests pin literal days, the alias, and the text refusal.
+  pins: sql-literal-typing-1/L-002
 - [`intervals.rs`](intervals.rs) — `make_ym_interval`, `try_make_interval`, the
   `CAST(interval AS STRING)` analyzer rule with Spark's spelled-out text (each
   unit carries its own sign from truncating division).

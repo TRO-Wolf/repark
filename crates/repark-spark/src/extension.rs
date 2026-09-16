@@ -57,7 +57,8 @@ impl SessionExtension for SparkExtension {
         &self,
         rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
     ) -> datafusion::error::Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
-        repark_functions::analyzer_rules_with_higher_order_preparation(rules)
+        let rules = repark_functions::analyzer_rules_with_higher_order_preparation(rules)?;
+        crate::spark_literal_typing::insert_literal_rule_before_coercion(rules)
     }
 
     /// Register Spark functions and analyzer rules, then compose the TA window extension.
@@ -69,7 +70,7 @@ impl SessionExtension for SparkExtension {
         ctx.register_udf(crate::spark_typed::suffix_literal_udf().as_ref().clone());
         // WI-2: the plain-INSERT ANSI store-assignment gate, BEFORE the Spark expression semantics.
         ctx.add_analyzer_rule(Arc::new(repark_iceberg::InsertStoreAssignment));
-        for rule in repark_functions::analyzer_rules() {
+        for rule in crate::spark_literal_typing::spark_door_post_coercion_rules() {
             ctx.add_analyzer_rule(rule);
         }
         ctx.add_analyzer_rule(Arc::new(crate::spark_typed::FoldSparkNumericCasts));

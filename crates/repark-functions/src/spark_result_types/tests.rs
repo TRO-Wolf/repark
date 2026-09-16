@@ -59,15 +59,12 @@ fn int64_literal_out_of_range_stays_int64() {
 }
 
 #[test]
-fn negative_two_to_31_folds_to_int32_min() {
+fn parenthesized_negative_two_to_31_stays_int64() {
     let negated = Expr::Negative(Box::new(Expr::Literal(
         ScalarValue::Int64(Some(2_147_483_648)),
         None,
     )));
-    assert_eq!(
-        rewrite_once(negated),
-        Expr::Literal(ScalarValue::Int32(Some(i32::MIN)), None)
-    );
+    assert_eq!(rewrite_once(negated.clone()), negated);
 }
 
 #[test]

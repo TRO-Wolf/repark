@@ -261,7 +261,7 @@ def test_no_registration_survives_collection_failure(spark: ReparkSession) -> No
 def test_max_bytes_contract_unchanged(spark: ReparkSession) -> None:
     """C-008: per-result max_bytes keeps the main metric, message and boundary.
 
-    The 312-byte figure is the ``get_array_memory_size`` sum measured on the
+    The 300-byte figure is the ``get_array_memory_size`` sum measured on the
     main tree for the three-row UNION plan (not the distinct-buffer metric).
     """
     three_row = "SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3"
@@ -270,20 +270,20 @@ def test_max_bytes_contract_unchanged(spark: ReparkSession) -> None:
     with pytest.raises(IllegalArgumentException) as excinfo:
         refused.count()
     message = str(excinfo.value)
-    assert "cache materialize size 312 bytes exceeds repark.cache.max_bytes=100" in message
+    assert "cache materialize size 300 bytes exceeds repark.cache.max_bytes=100" in message
     assert "raise the conf or avoid cache()/persist() on this plan" in message
     assert "no disk spill" in message
     assert "REPARK_CACHE_BUDGET_EXCEEDED" not in message
     assert refused.is_cached is True
-    spark.conf.set(_MAX_BYTES_KEY, "312")
+    spark.conf.set(_MAX_BYTES_KEY, "300")
     boundary = spark.sql(three_row).cache()
     assert boundary.count() == 3
     boundary.unpersist()
-    spark.conf.set(_MAX_BYTES_KEY, "311")
+    spark.conf.set(_MAX_BYTES_KEY, "299")
     refused = spark.sql(three_row).cache()
     with pytest.raises(IllegalArgumentException) as excinfo:
         refused.count()
-    assert "cache materialize size 312 bytes exceeds repark.cache.max_bytes=311" in str(
+    assert "cache materialize size 300 bytes exceeds repark.cache.max_bytes=299" in str(
         excinfo.value
     )
 

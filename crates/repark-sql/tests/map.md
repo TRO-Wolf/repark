@@ -93,6 +93,9 @@ holds behavior observed from outside the crate.
   **TYPES-1 (2026-09-05):** the INSERT / ALTER / case-folding / time-travel setups declare
   `CAST(1 AS BIGINT)` so the chartered literal-width split (Spark `Int32`, ANSI `Int64`)
   does not move these catalog-behavior rows. pins: types-1/C-007
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** ROW 1 (CTAS content+schema) and ROW 6 (MERGE
+  result) join that spelling — their bodies declare `CAST(... AS BIGINT)` so they keep
+  testing CTAS/MERGE mechanics, not literal widths. pins: sql-literal-typing-1/C-007
 
   Its case-folding row (`cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`)
   is a **declared-divergence test**: it names the registry row it defends

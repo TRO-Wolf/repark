@@ -39,8 +39,19 @@ pub fn rint_udf() -> Arc<ScalarUDF> {
 }
 
 #[must_use]
+pub fn factorial_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(Factorial::new()))
+}
+
+#[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
-    vec![abs_udf(), hypot_udf(), bin_udf(), rint_udf()]
+    vec![
+        abs_udf(),
+        hypot_udf(),
+        bin_udf(),
+        rint_udf(),
+        factorial_udf(),
+    ]
 }
 
 #[derive(Debug)]
@@ -333,6 +344,55 @@ impl ScalarUDFImpl for SparkRint {
     }
 }
 
+#[derive(Debug)]
+struct Factorial {
+    signature: Signature,
+}
+
+impl Factorial {
+    fn new() -> Self {
+        Self {
+            signature: Signature::user_defined(Volatility::Immutable),
+        }
+    }
+}
+
+impl PartialEq for Factorial {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for Factorial {}
+
+impl Hash for Factorial {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for Factorial {
+    crate::shim_udf_boilerplate!("factorial");
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Int64)
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        match arg_types {
+            [data_type] if data_type.is_integer() || matches!(data_type, DataType::Null) => {
+                Ok(vec![DataType::Int32])
+            }
+            [data_type] => Err(unexpected_input_type("factorial", "INT", data_type)),
+            _ => exec_err!("'factorial' expects one argument, got {}", arg_types.len()),
+        }
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        datafusion_spark::function::math::factorial::spark_factorial(&args.args)
+    }
+}
+
 fn unwrap_dict(data_type: &DataType) -> &DataType {
     match data_type {
         DataType::Dictionary(_, value) => unwrap_dict(value),
@@ -560,6 +620,26 @@ mod tests {
                 .unwrap_or_else(|| panic!("{sql} should refuse"))
                 .to_string(),
         }
+    }
+
+    #[tokio::test]
+    async fn factorial_accepts_unsuffixed_and_bigint_literals() {
+        let ctx = ctx();
+        assert_eq!(
+            one(&ctx, "SELECT factorial(5)").await,
+            ScalarValue::Int64(Some(120))
+        );
+        assert_eq!(
+            one(&ctx, "SELECT factorial(CAST(5 AS BIGINT))").await,
+            ScalarValue::Int64(Some(120))
+        );
+    }
+
+    #[tokio::test]
+    async fn factorial_refuses_non_integer() {
+        let ctx = ctx();
+        let error = error_text(&ctx, "SELECT factorial('five')").await;
+        assert!(error.contains("requires the \"INT\" type"), "{error}");
     }
 
     #[tokio::test]

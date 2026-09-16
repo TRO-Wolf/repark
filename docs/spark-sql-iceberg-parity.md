@@ -857,20 +857,20 @@ them, and the document is ordered by surface, never by date.
   union schema after narrowing, which is a planner change beyond a type-widening unit.
   pins: types-1/C-001
 
-### TY-7 — `COALESCE` of an INT and a narrowed literal answers BIGINT
+### TY-7 — `COALESCE` of an INT and a narrowed literal answers INT
 
-- **repark** — `SELECT COALESCE(CAST(NULL AS INT), 1)` answers `int64` / non-null.
-  DataFusion's own `TypeCoercion` runs before the TYPES-1 narrowing pass and unifies the
-  still-wide literal to BIGINT behind an explicit `CAST`; narrowing then shrinks the
-  literal inside the cast, and the closing coercion keeps the explicit wide type.
+- **repark** — `SELECT COALESCE(CAST(NULL AS INT), 1)` answers `int32` / non-null.
+  SQL-LITERAL-TYPING-1 seats the narrowing before DataFusion's first `TypeCoercion`
+  (`SparkIntegralLiteral`), so the coercion unifies an already-narrow literal.
 - **Apache Spark** — answers `int32` / non-null with the same value. *(oracle: live
   PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe.)*
-- **Pin** — `python/repark/tests/test_types_1.py::test_coalesce_with_int_stays_wide_on_repark`
+- **Pin** — `python/repark/tests/test_types_1.py::test_coalesce_with_int_answers_int_on_repark`
   and `::test_live_recoercion_shapes_match_the_oracle`
-  (pins the `(int64, int32)` type pair so either side moving reds it).
-- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Stripping DataFusion's
-  explicit casts would re-open the UNION division rewrite the §10 placement closed; the
-  placement keeps the wide answer on this shape.
+  (pins the `(int32, int32)` type pair so either side moving reds it).
+- **Rationale** — FIXED 2026-09-16 (SQL-LITERAL-TYPING-1, closing BL-20's mechanism).
+  Filed 2026-09-05 (TYPES-1 round 4) as BACKLOG: stripping DataFusion's explicit casts
+  would have re-opened the UNION division rewrite the §10 placement closed; seating the
+  narrowing first keeps no wide cast to strip.
   pins: types-1/C-001
 
 ### TY-8 — `grouping()` answers INT and is accepted outside grouping sets
@@ -9605,12 +9605,52 @@ field NAME.
 - **Apache Spark** — `typeof(1 + CAST(1 AS TINYINT))` is `int`, and
   `hex(CAST(1 + CAST(1 AS TINYINT) AS BINARY))` is `00000002` on both doors.
   *(oracle: `<pyspark-4.1.2-oracle>` — measured by run 17c, 2026-09-16.)*
-- **Pin** — none yet; recorded ahead of its unit.
-- **Rationale** — BACKLOG, door-disagreement. Pre-existing in the SQL door's integral literal typing and
-  surfaced by BL-11 (#641), which made it visible because numeric → `BINARY` is the first cast whose result
-  *width* is decided by the static integral type rather than by the value. Ranked above the individual
-  width rows: literal typing sits upstream of a large family of casts and comparisons, so the wrong type
-  propagates silently wherever the result width or precision is observable.
+- **Pin** — `python/repark/tests/test_sql_literal_typing_1.py` over
+  `python/repark/tests/sql_literal_typing_1_spark_oracle.json` (the 64-cell live-PySpark 4.1.2
+  recording `/tmp/oc-worker/sc/oracle/bl20-oracle.json`, batch `sc18-bl20-literal-typing`,
+  measured 2026-09-16): value plus Arrow type per cell, Spark error class plus message where
+  recorded. Rust unit tests beside `crates/repark-spark/src/spark_literal_typing.rs`.
+  pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-006.
+- **Rationale** — FIXED 2026-09-16 (SQL-LITERAL-TYPING-1): `SparkIntegralLiteral`
+  (`crates/repark-spark/src/spark_literal_typing.rs`) types the literal as Spark does at planning
+  time — Int32 when the value fits, Int64 when it needs 64 bits, DECIMAL(p,0) past i64, refusal
+  past 38 digits — from `SparkExtension::configure_analyzer_rules` immediately before the first
+  `TypeCoercion`, so DataFusion's own coercion produces Spark's promotion with no per-operator
+  retag. Still open and owned elsewhere: `div` (LIT-SQL-26) and unary `~` (LIT-SQL-38) are
+  SPARK-SQL-GRAMMAR-1 C-001/C-002 parser residues; narrow-integral overflow is BL-20-OVF below.
+
+### BL-20-OVF — narrow-integral arithmetic wraps under ANSI; Spark raises `BINARY_ARITHMETIC_OVERFLOW`
+
+- **repark** — `SELECT CAST(127 AS TINYINT) + CAST(1 AS TINYINT)` answers `-128` (tinyint wrap)
+  with ANSI on. The legacy (`ansi=false`) wrap is correct and already matches Spark
+  (`hex` cell LIT-SQL-50).
+- **Apache Spark** — `[BINARY_ARITHMETIC_OVERFLOW] 127S + 1S caused overflow. Use try_add to
+  ignore overflow problem and return NULL. SQLSTATE: 22003`.
+  *(oracle: `/tmp/oc-worker/sc/oracle/bl20-oracle.json` cell LIT-SQL-52 — measured by run 18c,
+  2026-09-16.)*
+- **Pin** — `test_tinyint_overflow_wrap_is_declared` in
+  `python/repark/tests/test_sql_literal_typing_1.py` holds today's `-128` wrap; it flips red
+  when the kernel lands.
+  pins: sql-literal-typing-1/C-005.
+- **Rationale** — BACKLOG. Neither operand is an unsuffixed literal, so no planner rule can see a
+  width to keep: the fix is checked Int8/Int16 `+`/`-`/`*` kernels with the `S`-suffixed error
+  shape, new kernels in `repark-functions`. Split from BL-20, which the literal typing closed.
+
+### BL-20-NATIVE — the ANSI side of the chartered literal-width split
+
+- **repark** — `SELECT 1 AS id` answers Int64 on the native (`repark.sql()`) door and Int32 on
+  the Spark door since SQL-LITERAL-TYPING-1. The `SparkIntegralLiteral` rule installs only
+  from `SparkExtension::configure_analyzer_rules`; the native builder uses no extension, and
+  the rule cannot move to `repark-core` without inverting the crate DAG.
+- **Apache Spark / Trino** — the Spark side is oracle-pinned by SQL-LITERAL-TYPING-1. The
+  ANSI Int64 is the chartered split (F-Y10-1 decided it, TYPES-1 kept it for catalog-behavior
+  rows, which spell `CAST(... AS BIGINT)`); whether Trino-oracle work should retire the ANSI
+  side is not measured here.
+- **Pin** — none yet; the two `cross_door.rs` schema-equality tests that incidentally covered
+  the shape now spell their literals `CAST(... AS BIGINT)` so they keep testing CTAS/MERGE
+  mechanics, not literal widths.
+- **Rationale** — BACKLOG, filed 2026-09-16 (SQL-LITERAL-TYPING-1 residue). Unifying needs the
+  rule installed for core sessions (home question belongs to that card) plus native-door pins.
 
 ## 8. Drop-in disclosure rationale
 

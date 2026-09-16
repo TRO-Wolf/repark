@@ -206,6 +206,35 @@ pins: rp-4-fork-repin/C-005, C-006
   digit/`.` + suffix letter or exponent (`1.e2` stays on the rewrite path); bare
   decimals skip the tokenize. The 200-column decimal gap is DataFusion-side.
   pins: fnp-4b/C-001, C-004, C-005, C-006, C-020
+- `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
+  `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —
+  Int64 fitting i32 narrows to Int32, UInt64 becomes Decimal128(digits, 0),
+  decimal literals past precision 38 refuse with
+  `[DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION]`, `-2147483648` folds — installed
+  from `SparkExtension::configure_analyzer_rules` immediately before the first
+  `type_coercion`, so DataFusion's own coercion then produces Spark's promotion
+  with no per-operator retag. Skips `Limit` plans, rebuilds `Values` rows. The
+  late `SparkIntegerLiteral` stays (idempotent no-op afterwards). The rule
+  recurses with subqueries, re-resolves lambda variables after narrowing, and
+  re-derives union schemas from their inputs, so the first coercion sees one
+  consistent narrow world (else it cements Int64 around lambdas and unions).
+  Unit tests beside the change cover the mapping, the refusal shape, the
+  insert order and the union refresh.
+  pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-007
+  **Remediation round 1 (2026-09-16):** the seat stays immediately before
+  `type_coercion` (a first-among-pre-coercion seat was measured, broke 24
+  FNP-8 HOF pins, and reverted — the revert stayed red, exonerating the
+  seat; the true cause was the `recompute_schema` skip leaving stale parent
+  schemas, fixed by always recomputing); the `Negative` fold is gone so only
+  the lexer-level negative token narrows and `-(2147483648)` stays bigint
+  (LIT2-SQL-03/04); the late `SparkIntegerLiteral` is uninstalled on both
+  Spark doors (`spark_door_post_coercion_rules`, the early rule subsumes it).
+  A plan-level apply pre-check skips literal-free plans;
+  `resolve_lambda_variables` runs only with a higher-order function on the
+  node (`recompute_schema` stays unconditional: gating it left stale parent
+  schemas after bottom-up narrowing); `Values` clones rows only on change;
+  `Union` rebuilds only on a moved child type.
+  pins: sql-literal-typing-1/L-001, L-002, L-003
 - `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
   `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),

@@ -202,7 +202,7 @@ def test_explode_prealiased_sibling_no_double_as(frame: object) -> None:
     table = out.to_arrow()
     rows = [(r["x"], r["e"]) for r in table.to_pylist()]
     assert rows == [(1, 10), (1, 20), (4, None), (4, 5)]
-    assert table.schema.field("x").type == pa.int64()
+    assert table.schema.field("x").type == pa.int32()
     assert table.schema.field("e").type == pa.int64()
 
 
