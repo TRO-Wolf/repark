@@ -480,7 +480,7 @@ pub fn spark_as_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkAs::new()))
 }
 
-pub const SUFFIX_LITERAL_NAME: &str = "__repark_suffix_literal__";
+pub use repark_functions::java_double::SUFFIX_LITERAL_NAME;
 
 #[derive(Debug)]
 struct SuffixLiteral {

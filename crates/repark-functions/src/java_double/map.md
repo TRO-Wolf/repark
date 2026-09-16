@@ -9,7 +9,14 @@ and `__repark_parse_java_double__` / `__repark_parse_java_float__` UDFs, the
 folds (with the Java-suffix strip), one-level literal propagation through
 projections, `%s`-verb float wrapping, single-verb `%f`/`%F` routing to the
 HALF_UP shim, and non-literal STRING to FLOAT/DOUBLE casts routing to the
-column parse kernel. Round 2 (2026-09-15, L-004/L-001): `%F` parses only to refuse with
+column parse kernel. **Fix round 1 (2026-09-15, R-17c-2):** the parse-kernel
+route exempts `CAST(__repark_suffix_literal__(…) AS FLOAT|DOUBLE)` — the
+provenance marker wraps a validated numeric literal and the door's
+`FoldSparkNumericCasts` folds that cast to a non-null float literal later in
+the analyzer chain; rewriting it to `__repark_parse_java_double__` first
+re-tagged the field nullable. The marker's wire name is the `pub const`
+`SUFFIX_LITERAL_NAME` here — the single source repark-spark re-exports (a
+capability crate cannot take an edge on the door crate). Round 2 (2026-09-15, L-004/L-001): `%F` parses only to refuse with
 `Conversion = 'F'` (Java has no upper-float conversion); NaN renders bare `NaN`
 under every sign/space/paren flag while infinity keeps sign handling. L-002: `#`
 sets an ALT flag that appends `.` when precision is 0.
@@ -51,6 +58,11 @@ sets an ALT flag that appends `.` when precision is 0.
   rows) so CI holds the claim without the fixture file.
 - `tests_corpus.rs` — the corpus byte-equality test and the in-tree table test.
   pins: java-double-fd-1/C-001, C-002
+- `tests_suffix_marker.rs` — **Fix round 1 (2026-09-15, R-17c-2):** pins the
+  `__repark_suffix_literal__` exemption with a stub marker UDF (identity,
+  always-nullable field, the door's real contract) — the cast survives
+  analysis untouched while a plain non-literal string source still routes to
+  `__repark_parse_java_double__`.
 
 Port-lint posture (2026-09-15): `dtoa.rs`/`bigint.rs` mirror Java `int`/`long`
 wraparound arithmetic, so their `as` casts carry per-function `allow` attributes

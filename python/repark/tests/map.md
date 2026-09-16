@@ -5384,6 +5384,10 @@ through `core` or the package. pins: eager-budget-1/C-010
   L-003: the six column pin functions cover the eight Q19 cells on both doors
   with value, Arrow type and nullability. The suffix pin is test_q19_suffix_col_ok
   after a lint rename.
+  **Fix round 1 (2026-09-15, R-17c-2):** `test_typed_literals_above_decimal38_stay_nonnull`
+  pins `1e38D` / `1e200D` / `1e38F` for value, Arrow type AND nullability on the
+  SQL door, plus `F.expr("1e200D")` on the facade — the >DECIMAL(38) suffix
+  literals fold to non-null float fields again after the #611 merge.
   pins: java-double-fd-1/C-001, C-002, C-003, C-004, C-005, C-006
 FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 

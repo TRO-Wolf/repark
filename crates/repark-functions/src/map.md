@@ -637,6 +637,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   are idempotent. The JDK-longhand remainder is JAVA-DOUBLE-FD-1.
   **FNP-4B round 8 (2026-09-15):** the text helpers are `pub` (module `pub`) so the
   Spark door names suffix-literal fields from value text.
+  **JAVA-DOUBLE-FD-1 fix round 1 (2026-09-15, R-17c-2):** `rewrite_float_cast`
+  exempts `CAST(__repark_suffix_literal__(…) AS FLOAT|DOUBLE)` from the
+  non-literal parse-kernel route so the door's `FoldSparkNumericCasts` still
+  folds it to a non-null literal; `SUFFIX_LITERAL_NAME` is the `pub` single
+  source here that repark-spark re-exports.
   pins: java-double-str-1/C-003, C-004, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - `string.rs` — `SparkSubstring` (`substring`, alias `substr`; audit #6): Spark's
   `UTF8String.substringSQL` character-based semantics — pos 0 acts as 1, negative pos counts

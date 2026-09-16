@@ -652,6 +652,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   JAVA-DOUBLE-CAST-SUFFIX-1 and FNP10-JAVA-DOUBLE-TEXT-1. Perf: SQL-door
   0.082s → 0.035s, facade 0.049s → 0.031s (5M rows, best of 3), inside #612's
   bar. Residue: `%e`/`%g`/`%a` and multi-verb `%f` stay on upstream.
+  **Fix round 1 (2026-09-15, R-17c-2):** the #611 rebase regressed
+  >DECIMAL(38) suffix-literal nullability — `SparkFloatStringify` routed the
+  marker cast to `__repark_parse_java_double__` before `FoldSparkNumericCasts`
+  could fold it non-null; `rewrite_float_cast` now exempts the
+  `__repark_suffix_literal__` marker (name single-sourced in repark-functions,
+  re-exported by repark-spark).
   `risk_tier: standard`. Branch `feat/java-double-fd-1`.
   pins: java-double-fd-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [java-double-fd-1-ledger.md](java-double-fd-1-ledger.md) — Unit ledger — JAVA-DOUBLE-FD-1 · JDK 17 FloatingDecimal port for DOUBLE/FLOAT text

@@ -8,12 +8,16 @@ mod tables_doubles;
 mod tables_floats;
 #[cfg(test)]
 mod tests_corpus;
+#[cfg(test)]
+mod tests_suffix_marker;
 
 pub(crate) use dtoa::{java_double_strings, java_float_strings, with_java_double_text};
 pub use dtoa::{
     java_double_text, java_double_text_len, java_float_text, java_float_text_len,
     with_java_float_text,
 };
+
+pub const SUFFIX_LITERAL_NAME: &str = "__repark_suffix_literal__";
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -282,6 +286,13 @@ fn is_string_type(data_type: &DataType) -> bool {
     )
 }
 
+fn is_suffix_literal_call(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::ScalarFunction(function) if function.func.name() == SUFFIX_LITERAL_NAME
+    )
+}
+
 fn rewrite_float_cast(cast: Cast, schema: &DFSchema, ansi: bool) -> Result<Transformed<Expr>> {
     let Ok(source_type) = cast.expr.get_type(schema) else {
         return Ok(Transformed::no(Expr::Cast(cast)));
@@ -300,7 +311,10 @@ fn rewrite_float_cast(cast: Cast, schema: &DFSchema, ansi: bool) -> Result<Trans
         {
             return Ok(Transformed::yes(folded));
         }
-        if is_string_type(&source_type) && !matches!(cast.expr.as_ref(), Expr::Literal(_, _)) {
+        if is_string_type(&source_type)
+            && !matches!(cast.expr.as_ref(), Expr::Literal(_, _))
+            && !is_suffix_literal_call(cast.expr.as_ref())
+        {
             let parse = if target == DataType::Float32 {
                 parse_float::parse_java_float_udf()
             } else {

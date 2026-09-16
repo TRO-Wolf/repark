@@ -163,3 +163,89 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-functions/src/java_double/format_float.rs, crates/repark-functions/src/java_double.rs, python/repark/tests/test_java_double_fd_1.py]
   complete: true
 ```
+
+## Fix round 1 (run 17c, 2026-09-15) — PR #633 rebase regression
+
+**Ruling.** **R-17c-2 (orchestrator, G-2, 2026-09-15): the FD-1 rebase onto #611
+regressed literal nullability above DECIMAL(38); the fix ships inside PR #633
+rather than as a follow-up unit, because #633 is the commit that introduces it.**
+
+**Situation.** The orchestrator merged `origin/main` (now carrying #611 /
+FNP-4B typed suffix literals) into `feat/java-double-fd-1`. The only conflicted
+file, `crates/repark-functions/src/java_double.rs`, resolved to the branch side
+(the module split plus re-exports); `make verify` was rc 0 on the merged tree
+and `make preflight` red on exactly two of #611's own pins.
+
+**Red evidence** (release native rebuilt from the merged tree first — the
+installed module had been built from main's `java_double.rs` during the
+orchestrator's bisect; the source tree was already the correct FD-1 tree):
+
+```
+$ .venv/bin/python -m pytest python/repark/tests/test_fnp_4b_literals.py -q
+FAILED test_fnp_4b_literals.py::test_double_suffix_huge_scientific
+FAILED test_fnp_4b_literals.py::test_typed_numeric_literals_are_non_null
+2 failed, 46 passed
+# both fail on `assert table.schema.field("v").nullable is False` for `1e200D`;
+# value (1e+200) and Arrow type (double) are correct — only nullability regressed
+```
+
+**Mechanism (measured, not hypothesized).** `canonicalize_verbatim` lowers
+`SELECT 1e200D AS v` to `SELECT CAST(__repark_suffix_literal__('1e200') AS
+DOUBLE) AS v` — #611's `decimal_cast_operand` quotes the digits through
+`requote_generic` when the DECIMAL precision exceeds 38 (`1e38` needs 39
+digits, matching the observed 1e37-false / 1e38-true threshold). The analyzed
+plan on the merged tree:
+
+```
+logical:  Projection: CAST(__repark_suffix_literal__(Utf8("1e200")) AS Float64) AS v
+analyzed: Projection: __repark_parse_java_double__(__repark_suffix_literal__(Utf8("1e200"))) AS v [v:Float64;N]
+```
+
+FD-1's `SparkFloatStringify.rewrite_float_cast` routes any non-`Literal`
+STRING-to-FLOAT/DOUBLE cast to `__repark_parse_java_double__`, whose
+`return_field_from_args` forwards the argument field's nullability — and
+`SuffixLiteral::return_field_from_args` hard-codes `nullable = true`. Both
+`SparkFloatStringify` seats (pre-coercion in
+`analyzer_rules_with_higher_order_preparation`, post-coercion in
+`analyzer_rules()`) run before repark-spark's `FoldSparkNumericCasts`, so the
+fold that on main turned the cast into a non-null `Float64` literal never saw
+it. DataFusion keeps a plan's schema across the optimizer, so the `;N` flag
+reached `to_arrow`. The Rust-side `one_cell` pins did not catch it because
+constant folding re-computes the executed batch's schema non-null; only the
+analyzed schema carried the regression.
+
+**Fix (narrow, inside `crates/repark-functions/**`).**
+`rewrite_float_cast` now exempts `CAST(__repark_suffix_literal__(…) AS
+FLOAT|DOUBLE)` from the parse-kernel route via `is_suffix_literal_call`, so the
+cast survives both seats and `FoldSparkNumericCasts` folds it exactly as on
+main (`Literal(Float64(1e200))`, non-null). The marker's wire name is the new
+`pub const SUFFIX_LITERAL_NAME` in `java_double.rs`, single-sourced there
+because `check_crate_dag.py` forbids a functions→spark edge; `repark-spark`'s
+`spark_typed.rs` re-exports it (`pub use`), so `crate::SUFFIX_LITERAL_NAME` and
+the `repark_spark::SUFFIX_LITERAL_NAME` surface are unchanged. No global
+wrapper, no UDF return-field retag (owner Q-15c-6). The exemption is
+name-only: any `__repark_suffix_literal__` call shape survives, matching
+main's behavior whether or not the fold later claims it.
+
+**Pins.** Rust unit: `java_double/tests_suffix_marker.rs` — a stub marker UDF
+carrying the door's real contract (identity, always-nullable field) proves the
+cast survives analysis while `CAST(repeat('1d', 1) AS DOUBLE)` still routes to
+the parse kernel. Rust integration: `spark_dialect.rs::
+suffix_literals_above_decimal38_stay_nonnull_at_analysis` asserts the ANALYZED
+schema (the surface that regressed) is non-null for `1e38D`/`1e200D`/`1e38F`.
+Python: `test_java_double_fd_1.py::test_typed_literals_above_decimal38_stay_nonnull`
+pins value, Arrow type AND `nullable is False` for `1e38D`/`1e200D`/`1e38F` on
+the SQL door and `F.expr("1e200D")` on the facade.
+`test_fnp_4b_literals.py` is untouched — #611's pins are the oracle and go
+green as-is.
+
+**Out-of-scope observation (P3, not fixed).** `SELECT CAST('1e20' AS DOUBLE)`
+answers `nullable = True` on BOTH main and the branch — a plain string→double
+cast is a genuinely fallible cast, and whether Spark marks the folded literal
+non-null is a separate parity question. Recorded here per the brief; no claim
+of divergence is made without an oracle cell.
+
+**Gates.** `cargo test -p repark-functions --lib` (incl. the two new
+`suffix_marker` pins) green; `make rust-clippy` clean; `make verify` rc 0;
+release native rebuilt after the last Rust edit; pytest runs pasted below in
+the hand-back.

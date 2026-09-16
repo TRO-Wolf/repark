@@ -198,6 +198,26 @@ def test_cast_suffix_float_target(spark: ReparkSession) -> None:
     assert table.schema.field("r").type == pa.float32()
 
 
+def test_typed_literals_above_decimal38_stay_nonnull(spark: ReparkSession) -> None:
+    """R-17c-2: >DECIMAL(38) typed literals fold to non-null float fields."""
+    cases = [
+        ("SELECT 1e38D AS v", pa.float64(), 1e38),
+        ("SELECT 1e200D AS v", pa.float64(), 1e200),
+        ("SELECT 1e38F AS v", pa.float32(), 1e38),
+    ]
+    for sql, data_type, expected in cases:
+        table = _table(spark.sql(sql))
+        value = table.column("v").to_pylist()[0]
+        assert math.isclose(value, expected, rel_tol=1e-6), sql
+        assert table.schema.field("v").type == data_type, sql
+        assert table.schema.field("v").nullable is False, sql
+    frame = spark.range(1).select(F.expr("1e200D").alias("v"))
+    table = _table(frame)
+    assert table.column("v").to_pylist() == [1e200]
+    assert table.schema.field("v").type == pa.float64()
+    assert table.schema.field("v").nullable is False
+
+
 def _check_string(table: pa.Table, column: str, expected: str) -> None:
     values = table.column(column).to_pylist()
     assert values == [expected]
