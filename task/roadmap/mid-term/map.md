@@ -240,3 +240,4 @@ declines it (a dated ruling in the intake, then the archive).
 - [overnight-report-2026-09-15-16b.md](overnight-report-2026-09-15-16b.md) — run 16b day report (the facade surfaces and IO of the
   1.5 Spark-parity campaign): census slice 17 → 7 missing names, #610 / #621 / #626 / #630 merged, rulings R-16b-1..44, owner questions
   Q-16b-1..4, the Rust-first roll-call, and the carry-overs DF-RUST-3, DF-SUBQUERY-1, IO-ORC-1, DF-METADATA-COL-1 with their oracles.
+- [overnight-report-2026-09-15-16c.md](overnight-report-2026-09-15-16c.md) — run 16c day report (2026-09-15): the SQL door, the type table and the registry backlog of the 1.5 Spark-parity campaign — census slice, per-PR table with reviewer verdicts and costs, oracle batches 12–19, rulings R-16c-1…17, owner questions Q-16c-1/2, hand-offs, the Rust-first roll-call.
