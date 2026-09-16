@@ -1,3 +1,6 @@
+use datafusion::sql::sqlparser::dialect::GenericDialect;
+use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan, Tokenizer};
+
 const SEARCH_PATH: &str = "[`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]";
 const INVALID_FUNCTION_MARKER: &str = "Invalid function '";
 const TABLE_FUNCTION_MARKER: &str = "table function '";
@@ -20,64 +23,69 @@ fn capture_quoted(message: &str, marker: &str) -> Option<String> {
 }
 
 fn routine_message(sql: &str, dotted: &str) -> Option<String> {
-    let parts: Vec<&str> = dotted.split('.').collect();
-    if parts.iter().any(|part| part.is_empty()) {
+    let key = flatten_name(dotted);
+    if key.split('.').any(str::is_empty) {
         return None;
     }
-    let qualifier = &parts[..parts.len().saturating_sub(1)];
-    if qualifier.len() == 2
-        && qualifier[0].eq_ignore_ascii_case("system")
-        && qualifier[1].eq_ignore_ascii_case("builtin")
-    {
-        let first = recover_spelling(sql, qualifier[0]);
-        let second = recover_spelling(sql, qualifier[1]);
-        return Some(format!(
-            "[REQUIRES_SINGLE_PART_NAMESPACE] spark_catalog requires a single-part namespace, \
-             but got `{first}`.`{second}`. SQLSTATE: 42K05"
-        ));
+    match locate_call_site(sql, &key) {
+        Some(site) => {
+            if let [first, second, _] = site.parts.as_slice()
+                && first.eq_ignore_ascii_case("system")
+                && second.eq_ignore_ascii_case("builtin")
+            {
+                Some(requires_message(first, second))
+            } else {
+                Some(unresolved_message(
+                    &render_parts(&site.parts),
+                    Some(site.start),
+                ))
+            }
+        }
+        None => Some(unresolved_message(&render_key_parts(&key), None)),
     }
-    let rendered = render_parts(&spell_parts(sql, &parts));
-    let position = locate_call(sql, &parts)
-        .map(|offset| position_suffix(sql, offset))
-        .unwrap_or_default();
-    Some(format!(
-        "[UNRESOLVED_ROUTINE] Cannot resolve routine {rendered} on search path {SEARCH_PATH}. \
-         SQLSTATE: 42883{position}"
-    ))
 }
 
 fn table_valued_function_message(sql: &str, dotted: &str) -> Option<String> {
-    let parts: Vec<&str> = dotted.split('.').collect();
-    if parts.iter().any(|part| part.is_empty()) {
+    let key = flatten_name(dotted);
+    if key.split('.').any(str::is_empty) {
         return None;
     }
-    let rendered = render_parts(&spell_parts(sql, &parts));
-    let position = locate_call(sql, &parts)
-        .map(|offset| position_suffix(sql, offset))
-        .unwrap_or_default();
+    let (rendered, start) = match locate_call_site(sql, &key) {
+        Some(site) => (render_parts(&site.parts), Some(site.start)),
+        None => (render_key_parts(&key), None),
+    };
     Some(format!(
         "[UNRESOLVABLE_TABLE_VALUED_FUNCTION] Could not resolve {rendered} to a table-valued \
          function.\nPlease make sure that {rendered} is defined as a table-valued function and \
          that all required parameters are provided correctly.\nIf {rendered} is not defined, \
          please create the table-valued function before using it.\nFor more information about \
          defining table-valued functions, please refer to the Apache Spark documentation. \
-         SQLSTATE: 42883{position}"
+         SQLSTATE: 42883{}",
+        start.map_or(String::new(), position_suffix),
     ))
 }
 
-fn spell_parts(sql: &str, parts: &[&str]) -> Vec<String> {
-    parts
-        .iter()
-        .map(|part| recover_spelling(sql, part))
-        .collect()
+fn requires_message(first: &str, second: &str) -> String {
+    format!(
+        "[REQUIRES_SINGLE_PART_NAMESPACE] spark_catalog requires a single-part namespace, \
+         but got `{first}`.`{second}`. SQLSTATE: 42K05"
+    )
 }
 
-fn recover_spelling(sql: &str, part: &str) -> String {
-    find_ident_offsets(sql.as_bytes(), part)
-        .into_iter()
-        .next()
-        .and_then(|offset| sql.get(offset..offset + part.len()).map(str::to_string))
-        .unwrap_or_else(|| part.to_string())
+fn unresolved_message(rendered: &str, start: Option<Location>) -> String {
+    format!(
+        "[UNRESOLVED_ROUTINE] Cannot resolve routine {rendered} on search path {SEARCH_PATH}. \
+         SQLSTATE: 42883{}",
+        start.map_or(String::new(), position_suffix)
+    )
+}
+
+fn flatten_name(dotted: &str) -> String {
+    dotted
+        .chars()
+        .filter(|next| *next != '`' && *next != '"')
+        .collect::<String>()
+        .to_lowercase()
 }
 
 fn render_parts(spelled: &[String]) -> String {
@@ -88,118 +96,88 @@ fn render_parts(spelled: &[String]) -> String {
         .join(".")
 }
 
-fn locate_call(sql: &str, parts: &[&str]) -> Option<usize> {
-    match_dotted_call(sql, parts)
-        .or_else(|| parts.last().and_then(|last| match_single_call(sql, last)))
-        .map(|offset| quote_adjust(sql, offset))
+fn render_key_parts(key: &str) -> String {
+    key.split('.')
+        .map(|part| format!("`{part}`"))
+        .collect::<Vec<_>>()
+        .join(".")
 }
 
-fn quote_adjust(sql: &str, offset: usize) -> usize {
-    if offset > 0 && sql.as_bytes().get(offset - 1) == Some(&b'`') {
-        offset - 1
-    } else {
-        offset
+struct CallSite {
+    parts: Vec<String>,
+    start: Location,
+}
+
+impl CallSite {
+    fn matches(&self, key: &str) -> bool {
+        self.parts.join(".").to_lowercase() == key
     }
 }
 
-fn match_dotted_call(sql: &str, parts: &[&str]) -> Option<usize> {
-    let bytes = sql.as_bytes();
-    let first = *parts.first()?;
-    for start in find_ident_offsets(bytes, first) {
-        let mut cursor = start + first.len();
-        let mut matched = true;
-        for part in parts.iter().skip(1) {
-            cursor = skip_gap(bytes, cursor);
-            if bytes.get(cursor) != Some(&b'.') {
-                matched = false;
-                break;
-            }
-            cursor = skip_gap(bytes, cursor + 1);
-            if !matches_part_at(bytes, cursor, part) {
-                matched = false;
-                break;
-            }
-            cursor += part.len();
+fn locate_call_site(sql: &str, key: &str) -> Option<CallSite> {
+    let tokens = Tokenizer::new(&GenericDialect {}, sql)
+        .tokenize_with_location()
+        .ok()?;
+    let mut index = 0;
+    while index < tokens.len() {
+        if let Some(site) = match_call_at(&tokens, index)
+            && site.matches(key)
+        {
+            return Some(site);
         }
-        if matched && is_call_at(bytes, cursor) {
-            return Some(start);
-        }
+        index += 1;
     }
     None
 }
 
-fn match_single_call(sql: &str, part: &str) -> Option<usize> {
-    let bytes = sql.as_bytes();
-    find_ident_offsets(bytes, part)
-        .into_iter()
-        .find(|start| is_call_at(bytes, start + part.len()))
-}
-
-fn find_ident_offsets(haystack: &[u8], needle: &str) -> Vec<usize> {
-    let pattern = needle.as_bytes();
-    if pattern.is_empty() {
-        return Vec::new();
+fn match_call_at(tokens: &[TokenWithSpan], index: usize) -> Option<CallSite> {
+    let mut parts = vec![word_value(&tokens.get(index)?.token)?];
+    let mut cursor = skip_trivia(tokens, index + 1);
+    while tokens
+        .get(cursor)
+        .is_some_and(|next| next.token == Token::Period)
+    {
+        cursor = skip_trivia(tokens, cursor + 1);
+        parts.push(word_value(&tokens.get(cursor)?.token)?);
+        cursor = skip_trivia(tokens, cursor + 1);
     }
-    let mut offsets = Vec::new();
-    let mut start = 0;
-    while start + pattern.len() <= haystack.len() {
-        let preceded = start
-            .checked_sub(1)
-            .and_then(|index| haystack.get(index))
-            .copied();
-        if ascii_eq_ignore_case(&haystack[start..start + pattern.len()], pattern)
-            && !is_ident_byte(preceded)
-        {
-            offsets.push(start);
-        }
-        start += 1;
+    if tokens
+        .get(cursor)
+        .is_some_and(|next| next.token == Token::LParen)
+    {
+        Some(CallSite {
+            parts,
+            start: tokens[index].span.start,
+        })
+    } else {
+        None
     }
-    offsets
 }
 
-fn matches_part_at(haystack: &[u8], cursor: usize, part: &str) -> bool {
-    let pattern = part.as_bytes();
-    haystack
-        .get(cursor..cursor + pattern.len())
-        .is_some_and(|window| ascii_eq_ignore_case(window, pattern))
-}
-
-fn is_call_at(bytes: &[u8], cursor: usize) -> bool {
-    bytes.get(skip_gap(bytes, cursor)) == Some(&b'(')
-}
-
-fn skip_gap(bytes: &[u8], mut cursor: usize) -> usize {
-    while matches!(bytes.get(cursor), Some(b' ' | b'\t' | b'\n' | b'\r' | b'`')) {
+fn skip_trivia(tokens: &[TokenWithSpan], mut cursor: usize) -> usize {
+    while tokens
+        .get(cursor)
+        .is_some_and(|next| matches!(next.token, Token::Whitespace(_)))
+    {
         cursor += 1;
     }
     cursor
 }
 
-fn ascii_eq_ignore_case(left: &[u8], right: &[u8]) -> bool {
-    left.len() == right.len()
-        && left
-            .iter()
-            .zip(right.iter())
-            .all(|(left, right)| left.eq_ignore_ascii_case(right))
+fn word_value(token: &Token) -> Option<String> {
+    if let Token::Word(word) = token {
+        Some(word.value.clone())
+    } else {
+        None
+    }
 }
 
-fn is_ident_byte(byte: Option<u8>) -> bool {
-    matches!(byte, Some(b'0'..=b'9' | b'A'..=b'Z' | b'a'..=b'z' | b'_'))
-}
-
-fn position_suffix(sql: &str, offset: usize) -> String {
-    let (line, column) = line_col(sql, offset);
-    format!("; line {line} pos {column}")
-}
-
-fn line_col(sql: &str, offset: usize) -> (usize, usize) {
-    let head = sql.get(..offset).unwrap_or("");
-    let line = head.bytes().filter(|byte| *byte == b'\n').count() + 1;
-    let column = head
-        .rsplit('\n')
-        .next()
-        .map_or(0, |last| last.chars().count());
-    (line, column)
+fn position_suffix(start: Location) -> String {
+    format!(
+        "; line {} pos {}",
+        start.line,
+        start.column.saturating_sub(1)
+    )
 }
 
 #[cfg(test)]
@@ -240,6 +218,40 @@ mod tests {
     }
 
     #[test]
+    fn string_literal_case_does_not_leak_into_name() {
+        let mapped =
+            map_unknown_routine_message("SELECT 'NoSuchFn', nosuchfn(1)", &invalid("nosuchfn"))
+                .unwrap();
+        assert!(mapped.contains("`nosuchfn`"), "{mapped}");
+        assert!(!mapped.contains("NoSuchFn"), "{mapped}");
+        assert!(mapped.ends_with("; line 1 pos 19"), "{mapped}");
+    }
+
+    #[test]
+    fn string_literal_call_decoy_does_not_win_position() {
+        let mapped =
+            map_unknown_routine_message("SELECT 'nosuchfn(', nosuchfn(1)", &invalid("nosuchfn"))
+                .unwrap();
+        assert!(mapped.ends_with("; line 1 pos 20"), "{mapped}");
+    }
+
+    #[test]
+    fn block_comment_call_decoy_does_not_win_position() {
+        let mapped =
+            map_unknown_routine_message("SELECT /* nosuchfn( */ nosuchfn(1)", &invalid("nosuchfn"))
+                .unwrap();
+        assert!(mapped.ends_with("; line 1 pos 23"), "{mapped}");
+    }
+
+    #[test]
+    fn line_comment_call_decoy_does_not_win_position() {
+        let mapped =
+            map_unknown_routine_message("SELECT -- nosuchfn(\n nosuchfn(1)", &invalid("nosuchfn"))
+                .unwrap();
+        assert!(mapped.ends_with("; line 2 pos 1"), "{mapped}");
+    }
+
+    #[test]
     fn quoted_name_renders_without_doubled_backticks() {
         let mapped =
             map_unknown_routine_message("SELECT `nosuchfn`(1)", &invalid("nosuchfn")).unwrap();
@@ -250,6 +262,39 @@ mod tests {
     fn quoted_call_positions_at_opening_backtick() {
         let mapped =
             map_unknown_routine_message("SELECT `nosuchfn`(1)", &invalid("nosuchfn")).unwrap();
+        assert!(mapped.ends_with("; line 1 pos 7"), "{mapped}");
+    }
+
+    #[test]
+    fn quoted_three_part_name_quotes_each_part_once() {
+        let mapped = map_unknown_routine_message(
+            "SELECT `spark_catalog`.`default`.`nosuchfn`(1)",
+            &invalid("`spark_catalog`.`default`.`nosuchfn`"),
+        )
+        .unwrap();
+        assert!(
+            mapped.contains("`spark_catalog`.`default`.`nosuchfn`"),
+            "{mapped}"
+        );
+        assert!(!mapped.contains("``"), "{mapped}");
+        assert!(mapped.ends_with("; line 1 pos 7"), "{mapped}");
+    }
+
+    #[test]
+    fn quoted_two_part_name_quotes_each_part_once() {
+        let mapped =
+            map_unknown_routine_message("SELECT `nosuch`.`fn`(1)", &invalid("`nosuch`.`fn`"))
+                .unwrap();
+        assert!(mapped.contains("`nosuch`.`fn`"), "{mapped}");
+        assert!(!mapped.contains("``"), "{mapped}");
+        assert!(mapped.ends_with("; line 1 pos 7"), "{mapped}");
+    }
+
+    #[test]
+    fn single_dotted_quoted_ident_stays_one_part() {
+        let mapped =
+            map_unknown_routine_message("SELECT `nosuch.fn`(1)", &invalid("`nosuch.fn`")).unwrap();
+        assert!(mapped.contains("`nosuch.fn` on search path"), "{mapped}");
         assert!(mapped.ends_with("; line 1 pos 7"), "{mapped}");
     }
 
@@ -275,6 +320,20 @@ mod tests {
     }
 
     #[test]
+    fn backticked_system_builtin_qualifier_needs_single_part_namespace() {
+        let mapped = map_unknown_routine_message(
+            "SELECT `system`.`builtin`.`nosuchfn`(1)",
+            &invalid("`system`.`builtin`.`nosuchfn`"),
+        )
+        .unwrap();
+        assert_eq!(
+            mapped,
+            "[REQUIRES_SINGLE_PART_NAMESPACE] spark_catalog requires a single-part namespace, \
+             but got `system`.`builtin`. SQLSTATE: 42K05"
+        );
+    }
+
+    #[test]
     fn system_builtin_qualifier_needs_single_part_namespace() {
         let mapped = map_unknown_routine_message(
             "SELECT system.builtin.nosuchfn(1)",
@@ -289,10 +348,32 @@ mod tests {
     }
 
     #[test]
-    fn nested_call_positions_at_inner_name() {
+    fn nested_call_positions_at_outer_name() {
+        let mapped = map_unknown_routine_message(
+            "SELECT abs(1), NOSUCHFN(nosuchfn(1))",
+            &invalid("nosuchfn"),
+        )
+        .unwrap();
+        assert!(mapped.contains("`NOSUCHFN`"), "{mapped}");
+        assert!(mapped.ends_with("; line 1 pos 15"), "{mapped}");
+    }
+
+    #[test]
+    fn repeated_call_positions_at_first_name() {
         let mapped =
-            map_unknown_routine_message("SELECT abs(nosuchfn(1))", &invalid("nosuchfn")).unwrap();
-        assert!(mapped.ends_with("; line 1 pos 11"), "{mapped}");
+            map_unknown_routine_message("SELECT nosuchfn(1), nosuchfn(2)", &invalid("nosuchfn"))
+                .unwrap();
+        assert!(mapped.ends_with("; line 1 pos 7"), "{mapped}");
+    }
+
+    #[test]
+    fn unicode_literal_keeps_code_point_columns() {
+        let mapped =
+            map_unknown_routine_message("SELECT 'é', nosuchfn(1)", &invalid("nosuchfn")).unwrap();
+        assert!(mapped.ends_with("; line 1 pos 12"), "{mapped}");
+        let mapped =
+            map_unknown_routine_message("SELECT '😀', nosuchfn(1)", &invalid("nosuchfn")).unwrap();
+        assert!(mapped.ends_with("; line 1 pos 12"), "{mapped}");
     }
 
     #[test]
@@ -328,6 +409,21 @@ mod tests {
     }
 
     #[test]
+    fn tokenize_failure_falls_back_without_position() {
+        let mapped =
+            map_unknown_routine_message("SELECT 'unterminated", &invalid("nosuchfn")).unwrap();
+        assert!(mapped.contains("`nosuchfn` on search path"), "{mapped}");
+        assert!(!mapped.contains("; line"), "{mapped}");
+    }
+
+    #[test]
+    fn unmatched_name_falls_back_without_position() {
+        let mapped = map_unknown_routine_message("SELECT 1", &invalid("nosuchfn")).unwrap();
+        assert!(mapped.contains("`nosuchfn` on search path"), "{mapped}");
+        assert!(!mapped.contains("; line"), "{mapped}");
+    }
+
+    #[test]
     fn unrelated_errors_pass_through() {
         assert_eq!(
             map_unknown_routine_message("SELECT a FROM t", "Schema error: No field named a."),
@@ -346,6 +442,10 @@ mod tests {
     fn degenerate_names_pass_through() {
         assert_eq!(
             map_unknown_routine_message("SELECT 1", "Invalid function ''"),
+            None
+        );
+        assert_eq!(
+            map_unknown_routine_message("SELECT 1", "Invalid function '.'"),
             None
         );
     }

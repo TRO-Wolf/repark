@@ -117,6 +117,11 @@ honestly"). SQL routing and session-build registration are seam-inverted
   recovered from the caller SQL text; 14 in-module tests incl. the blanket
   arbitrary-name case. The BL-19 registry row carries these pins.
   pins: unresolved-routine-1/C-001, C-002, C-004, C-005, C-007
+  **Remediation round 1 (2026-09-16):** call sites match on sqlparser word
+  tokens (strings/comments never match; the error text is only a flattened
+  lookup key, structure comes from the SQL idents), so decoys, quoted
+  multi-part names and nesting render Spark-shaped; 26 in-module tests.
+  pins: unresolved-routine-1/C-001, C-002
 - `src/namespace_create.rs` — G-6 Q1 location-conflict predicate shared by Session
   `create_namespace` and both SQL doors' `IF NOT EXISTS` paths.
 - `src/idents.rs` — table-identifier segment parse + path-escape refuse (delegates to
