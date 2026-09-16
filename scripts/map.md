@@ -5,6 +5,9 @@ FNP-11B remediation round 1 (2026-09-16, run 17a): `check_lib_py.py` sets `funct
 
 FNP-11B step 6 (2026-09-15, run 17a): `check_lib_py.py` sets `functions.py` 1960 → 1984 (the `lit` decimal arm) and `functions_expr.py` 2235 → 2237 (the `make_timestamp` widening, ruff-format ratchets two lines back) with the CAP-1 mirror; the duplicate table in `test_cap_1_source_file_line_cap.py` moves with it. pins: fnp-11b/C-001, C-005
 
+DF-RUST-3 (2026-09-16, rebase onto main after BL-11): `check_example_coverage.py` `BACKLOG_BASELINE` 111 → 110 —
+main had independently ratcheted 112 → 111 for another unit, and both removals apply on the merged tree, so the measured
+count is 110. Before the rebase this row read 112 → 111.
 DF-RUST-3 (2026-09-15): `check_example_coverage.py` `BACKLOG_BASELINE` 112 → 111 —
 `DataFrameStatFunctions.freqItems` leaves the backlog for the new
 `docs/examples/dataframe/freq_items_transpose.py` (which also covers the new
