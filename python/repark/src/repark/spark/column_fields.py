@@ -232,7 +232,7 @@ def outer(column: Any) -> Any:
     from repark.spark.column import Column
 
     return Column(
-        column._inner,
+        _native.column_outer(column._inner),
         sort_ascending=column._sort_ascending,
         sort_nulls_first=column._sort_nulls_first,
         when_pairs=column._when_pairs,
@@ -342,3 +342,14 @@ def _update_fields_result(column: Any, value: Any, parts: Any) -> Any:
         partition_transform=column._partition_transform or value._partition_transform,
         outer=column._outer,
     )
+
+
+def column_or_str_error(item: Any) -> PySparkTypeError:
+    """The ``select``/``_column_of`` rejection — ``TableArg`` gets Spark's conditioned error."""
+    if type(item).__name__ == "TableArg" or "table_arg" in (type(item).__module__ or "").lower():
+        return PySparkTypeError(
+            "[NOT_COLUMN_OR_STR] Argument `col` should be a Column or str, got TableArg.",
+            errorClass="NOT_COLUMN_OR_STR",
+            messageParameters={"arg_name": "col", "arg_type": "TableArg"},
+        )
+    return PySparkTypeError(f"expected a column name (str) or Column, got {type(item).__name__}")

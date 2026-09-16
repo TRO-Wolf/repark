@@ -96,6 +96,7 @@ column	Column.withField
 dataframe	DataFrame.agg
 dataframe	DataFrame.alias
 dataframe	DataFrame.approxQuantile
+dataframe	DataFrame.asTable
 dataframe	DataFrame.cache
 dataframe	DataFrame.checkpoint
 dataframe	DataFrame.coalesce
@@ -136,6 +137,7 @@ dataframe	DataFrame.eager
 dataframe	DataFrame.exceptAll
 dataframe	DataFrame.except_all
 dataframe	DataFrame.executionInfo
+dataframe	DataFrame.exists
 dataframe	DataFrame.explain
 dataframe	DataFrame.fillna
 dataframe	DataFrame.filter
@@ -161,6 +163,7 @@ dataframe	DataFrame.is_cached
 dataframe	DataFrame.is_empty
 dataframe	DataFrame.is_streaming
 dataframe	DataFrame.join
+dataframe	DataFrame.lateralJoin
 dataframe	DataFrame.lazy
 dataframe	DataFrame.limit
 dataframe	DataFrame.localCheckpoint
@@ -192,6 +195,7 @@ dataframe	DataFrame.sameSemantics
 dataframe	DataFrame.same_semantics
 dataframe	DataFrame.sample
 dataframe	DataFrame.sampleBy
+dataframe	DataFrame.scalar
 dataframe	DataFrame.schema
 dataframe	DataFrame.select
 dataframe	DataFrame.selectExpr

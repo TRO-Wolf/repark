@@ -103,7 +103,7 @@ impl PyDataFrame {
         column
             .expr()
             .resolve_lambda_variables(self.df.schema())
-            .map(|transformed| transformed.data)
+            .and_then(|expr| repark_core::resolve_bound_expr(expr.data, self.df.schema()))
             .map_err(datafusion_to_py_err)
     }
 

@@ -1,0 +1,618 @@
+{
+ "astable_methods": {
+  "result": [
+   "orderBy",
+   "partitionBy",
+   "withSinglePartition"
+  ]
+ },
+ "astable_order_without_partition": {
+  "error": {
+   "condition": null,
+   "message": "Please call partitionBy() or withSinglePartition() before orderBy().",
+   "params": null,
+   "raises": "IllegalArgumentException",
+   "sqlstate": null
+  }
+ },
+ "astable_partition": {
+  "result": "<pyspark.sql.classic.table_arg.TableArg object at 0x7098ea02c710>"
+ },
+ "astable_partition_and_single": {
+  "error": {
+   "condition": null,
+   "message": "Cannot call withSinglePartition() after partitionBy() or withSinglePartition() has been called.",
+   "params": null,
+   "raises": "IllegalArgumentException",
+   "sqlstate": null
+  }
+ },
+ "astable_repr": {
+  "result": "<pyspark.sql.classic.table_arg.TableArg object at 0x7098ea9ab2f0>"
+ },
+ "astable_select_error": {
+  "error": {
+   "condition": "NOT_COLUMN_OR_STR",
+   "message": "[NOT_COLUMN_OR_STR] Argument `col` should be a Column or str, got TableArg.",
+   "params": {
+    "arg_name": "col",
+    "arg_type": "TableArg"
+   },
+   "raises": "PySparkTypeError",
+   "sqlstate": null
+  }
+ },
+ "astable_tvf": {
+  "result": {
+   "columns": [
+    "col"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "(1,)",
+    "(2,)"
+   ],
+   "schema": "struct<col:int>"
+  }
+ },
+ "astable_type": {
+  "result": "TableArg"
+ },
+ "astable_udtf_call": {
+  "result": {
+   "columns": [
+    "id",
+    "n"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 1)",
+    "(2, 1)",
+    "(3, 1)",
+    "(4, 1)"
+   ],
+   "schema": "struct<id:int,n:int>"
+  }
+ },
+ "astable_udtf_sql": {
+  "result": {
+   "columns": [
+    "id",
+    "n"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 1)",
+    "(2, 1)",
+    "(3, 1)",
+    "(4, 1)"
+   ],
+   "schema": "struct<id:int,n:int>"
+  }
+ },
+ "astable_withsinglepartition": {
+  "result": "<pyspark.sql.classic.table_arg.TableArg object at 0x7098ea02c830>"
+ },
+ "exists_correlated": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal"
+   ],
+   "nullable": [
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10)",
+    "(2, 'b', 20)",
+    "(3, 'a', 30)",
+    "(4, None, None)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int>"
+  }
+ },
+ "exists_in_select": {
+  "result": {
+   "columns": [
+    "id",
+    "e"
+   ],
+   "nullable": [
+    true,
+    false
+   ],
+   "rows": [
+    "(1, True)",
+    "(2, True)",
+    "(3, True)",
+    "(4, True)"
+   ],
+   "schema": "struct<id:int,e:boolean>"
+  }
+ },
+ "exists_no_alias_name": {
+  "result": {
+   "columns": [
+    "exists()"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "(True,)",
+    "(True,)",
+    "(True,)",
+    "(True,)"
+   ],
+   "schema": "struct<exists():boolean>"
+  }
+ },
+ "exists_not": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal"
+   ],
+   "nullable": [
+    true,
+    true,
+    true
+   ],
+   "rows": [],
+   "schema": "struct<id:int,dept:string,sal:int>"
+  }
+ },
+ "exists_repr": {
+  "result": "Column<'EXISTS ([dept: string, budget: int])'>"
+ },
+ "exists_sql": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal"
+   ],
+   "nullable": [
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10)",
+    "(3, 'a', 30)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int>"
+  }
+ },
+ "exists_uncorrelated_empty": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal"
+   ],
+   "nullable": [
+    true,
+    true,
+    true
+   ],
+   "rows": [],
+   "schema": "struct<id:int,dept:string,sal:int>"
+  }
+ },
+ "exists_uncorrelated_true": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal"
+   ],
+   "nullable": [
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10)",
+    "(2, 'b', 20)",
+    "(3, 'a', 30)",
+    "(4, None, None)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int>"
+  }
+ },
+ "lateral_bad_how": {
+  "error": {
+   "condition": "UNSUPPORTED_JOIN_TYPE",
+   "message": "[UNSUPPORTED_JOIN_TYPE] Unsupported join type 'nope'. Supported join types include: 'inner', 'leftouter', 'left', 'left_outer', 'cross'. SQLSTATE: 0A000",
+   "params": {
+    "supported": "'inner', 'leftouter', 'left', 'left_outer', 'cross'",
+    "typ": "nope"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "0A000"
+  }
+ },
+ "lateral_basic": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal",
+    "budget"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10, 100)",
+    "(2, 'b', 20, 100)",
+    "(1, 'a', 10, 300)",
+    "(2, 'b', 20, 300)",
+    "(3, 'a', 30, 100)",
+    "(4, None, None, 100)",
+    "(3, 'a', 30, 300)",
+    "(4, None, None, 300)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int,budget:int>"
+  }
+ },
+ "lateral_cross": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal",
+    "budget"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10, 100)",
+    "(2, 'b', 20, 100)",
+    "(1, 'a', 10, 300)",
+    "(2, 'b', 20, 300)",
+    "(3, 'a', 30, 100)",
+    "(4, None, None, 100)",
+    "(3, 'a', 30, 300)",
+    "(4, None, None, 300)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int,budget:int>"
+  }
+ },
+ "lateral_full": {
+  "error": {
+   "condition": "UNSUPPORTED_JOIN_TYPE",
+   "message": "[UNSUPPORTED_JOIN_TYPE] Unsupported join type 'full'. Supported join types include: 'inner', 'leftouter', 'left', 'left_outer', 'cross'. SQLSTATE: 0A000",
+   "params": {
+    "supported": "'inner', 'leftouter', 'left', 'left_outer', 'cross'",
+    "typ": "full"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "0A000"
+  }
+ },
+ "lateral_left": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal",
+    "budget"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10, 100)",
+    "(1, 'a', 10, 300)",
+    "(2, 'b', 20, 100)",
+    "(2, 'b', 20, 300)",
+    "(3, 'a', 30, 100)",
+    "(3, 'a', 30, 300)",
+    "(4, None, None, 100)",
+    "(4, None, None, 300)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int,budget:int>"
+  }
+ },
+ "lateral_on": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal",
+    "dept",
+    "budget"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10, 'a', 100)",
+    "(3, 'a', 30, 'a', 100)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int,dept:string,budget:int>"
+  }
+ },
+ "lateral_outer_expr": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal",
+    "dbl"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(2, 'b', 20, 40)",
+    "(1, 'a', 10, 20)",
+    "(3, 'a', 30, 60)",
+    "(4, None, None, None)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int,dbl:int>"
+  }
+ },
+ "lateral_right": {
+  "error": {
+   "condition": "UNSUPPORTED_JOIN_TYPE",
+   "message": "[UNSUPPORTED_JOIN_TYPE] Unsupported join type 'right'. Supported join types include: 'inner', 'leftouter', 'left', 'left_outer', 'cross'. SQLSTATE: 0A000",
+   "params": {
+    "supported": "'inner', 'leftouter', 'left', 'left_outer', 'cross'",
+    "typ": "right"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "0A000"
+  }
+ },
+ "lateral_semi": {
+  "error": {
+   "condition": "UNSUPPORTED_JOIN_TYPE",
+   "message": "[UNSUPPORTED_JOIN_TYPE] Unsupported join type 'left_semi'. Supported join types include: 'inner', 'leftouter', 'left', 'left_outer', 'cross'. SQLSTATE: 0A000",
+   "params": {
+    "supported": "'inner', 'leftouter', 'left', 'left_outer', 'cross'",
+    "typ": "left_semi"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "0A000"
+  }
+ },
+ "lateral_sql": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal",
+    "budget"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10, 100)",
+    "(3, 'a', 30, 100)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int,budget:int>"
+  }
+ },
+ "lateral_tvf_like": {
+  "error": {
+   "condition": "UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE",
+   "message": "[UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE] Unsupported subquery expression: Expressions referencing the outer query are not supported outside of WHERE/HAVING clauses: \"explode(array(id, sal))\". SQLSTATE: 0A000;\nLateralJoin lateral-subquery#125 [sal#46], Inner\n:  +- Project [v#126L]\n:     +- Generate explode(array(id#123L, cast(outer(sal#46) as bigint))), false, [v#126L]\n:        +- Range (0, 1, step=1, splits=Some(2))\n+- LogicalRDD [id#44, dept#45, sal#46], false\n",
+   "params": {
+    "sqlExprs": "\"explode(array(id, sal))\""
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "0A000"
+  }
+ },
+ "meta": {
+  "by": "run 16b orchestrator",
+  "recorded": "2026-09-15",
+  "spark": "4.1.2"
+ },
+ "outer_outside_subquery": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal"
+   ],
+   "nullable": [
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10)",
+    "(3, 'a', 30)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int>"
+  }
+ },
+ "scalar_correlated": {
+  "result": {
+   "columns": [
+    "id",
+    "b"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 300)",
+    "(2, 300)",
+    "(3, 300)",
+    "(4, 300)"
+   ],
+   "schema": "struct<id:int,b:int>"
+  }
+ },
+ "scalar_correlated_qualified": {
+  "result": {
+   "columns": [
+    "id",
+    "b"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(2, None)",
+    "(1, 100)",
+    "(4, None)",
+    "(3, 100)"
+   ],
+   "schema": "struct<id:int,b:int>"
+  }
+ },
+ "scalar_empty": {
+  "result": {
+   "columns": [
+    "id",
+    "b"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(1, None)",
+    "(2, None)",
+    "(3, None)",
+    "(4, None)"
+   ],
+   "schema": "struct<id:int,b:int>"
+  }
+ },
+ "scalar_in_filter": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal"
+   ],
+   "nullable": [
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10)",
+    "(2, 'b', 20)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int>"
+  }
+ },
+ "scalar_multi_col": {
+  "error": {
+   "condition": "INVALID_SUBQUERY_EXPRESSION.SCALAR_SUBQUERY_RETURN_MORE_THAN_ONE_OUTPUT_COLUMN",
+   "message": "[INVALID_SUBQUERY_EXPRESSION.SCALAR_SUBQUERY_RETURN_MORE_THAN_ONE_OUTPUT_COLUMN] Invalid subquery: Scalar subquery must return only one column, but got 2. SQLSTATE: 42823;\nProject [id#44, scalar-subquery#78 [] AS b#79]\n:  +- Project [dept#47, budget#48]\n:     +- LogicalRDD [dept#47, budget#48], false\n+- LogicalRDD [id#44, dept#45, sal#46], false\n",
+   "params": {
+    "number": "2"
+   },
+   "raises": "AnalysisException",
+   "sqlstate": "42823"
+  }
+ },
+ "scalar_multi_row": {
+  "error": {
+   "message": "An error occurred while calling o205.collectToPython.\n: org.apache.spark.SparkException: [SCALAR_SUBQUERY_TOO_MANY_ROWS] More than one row returned by a subquery used as an expression. SQLSTATE: 21000\n== DataFrame ==\n\"scalar\" was called from\njava.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\n\tat org.apache.spark.sql.errors.QueryExecutionErrors$.multipleRowScalarSubqueryError(QueryExecutionErrors.scala:2586)\n\tat org.apache.spark.sql.execution.ScalarSubquery.updateResult(subquery.scala:85)\n\tat org.apache.spark.sql.execution.SparkPlan.$anonfun$waitForSubqueries$1(SparkPlan.scala:290)\n\tat org.apache.spark.sql.execution.SparkPlan.$anonfun$waitForSubqueries$1$adapted(S",
+   "raises": "Py4JJavaError"
+  }
+ },
+ "scalar_no_alias_name": {
+  "result": {
+   "columns": [
+    "scalarsubquery()"
+   ],
+   "nullable": [
+    true
+   ],
+   "rows": [
+    "(300,)",
+    "(300,)",
+    "(300,)",
+    "(300,)"
+   ],
+   "schema": "struct<scalarsubquery():int>"
+  }
+ },
+ "scalar_repr": {
+  "result": "Column<'([max(budget): int])'>"
+ },
+ "scalar_sql": {
+  "result": {
+   "columns": [
+    "id",
+    "mb"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 300)",
+    "(2, 300)",
+    "(3, 300)",
+    "(4, 300)"
+   ],
+   "schema": "struct<id:int,mb:int>"
+  }
+ },
+ "scalar_uncorrelated": {
+  "result": {
+   "columns": [
+    "id",
+    "mb"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 300)",
+    "(2, 300)",
+    "(3, 300)",
+    "(4, 300)"
+   ],
+   "schema": "struct<id:int,mb:int>"
+  }
+ }
+}

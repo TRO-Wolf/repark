@@ -14,6 +14,7 @@ use repark_common::Error;
 
 use crate::extension::SessionExtension;
 
+pub(super) mod subquery;
 mod window_rescan;
 
 /// DataFusion's own name for the pass-2 leaf-projection rule.
@@ -56,6 +57,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
     crate::stack::register_stack(&context);
     crate::update_fields::register_update_fields(&context);
     crate::isnan::register_repark_isnan(&context);
+    subquery::register_single_row_guard(&context);
     Ok(context)
 }
 
@@ -66,18 +68,25 @@ pub(super) fn analyzer_rules_with_df_54_1_rule_guards() -> Vec<Arc<dyn AnalyzerR
 
 /// DataFusion's recommended rule list with `push_down_leaf_projections` wrapped.
 fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
-    Optimizer::new()
-        .rules
-        .into_iter()
-        .map(|rule| {
-            if rule.name() == LEAF_PUSHDOWN_RULE_NAME {
-                Arc::new(UnnestSafeLeafProjectionPushdown { inner: rule })
-                    as Arc<dyn OptimizerRule + Send + Sync>
-            } else {
-                rule
+    let mut rules: Vec<Arc<dyn OptimizerRule + Send + Sync>> = Vec::new();
+    for rule in Optimizer::new().rules {
+        match rule.name() {
+            "scalar_subquery_to_join" => {
+                rules.push(Arc::new(subquery::ReparkProjectionExists));
+                rules.push(Arc::new(subquery::ReparkScalarSubqueryGuard));
+                rules.push(rule);
             }
-        })
-        .collect()
+            "decorrelate_lateral_join" => {
+                rules.push(Arc::new(subquery::ReparkLateralProjectionHoist));
+                rules.push(rule);
+            }
+            LEAF_PUSHDOWN_RULE_NAME => {
+                rules.push(Arc::new(UnnestSafeLeafProjectionPushdown { inner: rule }));
+            }
+            _ => rules.push(rule),
+        }
+    }
+    rules
 }
 
 /// `push_down_leaf_projections`, scoped away from the plan shape it cannot rewrite.

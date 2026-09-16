@@ -73,6 +73,18 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   Mutation: make the rule probe `accumulator` instead of `create_sliding_accumulator` and
   `a_retractable_aggregate_keeps_datafusions_sliding_accumulator` reds.
   pins: win-slide-1/C-005, C-006
+- `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** plan-level pins for the three
+  [../df_guards/subquery.rs](../df_guards/subquery.rs) rules — the scalar guard wraps a
+  non-singleton subplan in `__repark_single_row` and leaves a zero-group `count(*)`
+  aggregate untouched (count-bug compensation stays native), the lateral hoist lifts a
+  `Subquery`-wrapped right projection onto the left input and refuses a correlated
+  `Unnest`, and the EXISTS-in-projection rewrite keeps the plan's field name.
+  **Round-3 (2026-09-16):** the hoist keeps a `SubqueryAlias` qualifier on its
+  lifted outputs (`t.dbl` resolves in the rewritten schema, a still-correlated
+  right keeps its `Subquery` marker under the alias), and the scalar guard
+  strips a correlated `LIMIT 1` into `__repark_any_row` while an uncorrelated
+  `LIMIT 1` stays untouched.
+  pins: df-subquery-1/C-001, C-002, C-004
 
 ## Pointers
 

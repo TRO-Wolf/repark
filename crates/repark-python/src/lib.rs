@@ -18,6 +18,7 @@ mod plan_introspect;
 mod session;
 mod session_runtime;
 mod session_sources;
+mod subquery;
 mod text_io;
 mod type_bridge;
 
@@ -139,6 +140,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     plan_introspect::register(module)?;
     session_runtime::register(module)?;
     session_sources::register(module)?;
+    subquery::register(module)?;
     text_io::register(module)?;
     type_bridge::register(module)?;
     Ok(())

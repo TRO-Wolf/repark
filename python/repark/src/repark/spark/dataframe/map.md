@@ -733,6 +733,18 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_integral.py`'s `_spark_error_class` attach helpers; the helpers are bound
   as real class members so `__getattr__` column access can never shadow them.
   pins: df-stream-batch-1/C-001, C-002, C-003, C-004
+- `subquery.py` owns the DF-SUBQUERY-1 method bodies (2026-09-15), bound on the class
+  from `core.py` as four individual class-body assignments (`scalar = subquery.scalar`
+  &c.) so the AST inventory walk sees them: `scalar` / `exists` raise Spark's
+  conditioned errors through `_spark_error_class` attach helpers
+  (`SCALAR_SUBQUERY_RETURN_MORE_THAN_ONE_OUTPUT_COLUMN` at construction,
+  `NOT_DATAFRAME` / `NOT_STR` / `UNSUPPORTED_JOIN_TYPE` on `lateralJoin` argument
+  shapes, `on` accepting `Column` / `str` / list-of-`str` / `None`), `asTable` returns
+  `spark.table_arg.TableArg`, and `Column.outer` (column_fields.py) lowers to the
+  native `OuterReferenceColumn` marker. `DataFrame.alias` (core.py) now wraps the
+  frame in a native `SubqueryAlias` so `e.dept` qualifiers survive view analysis
+  while keeping the temp-view registration side effect.
+  pins: df-subquery-1/C-001..C-007
 - `__init__.py` preserves the package import surface, including private compatibility names.
 
 ## Durable contracts
@@ -1107,6 +1119,7 @@ that held the comment (pins: comment-core-1/C-003).
 | Writer layout bodies and write helpers | [`writer_layout.py`](writer_layout.py) |
 | `foreach` / `foreachPartition` / `observe` | [`surface_b.py`](surface_b.py) |
 | `foreach` / `foreachPartition` / `observe` | [`surface_b.py`](surface_b.py) |
+| `scalar` / `exists` / `lateralJoin` / `asTable` | [`subquery.py`](subquery.py) |
 | Parent navigation | [`../map.md`](../map.md) |
 | Rust engine contracts | [`../../../../../../crates/repark-core/src/map.md`](../../../../../../crates/repark-core/src/map.md) |
 | Tests | [`../../../../tests/map.md`](../../../../tests/map.md) |
