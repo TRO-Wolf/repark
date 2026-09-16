@@ -1,0 +1,455 @@
+{
+ "spark_version": "4.1.2",
+ "session_timezone": "America/New_York",
+ "ansi": "true",
+ "signatures": {
+  "lit": "(col: Any) -> pyspark.sql.column.Column",
+  "like": "(str: 'ColumnOrName', pattern: 'ColumnOrName', escapeChar: Optional[ForwardRef('Column')] = None) -> pyspark.sql.column.Column",
+  "ilike": "(str: 'ColumnOrName', pattern: 'ColumnOrName', escapeChar: Optional[ForwardRef('Column')] = None) -> pyspark.sql.column.Column"
+ },
+ "cells": [
+  {
+   "id": "LIT-D-00",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"0\"))",
+   "schema": "struct<v:decimal(1,0)>",
+   "dtype": "decimal(1,0)",
+   "nullable": false,
+   "value": "0",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-01",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"-0\"))",
+   "schema": "struct<v:decimal(1,0)>",
+   "dtype": "decimal(1,0)",
+   "nullable": false,
+   "value": "0",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-02",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"1\"))",
+   "schema": "struct<v:decimal(1,0)>",
+   "dtype": "decimal(1,0)",
+   "nullable": false,
+   "value": "1",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-03",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"-1\"))",
+   "schema": "struct<v:decimal(1,0)>",
+   "dtype": "decimal(1,0)",
+   "nullable": false,
+   "value": "-1",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-04",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"1.5\"))",
+   "schema": "struct<v:decimal(2,1)>",
+   "dtype": "decimal(2,1)",
+   "nullable": false,
+   "value": "1.5",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-05",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"-1.5\"))",
+   "schema": "struct<v:decimal(2,1)>",
+   "dtype": "decimal(2,1)",
+   "nullable": false,
+   "value": "-1.5",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-06",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"1.00\"))",
+   "schema": "struct<v:decimal(3,2)>",
+   "dtype": "decimal(3,2)",
+   "nullable": false,
+   "value": "1.00",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-07",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"0.000001\"))",
+   "schema": "struct<v:decimal(6,6)>",
+   "dtype": "decimal(6,6)",
+   "nullable": false,
+   "value": "0.000001",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-08",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"1E+10\"))",
+   "schema": "struct<v:decimal(11,0)>",
+   "dtype": "decimal(11,0)",
+   "nullable": false,
+   "value": "10000000000",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-09",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"1E-10\"))",
+   "schema": "struct<v:decimal(10,10)>",
+   "dtype": "decimal(10,10)",
+   "nullable": false,
+   "value": "1.00E-10",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-10",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"3.14159265358979323846\"))",
+   "schema": "struct<v:decimal(21,20)>",
+   "dtype": "decimal(21,20)",
+   "nullable": false,
+   "value": "3.14159265358979323846",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-11",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"12345678901234567890123456789012345678\"))",
+   "schema": "struct<v:decimal(38,0)>",
+   "dtype": "decimal(38,0)",
+   "nullable": false,
+   "value": "12345678901234567890123456789012345678",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-12",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"123456789012345678901234567890123456789\"))",
+   "outcome": "error",
+   "error": "[DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION] Decimal precision 39 exceeds max precision 38. SQLSTATE: 22003",
+   "error_class": "ArithmeticException",
+   "condition": "DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION"
+  },
+  {
+   "id": "LIT-D-13",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"0.12345678901234567890123456789012345678\"))",
+   "schema": "struct<v:decimal(38,38)>",
+   "dtype": "decimal(38,38)",
+   "nullable": false,
+   "value": "0.12345678901234567890123456789012345678",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-14",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"1E+38\"))",
+   "outcome": "error",
+   "error": "[DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION] Decimal precision 39 exceeds max precision 38. SQLSTATE: 22003",
+   "error_class": "ArithmeticException",
+   "condition": "DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION"
+  },
+  {
+   "id": "LIT-D-15",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"1E-38\"))",
+   "schema": "struct<v:decimal(38,38)>",
+   "dtype": "decimal(38,38)",
+   "nullable": false,
+   "value": "1.0E-38",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-D-16",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"1E+39\"))",
+   "outcome": "error",
+   "error": "[DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION] Decimal precision 40 exceeds max precision 38. SQLSTATE: 22003",
+   "error_class": "ArithmeticException",
+   "condition": "DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION"
+  },
+  {
+   "id": "LIT-D-17",
+   "kind": "lit_decimal",
+   "expr": "F.lit(Decimal(\"-12345678901234567890.123456789\"))",
+   "schema": "struct<v:decimal(29,9)>",
+   "dtype": "decimal(29,9)",
+   "nullable": false,
+   "value": "-12345678901234567890.123456789",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-DS-00",
+   "kind": "lit_decimal_special",
+   "expr": "F.lit(Decimal(\"NaN\"))",
+   "outcome": "error",
+   "error": "An error occurred while calling z:org.apache.spark.sql.functions.lit. Trace:\njava.lang.NumberFormatException: Character N is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark.\n\tat java.base/java.math.BigDecimal.<init>(BigDecimal.java:586)\n\tat java.base/java.math.BigDecimal.<init>(BigDecimal.java:471)\n\tat java.base/java.math.BigDecimal.<init>(BigDecimal.java:900)\n\tat py4j.Protocol.getDecimal(Protocol.java:190)\n\tat py4j.Protocol.getObject(Protocol.java:309)\n\tat py4j.commands.AbstractCommand.getArguments(AbstractCommand.java:82)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:77)\n\tat py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)\n\tat py4j.ClientServerConnection.run(ClientServerConnection.java:108)\n\tat java.base/java.lang.Thread.run(Thread.java:840)\n\n",
+   "error_class": "Py4JError"
+  },
+  {
+   "id": "LIT-DS-01",
+   "kind": "lit_decimal_special",
+   "expr": "F.lit(Decimal(\"Infinity\"))",
+   "outcome": "error",
+   "error": "An error occurred while calling z:org.apache.spark.sql.functions.lit. Trace:\njava.lang.NumberFormatException: Character I is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark.\n\tat java.base/java.math.BigDecimal.<init>(BigDecimal.java:586)\n\tat java.base/java.math.BigDecimal.<init>(BigDecimal.java:471)\n\tat java.base/java.math.BigDecimal.<init>(BigDecimal.java:900)\n\tat py4j.Protocol.getDecimal(Protocol.java:190)\n\tat py4j.Protocol.getObject(Protocol.java:309)\n\tat py4j.commands.AbstractCommand.getArguments(AbstractCommand.java:82)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:77)\n\tat py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)\n\tat py4j.ClientServerConnection.run(ClientServerConnection.java:108)\n\tat java.base/java.lang.Thread.run(Thread.java:840)\n\n",
+   "error_class": "Py4JError"
+  },
+  {
+   "id": "LIT-DS-02",
+   "kind": "lit_decimal_special",
+   "expr": "F.lit(Decimal(\"-Infinity\"))",
+   "outcome": "error",
+   "error": "An error occurred while calling z:org.apache.spark.sql.functions.lit. Trace:\njava.lang.NumberFormatException: Character I is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark.\n\tat java.base/java.math.BigDecimal.<init>(BigDecimal.java:586)\n\tat java.base/java.math.BigDecimal.<init>(BigDecimal.java:471)\n\tat java.base/java.math.BigDecimal.<init>(BigDecimal.java:900)\n\tat py4j.Protocol.getDecimal(Protocol.java:190)\n\tat py4j.Protocol.getObject(Protocol.java:309)\n\tat py4j.commands.AbstractCommand.getArguments(AbstractCommand.java:82)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:77)\n\tat py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)\n\tat py4j.ClientServerConnection.run(ClientServerConnection.java:108)\n\tat java.base/java.lang.Thread.run(Thread.java:840)\n\n",
+   "error_class": "Py4JError"
+  },
+  {
+   "id": "LIT-DS-03",
+   "kind": "lit_decimal_special",
+   "expr": "F.lit(Decimal(\"sNaN\"))",
+   "outcome": "error",
+   "error": "An error occurred while calling z:org.apache.spark.sql.functions.lit. Trace:\njava.lang.NumberFormatException: Character s is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark.\n\tat java.base/java.math.BigDecimal.<init>(BigDecimal.java:586)\n\tat java.base/java.math.BigDecimal.<init>(BigDecimal.java:471)\n\tat java.base/java.math.BigDecimal.<init>(BigDecimal.java:900)\n\tat py4j.Protocol.getDecimal(Protocol.java:190)\n\tat py4j.Protocol.getObject(Protocol.java:309)\n\tat py4j.commands.AbstractCommand.getArguments(AbstractCommand.java:82)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:77)\n\tat py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)\n\tat py4j.ClientServerConnection.run(ClientServerConnection.java:108)\n\tat java.base/java.lang.Thread.run(Thread.java:840)\n\n",
+   "error_class": "Py4JError"
+  },
+  {
+   "id": "LIT-DT-00",
+   "kind": "lit_decimal_tuple",
+   "expr": "F.lit(Decimal((0,(1,5),-1)))",
+   "schema": "struct<v:decimal(2,1)>",
+   "dtype": "decimal(2,1)",
+   "nullable": false,
+   "value": "1.5",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-DI-00",
+   "kind": "lit_decimal_int",
+   "expr": "F.lit(Decimal(5))",
+   "schema": "struct<v:decimal(1,0)>",
+   "dtype": "decimal(1,0)",
+   "nullable": false,
+   "value": "5",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-DF-00",
+   "kind": "lit_decimal_from_float",
+   "expr": "F.lit(Decimal(0.1))",
+   "outcome": "error",
+   "error": "[DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION] Decimal precision 55 exceeds max precision 38. SQLSTATE: 22003",
+   "error_class": "ArithmeticException",
+   "condition": "DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION"
+  },
+  {
+   "id": "LIT-A-00",
+   "kind": "lit_decimal_arith",
+   "expr": "F.lit(Decimal(\"1.5\")) + F.lit(Decimal(\"2.25\"))",
+   "schema": "struct<v:decimal(4,2)>",
+   "dtype": "decimal(4,2)",
+   "value": "3.75",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-A-01",
+   "kind": "lit_decimal_arith",
+   "expr": "F.lit(Decimal(\"1.5\")) * F.lit(2)",
+   "schema": "struct<v:decimal(4,1)>",
+   "dtype": "decimal(4,1)",
+   "value": "3.0",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-A-02",
+   "kind": "lit_decimal_arith",
+   "expr": "F.lit(Decimal(\"1.5\")) / F.lit(Decimal(\"3\"))",
+   "schema": "struct<v:decimal(7,6)>",
+   "dtype": "decimal(7,6)",
+   "value": "0.500000",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-A-03",
+   "kind": "lit_decimal_arith",
+   "expr": "F.lit(Decimal(\"1.5\")).cast(\"double\")",
+   "schema": "struct<v:double>",
+   "dtype": "double",
+   "value": "1.5",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-00",
+   "kind": "sql_decimal_literal",
+   "expr": "SELECT 1.5",
+   "schema": "struct<1.5:decimal(2,1)>",
+   "value": "1.5",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-01",
+   "kind": "sql_decimal_literal",
+   "expr": "SELECT 1.5BD",
+   "schema": "struct<1.5:decimal(2,1)>",
+   "value": "1.5",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-02",
+   "kind": "sql_decimal_literal",
+   "expr": "SELECT typeof(1.5)",
+   "schema": "struct<typeof(1.5):string>",
+   "value": "decimal(2,1)",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-03",
+   "kind": "sql_decimal_literal",
+   "expr": "SELECT typeof(1.5BD)",
+   "schema": "struct<typeof(1.5):string>",
+   "value": "decimal(2,1)",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-04",
+   "kind": "sql_decimal_literal",
+   "expr": "SELECT 123456789012345678901234567890123456789",
+   "outcome": "error",
+   "error": "[DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION] Decimal precision 39 exceeds max precision 38. SQLSTATE: 22003",
+   "error_class": "ArithmeticException",
+   "condition": "DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION"
+  },
+  {
+   "id": "LIT-SQL-05",
+   "kind": "sql_decimal_literal",
+   "expr": "SELECT typeof(1E+10)",
+   "schema": "struct<typeof(1.0E10):string>",
+   "value": "double",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-06",
+   "kind": "sql_decimal_literal",
+   "expr": "SELECT CAST(1.5 AS DECIMAL(10,4))",
+   "schema": "struct<CAST(1.5 AS DECIMAL(10,4)):decimal(10,4)>",
+   "value": "1.5000",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-07",
+   "kind": "sql_decimal_literal",
+   "expr": "SELECT typeof(0.000001)",
+   "schema": "struct<typeof(0.000001):string>",
+   "value": "decimal(6,6)",
+   "outcome": "ok"
+  },
+  {
+   "id": "LIKE-00",
+   "kind": "like_escape",
+   "expr": "F.like(F.col(\"s\"), F.lit(\"a\\\\_b\"), F.lit(\"\\\\\"))",
+   "schema": "struct<v:boolean>",
+   "dtype": "boolean",
+   "values": [
+    "True",
+    "False",
+    "False",
+    "None"
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIKE-01",
+   "kind": "like_escape",
+   "expr": "F.like(F.col(\"s\"), F.lit(\"a!_b\"), F.lit(\"!\"))",
+   "schema": "struct<v:boolean>",
+   "dtype": "boolean",
+   "values": [
+    "True",
+    "False",
+    "False",
+    "None"
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIKE-02",
+   "kind": "like_escape",
+   "expr": "F.like(F.col(\"s\"), F.lit(\"a_b\"))",
+   "schema": "struct<v:boolean>",
+   "dtype": "boolean",
+   "values": [
+    "True",
+    "True",
+    "True",
+    "None"
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIKE-03",
+   "kind": "like_escape",
+   "expr": "F.ilike(F.col(\"s\"), F.lit(\"A!_B\"), F.lit(\"!\"))",
+   "schema": "struct<v:boolean>",
+   "dtype": "boolean",
+   "values": [
+    "True",
+    "False",
+    "False",
+    "None"
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIKE-04",
+   "kind": "like_escape",
+   "expr": "F.like(F.col(\"s\"), F.lit(\"a!_b\"), F.lit(\"!!\"))",
+   "outcome": "error",
+   "error": "[INVALID_ESCAPE_CHAR] `EscapeChar` should be a string literal of length one, but got \"!!\". SQLSTATE: 42604",
+   "error_class": "AnalysisException",
+   "condition": "INVALID_ESCAPE_CHAR"
+  },
+  {
+   "id": "LIKE-05",
+   "kind": "like_escape",
+   "expr": "F.like(F.col(\"s\"), F.lit(\"a!_b\"), F.lit(\"\"))",
+   "outcome": "error",
+   "error": "[INVALID_ESCAPE_CHAR] `EscapeChar` should be a string literal of length one, but got \"\". SQLSTATE: 42604",
+   "error_class": "AnalysisException",
+   "condition": "INVALID_ESCAPE_CHAR"
+  },
+  {
+   "id": "LIKE-SQL-00",
+   "kind": "sql_like_escape",
+   "expr": "SELECT 'a_b' LIKE 'a!_b' ESCAPE '!'",
+   "schema": "struct<a_b LIKE a!_b ESCAPE '!':boolean>",
+   "values": [
+    "True"
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIKE-SQL-01",
+   "kind": "sql_like_escape",
+   "expr": "SELECT 'axb' LIKE 'a!_b' ESCAPE '!'",
+   "schema": "struct<axb LIKE a!_b ESCAPE '!':boolean>",
+   "values": [
+    "False"
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIKE-SQL-02",
+   "kind": "sql_like_escape",
+   "expr": "SELECT like('a_b','a!_b','!')",
+   "schema": "struct<a_b LIKE a!_b ESCAPE '!':boolean>",
+   "values": [
+    "True"
+   ],
+   "outcome": "ok"
+  }
+ ]
+}

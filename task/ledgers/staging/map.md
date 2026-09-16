@@ -273,6 +273,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   gaps F-1 (mutation-proven cast pin), F-2 (partitioned abort pin) and F-4 (§8 counts). No
   dependency, no spawn. `risk_tier: standard`. Branch `perf/write-distribution-2`.
   pins: write-distribution-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [lit-decimal-1-ledger.md](lit-decimal-1-ledger.md) —
+  **LIT-DECIMAL-1 step 1 (2026-09-15), in flight:** `F.lit(Decimal)` typed by
+  Spark's decimal literal rules and `F.like`/`F.ilike` gaining PySpark 4.1.2's
+  optional `escapeChar` (run 17a, thin clone — ledger + verbatim 46-cell oracle +
+  red-first pins only; 39 red / 8 already-green controls measured on base
+  `0355ef5e`, including two cells the card called controls: the SQL-door
+  `LIKE … ESCAPE` and the 39-digit literal). `risk_tier: standard`. Branch
+  `feat/lit-decimal-1`.
+  pins: lit-decimal-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 
 ## Pointers
 - Up: [../map.md](../map.md)

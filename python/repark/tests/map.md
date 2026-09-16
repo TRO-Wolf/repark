@@ -5428,3 +5428,22 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 - **FNP-4B remediation (2026-09-15):** added comment lines removed from `_live_parity.py`, `test_columns.py`, `test_errors.py` (ruling 2026-08-26); `_live_parity.py` ceiling 1763 → 1753 after ruff format.
 - **FNP-4B R-16c-13 (2026-09-15, orchestrator):** `test_create_table_array_element_not_null_refuses_loudly` (L-006, oracle Q17-18: Spark also refuses `ARRAY<INT NOT NULL>`) moves from run 16b's `test_catalog_surface_1.py` into `test_fnp_4b_spark_dialect.py`, inside this unit's fence. pins: fnp-4b/C-025
 - **FNP-4B (#611, 2026-09-15, orchestrator):** `test_fnp_bitmap_facade_1.py::test_sql_door_qualifier_leak_is_expected_divergence` keeps its `spark.sql` half (the DataFusion qualifier still leaks) and its `selectExpr` half now asserts Spark's `bitmap_construct_agg(x)`, because FNP-4B's root-projection display names converged that door. Run 16a filed the pin to go red on convergence (ruling R-16c-14). pins: fnp-4b/C-022
+
+LIT-DECIMAL-1 (2026-09-15): the `F.lit(Decimal)` typing and `like`/`ilike` escapeChar pins.
+
+- [lit_decimal_1_spark_oracle.json](lit_decimal_1_spark_oracle.json) — live PySpark
+  4.1.2 recording (2026-09-15, orchestrator-run, run 17a): 46 cells — 18 string
+  Decimals, 4 non-finite specials, tuple/int/float constructors, decimal
+  arithmetic, 8 SQL-door literal cells, 6 facade `like`/`ilike` escape cells and
+  3 SQL-door escape cells — plus the `lit`/`like`/`ilike` signatures. Copied
+  verbatim; recorded evidence is never hand-edited.
+  pins: lit-decimal-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [test_lit_decimal_1.py](test_lit_decimal_1.py) — **LIT-DECIMAL-1 step 1
+  (2026-09-15):** one parametrized pin per cell group over the copied oracle —
+  facade cells replay the recorded `expr` (`F.lit(Decimal)`, arithmetic, `like` /
+  `ilike` with `escapeChar`), SQL cells run `spark.sql`, error cells assert
+  Spark's condition and message text, and `typeof` cells translate to a
+  schema-dtype assert (the R2 precedent — `typeof` is not an engine name). Cell
+  ids are the pytest ids. Red-first on base `0355ef5e`: 39 failed / 8 passed —
+  the 8 greens are the LIT-SQL-00/01/02/03/05/06/07 controls and LIKE-02.
+  pins: lit-decimal-1/C-001, C-002, C-003, C-004, C-005, C-006
