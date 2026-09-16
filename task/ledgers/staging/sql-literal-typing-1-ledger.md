@@ -311,3 +311,19 @@ parenthesized form.
 | Finding | Disposition | Evidence |
 |---|---|---|
 | V-001 (P2) | FIXED | 77/77 pins green on the rebuilt release native; `cargo test -p repark-functions --lib`, `cargo test -p repark-spark --lib`, `make rust-clippy` green; the brief's `-k` gate slice green (see §9). |
+
+## 9. Round 3 verification (2026-09-16)
+
+- `cargo test -p repark-functions --lib` — exit 0: 738 passed, 0 failed,
+  1 ignored.
+- `cargo test -p repark-spark --lib` — exit 0: 1041 passed, 0 failed,
+  4 ignored.
+- `make rust-clippy` — exit 0.
+- Release native rebuilt (`uvx maturin@1.14.1 develop --release`, exit 0)
+  from the final shipped sources (Rust unchanged since the V-001 build that
+  went green; rebuild certifies the tree).
+- `.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider -k
+  "literal or higher_order or hof or transform or lambda or fnp8 or fnp_8"`
+  — exit 0: 722 passed, 118 skipped, 2 xfailed.
+- The orchestrator runs `make verify` and the whole facade and parity
+  suites after hand-back.
