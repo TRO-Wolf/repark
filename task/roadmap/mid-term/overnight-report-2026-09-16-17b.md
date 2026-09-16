@@ -13,12 +13,12 @@ pipeline untouched; no file owned by run 17a or 17c edited.
 
 | Surface | PySpark | Present before | Present after | Missing after |
 |---|---|---|---|---|
-| DataFrame | 115 | 108 | 114 | `metadataColumn` |
+| DataFrame | 115 | 108 | **114** | `metadataColumn` |
 | Column · GroupedData · DataFrameReader · DataFrameWriter · DataFrameWriterV2 · DataFrameNaFunctions · Catalog · SparkSession · Row · types | — | complete | complete | — |
 
 **Before** (main `0355ef5e`, 20:10): DataFrame 108/115 — missing `asTable` `exists` `freqItems` `lateralJoin` `metadataColumn`
-`scalar` `transpose`. **After**: `freqItems` and `transpose` merged (#640); `scalar`, `exists`, `lateralJoin` and `asTable` are
-green in the lane and in PR (§2). Six of the seven names closed; `metadataColumn` (DF-METADATA-COL-1) is the whole remainder of the
+`scalar` `transpose`. **After**: `freqItems` and `transpose` merged (#640); `scalar`, `exists`, `lateralJoin` and `asTable` merged (#647).
+Re-measured on merged main at 07:12: **DataFrame 114 / 115**. Six of the seven names closed; `metadataColumn` (DF-METADATA-COL-1) is the whole remainder of the
 DataFrame census, and its oracle cells (`metadata_*` in `dfrust3_probe_2026-09-15.json`) are already recorded.
 
 ## 2. Per-PR table
@@ -26,7 +26,7 @@ DataFrame census, and its oracle cells (`metadata_*` in `dfrust3_probe_2026-09-1
 | PR | Unit | Actor tier and rounds | Reviews (Grok 4.6) | State |
 |---|---|---|---|---|
 | #640 | **DF-RUST-3** — `DataFrame.freqItems`, `DataFrameStatFunctions.freqItems`, `DataFrame.transpose` as Rust kernels: a DataFusion UDAF implementing Spark's `FreqItemCounter` and an eager `ResolveTranspose` kernel in repark-core, `#[pyfunction]` bindings, thin facade | **Devin SWE-2**, 4 rounds (58 / 47 / 94 / 23 agent steps) | logic **NEEDS_REMEDIATION** 1 P1 + 2 P2 $0.90; Rust perf **NEEDS_REMEDIATION** 2 P2 (turn-1 stall $0.02, resumed $0.87); Python perf **PASS** $0.42; verification **PASS** $0.37 | **merged** `fb754bf0`, tree-equal 05:31 |
-| #644 | **DF-SUBQUERY-1** — `DataFrame.scalar` / `.exists` / `.lateralJoin` / `.asTable` over `Column.outer`: scoped resolution, the `__repark_single_row` guard UDAF, the EXISTS-in-projection rewrite and the lateral-projection hoist in repark-core; `TableArg` and the table-argument UDTF path on the facade | **Devin SWE-2**, 3 rounds (115 / 25 / — agent steps) | logic **NEEDS_REMEDIATION** 0 P1 + 4 P2 $0.68; Rust perf **PASS** $1.09; Python perf **PASS** $0.57 | see §7 |
+| #647 | **DF-SUBQUERY-1** — `DataFrame.scalar` / `.exists` / `.lateralJoin` / `.asTable` over `Column.outer`: scoped resolution, the `__repark_single_row` guard UDAF, the EXISTS-in-projection rewrite and the lateral-projection hoist in repark-core; `TableArg` and the table-argument UDTF path on the facade | **Devin SWE-2**, 3 rounds (115 / 25 / 90 agent steps) | logic **NEEDS_REMEDIATION** 0 P1 + 4 P2 $0.68; Rust perf **PASS** $1.09; Python perf **PASS** $0.57 | **merged** `39f49fb3`, tree-equal 07:12 |
 
 ## 3. Devin SWE-2 vs Muse — the comparison the owner asked for
 
@@ -116,8 +116,7 @@ review-driven rounds to close properly.
 | **WITHCOLUMNS-NESTED-1**, **TODF-REF-1** | not opened | DECIMAL-CACHE-1 side cards; no oracle recorded yet. |
 | **IO-TEXT-PART-POOL-1** (Q-16b-4) | not opened | Run 16b's reproduction stands (a tight pool refuses loudly at 256 keys). |
 
-**PR #647 (DF-SUBQUERY-1)** is green, rebased onto main and first in the merge queue at the stop time; if it did not merge inside
-the window it is untouched and ready.
+**PR #647 (DF-SUBQUERY-1) merged as `39f49fb3`, tree-equal, at 07:12** — three minutes inside the window, on the last CI job.
 
 ## 8. Owner questions (with recommendations)
 
