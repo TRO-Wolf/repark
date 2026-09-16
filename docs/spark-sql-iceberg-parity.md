@@ -8421,6 +8421,44 @@ field NAME.
   was the **only** Never-OOM contract failure in the 180-cell matrix: a bounded pool must answer
   with a typed refusal, never a panic.
   pins: h3-spill-residue-1/C-002
+- **NEVER-OOM-PANIC-1 (2026-09-16).** The pin above was renamed to
+  `…_spills_or_refuses_a_nested_loop_join_without_a_panic`: the double-execute is fixed at
+  the root now (row NEVER-OOM-PANIC-1 below), so the same 8 MiB query spills and succeeds
+  instead of refusing, and the pin accepts both legal outcomes while still forbidding every
+  panic marker. The containment stays for the other allow-listed fallback paths; this path
+  no longer reaches it.
+
+### NEVER-OOM-PANIC-1 — a tight pool never panics a nested-loop join: it spills or refuses typed — **FIXED 2026-09-16, NEVER-OOM-PANIC-1**
+
+- **repark** — `SELECT l.id, r.v FROM base l JOIN other r ON l.v < r.v` with a 1e6-row left side,
+  a 64-row right side and `datafusion.runtime.memory_limit = '8M'` no longer panics on any
+  scheduling. A repark physical-optimizer rule (`NljBuildSideReset`,
+  `crates/repark-core/src/nlj_build_reset.rs`) wraps each nested-loop-join build side so the
+  OOM fallback's second `execute(0)` meets fresh `RepartitionExec` channels and really
+  spills: the query now answers `ok` at 8 MiB (6/6 worker runs, zero panic blocks on
+  stderr), where the base tree printed a `partition not used yet` block in 400/400 runs, a
+  poisoned-arm `inner future panicked during poll` block in 200/400, and escaped the latter
+  to the user in 2/400 with the exact CI message. A still-too-tight pool keeps the typed
+  `Resources exhausted … fair(pool_size: …)` refusal. The upstream defect is unchanged and
+  still unfixed; repark no longer triggers it.
+- **Apache Spark** — a `BroadcastNestedLoopJoin` under a bounded driver heap either completes or
+  raises; it does not answer with an engine-internal panic. *(oracle: documented — the claim here
+  is the failure shape, not a value.)*
+- **Pin** —
+  `python/repark/tests/test_h3_spill_matrix.py::test_never_oom_panic_1_a_tight_pool_leaves_no_panic_blocks_on_stderr`
+  (five worker runs, zero `panicked at` blocks on stderr — red on the base tree at the first
+  run — plus the renamed `…_spills_or_refuses_…_without_a_panic` pin accepting `ok` or the
+  typed refusal);
+  `crates/repark-core/src/session/tests/nlj_tight_pool.rs` (ten `EXPLAIN ANALYZE`
+  iterations under an 8 MiB pool, each proving its own tightness through the refusal log —
+  red on the base tree in 0.10 s via the unwound `partition not used yet` panic);
+  `crates/repark-core/src/nlj_build_reset.rs` (seven module tests: the rule wraps only the
+  build side, is idempotent, leaves other plans alone; the wrapper replays a one-shot child
+  twice, including values).
+- **Rationale** — FIXED 2026-09-16 by NEVER-OOM-PANIC-1, root fix for the H3-SPILL-NLJ-1
+  race (owner ruling Q-17c-7). The H3-SPILL-NLJ-1 containment is retained for the other
+  allow-listed fallback paths and is now defense-in-depth on this one.
+  pins: never-oom-panic-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 
 ### H3-SPILL-COLLECT-1 — `collect()` under an address-space limit raises `MemoryError` — **FIXED 2026-09-06, H3-SPILL-RESIDUE-1**
 

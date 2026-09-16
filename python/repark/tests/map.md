@@ -3192,6 +3192,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   400-character truncation cut the resize knobs off the very assertion that names them.
   pins: h3-spill-1/C-003, C-004, C-005, C-006
   pins: h3-spill-residue-1/C-001, C-002
+  **NEVER-OOM-PANIC-1 (2026-09-16):** the NLJ pin is renamed to
+  `…_spills_or_refuses_a_nested_loop_join_without_a_panic` — the root fix spills where the
+  containment used to refuse, so it accepts `ok` or the typed refusal while still forbidding
+  every panic marker — and a second pin,
+  `test_never_oom_panic_1_a_tight_pool_leaves_no_panic_blocks_on_stderr`, runs the worker
+  five times asserting zero `panicked at` blocks on stderr (deterministic red on the base
+  tree, green after; five runs stay far under the minute budget at ~1.6 s each).
+  pins: never-oom-panic-1/C-007, C-008
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set

@@ -46,8 +46,8 @@ subsets, real exit codes and counts in the ledger.
 | C-004 | The design is chosen with evidence among (a) optimizer rule / wrapper exec that makes the NLJ build-side child safe to execute twice, (b) a rule that prevents the double-execute shape under a bounded pool, (c) containment extension only — recorded as a ruling row with one line of reason. | The ruling row R-DESIGN. | **PROVEN** | R-DESIGN chose (a); see Rulings. pins: never-oom-panic-1/C-004 |
 | C-005 | The fix lands in Rust (`crates/repark-core`; `arrow_export.rs` only under design (c)): no `unwrap`/`expect` in product code, no `tokio::spawn`, clippy pedantic clean, `thiserror` errors, no new comments, no `Cargo.toml`/`Cargo.lock` change, no process-wide panic hook. | The fix diff; `git diff --stat -- Cargo.lock Cargo.toml` empty. | **PROVEN** | `crates/repark-core/src/nlj_build_reset.rs` (new, ~370 lines with its 7 module tests) + one-line wiring in `session/df_guards.rs` + `mod` row in `lib.rs`. Product code holds no `unwrap`/`expect`/`unreachable!`/`panic!`/`tokio::spawn` (verified by reading the diff; clippy pedantic runs in C-010). No `catch_unwind` in product (only in the premise test). `git diff --stat -- Cargo.toml Cargo.lock` empty. No panic hook. No new comments (`//`/`///`/`//!` absent from the new file; the pedantic doc lint is met with `#[allow(clippy::missing_errors_doc)]` on the trait impl). pins: never-oom-panic-1/C-005 |
 | C-006 | The Rust loop pin is green after the fix. | The green run. | **PROVEN** | `cargo test -p repark-core --lib session::tests::nlj_tight_pool`: ok in 107.02 s (10/10 iterations; each proved its own tightness via the refusal log, each outcome `Ok` — the fallback now spills and the query succeeds). Module tests 7/7 green. pins: never-oom-panic-1/C-003, C-006 |
-| C-007 | A facade pin repeats the NLJ worker enough times to have caught the race at the measured rate (rate cited), asserting the typed message every time, bounded to stay under ~60 s. | The new facade pin and its run. | **OPEN** | — |
-| C-008 | The existing `test_h3_spill_matrix.py` pins and the `arrow_export.rs` containment tests stay green unchanged; if the design makes the containment dead, the ledger and registry row say so and the containment is kept only if another path still needs it. | The unchanged runs (or the dead-containment statement). | **OPEN** | — |
+| C-007 | A facade pin repeats the NLJ worker enough times to have caught the race at the measured rate (rate cited), asserting the typed message every time, bounded to stay under ~60 s. | The new facade pin and its run. | **PROVEN** | `test_never_oom_panic_1_a_tight_pool_leaves_no_panic_blocks_on_stderr`: 5 worker runs (8M, 1e6 rows, ~1.6 s each, ~12 s with the renamed pin), asserting zero `panicked at`/`partition not used yet`/`inner future panicked` bytes on stderr plus the legal outcome. Red on the base RELEASE module at the first run (FAILED in 0.54 s with the `repartition/mod.rs:1277` block pasted in §Red runs); green after (2 passed in 12.41 s). The measured base rate it would have caught: stderr panic blocks in 400/400 runs, user-visible escape in 2/400 — the stderr signal is the deterministic one. pins: never-oom-panic-1/C-007 |
+| C-008 | The existing `test_h3_spill_matrix.py` pins and the `arrow_export.rs` containment tests stay green unchanged; if the design makes the containment dead, the ledger and registry row say so and the containment is kept only if another path still needs it. | The unchanged runs (or the dead-containment statement). | **PROVEN** | Whole `test_h3_spill_matrix.py`: 23 passed in 45.71 s on the fixed RELEASE module. The old NLJ pin is RENAMED (not silently widened) to `…_spills_or_refuses_…_without_a_panic` because the fix legitimately changed the outcome from refuse to spill-and-succeed; it passes on base too (typed arm, 1.53 s) except when the race escapes, which the new stderr pin covers deterministically. Containment statement: this path no longer reaches the containment (6/6 post-fix worker runs with zero stderr blocks; 10/10 Rust iterations `Ok`), and that is said in the ledger, the `H3-SPILL-NLJ-1` paragraph and the `nlj_build_reset` map rows — but the containment is KEPT because the other seven allow-listed payloads guard fallback paths this unit does not touch (`arrow_export.rs` tests untouched and green, verified in C-010). pins: never-oom-panic-1/C-008 |
 | C-009 | Registry: `H3-SPILL-NLJ-1` gains a dated appended paragraph (history not rewritten) and `NEVER-OOM-PANIC-1` is added in the same section. | The registry diff. | **OPEN** | — |
 | C-010 | Gates whole and green with real exit codes and counts: `make verify`; the unit's own test files; the whole facade suite once into a log; the whole parity suite once into a log; `cargo test -p repark-core` and `cargo test -p repark-python`; `COVERAGE_ATTESTATION` complete; VERDICT. | §Gates. | **OPEN** | — |
 
@@ -129,6 +129,24 @@ Green after the fix: `test result: ok. 1 passed; finished in 107.02s`, plus the 
 tests in `nlj_build_reset.rs` (the premise test `a_bare_repartition_exec_runs_only_once`
 documents P-3 against the real `RepartitionExec` and reds if the wrapper ever stops
 resetting).
+
+Facade red for C-007 (new stderr pin on the base RELEASE module, fix stashed out of the
+tree, pins kept):
+
+```text
+E           assert 'panicked at' not in "\nthread 't...t used yet\n"
+E             'panicked at' is contained here:
+E               thread 'tokio-rt-worker' (84499) panicked at .../datafusion-physical-plan-54.1.0/src/repartition/mod.rs:1277:22:
+E             ?                                  +++++++++++
+E               partition not used yet
+python/repark/tests/test_h3_spill_matrix.py:375: AssertionError
+1 failed in 0.54s
+```
+
+The renamed pin on the same base module: `1 passed in 1.53s` (typed-refusal arm — it only
+reds when the race escapes, measured 2/400). After restoring the fix and rebuilding
+RELEASE: `2 passed in 12.41s`; whole `test_h3_spill_matrix.py`: `23 passed in 45.71s`;
+post-fix worker sample 6/6 `ok` with `[0, 0, 0]` hook blocks in every run.
 
 ## Rust-first roll-call
 

@@ -324,21 +324,63 @@ def test_the_boundary_digest_is_order_independent_and_content_sensitive() -> Non
     assert four["rows_out"] == shifted["rows_out"], (four, shifted)
 
 
-def test_h3_spill_nlj_1_a_tight_pool_refuses_a_nested_loop_join_with_the_typed_exception() -> None:
+def test_h3_spill_nlj_1_a_tight_pool_spills_or_refuses_a_nested_loop_join_without_a_panic() -> None:
     result = _run_worker("nested_loop_join", "8M", 1_000_000)
-    assert result["outcome"] == "error", result
-    message = result["message"]
-    lowered = message.lower()
-    assert "memory" in lowered or "resources exhausted" in lowered, result
-    assert "fair(" in lowered, result
-    assert "greedy(" not in lowered, result
-    assert "repark.memory.limit.gb" in message, result
-    assert "datafusion.runtime.memory_limit" in message, result
+    message = result.get("message", "")
     assert "a Rust panic was caught" not in message, result
     assert "partition not used yet" not in message, result
-    assert "the bounded memory pool refused this plan" in message, result
+    assert "inner future panicked" not in message, result
+    if result["outcome"] == "error":
+        lowered = message.lower()
+        assert "memory" in lowered or "resources exhausted" in lowered, result
+        assert "fair(" in lowered, result
+        assert "greedy(" not in lowered, result
+        assert "repark.memory.limit.gb" in message, result
+        assert "datafusion.runtime.memory_limit" in message, result
+        assert "the bounded memory pool refused this plan" in message, result
+    else:
+        assert result["outcome"] == "ok", result
     control = _run_worker("nested_loop_join", "1G", 1_000_000)
     assert control["outcome"] == "ok", control
+
+
+def _run_worker_with_stderr(
+    mode: str, pool: str, rows: int, headroom: int = 0, partitions: int = 4, offset: int = 0
+) -> tuple[dict, str]:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            _WORKER,
+            mode,
+            pool,
+            str(rows),
+            str(headroom),
+            str(partitions),
+            str(offset),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=900,
+        check=False,
+    )
+    tail = completed.stdout.strip().splitlines()
+    assert tail, completed.stderr[-2000:]
+    return json.loads(tail[-1]), completed.stderr
+
+
+def test_never_oom_panic_1_a_tight_pool_leaves_no_panic_blocks_on_stderr() -> None:
+    for _ in range(5):
+        result, stderr = _run_worker_with_stderr("nested_loop_join", "8M", 1_000_000)
+        assert "panicked at" not in stderr, (result, stderr[-2000:])
+        assert "partition not used yet" not in stderr, (result, stderr[-2000:])
+        assert "inner future panicked" not in stderr, (result, stderr[-2000:])
+        message = result.get("message", "")
+        assert "a Rust panic was caught" not in message, result
+        if result["outcome"] == "error":
+            assert "fair(" in result["message"], result
+        else:
+            assert result["outcome"] == "ok", result
 
 
 def test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_raise_memory_error() -> None:
