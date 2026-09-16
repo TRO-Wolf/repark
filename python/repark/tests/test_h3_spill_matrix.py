@@ -383,6 +383,126 @@ def test_never_oom_panic_1_a_tight_pool_leaves_no_panic_blocks_on_stderr() -> No
             assert result["outcome"] == "ok", result
 
 
+_JOIN_VALUES_WORKER = """
+import hashlib, json, sys
+
+pool, rows, partitions = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+from repark import ReparkSession
+
+spark = (
+    ReparkSession.builder.appName("nlj-join-values")
+    .config("datafusion.runtime.memory_limit", pool)
+    .config("datafusion.execution.target_partitions", partitions)
+    .getOrCreate()
+)
+columns = [
+    "id",
+    "md5(cast(id as string)) AS h",
+    "id % 1024 AS g",
+    "concat(md5(cast(id as string)), md5(cast(id + 1 as string))) AS payload",
+    "cast(id as double) * 1.5 AS v",
+]
+spark.range(rows).selectExpr(*columns).createOrReplaceTempView("base")
+spark.range(64).selectExpr(*columns).createOrReplaceTempView("other")
+specs = [
+    ("inner", "SELECT l.id AS id, r.v AS v FROM base l JOIN other r ON l.v < r.v"),
+    ("left", "SELECT l.id AS id, r.v AS v FROM base l LEFT JOIN other r ON l.v < r.v"),
+    ("anti", "SELECT l.id AS id, CAST(NULL AS DOUBLE) AS v FROM base l LEFT ANTI JOIN other r ON l.v < r.v"),
+    ("semi", "SELECT l.id AS id, CAST(NULL AS DOUBLE) AS v FROM base l LEFT SEMI JOIN other r ON l.v < r.v"),
+    ("right", "SELECT l.id AS id, r.v AS v FROM base l RIGHT JOIN other r ON l.v < r.v"),
+    ("full", "SELECT l.id AS id, r.v AS v FROM base l FULL JOIN other r ON l.v < r.v"),
+    ("rsemi", "SELECT r.id AS id, r.v AS v FROM base l RIGHT SEMI JOIN other r ON l.v < r.v"),
+    ("ranti", "SELECT r.id AS id, r.v AS v FROM base l RIGHT ANTI JOIN other r ON l.v < r.v"),
+]
+out = {"pool": pool, "partitions": partitions, "rows": rows, "types": {}}
+for name, sql in specs:
+    try:
+        rows_out = spark.sql(sql).to_arrow().to_pylist()
+    except BaseException as error:
+        out["types"][name] = {
+            "outcome": "error",
+            "message": (type(error).__name__ + ": " + str(error))[:900],
+        }
+        continue
+    ids = [row["id"] for row in rows_out]
+    pairs = sorted(
+        ("N" if row["id"] is None else str(row["id"]))
+        + "|"
+        + ("N" if row["v"] is None else repr(row["v"]))
+        for row in rows_out
+    )
+    out["types"][name] = {
+        "outcome": "ok",
+        "n": len(rows_out),
+        "s": sum(value for value in ids if value is not None),
+        "digest": hashlib.sha256("\\n".join(pairs).encode("utf-8")).hexdigest(),
+    }
+print(json.dumps(out))
+"""
+
+
+def _run_join_values(pool: str, partitions: int) -> dict:
+    completed = subprocess.run(
+        [sys.executable, "-c", _JOIN_VALUES_WORKER, pool, "1000000", str(partitions)],
+        capture_output=True,
+        text=True,
+        timeout=900,
+        check=False,
+    )
+    tail = completed.stdout.strip().splitlines()
+    assert tail, completed.stderr[-2000:]
+    return json.loads(tail[-1])
+
+
+_JOIN_VALUE_EQUAL = frozenset({"inner", "right", "rsemi", "ranti"})
+
+
+def _assert_typed_join_refusal(cell: dict, *, disclosure: bool) -> None:
+    assert cell["outcome"] == "error", cell
+    message = cell["message"]
+    lowered = message.lower()
+    assert "memory" in lowered or "resources exhausted" in lowered, cell
+    assert "fair(" in lowered, cell
+    assert "greedy(" not in lowered, cell
+    assert "repark.memory.limit.gb" in message, cell
+    assert "datafusion.runtime.memory_limit" in message, cell
+    assert "a Rust panic was caught" not in message, cell
+    assert "partition not used yet" not in message, cell
+    assert "inner future panicked" not in message, cell
+    if disclosure:
+        assert "the bounded memory pool refused this plan" in message, cell
+
+
+def test_never_oom_panic_1_tight_pool_join_values_match_or_refuse_typed() -> None:
+    tight = _run_join_values("8M", 4)
+    wide = _run_join_values("1G", 4)
+    single = _run_join_values("8M", 1)
+    for name in _JOIN_VALUE_EQUAL:
+        assert tight["types"][name]["outcome"] == "ok", (name, tight["types"][name])
+        assert wide["types"][name]["outcome"] == "ok", (name, wide["types"][name])
+        for key in ("n", "s", "digest"):
+            assert tight["types"][name][key] == wide["types"][name][key], (
+                name,
+                key,
+                tight["types"][name],
+                wide["types"][name],
+            )
+    for name in ("left", "anti", "semi"):
+        _assert_typed_join_refusal(tight["types"][name], disclosure=True)
+        assert wide["types"][name]["outcome"] == "ok", (name, wide["types"][name])
+    _assert_typed_join_refusal(tight["types"]["full"], disclosure=False)
+    assert wide["types"]["full"]["outcome"] == "ok", wide["types"]["full"]
+    for name in ("left", "anti"):
+        assert single["types"][name]["outcome"] == "ok", (name, single["types"][name])
+        for key in ("n", "s", "digest"):
+            assert single["types"][name][key] == wide["types"][name][key], (
+                name,
+                key,
+                single["types"][name],
+                wide["types"][name],
+            )
+
+
 def test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_raise_memory_error() -> None:
     result = _run_worker("collect_under_a_ceiling", "none", 4_000_000, 256 * 1024 * 1024)
     assert result["outcome"] == "error", result

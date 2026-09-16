@@ -3203,6 +3203,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   vendored-source panic paths (P-1..P-5) are this file's worker and query shape. The
   `NEVER-OOM-PANIC-1` registry row and the whole-gates evidence live in the same unit.
   pins: never-oom-panic-1/C-001, C-002, C-007, C-008, C-009, C-010
+  **Round 2 (2026-09-16):** `test_never_oom_panic_1_tight_pool_join_values_match_or_refuse_typed`
+  runs one `_JOIN_VALUES_WORKER` process per pool (8M/4, 1G/4, 8M/1) over INNER, LEFT, LEFT
+  ANTI, LEFT SEMI, RIGHT, FULL plus RIGHT SEMI/ANTI legs; each type reports outcome plus
+  count(*)/sum(id)/content-digest or the message. INNER/RIGHT-family legs assert tight ==
+  wide values; LEFT-family legs assert the typed refusal with the containment disclosure
+  (FULL without it — the upstream-disabled shape refuses with the genuine pool text); LEFT
+  and LEFT ANTI at one partition assert spilled values equal the wide run.
+  pins: never-oom-panic-1/C-011, C-012
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set
