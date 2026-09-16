@@ -3192,6 +3192,27 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   400-character truncation cut the resize knobs off the very assertion that names them.
   pins: h3-spill-1/C-003, C-004, C-005, C-006
   pins: h3-spill-residue-1/C-001, C-002
+  **NEVER-OOM-PANIC-1 (2026-09-16):** the NLJ pin is renamed to
+  `…_spills_or_refuses_a_nested_loop_join_without_a_panic` — the root fix spills where the
+  containment used to refuse, so it accepts `ok` or the typed refusal while still forbidding
+  every panic marker — and a second pin,
+  `test_never_oom_panic_1_a_tight_pool_leaves_no_panic_blocks_on_stderr`, runs the worker
+  five times asserting zero `panicked at` blocks on stderr (deterministic red on the base
+  tree, green after; five runs stay far under the minute budget at ~1.6 s each).
+  The 400-run `_WORKER` loop behind the NEVER-OOM-PANIC-1 §Reproduction histogram and the
+  vendored-source panic paths (P-1..P-5) are this file's worker and query shape. The
+  `NEVER-OOM-PANIC-1` registry row and the whole-gates evidence live in the same unit.
+  pins: never-oom-panic-1/C-001, C-002, C-007, C-008, C-009, C-010
+  **Round 2 (2026-09-16):** `test_never_oom_panic_1_tight_pool_join_values_match_or_refuse_typed`
+  runs one `_JOIN_VALUES_WORKER` process per pool (8M/4, 1G/4, 8M/1) over INNER, LEFT, LEFT
+  ANTI, LEFT SEMI, RIGHT, FULL plus RIGHT SEMI/ANTI legs; each type reports outcome plus
+  count(*)/sum(id)/content-digest or the message. INNER/RIGHT-family legs assert tight ==
+  wide values; LEFT-family legs assert the typed refusal with the containment disclosure
+  (FULL without it — the upstream-disabled shape refuses with the genuine pool text); LEFT
+  and LEFT ANTI at one partition assert spilled values equal the wide run. The digest
+  covers `(id, v)` pairs with `N` for nulls, so FULL-join nulls hash deterministically.
+  The round-2 residue (empty build-side metrics, reset cost, spill replay) is ledger-only.
+  pins: never-oom-panic-1/C-011, C-012, C-013
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set

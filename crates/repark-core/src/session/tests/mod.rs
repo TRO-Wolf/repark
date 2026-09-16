@@ -5,6 +5,7 @@ mod commit_unknown;
 mod conf_unread;
 mod df_guard;
 mod namespace_create;
+mod nlj_tight_pool;
 mod pool_refusals;
 mod session;
 mod subquery;

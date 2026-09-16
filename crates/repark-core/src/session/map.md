@@ -138,6 +138,12 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
     a genuinely-failing shape silently keeps the slower, correct plan.
   Pins: all seven live in `tests/df_guard.rs` (below), not in `tests/session.rs`;
   ledger `task/c25-bugfix-ledger.md` → DEFECT-2.
+  **NEVER-OOM-PANIC-1 (2026-09-16):** `context_with_df_54_1_rule_guards` also appends the
+  `NljBuildSideReset` physical-optimizer rule (guard 3, same 54.1-defect family as the two
+  above): it runs after DataFusion's own physical rules and wraps each nested-loop-join
+  build side so the OOM fallback's second `execute(0)` meets fresh `RepartitionExec`
+  channels. Full design in [../map.md](../map.md) (`nlj_build_reset.rs`).
+  pins: never-oom-panic-1/C-004, C-005
   **CONF-UNREAD-1 step 1 (2026-09-11):** `df_guards.rs` also owns
   `DEAD_DATAFUSION_54_1_KEYS` (today only `datafusion.execution.coalesce_batches`,
   which 54.1.0 defines but no engine path reads) with its refusal constructor;

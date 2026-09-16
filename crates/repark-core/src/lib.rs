@@ -14,6 +14,7 @@ mod isnan;
 mod lineage_columns;
 mod named_sources;
 mod namespace_create;
+mod nlj_build_reset;
 mod object_store_s3;
 mod partition_discovery;
 mod partition_timestamp;
@@ -84,7 +85,9 @@ pub use lineage_columns::{LineagePins, prepare_lineage_sql, sql_mentions_lineage
 
 // --- Error surface: the classifier fold + the seed re-export (bindings import one crate).
 pub use error_map::engine_err;
-pub use pool_refusals::{PoolRefusalLog, RefusalRecordingPool, pool_refusal_log};
+pub use pool_refusals::{
+    PoolRefusalLog, REFUSAL_CONTAINMENT_NOTE, RefusalRecordingPool, pool_refusal_log,
+};
 pub use repark_common::{Error, ErrorClass, Result};
 
 // === SE-1 tightenNulls ===
