@@ -80,12 +80,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split writer and reader bindings into separate cohesive modules.",
     ),
     "python/repark/src/repark/spark/functions.py": (
-        1984,
+        1983,
         "Facade function exports and wrappers remain consolidated.",
         "Split by function family while preserving the public re-export surface.",
     ),
     "python/repark/src/repark/spark/functions_expr.py": (
-        2198,
+        2178,
         "Expression-building function families share one module.",
         "Split string, collection, or predicate expression families.",
     ),

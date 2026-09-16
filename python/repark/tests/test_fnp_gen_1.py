@@ -212,12 +212,6 @@ def test_python_door_posexplode_multi_alias(spark: ReparkSession) -> None:
     _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_python_door_json_tuple_four_fields(spark: ReparkSession) -> None:
     """Four fields answer ``c0``..``c3`` as strings with NULL for the missing field."""
     (cell,) = [cell for cell in _cells("json_tuple", "python") if "zz" in cell["expr"]]
@@ -225,12 +219,6 @@ def test_python_door_json_tuple_four_fields(spark: ReparkSession) -> None:
     _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_python_door_json_tuple_single_field_keeps_spark_name(spark: ReparkSession) -> None:
     """One field answers a single ``c0`` string column on the Python door."""
     (cell,) = [cell for cell in _cells("json_tuple", "python") if "zz" not in cell["expr"]]
@@ -238,12 +226,6 @@ def test_python_door_json_tuple_single_field_keeps_spark_name(spark: ReparkSessi
     _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_sql_door_json_tuple_three_fields(spark: ReparkSession) -> None:
     """Three fields answer ``c0``..``c2`` as strings on the SQL door."""
     (cell,) = [cell for cell in _cells("json_tuple", "sql") if "js," in cell["expr"]]
@@ -251,12 +233,6 @@ def test_sql_door_json_tuple_three_fields(spark: ReparkSession) -> None:
     _check_schema_and_rows(result, cell)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_sql_door_json_tuple_invalid_json_answers_null(spark: ReparkSession) -> None:
     """Invalid JSON answers NULL instead of raising on the SQL door."""
     (cell,) = [cell for cell in _cells("json_tuple", "sql") if "js," not in cell["expr"]]

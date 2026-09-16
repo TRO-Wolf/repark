@@ -5846,6 +5846,8 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   to-string-from-binary regression guards.
   pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009;
   pins: logical-width-1/C-010, C-011, C-013, C-014, C-015, C-016
+  **Step 2 (run 18a):** the four `json_tuple` marks retire with the kernel; the eight
+  `from_csv` / `schema_of_csv` marks stay strict until steps 3–4.
 - [fnp_gen_1_s34_spark_oracle.json](fnp_gen_1_s34_spark_oracle.json) —
   **FNP-GEN-1 steps 3–4 (2026-09-16, run 18a):** the 80 cells (40 ansi pairs) over the
   six-row `(id, js, csvrow)` frame for `json_tuple`, `from_csv` and `schema_of_csv` on both

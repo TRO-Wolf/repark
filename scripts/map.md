@@ -14,6 +14,12 @@ DF-RUST-3 (2026-09-15): `check_example_coverage.py` `BACKLOG_BASELINE` 112 → 1
 `DataFrame.freqItems` and `DataFrame.transpose` inventory rows).
 pins: df-rust-3/C-005
 
+FNP-GEN-1 step 2 (2026-09-16, run 18a): `check_lib_py.py` sets `functions.py`
+1984 → 1983 (the `json_tuple` import joins the `posexplode` line) and
+`functions_expr.py` 2198 → 2178 (the `json_tuple` stub leaves for
+`functions_generators.py`) with the CAP-1 mirror.
+pins: fnp-gen-1/C-002, C-003
+
 FNP-GEN-1 step 2 (2026-09-16): `check_example_coverage.py` walks `functions_generators.py`
 and its `GENERATOR_NAMES` export tuple (the binding set was resorted while it was edited);
 `build_api_freeze.py` reads `functions_generators.py` as a def source so the four generator

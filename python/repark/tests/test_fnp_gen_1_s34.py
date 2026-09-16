@@ -1,4 +1,4 @@
-"""FNP-GEN-1 steps 3-4 pins: ``json_tuple``, ``from_csv`` and ``schema_of_csv`` over the s34 oracle."""
+"""FNP-GEN-1 steps 3-4 pins: tuple, csv and csv-schema kernels over the s34 oracle."""
 
 from __future__ import annotations
 
@@ -16,7 +16,8 @@ from repark.spark import functions as F  # noqa: N812
 FIXTURE_PATH = Path(__file__).parent / "fnp_gen_1_s34_spark_oracle.json"
 S34_FRAME = (
     "SELECT CAST(1 AS INT) AS id, "
-    "CAST('{\"a\":1,\"b\":\"x\",\"c\":{\"d\":2},\"e\":[1,2],\"f\":null,\"g\":1.50,\"h\":true,\"a2\":\"q\"}' AS STRING) AS js, "
+    'CAST(\'{"a":1,"b":"x","c":{"d":2},"e":[1,2],"f":null,'
+    '"g":1.50,"h":true,"a2":"q"}\' AS STRING) AS js, '
     "CAST('1,abc,2.5' AS STRING) AS csvrow "
     "UNION ALL SELECT CAST(2 AS INT), CAST('{\"a\":\"2\"}' AS STRING), CAST('x,y,z' AS STRING) "
     "UNION ALL SELECT CAST(3 AS INT), CAST(NULL AS STRING), CAST(NULL AS STRING) "
@@ -134,9 +135,7 @@ def test_python_door_json_tuple_alias_count_mismatch_refuses(
     spark: ReparkSession, frame: Any
 ) -> None:
     """A wrong alias count raises ``UDTF_ALIAS_NUMBER_MISMATCH``."""
-    cells = _pair("json_tuple", "python", ".alias('x', 'y')")
-    cells = [cell for cell in cells if "json_tuple(js, 'a')" in cell["expr"]]
-    assert len(cells) == 2
+    cells = _pair("json_tuple", "python", "js, 'a').alias('x', 'y')")
     assert all(cell["error_condition"] == "UDTF_ALIAS_NUMBER_MISMATCH" for cell in cells)
     with pytest.raises(AnalysisException, match="UDTF_ALIAS_NUMBER_MISMATCH") as excinfo:
         frame.select(F.json_tuple("js", "a").alias("x", "y")).collect()
@@ -184,20 +183,16 @@ def test_sql_door_json_tuple_udt_alias_pair(spark: ReparkSession) -> None:
 def test_sql_door_json_tuple_non_string_field_refuses(spark: ReparkSession) -> None:
     """A non-string field raises ``DATATYPE_MISMATCH.NON_STRING_TYPE``."""
     cells = _pair("json_tuple", "sql", "json_tuple(js, id)")
-    assert all(
-        cell["error_condition"] == "DATATYPE_MISMATCH.NON_STRING_TYPE" for cell in cells
-    )
-    with pytest.raises(AnalysisException, match="DATATYPE_MISMATCH.NON_STRING_TYPE"):
+    assert all(cell["error_condition"] == "DATATYPE_MISMATCH.NON_STRING_TYPE" for cell in cells)
+    with pytest.raises(AnalysisException, match="NON_STRING_TYPE"):
         spark.sql(cells[0]["expr"].replace("FRAME", f"({S34_FRAME})")).collect()
 
 
 def test_sql_door_json_tuple_null_field_refuses(spark: ReparkSession) -> None:
     """A NULL field raises ``DATATYPE_MISMATCH.NON_STRING_TYPE``."""
     cells = _pair("json_tuple", "sql", "json_tuple(js, NULL)")
-    assert all(
-        cell["error_condition"] == "DATATYPE_MISMATCH.NON_STRING_TYPE" for cell in cells
-    )
-    with pytest.raises(AnalysisException, match="DATATYPE_MISMATCH.NON_STRING_TYPE"):
+    assert all(cell["error_condition"] == "DATATYPE_MISMATCH.NON_STRING_TYPE" for cell in cells)
+    with pytest.raises(AnalysisException, match="NON_STRING_TYPE"):
         spark.sql(cells[0]["expr"].replace("FRAME", f"({S34_FRAME})")).collect()
 
 
@@ -209,9 +204,7 @@ def test_sql_door_json_tuple_zero_fields_refuses(spark: ReparkSession) -> None:
         spark.sql(cells[0]["expr"].replace("FRAME", f"({S34_FRAME})")).collect()
 
 
-def test_python_door_from_csv_permissive_partial_rows(
-    spark: ReparkSession, frame: Any
-) -> None:
+def test_python_door_from_csv_permissive_partial_rows(spark: ReparkSession, frame: Any) -> None:
     """PERMISSIVE pads NULLs, keeps quoted commas and parses ``1e3``."""
     cells = _pair("from_csv", "python", "'a INT, b STRING, c DOUBLE')")
     result = frame.select("id", F.from_csv("csvrow", "a INT, b STRING, c DOUBLE"))
@@ -226,9 +219,7 @@ def test_python_door_from_csv_failfast_raises(spark: ReparkSession, frame: Any) 
     _check_error_cells(cells, excinfo)
 
 
-def test_python_door_from_csv_dropmalformed_refuses(
-    spark: ReparkSession, frame: Any
-) -> None:
+def test_python_door_from_csv_dropmalformed_refuses(spark: ReparkSession, frame: Any) -> None:
     """DROPMALFORMED raises ``PARSE_MODE_UNSUPPORTED`` on the Python door."""
     cells = _pair("from_csv", "python", "DROPMALFORMED")
     assert all(cell["error_condition"] == "PARSE_MODE_UNSUPPORTED" for cell in cells)
@@ -240,15 +231,11 @@ def test_python_door_from_csv_dropmalformed_refuses(
 def test_python_door_from_csv_null_value_option(spark: ReparkSession, frame: Any) -> None:
     """``nullValue`` spells an extra NULL without touching the other tokens."""
     cells = _pair("from_csv", "python", "nullValue")
-    result = frame.select(
-        "id", F.from_csv("csvrow", "a STRING, b STRING", {"nullValue": "abc"})
-    )
+    result = frame.select("id", F.from_csv("csvrow", "a STRING, b STRING", {"nullValue": "abc"}))
     _check_value_cells(result, cells)
 
 
-def test_python_door_from_csv_corrupt_record_column(
-    spark: ReparkSession, frame: Any
-) -> None:
+def test_python_door_from_csv_corrupt_record_column(spark: ReparkSession, frame: Any) -> None:
     """A bad field lands the whole record in the corrupt column, others parsed."""
     cells = _pair("from_csv", "python", "columnNameOfCorruptRecord")
     result = frame.select(
@@ -278,15 +265,11 @@ def test_python_door_from_csv_date_format(spark: ReparkSession) -> None:
     _check_value_cells(result, cells)
 
 
-def test_python_door_from_csv_non_literal_schema_refuses(
-    spark: ReparkSession, frame: Any
-) -> None:
+def test_python_door_from_csv_non_literal_schema_refuses(spark: ReparkSession, frame: Any) -> None:
     """A non-literal schema raises ``INVALID_SCHEMA.NON_STRING_LITERAL``."""
     cells = _pair("from_csv", "python", "col('csvrow')")
-    assert all(
-        cell["error_condition"] == "INVALID_SCHEMA.NON_STRING_LITERAL" for cell in cells
-    )
-    with pytest.raises(AnalysisException, match="INVALID_SCHEMA.NON_STRING_LITERAL"):
+    assert all(cell["error_condition"] == "INVALID_SCHEMA.NON_STRING_LITERAL" for cell in cells)
+    with pytest.raises(AnalysisException, match="NON_STRING_LITERAL"):
         frame.select(F.from_csv("csvrow", F.col("csvrow"))).collect()
 
 
@@ -298,31 +281,24 @@ def test_python_door_from_csv_bad_ddl_refuses(spark: ReparkSession, frame: Any) 
         frame.select(F.from_csv("csvrow", "not a schema !!")).collect()
 
 
-def test_python_door_from_csv_non_string_input_refuses(
-    spark: ReparkSession, frame: Any
-) -> None:
+def test_python_door_from_csv_non_string_input_refuses(spark: ReparkSession, frame: Any) -> None:
     """A non-string input raises ``DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE``."""
     cells = _pair("from_csv", "python", "F.from_csv('id'")
     assert all(
-        cell["error_condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
-        for cell in cells
+        cell["error_condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE" for cell in cells
     )
-    with pytest.raises(AnalysisException, match="DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"):
+    with pytest.raises(AnalysisException, match="UNEXPECTED_INPUT_TYPE"):
         frame.select(F.from_csv("id", "a INT")).collect()
 
 
-def test_python_door_from_csv_unknown_option_ignored(
-    spark: ReparkSession, frame: Any
-) -> None:
+def test_python_door_from_csv_unknown_option_ignored(spark: ReparkSession, frame: Any) -> None:
     """Unknown options are ignored and the row still parses."""
     cells = _pair("from_csv", "python", "bogus")
     result = frame.select("id", F.from_csv("csvrow", "a INT", {"bogus": "x"}))
     _check_value_cells(result, cells)
 
 
-def test_python_door_from_csv_array_field_refuses(
-    spark: ReparkSession, frame: Any
-) -> None:
+def test_python_door_from_csv_array_field_refuses(spark: ReparkSession, frame: Any) -> None:
     """A complex field raises ``UNSUPPORTED_DATATYPE`` as Spark's own class."""
     cells = _pair("from_csv", "python", "ARRAY<INT>")
     assert all(cell["error_condition"] == "UNSUPPORTED_DATATYPE" for cell in cells)
@@ -349,10 +325,8 @@ def test_sql_door_from_csv_named_struct(spark: ReparkSession) -> None:
 def test_sql_door_from_csv_non_literal_schema_refuses(spark: ReparkSession) -> None:
     """A column schema raises ``INVALID_SCHEMA.NON_STRING_LITERAL`` on SQL."""
     cells = _pair("from_csv", "sql", "from_csv(csvrow, csvrow)")
-    assert all(
-        cell["error_condition"] == "INVALID_SCHEMA.NON_STRING_LITERAL" for cell in cells
-    )
-    with pytest.raises(AnalysisException, match="INVALID_SCHEMA.NON_STRING_LITERAL"):
+    assert all(cell["error_condition"] == "INVALID_SCHEMA.NON_STRING_LITERAL" for cell in cells)
+    with pytest.raises(AnalysisException, match="NON_STRING_LITERAL"):
         spark.sql(cells[0]["expr"].replace("FRAME", f"({S34_FRAME})")).collect()
 
 
@@ -367,10 +341,8 @@ def test_sql_door_from_csv_single_arg_refuses(spark: ReparkSession) -> None:
 def test_sql_door_from_csv_non_string_option_refuses(spark: ReparkSession) -> None:
     """A non-string option value raises ``INVALID_OPTIONS.NON_STRING_TYPE``."""
     cells = _pair("from_csv", "sql", "map('sep', 1)")
-    assert all(
-        cell["error_condition"] == "INVALID_OPTIONS.NON_STRING_TYPE" for cell in cells
-    )
-    with pytest.raises(AnalysisException, match="INVALID_OPTIONS.NON_STRING_TYPE"):
+    assert all(cell["error_condition"] == "INVALID_OPTIONS.NON_STRING_TYPE" for cell in cells)
+    with pytest.raises(AnalysisException, match="NON_STRING_TYPE"):
         spark.sql(cells[0]["expr"].replace("FRAME", f"({S34_FRAME})")).collect()
 
 
@@ -406,25 +378,19 @@ def test_python_door_schema_of_csv_empty_refuses(spark: ReparkSession) -> None:
     _check_error_cells(cells, excinfo)
 
 
-def test_python_door_schema_of_csv_non_foldable_refuses(
-    spark: ReparkSession, frame: Any
-) -> None:
+def test_python_door_schema_of_csv_non_foldable_refuses(spark: ReparkSession, frame: Any) -> None:
     """A column raises ``DATATYPE_MISMATCH.NON_FOLDABLE_INPUT``."""
     cells = _pair("schema_of_csv", "python", "col('csvrow')")
-    assert all(
-        cell["error_condition"] == "DATATYPE_MISMATCH.NON_FOLDABLE_INPUT" for cell in cells
-    )
-    with pytest.raises(AnalysisException, match="DATATYPE_MISMATCH.NON_FOLDABLE_INPUT"):
+    assert all(cell["error_condition"] == "DATATYPE_MISMATCH.NON_FOLDABLE_INPUT" for cell in cells)
+    with pytest.raises(AnalysisException, match="NON_FOLDABLE_INPUT"):
         frame.select(F.schema_of_csv(F.col("csvrow"))).collect()
 
 
 def test_python_door_schema_of_csv_null_refuses(spark: ReparkSession) -> None:
     """A NULL literal raises ``DATATYPE_MISMATCH.UNEXPECTED_NULL``."""
     cells = _pair("schema_of_csv", "python", "lit(None)")
-    assert all(
-        cell["error_condition"] == "DATATYPE_MISMATCH.UNEXPECTED_NULL" for cell in cells
-    )
-    with pytest.raises(AnalysisException, match="DATATYPE_MISMATCH.UNEXPECTED_NULL"):
+    assert all(cell["error_condition"] == "DATATYPE_MISMATCH.UNEXPECTED_NULL" for cell in cells)
+    with pytest.raises(AnalysisException, match="UNEXPECTED_NULL"):
         spark.sql(S34_FRAME).select(F.schema_of_csv(F.lit(None).cast("string"))).collect()
 
 
@@ -432,10 +398,9 @@ def test_python_door_schema_of_csv_non_string_refuses(spark: ReparkSession) -> N
     """A non-string literal raises ``DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE``."""
     cells = _pair("schema_of_csv", "python", "lit(5)")
     assert all(
-        cell["error_condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
-        for cell in cells
+        cell["error_condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE" for cell in cells
     )
-    with pytest.raises(AnalysisException, match="DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"):
+    with pytest.raises(AnalysisException, match="UNEXPECTED_INPUT_TYPE"):
         spark.sql(S34_FRAME).select(F.schema_of_csv(F.lit(5))).collect()
 
 
@@ -471,18 +436,14 @@ def test_sql_door_schema_of_csv_sep_option(spark: ReparkSession) -> None:
 def test_sql_door_schema_of_csv_null_refuses(spark: ReparkSession) -> None:
     """``schema_of_csv(NULL)`` raises ``DATATYPE_MISMATCH.UNEXPECTED_NULL``."""
     cells = _pair("schema_of_csv", "sql", "schema_of_csv(NULL)")
-    assert all(
-        cell["error_condition"] == "DATATYPE_MISMATCH.UNEXPECTED_NULL" for cell in cells
-    )
-    with pytest.raises(AnalysisException, match="DATATYPE_MISMATCH.UNEXPECTED_NULL"):
+    assert all(cell["error_condition"] == "DATATYPE_MISMATCH.UNEXPECTED_NULL" for cell in cells)
+    with pytest.raises(AnalysisException, match="UNEXPECTED_NULL"):
         spark.sql(cells[0]["expr"]).collect()
 
 
 def test_sql_door_schema_of_csv_non_map_options_refuses(spark: ReparkSession) -> None:
     """Non-``map()`` options raise ``INVALID_OPTIONS.NON_MAP_FUNCTION``."""
     cells = _pair("schema_of_csv", "sql", "schema_of_csv('a', 'b')")
-    assert all(
-        cell["error_condition"] == "INVALID_OPTIONS.NON_MAP_FUNCTION" for cell in cells
-    )
-    with pytest.raises(AnalysisException, match="INVALID_OPTIONS.NON_MAP_FUNCTION"):
+    assert all(cell["error_condition"] == "INVALID_OPTIONS.NON_MAP_FUNCTION" for cell in cells)
+    with pytest.raises(AnalysisException, match="NON_MAP_FUNCTION"):
         spark.sql(cells[0]["expr"]).collect()

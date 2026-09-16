@@ -49,6 +49,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   registers at the tail of `analyzer_rules()` in `registration.rs`, after the closing
   `TypeCoercion`. The `#[cfg(test)]` suite lives in [`generator/tests.rs`](generator/tests.rs)
   (moved out in remediation round 1 so this file keeps the size ceiling).
+  **Step 2 (run 18a):** `json_tuple` joins the rule — its site carries every argument
+  (the document plus the field expressions), non-string arguments refuse
+  `[DATATYPE_MISMATCH.NON_STRING_TYPE]` and fewer than two arguments refuse
+  `[WRONG_NUM_ARGS]`, both with Spark's message shape. The expansion computes one
+  `STRUCT<c0..cN>` per row through the internal `__repark_json_tuple` kernel (one
+  parse per row, no unnest) and reads the fields back through `__repark_gen_field`.
+  A lone alias on a single output is ignored and any other count mismatch raises
+  `[UDTF_ALIAS_NUMBER_MISMATCH]`, both per the s34 oracle; the other four names keep
+  `[COLUMN_ALIASES_MISMATCH]`.
   pins: fnp-gen-1/C-002, C-003, C-005
 - `spark_length.rs` — **GT1-FIX G5 / A3 / R3-1:** Spark `bit_length` /
   `octet_length`. Stringifies non-binary; BINARY pass-through (including

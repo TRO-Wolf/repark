@@ -16,6 +16,14 @@ single generator call in a `Projection` into list `Unnest` plans on both doors.
   name-restored `Expr::Alias` pin, and the NULL-struct-element regression pin over a
   non-nullable-field `StructArray` with a NULL parent slot.
   pins: fnp-gen-1/C-002, C-003, C-005
+- `json_tuple.rs` — **FNP-GEN-1 step 2 (2026-09-16, run 18a):** the `json_tuple`
+  expansion (moved out of `generator.rs` so the parent keeps the file-size ceiling):
+  string-type checks with `[DATATYPE_MISMATCH.NON_STRING_TYPE]`, the
+  `[WRONG_NUM_ARGS]` arity refusal, the lone-alias ignore and
+  `[UDTF_ALIAS_NUMBER_MISMATCH]` arity refusal, and the unnest-free expansion that
+  computes one struct per row through `__repark_json_tuple` and reads the fields
+  back through `__repark_gen_field`.
+  pins: fnp-gen-1/C-002, C-003
 
 ## Pointers
 

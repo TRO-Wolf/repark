@@ -302,7 +302,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `scripts/check_example_coverage.py` reads, and
   `install_into` runs at the tail of `functions.py`'s installer chain; `posexplode` /
   `posexplode_outer` are additionally imported statically into `functions.py` because
-  their `__all__` rows predate the installer. pins: fnp-gen-1/C-001, C-002, C-003
+  their `__all__` rows predate the installer. **Step 2 (run 18a):** `json_tuple` joins
+  this module — its stub leaves `functions_expr.py` and it is imported statically
+  beside `posexplode` / `posexplode_outer`, keeping its presplit `__all__` row, so
+  `GENERATOR_NAMES` keeps only the four step-2 names. A lone `.alias('x')` on one
+  field is ignored and a wrong count raises `UDTF_ALIAS_NUMBER_MISMATCH`, both decided
+  by the rewrite. pins: fnp-gen-1/C-001, C-002, C-003
 - `functions_json.py` — **FNP-10 (2026-09-05):** the JSON wrappers (`get_json_object`,
   `json_array_length`, `json_object_keys`, `to_json`, `from_json`). Its `install_into` also
   re-exports the collection constructors from `functions_collections`, so the whole FNP-9/10

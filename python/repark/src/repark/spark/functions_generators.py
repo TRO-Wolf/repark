@@ -1,4 +1,4 @@
-"""Spark generator wrappers — ``posexplode*`` and ``inline*`` answer through the analyzer."""
+"""Spark generator wrappers answering through the analyzer rewrite."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any
 from repark import _native
 from repark.errors import AnalysisException, PySparkTypeError, PySparkValueError
 from repark.spark.column import Column
-from repark.spark.functions import _column_argument
+from repark.spark.functions import _column_argument, lit
 
 GENERATOR_NAMES: tuple[str, ...] = (
     "posexplode",
@@ -102,6 +102,36 @@ def inline(col: Column | str) -> Column:
 def inline_outer(col: Column | str) -> Column:
     """``inline`` keeping a row of NULLs for a NULL or empty input."""
     return _generator_call("inline_outer", col)
+
+
+def json_tuple(col: Column | str, *fields: Column | str) -> Column:
+    """Extract JSON fields as strings (PySpark ``functions.json_tuple``)."""
+    if len(fields) == 0:
+        raise PySparkValueError(
+            "At least one field must be specified",
+            errorClass="CANNOT_BE_EMPTY",
+            messageParameters={"item": "field"},
+        )
+    head = _column_argument(col)
+    head._reject_nested_generator("function json_tuple")
+    inners = [head._inner]
+    displays = [head.spark_wrap_display_part()]
+    sqls = [head.sql_expr_part()]
+    joins = [head.join_sql_part()]
+    for field in fields:
+        column = lit(field) if isinstance(field, str) else _column_argument(field)
+        column._reject_nested_generator("function json_tuple")
+        inners.append(column._inner)
+        displays.append(column.spark_wrap_display_part())
+        sqls.append(column.sql_expr_part())
+        joins.append(column.join_sql_part())
+    parts = _native.PyColumnParts.call_scalar("json_tuple", inners, displays, sqls, joins, None)
+    return _GeneratorColumn(
+        parts[0],
+        spark_display=parts[1],
+        sql_expr=parts[2],
+        join_sql_expr=parts[3],
+    )
 
 
 def install_into(namespace: dict[str, Any], exported: list[str]) -> None:

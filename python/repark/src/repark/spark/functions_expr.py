@@ -477,26 +477,6 @@ def schema_of_xml(xml: Column | str, options: dict[str, str] | None = None) -> C
     )
 
 
-def json_tuple(col: Column | str, *fields: str) -> Column:
-    """Extract JSON fields as a row (PySpark ``functions.json_tuple``).
-
-    E1: empty ``fields`` raises ``CANNOT_BE_EMPTY`` (Apache ``test_json_tuple_empty_fields``
-    pins the message text via assertRaisesRegex).
-    """
-    if len(fields) == 0:
-        # Apache test_json_tuple_empty_fields asserts message text via assertRaisesRegex
-        raise PySparkValueError(
-            "At least one field must be specified",
-            errorClass="CANNOT_BE_EMPTY",
-            messageParameters={"item": "field"},
-        )
-    _require_column_or_str(col, "col")
-
-    raise UnsupportedOperationException(
-        "functions.json_tuple is not supported yet (JSON tuple kernel deferred; disclosed E1)"
-    )
-
-
 def raise_error(errMsg: Column | str) -> Column:  # noqa: N803 — PySpark arg name
     """Throw at evaluation with the given message (PySpark ``functions.raise_error``).
 

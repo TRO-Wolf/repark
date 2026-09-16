@@ -39,6 +39,13 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 exprs.clone(),
             ))
         }
+        "json_tuple" => {
+            need_at_least(2)?;
+            Expr::ScalarFunction(ScalarFunction::new_udf(
+                repark_functions::generator::generator_udf("json_tuple"),
+                exprs.clone(),
+            ))
+        }
         "get_json_object" => {
             need(2)?;
             repark_functions::expr_fn::get_json_object(exprs[0].clone(), exprs[1].clone())

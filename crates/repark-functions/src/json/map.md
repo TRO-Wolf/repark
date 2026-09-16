@@ -38,6 +38,17 @@ round-trip destroys.
 - `scalars.rs` — `get_json_object`, `json_array_length`, `json_object_keys`. All nullable; a
   malformed document or a wrong-shaped value is NULL, never an error.
   pins: fnp-9-collections-json/C-002
+- `tuple.rs` — **FNP-GEN-1 step 2 (2026-09-16, run 18a):** the internal
+  `__repark_json_tuple` kernel behind the `json_tuple` generator arm. One parse per row
+  for all N fields through the shared `reader.rs` (`parse_json`, `json_number_text`,
+  `write_compact`): text renders bare, integers keep the token, `1.50` re-renders to
+  `1.5`, booleans render `true`/`false`, nested objects and arrays re-serialize
+  verbatim, JSON `null` and missing keys are NULL. A NULL, malformed or non-object
+  document NULLs every field; a repeated key is last-wins like `decode.rs`. Output is
+  `STRUCT<c0..cN: STRING>` read back through `__repark_gen_field`, so a NULL document
+  stays NULL down the final projection. The `#[cfg(test)]` module covers the render
+  table, the NULL/malformed/non-object rows and a sliced `StringArray` input.
+  pins: fnp-gen-1/C-002, C-003
 - `schema_of.rs` — `schema_of_json`. Non-nullable STRING; struct fields sort alphabetically; a
   lone JSON null infers STRING while a null beside a typed sibling merges away; an integer wider
   than `i64` infers `DECIMAL(digits,0)`. A malformed document raises. **Round 2 (2026-09-06,

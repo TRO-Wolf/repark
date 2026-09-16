@@ -135,6 +135,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `scripts/check_example_coverage.py` row was removed when the script was
   compacted back under the default ceiling; python_approved stays 32.
   pins: fnp-gen-1/C-006
+- `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 2 (2026-09-16, run 18a):**
+  mirror rows ratchet `functions.py` 1984 → 1983 and `functions_expr.py`
+  2198 → 2178 with `scripts/check_lib_py.py`.
+  pins: fnp-gen-1/C-002, C-003
 - `test_cap_1_source_file_line_cap.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):**
   `dataframe/writer_readwriter.py` mirror row 1111 → 1105 with the script baseline
   (the bucketBy/sortBy/clusterBy bindings and action-check calls landed while the five

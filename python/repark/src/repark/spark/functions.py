@@ -1415,7 +1415,6 @@ from repark.spark.functions_expr import (  # noqa: E402
     isnan,
     isnotnull,
     isnull,
-    json_tuple,
     kurtosis,
     lcase,
     least,
@@ -1552,7 +1551,7 @@ from repark.spark.functions_expr import (  # noqa: E402
     xxhash64,
     zeroifnull,
 )
-from repark.spark.functions_generators import posexplode, posexplode_outer  # noqa: E402
+from repark.spark.functions_generators import json_tuple, posexplode, posexplode_outer  # noqa: E402
 from repark.spark.functions_lambda import (  # noqa: E402
     exists,
 )

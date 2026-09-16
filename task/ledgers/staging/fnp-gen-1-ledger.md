@@ -298,3 +298,26 @@ stub `UnsupportedOperationException`; SQL — upstream struct shape; `from_csv` 
 `schema_of_csv` Python — stub refusals, SQL — `Invalid function`; error pins carry
 the stub/`Invalid function` text instead of the oracle condition.
 pins: fnp-gen-1/C-002, C-003, C-004, C-005
+
+### Step 2 green summary (run 18a): `json_tuple` kernel + rewrite arm
+
+`crates/repark-functions/src/json/tuple.rs` holds the internal `__repark_json_tuple`
+kernel (one `parse_json` per row for all N fields through the shared reader; R-18a-4,
+R-18a-6 style batch casts, no new dependency); `generator.rs` gains the `JsonTuple`
+site (all arguments carried), `[DATATYPE_MISMATCH.NON_STRING_TYPE]` for non-string
+arguments, `[WRONG_NUM_ARGS]` under two arguments, the lone-alias ignore and
+`[UDTF_ALIAS_NUMBER_MISMATCH]` mismatch (both per the s34 oracle; the older four
+names keep `[COLUMN_ALIASES_MISMATCH]`), and the unnest-free expansion computing one
+struct per row read back through `__repark_gen_field`. The expansion lives in
+`generator/json_tuple.rs` so `generator.rs` keeps the 1000-line ceiling (924).
+`test_fnp_gen_1.py` retires its four `json_tuple` strict marks; the FNP-Z residue pin
+`test_json_tuple_still_refuses_on_the_facade` becomes
+`test_json_tuple_answers_on_both_doors` (the unit charter supersedes the refusal).
+`GENERATOR_NAMES` keeps the four step-2 names: `json_tuple` holds its presplit
+`__all__` row through a static import, so `test_functions_split_identity.py` is
+untouched. A NULL-typed literal argument refuses `NON_STRING_TYPE` while a
+string-typed NULL value answers all-NULL fields, per the fixture cells.
+`cargo test -p repark-functions --lib`: 738 passed. s34 `json_tuple` pins: 9 passed,
+2 xfailed (18c). Neighbor suites (`test_fnp_gen_1`, `test_explode_rewrite`,
+`test_fnp_9_collections_json`) green.
+pins: fnp-gen-1/C-002, C-003
