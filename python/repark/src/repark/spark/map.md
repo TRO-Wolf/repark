@@ -388,6 +388,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `bround(col, scale=None)` joins `INSTALL_NAMES` (thin `_scalar` bind, scale default
   materialized as `0` so the display reads Spark's `bround(d, 0)`); the installer path
   keeps `functions.py` untouched under its ceiling. pins: fnp-math-1/C-001, C-002
+  **FNP-MATH-1 step 3 (2026-09-16, run 18a):** `conv(col, fromBase, toBase)` joins
+  `INSTALL_NAMES` beside it. pins: fnp-math-1/C-001, C-002, C-003, C-004
   **crit-logic-1 L-001 (2026-09-15):** `_rescaled`
   threads join origin like every house wrapper — `join_sql_expr` from the multiply result and
   `**_thread_origin(column)` — so a right-parent column after semi/anti raises

@@ -247,6 +247,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 - `bround` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a): the
   name joins the door-converged list (one line — the parent file sits at its ceiling) and the
   arm builds `spark_math::call_bround` over 1–2 args. pins: fnp-math-1/C-002, C-003
+- `conv` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a): the
+  name joins the same one-line list growth and the arm builds `spark_math::call_conv`
+  over 3 args. pins: fnp-math-1/C-002, C-003, C-004
 - `to_timestamp_ltz` / `to_timestamp_ntz` dispatch beside `to_timestamp`, and
   `try_to_timestamp` joins the `try_to_date` arm (FNP-11B step 3): thin arms over
   `expr_fn` onto the new `timestamp_ltz_ntz` kernels.

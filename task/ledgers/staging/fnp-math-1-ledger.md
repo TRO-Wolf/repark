@@ -204,3 +204,21 @@ kernel carries its own measured nullability. Unpinned choices: non-integral
 precedent); integral overflow errors `[ARITHMETIC_OVERFLOW]` under ANSI and
 wraps otherwise; NULL scale answers NULL; Decimal32/64/256 and Float16 refuse
 (all recorded decimal cells are Decimal128).
+
+## Step 3 (run 18a) — `conv` evidence
+
+Kernel `crates/repark-functions/src/spark_math/conv.rs` (submodule; map rows),
+registered via `spark_math::functions()`, facade arm + one-line list growth,
+thin facade `conv` in `functions_math.py` + `INSTALL_NAMES`.
+`test_fnp_math_1.py -k "bround or conv"` → 20 passed on the rebuilt release
+native (11 bround + 9 conv).
+The SQL door's wrong error class is gone: the kernel raises
+`[ARITHMETIC_OVERFLOW]` under ANSI and saturates to `18446744073709551615`
+otherwise. Flush: `cargo fmt` reflow of the step-2 files rides this commit —
+a content-free fixup cannot satisfy the map lockstep hook alone, and the next
+touch of those maps is this step; every commit stays hook-green. Hook lesson
+recorded: run `cargo fmt --check` before every commit; the ban-grep prints
+nothing on clean (exit 1) so never chain it with `&&`.
+Unpinned choices: `+` sign accepted Java-style; numerics cast to string
+(Spark implicit cast); booleans and other types refuse requiring STRING;
+negative `fromBase` answers NULL; NULL base answers NULL.

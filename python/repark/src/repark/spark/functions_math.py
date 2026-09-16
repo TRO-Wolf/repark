@@ -14,6 +14,11 @@ def bround(col: Column | str, scale: Column | int | None = None) -> Column:
     return _scalar("bround", col, 0 if scale is None else scale)
 
 
+def conv(col: Column | str, fromBase: Column | int, toBase: Column | int) -> Column:  # noqa: N803
+    """Base conversion with Spark ``conv`` signed-output semantics."""
+    return _scalar("conv", col, fromBase, toBase)
+
+
 def bin(col: Column | str) -> Column:
     """Binary string of a long (PySpark ``functions.bin``).
 
@@ -181,7 +186,7 @@ def toRadians(col: Column | str) -> Column:  # noqa: N802
     return radians(col)
 
 
-INSTALL_NAMES: tuple[str, ...] = ("toDegrees", "toRadians", "bround")
+INSTALL_NAMES: tuple[str, ...] = ("toDegrees", "toRadians", "bround", "conv")
 
 
 def install_into(namespace: dict[str, Any], exported: list[str]) -> None:
