@@ -26,7 +26,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   lateral-projection-hoist rewrites in the core optimizer list, the
   `SCALAR_SUBQUERY_TOO_MANY_ROWS` execution guard, `TableArg` + the UDTF
   table-argument path, and the Spark-classic unqualified-resolution quirk
-  pinned both ways. `risk_tier: standard`. Branch `feat/df-subquery-1`.
+  pinned both ways. Round 3 (2026-09-16): the Grok reviews' four P2s — the
+  hoist keeps the right side's `SubqueryAlias` qualifier, a correlated
+  `LIMIT` is stripped into `__repark_any_row` / `__repark_single_row`, the
+  `lateral_tvf_like` pin's claim is narrowed to what it reads with both
+  residuals disclosed, and `how="left"` gains a red-capable qualified pin;
+  P-201..P-206 / Y-1..Y-3 recorded as residue.
+  `risk_tier: standard`. Branch `feat/df-subquery-1`.
   pins: df-subquery-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format

@@ -226,6 +226,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   outer-reference scope resolution plus three optimizer rules and the
   `__repark_single_row` guard UDAF, all installed on every core session through
   `df_guards.rs` (see [df_guards/map.md](df_guards/map.md) for the full design note).
+  Round 3 (2026-09-16): `__repark_any_row` joins the guard family for a stripped
+  correlated `LIMIT 1`, and the projection hoist carries a `SubqueryAlias`
+  qualifier through to its lifted outputs.
   Pins: `tests/subquery.rs` and `python/repark/tests/test_df_subquery_1.py`.
   pins: df-subquery-1/C-001, C-002, C-003, C-004
 - `tests/subquery.rs` — **DF-SUBQUERY-1:** plan-level pins for the three subquery

@@ -5685,9 +5685,17 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   guards), `spark.tvf.explode` and the `TABLE(...)` UDTF argument spellings, and the
   `CORRELATED_REFERENCE` refusal under `explode` (a registered residual: the
   optimizer-raised message carries Spark's condition text and SQLSTATE but
-  `getCondition()` is not populated on the wrapped exception). The pre-existing
-  `spark.tvf.explode` nullable-vs-non-nullable gap is pinned as-is, not silently
-  re-matched.
+  `getCondition()` is not populated on the wrapped exception, and the message's
+  `sqlExprs` parameter quotes repark's internal array id rather than Spark's
+  `explode(array(id, sal))` — the pin reads only condition/head/SQLSTATE). The
+  pre-existing `spark.tvf.explode` nullable-vs-non-nullable gap is pinned as-is,
+  not silently re-matched. **Round-3 (2026-09-16):** the aliased LATERAL
+  spellings — `LATERAL (…) t`, `WHERE t.dbl > 10`, `JOIN LATERAL (…) t ON`,
+  DataFrame `on=col("dbl") > 10`, and a still-correlated right under `t` — pin
+  the hoist's preserved `SubqueryAlias` qualifier; a correlated `LIMIT 1`
+  scalar (DataFrame + SQL doors) pins the any-row pick against an unmeasured
+  cell; and `how="left"` gains a qualified-alias pin whose 4-row/NULL-right
+  answer goes red on an `inner` revert.
   pins: df-subquery-1/C-001..C-007
 - [facade_df_subquery_oracle.json](facade_df_subquery_oracle.json) — **DF-SUBQUERY-1
   (2026-09-15):** the live-PySpark 4.1.2 cells (`probe_dfsubq.py`, run 16b, recorded

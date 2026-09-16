@@ -299,7 +299,14 @@ def test_lateral_outer_expr_in_projection(spark: ReparkSession) -> None:
 
 
 def test_lateral_outer_ref_under_generator_refused(spark: ReparkSession) -> None:
-    """pins: df-subquery-1/C-004 — cell lateral_tvf_like."""
+    """pins: df-subquery-1/C-004 — cell lateral_tvf_like, the parts the pin can read.
+
+    The pin asserts the condition name, the English head, and SQLSTATE inside the
+    message text — NOT the cell's ``sqlExprs`` parameter (Spark renders
+    ``explode(array(id, sal))``; repark quotes the internal array id) and not
+    ``getCondition()`` (unpopulated on the engine-wrapped exception). Both gaps
+    are disclosed residuals on the ``DF-SUBQUERY-1`` registry row.
+    """
     emp = _emp(spark)
     error = _cell("lateral_tvf_like")["error"]
     with pytest.raises(AnalysisException) as caught:
@@ -489,3 +496,172 @@ def test_lateral_sql_door_outer_ref_in_select(spark: ReparkSession) -> None:
         spark.sql("SELECT * FROM emp e, LATERAL (SELECT e.sal * 2 AS dbl)"),
         "lateral_outer_expr",
     )
+
+
+def test_lateral_sql_door_outer_ref_aliased(spark: ReparkSession) -> None:
+    """pins: df-subquery-1/C-006 — ``LATERAL (…) t`` keeps the alias on hoisted columns.
+
+    Round-3 S-10: the hoist rebuilds the projection above the join and must carry
+    the ``SubqueryAlias`` qualifier onto every hoisted output so parents naming
+    ``t.dbl`` resolve. The ``t`` qualifier is a relation tag only — the answer is
+    the ``lateral_outer_expr`` cell's exactly.
+    """
+    _emp(spark).createOrReplaceTempView("emp")
+    _assert_frame(
+        spark.sql("SELECT * FROM emp e, LATERAL (SELECT e.sal * 2 AS dbl) t"),
+        "lateral_outer_expr",
+    )
+
+
+def test_lateral_sql_door_outer_ref_qualified_filter(spark: ReparkSession) -> None:
+    """pins: df-subquery-1/C-006 — ``WHERE t.dbl > 10`` resolves a hoisted column (S-10).
+
+    Expected rows are the ``lateral_outer_expr`` set filtered by ``dbl > 10``
+    (the NULL ``dbl`` row drops) — cell-derived, pending the wanted cell
+    ``lateral_sql_outer_expr_aliased_filter``.
+    """
+    _emp(spark).createOrReplaceTempView("emp")
+    frame = spark.sql("SELECT * FROM emp e, LATERAL (SELECT e.sal * 2 AS dbl) t WHERE t.dbl > 10")
+    assert frame.columns == _cell("lateral_outer_expr")["result"]["columns"]
+    assert sorted(repr(tuple(row)) for row in frame.collect()) == [
+        "(1, 'a', 10, 20)",
+        "(2, 'b', 20, 40)",
+        "(3, 'a', 30, 60)",
+    ]
+
+
+def test_lateral_sql_door_outer_ref_aliased_on(spark: ReparkSession) -> None:
+    """pins: df-subquery-1/C-006 — ``JOIN LATERAL (…) t ON e.sal > 15`` answers (S-10).
+
+    Expected rows are the ``lateral_outer_expr`` set restricted to ``sal > 15``
+    — cell-derived, pending the wanted cell ``lateral_sql_outer_expr_aliased_on``.
+    """
+    _emp(spark).createOrReplaceTempView("emp")
+    frame = spark.sql("SELECT * FROM emp e JOIN LATERAL (SELECT e.sal * 2 AS dbl) t ON e.sal > 15")
+    assert frame.columns == _cell("lateral_outer_expr")["result"]["columns"]
+    assert sorted(repr(tuple(row)) for row in frame.collect()) == [
+        "(2, 'b', 20, 40)",
+        "(3, 'a', 30, 60)",
+    ]
+
+
+def test_lateral_on_hoisted_column(spark: ReparkSession) -> None:
+    """pins: df-subquery-1/C-004 — ``on=col("dbl") > 10`` resolves a hoisted column (S-10).
+
+    ``on`` installs a join filter against the pre-hoist right schema; the hoist
+    must substitute the projection it lifts. Expected rows are the
+    ``lateral_outer_expr`` set filtered by ``dbl > 10`` — cell-derived, pending
+    the wanted cell ``lateral_on_outer_expr``.
+    """
+    emp = _emp(spark)
+    frame = emp.lateralJoin(
+        spark.range(1).select((F.col("sal").outer() * 2).alias("dbl")),
+        on=F.col("dbl") > 10,
+    )
+    assert frame.columns == _cell("lateral_outer_expr")["result"]["columns"]
+    assert sorted(repr(tuple(row)) for row in frame.collect()) == [
+        "(1, 'a', 10, 20)",
+        "(2, 'b', 20, 40)",
+        "(3, 'a', 30, 60)",
+    ]
+
+
+def test_lateral_sql_door_aliased_correlated_filter(spark: ReparkSession) -> None:
+    """pins: df-subquery-1/C-006 — ``LATERAL (… WHERE d.dept = e.dept) t`` answers (S-10).
+
+    The lateral right still correlates inside its filter, so the hoist must keep
+    the ``Subquery`` marker under the ``SubqueryAlias`` — and qualify the hoisted
+    ``budget`` so ``t.budget`` resolves. Answers the ``lateral_sql`` cell exactly.
+    """
+    _emp(spark).createOrReplaceTempView("emp")
+    _dept(spark).createOrReplaceTempView("dept")
+    _assert_frame(
+        spark.sql(
+            "SELECT * FROM emp e, LATERAL (SELECT budget FROM dept d WHERE d.dept = e.dept) t"
+        ),
+        "lateral_sql",
+    )
+
+
+def test_scalar_correlated_limit_answers(spark: ReparkSession) -> None:
+    """pins: df-subquery-1/C-001 — a correlated ``LIMIT`` subplan is never left raw (S-11).
+
+    ``scalar_limit1_correlated`` is unmeasured in the fixture; Spark classic
+    answers one (nondeterministic) matching row per outer row. The pin asserts
+    the answer stays inside the match set — ``dept='a'`` rows take a ``budget``
+    from ``{100, 200}``, non-matching and NULL-dept rows take NULL — never an
+    engine-internal physical-planning error. ``LIMIT 0`` answers NULL.
+    """
+    emp = _emp(spark)
+    dup = spark.createDataFrame([("a", 100), ("a", 200), ("c", 300)], "dept string, budget int")
+    rows = (
+        emp.alias("e")
+        .select(
+            "id",
+            dup.alias("d")
+            .where(F.col("d.dept") == F.col("e.dept").outer())
+            .select("budget")
+            .limit(1)
+            .scalar()
+            .alias("b"),
+        )
+        .collect()
+    )
+    by_id = {row["id"]: row["b"] for row in rows}
+    assert by_id[1] in (100, 200) and by_id[3] in (100, 200)
+    assert by_id[2] is None and by_id[4] is None
+
+    zero = (
+        emp.alias("e")
+        .select(
+            "id",
+            dup.alias("d")
+            .where(F.col("d.dept") == F.col("e.dept").outer())
+            .select("budget")
+            .limit(0)
+            .scalar()
+            .alias("b"),
+        )
+        .collect()
+    )
+    assert [row["b"] for row in zero] == [None, None, None, None]
+
+
+def test_scalar_correlated_limit_sql_door(spark: ReparkSession) -> None:
+    """pins: df-subquery-1/C-001, C-006 — the SQL spelling of correlated ``LIMIT 1`` (S-11).
+
+    Same unmeasured-cell contract as the DataFrame pin: an answer inside the
+    match set, never a physical-planning error.
+    """
+    _emp(spark).createOrReplaceTempView("emp")
+    spark.createDataFrame(
+        [("a", 100), ("a", 200), ("c", 300)], "dept string, budget int"
+    ).createOrReplaceTempView("dept")
+    rows = spark.sql(
+        "SELECT id, (SELECT budget FROM dept d WHERE d.dept = e.dept LIMIT 1) b FROM emp e"
+    ).collect()
+    by_id = {row["id"]: row["b"] for row in rows}
+    assert by_id[1] in (100, 200) and by_id[3] in (100, 200)
+    assert by_id[2] is None and by_id[4] is None
+
+
+def test_lateral_left_qualified_keeps_unmatched_rows(spark: ReparkSession) -> None:
+    """pins: df-subquery-1/C-004 — qualified ``left`` keeps unmatched outers (S-13).
+
+    No fixture cell covers the qualified-left spelling (wanted cell
+    ``lateral_left_qualified``); the pinned contract is the inner/left
+    DIFFERENCE — ``inner`` drops non-matching rows while ``left`` keeps every
+    outer row with NULL right columns — which holds of Spark's join semantics
+    regardless of the budget values. Red-proven: reverting the ``left`` arm to
+    ``JoinType::Inner`` fails this pin.
+    """
+    emp, dept = _emp(spark), _dept(spark)
+    e = emp.alias("e")
+    correlated = dept.alias("d").where(F.col("d.dept") == F.col("e.dept").outer()).select("budget")
+    _assert_frame(e.lateralJoin(correlated, how="inner"), "lateral_sql")
+    left = e.lateralJoin(correlated, how="left")
+    assert left.schema.fields[3].nullable
+    by_id = {row["id"]: row["budget"] for row in left.collect()}
+    assert len(by_id) == 4
+    assert by_id[1] == 100 and by_id[3] == 100
+    assert by_id[2] is None and by_id[4] is None

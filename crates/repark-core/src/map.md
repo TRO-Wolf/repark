@@ -741,8 +741,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (`repark_projection_exists`, `repark_scalar_subquery_guard`,
   `repark_lateral_projection_hoist`) spliced ahead of `scalar_subquery_to_join`
   and `decorrelate_lateral_join`; `session/df_guards.rs` installs them and
-  `tests/subquery.rs` pins them at plan level. `session.rs` re-exports the
-  resolvers for the Python bindings.
+  `tests/subquery.rs` pins them at plan level. Round 3 added the
+  `__repark_any_row` sibling UDAF (a correlated `LIMIT` is stripped before
+  wrapping) and made the hoist preserve a `SubqueryAlias` qualifier on lifted
+  outputs. `session.rs` re-exports the resolvers for the Python bindings.
   pins: df-subquery-1/C-001, C-002, C-003, C-004, C-008, C-009
 
 ## Pointers

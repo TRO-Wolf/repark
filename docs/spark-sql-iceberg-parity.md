@@ -2124,11 +2124,19 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   projection lowers to a count-comparison boolean that keeps the plan's field name
   (`exists()` unaliased); outer references under a generator or any non-Filter /
   non-root-Projection node refuse `UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE`,
-  SQLSTATE 0A000. Residuals measured against the same oracle: (a) the optimizer-raised
-  `CORRELATED_REFERENCE` refusal carries Spark's condition and SQLSTATE in the message
-  text but `getCondition()` is not populated on the engine-wrapped exception; (b)
-  `spark.tvf.explode` reports the exploded column nullable where Spark reports
-  non-nullable (pre-existing tvf path, unchanged here).
+  SQLSTATE 0A000. A `SubqueryAlias` on the lateral right is carried through the
+  projection hoist — hoisted outputs keep the `t.` qualifier, so the ordinary SQL
+  spelling `LATERAL (…) t` with qualified `t.dbl` references answers (round-3 fix,
+  2026-09-16); a correlated `LIMIT` inside a scalar subplan is stripped before the
+  guard wraps it, so correlated `LIMIT 1` answers a per-group pick instead of dying
+  in physical planning. Residuals measured against the same oracle: (a) the
+  optimizer-raised `CORRELATED_REFERENCE` refusal carries Spark's condition and
+  SQLSTATE in the message text but `getCondition()` is not populated on the
+  engine-wrapped exception, and the message's `sqlExprs` parameter quotes repark's
+  internal array id where the `lateral_tvf_like` cell records Spark rendering
+  `explode(array(id, sal))`; (b) `spark.tvf.explode` reports the exploded column
+  nullable where Spark reports non-nullable (pre-existing tvf path, unchanged
+  here).
 - **Apache Spark** — PySpark 4.1.2 classic; all four methods implemented per the
   recorded probe (`probe_dfsubq.py`, run 16b, 2026-09-15).
 - **Pin** — `python/repark/tests/test_df_subquery_1.py` (every `scalar_*`, `exists_*`,

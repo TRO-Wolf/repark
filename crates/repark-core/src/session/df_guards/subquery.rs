@@ -13,13 +13,15 @@ use datafusion::logical_expr::expr::{AggregateFunction, Exists, InSubquery, SetC
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::utils::format_state_name;
 use datafusion::logical_expr::{
-    Accumulator, AggregateUDF, AggregateUDFImpl, Expr, Join, JoinType, LogicalPlan,
+    Accumulator, AggregateUDF, AggregateUDFImpl, Expr, Filter, Join, JoinType, LogicalPlan,
     LogicalPlanBuilder, Projection, Signature, Subquery, SubqueryAlias, Volatility, col, lit, not,
 };
 use datafusion::optimizer::{ApplyOrder, OptimizerConfig, OptimizerRule};
 use datafusion::prelude::SessionContext;
 
 const SINGLE_ROW_UDAF: &str = "__repark_single_row";
+
+const ANY_ROW_UDAF: &str = "__repark_any_row";
 
 const EXISTS_COUNT_ALIAS: &str = "__repark_exists_count";
 
@@ -155,6 +157,39 @@ fn rewire_join_right(join: Join, right: LogicalPlan) -> Result<Join> {
     )
 }
 
+fn substitute_hoisted_ref(
+    expr: Expr,
+    left_schema: &DFSchemaRef,
+    right_schema: &DFSchemaRef,
+    hoisted_named: &[(String, Expr)],
+    alias: Option<&TableReference>,
+) -> Result<Expr> {
+    expr.transform(|node| {
+        let Expr::Column(column) = &node else {
+            return Ok(Transformed::no(node));
+        };
+        let relation_ok = match (&column.relation, alias) {
+            (None, _) => true,
+            (Some(relation), Some(name)) => relation == name,
+            (Some(_), None) => false,
+        };
+        if !relation_ok
+            || left_schema.index_of_column(column).is_ok()
+            || right_schema.index_of_column(column).is_ok()
+        {
+            return Ok(Transformed::no(node));
+        }
+        match hoisted_named
+            .iter()
+            .find(|(name, _)| name.as_str() == column.name())
+        {
+            Some((_, replacement)) => Ok(Transformed::yes(replacement.clone())),
+            None => Ok(Transformed::no(node)),
+        }
+    })
+    .map(|transformed| transformed.data)
+}
+
 fn lateral_parts(right: &LogicalPlan) -> Option<(&Subquery, Option<TableReference>)> {
     match right {
         LogicalPlan::Subquery(subquery) => Some((subquery, None)),
@@ -198,13 +233,20 @@ fn guard_scalar_subquery(subquery: Subquery) -> Result<Subquery> {
     if plan_is_singleton(subquery.subquery.as_ref()) {
         return Ok(subquery);
     }
-    let head = Expr::Column(Column::from(subquery.subquery.schema().qualified_field(0)));
-    let head_name = subquery.subquery.schema().fields()[0].name().clone();
-    let wrapped = LogicalPlanBuilder::from((*subquery.subquery).clone())
-        .aggregate(
-            Vec::<Expr>::new(),
-            vec![single_row_call(head).alias(head_name)],
-        )?
+    let correlated = !subquery.outer_ref_columns.is_empty();
+    let (subplan, fetch) = if correlated {
+        strip_correlated_limit((*subquery.subquery).clone())?
+    } else {
+        ((*subquery.subquery).clone(), None)
+    };
+    let head = Expr::Column(Column::from(subplan.schema().qualified_field(0)));
+    let head_name = subplan.schema().fields()[0].name().clone();
+    let guard = match fetch {
+        Some(n) if n <= 1 => any_row_call(head),
+        _ => single_row_call(head),
+    };
+    let wrapped = LogicalPlanBuilder::from(subplan)
+        .aggregate(Vec::<Expr>::new(), vec![guard.alias(head_name)])?
         .build()?;
     Ok(Subquery {
         outer_ref_columns: subquery.outer_ref_columns,
@@ -213,15 +255,66 @@ fn guard_scalar_subquery(subquery: Subquery) -> Result<Subquery> {
     })
 }
 
-fn single_row_call(arg: Expr) -> Expr {
+fn strip_correlated_limit(plan: LogicalPlan) -> Result<(LogicalPlan, Option<i64>)> {
+    Ok(match plan {
+        LogicalPlan::Limit(limit) => {
+            let fetch = match limit.fetch.as_deref() {
+                Some(Expr::Literal(ScalarValue::Int64(Some(n)), _)) => Some(*n),
+                _ => None,
+            };
+            let skipped = matches!(
+                limit.skip.as_deref(),
+                None | Some(Expr::Literal(ScalarValue::Int64(Some(0)), _))
+            );
+            match (fetch, skipped) {
+                (Some(0), true) => {
+                    let (input, _) = strip_correlated_limit((*limit.input).clone())?;
+                    (
+                        LogicalPlan::Filter(Filter::try_new(lit(false), Arc::new(input))?),
+                        Some(0),
+                    )
+                }
+                (Some(n), true) => {
+                    let (input, deeper) = strip_correlated_limit((*limit.input).clone())?;
+                    (input, Some(deeper.map_or(n, |d| d.min(n))))
+                }
+                _ => (LogicalPlan::Limit(limit), None),
+            }
+        }
+        node @ (LogicalPlan::Projection(_)
+        | LogicalPlan::Filter(_)
+        | LogicalPlan::SubqueryAlias(_)
+        | LogicalPlan::Sort(_)) => {
+            let mut inputs = node.inputs().into_iter().cloned();
+            match (inputs.next(), inputs.next()) {
+                (Some(input), None) => {
+                    let (input, fetch) = strip_correlated_limit(input)?;
+                    (node.with_new_exprs(node.expressions(), vec![input])?, fetch)
+                }
+                _ => (node, None),
+            }
+        }
+        node => (node, None),
+    })
+}
+
+fn row_guard_call(arg: Expr, udaf: AggregateUDF) -> Expr {
     Expr::AggregateFunction(AggregateFunction::new_udf(
-        Arc::new(single_row_udaf()),
+        Arc::new(udaf),
         vec![arg],
         false,
         None,
         vec![],
         None,
     ))
+}
+
+fn single_row_call(arg: Expr) -> Expr {
+    row_guard_call(arg, single_row_udaf())
+}
+
+fn any_row_call(arg: Expr) -> Expr {
+    row_guard_call(arg, any_row_udaf())
 }
 
 #[derive(Debug)]
@@ -265,7 +358,11 @@ fn plan_is_singleton(plan: &LogicalPlan) -> bool {
                 limit.fetch.as_deref(),
                 Some(Expr::Literal(ScalarValue::Int64(Some(n)), _)) if *n <= 1
             );
-            small || plan_is_singleton(&limit.input)
+            if small && !plan_has_outer_refs(&limit.input) {
+                true
+            } else {
+                plan_is_singleton(&limit.input)
+            }
         }
         _ => false,
     }
@@ -337,57 +434,11 @@ impl OptimizerRule for ReparkLateralProjectionHoist {
         let Some(projection) = root_projection else {
             return Ok(Transformed::no(LogicalPlan::Join(join)));
         };
-        let hoisted = projection
-            .expr
-            .iter()
-            .map(|expr| {
-                expr.clone()
-                    .transform(|node| match node {
-                        Expr::OuterReferenceColumn(_, column) => {
-                            Ok(Transformed::yes(Expr::Column(column)))
-                        }
-                        _ => Ok(Transformed::no(node)),
-                    })
-                    .map(|transformed| transformed.data)
-            })
-            .collect::<Result<Vec<Expr>>>()?;
-        let mut right_inner = (*projection.input).clone();
-        let hoisted_use_inner = hoisted.iter().any(|expr| {
-            expr.exists(|node| Ok(matches!(node, Expr::Column(_))))
-                .is_ok_and(|found| found)
-                && expr
-                    .exists(|node| {
-                        Ok(matches!(node, Expr::Column(column) if {
-                            right_inner.schema().index_of_column(column).is_ok()
-                        }))
-                    })
-                    .unwrap_or(false)
-        });
-        if !hoisted_use_inner {
-            right_inner = LogicalPlanBuilder::from(right_inner)
-                .project([lit(true).alias("__repark_lateral_rows")])?
-                .build()?;
-        }
-        let right_outer_refs = right_inner.all_out_ref_exprs();
-        let new_right = match (alias, right_outer_refs.is_empty()) {
-            (Some(name), _) => {
-                LogicalPlan::SubqueryAlias(SubqueryAlias::try_new(Arc::new(right_inner), name)?)
-            }
-            (None, true) => right_inner,
-            (None, false) => LogicalPlan::Subquery(Subquery {
-                outer_ref_columns: right_outer_refs,
-                subquery: Arc::new(right_inner),
-                spans: Spans::new(),
-            }),
-        };
-        let left_columns: Vec<Expr> = (0..join.left.schema().fields().len())
-            .map(|index| Expr::Column(Column::from(join.left.schema().qualified_field(index))))
-            .collect();
-        let new_plan =
-            LogicalPlanBuilder::from(LogicalPlan::Join(rewire_join_right(join, new_right)?))
-                .project(left_columns.into_iter().chain(hoisted))?
-                .build()?;
-        Ok(Transformed::yes(new_plan))
+        Ok(Transformed::yes(hoist_lateral_projection(
+            join,
+            projection,
+            alias.as_ref(),
+        )?))
     }
 
     fn name(&self) -> &'static str {
@@ -397,6 +448,171 @@ impl OptimizerRule for ReparkLateralProjectionHoist {
     fn apply_order(&self) -> Option<ApplyOrder> {
         Some(ApplyOrder::TopDown)
     }
+}
+
+fn hoist_lateral_projection(
+    mut join: Join,
+    projection: &Projection,
+    alias: Option<&TableReference>,
+) -> Result<LogicalPlan> {
+    let hoisted = projection
+        .expr
+        .iter()
+        .map(|expr| {
+            expr.clone()
+                .transform(|node| match node {
+                    Expr::OuterReferenceColumn(_, column) => {
+                        Ok(Transformed::yes(Expr::Column(column)))
+                    }
+                    _ => Ok(Transformed::no(node)),
+                })
+                .map(|transformed| transformed.data)
+        })
+        .collect::<Result<Vec<Expr>>>()?;
+    let mut right_inner = (*projection.input).clone();
+    let hoisted_use_inner = hoisted.iter().any(|expr| {
+        expr.exists(|node| Ok(matches!(node, Expr::Column(_))))
+            .is_ok_and(|found| found)
+            && expr
+                .exists(|node| {
+                    Ok(matches!(node, Expr::Column(column) if {
+                        right_inner.schema().index_of_column(column).is_ok()
+                    }))
+                })
+                .unwrap_or(false)
+    });
+    if !hoisted_use_inner {
+        right_inner = LogicalPlanBuilder::from(right_inner)
+            .project([lit(true).alias("__repark_lateral_rows")])?
+            .build()?;
+    }
+    let right_outer_refs = right_inner.all_out_ref_exprs();
+    let hoisted = requalify_hoisted(hoisted, right_inner.schema(), alias)?;
+    let new_right = match (alias, right_outer_refs.is_empty()) {
+        (Some(name), true) => {
+            LogicalPlan::SubqueryAlias(SubqueryAlias::try_new(Arc::new(right_inner), name.clone())?)
+        }
+        (Some(name), false) => LogicalPlan::SubqueryAlias(SubqueryAlias::try_new(
+            Arc::new(LogicalPlan::Subquery(Subquery {
+                outer_ref_columns: right_outer_refs,
+                subquery: Arc::new(right_inner),
+                spans: Spans::new(),
+            })),
+            name.clone(),
+        )?),
+        (None, true) => right_inner,
+        (None, false) => LogicalPlan::Subquery(Subquery {
+            outer_ref_columns: right_outer_refs,
+            subquery: Arc::new(right_inner),
+            spans: Spans::new(),
+        }),
+    };
+    let hoisted_named: Vec<(String, Expr)> = hoisted
+        .iter()
+        .map(|expr| match expr {
+            Expr::Alias(alias) => (alias.name.clone(), (*alias.expr).clone()),
+            Expr::Column(column) => (column.name().to_string(), expr.clone()),
+            other => (other.schema_name().to_string(), other.clone()),
+        })
+        .collect();
+    let left_schema = Arc::clone(join.left.schema());
+    let right_schema = Arc::clone(new_right.schema());
+    rewrite_join_predicates(
+        &mut join,
+        &left_schema,
+        &right_schema,
+        &hoisted_named,
+        alias,
+    )?;
+    let left_columns: Vec<Expr> = (0..left_schema.fields().len())
+        .map(|index| Expr::Column(Column::from(left_schema.qualified_field(index))))
+        .collect();
+    let hoisted_out: Vec<Expr> = match alias {
+        Some(name) => hoisted
+            .into_iter()
+            .map(|expr| match expr {
+                Expr::Alias(mut alias_expr) => {
+                    alias_expr.relation = Some(name.clone());
+                    Expr::Alias(alias_expr)
+                }
+                other => {
+                    let output = match &other {
+                        Expr::Column(column) => column.name().to_string(),
+                        expr => expr.schema_name().to_string(),
+                    };
+                    other.alias_qualified(Some(name.clone()), output)
+                }
+            })
+            .collect(),
+        None => hoisted,
+    };
+    LogicalPlanBuilder::from(LogicalPlan::Join(rewire_join_right(join, new_right)?))
+        .project(left_columns.into_iter().chain(hoisted_out))?
+        .build()
+}
+
+fn requalify_hoisted(
+    hoisted: Vec<Expr>,
+    right_schema: &DFSchemaRef,
+    alias: Option<&TableReference>,
+) -> Result<Vec<Expr>> {
+    let Some(name) = alias else {
+        return Ok(hoisted);
+    };
+    hoisted
+        .into_iter()
+        .map(|expr| {
+            expr.transform(|node| match node {
+                Expr::Column(column) if right_schema.index_of_column(&column).is_ok() => {
+                    Ok(Transformed::yes(Expr::Column(Column::new(
+                        Some(name.clone()),
+                        column.name().to_string(),
+                    ))))
+                }
+                _ => Ok(Transformed::no(node)),
+            })
+            .map(|transformed| transformed.data)
+        })
+        .collect()
+}
+
+fn rewrite_join_predicates(
+    join: &mut Join,
+    left_schema: &DFSchemaRef,
+    right_schema: &DFSchemaRef,
+    hoisted_named: &[(String, Expr)],
+    alias: Option<&TableReference>,
+) -> Result<()> {
+    join.on = join
+        .on
+        .iter()
+        .map(|(left_key, right_key)| {
+            Ok((
+                substitute_hoisted_ref(
+                    left_key.clone(),
+                    left_schema,
+                    right_schema,
+                    hoisted_named,
+                    alias,
+                )?,
+                substitute_hoisted_ref(
+                    right_key.clone(),
+                    left_schema,
+                    right_schema,
+                    hoisted_named,
+                    alias,
+                )?,
+            ))
+        })
+        .collect::<Result<Vec<(Expr, Expr)>>>()?;
+    join.filter = join
+        .filter
+        .take()
+        .map(|filter| {
+            substitute_hoisted_ref(filter, left_schema, right_schema, hoisted_named, alias)
+        })
+        .transpose()?;
+    Ok(())
 }
 
 fn lateral_correlated_refusal(
@@ -435,21 +651,30 @@ fn plan_has_outer_refs(plan: &LogicalPlan) -> bool {
 
 pub fn register_single_row_guard(context: &SessionContext) {
     context.register_udaf(single_row_udaf());
+    context.register_udaf(any_row_udaf());
 }
 
 pub fn single_row_udaf() -> AggregateUDF {
-    AggregateUDF::new_from_impl(ReparkSingleRow::new())
+    AggregateUDF::new_from_impl(ReparkSingleRow::new(SINGLE_ROW_UDAF, true))
+}
+
+pub fn any_row_udaf() -> AggregateUDF {
+    AggregateUDF::new_from_impl(ReparkSingleRow::new(ANY_ROW_UDAF, false))
 }
 
 #[derive(Debug)]
 struct ReparkSingleRow {
     signature: Signature,
+    udaf_name: &'static str,
+    strict: bool,
 }
 
 impl ReparkSingleRow {
-    fn new() -> Self {
+    fn new(udaf_name: &'static str, strict: bool) -> Self {
         Self {
             signature: Signature::any(1, Volatility::Immutable),
+            udaf_name,
+            strict,
         }
     }
 }
@@ -469,9 +694,8 @@ impl Hash for ReparkSingleRow {
 }
 
 impl AggregateUDFImpl for ReparkSingleRow {
-    #[allow(clippy::unnecessary_literal_bound)]
     fn name(&self) -> &'static str {
-        SINGLE_ROW_UDAF
+        self.udaf_name
     }
 
     fn signature(&self) -> &Signature {
@@ -494,6 +718,7 @@ impl AggregateUDFImpl for ReparkSingleRow {
         Ok(Box::new(SingleRowAccumulator {
             seen: 0_u64,
             value: ScalarValue::try_from(&input_type).unwrap_or(ScalarValue::Null),
+            strict: self.strict,
         }))
     }
 
@@ -522,6 +747,7 @@ impl AggregateUDFImpl for ReparkSingleRow {
 struct SingleRowAccumulator {
     seen: u64,
     value: ScalarValue,
+    strict: bool,
 }
 
 impl Accumulator for SingleRowAccumulator {
@@ -531,13 +757,15 @@ impl Accumulator for SingleRowAccumulator {
         };
         for index in 0..array.len() {
             self.seen += 1;
-            if self.seen > 1 {
+            if self.strict && self.seen > 1 {
                 return exec_err!(
                     "[SCALAR_SUBQUERY_TOO_MANY_ROWS] More than one row returned by a \
                      subquery used as an expression. SQLSTATE: 21000"
                 );
             }
-            self.value = ScalarValue::try_from_array(array.as_ref(), index)?;
+            if self.seen == 1 {
+                self.value = ScalarValue::try_from_array(array.as_ref(), index)?;
+            }
         }
         Ok(())
     }
@@ -568,14 +796,17 @@ impl Accumulator for SingleRowAccumulator {
             if incoming == 0 {
                 continue;
             }
+            let first = self.seen == 0;
             self.seen += incoming;
-            if self.seen > 1 {
+            if self.strict && self.seen > 1 {
                 return exec_err!(
                     "[SCALAR_SUBQUERY_TOO_MANY_ROWS] More than one row returned by a \
                      subquery used as an expression. SQLSTATE: 21000"
                 );
             }
-            self.value = ScalarValue::try_from_array(values.as_ref(), index)?;
+            if first {
+                self.value = ScalarValue::try_from_array(values.as_ref(), index)?;
+            }
         }
         Ok(())
     }
