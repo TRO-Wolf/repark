@@ -62,12 +62,12 @@ the missing shift kernel the card names.
 | C-005 | `TIMESTAMP_NTZ '…'` / `CAST(x AS TIMESTAMP_NTZ)` parse onto the tz-naive Arrow path with Spark's value, or refuse loud naming TZ-6 with the TZ-6 row extended. `timestampdiff(DAY, ntz, TIMESTAMP_NTZ'…')` leaves `D4_BLOCKED_SQL`. | PG-ntz-lit / PG-ntz-cast cells, or the dated refusal plus the extended row. | OPEN | RED on base: `Unsupported SQL type TIMESTAMP_NTZ`. TZ-6 ruling read before choosing. §1. |
 | C-006 | `named_struct('a', 1).a` answers `1` int non-null. | PG-struct-dot cell in the same pin file. | OPEN | ALREADY-GREEN on base: `v:int32:nullable=False rows=[{'v': 1}]`. Pin still to file. §1. |
 | C-007 | `SELECT 1 AS a, a + 1 AS b` answers `(1, 2)` both int non-null, or DECLARES with a registry row naming the planner seam. | PG-lateral-alias cell, or the dated refusal plus the new row. | OPEN | RED on base: `Schema error: No field named a`. Seam measured in step 2. §1. |
-| C-008 | Bare unit spellings `timestampadd(DAY, 1, ts)`, `timestampdiff(HOUR, a, b)`, `dateadd(DAY, …)`, `datediff(HOUR, a, b)` rewrite onto the #606 kernels; quoted units refuse `INVALID_PARAMETER_VALUE.DATETIME_UNIT`; unknown units refuse `UNRESOLVED_ROUTINE`; 2-arg `datediff` stays `int`. Closes EX-FN-27. | Q14-22…40 cells plus PG-tsadd/tsdiff/dateadd/datediff-unit in the same pin file; `BARE_UNIT_NAMES` skip removed. | OPEN | RED on base: bare units read as columns (`No field named day/hour/…`); quoted `'DAY'` answers where Spark refuses; `FORTNIGHT` reads as a column where Spark raises `UNRESOLVED_ROUTINE`. §1. |
+| C-008 | Bare unit spellings `timestampadd(DAY, 1, ts)`, `timestampdiff(HOUR, a, b)`, `dateadd(DAY, …)`, `datediff(HOUR, a, b)` rewrite onto the #606 kernels; quoted units refuse `INVALID_PARAMETER_VALUE.DATETIME_UNIT`; unknown units refuse `UNRESOLVED_ROUTINE`; 2-arg `datediff` stays `int`. Closes EX-FN-27. | Q14-22…40 cells plus PG-tsadd/tsdiff/dateadd/datediff-unit in the same pin file; `BARE_UNIT_NAMES` skip removed. | PROVEN | `crates/repark-spark/src/bare_unit.rs` rewrite + 7 in-module tests; `test_spark_sql_grammar_1.py` 50 passed (both ANSI); `test_fnp11a_temporal.py` 316 passed with the workaround retired. pins: spark-sql-grammar-1/C-008. §2. |
 | C-009 | `LATERAL VIEW [OUTER] <generator>(…) <alias> AS <cols>` answers the run-15a oracle cells. | The lateral-15a cells in the same pin file. | OPEN | R-17c-7: FNP-GEN-1 is not on main (`git log origin/main --oneline | grep -i fnp-gen` empty, 2026-09-16). Generators are 16a's; this lane never implements them. |
 | C-010 | Bare nullary keywords follow Spark both directions: `current_date`, `current_timestamp`, `current_user`, `user`, `session_user` resolve; `localtimestamp`, `current_catalog`, `current_database`, `current_schema`, `current_timezone`, `now` refuse `UNRESOLVED_COLUMN.WITH_SUGGESTION`; parenthesised forms resolve with Spark's type and nullability. | Q14-0…21 cells in the same pin file; `BARE_NULLARY_SQL` skip flipped to the error pin. | OPEN | Mixed on base: bare `localtimestamp` over-accepts (EX-FN-25, must become the refusal); `current_date`/`current_timestamp` bare resolve; `current_user`/`user`/`session_user`/`current_catalog`/`current_database`/`current_schema` answer neither bare nor parenthesised (`No field named` / `Invalid function`) — new kernels, 17a's fence half, likely a hand-off. §1. |
 
-VERDICT: 10 clauses, 0 PROVEN, 10 OPEN, 0 REJECTED. No COVERAGE_ATTESTATION:
-no clause is proven yet, so attesting would be false.
+VERDICT: 10 clauses, 1 PROVEN, 9 OPEN, 0 REJECTED. No COVERAGE_ATTESTATION:
+nine clauses are still open, so attesting would be false.
 
 ## 1. Red-first record (base `0ef060af`, release native rebuilt 2026-09-16)
 
@@ -108,3 +108,32 @@ session zone UTC, ANSI off.
 | `typeof(1 + CAST(1 AS TINYINT))` | `int` | `bigint` | Finding F-002, filed, not fixed here: upstream literal typing owns it. No grammar pin encodes `bigint` as correct. |
 
 Full probe output is pasted in the step-1 commit message body for the record.
+
+## 2. C-008 implementation record (2026-09-16)
+
+New module `crates/repark-spark/src/bare_unit.rs` (no new kernel: #606 already
+routes 3-argument `dateadd` / `datediff` onto `timestampadd` / `timestampdiff`,
+so the four names keep their spelling and only the unit argument is rewritten).
+Runs pre-plan in `spark_ast::execute_passthrough` and, in lockstep, in the
+range-frame restatement. Seven in-module tests.
+
+Two measured consequences, both announced to run 17a here: the quoted-unit
+refusal is Spark-correct (Q14-26) but retired five of 17a's pins that asserted
+the old over-accepting answers (`timestampadd('DAY', …)` and siblings on the SQL
+door). Those five now run the bare spelling with identical values
+(`test_timestampadd_bare_unit_sql_matches_oracle`,
+`test_timestampdiff_bare_unit_sql_matches_oracle`,
+`test_bare_units_match_in_any_case`, `test_timestampdiff_ntz_pair_answers_days`,
+`test_ntz_pair_ignores_session_zone`); the quoted SQL-door spelling has no
+legitimate pin left. The `BARE_UNIT_NAMES` / `BARE_UNIT_CALL` workaround and the
+`test_bare_timestampadd_unit_refuses` pin retired with it. `D4_BLOCKED_SQL` and
+`BARE_NULLARY_SQL` are untouched.
+
+Nullability notes: literal-only PG cells stay nullable on RePark where Spark
+folds to non-null (the `test_folded_literals_stay_nullable` precedent, named in
+the pin module docstring). Q14-34 needed a nullable frame leg to show Spark's
+`int` nullable; nullability follows the inputs.
+
+Gates for this slice: `cargo test -p repark-spark --lib bare_unit` 7 passed;
+`test_spark_sql_grammar_1.py` 50 passed; `test_fnp11a_temporal.py` 316 passed
+(366 jointly).

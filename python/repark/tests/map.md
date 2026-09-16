@@ -870,6 +870,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   dropped — `catalog_surface.session_table` is the resolved-identity door).
   pins: csv-infer-perf-1/C-002, C-005; facade-4/C-014, C-022, C-026;
   catalog-surface-1/C-008
+- [test_spark_sql_grammar_1.py](test_spark_sql_grammar_1.py) — **SPARK-SQL-GRAMMAR-1
+  (2026-09-16):** SQL-door pins for Spark operators, keywords and type names —
+  value AND Arrow type/nullability through ``spark.sql`` (``selectExpr`` legs ride
+  the same router), both ANSI settings. C-008 lands first: bare datetime-unit
+  keywords, the quoted-unit and unknown-unit refusals, two-argument ``datediff``.
+  pins: spark-sql-grammar-1/C-008
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
   **FNP-4B (2026-09-15):** BL-9 and BL-12 FIXED — the double-quoted pin asserts a STRING and the

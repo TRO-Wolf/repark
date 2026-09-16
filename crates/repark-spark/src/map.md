@@ -144,6 +144,16 @@ pins: rp-4-fork-repin/C-005, C-006
   eager analyze below runs, so the door still fails illegal casts at build. **BL-11
   (2026-09-16):** the old plan-walk refusal is deleted in favour of that single verdict —
   it never saw the native `DataFrame` path, which builds `Expr::Cast` directly.
+- `bare_unit.rs` — **SPARK-SQL-GRAMMAR-1 C-008 (2026-09-16):** the pre-plan rewrite
+  for bare datetime-unit keywords. A bare `DAY` in a 3-argument `timestampadd` /
+  `timestampdiff` / `dateadd` / `datediff` call becomes the `'DAY'` string literal the
+  #606 kernels take (case-insensitive; `dateadd` / `datediff` keep their names — the
+  kernels already route 3-argument calls). A quoted unit refuses
+  `[INVALID_PARAMETER_VALUE.DATETIME_UNIT]` and an unknown bare unit refuses
+  `[UNRESOLVED_ROUTINE]`, both matching PySpark 4.1.2 batch-14. Runs in
+  `spark_ast::execute_passthrough` and the range-frame restatement, in lockstep.
+  7 in-module tests.
+  pins: spark-sql-grammar-1/C-008
 - `spark_literals.rs` — **SQP-1:** `canonicalize(sql) -> Cow<str>`, the front-door pass that rewrites
   Spark string-literal escapes once (rule table, dialect, design in the module doc). Sole caller
   `router::execute_with_read_only` (grep-pinned); DataFusion-native `COPY` / `CREATE EXTERNAL TABLE`

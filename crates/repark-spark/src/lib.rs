@@ -2,6 +2,7 @@
 
 mod alter;
 mod alter_write_order;
+mod bare_unit;
 mod call;
 mod call_args;
 mod catalog_ops;

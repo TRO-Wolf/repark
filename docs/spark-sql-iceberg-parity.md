@@ -8146,18 +8146,25 @@ field NAME.
 - **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Matching
   Spark would mean reading the driver zone, which the server-prep disciplines forbid.
 
-### EX-FN-27 — bare-unit `timestampadd` / `timestampdiff` keywords refuse; Spark parses them
+### EX-FN-27 — bare-unit `timestampadd` / `timestampdiff` keywords refuse; Spark parses them — **FIXED 2026-09-16 (SPARK-SQL-GRAMMAR-1 C-008)**
 
-- **repark** — `SELECT timestampadd(YEAR, 1, TIMESTAMP'2024-01-01 00:00:00')` raises
-  `AnalysisException: Schema error: No field named year`: the bare unit parses as a column
-  reference. The string-unit spelling `timestampadd('YEAR', …)` answers on both doors, and
-  the Python door (`F.timestamp_add("YEAR", …)`) answers.
+- **repark** — the SQL door rewrites the bare unit keyword to the string unit the
+  kernels take (`crates/repark-spark/src/bare_unit.rs`): `timestampadd(DAY, 1, ts)`,
+  `timestampdiff(HOUR, a, b)` and the three-argument `dateadd` / `datediff` aliases
+  answer on `spark.sql` and `selectExpr`. A quoted unit refuses
+  `[INVALID_PARAMETER_VALUE.DATETIME_UNIT]` and an unknown unit refuses
+  `[UNRESOLVED_ROUTINE]`, both matching live PySpark 4.1.2 (batch-14 Q14-26/Q14-35).
 - **Apache Spark** — the bare-unit spellings parse (the unit is a keyword, not a column)
   and answer. *(oracle: live PySpark 4.1.2, both ANSI settings, UTC and
-  America/New_York, 2026-09-14, FNP-11A batch.)*
-- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_bare_timestampadd_unit_refuses`
-- **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closing it
-  means a SQL parser/planner change (run 15c owns the parser), out of scope for FNP-11A.
+  America/New_York, 2026-09-14, FNP-11A batch; batch-14 nullary-units fixture for
+  the quoted/unknown-unit refusals.)*
+- **Pin** — `python/repark/tests/test_spark_sql_grammar_1.py` (Q14-22…40 PG-tsadd /
+  PG-tsdiff / PG-dateadd / PG-datediff-unit legs, both ANSI settings) and
+  `python/repark/tests/test_fnp11a_temporal.py::test_bare_timestampadd_unit_answers`
+  (the retired `test_bare_timestampadd_unit_refuses` pin).
+- **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closed
+  2026-09-16 by the SQL-door rewrite; the `BARE_UNIT_NAMES` workaround and the refusal
+  pin retired in the same commit.
 
 
 ### EX-FN-28 — facade `make_timestamp(date=, time=)` answers after the Q-15a-3 widening — **FIXED 2026-09-15 (FNP-11B)**
