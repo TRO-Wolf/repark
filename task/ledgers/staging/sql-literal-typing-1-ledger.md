@@ -237,9 +237,20 @@ LIT-SQL-22/53.
   accepts every integer width (literals narrow in the early rule first;
   explicit widths coerce to Int32 exactly like `add_months` already does).
 - R-18c-5 (this lane): `insert_literal_rule_before_coercion` keeps its name
-  and seats the rule first among the pre-coercion rules (before
-  `higher_order_preparation`, falling back to `type_coercion`). One shared
-  function serves the session door and the `F.expr` door.
+  and seats the rule immediately before `type_coercion`. One shared function
+  serves the session door and the `F.expr` door.
+- R-18c-8 (this lane): the first-among-pre-coercion seat was built, measured
+  (24 FNP-8 HOF pins red) and reverted — and the revert stayed red, which
+  exonerates the seat. The true cause is the PERF-001 `recompute_schema`
+  skip: narrowing runs bottom-up, so a parent whose own expressions are
+  unchanged (e.g. `column1 AS a` over narrowed `VALUES`) keeps its
+  construction-time Int64 schema, and the lambda variable binds the stale
+  width. The fix always recomputes after `map_expressions` (round-1
+  behavior) and only gates `resolve_lambda_variables`; the pre-check,
+  the `Values` check-first and the conditional `Union` rebuild stay.
+  L-002 needs no seat change at all (plan-construction verify precedes every
+  rule). Proven by the `values_fed_hof_body_narrows_without_late_rule` unit
+  pin, which also holds PERF-005's premise (no late rule in its pipeline).
 - R-18c-6 (this lane): the late `SparkIntegerLiteral` leaves both Spark
   doors (it is subsumed by the early rule) but stays in
   `repark_functions::analyzer_rules()` for the non-door test contexts that
@@ -254,7 +265,7 @@ LIT-SQL-22/53.
 | L-001 (P1) | FIXED | `build_expr_context` seats the early rule through the shared insert function; `test_fexpr_mixed_width_matches_sql_door` plus LIT2-PY-00…04 green. |
 | L-002 (P2) | FIXED | `DateOffset` (`date_add`/`date_sub`) and `Factorial` shadows accept integer widths in `coerce_types` and delegate kernels upstream; LIT2-SQL-00/01/02 green. The whole upstream `Exact(Int32)` family was surveyed: the only strict-Exact int UDFs repark does not already shadow are these three (`add_months`, `make_date`, `sequence` have local UDFs). |
 | L-003 (P2) | FIXED | The `Negative` fold is gone: only the lexer-level negative token (planned as a negative `Int64` literal) narrows; `-(2147483648)` stays `Negative(Int64)` → bigint. LIT2-SQL-03/04/05/07 green. |
-| PERF-001 (P2) | FIXED | Plan-level apply pre-check skips the walk when no narrowable literal exists; `recompute_schema` and `resolve_lambda_variables` run only after a real transform, the latter only with a higher-order function on the node. Release-native medians before → after (`/tmp/bl20-perf-probe.py` shapes): (a) 500-col int 30.63 → 30.44, str 30.50 → 29.62; (b) 2000-arm CASE int 189.26 → 189.66, str 195.67 → 188.82; (c) VALUES 10k×2 int 518.31 → 505.51, str 502.01 → 513.71; (d) 200 withColumn F.lit+schema 4454 → 4282, F.expr+schema 4583 → 4293, build-only 3513 → 3632 (no analysis; noise); UNION 200 int 35.21 → 33.94, str 35.34 → 33.78. The int-vs-str rewrite deltas stay in the noise; the 6–7× Spark/native gap is the whole Spark analyzer roster, out of scope. |
+| PERF-001 (P2) | FIXED | Plan-level apply pre-check skips the walk when no narrowable literal exists; `resolve_lambda_variables` runs only with a higher-order function on the node. `recompute_schema` keeps running unconditionally: a first version gated it on a real transform and broke 24 FNP-8 HOF pins (stale parent schemas after bottom-up narrowing), fixed the same day. Release-native medians before → after (`/tmp/bl20-perf-probe.py` shapes): (a) 500-col int 30.63 → 30.89, str 30.50 → 29.86; (b) 2000-arm CASE int 189.26 → 187.92, str 195.67 → 185.76; (c) VALUES 10k×2 int 518.31 → 502.46, str 502.01 → 492.28; (d) 200 withColumn F.lit+schema 4454 → 4270, F.expr+schema 4583 → 4429, build-only 3513 → 3850 (no analysis; noise); UNION 200 int 35.21 → 34.52, str 35.34 → 34.01. The int-vs-str rewrite deltas stay in the noise; the 6–7× Spark/native gap is the whole Spark analyzer roster, out of scope. |
 | PERF-002 (P2) | FIXED | `rewrite_values` applies over `&Expr` first and clones a row only when a cell changes. |
 | PERF-003 (P3) | FIXED | `Union` rebuilds only when a child schema field type moved. |
 | PERF-005 (P3) | FIXED | Late `SparkIntegerLiteral` uninstalled on both Spark doors; full facade plus parity suites green. |

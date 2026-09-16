@@ -27,14 +27,14 @@ impl AnalyzerRule for SparkIntegralLiteral {
     }
 }
 
+#[expect(
+    clippy::missing_errors_doc,
+    reason = "The error contract is documented in map.md under the owner comment ban."
+)]
 pub fn insert_literal_rule_before_coercion(
     mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
 ) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
-    let position = rules
-        .iter()
-        .position(|rule| rule.name() == "higher_order_preparation")
-        .or_else(|| rules.iter().position(|rule| rule.name() == "type_coercion"));
-    let Some(position) = position else {
+    let Some(position) = rules.iter().position(|rule| rule.name() == "type_coercion") else {
         return Err(DataFusionError::Plan(
             "spark integral literals require the default type_coercion analyzer rule".to_string(),
         ));
@@ -92,10 +92,13 @@ fn node_has_higher_order(plan: &LogicalPlan) -> Result<bool> {
 fn is_narrowable_literal(expr: &Expr) -> bool {
     matches!(
         expr,
-        Expr::Literal(ScalarValue::Int64(_), _)
-            | Expr::Literal(ScalarValue::UInt64(_), _)
-            | Expr::Literal(ScalarValue::Decimal128(_, _, _), _)
-            | Expr::Literal(ScalarValue::Decimal256(_, _, _), _)
+        Expr::Literal(
+            ScalarValue::Int64(_)
+                | ScalarValue::UInt64(_)
+                | ScalarValue::Decimal128(_, _, _)
+                | ScalarValue::Decimal256(_, _, _),
+            _
+        )
     )
 }
 
@@ -128,17 +131,23 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         let rewritten = expr.transform_up(spark_integral_literal)?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
-    if !transformed.transformed {
-        return Ok(transformed);
-    }
+    let narrowed_flag = transformed.transformed;
     let narrowed = transformed.map_data(LogicalPlan::recompute_schema)?.data;
+    if narrowed_flag {
+        let resolved = narrowed.resolve_lambda_variables()?;
+        return Ok(Transformed::new(
+            resolved.data,
+            true,
+            TreeNodeRecursion::Continue,
+        ));
+    }
     if !node_has_higher_order(&narrowed)? {
-        return Ok(Transformed::yes(narrowed));
+        return Ok(Transformed::no(narrowed));
     }
     let resolved = narrowed.resolve_lambda_variables()?;
     Ok(Transformed::new(
         resolved.data,
-        true,
+        resolved.transformed,
         TreeNodeRecursion::Continue,
     ))
 }
@@ -384,7 +393,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_order_seats_rule_before_hof_preparation() {
+    fn insert_order_keeps_hof_preparation_ahead_of_the_rule() {
         let rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
             Arc::new(StubRule("first")),
             Arc::new(StubRule("higher_order_preparation")),
@@ -397,9 +406,9 @@ mod tests {
             names,
             vec![
                 "first",
-                "spark_integral_literal",
                 "higher_order_preparation",
                 "spark_decimal_precision",
+                "spark_integral_literal",
                 "type_coercion",
             ]
         );
@@ -487,6 +496,31 @@ mod tests {
             .unwrap();
         let rewritten = rewrite_plan(plan).unwrap();
         assert!(!rewritten.transformed);
+    }
+
+    #[tokio::test]
+    async fn values_fed_hof_body_narrows_without_late_rule() {
+        use datafusion::prelude::{SessionConfig, SessionContext};
+        use repark_functions::lambda_rebind::HigherOrderPreparation;
+        let mut config = SessionConfig::new();
+        config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
+        let ctx = SessionContext::new_with_config(config);
+        repark_functions::register_all(&ctx);
+        let plan = ctx
+            .state()
+            .create_logical_plan(
+                "SELECT transform(a, x -> x + 1) AS r FROM (VALUES (array(1, 2, 3))) AS t(a)",
+            )
+            .await
+            .unwrap();
+        let config = ctx.state().config_options().clone();
+        let plan = HigherOrderPreparation.analyze(plan, &config).unwrap();
+        let plan = SparkIntegralLiteral.analyze(plan, &config).unwrap();
+        let plan = TypeCoercion::new().analyze(plan, &config).unwrap();
+        let DataType::List(element) = plan.schema().field(0).data_type() else {
+            panic!("transform answers a list");
+        };
+        assert_eq!(element.data_type(), &DataType::Int32);
     }
 
     #[tokio::test]

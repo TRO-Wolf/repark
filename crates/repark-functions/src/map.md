@@ -984,6 +984,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **FNP-11B step 5 (2026-09-15):** `to_char_family` builder dispatching the
   four formatting names onto the `try_invert::strict` kernels by name.
   pins: fnp-11b/C-001, C-002
+  **SQL-LITERAL-TYPING-1 remediation round 1 (2026-09-16):** the `factorial`
+  builder embeds the `Factorial` shadow UDF (not upstream's), keeping the
+  facade kernel identical to the SQL-door registration; the door-parity test
+  holds it. pins: sql-literal-typing-1/L-002
 
 Facade builders embed the same kernels registered by the SQL door, including `to_timestamp`, `avg`,
 the additional `datafusion-spark` functions, and map builders; keep both dispatch surfaces aligned.

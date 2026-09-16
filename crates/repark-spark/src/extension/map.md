@@ -42,10 +42,11 @@ function-registry + analyzer-rule installation + the composed
   pre-coercion seat, `spark_integral_literal` immediately before `type_coercion`
   (name kept); the BL-20 door pins prove the seat.
   pins: sql-literal-typing-1/C-001, C-002, C-007
-  **Remediation round 1 (2026-09-16):** the seat moved first among the
-  pre-coercion rules (before `higher_order_preparation`); the contract test
-  pins the new order. `register` installs the post-coercion rules minus the
-  subsumed late `spark_integer_literal`.
+  **Remediation round 1 (2026-09-16):** the seat stays fourth, immediately
+  before `type_coercion` (a first-among-pre-coercion seat was measured and
+  reverted with the 24 broken FNP-8 HOF pins as evidence). `register`
+  installs the post-coercion rules minus the subsumed late
+  `spark_integer_literal`.
   pins: sql-literal-typing-1/L-001, L-002
 
 ## Pointers

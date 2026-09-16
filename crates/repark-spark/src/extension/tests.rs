@@ -17,7 +17,7 @@ use repark_functions::timestamp_type::{
 use super::SparkExtension;
 
 #[test]
-fn analyzer_configuration_seats_integral_literal_first_before_type_coercion() {
+fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion() {
     let original = Analyzer::new().rules;
     let original_names: Vec<String> = original
         .iter()
@@ -32,11 +32,11 @@ fn analyzer_configuration_seats_integral_literal_first_before_type_coercion() {
         .collect();
     let position = configured_names
         .iter()
-        .position(|name| name == "spark_integral_literal")
-        .expect("integral literal narrowing is installed");
-    assert_eq!(configured_names[position + 1], "higher_order_preparation");
-    assert_eq!(configured_names[position + 2], "spark_float_stringify");
-    assert_eq!(configured_names[position + 3], "spark_decimal_precision");
+        .position(|name| name == "higher_order_preparation")
+        .expect("HOF preparation is installed");
+    assert_eq!(configured_names[position + 1], "spark_float_stringify");
+    assert_eq!(configured_names[position + 2], "spark_decimal_precision");
+    assert_eq!(configured_names[position + 3], "spark_integral_literal");
     assert_eq!(configured_names[position + 4], "type_coercion");
     let without_insertions: Vec<String> = configured_names
         .into_iter()
