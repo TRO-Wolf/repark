@@ -73,7 +73,7 @@ named_udf!(SparkTryToNumber, "try_to_number");
 named_udf!(SparkTryToBinary, "try_to_binary");
 named_udf!(SparkTryToTime, "try_to_time");
 
-fn string_array(array: &dyn Array) -> Result<&StringArray> {
+pub(crate) fn string_array(array: &dyn Array) -> Result<&StringArray> {
     array.as_any().downcast_ref::<StringArray>().ok_or_else(|| {
         DataFusionError::Execution(format!("try_* expected Utf8, got {}", array.data_type()))
     })
@@ -402,14 +402,14 @@ impl ScalarUDFImpl for SparkTryToNumber {
     }
 }
 
-struct NumberFormat {
-    decimal: (u8, i8),
+pub(crate) struct NumberFormat {
+    pub(crate) decimal: (u8, i8),
     has_dollar: bool,
     grouping: Option<char>,
     decimal_sep: Option<char>,
 }
 
-fn parse_number_format(pattern: &str) -> Result<NumberFormat> {
+pub(crate) fn parse_number_format(pattern: &str) -> Result<NumberFormat> {
     let upper = pattern.to_ascii_uppercase();
     if !upper.bytes().any(|byte| byte == b'9' || byte == b'0') {
         return Err(DataFusionError::Plan(format!(
@@ -479,7 +479,7 @@ fn unexpected_format_token(pattern: &str, token: char) -> Result<NumberFormat> {
     )))
 }
 
-fn apply_number_format(input: &str, format: &NumberFormat) -> Option<i128> {
+pub(crate) fn apply_number_format(input: &str, format: &NumberFormat) -> Option<i128> {
     let mut text = input.trim().to_string();
     if format.has_dollar {
         if let Some(stripped) = text.strip_prefix('$') {
@@ -607,7 +607,7 @@ impl ScalarUDFImpl for SparkTryToBinary {
     }
 }
 
-fn decode_binary(input: &str, fmt: &str) -> Option<Vec<u8>> {
+pub(crate) fn decode_binary(input: &str, fmt: &str) -> Option<Vec<u8>> {
     match fmt.to_ascii_lowercase().as_str() {
         "hex" => decode_hex(input),
         "utf-8" | "utf8" => Some(input.as_bytes().to_vec()),
@@ -616,7 +616,7 @@ fn decode_binary(input: &str, fmt: &str) -> Option<Vec<u8>> {
     }
 }
 
-fn decode_hex(input: &str) -> Option<Vec<u8>> {
+pub(crate) fn decode_hex(input: &str) -> Option<Vec<u8>> {
     let mut hex = input.to_string();
     if hex.len() % 2 == 1 {
         hex.insert(0, '0');
@@ -630,7 +630,7 @@ fn decode_hex(input: &str) -> Option<Vec<u8>> {
         .collect()
 }
 
-fn decode_base64(input: &str) -> Option<Vec<u8>> {
+pub(crate) fn decode_base64(input: &str) -> Option<Vec<u8>> {
     fn value(byte: u8) -> Option<u8> {
         match byte {
             b'A'..=b'Z' => Some(byte - b'A'),

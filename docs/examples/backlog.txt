@@ -96,7 +96,6 @@ F.to_variant_object
 F.to_xml
 F.try_parse_json
 F.try_reflect
-F.try_to_timestamp
 F.try_variant_get
 F.unwrap_udt
 F.variant_get

@@ -4,28 +4,12 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
-- [facade-5-ledger.md](facade-5-ledger.md) —
-  **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
-  split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
-  formatters, the audit §6 UNMEASURED cell), the renderer × truncation-rule pin
-  census, goldens for the pairs no §8 pin binds (recorded from base, mutation
-  proven), and the step-1 target — a measured format wall and its Rust move, or
-  the smallest byte-identical consolidation naming what stays for `eager.py`.
-  No product change under `python/repark/src/` or `crates/`.
-  `risk_tier: standard`. Branch `perf/facade-5-s0`.
-  pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [array-null-1-ledger.md](array-null-1-ledger.md) —
-  **ARRAY-NULL-1 (2026-09-14):** `F.array_append`/`F.array_prepend` lower through
-  `spark_array_append_udf`/`spark_array_prepend_udf` — a `ScalarUDF` that delegates
-  to DataFusion's kernel and grafts the input array's outer null buffer back
-  (route (a); the CASE route died at depth 40 and no lateral plan-level alias
-  exists). One native call per facade level: depth-40 RSS ~2.0 MB vs 577 MB at
-  depth 16 before; the SQL door answers the same arm in Spark `(array, element)`
-  order, and the depth-40 memory pin runs by default on both functions.
-  Measurement script: [array-null-1-spikes/](array-null-1-spikes/map.md).
-  `risk_tier: standard`. Branch `fix/array-null-1`.
-  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
-  L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
+- [registry-16b-1-ledger.md](../completed/registry-16b-1-ledger.md) —
+  **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
+  CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live
+  PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
+  `risk_tier: standard`. Branch `docs/registry-16b-1`.
+  pins: registry-16b-1/C-001, C-002, C-003
 - [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —
   **ABS-EXPR-1 (2026-09-13), in flight:** `F.abs` / `F.cbrt` / `F.nullif` lower to one
   native `call_scalar` each (`expr_fn::abs` / `cbrt` / `nullif`) — the facade `when(...)`
@@ -55,6 +39,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   maintenance guide's S2-24 known-issues line move with it.
   `risk_tier: standard`. Branch `feat/ap-3`.
   pins: ap-3/C-001, C-002, C-003, C-004, C-005, C-006
+- [array-null-1-ledger.md](array-null-1-ledger.md) —
+  **ARRAY-NULL-1 (2026-09-14):** `F.array_append`/`F.array_prepend` lower through
+  `spark_array_append_udf`/`spark_array_prepend_udf` — a `ScalarUDF` that delegates
+  to DataFusion's kernel and grafts the input array's outer null buffer back
+  (route (a); the CASE route died at depth 40 and no lateral plan-level alias
+  exists). One native call per facade level: depth-40 RSS ~2.0 MB vs 577 MB at
+  depth 16 before; the SQL door answers the same arm in Spark `(array, element)`
+  order, and the depth-40 memory pin runs by default on both functions.
+  Measurement script: [array-null-1-spikes/](array-null-1-spikes/map.md).
+  `risk_tier: standard`. Branch `fix/array-null-1`.
+  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
+  L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
 - [array-null-1-ledger.md](array-null-1-ledger.md) —
   **ARRAY-NULL-1 (2026-09-14):** `F.array_append`/`F.array_prepend` lower through
   `spark_array_append_udf`/`spark_array_prepend_udf` — a `ScalarUDF` that delegates
@@ -172,6 +168,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   No product change under `python/repark/src/` or `crates/`.
   `risk_tier: standard`. Branch `perf/facade-5-s0`.
   pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [facade-5-ledger.md](facade-5-ledger.md) —
+  **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
+  split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
+  formatters, the audit §6 UNMEASURED cell), the renderer × truncation-rule pin
+  census, goldens for the pairs no §8 pin binds (recorded from base, mutation
+  proven), and the step-1 target — a measured format wall and its Rust move, or
+  the smallest byte-identical consolidation naming what stays for `eager.py`.
+  No product change under `python/repark/src/` or `crates/`.
+  `risk_tier: standard`. Branch `perf/facade-5-s0`.
+  pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
@@ -186,6 +192,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   oracle pins on both doors; P2-2 stays OPEN residue.
   `risk_tier: standard`. Branch `feat/java-double-fd-1`.
   pins: java-double-fd-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [fnp-11b-ledger.md](fnp-11b-ledger.md) — Charter ledger — FNP-11B · datetime format parsing, the TIME family, BL-13 and BL-14
 - [orphan-s3tables-1-ledger.md](orphan-s3tables-1-ledger.md) —
   **ORPHAN-S3TABLES-1 step 1 (2026-09-12), in flight:** `remove_orphan_files` refuses loud
   on an `s3tables`-kind catalog before any IO — table buckets answer `ListObjectsV2` 405 —
@@ -218,12 +225,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `perf/unpivot-1` / `perf/unpivot-1-s2`.
   pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013
-- [registry-16b-1-ledger.md](../completed/registry-16b-1-ledger.md) —
-  **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
-  CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live
-  PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
-  `risk_tier: standard`. Branch `docs/registry-16b-1`.
-  pins: registry-16b-1/C-001, C-002, C-003
 - [sepmo-e0-e1-ledger.md](sepmo-e0-e1-ledger.md) —
   **SEPMO-E0E1 (2026-09-06), in flight, round 3:** telemetry inventory (E-0) and usage
   collector (E-1). Minority truncated JSONL and exit-without-terminal are degraded
@@ -723,3 +724,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   verdicts. `risk_tier: standard`. Branch
   `feat/fnp-win-1`.
   pins: fnp-win-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+- [fnp-11b-ledger.md](fnp-11b-ledger.md) —
+  **FNP-11B step 1 (2026-09-15), in flight:** datetime format parsing, the TIME
+  family, BL-13 and BL-14 — ledger with D-1…D-10 (card D-1…D-6, run-16a D-7…D-10
+  with owner ruling Q-15a-3 under D-8), the filtered oracle
+  (`python/repark/tests/fnp11b_spark_oracle.json`: 315 pa-11b cells plus 22
+  pa-math `to_char`-family cells) and the red-first two-door pins
+  (`test_fnp11b_temporal_formats.py`: 310 failed, 28 passed on the base, all
+  clauses OPEN). No product code in step 1.
+  `risk_tier: standard`. Branch `feat/fnp-11b-temporal-formats`.
+  pins: fnp-11b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

@@ -499,7 +499,7 @@ def test_bare_localtimestamp_answers_call() -> None:
 
 
 def test_make_timestamp_keeps_its_frozen_signature() -> None:
-    """pins: fnp-11a/C-001."""
+    """pins: fnp-11a/C-001; fnp-11b/C-001 (Q-15a-3 widening)."""
     parameters = list(inspect.signature(F.make_timestamp).parameters.values())
     assert [item.name for item in parameters] == [
         "years",
@@ -509,16 +509,21 @@ def test_make_timestamp_keeps_its_frozen_signature() -> None:
         "mins",
         "secs",
         "timezone",
+        "date",
+        "time",
     ]
-    assert [_signature_default(item) for item in parameters] == ["<required>"] * 6 + ["None"]
+    assert [_signature_default(item) for item in parameters] == ["None"] * 9
 
 
-def test_make_timestamp_date_time_keywords_refused_by_the_frozen_signature() -> None:
-    """pins: fnp-11a/C-002."""
-    with pytest.raises(TypeError):
-        F.make_timestamp(date=F.col("dt"), time=F.col("tm"))
-    session = ReparkSession.builder.appName("pytest-fnp11a-frozen").getOrCreate()
-    rows = session.sql(
-        "SELECT make_timestamp(DATE'2014-12-28', TIME'06:30:45.887') AS ts"
+def test_make_timestamp_date_time_keywords_answer() -> None:
+    """pins: fnp-11a/C-002; fnp-11b/C-002 (Q-15a-3 widening retires the EX-FN-28 refusal)."""
+    session = ReparkSession.builder.appName("pytest-fnp11b-widened").getOrCreate()
+    frame = session.createDataFrame([(datetime.date(2014, 12, 28),)], "dt DATE")
+    rows = frame.select(
+        F.make_timestamp(date=F.col("dt"), time=F.lit("06:30:45.887")).alias("ts")
     ).collect()
     assert len(rows) == 1 and rows[0]["ts"] is not None
+    answered = session.sql(
+        "SELECT make_timestamp(DATE'2014-12-28', TIME'06:30:45.887') AS ts"
+    ).collect()
+    assert len(answered) == 1 and answered[0]["ts"] is not None

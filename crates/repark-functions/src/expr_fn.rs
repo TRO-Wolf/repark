@@ -126,28 +126,46 @@ pub fn next_day(date: Expr, day_of_week: Expr) -> Expr {
     spark_datetime::next_day(date, day_of_week)
 }
 
-/// Spark `hour(timestamp|time)` — repark `DatePartUdf` (Time + Timestamp; overwrites DF-spark).
 #[must_use]
 pub fn hour(arg: Expr) -> Expr {
-    call(datetime::hour_udf(), vec![arg])
+    call(crate::time_family::hour_udf(), vec![arg])
 }
 
-/// Spark `minute(timestamp|time)` — repark `DatePartUdf` (Time + Timestamp).
 #[must_use]
 pub fn minute(arg: Expr) -> Expr {
-    call(datetime::minute_udf(), vec![arg])
+    call(crate::time_family::minute_udf(), vec![arg])
 }
 
-/// Spark `second(timestamp|time)` — repark `DatePartUdf` (Time + Timestamp).
 #[must_use]
 pub fn second(arg: Expr) -> Expr {
-    call(datetime::second_udf(), vec![arg])
+    call(crate::time_family::second_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn time_family_refusal(name: &str, args: Vec<Expr>) -> Expr {
+    let udf = match name {
+        "make_time" => crate::time_family::make_time_udf(),
+        "to_time" => crate::time_family::to_time_udf(),
+        "time_diff" => crate::time_family::time_diff_udf(),
+        _ => crate::time_family::time_trunc_udf(),
+    };
+    call(udf, args)
+}
+
+#[must_use]
+pub fn current_time(args: Vec<Expr>) -> Expr {
+    call(crate::time_family::current_time_udf(), args)
+}
+
+#[must_use]
+pub fn spark_typeof(arg: Expr) -> Expr {
+    call(crate::time_family::type_of_udf(), vec![arg])
 }
 
 /// Spark `to_date(ts|date|string)` — TZ-8 session-zone date for an LTZ timestamp.
 #[must_use]
-pub fn to_date(arg: Expr) -> Expr {
-    call(crate::timestamp_cast::to_date_udf(), vec![arg])
+pub fn to_date(args: Vec<Expr>) -> Expr {
+    call(crate::timestamp_cast::to_date_udf(), args)
 }
 
 #[must_use]
@@ -299,6 +317,21 @@ pub fn map_from_arrays(keys: Expr, values: Expr) -> Expr {
 #[must_use]
 pub fn to_timestamp(args: Vec<Expr>) -> Expr {
     call(crate::instant_ts::to_timestamp_udf(), args)
+}
+
+#[must_use]
+pub fn to_timestamp_ltz(args: Vec<Expr>) -> Expr {
+    call(crate::timestamp_ltz_ntz::to_timestamp_ltz_udf(), args)
+}
+
+#[must_use]
+pub fn to_timestamp_ntz(args: Vec<Expr>) -> Expr {
+    call(crate::timestamp_ltz_ntz::to_timestamp_ntz_udf(), args)
+}
+
+#[must_use]
+pub fn try_to_timestamp(args: Vec<Expr>) -> Expr {
+    call(crate::timestamp_ltz_ntz::try_to_timestamp_udf(), args)
 }
 
 #[must_use]
@@ -679,6 +712,17 @@ pub fn try_to_number(expr: Expr, format: Expr) -> Expr {
 #[must_use]
 pub fn try_to_binary(args: Vec<Expr>) -> Expr {
     call(crate::try_invert::try_to_binary_udf(), args)
+}
+
+#[must_use]
+pub fn to_char_family(name: &str, args: Vec<Expr>) -> Expr {
+    let udf = match name {
+        "to_number" => crate::try_invert::to_number_udf(),
+        "to_binary" => crate::try_invert::to_binary_udf(),
+        "to_char" => crate::try_invert::to_char_udf(),
+        _ => crate::try_invert::to_varchar_udf(),
+    };
+    call(udf, args)
 }
 
 /// Spark `try_to_time` — matches Spark 4.1.2 `UNSUPPORTED_TIME_TYPE`.

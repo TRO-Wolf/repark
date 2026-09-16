@@ -12,7 +12,7 @@ pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-009, C-01
 
 ## Contents
 
-- `mod.rs` — register the nine scalar kernels.
+- `mod.rs` — register the thirteen scalar kernels.
 - `arith.rs` — `try_divide`, `try_mod`, `try_add`, `try_subtract`, `try_multiply`.
   Integer overflow including SMALLINT/Int16 yields NULL. Divide/mod by zero yields NULL.
   Decimal reuses `decimal_spark::try_decimal_op` (ANSI-off overflow path). Coerce/result
@@ -29,7 +29,26 @@ pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-009, C-01
   Live Spark 4.1.2 `try_to_time` raises `UNSUPPORTED_TIME_TYPE`; this kernel matches that.
   `try_to_date` Java patterns default missing month/day to 01 and parse `MMM`/`MMMM`.
   **FN-FIX-1:** non-foldable `try_to_number` format raises `NON_FOLDABLE_INPUT`.
+  The number-format grammar and the binary decoders are `pub(crate)` for `strict.rs`.
   pins: fn-fix-1-registry-rows/C-002
+- `strict.rs` — **FNP-11B step 5 (2026-09-15):** the raising twins `to_number` /
+  `to_binary` over the shared `convert.rs` grammar (mismatch raises Spark's
+  `[INVALID_FORMAT.MISMATCH_INPUT]`, malformed bytes raise `[CONVERSION_INVALID_INPUT]`;
+  `to_binary` defaults to hex and also takes `utf-8` / `base64` / `binary`) and the
+  `to_char` / `to_varchar` dispatcher (one kernel, two names): numerics render through an
+  Oracle-style mask (`9` blanks, `0` zero-fills, `,` blanks when leading, overflow spells
+  `#` with a blank group slot, the sign drops and stripped fraction digits pad — derived
+  from the FNP-MATH-1 oracle cells, whose `-0.5` frame value both mask widths prove);
+  timestamps and dates render through the `datetime.rs` Java-pattern path in the session
+  zone; binaries render `hex` / `base64` / `utf-8`; strings pass through. Nullability is
+  per input kind (timestamps answer non-nullable like `date_format`, `utf-8` binary arms
+  stay nullable). pins: fnp-11b/C-002, C-003, C-004, C-005;
+  `strict::tests::*`.
+  **FNP-11B remediation round 1 (2026-09-16):** `to_char` resolves its input arm
+  once (lazily, so all-null unknown inputs still answer null) with one cached
+  mask and a sized builder; `to_number` / `to_binary` cache one format and
+  `to_binary` sizes its builder — answers unchanged, only allocations move.
+  pins: fnp-11b/C-006, C-007.
 
 ## I want to...
 
@@ -38,5 +57,6 @@ pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-009, C-01
 | change a numeric try_* | `arith.rs` |
 | change DATE/TIMESTAMP ± INTERVAL or INTERVAL / numeric | `temporal.rs` |
 | change a parse try_* | `convert.rs` |
+| change a strict `to_*` twin or the `to_char` mask | `strict.rs` |
 | change `try_element_at` | [`../collection.rs`](../collection.rs) |
 | change `try_sum` / `try_avg` | [`../aggregate.rs`](../aggregate.rs) |

@@ -194,6 +194,22 @@ def load_gate(root: Path) -> ModuleType:
     return module
 
 
+def aliased_source_paths(root: Path, gate: ModuleType) -> list[str]:
+    """Return def-source alias targets the signature reader follows."""
+    extra: list[str] = []
+    for relative in FUNCTION_DEF_SOURCES:
+        tree = gate.parse_source(root / relative)
+        for _alias, dotted in import_from_map(tree).items():
+            module_dotted, _, _ = dotted.rpartition(".")
+            source = resolve_module_file(root, relative, module_dotted)
+            if source is None:
+                continue
+            candidate = source.relative_to(root).as_posix()
+            if candidate not in extra:
+                extra.append(candidate)
+    return extra
+
+
 def source_paths(root: Path) -> tuple[str, ...]:
     """Return every repo-relative path the enumerators read."""
     gate = load_gate(root)
@@ -212,6 +228,7 @@ def source_paths(root: Path) -> tuple[str, ...]:
         FACADE_PYPROJECT_SOURCE,
     ]
     paths.extend(FUNCTION_DEF_SOURCES)
+    paths.extend(aliased_source_paths(root, gate))
     paths.extend(gate.FUNCTIONS_INSTALLER_SOURCES)
     paths.extend(relative for _family, _prefix, relative in gate.MODULE_SURFACES)
     paths.extend(relative for _family, _prefix, relative, _cls, _nested in gate.CLASS_SURFACES)
@@ -352,12 +369,39 @@ def class_body_signatures(class_node: ast.ClassDef) -> dict[str, list[str]]:
     return defs
 
 
+def aliased_function_signatures(
+    root: Path, relative: str, tree: ast.Module
+) -> dict[str, list[str]]:
+    """Return required parameters for names a def-source module re-exports by alias."""
+    found: dict[str, list[str]] = {}
+    for alias, dotted in import_from_map(tree).items():
+        module_dotted, _, target = dotted.rpartition(".")
+        if not module_dotted or not target:
+            continue
+        source = resolve_module_file(root, relative, module_dotted)
+        if source is None:
+            continue
+        try:
+            module_tree = ast.parse(source.read_text(encoding="utf-8"))
+        except OSError:
+            continue
+        for candidate in module_tree.body:
+            if (
+                isinstance(candidate, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and candidate.name == target
+            ):
+                found.setdefault(alias, required_parameters(candidate))
+    return found
+
+
 def functions_signatures(root: Path, gate: ModuleType) -> dict[str, list[str]]:
     """Return required parameters for every ``F.*`` name that has a definition."""
     found: dict[str, list[str]] = {}
     for relative in FUNCTION_DEF_SOURCES:
         tree = gate.parse_source(root / relative)
         for name, params in module_function_defs(tree).items():
+            found.setdefault(name, params)
+        for name, params in aliased_function_signatures(root, relative, tree).items():
             found.setdefault(name, params)
     return found
 

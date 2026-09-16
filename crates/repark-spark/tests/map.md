@@ -29,7 +29,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   extractors, `date_trunc`, `date_format`, DST boundaries, pre-1970 instants, and the native
   DataFrame API across non-UTC and half-hour zones. DATE/TIME invariants, source instants,
   default-zone fallback, composed DATE/string inputs, date-valued shims, and TZ-7/TZ-8 registry
-  divergences are covered.
+  divergences are covered. **FNP-11B step 4 (2026-09-15):**
+  `time_arguments_never_move_with_the_session_zone` asserts the zone-independent
+  `[UNSUPPORTED_TIME_TYPE]` refusal (hour/minute/second over TIME) instead of
+  the old answering values. pins: fnp-11b/C-005
 - [timestamp_cast_seconds.rs](timestamp_cast_seconds.rs) — the
   `CAST(TIMESTAMP AS <numeric>)` epoch-seconds class at the **Spark door** and the **native
   DataFrame API**, on real sessions, value AND Arrow type. Nine pins: whole instants either side

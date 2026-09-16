@@ -97,6 +97,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   Spark-exact `repark_functions::expr_fn::degrees` / `radians` pair, which carries the
   refusals and the ANSI switch the engine UDFs lack.
   pins: fnp-bitmap-facade-1/C-011, C-012, C-013, C-014
+  **FNP-11B step 2 (2026-09-15):** the `to_date` arm takes 1 or 2 args
+  (`expr_fn::to_date` widens to `Vec<Expr>`); `unix_timestamp` takes 0 to 2.
+  pins: fnp-11b/C-002, C-003
 - [`function_dispatch/dispatch_json.rs`](function_dispatch/dispatch_json.rs) —
   **FNP-9/10 (2026-09-05):** arms for
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
@@ -227,13 +230,26 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 - `split` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the Rust
   arm is ready, but Python `F.split` raises before reaching it (run 16a owns that half).
   pins: door-converge-2/C-004
+- `to_timestamp_ltz` / `to_timestamp_ntz` dispatch beside `to_timestamp`, and
+  `try_to_timestamp` joins the `try_to_date` arm (FNP-11B step 3): thin arms over
+  `expr_fn` onto the new `timestamp_ltz_ntz` kernels.
+  pins: fnp-11b/C-001, C-002
+- `make_time` / `to_time` / `time_diff` / `time_trunc` share one refusal arm over
+  `expr_fn::time_family_refusal`, with `current_time` (0 or 1 args) and `typeof`
+  beside `hour` (FNP-11B step 4): thin arms onto the new `time_family` kernels.
+  pins: fnp-11b/C-001, C-002, C-005
+- `to_number` / `to_binary` / `to_char` / `to_varchar` share one arm over
+  `expr_fn::to_char_family` (FNP-11B step 5): arity is enforced by the kernels'
+  coercions, keeping the dispatch file under its ceiling. pins: fnp-11b/C-001,
+  C-002, C-005
 - Window frames use Spark-relative offsets. Count-like unsigned results are cast to signed types.
 - Unknown scalar, aggregate, cast, or window names fail with typed Python exceptions.
 
 ## Change locations
 
 FNP-7 try_* scalar and aggregate names dispatch here (`try_divide` … `try_to_time`,
-`try_sum`, `try_avg`). pins: fnp-7-try-inversions/C-013
+`try_sum`, `try_avg`); FNP-11B step 3 adds `try_to_timestamp` to the same arm.
+pins: fnp-7-try-inversions/C-013; fnp-11b/C-001
 SEM-1 `log` embeds `SparkLog` (1- or 2-arg); `ln` stays DataFusion `ln`.
 pins: sem-1-spark-answer-parity/C-005, C-006
 

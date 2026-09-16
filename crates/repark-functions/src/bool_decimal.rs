@@ -25,6 +25,11 @@ pub fn install_bool_decimal_cast(ctx: &SessionContext) {
     ctx.add_analyzer_rule(Arc::new(BoolDecimalCast));
 }
 
+pub fn install_shared_analyzer_rules(ctx: &SessionContext) {
+    crate::integer_spark::install_integer_overflow(ctx);
+    install_bool_decimal_cast(ctx);
+}
+
 #[derive(Debug, Default)]
 pub struct BoolDecimalCast;
 

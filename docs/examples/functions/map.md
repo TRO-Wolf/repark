@@ -156,9 +156,10 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
 - [dates_more.py](dates_more.py) — `F.add_months` from month ends both directions,
   `F.make_interval` shifting a date and a timestamp (the string-cast arm diverges,
   EX-FN-19), `F.unix_timestamp` / `F.to_unix_timestamp` on the default pattern
-  (the format argument is EX-FN-21), and `F.try_to_time` matching Spark's
-  `UNSUPPORTED_TIME_TYPE`. `F.months_between` (EX-FN-11), `F.make_timestamp`
-  (EX-FN-10) and `F.try_to_timestamp` (EX-FN-20) stay on the backlog.
+  (the format argument is EX-FN-21, FIXED 2026-09-15 by FNP-11B), and `F.try_to_time` matching Spark's
+  `UNSUPPORTED_TIME_TYPE`. `F.months_between` (EX-FN-11) and `F.make_timestamp`
+  (EX-FN-10) stay on the backlog; `F.try_to_timestamp` (EX-FN-20, FIXED 2026-09-15
+  by FNP-11B step 3) moved to [timestamp_ltz_ntz.py](timestamp_ltz_ntz.py).
   pins: ex-25-functions-a/C-004
   pins: ex-28-scalar-remainder/C-003
 - [stats.py](stats.py) — the `F.percentile_approx` / `F.approx_percentile` alias pair
@@ -188,6 +189,9 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
 - [by_name_and_arrow_udfs.py](by_name_and_arrow_udfs.py) — FNP-MISC-1 (2026-09-15): `call_function` / `call_udf` answer the direct spellings (a builtin and a session-registered UDF), `arrow_udf` adds one over an Arrow array keeping NULL, and `arrow_udtf` counts rows out of one yielded Arrow table. pins: fnp-misc-1/C-002, C-004, C-005
 - [temporal_constructors.py](temporal_constructors.py) — FNP-11A (2026-09-15): the temporal constructors on valid and out-of-range parts, the `try_` forms, `timestamp_diff` / `timestamp_add` hour and day arithmetic, `convert_timezone`, `localtimestamp`, and `try_make_interval` overflow answering NULL. pins: fnp-11a/C-001, C-002
 - [time_windows.py](time_windows.py) — FNP-WIN-1 (2026-09-15): three rows into ten-minute `window` buckets with end-minus-microsecond `window_time` values, and into five-minute `session_window` sessions with counts [1, 2]. pins: fnp-win-1/C-002, C-003, C-004
+- [timestamp_ltz_ntz.py](timestamp_ltz_ntz.py) — FNP-11B step 3 (2026-09-15): `F.to_timestamp_ltz` answering the session-zone instant, `F.to_timestamp_ntz` answering the zone-free wall clock, and `F.try_to_timestamp` answering NULL on garbage, each with and without a Java datetime pattern. Remediation round 1 (2026-09-16): patterns pass as `F.lit(...)` since a bare string is a column reference. pins: fnp-11b/C-002, C-007
+- [time_family.py](time_family.py) — FNP-11B step 4 (2026-09-15): `F.current_time` answering the session-zone wall clock, `F.typeof` spelling the type, and `F.make_time` / `F.to_time` / `F.time_diff` / `F.time_trunc` raising Spark's `[UNSUPPORTED_TIME_TYPE]`. pins: fnp-11b/C-005, C-007
+- [to_char_family.py](to_char_family.py) — FNP-11B step 5 (2026-09-15): `F.to_char` / `F.to_varchar` formatting numbers, timestamps and binary values, `F.to_number` parsing with an Oracle-style format, and `F.to_binary` decoding hex, base64 and utf-8, with the strict twins raising Spark's `[INVALID_FORMAT.MISMATCH_INPUT]` / `[CONVERSION_INVALID_INPUT]`. pins: fnp-11b/C-005, C-007
 ## Pointers
 
 - Up: [../map.md](../map.md)

@@ -44,9 +44,9 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         dayofyear_udf(),
         dayofweek_udf(),
         weekday_udf(),
-        hour_udf(),
-        minute_udf(),
-        second_udf(),
+        crate::time_family::hour_udf(),
+        crate::time_family::minute_udf(),
+        crate::time_family::second_udf(),
         make_date_udf(),
         add_months_udf(),
         date_format_udf(),
@@ -1242,15 +1242,14 @@ mod tests {
 
     /// Time32/64 and timestamp inputs return Spark calendar fields.
     #[tokio::test]
-    async fn hour_minute_second_accept_time_and_timestamp() {
-        assert_eq!(eval_i32("SELECT hour(TIME '12:34:56')").await, Some(12));
-        assert_eq!(eval_i32("SELECT minute(TIME '12:34:56')").await, Some(34));
-        assert_eq!(eval_i32("SELECT second(TIME '12:34:56')").await, Some(56));
-        assert_eq!(
-            eval_i32("SELECT hour(TIMESTAMP '2017-11-06 15:16:17')").await,
-            Some(15)
-        );
-        assert_eq!(eval_i32("SELECT hour(CAST(NULL AS TIME))").await, None);
+    async fn hour_minute_second_refuse_time() {
+        for sql in [
+            "SELECT hour(TIME '12:34:56')",
+            "SELECT second(TIME '12:34:56')",
+        ] {
+            let error = ctx().sql(sql).await.map(|_| "planned").unwrap_err();
+            assert!(error.to_string().contains("[UNSUPPORTED_TIME_TYPE]"));
+        }
     }
 
     #[tokio::test]
