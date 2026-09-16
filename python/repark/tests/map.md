@@ -5751,3 +5751,10 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `[MISSING_GROUP_BY]` on both doors, and `inline` NULL-struct-element
   propagation on both doors.
   pins: fnp-gen-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- `test_fnp_gen_1.py` — **FNP-GEN-1 orchestrator fix-up (2026-09-16, run 17a):** the twelve
+  `json_tuple` / `from_csv` / `schema_of_csv` pins are this unit's own **steps 3–4**, written
+  red-first in step 1 and not implemented by step 2. They were plain failures, which cannot merge —
+  CI reds and the suite stops being a signal. Each is now `xfail(strict=True)` naming the step, so
+  the moment those kernels land the pin **XPASSes and fails** and the step-3 round has to retire it.
+  A red-first pin for later work in the same unit is still a residual: strict-xfail it, do not leave
+  it failing. pins: fnp-gen-1/C-004

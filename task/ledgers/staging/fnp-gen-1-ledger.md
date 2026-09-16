@@ -235,3 +235,13 @@ deferred step-3/4 names.
   guard. SQL-sourced frames refuse with the Spark text. Both doors refuse
   without answering; closing the message gap needs `_select_with_generator`
   (`dataframe/**`, out of this unit's fence) to see the family.
+
+## Orchestrator fix-up before the PR gate (2026-09-16, run 17a)
+
+Twelve `json_tuple` / `from_csv` / `schema_of_csv` pins — this unit's steps 3–4, written red-first
+in step 1 — were still plain failures after step 2. A merged PR cannot carry failing tests, so each
+is now `xfail(strict=True)` with a reason naming the step. Strict is the point: when the step-3
+kernels land the pins XPASS and fail, which forces that round to retire them instead of quietly
+leaving them marked. The unit ships steps 1–2 (`posexplode`, `posexplode_outer`, `inline`,
+`inline_outer` answering on both doors, and `from_xml` / `schema_of_xml` as dated declared
+refusals); the three parser names stay OPEN in the clause table. pins: fnp-gen-1/C-004
