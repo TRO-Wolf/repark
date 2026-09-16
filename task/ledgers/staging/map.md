@@ -4,6 +4,12 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [never-oom-panic-1-ledger.md](never-oom-panic-1-ledger.md) —
+  **NEVER-OOM-PANIC-1 (2026-09-16), in flight:** the tight-pool NLJ race — `inner future
+  panicked during poll` versus the typed refusal — fixed at the root so the nested-loop
+  join ends in `ResourcesExhausted` or spills on every scheduling, per owner ruling
+  Q-17c-7. `risk_tier: standard`. Branch `fix/never-oom-panic-1`.
+  pins: never-oom-panic-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [registry-16b-1-ledger.md](../completed/registry-16b-1-ledger.md) —
   **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
   CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live
