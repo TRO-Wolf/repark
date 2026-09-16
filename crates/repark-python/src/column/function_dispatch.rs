@@ -946,6 +946,9 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "bitmap_construct_agg" => repark_functions::bitmap_agg::bitmap_construct_agg_udaf(),
         "bitmap_or_agg" => repark_functions::bitmap_agg::bitmap_or_agg_udaf(),
         "bitmap_and_agg" => repark_functions::bitmap_agg::bitmap_and_agg_udaf(),
+        "kurtosis" | "skewness" => repark_functions::aggregate::moment_udaf(kind),
+        "mode" => repark_functions::aggregate::mode_udaf(),
+        "product" => repark_functions::aggregate::product_udaf(),
         "approx_count_distinct" | "approx_distinct" => {
             repark_functions::spark_result_types::approx_count_distinct_udaf()
         }
@@ -985,6 +988,8 @@ pub(super) fn binary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "regr_sxy" => regr_sxy_udaf(),
         "regr_syy" => regr_syy_udaf(),
         "string_agg" | "listagg" => string_agg_udaf(),
+        "max_by" | "min_by" => repark_functions::aggregate::max_min_by_udaf(kind == "max_by"),
+        "mode" => repark_functions::aggregate::mode_udaf(),
         other_kind => {
             return Err(PyValueError::new_err(format!(
                 "unknown binary aggregate {other_kind:?}"

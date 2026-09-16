@@ -381,9 +381,10 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     FNP-11A appends its eleven new temporal names before FNP-WIN-1's window
     names; FNP-11B then appends to the same installer tuple — step 3 the LTZ and
     NTZ timestamp parsers, step 4 the TIME family plus typeof, step 5 the
-    to_char family.
+    to_char family. FNP-AGG-1 step 2 appends its four aggregates after window.
     """
     from repark.spark.functions_agg import INSTALL_NAMES as AGG_INSTALL_NAMES
+    from repark.spark.functions_agg_1 import FNPAGG1_EXPORTS
     from repark.spark.functions_arrow_udf import ARROW_EXPORTS
     from repark.spark.functions_bitwise import INSTALL_NAMES as BITWISE_INSTALL_NAMES
     from repark.spark.functions_byname import BYNAME_NAMES
@@ -421,7 +422,9 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     temporal_start = arrow_start + len(ARROW_EXPORTS)
     assert exported[temporal_start : temporal_start + len(FNP11A_EXPORTS)] == FNP11A_EXPORTS
     window_start = temporal_start + len(FNP11A_EXPORTS)
-    assert exported[window_start:] == WINDOW_INSTALL_NAMES
+    agg1_start = window_start + len(WINDOW_INSTALL_NAMES)
+    assert exported[window_start:agg1_start] == WINDOW_INSTALL_NAMES
+    assert exported[agg1_start:] == FNPAGG1_EXPORTS
     assert len(exported) == (
         360
         + 62
@@ -434,6 +437,7 @@ def test_functions_all_matches_pre_split_inventory() -> None:
         + len(ARROW_EXPORTS)
         + len(FNP11A_EXPORTS)
         + len(WINDOW_INSTALL_NAMES)
+        + len(FNPAGG1_EXPORTS)
     )
 
 

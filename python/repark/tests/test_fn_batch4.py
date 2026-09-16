@@ -20,15 +20,12 @@ from repark.spark.functions import (
     covar_samp,
     first,
     input_file_name,
-    kurtosis,
     last,
     median,
-    mode,
     monotonically_increasing_id,
     percentile_approx,
     rand,
     sha2,
-    skewness,
     spark_partition_id,
     stddev,
     stddev_pop,
@@ -271,14 +268,6 @@ def test_approx_percentile_discrete_bigint_matches_spark(spark: ReparkSession) -
 
 
 def test_batch4_loud_unsupported(spark: ReparkSession) -> None:
-    with pytest.raises(UnsupportedOperationException, match="skewness"):
-        skewness("x")
-    with pytest.raises(UnsupportedOperationException, match="kurtosis"):
-        kurtosis("x")
-    # percentile_approx / approx_percentile ship (see test_percentile_approx_scalar_bounds);
-    # the rest stay loud-unsupported.
-    with pytest.raises(UnsupportedOperationException, match="mode"):
-        mode("x")
     # FNP-3: sha1 / crc32 / xxhash64 ship (datafusion-spark hash kernels). Behavior:
     # test_fnp3_destubbed.py.
     # G2: randn is live (XORShift Gaussian); keep other loud stubs.

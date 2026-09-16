@@ -1,5 +1,6 @@
 # map — scripts/
 
+FNP-AGG-1 step 2 (2026-09-16, run 17a): `check_lib_py.py` sets `functions.py` 1984 → 1985 (the installer import) and `functions_expr.py` 2220 → 2233 (the destub plus the shared unary-aggregate builder) with the CAP-1 mirror; `check_example_coverage.py` registers `functions_agg_1.py` / `FNPAGG1_EXPORTS`, pays its two registry lines by compacting docstring prose, and `BACKLOG_BASELINE` ratchets 111 → 108 (the new example covers `F.kurtosis` / `F.mode` / `F.skewness`). pins: fnp-agg-1/C-007
 SET-ANSI-RUNTIME-1 (2026-09-15): `check_lib_py.py` ratchets `tests/test_session_timezone_parity.py` 1328 → 1318 (the applied-contract flips are net-negative). pins: set-ansi-runtime-1/C-005
 FNP-11B remediation round 1 (2026-09-16, run 17a): `check_lib_py.py` sets `functions_expr.py` 2237 → 2220 (the `make_timestamp` forwarder becomes a direct re-export) with the CAP-1 mirror; `build_api_freeze.py` follows module-level `from`-import aliases when reading required params (`aliased_function_signatures`) and carries the alias targets in `source_paths` so scratch trees resolve them — the regenerated register keeps `F.make_timestamp` at `[]` and corrects `F.udtf` from `null` to `[]`. pins: fnp-11b/C-007, C-008
 
@@ -1307,3 +1308,12 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
   `C2-L004` pin). Ratchets only. pins: fnp-win-1/C-004
 FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` puts `crates/repark-python/src/dataframe.rs` back at 1019 after the round-2 binding pre-check was reverted (owner ruling Q-15c-4); `check_lib_py.py` ratchets `python/repark/tests/test_fnp_win_1.py` down 1454 → 1449.
 - **FNP-11B step-4 orchestrator fix-up (2026-09-15, run 17a):** the step-3 row's numeral phrase is reworded to "sits exactly on the default line ceiling". CAP-1's prose pin forbids the literal old default in any carrier `map.md`, so the numeral reds `test_cap_1_prose_and_navigation_name_the_generalized_gate`; the fact is unchanged. pins: fnp-11b/C-007
+- **FNP-AGG-1 step-2 orchestrator fix-up (2026-09-16, run 17a):** the round repointed a stale
+  `registry-16b-1-ledger.md` row in `task/ledgers/staging/map.md` and reported it as broken on main
+  too. **It is not broken on main** — main's row already points at `../completed/` and that file
+  exists. The stale row was introduced on this branch by the lane-switch script's union conflict
+  resolver, which keeps both sides of a `map.md` hunk (R-17a-17). Repointing left the entry twice;
+  the duplicate header is removed here. The diff-of-diffs guard cannot see this class: the branch's
+  own delta legitimately contains the row, so the replay is faithful while the merged tree points at
+  a file main has since moved. The gate that catches it is `check_map_md` / the ledger link check,
+  not the replay audit. pins: fnp-agg-1/C-007
