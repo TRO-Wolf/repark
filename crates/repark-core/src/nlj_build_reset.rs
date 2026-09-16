@@ -23,7 +23,7 @@ pub(crate) enum BuildSidePolicy {
 }
 
 impl BuildSidePolicy {
-    pub(crate) fn for_join(join_type: &JoinType, right_partitions: usize) -> Self {
+    pub(crate) fn for_join(join_type: JoinType, right_partitions: usize) -> Self {
         let left_family = matches!(
             join_type,
             JoinType::Left | JoinType::LeftSemi | JoinType::LeftAnti | JoinType::LeftMark
@@ -63,6 +63,7 @@ impl NljBuildSideExec {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn policy(&self) -> BuildSidePolicy {
         self.policy
     }
@@ -174,7 +175,7 @@ impl PhysicalOptimizerRule for NljBuildSideReset {
                 return Ok(Transformed::no(plan));
             };
             let policy = BuildSidePolicy::for_join(
-                join.join_type(),
+                *join.join_type(),
                 join.right().output_partitioning().partition_count(),
             );
             let children = plan.children().into_iter().cloned().collect::<Vec<_>>();
@@ -495,9 +496,8 @@ mod tests {
             .execute(0, Arc::clone(&context))
             .expect("the load execute succeeds");
         drain_rows(first).await;
-        let error = match plan.execute(0, Arc::clone(&context)) {
-            Ok(_) => panic!("the fallback execute must not produce rows"),
-            Err(error) => error,
+        let Err(error) = plan.execute(0, Arc::clone(&context)) else {
+            panic!("the fallback execute must not produce rows")
         };
         let message = error.to_string();
         assert!(

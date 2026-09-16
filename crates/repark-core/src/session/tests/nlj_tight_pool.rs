@@ -88,7 +88,10 @@ async fn a_tight_pool_spills_an_inner_nested_loop_join_with_exact_values() {
         );
         match outcome {
             Ok(batches) => {
-                let total: usize = batches.iter().map(|batch| batch.num_rows()).sum();
+                let total: usize = batches
+                    .iter()
+                    .map(arrow::array::RecordBatch::num_rows)
+                    .sum();
                 assert_eq!(total, 1, "the aggregate answers one row");
                 let counts = batches[0]
                     .column(0)

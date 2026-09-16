@@ -57,11 +57,10 @@ subsets, real exit codes and counts in the ledger.
 | C-007 | A facade pin repeats the NLJ worker enough times to have caught the race at the measured rate (rate cited), asserting the typed message every time, bounded to stay under ~60 s. | The new facade pin and its run. | **PROVEN** | `test_never_oom_panic_1_a_tight_pool_leaves_no_panic_blocks_on_stderr`: 5 worker runs (8M, 1e6 rows, ~1.6 s each, ~12 s with the renamed pin), asserting zero `panicked at`/`partition not used yet`/`inner future panicked` bytes on stderr plus the legal outcome. Red on the base RELEASE module at the first run (FAILED in 0.54 s with the `repartition/mod.rs:1277` block pasted in §Red runs); green after (2 passed in 12.41 s). The measured base rate it would have caught: stderr panic blocks in 400/400 runs, user-visible escape in 2/400 — the stderr signal is the deterministic one. pins: never-oom-panic-1/C-007 |
 | C-008 | The existing `test_h3_spill_matrix.py` pins and the `arrow_export.rs` containment tests stay green unchanged; if the design makes the containment dead, the ledger and registry row say so and the containment is kept only if another path still needs it. | The unchanged runs (or the dead-containment statement). | **PROVEN** | Whole `test_h3_spill_matrix.py`: 23 passed in 45.71 s on the fixed RELEASE module. The old NLJ pin is RENAMED (not silently widened) to `…_spills_or_refuses_…_without_a_panic` because the fix legitimately changed the outcome from refuse to spill-and-succeed; it passes on base too (typed arm, 1.53 s) except when the race escapes, which the new stderr pin covers deterministically. Containment statement: this path no longer reaches the containment (6/6 post-fix worker runs with zero stderr blocks; 10/10 Rust iterations `Ok`), and that is said in the ledger, the `H3-SPILL-NLJ-1` paragraph and the `nlj_build_reset` map rows — but the containment is KEPT because the other seven allow-listed payloads guard fallback paths this unit does not touch (`arrow_export.rs` tests untouched and green, verified in C-010). pins: never-oom-panic-1/C-008 |
 | C-009 | Registry: `H3-SPILL-NLJ-1` gains a dated appended paragraph (history not rewritten) and `NEVER-OOM-PANIC-1` is added in the same section. | The registry diff. | **PROVEN** | Commit `11b22d43`: `H3-SPILL-NLJ-1` keeps its FIXED history plus a dated NEVER-OOM-PANIC-1 paragraph (pin rename, containment now defense-in-depth on this path); new row `NEVER-OOM-PANIC-1` in the same section with the measured counts, the pin list and the rationale. Nothing reordered. pins: never-oom-panic-1/C-009 |
-| C-010 | Gates whole and green with real exit codes and counts: `make verify`; the unit's own test files; the whole facade suite once into a log; the whole parity suite once into a log; `cargo test -p repark-core` and `cargo test -p repark-python`; `COVERAGE_ATTESTATION` complete; VERDICT. | §Gates. | **OPEN** | Round-1 gates were green (see §Gates); round-2 changed product code, so every gate re-runs in step 5. pins: never-oom-panic-1/C-010 |
+| C-010 | Gates whole and green with real exit codes and counts: `make verify`; the unit's own test files; the whole facade suite once into a log; the whole parity suite once into a log; `cargo test -p repark-core` and `cargo test -p repark-python`; `COVERAGE_ATTESTATION` complete; VERDICT. | §Gates. | **PROVEN** | Round-2 §Gates table: every command exit 0 with counts pasted from the logs (`verify3`, `core2`, `pytests2`, `facade2`, `parity2`). pins: never-oom-panic-1/C-010 |
 | C-013 | R-18b-3: residue rows for L-203/R-01 (empty build-side metrics), R-02 (first execute resets), R-03 (spill replay ~2.8x build rows) with the perf-report citations; `metrics()` stays `None`. | The residue section. | **PROVEN** | §Round-2 residue records all three with the perf-report citations and the decline reason for the `metrics()` change. pins: never-oom-panic-1/C-013 |
 | C-011 | R-18b-1: for LEFT, LEFT SEMI, LEFT ANTI and LEFT MARK with more than one right partition the fallback re-execute refuses typed (the genuine recorded pool text plus the containment disclosure; knobs arrive at the Python boundary) instead of emitting rows; every other shape still spills, and single-right-partition shapes still spill. | The rule policy matrix tests; the LEFT refusal pins; the refusal message measured on the facade. | **PROVEN** | `BuildSidePolicy::for_join` off the public `join_type()` and right partition count; the wrapper counts executes (first is always the load, second always the fallback) and the second execute with a left-family type and >1 right partitions returns `ResourcesExhausted` from the session refusal log plus the shared disclosure string — never a row, never a fabrication (no recorded refusal means spill, a case the fallback cannot reach). 16-case policy matrix green; refuse-on-second-execute green with `fair(` and the disclosure asserted; module suite 10/10. Rust LEFT pin green (typed refusal); facade LEFT/ANTI/SEMI legs green (refusal with disclosure), FULL green (refusal without it — the upstream disable path). pins: never-oom-panic-1/C-011 |
 | C-012 | R-18b-2: value pins per join type — facade runs INNER, LEFT, LEFT ANTI, LEFT SEMI, RIGHT, FULL at 8M/4 and 1G asserting count(*) AND sum(id) AND a content digest equal, or the typed refusal, asserting which outcome each type answers; Rust loop pin asserts the INNER value and the LEFT refusal; red first on this head for LEFT / LEFT ANTI; NLJ group under ~60 s. | The new pins and their red/green runs. | **PROVEN** | Red on this head (round-1 code, RELEASE): facade `test_..._join_values_match_or_refuse_typed` FAILED in 35.85 s — the LEFT leg answered `ok` where the refusal is asserted (`assert 'ok' == 'error'`); Rust `a_tight_pool_refuses_a_left_...` FAILED in 29.13 s (`must not spill rows`), INNER value pin green as a keep-spill pin. Facade worker: one process per pool (8M/4, 1G/4, 8M/1) over all six types plus RIGHT SEMI/ANTI legs; each type reports outcome plus count/sum/content-digest, or the message. MARK joins are unproducible through the SQL door (parser refuses `LEFT MARK` with `expected OUTER, SEMI, ANTI or JOIN after LEFT`); the rule classifies them and the Rust policy-matrix test covers LeftMark. Green after the fix: facade value pin green in 25.32 s (tight `ok` legs equal wide on count/sum/digest; refusal legs carry the asserted shapes); NLJ group 3 passed in 34.48 s, under the 60 s budget. Rust INNER value pin green (`count(*)` 2016, `sum(id)` 41664); LEFT refusal pin green. pins: never-oom-panic-1/C-012 |
-| C-013 | R-18b-3: residue rows for L-203/R-01 (empty build-side metrics), R-02 (first execute resets), R-03 (spill replay ~2.8x build rows) with the perf-report citations; `metrics()` stays `None`. | The residue section. | **OPEN** | Decision: residue, no metrics change — the clone's metrics belong to a discarded plan node and threading them through would add shared state for observability only. |
 
 ## Rulings
 
@@ -189,6 +188,8 @@ Each mutation applied alone, the named tests run, then reverted.
 | M-1 | `df_guards.rs` wiring line removed (rule never installed) | `session::tests::nlj_tight_pool` FAILED in 0.10 s with the `repartition/mod.rs:1277` panic — the end-to-end kill |
 | M-2 | `NljBuildSideExec::execute` runs `self.inner` directly (no `reset_plan_states`) | `the_wrapper_runs_a_one_shot_child_twice`, `the_wrapper_replays_values_on_every_execute` (2 failed / 7) |
 | M-3 | Rule wraps the right (probe) child instead of the left | `the_rule_wraps_only_the_build_side_of_a_nested_loop_join`, `the_rule_is_idempotent` (2 failed / 7) |
+| R2M-1 | `for_join` ignores the partition count (all left-family refuse) | `the_rule_refuses_only_the_left_family_past_one_right_partition` (1 failed) |
+| R2M-2 | Refusal text drops the disclosure line | `the_second_execute_refuses_typed_when_the_fallback_is_unsafe` (1 failed) |
 
 ## Rust-first roll-call
 
@@ -208,19 +209,23 @@ None yet.
 
 ## Gates
 
+Round 1 ran on the DEBUG module into `/tmp/verify.log`, `/tmp/core-tests.log`,
+`/tmp/py-tests.log`, `/tmp/facade.log`, `/tmp/parity.log`. Round 2 re-ran everything on the
+round-2 RELEASE module:
+
 | Gate | Exit | Counts |
 |---|---|---|
-| `make verify` | 0 | lint, format, clippy (both clippy gates incl. the production panic ban), all Rust tests, all map/ledger/manifest gates — see `/tmp/verify.log` |
-| `cargo test -p repark-core` | 0 | 534 lib + 37 + 8 integration passed, 0 failed (`/tmp/core-tests.log`; lib leg 159.35 s incl. the 107 s loop pin) |
-| `cargo test -p repark-python` | 0 | 75 + 25 passed, 0 failed (`/tmp/py-tests.log`) |
-| unit's own test files: `nlj_build_reset` + `nlj_tight_pool` | 0 | 7/7 module tests; loop pin 1/1 |
-| unit's own facade pins | 0 | 2 passed in 12.41 s |
-| whole `test_h3_spill_matrix.py` | 0 | 23 passed in 45.71 s |
-| whole facade suite `.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider` | 0 | 9036 passed, 367 skipped, 34 xfailed in 340.94 s (`/tmp/facade.log`) |
-| whole parity suite `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q` | 0 | 757 passed, 2 skipped, 12 xfailed in 381.43 s (`/tmp/parity.log`) |
+| `make verify` | 0 | lint, format, both clippy gates incl. the production panic ban, all Rust tests, all map/ledger/manifest gates — see `/tmp/verify3.log` |
+| `cargo test -p repark-core` | 0 | 538 lib + 37 + 8 integration passed, 0 failed (`/tmp/core2.log`; lib leg 95.73 s) |
+| `cargo test -p repark-python` | 0 | 75 + 25 passed, 0 failed (`/tmp/pytests2.log`) |
+| unit's own test files: `nlj_build_reset` + `nlj_tight_pool` | 0 | 10/10 module tests; 2/2 session pins (INNER values, LEFT refusal) |
+| unit's own facade pins | 0 | value pin green in 25.32 s; NLJ group 3 passed in 34.48 s |
+| whole `test_h3_spill_matrix.py` | 0 | 24 passed (run inside the facade suite leg) |
+| whole facade suite `.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider` | 0 | 9039 passed, 367 skipped, 34 xfailed in 319.50 s (`/tmp/facade2.log`) |
+| whole parity suite `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q` | 0 | 757 passed, 2 skipped, 12 xfailed in 248.73 s (`/tmp/parity2.log`) |
 | `git diff --stat -- Cargo.toml Cargo.lock` | 0 | empty — no dependency or lockfile change |
 
-VERDICT: 13 clauses, 12 PROVEN, 1 OPEN, 0 REJECTED.
+VERDICT: 13 clauses, 13 PROVEN, 0 OPEN, 0 REJECTED.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -228,12 +233,12 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Each charter clause is checked against behavior, not paraphrase. C-001 is the 400-run worker histogram with the exact CI payload twice; C-002 is five file:line paths read from the vendored tree; C-003/C-006 are the red (0.10 s, unwound partition-not-used-yet panic) and green (107.02 s, 10/10 Ok) loop-pin runs; C-004 is R-DESIGN with the P-5 evidence; C-005 is the diff-property list (no unwrap/expect/unreachable/panic/spawn/hook/comments, Cargo files empty); C-007 is the stderr-pin red (0.54 s) and green (12.41 s); C-008 is the 23-green matrix plus the containment statement; C-009 is commit 11b22d43; C-010 is the gates table above.
-      artifacts: [task/ledgers/staging/never-oom-panic-1-ledger.md, crates/repark-core/src/session/tests/nlj_tight_pool.rs, python/repark/tests/test_h3_spill_matrix.py]
+      evidence: Each charter clause is checked against behavior, not paraphrase. C-001 is the 400-run worker histogram with the exact CI payload twice; C-002 is five file:line paths read from the vendored tree; C-003/C-006 are the red (0.10 s, unwound partition-not-used-yet panic) and green (107.02 s, 10/10 Ok) loop-pin runs; C-004 is R-DESIGN with the P-5 evidence; C-005 is the diff-property list (no unwrap/expect/unreachable/panic/spawn/hook/comments, Cargo files empty); C-007 is the stderr-pin red (0.54 s) and green (12.41 s); C-008 is the 23-green matrix plus the containment statement; C-009 is commit 11b22d43; C-010 is the gates table above. Round 2: C-011 is the 16-case policy matrix plus the refuse-on-second-execute pin and the green LEFT/FULL refusal legs; C-012 is the facade value-pin red (35.85 s, LEFT answered ok) and green (25.32 s) with the 34.48 s NLJ group, plus the Rust LEFT red (29.13 s) and green and the INNER values; C-013 is the residue section with the perf-report citations.
+      artifacts: [task/ledgers/staging/never-oom-panic-1-ledger.md, crates/repark-core/src/session/tests/nlj_tight_pool.rs, python/repark/tests/test_h3_spill_matrix.py, crates/repark-core/src/nlj_build_reset.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: The pool/partition/load domain is swept, not sampled: pools 4M/6M/8M/12M by partitions 2/4/8 by load/no-load, 40 worker runs each. The fits boundary holds (1G control ok); the tight boundary answers ok-or-typed-refusal. Every Rust loop iteration proves its own tightness through the refusal log, so a vacuous pass is impossible. Null/empty inputs have no surface here: the change is a physical-plan rewrite on a fixed non-equi-join shape with no new parser or expression.
-      artifacts: [task/ledgers/staging/never-oom-panic-1-ledger.md, crates/repark-core/src/session/tests/nlj_tight_pool.rs]
+      evidence: The pool/partition/load domain is swept, not sampled: pools 4M/6M/8M/12M by partitions 2/4/8 by load/no-load, 40 worker runs each. The fits boundary holds (1G control ok); the tight boundary answers ok-or-typed-refusal. Every Rust loop iteration proves its own tightness through the refusal log, so a vacuous pass is impossible. Null/empty inputs have no surface here: the change is a physical-plan rewrite on a fixed non-equi-join shape with no new parser or expression. Round 2: the join-type domain is swept too — eight shapes at two pools plus the single-partition legs — with the wide run as the per-type oracle; MARK is unproducible through the door and covered by the policy matrix instead.
+      artifacts: [task/ledgers/staging/never-oom-panic-1-ledger.md, crates/repark-core/src/session/tests/nlj_tight_pool.rs, python/repark/tests/test_h3_spill_matrix.py]
     - id: AT-3
       status: ATTACKED
       evidence: Both legal failure outcomes are pinned: spill-and-succeed (ok) and the typed ResourcesExhausted refusal with its full message shape. The session-usable-after-refusal pin still passes, no run in 400+ aborts the process, and a non-refusal error propagates unrewritten. The renamed pin forbids every panic marker on both arms.
@@ -247,7 +252,7 @@ COVERAGE_ATTESTATION:
       justification: No authentication, privilege, secret, path, network, or deserialization surface is touched; no .github, env, or credential change. The rule rewrites in-memory plan nodes only.
     - id: AT-6
       status: ATTACKED
-      evidence: The spilled path answers exactly the in-memory path: the full join digest 9fb2c245 with 2016 rows is identical at 8M, 64M, and 1G. Schema, partitioning, fetch, and limit-pushdown delegation are pinned, the EXPLAIN shape guard keeps the pin on the NLJ path, and unbounded sessions are behavior-neutral (the fallback never triggers without a refusal; both whole suites green).
+      evidence: The spilled path answers exactly the in-memory path: the full join digest 9fb2c245 with 2016 rows is identical at 8M, 64M, and 1G. Schema, partitioning, fetch, and limit-pushdown delegation are pinned, the EXPLAIN shape guard keeps the pin on the NLJ path, and unbounded sessions are behavior-neutral (the fallback never triggers without a refusal; both whole suites green). Round 2: every keep-spill shape is value-pinned per type (count, sum, content digest tight-equals-wide), and the refuse shapes are pinned to never emit a row; the refusal reuses the genuine recorded pool text, never a fabrication.
       artifacts: [crates/repark-core/src/nlj_build_reset.rs, python/repark/tests/test_h3_spill_matrix.py]
     - id: AT-7
       status: ATTACKED
@@ -263,7 +268,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_h3_spill_matrix.py, crates/repark-python/src/arrow_export.rs]
     - id: AT-10
       status: ATTACKED
-      evidence: Red-first on both doors (Rust 0.10 s red, facade stderr pin 0.54 s red on base). Three mutations, each applied alone and reverted, each killed by named tests: M-1 (rule wiring removed) by the loop pin in 0.10 s; M-2 (wrapper executes the child directly) by the two double-execute module tests; M-3 (rule wraps the probe side) by the two rule tests. Branch liveness: every rule arm has a pin (wrap / non-NLJ identity / idempotent reapply), the wrapper arity refusal is pinned, and the two defensive arms are disclosed — NLJ is always binary so the not-two-children arm is unreachable-today future-proofing, and the reset ? is standard error propagation.
+      evidence: Red-first on both doors (Rust 0.10 s red, facade stderr pin 0.54 s red on base). Three mutations, each applied alone and reverted, each killed by named tests: M-1 (rule wiring removed) by the loop pin in 0.10 s; M-2 (wrapper executes the child directly) by the two double-execute module tests; M-3 (rule wraps the probe side) by the two rule tests. Round 2: R2M-1 (partition count ignored) by the policy matrix, R2M-2 (disclosure dropped) by the refuse-on-second-execute pin. Branch liveness: every rule arm has a pin (wrap / non-NLJ identity / idempotent reapply / 16-case policy split), the wrapper arity refusal is pinned, and the three defensive arms are disclosed — NLJ is always binary so the not-two-children arm is unreachable-today future-proofing, the reset ? is standard error propagation, and the no-recorded-refusal arm spills rather than fabricate (pinned by the fall-through test).
       artifacts: [crates/repark-core/src/nlj_build_reset.rs, crates/repark-core/src/session/tests/nlj_tight_pool.rs]
-  complete: false
+  complete: true
 ```

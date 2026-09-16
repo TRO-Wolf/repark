@@ -407,8 +407,10 @@ spark.range(64).selectExpr(*columns).createOrReplaceTempView("other")
 specs = [
     ("inner", "SELECT l.id AS id, r.v AS v FROM base l JOIN other r ON l.v < r.v"),
     ("left", "SELECT l.id AS id, r.v AS v FROM base l LEFT JOIN other r ON l.v < r.v"),
-    ("anti", "SELECT l.id AS id, CAST(NULL AS DOUBLE) AS v FROM base l LEFT ANTI JOIN other r ON l.v < r.v"),
-    ("semi", "SELECT l.id AS id, CAST(NULL AS DOUBLE) AS v FROM base l LEFT SEMI JOIN other r ON l.v < r.v"),
+    ("anti", "SELECT l.id AS id, CAST(NULL AS DOUBLE) AS v "
+     "FROM base l LEFT ANTI JOIN other r ON l.v < r.v"),
+    ("semi", "SELECT l.id AS id, CAST(NULL AS DOUBLE) AS v "
+     "FROM base l LEFT SEMI JOIN other r ON l.v < r.v"),
     ("right", "SELECT l.id AS id, r.v AS v FROM base l RIGHT JOIN other r ON l.v < r.v"),
     ("full", "SELECT l.id AS id, r.v AS v FROM base l FULL JOIN other r ON l.v < r.v"),
     ("rsemi", "SELECT r.id AS id, r.v AS v FROM base l RIGHT SEMI JOIN other r ON l.v < r.v"),

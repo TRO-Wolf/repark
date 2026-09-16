@@ -34,7 +34,8 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   **Round 2 (2026-09-16):** two pins of three iterations — the INNER join asserts spilled
   values (`count(*)` 2016, `sum(id)` 41664, or the typed refusal), the LEFT join asserts
   the typed `Resources exhausted … fair(` refusal (the fallback DataFusion documents as
-  unsafe must not emit rows), never a panic payload.
+  unsafe must not emit rows), never a panic payload. The shape guard and the refusal-shape
+  assertion are helpers shared by both pins.
   pins: never-oom-panic-1/C-003, C-006, C-012
 - `a13.rs` — `file://` warehouse fallback-root pin.
 - `pool_refusals.rs` — **H3-SPILL-RESIDUE-1 (2026-09-06):** the wiring pins. A bounded

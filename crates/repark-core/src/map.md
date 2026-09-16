@@ -312,7 +312,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   built from the session's own recorded pool text plus `REFUSAL_CONTAINMENT_NOTE` (moved to
   `pool_refusals.rs` so the export reader reuses the one string), never a row. Every other
   shape spills, including single-right-partition left-family joins. With no recorded refusal
-  the wrapper spills rather than fabricate. `metrics()` stays `None` (residue R-02).
+  the wrapper spills rather than fabricate. `metrics()` stays `None` (residue R-02). The
+  execute counter is an `AcqRel` atomic with no lock (the two executes are sequential: the
+  fallback runs only after the load resolves); `for_join` takes the one-byte `JoinType` by
+  value and the test-only `policy()` getter is `#[cfg(test)]`.
   pins: never-oom-panic-1/C-011, C-012, C-013
 - `catalog_config.rs` — the `spark.sql.catalog.<name>.*` → `Vec<CatalogSpec { name, kind,
   props }>` parser (`parse_catalog_specs`, pure/AWS-free). Both prefixes share one keyspace
