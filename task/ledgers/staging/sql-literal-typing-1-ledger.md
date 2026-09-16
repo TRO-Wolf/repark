@@ -204,6 +204,24 @@ passes (full list in §2).
   needs `REPARK_PARITY_LIVE=1` + JVM; its pair updated to `(int32, int32)` for
   nightly to confirm) and tier-2 live AWS (never against unmerged code).
 
+## 7. Remediation round 1 verification (2026-09-16, head `d5622025`)
+
+- `cargo test -p repark-spark --lib` — exit 0: 1041 passed, 0 failed,
+  4 ignored (18 `spark_literal_typing` tests incl. the HOF regression pin).
+- `cargo test -p repark-python --lib` — exit 0: 75 passed, 0 failed
+  (door-parity factorial row green after the dispatch fix).
+- `make rust-clippy` — exit 0. `make verify` — exit 0 (56 ok, zero failures).
+- Release native rebuilt (`uvx maturin@1.14.1 develop --release`,
+  exit 0) from the final shipped sources.
+- `make py-test-facade` — exit 0: 9108 passed, 372 skipped, 34 xfailed
+  (9098 round-1 + the 10 new LIT2/F.expr pins; the 24 FNP-8 HOF pins broke
+  mid-round on the recompute skip and are green after the fix).
+- `PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest
+  python/repark-parity/tests -q -p no:cacheprovider` — exit 0: 757 passed,
+  2 skipped, 12 xfailed (unchanged from round-1).
+- Not run here: live-Spark legs (no JVM) and tier-2 live AWS (never against
+  unmerged code).
+
 ## 5. Decisions
 
 - C-005 (2026-09-16): stays OPEN with BACKLOG residue row BL-20-OVF. Measured
