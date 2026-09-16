@@ -124,7 +124,7 @@ declines it (a dated ruling in the intake, then the archive).
   cheaper orchestrating session runs the slate unattended:** the four owner grants, the five
   reads, lane/brief/launch commands per launcher, the hand-back audit checklist, the gated
   push/PR/merge chain, bounded decision authority, one night's order, stop conditions, the
-  morning report, and the launch command the owner runs.
+  morning report, and the launch command the owner runs. Standing instructions added 2026-09-16 (morning): the Rust-first decision sentence, whole-suite gates, the commit as a numbered step, the box rules and the run-17 rulings.
 - [overnight-report-2026-09-09.md](overnight-report-2026-09-09.md) — **what the first
   unattended run of that runbook actually did (night of 2026-09-08/09):** two units merged
   (BALLISTA-AUDIT-0 #426, DF-EXPLAIN-1 #427), SQL-DESCRIBE-1 parked on the D-3 type-spelling
