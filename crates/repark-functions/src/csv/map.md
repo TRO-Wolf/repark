@@ -23,6 +23,12 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   `DROPMALFORMED` mode on a readable literal options map with
   `[PARSE_MODE_UNSUPPORTED]`; every other check is type-based in the kernels.
   pins: fnp-gen-1/C-003
+- `schema_of_csv.rs` — the `schema_of_csv` scalar UDF plus its `#[cfg(test)]`
+  pins (the Spark `CSVInferSchema` ladder and renderer, the quoted separator, the
+  `sep` option, the empty-document `INTERNAL_ERROR` defect, NULL, non-string
+  input, non-map options). The kernel answers one DDL string per row; the fold
+  rule (step 4b) folds a literal call at analysis time.
+  pins: fnp-gen-1/C-004
 
 ## Pointers
 

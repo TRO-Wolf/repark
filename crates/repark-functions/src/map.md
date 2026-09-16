@@ -360,6 +360,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   literal options map still carries its declared types when the rule reads the
   parse mode; the `csv` module registers its UDFs in `lib.rs` beside the other
   families.
+  **Step 4a (run 18a):** `csv::schema_of_csv` joins the `csv::functions()`
+  registry with the Spark `CSVInferSchema` ladder; folding lands in step 4b.
   pins: fnp-win-1/C-004, C-008, fnp-gen-1/C-002, C-003, C-004
 - `lib.rs` — crate-root stays at **182** under `check_lib_rs` (D-8 one-time
   FNP-WIN-1 grant; step 4 moved the `analyzer_rules()` home to
