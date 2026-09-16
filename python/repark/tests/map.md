@@ -5412,8 +5412,9 @@ through `core` or the package. pins: eager-budget-1/C-010
   ANSI, measured against `fixtures-batch17-bl11-binary.json` B11-* cells (PySpark 4.1.2):
   ANSI-off integral encode as big-endian bytes of natural width, ANSI-on integral refusal
   with `CAST_WITH_CONF_SUGGESTION`, the never-castable sources refusing in both modes with
-  `CAST_WITHOUT_SUGGESTION`; value AND Arrow type AND nullability on both doors.
-  pins: bl-11-numeric-binary/C-001, C-002, C-003, C-004, C-005
+  `CAST_WITHOUT_SUGGESTION`; value AND Arrow type AND nullability on both doors. The file's
+  C-001…C-005 pins are the evidence the registry BL-11 FIXED cites.
+  pins: bl-11-numeric-binary/C-001, C-002, C-003, C-004, C-005, C-006
 - **FNP-MISC-1 (2026-09-15):** `test_fnp_misc_1.py::test_fnp_misc_1_call_function_on_camel_case_aliases_matches_spark` pins `call_function` on #597's six camel-case aliases to the measured Spark 4.1.2 answers (pins: fnp-misc-1/F-4).
 
 - [test_java_double_str_1.py](test_java_double_str_1.py) — **JAVA-DOUBLE-STR-1
