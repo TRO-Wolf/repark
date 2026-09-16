@@ -2,6 +2,8 @@
 
 mod alter;
 mod alter_write_order;
+mod bare_nullary;
+mod bare_unit;
 mod call;
 mod call_args;
 mod catalog_ops;
@@ -12,6 +14,7 @@ mod describe_show;
 mod dialect;
 mod format_version;
 mod insert_overwrite;
+mod keyword_lower;
 mod local_fs_ddl;
 mod merge;
 mod metadata_tables;
