@@ -41,7 +41,13 @@ repo.
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
   table (one row per dedicated bump PR; started 2026-08-15; live pin RP-11 `189a73ed` on 2026-09-04).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
-  single home for how repark differs from Apache Spark. **FNP-11B registry pass (2026-09-15, run 17a):**
+  single home for how repark differs from Apache Spark. **Run 17c registry pass (2026-09-16):** `TZ-3`,
+  `SET-ANSI-RUNTIME-1` and `BL-11` flip to FIXED with their pins; `SET-ANSI-RUNTIME-2` / `-3` record two
+  narrow runtime-config residues and `SET-ANSI-RUNTIME-4` is a dated declared divergence (sub-minute
+  fixed offsets: Spark accepts `+05:30:30`, repark refuses, because Arrow's `Tz` has no seconds-offset
+  form); `BL-19` and `BL-20` are appended from live-oracle measurements taken that night — the
+  unknown-function refusal shape (`UNRESOLVED_ROUTINE`, a blanket contract rather than one row per
+  missing name) and the SQL door's integral literal typing, which makes the two repark doors disagree. **FNP-11B registry pass (2026-09-15, run 17a):**
   `EX-FN-20`, `EX-FN-21` and `EX-FN-28` flip to FIXED with their pin paths and `BL-13` is rewritten
   to its new shape (ledger D-18); seven §7 residual rows are appended, each naming the seam and its
   owner — the year-month `try_avg` rendering (R-17a-16, one Arrow `MonthDayNano` carries both ANSI
