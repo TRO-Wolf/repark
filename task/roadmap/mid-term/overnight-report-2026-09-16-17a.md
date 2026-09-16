@@ -48,6 +48,21 @@ Baseline files: `/tmp/oc-worker/run17a/census-before.json`, `census-after-627.js
 | Units carried | LIT-DECIMAL-1 step 1, FNP-GEN-1 steps 2 + remediation | FNP-11B steps 4–7 + remediation, FNP-AGG-1 step 2 |
 | Metered cost | **free tier** | **no metered cost** (contributor model) |
 
+**Measured from the `runs.tsv` files.**
+
+| Round | Tier | Turns | Steps | Tokens in | Tokens out | Hand-back |
+|---|---|---|---|---|---|---|
+| LIT-DECIMAL-1 step 1 | Devin | 68 | 91 | 8.20 M | 49.7 k | yes |
+| FNP-GEN-1 step 2, round 1 | Devin | 9 | 10 | 1.03 M | 6.8 k | **no — lost** |
+| FNP-GEN-1 step 2, round 2 | Devin | 76 | 84 | 6.21 M | 27.6 k | yes |
+| FNP-GEN-1 remediation | Devin | 56 | 58 | 3.91 M | 15.3 k | yes |
+| FNP-11B steps 4, 5, 6, 7 + remediation | Muse | — | 357 / 212 / 154 / 73 / 304 | — | — | 5 × yes |
+| FNP-AGG-1 step 2 | Muse | — | 423 | — | — | yes |
+
+Devin: **4 rounds, 19.35 M tokens in, 99.4 k out, 1 lost — free tier.** Muse: **6 rounds, 1 523 steps, 0 lost — no metered cost.**
+
+**Grok 4.6 reviewers: 11 rounds, $7.17.** Per PR: #627 $3.01 (critic-logic $1.22, Rust perf $0.31, Python perf $0.81, verification $0.67); #629 $2.29 (logic $0.65, Rust perf $0.41, Python perf $0.45, verification $0.79); #625 $1.88 (logic $0.68, Rust perf $0.63, Python perf $0.57). **That $7.17 bought nine P1s**, including a multi-partition accumulator that dropped every state row but the first, a `coalesce(expr, zero)` that turned real NULLs into `0`, and a panic on a sliced `ListArray` — none of which any gate caught.
+
 **How each behaved, which matters more than the counts.**
 
 *Devin* reads exhaustively before it writes. Its FNP-GEN-1 round spent **53 minutes reading with zero file edits** before the first byte of code — checking `unnest_columns_with_options`, `Case`, `arrays_zip`, nullability propagation, the analyzer-rule wiring — and then produced a correct analyzer rewrite in one pass. That is not waste: the design it derived unaided (an analyzer rule over a `Projection`, avoiding the forbidden `dataframe/**` seam) is the one I adopted as the sanctioned design. But it has a real failure mode: **round 1 ended a turn to narrate progress**, with no commit and no `handback.json`, burning 28 minutes and ~1 M tokens. The fix was a resume with an explicit proceed mandate; after that it ran clean for two rounds. **Give Devin the well-bounded card and always brief the proceed mandate.** Its hardest round (the five-P1 remediation, including replacing a `coalesce(expr, zero)` data-corruption hack with a validity-union UDF) came back with every finding closed and all gates green.
