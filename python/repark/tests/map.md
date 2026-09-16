@@ -945,7 +945,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`sql_literal_typing_1_spark_oracle.json`) — one case per in-scope cell id,
   recorded rows plus the Arrow type from `to_arrow().schema` (typeof cells pin
   the name too), Spark error class plus message where recorded. Red on base:
-  19 failed, 44 passed. `div` / unary `~` stay unpinned (SPARK-SQL-GRAMMAR-1
+  19 failed, 44 passed; green after the `spark_literal_typing.rs` fix
+  (63 passed). LIT-SQL-52 is a declared-divergence pin holding the -128 wrap
+  for residue BL-20-OVF. `div` / unary `~` stay unpinned (SPARK-SQL-GRAMMAR-1
   residues).
   pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE

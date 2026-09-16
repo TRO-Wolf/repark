@@ -23,6 +23,7 @@ mod normalize;
 mod ref_ddl;
 mod router;
 mod spark_ast;
+mod spark_literal_typing;
 pub mod spark_literals;
 mod spark_rewrites;
 mod spark_type_names;

@@ -41,12 +41,12 @@ and unary `~` (SPARK-SQL-GRAMMAR-1 C-001/C-002 residues); `functions*.py`,
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Unsuffixed integral literals answer Spark's type: Int32 when the value fits i32, Int64 when it needs 64 bits, DECIMAL(p,0) past i64, refusal past 38 digits. | `test_sql_literal_typing_1.py` LIT-SQL-00…09, 13…15 cells (value, Arrow type, error class/message). | OPEN | RED on base: LIT-SQL-06 errors `typeof(UInt64) is not implemented`, LIT-SQL-09 answers decimal(39,0) as decimal256. §1. |
-| C-002 | Binary arithmetic meeting a literal answers Spark's type: `+ - * %`, `pmod`, `1 + 1L` bigint, `2147483647 + 1` raises ARITHMETIC_OVERFLOW, `1 + 1.5` decimal(3,1), `1 / 2` double, `1 + decimal(5,2)` decimal(6,2), tinyint plus 2^63 decimal(20,0). | Same pin file, LIT-SQL-16, 19…25, 27, 35, 36, 40…42, 53, LIT-PY-08 cells. | OPEN | RED on base: 16, 19, 21, 27, 41, 42 answer bigint; 35 answers decimal(21,0). 20, 22…25, 36, 40, 53 already green, pinned. §1. |
-| C-003 | Coercion sites answer Spark's type: `coalesce`, `CASE`, `array(...)`, `greatest` over int literal plus tinyint answer int / array<int>; `1 = CAST(1 AS TINYINT)` stays boolean true. | Same pin file, LIT-SQL-30…34 cells. | OPEN | RED on base: 30…33 answer bigint / array<bigint>. 34 already green, pinned. §1. |
-| C-004 | `hex(CAST(<expr> AS BINARY))` under ANSI off answers Spark's byte count on both doors; LIT-SQL-44 and LIT-PY-05 agree. | Same pin file, LIT-SQL-44…51 and LIT-PY-05 cells. | OPEN | RED on base: 44 and 47 answer 8 bytes. 45, 46, 48…51, PY-05 already green, pinned. §1. |
-| C-005 | `CAST(127 AS TINYINT) + CAST(1 AS TINYINT)` under ANSI raises BINARY_ARITHMETIC_OVERFLOW. | Same pin file, LIT-SQL-52 cell; or BACKLOG residue row BL-20-OVF naming the seam. | OPEN | RED on base: answers -128 (wraps). Needs a checked Int8/Int16 kernel beyond the planner; decision recorded in §5. |
-| C-006 | The Python door does not regress: LIT-PY-00…09 stay as recorded. | Same pin file, LIT-PY-00…09 cells; PY-07 pins today's refusal. | OPEN | All green on base except the LOGICAL-WIDTH-1 display on PY-03/04, pinned through `to_arrow()` (int8/int16). §1. |
+| C-001 | Unsuffixed integral literals answer Spark's type: Int32 when the value fits i32, Int64 when it needs 64 bits, DECIMAL(p,0) past i64, refusal past 38 digits. | `test_sql_literal_typing_1.py` LIT-SQL-00…09, 13…15 cells (value, Arrow type, error class/message). | PROVEN | Green after the fix: 06 answers decimal(19,0), 09 refuses with the recorded class and message, the rest unchanged. Probe LIT-SQL-06/09 cells SAME. pins: sql-literal-typing-1/C-001. §2. |
+| C-002 | Binary arithmetic meeting a literal answers Spark's type: `+ - * %`, `pmod`, `1 + 1L` bigint, `2147483647 + 1` raises ARITHMETIC_OVERFLOW, `1 + 1.5` decimal(3,1), `1 / 2` double, `1 + decimal(5,2)` decimal(6,2), tinyint plus 2^63 decimal(20,0). | Same pin file, LIT-SQL-16, 19…25, 27, 35, 36, 40…42, 53, LIT-PY-08 cells. | PROVEN | Green after the fix: 16, 19, 21, 27, 41, 42, PY-08 answer int; 35 answers decimal(20,0); 22/53 still raise. No per-operator retag: DataFusion's own coercion produces the promotion once the literal is Int32. pins: sql-literal-typing-1/C-002. §2. |
+| C-003 | Coercion sites answer Spark's type: `coalesce`, `CASE`, `array(...)`, `greatest` over int literal plus tinyint answer int / array<int>; `1 = CAST(1 AS TINYINT)` stays boolean true. | Same pin file, LIT-SQL-30…34 cells. | PROVEN | Green after the fix: 30, 31, 33 answer int; 32 answers array<int>; 34 still boolean true. Same mechanism as C-002. pins: sql-literal-typing-1/C-003. §2. |
+| C-004 | `hex(CAST(<expr> AS BINARY))` under ANSI off answers Spark's byte count on both doors; LIT-SQL-44 and LIT-PY-05 agree. | Same pin file, LIT-SQL-44…51 and LIT-PY-05 cells. | PROVEN | Green after the fix: 44 and 47 answer `00000002`; the agreement pin asserts LIT-SQL-44 equals LIT-PY-05. Follows from C-002, no extra code. pins: sql-literal-typing-1/C-004. §2. |
+| C-005 | `CAST(127 AS TINYINT) + CAST(1 AS TINYINT)` under ANSI raises BINARY_ARITHMETIC_OVERFLOW. | Same pin file, LIT-SQL-52 cell; or BACKLOG residue row BL-20-OVF naming the seam. | OPEN | Still wraps to -128 after the fix (no unsuffixed literal involved, so the rule never fires). Needs checked Int8/Int16 add/sub/mul kernels plus the `S`-suffixed error shape: new kernels in `repark-functions`, outside this round's fence. Stays OPEN with BACKLOG row BL-20-OVF; the wrap is held by a declared-divergence pin that flips red when the kernel lands. §5. |
+| C-006 | The Python door does not regress: LIT-PY-00…09 stay as recorded. | Same pin file, LIT-PY-00…09 cells; PY-07 pins today's refusal. | PROVEN | Green after the fix: all nine cells plus the PY-07 refusal pin unchanged (`F.lit` builds Int32 directly, so the SQL-text rule never fires on the Python door). pins: sql-literal-typing-1/C-006. §2. |
 | C-007 | BL-20 moves to FIXED with pin names and the oracle path; residues (`div`, `~`, C-005 if open) are their own rows. | Registry diff plus this ledger. | OPEN | Done last, in the registry commit. |
 
 ## 1. Red-first record (base `33c87cbf`, release native in `.venv`, 2026-09-16)
@@ -102,6 +102,11 @@ passes (full list in §2).
   hex-agreement pin, the nullability pin (blocked on 06). Passing: every other
   in-scope cell, including the LOGICAL-WIDTH-1 display cells through
   `typeof`/`to_arrow` (10, 11, 17, 18, 28, 29, 37, 39, 43, PY-03, PY-04).
+- Green run 2026-09-16 after the `spark_literal_typing.rs` fix (release native
+  rebuilt): `63 passed`. Probe `rp.py` over the 64 oracle cells: 30 DIFFs
+  down to 14, and every remaining DIFF is declared out of scope (11
+  LOGICAL-WIDTH-1 display cells whose `typeof` agrees, `div` LIT-SQL-26,
+  unary `~` LIT-SQL-38) except LIT-SQL-52 (C-005, declared divergence pin).
 
 ## 3. Design (Rust-first per Q-17a-2)
 
@@ -122,6 +127,13 @@ passes (full list in §2).
 
 ## 5. Decisions
 
-- C-005: measured first (this section records fix vs BACKLOG row BL-20-OVF).
+- C-005 (2026-09-16): stays OPEN with BACKLOG residue row BL-20-OVF. Measured
+  after the C-001…C-004 fix: the cell still answers -128 because neither side
+  is an unsuffixed literal, so no planner rule can see a width to keep. The
+  fix is checked Int8/Int16 `+`/`-`/`*` kernels (ANSI raise with the
+  `127S + 1S` error shape, legacy wrap) — new kernels in `repark-functions`,
+  outside this round's fence. Not a silent skip: the wrap is pinned by
+  `test_tinyint_overflow_wrap_is_declared`, which flips red when the kernel
+  lands.
 - `div` / `~`: out of scope, named in the BL-20 registry row as still open
   (SPARK-SQL-GRAMMAR-1 C-001/C-002 own them).
