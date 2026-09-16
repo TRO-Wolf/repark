@@ -520,3 +520,53 @@ arrival: the GROUPING SETS refusal and value cells, all three DISTINCT cells
 (multiset already passes both scan orders), the cube `grouping_id()` cell
 (rows as a multiset — the plan shape shows rare nondeterministic output
 order across processes, an engine sort-stability seam outside this slice).
+
+Remediation step 2 landed (R-18a-19, R-18a-22): exact-order accept in
+`resolve_grouping_id_call` with Spark's message shape, `sorted_names` and the
+set-match deleted, `rollup_subset` test inverted to refusal plus a
+cube-reversed-args refusal pin (Rust grouping tests 9 green); both new `///`
+lines removed with no `missing_docs` fallout. Engine pins for the five
+grouping refusals turn green at the next release rebuild.
+
+Queued at the 20:40 hard stop (next worker continues here; nothing below is
+started): step 3 R-18a-20 histogram rewrite, step 4 R-18a-21 listagg order +
+R-18a-23 percentile/sketch + , step 5 R-18a-24 mode + R-18a-25 hex, step 6
+R-18a-26 (a)-(g), step 7 dispositions, step 8 gates. Findings the next worker
+must NOT re-derive (all measured live against PySpark 4.1.2 `/tmp/sparkenv`):
+
+- Single-partition histogram algorithm (8 live measurements agree):
+  sorted-center insert, adjacent-only merge, last-wins ties, merged center
+  `x1 * (y1 / total) + x2 * (y2 / total)` (this association, not the plain
+  weighted mean: only it reproduces Spark's `y = 2.333333333333333`, one ulp
+  below `7.0 / 3.0`, on doubles `[11, 1, 7, 2, 4]` nBins 2 answering
+  `[(2.333333333333333, 3), (9, 2)]`). Other verified cells: `(30, 10, 20)`
+  nBins 2 `[(10, 1), (25, 2)]`; `[5, 1, 9, 3, 7, 2, 8]` nBins 3 `[(1.5, 2),
+  (4, 2), (8, 3)]`; ten ints single-partition `[(1, 3), (4, 3), (7.5, 4)]`
+  as doubles, `[(1, 3), (4, 3), (7, 4)]` as ints (Spark truncates `7.5` to
+  `7`: verify the Arrow float-to-int cast truncates, else truncate
+  explicitly). State becomes at most `nBins` sorted `(center, count)` bins
+  (`state_fields` changes from raw-value list to bin-struct list);
+  `merge_batch` inserts the other's bins the same way.
+- The three-partition cell is a Spark partitioning artifact and cannot go
+  green exactly on a single-node engine: measured round-robin assignment is
+  `P0 = [3, 9, 8]`, `P1 = [7, 1, 0, 2]`, `P2 = [5, 6, 4]`; every partial
+  histogram was re-measured single-partition and matches the algorithm
+  above, yet no merge composition tried (sequential all 6 orders, tree,
+  concat-then-trim, raw-buffer replay, sorted/descending insert, first- and
+  last-wins, weighted and midpoint) reproduces Spark's `[(1.5, 4), (4.5, 2),
+  (7.5, 4)]`. Disposition: strict-xfail the cell with that reason plus a
+  registry row, and ask the owner (question below).
+- `hex` today: `expr_fn::hex` delegates to upstream `datafusion-spark`
+  `SparkHex` (no `return_field` override), registered via
+  `all_default_scalar_functions`; our output is always nullable while Spark
+  follows the child. Fix per R-18a-25 is a delegating wrapper in our
+  `spark_math.rs` (`return_field_from_args` precedent in `bool_decimal.rs`)
+  registered after the upstream loop plus a nullable-argument control pin.
+- `F.mode` fix per R-18a-24 mirrors `any_value`: `isinstance` bool check to
+  `lit()`, always `aggregate_binary`, display mirrored from the kernel rule,
+  `join_sql_expr` plus `**_thread_origin`; delete `_mode_deterministic`.
+  The kernel already reads the flag from `values[1]` (`ModeAccumulator::flag`).
+- Cube `grouping_id()` plan shape shows rare nondeterministic output row
+  order across processes (observed once in nine runs; ORDER BY present):
+  the critic pin compares rows as a multiset, the SQL `ORDER BY 1` cell
+  stays exact. Engine sort-stability seam, outside this slice.
