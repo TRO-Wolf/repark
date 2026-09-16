@@ -144,6 +144,9 @@ pins: rp-4-fork-repin/C-005, C-006
   eager analyze below runs, so the door still fails illegal casts at build. **BL-11
   (2026-09-16):** the old plan-walk refusal is deleted in favour of that single verdict —
   it never saw the native `DataFrame` path, which builds `Expr::Cast` directly.
+  **SPARK-SQL-GRAMMAR-1 (2026-09-16):** the same pre-plan slot runs the bare-unit
+  (`bare_unit.rs`), nullary-demote (`bare_nullary.rs`) and keyword (`keyword_lower.rs`)
+  lowerings, in that order; the range-frame restatement repeats all three.
 - `bare_nullary.rs` — **SPARK-SQL-GRAMMAR-1 C-010 (2026-09-16):** bare nullary
   keywords in both Spark directions. `demote_refusing_nullary_calls` lowers a
   no-paren `localtimestamp` call (the Databricks dialect parses it as a function)

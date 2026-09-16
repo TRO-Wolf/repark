@@ -40,7 +40,7 @@ fn quoted_unit_refusal(name: &str, literal: &str) -> DataFusionError {
     ))
 }
 
-fn rewrite_call(name: &str, args: &mut Vec<FunctionArg>) -> Result<()> {
+fn rewrite_call(name: &str, args: &mut [FunctionArg]) -> Result<()> {
     if args.len() != 3 {
         return Ok(());
     }
