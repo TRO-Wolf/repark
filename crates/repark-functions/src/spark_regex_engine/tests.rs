@@ -27,6 +27,11 @@ fn plain_patterns_stay_plain() {
         "\\Qa.b\\E",
         "(ab)",
         "(?:ab)",
+        "(a)+",
+        "(ab)*",
+        "(a){2,3}",
+        "(a){2,}",
+        "(a|b){2,3}",
     ] {
         assert_eq!(
             engine_of(pattern),
@@ -64,13 +69,25 @@ fn fancy_features_route_fancy() {
         "a*+",
         "^(?>a*)a$",
         "(a|b)\\1",
-        "(a+)+b",
-        "(a|b)*c",
-        "(ab)*",
     ] {
-        assert!(
-            matches!(engine_of(pattern), Engine::Fancy { .. }),
-            "{pattern}"
+        assert!(matches!(engine_of(pattern), Engine::Fancy), "{pattern}");
+    }
+}
+
+#[test]
+fn catastrophic_shapes_route_by_feature_not_by_loop() {
+    for pattern in ["(a+)+b", "(a|b)*c", "(a*)*", "(a|b){2,}"] {
+        assert_eq!(
+            engine_of(pattern),
+            Engine::Plain,
+            "no lookaround, backref, possessive or atomic: {pattern}"
+        );
+    }
+    for pattern in ["(a+)+b(?=c)", "(a|b)*+c", "(?>(a|b)*)c"] {
+        assert_eq!(
+            engine_of(pattern),
+            Engine::Fancy,
+            "a fancy feature still routes fancy: {pattern}"
         );
     }
 }
@@ -163,9 +180,9 @@ fn invalid_pattern_names_the_function() {
 }
 
 #[test]
-fn nested_shape_delegates_to_plain_values() {
+fn nested_shape_without_fancy_feature_stays_plain() {
     let compiled = compile_spark_regex("(a+)+b", "rlike").expect("compiles");
-    assert!(matches!(compiled.engine(), Engine::Fancy { .. }));
+    assert_eq!(compiled.engine(), Engine::Plain);
     assert!(!compiled.is_match(&"a".repeat(25)).expect("runs"));
     assert!(compiled.is_match("aab").expect("runs"));
 }
@@ -198,7 +215,7 @@ fn backtrack_budget_trips_on_hard_exponential() {
     let error = compiled.is_match(&text).expect_err("overruns");
     let message = error.to_string();
     assert!(message.contains("overrun"), "{message}");
-    assert!(message.contains("10000000"), "{message}");
+    assert!(message.contains("100000000"), "{message}");
     assert!(started.elapsed().as_secs() < 120, "budget trips closed");
 }
 

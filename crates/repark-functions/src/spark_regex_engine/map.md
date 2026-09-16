@@ -9,9 +9,11 @@ operations both engines serve.
 
 ## Files
 
-- [`tests.rs`](tests.rs) — engine-routing verdicts, the octal rewrite, the `${}`
-  pre-pass, the invalid-pattern message per function name, both overrun tripwires,
-  lookbehind normalization, and per-feature value pins. pins: java-regex-features-1/C-001,
+- [`tests.rs`](tests.rs) — engine-routing verdicts (features-only; quantified groups
+  stay plain; catastrophic shapes route by feature), the octal rewrite, the `${}`
+  pre-pass, the invalid-pattern message per function name, both overrun tripwires
+  (100M backtrack budget, catastrophic-class haystack wire), lookbehind normalization,
+  and per-feature value pins. pins: java-regex-features-1/C-001,
   C-002, C-003, C-004, C-005
   **Step 6:** split invalids name the translated pattern with the engine detail, so
   the long-standing `Q15-13` text leg stays green. pins: java-regex-features-1/C-008

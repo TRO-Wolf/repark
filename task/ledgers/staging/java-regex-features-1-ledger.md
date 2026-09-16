@@ -263,6 +263,12 @@ Java's recursive matcher overflows on, per D-3/D-4), keeping the same
 routing itself is pure D-1 (features only). Every observable the brief names
 holds; the mechanism sentence is the casualty, cited here for overrule.
 
+Step outcomes: step 1 red `8726d6fd` (17 fail / 8 pass as predicted); step 2
+`RX3-SQL-00…05` green on the rebuilt native, `RX2-SQL-00` still `overrun`,
+`RX-SQL-18`/`RX2-SQL-01` still `false`, full file 73 pass / 13 fail with the
+13 all in step-3/4 scope; `cargo test -p repark-functions --lib spark_regex`
+37 pass (trip pin still trips at 100M, ~2 s).
+
 FD-2 (forced, measured): `RX3-SQL-03` (`a*(?=b)` on 10001 a's, Spark `false`)
 needs ~60M backtrack pops (limit sweep 10M→200M: trips through 30M, `false`
 in ~1.1 s from 60M), while the C-004 trip pin (`(a+)+b(?=c)` on 25 a's)

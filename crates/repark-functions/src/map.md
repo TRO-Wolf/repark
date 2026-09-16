@@ -249,14 +249,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `spark_regex_engine.rs` — **JAVA-REGEX-FEATURES-1 (2026-09-16):** the shared
   compiler. Per-pattern engine selection in Rust: the `regex` crate serves every pattern
   it can express; `fancy-regex` 0.11 serves lookaround, backreferences, possessive
-  quantifiers, atomic groups and group-under-open-quantifier shapes (matching still
-  delegates to the DFA where fancy has no hard node, so routing alone changes no value).
+  quantifiers and atomic groups only (a quantified group alone never routes fancy;
+  matching still delegates to the DFA where fancy has no hard node, so routing alone
+  changes no value).
   Dangling `\1`…`\7` read as Java octal; `${…}` drops out of replacements before engine
   expansion (Spark's SQL substitution empties it); non-constant lookbehind normalizes
   (`+` to single, `{n,m}` to alternation, nullable to `(?=)` / `(?!)`). Invalid patterns
   raise Spark's `INVALID_PARAMETER_VALUE.PATTERN` naming the caller (`split` keeps its
-  long-standing text). Overrun is disjunctive: backtrack budget 10M, or a looping fancy
-  pattern on a haystack over 10000 bytes (Java's recursive matcher overflows there —
+  long-standing text). Overrun is disjunctive: backtrack budget 100M, or a
+  catastrophic-class pattern (unbounded-quantified group over alternation or nested
+  loops) on a haystack over 10000 bytes (Java's recursive matcher overflows there —
   measured `StackOverflowError` at 40000). pins: java-regex-features-1/C-001 … C-005,
   C-007 (plain patterns stay on the DFA path)
 - `spark_regex_lookbehind.rs` — **JAVA-REGEX-FEATURES-1 (2026-09-16):** the

@@ -1,77 +1,71 @@
 use datafusion::common::{DataFusionError, Result};
 use regex::Regex;
 
-pub(crate) const FANCY_BACKTRACK_LIMIT: usize = 10_000_000;
-pub(crate) const FANCY_LOOP_HAYSTACK_MAX: usize = 10_000;
+pub(crate) const FANCY_BACKTRACK_LIMIT: usize = 100_000_000;
+pub(crate) const CATASTROPHIC_HAYSTACK_MAX: usize = 10_000;
 
 #[cfg(test)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Engine {
     Plain,
-    Fancy { loops: bool },
+    Fancy,
 }
 
 #[derive(Clone)]
-pub(crate) enum SparkRegex {
+pub(crate) struct SparkRegex {
+    engine: SparkEngine,
+    java_pattern: String,
+    catastrophic: bool,
+}
+
+#[derive(Clone)]
+enum SparkEngine {
     Plain(Regex),
-    Fancy(FancyCompiled),
+    Fancy(fancy_regex::Regex),
 }
 
 impl std::fmt::Debug for SparkRegex {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SparkRegex::Plain(regex) => regex.fmt(formatter),
-            SparkRegex::Fancy(compiled) => formatter
-                .debug_struct("Fancy")
-                .field("pattern", &compiled.java_pattern)
-                .finish(),
-        }
+        formatter
+            .debug_struct("SparkRegex")
+            .field("pattern", &self.java_pattern)
+            .finish()
     }
-}
-
-#[derive(Clone)]
-pub(crate) struct FancyCompiled {
-    regex: fancy_regex::Regex,
-    java_pattern: String,
-    loops: bool,
 }
 
 pub(crate) fn compile_spark_regex(pattern: &str, fn_name: &str) -> Result<SparkRegex> {
     let groups = count_groups(pattern);
     let rewritten = rewrite_out_of_range_octal(pattern, groups);
     let normalized = crate::spark_regex_lookbehind::normalize_lookbehind(&rewritten);
-    match scan_features(&normalized) {
-        ScanVerdict::InvalidJava => Err(invalid_pattern_error(
+    let Some(outcome) = scan_pattern(&normalized) else {
+        return Err(invalid_pattern_error(
             fn_name,
             pattern,
             &translate_pattern(&normalized),
             None,
-        )),
-        ScanVerdict::Plain => {
-            let translated = translate_pattern(&normalized);
-            Regex::new(&translated)
-                .map(SparkRegex::Plain)
-                .map_err(|error| {
-                    invalid_pattern_error(fn_name, pattern, &translated, Some(error.to_string()))
-                })
-        }
-        ScanVerdict::Fancy { loops } => {
-            let translated = translate_pattern(&normalized);
-            fancy_regex::RegexBuilder::new(&translated)
-                .backtrack_limit(FANCY_BACKTRACK_LIMIT)
-                .build()
-                .map(|regex| {
-                    SparkRegex::Fancy(FancyCompiled {
-                        regex,
-                        java_pattern: pattern.to_owned(),
-                        loops,
-                    })
-                })
-                .map_err(|error| {
-                    invalid_pattern_error(fn_name, pattern, &translated, Some(error.to_string()))
-                })
-        }
-    }
+        ));
+    };
+    let translated = translate_pattern(&normalized);
+    let engine = if outcome.fancy {
+        fancy_regex::RegexBuilder::new(&translated)
+            .backtrack_limit(FANCY_BACKTRACK_LIMIT)
+            .build()
+            .map(SparkEngine::Fancy)
+            .map_err(|error| {
+                invalid_pattern_error(fn_name, pattern, &translated, Some(error.to_string()))
+            })?
+    } else {
+        Regex::new(&translated)
+            .map(SparkEngine::Plain)
+            .map_err(|error| {
+                invalid_pattern_error(fn_name, pattern, &translated, Some(error.to_string()))
+            })?
+    };
+    Ok(SparkRegex {
+        engine,
+        java_pattern: pattern.to_owned(),
+        catastrophic: outcome.catastrophic,
+    })
 }
 
 fn invalid_pattern_error(
@@ -134,17 +128,18 @@ pub(crate) fn strip_dollar_braces(replacement: &str) -> String {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum ScanVerdict {
-    Plain,
-    Fancy { loops: bool },
-    InvalidJava,
+struct ScanOutcome {
+    fancy: bool,
+    catastrophic: bool,
 }
 
-fn scan_features(pattern: &str) -> ScanVerdict {
+fn scan_pattern(pattern: &str) -> Option<ScanOutcome> {
     let bytes = pattern.as_bytes();
     let mut index = 0;
-    let mut fancy = false;
-    let mut loops = false;
+    let mut outcome = ScanOutcome {
+        fancy: false,
+        catastrophic: false,
+    };
     while index < bytes.len() {
         match bytes[index] {
             b'\\' => {
@@ -164,13 +159,13 @@ fn scan_features(pattern: &str) -> ScanVerdict {
                         }
                     }
                     b'1'..=b'9' => {
-                        fancy = true;
+                        outcome.fancy = true;
                         index += 1;
                     }
                     b'k' => {
                         match bytes.get(index + 1) {
-                            Some(b'<') => fancy = true,
-                            Some(b'\'') => return ScanVerdict::InvalidJava,
+                            Some(b'<') => outcome.fancy = true,
+                            Some(b'\'') => return None,
                             _ => {}
                         }
                         index += 1;
@@ -184,33 +179,25 @@ fn scan_features(pattern: &str) -> ScanVerdict {
             b'(' => {
                 match group_kind(bytes, index) {
                     GroupKind::Lookahead | GroupKind::Lookbehind | GroupKind::Atomic => {
-                        fancy = true;
+                        outcome.fancy = true;
                     }
-                    GroupKind::Invalid => return ScanVerdict::InvalidJava,
-                    GroupKind::Consuming => {
-                        if let Some(close) = match_group(bytes, index)
-                            && has_open_quantifier(bytes, close + 1)
-                        {
-                            fancy = true;
-                        }
+                    GroupKind::Invalid => return None,
+                    GroupKind::Consuming | GroupKind::Other => {
+                        outcome.catastrophic =
+                            outcome.catastrophic || is_catastrophic_group(bytes, index);
                     }
-                    GroupKind::Other => {}
                 }
                 index += 1;
             }
             b'*' | b'+' => {
-                fancy = fancy || bytes.get(index + 1) == Some(&b'+');
-                loops = true;
+                outcome.fancy = outcome.fancy || bytes.get(index + 1) == Some(&b'+');
                 index += 1;
             }
             b'?' => {
-                fancy = fancy || bytes.get(index + 1) == Some(&b'+');
+                outcome.fancy = outcome.fancy || bytes.get(index + 1) == Some(&b'+');
                 index += 1;
             }
             b'{' => {
-                if is_open_quantifier(bytes, index) {
-                    loops = true;
-                }
                 index += 1;
             }
             b'}' => {
@@ -224,7 +211,7 @@ fn scan_features(pattern: &str) -> ScanVerdict {
                         && bytes[back - 1] == b'{'
                         && bytes.get(back).is_some_and(u8::is_ascii_digit)
                     {
-                        fancy = true;
+                        outcome.fancy = true;
                     }
                 }
                 index += 1;
@@ -232,11 +219,66 @@ fn scan_features(pattern: &str) -> ScanVerdict {
             _ => index += 1,
         }
     }
-    if fancy {
-        ScanVerdict::Fancy { loops }
-    } else {
-        ScanVerdict::Plain
+    Some(outcome)
+}
+
+fn is_catastrophic_group(bytes: &[u8], open: usize) -> bool {
+    let Some(close) = match_group(bytes, open) else {
+        return false;
+    };
+    if !is_unbounded_repetition(bytes, close + 1) {
+        return false;
     }
+    body_has_branch_or_loop(&bytes[open..=close])
+}
+
+fn is_unbounded_repetition(bytes: &[u8], index: usize) -> bool {
+    match bytes.get(index) {
+        Some(b'*' | b'+') => true,
+        Some(b'{') => {
+            let mut cursor = index + 1;
+            if bytes.get(cursor).is_none_or(|byte| !byte.is_ascii_digit()) {
+                return false;
+            }
+            while bytes.get(cursor).is_some_and(u8::is_ascii_digit) {
+                cursor += 1;
+            }
+            if bytes.get(cursor) != Some(&b',') {
+                return false;
+            }
+            cursor += 1;
+            while bytes.get(cursor).is_some_and(u8::is_ascii_digit) {
+                cursor += 1;
+            }
+            bytes.get(cursor) == Some(&b'}') && bytes.get(cursor - 1) == Some(&b',')
+        }
+        _ => false,
+    }
+}
+
+fn body_has_branch_or_loop(bytes: &[u8]) -> bool {
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'\\' => {
+                if bytes.get(index + 1) == Some(&b'Q') {
+                    index = find_quote_end(bytes, index + 2).saturating_sub(1);
+                } else {
+                    index += 1;
+                }
+            }
+            b'[' => index = skip_class(bytes, index).saturating_sub(1),
+            b'|' | b'*' | b'+' => return true,
+            b'{' => {
+                if is_unbounded_repetition(bytes, index) {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+        index += 1;
+    }
+    false
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -306,32 +348,6 @@ pub(crate) fn match_group(bytes: &[u8], open: usize) -> Option<usize> {
         index += 1;
     }
     None
-}
-
-fn has_open_quantifier(bytes: &[u8], index: usize) -> bool {
-    match bytes.get(index) {
-        Some(b'*' | b'+') => true,
-        Some(b'{') => is_open_quantifier(bytes, index),
-        _ => false,
-    }
-}
-
-fn is_open_quantifier(bytes: &[u8], open: usize) -> bool {
-    let mut index = open + 1;
-    if bytes.get(index).is_none_or(|byte| !byte.is_ascii_digit()) {
-        return false;
-    }
-    while bytes.get(index).is_some_and(u8::is_ascii_digit) {
-        index += 1;
-    }
-    if bytes.get(index) == Some(&b',') {
-        index += 1;
-        while bytes.get(index).is_some_and(u8::is_ascii_digit) {
-            index += 1;
-        }
-        return bytes.get(index) == Some(&b'}');
-    }
-    false
 }
 
 pub(crate) fn skip_class(bytes: &[u8], open: usize) -> usize {
@@ -494,70 +510,61 @@ const MID_SURROGATE_PROBE_OFFSET: usize = 3;
 impl SparkRegex {
     #[cfg(test)]
     pub(crate) fn engine(&self) -> Engine {
-        match self {
-            SparkRegex::Plain(_) => Engine::Plain,
-            SparkRegex::Fancy(compiled) => Engine::Fancy {
-                loops: compiled.loops,
-            },
+        match self.engine {
+            SparkEngine::Plain(_) => Engine::Plain,
+            SparkEngine::Fancy(_) => Engine::Fancy,
         }
     }
 
-    fn check_haystack(&self, text: &str) -> Result<()> {
-        if let SparkRegex::Fancy(compiled) = self
-            && compiled.loops
-            && text.len() > FANCY_LOOP_HAYSTACK_MAX
-        {
+    fn check_wire(&self, text: &str) -> Result<()> {
+        if self.catastrophic && text.len() > CATASTROPHIC_HAYSTACK_MAX {
             return Err(overrun_error(
-                &compiled.java_pattern,
+                &self.java_pattern,
                 "looping-pattern haystack",
-                FANCY_LOOP_HAYSTACK_MAX,
+                CATASTROPHIC_HAYSTACK_MAX,
             ));
         }
         Ok(())
     }
 
     fn overrun(&self, error: fancy_regex::Error) -> DataFusionError {
-        match self {
-            SparkRegex::Fancy(compiled) => runtime_error(&compiled.java_pattern, error),
-            SparkRegex::Plain(_) => {
+        match self.engine {
+            SparkEngine::Fancy(_) => runtime_error(&self.java_pattern, error),
+            SparkEngine::Plain(_) => {
                 DataFusionError::Internal("plain regex has no runtime failure".to_owned())
             }
         }
     }
 
     pub(crate) fn is_empty_pattern(&self) -> bool {
-        match self {
-            SparkRegex::Plain(regex) => regex.as_str().is_empty(),
-            SparkRegex::Fancy(compiled) => compiled.regex.as_str().is_empty(),
+        match &self.engine {
+            SparkEngine::Plain(regex) => regex.as_str().is_empty(),
+            SparkEngine::Fancy(regex) => regex.as_str().is_empty(),
         }
     }
 
     pub(crate) fn captures_len(&self) -> usize {
-        match self {
-            SparkRegex::Plain(regex) => regex.captures_len(),
-            SparkRegex::Fancy(compiled) => compiled.regex.captures_len(),
+        match &self.engine {
+            SparkEngine::Plain(regex) => regex.captures_len(),
+            SparkEngine::Fancy(regex) => regex.captures_len(),
         }
     }
 
     pub(crate) fn is_match(&self, text: &str) -> Result<bool> {
-        self.check_haystack(text)?;
-        match self {
-            SparkRegex::Plain(regex) => Ok(regex.is_match(text)),
-            SparkRegex::Fancy(compiled) => compiled
-                .regex
-                .is_match(text)
-                .map_err(|error| self.overrun(error)),
+        self.check_wire(text)?;
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex.is_match(text)),
+            SparkEngine::Fancy(regex) => regex.is_match(text).map_err(|error| self.overrun(error)),
         }
     }
 
     pub(crate) fn find_first(&self, text: &str) -> Result<Option<(usize, usize)>> {
-        self.check_haystack(text)?;
-        match self {
-            SparkRegex::Plain(regex) => {
+        self.check_wire(text)?;
+        match &self.engine {
+            SparkEngine::Plain(regex) => {
                 Ok(regex.find(text).map(|found| (found.start(), found.end())))
             }
-            SparkRegex::Fancy(compiled) => compiled
-                .regex
+            SparkEngine::Fancy(regex) => regex
                 .find(text)
                 .map(|matched| matched.map(|found| (found.start(), found.end())))
                 .map_err(|error| self.overrun(error)),
@@ -570,12 +577,11 @@ impl SparkRegex {
         start: usize,
         group: usize,
     ) -> Result<Option<String>> {
-        match self {
-            SparkRegex::Plain(regex) => Ok(regex
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex
                 .captures_at(text, start)
                 .and_then(|caps| caps.get(group).map(|matched| matched.as_str().to_owned()))),
-            SparkRegex::Fancy(compiled) => compiled
-                .regex
+            SparkEngine::Fancy(regex) => regex
                 .captures_from_pos(text, start)
                 .map(|caps| {
                     caps.and_then(|captures| {
@@ -589,12 +595,11 @@ impl SparkRegex {
     }
 
     pub(crate) fn find_from(&self, text: &str, start: usize) -> Result<Option<(usize, usize)>> {
-        match self {
-            SparkRegex::Plain(regex) => Ok(regex
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex
                 .find_at(text, start)
                 .map(|found| (found.start(), found.end()))),
-            SparkRegex::Fancy(compiled) => compiled
-                .regex
+            SparkEngine::Fancy(regex) => regex
                 .find_from_pos(text, start)
                 .map(|matched| matched.map(|found| (found.start(), found.end())))
                 .map_err(|error| self.overrun(error)),
@@ -602,12 +607,11 @@ impl SparkRegex {
     }
 
     pub(crate) fn matches_at_mid_surrogate_index(&self) -> Result<bool> {
-        match self {
-            SparkRegex::Plain(regex) => Ok(regex
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex
                 .find_at(MID_SURROGATE_PROBE, MID_SURROGATE_PROBE_OFFSET)
                 .is_some_and(|found| found.start() == MID_SURROGATE_PROBE_OFFSET)),
-            SparkRegex::Fancy(compiled) => compiled
-                .regex
+            SparkEngine::Fancy(regex) => regex
                 .find_from_pos(MID_SURROGATE_PROBE, MID_SURROGATE_PROBE_OFFSET)
                 .map(|matched| {
                     matched.is_some_and(|found| found.start() == MID_SURROGATE_PROBE_OFFSET)
@@ -621,7 +625,7 @@ impl SparkRegex {
         text: &str,
         max_matches: usize,
     ) -> Result<Vec<(usize, usize)>> {
-        self.check_haystack(text)?;
+        self.check_wire(text)?;
         let mut found_all = Vec::new();
         if max_matches == 0 {
             return Ok(found_all);
@@ -669,7 +673,7 @@ impl SparkRegex {
     }
 
     pub(crate) fn count_non_overlapping(&self, text: &str) -> Result<i32> {
-        self.check_haystack(text)?;
+        self.check_wire(text)?;
         if self.is_empty_pattern() {
             let count = text.encode_utf16().count().saturating_add(1);
             return i32::try_from(count).map_err(|_| count_overflow());
@@ -727,16 +731,18 @@ impl SparkRegex {
     }
 
     pub(crate) fn replace_all(&self, text: &str, replacement: &str) -> Result<String> {
-        self.check_haystack(text)?;
+        self.check_wire(text)?;
         let stripped = strip_dollar_braces(replacement);
-        match self {
-            SparkRegex::Plain(regex) => Ok(regex.replace_all(text, stripped.as_str()).into_owned()),
-            SparkRegex::Fancy(compiled) => {
+        match &self.engine {
+            SparkEngine::Plain(regex) => {
+                Ok(regex.replace_all(text, stripped.as_str()).into_owned())
+            }
+            SparkEngine::Fancy(regex) => {
                 let mut out = String::with_capacity(text.len());
                 let mut last = 0usize;
                 for (start, end) in self.collect_matches(text, usize::MAX)? {
                     out.push_str(&text[last..start]);
-                    match compiled.regex.captures_from_pos(text, start) {
+                    match regex.captures_from_pos(text, start) {
                         Ok(Some(caps)) => caps.expand(&stripped, &mut out),
                         Ok(None) => out.push_str(&stripped),
                         Err(error) => return Err(self.overrun(error)),
