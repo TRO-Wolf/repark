@@ -23,6 +23,7 @@ pub mod format_version;
 mod groups_null_state;
 pub mod higher_order;
 pub mod instant_ts;
+mod int_to_binary;
 pub mod integer_spark;
 pub mod java_double;
 mod java_regex;

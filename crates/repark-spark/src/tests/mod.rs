@@ -14,6 +14,7 @@ mod call_rewrite_options;
 mod call_v3;
 mod call_v3_dv;
 mod cast_binary;
+mod cast_binary_ansi;
 mod catalog_cache_staleness;
 mod catalog_ops;
 mod collation;

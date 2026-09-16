@@ -533,6 +533,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   its return field marks overflow-exposed targets nullable. Registry
   `CAST-BOOL-DEC-1`.
   pins: nullability-2/C-003
+- `int_to_binary.rs` — **BL-11 (2026-09-16):** the `IntToBinaryCast` analyzer rule,
+  slotted after `SparkExprSemantics` so `SparkIntegerLiteral` has already narrowed bare
+  literals: a `CAST(<integral> AS BINARY)` becomes the `__repark_int_to_binary__` UDF
+  (big-endian bytes of natural width, NULL propagates, nullability follows the input)
+  only when ANSI is off; the same rule refuses every other `→ BINARY` cast with Spark's
+  `DATATYPE_MISMATCH` (`CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals
+  under ANSI on, `CAST_WITHOUT_SUGGESTION` otherwise, `TRY_CAST` always without). The
+  rule sees both doors because the SQL door analyzes eagerly at build and the native
+  `DataFrame` path analyzes the same rule set at collect. Registry `BL-11`.
+  pins: bl-11-numeric-binary/C-001, C-002, C-003
 - Integer `+ − *` overflow (**F-Y10-1 C-001**, measured 2026-08-30): same-width
   Int32/Int64 `BinaryExpr` wrapped via Arrow `arrow-arith`; `CAST(INT) + 1`
   widened to Int64 because DataFusion types a bare integer literal as Int64.

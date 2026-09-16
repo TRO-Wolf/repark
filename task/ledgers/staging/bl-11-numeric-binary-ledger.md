@@ -131,3 +131,10 @@ not exist, and the message lacks the resolve prefix and the conf remedy.
   `int_to_binary.rs` module tests spell `BYTEA`. (e) The `audit-repark-parity` skill was not
   loaded: it measures against live PySpark and this lane forbids starting a JVM; the recorded
   batch-17 fixture is the oracle and the pins assert its cells in the same change.
+- 2026-09-16: Rust lands — new `crates/repark-functions/src/int_to_binary.rs`
+  (`IntToBinaryCast` rule + `__repark_int_to_binary__` UDF, 11 module tests), one-line rule
+  registration after `SparkExprSemantics`, door pre-refusal deleted from `spark_ast.rs`
+  (single analyzer verdict; SQL door still fails at build via `analyze_eagerly`), new door
+  battery `cast_binary_ansi.rs` (5 tests; frozen `cast_binary.rs` untouched). Rust:
+  `repark-functions --lib int_to_binary` 11 passed, `repark-spark --lib cast_binary`
+  10 passed (5 frozen + 5 new).
