@@ -220,3 +220,25 @@ one narrowing rule remains.
   `test_sql_literal_typing_1.py` 77 passed; `cargo test -p
   repark-functions --lib` 739 passed; `-p repark-spark --lib` 1044
   passed; `-p repark-python --lib` 75 passed.
+
+## Round 2 step-4 verdicts — 2026-09-16 (muse-spark-1.3-contributor)
+
+`test_door_converge_2b.py`: **134 passed** (120 round-1 legs plus 14 new
+gap legs, all verified live before pinning). `test_sql_literal_typing_1.py`:
+**77 passed**. An independent cross-check (`/tmp/dc2b_crosscheck.py`)
+matched every Q16 cell's Spark type and nullability against the verbatim
+fixture JSON, and every N7/PG id against the pins; the only mismatches were
+the script's own row-string normalization. Gap audit closed 14 unpinned
+fixture cells with new legs (date-alias breadth DIV-date_part-0…5,
+DIV-slice-4, DIV-array_repeat-0/1/3, DIV-array_contains-0/2, DIV-size-1/3,
+facade `dow`); no cell needed a residue row.
+
+| Clause | Verdict | Evidence |
+|---|---|---|
+| C-001 | PROVEN | Q16-0…8, 11, 12, 15, 16, 20 + DIV-round-0…5 + R-round-a/b/d + facade round leg; 134 green |
+| C-002 | PROVEN | Q16-9/10/13/14/17/18/19 + DIV-ceil-0…6 + R-ceil-a/b/c + facade ceil/floor legs; 134 green |
+| C-003 | PROVEN | Q16-21…25 + R-date-sec-b + new DIV-date_part-0…5 + epoch/nanosecond/unknown refusals + facade SECOND/dow legs; 134 green |
+| C-004 | PROVEN | Q16-26…31 + R-array-a…d + DIV-slice-0/1/4 + slice start/length refusals; 134 green |
+| C-005 | PROVEN | N7-0…32 + PG-is-distinct/not-distinct/map-access + VALUES test + new DIV-size/array_repeat/array_contains legs + facade array legs; 134 green. ARRAY-LITERAL-CONTAINSNULL-1 stays closed via the repark `array` kernel |
+| C-006 | PROVEN | Q16-32…39 (incl. Q16-37 NULL) + DIV-like-0…4 + Q16-35/36 refusals + facade 2-arg legs; 134 green. 3-arg facade stays P2 with run 18a |
+| C-007 | PROVEN | Ratchet 15 → 4 in tree; `door_parity_tests` green inside `cargo test -p repark-python --lib` (75 passed) |

@@ -227,7 +227,80 @@ _SQL_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
         False,
     ),
     "DIV-size-0": ("SELECT size(array(1,2))", [2], pa.int32(), False),
+    "DIV-size-1": ("SELECT size(CAST(NULL AS ARRAY<INT>))", [None], pa.int32(), True),
     "DIV-size-2": ("SELECT size(map(1,2))", [1], pa.int32(), False),
+    "DIV-size-3": (
+        "SELECT cardinality(CAST(NULL AS ARRAY<INT>))",
+        [None],
+        pa.int32(),
+        True,
+    ),
+    "DIV-slice-4": (
+        "SELECT slice(array(1,2,3), 5, 1)",
+        [[]],
+        _list(pa.int32(), False),
+        False,
+    ),
+    "DIV-array_repeat-0": (
+        "SELECT array_repeat('a', 2)",
+        [["a", "a"]],
+        _list(pa.string(), False),
+        False,
+    ),
+    "DIV-array_repeat-1": (
+        "SELECT array_repeat('a', -1)",
+        [[]],
+        _list(pa.string(), False),
+        False,
+    ),
+    "DIV-array_repeat-3": (
+        "SELECT array_repeat('a', CAST(NULL AS INT))",
+        [None],
+        _list(pa.string(), False),
+        True,
+    ),
+    "DIV-array_contains-0": (
+        "SELECT array_contains(array(1, NULL), 2)",
+        [None],
+        pa.bool_(),
+        True,
+    ),
+    "DIV-date_part-0": (
+        "SELECT date_part('YEAR', DATE'2024-03-05')",
+        [2024],
+        pa.int32(),
+        False,
+    ),
+    "DIV-date_part-1": (
+        "SELECT date_part('dow', DATE'2024-03-05')",
+        [3],
+        pa.int32(),
+        False,
+    ),
+    "DIV-date_part-2": (
+        "SELECT date_part('doy', DATE'2024-03-05')",
+        [65],
+        pa.int32(),
+        False,
+    ),
+    "DIV-date_part-3": (
+        "SELECT date_part('week', DATE'2024-03-05')",
+        [10],
+        pa.int32(),
+        False,
+    ),
+    "DIV-date_part-4": (
+        "SELECT date_part('SECONDS', TIMESTAMP'2024-03-05 01:02:03.5')",
+        [Decimal("3.500000")],
+        pa.decimal128(8, 6),
+        False,
+    ),
+    "DIV-date_part-5": (
+        "SELECT datepart('quarter', DATE'2024-03-05')",
+        [1],
+        pa.int32(),
+        False,
+    ),
     "R-ceil-a": ("SELECT ceil(1234.5, -2)", [Decimal("1300")], pa.decimal128(5, 0), True),
     "R-ceil-b": (
         "SELECT floor(CAST(1.5 AS DOUBLE), 1)",
@@ -436,6 +509,10 @@ _ERROR_CELLS: dict[str, tuple[str, str]] = {
         "SELECT date_part('fizz', DATE'2024-03-05')",
         "INVALID_EXTRACT_FIELD",
     ),
+    "DIV-array_contains-2": (
+        "SELECT array_contains(array(1,2), NULL)",
+        "DATATYPE_MISMATCH.NULL_TYPE",
+    ),
 }
 
 
@@ -482,6 +559,12 @@ def test_facade_date_part(spark: ReparkSession, views: None) -> None:
     ).to_arrow()
     assert table.schema.field("v").type == pa.decimal128(8, 6)
     assert table.column("v").to_pylist() == [Decimal("3.500000")]
+    dated = spark.sql("SELECT DATE'2024-03-05' AS d")
+    alias = dated.select(
+        F.date_part(F.lit("dow"), F.col("d")).alias("v"),
+    ).to_arrow()
+    assert alias.schema.field("v").type == pa.int32()
+    assert alias.column("v").to_pylist() == [3]
 
 
 def test_facade_array_shapes(spark: ReparkSession, views: None) -> None:

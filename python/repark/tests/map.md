@@ -361,6 +361,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (fixtures-batch11.json A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x).
   pins: door-converge-1/C-001, C-002, C-003, C-004, C-005,
   C-006, C-007, C-008, C-010, C-011, C-012, C-013, C-014
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** 134 legs — the date-alias breadth
+  rides on DIV-date_part-0…5 (YEAR/`dow`/`doy`/`week`/`datepart`-quarter/
+  `SECONDS`), plus DIV-slice-4 (past-end empty slice), DIV-array_repeat-0/1/3,
+  DIV-array_contains-0/2, DIV-size-1/3, and a facade `dow`-alias leg.
+  pins: door-converge-2b/C-003, C-004, C-005
 - [test_abs_expr_1.py](test_abs_expr_1.py) — **ABS-EXPR-1 (2026-09-13):** `F.abs` /
   `F.cbrt` / `F.nullif` are one native `call_scalar` each — the depth-40 memory pin
   runs each chain in a subprocess under `RLIMIT_AS` (12 GB) with a per-level bound
