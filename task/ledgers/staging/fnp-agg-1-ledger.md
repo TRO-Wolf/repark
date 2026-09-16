@@ -116,5 +116,5 @@ VERDICT: 7 clauses, 0 PROVEN, 7 OPEN, 0 REJECTED (step-2 evidence above; the two
 | `python/repark-parity/tests` (whole suite) | first run 755 passed, 2 failed — both from a stale staging-map row for the completed REGISTRY-16B-1 unit (ledger already in `completed/`); the row is gone in the final tree per the map's own rule ("every other ledger leaves for `../completed/` in its unit's last commit"), after which `ledger-check` (1007 links), `map-sync` (276 maps) and `docs-links` (5679 links) pass, and the dl_4/dl_6 suites re-run 37/37 green. Pre-existing on `origin/main` (verified via `git show`/`ls-tree`, not by a main-tree test run). |
 | `.venv/bin/python scripts/check_example_coverage.py --require-execute` | exit 0 (245 examples incl. new `agg_misc.py`; inventory +4, backlog 108) |
 | `uvx ruff@0.15.22 format --check .` / `ruff check .` | 1005 files formatted, all checks passed |
-| `make verify` | green through `check-manifest`; was red at `check-ledgers` on the stale staging row above — green after the repoint (re-run at commit time) |
+| `make verify` | exit 0 end-to-end on the final tree (was red at `check-ledgers` on the stale staging row above before its removal) |
 | comment-ban grep over the staged diff | prints nothing |
