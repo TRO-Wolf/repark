@@ -327,3 +327,25 @@ parenthesized form.
   — exit 0: 722 passed, 118 skipped, 2 xfailed.
 - The orchestrator runs `make verify` and the whole facade and parity
   suites after hand-back.
+
+## Orchestrator close-out — run 18c, 2026-09-16
+
+**Rulings applied:** Q-17c-2 (owner: BL-20 is a high 1.5 card), Q-17a-2 (the literal typing is decided in Rust on both doors),
+Q-17a-4 (whole facade + whole parity suites at the gate), Q-15c-6 (no retag wrapper), Q-17b-1 (commit as its own step).
+R-18c-O4 (orchestrator, card): the DataFrame schema-string widths are LOGICAL-WIDTH-1 (run 18b, merged on main as `778fa9b1`), and `div` / unary `~` are grammar residues — out of scope. R-18c-O5: the critic's P3 on `-(2147483648)` was
+raised to P2 after the orchestrator measured Spark (LIT2-SQL-03 bigint). R-18c-O7: `make verify` failed twice on
+`repark-iceberg` `listing_cost_list_tables_cheaper_than_provider_rebuild`, a wall-clock ratio assertion (6.5 ms vs 1.7 ms) under a
+loaded box, in a crate this unit does not touch; the test passes alone — accepted as a load flake, every other verify leg clean.
+C-005 (narrow-integral overflow) stays OPEN with the dated residue row BL-20-OVF, as the card allowed; so no COVERAGE_ATTESTATION.
+
+**Reviews (Grok 4.6):** critic-logic on `996094c8` — 1 P1 (the `F.expr` door), 1 P2 (`date_add`/`factorial` refused an unsuffixed
+literal), 1 P3 (`-(2147483648)`, measured → P2); Rust perf — 2 P2, 3 P3; Python perf — 2 P3 (hand-offs). Its attack on
+re-analysis narrowing an explicit BIGINT came back clean. Verification critic on `a51dc153`: L-001, L-002, L-003, PERF-001/002/003/005
+CLOSED; the `Exact(Int32)` survey and the late-rule removal held under ten probes; one new P2, V-001 (the higher-order preparation
+path still folded `-(2147483648)`), fixed in round 3 with pins.
+
+**Orchestrator gate re-run** (rebased head, release native): `make rust-clippy` rc 0; release native rc 0; the whole facade suite
+rc 0 (9213 passed, 367 skipped, 33 xfailed); the whole parity suite rc 0 (757 passed, 2 skipped, 12 xfailed); example coverage rc 0;
+`make verify` rc 2 on the one R-18c-O7 load flake only. Comment-ban grep 0 hits. The resumed Muse rounds wrote a
+co-author line in the form the pre-push hook forbids, instead of the `Authored-By` trailer, on eight commits; the orchestrator rewrote those messages to the
+required trailer (tree unchanged) before the push.
