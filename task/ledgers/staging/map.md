@@ -832,3 +832,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   State 2026-09-16: C-001, C-002, C-003, C-004, C-006, C-007 PROVEN; C-005 OPEN
   with BACKLOG row BL-20-OVF.
   pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [io-orc-1-ledger.md](io-orc-1-ledger.md) —
+  **IO-ORC-1 (2026-09-16), in flight:** the read-only ORC scan — `DataFrameReader.orc`,
+  `format("orc").load` over orc-rust 0.8.0 (owner ruling Q-15B-1; write stays declared),
+  the oracle cells (`python/repark/tests/facade_orc_oracle.json`) and the Spark-written
+  fixtures (`python/repark/tests/fixtures/orc/`).
+  `risk_tier: standard`. Branch `feat/io-orc-1`.
+  pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
