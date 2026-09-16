@@ -81,9 +81,6 @@ def spark() -> Any:
 
 
 def _use_probe_zone(spark: ReparkSession) -> None:
-    # The oracle cells were recorded with the probe's ambient zone, America/New_York:
-    # the `ts` instant renders 22:04:05 there (03:04:05 UTC). Pins that read `ts`
-    # run in the same zone so wall clocks compare.
     spark.conf.set("spark.sql.session.timeZone", "America/New_York")
 
 
@@ -296,6 +293,15 @@ def test_orc_reader_signature_bad_arg(spark: ReparkSession) -> None:
 def test_orc_merge_schema_off_dir(spark: ReparkSession) -> None:
     """cell orc_merge_schema_off_dir — no merge keeps the first schema. pins: io-orc-1/C-006"""
     _frame_pin(spark.read.orc(f"{FIXTURES}/m*").orderBy("id"), "orc_merge_schema_off_dir")
+
+
+def test_orc_list_matches_glob_without_merge(spark: ReparkSession) -> None:
+    """A two-path list with differing schemas answers one Rust scan like the glob. pins: io-orc-1/C-006"""
+    listed = spark.read.orc([f"{FIXTURES}/m1", f"{FIXTURES}/m2"]).orderBy("id")
+    globbed = spark.read.orc(f"{FIXTURES}/m*").orderBy("id")
+    assert listed.columns == globbed.columns == ["id"]
+    assert listed.schema.simpleString() == globbed.schema.simpleString()
+    assert [repr(row) for row in listed.collect()] == [repr(row) for row in globbed.collect()]
 
 
 def test_orc_merge_schema_on_unions(spark: ReparkSession) -> None:

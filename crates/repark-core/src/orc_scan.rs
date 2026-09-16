@@ -131,6 +131,11 @@ fn keep_modified(
     Ok(kept)
 }
 
+fn is_orc_data_file(name: &std::ffi::OsStr) -> bool {
+    name.to_str()
+        .is_some_and(|text| text.len() > 4 && text[text.len() - 4..].eq_ignore_ascii_case(".orc"))
+}
+
 fn push_orc_dir(dir: &Path, display: &str, recursive: bool, out: &mut Vec<PathBuf>) -> Result<()> {
     let mut stack = vec![dir.to_path_buf()];
     while let Some(current) = stack.pop() {
@@ -159,7 +164,9 @@ fn push_orc_dir(dir: &Path, display: &str, recursive: bool, out: &mut Vec<PathBu
                 ))
             })?;
             if kind.is_file() || (kind.is_symlink() && candidate.is_file()) {
-                out.push(candidate);
+                if is_orc_data_file(&entry.file_name()) {
+                    out.push(candidate);
+                }
             } else if kind.is_dir() {
                 let partitioned = entry
                     .file_name()
@@ -188,15 +195,10 @@ fn keep_partitioned_only(root: &Path, files: Vec<PathBuf>) -> Vec<PathBuf> {
 }
 
 pub(crate) fn expand_orc_paths(
-    path: &str,
+    paths: &[String],
     options: &OrcReadOptions,
     session_zone: &str,
 ) -> Result<(Vec<PathBuf>, DiscoveredPartitions)> {
-    if is_remote_path(path) {
-        return Err(Error::Analysis(format!(
-            "orc read over {path:?} is not supported by repark yet (local files and directories only)"
-        )));
-    }
     let before = options
         .modified_before
         .as_deref()
@@ -207,45 +209,126 @@ pub(crate) fn expand_orc_paths(
         .as_deref()
         .map(|raw| parse_spark_modified(raw, "modifiedAfter"))
         .transpose()?;
-    let mut files = if has_glob_meta(path) {
-        expand_text_glob(path)?
-    } else {
-        let fs_path = Path::new(path);
-        if fs_path.is_file() {
-            vec![fs_path.to_path_buf()]
-        } else if fs_path.is_dir() {
-            let mut listed: Vec<PathBuf> = Vec::new();
-            push_orc_dir(fs_path, path, options.recursive_file_lookup, &mut listed)?;
-            listed.sort();
-            let kept = keep_partitioned_only(fs_path, listed);
-            if let Some(base) = options.base_path.as_deref() {
-                let root = Path::new(base);
-                let partitions = discover_partitions(root, &kept, session_zone)?;
-                return finish_expansion(kept, partitions, options, before, after);
-            }
-            let partitions = discover_partitions(fs_path, &kept, session_zone)?;
-            return finish_expansion(kept, partitions, options, before, after);
-        } else {
-            return Err(missing_orc_path(path));
-        }
-    };
-    files.sort();
-    if files.is_empty() {
-        return Err(orc_schema_error());
+    let mut files: Vec<PathBuf> = Vec::new();
+    let mut partitions = DiscoveredPartitions::default();
+    for path in paths {
+        let (mut item_files, item_partitions) =
+            expand_single_orc_path(path, options, session_zone)?;
+        files.append(&mut item_files);
+        partitions = merge_orc_partitions(partitions, item_partitions);
     }
+    files.sort();
+    finish_expansion(files, partitions, options, before, after)
+}
+
+fn expand_single_orc_path(
+    path: &str,
+    options: &OrcReadOptions,
+    session_zone: &str,
+) -> Result<(Vec<PathBuf>, DiscoveredPartitions)> {
+    if is_remote_path(path) {
+        return Err(Error::Analysis(format!(
+            "orc read over {path:?} is not supported by repark yet (local files and directories only)"
+        )));
+    }
+    if has_glob_meta(path) {
+        let files = expand_text_glob(path)?;
+        let data: Vec<PathBuf> = files
+            .into_iter()
+            .filter(|file| file.file_name().is_some_and(is_orc_data_file))
+            .collect();
+        return base_or_default_partitions(data, options, session_zone);
+    }
+    let fs_path = Path::new(path);
+    if fs_path.is_file() {
+        return Ok((vec![fs_path.to_path_buf()], DiscoveredPartitions::default()));
+    }
+    if fs_path.is_dir() {
+        let mut listed: Vec<PathBuf> = Vec::new();
+        push_orc_dir(fs_path, path, options.recursive_file_lookup, &mut listed)?;
+        listed.sort();
+        let kept = keep_partitioned_only(fs_path, listed);
+        if let Some(base) = options.base_path.as_deref() {
+            let root = Path::new(base);
+            let partitions = discover_partitions(root, &kept, session_zone)?;
+            return Ok((kept, partitions));
+        }
+        let partitions = discover_partitions(fs_path, &kept, session_zone)?;
+        return Ok((kept, partitions));
+    }
+    Err(missing_orc_path(path))
+}
+
+fn base_or_default_partitions(
+    files: Vec<PathBuf>,
+    options: &OrcReadOptions,
+    session_zone: &str,
+) -> Result<(Vec<PathBuf>, DiscoveredPartitions)> {
     if let Some(base) = options.base_path.as_deref() {
         let root = Path::new(base);
         let kept = keep_partitioned_only(root, files);
         let partitions = discover_partitions(root, &kept, session_zone)?;
-        return finish_expansion(kept, partitions, options, before, after);
+        return Ok((kept, partitions));
     }
-    finish_expansion(
-        files,
-        DiscoveredPartitions::default(),
-        options,
-        before,
-        after,
-    )
+    Ok((files, DiscoveredPartitions::default()))
+}
+
+fn merge_orc_partitions(
+    mut merged: DiscoveredPartitions,
+    next: DiscoveredPartitions,
+) -> DiscoveredPartitions {
+    if merged.fields.is_empty() {
+        return next;
+    }
+    if next.fields.is_empty() {
+        return merged;
+    }
+    let mut position: HashMap<String, usize> = HashMap::new();
+    for (index, field) in merged.fields.iter().enumerate() {
+        position.insert(field.name().to_lowercase(), index);
+    }
+    for field in &next.fields {
+        position
+            .entry(field.name().to_lowercase())
+            .or_insert_with(|| {
+                merged.fields.push(field.clone());
+                merged.fields.len() - 1
+            });
+    }
+    let width = merged.fields.len();
+    for values in merged.values.values_mut() {
+        values.resize(width, PartitionValue::Null);
+    }
+    for raws in merged.raw.values_mut() {
+        raws.resize(width, None);
+    }
+    let mut next_position: HashMap<String, usize> = HashMap::new();
+    for (index, field) in next.fields.iter().enumerate() {
+        next_position.insert(field.name().to_lowercase(), index);
+    }
+    for (file, values) in next.values {
+        let mut aligned: Vec<PartitionValue> = Vec::with_capacity(width);
+        for field in &merged.fields {
+            let value = next_position
+                .get(&field.name().to_lowercase())
+                .and_then(|index| values.get(*index).cloned())
+                .unwrap_or(PartitionValue::Null);
+            aligned.push(value);
+        }
+        merged.values.insert(file, aligned);
+    }
+    for (file, raws) in next.raw {
+        let mut aligned: Vec<Option<String>> = Vec::with_capacity(width);
+        for field in &merged.fields {
+            let raw = next_position
+                .get(&field.name().to_lowercase())
+                .and_then(|index| raws.get(*index).cloned())
+                .unwrap_or(None);
+            aligned.push(raw);
+        }
+        merged.raw.insert(file, aligned);
+    }
+    merged
 }
 
 fn finish_expansion(
@@ -792,11 +875,11 @@ impl crate::ReparkSession {
         reason = "symmetric with read_text; remote reads will await"
     )]
     #[allow(clippy::missing_errors_doc)]
-    pub async fn read_orc(&self, path: &str, options: OrcReadOptions) -> Result<DataFrame> {
+    pub async fn read_orc(&self, paths: &[String], options: OrcReadOptions) -> Result<DataFrame> {
         let session_zone = self.session_time_zone();
         let canonical = crate::canonical_session_zone_id(session_zone.id());
         let zone = canonical.as_str();
-        let (files, partitions) = expand_orc_paths(path, &options, zone)?;
+        let (files, partitions) = expand_orc_paths(paths, &options, zone)?;
         let (data_schema, valid) =
             infer_orc_schema(&files, options.merge_schema, options.ignore_corrupt_files)?;
         let mut fields: Vec<Field> = data_schema

@@ -307,7 +307,7 @@ mod tests {
     use super::*;
 
     fn tagged_varint(field: u32, value: u64) -> Vec<u8> {
-        let mut out = encode_varint((field << 3) as u64);
+        let mut out = encode_varint(u64::from(field) << 3);
         out.extend(encode_varint(value));
         out
     }
@@ -336,12 +336,12 @@ mod tests {
     #[test]
     fn footer_blob_and_skip_arms() {
         let mut bytes = tagged_varint(12, 7);
-        bytes.push((4 << 3 | 2) as u8);
+        bytes.push(4u8 << 3 | 2);
         bytes.extend(encode_varint(3));
         bytes.extend_from_slice(b"abc");
-        bytes.push((6 << 3 | 1) as u8);
+        bytes.push(6u8 << 3 | 1);
         bytes.extend_from_slice(&[9; 8]);
-        bytes.push((7 << 3 | 5) as u8);
+        bytes.push(7u8 << 3 | 5);
         bytes.extend_from_slice(&[8; 4]);
         let fields = parse_fields(&bytes).unwrap();
         assert_eq!(fields.varint(12), Some(7));

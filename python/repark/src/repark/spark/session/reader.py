@@ -419,8 +419,6 @@ class DataFrameReader:
         if fmt == "text":
             _reader_text._drop_falsy_recursive_lookup(self)
         # Postgres/JDBC options are intentional; skip the parquet/iceberg semantic gate for them.
-        # ORC carries its own file options (mergeSchema, pathGlobFilter, …); the blanket gate
-        # would refuse names the scan implements.
         if fmt not in {"postgres", "postgresql", "jdbc", "orc"}:
             self._reject_unsupported_semantic_options()
         if not fmt:

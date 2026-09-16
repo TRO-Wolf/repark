@@ -569,7 +569,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   projects through `ProjectionMask` and converts columns recursively (instant columns
   undo the stripe writer zone per file). Schema inference and the user-schema overlay
   live beside it in `orc_schema.rs` (split at the 1000-line ceiling).
-  pins: io-orc-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **Round 2:** `read_orc`/`expand_orc_paths` take a path list — per-item expansion
+  merged into one file set (partition fields union by name, values Null-padded),
+  so a list answers exactly like a directory; listings keep `*.orc` names only
+  (repo bookkeeping is never data; a directly addressed file still
+  footer-checks). pins: io-orc-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `orc_schema.rs` — **IO-ORC-1 (2026-09-16):** the ORC schema half beside the scan:
   footer-attribute mapping (LONG→`timestamp_ntz`, instant→UTC-stamped `timestamp`,
   local-tz-kind→naive, recursive through struct/list/map), schema union by name under

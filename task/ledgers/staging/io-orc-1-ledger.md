@@ -40,7 +40,7 @@ No hand-computed Spark expectation; unprobed shapes are marked UNMEASURED.
 | C-007 | O-6 + O-7: `k=v` dirs add partition columns after data columns with Spark inference (`__HIVE_DEFAULT_PARTITION__` → NULL); leaf read adds none; user schema resolves by name case-insensitively, missing → NULL, int→string reads the text form; other mismatches refuse loud (UNMEASURED). | The O-6/O-7 pins. | PROVEN | All green. Partitions reuse `partition_discovery` (inference, HIVE_DEFAULT→NULL, basePath root); the `__HIVE_DEFAULT_PARTITION__` arm has no ORC fixture (same shared code the text/csv scans pin — noted, not re-pinned). User schema applies as an engine-side select (name match case-insensitive, missing→NULL cast, int→Utf8 cast, other mismatches loud). pins: io-orc-1/C-007 |
 | C-008 | O-8 + O-9: nested-field + array select, `i = 2` filter, case-insensitive names, count; stripe/column projection is real (only projected columns decoded); stripe-statistics predicate pushdown NOT implemented (DataFusion-side filtering); `timestamp` renders in session zone, `timestamp_ntz` unshifted. | The O-8/O-9 pins. | PROVEN | All green. Column projection travels as an orc-rust `ProjectionMask` (only projected roots decoded); every filter reports Inexact so DataFusion filters after the scan (stripe-statistics pushdown explicitly not implemented). Dotted-string `select("st.y")` fails engine-wide (parquet identical — pre-existing facade gap, not ORC): the pin uses the working attribute form and the registry notes it. Case-insensitive names ride the facade resolver. `count()` covers the empty-projection scan path. pins: io-orc-1/C-008 |
 | C-009 | O-10: `SELECT * FROM orc.`path`` and `CREATE TABLE t USING orc LOCATION` pin today's refusal (identical to the parquet twins on main — planner owned by run 18c); registry row IO-ORC-SQL-1 BACKLOG. | The O-10 pins + registry diff. | PROVEN | Both pins green on today's refusal text (no `crates/repark-spark` edit — planner lane owns it). Registry row IO-ORC-SQL-1 lands with C-010. pins: io-orc-1/C-009 |
-| C-010 | Registry row IO-ORC-1 rewritten in place (read implemented, write DECLARED, O-4/O-7 divergences, SQL-door state); `docs/examples/io/orc_read.py` covers the read names, the refusal example still covers the write names; inventory refreshed; EX-0 count unmoved (no new public names). | The registry diff; the example runs; the EX-0 rc. | OPEN |  |
+| C-010 | Registry row IO-ORC-1 rewritten in place (read implemented, write DECLARED, O-4/O-7 divergences, SQL-door state); `docs/examples/io/orc_read.py` covers the read names, the refusal example still covers the write names; inventory refreshed; EX-0 count unmoved (no new public names). | The registry diff; the example runs; the EX-0 rc. | PROVEN | Registry IO-ORC-1 rewritten + IO-ORC-SQL-1 BACKLOG row (round-1 commit). `orc_read.py` runs rc 0 (round 2 re-run; only the pre-existing master-URL warning); `io_declared_refusals.py` still covers the write names. `DataFrameReader.orc` was already in `docs/examples/inventory.txt` — no new public names. `check_example_coverage.sh` rc 0 (1075 names, 966 covered, 108 backlog, 249 examples). pins: io-orc-1/C-010 |
 | C-011 | No regression: `make verify`, the unit test files, the whole facade suite, the whole parity suite green with real exit codes and counts. | §Gates. | OPEN |  |
 
 Red-first log: each clause pins red on the base tree first, then green. Red lines
@@ -134,6 +134,42 @@ reasons:
 
 None yet.
 
+## Round 2 (2026-09-16, run 18b) — audit findings A-5/A-6/A-7
+
+- **A-5 comment ban.** Deleted the 5 `#` lines (2 in `session/reader.py` on the
+  `orc` semantic-gate skip, 3 on `_use_probe_zone` in `test_io_orc_1.py`); both
+  facts already live in `session/map.md` row 47 and `tests/map.md` (probe-zone
+  line), so no map edit was owed for the move.
+- **A-6 trailer.** HEAD was still `20054751` — amended in place to the exact
+  `Authored-By: Muse Spark (muse-spark-1.3-contributor) <noreply@meta.ai>`
+  trailer (now `555bcee1`); no other commit touched.
+- **A-7 Rust-first.** `load_orc` no longer reads list items separately: every
+  read is one `_native.read_orc` over a path list and `expand_orc_paths` merges
+  per-item expansions (mergeSchema unions, otherwise first schema wins —
+  identical to a directory). New red-first pin
+  `test_orc_list_matches_glob_without_merge` (red on the old `union`:
+  `UNION queries have different number of columns`; green on one scan).
+  The prefix→condition map moved into the `read_orc` binding (transpose
+  precedent: `_spark_*` setattr); `load_orc` only binds the shared
+  structured-error methods (pure plumbing, no value branch).
+- **Rust-first roll-call.** `_option_bool` stays: shared reader plumbing
+  (`reader.py:615`, used by csv/json) — not ORC-only. `_check_orc_path_type`,
+  the empty-list refusal and the `mergeSchema`/`path` argument shapes stay in
+  Python as API plumbing. The `IllegalArgumentException` for a non-bool
+  mergeSchema string is Spark's signature shape, kept at the boundary.
+- **Listings keep `*.orc` names.** Round 1's lockstep `fixtures/orc/map.md`
+  matched the committed `m*` glob pin and footer-failed the scan. The scan now
+  lists `*.orc` names only (dir walks and glob results; a directly addressed
+  file still footer-checks, so `orc_not_orc_file` is unchanged). Rationale: the
+  repo's own map.md convention puts bookkeeping in every data dir — the scan
+  must not read it as data. Stray non-`.orc` files under a glob/dir are
+  skipped where Spark would choke (UNMEASURED, no oracle cell claims strays).
+- **Clippy debt paid.** Round-1 `orc_footer.rs` test helpers failed the
+  workspace clippy gate (`cast_lossless`, `-D warnings`): four lossless
+  rewrites, values identical.
+- **C-001 re-run.** No new crates in round 2; `cargo-deny check licenses`
+  → `licenses ok`, rc 0.
+
 ## Gates
 
 | gate | result |
@@ -143,4 +179,4 @@ None yet.
 | whole parity suite | TBD |
 | `cargo test -p repark-core orc` | TBD |
 
-VERDICT: 11 clauses, 9 PROVEN, 2 OPEN, 0 REJECTED.
+VERDICT: 11 clauses, 10 PROVEN, 1 OPEN (gates), 0 REJECTED.
