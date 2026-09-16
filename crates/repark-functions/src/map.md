@@ -979,3 +979,16 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
 - **FNP-11A R3 (2026-09-15):** `expr_fn::datediff` is the Spark `datediff` spelling. The function door routes two arguments to `date_diff` and three to `timestampdiff` through `temporal_ctor::date_alias` (pins: fnp-11a/C-019).
 - **FNP-6D-FOLLOWUP-1 rebase (2026-09-15, run 16a):** after #612 moved the Java text helpers into `java_double.rs`, `bitmap_agg.rs` imports `java_double_text` / `java_float_text` from `crate::java_double`; `json.rs` keeps `mod reader;` private as on main.
 - **FNP-WIN-1 squash onto 4bd43fc8 (2026-09-15, run 16a):** `lib.rs` drops its `use std::sync::Arc;` — `analyzer_rules()` and its `Arc<dyn AnalyzerRule>` list now live in `registration.rs`, so the crate root no longer names `Arc` (clippy `-D warnings`).
+- **FNP-AGG-1 step 2 (2026-09-16):** `any_value.rs` (first-value freeze with an
+  occupied flag; 1- and 2-arg SQL, display always `any_value(v)`),
+  `max_min_by.rs` (parameterized `max_by` / `min_by` over a shared `OrdKey`
+  ordering; NULL ords skipped, NULL values kept; 3-arg SQL raises Spark's
+  `[WRONG_NUM_ARGS.WITHOUT_SUGGESTION]` from `return_type`), `moments.rs`
+  (Spark `CentralMomentAgg` row update plus Chan parallel merge; NULL when the
+  count is below 2 or the variance is 0), `mode.rs` (insertion-ordered counts;
+  last-wins ties, smallest-wins with `deterministic` or `WITHIN GROUP`, whose
+  sort key the planner prepends to the args; Spark's `mode() WITHIN GROUP`
+  display), `product.rs` (facade-only `__repark_product`, `double` out, SQL
+  `product` stays `UNRESOLVED_ROUTINE`). All register through
+  `aggregate::functions()` as `pub use` re-exports (no new `pub mod` line).
+  pins: fnp-agg-1/C-002, C-003, C-004, C-005
