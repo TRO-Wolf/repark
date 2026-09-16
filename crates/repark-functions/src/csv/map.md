@@ -42,6 +42,13 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   straight into their target width and the null-mark shares one helper; answers
   are unchanged.
   pins: fnp-gen-1/C-006
+- `from_csv.rs` — **Remediation (run 18a):** tokens map onto the data fields only
+  (the corrupt-record column takes no token slot); a row is malformed when the
+  token count differs from the data-field count or a field conversion fails, and
+  the whole record lands in the corrupt column wherever that column sits.
+  `return_field_from_args` refuses a non-STRING corrupt column with
+  `[INVALID_CORRUPT_RECORD_TYPE]` at analysis on both doors.
+  pins: fnp-gen-1/L-001, R-18a-13
 - `schema_of_csv.rs` — the `schema_of_csv` scalar UDF plus its `#[cfg(test)]`
   pins (the Spark `CSVInferSchema` ladder and renderer, the quoted separator, the
   `sep` option, the empty-document `INTERNAL_ERROR` defect, NULL, non-string

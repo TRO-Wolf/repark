@@ -143,6 +143,7 @@ impl ScalarUDFImpl for SparkFromCsv {
             ));
         }
         let nullable = args.arg_fields[0].is_nullable();
+        let mut literal_options = None;
         if args.arg_fields.len() == 3 {
             match args.arg_fields[2].data_type() {
                 DataType::Map(entry, _) => {
@@ -168,10 +169,21 @@ impl ScalarUDFImpl for SparkFromCsv {
                 }
             }
             if let Some(scalar @ ScalarValue::Map(_)) = args.scalar_arguments[2] {
-                options_from_map(scalar)?;
+                literal_options = Some(options_from_map(scalar)?);
             }
         }
-        let (data_type, _) = csv_struct_type(&schema_text)?;
+        let (data_type, fields) = csv_struct_type(&schema_text)?;
+        if let Some(options) = literal_options.as_ref()
+            && let Some(name) = options.corrupt_record_column.as_ref()
+            && let Some((_, data_type)) = fields.iter().find(|(field, _)| field == name)
+            && !is_string_type(data_type)
+        {
+            return plan_err!(
+                "[INVALID_CORRUPT_RECORD_TYPE] The column `{name}` for corrupt records must \
+                 have the nullable STRING type, but got \"{}\". SQLSTATE: 42804",
+                super::spark_type_name(data_type)
+            );
+        }
         Ok(Arc::new(Field::new(self.name(), data_type, nullable)))
     }
 
@@ -450,16 +462,19 @@ fn decode_records(
         }
         validity.append_non_null();
         let tokens = split_csv_record(documents.value(row), options);
-        let mut malformed = tokens.len() > fields.len();
+        let data_count = fields.len() - usize::from(corrupt_index.is_some());
+        let mut malformed = tokens.len() != data_count;
         let mut shown: Vec<String> = Vec::with_capacity(fields.len());
+        let mut data_pos = 0;
         for (index, ((_, data_type), builder)) in fields.iter().zip(builders.iter_mut()).enumerate()
         {
-            let is_corrupt_field = Some(index) == corrupt_index;
-            if is_corrupt_field {
+            if Some(index) == corrupt_index {
                 shown.push("null".to_string());
                 continue;
             }
-            let Some(token) = tokens.get(index) else {
+            let token = tokens.get(data_pos);
+            data_pos += 1;
+            let Some(token) = token else {
                 append_null(builder);
                 shown.push("null".to_string());
                 malformed = true;
@@ -568,6 +583,43 @@ mod tests {
             ),
             "{a:,b:y,c:,_corrupt_record:x,y,z}"
         );
+    }
+
+    #[test]
+    fn extra_token_with_trailing_corrupt_column_marks_malformed() {
+        assert_eq!(
+            first(
+                "SELECT from_csv('1,abc,2.5,EXTRA', 'a INT, b STRING, c DOUBLE, \
+                 _corrupt_record STRING', map('columnNameOfCorruptRecord', '_corrupt_record'))"
+            ),
+            "{a:1,b:abc,c:2.5,_corrupt_record:1,abc,2.5,EXTRA}"
+        );
+    }
+
+    #[test]
+    fn middle_corrupt_column_maps_data_fields_only() {
+        assert_eq!(
+            first(
+                "SELECT from_csv('1,x', 'a INT, _corrupt_record STRING, b STRING', \
+                 map('columnNameOfCorruptRecord', '_corrupt_record'))"
+            ),
+            "{a:1,_corrupt_record:,b:x}"
+        );
+        assert_eq!(
+            first(
+                "SELECT from_csv('q,x,y', 'a INT, _corrupt_record STRING, b STRING', \
+                 map('columnNameOfCorruptRecord', '_corrupt_record'))"
+            ),
+            "{a:,_corrupt_record:q,x,y,b:x}"
+        );
+    }
+
+    #[test]
+    fn non_string_corrupt_column_refuses_at_analysis() {
+        let error = run("SELECT from_csv('q', 'a INT, _corrupt_record INT', \
+             map('columnNameOfCorruptRecord', '_corrupt_record'))")
+        .unwrap_err();
+        assert!(format!("{error}").contains("INVALID_CORRUPT_RECORD_TYPE"));
     }
 
     #[test]
