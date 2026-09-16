@@ -3199,7 +3199,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_never_oom_panic_1_a_tight_pool_leaves_no_panic_blocks_on_stderr`, runs the worker
   five times asserting zero `panicked at` blocks on stderr (deterministic red on the base
   tree, green after; five runs stay far under the minute budget at ~1.6 s each).
-  pins: never-oom-panic-1/C-007, C-008
+  The 400-run `_WORKER` loop behind the NEVER-OOM-PANIC-1 §Reproduction histogram and the
+  vendored-source panic paths (P-1..P-5) are this file's worker and query shape. The
+  `NEVER-OOM-PANIC-1` registry row and the whole-gates evidence live in the same unit.
+  pins: never-oom-panic-1/C-001, C-002, C-007, C-008, C-009, C-010
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set

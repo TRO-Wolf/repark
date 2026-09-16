@@ -298,7 +298,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   fresh `RepartitionExec` channels and really spills instead of hitting
   `expect("partition not used yet")` and poisoning the shared once-future. Properties,
   schema, partitioning, fetch and limit-pushdown support delegate to the inner plan;
-  `metrics` is `None` (per-execute clones own theirs). Wired in
+  `metrics` is `None` (per-execute clones own theirs). A child count other than one is an
+  `Internal` error, pinned. Wired in
   `session/df_guards.rs::context_with_df_54_1_rule_guards`.
   pins: never-oom-panic-1/C-004, C-005, C-006
 - `catalog_config.rs` — the `spark.sql.catalog.<name>.*` → `Vec<CatalogSpec { name, kind,

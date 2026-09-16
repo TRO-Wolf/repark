@@ -9,7 +9,7 @@ use datafusion::physical_plan::execution_plan::{PlanProperties, reset_plan_state
 use datafusion::physical_plan::joins::NestedLoopJoinExec;
 use datafusion::physical_plan::metrics::MetricsSet;
 use datafusion::physical_plan::{
-    DisplayAs, DisplayFormatType, ExecutionPlan, Partitioning, SendableRecordBatchStream,
+    DisplayAs, DisplayFormatType, ExecutionPlan, SendableRecordBatchStream,
 };
 
 #[derive(Debug)]
@@ -142,7 +142,7 @@ impl PhysicalOptimizerRule for NljBuildSideReset {
         .data()
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "nlj_build_side_reset"
     }
 
@@ -157,6 +157,7 @@ mod tests {
     use arrow::datatypes::{DataType, Field, Schema};
     use datafusion::logical_expr::JoinType;
     use datafusion::physical_plan::ExecutionPlanProperties;
+    use datafusion::physical_plan::Partitioning;
     use datafusion::physical_plan::empty::EmptyExec;
     use datafusion::physical_plan::repartition::RepartitionExec;
     use futures::StreamExt;
@@ -340,6 +341,9 @@ mod tests {
             "the wrapper keeps limit-pushdown support"
         );
         assert_eq!(wrapped.children().len(), 1, "the wrapper is unary");
+        Arc::new(NljBuildSideExec::new(Arc::clone(&inner)))
+            .with_new_children(vec![])
+            .expect_err("a child count other than one refuses");
     }
 
     #[tokio::test]
