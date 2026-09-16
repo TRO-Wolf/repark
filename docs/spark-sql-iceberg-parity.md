@@ -8190,6 +8190,22 @@ field NAME.
   2026-09-16 by the SQL-door rewrite; the `BARE_UNIT_NAMES` workaround and the refusal
   pin retired in the same commit.
 
+### SQL-GRAMMAR-LATERAL-1 — same-SELECT-list lateral column alias refuses; Spark answers
+
+- **repark** — `SELECT 1 AS a, a + 1 AS b` raises `AnalysisException: Schema error:
+  No field named a`: the planner does not expand a lateral same-level alias. The
+  CTE (`WITH t AS (SELECT 1 AS a) SELECT a, a + 1 AS b FROM t`) and subquery
+  spellings answer `(1, 2)` — but type `b` as `int64`, where Spark says `int`
+  (the F-002 width family, owned upstream).
+- **Apache Spark** — the lateral alias answers `(1, 2)`, both `int` non-null.
+  *(oracle: live PySpark 4.1.2, fixtures-batch3 PG-lateral-alias.)*
+- **Pin** — none yet: the PG-lateral-alias cell is unpinned until the expansion
+  lands (this row is the dated declaration).
+- **Rationale** — DECLARED 2026-09-16 by SPARK-SQL-GRAMMAR-1 C-007 per the card's
+  own budget rule (the seam is a same-level alias-expansion analyzer rule with
+  scoping and shadowing, more than a projection rewrite). Next unit owns the
+  rule plus the `b`-width half.
+
 
 ### EX-FN-28 — facade `make_timestamp(date=, time=)` answers after the Q-15a-3 widening — **FIXED 2026-09-15 (FNP-11B)**
 

@@ -55,13 +55,13 @@ the missing shift kernel the card names.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | `-8 >>> 1` answers `2147483644` int non-null on the SQL door. | `test_spark_sql_grammar_1.py` PG-ushift cell (value, Arrow type, nullability). | OPEN | RED on base: `ParserError("No infix parser for token ShiftRight")`. §1. |
-| C-002 | `7 div 2` answers `3` bigint nullable on the SQL door. | PG-div cell in the same pin file. | OPEN | RED on base: `ParserError` on the `div` keyword. §1. |
+| C-001 | `-8 >>> 1` answers `2147483644` int non-null on the SQL door. | `test_spark_sql_grammar_1.py` PG-ushift cell (value, Arrow type, nullability). | OPEN | Kernels verified exact on the door 2026-09-16 (`shiftrightunsigned(-8,1)=2147483644`, `shiftright(-8,1)=-4`, `shiftleft(1,3)=8`, all int32 — no new kernel needed, the fence's shift allowance unspent). Missing only the parse: stock DatabricksDialect has no infix parser for `>>>`/`>>`/`<<`. Seam: a custom sqlparser `Dialect` wrapper (`parse_infix` + `get_next_precedence` overrides exist in 0.62) threaded through the passthrough parse — but `sql_to_statement` takes the config enum, so the passthrough must parse directly, bypassing session normalization: needs the FNP-4B dialect owner's decision, not a midnight edit. Next unit owns it. §5. |
+| C-002 | `7 div 2` answers `3` bigint nullable on the SQL door. | PG-div cell in the same pin file. | OPEN | RED: `ParserError` on the `div` keyword. No `div` kernel exists in the engine and the fence forbids new `repark-functions` kernels here, so the lowering must be kernel-free (`CAST((a-(a%b))/b AS BIGINT)` is exact for all longs, NULL and zero cases included) with precedence-aware token surgery at the canonicalize altitude — the same custom-parse design decision as C-001. Next unit owns both together. §5. |
 | C-003 | `'abc' RLIKE '^a'` and `NOT RLIKE` lower onto `regexp_like`. | PG-rlike cells plus the negated form in the same pin file. | PROVEN | `keyword_lower.rs` lowers both signs onto the registered kernel; door pins + the retired 17a refusal pin (now an answer pin) green. Registry FN-RLIKE-KEYWORD-1 → FIXED. pins: spark-sql-grammar-1/C-003. §4. |
 | C-004 | `CAST(x AS TIMESTAMP_LTZ)` answers `TIMESTAMP`. | PG-ltz-cast cell in the same pin file. | PROVEN | `keyword_lower.rs` rewrites the target to bare `TIMESTAMP` (TRY_CAST included); value+type exact, literal folds non-null like plain `CAST`, nullable frame stays nullable. pins: spark-sql-grammar-1/C-004. §4. |
 | C-005 | `TIMESTAMP_NTZ '…'` / `CAST(x AS TIMESTAMP_NTZ)` parse onto the tz-naive Arrow path with Spark's value, or refuse loud naming TZ-6 with the TZ-6 row extended. `timestampdiff(DAY, ntz, TIMESTAMP_NTZ'…')` leaves `D4_BLOCKED_SQL`. | PG-ntz-lit / PG-ntz-cast cells, or the dated refusal plus the extended row. | PROVEN | No tz-naive CAST path exists (rewriting onto `TIMESTAMP WITHOUT TIME ZONE` plans tz-aware, measured), so the refusal stands, now as `[UNSUPPORTED_TIMESTAMP_NTZ]` naming TZ-6, with the TZ-6 dated extension; both PG cells pin the refusal. No contradiction with TZ-6's FIXED ruling (it covers the type level, this the SQL-door type name). `D4_BLOCKED_SQL` untouched. pins: spark-sql-grammar-1/C-005. §4. |
 | C-006 | `named_struct('a', 1).a` answers `1` int non-null. | PG-struct-dot cell in the same pin file. | PROVEN | Was ALREADY-GREEN; pin filed unchanged. pins: spark-sql-grammar-1/C-006. §4. |
-| C-007 | `SELECT 1 AS a, a + 1 AS b` answers `(1, 2)` both int non-null, or DECLARES with a registry row naming the planner seam. | PG-lateral-alias cell, or the dated refusal plus the new row. | OPEN | RED on base: `Schema error: No field named a`. Seam measured in step 2. §1. |
+| C-007 | `SELECT 1 AS a, a + 1 AS b` answers `(1, 2)` both int non-null, or DECLARES with a registry row naming the planner seam. | PG-lateral-alias cell, or the dated refusal plus the new row. | OPEN (DECLARED, registry row filed) | RED: `Schema error: No field named a`. Measured 2026-09-16: only the same-SELECT-list reference fails — the CTE and subquery spellings answer — so the seam is a same-level alias-expansion analyzer rule with scoping/shadowing care, more than the card's projection-rewrite budget. Second wrinkle: even the working spellings type `b` as int64 where Spark says int (the F-002 width family). Per the clause it DECLARES: row SQL-GRAMMAR-LATERAL-1. §5. |
 | C-008 | Bare unit spellings `timestampadd(DAY, 1, ts)`, `timestampdiff(HOUR, a, b)`, `dateadd(DAY, …)`, `datediff(HOUR, a, b)` rewrite onto the #606 kernels; quoted units refuse `INVALID_PARAMETER_VALUE.DATETIME_UNIT`; unknown units refuse `UNRESOLVED_ROUTINE`; 2-arg `datediff` stays `int`. Closes EX-FN-27. | Q14-22…40 cells plus PG-tsadd/tsdiff/dateadd/datediff-unit in the same pin file; `BARE_UNIT_NAMES` skip removed. | PROVEN | `crates/repark-spark/src/bare_unit.rs` rewrite + 7 in-module tests; `test_spark_sql_grammar_1.py` 50 passed (both ANSI); `test_fnp11a_temporal.py` 316 passed with the workaround retired. pins: spark-sql-grammar-1/C-008. §2. |
 | C-009 | `LATERAL VIEW [OUTER] <generator>(…) <alias> AS <cols>` answers the run-15a oracle cells. | The lateral-15a cells in the same pin file. | OPEN | R-17c-7: FNP-GEN-1 is not on main (`git log origin/main --oneline | grep -i fnp-gen` empty, 2026-09-16). Generators are 16a's; this lane never implements them. |
 | C-010 | Bare nullary keywords follow Spark both directions: `current_date`, `current_timestamp`, `current_user`, `user`, `session_user` resolve; `localtimestamp`, `current_catalog`, `current_database`, `current_schema`, `current_timezone`, `now` refuse `UNRESOLVED_COLUMN.WITH_SUGGESTION`; parenthesised forms resolve with Spark's type and nullability. | Q14-0…21 cells in the same pin file; `BARE_NULLARY_SQL` skip flipped to the error pin. | OPEN (refusal half + greens proven; session-names paren forms handed to 17a) | Refusal half PROVEN: demote + error map, Q14-0/8/10/12/18/20 framed+frameless pins, column-wins discriminator, `BARE_NULLARY_SQL` retired, EX-FN-25 FIXED. Greens pinned: current_date (nullable divergence recorded), current_timestamp, localtimestamp(), now(), current_timezone(). Paren `current_user`/`user`/`session_user`/`current_catalog`/`current_database`/`current_schema` still refuse on the SQL door (Python door answers; needs 17a's session plumbing) — divergence pins hold them loud. pins: spark-sql-grammar-1/C-010. §3. |
@@ -193,3 +193,22 @@ semantics via the shared translator, pinned by FN-REGEX-POSIX-1); the now-unused
 Gates for this slice: `cargo test -p repark-spark --lib keyword_lower` 6 passed;
 `test_spark_sql_grammar_1.py` + `test_fn_regex_posix_class.py` +
 `test_fnp11a_temporal.py` 437 passed jointly.
+
+## 5. Round-1 close (2026-09-16, 05:45 stop)
+
+C-001, C-002 and C-007 stay OPEN, each with its seam named in its row. C-001's
+kernels were verified exact on the door, so no shift kernel was added (the
+fence allowance unspent); the missing piece for C-001/C-002 is one shared
+custom-parse decision (sqlparser 0.62 `parse_infix` + `get_next_precedence`
+overrides threaded past `sql_to_statement`), owned by the FNP-4B dialect lane.
+C-009 stays OPEN per R-17c-7. C-010 stays OPEN on the session-names paren forms
+(P2 hand-off to run 17a in §3).
+
+Final VERDICT: 10 clauses, 5 PROVEN (C-003, C-004, C-005, C-006, C-008),
+5 OPEN (C-001, C-002, C-007, C-009, C-010), 0 REJECTED. No
+COVERAGE_ATTESTATION: five clauses are open, so attesting would be false.
+Registry: EX-FN-27, EX-FN-25, FN-RLIKE-KEYWORD-1 → FIXED; TZ-6 extended with the
+dated C-005 note; SQL-GRAMMAR-LATERAL-1 filed by C-007. `D4_BLOCKED_SQL` and
+`D4`-adjacent skips untouched; the only `test_fnp11a_temporal.py` edits are the
+three sanctioned skip-set removals and their flipped pins, announced in the
+ledger head.
