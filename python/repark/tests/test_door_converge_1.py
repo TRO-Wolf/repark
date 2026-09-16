@@ -239,9 +239,9 @@ def test_l002_array_contains_coerces_to_tightest_common_type(spark: ReparkSessio
     """Oracle C6-ac-*: needle and element widen together, never needle down.
 
     Spark answers these literal-haystack legs non-null (cell C6-ac-double-hit,
-    batch-7 N7-31); RePark reports nullable=True because the array constructor's
-    declared containsNull is DataFusion's unconditionally-nullable element —
-    recorded divergence ARRAY-LITERAL-CONTAINSNULL-1, owner DOOR-CONVERGE-2.
+    batch-7 N7-31). ARRAY-LITERAL-CONTAINSNULL-1 closed in DOOR-CONVERGE-2b: the
+    repark array constructor declares containsNull=false for non-null literals,
+    so the non-null-needle legs now pin Spark's non-null answer.
     """
     assert _sql_field(
         spark,
@@ -249,26 +249,26 @@ def test_l002_array_contains_coerces_to_tightest_common_type(spark: ReparkSessio
     ) == (pyarrow.bool_(), True, [False])
     assert _sql_field(spark, "SELECT array_contains(array(1,2), CAST(2 AS DOUBLE)) AS v") == (
         pyarrow.bool_(),
-        True,
+        False,
         [True],
     )
     assert _sql_field(
         spark,
         "SELECT array_contains(array(1,2), CAST(2147483648 AS BIGINT)) AS v",
-    ) == (pyarrow.bool_(), True, [False])
+    ) == (pyarrow.bool_(), False, [False])
     assert _sql_field(spark, "SELECT array_contains(array(1,2), CAST(1 AS BIGINT)) AS v") == (
         pyarrow.bool_(),
-        True,
+        False,
         [True],
     )
     assert _sql_field(spark, "SELECT array_contains(array(1.5, 2.5), 2.5) AS v") == (
         pyarrow.bool_(),
-        True,
+        False,
         [True],
     )
     assert _sql_field(spark, "SELECT array_contains(array(array(1), array(2)), array(2)) AS v") == (
         pyarrow.bool_(),
-        True,
+        False,
         [True],
     )
     frame = spark.createDataFrame([([1, 2],)], "a array<int>")
@@ -285,12 +285,12 @@ def test_l004_array_contains_empty_untyped_array_answers_false(
 ) -> None:
     """Oracle C6-ac-empty-untyped: array() + int needle is False non-null.
 
-    Spark answers non-null (cell C6-ac-empty-untyped); RePark reports
-    nullable=True for the same ARRAY-LITERAL-CONTAINSNULL-1 reason as test_l002.
+    Spark answers non-null (cell C6-ac-empty-untyped); the repark constructor's
+    containsNull fix (DOOR-CONVERGE-2b) makes the pin non-null on this door too.
     """
     assert _sql_field(spark, "SELECT array_contains(array(), 1) AS v") == (
         pyarrow.bool_(),
-        True,
+        False,
         [False],
     )
 
@@ -426,10 +426,14 @@ def test_l007_abs_wraps_signed_minima_when_ansi_off() -> None:
 
 
 def test_element_at_alias_1_resolves_the_dedicated_binding(spark: ReparkSession) -> None:
-    """ELEMENT-AT-ALIAS-1: element_at keeps array indexing, not map_extract."""
+    """ELEMENT-AT-ALIAS-1: element_at keeps array indexing, not map_extract.
+
+    Spark's ElementAt reports non-null here: ANSI failOnError plus a foldable
+    in-range ordinal resolves the literal element's own nullability (20 → false).
+    """
     assert _sql_field(spark, "SELECT element_at(array(10,20,30), 2) AS v") == (
         pyarrow.int32(),
-        True,
+        False,
         [20],
     )
     frame = spark.createDataFrame([([10, 20, 30],)], "a array<int>")

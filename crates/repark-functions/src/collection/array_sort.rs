@@ -81,7 +81,13 @@ impl ScalarUDFImpl for SparkArraySort {
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        inner_sort().inner().return_field_from_args(args)
+        let nullable = args.arg_fields.iter().any(|field| field.is_nullable());
+        let field = inner_sort().inner().return_field_from_args(args)?;
+        Ok(Arc::new(Field::new(
+            field.name(),
+            field.data_type().clone(),
+            nullable,
+        )))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
@@ -146,7 +152,13 @@ impl ScalarUDFImpl for SparkSortArray {
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        inner_sort().inner().return_field_from_args(args)
+        let nullable = args.arg_fields.iter().any(|field| field.is_nullable());
+        let field = inner_sort().inner().return_field_from_args(args)?;
+        Ok(Arc::new(Field::new(
+            field.name(),
+            field.data_type().clone(),
+            nullable,
+        )))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {

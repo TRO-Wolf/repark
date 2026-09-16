@@ -42,15 +42,15 @@ impl Hash for SparkFlatten {
     }
 }
 
-fn inner_element_type(data_type: &DataType) -> Result<DataType> {
+fn inner_element_field(data_type: &DataType) -> Result<FieldRef> {
     match data_type {
         DataType::List(field) => match field.data_type() {
             DataType::List(inner)
             | DataType::LargeList(inner)
-            | DataType::FixedSizeList(inner, _) => Ok(inner.data_type().clone()),
+            | DataType::FixedSizeList(inner, _) => Ok(Arc::clone(inner)),
             other => exec_err!("'flatten' expects ARRAY<ARRAY<T>>, got ARRAY<{other}>"),
         },
-        DataType::Null => Ok(DataType::Null),
+        DataType::Null => Ok(Arc::new(Field::new("element", DataType::Null, true))),
         other => exec_err!("'flatten' expects ARRAY<ARRAY<T>>, got {other}"),
     }
 }
@@ -63,7 +63,7 @@ fn offset_as_usize(offset: i32) -> Result<usize> {
     }
 }
 
-fn flatten_list(list: &ListArray, element_type: &DataType) -> Result<ArrayRef> {
+fn flatten_list(list: &ListArray, element: FieldRef) -> Result<ArrayRef> {
     let inner_list = list.values().as_list::<i32>();
     let outer_offsets = list.value_offsets();
     let inner_offsets = inner_list.value_offsets();
@@ -95,7 +95,7 @@ fn flatten_list(list: &ListArray, element_type: &DataType) -> Result<ArrayRef> {
         None
     };
     Ok(Arc::new(ListArray::try_new(
-        Arc::new(Field::new("item", element_type.clone(), true)),
+        element,
         OffsetBuffer::new(mapped.into()),
         Arc::clone(inner_list.values()),
         nulls,
@@ -106,16 +106,24 @@ impl ScalarUDFImpl for SparkFlatten {
     crate::shim_udf_boilerplate!("flatten");
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        let element = inner_element_type(&arg_types[0])?;
-        Ok(DataType::List(Arc::new(Field::new("item", element, true))))
+        let element = inner_element_field(&arg_types[0])?;
+        Ok(DataType::List(element))
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        let data_type = match args.arg_fields.first() {
-            Some(field) => self.return_type(&[field.data_type().clone()])?,
-            None => return exec_err!("'flatten' requires 1 argument"),
+        let Some(outer) = args.arg_fields.first() else {
+            return exec_err!("'flatten' requires 1 argument");
         };
-        Ok(Arc::new(Field::new(self.name(), data_type, true)))
+        let outer_contains_null = match outer.data_type() {
+            DataType::List(field) => field.is_nullable(),
+            _ => false,
+        };
+        let data_type = self.return_type(&[outer.data_type().clone()])?;
+        Ok(Arc::new(Field::new(
+            self.name(),
+            data_type,
+            outer.is_nullable() || outer_contains_null,
+        )))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
@@ -137,8 +145,8 @@ impl ScalarUDFImpl for SparkFlatten {
             return Ok(ColumnarValue::Array(Arc::clone(array)));
         }
         let list = array.as_list::<i32>();
-        let element_type = inner_element_type(array.data_type())?;
-        Ok(ColumnarValue::Array(flatten_list(list, &element_type)?))
+        let element = inner_element_field(array.data_type())?;
+        Ok(ColumnarValue::Array(flatten_list(list, element)?))
     }
 }
 

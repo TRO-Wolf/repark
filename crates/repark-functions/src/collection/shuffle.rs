@@ -3,10 +3,11 @@
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, ArrayRef};
-use datafusion::arrow::datatypes::{DataType, FieldRef};
-use datafusion::common::{Result, ScalarValue};
+use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
+use datafusion::common::{Result, ScalarValue, exec_err};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
+    Volatility,
 };
 
 /// The Spark `shuffle` UDF instance with a NULL guard.
@@ -19,12 +20,14 @@ pub fn shuffle_udf() -> Arc<ScalarUDF> {
 #[derive(Debug)]
 struct ReparkShuffle {
     inner: Arc<ScalarUDF>,
+    signature: Signature,
 }
 
 impl ReparkShuffle {
     fn new() -> Self {
         Self {
             inner: datafusion_spark::function::array::shuffle(),
+            signature: Signature::user_defined(Volatility::Immutable),
         }
     }
 }
@@ -64,15 +67,31 @@ impl ScalarUDFImpl for ReparkShuffle {
     }
 
     fn signature(&self) -> &Signature {
-        self.inner.signature()
+        &self.signature
     }
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        self.inner.inner().return_type(arg_types)
+        if let Some(data_type) = arg_types.first() {
+            Ok(data_type.clone())
+        } else {
+            exec_err!("'shuffle' expects an array argument")
+        }
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
-        self.inner.inner().return_field_from_args(args)
+        if let Some(field) = args.arg_fields.first() {
+            Ok(Arc::new(Field::new(
+                self.name(),
+                field.data_type().clone(),
+                field.is_nullable(),
+            )))
+        } else {
+            exec_err!("'shuffle' expects an array argument")
+        }
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        Ok(arg_types.to_vec())
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {

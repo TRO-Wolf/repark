@@ -235,6 +235,10 @@ pins: rp-4-fork-repin/C-005, C-006
   schemas after bottom-up narrowing); `Values` clones rows only on change;
   `Union` rebuilds only on a moved child type.
   pins: sql-literal-typing-1/L-001, L-002, L-003
+  **DOOR-CONVERGE-2b (2026-09-15):** the `canonicalize_verbatim` fast-path guard
+  also fires on a `(` containing `ceil`/`floor` so the scale-bearing rewrite is
+  never skipped.
+  pins: fnp-4b/C-001, C-004, C-005, C-006, C-020; door-converge-2b/C-002
 - `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
   `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),
@@ -248,7 +252,12 @@ pins: rp-4-fork-repin/C-005, C-006
   **Round 8 (2026-09-15):** Y/S regions absorb a unary minus like the LONG_MIN arm
   (`CAST({signed} AS TINYINT/SMALLINT)`), range-checked on the signed text; the L arm
   refuses out-of-range `BIGINT` at parse with `[INVALID_NUMERIC_LITERAL_RANGE]`.
-  pins: fnp-4b/C-001, C-004, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-021, C-023
+  **DOOR-CONVERGE-2b (2026-09-15):** `plan_ceil_floor_scale_regions` rewrites
+  `ceil(x, n)`/`ceiling(x, n)`/`floor(x, n)` calls onto `__repark_ceil__` /
+  `__repark_floor__` — the two-argument forms parse as a dedicated
+  `SQLExpr::Ceil{field: Scale}` node DataFusion refuses, so the front-door token
+  rewrite carries them to the Spark scale-aware kernels.
+  pins: door-converge-2b/C-002; fnp-4b/C-001, C-004, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-021, C-023
 - `spark_typed.rs` — **FNP-4B critic (2026-09-15):** `FoldSparkNumericCasts` folds
   `CAST('1e200' AS DOUBLE)` to a non-null Float64 literal; `SparkProjectionDisplay`
   aliases unaliased projections whose DataFusion names carry `Int64(` /

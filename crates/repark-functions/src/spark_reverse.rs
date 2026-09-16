@@ -235,7 +235,7 @@ mod tests {
             .expect("execute reverse");
         assert_eq!(
             batches[0].column(0).data_type(),
-            &DataType::List(Arc::new(Field::new("element", DataType::Int32, true)))
+            &DataType::List(Arc::new(Field::new("element", DataType::Int32, false)))
         );
         let scalar = one(&ctx, "SELECT reverse(array(1, 2, 3))").await;
         let ScalarValue::List(values) = &scalar else {

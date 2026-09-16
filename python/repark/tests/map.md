@@ -321,6 +321,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   realigned to the oracle, a real nested-column `reverse` pin on both doors, and
   scalar/limit/LRU perf-equivalence legs.
   pins: door-converge-2/C-007, C-008, C-009
+- [test_door_converge_2b.py](test_door_converge_2b.py) — **DOOR-CONVERGE-2b
+  (2026-09-15):** SQL-door + facade oracle pins for the round-2 names —
+  decimal-aware `round`/`bround` (Q16-0…8, 11, 12, 15, 16, 20; DIV-round-*;
+  R-round-*), scale-aware `ceil`/`ceiling`/`floor` (Q16-9, 10, 13, 14, 17–19;
+  DIV-ceil-*; R-ceil-*), `date_part`/`extract` fractional seconds
+  (decimal(8,6); Q16-21…25; R-date-part-sec; `INVALID_EXTRACT_FIELD` refusals),
+  literal array widening and element `containsNull` (Q16-26…31; N7-0…32;
+  R-array-*; DIV-slice-*), three-argument `like`/`ilike` and `ESCAPE`
+  (Q16-32…39; DIV-like-*; `INVALID_ESCAPE_CHAR`), `PG-*` cells
+  (`IS [NOT] DISTINCT FROM` non-null, literal-VALUES non-null columns,
+  map/array subscript element types) — value + Arrow type + nullability per
+  cell; `shuffle` pins order-insensitively; facade legs exercise
+  `F.round`/`F.ceil`/`F.floor`/`F.like`/`F.ilike`/`F.date_part`/`F.array`/
+  `F.slice`/`F.array_repeat`/`F.array_distinct`/`F.array_compact`/
+  `F.array_union`/`F.array_remove`/`F.map_keys`/`F.map_values`.
+  pins: door-converge-2b/C-001, C-002, C-003, C-004, C-005, C-006
   **Round 2 (2026-09-16):** `unbase64` raises the Java MIME-decoder texts on
   malformed endings while `'QR'`/`'QQQ'`/whitespace/`'!!'` stay lenient;
   `array_contains` coerces to the tightest common type (DOUBLE needle →
@@ -335,6 +351,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and flip back to Spark's non-null when that unit lands. `test_element_at_alias_1_*`
   codifies today's `element_at` resolution against the alias-clobber hazard
   (ELEMENT-AT-ALIAS-1).
+  **DOOR-CONVERGE-2b (2026-09-15):** the flip landed — `test_l002`/`test_l004`
+  literal-haystack legs now pin Spark's non-null answer, and
+  `test_element_at_alias_1_*` pins ANSI Spark's non-null `element_at` on a
+  foldable in-range ordinal.
   **Round 5 (2026-09-16):** `abs` takes Spark's implicit STRING→DOUBLE cast on both
   doors — `test_c003_abs_casts_string_to_double_on_both_doors` pins `abs('-1')` =
   1.0 double nullable and CAST_INVALID_INPUT on `'x'` literal and column inputs

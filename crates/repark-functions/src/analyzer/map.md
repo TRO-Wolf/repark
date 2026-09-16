@@ -14,6 +14,23 @@ under its `check_rust_file_size` ceiling and each matrix has one home.
 - `like_escape.rs` — **FN-FIX-2 (2026-09-04):** a LIKE/ILIKE pattern that ends in the
   unconsumed escape char is `DataFusionError::Plan` `[INVALID_FORMAT.ESC_AT_THE_END]`
   SQLSTATE 42601. Foldable literals only. pins: fn-fix-2-string-rows/C-002
+  **DOOR-CONVERGE-2b (2026-09-15):** `LIKE … ESCAPE e` / `ILIKE … ESCAPE e` with a
+  non-backslash foldable escape rewrite onto the `spark_like` kernels (3-arg
+  call); the backslash case keeps DataFusion's `Like`/`ILike` nodes.
+  pins: door-converge-2b/C-006
+- `date_part.rs` — **DOOR-CONVERGE-2b (2026-09-15):** rewrites the
+  planner-embedded `date_part` builtin onto `__repark_date_part__`. EXTRACT
+  plans through DataFusion's `DatetimeFunctionPlanner`, which bakes the builtin
+  UDF into the node, so only the analyzer sees the name; a named `date_part`
+  call resolves through the repark UDF's alias anyway, and the arm is
+  idempotent against it. pins: door-converge-2b/C-003
+- `subscript.rs` — **DOOR-CONVERGE-2b (2026-09-15):** `rewrite_array_subscript`
+  moved here from `analyzer.rs`. Skips the registered refusing `array_element`
+  UDF (downcast check — only the planner-embedded DataFusion builtin is
+  rewritten) and strips DataFusion's first-pass `CAST(… AS List(item …))`
+  coercion on the array operand: the cast target was computed pre-narrowing or
+  against DF's `item` field name, and stripping it lets Spark literal widths
+  reach `__repark_array_get__`. pins: door-converge-2b/C-004, C-005
 - `overlay.rs` — `overlay(..., -1)` drops the Spark default length to the 3-arg form.
   **SQL-LITERAL-TYPING-1 (2026-09-16):** the `-1` match sees through one compiler
   `CAST` (early Int32 narrowing makes the first coercion wrap the literal before

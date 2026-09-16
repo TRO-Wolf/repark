@@ -103,6 +103,12 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **FNP-11B step 2 (2026-09-15):** the `to_date` arm takes 1 or 2 args
   (`expr_fn::to_date` widens to `Vec<Expr>`); `unix_timestamp` takes 0 to 2.
   pins: fnp-11b/C-002, C-003
+  **DOOR-CONVERGE-2b (2026-09-15):** the `round`/`bround`, `ceil`/`ceiling`/`floor`,
+  `like`/`ilike`, `date_part`/`datepart`, `array`/`make_array`, `slice`,
+  `array_repeat`, `map_keys`/`map_values`, `array_distinct`, `array_compact`,
+  `array_remove` and `array_union` arms embed the `repark_functions::expr_fn`
+  kernels the SQL door registers — one kernel on both doors.
+  pins: door-converge-2b/C-001, C-002, C-003, C-004, C-005, C-006
 - [`function_dispatch/dispatch_json.rs`](function_dispatch/dispatch_json.rs) —
   **FNP-9/10 (2026-09-05):** arms for
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
@@ -218,6 +224,13 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   overwriting the door would break `FROM generate_series` users.
   pins: door-converge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013, C-014; pins: door-converge-2/C-006
+  **DOOR-CONVERGE-2b (2026-09-15):** `EXPECTED_DIVERGENCES` ratchets 15 → 4
+  (`sec`, `csc`, `array_element`, `generate_series`); `SCALAR_NAMES` gains
+  `round`, `bround`, `ceil`, `floor`, `like`, `ilike`, `date_part`, `slice`,
+  `array`, `array_repeat`, `map_keys`, `map_values`, `array_distinct`,
+  `array_compact`, `array_remove` and `array_union` so the explicit
+  kernel-identity guard covers every name converged here.
+  pins: door-converge-2b/C-007
   **ABS-EXPR-1 (2026-09-13):** `EXPECTED_DIVERGENCES` gains `abs` — the facade's core
   `checked_abs` raises on integer-min (Spark ANSI-on answer); the door's `SparkAbs`
   wraps because repark never sets `execution.enable_ansi_mode` — measured on typed

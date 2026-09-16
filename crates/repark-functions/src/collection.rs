@@ -10,7 +10,8 @@ use datafusion::common::{DataFusionError, Result, ScalarValue};
 use datafusion::functions_nested::extract::array_element_udf;
 use datafusion::functions_nested::map_extract::map_extract_udf;
 use datafusion::logical_expr::{
-    ColumnarValue, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
+    ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
+    Volatility,
 };
 
 /// Regex `str_to_map` (Spark treats both delimiters as regular expressions).
@@ -22,6 +23,7 @@ mod shuffle;
 
 mod array_append;
 mod array_contains;
+mod coerce;
 mod concat_array;
 pub(crate) use concat_array::{
     all_list_args, invoke_array_concat, is_binary_family, is_list_family, plan_array_concat,
@@ -38,6 +40,7 @@ mod map_concat;
 /// `map_from_entries` with Spark's `EXCEPTION` map-key dedup policy (X7).
 mod map_from_entries;
 mod size;
+pub(crate) mod spark_array;
 
 /// The collection shims registered after DataFusion's defaults.
 #[must_use]
@@ -61,6 +64,16 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         crate::spark_sequence::sequence_udf(),
         array_append::spark_array_append_udf(),
         array_append::spark_array_prepend_udf(),
+        spark_array::make_array_udf(),
+        spark_array::array_element_udf(),
+        spark_array::slice_udf(),
+        spark_array::array_repeat_udf(),
+        spark_array::map_keys_udf(),
+        spark_array::map_values_udf(),
+        spark_array::array_distinct_udf(),
+        spark_array::array_compact_udf(),
+        spark_array::array_remove_udf(),
+        spark_array::array_union_udf(),
     ]
 }
 
@@ -210,6 +223,23 @@ impl ScalarUDFImpl for SparkArrayGet {
         })
     }
 
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let data_type = self.return_type(
+            &args
+                .arg_fields
+                .iter()
+                .map(|field| field.data_type().clone())
+                .collect::<Vec<_>>(),
+        )?;
+        let contains_null = matches!(
+            args.arg_fields.first().map(|field| field.data_type()),
+            Some(DataType::List(element) | DataType::LargeList(element))
+                if element.is_nullable()
+        );
+        let nullable = args.arg_fields.iter().any(|field| field.is_nullable()) || contains_null;
+        Ok(Arc::new(Field::new(self.name(), data_type, nullable)))
+    }
+
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
         let indices = cast(arrays[1].as_ref(), &DataType::Int64)?;
@@ -277,6 +307,28 @@ impl ScalarUDFImpl for SparkGetItem {
             "'__repark_get_item__' expects an array or map first argument, got {}",
             arg_types[0]
         )))
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let data_type = self.return_type(
+            &args
+                .arg_fields
+                .iter()
+                .map(|field| field.data_type().clone())
+                .collect::<Vec<_>>(),
+        )?;
+        let container = args.arg_fields.first().map(|field| field.data_type());
+        let nullable = if matches!(container, Some(DataType::Map(_, _))) {
+            true
+        } else {
+            let contains_null = matches!(
+                container,
+                Some(DataType::List(element) | DataType::LargeList(element))
+                    if element.is_nullable()
+            );
+            args.arg_fields.iter().any(|field| field.is_nullable()) || contains_null
+        };
+        Ok(Arc::new(Field::new(self.name(), data_type, nullable)))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
@@ -383,6 +435,28 @@ impl ScalarUDFImpl for SparkElementAt {
             "'element_at' expects an array or map first argument, got {}",
             arg_types[0]
         )))
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let data_type = self.return_type(
+            &args
+                .arg_fields
+                .iter()
+                .map(|field| field.data_type().clone())
+                .collect::<Vec<_>>(),
+        )?;
+        let container = args.arg_fields.first().map(|field| field.data_type());
+        let nullable = if matches!(container, Some(DataType::Map(_, _))) {
+            true
+        } else {
+            let contains_null = matches!(
+                container,
+                Some(DataType::List(element) | DataType::LargeList(element))
+                    if element.is_nullable()
+            );
+            args.arg_fields.iter().any(|field| field.is_nullable()) || contains_null
+        };
+        Ok(Arc::new(Field::new(self.name(), data_type, nullable)))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {

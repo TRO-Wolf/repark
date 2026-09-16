@@ -113,12 +113,12 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             expr_fn::sqrt(exprs[0].clone())
         }
         "floor" => {
-            need(1)?;
-            expr_fn::floor(exprs[0].clone())
+            need_at_least(1)?;
+            repark_functions::expr_fn::floor(exprs.clone())
         }
         "ceil" | "ceiling" => {
-            need(1)?;
-            expr_fn::ceil(exprs[0].clone())
+            need_at_least(1)?;
+            repark_functions::expr_fn::ceil(exprs.clone())
         }
         "signum" | "sign" => {
             need(1)?;
@@ -222,12 +222,12 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             )
         }
         "like" => {
-            need(2)?;
-            exprs[0].clone().like(exprs[1].clone())
+            need_at_least(2)?;
+            repark_functions::expr_fn::like(exprs.clone())
         }
         "ilike" => {
-            need(2)?;
-            exprs[0].clone().ilike(exprs[1].clone())
+            need_at_least(2)?;
+            repark_functions::expr_fn::ilike(exprs.clone())
         }
         "regexp_like" => {
             need(2)?;
@@ -239,11 +239,11 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "round" => {
             need_at_least(1)?;
-            if exprs.len() == 1 {
-                expr_fn::round(vec![exprs[0].clone()])
-            } else {
-                expr_fn::round(vec![exprs[0].clone(), exprs[1].clone()])
-            }
+            repark_functions::expr_fn::round(exprs.clone())
+        }
+        "bround" => {
+            need_at_least(1)?;
+            repark_functions::expr_fn::bround(exprs.clone())
         }
         "ln" => {
             need(1)?;
@@ -407,7 +407,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "array_distinct" => {
             need(1)?;
-            nested_fn::array_distinct(exprs[0].clone())
+            repark_functions::expr_fn::array_distinct(exprs[0].clone())
         }
         "array_except" => {
             need(2)?;
@@ -419,7 +419,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "array_union" => {
             need(2)?;
-            nested_fn::array_union(exprs[0].clone(), exprs[1].clone())
+            repark_functions::expr_fn::array_union(exprs[0].clone(), exprs[1].clone())
         }
         "arrays_overlap" => {
             need(2)?;
@@ -443,13 +443,13 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "array_remove" => {
             need(2)?;
-            nested_fn::array_remove(exprs[0].clone(), exprs[1].clone())
+            repark_functions::expr_fn::array_remove(exprs[0].clone(), exprs[1].clone())
         }
         "array_repeat" => {
             need(2)?;
             repark_functions::cardinality::refuse_facade_literal_expansion("array_repeat", &exprs)
                 .map_err(crate::datafusion_to_py_err)?;
-            nested_fn::array_repeat(exprs[0].clone(), exprs[1].clone())
+            repark_functions::expr_fn::array_repeat(exprs[0].clone(), exprs[1].clone())
         }
         "array_sort" => {
             need_at_least(1)?;
@@ -465,8 +465,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "slice" => {
             need(3)?;
-            let end = exprs[1].clone() + exprs[2].clone() - lit(1i64);
-            nested_fn::array_slice(exprs[0].clone(), exprs[1].clone(), end, None)
+            repark_functions::expr_fn::slice(exprs[0].clone(), exprs[1].clone(), exprs[2].clone())
         }
         "flatten" => {
             need(1)?;
@@ -474,11 +473,11 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "map_keys" => {
             need(1)?;
-            nested_fn::map_keys(exprs[0].clone())
+            repark_functions::expr_fn::map_keys(exprs[0].clone())
         }
         "map_values" => {
             need(1)?;
-            nested_fn::map_values(exprs[0].clone())
+            repark_functions::expr_fn::map_values(exprs[0].clone())
         }
         "map_entries" => {
             need(1)?;
@@ -506,7 +505,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             datafusion::functions::core::get_field().call(exprs.clone())
         }
-        "array" | "make_array" => nested_fn::make_array(exprs.clone()),
+        "array" | "make_array" => repark_functions::expr_fn::array(exprs.clone()),
         "next_day" => {
             need(2)?;
             repark_functions::expr_fn::next_day(exprs[0].clone(), exprs[1].clone())
@@ -545,7 +544,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "date_part" | "datepart" => {
             need(2)?;
-            expr_fn::date_part(exprs[0].clone(), exprs[1].clone())
+            repark_functions::expr_fn::date_part(exprs.clone())
         }
         "timestamp_seconds" | "to_timestamp_seconds" => {
             need(1)?;
@@ -839,7 +838,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "array_compact" => {
             need(1)?;
-            nested_fn::array_compact(exprs[0].clone())
+            repark_functions::expr_fn::array_compact(exprs[0].clone())
         }
         "shuffle" => {
             need_at_least(1)?;

@@ -810,3 +810,53 @@ fn byte_offset(starts: &[usize], sql: &str, location: Location) -> Option<usize>
         None => None,
     }
 }
+
+pub(crate) fn plan_ceil_floor_scale_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
+    let mut regions = Vec::new();
+    for (index, token) in tokens.iter().enumerate() {
+        let Token::Word(word) = &token.token else {
+            continue;
+        };
+        if word.quote_style.is_some() {
+            continue;
+        }
+        let replacement = match word.value.to_ascii_lowercase().as_str() {
+            "ceil" | "ceiling" => "__repark_ceil__",
+            "floor" => "__repark_floor__",
+            _ => continue,
+        };
+        let open = skip_whitespace(tokens, index + 1);
+        if !matches!(
+            tokens.get(open).map(|with_span| &with_span.token),
+            Some(Token::LParen)
+        ) {
+            continue;
+        }
+        let mut depth = 0usize;
+        let mut scaled = false;
+        for inner in &tokens[open..] {
+            match &inner.token {
+                Token::LParen => depth += 1,
+                Token::RParen => {
+                    depth = depth.saturating_sub(1);
+                    if depth == 0 {
+                        break;
+                    }
+                }
+                Token::Comma if depth == 1 => {
+                    scaled = true;
+                    break;
+                }
+                _ => {}
+            }
+        }
+        if scaled {
+            regions.push(LiteralRegion {
+                start: token.span.start,
+                end: token.span.end,
+                replacement: replacement.to_string(),
+            });
+        }
+    }
+    regions
+}

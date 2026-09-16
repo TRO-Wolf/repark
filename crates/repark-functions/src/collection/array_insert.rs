@@ -72,6 +72,22 @@ fn element_type(data_type: &DataType) -> Result<DataType> {
     }
 }
 
+fn widened_element(element: &DataType, value: &DataType) -> Result<DataType> {
+    if element == &DataType::Null {
+        return Ok(value.clone());
+    }
+    if value == &DataType::Null || value == element {
+        return Ok(element.clone());
+    }
+    tightest_common(element, value).ok_or_else(|| {
+        datafusion::error::DataFusionError::Plan(format!(
+            "[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] `array_insert` requires the \
+             array element type and the inserted value type to share a common type, but \
+             got {element} and {value}"
+        ))
+    })
+}
+
 fn index_of_zero() -> datafusion::error::DataFusionError {
     datafusion::error::DataFusionError::Execution(
         "[INVALID_INDEX_OF_ZERO] The index 0 is invalid. An index shall be either < 0 or > 0 \
@@ -126,19 +142,24 @@ impl ScalarUDFImpl for SparkArrayInsert {
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
         let element = element_type(&arg_types[0])?;
+        let element = match arg_types.get(2) {
+            Some(value) => widened_element(&element, value)?,
+            None => element,
+        };
         Ok(DataType::List(Arc::new(Field::new("item", element, true))))
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        let Some(first) = args.arg_fields.first() else {
-            return exec_err!("'array_insert' requires 3 arguments, got 0");
-        };
-        let data_type = self.return_type(&[first.data_type().clone()])?;
-        let nullable = args
+        let arg_types: Vec<DataType> = args
             .arg_fields
             .iter()
-            .take(2)
-            .any(|field| field.is_nullable());
+            .map(|field| field.data_type().clone())
+            .collect();
+        if arg_types.is_empty() {
+            return exec_err!("'array_insert' requires 3 arguments, got 0");
+        }
+        let data_type = self.return_type(&arg_types)?;
+        let nullable = args.arg_fields.iter().any(|field| field.is_nullable());
         Ok(Arc::new(Field::new(self.name(), data_type, nullable)))
     }
 
@@ -157,24 +178,8 @@ impl ScalarUDFImpl for SparkArrayInsert {
             );
         }
         let element = element_type(array)?;
-        let widened = if element == DataType::Null {
-            value.clone()
-        } else if value == &DataType::Null || value == &element {
-            element
-        } else {
-            tightest_common(&element, value).ok_or_else(|| {
-                datafusion::error::DataFusionError::Plan(format!(
-                    "[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] `array_insert` requires the \
-                     array element type and the inserted value type to share a common type, but \
-                     got {element} and {value}"
-                ))
-            })?
-        };
-        Ok(vec![
-            DataType::List(Arc::new(Field::new("item", widened.clone(), true))),
-            DataType::Int32,
-            widened,
-        ])
+        widened_element(&element, value)?;
+        Ok(vec![array.clone(), DataType::Int32, value.clone()])
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -186,16 +191,34 @@ impl ScalarUDFImpl for SparkArrayInsert {
                 arrays.len()
             );
         };
+        let Some(slots) = positions.as_any().downcast_ref::<Int32Array>() else {
+            return exec_err!("'array_insert' argument 2 must be an INT");
+        };
+        let source_element = element_type(source.data_type())?;
+        let element = widened_element(&source_element, values.data_type())?;
+        let source_storage;
+        let source = if source_element == element {
+            source
+        } else {
+            source_storage = datafusion::arrow::compute::cast(
+                source.as_ref(),
+                &DataType::List(Arc::new(Field::new("item", element.clone(), true))),
+            )?;
+            &source_storage
+        };
+        let values_storage;
+        let values = if values.data_type() == &element {
+            values
+        } else {
+            values_storage = datafusion::arrow::compute::cast(values.as_ref(), &element)?;
+            &values_storage
+        };
         let Some(lists) = source.as_any().downcast_ref::<ListArray>() else {
             return exec_err!(
                 "'array_insert' argument 1 must be an ARRAY, got {}",
                 source.data_type()
             );
         };
-        let Some(slots) = positions.as_any().downcast_ref::<Int32Array>() else {
-            return exec_err!("'array_insert' argument 2 must be an INT");
-        };
-        let element = element_type(source.data_type())?;
         let mut pieces: Vec<ArrayRef> = Vec::new();
         let mut offsets: Vec<i32> = Vec::with_capacity(lists.len() + 1);
         let mut present: Vec<bool> = Vec::with_capacity(lists.len());

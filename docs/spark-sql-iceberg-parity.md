@@ -3629,7 +3629,14 @@ the pin rather than obeying it.
   registry-wide work, which must rebind each function under its exact registry key
   without propagating aliases.
 
-### ARRAY-LITERAL-CONTAINSNULL-1 — literal array constructors declare a nullable element
+### ARRAY-LITERAL-CONTAINSNULL-1 — FIXED (DOOR-CONVERGE-2b, 2026-09-15): literal array constructors declare a nullable element
+
+> **CLOSED 2026-09-15 (DOOR-CONVERGE-2b, ruling D-1).** The repark-owned `make_array`
+> kernel declares `containsNull = any(arg nullable)` post-narrowing, so
+> `array(1,2)` is `array<int>` non-null elements and `array_contains(array(1,2),1)`
+> reports non-nullable `boolean` (N7-31 green). The `test_door_converge_1` pins
+> named below were flipped to Spark's non-null in the same change, and
+> `test_door_converge_2b.py` carries the N7 suite. Retired per §6.
 
 - **repark** — `array_contains(array(1,2), CAST(2 AS DOUBLE))` and
   `array_contains(array(), 1)` report a **nullable** result on both doors;

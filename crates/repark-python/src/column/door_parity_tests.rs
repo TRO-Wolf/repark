@@ -21,57 +21,16 @@ enum FacadeShape {
 
 const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
     (
-        "ceil",
-        FacadeShape::Kernel(1),
-        "DF-core ceil is float-first; spark ceil carries the decimal target-scale arm",
-    ),
-    ("ceiling", FacadeShape::Kernel(1), "alias of ceil"),
-    ("floor", FacadeShape::Kernel(1), "mirror of ceil"),
-    (
-        "round",
-        FacadeShape::Kernel(1),
-        "DF-core round vs spark HALF_UP with a decimal target scale",
-    ),
-    (
-        "like",
-        FacadeShape::Composed,
-        "DF-core LIKE vs spark like with an explicit escape argument",
-    ),
-    ("ilike", FacadeShape::Composed, "mirror of like"),
-    (
         "sec",
         FacadeShape::Composed,
         "facade lowers to 1/cos; spark sec is a kernel with its own overflow behaviour",
     ),
     ("csc", FacadeShape::Composed, "mirror of sec"),
     (
-        "slice",
-        FacadeShape::Kernel(3),
-        "DF-core array_slice is 0-based-tolerant; spark slice is 1-based and raises on 0",
-    ),
-    (
-        "array_repeat",
-        FacadeShape::Kernel(2),
-        "DF-core array_repeat vs spark array_repeat on negative counts",
-    ),
-    (
-        "date_part",
-        FacadeShape::Kernel(2),
-        "DF-core date_part vs spark date_part field-name set",
-    ),
-    ("datepart", FacadeShape::Kernel(2), "alias of date_part"),
-    (
-        "array",
-        FacadeShape::Kernel(1),
-        "facade builds `make_array`, the door resolves the `array` alias; values agree, only the \
-         kernel identity differs",
-    ),
-    (
         "array_element",
         FacadeShape::Kernel(2),
-        "a DataFusion name Spark does not have at all (`UNRESOLVED_ROUTINE` there). The facade \
-         reaches `element_at`; the door's own `array_element` returns NULL for a valid index, \
-         which is an engine defect on a non-Spark spelling",
+        "a DataFusion name Spark does not have at all — the door refuses it with \
+         `UNRESOLVED_ROUTINE`; the facade reaches `element_at`",
     ),
     (
         "generate_series",
@@ -120,6 +79,22 @@ const SCALAR_NAMES: &[(&str, usize)] = &[
     ("regexp_count", 2),
     ("log1p", 1),
     ("expm1", 1),
+    ("round", 2),
+    ("bround", 2),
+    ("ceil", 2),
+    ("floor", 2),
+    ("like", 3),
+    ("ilike", 3),
+    ("date_part", 2),
+    ("slice", 3),
+    ("array", 2),
+    ("array_repeat", 2),
+    ("map_keys", 1),
+    ("map_values", 1),
+    ("array_distinct", 1),
+    ("array_compact", 1),
+    ("array_remove", 2),
+    ("array_union", 2),
 ];
 
 fn registered_session() -> SessionContext {
@@ -180,10 +155,12 @@ fn facade_avg_is_the_repark_retracting_kernel_not_datafusion_core() {
 fn expected_divergences_are_all_still_real() {
     assert_eq!(
         EXPECTED_DIVERGENCES.len(),
-        15,
+        4,
         "DOOR-CONVERGE-1 closed abs/ascii/base64/unbase64/length/character_length/size/\
          array_contains — both doors now resolve the same kernel; ratchet 22 → 14. \
-         DOOR-CONVERGE-2 adds generate_series (facade sequence-alias vs door native) → 15"
+         DOOR-CONVERGE-2 adds generate_series (facade sequence-alias vs door native) → 15. \
+         DOOR-CONVERGE-2b closed ceil/ceiling/floor/round/like/ilike/slice/array_repeat/\
+         date_part/datepart/array → 4"
     );
     let ctx = registered_session();
     let mut already_fixed = Vec::new();

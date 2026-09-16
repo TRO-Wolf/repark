@@ -377,7 +377,7 @@ mod tests {
             .expect("execute widen");
         assert_eq!(
             batches[0].column(0).data_type(),
-            &DataType::List(Arc::new(Field::new("element", DataType::Int64, true)))
+            &DataType::List(Arc::new(Field::new("element", DataType::Int64, false)))
         );
         let scalar = ScalarValue::try_from_array(batches[0].column(0).as_ref(), 0).expect("scalar");
         let ScalarValue::List(values) = &scalar else {
@@ -403,7 +403,7 @@ mod tests {
             .expect("execute pipe");
         assert_eq!(
             batches[0].column(0).data_type(),
-            &DataType::List(Arc::new(Field::new("element", DataType::Int32, true)))
+            &DataType::List(Arc::new(Field::new("element", DataType::Int32, false)))
         );
         assert!(!batches[0].schema().field(0).is_nullable());
         let joined = value_of(&ctx, "SELECT array(1) || array(2)").await;
@@ -426,7 +426,7 @@ mod tests {
             &DataType::List(Arc::new(Field::new(
                 "element",
                 DataType::Decimal128(11, 1),
-                true
+                false
             )))
         );
     }

@@ -716,3 +716,20 @@ fn numeric_suffix_guard_skips_bare_decimals() {
         );
     }
 }
+
+#[test]
+fn ceil_floor_scale_rewrites_to_repark_udfs() {
+    for (sql, expected) in [
+        ("SELECT ceil(1.5, 2)", "SELECT __repark_ceil__(1.5, 2)"),
+        ("SELECT floor(1.5, 2)", "SELECT __repark_floor__(1.5, 2)"),
+        ("SELECT ceiling(1.5, 2)", "SELECT __repark_ceil__(1.5, 2)"),
+        (
+            "SELECT floor(CAST(125 AS BIGINT), -2)",
+            "SELECT __repark_floor__(CAST(125 AS BIGINT), -2)",
+        ),
+        ("SELECT ceil(1.5)", "SELECT ceil(1.5)"),
+    ] {
+        let canonical = crate::spark_literals::canonicalize(sql).expect("canonicalizes");
+        assert_eq!(canonical.as_ref(), expected, "{sql}");
+    }
+}

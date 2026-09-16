@@ -1,14 +1,38 @@
 use datafusion::common::tree_node::Transformed;
 use datafusion::common::{Result, ScalarValue};
 use datafusion::logical_expr::Expr;
-use datafusion::logical_expr::expr::Like;
+use datafusion::logical_expr::expr::{Like, ScalarFunction};
 
 pub(super) fn rewrite(expr: Expr) -> Result<Transformed<Expr>> {
     let Expr::Like(like) = &expr else {
         return Ok(Transformed::no(expr));
     };
     refuse_escape_at_end(like)?;
-    Ok(Transformed::no(expr))
+    let Some(escape) = like.escape_char else {
+        return Ok(Transformed::no(expr));
+    };
+    if escape == '\\' {
+        return Ok(Transformed::no(expr));
+    }
+    let udf = if like.case_insensitive {
+        crate::spark_like::ilike_udf()
+    } else {
+        crate::spark_like::like_udf()
+    };
+    let call = Expr::ScalarFunction(ScalarFunction::new_udf(
+        udf,
+        vec![
+            (*like.expr).clone(),
+            (*like.pattern).clone(),
+            Expr::Literal(ScalarValue::Utf8(Some(escape.to_string())), None),
+        ],
+    ));
+    let wrapped = if like.negated {
+        Expr::Not(Box::new(call))
+    } else {
+        call
+    };
+    Ok(Transformed::yes(wrapped))
 }
 
 fn refuse_escape_at_end(like: &Like) -> Result<()> {
