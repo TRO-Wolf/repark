@@ -78,10 +78,12 @@ pub(crate) fn render_decimal(value: i128, scale: i8) -> String {
     }
     let negative = value < 0;
     let mut digits = value.unsigned_abs().to_string();
-    while digits.len() <= usize::from(scale as u8) {
+    #[allow(clippy::cast_sign_loss)]
+    let width = usize::from(scale as u8);
+    while digits.len() <= width {
         digits.insert(0, '0');
     }
-    let point = digits.len() - usize::from(scale as u8);
+    let point = digits.len() - width;
     let (whole, frac) = digits.split_at(point);
     if negative {
         format!("-{whole}.{frac}")

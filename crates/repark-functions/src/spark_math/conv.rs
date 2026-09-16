@@ -110,6 +110,7 @@ fn render_unsigned(mut value: u64, base: u32, out: &mut String) {
     let mut digits = [0u8; 64];
     let mut len = 0;
     while value > 0 {
+        #[allow(clippy::cast_possible_truncation)]
         let digit = (value % u64::from(base)) as u8;
         digits[len] = if digit < 10 {
             b'0' + digit
@@ -129,6 +130,7 @@ fn convert_row(text: &str, from_base: i32, to_base: i32, ansi: bool) -> Result<O
     if !(2..=36).contains(&from_base) || !(2..=36).contains(&to_magnitude) {
         return Ok(None);
     }
+    let from_magnitude = u64::from(from_base.unsigned_abs());
     let bytes = text.as_bytes();
     let mut cursor = 0;
     let mut negative = false;
@@ -144,18 +146,17 @@ fn convert_row(text: &str, from_base: i32, to_base: i32, ansi: bool) -> Result<O
         let Some(digit) = digit_value(bytes[cursor]) else {
             break;
         };
-        if digit >= from_base as u64 {
+        if digit >= from_magnitude {
             break;
         }
-        match magnitude
-            .checked_mul(from_base as u64)
+        if let Some(next) = magnitude
+            .checked_mul(from_magnitude)
             .and_then(|scaled| scaled.checked_add(digit))
         {
-            Some(next) => magnitude = next,
-            None => {
-                overflowed = true;
-                break;
-            }
+            magnitude = next;
+        } else {
+            overflowed = true;
+            break;
         }
         cursor += 1;
     }
@@ -172,7 +173,7 @@ fn convert_row(text: &str, from_base: i32, to_base: i32, ansi: bool) -> Result<O
     };
     let mut rendered = String::new();
     if to_base < 0 {
-        let signed = unsigned as i64;
+        let signed = unsigned.cast_signed();
         if signed < 0 {
             rendered.push('-');
             render_unsigned(signed.unsigned_abs(), to_magnitude, &mut rendered);
