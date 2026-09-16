@@ -9197,6 +9197,40 @@ field NAME.
   must survive planning before any kernel or spelling table can use it.
   pins: fnp-11b/C-005
 
+### BL-19 — an unknown function on the SQL door refuses as "Invalid function", not `UNRESOLVED_ROUTINE`
+
+- **repark** — `spark.sql("SELECT nosuchfn(1)")` raises `Error during planning: Invalid function
+  'nosuchfn'.` The class, the SQLSTATE and the message shape are all DataFusion's, not Spark's. Because
+  this is the blanket path for *every* name the door does not know, each unimplemented Spark function
+  currently refuses in the wrong shape — one contract, not one row per name.
+- **Apache Spark** — `[UNRESOLVED_ROUTINE] Cannot resolve routine ``nosuchfn`` on search path
+  [``system``.``builtin``, ``system``.``session``, ``spark_catalog``.``default``]. SQLSTATE: 42883; line 1 pos 7`.
+  The same class and shape answer an unknown bare name, an unknown quoted name, and an unknown datetime
+  unit used as a routine (`FORTNIGHT`).
+  *(oracle: `<pyspark-4.1.2-oracle>` — measured by run 17c, 2026-09-16.)*
+- **Pin** — none yet; the divergence is recorded ahead of its unit.
+- **Rationale** — BACKLOG, contract-level. Found by run 17c while measuring the SPARK-SQL-GRAMMAR-1 cells
+  (`FORTNIGHT` → `UNRESOLVED_ROUTINE`, batch-14 Q14-35). It is listed before any further individual
+  function names because fixing the blanket path corrects every missing name at once, whereas adding names
+  one at a time never corrects the shape. The refusal is loud in both engines, so the risk is disclosure
+  fidelity rather than a wrong answer.
+
+### BL-20 — `INT + TINYINT` types as BIGINT on the SQL door; Spark says INT, and repark's two doors disagree
+
+- **repark** — the SQL door types an integral literal added to a narrower integral as BIGINT:
+  `hex(CAST(1 + CAST(1 AS TINYINT) AS BINARY))` is `0000000000000002` (8 bytes). The Python door answers
+  `00000002` (4 bytes). **The two repark doors give different answers to the same expression**, which is
+  the failure mode the 1.5 shape rule exists to prevent.
+- **Apache Spark** — `typeof(1 + CAST(1 AS TINYINT))` is `int`, and
+  `hex(CAST(1 + CAST(1 AS TINYINT) AS BINARY))` is `00000002` on both doors.
+  *(oracle: `<pyspark-4.1.2-oracle>` — measured by run 17c, 2026-09-16.)*
+- **Pin** — none yet; recorded ahead of its unit.
+- **Rationale** — BACKLOG, door-disagreement. Pre-existing in the SQL door's integral literal typing and
+  surfaced by BL-11 (#641), which made it visible because numeric → `BINARY` is the first cast whose result
+  *width* is decided by the static integral type rather than by the value. Ranked above the individual
+  width rows: literal typing sits upstream of a large family of casts and comparisons, so the wrong type
+  propagates silently wherever the result width or precision is observable.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
