@@ -610,6 +610,7 @@ functions	F.second
 functions	F.sentences
 functions	F.sequence
 functions	F.session_user
+functions	F.session_window
 functions	F.sha
 functions	F.sha1
 functions	F.sha2
@@ -732,6 +733,8 @@ functions	F.weekday
 functions	F.weekofyear
 functions	F.when
 functions	F.width_bucket
+functions	F.window
+functions	F.window_time
 functions	F.xpath
 functions	F.xpath_boolean
 functions	F.xpath_double

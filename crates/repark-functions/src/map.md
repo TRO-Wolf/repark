@@ -280,6 +280,49 @@ scalars live under [`try_invert/`](try_invert/map.md).
   move-only). pins: door-converge-2/C-008, C-009
 - `spark_split_part.rs` — **GT1-FIX F-6c / R3-1:** STRING `partNum` +
   Dictionary(_, Utf8); partNum 0 fail-loud.
+- `spark_time_window.rs` — **FNP-WIN-1 (2026-09-15):** the `window` scalar UDF
+  (`struct<start:timestamp,end:timestamp>` over the input timestamp type, UTC-epoch
+  buckets, NULL time to NULL struct) plus the internal
+  `__repark_window_starts__` list UDF that feeds the expansion rule; Spark
+  interval-string durations with the oracle `CANNOT_PARSE_INTERVAL` text;
+  month/year durations refuse loud (no fixed microsecond length).
+  Audit round 16a splits the refusal: `window` keeps the Legacy
+  `[_LEGACY_ERROR_TEMP_3231]` text while the session gap carries its own
+  gapDuration text; non-positive window durations refuse
+  `CANNOT_PARSE_INTERVAL`, and `Date32` coerces to `Timestamp(ns)`.
+  Remediation 16a: `startTime` parses signed (negative/zero allowed);
+  `slide > window` and `abs(start) >= slide` refuse with the oracle
+  `PARAMETER_CONSTRAINT_VIOLATION` text; kernels batch (one downcast per
+  batch, typed timestamp builders, streamed sliding starts) and a NULL time
+  expands to an empty sliding list.
+  pins: fnp-win-1/C-002, C-005
+- `spark_window_time.rs` — **FNP-WIN-1 step 3 (2026-09-15):** the `window_time`
+  scalar UDF (window `end` minus one microsecond, end field's timestamp type,
+  NULL struct to NULL); non-struct arguments refuse loud. Remediation 16a
+  reuses the batched timestamp kernels; behavior unchanged.
+  pins: fnp-win-1/C-003
+- `spark_session_window.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the
+  `session_window` marker UDF (GROUP-BY-only; per-row evaluation refuses loud)
+  plus the `__repark_session_gap__` / `__repark_ts_micros__` /
+  `__repark_session_assemble__` internal UDFs the sessionize rule threads
+  through its lag / flag / running-sum / min-max plan. Remediation 16a
+  replaces `__repark_session_gap__` with `__repark_session_end__`, which
+  answers each row's calendar session end (month/year gaps via the local
+  civil month-end helper over `datetime::spark_add_months`, NULL /
+  non-positive gaps to NULL for the drop filter) with one parse per distinct
+  gap string per batch; the assemble UDF takes an Int64-micros or a
+  TIMESTAMP end; `Date32` coerces to `Timestamp(ns)`.
+  pins: fnp-win-1/C-004, C-008. Round 2 (2026-09-15) shares the two-spec
+  `[_LEGACY_ERROR_TEMP_1039]` refusal text (`MULTIPLE_SESSION_EXPRESSIONS`)
+  with the analyzer and SQL staging; the Python door's duplicate-name error
+  is registry row WIN-4. pins: fnp-win-1/C-004
+- `registration.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the `analyzer_rules()`
+  home moved out of `lib.rs` so the crate root stays under its `check_lib_rs`
+  ceiling; `SparkSessionWindow` registers beside the window rules.
+  pins: fnp-win-1/C-004, C-008
+- `lib.rs` — crate-root stays at **182** under `check_lib_rs` (D-8 one-time
+  FNP-WIN-1 grant; step 4 moved the `analyzer_rules()` home to
+  `registration.rs`).
 - `higher_order/` — FNP-4c Spark higher-order kernels (`transform`, `filter`, `forall`,
   `aggregate`/`reduce`, `zip_with`, `transform_keys`, `transform_values`, `map_filter`,
   `map_zip_with`) plus native `exists`. Registry both doors
@@ -302,6 +345,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (same line count) so `repark-python`'s `unary_aggregate_udaf` can reach the three
   `bitmap_agg` UDAF constructors the way it reaches `aggregate`'s.
   pins: fnp-bitmap-facade-1/C-001
+- `lib.rs` — crate-root stays at **162** under `check_lib_rs` with `pub mod timestamp_type`
+  (D-8 one-time FNP-WIN-1 grant; step 4 moved the `analyzer_rules()` home to
+  `registration.rs`).
 - `timestamp_type.rs` — **Q10:** Spark-door `spark.sql.timestampType` carrier
   (`SparkTimestampTypeConfig`, `PREFIX = repark.timestamp`, default
   **TIMESTAMP_LTZ**). Parsed from the builder map in `SparkExtension::configure`.
@@ -841,3 +887,4 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
 - **DOOR-CONVERGE-1 rebase (2026-09-15):** `collection.rs` keeps main's `array_append` / `array_prepend` shims (ARRAY-NULL-1) beside this unit's `array_contains` / `size` modules; the round-2 `make_array` shim stays removed (R-10).
 - **FNP-11A R3 (2026-09-15):** `expr_fn::datediff` is the Spark `datediff` spelling. The function door routes two arguments to `date_diff` and three to `timestampdiff` through `temporal_ctor::date_alias` (pins: fnp-11a/C-019).
 - **FNP-6D-FOLLOWUP-1 rebase (2026-09-15, run 16a):** after #612 moved the Java text helpers into `java_double.rs`, `bitmap_agg.rs` imports `java_double_text` / `java_float_text` from `crate::java_double`; `json.rs` keeps `mod reader;` private as on main.
+- **FNP-WIN-1 squash onto 4bd43fc8 (2026-09-15, run 16a):** `lib.rs` drops its `use std::sync::Arc;` — `analyzer_rules()` and its `Arc<dyn AnalyzerRule>` list now live in `registration.rs`, so the crate root no longer names `Arc` (clippy `-D warnings`).

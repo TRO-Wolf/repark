@@ -77,3 +77,6 @@ extend-glob = ["fnp-bitmap-facade-1-ledger.md"]
 
 [type.fnpbitmapfacade1ledger.extend-words]
 ba = "ba"
+
+[type.fnpwin1oracle]
+extend-glob = ["fnp_win_1_spark_oracle.json"]
