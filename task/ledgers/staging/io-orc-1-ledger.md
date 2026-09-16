@@ -205,6 +205,7 @@ None yet.
 
 | gate | result |
 |---|---|
+| R-18b-14 streaming RSS | Recipe: 1e6×20 int64 zstd ORC (`/tmp/sb-orc-r3-scratch/big_1e6_20col.orc`, 7 stripes, `/tmp/sb-orc-r3-scratch/meas.py`), RELEASE module (`__debug_assertions__` False), fresh process, `/usr/bin/time -v`. Before (perf report, same shape 18-stripe file): sum20 peak 561 244 KiB. After: sum20 peak 465 072 KiB, sums correct (c00 499837043264); sum2 peak 84 440 KiB vs 77 472 KiB idle. The scan `Vec` is gone; the remainder is downstream (RepartitionExec 64 + 20-col agg) and R-02/R-03 (IO-ORC-PERF-1). |
 | `make verify` | rc 0 (`/tmp/verify3.log`): ci + full Rust workspace suite green |
 | whole facade suite | rc 0: 9177 passed, 372 skipped, 33 xfailed (`/tmp/facade_rs.log`, 1871 s). Skips all env-gated and sanctioned: live-JVM oracle tier (`REPARK_PARITY_LIVE` unset), real-AWS acceptance, release-only repeatability. Facade extras (numpy/pandas/polars/ml-ext) installed and imported |
 | whole parity suite | rc 0: 757 passed, 2 skipped, 12 xfailed (`/tmp/parity.log`, 745 s) |

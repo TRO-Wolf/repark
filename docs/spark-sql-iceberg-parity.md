@@ -1983,6 +1983,24 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — BACKLOG 2026-09-16 (run 18b): the planner decision belongs to run 18c;
   no planner file carries an ORC arm from this unit.
 
+### IO-ORC-PERF-1 — the ORC scan is correct but slower than parquet on wide files
+
+- **repark** — `execute` streams batches since round 3 (R-18b-14, no collected
+  `Vec`); one file is still one partition (no stripe split) and every file is
+  still opened five times (footer per infer/catalyst-attrs/writer-tz/projection
+  names/decode). Both are correct-but-slow by measurement, not by guess.
+- **Apache Spark** — not the baseline here (no JVM in the loop); the baseline is
+  repark's own `spark.read.parquet` over the same 1e6×20 int64 rows.
+- **Pin** — none (BACKLOG).
+- **Rationale** — BACKLOG 2026-09-16 (run 18b, R-18b-15, deferred under G-2):
+  20-column sum 3.99 s vs parquet 0.35 s (11.3×, one serial partition of the
+  whole file); 5 opens per file vs parquet's 1 (`strace openat`, 200 files).
+  Round-3 streaming cut the 20-column peak RSS from 561 244 KiB to 465 072 KiB
+  (report recipe, same shape); the narrow 2-column sum sits at 84 440 KiB
+  (near the 77 472 KiB idle). Numbers: perf report
+  `/tmp/oc-worker/run18b/reviews/perf-orc-rust-report.md`, round-3 rerun in the
+  unit ledger Gates.
+
 ### IO-XML-1 — the XML reader and writer names are a declared `NOT_IMPLEMENTED` refusal behind Spark's own `rowTag` check
 
 - **repark** — `DataFrameReader.xml(path, rowTag, schema, **options)`,
