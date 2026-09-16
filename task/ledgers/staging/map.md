@@ -829,3 +829,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `ARITH-FLOAT-INT-1` exact (R-18b-6) and pinned `to(string)`-over-binary (R-18b-8). Branch
   `feat/logical-width-1`.
   pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-013, C-014, C-015, C-016
+- [sql-literal-typing-1-ledger.md](sql-literal-typing-1-ledger.md) —
+  **SQL-LITERAL-TYPING-1 (2026-09-16), in flight:** Spark integral literal
+  typing and binary-arithmetic promotion on the SQL door (BL-20) — ledger with
+  Q-17c-2/Q-17a-2/Q-15c-6 and R-18c-1…R-18c-3, the verbatim 64-cell oracle
+  (`python/repark/tests/sql_literal_typing_1_spark_oracle.json`) and the
+  red-first pins (`test_sql_literal_typing_1.py`: 19 failed, 44 passed on the
+  base, all clauses OPEN). No product code in step 1.
+  `risk_tier: standard`. Branch `feat/sql-literal-typing-1`.
+  pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007

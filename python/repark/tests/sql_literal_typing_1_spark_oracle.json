@@ -1,0 +1,828 @@
+{
+ "spark_version": "4.1.2",
+ "batch": "sc18-bl20-literal-typing",
+ "measured": "2026-09-16",
+ "cells": [
+  {
+   "id": "LIT-SQL-00",
+   "door": "sql",
+   "expr": "SELECT 1 AS v, typeof(1) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     1,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-01",
+   "door": "sql",
+   "expr": "SELECT 2147483647 AS v, typeof(2147483647) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     2147483647,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-02",
+   "door": "sql",
+   "expr": "SELECT 2147483648 AS v, typeof(2147483648) AS t",
+   "schema": "struct<v:bigint,t:string>",
+   "rows": [
+    [
+     2147483648,
+     "bigint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-03",
+   "door": "sql",
+   "expr": "SELECT -2147483648 AS v, typeof(-2147483648) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     -2147483648,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-04",
+   "door": "sql",
+   "expr": "SELECT -2147483649 AS v, typeof(-2147483649) AS t",
+   "schema": "struct<v:bigint,t:string>",
+   "rows": [
+    [
+     -2147483649,
+     "bigint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-05",
+   "door": "sql",
+   "expr": "SELECT 9223372036854775807 AS v, typeof(9223372036854775807) AS t",
+   "schema": "struct<v:bigint,t:string>",
+   "rows": [
+    [
+     9223372036854775807,
+     "bigint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-06",
+   "door": "sql",
+   "expr": "SELECT 9223372036854775808 AS v, typeof(9223372036854775808) AS t",
+   "schema": "struct<v:decimal(19,0),t:string>",
+   "rows": [
+    [
+     "Decimal('9223372036854775808')",
+     "decimal(19,0)"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-07",
+   "door": "sql",
+   "expr": "SELECT -9223372036854775808 AS v, typeof(-9223372036854775808) AS t",
+   "schema": "struct<v:bigint,t:string>",
+   "rows": [
+    [
+     -9223372036854775808,
+     "bigint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-08",
+   "door": "sql",
+   "expr": "SELECT 99999999999999999999999999999999999999 AS v, typeof(99999999999999999999999999999999999999) AS t",
+   "schema": "struct<v:decimal(38,0),t:string>",
+   "rows": [
+    [
+     "Decimal('99999999999999999999999999999999999999')",
+     "decimal(38,0)"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-09",
+   "door": "sql",
+   "expr": "SELECT 999999999999999999999999999999999999999 AS v, typeof(999999999999999999999999999999999999999) AS t",
+   "outcome": "error",
+   "error_class": "DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION",
+   "message": "[DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION] Decimal precision 39 exceeds max precision 38. SQLSTATE: 22003"
+  },
+  {
+   "id": "LIT-SQL-10",
+   "door": "sql",
+   "expr": "SELECT 1Y AS v, typeof(1Y) AS t",
+   "schema": "struct<v:tinyint,t:string>",
+   "rows": [
+    [
+     1,
+     "tinyint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-11",
+   "door": "sql",
+   "expr": "SELECT 1S AS v, typeof(1S) AS t",
+   "schema": "struct<v:smallint,t:string>",
+   "rows": [
+    [
+     1,
+     "smallint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-12",
+   "door": "sql",
+   "expr": "SELECT 1L AS v, typeof(1L) AS t",
+   "schema": "struct<v:bigint,t:string>",
+   "rows": [
+    [
+     1,
+     "bigint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-13",
+   "door": "sql",
+   "expr": "SELECT 0 AS v, typeof(0) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     0,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-14",
+   "door": "sql",
+   "expr": "SELECT -0 AS v, typeof(-0) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     0,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-15",
+   "door": "sql",
+   "expr": "SELECT 00012 AS v, typeof(00012) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     12,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-16",
+   "door": "sql",
+   "expr": "SELECT 1 + CAST(1 AS TINYINT) AS v, typeof(1 + CAST(1 AS TINYINT)) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     2,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-17",
+   "door": "sql",
+   "expr": "SELECT CAST(1 AS TINYINT) + CAST(1 AS TINYINT) AS v, typeof(CAST(1 AS TINYINT) + CAST(1 AS TINYINT)) AS t",
+   "schema": "struct<v:tinyint,t:string>",
+   "rows": [
+    [
+     2,
+     "tinyint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-18",
+   "door": "sql",
+   "expr": "SELECT CAST(1 AS TINYINT) + CAST(1 AS SMALLINT) AS v, typeof(CAST(1 AS TINYINT) + CAST(1 AS SMALLINT)) AS t",
+   "schema": "struct<v:smallint,t:string>",
+   "rows": [
+    [
+     2,
+     "smallint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-19",
+   "door": "sql",
+   "expr": "SELECT CAST(1 AS SMALLINT) * 2 AS v, typeof(CAST(1 AS SMALLINT) * 2) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     2,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-20",
+   "door": "sql",
+   "expr": "SELECT 1 + 1L AS v, typeof(1 + 1L) AS t",
+   "schema": "struct<v:bigint,t:string>",
+   "rows": [
+    [
+     2,
+     "bigint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-21",
+   "door": "sql",
+   "expr": "SELECT 1 - CAST(1 AS SMALLINT) AS v, typeof(1 - CAST(1 AS SMALLINT)) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     0,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-22",
+   "door": "sql",
+   "expr": "SELECT 2147483647 + 1 AS v, typeof(2147483647 + 1) AS t",
+   "schema": "struct<v:int,t:string>",
+   "outcome": "error",
+   "error_class": "ARITHMETIC_OVERFLOW",
+   "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003"
+  },
+  {
+   "id": "LIT-SQL-23",
+   "door": "sql",
+   "expr": "SELECT 2147483648 + 1 AS v, typeof(2147483648 + 1) AS t",
+   "schema": "struct<v:bigint,t:string>",
+   "rows": [
+    [
+     2147483649,
+     "bigint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-24",
+   "door": "sql",
+   "expr": "SELECT 1 + 1.5 AS v, typeof(1 + 1.5) AS t",
+   "schema": "struct<v:decimal(3,1),t:string>",
+   "rows": [
+    [
+     "Decimal('2.5')",
+     "decimal(3,1)"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-25",
+   "door": "sql",
+   "expr": "SELECT 1 / 2 AS v, typeof(1 / 2) AS t",
+   "schema": "struct<v:double,t:string>",
+   "rows": [
+    [
+     0.5,
+     "double"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-26",
+   "door": "sql",
+   "expr": "SELECT 7 div 2 AS v, typeof(7 div 2) AS t",
+   "schema": "struct<v:bigint,t:string>",
+   "rows": [
+    [
+     3,
+     "bigint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-27",
+   "door": "sql",
+   "expr": "SELECT 7 % CAST(2 AS TINYINT) AS v, typeof(7 % CAST(2 AS TINYINT)) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     1,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-28",
+   "door": "sql",
+   "expr": "SELECT -CAST(1 AS TINYINT) AS v, typeof(-CAST(1 AS TINYINT)) AS t",
+   "schema": "struct<v:tinyint,t:string>",
+   "rows": [
+    [
+     -1,
+     "tinyint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-29",
+   "door": "sql",
+   "expr": "SELECT abs(CAST(1 AS TINYINT)) AS v, typeof(abs(CAST(1 AS TINYINT))) AS t",
+   "schema": "struct<v:tinyint,t:string>",
+   "rows": [
+    [
+     1,
+     "tinyint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-30",
+   "door": "sql",
+   "expr": "SELECT coalesce(1, CAST(1 AS TINYINT)) AS v, typeof(coalesce(1, CAST(1 AS TINYINT))) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     1,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-31",
+   "door": "sql",
+   "expr": "SELECT CASE WHEN true THEN 1 ELSE CAST(2 AS TINYINT) END AS v, typeof(CASE WHEN true THEN 1 ELSE CAST(2 AS TINYINT) END) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     1,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-32",
+   "door": "sql",
+   "expr": "SELECT array(1, CAST(1 AS TINYINT)) AS v, typeof(array(1, CAST(1 AS TINYINT))) AS t",
+   "schema": "struct<v:array<int>,t:string>",
+   "rows": [
+    [
+     "[1, 1]",
+     "array<int>"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-33",
+   "door": "sql",
+   "expr": "SELECT greatest(1, CAST(1 AS TINYINT)) AS v, typeof(greatest(1, CAST(1 AS TINYINT))) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     1,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-34",
+   "door": "sql",
+   "expr": "SELECT 1 = CAST(1 AS TINYINT) AS v, typeof(1 = CAST(1 AS TINYINT)) AS t",
+   "schema": "struct<v:boolean,t:string>",
+   "rows": [
+    [
+     true,
+     "boolean"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-35",
+   "door": "sql",
+   "expr": "SELECT CAST(1 AS TINYINT) + 9223372036854775808 AS v, typeof(CAST(1 AS TINYINT) + 9223372036854775808) AS t",
+   "schema": "struct<v:decimal(20,0),t:string>",
+   "rows": [
+    [
+     "Decimal('9223372036854775809')",
+     "decimal(20,0)"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-36",
+   "door": "sql",
+   "expr": "SELECT 1 + CAST(1 AS DECIMAL(5,2)) AS v, typeof(1 + CAST(1 AS DECIMAL(5,2))) AS t",
+   "schema": "struct<v:decimal(6,2),t:string>",
+   "rows": [
+    [
+     "Decimal('2.00')",
+     "decimal(6,2)"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-37",
+   "door": "sql",
+   "expr": "SELECT CAST(1 AS TINYINT) & CAST(3 AS SMALLINT) AS v, typeof(CAST(1 AS TINYINT) & CAST(3 AS SMALLINT)) AS t",
+   "schema": "struct<v:smallint,t:string>",
+   "rows": [
+    [
+     1,
+     "smallint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-38",
+   "door": "sql",
+   "expr": "SELECT ~CAST(1 AS TINYINT) AS v, typeof(~CAST(1 AS TINYINT)) AS t",
+   "schema": "struct<v:tinyint,t:string>",
+   "rows": [
+    [
+     -2,
+     "tinyint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-39",
+   "door": "sql",
+   "expr": "SELECT CAST(1 AS TINYINT) + NULL AS v, typeof(CAST(1 AS TINYINT) + NULL) AS t",
+   "schema": "struct<v:tinyint,t:string>",
+   "rows": [
+    [
+     null,
+     "tinyint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-40",
+   "door": "sql",
+   "expr": "SELECT 2147483648 * 2 AS v, typeof(2147483648 * 2) AS t",
+   "schema": "struct<v:bigint,t:string>",
+   "rows": [
+    [
+     4294967296,
+     "bigint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-41",
+   "door": "sql",
+   "expr": "SELECT pmod(7, CAST(2 AS TINYINT)) AS v, typeof(pmod(7, CAST(2 AS TINYINT))) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     1,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-42",
+   "door": "sql",
+   "expr": "SELECT x + 1 AS v, typeof(x + 1) AS t FROM (SELECT CAST(1 AS TINYINT) AS x)",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     2,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-43",
+   "door": "sql",
+   "expr": "SELECT x + y AS v, typeof(x + y) AS t FROM (SELECT CAST(1 AS TINYINT) AS x, CAST(2 AS SMALLINT) AS y)",
+   "schema": "struct<v:smallint,t:string>",
+   "rows": [
+    [
+     3,
+     "smallint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-44",
+   "door": "sql",
+   "expr": "SELECT hex(CAST(1 + CAST(1 AS TINYINT) AS BINARY)) AS h",
+   "conf": {
+    "spark.sql.ansi.enabled": "false"
+   },
+   "schema": "struct<h:string>",
+   "rows": [
+    [
+     "00000002"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-45",
+   "door": "sql",
+   "expr": "SELECT hex(CAST(CAST(1 AS TINYINT) + CAST(1 AS TINYINT) AS BINARY)) AS h",
+   "conf": {
+    "spark.sql.ansi.enabled": "false"
+   },
+   "schema": "struct<h:string>",
+   "rows": [
+    [
+     "02"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-46",
+   "door": "sql",
+   "expr": "SELECT hex(CAST(2147483647 + 1 AS BINARY)) AS h",
+   "conf": {
+    "spark.sql.ansi.enabled": "false"
+   },
+   "schema": "struct<h:string>",
+   "rows": [
+    [
+     "80000000"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-47",
+   "door": "sql",
+   "expr": "SELECT hex(CAST(CAST(1 AS SMALLINT) * 2 AS BINARY)) AS h",
+   "conf": {
+    "spark.sql.ansi.enabled": "false"
+   },
+   "schema": "struct<h:string>",
+   "rows": [
+    [
+     "00000002"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-48",
+   "door": "sql",
+   "expr": "SELECT hex(CAST(1 AS BINARY)) AS h",
+   "conf": {
+    "spark.sql.ansi.enabled": "false"
+   },
+   "schema": "struct<h:string>",
+   "rows": [
+    [
+     "00000001"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-49",
+   "door": "sql",
+   "expr": "SELECT hex(CAST(2147483648 AS BINARY)) AS h",
+   "conf": {
+    "spark.sql.ansi.enabled": "false"
+   },
+   "schema": "struct<h:string>",
+   "rows": [
+    [
+     "0000000080000000"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-50",
+   "door": "sql",
+   "expr": "SELECT hex(CAST(CAST(127 AS TINYINT) + CAST(1 AS TINYINT) AS BINARY)) AS h",
+   "conf": {
+    "spark.sql.ansi.enabled": "false"
+   },
+   "schema": "struct<h:string>",
+   "rows": [
+    [
+     "80"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-51",
+   "door": "sql",
+   "expr": "SELECT hex(CAST(2147483647 + 1 AS BINARY)) AS h",
+   "conf": {
+    "spark.sql.ansi.enabled": "false"
+   },
+   "schema": "struct<h:string>",
+   "rows": [
+    [
+     "80000000"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-SQL-52",
+   "door": "sql",
+   "expr": "SELECT CAST(127 AS TINYINT) + CAST(1 AS TINYINT) AS v",
+   "schema": "struct<v:tinyint>",
+   "outcome": "error",
+   "error_class": "BINARY_ARITHMETIC_OVERFLOW",
+   "message": "[BINARY_ARITHMETIC_OVERFLOW] 127S + 1S caused overflow. Use `try_add` to ignore overflow problem and return NULL. SQLSTATE: 22003"
+  },
+  {
+   "id": "LIT-SQL-53",
+   "door": "sql",
+   "expr": "SELECT 2147483647 + 1 AS v",
+   "schema": "struct<v:int>",
+   "outcome": "error",
+   "error_class": "ARITHMETIC_OVERFLOW",
+   "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003"
+  },
+  {
+   "id": "LIT-PY-00",
+   "door": "py",
+   "expr": "spark.range(1).select((F.lit(1) + F.lit(1).cast('tinyint')).alias('v'))",
+   "schema": "struct<v:int>",
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-PY-01",
+   "door": "py",
+   "expr": "spark.range(1).select(F.lit(2147483648).alias('v'))",
+   "schema": "struct<v:bigint>",
+   "rows": [
+    [
+     2147483648
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-PY-02",
+   "door": "py",
+   "expr": "spark.range(1).select(F.lit(1).alias('v'), F.typeof(F.lit(1)).alias('t'))",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     1,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-PY-03",
+   "door": "py",
+   "expr": "spark.range(1).select((F.lit(1).cast('tinyint') + F.lit(1).cast('tinyint')).alias('v'))",
+   "schema": "struct<v:tinyint>",
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-PY-04",
+   "door": "py",
+   "expr": "spark.range(1).select((F.lit(1).cast('tinyint') + F.lit(1).cast('smallint')).alias('v'))",
+   "schema": "struct<v:smallint>",
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-PY-05",
+   "door": "py",
+   "expr": "spark.range(1).select(F.hex((F.lit(1) + F.lit(1).cast('tinyint')).cast('binary')).alias('h'))",
+   "conf": {
+    "spark.sql.ansi.enabled": "false"
+   },
+   "schema": "struct<h:string>",
+   "rows": [
+    [
+     "00000002"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-PY-06",
+   "door": "py",
+   "expr": "spark.range(1).select((F.lit(1).cast('smallint') * 2).alias('v'))",
+   "schema": "struct<v:int>",
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-PY-07",
+   "door": "py",
+   "expr": "spark.range(1).select(F.lit(9223372036854775808).alias('v'))",
+   "outcome": "error",
+   "error_class": null,
+   "message": "An error occurred while calling z:org.apache.spark.sql.functions.lit. Trace:"
+  },
+  {
+   "id": "LIT-PY-08",
+   "door": "py",
+   "expr": "spark.range(1).selectExpr('1 + CAST(1 AS TINYINT) AS v')",
+   "schema": "struct<v:int>",
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT-PY-09",
+   "door": "py",
+   "expr": "spark.range(1).select((F.col('id') + F.lit(1).cast('tinyint')).alias('v'))",
+   "schema": "struct<v:bigint>",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "outcome": "ok"
+  }
+ ]
+}

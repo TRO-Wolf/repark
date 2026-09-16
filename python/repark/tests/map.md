@@ -940,6 +940,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_fnp_4b_literals.py`. Byte-frozen by `test_pr_245_revalidation_record.py`; hash re-baselined
   with this unit (ledger), and again by BL-11 (2026-09-16) for the in-place ANSI-on flip of
   `test_numeric_to_binary_refuses`.
+- [test_sql_literal_typing_1.py](test_sql_literal_typing_1.py) — **SQL-LITERAL-TYPING-1
+  (2026-09-16):** BL-20 pins over the verbatim 64-cell oracle
+  (`sql_literal_typing_1_spark_oracle.json`) — one case per in-scope cell id,
+  recorded rows plus the Arrow type from `to_arrow().schema` (typeof cells pin
+  the name too), Spark error class plus message where recorded. Red on base:
+  19 failed, 44 passed. `div` / unary `~` stay unpinned (SPARK-SQL-GRAMMAR-1
+  residues).
+  pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
   wipes rows, stamps `operation=delete`, time-travels to the pre-truncate snapshot;
   missing table is `TABLE_OR_VIEW_NOT_FOUND`; a view is `EXPECT_TABLE_NOT_VIEW`;
@@ -5774,6 +5782,14 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `simpleString` converted to the fixture's `schema` key, `columns` / `nullable` /
   `rows` verbatim, existing cells untouched.
   pins: df-subquery-1/C-007
+- [sql_literal_typing_1_spark_oracle.json](sql_literal_typing_1_spark_oracle.json) —
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** the 64 cells of the BL-20 literal-typing
+  batch (`LIT-SQL-00…53`, `LIT-PY-00…09`), copied verbatim from the
+  orchestrator's live PySpark 4.1.2 recording
+  `/tmp/oc-worker/sc/oracle/bl20-oracle.json` (batch `sc18-bl20-literal-typing`,
+  measured 2026-09-16); `spark_version` 4.1.2 kept. Recorded evidence, never
+  hand-edited.
+  pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [fnp_gen_1_spark_oracle.json](fnp_gen_1_spark_oracle.json) —
   **FNP-GEN-1 step 1 (2026-09-15):** the 62 cells of the nine card names
   (`inline`, `inline_outer`, `posexplode`, `posexplode_outer`, `json_tuple`,
