@@ -4966,6 +4966,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: java-regex-features-1/C-001
   **Step 6:** `Q15-10…12` move from refusal legs to value legs in
   `test_door_converge_2.py` (`Q15-13` untouched). pins: java-regex-features-1/C-008
+  **Step 7:** lint-clean docstring shapes. pins: java-regex-features-1/C-001
 - `test_java_regex_features_1.py` + `java_regex_features_1_spark_oracle.json` —
   **JAVA-REGEX-FEATURES-1 (2026-09-16):** every in-scope oracle cell (`RX-SQL-00…24`,
   `RX-PY-00…02`, `RX2-SQL-00…29`) pinned on its own door for value, Arrow type and

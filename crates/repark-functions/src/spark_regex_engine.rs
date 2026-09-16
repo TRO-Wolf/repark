@@ -286,7 +286,13 @@ pub(crate) fn match_group(bytes: &[u8], open: usize) -> Option<usize> {
     let mut index = open;
     while index < bytes.len() {
         match bytes[index] {
-            b'\\' => index += 1,
+            b'\\' => {
+                if bytes.get(index + 1) == Some(&b'Q') {
+                    index = find_quote_end(bytes, index + 2).saturating_sub(1);
+                } else {
+                    index += 1;
+                }
+            }
             b'[' => index = skip_class(bytes, index).saturating_sub(1),
             b'(' => depth += 1,
             b')' => {
@@ -351,7 +357,13 @@ fn count_groups(pattern: &str) -> usize {
     let mut groups = 0;
     while index < bytes.len() {
         match bytes[index] {
-            b'\\' => index += 1,
+            b'\\' => {
+                if bytes.get(index + 1) == Some(&b'Q') {
+                    index = find_quote_end(bytes, index + 2).saturating_sub(1);
+                } else {
+                    index += 1;
+                }
+            }
             b'[' => index = skip_class(bytes, index).saturating_sub(1),
             b'(' if group_kind(bytes, index) == GroupKind::Consuming => groups += 1,
             _ => {}
@@ -393,8 +405,9 @@ fn rewrite_out_of_range_octal(pattern: &str, groups: usize) -> String {
             index = end;
             continue;
         }
-        out.push_str(&pattern[index..=index]);
-        index += 1;
+        let width = pattern[index..].chars().next().map_or(1, char::len_utf8);
+        out.push_str(&pattern[index..index + width]);
+        index += width;
     }
     out
 }
@@ -432,7 +445,7 @@ fn rewrite_escape(bytes: &[u8], index: usize, groups: usize) -> Option<(String, 
     None
 }
 
-fn find_quote_end(bytes: &[u8], start: usize) -> usize {
+pub(crate) fn find_quote_end(bytes: &[u8], start: usize) -> usize {
     let mut index = start;
     while index < bytes.len() {
         if bytes[index] == b'\\' && bytes.get(index + 1) == Some(&b'E') {

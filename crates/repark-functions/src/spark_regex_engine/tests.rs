@@ -28,7 +28,11 @@ fn plain_patterns_stay_plain() {
         "(ab)",
         "(?:ab)",
     ] {
-        assert_eq!(engine_of(pattern), Engine::Plain, "{pattern}");
+        assert_eq!(
+            engine_of(pattern),
+            Engine::Plain,
+            "pins: java-regex-features-1/C-001, C-007: {pattern}"
+        );
     }
 }
 
@@ -112,6 +116,22 @@ fn real_backref_stays_a_backref() {
 fn quoted_and_class_backslashes_survive_octal_rewrite() {
     assert!(is_match("\\\\1", "\\1"));
     assert!(!is_match("\\\\1", "\u{1}"));
+}
+
+#[test]
+fn non_ascii_patterns_never_panic() {
+    assert!(is_match("\u{e9}+", "\u{e9}e"));
+    assert!(is_match("(?i)\u{e9}", "\u{c9}"));
+    assert!(is_match("(?<=\u{e9}+)x", "\u{e9}x"));
+    assert!(!is_match("(?<=\u{e9}+)x", "ax"));
+}
+
+#[test]
+fn quoted_group_syntax_stays_literal() {
+    assert!(is_match("\\Q(?<=a+)\\E", "(?<=a+)"));
+    assert!(!is_match("\\Q(?<=a+)\\E", "(?<=a)"));
+    assert!(is_match("\\Q(\\E(a)\\1", "(aa"));
+    assert!(!is_match("\\Q(\\E(a)\\1", "(a)a"));
 }
 
 #[test]

@@ -701,7 +701,11 @@ _Q15_ERRORS: dict[str, tuple[str, type, str]] = {
 
 @pytest.mark.parametrize("cell_id", sorted(_Q15_VALUES), ids=sorted(_Q15_VALUES))
 def test_q15_cell(spark: ReparkSession, cell_id: str) -> None:
-    """pins: door-converge-2/C-007, C-008, C-009 — one round-3 oracle cell (Q15-10…12 answer through the fallback engine: java-regex-features-1/C-008)."""
+    """One round-3 oracle cell.
+
+    pins: door-converge-2/C-007, C-008, C-009
+    pins: java-regex-features-1/C-008
+    """
     _frame(spark)
     _q15_frame(spark)
     sql, value, arrow_type, nullable = _Q15_VALUES[cell_id]

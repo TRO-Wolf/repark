@@ -15,6 +15,8 @@ operations both engines serve.
   C-002, C-003, C-004, C-005
   **Step 6:** split invalids name the translated pattern with the engine detail, so
   the long-standing `Q15-13` text leg stays green. pins: java-regex-features-1/C-008
+  **Step 7:** unicode and quoting regression pins; the routing test cites the
+  cost clause. pins: java-regex-features-1/C-001, C-007
 
 ## Pointers
 

@@ -119,11 +119,108 @@ query kill. Full per-cell output in the step-2 commit message.
 - F-5 `RX-SQL-18` / `RX2-SQL-01` pin nullable true: the nullability rides in on
   `repeat(...)` (another unit's kernel); `rlike` propagates correctly (NULL legs pin
   true, literal legs pin false).
+- F-6 self-review caught a panic class before any gate did: the pattern scanners
+  emitted single bytes (`&pattern[i..=i]`), which panics on multi-byte chars, and
+  ignored `\Q…\E` when counting groups, matching groups and normalizing
+  lookbehinds. All scanners are now char-aware with `\Q…\E` skipping, pinned by
+  `non_ascii_patterns_never_panic` and `quoted_group_syntax_stays_literal`. No
+  oracle cell covers either shape; both were verified at the Rust level.
 
 ## Gates
 
 | Command | Result |
 |---|---|
-| (pending) | — |
+| `cargo test -p repark-functions --lib` | exit 0 — 756 passed, 0 failed, 1 ignored (pre-existing ignore) |
+| `make rust-clippy` (via `make verify`) | exit 0 — workspace clippy clean under `-D warnings` |
+| `make verify` | exit 0 — ci (fmt, clippy, panic-ban, crate-dag, lib-rs, file-size, lib-py, conventions, docstrings, manifest, ledgers, ledger-grammar, docs-compaction, docs-links, owner-ruling, dual-wire, matrix-liveness, rust-check, py-lint, py-format-check, py-lock-check, toml-check, spell-check) + full workspace `cargo test` |
+| `make rust-deny` | exit 0 — advisories ok, bans ok, licenses ok (fancy-regex MIT, bit-set/bit-vec pass), sources ok |
+| release native rebuild (`maturin develop --release`) | exit 0 — current; no Rust change since the build |
+| `.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider` | exit 0 — 9100 passed, 367 skipped, 34 xfailed |
+| `PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest python/repark-parity/tests -q` | exit 0 — 757 passed, 2 skipped, 12 xfailed |
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: java-regex-features-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: >
+        All 58 in-scope oracle cells pinned on their own door for value, Arrow
+        type and nullability (61 pins incl. Python-door legs), red-first with 47
+        failures on the main native; every error leg pins the message text; the
+        one unanswerable cell carries an honest _divergence pin, never a skip.
+      artifacts: [python/repark/tests/test_java_regex_features_1.py, python/repark/tests/java_regex_features_1_spark_oracle.json, crates/repark-functions/src/spark_regex_engine/tests.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: >
+        NULL pattern/subject, empty pattern, invalid patterns on both engines,
+        the 40000-char overrun haystack, possessive/atomic edges, unterminated
+        ${, dangling multi-digit backrefs, and group-numbering across dropped
+        lookbehinds are all exercised; astral/empty stepping rides the
+        pre-existing suite (754 green).
+      artifacts: [python/repark/tests/test_java_regex_features_1.py, crates/repark-functions/src/spark_regex_engine/tests.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: >
+        Invalid patterns raise Spark's class (byte-exact per msg.py on two
+        cells) or keep split's long-standing text; overruns raise a loud error
+        naming pattern and limit; the backtrack tripwire is proven by a hard
+        exponential pin. UDFs are pure with no retry surface.
+      artifacts: [python/repark/tests/test_java_regex_features_1.py, crates/repark-functions/src/spark_regex_engine/tests.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: >
+        No shared mutable state: per-pattern caches are row-loop locals inside
+        each invoke; compiled patterns are immutable and Clone; DataFusion runs
+        the UDFs concurrently with no statics anywhere on the path.
+      artifacts: [crates/repark-functions/src/spark_regexp.rs, crates/repark-functions/src/spark_regexp_match.rs, crates/repark-functions/src/spark_split.rs]
+    - id: AT-5
+      status: N/A
+      justification: Pure-compute string UDFs with no privileged action, no
+        credentials, no I/O, no deserialization; the only untrusted input is
+        the pattern text, whose blowup surface is bounded by AT-7's tripwires.
+    - id: AT-6
+      status: ATTACKED
+      evidence: >
+        Every cell pins Arrow value, type and nullability on the collect path;
+        no storage, migration or schema-evolution surface is touched.
+      artifacts: [python/repark/tests/test_java_regex_features_1.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: >
+        The system-breaking defect class here is unbounded backtracking
+        (hang/OOM): bounded by the 10M backtrack budget and the 10000-byte
+        looping-haystack guard, both pinned; compile caches are per-invocation
+        and bounded by distinct patterns per query; plain-pattern cost measured
+        unchanged on the release native.
+      artifacts: [crates/repark-functions/src/spark_regex_engine.rs, python/repark/tests/test_java_regex_features_1.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: >
+        No fancy-regex behavior was presumed: delegation of easy repeats, the
+        constant-size lookbehind restriction, case-sensitive backreferences and
+        the ${} substitution effect were each measured (VM source read and
+        probed) before the design committed to them; the error contract is
+        byte-exact on the measured cells.
+      artifacts: [crates/repark-functions/src/spark_regex_engine/tests.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: >
+        Both failure modes surface as loud execution errors naming the pattern
+        (and the tripped limit for overruns), visible at the query surface;
+        msg.py confirms the invalid-pattern text end-to-end.
+      artifacts: [crates/repark-functions/src/spark_regex_engine.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: >
+        Red-first (47 failed pre-fix, 0 pass-to-fail flips post-fix outside the
+        intended flips); every new branch names an input that flips it
+        (routing verdicts, octal digits, brace shapes, nullable bodies,
+        possessive/lazy markers); mutation spot-check: restoring the old
+        refusal re-fails 47 pins, dropping the ${} pre-pass re-fails RX-SQL-15.
+      artifacts: [python/repark/tests/test_java_regex_features_1.py, crates/repark-functions/src/spark_regex_engine/tests.rs]
+  reattested: [AT-1, AT-2, AT-3, AT-10]
+  complete: true
+```
 
 ## VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED (round 1, step 6).

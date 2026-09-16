@@ -98,7 +98,7 @@ def _check_value(cell_id: str) -> None:
     if cell["door"] == "sql":
         table = _session().sql(cell["expr"]).toArrow()
     else:
-        frame = eval(cell["expr"], {"spark": _session(), "F": F})  # noqa: S307
+        frame = eval(cell["expr"], {"spark": _session(), "F": F})
         table = frame.toArrow()
     assert table.column("v").to_pylist() == [value]
     assert table.schema.field("v").type == arrow_type
@@ -107,13 +107,13 @@ def _check_value(cell_id: str) -> None:
 
 @pytest.mark.parametrize("cell_id", sorted(VALUES), ids=sorted(VALUES))
 def test_oracle_value_cell(cell_id: str) -> None:
-    """One oracle value cell answers Spark on its own door. pins: java-regex-features-1/C-001, C-002, C-003, C-006"""
+    """Value cell on its own door. pins: java-regex-features-1/C-001, C-002, C-003, C-006"""
     _check_value(cell_id)
 
 
 @pytest.mark.parametrize("cell_id", sorted(ERRORS), ids=sorted(ERRORS))
 def test_oracle_error_cell(cell_id: str) -> None:
-    """One oracle error cell fails loudly with the pinned message. pins: java-regex-features-1/C-004, C-005"""
+    """Error cell fails loudly. pins: java-regex-features-1/C-004, C-005"""
     cell = _CELLS[cell_id]
     with pytest.raises(PySparkException, match=ERRORS[cell_id]):
         _session().sql(cell["expr"]).toArrow()
@@ -156,8 +156,6 @@ def test_python_door_null_pattern_stays_null() -> None:
     """NULL pattern on the Python door is NULL, never an error. pins: java-regex-features-1/C-001"""
     spark = _session()
     table = (
-        spark.range(1)
-        .select(F.lit("ab").rlike(F.lit(None).cast("string")).alias("v"))
-        .toArrow()
+        spark.range(1).select(F.lit("ab").rlike(F.lit(None).cast("string")).alias("v")).toArrow()
     )
     assert table.column("v").to_pylist() == [None]

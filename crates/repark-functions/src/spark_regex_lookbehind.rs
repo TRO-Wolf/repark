@@ -1,4 +1,4 @@
-use crate::spark_regex_engine::{GroupKind, group_kind, match_group, skip_class};
+use crate::spark_regex_engine::{GroupKind, find_quote_end, group_kind, match_group, skip_class};
 
 pub(crate) fn normalize_lookbehind(pattern: &str) -> String {
     let bytes = pattern.as_bytes();
@@ -6,9 +6,18 @@ pub(crate) fn normalize_lookbehind(pattern: &str) -> String {
     let mut index = 0;
     while index < bytes.len() {
         if bytes[index] == b'\\' {
-            let end = (index + 2).min(bytes.len());
-            out.push_str(&pattern[index..end]);
-            index = end;
+            if bytes.get(index + 1) == Some(&b'Q') {
+                let end = find_quote_end(bytes, index + 2).min(pattern.len());
+                out.push_str(&pattern[index..end]);
+                index = end;
+                continue;
+            }
+            let width = 1 + pattern[index + 1..]
+                .chars()
+                .next()
+                .map_or(0, char::len_utf8);
+            out.push_str(&pattern[index..index + width]);
+            index += width;
             continue;
         }
         if bytes[index] == b'[' {
@@ -29,8 +38,9 @@ pub(crate) fn normalize_lookbehind(pattern: &str) -> String {
             index = close + 1;
             continue;
         }
-        out.push_str(&pattern[index..=index]);
-        index += 1;
+        let width = pattern[index..].chars().next().map_or(1, char::len_utf8);
+        out.push_str(&pattern[index..index + width]);
+        index += width;
     }
     out
 }
