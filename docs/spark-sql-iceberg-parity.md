@@ -1825,13 +1825,14 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   keys compare with Spark's boxed-value equality: floats by primitive IEEE `==` (`+0.0` and
   `-0.0` are one key with the first-inserted spelling surviving; every `NaN` row equals
   nothing — the insert always happens and the lookup always misses, so two NaNs at capacity
-  1 answer `[]` and at the default capacity answer `[nan, nan]`), `map` keys by identity
-  (never equal — two identical `{a: 1}` rows answer `[{'a': 1}, {'a': 1}]` and capacity 1
-  answers `[]`), and everything else by content. Floats or maps nested inside
-  `array`/`struct` keys are part of the parent's content and keep bit-exact equality
-  (`[nan]` equals `[nan]`, `[0.0]` does not equal `[-0.0]`, a struct holding `{a: 1}`
-  dedupes). A case-insensitive `cols` hit keeps the requested spelling in the output name
-  (`freqItems(["I"])` → `I_freqItems`).
+  1 answer `[]` and at the default capacity answer `[nan, nan]`), NON-NULL `map` keys by
+  identity (never equal — two identical `{a: 1}` rows answer `[{'a': 1}, {'a': 1}]`,
+  capacity 1 answers `[]`, and even two empty maps stay two keys), and NULL plus everything
+  else by content — a NULL in a map column dedupes like every other NULL (`[None]` at any
+  capacity). Floats or maps nested inside `array`/`struct` keys are part of the parent's
+  content and keep bit-exact equality (`[nan]` equals `[nan]`, `[0.0]` does not equal
+  `[-0.0]`, a struct holding `{a: 1}` dedupes). A case-insensitive `cols` hit keeps the
+  requested spelling in the output name (`freqItems(["I"])` → `I_freqItems`).
 - **Apache Spark** — same answers on the same inputs; the array order is likewise unspecified.
   Spark classic rejects `support=1` (int) with a Py4J `TypeError`; Spark Connect accepts it as
   float — repark follows Connect and records the divergence. Spark's counter is a
@@ -1848,13 +1849,16 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `freq_struct_nan_cap1`, `freq_map_dup_default`, `freq_map_dup_cap1`,
   `freq_map_distinct_default`, `freq_map_of_map_default`, `freq_array_dup_default`,
   `freq_array_dup_cap1`, `freq_struct_dup_cap1`, `freq_struct_with_map_default`,
-  `freq_array_of_map_default` in `python/repark/tests/facade_df_rust3_oracle.json`.)*
+  `freq_array_of_map_default`, `freq_null_map_default`, `freq_null_map_cap1`,
+  `freq_null_and_value_map_default`, `freq_empty_map_default` in
+  `python/repark/tests/facade_df_rust3_oracle.json`.)*
 - **Pin** — `python/repark/tests/test_df_rust3_freqitems_transpose.py` (freq pins),
   `python/repark/tests/test_examples_dataframe_d.py::test_stat_freq_items_answers`
 - **Rationale** — IMPLEMENTED 2026-09-15 (DF-RUST-3, rulings R-1..R-6); float-key equality
-  remediated 2026-09-16 (R-9) and map-key identity landed the same day (R-13). Recorded
-  divergences: int `support` is accepted as float (the classic Py4JError is a bridge
-  artefact, R-4); result array order is unspecified on both engines (hash map).
+  remediated 2026-09-16 (R-9), map-key identity the same day (R-13), and the NULL-map
+  narrowing immediately after (R-14). Recorded divergences: int `support` is accepted as
+  float (the classic Py4JError is a bridge artefact, R-4); result array order is
+  unspecified on both engines (hash map).
 
 ### DF-TRANSPOSE-1 — `transpose` runs the `ResolveTranspose` algorithm as an eager Rust kernel
 

@@ -121,7 +121,11 @@ impl PartialEq for FreqKey {
             }
             (ScalarValue::Float32(Some(left)), ScalarValue::Float32(Some(right))) => left == right,
             (ScalarValue::Float64(Some(left)), ScalarValue::Float64(Some(right))) => left == right,
-            (ScalarValue::Map(_), _) | (_, ScalarValue::Map(_)) => false,
+            (ScalarValue::Map(_), _) | (_, ScalarValue::Map(_))
+                if !self.0.is_null() || !other.0.is_null() =>
+            {
+                false
+            }
             _ => self.0 == other.0,
         }
     }
@@ -409,5 +413,49 @@ mod tests {
         acc.add(map_key(), 1);
         acc.add(map_key(), 1);
         assert!(acc.counts.is_empty());
+    }
+
+    fn null_map_key() -> FreqKey {
+        let map = arrow::array::MapArray::new_from_strings(
+            ["a"].into_iter(),
+            &arrow::array::Int32Array::from(vec![Some(1)]),
+            &[0, 1],
+        )
+        .expect("map");
+        let (field, offsets, entries, _, ordered) = map.into_parts();
+        let null_map = arrow::array::MapArray::try_new(
+            field,
+            offsets,
+            entries,
+            Some(arrow::buffer::NullBuffer::from(vec![false])),
+            ordered,
+        )
+        .expect("null map");
+        FreqKey(ScalarValue::Map(Arc::new(null_map)))
+    }
+
+    #[test]
+    fn null_map_keys_dedupe() {
+        let mut acc = accumulator(4);
+        acc.add(null_map_key(), 1);
+        acc.add(null_map_key(), 1);
+        assert_eq!(acc.counts.len(), 1);
+        assert_eq!(acc.counts.get(&null_map_key()), Some(&2));
+    }
+
+    #[test]
+    fn null_map_keys_dedupe_at_capacity_one() {
+        let mut acc = accumulator(1);
+        acc.add(null_map_key(), 1);
+        acc.add(null_map_key(), 1);
+        assert_eq!(acc.counts.len(), 1);
+    }
+
+    #[test]
+    fn null_map_key_differs_from_value_map() {
+        let mut acc = accumulator(4);
+        acc.add(null_map_key(), 1);
+        acc.add(map_key(), 1);
+        assert_eq!(acc.counts.len(), 2);
     }
 }

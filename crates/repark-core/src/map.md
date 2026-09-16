@@ -150,12 +150,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   capacity `floor(1/support)`, the KSP add/merge (negative-remainder branch keeps
   reduced entries), eval dumps keys with no threshold filter, null keys counted.
   `FreqKey` gives `Float32`/`Float64` keys IEEE `==` (`+0.0`/`-0.0` one key, every
-  `NaN` equal to nothing), `Map` keys identity (never equal — Spark's `MapData`),
-  and every other type `ScalarValue` semantics, so values nested in
-  `array`/`struct` stay bit-exact like Spark's boxed `equals` (round-2 R-9,
-  round-3 R-13). `freq_items` runs one aggregate over the named columns
+  `NaN` equal to nothing), non-null `Map` keys identity (never equal — Spark's
+  `MapData`; a NULL map stays a NULL key and dedupes), and every other type
+  `ScalarValue` semantics, so values nested in `array`/`struct` stay bit-exact
+  like Spark's boxed `equals` (round-2 R-9, round-3 R-13, round-4 R-14).
+  `freq_items` runs one aggregate over the named columns
   and answers the `<name>_freqItems` projection.
-  pins: df-rust-3/C-001, C-002, C-007, C-010
+  pins: df-rust-3/C-001, C-002, C-007, C-010, C-011
 - `transpose.rs` — **DF-RUST-3 (2026-09-15):** the `ResolveTranspose` algorithm as an
   eager kernel (`transpose_frame`): filter null index rows, enforce
   `spark.sql.transposeMaxValues`, collect once, stable-sort ascending on the raw index

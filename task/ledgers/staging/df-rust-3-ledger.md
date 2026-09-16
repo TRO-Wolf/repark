@@ -40,8 +40,9 @@ belong to other runs today. The `metadata_*` oracle cells belong to a later unit
 | C-008 | `transpose` renders a binary index column name by lossy UTF-8 decode (R-10): each invalid byte becomes one U+FFFD replacement character, so `bytes([0xFF, 0xFE])` answers the two-codepoint name `U+FFFD U+FFFD` (cells `transpose_binary_invalid_utf8`, `transpose_binary_invalid_utf8_repr`); a NULL binary index row is dropped before naming and contributes no column (cell `transpose_binary_null_index`); a name is never `''` unless the index value really is empty. | The transpose pins in the same module over the three fixture cells. | **PROVEN** | `build_output` in `transpose.rs` now decodes `Binary`/`LargeBinary`/`FixedSizeBinary`/`BinaryView` index values via `String::from_utf8_lossy` instead of `value()` (which returned `""` on invalid UTF-8); null index rows were already filtered upstream — pinned by `transpose_binary_null_index` (`['key', 'b']` only). Red-first on `a2bffafa`: `test_transpose_binary_invalid_utf8` answered `''`. All green after. |
 | C-009 | `_freq_items` resolves requested names with one lookup structure built once (R-11): `available` set + `folded` display-name map + display→engine overlay; duplicate requested names keep duplicate columns in request order; a case-insensitive hit keeps the requested spelling in the output name (`freqItems(["I"])` → `I_freqItems`, measured on Spark 4.1.2); the `UNRESOLVED_COLUMN` suggestion list stays the sorted `available` proposal (`freq_missing_col` byte-exact); display-overlay renames still resolve to the right engine field. | `test_freq_name_lookup` (duplicates/order), `test_freq_case_insensitive_requested_spelling`, `test_freq_display_overlay`, `test_freq_missing_col` in the same module. | **PROVEN** | One pass builds `available`, `folded`, `by_display`; resolution is O(names + columns). Red-first on `a2bffafa`: `test_freq_case_insensitive_requested_spelling` answered `i_freqItems` instead of `I_freqItems`. All green after. |
 | C-010 | Map keys in `freqItems` do not dedupe in Spark 4.1.2 (`mutable.Map[Any, Long]` keys are `MapData` objects whose equality is identity): two identical `{a: 1}` rows answer `[{'a': 1}, {'a': 1}]` at the default capacity and `[]` at capacity 1 — `FreqKey` must answer false for any comparison involving a `ScalarValue::Map`, while a map nested inside a `struct`/`array` key remains part of the parent's content and dedupes bit-exactly. | `python/repark/tests/test_df_rust3_freqitems_transpose.py` map-key pins over fixture cells `freq_map_dup_default`, `freq_map_dup_cap1`, `freq_map_distinct_default`, `freq_map_of_map_default`, plus regression guards `freq_array_dup_default`, `freq_array_dup_cap1`, `freq_struct_dup_cap1`, `freq_struct_with_map_default`, `freq_array_of_map_default`; Rust unit tests in `freq_items.rs`. | **PROVEN** | R-13 ruled implement it: `(ScalarValue::Map(_), _) | (_, ScalarValue::Map(_)) => false` — insert always happens, lookup always misses, same shape as NaN. Nested-map measurement on live Spark 4.1.2 (2026-09-16): `struct`/`array` keys containing maps still dedupe by content (`struct_with_map_default` → `[Row(x='x', m={'a': 1})]`, `array_of_map_default` → `[[{'a': 1}]]`), matching the top-level-only arm with no extra work. Red-first on `d27b86c3`: `test_freq_map_keys_never_equal` `[{'a': 1}]` vs `[{'a': 1}, {'a': 1}]`; the two regression-guard tests already passed. All green after. |
+| C-011 | A NULL in a map column is a NULL key like any other value, not a map key (R-14, fixes V-101): two NULLs in a `map<string,int>` column dedupe to `[None]` at the default capacity and `[None]` at capacity 1; a NULL beside a `{a: 1}` row answers `[None, {'a': 1}]` (sorted: `[{'a': 1}, None]`); two empty non-null maps still never equal (`[{}, {}]`). | `python/repark/tests/test_df_rust3_freqitems_transpose.py::test_freq_null_map_keys_dedupe` over cells `freq_null_map_default`, `freq_null_map_cap1`, `freq_null_and_value_map_default`, `freq_empty_map_default`; Rust unit tests `null_map_keys_dedupe`, `null_map_keys_dedupe_at_capacity_one`, `null_map_key_differs_from_value_map` in `freq_items.rs`. | **PROVEN** | The R-13 arm `(ScalarValue::Map(_), _) | (_, ScalarValue::Map(_)) => false` also fired for NULL maps; narrowed with the guard `!self.0.is_null() || !other.0.is_null()` so a NULL map falls through to `ScalarValue` content equality (all-null map arrays compare equal → dedupe). Red-first on `fdf7e0df`: `test_freq_null_map_keys_dedupe` `[None, None]` vs `[None]` (also `[]` vs `[None]` at cap1 and `[None, {'a': 1}, None]` vs `[None, {'a': 1}]` in the mixed cell). All green after; the C-010 pins still pass. |
 
-VERDICT: 10 clauses, 10 PROVEN, 0 OPEN, 0 REJECTED (round 3 close-out 2026-09-16).
+VERDICT: 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED (round 4 close-out 2026-09-16).
 
 ## Per-name decision table
 
@@ -119,6 +120,13 @@ VERDICT: 10 clauses, 10 PROVEN, 0 OPEN, 0 REJECTED (round 3 close-out 2026-09-16
   boundary (`struct`/`array` holding maps) was measured again in-round:
   `struct_with_map_default` and `array_of_map_default` dedupe by content in Spark,
   exactly what the top-level-only arm gives — no divergence to record.
+- R-14 (round 4, binding — V-101): a NULL map is NOT a map key. The `FreqKey` Map arm is
+  narrowed to fire only for a NON-NULL `ScalarValue::Map`; a NULL map falls through to the
+  ordinary `ScalarValue` equality that makes every other type's NULLs equal — restoring
+  R-1's "NULL is a key like any other value" for map columns. Orchestrator-measured cells:
+  `freq_null_map_default` → `[None]`, `freq_null_map_cap1` → `[None]`,
+  `freq_null_and_value_map_default` → `[None, {'a': 1}]`, `freq_empty_map_default` →
+  `[{}, {}]` (`nullmap_probe_2026-09-16.json`).
 
 ## Round 2 residue (recorded, no code change)
 
@@ -136,6 +144,11 @@ VERDICT: 10 clauses, 10 PROVEN, 0 OPEN, 0 REJECTED (round 3 close-out 2026-09-16
 - **Y-3** (Python perf, P3): `statistics._java_double` duplicates the Rust Java-double
   renderer in `repark-functions`. Recorded in the Rust-first roll-call as known
   duplication; moving it would touch a file another run owns tonight. No change.
+- **UNMEASURED** (round 4, critic boundary list — do not invent answers; a later run must
+  record them): `transpose_binary_empty_index`, a valid multi-byte UTF-8 binary index, a
+  map whose VALUES are NaN or signed zero, and Spark's answer for more than 100 NaN rows
+  at the default capacity. (The fifth critic item, an empty map key, was measured by
+  `nullmap_probe_2026-09-16.json` this round: `freq_empty_map_default` → `[{}, {}]`.)
 
 ## Rust-first roll-call
 
@@ -181,13 +194,14 @@ VERDICT: 10 clauses, 10 PROVEN, 0 OPEN, 0 REJECTED (round 3 close-out 2026-09-16
 | Red first — unit test file on the base tree (round 1) | 44 failed on the base tree (missing names / refused calls), all green after the implementation |
 | Red first — new pins on `a2bffafa` (round 2) | 6 failed: `test_freq_signed_zero_collapses` `[]` vs `[0.0]`, `test_freq_signed_zero_first_key_kept` `[-0.0, 0.0]` vs `[-0.0]`, `test_freq_signed_zero_float` `[]` vs `[0.0]`, `test_freq_nan_keys` `[nan]` vs `[]`, `test_freq_case_insensitive_requested_spelling` `i_freqItems` vs `I_freqItems`, `test_transpose_binary_invalid_utf8` `''` vs `` — all green after the fixes |
 | Red first — new pins on `d27b86c3` (round 3) | 1 failed: `test_freq_map_keys_never_equal` `[{'a': 1}]` vs `[{'a': 1}, {'a': 1}]`; the regression-guard tests `test_freq_nested_map_keys_dedupe` / `test_freq_container_keys_dedupe` already passed — all green after the `FreqKey` map arm |
-| `cargo test -p repark-core freq` / `transpose` | green — `freq` filter 14 passed incl. the signed-zero/NaN/map-key tests; `transpose` filter 10 passed |
-| `cargo test --locked --workspace` | green — repark-core 504 passed incl. the new `freq_items`/`transpose` unit tests (round 2: 514; round 3: 516 incl. the two map-key tests) |
-| Release native rebuild + unit file | `maturin develop --release` clean; unit file 63 passed (round 2), 66 passed (round 3 incl. exports file) |
-| `test_dfcore_1_exports.py` | 10 passed (green alongside the unit file, 66 total round 3) |
-| `make verify` | green — every structural gate clean (fmt, clippy both lists, crate-DAG, lib-rs, file-size, lib-py, conventions, docstrings, example-coverage 1057/945/111, manifest, ledger lifecycle + grammar, docs, owner-ruling, parity-live, matrix-liveness, ruff, taplo, typos); re-run green on 2026-09-16 after the round-3 diff |
-| `make py-test-facade` | 8314 passed, 372 skipped, 2 xfailed (round 1); 8428/367/2 (round 2); 8431 passed, 367 skipped, 2 xfailed (round 3) |
-| parity suite `python/repark-parity/tests` | 757 passed, 2 skipped, 12 xfailed (EX-0 raw-walk pin moved 1059 → 1061); same counts re-confirmed 2026-09-16 rounds 2 and 3 |
+| Red first — new pin on `fdf7e0df` (round 4) | 1 failed: `test_freq_null_map_keys_dedupe` — `[None, None]` vs `[None]` (cap1 `[]` vs `[None]`, mixed `[None, {'a': 1}, None]` vs `[None, {'a': 1}]`) — green after the NULL-map narrowing |
+| `cargo test -p repark-core freq` / `transpose` | green — `freq` filter 17 passed incl. the signed-zero/NaN/map-key/null-map tests; `transpose` filter 10 passed |
+| `cargo test --locked --workspace` | green — repark-core 504 passed incl. the new `freq_items`/`transpose` unit tests (round 3: 516; round 4: 519 incl. the null-map tests) |
+| Release native rebuild + unit file | `maturin develop --release` clean; unit file 66 passed (round 3 incl. exports), 67 passed (round 4) |
+| `test_dfcore_1_exports.py` | 10 passed (green alongside the unit file, 67 total round 4) |
+| `make verify` | green — every structural gate clean (fmt, clippy both lists, crate-DAG, lib-rs, file-size, lib-py, conventions, docstrings, example-coverage, manifest, ledger lifecycle + grammar, docs, owner-ruling, parity-live, matrix-liveness, ruff, taplo, typos); re-run green after the round-4 diff |
+| `make py-test-facade` | 8314 passed, 372 skipped, 2 xfailed (round 1); 8428/367/2 (round 2); 8431/367/2 (round 3); 8839/367/21 (round 4 — the round-4 head carries the orchestrator's rebase ratchet plus new main-side tests, so the count grew against round 3) |
+| parity suite `python/repark-parity/tests` | 757 passed, 2 skipped, 12 xfailed (EX-0 raw-walk pin moved 1059 → 1061); re-confirmed rounds 2–4 |
 | comment fence | clean — no code comments added; rationale lives in this ledger and the touched `map.md` rows |
 
 ## Coverage attestation
@@ -225,11 +239,11 @@ COVERAGE_ATTESTATION:
     artifacts: [crates/repark-python/src/dataframe_stats.rs, python/repark/src/repark/spark/dataframe/statistics.py, python/repark/src/repark/spark/dataframe/surface_a.py]
   - id: AT-9
     status: ATTACKED
-    evidence: Every measured divergence is recorded rather than hidden: R-4 int-support acceptance (Connect semantics, not Py4JError), the unspecified hash-map/equal-key orders, and the full boxed-value key-equality rule (floats IEEE `==`, maps identity, everything else content) plus U+FFFD index rendering are written into the DF-FREQITEMS-1/DF-TRANSPOSE-1 registry rows; the dict cells accept either legal equal-key variant while tuple cells pin positional truth; the round-3 map-key boundary was measured on both sides — top-level maps never equal (pinned) and maps nested in struct/array dedupe by content (regression-guarded).
+    evidence: Every measured divergence is recorded rather than hidden: R-4 int-support acceptance (Connect semantics, not Py4JError), the unspecified hash-map/equal-key orders, and the full boxed-value key-equality rule (floats IEEE `==`, NON-NULL maps identity, NULL and everything else content) plus U+FFFD index rendering are written into the DF-FREQITEMS-1/DF-TRANSPOSE-1 registry rows; the dict cells accept either legal equal-key variant while tuple cells pin positional truth; the map-key boundary was measured on both sides — top-level non-null maps never equal (pinned), NULL maps dedupe (pinned round 4), and maps nested in struct/array dedupe by content (regression-guarded).
     artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_df_rust3_freqitems_transpose.py]
   - id: AT-10
     status: ATTACKED
-    evidence: The four old refusal pins flipped to positive assertions in the same commit (test_df_batch2.py, test_g1_stat_and_expander.py, test_dfcore_5_approx_quantile.py, test_examples_dataframe_d.py); the full facade suite and parity suite run the neighbours (round-2 counts in the gates table).
+    evidence: The four old refusal pins flipped to positive assertions in the same commit (test_df_batch2.py, test_g1_stat_and_expander.py, test_dfcore_5_approx_quantile.py, test_examples_dataframe_d.py); the full facade suite (round 4: 8839 passed, 367 skipped, 21 xfailed) and parity suite (757 passed, 2 skipped, 12 xfailed) run the neighbours — counts in the gates table.
     artifacts: [python/repark/tests/test_df_batch2.py, python/repark/tests/test_examples_dataframe_d.py, python/repark/tests/test_dfcore_1_exports.py]
 complete: true
 ```

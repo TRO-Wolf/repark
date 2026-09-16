@@ -129,10 +129,11 @@ honestly"). SQL routing and session-build registration are seam-inverted
 - `src/freq_items.rs` / `src/transpose.rs` — **DF-RUST-3 (2026-09-15):** Spark's
   `FreqItemCounter` as a DataFusion UDAF and the `ResolveTranspose` algorithm as an
   eager `transpose_frame` kernel; both bound in repark-python for the facade's
-  `freqItems` / `transpose`. Round-2/3 remediation (2026-09-16): `FreqKey` gives
-  float keys IEEE `==` and map keys identity (never equal), and binary index
-  names decode with lossy UTF-8 (U+FFFD per invalid byte).
-  pins: df-rust-3/C-001, C-003, C-007, C-008, C-010
+  `freqItems` / `transpose`. Round-2/3/4 remediation (2026-09-16): `FreqKey` gives
+  float keys IEEE `==`, non-null map keys identity (never equal; NULL maps dedupe
+  like every other NULL), and binary index names decode with lossy UTF-8 (U+FFFD
+  per invalid byte).
+  pins: df-rust-3/C-001, C-003, C-007, C-008, C-010, C-011
 - `src/lib.rs` — the crate-root manifest (module declarations + re-exports; no logic).
 - `src/dialect.rs` / `src/extension.rs` — the phase-2 seams: `SqlDialect` (+ `EngineContext`,
   default `DataFusionDialect`) and `SessionExtension` (configure/register hooks,

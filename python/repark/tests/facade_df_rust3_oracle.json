@@ -1009,5 +1009,61 @@
    ],
    "schema": "struct<m_freqItems:array<map<string,map<string,int>>>>"
   }
+ },
+ "freq_null_map_default": {
+  "result": {
+   "columns": [
+    "m_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'m_freqItems': [None]}"
+   ],
+   "schema": "struct<m_freqItems:array<map<string,int>>>"
+  }
+ },
+ "freq_null_map_cap1": {
+  "result": {
+   "columns": [
+    "m_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'m_freqItems': [None]}"
+   ],
+   "schema": "struct<m_freqItems:array<map<string,int>>>"
+  }
+ },
+ "freq_null_and_value_map_default": {
+  "result": {
+   "columns": [
+    "m_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'m_freqItems': [{'a': 1}, None]}"
+   ],
+   "schema": "struct<m_freqItems:array<map<string,int>>>"
+  }
+ },
+ "freq_empty_map_default": {
+  "result": {
+   "columns": [
+    "m_freqItems"
+   ],
+   "nullable": [
+    false
+   ],
+   "rows": [
+    "{'m_freqItems': [{}, {}]}"
+   ],
+   "schema": "struct<m_freqItems:array<map<string,int>>>"
+  }
  }
 }

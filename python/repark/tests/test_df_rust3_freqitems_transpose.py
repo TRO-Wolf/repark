@@ -1,7 +1,8 @@
 """DF-RUST-3 — freqItems / transpose pins driven by the live PySpark 4.1.2 oracle.
 
 pins: df-rust-3/C-001, df-rust-3/C-002, df-rust-3/C-003, df-rust-3/C-004,
-df-rust-3/C-007, df-rust-3/C-008, df-rust-3/C-009, df-rust-3/C-010
+df-rust-3/C-007, df-rust-3/C-008, df-rust-3/C-009, df-rust-3/C-010,
+df-rust-3/C-011
 """
 
 from __future__ import annotations
@@ -469,6 +470,17 @@ def test_freq_map_keys_never_equal(spark: ReparkSession) -> None:
         spark.createDataFrame([({"a": 1},), ({"b": 2},)], "m map<string,int>").freqItems(["m"]),
         "freq_map_distinct_default",
     )
+
+
+def test_freq_null_map_keys_dedupe(spark: ReparkSession) -> None:
+    """pins: df-rust-3/C-011 — a NULL map is a NULL key like any other, not a map key."""
+    frame = spark.createDataFrame([(None,), (None,)], "m map<string,int>")
+    _check_result(frame.freqItems(["m"]), "freq_null_map_default")
+    _check_result(frame.freqItems(["m"], 1.0), "freq_null_map_cap1")
+    mixed = spark.createDataFrame([(None,), ({"a": 1},), (None,)], "m map<string,int>")
+    _check_result(mixed.freqItems(["m"]), "freq_null_and_value_map_default")
+    empty = spark.createDataFrame([({},), ({},)], "m map<string,int>")
+    _check_result(empty.freqItems(["m"]), "freq_empty_map_default")
 
 
 def test_freq_nested_map_keys_dedupe(spark: ReparkSession) -> None:

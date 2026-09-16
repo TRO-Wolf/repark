@@ -182,7 +182,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `freq_map_dup_cap1`, `freq_map_distinct_default`, `freq_array_dup_default`,
   `freq_array_dup_cap1`, `freq_struct_dup_cap1`) plus the nested-map boundary
   cells measured in-round (`freq_map_of_map_default`, `freq_struct_with_map_default`,
-  `freq_array_of_map_default`).
+  `freq_array_of_map_default`). Round 4 (2026-09-16) adds the run-17b null-map cells
+  (`freq_null_map_default`, `freq_null_map_cap1`, `freq_null_and_value_map_default`,
+  `freq_empty_map_default`).
 - [test_df_rust3_freqitems_transpose.py](test_df_rust3_freqitems_transpose.py) —
   **DF-RUST-3 (2026-09-15):** the pins driving every `freq_*` / `transpose_*` cell of the
   fixture above — argument shapes (`NOT_LIST_OR_TUPLE`, `NOT_ITERABLE`, `NOT_FLOAT`, the
@@ -198,8 +200,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   name-resolution pins (duplicates/order, case-insensitive requested spelling,
   display-overlay rename). Round 3 (2026-09-16) adds the map-key identity pins
   (top-level maps never equal) with the array/struct/nested-map dedupe regression
-  guards.
-  pins: df-rust-3/C-001, C-002, C-003, C-004, C-006, C-007, C-008, C-009, C-010
+  guards. Round 4 (2026-09-16) adds the null-map pin (a NULL in a map column is a
+  NULL key, not a never-equal map key).
+  pins: df-rust-3/C-001, C-002, C-003, C-004, C-006, C-007, C-008, C-009, C-010, C-011
 - [test_ice_spark_table_1.py](test_ice_spark_table_1.py) — **ICE-SPARK-TABLE-1
   (2026-09-14):** RePark writes into a table **Spark created** — the G-3 / G-4-Spark-half
   standing requirement (inventory §8 ruling 6). Always-run: the committed
