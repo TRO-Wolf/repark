@@ -875,7 +875,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   value AND Arrow type/nullability through ``spark.sql`` (``selectExpr`` legs ride
   the same router), both ANSI settings. C-008 lands first: bare datetime-unit
   keywords, the quoted-unit and unknown-unit refusals, two-argument ``datediff``.
-  pins: spark-sql-grammar-1/C-008
+  pins: spark-sql-grammar-1/C-008, C-010
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
   **FNP-4B (2026-09-15):** BL-9 and BL-12 FIXED — the double-quoted pin asserts a STRING and the

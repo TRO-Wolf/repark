@@ -64,7 +64,7 @@ the missing shift kernel the card names.
 | C-007 | `SELECT 1 AS a, a + 1 AS b` answers `(1, 2)` both int non-null, or DECLARES with a registry row naming the planner seam. | PG-lateral-alias cell, or the dated refusal plus the new row. | OPEN | RED on base: `Schema error: No field named a`. Seam measured in step 2. §1. |
 | C-008 | Bare unit spellings `timestampadd(DAY, 1, ts)`, `timestampdiff(HOUR, a, b)`, `dateadd(DAY, …)`, `datediff(HOUR, a, b)` rewrite onto the #606 kernels; quoted units refuse `INVALID_PARAMETER_VALUE.DATETIME_UNIT`; unknown units refuse `UNRESOLVED_ROUTINE`; 2-arg `datediff` stays `int`. Closes EX-FN-27. | Q14-22…40 cells plus PG-tsadd/tsdiff/dateadd/datediff-unit in the same pin file; `BARE_UNIT_NAMES` skip removed. | PROVEN | `crates/repark-spark/src/bare_unit.rs` rewrite + 7 in-module tests; `test_spark_sql_grammar_1.py` 50 passed (both ANSI); `test_fnp11a_temporal.py` 316 passed with the workaround retired. pins: spark-sql-grammar-1/C-008. §2. |
 | C-009 | `LATERAL VIEW [OUTER] <generator>(…) <alias> AS <cols>` answers the run-15a oracle cells. | The lateral-15a cells in the same pin file. | OPEN | R-17c-7: FNP-GEN-1 is not on main (`git log origin/main --oneline | grep -i fnp-gen` empty, 2026-09-16). Generators are 16a's; this lane never implements them. |
-| C-010 | Bare nullary keywords follow Spark both directions: `current_date`, `current_timestamp`, `current_user`, `user`, `session_user` resolve; `localtimestamp`, `current_catalog`, `current_database`, `current_schema`, `current_timezone`, `now` refuse `UNRESOLVED_COLUMN.WITH_SUGGESTION`; parenthesised forms resolve with Spark's type and nullability. | Q14-0…21 cells in the same pin file; `BARE_NULLARY_SQL` skip flipped to the error pin. | OPEN | Mixed on base: bare `localtimestamp` over-accepts (EX-FN-25, must become the refusal); `current_date`/`current_timestamp` bare resolve; `current_user`/`user`/`session_user`/`current_catalog`/`current_database`/`current_schema` answer neither bare nor parenthesised (`No field named` / `Invalid function`) — new kernels, 17a's fence half, likely a hand-off. §1. |
+| C-010 | Bare nullary keywords follow Spark both directions: `current_date`, `current_timestamp`, `current_user`, `user`, `session_user` resolve; `localtimestamp`, `current_catalog`, `current_database`, `current_schema`, `current_timezone`, `now` refuse `UNRESOLVED_COLUMN.WITH_SUGGESTION`; parenthesised forms resolve with Spark's type and nullability. | Q14-0…21 cells in the same pin file; `BARE_NULLARY_SQL` skip flipped to the error pin. | OPEN (refusal half + greens proven; session-names paren forms handed to 17a) | Refusal half PROVEN: demote + error map, Q14-0/8/10/12/18/20 framed+frameless pins, column-wins discriminator, `BARE_NULLARY_SQL` retired, EX-FN-25 FIXED. Greens pinned: current_date (nullable divergence recorded), current_timestamp, localtimestamp(), now(), current_timezone(). Paren `current_user`/`user`/`session_user`/`current_catalog`/`current_database`/`current_schema` still refuse on the SQL door (Python door answers; needs 17a's session plumbing) — divergence pins hold them loud. pins: spark-sql-grammar-1/C-010. §3. |
 
 VERDICT: 10 clauses, 1 PROVEN, 9 OPEN, 0 REJECTED. No COVERAGE_ATTESTATION:
 nine clauses are still open, so attesting would be false.
@@ -137,3 +137,39 @@ the pin module docstring). Q14-34 needed a nullable frame leg to show Spark's
 Gates for this slice: `cargo test -p repark-spark --lib bare_unit` 7 passed;
 `test_spark_sql_grammar_1.py` 50 passed; `test_fnp11a_temporal.py` 316 passed
 (366 jointly).
+
+## 3. C-010 implementation record (2026-09-16)
+
+New module `crates/repark-spark/src/bare_nullary.rs`, two halves. The parse
+shapes (measured with a throwaway probe test, since removed): the Databricks
+dialect parses bare `localtimestamp` as a no-paren `Function` call, while `now`,
+`current_catalog`, `current_database`, `current_schema`, `current_timezone`
+(and the resolving `current_user` / `user` / `session_user`) parse as plain
+identifiers. `current_date`, `current_timestamp`, `current_time` also parse as
+no-paren calls and already answer, so the demotion touches only the six refusing
+names: a no-paren call becomes a column reference (a real column still wins —
+Spark resolves bare names against columns first), and the missing-field error
+maps to `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` with the planner's candidates, or
+`[WITHOUT_SUGGESTION]` frameless. Both shapes match the recorded oracle (FNP-11A
+batch frameless, batch-14 framed). Eight in-module tests.
+
+Two findings from the same measurement. First, the refusal map must sit around
+the whole passthrough, not on `statement_to_plan`: the missing-field error for
+`now` arrives wrapped (`Error during planning:` context), so a variant match
+misses it and a text match catches it. Second, one silent build death: a
+backgrounded `maturin develop` exited 0 with no output and no new artifact; the
+foreground `touch` + rebuild compiled `repark-spark` (4m06s) and the behavior
+appeared. Rebuilds on this lane run in the foreground with output checked.
+
+Residual (P2 hand-off to run 17a, recorded here, not implemented): the SQL door
+still refuses `current_user()` / `user()` / `session_user()` /
+`current_catalog()` / `current_database()` / `current_schema()` with `Invalid
+function`, where Spark answers `string` and the Python door answers its
+foldable session strings (`functions_session.py`: identity `repark`, live
+catalog/database names — another lane's server-prep design, ADR-0004). Wiring
+the SQL door to the same session plumbing needs 16a's function/facade half and
+a ruling on the catalog-name values (the card already flags the catalog name as
+a registry question). The divergence pins hold the refusal loud meanwhile. The
+`F.expr` / `filter`-string legs of both C-008 and C-010 need a binding call-site
+for the repark-spark rewrites (`parse_sql_expr` bypasses the statement router);
+same owner.

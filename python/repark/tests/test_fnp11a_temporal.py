@@ -19,6 +19,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
+from repark.errors import AnalysisException
 from repark.spark import functions as F  # noqa: N812
 
 CARD_NAMES: frozenset[str] = frozenset(
@@ -62,7 +63,6 @@ SPARK_PA_TYPE: dict[str, str] = {
 NTZ_NAMES: frozenset[str] = frozenset({"make_timestamp_ntz", "try_make_timestamp_ntz"})
 FROZEN_SIGNATURE_NAMES: frozenset[str] = frozenset({"make_timestamp"})
 TYPEOF_TOKEN: re.Pattern[str] = re.compile(r"\btypeof\b")
-BARE_NULLARY_SQL: frozenset[str] = frozenset({"localtimestamp"})
 LIT_ZONE_EXPRS: frozenset[str] = frozenset(
     {"F.timestamp_diff('HOUR', lit(datetime.datetime(2024, 1, 1)), col('ts'))"}
 )
@@ -90,8 +90,6 @@ def _pinned_cells() -> list[dict[str, Any]]:
         if cell["door"] == "sql" and cell["expr"] in D4_BLOCKED_SQL:
             continue
         if cell["name"] in NTZ_NAMES and cell.get("error_condition") == "UNSUPPORTED_TIME_TYPE":
-            continue
-        if cell["door"] == "sql" and cell["expr"] in BARE_NULLARY_SQL:
             continue
         if cell["door"] == "python" and cell["expr"] in LIT_ZONE_EXPRS:
             continue
@@ -489,12 +487,11 @@ def test_bare_timestampadd_unit_answers() -> None:
     assert diff_table.column(0).to_pylist() == [4]
 
 
-def test_bare_localtimestamp_answers_call() -> None:
-    """pins: fnp-11a/C-004 (EX-FN-25)."""
+def test_bare_localtimestamp_refuses() -> None:
+    """pins: fnp-11a/C-004 (EX-FN-25, FIXED by spark-sql-grammar-1/C-010)."""
     session = _session(True, "UTC")
-    table = session.sql("SELECT localtimestamp").toArrow()
-    assert str(table.schema.field(0).type) == SPARK_PA_TYPE["timestamp_ntz"]
-    assert table.column(0).to_pylist()[0] is not None
+    with pytest.raises(AnalysisException, match=r"\[UNRESOLVED_COLUMN\.WITHOUT_SUGGESTION\]"):
+        session.sql("SELECT localtimestamp")
 
 
 def test_make_timestamp_keeps_its_frozen_signature() -> None:

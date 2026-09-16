@@ -8119,17 +8119,25 @@ field NAME.
 - **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closing it
   means folding literal-only UDF calls in the planner, not touching the kernels.
 
-### EX-FN-25 — bare `localtimestamp` answers the call; Spark raises UNRESOLVED_COLUMN
+### EX-FN-25 — bare `localtimestamp` answers the call; Spark raises UNRESOLVED_COLUMN — **FIXED 2026-09-16 (SPARK-SQL-GRAMMAR-1 C-010)**
 
-- **repark** — `SELECT localtimestamp` (no parentheses) answers the current session-zone
-  wall clock as `timestamp_ntz`, non-null: the engine resolves a bare nullary function
-  name as a call.
+- **repark** — a bare nullary name Spark refuses (`localtimestamp`, `current_catalog`,
+  `current_database`, `current_schema`, `current_timezone`, `now`) raises Spark's
+  `UNRESOLVED_COLUMN` class on the SQL door
+  (`crates/repark-spark/src/bare_nullary.rs` maps the planner's missing-field error):
+  `WITH_SUGGESTION` with candidates when the query has a frame, `WITHOUT_SUGGESTION`
+  frameless — both shapes matching live PySpark 4.1.2 (FNP-11A batch for the frameless
+  shape, batch-14 for the framed shape). A real column of the same name still wins
+  (the map only fires on the missing-field error).
 - **Apache Spark** — the same text raises `[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION]`; only
   `localtimestamp()` with parentheses answers. *(oracle: live PySpark 4.1.2, ANSI on, UTC,
   2026-09-14, FNP-11A batch.)*
-- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_bare_localtimestamp_answers_call`
-- **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closing it
-  means a SQL parser/planner change (run 15c owns the parser), out of scope for FNP-11A.
+- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_bare_localtimestamp_refuses`
+  (the retired `test_bare_localtimestamp_answers_call` pin) and the Q14-0/8/10/12/18/20
+  legs in `python/repark/tests/test_spark_sql_grammar_1.py`.
+- **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closed
+  2026-09-16 by the SQL-door error map; the `BARE_NULLARY_SQL` skip retired in the
+  same commit.
 
 ### EX-FN-26 — naive Python datetime literals read as UTC; Spark reads the driver zone
 

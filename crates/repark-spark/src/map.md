@@ -144,6 +144,18 @@ pins: rp-4-fork-repin/C-005, C-006
   eager analyze below runs, so the door still fails illegal casts at build. **BL-11
   (2026-09-16):** the old plan-walk refusal is deleted in favour of that single verdict —
   it never saw the native `DataFrame` path, which builds `Expr::Cast` directly.
+- `bare_nullary.rs` — **SPARK-SQL-GRAMMAR-1 C-010 (2026-09-16):** bare nullary
+  keywords in both Spark directions. `demote_refusing_nullary_calls` lowers a
+  no-paren `localtimestamp` call (the Databricks dialect parses it as a function)
+  to a plain column reference, so a real column still wins and a missing one
+  reaches the planner; `map_bare_nullary_column_error` maps the missing-field
+  error for the six names Spark refuses (`localtimestamp`, `current_catalog`,
+  `current_database`, `current_schema`, `current_timezone`, `now`) to
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` (framed) or `[WITHOUT_SUGGESTION]`
+  (frameless), matching PySpark 4.1.2. Runs in `spark_ast::execute_passthrough`
+  (rewrite pre-plan, map around the whole passthrough) and the range-frame
+  restatement. 8 in-module tests.
+  pins: spark-sql-grammar-1/C-010
 - `bare_unit.rs` — **SPARK-SQL-GRAMMAR-1 C-008 (2026-09-16):** the pre-plan rewrite
   for bare datetime-unit keywords. A bare `DAY` in a 3-argument `timestampadd` /
   `timestampdiff` / `dateadd` / `datediff` call becomes the `'DAY'` string literal the
