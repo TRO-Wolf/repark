@@ -247,7 +247,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
   **FNP-4B (2026-09-15):** the `test_sqp_1_string_literals.py` hash re-baselined for the BL-9/BL-12
-  FIXED flips (the old pins documented this red→green).
+  FIXED flips (the old pins documented this red→green). **BL-11 (2026-09-16):** the same hash
+  re-baselined for the in-place ANSI-on flip of `test_numeric_to_binary_refuses`.
   H3-SPILL-1 (2026-09-05): the literal-helper inventory gains
   `bench/spill/cell_worker.py` `sql_string_literal` 1 — the spill harness escapes its own
   warehouse path into `CREATE NAMESPACE … LOCATION`, so it uses the helper rather than a

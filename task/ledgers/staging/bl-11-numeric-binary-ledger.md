@@ -64,12 +64,15 @@ naming `spark.sql.ansi.enabled` as `'false'`. `CAST('ab' AS BINARY)` works in bo
 
 | Clause | Statement | Pins | Verdict |
 |---|---|---|---|
-| C-001 | ANSI-off integral encode, value + Arrow type + nullability, both doors | `test_bl_11_numeric_binary.py` encode cases + Rust `int_to_binary`/`cast_binary` tests | OPEN |
-| C-002 | ANSI-off never-castable refusals, WITHOUT_SUGGESTION + message | refusal params, both doors (representative) | OPEN |
-| C-003 | ANSI-on integrals refuse WITH_CONF_SUGGESTION + conf message; rest keep WITHOUT | refusal params, both doors (representative) | OPEN |
-| C-004 | Mode binds at analysis: stale encode frame survives SET on; refusal binds at build; fresh frame encodes | `test_c004_*` | OPEN |
-| C-005 | `CAST('ab' AS BINARY)` both modes both doors; `test_numeric_to_binary_refuses` flips in place to ANSI-on | `test_c005_*` + flipped pin | OPEN |
-| C-006 | Registry BL-11 BACKLOG → FIXED with pins; set-ansi-runtime-1 C-006 noted discharged | registry row, ledger note | OPEN |
+| C-001 | ANSI-off integral encode, value + Arrow type + nullability, both doors | `test_bl_11_numeric_binary.py` encode cases + `int_to_binary` (11) + `cast_binary_ansi` door tests | PROVEN |
+| C-002 | ANSI-off never-castable refusals, WITHOUT_SUGGESTION + message | refusal params, both doors (representative) | PROVEN |
+| C-003 | ANSI-on integrals refuse WITH_CONF_SUGGESTION + conf message; rest keep WITHOUT | refusal params, both doors (representative) | PROVEN |
+| C-004 | Mode binds at analysis: stale encode frame survives SET on; refusal binds at build; fresh frame encodes; native stale frame keeps refusal | `test_c004_*` (5 pins) | PROVEN |
+| C-005 | `CAST('ab' AS BINARY)` both modes both doors; `test_numeric_to_binary_refuses` flips in place to ANSI-on | `test_c005_*` + flipped pin | PROVEN |
+| C-006 | Registry BL-11 BACKLOG → FIXED with pins; set-ansi-runtime-1 C-006 noted discharged | registry row, ledger note | PROVEN |
+
+VERDICT (2026-09-16): 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
+COVERAGE_ATTESTATION: every clause names its pins in the table above.
 
 ## 6. Red first
 
@@ -138,3 +141,13 @@ not exist, and the message lacks the resolve prefix and the conf remedy.
   battery `cast_binary_ansi.rs` (5 tests; frozen `cast_binary.rs` untouched). Rust:
   `repark-functions --lib int_to_binary` 11 passed, `repark-spark --lib cast_binary`
   10 passed (5 frozen + 5 new).
+- 2026-09-16: green run — release native rebuilt; `test_bl_11_numeric_binary.py` 42 passed
+  (30 oracle cells on the SQL door, Python-door representatives, 5 C-004 pins); trio with
+  `test_sqp_1_string_literals.py` + `test_set_ansi_runtime_1.py` 76 passed; sweep
+  `-k "binary or ansi or cast"` 952 passed after moving the `binary` vocab row in
+  `test_a3_cast_vocab.py` from the LONG to the STRING source (that pin asserted the native
+  little-endian leak this unit removes; its own comment frames the claim as
+  source-independent). `cargo test -p repark-functions --lib` 669 passed,
+  `cargo test -p repark-spark --lib` 997 passed, `make rust-clippy` green, `make verify`
+  rc 0. `test_numeric_to_binary_refuses` flipped in place; its sha256 re-baselined in
+  `test_pr_245_revalidation_record.py` (FNP-4B precedent); registry BL-11 FIXED.

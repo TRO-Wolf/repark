@@ -5335,16 +5335,25 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 ### BL-11 — numeric → `BINARY` under `spark.sql.ansi.enabled=false` refuses rather than encodes
 
-- **repark** — `CAST(1 AS BINARY)` refuses with `DATATYPE_MISMATCH` in every mode (SQP-1 / C-009);
-  there is no ANSI-off big-endian encoding path.
+- **repark** — under `spark.sql.ansi.enabled=false` the integrals encode as big-endian bytes of
+  their natural width (`IntToBinaryCast` analyzer rule, both doors); under ANSI on (the default)
+  they refuse with `DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION` naming the conf. FLOAT, DOUBLE,
+  DECIMAL, BOOLEAN, DATE, TIMESTAMP and INTERVAL refuse in both modes with
+  `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`.
 - **Apache Spark** — under `spark.sql.ansi.enabled=false`, `CAST(1 AS BINARY)` is the value's
   big-endian bytes: `hex(CAST(1 AS BINARY))` is `00000001` (4 bytes). Under ANSI on (the default,
   and repark's) Spark refuses the same cast — which repark matches.
-  *(oracle: `<pyspark-4.1.2-oracle>` — B11.)*
-- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_numeric_to_binary_refuses`
-- **Rationale** — BACKLOG, fail-loud direction. The refuse is safe (a loud stop, never a wrong
-  answer), the ANSI-off default is not repark's, and the big-endian encoding is a narrow legacy
-  path. Recorded so the encoding lands behind an ANSI-off carrier with its own pin.
+  *(oracle: `<pyspark-4.1.2-oracle>` — B11; re-measured 2026-09-16 as
+  `fixtures-batch17-bl11-binary.json`, 30 cells.)*
+- **Pin** — `python/repark/tests/test_bl_11_numeric_binary.py` (one case per B11 cell id on the
+  SQL door plus Python-door representatives, value AND Arrow type AND nullability) and
+  `python/repark/tests/test_sqp_1_string_literals.py::test_numeric_to_binary_refuses`
+  (the ANSI-on refusal, flipped in place); door battery
+  `crates/repark-spark/src/tests/cast_binary_ansi.rs`
+- **Rationale** — FIXED 2026-09-16. The ANSI-off encode and the ANSI-on conf refusal land together
+  behind the runtime ANSI carrier (SET-ANSI-RUNTIME-1); the mode binds at frame analysis on both
+  doors. `TRY_CAST(<int> AS BINARY)` keeps refusing without the suggestion in both modes — the
+  batch-17 oracle measures no `TRY_CAST` cell, so no encode is claimed there.
 
 ### BL-12 — an out-of-range `\U` escape becomes one `?` where Spark emits a 2-char Java artifact
 

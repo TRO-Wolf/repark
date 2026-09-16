@@ -53,7 +53,7 @@ _PRIMITIVE_CAST_TYPES: list[tuple[str, DataType, pa.DataType]] = [
 # (`DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION`, divergence registry row G6-5), and so does
 # repark. The claim here is a VOCABULARY claim — string token and type object reach the same
 # native cast — unchanged by which legal source column the cast starts from.
-_CAST_SOURCE: dict[str, str] = {"date": "s"}
+_CAST_SOURCE: dict[str, str] = {"binary": "s", "date": "s"}
 
 
 # Alias tokens the facade/native both accept (Spark short forms).

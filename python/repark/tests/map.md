@@ -870,7 +870,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   out-of-range-`\U` pin asserts the two-char Java artifact (renamed `..._is_two_replacements`);
   the BL-10 pin still guards the default-`false` door, the `true` carrier living in
   `test_fnp_4b_literals.py`. Byte-frozen by `test_pr_245_revalidation_record.py`; hash re-baselined
-  with this unit (ledger).
+  with this unit (ledger), and again by BL-11 (2026-09-16) for the in-place ANSI-on flip of
+  `test_numeric_to_binary_refuses`.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
   wipes rows, stamps `operation=delete`, time-travels to the pre-truncate snapshot;
   missing table is `TABLE_OR_VIEW_NOT_FOUND`; a view is `EXPECT_TABLE_NOT_VIEW`;
@@ -1611,6 +1612,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_a3_cast_vocab.py` — **r24 A3 QUAL-03:** parametrized cast/try_cast over every
   (octo C4-Q-001: try_cast byte/short overflow → NULL; strict cast fail-loud);
   `types.py` primitive that claims cast + aliases; native residual → `AnalysisException`.
+  **BL-11 (2026-09-16):** the `binary` row casts from the STRING source, not the LONG one —
+  ANSI-on `BIGINT → BINARY` refuses per the oracle, and the file's source comment is frozen
+  by the no-comment rule, so this row carries the reason.
 - `test_a3_secrets_redaction.py` — **r24 A3 SEC-04:** `_secrets.prop_key_is_secret` needles
   (conformance inventory covers every Rust arm + `bucket`/`arn` `_key` exclusions; octo C1-SEC-001);
   getAll isolation pin (octo C2-Q-002);

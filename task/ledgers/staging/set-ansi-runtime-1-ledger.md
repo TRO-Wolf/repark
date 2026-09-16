@@ -236,3 +236,7 @@ now documented). Post-fix: 6 passed. Five oracle cells closed against the fixtur
   117 passed; keyword sweep 957 passed, 112 skipped; `make verify` rc 0; release native
   rebuilt after the last Rust edit.
   Clause verdicts unchanged: C-001…C-005 PROVEN, C-006 OPEN (round 2).
+- Discharge (BL-11, 2026-09-16, unit `bl-11-numeric-binary`, branch
+  `feat/bl-11-numeric-binary`): C-006 is FIXED by that unit — the `IntToBinaryCast` analyzer
+  rule reads this ledger's runtime ANSI carrier at frame analysis on both doors (ANSI-off
+  integral encode, ANSI-on conf refusal). This ledger is otherwise unchanged.
