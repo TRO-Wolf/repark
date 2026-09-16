@@ -6,7 +6,7 @@ fixtures under ``fixtures/orc/`` (``.crc`` files not copied). Reads pin columns
 plus schema simpleString plus Row reprs; error cells pin Spark's own class,
 message, params, and SQLSTATE.
 
-pins: io-orc-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 """
 
 from __future__ import annotations
@@ -296,7 +296,7 @@ def test_orc_merge_schema_off_dir(spark: ReparkSession) -> None:
 
 
 def test_orc_list_matches_glob_without_merge(spark: ReparkSession) -> None:
-    """A two-path list with differing schemas answers one Rust scan like the glob. pins: io-orc-1/C-006"""
+    """A differing-schema list answers one scan like the glob. pins: io-orc-1/C-006"""
     listed = spark.read.orc([f"{FIXTURES}/m1", f"{FIXTURES}/m2"]).orderBy("id")
     globbed = spark.read.orc(f"{FIXTURES}/m*").orderBy("id")
     assert listed.columns == globbed.columns == ["id"]

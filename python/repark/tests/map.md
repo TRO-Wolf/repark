@@ -2658,8 +2658,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   that zone), the SQL-door refusals, and the untouched write refusal.
   **Round 2:** `test_orc_list_matches_glob_without_merge` pins a differing-schema
   list answering one scan like the glob (A-7); the probe-zone note lives here,
-  not in code (A-5).
-  pins: io-orc-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  not in code (A-5); the module docstring cites C-001..C-010 (the io-declared-1
+  precedent for setup/registry clauses).
+  pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `test_io_declared_1.py` + `facade_reader_writer_oracle.json` —
   **IO-DECLARED-1 (2026-09-14):** the orc-write / xml / jdbc declared IO refusals and
   `DataFrameNaFunctions.replace`, driven cell-by-cell from the live-PySpark oracle copy.

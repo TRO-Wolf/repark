@@ -174,9 +174,58 @@ None yet.
 
 | gate | result |
 |---|---|
-| `make verify` | TBD |
-| whole facade suite | TBD |
-| whole parity suite | TBD |
-| `cargo test -p repark-core orc` | TBD |
+| `make verify` | rc 0 (`/tmp/verify3.log`): ci + full Rust workspace suite green |
+| whole facade suite | rc 0: 9177 passed, 372 skipped, 33 xfailed (`/tmp/facade_rs.log`, 1871 s). Skips all env-gated and sanctioned: live-JVM oracle tier (`REPARK_PARITY_LIVE` unset), real-AWS acceptance, release-only repeatability. Facade extras (numpy/pandas/polars/ml-ext) installed and imported |
+| whole parity suite | rc 0: 757 passed, 2 skipped, 12 xfailed (`/tmp/parity.log`, 745 s) |
+| `cargo test -p repark-core orc` | 5 passed, 0 failed |
+| `cargo-deny check licenses` | `licenses ok`, rc 0 (no new crates in round 2) |
+| `test_io_orc_1.py` | 46/46 green on the rebuilt module (45 oracle pins + the round-2 list-matches-glob pin, red-first) |
 
-VERDICT: 11 clauses, 10 PROVEN, 1 OPEN (gates), 0 REJECTED.
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: io-orc-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card O-1..O-10, the run-16b recorded cells and the Q-15B-1/Q-17a-2 rulings; the round-2 orchestrator audit (A-5 comment ban, A-6 trailer, A-7 Rust-first) went back to the actor and all three remediated in one refactor commit.
+      artifacts: [task/ledgers/staging/io-orc-1-ledger.md, python/repark/tests/facade_orc_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: All seven Spark-written codecs, file/dir/glob/list paths, the positional signature shapes (two-positional, bad-arg, kw-after-positionals), mergeSchema on/off, pathGlobFilter, recursiveFileLookup, modifiedBefore/After, basePath, partition discovery (dir, leaf, basePath), subset/missing/wrong-type user schemas, select/filter/count/inputFiles, session-zone timestamps, both SQL-door refusals and the write refusal.
+      artifacts: [python/repark/tests/test_io_orc_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: The workspace clippy gate (`-D warnings`, disallowed-methods) is green; the production scan and binding carry no unwrap/expect (unwraps live only in the orc_footer.rs cfg(test) helpers); the async read carries the symmetric-with-read_text unused_async expect.
+      artifacts: [crates/repark-core/src/orc_scan.rs, crates/repark-python/src/orc_io.rs]
+    - id: AT-4
+      status: N/A
+      justification: No shared mutable state across the scan: one expansion builds one file set, each file gets an independent footer reader, partition values are per-file; the option struct is built per call.
+    - id: AT-5
+      status: N/A
+      justification: Local file reads only. Remote paths refuse before any I/O; no credential, no network, no secret-bearing option is logged or forwarded.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Red-first throughout: the round-2 list pin failed red on the old Python union (UNION column-count mismatch) and passes on one scan; the error-shape pins assert class, message, params and SQLSTATE against the recorded cells; the *.orc listing rule was forced by a real failure (the lockstep map.md footer-crashed the committed m* glob).
+      artifacts: [python/repark/tests/test_io_orc_1.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Full facade suite 9177 passed rc 0 on the rebuilt module, parity suite 757 passed rc 0, make verify rc 0, ruff check/format clean, example coverage rc 0, map sync 280 clean, the 5 round-1 comment lines deleted (remaining reader.py comments pre-date the unit).
+      artifacts: [python/repark/tests/test_io_orc_1.py, docs/examples/io/orc_read.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark's contracts were recorded, not assumed: the 43-cell run-16b live-PySpark-4.1.2 oracle (including the brotli cell where Spark itself fails, claimed by neither door), Spark's reader signature shapes and the JVM IllegalArgumentException/NOT_STR_OR_LIST texts.
+      artifacts: [python/repark/tests/facade_orc_oracle.json, python/repark/src/repark/spark/session/reader_orc.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Registry IO-ORC-1 rewritten (read implemented, write DECLARED) and IO-ORC-SQL-1 BACKLOG filed; every error shape pins Spark's class, messageParameters and SQLSTATE; the example covers the read names and the refusal example still covers the write names.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Behaviour-move guards run: per-path Python union reds the new list pin (observed UNION column-count mismatch); unattached conditions red the condition pins (observed getCondition None before the method bind); an unfiltered listing reds the m* glob pin (observed map.md footer crash).
+      artifacts: [python/repark/tests/test_io_orc_1.py]
+  complete: true
+```
+
+VERDICT: 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED.
