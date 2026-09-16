@@ -41,12 +41,19 @@ pub(crate) fn compile_spark_regex(pattern: &str, fn_name: &str) -> Result<SparkR
     let rewritten = rewrite_out_of_range_octal(pattern, groups);
     let normalized = crate::spark_regex_lookbehind::normalize_lookbehind(&rewritten);
     match scan_features(&normalized) {
-        ScanVerdict::InvalidJava => Err(invalid_pattern_error(fn_name, pattern)),
+        ScanVerdict::InvalidJava => Err(invalid_pattern_error(
+            fn_name,
+            pattern,
+            &translate_pattern(&normalized),
+            None,
+        )),
         ScanVerdict::Plain => {
             let translated = translate_pattern(&normalized);
             Regex::new(&translated)
                 .map(SparkRegex::Plain)
-                .map_err(|_| invalid_pattern_error(fn_name, pattern))
+                .map_err(|error| {
+                    invalid_pattern_error(fn_name, pattern, &translated, Some(error.to_string()))
+                })
         }
         ScanVerdict::Fancy { loops } => {
             let translated = translate_pattern(&normalized);
@@ -60,14 +67,28 @@ pub(crate) fn compile_spark_regex(pattern: &str, fn_name: &str) -> Result<SparkR
                         loops,
                     })
                 })
-                .map_err(|_| invalid_pattern_error(fn_name, pattern))
+                .map_err(|error| {
+                    invalid_pattern_error(fn_name, pattern, &translated, Some(error.to_string()))
+                })
         }
     }
 }
 
-fn invalid_pattern_error(fn_name: &str, pattern: &str) -> DataFusionError {
+fn invalid_pattern_error(
+    fn_name: &str,
+    pattern: &str,
+    translated: &str,
+    detail: Option<String>,
+) -> DataFusionError {
     if fn_name == "split" {
-        DataFusionError::Execution(format!("invalid regular expression '{pattern}'"))
+        match detail {
+            Some(detail) => DataFusionError::Execution(format!(
+                "invalid regular expression '{translated}': {detail}"
+            )),
+            None => {
+                DataFusionError::Execution(format!("invalid regular expression '{translated}'"))
+            }
+        }
     } else {
         DataFusionError::Execution(format!(
             "[INVALID_PARAMETER_VALUE.PATTERN] The value of parameter(s) `regexp` in `{fn_name}` \

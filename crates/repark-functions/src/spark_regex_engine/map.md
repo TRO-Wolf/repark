@@ -13,6 +13,8 @@ operations both engines serve.
   pre-pass, the invalid-pattern message per function name, both overrun tripwires,
   lookbehind normalization, and per-feature value pins. pins: java-regex-features-1/C-001,
   C-002, C-003, C-004, C-005
+  **Step 6:** split invalids name the translated pattern with the engine detail, so
+  the long-standing `Q15-13` text leg stays green. pins: java-regex-features-1/C-008
 
 ## Pointers
 

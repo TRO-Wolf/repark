@@ -263,6 +263,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (file-size split from `spark_regex_engine.rs`): `+` collapses to single,
   `{n,m}` expands to alternation, nullable bodies become `(?=)` / `(?!)`, with a
   syntactic nullability walk. pins: java-regex-features-1/C-001
+  **Step 6:** split invalids name the translated pattern with the engine detail
+  (the `Q15-13` text leg). pins: java-regex-features-1/C-008
 - `spark_regexp_match.rs` — **FN-FIX-2 (2026-09-04):** `regexp_like` / `rlike` /
   `regexp_replace` compile through `compile_spark_regex`. pins: fn-fix-2-string-rows/C-002
   **JAVA-REGEX-FEATURES-1 (2026-09-16):** the compiler moved to `spark_regex_engine`

@@ -134,9 +134,11 @@ fn invalid_pattern_names_the_function() {
     let error = compile_spark_regex("(?<=a", "regexp_extract").expect_err("rejects");
     assert!(error.to_string().contains("in `regexp_extract`"), "{error}");
     let error = compile_spark_regex("(?<=a", "split").expect_err("rejects");
-    assert_eq!(
-        error.to_string(),
-        "Execution error: invalid regular expression '(?<=a'"
+    assert!(
+        error
+            .to_string()
+            .starts_with("Execution error: invalid regular expression '(?<=a': "),
+        "{error}"
     );
 }
 
