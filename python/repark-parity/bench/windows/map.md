@@ -31,6 +31,9 @@ window-exec spill is UNMEASURED.
 - `models.py` — pydantic `ProbeRow` / `CellTiming` / `CellResult` / `RunResult`.
 - `classify.py` — outcome classes (`ok` / `refuse` / `absent` / `oom` / `spill` /
   `error` / `crash` / `skip`) and `WIN-SLIDE-<name>` heading helper.
+  **UNRESOLVED-ROUTINE-1 (2026-09-16):** the absent needles also match Spark's
+  `unresolved_routine` class, so the blanket refusal still files as absence.
+  pins: unresolved-routine-1/C-006
 - `oracles.py` — DuckDB and PySpark 4.1.2 adapters (lazy imports).
 - `measure.py` — RePark driver (native module). Not imported by `make py-test`.
 - `report.py` — markdown renderer for the dated results document.

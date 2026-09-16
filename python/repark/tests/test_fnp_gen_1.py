@@ -369,19 +369,13 @@ def test_sql_door_schema_of_csv_non_foldable_raises(spark: ReparkSession) -> Non
         spark.sql(cell["expr"].replace("FRAME", f"({FRAME})"))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 steps 3-4: json_tuple, from_csv and schema_of_csv are not implemented "
-    "yet. Red-first pins from step 1, kept strict so they XPASS-fail the moment the kernels "
-    "land and the step-3 round must retire them.",
-)
 def test_sql_door_schema_of_csv_uninferable_literal_raises(spark: ReparkSession) -> None:
     """Spark itself refuses the uninferable literal, so the door must raise, not answer."""
     (cell,) = [cell for cell in _cells("schema_of_csv", "sql") if "csvrow" not in cell["expr"]]
     assert "error_type" in cell
     with pytest.raises(Exception) as excinfo:
         spark.sql(cell["expr"]).collect()
-    assert "Invalid function" not in str(excinfo.value)
+    assert "UNRESOLVED_ROUTINE" in str(excinfo.value)
 
 
 def test_generator_keeps_select_list_position(spark: ReparkSession) -> None:

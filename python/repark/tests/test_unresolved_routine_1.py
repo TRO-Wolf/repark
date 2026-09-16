@@ -78,7 +78,10 @@ def _expected(cell_id: str) -> str:
 
 @pytest.mark.parametrize("cell_id", SQL_CELLS)
 def test_sql_door_unknown_routine_matches_spark_message(spark: Any, cell_id: str) -> None:
-    """SQL-door unknown routines carry the full Spark message. pins: unresolved-routine-1/C-001, C-002"""
+    """SQL-door unknown routines carry the full Spark message.
+
+    pins: unresolved-routine-1/C-001, C-002
+    """
     cell = _cells()[cell_id]
     with pytest.raises(AnalysisException) as caught:
         spark.sql(cell["expr"]).collect()
@@ -126,7 +129,10 @@ def test_py_door_call_function_stays_green(spark: Any) -> None:
 
 @pytest.mark.parametrize("cell_id", ("UR-PY-01", "UR-PY-03"))
 def test_py_door_fragment_positions_match_spark(spark: Any, cell_id: str) -> None:
-    """Expression and filter fragments position at the fragment. pins: unresolved-routine-1/C-002, C-003"""
+    """Expression and filter fragments position at the fragment.
+
+    pins: unresolved-routine-1/C-002, C-003
+    """
     cell = _cells()[cell_id]
     with pytest.raises(AnalysisException) as caught:
         frame = eval(cell["expr"], {"spark": spark, "F": F})
@@ -135,7 +141,10 @@ def test_py_door_fragment_positions_match_spark(spark: Any, cell_id: str) -> Non
 
 
 def test_py_door_select_expr_answers_spark_class(spark: Any) -> None:
-    """selectExpr answers the Spark class; fragment position is 18b. pins: unresolved-routine-1/C-003"""
+    """selectExpr answers the Spark class; fragment position is run 18b.
+
+    pins: unresolved-routine-1/C-003
+    """
     with pytest.raises(AnalysisException, match=r"\[UNRESOLVED_ROUTINE\]") as caught:
         spark.range(1).selectExpr("nosuchfn(id)").collect()
     assert "Cannot resolve routine `nosuchfn` on search path" in str(caught.value)

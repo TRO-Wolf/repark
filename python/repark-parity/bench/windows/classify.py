@@ -32,6 +32,7 @@ _SLIDING_NEEDLES: tuple[str, ...] = (
 
 _ABSENT_NEEDLES: tuple[str, ...] = (
     "invalid function",
+    "unresolved_routine",
     "does not exist",
     "not found",
     "unsupportedoperation",

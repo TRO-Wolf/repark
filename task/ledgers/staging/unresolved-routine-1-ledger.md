@@ -165,6 +165,13 @@ per the card's edit-only-the-assertion rule.
   `bare_nullary.rs::non_schema_error_passes_through`: fixtures swapped to a
   genuinely unrelated `Plan` error — the old-shape blessing moves to
   `unknown_routine.rs` tests, which pin the new shape.
+- W-0 bench classifier (`python/repark-parity/bench/windows/classify.py`, outside
+  this lane's fence — one needle, announced to the bench owner): Finding F-004 —
+  the full-suite run showed `live_absent == ()` because the absent needles only
+  knew DataFusion's `invalid function`; Spark's `UNRESOLVED_ROUTINE` filed as
+  `error`. The `_ABSENT_NEEDLES` gain `unresolved_routine` (the old needle stays,
+  still pinned), plus one classifier pin in `test_w0_window_bench.py`. Without
+  this, the C-006 w0 edit alone leaves the suite red.
 
 ### names Spark has that the SQL door lacks
 
@@ -174,6 +181,12 @@ per the card's edit-only-the-assertion rule.
   `try_to_number`, `try_to_time` (all twelve `TRY_NAMES`).
 - `shuffle` over a NULL-typed argument (`shuffle(CAST(NULL AS ARRAY<INT>))`;
   populated and empty arrays answer on both doors already).
+- `schema_of_csv` on the SQL door (FNP-GEN-1 steps 3–4 pending): its strict-xfail
+  tripwire (`test_sql_door_schema_of_csv_uninferable_literal_raises`) XPASSed on
+  the shape change alone, so the marker is retired and the refusal now pins
+  `UNRESOLVED_ROUTINE`. The kernel-landing signal survives: answering flips the
+  `pytest.raises` block red. Announced to the FNP-GEN-1 owners alongside the 18a
+  list.
 
 ## 4. Hand-offs
 
@@ -185,8 +198,39 @@ per the card's edit-only-the-assertion rule.
   the Rust path; also its dotted-name arm raises `REQUIRES_SINGLE_PART_NAMESPACE`
   for every dotted name while the SQL door answers `UNRESOLVED_ROUTINE` for
   `spark_catalog.default.x` and `nosuch.fn` — doors disagree there, no oracle
-  cell pins it.
+  cell pins it. Measured 2026-09-16: `F.call_function('spark_catalog.default.nosuchfn', …)`
+  raises `REQUIRES_SINGLE_PART_NAMESPACE` naming `` `spark_catalog`.`default` ``
+  while `spark.sql("SELECT spark_catalog.default.nosuchfn(1)")` raises
+  `UNRESOLVED_ROUTINE`. Also measured: an all-caps `SYSTEM.BUILTIN` qualifier
+  renders recovered-case `` `SYSTEM`.`BUILTIN` `` (unmeasured by the oracle).
 
-## 5. Gates
+## 5. Gates (step 8, 2026-09-16, release native rebuilt after the final Rust edit)
 
-(to be filled in step 8: exact commands, exit codes, counts.)
+- `cargo test -p repark-spark --lib` → exit 0: 1023 passed, 0 failed, 4 ignored.
+- `cargo test -p repark-core --lib` → exit 0: 540 passed, 0 failed, 1 ignored
+  (14 new `unknown_routine` tests green).
+- `make rust-clippy` → exit 0, Finished, no errors.
+- `make verify` → green end to end (crate-dag, lib-rs, rust-file-size, lib-py,
+  python-conventions, docstring-presence, ledger-check, ledger-grammar,
+  docs-compaction, docs-links all clean). Two reds on the way, both fixed in
+  this unit: ledger-grammar wanted a `pins:` citation for PROVEN C-007 (added to
+  the `crates/repark-core` and tests maps); py-lint E501 on three long
+  docstrings in the new pin file (wrapped).
+- Release native: rebuilt with `maturin develop --release` after the final Rust
+  edit; later commits touch only `#[cfg(test)]` fixtures, `.py` pins, `.md` and
+  the registry, so the binary is current (no rebuild needed).
+- `.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider`
+  (WHOLE facade suite) → exit 0: 9081 passed, 367 skipped, 33 xfailed. Two reds
+  on the way, both fixed here: the FNP-GEN-1 strict-XPASS tripwire (F-003) and
+  the W-0 absent-classifier (F-004).
+- `PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest
+  python/repark-parity/tests -q` (WHOLE parity suite) → exit 0: 757 passed,
+  2 skipped, 12 xfailed. One red on the way, fixed here: CAP-1 mirror row
+  `column/mod.rs` 1014 → 1013 moved with the script baseline.
+
+In-flight finding F-003: the full facade run surfaced one strict-XPASS in
+another unit's file (`test_fnp_gen_1.py::test_sql_door_schema_of_csv_uninferable_literal_raises`):
+its guarded refusal changed shape under this unit (`Invalid function` →
+`UNRESOLVED_ROUTINE`) without the kernel landing. Repaired narrowly in step 6
+(marker retired, refusal pins the new class, kernel-landing signal preserved);
+see §3.

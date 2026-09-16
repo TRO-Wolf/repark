@@ -798,10 +798,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `feat/spark-sql-grammar-1`.
   pins: spark-sql-grammar-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [unresolved-routine-1-ledger.md](unresolved-routine-1-ledger.md) —
-  **UNRESOLVED-ROUTINE-1 step 1 (2026-09-16), in flight:** every unknown routine
+  **UNRESOLVED-ROUTINE-1 (2026-09-16), in flight:** every unknown routine
   refuses with Spark's `UNRESOLVED_ROUTINE` on both doors (Q-17c-3) — ledger with
-  the card rulings plus R-18c-1/R-18c-2/R-18c-3 and the red-first table (41
-  failed, 4 passed on the base). All clauses OPEN. Branch
+  the card rulings plus R-18c-1/R-18c-2/R-18c-3, the red-first table (41
+  failed, 4 passed on the base) and the C-006/C-007 close. All clauses PROVEN;
+  residue rows BL-19-POS-SELX and BL-19-LATERAL-1 filed. Branch
   `feat/unresolved-routine-1`.
   pins: unresolved-routine-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [fnp-11b-ledger.md](fnp-11b-ledger.md) —
