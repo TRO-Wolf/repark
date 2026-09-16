@@ -235,7 +235,9 @@ macro_rules! impl_integral_bround {
                     back,
                 )
             };
-            let fits = quotient.checked_mul(back).and_then(|exact| <$native>::try_from(exact).ok());
+            let fits = quotient
+                .checked_mul(back)
+                .and_then(|exact| <$native>::try_from(exact).ok());
             match fits {
                 Some(fits) => out.append_value(fits),
                 None => {
@@ -314,15 +316,23 @@ impl ScalarUDFImpl for SparkBround {
     }
 }
 
-fn read_scales(scale_value: Option<&ColumnarValue>, number_rows: usize) -> Result<Vec<Option<i32>>> {
+fn read_scales(
+    scale_value: Option<&ColumnarValue>,
+    number_rows: usize,
+) -> Result<Vec<Option<i32>>> {
     let Some(scale_value) = scale_value else {
         return Ok(vec![Some(0); number_rows]);
     };
     let array = scale_value.to_array(number_rows)?;
     let shaped = cast(array.as_ref(), &DataType::Int32)?;
-    let ints = shaped.as_any().downcast_ref::<Int32Array>().ok_or_else(|| {
-        datafusion::common::DataFusionError::Execution("bround needs an integral scale".to_owned())
-    })?;
+    let ints = shaped
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .ok_or_else(|| {
+            datafusion::common::DataFusionError::Execution(
+                "bround needs an integral scale".to_owned(),
+            )
+        })?;
     Ok((0..ints.len())
         .map(|row| {
             if ints.is_null(row) {
@@ -342,7 +352,10 @@ fn apply_bround(
 ) -> Result<ColumnarValue> {
     use datafusion::arrow::array::new_null_array;
     match input.data_type() {
-        DataType::Null => Ok(ColumnarValue::Array(new_null_array(output_type, input.len()))),
+        DataType::Null => Ok(ColumnarValue::Array(new_null_array(
+            output_type,
+            input.len(),
+        ))),
         DataType::Float32 => {
             let shaped = cast(input.as_ref(), &DataType::Float64)?;
             apply_float_bround(&shaped, scales)
@@ -412,9 +425,12 @@ fn apply_bround(
 }
 
 fn apply_float_bround(input: &ArrayRef, scales: &[Option<i32>]) -> Result<ColumnarValue> {
-    let values = input.as_any().downcast_ref::<Float64Array>().ok_or_else(|| {
-        datafusion::common::DataFusionError::Execution("bround needs float64 values".to_owned())
-    })?;
+    let values = input
+        .as_any()
+        .downcast_ref::<Float64Array>()
+        .ok_or_else(|| {
+            datafusion::common::DataFusionError::Execution("bround needs float64 values".to_owned())
+        })?;
     let mut out = PrimitiveBuilder::<Float64Type>::with_capacity(values.len());
     for row in 0..values.len() {
         if values.is_null(row) {
@@ -440,7 +456,9 @@ fn apply_decimal_bround(
         .as_any()
         .downcast_ref::<Decimal128Array>()
         .ok_or_else(|| {
-            datafusion::common::DataFusionError::Execution("bround needs decimal128 values".to_owned())
+            datafusion::common::DataFusionError::Execution(
+                "bround needs decimal128 values".to_owned(),
+            )
         })?;
     let DataType::Decimal128(out_precision, out_scale) = output_type else {
         return exec_err!("'bround' decimal output must stay decimal128");
@@ -501,7 +519,10 @@ mod tests {
         ctx
     }
 
-    async fn batches_of(ctx: &SessionContext, sql: &str) -> Vec<datafusion::arrow::array::RecordBatch> {
+    async fn batches_of(
+        ctx: &SessionContext,
+        sql: &str,
+    ) -> Vec<datafusion::arrow::array::RecordBatch> {
         ctx.sql(sql)
             .await
             .unwrap_or_else(|error| panic!("plan {sql}: {error}"))
@@ -531,12 +552,20 @@ mod tests {
         let ctx = ctx();
         let batches = batches_of(&ctx, "SELECT bround(CAST(25 AS INT), -1)").await;
         assert_eq!(
-            batches[0].column(0).as_primitive::<Int32Type>().clone().value(0),
+            batches[0]
+                .column(0)
+                .as_primitive::<Int32Type>()
+                .clone()
+                .value(0),
             20
         );
         let batches = batches_of(&ctx, "SELECT bround(CAST(2147483647 AS INT), -9)").await;
         assert_eq!(
-            batches[0].column(0).as_primitive::<Int32Type>().clone().value(0),
+            batches[0]
+                .column(0)
+                .as_primitive::<Int32Type>()
+                .clone()
+                .value(0),
             2_000_000_000
         );
     }
@@ -555,7 +584,8 @@ mod tests {
             .downcast_ref::<Decimal128Array>()
             .expect("decimal output");
         assert_eq!(values.value(0), 1_234_568);
-        let batches = batches_of(&ctx, "SELECT bround(CAST(12345.6789 AS DECIMAL(10,4)), -2)").await;
+        let batches =
+            batches_of(&ctx, "SELECT bround(CAST(12345.6789 AS DECIMAL(10,4)), -2)").await;
         assert_eq!(
             batches[0].schema().field(0).data_type(),
             &DataType::Decimal128(7, 0)

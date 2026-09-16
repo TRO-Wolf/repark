@@ -20,6 +20,8 @@ use datafusion::logical_expr::{
 
 mod bround;
 pub use bround::{bround_udf, call_bround};
+mod conv;
+pub use conv::{call_conv, conv_udf};
 
 #[must_use]
 pub fn abs_udf() -> Arc<ScalarUDF> {
@@ -48,7 +50,6 @@ pub fn factorial_udf() -> Arc<ScalarUDF> {
 
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
-<<<<<<< HEAD
     vec![
         abs_udf(),
         hypot_udf(),
@@ -56,8 +57,8 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         rint_udf(),
         factorial_udf(),
         bround_udf(),
+        conv_udf(),
     ]
->>>>>>> 04cebd25 (fnp-math-1 step 2 (run 18a): bround answers PySpark 4.1.2 on both doors)
 }
 
 #[derive(Debug)]
@@ -413,11 +414,7 @@ fn acceptable_double(data_type: &DataType) -> bool {
     ) || unwrap_dict(data_type).is_numeric()
 }
 
-pub(crate) fn unexpected_input_type(
-    name: &str,
-    required: &str,
-    got: &DataType,
-) -> DataFusionError {
+pub(crate) fn unexpected_input_type(name: &str, required: &str, got: &DataType) -> DataFusionError {
     DataFusionError::Plan(format!(
         "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"{name}(<expr>)\" due to \
          data type mismatch: The first parameter requires the \"{required}\" type, however \

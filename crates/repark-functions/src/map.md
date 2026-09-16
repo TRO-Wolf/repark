@@ -106,7 +106,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (2026-09-15):** Spark `abs` / `hypot` / `bin` / `rint` kernels shared by both
   doors. **FNP-MATH-1 (2026-09-16, run 18a):** `spark_math/bround.rs` adds the
   `bround` HALF_EVEN kernel (double, decimal, integral; negative scale; Spark
-  result types; `scalar_arguments` scale literal; always-nullable display field).
+  result types; `scalar_arguments` scale literal; always-nullable display field)
+  and `spark_math/conv.rs` the `conv` base-conversion kernel (ANSI-carried
+  overflow).
   `abs` keeps the input width, refuses BOOLEAN, and
   reads the ANSI carrier (`repark.ansi` extension via
   `ansi::spark_ansi_enabled_from_options`) to raise Spark-shaped `[ARITHMETIC_OVERFLOW]`
