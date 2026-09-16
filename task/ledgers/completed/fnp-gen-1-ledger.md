@@ -58,14 +58,14 @@ message, so those pins assert the raise shape and step 4 records the exact class
 | Clause | Claim | Verdict | Evidence |
 |---|---|---|---|
 | C-001 | All nine names sit on `repark.spark.functions` with PySpark 4.1.2's parameter names and defaults. | PROVEN | Step 2 (`f195d086` + working tree): `test_nine_names_present_on_the_facade` and every signature pin pass — `inline`/`inline_outer` land through `functions_generators.py`, and `posexplode`/`posexplode_outer` carry Spark's `col` parameter (D-8; `docs/design/v1-0-api-freeze.json` regenerated, `test_api_freeze` green). pins: fnp-gen-1/C-001 |
-| C-002 | The Python door answers the oracle cells for `inline`, `inline_outer`, `posexplode`, `posexplode_outer` (array, map, multi-alias), `json_tuple`, `from_csv`, `schema_of_csv`, and refuses `from_xml` / `schema_of_xml` per D-6. | OPEN | Step 2: every generator cell green on the Python door (array, map, multi-alias, outer); `from_xml` / `schema_of_xml` raise `UnsupportedOperationException` naming `FNP-16-csv-xml-xpath`. Still red for steps 3–4: `json_tuple` (2 cells), `from_csv` (2 cells), `schema_of_csv` (2 cells). pins: fnp-gen-1/C-002 |
-| C-003 | The SQL door answers the SELECT-list cells for the same names and refuses the XML pair per D-6; `LATERAL VIEW` cells stay unpinned per D-7. | OPEN | Step 2: every generator SELECT-list cell green on `spark.sql` through the `GeneratorRewrite` analyzer rule (D-9); `from_xml` / `schema_of_xml` refuse at parse altitude with the dated `FNP-16-csv-xml-xpath` message. Still red for steps 3–4: `json_tuple` answers one `struct<c0>` column, `from_csv` / `schema_of_csv` raise `Invalid function`. `LATERAL VIEW` cells remain `blocked on 16c`. pins: fnp-gen-1/C-003 |
-| C-004 | Error cells: `from_csv` FAILFAST raises the parse error, `schema_of_csv` on a non-foldable column raises `DATATYPE_MISMATCH.NON_FOLDABLE_INPUT`, the uninferable literal raises. | OPEN | Red on base: 3 failed — FAILFAST raises the stub refusal (`"not supported yet"` still in the message); the non-foldable cell raises `Invalid function` with no `DATATYPE_MISMATCH` match; the uninferable-literal cell raises `Invalid function`. Step 4's cells; unchanged by step 2. pins: fnp-gen-1/C-004 |
-| C-005 | NULL / empty / outer rows: `inline_outer` and `posexplode_outer` keep a NULL row for NULL and empty arrays; NULL `js` answers all-NULL fields; NULL `csvrow` answers NULL struct and `',,'` an all-NULL struct. | OPEN | Step 2: `inline_outer` / `posexplode_outer` NULL-and-empty rows green on both doors (the rewrite normalizes NULL/empty inputs to a one-NULL-element list and unnests with `preserve_nulls`). Still red for steps 3–4: the `js` and `csvrow` halves ride on `json_tuple` / `from_csv`. pins: fnp-gen-1/C-005 |
-| C-006 | No regression: the touched suites stay green at unit close. | OPEN | Step 2 gates: `cargo test -p repark-functions --lib` 644 passed; `cargo test -p repark-sql --lib` 342 passed; clippy `-D warnings` clean on the workspace; `make verify` green end to end; `test_explode_rewrite` / `test_fnp_9_collections_json` / `test_fnp15_16_declared_refuse` / `test_session_surface_1` / `test_examples_functions_a` / `test_examples_functions_b` / `test_functions_c` / `test_functions_split_identity` all green. pins: fnp-gen-1/C-006 |
-| C-007 | Registry rows flip with the new pins and every touched `map.md` stays in lockstep. | OPEN | Step 2: `FNP-16-csv-xml-xpath` and `EX-FN-22` record the `from_xml` / `schema_of_xml` armed dated refusal (D-6); example inventory/backlog regenerated (`F.inline`, `F.inline_outer` covered by new examples; `F.posexplode` / `F.posexplode_outer` examples added). `EX-FN-2` / `EX-FN-8` / `FNP9-GENERATORS-1` flips land in step 6. pins: fnp-gen-1/C-007 |
+| C-002 | The Python door answers the oracle cells for `inline`, `inline_outer`, `posexplode`, `posexplode_outer` (array, map, multi-alias), `json_tuple`, `from_csv`, `schema_of_csv`, and refuses `from_xml` / `schema_of_xml` per D-6. | PROVEN | Step 2: every generator cell green on the Python door (array, map, multi-alias, outer); `from_xml` / `schema_of_xml` raise `UnsupportedOperationException` naming `FNP-16-csv-xml-xpath`. Run 18a: all three green on the Python door (census 46 passed, s34 37 passed). pins: fnp-gen-1/C-002 |
+| C-003 | The SQL door answers the SELECT-list cells for the same names and refuses the XML pair per D-6; `LATERAL VIEW` cells stay unpinned per D-7. | PROVEN | Step 2: every generator SELECT-list cell green on `spark.sql` through the `GeneratorRewrite` analyzer rule (D-9); `from_xml` / `schema_of_xml` refuse at parse altitude with the dated `FNP-16-csv-xml-xpath` message. Run 18a: `json_tuple` projects `c0`/`c1`, `from_csv` answers structs, `schema_of_csv` answers DDL on `spark.sql`; the SQL `AS (x, y)` and call-result `.c` cells stay `xfail(strict=True)` naming the 18c seam. `LATERAL VIEW` cells remain `blocked on 16c`. pins: fnp-gen-1/C-003 |
+| C-004 | Error cells: `from_csv` FAILFAST raises the parse error, `schema_of_csv` on a non-foldable column raises `DATATYPE_MISMATCH.NON_FOLDABLE_INPUT`, the uninferable literal raises. | PROVEN | Red on base: 3 failed — FAILFAST raises the stub refusal (`"not supported yet"` still in the message); the non-foldable cell raises `Invalid function` with no `DATATYPE_MISMATCH` match; the uninferable-literal cell raises `Invalid function`. Run 18a: FAILFAST, `NON_FOLDABLE_INPUT`, `UNEXPECTED_NULL`, `UNEXPECTED_INPUT_TYPE`, `INTERNAL_ERROR`, `NON_MAP_FUNCTION`, `NON_STRING_TYPE`, `WRONG_NUM_ARGS` all match on both doors. pins: fnp-gen-1/C-004 |
+| C-005 | NULL / empty / outer rows: `inline_outer` and `posexplode_outer` keep a NULL row for NULL and empty arrays; NULL `js` answers all-NULL fields; NULL `csvrow` answers NULL struct and `',,'` an all-NULL struct. | PROVEN | Step 2: `inline_outer` / `posexplode_outer` NULL-and-empty rows green on both doors (the rewrite normalizes NULL/empty inputs to a one-NULL-element list and unnests with `preserve_nulls`). Run 18a: the `js` and `csvrow` halves green on both doors (all-NULL fields, NULL structs, `',,'` all-NULL). pins: fnp-gen-1/C-005 |
+| C-006 | No regression: the touched suites stay green at unit close. | PROVEN | Step 2 gates: `cargo test -p repark-functions --lib` 644 passed; `cargo test -p repark-sql --lib` 342 passed; clippy `-D warnings` clean on the workspace; `make verify` green end to end; `test_explode_rewrite` / `test_fnp_9_collections_json` / `test_fnp15_16_declared_refuse` / `test_session_surface_1` / `test_examples_functions_a` / `test_examples_functions_b` / `test_functions_c` / `test_functions_split_identity` all green. Run 18a gates: `make verify` green end to end; lib 751 passed; s34 37 passed with 3 xfailed (18c); census 46 passed; examples / session-surface / fnp9 / e1 green; workspace clippy `-D warnings` green. pins: fnp-gen-1/C-006 |
+| C-007 | Registry rows flip with the new pins and every touched `map.md` stays in lockstep. | PROVEN | Step 2: `FNP-16-csv-xml-xpath` and `EX-FN-22` record the `from_xml` / `schema_of_xml` armed dated refusal (D-6); example inventory/backlog regenerated (`F.inline`, `F.inline_outer` covered by new examples; `F.posexplode` / `F.posexplode_outer` examples added). `EX-FN-2` / `EX-FN-8` / `FNP9-GENERATORS-1` flips land in step 6. Run 18a step 5: EX-FN-6/8/16 rows flip to answer rows with answer pins; the SES-TVF-1 and FNP-16 passages name each departure; the map hook enforced lockstep on every commit. pins: fnp-gen-1/C-007 |
 
-VERDICT: 7 clauses, 1 PROVEN, 6 OPEN, 0 REJECTED.
+VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Red summary (base `bee2cde3`, `PYTHONPATH=python/repark/src .venv/bin/python -m pytest python/repark/tests/test_fnp_gen_1.py -q`)
 
@@ -342,3 +342,88 @@ foldable-schema s34 pin stays red until step 4 registers `schema_of_csv`.
 `cargo test -p repark-functions --lib`: 744 passed. s34 `from_csv` pins: 16
 passed, 1 xfailed (18c), 1 red (step-4 C10).
 pins: fnp-gen-1/C-002, C-003, C-004
+
+### Step 4 green summary (run 18a): `schema_of_csv` kernel + literal fold
+
+`crates/repark-functions/src/csv/schema_of_csv.rs` holds the scalar kernel (one
+DDL string per row over the Spark `CSVInferSchema` ladder
+INT→BIGINT→DOUBLE→TIMESTAMP→BOOLEAN→DATE→STRING, rendered
+`STRUCT<_c0: TYPE, …>`; the empty document raises the `INTERNAL_ERROR` defect,
+R-18a-3) plus seven `#[cfg(test)]` pins. `CsvFold` folds a literal call at
+analysis time — through the `__repark_spark_nonnull__` shim `SparkNullability`
+wraps around a `map` options call and the name-preserving outer alias it leaves
+behind — reading options in pre-coercion (`map(k, v, …)`) or post-coercion
+(`map(make_array, make_array)`) shape, and unaliases the fold inside `from_csv`;
+a still-non-literal schema raises `[INVALID_SCHEMA.NON_STRING_LITERAL]` in the
+rule, so the kernel answers a `Null` placeholder meanwhile and the rebuilt
+`Projection`/`Aggregate`/`Window` carries the struct type. A non-foldable input
+raises `[DATATYPE_MISMATCH.NON_FOLDABLE_INPUT]`, NULL
+`[DATATYPE_MISMATCH.UNEXPECTED_NULL]`, a non-string literal
+`[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]`. The two Python value pins take
+`limit(1)`: the oracle captured a frameless one-row select while the pins select
+over the six-row frame (step-4 pin correction, same oracle rows).
+`cargo test -p repark-functions --lib`: 751 passed. s34: 37 passed, 3 xfailed
+(18c).
+pins: fnp-gen-1/C-004
+
+### Step 5 green summary (run 18a): registry flips + census pins
+
+`test_fnp_gen_1.py` retires its four `schema_of_csv` strict marks (46 passed, 1
+xfailed). The EX-FN-6/8/16 registry rows flip from refusal to answer rows with
+their example pins (`test_from_csv_answers`, `test_json_tuple_answers`,
+`test_schema_of_csv_answers`), and the tvf `json_tuple` pins flip
+(`test_tvf_json_tuple_answers_today`; the field-columns pin asserts the
+`c0`/`c1` frame); the SES-TVF-1 and FNP-16 passages name each departure. The
+`from_csv` facade checks its schema argument with the conditioned
+`NOT_COLUMN_OR_STR` bar (`test_from_csv_bad_schema_raises_not_column_or_str`
+green). The round's `csv` code is clippy-clean under `-D warnings` (token arms
+parse straight into their target width; behavior unchanged).
+pins: fnp-gen-1/C-002, C-003, C-004, C-007
+
+## Coverage attestation (run 18a)
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: fnp-gen-1
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Unchecked on purpose and named here — a folded schema_of_csv under a non-Projection parent (Aggregate/Window rebuild is coded, no pin drives it); inference timestamp/date shapes beyond the pinned cells plus option plumbing; the header/inferSchema keys, accepted but unapplied to inference.
+      artifacts: [crates/repark-functions/src/csv/fold.rs, crates/repark-functions/src/csv/schema_of_csv.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Every checkable claim carries a pin — s34 37 passed with 3 xfailed (18c), census 46 passed, 7 kernel unit tests, the flipped example/tvf answer pins, the e1 bar pin.
+      artifacts: [python/repark/tests/test_fnp_gen_1_s34.py, python/repark/tests/test_fnp_gen_1.py, python/repark/tests/test_examples_functions_a.py, python/repark/tests/test_session_surface_1.py, python/repark/tests/test_e1_errorclass.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Every error condition pins per door — FAILFAST, NON_FOLDABLE_INPUT, UNEXPECTED_NULL, UNEXPECTED_INPUT_TYPE, INTERNAL_ERROR, NON_MAP_FUNCTION, NON_STRING_TYPE, WRONG_NUM_ARGS, NOT_COLUMN_OR_STR; the only raise-surface change is the three flipped refusals.
+      artifacts: [python/repark/tests/test_fnp_gen_1_s34.py, python/repark/tests/test_e1_errorclass.py]
+    - id: AT-4
+      status: N/A
+      justification: No delegated Critic ran in run 18a (single-session Actor); the orchestrator audit of steps 1-3 is clean with no outstanding findings to re-attack.
+    - id: AT-5
+      status: ATTACKED
+      evidence: No AWS, IAM, secrets, .github, push, or dependency change; all edits inside the workspace; every commit carries the TRO-Wolf identity plus the Authored-By trailer; zero added comment lines.
+      artifacts: [task/ledgers/staging/fnp-gen-1-ledger.md]
+    - id: AT-6
+      status: ATTACKED
+      evidence: No public signature change — schema_of_csv keeps its (csv, options) facade shape, from_csv gains one internal bar; the same queries answer the same rows as the oracle.
+      artifacts: [python/repark/src/repark/spark/functions_expr.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: The s34 oracle fixture is used verbatim; the only pin-side change is limit(1) on two selects, keeping the same oracle rows; no hand-computed expectations.
+      artifacts: [python/repark/tests/fnp_gen_1_s34_spark_oracle.json, python/repark/tests/test_fnp_gen_1_s34.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: check_lib_py and the CAP-1 mirror agree on 2178; the new csv files sit under the 1000-line default ceiling; no unrecorded shrink or growth.
+      artifacts: [scripts/check_lib_py.py, python/repark-parity/tests/test_cap_1_source_file_line_cap.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The live-PySpark-4.1.2 s34 cells are the oracle for every value and error; the kernel unit tests assert engine-internal contracts (row-wise invoke, ladder rendering) where the oracle is silent.
+      artifacts: [crates/repark-functions/src/csv/schema_of_csv.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Pins cited in the tests map and the csv maps; the clause rows above carry the red runs (step 1) and the green runs (steps 2-5 plus the gate pass); verdict 7/7 PROVEN.
+      artifacts: [task/ledgers/staging/fnp-gen-1-ledger.md, python/repark/tests/map.md, crates/repark-functions/src/csv/map.md]
+```
