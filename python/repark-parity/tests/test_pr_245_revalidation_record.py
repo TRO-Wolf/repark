@@ -66,7 +66,7 @@ _SQL_LITERAL_CALLS = {
         "_sql_string_literal": 2,
         "escape_sql_single_quotes": 1,
     },
-    "python/repark/src/repark/spark/functions.py": {"sql_string_literal": 4},
+    "python/repark/src/repark/spark/functions.py": {"sql_string_literal": 5},
     "python/repark/src/repark/spark/functions_collections.py": {"sql_string_literal": 1},
     "python/repark/src/repark/spark/functions_expr.py": {"sql_string_literal": 1},
     "python/repark/src/repark/spark/ml/feature/_transformers.py": {"sql_string_literal": 7},
