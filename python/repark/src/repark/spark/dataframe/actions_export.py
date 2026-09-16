@@ -79,7 +79,7 @@ class DataFrameNaFunctions:
 
         literal = F.lit(value)
         if (
-            type_key in ("int", "long")
+            type_key in ("byte", "short", "int", "long", "float", "double")
             and isinstance(value, (int, float))
             and not isinstance(value, bool)
         ):
@@ -200,14 +200,18 @@ class DataFrameNaFunctions:
             }
             from repark.spark.types import (
                 BooleanType,
+                ByteType,
                 DoubleType,
                 FloatType,
                 IntegerType,
                 LongType,
+                ShortType,
                 StringType,
             )
 
             key_to_cls = {
+                "byte": ByteType,
+                "short": ShortType,
                 "int": IntegerType,
                 "long": LongType,
                 "double": DoubleType,

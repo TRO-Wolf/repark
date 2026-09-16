@@ -132,6 +132,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   (`replace_expr._NO_VALUE`) — PySpark's `<no value>` default — so `na.replace(x)`
   over a non-dict `to_replace` raises `ARGUMENT_REQUIRED` while an explicit `None`
   value null-replaces. pins: io-declared-1/C-004
+  LOGICAL-WIDTH-1 (2026-09-16): `fill` casts the fill literal to the column's own
+  width (`byte`/`short`/`int`/`long`/`float`/`double`, Spark's cast-the-literal rule)
+  so `fillna` never widens the schema; the display-overlay key map knows the narrow
+  keys too. pins: logical-width-1/C-004
 - `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
   PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,
   same-type-group `MIXED_TYPE_REPLACEMENT`, subset resolution through
