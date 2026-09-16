@@ -239,7 +239,7 @@ def _build_holder_child(frame: Any, kind: str, spark: ReparkSession) -> Any:
     if kind == "crossJoin":
         return frame.crossJoin(spark.sql("SELECT 9 AS rid"))
     if kind == "mapInArrow":
-        return frame.mapInArrow(_arrow_passthrough, "id BIGINT, label STRING")
+        return frame.mapInArrow(_arrow_passthrough, "id INT, label STRING")
     raise AssertionError(f"unknown holder kind {kind}")
 
 

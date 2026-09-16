@@ -92,7 +92,7 @@ def test_merge_into_upsert_equals_sql_merge(spark: ReparkSession) -> None:
         ]
     )
     table = spark.sql(f"SELECT id, name FROM {FQ} ORDER BY id").to_arrow()
-    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("id").type == pa.int32()
     assert table.schema.field("name").type == pa.string()
 
 
@@ -213,7 +213,7 @@ def test_merge_into_not_matched_by_source_deletes_unmatched(spark: ReparkSession
         .merge()
     )
     table = spark.sql(f"SELECT id, name FROM {FQ} ORDER BY id").to_arrow()
-    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("id").type == pa.int32()
     assert table.schema.field("name").type == pa.string()
     assert table.to_pylist() == [{"id": 1, "name": "aa"}]
 
@@ -232,7 +232,7 @@ def test_merge_into_not_matched_by_source_update(spark: ReparkSession) -> None:
         .merge()
     )
     table = spark.sql(f"SELECT id, name FROM {FQ} ORDER BY id").to_arrow()
-    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("id").type == pa.int32()
     assert table.schema.field("name").type == pa.string()
     assert table.to_pylist() == [
         {"id": 1, "name": "a"},

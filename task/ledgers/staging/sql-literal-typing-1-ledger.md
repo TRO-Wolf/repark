@@ -150,6 +150,15 @@ passes (full list in §2).
   `crates/repark-sql/tests/cross_door.rs` (2 bodies spell literals BIGINT).
   Each change moves the pin toward the recorded Spark answer; nothing else in
   those files was edited.
+- Second width-flip wave (facade suite, all the same disease — incidental Int64
+  pins on literal-built fixtures, each verified Spark-true before flipping):
+  `test_case_insensitive_conform.py`, `test_catalog_flow.py` (×2),
+  `test_eager_own_1.py` (mapInArrow declares INT now),
+  `test_explode_rewrite.py` (`x` only; `e` stays Int64 over explicit BIGINT),
+  `test_filter_predicate_rewrite.py` (×3 year/YEAR legs),
+  `test_merge_into.py` (×3), `test_sql_dml_eager.py` (×3, stale fixture comment
+  removed), `test_eager_budget_1.py` (byte budget re-measured 312 → 300, 12
+  bytes saved by narrower rows). Map rows updated per file.
 - Native-door follow-up (hand-off, not absorbed): the native door still answers
   Int64 for `SELECT 1` while the Spark door now answers Int32 — the ANSI side of
   the chartered literal-width split (F-Y10-1 decided it, TYPES-1 kept it for

@@ -26,7 +26,6 @@ def spark(tmp_path: Path) -> ReparkSession:
     session = ReparkSession.builder.appName("pytest-dml-eager").getOrCreate()
     session.register_memory_catalog("cat", tmp_path)
     session.sql("CREATE NAMESPACE cat.ns")
-    # `id` is a 64-bit integer (SQL integer literals are int64), `name` a string.
     session.sql(f"CREATE TABLE {TABLE} AS SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2, 'b'")
     return session
 
@@ -46,7 +45,7 @@ def test_bare_sql_insert_applies_without_collect(spark: ReparkSession) -> None:
         {"id": 2, "name": "b"},
         {"id": 3, "name": "c"},
     ]
-    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("id").type == pa.int32()
     assert table.schema.field("name").type == pa.string()
 
 
@@ -55,7 +54,7 @@ def test_bare_sql_delete_applies_without_collect(spark: ReparkSession) -> None:
 
     table = _table(spark)
     assert table.to_pylist() == [{"id": 2, "name": "b"}]
-    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("id").type == pa.int32()
 
 
 def test_bare_sql_update_applies_without_collect(spark: ReparkSession) -> None:
@@ -105,7 +104,7 @@ def test_bare_sql_empty_insert_overwrite_wipes_table(spark: ReparkSession) -> No
     )
     table = _table(spark)
     assert table.to_pylist() == [], "empty INSERT OVERWRITE must wipe all rows (not a silent no-op)"
-    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("id").type == pa.int32()
     assert table.schema.field("name").type == pa.string()
 
 

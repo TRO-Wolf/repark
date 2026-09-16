@@ -205,7 +205,7 @@ def test_function_call_is_not_rewritten_when_a_same_named_column_exists(
 
     assert got.num_rows == 1
     assert got.column("year").to_pylist() == [1]
-    assert got.schema.field("year").type == pa.int64()
+    assert got.schema.field("year").type == pa.int32()
     assert pa.types.is_timestamp(got.schema.field("ts").type)
 
 
@@ -225,7 +225,7 @@ def test_function_call_survives_a_case_differing_same_named_column(
     got = getattr(df, entry_point)("year(ts) = 2020").to_arrow()
 
     assert got.column("YEAR").to_pylist() == [1]
-    assert got.schema.field("YEAR").type == pa.int64()
+    assert got.schema.field("YEAR").type == pa.int32()
     assert pa.types.is_timestamp(got.schema.field("ts").type)
     # …and the bare column reference on that same frame is still rewritten, in either spelling.
     assert getattr(df, entry_point)("YEAR > 1").to_arrow().column("YEAR").to_pylist() == [2]
@@ -246,7 +246,7 @@ def test_bare_column_of_a_function_name_is_still_rewritten(
     got = getattr(df, entry_point)("year > 1").to_arrow()
 
     assert got.column("year").to_pylist() == [2]
-    assert got.schema.field("year").type == pa.int64()
+    assert got.schema.field("year").type == pa.int32()
 
 
 def test_mixed_case_column_survives_the_rewrite(spark: ReparkSession) -> None:
