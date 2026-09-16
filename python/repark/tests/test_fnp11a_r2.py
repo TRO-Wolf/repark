@@ -1,10 +1,11 @@
 """FNP-11A round-2 finding pins against the run-15a Spark oracle.
 
 SQL cells use Spark spellings (bare units, TIMESTAMP_NTZ literals, typeof);
-the runner translates them to engine spellings: quoted units,
-make_timestamp_ntz(...) constructors, typeof dropped in favour of the Arrow
-schema assertion. The kernel batch-efficiency rework behind these pins is
-covered by this module and the R1 suite staying green.
+the runner translates them to engine spellings: make_timestamp_ntz(...)
+constructors, typeof dropped in favour of the Arrow schema assertion (bare
+units run natively since spark-sql-grammar-1/C-008). The kernel
+batch-efficiency rework behind these pins is covered by this module and the R1
+suite staying green.
 pins: fnp-11a/C-016
 """
 
@@ -28,7 +29,6 @@ BOX_ZONE: str = "America/New_York"
 NTZ_LITERAL: re.Pattern[str] = re.compile(
     r"TIMESTAMP_NTZ'(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?'"
 )
-BARE_UNIT: re.Pattern[str] = re.compile(r"\btimestamp(add|diff)\(\s*([A-Za-z]+)\s*,")
 SPARK_PA_TYPE: dict[str, str] = {
     "timestamp": "timestamp[us, tz=UTC]",
     "timestamp_ntz": "timestamp[us]",
@@ -89,7 +89,6 @@ def _drop_typeof(text: str) -> tuple[str, bool]:
 def _translate_sql(expr: str) -> tuple[str, bool]:
     """Engine spelling of one recorded SQL expression plus whether typeof dropped."""
     expr = NTZ_LITERAL.sub(_ntz_call, expr)
-    expr = BARE_UNIT.sub(lambda pair: f"timestamp{pair.group(1)}('{pair.group(2)}',", expr)
     return _drop_typeof(expr)
 
 

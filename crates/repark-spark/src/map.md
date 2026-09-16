@@ -144,6 +144,41 @@ pins: rp-4-fork-repin/C-005, C-006
   eager analyze below runs, so the door still fails illegal casts at build. **BL-11
   (2026-09-16):** the old plan-walk refusal is deleted in favour of that single verdict —
   it never saw the native `DataFrame` path, which builds `Expr::Cast` directly.
+  **SPARK-SQL-GRAMMAR-1 (2026-09-16):** the same pre-plan slot runs the bare-unit
+  (`bare_unit.rs`), nullary-demote (`bare_nullary.rs`) and keyword (`keyword_lower.rs`)
+  lowerings, in that order; the range-frame restatement repeats all three.
+- `bare_nullary.rs` — **SPARK-SQL-GRAMMAR-1 C-010 (2026-09-16):** bare nullary
+  keywords in both Spark directions. `demote_refusing_nullary_calls` lowers a
+  no-paren `localtimestamp` call (the Databricks dialect parses it as a function)
+  to a plain column reference, so a real column still wins and a missing one
+  reaches the planner; `map_bare_nullary_column_error` maps the missing-field
+  error for the six names Spark refuses (`localtimestamp`, `current_catalog`,
+  `current_database`, `current_schema`, `current_timezone`, `now`) to
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` (framed) or `[WITHOUT_SUGGESTION]`
+  (frameless), matching PySpark 4.1.2. Runs in `spark_ast::execute_passthrough`
+  (rewrite pre-plan, map around the whole passthrough) and the range-frame
+  restatement. 8 in-module tests.
+  pins: spark-sql-grammar-1/C-010
+- `keyword_lower.rs` — **SPARK-SQL-GRAMMAR-1 C-003/C-004/C-005 (2026-09-16):**
+  Spark-only keyword lowerings onto registered kernels. `x RLIKE p` becomes
+  `regexp_like(x, p)` (`NOT RLIKE` becomes `NOT regexp_like`); `CAST(x AS
+  TIMESTAMP_LTZ)` becomes `CAST(x AS TIMESTAMP)` (TRY_CAST included); a
+  `TIMESTAMP_NTZ` type name still refuses, now as `[UNSUPPORTED_TIMESTAMP_NTZ]`
+  naming TZ-6 (no tz-naive CAST path exists — rewriting onto `TIMESTAMP WITHOUT
+  TIME ZONE` plans tz-aware, measured). Runs pre-plan in `spark_ast`; the error
+  map chains after the nullary map around the whole passthrough. 6 in-module
+  tests.
+  pins: spark-sql-grammar-1/C-003, C-004, C-005
+- `bare_unit.rs` — **SPARK-SQL-GRAMMAR-1 C-008 (2026-09-16):** the pre-plan rewrite
+  for bare datetime-unit keywords. A bare `DAY` in a 3-argument `timestampadd` /
+  `timestampdiff` / `dateadd` / `datediff` call becomes the `'DAY'` string literal the
+  #606 kernels take (case-insensitive; `dateadd` / `datediff` keep their names — the
+  kernels already route 3-argument calls). A quoted unit refuses
+  `[INVALID_PARAMETER_VALUE.DATETIME_UNIT]` and an unknown bare unit refuses
+  `[UNRESOLVED_ROUTINE]`, both matching PySpark 4.1.2 batch-14. Runs in
+  `spark_ast::execute_passthrough` and the range-frame restatement, in lockstep.
+  7 in-module tests.
+  pins: spark-sql-grammar-1/C-008
 - `spark_literals.rs` — **SQP-1:** `canonicalize(sql) -> Cow<str>`, the front-door pass that rewrites
   Spark string-literal escapes once (rule table, dialect, design in the module doc). Sole caller
   `router::execute_with_read_only` (grep-pinned); DataFusion-native `COPY` / `CREATE EXTERNAL TABLE`
