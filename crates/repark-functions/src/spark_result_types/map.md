@@ -2,14 +2,17 @@
 
 ## Purpose
 
-Unit tests for `SparkIntegerLiteral` (plus the signed aggregate/window wrappers'
-rule shape): narrowing lands on `SELECT`/`VALUES`/CTAS literals, `LIMIT` fetch/skip
-stay `Int64`, `count(*)`/`regr_count`/`ntile`/`rank()` keep their signed widths.
+Unit tests for the signed aggregate/window wrappers' rule shape:
+`count(*)`/`regr_count`/`ntile`/`rank()` keep their signed widths. Literal
+narrowing coverage moved to `repark-spark`'s `SparkIntegralLiteral`
+(**DOOR-CONVERGE-2b round 2, 2026-09-16:** the late `SparkIntegerLiteral`
+rule is deleted; one narrowing rule remains).
+pins: door-converge-2b/C-004
 
 ## Files
 
-- [`tests.rs`](tests.rs) contains the suite; the context mirrors the production rule
-  order (DataFusion defaults, then narrowing).
+- [`tests.rs`](tests.rs) contains the suite; the context is DataFusion
+  defaults plus the signed wrappers.
 
 ## Contracts pinned
 

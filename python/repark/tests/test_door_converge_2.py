@@ -18,16 +18,17 @@ Respellings (same shape, parse-level only): `1L`/`2L` become `CAST(1 AS BIGINT)`
 `CAST(1.5 AS DECIMAL(2, 1))` because a bare `1.5` parses as DOUBLE on this door while
 Spark reads a `decimal(2,1)` literal — the pinned claim is the widening rule to
 `decimal(11,1)`; Q12-18 spells the null element as `CAST(NULL AS INT)` because the
-bare `array(3, NULL)` constructor widens to BIGINT on this door (round-2
-literal-widths scope — the as-written form reverses correctly, only wider).
+bare `array(3, NULL)` constructor widened to BIGINT before DOOR-CONVERGE-2b's
+Spark `array` kernel; it now resolves to `array<int>` exactly, so the respelled
+form stays as the pin.
 
-Recorded-divergence legs (all `ARRAY-LITERAL-CONTAINSNULL-1`, owned by
-DOOR-CONVERGE-2 round 2): `array(...)` literals declare a nullable element on this
-door, so literal-input cells whose fixture says `containsNull=false` pin
-`nullable=True` here — Q12-0, Q12-3, Q12-4, Q12-8 (outer and inner), Q12-9, Q12-16,
-Q12-17, Q12-20 (element `Null` ≈ Spark `void`), Q12-23. Column-input cells,
-`sequence` cells and `split` cells assert the fixture exactly: the view columns are
-built nullable-element, and both kernels construct `containsNull=false` always.
+DOOR-CONVERGE-2b closed `ARRAY-LITERAL-CONTAINSNULL-1`: `array(...)` literals now
+declare element `containsNull=false` when no argument is nullable, and the literal
+legs Q12-0, Q12-3, Q12-4, Q12-8 (outer and inner), Q12-9, Q12-16, Q12-17, Q12-20
+(element `Null` ≈ Spark `void`), Q12-23 assert the fixture exactly. Column-input
+cells, `sequence` cells and `split` cells assert the fixture exactly: the view
+columns are built nullable-element, and both kernels construct
+`containsNull=false` always.
 
 Error mappings: `concat`/`sequence` refusals surface `AnalysisException` carrying the
 Spark `DATATYPE_MISMATCH` class; `sequence` step errors surface the base
@@ -99,7 +100,7 @@ _SQL_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
     "Q12-0": (
         "SELECT concat(array(1), array(2))",
         [[1, 2]],
-        _int_list(True),
+        _int_list(False),
         False,
     ),
     "Q12-1": (
@@ -117,13 +118,13 @@ _SQL_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
     "Q12-3": (
         "SELECT concat(array(1), array(CAST(2 AS BIGINT)))",
         [[1, 2]],
-        pa.list_(pa.field("element", pa.int64(), nullable=True)),
+        pa.list_(pa.field("element", pa.int64(), nullable=False)),
         False,
     ),
     "Q12-4": (
         "SELECT concat(array(1), array(CAST(1.5 AS DECIMAL(2, 1))))",
         [[Decimal("1.0"), Decimal("1.5")]],
-        pa.list_(pa.field("element", pa.decimal128(11, 1), nullable=True)),
+        pa.list_(pa.field("element", pa.decimal128(11, 1), nullable=False)),
         False,
     ),
     "Q12-5": (
@@ -150,8 +151,8 @@ _SQL_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
         pa.list_(
             pa.field(
                 "element",
-                pa.list_(pa.field("element", pa.int32(), nullable=True)),
-                nullable=True,
+                pa.list_(pa.field("element", pa.int32(), nullable=False)),
+                nullable=False,
             )
         ),
         False,
@@ -159,7 +160,7 @@ _SQL_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
     "Q12-9": (
         "SELECT concat(array(1), array())",
         [[1]],
-        _int_list(True),
+        _int_list(False),
         False,
     ),
     "Q12-11": ("SELECT concat('a', 'b')", ["ab"], pa.string(), False),
@@ -175,13 +176,13 @@ _SQL_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
     "Q12-16": (
         "SELECT array(1) || array(2)",
         [[1, 2]],
-        pa.list_(pa.field("element", pa.int32(), nullable=True)),
+        pa.list_(pa.field("element", pa.int32(), nullable=False)),
         False,
     ),
     "Q12-17": (
         "SELECT reverse(array(1, 2, 3))",
         [[3, 2, 1]],
-        _int_list(True),
+        _int_list(False),
         False,
     ),
     "Q12-18": (
@@ -199,7 +200,7 @@ _SQL_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
     "Q12-20": (
         "SELECT reverse(array())",
         [[]],
-        pa.list_(pa.field("element", pa.null(), nullable=True)),
+        pa.list_(pa.field("element", pa.null()).with_nullable(False)),
         False,
     ),
     "Q12-21": ("SELECT reverse('abc')", ["cba"], pa.string(), False),
@@ -215,8 +216,8 @@ _SQL_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
         pa.list_(
             pa.field(
                 "element",
-                pa.list_(pa.field("element", pa.int32(), nullable=True)),
-                nullable=True,
+                pa.list_(pa.field("element", pa.int32(), nullable=False)),
+                nullable=False,
             )
         ),
         False,

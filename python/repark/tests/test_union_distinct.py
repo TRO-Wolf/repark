@@ -11,7 +11,7 @@ separately: after U2 (`parse_float_as_decimal=true`) repark types
 DECIMAL(20,0) union DECIMAL(2,1)), where Spark lands ``decimal128(11, 1)`` non-null
 (INT promoted to DECIMAL(10,0) union DECIMAL(2,1)).
 That leftover is campaign DEC-8 / U3 **set-op widening** (Spark `forType(INT)=(10,0)`, not
-`fromLiteral` digits) — see `test_union_inline_decimal_literal_diverges_from_spark`.
+`fromLiteral` digits) — see `test_union_inline_decimal_literal_matches_spark`.
 `dropDuplicates(subset)` is row-nondeterministic in Spark, so its fixtures pin a deterministic
 survivor (the surviving key set, or identical non-key values), never an accident (docs/testing.md
 row-order discipline).
@@ -26,7 +26,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import AnalysisException
-from repark_parity import FrameMismatchError, assert_frames_equal
+from repark_parity import assert_frames_equal
 
 
 @pytest.fixture
@@ -87,7 +87,7 @@ def test_parity_union_type_coercion(spark: ReparkSession) -> None:
     ``[('v', 'double', nullable=True)]`` with values ``1.0`` / ``2.5``. An inline SQL literal
     2.5 does NOT type identically (Spark parses it as DECIMAL(2,1)), so it cannot back this
     parity claim; that divergence is pinned in
-    ``test_union_inline_decimal_literal_diverges_from_spark``.
+    ``test_union_inline_decimal_literal_matches_spark``.
     """
     ints = spark.createDataFrame([(1,)], ["v"])
     doubles = spark.createDataFrame([(2.5,)], ["v"])
@@ -99,34 +99,24 @@ def test_parity_union_type_coercion(spark: ReparkSession) -> None:
     assert_frames_equal(result.to_arrow(), golden)
 
 
-def test_union_inline_decimal_literal_diverges_from_spark(spark: ReparkSession) -> None:
-    """DISCLOSED DIVERGENCE (TY-3): TYPES-1 converged the width to (11,1); nullability stays.
+def test_union_inline_decimal_literal_matches_spark(spark: ReparkSession) -> None:
+    """TY-3 CLOSED (DOOR-CONVERGE-2b, 2026-09-16): literal VALUES rows went
+    non-null, so the union is Spark-equal.
 
     ``VALUES (2.5)`` is DECIMAL(2,1); ``VALUES (1)`` is Int32 -> ``DECIMAL(10,0) union
-    DECIMAL(2,1)`` -> ``decimal128(11, 1)`` **nullable**. Spark 4.1.2 yields
-    ``decimal128(11, 1)`` **non-null**.
-
-    The width converged when integer literals narrowed to INT (Spark ``forType(INT)``);
-    the remaining gap is nullability only, which is out of scope here. Still DECLARED.
+    DECIMAL(2,1)`` -> ``decimal128(11, 1)`` **non-null**, matching the PySpark
+    4.1.2 golden below. The width converged under TYPES-1; the nullability half
+    converged when literal VALUES rows went non-null (PG-values-alias).
     """
     ints = spark.sql("SELECT * FROM (VALUES (1)) AS t(v)")
     dec = spark.sql("SELECT * FROM (VALUES (2.5)) AS t(v)")
     result = ints.union(dec).to_arrow()
 
-    repark_out = pa.table(
-        [pa.array([Decimal("1.0"), Decimal("2.5")], pa.decimal128(11, 1))],
-        schema=pa.schema([pa.field("v", pa.decimal128(11, 1), nullable=True)]),
-    )
-    assert_frames_equal(result, repark_out)
-
-    # The real Spark golden (recorded from PySpark 4.1.2). Load-bearing: if U3 converges on
-    # DECIMAL(11,1) non-null, this guard flips RED and the disclosure must be revisited.
     spark_golden = pa.table(
         [pa.array([Decimal("1.0"), Decimal("2.5")], pa.decimal128(11, 1))],
         schema=pa.schema([pa.field("v", pa.decimal128(11, 1), nullable=False)]),
     )
-    with pytest.raises(FrameMismatchError):
-        assert_frames_equal(result, spark_golden)
+    assert_frames_equal(result, spark_golden)
 
 
 def test_union_column_count_mismatch_raises(spark: ReparkSession) -> None:

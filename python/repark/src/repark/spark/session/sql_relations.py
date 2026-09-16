@@ -497,9 +497,24 @@ def _match_from_or_join_keyword(query: str, index: int) -> str | None:
             if next_char.isalnum() or next_char == "_":
                 continue
 
+        if keyword == "FROM" and _from_is_distinct_from_operand(query, index):
+            continue
+
         return query[index:after]  # preserve original case
 
     return None
+
+
+def _from_is_distinct_from_operand(query: str, index: int) -> bool:
+    """True when the FROM at ``index`` is the ``IS [NOT] DISTINCT FROM`` operator
+    tail, not a table-clause keyword."""
+    cursor = index
+    while cursor > 0 and query[cursor - 1].isspace():
+        cursor -= 1
+    end = cursor
+    while cursor > 0 and (query[cursor - 1].isalnum() or query[cursor - 1] == "_"):
+        cursor -= 1
+    return query[cursor:end].upper() == "DISTINCT"
 
 
 def _update_rest_has_set_clause(rest: str) -> bool:

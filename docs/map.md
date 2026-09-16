@@ -47,7 +47,10 @@ repo.
   fixed offsets: Spark accepts `+05:30:30`, repark refuses, because Arrow's `Tz` has no seconds-offset
   form); `BL-19` and `BL-20` are appended from live-oracle measurements taken that night — the
   unknown-function refusal shape (`UNRESOLVED_ROUTINE`, a blanket contract rather than one row per
-  missing name) and the SQL door's integral literal typing, which makes the two repark doors disagree. **FNP-11B registry pass (2026-09-15, run 17a):**
+  missing name) and the SQL door's integral literal typing, which makes the two repark doors disagree.
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** `COMPLEX-ELEM-NULL-1` array arm
+  FIXED (struct/map arms stay BACKLOG); `ARRAY-LITERAL-CONTAINSNULL-1` stays
+  FIXED. **FNP-11B registry pass (2026-09-15, run 17a):**
   `EX-FN-20`, `EX-FN-21` and `EX-FN-28` flip to FIXED with their pin paths and `BL-13` is rewritten
   to its new shape (ledger D-18); seven §7 residual rows are appended, each naming the seam and its
   owner — the year-month `try_avg` rendering (R-17a-16, one Arrow `MonthDayNano` carries both ANSI

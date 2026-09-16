@@ -903,3 +903,101 @@ pub fn timestampadd(args: Vec<Expr>) -> Expr {
 pub fn timestampdiff(args: Vec<Expr>) -> Expr {
     call(crate::temporal_ctor::adddiff::timestampdiff_udf(), args)
 }
+
+#[must_use]
+pub fn round(args: Vec<Expr>) -> Expr {
+    call(crate::spark_round::round_udf(), args)
+}
+
+#[must_use]
+pub fn bround(args: Vec<Expr>) -> Expr {
+    call(crate::spark_round::bround_udf(), args)
+}
+
+#[must_use]
+pub fn ceil(args: Vec<Expr>) -> Expr {
+    call(crate::spark_round::ceil_udf(), args)
+}
+
+#[must_use]
+pub fn floor(args: Vec<Expr>) -> Expr {
+    call(crate::spark_round::floor_udf(), args)
+}
+
+#[must_use]
+pub fn like(args: Vec<Expr>) -> Expr {
+    call(crate::spark_like::like_udf(), args)
+}
+
+#[must_use]
+pub fn ilike(args: Vec<Expr>) -> Expr {
+    call(crate::spark_like::ilike_udf(), args)
+}
+
+#[must_use]
+pub fn date_part(args: Vec<Expr>) -> Expr {
+    call(crate::spark_date_part::date_part_udf(), args)
+}
+
+#[must_use]
+pub fn slice(array: Expr, start: Expr, length: Expr) -> Expr {
+    call(
+        crate::collection::spark_array::slice_udf(),
+        vec![array, start, length],
+    )
+}
+
+#[must_use]
+pub fn array(args: Vec<Expr>) -> Expr {
+    call(crate::collection::spark_array::make_array_udf(), args)
+}
+
+#[must_use]
+pub fn array_repeat(value: Expr, count: Expr) -> Expr {
+    call(
+        crate::collection::spark_array::array_repeat_udf(),
+        vec![value, count],
+    )
+}
+
+#[must_use]
+pub fn map_keys(map: Expr) -> Expr {
+    call(crate::collection::spark_array::map_keys_udf(), vec![map])
+}
+
+#[must_use]
+pub fn map_values(map: Expr) -> Expr {
+    call(crate::collection::spark_array::map_values_udf(), vec![map])
+}
+
+#[must_use]
+pub fn array_distinct(array: Expr) -> Expr {
+    call(
+        crate::collection::spark_array::array_distinct_udf(),
+        vec![array],
+    )
+}
+
+#[must_use]
+pub fn array_compact(array: Expr) -> Expr {
+    call(
+        crate::collection::spark_array::array_compact_udf(),
+        vec![array],
+    )
+}
+
+#[must_use]
+pub fn array_remove(array: Expr, value: Expr) -> Expr {
+    call(
+        crate::collection::spark_array::array_remove_udf(),
+        vec![array, value],
+    )
+}
+
+#[must_use]
+pub fn array_union(left: Expr, right: Expr) -> Expr {
+    call(
+        crate::collection::spark_array::array_union_udf(),
+        vec![left, right],
+    )
+}

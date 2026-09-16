@@ -46,9 +46,6 @@ pub fn insert_literal_rule_before_coercion(
 #[must_use]
 pub fn spark_door_post_coercion_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     repark_functions::analyzer_rules()
-        .into_iter()
-        .filter(|rule| rule.name() != "spark_integer_literal")
-        .collect()
 }
 
 fn plan_may_narrow(plan: &LogicalPlan) -> Result<bool> {

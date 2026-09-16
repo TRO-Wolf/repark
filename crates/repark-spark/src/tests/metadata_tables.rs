@@ -174,7 +174,7 @@ async fn metadata_tables_spark_dot_form_and_guards() {
     run(
         &ctx,
         &catalogs,
-        "CREATE TABLE ice.sales.files AS SELECT 42 AS x",
+        "CREATE TABLE ice.sales.files AS SELECT CAST(42 AS INT) AS x",
     )
     .await;
     let real = execute(&ctx, &catalogs, "SELECT x FROM ice.sales.files")

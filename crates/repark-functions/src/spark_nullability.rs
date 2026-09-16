@@ -1,10 +1,12 @@
-use datafusion::arrow::datatypes::DataType;
+use std::sync::Arc;
+
+use datafusion::arrow::datatypes::{DataType, Field};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, Result};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
-use datafusion::logical_expr::{Expr, ExprSchemable, LogicalPlan, Operator};
+use datafusion::logical_expr::{Expr, ExprSchemable, LogicalPlan, Operator, Values};
 use datafusion::optimizer::AnalyzerRule;
 
 use crate::ansi::spark_ansi_enabled_from_options;
@@ -31,6 +33,9 @@ impl AnalyzerRule for SparkNullability {
 }
 
 fn rewrite_plan(plan: LogicalPlan, ansi_enabled: bool) -> Result<Transformed<LogicalPlan>> {
+    if let LogicalPlan::Values(values) = &plan {
+        return rewrite_values_schema(values);
+    }
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -73,7 +78,10 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Transforme
         );
     }
     if let Expr::BinaryExpr(binary) = &expr
-        && binary.op == Operator::IsNotDistinctFrom
+        && matches!(
+            binary.op,
+            Operator::IsNotDistinctFrom | Operator::IsDistinctFrom
+        )
         && datafusion_nullable(&expr, schema) == Some(true)
     {
         return Transformed::new(
@@ -86,6 +94,43 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Transforme
         return Transformed::new(nullable, true, TreeNodeRecursion::Stop);
     }
     Transformed::no(expr)
+}
+
+fn rewrite_values_schema(values: &Values) -> Result<Transformed<LogicalPlan>> {
+    let empty = DFSchema::empty();
+    let mut changed = false;
+    let qualified: Vec<_> = values
+        .schema
+        .iter()
+        .enumerate()
+        .map(|(index, (qualifier, field))| {
+            let nullable = values.values.iter().any(|row| {
+                row.get(index)
+                    .is_none_or(|expr| expr.nullable(&empty).unwrap_or(true))
+            });
+            if nullable == field.is_nullable() {
+                (qualifier.cloned(), Arc::clone(field))
+            } else {
+                changed = true;
+                (
+                    qualifier.cloned(),
+                    Arc::new(Field::new(
+                        field.name(),
+                        field.data_type().clone(),
+                        nullable,
+                    )),
+                )
+            }
+        })
+        .collect();
+    if !changed {
+        return Ok(Transformed::no(LogicalPlan::Values(values.clone())));
+    }
+    let schema = DFSchema::new_with_metadata(qualified, values.schema.metadata().clone())?;
+    Ok(Transformed::yes(LogicalPlan::Values(Values {
+        schema: Arc::new(schema),
+        values: values.values.clone(),
+    })))
 }
 
 fn nullable_decimal_arith(expr: &Expr, schema: &DFSchema) -> Option<Expr> {
@@ -306,6 +351,23 @@ mod tests {
         ] {
             assert_eq!(flags(&ctx, sql).await, vec![false], "{sql}");
         }
+    }
+
+    #[tokio::test]
+    async fn values_columns_take_literal_row_nullability() {
+        let ctx = ctx_ansi(true);
+        assert_eq!(
+            flags(&ctx, "SELECT * FROM (VALUES (1, 'a')) AS t(x, y)").await,
+            vec![false, false]
+        );
+        assert_eq!(
+            flags(&ctx, "SELECT * FROM (VALUES (NULL, 1)) AS t(x, y)").await,
+            vec![true, false]
+        );
+        assert_eq!(
+            flags(&ctx, "SELECT NULL IS DISTINCT FROM 1 AS v").await,
+            vec![false]
+        );
     }
 
     #[tokio::test]

@@ -37,7 +37,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   through `__repark_gen_field`, which unions the parent struct's validity into the
   child so a NULL element emits NULL fields rather than Arrow defaults; the outer
   spellings normalize NULL/empty inputs to a one-NULL-element list so `preserve_nulls`
-  emits Spark's all-NULL row. Intended-non-nullable outputs wrap in the
+  emits Spark's all-NULL row; the NULL list carries a nullable copy of the
+  element field (**DOOR-CONVERGE-2b** round 2, 2026-09-16 — reusing the
+  input's now-non-null field panicked at Arrow export).
+  pins: door-converge-2b/C-005. Intended-non-nullable outputs wrap in the
   `__repark_spark_nonnull__` schema marker (value-preserving). A single `AS name` or
   `__repark_gen_alias` name list must match the output arity or the rewrite raises
   `[COLUMN_ALIASES_MISMATCH]`; two generators, a `stack` call, an explode-path
@@ -124,11 +127,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   table into a single batch buffer with the input null bitmap.
   pins: door-converge-1/C-001, C-010
 - `spark_result_types.rs` (+ `spark_result_types/tests.rs`) — **TYPES-1 (2026-09-05):**
-  `SparkIntegerLiteral` narrows in-range `Int64` literals to `Int32` (first in
-  `analyzer_rules()`, after DataFusion's own `TypeCoercion`; `LIMIT` fetch/skip stay `Int64`
-  for the physical planner), `SignedAggregate` casts `regr_count`/`approx_distinct` to
+  `SignedAggregate` casts `regr_count`/`approx_distinct` to
   `Int64`, `SignedWindow` casts the rank family to `Int32`.
   pins: types-1/C-001, C-003, C-005, C-007
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** the late `SparkIntegerLiteral`
+  rule is deleted; literal narrowing lives only in `repark-spark`'s
+  pre-coercion `SparkIntegralLiteral`, and the shared
+  `narrow_provisional_integer_*` helpers stay for HOF preparation.
+  pins: door-converge-2b/C-004
   **DOOR-CONVERGE-1 (2026-09-15):** `SignedAggregate` additionally declares
   `is_nullable() = false` with `default_value = 0` — `approx_count_distinct` /
   `regr_count` answer non-null `bigint`, `0` on empty input. pins: door-converge-1/C-006
@@ -140,7 +146,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (LIT2-SQL-03); only the lexer-level negative token narrows.
   pins: sql-literal-typing-1/V-001
 - `lambda_rebind.rs` — **FNP-8 (2026-09-06):** `LambdaRebind`, in `analyzer_rules()`
-  twice — right after `SparkIntegerLiteral` and last. Two passes over lambda bindings: it
+  twice — first and last. Two passes over lambda bindings: it
   packs a multi-parameter lambda body that leaves a parameter unreferenced into the
   facade's own `named_struct` + `get_field("__hof_body")` shape (the physical planner
   remaps by referenced position, so an `(x, i)` body mentioning only `i` would read the
@@ -526,8 +532,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `decimal_precision.rs` — **V-2 / DEC U3+U4a:** `SparkDecimalPrecision` analyzer rule.
   U3: integer-literal `fromLiteral` (`DECIMAL(digits,0)`) on `+ − *` only (typed INT
   columns untouched). U4a: CAST-after add/sub/mul clamp (`allowPrecisionLoss=true`).
-  `/` formula, DEC-8, and DEC-6 live in `decimal_spark.rs`. Inserted **second** in
-  `analyzer_rules()` (after `SparkIntegerLiteral`, before `SparkDecimalRewrite` then
+  `/` formula, DEC-8, and DEC-6 live in `decimal_spark.rs`. Inserted **first** in
+  `analyzer_rules()` (before `SparkDecimalRewrite` then
   `SparkExprSemantics`). **TYPES-1 (2026-09-05):** the default-cast check accepts the
   narrowed `(20,0)`-over-`Int32` shape and keeps `(10,0)`-over-`Int32` user casts declared.
   Ledger: `task/v2-dec-u3u4-ledger.md`.
@@ -589,6 +595,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Timestamp only. The facade column-CAST pin still holds Spark-equal non-null
   struct CAST.
   pins: nullability-2/C-001, C-002, C-004
+  **DOOR-CONVERGE-2b (2026-09-15):** `IS DISTINCT FROM` / `IS NOT DISTINCT FROM`
+  wrap non-null beside the existing `<=>` arm, and `rewrite_values_schema`
+  rebuilds `LogicalPlan::Values` schemas so columns of literal rows take the
+  rows' nullability (Spark's literal-VALUES fields are non-null; DataFusion
+  declares them unconditionally nullable). pins: door-converge-2b/C-005
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the
@@ -599,8 +610,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `CAST-BOOL-DEC-1`.
   pins: nullability-2/C-003
 - `int_to_binary.rs` — **BL-11 (2026-09-16):** the `IntToBinaryCast` analyzer rule,
-  slotted after `SparkExprSemantics` so `SparkIntegerLiteral` has already narrowed bare
-  literals: a `CAST(<integral> AS BINARY)` becomes the `__repark_int_to_binary__` UDF
+  slotted after `SparkExprSemantics`: a `CAST(<integral> AS BINARY)` becomes the `__repark_int_to_binary__` UDF
   (big-endian bytes of natural width, NULL propagates, nullability follows the input)
   only when ANSI is off; the same rule refuses every other `→ BINARY` cast with Spark's
   `DATATYPE_MISMATCH` (`CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals
@@ -637,12 +647,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`log1p` / `expm1`) — later registration wins a
   name clash) + Q1 percentile aliases + `datetime::functions()` date shims (the
   single-use helper is inlined; the root stays under its ceiling) +
-  `analyzer_rules()` (`SparkIntegerLiteral` → `LambdaRebind` → `SparkDecimalPrecision` →
+  `analyzer_rules()` (`LambdaRebind` → `SparkDecimalPrecision` →
   `SparkDecimalRewrite` → `SparkIntegerOverflow` → Spark semantics +
-  cardinality + instant_ts + a closing `TypeCoercion` — the narrowing runs after
-  DataFusion's own coercion and re-opens mixes, so the closing pass shuts them before the
-  next rule (pins: types-1/C-007) + `LambdaRebind` twice — after the integer narrowing
-  and final (pins: fnp-8/C-004); the
+  cardinality + instant_ts + a closing `TypeCoercion` (pins: types-1/C-007) +
+  `LambdaRebind` twice — first and final (pins: fnp-8/C-004); the
   session installs them via the Spark door's `SessionExtension`;
   error conversion one layer up is `repark-core`) + `register_spark_decimal_planner` +
   `register_spark_integer_planner` +
@@ -702,13 +710,21 @@ scalars live under [`try_invert/`](try_invert/map.md).
   different questions and each is laxer than the other somewhere.
 - `analyzer.rs` — `SparkExprSemantics`: integer `/` → always-double division; division/modulo-by-zero
   follows `spark.sql.ansi.enabled` (raise when TRUE, NULL otherwise); `[]` array subscript →
-  0-based with invalid-index → NULL (rewrites the planner's
-  `array_element` onto the embedded `__repark_array_get__` UDF); swaps planner-embedded built-in
+  0-based with invalid-index → NULL (`analyzer/subscript.rs` rewrites the planner's
+  `array_element` onto the embedded `__repark_array_get__` UDF, skipping the registered
+  refusing `array_element` of the same name and stripping DataFusion's first-pass
+  `CAST(… AS List(item …))` coercion so narrowed literal widths survive — D-1); swaps
+  planner-embedded built-in
   `substr` nodes onto the Spark shim (the `SUBSTRING` special form bypasses the registry);
   **DOOR-CONVERGE-2 (2026-09-15):** planner-embedded `array_concat` nodes (the `||`
   operator over equal lists, plus direct calls) rewrite onto the door-converged `concat`
   UDF when every argument is list-shaped or NULL — the nested planner bakes its own UDF
   in, so only the analyzer sees the name. pins: door-converge-2/C-001;
+  **DOOR-CONVERGE-2b (2026-09-15):** `analyzer/date_part.rs` rewrites the
+  planner-embedded `date_part` builtin (EXTRACT and named calls alike) onto
+  `__repark_date_part__`, and `analyzer/like_escape.rs` additionally routes
+  `LIKE … ESCAPE` / `ILIKE … ESCAPE` with a non-backslash escape onto the
+  `spark_like.rs` kernels. pins: door-converge-2b/C-003, C-006;
   **F2 octo C1:** `overlay(..., -1)` literal 4th arg dropped to 3-arg (Spark replace-length;
   pin `overlay_len_minus_one_matches_three_arg`);
   **TZ-5 (2026-08-12):** `CAST(TIMESTAMP AS <numeric>)` → epoch SECONDS
@@ -818,10 +834,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (int widths kept, descending default step, dates with 1-day default and month steps,
   timestamps with interval steps, NULL bound/step → NULL with `containsNull=false`, zero
   or wrong-sign step raises Spark's `Illegal sequence boundaries` text, decimal bounds
-  refuse `SEQUENCE_WRONG_INPUT_TYPES`). `coerce_types` validates but never casts: the
-  built-in `type_coercion` runs before `spark_integer_literal` narrowing, so a widening
-  coerce would shield provisional `Int64` literals behind `CAST`s and defeat the narrow —
-  widths resolve in the return type after narrowing, and the kernel casts internally.
+  refuse `SEQUENCE_WRONG_INPUT_TYPES`). `coerce_types` validates but never casts: a
+  widening coerce would shield provisional `Int64` literals behind `CAST`s and defeat
+  the pre-coercion narrow — widths resolve in the return type after narrowing, and the
+  kernel casts internally.
   Month stepping reuses `datetime::spark_add_months` (now `pub(crate)`). The facade arm
   moved to `dispatch_spark.rs` with the `refuse_facade_literal_expansion` ceiling kept;
   the plan-time `ArrayCardinalityCeiling` still fires on the `sequence` name.
@@ -968,6 +984,42 @@ scalars live under [`try_invert/`](try_invert/map.md).
   swaps in. **E1 octo C2:** `SparkGetItem` / `spark_get_item_udf` (`__repark_get_item__`) —
   polymorphic array 0-based or map-by-key for facade `Column.__getitem__` Column/other keys
   (never fail-open to parent container).
+  **DOOR-CONVERGE-2b (2026-09-15):** `SparkArrayGet`/`SparkGetItem`/`SparkElementAt`
+  return fields now follow Spark's subscript rules (map value always nullable;
+  array element per `computeNullabilityFromArray` — children or element
+  `containsNull`), and `collection::functions()` registers the
+  `collection/spark_array.rs` set (repark `array`/`slice`/`array_repeat`/
+  `map_keys`/`map_values`, the refusing `array_element`, and the
+  `array_distinct`/`array_compact`/`array_remove`/`array_union` list-op
+  wrappers). pins: door-converge-2b/C-004, C-005
+- `spark_round.rs` — **DOOR-CONVERGE-2b (2026-09-15):** `round`/`bround`
+  (HALF_UP / HALF_EVEN through `BigDecimal`-exact expansion for float/double;
+  i128 decimal math otherwise) and scale-bearing `__repark_ceil__` /
+  `__repark_floor__` (the `ceil`/`ceiling`/`floor` 2-arg spellings reach them
+  through `repark-spark`'s token rewrite — `CEIL(x, n)` is a dedicated AST node
+  DataFusion refuses). Decimal result type per Spark `RoundBase.dataType`
+  (`integralLeastNumDigits = p - s + 1`, 38-clamped); scale args are implicit
+  `DecimalType.forType` casts; NULL scale answers NULL with the scale-0 type.
+  One-arg `ceil`/`floor` keep `decimal(p,s) → decimal(min(p-s+1,38),0)`,
+  integral → `bigint`, float/double → `bigint`. pins: door-converge-2b/C-001,
+  C-002
+- `spark_like.rs` — **DOOR-CONVERGE-2b (2026-09-15):** `like`/`ilike`, 2- and
+  3-arg. Third argument is the escape character — non-foldable or
+  non-single-character escapes refuse `INVALID_ESCAPE_CHAR` (empty string
+  included); a pattern ending in the unconsumed escape is
+  `INVALID_FORMAT.ESC_AT_THE_END`. Matching is a per-row wildcard walk, not a
+  regex. `analyzer/like_escape.rs` rewrites `LIKE … ESCAPE` plans onto these
+  UDFs when the escape is not the backslash. pins: door-converge-2b/C-006
+- `spark_date_part.rs` — **DOOR-CONVERGE-2b (2026-09-15):** `__repark_date_part__`
+  (aliases `date_part`/`datepart`, the `extract` spellings reach it through the
+  `analyzer/date_part.rs` arm over DF's embedded builtin). The Spark field set
+  (YEAR/YEARS/YR/YRS, YEAROFWEEK, QUARTER/QTR, MONTH/MON/MONS/MONTHS, WEEK/WEEKS,
+  DAY/DAYS, DAYOFWEEK/DOW, DAYOFWEEK_ISO/DOW_ISO, DOY, HOUR/HOURS/HR/HRS,
+  MINUTE/MIN/MINS/MINUTES, SECOND/S/SEC/SECONDS/SECS) answers `int`, except the
+  second family which answers `decimal(8,6)` (seconds plus microsecond
+  fraction); date sources read time fields as midnight. Unknown fields and
+  `epoch`/`nanosecond` refuse `INVALID_EXTRACT_FIELD` at analysis.
+  pins: door-converge-2b/C-003
 - `datetime.rs` — Spark calendar date shim. `DatePartUdf` (generic `date_part`-backed extractor with
   a Spark indexing offset) covers `year`/`month`/`dayofmonth`/`day`/`dayofyear`/`quarter`/`weekofyear`/
   `yearofweek`/`dayofweek`/`weekday`; `MakeDate` builds `Date32` from three `Int64` columns. WG2 added

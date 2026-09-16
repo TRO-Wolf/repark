@@ -225,7 +225,7 @@ EXPECTED_SYMBOL_HASHES = {
     ),
     "_master_warned": ("1d1dfb629085b4810080a912d37b236e3a46e39d39340efd26798e99ebd1db83"),
     "_match_from_or_join_keyword": (
-        "536a4c6c4810c55736b8ca642f4189f39e811b2245bc7ddf0e1d7c58b4aa2af1"
+        "8ae0e6363a67b91125cb80a48286ed61cdcf693d22684c1983f746f7216afc4d"
     ),
     "_materialize_arrow_as_memtable_frame": (
         "75fde5520c9bd4362523509defbde54daa899a612f112f6b43117b97b952f1a6"

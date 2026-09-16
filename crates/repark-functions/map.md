@@ -72,10 +72,11 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   registration wins) + **FN-FIX-1** `percentile_approx` / `approx_percentile` discrete UDAF
   (`percentile_approx_udaf` with alias); `approx_percentile_cont` stays the t-digest name for ML +
   `spark_date_shim_functions()` + `analyzer_rules()` (**TYPES-1 (2026-09-05):**
-  `SparkIntegerLiteral` first, then `SparkDecimalPrecision`, `SparkDecimalRewrite` (U4b `/` +
+  `SparkDecimalPrecision`, `SparkDecimalRewrite` (U4b `/` +
   DEC-6), `SparkIntegerOverflow` (F-Y10-1), `SparkExprSemantics` + cardinality + instant_ts,
-  and a closing `TypeCoercion` — the narrowing runs after DataFusion's own coercion and
-  re-opens mixes, so the closing pass shuts them before the next rule; installed by the session
+  and a closing `TypeCoercion`; **DOOR-CONVERGE-2b round 2 (2026-09-16):** the late
+  narrowing rule is deleted, narrowing lives only in `repark-spark`'s pre-coercion
+  `SparkIntegralLiteral`; installed by the session
   on every context via the Spark door's `SessionExtension` in `repark-spark`) + DEC-8
   `register_spark_decimal_planner` from `register_all` + the shared `shim_udf_boilerplate!`
   macro. Error conversion from `DataFusionError` happens one layer up in `repark-core` (this

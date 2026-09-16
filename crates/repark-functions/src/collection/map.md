@@ -18,6 +18,14 @@ needed.
   expressions, where the DataFusion kernel splits on literals). Exports
   `bind_ascii_perl_classes`. Depends on workspace `regex`.
 - `shuffle.rs` — **X1:** NULL-guarded `shuffle`; the upstream kernel panics on an all-NULL list.
+  **DOOR-CONVERGE-2b (2026-09-15):** own `Signature::user_defined` + pass-through
+  `coerce_types` + Spark return field (input list shape and nullability kept) —
+  the upstream signature coerced the array to `List(item Int64)` before literal
+  narrowing. pins: door-converge-2b/C-005
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** the `Int32` seed widens to `Int64`
+  at invoke (the pass-through coercion dropped DataFusion's seed cast);
+  `Utf8`/`LargeUtf8`/`Utf8View` widen to `Utf8` in `wider_pair` (Spark has one
+  string type). pins: door-converge-2b/C-004, C-005
 - `map_from_entries.rs` — **X7:** `map_from_entries` under Spark's `EXCEPTION` map-key dedup
   policy (duplicate keys raise rather than last-wins).
 - `array_position.rs` — **FN-FIX-1:** not-found → `0`; NULL only for NULL array/needle.
@@ -31,6 +39,10 @@ needed.
   raises `ARRAY_FUNCTION_DIFF_TYPES` the way Spark raises it. DataFusion's `comparison_coercion`
   alone is too loose here: it accepts string-with-numeric, which Spark refuses.
   pins: fnp-9-collections-json/C-006
+  **DOOR-CONVERGE-2b (2026-09-15):** the array operand keeps its own type through
+  `coerce_types` (no `List(Int64)` freeze); the inserted value widens to the
+  source element type at return/invoke time instead, and the position types as
+  `Int32`. pins: door-converge-2b/C-005
 - `arrays_zip.rs` — **FNP-9 (2026-09-05):** Spark `arrays_zip`. Zips to the LONGEST array and
   NULL-fills the rest; the struct field takes its 0-based position — NOT the child column name
   Spark uses for an attribute child. A UDF's return field must be a pure function of the
@@ -58,6 +70,9 @@ needed.
 - `array_sort.rs` — **FN-FIX-1:** `array_sort` NULLs LAST; `sort_array` Spark order
   (asc NULLS FIRST, desc NULLS LAST).
   pins: fn-fix-1-registry-rows/C-002
+  **DOOR-CONVERGE-2b (2026-09-15):** `coerce_types` passes the array type through
+  (no `List(Int64)` freeze) and the return field carries the input's element
+  field and nullability. pins: door-converge-2b/C-005
 - `arrays_overlap.rs` — **FN-FIX-1:** three-valued overlap. HashSet of owned
   `ScalarValue` per row; a borrowed-key set is not a one-line change.
   pins: fn-fix-1-registry-rows/C-002
@@ -65,6 +80,10 @@ needed.
   Output `ListArray` from inner values + mapped offsets (no per-row concat).
   `#[ignore = "1e6-row release bench"]` `one_million_rows_within_three_times_datafusion` (≤ 3× DataFusion).
   pins: fn-fix-1-registry-rows/C-002
+  **DOOR-CONVERGE-2b (2026-09-15):** the element field comes from the INNER list
+  (not DF's rebuilt `item` field) and outer nullability is
+  `child.nullable || outer containsNull` — Spark's `Flatten` rule.
+  pins: door-converge-2b/C-005
 - `concat_array.rs` — **DOOR-CONVERGE-2 (2026-09-15):** the array arm of the door-converged
   `concat` UDF (`string.rs` keeps the name; this module holds the helpers). Element types fold
   through `array_insert::tightest_common` (text pairs normalize to `Utf8`, binary pairs to
@@ -78,6 +97,9 @@ needed.
   pins: door-converge-2/C-001
   **Round 3 (2026-09-15):** the `MutableArrayData` capacity is the total child length
   (P3-trivial hint, no behavior change). pins: door-converge-2/C-009
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** the pipe and decimal-widen tests
+  spell `CAST(n AS INT)` explicitly (the deleted late narrowing rule used to
+  provide the `Int32`). pins: door-converge-2b/C-004
 - `array_append.rs` — **ARRAY-NULL-1 (2026-09-14):** `spark_array_append_udf` /
   `spark_array_prepend_udf`. Each delegates to DataFusion's native kernel and then grafts
   the input array's outer `NullBuffer` onto the result — the kernels drop it, so a NULL
@@ -108,6 +130,28 @@ needed.
   Spark-4 `sizeOfNull=false` default: a NULL array/map answers NULL, the field is
   nullable `int32` (the DF kernels answer `-1` `uint64`). Covers list / large-list /
   fixed-size-list and map (`MapArray::value_length`). pins: door-converge-1/C-004
+- `spark_array.rs` — **DOOR-CONVERGE-2b (2026-09-15):** the repark-owned literal
+  collection surface. `SparkMakeArray` (`make_array`, alias `array`) computes the
+  element type through `coerce.rs::spark_common_element` post-narrowing and
+  declares `containsNull = any(arg nullable)` / outer never-null
+  (Spark `CreateArray`); `SparkSlice` (`slice`) keeps the input element field and
+  takes Spark's runtime `INVALID_PARAMETER_VALUE.START`/`.LENGTH` refusals;
+  `SparkArrayRepeat` (`array_repeat`) null-fills for a NULL element input;
+  `SparkArrayElement` (`array_element`) is the registered-refusal half of the
+  subscript rewrite — a named `array_element` call fails `UNRESOLVED_ROUTINE`
+  the way Spark's catalog does, while `a[i]` never reaches the registry.
+  `map_keys`/`map_values` wrap DF's kernels with pass-through coercion and
+  `containsNull=true` element fields (Spark `MapKeys`/`MapValues` always do).
+  `SparkListOp` wraps DF's `array_distinct`/`array_compact`/`array_remove`/
+  `array_union`: validate-only `coerce_types` (the D-1 pre-narrowing freeze),
+  Spark return-field shaping (`array_union` widens both sides to the common
+  element type; `array_compact` reports non-null elements), invoke-side casts,
+  and a post-invoke schema conform for kernels whose physical element field
+  differs from the declared one. pins: door-converge-2b/C-004, C-005
+- `coerce.rs` — **DOOR-CONVERGE-2b (2026-09-15):** `spark_common_element`, Spark's
+  wider-common-type ladder for collection element types (numeric widths,
+  fractional → `decimal` widening per `DecimalType.wider`, string with numeric →
+  string, `Null` yields to the other side). pins: door-converge-2b/C-004
 - `array_contains.rs` — **DOOR-CONVERGE-1 (2026-09-15):** `array_contains` wraps
   datafusion-spark's `SparkArrayContains` (already three-valued: match → TRUE, no match
   with a NULL element → NULL, no match → FALSE) behind `Signature::user_defined` and a

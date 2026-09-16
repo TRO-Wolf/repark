@@ -339,6 +339,8 @@ mod tests {
 
     use datafusion::arrow::array::{Array, BinaryArray, Int32Array, RecordBatch, UInt64Array};
     use datafusion::arrow::datatypes::{DataType, Field, Schema};
+    use datafusion::execution::SessionStateBuilder;
+    use datafusion::optimizer::Analyzer;
     use datafusion::prelude::SessionContext;
 
     use repark_core::CatalogRegistry;
@@ -347,7 +349,14 @@ mod tests {
 
     /// A context whose `v` table carries.
     fn ctx() -> (SessionContext, CatalogRegistry) {
-        let ctx = SessionContext::new();
+        let rules =
+            crate::spark_literal_typing::insert_literal_rule_before_coercion(Analyzer::new().rules)
+                .expect("default rules carry type_coercion");
+        let state = SessionStateBuilder::new()
+            .with_default_features()
+            .with_analyzer_rules(rules)
+            .build();
+        let ctx = SessionContext::new_with_state(state);
         for rule in repark_functions::analyzer_rules() {
             ctx.add_analyzer_rule(rule);
         }

@@ -21,6 +21,8 @@ fn hof_ctx_with_ansi(ansi_enabled: bool) -> (SessionContext, CatalogRegistry) {
     let rules =
         repark_functions::analyzer_rules_with_higher_order_preparation(Analyzer::new().rules)
             .unwrap();
+    let rules = crate::spark_literal_typing::insert_literal_rule_before_coercion(rules)
+        .expect("default rules carry type_coercion");
     let state = SessionStateBuilder::new()
         .with_config(config)
         .with_default_features()

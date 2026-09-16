@@ -12,8 +12,10 @@ use datafusion::optimizer::AnalyzerRule;
 
 /// G6-3 / G6-5 cast-legality deny matrix and refusal.
 mod cast_legality;
+mod date_part;
 mod like_escape;
 mod overlay;
+mod subscript;
 pub(crate) mod time_window;
 /// Spark operator semantics over type-coerced logical plans; the rule is stateless.
 #[derive(Debug, Default)]
@@ -59,7 +61,7 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Tra
         Expr::ScalarFunction(ref function)
             if function.func.name() == "array_element" && function.args.len() == 2 =>
         {
-            Ok(rewrite_array_subscript(expr, schema))
+            Ok(subscript::rewrite_array_subscript(expr, schema))
         }
         Expr::ScalarFunction(function) if function.func.name() == "substr" => {
             Ok(Transformed::yes(Expr::ScalarFunction(
@@ -79,6 +81,7 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Tra
         {
             Ok(overlay::rewrite(function))
         }
+        Expr::ScalarFunction(_) => Ok(date_part::rewrite(expr)),
         Expr::Cast(_) => rewrite_timestamp_casts(expr, schema),
         Expr::TryCast(ref try_cast) => {
             if let Ok(source_type) = try_cast.expr.get_type(schema) {
@@ -287,37 +290,6 @@ fn is_zero_guard(expr: &Expr) -> bool {
         return matches!(ScalarValue::new_zero(&value.data_type()), Ok(zero) if *value == zero);
     }
     false
-}
-
-/// Rewrite planner-lowered `array_element` to Spark's 0-based `[]` UDF.
-fn rewrite_array_subscript(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
-    let Expr::ScalarFunction(function) = expr else {
-        return Transformed::no(expr);
-    };
-    let types = (
-        function.args[0].get_type(schema),
-        function.args[1].get_type(schema),
-    );
-    let (Ok(array_type), Ok(index_type)) = types else {
-        return Transformed::no(Expr::ScalarFunction(function));
-    };
-    if list_element_type(&array_type).is_none() || !index_type.is_integer() {
-        return Transformed::no(Expr::ScalarFunction(function));
-    }
-    Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
-        crate::collection::spark_array_get_udf(),
-        function.args,
-    )))
-}
-
-/// Return the element type of a list-shaped `DataType`.
-fn list_element_type(data_type: &DataType) -> Option<DataType> {
-    match data_type {
-        DataType::List(field) | DataType::LargeList(field) | DataType::FixedSizeList(field, _) => {
-            Some(field.data_type().clone())
-        }
-        _ => None,
-    }
 }
 
 #[cfg(test)]

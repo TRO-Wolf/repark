@@ -110,6 +110,7 @@ pub(crate) fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Co
         && !sql_may_have_drop_temporary(sql)
         && !sql_may_have_fromless_delete(sql)
         && !sql_may_have_wildcard_exclude(sql)
+        && !sql_may_have_ceil_floor_scale(sql)
     {
         return Ok(Cow::Borrowed(sql));
     }
@@ -121,6 +122,11 @@ pub(crate) fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Co
 
 fn sql_may_have_wildcard_exclude(sql: &str) -> bool {
     sql.as_bytes().contains(&b'*') && sql.to_ascii_lowercase().contains("exclude")
+}
+
+fn sql_may_have_ceil_floor_scale(sql: &str) -> bool {
+    let lower = sql.to_ascii_lowercase();
+    lower.contains('(') && (lower.contains("ceil") || lower.contains("floor"))
 }
 
 fn sql_may_have_drop_temporary(sql: &str) -> bool {
@@ -280,6 +286,9 @@ fn canonical_rewrite(sql: &str, keep_verbatim: bool) -> Result<Option<CanonicalR
     regions.extend(crate::spark_rewrites::plan_delete_from_regions(&tokens));
     regions.extend(crate::spark_rewrites::plan_drop_temporary_regions(&tokens));
     regions.extend(crate::spark_rewrites::plan_wildcard_except_regions(&tokens));
+    regions.extend(crate::spark_rewrites::plan_ceil_floor_scale_regions(
+        &tokens,
+    ));
     crate::spark_rewrites::plan_struct_field_regions(&tokens, sql, &mut regions);
     regions.sort_by_key(|region| (region.start.line, region.start.column));
     if regions.is_empty() {

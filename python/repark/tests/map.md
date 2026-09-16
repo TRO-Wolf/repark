@@ -321,6 +321,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   realigned to the oracle, a real nested-column `reverse` pin on both doors, and
   scalar/limit/LRU perf-equivalence legs.
   pins: door-converge-2/C-007, C-008, C-009
+- [test_door_converge_2b.py](test_door_converge_2b.py) — **DOOR-CONVERGE-2b
+  (2026-09-15):** SQL-door + facade oracle pins for the round-2 names —
+  decimal-aware `round`/`bround` (Q16-0…8, 11, 12, 15, 16, 20; DIV-round-*;
+  R-round-*), scale-aware `ceil`/`ceiling`/`floor` (Q16-9, 10, 13, 14, 17–19;
+  DIV-ceil-*; R-ceil-*), `date_part`/`extract` fractional seconds
+  (decimal(8,6); Q16-21…25; R-date-part-sec; `INVALID_EXTRACT_FIELD` refusals),
+  literal array widening and element `containsNull` (Q16-26…31; N7-0…32;
+  R-array-*; DIV-slice-*), three-argument `like`/`ilike` and `ESCAPE`
+  (Q16-32…39; DIV-like-*; `INVALID_ESCAPE_CHAR`), `PG-*` cells
+  (`IS [NOT] DISTINCT FROM` non-null, literal-VALUES non-null columns,
+  map/array subscript element types) — value + Arrow type + nullability per
+  cell; `shuffle` pins order-insensitively; facade legs exercise
+  `F.round`/`F.ceil`/`F.floor`/`F.like`/`F.ilike`/`F.date_part`/`F.array`/
+  `F.slice`/`F.array_repeat`/`F.array_distinct`/`F.array_compact`/
+  `F.array_union`/`F.array_remove`/`F.map_keys`/`F.map_values`.
+  pins: door-converge-2b/C-001, C-002, C-003, C-004, C-005, C-006
   **Round 2 (2026-09-16):** `unbase64` raises the Java MIME-decoder texts on
   malformed endings while `'QR'`/`'QQQ'`/whitespace/`'!!'` stay lenient;
   `array_contains` coerces to the tightest common type (DOUBLE needle →
@@ -335,12 +351,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and flip back to Spark's non-null when that unit lands. `test_element_at_alias_1_*`
   codifies today's `element_at` resolution against the alias-clobber hazard
   (ELEMENT-AT-ALIAS-1).
+  **DOOR-CONVERGE-2b (2026-09-15):** the flip landed — `test_l002`/`test_l004`
+  literal-haystack legs now pin Spark's non-null answer, and
+  `test_element_at_alias_1_*` pins ANSI Spark's non-null `element_at` on a
+  foldable in-range ordinal.
   **Round 5 (2026-09-16):** `abs` takes Spark's implicit STRING→DOUBLE cast on both
   doors — `test_c003_abs_casts_string_to_double_on_both_doors` pins `abs('-1')` =
   1.0 double nullable and CAST_INVALID_INPUT on `'x'` literal and column inputs
   (fixtures-batch11.json A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x).
   pins: door-converge-1/C-001, C-002, C-003, C-004, C-005,
   C-006, C-007, C-008, C-010, C-011, C-012, C-013, C-014
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** 134 legs — the date-alias breadth
+  rides on DIV-date_part-0…5 (YEAR/`dow`/`doy`/`week`/`datepart`-quarter/
+  `SECONDS`), plus DIV-slice-4 (past-end empty slice), DIV-array_repeat-0/1/3,
+  DIV-array_contains-0/2, DIV-size-1/3, and a facade `dow`-alias leg.
+  pins: door-converge-2b/C-003, C-004, C-005
 - [test_abs_expr_1.py](test_abs_expr_1.py) — **ABS-EXPR-1 (2026-09-13):** `F.abs` /
   `F.cbrt` / `F.nullif` are one native `call_scalar` each — the depth-40 memory pin
   runs each chain in a subprocess under `RLIMIT_AS` (12 GB) with a per-level bound
@@ -890,6 +915,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and re-hashed `_create_dataframe_from_rows_inner` for the named-decline dispatch and
   `_rows_from_mapping_list` for the funnel split (dict scan-then-comprehend, hoisted `Row`
   import — doomed-path cheapening for the real-base fallback bar).
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** re-hashed `_match_from_or_join_keyword`
+  for the `IS [NOT] DISTINCT FROM` table-clause guard.
   NULLABILITY-2 round 3 re-hashed `_promote_csv_string_types` (timestamp candidate + clock guard).
   FACADE-1 re-hashed `_arrow_table_from_raw_tuples_fast`, `_create_dataframe_from_rows_inner`,
   and `_materialize_arrow_as_memtable_frame`.
@@ -959,7 +986,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-09-16) adds the V-001 probe table: parenthesized `-(2147483648)`
   stays bigint inside `transform` / `filter` / `transform_keys` on both
   doors, matching LIT2-SQL-03. `transform` / `filter` over literal arrays pin
-  non-nullable bigint elements; the bare `array(...)` form pins nullable ones.
+  non-nullable bigint elements; the bare `array(...)` form pins non-nullable
+  bigint elements too (**DOOR-CONVERGE-2b** round 2, 2026-09-16: LIT-SQL-32,
+  LIT2-PY-02 and the bare-`array` V-001 case tightened from the DF-native
+  nullable-`item` spelling to the N7-oracle `element` non-null shape —
+  all-literal args are `containsNull=false` in Spark; widths and values
+  unchanged).
   pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: sql-literal-typing-1/L-001, L-002, L-003
   pins: sql-literal-typing-1/V-001
@@ -1058,6 +1090,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (NIGHTLY-LIVE-1 — the pin still expected the retired divergence).
   **SQL-LITERAL-TYPING-1 (2026-09-16):** the TY-7 twin now answers `int32` (pre-coercion
   narrowing closed the mechanism); the live twin asserts the `(int32, int32)` pair.
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** literal `VALUES` rows pin non-null
+  and the `array` legs pin `element` non-null on both doors (Spark-equal).
+  pins: door-converge-2b/C-004, C-005
   pins: sql-literal-typing-1/C-002
 - [test_date_fn_1.py](test_date_fn_1.py) — **DATE-FN-1 (2026-09-04):** Spark SQL `date()` Clock-flake fix (2026-09-05): the zero-arg pin asserts each door repeats one value per row and the two doors agree within one second, since the two statements run in different seconds (it straddled a second boundary in three CI runs).
   and `unix_timestamp` unit pins (timestamp / string / date / NULL; invalid string ANSI on
@@ -1118,9 +1153,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Round 2 (2026-09-06): complex casts propagate the child flag with non-null
   `STRUCT()`/`MAP()`/`ARRAY()` constructors (both ANSI modes, both doors, live leg);
   the `MAP<…>` CAST spelling stays a pinned refusal and the constructor element
-  flags kept their pins (all three arms stay the backlog of COMPLEX-ELEM-NULL-1 —
-  the 2026-09-16 array-arm flip was reverted 2026-09-15 under DOOR-CONVERGE-1
-  ruling R-10 and handed to DOOR-CONVERGE-2);
+  flags kept their pins (struct/map arms stay the backlog of COMPLEX-ELEM-NULL-1 —
+  the array-arm flip landed 2026-09-16 under DOOR-CONVERGE-2b, pins:
+  door-converge-2b/C-005);
   CSV `inferSchema` timestamps report instant `timestamp`; the footer boundary pins
   reads-at-60 / refuses-at-61; narrow logical widths pin today's wide labels.
   The CSV-infer live leg also pins JSON inference staying `string` on both engines.
@@ -3419,9 +3454,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   2.5, 1.21× after) — the single partition is what makes the per-group boxing cost
   visible. Live legs
   re-derive the small grouped, decimal, window, many-groups, overflow and distinct answers
-  from PySpark 4.1.2. Three pre-existing divergences are disclosed, not absorbed: group keys
-  come back nullable where Spark marks them not-null (the live legs project to the avg
-  column), multi-column distinct aggregates refuse with `DistinctAvgAccumulator`
+  from PySpark 4.1.2. Two pre-existing divergences are disclosed, not absorbed (**DOOR-CONVERGE-2b**
+  round 2, 2026-09-16: group keys over literal rows pin non-null like Spark now,
+  pins: door-converge-2b/C-005): multi-column distinct aggregates refuse with `DistinctAvgAccumulator`
   where Spark answers, and the sum-wrap fixtures answer the wrapped quotient where
   Spark NULLs or raises (`AVG-DEC-SUMWRAP-1`, below). Round 2 pins the grouped
   refusal shapes as measured: grouped multi-distinct refuses as a bare
@@ -3920,15 +3955,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `createDataFrame` so both engines infer type+nullability identically (F1 remediation: the prior
   fixture used inline SQL `VALUES (1)`/`VALUES (2.5)` and pinned repark's own `double`/nullable output
   as the "Spark" golden, but Spark parses `2.5` as DECIMAL(2,1) → `decimal128(11,1)` non-null, so the
-  pin was repark-vs-repark); that inline-decimal-literal divergence is now DISCLOSED and pinned in
-  `test_union_inline_decimal_literal_diverges_from_spark` (**U2 / TY-3 dated 2026-08-13:**
+  pin was repark-vs-repark); that inline-decimal-literal divergence closed 2026-09-16
+  (DOOR-CONVERGE-2b round 2) and is pinned in
+  `test_union_inline_decimal_literal_matches_spark` (**U2 / TY-3 dated 2026-08-13:**
   repark `decimal128(21,1)` nullable vs Spark `decimal128(11,1)` non-null. **U3 dated
   2026-08-13:** still DECLARED — U3 `fromLiteral` is `+ - *` only; UNION uses Spark
   `forType(INT)=(10,0)`, not digits. **R-2 dated 2026-08-14:** still DECLARED — hook is
   `TypeCoercion` / `coerce_union` (Int64→DECIMAL(20,0)), not a `decimal_precision` arm).
   **TYPES-1 dated 2026-09-05:** width converged to `decimal128(11,1)` like Spark; still
   DECLARED on nullability only (registry TY-3 keeps the declaration; cf. the TYPES-1 union
-  residue TY-6). pins: types-1/C-002. Count-mismatch raises; `unionByName`
+  residue TY-6). pins: types-1/C-002.
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** TY-3 closed — the union pins the
+  Spark golden directly. pins: door-converge-2b/C-005. Count-mismatch raises; `unionByName`
   (by name, reorders), missing-column raises by default + `allowMissingColumns=True` fills NULL (parity
   golden); `distinct`, `dropDuplicates()` (= distinct) and `dropDuplicates(subset)` with a
   deterministic-survivor pin (key set / identical non-key values, never an accident). **R4
@@ -5459,6 +5497,10 @@ alike — a disclosed round-8 residual, deliberately unpinned.
   in UTC with both ANSI settings. `fnp8_repark_dispositions.json` records each door
   schema or explicit refusal; residual reasons live in the parity registry.
   The live test remeasures the same goldens. pins: fnp-8/C-003, C-004, C-005, C-006
+  **DOOR-CONVERGE-2b round 2 (2026-09-16):** the eight binding capture/shadow
+  dispositions re-measured to the converged nullability (values already equal
+  the Spark rows); the `item` exporter name stays a residual for FNP-8.
+  pins: door-converge-2b/C-005
   `fnp8_error_oracle.json` retains the live arity, accumulator, and overflow measurements
   consumed by the same module; the SQL error pins remain in `lambda_door.rs`.
 

@@ -7,7 +7,6 @@ use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
 pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
         Arc::new(crate::decimal_precision::SparkNegateNullDecimal),
-        Arc::new(crate::spark_result_types::SparkIntegerLiteral),
         Arc::new(crate::lambda_rebind::LambdaRebind),
         Arc::new(crate::decimal_precision::SparkDecimalPrecision),
         Arc::new(crate::decimal_spark::SparkDecimalRewrite),

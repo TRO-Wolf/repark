@@ -377,7 +377,7 @@ mod tests {
             .expect("execute widen");
         assert_eq!(
             batches[0].column(0).data_type(),
-            &DataType::List(Arc::new(Field::new("element", DataType::Int64, true)))
+            &DataType::List(Arc::new(Field::new("element", DataType::Int64, false)))
         );
         let scalar = ScalarValue::try_from_array(batches[0].column(0).as_ref(), 0).expect("scalar");
         let ScalarValue::List(values) = &scalar else {
@@ -395,7 +395,7 @@ mod tests {
     async fn pipe_operator_over_arrays_resolves_the_concat_kernel() {
         let ctx = ctx();
         let batches = ctx
-            .sql("SELECT array(1) || array(2)")
+            .sql("SELECT array(CAST(1 AS INT)) || array(CAST(2 AS INT))")
             .await
             .expect("plan pipe")
             .collect()
@@ -403,10 +403,14 @@ mod tests {
             .expect("execute pipe");
         assert_eq!(
             batches[0].column(0).data_type(),
-            &DataType::List(Arc::new(Field::new("element", DataType::Int32, true)))
+            &DataType::List(Arc::new(Field::new("element", DataType::Int32, false)))
         );
         assert!(!batches[0].schema().field(0).is_nullable());
-        let joined = value_of(&ctx, "SELECT array(1) || array(2)").await;
+        let joined = value_of(
+            &ctx,
+            "SELECT array(CAST(1 AS INT)) || array(CAST(2 AS INT))",
+        )
+        .await;
         assert_eq!(joined.len(), 1);
         assert_eq!(int_cells(&joined[0]), Some(vec![Some(1), Some(2)]));
     }
@@ -415,7 +419,7 @@ mod tests {
     async fn concat_decimal_widen_matches_spark_range_scale() {
         let ctx = ctx();
         let batches = ctx
-            .sql("SELECT concat(array(1), array(CAST(1.5 AS DECIMAL(2, 1))))")
+            .sql("SELECT concat(array(CAST(1 AS INT)), array(CAST(1.5 AS DECIMAL(2, 1))))")
             .await
             .expect("plan decimal widen")
             .collect()
@@ -426,7 +430,7 @@ mod tests {
             &DataType::List(Arc::new(Field::new(
                 "element",
                 DataType::Decimal128(11, 1),
-                true
+                false
             )))
         );
     }

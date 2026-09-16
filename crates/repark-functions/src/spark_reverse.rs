@@ -227,7 +227,7 @@ mod tests {
     async fn reverse_array_reverses_elements_and_keeps_type() {
         let ctx = ctx();
         let batches = ctx
-            .sql("SELECT reverse(array(1, 2, 3))")
+            .sql("SELECT reverse(array(CAST(1 AS INT), CAST(2 AS INT), CAST(3 AS INT)))")
             .await
             .expect("plan reverse")
             .collect()
@@ -235,9 +235,13 @@ mod tests {
             .expect("execute reverse");
         assert_eq!(
             batches[0].column(0).data_type(),
-            &DataType::List(Arc::new(Field::new("element", DataType::Int32, true)))
+            &DataType::List(Arc::new(Field::new("element", DataType::Int32, false)))
         );
-        let scalar = one(&ctx, "SELECT reverse(array(1, 2, 3))").await;
+        let scalar = one(
+            &ctx,
+            "SELECT reverse(array(CAST(1 AS INT), CAST(2 AS INT), CAST(3 AS INT)))",
+        )
+        .await;
         let ScalarValue::List(values) = &scalar else {
             panic!("expected list, got {scalar:?}");
         };

@@ -41,12 +41,14 @@ pub mod registration;
 pub mod session_time_zone;
 pub mod spark_base64;
 pub mod spark_chr;
+pub mod spark_date_part;
 pub mod spark_degrees;
 pub mod spark_elt;
 pub mod spark_from_unixtime;
 pub mod spark_initcap;
 pub mod spark_isnan;
 pub mod spark_length;
+pub mod spark_like;
 pub mod spark_log;
 pub mod spark_log1p;
 pub mod spark_math;
@@ -55,6 +57,7 @@ pub mod spark_regexp;
 pub mod spark_regexp_match;
 pub mod spark_result_types;
 pub mod spark_reverse;
+pub mod spark_round;
 pub mod spark_sequence;
 pub mod spark_session_window;
 pub mod spark_split;
@@ -140,9 +143,12 @@ pub fn register_all(ctx: &SessionContext) {
         .chain(spark_chr::functions())
         .chain(spark_degrees::functions())
         .chain(spark_elt::functions())
+        .chain(spark_round::functions())
+        .chain(spark_like::functions())
     {
         ctx.register_udf(udf.as_ref().clone());
     }
+    ctx.register_udf(spark_date_part::date_part_udf().as_ref().clone());
     for udf in spark_time_window::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
