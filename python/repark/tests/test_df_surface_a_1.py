@@ -123,7 +123,8 @@ def test_to_store_assignment_atomic_to_string(spark: ReparkSession) -> None:
 def test_to_binary_follows_reported_schema_df_to_binary_1(spark: ReparkSession) -> None:
     """Binary to() is identity; the string target follows the cast.
 
-    pins: df-surface-a-1/C-008; pins: logical-width-1/C-010
+    pins: df-surface-a-1/C-008; pins: logical-width-1/C-010, C-016 — the 'hi'
+    value is Spark cell to_string_from_binary (round 3, 2026-09-16).
     """
     frame = spark.createDataFrame([(b"hi",)], "b binary")
     assert frame.schema.simpleString() == "struct<b:binary>"

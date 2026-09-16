@@ -72,6 +72,22 @@
    "raises": "AnalysisException"
   }
  },
+ "cast_string_from_binary": {
+  "result": {
+   "columns": [
+    "b"
+   ],
+   "dtypes": [
+    [
+     "b",
+     "string"
+    ]
+   ],
+   "rows": [
+    "('hi',)"
+   ]
+  }
+ },
  "ddl_collect_types": {
   "result": [
    [
@@ -307,6 +323,83 @@
    ],
    "printSchema": "root\n |-- sh: short (nullable = true)\n |-- ti: byte (nullable = true)\n |-- f: float (nullable = false)\n |-- d: double (nullable = false)\n |-- b: binary (nullable = true)\n |-- s: string (nullable = true)\n |-- i: integer (nullable = true)\n |-- l: long (nullable = true)\n\n",
    "simpleString": "struct<sh:smallint,ti:tinyint,f:float,d:double,b:binary,s:string,i:int,l:bigint>"
+  }
+ },
+ "float_arith_sql": {
+  "result": {
+   "columns": [
+    "f2",
+    "fi",
+    "fplus",
+    "ff"
+   ],
+   "dtypes": [
+    [
+     "f2",
+     "double"
+    ],
+    [
+     "fi",
+     "double"
+    ],
+    [
+     "fplus",
+     "double"
+    ],
+    [
+     "ff",
+     "float"
+    ]
+   ],
+   "rows": [
+    "(2.200000047683716, 2.200000047683716, 2.100000023841858, 2.200000047683716)"
+   ]
+  }
+ },
+ "float_arith_values": {
+  "result": {
+   "columns": [
+    "f2",
+    "fi",
+    "fplus",
+    "fminus",
+    "f2d",
+    "fdiv",
+    "ff"
+   ],
+   "dtypes": [
+    [
+     "f2",
+     "double"
+    ],
+    [
+     "fi",
+     "double"
+    ],
+    [
+     "fplus",
+     "double"
+    ],
+    [
+     "fminus",
+     "double"
+    ],
+    [
+     "f2d",
+     "double"
+    ],
+    [
+     "fdiv",
+     "double"
+    ],
+    [
+     "ff",
+     "float"
+    ]
+   ],
+   "rows": [
+    "(2.200000047683716, 2.200000047683716, 2.100000023841858, 0.10000002384185791, 2.200000047683716, 0.550000011920929, 2.200000047683716)"
+   ]
   }
  },
  "grouped_avg_noargs": {
@@ -801,6 +894,12 @@
    "simpleString": "struct<f:double,b:binary>"
   }
  },
+ "meta": {
+  "engine": "PySpark 4.1.2",
+  "probe": "/tmp/oc-worker/run18b/oracle/probe_lw_r3.py",
+  "recorded": "2026-09-16",
+  "round": 3
+ },
  "na_fill_float_col": {
   "result": {
    "columns": [
@@ -987,6 +1086,22 @@
     "('count', '2', '2', '2')",
     "('max', '4', '2', '2.25')",
     "('min', '3', '1', '1.5')"
+   ]
+  }
+ },
+ "to_string_from_binary": {
+  "result": {
+   "columns": [
+    "b"
+   ],
+   "dtypes": [
+    [
+     "b",
+     "string"
+    ]
+   ],
+   "rows": [
+    "('hi',)"
    ]
   }
  },

@@ -1,7 +1,8 @@
 """LOGICAL-WIDTH-1 — Spark's logical widths on the facade, both doors.
 
-Every pin is driven from a named cell of the live PySpark 4.1.2 recording in
-``facade_logical_width_oracle.json`` (run 17b, 2026-09-15). Nullability is out of
+Every pin is driven from a named cell of the live PySpark 4.1.2 recordings in
+``facade_logical_width_oracle.json`` (run 17b, 2026-09-15; round 3, 2026-09-16,
+probe ``/tmp/oc-worker/run18b/oracle/probe_lw_r3.py``). Nullability is out of
 scope (W-7): pins assert names, type labels and values, never ``nullable``.
 """
 
@@ -22,6 +23,7 @@ from repark.spark.types import (
     ByteType,
     FloatType,
     ShortType,
+    StringType,
     StructField,
     StructType,
 )
@@ -169,15 +171,65 @@ def test_arith_keeps_spark_widths_logical_width_1(wide: object) -> None:
     assert frame.schema.simpleString() == "struct<st:smallint,fd:double>"
 
 
-def test_float_times_int_literal_divergence_arith_float_int_1(wide: object) -> None:
-    """pins: ARITH-FLOAT-INT-1 (BACKLOG) — Spark cell arith_width records f2 double.
+def test_float_int_coercion_divergence_arith_float_int_1(spark: ReparkSession) -> None:
+    """pins: ARITH-FLOAT-INT-1 (BACKLOG, exact) — cells float_arith_values, float_arith_sql.
 
-    The engine answers float32 for ``float * int``; Spark widens float-by-int to
-    double. This pin holds the tree answer and reds when the coercion lands.
+    Spark types ``f * 2``, ``f * i``, ``f + 1``, ``f - 1`` as double and computes them
+    widened to double; the engine computes Float32. The ``*``/``-`` values coincide on
+    the probe but ``f + 1`` differs (Spark 2.100000023841858, tree 2.0999999046325684).
+    This pin holds today's tree dtypes AND today's tree ``fplus`` value on both doors
+    and reds when the coercion lands.
     """
-    frame = wide.select((F.col("f") * 2).alias("f2"))
-    assert frame.dtypes == [("f2", "float")]
-    assert _cell("arith_width")["result"]["dtypes"][1] == ["f2", "double"]
+    frame = spark.createDataFrame([(1.1, 2)], "f float, i int")
+    selected = frame.select(
+        (F.col("f") * 2).alias("f2"),
+        (F.col("f") * F.col("i")).alias("fi"),
+        (F.col("f") + 1).alias("fplus"),
+        (F.col("f") - 1).alias("fminus"),
+        (F.col("f") * 2.0).alias("f2d"),
+        (F.col("f") / 2).alias("fdiv"),
+        (F.col("f") + F.col("f")).alias("ff"),
+    )
+    values = _cell("float_arith_values")["result"]
+    assert selected.dtypes == [
+        ("f2", "float"),
+        ("fi", "float"),
+        ("fplus", "float"),
+        ("fminus", "float"),
+        ("f2d", "double"),
+        ("fdiv", "double"),
+        ("ff", "float"),
+    ]
+    assert [pair[1] for pair in values["dtypes"]] == [
+        "double",
+        "double",
+        "double",
+        "double",
+        "double",
+        "double",
+        "float",
+    ]
+    assert [repr(tuple(row)) for row in selected.collect()] == [
+        "(2.200000047683716, 2.200000047683716, 2.0999999046325684, "
+        "0.10000002384185791, 2.200000047683716, 0.550000011920929, 2.200000047683716)"
+    ]
+    assert values["rows"] == [
+        "(2.200000047683716, 2.200000047683716, 2.100000023841858, "
+        "0.10000002384185791, 2.200000047683716, 0.550000011920929, 2.200000047683716)"
+    ]
+    frame.createOrReplaceTempView("lw_float_probe")
+    via_sql = spark.sql(
+        "SELECT f * 2 AS f2, f * i AS fi, f + 1 AS fplus, f + f AS ff FROM lw_float_probe"
+    )
+    sql_values = _cell("float_arith_sql")["result"]
+    assert via_sql.dtypes == [("f2", "float"), ("fi", "float"), ("fplus", "float"), ("ff", "float")]
+    assert [pair[1] for pair in sql_values["dtypes"]] == ["double", "double", "double", "float"]
+    assert [repr(tuple(row)) for row in via_sql.collect()] == [
+        "(2.200000047683716, 2.200000047683716, 2.0999999046325684, 2.200000047683716)"
+    ]
+    assert sql_values["rows"] == [
+        "(2.200000047683716, 2.200000047683716, 2.100000023841858, 2.200000047683716)"
+    ]
 
 
 def test_agg_keeps_spark_widths_logical_width_1(wide: object) -> None:
@@ -401,3 +453,17 @@ def test_replace_narrow_matches_spark_logical_width_1(spark: ReparkSession) -> N
     """pins: logical-width-1/C-014 — cell na_replace_narrow (regression guard)."""
     frame = spark.createDataFrame([(1, 1.5)], "sh smallint, f float")
     _assert_cell_frame(frame.replace(1, 9), "na_replace_narrow")
+
+
+def test_to_string_from_binary_matches_spark_logical_width_1(
+    spark: ReparkSession,
+) -> None:
+    """pins: logical-width-1/C-016 — cells to_string_from_binary, cast_string_from_binary."""
+    frame = spark.createDataFrame([(b"hi",)], "b binary")
+    _assert_cell_frame(
+        frame.to(StructType([StructField("b", StringType())])),
+        "to_string_from_binary",
+    )
+    _assert_cell_frame(
+        frame.select(F.col("b").cast("string").alias("b")), "cast_string_from_binary"
+    )

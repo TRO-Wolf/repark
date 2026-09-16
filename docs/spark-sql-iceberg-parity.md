@@ -3717,17 +3717,26 @@ the pin rather than obeying it.
   `python/repark/src/repark/spark/functions.py::lit`, owned by run 18a today, ahead of the
   Rust `PyColumn::literal` arm; no silent stub per the shape rule.
 
-### ARITH-FLOAT-INT-1 — `float * int` answers float32, Spark answers double — **BACKLOG 2026-09-16**
+### ARITH-FLOAT-INT-1 — `float` with an integral operand answers float32, Spark answers double — **BACKLOG 2026-09-16, made exact 2026-09-16 (LOGICAL-WIDTH-1 round 3, R-18b-6)**
 
-- **repark** — `(F.col("f") * 2)` over a `float` column answers Arrow `float` (Float32).
-- **Apache Spark** — widens float-by-int to `double` (cell `arith_width`, `f2: double`).
-  *(oracle: live PySpark 4.1.2, UTC, `facade_logical_width_oracle.json`, 2026-09-15.)*
+- **repark** — `f * 2`, `f * i`, `f + 1`, `f - 1` over a `float` column answer Arrow
+  `float` (Float32), computed in Float32; `f * 2.0`, `f / 2` answer `double`, and
+  `f + f` stays `float`. Today's `f + 1` over `1.1f` is `2.0999999046325684`.
+- **Apache Spark** — types `f * 2`, `f * i`, `f + 1`, `f - 1` as `double` and computes
+  them widened to double; `f + f` stays `float`. Today's `f + 1` over `1.1f` is
+  `2.100000023841858`. The `*`/`-` values coincide on the probe; only `f + 1`
+  differs in value. (cells `float_arith_values`, `float_arith_sql`.)
+  *(oracle: live PySpark 4.1.2, 2026-09-16, probe
+  `/tmp/oc-worker/run18b/oracle/probe_lw_r3.py`.)*
 - **Pin** —
-  `python/repark/tests/test_logical_width_1.py::test_float_times_int_literal_divergence_arith_float_int_1`
-  (holds the tree `float` answer against the recorded `double`; red when fixed).
-- **Rationale** — BACKLOG, filed 2026-09-16 (LOGICAL-WIDTH-1 round 1, finding F-1). Needs a
-  DataFusion binary-arithmetic coercion rule (float × int → float64); a display change
-  cannot serve it. Exposed when the widened display stopped masking the engine type.
+  `python/repark/tests/test_logical_width_1.py::test_float_int_coercion_divergence_arith_float_int_1`
+  (holds today's tree dtypes AND today's tree `fplus` value against both Spark cells on
+  both doors; red when fixed).
+- **Rationale** — BACKLOG, filed 2026-09-16 (LOGICAL-WIDTH-1 round 1, finding F-1), made
+  exact 2026-09-16 (round 3, L-302). Likely home: binary arithmetic coercion — float
+  with an integral operand promotes to double; owned by the SQL/type-coercion lane
+  (run 18c), not a display fix. Exposed when the widened display stopped masking the
+  engine type.
 
 ### FLOAT-AGG-1 — sum of catastrophic-cancellation float vector
 
@@ -6519,16 +6528,20 @@ Shared roster pin for every heading:
   engine cast. The pre-fix shape (string report, binary target refused) is gone with the
   report it followed.
 - **Apache Spark** — the column is `binary`: `to(binary)` is identity; `to(string)` follows Spark's store-assignment rule
-  for binary → string. *(oracle: documented — `Dataset.to` store assignment; the binary → string value is UNMEASURED on a
-  live Spark, recorded for the next oracle round.)*
+  for binary → string and answers `'hi'` (cell `to_string_from_binary`; `cast_string_from_binary` likewise).
+  *(oracle: live PySpark 4.1.2, 2026-09-16, probe
+  `/tmp/oc-worker/run18b/oracle/probe_lw_r3.py`.)*
 - **Pin** — `python/repark/tests/test_df_surface_a_1.py::test_to_binary_follows_reported_schema_df_to_binary_1`
-  (rewritten 2026-09-16: binary identity keeps bytes; string target follows the cast).
+  (rewritten 2026-09-16: binary identity keeps bytes; string target follows the cast) and
+  `python/repark/tests/test_logical_width_1.py::test_to_string_from_binary_matches_spark_logical_width_1`
+  (round 3: `to(string)` and `cast(string)` against cells `to_string_from_binary`,
+  `cast_string_from_binary`).
 - **Pin (IO-TEXT-1, 2026-09-15)** — a user schema typing a text partition column `binary` reads the raw bytes and now
   reports `binary`: `python/repark/tests/test_io_text_2.py::test_text_probe6_int_schema_binary`.
 - **Rationale** — FIXED 2026-09-16 (LOGICAL-WIDTH-1 round 1): the binary report landed, so
   `to()` reconciles binary→binary as identity. Filed by DF-SURFACE-A-1 (run 15b) from the
-  critic re-check finding L-101. The binary → string VALUE stays tree-measured until the
-  next oracle round records it on a live Spark.
+  critic re-check finding L-101. The binary → string VALUE was tree-measured until round 3
+  (R-18b-8) pinned it to live-Spark cell `to_string_from_binary` (`'hi'`).
 
 ### Surfaced, awaiting pins — not yet rows
 
