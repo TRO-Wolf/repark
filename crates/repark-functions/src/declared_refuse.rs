@@ -108,6 +108,12 @@ const CSV_XML_XPATH_REASON: &str = "is reachable without a JVM and is deferred b
      xpath family needs an XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's \
      csv and xml modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath).";
 
+const XML_PARSE: &[&str] = &["from_xml", "schema_of_xml"];
+
+const XML_PARSE_REASON: &str = "is reachable without a JVM and is deferred by cost: an XML \
+     parser matching Spark's javax.xml kernel is a new dependency this unit may not add \
+     (owner ruling 2026-09-15). See docs/spark-sql-iceberg-parity.md (FNP-16-csv-xml-xpath).";
+
 const VARIANT: &[&str] = &[
     "is_variant_null",
     "parse_json",
@@ -148,6 +154,9 @@ pub fn refusal_message(name: &str) -> Option<String> {
     if CSV_XML_XPATH.binary_search(&key.as_str()).is_ok() {
         return Some(format!("{key} {CSV_XML_XPATH_REASON}"));
     }
+    if XML_PARSE.binary_search(&key.as_str()).is_ok() {
+        return Some(format!("{key} {XML_PARSE_REASON}"));
+    }
     if VARIANT.binary_search(&key.as_str()).is_ok() {
         return Some(format!("{key} {VARIANT_REASON}"));
     }
@@ -163,6 +172,7 @@ pub fn armed_names() -> Vec<&'static str> {
     let mut names: Vec<&'static str> = FNP15.iter().map(|(name, _)| *name).collect();
     names.extend(SKETCHES.iter().copied());
     names.extend(CSV_XML_XPATH.iter().copied());
+    names.extend(XML_PARSE.iter().copied());
     names.extend(VARIANT.iter().copied());
     names.extend(GEOSPATIAL.iter().copied());
     names
@@ -280,6 +290,26 @@ mod tests {
     }
 
     #[test]
+    fn xml_parse_is_deferred_by_cost_and_sorted() {
+        assert!(XML_PARSE.is_sorted());
+        assert_eq!(XML_PARSE.len(), 2);
+        for name in XML_PARSE {
+            let message = refusal_message(name).expect("xml name has a message");
+            assert!(message.contains("deferred by cost"), "{name}: {message}");
+            assert!(
+                message.contains("reachable without a JVM"),
+                "{name}: {message}"
+            );
+            assert!(
+                message.contains("FNP-16-csv-xml-xpath"),
+                "{name}: {message}"
+            );
+            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(name);
+            assert!(matches!(error, DataFusionError::NotImplemented(_)));
+        }
+    }
+
+    #[test]
     fn variant_is_deferred_by_cost_and_sorted() {
         assert!(VARIANT.is_sorted());
         assert_eq!(VARIANT.len(), 8);
@@ -300,7 +330,7 @@ mod tests {
     fn geospatial_is_deferred_by_cost_and_sorted() {
         assert!(GEOSPATIAL.is_sorted());
         assert_eq!(GEOSPATIAL.len(), 5);
-        assert_eq!(armed_names().len(), 62);
+        assert_eq!(armed_names().len(), 64);
         for name in GEOSPATIAL {
             let message = refusal_message(name).expect("geospatial name has a message");
             assert!(message.contains("deferred by cost"), "{name}: {message}");

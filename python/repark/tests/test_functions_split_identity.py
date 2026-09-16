@@ -388,6 +388,7 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     from repark.spark.functions_bitwise import INSTALL_NAMES as BITWISE_INSTALL_NAMES
     from repark.spark.functions_byname import BYNAME_NAMES
     from repark.spark.functions_declared import DECLARED_REFUSE_NAMES
+    from repark.spark.functions_generators import GENERATOR_NAMES
     from repark.spark.functions_json import FNP9_NAMES
     from repark.spark.functions_lambda import HIGHER_ORDER_EXPORTS
     from repark.spark.functions_math import INSTALL_NAMES as MATH_INSTALL_NAMES
@@ -421,7 +422,11 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     temporal_start = arrow_start + len(ARROW_EXPORTS)
     assert exported[temporal_start : temporal_start + len(FNP11A_EXPORTS)] == FNP11A_EXPORTS
     window_start = temporal_start + len(FNP11A_EXPORTS)
-    assert exported[window_start:] == WINDOW_INSTALL_NAMES
+    generator_start = window_start + len(WINDOW_INSTALL_NAMES)
+    assert exported[window_start:generator_start] == WINDOW_INSTALL_NAMES
+    assert exported[generator_start:] == tuple(
+        name for name in GENERATOR_NAMES if name not in _PRE_SPLIT_ALL
+    )
     assert len(exported) == (
         360
         + 62
@@ -434,6 +439,8 @@ def test_functions_all_matches_pre_split_inventory() -> None:
         + len(ARROW_EXPORTS)
         + len(FNP11A_EXPORTS)
         + len(WINDOW_INSTALL_NAMES)
+        + len(GENERATOR_NAMES)
+        - 2
     )
 
 

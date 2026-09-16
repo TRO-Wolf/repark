@@ -14,6 +14,15 @@ DF-RUST-3 (2026-09-15): `check_example_coverage.py` `BACKLOG_BASELINE` 112 → 1
 `DataFrame.freqItems` and `DataFrame.transpose` inventory rows).
 pins: df-rust-3/C-005
 
+FNP-GEN-1 step 2 (2026-09-16): `check_example_coverage.py` walks `functions_generators.py`
+and its `GENERATOR_NAMES` export tuple (the binding set was resorted while it was edited);
+`build_api_freeze.py` reads `functions_generators.py` as a def source so the four generator
+signatures — including the D-13 `column` → `col` rename — reach the freeze register;
+`check_lib_py.py` ratchets `functions_expr.py` 2235 → 2213 and `test_explode_rewrite.py`
+1135 → 1133; `check_example_coverage.py` crossed the default and was compacted back to it
+(orchestrator fix-up below — no exception row on a gate script). The CAP-1 parity mirror
+rows moved with them; python_approved stays 32.
+pins: fnp-gen-1/C-001, C-006
 DF-PLAN-INTROSPECT-1 (2026-09-15, rebase onto main after #610/#612): `check_lib_py.py` sets `dataframe/core.py` 4014 → 4015 with the CAP-1 mirror — the wrapped `repark.spark.dataframe` import gains `replace_expr` from #610; still below main's 4027. pins: df-plan-introspect-1/C-004
 DF-PLAN-INTROSPECT-1 follow-up round 3 (2026-09-15, R-11): `check_lib_py.py`
 `dataframe/core.py` 4027 → 4014 (the `sameSemantics` body moves to
@@ -1316,3 +1325,13 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
   `C2-L004` pin). Ratchets only. pins: fnp-win-1/C-004
 FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` puts `crates/repark-python/src/dataframe.rs` back at 1019 after the round-2 binding pre-check was reverted (owner ruling Q-15c-4); `check_lib_py.py` ratchets `python/repark/tests/test_fnp_win_1.py` down 1454 → 1449.
 - **FNP-11B step-4 orchestrator fix-up (2026-09-15, run 17a):** the step-3 row's numeral phrase is reworded to "sits exactly on the default line ceiling". CAP-1's prose pin forbids the literal old default in any carrier `map.md`, so the numeral reds `test_cap_1_prose_and_navigation_name_the_generalized_gate`; the fact is unchanged. pins: fnp-11b/C-007
+- **FNP-GEN-1 orchestrator fix-up (2026-09-16, run 17a):** the round added a `check_lib_py`
+  EXCEPTIONS row for `check_example_coverage.py` at 1002 lines when the generator names pushed it
+  two lines past the default ceiling. Size ceilings only move down (owner ruling Q-15c-4), and a
+  new exception row on a **gate script** is ratchet erosion, so the module docstring's EX-1
+  closed-set paragraph was reflowed instead: the file is back at the default ceiling and the
+  row is gone. Compact before you except. pins: fnp-gen-1/C-007
+- **FNP-GEN-1 rebase onto #640 (2026-09-16, run 17a):** `check_example_coverage.py`'s
+  `BACKLOG_BASELINE` is set to the count the script itself reports (108), not to an arithmetic
+  combination of the two sides' values. Both sides of the rebase had moved it; a measured count is
+  exact where an arithmetic one is only usually right. pins: fnp-gen-1/C-007

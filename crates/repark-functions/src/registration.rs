@@ -28,5 +28,6 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
         crate::analyzer::time_window::SparkWindowTimeGrouping,
     ));
     rules.push(Arc::new(crate::analyzer::time_window::SparkSessionWindow));
+    rules.push(Arc::new(crate::generator::GeneratorRewrite));
     rules
 }

@@ -22,6 +22,12 @@ unit — so a new family gets a child module and the parent's default arm falls 
   **FNP-WIN-1 step 3 (2026-09-15):** the `window_time` arm builds one
   `ScalarFunction::new_udf` over `spark_window_time::window_time_udf`.
   pins: fnp-win-1/C-003
+  **FNP-GEN-1 step 2 (2026-09-16):** the `posexplode` / `posexplode_outer` /
+  `inline` / `inline_outer` arms embed the registered placeholder UDFs from
+  `repark_functions::generator::generator_udf`, and the `__repark_gen_alias` arm
+  embeds the marker the facade's `_GeneratorColumn.alias` uses to carry
+  multi-name output aliases into `generator::GeneratorRewrite`.
+  pins: fnp-gen-1/C-002, C-003
 - `dispatch_spark.rs` — **DOOR-CONVERGE-1 (2026-09-15):** the converged scalar arms —
   `abs`, `hypot`, `bin`, `rint`, `base64`, `unbase64`, `size`, `cardinality`,
   `array_contains` / `array_has`, `ascii`, `length` / `character_length` /

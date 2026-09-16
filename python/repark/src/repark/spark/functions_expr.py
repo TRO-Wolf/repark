@@ -438,10 +438,10 @@ def from_xml(
                 "arg_type": type(schema).__name__,
             },
         )
-    from repark.errors import UnsupportedOperationException
-
     raise UnsupportedOperationException(
-        "functions.from_xml is not supported yet (XML parse kernel deferred; disclosed E1)"
+        "from_xml is reachable without a JVM and is deferred by cost: an XML parser matching "
+        "Spark's javax.xml kernel is a new dependency this unit may not add (owner ruling "
+        "2026-09-15). See docs/spark-sql-iceberg-parity.md (FNP-16-csv-xml-xpath)."
     )
 
 
@@ -471,7 +471,9 @@ def schema_of_xml(xml: Column | str, options: dict[str, str] | None = None) -> C
     _require_column_or_str(xml, "xml")
 
     raise UnsupportedOperationException(
-        "functions.schema_of_xml is not supported yet (disclosed E1)"
+        "schema_of_xml is reachable without a JVM and is deferred by cost: an XML parser "
+        "matching Spark's javax.xml kernel is a new dependency this unit may not add "
+        "(owner ruling 2026-09-15). See docs/spark-sql-iceberg-parity.md (FNP-16-csv-xml-xpath)."
     )
 
 
@@ -1698,30 +1700,6 @@ def _reject_aggregate_generator_argument(array_column: Column, operation: str) -
         "[MISSING_GROUP_BY] The query does not include a GROUP BY clause. "
         "Add GROUP BY or turn it into the window functions using OVER clauses. "
         f"(generator {operation} cannot wrap an aggregate expression)"
-    )
-
-
-def posexplode(column: Column | str) -> Column:
-    """Generator with ordinal (PySpark ``posexplode``) — STOP: no DF unnest-with-ordinality.
-
-    Raises :class:`~repark.errors.UnsupportedOperationException`. ``explode`` /
-    ``explode_outer`` are separate operations.
-    """
-
-    _ = column
-    # the wheel pins 54.1). Capability fact only.
-    raise UnsupportedOperationException(
-        "posexplode is not supported yet (no first-class unnest-with-ordinality; "
-        "explode/explode_outer are available via guarded unnest rewrite)"
-    )
-
-
-def posexplode_outer(column: Column | str) -> Column:
-    """``posexplode_outer`` — same STOP as :func:`posexplode`."""
-
-    _ = column
-    raise UnsupportedOperationException(
-        "posexplode_outer is not supported yet (see posexplode; use explode_outer without ordinal)"
     )
 
 

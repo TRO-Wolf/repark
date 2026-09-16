@@ -123,6 +123,18 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   (`DataFrameWriter.bucketBy`/`bucket_by`/`sortBy`/`sort_by`/`clusterBy`/`cluster_by`,
   `DataFrameWriterV2.clusterBy`/`cluster_by`); backlog and exceptions baselines hold.
   pins: io-bucket-cluster-1/C-003
+- `test_ex_0_example_coverage.py` — **FNP-GEN-1 step 2 (2026-09-16):** the
+  enumerated public surface moves 1062 → 1064 as `F.inline` and
+  `F.inline_outer` join `__all__` through the generator installer;
+  `docs/examples/functions/{posexplode,inline}.py` cover the four names and
+  the backlog baseline ratchets 112 → 110.
+  pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 2 (2026-09-16):**
+  mirror rows ratchet `functions_expr.py` 2235 → 2213 and
+  `test_explode_rewrite.py` 1135 → 1133; a short-lived
+  `scripts/check_example_coverage.py` row was removed when the script was
+  compacted back under the default ceiling; python_approved stays 32.
+  pins: fnp-gen-1/C-006
 - `test_cap_1_source_file_line_cap.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):**
   `dataframe/writer_readwriter.py` mirror row 1111 → 1105 with the script baseline
   (the bucketBy/sortBy/clusterBy bindings and action-check calls landed while the five
@@ -861,3 +873,10 @@ Escalate to: [../map.md#debug](../map.md).
   literal this unit's `to_char` / `to_number` family builds — `CAST(<literal> AS DECIMAL(p,s))` —
   routed through the escaping helper, which is the direction this census exists to enforce.
   pins: fnp-11b/C-007
+- **FNP-GEN-1 rebase onto #640 (2026-09-16, run 17a):** EX-0 and the example backlog are set from
+  **measurement**, not arithmetic — `len(rows)` 1078 read from the failing assert, backlog 108 read
+  from `check_example_coverage.py`'s own report. Both sides of the rebase had moved both counts, and
+  a measured count is exact where an arithmetic one only usually is. pins: fnp-gen-1/C-007
+- **FNP-GEN-1 rebase onto #647 (2026-09-16, orchestrating session):** the same recipe a second
+  time — `len(rows)` 1082 read from the failing assert on a fresh release native, backlog 108 read
+  from `check_example_coverage.py`'s report (unchanged). pins: fnp-gen-1/C-007

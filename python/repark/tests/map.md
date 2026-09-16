@@ -684,7 +684,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ex-30-functions-remainder/C-005
 - [test_examples_functions_a.py](test_examples_functions_a.py) — **EX-25 (2026-09-05):**
   the twenty divergence pins for the F.* long-tail (a) example batch — the refusal
-  pins for `arrays_zip` (EX-FN-1), the `posexplode` pair (EX-FN-2), the
+  pins for `arrays_zip` (EX-FN-1), the `posexplode` pair (EX-FN-2 — **FNP-GEN-1 step
+  2 (2026-09-16):** flipped from refusal pins to answer pins over
+  `createDataFrame(..., "a ARRAY<INT>")`), the
   `encode`/`decode` charset arms (EX-FN-3), column-referencing `expr` (EX-FN-4),
   `format_number` (EX-FN-5), `from_csv` (EX-FN-6), `hash` (EX-FN-7), `json_tuple`
   (EX-FN-8), the `kurtosis`/`skewness`/`mode` trio (EX-FN-9), `make_timestamp`
@@ -1381,6 +1383,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   declared-absent names append. pins: fnp-15-16/C-016
   **FNP-BITMAP-FACADE-1 (2026-09-15):** the alias-segment constant moves 6 → 9 —
   `functions_bitwise.INSTALL_NAMES` appends the three bitmap aggregate names.
+  **FNP-GEN-1 step 2 (2026-09-16):** the tail gains `GENERATOR_NAMES` after
+  `WINDOW_INSTALL_NAMES`; `posexplode` / `posexplode_outer` were already in the
+  pre-split prefix so only `inline` / `inline_outer` append at the end.
+  pins: fnp-gen-1/C-001
   (2026-08-15): `__all__` before==after pin. **FN-E moved the pin** to 262 names
   (freeze 253 + 9 collection additions) + every name resolves.
   (2026-08-15): **FN-F moved the pin** to 263
@@ -1966,6 +1972,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   deliberate go-red-when-they-land pins — today's function-level refusals for
   `posexplode`, `json_tuple`, `inline`, `variant_explode` plus the `sql_keywords` /
   `collations` / `python_worker_logs` `tvf.*` refusals (SES-TVF-1).
+  **FNP-GEN-1 step 2 (2026-09-16):** the `tvf.posexplode` / `posexplode_outer` /
+  `inline` / `inline_outer` go-red pins flipped to answer pins — the tvf facade
+  delegates to the live `F.` generators; `json_tuple` and `variant_explode` keep
+  their declared refusals. pins: session-surface-1/C-007, fnp-gen-1/C-002
   Critic round 1 adds pins for the artifact-dir `stop()` lifecycle (dir gone, exactly its
   own `sys.path` entry removed, `sys.modules` untouched), the `Try(toLong)` id validation
   (Unicode digits, whitespace, int64 overflow, non-str `NOT_STR`), the `hasattr` raise on
@@ -2380,7 +2390,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_pandas_udf.py` — U7 + **M5/M6** `@pandas_udf` pins: SCALAR select/withColumn + multi-UDF one-pass + octo C1–C8 harden pins retained; **SCALAR_ITER** basic/multi-arg/pass-through/wrong-batch-count + dual-UDF streams (octo M5 C5); **pure GROUPED_AGG** mean/global/multi-key+multi-arg + large-group stitch (octo M5 C7); **M6 mixed UDF+builtin** order-independent + global crossJoin + **null group-key null-safe join** (octo M6 C1); cube/rollup refuse (octo M5 C6) + hostile returnType refuse (octo M5 C1) + GROUPED_AGG-in-select refuse + SCALAR-in-agg refuse; **M6 windowed GROUPED_AGG** unbounded `partitionBy` + **null partition keys** + **select alias overwrite** last-wins (octo M6 C1/C2); **M7** ordered default frame (UNBOUNDED PRECEDING→CURRENT ROW running agg) + duck-typed `_frame_start`/`_frame_end` rowsBetween; GROUPED_MAP/WINDOW functionType tag still loud; PandasUDFType ints match PySpark 4.1.2 (200/201/202/204).
 - `test_pandas_udf_oracle.py (+ pandas_udf_oracle_funcs.py picklable helpers)` — live PySpark 4.1.2 pandas_udf oracle (named deliverable): SCALAR values/nulls/coercion/multi-arg/string/error/withColumn + **M5 SCALAR_ITER + pure GROUPED_AGG**; skips cleanly without JVM. Not Apache `test_pandas_udf*` census.
 - `test_explode_rewrite.py` — R-EXPLODE-REWRITE pins (null/empty, one-generator, posexplode*
-  STOP, str ColumnOrName, cast sticky, withColumn unnest, pre-aliased AS strip, multi-array
+  answer pins since FNP-GEN-1 step 2 — the pair emits `pos`/`col` through the analyzer
+  rewrite instead of the former STOP refusals, str ColumnOrName, cast sticky, withColumn
+  unnest, pre-aliased AS strip, multi-array
   exact type bind; **DF-2:** `explode_outer` on `array<struct>` + nested `web_info` struct
   keeps null/empty rows; void `array<Null>` keeps via `make_array(NULL)` and
   reports `NullType`/`void` from `.schema`/`.dtypes` (SQM #176 W-1);
@@ -2396,7 +2408,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   idents, hostile name quote, asc/desc sticky, alone-select outer; octo c3: compound
   mixed-case sibling, nested-list outer type, fn-call/subquery ColumnOrName not SQL inject,
   array-of-struct explode, coalesce outer type, size sibling; octo c4: sql.functions
-  __all__/identity + posexplode STOP path, nested generator refuse, hostile cast reject;
+  __all__/identity + posexplode Column-instance path (was STOP until FNP-GEN-1 step 2),
+  nested generator refuse, hostile cast reject;
   octo c5: F.size/coalesce/when/str refuse generator, nested explode refuse, chained cast
   compose, generator select dup-name preflight; octo c6: aggregate wrappers refuse,
   filter/orderBy/groupBy/agg refuse, nested array_length empty guards; octo c7: date
@@ -4891,8 +4904,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **JAVA-DOUBLE-FD-1 (2026-09-15):** the `to_json` JDK-spelling pin now expects the
   converged longhand cells (`8.409999999999999E21`, `9.999999999999999E22`) —
   registry FNP10-JAVA-DOUBLE-TEXT-1 is FIXED.
+  **FNP-GEN-1 step 2 (2026-09-16):** the `inline` / `inline_outer` stay-absent pin
+  reddened as designed when the names exported; it flips to a presence-and-live
+  pin (facade `Column` instances through the analyzer-rewrite path).
   pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008;
-  pins: door-converge-2/C-003
+  pins: door-converge-2/C-003; pins: fnp-gen-1/C-001
 
 - `test_parity_live_fnp9.py::test_live_fnp9_collections_json` — **FNP-9/10 (2026-09-05):** the
   fifteen answer cells and four raising cells this unit pinned, re-derived from live Spark
@@ -5703,3 +5719,42 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   lateral-join, asTable/TableArg, and `Column.outer` arms plus the error cells.
   Recorded evidence, never hand-edited.
   pins: df-subquery-1/C-007
+- [fnp_gen_1_spark_oracle.json](fnp_gen_1_spark_oracle.json) —
+  **FNP-GEN-1 step 1 (2026-09-15):** the 62 cells of the nine card names
+  (`inline`, `inline_outer`, `posexplode`, `posexplode_outer`, `json_tuple`,
+  `from_csv`, `schema_of_csv`, `from_xml`, `schema_of_xml`) plus their nine
+  `inspect.signature` entries, copied verbatim from the orchestrator's live
+  PySpark 4.1.2 recording `/tmp/oc-worker/pa-gen/o245_spark_oracle.json`
+  (recorder `/tmp/oc-worker/pa-gen/o245.py`, 2026-09-14); `spark_version`
+  4.1.2 kept. No cell projects `ts`, so no driver-zone localization applies.
+  pins: fnp-gen-1/C-001, C-002, C-003, C-004, C-005
+- [test_fnp_gen_1.py](test_fnp_gen_1.py) — **FNP-GEN-1 step 1 (2026-09-15):**
+  red-first two-door pins over the fixture's ansi-True cells (SQL SELECT-list
+  only): facade presence and signature parity (C-001), Python-door and SQL-door
+  value/type/name equality for the generators, `json_tuple`, `from_csv` and
+  `schema_of_csv` (C-002/C-003), the FAILFAST / non-foldable / uninferable
+  error shapes (C-004), the outer/NULL rows inside the generator pins (C-005),
+  and the D-6 declared XML refusal pins naming `FNP-16-csv-xml-xpath` (step 5
+  carries the marker into the message). The three ansi-True `LATERAL VIEW`
+  cells stay unpinned, blocked on run 16c (D-7). Red on base `bee2cde3`:
+  32 failed, 5 signature pins already green on matching stubs.
+  **Step 2 (2026-09-16):** the frame rebuilds as `SELECT CAST(...) UNION ALL`
+  because `VALUES` yields nullable `id` and `bigint` arrays where the oracle
+  records non-nullable `int`; row comparison is order-insensitive because the
+  optimizer drops a subquery `ORDER BY`; the literal-array `inline` cell is a
+  non-strict xfail on the `c0`/`c1`-vs-`col1`/`col2` struct naming divergence
+  (D-10). Green after step 2: every generator cell on both doors and the four
+  XML refusal pins; `json_tuple` / `from_csv` / `schema_of_csv` stay red for
+  steps 3–4. **Remediation round 1:** added red-first pins for mid-list
+  generator position, single-alias `[COLUMN_ALIASES_MISMATCH]` on both doors,
+  `explode`/`stack` mixing on both doors, generator-over-aggregate
+  `[MISSING_GROUP_BY]` on both doors, and `inline` NULL-struct-element
+  propagation on both doors.
+  pins: fnp-gen-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- `test_fnp_gen_1.py` — **FNP-GEN-1 orchestrator fix-up (2026-09-16, run 17a):** the twelve
+  `json_tuple` / `from_csv` / `schema_of_csv` pins are this unit's own **steps 3–4**, written
+  red-first in step 1 and not implemented by step 2. They were plain failures, which cannot merge —
+  CI reds and the suite stops being a signal. Each is now `xfail(strict=True)` naming the step, so
+  the moment those kernels land the pin **XPASSes and fails** and the step-3 round has to retire it.
+  A red-first pin for later work in the same unit is still a residual: strict-xfail it, do not leave
+  it failing. pins: fnp-gen-1/C-004

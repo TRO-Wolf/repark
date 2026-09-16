@@ -2204,6 +2204,15 @@ condition the mirror exists to make impossible.
 
 ---
 
+- **GEN-ALIAS-1** (2026-09-16, run 17a, BACKLOG) — on the **SQL door**, a user `AS name` around a
+  multi-column generator (`posexplode`, `inline`) whose alias text begins with the call's own
+  rendering (`posexplode(` …) is mistaken for a NamePreserver-restored display alias and dropped, so
+  the door answers with default names where Spark raises `COLUMN_ALIASES_MISMATCH`; the Python door
+  raises correctly. The seam is the textual `starts_with(funcname + "(")` test in
+  `crates/repark-functions/src/generator.rs::peel_generator`, which needs a non-textual marker on
+  restored aliases to close — a change to the name-restoration path, not to the generator rewrite.
+  Found by the FNP-GEN-1 verification critic (V-001). pins: fnp-gen-1/C-003
+
 ## 7. Known Spark-parity divergences (BACKLOG)
 
 Differences we intend to close. Each pin **codifies today's behavior** so the fix reds it on
@@ -8211,12 +8220,16 @@ field NAME.
   2026-09-15 by FNP-11B step 2, which retired the refusal pin
   `test_examples_functions_b.py::test_unix_timestamp_format_refuses`.
 
-### EX-FN-22 — `from_xml` / `schema_of_xml` refuse as E1 stubs; Spark parses and infers XML
+### EX-FN-22 — `from_xml` / `schema_of_xml` refuse as a dated declared refusal; Spark parses and infers XML
 
 - **repark** — `F.from_xml("x", "b INT")` raises `UnsupportedOperationException:
-  functions.from_xml is not supported yet (XML parse kernel deferred; disclosed E1)`, and
+  functions.from_xml is a dated declared refusal (owner ruling 2026-09-15): an XML parser
+  matching Spark's javax.xml kernel needs a new dependency this unit may not add. See
+  docs/spark-sql-iceberg-parity.md (FNP-16-csv-xml-xpath)`, and
   `F.schema_of_xml(F.lit("<a><b>1</b></a>"))` raises `UnsupportedOperationException:
-  functions.schema_of_xml is not supported yet (disclosed E1)`.
+  functions.schema_of_xml is a dated declared refusal (…) (FNP-16-csv-xml-xpath)`. Both
+  names joined the FNP-16-csv-xml-xpath armed refusal on both SQL doors under owner ruling
+  D-6 (FNP-GEN-1, 2026-09-15).
 - **Apache Spark** — `from_xml("<a><b>1</b></a>", "b INT")` answers `Row(b=1)`;
   `schema_of_xml("<a><b>1</b></a>")` answers `"STRUCT<b: BIGINT>"`. *(oracle: live PySpark
   4.1.2, ANSI on, UTC, 2026-09-11, EX-30 batch.)*
@@ -9565,7 +9578,9 @@ oracle is involved.
 - **repark** — `to_csv`, `to_xml`, and the nine `xpath_*` names are exported and refuse as
   **reachable without a JVM and deferred by cost**. The nine `xpath_*` functions need an XPath
   1.0 engine matching `javax.xml.xpath`. `datafusion-spark`'s `csv` and `xml` modules are
-  empty. (`from_csv` / `from_xml` / `schema_of_*` already refuse as E1 stubs.)
+  empty. `from_xml` / `schema_of_xml` joined this row's armed refusal under owner ruling
+  D-6 (FNP-GEN-1, 2026-09-15) and name the row in their refusal; `from_csv` /
+  `schema_of_csv` still refuse as E1 stubs pending their own kernels.
 - **Apache Spark** — parses CSV/XML and evaluates XPath 1.0 over XML strings.
   *(oracle: documented.)*
 - **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_csv_xml_xpath_facade_refuses_deferred_by_cost`,

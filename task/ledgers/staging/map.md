@@ -34,6 +34,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   P-201..P-206 / Y-1..Y-3 recorded as residue.
   `risk_tier: standard`. Branch `feat/df-subquery-1`.
   pins: df-subquery-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [fnp-gen-1-ledger.md](fnp-gen-1-ledger.md) —
+  **FNP-GEN-1 step 1 (2026-09-15), in flight:** the 1.5 Spark-parity generators and
+  semi-structured parsers (`inline`, `posexplode`, `json_tuple`, `from_csv`,
+  `schema_of_csv`, plus the D-6 declared XML refusal) — ledger with D-1…D-7,
+  the 62-cell oracle subset, and the red-first two-door pins (32 failed, 5
+  signature pins already green on base `bee2cde3`). No product code in step 1.
+  `risk_tier: standard`. Branch `feat/fnp-gen-1`.
+  pins: fnp-gen-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
@@ -211,23 +219,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   dispositions marked).
   `risk_tier: standard`. Branch `perf/facade-4-s1`.
   pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
-- [facade-5-ledger.md](facade-5-ledger.md) —
-  **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
-  split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
-  formatters, the audit §6 UNMEASURED cell), the renderer × truncation-rule pin
-  census, goldens for the pairs no §8 pin binds (recorded from base, mutation
-  proven), and the step-1 target — a measured format wall and its Rust move, or
-  the smallest byte-identical consolidation naming what stays for `eager.py`.
   No product change under `python/repark/src/` or `crates/`.
   `risk_tier: standard`. Branch `perf/facade-5-s0`.
   pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [facade-5-ledger.md](facade-5-ledger.md) —
-  **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
-  split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
-  formatters, the audit §6 UNMEASURED cell), the renderer × truncation-rule pin
-  census, goldens for the pairs no §8 pin binds (recorded from base, mutation
-  proven), and the step-1 target — a measured format wall and its Rust move, or
-  the smallest byte-identical consolidation naming what stays for `eager.py`.
   No product change under `python/repark/src/` or `crates/`.
   `risk_tier: standard`. Branch `perf/facade-5-s0`.
   pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

@@ -327,15 +327,15 @@ def test_tvf_stack(spark: ReparkSession) -> None:
     )
 
 
-def test_tvf_posexplode_declared_today(spark: ReparkSession) -> None:
-    """cell tvf_posexplode — today's refusal; RED when the ordinal unnest lands (run 15a).
+def test_tvf_posexplode_answers(spark: ReparkSession) -> None:
+    """cell tvf_posexplode — posexplode landed (fnp-gen-1); tvf delegates to F.*.
 
     pins: session-surface-1/C-007
     """
-    with pytest.raises(UnsupportedOperationException, match="posexplode"):
-        spark.tvf.posexplode(F.array(F.lit("a"), F.lit("b")))
-    with pytest.raises(UnsupportedOperationException, match="posexplode"):
-        spark.tvf.posexplode_outer(F.array(F.lit("a")))
+    frame = spark.tvf.posexplode(F.array(F.lit("a"), F.lit("b")))
+    assert frame.to_arrow().to_pylist() == [{"pos": 0, "col": "a"}, {"pos": 1, "col": "b"}]
+    outer = spark.tvf.posexplode_outer(F.array(F.lit("a")))
+    assert outer.to_arrow().to_pylist() == [{"pos": 0, "col": "a"}]
 
 
 def test_tvf_json_tuple_declared_today(spark: ReparkSession) -> None:
@@ -348,18 +348,17 @@ def test_tvf_json_tuple_declared_today(spark: ReparkSession) -> None:
 
 
 def test_tvf_inline_and_variant_declared_today(spark: ReparkSession) -> None:
-    """cells tvf_inline / tvf_variant_explode — no F.* generator exists yet.
+    """cells tvf_inline / tvf_variant_explode — inline landed (fnp-gen-1); variant stays declared.
 
     pins: session-surface-1/C-007
     """
-    for name, arg in (
-        ("inline", F.array(F.struct(F.lit(1).alias("a"), F.lit("x").alias("b")))),
-        ("inline_outer", F.array(F.struct(F.lit(1).alias("a")))),
-        ("variant_explode", F.col("x")),
-        ("variant_explode_outer", F.col("x")),
-    ):
+    frame = spark.tvf.inline(F.array(F.struct(F.lit(1).alias("a"), F.lit("x").alias("b"))))
+    assert frame.to_arrow().to_pylist() == [{"a": 1, "b": "x"}]
+    outer = spark.tvf.inline_outer(F.array(F.struct(F.lit(1).alias("a"))))
+    assert outer.to_arrow().to_pylist() == [{"a": 1}]
+    for name in ("variant_explode", "variant_explode_outer"):
         with pytest.raises(PySparkNotImplementedError) as raised:
-            getattr(spark.tvf, name)(arg)
+            getattr(spark.tvf, name)(F.col("x"))
         assert raised.value.getCondition() == "NOT_IMPLEMENTED"
         assert raised.value.getMessageParameters() == {"feature": f"tvf.{name}"}
 

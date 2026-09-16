@@ -1,0 +1,2184 @@
+{
+ "cells": [
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, inline(arr_s))",
+   "name": "inline",
+   "rows": [
+    [
+     1,
+     1,
+     "p"
+    ],
+    [
+     1,
+     2,
+     "q"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, inline(arr_s))",
+   "name": "inline",
+   "rows": [
+    [
+     1,
+     1,
+     "p"
+    ],
+    [
+     1,
+     2,
+     "q"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, inline_outer(arr_s))",
+   "name": "inline_outer",
+   "rows": [
+    [
+     1,
+     1,
+     "p"
+    ],
+    [
+     1,
+     2,
+     "q"
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, inline_outer(arr_s))",
+   "name": "inline_outer",
+   "rows": [
+    [
+     1,
+     1,
+     "p"
+    ],
+    [
+     1,
+     2,
+     "q"
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, inline(arr_s) FROM FRAME",
+   "name": "inline",
+   "rows": [
+    [
+     1,
+     1,
+     "p"
+    ],
+    [
+     1,
+     2,
+     "q"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, inline(arr_s) FROM FRAME",
+   "name": "inline",
+   "rows": [
+    [
+     1,
+     1,
+     "p"
+    ],
+    [
+     1,
+     2,
+     "q"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, inline_outer(arr_s) FROM FRAME",
+   "name": "inline_outer",
+   "rows": [
+    [
+     1,
+     1,
+     "p"
+    ],
+    [
+     1,
+     2,
+     "q"
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, inline_outer(arr_s) FROM FRAME",
+   "name": "inline_outer",
+   "rows": [
+    [
+     1,
+     1,
+     "p"
+    ],
+    [
+     1,
+     2,
+     "q"
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, x, y FROM FRAME LATERAL VIEW inline(arr_s) v AS x, y",
+   "name": "inline",
+   "rows": [
+    [
+     1,
+     1,
+     "p"
+    ],
+    [
+     1,
+     2,
+     "q"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "y",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, x, y FROM FRAME LATERAL VIEW inline(arr_s) v AS x, y",
+   "name": "inline",
+   "rows": [
+    [
+     1,
+     1,
+     "p"
+    ],
+    [
+     1,
+     2,
+     "q"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "col1",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "col2",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT inline(array(struct(1, 'a'), struct(2, 'b')))",
+   "name": "inline",
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "col1",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "col2",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT inline(array(struct(1, 'a'), struct(2, 'b')))",
+   "name": "inline",
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "pos",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "col",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, posexplode(arr_i))",
+   "name": "posexplode",
+   "rows": [
+    [
+     1,
+     0,
+     10
+    ],
+    [
+     1,
+     1,
+     20
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "pos",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "col",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, posexplode(arr_i))",
+   "name": "posexplode",
+   "rows": [
+    [
+     1,
+     0,
+     10
+    ],
+    [
+     1,
+     1,
+     20
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "pos",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "col",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, posexplode_outer(arr_i))",
+   "name": "posexplode_outer",
+   "rows": [
+    [
+     1,
+     0,
+     10
+    ],
+    [
+     1,
+     1,
+     20
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "pos",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "col",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, posexplode_outer(arr_i))",
+   "name": "posexplode_outer",
+   "rows": [
+    [
+     1,
+     0,
+     10
+    ],
+    [
+     1,
+     1,
+     20
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "pos",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "key",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "value",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "select(posexplode(create_map))",
+   "name": "posexplode",
+   "rows": [
+    [
+     1,
+     0,
+     "a",
+     1
+    ],
+    [
+     2,
+     0,
+     "a",
+     2
+    ],
+    [
+     3,
+     0,
+     "a",
+     3
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "pos",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "key",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "value",
+     "nullable": false,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "select(posexplode(create_map))",
+   "name": "posexplode",
+   "rows": [
+    [
+     1,
+     0,
+     "a",
+     1
+    ],
+    [
+     2,
+     0,
+     "a",
+     2
+    ],
+    [
+     3,
+     0,
+     "a",
+     3
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "p",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "select(posexplode(arr_i).alias('p','v'))",
+   "name": "posexplode",
+   "rows": [
+    [
+     0,
+     10
+    ],
+    [
+     1,
+     20
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "p",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "select(posexplode(arr_i).alias('p','v'))",
+   "name": "posexplode",
+   "rows": [
+    [
+     0,
+     10
+    ],
+    [
+     1,
+     20
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "pos",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "col",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, posexplode(arr_i) FROM FRAME",
+   "name": "posexplode",
+   "rows": [
+    [
+     1,
+     0,
+     10
+    ],
+    [
+     1,
+     1,
+     20
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "pos",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "col",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, posexplode(arr_i) FROM FRAME",
+   "name": "posexplode",
+   "rows": [
+    [
+     1,
+     0,
+     10
+    ],
+    [
+     1,
+     1,
+     20
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "pos",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "col",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, posexplode_outer(arr_i) FROM FRAME",
+   "name": "posexplode_outer",
+   "rows": [
+    [
+     1,
+     0,
+     10
+    ],
+    [
+     1,
+     1,
+     20
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "pos",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "col",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, posexplode_outer(arr_i) FROM FRAME",
+   "name": "posexplode_outer",
+   "rows": [
+    [
+     1,
+     0,
+     10
+    ],
+    [
+     1,
+     1,
+     20
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "p",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, p, v FROM FRAME LATERAL VIEW OUTER posexplode(arr_i) t2 AS p, v",
+   "name": "posexplode",
+   "rows": [
+    [
+     1,
+     0,
+     10
+    ],
+    [
+     1,
+     1,
+     20
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "p",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "v",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, p, v FROM FRAME LATERAL VIEW OUTER posexplode(arr_i) t2 AS p, v",
+   "name": "posexplode",
+   "rows": [
+    [
+     1,
+     0,
+     10
+    ],
+    [
+     1,
+     1,
+     20
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c1",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c2",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c3",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, json_tuple(js, 'a','b','c','zz'))",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "x",
+     "{\"d\":2}",
+     null
+    ],
+    [
+     2,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c1",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c2",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c3",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(id, json_tuple(js, 'a','b','c','zz'))",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "x",
+     "{\"d\":2}",
+     null
+    ],
+    [
+     2,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(json_tuple(js,'a').alias('x'))",
+   "name": "json_tuple",
+   "rows": [
+    [
+     "1"
+    ],
+    [
+     null
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "select(json_tuple(js,'a').alias('x'))",
+   "name": "json_tuple",
+   "rows": [
+    [
+     "1"
+    ],
+    [
+     null
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c1",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c2",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, json_tuple(js, 'a', 'b', 'c') FROM FRAME",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "x",
+     "{\"d\":2}"
+    ],
+    [
+     2,
+     null,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c1",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "c2",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, json_tuple(js, 'a', 'b', 'c') FROM FRAME",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "x",
+     "{\"d\":2}"
+    ],
+    [
+     2,
+     null,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "a",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "b",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, a, b FROM FRAME LATERAL VIEW json_tuple(js, 'a', 'b') j AS a, b",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "x"
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "id",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "a",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "b",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT id, a, b FROM FRAME LATERAL VIEW json_tuple(js, 'a', 'b') j AS a, b",
+   "name": "json_tuple",
+   "rows": [
+    [
+     1,
+     "1",
+     "x"
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT json_tuple('not json', 'a')",
+   "name": "json_tuple",
+   "rows": [
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "c0",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT json_tuple('not json', 'a')",
+   "name": "json_tuple",
+   "rows": [
+    [
+     null
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:int,b:string,c:double>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', 'a INT, b STRING, c DOUBLE')",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     }
+    ],
+    [
+     null
+    ],
+    [
+     {
+      "row": {
+       "a": null,
+       "b": null,
+       "c": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:int,b:string,c:double>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv('csvrow', 'a INT, b STRING, c DOUBLE')",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     }
+    ],
+    [
+     null
+    ],
+    [
+     {
+      "row": {
+       "a": null,
+       "b": null,
+       "c": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:int,b:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv(col('csvrow'), lit('a INT, b STRING'), {'sep': ','})",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "abc"
+      }
+     }
+    ],
+    [
+     null
+    ],
+    [
+     {
+      "row": {
+       "a": null,
+       "b": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:int,b:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_csv(col('csvrow'), lit('a INT, b STRING'), {'sep': ','})",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "abc"
+      }
+     }
+    ],
+    [
+     null
+    ],
+    [
+     {
+      "row": {
+       "a": null,
+       "b": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "F.from_csv('csvrow', 'a INT, b INT', {'mode': 'FAILFAST'})",
+   "message": "An error occurred while calling o1604.collectToPython.",
+   "name": "from_csv"
+  },
+  {
+   "ansi": false,
+   "door": "python",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "F.from_csv('csvrow', 'a INT, b INT', {'mode': 'FAILFAST'})",
+   "message": "An error occurred while calling o1619.collectToPython.",
+   "name": "from_csv"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:int,b:string,c:double>"
+    },
+    {
+     "name": "from_csv(1;x)",
+     "nullable": false,
+     "type": "struct<a:int,b:string>"
+    },
+    {
+     "name": "from_csv(abc)",
+     "nullable": false,
+     "type": "struct<a:int>"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT from_csv(csvrow, 'a INT, b STRING, c DOUBLE'), from_csv('1;x', 'a INT, b STRING', map('sep', ';')), from_csv('abc', 'a INT') FROM FRAME",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     },
+     {
+      "row": {
+       "a": 1,
+       "b": "x"
+      }
+     },
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ],
+    [
+     null,
+     {
+      "row": {
+       "a": 1,
+       "b": "x"
+      }
+     },
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": null,
+       "b": null,
+       "c": null
+      }
+     },
+     {
+      "row": {
+       "a": 1,
+       "b": "x"
+      }
+     },
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "from_csv(csvrow)",
+     "nullable": true,
+     "type": "struct<a:int,b:string,c:double>"
+    },
+    {
+     "name": "from_csv(1;x)",
+     "nullable": false,
+     "type": "struct<a:int,b:string>"
+    },
+    {
+     "name": "from_csv(abc)",
+     "nullable": false,
+     "type": "struct<a:int>"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT from_csv(csvrow, 'a INT, b STRING, c DOUBLE'), from_csv('1;x', 'a INT, b STRING', map('sep', ';')), from_csv('abc', 'a INT') FROM FRAME",
+   "name": "from_csv",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "abc",
+       "c": 2.5
+      }
+     },
+     {
+      "row": {
+       "a": 1,
+       "b": "x"
+      }
+     },
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ],
+    [
+     null,
+     {
+      "row": {
+       "a": 1,
+       "b": "x"
+      }
+     },
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": null,
+       "b": null,
+       "c": null
+      }
+     },
+     {
+      "row": {
+       "a": 1,
+       "b": "x"
+      }
+     },
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "schema_of_csv(1,abc,2.5)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.schema_of_csv('1,abc,2.5')",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: INT, _c1: STRING, _c2: DOUBLE>"
+    ],
+    [
+     "STRUCT<_c0: INT, _c1: STRING, _c2: DOUBLE>"
+    ],
+    [
+     "STRUCT<_c0: INT, _c1: STRING, _c2: DOUBLE>"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "schema_of_csv(1,abc,2.5)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.schema_of_csv('1,abc,2.5')",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: INT, _c1: STRING, _c2: DOUBLE>"
+    ],
+    [
+     "STRUCT<_c0: INT, _c1: STRING, _c2: DOUBLE>"
+    ],
+    [
+     "STRUCT<_c0: INT, _c1: STRING, _c2: DOUBLE>"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "schema_of_csv(1|x)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.schema_of_csv(lit('1|x'), {'sep': '|'})",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: INT, _c1: STRING>"
+    ],
+    [
+     "STRUCT<_c0: INT, _c1: STRING>"
+    ],
+    [
+     "STRUCT<_c0: INT, _c1: STRING>"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "schema_of_csv(1|x)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.schema_of_csv(lit('1|x'), {'sep': '|'})",
+   "name": "schema_of_csv",
+   "rows": [
+    [
+     "STRUCT<_c0: INT, _c1: STRING>"
+    ],
+    [
+     "STRUCT<_c0: INT, _c1: STRING>"
+    ],
+    [
+     "STRUCT<_c0: INT, _c1: STRING>"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "SELECT schema_of_csv('1,abc,2.5,true,2024-01-01'), schema_of_csv('')",
+   "message": "An error occurred while calling o1681.collectToPython.",
+   "name": "schema_of_csv"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": null,
+   "error_type": "Py4JJavaError",
+   "expr": "SELECT schema_of_csv('1,abc,2.5,true,2024-01-01'), schema_of_csv('')",
+   "message": "An error occurred while calling o1688.collectToPython.",
+   "name": "schema_of_csv"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.NON_FOLDABLE_INPUT",
+   "error_type": "AnalysisException",
+   "expr": "SELECT schema_of_csv(csvrow) FROM FRAME",
+   "message": "[DATATYPE_MISMATCH.NON_FOLDABLE_INPUT] Cannot resolve \"schema_of_csv(csvrow)\" due to data type mismatch: the input `csv` should be a foldable \"STRING\" expression; however, got \"csvrow\". SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "schema_of_csv"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "DATATYPE_MISMATCH.NON_FOLDABLE_INPUT",
+   "error_type": "AnalysisException",
+   "expr": "SELECT schema_of_csv(csvrow) FROM FRAME",
+   "message": "[DATATYPE_MISMATCH.NON_FOLDABLE_INPUT] Cannot resolve \"schema_of_csv(csvrow)\" due to data type mismatch: the input `csv` should be a foldable \"STRING\" expression; however, got \"csvrow\". SQLSTATE: 42K09; line 1 pos 7;",
+   "name": "schema_of_csv"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "from_xml(xml)",
+     "nullable": true,
+     "type": "struct<a:int,b:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_xml('xml', 'a INT, b STRING')",
+   "name": "from_xml",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "x"
+      }
+     }
+    ],
+    [
+     null
+    ],
+    [
+     {
+      "row": {
+       "a": null,
+       "b": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "from_xml(xml)",
+     "nullable": true,
+     "type": "struct<a:int,b:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_xml('xml', 'a INT, b STRING')",
+   "name": "from_xml",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "x"
+      }
+     }
+    ],
+    [
+     null
+    ],
+    [
+     {
+      "row": {
+       "a": null,
+       "b": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "from_xml(xml)",
+     "nullable": true,
+     "type": "struct<a:bigint,b:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_xml(col('xml'), F.schema_of_xml(lit('<p><a>1</a><b>x</b></p>')))",
+   "name": "from_xml",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "x"
+      }
+     }
+    ],
+    [
+     null
+    ],
+    [
+     {
+      "row": {
+       "a": null,
+       "b": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "from_xml(xml)",
+     "nullable": true,
+     "type": "struct<a:bigint,b:string>"
+    }
+   ],
+   "door": "python",
+   "expr": "F.from_xml(col('xml'), F.schema_of_xml(lit('<p><a>1</a><b>x</b></p>')))",
+   "name": "from_xml",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "x"
+      }
+     }
+    ],
+    [
+     null
+    ],
+    [
+     {
+      "row": {
+       "a": null,
+       "b": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "from_xml(xml)",
+     "nullable": true,
+     "type": "struct<a:int,b:string>"
+    },
+    {
+     "name": "from_xml(<p><a>bad</a></p>)",
+     "nullable": true,
+     "type": "struct<a:int>"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT from_xml(xml, 'a INT, b STRING'), from_xml('<p><a>bad</a></p>', 'a INT') FROM FRAME",
+   "name": "from_xml",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "x"
+      }
+     },
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ],
+    [
+     null,
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": null,
+       "b": null
+      }
+     },
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "from_xml(xml)",
+     "nullable": true,
+     "type": "struct<a:int,b:string>"
+    },
+    {
+     "name": "from_xml(<p><a>bad</a></p>)",
+     "nullable": true,
+     "type": "struct<a:int>"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT from_xml(xml, 'a INT, b STRING'), from_xml('<p><a>bad</a></p>', 'a INT') FROM FRAME",
+   "name": "from_xml",
+   "rows": [
+    [
+     {
+      "row": {
+       "a": 1,
+       "b": "x"
+      }
+     },
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ],
+    [
+     null,
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ],
+    [
+     {
+      "row": {
+       "a": null,
+       "b": null
+      }
+     },
+     {
+      "row": {
+       "a": null
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "schema_of_xml(<p><a>1</a><b>x</b></p>)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.schema_of_xml('<p><a>1</a><b>x</b></p>')",
+   "name": "schema_of_xml",
+   "rows": [
+    [
+     "STRUCT<a: BIGINT, b: STRING>"
+    ],
+    [
+     "STRUCT<a: BIGINT, b: STRING>"
+    ],
+    [
+     "STRUCT<a: BIGINT, b: STRING>"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "schema_of_xml(<p><a>1</a><b>x</b></p>)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "F.schema_of_xml('<p><a>1</a><b>x</b></p>')",
+   "name": "schema_of_xml",
+   "rows": [
+    [
+     "STRUCT<a: BIGINT, b: STRING>"
+    ],
+    [
+     "STRUCT<a: BIGINT, b: STRING>"
+    ],
+    [
+     "STRUCT<a: BIGINT, b: STRING>"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "schema_of_xml(<p><a>1</a><b>x</b><c><d>1.5</d></c></p>)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "schema_of_xml(<p><a>1</a><a>2</a></p>)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT schema_of_xml('<p><a>1</a><b>x</b><c><d>1.5</d></c></p>'), schema_of_xml('<p><a>1</a><a>2</a></p>')",
+   "name": "schema_of_xml",
+   "rows": [
+    [
+     "STRUCT<a: BIGINT, b: STRING, c: STRUCT<d: DOUBLE>>",
+     "STRUCT<a: ARRAY<BIGINT>>"
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "schema_of_xml(<p><a>1</a><b>x</b><c><d>1.5</d></c></p>)",
+     "nullable": false,
+     "type": "string"
+    },
+    {
+     "name": "schema_of_xml(<p><a>1</a><a>2</a></p>)",
+     "nullable": false,
+     "type": "string"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT schema_of_xml('<p><a>1</a><b>x</b><c><d>1.5</d></c></p>'), schema_of_xml('<p><a>1</a><a>2</a></p>')",
+   "name": "schema_of_xml",
+   "rows": [
+    [
+     "STRUCT<a: BIGINT, b: STRING, c: STRUCT<d: DOUBLE>>",
+     "STRUCT<a: ARRAY<BIGINT>>"
+    ]
+   ]
+  }
+ ],
+ "signatures": {
+  "from_csv": "(col: 'ColumnOrName', schema: Union[pyspark.sql.column.Column, str], options: Optional[Mapping[str, str]] = None) -> pyspark.sql.column.Column",
+  "from_xml": "(col: 'ColumnOrName', schema: Union[pyspark.sql.types.StructType, pyspark.sql.column.Column, str], options: Optional[Mapping[str, str]] = None) -> pyspark.sql.column.Column",
+  "inline": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "inline_outer": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "json_tuple": "(col: 'ColumnOrName', *fields: str) -> pyspark.sql.column.Column",
+  "posexplode": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "posexplode_outer": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "schema_of_csv": "(csv: Union[pyspark.sql.column.Column, str], options: Optional[Mapping[str, str]] = None) -> pyspark.sql.column.Column",
+  "schema_of_xml": "(xml: Union[pyspark.sql.column.Column, str], options: Optional[Mapping[str, str]] = None) -> pyspark.sql.column.Column"
+ },
+ "spark_version": "4.1.2"
+}

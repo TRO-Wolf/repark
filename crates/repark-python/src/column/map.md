@@ -116,6 +116,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   arms (the parent file is at its 1000-line ceiling, so no arm lands there;
   `datediff` moved here when the door grew its arity route).
   pins: fnp-11a/C-002, C-003
+  **FNP-GEN-1 step 2 (2026-09-16):** the `posexplode` / `posexplode_outer` / `inline` /
+  `inline_outer` arms embed the registered placeholder UDFs and the
+  `__repark_gen_alias` arm embeds the marker the facade's `_GeneratorColumn.alias`
+  uses to carry multi-name output aliases into `generator::GeneratorRewrite`.
+  pins: fnp-gen-1/C-002, C-003
   **DATE-FN-1:** `unix_timestamp` / `to_unix_timestamp` (0 or 1 arg). PySpark has no `F.date`.
   pins: date-fn-1-spark-date-spelling/C-002
   **FN-FIX-1:** `isnan` / `sha2` / array kernels. pins: fn-fix-1-registry-rows/C-002

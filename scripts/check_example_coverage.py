@@ -8,17 +8,15 @@ that ``install_into`` appends at import, and public defs on that module. When
 ``repark._native`` imports, every example script runs and every module door's
 live ``__all__`` (``F``, ``ta``, ``types``, ``ml``) is checked against the walk.
 
-Closed set after EX-1 (roadmap colon list, session, and the seven class
-surfaces the owner ruled into v0.7 on 2026-08-31): ``F.*``, DataFrame /
-GroupedData / DataFrameNaFunctions / DataFrameStatFunctions public members,
-TA ``__all__``, DataFrameReader / DataFrameWriter / DataFrameWriterV2 public
-members, ``repark.sql``, SparkSession / SparkSession.Builder public members,
-Column / Window / WindowSpec / Catalog / Row public members, and the
-``types`` / ``ml`` module ``__all__`` surfaces. Names starting with ``_`` and
-every dunder are skipped (``DataFrame.__getitem__`` is excluded by that dunder
-rule). Still outside the inventory: RuntimeConfig (5), SparkContext (3),
-UDFRegistration (3), StorageLevel (0 public). Widening again is an owner
-decision. Measured 2026-08-31.
+Closed set after EX-1 (roadmap colon list, session, and the seven class surfaces the owner
+ruled into v0.7 on 2026-08-31): ``F.*``, DataFrame / GroupedData / DataFrameNaFunctions /
+DataFrameStatFunctions public members, TA ``__all__``, DataFrameReader / DataFrameWriter /
+DataFrameWriterV2 public members, ``repark.sql``, SparkSession / SparkSession.Builder public
+members, Column / Window / WindowSpec / Catalog / Row public members, and the ``types`` / ``ml``
+module ``__all__`` surfaces. Names starting with ``_`` and every dunder are skipped
+(``DataFrame.__getitem__`` is excluded by that dunder rule). Still outside the inventory:
+RuntimeConfig (5), SparkContext (3), UDFRegistration (3), StorageLevel (0 public). Widening
+again is an owner decision. Measured 2026-08-31.
 
 Seven names are repark plumbing, not PySpark surface — the six ``Column.*``
 select-boundary helpers and ``F.PythonUDFColumn`` — measured absent from
@@ -83,21 +81,23 @@ FUNCTIONS_INSTALLER_SOURCES: tuple[str, ...] = (
     "python/repark/src/repark/spark/functions_arrow_udf.py",
     "python/repark/src/repark/spark/functions_temporal.py",
     "python/repark/src/repark/spark/functions_window.py",
+    "python/repark/src/repark/spark/functions_generators.py",
 )
 FUNCTION_EXPORT_BINDINGS: frozenset[str] = frozenset(
     {
-        "TRY_EXPORTS",
-        "HIGHER_ORDER_EXPORTS",
-        "SKETCH_NAMES",
-        "CSV_XML_XPATH_NAMES",
-        "VARIANT_NAMES",
-        "GEOSPATIAL_NAMES",
-        "FNP9_NAMES",
-        "STACK_NAMES",
-        "INSTALL_NAMES",
-        "BYNAME_NAMES",
         "ARROW_EXPORTS",
+        "BYNAME_NAMES",
+        "CSV_XML_XPATH_NAMES",
         "FNP11A_EXPORTS",
+        "FNP9_NAMES",
+        "GENERATOR_NAMES",
+        "GEOSPATIAL_NAMES",
+        "HIGHER_ORDER_EXPORTS",
+        "INSTALL_NAMES",
+        "SKETCH_NAMES",
+        "STACK_NAMES",
+        "TRY_EXPORTS",
+        "VARIANT_NAMES",
     }
 )
 FUNCTION_EXPORT_DICT_KEYS: frozenset[str] = frozenset({"FNP15_MESSAGES"})
@@ -113,7 +113,7 @@ FAMILIES: tuple[str, ...] = (
     "types",
     "window",
 )
-BACKLOG_BASELINE = 110
+BACKLOG_BASELINE = 108
 EXCEPTIONS_BASELINE = 1
 COLUMN_PLUMBING_REASON = (
     "bound select-boundary plumbing on repark's Column; measured absent from "

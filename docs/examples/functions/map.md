@@ -36,6 +36,12 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
 `map_build.py` pins: fnp-9-collections-json/C-006.
 - [explode.py](explode.py) — `F.explode` and `F.explode_outer`: one row per array element,
   the outer spelling keeping the empty and NULL rows.
+- [posexplode.py](posexplode.py) — `F.posexplode` and `F.posexplode_outer`: position and
+  element per row, the outer spelling keeping the empty and NULL rows (EX-FN-2 fixed,
+  fnp-gen-1 step 2). pins: fnp-gen-1/C-002
+- [inline.py](inline.py) — `F.inline` and `F.inline_outer`: an array of structs fans out to
+  one column per struct field, the outer spelling keeping the NULL and empty rows
+  (fnp-gen-1 step 2). pins: fnp-gen-1/C-002
 - [stack.py](stack.py) — `F.stack`: Spark's `stack(n, expr…)` unpivot, two rows from four
   literals. pins: perf-unpivot-1/C-004
 - [higher_order.py](higher_order.py) — the lambda names: `F.exists`, `F.forall`, `F.filter`,
@@ -144,7 +150,8 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
 - [array_more.py](array_more.py) — `F.array_position` found/missing/NULL, `F.array_sort`
   ascending with NULLs last, `F.arrays_overlap` with its NULL decisions, `F.flatten`
   over NULL sub-arrays, and `F.map_zip_with` merging two maps key by key.
-  `F.arrays_zip` and the `posexplode` pair stay on the backlog (EX-FN-1, EX-FN-2).
+  `F.arrays_zip` stays on the backlog (EX-FN-1); the `posexplode` pair moved to
+  [posexplode.py](posexplode.py) when EX-FN-2 landed (fnp-gen-1 step 2).
   pins: ex-25-functions-a/C-002
 - [strings_more.py](strings_more.py) — `F.chr` / `F.char` modulo-256 spellings with the
   negative-empty edge, `F.elt` in range with its `INVALID_ARRAY_INDEX` raise, `F.initcap`

@@ -10,7 +10,9 @@ order the guards run — as distinct from what each handler then does.
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../router.rs`.
   FNP-15/16: `execute_refuses_every_armed_declared_name` walks `declared_refuse::armed_names()`
   through `execute` and asserts `NotImplemented` plus the registry-section reason.
-  pins: fnp-15-16/C-001, C-008, C-009, C-010, C-011
+  **FNP-GEN-1 (2026-09-16):** the roster count pin moves 62 → 64 as the XML pair
+  `from_xml` / `schema_of_xml` arms (6 unreachable plus 58 deferred).
+  pins: fnp-15-16/C-001, C-008, C-009, C-010, C-011, fnp-gen-1/C-003
 
 ## Pointers
 

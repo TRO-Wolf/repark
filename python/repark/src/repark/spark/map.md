@@ -267,6 +267,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `functions_expr.py` — shared expression builders and scalar lowering. **FNP-9/10
   (2026-09-05):** `arrays_zip` and `schema_of_json` stop refusing and route to their kernels.
   pins: fnp-9-collections-json/C-003, C-006
+  **FNP-GEN-1 (2026-09-16):** `from_xml` / `schema_of_xml` raise the dated declared
+  refusal naming `FNP-16-csv-xml-xpath` (owner ruling D-6, 2026-09-15), verbatim the
+  same `{name} is reachable without a JVM …` string the armed parse-altitude refusal
+  raises on both SQL doors. pins: fnp-gen-1/C-002, C-003
   **ABS-EXPR-1 (2026-09-13):** `cbrt` and `nullif` are one native `_scalar` call each
   (`expr_fn::cbrt` / `expr_fn::nullif`); both `when(...)` rewrites embedded their child
   more than once per level (cbrt 3×, nullif 2×). `nvl2` stays a `when` — each child is
@@ -281,16 +285,34 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `NOT_ITERABLE`; `unix_timestamp` takes Spark's default `'yyyy-MM-dd HH:mm:ss'`. The file
   holds exactly 2235 lines. pins: fnp-11b/C-001, C-002
 - `functions_stack.py` — **PERF-UNPIVOT-1 (2026-09-12):** `F.stack` / `StackCall` /
-  `select_with_stack_if_present`. Installed last onto `functions.py`. pins: perf-unpivot-1/C-004
+  `select_with_stack_if_present`. Installed last onto `functions.py`; its
+  one-generator gate also reads `_repark_generator` (FNP-GEN-1) so `stack` beside
+  an analyzer generator refuses. pins: perf-unpivot-1/C-004, fnp-gen-1/C-003
+- `functions_generators.py` — **FNP-GEN-1 step 2 (2026-09-16):** the thin wrappers for
+  `posexplode` / `posexplode_outer` / `inline` / `inline_outer`, plus `_GeneratorColumn`
+  whose `alias(*names)` packs multi-name output aliases into the `__repark_gen_alias`
+  marker call that `repark_functions::generator::GeneratorRewrite` peels. The wrappers
+  return plain scalar expressions; the analyzer rule does the unnesting, so
+  `dataframe/**` and the `_select_with_generator` allow-list stay untouched.
+  `_GeneratorColumn` carries `_repark_generator` (the `functions_stack.py`
+  one-generator gate reads it so `stack` + `inline` refuses) and clears
+  `_projection_name` so `_collapse_identity_projection_alias` keeps the call bare —
+  an identity `Expr::Alias` would otherwise reach the rewrite as a one-name
+  `COLUMN_ALIASES_MISMATCH`. `GENERATOR_NAMES` is the export table
+  `scripts/check_example_coverage.py` reads, and
+  `install_into` runs at the tail of `functions.py`'s installer chain; `posexplode` /
+  `posexplode_outer` are additionally imported statically into `functions.py` because
+  their `__all__` rows predate the installer. pins: fnp-gen-1/C-001, C-002, C-003
 - `functions_json.py` — **FNP-10 (2026-09-05):** the JSON wrappers (`get_json_object`,
   `json_array_length`, `json_object_keys`, `to_json`, `from_json`). Its `install_into` also
   re-exports the collection constructors from `functions_collections`, so the whole FNP-9/10
   surface reaches `functions.py` through the existing installer chain instead of growing that
   module past its exact size baseline. `FNP9_NAMES` is the export table
   `scripts/check_example_coverage.py` reads, so a name added here is a name that needs an
-  example. The unit's unbuilt names (`inline`, `inline_outer`, `call_udf`,
-  `call_function`) are deliberately NOT here (`stack` landed in PERF-UNPIVOT-1): exporting a
-  refusal would add rows to an example backlog whose count only ratchets down.
+  example. The unit's unbuilt names (`call_udf`, `call_function` — before FNP-MISC-1)
+  were deliberately NOT here (`stack` landed in PERF-UNPIVOT-1; `inline` /
+  `inline_outer` landed in FNP-GEN-1 step 2 through `functions_generators.py`):
+  exporting a refusal would add rows to an example backlog whose count only ratchets down.
   §7 `FNP9-GENERATORS-1` / `FNP9-BYNAME-1`.
   The `DataType` import is under `TYPE_CHECKING` — a runtime one closes an import cycle through
   `repark.spark.types`. `_refuse_json_options` is the one rule `from_json`, `to_json` and
@@ -569,3 +591,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - **DOOR-CONVERGE-2 (#622, 2026-09-15, orchestrator):** `functions_byname.py` `FACADE_ONLY_ROUTINE_NAMES` drops `split`: the facade dispatch now resolves `split` on the Spark kernel, so it is no longer a measured engine gap (`test_fnp_misc_1_byname_allowlist_covers_facade`; ruling R-16c-11, run 16a told). `F.split` itself stays run 16a's hand-off. pins: door-converge-2/C-005
 - **DEGREES-RUST-1 by-name drift (2026-09-15, run 16a):** `degrees` / `radians` leave `functions_byname.py`'s `FACADE_ONLY_ROUTINE_NAMES` — once they bind engine scalar UDFs, `call_function` resolves them in the engine, so the derived allowlist no longer lists them as facade-only. pins: fnp-bitmap-facade-1/C-011
 - **FNP-11B step 3 (2026-09-15):** `try_to_timestamp` leaves `FACADE_ONLY_ROUTINE_NAMES` for the same reason — the facade dispatch now resolves it on the tolerant-timestamp kernel. pins: fnp-11b/C-007
+- **FNP-GEN-1 orchestrator fix-up (2026-09-16, run 17a):** `functions_byname.py` drops `posexplode`
+  and `posexplode_outer` from `FACADE_ONLY_ROUTINE_NAMES`. That tuple lists names reachable **only**
+  from the facade; this unit's `GeneratorRewrite` makes both answer on the SQL door too, so they are
+  no longer facade-only and `test_fnp_misc_1_byname_allowlist_covers_facade` derives them out of the
+  set. The full facade suite caught it — the unit's own pin set does not include that census.
+  pins: fnp-gen-1/C-005

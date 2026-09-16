@@ -526,10 +526,12 @@ def test_arrays_zip_field_names_are_positional_not_the_column_name() -> None:
 
 
 @pytest.mark.parametrize("name", ["inline", "inline_outer"])
-def test_fnp9_multi_column_and_by_name_names_stay_absent(name: str) -> None:
-    """A name this unit did not build stays absent rather than half-answering."""
-    assert not hasattr(F, name)
-    assert name not in F.__all__
+def test_fnp9_multi_column_and_by_name_names_are_live(name: str) -> None:
+    """``inline*`` landed as analyzer-rewrite generators under FNP-GEN-1 step 2."""
+    from repark.spark.column import Column
+
+    assert name in F.__all__
+    assert isinstance(getattr(F, name)("arrs"), Column)
 
 
 def test_json_tuple_still_refuses_on_the_facade() -> None:
