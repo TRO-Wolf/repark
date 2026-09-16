@@ -115,6 +115,40 @@ passes (full list in §2).
   pinned the old three-seat pre-coercion order, so the new fourth seat failed
   it. Updated to the new contract (name kept) with an `extension/map.md` row;
   no behavior assertion changed, only the seating this card owns.
+- Facade-suite fallout, round 1 (27 failed): the early narrowing left two
+  cements for the first `TypeCoercion`, both diagnosed with a rule-by-rule plan
+  probe and both fixed inside the new rule. (i) Higher-order lambdas over
+  column-fed arrays: `HigherOrderPreparation` binds the lambda variable from
+  the still-wide array, so the coercion widened the array back to Int64. The
+  rule now recurses with subqueries (the inner constructor lives a level down;
+  `map_expressions` alone never reached it) and re-resolves lambda variables
+  after narrowing, so the coercion sees one consistent narrow world.
+  (ii) Unions: `recompute_schema` preserves the stale Int64 union schema and
+  `coerce_union_schema_with_schema` seeds from it, so the coercion wrapped
+  every narrowed branch in `CAST(... AS BIGINT)` — visibly cementing
+  `5 / 2 UNION ALL 7 / 2` to integer division. The rule now re-derives the
+  union schema from its inputs (`try_new_with_loose_types`); the coercion
+  then does the real merge. Both fixes carry Rust unit tests beside the rule.
+- Facade-suite fallout, round 2 (targeted repairs, Spark-recorded answers):
+  `overlay(..., -1)` stopped truncating because the coercion wraps the
+  narrowed `-1` in a cast before the rewrite sees it; `is_negative_one_literal`
+  now sees through one compiler cast (Spark treats every `-1` len as omit).
+  `COALESCE(CAST(NULL AS INT), 1)` now answers int32 — TY-7's recorded Spark
+  answer — so the TY-7 twins flip to int32 and the TY-7 row moves to FIXED.
+  `coalesce(int_col, 0)` CTAS width flips long to int the same way (Spark:
+  int); the test's nullability purpose is untouched.
+- Indexed-transform note: the live oracle types Spark's `(x, i)` index INT, so
+  the Int32 index stays; the `null_element` door row now reads int32 on both
+  doors (the column-vs-SQL disagreement is gone with the widening). Two
+  `fnp8` sql_columns dispositions re-measured from the running engine to the
+  oracle-converged int32 schema (script `/tmp/bl20-rerecord.py`, measured not
+  hand-computed). A mid-course index-to-Int64 experiment was reverted the same
+  day once the oracle decode showed INT.
+- Files owned by other units touched (announced): `test_types_1.py` (TY-7
+  twins), `test_fnp_8_sql_door.py` (null_element row), `test_cutover_schema_1.py`
+  (CTAS width cell), `fnp8_repark_dispositions.json` (2 re-measured schemas).
+  Each change moves the pin toward the recorded Spark answer; nothing else in
+  those files was edited.
 
 ## 3. Design (Rust-first per Q-17a-2)
 

@@ -222,7 +222,7 @@ def test_column_and_spark_sql_share_higher_order_answer(
     ),
     (
         ("array(1, 2, 3)", [[1, 3, 5]], False, False, True, True),
-        ("array(1, CAST(NULL AS INT), 3)", [[1, None, 5]], False, True, False, True),
+        ("array(1, CAST(NULL AS INT), 3)", [[1, None, 5]], False, True, True, True),
         ("CAST(array() AS ARRAY<INT>)", [[]], False, True, True, True),
         ("CAST(NULL AS ARRAY<INT>)", [None], True, True, True, True),
     ),

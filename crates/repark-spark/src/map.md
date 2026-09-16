@@ -214,8 +214,12 @@ pins: rp-4-fork-repin/C-005, C-006
   from `SparkExtension::configure_analyzer_rules` immediately before the first
   `type_coercion`, so DataFusion's own coercion then produces Spark's promotion
   with no per-operator retag. Skips `Limit` plans, rebuilds `Values` rows. The
-  late `SparkIntegerLiteral` stays (idempotent no-op afterwards). Unit tests
-  beside the change cover the mapping, the refusal shape and the insert order.
+  late `SparkIntegerLiteral` stays (idempotent no-op afterwards). The rule
+  recurses with subqueries, re-resolves lambda variables after narrowing, and
+  re-derives union schemas from their inputs, so the first coercion sees one
+  consistent narrow world (else it cements Int64 around lambdas and unions).
+  Unit tests beside the change cover the mapping, the refusal shape, the
+  insert order and the union refresh.
   pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-007
 - `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /

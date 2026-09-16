@@ -837,4 +837,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   red-first pins (`test_sql_literal_typing_1.py`: 19 failed, 44 passed on the
   base, all clauses OPEN). No product code in step 1.
   `risk_tier: standard`. Branch `feat/sql-literal-typing-1`.
+  State 2026-09-16: C-001, C-002, C-003, C-004, C-006, C-007 PROVEN; C-005 OPEN
+  with BACKLOG row BL-20-OVF.
   pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007

@@ -177,11 +177,11 @@ def test_coalesce_with_bigint_stays_wide_on_both_doors() -> None:
     assert facade.collect()[0][0] == 1
 
 
-def test_coalesce_with_int_stays_wide_on_repark() -> None:
-    """pins: types-1/C-001 — COALESCE of INT and a narrowed literal answers BIGINT (TY-7)."""
+def test_coalesce_with_int_answers_int_on_repark() -> None:
+    """pins: types-1/C-001 — COALESCE of INT and a narrowed literal answers INT (TY-7, FIXED by sql-literal-typing-1)."""
     session = _session()
     query = "SELECT COALESCE(CAST(NULL AS INT), 1) AS r"
-    assert _door_type(session, query) == ("int64", False)
+    assert _door_type(session, query) == ("int32", False)
     assert session.sql(query).collect()[0][0] == 1
 
 
@@ -743,7 +743,7 @@ def test_live_recoercion_shapes_match_the_oracle(spark_engine: lp.Engine) -> Non
     narrow = "SELECT COALESCE(CAST(NULL AS INT), 1) AS r"
     mine = _live_type(engine, narrow)
     spark = _live_type(spark_engine, narrow)
-    assert (mine[0], spark[0]) == ("int64", "int32")
+    assert (mine[0], spark[0]) == ("int32", "int32")
     assert mine[1] is spark[1] is False
     assert mine[2] == spark[2]
     conditional = "SELECT IF(i > 1, 1, 0) AS r FROM types1_probe"

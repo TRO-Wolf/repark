@@ -156,7 +156,7 @@ def test_ctas_of_coalesce_stores_optional(tmp_path: Path) -> None:
         "SELECT coalesce(units, 0) AS u, 'lit' AS s, coalesce(id, 'z') AS nid FROM staging_view"
     )
     schema = _spark_ctas_schema(tmp_path, select, "t2")
-    assert schema == [["u", "long", False], ["s", "string", False], ["nid", "string", False]]
+    assert schema == [["u", "int", False], ["s", "string", False], ["nid", "string", False]]
 
 
 def test_dedup_arrow_schema_matches_spark(tmp_path: Path) -> None:

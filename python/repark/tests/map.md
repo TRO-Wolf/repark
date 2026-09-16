@@ -4806,8 +4806,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   higher-order callable forms through the Column door, Spark SQL, and column-free `F.expr`.
   It fences the separately BACKLOGed EX-FN-4 column-reference refusal, pins Spark-equal public
   `exists` nullability, and records indexed-transform width and nested nullability on four measured
-  shapes. Only a pre-analyzed nullable-element Column source keeps the inherited Int64 width. NULL
-  and empty aggregate inputs pin Int32 across all three paths; explicit `BIGINT` stays Int64.
+  shapes. **SQL-LITERAL-TYPING-1 (2026-09-16):** all four shapes read Int32 on every door
+  (the old nullable-element Column Int64 was the same Int64-literal widening; Spark's index
+  is INT). NULL and empty aggregate inputs pin Int32 across all three paths; explicit
+  `BIGINT` stays Int64.
 - `test_parity_live_fnp8.py` — **FNP-8 (2026-09-07), in flight:** ANSI-on/off indexed
   `transform` Arrow cells through Column RePark, SQL RePark, and live Spark. It names the
   per-door width and nested nullability against the measured Spark cell. A second live detector

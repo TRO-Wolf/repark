@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use datafusion::common::config::ConfigOptions;
-use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
+use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Result, ScalarValue};
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
-use datafusion::logical_expr::{Expr, LogicalPlan, LogicalPlanBuilder, Values};
+use datafusion::logical_expr::{Expr, LogicalPlan, LogicalPlanBuilder, Union, Values};
 use datafusion::optimizer::AnalyzerRule;
 
 pub const SPARK_MAX_DECIMAL_PRECISION: u8 = 38;
@@ -15,19 +15,7 @@ pub struct SparkIntegralLiteral;
 
 impl AnalyzerRule for SparkIntegralLiteral {
     fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        if let LogicalPlan::Values(values) = plan {
-            return rewrite_values(values).data();
-        }
-        if matches!(plan, LogicalPlan::Limit(_)) {
-            return Ok(plan);
-        }
-        let name_preserver = NamePreserver::new(&plan);
-        let transformed = plan.map_expressions(|expr| {
-            let saved_name = name_preserver.save(&expr);
-            let rewritten = expr.transform_up(spark_integral_literal)?;
-            Ok(rewritten.update_data(|node| saved_name.restore(node)))
-        })?;
-        transformed.map_data(LogicalPlan::recompute_schema).data()
+        plan.transform_up_with_subqueries(rewrite_plan).data()
     }
 
     #[allow(clippy::unnecessary_literal_bound)]
@@ -48,6 +36,33 @@ pub(crate) fn insert_literal_rule_before_coercion(
     Ok(rules)
 }
 
+fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    if let LogicalPlan::Values(values) = plan {
+        return rewrite_values(values);
+    }
+    if matches!(plan, LogicalPlan::Limit(_)) {
+        return Ok(Transformed::no(plan));
+    }
+    if let LogicalPlan::Union(union) = plan {
+        let rebuilt = Union::try_new_with_loose_types(union.inputs)?;
+        return Ok(Transformed::yes(LogicalPlan::Union(rebuilt)));
+    }
+    let name_preserver = NamePreserver::new(&plan);
+    let transformed = plan.map_expressions(|expr| {
+        let saved_name = name_preserver.save(&expr);
+        let rewritten = expr.transform_up(spark_integral_literal)?;
+        Ok(rewritten.update_data(|node| saved_name.restore(node)))
+    })?;
+    let narrowed_flag = transformed.transformed;
+    let narrowed = transformed.map_data(LogicalPlan::recompute_schema)?.data;
+    let resolved = narrowed.resolve_lambda_variables()?;
+    Ok(Transformed::new(
+        resolved.data,
+        narrowed_flag || resolved.transformed,
+        TreeNodeRecursion::Continue,
+    ))
+}
+
 fn rewrite_values(values: Values) -> Result<Transformed<LogicalPlan>> {
     let mut changed = false;
     let mut rows = Vec::with_capacity(values.values.len());
@@ -64,7 +79,7 @@ fn rewrite_values(values: Values) -> Result<Transformed<LogicalPlan>> {
         return Ok(Transformed::no(LogicalPlan::Values(values)));
     }
     let rebuilt = LogicalPlanBuilder::values(rows)?.build()?;
-    Ok(Transformed::yes(rebuilt))
+    Ok(Transformed::yes(rebuilt.resolve_lambda_variables().data()?))
 }
 
 pub(crate) fn spark_integral_literal(expr: Expr) -> Result<Transformed<Expr>> {
@@ -149,7 +164,7 @@ fn check_decimal_precision(precision: u8) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datafusion::arrow::datatypes::i256;
+    use datafusion::arrow::datatypes::{DataType, i256};
     use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
 
     fn literal(expr: Expr) -> (ScalarValue, bool) {
@@ -289,5 +304,20 @@ mod tests {
     fn insert_without_coercion_errors() {
         let rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![Arc::new(StubRule("only"))];
         assert!(insert_literal_rule_before_coercion(rules).is_err());
+    }
+
+    #[tokio::test]
+    async fn union_schema_follows_narrowed_branches() {
+        use datafusion::prelude::SessionContext;
+        let ctx = SessionContext::new();
+        let plan = ctx
+            .state()
+            .create_logical_plan("SELECT 1 AS q UNION ALL SELECT 2")
+            .await
+            .unwrap();
+        assert_eq!(plan.schema().field(0).data_type(), &DataType::Int64);
+        let config = ctx.state().config_options().clone();
+        let analyzed = SparkIntegralLiteral.analyze(plan, &config).unwrap();
+        assert_eq!(analyzed.schema().field(0).data_type(), &DataType::Int32);
     }
 }

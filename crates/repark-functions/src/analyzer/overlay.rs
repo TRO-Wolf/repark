@@ -16,8 +16,13 @@ pub(super) fn rewrite(function: ScalarFunction) -> Transformed<Expr> {
 }
 
 fn is_negative_one_literal(expr: &Expr) -> bool {
+    let literal = match expr {
+        Expr::Literal(_, _) => expr,
+        Expr::Cast(cast) => cast.expr.as_ref(),
+        _ => return false,
+    };
     matches!(
-        expr,
+        literal,
         Expr::Literal(
             ScalarValue::Int64(Some(-1))
                 | ScalarValue::Int32(Some(-1))

@@ -857,20 +857,20 @@ them, and the document is ordered by surface, never by date.
   union schema after narrowing, which is a planner change beyond a type-widening unit.
   pins: types-1/C-001
 
-### TY-7 — `COALESCE` of an INT and a narrowed literal answers BIGINT
+### TY-7 — `COALESCE` of an INT and a narrowed literal answers INT
 
-- **repark** — `SELECT COALESCE(CAST(NULL AS INT), 1)` answers `int64` / non-null.
-  DataFusion's own `TypeCoercion` runs before the TYPES-1 narrowing pass and unifies the
-  still-wide literal to BIGINT behind an explicit `CAST`; narrowing then shrinks the
-  literal inside the cast, and the closing coercion keeps the explicit wide type.
+- **repark** — `SELECT COALESCE(CAST(NULL AS INT), 1)` answers `int32` / non-null.
+  SQL-LITERAL-TYPING-1 seats the narrowing before DataFusion's first `TypeCoercion`
+  (`SparkIntegralLiteral`), so the coercion unifies an already-narrow literal.
 - **Apache Spark** — answers `int32` / non-null with the same value. *(oracle: live
   PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe.)*
-- **Pin** — `python/repark/tests/test_types_1.py::test_coalesce_with_int_stays_wide_on_repark`
+- **Pin** — `python/repark/tests/test_types_1.py::test_coalesce_with_int_answers_int_on_repark`
   and `::test_live_recoercion_shapes_match_the_oracle`
-  (pins the `(int64, int32)` type pair so either side moving reds it).
-- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Stripping DataFusion's
-  explicit casts would re-open the UNION division rewrite the §10 placement closed; the
-  placement keeps the wide answer on this shape.
+  (pins the `(int32, int32)` type pair so either side moving reds it).
+- **Rationale** — FIXED 2026-09-16 (SQL-LITERAL-TYPING-1, closing BL-20's mechanism).
+  Filed 2026-09-05 (TYPES-1 round 4) as BACKLOG: stripping DataFusion's explicit casts
+  would have re-opened the UNION division rewrite the §10 placement closed; seating the
+  narrowing first keeps no wide cast to strip.
   pins: types-1/C-001
 
 ### TY-8 — `grouping()` answers INT and is accepted outside grouping sets
