@@ -953,8 +953,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   19 failed, 44 passed; green after the `spark_literal_typing.rs` fix
   (63 passed). LIT-SQL-52 is a declared-divergence pin holding the -128 wrap
   for residue BL-20-OVF. `div` / unary `~` stay unpinned (SPARK-SQL-GRAMMAR-1
-  residues).
+  residues). Remediation round 1 (2026-09-16) adds the 13 LIT2 cells, the
+  LIT2 overflow error pins, and the critic L-001 `F.expr` door-agreement
+  table (mixed-width SQL answered identically on both doors).
   pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: sql-literal-typing-1/L-001, L-002, L-003
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
   wipes rows, stamps `operation=delete`, time-travels to the pre-truncate snapshot;
   missing table is `TABLE_OR_VIEW_NOT_FOUND`; a view is `EXPECT_TABLE_NOT_VIEW`;
@@ -5812,8 +5815,11 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   orchestrator's live PySpark 4.1.2 recording
   `/tmp/oc-worker/sc/oracle/bl20-oracle.json` (batch `sc18-bl20-literal-typing`,
   measured 2026-09-16); `spark_version` 4.1.2 kept. Recorded evidence, never
-  hand-edited.
+  hand-edited. Remediation round 1 appends the 13 LIT2 cells verbatim from
+  `/tmp/oc-worker/sc/oracle/lit2-oracle.json` (batch `sc18-lit2`, measured
+  2026-09-16), existing cells untouched.
   pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: sql-literal-typing-1/L-001, L-002, L-003
 - [fnp_gen_1_spark_oracle.json](fnp_gen_1_spark_oracle.json) —
   **FNP-GEN-1 step 1 (2026-09-15):** the 62 cells of the nine card names
   (`inline`, `inline_outer`, `posexplode`, `posexplode_outer`, `json_tuple`,

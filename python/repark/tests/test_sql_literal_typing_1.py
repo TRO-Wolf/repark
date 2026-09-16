@@ -9,10 +9,12 @@ tinyint/smallint display is LOGICAL-WIDTH-1, owned by run 18b). Error pins
 assert Spark's error class and message shape.
 
 pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006
+pins: sql-literal-typing-1/L-001, L-002, L-003
 """
 
 from __future__ import annotations
 
+import datetime
 import json
 from decimal import Decimal
 from pathlib import Path
@@ -59,6 +61,8 @@ def _session_for(cell: dict[str, Any]) -> ReparkSession:
 
 def _normalize(value: Any) -> Any:
     """Oracle-comparable form of one collected value."""
+    if isinstance(value, datetime.date) and not isinstance(value, datetime.datetime):
+        return repr(value)
     if isinstance(value, Decimal):
         return f"Decimal('{value}')"
     if isinstance(value, list):
@@ -162,6 +166,12 @@ OK_SQL_CASES: list[tuple[str, str, pa.DataType]] = [
     ("LIT-SQL-49", "h", pa.string()),
     ("LIT-SQL-50", "h", pa.string()),
     ("LIT-SQL-51", "h", pa.string()),
+    ("LIT2-SQL-00", "v", pa.date32()),
+    ("LIT2-SQL-01", "v", pa.date32()),
+    ("LIT2-SQL-02", "v", pa.int64()),
+    ("LIT2-SQL-03", "v", pa.int64()),
+    ("LIT2-SQL-04", "v", pa.int32()),
+    ("LIT2-SQL-06", "v", pa.int32()),
 ]
 
 OK_PY_CASES: list[tuple[str, str, pa.DataType]] = [
@@ -174,6 +184,11 @@ OK_PY_CASES: list[tuple[str, str, pa.DataType]] = [
     ("LIT-PY-06", "v", pa.int32()),
     ("LIT-PY-08", "v", pa.int32()),
     ("LIT-PY-09", "v", pa.int64()),
+    ("LIT2-PY-00", "v", pa.int32()),
+    ("LIT2-PY-01", "v", pa.int32()),
+    ("LIT2-PY-02", "v", pa.list_(pa.int32())),
+    ("LIT2-PY-03", "v", pa.date32()),
+    ("LIT2-PY-04", "v", pa.int32()),
 ]
 
 
@@ -213,6 +228,39 @@ def test_int_overflow_raises_arithmetic_overflow() -> None:
     for cell_id in ("LIT-SQL-22", "LIT-SQL-53"):
         message = _check_error_cell(cell_id, "ARITHMETIC_OVERFLOW")
         assert "try_add" in message
+
+
+def test_lit2_overflow_cells_raise_arithmetic_overflow() -> None:
+    """``abs(-2147483648)`` and ``CAST(2147483647 AS INT) + 1`` raise.
+
+    pins: sql-literal-typing-1/L-003
+    """
+    for cell_id in ("LIT2-SQL-05", "LIT2-SQL-07"):
+        _check_error_cell(cell_id, "ARITHMETIC_OVERFLOW")
+
+
+def test_fexpr_mixed_width_matches_sql_door() -> None:
+    """The critic's L-001 table, re-pinned on the ``F.expr`` door.
+
+    ``spark.range(1).select(F.expr(text))`` must answer the same rows with
+    the same Arrow types as ``spark.sql(f"SELECT {text} AS v")``.
+
+    pins: sql-literal-typing-1/L-001
+    """
+    session = _spark()
+    for text in (
+        "1 + CAST(1 AS TINYINT)",
+        "CAST(1 AS SMALLINT) * 2",
+        "coalesce(1, CAST(1 AS TINYINT))",
+        "array(1, CAST(1 AS TINYINT))",
+        "greatest(1, CAST(1 AS TINYINT))",
+        "pmod(7, CAST(2 AS TINYINT))",
+        "7 % CAST(2 AS TINYINT)",
+    ):
+        expected = session.sql(f"SELECT {text} AS v").to_arrow()
+        observed = session.range(1).select(F.expr(text).alias("v")).to_arrow()
+        assert observed.schema.field("v").type == expected.schema.field("v").type, text
+        assert observed.column("v").to_pylist() == expected.column("v").to_pylist(), text
 
 
 def test_tinyint_overflow_wrap_is_declared() -> None:

@@ -823,6 +823,161 @@
     ]
    ],
    "outcome": "ok"
+  },
+  {
+   "id": "LIT2-SQL-00",
+   "door": "sql",
+   "expr": "SELECT date_add(DATE '2020-01-01', 1) AS v",
+   "schema": "struct<v:date>",
+   "rows": [
+    [
+     "datetime.date(2020, 1, 2)"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT2-SQL-01",
+   "door": "sql",
+   "expr": "SELECT date_sub(DATE '2020-01-01', 1) AS v",
+   "schema": "struct<v:date>",
+   "rows": [
+    [
+     "datetime.date(2019, 12, 31)"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT2-SQL-02",
+   "door": "sql",
+   "expr": "SELECT factorial(5) AS v",
+   "schema": "struct<v:bigint>",
+   "rows": [
+    [
+     120
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT2-SQL-03",
+   "door": "sql",
+   "expr": "SELECT -(2147483648) AS v, typeof(-(2147483648)) AS t",
+   "schema": "struct<v:bigint,t:string>",
+   "rows": [
+    [
+     -2147483648,
+     "bigint"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT2-SQL-04",
+   "door": "sql",
+   "expr": "SELECT - 2147483648 AS v, typeof(- 2147483648) AS t",
+   "schema": "struct<v:int,t:string>",
+   "rows": [
+    [
+     -2147483648,
+     "int"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT2-SQL-05",
+   "door": "sql",
+   "expr": "SELECT abs(-2147483648) AS v",
+   "schema": "struct<v:int>",
+   "outcome": "error",
+   "error_class": "ARITHMETIC_OVERFLOW",
+   "message": "[ARITHMETIC_OVERFLOW] integer overflow. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003"
+  },
+  {
+   "id": "LIT2-SQL-06",
+   "door": "sql",
+   "expr": "SELECT 2147483647 + 1 AS v",
+   "conf": {
+    "spark.sql.ansi.enabled": "false"
+   },
+   "schema": "struct<v:int>",
+   "rows": [
+    [
+     -2147483648
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT2-SQL-07",
+   "door": "sql",
+   "expr": "SELECT CAST(2147483647 AS INT) + 1 AS v",
+   "schema": "struct<v:int>",
+   "outcome": "error",
+   "error_class": "ARITHMETIC_OVERFLOW",
+   "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 8) ==\nSELECT CAST(2147483647 AS INT) + 1 AS v\n       ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
+  },
+  {
+   "id": "LIT2-PY-00",
+   "door": "py",
+   "expr": "spark.range(1).select(F.expr('1 + CAST(1 AS TINYINT)').alias('v'))",
+   "schema": "struct<v:int>",
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT2-PY-01",
+   "door": "py",
+   "expr": "spark.range(1).select(F.expr('coalesce(1, CAST(1 AS TINYINT))').alias('v'))",
+   "schema": "struct<v:int>",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT2-PY-02",
+   "door": "py",
+   "expr": "spark.range(1).select(F.expr('array(1, CAST(1 AS TINYINT))').alias('v'))",
+   "schema": "struct<v:array<int>>",
+   "rows": [
+    [
+     "[1, 1]"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT2-PY-03",
+   "door": "py",
+   "expr": "spark.range(1).select(F.expr(\"date_add(DATE '2020-01-01', 1)\").alias('v'))",
+   "schema": "struct<v:date>",
+   "rows": [
+    [
+     "datetime.date(2020, 1, 2)"
+    ]
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "LIT2-PY-04",
+   "door": "py",
+   "expr": "spark.range(1).select(F.expr('pmod(7, CAST(2 AS TINYINT))').alias('v'))",
+   "schema": "struct<v:int>",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "outcome": "ok"
   }
  ]
 }
