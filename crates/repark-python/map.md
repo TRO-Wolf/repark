@@ -15,6 +15,9 @@ crates; this crate owns the Python boundary and the PyO3/Arrow FFI `unsafe` boun
 
 - [`src/lib.rs`](src/lib.rs) registers the native module and maps engine errors.
 - [`src/session.rs`](src/session.rs) provides synchronous session methods over the shared runtime.
+- [`src/session_runtime.rs`](src/session_runtime.rs) applies one validated runtime conf value
+  to the live session (`set_runtime_config`, strict; `restore_runtime_config`, builder-lenient
+  for `RESET`). **SET-ANSI-RUNTIME-1 (2026-09-15).** pins: set-ansi-runtime-1/C-001, C-002, C-003
 - [`src/dataframe.rs`](src/dataframe.rs) provides immutable plans, actions, transforms, and lazy
   Arrow C Stream export. **FNP-4B (2026-09-15):** `filter_sql` canonicalizes the predicate with
   the Spark-door lexer and maps downstream locations back; `F.expr` contexts parse Databricks.

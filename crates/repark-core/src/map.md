@@ -663,6 +663,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **TZ-8 (2026-08-14):** module docs now say `CAST(ts AS DATE)` / `to_date` honor the zone
   (NTZ stays the stored wall); `datediff` rides CAST; `last_day`/`date_add` over TIMESTAMP
   stay residual. Ledger: `task/r4-tz8-ledger.md`.
+  **SET-ANSI-RUNTIME-1 (2026-09-15):** `parse_runtime_session_zone_value` (the runtime
+  gate: IANA ids plus Java `ZoneOffset` / `GMT|UTC|UT`-prefixed forms inside ±18:00 —
+  a sign-led value that fails the offset arm never falls through to Arrow, which accepts
+  past ±18:00 that Java refuses; refusals carry Spark's `INVALID_CONF_VALUE.TIME_ZONE`)
+  and `ReparkSession::set_runtime_zone` (the live zone behind `RwLock<Arc<_>>`, shared by
+  clones; `session_time_zone` now returns the snapshot `Arc`).
+  pins: set-ansi-runtime-1/C-002
 - `temp_view.rs` (+ `temp_view/tests.rs`) — **the temp-view NAME choke point (round 6, R6-1):**
   `TempViewHome` (the build-time `catalog.schema` a session's temp views live in, snapshotted
   once), `build_temp_view_home` (the one `build()`-time capture, moved here from `session.rs`

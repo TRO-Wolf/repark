@@ -20,6 +20,11 @@ authoritative key spelling, and the resolved value reaching engine session state
   - **reaches session state** — a bare session carries `UTC`; a builder conf reaches
     `ReparkSession::session_time_zone`; an invalid zone fails the BUILD (not a later query); a
     session clone shares the resolved zone.
+  - **runtime values** — SET-ANSI-RUNTIME-1 (2026-09-15): `parse_runtime_session_zone_value`
+    accepts IANA ids plus Java `ZoneOffset` / `GMT|UTC|UT`-prefixed forms inside ±18:00 and
+    refuses past ±18:00, unknown ids, blanks and quoted values with Spark's
+    `INVALID_CONF_VALUE.TIME_ZONE`; a stored runtime zone is what `session_time_zone`
+    reports, on the session and its clones. pins: set-ansi-runtime-1/C-002
 
 Deliberately NOT here: extraction implementation. H-1a split B owns extractor pins; this map covers
 parsing, one spelling, and resolved session state.

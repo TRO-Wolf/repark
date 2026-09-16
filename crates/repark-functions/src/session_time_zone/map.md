@@ -22,6 +22,9 @@ session timezone (`spark.sql.session.timeZone`) down to the calendar extractors 
     `current_timezone_answers_the_carrier_zone_as_a_non_null_string` (the installed zone comes
     back in a non-nullable Utf8 field, the Arrow nullability Spark promises) and
     `current_timezone_defaults_to_utc_without_the_carrier` (a bare context answers the default).
+  - **runtime swap** — SET-ANSI-RUNTIME-1 (2026-09-15): `set_zone_swaps_the_live_value_for_a_validated_runtime_set`
+    (the binding calls it only after the session's runtime gate accepted the value, so it
+    stores without re-validating). pins: set-ansi-runtime-1/C-002
 
 Deliberately NOT here: the extraction SEMANTICS. What `year` / `hour` / `date_trunc` actually
 answer under a zone is pinned end-to-end on real sessions in

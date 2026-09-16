@@ -144,3 +144,74 @@ async fn session_clone_shares_the_resolved_zone() {
     assert_eq!(cloned.session_time_zone(), session.session_time_zone());
     assert_eq!(cloned.session_time_zone().id(), "Asia/Tokyo");
 }
+
+// === Runtime values (`SET` / `conf.set`) =====================================================
+
+/// The runtime gate accepts what Java `ZoneId.of` accepts: IANA ids plus the offset forms the
+/// `SET`-door cells pin (`+05`, `+5`, `+18:00`, `GMT+8`, `+08:00`, `Z`).
+#[test]
+fn runtime_values_accept_iana_and_java_offset_forms() {
+    for zone in [
+        "UTC",
+        "America/New_York",
+        "Asia/Tokyo",
+        "+05",
+        "+5",
+        "+0530",
+        "+05:30",
+        "+08:00",
+        "+18:00",
+        "GMT+8",
+        "Z",
+    ] {
+        let parsed = parse_runtime_session_zone_value(zone)
+            .unwrap_or_else(|error| panic!("runtime must accept {zone:?}: {error}"));
+        assert_eq!(parsed.id(), zone);
+    }
+}
+
+/// The runtime gate refuses what Java refuses: past ±18:00, unknown ids, blanks, quoted values.
+/// Arrow alone would accept `+18:01`, so the offset arm runs before the IANA check.
+#[test]
+fn runtime_values_refuse_past_the_java_range_with_sparks_message() {
+    for zone in [
+        "+18:01",
+        "+19:00",
+        "Not/AZone",
+        "Mars/Olympus_Mons",
+        "Invalid/Zone",
+        "",
+        "   ",
+        "'Asia/Tokyo'",
+    ] {
+        let error =
+            parse_runtime_session_zone_value(zone).expect_err("runtime must refuse the zone");
+        let message = error.to_string();
+        assert!(
+            message.contains("[INVALID_CONF_VALUE.TIME_ZONE]"),
+            "refusal must carry Spark's class: {message}"
+        );
+        assert!(
+            message.contains(SESSION_TIME_ZONE_KEY),
+            "refusal must name the conf key: {message}"
+        );
+        assert!(
+            message.contains("SQLSTATE: 22022"),
+            "refusal must carry the SQLSTATE: {message}"
+        );
+        assert!(
+            matches!(error, repark_common::Error::IllegalArgument(_)),
+            "a refused runtime VALUE is IllegalArgument (-> IllegalArgumentException): {error:?}"
+        );
+    }
+}
+
+/// A stored runtime zone is what `session_time_zone` reports, on the session and its clones.
+#[tokio::test]
+async fn stored_runtime_zone_is_live_on_the_session_and_its_clones() {
+    let session = ReparkSession::builder().build().unwrap();
+    assert_eq!(session.session_time_zone().id(), "UTC");
+    session.set_runtime_zone(parse_runtime_session_zone_value("Asia/Tokyo").unwrap());
+    assert_eq!(session.session_time_zone().id(), "Asia/Tokyo");
+    assert_eq!(session.clone().session_time_zone().id(), "Asia/Tokyo");
+}

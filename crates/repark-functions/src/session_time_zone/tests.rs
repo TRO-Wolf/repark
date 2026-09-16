@@ -58,6 +58,15 @@ fn the_carrier_refuses_to_be_set_and_names_the_one_authoritative_key() {
 }
 
 #[test]
+fn set_zone_swaps_the_live_value_for_a_validated_runtime_set() {
+    let mut carrier = SessionTimeZoneConfig::default();
+    carrier.set_zone("Asia/Tokyo");
+    assert_eq!(carrier.zone(), "Asia/Tokyo");
+    carrier.set_zone("UTC");
+    assert_eq!(carrier.zone(), "UTC");
+}
+
+#[test]
 fn the_carrier_advertises_no_settable_entries() {
     assert!(
         SessionTimeZoneConfig::default().entries().is_empty(),
