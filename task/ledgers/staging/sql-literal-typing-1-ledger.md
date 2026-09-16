@@ -184,7 +184,25 @@ passes (full list in §2).
 
 ## 4. Verification
 
-(commands with real exit codes pasted here at gate time)
+- `cargo test -p repark-spark --lib` — exit 0, 1035 passed, 0 failed, 4 ignored
+  (includes the 12 `spark_literal_typing` unit tests and the updated order pin;
+  count from the final `make verify` run).
+- `make rust-clippy` — exit 0.
+- `make verify` — exit 0 (56 `test result: ok`, zero failures; covers lint,
+  format, clippy, workspace Rust tests, map/manifest/ledger gates).
+- Release native rebuilt (`maturin develop --release` in `python/repark`,
+  exit 0) from the final shipped sources.
+- `.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider` —
+  exit 0: 9098 passed, 367 skipped, 34 xfailed.
+- `PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest
+  python/repark-parity/tests -q` — exit 0: 757 passed, 2 skipped, 12 xfailed.
+- BL-20 probe `rp.py` over the 64 oracle cells — 30 DIFFs to 14; every
+  remaining DIFF is declared out of scope (11 LOGICAL-WIDTH-1 display cells
+  whose `typeof` agrees, `div`, unary `~`) except LIT-SQL-52 (C-005 declared
+  divergence pin).
+- Not run here: the live-Spark legs (`test_live_recoercion_shapes_match_the_oracle`
+  needs `REPARK_PARITY_LIVE=1` + JVM; its pair updated to `(int32, int32)` for
+  nightly to confirm) and tier-2 live AWS (never against unmerged code).
 
 ## 5. Decisions
 
