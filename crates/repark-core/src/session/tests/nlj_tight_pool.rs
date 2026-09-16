@@ -70,7 +70,7 @@ fn assert_typed_refusal(message: &str) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_tight_pool_spills_an_inner_nested_loop_join_with_exact_values() {
-    assert_nested_loop_shape(&tight_session(), &inner_sql());
+    assert_nested_loop_shape(&tight_session(), &inner_sql()).await;
     for _ in 0..3 {
         let session = tight_session();
         let outcome = session
@@ -110,7 +110,7 @@ async fn a_tight_pool_spills_an_inner_nested_loop_join_with_exact_values() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_tight_pool_refuses_a_left_nested_loop_join_with_the_typed_exception() {
-    assert_nested_loop_shape(&tight_session(), &left_join_sql());
+    assert_nested_loop_shape(&tight_session(), &left_join_sql()).await;
     for _ in 0..3 {
         let session = tight_session();
         let error = session

@@ -8427,6 +8427,11 @@ field NAME.
   instead of refusing, and the pin accepts both legal outcomes while still forbidding every
   panic marker. The containment stays for the other allow-listed fallback paths; this path
   no longer reaches it.
+- **Round 2 (2026-09-16).** The spill is kept only where it is correct: INNER, RIGHT,
+  RIGHT SEMI/ANTI and FULL keep spilling (FULL past one right partition still refuses via
+  the upstream-disabled path, with the genuine pool text only); LEFT, LEFT SEMI, LEFT ANTI
+  and LEFT MARK past one right partition now refuse typed instead of emitting duplicated
+  rows — see the NEVER-OOM-PANIC-1 row for the exact split and why.
 
 ### NEVER-OOM-PANIC-1 — a tight pool never panics a nested-loop join: it spills or refuses typed — **FIXED 2026-09-16, NEVER-OOM-PANIC-1**
 
@@ -8441,6 +8446,24 @@ field NAME.
   to the user in 2/400 with the exact CI message. A still-too-tight pool keeps the typed
   `Resources exhausted … fair(pool_size: …)` refusal. The upstream defect is unchanged and
   still unfixed; repark no longer triggers it.
+- **Round 2 — the join-type split (2026-09-16).** Letting the fallback really run exposed
+  that DataFusion 54.1's spill fallback is incorrect for one-sided final emission with
+  multiple right partitions: at 8M/4 a LEFT join answered 4,001,953 rows against 1,001,953
+  unbounded (LEFT ANTI 3,999,937 against 999,937) — silent ~4x duplication, each output
+  partition re-emitting the build side. DataFusion documents exactly this set
+  (`nested_loop_join.rs:655-660`: FULL is disabled upstream; LEFT, LEFT SEMI, LEFT ANTI,
+  LEFT MARK carry "a similar latent issue", and the per-partition emission at `:2924-2962`
+  emits locally-seen matches with no cross-partition dedup, which is why LEFT SEMI's
+  correct-looking fixture proves nothing). So the wrapper now carries a `BuildSidePolicy`:
+  LEFT, LEFT SEMI, LEFT ANTI and LEFT MARK **with more than one right partition** refuse
+  the fallback with the typed pool refusal (the session's own recorded pool text plus the
+  containment disclosure; the resize knobs arrive at the Python boundary) — never a row.
+  Everything else **spills**: INNER, RIGHT, RIGHT SEMI/ANTI (each right row lives in exactly
+  one partition, so per-partition emission is complete — measured equal to unbounded on
+  count, sum and content digest), FULL with one right partition, and every left-family join
+  with exactly one right partition (LEFT and LEFT ANTI at 8M/1 measured equal to unbounded;
+  FULL past one right partition keeps refusing via the upstream-disabled path, with the
+  genuine pool text and no disclosure).
 - **Apache Spark** — a `BroadcastNestedLoopJoin` under a bounded driver heap either completes or
   raises; it does not answer with an engine-internal panic. *(oracle: documented — the claim here
   is the failure shape, not a value.)*
@@ -8455,9 +8478,19 @@ field NAME.
   `crates/repark-core/src/nlj_build_reset.rs` (seven module tests: the rule wraps only the
   build side, is idempotent, leaves other plans alone; the wrapper replays a one-shot child
   twice, including values).
+- **Round 2 pins (2026-09-16)** —
+  `test_never_oom_panic_1_tight_pool_join_values_match_or_refuse_typed` (one worker process
+  per pool over INNER, LEFT, LEFT ANTI, LEFT SEMI, RIGHT, FULL plus RIGHT SEMI/ANTI legs,
+  asserting count/sum/digest equality or the typed refusal per the split above — red on the
+  round-1 head for LEFT; the NLJ group stays under 60 s);
+  `nlj_tight_pool.rs` now pins the INNER spilled values and the LEFT typed refusal;
+  `nlj_build_reset.rs` grew the 16-case policy matrix and the refuse-on-second-execute pins.
 - **Rationale** — FIXED 2026-09-16 by NEVER-OOM-PANIC-1, root fix for the H3-SPILL-NLJ-1
   race (owner ruling Q-17c-7). The H3-SPILL-NLJ-1 containment is retained for the other
   allow-listed fallback paths and is now defense-in-depth on this one.
+  Round 2 (rulings R-18b-1/R-18b-2, critic L-201/L-202): the spill is kept only where the
+  fallback is correct; the documented-unsafe shapes refuse typed instead of duplicating.
+  pins: never-oom-panic-1/C-011, C-012
   pins: never-oom-panic-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 
 ### H3-SPILL-COLLECT-1 — `collect()` under an address-space limit raises `MemoryError` — **FIXED 2026-09-06, H3-SPILL-RESIDUE-1**

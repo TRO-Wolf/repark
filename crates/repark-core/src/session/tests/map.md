@@ -31,10 +31,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   loop pin. The plan shape is guarded (`NestedLoopJoinExec` in `EXPLAIN`), every iteration
   runs under an 8 MiB pool with 4 partitions and proves its own tightness (the pool recorded
   a refusal).
-  **Round 2 (2026-09-16):** two pins — the INNER join asserts spilled values
-  (`count(*)` 2016, `sum(id)` 41664, or the typed refusal), the LEFT join asserts the typed
-  `Resources exhausted … fair(` refusal (the fallback DataFusion documents as unsafe must
-  not emit rows), never a panic payload.
+  **Round 2 (2026-09-16):** two pins of three iterations — the INNER join asserts spilled
+  values (`count(*)` 2016, `sum(id)` 41664, or the typed refusal), the LEFT join asserts
+  the typed `Resources exhausted … fair(` refusal (the fallback DataFusion documents as
+  unsafe must not emit rows), never a panic payload.
   pins: never-oom-panic-1/C-003, C-006, C-012
 - `a13.rs` — `file://` warehouse fallback-root pin.
 - `pool_refusals.rs` — **H3-SPILL-RESIDUE-1 (2026-09-06):** the wiring pins. A bounded
