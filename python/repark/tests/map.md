@@ -5713,11 +5713,30 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   cell; and `how="left"` gains a qualified-alias pin whose 4-row/NULL-right
   answer goes red on an `inner` revert.
   pins: df-subquery-1/C-001..C-007
+  **SUBQ-CELLS-1 (2026-09-16):** the six run-18b wanted cells landed and the shape-only
+  pins repointed — the two hoisted-column spellings now `_assert_frame` against
+  `lateral_sql_outer_expr_aliased_filter` / `lateral_sql_outer_expr_aliased_on`, the
+  aliased-hoist pin gains a second assertion against `lateral_sql_outer_expr_aliased_plain`,
+  the new SQL-door pins `test_lateral_sql_door_left_qualified` /
+  `test_lateral_sql_door_inner_qualified` pin the probe's exact
+  `LEFT JOIN LATERAL (…) t ON true` / `JOIN LATERAL (…) t ON true` spellings against
+  `lateral_left_qualified_sql` / `lateral_inner_qualified_sql`, and the SQL-door
+  correlated `LIMIT 1` pin keeps its match-set assertion (ruling S-1: the
+  `scalar_limit1_correlated_sql` cell's recorded Spark rows are one legal answer of a
+  nondeterministic query) while adding the cell's columns / schema / nullable assertions.
+  pins: subq-cells-1/C-001, C-002, C-003, C-004, C-005
 - [facade_df_subquery_oracle.json](facade_df_subquery_oracle.json) — **DF-SUBQUERY-1
   (2026-09-15):** the live-PySpark 4.1.2 cells (`probe_dfsubq.py`, run 16b, recorded
   2026-09-15) over `emp(id, dept, sal)` / `dept(dept, budget)`: scalar, exists,
   lateral-join, asTable/TableArg, and `Column.outer` arms plus the error cells.
   Recorded evidence, never hand-edited.
+  **SUBQ-CELLS-1 (2026-09-16):** the six run-18b wanted cells joined the fixture —
+  `lateral_inner_qualified_sql`, `lateral_left_qualified_sql`,
+  `lateral_sql_outer_expr_aliased_filter`, `lateral_sql_outer_expr_aliased_on`,
+  `lateral_sql_outer_expr_aliased_plain`, `scalar_limit1_correlated_sql` (probe
+  `oracle-input/probe_subq_wanted.py`, recorded on live PySpark 4.1.2 2026-09-16);
+  `simpleString` converted to the fixture's `schema` key, `columns` / `nullable` /
+  `rows` verbatim, existing cells untouched.
   pins: df-subquery-1/C-007
 - [fnp_gen_1_spark_oracle.json](fnp_gen_1_spark_oracle.json) —
   **FNP-GEN-1 step 1 (2026-09-15):** the 62 cells of the nine card names

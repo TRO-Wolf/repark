@@ -311,6 +311,27 @@
    "sqlstate": "0A000"
   }
  },
+ "lateral_inner_qualified_sql": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal",
+    "budget"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10, 100)",
+    "(3, 'a', 30, 100)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int,budget:int>"
+  }
+ },
  "lateral_left": {
   "result": {
    "columns": [
@@ -334,6 +355,29 @@
     "(3, 'a', 30, 300)",
     "(4, None, None, 100)",
     "(4, None, None, 300)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int,budget:int>"
+  }
+ },
+ "lateral_left_qualified_sql": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal",
+    "budget"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10, 100)",
+    "(2, 'b', 20, None)",
+    "(3, 'a', 30, 100)",
+    "(4, None, None, None)"
    ],
    "schema": "struct<id:int,dept:string,sal:int,budget:int>"
   }
@@ -427,6 +471,72 @@
     "(3, 'a', 30, 100)"
    ],
    "schema": "struct<id:int,dept:string,sal:int,budget:int>"
+  }
+ },
+ "lateral_sql_outer_expr_aliased_filter": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal",
+    "dbl"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10, 20)",
+    "(2, 'b', 20, 40)",
+    "(3, 'a', 30, 60)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int,dbl:int>"
+  }
+ },
+ "lateral_sql_outer_expr_aliased_on": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal",
+    "dbl"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(2, 'b', 20, 40)",
+    "(3, 'a', 30, 60)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int,dbl:int>"
+  }
+ },
+ "lateral_sql_outer_expr_aliased_plain": {
+  "result": {
+   "columns": [
+    "id",
+    "dept",
+    "sal",
+    "dbl"
+   ],
+   "nullable": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 'a', 10, 20)",
+    "(2, 'b', 20, 40)",
+    "(3, 'a', 30, 60)",
+    "(4, None, None, None)"
+   ],
+   "schema": "struct<id:int,dept:string,sal:int,dbl:int>"
   }
  },
  "lateral_tvf_like": {
@@ -538,6 +648,25 @@
     "(2, 'b', 20)"
    ],
    "schema": "struct<id:int,dept:string,sal:int>"
+  }
+ },
+ "scalar_limit1_correlated_sql": {
+  "result": {
+   "columns": [
+    "id",
+    "b"
+   ],
+   "nullable": [
+    true,
+    true
+   ],
+   "rows": [
+    "(1, 100)",
+    "(2, None)",
+    "(3, 100)",
+    "(4, None)"
+   ],
+   "schema": "struct<id:int,b:int>"
   }
  },
  "scalar_multi_col": {

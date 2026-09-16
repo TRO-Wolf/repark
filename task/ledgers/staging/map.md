@@ -34,6 +34,19 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   P-201..P-206 / Y-1..Y-3 recorded as residue.
   `risk_tier: standard`. Branch `feat/df-subquery-1`.
   pins: df-subquery-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [subq-cells-1-ledger.md](subq-cells-1-ledger.md) —
+  **SUBQ-CELLS-1 (2026-09-16), in flight:** the run-18b follow-up folding the six
+  live-measured subquery cells (`lateral_inner_qualified_sql`,
+  `lateral_left_qualified_sql`, `lateral_sql_outer_expr_aliased_filter`,
+  `lateral_sql_outer_expr_aliased_on`, `lateral_sql_outer_expr_aliased_plain`,
+  `scalar_limit1_correlated_sql`, recorded on PySpark 4.1.2 by
+  `oracle-input/probe_subq_wanted.py`, 2026-09-16) into
+  `facade_df_subquery_oracle.json` and repointing the round-3 shape-only pins —
+  two repointed `_assert_frame` pins, a second assertion on the aliased-hoist
+  pin, two new SQL-door qualified-lateral pins, and ruling S-1's shape
+  assertions on the correlated `LIMIT 1` SQL door. No product code.
+  `risk_tier: standard`. Branch `test/subq-cells-1`.
+  pins: subq-cells-1/C-001, C-002, C-003, C-004, C-005
 - [fnp-gen-1-ledger.md](fnp-gen-1-ledger.md) —
   **FNP-GEN-1 step 1 (2026-09-15), in flight:** the 1.5 Spark-parity generators and
   semi-structured parsers (`inline`, `posexplode`, `json_tuple`, `from_csv`,

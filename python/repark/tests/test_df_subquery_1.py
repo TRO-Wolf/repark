@@ -504,45 +504,80 @@ def test_lateral_sql_door_outer_ref_aliased(spark: ReparkSession) -> None:
     Round-3 S-10: the hoist rebuilds the projection above the join and must carry
     the ``SubqueryAlias`` qualifier onto every hoisted output so parents naming
     ``t.dbl`` resolve. The ``t`` qualifier is a relation tag only — the answer is
-    the ``lateral_outer_expr`` cell's exactly.
+    the ``lateral_outer_expr`` cell's exactly, re-measured as
+    ``lateral_sql_outer_expr_aliased_plain``.
+    pins: subq-cells-1/C-001, C-002
     """
     _emp(spark).createOrReplaceTempView("emp")
     _assert_frame(
         spark.sql("SELECT * FROM emp e, LATERAL (SELECT e.sal * 2 AS dbl) t"),
         "lateral_outer_expr",
     )
+    _assert_frame(
+        spark.sql("SELECT * FROM emp e, LATERAL (SELECT e.sal * 2 AS dbl) t"),
+        "lateral_sql_outer_expr_aliased_plain",
+    )
 
 
 def test_lateral_sql_door_outer_ref_qualified_filter(spark: ReparkSession) -> None:
     """pins: df-subquery-1/C-006 — ``WHERE t.dbl > 10`` resolves a hoisted column (S-10).
 
-    Expected rows are the ``lateral_outer_expr`` set filtered by ``dbl > 10``
-    (the NULL ``dbl`` row drops) — cell-derived, pending the wanted cell
-    ``lateral_sql_outer_expr_aliased_filter``.
+    Answers the measured cell ``lateral_sql_outer_expr_aliased_filter``.
+    pins: subq-cells-1/C-001, C-002
     """
     _emp(spark).createOrReplaceTempView("emp")
-    frame = spark.sql("SELECT * FROM emp e, LATERAL (SELECT e.sal * 2 AS dbl) t WHERE t.dbl > 10")
-    assert frame.columns == _cell("lateral_outer_expr")["result"]["columns"]
-    assert sorted(repr(tuple(row)) for row in frame.collect()) == [
-        "(1, 'a', 10, 20)",
-        "(2, 'b', 20, 40)",
-        "(3, 'a', 30, 60)",
-    ]
+    _assert_frame(
+        spark.sql("SELECT * FROM emp e, LATERAL (SELECT e.sal * 2 AS dbl) t WHERE t.dbl > 10"),
+        "lateral_sql_outer_expr_aliased_filter",
+    )
 
 
 def test_lateral_sql_door_outer_ref_aliased_on(spark: ReparkSession) -> None:
     """pins: df-subquery-1/C-006 — ``JOIN LATERAL (…) t ON e.sal > 15`` answers (S-10).
 
-    Expected rows are the ``lateral_outer_expr`` set restricted to ``sal > 15``
-    — cell-derived, pending the wanted cell ``lateral_sql_outer_expr_aliased_on``.
+    Answers the measured cell ``lateral_sql_outer_expr_aliased_on``.
+    pins: subq-cells-1/C-001, C-002
     """
     _emp(spark).createOrReplaceTempView("emp")
-    frame = spark.sql("SELECT * FROM emp e JOIN LATERAL (SELECT e.sal * 2 AS dbl) t ON e.sal > 15")
-    assert frame.columns == _cell("lateral_outer_expr")["result"]["columns"]
-    assert sorted(repr(tuple(row)) for row in frame.collect()) == [
-        "(2, 'b', 20, 40)",
-        "(3, 'a', 30, 60)",
-    ]
+    _assert_frame(
+        spark.sql("SELECT * FROM emp e JOIN LATERAL (SELECT e.sal * 2 AS dbl) t ON e.sal > 15"),
+        "lateral_sql_outer_expr_aliased_on",
+    )
+
+
+def test_lateral_sql_door_left_qualified(spark: ReparkSession) -> None:
+    """pins: df-subquery-1/C-006 — ``LEFT JOIN LATERAL (…) t ON true`` keeps unmatched outers.
+
+    Answers the measured cell ``lateral_left_qualified_sql``: every outer row
+    survives, a non-matching outer takes NULL right columns.
+    pins: subq-cells-1/C-001, C-003
+    """
+    _emp(spark).createOrReplaceTempView("emp")
+    _dept(spark).createOrReplaceTempView("dept")
+    _assert_frame(
+        spark.sql(
+            "SELECT * FROM emp e LEFT JOIN LATERAL (SELECT budget FROM dept d"
+            " WHERE d.dept = e.dept) t ON true"
+        ),
+        "lateral_left_qualified_sql",
+    )
+
+
+def test_lateral_sql_door_inner_qualified(spark: ReparkSession) -> None:
+    """pins: df-subquery-1/C-006 — ``JOIN LATERAL (…) t ON true`` keeps matching rows only.
+
+    Answers the measured cell ``lateral_inner_qualified_sql``.
+    pins: subq-cells-1/C-001, C-003
+    """
+    _emp(spark).createOrReplaceTempView("emp")
+    _dept(spark).createOrReplaceTempView("dept")
+    _assert_frame(
+        spark.sql(
+            "SELECT * FROM emp e JOIN LATERAL (SELECT budget FROM dept d"
+            " WHERE d.dept = e.dept) t ON true"
+        ),
+        "lateral_inner_qualified_sql",
+    )
 
 
 def test_lateral_on_hoisted_column(spark: ReparkSession) -> None:
@@ -630,17 +665,24 @@ def test_scalar_correlated_limit_answers(spark: ReparkSession) -> None:
 def test_scalar_correlated_limit_sql_door(spark: ReparkSession) -> None:
     """pins: df-subquery-1/C-001, C-006 — the SQL spelling of correlated ``LIMIT 1`` (S-11).
 
-    Same unmeasured-cell contract as the DataFrame pin: an answer inside the
-    match set, never a physical-planning error.
+    Ruling S-1: ``LIMIT 1`` without ``ORDER BY`` is nondeterministic in Spark, so the
+    match-set assertion stays and the ``scalar_limit1_correlated_sql`` cell's recorded
+    Spark rows are one legal answer; the frame's columns, schema and nullability are
+    the measured cell's exactly.
+    pins: subq-cells-1/C-001, C-004
     """
     _emp(spark).createOrReplaceTempView("emp")
     spark.createDataFrame(
         [("a", 100), ("a", 200), ("c", 300)], "dept string, budget int"
     ).createOrReplaceTempView("dept")
-    rows = spark.sql(
+    frame = spark.sql(
         "SELECT id, (SELECT budget FROM dept d WHERE d.dept = e.dept LIMIT 1) b FROM emp e"
-    ).collect()
-    by_id = {row["id"]: row["b"] for row in rows}
+    )
+    expected = _cell("scalar_limit1_correlated_sql")["result"]
+    assert frame.columns == expected["columns"]
+    assert frame.schema.simpleString() == expected["schema"]
+    assert [field.nullable for field in frame.schema.fields] == expected["nullable"]
+    by_id = {row["id"]: row["b"] for row in frame.collect()}
     assert by_id[1] in (100, 200) and by_id[3] in (100, 200)
     assert by_id[2] is None and by_id[4] is None
 
@@ -648,12 +690,14 @@ def test_scalar_correlated_limit_sql_door(spark: ReparkSession) -> None:
 def test_lateral_left_qualified_keeps_unmatched_rows(spark: ReparkSession) -> None:
     """pins: df-subquery-1/C-004 — qualified ``left`` keeps unmatched outers (S-13).
 
-    No fixture cell covers the qualified-left spelling (wanted cell
-    ``lateral_left_qualified``); the pinned contract is the inner/left
-    DIFFERENCE — ``inner`` drops non-matching rows while ``left`` keeps every
-    outer row with NULL right columns — which holds of Spark's join semantics
-    regardless of the budget values. Red-proven: reverting the ``left`` arm to
-    ``JoinType::Inner`` fails this pin.
+    The qualified-left SQL spelling is pinned against the measured cell
+    ``lateral_left_qualified_sql`` by ``test_lateral_sql_door_left_qualified``;
+    the pinned contract here is the inner/left DIFFERENCE — ``inner`` drops
+    non-matching rows while ``left`` keeps every outer row with NULL right
+    columns — which holds of Spark's join semantics regardless of the budget
+    values. Red-proven: reverting the ``left`` arm to ``JoinType::Inner`` fails
+    this pin.
+    pins: subq-cells-1/C-002
     """
     emp, dept = _emp(spark), _dept(spark)
     e = emp.alias("e")
