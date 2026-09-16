@@ -90,7 +90,7 @@ class DataFrameNaFunctions:
         if cast_literal is None:
             literal = probe
         else:
-            lit_inner, display, sql, join = cast_literal
+            lit_inner, (display, sql, join) = cast_literal
             literal = Column(
                 lit_inner,
                 spark_display=display,

@@ -14,6 +14,10 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
+type LitParts = (String, String, String);
+type CastLiteral = (PyColumn, LitParts);
+type FillOut = (PyColumn, Option<CastLiteral>);
+
 fn fill_cast_token(data_type: &ArrowDataType) -> Option<&'static str> {
     match data_type {
         ArrowDataType::Int8 => Some("TINYINT"),
@@ -35,8 +39,8 @@ fn fill_expr_for_column(
     field_name: String,
     fallback_name: String,
     literal: PyColumn,
-    lit_parts: (String, String, String),
-) -> PyResult<(PyColumn, Option<(PyColumn, String, String, String)>)> {
+    lit_parts: LitParts,
+) -> PyResult<FillOut> {
     fenced!("dataframe_fill.fill_expr_for_column", {
         let lit_expr = literal.expr();
         let scalar = match &lit_expr {
@@ -65,12 +69,12 @@ fn fill_expr_for_column(
                 let cast_inner =
                     PyColumn::from_expr(Expr::Cast(Cast::new(Box::new(lit_expr), target)));
                 let (display, sql, join) = lit_parts;
-                Some((
-                    cast_inner,
+                let texts = (
                     wrap_cast("CAST", display.as_str(), token),
                     wrap_cast("CAST", sql.as_str(), token),
                     wrap_cast("CAST", join.as_str(), token),
-                ))
+                );
+                Some((cast_inner, texts))
             }
         };
         Ok((filled, cast))
