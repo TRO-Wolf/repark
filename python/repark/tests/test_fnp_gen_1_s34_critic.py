@@ -110,7 +110,8 @@ def _epochs_and_walls(struct: dict[str, Any], zone: str) -> list[Any]:
 
 
 def _render_struct(struct: dict[str, Any]) -> str:
-    return "{" + ", ".join("null" if value is None else str(value) for value in struct.values()) + "}"
+    shown = ["null" if value is None else str(value) for value in struct.values()]
+    return "{" + ", ".join(shown) + "}"
 
 
 def session_range_select(session: ReparkSession, column: Any) -> Any:
@@ -193,9 +194,7 @@ def test_sql_door_from_csv_dot_access_cells(spark: ReparkSession) -> None:
     cells = [
         cell
         for cell in _oracle()["cells"]
-        if cell["name"] == "from_csv"
-        and cell["door"] == "sql"
-        and "CAST(from_csv" in cell["expr"]
+        if cell["name"] == "from_csv" and cell["door"] == "sql" and "CAST(from_csv" in cell["expr"]
     ]
     assert len(cells) == 4
     for cell in cells:
@@ -250,13 +249,9 @@ def test_python_door_from_csv_non_string_corrupt_column_refuses(
     assert all(cell["error_condition"] == "INVALID_CORRUPT_RECORD_TYPE" for cell in cells)
     assert all(cell["error_type"] == "AnalysisException" for cell in cells)
     with pytest.raises(AnalysisException, match="INVALID_CORRUPT_RECORD_TYPE"):
-        spark.range(1).select(
-            F.from_csv(F.lit("q"), MIDDLE_BAD_SCHEMA, CORRUPT_OPTIONS)
-        ).collect()
+        spark.range(1).select(F.from_csv(F.lit("q"), MIDDLE_BAD_SCHEMA, CORRUPT_OPTIONS)).collect()
     with pytest.raises(AnalysisException, match="INVALID_CORRUPT_RECORD_TYPE"):
-        spark.range(1).select(
-            F.from_csv(F.lit("1"), MIDDLE_BAD_SCHEMA, CORRUPT_OPTIONS)
-        ).collect()
+        spark.range(1).select(F.from_csv(F.lit("1"), MIDDLE_BAD_SCHEMA, CORRUPT_OPTIONS)).collect()
 
 
 def test_sql_door_from_csv_non_string_corrupt_column_refuses(
@@ -273,9 +268,7 @@ def test_sql_door_from_csv_non_string_corrupt_column_refuses(
 def test_python_door_from_csv_decimal_rounds_half_up(spark: ReparkSession) -> None:
     """Decimals round HALF_UP, take scientific notation and NULL on overflow."""
     cells = _cells("from_csv", "python", "DECIMAL(5,2)", "UTC")
-    result = spark.range(1).select(
-        F.from_csv(F.lit("1.239,1e2,123456.7,-0.005"), DECIMAL_SCHEMA)
-    )
+    result = spark.range(1).select(F.from_csv(F.lit("1.239,1e2,123456.7,-0.005"), DECIMAL_SCHEMA))
     assert _render_struct(_single_struct(result)) == cells[0]["rows"][0][0]
 
 

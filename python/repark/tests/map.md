@@ -5905,5 +5905,6 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   rendering, the zero-row frame, the inference ladder and lenient trailing
   `json_tuple`. The exact-expr SQL timestamp pins stay `xfail(strict=True)`,
   blocked on run 18c's dot-access seam (R-18a-5); struct-to-string casts stay
-  Python-side because the engine has no struct-to-string cast.
+  Python-side because the engine has no struct-to-string cast. Step 6 formats the
+  file with the pinned `ruff format` (no semantic change).
   pins: fnp-gen-1/L-001, L-002, L-003, L-004, L-005, R-18a-13, R-18a-14

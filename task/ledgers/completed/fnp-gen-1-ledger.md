@@ -464,3 +464,37 @@ ladder infers `STRUCT<_c0: STRING, _c1: STRING, _c2: TIMESTAMP, _c3: DOUBLE,
 _c4: DOUBLE, _c5: STRING, _c6: STRING, _c7: STRING>` (no fractional/`Z` stamps, no
 `DECIMAL(24,0)`, `1.5f` not DOUBLE).
 pins: fnp-gen-1/L-001, L-002, L-003, L-004, L-005, R-18a-13, R-18a-14
+
+### Remediation dispositions (R-18a-13..R-18a-15)
+
+| Id | Sev | Disposition |
+|---|---|---|
+| L-001 | P1 | Closed in `1fd3ca3f`. Tokens map onto the data fields only; malformed is token-count mismatch or a conversion failure; the whole record lands in the corrupt column at any position. Pins: `test_python_door_from_csv_extra_token_marks_corrupt`, `..._corrupt_column_middle_wellformed`, `..._middle_malformed` plus Rust `extra_token_with_trailing_corrupt_column_marks_malformed`, `middle_corrupt_column_maps_data_fields_only`. |
+| L-002 + L-004 | P1/P2 | Closed in `5337d55e`. Default stamps try offset, naive and date-only shapes; `timestampFormat`/`dateFormat` compile once per invoke through the shared Java machinery with no `dateFormat` fallback for `TIMESTAMP`; naive stamps localize in the session zone, `TIMESTAMP_NTZ` stays wall-clock, builders carry the field zone. Pins: `..._default_timestamps_utc`, `..._new_york`, `..._timestamp_format_option`, `..._timestamp_ntz_stays_wall_clock`, `test_sql_door_from_csv_default_timestamp_value`. |
+| L-003 / PERF-001 | P1 | Closed in `5337d55e`. Schema and options come off the `ColumnarValue::Scalar`; a 0-length schema array answers an empty `Null` frame without indexing row 0; only documents go through `values_to_arrays`. Pins: Rust `empty_documents_answer_an_empty_struct` (direct 0-length invoke) plus Python `test_python_door_from_csv_empty_frame`. |
+| R-18a-13 | P1 | Closed in `1fd3ca3f`. Non-STRING corrupt column refuses `[INVALID_CORRUPT_RECORD_TYPE]` (SQLSTATE 42804) in `return_field_from_args`, both doors. Pins: `test_python_door_from_csv_non_string_corrupt_column_refuses` (malformed and well-formed rows, proving analysis time), `test_sql_door_from_csv_non_string_corrupt_column_refuses`, Rust `non_string_corrupt_column_refuses_at_analysis`. |
+| L-005 | P2 | Closed in `37977bf0`. `DECIMAL` tokens run through `from_json`'s `decimal_units` (HALF_UP, scientific notation, precision overflow to NULL); `parse_decimal` deleted. Pins: `test_python_door_from_csv_decimal_rounds_half_up`, Rust `decimal_tokens_round_half_up_take_exponents_and_null_on_overflow`. |
+| R-18a-14 | P2 | Closed in `37977bf0`. Inference gains fractional/`Z`/`HH:mm` stamps (date-only stays `DATE`), `DECIMAL(n,0)` past `BIGINT` capped at precision 38, `1.5f`-style suffix to `DOUBLE`, sharing the parser's default stamp shapes. Pins: `test_python_door_schema_of_csv_inference_ladder`, Rust `schema_of_csv_infers_fractional_zulu_short_stamps_big_integers_and_float_suffix`. |
+| PERF-002 | P2 | Closed in `5337d55e` with L-003 (no broadcast of schema/options arrays); every critic and s34 pin passes over the new path. |
+| PERF-003 | P2 | Closed in `a2547e53`. Scalar `json_tuple` field names hold one shared value per batch; array names keep the column path with the mixed-length check. No behavior change: all `json_tuple` pins green. |
+| PERF-004 | P2 | Closed in `a2547e53`. The tokenizer borrows unquoted fields (`Cow`), allocating only for quoted/escaped ones. No behavior change: full pin suites green plus a unicode probe (`héllo,"wörld",3.5`). |
+| PERF-005 | P2 | Closed in `a2547e53`. The PERMISSIVE path builds no payload; the FAILFAST payload rebuilds on scratch builders for the single malformed row with byte-identical text (`[1,null]` probed). |
+| PERF-006 | P2 | Closed in `5337d55e` with L-002 (`CsvStampParsers` compiled once per invoke). |
+| PERF-007 | P3 | Noted, not changed (R-18a-15): the decimal half is gone with `parse_decimal` (L-005); the boolean `to_ascii_lowercase` alloc is unmeasured on every pinned path. |
+| PERF-008 | P3 | Noted, not changed (R-18a-15): the `GeneratorField` rebuild on a null-free parent is N wrapper invocations, not a payload copy; restructuring the rewrite is outside this unit. |
+| PERF-009 | P3 | Noted, not changed (R-18a-15): per-row re-inference only fires when `CsvFold` misses; the foldable contract holds on every pinned path. |
+| PYPERF-001 | P3 | Noted, not changed (R-18a-15): a variadic generator helper would not change kernel arity or FFI count; facade thinness holds. |
+| PYPERF-002 | P3 | Noted, not changed (R-18a-15): pre-wrap plus identity-wrap costs Python objects only with the same FFI count as `from_json`, and the E1 bar needs the pre-check. |
+| PYPERF-003 | P3 | Noted, not changed (R-18a-15): an empty options dict as a 3-arg empty map is equivalent to omitted options; no cell distinguishes them. |
+
+Residuals: the four exact-expr SQL timestamp cells pin `xfail(strict=True)` on run 18c's dot-access seam (R-18a-5 extended); the SQL-door timestamp VALUE pins green beside them. Struct-to-string rendering stays Python-side (the engine has no struct-to-string cast). `F.col("s.t1")` nested access is unpinned surface; the pins read whole structs.
+pins: fnp-gen-1/L-001, L-002, L-003, L-004, L-005, R-18a-13, R-18a-14, PERF-001, PERF-002, PERF-003, PERF-004, PERF-005, PERF-006
+
+### Remediation gates (run 18a)
+
+- `cargo test -p repark-functions --lib` → `test result: ok. 757 passed; 0 failed; 1 ignored`.
+- Release native rebuilt (`maturin develop --release`) → `Installed repark-1.4.2`.
+- Named pin suites (`test_fnp_gen_1.py`, `test_fnp_gen_1_s34.py`, `test_fnp_gen_1_s34_critic.py`, `test_explode_rewrite.py`, `test_fnp_9_collections_json.py`, `test_functions_c.py`, `test_functions_split_identity.py`) → `293 passed, 5 xfailed`.
+- Whole parity suite (`make py-test`) → `757 passed, 2 skipped, 12 xfailed`.
+- `make rust-clippy` → clean (`Finished dev profile`, no warnings).
+- `make verify` → exit 0 (first attempt red only on one 101-char line in the new pin file, fixed plus `ruff format`; re-run green end to end).
