@@ -1064,13 +1064,18 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   **FNP-AGG-1 run 18a step 3 (2026-09-16):** `percentile.rs` (exact Spark
   percentile with linear interpolation; scalar and array percentages, literal and
   column frequency; range and negative-frequency refusals in Spark wording; two-
-  partition merge test).
+  partition merge test). Remediation R-18a-23: state coalesces equal values
+  (sorted value-to-frequency pairs, binary-search insert), so `evaluate`
+  walks order without cloning or sorting; `merge_batch` reuses `push`
+  (zero frequencies skipped, negatives refused).
   **FNP-AGG-1 run 18a step 3b (2026-09-16):** `string_distinct.rs` (one
   parameterized kernel behind `__repark_listagg_distinct` /
   `__repark_string_agg_distinct`; reverse-scan dedup, NULL delimiter
   concatenates bare, all-NULL answers NULL, non-literal delimiter refused;
   cross-partition merge appends unseen values in arrival order, pinned by a
-  reverse-order merge test).
+  reverse-order merge test). Remediation R-18a-21: first-occurrence scan
+  order (repeated `update_batch` calls compose); duplicates allocate nothing
+  (contains-check before insert); pins compare delimiter-split multisets.
   **FNP-AGG-1 run 18a step 3c (2026-09-16):** `histogram_numeric.rs` (Spark
   `NumericHistogram`: closest-pair merge with last-wins ties, `x` keeps the
   input numeric type, `y` is double; raw values in state so merge is exact;
@@ -1101,6 +1106,8 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   `CountMinSketchAgg`; empty input answers the empty sketch, never NULL).
   Step 10 clears the slice's own clippy lints (fold-plus-`write!` hex helper
   in tests, `?` arms in `grouping.rs`); behavior unchanged. Remediation
+  R-18a-23: string/binary hashing inlines the Murmur pair per row (no
+  per-row `Vec`). Remediation
   (R-18a-19): `grouping_id` args must equal the grouping columns exactly in
   order, else `GROUPING_ID_COLUMN_MISMATCH` in Spark's message shape; the
   wrong-accept unit test is inverted and the `///` over

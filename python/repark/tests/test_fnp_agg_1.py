@@ -204,6 +204,20 @@ def _assert_sketch_cell(result: Any, cell: dict[str, Any]) -> None:
             assert field.nullable == column["nullable"]
 
 
+def _assert_distinct_elements(actual_rows: list[list[Any]], expected_rows: list[list[Any]]) -> None:
+    """DISTINCT strings compare as multisets: Spark contracts no element order."""
+    assert len(actual_rows) == len(expected_rows)
+    for actual, expected in zip(actual_rows, expected_rows, strict=True):
+        assert len(actual) == len(expected)
+        for actual_value, expected_value in zip(actual, expected, strict=True):
+            if actual_value is None or expected_value is None:
+                assert actual_value == expected_value
+            elif "-" in expected_value:
+                assert sorted(actual_value.split("-")) == sorted(expected_value.split("-"))
+            else:
+                assert sorted(actual_value) == sorted(expected_value)
+
+
 def _assert_value_cell(result: Any, cell: dict[str, Any]) -> None:
     if cell["name"] == "count_min_sketch":
         _assert_sketch_cell(result, cell)
@@ -221,7 +235,9 @@ def _assert_value_cell(result: Any, cell: dict[str, Any]) -> None:
         if column["name"] != "g":
             assert field.nullable == column["nullable"]
     actual_rows = [[_normalize(value) for value in row] for row in result.collect()]
-    if cell["name"] == "grouping_id":
+    if cell["name"] in ("listagg_distinct", "string_agg_distinct"):
+        _assert_distinct_elements(actual_rows, cell["rows"])
+    elif cell["name"] == "grouping_id":
         _assert_rows_up_to_ties(actual_rows, cell["rows"], 2)
     else:
         assert actual_rows == cell["rows"]

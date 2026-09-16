@@ -171,9 +171,11 @@ impl StringDistinctAccumulator {
     }
 
     fn push(&mut self, value: &str) {
-        if self.members.insert(value.to_string()) {
-            self.seen.push(value.to_string());
+        if self.members.contains(value) {
+            return;
         }
+        self.members.insert(value.to_string());
+        self.seen.push(value.to_string());
     }
 }
 
@@ -196,7 +198,7 @@ impl Accumulator for StringDistinctAccumulator {
             .ok_or_else(|| {
                 DataFusionError::Plan("string distinct value must be castable".to_string())
             })?;
-        for row in (0..strings.len()).rev() {
+        for row in 0..strings.len() {
             if strings.is_null(row) {
                 continue;
             }
@@ -287,7 +289,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn reverse_scan_orders_by_last_occurrence() {
+    async fn forward_scan_orders_by_first_occurrence() {
         let batch = run(
             &ctx(),
             "SELECT __repark_listagg_distinct(v, ',') FROM (VALUES ('x'), ('y'), (NULL), ('x')) AS t(v)",
@@ -299,7 +301,7 @@ mod tests {
             "SELECT __repark_listagg_distinct(v, '-') FROM (VALUES ('a'), ('b'), ('b'), ('c')) AS t(v)",
         )
         .await;
-        assert_eq!(text(&batch, 0), Some("c-b-a".to_string()));
+        assert_eq!(text(&batch, 0), Some("a-b-c".to_string()));
     }
 
     #[tokio::test]
@@ -347,7 +349,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn reverse_order_merge_matches_single_partition() {
+    async fn repeated_update_batch_composes_in_scan_order() {
+        let mut accumulator = StringDistinctAccumulator::new("-".to_string());
+        for slice in [
+            StringArray::from(vec![Some("a"), Some("b")]),
+            StringArray::from(vec![Some("b"), Some("c")]),
+        ] {
+            accumulator
+                .update_batch(&[Arc::new(slice) as ArrayRef])
+                .expect("update");
+        }
+        assert_eq!(
+            accumulator.evaluate().expect("evaluate"),
+            ScalarValue::Utf8(Some("a-b-c".to_string()))
+        );
+    }
+
+    #[tokio::test]
+    async fn forward_order_merge_matches_single_partition() {
         let values = StringArray::from(vec![Some("a"), Some("b"), Some("b"), Some("c")]);
         let state_of = |slice: StringArray| {
             let mut accumulator = StringDistinctAccumulator::new("-".to_string());
@@ -381,7 +400,7 @@ mod tests {
                     .clone(),
             );
             let mut merged = StringDistinctAccumulator::new("-".to_string());
-            for state in [second, first] {
+            for state in [first, second] {
                 let arrays = state
                     .iter()
                     .map(|scalar| scalar.to_array_of_size(1).expect("state array"))
@@ -391,6 +410,6 @@ mod tests {
             merged.evaluate().expect("evaluate")
         };
         assert_eq!(single, merged);
-        assert_eq!(single, ScalarValue::Utf8(Some("c-b-a".to_string())));
+        assert_eq!(single, ScalarValue::Utf8(Some("a-b-c".to_string())));
     }
 }

@@ -137,18 +137,9 @@ fn long_bucket(value: i64, seed: i64, width: usize) -> usize {
     clippy::cast_possible_wrap,
     clippy::cast_sign_loss
 )]
-fn binary_buckets(data: &[u8], depth: usize, width: usize) -> Vec<usize> {
+fn murmur_pair(data: &[u8]) -> (i32, i32) {
     let first = murmur_bytes(data, 0) as i32;
-    let second = murmur_bytes(data, first as u32) as i32;
-    let width = width as i32;
-    (0..depth)
-        .map(|row| {
-            first
-                .wrapping_add((row as i32).wrapping_mul(second))
-                .wrapping_rem(width)
-                .wrapping_abs() as usize
-        })
-        .collect()
+    (first, murmur_bytes(data, first as u32) as i32)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -245,14 +236,24 @@ impl Sketch {
         Ok(())
     }
 
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_sign_loss
+    )]
     fn add_binary(&mut self, data: &[u8]) -> Result<()> {
         if self.width == 0 {
             return Err(invalid(
                 "count_min_sketch width is zero, cannot add".to_string(),
             ));
         }
-        let buckets = binary_buckets(data, self.depth, self.width);
-        for (row, bucket) in buckets.iter().enumerate() {
+        let (first, second) = murmur_pair(data);
+        let width = self.width as i32;
+        for row in 0..self.depth {
+            let bucket = first
+                .wrapping_add((row as i32).wrapping_mul(second))
+                .wrapping_rem(width)
+                .wrapping_abs() as usize;
             let slot = row * self.width + bucket;
             self.table[slot] = self.table[slot].wrapping_add(1);
         }

@@ -385,21 +385,27 @@ impl PercentileAccumulator {
         if frequency < 0 {
             return Err(negative_frequency(frequency_context, frequency));
         }
-        if frequency > 0 {
-            self.pairs.push((value, frequency));
+        if frequency == 0 {
+            return Ok(());
+        }
+        match self.pairs.binary_search_by(|pair| pair.0.total_cmp(&value)) {
+            Ok(index) => {
+                self.pairs[index].1 += frequency;
+            }
+            Err(index) => {
+                self.pairs.insert(index, (value, frequency));
+            }
         }
         Ok(())
     }
 
     fn sorted_counts(&self) -> (Vec<f64>, Vec<i64>, i64) {
-        let mut pairs = self.pairs.clone();
-        pairs.sort_by(|left, right| left.0.total_cmp(&right.0));
-        let mut values = Vec::with_capacity(pairs.len());
-        let mut counts = Vec::with_capacity(pairs.len());
+        let mut values = Vec::with_capacity(self.pairs.len());
+        let mut counts = Vec::with_capacity(self.pairs.len());
         let mut total = 0;
-        for (value, frequency) in pairs {
+        for (value, frequency) in &self.pairs {
             total += frequency;
-            values.push(value);
+            values.push(*value);
             counts.push(total);
         }
         (values, counts, total)
@@ -518,8 +524,11 @@ impl Accumulator for PercentileAccumulator {
                 if group_values.is_null(row) || group_frequencies.is_null(row) {
                     continue;
                 }
-                self.pairs
-                    .push((group_values.value(row), group_frequencies.value(row)));
+                self.push(
+                    group_values.value(row),
+                    group_frequencies.value(row),
+                    "frequency",
+                )?;
             }
         }
         Ok(())

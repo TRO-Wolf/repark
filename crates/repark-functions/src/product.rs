@@ -49,7 +49,12 @@ impl AggregateUDFImpl for SparkProduct {
     }
 
     fn schema_name(&self, params: &AggregateFunctionParams) -> Result<String> {
-        Ok(format!("product({})", unqualified_name(&params.args[0])))
+        let arg = params
+            .args
+            .first()
+            .map(unqualified_name)
+            .unwrap_or_default();
+        Ok(format!("product({arg})"))
     }
 
     fn display_name(&self, params: &AggregateFunctionParams) -> Result<String> {

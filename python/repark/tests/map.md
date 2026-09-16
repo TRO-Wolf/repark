@@ -873,6 +873,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   values, nullability and the clean schema halves stay strict. Step 9 keeps
   two dedicated strict-xfail tests (binary-type, SQL names) beside the split
   order-insensitive value comparator; card roll-call lives in the ledger.
+  **Remediation R-18a-21:** the DISTINCT value pins compare delimiter-split
+  elements as multisets (Spark contracts no element order).
   pins: fnp-agg-1/C-001, C-002, C-003, C-004
 - [test_fnp_agg_1_p1.py](test_fnp_agg_1_p1.py) +
   `fnp_agg_1_p1_spark_oracle.json` — **FNP-AGG-1 run 18a (2026-09-16):** thirty
