@@ -70,8 +70,8 @@ illustrative. A claim with no verified basis does not go in.
   pins: ap-2/C-007, C-008
   pins: ap-1-close-1/C-001, C-004
 - [session-and-conf.md](session-and-conf.md) — the `ReparkSession` builder; `getOrCreate` reuse
-  semantics; F-Y10-1 notes SMALLINT wrap residue (2026-08-30); how `conf.get` / `conf.set` behave (unset keys raise; three tiers of key: build-time
-  engine knob / live `datafusion.*` / facade-local); where the defaults live (`_SQLCONF_DEFAULTS`);
+  semantics; F-Y10-1 notes SMALLINT wrap residue (2026-08-30); how `conf.get` / `conf.set` behave (unset keys raise; four tiers of key: build-time
+  engine knob / runtime-applied session knob (SET-ANSI-RUNTIME-1, 2026-09-15) / live `datafusion.*` / facade-local); where the defaults live (`_SQLCONF_DEFAULTS`);
   and the keys users actually set — `spark.sql.pyspark.inferNestedDictAsStruct.enabled` (FA-4),
   `spark.sql.session.timeZone` (TZ-2 / TZ-3), `spark.sql.ansi.enabled`, target partitions, batch
   size, the one-truth memory pool, the Iceberg catalog caches (`metadataCache` /

@@ -413,8 +413,10 @@ UTC
 ([ADR-0004](../adr/0004-server-prep-disciplines.md)), so the default is the fixed constant `UTC`.
 Registry row [TZ-2](../spark-sql-iceberg-parity.md#tz-2--the-session-timezone-default-is-utc).
 
-**And the trap next to it.** A *runtime* `conf.set` of the session zone is accepted for source
-compatibility, but neither validated nor applied:
+**And the trap next to it (fixed 2026-09-15).** A *runtime* `conf.set` of the session zone
+used to be accepted for source compatibility but neither validated nor applied (warned once per
+process). It now validates in Rust and applies to the live session — fresh queries answer the new
+zone:
 
 ```python
 spark.conf.set("spark.sql.session.timeZone", "America/New_York")
@@ -422,15 +424,11 @@ spark.conf.get("spark.sql.session.timeZone")
 ```
 
 ```text
-UserWarning: config 'spark.sql.session.timeZone' is accepted for source compatibility but NOT
-applied at runtime, and its value is NOT validated: the session timezone is resolved AND validated
-exactly once, at getOrCreate (default 'UTC') …
-UTC
+America/New_York
 ```
 
-The warning fires **once per process**, so a second session in the same interpreter gets a silent
-no-op. Registry row
-[TZ-3](../spark-sql-iceberg-parity.md#tz-3--a-runtime-confset-of-the-session-zone-is-accepted-neither-validated-nor-applied).
+Frames built before the set keep the snapshot they were analysed under. Registry row
+[TZ-3](../spark-sql-iceberg-parity.md#tz-3--a-runtime-confset-of-the-session-zone-validates-and-applies--fixed-2026-09-15).
 
 **What to do.** Set the zone on the **builder**, where it is validated:
 

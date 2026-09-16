@@ -668,7 +668,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   a sign-led value that fails the offset arm never falls through to Arrow, which accepts
   past ±18:00 that Java refuses; refusals carry Spark's `INVALID_CONF_VALUE.TIME_ZONE`)
   and `ReparkSession::set_runtime_zone` (the live zone behind `RwLock<Arc<_>>`, shared by
-  clones; `session_time_zone` now returns the snapshot `Arc`).
+  clones; `session_time_zone` now returns the snapshot `Arc`). Pedantic-clean (nested
+  or-patterns, method-ref digit checks).
   pins: set-ansi-runtime-1/C-002
 - `temp_view.rs` (+ `temp_view/tests.rs`) — **the temp-view NAME choke point (round 6, R6-1):**
   `TempViewHome` (the build-time `catalog.schema` a session's temp views live in, snapshotted

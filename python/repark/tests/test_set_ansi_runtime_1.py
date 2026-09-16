@@ -22,8 +22,8 @@ import pytest
 
 import repark
 from repark import ReparkSession
+from repark import functions as F  # noqa: N812 — PySpark idiom
 from repark.errors import IllegalArgumentException, PySparkException
-from repark.spark import functions as F
 
 ANSI_KEY = "spark.sql.ansi.enabled"
 ZONE_KEY = "spark.sql.session.timeZone"
@@ -157,9 +157,7 @@ def test_s16_8_conf_set_zone_applies() -> None:
     spark.conf.set(ZONE_KEY, ZONE_NEW_YORK)
     assert spark.conf.get(ZONE_KEY) == ZONE_NEW_YORK
     table = _arrow(
-        spark.sql(
-            "SELECT current_timezone() AS tz, CAST(from_unixtime(0) AS STRING) AS epoch"
-        )
+        spark.sql("SELECT current_timezone() AS tz, CAST(from_unixtime(0) AS STRING) AS epoch")
     )
     assert table.to_pylist() == [{"tz": ZONE_NEW_YORK, "epoch": "1969-12-31 19:00:00"}]
     spark.stop()
@@ -205,9 +203,7 @@ def test_s16_11_reset_zone_restores_builder() -> None:
     spark.sql("RESET spark.sql.session.timeZone")
     assert spark.conf.get(ZONE_KEY) == "UTC"
     table = _arrow(
-        spark.sql(
-            "SELECT current_timezone() AS tz, CAST(from_unixtime(0) AS STRING) AS epoch"
-        )
+        spark.sql("SELECT current_timezone() AS tz, CAST(from_unixtime(0) AS STRING) AS epoch")
     )
     assert table.to_pylist() == [{"tz": "UTC", "epoch": "1970-01-01 00:00:00"}]
     spark.stop()
@@ -255,7 +251,7 @@ def test_btz5_5_refused_set_moves_nothing() -> None:
     """A refused zone SET stores nothing, so the zone query still answers NY — BTZ5-5."""
     spark = _session()
     spark.sql("SET spark.sql.session.timeZone = America/New_York")
-    with pytest.raises(IllegalArgumentException, match="INVALID_CONF_VALUE.TIME_ZONE"):
+    with pytest.raises(IllegalArgumentException, match=r"INVALID_CONF_VALUE\.TIME_ZONE"):
         spark.sql("SET spark.sql.session.timeZone = 'Asia/Tokyo'")
     table = _arrow(spark.sql("SELECT current_timezone() AS tz"))
     assert table.to_pylist() == [{"tz": ZONE_NEW_YORK}]
@@ -295,7 +291,7 @@ def test_s5_zone_cells_apply() -> None:
     assert spark.conf.get(ZONE_KEY) == "GMT+8"
     spark.sql("SET TIME ZONE INTERVAL '+08:00' HOUR TO MINUTE")
     assert spark.conf.get(ZONE_KEY) == "+08:00"
-    with pytest.raises(IllegalArgumentException, match="INVALID_CONF_VALUE.TIME_ZONE"):
+    with pytest.raises(IllegalArgumentException, match=r"INVALID_CONF_VALUE\.TIME_ZONE"):
         spark.sql("SET TIME ZONE '+18:01'")
     spark.stop()
 

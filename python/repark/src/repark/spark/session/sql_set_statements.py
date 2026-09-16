@@ -278,7 +278,7 @@ def _restore_or_unset(session: ReparkSession, key: str) -> None:
     refuse_collation_session_key(key)
     builder_value = session._builder_config.get(key)
     if builder_value is not None:
-        if key == SESSION_TIME_ZONE_KEY or key == SPARK_SQL_ANSI_ENABLED_KEY:
+        if key in (SESSION_TIME_ZONE_KEY, SPARK_SQL_ANSI_ENABLED_KEY):
             from repark import _native
 
             _native.restore_runtime_config(session._ensure_alive(), key, builder_value)

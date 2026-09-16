@@ -85,7 +85,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/tests/test_ml_boost_oracle.py", 2241),
     ("python/repark/tests/test_pandas_udf.py", 1478),
     ("python/repark/tests/test_partition_value_audit.py", 1665),
-    ("python/repark/tests/test_session_timezone_parity.py", 1328),
+    ("python/repark/tests/test_session_timezone_parity.py", 1318),
     ("python/repark/tests/test_ta.py", 1020),
     ("python/repark/tests/test_tpch_compare_unit.py", 1551),
     ("python/repark/tests/test_udf.py", 1170),

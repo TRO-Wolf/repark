@@ -117,13 +117,11 @@ fn is_java_offset_zone(value: &str) -> bool {
     }
     let body = &bytes[1..];
     let (hours, minutes, seconds) = match body.len() {
-        1 | 2 if body.iter().all(|byte| byte.is_ascii_digit()) => {
-            (decimal_pair(body, 0, body.len()), 0, 0)
-        }
-        4 if body.iter().all(|byte| byte.is_ascii_digit()) => {
+        1 | 2 if body.iter().all(u8::is_ascii_digit) => (decimal_pair(body, 0, body.len()), 0, 0),
+        4 if body.iter().all(u8::is_ascii_digit) => {
             (decimal_pair(body, 0, 2), decimal_pair(body, 2, 2), 0)
         }
-        6 if body.iter().all(|byte| byte.is_ascii_digit()) => (
+        6 if body.iter().all(u8::is_ascii_digit) => (
             decimal_pair(body, 0, 2),
             decimal_pair(body, 2, 2),
             decimal_pair(body, 4, 2),
@@ -158,7 +156,7 @@ fn is_java_prefixed_zone(value: &str) -> bool {
             return true;
         }
         let rest = &value[prefix.len()..];
-        if matches!(rest.as_bytes().first(), Some(b'+') | Some(b'-')) && is_java_offset_zone(rest) {
+        if matches!(rest.as_bytes().first(), Some(b'+' | b'-')) && is_java_offset_zone(rest) {
             return true;
         }
     }

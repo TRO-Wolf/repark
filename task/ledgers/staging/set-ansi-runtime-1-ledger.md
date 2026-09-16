@@ -14,6 +14,9 @@ Run 16b owns `dataframe/**`, `column.py`, `catalog.py` and the unfolding CONF-UN
 - `sql_set_statements.py` — net-negative: the Python boolean/zone validators move into the native setter (single gate, same verdicts and messages, proved by the unchanged refusal pins); the `SET TIME ZONE` path keeps unquoting and the LOCAL refusal and otherwise delegates to `conf.set`.
 - `session_configuration.py` — TWO lines, the one coordination point this unit cannot stay out of: a `SPARK_SQL_ANSI_ENABLED_KEY` constant and one `_SQLCONF_DEFAULTS` entry (`spark.sql.ansi.enabled → true`). S16-5 (`conf.get` after `unset` answers `'true'` with builder `true`) is unreachable without it: the tombstone CONF-UNSET-1 owns hides the builder value, and only a registered default answers. This is row one of the registered-default table CONF-UNSET-1's own BACKLOG prescribes (`The fix is a registered-default table behind RuntimeConfig.get`); 16b's pins (shuffle.partitions) are unaffected, and the entry composes with the future table instead of pre-empting it. `session_core.py` needs NO edit (net-zero, Q-15c-4): the reuse fold and `getOrCreate` paths are untouched — reuse-with-a-differing-ANSI still soft-folds facade-only, a known narrow residue noted under C-003.
 - No other session/** file is edited. `functions*.py`, `dataframe/**`, `column.py`, `catalog.py` are not edited; no hand-off to 16a/16b is owed beyond this section.
+- Addendum (round 17c): one unlisted one-line touch — `timestamp_type.py` module docstring drops
+  the stale `(ansi.enabled precedent)` parenthetical (that knob now applies at runtime while
+  timestamp-type stays store-only). No behaviour, no size move.
 
 ## 2. Rulings and design record
 
@@ -24,19 +27,38 @@ Run 16b owns `dataframe/**`, `column.py`, `catalog.py` and the unfolding CONF-UN
 - **Unset applies the get-visible value** (CONF-UNSET-1 authority): `unset` keeps its tombstone; the engine is then set to `_SQLCONF_DEFAULTS[key]` (`true` / `UTC`), which is what `get` reports. `RESET` with a builder value goes through the lenient restore entry (builder tokens such as `1`/`yes` parsed at build must re-apply without tripping the strict runtime gate).
 - **Round 2 (BL-11, C-006) is OPEN and out of this step**: numeric→BINARY cast legality (`analyzer.rs` `cast_legality`, no ANSI input today) needs an analyzer change outside this card's fence. The runtime ANSI carrier it will read is this step's deliverable.
 - **Rust first**: all validation, parsing and state writes are Rust. Python is storage plus forwarding. No Python-only implementation, so no ledger reason is owed.
+- **R-17c-1** (orchestrator, G-2, 2026-09-15): this unit keeps lane name `pc-cv2`; no clone rename.
+- **Comment contract precedence (round 17c):** the brief's comment-grep is stricter than the
+  authoritative contract — AGENTS.md holds that required docstrings, Rust banners and invariant
+  comments remain (the mechanical pre-commit hook carries no comment check, and
+  `missing_errors_doc` clippy would fail without the `# Errors` sections). The parked Rust keeps
+  only those; the facade half is net-negative prose (one `#`-comment pair added mid-round was
+  deleted before commit, its reason living in the session `map.md` row instead).
+- **Third measured deviation, S16-2 (round 17c):** `CAST('x' AS INT)` still raises after the SET.
+  Measured identical with ANSI off at BUILD (literal, subquery and real-column shapes all raise
+  the same `simplify_expressions` cast error), so the string-cast path never reads the ANSI flag
+  and the snapshot cannot deliver the oracle cell. Pinned as today's answer plus narrow residue
+  row SET-ANSI-RUNTIME-3 (registry); division (S16-1) is the live proof fresh queries read the
+  runtime flag. Fixing the cast kernel is outside this card's fence (carriers only).
+- **Size actuals (round 17c, Q-15c-4):** `builder_conf.py` 386→391 (+5, native-dispatch lines),
+  `session_configuration.py` 577→583 (+6, ANSI key + default), `sql_set_statements.py` 438→369,
+  `session_time_zone.py` 161→108, `timestamp_type.py` 94 (one line reworded, count unchanged);
+  `session_core.py` untouched at 2290. One sanctioned ratchet: `check_lib_py.py`
+  `test_session_timezone_parity.py` 1328→1318 (flips net-negative), logged in `scripts/map.md`.
 
 ## PROPOSITION LEDGER — set-ansi-runtime-1 round 1 — 2026-09-15
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | `conf.set("spark.sql.ansi.enabled","false")` then fresh `SELECT 1/0` answers NULL (double, nullable); the same through `SET`; `true` restores `DIVIDE_BY_ZERO`; `F.lit(1)/F.lit(0)` on a post-SET frame follows; a frame built pre-SET keeps the raise (S16-0). | `test_s16_0_stale_frame_keeps_divide_by_zero`, `test_s16_1_fresh_division_answers_null_after_set`, `test_s16_2_cast_x_answers_null_after_set`, `test_s16_3_conf_set_true_restores_raise`, `test_s16_4_unset_with_builder_true_raises`, `test_c001_f_api_division_follows_runtime_ansi`, `test_btz5_7_8_set_false_then_null`, `test_btz5_9_10_reset_then_raise` | **OPEN** | Red run below. |
-| C-002 | `conf.set("spark.sql.session.timeZone","Asia/Tokyo")` then `current_timezone()`, `from_unixtime(0)`, `CAST(TIMESTAMP … AS STRING)` follow the new zone on both doors; `SET TIME ZONE` the same; invalid zone refuses `INVALID_CONF_VALUE.TIME_ZONE` at the SET with nothing stored; `conf.get` reports the applied value. S16-6 pins exactly, including the one-element `current_timezone()` residue. | `test_s16_6_stale_frame_split_binding`, `test_s16_7_fresh_query_follows_new_zone`, `test_s16_8_conf_set_zone_applies`, `test_s16_9_conf_set_invalid_zone_refuses`, `test_s16_10_set_ansi_maybe_refuses`, `test_s16_11_reset_zone_restores_builder`, `test_c002_f_api_zone_follows`, `test_btz5_2_3_set_zone_then_current_timezone`, `test_btz5_5_refused_set_moves_nothing`, `test_s5_zone_cells_apply` | **OPEN** | Red run below. |
-| C-003 | `RESET` / `conf.unset` restore the builder-seeded value, applied; with no builder value the registered default applies (`true` / `UTC`). | `test_s16_5_get_after_unset_reports_builder_true`, `test_reset_restores_builder_ansi_applied` (in `test_sql_set_door_1.py` flip), S16-4/S16-11 | **OPEN** | Red run below. |
-| C-004 | The native ANSI door (`repark.sql()`) is unaffected by Spark-session runtime sets. | `test_c004_native_door_ignores_spark_runtime_sets` | **OPEN** | Red run below. |
-| C-005 | Registry TZ-3 and SET-ANSI-RUNTIME-1 read FIXED with pins; every pin that codified the old residue flips in place. | Flipped pins in `test_sql_set_door_1.py` (module docstring + 9 tests) and `test_session_timezone_parity.py` (2 tests), registry rows, `make verify` rc 0 | **OPEN** | Red run below. |
+| C-001 | `conf.set("spark.sql.ansi.enabled","false")` then fresh `SELECT 1/0` answers NULL (double, nullable); the same through `SET`; `true` restores `DIVIDE_BY_ZERO`; `F.lit(1)/F.lit(0)` on a post-SET frame follows; a frame built pre-SET keeps the raise (S16-0). | `test_s16_0_stale_frame_keeps_divide_by_zero`, `test_s16_1_fresh_division_answers_null_after_set`, `test_s16_3_conf_set_true_restores_raise`, `test_s16_4_unset_with_builder_true_raises`, `test_c001_f_api_division_follows_runtime_ansi`, `test_btz5_7_8_set_false_then_null`, `test_btz5_9_10_reset_then_raise` | **PROVEN** | `test_set_ansi_runtime_1.py` 22/22 green on the rebuilt release native; S16-2 renamed to `test_s16_2_cast_x_still_raises_string_cast_residue` (third deviation above, residue row SET-ANSI-RUNTIME-3) and no longer counts toward this clause. |
+| C-002 | `conf.set("spark.sql.session.timeZone","Asia/Tokyo")` then `current_timezone()`, `from_unixtime(0)`, `CAST(TIMESTAMP … AS STRING)` follow the new zone on both doors; `SET TIME ZONE` the same; invalid zone refuses `INVALID_CONF_VALUE.TIME_ZONE` at the SET with nothing stored; `conf.get` reports the applied value. S16-6 pins exactly, including the one-element `current_timezone()` residue. | `test_s16_6_stale_frame_split_binding`, `test_s16_7_fresh_query_follows_new_zone`, `test_s16_8_conf_set_zone_applies`, `test_s16_9_conf_set_invalid_zone_refuses`, `test_s16_10_set_ansi_maybe_refuses`, `test_s16_11_reset_zone_restores_builder`, `test_c002_f_api_zone_follows`, `test_btz5_2_3_set_zone_then_current_timezone`, `test_btz5_5_refused_set_moves_nothing`, `test_s5_zone_cells_apply` | **PROVEN** | Same green run; S16-6 green pre- and post-change for the pinned reason (build-zone snapshot). Narrow residue row SET-ANSI-RUNTIME-2 in the registry. |
+| C-003 | `RESET` / `conf.unset` restore the builder-seeded value, applied; with no builder value the registered default applies (`true` / `UTC`). | `test_s16_5_get_after_unset_reports_builder_true`, `test_reset_restores_builder_ansi_applied`, S16-4/S16-11 | **PROVEN** | Same green run; `test_sql_set_door_1.py` RESET pins green (flipped where the old residue showed). Reuse-with-differing-ANSI still soft-folds facade-only: known narrow residue, `session_core.py` untouched per Q-15c-4. |
+| C-004 | The native ANSI door (`repark.sql()`) is unaffected by Spark-session runtime sets. | `test_c004_native_door_ignores_spark_runtime_sets` | **PROVEN** | Same green run. |
+| C-005 | Registry TZ-3 and SET-ANSI-RUNTIME-1 read FIXED with pins; every pin that codified the old residue flips in place. | Flipped pins in `test_sql_set_door_1.py` (module docstring + 9 tests) and `test_session_timezone_parity.py` (2 tests), registry rows, `make verify` rc 0 | **PROVEN** | 9 + 2 flips landed; TZ-3 / SET-ANSI-RUNTIME-1 rows read FIXED; new residue rows SET-ANSI-RUNTIME-2 / -3; guides (`session-and-conf.md`, `troubleshooting.md`) trued up; `make verify` rc 0 (gates below). `check_lib_py` ratchet 1328→1318 logged. |
 | C-006 | Round 2: BL-11 numeric→BINARY under runtime ANSI off. | — | **OPEN** | Out of this step by card order; prerequisite (runtime ANSI carrier) delivered here. |
 
 VERDICT (2026-09-15, ledger creation): 6 clauses, 0 PROVEN, 6 OPEN, 0 REJECTED.
+VERDICT (2026-09-15, round 1 close): 6 clauses, 5 PROVEN, 1 OPEN (C-006, round 2), 0 REJECTED.
 
 ## Red first
 
@@ -78,4 +100,21 @@ not Spark's) — pinned as the C-004 answer.
 
 ## Gates
 
-(TBD — commands with real exit codes as each clause group lands.)
+- `cargo test -p repark-core session` — 151 passed, 0 failed (one parked-test fix: sign-led
+  values no longer fall through to Arrow's `Tz`, so `+18:01` refuses as Java does).
+- `cargo test -p repark-functions -- ansi session_time_zone` — all suites green (57 + 2).
+- `make rust-clippy` — green after 4 pedantic fixes in `session_time_zone.rs`
+  (`unnested_or_patterns`, 3× `redundant_closure_for_method_calls`).
+- `make verify` — rc 0.
+- Release native rebuilt twice via the venv maturin path (after the Rust slice, after the
+  clippy fixes); no `make develop`, no JVM.
+- `.venv/bin/python -m pytest python/repark/tests/test_set_ansi_runtime_1.py python/repark/tests/test_sql_set_door_1.py -q` — 65 passed.
+- `.venv/bin/python -m pytest python/repark/tests -q -k "ansi or time_zone or timezone or conf or set_door"` — 881 passed, 112 skipped.
+- Full facade suite (`python/repark/tests`, venv python, release native) — 8296 passed,
+  367 skipped, 2 xfailed, 1 failed: `test_production_file_size` `_SQLCONF_DEFAULTS` body
+  hash, re-hashed to the measured value in the same round (mechanical baseline, not a product
+  failure); rerun green.
+- Parity harness (`python/repark-parity/tests`) — 756 passed, 2 skipped, 12 xfailed, 1 failed:
+  CAP-1 mirror row for the same ratchet, moved 1328→1318 with the script baseline; rerun green.
+- COVERAGE_ATTESTATION: every clause C-001…C-005 names its pins in the table above; C-006 stays
+  OPEN as round 2 by card order.

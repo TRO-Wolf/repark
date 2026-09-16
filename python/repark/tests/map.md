@@ -817,6 +817,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   FACADE-4 round 5 corrected `_data_type_to_sql_type` to the hash of the body
   committed in `a3424513` (`204ad7a…` was a stale mid-edit value).
   pins: facade-1/C-001, C-002
+  SET-ANSI-RUNTIME-1 (2026-09-15) re-hashed `_SQLCONF_DEFAULTS` (the ANSI default entry).
+  pins: set-ansi-runtime-1/C-005
   CSV-INFER-PERF-1 re-hashed `_promote_csv_string_types` (one `try_cast` failure-count agg)
   and `_CSV_NATIVE_OPTION_KEYS` (`utf8_columns`). Round 2 restored `_CSV_NATIVE_OPTION_KEYS`
   (internal `utf8_columns` no longer in the public native-key set) and re-hashed
