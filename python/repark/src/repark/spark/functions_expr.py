@@ -1112,12 +1112,9 @@ def timestamp_micros(col: Column | str | int) -> Column:
     return _scalar("timestamp_micros", col)
 
 
-def format_number(col: Column | str, d: int) -> Column:
-    """Unsupported because Spark ``format_number`` is not wired."""
-
-    raise UnsupportedOperationException(
-        "functions.format_number is not supported yet (engine gap; disclosed R-FN-BATCH3)"
-    )
+def format_number(col: Column | str, d: Column | int | str) -> Column:
+    """Grouped decimal text with Spark ``format_number`` names and types."""
+    return _scalar("format_number", col, d, lit_indices=frozenset({1}))
 
 
 def try_to_timestamp(col: Column | str, format: Column | str | None = None) -> Column:

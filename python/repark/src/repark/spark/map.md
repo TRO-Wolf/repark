@@ -296,6 +296,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **FNP-MATH-1 step 4 (2026-09-16, run 18a):** `hash` destubs in place to one native
   `_scalar` call (default display already reads Spark's `hash(a, b)`); `hash` leaves
   `functions_byname.py` `FACADE_ONLY_ROUTINE_NAMES`. pins: fnp-math-1/C-001, C-005
+  **FNP-MATH-1 step 5 (2026-09-16, run 18a):** `format_number` destubs in place to one
+  native `_scalar` call (the `d` scale rides `lit_indices`, so the display reads
+  Spark's `format_number(x, 2)`); `format_number` leaves `FACADE_ONLY_ROUTINE_NAMES`.
+  pins: fnp-math-1/C-001, C-002, C-003
   **FNP-ALIAS-1 (2026-09-15):** `degrees`/`radians` move to `functions_math.py` (this file sat
   exactly on its ceiling; the baseline ratchets 2247 → 2237 in `check_lib_py.py` and the CAP-1
   mirror). `functions.py` ratchets 1962 → 1960: the two re-export entries move between its

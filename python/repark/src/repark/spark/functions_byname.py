@@ -105,6 +105,7 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "first_value",
     "forall",
     "format_number",
+    "from_csv",
     "from_xml",
     "get",
     "grouping",

@@ -10,6 +10,9 @@ Unit tests for [`string.rs`](../string.rs), beside the kernels they pin.
   physical-type pins, the all-`Binary` and `register_all`-overwrite legs, plus the
   opt-in `REPARK_PERF_MEASURE=1` substring measurement. Moved verbatim 2026-09-15
   as a file-size split (move-only). pins: door-converge-2/C-001, C-008
+- [`format_number.rs`](format_number.rs) — Spark `format_number` grouping renderer
+  (HALF_EVEN digit rounding, grouping commas, `d` decimals; double/decimal/integral
+  inputs, NULL stays NULL) with its Rust tests. pins: fnp-math-1/C-002, C-003
 
 ## Pointers
 
