@@ -316,7 +316,6 @@ impl PyColumn {
         Ok(Self::from_expr(expr))
     }
 
-    /// Build a `grouping_id` aggregate over exactly the given columns (possibly none).
     pub(super) fn grouping_id_call(args: Vec<Expr>) -> PyResult<Expr> {
         let udaf = super::function_dispatch::nary_aggregate_udaf("grouping_id")?;
         let arity = args.len();

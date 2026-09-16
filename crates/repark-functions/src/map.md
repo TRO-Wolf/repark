@@ -1095,5 +1095,9 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   Step 8 marks the UDAF non-nullable (`is_nullable` false, matching Spark's
   `CountMinSketchAgg`; empty input answers the empty sketch, never NULL).
   Step 10 clears the slice's own clippy lints (fold-plus-`write!` hex helper
-  in tests, `?` arms in `grouping.rs`); behavior unchanged.
+  in tests, `?` arms in `grouping.rs`); behavior unchanged. Remediation
+  (R-18a-19): `grouping_id` args must equal the grouping columns exactly in
+  order, else `GROUPING_ID_COLUMN_MISMATCH` in Spark's message shape; the
+  wrong-accept unit test is inverted and the `///` over
+  `count_min_sketch_udaf` is removed (R-18a-22).
   pins: fnp-agg-1/C-002, C-003, C-004, C-005

@@ -97,9 +97,12 @@ fn unsupported_grouping_id(display: &str) -> DataFusionError {
     ))
 }
 
-fn grouping_id_column_mismatch(display: &str) -> DataFusionError {
+fn grouping_id_column_mismatch(args: &[String], order: &[String]) -> DataFusionError {
     DataFusionError::Plan(format!(
-        "[GROUPING_ID_COLUMN_MISMATCH] {display} columns do not match any grouping set"
+        "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id ({}) does not match grouping \
+         columns ({}).",
+        args.join(", "),
+        order.join(", ")
     ))
 }
 
@@ -337,15 +340,10 @@ fn split_alias_args(inner: &str) -> Vec<String> {
 
 type OuterName = Option<(Option<TableReference>, String)>;
 
-fn sorted_names(mut names: Vec<String>) -> Vec<String> {
-    names.sort();
-    names
-}
-
 fn resolve_grouping_id_call(
     function: &AggregateFunction,
     order: &[String],
-    sets: &[Vec<String>],
+    _sets: &[Vec<String>],
     outer: OuterName,
 ) -> Result<Expr> {
     let display = grouping_id_display(&function.params.args);
@@ -360,10 +358,8 @@ fn resolve_grouping_id_call(
     } else {
         rendered
     };
-    let wanted = sorted_names(names.clone());
-    let matched = sets.iter().any(|set| sorted_names(set.clone()) == wanted);
-    if !matched {
-        return Err(grouping_id_column_mismatch(&display));
+    if names.as_slice() != order {
+        return Err(grouping_id_column_mismatch(&names, order));
     }
     let bits = grouping_id_bits(order, &names)?;
     let (relation, name) = outer.unwrap_or((None, display));
@@ -581,15 +577,28 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn rollup_subset_matches_its_set() {
-        let batch = run(
+    async fn rollup_subset_is_refused() {
+        let refused = failure(
             &ctx(),
             "SELECT grouping_id(g) FROM (VALUES (1, 'a'), (2, 'b')) AS t(g, k) GROUP BY ROLLUP(g, k)",
         )
         .await;
-        assert_eq!(
-            longs(&batch, 0),
-            vec![Some(0), Some(0), Some(0), Some(0), Some(1)]
+        assert!(
+            refused.contains("[GROUPING_ID_COLUMN_MISMATCH]"),
+            "{refused}"
+        );
+    }
+
+    #[tokio::test]
+    async fn cube_reversed_args_are_refused() {
+        let refused = failure(
+            &ctx(),
+            "SELECT grouping_id(k, g) FROM (VALUES (1, 'a'), (2, 'b')) AS t(g, k) GROUP BY CUBE(g, k)",
+        )
+        .await;
+        assert!(
+            refused.contains("[GROUPING_ID_COLUMN_MISMATCH]"),
+            "{refused}"
         );
     }
 

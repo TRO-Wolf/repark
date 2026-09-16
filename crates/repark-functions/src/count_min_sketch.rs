@@ -17,7 +17,6 @@ use datafusion::logical_expr::{
 use datafusion::physical_expr::PhysicalExpr;
 use datafusion::physical_expr::expressions::Literal;
 
-/// Spark `count_min_sketch` — byte-exact Count-Min sketch over the engine API.
 #[must_use]
 pub fn count_min_sketch_udaf() -> Arc<AggregateUDF> {
     Arc::new(AggregateUDF::new_from_impl(SparkCountMinSketch::new()))
