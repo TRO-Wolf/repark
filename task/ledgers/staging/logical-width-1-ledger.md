@@ -71,6 +71,7 @@ parser/dialect/router in `crates/repark-spark` (run 18c) beyond `type_table.rs` 
 | C-009 | The `cast_schema` ANSI refusal stays: `CAST(bigint AS BINARY)` raises `DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION` (BL-11, W-6 withdrawn). | refusal pin from cell `cast_schema` (error cell). | **PROVEN** | Refusal at collect with the cell's condition + cannot-cast sentence + conf remedy. pins: logical-width-1/C-009 |
 | C-010 | Blast radius (W-3): base vs M-2-fix-alone suite lists written here; every changed pin classified (i) asserted the wrong widened answer, re-measured against a named Spark cell, or (ii) product regressed, product fixed. No pin updated without a named cell. | §Blast-radius lists + the reclassified-pin table. | **PROVEN** | 14 changed pins, all class (i) with named cells (§Blast-radius table); zero class (ii); parity untouched. New-pin red run: 13 failed / 7 passed on the stashed base (the 7: nested/collect guards, sql_describe values, the float-fill invariant, lit + cast guards, typename spellings — green by construction). pins: logical-width-1/C-010 |
 | C-011 | Registry rows `LOGICAL-WIDTH-1` (implemented) + `DF-LIT-BINARY-1` (BACKLOG) appended inside their section, never reordered; every gate in the preamble green with real exit codes and counts; COVERAGE_ATTESTATION complete. | Registry diff; §Gates. | **PROVEN** | Rows landed (`LOGICAL-WIDTH-1` implemented, `DF-LIT-BINARY-1` + `ARITH-FLOAT-INT-1` BACKLOG, `DF-TO-BINARY-1` closed by the report fix); rebased onto `a92a68db` conflict-free before the gates. pins: logical-width-1/C-011 |
+| C-012 | Round 2 (A-1 per R-12): the fill expression is built by `repark_core::na_fill_expr` (cast decision from the column's own Arrow type + coalesce), bound via free `fill_expr_for_column`; `actions_export.py` holds no `type_key in (...)` branch and no `.cast(...)` for the fill value; behaviour frozen (cells `fillna_width`/`fillna_values`, every fillna pin, dict/subset/string/bool/mixed-case fills). | Rust unit test (every numeric width, float→int truncation, string untouched) + `grep -ln fillna` files + `test_logical_width_1.py` + /tmp differential probe (old vs new texts/values). | **PROVEN** | 8 core unit tests green; differential probe `/tmp/sb-r2/diff_fill.py`: 20 keys (dtypes/values/wrapper texts incl. CAST renderings, join tokens, mixed-case, origin frames, uint), 0 diffs after plan-ID normalization; all 9 fillna files green (212 passed); `uint` keeps DataFusion coercion (measured old = int32-planned, new identical — casting uint to its own type would CHANGE the planned Arrow type, so the kernel covers signed+float only); `PyColumn::expr()` verified a plain clone (twin-identity holds); dead `_fill_expr` removed while `_type_keys` stays — another lane pins it as a live `_inner` schema reader (`test_mapinarrow_unpersist_action_then_plan_child`), and a metadata accessor is neither a branch nor a cast. pins: logical-width-1/C-012 |
 
 Note (not a clause): `toPandas` dtypes unmeasured — Spark cell `todf_toPandas` records
 `PACKAGE_NOT_INSTALLED`; repark main answers float64/object per its own file. No pin.
@@ -98,6 +99,19 @@ Note (not a clause): `toPandas` dtypes unmeasured — Spark cell `todf_toPandas`
   Python. No new kernel, no Python compute. Rust-first roll-call line 5.
 - R-10 = W-6: WITHDRAWN — no `CAST-ANSI-BINARY-1` row; `cast_schema` is a guard (C-009).
 - R-11 = W-7: nullability out of scope — differing `nullable` lists recorded, never chased.
+- R-12 = R-18b-4 (orchestrator, round 2, binding): AUDIT FINDING A-1 — the round-1 fillna
+  width fix is Python-side value branching and violates Q-17a-2. The fill EXPRESSION
+  (whether and to what the replacement is cast, from the target column's own Arrow type,
+  plus the coalesce) is ONE Rust function in `crates/repark-core` (`na_fill.rs`),
+  bound through `crates/repark-python` (free `fill_expr_for_column`), taking the
+  bound column expression and the replacement value and reading the column's type from
+  the plan schema in Rust. Python keeps: argument checks, subset normalization,
+  column-name binding, the Column identity/alias wrapper. No `type_key in (...)` branch
+  and no `.cast(type_key)` for the fill value remains in `actions_export.py`. The
+  `key_to_cls` map stays: it selects projection targets by declared schema type for
+  display-overlay name matching — name binding, never a value — one ledger line, no move.
+  Behaviour frozen: cells `fillna_width` / `fillna_values` and every fillna pin stay green.
+  Touch nothing outside A-1 this round.
 
 ## Rust-first roll-call
 
@@ -105,7 +119,9 @@ Note (not a clause): `toPandas` dtypes unmeasured — Spark cell `todf_toPandas`
 |---|---|---|
 | LogicalKey narrow arms (`short`/`byte`/`float`/`binary`) | `crates/repark-spark/src/type_table.rs` (Rust) | Type rule; reaches the SQL door via `logical_type_key`. |
 | `DESCRIBE` spelling stability | same file, Describe surface untouched (Rust) | Same type table; pinned by existing tests. |
-| fillna literal cast to the column's own width | Rust `lit`/`cast`/`coalesce` kernels, composed in Python | No Rust fillna builder exists; the kernels already land in Rust. |
+| fillna literal cast to the column's own width | `repark_core::na_fill_expr` (Rust, round 2 per R-12); R-9's composition retired | Value decision (cast or not, to what) is a kernel; SQL-door reachability is N/A (Spark has no SQL fillna). |
+| fillna target-column selection (`key_to_cls`, family isinstance checks) | `actions_export.py` (Python, stays per R-12) | Selects projection targets by declared schema type for name matching; never raises, casts, coerces or branches on a value. |
+| fillna texts (`coalesce(...)` / `CAST(... AS ...)` wrapper strings) | Rust binding renders cast text via `wrap_cast`; Python composes `coalesce(...)` from child parts (plumbing) | Byte-identity with round-1 proven by the /tmp differential probe, not by review. |
 | `DataFrame.schema` key decode (`short`/`byte`/…) | already in `core.py` (Python, pre-existing) | Name/shape plumbing over `logical_schema_fields`. |
 | `F.lit(bytes)` refusal text | `functions.py` (run 18a, untouched) | API plumbing owned by another lane; BACKLOG row. |
 
@@ -183,6 +199,11 @@ docs-only, so no rebuild was needed — the RELEASE module already matches this 
 | red-first new pins on stashed base | 13 failed, 7 passed (guards green by construction) |
 | base suites (W-3) | facade 9035 passed exit 0; parity 756 passed + 1 self-inflicted docs-link fail (untracked fixture/ledger), resolved at commit |
 | M-2-fix-alone suites (W-3) | facade 14 failed / 9021 passed; parity unchanged; all 14 class (i) |
+| round-2 `make verify` | exit 0 (incl. clippy, rustfmt, ledger grammar with C-012) |
+| round-2 whole facade | 9057 passed, 367 skipped, 34 xfailed — exit 0 (one self-caught red mid-round: `test_mapinarrow_unpersist_action_then_plan_child` pinned deleted `_type_keys`; helper restored as a schema reader, file green, suite re-run clean; +2 tests vs round 1 are the rebased main's `subq-cells-1` pins) |
+| round-2 whole parity | 757 passed, 2 skipped, 12 xfailed — exit 0 |
+| round-2 `cargo test -p repark-core na_fill` | 8 passed |
+| round-2 differential probe | 20 keys, 0 diffs |
 
 ## Questions
 
@@ -230,7 +251,7 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/logical-width-1-ledger.md]
     - id: AT-7
       status: ATTACKED
-      evidence: Final tree, rebased onto a92a68db: make verify exit 0; facade 9055 passed, 367 skipped, 34 xfailed, exit 0; parity 757 passed, 2 skipped, 12 xfailed, exit 0; unit file 20 passed; repark-spark Rust suite 1025 passed; comment-ban grep zero hits. Counts in §Gates.
+      evidence: Round-2 tree: make verify exit 0; facade 9057 passed, 367 skipped, 34 xfailed, exit 0; parity 757 passed, 2 skipped, 12 xfailed, exit 0; unit file 20 passed; core na_fill 8 passed; differential probe 20 keys 0 diffs; comment-ban grep zero hits. Counts in §Gates.
       artifacts: [python/repark/tests/test_logical_width_1.py]
     - id: AT-8
       status: ATTACKED
@@ -247,4 +268,4 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
-VERDICT: 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 12 clauses, 12 PROVEN, 0 OPEN, 0 REJECTED.

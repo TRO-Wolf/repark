@@ -138,8 +138,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   keys too. pins: logical-width-1/C-004
   LOGICAL-WIDTH-1 round 2 (2026-09-16, R-12): the cast decision and the coalesce move
   to `repark_core::na_fill_expr` via free `fill_expr_for_column`; `_fill_expr_for_bound`
-  keeps the probe literal, the `F.coalesce` composition and the identity/alias wrapper,
-  and the dead `_fill_expr` / `_type_keys` helpers go away. The cast texts unpack as one
+  keeps the probe literal, the `F.coalesce` composition and the identity/alias wrapper;
+  dead `_fill_expr` goes away while `_type_keys` stays as a schema reader pinned by
+  `test_mapinarrow_unpersist_action_then_plan_child`. The cast texts unpack as one
   nested unit. pins: logical-width-1/C-012
 - `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
   PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,

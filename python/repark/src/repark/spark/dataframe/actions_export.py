@@ -67,6 +67,12 @@ class DataFrameNaFunctions:
         names = _normalize_subset(subset, accept_str=True, allowed_phrase="a list or tuple")
         return self._fill_scalar(value, names)
 
+    def _type_keys(self) -> dict[str, str]:
+        """Return native type keys by engine field name for schema readers."""
+        return {
+            name: type_key for name, type_key, _ in self._dataframe._inner.logical_schema_fields()
+        }
+
     def _fill_expr_for_bound(
         self, bound: Column, value: Any, field_name: str, fallback_name: str
     ) -> Column:
