@@ -13,7 +13,7 @@ and is an ancestor — nothing tonight changed that tag.
 | **#639** | SET-ANSI-RUNTIME-1 (Q-15c-3) | **Muse contributor** | 4 | `6f74897f` | logic + 2× S2-21 perf: **1 shared P1**; 2 verification passes |
 | **#641** | BL-11 numeric → BINARY under ANSI off | **Muse contributor** | 2 | `0ef060af` | logic: 0 P1 / 2 P2; Rust perf: 0 P1 / 1 P2 |
 | **#642** | registry rows BL-19 / BL-20 (docs) | orchestrator | 1 | `(merged)` | — |
-| **#644** | SPARK-SQL-GRAMMAR-1 | **Muse contributor** | 1 | see §1a | — (cut off by the stop time) |
+| **#644** | SPARK-SQL-GRAMMAR-1 | **Muse contributor** | 1 | **merged** | — (cut off by the stop time) |
 | **#643** | DOOR-CONVERGE-2b | **Devin SWE-2** | 1 | **parked, draft** | — (never gated) |
 
 ### 1a. The two units the clock caught
