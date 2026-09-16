@@ -8,7 +8,7 @@ pin collects on the Arrow path (value AND type/nullability) through
 stay nullable on RePark where Spark folds to non-null (the folded-literal
 precedent); frame cells carry Spark's nullability exactly.
 
-pins: spark-sql-grammar-1/C-008, C-010
+pins: spark-sql-grammar-1/C-003, C-004, C-005, C-006, C-008, C-010
 """
 
 from __future__ import annotations
@@ -219,6 +219,72 @@ def test_q14_real_column_beats_nullary_name(spark: ReparkSession) -> None:
     table = _table(spark, "SELECT localtimestamp AS v FROM (SELECT 42 AS localtimestamp) AS t")
     assert table.column("v").to_pylist() == [42]
     assert table.schema.field("v").type == pa.int32()
+
+
+def test_pg_rlike(spark: ReparkSession) -> None:
+    """PG-rlike: ``'abc' RLIKE '^a'`` lowers onto ``regexp_like``."""
+    table = _table(spark, "SELECT 'abc' RLIKE '^a' AS v")
+    assert table.column("v").to_pylist() == [True]
+    assert table.schema.field("v").type == pa.bool_()
+    assert table.schema.field("v").nullable is False
+
+
+def test_pg_not_rlike(spark: ReparkSession) -> None:
+    """PG-rlike negated: ``NOT RLIKE`` lowers onto ``NOT regexp_like``."""
+    table = _table(spark, "SELECT 'abc' NOT RLIKE '^b' AS v")
+    assert table.column("v").to_pylist() == [True]
+    assert table.schema.field("v").type == pa.bool_()
+    assert table.schema.field("v").nullable is False
+
+
+def test_pg_ltz_cast(spark: ReparkSession) -> None:
+    """PG-ltz-cast: ``CAST(x AS TIMESTAMP_LTZ)`` answers ``TIMESTAMP``.
+
+    The literal-only cell folds to non-null, exactly like a plain
+    ``CAST('…' AS TIMESTAMP)`` on this door; Spark types it nullable.
+    """
+    table = _table(spark, "SELECT CAST('2024-01-02 03:04:05' AS TIMESTAMP_LTZ) AS v")
+    assert table.column("v").to_pylist() == [
+        datetime.datetime(2024, 1, 2, 3, 4, 5, tzinfo=datetime.UTC)
+    ]
+    assert table.schema.field("v").type == pa.timestamp("us", tz="UTC")
+    assert table.schema.field("v").nullable is False
+
+
+def test_pg_ltz_cast_nullable_frame(spark: ReparkSession) -> None:
+    """``CAST(x AS TIMESTAMP_LTZ)`` over nullable input stays nullable."""
+    table = _table(
+        spark,
+        "SELECT CAST(s AS TIMESTAMP_LTZ) AS v FROM (SELECT '2024-01-02 03:04:05' AS s "
+        "UNION ALL SELECT CAST(NULL AS STRING)) AS t",
+    )
+    values = table.column("v").to_pylist()
+    assert [value for value in values if value is not None] == [
+        datetime.datetime(2024, 1, 2, 3, 4, 5, tzinfo=datetime.UTC)
+    ]
+    assert any(value is None for value in values)
+    assert table.schema.field("v").type == pa.timestamp("us", tz="UTC")
+    assert table.schema.field("v").nullable is True
+
+
+def test_pg_ntz_literal_refuses(spark: ReparkSession) -> None:
+    """PG-ntz-lit: the ``TIMESTAMP_NTZ`` literal refuses loud naming TZ-6."""
+    with pytest.raises(AnalysisException, match=r"\[UNSUPPORTED_TIMESTAMP_NTZ\]"):
+        _table(spark, "SELECT TIMESTAMP_NTZ '2024-01-02 03:04:05' AS v")
+
+
+def test_pg_ntz_cast_refuses(spark: ReparkSession) -> None:
+    """PG-ntz-cast: ``CAST(x AS TIMESTAMP_NTZ)`` refuses loud naming TZ-6."""
+    with pytest.raises(AnalysisException, match=r"\[UNSUPPORTED_TIMESTAMP_NTZ\]"):
+        _table(spark, "SELECT CAST('2024-01-02 03:04:05' AS TIMESTAMP_NTZ) AS v")
+
+
+def test_pg_struct_dot(spark: ReparkSession) -> None:
+    """PG-struct-dot: ``named_struct('a', 1).a`` answers ``1`` int non-null."""
+    table = _table(spark, "SELECT named_struct('a', 1).a AS v")
+    assert table.column("v").to_pylist() == [1]
+    assert table.schema.field("v").type == pa.int32()
+    assert table.schema.field("v").nullable is False
 
 
 def test_q14_current_date_bare_and_paren(spark: ReparkSession) -> None:

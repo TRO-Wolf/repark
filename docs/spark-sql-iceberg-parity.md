@@ -2744,6 +2744,19 @@ the pin rather than obeying it.
 > (now an equality row) and
 > `crates/repark-spark/tests/session_timezone.rs::a_naive_ntz_timestamp_is_not_shifted_by_the_session_zone`.
 > **Residual:** `spark.sql.timestampType` (opt-in default-NTZ) is not implemented (Q10).
+>
+> **Dated note (2026-09-16, SPARK-SQL-GRAMMAR-1 C-005):** the `TIMESTAMP_NTZ`
+> *type name* on the SQL door (`TIMESTAMP_NTZ '…'` literals,
+> `CAST(x AS TIMESTAMP_NTZ)`) still refuses — now as
+> `[UNSUPPORTED_TIMESTAMP_NTZ]`, naming this row — because no tz-naive Arrow
+> CAST path exists in the engine (rewriting onto `TIMESTAMP WITHOUT TIME ZONE`
+> plans tz-aware, measured 2026-09-16). A naive CAST kernel or analyzer rule is
+> `repark-functions` work, outside this unit's fence. The literal does not parse
+> yet, so #606's `D4_BLOCKED_SQL` cell
+> (`timestampdiff(DAY, ntz, TIMESTAMP_NTZ'2024-03-11 01:00:00')`) stays blocked
+> and this unit does not touch that skip set.
+> **Pin:** `python/repark/tests/test_spark_sql_grammar_1.py::test_pg_ntz_literal_refuses`
+> and `…::test_pg_ntz_cast_refuses`.
 
 ### TZ-7 — a zoneless TIMESTAMP input is read as UTC, not as a session-zone wall clock
 
@@ -3273,18 +3286,21 @@ the pin rather than obeying it.
 - **Rationale** — FIXED. History: the `regex` crate honoured POSIX `[[:alpha:]]`.
 - **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `[[:alpha:]x]` matches `'x'` and `'fox'` via `rlike`/`regexp_like` on both engines; neighbouring `regexp_extract` answers since FN-REGEXP-EXTRACT-1 (2026-09-04) — the former refusal pin is now `test_fn_regex_posix_class.py::test_regexp_extract_answers_on_both_doors` (FINDING F-FN-FIX-2-CTRL-1-1's flag superseded; Spark `'alpha'`/`''` control measured 2026-09-04); the SQL `RLIKE` keyword gap is filed as FN-RLIKE-KEYWORD-1.
 
-### FN-RLIKE-KEYWORD-1 — SQL `RLIKE` keyword refuses; the `regexp_like(...)` spelling answers
+### FN-RLIKE-KEYWORD-1 — SQL `RLIKE` keyword refuses; the `regexp_like(...)` spelling answers — **FIXED 2026-09-16 (SPARK-SQL-GRAMMAR-1 C-003)**
 
-- **repark** — `SELECT 'x' RLIKE '[[:alpha:]x]'` raises
-  `UnsupportedOperationException: This feature is not implemented: Unsupported ast node in
-  sqltorel: RLike`. The function spelling
-  `SELECT regexp_like('x', '[[:alpha:]x]')` answers `True`.
+- **repark** — the SQL door lowers `x RLIKE p` onto `regexp_like(x, p)` and
+  `x NOT RLIKE p` onto `NOT regexp_like(x, p)`
+  (`crates/repark-spark/src/keyword_lower.rs`), answering Spark-equal on
+  `spark.sql` and `selectExpr`.
 - **Apache Spark** — the keyword statement answers `True` (also `True` for `'fox'`).
-  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, FN-FIX-2-CTRL-1 round 3.)*
-- **Pin** — `python/repark/tests/test_fn_regex_posix_class.py::test_sql_rlike_keyword_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the FN-FIX-2-CTRL-1 round-3 measurement. Only
-  the SQL keyword stays unsupported; `rlike` / `regexp_like` / SQL `regexp_like` answer
-  Spark-equal per FN-REGEX-POSIX-1.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, FN-FIX-2-CTRL-1 round 3;
+  fixtures-batch3 PG-rlike.)*
+- **Pin** — `python/repark/tests/test_spark_sql_grammar_1.py::test_pg_rlike` and
+  `…::test_pg_not_rlike` (the retired
+  `python/repark/tests/test_fn_regex_posix_class.py::test_sql_rlike_keyword_refuses`
+  refusal pin).
+- **Rationale** — BACKLOG, filed 2026-09-04 from the FN-FIX-2-CTRL-1 round-3 measurement. Closed
+  2026-09-16 by the SQL-door lowering.
 
 ### FN-REGEX-LOOKAROUND-1 — Java look-around refuses on every regexp kernel
 

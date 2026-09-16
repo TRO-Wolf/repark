@@ -14,6 +14,7 @@ mod describe_show;
 mod dialect;
 mod format_version;
 mod insert_overwrite;
+mod keyword_lower;
 mod local_fs_ddl;
 mod merge;
 mod metadata_tables;

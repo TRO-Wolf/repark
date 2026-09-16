@@ -29,7 +29,7 @@ pub(crate) async fn execute_passthrough(
 ) -> Result<DataFrame> {
     execute_passthrough_inner(ctx, catalogs, sql)
         .await
-        .map_err(crate::bare_nullary::map_bare_nullary_column_error)
+        .map_err(crate::keyword_lower::map_door_keyword_errors)
 }
 
 async fn execute_passthrough_inner(
@@ -60,6 +60,7 @@ async fn execute_passthrough_inner(
             rewrite_binary_casts(inner);
             crate::bare_unit::rewrite_bare_datetime_units(inner)?;
             crate::bare_nullary::demote_refusing_nullary_calls(inner);
+            crate::keyword_lower::lower_spark_keywords(inner);
             // R1: DataFusion accepts only SingleQuotedString inside INTERVAL frame bounds.
             window_range::quote_unquoted_interval_range_bounds(inner);
             may_have_bare_range_bound = window_range::statement_has_bare_range_bound(inner);
@@ -244,6 +245,7 @@ async fn restate_range_frames_and_replan(
         rewrite_binary_casts(inner);
         crate::bare_unit::rewrite_bare_datetime_units(inner)?;
         crate::bare_nullary::demote_refusing_nullary_calls(inner);
+        crate::keyword_lower::lower_spark_keywords(inner);
         window_range::quote_unquoted_interval_range_bounds(inner);
         rewrite(inner);
     }
