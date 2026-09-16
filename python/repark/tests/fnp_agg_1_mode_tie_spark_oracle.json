@@ -1,0 +1,138 @@
+{
+ "spark_version": "4.1.2",
+ "cells": [
+  {
+   "id": "MODE-PY-00",
+   "expr": "F.mode('v')",
+   "rows": [
+    [
+     1,
+     30
+    ],
+    [
+     2,
+     5
+    ]
+   ],
+   "name": [
+    "g",
+    "m"
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "MODE-PY-01",
+   "expr": "F.mode('v', True)",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     5
+    ]
+   ],
+   "name": [
+    "g",
+    "m"
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "MODE-PY-02",
+   "expr": "F.mode('v', False)",
+   "rows": [
+    [
+     1,
+     30
+    ],
+    [
+     2,
+     5
+    ]
+   ],
+   "name": [
+    "g",
+    "m"
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "MODE-SQL-00",
+   "expr": "SELECT g, mode(v) FROM t GROUP BY g ORDER BY g",
+   "rows": [
+    [
+     1,
+     30
+    ],
+    [
+     2,
+     5
+    ]
+   ],
+   "name": [
+    "g",
+    "mode(v)"
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "MODE-SQL-01",
+   "expr": "SELECT g, mode(v, true) FROM t GROUP BY g ORDER BY g",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     5
+    ]
+   ],
+   "name": [
+    "g",
+    "mode() WITHIN GROUP (ORDER BY v DESC)"
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "MODE-SQL-02",
+   "expr": "SELECT g, mode() WITHIN GROUP (ORDER BY v DESC) FROM t GROUP BY g ORDER BY g",
+   "rows": [
+    [
+     1,
+     30
+    ],
+    [
+     2,
+     5
+    ]
+   ],
+   "name": [
+    "g",
+    "mode() WITHIN GROUP (ORDER BY v)"
+   ],
+   "outcome": "ok"
+  },
+  {
+   "id": "MODE-SQL-03",
+   "expr": "SELECT g, mode() WITHIN GROUP (ORDER BY v) FROM t GROUP BY g ORDER BY g",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     5
+    ]
+   ],
+   "name": [
+    "g",
+    "mode() WITHIN GROUP (ORDER BY v DESC)"
+   ],
+   "outcome": "ok"
+  }
+ ]
+}

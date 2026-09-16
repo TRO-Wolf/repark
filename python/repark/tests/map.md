@@ -5623,3 +5623,12 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   where repark types it `string` (the collected value round-trips to `datetime.time` either way, and
   the extractor outcome is Spark-equal). That assert goes red when the lit path gains a TIME type,
   which is when the registry row retires. pins: fnp-11b/C-005
+- `fnp_agg_1_mode_tie_spark_oracle.json` — **FNP-AGG-1 critic round (2026-09-16, run 17a):** seven
+  live PySpark 4.1.2 cells settling `mode`'s frequency-tie behaviour, which the unit's own fixture
+  did not cover and a critic raised as a possible P1. On a group where 10, 20 and 30 each appear
+  once: `F.mode('v', True)` and `SELECT mode(v, true)` both answer **10, the smallest** — which is
+  what `mode.rs`'s `extremum(false)` already does, so the claim is **refuted**. The explicit
+  orderings are separate and also match: `mode() WITHIN GROUP (ORDER BY v DESC)` answers 30 and
+  `ORDER BY v` answers 10. The `DESC` text in the 2-arg form's display name is cosmetic, not
+  semantic. This turns `deterministic_ties_pick_smallest` from an author's assertion into an
+  oracle-backed one. pins: fnp-agg-1/C-002

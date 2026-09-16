@@ -118,3 +118,31 @@ VERDICT: 7 clauses, 0 PROVEN, 7 OPEN, 0 REJECTED (step-2 evidence above; the two
 | `uvx ruff@0.15.22 format --check .` / `ruff check .` | 1005 files formatted, all checks passed |
 | `make verify` | exit 0 end-to-end on the final tree (was red at `check-ledgers` on the stale staging row above before its removal) |
 | comment-ban grep over the staged diff | prints nothing |
+
+## Critic round and its dispositions (2026-09-16, run 17a)
+
+Three Grok reviewers read the step-2 head. **critic-logic found no P1** — the two-partition merge
+test on every UDAF held up under attack, which is the defect class that cost a sibling unit a
+remediation round two nights earlier. **Rust perf found no P1** (four P2s, one P3).
+
+- **ag-logic's one P2 is REFUTED by measurement.** It conjectured that `F.mode('v', True)` might
+  answer the *maximum* on a frequency tie, because Spark renders that form's display name as
+  `mode() WITHIN GROUP (ORDER BY v DESC)`, and said that if so it would be a P1 on a claimed shape.
+  The unit's fixture had no tie cell, so the orchestrator recorded one live:
+  `python/repark/tests/fnp_agg_1_mode_tie_spark_oracle.json`, seven cells. On a group where 10, 20
+  and 30 each appear once, **`F.mode('v', True)` and `SELECT mode(v, true)` both answer 10, the
+  smallest** — exactly what `mode.rs`'s `extremum(false)` does. The explicit orderings are a
+  separate path and also match (`WITHIN GROUP (ORDER BY v DESC)` → 30, `ORDER BY v` → 10). The
+  `DESC` in the 2-arg display name is cosmetic. The critic was right to flag the gap and right to
+  label it a conjecture; the measurement closes it in the implementation's favour and converts
+  `deterministic_ties_pick_smallest` from an author's assertion into an oracle-backed pin.
+- **Two P1s from the Python perf read are real and are CARRY-OVER**, not closed tonight (the run's
+  clock ran out before a remediation round plus a full gate plus CI could land):
+  - **PYPERF-001** `F.any_value` binds DataFusion's `first_value` and folds `ignoreNulls` in Python,
+    while the SQL door runs `SparkAnyValue` — **two kernels behind one Python name**, so an
+    ungrouped select and a `groupBy().agg` take different paths. The fix is dispatch arms onto
+    `any_value_udaf()` (unary and binary), passing the `ignoreNulls` Column through instead of
+    folding it, and `join_sql_expr` naming `any_value` rather than `first_value`.
+  - **PYPERF-002** `F.product`'s `sql_expr` leaks the internal `__repark_product` name.
+  Both are the door-split class the campaign keeps finding: a decision taken in Python is a decision
+  the SQL door never makes.
