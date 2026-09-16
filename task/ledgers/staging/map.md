@@ -819,3 +819,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   clauses OPEN). No product code in step 1.
   `risk_tier: standard`. Branch `feat/fnp-11b-temporal-formats`.
   pins: fnp-11b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [logical-width-1-ledger.md](logical-width-1-ledger.md) —
+  **LOGICAL-WIDTH-1 step 1 (2026-09-16), in flight:** Spark's logical widths on the facade —
+  ledger with the card rulings W-1..W-7 plus owner rulings Q-16b-3/Q-17a-2/Q-17a-4, the
+  Spark-cell fixture (`python/repark/tests/facade_logical_width_oracle.json`: 22 width cells)
+  and the red-first pins (`test_logical_width_1.py`, red on the base). Branch
+  `feat/logical-width-1`.
+  pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011

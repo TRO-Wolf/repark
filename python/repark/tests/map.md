@@ -5817,3 +5817,12 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   the moment those kernels land the pin **XPASSes and fails** and the step-3 round has to retire it.
   A red-first pin for later work in the same unit is still a residual: strict-xfail it, do not leave
   it failing. pins: fnp-gen-1/C-004
+- [facade_logical_width_oracle.json](facade_logical_width_oracle.json) —
+  **LOGICAL-WIDTH-1 (2026-09-16):** the run-17b live PySpark 4.1.2 width oracle, copied
+  byte-identical from `/tmp/oc-worker/run18b/oracle/width_spark_2026-09-15.json` (22 cells:
+  `ddl_schema` / `struct_schema` / `infer_schema` / `nested_schema` / `cast_schema` /
+  `sql_cast` / `sql_describe` / `arith_width` / `agg_width` / `union_width` / `fillna_width` /
+  `fillna_values` / `lit_width` / `schema_json` / `write_read_parquet` / `iceberg_schema` /
+  `iceberg_desc` / `iceberg_rows` / `ddl_collect_types` / `ddl_collect_values` /
+  `todf_toPandas` / `typename_strings`). Every pin in `test_logical_width_1.py` names its cell.
+  pins: logical-width-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
