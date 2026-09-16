@@ -1,5 +1,10 @@
 # map — python/repark-parity/tests
 
+**FNP-AGG-1 step 2 (2026-09-16, run 17a):** EX-0 count 1074 → 1078 (the four new
+aggregates); the CAP-1 mirror rows move with the code (`functions.py` 1984 →
+1985, `functions_expr.py` 2220 → 2233) with the `check_lib_py.py` rows.
+pins: fnp-agg-1/C-006, C-007
+
 DF-PLAN-INTROSPECT-1 follow-up round 3 (2026-09-15, R-11): CAP-1 mirror row
 ratcheted down with the code — `dataframe/core.py` 4027 → 4014 (the
 `sameSemantics` body moves to `dataframe/plan_introspect.py`). The

@@ -27,13 +27,10 @@ PySpark 4.1.2 (EX-29 / EX-30, 2026-09-11; owner ruling S2-22).
 from the example inventory, the backlog and the live ``__all__`` cross-check;
 the raw walk still reports them, so the API-freeze register keeps them frozen.
 
-A ``COVERS`` entry must be used in that script's body. Class-surface names bind only
-on a repark-rooted local (assignment dataflow from a door or session builder), except
-the class-root surfaces ``SparkSession.builder`` / ``SparkSession.Builder.*`` /
-``Window.*``, which bind on the class name. Module covers such as ``repark.sql`` bind
-only on the module alias. A repark-rooted receiver can still list a method it calls
-only trivially — review holds that honesty. ``exceptions.txt`` has the same exact-count
-ratchet as the backlog.
+A ``COVERS`` entry must be used in its script body. Class-surface names bind on a
+repark-rooted local, except ``SparkSession.builder`` / ``SparkSession.Builder.*`` /
+``Window.*`` (class name) and ``repark.sql`` (module alias); review holds that honesty.
+``exceptions.txt`` has the same exact-count ratchet as the backlog.
 
 pins: ex-0-example-drift-gate/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 pins: ex-1-class-surfaces/C-001, C-002, C-004, C-005
@@ -83,6 +80,7 @@ FUNCTIONS_INSTALLER_SOURCES: tuple[str, ...] = (
     "python/repark/src/repark/spark/functions_arrow_udf.py",
     "python/repark/src/repark/spark/functions_temporal.py",
     "python/repark/src/repark/spark/functions_window.py",
+    "python/repark/src/repark/spark/functions_agg_1.py",
 )
 FUNCTION_EXPORT_BINDINGS: frozenset[str] = frozenset(
     {
@@ -98,6 +96,7 @@ FUNCTION_EXPORT_BINDINGS: frozenset[str] = frozenset(
         "BYNAME_NAMES",
         "ARROW_EXPORTS",
         "FNP11A_EXPORTS",
+        "FNPAGG1_EXPORTS",
     }
 )
 FUNCTION_EXPORT_DICT_KEYS: frozenset[str] = frozenset({"FNP15_MESSAGES"})
@@ -113,7 +112,7 @@ FAMILIES: tuple[str, ...] = (
     "types",
     "window",
 )
-BACKLOG_BASELINE = 111
+BACKLOG_BASELINE = 108
 EXCEPTIONS_BASELINE = 1
 COLUMN_PLUMBING_REASON = (
     "bound select-boundary plumbing on repark's Column; measured absent from "
