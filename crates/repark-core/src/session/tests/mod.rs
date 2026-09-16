@@ -7,4 +7,5 @@ mod df_guard;
 mod namespace_create;
 mod pool_refusals;
 mod session;
+mod subquery;
 mod window_rescan;

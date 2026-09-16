@@ -1795,10 +1795,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `"or"` filter-boolean-steal pins; bare `when` pin-refuse (quoted works; no leak).
 - `test_udtf.py` — **r23 C6 / U12 UDTF scalar-arg phase-2 core:** `@udtf` /
   lit-call multi-row expand (Arrow value+type); `spark.udtf.register` +
-  `SELECT * FROM name(lit_args)` rewrite; column-subset SELECT; LATERAL /
-  non-literal / table-arg refuse-loud; validation errorClasses held
+  `SELECT * FROM name(lit_args)` rewrite; column-subset SELECT; non-literal
+  Column args refuse-loud; validation errorClasses held
   (`INVALID_UDTF_*` / `CANNOT_REGISTER_UDTF`); reserved name refuse;
   `functions.udtf` export; empty-eval empty schema; half-wired scalar guard.
+  **DF-SUBQUERY-1 (2026-09-15):** the table-arg pin flips from refuse-loud to
+  execute — `Echo(frame)` feeds each input `Row` to `eval` through the
+  `table_arg.py` path (`test_udtf_table_arg_feeds_rows`).
   **octo C1 pins:** name-in-string/comment no-hijack; JOIN table-factor refuse;
   unclosed SQL string refuse; eval arity mismatch; multi-arg/NULL/TRUE/FALSE/case
   SQL; zero-arg + bad register name.
@@ -5667,3 +5670,28 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   where repark types it `string` (the collected value round-trips to `datetime.time` either way, and
   the extractor outcome is Spark-equal). That assert goes red when the lit path gains a TIME type,
   which is when the registry row retires. pins: fnp-11b/C-005
+- [test_df_subquery_1.py](test_df_subquery_1.py) — **DF-SUBQUERY-1 (2026-09-15):** every
+  `scalar_*` / `exists_*` / `lateral_*` / `astable_*` / `outer_*` cell of
+  `facade_df_subquery_oracle.json` on the Python door, plus the `scalar_sql` /
+  `exists_sql` / `lateral_sql` cells on the SQL door — and the card's two named
+  SQL-door gap spellings (EXISTS in a projection; LATERAL with an outer ref in the
+  SELECT list), both of which answer through the repark-core rules, so no
+  `DF-SUBQUERY-SQL-1` row was needed: values, schemas, nullability,
+  projection names (`scalarsubquery()` / `exists()` unaliased), display strings, the
+  inner-scope-wins unqualified-`outer()` quirk, the conditioned error cells
+  (`SCALAR_SUBQUERY_RETURN_MORE_THAN_ONE_OUTPUT_COLUMN` 42823,
+  `SCALAR_SUBQUERY_TOO_MANY_ROWS` 21000, `UNSUPPORTED_JOIN_TYPE` / `NOT_STR` /
+  `NOT_DATAFRAME` / `NOT_COLUMN_OR_STR` argument shapes, the `TableArg` ordering
+  guards), `spark.tvf.explode` and the `TABLE(...)` UDTF argument spellings, and the
+  `CORRELATED_REFERENCE` refusal under `explode` (a registered residual: the
+  optimizer-raised message carries Spark's condition text and SQLSTATE but
+  `getCondition()` is not populated on the wrapped exception). The pre-existing
+  `spark.tvf.explode` nullable-vs-non-nullable gap is pinned as-is, not silently
+  re-matched.
+  pins: df-subquery-1/C-001..C-007
+- [facade_df_subquery_oracle.json](facade_df_subquery_oracle.json) — **DF-SUBQUERY-1
+  (2026-09-15):** the live-PySpark 4.1.2 cells (`probe_dfsubq.py`, run 16b, recorded
+  2026-09-15) over `emp(id, dept, sal)` / `dept(dept, budget)`: scalar, exists,
+  lateral-join, asTable/TableArg, and `Column.outer` arms plus the error cells.
+  Recorded evidence, never hand-edited.
+  pins: df-subquery-1/C-007

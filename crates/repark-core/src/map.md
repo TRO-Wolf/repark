@@ -733,6 +733,17 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   census)
   and `tests/conf_unread.rs` (CONF-UNREAD-1 step 1: the four accepted-but-unread
   keys — coalesce refusal plus three wiring pins).
+  **DF-SUBQUERY-1 (2026-09-16):** `session/df_guards/subquery.rs` adds the subquery
+  family — scoped expression/plan resolution (`resolve_bound_expr` /
+  `resolve_scoped_expr` / `resolve_subquery_plan`, innermost-first per Spark
+  classic's recorded quirk), the `__repark_single_row` guard UDAF (multi-row
+  scalar → 21000 at execution), and three optimizer rules
+  (`repark_projection_exists`, `repark_scalar_subquery_guard`,
+  `repark_lateral_projection_hoist`) spliced ahead of `scalar_subquery_to_join`
+  and `decorrelate_lateral_join`; `session/df_guards.rs` installs them and
+  `tests/subquery.rs` pins them at plan level. `session.rs` re-exports the
+  resolvers for the Python bindings.
+  pins: df-subquery-1/C-001, C-002, C-003, C-004, C-008, C-009
 
 ## Pointers
 

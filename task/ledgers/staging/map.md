@@ -18,6 +18,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Oracle: run-16b PySpark 4.1.2 cells (`freq_*`, `transpose_*`).
   `risk_tier: standard`. Branch `feat/df-rust-3`.
   pins: df-rust-3/C-001, C-002, C-003, C-004, C-005, C-006
+- [df-subquery-1-ledger.md](df-subquery-1-ledger.md) —
+  **DF-SUBQUERY-1 (2026-09-15), in flight:** `DataFrame.scalar` / `.exists` /
+  `.lateralJoin` / `.asTable` over `Column.outer` — `Expr::ScalarSubquery`,
+  `Expr::Exists`, `OuterReferenceColumn` and `LogicalPlan::Subquery` built in
+  Rust (repark-python + repark-core), EXISTS-in-projection and
+  lateral-projection-hoist rewrites in the core optimizer list, the
+  `SCALAR_SUBQUERY_TOO_MANY_ROWS` execution guard, `TableArg` + the UDTF
+  table-argument path, and the Spark-classic unqualified-resolution quirk
+  pinned both ways. `risk_tier: standard`. Branch `feat/df-subquery-1`.
+  pins: df-subquery-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`

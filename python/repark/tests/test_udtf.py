@@ -1,7 +1,7 @@
 """UDTF scalar-arg core (mapInArrow + FROM name(lit_args)).
 
-Validation error classes held; the scalar-arg relation constructor executes; LATERAL and
-table-arg stay blocked.
+Validation error classes held; the scalar-arg relation constructor executes; table args
+feed each input row to ``eval`` (DF-SUBQUERY-1).
 """
 
 from __future__ import annotations
@@ -125,20 +125,20 @@ def test_udtf_non_literal_column_refuses(spark: SparkSession) -> None:
         Echo(col("x"))
 
 
-def test_udtf_table_arg_refuses(spark: SparkSession) -> None:
-    """DataFrame / table-arg form refuses loud."""
+def test_udtf_table_arg_feeds_rows(spark: SparkSession) -> None:
+    """DataFrame table-arg form executes — each input row reaches eval (DF-SUBQUERY-1).
+
+    pins: df-subquery-1/C-005
+    """
+    from repark.spark.row import Row
 
     @udtf(returnType="a: int")
     class Echo:
-        def eval(self, value: object) -> Iterator[tuple[object]]:
-            yield (value,)
+        def eval(self, row: Row) -> Iterator[tuple[int]]:
+            yield (row["id"],)
 
     frame = spark.range(2)
-    with pytest.raises(
-        UnsupportedOperationException,
-        match=r"table-argument|table.arg|not supported|LATERAL",
-    ):
-        Echo(frame)
+    assert [row.a for row in Echo(frame).collect()] == [0, 1]
 
 
 def test_udtf_direct_form_and_as_deterministic(spark: SparkSession) -> None:
