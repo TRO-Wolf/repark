@@ -154,7 +154,9 @@ impl ScalarUDFImpl for SparkSchemaOfCsv {
         if args.arg_fields.len() < 1 || args.arg_fields.len() > 2 {
             return Err(wrong_num_args(args.arg_fields.len()));
         }
-        if !is_string_type(args.arg_fields[0].data_type()) {
+        if !is_string_type(args.arg_fields[0].data_type())
+            && !matches!(args.arg_fields[0].data_type(), DataType::Null)
+        {
             return Err(unexpected_input_type(args.arg_fields[0].data_type()));
         }
         if args.arg_fields.len() == 2 {

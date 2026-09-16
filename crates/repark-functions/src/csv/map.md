@@ -41,8 +41,10 @@ record per row; the `fold` analyzer rule validates the options literal and folds
 - `schema_of_csv.rs` — the `schema_of_csv` scalar UDF plus its `#[cfg(test)]`
   pins (the Spark `CSVInferSchema` ladder and renderer, the quoted separator, the
   `sep` option, the empty-document `INTERNAL_ERROR` defect, NULL, non-string
-  input, non-map options). The kernel answers one DDL string per row; the fold
-  rule (step 4b) folds a literal call at analysis time.
+  input, non-map options). The kernel answers one DDL string per row and lets a
+  `Null`-typed first argument through so the fold rule raises
+  `[DATATYPE_MISMATCH.UNEXPECTED_NULL]`; the fold rule (step 4b) folds a literal
+  call at analysis time.
   pins: fnp-gen-1/C-004
 
 ## Pointers
