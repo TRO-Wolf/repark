@@ -301,3 +301,25 @@ P2 hand-offs out of this unit's scope (recorded, not fixed):
 Residual for FNP-8: HOF kernels export the `item` field name while live
 Spark exports `element` (decoded from `fnp8_spark_oracle.json` schemas);
 nullability now matches. Renaming HOF kernels is FNP-8's call.
+
+## Round 2 step-6/7 gates — 2026-09-16 (muse-spark-1.3-contributor)
+
+- `cargo test -p repark-functions --lib`: 740 passed, 0 failed (739 + the
+  new shuffle-seed unit test).
+- `cargo test -p repark-python --lib`: 75 passed, 0 failed.
+- `make rust-clippy`: exit 0.
+- `make verify`: exit 0, 56 suites ok, zero failures (one earlier run hit
+  the `repark-iceberg` listing-cost timing probe under concurrent load;
+  green in isolation and in the clean rerun).
+- Release native rebuilt; `test_door_converge_2b.py` 134 passed,
+  `test_sql_literal_typing_1.py` 77 passed.
+- Whole facade suite: 9322 passed, 367 skipped, 25 failed — all 25 are the
+  two recorded P2s (4 `fnp_gen_1` union nested-unification, 21 ML
+  `array_element` lowering), each verified to a single uniform cause.
+- Whole parity suite: exit 0, 757 passed, 2 skipped.
+
+Step-7 registry: `COMPLEX-ELEM-NULL-1` array arm FIXED (struct/map BACKLOG),
+`ARRAY-LITERAL-CONTAINSNULL-1` stays FIXED, TY-3 closed with the Spark
+golden pin, `EXPECTED_DIVERGENCES` holds at 4. P2 hand-offs: P2 union-path
+and P2 ML owner above; P2 run 18a keeps facade `F.bround` and 3-argument
+`F.like`/`F.ilike`. Residual for FNP-8: HOF `item` exporter naming.
