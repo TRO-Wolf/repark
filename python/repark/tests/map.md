@@ -949,7 +949,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (63 passed). LIT-SQL-52 is a declared-divergence pin holding the -128 wrap
   for residue BL-20-OVF. `div` / unary `~` stay unpinned (SPARK-SQL-GRAMMAR-1
   residues).
-  pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
   wipes rows, stamps `operation=delete`, time-travels to the pre-truncate snapshot;
   missing table is `TABLE_OR_VIEW_NOT_FOUND`; a view is `EXPECT_TABLE_NOT_VIEW`;

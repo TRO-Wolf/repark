@@ -9597,12 +9597,36 @@ field NAME.
 - **Apache Spark** — `typeof(1 + CAST(1 AS TINYINT))` is `int`, and
   `hex(CAST(1 + CAST(1 AS TINYINT) AS BINARY))` is `00000002` on both doors.
   *(oracle: `<pyspark-4.1.2-oracle>` — measured by run 17c, 2026-09-16.)*
-- **Pin** — none yet; recorded ahead of its unit.
-- **Rationale** — BACKLOG, door-disagreement. Pre-existing in the SQL door's integral literal typing and
-  surfaced by BL-11 (#641), which made it visible because numeric → `BINARY` is the first cast whose result
-  *width* is decided by the static integral type rather than by the value. Ranked above the individual
-  width rows: literal typing sits upstream of a large family of casts and comparisons, so the wrong type
-  propagates silently wherever the result width or precision is observable.
+- **Pin** — `python/repark/tests/test_sql_literal_typing_1.py` over
+  `python/repark/tests/sql_literal_typing_1_spark_oracle.json` (the 64-cell live-PySpark 4.1.2
+  recording `/tmp/oc-worker/sc/oracle/bl20-oracle.json`, batch `sc18-bl20-literal-typing`,
+  measured 2026-09-16): value plus Arrow type per cell, Spark error class plus message where
+  recorded. Rust unit tests beside `crates/repark-spark/src/spark_literal_typing.rs`.
+  pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-006.
+- **Rationale** — FIXED 2026-09-16 (SQL-LITERAL-TYPING-1): `SparkIntegralLiteral`
+  (`crates/repark-spark/src/spark_literal_typing.rs`) types the literal as Spark does at planning
+  time — Int32 when the value fits, Int64 when it needs 64 bits, DECIMAL(p,0) past i64, refusal
+  past 38 digits — from `SparkExtension::configure_analyzer_rules` immediately before the first
+  `TypeCoercion`, so DataFusion's own coercion produces Spark's promotion with no per-operator
+  retag. Still open and owned elsewhere: `div` (LIT-SQL-26) and unary `~` (LIT-SQL-38) are
+  SPARK-SQL-GRAMMAR-1 C-001/C-002 parser residues; narrow-integral overflow is BL-20-OVF below.
+
+### BL-20-OVF — narrow-integral arithmetic wraps under ANSI; Spark raises `BINARY_ARITHMETIC_OVERFLOW`
+
+- **repark** — `SELECT CAST(127 AS TINYINT) + CAST(1 AS TINYINT)` answers `-128` (tinyint wrap)
+  with ANSI on. The legacy (`ansi=false`) wrap is correct and already matches Spark
+  (`hex` cell LIT-SQL-50).
+- **Apache Spark** — `[BINARY_ARITHMETIC_OVERFLOW] 127S + 1S caused overflow. Use try_add to
+  ignore overflow problem and return NULL. SQLSTATE: 22003`.
+  *(oracle: `/tmp/oc-worker/sc/oracle/bl20-oracle.json` cell LIT-SQL-52 — measured by run 18c,
+  2026-09-16.)*
+- **Pin** — `test_tinyint_overflow_wrap_is_declared` in
+  `python/repark/tests/test_sql_literal_typing_1.py` holds today's `-128` wrap; it flips red
+  when the kernel lands.
+  pins: sql-literal-typing-1/C-005.
+- **Rationale** — BACKLOG. Neither operand is an unsuffixed literal, so no planner rule can see a
+  width to keep: the fix is checked Int8/Int16 `+`/`-`/`*` kernels with the `S`-suffixed error
+  shape, new kernels in `repark-functions`. Split from BL-20, which the literal typing closed.
 
 ## 8. Drop-in disclosure rationale
 

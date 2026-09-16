@@ -216,7 +216,7 @@ pins: rp-4-fork-repin/C-005, C-006
   with no per-operator retag. Skips `Limit` plans, rebuilds `Values` rows. The
   late `SparkIntegerLiteral` stays (idempotent no-op afterwards). Unit tests
   beside the change cover the mapping, the refusal shape and the insert order.
-  pins: sql-literal-typing-1/C-001, C-002, C-003, C-004
+  pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-007
 - `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
   `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),

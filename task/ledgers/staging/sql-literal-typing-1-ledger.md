@@ -47,7 +47,7 @@ and unary `~` (SPARK-SQL-GRAMMAR-1 C-001/C-002 residues); `functions*.py`,
 | C-004 | `hex(CAST(<expr> AS BINARY))` under ANSI off answers Spark's byte count on both doors; LIT-SQL-44 and LIT-PY-05 agree. | Same pin file, LIT-SQL-44…51 and LIT-PY-05 cells. | PROVEN | Green after the fix: 44 and 47 answer `00000002`; the agreement pin asserts LIT-SQL-44 equals LIT-PY-05. Follows from C-002, no extra code. pins: sql-literal-typing-1/C-004. §2. |
 | C-005 | `CAST(127 AS TINYINT) + CAST(1 AS TINYINT)` under ANSI raises BINARY_ARITHMETIC_OVERFLOW. | Same pin file, LIT-SQL-52 cell; or BACKLOG residue row BL-20-OVF naming the seam. | OPEN | Still wraps to -128 after the fix (no unsuffixed literal involved, so the rule never fires). Needs checked Int8/Int16 add/sub/mul kernels plus the `S`-suffixed error shape: new kernels in `repark-functions`, outside this round's fence. Stays OPEN with BACKLOG row BL-20-OVF; the wrap is held by a declared-divergence pin that flips red when the kernel lands. §5. |
 | C-006 | The Python door does not regress: LIT-PY-00…09 stay as recorded. | Same pin file, LIT-PY-00…09 cells; PY-07 pins today's refusal. | PROVEN | Green after the fix: all nine cells plus the PY-07 refusal pin unchanged (`F.lit` builds Int32 directly, so the SQL-text rule never fires on the Python door). pins: sql-literal-typing-1/C-006. §2. |
-| C-007 | BL-20 moves to FIXED with pin names and the oracle path; residues (`div`, `~`, C-005 if open) are their own rows. | Registry diff plus this ledger. | OPEN | Done last, in the registry commit. |
+| C-007 | BL-20 moves to FIXED with pin names and the oracle path; residues (`div`, `~`, C-005 if open) are their own rows. | Registry diff plus this ledger. | PROVEN | BL-20 FIXED with the pin file, the fixture and the oracle path; new BACKLOG row BL-20-OVF for C-005; `div` / `~` named as SPARK-SQL-GRAMMAR-1 C-001/C-002 residues. pins: sql-literal-typing-1/C-007. §2. |
 
 ## 1. Red-first record (base `33c87cbf`, release native in `.venv`, 2026-09-16)
 
@@ -107,6 +107,9 @@ passes (full list in §2).
   down to 14, and every remaining DIFF is declared out of scope (11
   LOGICAL-WIDTH-1 display cells whose `typeof` agrees, `div` LIT-SQL-26,
   unary `~` LIT-SQL-38) except LIT-SQL-52 (C-005, declared divergence pin).
+- Registry commit: BL-20 → FIXED with pin names and the oracle path, new
+  BACKLOG row BL-20-OVF carrying C-005 with the seam named, `div` / `~`
+  named as SPARK-SQL-GRAMMAR-1 residues. C-007 PROVEN.
 
 ## 3. Design (Rust-first per Q-17a-2)
 
