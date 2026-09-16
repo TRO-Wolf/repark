@@ -73,6 +73,30 @@ VALUES: dict[str, tuple[Any, pa.DataType, bool]] = {
     "RX2-SQL-27": ("", _STR, False),
     "RX2-SQL-28": (None, _BOOL, True),
     "RX2-SQL-29": (None, _BOOL, True),
+    "RX3-SQL-00": (True, _BOOL, True),
+    "RX3-SQL-01": (True, _BOOL, True),
+    "RX3-SQL-02": (True, _BOOL, True),
+    "RX3-SQL-03": (False, _BOOL, True),
+    "RX3-SQL-04": (19999, _INT, True),
+    "RX3-SQL-05": (True, _BOOL, True),
+    "RX3-SQL-06": ("c", _STR, False),
+    "RX3-SQL-07": ("c", _STR, False),
+    "RX3-SQL-08": ("c", _STR, False),
+    "RX3-SQL-09": ("b", _STR, False),
+    "RX3-SQL-10": ("", _STR, False),
+    "RX3-SQL-11": ("b", _STR, False),
+    "RX3-SQL-12": ("c", _STR, False),
+    "RX3-SQL-13": (True, _BOOL, False),
+    "RX3-SQL-14": (True, _BOOL, False),
+    "RX3-SQL-15": (True, _BOOL, False),
+    "RX3-SQL-16": (True, _BOOL, False),
+    "RX3-SQL-17": (True, _BOOL, False),
+    "RX3-SQL-18": (3, _INT, False),
+    "RX3-SQL-19": (["", "", ""], _EXTRACT_ALL_LIST, False),
+    "RX3-SQL-22": (3, _INT, False),
+    "RX3-SQL-23": (["", "", "", ""], _EXTRACT_ALL_LIST, False),
+    "RX3-SQL-25": (False, _BOOL, False),
+    "RX3-SQL-26": (True, _BOOL, False),
 }
 
 ERRORS: dict[str, str] = {
@@ -82,6 +106,7 @@ ERRORS: dict[str, str] = {
     "RX2-SQL-16": "INVALID_PARAMETER_VALUE.PATTERN",
     "RX2-SQL-17": "INVALID_PARAMETER_VALUE.PATTERN",
     "RX2-SQL-25": "INVALID_PARAMETER_VALUE.PATTERN",
+    "RX3-SQL-24": "INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX",
 }
 
 

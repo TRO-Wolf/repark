@@ -4969,13 +4969,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Step 7:** lint-clean docstring shapes. pins: java-regex-features-1/C-001
 - `test_java_regex_features_1.py` + `java_regex_features_1_spark_oracle.json` —
   **JAVA-REGEX-FEATURES-1 (2026-09-16):** every in-scope oracle cell (`RX-SQL-00…24`,
-  `RX-PY-00…02`, `RX2-SQL-00…29`) pinned on its own door for value, Arrow type and
+  `RX-PY-00…02`, `RX2-SQL-00…29`, `RX3-SQL-00…26`) pinned on its own door for value, Arrow type and
   nullability, plus Python-door legs for the remaining match/extract names and the NULL
   pattern leg. Error legs pin Spark's `INVALID_PARAMETER_VALUE.PATTERN` (the overrun
-  leg pins `overrun`); `RX2-SQL-12` is an honest `_divergence` pin (case-insensitive
-  backreference, residue row R1). The `RX-SQL-18` / `RX2-SQL-01` legs pin nullable
+  leg pins `overrun`, the group-index leg pins `REGEX_GROUP_INDEX`); `RX2-SQL-12` is an honest `_divergence` pin (case-insensitive
+  backreference, residue row R1). The `RX-SQL-18` / `RX2-SQL-01` / `RX3-SQL-00…05` legs pin nullable
   true: the nullability rides in on `repeat(...)` (another unit's kernel), while
-  `rlike` itself propagates correctly.
+  `rlike` itself propagates correctly. `RX3-SQL-20/21` pin today's UTF-8 answer as DECLARED row R2 (lone surrogates are unrepresentable).
   pins: java-regex-features-1/C-001, C-002, C-003, C-004, C-005, C-006
 
 - `test_fnp_9_collections_json.py` — **FNP-9/10 (2026-09-05):** the collections and JSON

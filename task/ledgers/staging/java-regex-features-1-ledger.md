@@ -224,3 +224,49 @@ COVERAGE_ATTESTATION:
 ```
 
 ## VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED (round 1, step 6).
+
+## Remediation round 1 (2026-09-16, run 18c, muse-spark-1.3-contributor)
+
+Oracle: `/tmp/oc-worker/sc/oracle/rx3-oracle.json` (`RX3-SQL-00…26`, live
+PySpark 4.1.2, 2026-09-16, orchestrator-measured; no JVM in this lane),
+copied verbatim into
+[../../../python/repark/tests/java_regex_features_1_spark_oracle.json](../../../python/repark/tests/java_regex_features_1_spark_oracle.json).
+Reports on head `9cc09218`: critic-logic (L-001…L-007), rust-perf
+(PERF-001…PERF-007), py-perf (PYPERF-001). Ruling R-18c-O8 (orchestrator):
+lookbehind goes semantic — `(?<=X)`/`(?<!X)` at p holds iff `X` matches
+exactly `text[s..p]` for some s ≤ p.
+
+| ID | Disposition | Evidence |
+|---|---|---|
+| L-001/PERF-001/PERF-002 | FIX, narrowed (see FD-1) | `RX3-SQL-00…05` answer on the rebuilt native; `RX-SQL-18`/`RX2-SQL-01` stay false; `RX2-SQL-00` still refuses with the same `overrun` text. |
+| L-002/L-003/L-004/L-007/PERF-003/PERF-007 | FIX semantic lookbehind | `RX3-SQL-06…12/15/16/17/26` pinned; Rust unit tests per shape; PERF-007 dissolves (no expansion; `{1,40}` compiles as its own regex). Timing in the step-3 commit. |
+| L-005 | FIX `\N`→`\k<name>` rewrite | `RX3-SQL-13/14` pinned; Rust unit test. |
+| L-006 | FIX count/match agreement; replace/split DECLARED | `RX3-SQL-18/19/22/23` pinned; `RX3-SQL-20/21` pin today's UTF-8 answer under new DECLARED row JAVA-REGEX-FEATURES-1-R2. |
+| RX3-SQL-24 | PIN (already correct) | `REGEX_GROUP_INDEX` byte-matches Spark; error-leg pin. |
+| RX3-SQL-25 | PIN value false | Repark and Spark agree (`false`); residue row R1 stays open for `RX2-SQL-12`. |
+| PERF-004 | FIX if trivial (skip `${}` copy when no `$`) | Ledger C-007 re-measured. |
+| PERF-005 | FIX if trivial (single-pass fancy replace) | Same. |
+| PERF-006 | LEDGER NOTE | 10× budget scales just-under-budget rows ~10×; numbers below. |
+| PYPERF-001 | HAND-OFF, no edit (fence) | Registry row naming the `F.split` call and cell. |
+
+FD-1 (forced, worker-decided, one-line reversible): the brief orders both
+"remove the haystack cap / ONLY backtrack-limit signal" and "keep
+`RX2-SQL-00` refusing". Measured against raw fancy-regex 0.11 (release,
+`/tmp/fancyprobe`): `(a|b)*c` on 40000 chars answers `false` in 105 µs —
+delegation bypasses the backtrack counter, so no backtrack limit separates
+it from an answer; the round-1 cap was load-bearing. Resolution: the generic
+`loops` cap is removed (every `*`/`+`/bounded-`{n,m}` no longer trips), and a
+narrow wire stays for the catastrophic class only (unbounded-quantified group
+whose body has top-level `|` or a nested unbounded quantifier — the class
+Java's recursive matcher overflows on, per D-3/D-4), keeping the same
+`regex overrun … looping-pattern haystack (limit 10000)` text. Engine
+routing itself is pure D-1 (features only). Every observable the brief names
+holds; the mechanism sentence is the casualty, cited here for overrule.
+
+FD-2 (forced, measured): `RX3-SQL-03` (`a*(?=b)` on 10001 a's, Spark `false`)
+needs ~60M backtrack pops (limit sweep 10M→200M: trips through 30M, `false`
+in ~1.1 s from 60M), while the C-004 trip pin (`(a+)+b(?=c)` on 25 a's)
+still trips at 100M (1.9 s). No single 10M budget answers both; the limit
+moves 10M → 100M, same signal family, message text unchanged apart from the
+number. `RX-SQL-18`/`RX2-SQL-01` still delegate (µs). PERF-006 scales: a
+just-under-budget row costs ~10× more than under 10M before tripping.
