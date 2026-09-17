@@ -448,9 +448,6 @@ pub(crate) fn tighten_batch_nullability(batches: Vec<RecordBatch>) -> Result<Vec
         .collect()
 }
 
-/// Extend an `INSERT OVERWRITE` column-list source with write-default fills for omitted columns.
-/// # Errors
-/// Plan error when the table defaults cannot load or a default literal has no SQL rendering.
 fn overwrite_source_with_default_fills(
     table: &iceberg::table::Table,
     column_names: &[String],

@@ -14,7 +14,6 @@ use crate::write::store_assign::{self, MERGE_SPARK_CLASS};
 use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::table::Table;
 
-/// Project an INSERT clause for a table, filling omitted defaulted columns.
 pub(super) fn table_projection(clause: &InsertClause, table: &Table) -> Result<String> {
     let current = table.metadata().current_schema();
     let write_schema = schema_to_arrow_schema(current).map_err(super::iceberg_err)?;
@@ -22,7 +21,6 @@ pub(super) fn table_projection(clause: &InsertClause, table: &Table) -> Result<S
     insert_projection_with_defaults(clause, &write_schema, &defaults)
 }
 
-/// Project an INSERT clause onto the target schema, filling omitted defaulted columns.
 pub(super) fn insert_projection_with_defaults(
     clause: &InsertClause,
     write_schema: &ArrowSchema,

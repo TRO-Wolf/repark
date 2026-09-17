@@ -87,7 +87,8 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-dyn-overwrite-1/C-019, C-020, C-021, C-023
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the overwrite stage-then-swap fills
   omitted columns from `write_default` before staging, so `INSERT OVERWRITE`
-  matches Spark's measured answer.
+  matches Spark's measured answer. The fill helper carries no doc comment per the
+  no-code-comments ruling.
   pins: ice-v3-write-default-1/C-007
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:

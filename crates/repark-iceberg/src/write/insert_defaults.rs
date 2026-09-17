@@ -27,8 +27,7 @@ impl ColumnDefault {
         primitive_scalar(&self.data_type, &self.primitive)
     }
 
-    /// # Errors
-    /// Plan error when the default literal has no SQL rendering for its column type.
+    #[allow(clippy::missing_errors_doc)]
     pub fn sql_text(&self) -> Result<String> {
         default_sql_text(&self.data_type, &self.primitive)
     }
@@ -61,8 +60,7 @@ impl ColumnDefaults {
     }
 }
 
-/// # Errors
-/// Plan error when the schema cannot convert to Arrow.
+#[allow(clippy::missing_errors_doc)]
 pub fn column_defaults(schema: &IcebergSchema) -> Result<ColumnDefaults> {
     let arrow_schema =
         schema_to_arrow_schema(schema).map_err(crate::catalog::iceberg_to_datafusion)?;
@@ -119,8 +117,7 @@ pub fn dml_target(plan: &LogicalPlan) -> Option<(String, TableIdent)> {
     table_reference_target(&dml.table_name)
 }
 
-/// # Errors
-/// Plan error when the target table or a default literal fragment cannot load or parse.
+#[allow(clippy::missing_errors_doc)]
 pub async fn rewrite_insert_markers(
     catalog: &Arc<dyn Catalog>,
     ident: &TableIdent,
@@ -199,8 +196,7 @@ pub async fn rewrite_insert_markers(
     Ok(None)
 }
 
-/// # Errors
-/// Plan error when the target table cannot load or a default literal does not fit.
+#[allow(clippy::missing_errors_doc)]
 pub async fn fill_insert_plan(
     catalog: &Arc<dyn Catalog>,
     ident: &TableIdent,

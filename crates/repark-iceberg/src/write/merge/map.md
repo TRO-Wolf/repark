@@ -267,7 +267,8 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   files-exist pin on the snapshot arm).
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** NOT MATCHED INSERT fills omitted
   columns from `write_default` through `../insert_defaults.rs` (`table_projection`
-  carries the fill into the lowered text); explicit NULL stays NULL. Pins in
+  carries the fill into the lowered text); explicit NULL stays NULL. The fill entry
+  points carry no doc comments per the no-code-comments ruling. Pins in
   `tests/insert_fill.rs`.
   pins: ice-v3-write-default-1/C-005
 - [tests/](tests/map.md) — MERGE unit batteries (primary, OCC, streaming, parallel write).
