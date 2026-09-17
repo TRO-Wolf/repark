@@ -26,6 +26,7 @@ mod plan_partitioning_bytes;
 mod plan_partitioning_score;
 mod rewrite_data_files;
 mod rewrite_manifests;
+pub(crate) mod rewrite_options;
 mod rewrite_where;
 mod run_maintenance;
 mod run_maintenance_apply;
@@ -62,10 +63,22 @@ pub async fn execute_call(
     match procedure.as_str() {
         "expire_snapshots" => execute_expire_snapshots(ctx, catalog, &catalog_name, &args).await,
         "rewrite_data_files" => {
-            rewrite_data_files::execute_rewrite_data_files(ctx, catalog, &catalog_name, &args).await
+            Box::pin(rewrite_data_files::execute_rewrite_data_files(
+                ctx,
+                catalog,
+                &catalog_name,
+                &args,
+            ))
+            .await
         }
         "rewrite_position_delete_files" => {
-            execute_rewrite_position_delete_files(ctx, catalog, &catalog_name, &args).await
+            Box::pin(execute_rewrite_position_delete_files(
+                ctx,
+                catalog,
+                &catalog_name,
+                &args,
+            ))
+            .await
         }
         "rewrite_manifests" => {
             rewrite_manifests::execute_rewrite_manifests(ctx, catalog, &catalog_name, &args).await
@@ -309,13 +322,6 @@ async fn execute_rewrite_position_delete_files(
     args.reject_unknown_named(&["table", "options", "where"])?;
     // Only `table` is supported positionally.
     args.reject_excess_positional(1)?;
-    if args.has_named("options") {
-        return Err(DataFusionError::NotImplemented(
-            "CALL rewrite_position_delete_files options map is not supported in v1 — use table \
-             properties / defaults (fork bin-pack planner groups by (spec, partition))"
-                .to_string(),
-        ));
-    }
     if args.has_named("where") {
         return Err(DataFusionError::NotImplemented(
             "CALL rewrite_position_delete_files where filter is not supported in v1 (the fork \
@@ -327,8 +333,29 @@ async fn execute_rewrite_position_delete_files(
     let table_arg = args.require_string("table", 0)?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
+    let pairs = rewrite_options::extract_option_pairs(args, "rewrite_position_delete_files")?;
+    let options = rewrite_options::parse_rpd_options(&pairs, &table)?;
 
-    let result = RewritePositionDeleteFiles::new(table)
+    let mut action = RewritePositionDeleteFiles::new(table);
+    if let Some(size) = options.target_file_size_bytes {
+        action = action.target_file_size_bytes(size);
+    }
+    if let Some(size) = options.min_file_size_bytes {
+        action = action.min_file_size_bytes(size);
+    }
+    if let Some(size) = options.max_file_size_bytes {
+        action = action.max_file_size_bytes(size);
+    }
+    if let Some(count) = options.min_input_files {
+        action = action.min_input_files(count);
+    }
+    if let Some(size) = options.max_file_group_size_bytes {
+        action = action.max_file_group_size_bytes(size);
+    }
+    if options.rewrite_all {
+        action = action.rewrite_all(true);
+    }
+    let result = action
         .execute(catalog.as_ref())
         .await
         .map_err(iceberg_err)?;

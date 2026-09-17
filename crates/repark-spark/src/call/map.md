@@ -9,6 +9,8 @@ parsing, table-ident resolution, and the other procedures; a procedure moves her
 and measured-parity contract would grow `call.rs` beyond its exact
 `check_rust_file_size` baseline. This directory contains
 `apply_partitioning`, `branch_ops`, `rewrite_manifests`, `rewrite_data_files`, and `rewrite_where`; `call.rs` keeps
+`apply_partitioning`, `rewrite_manifests`, `rewrite_data_files`, `rewrite_options`, and
+`rewrite_where`; `call.rs` keeps
 `expire_snapshots`, `rewrite_position_delete_files`, `remove_orphan_files`,
 `rollback_to_snapshot`, `register_table`).
 
@@ -59,18 +61,33 @@ and measured-parity contract would grow `call.rs` beyond its exact
   strategy and bad `where` use Spark 4.1.2 + Iceberg 1.11.0 text. v3 rewrite
   preserves lineage (`V3-LINEAGE-1` FIXED, RP-4 / fork #243) and drops
   in-scope Puffin DVs with a true `removed_delete_files_count` (`V3-DANGLE-1`
-  FIXED, V3-5). `options` stays refused. **MAINT-POLICY-1 step 3 (2026-09-10):** the fork
-  invocation is the shared `run_rewrite` core (door passes `None` for the size after its
-  refusals; the apply path passes the policy size). **MAINT-POLICY-1 step 4 (2026-09-10):**
+  FIXED, V3-5). **ICE-RDF-OPTIONS-1 round 1 (2026-09-17):** `options => map(…)` parses
+  through `rewrite_options.rs` (Spark's 16 keys, Spark's class and text); the nine
+  pin-supported knobs apply to the fork builder and the fork-owned remainder sits on the
+  parsed struct for round 2. **MAINT-POLICY-1 step 3 (2026-09-10):** the fork
+  invocation is the shared `run_rewrite` core (the door passes the parsed options struct
+  by value; the apply path passes a struct carrying only the policy size).
+  **MAINT-POLICY-1 step 4 (2026-09-10):**
   the door loads the table once up front and passes the loaded table (or its ident) into
   `run_rewrite`, so a `where` CALL loads once and a missing table reports before a
   malformed `remove-dangling-deletes` value — the pre-step-3 precedence, pinned. The
-  eighth parameter (ident plus table) trips pedantic `too_many_arguments`, held by the
-  item-scoped allow on `run_rewrite`; bundling the action config into a struct was
-  rejected as heavier than the two-caller shared core it would serve.
+  options struct parameter keeps the two-caller core at seven arguments; both CALL arms
+  dispatch behind `Box::pin` (the options state would push the router future past the
+  16 KiB `large_futures` lint otherwise — same remedy as the `run_maintenance` plan path).
   pins: maint-rewrite-data-files-options/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
   pins: rp-4-fork-repin/C-003
   pins: v3-5-dv-compaction/C-002, C-004
+  pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- `rewrite_options.rs` — **ICE-RDF-OPTIONS-1 round 1 (2026-09-17):** `options => map(k, v, …)`
+  extraction and validation for both rewrite procedures. String/number/boolean/NULL scalar
+  rendering, duplicate-key `[DUPLICATED_MAP_KEY]`, unknown-key listing in map order with the
+  `BIN-PACK` text, Java `Long.parseLong` / `parseBoolean` / `Double.parseDouble` value rules,
+  case-insensitive `rewrite-job-order` names, `output-spec-id` membership against the table
+  specs, and the size-band cross-checks against the table-property (or 512 MiB) default.
+  The delete procedure accepts its measured 8-key subset. Fork-owned keys validate now and
+  wait on the struct. Errors return the `IllegalArgument` marker so Python raises
+  `IllegalArgumentException`.
+  pins: ice-rdf-options-1/C-001, C-002, C-005
 - `rewrite_where.rs` — SQL `where` string → Iceberg `Predicate` (eq/cmp/AND/OR/NOT/IS NULL/IN/
   BETWEEN on primitives). Failures wrap as Spark's `Cannot parse predicates in where option`.
   In-module unit tests pin each convertible operator's Predicate shape.
@@ -102,7 +119,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
   planned step runs through the same procedure body the CALL door dispatches to (built
   `CallArgs`, no SQL-text re-entry): position-delete, manifests, expire and orphan steps
   through their `execute_*` entries, the rewrite step through the shared `run_rewrite` core
-  with the policy's `target_file_size_bytes` (the door keeps its v1 options-map refusal, so
+  with the policy's `target_file_size_bytes` (the door parses the same options map, so
   the dry-run options rendering stays Spark-spelling documentation while apply passes the
   parsed size). The frame keeps the dry-run shape with `ran` / `failed` / `skipped`: the
   first failure stops the chain, its row carries the error text, later rows are `skipped`
@@ -203,10 +220,12 @@ and measured-parity contract would grow `call.rs` beyond its exact
 - Up: [../map.md](../map.md)
 - Pins: [../tests/call_manifests.rs](../tests/call_manifests.rs),
   [../tests/call_rewrite_options.rs](../tests/call_rewrite_options.rs),
+  [../tests/call_rdf_options.rs](../tests/call_rdf_options.rs),
   `python/repark/tests/test_maintenance_call.py`,
-  `python/repark/tests/test_rewrite_data_files_options.py`
+  `python/repark/tests/test_rewrite_data_files_options.py`,
+  `python/repark/tests/test_ice_rdf_options_1.py`
 - Divergences: [../../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md)
-  rows `MANIFEST-1`, `MANIFEST-2`, `RDF-SORT-1`
+  rows `MANIFEST-1`, `MANIFEST-2`, `RDF-SORT-1`, `ICE-RDF-OPTIONS-1`, `RDF-DANGLING-1`
 
 ## Debug
 

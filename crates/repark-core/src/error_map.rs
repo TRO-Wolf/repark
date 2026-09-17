@@ -9,6 +9,22 @@ use repark_iceberg::write::CommitStateUnknownError;
 
 use crate::object_store_s3;
 
+#[derive(Debug)]
+pub struct IllegalArgumentMarker(pub String);
+
+impl std::fmt::Display for IllegalArgumentMarker {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for IllegalArgumentMarker {}
+
+#[must_use]
+pub fn illegal_argument_error(message: String) -> DataFusionError {
+    DataFusionError::External(Box::new(IllegalArgumentMarker(message)))
+}
+
 /// DataFusion error partition used before conversion to [`Error`].
 #[derive(Debug)]
 pub(crate) enum EngineErrorKind<'a> {
@@ -17,6 +33,7 @@ pub(crate) enum EngineErrorKind<'a> {
     /// `DataFusionError::NotImplemented`.
     Unsupported,
     IllegalArgument,
+    IllegalArgumentMarked(&'a IllegalArgumentMarker),
     /// A peeled `External` wrapping a live [`iceberg::Error`], classified by its `kind()`.
     Iceberg(&'a iceberg::Error),
     CommitStateUnknown(&'a CommitStateUnknownError),
@@ -40,9 +57,12 @@ pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorK
             DataFusionError::External(inner) => {
                 return match inner.downcast_ref::<CommitStateUnknownError>() {
                     Some(stamped) => EngineErrorKind::CommitStateUnknown(stamped),
-                    None => match inner.downcast_ref::<iceberg::Error>() {
-                        Some(iceberg_error) => EngineErrorKind::Iceberg(iceberg_error),
-                        None => EngineErrorKind::Other,
+                    None => match inner.downcast_ref::<IllegalArgumentMarker>() {
+                        Some(marker) => EngineErrorKind::IllegalArgumentMarked(marker),
+                        None => match inner.downcast_ref::<iceberg::Error>() {
+                            Some(iceberg_error) => EngineErrorKind::Iceberg(iceberg_error),
+                            None => EngineErrorKind::Other,
+                        },
                     },
                 };
             }
@@ -81,6 +101,7 @@ pub fn engine_err(err: DataFusionError) -> Error {
         EngineErrorKind::Analysis => Error::Analysis(err.to_string()),
         EngineErrorKind::Unsupported => Error::NotImplemented(err.to_string()),
         EngineErrorKind::IllegalArgument => Error::IllegalArgument(err.to_string()),
+        EngineErrorKind::IllegalArgumentMarked(marker) => Error::IllegalArgument(marker.0.clone()),
         EngineErrorKind::Iceberg(iceberg_error) => classify_iceberg_error(iceberg_error),
         EngineErrorKind::CommitStateUnknown(stamped) => Error::CommitStateUnknown {
             message: stamped.inner().to_string(),
@@ -135,4 +156,33 @@ pub(crate) fn classify_iceberg_error(error: &iceberg::Error) -> Error {
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn iceberg_err(err: iceberg::Error) -> Error {
     classify_iceberg_error(&err)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn illegal_argument_marker_maps_to_illegal_argument() {
+        let error = engine_err(illegal_argument_error(
+            "Cannot use options [foo]".to_string(),
+        ));
+        assert_eq!(
+            error.exception_class(),
+            repark_common::ErrorClass::IllegalArgument
+        );
+        assert!(
+            matches!(error, Error::IllegalArgument(message) if message == "Cannot use options [foo]")
+        );
+    }
+
+    #[test]
+    fn illegal_argument_marker_survives_context_wrapping() {
+        let wrapped = DataFusionError::Context(
+            "rewrite".to_string(),
+            Box::new(illegal_argument_error("boom".to_string())),
+        );
+        let error = engine_err(wrapped);
+        assert!(matches!(error, Error::IllegalArgument(_)));
+    }
 }

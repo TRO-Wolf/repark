@@ -1156,13 +1156,13 @@ async fn call_mor2_merge_writes_one_position_delete_per_data_file_by_default() {
 
 /// MW-2 keeps the austerity `rewrite_data_files` already has.
 #[tokio::test]
-async fn call_rewrite_position_delete_files_refuses_options_and_where() {
+async fn call_rewrite_position_delete_files_validates_options_and_refuses_where() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     seed_mor_delete_files(&ctx, &catalogs, "mor", 3, 2).await;
 
     for (argument, needle) in [
-        ("options => map('a', 'b')", "options map is not supported"),
+        ("options => map('a', 'b')", "by the action"),
         ("where => 'id = 1'", "where filter is not supported"),
     ] {
         let err = execute(

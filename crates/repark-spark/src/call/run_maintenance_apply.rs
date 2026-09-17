@@ -111,9 +111,11 @@ async fn run_step(
                 catalog_name,
                 &ident,
                 table,
-                false,
                 None,
-                target_size,
+                super::rewrite_options::RewriteOptions {
+                    target_file_size_bytes: target_size,
+                    ..Default::default()
+                },
             )
             .await?
         }
