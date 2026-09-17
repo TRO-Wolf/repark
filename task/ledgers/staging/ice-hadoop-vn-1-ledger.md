@@ -45,7 +45,7 @@ No hand-computed Spark expectation.
 | C-003 | Recovery: re-registering the stale catalog at the newest metadata then committing succeeds and Spark reads all rows. | Offline + live pins in the same file. | OPEN |  |
 | C-004 | The RePark exception class and message stand against Spark's mirrored stale-commit error (PySpark-visible class and message prefix) and against the existing OCC conflict contract (V2-20a / `occ_conflict`); R-1 verdict recorded. | Oracle JSON + pins asserting class and prefix + this ledger's R-1 verdict. | OPEN |  |
 | C-005 | The DataFrame door writers (`writeTo().append()`, `saveAsTable(append)`) as the stale writer raise the same conflict. | Pins in the same file. | OPEN |  |
-| C-006 | Repro: `/tmp/ib-scratch/probes/p_failures.py` conc / conc2 blocks copied into `p_hadoop_vn.py`, run through `/tmp/oc-worker/jb-jvm.sh`, output pasted. | Evidence paste below. | OPEN |  |
+| C-006 | Repro: `/tmp/ib-scratch/probes/p_failures.py` conc / conc2 blocks copied into `p_hadoop_vn.py`, run through `/tmp/oc-worker/jb-jvm.sh`, output pasted. | Evidence paste below. | PROVEN | 2026-09-17, rc 0, findings F-1..F-6 below. pins: ice-hadoop-vn-1/C-006 |
 | C-007 | Spark oracle recorded as a checked-in fixture (recorder + truth JSON per the `test_ice_spark_table_1.py` / `_oracle_pins.py` convention). | Recorder script + `ice_hadoop_vn_1_spark_oracle.json`. | OPEN |  |
 | C-008 | Registry row ICE-HADOOP-VN-1 near V3-ADOPT-1 (FIXED 2026-09-17 by fork #286 at pin sha, typed error, recovery recipe, D-2's loud wedge on an orphan version file); residue sentence at ~6897 replaced with a pointer; tests map and ledgers map in lockstep. | The registry diff. | OPEN |  |
 | C-009 | No regression: the new file offline and live, `make verify`, the whole facade suite, the whole parity suite, green with real exit codes and counts. | §Gates. | OPEN |  |
@@ -58,7 +58,81 @@ Pasted per clause as it lands.
 
 ### C-006 repro output
 
-Pending.
+`/tmp/ib-scratch/probes/p_hadoop_vn.py` (conc / conc2 blocks of `p_failures.py`
+plus stale MERGE / DELETE / UPDATE, a Spark-vs-RePark commit race, and a planted-v3
+collision), run 2026-09-17 through `/tmp/oc-worker/jb-jvm.sh` on
+`PYTHONPATH=/tmp/jb-vn/python/repark/src:/tmp/jb-vn/.venv/lib/python3.12/site-packages`
+with `/tmp/sparkenv/bin/python`, rc 0. Banner: `spark.version=4.1.2`,
+`session.tz=UTC`, `pyspark=4.1.2`,
+`gav=org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0`. Full stdout kept
+in the run output; load-bearing lines:
+
+```text
+OK conc repark cat1 INSERT (base v2)
+conc metadata after cat1: ['v1.metadata.json', 'v2.metadata.json', 'v3.metadata.json']
+ERR conc repark cat2 stale INSERT (base v2): PySparkException: CatalogCommitConflicts => Cannot commit table metadata to /tmp/ib-scratch/wh/p_hadoop_vn/sp_wh/ns/conc/metadata/v3.metadata.json: version file already exists (.../v3.metadata.json), source: PreconditionFailed => Cannot create .../v3.metadata.json: file already exists, source: File exists (os error 17)
+conc v3 bytes unchanged after stale INSERT: True
+ERR conc repark cat2 stale MERGE (base v2): PySparkException: CatalogCommitConflicts => ... (same shape)
+conc v3 bytes unchanged after stale MERGE: True
+OK conc repark cat2 stale DELETE (base v2): [Row()]
+conc v3 bytes unchanged after stale DELETE: True
+ERR conc repark cat2 stale UPDATE (base v2): PySparkException: CatalogCommitConflicts => ... (same shape)
+conc v3 bytes unchanged after stale UPDATE: True
+conc metadata final: ['v1.metadata.json', 'v2.metadata.json', 'v3.metadata.json']
+OK conc repark cat1 reads: [(1, 'seed'), (2, 'rp-cat1')]
+OK conc repark cat2 reads: [(1, 'seed')]
+OK conc spark reads: [(1, 'seed'), (2, 'rp-cat1')]
+ERR conc re-register cat2 at newest then INSERT: AnalysisException: TableAlreadyExists => Cannot create table TableIdent { namespace: NamespaceIdent(["ns"]), name: "conc" }. Table already exists.
+ERR conc cat2 recovery INSERT (base v3): PySparkException: CatalogCommitConflicts => ... (same shape)
+ERR conc2 repark INSERT on stale base v2: PySparkException: CatalogCommitConflicts => ... (same shape)
+conc2 v3.metadata.json unchanged by repark: True
+OK conc2 repark reads: [(1, 'seed')]
+OK conc2 spark reads: [(1, 'seed'), (2, 'spark')]
+OK conc2 spark INSERT again (can keep committing): []
+OK conc2 spark reads after second spark commit: [(1, 'seed'), (2, 'spark'), (4, 'spark-again')]
+race spark data files appeared before repark commit: True
+OK race repark INSERT during spark write: [Row(count=1)]
+race metadata after repark: ['v1.metadata.json', 'v2.metadata.json', 'v3.metadata.json']
+race spark slow INSERT outcome: committed
+OK race spark reads: [(400002, 2)]
+OK planted spark INSERT onto existing v3: []
+OK planted spark reads: [(1, 'seed'), (2, 'spark'), (2, 'spark')]
+repark.errors classes: ['AnalysisException', 'CommitStateUnknownException', 'IllegalArgumentException', 'ParseException', 'PySparkAssertionError', 'PySparkAttributeError', 'PySparkException', 'PySparkNotImplementedError', 'PySparkRuntimeError', 'PySparkTypeError', 'PySparkValueError', 'UnsupportedOperationException', 'annotations']
+DONE
+```
+
+### C-006 findings (all measured, 2026-09-17)
+
+- F-1: every stale RePark writer that commits (INSERT, MERGE, UPDATE) raises
+  `repark.errors.PySparkException` with a `CatalogCommitConflicts`-leading message
+  naming the existing `vN` file, and the winner's bytes are unchanged.
+- F-2: the stale DELETE committed nothing because it matched zero rows on the stale
+  snapshot (`DELETE WHERE id = 2`, only visible post-v3) — correct no-commit, not a
+  gap. Pins delete a stale-visible row instead.
+- F-3: `CALL system.register_table` on an existing name refuses `TableAlreadyExists`
+  — re-registration is NOT the recovery. The workable recovery is a fresh catalog
+  handle registered at the newest version (a new memory catalog or session); DROP +
+  re-register is unsafe (the fork's memory `drop_table` deletes the pointer's metadata
+  file). The stale handle stays wedged-loud on every later commit (D-2's wedge).
+- F-4: the stale catalog's READS stay stale (`cat2 reads: [(1, 'seed')]`) — the
+  pre-existing memory-catalog read-staleness, same class as Spark's cached-table
+  staleness already rowed in ICE-SPARK-TABLE-1. The brief's "both catalogs read the
+  first writer's rows" holds for the winning catalog and for Spark after refresh;
+  the stale catalog's read is pinned as stale, not as winner rows. Nothing is lost:
+  every row stays readable via the winner, via Spark, and via a fresh registration.
+- F-5: Spark never raises in the mirrored shape. A 400k-row Spark INSERT racing a
+  RePark commit scan-forwards and commits the next version (`committed`,
+  400002 rows); a planted `v3.metadata.json` does not fail Spark's INSERT either —
+  Spark lists the metadata dir and continues at the next version. Java's
+  `CommitFailedException: Version N already exists` needs a true simultaneous-commit
+  race and is not reachable deterministically through PySpark, so the oracle records
+  Spark's rows plus "Spark scan-forwards, no PySpark-visible error" instead of a
+  class and prefix that live Spark 4.1.2 does not show.
+- F-6: `repark.errors` carries no commit-conflict class. R-1 verdict: the surfaced
+  base `PySparkException` with the `CatalogCommitConflicts`-leading message IS the
+  existing OCC conflict contract (V2-20a "base PySparkException, message-typed",
+  pinned in `crates/repark-core/src/session/tests/session.rs` CQ-015); no new public
+  class is invented, per the brief's own ban.
 
 ## §Gates
 
