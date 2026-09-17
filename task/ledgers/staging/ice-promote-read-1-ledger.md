@@ -71,7 +71,7 @@ schema built from the current schema without casting data columns.
 | C-011 | RePark's DML target scan conforms a legally promoted column (`Int32→Int64`, `Float32→Float64`, `Decimal128(p,s)→Decimal128(p',s)`) to the current type and still refuses an illegal narrowing. | `promoted_scan` pins in `crates/repark-iceberg/src/write/merge/tests/`. | PROVEN | `cargo test -p repark-iceberg --lib` under the override: 437 passed. Mutation: `conform_scan_batch` reverted to `column.clone()` → the two widening pins red, the narrowing control green. |
 | C-012 | Under `REPARK_PARITY_LIVE=1` live Spark re-derives every recorded answer (no golden drift) while the offline cells hold RePark equal to the recording. | `test_live_spark_rederives_every_recorded_answer`. | PROVEN | `REPARK_PARITY_LIVE=1 pytest test_ice_promote_read_1.py` → `170 passed in 153.88s` (live Spark re-derived all 126 recorded answers; no drift). |
 | C-013 | Registry rows land in `docs/spark-sql-iceberg-parity.md` for the read-promotion defect, the DML-after-promotion defect and the promoted-partition-source defect, FIXED with pin names or DECLARED with a typed exception; `V3-COV-2` gains a dated pointer note; maps move in lockstep. | Registry diff; `make check-map-sync`. | PROVEN | `docs/spark-sql-iceberg-parity.md` §7 rows **ICE-PROMOTE-READ-1** (reads), **ICE-PROMOTE-DML-1** (MERGE / UPDATE / DELETE), **ICE-PROMOTE-PARTITION-1** (promoted partition source), all FIXED with pin names and the pin-bump dependency; `V3-COV-2` carries the dated 2026-09-16 note pointing at them. `make check-docs-links`: 931 files, 5759 links — clean. No shape is DECLARED: every recorded case answers Spark. |
-| C-014 | Gates: fork `cargo test -p iceberg` filters + clippy; RePark `cargo test -p repark-iceberg --lib` under the override; release native; the pin module offline and live; the `*alter*`, `*evo*`, `*merge*`, `*v3_*`, `*ice_spark*` modules; `make verify`; comment and override greps on both branch diffs. | Command → result table. | OPEN | |
+| C-014 | Gates: fork `cargo test -p iceberg` filters + clippy; RePark `cargo test -p repark-iceberg --lib` under the override; release native; the pin module offline and live; the `*alter*`, `*evo*`, `*merge*`, `*v3_*`, `*ice_spark*` modules; `make verify`; comment and override greps on both branch diffs. | Command → result table. | PROVEN | Command → result table in §Gates. |
 
 ## Fix (step 5)
 
@@ -120,6 +120,72 @@ REPARK_PARITY_LIVE=1 .venv/bin/python -m pytest python/repark/tests/test_ice_pro
 
 Orchestrator replay block on the fixed native: `id<2 => [old1]`, `id>1 => [new3, old2]`,
 `f<2.0D => [old1]`, `id=1 => [old1]`, MERGE → `[(1,'m1'), (2,'old2'), (3,'new3')]`, v2 and v3.
+
+## Gates (step 8, 2026-09-16)
+
+| Gate | Result |
+|---|---|
+| fork `cargo test -p iceberg --lib spec::promotion_tests` | 11 passed (10 red on base `edc38c6a`) |
+| fork `cargo test -p iceberg --lib` | 3688 passed; 0 failed; 8 ignored |
+| fork `cargo clippy -p iceberg --all-targets -- -D warnings` | exit 0 |
+| fork `cargo test -p iceberg-datafusion --lib --test promoted_type_dml --test integration_datafusion_test --test h7_p1_dml_prune --test commit_branch --test row_lineage_cow --test row_lineage_mor --test count_star_fold` | lib 216 passed (1 ignored); 4, 87, 5, 20, 14, 5, 7 passed |
+| fork `cargo clippy -p iceberg-datafusion --all-targets -- -D warnings` | exit 0 |
+| fork `cargo fmt --all -- --check`, `scripts/check_rust_file_size.py`, `typos`, `make check-comment-blocks check-agent-artifacts check-matrix-anchors` | clean (467 files; strict evaluator ceiling 1928 → 1922) |
+| fork mutations | each of the 7 `iceberg` seams, the FLOAT page-index arm and the DataFusion `widened_batch` calls reverted alone → at least one pin red |
+| RePark `cargo --config <override> test -p repark-iceberg --lib` | 437 passed; 0 failed |
+| RePark `promoted_scan` mutation (`conform_scan_batch` → `column.clone()`) | 2 red, narrowing control green |
+| release native, `maturin develop --release --config <override>` | built 23:42:04 against fork `04a338c3` |
+| `pytest python/repark/tests/test_ice_promote_read_1.py -q` | 169 passed, 1 skipped |
+| same, `REPARK_PARITY_LIVE=1` | 170 passed |
+| `pytest test_alter_table.py test_ice_spark_table_1.py test_merge_*.py test_rdf_schema_evo_1.py test_v3_*.py` (20 modules), native 23:00:19 (fork `364748c0`; `04a338c3` changes no behaviour) | offline 194 passed, 96 skipped; live 290 passed |
+| `make verify` (pinned fork `edc38c6a`, no override, `--locked`) | exit 0 — `ci` clean (fmt, clippy, panic ban, crate DAG, file sizes, docstrings, ledgers, docs links, py-lint "All checks passed!") and the Rust workspace suite 0 failed |
+| comment grep and override grep on `git diff origin/main..HEAD` | RePark: nothing; fork: only the ASF headers of its four new files |
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: ice-promote-read-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause is a recorded-oracle comparison — 126 Spark cases replayed on both doors where the surface has two, red on the base native (126 failed) and green on the fix (169 passed offline, 170 live); the report's rows V2-10c, V2-06b, V3-11, V3-14 each map to a clause.
+      artifacts: [python/repark/tests/test_ice_promote_read_1.py, python/repark-parity/fixtures/torture/data/ice_promote_read_1/truth.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundaries measured, not assumed — a post-promotion value outside the int range (3000000000), a 24-value IN list beside a two-value one, BETWEEN, NOT IN, float and decimal ranges, single-era versus mixed-era tables, identity, bucket(4) and truncate(10) sources, and an illegal Int32 to Int16 narrowing that must still refuse.
+      artifacts: [python/repark/tests/_record_ice_promote_read_1.py, crates/repark-iceberg/src/write/merge/tests/promoted_scan.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Refusals stay loud where they should — promotion widens only int to long, float to double and decimal precision; every other kind mismatch still fails in RecordBatch::try_new, the accessor, and PartitionKey::new (fork pins narrowed to a string literal, RePark narrowing control).
+      artifacts: [crates/repark-iceberg/src/write/merge/tests/promoted_scan.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: Write ordering across eras is the subject — a delete written after the promotion against a data file written before it, dynamic overwrite replacing a pre-promotion partition, MERGE against pre- and post-promotion files; the replace-partitions conflict scope with a stale concurrent writer is named residue in the fork ledger.
+      artifacts: [python/repark/tests/test_ice_promote_read_1.py]
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, secret, deserialization or path handling changes; the fix re-types values already read.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The defect was silent data corruption (row loss, duplicate rows) and the pins assert exact row sets; no on-disk format changes — manifests are never rewritten by a read, and Spark-created tables adopted through register_table answer Spark's own run.
+      artifacts: [python/repark-parity/fixtures/torture/data/ice_promote_read_1/map.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Scan planning promotes a partition tuple only when a slot needs it (no allocation otherwise), bounds promote through Cow, and the pin module runs in 29 s offline on an idle box.
+      artifacts: [task/ledgers/staging/ice-promote-read-1-ledger.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Java semantics are the contract — TypeUtil.isPromotionAllowed for the legal edges, ManifestReader over current specs and Conversions.fromByteBuffer(ref.type()) for bounds; the fork pin bump is the declared dependency for CI.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-9
+      status: ATTACKED
+      evidence: A remaining mismatch fails with the same named Arrow or DataInvalid error as before; the live cell reports every drifted case id.
+      artifacts: [python/repark/tests/test_ice_promote_read_1.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red on base at every layer, then single-seam mutations — 7 fork seams, the FLOAT page arm, the DataFusion widening and the RePark conform — each red at least one pin; the facade mergeInto cells are named door guards, not red pins.
+      artifacts: [crates/repark-iceberg/src/write/merge/tests/map.md, python/repark/tests/map.md]
+  complete: true
+```
 
 ## Red evidence
 
