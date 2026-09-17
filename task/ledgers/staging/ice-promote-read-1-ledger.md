@@ -257,3 +257,27 @@ test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 434 filtered out
 
 `CARGO_BUILD_JOBS=10 cargo test -p iceberg --lib spec::promotion_tests` → `0 passed; 10 failed`
 (messages verbatim in the fork ledger's §Base-red evidence).
+
+### C-015 inspect cells — current native without the fork L-01 fix, 2026-09-17
+
+`.venv/bin/python -m pytest python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider -k "inspect or recorded_oracle"`
+
+```
+FAILED test_sql_door_matches_spark[inspect/v2]
+FAILED test_sql_door_matches_spark[inspect/v3]
+FAILED test_dataframe_door_matches_spark[inspect/v2]
+FAILED test_dataframe_door_matches_spark[inspect/v3]
+4 failed, 1 passed, 169 deselected in 2.34s
+```
+
+Every cell fails at its first step (`partitions`), both doors, v2 and v3:
+
+```
+repark.errors.PySparkException: External error: DataInvalid => partition literal
+Int(1) does not match its partition field type
+```
+
+The catalog-digest cell passes (the re-recorded digest matches the extended
+driver). The DataFrame-door cells fail at the same SQL-fallback `partitions`
+step — their only DataFrame twin (`p_eq_7`) is never reached, so no door
+difference is measured here. This is the critic's L-01 verbatim.
