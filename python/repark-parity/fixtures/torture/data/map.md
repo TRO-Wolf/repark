@@ -22,6 +22,10 @@ the committed landing zone, not a generation target.
   table at `v2` with one seed row, the adoption base for the stale-`vN`-writer
   pins (ICE-HADOOP-VN-1).
   pins: ice-hadoop-vn-1/C-007
+- [ice_promote_read_1/](ice_promote_read_1/map.md) — the recorded Spark 4.1.2 answers for
+  reads and DML after a legal type promotion (`truth.json`, 126 cases) and two
+  Spark-created promoted mixed-era tables (v2, v3) for the adoption cells
+  (ICE-PROMOTE-READ-1; third committed-data exception).
 
 ## Pointers
 

@@ -12,6 +12,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   note and the §9 audit trail, and registry claims C-3, C-8, C-9 rewritten
   (C-3, C-9 FIXED → OPEN). Docs-only reading unit, no product change.
   `risk_tier: standard`. Branch `docs/ice-cutover-corrections-1`.
+- [ice-promote-read-1-ledger.md](ice-promote-read-1-ledger.md) —
+  **ICE-PROMOTE-READ-1 (2026-09-16), in flight:** reads and DML after a legal
+  `ALTER COLUMN … TYPE` promotion answer Spark 4.1.2 — range / long-`IN` filters, promoted
+  partition sources, MERGE keyed on the promoted column, range UPDATE, single-era DML,
+  promoted-identity-partition DML and overwrite, Spark-created adopted tables, v2 and v3.
+  Fork half F-PROMOTE-READ-1 (manifest values read under the promoted type); RePark half
+  the DML target-scan conform. Registry rows ICE-PROMOTE-READ-1, ICE-PROMOTE-DML-1,
+  ICE-PROMOTE-PARTITION-1 (FIXED 2026-09-16). `risk_tier: high`. Branch `fix/ice-promote-read-1`.
 - [ice-column-reorder-1-ledger.md](ice-column-reorder-1-ledger.md) —
   **ICE-COLUMN-REORDER-1 (2026-09-17), in flight:** `ALTER COLUMN … FIRST/AFTER`
   column moves on Iceberg tables (rating row V2-10b) — move as a schema update with
@@ -385,6 +393,20 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   ICE-NAN-PUSHDOWN-1 FIXED. `risk_tier: standard`. Branch
   `fix/ice-nan-pushdown-1`.
   pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+- [ice-rdf-options-1-ledger.md](ice-rdf-options-1-ledger.md) —
+  **ICE-RDF-OPTIONS-1 round 1 (2026-09-17), in flight:** the RePark side of the options-map
+  remediation (rating V2-08/C-4) — `rewrite_data_files` (16 keys) and
+  `rewrite_position_delete_files` (measured 8-key subset) parse `options => map(…)` with
+  Spark's class and text (new `IllegalArgumentMarker` → `IllegalArgumentException` path in
+  `repark-core/src/error_map.rs`); pin-supported knobs apply to the fork builder, fork-owned
+  keys (`rewrite-all`, `partial-progress.*`, `output-spec-id`, `rewrite-job-order`,
+  `max-concurrent-file-group-rewrites`) validate now and wire in round 2 against
+  `F-RDF-OPTIONS-1`. Recorded 45-cell Spark 4.1.2 oracle with generator, 29 Rust pins, 42
+  Python pins (fork cells `xfail(strict)`), registry rows `ICE-RDF-OPTIONS-1`
+  (OPEN-IN-PROGRESS) and `RDF-DANGLING-1` (BACKLOG, residue #37). Both CALL arms dispatch
+  behind `Box::pin` (16 KiB `large_futures`). `risk_tier: standard`. Branch
+  `feat/ice-rdf-options-1`.
+  pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 
 ## Pointers
 - Up: [../map.md](../map.md)
