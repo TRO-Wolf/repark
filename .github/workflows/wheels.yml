@@ -60,8 +60,8 @@ jobs:
           # ABSOLUTE file:// URL — pip rejects a relative-path file URI ("non-local file URIs
           # are not supported"), which would red this required job on every PR.
           WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
-          /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest ./python/repark-parity
-          /tmp/wheeltest/bin/python -m pytest python/repark/tests -q
+          /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist ./python/repark-parity
+          /tmp/wheeltest/bin/python -m pytest python/repark/tests -q -n 4
       - name: dbt-adapter tests against the built wheel
         run: |
           /tmp/wheeltest/bin/pip install "dbt-core==1.9.11" "dbt-spark==1.9.3"
