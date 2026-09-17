@@ -334,13 +334,61 @@ xfailed` in 349 s — identical to round 2, so the fork merge (`75da2b58` pin /
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| L-01 | Negative min/max sizes take Spark's signed-long band semantics. | New oracle cells `neg_min_file_size` / `neg_max_file_size` + Rust + Python pins. | OPEN | — |
-| L-02 | RPD byte pins compare against vanished delete files. | `_delete_file_sizes` + green RPD-zero cells. | OPEN | — |
-| L-03 | Live rows pinned green outside every value xfail. | New rows pins over the 7 cells. | OPEN | — |
-| L-04 | `removed/failed_delete_files_count` compared on every cell. | New delete-count pins; dangling 1-vs-0 under DANGLE-2. | OPEN | — |
-| L-05 | Forced-plan RPD cells recorded, or ledger why-impossible. | Generator cells `rpd_target_small_forced` / `rpd_max_group_size_forced`. | OPEN | — |
-| L-06 | RPD semantic-invalid values report IAE before Unsupported. | Reordered `parse_rpd_options` + Rust + Python pins. | OPEN | — |
-| L-07 | NULL map key wins over the legacy dangling flag. | Presence check + pin. | OPEN | — |
+| L-01 | Negative min/max sizes take Spark's signed-long band semantics. | New oracle cells `neg_min_file_size` / `neg_max_file_size` + Rust + Python pins. | **PROVEN** | Oracle overruled premise (min rejects `>= 0`); 2 Python error pins + 3 Rust pins green; 6/6 Rust pins bite pre-fix. |
+| L-02 | RPD byte pins compare against vanished delete files. | `_delete_file_sizes` + probe on a real 8→2 rewrite. | **PROVEN** | rewritten 13325/13325, added 3571/3571; asserts guard the fork packing fix. |
+| L-03 | Live rows pinned green outside every value xfail. | New keep-set pins over the 7 cells. | **PROVEN** | 7/7 green incl. rows 399/370/200 — no keep-set defect hides in any xfail. |
+| L-04 | `removed/failed_delete_files_count` compared on every cell. | New delete-count pins; dangling 1-vs-0 under DANGLE-2. | **PROVEN** | failed all green; removed green except threshold + dangling (1 vs 0, DANGLE-2 xfail). |
+| L-05 | Forced-plan RPD cells recorded, or ledger why-impossible. | Generator cells `rpd_target_small_forced` / `rpd_max_group_size_forced`. | **PROVEN** | Spark narrows both to zeros; RePark narrows identically — both green, honoring proven. |
+| L-06 | RPD semantic-invalid values report IAE before Unsupported. | Reordered `parse_rpd_options` + Rust + Python pins. | **PROVEN** | 3 Rust + 3 Python IAE-first pins green; bite pre-fix. |
+| L-07 | NULL map key wins over the legacy dangling flag. | Presence check + pin. | **PROVEN** | Residue-shape discrimination (0/2 vs 2/0); bite by construction. |
+
+### Round-3 oracle recording (2026-09-17, banner `4.1.2`, one JVM, stopped after)
+
+Generator extended with four cells; fixture surgically merged 45→49 cells (no churn to
+existing cells). **L-01 surprise:** the live oracle contradicts the critic premise — Spark
+REJECTS `min-file-size-bytes=-1` with `IllegalArgumentException: 'min-file-size-bytes' is
+set to -1 but must be >= 0` (a `>= 0` floor check mirroring `delete-file-threshold`, not
+acceptance). `max-file-size-bytes=-1` fails the band check exactly as premised:
+`'target-file-size-bytes' (536870912) must be < 'max-file-size-bytes' (-1), …`. The Rust
+fix follows the measurement, not the premise: signed-long storage, an explicit `>= 0`
+min check, signed `i128` band compares (never a wrap to `u64`; negatives reaching a
+builder clamp to 0, the Java no-floor equivalent). **L-05:** both forced RPD variants are
+also no-ops in Spark (zeros, 9 snapshots) — target-small and max-group-size only NARROW
+the RPD plan on this shape family (forced zeros vs `min-input-files=1` alone rewriting
+8→8), never expand it. That narrowing IS the honoring proof, pinned as green cells if
+RePark narrows identically. Perf P-01/P-02 recorded as P3 deferred (ledger only): neither
+is a few lines — P-01 restructures parsing into one pass, P-02 re-threads every parsed
+local — and both risk behavior drift for zero measurable gain on a 16-key once-per-CALL
+path. Fork V-001: no action (fork side).
+
+### Round-3 L-07 discrimination probes (release native, 2026-09-17)
+
+On single-delete shapes the legacy flag is observably inert: 6-file shape with one
+stranded delete removes 1 with flag true, with no flag, and with NULL+flag alike (the
+rewrite commit drops it regardless of the sub-action switch). The residue shape
+discriminates: default removes 0 (2 dangle), map-`true` removes 2 (0 dangle), map-NULL +
+flag-true removes 0 (2 dangle) — the NULL key wins, fix verified, pin built on this
+shape. Bite argument without a second native rebuild: pre-fix the NULL case falls into
+the flag fill and behaves exactly like the measured map-`true` case (`removed=2`), so
+the pin's `removed == 0` reds pre-fix by construction.
+
+### Round-3 gates (release native unless noted, 2026-09-17)
+
+- `pytest python/repark/tests/test_ice_rdf_options_1.py`: `118 passed, 1 skipped, 13
+  xfailed`, zero failures (13 = 7 value + 3 snapshot + 1 residue + 2 removed-count
+  DANGLE-2 xfails; the skip is the live tier without `REPARK_PARITY_LIVE=1`).
+- Live tier (`test_live_oracle_still_matches_spark`, `REPARK_PARITY_LIVE=1`, one JVM):
+  PASSED — the 49-cell fixture replays from the generator. One trip: the first run
+  redded in `_normalise_rerun` (it asserts positive bytes for listed RPD cells, but the
+  forced cells are zeros); fixed by leaving zero-cells out of `_RPD_BYTE_CELLS` like the
+  existing zero RPD cells, re-ran green.
+- Neighbours (`test_rewrite_data_files_options.py`, `test_maintenance_call.py`,
+  `test_maintenance_policy_1.py`, `test_rdf_schema_evo_1.py`, `test_v3_dv_compaction.py`,
+  `test_ice_spark_table_1.py`): `40 passed, 2 skipped`.
+- `cargo test -p repark-spark --lib`: `1078 passed; 0 failed; 4 ignored` (35/35 in
+  `call_rdf_options`). Bite: 6 new pins fail on the stashed pre-fix implementation.
+- `make rust-clippy`: clean.
+- `python3 scripts/sync_map_md.py --check`: 281 maps clean.
 
 ## Hand-back
 
