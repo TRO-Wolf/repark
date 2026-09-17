@@ -78,7 +78,7 @@ schema built from the current schema without casting data columns.
 | C-012 | Under `REPARK_PARITY_LIVE=1` live Spark re-derives every recorded answer (no golden drift) while the offline cells hold RePark equal to the recording. | `test_live_spark_rederives_every_recorded_answer`. | PROVEN | `REPARK_PARITY_LIVE=1 pytest test_ice_promote_read_1.py` → `170 passed in 153.88s` (live Spark re-derived all 126 recorded answers; no drift). |
 | C-013 | Registry rows land in `docs/spark-sql-iceberg-parity.md` for the read-promotion defect, the DML-after-promotion defect and the promoted-partition-source defect, FIXED with pin names or DECLARED with a typed exception; `V3-COV-2` gains a dated pointer note; maps move in lockstep. | Registry diff; `make check-map-sync`. | PROVEN | `docs/spark-sql-iceberg-parity.md` §7 rows **ICE-PROMOTE-READ-1** (reads), **ICE-PROMOTE-DML-1** (MERGE / UPDATE / DELETE), **ICE-PROMOTE-PARTITION-1** (promoted partition source), all FIXED with pin names and the pin-bump dependency; `V3-COV-2` carries the dated 2026-09-16 note pointing at them. `make check-docs-links`: 931 files, 5759 links — clean. No shape is DECLARED: every recorded case answers Spark. |
 | C-014 | Gates: fork `cargo test -p iceberg` filters + clippy; RePark `cargo test -p repark-iceberg --lib` under the override; release native; the pin module offline and live; the `*alter*`, `*evo*`, `*merge*`, `*v3_*`, `*ice_spark*` modules; `make verify`; comment and override greps on both branch diffs. | Command → result table. | PROVEN | Command → result table in §Gates. |
-| C-015 | Inspect tables after an identity-source promotion answer Spark: `t.partitions` (`partition.p`, `record_count`, `file_count`, `spec_id`), `t.files` (`partition.p`, `record_count`), `t.entries` (`status`, `data_file.partition.p`, `data_file.record_count`), and `SELECT id, s FROM t WHERE p = 7`, on the `(id INT, p INT, s STRING) PARTITIONED BY (p)` shape with pre- and post-promotion rows sharing `p = 7` — v2 and v3, SQL door (the DataFrame door cannot project a nested field: `functions.col("partition.p")` and `select("partition.p")` refuse `AnalysisException`, so the three metadata queries are SQL-only; the flat `p = 7` query carries a DataFrame twin). | `test_sql_door_matches_spark[inspect/*]`, `test_dataframe_door_matches_spark[inspect/*]`. | OPEN | Catalog extended 2026-09-17; oracle re-recording and red-first next. |
+| C-015 | Inspect tables after an identity-source promotion answer Spark: `t.partitions` (`partition.p AS p`, `record_count`, `file_count`, `spec_id`), `t.files` (`partition.p AS p`, `record_count`), `t.entries` (`status`, `data_file.partition.p AS p`, `data_file.record_count AS record_count`), and `SELECT id, s FROM t WHERE p = 7`, on the `(id INT, p INT, s STRING) PARTITIONED BY (p)` shape with pre- and post-promotion rows sharing `p = 7` — v2 and v3, SQL door for the three nested projections (the DataFrame door cannot project a nested field: `functions.col("partition.p")` and `select("partition.p")` refuse `AnalysisException`; the bare-name arm is EX-COL-2 BACKLOG, aliases ruled by Q-20a-5; the flat `p = 7` query carries a DataFrame twin). | `test_sql_door_matches_spark[inspect/*]`, `test_dataframe_door_matches_spark[inspect/*]`. | PROVEN | Offline 173 passed, 1 skipped on the L-01-fixed native; live Spark re-derived all 128 answers; red-first `DataInvalid` on the pre-fix native. |
 
 ## Fix (step 5)
 
@@ -213,12 +213,39 @@ below is therefore not complete.
 | override grep over `git diff origin/main..HEAD` | one hit, pre-existing ledger prose naming the override path; no `Cargo.toml` / `Cargo.lock` / `.cargo` change in the diff |
 | `Cargo.lock` after override builds | restored; `git status` clean |
 
-Attestation status: C-015 is OPEN (the three metadata projections fail on
-RePark's nested-projection column names, values and types verified Spark-equal
-by probe), so the COVERAGE_ATTESTATION block above is not complete for this
-round. Everything else in it still holds. The registry sentence for
-ICE-PROMOTE-PARTITION-1 is deferred to the hand-back ruling for the same
-reason — FIXED may not be claimed over red pins.
+Attestation status: C-015 was OPEN on the unaliased projections (the three
+metadata queries failed only on RePark's nested-projection column names, values
+and types verified Spark-equal by probe). Closure below proves it under ruling
+Q-20a-5, so the COVERAGE_ATTESTATION block above is complete again — every
+clause PROVEN.
+
+### C-015 closure under orchestrator ruling Q-20a-5, 2026-09-17
+
+Ruling: alias the three metadata projections to leaf names and re-record with
+one JVM. Applied exactly (`partition.p AS p` on partitions and files;
+`data_file.partition.p AS p`, `data_file.record_count AS record_count` on
+entries). Re-record exit 0 with the same one-JVM env; the 126 prior answers are
+byte-identical again (zero drift across both recordings); digest
+`645e20cda96f76a1d880d31d05ec58feb47e1c74f6e804ad1fe78bbf6ae50f41` matches the
+driver. The bare-name divergence is recorded as a dated note on registry row
+EX-COL-2 (BACKLOG, same class as the `getField` arm); the ICE-PROMOTE-PARTITION-1
+row gains the inspect-table FIXED sentence with the `inspect/*` pins.
+
+Offline, whole module, fixed native:
+
+```
+.venv/bin/python -m pytest python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider -rs
+173 passed, 1 skipped in 779.77s
+```
+
+Live, one JVM:
+
+```
+REPARK_PARITY_LIVE=1 … pytest … -k live_spark
+1 passed, 173 deselected in 211.80s
+```
+
+All 128 recorded answers re-derived, no drift. C-015 is PROVEN.
 
 ```yaml
 COVERAGE_ATTESTATION:

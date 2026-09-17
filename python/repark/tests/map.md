@@ -297,7 +297,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   filters on single- and mixed-era tables, MERGE keyed on the promoted column, range and
   long-`IN` UPDATE/DELETE, single-era DML, DML and static/dynamic overwrite on a promoted
   identity partition source, the `inspect/*` metadata-table reads after an identity-source
-  promotion, v2/v3 × CoW/MoR), `test_dataframe_door_matches_spark` (the
+  promotion (nested projections aliased to leaf names per ruling Q-20a-5; the
+  bare-name arm is EX-COL-2 BACKLOG), v2/v3 × CoW/MoR), `test_dataframe_door_matches_spark` (the
   same cases through `table().filter()`, facade `mergeInto`, and
   `writeTo().overwritePartitions()`; the three nested metadata-table projections are
   SQL-only — the DataFrame door cannot resolve `partition.p` — while the flat `p = 7`

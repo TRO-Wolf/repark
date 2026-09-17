@@ -10,7 +10,10 @@ Spark-created, Spark-promoted mixed-era tables the JVM-free tier adopts with
 iceberg-spark-runtime-4.1_2.13:1.11.0 (ANSI on, Hadoop catalog); two independent
 recordings produced identical answers. Re-recorded 2026-09-17 with the `inspect/*`
 cases appended: the 126 prior answers are byte-identical, the two new cases record
-Spark's Long-typed merged partitions. Never hand-edited: re-run the driver.
+Spark's Long-typed merged partitions. Re-recorded again the same day per ruling
+Q-20a-5 with the three nested projections aliased to leaf names (values and types
+unchanged; the 126 prior answers byte-identical across both recordings).
+Never hand-edited: re-run the driver.
 
 ## Contents
 

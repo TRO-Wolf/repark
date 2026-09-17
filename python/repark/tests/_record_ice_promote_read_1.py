@@ -406,18 +406,19 @@ def inspect_cases() -> list[dict[str, Any]]:
         steps = [
             query_step(
                 "partitions",
-                "SELECT partition.p, record_count, file_count, spec_id "
+                "SELECT partition.p AS p, record_count, file_count, spec_id "
                 "FROM {t}.partitions ORDER BY 1",
                 None,
             ),
             query_step(
                 "files",
-                "SELECT partition.p, record_count FROM {t}.files ORDER BY 1, 2",
+                "SELECT partition.p AS p, record_count FROM {t}.files ORDER BY 1, 2",
                 None,
             ),
             query_step(
                 "entries",
-                "SELECT status, data_file.partition.p, data_file.record_count "
+                "SELECT status, data_file.partition.p AS p, "
+                "data_file.record_count AS record_count "
                 "FROM {t}.entries ORDER BY 2, 3",
                 None,
             ),
