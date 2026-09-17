@@ -41,13 +41,53 @@ TBD — recorder cells, pin shapes per door, `sort_order_id` checks via `{t}.fil
 
 Row V2-12, claim C-7 (2026-09-16): a plain `INSERT INTO` into a table with a declared sort order (`ALTER TABLE … WRITE ORDERED BY …`) wrote unsorted files with `sort_order_id` NULL; Spark writes each file sorted and stamped with the table's order id. Probe: `/tmp/oc-worker/ice-rating/scratch/probes/p_sort_overwrite.py`. Spark oracle: `/tmp/oc-worker/ic-build/write_fidelity_spark.json` (cells `sort_partitioned_local`, `sort_unpartitioned_desc`, `sort_two_keys_nulls`, `sort_dataframe_door`, `sort_distribution_none`, `sort_transform_bucket`), generator `/tmp/oc-worker/ic-build/write_fidelity_probe.py`.
 
+### Oracle cells (recorded 2026-09-17, Spark 4.1.2, `local[4]`, UTC)
+
+`python/repark/tests/_record_ice_sorted_insert_1_oracle.py --rewrite` wrote
+`python/repark/tests/ice_sorted_insert_1_spark_oracle.json` (8 cells) and the
+`fixtures/ice_sorted_insert_1/days` warehouse (84 KB). Per-file
+`(records, sort_order_id, sorted)`:
+
+| cell | files |
+|---|---|
+| sort_partitioned_local | (1000, 1, True, p=0), (1000, 1, True, p=1) |
+| sort_unpartitioned_desc | (2000, 1, True) |
+| sort_two_keys_nulls | (2000, 1, True), heads `(0, NULL)` |
+| sort_dataframe_door | (1000, 1, True, p=0), (1000, 1, True, p=1) |
+| sort_distribution_none | (1000, 1, True, p=0), (1000, 1, True, p=1) |
+| sort_transform_bucket | (2000, 1, False) — one file, id-major heads `(0,1,2)`, unsorted by id alone (bucket-major) |
+| sort_transform_days | (2000, 1, True), day-major heads |
+| sort_float_nan | (2000, 1, True), NULLS FIRST heads, NaN largest |
+
+The float cell confirms the checker: ASC NULLs first, NaN above every finite
+value. The days cell confirms `WRITE ORDERED BY days(ts), id` sorts day-major.
+`sparkenv` carries no pyarrow, so the recorder reads per-file rows through
+Spark (`input_file_name()`) joined to `{t}.files` on the file basename.
+
 ### RePark reproduction on this tree
 
-TBD.
+TBD — pins run once the release native lands.
 
 ### Red-first (main pin)
 
-TBD — run-19c rating result quoted here.
+Run-19c rating row V2-12 / claim C-7 (2026-09-16): plain `INSERT INTO` into a
+declared-order table wrote unsorted files with `sort_order_id` NULL; Spark
+writes each file sorted and stamped. That is the red for C-001/C-002 on main's
+pin. For C-003 the red is measured in-test on the release native before the
+fix (`test_repark_owned_paths_write_sorted_stamped_files`):
+
+```
+assert entry["sort_order_id"] == order_id, entry
+AssertionError: {'file_path': '.../owned/data/p=0/951c62c9-....parquet',
+ 'record_count': 1000, 'sort_order_id': None}
+assert None == 1
+```
+
+The same run had C-001 (5 SQL cells) and C-002 (3 DataFrame doors) green: the
+fork's `insert_into` sorts and stamps, while RePark-owned writers (`append.rs`,
+`merge/row_lineage.rs`, `merge/mod.rs`) never call the fork's
+`with_sort_order_id`. The fix stamps `default_sort_order_id` at those three
+sites, reusing the fork's builder without re-implementing any sort.
 
 ### Green (override)
 

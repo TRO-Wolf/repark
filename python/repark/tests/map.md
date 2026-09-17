@@ -380,6 +380,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `truth.json` (one answer per line, `catalog_sha256`). `run_case_steps` /
   `run_dataframe_steps` are reused by the live cell so the live and recorded answers come from
   one code path.
+- [test_ice_sorted_insert_1.py](test_ice_sorted_insert_1.py) +
+  [ice_sorted_insert_1_spark_oracle.json](ice_sorted_insert_1_spark_oracle.json) +
+  [_record_ice_sorted_insert_1_oracle.py](_record_ice_sorted_insert_1_oracle.py) —
+  **ICE-SORTED-INSERT-1 (2026-09-17):** plain INSERT sorts and stamps per the
+  declared order — the fork #287 per-writer sort plus `sort_order_id` stamp at
+  fork main `4151b488` (RP-22), proven per file (parquet bytes sorted on the
+  order keys, `{t}.files` stamped) on the SQL door over five identity cells
+  (partitioned-local, DESC, two-key null ordering, locally-ordered, float with
+  NaN) and on the DataFrame door (`writeTo.append`, `saveAsTable(append)`,
+  `insertInto`), plus the RePark-owned paths (INSERT OVERWRITE and MERGE sort
+  and stamp; the CTAS replace resets the default to 0 and stamps 0) and the
+  adopted Spark-written `days(ts), id` warehouse under
+  [fixtures/ice_sorted_insert_1/](fixtures/ice_sorted_insert_1/map.md)
+  (canonical `/tmp/repark-ice-sorted-insert-1` path, plain INSERT sorts day-major
+  and stamps 1 while INSERT OVERWRITE keeps the transform refusal). The recorder
+  rebuilds the six run-19c cells plus the days and float-NaN cells on live Spark
+  and verifies on re-run (`--rewrite` re-records). Live (`REPARK_PARITY_LIVE=1`):
+  Spark rebuilds every cell from the recorded DDL and asserts the same
+  (records, stamp, sorted) triples.
+  pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-005
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
