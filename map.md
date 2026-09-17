@@ -62,6 +62,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **RP-18 (2026-09-12):** `9e3522e3` (F-REWRITE-SIZE-1 step 2 `#280` — the maintenance rewrite disables the dictionary per column from the input footers, so compaction no longer writes dead dictionary pages, and an unset compression level means zstd 3 like Java; RePark re-measures AP-1 a fourth time).
   **RP-19 (2026-09-12):** `3ebf7d36` (F-S3ROOT-1 `#281` — a bare-bucket object-store location, every S3 Tables table's, resolves to the bucket root like Java's S3URI, for S3, GCS and OSS; the S3 Tables orphan door itself is ORPHAN-S3TABLES-1).
   **RP-20 (2026-09-14):** `edc38c6a` (F-GLUE-REPLACE-1 `#282` — the Glue catalog publishes a staged `CREATE OR REPLACE` through a version-id-checked `UpdateTable`, read-validating the staged metadata first, so a gold dbt model rebuilds on Glue).
+  **RP-21 (2026-09-17):** `75da2b58` (F-ICE-NAN-PUSHDOWN-1 `#284` — `= NaN` / `IN (NaN)` push down as `is_nan`, never as a NaN literal, so Iceberg scans return the NaN rows; F-ICE-HADOOP-VN-1 `#286` — a Hadoop `vN` metadata commit exclusive-creates its version file and a stale writer gets a typed conflict instead of overwriting another writer's commit).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
 - `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
   itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).
