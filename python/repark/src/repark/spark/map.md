@@ -610,6 +610,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (`str`/`pattern`/`limit`, `str` patterns arrive as `lit` so the display reads
   Spark's bare `split(csvs, ,, -1)`); the door-converge-2 refusal guard flips to
   answer-compare. pins: fnp-math-1/C-008
+- **FNP-MATH-1 step 7 (2026-09-16, run 18a, D-9):** `bin` / `rint` drop the facade
+  pre-cast that stringified BOOLEAN past the kernel refusal; the Rust coercion
+  raises Spark's `DATATYPE_MISMATCH` on both doors. pins: fnp-math-1/C-009
 - **DEGREES-RUST-1 by-name drift (2026-09-15, run 16a):** `degrees` / `radians` leave `functions_byname.py`'s `FACADE_ONLY_ROUTINE_NAMES` — once they bind engine scalar UDFs, `call_function` resolves them in the engine, so the derived allowlist no longer lists them as facade-only. pins: fnp-bitmap-facade-1/C-011
 - **FNP-11B step 3 (2026-09-15):** `try_to_timestamp` leaves `FACADE_ONLY_ROUTINE_NAMES` for the same reason — the facade dispatch now resolves it on the tolerant-timestamp kernel. pins: fnp-11b/C-007
 - **FNP-GEN-1 orchestrator fix-up (2026-09-16, run 17a):** `functions_byname.py` drops `posexplode`

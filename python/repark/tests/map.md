@@ -5881,4 +5881,7 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   its projection optimizer cannot keep an arg-rendered UDF name stable across
   repeated columns; values, names, types and rows stay pinned per column. Q12
   list types map the recorded `containsNull` onto the engine `element` field.
+  **FNP-MATH-1 step 7 (2026-09-16, run 18a, D-9):** `BL6-sql-3` (`2.5D` literal)
+  and the `like`-escape cells go `xfail(strict)` on their owning fences (run 18c
+  parser, LIT-DECIMAL-1); the BOOLEAN refusals pin green on both doors.
   pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
