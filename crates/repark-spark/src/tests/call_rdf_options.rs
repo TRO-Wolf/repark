@@ -566,7 +566,7 @@ async fn call_rpd_options_rewrite_all_runs() {
 }
 
 #[tokio::test]
-async fn call_rpd_options_zero_max_commits_needs_enabled_progress() {
+async fn call_rpd_options_partial_progress_refuses_unsupported() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     seed_mor_shape(&ctx, &catalogs).await;
@@ -577,7 +577,42 @@ async fn call_rpd_options_zero_max_commits_needs_enabled_progress() {
     )
     .await;
     assert!(
-        message.contains("Cannot set partial-progress.max-commits to 0"),
+        message.contains(
+            "CALL rewrite_position_delete_files option [partial-progress.enabled, \
+             partial-progress.max-commits] is not supported in RePark \
+             (registry ICE-RDF-OPTIONS-1, 2026-09-17)"
+        ),
         "got: {message}"
     );
+}
+
+#[tokio::test]
+async fn call_rpd_options_unwired_keys_refuse_unsupported() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_mor_shape(&ctx, &catalogs).await;
+    for (options, key) in [
+        ("'rewrite-job-order', 'bytes-desc'", "rewrite-job-order"),
+        (
+            "'partial-progress.enabled', 'false'",
+            "partial-progress.enabled",
+        ),
+        (
+            "'partial-progress.max-commits', '3'",
+            "partial-progress.max-commits",
+        ),
+        (
+            "'max-concurrent-file-group-rewrites', '4'",
+            "max-concurrent-file-group-rewrites",
+        ),
+    ] {
+        let message = rpd_options_error(&ctx, &catalogs, options).await;
+        assert!(
+            message.contains(&format!(
+                "CALL rewrite_position_delete_files option [{key}] is not supported in RePark \
+                 (registry ICE-RDF-OPTIONS-1, 2026-09-17)"
+            )),
+            "got: {message}"
+        );
+    }
 }

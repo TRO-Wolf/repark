@@ -1386,13 +1386,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `sort_order` refuse.
   pins: maint-rewrite-data-files-options/C-003, C-004, C-005, C-006, C-007
 - [test_ice_rdf_options_1.py](test_ice_rdf_options_1.py) —
-  **ICE-RDF-OPTIONS-1 round 1 (2026-09-17):** 42 offline pins over the recorded 45-cell
+  **ICE-RDF-OPTIONS-1 round 2 (2026-09-17):** offline pins over the recorded 45-cell
   Spark 4.1.2 oracle ([ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json),
   recorded by [_record_rdf_options_1_oracle.py](_record_rdf_options_1_oracle.py)) — result counts
   (rewritten bytes checked against the vanished files' sizes), file/spec/row counts, snapshot
-  count+ops, and `IllegalArgumentException` class+message per error cell; fork-owned cells
-  `xfail(strict, reason="BLOCKED-ON-FORK F-RDF-OPTIONS-1")`; the live tier re-runs the
-  generator and asserts the fixture plus a `4.1.` banner.
+  count+ops, and `IllegalArgumentException` class+message per error cell; the 11 still-red
+  cells carry dated per-cell `xfail(strict)` reasons; RPD unwired-key
+  `UnsupportedOperationException` pins and the max-failed-commits no-effect pin; the live
+  tier re-runs the generator and asserts the fixture plus a `4.1.` banner.
   pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json) —
   **ICE-RDF-OPTIONS-1 (2026-09-17):** the 33-cell RDF oracle section replays byte-identical

@@ -109,6 +109,24 @@ pub(super) async fn run_rewrite(
     if let Some(flag) = options.use_starting_sequence_number {
         action = action.use_starting_sequence_number(flag);
     }
+    action = action.rewrite_all(options.rewrite_all);
+    action = action.partial_progress(options.partial_progress_enabled);
+    if let Some(value) = options.partial_progress_max_commits
+        && let Ok(commits) = usize::try_from(value)
+    {
+        action = action.partial_progress_max_commits(commits);
+    }
+    if let Some(value) = options.output_spec_id
+        && let Ok(id) = i32::try_from(value)
+    {
+        action = action.output_spec_id(id);
+    }
+    action = action.rewrite_job_order(options.rewrite_job_order.into());
+    if let Some(value) = options.max_concurrent_file_group_rewrites
+        && let Ok(limit) = usize::try_from(value)
+    {
+        action = action.max_concurrent_file_group_rewrites(limit);
+    }
     let result = action
         .execute(catalog.as_ref())
         .await

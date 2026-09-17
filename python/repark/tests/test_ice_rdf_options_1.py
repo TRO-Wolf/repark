@@ -11,11 +11,14 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.errors import IllegalArgumentException, PySparkException
+from repark.errors import (
+    IllegalArgumentException,
+    PySparkException,
+    UnsupportedOperationException,
+)
 
 FIXTURE_PATH = Path(__file__).with_name("ice_rdf_options_1_spark_oracle.json")
 GENERATOR_PATH = Path(__file__).with_name("_record_rdf_options_1_oracle.py")
-FORK_XFAIL = "BLOCKED-ON-FORK F-RDF-OPTIONS-1"
 _BANNER_SNIPPET = (
     "from pyspark.sql import SparkSession;"
     " s=SparkSession.builder.master('local[1]').appName('banner').getOrCreate();"
@@ -170,8 +173,6 @@ def _check_snapshot_cell(
     assert ops == [str(op) for op in after["ops"]], f"{name} snapshot ops"  # type: ignore[union-attr]
 
 
-_FORK = pytest.mark.xfail(strict=True, reason=FORK_XFAIL)
-
 _VALUE_CELLS: list[tuple[str, dict[str, object], int]] = [
     ("baseline", {}, 400),
     ("min_input_files_1", {}, 400),
@@ -199,54 +200,51 @@ _VALUE_CELLS: list[tuple[str, dict[str, object], int]] = [
     ("rpd_max_group_size", {"mor": True, "pre": ("DELETE FROM {t} WHERE id % 2 = 0",)}, 200),
 ]
 
-_VALUE_XFAIL = {
-    "rewrite_all",
-    "target_small",
-    "max_group_size",
-    "partial_progress",
-    "partial_progress_max1",
-    "partial_progress_groups",
-    "job_order_bytes_desc",
-    "job_order_files_asc",
-    "use_start_seq_false",
-    "concurrent",
-    "output_spec_id",
-    "remove_dangling",
-    "delete_file_threshold",
-    "rpd_rewrite_all",
-    "rpd_min_input_files_1",
+_VALUE_XFAIL: dict[str, str] = {
+    "target_small": "FORK-WRITE-GRANULARITY 2026-09-17: fork writes one file per group "
+    "(RePark 8→2), Spark splits outputs to the target size (8→4)",
+    "max_group_size": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 added, "
+    "Spark 8→4",
+    "partial_progress_groups": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 "
+    "added, Spark 8→4",
+    "delete_file_threshold": "DELETE-COW-BYTES 2026-09-17: result counts match Spark "
+    "(4/1) but rewritten_bytes (5869) misses the DELETE-written survivor file the "
+    "rewrite folds in (vanished-sum 7592)",
+    "remove_dangling": "DELETE-COW-BYTES 2026-09-17: rewritten_bytes 11878 misses the "
+    "DELETE-written 1644-byte file folded into the 2 outputs (vanished-sum 13522); "
+    "removed_delete_files_count 1 vs Spark 0",
+    "rpd_rewrite_all": "FORK-RPD 2026-09-17: fork RPD untouched by #283, compacts 8→2 "
+    "per-group commits, Spark rewrites 8→8 in one commit",
+    "rpd_min_input_files_1": "FORK-RPD 2026-09-17: fork RPD untouched by #283, compacts "
+    "8→2 per-group commits, Spark rewrites 8→8 in one commit",
 }
 
-_SNAPSHOT_XFAIL = {
-    "min_input_files_1",
-    "rewrite_all",
-    "max_group_size",
-    "partial_progress",
-    "partial_progress_max1",
-    "partial_progress_groups",
-    "job_order_bytes_desc",
-    "job_order_files_asc",
-    "use_start_seq_false",
-    "concurrent",
-    "rpd_rewrite_all",
-    "rpd_min_input_files_1",
+_SNAPSHOT_XFAIL: dict[str, str] = {
+    "partial_progress_groups": "FORK-GROUP-GRANULARITY 2026-09-17: 8 groups under "
+    "max-commits 3 need 3 commits (11 snapshots), Spark compacts 4 groups in 2 (10)",
+    "rpd_rewrite_all": "FORK-RPD 2026-09-17: per-group commits (11 snapshots), Spark one "
+    "commit (10)",
+    "rpd_min_input_files_1": "FORK-RPD 2026-09-17: per-group commits (11 snapshots), "
+    "Spark one commit (10)",
 }
 
 
 def _value_params() -> list[object]:
-    """Parametrize value cells with fork marks on fork-dependent cells."""
+    """Parametrize value cells with precise-reason marks on the still-red cells."""
     params = []
     for name, build, rows in _VALUE_CELLS:
-        marks = (_FORK,) if name in _VALUE_XFAIL else ()
+        reason = _VALUE_XFAIL.get(name)
+        marks = (pytest.mark.xfail(strict=True, reason=reason),) if reason else ()
         params.append(pytest.param(name, build, rows, marks=marks, id=name))
     return params
 
 
 def _snapshot_params() -> list[object]:
-    """Parametrize snapshot cells with fork marks on multi-commit cells."""
+    """Parametrize snapshot cells with precise-reason marks on the still-red cells."""
     params = []
     for name, build, _rows in _VALUE_CELLS:
-        marks = (_FORK,) if name in _SNAPSHOT_XFAIL else ()
+        reason = _SNAPSHOT_XFAIL.get(name)
+        marks = (pytest.mark.xfail(strict=True, reason=reason),) if reason else ()
         params.append(pytest.param(name, build, marks=marks, id=name))
     return params
 
@@ -329,6 +327,52 @@ def test_number_format_maps_to_illegal_argument(spark: ReparkSession) -> None:
         ).to_arrow()
 
 
+_RPD_UNSUPPORTED: list[tuple[str, str]] = [
+    ("rewrite-job-order", "bytes-desc"),
+    ("partial-progress.enabled", "true"),
+    ("partial-progress.enabled", "false"),
+    ("partial-progress.max-commits", "3"),
+    ("max-concurrent-file-group-rewrites", "4"),
+]
+
+
+@pytest.mark.parametrize(
+    ("key", "value"), [pytest.param(key, value, id=f"{key}={value}") for key, value in _RPD_UNSUPPORTED]
+)
+def test_rpd_unsupported_keys_refuse_loud(spark: ReparkSession, key: str, value: str) -> None:
+    """RPD keys without a fork path refuse as UnsupportedOperationException naming the key."""
+    _build_shape(
+        spark,
+        "mem.ns.rpdun",
+        parts=2,
+        files_per=4,
+        mor=True,
+        pre=("DELETE FROM {t} WHERE id % 2 = 0",),
+    )
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql(
+            "CALL mem.system.rewrite_position_delete_files(table => 'ns.rpdun', "
+            f"options => map('{key}','{value}'))"
+        ).to_arrow()
+    assert key in str(caught.value)
+    assert "ICE-RDF-OPTIONS-1" in str(caught.value)
+
+
+def test_rdf_max_failed_commits_accepted_without_effect(spark: ReparkSession) -> None:
+    """partial-progress.max-failed-commits parses and changes nothing on a clean run."""
+    _build_shape(spark, "mem.ns.mfc", parts=1, files_per=2)
+    got = _result_row(
+        spark,
+        "CALL mem.system.rewrite_data_files(table => 'ns.mfc', "
+        "options => map('rewrite-all','true', 'partial-progress.max-failed-commits','7'))",
+    )
+    assert got["rewritten_data_files_count"] == 2
+    assert got["added_data_files_count"] == 1
+    assert _live_rows(spark, "mem.ns.mfc") == 100
+    count, _ops = _snapshots(spark, "mem.ns.mfc")
+    assert count == 3
+
+
 def test_residue_repark_sequence_pins_current_shape(spark: ReparkSession) -> None:
     """RePark's own rpd-then-rdf sequence keeps rows and leaves two delete files behind."""
     _build_shape(
@@ -348,7 +392,11 @@ def test_residue_repark_sequence_pins_current_shape(spark: ReparkSession) -> Non
     assert deletes == 2
 
 
-@pytest.mark.xfail(strict=True, reason=FORK_XFAIL)
+@pytest.mark.xfail(
+    strict=True,
+    reason="ICE-RDF-DANGLE-2 2026-09-17: RePark ends the rpd-then-rdf sequence with 2 "
+    "dangling deletes, Spark with 0",
+)
 def test_residue_matches_spark_zero_delete_files(spark: ReparkSession) -> None:
     """Spark's sequence ends with zero delete files; RePark still leaves dangling ones."""
     _build_shape(

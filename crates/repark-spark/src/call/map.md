@@ -61,10 +61,12 @@ and measured-parity contract would grow `call.rs` beyond its exact
   strategy and bad `where` use Spark 4.1.2 + Iceberg 1.11.0 text. v3 rewrite
   preserves lineage (`V3-LINEAGE-1` FIXED, RP-4 / fork #243) and drops
   in-scope Puffin DVs with a true `removed_delete_files_count` (`V3-DANGLE-1`
-  FIXED, V3-5). **ICE-RDF-OPTIONS-1 round 1 (2026-09-17):** `options => map(…)` parses
-  through `rewrite_options.rs` (Spark's 16 keys, Spark's class and text); the nine
-  pin-supported knobs apply to the fork builder and the fork-owned remainder sits on the
-  parsed struct for round 2. **MAINT-POLICY-1 step 3 (2026-09-10):** the fork
+  FIXED, V3-5). **ICE-RDF-OPTIONS-1 round 2 (2026-09-17):** `options => map(…)` parses
+  through `rewrite_options.rs` (Spark's 16 keys, Spark's class and text) and every
+  fork-owned key wires into the fork builders in `run_rewrite` (`rewrite-all`,
+  `partial-progress.*`, `output-spec-id`, `rewrite-job-order`, sequential
+  `max-concurrent-file-group-rewrites`; `max-failed-commits` accepted without effect).
+  **MAINT-POLICY-1 step 3 (2026-09-10):** the fork
   invocation is the shared `run_rewrite` core (the door passes the parsed options struct
   by value; the apply path passes a struct carrying only the policy size).
   **MAINT-POLICY-1 step 4 (2026-09-10):**
@@ -84,8 +86,10 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `BIN-PACK` text, Java `Long.parseLong` / `parseBoolean` / `Double.parseDouble` value rules,
   case-insensitive `rewrite-job-order` names, `output-spec-id` membership against the table
   specs, and the size-band cross-checks against the table-property (or 512 MiB) default.
-  The delete procedure accepts its measured 8-key subset. Fork-owned keys validate now and
-  wait on the struct. Errors return the `IllegalArgument` marker so Python raises
+  The delete procedure accepts its measured subset; the four Spark-accepted keys the fork's
+  delete action cannot honour (`rewrite-job-order`, `partial-progress.*`,
+  `max-concurrent-file-group-rewrites`) refuse as `UnsupportedOperationException` naming
+  the key and the registry row. Errors return the `IllegalArgument` marker so Python raises
   `IllegalArgumentException`.
   pins: ice-rdf-options-1/C-001, C-002, C-005
 - `rewrite_where.rs` — SQL `where` string → Iceberg `Predicate` (eq/cmp/AND/OR/NOT/IS NULL/IN/

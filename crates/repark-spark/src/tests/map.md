@@ -297,13 +297,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   file-scoped, and outlives the rewrite (`removed_delete_files_count = 0`, one delete file
   after) with its shadowed rows still shadowed — F-16 residue 2, unchanged. Registry `RDF-1`.
   pins: rdf-1-position-delete-bounds/C-003
-- `call_rdf_options.rs` — **ICE-RDF-OPTIONS-1 round 1 (2026-09-17):** 29
+- `call_rdf_options.rs` — **ICE-RDF-OPTIONS-1 round 2 (2026-09-17):** 30
   `options => map(…)` pins on both rewrite procedures — Spark's unknown-key / bad-integer /
-  bad-job-order / bad-spec / max-commits / band-crossing texts, silent-false booleans,
+  bad-job-order / bad-spec / band-crossing texts, silent-false booleans,
   case-insensitive job orders, current-spec validation, `[DUPLICATED_MAP_KEY]`, non-map and
   odd-arity refuses, empty-map/NULL/integer-literal acceptance, `min-input-files` rewrite
-  counts, `where`+options composition, and the delete procedure's 8-key subset with its
-  data-only-key refuses.
+  counts, `where`+options composition, and the delete procedure's subset with its
+  data-only-key refuses plus the four unwired-key `UnsupportedOperationException` refuses.
   pins: ice-rdf-options-1/C-001, C-002, C-004, C-005
 - `call_rewrite_options.rs` — **rewrite_data_files options:** `where => 'part = 0'` (and `IN (0)`)
   keeps the **part=1** pre-image paths byte-identical and rewrites part=0 away; unknown strategy

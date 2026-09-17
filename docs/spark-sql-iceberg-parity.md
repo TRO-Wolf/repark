@@ -4869,39 +4869,42 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   row — a declared default order sorts the files a write commits, but `rewrite_data_files`
   still takes no `sort` / `sort_order`, which is what this row claims.
 
-### ICE-RDF-OPTIONS-1 — `rewrite_data_files` / `rewrite_position_delete_files` options map — **OPEN-IN-PROGRESS 2026-09-17 (round 1, RePark side)**
+### ICE-RDF-OPTIONS-1 — `rewrite_data_files` / `rewrite_position_delete_files` options map — **FIXED 2026-09-17**
 
-- **repark** — round 1 parses and validates the full Spark-measured key set with Spark's
-  exception class and message: `rewrite_data_files` accepts 16 keys, `rewrite_position_delete_files`
-  8 (`delete-file-threshold`, `delete-ratio-threshold`, `output-spec-id`,
-  `use-starting-sequence-number`, `remove-dangling-deletes`,
-  `partial-progress.max-failed-commits` are unknown on the delete procedure with the same
-  `Cannot use options […] … BIN-PACK` message); bad longs/double render `For input string: "…"`,
-  bad booleans parse silently false, duplicate map keys raise Spark's `[DUPLICATED_MAP_KEY]` text.
-  Applied at the pinned fork rev (`edc38c6`): the size band, `min-input-files`,
-  `delete-file-threshold`, `delete-ratio-threshold`, `max-file-group-size-bytes`,
-  `use-starting-sequence-number`, `remove-dangling-deletes` (the options spelling wins over the
-  legacy top-level flag). Parsed, validated, and stored for round 2: `rewrite-all`,
-  `partial-progress.*`, `output-spec-id` (a non-current known id rewrites into the current spec),
-  `rewrite-job-order`, `max-concurrent-file-group-rewrites`. A bad integer maps to
-  `IllegalArgumentException` (PySpark's `NumberFormatException` subclasses it; no native leaf
-  exists yet — Q-19c recommendation in the unit ledger). The pinned fork commits one snapshot
-  per group while Spark's default is one commit for all groups, so multi-group cells match on
-  result and file counts but not on snapshot counts.
+- **repark** — round 2 wires every fork-owned `rewrite_data_files` key into the fork builders
+  (consumes fork `F-RDF-OPTIONS-1` (#283) via the RP pin bump that follows it): `rewrite-all`,
+  `partial-progress.enabled` + `partial-progress.max-commits` (groups per commit =
+  ceil(groups / max-commits), one commit by default like Spark), `output-spec-id` (grouping
+  keys on the table's current default spec; the write uses the output spec), `rewrite-job-order`
+  (none / bytes-asc / bytes-desc / files-asc / files-desc, case-insensitive, Java's invalid-name
+  message), `max-concurrent-file-group-rewrites` (validated positive, runs sequentially).
+  `partial-progress.max-failed-commits` is accepted and changes nothing on a clean run, as in
+  Spark. Round-1 parsing and validation stand: 16 RDF keys, the RPD subset, `For input string`
+  longs, silent-false booleans, `[DUPLICATED_MAP_KEY]` text, `IllegalArgumentException` mapping.
+  On `rewrite_position_delete_files` the four Spark-accepted keys the fork's action cannot
+  honour (`rewrite-job-order`, `partial-progress.enabled`, `partial-progress.max-commits`,
+  `max-concurrent-file-group-rewrites`) refuse as `UnsupportedOperationException` naming the key
+  and this row — never silently ignored, even in no-op spellings. Eleven oracle cells stay
+  `xfail(strict)` with precise dated reasons: output-splitting and group granularity
+  (`target_small`, `max_group_size`, `partial_progress_groups`), DELETE-written-file byte
+  accounting (`delete_file_threshold`, `remove_dangling`), and the untouched fork RPD
+  (`rpd_rewrite_all`, `rpd_min_input_files_1`, all fork asks); the residue zero cell belongs to
+  `ICE-RDF-DANGLE-2`.
 - **Apache Spark** — the 45 recorded cells
   (`python/repark/tests/ice_rdf_options_1_spark_oracle.json`, live PySpark 4.1.2 + Iceberg
   1.11.0, 2026-09-17): default single-commit rewrites, per-key validation messages, the
   `rewrite_position_delete_files` option subset, and the two residue sequences.
   *(oracle: recorded — the committed generator replays byte-identical on its 33-cell RDF section.)*
 - **Pin** —
-  `crates/repark-spark/src/tests/call_rdf_options.rs` (29 option-validation and apply pins),
-  `python/repark/tests/test_ice_rdf_options_1.py` (42 offline pins over the fixture, fork cells
-  `xfail(strict, reason="BLOCKED-ON-FORK F-RDF-OPTIONS-1")`, plus the live tier that re-runs the
-  generator and asserts the fixture), and the updated
+  `crates/repark-spark/src/tests/call_rdf_options.rs` (30 option-validation, apply, and
+  RPD-refusal pins),
+  `python/repark/tests/test_ice_rdf_options_1.py` (offline pins over the fixture with per-cell
+  dated xfail reasons, the RPD `UnsupportedOperationException` pins, the
+  max-failed-commits no-effect pin, plus the live tier that re-runs the
+  generator and asserts the fixture), and
   `call.rs::call_rewrite_position_delete_files_validates_options_and_refuses_where`.
-- **Rationale** — OPEN-IN-PROGRESS: the orchestrator flips this row FIXED after round 2 wires the
-  stored keys against `F-RDF-OPTIONS-1`. The `NumberFormatException` leaf, the `inf`/`2d` double
-  spellings, and multi-violation check order are measured-and-noted gaps in the unit ledger.
+- **Rationale** — FIXED. The `NumberFormatException` leaf, the `inf`/`2d` double
+  spellings, and multi-violation check order stay measured-and-noted gaps in the unit ledger.
   pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-007
 
 ### RDF-DANGLING-1 — `rewrite_position_delete_files` → `rewrite_data_files` leaves partition-scoped deletes dangling — **BACKLOG 2026-09-17**
@@ -4925,6 +4928,25 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Rationale** — BACKLOG, fork work: Spark's post-rewrite deletes die with their referents while
   RePark's rewritten deletes come back partition-scoped and invisible to the data rewrite's drop
   (the RDF-1 family). Rating residue #37.
+  pins: ice-rdf-options-1/C-006
+
+### ICE-RDF-DANGLE-2 — `rewrite_position_delete_files` → `rewrite_data_files` still leaves 2 dangling deletes on fork `2f5323ca` — **OPEN 2026-09-17**
+
+- **repark** — re-measured on the wired tree with fork `2f5323ca` (F-RDF-OPTIONS-1 #283,
+  which did not touch the RPD path or the dangling logic), 2×8 half-deleted MoR shape
+  (`DELETE WHERE id % 2 = 0` hits every file; the DELETE itself leaves 32 data + 16 deletes):
+  default `rewrite_position_delete_files` compacts 16→2 deletes (17→19 snapshots — the fork
+  RPD still commits per group), then default `rewrite_data_files` answers 16 rewritten / 2 added /
+  0 removed and the table ends with 4 files (2 data + 2 deletes), 20 snapshots, 400 live rows.
+- **Apache Spark** — the recorded `residue_rpd_then_rdf` sequence on the same shape ends with
+  2 data + 0 delete files in 19 snapshots (`removed_delete_files_count = 0`).
+  *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0.)*
+- **Pin** —
+  `python/repark/tests/test_ice_rdf_options_1.py::test_residue_repark_sequence_pins_current_shape`
+  (asserts RePark's current `deletes == 2` as the documented divergence) and
+  `::test_residue_matches_spark_zero_delete_files` (`xfail(strict)` on the zero).
+- **Rationale** — OPEN, fork ask: the remaining difference is exactly 2 partition-scoped deletes
+  surviving RePark's data rewrite. A later fix flips the current-count pin.
   pins: ice-rdf-options-1/C-006
 
 ### MANIFEST-1 — `rewrite_manifests` rewrites data manifests only; Spark rewrites delete manifests too

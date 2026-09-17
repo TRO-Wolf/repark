@@ -57,6 +57,18 @@ pub(crate) enum RewriteJobOrder {
     BytesDesc,
 }
 
+impl From<RewriteJobOrder> for iceberg::maintenance::RewriteJobOrder {
+    fn from(order: RewriteJobOrder) -> Self {
+        match order {
+            RewriteJobOrder::None => Self::None,
+            RewriteJobOrder::FilesAsc => Self::FilesAsc,
+            RewriteJobOrder::FilesDesc => Self::FilesDesc,
+            RewriteJobOrder::BytesAsc => Self::BytesAsc,
+            RewriteJobOrder::BytesDesc => Self::BytesDesc,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub(crate) struct RewriteOptions {
     pub(crate) target_file_size_bytes: Option<u64>,
@@ -458,6 +470,32 @@ pub(crate) fn parse_rdf_options(
     Ok(options)
 }
 
+const RPD_UNWIRED: &[&str] = &[
+    "rewrite-job-order",
+    "partial-progress.enabled",
+    "partial-progress.max-commits",
+    "max-concurrent-file-group-rewrites",
+];
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn refuse_rpd_unwired(pairs: &[(String, Option<String>)]) -> Result<()> {
+    let hit: Vec<&str> = pairs
+        .iter()
+        .map(|(key, _)| key.as_str())
+        .filter(|key| RPD_UNWIRED.contains(key))
+        .collect();
+    if hit.is_empty() {
+        return Ok(());
+    }
+    Err(DataFusionError::NotImplemented(format!(
+        "CALL rewrite_position_delete_files option [{}] is not supported in RePark \
+         (registry ICE-RDF-OPTIONS-1, 2026-09-17): the fork's RewritePositionDeleteFiles has no \
+         rewrite-job-order / partial-progress / concurrent-group path — run without the key for \
+         Spark's default single-commit shape",
+        hit.join(", ")
+    )))
+}
+
 #[allow(clippy::missing_errors_doc, clippy::too_many_lines)]
 pub(crate) fn parse_rpd_options(
     pairs: &[(String, Option<String>)],
@@ -465,6 +503,7 @@ pub(crate) fn parse_rpd_options(
 ) -> Result<RewriteOptions> {
     reject_unknown(pairs, RPD_ACCEPTED)?;
     let values = typed_values(pairs)?;
+    refuse_rpd_unwired(pairs)?;
     let mut options = RewriteOptions::default();
     if let Some(raw) = &values.job_order {
         options.rewrite_job_order = job_order_from(raw)?;
