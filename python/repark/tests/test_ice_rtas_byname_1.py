@@ -9,7 +9,7 @@ oracle's ``swapped`` view is a same-shape source table ``sc.ns.sw``
 RePark against the fixture; the live tier replays the generator and checks
 the fixture.
 
-pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004, C-005
+pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-010
 """
 
 from __future__ import annotations
@@ -311,6 +311,182 @@ def _rows_branch(session: Any, table: str) -> list[tuple[Any, ...]]:
     frame = session.sql(f"SELECT first_name, last_name, n FROM {table}").to_arrow()
     columns = [frame.column(name).to_pylist() for name in ("first_name", "last_name", "n")]
     return sorted(zip(*columns, strict=True), key=repr)
+
+
+def _rows_pt(session: Any, table: str) -> list[tuple[Any, ...]]:
+    frame = session.sql(f"SELECT first_name, n, p FROM {table}").to_arrow()
+    columns = [frame.column(name).to_pylist() for name in ("first_name", "n", "p")]
+    return sorted(zip(*columns, strict=True), key=repr)
+
+
+def _seed_pt(session: Any, table: str, ddl: str, seed: str) -> None:
+    session.sql(f"CREATE TABLE {table} {ddl} USING iceberg PARTITIONED BY (p)")
+    session.sql(seed)
+
+
+def _fixture_rows(section: str, cell: str) -> list[tuple[Any, ...]]:
+    return [tuple(row) for row in FIXTURE[section][cell]["rows"]]
+
+
+def test_partition_overwrite_static_by_name(spark: Any) -> None:
+    """Static PARTITION overwrite keeps p=0, replaces p=1. pins: ice-rtas-byname-1/C-007"""
+    _seed_pt(
+        spark,
+        "sc.ns.pt",
+        "(first_name STRING, n INT, p INT)",
+        "INSERT INTO sc.ns.pt VALUES ('a', 1, 0), ('b', 2, 1), ('c', 3, 1)",
+    )
+    spark.sql(_cell_sql("partition_by_name", "pt_overwrite_static")).collect()
+    assert _rows_pt(spark, "sc.ns.pt") == _fixture_rows("partition_by_name", "pt_overwrite_static")
+
+
+def test_partition_overwrite_static_positional_control(spark: Any) -> None:
+    """Positional static overwrite agrees with BY NAME. pins: ice-rtas-byname-1/C-007"""
+    _seed_pt(
+        spark,
+        "sc.ns.ptp",
+        "(first_name STRING, n INT, p INT)",
+        "INSERT INTO sc.ns.ptp VALUES ('a', 1, 0), ('b', 2, 1), ('c', 3, 1)",
+    )
+    spark.sql(_cell_sql("partition_by_name", "pt_overwrite_static_positional")).collect()
+    assert _rows_pt(spark, "sc.ns.ptp") == _fixture_rows("partition_by_name", "pt_overwrite_static")
+
+
+def test_partition_overwrite_dynamic_by_name(spark: Any) -> None:
+    """Dynamic PARTITION overwrite keeps only source partitions. pins: ice-rtas-byname-1/C-007"""
+    _seed_pt(
+        spark,
+        "sc.ns.ptdyn",
+        "(first_name STRING, n INT, p INT)",
+        "INSERT INTO sc.ns.ptdyn VALUES ('a', 1, 0), ('b', 2, 1), ('c', 3, 2)",
+    )
+    spark.sql(_cell_sql("partition_by_name", "pt_overwrite_dynamic")).collect()
+    assert _rows_pt(spark, "sc.ns.ptdyn") == _fixture_rows(
+        "partition_by_name", "pt_overwrite_dynamic"
+    )
+
+
+def test_partition_overwrite_no_clause_replaces_all(spark: Any) -> None:
+    """No PARTITION clause replaces the whole table. pins: ice-rtas-byname-1/C-007"""
+    _seed_pt(
+        spark,
+        "sc.ns.ptn",
+        "(first_name STRING, n INT, p INT)",
+        "INSERT INTO sc.ns.ptn VALUES ('a', 1, 0), ('b', 2, 1)",
+    )
+    spark.sql(_cell_sql("partition_by_name", "pt_overwrite_no_clause")).collect()
+    assert _rows_pt(spark, "sc.ns.ptn") == _fixture_rows(
+        "partition_by_name", "pt_overwrite_no_clause"
+    )
+
+
+def test_partition_append_static_by_name(spark: Any) -> None:
+    """Static PARTITION append injects the clause value. pins: ice-rtas-byname-1/C-007"""
+    _seed_pt(
+        spark,
+        "sc.ns.pta",
+        "(first_name STRING, n INT, p INT)",
+        "INSERT INTO sc.ns.pta VALUES ('a', 1, 0)",
+    )
+    spark.sql(_cell_sql("partition_by_name", "pt_append_static")).collect()
+    assert _rows_pt(spark, "sc.ns.pta") == _fixture_rows("partition_by_name", "pt_append_static")
+
+
+def test_partition_static_column_in_list_refused(spark: Any) -> None:
+    """A source naming the static column refuses 42713. pins: ice-rtas-byname-1/C-007"""
+    _seed_pt(
+        spark,
+        "sc.ns.pts",
+        "(first_name STRING, n INT, p INT)",
+        "INSERT INTO sc.ns.pts VALUES ('a', 1, 0)",
+    )
+    _refusal(spark, "partition_by_name", "pt_static_in_list")
+
+
+def test_empty_overwrite_by_name_wipes(spark: Any) -> None:
+    """Empty BY NAME overwrite replaces the table with zero rows. pins: ice-rtas-byname-1/C-008"""
+    spark.sql("CREATE TABLE sc.ns.pte (first_name STRING, last_name STRING, n INT) USING iceberg")
+    spark.sql("INSERT INTO sc.ns.pte VALUES ('A', 'B', 1)")
+    spark.sql(_cell_sql("partition_by_name", "pt_empty_overwrite")).collect()
+    assert _rows(spark, "sc.ns.pte") == []
+
+
+def test_empty_partition_overwrite_drops_only_named(spark: Any) -> None:
+    """Empty static PARTITION overwrite drops only p=1. pins: ice-rtas-byname-1/C-008"""
+    _seed_pt(
+        spark,
+        "sc.ns.ptf",
+        "(first_name STRING, n INT, p INT)",
+        "INSERT INTO sc.ns.ptf VALUES ('a', 1, 0), ('b', 2, 1)",
+    )
+    spark.sql(_cell_sql("partition_by_name", "pt_empty_partition_overwrite")).collect()
+    assert _rows_pt(spark, "sc.ns.ptf") == _fixture_rows(
+        "partition_by_name", "pt_empty_partition_overwrite"
+    )
+
+
+def test_missing_nullable_fills_on_not_null_table(spark: Any) -> None:
+    """A missing nullable column NULL-fills beside NOT NULL. pins: ice-rtas-byname-1/C-009"""
+    spark.sql(
+        "CREATE TABLE sc.ns.nn (first_name STRING NOT NULL, last_name STRING, n INT) USING iceberg"
+    )
+    spark.sql(_cell_sql("not_null_by_name", "nn_nullable_ok")).collect()
+    assert _rows(spark, "sc.ns.nn") == [
+        tuple(row) for row in FIXTURE["not_null_by_name"]["nn_nullable_ok"]["rows"]
+    ]
+
+
+def test_missing_required_refused(spark: Any) -> None:
+    """A missing NOT NULL column refuses CANNOT_FIND_DATA. pins: ice-rtas-byname-1/C-009"""
+    spark.sql(
+        "CREATE TABLE sc.ns.nn2 (first_name STRING, last_name STRING NOT NULL, n INT) USING iceberg"
+    )
+    _refusal(spark, "not_null_by_name", "nn_missing_required")
+
+
+def test_missing_required_overwrite_refused(spark: Any) -> None:
+    """Overwrite with a missing NOT NULL column refuses too. pins: ice-rtas-byname-1/C-009"""
+    spark.sql(
+        "CREATE TABLE sc.ns.nn3 (first_name STRING, last_name STRING NOT NULL, n INT) USING iceberg"
+    )
+    spark.sql("INSERT INTO sc.ns.nn3 VALUES ('A', 'B', 1)")
+    _refusal(spark, "not_null_by_name", "nn_missing_required_overwrite")
+
+
+def test_case_insensitive_default_folds(spark: Any) -> None:
+    """Default matching folds case like Spark. pins: ice-rtas-byname-1/C-010"""
+    spark.sql("CREATE TABLE sc.ns.cs (first_name STRING, n INT) USING iceberg")
+    spark.sql(_cell_sql("case_sensitive_by_name", "cs_default_folds")).collect()
+    frame = spark.sql("SELECT first_name, n FROM sc.ns.cs").to_arrow()
+    columns = [frame.column(name).to_pylist() for name in ("first_name", "n")]
+    assert sorted(zip(*columns, strict=True), key=repr) == [
+        tuple(row) for row in FIXTURE["case_sensitive_by_name"]["cs_default_folds"]["rows"]
+    ]
+
+
+def test_case_sensitive_refuses_mismatch(spark: Any) -> None:
+    """caseSensitive=true answers EXTRA_COLUMNS on mismatch. pins: ice-rtas-byname-1/C-010"""
+    spark.sql("CREATE TABLE sc.ns.cs2 (first_name STRING, n INT) USING iceberg")
+    spark.conf.set("spark.sql.caseSensitive", "true")
+    try:
+        _refusal(spark, "case_sensitive_by_name", "cs_sensitive_refuses_mismatch")
+    finally:
+        spark.conf.set("spark.sql.caseSensitive", "false")
+
+
+def test_case_sensitive_exact_ok(spark: Any) -> None:
+    """caseSensitive=true still writes exact names. pins: ice-rtas-byname-1/C-010"""
+    spark.sql("CREATE TABLE sc.ns.cs3 (first_name STRING, n INT) USING iceberg")
+    spark.conf.set("spark.sql.caseSensitive", "true")
+    try:
+        spark.sql(_cell_sql("case_sensitive_by_name", "cs_sensitive_exact_ok")).collect()
+    finally:
+        spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.sql("SELECT first_name, n FROM sc.ns.cs3").to_arrow()
+    columns = [frame.column(name).to_pylist() for name in ("first_name", "n")]
+    assert sorted(zip(*columns, strict=True), key=repr) == [
+        tuple(row) for row in FIXTURE["case_sensitive_by_name"]["cs_sensitive_exact_ok"]["rows"]
+    ]
 
 
 @pytest.mark.xfail(strict=True, reason="BLOCKED-ON-FORK F-RTAS-OPS-1")

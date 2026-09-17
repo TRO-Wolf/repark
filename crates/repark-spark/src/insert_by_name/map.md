@@ -23,12 +23,15 @@ recognized form has a row; the executor pins live in the Python suite
 
 `PARTITION (…)` routes through the positional arm: static overwrite delegates
 to `execute_partition_overwrite` after name projection (the source must not
-name a static column); static append injects the clause literals into the
-projection; dynamic shapes match the full target list. Empty unpartitioned
-overwrite wipes via `commit_overwrite_replace_all_to` after the
-empty-source type guard. A missing required target refuses
-`CANNOT_FIND_DATA` before any write. `spark.sql.caseSensitive=true` matches
-exact (carrier `repark_functions::case_sensitive`).
+name a static column); dynamic overwrite is whole-table replace-all, which is
+Spark's default-mode answer for a valueless spec (`partitionOverwriteMode`
+is unread, same residue class as the positional always-dynamic path);
+static append injects the clause literals into the projection; dynamic
+append matches the full target list. Empty unpartitioned overwrite wipes
+via `commit_overwrite_replace_all_to` after the empty-source type guard.
+A missing required target refuses `CANNOT_FIND_DATA` before any write.
+`spark.sql.caseSensitive=true` matches exact
+(carrier `repark_functions::case_sensitive`).
 
 ## Pointers
 

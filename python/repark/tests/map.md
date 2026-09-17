@@ -2796,6 +2796,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`test_dataframe_writeto_appends_by_name`) on F-DML-FIELD-ID-1. The live
   replay cell (`test_live_oracle_fixture_reproduces`) skips without a
   `/tmp/sparkenv` interpreter.
+  **Round 2 (2026-09-17):** the `partition_by_name` section (static/dynamic
+  overwrite, no-clause replace-all, static append, the 42713 refusal, empty
+  overwrite wipe, empty static-partition drop), the `not_null_by_name`
+  section (nullable fill beside NOT NULL, `CANNOT_FIND_DATA` on INSERT and
+  OVERWRITE), and the `case_sensitive_by_name` section (default fold,
+  `EXTRA_COLUMNS` under `caseSensitive=true`, exact-name write).
+  pins: ice-rtas-byname-1/C-007, C-008, C-009, C-010
   pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004, C-005, C-006
 - **octo-extra C3: format= refuse surface**
 

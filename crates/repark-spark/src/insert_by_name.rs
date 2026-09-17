@@ -132,7 +132,7 @@ pub(crate) async fn execute_insert_by_name(
     };
     if insert.overwrite {
         let query = parse_projection_query(&projection_sql)?;
-        if insert.partitioned.is_some() {
+        if insert.partitioned.is_some() && !static_columns.is_empty() {
             let mut delegated = insert.clone();
             delegated.source = Some(query);
             delegated.columns = Vec::new();
