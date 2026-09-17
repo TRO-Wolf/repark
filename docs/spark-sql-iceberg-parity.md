@@ -511,6 +511,19 @@ perfectly good read.
   `crates/repark-spark/src/insert_by_name/tests.rs` (strip + resolution rules);
   `crates/repark-sql/src/sniff/tests.rs` (native-door steer).
   pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004
+  **Round 2 (2026-09-17):** static `PARTITION` overwrite delegates to the
+  positional partition arm after name projection (a source naming the static
+  column refuses `[STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST]`, SQLSTATE
+  42713); dynamic `PARTITION (p)` overwrite is whole-table replace-all
+  (Spark's default-mode answer — `partitionOverwriteMode` is unread, the same
+  residue class as the positional always-dynamic path); static append injects
+  the clause literals; empty unpartitioned overwrite wipes; a missing required
+  target refuses `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]` (SQLSTATE
+  KD000) before any write; `spark.sql.caseSensitive=true` matches exact and
+  answers `EXTRA_COLUMNS` on case mismatch (new carrier, default false).
+  Oracle sections `partition_by_name` (9 cells), `not_null_by_name` (3),
+  `case_sensitive_by_name` (3).
+  pins: ice-rtas-byname-1/C-007, C-008, C-009, C-010
 - **Rationale** — FIXED, not declared. `BY NAME` has no ANSI spelling (ADR-0002:
   the native door steers, never parses). The staged route is load-bearing, not
   incidental: the DML passthrough misroutes reordered scan batches by
