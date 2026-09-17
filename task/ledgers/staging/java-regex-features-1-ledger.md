@@ -274,7 +274,15 @@ Step outcomes: step 1 red `8726d6fd` (17 fail / 8 pass as predicted); step 2
 37 pass (trip pin still trips at 100M, ~2 s). Step 3: RX3 lookbehind/backref
 legs green (only 19/23 L-006 red remain); engine suite 32 pass; full lib
 suite 765 pass. Step 4: file 87 pass (86 + R2 declared); engine suite 46
-pass; R2 + PYPERF-001 + BACKTRACK-1/FIXED-refresh registry rows.
+pass; R2 + PYPERF-001 + BACKTRACK-1/FIXED-refresh registry rows. Cost
+(1e6 rows, release native, warmed): plain `rlike` 0.086 s, `(?<=a)b` 0.077 s,
+`(?<=ab+)` 0.290 s, `(?<=.*a)` 0.139 s, lookahead count 0.231 s, replace
+literal-template 0.195 s vs group-template 0.501 s (PERF-004 keeps the
+literal path allocation-free). Step 5 gate fallout: the facade suite turned the
+LRS-6 pin red on purpose (its own module rule for the fixing unit) — L-006 closes
+RE-2 exactly (count and collection return Spark's 5 / `['','','','b','']`), so the
+pin moved to `test_java_regex_features_1.py` as a convergence test and the RE-2
+registry row flips BACKLOG → FIXED in the step-5 commit.
 
 FD-2 (forced, measured): `RX3-SQL-03` (`a*(?=b)` on 10001 a's, Spark `false`)
 needs ~60M backtrack pops (limit sweep 10M→200M: trips through 30M, `false`

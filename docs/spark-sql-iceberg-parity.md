@@ -4164,11 +4164,14 @@ the pin rather than obeying it.
   and `Aggregate` output field names.
   pins: types-1/C-003
 
-### RE-2 — a zero-width match at a mid-surrogate position
+### RE-2 — a zero-width match at a mid-surrogate position — **FIXED 2026-09-16 (JAVA-REGEX-FEATURES-1)**
 
-- **repark** — `regexp_extract_all('🎉ab', '', 0)` returns **4** empty strings and
-  `regexp_extract_all('🎉ab', 'b*', 0)` returns 4 elements. `regexp_count` on the same inputs
-  returns **5**, so two functions in this repository disagree.
+- **repark** — **FIXED 2026-09-16.** `regexp_extract_all('🎉ab', '', 0)` returns **5**
+  empty strings and `regexp_extract_all('🎉ab', 'b*', 0)` returns
+  `['','','','b','']`: the collector walks the same mid-surrogate step as the counter,
+  emitting the extra zero-width match at the supplementary character's own offset
+  instead of addressing a mid-surrogate byte index. Count and collection agree with
+  each other and with Spark.
 - **Apache Spark** — **5** in every case (`['','','','','']`, `['','','','b','']`). Java's
   `Matcher` finds an empty match at every UTF-16 code-unit index, including the one *inside* a
   surrogate pair. *(oracle: live — PySpark 4.1.2.)*
@@ -4178,13 +4181,11 @@ the pin rather than obeying it.
   was not about surrogates at all and moved to its own row, `RE-3` — **which SEM-6 then closed the
   same day**, so it is gone from this registry and `regexp_substr` now returns NULL there. What
   remains here is genuinely surrogate-bound: the count.
-- **Pin** — `python/repark/tests/test_lrs6_regexp_divergences.py::test_re2_zero_width_matches_skip_the_mid_surrogate_position`
-- **Rationale** — BACKLOG. `regexp_count` walks UTF-16 code units and is already right;
-  `collect_matches` walks Unicode scalars, because a mid-surrogate offset is **not a byte boundary**
-  and Rust's `&str` cannot address one — there is no `regex::Match` to build there. Closing this
-  means running the collector in UTF-16 space and mapping back, which is a restructure of a hot
-  path, not an edge-case patch. The row exists so the number 4 is a known, measured difference
-  rather than an assumption that the two functions agree.
+- **Pin** — `python/repark/tests/test_java_regex_features_1.py::test_zero_width_matches_agree_with_count_on_supplementary_text`
+- **Rationale** — FIXED 2026-09-16 (JAVA-REGEX-FEATURES-1 round 2, L-006). No UTF-16
+  restructure was needed after all: the duplicate match lands on a real boundary, so the
+  hot path is unchanged.
+  pins: java-regex-features-1/C-002
 
 ### LOG-1 — SQL-door `log` is base 10, Spark's is natural
 

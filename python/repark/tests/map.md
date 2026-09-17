@@ -4979,7 +4979,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: java-regex-features-1/C-001, C-002, C-003, C-004, C-005, C-006
   **Remediation round 1 (2026-09-16):** `RX3-SQL-00…26` join the fixture and the
   value/error legs (group-index leg pins `REGEX_GROUP_INDEX`); the R2 declared
-  test pins `XX😀X` / `['', '', '😀', '']`.
+  test pins `XX😀X` / `['', '', '😀', '']`; the closed `RE-2` pin moved in from
+  `test_lrs6_regexp_divergences.py` as a convergence test.
 
 - `test_fnp_9_collections_json.py` — **FNP-9/10 (2026-09-05):** the collections and JSON
   families on both Spark-facade doors against the live PySpark 4.1.2 oracle — `get_json_object`
@@ -5154,6 +5155,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-08-21):** the `regexp_substr` pin is now `RE-3`, its own row, measured on plain ASCII; the
   BMP-bound test's claim that both RE-2 divergences are confined to supplementary-plane text was
   false for the substr half and is corrected.
+  **JAVA-REGEX-FEATURES-1 round 2 (2026-09-16):** `RE-2` closed, so its pin left this
+  file — `test_java_regex_features_1.py::test_zero_width_matches_agree_with_count_on_supplementary_text`
+  owns those assertions now; the BMP agreement pin stays.
 
 - `test_lrs4_door_domain.py` — **LRS-4 (2026-08-20):** pins for `LOG-1` and `UNIX-1`.
   **SEM-1 (2026-08-31):** `LOG-1` pins flip to Spark: `log(8)` is the natural log on both

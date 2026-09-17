@@ -154,6 +154,25 @@ def test_oracle_divergence_case_insensitive_backref() -> None:
     assert table.schema.field("v").type == pa.bool_()
 
 
+def test_zero_width_matches_agree_with_count_on_supplementary_text() -> None:
+    """RE-2 closed here: count and extract_all agree with Spark on astral text.
+
+    pins: java-regex-features-1/C-002
+    """
+    for pattern, value in [
+        ("", ["", "", "", "", ""]),
+        ("b*", ["", "", "", "b", ""]),
+    ]:
+        table = (
+            _session()
+            .sql(f"SELECT regexp_extract_all('\U0001f389ab', '{pattern}', 0) AS v")
+            .toArrow()
+        )
+        assert table.column("v").to_pylist() == [value]
+        assert table.schema.field("v").type == _EXTRACT_ALL_LIST
+        assert table.schema.field("v").nullable is False
+
+
 def test_oracle_divergence_lone_surrogate_replace_split() -> None:
     """RX3-SQL-20/21 pin today's UTF-8 answer where Spark makes lone surrogates.
 
@@ -164,10 +183,10 @@ def test_oracle_divergence_lone_surrogate_replace_split() -> None:
     pins: java-regex-features-1/C-002 (residue row JAVA-REGEX-FEATURES-1-R2)
     """
     replace = _session().sql(_CELLS["RX3-SQL-20"]["expr"]).toArrow()
-    assert replace.column("v").to_pylist() == ["XX\U0001F600X"]
+    assert replace.column("v").to_pylist() == ["XX\U0001f600X"]
     assert replace.schema.field("v").type == pa.string()
     split = _session().sql(_CELLS["RX3-SQL-21"]["expr"]).toArrow()
-    assert split.column("v").to_pylist() == [["", "", "\U0001F600", ""]]
+    assert split.column("v").to_pylist() == [["", "", "\U0001f600", ""]]
     assert split.schema.field("v").type == pa.list_(
         pa.field("element", pa.string(), nullable=False)
     )
