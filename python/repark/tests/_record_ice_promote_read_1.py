@@ -392,6 +392,55 @@ def dml_partition_cases() -> list[dict[str, Any]]:
     return cases
 
 
+def inspect_cases() -> list[dict[str, Any]]:
+    cases = []
+    for format_version in FORMAT_VERSIONS:
+        setup = [
+            "CREATE TABLE {t} (id INT, p INT, s STRING) USING iceberg "
+            f"PARTITIONED BY (p) TBLPROPERTIES ({table_properties(format_version, None)})",
+            "INSERT INTO {t} VALUES (1, 1, 'old1'), (2, 22, 'old2'), (7, 7, 'old7')",
+            "ALTER TABLE {t} ALTER COLUMN id TYPE BIGINT",
+            "ALTER TABLE {t} ALTER COLUMN p TYPE BIGINT",
+            "INSERT INTO {t} VALUES (3000000000, 3000000000, 'new3'), (8, 7, 'new7')",
+        ]
+        steps = [
+            query_step(
+                "partitions",
+                "SELECT partition.p, record_count, file_count, spec_id "
+                "FROM {t}.partitions ORDER BY 1",
+                None,
+            ),
+            query_step(
+                "files",
+                "SELECT partition.p, record_count FROM {t}.files ORDER BY 1, 2",
+                None,
+            ),
+            query_step(
+                "entries",
+                "SELECT status, data_file.partition.p, data_file.record_count "
+                "FROM {t}.entries ORDER BY 2, 3",
+                None,
+            ),
+            query_step(
+                "p_eq_7",
+                "SELECT id, s FROM {t} WHERE p = 7 ORDER BY id",
+                {"select": ["id", "s"], "filter": {"column": "p", "op": "eq", "value": 7}},
+            ),
+        ]
+        cases.append(
+            {
+                "id": f"inspect/v{format_version}",
+                "group": "inspect",
+                "format_version": format_version,
+                "mode": None,
+                "era": "mixed",
+                "setup": setup,
+                "steps": steps,
+            }
+        )
+    return cases
+
+
 def adopted_setup(format_version: str) -> list[str]:
     return [
         "CREATE TABLE {t} (id INT, f FLOAT, d DECIMAL(9,2), p INT, s STRING) USING iceberg "
@@ -457,6 +506,7 @@ def build_cases() -> list[dict[str, Any]]:
         + dml_single_cases()
         + dml_partition_cases()
         + adopted_cases()
+        + inspect_cases()
     )
 
 

@@ -8,7 +8,9 @@ Spark-created, Spark-promoted mixed-era tables the JVM-free tier adopts with
 `register_table`. Recorded 2026-09-16 by
 `python/repark/tests/_record_ice_promote_read_1.py` on PySpark 4.1.2 +
 iceberg-spark-runtime-4.1_2.13:1.11.0 (ANSI on, Hadoop catalog); two independent
-recordings produced identical answers. Never hand-edited: re-run the driver.
+recordings produced identical answers. Re-recorded 2026-09-17 with the `inspect/*`
+cases appended: the 126 prior answers are byte-identical, the two new cases record
+Spark's Long-typed merged partitions. Never hand-edited: re-run the driver.
 
 ## Contents
 
@@ -18,7 +20,7 @@ recordings produced identical answers. Never hand-edited: re-run the driver.
   `types`, `columns`) or `{"ok": true}` for a statement, a `dataframe` answer only where
   Spark's DataFrame door differed from its SQL door (none did), `dataframe_steps` for the
   `writeTo(t).overwritePartitions()` twin, and `frozen` (baked table root + metadata file)
-  for the adopted tables. 126 cases, 58,427 bytes.
+  for the adopted tables. 128 cases, 59,831 bytes.
 - `adopt_v2/`, `adopt_v3/` — the Spark-written table roots (`data/p=…/` parquet,
   `metadata/v1…v7.metadata.json`, manifests, manifest lists, `version-hint.text`):
   `(id INT, f FLOAT, d DECIMAL(9,2), p INT, s STRING) PARTITIONED BY (p)`, two rows, all
@@ -34,4 +36,4 @@ recordings produced identical answers. Never hand-edited: re-run the driver.
 - Driver: [../../../../../repark/tests/_record_ice_promote_read_1.py](../../../../../repark/tests/_record_ice_promote_read_1.py)
 - Ledger: `task/ledgers/staging/ice-promote-read-1-ledger.md`
 
-pins: ice-promote-read-1/C-001, C-008
+pins: ice-promote-read-1/C-001, C-008, C-015

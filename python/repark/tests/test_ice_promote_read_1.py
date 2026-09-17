@@ -1,7 +1,7 @@
 """ICE-PROMOTE-READ-1 — reads and DML after a legal Iceberg type promotion answer Spark.
 
 pins: ice-promote-read-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-pins: ice-promote-read-1/C-009, C-010, C-012
+pins: ice-promote-read-1/C-009, C-010, C-012, C-015
 """
 
 from __future__ import annotations
@@ -232,6 +232,7 @@ def test_recorded_oracle_covers_the_driver_catalog() -> None:
         "dml_single",
         "dml_partition",
         "adopted",
+        "inspect",
     }
     assert {case["format_version"] for case in _CASES} == {"2", "3"}
 

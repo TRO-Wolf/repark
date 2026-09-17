@@ -293,12 +293,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `_record_ice_promote_read_1.build_cases()` and Spark's answers from the recorded
   `fixtures/torture/data/ice_promote_read_1/truth.json`; the first cell fails if the
   recording's `catalog_sha256` no longer matches the driver. Always-run:
-  `test_sql_door_matches_spark` (124 table cases — unpartitioned and partition-source
+  `test_sql_door_matches_spark` (126 table cases — unpartitioned and partition-source
   filters on single- and mixed-era tables, MERGE keyed on the promoted column, range and
   long-`IN` UPDATE/DELETE, single-era DML, DML and static/dynamic overwrite on a promoted
-  identity partition source, v2/v3 × CoW/MoR), `test_dataframe_door_matches_spark` (the
+  identity partition source, the `inspect/*` metadata-table reads after an identity-source
+  promotion, v2/v3 × CoW/MoR), `test_dataframe_door_matches_spark` (the
   same cases through `table().filter()`, facade `mergeInto`, and
-  `writeTo().overwritePartitions()`), and `test_adopted_spark_table_matches_spark` (the
+  `writeTo().overwritePartitions()`; the three nested metadata-table projections are
+  SQL-only — the DataFrame door cannot resolve `partition.p` — while the flat `p = 7`
+  read carries a `filter()` twin), and `test_adopted_spark_table_matches_spark` (the
   two committed Spark-created promoted tables materialized at their baked-in path under a
   directory lock, `register_table`, every predicate on both doors, then MERGE `*`, range
   UPDATE and DELETE). Values and the promoted columns' Arrow types are compared on the
@@ -311,7 +314,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (F-PROMOTE-READ-1) reaches CI with the fork pin bump; until then the table cases are red at
   pin `edc38c6a`.
   pins: ice-promote-read-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-  pins: ice-promote-read-1/C-010, C-012, C-013, C-014
+  pins: ice-promote-read-1/C-010, C-012, C-013, C-014, C-015
 - `_record_ice_promote_read_1.py` — the **record driver** for the module above (NOT a `test_`
   module; never collected). `build_cases()` is the case catalog both the driver and the pins
   read; `main()` runs every case on a Hadoop catalog, freezes the two adopted tables into
