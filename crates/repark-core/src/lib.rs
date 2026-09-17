@@ -90,7 +90,9 @@ pub use time_travel::{
 pub use lineage_columns::{LineagePins, prepare_lineage_sql, sql_mentions_lineage_columns};
 
 // --- Error surface: the classifier fold + the seed re-export (bindings import one crate).
-pub use error_map::{engine_err, engine_err_for_sql};
+pub use error_map::{
+    IllegalArgumentMarker, engine_err, engine_err_for_sql, illegal_argument_error,
+};
 pub use pool_refusals::{
     PoolRefusalLog, REFUSAL_CONTAINMENT_NOTE, RefusalRecordingPool, pool_refusal_log,
 };
