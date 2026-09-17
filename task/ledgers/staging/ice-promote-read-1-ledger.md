@@ -200,6 +200,26 @@ below is therefore not complete.
 | `make verify` (pinned fork `edc38c6a`, no override, `--locked`) | exit 0 — `ci` clean (fmt, clippy, panic ban, crate DAG, file sizes, docstrings, ledgers, docs links, py-lint "All checks passed!") and the Rust workspace suite 0 failed |
 | comment grep and override grep on `git diff origin/main..HEAD` | RePark: nothing; fork: only the ASF headers of its four new files |
 
+### C-015 follow-on gates, 2026-09-17 (fork `e8db2ac0` via the run-20a override)
+
+| Gate | Result |
+|---|---|
+| `cargo --config /tmp/oc-worker/run20a/fork-override.toml test -p repark-iceberg --lib` | 437 passed; 0 failed |
+| oracle re-record, one JVM (`JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, `SPARK_LOCAL_IP=127.0.0.1`, `REPARK_ORACLE_IVY=/tmp/oc-worker/ice-rating/scratch/.ivy2`, pyspark from `/tmp/sparkenv`) | exit 0; oracle banner pyspark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 + ANSI true; 126 prior answers byte-identical; digest `5b066572…` matches the extended driver |
+| red-first on the pre-fix native | 4 failed (`inspect/v2`, `inspect/v3` × both doors, `DataInvalid` at `partitions`), 1 passed (digest) |
+| whole module offline on the fixed native | 4 failed (inspect cells, column names only), 169 passed, 1 skipped |
+| live tier once (`REPARK_PARITY_LIVE=1 -k live_spark`) | 1 passed in 137.20s — all 128 answers re-derived, no drift |
+| comment grep over `git diff origin/main..HEAD` | nothing (exit 1) |
+| override grep over `git diff origin/main..HEAD` | one hit, pre-existing ledger prose naming the override path; no `Cargo.toml` / `Cargo.lock` / `.cargo` change in the diff |
+| `Cargo.lock` after override builds | restored; `git status` clean |
+
+Attestation status: C-015 is OPEN (the three metadata projections fail on
+RePark's nested-projection column names, values and types verified Spark-equal
+by probe), so the COVERAGE_ATTESTATION block above is not complete for this
+round. Everything else in it still holds. The registry sentence for
+ICE-PROMOTE-PARTITION-1 is deferred to the hand-back ruling for the same
+reason — FIXED may not be claimed over red pins.
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: ice-promote-read-1
