@@ -32,8 +32,8 @@ TBD — recorder cells, pin shapes per door, `sort_order_id` checks via `{t}.fil
 | C-001 | Plain `INSERT INTO … SELECT` into a declared-order table writes sorted, stamped files, SQL door | `test_ice_sorted_insert_1.py` | OPEN |
 | C-002 | Same, DataFrame door (`writeTo(t).append()`, `saveAsTable(mode="append")`, `insertInto`) | `test_ice_sorted_insert_1.py` | OPEN |
 | C-003 | Paths RePark owns (INSERT OVERWRITE, CTAS, MERGE, `sort_batches_by_default_order`) write sorted, stamped files or file a registry row | `test_ice_sorted_insert_1.py` | OPEN |
-| C-004 | Spark oracle recorded as fixture: recorder script plus truth JSON (sort cells + days-transform cell + float-NaN cell); live tier re-derives | recorder script, truth JSON, live legs | OPEN |
-| C-005 | Registry sort-on-INSERT row FIXED 2026-09-17 (consumes fork #287 via RP-22); WRITE-ORDER-TRANSFORM-1 FIXED if pinned green else stays open with the measurement | registry rows, map edits | OPEN |
+| C-004 | Spark oracle recorded as fixture: recorder script plus truth JSON (sort cells + days-transform cell + float-NaN cell); live tier re-derives | recorder script, truth JSON, live legs | PROVEN |
+| C-005 | Registry sort-on-INSERT row FIXED 2026-09-17 (consumes fork #287 via RP-22); WRITE-ORDER-TRANSFORM-1 FIXED if pinned green else stays open with the measurement | registry rows, map edits | PROVEN |
 
 ## 6. Evidence
 
@@ -105,12 +105,20 @@ OVERWRITE keeps the `only identity sort fields are supported` refusal.
 | C-001 | Plain `INSERT INTO … SELECT` into a declared-order table writes sorted, stamped files, SQL door | `test_ice_sorted_insert_1.py` SQL cells | PROVEN |
 | C-002 | Same, DataFrame door (`writeTo(t).append()`, `saveAsTable(mode="append")`, `insertInto`) | `test_ice_sorted_insert_1.py` door legs | PROVEN |
 | C-003 | Paths RePark owns (INSERT OVERWRITE, CTAS, MERGE, `sort_batches_by_default_order`) write sorted, stamped files or file a registry row | `test_ice_sorted_insert_1.py` owned legs + days leg | PROVEN |
-| C-004 | Spark oracle recorded as fixture: recorder script plus truth JSON (sort cells + days-transform cell + float-NaN cell); live tier re-derives | recorder script, truth JSON, live legs | OPEN |
-| C-005 | Registry sort-on-INSERT row FIXED 2026-09-17 (consumes fork #287 via RP-22); WRITE-ORDER-TRANSFORM-1 FIXED if pinned green else stays open with the measurement | registry rows, map edits | OPEN |
+| C-004 | Spark oracle recorded as fixture: recorder script plus truth JSON (sort cells + days-transform cell + float-NaN cell); live tier re-derives | recorder script, truth JSON, live legs | PROVEN |
+| C-005 | Registry sort-on-INSERT row FIXED 2026-09-17 (consumes fork #287 via RP-22); WRITE-ORDER-TRANSFORM-1 FIXED if pinned green else stays open with the measurement | registry rows, map edits | PROVEN |
 
 ## 7. Gates
 
-TBD.
+- `test_ice_sorted_insert_1.py -k "not live"`: 10 passed (release native, RP-22 pin).
+- `test_live_cells_match_fixture` (8 cells) + recorder re-run: green, Spark 4.1.2.
+- `test_writer_v2.py`: 34 passed.
+- `test_sql_harden_cutover.py` + `test_insert_store_assign.py`: 59 passed, 15 skipped.
+- `sort_order_id` in `python/repark/tests/*.py`: only the unit's own recorder + pin test; no other file asserts it.
+- `cargo test -p repark-iceberg --lib`: 434 passed, 0 failed.
+- `make rust-clippy`: clean.
+
+VERDICT (2026-09-17): 5 clauses, 5 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## 8. Round 2 (2026-09-17) — rebase onto main at RP-22
 
@@ -135,5 +143,9 @@ fix) pass, so the installed native carries both the fix and fork #287. No
 `WRITE-ORDER-SORTED-INSERT-1` FIXED 2026-09-17 (consumes fork #287 via RP-22
 #667); `WRITE-ORDER-TRANSFORM-1` stays open with the 2026-09-17 measurement
 (plain INSERT into the adopted days table sorts and stamps via the fork;
-RePark-owned paths keep the loud refusal). C-005 PROVEN on write; live tier
-still to run.
+RePark-owned paths keep the loud refusal). C-004 PROVEN: the recorder
+re-run exits 0 (`oracle matches the checked-in truth`) and
+`test_live_cells_match_fixture` passes 8/8 on live Spark 4.1.2 — every cell
+rebuilt from the recorded DDL. The venv carries no pyspark; the live tier runs
+under the venv python with sparkenv's site-packages bridged in
+(`PYTHONPATH=/tmp/sparkenv/lib/python3.12/site-packages`, both 3.12.3).
