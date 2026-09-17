@@ -210,3 +210,26 @@ TODO: rows written.
   byte-exact from the snapshot summary; it passes. No fixture cell: the
   Spark oracle has no quote-key cell, so this is a RePark round-trip pin,
   not a parity claim.
+
+## 8. Round 2 step 5 gates (2026-09-17, release native rebuilt via
+`maturin develop --release`, 7m13s)
+
+- `tests/test_ice_write_options_1.py`: 35 passed, 1 skipped, exit 0
+  (101 s; the skip is `test_live_cells_reproduce_fixture`, JVM-gated by design).
+- `tests/test_writer_v2.py` + `test_insert_store_assign.py` +
+  `test_sql_harden_cutover.py` + `test_dml_b_partition_overwrite.py`:
+  102 passed, 15 skipped, exit 0 (290 s).
+- `tests/test_dfcore_1*.py` (one file, `test_dfcore_1_exports.py`):
+  10 passed, exit 0.
+- `cargo test -p repark-spark --lib`: 1056 passed, 0 failed, exit 0 (514 s).
+- `cargo test -p repark-iceberg --lib`: 443 passed, 0 failed, exit 0 (291 s).
+- `make rust-clippy`: exit 0. `make ci`: exit 0.
+- Live tier NOT re-run in round 2: this clone has no pyspark (no `pip` in
+  the venv, none on the box) and the 11:30 ET stop left no room to provision
+  it plus the Maven iceberg jar. Round-1 recorded the 43-cell fixture live;
+  round-2 diffs cannot move live behavior (Rust diff is comments/allows
+  only; the Python restructure renders byte-identical SQL, pinned offline by
+  all 35 cells including new SNAP-06).
+- Round-2 commits: step 1 purge, step 2 size restore (baseline 1099, one
+  under main after ruff format's collapse), step 4 SNAP-06 pin, step 5 this
+  gate paste. Tree clean, no push per the brief.

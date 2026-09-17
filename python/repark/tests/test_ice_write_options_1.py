@@ -119,12 +119,7 @@ def test_snapshot_property_quoted_key_value(spark: ReparkSession) -> None:
     """SNAP-06: a key and a value carrying quotes and parens round-trip exactly."""
     _seed(spark, "snap_quote")
     table = f"{CATALOG}.{NS}.snap_quote"
-    (
-        _frame(spark)
-        .writeTo(table)
-        .option("snapshot-property.up')side", "rock'n)roll")
-        .append()
-    )
+    (_frame(spark).writeTo(table).option("snapshot-property.up')side", "rock'n)roll").append())
     assert _latest_summary(spark, table)["up')side"] == "rock'n)roll"
 
 
