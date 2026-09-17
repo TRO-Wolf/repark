@@ -96,20 +96,66 @@ measured at `[]` on the unfixed tree (`d = CAST('NaN' AS DOUBLE)` → `[1, 5]`,
 `IN (NaN)` → `[1, 5]`); no second native at the old pin was available, so the
 unfixed-tree run itself is quoted, not re-run.
 
-### Gates (to fill with counts)
+### Gates (2026-09-17, release native at pin `75da2b58`)
 
-(to fill: `make verify`, whole facade suite, whole parity suite)
+- `make verify`: rc 0 (fmt, clippy `all`+`pedantic`, panic ban, crate DAG, lib
+  ceilings, Python conventions, docstrings, manifest, ledgers, grammar,
+  full Rust workspace tests incl. the 2 new `nan_pushdown` pins).
+- Whole facade suite `.venv/bin/python -m pytest python/repark/tests -q
+  -p no:cacheprovider`: 9330 passed, 368 skipped, 26 xfailed, 0 failed.
+- Whole parity suite `PYTHONPATH=python/repark-parity/src .venv/bin/python -m
+  pytest python/repark-parity/tests -q` (plus `-p no:cacheprovider`, the same
+  cache flag as the facade run): 757 passed, 2 skipped, 12 xfailed, 0 failed.
+- New-file live tier under `REPARK_PARITY_LIVE=1`: 5 passed (counted above in
+  neither suite run; routine runs stay JVM-free).
 
 ## Coverage attestation
 
-C-001…C-008: `crates/repark-spark/src/tests/nan_pushdown.rs` (memory-catalog
-answer pins) and the `test_ice_nan_pushdown_1.py` grid legs. C-009: the grid
-runs every shape × version × writer half. C-010: the frame legs on all eight
-table instances. C-011: the DML legs at v2 and v3. C-012: the recorder, the
-truth JSON, the fixture warehouses, and the live replay tier. C-013: the
-ICE-NAN-PUSHDOWN-1 registry row, cited by the C-001…C-012 pins. Citations live
-in the test module docstring and the three `map.md` files (comment ban);
-`make check-ledger-grammar` holds the direction.
+Citations live in the test module docstring and the three `map.md` files
+(comment ban); `make check-ledger-grammar` holds the direction.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: ice-nan-pushdown-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against its recorded oracle cell, not a paraphrase — 84 read cells (14 double plus 10/4 float legs per shape) across 8 table instances on the SQL door, frame representatives per instance, DELETE/UPDATE outcomes at v2 and v3; the live tier asserts repark == truth == live Spark.
+      artifacts: [python/repark/tests/test_ice_nan_pushdown_1.py, python/repark/tests/ice_nan_pushdown_1_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundaries exercised — NaN-only file, NaN plus finite plus NULL in one file, NaN split across two files, negative and fractional finite values, positive and negative NaN-adjacent ranges, double and float columns, v2 and v3, RePark- and Spark-written tables.
+      artifacts: [python/repark/tests/test_ice_nan_pushdown_1.py, python/repark/tests/fixtures/ice_nan_pushdown_1/map.md]
+    - id: AT-3
+      status: ATTACKED
+      evidence: The unpushed legs (ranges, NOT IN with NaN, BETWEEN, negation) answer the oracle sets instead of erroring; the bare-decimal-literal spelling fails loud with the engine cast error on any NaN-holding table and is recorded in the registry row, never absorbed.
+      artifacts: [python/repark/tests/test_ice_nan_pushdown_1.py, docs/spark-sql-iceberg-parity.md]
+    - id: AT-4
+      status: N/A
+      justification: No new shared mutable state — fixture copies run under the copied cross-process directory lock, reads carry ORDER BY id, sessions are per-test with stop in finally.
+    - id: AT-5
+      status: N/A
+      justification: No auth, injection, secret, or deserialization surface — fixed clause spellings and fixed table names over local test warehouses; no user input reaches SQL text.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Spark-written warehouses adopted byte-identical through register_table at both format versions; DELETE removes exactly the NaN rows and UPDATE touches exactly them on the recorded Spark outcomes; RePark-written twins answer identically.
+      artifacts: [python/repark/tests/test_ice_nan_pushdown_1.py, python/repark/tests/_record_ice_nan_pushdown_1.py]
+    - id: AT-7
+      status: N/A
+      justification: No perf claim filed — fixtures total 236 KB, the grid is a correctness pin, no resource shape changes.
+    - id: AT-8
+      status: ATTACKED
+      evidence: Upstream contracts honored, not presumed — fork #284 named at pin 75da2b58, the Spark GAV read from _oracle_pins, the recorder re-derives every cell from live Spark and exits non-zero on drift, the live tier replays Spark per run.
+      artifacts: [python/repark/tests/_record_ice_nan_pushdown_1.py, python/repark/tests/_oracle_pins.py, crates/repark-spark/src/tests/nan_pushdown.rs]
+    - id: AT-9
+      status: N/A
+      justification: No product code and no new failure surface — the one observed failure raises the engine error verbatim, and every pin asserts on values rather than messages.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Pins-first held — the legs assert the exact query shape the fork ledger measured at [] on the unfixed tree, so they fail on the old pin by construction; the grid proved sensitive during development by catching the bare-decimal-literal defect as 3 DIFFs while every pushdown leg stayed ALL-EQUAL.
+      artifacts: [python/repark/tests/test_ice_nan_pushdown_1.py, crates/repark-spark/src/tests/nan_pushdown.rs]
+  complete: true
+```
 
 ## Open questions
 

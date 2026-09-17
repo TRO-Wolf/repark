@@ -642,6 +642,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (`IN (NaN)`, `IN (NaN, 1.0)`, `!=`, `NOT IN`, `<`, `>=`, negation, `isnan`
   control). Red-first by construction: on the pre-#284 fork pin the equality and
   IN legs answer `[]` (measured in the fork ledger's unfixed-tree e2e run).
+  Leaf-private helpers (`nan_seed`, `nan_ids`) stay in `nan_pushdown.rs`; only
+  that leaf uses them.
   pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]

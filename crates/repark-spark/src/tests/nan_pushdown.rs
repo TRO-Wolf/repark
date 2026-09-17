@@ -22,7 +22,7 @@ async fn nan_ids(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) ->
             ids.push(column.value(index));
         }
     }
-    ids.sort();
+    ids.sort_unstable();
     ids
 }
 
