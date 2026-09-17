@@ -27,10 +27,13 @@ its ledger; rows whose PR had not merged when the run closed say so.
 | V2-10c, V2-06b, V3-11, V3-14 (promotion) | MISSING — silent row loss, duplicate MERGE inserts, refused single-era DML | **FIXED** — 128 recorded-oracle cases, both doors, v2 and v3, live tier green; fork half merged | fork #285 (merged `96fc9f1f`), RePark #673 |
 | V2-10d (inspect tables after an identity-source promotion) | not measured by the rating; found by the run-19a critic | **FIXED** — `partitions`/`files`/`entries` answer Long values, cross-era values group into one row | fork #285 |
 | V2-10e (DML after ADD / RENAME COLUMN, 24 of 24 shapes) | MISSING — every MERGE/UPDATE/DELETE refuses; a name swap wrote the other field's values | **FIXED** — 393 cases pass, including all 33 plain-UPDATE cells; the swap arm is Spark-equal | fork #289 (merged `f7ecd855`), RePark branch `fix/ice-evo-dml-1` (PR pending the pin bump) |
-| V2-24b (`partitionOverwriteMode=dynamic`) | MISSING — silent whole-table replace | **FIXED on the branch** — routed in Rust, Spark-equal on every measured cell incl. empty source, unpartitioned, evolved spec | branch `fix/ice-dyn-overwrite-1` (no PR; one review round outstanding) |
-| V2-20a / DML-5 (serializable MERGE aborts on any concurrent commit) | MISSING — 1 of 8 disjoint MERGEs commit | **FIXED fork-side** — partition projection before metrics, retry-on-rebase; 23 fault-injected pins | fork #291 (green, queued) — the RePark half (pass each DML target filter) is NOT written |
+| V2-24b (`partitionOverwriteMode=dynamic`) | MISSING — silent whole-table replace | **FIXED on the branch** — routed in Rust, Spark-equal on every measured cell incl. empty source, unpartitioned, evolved spec | #682 (draft) |
+| V2-20a / DML-5 (serializable MERGE aborts on any concurrent commit) | MISSING — 1 of 8 disjoint MERGEs commit | **FIXED fork-side** — partition projection before metrics, retry-on-rebase; 23 fault-injected pins | fork #291 (merged `8fb44a39`) — the RePark half (pass each DML target filter) is NOT written |
 | V2-10d (nested struct child added → Spark table unreadable) | MISSING | **fork half fixed, unreviewed** — NULL-fill by field id through struct/list/map | fork #292 (draft) — RePark half and the nested DDL row not written |
 | V3-05 (multi-argument transforms) | MISSING (loud, unregistered) | unchanged — not opened (ruling Q-20a-7) | card below |
+
+Fork #291 merged at `8fb44a39` and #285/#289 before it; #673 was green and first in the queue at the
+close but had not merged (the queue head was another run's bump).
 
 Nothing in this run was closed by a DECLARED refusal; every closed row is Spark-equal against a
 recorded oracle.
@@ -41,11 +44,11 @@ recorded oracle.
 |---|---|---|---|---|---|---|
 | #285 | fork | F-PROMOTE-READ-1 (+ critic L-01) | Opus (19a) + Muse (20a) | 1 + 1 | 19a logic NEEDS_REMEDIATION → 20a verify PASS; 19a rust-perf PASS | **MERGED** `96fc9f1f` |
 | #289 | fork | F-EVO-SCAN-1 | Muse | 2 | logic NEEDS_REMEDIATION (L-001 P1) → verify PASS; rust-perf PASS | **MERGED** `f7ecd855` |
-| #291 | fork | F-OCC-SCOPED-1 | Muse | 2 | logic + rust-perf NEEDS_REMEDIATION → verify PASS | green, queued |
+| #291 | fork | F-OCC-SCOPED-1 | Muse | 2 | logic + rust-perf NEEDS_REMEDIATION → verify PASS | **MERGED** `8fb44a39` |
 | #292 | fork | F-NESTED-EVO-1 | Muse | 1 | none (clock) | draft |
-| #673 | RePark | ICE-PROMOTE-READ-1 | Opus (19a) + Muse (20a) | 2 | as #285 | green, queued |
+| #673 | RePark | ICE-PROMOTE-READ-1 | Opus (19a) + Muse (20a) | 2 | as #285 | green, queued at close |
 | `fix/ice-evo-dml-1` | RePark | ICE-EVO-DML-1 | Opus (19a) + Muse (20a) | 2 | pending | pushed; PR waits on the pin bump to `f7ecd855` (20c #671) |
-| `fix/ice-dyn-overwrite-1` | RePark | ICE-DYN-OVERWRITE-1 | Muse | 2 | logic NEEDS_REMEDIATION (P1) remediated; rust-perf + py-perf PASS | pushed; no PR |
+| #682 | RePark | ICE-DYN-OVERWRITE-1 | Muse | 2 | logic NEEDS_REMEDIATION (P1) remediated; rust-perf + py-perf PASS | draft (no critic since the typed-flag rewrite) |
 | `fix/nested-evo-1` | fork | F-NESTED-EVO-1 | Muse | 1 | none | see #292 |
 
 Pin bumps: 20c's #667 (`96fc9f1f`, carries #285) merged; #671 (`4151b488`) carries #289 and is 20c's.
@@ -83,7 +86,14 @@ Pin bumps: 20c's #667 (`96fc9f1f`, carries #285) merged; #671 (`4151b488`) carri
 4. **V3-MULTIARG-1 (V3-05)** needs a producer: Spark 4.1.2 DDL cannot create a multi-argument
    transform, so the oracle has to come through the Iceberg Java API. **Recommendation:** treat it as
    a fork spec unit with a hand-built metadata fixture, after the v2 rows are closed.
-5. **Nested DDL** (`CREATE TABLE … (s STRUCT<…>)`, `ADD COLUMN s.b`) is still refused with no
+5. **The comment ban and non-Anthropic actors.** The 2026-08-26 ruling binds Anthropic models. Every
+   brief in this run extended it to Muse as well, and Muse held it everywhere except #682, which adds
+   14 Rust comment lines — about half moved with relocated code, the rest doc comments on the new
+   public items (`sql_static_overwrite` and its two new modules). No armed gate demands them (no
+   `deny(missing_docs)` in the workspace). **Recommendation:** rule whether the ban is on Anthropic
+   models only (in which case #682 stands as written) or on every actor (in which case the next
+   round strips those lines before the PR opens). I did not reject the round at the clock's end.
+7. **Nested DDL** (`CREATE TABLE … (s STRUCT<…>)`, `ADD COLUMN s.b`) is still refused with no
    registry row. **Recommendation:** the next run either implements it or files DECLARED rows with
    the measured Spark error shapes.
 
