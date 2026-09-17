@@ -518,9 +518,11 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   pin asserts `_TOTALS`' program count appears in the track's dated line, which is how the stale
   80 survived the first cut.
   **RP-8 (2026-09-03):** `V3-COV-3` was FIXED by the repin, so the TRIGGER pin covers `V3-COV-6`
-  alone and a new pin, `test_v3_cov_3_records_the_repin_that_retired_it`, holds the closed
-  reading — the date, the fork PR that closed it, the twelve-of-twelve measurement and the
-  renamed cell — so a row cannot be quietly re-opened or its evidence dropped. `_TOTALS` is
+  alone. **ICE-REGISTRY-SWEEP-1A (2026-09-17):** the 2026-09-16 rating re-measured the row and
+  it stands OPEN, so the pin is renamed to `test_v3_cov_3_records_the_measured_reopening` and
+  holds the corrected reading — the OPEN disposition with the measured date, the 1-of-12
+  `INSERT … SELECT` fact, the 12-of-12 VALUES/CTAS fact and the `p_rowid_order` probe — so a
+  row cannot be quietly re-closed on the retired evidence. `_TOTALS` is
   unchanged: the nine partitioned rows were re-measured on both engines with the `_row_id` probe
   restored and every verdict held.
   **B-MOR-3 (2026-09-03):** `_TOTALS` moves to 72 EQUAL / 8 DIVERGES with the CALL row's flip,

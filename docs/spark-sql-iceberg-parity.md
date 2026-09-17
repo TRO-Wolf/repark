@@ -6951,8 +6951,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   repark's `engine.operation-id`/`deleted-*` family) and Spark reads both;
   on a table without prior statistics, `statistics`/`partition-statistics` keys are absent
   from repark commits — but on a Spark table that already carries both files, RePark's INSERT
-  and `expire_snapshots` commits carry both entries forward (corrected 2026-09-17 from the
-  2026-09-16 rating, probes `p_meta_stats`, `p_stats_expire` at `a92a68db`); and a
+  and `expire_snapshots` commits carry both entries forward, while expiring the owning
+  snapshot removes the entries and files exactly as Spark does (`(0, 0, 0, 0, 1, 2)` on both)
+  (corrected 2026-09-17 from the 2026-09-16 rating, probes `p_meta_stats`, `p_stats_expire`
+  at `a92a68db`); and a
   `bucket(4,id)` sort order refuses the MERGE loudly with nothing committed — the
   WRITE-ORDER-TRANSFORM-1 residual, stated not silent. Pins:
   `python/repark/tests/test_ice_spark_table_1.py::test_live_spark_created_table_roundtrip`,
@@ -7221,7 +7223,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   never-committed path override as **86.5 → 2.0 ms at 1e6** (parquet 1.8 ms) and
   686 → 2.5 ms at 1e7, with the V3 MoR DV leg correctly unfolded at 4.6 ms answering
   990,000 (`docs/perf/iceberg-scan-baseline.md` §2–§3). The RePark fold/non-fold pins
-  (`python/repark/tests/test_perf_ice_scan_1.py`) skip naming F-27 until the bump.
+  (`python/repark/tests/test_perf_ice_scan_1.py`) self-skip with `fork pin predates F-27`
+  at the current pin.
 - **PERF-ICE-SCANPART-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 5.
   **FIXED 2026-09-06 (RP-14)** behind the RP-14 fork pin bump, with residue. A sub-split-size
   table scanned as ONE partition because `plan_partition_work` bin-packs to the 128 MiB

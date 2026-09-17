@@ -43,7 +43,15 @@ disposition change except C-3 and C-9 FIXED → OPEN; push; PRs; `gh`.
 | C-015 | Registry C-9 (PERF-ICE-COUNTSTAR-1) rewritten (no fold at the current pin, answer correct, fold pins self-skip), dated 2026-09-17, citing the rating and probe `p_countstar`; disposition FIXED → OPEN, row id kept. | Before/after line numbers of the row. | **PROVEN** | Row at `docs/spark-sql-iceberg-parity.md:7205-7212` (was :7197-7211) now OPEN — measured 2026-09-16, RP-14 account kept as history. Row id kept. |
 | C-016 | `make spell-check check-docs-links check-map-sync check-ledgers check-ledger-grammar` green with no installs. | Quoted exit-0 output per target. | **PROVEN** | All five exit 0, nothing installed; outputs in §Gates. |
 
-VERDICT: 16 clauses, 16 PROVEN, 0 OPEN, 0 REJECTED.
+| C-017 | D-01: the §3 rollup line recounted from the status column exactly (20 PROVEN, 2 run-PROVEN, 6 PROVEN in part, 1 PROVEN offline, 1 PROVEN on local catalogs, 2 DECLARED, 3 NOT ESTABLISHED, 1 Hadoop-only failing; 36 rows). | Recounted families against the matrix. | **PROVEN** | Rollup at `docs/cutover/production-iceberg-status-2026-09-14.md:257-260`; families named as the rows carry them; 20+2+6+1+1+2+3+1 = 36. |
+| C-018 | D-02: W6 evidence no longer cites `V3-COV-5` FIXED bare; it bounds the citation to CTAS/INSERT OVERWRITE/MERGE and names the §9 C-7 contradiction. | W6 evidence text. | **PROVEN** | Row W6 evidence at `docs/cutover/production-iceberg-status-2026-09-14.md:195`; registry V3-COV-5 row itself untouched. |
+| C-019 | D-03: E1 attaches each cell number to the clause it measured (range reads #55–#57, MERGE duplicates #29). | E1 evidence text. | **PROVEN** | Row E1 evidence at `docs/cutover/production-iceberg-status-2026-09-14.md:216`; figures unchanged from rating V2-10c/V2-06b. |
+| C-020 | D-04: the owning-snapshot expiry half of C-8 restored in the registry sentence and the audit-trail C-8 row. | Both C-8 texts carry the expiry match. | **PROVEN** | Registry at `docs/spark-sql-iceberg-parity.md:6952-6957`; audit C-8 at `docs/cutover/production-iceberg-status-2026-09-14.md:733`; `(0, 0, 0, 0, 1, 2)` on both, probes `p_meta_stats`, `p_stats_expire`. |
+| C-021 | D-05: the V3-COV-3 pin test updated to the corrected row (OPEN, measured 2026-09-16, 1-of-12 SELECT, 12-of-12 VALUES/CTAS, `p_rowid_order`), no comment lines; map entry renamed with it; no other test or link reads the changed text; both tests run green on the borrowed interpreter. | Test text, map text, grep, two pytest runs. | **PROVEN** | `python/repark-parity/tests/test_v3_cov_docs.py:113-123` (`test_v3_cov_3_records_the_measured_reopening`); map at `python/repark-parity/tests/map.md:520-526`; old name has no remaining reference; `test_v3_cov_docs.py` 10 passed; `test_live_v3_docs.py::test_the_partition_file_order_residual_is_closed_by_the_fork_drain` 1 passed (see §Gates). The VALUES-shape engine pin in `test_v3_statement_coverage.py:366` reads no registry text and needs a live session, so it stays. |
+| C-022 | D-06: the PERF-ICE-COUNTSTAR-1 History tail no longer talks as if the bump is future. | C-9 tail text. | **PROVEN** | Row at `docs/spark-sql-iceberg-parity.md:7225-7227` now self-skips at the current pin; no invented count copied. |
+| C-023 | D-07: the superseding note no longer overclaims; it names the corrected rows, the rollup and §11 as the only changes. | Note text. | **PROVEN** | Note at `docs/cutover/production-iceberg-status-2026-09-14.md:3-9`. |
+
+VERDICT: 23 clauses, 23 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Open questions
 
@@ -67,15 +75,29 @@ ledger-grammar: 177 live ledgers clean (1384 clauses, 1981 pinned clause ids, 2 
 
 `spell-check` passes silent (typos clean, no output past the tool line).
 
+Round 3 (critic D-01 … D-07), borrowed interpreter read-only use, 2026-09-17:
+
+```
+PYTHONPATH=python/repark-parity/src /tmp/jb-wd/.venv/bin/python -m pytest python/repark-parity/tests/test_v3_cov_docs.py -q -p no:cacheprovider
+10 passed in 0.37s
+PYTHONPATH=python/repark-parity/src /tmp/jb-wd/.venv/bin/python -m pytest python/repark-parity/tests/test_live_v3_docs.py::test_the_partition_file_order_residual_is_closed_by_the_fork_drain -q -p no:cacheprovider
+1 passed in 0.17s
+```
+
+Other-tests sweep: `grep -rn "V3-COV-3\|COUNTSTAR" python docs --include=*.py`
+hits only `test_v3_cov_docs.py` (rewritten) and a docstring at
+`python/repark/tests/test_v3_statement_coverage.py:366` on the live VALUES-shape
+engine pin, which reads no registry text and needs a live session, so it stays
+and was not run. No in-repo link targets the retired V3-COV-3 heading slug.
+
 ## Evidence
 
-Diff scope: `git diff --stat` shows two files —
-`docs/cutover/production-iceberg-status-2026-09-14.md` (12 removed row lines,
-one per corrected row, plus the note and §11) and
-`docs/spark-sql-iceberg-parity.md` (hunks only at the three claim sites).
-Removed-line check confirms exactly the twelve listed rows changed; protected
+Diff scope: the cutover file carries the note, the twelve corrected rows (round 2
+part-scoped statuses on R1, W3, W6, V1, M1), the recounted rollup and §11; the
+registry carries the three claim rewrites plus the D-04 expiry and D-06 tail
+fixes. Removed-line check confirms no other cutover row changed; protected
 registry rows ID-1, V3-6, V3-COV-2, V3-COV-5, REF-*, NaN and Hadoop rows are
-byte-identical.
+byte-identical. Python side: one pin test rewritten plus its map entry.
 
 ```
 COVERAGE_ATTESTATION:
