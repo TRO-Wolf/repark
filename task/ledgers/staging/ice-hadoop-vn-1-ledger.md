@@ -157,7 +157,21 @@ DONE
 
 ## §Gates
 
-Pending.
+Pending — counts land here after the final runs.
+
+### Gate incident 2026-09-17: cross-clone bytecode poisoning (pre-existing, repaired)
+
+The first whole-facade run ended `1 failed, 9331 passed, 370 skipped, 26 xfailed` on
+`test_dfcore_4b_show_goldens.py::test_show_styled_vertical_warning_attributes_to_caller`,
+which asserts a warning names the calling file. The warning named
+`/tmp/ib-bump/...` while `__file__` was `/tmp/jb-vn/...`. Root cause: the clone
+carries `__pycache__` dirs whose bytecode was compiled from `/tmp/ib-bump` sources —
+690 of 692 inventoried `.pyc` files record an `/tmp/ib-bump` `co_filename`, and Python's
+`(mtime, size)` validation passes because the clones preserve both. Nothing in this
+unit writes show/display code; the poison predates the session (pyc dated 00:43, session
+from 05:12). Repair, sanctioned routine for regenerable caches: removed the 38
+`__pycache__` dirs under the repo tree (`.venv` untouched, status clean), after
+which the file passes `7 passed`. The whole suite is re-run below on the clean tree.
 
 ## Open questions
 
