@@ -284,6 +284,19 @@ RE-2 exactly (count and collection return Spark's 5 / `['','','','b','']`), so t
 pin moved to `test_java_regex_features_1.py` as a convergence test and the RE-2
 registry row flips BACKLOG → FIXED in the step-5 commit.
 
+## Remediation round 1 gates (real exits, 2026-09-16/17)
+
+- `cargo test -p repark-functions --lib`: 766 pass, 0 fail, exit 0.
+- `make rust-clippy`: exit 0. `make verify`: exit 0 (after one `ruff format`
+  on the new test).
+- Release native rebuilt (`maturin develop --release`); regex file 88 pass.
+- Facade `python/repark/tests`: three full runs — 9222+1-fixed (LRS-6, closed
+  this round), then twice 9220+3 flakes: `q14 current_date` ×2 fail only while
+  UTC/local dates straddle midnight (`TZ=UTC` greens them, unrelated date code);
+  spill/sort pool legs pass in isolation (contention across runs on one box).
+- Parity `python/repark-parity/tests`: 757 pass, 2 skip, 12 xfail, exit 0.
+- No `gh`, no push, no JVM; tree clean at handoff.
+
 FD-2 (forced, measured): `RX3-SQL-03` (`a*(?=b)` on 10001 a's, Spark `false`)
 needs ~60M backtrack pops (limit sweep 10M→200M: trips through 30M, `false`
 in ~1.1 s from 60M), while the C-004 trip pin (`(a+)+b(?=c)` on 25 a's)
