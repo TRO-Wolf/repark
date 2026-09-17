@@ -1,6 +1,6 @@
 """Record the ICE-NAN-PUSHDOWN-1 Spark oracle — truth JSON plus fixture warehouses.
 
-NOT a ``test_`` module: pytest never collects it. It builds the four NaN tables on
+NOT a ``test_`` module: pytest never collects it. It builds the six NaN tables on
 live PySpark at their canonical paths, runs the clause grid, writes
 ``ice_nan_pushdown_1_oracle.json`` beside this file, and copies the warehouses into
 ``fixtures/ice_nan_pushdown_1/``. The pin test copies them back to the same
@@ -35,7 +35,14 @@ _CATALOG = "rec"
 _HERE = Path(__file__).resolve().parent
 _TRUTH_PATH = _HERE / "ice_nan_pushdown_1_oracle.json"
 _FIXTURE_DIR = _HERE / "fixtures" / "ice_nan_pushdown_1"
-_FIXTURE_TABLES = ("v2/mixed", "v2/nan_only", "v3/mixed", "v3/nan_only")
+_FIXTURE_TABLES = (
+    "v2/mixed",
+    "v2/nan_only",
+    "v2/split",
+    "v3/mixed",
+    "v3/nan_only",
+    "v3/split",
+)
 NAN_D = "CAST('NaN' AS DOUBLE)"
 ONE_D = "CAST(1.0 AS DOUBLE)"
 NAN_F = "CAST('NaN' AS FLOAT)"
@@ -52,6 +59,13 @@ _MIXED_FILE_TWO = (
 _NAN_ONLY_ROWS = (
     "(1, CAST('NaN' AS DOUBLE), CAST('NaN' AS FLOAT)), "
     "(2, CAST('NaN' AS DOUBLE), CAST('NaN' AS FLOAT))"
+)
+_SPLIT_FILE_A = (
+    "(1, CAST('NaN' AS DOUBLE), CAST('NaN' AS FLOAT)), "
+    "(2, CAST('NaN' AS DOUBLE), CAST('NaN' AS FLOAT))"
+)
+_SPLIT_FILE_B = (
+    "(3, CAST(1.0 AS DOUBLE), CAST(1.0 AS FLOAT)), (4, CAST(0.5 AS DOUBLE), CAST(0.5 AS FLOAT))"
 )
 
 
@@ -70,6 +84,7 @@ def _double_clauses() -> dict[str, str]:
         "in_nan_1": f"d IN ({NAN_D}, {ONE_D})",
         "not_in_nan": f"d NOT IN ({NAN_D})",
         "between": f"d BETWEEN {ONE_D} AND {NAN_D}",
+        "between_nan_nan": f"d BETWEEN {NAN_D} AND {NAN_D}",
         "not_eq": f"NOT (d = {NAN_D})",
         "isnan": "isnan(d)",
     }
@@ -79,14 +94,18 @@ def _float_clauses() -> dict[str, str]:
     """The float-column clause grid: name to WHERE text."""
     return {
         "eq": f"f = {NAN_F}",
+        "eq_rev": f"{NAN_F} = f",
         "nullsafe": f"f <=> {NAN_F}",
         "neq": f"f != {NAN_F}",
         "lt": f"f < {NAN_F}",
+        "le": f"f <= {NAN_F}",
         "gt": f"f > {NAN_F}",
         "ge": f"f >= {NAN_F}",
         "in_nan": f"f IN ({NAN_F})",
         "in_nan_1": f"f IN ({NAN_F}, {ONE_F})",
         "not_in_nan": f"f NOT IN ({NAN_F})",
+        "between": f"f BETWEEN {ONE_F} AND {NAN_F}",
+        "not_eq": f"NOT (f = {NAN_F})",
         "isnan": "isnan(f)",
     }
 
@@ -123,34 +142,33 @@ def _ids(spark: Any, query: str) -> list[int]:
     return sorted(row[0] for row in spark.sql(query).collect())
 
 
+def _insert_one_file(spark: Any, table: str, rows: str) -> None:
+    """One single-file INSERT leg."""
+    spark.sql(f"INSERT INTO {table} SELECT /*+ COALESCE(1) */ * FROM VALUES {rows} AS x(id, d, f)")
+
+
 def _build_tables(spark: Any) -> dict[str, str]:
-    """Create the four fixture tables; return shape key to fully qualified name."""
+    """Create the six fixture tables; return shape key to fully qualified name."""
     if _CANONICAL_ROOT.exists():
         shutil.rmtree(_CANONICAL_ROOT)
     _WAREHOUSE.mkdir(parents=True)
     spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {_CATALOG}.ns")
     names: dict[str, str] = {}
     for version in ("2", "3"):
-        for shape in ("mixed", "nan_only"):
+        for shape in ("mixed", "nan_only", "split"):
             table = f"{_CATALOG}.ns.nan_{shape}_v{version}"
             spark.sql(
                 f"CREATE TABLE {table} (id INT, d DOUBLE, f FLOAT) USING iceberg "
                 f"TBLPROPERTIES ('format-version'='{version}')"
             )
             if shape == "mixed":
-                spark.sql(
-                    f"INSERT INTO {table} SELECT /*+ COALESCE(1) */ * "
-                    f"FROM VALUES {_MIXED_FILE_ONE} AS x(id, d, f)"
-                )
-                spark.sql(
-                    f"INSERT INTO {table} SELECT /*+ COALESCE(1) */ * "
-                    f"FROM VALUES {_MIXED_FILE_TWO} AS x(id, d, f)"
-                )
+                _insert_one_file(spark, table, _MIXED_FILE_ONE)
+                _insert_one_file(spark, table, _MIXED_FILE_TWO)
+            elif shape == "split":
+                _insert_one_file(spark, table, _SPLIT_FILE_A)
+                _insert_one_file(spark, table, _SPLIT_FILE_B)
             else:
-                spark.sql(
-                    f"INSERT INTO {table} SELECT /*+ COALESCE(1) */ * "
-                    f"FROM VALUES {_NAN_ONLY_ROWS} AS x(id, d, f)"
-                )
+                _insert_one_file(spark, table, _NAN_ONLY_ROWS)
             names[f"v{version}/{shape}"] = table
     return names
 
@@ -162,63 +180,82 @@ def _record_reads(spark: Any, names: dict[str, str]) -> dict[str, dict[str, list
         cells: dict[str, list[int]] = {}
         for name, where in _double_clauses().items():
             cells[f"d_{name}"] = _ids(spark, f"SELECT id FROM {table} WHERE {where}")
-        if key.endswith("mixed"):
-            for name, where in _float_clauses().items():
-                cells[f"f_{name}"] = _ids(spark, f"SELECT id FROM {table} WHERE {where}")
+        if key.endswith("nan_only"):
+            float_names = ("eq", "neq", "in_nan", "isnan")
         else:
-            for name in ("eq", "neq", "in_nan", "isnan"):
-                where = _float_clauses()[name]
-                cells[f"f_{name}"] = _ids(spark, f"SELECT id FROM {table} WHERE {where}")
+            float_names = tuple(_float_clauses().keys())
+        for name in float_names:
+            where = _float_clauses()[name]
+            cells[f"f_{name}"] = _ids(spark, f"SELECT id FROM {table} WHERE {where}")
         reads[key] = cells
     return reads
 
 
-_SCRATCH_DDL = "(id INT, d DOUBLE, f FLOAT) USING iceberg TBLPROPERTIES ('format-version'='2')"
+def _scratch_ddl(version: str) -> str:
+    """The scratch DML table DDL at one format version."""
+    return f"(id INT, d DOUBLE, f FLOAT) USING iceberg TBLPROPERTIES ('format-version'='{version}')"
 
 
-def _record_dml(spark: Any) -> dict[str, Any]:
-    """DELETE and UPDATE row outcomes on scratch copies of the mixed v2 table."""
-    spark.sql(f"CREATE TABLE {_CATALOG}.ns.nan_dml_v2 {_SCRATCH_DDL}")
-    spark.sql(
-        f"INSERT INTO {_CATALOG}.ns.nan_dml_v2 SELECT /*+ COALESCE(1) */ * "
-        f"FROM VALUES {_MIXED_FILE_ONE} AS x(id, d, f)"
-    )
-    spark.sql(
-        f"INSERT INTO {_CATALOG}.ns.nan_dml_v2 SELECT /*+ COALESCE(1) */ * "
-        f"FROM VALUES {_MIXED_FILE_TWO} AS x(id, d, f)"
-    )
-    spark.sql(f"DELETE FROM {_CATALOG}.ns.nan_dml_v2 WHERE d = {NAN_D}")
-    remaining = _ids(spark, f"SELECT id FROM {_CATALOG}.ns.nan_dml_v2")
-    spark.sql(f"CREATE TABLE {_CATALOG}.ns.nan_upd_v2 {_SCRATCH_DDL}")
-    spark.sql(
-        f"INSERT INTO {_CATALOG}.ns.nan_upd_v2 SELECT /*+ COALESCE(1) */ * "
-        f"FROM VALUES {_MIXED_FILE_ONE} AS x(id, d, f)"
-    )
-    spark.sql(
-        f"INSERT INTO {_CATALOG}.ns.nan_upd_v2 SELECT /*+ COALESCE(1) */ * "
-        f"FROM VALUES {_MIXED_FILE_TWO} AS x(id, d, f)"
-    )
-    spark.sql(f"UPDATE {_CATALOG}.ns.nan_upd_v2 SET f = {ONE_F} WHERE d = {NAN_D}")
-    updated = _ids(
-        spark, f"SELECT id FROM {_CATALOG}.ns.nan_upd_v2 WHERE f = {ONE_F} AND d = {NAN_D}"
-    )
-    untouched = _ids(spark, f"SELECT id FROM {_CATALOG}.ns.nan_upd_v2 WHERE NOT (f = {ONE_F})")
-    return {"delete_remaining": remaining, "update_touched": updated, "update_untouched": untouched}
+def _seed_scratch(spark: Any, table: str) -> None:
+    """Two mixed-shape files into one scratch table."""
+    _insert_one_file(spark, table, _MIXED_FILE_ONE)
+    _insert_one_file(spark, table, _MIXED_FILE_TWO)
+
+
+def _record_dml_version(spark: Any, version: str) -> dict[str, list[int]]:
+    """DELETE and UPDATE row outcomes on scratch mixed-shape tables at one version."""
+    delete_table = f"{_CATALOG}.ns.nan_dml_v{version}"
+    spark.sql(f"CREATE TABLE {delete_table} {_scratch_ddl(version)}")
+    _seed_scratch(spark, delete_table)
+    spark.sql(f"DELETE FROM {delete_table} WHERE d = {NAN_D}")
+    remaining = _ids(spark, f"SELECT id FROM {delete_table}")
+    update_table = f"{_CATALOG}.ns.nan_upd_v{version}"
+    spark.sql(f"CREATE TABLE {update_table} {_scratch_ddl(version)}")
+    _seed_scratch(spark, update_table)
+    spark.sql(f"UPDATE {update_table} SET f = {ONE_F} WHERE d = {NAN_D}")
+    updated = _ids(spark, f"SELECT id FROM {update_table} WHERE f = {ONE_F} AND d = {NAN_D}")
+    untouched = _ids(spark, f"SELECT id FROM {update_table} WHERE NOT (f = {ONE_F})")
+    return {
+        "delete_remaining": remaining,
+        "update_touched": updated,
+        "update_untouched": untouched,
+    }
+
+
+def _record_dml(spark: Any) -> dict[str, dict[str, list[int]]]:
+    """DELETE and UPDATE row outcomes at v2 and v3."""
+    return {version: _record_dml_version(spark, version) for version in ("2", "3")}
+
+
+def _record_decimal_observation(spark: Any, table: str) -> dict[str, list[int]]:
+    """Spark answers for bare-decimal-literal spellings on a NaN-holding column.
+
+    RePark raises a loud cast error on both (ICE-NAN-DECIMAL-LITERAL-1); the
+    recorded Spark sets are the fix target.
+    """
+    return {
+        "d_eq_1_0_bare": _ids(spark, f"SELECT id FROM {table} WHERE d = 1.0"),
+        "d_in_nan_1_0_bare": _ids(spark, f"SELECT id FROM {table} WHERE d IN ({NAN_D}, 1.0)"),
+    }
 
 
 def _copy_fixtures() -> None:
-    """Copy the four canonical warehouses into the checked-in fixture dir."""
-    if _FIXTURE_DIR.exists():
-        shutil.rmtree(_FIXTURE_DIR)
+    """Copy the six canonical warehouses into the fixture dir, keeping map.md."""
     for key in _FIXTURE_TABLES:
         version, shape = key.split("/")
         src = _WAREHOUSE / "ns" / f"nan_{shape}_{version}"
         dest = _FIXTURE_DIR / key
+        if dest.exists():
+            shutil.rmtree(dest)
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(src, dest)
 
 
-def _payload(reads: dict[str, dict[str, list[int]]], dml: dict[str, Any]) -> dict[str, Any]:
+def _payload(
+    reads: dict[str, dict[str, list[int]]],
+    dml: dict[str, dict[str, list[int]]],
+    decimal_literal: dict[str, list[int]],
+) -> dict[str, Any]:
     """The truth JSON document."""
     return {
         "oracle": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, local[2], ANSI on, UTC",
@@ -226,12 +263,33 @@ def _payload(reads: dict[str, dict[str, list[int]]], dml: dict[str, Any]) -> dic
             "v2/mixed": "ids 1..6: (NaN,NaN),(1.0,1.0),(NULL,NULL) in file one; "
             "(0.5,0.5),(NaN,NaN),(-2.0,-2.0) in file two",
             "v2/nan_only": "ids 1..2, every d and f NaN, one file",
+            "v2/split": "ids 1..2 NaN in file A, ids 3..4 (1.0,1.0),(0.5,0.5) in file B",
             "v3/mixed": "same rows as v2/mixed at format-version 3",
             "v3/nan_only": "same rows as v2/nan_only at format-version 3",
+            "v3/split": "same rows as v2/split at format-version 3",
         },
         "reads": reads,
         "dml": dml,
+        "decimal_literal": decimal_literal,
     }
+
+
+def _report_drift(recorded: dict[str, Any], payload: dict[str, Any]) -> None:
+    """Print every truth-vs-live cell difference."""
+    for key in payload["reads"]:
+        for cell, live in payload["reads"][key].items():
+            old = recorded["reads"].get(key, {}).get(cell)
+            if old != live:
+                print(f"  reads {key} {cell}: truth={old} live={live}")
+    for version in payload["dml"]:
+        for cell, live in payload["dml"][version].items():
+            old = recorded["dml"].get(version, {}).get(cell)
+            if old != live:
+                print(f"  dml {version} {cell}: truth={old} live={live}")
+    for cell, live in payload["decimal_literal"].items():
+        old = recorded["decimal_literal"].get(cell)
+        if old != live:
+            print(f"  decimal_literal {cell}: truth={old} live={live}")
 
 
 def main(argv: list[str]) -> int:
@@ -241,23 +299,21 @@ def main(argv: list[str]) -> int:
         names = _build_tables(spark)
         reads = _record_reads(spark, names)
         dml = _record_dml(spark)
+        decimal_literal = _record_decimal_observation(spark, names["v2/mixed"])
     finally:
         spark.stop()
-    payload = _payload(reads, dml)
+    payload = _payload(reads, dml, decimal_literal)
     if _TRUTH_PATH.exists() and "--rewrite" not in argv:
         recorded = json.loads(_TRUTH_PATH.read_text(encoding="utf-8"))
-        if recorded["reads"] == payload["reads"] and recorded["dml"] == payload["dml"]:
+        if (
+            recorded["reads"] == payload["reads"]
+            and recorded["dml"] == payload["dml"]
+            and recorded["decimal_literal"] == payload["decimal_literal"]
+        ):
             print("oracle matches the checked-in truth")
             return 0
         print("ORACLE DRIFT versus the checked-in truth:")
-        for key in payload["reads"]:
-            for cell, live in payload["reads"][key].items():
-                old = recorded["reads"].get(key, {}).get(cell)
-                if old != live:
-                    print(f"  reads {key} {cell}: truth={old} live={live}")
-        for cell, live in payload["dml"].items():
-            if recorded["dml"].get(cell) != live:
-                print(f"  dml {cell}: truth={recorded['dml'].get(cell)} live={live}")
+        _report_drift(recorded, payload)
         return 1
     _TRUTH_PATH.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     _copy_fixtures()

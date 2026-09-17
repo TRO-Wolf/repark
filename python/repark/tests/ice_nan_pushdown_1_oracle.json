@@ -3,8 +3,10 @@
   "tables": {
     "v2/mixed": "ids 1..6: (NaN,NaN),(1.0,1.0),(NULL,NULL) in file one; (0.5,0.5),(NaN,NaN),(-2.0,-2.0) in file two",
     "v2/nan_only": "ids 1..2, every d and f NaN, one file",
+    "v2/split": "ids 1..2 NaN in file A, ids 3..4 (1.0,1.0),(0.5,0.5) in file B",
     "v3/mixed": "same rows as v2/mixed at format-version 3",
-    "v3/nan_only": "same rows as v2/nan_only at format-version 3"
+    "v3/nan_only": "same rows as v2/nan_only at format-version 3",
+    "v3/split": "same rows as v2/split at format-version 3"
   },
   "reads": {
     "v2/mixed": {
@@ -60,6 +62,10 @@
         1,
         2
       ],
+      "d_between_nan_nan": [
+        1,
+        5
+      ],
       "d_not_eq": [
         2,
         4,
@@ -70,6 +76,10 @@
         5
       ],
       "f_eq": [
+        1,
+        5
+      ],
+      "f_eq_rev": [
         1,
         5
       ],
@@ -87,6 +97,13 @@
         4,
         6
       ],
+      "f_le": [
+        1,
+        2,
+        4,
+        5,
+        6
+      ],
       "f_gt": [],
       "f_ge": [
         1,
@@ -102,6 +119,15 @@
         5
       ],
       "f_not_in_nan": [
+        2,
+        4,
+        6
+      ],
+      "f_between": [
+        1,
+        2
+      ],
+      "f_not_eq": [
         2,
         4,
         6
@@ -145,6 +171,10 @@
       ],
       "d_not_in_nan": [],
       "d_between": [],
+      "d_between_nan_nan": [
+        1,
+        2
+      ],
       "d_not_eq": [],
       "d_isnan": [
         1,
@@ -158,6 +188,122 @@
       "f_in_nan": [
         1,
         2
+      ],
+      "f_isnan": [
+        1,
+        2
+      ]
+    },
+    "v2/split": {
+      "d_eq": [
+        1,
+        2
+      ],
+      "d_eq_rev": [
+        1,
+        2
+      ],
+      "d_nullsafe": [
+        1,
+        2
+      ],
+      "d_neq": [
+        3,
+        4
+      ],
+      "d_lt": [
+        3,
+        4
+      ],
+      "d_le": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "d_gt": [],
+      "d_ge": [
+        1,
+        2
+      ],
+      "d_in_nan": [
+        1,
+        2
+      ],
+      "d_in_nan_1": [
+        1,
+        2,
+        3
+      ],
+      "d_not_in_nan": [
+        3,
+        4
+      ],
+      "d_between": [
+        3
+      ],
+      "d_between_nan_nan": [
+        1,
+        2
+      ],
+      "d_not_eq": [
+        3,
+        4
+      ],
+      "d_isnan": [
+        1,
+        2
+      ],
+      "f_eq": [
+        1,
+        2
+      ],
+      "f_eq_rev": [
+        1,
+        2
+      ],
+      "f_nullsafe": [
+        1,
+        2
+      ],
+      "f_neq": [
+        3,
+        4
+      ],
+      "f_lt": [
+        3,
+        4
+      ],
+      "f_le": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "f_gt": [],
+      "f_ge": [
+        1,
+        2
+      ],
+      "f_in_nan": [
+        1,
+        2
+      ],
+      "f_in_nan_1": [
+        1,
+        2,
+        3
+      ],
+      "f_not_in_nan": [
+        3,
+        4
+      ],
+      "f_between": [
+        3
+      ],
+      "f_not_eq": [
+        3,
+        4
       ],
       "f_isnan": [
         1,
@@ -217,6 +363,10 @@
         1,
         2
       ],
+      "d_between_nan_nan": [
+        1,
+        5
+      ],
       "d_not_eq": [
         2,
         4,
@@ -227,6 +377,10 @@
         5
       ],
       "f_eq": [
+        1,
+        5
+      ],
+      "f_eq_rev": [
         1,
         5
       ],
@@ -244,6 +398,13 @@
         4,
         6
       ],
+      "f_le": [
+        1,
+        2,
+        4,
+        5,
+        6
+      ],
       "f_gt": [],
       "f_ge": [
         1,
@@ -259,6 +420,15 @@
         5
       ],
       "f_not_in_nan": [
+        2,
+        4,
+        6
+      ],
+      "f_between": [
+        1,
+        2
+      ],
+      "f_not_eq": [
         2,
         4,
         6
@@ -302,6 +472,10 @@
       ],
       "d_not_in_nan": [],
       "d_between": [],
+      "d_between_nan_nan": [
+        1,
+        2
+      ],
       "d_not_eq": [],
       "d_isnan": [
         1,
@@ -320,22 +494,166 @@
         1,
         2
       ]
+    },
+    "v3/split": {
+      "d_eq": [
+        1,
+        2
+      ],
+      "d_eq_rev": [
+        1,
+        2
+      ],
+      "d_nullsafe": [
+        1,
+        2
+      ],
+      "d_neq": [
+        3,
+        4
+      ],
+      "d_lt": [
+        3,
+        4
+      ],
+      "d_le": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "d_gt": [],
+      "d_ge": [
+        1,
+        2
+      ],
+      "d_in_nan": [
+        1,
+        2
+      ],
+      "d_in_nan_1": [
+        1,
+        2,
+        3
+      ],
+      "d_not_in_nan": [
+        3,
+        4
+      ],
+      "d_between": [
+        3
+      ],
+      "d_between_nan_nan": [
+        1,
+        2
+      ],
+      "d_not_eq": [
+        3,
+        4
+      ],
+      "d_isnan": [
+        1,
+        2
+      ],
+      "f_eq": [
+        1,
+        2
+      ],
+      "f_eq_rev": [
+        1,
+        2
+      ],
+      "f_nullsafe": [
+        1,
+        2
+      ],
+      "f_neq": [
+        3,
+        4
+      ],
+      "f_lt": [
+        3,
+        4
+      ],
+      "f_le": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "f_gt": [],
+      "f_ge": [
+        1,
+        2
+      ],
+      "f_in_nan": [
+        1,
+        2
+      ],
+      "f_in_nan_1": [
+        1,
+        2,
+        3
+      ],
+      "f_not_in_nan": [
+        3,
+        4
+      ],
+      "f_between": [
+        3
+      ],
+      "f_not_eq": [
+        3,
+        4
+      ],
+      "f_isnan": [
+        1,
+        2
+      ]
     }
   },
   "dml": {
-    "delete_remaining": [
-      2,
-      3,
-      4,
-      6
+    "2": {
+      "delete_remaining": [
+        2,
+        3,
+        4,
+        6
+      ],
+      "update_touched": [
+        1,
+        5
+      ],
+      "update_untouched": [
+        4,
+        6
+      ]
+    },
+    "3": {
+      "delete_remaining": [
+        2,
+        3,
+        4,
+        6
+      ],
+      "update_touched": [
+        1,
+        5
+      ],
+      "update_untouched": [
+        4,
+        6
+      ]
+    }
+  },
+  "decimal_literal": {
+    "d_eq_1_0_bare": [
+      2
     ],
-    "update_touched": [
+    "d_in_nan_1_0_bare": [
       1,
+      2,
       5
-    ],
-    "update_untouched": [
-      4,
-      6
     ]
   }
 }
