@@ -203,7 +203,7 @@ cells, and files OPEN residue row `ICE-HADOOP-VN-1-R-001`.
 | Clause | Proposition (checkable) | Verdict | Evidence |
 |---|---|---|---|
 | R2-C001 (L-02 per Q-20b-3) | Stale replace measured both doors; Spark mirror recorded; R-001 filed; current behavior pinned exactly with strict-xfail targets; docstring + registry wedge text corrected. | PROVEN | Probe `/tmp/ib-scratch/probes/p_hadoop_vn_r2.py` rc 0 (paste below); `test_stale_replace_splits_brain`, `test_stale_replace_doors_split_brain`, `test_stale_replace_raises_conflict`, `test_stale_df_replace_raises_conflict`, `test_live_replace_split_brain_spark_reads_winner`, `test_live_spark_replace_after_repark_commit`; registry `ICE-HADOOP-VN-1-R-001`. pins: ice-hadoop-vn-1/C-008 |
-| R2-C002 (L-01) | Every registry sentence pinned or removed. | OPEN |  |
+| R2-C002 (L-01) | Every registry sentence pinned or removed. | PROVEN | `test_same_name_reregister_refuses`, `test_drop_stale_handle_deletes_pointer_file`, `test_planted_orphan_wedges_repark_loud`, `test_oracle_spark_scan_forward_keys` green offline; `test_live_planted_next_version_commits`, `test_live_spark_race_scan_forwards` run in R2-C004. No sentence removed. pins: ice-hadoop-vn-1/C-008 |
 | R2-NOTE | Recorder incident: the fixture rewrite used `rmtree(FIXTURE_DIR)`, deleting the checked-in `map.md`; fixed to clear only `metadata/`, `data/`, `truth.json`, map restored from git. | PROVEN | Recorder diff in the step-1 commit. |
 | R2-C003 (L-03) | DataFrame doors share one helper; overwrite/truncate/alter shapes pinned. | OPEN |  |
 | R2-C004 (gates) | Round-2 gates green with counts. | OPEN |  |

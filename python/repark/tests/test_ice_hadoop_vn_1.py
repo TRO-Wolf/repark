@@ -17,6 +17,7 @@ import json
 import os
 import re
 import shutil
+import threading
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager, suppress
@@ -366,6 +367,100 @@ def test_stale_df_replace_raises_conflict(tmp_path: Path) -> None:
         session.stop()
 
 
+def test_same_name_reregister_refuses(tmp_path: Path) -> None:
+    """L-01: re-registering an existing name refuses TableAlreadyExists; nothing changes."""
+    from repark.errors import AnalysisException
+
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            _run_conc_shape(session, table_root)
+            with pytest.raises(AnalysisException, match="TableAlreadyExists"):
+                _adopt(
+                    session,
+                    _CATALOG_TWO,
+                    _TABLE,
+                    table_root / "metadata" / "v3.metadata.json",
+                )
+            assert _metadata_names(table_root) == [
+                "v1.metadata.json",
+                "v2.metadata.json",
+                "v3.metadata.json",
+            ]
+    finally:
+        session.stop()
+
+
+def test_drop_stale_handle_deletes_pointer_file(tmp_path: Path) -> None:
+    """L-01: DROP on the stale handle deletes the pointer's metadata file, not the table."""
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            v3_bytes = _run_conc_shape(session, table_root)
+            session.sql(f"DROP TABLE {_CATALOG_TWO}.{_NAMESPACE}.{_TABLE}").collect()
+            assert not (table_root / "metadata" / "v2.metadata.json").exists()
+            assert (table_root / "metadata" / "v3.metadata.json").read_bytes() == v3_bytes
+            assert (
+                _select_rows(session, f"{_CATALOG_ONE}.{_NAMESPACE}.{_TABLE}")
+                == _ORACLE_DOC["rows_after_conc"]
+            )
+    finally:
+        session.stop()
+
+
+def test_planted_orphan_wedges_repark_loud(tmp_path: Path) -> None:
+    """L-01: a planted orphan v(N+1) wedges the next RePark commit loud, then clears."""
+    from repark.errors import PySparkException
+
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            _run_conc_shape(session, table_root)
+            planted = table_root / "metadata" / "v4.metadata.json"
+            planted.write_bytes((table_root / "metadata" / "v2.metadata.json").read_bytes())
+            _adopt(
+                session,
+                _CATALOG_FRESH,
+                _TABLE,
+                table_root / "metadata" / "v3.metadata.json",
+            )
+            with pytest.raises(PySparkException, match="CatalogCommitConflicts") as excinfo:
+                session.sql(
+                    f"INSERT INTO {_CATALOG_FRESH}.{_NAMESPACE}.{_TABLE} VALUES (5,'rp-planted')"
+                ).collect()
+            assert "v4.metadata.json" in str(excinfo.value)
+            assert (
+                planted.read_bytes() == (table_root / "metadata" / "v2.metadata.json").read_bytes()
+            )
+            planted.unlink()
+            session.sql(
+                f"INSERT INTO {_CATALOG_FRESH}.{_NAMESPACE}.{_TABLE} VALUES (5,'rp-planted')"
+            ).collect()
+            assert _metadata_names(table_root) == [
+                "v1.metadata.json",
+                "v2.metadata.json",
+                "v3.metadata.json",
+                "v4.metadata.json",
+            ]
+            assert _select_rows(session, f"{_CATALOG_FRESH}.{_NAMESPACE}.{_TABLE}") == [
+                [1, "seed"],
+                [2, "rp-cat1"],
+                [5, "rp-planted"],
+            ]
+    finally:
+        session.stop()
+
+
+def test_oracle_spark_scan_forward_keys() -> None:
+    """L-01: the frozen Spark scan-forward claims read back from the oracle JSON."""
+    scan = _ORACLE_DOC["spark_stale_commit"]
+    assert scan["raises"] is False
+    assert scan["planted_next_version_insert"]["class"] == "COMMITTED"
+    race = _ORACLE_DOC["spark_race_400k"]
+    assert race["outcome"] == "committed"
+    assert race["row_count"] == 400002
+
+
 def test_recovery_fresh_registration_commits(tmp_path: Path) -> None:
     """C-003: a fresh handle registered at the newest version commits; all rows read back."""
     session = _new_session(tmp_path)
@@ -406,6 +501,17 @@ def _live_spark_rows(spark: Any) -> list[list[Any]]:
     """All `(id, s)` rows Spark reads from the adopted table, ordered by id."""
     rows = spark.sql(f"SELECT id, s FROM {_SPARK_TABLE}").toArrow().to_pylist()
     return [[row["id"], row["s"]] for row in sorted(rows, key=repr)]
+
+
+def _slow_race_insert(slow: Any, outcome_box: dict[str, str]) -> None:
+    """Run the 400k-row Spark INSERT, recording whether it committed or raised."""
+    try:
+        slow.sql(
+            f"INSERT INTO {_SPARK_TABLE} SELECT id, id FROM range(0, 400000, 1, 200)"
+        ).collect()
+        outcome_box["spark"] = "committed"
+    except Exception as exc:
+        outcome_box["spark"] = f"{type(exc).__module__}.{type(exc).__name__}"
 
 
 @pytest.mark.skipif(not _LIVE, reason=_LIVE_SKIP)
@@ -535,5 +641,86 @@ def test_live_spark_replace_after_repark_commit(tmp_path: Path) -> None:
                 _select_rows(session, f"{_CATALOG_ONE}.{_NAMESPACE}.rpl3")
                 == mirror["repark_stale_rows"]
             )
+    finally:
+        session.stop()
+
+
+@pytest.mark.skipif(not _LIVE, reason=_LIVE_SKIP)
+def test_live_planted_next_version_commits(tmp_path: Path) -> None:
+    """L-01 live: Spark commits past a planted next-version file, leaving it intact."""
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            spark = _live_spark_session()
+            spark.sql(f"REFRESH TABLE {_SPARK_TABLE}")
+            planted = table_root / "metadata" / "v3.metadata.json"
+            planted.write_bytes((table_root / "metadata" / "v2.metadata.json").read_bytes())
+            spark.sql(f"INSERT INTO {_SPARK_TABLE} VALUES (5,'planted-live')")
+            assert (
+                planted.read_bytes() == (table_root / "metadata" / "v2.metadata.json").read_bytes()
+            )
+            names = _metadata_names(table_root)
+            assert "v1.metadata.json" in names and "v2.metadata.json" in names
+            assert len([name for name in names if name != "v3.metadata.json"]) == 3
+            planted.unlink()
+            spark.sql(f"INSERT INTO {_SPARK_TABLE} VALUES (6,'planted-again')")
+            spark.sql(f"REFRESH TABLE {_SPARK_TABLE}")
+            assert _live_spark_rows(spark) == [
+                [1, "seed"],
+                [5, "planted-live"],
+                [6, "planted-again"],
+            ]
+    finally:
+        session.stop()
+
+
+@pytest.mark.skipif(not _LIVE, reason=_LIVE_SKIP)
+def test_live_spark_race_scan_forwards(tmp_path: Path) -> None:
+    """L-01 live: a 400k-row Spark INSERT beside a RePark commit scan-forwards; count frozen."""
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            spark = _live_spark_session()
+            spark.sql(f"REFRESH TABLE {_SPARK_TABLE}")
+            field = _ORACLE_DOC["spark_race_400k"]
+            outcome_box: dict[str, str] = {}
+            row_count = 0
+            for round_no in range(3):
+                _adopt(
+                    session,
+                    _CATALOG_ONE,
+                    f"race{round_no}",
+                    table_root / "metadata" / "v2.metadata.json",
+                )
+                slow = spark.newSession()
+                data_root = table_root / "data"
+                before = {str(path) for path in data_root.rglob("*.parquet")}
+                thread = threading.Thread(target=_slow_race_insert, args=(slow, outcome_box))
+                thread.start()
+                deadline = time.time() + 180
+                while time.time() < deadline:
+                    current = {str(path) for path in data_root.rglob("*.parquet")}
+                    if len(current - before) >= 1:
+                        break
+                    time.sleep(0.5)
+                target = f"{_CATALOG_ONE}.{_NAMESPACE}.race{round_no}"
+                try:
+                    session.sql(f"INSERT INTO {target} VALUES (400001,'repark-race')").collect()
+                    repark_won = True
+                except Exception:
+                    repark_won = False
+                thread.join(timeout=300)
+                if not repark_won:
+                    continue
+                spark.sql(f"REFRESH TABLE {_SPARK_TABLE}")
+                row_count = (
+                    spark.sql(f"SELECT count(*) AS n FROM {_SPARK_TABLE}")
+                    .toArrow()
+                    .to_pylist()[0]["n"]
+                )
+                if outcome_box.get("spark") == "committed" and row_count == 400002:
+                    break
+            assert outcome_box.get("spark") == "committed", outcome_box
+            assert row_count == field["row_count"] == 400002
     finally:
         session.stop()

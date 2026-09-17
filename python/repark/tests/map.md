@@ -274,7 +274,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `.createOrReplace()` land their rows, each replace minting two fresh-uuid metadata
   files with `v3` bytes intact), the typed-conflict target rides
   `xfail(strict=True)` pins, and the live mirror shows Spark's own replace continuing
-  the version chain (`v4`, new rows only) while RePark stays stale.
+  the version chain (`v4`, new rows only) while RePark stays stale. Round 2 L-01 pins
+  every registry sentence: same-name re-register refuses, DROP on the stale handle
+  deletes the pointer file, the planted orphan wedges loud then clears, and the frozen
+  Spark scan-forward keys plus the 400k race count are read offline and re-derived live.
   pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [_record_ice_hadoop_vn_1.py](_record_ice_hadoop_vn_1.py) —
   the explicit-run recorder behind the fixture and the oracle JSON above (JVM +
