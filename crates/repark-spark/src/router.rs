@@ -145,6 +145,12 @@ async fn execute_inner(
 ) -> Result<DataFrame> {
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
+    if let Some(stripped) = crate::insert_by_name::strip_insert_by_name(sql)? {
+        return Box::pin(crate::insert_by_name::execute_insert_by_name(
+            ctx, catalogs, &stripped,
+        ))
+        .await;
+    }
     // Pre-parse recognizers for forms stock sqlparser cannot model (or would drop clauses from).
     if let Some(frame) = try_preparse_intercepts(ctx, catalogs, sql).await {
         return frame;
@@ -355,7 +361,7 @@ async fn try_preparse_intercepts(
 }
 
 /// Fall-through when `parse_single_normalized` returns `None` (MERGE / residual BRANCH|TAG / DF).
-async fn execute_unparsable_fallthrough(
+pub(crate) async fn execute_unparsable_fallthrough(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,

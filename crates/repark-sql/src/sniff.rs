@@ -160,6 +160,12 @@ fn sniff(scrubbed: &str) -> Option<SparkIsm> {
 
 /// Recognize Spark-isms that need more than one token, such as a keyword pair without its prefix.
 fn sniff_composite_forms(scrubbed: &str, leading: Option<&str>) -> Option<SparkIsm> {
+    if leading == Some("INSERT") && insert_by_name_before_source(scrubbed) {
+        return Some(SparkIsm {
+            token: "BY NAME",
+            equivalent: "There is no ANSI spelling of BY NAME in this door.",
+        });
+    }
     // `VERSION AS OF` / `TIMESTAMP AS OF` without the mandatory `FOR` is a common Spark spelling.
     if (contains_word(scrubbed, "VERSION AS OF") || contains_word(scrubbed, "TIMESTAMP AS OF"))
         && !contains_word(scrubbed, "FOR VERSION AS OF")
@@ -193,6 +199,40 @@ fn sniff_composite_forms(scrubbed: &str, leading: Option<&str>) -> Option<SparkI
     }
 
     None
+}
+
+fn word_starts(text: &str) -> Vec<(usize, &str)> {
+    let mut words = Vec::new();
+    let mut start: Option<usize> = None;
+    for (index, ch) in text.char_indices() {
+        if ch.is_ascii_alphanumeric() || ch == '_' {
+            if start.is_none() {
+                start = Some(index);
+            }
+        } else if let Some(begin) = start.take() {
+            words.push((begin, &text[begin..index]));
+        }
+    }
+    if let Some(begin) = start {
+        words.push((begin, &text[begin..]));
+    }
+    words
+}
+
+fn insert_by_name_before_source(scrubbed: &str) -> bool {
+    let words = word_starts(scrubbed);
+    let upper: Vec<(usize, String)> = words
+        .iter()
+        .map(|(start, word)| (*start, word.to_ascii_uppercase()))
+        .collect();
+    let source = upper
+        .iter()
+        .find(|(_, word)| word == "SELECT" || word == "VALUES" || word == "WITH");
+    upper.windows(2).any(|pair| {
+        pair[0].1 == "BY"
+            && pair[1].1 == "NAME"
+            && source.is_none_or(|(start, _)| pair[0].0 < *start)
+    })
 }
 
 #[cfg(test)]

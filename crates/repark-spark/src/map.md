@@ -48,6 +48,20 @@ pins: rp-4-fork-repin/C-005, C-006
   self-scan.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
   pins: rp-5-fork-repin/C-004
+- `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
+  strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
+  projection build, the staged-append executor (stream → conform → `commit_append_to` →
+  reregister) and the overwrite delegation to `insert_overwrite_from_staged_source`. Branch
+  targets count as owned write heads (`write_to_branch.rs`), so no temp-view rewrite fires.
+  In-module tests (file-backed in [insert_by_name/map.md](insert_by_name/map.md)).
+  pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004
+  **Round 2 (2026-09-17):** `PARTITION` shapes delegate to the positional
+  partition arm (static overwrite) or inject clause literals (static append);
+  dynamic overwrite stays whole-table replace-all (Spark's default-mode
+  answer); empty unpartitioned overwrite wipes; missing required targets
+  refuse `CANNOT_FIND_DATA`; matching honours `spark.sql.caseSensitive`
+  (matching plus projection live in `plan_name_projection`).
+  pins: ice-rtas-byname-1/C-007, C-008, C-009, C-010
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
@@ -341,7 +355,9 @@ pins: rp-4-fork-repin/C-005, C-006
 - `extension.rs` — `SparkExtension` owns Spark session defaults and installs the ordered
   `InsertStoreAssignment`, function registry, analyzer rules, `StackRewrite` (PERF-UNPIVOT-1,
   after integer-literal narrowing), and composed `TaExtension`. It also
-  carries the session timezone and Spark decimal settings. Tests:
+  carries the session timezone and Spark decimal settings, plus the
+  case-sensitivity carrier (`repark_functions::case_sensitive`, default false).
+  Tests:
   [extension/map.md](extension/map.md) and [../tests/session_timezone.rs](../tests/session_timezone.rs).
   **FNP-8 (2026-09-07):** its analyzer-configuration hook inserts the shared HOF preparation rule
   before core's first default type-coercion rule. pins: fnp-8/C-003, C-004

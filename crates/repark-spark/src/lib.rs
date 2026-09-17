@@ -14,6 +14,7 @@ mod ctas;
 mod describe_show;
 mod dialect;
 mod format_version;
+mod insert_by_name;
 mod insert_overwrite;
 mod keyword_lower;
 mod local_fs_ddl;

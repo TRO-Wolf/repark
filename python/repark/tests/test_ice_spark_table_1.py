@@ -45,7 +45,7 @@ _TBLPROPERTIES = (
     "'write.target-file-size-bytes' = '268435456'"
 )
 _TWIN_TBLPROPERTIES = _TBLPROPERTIES + ", 'write.distribution-mode' = 'hash'"
-_SPARK_ONLY_PROPERTY_KEYS = ("owner", "write.parquet.compression-codec")
+_SPARK_ONLY_PROPERTY_KEYS = ("owner",)
 _REPARK_ONLY_SUMMARY_KEY = "engine.operation-id"
 _SPARK_ONLY_SUMMARY_KEYS = (
     "app-id",
@@ -611,13 +611,13 @@ def test_spark_created_and_repark_created_metadata_shapes(tmp_path: Path) -> Non
         "write.merge.mode": "copy-on-write",
         "write.delete.mode": "copy-on-write",
         "write.update.mode": "copy-on-write",
+        "write.parquet.compression-codec": "zstd",
         "write.target-file-size-bytes": "268435456",
         "write.distribution-mode": "hash",
     }, twin_props
     assert spark_props == {
         **twin_props,
         "owner": spark_props["owner"],
-        "write.parquet.compression-codec": "zstd",
     }, spark_props
     assert isinstance(spark_props["owner"], str) and spark_props["owner"]
     assert spark_doc["format-version"] == twin_doc["format-version"] == 2

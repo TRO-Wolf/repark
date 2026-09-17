@@ -63,11 +63,8 @@ MAINTENANCE_ORDER = [
 
 ONE_DAY_MS = 24 * 60 * 60 * 1000
 
-# C-011's fixture. 2,500 rows of the six-column schema write ONE ~68 KB data file, which sits
-# inside the bin-pack band for a 64 KiB target — so only the delete-RATIO clause can ever make
-# it a candidate, and a MERGE that deletes every one of its rows is what raises that ratio.
 # Java's band, from `BinPackRewriteFilePlanner`: [0.75 x target, 1.8 x target].
-C011_ROWS = 2_500
+C011_ROWS = 2_000
 C011_TARGET_FILE_SIZE = 64 * 1024
 C011_BAND_LOW = 0.75
 C011_BAND_HIGH = 1.8

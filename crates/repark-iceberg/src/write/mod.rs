@@ -5,6 +5,7 @@ pub mod append;
 pub mod column_move;
 mod commit_error;
 pub mod commit_target;
+pub use commit_target::commit_append_to;
 pub mod concurrency;
 pub(crate) mod conform;
 pub(crate) mod distribution;

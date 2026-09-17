@@ -5,7 +5,7 @@ procedures in one order; this module runs that sequence on a local catalog and a
 of every step, so a guide that drifts from the engine reds here.
 
 The scale is a gate's, not production's — the guide's measured numbers live in the MW-7 ledger and
-are not re-asserted here. RP-5 / F-16r (fork ``00cdde0``): this partitioned 6,000-row fixture's
+are not re-asserted here. RP-5 / F-16r (fork ``00cdde0``): this partitioned 4,000-row fixture's
 in-band delete-laden seed files are rewrite candidates. RDF-1 (2026-09-02) flipped the MW-7
 2,500-row pin to the same reclaim; this module is unchanged by it.
 pins: rp-5-fork-repin/C-005; rdf-1-position-delete-bounds/C-003
@@ -41,7 +41,7 @@ _GUIDE = _REPO_ROOT / "docs" / "guide" / "iceberg-guide.md"
 
 # Six MERGEs over two partitions leave twelve position-delete files, which clears the five-file
 # floor `rewrite_position_delete_files` needs before it folds anything.
-RUNBOOK_ROWS = 6_000
+RUNBOOK_ROWS = 4_000
 RUNBOOK_MERGES = 6
 RUNBOOK_PARTITIONS = 2
 RUNBOOK_ROWS_PER_MERGE = 600

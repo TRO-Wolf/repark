@@ -9,21 +9,21 @@ from _sql_harden_cutover_repark import REPARK
 from _sql_harden_cutover_spark import SPARK
 
 VERDICTS: dict[str, str] = {
-    "s1-ctas-if-fresh": "DIVERGES",
-    "s2-merge-idempotent": "DIVERGES",
+    "s1-ctas-if-fresh": "EQUAL",
+    "s2-merge-idempotent": "EQUAL",
     "s3-dedup-coalesce-cast": "EQUAL",
-    "s4-overwrite-partitions": "DIVERGES",
-    "s5-maintenance-calls": "DIVERGES",
-    "s6-gold-incremental": "DIVERGES",
-    "s7-ctas-if-fresh": "DIVERGES",
-    "s7-merge-idempotent": "DIVERGES",
-    "s7-overwrite-partitions": "DIVERGES",
-    "s8-ctas-cow": "DIVERGES",
-    "s8-merge-idempotent-cow": "DIVERGES",
-    "s8-overwrite-partitions-cow": "DIVERGES",
-    "s9-ctas-cow": "DIVERGES",
-    "s9-merge-idempotent-cow": "DIVERGES",
-    "s9-overwrite-partitions-cow": "DIVERGES",
+    "s4-overwrite-partitions": "EQUAL",
+    "s5-maintenance-calls": "EQUAL",
+    "s6-gold-incremental": "EQUAL",
+    "s7-ctas-if-fresh": "EQUAL",
+    "s7-merge-idempotent": "EQUAL",
+    "s7-overwrite-partitions": "EQUAL",
+    "s8-ctas-cow": "EQUAL",
+    "s8-merge-idempotent-cow": "EQUAL",
+    "s8-overwrite-partitions-cow": "EQUAL",
+    "s9-ctas-cow": "EQUAL",
+    "s9-merge-idempotent-cow": "EQUAL",
+    "s9-overwrite-partitions-cow": "EQUAL",
 }
 
 REGISTRY: dict[str, str] = {

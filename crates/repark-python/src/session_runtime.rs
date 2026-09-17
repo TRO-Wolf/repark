@@ -5,6 +5,9 @@ use repark_functions::ansi::{
     SPARK_SQL_ANSI_ENABLED_KEY, SparkAnsiConfig, parse_runtime_spark_sql_ansi_enabled,
     parse_spark_sql_ansi_enabled,
 };
+use repark_functions::case_sensitive::{
+    SPARK_SQL_CASE_SENSITIVE_KEY, SparkCaseSensitiveConfig, parse_runtime_spark_sql_case_sensitive,
+};
 use repark_functions::session_time_zone::SessionTimeZoneConfig;
 
 use crate::fence::fenced_span;
@@ -70,9 +73,16 @@ fn apply_runtime_config(
         write_session_zone(session, zone)?;
         return Ok(());
     }
+    if key == SPARK_SQL_CASE_SENSITIVE_KEY {
+        let enabled = parse_runtime_spark_sql_case_sensitive(value)
+            .map_err(|error| Error::IllegalArgument(configuration_message(error)))?;
+        write_case_sensitive_flag(session, enabled)?;
+        return Ok(());
+    }
     Err(Error::IllegalArgument(format!(
         "set_runtime_config refuses unknown key {key:?} (served: \
-         {SPARK_SQL_ANSI_ENABLED_KEY:?}, {SESSION_TIME_ZONE_KEY:?})"
+         {SPARK_SQL_ANSI_ENABLED_KEY:?}, {SESSION_TIME_ZONE_KEY:?}, \
+         {SPARK_SQL_CASE_SENSITIVE_KEY:?})"
     )))
 }
 
@@ -99,6 +109,26 @@ fn write_ansi_flag(session: &ReparkSession, enabled: bool) -> Result<()> {
         None => Err(Error::IllegalArgument(format!(
             "set_runtime_config refuses {SPARK_SQL_ANSI_ENABLED_KEY:?}: \
              the live session has no Spark ANSI carrier"
+        ))),
+    }
+}
+
+fn write_case_sensitive_flag(session: &ReparkSession, enabled: bool) -> Result<()> {
+    let state_lock = session.context().state_ref();
+    let mut state = state_lock.write();
+    let carrier = state
+        .config_mut()
+        .options_mut()
+        .extensions
+        .get_mut::<SparkCaseSensitiveConfig>();
+    match carrier {
+        Some(carrier) => {
+            carrier.enabled = enabled;
+            Ok(())
+        }
+        None => Err(Error::IllegalArgument(format!(
+            "set_runtime_config refuses {SPARK_SQL_CASE_SENSITIVE_KEY:?}: \
+             the live session has no case-sensitivity carrier"
         ))),
     }
 }
