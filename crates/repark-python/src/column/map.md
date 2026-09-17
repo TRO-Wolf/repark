@@ -308,3 +308,7 @@ sync after changes.
   `count_aggregate`'s branch; `mod.rs` stays on its exact baseline) behind
   `sum_distinct`.
   pins: fnp-agg-1/C-002, C-003, C-004
+- `expr_build.rs` — **FNP-AGG-1 orchestrator fix-up (2026-09-16, run 18a):** the remediation round added a
+  four-line doc comment above `distinct_aggregate_column`; the comment ban (CLAUDE.md, 2026-08-26) forbids
+  adding one, so it is removed here. The function builds a Spark `DISTINCT` aggregate over one column for
+  `F.sum_distinct` / `F.sumDistinct` and raises `ValueError` for an unknown kind. pins: fnp-agg-1/C-001

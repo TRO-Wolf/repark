@@ -5991,3 +5991,6 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `ORDER BY v` answers 10. The `DESC` text in the 2-arg form's display name is cosmetic, not
   semantic. This turns `deterministic_ties_pick_smallest` from an author's assertion into an
   oracle-backed one. pins: fnp-agg-1/C-002
+- `test_fnp_agg_1.py` — **FNP-AGG-1 orchestrator fix-up (2026-09-16, run 18a):** `test_sql_grouping_reports_tinyint`
+  carried a non-strict xfail that XPASSed once #655 LOGICAL-WIDTH-1 landed; a non-strict XPASS is a silent pass,
+  so the mark is removed and the pin asserts Spark's `tinyint` outright (R-18a-26(b)). pins: fnp-agg-1/C-003

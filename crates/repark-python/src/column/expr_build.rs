@@ -353,10 +353,6 @@ pub(crate) fn grouping_id_column(args: Vec<PyColumn>) -> PyResult<PyColumn> {
     })
 }
 
-/// Build a Spark `DISTINCT` aggregate over one column (PySpark `F.sum_distinct`).
-///
-/// # Errors
-/// Returns `ValueError` for an unknown `kind`, or if the aggregate builder fails.
 #[pyfunction]
 pub(crate) fn distinct_aggregate_column(kind: &str, column: &PyColumn) -> PyResult<PyColumn> {
     fenced!("distinct_aggregate_column", {

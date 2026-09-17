@@ -462,7 +462,6 @@ def _grouping_sql_cells() -> list[dict[str, Any]]:
     ]
 
 
-@pytest.mark.xfail(strict=False, reason="LOGICAL-WIDTH-1: facade collapses Int8 to int")
 def test_sql_grouping_reports_tinyint() -> None:
     """SQL-door grouping(g) is tinyint once LOGICAL-WIDTH-1 lands. pins: fnp-agg-1/C-003."""
     session = _session("agg", True)
