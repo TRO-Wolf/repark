@@ -206,12 +206,12 @@ None yet.
 | gate | result |
 |---|---|
 | R-18b-14 streaming RSS | Recipe: 1e6×20 int64 zstd ORC (`/tmp/sb-orc-r3-scratch/big_1e6_20col.orc`, 7 stripes, `/tmp/sb-orc-r3-scratch/meas.py`), RELEASE module (`__debug_assertions__` False), fresh process, `/usr/bin/time -v`. Before (perf report, same shape 18-stripe file): sum20 peak 561 244 KiB. After: sum20 peak 465 072 KiB, sums correct (c00 499837043264); sum2 peak 84 440 KiB vs 77 472 KiB idle. The scan `Vec` is gone; the remainder is downstream (RepartitionExec 64 + 20-col agg) and R-02/R-03 (IO-ORC-PERF-1). |
-| `make verify` | rc 0 (`/tmp/verify3.log`): ci + full Rust workspace suite green |
-| whole facade suite | rc 0: 9177 passed, 372 skipped, 33 xfailed (`/tmp/facade_rs.log`, 1871 s). Skips all env-gated and sanctioned: live-JVM oracle tier (`REPARK_PARITY_LIVE` unset), real-AWS acceptance, release-only repeatability. Facade extras (numpy/pandas/polars/ml-ext) installed and imported |
-| whole parity suite | rc 0: 757 passed, 2 skipped, 12 xfailed (`/tmp/parity.log`, 745 s) |
+| `make verify` | Round 3 rc 0 (`/tmp/verify_r3b.log`): ci + full Rust workspace suite green |
+| whole facade suite | Round 3 (`/tmp/facade_r3.log`, RELEASE module, 340 s): 9184 passed, 367 skipped, 33 xfailed, 2 failed — both `test_q14_current_date_bare_and_paren` (ansi-off/on), a UTC-midnight environmental flake OUTSIDE this unit's diff (engine answers the UTC date, the pin asserts the local date; fails 20:00–24:00 EDT daily; rerun single-test red, zero diff files touch the grammar/date path; left for its owner, not xfailed as a passenger) |
+| whole parity suite | Round 3 rc 0: 757 passed, 2 skipped, 12 xfailed (`/tmp/parity_r3.log`, 306 s) |
 | `cargo test -p repark-core orc` | 5 passed, 0 failed |
-| `cargo-deny check licenses` | `licenses ok`, rc 0 (no new crates in round 2) |
-| `test_io_orc_1.py` | 46/46 green on the rebuilt module (45 oracle pins + the round-2 list-matches-glob pin, red-first) |
+| `cargo-deny check licenses` | `licenses ok`, rc 0 (no new crates in rounds 2–3) |
+| `test_io_orc_1.py` | 50/50 green on the RELEASE module (45 oracle pins + round-2 list pin + 3 R-18b-11 refuses + R-18b-12 glob refusal, all red-first) |
 
 ## Coverage attestation
 
@@ -243,7 +243,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_io_orc_1.py]
     - id: AT-7
       status: ATTACKED
-      evidence: Full facade suite 9177 passed rc 0 on the rebuilt module, parity suite 757 passed rc 0, make verify rc 0, ruff check/format clean, example coverage rc 0, map sync 280 clean, the 5 round-1 comment lines deleted (remaining reader.py comments pre-date the unit).
+      evidence: Round 3 on the RELEASE module — facade 9184 passed (2 unrelated UTC-midnight q14 flakes, evidenced in Gates), parity 757 passed rc 0, make verify rc 0, ruff clean, example coverage rc 0, map sync 280 clean, unit file 50/50.
       artifacts: [python/repark/tests/test_io_orc_1.py, docs/examples/io/orc_read.py]
     - id: AT-8
       status: ATTACKED

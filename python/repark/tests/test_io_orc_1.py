@@ -291,7 +291,7 @@ def test_orc_reader_signature_bad_arg(spark: ReparkSession) -> None:
 
 
 def test_orc_merge_schema_off_dir(spark: ReparkSession) -> None:
-    """cell orc_merge_schema_off_dir — recorded with m* over m1/ and m2/ only. pins: io-orc-1/C-006"""
+    """cell orc_merge_schema_off_dir — recorded with m* over m1/m2. pins: io-orc-1/C-006"""
     _frame_pin(spark.read.orc(f"{FIXTURES}/m?").orderBy("id"), "orc_merge_schema_off_dir")
 
 
