@@ -882,3 +882,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (F-RTAS-OPS-1, xfail pins).
   `risk_tier: standard`. Branch `feat/ice-rtas-byname-1`.
   pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [rp-23-pin-bump-ledger.md](rp-23-pin-bump-ledger.md) —
+  **RP-23-PIN-BUMP (2026-09-17), in flight:** the fork-pin `4151b488`
+  consequences round — F-TARGET-FILE-SIZE-1 fallout over the 26 facade
+  failures: the codec-stamp expectation updates (family A), the re-derived
+  file-layout fixtures (family B), and the MERGE delete-file diagnosis
+  (family C, counts healthy, no regression). No product code.
+  `risk_tier: standard`. Branch `chore/fork-pin-ice-20c-2`.
+  pins: rp-23-pin-bump/C-001, C-002, C-003, C-004
