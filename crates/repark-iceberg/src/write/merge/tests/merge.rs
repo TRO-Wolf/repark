@@ -1,7 +1,7 @@
 use super::super::*;
+use super::helpers::{delete, spec, update};
 
 use datafusion::datasource::MemTable;
-use iceberg::NamespaceIdent;
 
 #[derive(Debug)]
 struct EmptyTargetStream(SchemaRef);
@@ -25,39 +25,6 @@ pub(super) fn merge_sql(spec: &MergeSpec) -> MergeSql<'_> {
         target_name: "scratch",
         match_flag: "__repark_matched_t",
         carry_lineage: false,
-    }
-}
-
-pub(super) fn spec(matched: Vec<MatchedClause>, not_matched: Vec<InsertClause>) -> MergeSpec {
-    MergeSpec {
-        target: TableIdent::new(NamespaceIdent::new("sales".to_string()), "t".to_string()),
-        target_alias: "t".to_string(),
-        source_from_sql: "src".to_string(),
-        source_alias: "s".to_string(),
-        on_sql: "t.id = s.id".to_string(),
-        matched,
-        not_matched,
-        not_matched_by_source: vec![],
-        commit_branch: None,
-    }
-}
-
-pub(super) fn update(predicate: Option<&str>, sets: &[(&str, &str)]) -> MatchedClause {
-    MatchedClause {
-        predicate_sql: predicate.map(ToString::to_string),
-        action: MatchedAction::Update {
-            assignments: sets
-                .iter()
-                .map(|(c, e)| ((*c).to_string(), (*e).to_string()))
-                .collect(),
-        },
-    }
-}
-
-pub(super) fn delete(predicate: Option<&str>) -> MatchedClause {
-    MatchedClause {
-        predicate_sql: predicate.map(ToString::to_string),
-        action: MatchedAction::Delete,
     }
 }
 
@@ -726,22 +693,22 @@ fn insert(columns: &[&str], values: &[&str]) -> InsertClause {
 fn insert_projection_validates_columns() {
     let schema = arrow_schema();
     assert_eq!(
-        insert_projection(&insert(&["id", "name"], &["s.id", "s.name"]), &schema).unwrap(),
+        insert_projection(&insert(&["id", "name"], &["s.id", "s.name"]), &schema, true).unwrap(),
         "(s.id) AS `id`, (s.name) AS `name`"
     );
 
     assert_eq!(
-        insert_projection(&insert(&["id"], &["s.id"]), &schema).unwrap(),
+        insert_projection(&insert(&["id"], &["s.id"]), &schema, true).unwrap(),
         "(s.id) AS `id`, NULL AS `name`"
     );
 
-    let err = insert_projection(&insert(&["name"], &["s.name"]), &schema).unwrap_err();
+    let err = insert_projection(&insert(&["name"], &["s.name"]), &schema, true).unwrap_err();
     assert!(err.to_string().contains("required column `id`"));
 
-    let err = insert_projection(&insert(&["nope"], &["1"]), &schema).unwrap_err();
+    let err = insert_projection(&insert(&["nope"], &["1"]), &schema, true).unwrap_err();
     assert!(err.to_string().contains("`nope` does not exist"));
 
-    let err = insert_projection(&insert(&["id", "name"], &["s.id"]), &schema).unwrap_err();
+    let err = insert_projection(&insert(&["id", "name"], &["s.id"]), &schema, true).unwrap_err();
     assert!(err.to_string().contains("2 columns but 1 VALUES"));
 }
 
@@ -749,7 +716,7 @@ fn insert_projection_validates_columns() {
 #[test]
 fn insert_projection_rejects_duplicate_columns() {
     let schema = arrow_schema();
-    let err = insert_projection(&insert(&["id", "id"], &["1", "2"]), &schema).unwrap_err();
+    let err = insert_projection(&insert(&["id", "id"], &["1", "2"]), &schema, true).unwrap_err();
     assert!(err.to_string().contains("more than once"));
 }
 
@@ -758,7 +725,7 @@ fn insert_projection_rejects_duplicate_columns() {
 fn insert_projection_positional() {
     let schema = arrow_schema();
     assert_eq!(
-        insert_projection(&insert(&[], &["s.id", "s.name"]), &schema).unwrap(),
+        insert_projection(&insert(&[], &["s.id", "s.name"]), &schema, true).unwrap(),
         "(s.id) AS `id`, (s.name) AS `name`"
     );
 }
@@ -771,7 +738,7 @@ fn insert_projection_rejects_unexpanded_star() {
         predicate_sql: None,
         action: InsertAction::All,
     };
-    let err = insert_projection(&star, &schema).unwrap_err();
+    let err = insert_projection(&star, &schema, true).unwrap_err();
     assert!(err.to_string().contains("unexpanded"));
 }
 
@@ -866,10 +833,10 @@ fn rewrite_column_case_insensitive_assignment() {
 fn insert_projection_case_insensitive_columns() {
     let schema = arrow_schema();
     assert_eq!(
-        insert_projection(&insert(&["ID", "Name"], &["s.id", "s.name"]), &schema).unwrap(),
+        insert_projection(&insert(&["ID", "Name"], &["s.id", "s.name"]), &schema, true).unwrap(),
         "(s.id) AS `id`, (s.name) AS `name`"
     );
-    let err = insert_projection(&insert(&["id", "ID"], &["1", "2"]), &schema).unwrap_err();
+    let err = insert_projection(&insert(&["id", "ID"], &["1", "2"]), &schema, true).unwrap_err();
     assert!(
         err.to_string().contains("more than once"),
         "case-differing duplicate must fail, got {err}"
@@ -1043,7 +1010,7 @@ fn generated_sql_quotes_identifiers() {
     assert_eq!(quote_ident("na\"me"), "`na\"me`");
 
     let weird = ArrowSchema::new(vec![Field::new("na\"me", DataType::Utf8, true)]);
-    let projected = insert_projection(&insert(&["na\"me"], &["s.x"]), &weird).unwrap();
+    let projected = insert_projection(&insert(&["na\"me"], &["s.x"]), &weird, true).unwrap();
     assert_eq!(projected, "(s.x) AS `na\"me`");
 
     let plain_spec = spec(vec![], vec![]);

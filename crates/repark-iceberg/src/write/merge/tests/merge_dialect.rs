@@ -1,5 +1,6 @@
 use super::super::*;
-use super::merge::{merge_sql, spec, update};
+use super::helpers::{spec, update};
+use super::merge::merge_sql;
 
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;

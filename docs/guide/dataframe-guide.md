@@ -576,9 +576,10 @@ reverse dict order. Spark resolves the forward order laterally. Split it into tw
 calls. Registry row
 [FA-1](../spark-sql-iceberg-parity.md#fa-1--lateral-column-aliases-in-withcolumns).
 
-**Quoted identifiers resolve case-sensitively.** `` `ID` `` (Spark door) and `"ID"` (native door)
-do not find a column stored as `id`; unquoted references agree with Spark. Registry row
-[ID-1](../spark-sql-iceberg-parity.md#id-1--a-quoted-identifier-resolves-case-sensitively).
+**Quoted identifiers stay exact on the native door.** `"ID"` (native door) does not find a
+column stored as `id`; the Spark door follows `spark.sql.caseSensitive` (default false), so
+`` `ID` `` finds `id` there. Unquoted references agree with Spark through either door. Registry
+row [ID-1](../spark-sql-iceberg-parity.md#id-1--quoted-identifiers-stay-exact-on-the-ansi-door-fold-on-the-spark-door).
 
 **Exact duplicate output names refuse at construction:**
 

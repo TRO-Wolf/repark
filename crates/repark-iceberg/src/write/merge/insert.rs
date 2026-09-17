@@ -8,13 +8,15 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use futures::Stream;
 
-use super::{InsertAction, InsertClause, MatchedAction, quote_ident, resolve_schema_field_name};
+use super::{InsertAction, InsertClause, MatchedAction, quote_ident};
+use crate::write::name_resolution::{dedup_key, resolve_arrow_field};
 use crate::write::store_assign::{self, MERGE_SPARK_CLASS};
 
 /// Project an INSERT clause onto the target schema: named columns take VALUES, others become NULL.
 pub(super) fn insert_projection(
     clause: &InsertClause,
     write_schema: &ArrowSchema,
+    case_insensitive: bool,
 ) -> Result<String> {
     let InsertAction::Explicit {
         columns: named,
@@ -41,16 +43,15 @@ pub(super) fn insert_projection(
             values_sql.len()
         )));
     }
-    // Case-insensitive resolution.
     let mut seen = HashSet::with_capacity(columns.len());
     let mut canonical_columns: Vec<String> = Vec::with_capacity(columns.len());
     for column in &columns {
-        let Some(canonical) = resolve_schema_field_name(write_schema, column) else {
+        let Some(canonical) = resolve_arrow_field(write_schema, column, case_insensitive) else {
             return Err(DataFusionError::Plan(format!(
                 "MERGE INSERT column `{column}` does not exist in the target table"
             )));
         };
-        if !seen.insert(canonical.to_ascii_lowercase()) {
+        if !seen.insert(dedup_key(canonical, case_insensitive)) {
             return Err(DataFusionError::Plan(format!(
                 "MERGE INSERT clause names column `{column}` more than once"
             )));
@@ -198,7 +199,9 @@ fn update_assignment_probe_sql(
             continue;
         };
         for (column, expr) in assignments {
-            let Some(canonical) = resolve_schema_field_name(write_schema, column) else {
+            let Some(canonical) =
+                resolve_arrow_field(write_schema, column, sql.spec.case_insensitive)
+            else {
                 return Err(DataFusionError::Internal(format!(
                     "MERGE UPDATE SET column `{column}` missing after validate_update_columns \
                      (executor bug)"

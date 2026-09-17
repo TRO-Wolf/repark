@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 
+use datafusion::arrow::datatypes::Schema as ArrowSchema;
+
 /// Outcome of resolving one target column name against source names (Spark `reorderColumnsByName`).
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum SourceMatch {
@@ -37,6 +39,25 @@ impl<'a> CaseInsensitiveColumnIndex<'a> {
         }
     }
 
+    pub(crate) fn resolve_exact(&self, target_name: &str) -> SourceMatch {
+        match self
+            .source_names
+            .iter()
+            .position(|name| *name == target_name)
+        {
+            Some(index) => SourceMatch::Unique(index),
+            None => SourceMatch::Missing,
+        }
+    }
+
+    pub(crate) fn resolve_scoped(&self, target_name: &str, case_insensitive: bool) -> SourceMatch {
+        if case_insensitive {
+            self.resolve(target_name)
+        } else {
+            self.resolve_exact(target_name)
+        }
+    }
+
     /// Resolve one target column name against the indexed source columns.
     pub(crate) fn resolve(&self, target_name: &str) -> SourceMatch {
         match self
@@ -57,6 +78,38 @@ impl<'a> CaseInsensitiveColumnIndex<'a> {
     /// The original-cased source column name at `source_index` (as returned by [`Self::resolve`]).
     pub(crate) fn source_name(&self, source_index: usize) -> &'a str {
         self.source_names[source_index]
+    }
+}
+
+pub(crate) fn resolve_arrow_field<'a>(
+    schema: &'a ArrowSchema,
+    name: &str,
+    case_insensitive: bool,
+) -> Option<&'a str> {
+    if !case_insensitive {
+        return schema
+            .fields()
+            .iter()
+            .find(|field| field.name() == name)
+            .map(|field| field.name().as_str());
+    }
+    let mut found: Option<&'a str> = None;
+    for field in schema.fields() {
+        if field.name().eq_ignore_ascii_case(name) {
+            if found.is_some() {
+                return None;
+            }
+            found = Some(field.name().as_str());
+        }
+    }
+    found
+}
+
+pub(crate) fn dedup_key(canonical: &str, case_insensitive: bool) -> String {
+    if case_insensitive {
+        canonical.to_ascii_lowercase()
+    } else {
+        canonical.to_string()
     }
 }
 

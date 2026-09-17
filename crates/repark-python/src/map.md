@@ -1,5 +1,7 @@
 # map — repark-python/src
 
+ICE-MIXED-CASE-1 (2026-09-17): `session_runtime.rs` validates `spark.sql.caseSensitive` in Rust at `set_runtime_config` and writes the verdict into the live session's column-resolution carrier, refusing loud when the carrier is absent. pins: ice-mixed-case-1/C-006
+
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 (pins: cc-3-comment-condensation/C-009).
 

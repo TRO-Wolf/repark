@@ -61,7 +61,9 @@ pub(crate) use target_scan::{
 
 use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
 use crate::write::conform::{conform_batch_retaining_unmapped_columns, write_default_column_names};
-use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
+pub(crate) use crate::write::name_resolution::{
+    CaseInsensitiveColumnIndex, SourceMatch, dedup_key, resolve_arrow_field,
+};
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 use crate::write::scan_prune::{
     bare_equalities_from_on, file_scoped_rewrite_from_ctx, residual_bounds_predicate,
@@ -100,6 +102,7 @@ pub struct MergeSpec {
     /// `WHEN NOT MATCHED BY SOURCE` clauses, in declaration order.
     pub not_matched_by_source: Vec<NotMatchedBySourceClause>,
     pub commit_branch: Option<String>,
+    pub case_insensitive: bool,
 }
 
 /// One `WHEN MATCHED [AND …] THEN UPDATE/DELETE` clause.
@@ -382,38 +385,22 @@ fn validate_update_columns(spec: &MergeSpec, write_schema: &ArrowSchema) -> Resu
                 ));
             }
         };
-        // Case-insensitive duplicates would silent first-win in `rewrite_column`.
         let mut seen = HashSet::with_capacity(assignments.len());
         for (column, _) in assignments {
-            let Some(canonical) = resolve_schema_field_name(write_schema, column) else {
+            let Some(canonical) = resolve_arrow_field(write_schema, column, spec.case_insensitive)
+            else {
                 return Err(DataFusionError::Plan(format!(
                     "MERGE UPDATE SET column `{column}` does not exist in the target table"
                 )));
             };
-            if !seen.insert(canonical.to_ascii_lowercase()) {
+            if !seen.insert(dedup_key(canonical, spec.case_insensitive)) {
                 return Err(DataFusionError::Plan(format!(
-                    "MERGE UPDATE SET names column `{column}` more than once \
-                     (case-insensitive)"
+                    "MERGE UPDATE SET names column `{column}` more than once"
                 )));
             }
         }
     }
     not_matched_by_source::validate_update_columns(spec, write_schema)
-}
-
-/// Resolve `name` against `schema` case-insensitively (Spark `caseSensitive=false`).
-fn resolve_schema_field_name<'a>(schema: &'a ArrowSchema, name: &str) -> Option<&'a str> {
-    let mut found: Option<&str> = None;
-    for field in schema.fields() {
-        if field.name().eq_ignore_ascii_case(name) {
-            if found.is_some() {
-                // Two schema fields differing only by case — refuse ambiguous resolution.
-                return None;
-            }
-            found = Some(field.name().as_str());
-        }
-    }
-    found
 }
 
 /// Expand `UPDATE SET *` / `INSERT *` into explicit per-column clauses (Spark star resolution).
@@ -434,7 +421,6 @@ async fn expand_star_clauses<'a>(
         return Ok(Cow::Borrowed(spec));
     }
 
-    // Resolve every target column to its source column by name (case-insensitively).
     let source_names = source_column_names(ctx, spec).await?;
     let source_index = CaseInsensitiveColumnIndex::new(source_names.iter().map(String::as_str));
     let columns: Vec<String> = write_schema
@@ -445,7 +431,7 @@ async fn expand_star_clauses<'a>(
     let mut values_sql: Vec<String> = Vec::with_capacity(columns.len());
     let mut missing: Vec<String> = Vec::new();
     for column in &columns {
-        match source_index.resolve(column) {
+        match source_index.resolve_scoped(column, spec.case_insensitive) {
             SourceMatch::Unique(index) => values_sql.push(format!(
                 "{}.{}",
                 spec.source_alias,
@@ -463,10 +449,14 @@ async fn expand_star_clauses<'a>(
         }
     }
     if !missing.is_empty() {
+        let mode = if spec.case_insensitive {
+            " (columns resolve by name, case-insensitively — Spark default)"
+        } else {
+            " (columns resolve by name, exactly — `spark.sql.caseSensitive=true`)"
+        };
         return Err(DataFusionError::Plan(format!(
             "MERGE `UPDATE SET *` / `INSERT *` requires the source to provide every target \
-             column; missing from the source: `{}` (columns resolve by name, case-insensitively \
-             — Spark default)",
+             column; missing from the source: `{}`{mode}",
             missing.join("`, `")
         )));
     }
@@ -1457,7 +1447,7 @@ impl MergeSql<'_> {
     /// The rows insert clause `index` adds: source rows with no target match.
     fn insert_sql(&self, index: usize, write_schema: &ArrowSchema) -> Result<String> {
         let clause = &self.spec.not_matched[index];
-        let projection = insert_projection(clause, write_schema)?;
+        let projection = insert_projection(clause, write_schema, self.spec.case_insensitive)?;
         let predicates: Vec<Option<&str>> = self
             .spec
             .not_matched

@@ -40,6 +40,10 @@ pins: rp-4-fork-repin/C-005, C-006
   in-module tests (MG-2: M2 Oracle sub-predicates, M3
   assignment-target qualification, M8 INSERT column list, M10 non-last
   unconditional clause). pins: dml-a-merge-not-matched-by-source/C-005
+- `merge_fragments.rs` — **ICE-MIXED-CASE-1 (2026-09-17):** MERGE fragment
+  preprocessing for case-insensitive resolution (target/source scope read,
+  `ON` / predicate / value fragment rewrite, `maybe_` dispatcher that stamps
+  the carrier flag onto the spec).
 - `insert_overwrite.rs` — INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
   non-empty stage-then-swap; **DML-B** `PARTITION (…)` static/dynamic via
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).

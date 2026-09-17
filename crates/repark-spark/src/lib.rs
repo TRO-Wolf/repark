@@ -19,6 +19,7 @@ mod insert_overwrite;
 mod keyword_lower;
 mod local_fs_ddl;
 mod merge;
+mod merge_fragments;
 mod metadata_tables;
 mod namespace_ddl;
 mod normalize;

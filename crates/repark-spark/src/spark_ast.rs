@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::DataType as ArrowDataType;
 use datafusion::config::Dialect;
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::{Cast, Expr as DataFusionExpr, ExprSchemable, LogicalPlan, WriteOp};
@@ -70,7 +70,8 @@ async fn execute_passthrough_inner(
         }
         _ => {}
     }
-    let plan = state.statement_to_plan(statement).await?;
+    let plan = repark_core::column_resolution::plan_statement_with_column_repair(&state, statement)
+        .await?;
     // G5b: a unit-less RANGE offset over datetime is Spark refusal or DAYS, never silent MONTHS.
     let plan = if may_have_bare_range_bound {
         conform_temporal_range_frames(&state, sql, &dialect, plan).await?
@@ -157,7 +158,10 @@ async fn try_execute_identity_dml(
     catalogs: &CatalogRegistry,
     inner: &Statement,
 ) -> Result<Option<DataFrame>> {
-    let (allowed, kind, object_name) = if let Some(allowed) =
+    let case_insensitive = repark_core::column_resolution::column_resolution_is_case_insensitive(
+        ctx.state().config().options(),
+    );
+    let (mut allowed, kind, object_name) = if let Some(allowed) =
         repark_iceberg::write::predicate_dml::try_allowed_delete_in(inner)?
     {
         let object_name = match inner {
@@ -193,10 +197,116 @@ async fn try_execute_identity_dml(
     } else {
         return Ok(None);
     };
+    allowed.spec.case_insensitive = case_insensitive;
+    if case_insensitive {
+        canonicalize_identity_selection(catalogs, &allowed.catalog_name, &mut allowed.spec).await?;
+    }
     crate::refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, kind).await?;
     let handle = crate::catalog_handle(catalogs, &allowed.catalog_name)?;
     repark_iceberg::write::predicate_dml::execute_predicate_dml(ctx, handle, &allowed.spec).await?;
     Ok(Some(ctx.read_empty()?))
+}
+
+async fn canonicalize_identity_selection(
+    catalogs: &CatalogRegistry,
+    catalog_name: &str,
+    spec: &mut repark_iceberg::write::predicate_dml::PredicateDmlSpec,
+) -> Result<()> {
+    let handle = crate::catalog_handle(catalogs, catalog_name)?;
+    let table = handle
+        .load_table(&spec.target)
+        .await
+        .map_err(crate::iceberg_err)?;
+    let schema = iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
+        .map_err(crate::iceberg_err)?;
+    let dialect = datafusion::sql::sqlparser::dialect::DatabricksDialect {};
+    let mut selection = datafusion::sql::sqlparser::parser::Parser::new(&dialect)
+        .try_with_sql(&spec.selection_sql)
+        .map_err(|error| DataFusionError::SQL(Box::new(error), None))?
+        .parse_expr()
+        .map_err(|error| DataFusionError::SQL(Box::new(error), None))?;
+    let mut rewrite = SelectionCaseRewrite {
+        alias: spec.target_alias.clone(),
+        fields: schema
+            .fields()
+            .iter()
+            .map(|field| field.name().clone())
+            .collect(),
+        depth: 0,
+    };
+    let _ = selection.visit(&mut rewrite);
+    spec.selection_sql = selection.to_string();
+    Ok(())
+}
+
+struct SelectionCaseRewrite {
+    alias: String,
+    fields: Vec<String>,
+    depth: usize,
+}
+
+impl SelectionCaseRewrite {
+    fn canonical(&self, qualifier: Option<&str>, name: &str) -> Option<String> {
+        if let Some(qualifier) = qualifier
+            && !self.alias.eq_ignore_ascii_case(qualifier)
+        {
+            return None;
+        }
+        let mut found: Option<&str> = None;
+        for field in &self.fields {
+            if !field.eq_ignore_ascii_case(name) {
+                continue;
+            }
+            if found.is_some() {
+                return None;
+            }
+            found = Some(field);
+        }
+        found.map(ToString::to_string)
+    }
+}
+
+impl VisitorMut for SelectionCaseRewrite {
+    type Break = std::convert::Infallible;
+    fn pre_visit_query(
+        &mut self,
+        _query: &mut datafusion::sql::sqlparser::ast::Query,
+    ) -> ControlFlow<Self::Break> {
+        self.depth += 1;
+        ControlFlow::Continue(())
+    }
+    fn post_visit_query(
+        &mut self,
+        _query: &mut datafusion::sql::sqlparser::ast::Query,
+    ) -> ControlFlow<Self::Break> {
+        self.depth = self.depth.saturating_sub(1);
+        ControlFlow::Continue(())
+    }
+    fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+        if self.depth > 0 {
+            return ControlFlow::Continue(());
+        }
+        match expr {
+            Expr::Identifier(ident) => {
+                if let Some(canonical) = self.canonical(None, &ident.value)
+                    && ident.value != canonical
+                {
+                    ident.value = canonical;
+                }
+            }
+            Expr::CompoundIdentifier(parts) => {
+                if parts.len() == 2
+                    && let Some(canonical) =
+                        self.canonical(Some(parts[0].value.as_str()), &parts[1].value)
+                    && parts[1].value != canonical
+                {
+                    parts[1].value = canonical;
+                }
+            }
+            _ => {}
+        }
+        ControlFlow::Continue(())
+    }
 }
 
 /// Apply Spark's bare-`RANGE`-offset rules to a freshly-planned statement (G5b).
@@ -249,7 +359,7 @@ async fn restate_range_frames_and_replan(
         window_range::quote_unquoted_interval_range_bounds(inner);
         rewrite(inner);
     }
-    state.statement_to_plan(restated).await
+    repark_core::column_resolution::plan_statement_with_column_repair(state, restated).await
 }
 
 /// Inject Spark null-placement defaults into every ORDER BY whose placement is unspecified.

@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/write
 
+ICE-MIXED-CASE-1 (2026-09-17): the write path resolves target columns through the shared case-insensitive scope helpers (`name_resolution.rs`, `predicate_dml.rs`); identity DELETE/UPDATE take the flag at the execution site. pins: ice-mixed-case-1/C-003, C-005
+
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002). Clippy doc_markdown backticks added.
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and

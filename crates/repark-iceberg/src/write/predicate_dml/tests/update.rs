@@ -279,6 +279,7 @@ fn update_spec(table: &str, assignments: Vec<(&str, &str)>) -> PredicateDmlSpec 
                 .map(|(column, expr)| (column.to_string(), expr.to_string()))
                 .collect(),
         ),
+        case_insensitive: true,
     }
 }
 
@@ -738,6 +739,7 @@ async fn identity_delete_correlated_in_deletes_the_key_row() {
             target_alias: "corrin".to_string(),
             selection_sql: "id IN (SELECT k.id FROM keys k WHERE k.id = corrin.id)".to_string(),
             assignments: None,
+            case_insensitive: true,
         },
     )
     .await

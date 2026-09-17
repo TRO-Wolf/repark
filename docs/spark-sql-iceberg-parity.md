@@ -56,7 +56,7 @@ field are pinned JVM-free only; that is a property of what the live tier can exp
 lesser row.
 
 **Scope — swept on 2026-08-10 (method-bounded, not exhaustive).** It opened the same day with
-[ID-1](#id-1--a-quoted-identifier-resolves-case-sensitively) — quoted-identifier case folding,
+[ID-1](#id-1--quoted-identifiers-stay-exact-on-the-ansi-door-fold-on-the-spark-door) — quoted-identifier case folding,
 campaign decision D3 — as the first row admitted at seeding, alongside the rows the sixteen live
 citations forced, the cast-failure backlog row, and the four live-tier disclosures. Unit **G-5**
 then swept the pre-registry disclosures: a wider inventory over `python/repark/` and `crates/`
@@ -958,27 +958,32 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
 
 ## 3. Identifier resolution (DECLARED)
 
-### ID-1 — a quoted identifier resolves case-sensitively
+### ID-1 — quoted identifiers stay exact on the ANSI door, fold on the Spark door
 
 **The first row admitted at seeding (campaign decision D3, 2026-08-10).** It is first by
 *declaration*, not by position: §2's rows were back-filled from the sixteen citations that forced
-them, and the document is ordered by surface, never by date.
+them, and the document is ordered by surface, never by date. Unit ICE-MIXED-CASE-1 rewrote this
+row on 2026-09-16: the Spark-door half is FIXED, the ANSI-door half is an INTENDED split.
 
-- **repark** — a *quoted* identifier is matched case-**sensitively** through both SQL doors:
-  neither the ANSI door's `"ID"` nor the Spark door's `` `ID` `` resolves against a column stored
-  as `id`; both refuse. *Unquoted* identifiers agree with Spark — a mixed-case unquoted reference
-  resolves to the same column through either door.
+- **repark, ANSI door** — a *quoted* identifier matches case-**sensitively**: `"ID"` never
+  resolves against a column stored as `id`; the refusal is a resolution failure naming `"ID"`.
+  Standard SQL keeps quoted names exact, and Spark is not the ANSI door's oracle (owner ruling
+  2026-08-12, Option A). *Unquoted* identifiers agree with Spark through either door.
+- **repark, Spark door** — a quoted identifier follows `spark.sql.caseSensitive` (default
+  false): `` `ID` `` finds `id` under the default, and `true` refuses exactly like the ANSI
+  door. Two case-insensitive matches refuse with Spark's `AMBIGUOUS_REFERENCE` shape. The repair
+  runs in the Spark extension's statement loop, so DML fragments (`ON` / `SET` / `INSERT`
+  columns) resolve the same way. Output columns keep stored names where Spark echoes the
+  requested spelling.
 - **Apache Spark** — resolves the backticked form case-**insensitively** by default
   (`spark.sql.caseSensitive = false` applies to quoted names too), so `` `ID` `` finds `id`.
-  *(oracle: documented.)*
+  *(oracle: recorded fixture `python/repark/tests/ice_mixed_case_1_spark_oracle.json`, Spark 4.1.2.)*
 - **Pin** — `crates/repark-sql/tests/cross_door.rs::cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`
-- **Rationale** — DECLARED, not fixed. The behavior is inherited engine-wide from stock DataFusion
-  resolution; it is not introduced by either door and the doors do not disagree with each other.
-  Making quoted resolution case-insensitive means changing identifier resolution engine-wide for
-  marginal migration value, which is a deliberate decision rather than a bug fix. Revisit only if
-  a workload that actually depends on it turns up. The pin is a **declared-divergence test**: it
-  names this section, and it reds if either half of the claim stops being true — including if the
-  divergence silently disappears.
+  (ANSI refuses, Spark resolves) plus `python/repark/tests/test_ice_mixed_case_1.py` (both
+  doors, both flag values, DML fragments, the ambiguity shape, and the live tier).
+- **Rationale** — FIXED on the Spark door (ICE-MIXED-CASE-1, 2026-09-16); INTENDED split on the
+  ANSI door per G11 Option A. The old declared-divergence pin reddened exactly as designed when
+  the Spark half converged, and this row was rewritten in the same change.
 
 > **G11 closed: not parity — correctness (2026-08-12, Y-10 / #67).** Spark is not the ANSI
 > door's oracle (owner ruling 2026-08-12, Option A). The ANSI door serves standard SQL;
@@ -986,7 +991,7 @@ them, and the document is ordered by surface, never by date.
 > `crates/repark-sql/tests/cross_door.rs` (`cross_door_integer_division_*`,
 > `cross_door_*_div_by_zero_*`, `cross_door_order_by_*`). Six ANSI-door standard-SQL value
 > pins live in `crates/repark-sql/tests/ansi_door_values.rs`. Identifier case folding remains
-> this section's [ID-1](#id-1--a-quoted-identifier-resolves-case-sensitively) (cited, not
+> this section's [ID-1](#id-1--quoted-identifiers-stay-exact-on-the-ansi-door-fold-on-the-spark-door) (cited, not
 > duplicated).
 >
 > **F-Y10-1 — integer arithmetic overflow raises where Spark raises — FIXED (2026-08-30).**

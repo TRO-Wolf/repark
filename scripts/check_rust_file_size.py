@@ -87,12 +87,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract writer preparation from transaction commit assembly.",
     ),
     "crates/repark-iceberg/src/write/merge/mod.rs": (
-        1792,
+        1782,
         "The RePark-owned MERGE executor combines plan, COW, and MOR paths.",
         "Split plan preparation from COW and MOR execution modules.",
     ),
     "crates/repark-iceberg/src/write/merge/tests/merge.rs": (
-        1065,
+        1032,
         "General MERGE behavior cases remain in one file-backed module.",
         "Split common plan cases from write-mode-specific cases.",
     ),
@@ -102,7 +102,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split retryable conflicts from terminal conflict cases.",
     ),
     "crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs": (
-        3028,
+        3020,
         "Streaming MERGE scan and rewrite scenarios share one test battery.",
         "Split position-delete, rewrite, and scan-shape scenario families.",
     ),
@@ -112,12 +112,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract predicate and file-selection logic from commit assembly.",
     ),
     "crates/repark-iceberg/src/write/predicate_dml.rs": (
-        1142,
+        1141,
         "Predicate DELETE and UPDATE planning share one adapter.",
         "Split predicate validation from operation-specific plan construction.",
     ),
     "crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs": (
-        1442,
+        1440,
         "Predicate DML scenarios share one consolidated test module.",
         "Split DELETE and UPDATE scenario families with shared setup retained.",
     ),
@@ -202,7 +202,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split statement families into production-aligned test modules.",
     ),
     "crates/repark-sql/tests/cross_door.rs": (
-        1258,
+        1254,
         "Cross-door parity cases share one integration battery.",
         "Split syntax-equivalence from deliberate-divergence cases.",
     ),

@@ -203,22 +203,35 @@ The native door plans on stock DataFusion, which follows the ANSI rule: an **unq
 folds to lower case, a `"Quoted"` one is taken literally. So `SELECT "Id" FROM t` finds a column
 only if it really is `Id`.
 
-repark also resolves *quoted* identifiers case-sensitively on the **Spark door**, where Spark would
-resolve `` `ID` `` against a column named `id`:
+The **Spark door** follows Spark: under the default `spark.sql.caseSensitive = false`,
+`` `ID` `` resolves against a column named `id`; setting the flag to `true` makes quoted
+references exact, like the native door:
 
 ```python
 spark.createDataFrame([(1,)], ["id"]).createOrReplaceTempView("q")
-spark.sql("SELECT `ID` FROM q")
+spark.sql("SELECT `ID` FROM q").show()
 ```
+
+```text
++----+
+| id |
++----+
+| 1  |
++----+
+```
+
+The output column keeps the stored name; Spark echoes the requested
+spelling. With `spark.conf.set("spark.sql.caseSensitive", "true")` the same
+query refuses instead:
 
 ```text
 AnalysisException: Schema error: No field named "ID". Valid fields are q.id.
 ```
 
 Unquoted references agree with Spark. This is registry row
-[ID-1](../spark-sql-iceberg-parity.md#id-1--a-quoted-identifier-resolves-case-sensitively) — a
-declared, engine-wide property of the resolution layer, not a per-door quirk, and the two doors do
-not disagree with each other about it.
+[ID-1](../spark-sql-iceberg-parity.md#id-1--quoted-identifiers-stay-exact-on-the-ansi-door-fold-on-the-spark-door):
+exact quoted names on the native door are standard SQL, while the Spark door follows the
+`spark.sql.caseSensitive` flag like Spark does.
 
 ## Choosing a door
 

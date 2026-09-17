@@ -1,5 +1,8 @@
 use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
+use repark_core::column_resolution::{
+    ColumnResolutionConfig, SPARK_SQL_CASE_SENSITIVE_KEY, parse_runtime_column_case_sensitive,
+};
 use repark_core::{Error, ReparkSession, Result, SESSION_TIME_ZONE_KEY};
 use repark_functions::ansi::{
     SPARK_SQL_ANSI_ENABLED_KEY, SparkAnsiConfig, parse_runtime_spark_sql_ansi_enabled,

@@ -1,5 +1,7 @@
 # map — python/repark/tests
 
+ICE-MIXED-CASE-1 (2026-09-17): `test_ice_mixed_case_1.py` pins the Spark-door case-insensitive column resolution cells against `ice_mixed_case_1_spark_oracle.json` (live PySpark 4.1.2 recording); `_record_ice_mixed_case_1.py` is the recorder driver, not a collected test. pins: ice-mixed-case-1/C-001…C-012
+
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 CC-2 close: S3 Tables location-guard phrase kept contiguous in `test_aws_acceptance.py`.

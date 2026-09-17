@@ -561,6 +561,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   column does not become int32 on write. `drop_null_lists=True` still drops `List(Null)`
   that never went through this reader.
   pins: dynflatten-listnull-1/C-002, C-006
+- `column_resolution.rs` — **ICE-MIXED-CASE-1 (2026-09-16):** Spark-door case-insensitive
+  column repair (`plan_statement_with_column_repair` / `sql_with_column_repair` rewrite
+  wrong-case references against known scopes under `spark.sql.caseSensitive = false`,
+  `rewrite_fragment_case` does the same for DML fragments), the `ColumnResolutionConfig`
+  carrier, and the `SPARK_SQL_CASE_SENSITIVE_KEY` constant.
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
   — shared needles). **FNP-4B (2026-09-15):** segment unescaping generalized to the quote

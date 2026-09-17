@@ -22,6 +22,9 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 - `merge_dialect.rs` — **FNP-4B round 6 (2026-09-15):** the four MERGE internal
   statements carry no double-quoted identifier and parse under the Spark Databricks
   dialect. pins: fnp-4b/C-024
+- `helpers.rs` — **ICE-MIXED-CASE-1 (2026-09-17):** the shared MERGE-test
+  constructors (`spec`, `update`, `delete`) used by `merge.rs`, `lineage.rs`,
+  `merge_dialect.rs`, and `nmbs.rs`.
 - `lineage.rs` — V3-7 rewrite-projection and scratch-schema pins for carried `_row_id`.
   pins: v3-7-merge-lineage/C-001
   **FNP-4B (2026-09-15):** projection expectations in backtick form. pins: fnp-4b/C-002

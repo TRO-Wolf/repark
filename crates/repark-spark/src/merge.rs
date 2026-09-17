@@ -52,7 +52,8 @@ pub(crate) async fn execute_merge(
     on: &Expr,
     clauses: &[MergeClause],
 ) -> Result<DataFrame> {
-    let (catalog_name, spec) = lower(table, source, on, clauses)?;
+    let (catalog_name, mut spec) = lower(table, source, on, clauses)?;
+    crate::merge_fragments::maybe_rewrite_merge_fragments(ctx, &catalog_name, &mut spec).await?;
     let handle = catalog_handle(catalogs, &catalog_name)?;
     repark_iceberg::write::merge::execute_merge(ctx, handle, &spec).await?;
     ctx.read_empty()
@@ -206,6 +207,7 @@ fn lower(
         not_matched,
         not_matched_by_source,
         commit_branch,
+        case_insensitive: true,
     };
     Ok((catalog, spec))
 }
