@@ -215,6 +215,107 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
+## Round 2 (RePark side, fork `2f5323ca` via the local path override)
+
+**Date:** 2026-09-17 · **Branch:** `feat/ice-rdf-options-1` · **Base:** `97ec905f` ·
+**Model:** muse-spark-1.3-contributor.
+Fork half: TRO-Wolf/iceberg-rust#283 head `2f5323ca`, read at `/tmp/ic-fork-rdfsrc`
+(read-only; round-2 ledger §9 there). `Cargo.toml` / `Cargo.lock` / `.ivy2` are
+`skip-worktree` in this clone and are never staged.
+
+### Round-2 proposition ledger
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-003 | Every fork-dependent cell is green, or stays `xfail(strict)` with a precise reason. | `test_ice_rdf_options_1.py` full run, zero XPASS. | **PROVEN** | 17 XPASS unmarked; 11 red kept with dated per-cell reasons (§Wiring and triage). |
+| C-005 | RPD wires every Spark key the fork supports; the rest refuse loud. | New `UnsupportedOperationException` pins (Rust + Python). | **PROVEN** | 5 Python refusal params + 2 Rust refusal tests green; RPD wiring unchanged (the 6 fork keys). |
+| C-006 | Residue re-measured on fork `2f5323ca`. | Round-2 measurement below. | **PROVEN** | Still 2 vs 0; `ICE-RDF-DANGLE-2` (OPEN) filed; current-count pin + zero xfail kept. |
+| C-007 | Registry `ICE-RDF-OPTIONS-1` → FIXED 2026-09-17; `RDF-SORT-1` untouched. | Registry diff. | **PROVEN** | Row flipped; `RDF-SORT-1` and `RDF-DANGLING-1` untouched; `ICE-RDF-DANGLE-2` added. |
+
+### Round-2 red-first (unwired tree `97ec905f` + fork `2f5323ca`, release native)
+
+`pytest python/repark/tests/test_ice_rdf_options_1.py -q` (2026-09-17):
+`1 failed, 42 passed, 1 skipped, 27 xfailed`. The one failure is
+`test_option_cell_snapshots[min_input_files_1]` with `[XPASS(strict)]` — the fork's
+one-commit default lands even through the unwired CALL, so the pin bites exactly as
+designed. All ten fork-flag value cells still xfail (stored-not-wired zeros); the RPD
+`rewrite_all` / `min_input_files_1` cells still xfail (fork RPD untouched by #283).
+A scratch probe confirmed the binary carries the new fork: `min-input-files=1` on the
+2×4 shape answers 8/2 with 9 snapshots (old fork: 10).
+
+### Round-2 residue re-measurement (C-006, fork `2f5323ca`, wired, 2026-09-17)
+
+2×8 half-deleted MoR shape (DELETE halves 800→400 rows; 16 data + 16 deletes, 17
+snapshots). Default RPD: 16→2 deletes, 17→19 snapshots (fork RPD still commits per
+group — #283 did not touch it), 400 rows. Default RDF: 16 rewritten / 2 added /
+0 removed; ends with 4 files (2 data + 2 deletes), 20 snapshots, 400 rows. Spark's
+recorded sequence on the same shape ends with 0 delete files in 19 snapshots.
+Remainder: RePark keeps 2 dangling, Spark 0 — unchanged from round 1. Finding stays
+fork-side: new registry row `ICE-RDF-DANGLE-2` (OPEN, fork ask); the current-count pin
+(`test_residue_repark_sequence_pins_current_shape`, `deletes == 2`) stays green as the
+documented divergence and the zero pin stays `xfail(strict)`.
+
+### Round-2 wiring and triage (C-003, C-005, 2026-09-17)
+
+Rust (`crates/repark-spark/src/call/rewrite_data_files.rs::run_rewrite`) now wires every
+fork-owned RDF key into the fork builders: `rewrite_all`, `partial_progress`,
+`partial_progress_max_commits`, `output_spec_id`, `rewrite_job_order` (local-to-fork
+`From` map, same five variants), `max_concurrent_file_group_rewrites` (accepted, runs
+sequentially in the fork). `partial-progress.max-failed-commits` stays accepted and
+unwired: Spark parses it with no positivity check and no effect on a clean run, and the
+fork has no such builder. Non-convertible numerics (only reachable as a Spark no-op:
+`max-commits <= 0` with progress off) keep the fork default through `try_from`, never a
+panic. RPD (`parse_rpd_options`) refuses the four Spark-accepted keys the fork's
+`RewritePositionDeleteFiles` cannot honour — `rewrite-job-order`,
+`partial-progress.enabled`, `partial-progress.max-commits`,
+`max-concurrent-file-group-rewrites` — with `NotImplemented` (=
+`UnsupportedOperationException`) naming the key and `ICE-RDF-OPTIONS-1, 2026-09-17`,
+checked after lexical typing so garbage values still report `IllegalArgumentException`
+first, key-based (even no-op spellings refuse, so no key is ever silently ignored).
+
+Wired-tree run: `17 failed, 48 passed, 1 skipped, 11 xfailed` where all 17 failures are
+`[XPASS(strict)]`. Unmarked (now green): values `rewrite_all`, `partial_progress`,
+`partial_progress_max1`, `job_order_bytes_desc`, `job_order_files_asc`,
+`use_start_seq_false`, `concurrent`, `output_spec_id`; snapshots `min_input_files_1`,
+`rewrite_all`, `max_group_size`, `partial_progress`, `partial_progress_max1`,
+`job_order_*`, `use_start_seq_false`, `concurrent`. Still red, kept `xfail(strict)`
+with precise dated reasons: values `target_small` (fork one file per group, 8→2, Spark
+splits to target, 8→4), `max_group_size` + `partial_progress_groups` (8→8 added, Spark
+8→4), `delete_file_threshold` (counts match 4/1; bytes 5869 vs vanished-sum 7592),
+`remove_dangling` (bytes 11878 vs 13522, `removed_delete` 1 vs 0),
+`rpd_rewrite_all` + `rpd_min_input_files_1` (fork RPD untouched by #283: 8→2 in
+per-group commits, Spark 8→8 in one); snapshots `partial_progress_groups` (11 vs 10:
+8 groups under max-commits 3), both RPD cells (11 vs 10). New pins: five RPD refusal
+params + `test_rdf_max_failed_commits_accepted_without_effect` (all green); Rust
+`call_rpd_options_partial_progress_refuses_unsupported` +
+`call_rpd_options_unwired_keys_refuse_unsupported` (green, 30/30 in module).
+
+Correction to the round-1 Green re-run note: on the 2×8 shape the DELETE does not leave
+"16 data + 16 deletes" — it leaves **32 data + 16 deletes** (verified 2026-09-17:
+16 inserts → 16 files; `DELETE WHERE id % 2 = 0` hitting every file → 32 + 16).
+RePark's MoR DELETE copy-rewrites each affected data file alongside the position
+delete (`id < 30`, one file hit → 9 data files, the 9th 1644 B). That DELETE-written
+file is what the rewrite folds in without counting (the two MoR byte gaps above).
+DELETE-shape DML behavior is outside this unit; recorded for the orchestrator, not
+fixed here.
+
+### Round-2 gates (release native unless noted, 2026-09-17)
+
+- `pytest python/repark/tests/test_ice_rdf_options_1.py`: `65 passed, 1 skipped, 11
+  xfailed` (zero XPASS; the skip is the live tier without `REPARK_PARITY_LIVE=1`).
+- Live tier (`test_live_oracle_still_matches_spark`, `REPARK_PARITY_LIVE=1`, one JVM):
+  PASSED in 105 s — fixture still replays from the generator.
+- Neighbours: `test_rewrite_data_files_options.py` + `test_maintenance_call.py` +
+  `test_maintenance_policy_1.py` + `test_rdf_schema_evo_1.py` + `test_v3_dv_compaction.py` +
+  `test_ice_spark_table_1.py`: `40 passed, 2 skipped`.
+- `cargo test -p repark-spark --lib`: `1073 passed; 0 failed; 4 ignored` (30/30 in
+  `call_rdf_options` incl. the 2 new RPD refusal tests).
+- Clippy: the brief's literal `cargo clippy -p repark-spark --all-targets -- -D warnings`
+  reds only on 3295+ pre-existing `unwrap`/`expect` hits in test targets — the repo gate
+  (`-A clippy::disallowed_methods` for `--all-targets`, panic ban live on `--lib`) is
+  clean on the touched crate, and the panic-ban `--lib` run adds zero new findings.
+- `python3 scripts/sync_map_md.py --check`: 279 maps clean after the round-2 map edits.
+
 ## Hand-back
 
 (TBD.)
