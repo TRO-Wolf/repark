@@ -263,13 +263,17 @@ Supported surface, for reference:
   run: with `spark.wap.branch` set but `write.wap.enabled` **absent**, Spark silently ignored the
   conf and wrote to `main`.)*
 - **Pin** — `crates/repark-spark/src/tests/refs_and_wap.rs::wap_publish_procedures_and_session_conf_refuse_loud`;
-  facade rows in `python/repark/tests/test_ref_branch_tag_wap.py`
+  facade rows in `python/repark/tests/test_ref_branch_tag_wap.py`; WAP-staged cherry-pick
+  live rows in `python/repark/tests/test_ice_branch_ops_1.py::test_live_branch_ops_adopted_shapes`
 - **Rationale** — BACKLOG (2026-09-01, RP-5; narrowed 2026-09-17, ICE-BRANCH-OPS-1:
-  `fast_forward` and `cherrypick_snapshot` are ordinary branch procedures now, REF-5/REF-6).
+  `fast_forward` and `cherrypick_snapshot` are ordinary branch procedures now, REF-5/REF-6;
+  round 2: cherry-picking a Spark-staged WAP snapshot publishes it with `published-wap-id`
+  and refuses the duplicate, pinned live against the recorded oracle).
   The remaining gap is the WAP publish procedure and the `spark.wap.*` session confs. Do not
   half-build WAP: a staged write that quietly lands on `main` is the failure mode this row
   keeps impossible.
   pins: ref-branch-tag-wap/C-005
+  pins: ice-branch-ops-1/C-013
 
 #### REF-4 — reading a ref through the dotted selector — **FIXED 2026-09-01**
 
@@ -320,7 +324,9 @@ perfectly good read.
   `Ref <branch> is a tag not a branch`; a `to` that is not a descendant refuses
   `Cannot fast-forward: <branch> is not an ancestor of <to>`; all three are
   `IllegalArgumentException`, like Spark's client-side refusals. A `to` naming a tag works
-  when the ancestry holds. No snapshot is added; the rows follow the moved ref.
+  when the ancestry holds. An empty or whitespace `branch` is auto-created at `to` —
+  measured on Spark 4.1.2, which creates rather than refuses (round 2 ended the
+  RePark-only trim refusal). No snapshot is added; the rows follow the moved ref.
 - **Apache Spark** — the same call, row, and refusals, measured cell by cell.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`.)*
 - **Pin** — `crates/repark-spark/src/tests/branch_ops.rs::fast_forward_moves_branch_and_reports_refs`,
@@ -331,7 +337,7 @@ perfectly good read.
   `ManageSnapshots::fast_forward`; no fork change. Ref-kind and ancestry pre-checks live in the
   procedure layer so the messages match Java's procedure layer; the fork still enforces at
   commit.
-  pins: ice-branch-ops-1/C-001, C-007
+  pins: ice-branch-ops-1/C-001, C-007, C-012
 
 #### REF-6 — `cherrypick_snapshot` — **FIXED 2026-09-17**
 
@@ -346,6 +352,12 @@ perfectly good read.
   `Cannot cherry-pick snapshot <id>: not append, dynamic overwrite, or fast-forward` — all
   with the fork's Java-identical text as the base `PySparkException` (RePark has no JVM, so
   the `Py4JJavaError` wrapper has no counterpart; the operative text is what the pins hold).
+  A dynamic-overwrite (`replace-partitions`) staged snapshot replays, and a staged snapshot
+  whose parent is already the head fast-forwards with both ids equal — including a staged
+  DELETE published as-is (round 2 pins the fast-forward shape on a DELETE). A missing
+  `snapshot_id` refuses Spark's `REQUIRED_PARAMETER_NOT_FOUND` text (`AnalysisException`);
+  a string that is not an integer refuses Spark's `CAST_INVALID_INPUT` text (base
+  `PySparkException`, like every JVM cast failure).
 - **Apache Spark** — the same call, row, and refusals, measured cell by cell.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`.)*
 - **Pin** — `crates/repark-spark/src/tests/branch_ops.rs::cherrypick_replays_branch_snapshot_onto_main`,
@@ -354,7 +366,7 @@ perfectly good read.
 - **Rationale** — FIXED (2026-09-17, ICE-BRANCH-OPS-1). Procedure wiring over the fork's
   `Transaction::cherry_pick`; no fork change. On a format-v3 table the replay keeps Spark's
   row lineage (`next-row-id`, `_row_id`), pinned by the `ops3_*` steps.
-  pins: ice-branch-ops-1/C-002, C-005, C-007
+  pins: ice-branch-ops-1/C-002, C-005, C-007, C-014, C-015, C-018
 
 #### REF-7 — `set_current_snapshot` — **FIXED 2026-09-17**
 
@@ -386,16 +398,21 @@ perfectly good read.
   `spark.sql.session.timeZone`** — that is what Spark does: the `TIMESTAMP` literal itself
   evaluates in-session (proved with `UNIX_MICROS` in the same session), but the procedure path
   reads the wall as UTC, for literals and string arguments alike. RePark parses the argument
-  with the same UTC rule, so the answers agree in every session zone.
+  with the same UTC rule, so the answers agree in every session zone. The selection walks
+  current ancestry (a lateral `set_current` jump then rollback stays on the jumped line,
+  pinned). A missing `timestamp` refuses Spark's `REQUIRED_PARAMETER_NOT_FOUND` text; an
+  integer refuses `DATATYPE_MISMATCH` (`AnalysisException` both); a malformed string refuses
+  `CAST_INVALID_INPUT` (base `PySparkException`); a malformed `TIMESTAMP` literal refuses
+  `INVALID_TYPED_LITERAL` (`ParseException`).
 - **Apache Spark** — the same call, row, refusal, and zone rule, measured cell by cell,
   including an `America/New_York` session (UTC wall selects; NY wall reads as UTC).
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`.)*
 - **Pin** — `crates/repark-spark/src/tests/branch_ops.rs::rollback_to_timestamp_selects_latest_older_ancestor`;
   `python/repark/tests/test_ice_branch_ops_1.py` (`rt_*` steps plus the live cross-read leg)
 - **Rationale** — FIXED (2026-09-17, ICE-BRANCH-OPS-1). Procedure wiring over the fork's
-  `ManageSnapshots::rollback_to_time`; no fork change. The pre-commit ancestor walk only
-  shapes the refusal class; the fork enforces at commit.
-  pins: ice-branch-ops-1/C-004, C-007
+  `ManageSnapshots::rollback_to` with the pre-check's selected id (round 2; the fork
+  re-validates ancestry at commit); no fork change.
+  pins: ice-branch-ops-1/C-004, C-007, C-016, C-017, C-018, C-019
 
 ### 2.3 DML statement forms
 

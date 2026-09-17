@@ -42,7 +42,17 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `PySparkException`. Naive timestamp walls read as UTC in every session zone, matching
   Spark's measured procedure-path rule (registry REF-8). Ref targets come from
   `repark-iceberg` `list_snapshot_refs` (the fork's refs-map field is crate-private).
+  **Round 2:** empty/whitespace `branch` auto-creates (Spark does; trim refusal gone);
+  missing routine args refuse `REQUIRED_PARAMETER_NOT_FOUND`, integer timestamps refuse
+  `DATATYPE_MISMATCH`, malformed strings refuse `CAST_INVALID_INPUT`, malformed
+  `TIMESTAMP` literals refuse `INVALID_TYPED_LITERAL` — all with Spark's measured text;
+  rollback commits the pre-check's selected id via `rollback_to` (fork re-validates
+  ancestry at commit). Cherry-pick runs a WAP-duplicate pre-check first: Java reports a
+  re-picked WAP snapshot as `Duplicate request ...` ahead of the already-picked dedup,
+  while the fork validates the other way round, so the procedure checks `wap.id` /
+  `published-wap-id` on current ancestry itself (the fork still enforces at commit).
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
+  pins: ice-branch-ops-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - `rewrite_data_files.rs` — **rewrite_data_files options (2026-08-31):** v2 `where` is wired
   through the fork's `RewriteDataFiles::filter` (file-selection, no residual). `strategy`
   `binpack` runs; `sort` and `sort_order` refuse (fork R135 / registry `RDF-SORT-1`). Unknown

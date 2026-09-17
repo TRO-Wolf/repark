@@ -188,6 +188,26 @@ class Script:
         """Pin the current ref map."""
         self.steps.append({"check_refs": label, "refs": self.refs_now()})
 
+    def summary_now(self) -> dict[str, str]:
+        """Return the newest snapshot's summary as string pairs."""
+        rows = (
+            self.rec.spark.sql(f"SELECT summary FROM {self.table}.snapshots ORDER BY committed_at")
+            .toArrow()
+            .to_pylist()
+        )
+        return {str(k): str(v) for k, v in rows[-1]["summary"]}
+
+    def expect_summary(self, label: str, keys: list[str]) -> None:
+        """Pin deterministic summary properties of the newest snapshot."""
+        summary = self.summary_now()
+        self.steps.append(
+            {
+                "check_summary": label,
+                "pos": len(self.log()) - 1,
+                "props": {key: summary[key] for key in keys},
+            }
+        )
+
     def call(self, template: str, label: str) -> None:
         """Run a CALL template and pin its output or error cell."""
         before = len(self.log())
@@ -209,6 +229,8 @@ class Script:
                 "columns": cell["schema"],
                 "rows": _resolve_rows(after, cell["rows"]),
             }
+        elif label == "rt_bad_typed":
+            step["expect_error"] = _typed_literal_needles(cell)
         else:
             step["expect_error"] = _error_cell(cell)
         self.steps.append(step)
@@ -246,6 +268,21 @@ def _error_cell(cell: dict[str, Any]) -> dict[str, Any]:
     chunks = java.split(": ", 2)
     message = chunks[2] if len(chunks) == 3 else java
     return {"exc": cell["exc"], "prefix": message[:300]}
+
+
+def _typed_literal_needles(cell: dict[str, Any]) -> dict[str, Any]:
+    """Pin a typed-literal refusal as its quoteless spans.
+
+    The RePark Parse door Debug-renders the sqlparser error, which escapes every
+    double quote, so one contiguous needle can never match Spark's operative line.
+    Both spans stay verbatim Spark text.
+    """
+    operative = next(
+        line.strip() for line in cell["msg"].splitlines() if "INVALID_TYPED_LITERAL" in line
+    )
+    parts = operative.split('"')
+    assert len(parts) == 3, operative
+    return {"exc": cell["exc"], "needles": [parts[0], parts[2]]}
 
 
 def _slim(log: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -451,6 +488,59 @@ def record(warehouse: Path, out: Path) -> None:
         rec.spark.conf.set("spark.sql.session.timeZone", "UTC")
         ops.expect_rows("final_rows")
         ops.expect_refs("final_refs")
+        ops.call("CALL bo.system.fast_forward('ns.ops', '', 'feat2')", "ff_empty_branch")
+        ops.call("CALL bo.system.fast_forward('ns.ops', '   ', 'feat2')", "ff_ws_branch")
+        ops.call("CALL bo.system.cherrypick_snapshot('ns.ops')", "cp_missing_arg")
+        ops.call("CALL bo.system.cherrypick_snapshot('ns.ops', 'feat2')", "cp_wrongtype_str")
+        ops.call("CALL bo.system.rollback_to_timestamp('ns.ops')", "rt_missing_arg")
+        ops.call("CALL bo.system.rollback_to_timestamp('ns.ops', 123)", "rt_int_arg")
+        ops.call(
+            "CALL bo.system.rollback_to_timestamp(table => 'ns.ops', timestamp => 123)",
+            "rt_named_int_arg",
+        )
+        ops.call("CALL bo.system.rollback_to_timestamp('ns.ops', 'not-a-time')", "rt_bad_string")
+        ops.call(
+            "CALL bo.system.rollback_to_timestamp('ns.ops', TIMESTAMP 'not-a-time')",
+            "rt_bad_typed",
+        )
+        wip = ops.ref("wip")
+        assert wip is not None
+        ops.do("CALL bo.system.set_current_snapshot('ns.ops', " + ops.snap(wip) + ")")
+        ops.call(
+            "CALL bo.system.rollback_to_timestamp('ns.ops', TIMESTAMP '{ts:11}')",
+            "rt_lateral",
+        )
+        ops.expect_rows("rows_after_rt_lateral")
+        ops.do("CALL bo.system.set_current_snapshot('ns.ops', " + ops.snap(log[11]["id"]) + ")")
+        ops.call(
+            "CALL bo.system.rollback_to_timestamp(table => 'ns.ops', "
+            "timestamp => TIMESTAMP '{ts:2}')",
+            "rt_named2",
+        )
+        ops.expect_rows("rows_after_rt_named2")
+        ops.do("CALL bo.system.set_current_snapshot('ns.ops', " + ops.snap(log[11]["id"]) + ")")
+        ops.call("CALL bo.system.rollback_to_timestamp('ns.ops', '{ts:2}')", "rt_string2")
+        ops.expect_rows("rows_after_rt_string2")
+        ops.do("ALTER TABLE bo.ns.ops CREATE BRANCH ffb")
+        ops.do("INSERT INTO bo.ns.ops.branch_ffb VALUES " + _values([(12, "l")]))
+        ffb = ops.ref("ffb")
+        assert ffb is not None
+        ops.call(
+            "CALL bo.system.cherrypick_snapshot('ns.ops', " + ops.snap(ffb) + ")",
+            "cp_ff",
+        )
+        ops.expect_rows("rows_after_cp_ff")
+        ops.expect_refs("refs_after_cp_ff")
+        ops.do("ALTER TABLE bo.ns.ops CREATE BRANCH ffdel")
+        ops.do("DELETE FROM bo.ns.ops.branch_ffdel WHERE id = 12")
+        ffdel = ops.ref("ffdel")
+        assert ffdel is not None
+        ops.call(
+            "CALL bo.system.cherrypick_snapshot('ns.ops', " + ops.snap(ffdel) + ")",
+            "cp_ff_delete",
+        )
+        ops.expect_rows("rows_after_cp_ff_delete")
+        ops.expect_refs("r2_final_refs")
 
         v3 = Script(rec, "bo.ns.ops3")
         v3.do("CREATE TABLE bo.ns.ops3 " + V3_DDL)
@@ -478,9 +568,94 @@ def record(warehouse: Path, out: Path) -> None:
         )
         v3.expect_rows("ops3_rows")
 
+        dyn = Script(rec, "bo.ns.ops_dyn")
+        dyn_stage: list[dict[str, Any]] = [
+            {
+                "sql": "CREATE TABLE bo.ns.ops_dyn (id INT, s STRING) USING iceberg "
+                "PARTITIONED BY (s) TBLPROPERTIES ('format-version'='2')"
+            },
+            {"sql": "INSERT INTO bo.ns.ops_dyn VALUES " + _values([(1, "a"), (2, "b")])},
+            {"sql": "ALTER TABLE bo.ns.ops_dyn CREATE BRANCH db"},
+        ]
+        for item in dyn_stage:
+            rec.spark.sql(item["sql"]).collect()
+            time.sleep(SLEEP)
+        frame = rec.spark.sql("SELECT 10 AS id, 'a' AS s UNION ALL SELECT 20, 'b'")
+        frame.writeTo("bo.ns.ops_dyn.branch_db").overwritePartitions()
+        time.sleep(SLEEP)
+        dyn_stage.append(
+            {
+                "df_overwrite": {
+                    "table": "bo.ns.ops_dyn.branch_db",
+                    "rows": [[10, "a"], [20, "b"]],
+                }
+            }
+        )
+        rec.spark.sql("INSERT INTO bo.ns.ops_dyn VALUES " + _values([(3, "c")])).collect()
+        time.sleep(SLEEP)
+        dyn_stage.append({"sql": "INSERT INTO bo.ns.ops_dyn VALUES " + _values([(3, "c")])})
+        db = dyn.ref("db")
+        assert db is not None
+        dyn.call(
+            "CALL bo.system.cherrypick_snapshot('ns.ops_dyn', " + dyn.snap(db) + ")",
+            "dyn_pick",
+        )
+        dyn.expect_rows("dyn_rows")
+        dyn.expect_refs("dyn_refs")
+
+        wap = Script(rec, "bo.ns.ops_wap")
+        wap_stage: list[dict[str, Any]] = [
+            {
+                "sql": "CREATE TABLE bo.ns.ops_wap (id INT, s STRING) USING iceberg "
+                "TBLPROPERTIES ('format-version'='2')"
+            },
+            {"sql": "INSERT INTO bo.ns.ops_wap VALUES " + _values([(1, "a")])},
+            {"sql": "ALTER TABLE bo.ns.ops_wap SET TBLPROPERTIES ('write.wap.enabled'='true')"},
+        ]
+        for item in wap_stage:
+            rec.spark.sql(item["sql"]).collect()
+            time.sleep(SLEEP)
+        rec.spark.conf.set("spark.wap.id", "r2wapid")
+        wap_stage.append({"conf_set": {"spark.wap.id": "r2wapid"}})
+        before_wap = {entry["id"] for entry in wap.log()}
+        rec.spark.sql("INSERT INTO bo.ns.ops_wap VALUES " + _values([(2, "b")])).collect()
+        time.sleep(SLEEP)
+        staged_wap = [entry for entry in wap.log() if entry["id"] not in before_wap]
+        assert len(staged_wap) == 1
+        wap_stage.append({"sql": "INSERT INTO bo.ns.ops_wap VALUES " + _values([(2, "b")])})
+        rec.spark.sql(
+            "ALTER TABLE bo.ns.ops_wap UNSET TBLPROPERTIES ('write.wap.enabled')"
+        ).collect()
+        time.sleep(SLEEP)
+        wap_stage.append(
+            {"sql": "ALTER TABLE bo.ns.ops_wap UNSET TBLPROPERTIES ('write.wap.enabled')"}
+        )
+        rec.spark.sql("INSERT INTO bo.ns.ops_wap VALUES " + _values([(3, "c")])).collect()
+        time.sleep(SLEEP)
+        wap_stage.append({"sql": "INSERT INTO bo.ns.ops_wap VALUES " + _values([(3, "c")])})
+        wap.call(
+            "CALL bo.system.cherrypick_snapshot('ns.ops_wap', "
+            + wap.snap(staged_wap[0]["id"])
+            + ")",
+            "wap_pick",
+        )
+        wap.expect_summary("wap_summary", ["published-wap-id"])
+        wap.expect_rows("wap_rows")
+        wap.call(
+            "CALL bo.system.cherrypick_snapshot('ns.ops_wap', "
+            + wap.snap(staged_wap[0]["id"])
+            + ")",
+            "wap_pick_dup",
+        )
+
         final_log = ops.log()
         idmap = {entry["id"]: entry["pos"] for entry in final_log}
         idmap.update({entry["id"]: entry["pos"] for entry in v3.log()})
+        idmap.update({entry["id"]: entry["pos"] for entry in dyn.log()})
+        idmap.update({entry["id"]: entry["pos"] for entry in wap.log()})
+        for step in dyn.steps + wap.steps:
+            if "expect_error" in step:
+                step["expect_error"]["prefix"] = _mark_ids(step["expect_error"]["prefix"], idmap)
         for step in ops.steps:
             if "expect_error" in step:
                 step["expect_error"]["prefix"] = _mark_ids(step["expect_error"]["prefix"], idmap)
@@ -504,6 +679,20 @@ def record(warehouse: Path, out: Path) -> None:
             "steps": ops.steps,
             "snapshots": _slim(final_log),
             "v3": {"steps": v3.steps, "snapshots": _slim(v3.log())},
+            "adopted": {
+                "dyn": {
+                    "table": "ops_dyn",
+                    "stage": dyn_stage,
+                    "steps": dyn.steps,
+                    "snapshots": _slim(dyn.log()),
+                },
+                "wap": {
+                    "table": "ops_wap",
+                    "stage": wap_stage,
+                    "steps": wap.steps,
+                    "snapshots": _slim(wap.log()),
+                },
+            },
         }
         out.write_text(json.dumps(doc, indent=1, default=str), encoding="utf-8")
     finally:

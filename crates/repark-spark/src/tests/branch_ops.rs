@@ -401,13 +401,15 @@ async fn rollback_to_timestamp_selects_latest_older_ancestor() {
     let oldest_ms = chain.iter().map(|(_, ts)| *ts).min().unwrap();
     let newest_ms = chain.iter().map(|(_, ts)| *ts).max().unwrap();
     assert!(newest_ms > oldest_ms);
+    let wall = chrono::DateTime::from_timestamp_millis(oldest_ms + 1)
+        .unwrap()
+        .naive_utc()
+        .format("%Y-%m-%d %H:%M:%S%.3f")
+        .to_string();
     let (schema, row) = call_text(
         &ctx,
         &catalogs,
-        &format!(
-            "CALL ice.system.rollback_to_timestamp('sales.t', {})",
-            oldest_ms + 1
-        ),
+        &format!("CALL ice.system.rollback_to_timestamp('sales.t', TIMESTAMP '{wall}')"),
     )
     .await;
     assert_eq!(

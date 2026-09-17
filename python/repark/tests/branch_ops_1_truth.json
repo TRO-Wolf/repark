@@ -497,16 +497,16 @@
   },
   {
    "note": "tz_setup",
-   "mid_utc": "2026-09-17 05:03:15.571500",
-   "mid_ny": "2026-09-17 01:03:15.571500"
+   "mid_utc": "2026-09-17 10:09:51.101000",
+   "mid_ny": "2026-09-17 06:09:51.101000"
   },
   {
    "note": "tz_literal_eval",
-   "unix_micros": 1789606995571500
+   "unix_micros": 1789625391101000
   },
   {
    "note": "tz_literal_eval_ny",
-   "unix_micros": 1789621395571500
+   "unix_micros": 1789639791101000
   },
   {
    "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', TIMESTAMP '{ts_ny_mid:9:11}')",
@@ -844,6 +844,494 @@
      "pos": 5
     }
    }
+  },
+  {
+   "sql": "CALL bo.system.fast_forward('ns.ops', '', 'feat2')",
+   "label": "ff_empty_branch",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "branch_updated",
+      "string"
+     ],
+     [
+      "previous_ref",
+      "int64"
+     ],
+     [
+      "updated_ref",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "lit": ""
+      },
+      null,
+      {
+       "pos": 4
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.fast_forward('ns.ops', '   ', 'feat2')",
+   "label": "ff_ws_branch",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "branch_updated",
+      "string"
+     ],
+     [
+      "previous_ref",
+      "int64"
+     ],
+     [
+      "updated_ref",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "lit": "   "
+      },
+      null,
+      {
+       "pos": 4
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.cherrypick_snapshot('ns.ops')",
+   "label": "cp_missing_arg",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "AnalysisException",
+    "prefix": "[REQUIRED_PARAMETER_NOT_FOUND] Cannot invoke routine `cherrypick_snapshot` because the parameter named `snapshot_id` is required, but the routine call did not supply a value. Please update the routine call to supply an argument value (either positionally at index 0 or by name) and retry the query ag"
+   }
+  },
+  {
+   "sql": "CALL bo.system.cherrypick_snapshot('ns.ops', 'feat2')",
+   "label": "cp_wrongtype_str",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "NumberFormatException",
+    "prefix": "[CAST_INVALID_INPUT] The value 'feat2' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+   }
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops')",
+   "label": "rt_missing_arg",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "AnalysisException",
+    "prefix": "[REQUIRED_PARAMETER_NOT_FOUND] Cannot invoke routine `rollback_to_timestamp` because the parameter named `timestamp` is required, but the routine call did not supply a value. Please update the routine call to supply an argument value (either positionally at index 0 or by name) and retry the query ag"
+   }
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', 123)",
+   "label": "rt_int_arg",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "AnalysisException",
+    "prefix": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve CALL due to data type mismatch: The second parameter requires the \"TIMESTAMP\" type, however \"123\" has the type \"INT\". SQLSTATE: 42K09"
+   }
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp(table => 'ns.ops', timestamp => 123)",
+   "label": "rt_named_int_arg",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "AnalysisException",
+    "prefix": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve CALL due to data type mismatch: The second parameter requires the \"TIMESTAMP\" type, however \"123\" has the type \"INT\". SQLSTATE: 42K09"
+   }
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', 'not-a-time')",
+   "label": "rt_bad_string",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "DateTimeException",
+    "prefix": "[CAST_INVALID_INPUT] The value 'not-a-time' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+   }
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', TIMESTAMP 'not-a-time')",
+   "label": "rt_bad_typed",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "ParseException",
+    "needles": [
+     "[INVALID_TYPED_LITERAL] The value of the typed literal ",
+     " is invalid: 'not-a-time'. SQLSTATE: 42604"
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot('ns.ops', {snap:5})",
+   "new_pos": null
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', TIMESTAMP '{ts:11}')",
+   "label": "rt_lateral",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 5
+      },
+      {
+       "pos": 5
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "check_rows": "rows_after_rt_lateral",
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     4,
+     "d"
+    ],
+    [
+     6,
+     "f"
+    ],
+    [
+     7,
+     "g"
+    ]
+   ]
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot('ns.ops', {snap:11})",
+   "new_pos": null
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp(table => 'ns.ops', timestamp => TIMESTAMP '{ts:2}')",
+   "label": "rt_named2",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 11
+      },
+      {
+       "pos": 1
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "check_rows": "rows_after_rt_named2",
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ]
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot('ns.ops', {snap:11})",
+   "new_pos": null
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', '{ts:2}')",
+   "label": "rt_string2",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 11
+      },
+      {
+       "pos": 1
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "check_rows": "rows_after_rt_string2",
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ]
+  },
+  {
+   "sql": "ALTER TABLE bo.ns.ops CREATE BRANCH ffb",
+   "new_pos": null
+  },
+  {
+   "sql": "INSERT INTO bo.ns.ops.branch_ffb VALUES (12,'l')",
+   "new_pos": 12
+  },
+  {
+   "sql": "CALL bo.system.cherrypick_snapshot('ns.ops', {snap:12})",
+   "label": "cp_ff",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "source_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 12
+      },
+      {
+       "pos": 12
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "check_rows": "rows_after_cp_ff",
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     12,
+     "l"
+    ]
+   ]
+  },
+  {
+   "check_refs": "refs_after_cp_ff",
+   "refs": {
+    "": {
+     "type": "BRANCH",
+     "pos": 4
+    },
+    "   ": {
+     "type": "BRANCH",
+     "pos": 4
+    },
+    "ffb": {
+     "type": "BRANCH",
+     "pos": 12
+    },
+    "old": {
+     "type": "BRANCH",
+     "pos": 1
+    },
+    "main": {
+     "type": "BRANCH",
+     "pos": 12
+    },
+    "feat2": {
+     "type": "BRANCH",
+     "pos": 4
+    },
+    "newb": {
+     "type": "BRANCH",
+     "pos": 4
+    },
+    "delb": {
+     "type": "BRANCH",
+     "pos": 8
+    },
+    "ovb": {
+     "type": "BRANCH",
+     "pos": 10
+    },
+    "t1": {
+     "type": "TAG",
+     "pos": 1
+    },
+    "feat": {
+     "type": "BRANCH",
+     "pos": 2
+    },
+    "wip": {
+     "type": "BRANCH",
+     "pos": 5
+    }
+   }
+  },
+  {
+   "sql": "ALTER TABLE bo.ns.ops CREATE BRANCH ffdel",
+   "new_pos": null
+  },
+  {
+   "sql": "DELETE FROM bo.ns.ops.branch_ffdel WHERE id = 12",
+   "new_pos": 13
+  },
+  {
+   "sql": "CALL bo.system.cherrypick_snapshot('ns.ops', {snap:13})",
+   "label": "cp_ff_delete",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "source_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 13
+      },
+      {
+       "pos": 13
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "check_rows": "rows_after_cp_ff_delete",
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ]
+  },
+  {
+   "check_refs": "r2_final_refs",
+   "refs": {
+    "": {
+     "type": "BRANCH",
+     "pos": 4
+    },
+    "   ": {
+     "type": "BRANCH",
+     "pos": 4
+    },
+    "ffb": {
+     "type": "BRANCH",
+     "pos": 12
+    },
+    "old": {
+     "type": "BRANCH",
+     "pos": 1
+    },
+    "ffdel": {
+     "type": "BRANCH",
+     "pos": 13
+    },
+    "main": {
+     "type": "BRANCH",
+     "pos": 13
+    },
+    "feat2": {
+     "type": "BRANCH",
+     "pos": 4
+    },
+    "newb": {
+     "type": "BRANCH",
+     "pos": 4
+    },
+    "delb": {
+     "type": "BRANCH",
+     "pos": 8
+    },
+    "ovb": {
+     "type": "BRANCH",
+     "pos": 10
+    },
+    "t1": {
+     "type": "TAG",
+     "pos": 1
+    },
+    "feat": {
+     "type": "BRANCH",
+     "pos": 2
+    },
+    "wip": {
+     "type": "BRANCH",
+     "pos": 5
+    }
+   }
   }
  ],
  "snapshots": [
@@ -906,6 +1394,16 @@
    "pos": 11,
    "parent_pos": 9,
    "operation": "append"
+  },
+  {
+   "pos": 12,
+   "parent_pos": 1,
+   "operation": "append"
+  },
+  {
+   "pos": 13,
+   "parent_pos": 12,
+   "operation": "delete"
   }
  ],
  "v3": {
@@ -1027,5 +1525,232 @@
     "operation": "append"
    }
   ]
+ },
+ "adopted": {
+  "dyn": {
+   "table": "ops_dyn",
+   "stage": [
+    {
+     "sql": "CREATE TABLE bo.ns.ops_dyn (id INT, s STRING) USING iceberg PARTITIONED BY (s) TBLPROPERTIES ('format-version'='2')"
+    },
+    {
+     "sql": "INSERT INTO bo.ns.ops_dyn VALUES (1,'a'),(2,'b')"
+    },
+    {
+     "sql": "ALTER TABLE bo.ns.ops_dyn CREATE BRANCH db"
+    },
+    {
+     "df_overwrite": {
+      "table": "bo.ns.ops_dyn.branch_db",
+      "rows": [
+       [
+        10,
+        "a"
+       ],
+       [
+        20,
+        "b"
+       ]
+      ]
+     }
+    },
+    {
+     "sql": "INSERT INTO bo.ns.ops_dyn VALUES (3,'c')"
+    }
+   ],
+   "steps": [
+    {
+     "sql": "CALL bo.system.cherrypick_snapshot('ns.ops_dyn', {snap:1})",
+     "label": "dyn_pick",
+     "new_pos": 3,
+     "expect_call": {
+      "columns": [
+       [
+        "source_snapshot_id",
+        "int64"
+       ],
+       [
+        "current_snapshot_id",
+        "int64"
+       ]
+      ],
+      "rows": [
+       [
+        {
+         "pos": 1
+        },
+        {
+         "pos": 3
+        }
+       ]
+      ]
+     }
+    },
+    {
+     "check_rows": "dyn_rows",
+     "rows": [
+      [
+       3,
+       "c"
+      ],
+      [
+       10,
+       "a"
+      ],
+      [
+       20,
+       "b"
+      ]
+     ]
+    },
+    {
+     "check_refs": "dyn_refs",
+     "refs": {
+      "main": {
+       "type": "BRANCH",
+       "pos": 3
+      },
+      "db": {
+       "type": "BRANCH",
+       "pos": 1
+      }
+     }
+    }
+   ],
+   "snapshots": [
+    {
+     "pos": 0,
+     "parent_pos": null,
+     "operation": "append"
+    },
+    {
+     "pos": 1,
+     "parent_pos": 0,
+     "operation": "overwrite"
+    },
+    {
+     "pos": 2,
+     "parent_pos": 0,
+     "operation": "append"
+    },
+    {
+     "pos": 3,
+     "parent_pos": 2,
+     "operation": "overwrite"
+    }
+   ]
+  },
+  "wap": {
+   "table": "ops_wap",
+   "stage": [
+    {
+     "sql": "CREATE TABLE bo.ns.ops_wap (id INT, s STRING) USING iceberg TBLPROPERTIES ('format-version'='2')"
+    },
+    {
+     "sql": "INSERT INTO bo.ns.ops_wap VALUES (1,'a')"
+    },
+    {
+     "sql": "ALTER TABLE bo.ns.ops_wap SET TBLPROPERTIES ('write.wap.enabled'='true')"
+    },
+    {
+     "conf_set": {
+      "spark.wap.id": "r2wapid"
+     }
+    },
+    {
+     "sql": "INSERT INTO bo.ns.ops_wap VALUES (2,'b')"
+    },
+    {
+     "sql": "ALTER TABLE bo.ns.ops_wap UNSET TBLPROPERTIES ('write.wap.enabled')"
+    },
+    {
+     "sql": "INSERT INTO bo.ns.ops_wap VALUES (3,'c')"
+    }
+   ],
+   "steps": [
+    {
+     "sql": "CALL bo.system.cherrypick_snapshot('ns.ops_wap', {snap:1})",
+     "label": "wap_pick",
+     "new_pos": 3,
+     "expect_call": {
+      "columns": [
+       [
+        "source_snapshot_id",
+        "int64"
+       ],
+       [
+        "current_snapshot_id",
+        "int64"
+       ]
+      ],
+      "rows": [
+       [
+        {
+         "pos": 1
+        },
+        {
+         "pos": 3
+        }
+       ]
+      ]
+     }
+    },
+    {
+     "check_summary": "wap_summary",
+     "pos": 3,
+     "props": {
+      "published-wap-id": "r2wapid"
+     }
+    },
+    {
+     "check_rows": "wap_rows",
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       3,
+       "c"
+      ]
+     ]
+    },
+    {
+     "sql": "CALL bo.system.cherrypick_snapshot('ns.ops_wap', {snap:1})",
+     "label": "wap_pick_dup",
+     "new_pos": null,
+     "expect_error": {
+      "exc": "Py4JJavaError",
+      "prefix": "Duplicate request to cherry pick wap id that was published already: r2wapid"
+     }
+    }
+   ],
+   "snapshots": [
+    {
+     "pos": 0,
+     "parent_pos": null,
+     "operation": "append"
+    },
+    {
+     "pos": 1,
+     "parent_pos": 0,
+     "operation": "append"
+    },
+    {
+     "pos": 2,
+     "parent_pos": 0,
+     "operation": "append"
+    },
+    {
+     "pos": 3,
+     "parent_pos": 2,
+     "operation": "append"
+    }
+   ]
+  }
  }
 }

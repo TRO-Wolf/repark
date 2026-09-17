@@ -1040,7 +1040,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   every error shape, the snapshot structure, refs, and (v3) `next-row-id` / `_row_id`.
   The recorder regenerates the truth under a JVM (the `record` extra; routine CI never runs
   it). The live tier replays Spark on the same shapes and cross-reads both directions.
+  **Round 2:** empty/whitespace-branch auto-create, fast-forward-shape and dynamic-overwrite
+  cherry-picks, lateral rollback, selecting named/string rollback twins, and routine-arg
+  error shapes; the truth gains an `adopted` section (Spark-staged dynamic-overwrite and
+  WAP tables) replayed live by `test_live_branch_ops_adopted_shapes` after
+  `register_table` adoption, including the `published-wap-id` summary pin.
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
+  pins: ice-branch-ops-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append; live-DV UPDATE

@@ -376,8 +376,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   args, tag-as-`to`, and the three refusals; `cherrypick_snapshot` replays onto `main`
   (duplicate/ancestor/delete refusals with the fork's Java-identical text);
   `set_current_snapshot` by id and by ref with both/neither/unknown refusals;
-  `rollback_to_timestamp` by epoch millis with the ancient-timestamp refusal; every CALL
-  adds no snapshot. pins: ice-branch-ops-1/C-007, C-009, C-011),
+  `rollback_to_timestamp` by `TIMESTAMP` literal (integer epoch-millis arguments refuse
+  `DATATYPE_MISMATCH`, like Spark) with the ancient-timestamp refusal; every CALL
+  adds no snapshot. pins: ice-branch-ops-1/C-007, C-009, C-011, C-016, C-018),
   `refs_and_wap` (**REF:** both `WITH SNAPSHOT RETENTION` halves at the oracle's values and the
   reversed order refusing; the `branch_`/`tag_` READ selectors resolving the ref, joining
   against the live table, refusing loud on a missing ref, and claiming neither a

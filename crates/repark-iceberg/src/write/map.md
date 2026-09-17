@@ -416,7 +416,9 @@ repark-core's error map.
   door (`repark-spark` `write_to_branch.rs`) and the `to_branch` / `with_commit_branch`
   commit seats. **ICE-BRANCH-OPS-1 (2026-09-17):** `list_snapshot_refs` reads every ref as
   `(name, kind, snapshot_id)` through the fork's refs inspect table for the branch-procedure
-  pre-checks (the fork's refs-map field is crate-private).
+  pre-checks (the fork's refs-map field is crate-private). **Round 2:** the inspect batch
+  schema is gated (strict Utf8/Utf8/Int64) and a mistyped refs schema refuses typed instead
+  of panicking.
 - `testing_support.rs` — `testing_create_ref` (wraps `create_snapshot_ref`) for fixtures only;
   product SQL routes via `snapshot_refs`.
 - `concurrency.rs` — `repark.write.max-concurrent-files` (default 4, ≥1 or loud): DataFusion

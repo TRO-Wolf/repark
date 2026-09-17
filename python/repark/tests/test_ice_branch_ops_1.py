@@ -15,8 +15,11 @@ reads after each Spark procedure.
 Error-class map: Spark raises client-side ``IllegalArgumentException`` itself
 and server-side Java errors through Py4J. RePark has no JVM, so the
 procedure-layer validations surface as ``IllegalArgumentException`` with the
-same message, while fork commit-time errors surface as the base
-``PySparkException`` with the same operative text.
+same message, missing/wrong-typed routine arguments surface as
+``AnalysisException`` with Spark's routine-binding text, and JVM cast failures
+(``NumberFormatException``, ``DateTimeException``) surface as the base
+``PySparkException`` with the same operative text, like every other
+commit-time Java error.
 
 pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005
 pins: ice-branch-ops-1/C-006, C-007, C-008
@@ -36,7 +39,12 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from repark import ReparkSession
-from repark.errors import IllegalArgumentException, PySparkException
+from repark.errors import (
+    AnalysisException,
+    IllegalArgumentException,
+    ParseException,
+    PySparkException,
+)
 
 _TRUTH = json.loads(
     (Path(__file__).resolve().parent / "branch_ops_1_truth.json").read_text(encoding="utf-8")
@@ -52,6 +60,10 @@ _SLEEP = 0.12
 _EXC: dict[str, type[BaseException]] = {
     "IllegalArgumentException": IllegalArgumentException,
     "Py4JJavaError": PySparkException,
+    "AnalysisException": AnalysisException,
+    "ParseException": ParseException,
+    "NumberFormatException": PySparkException,
+    "DateTimeException": PySparkException,
 }
 
 
@@ -181,14 +193,25 @@ def _check_call_output(
 
 
 def _assert_error(
-    session: ReparkSession, sql: str, exc: str, prefix: str, log: list[dict[str, Any]]
+    session: ReparkSession,
+    sql: str,
+    exc: str,
+    prefix: str | None,
+    log: list[dict[str, Any]],
+    needles: list[str] | None = None,
 ) -> None:
     """Assert a CALL refuses with the recorded class and message needle."""
     assert exc in _EXC, f"unmapped oracle exception {exc!r}"
     with pytest.raises(_EXC[exc]) as caught:
         session.sql(sql).to_arrow()
-    want = _resolve_prefix(prefix, log, sql)
-    assert want in str(caught.value), f"{sql}: {want!r} not in {caught.value}"
+    wants = (
+        [_resolve_prefix(prefix, log, sql)]
+        if needles is None and prefix is not None
+        else [_resolve_prefix(needle, log, sql) for needle in (needles or [])]
+    )
+    assert wants, f"{sql}: error cell carries no needle"
+    for want in wants:
+        assert want in str(caught.value), f"{sql}: {want!r} not in {caught.value}"
 
 
 def _assert_refs(
@@ -295,8 +318,9 @@ def _replay(
                 session,
                 resolved,
                 step["expect_error"]["exc"],
-                step["expect_error"]["prefix"],
+                step["expect_error"].get("prefix"),
                 log,
+                step["expect_error"].get("needles"),
             )
             assert len(_read_log(session, table)) == len(log), f"{resolved} grew the log"
             continue
@@ -382,6 +406,141 @@ def _spark_adopt(spark: Any, table_root: Path, catalog: str, name: str) -> str:
     return f"{catalog}.ns.{name}"
 
 
+def _live_read_log(session: ReparkSession, catalog: str, table: str) -> list[dict[str, Any]]:
+    """Return a live RePark table's snapshot log with positions."""
+    arrow = session.sql(
+        f"SELECT snapshot_id, parent_id, operation, committed_at "
+        f"FROM {catalog}.{_NAMESPACE}.{table}.snapshots ORDER BY committed_at"
+    ).to_arrow()
+    log = [
+        {
+            "id": snap,
+            "parent_id": parent,
+            "operation": op,
+            "ts": _to_utc_naive(ts),
+        }
+        for snap, parent, op, ts in zip(
+            arrow.column("snapshot_id").to_pylist(),
+            arrow.column("parent_id").to_pylist(),
+            arrow.column("operation").to_pylist(),
+            arrow.column("committed_at").to_pylist(),
+            strict=True,
+        )
+    ]
+    return [{"pos": i, **row} for i, row in enumerate(log)]
+
+
+def _live_main_id(session: ReparkSession, catalog: str, table: str) -> int:
+    """Return the snapshot id the live table's main branch points at."""
+    arrow = session.sql(
+        f"SELECT snapshot_id FROM {catalog}.{_NAMESPACE}.{table}.refs WHERE name = 'main'"
+    ).to_arrow()
+    return arrow.column("snapshot_id").to_pylist()[0]
+
+
+def _live_select_older(log: list[dict[str, Any]], head: int, stamp: datetime) -> int:
+    """Walk main ancestry for the latest snapshot strictly older than stamp."""
+    by_id = {row["id"]: row for row in log}
+    best: dict[str, Any] | None = None
+    cursor: int | None = head
+    seen = set()
+    while cursor is not None and cursor not in seen:
+        seen.add(cursor)
+        row = by_id[cursor]
+        if row["ts"] < stamp and (best is None or row["ts"] > best["ts"]):
+            best = row
+        cursor = row["parent_id"]
+    assert best is not None, f"no ancestor older than {stamp} from {head}"
+    return best["id"]
+
+
+def _replay_adopted(
+    spark: Any,
+    repark: ReparkSession,
+    spark_warehouse: Path,
+    live_catalog: str,
+    section: dict[str, Any],
+) -> None:
+    """Stage a recorded shape on live Spark, adopt it, and pin RePark's answer."""
+    table = section["table"]
+    for item in section["stage"]:
+        if "sql" in item:
+            spark.sql(item["sql"].replace("bo.", f"{live_catalog}.")).collect()
+        elif "df_overwrite" in item:
+            spec = item["df_overwrite"]
+            frame = spark.createDataFrame(spec["rows"], ["id", "s"])
+            frame.writeTo(spec["table"].replace("bo.", f"{live_catalog}.")).overwritePartitions()
+        elif "conf_set" in item:
+            for key, value in item["conf_set"].items():
+                spark.conf.set(key, value)
+        elif "conf_unset" in item:
+            spark.conf.unset(item["conf_unset"])
+        else:
+            raise AssertionError(f"unrouted adopted stage item {item!r}")
+        time.sleep(0.3)
+    table_root = spark_warehouse / "ns" / table
+    _live_adopt(repark, table_root, table)
+    log = _live_read_log(repark, "rp", table)
+    for step in section["steps"]:
+        if "check_rows" in step:
+            assert _live_rows(
+                repark, f"SELECT id, s FROM rp.{_NAMESPACE}.{table} ORDER BY id"
+            ) == sorted((row[0], row[1]) for row in step["rows"]), step["check_rows"]
+            continue
+        if "check_refs" in step:
+            ids = {entry["id"]: entry["pos"] for entry in log}
+            arrow = repark.sql(
+                f"SELECT name, type, snapshot_id FROM rp.{_NAMESPACE}.{table}.refs"
+            ).to_arrow()
+            got = {
+                name: {"type": kind, "pos": ids[snap]}
+                for name, kind, snap in zip(
+                    arrow.column("name").to_pylist(),
+                    arrow.column("type").to_pylist(),
+                    arrow.column("snapshot_id").to_pylist(),
+                    strict=True,
+                )
+            }
+            assert got == step["refs"], f"{table}.refs: got {got}, want {step['refs']}"
+            continue
+        if "check_summary" in step:
+            by_pos = {entry["pos"]: entry["id"] for entry in log}
+            snap_id = by_pos[step["pos"]]
+            doc = json.loads(_newest_metadata_file(table_root).read_text(encoding="utf-8"))
+            snap = next(s for s in doc["snapshots"] if s["snapshot-id"] == snap_id)
+            for key, value in step["props"].items():
+                assert snap["summary"].get(key) == value, (key, snap["summary"])
+            continue
+        sql = step["sql"].replace("bo.", "rp.")
+        resolved = _resolve(sql, log)
+        if "expect_error" in step:
+            _assert_error(
+                repark,
+                resolved,
+                step["expect_error"]["exc"],
+                step["expect_error"].get("prefix"),
+                log,
+                step["expect_error"].get("needles"),
+            )
+            assert len(_live_read_log(repark, "rp", table)) == len(log)
+            continue
+        arrow = repark.sql(resolved).to_arrow()
+        grown = _live_read_log(repark, "rp", table)
+        if step.get("new_pos") is not None:
+            assert len(grown) == step["new_pos"] + 1, (
+                f"{resolved}: log length {len(grown)}, want {step['new_pos'] + 1}"
+            )
+            time.sleep(0.3)
+            log = grown
+        else:
+            assert len(grown) == len(log), f"{resolved} grew the log"
+        if "expect_call" in step:
+            _check_call_output(
+                arrow, resolved, step["expect_call"]["columns"], step["expect_call"]["rows"], grown
+            )
+    assert _slim(_live_read_log(repark, "rp", table)) == section["snapshots"]
+
+
 @pytest.mark.skipif(not _LIVE, reason=_LIVE_SKIP)
 def test_live_branch_ops_cross_reads(tmp_path: Path) -> None:
     """Spark and RePark read back each other's procedure commits on one table."""
@@ -395,9 +554,12 @@ def test_live_branch_ops_cross_reads(tmp_path: Path) -> None:
         "TBLPROPERTIES ('format-version'='2')"
     )
     spark.sql("INSERT INTO bo_live.ns.ops VALUES (1, 'a'), (2, 'b')")
+    time.sleep(0.3)
     spark.sql("INSERT INTO bo_live.ns.ops VALUES (4, 'd')")
+    time.sleep(0.3)
     spark.sql("ALTER TABLE bo_live.ns.ops CREATE BRANCH feat")
     spark.sql("INSERT INTO bo_live.ns.ops.branch_feat VALUES (3, 'c')")
+    time.sleep(0.3)
     spark.sql("CALL bo_live.system.fast_forward('ns.ops', 'main', 'feat')")
 
     repark = ReparkSession.builder.appName("ice-branch-ops-1-live").getOrCreate()
@@ -410,6 +572,7 @@ def test_live_branch_ops_cross_reads(tmp_path: Path) -> None:
         assert _live_rows(repark, "SELECT id, s FROM rp.ns.ops") == want
 
         repark.sql("INSERT INTO rp.ns.ops VALUES (5, 'e')")
+        time.sleep(0.3)
         back = _spark_adopt(spark, table_root, "bo_live", "ops_r1")
         assert _live_rows(spark, f"SELECT id, s FROM {back}") == _live_rows(
             repark, "SELECT id, s FROM rp.ns.ops"
@@ -417,7 +580,9 @@ def test_live_branch_ops_cross_reads(tmp_path: Path) -> None:
 
         spark.sql("ALTER TABLE bo_live.ns.ops CREATE BRANCH wip")
         spark.sql("INSERT INTO bo_live.ns.ops.branch_wip VALUES (6, 'f')")
+        time.sleep(0.3)
         spark.sql("INSERT INTO bo_live.ns.ops VALUES (7, 'g')")
+        time.sleep(0.3)
         staged = (
             spark.sql("SELECT snapshot_id FROM bo_live.ns.ops.refs WHERE name = 'wip'")
             .toArrow()
@@ -437,21 +602,37 @@ def test_live_branch_ops_cross_reads(tmp_path: Path) -> None:
             repark, "SELECT id, s FROM rp.ns.ops_cp"
         )
 
-        stamp = (
-            spark.sql(
-                "SELECT CAST(committed_at AS STRING) AS ts "
-                "FROM bo_live.ns.ops.snapshots ORDER BY committed_at"
-            )
-            .toArrow()
-            .to_pylist()[2]["ts"]
-        )
+        cp_log = _live_read_log(repark, "rp", "ops_cp")
+        stamp = _fmt(cp_log[2]["ts"])
+        pre_main = _live_main_id(repark, "rp", "ops_cp")
+        want_main = _live_select_older(cp_log, pre_main, cp_log[2]["ts"])
         repark.sql(
             f"CALL rp.system.rollback_to_timestamp('ns.ops_cp', TIMESTAMP '{stamp}')"
         ).to_arrow()
+        assert _live_main_id(repark, "rp", "ops_cp") == want_main
         back = _spark_adopt(spark, table_root, "bo_live", "ops_r3")
         assert _live_rows(spark, f"SELECT id, s FROM {back}") == _live_rows(
             repark, "SELECT id, s FROM rp.ns.ops_cp"
         )
+    finally:
+        repark.stop()
+
+
+@pytest.mark.skipif(not _LIVE, reason=_LIVE_SKIP)
+def test_live_branch_ops_adopted_shapes(tmp_path: Path) -> None:
+    """RePark cherry-picks Spark-staged dynamic-overwrite and WAP snapshots."""
+    import _live_parity as lp
+
+    assert _TRUTH["oracle"]["spark"] == "4.1.2"
+    warehouse = tmp_path / "adopt-warehouse"
+    spark = lp.build_spark_iceberg_engine(warehouse, catalog="bo_adopt").session
+    spark.sql("CREATE NAMESPACE IF NOT EXISTS bo_adopt.ns")
+    repark = ReparkSession.builder.appName("ice-branch-ops-1-adopt").getOrCreate()
+    try:
+        repark.register_memory_catalog("rp", tmp_path / "adopt-repark-warehouse")
+        repark.sql("CREATE NAMESPACE rp.ns")
+        _replay_adopted(spark, repark, warehouse, "bo_adopt", _TRUTH["adopted"]["dyn"])
+        _replay_adopted(spark, repark, warehouse, "bo_adopt", _TRUTH["adopted"]["wap"])
     finally:
         repark.stop()
 

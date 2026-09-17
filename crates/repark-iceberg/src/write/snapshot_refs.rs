@@ -1,7 +1,7 @@
 //! Snapshot-ref helpers over the fork's `ManageSnapshots` transaction API.
 
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
-use iceberg::{Catalog, Result, TableIdent};
+use iceberg::{Catalog, Error, ErrorKind, Result, TableIdent};
 
 /// Kind of snapshot ref (branch vs tag).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -145,12 +145,23 @@ pub async fn list_snapshot_refs(
     table: &iceberg::table::Table,
 ) -> Result<Vec<(String, SnapshotRefKind, i64)>> {
     use datafusion::arrow::array::{Array, AsArray};
-    use datafusion::arrow::datatypes::Int64Type;
+    use datafusion::arrow::datatypes::{DataType, Int64Type};
     use futures::TryStreamExt;
     let stream = table.inspect().refs().scan().await?;
     let batches: Vec<datafusion::arrow::array::RecordBatch> = stream.try_collect().await?;
     let mut refs = Vec::new();
     for batch in &batches {
+        let schema = batch.schema();
+        let shape_ok = schema.fields().len() >= 3
+            && matches!(schema.field(0).data_type(), DataType::Utf8)
+            && matches!(schema.field(1).data_type(), DataType::Utf8)
+            && matches!(schema.field(2).data_type(), DataType::Int64);
+        if !shape_ok {
+            return Err(Error::new(
+                ErrorKind::DataInvalid,
+                "unexpected refs inspect schema".to_string(),
+            ));
+        }
         let names = batch.column(0).as_string::<i32>();
         let kinds = batch.column(1).as_string::<i32>();
         let ids = batch.column(2).as_primitive::<Int64Type>();

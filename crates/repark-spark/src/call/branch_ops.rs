@@ -5,12 +5,14 @@ use datafusion::arrow::array::{Int64Array, RecordBatch, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
+use datafusion::sql::sqlparser::ast::{DataType as SqlDataType, Expr, Value, ValueWithSpan};
+use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, ErrorKind, TableIdent, table::Table};
 use repark_iceberg::write::{SnapshotRefKind, list_snapshot_refs};
 
 use super::{CallArgs, resolve_table_ident};
-use crate::call_args::expr_as_string;
+use crate::call_args::{expr_as_i64, expr_as_string, expr_as_timestamp_ms};
 use crate::{iceberg_err, reregister};
 
 struct RefTarget {
@@ -71,6 +73,92 @@ fn engine_refusal(message: String) -> DataFusionError {
     iceberg_err(iceberg::Error::new(ErrorKind::DataInvalid, message))
 }
 
+fn string_literal_value(expr: &Expr) -> Option<&str> {
+    match expr {
+        Expr::Value(ValueWithSpan {
+            value: Value::SingleQuotedString(text) | Value::DoubleQuotedString(text),
+            ..
+        }) => Some(text),
+        _ => None,
+    }
+}
+
+fn timestamp_typed_literal(expr: &Expr) -> Option<&str> {
+    match expr {
+        Expr::TypedString(typed) if matches!(typed.data_type, SqlDataType::Timestamp(..)) => {
+            match &typed.value.value {
+                Value::SingleQuotedString(text) | Value::DoubleQuotedString(text) => Some(text),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+fn cast_invalid_input(value: &str, from: &str, to: &str) -> DataFusionError {
+    engine_refusal(format!(
+        "[CAST_INVALID_INPUT] The value '{value}' of the type \"{from}\" cannot be cast to \"{to}\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+    ))
+}
+
+fn missing_routine_arg(routine: &str, param: &str) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[REQUIRED_PARAMETER_NOT_FOUND] Cannot invoke routine `{routine}` because the parameter named `{param}` is required, but the routine call did not supply a value. Please update the routine call to supply an argument value (either positionally at index 0 or by name) and retry the query again. SQLSTATE: 4274K"
+    ))
+}
+
+fn invalid_typed_literal(type_name: &str, value: &str) -> DataFusionError {
+    DataFusionError::SQL(
+        Box::new(ParserError::ParserError(format!(
+            "[INVALID_TYPED_LITERAL] The value of the typed literal \"{type_name}\" is invalid: '{value}'. SQLSTATE: 42604"
+        ))),
+        None,
+    )
+}
+
+fn duplicate_wap_pick(table: &Table, snapshot_id: i64) -> Option<DataFusionError> {
+    let metadata = table.metadata();
+    let picked = metadata.snapshot_by_id(snapshot_id)?;
+    let wap_id = picked
+        .summary()
+        .additional_properties
+        .get("wap.id")
+        .filter(|id| !id.is_empty())?;
+    let head = metadata.current_snapshot_id();
+    if picked.parent_snapshot_id() == head {
+        return None;
+    }
+    let mut current = head;
+    while let Some(id) = current {
+        let Some(snapshot) = metadata.snapshot_by_id(id) else {
+            break;
+        };
+        let properties = &snapshot.summary().additional_properties;
+        if properties.get("wap.id").is_some_and(|id| id == wap_id)
+            || properties
+                .get("published-wap-id")
+                .is_some_and(|id| id == wap_id)
+        {
+            return Some(engine_refusal(format!(
+                "Duplicate request to cherry pick wap id that was published already: {wap_id}"
+            )));
+        }
+        current = snapshot.parent_snapshot_id();
+    }
+    None
+}
+
+fn timestamp_type_mismatch(raw: &str) -> DataFusionError {
+    let kind = if raw.parse::<i32>().is_ok() {
+        "INT"
+    } else {
+        "BIGINT"
+    };
+    DataFusionError::Plan(format!(
+        "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve CALL due to data type mismatch: The second parameter requires the \"TIMESTAMP\" type, however \"{raw}\" has the type \"{kind}\". SQLSTATE: 42K09"
+    ))
+}
+
 async fn load_call_table(
     catalog: &Arc<dyn Catalog>,
     catalog_name: &str,
@@ -103,11 +191,6 @@ pub(super) async fn execute_fast_forward(
     let table_arg = args.require_string("table", 0)?;
     let branch = args.require_string("branch", 1)?;
     let target = args.require_string("to", 2)?;
-    if branch.trim().is_empty() {
-        return Err(illegal_argument(
-            "CALL fast_forward requires a non-empty `branch`".to_string(),
-        ));
-    }
     let (ident, table) = load_call_table(&catalog, catalog_name, &table_arg).await?;
     let refs = load_ref_map(&table).await?;
     let to_snapshot = refs
@@ -167,12 +250,25 @@ pub(super) async fn execute_cherrypick_snapshot(
     args.reject_unknown_named(&["table", "snapshot_id"])?;
     args.reject_excess_positional(2)?;
     let table_arg = args.require_string("table", 0)?;
-    let snapshot_id = args.optional_i64("snapshot_id", Some(1))?.ok_or_else(|| {
-        DataFusionError::Plan(
-            "CALL cherrypick_snapshot requires `snapshot_id` (named or positional #1)".to_string(),
-        )
-    })?;
+    let snapshot_expr = args.named.get("snapshot_id").or(args.positional.get(1));
+    let snapshot_id = match snapshot_expr {
+        None => {
+            return Err(missing_routine_arg("cherrypick_snapshot", "snapshot_id"));
+        }
+        Some(expr) => {
+            if let Some(text) = string_literal_value(expr) {
+                text.trim()
+                    .parse::<i64>()
+                    .map_err(|_| cast_invalid_input(text, "STRING", "BIGINT"))?
+            } else {
+                expr_as_i64(expr, "snapshot_id")?
+            }
+        }
+    };
     let (ident, table) = load_call_table(&catalog, catalog_name, &table_arg).await?;
+    if let Some(duplicate) = duplicate_wap_pick(&table, snapshot_id) {
+        return Err(duplicate);
+    }
     let tx = Transaction::new(&table);
     let action = tx.cherry_pick(snapshot_id);
     let tx = action.apply(tx).map_err(iceberg_err)?;
@@ -287,27 +383,42 @@ pub(super) async fn execute_rollback_to_timestamp(
     args.reject_unknown_named(&["table", "timestamp"])?;
     args.reject_excess_positional(2)?;
     let table_arg = args.require_string("table", 0)?;
-    let timestamp_ms = args
-        .optional_timestamp_ms("timestamp", Some(1))?
-        .ok_or_else(|| {
-            DataFusionError::Plan(
-                "CALL rollback_to_timestamp requires `timestamp` (named or positional #1)"
-                    .to_string(),
-            )
-        })?;
+    let timestamp_expr = args.named.get("timestamp").or(args.positional.get(1));
+    let timestamp_ms = match timestamp_expr {
+        None => {
+            return Err(missing_routine_arg("rollback_to_timestamp", "timestamp"));
+        }
+        Some(Expr::Value(ValueWithSpan {
+            value: Value::Number(raw, _),
+            ..
+        })) => return Err(timestamp_type_mismatch(raw)),
+        Some(expr) => match expr_as_timestamp_ms(expr, "timestamp") {
+            Ok(timestamp_ms) => timestamp_ms,
+            Err(original) => {
+                if let Some(text) = string_literal_value(expr) {
+                    return Err(cast_invalid_input(text, "STRING", "TIMESTAMP"));
+                }
+                if let Some(text) = timestamp_typed_literal(expr) {
+                    return Err(invalid_typed_literal("TIMESTAMP", text));
+                }
+                return Err(original);
+            }
+        },
+    };
     let (ident, table) = load_call_table(&catalog, catalog_name, &table_arg).await?;
     let previous_snapshot_id = table.metadata().current_snapshot_id().ok_or_else(|| {
         DataFusionError::Plan(format!(
             "table `{table_arg}` has no current snapshot to roll back from"
         ))
     })?;
-    latest_ancestor_older_than(&table, previous_snapshot_id, timestamp_ms).ok_or_else(|| {
-        illegal_argument(format!(
-            "Cannot roll back, no valid snapshot older than: {timestamp_ms}"
-        ))
-    })?;
+    let selected = latest_ancestor_older_than(&table, previous_snapshot_id, timestamp_ms)
+        .ok_or_else(|| {
+            illegal_argument(format!(
+                "Cannot roll back, no valid snapshot older than: {timestamp_ms}"
+            ))
+        })?;
     let tx = Transaction::new(&table);
-    let action = tx.manage_snapshots().rollback_to_time(timestamp_ms);
+    let action = tx.manage_snapshots().rollback_to(selected);
     let tx = action.apply(tx).map_err(iceberg_err)?;
     let committed = tx.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
     let current_snapshot_id = committed.metadata().current_snapshot_id().ok_or_else(|| {

@@ -199,3 +199,131 @@ suite with `AttributeError` until corrected; four `zip` calls gained `strict=Tru
 `REPARK_PARITY_LIVE=1`, same as round 1 offline), recorder pure helpers
 (`_mark_ids`, `_parse_ts`, `_in_zone`) smoke-tested, `make verify` exit 0,
 comment-ban grep clean (unit adds zero `//` and zero `#` comment lines).
+
+## Round 2 (run 20b, muse-worker) — Grok P2/P3 findings — 2026-09-17
+
+**Model:** muse-spark-1.3-contributor. **Base:** `a003f9f5` (fork pin `75da2b58`;
+clean rebase, no conflicts). Reviews: `br-logic-report.md` (L-01–L-10),
+`br-rustperf-report.md` (R-01–R-05), both PASS with findings.
+
+### PROPOSITION LEDGER — round 2
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-012 | Empty and whitespace `branch` auto-create at `to` like Spark 4.1.2; trim refusal gone (L-05). AT-2's empty-branch clause, unpinned in round 1 (L-09), is now pinned. | `ff_empty_branch`, `ff_ws_branch` green. | PROVEN | Cells below; Spark creates `''`/`'   '` with `(name, null, head)`. |
+| C-013 | A Spark WAP-staged snapshot adopted into RePark cherry-picks with `published-wap-id` stamped; duplicate pick refuses (L-04). | Live `test_live_branch_ops_adopted_shapes` (wap) green. | PROVEN | `wap_pick`, `wap_summary`, `wap_pick_dup` cells below. |
+| C-014 | A Spark dynamic-overwrite (`replace-partitions`) staged snapshot adopted into RePark replays (L-03). | Live adopted test (dyn) green. | PROVEN | `dyn_pick` `(1,3)` overwrite, rows `(3,c),(10,a),(20,b)`. |
+| C-015 | Cherry-pick fast-forward shape pinned, including a staged DELETE published as-is (L-02). | `cp_ff`, `cp_ff_delete` green. | PROVEN | `(12,12)`/`(13,13)`, no growth, rows follow. |
+| C-016 | Rollback after a lateral `set_current` jump walks current ancestry (L-01); the procedure commits the pre-check's selected id via fork `rollback_to`, which re-validates ancestry at commit (R-04). | `rt_lateral` green. | PROVEN | `(5,5)` at ts of 11; a log walk would select 11. |
+| C-017 | Selecting twins for the no-op `rt_named` / `rt_string_*` cells (L-07). | `rt_named2`, `rt_string2` green. | PROVEN | Both `(11,1)` with rows `(1,a),(2,b)`. |
+| C-018 | Missing `snapshot_id`/`timestamp` refuse Spark's `REQUIRED_PARAMETER_NOT_FOUND`; wrong types match Spark's class+text (L-10). | `cp_missing_arg`, `rt_missing_arg`, `cp_wrongtype_str`, `rt_int_arg`, `rt_named_int_arg`, `rt_bad_string`, `rt_bad_typed` green. | PROVEN | Texts below; int timestamps no longer accepted as millis. |
+| C-019 | Live cross-read rollback takes the timestamp from the table the procedure runs on and asserts `main` moved to the computed selection (L-06). | Live cross-read leg green. | PROVEN | `want_main` walked in-test; `current_snapshot_id` asserted. |
+| C-020 | `list_snapshot_refs` refuses a mistyped refs schema instead of panicking (L-08); R-01/R-02/R-03/R-05 recorded as residue, no code change. | Residue section below. | PROVEN | Strict Utf8/Utf8/Int64 gate; fork `plan()` twice stays fork-internal. |
+
+### Red-first on the unfixed tree (round-1 native, round-2 truth)
+
+New pins replayed against the round-1 build fail first at `ff_empty_branch`:
+
+```text
+repark.errors.IllegalArgumentException: Invalid or Unsupported Configuration:
+CALL fast_forward requires a non-empty `branch`
+1 failed, 1 passed, 3 skipped
+```
+
+Pre-fix RePark answers for every L-05/L-10 shape (scratch probe `/tmp/check_errs.py`,
+release native at `b8e055f5`, 2026-09-17), each mismatching the recorded Spark cell:
+
+```text
+ERR fast_forward('', ...) -> IllegalArgumentException: CALL fast_forward requires a non-empty `branch` (Spark: auto-creates)
+ERR cherrypick_snapshot('ns.t') -> AnalysisException: CALL cherrypick_snapshot requires `snapshot_id` (named or positional #1) (Spark: REQUIRED_PARAMETER_NOT_FOUND)
+ERR cherrypick_snapshot('ns.t', 'b') -> AnalysisException: CALL argument `snapshot_id` string is not an integer: b (Spark: NumberFormatException CAST_INVALID_INPUT)
+ERR rollback_to_timestamp('ns.t') -> AnalysisException: CALL rollback_to_timestamp requires `timestamp` (named or positional #1) (Spark: REQUIRED_PARAMETER_NOT_FOUND)
+ERR rollback_to_timestamp('ns.t', 123) -> IllegalArgumentException: Cannot roll back, no valid snapshot older than: 123 (Spark: AnalysisException DATATYPE_MISMATCH — the int was silently read as epoch-ms)
+ERR rollback_to_timestamp('ns.t', 'not-a-time') -> AnalysisException: cannot parse TIMESTAMP AS OF value "not-a-time" (...) (Spark: DateTimeException CAST_INVALID_INPUT)
+```
+
+The round-1 Rust selection test passed epoch-ms as an INT literal, a shape Spark
+refuses; it now spells the instant as `TIMESTAMP '<wall>'` (same selection, Spark-legal
+shape). First run against the new code failed loud with the new refusal, then passed
+after the conversion.
+
+### Oracle notes (round-2 recording, PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17)
+
+- `ff_empty_branch` / `ff_ws_branch`: OK `(branch_updated, previous_ref, updated_ref)` =
+  `('', None, {pos:4})` / `('   ', None, {pos:4})`. Spark creates; no snapshot added.
+- `cp_missing_arg` / `rt_missing_arg`: `AnalysisException`
+  `[REQUIRED_PARAMETER_NOT_FOUND] Cannot invoke routine ... (either positionally at
+  index 0 or by name) ... SQLSTATE: 4274K`.
+- `cp_wrongtype_str`: `NumberFormatException` `[CAST_INVALID_INPUT] The value 'feat2'
+  ... cannot be cast to "BIGINT" ... SQLSTATE: 22018`.
+- `rt_int_arg` / `rt_named_int_arg`: `AnalysisException` `[DATATYPE_MISMATCH.
+  UNEXPECTED_INPUT_TYPE] ... The second parameter requires the "TIMESTAMP" type,
+  however "123" has the type "INT". SQLSTATE: 42K09` — identical for both spellings.
+  The recorder's iceberg-line rule caught a `ResolvedProcedure ...@<addr>` plan-dump
+  line for these two cells, so their prefixes were replaced with the operative line
+  quoted verbatim from Spark's own run log (`/tmp/r2record.log`); same for
+  `rt_bad_typed` (`ParseException`
+  `[INVALID_TYPED_LITERAL] The value of the typed literal "TIMESTAMP" is invalid:
+  'not-a-time'. SQLSTATE: 42604`).
+- `rt_bad_string`: `DateTimeException` `[CAST_INVALID_INPUT] ... cannot be cast to
+  "TIMESTAMP" ... SQLSTATE: 22018`.
+- `rt_lateral`: `(5,5)`, no growth, rows `(1,a),(2,b),(3,c),(4,d),(6,f),(7,g)`.
+- `rt_named2` / `rt_string2`: `(11,1)`, rows `(1,a),(2,b)`.
+- `cp_ff` / `cp_ff_delete`: `(12,12)` / `(13,13)`, no growth; rows gain then lose
+  `(12,l)`; refs follow.
+- `dyn_pick`: `(1,3)` overwrite replay, rows `(3,c),(10,a),(20,b)`; staged with
+  `df.writeTo(branch).overwritePartitions()`, summary `replace-partitions=true`.
+- `wap_pick`: `(1,3)` append replay stamping `published-wap-id=r2wapid`, rows
+  `(1,a),(2,b),(3,c)`; `wap_pick_dup`: `Py4JJavaError` `Duplicate request to cherry
+  pick wap id that was published already: r2wapid`. Staged with
+  `write.wap.enabled=true` + `spark.wap.id`, main moved past it after UNSETting the
+  table property.
+
+### Residue (P3s + fork-internal; no code change in this unit)
+
+- R-01 (P2, fork-internal double `plan()` on cherry-pick replay): fork residue. The
+  replay path loads the picked manifest list + own data manifests in both `validate`
+  and `commit`, raw `FileIO::read`, no `ObjectCache`. RePark cannot cache the plan
+  without a fork change, and this unit charters none. Disposition: record; a fork-side
+  `plan`-once change is future work, not this unit.
+- R-02 (P3, refs Arrow round-trip): accepted cost. `metadata.refs` is fork-crate-private;
+  inspect is the public kind+id surface `fast_forward` needs. Zero I/O; noise at any
+  realistic ref count. Disposition: record.
+- R-03 (P3, by-ref scan instead of `snapshot_for_ref`): accepted micro-cost. One small
+  in-memory map build per by-ref call; the inspect pass is already paid for kind.
+  Disposition: record.
+- R-05 (P3, fast_forward ancestry pre-check duplicates the fork walk): required for
+  Spark's `IllegalArgumentException` text; the fork enforces again at commit. One extra
+  linear parent-chain walk at ~10k HashMap lookups. Disposition: record.
+- L-08 (P3): FIXED in this round — `list_snapshot_refs` now checks the inspect batch
+  schema (strict Utf8/Utf8/Int64 over the first three columns) and refuses typed
+  (`DataInvalid`) instead of panicking on `column(i)` / `as_string`.
+- L-09: the AT-2 overclaim is resolved, not rewritten: the empty-branch clause it
+  named without an artifact is now pinned by `ff_empty_branch`/`ff_ws_branch`, and the
+  RePark-only trim refusal those cells replaced is deleted.
+
+### Open questions
+
+None. All brief ambiguities resolved by measurement against the oracle.
+
+### Gate counts (round 2, release native rebuilt after every Rust edit)
+
+- Unit file offline: `2 passed, 3 skipped` (live cells skip without the flag).
+- Unit file live (`jb-jvm.sh`, `REPARK_PARITY_LIVE=1`): `5 passed` — first live run
+  caught the WAP-dup precedence inversion (fork reported already-picked, Spark reports
+  duplicate-WAP); the procedure-layer `duplicate_wap_pick` pre-check closed it and the
+  re-run went `5 passed`. Full log `/tmp/r2live2.log` (scratch).
+- `cargo test -p repark-spark --lib`: `1051 passed, 0 failed, 4 ignored`.
+- Whole facade suite: `9326 passed, 370 skipped, 26 xfailed`
+  (`/tmp/oc-worker/ib-build2/facade-r2.log`).
+- Whole parity suite: `757 passed, 2 skipped, 12 xfailed`
+  (`/tmp/oc-worker/ib-build2/parity-r2.log`).
+- `make verify`: red on ONE assertion, three attempts, same test every time —
+  `catalog::tests::catalog::listing_cost_list_tables_cheaper_than_provider_rebuild`
+  (`list_table_names` 148ms / 24.7ms / 8.6ms vs provider rebuild ~2ms rock-stable,
+  20 iterations). Everything else in the gate is green, and the test passes in
+  isolation. The round-2 diff shares no code path with that test (only
+  `write/snapshot_refs.rs` in `repark-iceberg`, which the listing/provider path never
+  calls); the variance sits entirely on the filesystem side while sibling lanes hold
+  the box at load 30–68 with test binaries at 400–600% CPU. Environmental contention,
+  not a regression — see handback.
