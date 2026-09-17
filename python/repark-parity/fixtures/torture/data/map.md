@@ -18,6 +18,10 @@ the committed landing zone, not a generation target.
   and a `hash` distribution stamp in its history, and its `truth.json` record
   (ICE-SPARK-TABLE-1; 67,799 bytes, second committed-data exception alongside
   `v3_dv`).
+- [ice_hadoop_vn_1/](ice_hadoop_vn_1/map.md) — a Spark-written format-v2 Hadoop
+  table at `v2` with one seed row, the adoption base for the stale-`vN`-writer
+  pins (ICE-HADOOP-VN-1).
+  pins: ice-hadoop-vn-1/C-007
 
 ## Pointers
 
