@@ -175,6 +175,12 @@ repark-core's error map.
   pins: ice-commit-unknown-1/C-001, C-003, C-005, C-006
 - `overwrite_commit.rs` — full-table overwrite commit, optional `to_branch`.
   pins: rp-5-fork-repin/C-004
+- `hadoop_stale_commit.rs` (test-only) — **ICE-HADOOP-VN-1 (2026-09-17):** two memory
+  catalogs over one tempdir warehouse adopt the same Hadoop `v2` file; the first
+  `append()` lands `v3`, and the stale catalog's append burns the fork's bounded
+  retry budget and surfaces `ErrorKind::CatalogCommitConflicts` with the winner's
+  bytes and rows intact, then stays wedged-loud on the next stale append.
+  pins: ice-hadoop-vn-1/C-001
 - `overwrite.rs` — exclusive full-table `INSERT OVERWRITE` stage-then-swap:
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`

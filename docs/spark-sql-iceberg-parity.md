@@ -4999,6 +4999,46 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Rationale** — retired. The owned fork closed Hadoop pointer math; this engine consumed
   it at `d408da42`.
 
+### ICE-HADOOP-VN-1 — a stale Hadoop `vN` writer raises loud and loses nothing
+
+> **FIXED 2026-09-17 (fork #286 at pin `75da2b58`).** A commit whose next metadata
+> location is a Hadoop `vN(.gz).metadata.json` that already exists fails with retryable
+> `CatalogCommitConflicts` after the retry budget, and the existing file stays
+> byte-identical. The stale handle stays wedged-loud; recovery is a fresh catalog
+> handle registered at the newest version file.
+
+- **repark** — two memory catalogs adopt a Spark-written `v2` table; catalog one's
+  INSERT lands `v3`; the stale INSERT, MERGE, DELETE and UPDATE each raise base
+  `PySparkException` with the `CatalogCommitConflicts`-leading message (`Cannot commit
+  table metadata to …/v3.metadata.json: version file already exists …`), `v3` bytes and
+  the metadata listing unchanged, the winner's rows readable from the winning catalog
+  and from Spark after refresh. The stale catalog's reads stay seed-stale (the
+  pre-existing memory-catalog read-staleness, same class as Spark's cached-table
+  staleness in ICE-SPARK-TABLE-1); re-registering the same name refuses
+  `TableAlreadyExists`, and DROP + re-register is unsafe (the fork's memory `drop_table`
+  deletes the pointer's metadata file) — so recovery is a fresh handle at the newest
+  version, after which commits resume and Spark reads all rows. A planted orphan `v(N+1)`
+  wedges later commits loud the same way (fork D-2); Spark lists past it and continues,
+  so on a shared table the orphan is visible to Spark but harmless.
+- **Apache Spark** — never raises on this path: a 400k-row INSERT racing a RePark commit
+  scan-forwards and commits the next version, and a planted next-version file does not
+  fail the INSERT either — Spark lists the metadata directory and continues. Java's
+  `CommitFailedException: Version N already exists` needs a true simultaneous-commit race
+  and is not reachable deterministically through PySpark 4.1.2.
+  *(oracle: recorded — `python/repark/tests/ice_hadoop_vn_1_spark_oracle.json`: Spark's
+  rows after each shape, the 400k-row race outcome, and the planted-file outcome.)*
+- **Pin** —
+  `python/repark/tests/test_ice_hadoop_vn_1.py` (offline `conc` + wedge + recovery +
+  DataFrame-door stale writers; live `conc2`, conc cross-read, recovery cross-read),
+  `crates/repark-iceberg/src/write/hadoop_stale_commit.rs`
+  (`stale_hadoop_pointer_second_append_fails_loud_and_keeps_winner`,
+  `stale_hadoop_pointer_stays_wedged_loud`)
+- **Rationale** — the V2-20c silent-overwrite shape is closed at the fork seam (exclusive
+  `vN` create) and pinned at the RePark surface (loud conflict, nothing lost). The
+  remaining deltas are declared: the stale-read shape (pre-existing, catalog-agnostic)
+  and Spark's scan-forward versus RePark's loud refusal (both lossless).
+  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-007, C-008
+
 ### S3T-1 — S3 Tables `register_table` is a dated service gap (fork R126)
 
 - **repark** — `CALL <catalog>.system.register_table` against an S3 Tables catalog refuses
@@ -6977,8 +7017,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   while a same-session `INSERT` scan-forwards and commits `v10` cleanly (no
   `CommitFailedException`, no clobber); production C4 is Glue, which has no version
   hint, so the runbook action is refreshing Spark's table cache after a repark commit,
-  catalog-agnostic — and the reverse direction is the residue: repark (fork R167) has
-  no exists-fail on a Hadoop `vN` collision; repark continues the adopted table's `vN`
+  catalog-agnostic — and the reverse direction is rowed in `ICE-HADOOP-VN-1` (fixed
+  2026-09-17 by fork #286: the `vN`-collision exists-fail); repark continues the adopted table's `vN`
   metadata naming (v6…v9) where its own tables use `NNNNN-uuid`; snapshot summaries
   mix vocabularies (Spark's `spark.app.id`/`engine-name`/`iceberg-version` family vs
   repark's `engine.operation-id`/`deleted-*` family) and Spark reads both;

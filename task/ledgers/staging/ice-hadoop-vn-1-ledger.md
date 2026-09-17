@@ -47,12 +47,33 @@ No hand-computed Spark expectation.
 | C-005 | The DataFrame door writers (`writeTo().append()`, `saveAsTable(append)`) as the stale writer raise the same conflict. | Pins in the same file. | PROVEN | 2026-09-17: `test_dataframe_doors_stale_writer_raises` green offline. pins: ice-hadoop-vn-1/C-005 |
 | C-006 | Repro: `/tmp/ib-scratch/probes/p_failures.py` conc / conc2 blocks copied into `p_hadoop_vn.py`, run through `/tmp/oc-worker/jb-jvm.sh`, output pasted. | Evidence paste below. | PROVEN | 2026-09-17, rc 0, findings F-1..F-6 below. pins: ice-hadoop-vn-1/C-006 |
 | C-007 | Spark oracle recorded as a checked-in fixture (recorder + truth JSON per the `test_ice_spark_table_1.py` / `_oracle_pins.py` convention). | Recorder script + `ice_hadoop_vn_1_spark_oracle.json`. | PROVEN | 2026-09-17: `_record_ice_hadoop_vn_1.py` rc 0; fixture `python/repark-parity/fixtures/torture/data/ice_hadoop_vn_1` (1 parquet, v1+v2, manifest, hint, truth.json) + `ice_hadoop_vn_1_spark_oracle.json` checked in. pins: ice-hadoop-vn-1/C-007 |
-| C-008 | Registry row ICE-HADOOP-VN-1 near V3-ADOPT-1 (FIXED 2026-09-17 by fork #286 at pin sha, typed error, recovery recipe, D-2's loud wedge on an orphan version file); residue sentence at ~6897 replaced with a pointer; tests map and ledgers map in lockstep. | The registry diff. | OPEN |  |
+| C-008 | Registry row ICE-HADOOP-VN-1 near V3-ADOPT-1 (FIXED 2026-09-17 by fork #286 at pin sha, typed error, recovery recipe, D-2's loud wedge on an orphan version file); residue sentence at ~6897 replaced with a pointer; tests map and ledgers map in lockstep. | The registry diff. | PROVEN | 2026-09-17: row `ICE-HADOOP-VN-1` after `V3-ADOPT-1`, residue clause replaced with a pointer, `write/map.md` + tests/fixture maps in lockstep. pins: ice-hadoop-vn-1/C-008 |
 | C-009 | No regression: the new file offline and live, `make verify`, the whole facade suite, the whole parity suite, green with real exit codes and counts. | §Gates. | OPEN |  |
 
 ## Red-first log
 
-Pasted per clause as it lands.
+### C-001 Rust pins on the previous fork pin (temporary local revert, never committed)
+
+`crates/repark-iceberg/src/write/hadoop_stale_commit.rs` run with the workspace pin
+reverted to `edc38c6a` (pre-#286; `CARGO_NET_OFFLINE=true`, restored byte-identical
+after via `git checkout -- Cargo.toml Cargo.lock`, zero diff):
+
+```text
+test write::hadoop_stale_commit::stale_hadoop_pointer_second_append_fails_loud_and_keeps_winner ... FAILED
+test write::hadoop_stale_commit::stale_hadoop_pointer_stays_wedged_loud ... FAILED
+test result: FAILED. 0 passed; 2 failed
+stale vN append must fail loud: Table { ..., metadata_location: Some(".../ns/src/metadata/v3.metadata.json"), ... }
+```
+
+The stale append returns `Ok` and overwrites `v3` — the rating's silent shape. On the
+unit pin (`75da2b58`) both pass (`2 passed; 0 failed`, 6.50s / 7.98s).
+
+### C-001 Python pins
+
+The rating report §6 row "Stale-base commit on adopted Hadoop table" is the recorded
+silent outcome on the unfixed tree (V2-20c MISSING). The new pins assert the fixed
+shape; their red state on the old pin follows by construction from the Rust red above
+(same fork seam, same `expect_err` on the stale commit).
 
 ## Evidence
 
