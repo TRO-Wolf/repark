@@ -33,7 +33,7 @@ step.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | `repro_before_fix`: `p_write_default.py` on the unfixed tree shows INSERT / MERGE column lists writing NULL for omitted `c` and `DataFrame` append refusing `missing from the DataFrame: ['c']`. | Regenerate the source table with `p_v3_types_defaults.py` via `/tmp/ib-scratch/run-probe.sh`; run `p_write_default.py`; paste the output. | **OPEN** | — |
+| C-001 | `repro_before_fix`: `p_write_default.py` on the unfixed tree shows INSERT / MERGE column lists writing NULL for omitted `c` and `DataFrame` append refusing `missing from the DataFrame: ['c']`. | Regenerate the source table with `p_v3_types_defaults.py` via `/tmp/ib-scratch/run-probe.sh`; run `p_write_default.py`; paste the output. | **PROVEN** | Source table regenerated (`/tmp/oc-worker/jb-jvm.sh /tmp/ib-scratch/run-probe.sh p_v3_types_defaults.py`, exit 0; schema carries `initial-default: 5, write-default: 5` on `c`; Spark reads pre-add rows as 5; RePark omitted-`c` insert reads back `(6, 'f', None)`). Repro on this tree's release native (`.venv/bin/python /tmp/ib-scratch/probes/p_write_default.py`, no JVM): `INSERT (id, name)` writes `(7, 'g', None)`; MERGE NOT MATCHED writes `(13, 'm', None)`; `writeTo`/`saveAsTable` append refuse `missing from the DataFrame: ['c']`; positional-short and SELECT-short refuse at planning (`Inconsistent data length`, `Column count doesn't match`); `DEFAULT` keyword refuses (`No field named default`). |
 | C-002 | `spark_oracle_recorded`: the Java-API-created v3 table ships as a checked-in fixture with relative-path-safe adoption, plus a truth JSON of Spark's answer for every cell, recorded by a script checked in beside it. | Fixture directory + truth JSON + recording script, following the `ice_spark_table_1` / `test_ice_spark_table_1.py` copy-and-register pattern. | **OPEN** | — |
 | C-003 | `pins_red_first`: `python/repark/tests/test_ice_v3_write_default_1.py` (offline tier against the fixture, live tier under `REPARK_PARITY_LIVE=1`) and the Rust fill unit tests fail on the unfixed tree. | Run the new pins on the unfixed tree; paste failures. | **OPEN** | — |
 | C-004 | `insert_column_list_fills`: `INSERT INTO t (id, name)` on both SQL doors fills omitted `c` from `write_default` (NULL only when the field has none); a required column with no write-default keeps Spark's error. | Offline + live pins green; Rust unit tests for the fill green. | **OPEN** | — |
@@ -52,11 +52,47 @@ VERDICT: 14 clauses, 0 PROVEN, 14 OPEN, 0 REJECTED.
 
 ## Red first
 
-—
+C-001 red is the matrix in `## Evidence` below (unfixed tree, release native
+`.venv`, 2026-09-17): every FILL cell reads NULL or refuses where Spark fills.
 
 ## Evidence
 
-—
+Spark oracle (live PySpark 4.1.2 + Iceberg 1.11.0, banner `spark=4.1.2 tz=UTC`,
+`/tmp/ib-scratch/wh/p_wd_oracle` + `p_wd_oracle3.py`, truth at
+`/tmp/ib-scratch/wh/wd_oracle/truth.json`, 20 cells). RePark column is this
+tree unfixed (`/tmp/wd_repark_matrix.py`). `FILL(x)` = writes x; both refuse =
+parity of refusal with different text.
+
+| Shape | Spark 4.1.2 | RePark unfixed |
+|---|---|---|
+| INSERT column list omits `c` | FILL(5): `(3, 'c', 5)` | NULL: `(103, 'rc', None)` |
+| MERGE NOT MATCHED omits `c` | FILL(5): `(4, 'd', 5)` | NULL: `(104, 'rd', None)` |
+| `writeTo(t).append()` missing `c` | FILL(5): `(5, 'e', 5)` | refuses `missing from the DataFrame: ['c']` |
+| `saveAsTable` append missing `c` | FILL(5): `(12, 'l', 5)` | refuses `missing from the DataFrame: ['c']` |
+| `df.write.insertInto` missing `c` | refuses `INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS` | refuses (`Column count doesn't match`) |
+| positional-short `VALUES (8, 'h')` | refuses `NOT_ENOUGH_DATA_COLUMNS` | refuses (`Inconsistent data length`) |
+| `INSERT SELECT 9, 'i'` short | refuses `NOT_ENOUGH_DATA_COLUMNS` | refuses (`Column count doesn't match`) |
+| `VALUES (10, 'j', DEFAULT)` | FILL(5) | refuses (`No field named default`) |
+| explicit NULL full-width | NULL (`(14, 'n', None)`) | NULL |
+| no-default nullable omitted (SQL + writeTo) | NULL | SQL NULL; writeTo refuses `missing` |
+| string default `'hi'` | FILL(`'hi'`, incl. pre-add row) | NULL on new row |
+| decimal default `3.14` | write OK; Spark read of the filled row ERRORS (`Cannot cast default value to long: 3.14`; physical parquet carries `3.14`) | NULL on new row |
+| date `2024-10-04` + timestamptz defaults | FILL both | NULL, NULL on new row |
+| write-default 7 / initial-default 5 | old row reads 5, new omitted write 7 | new row NULL |
+| required `req INT NOT NULL`, no default | refuses both doors (`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA`, `Cannot find data for the output column`) | INSERT refuses (Arrow `non-nullable but contains null`, pre-commit); writeTo refuses `missing` |
+| v2 table + Java `addColumn` default | refused (`Invalid schema for v2: non-null default not supported until v3`) | n/a (no v2 table can carry a default) |
+| Java `addRequiredColumn` no default | refused (`cannot add required column without a default value`) | n/a |
+
+Plan ground truth (EXPLAIN on this tree): column-list omit plans
+`Projection: column1 AS id, column2 AS name, Int32(NULL) AS c`; explicit
+full-width NULL plans `column3 AS c` (source ref); full-width
+`SELECT …, NULL` plans a bare `Int32(NULL) AS c` — identical to the
+synthesized fill, so the fix must know the statement column list (AST), a bare
+plan literal is not enough. Plain INSERT executes fork `IcebergWriteExec`
+(DataFusion `insert_to_plan` → fork `insert_into`); the fork's
+`apply_write_defaults` fills only MISSING columns, so an explicit NULL never
+fills there. MERGE NOT MATCHED null-fills in RePark-owned
+`write/merge/insert.rs::insert_projection` (`NULL AS c`).
 
 ## Open questions
 
