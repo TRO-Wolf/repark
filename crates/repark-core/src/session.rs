@@ -16,7 +16,7 @@ use crate::catalog_config::{self, CatalogKind, CatalogSpec};
 use crate::catalog_state::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
 use crate::config_file::maintenance::MaintenancePolicy;
 use crate::config_file::sources::SourceSpec;
-use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
+use crate::dialect::{DataFusionDialect, SqlDialect};
 use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension};
 use crate::session_owner::{session_owner_snapshot, with_session_owner};
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
@@ -28,7 +28,7 @@ pub(crate) use crate::error_map::{EngineErrorKind, classify_datafusion_error};
 #[cfg(test)]
 pub(crate) use crate::idents::reject_path_escape_segment;
 use crate::{
-    engine_err, engine_err_for_sql, iceberg_err, json_read_options_from_map, object_store_s3,
+    engine_err, iceberg_err, json_read_options_from_map, object_store_s3,
     parse_table_identifier_segments, resolve_s3_region_override,
 };
 
@@ -38,6 +38,7 @@ mod iceberg_caches;
 mod late_catalogs;
 mod spill;
 mod temp_views;
+mod write_options;
 
 pub use df_guards::subquery::{resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan};
 use df_guards::{
@@ -396,25 +397,8 @@ impl ReparkSession {
     /// # Errors
     /// Identical classification to [`Self::sql`]: every dialect gets the same error taxonomy.
     pub async fn sql_with(&self, dialect: &Arc<dyn SqlDialect>, query: &str) -> Result<DataFrame> {
-        // Intercept SET of `datafusion.runtime.memory_limit` and refuse SET of `temp_directory`.
-        if let Some(frame) = spill::maybe_apply_runtime_set(self.context(), query)? {
-            return Ok(frame);
-        }
-        self.trim_iceberg_caches();
-        // Clone the registry (cheap — keys + `Arc`s) so no lock is held across the `await`.
-        let catalogs = self.catalogs_snapshot();
-        let read_only = self.postgres_catalog_names_snapshot();
-        dialect
-            .execute(
-                EngineContext {
-                    ctx: self.context(),
-                    catalogs: &catalogs,
-                    read_only: &read_only,
-                },
-                query,
-            )
+        self.sql_with_write_options_inner(dialect, query, &HashMap::new())
             .await
-            .map_err(|error| engine_err_for_sql(query, error))
     }
 
     /// Register an Iceberg [`Catalog`] as both a DataFusion provider and session write handle.

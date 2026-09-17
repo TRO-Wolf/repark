@@ -257,3 +257,85 @@ Rulings carried in:
 - Perf P-01..P-04 (P2): stream, keep session writer concurrency, ONE catalog
   commit for OPTIONS CTAS (also correctness: Spark writes one snapshot).
   P3s only if trivial.
+
+## 10. Round 3 step 2 — out-of-band channel (Q-20c-4, 2026-09-17)
+
+- Text `OPTIONS('k'='v')` channel WITHDRAWN with the hand-written lexer
+  (L-01 smuggling, L-02 UTF-8 `byte as char` both die with it). Facade keeps
+  the dict (`store_writer_option` stays) and forwards it: writer actions call
+  native `PyReparkSession.sql_with_write_options(sql, options)`; core
+  `Session::sql_with_write_options` runs the session dialect's new
+  `execute_with_write_options` (default impl refuses non-empty on doors
+  without a channel); `SparkDialect` validates pairs into the typed
+  `StatementWriteOptions` (sorted for determinism) and routes via the new
+  `execute_with_statement_options`. SQL text is option-free everywhere.
+- A first-cut facade `_sql_with_write_options` mirroring `session.sql` was
+  written, then deleted: `DataFrame._session` is the native session, so writer
+  SQL never went through the facade pipeline — the native call is thinner.
+- User-typed behaviour pinned as main's (probed, then pinned): INSERT..OPTIONS
+  fails to parse (`ParseException`, SQL-02); `USING..OPTIONS` fails to parse;
+  `WITH(..)` CTAS keeps the loud `not supported for Iceberg` refusal (SQL-03).
+- UTF-8 rides PyO3 `HashMap` byte-exact: SNAP-08 (V2) and SNAP-09 (V1) pin
+  `café-🎉` / `naïve 🎉` through append/insertInto into the summary. Round-2
+  SNAP-06 (text-channel round-trip) deleted with the channel.
+- `writer_readwriter.py` 1099 -> 1093 (shared `run_through_temp_view` funnel).
+
+## 11. Round 3 step 3a — gzip plus table-property level (Q-20c-6, 2026-09-17)
+
+- Red-first at Rust unit level:
+  `table_level_gzip_option_codec_refuses_like_spark` failed before the fix
+  (table `write.parquet.compression-level=1` plus option codec gzip committed
+  fine) and passes after.
+- Fix: `writer_properties_with` refuses on the MERGED level
+  (option-over-table-property) whenever the effective codec is gzip, whatever
+  side the level came from. Refusal text renamed to the source-neutral
+  `gzip compression-codec with a compression-level is refused`; no test or
+  registry row pinned the old wording (only the `compression-level`
+  substring, kept).
+
+## 12. Round 3 step 3b — summary-key collisions (Q-20c-5, 2026-09-17)
+
+- Spark cells verbatim (`/tmp/sparkenv`, Iceberg 1.11.0, one JVM each):
+  - added-records=999 extra ->
+    `IllegalArgumentException: Multiple entries with same key:
+    added-records=2 and added-records=999` (write aborted).
+  - engine-name=custom-engine extra ->
+    `IllegalArgumentException: Multiple entries with same key:
+    engine-name=spark and engine-name=custom-engine`.
+  - operation=stolen-op extra (append AND overwrite): write commits, summary
+    shows `added-records => '2'`, `engine-name => 'spark'`,
+    `operation => None`, `run_id => 'plain-extra'` — the user operation never
+    lands and Spark sets none of its own on these paths.
+  - engine.operation-id=stolen-id extra: lands (`engine.operation-id =>
+    'stolen-id'`); Spark never computes the key.
+- Rule implemented in `summary_with_extras` (now `Result`): drop user
+  `operation` (as Spark does) and user `engine.operation-id` (ours always
+  wins, fresh UUID stands); refuse metric classes (`added-`/`deleted-`/
+  `removed-`/`total-` prefixes, `engine-name`, `engine-version`,
+  `changed-partition-count`) with a `Multiple entries with same key`
+  refusal. Red-first via SNAP-10/11/12 (all 3 failed before, pass after).
+
+## 13. Round 3 step 4 — P-01..P-04 (2026-09-17)
+
+- P-03/P-01: `execute_append_with_options` streams the source
+  (`execute_stream`, no `collect`); the partitioned overwrite arm conforms
+  once per batch inside the stream instead of collect-then-reconform.
+  `append_with_statement_options` and `stage_overwrite_files_with` are now
+  stream-in; the `Vec` partitioned wrapper is deleted (static-overwrite keeps
+  its main-branch collect, out of scope per the report).
+- P-02: `staging: &WriterStagingOverrides` threads through the canonical
+  concurrent fanout (`fanout_conformed_stream_with_concurrency`,
+  `fanout_sorted_serial/stream`, `serial_with_abort`); canonical callers pass
+  `none()`, which is value-identical to the old path (`with(None,None)` is
+  literally `for()`'s body; the size re-parse returns the same number).
+- P-04: OPTIONS CTAS publishes ONCE — materialize plus `set_snapshot_properties`
+  on a fork `Transaction`, then `publish_create_table` / `publish_replace_table`
+  (base captured from the loaded table before staging; the staged table's own
+  location is post-staging and tripped a `CatalogCommitConflicts` in SNAP-13
+  before the fix). Pins: SNAP-04 (create, count 1, kept) and new SNAP-13
+  (existing-table replace, before+1 with the extras on it).
+- P3s skipped as non-trivial (P-05 fork-side, P-06 Vec wrapper deleted as a
+  side effect for the SQL paths, P-07/08/09/10 review-held as the report asks).
+- Commit discipline deviation: steps 2+3+4 ride one implementation commit
+  (per-step hunk splits did not fit the 13:30 stop beside the mandatory
+  gates); the ledger sections above keep step traceability.

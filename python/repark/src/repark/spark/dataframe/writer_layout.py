@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 from types import MethodType
 from typing import TYPE_CHECKING, Any, NoReturn
 
+from repark import _native
 from repark.errors import (
     AnalysisException,
     PySparkNotImplementedError,
@@ -19,6 +21,7 @@ from repark.spark._integral import (
     _attached_message_parameters,
     _attached_sql_state,
 )
+from repark.spark._temp_views import scratch_view_name
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
@@ -45,15 +48,21 @@ def _raise_analysis(
     raise error
 
 
-def render_write_options_clause(options: dict[str, str]) -> str:
-    """Render stored writer options as a facade ``OPTIONS(...)`` clause for Iceberg SQL."""
-    if not options:
-        return ""
-    pairs = ", ".join(
-        f"'{escape_sql_single_quotes(key)}'='{escape_sql_single_quotes(value)}'"
-        for key, value in options.items()
-    )
-    return f" OPTIONS({pairs})"
+def run_through_temp_view(
+    dataframe: DataFrame,
+    build_sql: Callable[[str], str],
+    options: dict[str, str] | None,
+    prefix: str,
+) -> None:
+    """Register a temp view, run the built write SQL with options, drop the view."""
+    dataframe._ensure_alive()
+    session = dataframe._session
+    view_name = scratch_view_name(session, prefix)
+    session.create_or_replace_temp_view(view_name, dataframe._native_for_registration())
+    try:
+        _native.session_sql_with_write_options(session, build_sql(view_name), options or {})
+    finally:
+        session.drop_temp_view(view_name)
 
 
 def store_writer_option(options: dict[str, str], key: object, value: object) -> None:

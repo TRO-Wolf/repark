@@ -44,7 +44,7 @@ pub(crate) mod write_options;
 mod write_to_branch;
 
 // --- Router entrypoints.
-pub use router::{execute, execute_with_read_only};
+pub use router::{execute, execute_with_read_only, execute_with_statement_options};
 // G15: parse-altitude collation refuse (binding `F.expr` / `filter_sql` call this).
 pub use collation::{
     COLLATION_REFUSAL_NEEDLE, collation_refusal_message, is_collation_session_key,

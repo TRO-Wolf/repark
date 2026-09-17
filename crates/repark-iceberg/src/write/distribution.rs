@@ -396,12 +396,13 @@ impl PhysicalExpr for NestedFieldExpr {
 pub(crate) async fn fanout_sorted_serial<S>(
     table: &Table,
     conformed: &mut S,
+    staging: &super::write_options::WriterStagingOverrides,
 ) -> Result<Vec<DataFile>>
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
     if !default_sort_is_declared(table) {
-        return super::append::fanout_conformed_stream_serial(table, conformed).await;
+        return super::append::fanout_conformed_stream_serial(table, conformed, staging).await;
     }
     let mut collected = Vec::new();
     while let Some(batch) = conformed.try_next().await? {
@@ -409,13 +410,14 @@ where
     }
     let sorted = sort_batches_by_default_order(table, collected).await?;
     let mut ordered = futures::stream::iter(sorted.into_iter().map(Ok::<_, DataFusionError>));
-    super::append::fanout_conformed_stream_serial(table, &mut ordered).await
+    super::append::fanout_conformed_stream_serial(table, &mut ordered, staging).await
 }
 
 pub(crate) async fn fanout_sorted_stream<S>(
     table: &Table,
     stream: S,
     aborted: Arc<AtomicBool>,
+    staging: &super::write_options::WriterStagingOverrides,
 ) -> Result<Vec<DataFile>>
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
@@ -426,6 +428,7 @@ where
             table,
             &mut stream,
             &aborted,
+            staging,
         )
         .await;
     }
@@ -435,7 +438,8 @@ where
     }
     let sorted = sort_batches_by_default_order(table, collected).await?;
     let mut ordered = futures::stream::iter(sorted.into_iter().map(Ok::<_, DataFusionError>));
-    super::append::fanout_conformed_stream_serial_with_abort(table, &mut ordered, &aborted).await
+    super::append::fanout_conformed_stream_serial_with_abort(table, &mut ordered, &aborted, staging)
+        .await
 }
 
 pub(crate) async fn drive_unpartitioned<S, F, Fut, W>(

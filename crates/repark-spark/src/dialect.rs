@@ -17,6 +17,28 @@ impl SqlDialect for SparkDialect {
     ) -> datafusion::error::Result<DataFrame> {
         crate::execute_with_read_only(cx.ctx, cx.catalogs, query, cx.read_only).await
     }
+
+    async fn execute_with_write_options(
+        &self,
+        cx: EngineContext<'_>,
+        query: &str,
+        options: &std::collections::HashMap<String, String>,
+    ) -> datafusion::error::Result<DataFrame> {
+        let mut pairs: Vec<(String, String)> = options
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect();
+        pairs.sort();
+        let write_options = crate::write_options::StatementWriteOptions::validate(pairs)?;
+        crate::execute_with_statement_options(
+            cx.ctx,
+            cx.catalogs,
+            query,
+            cx.read_only,
+            &write_options,
+        )
+        .await
+    }
 }
 
 #[cfg(test)]

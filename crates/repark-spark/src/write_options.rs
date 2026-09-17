@@ -25,13 +25,14 @@ impl StatementWriteOptions {
         self.raw.is_empty()
     }
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn refuse_if_non_empty(&self, context: &str) -> Result<()> {
         if self.raw.is_empty() {
             return Ok(());
         }
         let keys: Vec<&str> = self.raw.iter().map(|(key, _)| key.as_str()).collect();
         Err(DataFusionError::Plan(format!(
-            "{context} does not support the facade OPTIONS clause ({}); it is only \
+            "{context} does not support write options ({}); they are only \
              honoured on Iceberg table writes (ICE-WRITE-OPTIONS-1)",
             keys.join(", ")
         )))
@@ -45,29 +46,9 @@ impl StatementWriteOptions {
             target_file_size_bytes: self.target_file_size_bytes,
         }
     }
-}
 
-pub fn extract_statement_write_options(sql: &str) -> Result<(String, StatementWriteOptions)> {
-    if !is_options_write_statement(sql) {
-        return Ok((sql.to_string(), StatementWriteOptions::empty()));
-    }
-    let mut cleaned = sql.to_string();
-    let mut pairs: Vec<(String, String)> = Vec::new();
-    while let Some((start, end, found)) = find_options_clause(&cleaned) {
-        let Some(clause_pairs) = parse_options_pairs(&found) else {
-            return Ok((sql.to_string(), StatementWriteOptions::empty()));
-        };
-        pairs.extend(clause_pairs);
-        cleaned = format!("{}{}", &cleaned[..start], &cleaned[end..]);
-    }
-    if pairs.is_empty() {
-        return Ok((sql.to_string(), StatementWriteOptions::empty()));
-    }
-    Ok((cleaned, StatementWriteOptions::validate(pairs)?))
-}
-
-impl StatementWriteOptions {
-    fn validate(pairs: Vec<(String, String)>) -> Result<Self> {
+    #[allow(clippy::missing_errors_doc)]
+    pub(crate) fn validate(pairs: Vec<(String, String)>) -> Result<Self> {
         let mut merged: Vec<(String, String)> = Vec::with_capacity(pairs.len());
         for (key, value) in pairs {
             let lowered = key.to_ascii_lowercase();
@@ -138,212 +119,40 @@ fn validate_isolation_level(raw: &str) -> Result<String> {
     }
 }
 
-fn is_options_write_statement(sql: &str) -> bool {
-    let mut words = sql
-        .split(|byte: char| byte.is_whitespace() || byte == '(')
-        .filter(|word| !word.is_empty());
-    let Some(first) = words.next() else {
-        return false;
-    };
-    if first.eq_ignore_ascii_case("insert") {
-        return true;
-    }
-    if !first.eq_ignore_ascii_case("create") {
-        return false;
-    }
-    let mut next = words.next();
-    if next.is_some_and(|word| word.eq_ignore_ascii_case("or")) {
-        next = words.next();
-        if !next.is_some_and(|word| word.eq_ignore_ascii_case("replace")) {
-            return false;
-        }
-        next = words.next();
-    }
-    next.is_some_and(|word| word.eq_ignore_ascii_case("table"))
-}
-
-fn find_options_clause(sql: &str) -> Option<(usize, usize, String)> {
-    let bytes = sql.as_bytes();
-    let mut index = 0;
-    let mut depth = 0usize;
-    while index < bytes.len() {
-        let byte = bytes[index];
-        if byte == b'\'' {
-            index = skip_quoted(bytes, index, b'\'');
-            continue;
-        }
-        if byte == b'"' || byte == b'`' {
-            index = skip_quoted(bytes, index, byte);
-            continue;
-        }
-        if byte == b'-' && bytes.get(index + 1) == Some(&b'-') {
-            while index < bytes.len() && bytes[index] != b'\n' {
-                index += 1;
-            }
-            continue;
-        }
-        if byte == b'/' && bytes.get(index + 1) == Some(&b'*') {
-            index += 2;
-            while index + 1 < bytes.len() && !(bytes[index] == b'*' && bytes[index + 1] == b'/') {
-                index += 1;
-            }
-            index += 2;
-            continue;
-        }
-        if byte == b'(' {
-            depth += 1;
-            index += 1;
-            continue;
-        }
-        if byte == b')' {
-            depth = depth.saturating_sub(1);
-            index += 1;
-            continue;
-        }
-        if depth == 0 && (byte.is_ascii_alphabetic() || byte == b'_') {
-            let start = index;
-            while index < bytes.len()
-                && (bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_')
-            {
-                index += 1;
-            }
-            if sql[start..index].eq_ignore_ascii_case("options") {
-                let mut cursor = index;
-                while cursor < bytes.len() && bytes[cursor].is_ascii_whitespace() {
-                    cursor += 1;
-                }
-                if bytes.get(cursor) == Some(&b'(') {
-                    let (end, text) = scan_balanced(sql, cursor)?;
-                    return Some((start, end, text));
-                }
-            }
-            continue;
-        }
-        index += 1;
-    }
-    None
-}
-
-fn skip_quoted(bytes: &[u8], at: usize, quote: u8) -> usize {
-    let mut index = at + 1;
-    while index < bytes.len() {
-        if bytes[index] == quote {
-            if bytes.get(index + 1) == Some(&quote) {
-                index += 2;
-                continue;
-            }
-            return index + 1;
-        }
-        index += 1;
-    }
-    index
-}
-
-fn scan_balanced(sql: &str, at: usize) -> Option<(usize, String)> {
-    let bytes = sql.as_bytes();
-    let mut depth = 0usize;
-    let mut index = at;
-    while index < bytes.len() {
-        let byte = bytes[index];
-        if byte == b'\'' {
-            index = skip_quoted(bytes, index, b'\'');
-            continue;
-        }
-        if byte == b'"' || byte == b'`' {
-            index = skip_quoted(bytes, index, byte);
-            continue;
-        }
-        if byte == b'(' {
-            depth += 1;
-        } else if byte == b')' {
-            depth -= 1;
-            if depth == 0 {
-                return Some((index + 1, sql[at + 1..index].to_string()));
-            }
-        }
-        index += 1;
-    }
-    None
-}
-
-fn parse_options_pairs(text: &str) -> Option<Vec<(String, String)>> {
-    let bytes = text.as_bytes();
-    let mut index = 0;
-    let mut pairs = Vec::new();
-    loop {
-        while index < bytes.len() && (bytes[index].is_ascii_whitespace() || bytes[index] == b',') {
-            index += 1;
-        }
-        if index >= bytes.len() {
-            return Some(pairs);
-        }
-        let key = parse_single_literal(text, &mut index)?;
-        while index < bytes.len() && bytes[index].is_ascii_whitespace() {
-            index += 1;
-        }
-        if bytes.get(index) != Some(&b'=') {
-            return None;
-        }
-        index += 1;
-        while index < bytes.len() && bytes[index].is_ascii_whitespace() {
-            index += 1;
-        }
-        let value = parse_single_literal(text, &mut index)?;
-        pairs.push((key, value));
-    }
-}
-
-fn parse_single_literal(text: &str, index: &mut usize) -> Option<String> {
-    let bytes = text.as_bytes();
-    if bytes.get(*index) != Some(&b'\'') {
-        return None;
-    }
-    *index += 1;
-    let mut out = String::new();
-    loop {
-        let byte = *bytes.get(*index)?;
-        if byte == b'\'' {
-            if bytes.get(*index + 1) == Some(&b'\'') {
-                out.push('\'');
-                *index += 2;
-                continue;
-            }
-            *index += 1;
-            return Some(out);
-        }
-        out.push(byte as char);
-        *index += 1;
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn pair(key: &str, value: &str) -> (String, String) {
+        (key.to_string(), value.to_string())
+    }
+
     #[test]
-    fn plain_insert_passes_through_untouched() {
-        let sql = "INSERT INTO cat.ns.t SELECT a FROM v";
-        let (cleaned, options) = extract_statement_write_options(sql).expect("extract");
-        assert_eq!(cleaned, sql);
+    fn empty_pairs_validate_empty() {
+        let options = StatementWriteOptions::validate(Vec::new()).expect("validate");
         assert!(options.is_empty());
     }
 
     #[test]
-    fn options_clause_extracts_and_strips() {
-        let sql = "INSERT INTO cat.ns.t OPTIONS('snapshot-property.run_id'='abc', 'write-format'='parquet') SELECT a FROM v";
-        let (cleaned, options) = extract_statement_write_options(sql).expect("extract");
-        assert_eq!(cleaned, "INSERT INTO cat.ns.t  SELECT a FROM v");
+    fn snapshot_extra_survives_validation() {
+        let options = StatementWriteOptions::validate(vec![
+            pair("snapshot-property.run_id", "abc"),
+            pair("write-format", "parquet"),
+        ])
+        .expect("validate");
         assert_eq!(
             options.snapshot_extra,
             vec![("run_id".to_string(), "abc".to_string())]
         );
         assert_eq!(options.write_format.as_deref(), Some("parquet"));
+        assert!(!options.is_empty());
     }
 
     #[test]
     fn suffix_lower_cases_like_spark() {
-        let sql = "INSERT INTO t OPTIONS('SNAPSHOT-PROPERTY.UPPER_KEY'='v') SELECT 1";
-        let (_, options) = extract_statement_write_options(sql).expect("extract");
+        let options =
+            StatementWriteOptions::validate(vec![pair("SNAPSHOT-PROPERTY.UPPER_KEY", "v")])
+                .expect("validate");
         assert_eq!(
             options.snapshot_extra,
             vec![("upper_key".to_string(), "v".to_string())]
@@ -352,8 +161,8 @@ mod tests {
 
     #[test]
     fn empty_suffix_keeps_empty_key_like_spark() {
-        let sql = "INSERT INTO t OPTIONS('snapshot-property.'='v') SELECT 1";
-        let (_, options) = extract_statement_write_options(sql).expect("extract");
+        let options = StatementWriteOptions::validate(vec![pair("snapshot-property.", "v")])
+            .expect("validate");
         assert_eq!(
             options.snapshot_extra,
             vec![(String::new(), "v".to_string())]
@@ -362,80 +171,46 @@ mod tests {
 
     #[test]
     fn duplicate_keys_last_wins_like_spark() {
-        let sql = "INSERT INTO t OPTIONS('write-format'='orc', 'WRITE-FORMAT'='parquet') SELECT 1";
-        let (_, options) = extract_statement_write_options(sql).expect("extract");
+        let options = StatementWriteOptions::validate(vec![
+            pair("write-format", "orc"),
+            pair("WRITE-FORMAT", "parquet"),
+        ])
+        .expect("validate");
         assert_eq!(options.write_format.as_deref(), Some("parquet"));
     }
 
     #[test]
     fn orc_refuses_naming_the_registry_row() {
         let error =
-            extract_statement_write_options("INSERT INTO t OPTIONS('write-format'='orc') SELECT 1")
-                .expect_err("orc must refuse");
-        let message = error.to_string();
-        assert!(message.contains("ICE-WRITE-OPTIONS-1"), "{message}");
+            StatementWriteOptions::validate(vec![pair("write-format", "orc")]).expect_err("orc");
+        assert!(error.to_string().contains("ICE-WRITE-OPTIONS-1"));
     }
 
     #[test]
     fn bogus_format_mirrors_spark_text() {
-        let error = extract_statement_write_options(
-            "INSERT INTO t OPTIONS('write-format'='bogus') SELECT 1",
-        )
-        .expect_err("bogus must refuse");
+        let error = StatementWriteOptions::validate(vec![pair("write-format", "bogus")])
+            .expect_err("bogus");
         assert!(error.to_string().contains("Invalid file format: bogus"));
     }
 
     #[test]
     fn unknown_keys_ignored_like_spark() {
-        let sql = "INSERT INTO t OPTIONS('repark-nope'='zzz') SELECT 1";
-        let (cleaned, options) = extract_statement_write_options(sql).expect("extract");
-        assert_eq!(cleaned, "INSERT INTO t  SELECT 1");
+        let options =
+            StatementWriteOptions::validate(vec![pair("repark-nope", "zzz")]).expect("validate");
         assert!(!options.is_empty());
         assert!(options.snapshot_extra.is_empty());
     }
 
     #[test]
-    fn quoted_options_word_never_matches() {
-        let sql = "INSERT INTO t SELECT * FROM x WHERE y = 'OPTIONS('";
-        let (cleaned, options) = extract_statement_write_options(sql).expect("extract");
-        assert_eq!(cleaned, sql);
-        assert!(options.is_empty());
-    }
-
-    #[test]
-    fn table_named_options_without_pairs_passes_through() {
-        let sql = "CREATE TABLE options (a INT)";
-        let (cleaned, options) = extract_statement_write_options(sql).expect("extract");
-        assert_eq!(cleaned, sql);
-        assert!(options.is_empty());
-    }
-
-    #[test]
-    fn non_insert_create_passes_through() {
-        let sql = "SELECT OPTIONS('a'='b')";
-        let (cleaned, options) = extract_statement_write_options(sql).expect("extract");
-        assert_eq!(cleaned, sql);
-        assert!(options.is_empty());
-    }
-
-    #[test]
-    fn create_namespace_and_view_keep_their_text() {
-        for sql in [
-            "CREATE NAMESPACE x WITH PROPERTIES ('a'='b')",
-            "CREATE VIEW v OPTIONS('a'='b') AS SELECT 1",
-            "CREATE OR REPLACE VIEW v AS SELECT 1",
-        ] {
-            let (cleaned, options) = extract_statement_write_options(sql).expect("extract");
-            assert_eq!(cleaned, sql, "{sql}");
-            assert!(options.is_empty());
-        }
-    }
-
-    #[test]
-    fn create_or_replace_table_strips() {
-        let sql = "CREATE OR REPLACE TABLE t OPTIONS('write-format'='parquet') AS SELECT 1";
-        let (cleaned, options) = extract_statement_write_options(sql).expect("extract");
-        assert_eq!(cleaned, "CREATE OR REPLACE TABLE t  AS SELECT 1");
-        assert_eq!(options.write_format.as_deref(), Some("parquet"));
+    fn utf8_pairs_pass_through_unscathed() {
+        let options = StatementWriteOptions::validate(vec![pair(
+            "snapshot-property.café-🎉",
+            "naïve töne 🎉",
+        )])
+        .expect("validate");
+        assert_eq!(
+            options.snapshot_extra,
+            vec![("café-🎉".to_string(), "naïve töne 🎉".to_string())]
+        );
     }
 }

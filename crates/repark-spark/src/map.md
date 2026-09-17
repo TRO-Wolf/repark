@@ -35,10 +35,11 @@ pins: rp-4-fork-repin/C-005, C-006
   refuses `V3-COW-1`.
   SQP-1: the front door canonicalizes escapes once and
   translates downstream parser locations back to the caller's SQL.
-  **ICE-WRITE-OPTIONS-1 (2026-09-17):** the front door extracts the facade
-  `OPTIONS(...)` clause before any rewrite, threads the validated set through
-  `execute_time_travelled` into `execute_inner`, and refuses non-empty sets on the
-  non-Iceberg arms so options are never silently dropped. `execute_time_travelled`
+  **ICE-WRITE-OPTIONS-1 (2026-09-17):** the front door threads the out-of-band
+  validated set through `execute_time_travelled` into `execute_inner`, and refuses
+  non-empty sets on the non-Iceberg arms so options are never silently dropped.
+  Round 3 withdrew the text-clause extractor (L-01/L-02): user-typed `OPTIONS(...)`
+  keeps main's parse error / CTAS refusal. `execute_time_travelled`
   runs heap-pinned (`Box::pin`) so the thread-through keeps test-task futures
   under the 16 KiB clippy ceiling.
   pins: ice-write-options-1/C-001, C-004
@@ -54,7 +55,7 @@ pins: rp-4-fork-repin/C-005, C-006
   Empty overwrite onto a branch wipes via `commit_overwrite_replace_all_to`, not a 4-part
   self-scan.
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** `execute_append_with_options` (option-carrying
-  plain INSERT stages serially on the owned path with the merged summary); the overwrite
+  plain INSERT stages on the owned path with the merged summary); the overwrite
   family threads `StatementWriteOptions` through staging (option-free arms keep the
   canonical staging byte-identical) into the `*_with_summary` commits. The append
   executor refuses table-function targets, `REPLACE INTO`, explicit column lists, and
@@ -76,14 +77,13 @@ pins: rp-4-fork-repin/C-005, C-006
   (matching plus projection live in `plan_name_projection`).
   pins: ice-rtas-byname-1/C-007, C-008, C-009, C-010
   pins: ice-write-options-1/C-001, C-003
-- `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** the facade `OPTIONS(...)`
-  clause recognizer: quote/comment/paren-aware extraction (INSERT and CREATE
-  [OR REPLACE] TABLE only; every other form keeps the SQL byte-identical), last-wins
-  validation (snapshot-property strip-and-lowercase, parquet honour, orc/avro/bogus
-  refusals, option-over-table-property numerics/codec/isolation, lenient booleans,
-  Spark-shaped refusal texts; pairs are single-quoted with `''` escapes, anything
-  else is not a clause), in-module units. No inline comments per the owner ban
-  (round-2 purge 2026-09-17 removed the `# Errors` sections too); rationale
+- `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
+  the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
+  honour, orc/avro/bogus refusals, option-over-table-property
+  numerics/codec/isolation, lenient booleans, Spark-shaped refusal texts),
+  in-module units. Round 3 withdrew the text-clause recognizer (L-01 smuggling,
+  L-02 UTF-8); the SQL text stays option-free. No inline comments per the owner
+  ban (round-2 purge 2026-09-17 removed the `# Errors` sections too); rationale
   lives here and in the ledger.
   pins: ice-write-options-1/C-001, C-002, C-003, C-004
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
@@ -151,9 +151,10 @@ pins: rp-4-fork-repin/C-005, C-006
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** option-carrying CTAS stages with overrides,
-  publishes the staged table empty, then appends with the merged summary (one snapshot);
-  the tail lives in `finish_ctas_staged_commit` so `execute_ctas` keeps the function
-  length ceiling.
+  then publishes once (materialize plus summary on a fork `Transaction`,
+  `publish_create_table` / `publish_replace_table`; one snapshot); the tail lives
+  in `finish_ctas_staged_commit` so `execute_ctas` keeps the function
+  length ceiling. Round 3 withdrew the empty-publish-then-append double commit.
   pins: ice-write-options-1/C-001, C-003
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the service-managed abort arm skips `drop_table`
   and returns the original error unwrapped when `is_commit_state_unknown` fires — a

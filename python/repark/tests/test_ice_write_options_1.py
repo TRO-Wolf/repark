@@ -20,7 +20,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException, ParseException, UnsupportedOperationException
 
 CATALOG = "ice_write_options_1"
 NS = "ns"
@@ -115,12 +115,51 @@ def test_snapshot_property_two_props(spark: ReparkSession) -> None:
     assert summary["pipeline.batch"] == "7"
 
 
-def test_snapshot_property_quoted_key_value(spark: ReparkSession) -> None:
-    """SNAP-06: a key and a value carrying quotes and parens round-trip exactly."""
-    _seed(spark, "snap_quote")
-    table = f"{CATALOG}.{NS}.snap_quote"
-    (_frame(spark).writeTo(table).option("snapshot-property.up')side", "rock'n)roll").append())
-    assert _latest_summary(spark, table)["up')side"] == "rock'n)roll"
+def test_snapshot_property_utf8_v2(spark: ReparkSession) -> None:
+    """SNAP-08: UTF-8 key and value ride the out-of-band channel byte-exact (V2)."""
+    _seed(spark, "snap_utf8")
+    table = f"{CATALOG}.{NS}.snap_utf8"
+    (_frame(spark).writeTo(table).option("snapshot-property.café-🎉", "naïve 🎉").append())
+    assert _latest_summary(spark, table)["café-🎉"] == "naïve 🎉"
+
+
+def test_snapshot_property_utf8_v1(spark: ReparkSession) -> None:
+    """SNAP-09: UTF-8 key and value ride the out-of-band channel byte-exact (V1)."""
+    _seed(spark, "snap_utf8_v1")
+    table = f"{CATALOG}.{NS}.snap_utf8_v1"
+    (
+        _frame(spark)
+        .write.format("iceberg")
+        .option("snapshot-property.café", "naïve 🎉")
+        .insertInto(table)
+    )
+    assert _latest_summary(spark, table)["café"] == "naïve 🎉"
+
+
+def test_user_typed_insert_options_not_honoured(spark: ReparkSession) -> None:
+    """SQL-02: user-typed OPTIONS on SQL INSERT fails to parse (main behaviour)."""
+    _seed(spark, "sql_smuggle")
+    table = f"{CATALOG}.{NS}.sql_smuggle"
+    with pytest.raises(ParseException):
+        spark.sql(
+            f"INSERT INTO {table} OPTIONS('snapshot-property.run_id'='smuggled') "
+            "SELECT * FROM (VALUES (9, 'name-9')) AS t(id, name)"
+        )
+    assert "run_id" not in _latest_summary(spark, table)
+
+
+def test_user_typed_ctas_options_still_refuses(spark: ReparkSession) -> None:
+    """SQL-03: user-typed OPTIONS on CTAS keeps main's refusal / parse error."""
+    table = f"{CATALOG}.{NS}.sql_ctas_opt"
+    with pytest.raises(UnsupportedOperationException, match="not supported for Iceberg"):
+        spark.sql(
+            f"CREATE TABLE {table} WITH ('a'='b') AS SELECT * FROM (VALUES (1, 'x')) AS t(id, name)"
+        )
+    with pytest.raises(ParseException):
+        spark.sql(
+            f"CREATE TABLE {table} USING iceberg OPTIONS('a'='b') "
+            "AS SELECT * FROM (VALUES (1, 'x')) AS t(id, name)"
+        )
 
 
 def test_snapshot_property_dyn_overwrite(spark: ReparkSession) -> None:
@@ -139,6 +178,21 @@ def test_snapshot_property_create_replace(spark: ReparkSession) -> None:
     assert _latest_summary(spark, table)["run_id"] == "ctas-1"
     assert _snapshot_count(spark, table) == 1
     assert _fixture_cell("SNAP-04-create-replace")["snapshot_count"] == 1
+
+
+def test_create_replace_existing_single_snapshot(spark: ReparkSession) -> None:
+    """SNAP-13: OPTIONS replace on an existing table adds one snapshot (P-04)."""
+    _seed(spark, "snap_replace_once")
+    table = f"{CATALOG}.{NS}.snap_replace_once"
+    before = _snapshot_count(spark, table)
+    (
+        _frame(spark, 4)
+        .writeTo(table)
+        .option("snapshot-property.run_id", "replace-1")
+        .createOrReplace()
+    )
+    assert _snapshot_count(spark, table) == before + 1
+    assert _latest_summary(spark, table)["run_id"] == "replace-1"
 
 
 def test_snapshot_property_v1_ctas(spark: ReparkSession) -> None:
@@ -550,3 +604,34 @@ def test_live_cells_reproduce_fixture(tmp_path: Path) -> None:
     assert set(recorded) == set(expected)
     for cell_id, want in expected.items():
         assert _stable_projection(recorded[cell_id]) == _stable_projection(want), cell_id
+
+
+def test_snapshot_property_added_records_refuses(spark: ReparkSession) -> None:
+    """SNAP-10: a colliding engine metric key refuses like Spark (Q-20c-5)."""
+    _seed(spark, "snap_reserved")
+    table = f"{CATALOG}.{NS}.snap_reserved"
+    before = _snapshot_count(spark, table)
+    with pytest.raises(AnalysisException, match="Multiple entries with same key"):
+        (_frame(spark).writeTo(table).option("snapshot-property.added-records", "999").append())
+    assert _snapshot_count(spark, table) == before
+
+
+def test_snapshot_property_operation_dropped(spark: ReparkSession) -> None:
+    """SNAP-11: a user operation never replaces the engine value (Q-20c-5)."""
+    _seed(spark, "snap_opdrop")
+    table = f"{CATALOG}.{NS}.snap_opdrop"
+    (_frame(spark).writeTo(table).option("snapshot-property.operation", "stolen-op").append())
+    assert _latest_summary(spark, table).get("operation") != "stolen-op"
+
+
+def test_snapshot_property_engine_operation_id_ours(spark: ReparkSession) -> None:
+    """SNAP-12: engine.operation-id always carries the engine UUID (Q-20c-5)."""
+    _seed(spark, "snap_opid")
+    table = f"{CATALOG}.{NS}.snap_opid"
+    (
+        _frame(spark)
+        .writeTo(table)
+        .option("snapshot-property.engine.operation-id", "stolen-id")
+        .append()
+    )
+    assert _latest_summary(spark, table)["engine.operation-id"] != "stolen-id"

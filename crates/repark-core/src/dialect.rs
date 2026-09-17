@@ -1,6 +1,6 @@
 //! SQL dialect seam for plugging a statement front end into [`ReparkSession::sql`].
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use async_trait::async_trait;
 use datafusion::prelude::{DataFrame, SessionContext};
@@ -46,6 +46,22 @@ pub trait SqlDialect: Send + Sync {
         cx: EngineContext<'_>,
         query: &str,
     ) -> datafusion::error::Result<DataFrame>;
+
+    #[allow(clippy::missing_errors_doc)]
+    async fn execute_with_write_options(
+        &self,
+        cx: EngineContext<'_>,
+        query: &str,
+        options: &HashMap<String, String>,
+    ) -> datafusion::error::Result<DataFrame> {
+        if !options.is_empty() {
+            return Err(datafusion::error::DataFusionError::Plan(format!(
+                "write options are not supported on this SQL door ({} option(s) refused)",
+                options.len()
+            )));
+        }
+        self.execute(cx, query).await
+    }
 
     /// Install dialect-owned hooks on the freshly built [`SessionContext`].
     fn on_session_built(&self, ctx: &SessionContext) {

@@ -116,6 +116,8 @@ repo.
   FIRST/AFTER` moves with ids intact; the I6 move refusal text is removed, the COMMENT
   refusal stays); the self-move diagnostic delta is recorded in the row, not absorbed.
   pins: ice-column-reorder-1/C-013
+  ICE-WRITE-OPTIONS-1 round 3 (2026-09-17): the FIXED row's channel paragraph moves
+  out of band (plus the Round 3 bullet: SQL-02/03, SNAP-08..13, merged gzip refusal).
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

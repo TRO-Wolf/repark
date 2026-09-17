@@ -7,7 +7,7 @@ accuracy contracts restored in condensed form (see the unit ledger's findings di
 
 ## Purpose
 
-File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`,
+File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`, `write_options.rs`,
 `spill.rs`, `iceberg_caches.rs`, `late_catalogs.rs`, `cache_budget.rs`, `df_guards.rs` and its `df_guards/` submodule) plus the test cohorts under `tests/` (`session.rs`,
 `session/catalog_registration.rs`, `df_guard.rs`, `aws_gate.rs`, `namespace_create.rs`, `a13.rs`,
 `conf_unread.rs`). Test cohorts are two: the E-2 gate tests

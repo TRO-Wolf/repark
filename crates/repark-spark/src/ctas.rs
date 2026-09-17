@@ -9,7 +9,9 @@ use datafusion::sql::sqlparser::ast::{CreateTable, CreateTableOptions, SqlOption
 use iceberg::arrow::arrow_schema_to_schema_auto_assign_ids;
 use iceberg::io::FileIO;
 use iceberg::spec::UnboundPartitionSpec;
-use iceberg::transaction::StagedTableTransaction;
+use iceberg::transaction::{
+    ApplyTransactionAction, StagedTableMode, StagedTableTransaction, Transaction,
+};
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 
 use repark_core::{CatalogRegistry, LocationPolicy};
@@ -210,7 +212,7 @@ pub(crate) async fn execute_ctas(
         )
         .await;
     }
-    let staged = if let CtasMode::StagedCreate(plan) = mode {
+    let (staged, replace_base) = if let CtasMode::StagedCreate(plan) = mode {
         // Create: location + FileIO were resolved above the SELECT (ADV-3).
         let creation = TableCreation::builder()
             .name(ctas.table.clone())
@@ -220,15 +222,18 @@ pub(crate) async fn execute_ctas(
             .format_version(format_version)
             .properties(ctas.properties.clone())
             .build();
-        StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)
-            .await
-            .map_err(iceberg_err)?
+        let staged =
+            StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)
+                .await
+                .map_err(iceberg_err)?;
+        (staged, None)
     } else {
         // Replace: stage against the existing table (its own location + FileIO).
         let existing = catalog
             .load_table(&table_ident)
             .await
             .map_err(iceberg_err)?;
+        let replace_base = existing.metadata_location().map(str::to_string);
         let mut properties = ctas.properties.clone();
         crate::create_table::stamp_requested_format_version(
             &mut properties,
@@ -242,13 +247,14 @@ pub(crate) async fn execute_ctas(
             .format_version(format_version)
             .properties(properties)
             .build();
-        StagedTableTransaction::begin_replace(&existing, creation)
+        let staged = StagedTableTransaction::begin_replace(&existing, creation)
             .await
-            .map_err(iceberg_err)?
+            .map_err(iceberg_err)?;
+        (staged, replace_base)
     };
 
     // STREAM the SELECT into the staged table (WG-2 bounded memory).
-    finish_ctas_staged_commit(ctx, catalog, staged, query, options).await?;
+    finish_ctas_staged_commit(ctx, catalog, staged, replace_base, query, options).await?;
 
     let namespace = namespace_schema_name(&ctas.namespace);
     reregister(ctx, catalog.clone(), &ctas.catalog, &namespace).await?;
@@ -259,6 +265,7 @@ async fn finish_ctas_staged_commit(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
     staged: StagedTableTransaction,
+    replace_base: Option<String>,
     query: DataFrame,
     options: &crate::write_options::StatementWriteOptions,
 ) -> Result<()> {
@@ -273,8 +280,9 @@ async fn finish_ctas_staged_commit(
     }
     let staging = options.staging_overrides();
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    let mut stream = query.execute_stream().await?;
+    let stream = query.execute_stream().await?;
     let staged_table = staged.table().clone();
+    let mode = staged.mode();
     let data_files = if staged_table
         .metadata()
         .default_partition_spec()
@@ -290,24 +298,35 @@ async fn finish_ctas_staged_commit(
     } else {
         repark_iceberg::write::stage_partitioned_stream_with_overrides(
             &staged_table,
-            &mut stream,
+            stream,
             &staging,
+            concurrency,
         )
         .await?
     };
-    let published = staged
-        .add_data_files(Vec::new())
-        .commit(catalog.as_ref())
-        .await
+    let (_, summary) = repark_iceberg::write::summary_with_extras(&options.snapshot_extra)?;
+    let tx = Transaction::new(&staged_table);
+    let tx = tx
+        .fast_append()
+        .add_data_files(data_files)
+        .set_snapshot_properties(summary)
+        .apply(tx)
         .map_err(iceberg_err)?;
-    repark_iceberg::write::commit_append_with_summary(
-        catalog,
-        &published,
-        data_files,
-        &options.snapshot_extra,
-        None,
-    )
-    .await?;
+    let table = tx.apply_locally().await.map_err(iceberg_err)?;
+    match mode {
+        StagedTableMode::Create => {
+            catalog
+                .publish_create_table(table)
+                .await
+                .map_err(iceberg_err)?;
+        }
+        StagedTableMode::Replace => {
+            catalog
+                .publish_replace_table(table, replace_base)
+                .await
+                .map_err(iceberg_err)?;
+        }
+    }
     Ok(())
 }
 
@@ -502,7 +521,7 @@ pub(crate) async fn execute_ctas_service_managed(
         }
         let staging = options.staging_overrides();
         let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-        let mut stream = query.execute_stream().await?;
+        let stream = query.execute_stream().await?;
         let data_files = if table.metadata().default_partition_spec().is_unpartitioned() {
             repark_iceberg::write::stage_unpartitioned_stream_with_overrides(
                 &table,
@@ -514,8 +533,9 @@ pub(crate) async fn execute_ctas_service_managed(
         } else {
             repark_iceberg::write::stage_partitioned_stream_with_overrides(
                 &table,
-                &mut stream,
+                stream,
                 &staging,
+                concurrency,
             )
             .await?
         };

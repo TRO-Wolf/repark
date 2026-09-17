@@ -212,7 +212,9 @@ class DataFrameWriter:
         normalized_mode = "error" if self._mode == "errorifexists" else self._mode
         if not session.table_exists(qualified):
             self._dataframe._refuse_tightened_iceberg_create()
-            self._run_through_temp_view(lambda view: self._ctas_sql(table_ref, view=view))
+            self._run_through_temp_view(
+                lambda view: self._ctas_sql(table_ref, view=view), self._options
+            )
             return
         if normalized_mode == "error":
             raise AnalysisException(
@@ -223,9 +225,8 @@ class DataFrameWriter:
             return
         projection = self._by_name_projection(session, table_ref, display_name=name)
         verb = "INSERT OVERWRITE" if normalized_mode == "overwrite" else "INSERT INTO"
-        options_clause = writer_layout.render_write_options_clause(self._options)
         self._run_through_temp_view(
-            lambda view: f"{verb} {table_ref}{options_clause} SELECT {projection} FROM {view}"
+            lambda view: f"{verb} {table_ref} SELECT {projection} FROM {view}", self._options
         )
 
     save_as_table = saveAsTable
@@ -245,8 +246,9 @@ class DataFrameWriter:
         if overwrite is None:
             overwrite = self._mode == "overwrite"
         verb = "INSERT OVERWRITE" if overwrite else "INSERT INTO"
-        head = verb + " " + table_ref + writer_layout.render_write_options_clause(self._options)
-        self._run_through_temp_view(lambda view: f"{head} SELECT * FROM {view}")
+        self._run_through_temp_view(
+            lambda view: f"{verb} {table_ref} SELECT * FROM {view}", self._options
+        )
 
     insert_into = insertInto
 
@@ -782,20 +784,13 @@ class DataFrameWriter:
         if self._partition_columns:
             quoted_parts = ", ".join(_quote_ident(column) for column in self._partition_columns)
             partition_clause = f" PARTITIONED BY ({quoted_parts})"
-        options_clause = writer_layout.render_write_options_clause(self._options)
-        head = f"CREATE TABLE {table_ref} USING iceberg{partition_clause}"
-        return f"{head}{options_clause} AS SELECT * FROM {view}"
+        return f"CREATE TABLE {table_ref} USING iceberg{partition_clause} AS SELECT * FROM {view}"
 
-    def _run_through_temp_view(self, build_sql: Callable[[str], str]) -> None:
+    def _run_through_temp_view(
+        self, build_sql: Callable[[str], str], options: dict[str, str] | None = None
+    ) -> None:
         """Register a temporary view, execute the generated write SQL, and drop the view."""
-        self._dataframe._ensure_alive()
-        session = self._dataframe._session
-        view_name = scratch_view_name(session, "_repark_writer_")
-        session.create_or_replace_temp_view(view_name, self._dataframe._native_for_registration())
-        try:
-            session.sql(build_sql(view_name))
-        finally:
-            session.drop_temp_view(view_name)
+        writer_layout.run_through_temp_view(self._dataframe, build_sql, options, "_repark_writer_")
 
 
 from repark.spark.dataframe.writer_layout import (  # noqa: E402
@@ -926,9 +921,9 @@ class DataFrameWriterV2:
         """Append rows to an existing table by column name."""
         session, table_ref = self._existing_table_ref()
         projection = self._by_name_projection(session, table_ref=table_ref)
-        options_clause = writer_layout.render_write_options_clause(self._options)
         self._run_through_temp_view(
-            lambda view: f"INSERT INTO {table_ref}{options_clause} SELECT {projection} FROM {view}"
+            lambda view: f"INSERT INTO {table_ref} SELECT {projection} FROM {view}",
+            self._options,
         )
 
     def overwritePartitions(self) -> None:  # noqa: N802 — PySpark method name
@@ -936,9 +931,10 @@ class DataFrameWriterV2:
         session, table_ref = self._existing_table_ref()
         projection = self._by_name_projection(session, table_ref=table_ref)
         clause = _dynamic_partition_sql(self._dataframe, table_ref)
-        options_clause = writer_layout.render_write_options_clause(self._options)
-        head = f"INSERT OVERWRITE {table_ref}{options_clause}{clause}"
-        self._run_through_temp_view(lambda view: f"{head} SELECT {projection} FROM {view}")
+        self._run_through_temp_view(
+            lambda view: f"INSERT OVERWRITE {table_ref}{clause} SELECT {projection} FROM {view}",
+            self._options,
+        )
 
     overwrite_partitions = overwritePartitions
 
@@ -1029,31 +1025,29 @@ class DataFrameWriterV2:
                 for key, value in self._properties.items()
             )
             properties_clause = f" TBLPROPERTIES ({pairs})"
-        options_clause = writer_layout.render_write_options_clause(self._options)
         return (
             f"{verb} {table_ref} USING iceberg{partition_clause}{properties_clause}"
-            f"{options_clause} AS SELECT * FROM {view}"
+            f" AS SELECT * FROM {view}"
         )
 
     def _run_ctas(self, *, or_replace: bool) -> None:
         """Execute the CTAS / CREATE OR REPLACE path through a throwaway temp view."""
-        self._run_through_temp_view(lambda view: self._ctas_sql(or_replace=or_replace, view=view))
+        self._run_through_temp_view(
+            lambda view: self._ctas_sql(or_replace=or_replace, view=view), self._options
+        )
 
-    def _run_through_temp_view(self, build_sql: Callable[[str], str]) -> None:
+    def _run_through_temp_view(
+        self, build_sql: Callable[[str], str], options: dict[str, str] | None = None
+    ) -> None:
         """Register the DataFrame as a temp view, run ``build_sql(view_name)``, drop the view.
 
         Builds SQL from the bound view name after registration so user-controlled path /
         ``tableProperty`` text cannot be reinterpreted by ``str.format``.
         Materializes pending mapInArrow / cache first.
         """
-        self._dataframe._ensure_alive()
-        session = self._dataframe._session
-        view_name = scratch_view_name(session, "_repark_writer_v2_")
-        session.create_or_replace_temp_view(view_name, self._dataframe._native_for_registration())
-        try:
-            session.sql(build_sql(view_name))
-        finally:
-            session.drop_temp_view(view_name)
+        writer_layout.run_through_temp_view(
+            self._dataframe, build_sql, options, "_repark_writer_v2_"
+        )
 
 
 class DataFrameStatFunctions:

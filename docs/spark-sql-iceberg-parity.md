@@ -2492,13 +2492,14 @@ the pin rather than obeying it.
 ### ICE-WRITE-OPTIONS-1 — DataFrame write options on Iceberg writes — **FIXED 2026-09-17**
 
 - **repark** — **FIXED 2026-09-17.** The facade stores `DataFrameWriterV2.option` /
-  `DataFrameWriter.option` entries and renders them onto its generated Iceberg SQL as a
-  facade-internal `OPTIONS('key'='value', …)` clause; Rust extracts, validates, and
-  honours or refuses every key before any file is staged. `snapshot-property.<k>`
+  `DataFrameWriter.option` entries and forwards them out of band with the generated
+  Iceberg SQL (native `sql_with_write_options`, typed router set; the SQL text stays
+  option-free); Rust validates and honours or refuses every key before any file is
+  staged. `snapshot-property.<k>`
   lands prefix-stripped and lower-cased in the commit summary on `writeTo(t).append()`,
   `.overwritePartitions()`, `.create()/.replace()/.createOrReplace()`, and
   `df.write.format("iceberg")` with `saveAsTable` / `insertInto` / append-mode `save`
-  (an option-carrying append stages serially on the owned path with the merged summary;
+  (an option-carrying append streams onto the owned path with the merged summary;
   option-free writes keep their canonical paths byte-identical). `write-format=parquet`
   (any case) writes parquet. `target-file-size-bytes`, `compression-codec`, and
   `compression-level` override the table property (option over table property, as Spark);
@@ -2523,7 +2524,7 @@ the pin rather than obeying it.
   unknown keys, and the SQL-door conf absence.
 - **Pin** — `python/repark/tests/test_ice_write_options_1.py` (offline over the
   fixture; the live tier re-runs both record drivers and checks the fixture);
-  `crates/repark-spark/src/write_options.rs` (extraction/validation units) and the
+  `crates/repark-spark/src/write_options.rs` (out-of-band pair validation units) and the
   staging/commit units in `crates/repark-iceberg/src/write/write_options.rs`.
 - **Rationale** — FIXED for the measured option set. Two residuals stay named here, not
   pinned as parity: (a) required-field nullability is not asserted on write, so
@@ -2536,6 +2537,14 @@ the pin rather than obeying it.
   commit) where Spark raises `ValidationException` on its own files — a fork validation
   strictness shared with the table-property path, not an option-parsing gap.
   `overwrite(condition)` stays a loud refusal, so options never reach a commit there.
+- **Round 3 (2026-09-17)** — the text channel is withdrawn: options travel out of band
+  (facade dict, native `sql_with_write_options`, typed router set; user-typed `OPTIONS`
+  keeps main's parse error / CTAS refusal, SQL-02/03). UTF-8 rides the map byte-exact
+  (SNAP-08/09). Engine-key collisions follow measured Spark behaviour — metric keys
+  refuse (`Multiple entries with same key`), user `operation` is dropped,
+  `engine.operation-id` stays ours (SNAP-10/11/12). gzip refuses on the merged level
+  whatever side it came from (Q-20c-6). Staging streams with session concurrency and
+  OPTIONS CTAS publishes once (SNAP-04 kept, SNAP-13).
   pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 
 ### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**

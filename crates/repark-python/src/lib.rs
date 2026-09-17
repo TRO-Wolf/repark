@@ -20,6 +20,7 @@ mod plan_introspect;
 mod session;
 mod session_runtime;
 mod session_sources;
+mod session_write_options;
 mod subquery;
 mod text_io;
 mod type_bridge;
@@ -41,7 +42,7 @@ pub use exceptions::{
 
 /// Convert a crate error to its PySpark-shaped Python exception.
 #[allow(clippy::needless_pass_by_value)]
-fn to_py_err(err: repark_core::Error) -> PyErr {
+pub(crate) fn to_py_err(err: repark_core::Error) -> PyErr {
     let message = err.to_string();
     match err.exception_class() {
         ErrorClass::Parse => ParseException::new_err(message),
@@ -152,6 +153,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     plan_introspect::register(module)?;
     session_runtime::register(module)?;
     session_sources::register(module)?;
+    session_write_options::register(module)?;
     subquery::register(module)?;
     text_io::register(module)?;
     type_bridge::register(module)?;

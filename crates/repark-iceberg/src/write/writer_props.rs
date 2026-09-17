@@ -28,18 +28,18 @@ pub fn writer_properties_with(
     codec_override: Option<&str>,
     level_override: Option<&str>,
 ) -> Result<WriterProperties> {
-    if level_override.is_some() {
-        let properties = table.metadata().properties();
-        let effective = codec_override
-            .or_else(|| properties.get(COMPRESSION_CODEC_PROP).map(String::as_str))
-            .unwrap_or("zstd");
-        if effective.eq_ignore_ascii_case("gzip") {
-            return Err(DataFusionError::Plan(
-                "option `compression-level` with gzip `compression-codec` is refused (Spark \
-                 fails integer gzip levels; ICE-WRITE-OPTIONS-1)"
-                    .to_string(),
-            ));
-        }
+    let properties = table.metadata().properties();
+    let effective_codec = codec_override
+        .or_else(|| properties.get(COMPRESSION_CODEC_PROP).map(String::as_str))
+        .unwrap_or("zstd");
+    let effective_level =
+        level_override.or_else(|| properties.get(COMPRESSION_LEVEL_PROP).map(String::as_str));
+    if effective_level.is_some() && effective_codec.eq_ignore_ascii_case("gzip") {
+        return Err(DataFusionError::Plan(
+            "gzip `compression-codec` with a `compression-level` is refused (Spark fails \
+             integer gzip levels; ICE-WRITE-OPTIONS-1)"
+                .to_string(),
+        ));
     }
     Ok(WriterProperties::builder()
         .set_compression(compression_with(table, codec_override, level_override)?)
@@ -714,16 +714,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn table_level_gzip_option_codec_refuses_like_spark() {
+        let warehouse = TempDir::new().expect("tmp");
+        let catalog = memory_catalog(&warehouse).await;
+        let ident = create_table(
+            &catalog,
+            "t_tablelevel",
+            HashMap::from([(COMPRESSION_LEVEL_PROP.to_string(), "1".to_string())]),
+        )
+        .await;
+        let table = catalog.load_table(&ident).await.expect("load");
+        let error = writer_properties_with(&table, Some("gzip"), None)
+            .expect_err("table level plus gzip option codec must refuse");
+        assert!(
+            error.to_string().contains("compression-level"),
+            "refusal must name the level: {error}"
+        );
+    }
+
+    #[tokio::test]
     async fn option_append_commit_carries_summary_extras() {
         let warehouse = TempDir::new().expect("tmp");
         let catalog = memory_catalog(&warehouse).await;
         let ident = create_table(&catalog, "t_summary", HashMap::new()).await;
         let table = catalog.load_table(&ident).await.expect("load");
         let extra = vec![("run_id".to_string(), "abc-123".to_string())];
+        let batches = vec![Ok::<_, DataFusionError>(numeric_batch(10))];
         append_with_statement_options(
             &catalog,
             &table,
-            vec![numeric_batch(10)],
+            futures::stream::iter(batches),
             &extra,
             &WriterStagingOverrides::none(),
             serial(),
@@ -773,7 +793,7 @@ mod tests {
     #[test]
     fn summary_extras_keep_engine_stamp() {
         let (operation_id, summary) =
-            summary_with_extras(&[("run_id".to_string(), "x".to_string())]);
+            summary_with_extras(&[("run_id".to_string(), "x".to_string())]).expect("extras");
         assert_eq!(summary.get("run_id").map(String::as_str), Some("x"));
         assert_eq!(
             summary

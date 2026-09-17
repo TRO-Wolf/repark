@@ -6,7 +6,7 @@ use datafusion::arrow::array::RecordBatch;
 use datafusion::error::{DataFusionError, Result};
 use futures::{Stream, StreamExt, TryStreamExt};
 use iceberg::Catalog;
-use iceberg::arrow::{FieldMatchMode, RecordBatchPartitionSplitter, schema_to_arrow_schema};
+use iceberg::arrow::{FieldMatchMode, schema_to_arrow_schema};
 use iceberg::expr::Predicate;
 use iceberg::spec::{DataFile, DataFileFormat, PartitionKey, Struct};
 use iceberg::table::Table;
@@ -17,16 +17,13 @@ use iceberg::writer::file_writer::location_generator::{
     DefaultFileNameGenerator, DefaultLocationGenerator,
 };
 use iceberg::writer::file_writer::rolling_writer::RollingFileWriterBuilder;
-use iceberg::writer::partitioning::PartitioningWriter;
-use iceberg::writer::partitioning::fanout_writer::FanoutWriter;
 use iceberg::writer::{IcebergWriter, IcebergWriterBuilder};
 use uuid::Uuid;
 
 use crate::write::commit_error::commit_result;
 use crate::write::commit_target::{maybe_to_branch, snapshot_id_for_commit};
 use crate::write::concurrency::WriteConcurrency;
-use crate::write::conform::{conform_batches, write_default_column_names};
-use crate::write::file_order::ascending_partition_order;
+use crate::write::conform::write_default_column_names;
 use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::writer_props::{target_file_size_with, writer_properties_with};
@@ -45,14 +42,33 @@ impl WriterStagingOverrides {
     }
 }
 
-#[must_use]
-pub fn summary_with_extras(extra: &[(String, String)]) -> (String, HashMap<String, String>) {
+#[allow(clippy::missing_errors_doc)]
+pub fn summary_with_extras(
+    extra: &[(String, String)],
+) -> Result<(String, HashMap<String, String>)> {
     let operation_id = Uuid::new_v4().to_string();
     let mut summary = HashMap::from([(OPERATION_ID_PROP.to_string(), operation_id.clone())]);
     for (key, value) in extra {
+        let folded = key.to_ascii_lowercase();
+        if folded == "operation" || folded == OPERATION_ID_PROP {
+            continue;
+        }
+        if folded == "engine-name"
+            || folded == "engine-version"
+            || folded == "changed-partition-count"
+            || ["added-", "deleted-", "removed-", "total-"]
+                .iter()
+                .any(|prefix| folded.starts_with(prefix))
+        {
+            return Err(DataFusionError::Plan(format!(
+                "Multiple entries with same key: `{key}` is an engine-computed snapshot \
+                 summary key (Spark IllegalArgumentException); refusing snapshot-property.{key} \
+                 (ICE-WRITE-OPTIONS-1)"
+            )));
+        }
         summary.insert(key.clone(), value.clone());
     }
-    (operation_id, summary)
+    Ok((operation_id, summary))
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -76,26 +92,29 @@ pub fn isolation_with_override(
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub async fn append_with_statement_options(
+pub async fn append_with_statement_options<S>(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
-    batches: Vec<RecordBatch>,
+    stream: S,
     summary_extra: &[(String, String)],
     staging: &WriterStagingOverrides,
     concurrency: WriteConcurrency,
     branch: Option<&str>,
-) -> Result<Table> {
+) -> Result<Table>
+where
+    S: Stream<Item = Result<RecordBatch>> + Unpin,
+{
     reject_non_parquet_append(table)?;
-    let current_schema = table.metadata().current_schema();
-    let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
-    let write_default_columns = write_default_column_names(current_schema);
-    let conformed = conform_batches(&write_schema, &write_default_columns, &batches)?;
-    let new_files = if conformed.is_empty() {
-        Vec::new()
-    } else if table.metadata().default_partition_spec().is_unpartitioned() {
-        stage_unpartitioned_with_overrides(table, conformed, concurrency, staging).await?
+    let new_files = if table.metadata().default_partition_spec().is_unpartitioned() {
+        stage_unpartitioned_stream_with_overrides(table, stream, concurrency, staging).await?
     } else {
-        stage_partitioned_with_overrides(table, conformed, staging).await?
+        let current_schema = table.metadata().current_schema();
+        let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
+        let write_default_columns = write_default_column_names(current_schema);
+        let conformed = stream.map(move |item| {
+            crate::write::conform::conform_batch(&write_schema, &write_default_columns, &item?)
+        });
+        stage_partitioned_stream_with_overrides(table, conformed, staging, concurrency).await?
     };
     commit_append_with_summary(catalog, table, new_files, summary_extra, branch).await
 }
@@ -173,24 +192,11 @@ where
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub async fn stage_partitioned_with_overrides(
-    table: &Table,
-    batches: Vec<RecordBatch>,
-    staging: &WriterStagingOverrides,
-) -> Result<Vec<DataFile>> {
-    let current_schema = table.metadata().current_schema();
-    let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
-    let write_default_columns = write_default_column_names(current_schema);
-    let conformed = conform_batches(&write_schema, &write_default_columns, &batches)?;
-    let mut stream = futures::stream::iter(conformed.into_iter().map(Ok::<_, DataFusionError>));
-    stage_partitioned_stream_with_overrides(table, &mut stream, staging).await
-}
-
-#[allow(clippy::missing_errors_doc)]
 pub async fn stage_partitioned_stream_with_overrides<S>(
     table: &Table,
-    conformed: &mut S,
+    conformed: S,
     staging: &WriterStagingOverrides,
+    concurrency: WriteConcurrency,
 ) -> Result<Vec<DataFile>>
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
@@ -198,41 +204,18 @@ where
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
     let file_format =
         DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    let splitter = RecordBatchPartitionSplitter::try_new_with_computed_values(
-        table.metadata().current_schema().clone(),
-        table.metadata().default_partition_spec().clone(),
-    )
-    .map_err(iceberg_err)?;
-    let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
-        writer_properties_with(table, staging.codec.as_deref(), staging.level.as_deref())?,
-        table.metadata().current_schema().clone(),
-        FieldMatchMode::Name,
-    );
-    let location_generator =
-        DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
-    let file_name_generator =
-        DefaultFileNameGenerator::new(Uuid::new_v4().to_string(), None, file_format);
-    let rolling_builder = RollingFileWriterBuilder::new(
-        parquet_builder,
-        target_file_size_with(table, staging.target_file_size_bytes)?,
-        table.file_io().clone(),
-        location_generator,
-        file_name_generator,
-    );
-    let mut fanout = FanoutWriter::new(DataFileWriterBuilder::new(rolling_builder));
-    while let Some(batch) = conformed.try_next().await? {
-        if batch.num_rows() == 0 {
-            continue;
-        }
-        for (partition_key, partition_batch) in splitter.split(&batch).map_err(iceberg_err)? {
-            fanout
-                .write(partition_key, partition_batch)
-                .await
-                .map_err(iceberg_err)?;
-        }
+    if file_format != DataFileFormat::Parquet {
+        return Err(DataFusionError::NotImplemented(format!(
+            "append writes only Parquet data files yet (table default is {file_format})"
+        )));
     }
-    let files = fanout.close().await.map_err(iceberg_err)?;
-    Ok(ascending_partition_order(files))
+    crate::write::append::fanout_conformed_stream_with_concurrency(
+        table,
+        conformed,
+        concurrency,
+        staging,
+    )
+    .await
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -265,17 +248,10 @@ where
         let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
         let write_default_columns =
             crate::write::conform::write_default_column_names(current_schema);
-        let mapped: Vec<RecordBatch> = mapped.try_collect().await?;
-        let mut conformed = Vec::with_capacity(mapped.len());
-        for batch in &mapped {
-            conformed.push(crate::write::conform::conform_batch(
-                &write_schema,
-                &write_default_columns,
-                batch,
-            )?);
-        }
-        let mut stream = futures::stream::iter(conformed.into_iter().map(Ok::<_, DataFusionError>));
-        stage_partitioned_stream_with_overrides(table, &mut stream, staging).await
+        let conformed = mapped.map(move |item| {
+            crate::write::conform::conform_batch(&write_schema, &write_default_columns, &item?)
+        });
+        stage_partitioned_stream_with_overrides(table, conformed, staging, concurrency).await
     }
 }
 
@@ -322,7 +298,7 @@ pub async fn commit_append_with_summary(
     summary_extra: &[(String, String)],
     branch: Option<&str>,
 ) -> Result<Table> {
-    let (operation_id, summary) = summary_with_extras(summary_extra);
+    let (operation_id, summary) = summary_with_extras(summary_extra)?;
     let tx = Transaction::new(table);
     let action = tx
         .fast_append()
@@ -343,7 +319,7 @@ pub async fn commit_overwrite_replace_all_with_summary(
     isolation_override: Option<&str>,
 ) -> Result<Table> {
     let isolation = isolation_with_override(table, isolation_override)?;
-    let (operation_id, summary) = summary_with_extras(summary_extra);
+    let (operation_id, summary) = summary_with_extras(summary_extra)?;
     let tx = Transaction::new(table);
     let mut action = tx
         .overwrite_files()
@@ -375,7 +351,7 @@ pub async fn commit_overwrite_by_row_filter_with_summary(
     isolation_override: Option<&str>,
 ) -> Result<Table> {
     let isolation = isolation_with_override(table, isolation_override)?;
-    let (operation_id, summary) = summary_with_extras(summary_extra);
+    let (operation_id, summary) = summary_with_extras(summary_extra)?;
     let tx = Transaction::new(table);
     let mut action = tx
         .overwrite_files()
@@ -408,7 +384,7 @@ pub async fn commit_replace_partitions_with_summary(
 ) -> Result<Table> {
     crate::write::partition_overwrite::refuse_empty_dynamic_overwrite(&staged_files)?;
     let isolation = isolation_with_override(table, isolation_override)?;
-    let (operation_id, summary) = summary_with_extras(summary_extra);
+    let (operation_id, summary) = summary_with_extras(summary_extra)?;
     let tx = Transaction::new(table);
     let mut action = tx
         .replace_partitions()

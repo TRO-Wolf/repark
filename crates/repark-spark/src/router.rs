@@ -39,13 +39,29 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     sql: &str,
     read_only_catalogs: &HashSet<String, S>,
 ) -> Result<DataFrame> {
-    let (sql_without_options, write_options) =
-        crate::write_options::extract_statement_write_options(sql)?;
+    execute_with_statement_options(
+        ctx,
+        catalogs,
+        sql,
+        read_only_catalogs,
+        &crate::write_options::StatementWriteOptions::empty(),
+    )
+    .await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    read_only_catalogs: &HashSet<String, S>,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Result<DataFrame> {
     // Canonicalize once at the Spark SQL front door so later tokenizers cannot process escapes again.
     // Translate downstream parser locations back to the caller's SQL before returning an error.
     let verbatim =
         crate::spark_literals::escaped_verbatim_from_options(ctx.state().config().options());
-    let canonical = crate::spark_literals::canonicalize_verbatim(&sql_without_options, verbatim)?;
+    let canonical = crate::spark_literals::canonicalize_verbatim(sql, verbatim)?;
     let canonical_sql = canonical.as_ref();
     // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
@@ -79,7 +95,7 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
         original_for_locations,
         &mut pinned,
         &mut lineage_pins,
-        &write_options,
+        write_options,
     ))
     .await;
     lineage_pins.release(ctx);

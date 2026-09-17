@@ -131,6 +131,9 @@ repark-core's error map.
   other column unchanged, so a non-promotion mismatch still fails in `RecordBatch::try_new`.
   Caller: `merge/mod.rs` `conform_scan_batch`.
   pins: ice-promote-read-1/C-011
+- `append_fanout_serial.rs` — **ICE-WRITE-OPTIONS-1 round 3 (2026-09-17):** the serial
+  conformed fanout (`fanout_conformed_stream_serial[_with_abort]`), split out of
+  `append.rs` under the file-size gate; re-exported there so callers keep their paths.
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform
   ([conform.rs](conform.rs): missing /
   extra / duplicate column = loud error, except a missing column whose Iceberg field carries a
@@ -534,7 +537,12 @@ repark-core's error map.
   re-verifies both copies (see `writer_props.rs` duties). Only option-carrying
   statements reach the override staging; option-free staging keeps the canonicals.
   Fallible fns carry `#[allow(clippy::missing_errors_doc)]`, never `# Errors` sections
-  (owner comment ban; round-2 purge 2026-09-17).
+  (owner comment ban; round-2 purge 2026-09-17). Round 3 (2026-09-17): staging
+  is stream-in with session concurrency (the override threads through the
+  canonical concurrent fanout; canonical callers pass `none()`); gzip refuses
+  on the merged level whatever side it came from (Q-20c-6); `summary_with_extras`
+  drops user `operation`/`engine.operation-id` and refuses engine metric keys
+  as Spark does (Q-20c-5).
   pins: ice-write-options-1/C-001, C-002, C-003
 
 ## I want to...
