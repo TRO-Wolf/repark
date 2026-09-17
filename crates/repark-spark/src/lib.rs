@@ -8,6 +8,7 @@ mod call;
 mod call_args;
 mod catalog_ops;
 mod collation;
+mod column_move;
 mod create_table;
 mod ctas;
 mod describe_show;

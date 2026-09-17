@@ -36,6 +36,21 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_ice_column_reorder_1.py](test_ice_column_reorder_1.py) +
+  [test_ice_column_reorder_1_truth.json](test_ice_column_reorder_1_truth.json) +
+  [_record_ice_column_reorder_1.py](_record_ice_column_reorder_1.py) —
+  **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):** `ALTER COLUMN … FIRST/AFTER` column moves
+  against the recorded live-PySpark-4.1.2 + Iceberg-1.11.0 oracle. Offline pins cover
+  move-first/after, no-op moves keeping the schema id, first-after-last, the self-move
+  refusal, unknown-column/reference `UNRESOLVED_COLUMN` refusals on both SQL doors,
+  nested-field moves with ids intact, the short-sibling move, the cross-struct and
+  dotted-`AFTER` refusals, positional INSERT after the move, v3 tables,
+  partition-source moves, whole-struct moves, and the DataFrame door (17 offline tests
+  incl. one strict-xfail no-op-metadata pin), all on the facade SQL door; the live tier
+  replays Spark and cross-reads both engines' moved tables (17 live tests). The ANSI door
+  carries the same move end to end in
+  `crates/repark-sql/tests/alter_column_move.rs`.
+  pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [test_df_surface_a_1.py](test_df_surface_a_1.py) +
   [facade_dataframe_surface_oracle.json](facade_dataframe_surface_oracle.json) —
   **DF-SURFACE-A-1 (2026-09-14):** the seven-name DataFrame surface pins driven
@@ -232,6 +247,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   WRITE-ORDER-TRANSFORM-1 residual: a `bucket(4,id)` sorted table refuses the MERGE
   loudly (`only identity sort fields are supported`) and commits no snapshot.
   pins: ice-spark-table-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **RP-23 (2026-09-17):** the RePark-created twin now stamps
+  `write.parquet.compression-codec=zstd` like the Spark-written fixture, so the
+  Spark-only property delta is `owner` alone.
+  pins: rp-23-pin-bump/C-001
 - [test_ice_nan_pushdown_1.py](test_ice_nan_pushdown_1.py) +
   [ice_nan_pushdown_1_oracle.json](ice_nan_pushdown_1_oracle.json) +
   [_record_ice_nan_pushdown_1.py](_record_ice_nan_pushdown_1.py) — **ICE-NAN-PUSHDOWN-1
@@ -1189,6 +1208,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   count equal to the memory half) plus the S6 gold namespace, which `date()` now answers into.
   Namespace pin: rendered SQL uses only the passed namespace.
   CUTOVER-DATE-1 controls: `to_date` / `CAST AS DATE` / `date` / `unix_timestamp` answer.
+  **RP-23 (2026-09-17):** the repark half records the `write.parquet.compression-codec=zstd`
+  stamp Spark always wrote, so all 14 DIVERGES verdicts join EQUAL; the MERGE delete-file
+  floors still hold (s2/s7 3 default / 2 capped, s8/s9 zero).
+  pins: rp-23-pin-bump/C-001, C-003, C-004
   MoR MERGE delete-file golden pins kinds (PARQUET vs PUFFIN), not count; count is
   host-dependent (3 on a 64-core box) and the always-run pin is `count >= Spark's 2`.
   CoW MERGE: `delete_files` empty (a delete file is a defect); data-file count after the
@@ -1320,6 +1343,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: v3-cov-statement-coverage/C-003
   **WRITE-ORDER-DIST-1 (2026-09-06):** `alter-write-ordered-by` flips DIVERGES→EQUAL.
   pins: write-order-dist-1/C-001
+  **RP-23 (2026-09-17):** `create-v3-properties` flips DIVERGES→EQUAL — the codec stamp was
+  its sole open difference.
+  pins: rp-23-pin-bump/C-001
 - [_v3_statement_coverage_repark.py](_v3_statement_coverage_repark.py) and
   [_v3_statement_coverage_spark.py](_v3_statement_coverage_spark.py) — **V3-COV (2026-09-03):**
   the measured halves, one entry per program, recorded 2026-09-03 against live PySpark 4.1.2 +
@@ -1329,6 +1355,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   nullability half); verdict stays DIVERGES on width.
   pins: v3-cov-statement-coverage/C-003
   pins: cutover-schema-1/C-002
+  pins: rp-23-pin-bump/C-001
   **WRITE-ORDER-DIST-1 (2026-09-06):** the `alter-write-ordered-by` repark half is `OK` —
   the statement the row runs now executes instead of refusing.
   pins: write-order-dist-1/C-001
@@ -1432,11 +1459,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: rdf-schema-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24; RP-5 2026-09-01):** the
   maintenance cycle `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end
-  to end on a local catalog at gate scale (6,000 rows, 2 partitions, six MERGEs). F-16r
+  to end on a local catalog at gate scale (4,000 rows, 2 partitions, six MERGEs). F-16r
   rewrites this fixture's in-band delete-laden seed files (`test_delete_laden_seed_files_are_rewritten_by_the_runbook`).
-  The MW-7 2,500-row pin still holds; it flipped to the reclaim on 2026-09-02 and this module
+  The MW-7 2,000-row pin still holds; it flipped to the reclaim on 2026-09-02 and this module
   stays green either way (`RDF-1` FIXED for a delete file naming one data file).
   pins: rp-5-fork-repin/C-005; rdf-1-position-delete-bounds/C-003
+  **RP-23 (2026-09-17):** 6,000 → 4,000 rows — 2,000 rows per partition seed one in-band
+  file under the fork's mid-stream rolling; 3,000 rolled into 2,000 + 1,000.
+  pins: rp-23-pin-bump/C-002
   **C-010 (Critic remediation, F-MW8-1/F-MW8-3)** parses the guide's `MAINTENANCE_CYCLE`
   out of its python block and compares procedure, order, argument names and literal argument
   values (placeholders skipped) against `measure.maintenance_sequence`'s, so printed SQL that drifts from the measured
@@ -1461,14 +1491,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   deterministic. Wall-clock is recorded in the ledger, never asserted.
   **C-011 (2026-08-24, Critic remediation; flipped 2026-09-02 by RDF-1):**
   `test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` pins registry row
-  `RDF-1` — a 2,500-row v2 merge-on-read table written as ONE data file inside Java's bin-pack
+  `RDF-1` — a 2,000-row v2 merge-on-read table written as ONE data file inside Java's bin-pack
   band, then a MERGE deleting every one of its rows. The pin now asserts the reclaim: the
   delete file's `file_path` bounds are exact and equal to the seeded path (field `2147483546`,
   read from the manifest, not inferred from a count), `rewrite_data_files` reports
   `removed_delete_files_count = 1`, the seeded path leaves the live set, the sequence ends at
-  zero delete files and zero delete records, and `COUNT(*)` is still 2,500 — the reclaimed rows
+  zero delete files and zero delete records, and `COUNT(*)` is still 2,000 — the reclaimed rows
   do not resurrect. Its predecessor asserted the opposite (the file survives) because RePark's
   own writer truncated those bounds away.
+  **RP-23 (2026-09-17):** 2,500 → 2,000 rows — 2,000 rows seed one 54,445 B in-band file
+  under the fork's mid-stream rolling; 2,500 rolled into 2,000 + 500.
+  pins: rp-23-pin-bump/C-002
   **SCALE-v3 (2026-09-02):** the v3 twins of the same shapes, from a second `v3_smoke_run`
   fixture the `--format-version 3` knob drives. What they hold, and why each differs from its
   v2 twin:
@@ -5332,7 +5365,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Pin the MW-7 scale-measurement machinery | `test_mw7_scale_smoke.py` — the bench driver at gate scale: census vs an independent count, delete files `partitions x merges` then folded to one per partition, COW zero-delete control (a control, not a clean delete-cost isolate — MOR-minus-COW bundles delete reads with MOR's data-file fan-out), manifest drop across `rewrite_manifests`, the five-procedure order, timings that carry their answer |
 | Pin the W-0 window-shape bench at gate scale | `test_w0_window_bench_smoke.py` — Iceberg lead/lag cell, memory_limit outcome class, the sliding-refuse set (**EMPTY since WIN-SLIDE-1, 2026-09-04** — the same pin, now the guard against a refusal returning), remaining absents fail at planning. pins: w-0-window-bench/C-002, C-005, C-006, C-009; win-slide-1/C-008 |
 | Pin an aggregate over a SLIDING window frame on both doors | `test_win_slide_1.py` — the thirteen once-refusing aggregates x five frame shapes x two doors against the recorded Spark 4.1.2 column, plus `collect_list` frame order, the `collect_set` multiset, `try_sum` BIGINT overflow inside a frame, `CURRENT ROW … UNBOUNDED FOLLOWING`, and the `percentile_approx` accuracy divergence. pins: win-slide-1/C-001, C-002, C-003, C-004, C-007 |
-| Pin `RDF-1` (a 100 %-dead in-band data file IS compacted, and its delete file dies with it) | `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` — exact equal `file_path` bounds, `removed_delete_files_count` 1, zero delete files, 2,500 rows. pins: rdf-1-position-delete-bounds/C-003 |
+| Pin `RDF-1` (a 100 %-dead in-band data file IS compacted, and its delete file dies with it) | `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` — exact equal `file_path` bounds, `removed_delete_files_count` 1, zero delete files, 2,000 rows. pins: rdf-1-position-delete-bounds/C-003 |
 | Re-measure the MW-0 MOR growth demo (MW-5) | `test_mw5_baseline_delta.py` — 1,000 rows, ten MERGEs of 200 ids, delete files 1→10 then compact+expire 10→1, Arrow `COUNT(*)` 1,000 `int64`, expire mutation-proof. Wall-clock logged, not asserted |
 | Add a case-insensitive column-conform (MERGE star) facade test | `test_case_insensitive_conform.py` |
 | Add a drop-in no-op / accepted-ignored disclosure test (OTH-010) | `test_dropin_disclosure.py` |
@@ -5659,6 +5692,9 @@ pins: fnp-8-review/C-009, C-010
   Spark 4.1.2 and diffs repark row for row (19 of 22 byte-identical; `Name`, `Location`,
   and `Table Properties` engine defaults differ by construction).
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **RP-23 (2026-09-17):** `Table Properties` carries the
+  `write.parquet.compression-codec=zstd` stamp every create writes.
+  pins: rp-23-pin-bump/C-001
 
 - `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
   probe re-runnability pins, run as a subprocess exactly as the document's reproduce
@@ -5685,12 +5721,14 @@ pins: fnp-8-review/C-009, C-010
   `test_bogus_distribution_mode_refuses_at_write` (a `bogus` distribution-mode
   table property refuses loud at partitioned CTAS) and
   `test_target_file_size_applies_at_table` (a `1`-byte target property splits a
-  20k-row MERGE rewrite 16 new files against 4 on default, with row counts held).
-  Both run with `target_partitions` fixed to 16: the rewrite file count tracks the
-  input partition count (the 2026-09-12 CI red: 5 vs 5 on a few-core runner), so an
+  20k-row MERGE rewrite 20 new files against 4 on default, with row counts held).
+  Both run with `target_partitions` fixed to 16: the 1-byte target rolls the writer at
+  every 1000-row slice (the 2026-09-12 CI red: 5 vs 5 on a few-core runner), so an
   unpinned session makes the pin machine-dependent. Seed files are excluded by
   set-diff so the count is the rewrite's alone.
   pins: review-fix-8/C-004
+  **RP-23 (2026-09-17):** 16 → 20 files — the fork's Java-style mid-stream rolling.
+  pins: rp-23-pin-bump/C-002
 
 EAGER-BUDGET-1 declared export delta (2026-09-13): `dataframe/core.py` imports only `_resolve_cache_budgets` from
 `eager.py`, so the frozen `core` and package surfaces in `_dfcore_1_expected.py` lose `_CACHE_MAX_BYTES_KEY`,

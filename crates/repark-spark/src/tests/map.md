@@ -436,6 +436,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ctas_staged_commit_state_unknown_surfaces_class_without_operation_id` pins the staged
   publish arm (`RequireExplicitLocation`) at `operation_id: None` with no drop.
   pins: ice-commit-unknown-1/C-001, C-003, C-004, C-005, C-008
+- [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
+  `alter_column_move_first_and_after_reorder` pins the move end to end over
+  `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).
+  pins: ice-column-reorder-1/C-001, C-002
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
   and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
