@@ -1385,6 +1385,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and rewrites part=0 away; unknown strategy and bad where use Spark's text; `sort` and
   `sort_order` refuse.
   pins: maint-rewrite-data-files-options/C-003, C-004, C-005, C-006, C-007
+- [ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json) —
+  **ICE-RDF-OPTIONS-1 (2026-09-17):** the 33-cell RDF oracle section replays byte-identical
+  from the committed generator; the 7 `rpd_*` cells and 2 `residue_*` sequences are this
+  unit's own Spark measurements (MoR half-delete shapes).
+- [_record_rdf_options_1_oracle.py](_record_rdf_options_1_oracle.py) —
+  **ICE-RDF-OPTIONS-1 (2026-09-17):** the Spark 4.1.2 record driver (parameterised warehouse,
+  ivy cache, and output paths); critics replay it to reproduce the fixture.
 - `test_rdf_schema_evo_1.py` — **RDF-SCHEMA-EVO-1** (2026-09-06): `rewrite_data_files` The module docstring is the one-line form; the unit story is in this row and the ledger.
   after schema evolution, through the facade over 6-file seeds with no later write. Red on
   fork `8bc325a3` (the owner's 7v8 refusal and its drop/rename/promote/v3 siblings), green

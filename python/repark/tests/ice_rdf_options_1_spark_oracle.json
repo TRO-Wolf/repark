@@ -1,0 +1,1657 @@
+{
+ "baseline": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t')",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 0,
+   "added_data_files_count": 0,
+   "rewritten_bytes_count": 0,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "min_input_files_1": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('min-input-files','1'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 2,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "min_input_files_9": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('min-input-files','9'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 0,
+   "added_data_files_count": 0,
+   "rewritten_bytes_count": 0,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "rewrite_all": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 2,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "target_small": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true', 'target-file-size-bytes','2000'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 4,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace"
+   ],
+   "data_files": 4,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "min_max": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('min-file-size-bytes','0', 'max-file-size-bytes','100000000', 'min-input-files','2'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "'target-file-size-bytes' (536870912) must be < 'max-file-size-bytes' (100000000), all new files will be larger than the max threshold",
+  "spark_error_class": null
+ },
+ "max_group_size": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true', 'max-file-group-size-bytes','2500'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 4,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace"
+   ],
+   "data_files": 4,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "partial_progress": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true', 'partial-progress.enabled','true'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 2,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 10,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace",
+    "replace"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "partial_progress_max1": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true', 'partial-progress.enabled','true', 'partial-progress.max-commits','1'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 2,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "partial_progress_groups": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true', 'max-file-group-size-bytes','2500', 'partial-progress.enabled','true', 'partial-progress.max-commits','3'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 4,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 10,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace",
+    "replace"
+   ],
+   "data_files": 4,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "job_order_bytes_desc": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true', 'rewrite-job-order','bytes-desc'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 2,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "job_order_files_asc": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true', 'rewrite-job-order','files-asc'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 2,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "use_start_seq_false": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true', 'use-starting-sequence-number','false'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 2,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "concurrent": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true', 'max-concurrent-file-group-rewrites','4'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 2,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "where_plus_options": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('min-input-files','1'), where => 'p = 1')",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 4,
+   "added_data_files_count": 1,
+   "rewritten_bytes_count": 4685,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace"
+   ],
+   "data_files": 5,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "delete_file_threshold": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('delete-file-threshold','1'))",
+  "before": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 9,
+   "delete_files": 1,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 4,
+   "added_data_files_count": 1,
+   "rewritten_bytes_count": 4544,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 10,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete",
+    "replace"
+   ],
+   "data_files": 6,
+   "delete_files": 1,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "output_spec_id": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true', 'output-spec-id','0'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 2,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "output_spec_id_current": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 1,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "replace"
+   ],
+   "data_files": 1,
+   "delete_files": 0,
+   "spec_ids": [
+    1
+   ]
+  }
+ },
+ "remove_dangling": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','true', 'remove-dangling-deletes','true'))",
+  "before": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 9,
+   "delete_files": 1,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 8,
+   "added_data_files_count": 2,
+   "rewritten_bytes_count": 9229,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 10,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete",
+    "replace"
+   ],
+   "data_files": 3,
+   "delete_files": 1,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "err_unknown_key": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('foo','1'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "Cannot use options [foo], they are not supported by the action or the rewriter BIN-PACK",
+  "spark_error_class": null
+ },
+ "err_bad_int": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('min-input-files','abc'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "NumberFormatException",
+  "error": "For input string: \"abc\"",
+  "spark_error_class": null
+ },
+ "err_zero_min_input": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('min-input-files','0'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "'min-input-files' is set to 0 but must be > 0",
+  "spark_error_class": null
+ },
+ "err_bad_bool": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-all','maybe'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_data_files_count": 0,
+   "added_data_files_count": 0,
+   "rewritten_bytes_count": 0,
+   "failed_data_files_count": 0,
+   "removed_delete_files_count": 0
+  },
+  "after": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "err_bad_job_order": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('rewrite-job-order','bogus'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "Invalid rewrite job order name: bogus",
+  "spark_error_class": null
+ },
+ "err_bad_spec": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('output-spec-id','99'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "Cannot use output spec id 99 because the table does not contain a reference to this spec-id.",
+  "spark_error_class": null
+ },
+ "err_max_commits_0": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('partial-progress.enabled','true', 'partial-progress.max-commits','0'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "Cannot set partial-progress.max-commits to 0, the value must be positive when partial-progress.enabled is true",
+  "spark_error_class": null
+ },
+ "err_target_le_min": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('target-file-size-bytes','100', 'min-file-size-bytes','200'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "'target-file-size-bytes' (100) must be > 'min-file-size-bytes' (200), all new files will be smaller than the min threshold",
+  "spark_error_class": null
+ },
+ "err_target_ge_max": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('target-file-size-bytes','300', 'max-file-size-bytes','200'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "'target-file-size-bytes' (300) must be < 'max-file-size-bytes' (200), all new files will be larger than the max threshold",
+  "spark_error_class": null
+ },
+ "err_neg_target": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('target-file-size-bytes','-1'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "'target-file-size-bytes' is set to -1 but must be > 0",
+  "spark_error_class": null
+ },
+ "err_concurrent_0": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('max-concurrent-file-group-rewrites','0'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "Cannot set max-concurrent-file-group-rewrites to 0, the value must be positive.",
+  "spark_error_class": null
+ },
+ "err_delete_ratio": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('delete-ratio-threshold','2'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "'delete-ratio-threshold' is set to 2.0 but must be <= 1",
+  "spark_error_class": null
+ },
+ "err_empty_key": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('','1'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "Cannot use options [], they are not supported by the action or the rewriter BIN-PACK",
+  "spark_error_class": null
+ },
+ "err_upper_key": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('MIN-INPUT-FILES','1'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "Cannot use options [MIN-INPUT-FILES], they are not supported by the action or the rewriter BIN-PACK",
+  "spark_error_class": null
+ },
+ "err_group_size_0": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('max-file-group-size-bytes','0'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "'max-file-group-size-bytes' is set to 0 but must be > 0",
+  "spark_error_class": null
+ },
+ "err_delete_threshold_neg": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('delete-file-threshold','-1'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "'delete-file-threshold' is set to -1 but must be >= 0",
+  "spark_error_class": null
+ },
+ "err_dup_key": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('min-input-files','1', 'min-input-files','2'))",
+  "before": {
+   "snapshots": 2,
+   "ops": [
+    "append",
+    "append"
+   ],
+   "data_files": 2,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "SparkRuntimeException",
+  "error": "[DUPLICATED_MAP_KEY] Duplicate map key min-input-files was found, please check the input data.\nIf you want to remove the duplicated keys, you can set \"spark.sql.mapKeyDedupPolicy\" to \"LAST_WIN\" so that the key inserted at last takes precedence. SQLSTATE: 23505",
+  "spark_error_class": "DUPLICATED_MAP_KEY"
+ },
+ "rpd_baseline": {
+  "sql": "CALL sc.system.rewrite_position_delete_files(table => 'ns.t')",
+  "before": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_delete_files_count": 0,
+   "added_delete_files_count": 0,
+   "rewritten_bytes_count": 0,
+   "added_bytes_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "rpd_rewrite_all": {
+  "sql": "CALL sc.system.rewrite_position_delete_files(table => 'ns.t', options => map('rewrite-all','true'))",
+  "before": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_delete_files_count": 8,
+   "added_delete_files_count": 8,
+   "rewritten_bytes_count": 12578,
+   "added_bytes_count": 12578
+  },
+  "after": {
+   "snapshots": 10,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete",
+    "replace"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "rpd_min_input_files_1": {
+  "sql": "CALL sc.system.rewrite_position_delete_files(table => 'ns.t', options => map('min-input-files','1'))",
+  "before": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_delete_files_count": 8,
+   "added_delete_files_count": 8,
+   "rewritten_bytes_count": 12580,
+   "added_bytes_count": 12580
+  },
+  "after": {
+   "snapshots": 10,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete",
+    "replace"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "rpd_target_small": {
+  "sql": "CALL sc.system.rewrite_position_delete_files(table => 'ns.t', options => map('target-file-size-bytes','2000'))",
+  "before": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_delete_files_count": 0,
+   "added_delete_files_count": 0,
+   "rewritten_bytes_count": 0,
+   "added_bytes_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "rpd_max_group_size": {
+  "sql": "CALL sc.system.rewrite_position_delete_files(table => 'ns.t', options => map('max-file-group-size-bytes','2500'))",
+  "before": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_delete_files_count": 0,
+   "added_delete_files_count": 0,
+   "rewritten_bytes_count": 0,
+   "added_bytes_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "rpd_unknown_key": {
+  "sql": "CALL sc.system.rewrite_position_delete_files(table => 'ns.t', options => map('foo','1'))",
+  "before": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "Cannot use options [foo], they are not supported by the action or the rewriter BIN-PACK",
+  "spark_error_class": null
+ },
+ "rpd_bad_int": {
+  "sql": "CALL sc.system.rewrite_position_delete_files(table => 'ns.t', options => map('min-input-files','abc'))",
+  "before": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "NumberFormatException",
+  "error": "For input string: \"abc\"",
+  "spark_error_class": null
+ },
+ "residue_rpd_then_rdf": {
+  "start": {
+   "snapshots": 17,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 32,
+   "delete_files": 16,
+   "spec_ids": [
+    0
+   ]
+  },
+  "rewrite_position_delete_files": {
+   "sql": "CALL sc.system.rewrite_position_delete_files(table => 'ns.t')",
+   "result": {
+    "rewritten_delete_files_count": 16,
+    "added_delete_files_count": 16,
+    "rewritten_bytes_count": 25153,
+    "added_bytes_count": 25153
+   },
+   "state": {
+    "snapshots": 18,
+    "ops": [
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "delete",
+     "replace"
+    ],
+    "data_files": 32,
+    "delete_files": 16,
+    "spec_ids": [
+     0
+    ]
+   }
+  },
+  "rewrite_data_files": {
+   "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t')",
+   "result": {
+    "rewritten_data_files_count": 16,
+    "added_data_files_count": 2,
+    "rewritten_bytes_count": 18655,
+    "failed_data_files_count": 0,
+    "removed_delete_files_count": 0
+   },
+   "state": {
+    "snapshots": 19,
+    "ops": [
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "delete",
+     "replace",
+     "replace"
+    ],
+    "data_files": 2,
+    "delete_files": 0,
+    "spec_ids": [
+     0
+    ]
+   }
+  }
+ },
+ "residue_rdf_only": {
+  "start": {
+   "snapshots": 17,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 32,
+   "delete_files": 16,
+   "spec_ids": [
+    0
+   ]
+  },
+  "rewrite_data_files": {
+   "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t')",
+   "result": {
+    "rewritten_data_files_count": 16,
+    "added_data_files_count": 2,
+    "rewritten_bytes_count": 18655,
+    "failed_data_files_count": 0,
+    "removed_delete_files_count": 0
+   },
+   "state": {
+    "snapshots": 18,
+    "ops": [
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "append",
+     "delete",
+     "replace"
+    ],
+    "data_files": 18,
+    "delete_files": 16,
+    "spec_ids": [
+     0
+    ]
+   }
+  }
+ }
+}
