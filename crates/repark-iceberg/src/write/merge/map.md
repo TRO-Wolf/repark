@@ -190,6 +190,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   serial writer for V3 lineage tables and the shared partitioned stream funnel otherwise, and
   the funnel routes one value to one writer. Row semantics and `_row_id` carry are unchanged.
   pins: write-distribution-2/C-004, C-007
+  **ICE-SORTED-INSERT-1 (2026-09-17):** both MERGE writer sites stamp the
+  table's default sort order id through `distribution::stamp` — the lineage
+  fanout and the unpartitioned writer in `mod.rs`.
+  pins: ice-sorted-insert-1/C-003
 - `cow_scratch.rs` — COW rewrite scratch tables (file-scoped target, affected-path
   MemTable, drop guard) extracted so `mod.rs` ratchets down. Scratch providers
   register on `datafusion.public` so a session default Iceberg catalog cannot

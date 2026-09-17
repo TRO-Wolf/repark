@@ -24,6 +24,9 @@ use iceberg::spec::{
 use iceberg::table::Table;
 use iceberg::transform::create_transform_function;
 use iceberg::writer::IcebergWriter;
+use iceberg::writer::base_writer::data_file_writer::DataFileWriterBuilder;
+use iceberg::writer::file_writer::FileWriterBuilder;
+use iceberg::writer::file_writer::location_generator::{FileNameGenerator, LocationGenerator};
 
 use crate::write::merge::iceberg_err;
 use crate::write::sort_order::DISTRIBUTION_MODE_PROPERTY;
@@ -183,6 +186,22 @@ pub(crate) fn distribution_is_none(table: &Table) -> Result<bool> {
 
 pub(crate) fn default_sort_is_declared(table: &Table) -> bool {
     !table.metadata().default_sort_order().is_unsorted()
+}
+
+pub(crate) fn default_sort_order_id(table: &Table) -> i32 {
+    i32::try_from(table.metadata().default_sort_order().order_id).unwrap_or(0)
+}
+
+pub(crate) fn stamp<B, L, F>(
+    writer: DataFileWriterBuilder<B, L, F>,
+    table: &Table,
+) -> DataFileWriterBuilder<B, L, F>
+where
+    B: FileWriterBuilder,
+    L: LocationGenerator,
+    F: FileNameGenerator,
+{
+    writer.with_sort_order_id(default_sort_order_id(table))
 }
 
 pub(crate) async fn sort_batches_by_default_order(

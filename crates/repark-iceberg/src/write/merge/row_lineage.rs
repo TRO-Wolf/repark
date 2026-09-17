@@ -26,6 +26,8 @@ use iceberg::writer::partitioning::fanout_writer::FanoutWriter;
 use parquet::arrow::PARQUET_FIELD_ID_META_KEY;
 use uuid::Uuid;
 
+use crate::write::distribution::stamp;
+
 use super::not_matched_by_source;
 use super::{FILE_PATH_COL, MergeSql, POS_COL, iceberg_err, quote_ident};
 
@@ -173,7 +175,7 @@ where
         location_generator,
         file_name_generator,
     );
-    let mut fanout = FanoutWriter::new(DataFileWriterBuilder::new(rolling_builder));
+    let mut fanout = FanoutWriter::new(stamp(DataFileWriterBuilder::new(rolling_builder), table));
     while let Some(batch) = stream.try_next().await? {
         if batch.num_rows() == 0 {
             continue;

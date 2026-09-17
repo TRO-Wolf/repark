@@ -348,6 +348,16 @@ repark-core's error map.
   identity return without an order, monotone committed files on both funnel entries, the
   `none` round-robin stream layout, the nested sort, and the transform refusal.
   pins: write-order-dist-1/C-007, C-008, C-010
+  **ICE-SORTED-INSERT-1 (2026-09-17):** plain `INSERT INTO` sorts inside the
+  fork's `insert_into` (F-SORTED-INSERT-1, RP-22), but the three RePark-owned
+  writer sites never stamped the files they wrote, so `{t}.files` read NULL.
+  `stamp` wraps a built `DataFileWriterBuilder` with the fork's
+  `with_sort_order_id` carrying the table's default order id (0 when unordered,
+  like the fork), called at the fanout close in `append.rs`, the lineage fanout
+  in `merge/row_lineage.rs`, and the unpartitioned MERGE writer in
+  `merge/mod.rs`. No sort is re-implemented here; the sort stays where
+  WRITE-ORDER-DIST-1 put it.
+  pins: ice-sorted-insert-1/C-003
   See [distribution/map.md](distribution/map.md).
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec
