@@ -232,6 +232,28 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   WRITE-ORDER-TRANSFORM-1 residual: a `bucket(4,id)` sorted table refuses the MERGE
   loudly (`only identity sort fields are supported`) and commits no snapshot.
   pins: ice-spark-table-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [test_ice_nan_pushdown_1.py](test_ice_nan_pushdown_1.py) +
+  [ice_nan_pushdown_1_oracle.json](ice_nan_pushdown_1_oracle.json) +
+  [_record_ice_nan_pushdown_1.py](_record_ice_nan_pushdown_1.py) — **ICE-NAN-PUSHDOWN-1
+  (2026-09-17, round 2):** NaN filter pushdown answers Spark end to end — the fork #284
+  rewrite at pin `75da2b58` with pushed shapes pinned structurally in
+  `nan_pushdown.rs` (`=` → `Unary IsNan`; `IN (NaN, 1.0)` → `Or(IsNan, Eq)`;
+  `!=` and single `NOT IN` → `NotNan`; `<=>` and NaN ranges push nothing),
+  proven on RePark tables built in-test plus the checked-in Spark-written v2/v3
+  warehouses under [fixtures/ice_nan_pushdown_1/](fixtures/ice_nan_pushdown_1/map.md)
+  (372 KB, canonical `/tmp/repark-ice-nan-pushdown-1` paths, materialized under a
+  directory lock and adopted via `CALL system.register_table`). The recorder builds
+  the six warehouses on live Spark, records the id set per clause per shape into the
+  truth JSON (plus v2/v3 DML and the decimal-literal Spark sets), and verifies on
+  re-run (`--rewrite` re-records). Offline: the full `=` / `<=>` / `!=` / range /
+  `IN` / `NOT IN` / `BETWEEN` / `BETWEEN NaN AND NaN` / negation grid plus the
+  `isnan` control on double and full float, SQL door everywhere and DataFrame door
+  on every cell but the `eq_rev` twin, every shape at v2 and v3, and the
+  DELETE/UPDATE row outcomes at v2 and v3. Live (`REPARK_PARITY_LIVE=1`): Spark
+  rebuilds the grid and the DML and asserts repark == truth == live Spark on both
+  doors, including RePark DML on adopted live tables. The bare-decimal-literal
+  BACKLOG pins hold today's loud needles against the recorded Spark answers.
+  pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine

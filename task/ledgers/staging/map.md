@@ -354,6 +354,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   gaps F-1 (mutation-proven cast pin), F-2 (partitioned abort pin) and F-4 (§8 counts). No
   dependency, no spawn. `risk_tier: standard`. Branch `perf/write-distribution-2`.
   pins: write-distribution-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [ice-nan-pushdown-1-ledger.md](ice-nan-pushdown-1-ledger.md) —
+  **ICE-NAN-PUSHDOWN-1 (2026-09-17), in flight:** NaN filter pushdown end to end
+  against Spark — the fork #284 `IsNan` / `NotNan` / `IsNan OR In(rest)` rewrite
+  at pin `75da2b58` (RP-21), proven by the clause grid on double and float over
+  NaN-only / mixed / two-file shapes at v2 and v3 on RePark- and Spark-written
+  tables, both doors, plus DELETE/UPDATE row outcomes; Spark oracle recorded as
+  truth JSON plus v2/v3 fixture warehouses with a live replay tier; registry row
+  ICE-NAN-PUSHDOWN-1 FIXED. `risk_tier: standard`. Branch
+  `fix/ice-nan-pushdown-1`.
+  pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
 
 ## Pointers
 - Up: [../map.md](../map.md)
