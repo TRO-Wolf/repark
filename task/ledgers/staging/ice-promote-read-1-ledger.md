@@ -128,6 +128,58 @@ REPARK_PARITY_LIVE=1 .venv/bin/python -m pytest python/repark/tests/test_ice_pro
 Orchestrator replay block on the fixed native: `id<2 => [old1]`, `id>1 => [new3, old2]`,
 `f<2.0D => [old1]`, `id=1 => [old1]`, MERGE → `[(1,'m1'), (2,'old2'), (3,'new3')]`, v2 and v3.
 
+### C-015 on the L-01-fixed native (fork `e8db2ac0`), 2026-09-17
+
+Release native rebuilt with the run-20a override (`maturin develop --release --config
+/tmp/oc-worker/run20a/fork-override.toml`, exit 0; `Cargo.lock` restored after).
+
+Offline, whole module:
+
+```
+.venv/bin/python -m pytest python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider -rs
+4 failed, 169 passed, 1 skipped in 65.15s
+```
+
+The 4 failures are exactly the new `inspect/v2` + `inspect/v3` cells (both
+doors); every one of the 169 prior cells still passes — the rebuild broke
+nothing. Each inspect cell aborts at its first step (`partitions`); the later
+steps were measured by direct probe instead (below).
+
+Live, one JVM:
+
+```
+REPARK_PARITY_LIVE=1 … pytest … -k live_spark
+1 passed, 173 deselected in 137.20s
+```
+
+Live Spark re-derived all 128 recorded answers, including the two new inspect
+cases — no oracle drift (in particular the all-`status = 1` entries answer
+reproduces run to run).
+
+Direct probe of the brief's four queries on the fixed native against the
+recorded Spark answers:
+
+| Query | Rows vs Spark | Promoted types vs Spark | Column names vs Spark |
+|---|---|---|---|
+| `partitions` | identical, incl. merged `[7, 2, 2, 0]` | `p` int64 both | RePark `ice_promote_read_1.ns.t$partitions.partition[p]` vs Spark `p` |
+| `files` | identical (5 rows) | `p` int64 both | RePark `…$files.partition[p]` vs Spark `p` |
+| `entries` | identical, incl. all `status = 1` | `p` int64 both | RePark `…$entries.data_file[partition][p]` / `…[record_count]` vs Spark `p` / `record_count` |
+| `p = 7` SQL and DataFrame twin | `[(7,'old7'), (8,'new7')]`, `id` int64, on both doors | identical | identical |
+
+Residual: the fork L-01 fix is verified on values and Arrow types — no
+`DataInvalid`, the cross-era `p = 7` partition merges into one Long-typed row.
+What remains is NOT the promotion defect: RePark names a nested projection over
+a metadata table with the qualified engine form
+(`<catalog>.<ns>.<t>$<inspect>.<struct>[<field>]`) where Spark names the leaf
+(`p`). Measured pre-existing and promotion-independent — the same mangled names
+come back on an unpromoted table with the old native (probe 2026-09-17,
+`SELECT partition.p … FROM c.ns.t.partitions` → `c.ns.t$partitions.partition[p]`,
+values right). No engine change was made for it here: the brief authorizes
+pins and registry prose, and a projection-naming change spans every `SELECT
+a.b` in the suite. C-015 stays OPEN pending the hand-back ruling (alias the
+three recorded projections vs a separate naming unit); the attestation block
+below is therefore not complete.
+
 ## Gates (step 8, 2026-09-16)
 
 | Gate | Result |
