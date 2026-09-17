@@ -4302,7 +4302,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `AnalysisException`, and the insertInto-positional-vs-saveAsTable-by-name discriminator pins the
   two writers genuinely diverge on a reordered frame (oracle-verified on PySpark 4.1.2).
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** a missing source column fills NULL on a
-  table with no defaults (Spark-equal) instead of raising; the extra-column refusal
+  table with no defaults (Spark-equal) instead of raising
+  (`test_save_as_table_append_missing_column_fills_null`); the extra-column refusal
   is unchanged.
   pins: ice-v3-write-default-1/C-006
 - `test_ctas_division_writeback.py` — **Group L-write**: CTAS integer-division type-derivation at

@@ -197,9 +197,6 @@ def test_save_as_table_append_extra_column_raises(spark: ReparkSession) -> None:
 
 
 def test_save_as_table_append_missing_column_fills_null(spark: ReparkSession) -> None:
-    # A MISSING source column (source columns ⊊ table columns) fills NULL on a
-    # table with no defaults — Spark-equal (ICE-V3-WRITE-DEFAULT-1 nodefault
-    # cells); only EXTRA source columns still refuse.
     table = "glue_catalog.writer_ns.missing"
     spark.createDataFrame([(1, 10)], ["a", "b"]).write.saveAsTable(table)
     spark.createDataFrame([(2,)], ["a"]).write.mode("append").saveAsTable(table)
