@@ -1250,7 +1250,7 @@ them, and the document is ordered by surface, never by date.
 - **Rationale** — FIXED, not declared. A v1.0 gate that promises v3 row lineage cannot ship a
   lineage projection that raises an internal error after a legal schema evolution.
 
-### V3-COV-3 — FIXED (RP-8, 2026-09-03): partitioned `INSERT INTO` assigns `_row_id` by ascending partition order
+### V3-COV-3 — OPEN (measured 2026-09-16; was FIXED at RP-8, 2026-09-03): partitioned `INSERT INTO` assigns `_row_id` by ascending partition order
 
 - **repark** — one `INSERT INTO t VALUES …` of four rows across two identity partitions on a v3
   table assigns row lineage from the manifest's data-file order. Filed 2026-09-03 (V3-COV) because
@@ -1267,7 +1267,7 @@ them, and the document is ordered by surface, never by date.
   `…::test_v3_ctas_partitioned_row_id_mapping_is_stable_and_spark_ordered`; plus the nine
   partitioned rows of the matrix, whose lineage probe is
   `SELECT id, _row_id, _last_updated_sequence_number` again on both engine goldens
-- **Rationale** — FIXED. This narrowed a claim
+- **Rationale** — OPEN (measured 2026-09-16). This narrowed a claim
   [V3-FILEORDER-1](#v3-fileorder-1--declared-v3-11-2026-09-02-same-commit-data-file-order-is-ascending-partition-value-not-sparks-hash-bucket-order)
   states unqualified — *ascending partition value … applied once per commit*. That rule held on
   every writer RePark owns, and V3-11 pinned it on MERGE and CTAS; it did **not** hold on a
@@ -1275,7 +1275,12 @@ them, and the document is ordered by surface, never by date.
   where RePark does not own the file set the commit sees. The TRIGGER this row named — **fork
   F-20 / `F-v3-10-partition-file-order`, taken at the RP-8 repin** — landed as fork `#261`:
   `FanoutWriter::close` drains its partition map in ascending partition-value order, so the rule
-  is now one rule on every writer that reaches a repark table. The partitioned rows of the
+  was read as one rule on every writer that reaches a repark table. **Corrected 2026-09-17
+  from the 2026-09-16 rating** (probe `p_rowid_order` at `a92a68db`): `INSERT INTO t SELECT id,
+  cat, v FROM <temp view>` on a v3 table partitioned by `cat` gave 5 distinct
+  partition-to-first-`_row_id` mappings over 12 fresh tables, ascending in 1 of 12 runs — the
+  one-rule claim does not hold for that shape. The pinned `INSERT … VALUES` shape and CTAS
+  stayed ascending 12 of 12. The partitioned rows of the
   coverage matrix pin `_row_id` again. What remains is `V3-FILEORDER-1`: ascending is not Spark's
   `HashMap` bucket order, and the two coincide only on collision-free monotonic partition sets —
   `{10, 20}`, this matrix's seed, is one of them.
@@ -6944,7 +6949,12 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   metadata naming (v6…v9) where its own tables use `NNNNN-uuid`; snapshot summaries
   mix vocabularies (Spark's `spark.app.id`/`engine-name`/`iceberg-version` family vs
   repark's `engine.operation-id`/`deleted-*` family) and Spark reads both;
-  `statistics`/`partition-statistics` keys are absent from repark commits; and a
+  on a table without prior statistics, `statistics`/`partition-statistics` keys are absent
+  from repark commits — but on a Spark table that already carries both files, RePark's INSERT
+  and `expire_snapshots` commits carry both entries forward, while expiring the owning
+  snapshot removes the entries and files exactly as Spark does (`(0, 0, 0, 0, 1, 2)` on both)
+  (corrected 2026-09-17 from the 2026-09-16 rating, probes `p_meta_stats`, `p_stats_expire`
+  at `a92a68db`); and a
   `bucket(4,id)` sort order refuses the MERGE loudly with nothing committed — the
   WRITE-ORDER-TRANSFORM-1 residual, stated not silent. Pins:
   `python/repark/tests/test_ice_spark_table_1.py::test_live_spark_created_table_roundtrip`,
@@ -7195,7 +7205,12 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Python twin). Fork trigger **F-CATIO-BOUND**: give the cache a byte- or entry-bounded LRU, which
   bounds within a statement by construction and evicts one entry instead of all of them.
 - **PERF-ICE-COUNTSTAR-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 4.
-  **FIXED 2026-09-06 (RP-14)** behind the RP-14 fork pin bump. `SELECT count(*)` over a plain
+  **OPEN — measured 2026-09-16** (corrected 2026-09-17 from the 2026-09-16 rating,
+  probe `p_countstar` at `a92a68db`): no fold at the current pin — `EXPLAIN SELECT count(*)`
+  over a delete-free RePark table keeps `IcebergTableScan` under `AggregateExec`; the answer
+  stays correct and the fold pins in `python/repark/tests/test_perf_ice_scan_1.py` self-skip
+  with `fork pin predates F-27`. History: **FIXED 2026-09-06 (RP-14)** behind the RP-14 fork
+  pin bump. `SELECT count(*)` over a plain
   1e6-row Iceberg table cost 86.5 ms (analysis §7.4: 93 ms) because the empty projection
   decoded every column (`get_arrow_projection_mask` turned `field_ids.is_empty()` into
   `ProjectionMask::all()`) and no statistics fold existed. Fork trigger **F-27a/b**: an
@@ -7208,7 +7223,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   never-committed path override as **86.5 → 2.0 ms at 1e6** (parquet 1.8 ms) and
   686 → 2.5 ms at 1e7, with the V3 MoR DV leg correctly unfolded at 4.6 ms answering
   990,000 (`docs/perf/iceberg-scan-baseline.md` §2–§3). The RePark fold/non-fold pins
-  (`python/repark/tests/test_perf_ice_scan_1.py`) skip naming F-27 until the bump.
+  (`python/repark/tests/test_perf_ice_scan_1.py`) self-skip with `fork pin predates F-27`
+  at the current pin.
 - **PERF-ICE-SCANPART-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 5.
   **FIXED 2026-09-06 (RP-14)** behind the RP-14 fork pin bump, with residue. A sub-split-size
   table scanned as ONE partition because `plan_partition_work` bin-packs to the 128 MiB

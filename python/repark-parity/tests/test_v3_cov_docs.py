@@ -110,14 +110,16 @@ def test_the_fork_routed_rows_name_a_trigger() -> None:
         assert "TRIGGER:" in body, row
 
 
-def test_v3_cov_3_records_the_repin_that_retired_it() -> None:
-    """RP-8: the fork-routed row this repin closed says which fork change closed it, and when."""
+def test_v3_cov_3_records_the_measured_reopening() -> None:
+    """ICE-REGISTRY-SWEEP-1A: the row stands OPEN on the 2026-09-16 rating, not the RP-8 close."""
     registry = _read(_REGISTRY)
     start = registry.index("V3-COV-3 — ")
     body = registry[start : registry.index("\n### ", start)]
-    assert "FIXED (RP-8, 2026-09-03)" in body
+    assert "OPEN (measured 2026-09-16" in body
+    assert "1 of 12" in body
+    assert "12 of 12" in body
+    assert "p_rowid_order" in body
     assert "landed as fork `#261`" in body
-    assert "twelve of twelve" in body
     assert "test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered" in body
 
 
