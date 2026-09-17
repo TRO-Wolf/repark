@@ -79,7 +79,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
   pins: maint-rewrite-data-files-options/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
   pins: rp-4-fork-repin/C-003
   pins: v3-5-dv-compaction/C-002, C-004
-  pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-011
 - `rewrite_options.rs` — **ICE-RDF-OPTIONS-1 round 1 (2026-09-17):** `options => map(k, v, …)`
   extraction and validation for both rewrite procedures. String/number/boolean/NULL scalar
   rendering, duplicate-key `[DUPLICATED_MAP_KEY]`, unknown-key listing in map order with the

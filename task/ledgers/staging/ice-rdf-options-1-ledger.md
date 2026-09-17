@@ -227,10 +227,10 @@ Fork half: TRO-Wolf/iceberg-rust#283 head `2f5323ca`, read at `/tmp/ic-fork-rdfs
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-003 | Every fork-dependent cell is green, or stays `xfail(strict)` with a precise reason. | `test_ice_rdf_options_1.py` full run, zero XPASS. | **PROVEN** | 17 XPASS unmarked; 11 red kept with dated per-cell reasons (§Wiring and triage). |
-| C-005 | RPD wires every Spark key the fork supports; the rest refuse loud. | New `UnsupportedOperationException` pins (Rust + Python). | **PROVEN** | 5 Python refusal params + 2 Rust refusal tests green; RPD wiring unchanged (the 6 fork keys). |
-| C-006 | Residue re-measured on fork `2f5323ca`. | Round-2 measurement below. | **PROVEN** | Still 2 vs 0; `ICE-RDF-DANGLE-2` (OPEN) filed; current-count pin + zero xfail kept. |
-| C-007 | Registry `ICE-RDF-OPTIONS-1` → FIXED 2026-09-17; `RDF-SORT-1` untouched. | Registry diff. | **PROVEN** | Row flipped; `RDF-SORT-1` and `RDF-DANGLING-1` untouched; `ICE-RDF-DANGLE-2` added. |
+| C-008 | (round 2 of C-003) Every fork-dependent cell is green, or stays `xfail(strict)` with a precise reason. | `test_ice_rdf_options_1.py` full run, zero XPASS. | **PROVEN** | 17 XPASS unmarked; 11 red kept with dated per-cell reasons (§Wiring and triage). |
+| C-009 | (round 2 of C-005) RPD wires every Spark key the fork supports; the rest refuse loud. | New `UnsupportedOperationException` pins (Rust + Python). | **PROVEN** | 5 Python refusal params + 2 Rust refusal tests green; RPD wiring unchanged (the 6 fork keys). |
+| C-010 | (round 2 of C-006) Residue re-measured on fork `2f5323ca`. | Round-2 measurement below. | **PROVEN** | Still 2 vs 0; `ICE-RDF-DANGLE-2` (OPEN) filed; current-count pin + zero xfail kept. |
+| C-011 | (round 2 of C-007) Registry `ICE-RDF-OPTIONS-1` → FIXED 2026-09-17; `RDF-SORT-1` untouched. | (round 2 of C-007) Registry diff. | **PROVEN** | Row flipped; `RDF-SORT-1` and `RDF-DANGLING-1` untouched; `ICE-RDF-DANGLE-2` added. |
 
 ### Round-2 red-first (unwired tree `97ec905f` + fork `2f5323ca`, release native)
 

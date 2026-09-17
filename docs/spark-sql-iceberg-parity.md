@@ -4913,7 +4913,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `call.rs::call_rewrite_position_delete_files_validates_options_and_refuses_where`.
 - **Rationale** — FIXED. The `NumberFormatException` leaf, the `inf`/`2d` double
   spellings, and multi-violation check order stay measured-and-noted gaps in the unit ledger.
-  pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-007
+  pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-007, C-011
 
 ### RDF-DANGLING-1 — `rewrite_position_delete_files` → `rewrite_data_files` leaves partition-scoped deletes dangling — **BACKLOG 2026-09-17**
 
