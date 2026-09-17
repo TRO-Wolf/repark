@@ -279,6 +279,29 @@ make verify (re-run 3) -> rc 0, full gate green
 `docs/spark-sql-iceberg-parity.md`: BY NAME row DML-6 (FIXED with pins) and
 the RTAS operation row RTAS-OPS-1 (OPEN, fork ask F-RTAS-OPS-1, pins named).
 
+### Round-2 gates (release native, 2026-09-17)
+
+```text
+maturin develop --release -> rc 0 (twice: engine, then clippy refactor)
+pytest test_ice_rtas_byname_1.py test_insert_store_assign.py
+  test_sql_harden_cutover.py test_writer_v2.py test_dml_b_partition_overwrite.py -q
+  -> 137 passed, 16 skipped, 5 xfailed
+pytest test_ice_rtas_byname_1.py (final native) -> 35 passed, 1 skipped, 5 xfailed
+cargo test -p repark-spark --lib -> 1069 passed, 0 failed, 4 ignored
+cargo test -p repark-sql --lib -> 345 passed, 0 failed
+cargo test -p repark-iceberg --lib -> 434 passed, 0 failed
+make rust-clippy -> rc 0 (after needless_borrow / too_many_lines /
+  ref_option / single_match_else fixes in insert_by_name.rs)
+make verify -> not re-run in round 2 (round-1 rc 0; round-2 gates above green)
+```
+
+Findings closed: L-001 (static/dynamic/append PARTITION routing + 42713),
+L-002 (empty overwrite wipe), L-003 (`CANNOT_FIND_DATA`), L-004
+(`caseSensitive` carrier + pins). Residue noted in DML-6:
+`partitionOverwriteMode` unread (dynamic BY NAME is whole-table replace-all,
+Spark's default-mode answer). Critic HANDOFF-Q items (native sniff
+paren/dot steer, hollow `"BY"` pin) left untouched as handed off.
+
 ## Round 2 (2026-09-17) — Critic-3 remediation
 
 Critic report `/tmp/oc-worker/jc-rv/bn-logic-1-report.md` (clone
