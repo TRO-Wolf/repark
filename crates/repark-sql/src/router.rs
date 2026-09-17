@@ -91,20 +91,20 @@ async fn execute_time_travelled(
     if let DFStatement::Reset(datafusion::sql::parser::ResetStatement::Variable(name)) = &statement
     {
         guards::refuse_collation_reset_variable(&name.to_string())?;
-        return delegate(cx, sql, None).await;
+        return delegate(cx, sql, None, None).await;
     }
     let DFStatement::Statement(mut statement) = statement else {
         // DataFusion's parser extensions use the delegated plan path.
-        return delegate(cx, sql, None).await;
+        return delegate(cx, sql, None, None).await;
     };
-    let rewritten = match insert_defaults::insert_target(&statement) {
+    let rewrite = match insert_defaults::insert_target(&statement) {
         Some((catalog_name, ident)) => match cx.catalogs.get(&catalog_name) {
             Some(catalog) => {
                 insert_defaults::rewrite_insert_markers(catalog, &ident, &mut statement).await?
             }
-            None => None,
+            None => insert_defaults::MarkerRewrite::unchanged(),
         },
-        None => None,
+        None => insert_defaults::MarkerRewrite::unchanged(),
     };
     let insert_columns = insert_defaults::insert_column_list(&statement);
 
@@ -156,8 +156,9 @@ async fn execute_time_travelled(
         _ => {
             delegate(
                 cx,
-                rewritten.as_deref().unwrap_or(sql),
+                rewrite.rewritten.as_deref().unwrap_or(sql),
                 insert_columns.as_deref(),
+                rewrite.preloaded,
             )
             .await
         }
@@ -183,7 +184,7 @@ async fn execute_identity_or_delegate(
     }
     guards::refuse_dml_subquery_predicate(statement)?;
     guards::refuse_mor_multi_spec_dml(cx, statement).await?;
-    delegate(cx, sql, None).await
+    delegate(cx, sql, None, None).await
 }
 
 async fn commit_identity_dml(
@@ -203,6 +204,7 @@ async fn delegate(
     cx: &EngineContext<'_>,
     sql: &str,
     listed: Option<&[String]>,
+    preloaded: Option<iceberg::table::Table>,
 ) -> Result<DataFrame> {
     // Plan, apply SEC-02, then execute through the shared pre-execute belt.
     let belt = repark_core::PreExecute::from_engine_context(cx);
@@ -214,7 +216,7 @@ async fn delegate(
         .and_then(|(name, ident)| cx.catalogs.get(&name).map(|catalog| (catalog, ident)));
     let plan = match target {
         Some((catalog, ident)) => {
-            insert_defaults::fill_insert_plan(catalog, &ident, listed, plan).await?
+            insert_defaults::fill_insert_plan(catalog, &ident, listed, plan, preloaded).await?
         }
         None => plan,
     };

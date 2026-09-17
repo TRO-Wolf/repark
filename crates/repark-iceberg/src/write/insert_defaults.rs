@@ -9,12 +9,13 @@ use datafusion::logical_expr::{
     DmlStatement, Expr as DataFusionExpr, LogicalPlan, Projection as DfProjection, WriteOp,
 };
 use datafusion::sql::sqlparser::ast::{
-    Expr as SqlExpr, SelectItem, SetExpr, Statement, TableObject,
+    Expr as SqlExpr, Query, SelectItem, SetExpr, Statement, TableObject,
 };
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::spec::{Literal, PrimitiveLiteral, Schema as IcebergSchema};
+use iceberg::table::Table;
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 
 pub struct ColumnDefault {
@@ -117,21 +118,41 @@ pub fn dml_target(plan: &LogicalPlan) -> Option<(String, TableIdent)> {
     table_reference_target(&dml.table_name)
 }
 
+pub struct MarkerRewrite {
+    pub rewritten: Option<String>,
+    pub preloaded: Option<Table>,
+}
+
+impl MarkerRewrite {
+    #[must_use]
+    pub fn unchanged() -> Self {
+        Self {
+            rewritten: None,
+            preloaded: None,
+        }
+    }
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub async fn rewrite_insert_markers(
     catalog: &Arc<dyn Catalog>,
     ident: &TableIdent,
     statement: &mut Statement,
-) -> Result<Option<String>> {
+) -> Result<MarkerRewrite> {
     let Statement::Insert(insert) = statement else {
-        return Ok(None);
+        return Ok(MarkerRewrite::unchanged());
     };
     let Some(source) = insert.source.as_mut() else {
-        return Ok(None);
+        return Ok(MarkerRewrite::unchanged());
     };
+    if !query_has_default_marker(source) {
+        return Ok(MarkerRewrite::unchanged());
+    }
     let table = match catalog.load_table(ident).await {
         Ok(table) => table,
-        Err(error) if error.kind() == ErrorKind::TableNotFound => return Ok(None),
+        Err(error) if error.kind() == ErrorKind::TableNotFound => {
+            return Ok(MarkerRewrite::unchanged());
+        }
         Err(error) => return Err(crate::catalog::iceberg_to_datafusion(error)),
     };
     let current = table.metadata().current_schema();
@@ -191,9 +212,31 @@ pub async fn rewrite_insert_markers(
         _ => {}
     }
     if changed {
-        return Ok(Some(statement.to_string()));
+        return Ok(MarkerRewrite {
+            rewritten: Some(statement.to_string()),
+            preloaded: Some(table),
+        });
     }
-    Ok(None)
+    Ok(MarkerRewrite {
+        rewritten: None,
+        preloaded: Some(table),
+    })
+}
+
+fn query_has_default_marker(source: &Query) -> bool {
+    match source.body.as_ref() {
+        SetExpr::Values(values) => values
+            .rows
+            .iter()
+            .flat_map(|row| row.content.iter())
+            .any(is_default_marker),
+        SetExpr::Select(select) => select.projection.iter().any(|item| match item {
+            SelectItem::UnnamedExpr(cell) => is_default_marker(cell),
+            SelectItem::ExprWithAlias { expr, .. } => is_default_marker(expr),
+            _ => false,
+        }),
+        _ => false,
+    }
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -202,6 +245,7 @@ pub async fn fill_insert_plan(
     ident: &TableIdent,
     listed: Option<&[String]>,
     plan: LogicalPlan,
+    preloaded: Option<Table>,
 ) -> Result<LogicalPlan> {
     let Some(listed) = listed else {
         return Ok(plan);
@@ -212,10 +256,13 @@ pub async fn fill_insert_plan(
     if !matches!(dml.op, WriteOp::Insert(_)) {
         return Ok(LogicalPlan::Dml(dml));
     }
-    let table = catalog
-        .load_table(ident)
-        .await
-        .map_err(crate::catalog::iceberg_to_datafusion)?;
+    let table = match preloaded {
+        Some(table) => table,
+        None => catalog
+            .load_table(ident)
+            .await
+            .map_err(crate::catalog::iceberg_to_datafusion)?,
+    };
     let defaults = column_defaults(table.metadata().current_schema())?;
     if !defaults.has_any() {
         return Ok(LogicalPlan::Dml(dml));
@@ -629,93 +676,4 @@ fn stamp_text(micros: i64) -> Result<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use datafusion::sql::sqlparser::dialect::GenericDialect;
-    use datafusion::sql::sqlparser::parser::Parser;
-
-    use super::*;
-
-    fn fill(data_type: ArrowDataType, primitive: PrimitiveLiteral) -> ColumnDefault {
-        ColumnDefault {
-            data_type,
-            primitive,
-        }
-    }
-
-    fn parse_one(sql: &str) -> Statement {
-        let statements = Parser::parse_sql(&GenericDialect {}, sql).expect("parse test statement");
-        assert_eq!(statements.len(), 1);
-        statements.into_iter().next().expect("one statement")
-    }
-
-    #[test]
-    fn string_default_renders_cast_varchar() {
-        let fill = fill(
-            ArrowDataType::Utf8,
-            PrimitiveLiteral::String("anon".to_string()),
-        );
-        assert_eq!(fill.sql_text().expect("text"), "CAST('anon' AS VARCHAR)");
-        assert_eq!(
-            fill.scalar().expect("scalar"),
-            ScalarValue::Utf8(Some("anon".to_string()))
-        );
-    }
-
-    #[test]
-    fn int_default_fills() {
-        let fill = fill(ArrowDataType::Int32, PrimitiveLiteral::Int(5));
-        assert_eq!(fill.sql_text().expect("text"), "CAST(5 AS INT)");
-        assert_eq!(fill.scalar().expect("scalar"), ScalarValue::Int32(Some(5)));
-    }
-
-    #[test]
-    fn exotic_primitive_fails_use_not_load() {
-        let fill = fill(ArrowDataType::Utf8, PrimitiveLiteral::AboveMax);
-        assert!(fill.scalar().is_err());
-        assert!(fill.sql_text().is_err());
-    }
-
-    #[test]
-    fn column_list_and_target_come_from_insert() {
-        let statement = parse_one("INSERT INTO catalog.ns.tbl (id, name) VALUES (1, 'a')");
-        assert_eq!(
-            insert_column_list(&statement),
-            Some(vec!["id".to_string(), "name".to_string()])
-        );
-        let (catalog, ident) = insert_target(&statement).expect("target");
-        assert_eq!(catalog, "catalog");
-        assert_eq!(ident.name(), "tbl");
-    }
-
-    #[test]
-    fn bare_insert_has_no_list_or_target() {
-        let statement = parse_one("INSERT INTO tbl VALUES (1, 'a')");
-        assert_eq!(insert_column_list(&statement), None);
-        assert_eq!(insert_target(&statement), None);
-    }
-
-    #[test]
-    fn decimal_and_date_literals_render() {
-        let decimal = fill(
-            ArrowDataType::Decimal128(10, 2),
-            PrimitiveLiteral::Int128(314),
-        );
-        assert_eq!(
-            decimal.sql_text().expect("d text"),
-            "CAST('3.14' AS DECIMAL(10,2))"
-        );
-        assert_eq!(
-            decimal.scalar().expect("d scalar"),
-            ScalarValue::Decimal128(Some(314), 10, 2)
-        );
-        let date = fill(ArrowDataType::Date32, PrimitiveLiteral::Int(20_000));
-        assert_eq!(
-            date.sql_text().expect("dt text"),
-            "CAST('2024-10-04' AS DATE)"
-        );
-        assert_eq!(
-            date.scalar().expect("dt scalar"),
-            ScalarValue::Date32(Some(20_000))
-        );
-    }
-}
+mod tests;

@@ -200,7 +200,8 @@ pins: rp-4-fork-repin/C-005, C-006
   lowerings, in that order; the range-frame restatement repeats all three.
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the slot also rewrites INSERT
   `DEFAULT` markers and records the INSERT column list, then fills omitted
-  columns from `write_default` on the planned DML (`insert_defaults`).
+  columns from `write_default` on the planned DML (`insert_defaults`). The marker
+  pass's loaded table threads into the fill call, so one INSERT loads once.
   pins: ice-v3-write-default-1/C-004, C-007
 - `bare_nullary.rs` — **SPARK-SQL-GRAMMAR-1 C-010 (2026-09-16):** bare nullary
   keywords in both Spark directions. `demote_refusing_nullary_calls` lowers a

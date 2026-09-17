@@ -444,7 +444,11 @@ repark-core's error map.
   table, an unrenderable default literal, and a default that does not fit its column type
   all surface as plan errors. Its entry points carry
   `#[allow(clippy::missing_errors_doc)]` in place of the `# Errors` doc comment the
-  no-code-comments ruling forbids.
+  no-code-comments ruling forbids. The marker pass probes the AST for `DEFAULT`
+  first and loads nothing without one; the loaded table travels in `MarkerRewrite`
+  into `fill_insert_plan`, so an INSERT pays at most one catalog load. Unit tests
+  (including the load-count pins over a counting test catalog) live in
+  `insert_defaults/tests.rs`.
   pins: ice-v3-write-default-1/C-004, C-005, C-006, C-007
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):

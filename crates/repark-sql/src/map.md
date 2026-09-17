@@ -42,7 +42,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
   (**V3-4:** `prepare_lineage_sql` after time travel; composed statements refuse `V3-ROWID-2`;
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** short `INSERT INTO t (cols)` fills omitted
-  columns from `write_default` before delegation, pins ice-v3-write-default-1/C-004)
+  columns from `write_default` before delegation, pins ice-v3-write-default-1/C-004;
+  the marker pass hands its loaded table through `delegate`, so the fill pass never
+  reloads)
   valve → match → the MoR DML valve → delegate) and the delegation path that carries the SEC-02
   guard. Delegation
   covers reads, the fork's metadata tables, and `INSERT`/`DELETE`/`UPDATE` via the fork's
