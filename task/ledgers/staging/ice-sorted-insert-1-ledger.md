@@ -111,3 +111,29 @@ OVERWRITE keeps the `only identity sort fields are supported` refusal.
 ## 7. Gates
 
 TBD.
+
+## 8. Round 2 (2026-09-17) — rebase onto main at RP-22
+
+The orchestrator rebased this branch onto main (`444323f2`, RP-22 PR #667,
+fork pin `96fc9f1f`, carries F-SORTED-INSERT-1 #287) and removed the
+`/tmp/jc-forksrc` override; `Cargo.toml` / `Cargo.lock` are tracked again.
+The unit's Rust fix uses only long-standing fork APIs (`DataFileWriterBuilder`,
+`with_sort_order_id`, `default_sort_order`), so no code change was needed for
+the rebase. No cell asserts file counts, so the 4151b488-only target-file-size
+change (fork #288, RP-23 #671) touches no pin: no `xfail` was needed.
+
+### Rebuild + rerun on main's pin
+
+Release native rebuilt on the RP-22 tree (`maturin develop --release`,
+installed); `test_ice_sorted_insert_1.py -k "not live"`: **10 passed, 8
+deselected**. The owned-paths stamp assertions (red as `None == 1` before the
+fix) pass, so the installed native carries both the fix and fork #287. No
+`xfail` needed: nothing asserts file counts.
+
+### Registry
+
+`WRITE-ORDER-SORTED-INSERT-1` FIXED 2026-09-17 (consumes fork #287 via RP-22
+#667); `WRITE-ORDER-TRANSFORM-1` stays open with the 2026-09-17 measurement
+(plain INSERT into the adopted days table sorts and stamps via the fork;
+RePark-owned paths keep the loud refusal). C-005 PROVEN on write; live tier
+still to run.
