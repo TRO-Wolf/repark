@@ -432,6 +432,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   The function carries `#[allow(clippy::missing_errors_doc)]` (R-17c-3: no Rust `///`).
   Its carrier `set` refusal now points at the runtime `SET` spelling.
   pins: set-ansi-runtime-1/C-001
+- `case_sensitive.rs` — **ICE-RTAS-BYNAME-1 round 2 (2026-09-17):** Spark-door
+  `spark.sql.caseSensitive` carrier (`SparkCaseSensitiveConfig`,
+  `PREFIX = repark.case-sensitive`, default **FALSE**) + builder/runtime
+  parsers + the options accessor. Filled by `repark-spark`'s
+  `SparkExtension::configure`; served at runtime by the binding's
+  `set_runtime_config`; read by the BY NAME resolver. The runtime parser
+  takes case-insensitive `true`/`false` only
+  (`INVALID_CONF_VALUE.TYPE_MISMATCH`, SQLSTATE 22022).
+  pins: ice-rtas-byname-1/C-010
 - `session_time_zone.rs` (+ `session_time_zone/`) — the carrier that brings the
   resolved session timezone to the extractors. A `ConfigExtension` with a two-segment `PREFIX`
   (`repark.session`), a `set` that always refuses naming `spark.sql.session.timeZone`, and empty

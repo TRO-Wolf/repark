@@ -13,6 +13,36 @@ use repark_core::CatalogRegistry;
 use crate::catalog_ops::{name_parts, namespace_schema_name, reregister};
 use crate::parse_single_normalized;
 
+enum TargetFill {
+    Source(usize),
+    Null,
+    Static(String),
+}
+
+struct StaticColumn {
+    canonical: String,
+    written: String,
+    literal_sql: String,
+}
+
+fn case_sensitive_insert(ctx: &SessionContext) -> bool {
+    repark_functions::case_sensitive::spark_case_sensitive_from_options(
+        &ctx.copied_config().options(),
+    )
+}
+
+fn fold_name(value: &str, case_sensitive: bool) -> String {
+    if case_sensitive {
+        value.to_string()
+    } else {
+        value.to_ascii_lowercase()
+    }
+}
+
+fn same_name(first: &str, second: &str, case_sensitive: bool) -> bool {
+    fold_name(first, case_sensitive) == fold_name(second, case_sensitive)
+}
+
 pub(crate) async fn execute_insert_by_name(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -45,20 +75,100 @@ pub(crate) async fn execute_insert_by_name(
              `{table_sql}`"
         )));
     };
-    let target_names: Vec<String> = table
+    let fields: Vec<(String, bool)> = table
         .metadata()
         .current_schema()
         .as_struct()
         .fields()
         .iter()
-        .map(|field| field.name.clone())
+        .map(|field| (field.name.clone(), field.required))
         .collect();
-    let source_names = probe_source_names(ctx, catalogs, source).await?;
+    let case_sensitive = case_sensitive_insert(ctx);
+    let source_names = probe_source_names(ctx, catalogs, source, case_sensitive).await?;
     let table_display = display_table_name(&catalog_name, &table);
-    let mapping = match_source_to_target(&target_names, &source_names, &table_display)?;
-    let projection_sql = build_projection_sql(source, &target_names, &source_names, &mapping);
+    let static_columns = static_partition_columns(&table, &insert, case_sensitive)?;
+    for name in &source_names {
+        if let Some(found) = static_columns.iter().find(|static_column| {
+            same_name(&static_column.canonical, &name.resolved, case_sensitive)
+        }) {
+            return Err(static_partition_in_column_list(&found.written));
+        }
+    }
+    let match_fields: Vec<(String, bool)> = fields
+        .iter()
+        .filter(|(name, _)| {
+            !static_columns
+                .iter()
+                .any(|static_column| same_name(&static_column.canonical, name, case_sensitive))
+        })
+        .cloned()
+        .collect();
+    let match_names: Vec<String> = match_fields.iter().map(|(name, _)| name.clone()).collect();
+    let mapping =
+        match_source_to_target(&match_names, &source_names, &table_display, case_sensitive)?;
+    for ((name, required), slot) in match_fields.iter().zip(mapping.iter()) {
+        if slot.is_none() && *required {
+            return Err(cannot_find_data(&table_display, name));
+        }
+    }
+    let projection_sql = if !insert.overwrite && !static_columns.is_empty() {
+        build_static_append_projection(
+            source,
+            &fields,
+            &static_columns,
+            &source_names,
+            &mapping,
+            case_sensitive,
+        )
+    } else {
+        let fills: Vec<TargetFill> = mapping
+            .iter()
+            .map(|slot| match slot {
+                Some(index) => TargetFill::Source(*index),
+                None => TargetFill::Null,
+            })
+            .collect();
+        build_projection_sql(source, &match_names, &source_names, &fills)
+    };
     if insert.overwrite {
         let query = parse_projection_query(&projection_sql)?;
+        if insert.partitioned.is_some() {
+            let mut delegated = insert.clone();
+            delegated.source = Some(query);
+            delegated.columns = Vec::new();
+            let partitioned = insert.partitioned.clone().unwrap_or_default();
+            return crate::insert_overwrite::execute_partition_overwrite(
+                ctx,
+                catalogs,
+                &table_name,
+                &table_sql,
+                &delegated,
+                &partitioned,
+            )
+            .await;
+        }
+        if projection_is_empty(ctx, catalogs, &projection_sql).await? {
+            let namespace = namespace_schema_name(table.identifier().namespace());
+            let type_table_sql =
+                format!("{catalog_name}.{namespace}.{}", table.identifier().name());
+            crate::insert_overwrite::assert_empty_overwrite_types_assignment_compatible(
+                ctx,
+                catalogs,
+                &type_table_sql,
+                &query,
+                &[],
+            )
+            .await?;
+            repark_iceberg::write::commit_overwrite_replace_all_to(
+                &catalog,
+                &table,
+                Vec::new(),
+                branch.as_deref(),
+            )
+            .await?;
+            reregister(ctx, catalog, &catalog_name, &namespace).await?;
+            return ctx.read_empty();
+        }
         return crate::insert_overwrite::insert_overwrite_from_staged_source(
             ctx,
             catalogs,
@@ -180,10 +290,95 @@ struct SourceName {
     resolved: String,
 }
 
+async fn projection_is_empty(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    projection_sql: &str,
+) -> Result<bool> {
+    let probe_sql = format!("SELECT 1 FROM ({projection_sql}) AS _repark_by_name_empty LIMIT 1");
+    let probe = crate::spark_ast::execute_passthrough(ctx, catalogs, &probe_sql).await?;
+    let batches = probe.collect().await?;
+    Ok(batches.iter().all(|batch| batch.num_rows() == 0))
+}
+
+fn static_partition_columns(
+    table: &iceberg::table::Table,
+    insert: &datafusion::sql::sqlparser::ast::Insert,
+    case_sensitive: bool,
+) -> Result<Vec<StaticColumn>> {
+    let Some(partitioned) = &insert.partitioned else {
+        return Ok(Vec::new());
+    };
+    if !insert.overwrite && table.metadata().default_partition_spec().is_unpartitioned() {
+        return Err(DataFusionError::NotImplemented(
+            "INSERT INTO … PARTITION (…) requires a partitioned Iceberg table; the target is \
+             unpartitioned"
+                .to_string(),
+        ));
+    }
+    let request = repark_iceberg::write::partition_overwrite_request_from_exprs(partitioned)?;
+    let plan = repark_iceberg::write::plan_partition_overwrite(table, &request)?;
+    let repark_iceberg::write::PartitionOverwritePlan::Static(spec) = plan else {
+        return Ok(Vec::new());
+    };
+    let fields = table
+        .metadata()
+        .current_schema()
+        .as_struct()
+        .fields()
+        .iter()
+        .map(|field| field.name.clone())
+        .collect::<Vec<_>>();
+    spec.equalities
+        .iter()
+        .map(|equality| {
+            let canonical = fields
+                .iter()
+                .find(|name| same_name(name, &equality.name, case_sensitive))
+                .cloned()
+                .unwrap_or_else(|| equality.name.clone());
+            Ok(StaticColumn {
+                canonical,
+                written: equality.name.clone(),
+                literal_sql: partition_literal_sql(&equality.value),
+            })
+        })
+        .collect()
+}
+
+fn partition_literal_sql(value: &Option<repark_iceberg::write::PartitionLiteral>) -> String {
+    match value {
+        None => "NULL".to_string(),
+        Some(repark_iceberg::write::PartitionLiteral::Boolean(true)) => "TRUE".to_string(),
+        Some(repark_iceberg::write::PartitionLiteral::Boolean(false)) => "FALSE".to_string(),
+        Some(repark_iceberg::write::PartitionLiteral::Int(value)) => value.to_string(),
+        Some(repark_iceberg::write::PartitionLiteral::Long(value)) => value.to_string(),
+        Some(repark_iceberg::write::PartitionLiteral::String(value)) => {
+            format!("'{}'", value.replace('\'', "''"))
+        }
+    }
+}
+
+fn static_partition_in_column_list(column: &str) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST] Static partition column {column} is also \
+         specified in the column list. SQLSTATE: 42713"
+    ))
+}
+
+fn cannot_find_data(table: &str, name: &str) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the \
+         table {table}: Cannot find data for the output column {}. SQLSTATE: KD000",
+        quote_name(name)
+    ))
+}
+
 async fn probe_source_names(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     source: &Query,
+    case_sensitive: bool,
 ) -> Result<Vec<SourceName>> {
     if let SetExpr::Values(values) = source.body.as_ref() {
         let Some(first) = values.rows.first() else {
@@ -198,7 +393,7 @@ async fn probe_source_names(
             })
             .collect());
     }
-    if let Some(names) = syntactic_source_names(source) {
+    if let Some(names) = syntactic_source_names(source, case_sensitive) {
         return Ok(names);
     }
     let probe_sql = format!("SELECT * FROM ({source}) AS _repark_by_name_src LIMIT 0");
@@ -215,15 +410,15 @@ async fn probe_source_names(
         .collect())
 }
 
-fn normalize_ident(value: &str, quoted: bool) -> String {
-    if quoted {
+fn normalize_ident(value: &str, quoted: bool, case_sensitive: bool) -> String {
+    if quoted || case_sensitive {
         value.to_string()
     } else {
         value.to_ascii_lowercase()
     }
 }
 
-fn syntactic_source_names(source: &Query) -> Option<Vec<SourceName>> {
+fn syntactic_source_names(source: &Query, case_sensitive: bool) -> Option<Vec<SourceName>> {
     let SetExpr::Select(select) = source.body.as_ref() else {
         return None;
     };
@@ -234,20 +429,32 @@ fn syntactic_source_names(source: &Query) -> Option<Vec<SourceName>> {
             datafusion::sql::sqlparser::ast::SelectItem::ExprWithAlias { alias, .. } => {
                 Some(SourceName {
                     display: alias.value.clone(),
-                    resolved: normalize_ident(&alias.value, alias.quote_style.is_some()),
+                    resolved: normalize_ident(
+                        &alias.value,
+                        alias.quote_style.is_some(),
+                        case_sensitive,
+                    ),
                 })
             }
             datafusion::sql::sqlparser::ast::SelectItem::UnnamedExpr(
                 datafusion::sql::sqlparser::ast::Expr::Identifier(ident),
             ) => Some(SourceName {
                 display: ident.value.clone(),
-                resolved: normalize_ident(&ident.value, ident.quote_style.is_some()),
+                resolved: normalize_ident(
+                    &ident.value,
+                    ident.quote_style.is_some(),
+                    case_sensitive,
+                ),
             }),
             datafusion::sql::sqlparser::ast::SelectItem::UnnamedExpr(
                 datafusion::sql::sqlparser::ast::Expr::CompoundIdentifier(parts),
             ) => parts.last().map(|ident| SourceName {
                 display: ident.value.clone(),
-                resolved: normalize_ident(&ident.value, ident.quote_style.is_some()),
+                resolved: normalize_ident(
+                    &ident.value,
+                    ident.quote_style.is_some(),
+                    case_sensitive,
+                ),
             }),
             _ => None,
         })
@@ -258,6 +465,7 @@ fn match_source_to_target(
     targets: &[String],
     sources: &[SourceName],
     table_display: &str,
+    case_sensitive: bool,
 ) -> Result<Vec<Option<usize>>> {
     if sources.len() > targets.len() {
         let data: Vec<String> = sources.iter().map(|name| name.display.clone()).collect();
@@ -265,7 +473,7 @@ fn match_source_to_target(
     }
     let folded: Vec<String> = sources
         .iter()
-        .map(|name| name.resolved.to_ascii_lowercase())
+        .map(|name| fold_name(&name.resolved, case_sensitive))
         .collect();
     let mut seen = HashSet::new();
     for key in &folded {
@@ -277,7 +485,7 @@ fn match_source_to_target(
     }
     let target_folded: Vec<String> = targets
         .iter()
-        .map(|name| name.to_ascii_lowercase())
+        .map(|name| fold_name(name, case_sensitive))
         .collect();
     let extra: Vec<&str> = sources
         .iter()
@@ -291,7 +499,7 @@ fn match_source_to_target(
     Ok(targets
         .iter()
         .map(|target| {
-            let wanted = target.to_ascii_lowercase();
+            let wanted = fold_name(target, case_sensitive);
             folded.iter().position(|key| *key == wanted)
         })
         .collect())
@@ -343,22 +551,55 @@ fn build_projection_sql(
     source: &Query,
     targets: &[String],
     sources: &[SourceName],
-    mapping: &[Option<usize>],
+    fills: &[TargetFill],
 ) -> String {
     let items = targets
         .iter()
-        .zip(mapping.iter())
-        .map(|(target, slot)| match slot {
-            Some(index) => format!(
+        .zip(fills.iter())
+        .map(|(target, fill)| match fill {
+            TargetFill::Source(index) => format!(
                 "{} AS {}",
                 quote_name(&sources[*index].resolved),
                 quote_name(target)
             ),
-            None => format!("NULL AS {}", quote_name(target)),
+            TargetFill::Null => format!("NULL AS {}", quote_name(target)),
+            TargetFill::Static(literal) => format!("{literal} AS {}", quote_name(target)),
         })
         .collect::<Vec<_>>()
         .join(", ");
     format!("SELECT {items} FROM ({source}) AS _repark_by_name_src")
+}
+
+fn build_static_append_projection(
+    source: &Query,
+    fields: &[(String, bool)],
+    static_columns: &[StaticColumn],
+    sources: &[SourceName],
+    mapping: &[Option<usize>],
+    case_sensitive: bool,
+) -> String {
+    let mut slots = mapping.iter();
+    let mut targets = Vec::with_capacity(fields.len());
+    let mut fills = Vec::with_capacity(fields.len());
+    for (name, _) in fields {
+        match static_columns
+            .iter()
+            .find(|static_column| same_name(&static_column.canonical, name, case_sensitive))
+        {
+            Some(static_column) => {
+                targets.push(name.clone());
+                fills.push(TargetFill::Static(static_column.literal_sql.clone()));
+            }
+            None => {
+                targets.push(name.clone());
+                fills.push(match slots.next() {
+                    Some(Some(index)) => TargetFill::Source(*index),
+                    _ => TargetFill::Null,
+                });
+            }
+        }
+    }
+    build_projection_sql(source, &targets, sources, &fills)
 }
 
 fn parse_projection_query(sql: &str) -> Result<Box<Query>> {

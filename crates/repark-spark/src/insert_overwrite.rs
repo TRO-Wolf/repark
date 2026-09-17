@@ -131,7 +131,7 @@ pub(crate) async fn execute_insert_overwrite(
 /// Static or dynamic `INSERT OVERWRITE … PARTITION (…)`.
 /// # Errors
 /// Parse, empty-dynamic guard, staging, or commit failures as [`DataFusionError`].
-async fn execute_partition_overwrite(
+pub(crate) async fn execute_partition_overwrite(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     table_name: &ObjectName,
