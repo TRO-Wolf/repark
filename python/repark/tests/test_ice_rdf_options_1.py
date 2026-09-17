@@ -108,6 +108,16 @@ def _file_sizes(spark: ReparkSession, table: str) -> dict[str, int]:
     return {str(path): int(size) for path, size in zip(paths, sizes, strict=True)}
 
 
+def _delete_file_sizes(spark: ReparkSession, table: str) -> dict[str, int]:
+    """Map live delete-file paths to their sizes in bytes."""
+    batch = spark.sql(
+        f"SELECT file_path, file_size_in_bytes FROM {table}.delete_files"
+    ).to_arrow()
+    paths = batch.column("file_path").to_pylist()
+    sizes = batch.column("file_size_in_bytes").to_pylist()
+    return {str(path): int(size) for path, size in zip(paths, sizes, strict=True)}
+
+
 def _check_value_cell(
     spark: ReparkSession, name: str, table: str, live_rows: int, build: dict[str, object]
 ) -> None:
@@ -124,6 +134,7 @@ def _check_value_cell(
         pre=tuple(str(stmt) for stmt in build.get("pre", ())),  # type: ignore[arg-type]
     )
     before_sizes = _file_sizes(spark, table)
+    before_deletes = _delete_file_sizes(spark, table)
     sql = _call_sql(cell, table)
     got = _result_row(spark, sql)
     want = cell["result"]
@@ -134,11 +145,22 @@ def _check_value_cell(
     for key in ("rewritten_delete_files_count", "added_delete_files_count"):
         if key in want:
             assert got[key] == int(want[key]), f"{name} {key}: {got} vs {want}"
-    after_sizes = _file_sizes(spark, table)
-    vanished = [path for path in before_sizes if path not in after_sizes]
-    assert got["rewritten_bytes_count"] == sum(before_sizes[path] for path in vanished), (
-        f"{name} rewritten_bytes_count is the vanished files' size sum"
-    )
+    if name.startswith("rpd_"):
+        after_deletes = _delete_file_sizes(spark, table)
+        vanished_deletes = [path for path in before_deletes if path not in after_deletes]
+        assert got["rewritten_bytes_count"] == sum(
+            before_deletes[path] for path in vanished_deletes
+        ), f"{name} rewritten_bytes_count is the vanished delete files' size sum"
+        added_deletes = [path for path in after_deletes if path not in before_deletes]
+        assert got["added_bytes_count"] == sum(after_deletes[path] for path in added_deletes), (
+            f"{name} added_bytes_count is the new delete files' size sum"
+        )
+    else:
+        after_sizes = _file_sizes(spark, table)
+        vanished = [path for path in before_sizes if path not in after_sizes]
+        assert got["rewritten_bytes_count"] == sum(
+            before_sizes[path] for path in vanished
+        ), f"{name} rewritten_bytes_count is the vanished files' size sum"
     after = cell["after"]
     assert isinstance(after, dict)
     files, deletes, specs = _file_state(spark, table)
@@ -198,6 +220,16 @@ _VALUE_CELLS: list[tuple[str, dict[str, object], int]] = [
     ("rpd_min_input_files_1", {"mor": True, "pre": ("DELETE FROM {t} WHERE id % 2 = 0",)}, 200),
     ("rpd_target_small", {"mor": True, "pre": ("DELETE FROM {t} WHERE id % 2 = 0",)}, 200),
     ("rpd_max_group_size", {"mor": True, "pre": ("DELETE FROM {t} WHERE id % 2 = 0",)}, 200),
+    (
+        "rpd_target_small_forced",
+        {"mor": True, "pre": ("DELETE FROM {t} WHERE id % 2 = 0",)},
+        200,
+    ),
+    (
+        "rpd_max_group_size_forced",
+        {"mor": True, "pre": ("DELETE FROM {t} WHERE id % 2 = 0",)},
+        200,
+    ),
 ]
 
 _VALUE_XFAIL: dict[str, str] = {
@@ -263,6 +295,100 @@ def test_option_cell_snapshots(spark: ReparkSession, name: str, build: dict[str,
     _check_snapshot_cell(spark, name, "mem.ns.snaps", build)
 
 
+def _check_keep_set(
+    spark: ReparkSession, name: str, table: str, live_rows: int, build: dict[str, object]
+) -> None:
+    """Run one xfailed oracle cell and compare only its keep-set: live rows and rewritten counts."""
+    cells = _fixture()
+    cell = cells[name]  # type: ignore[literal-required]
+    assert isinstance(cell, dict)
+    _build_shape(
+        spark,
+        table,
+        parts=int(build.get("parts", 2)),
+        files_per=int(build.get("files_per", 4)),
+        mor=bool(build.get("mor", False)),
+        pre=tuple(str(stmt) for stmt in build.get("pre", ())),  # type: ignore[arg-type]
+    )
+    got = _result_row(spark, _call_sql(cell, table))
+    want = cell["result"]
+    assert isinstance(want, dict)
+    for key in ("rewritten_data_files_count", "rewritten_delete_files_count"):
+        if key in want:
+            assert got[key] == int(want[key]), f"{name} {key}: {got} vs {want}"
+    assert _live_rows(spark, table) == live_rows, f"{name} live rows"
+
+
+@pytest.mark.parametrize(
+    ("name", "build", "rows"),
+    [pytest.param(n, b, r, id=n) for n, b, r in _VALUE_CELLS if n in _VALUE_XFAIL],
+)
+def test_option_cell_keep_set(
+    spark: ReparkSession, name: str, build: dict[str, object], rows: int
+) -> None:
+    """Granularity-xfailed cells still keep Spark's row set and rewritten counts."""
+    _check_keep_set(spark, name, "mem.ns.keep", rows, build)
+
+
+def _check_delete_counts(
+    spark: ReparkSession, name: str, table: str, build: dict[str, object], key: str
+) -> None:
+    """Run one oracle cell and compare one delete-count column with the fixture."""
+    cells = _fixture()
+    cell = cells[name]  # type: ignore[literal-required]
+    assert isinstance(cell, dict)
+    _build_shape(
+        spark,
+        table,
+        parts=int(build.get("parts", 2)),
+        files_per=int(build.get("files_per", 4)),
+        mor=bool(build.get("mor", False)),
+        pre=tuple(str(stmt) for stmt in build.get("pre", ())),  # type: ignore[arg-type]
+    )
+    got = _result_row(spark, _call_sql(cell, table))
+    want = cell["result"]
+    assert isinstance(want, dict)
+    assert key in want, f"{name} fixture has no {key}"
+    assert got[key] == int(want[key]), f"{name} {key}: {got} vs {want}"
+
+
+@pytest.mark.parametrize(
+    ("name", "build"),
+    [pytest.param(n, b, id=n) for n, b, _rows in _VALUE_CELLS if not n.startswith("rpd_")],
+)
+def test_option_cell_failed_counts(spark: ReparkSession, name: str, build: dict[str, object]) -> None:
+    """failed_data_files_count is 0 on every RDF cell, like every oracle cell."""
+    _check_delete_counts(spark, name, "mem.ns.fail", build, "failed_data_files_count")
+
+
+@pytest.mark.parametrize(
+    ("name", "build"),
+    [
+        pytest.param(
+            n,
+            b,
+            id=n,
+            marks=(
+                pytest.mark.xfail(
+                    strict=True,
+                    reason="ICE-RDF-DANGLE-2 2026-09-17: RePark removed_delete_files_count "
+                    "1 vs Spark 0",
+                )
+                if n in ("remove_dangling", "delete_file_threshold")
+                else ()
+            ),
+        )
+        for n, b, _rows in _VALUE_CELLS
+        if not n.startswith("rpd_")
+    ],
+)
+def test_option_cell_removed_counts(
+    spark: ReparkSession, name: str, build: dict[str, object]
+) -> None:
+    """removed_delete_files_count matches the oracle; dangling diverges (DANGLE-2)."""
+    _check_delete_counts(spark, name, "mem.ns.removed", build, "removed_delete_files_count")
+
+
 _ERROR_CELLS: list[tuple[str, dict[str, object]]] = [
     ("min_max", {}),
     ("err_unknown_key", {}),
@@ -280,6 +406,8 @@ _ERROR_CELLS: list[tuple[str, dict[str, object]]] = [
     ("err_upper_key", {}),
     ("err_group_size_0", {}),
     ("err_delete_threshold_neg", {}),
+    ("neg_min_file_size", {}),
+    ("neg_max_file_size", {}),
     ("rpd_unknown_key", {"mor": True, "pre": ("DELETE FROM {t} WHERE id % 2 = 0",)}),
     ("rpd_bad_int", {"mor": True, "pre": ("DELETE FROM {t} WHERE id % 2 = 0",)}),
 ]
@@ -371,6 +499,65 @@ def test_rdf_max_failed_commits_accepted_without_effect(spark: ReparkSession) ->
     assert _live_rows(spark, "mem.ns.mfc") == 100
     count, _ops = _snapshots(spark, "mem.ns.mfc")
     assert count == 3
+
+
+_RPD_IAE_FIRST: list[tuple[str, str]] = [
+    ("map('max-concurrent-file-group-rewrites','0')", "err_concurrent_0"),
+    ("map('rewrite-job-order','bogus')", "err_bad_job_order"),
+    (
+        "map('partial-progress.enabled','true', 'partial-progress.max-commits','0')",
+        "err_max_commits_0",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("options_map", "error_cell"),
+    [pytest.param(m, c, id=c) for m, c in _RPD_IAE_FIRST],
+)
+def test_rpd_invalid_values_report_illegal_argument_first(
+    spark: ReparkSession, options_map: str, error_cell: str
+) -> None:
+    """RPD semantic-invalid values raise Spark's IAE text before the unwired-key refusal."""
+    cells = _fixture()
+    error = cells[error_cell]  # type: ignore[literal-required]
+    assert isinstance(error, dict)
+    _build_shape(
+        spark,
+        "mem.ns.rpdiae",
+        parts=2,
+        files_per=4,
+        mor=True,
+        pre=("DELETE FROM {t} WHERE id % 2 = 0",),
+    )
+    with pytest.raises(IllegalArgumentException, match=re.escape(str(error["error"]))):
+        spark.sql(
+            "CALL mem.system.rewrite_position_delete_files(table => 'ns.rpdiae', "
+            f"options => {options_map})"
+        ).to_arrow()
+
+
+def test_remove_dangling_null_map_key_wins_over_flag(spark: ReparkSession) -> None:
+    """A present NULL map key means Java's default (false), even with the legacy flag true."""
+    _build_shape(
+        spark,
+        "mem.ns.dnull",
+        parts=2,
+        files_per=8,
+        mor=True,
+        pre=("DELETE FROM {t} WHERE id % 2 = 0",),
+    )
+    spark.sql("CALL mem.system.rewrite_position_delete_files(table => 'ns.dnull')").to_arrow()
+    got = _result_row(
+        spark,
+        "CALL mem.system.rewrite_data_files(table => 'ns.dnull', "
+        "options => map('remove-dangling-deletes', NULL), "
+        "'remove-dangling-deletes' => true)",
+    )
+    assert got["removed_delete_files_count"] == 0
+    _files, deletes, _specs = _file_state(spark, "mem.ns.dnull")
+    assert deletes == 2
+    assert _live_rows(spark, "mem.ns.dnull") == 400
 
 
 def test_residue_repark_sequence_pins_current_shape(spark: ReparkSession) -> None:

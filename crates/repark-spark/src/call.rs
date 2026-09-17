@@ -341,10 +341,10 @@ async fn execute_rewrite_position_delete_files(
         action = action.target_file_size_bytes(size);
     }
     if let Some(size) = options.min_file_size_bytes {
-        action = action.min_file_size_bytes(size);
+        action = action.min_file_size_bytes(u64::try_from(size).unwrap_or(0));
     }
     if let Some(size) = options.max_file_size_bytes {
-        action = action.max_file_size_bytes(size);
+        action = action.max_file_size_bytes(u64::try_from(size).unwrap_or(0));
     }
     if let Some(count) = options.min_input_files {
         action = action.min_input_files(count);

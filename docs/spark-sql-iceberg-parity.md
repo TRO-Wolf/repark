@@ -4884,22 +4884,30 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   On `rewrite_position_delete_files` the four Spark-accepted keys the fork's action cannot
   honour (`rewrite-job-order`, `partial-progress.enabled`, `partial-progress.max-commits`,
   `max-concurrent-file-group-rewrites`) refuse as `UnsupportedOperationException` naming the key
-  and this row — never silently ignored, even in no-op spellings. Eleven oracle cells stay
-  `xfail(strict)` with precise dated reasons: output-splitting and group granularity
-  (`target_small`, `max_group_size`, `partial_progress_groups`), DELETE-written-file byte
-  accounting (`delete_file_threshold`, `remove_dangling`), and the untouched fork RPD
-  (`rpd_rewrite_all`, `rpd_min_input_files_1`, all fork asks); the residue zero cell belongs to
-  `ICE-RDF-DANGLE-2`.
-- **Apache Spark** — the 45 recorded cells
+  and this row — never silently ignored, even in no-op spellings; semantic-invalid values on
+  those keys report Spark's `IllegalArgumentException` text first. Sizes store as signed
+  longs (`min-file-size-bytes` below 0 refuses `>= 0`; the band compares signed, so
+  `max-file-size-bytes` `-1` renders in the IAE text). A present NULL
+  `remove-dangling-deletes` map key wins over the legacy top-level flag (Java's default).
+  RPD byte pins compare against vanished delete files. Thirteen strict xfails stay, all with
+  precise dated reasons: output-splitting and group granularity (`target_small`,
+  `max_group_size`, `partial_progress_groups`, each with a green keep-set twin pinning rows
+  and rewritten counts), DELETE-written-file byte accounting (`delete_file_threshold`,
+  `remove_dangling`), the untouched fork RPD (`rpd_rewrite_all`, `rpd_min_input_files_1`),
+  and the removed-count 1-vs-0 on the two MoR cells (under `ICE-RDF-DANGLE-2`); the residue
+  zero cell belongs to `ICE-RDF-DANGLE-2`.
+- **Apache Spark** — the 49 recorded cells
   (`python/repark/tests/ice_rdf_options_1_spark_oracle.json`, live PySpark 4.1.2 + Iceberg
   1.11.0, 2026-09-17): default single-commit rewrites, per-key validation messages, the
-  `rewrite_position_delete_files` option subset, and the two residue sequences.
-  *(oracle: recorded — the committed generator replays byte-identical on its 33-cell RDF section.)*
+  `rewrite_position_delete_files` option subset (including the narrowing forced cells), the
+  negative-size band answers, and the two residue sequences.
+  *(oracle: recorded — the committed generator replays byte-identical on its RDF section.)*
 - **Pin** —
-  `crates/repark-spark/src/tests/call_rdf_options.rs` (30 option-validation, apply, and
+  `crates/repark-spark/src/tests/call_rdf_options.rs` (35 option-validation, apply, and
   RPD-refusal pins),
   `python/repark/tests/test_ice_rdf_options_1.py` (offline pins over the fixture with per-cell
-  dated xfail reasons, the RPD `UnsupportedOperationException` pins, the
+  dated xfail reasons plus green keep-set twins, failed/removed delete-count pins, the RPD
+  `UnsupportedOperationException` and IAE-first pins, the NULL-dangling-precedence pin, the
   max-failed-commits no-effect pin, plus the live tier that re-runs the
   generator and asserts the fixture), and
   `call.rs::call_rewrite_position_delete_files_validates_options_and_refuses_where`.
@@ -4947,6 +4955,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `::test_residue_matches_spark_zero_delete_files` (`xfail(strict)` on the zero).
 - **Rationale** — OPEN, fork ask: the remaining difference is exactly 2 partition-scoped deletes
   surviving RePark's data rewrite. A later fix flips the current-count pin.
+  Same fork-side drop on single-shape cells (2026-09-17): `delete_file_threshold` and
+  `remove_dangling` report `removed_delete_files_count = 1` vs Spark `0` (strict-xfailed
+  pins on the removed-count assert only; result counts and rows match).
   pins: ice-rdf-options-1/C-006
 
 ### MANIFEST-1 — `rewrite_manifests` rewrites data manifests only; Spark rewrites delete manifests too

@@ -566,7 +566,7 @@ async fn call_rpd_options_rewrite_all_runs() {
 }
 
 #[tokio::test]
-async fn call_rpd_options_partial_progress_refuses_unsupported() {
+async fn call_rpd_options_enabled_zero_max_commits_is_illegal_argument() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     seed_mor_shape(&ctx, &catalogs).await;
@@ -577,11 +577,70 @@ async fn call_rpd_options_partial_progress_refuses_unsupported() {
     )
     .await;
     assert!(
-        message.contains(
-            "CALL rewrite_position_delete_files option [partial-progress.enabled, \
-             partial-progress.max-commits] is not supported in RePark \
-             (registry ICE-RDF-OPTIONS-1, 2026-09-17)"
-        ),
+        message.contains("Cannot set partial-progress.max-commits to 0"),
+        "got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn call_rpd_options_zero_concurrent_is_illegal_argument() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_mor_shape(&ctx, &catalogs).await;
+    let message =
+        rpd_options_error(&ctx, &catalogs, "'max-concurrent-file-group-rewrites', '0'").await;
+    assert!(
+        message.contains("Cannot set max-concurrent-file-group-rewrites to 0"),
+        "got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn call_rpd_options_bogus_job_order_is_illegal_argument() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_mor_shape(&ctx, &catalogs).await;
+    let message = rpd_options_error(&ctx, &catalogs, "'rewrite-job-order', 'bogus'").await;
+    assert!(
+        message.contains("Invalid rewrite job order name: bogus"),
+        "got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn call_rdf_options_negative_min_size_needs_non_negative() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_options_shape(&ctx, &catalogs).await;
+    let message =
+        rdf_options_error(&ctx, &catalogs, "sales.opts", "'min-file-size-bytes', '-1'").await;
+    assert!(
+        message.contains("'min-file-size-bytes' is set to -1 but must be >= 0"),
+        "got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn call_rdf_options_negative_max_size_fails_band() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_options_shape(&ctx, &catalogs).await;
+    let message =
+        rdf_options_error(&ctx, &catalogs, "sales.opts", "'max-file-size-bytes', '-1'").await;
+    assert!(
+        message.contains("must be < 'max-file-size-bytes' (-1)"),
+        "got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn call_rpd_options_negative_min_size_needs_non_negative() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_mor_shape(&ctx, &catalogs).await;
+    let message = rpd_options_error(&ctx, &catalogs, "'min-file-size-bytes', '-1'").await;
+    assert!(
+        message.contains("'min-file-size-bytes' is set to -1 but must be >= 0"),
         "got: {message}"
     );
 }

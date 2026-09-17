@@ -44,9 +44,6 @@ const RPD_ACCEPTED: &[&str] = &[
     "max-concurrent-file-group-rewrites",
 ];
 
-const MIN_FILE_SIZE_DEFAULT_RATIO: f64 = 0.75;
-const MAX_FILE_SIZE_DEFAULT_RATIO: f64 = 1.8;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) enum RewriteJobOrder {
     #[default]
@@ -72,8 +69,8 @@ impl From<RewriteJobOrder> for iceberg::maintenance::RewriteJobOrder {
 #[derive(Debug, Clone, Default)]
 pub(crate) struct RewriteOptions {
     pub(crate) target_file_size_bytes: Option<u64>,
-    pub(crate) min_file_size_bytes: Option<u64>,
-    pub(crate) max_file_size_bytes: Option<u64>,
+    pub(crate) min_file_size_bytes: Option<i64>,
+    pub(crate) max_file_size_bytes: Option<i64>,
     pub(crate) min_input_files: Option<usize>,
     pub(crate) delete_file_threshold: Option<usize>,
     pub(crate) delete_ratio_threshold: Option<f64>,
@@ -153,15 +150,6 @@ fn pairs_from_map_args(
         pairs.push((key, scalar_text(chunk[1], procedure)?));
     }
     Ok(pairs)
-}
-
-#[allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss,
-    clippy::cast_precision_loss
-)]
-fn default_band_size(target: u64, ratio: f64) -> u64 {
-    (target as f64 * ratio) as u64
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -250,6 +238,11 @@ fn bool_option(pairs: &[(String, Option<String>)], key: &str) -> Option<bool> {
         .find(|(pair_key, _)| pair_key == key)
         .and_then(|(_, value)| value.as_ref())
         .map(|raw| raw.eq_ignore_ascii_case("true"))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn has_option_key(pairs: &[(String, Option<String>)], key: &str) -> bool {
+    pairs.iter().any(|(pair_key, _)| pair_key == key)
 }
 
 fn reject_unknown(pairs: &[(String, Option<String>)], accepted: &[&str]) -> Result<()> {
@@ -395,24 +388,32 @@ pub(crate) fn parse_rdf_options(
             })?
         }
     };
-    let default_min = default_band_size(target, MIN_FILE_SIZE_DEFAULT_RATIO);
-    let default_max = default_band_size(target, MAX_FILE_SIZE_DEFAULT_RATIO);
-    let min_size = match usize_value(&values, "min-file-size-bytes", "rewrite_data_files")? {
-        None => default_min,
-        Some(value) => value as u64,
-    };
-    let max_size = match usize_value(&values, "max-file-size-bytes", "rewrite_data_files")? {
-        None => default_max,
-        Some(value) => value as u64,
-    };
-    if target <= min_size {
+    if let Some(min) = long_value(&values, "min-file-size-bytes")
+        && i128::from(target) <= i128::from(min)
+    {
         return Err(illegal_argument(format!(
-            "'target-file-size-bytes' ({target}) must be > 'min-file-size-bytes' ({min_size}), all new files will be smaller than the min threshold"
+            "'target-file-size-bytes' ({target}) must be > 'min-file-size-bytes' ({min}), all new files will be smaller than the min threshold"
         )));
     }
-    if target >= max_size {
+    if let Some(value) = long_value(&values, "min-file-size-bytes")
+        && value < 0
+    {
         return Err(illegal_argument(format!(
-            "'target-file-size-bytes' ({target}) must be < 'max-file-size-bytes' ({max_size}), all new files will be larger than the max threshold"
+            "'min-file-size-bytes' is set to {value} but must be >= 0"
+        )));
+    }
+    if let Some(min) = long_value(&values, "min-file-size-bytes")
+        && i128::from(target) <= i128::from(min)
+    {
+        return Err(illegal_argument(format!(
+            "'target-file-size-bytes' ({target}) must be > 'min-file-size-bytes' ({min}), all new files will be smaller than the min threshold"
+        )));
+    }
+    if let Some(max) = long_value(&values, "max-file-size-bytes")
+        && i128::from(target) >= i128::from(max)
+    {
+        return Err(illegal_argument(format!(
+            "'target-file-size-bytes' ({target}) must be < 'max-file-size-bytes' ({max}), all new files will be larger than the max threshold"
         )));
     }
     if let Some(value) = long_value(&values, "min-input-files")
@@ -452,12 +453,8 @@ pub(crate) fn parse_rdf_options(
         options.delete_ratio_threshold = Some(ratio);
     }
     options.target_file_size_bytes = long_value(&values, "target-file-size-bytes").map(|_| target);
-    options.min_file_size_bytes =
-        usize_value(&values, "min-file-size-bytes", "rewrite_data_files")?
-            .map(|value| value as u64);
-    options.max_file_size_bytes =
-        usize_value(&values, "max-file-size-bytes", "rewrite_data_files")?
-            .map(|value| value as u64);
+    options.min_file_size_bytes = long_value(&values, "min-file-size-bytes");
+    options.max_file_size_bytes = long_value(&values, "max-file-size-bytes");
     options.min_input_files = usize_value(&values, "min-input-files", "rewrite_data_files")?;
     options.max_file_group_size_bytes =
         usize_value(&values, "max-file-group-size-bytes", "rewrite_data_files")?
@@ -503,7 +500,6 @@ pub(crate) fn parse_rpd_options(
 ) -> Result<RewriteOptions> {
     reject_unknown(pairs, RPD_ACCEPTED)?;
     let values = typed_values(pairs)?;
-    refuse_rpd_unwired(pairs)?;
     let mut options = RewriteOptions::default();
     if let Some(raw) = &values.job_order {
         options.rewrite_job_order = job_order_from(raw)?;
@@ -528,6 +524,7 @@ pub(crate) fn parse_rpd_options(
             "Cannot set partial-progress.max-commits to {value}, the value must be positive when partial-progress.enabled is true"
         )));
     }
+    refuse_rpd_unwired(pairs)?;
     let default_target = delete_target_default(table.metadata().properties())?;
     let target = match long_value(&values, "target-file-size-bytes") {
         None => default_target,
@@ -544,32 +541,25 @@ pub(crate) fn parse_rpd_options(
             })?
         }
     };
-    let default_min = default_band_size(target, MIN_FILE_SIZE_DEFAULT_RATIO);
-    let default_max = default_band_size(target, MAX_FILE_SIZE_DEFAULT_RATIO);
-    let min_size = match usize_value(
-        &values,
-        "min-file-size-bytes",
-        "rewrite_position_delete_files",
-    )? {
-        None => default_min,
-        Some(value) => value as u64,
-    };
-    let max_size = match usize_value(
-        &values,
-        "max-file-size-bytes",
-        "rewrite_position_delete_files",
-    )? {
-        None => default_max,
-        Some(value) => value as u64,
-    };
-    if target <= min_size {
+    if let Some(value) = long_value(&values, "min-file-size-bytes")
+        && value < 0
+    {
         return Err(illegal_argument(format!(
-            "'target-file-size-bytes' ({target}) must be > 'min-file-size-bytes' ({min_size}), all new files will be smaller than the min threshold"
+            "'min-file-size-bytes' is set to {value} but must be >= 0"
         )));
     }
-    if target >= max_size {
+    if let Some(min) = long_value(&values, "min-file-size-bytes")
+        && i128::from(target) <= i128::from(min)
+    {
         return Err(illegal_argument(format!(
-            "'target-file-size-bytes' ({target}) must be < 'max-file-size-bytes' ({max_size}), all new files will be larger than the max threshold"
+            "'target-file-size-bytes' ({target}) must be > 'min-file-size-bytes' ({min}), all new files will be smaller than the min threshold"
+        )));
+    }
+    if let Some(max) = long_value(&values, "max-file-size-bytes")
+        && i128::from(target) >= i128::from(max)
+    {
+        return Err(illegal_argument(format!(
+            "'target-file-size-bytes' ({target}) must be < 'max-file-size-bytes' ({max}), all new files will be larger than the max threshold"
         )));
     }
     if let Some(value) = long_value(&values, "min-input-files")
@@ -587,18 +577,8 @@ pub(crate) fn parse_rpd_options(
         )));
     }
     options.target_file_size_bytes = long_value(&values, "target-file-size-bytes").map(|_| target);
-    options.min_file_size_bytes = usize_value(
-        &values,
-        "min-file-size-bytes",
-        "rewrite_position_delete_files",
-    )?
-    .map(|value| value as u64);
-    options.max_file_size_bytes = usize_value(
-        &values,
-        "max-file-size-bytes",
-        "rewrite_position_delete_files",
-    )?
-    .map(|value| value as u64);
+    options.min_file_size_bytes = long_value(&values, "min-file-size-bytes");
+    options.max_file_size_bytes = long_value(&values, "max-file-size-bytes");
     options.min_input_files =
         usize_value(&values, "min-input-files", "rewrite_position_delete_files")?;
     options.max_file_group_size_bytes = usize_value(

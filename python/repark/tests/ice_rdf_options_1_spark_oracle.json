@@ -1653,5 +1653,147 @@
     ]
    }
   }
+ },
+ "neg_min_file_size": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('min-file-size-bytes','-1'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "'min-file-size-bytes' is set to -1 but must be >= 0",
+  "spark_error_class": null
+ },
+ "neg_max_file_size": {
+  "sql": "CALL sc.system.rewrite_data_files(table => 'ns.t', options => map('max-file-size-bytes','-1'))",
+  "before": {
+   "snapshots": 8,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append"
+   ],
+   "data_files": 8,
+   "delete_files": 0,
+   "spec_ids": [
+    0
+   ]
+  },
+  "error_class": "IllegalArgumentException",
+  "error": "'target-file-size-bytes' (536870912) must be < 'max-file-size-bytes' (-1), all new files will be larger than the max threshold",
+  "spark_error_class": null
+ },
+ "rpd_target_small_forced": {
+  "sql": "CALL sc.system.rewrite_position_delete_files(table => 'ns.t', options => map('target-file-size-bytes','2000', 'min-input-files','1'))",
+  "before": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_delete_files_count": 0,
+   "added_delete_files_count": 0,
+   "rewritten_bytes_count": 0,
+   "added_bytes_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  }
+ },
+ "rpd_max_group_size_forced": {
+  "sql": "CALL sc.system.rewrite_position_delete_files(table => 'ns.t', options => map('max-file-group-size-bytes','2500', 'min-input-files','1'))",
+  "before": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  },
+  "result": {
+   "rewritten_delete_files_count": 0,
+   "added_delete_files_count": 0,
+   "rewritten_bytes_count": 0,
+   "added_bytes_count": 0
+  },
+  "after": {
+   "snapshots": 9,
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ],
+   "data_files": 16,
+   "delete_files": 8,
+   "spec_ids": [
+    0
+   ]
+  }
  }
 }

@@ -80,8 +80,10 @@ pins: rp-4-fork-repin/C-005, C-006
   file (`B-MOR-3` FIXED 2026-09-03; `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11));
   rewrite-data-files honors v2 `where` file-selection, refuses
   sort/`sort_order` (`RDF-SORT-1`), answers the `options` map (registry
-  `ICE-RDF-OPTIONS-1` round 1), and on v3 drops in-scope DVs (`V3-DANGLE-1`
-  FIXED). rewrite-position-delete answers its measured 8-key options subset.
+  `ICE-RDF-OPTIONS-1` round 3: signed sizes, IAE-first RPD order, NULL-key precedence),
+  and on v3 drops in-scope DVs (`V3-DANGLE-1`
+  FIXED). rewrite-position-delete answers its measured options subset and refuses its
+  unwired keys loud.
   **MAINT-POLICY-1 steps 2–3 (2026-09-10):** `run_maintenance` plans the
   five D-4 steps over the stamped `[<profile>.maintenance]` policy plus inline overrides,
   and `dry_run => false` applies them step by step (`ran` / `failed` / `skipped`).

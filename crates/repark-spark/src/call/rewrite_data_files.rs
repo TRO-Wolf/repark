@@ -10,7 +10,9 @@ use iceberg::expr::Predicate;
 use iceberg::maintenance::RewriteDataFiles;
 use iceberg::{Catalog, TableIdent, table::Table};
 
-use super::rewrite_options::{RewriteOptions, extract_option_pairs, parse_rdf_options};
+use super::rewrite_options::{
+    RewriteOptions, extract_option_pairs, has_option_key, parse_rdf_options,
+};
 use super::rewrite_where::parse_rewrite_where;
 use super::{CallArgs, bytes_as_i64, count_as_i32, resolve_table_ident};
 use crate::call_args::expr_as_string;
@@ -48,7 +50,7 @@ pub(super) async fn execute_rewrite_data_files(
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
     let pairs = extract_option_pairs(args, "rewrite_data_files")?;
     let mut options = parse_rdf_options(&pairs, &table)?;
-    if options.remove_dangling_deletes.is_none() {
+    if !has_option_key(&pairs, "remove-dangling-deletes") {
         options.remove_dangling_deletes = args.optional_bool("remove-dangling-deletes", None)?;
     }
     let where_predicate = match args.optional_string("where")? {
@@ -89,10 +91,10 @@ pub(super) async fn run_rewrite(
         action = action.target_file_size_bytes(size);
     }
     if let Some(size) = options.min_file_size_bytes {
-        action = action.min_file_size_bytes(size);
+        action = action.min_file_size_bytes(u64::try_from(size).unwrap_or(0));
     }
     if let Some(size) = options.max_file_size_bytes {
-        action = action.max_file_size_bytes(size);
+        action = action.max_file_size_bytes(u64::try_from(size).unwrap_or(0));
     }
     if let Some(count) = options.min_input_files {
         action = action.min_input_files(count);

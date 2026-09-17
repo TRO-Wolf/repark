@@ -319,6 +319,8 @@ def record_all(session: Any) -> dict[str, Any]:
         mor=True,
         pre=["DELETE FROM {t} WHERE id < 30"],
     )
+    rdf_cell(session, out, counter, "neg_min_file_size", [("min-file-size-bytes", "-1")])
+    rdf_cell(session, out, counter, "neg_max_file_size", [("max-file-size-bytes", "-1")])
     for name, opts in [
         ("err_unknown_key", [("foo", "1")]),
         ("err_bad_int", [("min-input-files", "abc")]),
@@ -355,6 +357,20 @@ def record_all(session: Any) -> dict[str, Any]:
         counter,
         "rpd_max_group_size",
         [("max-file-group-size-bytes", "2500")],
+    )
+    rpd_cell(
+        session,
+        out,
+        counter,
+        "rpd_target_small_forced",
+        [("target-file-size-bytes", "2000"), ("min-input-files", "1")],
+    )
+    rpd_cell(
+        session,
+        out,
+        counter,
+        "rpd_max_group_size_forced",
+        [("max-file-group-size-bytes", "2500"), ("min-input-files", "1")],
     )
     rpd_cell(session, out, counter, "rpd_unknown_key", [("foo", "1")])
     rpd_cell(session, out, counter, "rpd_bad_int", [("min-input-files", "abc")])

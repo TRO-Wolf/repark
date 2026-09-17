@@ -86,11 +86,15 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `BIN-PACK` text, Java `Long.parseLong` / `parseBoolean` / `Double.parseDouble` value rules,
   case-insensitive `rewrite-job-order` names, `output-spec-id` membership against the table
   specs, and the size-band cross-checks against the table-property (or 512 MiB) default.
-  The delete procedure accepts its measured subset; the four Spark-accepted keys the fork's
-  delete action cannot honour (`rewrite-job-order`, `partial-progress.*`,
-  `max-concurrent-file-group-rewrites`) refuse as `UnsupportedOperationException` naming
-  the key and the registry row. Errors return the `IllegalArgument` marker so Python raises
-  `IllegalArgumentException`.
+  Sizes store as signed longs: `min-file-size-bytes` below 0 refuses `>= 0`, the band
+  compares in `i128` so `max-file-size-bytes` `-1` renders signed in the IAE text, and a
+  negative reaching a fork builder clamps to 0 (Java's no-floor equivalent).
+  The delete procedure accepts its measured subset; semantic-invalid values on its four
+  unwired keys report Spark's IAE text before the `UnsupportedOperationException` refusal
+  (`rewrite-job-order`, `partial-progress.*`, `max-concurrent-file-group-rewrites`), which
+  names the key and the registry row. A present NULL `remove-dangling-deletes` map key
+  wins over the legacy top-level flag (Java's default, false). Errors return the
+  `IllegalArgument` marker so Python raises `IllegalArgumentException`.
   pins: ice-rdf-options-1/C-001, C-002, C-005
 - `rewrite_where.rs` — SQL `where` string → Iceberg `Predicate` (eq/cmp/AND/OR/NOT/IS NULL/IN/
   BETWEEN on primitives). Failures wrap as Spark's `Cannot parse predicates in where option`.
