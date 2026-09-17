@@ -184,6 +184,14 @@ fills there. MERGE NOT MATCHED null-fills in RePark-owned
   - R-04 OPEN (P3): `overwrite_source_with_default_fills` walks the schema on
     every column-list OVERWRITE even when it adds no fills. Disposition: a
     `write_default.is_none()` pre-scan before the Arrow conversion, as R-02.
+- Round-4 gates (release native rebuilt after the Rust edits): `cargo test -p
+  repark-iceberg --lib` 445 passed; `cargo test -p repark-sql` exit 0 (342 lib);
+  unit file offline 14 passed, 1 skipped (live cell); `uvx ruff@0.15.22 check
+  .` clean; workspace clippy `-D warnings` green; `make verify` red on ONE
+  pre-existing finding only — `check-ledger-grammar` wants a
+  `COVERAGE_ATTESTATION` block this ledger never carried on this branch (every
+  branch version greps 0); all verify gates before it are clean. Writing that
+  attestation is orchestrator-side SEPMO ceremony, out of this round.
 
 ## Round-2 notes (2026-09-17, run 20b)
 
