@@ -905,6 +905,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
   smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
+  ICE-RTAS-BYNAME-1 (2026-09-17) re-hashed `_SQLCONF_DEFAULTS` for its `spark.sql.caseSensitive` default.
   PERF-FACADE-CDF-1 joined the inventory: `create_dataframe_columns.py`, the six new router
   bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
   edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
