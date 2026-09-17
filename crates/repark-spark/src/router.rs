@@ -8,8 +8,8 @@ use datafusion::sql::sqlparser::ast::{ObjectType, Statement, TableObject};
 use repark_core::CatalogRegistry;
 
 use crate::{
-    DmlSubqueryVerb, MorDmlKind, alter, alter_write_order, build_ctas, call, create_table,
-    delete_target_object_name, describe_show, execute_create_namespace, execute_ctas,
+    DmlSubqueryVerb, MorDmlKind, alter, alter_write_order, build_ctas, call, column_move,
+    create_table, delete_target_object_name, describe_show, execute_create_namespace, execute_ctas,
     execute_drop_namespace, execute_drop_table, execute_insert_overwrite, execute_truncate, merge,
     metadata_tables, object_name_from_table_with_joins, parse_single_normalized,
     passthrough_after_p11, ref_ddl, refuse_dml_subquery_predicate,
@@ -145,6 +145,12 @@ async fn execute_inner(
 ) -> Result<DataFrame> {
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
+    if let Some(stripped) = crate::insert_by_name::strip_insert_by_name(sql)? {
+        return Box::pin(crate::insert_by_name::execute_insert_by_name(
+            ctx, catalogs, &stripped,
+        ))
+        .await;
+    }
     // Pre-parse recognizers for forms stock sqlparser cannot model (or would drop clauses from).
     if let Some(frame) = try_preparse_intercepts(ctx, catalogs, sql).await {
         return frame;
@@ -296,6 +302,12 @@ async fn try_preparse_intercepts(
             Err(error) => Err(error),
         });
     }
+    if let Some(parsed) = column_move::try_parse_column_move_ddl(sql) {
+        return Some(match parsed {
+            Ok(ddl) => column_move::execute_column_move_ddl(ctx, catalogs, ddl).await,
+            Err(error) => Err(error),
+        });
+    }
     // I6 residual — forms stock sqlparser still cannot model.
     if let Some(refused) = alter::refuse_unsupported_alter_sql(sql) {
         return Some(refused);
@@ -349,7 +361,7 @@ async fn try_preparse_intercepts(
 }
 
 /// Fall-through when `parse_single_normalized` returns `None` (MERGE / residual BRANCH|TAG / DF).
-async fn execute_unparsable_fallthrough(
+pub(crate) async fn execute_unparsable_fallthrough(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,

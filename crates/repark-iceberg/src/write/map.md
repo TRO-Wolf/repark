@@ -154,7 +154,12 @@ repark-core's error map.
   pins: dml-c-truncate/C-001, C-005
   pins: rp-5-fork-repin/C-004
 - `commit_target.rs` — `maybe_to_branch` / `snapshot_id_for_commit` for named-ref commits.
+  `commit_append_to` (ICE-RTAS-BYNAME-1, 2026-09-17): `commit_append` with an
+  optional named branch, mirroring `commit_overwrite_replace_all_to`; the Spark door's
+  `INSERT … BY NAME` staged append commits through it. Like its sibling it carries
+  `#[allow(clippy::missing_errors_doc)]` rather than a doc comment.
   pins: rp-5-fork-repin/C-004
+  pins: ice-rtas-byname-1/C-001
 - `commit_error.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `CommitStateUnknownError`, the
   `std::error::Error` wrapper a RePark commit site stamps with the `engine.operation-id` it
   minted; `operation_id_and_summary` mints the id and the snapshot summary together;
@@ -164,14 +169,15 @@ repark-core's error map.
   reaches `Error::CommitStateUnknown`'s `operation_id` field. `is_commit_state_unknown`
   is the same detection for callers that must decide BEFORE wrapping (both doors'
   service-managed CTAS abort arms skip `drop_table` on it). The mint-site set is the six
-  call sites: `commit_append` (service-managed CTAS + `append()`), `commit_overwrite` /
+  call sites: `commit_append` (service-managed CTAS + `append()`) plus its branch twin
+  `commit_append_to`, `commit_overwrite` /
   `commit_row_delta_kind` (MERGE + predicate DML), `commit_overwrite_replace_all_to`
   (`INSERT OVERWRITE` + `TRUNCATE`), and the two `partition_overwrite.rs` commits; the
   staged publish path (`StagedTableTransaction` — Glue, warehouse catalogs) mints none at
   fork `edc38c6a`. The
   registry row `ICE-COMMIT-UNKNOWN-1` in `docs/spark-sql-iceberg-parity.md` §2.3 and the
   `docs/cutover/inventory.md` §8 ruling-8 cell carry the same shape table and the Airflow
-  alert/retry guidance.
+  alert/retry guidance. `commit_append_to` mints its own id the same way.
   pins: ice-commit-unknown-1/C-001, C-003, C-005, C-006
 - `overwrite_commit.rs` — full-table overwrite commit, optional `to_branch`.
   pins: rp-5-fork-repin/C-004
@@ -396,6 +402,28 @@ repark-core's error map.
   `rename_table`, schema evolution (`apply_schema_changes` / `SchemaChange` → fork
   `UpdateSchema`), partition-spec evolution (`apply_partition_spec_changes` /
   `PartitionSpecChange` → fork `UpdatePartitionSpec`). Return `iceberg::Result`.
+  **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):** `SchemaChange::MoveColumn`
+  (top-level and nested paths via the fork's standalone `move_first` / `move_after`); every
+  move commits through one `UpdateSchema` transaction, with batch-added names known to the
+  resolver. `apply_schema_changes_on_table` runs the commit on an already-loaded table so
+  doors load once. The partition-spec family moved to `partition_spec.rs` in the same change
+  (the size ratchet), behaviour-identical.
+  pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-008, C-010, C-011
+- `column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):**
+  `resolve_move_names` (pure fork-index resolution: the fork's own
+  `field_by_name_case_insensitive`, bare `AFTER` references qualified into the mover's
+  struct, top-level suggestions with Spark's `UNRESOLVED_COLUMN` framing) plus
+  `starts_with_alter` (the zero-alloc `ALTER`-prefix scan gating both doors' intercepts).
+  Split out of `alter.rs`, which sits at its exact ceiling.
+  pins: ice-column-reorder-1/C-001, C-002, C-003, C-006, C-007, C-008, C-014
+- `partition_spec.rs` — the partition-spec evolution family, split out of `alter.rs`
+  behaviour-identical (the size ratchet): one `PartitionSpecChange` transaction through
+  `apply_partition_spec_changes`. `AddField` carries a source column, a transform
+  (`identity` / `bucket[N]` / `truncate[W]` / `year` / `month` / `day` / `hour`) and an
+  optional `AS` name; `RemoveFieldByName` drops by partition name;
+  `RemoveFieldByTransform` drops by source-plus-transform pair; `ReplaceField` drops by old
+  name and adds source plus transform with an optional new name; `RenameField` renames by
+  current name. Errors propagate the load, validation, or commit failure unchanged.
 - `sort_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** `apply_write_order`, the one-transaction
   write-layout primitive over the fork's `Transaction::replace_sort_order` plus an optional
   `write.distribution-mode` property set: column names resolve case-insensitively against the

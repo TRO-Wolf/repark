@@ -13,7 +13,10 @@ use iceberg::{Catalog, TableIdent};
 use repark_core::EngineContext;
 use repark_functions::cardinality::repark_sql_settings_from_options;
 use repark_functions::format_version::resolve_alter_format_version;
-use repark_iceberg::write::alter::SchemaChange;
+use repark_iceberg::write::alter::{
+    ColumnPosition, SchemaChange, apply_schema_changes_on_table, resolve_move_names,
+    starts_with_alter,
+};
 use repark_iceberg::write::format_version::{
     FORMAT_VERSION_PROPERTY, format_version_from_number, format_version_number,
     set_properties_and_format_version,
@@ -264,9 +267,152 @@ async fn rename_table(
 fn unsupported_operation(operation: &AlterTableOperation) -> DataFusionError {
     DataFusionError::NotImplemented(format!(
         "{FORM}: operation `{operation}` is not supported by this door. Supported: ADD COLUMN, \
-         DROP COLUMN, RENAME COLUMN, ALTER COLUMN … SET DATA TYPE, RENAME TO, and \
-         SET PROPERTIES (…)"
+         DROP COLUMN, RENAME COLUMN, ALTER COLUMN … SET DATA TYPE, ALTER COLUMN … FIRST|AFTER, \
+         RENAME TO, and SET PROPERTIES (…)"
     ))
+}
+
+#[derive(Debug)]
+pub(crate) struct ColumnMoveDdl {
+    table: ObjectName,
+    name: String,
+    position: ColumnPosition,
+}
+
+enum MoveToken {
+    Word(String),
+    Period,
+}
+
+pub(crate) fn try_parse_column_move(sql: &str) -> Option<Result<ColumnMoveDdl>> {
+    use datafusion::sql::sqlparser::dialect::GenericDialect;
+    use datafusion::sql::sqlparser::parser::ParserError;
+    use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
+    if !starts_with_alter(sql) {
+        return None;
+    }
+    let tokens = Tokenizer::new(&GenericDialect {}, sql).tokenize().ok()?;
+    let mut significant = Vec::new();
+    for token in tokens {
+        match token {
+            Token::Whitespace(_) | Token::EOF | Token::SemiColon => {}
+            Token::Word(word) => significant.push(MoveToken::Word(word.value)),
+            Token::Period => significant.push(MoveToken::Period),
+            _ => return None,
+        }
+    }
+    let word_at = |index: usize| match significant.get(index) {
+        Some(MoveToken::Word(word)) => Some(word.as_str()),
+        _ => None,
+    };
+    let word_is = |index: usize, expected: &str| {
+        word_at(index).is_some_and(|word| word.eq_ignore_ascii_case(expected))
+    };
+    let is_period = |index: usize| matches!(significant.get(index), Some(MoveToken::Period));
+    if !(word_is(0, "ALTER") && word_is(1, "TABLE")) {
+        return None;
+    }
+    let mut index = 2usize;
+    let mut table_parts = vec![word_at(index)?.to_string()];
+    index += 1;
+    while is_period(index) {
+        table_parts.push(word_at(index + 1)?.to_string());
+        index += 2;
+    }
+    if !(word_is(index, "ALTER") && word_is(index + 1, "COLUMN")) {
+        return None;
+    }
+    index += 2;
+    let (name, next) = column_path(&significant, index)?;
+    if word_is(next, "FIRST") {
+        if next + 1 < significant.len() {
+            return Some(Err(DataFusionError::Plan(format!(
+                "{FORM} ALTER COLUMN `{name}` FIRST takes no further tokens"
+            ))));
+        }
+        return Some(Ok(ColumnMoveDdl {
+            table: object_name(&table_parts),
+            name,
+            position: ColumnPosition::First,
+        }));
+    }
+    if word_is(next, "AFTER") {
+        if is_period(next + 2) {
+            return Some(Err(DataFusionError::SQL(
+                Box::new(ParserError::ParserError(
+                    "[PARSE_SYNTAX_ERROR] Syntax error at or near '.'. SQLSTATE: 42601".to_string(),
+                )),
+                None,
+            )));
+        }
+        let (reference, after) = column_path(&significant, next + 1)?;
+        if after < significant.len() {
+            return Some(Err(DataFusionError::Plan(format!(
+                "{FORM} ALTER COLUMN `{name}` AFTER `{reference}` takes no further tokens"
+            ))));
+        }
+        return Some(Ok(ColumnMoveDdl {
+            table: object_name(&table_parts),
+            name,
+            position: ColumnPosition::After(reference),
+        }));
+    }
+    None
+}
+
+fn column_path(significant: &[MoveToken], start: usize) -> Option<(String, usize)> {
+    let word_at = |index: usize| match significant.get(index) {
+        Some(MoveToken::Word(word)) => Some(word.as_str()),
+        _ => None,
+    };
+    let mut parts = vec![word_at(start)?.to_string()];
+    let mut index = start + 1;
+    while matches!(significant.get(index), Some(MoveToken::Period)) {
+        parts.push(word_at(index + 1)?.to_string());
+        index += 2;
+    }
+    Some((parts.join("."), index))
+}
+
+fn object_name(parts: &[String]) -> ObjectName {
+    use datafusion::sql::sqlparser::ast::ObjectNamePart;
+    ObjectName(
+        parts
+            .iter()
+            .map(|part| ObjectNamePart::Identifier(Ident::new(part.clone())))
+            .collect(),
+    )
+}
+
+pub(crate) async fn execute_column_move(
+    cx: &EngineContext<'_>,
+    ddl: ColumnMoveDdl,
+) -> Result<DataFrame> {
+    let target = resolve_target(cx, &ddl.table, FORM)?;
+    let table = target
+        .catalog
+        .load_table(&target.ident())
+        .await
+        .map_err(iceberg_err)?;
+    let (mover, at) = resolve_move_names(
+        table.metadata().current_schema(),
+        &[],
+        &ddl.name,
+        &ddl.position,
+    )
+    .map_err(DataFusionError::Plan)?;
+    apply_schema_changes_on_table(
+        target.catalog.as_ref(),
+        &table,
+        &[SchemaChange::MoveColumn {
+            name: mover,
+            position: at,
+        }],
+    )
+    .await
+    .map_err(iceberg_err)?;
+    invalidate(cx, &target).await?;
+    cx.ctx.read_empty()
 }
 
 // SET PROPERTIES handlers.
