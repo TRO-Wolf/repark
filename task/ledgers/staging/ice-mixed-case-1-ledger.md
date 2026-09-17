@@ -212,6 +212,21 @@ guides `sql-doors.md` / `dataframe-guide.md` updated.
   (`F.col("Id")` filter plans `nums.id`; origin-map path untouched by this
   unit, needs base comparison). Full-suite pass count not captured (tail-only
   log). Parity suite (`make py-test`) not run. All C-001…C-012 still OPEN.
+- Round 3 (2026-09-17): WIP `2c948a80` committed first; the WHERE-cell ids
+  renamed to the `MC-WHERE-*` spelling in the record script, oracle JSON, pin
+  file and ledger (typos gate read the old trigram as a word). Q-20b-1
+  (ADOPTED): `rewrite_fragment_case`
+  gains `unqualified_scope` — NOT MATCHED [BY TARGET] fragments resolve bare
+  refs against the source alias only, NOT MATCHED BY SOURCE against the target
+  alias only, MATCHED/ON against both; qualified refs still validate against
+  both scopes. New Rust pin `fragment_rewrite_scopes_bare_references_to_one_side`.
+  `test_logical_names_equal_analyzed_names_for_dataframe_transforms[filter]`
+  is SUSPECTED PRE-EXISTING, not this unit's: `F.col("Id"/"id"/"ID")` filters
+  fail identically under `SET spark.sql.caseSensitive = true` (the unit's path
+  bypassed) and the traceback (`core.py count` → `eager.py _count_rows` →
+  native) never enters unit code; the facade origin-map/engine-name files are
+  untouched by this branch. The pinned answer (names agree) remains Spark's
+  answer, so no HALT. The orchestrator checks it on the pristine tree.
 
 ## 7. Open questions (HALT writes here; empty means none)
 

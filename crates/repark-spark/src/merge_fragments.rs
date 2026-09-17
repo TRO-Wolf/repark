@@ -55,40 +55,58 @@ async fn rewrite_merge_fragments(
         (spec.source_alias.as_str(), source_fields.as_slice()),
     ];
     spec.on_sql =
-        repark_core::column_resolution::rewrite_fragment_case(&spec.on_sql, &scopes, true)?;
+        repark_core::column_resolution::rewrite_fragment_case(&spec.on_sql, &scopes, true, None)?;
     for clause in &mut spec.matched {
         if let Some(predicate) = clause.predicate_sql.as_mut() {
-            *predicate =
-                repark_core::column_resolution::rewrite_fragment_case(predicate, &scopes, true)?;
+            *predicate = repark_core::column_resolution::rewrite_fragment_case(
+                predicate, &scopes, true, None,
+            )?;
         }
         if let MatchedAction::Update { assignments } = &mut clause.action {
             for (_, value) in assignments {
-                *value =
-                    repark_core::column_resolution::rewrite_fragment_case(value, &scopes, true)?;
+                *value = repark_core::column_resolution::rewrite_fragment_case(
+                    value, &scopes, true, None,
+                )?;
             }
         }
     }
     for clause in &mut spec.not_matched {
         if let Some(predicate) = clause.predicate_sql.as_mut() {
-            *predicate =
-                repark_core::column_resolution::rewrite_fragment_case(predicate, &scopes, true)?;
+            *predicate = repark_core::column_resolution::rewrite_fragment_case(
+                predicate,
+                &scopes,
+                true,
+                Some(spec.source_alias.as_str()),
+            )?;
         }
         if let InsertAction::Explicit { values_sql, .. } = &mut clause.action {
             for value in values_sql {
-                *value =
-                    repark_core::column_resolution::rewrite_fragment_case(value, &scopes, true)?;
+                *value = repark_core::column_resolution::rewrite_fragment_case(
+                    value,
+                    &scopes,
+                    true,
+                    Some(spec.source_alias.as_str()),
+                )?;
             }
         }
     }
     for clause in &mut spec.not_matched_by_source {
         if let Some(predicate) = clause.predicate_sql.as_mut() {
-            *predicate =
-                repark_core::column_resolution::rewrite_fragment_case(predicate, &scopes, true)?;
+            *predicate = repark_core::column_resolution::rewrite_fragment_case(
+                predicate,
+                &scopes,
+                true,
+                Some(spec.target_alias.as_str()),
+            )?;
         }
         if let NotMatchedBySourceAction::Update { assignments } = &mut clause.action {
             for (_, value) in assignments {
-                *value =
-                    repark_core::column_resolution::rewrite_fragment_case(value, &scopes, true)?;
+                *value = repark_core::column_resolution::rewrite_fragment_case(
+                    value,
+                    &scopes,
+                    true,
+                    Some(spec.target_alias.as_str()),
+                )?;
             }
         }
     }

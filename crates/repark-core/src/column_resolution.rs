@@ -483,6 +483,7 @@ pub fn rewrite_fragment_case(
     sql: &str,
     scopes: &[(&str, &[String])],
     case_insensitive: bool,
+    unqualified_scope: Option<&str>,
 ) -> Result<String, DataFusionError> {
     if !case_insensitive {
         return Ok(sql.to_string());
@@ -495,6 +496,7 @@ pub fn rewrite_fragment_case(
         .map_err(|error| DataFusionError::SQL(Box::new(error), None))?;
     let mut repair = FragmentRepair {
         scopes,
+        unqualified_scope,
         depth: 0,
         field_depth: 0,
         error: None,
@@ -508,6 +510,7 @@ pub fn rewrite_fragment_case(
 
 struct FragmentRepair<'a> {
     scopes: &'a [(&'a str, &'a [String])],
+    unqualified_scope: Option<&'a str>,
     depth: usize,
     field_depth: usize,
     error: Option<DataFusionError>,
@@ -520,6 +523,12 @@ impl FragmentRepair<'_> {
             let alias = alias.trim_matches('"');
             if let Some(qualifier) = qualifier
                 && !alias.eq_ignore_ascii_case(qualifier)
+            {
+                continue;
+            }
+            if qualifier.is_none()
+                && let Some(home) = self.unqualified_scope
+                && !alias.eq_ignore_ascii_case(home)
             {
                 continue;
             }
@@ -891,20 +900,25 @@ mod tests {
         let source = vec!["userid".to_string(), "eventname".to_string()];
         let scopes = [("t", target.as_slice()), ("s", source.as_slice())];
         assert_eq!(
-            rewrite_fragment_case("USERID = 2", &[scopes[0]], true).unwrap(),
+            rewrite_fragment_case("USERID = 2", &[scopes[0]], true, None).unwrap(),
             "userId = 2".to_string()
         );
         assert_eq!(
-            rewrite_fragment_case("t.USERID = s.userid AND t.EVENTNAME = 'x'", &scopes, true)
-                .unwrap(),
+            rewrite_fragment_case(
+                "t.USERID = s.userid AND t.EVENTNAME = 'x'",
+                &scopes,
+                true,
+                None
+            )
+            .unwrap(),
             "t.userId = s.userid AND t.eventName = 'x'".to_string()
         );
         assert_eq!(
-            rewrite_fragment_case("USERID = 2", &[scopes[0]], false).unwrap(),
+            rewrite_fragment_case("USERID = 2", &[scopes[0]], false, None).unwrap(),
             "USERID = 2".to_string()
         );
         assert!(
-            rewrite_fragment_case("nope = 2", &[scopes[0]], true)
+            rewrite_fragment_case("nope = 2", &[scopes[0]], true, None)
                 .unwrap()
                 .contains("nope")
         );
@@ -916,10 +930,32 @@ mod tests {
         let source = vec!["USERID".to_string(), "userId".to_string()];
         let scopes = [("t", target.as_slice()), ("s", source.as_slice())];
         assert_eq!(
-            rewrite_fragment_case("x IN (SELECT USERID FROM other)", &[scopes[0]], true).unwrap(),
+            rewrite_fragment_case("x IN (SELECT USERID FROM other)", &[scopes[0]], true, None)
+                .unwrap(),
             "x IN (SELECT USERID FROM other)".to_string()
         );
-        let error = rewrite_fragment_case("USERID = s.USERID", &scopes, true).unwrap_err();
+        let error = rewrite_fragment_case("USERID = s.USERID", &scopes, true, None).unwrap_err();
+        assert!(error.to_string().contains("[AMBIGUOUS_REFERENCE]"));
+    }
+
+    #[test]
+    fn fragment_rewrite_scopes_bare_references_to_one_side() {
+        let target = vec!["userId".to_string()];
+        let source = vec!["userid".to_string()];
+        let scopes = [("t", target.as_slice()), ("s", source.as_slice())];
+        assert_eq!(
+            rewrite_fragment_case("USERID = 2", &scopes, true, Some("s")).unwrap(),
+            "userid = 2".to_string()
+        );
+        assert_eq!(
+            rewrite_fragment_case("USERID = 2", &scopes, true, Some("t")).unwrap(),
+            "userId = 2".to_string()
+        );
+        assert_eq!(
+            rewrite_fragment_case("t.USERID = 2", &scopes, true, Some("s")).unwrap(),
+            "t.userId = 2".to_string()
+        );
+        let error = rewrite_fragment_case("USERID = 2", &scopes, true, None).unwrap_err();
         assert!(error.to_string().contains("[AMBIGUOUS_REFERENCE]"));
     }
 
