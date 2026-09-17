@@ -10,5 +10,6 @@ mod occ_conflict;
 mod occ_partitions;
 mod parallel_write;
 mod partition_sink;
+mod promoted_scan;
 mod streaming;
 mod streaming_scan;
