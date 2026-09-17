@@ -1,0 +1,244 @@
+{
+ "insert_by_name": {
+  "by_name": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME SELECT * FROM swapped",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ]
+   ]
+  },
+  "by_name_subset": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME SELECT 'Bo' AS first_name, 2 AS n",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ],
+    [
+     "Bo",
+     null,
+     2
+    ]
+   ]
+  },
+  "by_name_extra": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME SELECT 'Cy' AS first_name, 'Z' AS last_name, 3 AS n, 4 AS extra",
+   "error_class": "AnalysisException",
+   "error": "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `sc`.`ns`.`bn`, the reason is too many data columns:\nTable columns: `first_name`, `last_name`, `n`.\nData columns: `first_name`, `last_name`, `n`, `extra`. SQLSTATE: 21S01"
+  },
+  "by_name_case": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME SELECT 'Di' AS FIRST_NAME, 'Y' AS Last_Name, 5 AS N",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ],
+    [
+     "Bo",
+     null,
+     2
+    ],
+    [
+     "Di",
+     "Y",
+     5
+    ]
+   ]
+  },
+  "by_name_dup": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME SELECT 'E' AS first_name, 'F' AS first_name, 'G' AS last_name, 6 AS n",
+   "error_class": "AnalysisException",
+   "error": "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `sc`.`ns`.`bn`, the reason is too many data columns:\nTable columns: `first_name`, `last_name`, `n`.\nData columns: `first_name`, `first_name`, `last_name`, `n`. SQLSTATE: 21S01"
+  },
+  "positional": {
+   "sql": "INSERT INTO sc.ns.bn SELECT * FROM swapped",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ],
+    [
+     "Bo",
+     null,
+     2
+    ],
+    [
+     "Di",
+     "Y",
+     5
+    ],
+    [
+     "Smith",
+     "Ann",
+     1
+    ]
+   ]
+  },
+  "by_name_values": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME VALUES ('x', 'y', 7)",
+   "error_class": "AnalysisException",
+   "error": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] Cannot write incompatible data for the table `sc`.`ns`.`bn`: Cannot write extra columns `col1`, `col2`, `col3`. SQLSTATE: KD000"
+  },
+  "overwrite_by_name": {
+   "sql": "INSERT OVERWRITE sc.ns.bn BY NAME SELECT 'O' AS last_name, 'P' AS first_name, 8 AS n",
+   "rows": [
+    [
+     "P",
+     "O",
+     8
+    ]
+   ]
+  }
+ },
+ "rtas_ops": {
+  "ctas_then_rtas": [
+   {
+    "operation": "append",
+    "summary": {
+     "engine-version": "4.1.2",
+     "added-data-files": "3",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789620131286",
+     "added-records": "2000",
+     "total-records": "2000",
+     "app-name": "ic-rtas-byname-1-oracle",
+     "spark.app.id": "local-1789620131286",
+     "changed-partition-count": "3",
+     "engine-name": "spark",
+     "manifests-created": "1",
+     "total-position-deletes": "0",
+     "added-files-size": "5208",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "0",
+     "total-files-size": "5208",
+     "total-data-files": "3"
+    }
+   },
+   {
+    "operation": "overwrite",
+    "summary": {
+     "engine-version": "4.1.2",
+     "added-data-files": "5",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789620131286",
+     "added-records": "100",
+     "total-records": "100",
+     "app-name": "ic-rtas-byname-1-oracle",
+     "spark.app.id": "local-1789620131286",
+     "changed-partition-count": "5",
+     "engine-name": "spark",
+     "manifests-created": "1",
+     "total-position-deletes": "0",
+     "added-files-size": "3705",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "0",
+     "total-files-size": "3705",
+     "total-data-files": "5"
+    }
+   }
+  ],
+  "rtas_new_table": [
+   {
+    "operation": "overwrite",
+    "summary": {
+     "engine-version": "4.1.2",
+     "added-data-files": "1",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789620131286",
+     "added-records": "10",
+     "total-records": "10",
+     "app-name": "ic-rtas-byname-1-oracle",
+     "spark.app.id": "local-1789620131286",
+     "changed-partition-count": "1",
+     "engine-name": "spark",
+     "manifests-created": "1",
+     "total-position-deletes": "0",
+     "added-files-size": "456",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "0",
+     "total-files-size": "456",
+     "total-data-files": "1"
+    }
+   }
+  ],
+  "rtas_empty_new": [
+   {
+    "operation": "delete",
+    "summary": {
+     "engine-version": "4.1.2",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789620131286",
+     "total-records": "0",
+     "app-name": "ic-rtas-byname-1-oracle",
+     "spark.app.id": "local-1789620131286",
+     "changed-partition-count": "0",
+     "engine-name": "spark",
+     "manifests-created": "0",
+     "total-position-deletes": "0",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "0",
+     "total-files-size": "0",
+     "total-data-files": "0"
+    }
+   }
+  ],
+  "rtas_empty_twice": [
+   {
+    "operation": "delete",
+    "summary": {
+     "engine-version": "4.1.2",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789620131286",
+     "total-records": "0",
+     "app-name": "ic-rtas-byname-1-oracle",
+     "spark.app.id": "local-1789620131286",
+     "changed-partition-count": "0",
+     "engine-name": "spark",
+     "manifests-created": "0",
+     "total-position-deletes": "0",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "0",
+     "total-files-size": "0",
+     "total-data-files": "0"
+    }
+   },
+   {
+    "operation": "delete",
+    "summary": {
+     "engine-version": "4.1.2",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789620131286",
+     "total-records": "0",
+     "app-name": "ic-rtas-byname-1-oracle",
+     "spark.app.id": "local-1789620131286",
+     "changed-partition-count": "0",
+     "engine-name": "spark",
+     "manifests-created": "0",
+     "total-position-deletes": "0",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "0",
+     "total-files-size": "0",
+     "total-data-files": "0"
+    }
+   }
+  ]
+ }
+}
