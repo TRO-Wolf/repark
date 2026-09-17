@@ -1,0 +1,18 @@
+{
+  "unit": "ice-hadoop-vn-1",
+  "writer": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, hadoop catalog",
+  "recorded": "2026-09-17",
+  "recorder": "python/repark/tests/_record_ice_hadoop_vn_1.py",
+  "seed_rows": [
+    [
+      1,
+      "seed"
+    ]
+  ],
+  "format_version": 2,
+  "table": "ns.conc",
+  "table_location": "/tmp/repark-ice-hadoop-vn-1/ns/conc",
+  "metadata_file": "metadata/v2.metadata.json",
+  "schema": "struct<id:int,s:string>",
+  "version_hint": "2"
+}
