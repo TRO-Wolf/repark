@@ -233,3 +233,27 @@ TODO: rows written.
 - Round-2 commits: step 1 purge, step 2 size restore (baseline 1099, one
   under main after ruff format's collapse), step 4 SNAP-06 pin, step 5 this
   gate paste. Tree clean, no push per the brief.
+
+## 9. Round 3 remediation (2026-09-17, head dd897287 after orchestrator rebase)
+
+Rulings carried in:
+
+- Q-20c-4 (design): the `OPTIONS('k'='v')` text channel is WITHDRAWN. L-01
+  (user-typed SQL smuggling honoured options Spark never honours; CTAS
+  OPTIONS-refusal bypass) and L-02 (UTF-8 `byte as char` corruption) both die
+  with the hand-written literal lexer. Options travel OUT OF BAND: facade
+  dict -> new PyO3 method -> typed `StatementWriteOptions` at the router; SQL
+  stays option-free; user-typed `OPTIONS(...)` keeps main's behaviour, pinned.
+  Python still only forwards, never branches. The text parser, the escaper
+  uses that only served the channel, and SNAP-06 go. UTF-8 pin (`café` +
+  emoji) stays through both writer APIs.
+- Q-20c-5: user `snapshot-property.<k>` colliding with an engine-computed
+  summary key must not replace the engine value; one Spark cell for
+  `added-records` and `engine-name` first, then answer as Spark does
+  (extras win for non-metrics if Spark says so; `engine.operation-id`
+  always ours).
+- Q-20c-6: gzip + TABLE-PROPERTY level refuses like option + option, before
+  any file is written.
+- Perf P-01..P-04 (P2): stream, keep session writer concurrency, ONE catalog
+  commit for OPTIONS CTAS (also correctness: Spark writes one snapshot).
+  P3s only if trivial.
