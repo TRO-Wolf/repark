@@ -262,6 +262,12 @@ make rust-clippy -> rc 0
 make verify -> rc 1 on check-ledger-grammar only (no clause table);
   clause table added
 check_ledger_grammar.py (re-run) -> rc 0, 177 live ledgers clean
+make verify (re-run) -> rc 1 on py-lint (RUF100 unused noqa + 4 E501
+  in the generator/pins, run-19c leftovers); fixed in eda61681
+make verify (re-run 2) -> rc 1 on py-format-check (same two files);
+  pinned ruff format applied, pins re-run 21 passed / 1 skipped /
+  5 xfailed; fixed in f4724688
+make verify (re-run 3) -> rc 0, full gate green
 ```
 
 ### C-006 registry rows
