@@ -64,7 +64,9 @@ def _cells() -> dict[str, dict[str, Any]]:
         "MC-SEL-04": {
             "sql": ["SELECT `userId`, `eventName`, `Mixed Case` FROM sc.ns.mc ORDER BY `userId`"]
         },
-        "MC-WHERE-01": {"sql": ["SELECT userId FROM sc.ns.mc WHERE EVENTNAME = 'a' ORDER BY userId"]},
+        "MC-WHERE-01": {
+            "sql": ["SELECT userId FROM sc.ns.mc WHERE EVENTNAME = 'a' ORDER BY userId"]
+        },
         "MC-GRP-01": {
             "sql": [
                 "SELECT EVENTNAME, COUNT(*) AS c FROM sc.ns.mc "

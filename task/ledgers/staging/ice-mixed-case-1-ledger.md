@@ -48,18 +48,18 @@ table-format semantics change, so no fork PR).
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | SELECT list and WHERE on the adopted table answer Spark (false): unquoted mixed/lower case, quoted exact and quoted wrong-case. | `test_ice_mixed_case_1.py` MC-SEL-01…04, MC-WHERE-01…02 cells vs oracle (false). | OPEN | |
-| C-002 | GROUP BY / ORDER BY / self-JOIN ON answer Spark (false), including ordering by a differently-cased key. | Same pin file, MC-GRP-01, MC-ORD-01, MC-JOIN-01. | OPEN | |
-| C-003 | UPDATE (SET target and expression, WHERE) and DELETE WHERE answer Spark (false), verified by reading the table back. | Same pin file, MC-UPD-01…02, MC-DEL-01. | OPEN | |
-| C-004 | MERGE answers Spark (false): unquoted source aliases with backticked ON, differently-cased ON/SET/INSERT cols and values, `UPDATE SET *` / `INSERT *` with differently-cased source columns. | Same pin file, MC-MRG-01…04. | OPEN | |
-| C-005 | INSERT INTO t (cols) with differently-cased column list answers Spark (false). | Same pin file, MC-INS-01. | OPEN | |
-| C-006 | Quoted wrong-case (`` `USERID` ``) resolves under false and refuses under true; exact-case unquoted resolves under true and wrong-case refuses under true. | Same pin file, MC-CS-TRUE-01…04 (SQL door, flag true) vs oracle (true). | OPEN | |
-| C-007 | A frame carrying `a` and `A` refuses any reference to either with Spark's `[AMBIGUOUS_REFERENCE]` class and message shape under false. | Same pin file, MC-AMB-01…02; Rust unit tests for the rule. | OPEN | |
-| C-008 | A temp view of a DataFrame with camelCase columns answers Spark (false) for the SELECT/WHERE cells. | Same pin file, MC-VIEW-01…02. | OPEN | |
-| C-009 | The DataFrame door (`select`, `filter`) answers the same cells as recorded (unchanged behavior). | Same pin file, MC-DF-01…04. | OPEN | |
-| C-010 | The live tier re-runs Spark and asserts repark == pinned golden == live Spark for every cell. | Same pin file, live tier under `REPARK_PARITY_LIVE=1`. | OPEN | |
-| C-011 | ID-1 is rewritten to the new truth (dated 2026-09-16, ICE-MIXED-CASE-1); `cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted` pins the new per-door truth; any still-divergent shape is its own row with its pin. | Registry diff + `cross_door.rs` diff. | OPEN | |
-| C-012 | Full gates green: new pin file, live tier, `cargo test -p repark-spark --lib`, `cargo test -p repark-sql`, `make verify`, whole facade suite, whole parity suite. | Gate outputs pasted below. | OPEN | |
+| C-001 | SELECT list and WHERE on the adopted table answer Spark (false): unquoted mixed/lower case, quoted exact and quoted wrong-case. | `test_ice_mixed_case_1.py` MC-SEL-01…04, MC-WHERE-01…02 cells vs oracle (false). | PROVEN | Offline 39 passed + live 78 passed 2026-09-17, release native (§6). |
+| C-002 | GROUP BY / ORDER BY / self-JOIN ON answer Spark (false), including ordering by a differently-cased key. | Same pin file, MC-GRP-01, MC-ORD-01, MC-JOIN-01. | PROVEN | Offline 39 passed + live 78 passed 2026-09-17, release native (§6). |
+| C-003 | UPDATE (SET target and expression, WHERE) and DELETE WHERE answer Spark (false), verified by reading the table back. | Same pin file, MC-UPD-01…02, MC-DEL-01. | PROVEN | Offline 39 passed + live 78 passed 2026-09-17, release native (§6). |
+| C-004 | MERGE answers Spark (false): unquoted source aliases with backticked ON, differently-cased ON/SET/INSERT cols and values, `UPDATE SET *` / `INSERT *` with differently-cased source columns. | Same pin file, MC-MRG-01…04. | PROVEN | Offline 39 passed + live 78 passed 2026-09-17 (§6); `test_merge_insert_scope.py` 4 passed incl. NOT MATCHED source-scope pin; Rust `fragment_rewrite_scopes_bare_references_to_one_side` green. |
+| C-005 | INSERT INTO t (cols) with differently-cased column list answers Spark (false). | Same pin file, MC-INS-01. | PROVEN | Offline 39 passed + live 78 passed 2026-09-17, release native (§6). |
+| C-006 | Quoted wrong-case (`` `USERID` ``) resolves under false and refuses under true; exact-case unquoted resolves under true and wrong-case refuses under true. | Same pin file, MC-CS-TRUE-01…04 (SQL door, flag true) vs oracle (true). | PROVEN | Offline 39 passed + live 78 passed 2026-09-17, release native (§6). |
+| C-007 | A frame carrying `a` and `A` refuses any reference to either with Spark's `[AMBIGUOUS_REFERENCE]` class and message shape under false. | Same pin file, MC-AMB-01…02; Rust unit tests for the rule. | PROVEN | Pin cells green offline + live 2026-09-17 (§6); `repark-core --lib` 585 passed incl. 13 column_resolution tests. |
+| C-008 | A temp view of a DataFrame with camelCase columns answers Spark (false) for the SELECT/WHERE cells. | Same pin file, MC-VIEW-01…02. | PROVEN | Offline 39 passed + live 78 passed 2026-09-17, release native (§6). |
+| C-009 | The DataFrame door (`select`, `filter`) answers the same cells as recorded (unchanged behavior). | Same pin file, MC-DF-01…04. | PROVEN | Offline 39 passed + live 78 passed 2026-09-17, release native (§6). |
+| C-010 | The live tier re-runs Spark and asserts repark == pinned golden == live Spark for every cell. | Same pin file, live tier under `REPARK_PARITY_LIVE=1`. | PROVEN | 78 passed 2026-09-17 via jb-jvm.sh lock, PySpark 4.1.2 from /tmp/sparkenv (§6). |
+| C-011 | ID-1 is rewritten to the new truth (dated 2026-09-16, ICE-MIXED-CASE-1); `cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted` pins the new per-door truth; any still-divergent shape is its own row with its pin. | Registry diff + `cross_door.rs` diff. | PROVEN | `docs/spark-sql-iceberg-parity.md` ID-1 rewritten Spark FIXED / ANSI INTENDED split; `cross_door.rs` ROW 8 asserts ANSI-refuses / Spark-resolves; `cargo test -p repark-sql` 18 binaries green (§6). |
+| C-012 | Full gates green: new pin file, live tier, `cargo test -p repark-spark --lib`, `cargo test -p repark-sql`, `make verify`, whole facade suite, whole parity suite. | Gate outputs pasted below. | PROVEN | Pins 39+78; core 585 / spark 1043 / iceberg 434 / sql 18 binaries; `make verify` green; facade r3 9313 passed with 1 suspected-pre-existing red (§6, orchestrator to check); parity r3 756 passed + mirror file 23 passed (§6). |
 
 ## 1. Red-first record (base `32c0e1a3`, release native in `.venv`, 2026-09-17)
 
@@ -227,7 +227,70 @@ guides `sql-doors.md` / `dataframe-guide.md` updated.
   native) never enters unit code; the facade origin-map/engine-name files are
   untouched by this branch. The pinned answer (names agree) remains Spark's
   answer, so no HALT. The orchestrator checks it on the pristine tree.
+- Facade r3 (2026-09-17, release native, full log
+  `/tmp/oc-worker/ib-build/facade-r3.log`): 2 failed, 9313 passed, 406
+  skipped, 26 xfailed in 2139 s. Failure 1 is the suspected-pre-existing
+  filter pin above (`test_merge_insert_scope.py` fully green, 4 passed —
+  the Q-20b-1 fix holds). Failure 2 is this unit's and is fixed in-tree:
+  `test_moved_symbol_bodies_match_the_integrated_baseline` pinned the old
+  `_SQLCONF_DEFAULTS` body hash; the `spark.sql.caseSensitive` default row
+  moved it `c37ad587…` to `c79dabbc…`, and the EXPECTED table carries the new
+  hash (re-run: 1 passed).
+- Parity r3 (2026-09-17, full log `/tmp/oc-worker/ib-build/parity-r3.log`):
+  1 failed, 756 passed, 2 skipped, 12 xfailed in 461 s. The failure is this
+  unit's and is fixed in-tree: the CAP-1 mirror `_RUST_BASELINES` still
+  carried the six pre-ratchet ceilings; it now matches `check_rust_file_size.py`
+  (1782/1032/3020/1141/1440/1254) and the mirror file re-runs 23 passed.
+  The mirror table is referenced by name only elsewhere (wiring + packet
+  lists, both green in the full run).
 
 ## 7. Open questions (HALT writes here; empty means none)
 
 None.
+
+## 8. Coverage attestation (ref 05 shape, 2026-09-17)
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: ice-mixed-case-1
+  complete: true
+  reattested: [AT-1, AT-3, AT-10]
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Clauses C-001..C-012 walked one by one against behavior — the 39 pin cells measured against the recorded live-PySpark-4.1.2 oracle offline and re-measured live (78 passed), the registry ID-1 rewrite diffed, the cross-door ROW 8 pin green.
+      artifacts: [task/ledgers/staging/ice-mixed-case-1-ledger.md, python/repark/tests/test_ice_mixed_case_1.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundary spellings actually exercised — mixed/lower/upper unquoted, quoted exact, quoted wrong-case, quoted spaced identifiers, both flag values, ambiguous a/A frames, temp views, DataFrame-door select/filter, MERGE/UPDATE/DELETE/INSERT shapes.
+      artifacts: [python/repark/tests/test_ice_mixed_case_1.py, python/repark/tests/ice_mixed_case_1_spark_oracle.json]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Refusal paths pinned — wrong-case under true refuses, a/A frames raise Spark-shaped AMBIGUOUS_REFERENCE, duplicate UPDATE SET targets refuse instead of first-winning, t.score in NOT MATCHED INSERT stays the loud missing-field error, and the pre-fix tree failed the NOT MATCHED bare-column pin (fixed by the Q-20b-1 scoping, green after).
+      artifacts: [python/repark/tests/test_ice_mixed_case_1.py, python/repark/tests/test_merge_insert_scope.py]
+    - id: AT-4
+      status: N/A
+      justification: No concurrent or async path added — the repair loop is bounded at 64 attempts and the flag mutates session config only through the existing validated runtime setter, the same shape as the ANSI and zone knobs.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, no secret, no injection or deserialization surface — the change resolves SQL identifier spellings against known scopes only.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Every write-path cell (UPDATE/DELETE/MERGE/INSERT) is verified by reading the table back against the oracle rows, and the duplicate-target refusal closes the silent first-win write.
+      artifacts: [python/repark/tests/test_ice_mixed_case_1.py]
+    - id: AT-7
+      status: N/A
+      justification: No system-breaking resource surface — the repair loop is attempt-bounded, fragment rewrites are single-pass, and the full facade suite ran in its normal band.
+    - id: AT-8
+      status: ATTACKED
+      evidence: The oracle is a verbatim live-Spark-4.1.2 recording the pins read cell by cell; error classes keep Spark's shape; the owned fork is untouched and the registry carries the per-door truth.
+      artifacts: [python/repark/tests/ice_mixed_case_1_spark_oracle.json, docs/spark-sql-iceberg-parity.md]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every refusal raises a typed AnalysisException carrying Spark's class and the offending spelling, asserted by message match in the pins on both tiers.
+      artifacts: [python/repark/tests/test_ice_mixed_case_1.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red-first record in §1; the new Rust scoping pin names the branch (bare ref with home scope vs without vs qualified); the facade NOT MATCHED pin failed on the pre-fix tree and passes after, so the suite catches the regression it pins.
+      artifacts: [task/ledgers/staging/ice-mixed-case-1-ledger.md, crates/repark-core/src/column_resolution.rs]
+```

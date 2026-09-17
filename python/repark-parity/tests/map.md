@@ -1,5 +1,7 @@
 # map — python/repark-parity/tests
 
+ICE-MIXED-CASE-1 round 3 (2026-09-17): the CAP-1 mirror `_RUST_BASELINES` follows the six shrink-only ratchets (merge/mod.rs 1782, merge/tests/merge.rs 1032, streaming_scan.rs 3020, predicate_dml.rs 1141, predicate_dml/tests 1440, cross_door.rs 1254). pins: ice-mixed-case-1/C-012
+
 DF-PLAN-INTROSPECT-1 follow-up round 3 (2026-09-15, R-11): CAP-1 mirror row
 ratcheted down with the code — `dataframe/core.py` 4027 → 4014 (the
 `sameSemantics` body moves to `dataframe/plan_introspect.py`). The
