@@ -522,7 +522,8 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   it stands OPEN, so the pin is renamed to `test_v3_cov_3_records_the_measured_reopening` and
   holds the corrected reading — the OPEN disposition with the measured date, the 1-of-12
   `INSERT … SELECT` fact, the 12-of-12 VALUES/CTAS fact and the `p_rowid_order` probe — so a
-  row cannot be quietly re-closed on the retired evidence. `_TOTALS` is
+  row cannot be quietly re-closed on the retired evidence (its docstring is wrapped to Ruff's
+  100-column limit). `_TOTALS` is
   unchanged: the nine partitioned rows were re-measured on both engines with the `_row_id` probe
   restored and every verdict held.
   **B-MOR-3 (2026-09-03):** `_TOTALS` moves to 72 EQUAL / 8 DIVERGES with the CALL row's flip,

@@ -111,7 +111,7 @@ def test_the_fork_routed_rows_name_a_trigger() -> None:
 
 
 def test_v3_cov_3_records_the_measured_reopening() -> None:
-    """ICE-REGISTRY-SWEEP-1A: the row stands OPEN on the 2026-09-16 rating, not on the RP-8 close."""
+    """ICE-REGISTRY-SWEEP-1A: the row stands OPEN on the 2026-09-16 rating, not the RP-8 close."""
     registry = _read(_REGISTRY)
     start = registry.index("V3-COV-3 — ")
     body = registry[start : registry.index("\n### ", start)]
