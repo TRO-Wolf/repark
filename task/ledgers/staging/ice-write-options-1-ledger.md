@@ -339,3 +339,20 @@ Rulings carried in:
 - Commit discipline deviation: steps 2+3+4 ride one implementation commit
   (per-step hunk splits did not fit the 13:30 stop beside the mandatory
   gates); the ledger sections above keep step traceability.
+
+## 14. Round 3 verification signal (2026-09-17, final artifact)
+
+- `maturin develop --release`: exit 0 on the committed tree.
+- `tests/test_ice_write_options_1.py` (offline): 42 passed, 1 skipped
+  (the JVM-gated live cell), exit 0 in 14 s — every prior pin plus SNAP-08/09,
+  SQL-02/03, SNAP-10/11/12, SNAP-13 on the final native.
+- Static gates green at commit: comment grep (exit 1, no matches),
+  `check_lib_py`, `check_lib_rs`, `check_rust_file_size` (append.rs ratcheted
+  1882 -> 1819), ruff check + format, `cargo fmt --check`, `cargo check`
+  workspace crates, `make rust-clippy` (run pre-split; re-run pending).
+- NOT run against the final tree for lack of stop time: `cargo test`
+  (`-p repark-spark/iceberg/python --lib`), the remaining pytest files
+  (`test_writer_v2`, `test_insert_store_assign`, `test_sql_harden_cutover`,
+  `test_dml_b_partition_overwrite`, `test_dfcore_1*`,
+  `test_production_file_size`), `make ci`, the live tier. Handed back HALT
+  for a follow-up gate round.
