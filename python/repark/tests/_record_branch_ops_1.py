@@ -649,9 +649,7 @@ def record(warehouse: Path, out: Path) -> None:
         )
         dup_step = wap.steps[-1]
         spark_dup = dup_step.pop("expect_error")
-        staged_pos = next(
-            entry["pos"] for entry in wap.log() if entry["id"] == staged_wap[0]["id"]
-        )
+        staged_pos = next(entry["pos"] for entry in wap.log() if entry["id"] == staged_wap[0]["id"])
         dup_step["expect_error"] = {
             "exc": "Py4JJavaError",
             "prefix": (

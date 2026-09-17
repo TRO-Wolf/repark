@@ -1047,7 +1047,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `register_table` adoption, including the `published-wap-id` summary pin.
   **Round 3:** the duplicate-WAP cell pins the fork's already-picked refusal and records
   Spark's `Duplicate request ...` text beside it as `spark_error` (OPEN residue
-  `ICE-BRANCH-OPS-1-R-001`, fork trigger `F-CHERRYPICK-WAP-ORDER-1`).
+  `ICE-BRANCH-OPS-1-R-001`, fork trigger `F-CHERRYPICK-WAP-ORDER-1`); the recorder
+  rebuilds that cell shape from the live Spark error on every re-record.
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
   pins: ice-branch-ops-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade

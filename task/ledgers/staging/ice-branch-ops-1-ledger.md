@@ -348,10 +348,37 @@ gains dated OPEN residue row `ICE-BRANCH-OPS-1-R-001` beside REF-6 with fork tri
 
 ### Clause update
 
-| Clause | Updated text | Verdict |
-|---|---|---|
-| C-013 | A Spark WAP-staged snapshot adopted into RePark cherry-picks with `published-wap-id` stamped; the duplicate pick refuses — with the fork's already-picked message, not Java's duplicate-WAP text (residue `ICE-BRANCH-OPS-1-R-001`, Q-20b-4). | PROVEN |
+C-013 now reads: a Spark WAP-staged snapshot adopted into RePark cherry-picks with
+`published-wap-id` stamped; the duplicate pick refuses — with the fork's already-picked
+message, not Java's duplicate-WAP text (residue `ICE-BRANCH-OPS-1-R-001`, Q-20b-4).
+Verdict stays PROVEN; the `wap_pick_dup` pin holds RePark's class and the fork's prefix,
+with Spark's message recorded beside it as `spark_error`.
 
 ### Open questions
 
 None. Q-20b-4 resolved by the ruling above; no other ambiguity.
+
+### Red-first (round 3)
+
+New `wap_pick_dup` pin (fork already-picked message) run against the round-2 native
+that still carries `duplicate_wap_pick`:
+
+```text
+AssertionError: CALL rp.system.cherrypick_snapshot('ns.ops_wap', 5486998159514252257):
+'Cannot cherrypick snapshot 5486998159514252257: already picked to create ancestor
+8537183275774753859' not in DataInvalid => Duplicate request to cherry pick wap id
+that was published already: r2wapid
+```
+
+The removal restores the fork's refusal; the green run after the rebuild is the fix proof.
+
+### Gate counts (round 3)
+
+- `cargo test -p repark-spark --lib branch_ops`: `8 passed`.
+- Unit file offline: `2 passed, 3 skipped`; live (brief step-4 command):
+  `5 passed`, including the restructured `wap_pick_dup` fork-message pin.
+- `uvx ruff@0.15.22 check .`: clean. `make verify`: exit 0 (one retry loop: a ledger
+  duplicate-clause id, a recorder format reflow, and the known FS-timing assertion
+  `listing_cost_list_tables_cheaper_than_provider_rebuild`, which fails only under
+  sibling-lane contention and passed on the green run; no shared code path with this
+  diff).
