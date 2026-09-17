@@ -49,6 +49,12 @@ inclusive metrics evaluator's positive `cmp_fn` (`inclusive_metrics_evaluator.rs
 (`spec/partition.rs:389`), `resolve_partition_deletes` (`transaction/snapshot.rs:709`), and
 the page-index evaluator. Detail and per-seam consequences: the fork ledger.
 
+Line citations corrected 2026-09-16 against base `edc38c6a`: the partition type comes from
+`spec/manifest/mod.rs:65`, the accessor check is `expr/accessor.rs:77`, `PartitionKey::new`
+validates at `spec/partition.rs:391`; the second fork seam is
+`crates/integrations/datafusion/src/physical_plan/delete.rs:459` and `:850`, and the page-index
+INT32 arm `expr/visitors/page_index_evaluator.rs:277-278`.
+
 RePark: every DML target scan pins the snapshot id, so on a table with no write since the
 promotion the fork scans under the old schema; `conform_scan_batch`
 (`crates/repark-iceberg/src/write/merge/mod.rs:534`) rebuilds the batch against the scratch
