@@ -20,6 +20,11 @@ holds behavior observed from outside the crate.
   literal semantics (backslash literal, `\'` does not lex, raw strings refuse) — Spark-only (ADR-0002).
 - `parser_productions.rs` — pins stock-parser support and the productions that still require
   pre-parse recognition (`ALTER … SET PROPERTIES`, `ALTER … EXECUTE`, and `FOR … AS OF`).
+- `ansi_write_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** ANSI-door
+  `INSERT` with a column list fills an omitted `write_default` column through the
+  shared `insert_defaults` step, and a missing required column refuses with the
+  same nullability text as the Spark door.
+  pins: ice-v3-write-default-1/C-004
 
 - `session_timestamp_type_ansi_door.rs` — **Q10:** ANSI-door cell of
   `spark.sql.timestampType=TIMESTAMP_NTZ` on a Spark-extended session
