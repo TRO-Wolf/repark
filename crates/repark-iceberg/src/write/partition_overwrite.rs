@@ -324,6 +324,32 @@ pub async fn stage_static_partition_overwrite_files(
     .await
 }
 
+/// Stage static-overwrite batches with statement levers after injecting PARTITION columns.
+/// # Errors
+/// Injection, positional map, or file write failures as [`DataFusionError`].
+pub async fn stage_static_partition_overwrite_files_with(
+    table: &Table,
+    batches: Vec<RecordBatch>,
+    equalities: &[PartitionEquality],
+    concurrency: crate::write::concurrency::WriteConcurrency,
+    staging: &crate::write::write_options::WriterStagingOverrides,
+) -> Result<Vec<DataFile>> {
+    let write_schema: SchemaRef = Arc::new(
+        iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
+            .map_err(iceberg_err)?,
+    );
+    let plan = StaticPartitionPlan::new(Arc::clone(&write_schema), equalities, table)?;
+    let stream = futures::stream::iter(batches.into_iter().map(move |batch| plan.inject(&batch)));
+    crate::write::write_options::stage_overwrite_files_with(
+        table,
+        stream,
+        Vec::new(),
+        concurrency,
+        staging,
+    )
+    .await
+}
+
 fn constant_partition_array(
     equality: &PartitionEquality,
     data_type: &datafusion::arrow::datatypes::DataType,

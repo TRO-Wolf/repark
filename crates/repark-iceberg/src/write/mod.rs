@@ -42,6 +42,8 @@ pub mod testing_support;
 /// Whole-table `TRUNCATE TABLE` (delete-only empty overwrite).
 pub mod truncate;
 pub mod writer_props;
+/// Per-statement DataFrame write-option staging and commits (ICE-WRITE-OPTIONS-1).
+pub mod write_options;
 
 pub use commit_error::{CommitStateUnknownError, commit_err, is_commit_state_unknown};
 pub use snapshot_refs::{
@@ -87,7 +89,7 @@ pub use partition_overwrite::{
     commit_overwrite_by_row_filter_to, commit_replace_partitions, commit_replace_partitions_to,
     inject_static_partition_columns, partition_overwrite_request_from_exprs,
     plan_partition_overwrite, refuse_empty_dynamic_overwrite,
-    stage_static_partition_overwrite_files,
+    stage_static_partition_overwrite_files, stage_static_partition_overwrite_files_with,
 };
 pub use partition_write::{WRITTEN_FILES_COL_NAME, write_data_files_from_plan};
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
@@ -95,5 +97,13 @@ pub use repark_common::{Error, Result};
 pub use truncate::{commit_truncate, commit_truncate_to};
 pub use writer_props::{
     ACCEPTED_CODECS, COMPRESSION_CODEC_PROP, COMPRESSION_LEVEL_PROP, parse_compression,
-    writer_properties_for,
+    parse_target_file_size, target_file_size_with, writer_properties_for, writer_properties_with,
+};
+pub use write_options::{
+    WriterStagingOverrides, append_with_statement_options, commit_append_with_summary,
+    commit_overwrite_by_row_filter_with_summary, commit_overwrite_replace_all_with_summary,
+    commit_replace_partitions_with_summary, isolation_with_override,
+    stage_overwrite_files_with, stage_partitioned_stream_with_overrides,
+    stage_partitioned_with_overrides, stage_unpartitioned_stream_with_overrides,
+    stage_unpartitioned_with_overrides, summary_with_extras,
 };

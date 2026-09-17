@@ -19,9 +19,66 @@ pub const ACCEPTED_CODECS: &str = "zstd, snappy, gzip, lz4, uncompressed";
 /// # Errors
 /// Unknown codec, unparsable level, or level out of range for gzip/zstd.
 pub fn writer_properties_for(table: &Table) -> Result<WriterProperties> {
+    writer_properties_with(table, None, None)
+}
+
+/// Build [`WriterProperties`] with statement option overrides taking the table property's
+/// place (Spark's option-over-table-property precedence).
+/// # Errors
+/// Unknown codec, unparsable level, or level out of range for gzip/zstd.
+pub fn writer_properties_with(
+    table: &Table,
+    codec_override: Option<&str>,
+    level_override: Option<&str>,
+) -> Result<WriterProperties> {
+    if level_override.is_some() {
+        let properties = table.metadata().properties();
+        let effective = codec_override
+            .or_else(|| properties.get(COMPRESSION_CODEC_PROP).map(String::as_str))
+            .unwrap_or("zstd");
+        if effective.eq_ignore_ascii_case("gzip") {
+            return Err(DataFusionError::Plan(format!(
+                "option `compression-level` with gzip `compression-codec` is refused (Spark \
+                 fails integer gzip levels; ICE-WRITE-OPTIONS-1)"
+            )));
+        }
+    }
     Ok(WriterProperties::builder()
-        .set_compression(compression_for(table)?)
+        .set_compression(compression_with(table, codec_override, level_override)?)
         .build())
+}
+
+/// Resolve the rolling-writer target size with a statement option taking the table
+/// property's place.
+/// # Errors
+/// A non-numeric override, mirroring Spark's `NumberFormatException`.
+pub fn target_file_size_with(
+    table: &Table,
+    size_override: Option<u64>,
+) -> Result<usize> {
+    let Some(raw) = size_override else {
+        return Ok(table
+            .metadata()
+            .table_properties()
+            .map_err(crate::catalog::iceberg_to_datafusion)?
+            .write_target_file_size_bytes);
+    };
+    usize::try_from(raw).map_err(|_| {
+        DataFusionError::Plan(format!(
+            "option `target-file-size-bytes` value {raw} exceeds the platform file size"
+        ))
+    })
+}
+
+/// Parse a `target-file-size-bytes` option value.
+/// # Errors
+/// A non-numeric value, mirroring Spark's `NumberFormatException`.
+pub fn parse_target_file_size(raw: &str) -> Result<u64> {
+    raw.trim().parse::<u64>().map_err(|_| {
+        DataFusionError::Plan(format!(
+            "option `target-file-size-bytes` has non-numeric value {raw:?} (Spark NumberFormatException)"
+        ))
+    })
 }
 
 pub(crate) fn position_delete_writer_properties_for(table: &Table) -> Result<WriterProperties> {
@@ -34,9 +91,19 @@ pub(crate) fn position_delete_writer_properties_for(table: &Table) -> Result<Wri
 }
 
 fn compression_for(table: &Table) -> Result<Compression> {
+    compression_with(table, None, None)
+}
+
+fn compression_with(
+    table: &Table,
+    codec_override: Option<&str>,
+    level_override: Option<&str>,
+) -> Result<Compression> {
     let properties = table.metadata().properties();
-    let codec_raw = properties.get(COMPRESSION_CODEC_PROP).map(String::as_str);
-    let level_raw = properties.get(COMPRESSION_LEVEL_PROP).map(String::as_str);
+    let codec_raw = codec_override
+        .or_else(|| properties.get(COMPRESSION_CODEC_PROP).map(String::as_str));
+    let level_raw = level_override
+        .or_else(|| properties.get(COMPRESSION_LEVEL_PROP).map(String::as_str));
     parse_compression(codec_raw, level_raw)
 }
 
@@ -527,6 +594,236 @@ mod tests {
         assert!(
             message.contains(COMPRESSION_CODEC_PROP) && message.contains("brotli"),
             "loud error must name property and value: {message}"
+        );
+    }
+
+    use crate::write::write_options::{
+        WriterStagingOverrides, append_with_statement_options,
+        commit_append_with_summary, isolation_with_override,
+        stage_unpartitioned_with_overrides, summary_with_extras,
+    };
+
+    fn serial() -> WriteConcurrency {
+        WriteConcurrency::new(1).expect("K=1")
+    }
+
+    fn overrides(
+        codec: Option<&str>,
+        level: Option<&str>,
+        size: Option<u64>,
+    ) -> WriterStagingOverrides {
+        WriterStagingOverrides {
+            codec: codec.map(str::to_string),
+            level: level.map(str::to_string),
+            target_file_size_bytes: size,
+        }
+    }
+
+    #[tokio::test]
+    async fn option_target_size_rolls_one_file_per_batch() {
+        let warehouse = TempDir::new().expect("tmp");
+        let catalog = memory_catalog(&warehouse).await;
+        let ident = create_table(&catalog, "t_size", HashMap::new()).await;
+        let table = catalog.load_table(&ident).await.expect("load");
+        let batches = vec![numeric_batch(50), numeric_batch(50), numeric_batch(50)];
+        let tiny = stage_unpartitioned_with_overrides(
+            &table,
+            batches.clone(),
+            serial(),
+            &overrides(None, None, Some(1)),
+        )
+        .await
+        .expect("tiny target stages");
+        assert_eq!(tiny.len(), 3, "a 1-byte target rolls every batch");
+        let wide = stage_unpartitioned_with_overrides(
+            &table,
+            batches,
+            serial(),
+            &WriterStagingOverrides::none(),
+        )
+        .await
+        .expect("default stages");
+        assert_eq!(wide.len(), 1, "the 512MB default keeps one file");
+    }
+
+    #[tokio::test]
+    async fn option_target_size_beats_table_property() {
+        let warehouse = TempDir::new().expect("tmp");
+        let catalog = memory_catalog(&warehouse).await;
+        let ident = create_table(
+            &catalog,
+            "t_size_prop",
+            HashMap::from([("write.target-file-size-bytes".to_string(), "1".to_string())]),
+        )
+        .await;
+        let table = catalog.load_table(&ident).await.expect("load");
+        let batches = vec![numeric_batch(50), numeric_batch(50), numeric_batch(50)];
+        let prop_only = stage_unpartitioned_with_overrides(
+            &table,
+            batches.clone(),
+            serial(),
+            &WriterStagingOverrides::none(),
+        )
+        .await
+        .expect("property stages");
+        assert_eq!(prop_only.len(), 3, "the 1-byte table property rolls");
+        let option = stage_unpartitioned_with_overrides(
+            &table,
+            batches,
+            serial(),
+            &overrides(None, None, Some(512 * 1024 * 1024)),
+        )
+        .await
+        .expect("option stages");
+        assert_eq!(option.len(), 1, "the option takes the table property's place");
+    }
+
+    #[tokio::test]
+    async fn option_codec_gzip_footer_without_table_property() {
+        let warehouse = TempDir::new().expect("tmp");
+        let catalog = memory_catalog(&warehouse).await;
+        let ident = create_table(&catalog, "t_optcodec", HashMap::new()).await;
+        let table = catalog.load_table(&ident).await.expect("load");
+        let files = stage_unpartitioned_with_overrides(
+            &table,
+            vec![numeric_batch(100)],
+            serial(),
+            &overrides(Some("gzip"), None, None),
+        )
+        .await
+        .expect("gzip stages");
+        assert!(!files.is_empty());
+        let compression =
+            footer_compression(&catalog, &ident, files[0].file_path()).await;
+        assert!(
+            matches!(compression, Compression::GZIP(_)),
+            "the codec option must reach the footer; got {compression:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn option_gzip_level_refuses_like_spark() {
+        let warehouse = TempDir::new().expect("tmp");
+        let catalog = memory_catalog(&warehouse).await;
+        let ident = create_table(&catalog, "t_gziplevel", HashMap::new()).await;
+        let table = catalog.load_table(&ident).await.expect("load");
+        let error = stage_unpartitioned_with_overrides(
+            &table,
+            vec![numeric_batch(10)],
+            serial(),
+            &overrides(Some("gzip"), Some("1"), None),
+        )
+        .await
+        .expect_err("gzip plus a level must refuse");
+        assert!(
+            error.to_string().contains("compression-level"),
+            "refusal must name the option: {error}"
+        );
+    }
+
+    #[tokio::test]
+    async fn option_append_commit_carries_summary_extras() {
+        let warehouse = TempDir::new().expect("tmp");
+        let catalog = memory_catalog(&warehouse).await;
+        let ident = create_table(&catalog, "t_summary", HashMap::new()).await;
+        let table = catalog.load_table(&ident).await.expect("load");
+        let extra = vec![("run_id".to_string(), "abc-123".to_string())];
+        append_with_statement_options(
+            &catalog,
+            &table,
+            vec![numeric_batch(10)],
+            &extra,
+            &WriterStagingOverrides::none(),
+            serial(),
+            None,
+        )
+        .await
+        .expect("option append commits");
+        let table = catalog.load_table(&ident).await.expect("reload");
+        let summary = table
+            .metadata()
+            .current_snapshot()
+            .expect("snapshot")
+            .summary()
+            .additional_properties
+            .clone();
+        assert_eq!(summary.get("run_id").map(String::as_str), Some("abc-123"));
+        assert!(
+            summary.contains_key(crate::write::merge::OPERATION_ID_PROP),
+            "the engine stamp stays: {summary:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn option_commit_append_with_summary_is_one_snapshot() {
+        let warehouse = TempDir::new().expect("tmp");
+        let catalog = memory_catalog(&warehouse).await;
+        let ident = create_table(&catalog, "t_onesnap", HashMap::new()).await;
+        let table = catalog.load_table(&ident).await.expect("load");
+        let staged = stage_unpartitioned_with_overrides(
+            &table,
+            vec![numeric_batch(10)],
+            serial(),
+            &WriterStagingOverrides::none(),
+        )
+        .await
+        .expect("stage");
+        commit_append_with_summary(&catalog, &table, staged, &[], None)
+            .await
+            .expect("commit");
+        let table = catalog.load_table(&ident).await.expect("reload");
+        assert!(
+            table.metadata().current_snapshot().is_some(),
+            "the commit must stamp a snapshot"
+        );
+    }
+
+    #[test]
+    fn summary_extras_keep_engine_stamp() {
+        let (operation_id, summary) =
+            summary_with_extras(&[("run_id".to_string(), "x".to_string())]);
+        assert_eq!(summary.get("run_id").map(String::as_str), Some("x"));
+        assert_eq!(
+            summary
+                .get(crate::write::merge::OPERATION_ID_PROP)
+                .map(String::as_str),
+            Some(operation_id.as_str())
+        );
+    }
+
+    #[tokio::test]
+    async fn isolation_override_none_disables_validations() {
+        let warehouse = TempDir::new().expect("tmp");
+        let catalog = memory_catalog(&warehouse).await;
+        let ident = create_table(&catalog, "t_iso", HashMap::new()).await;
+        let table = catalog.load_table(&ident).await.expect("load");
+        let isolation = isolation_with_override(&table, Some("none"))
+            .expect("none parses");
+        assert!(isolation.is_none());
+        let isolation = isolation_with_override(&table, Some("SERIALIZABLE"))
+            .expect("case-insensitive");
+        assert!(matches!(
+            isolation,
+            Some(crate::write::overwrite::OverwriteIsolation::Serializable)
+        ));
+        let error = isolation_with_override(&table, Some("bogus")).expect_err("bogus");
+        assert!(
+            error.to_string().contains("Invalid isolation level: bogus"),
+            "Spark-shaped refusal: {error}"
+        );
+    }
+
+    #[test]
+    fn target_size_parse_rejects_non_numeric_like_spark() {
+        let error =
+            crate::write::writer_props::parse_target_file_size("abc").expect_err("abc");
+        assert!(
+            error.to_string().contains("target-file-size-bytes"),
+            "refusal must name the option: {error}"
+        );
+        assert_eq!(
+            crate::write::writer_props::parse_target_file_size("65536").expect("number"),
+            65536
         );
     }
 }

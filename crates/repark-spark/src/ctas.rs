@@ -145,6 +145,7 @@ pub(crate) async fn execute_ctas(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     ctas: Ctas,
+    options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     // Use catalog_handle so postgres (read-only) targets get P11, not a bare "unknown catalog".
     let catalog = catalog_handle(catalogs, &ctas.catalog)?;
@@ -205,6 +206,7 @@ pub(crate) async fn execute_ctas(
             partition_spec,
             format_version,
             query,
+            options,
         )
         .await;
     }
@@ -246,12 +248,53 @@ pub(crate) async fn execute_ctas(
     };
 
     // STREAM the SELECT into the staged table (WG-2 bounded memory).
-    let data_files = write_ctas_query(ctx, staged.table(), query).await?;
-    staged
-        .add_data_files(data_files)
-        .commit(catalog.as_ref())
-        .await
-        .map_err(iceberg_err)?;
+    if options.is_empty() {
+        let data_files = write_ctas_query(ctx, staged.table(), query).await?;
+        staged
+            .add_data_files(data_files)
+            .commit(catalog.as_ref())
+            .await
+            .map_err(iceberg_err)?;
+    } else {
+        // Options ride a publish-empty plus an owned append so the summary lands.
+        let staging = options.staging_overrides();
+        let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
+        let mut stream = query.execute_stream().await?;
+        let staged_table = staged.table().clone();
+        let data_files = if staged_table
+            .metadata()
+            .default_partition_spec()
+            .is_unpartitioned()
+        {
+            repark_iceberg::write::stage_unpartitioned_stream_with_overrides(
+                &staged_table,
+                stream,
+                concurrency,
+                &staging,
+            )
+            .await?
+        } else {
+            repark_iceberg::write::stage_partitioned_stream_with_overrides(
+                &staged_table,
+                &mut stream,
+                &staging,
+            )
+            .await?
+        };
+        let published = staged
+            .add_data_files(Vec::new())
+            .commit(catalog.as_ref())
+            .await
+            .map_err(iceberg_err)?;
+        repark_iceberg::write::commit_append_with_summary(
+            &catalog,
+            &published,
+            data_files,
+            &options.snapshot_extra,
+            None,
+        )
+        .await?;
+    }
 
     let namespace = namespace_schema_name(&ctas.namespace);
     reregister(ctx, catalog.clone(), &ctas.catalog, &namespace).await?;
@@ -423,6 +466,7 @@ pub(crate) async fn execute_ctas_service_managed(
     partition_spec: Option<UnboundPartitionSpec>,
     format_version: iceberg::spec::FormatVersion,
     query: DataFrame,
+    options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     // Location deliberately not set: the service assigns it.
     let creation = TableCreation::builder()
@@ -439,10 +483,40 @@ pub(crate) async fn execute_ctas_service_managed(
 
     // From here the table EXISTS in the catalog: any failure below aborts by dropping it.
     let write_result: Result<()> = async {
-        let data_files = write_ctas_query(ctx, &table, query).await?;
-        if !data_files.is_empty() {
-            repark_iceberg::write::commit_append(catalog, &table, data_files).await?;
+        if options.is_empty() {
+            let data_files = write_ctas_query(ctx, &table, query).await?;
+            if !data_files.is_empty() {
+                repark_iceberg::write::commit_append(catalog, &table, data_files).await?;
+            }
+            return Ok(());
         }
+        let staging = options.staging_overrides();
+        let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
+        let mut stream = query.execute_stream().await?;
+        let data_files = if table.metadata().default_partition_spec().is_unpartitioned() {
+            repark_iceberg::write::stage_unpartitioned_stream_with_overrides(
+                &table,
+                stream,
+                concurrency,
+                &staging,
+            )
+            .await?
+        } else {
+            repark_iceberg::write::stage_partitioned_stream_with_overrides(
+                &table,
+                &mut stream,
+                &staging,
+            )
+            .await?
+        };
+        repark_iceberg::write::commit_append_with_summary(
+            catalog,
+            &table,
+            data_files,
+            &options.snapshot_extra,
+            None,
+        )
+        .await?;
         Ok(())
     }
     .await;

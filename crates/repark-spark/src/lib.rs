@@ -40,6 +40,7 @@ mod time_window;
 mod truncate;
 pub mod type_table;
 mod window_range;
+pub(crate) mod write_options;
 mod write_to_branch;
 
 // --- Router entrypoints.
@@ -88,7 +89,7 @@ pub(crate) use ctas::{
 pub(crate) use describe_show::{
     DescribeNamespace, describe_namespace_batch, quoted_namespace, show_namespace_rows,
 };
-pub(crate) use insert_overwrite::execute_insert_overwrite;
+pub(crate) use insert_overwrite::{execute_append_with_options, execute_insert_overwrite};
 #[cfg(test)]
 pub(crate) use insert_overwrite::{logical_plan_has_unsafe_cast, tighten_batch_nullability};
 pub(crate) use namespace_ddl::{

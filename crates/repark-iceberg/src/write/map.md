@@ -522,6 +522,16 @@ repark-core's error map.
   `tooHighDeleteRatio`. The setting is read from the fork rather than restated, so a fork
   policy change carries. Registry `RDF-1`.
   pins: rdf-1-position-delete-bounds/C-002
+- `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** per-statement DataFrame
+  write-option staging and commits. `WriterStagingOverrides` (codec/level/target-size,
+  option over table property) feeds override-capable builders that mirror the
+  `merge/mod.rs` unpartitioned and `append.rs` fanout constructions against the same
+  fork actions; the four `*_with_summary` commits merge validated `snapshot-property.*`
+  extras into the summary; `isolation_with_override` shares the table-property grammar.
+  The mirror exists because the canonicals live in size-capped files the gate holds
+  exact — a fork bump re-verifies both copies (see `writer_props.rs` duties). The
+  option-free paths never call here.
+  pins: ice-write-options-1/C-001, C-002, C-003
 
 ## I want to...
 
@@ -535,6 +545,7 @@ repark-core's error map.
 | Cap concurrent Iceberg file writers (session conf) | `repark.write.max-concurrent-files` via `concurrency.rs` |
 | Send one partition value to one writer before a CTAS write (Spark's `hash` distribution) | `distribution.rs` (`hash_distribution`) |
 | Parquet compression codec (table property) | `writer_props.rs` |
+| Stage/commit an option-carrying write (summary extras + overrides) | `write_options.rs` |
 | Parquet statistics properties for a position-delete file | `writer_props.rs` (`position_delete_writer_properties_for`) |
 | Change MERGE INTO semantics | [merge/map.md](merge/map.md) |
 | Identity DELETE/UPDATE (subquery `WHERE` and RP-9 r2 plain `WHERE`) | `predicate_dml.rs` (`execute_predicate_dml`) |

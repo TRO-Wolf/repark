@@ -9,8 +9,9 @@ use repark_core::CatalogRegistry;
 
 use crate::{
     DmlSubqueryVerb, MorDmlKind, alter, alter_write_order, build_ctas, call, column_move,
-    create_table, delete_target_object_name, describe_show, execute_create_namespace, execute_ctas,
-    execute_drop_namespace, execute_drop_table, execute_insert_overwrite, execute_truncate, merge,
+    create_table, delete_target_object_name, describe_show, execute_append_with_options,
+    execute_create_namespace, execute_ctas, execute_drop_namespace, execute_drop_table,
+    execute_insert_overwrite, execute_truncate, merge,
     metadata_tables, object_name_from_table_with_joins, parse_single_normalized,
     passthrough_after_p11, ref_ddl, refuse_dml_subquery_predicate,
     refuse_mor_unpartitioned_multi_spec_dml, refuse_multi_statement_sql,
@@ -39,11 +40,14 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     sql: &str,
     read_only_catalogs: &HashSet<String, S>,
 ) -> Result<DataFrame> {
+    // Extract the facade OPTIONS clause before any rewrite or canonicalization can drop it.
+    let (sql_without_options, write_options) =
+        crate::write_options::extract_statement_write_options(sql)?;
     // Canonicalize once at the Spark SQL front door so later tokenizers cannot process escapes again.
     // Translate downstream parser locations back to the caller's SQL before returning an error.
     let verbatim =
         crate::spark_literals::escaped_verbatim_from_options(ctx.state().config().options());
-    let canonical = crate::spark_literals::canonicalize_verbatim(sql, verbatim)?;
+    let canonical = crate::spark_literals::canonicalize_verbatim(&sql_without_options, verbatim)?;
     let canonical_sql = canonical.as_ref();
     // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
@@ -77,6 +81,7 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
         original_for_locations,
         &mut pinned,
         &mut lineage_pins,
+        &write_options,
     )
     .await;
     lineage_pins.release(ctx);
@@ -92,6 +97,7 @@ async fn execute_time_travelled(
     original_for_locations: Option<&str>,
     pinned: &mut time_travel::PinnedViews,
     lineage_pins: &mut repark_core::LineagePins,
+    write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     // Iceberg time travel is not modelled by Databricks-dialect sqlparser.
     let sql_after_tt: std::borrow::Cow<'_, str> = if time_travel::sql_has_time_travel(sql) {
@@ -115,7 +121,7 @@ async fn execute_time_travelled(
         Some(rewritten) => std::borrow::Cow::Owned(rewritten),
         None => sql_after_tt,
     };
-    let result = execute_inner(ctx, catalogs, sql_storage.as_ref()).await;
+    let result = execute_inner(ctx, catalogs, sql_storage.as_ref(), write_options).await;
     if let Some(original) = original_for_locations
         .and_then(|original| original_sql_for_locations(original, sql, sql_storage.as_ref()))
     {
@@ -142,6 +148,7 @@ async fn execute_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
@@ -157,6 +164,7 @@ async fn execute_inner(
     }
     // If we can't parse it to a single statement we recognise, let DataFusion have it.
     let Some((statement, partitioning)) = parse_single_normalized(sql)? else {
+        write_options.refuse_if_non_empty("this INSERT form")?;
         return execute_unparsable_fallthrough(ctx, catalogs, sql).await;
     };
     // G15.
@@ -164,7 +172,13 @@ async fn execute_inner(
     crate::refuse_declared_function_in_statement(&statement)?;
     match &statement {
         Statement::CreateTable(create) if create.query.is_some() => {
-            execute_ctas(ctx, catalogs, build_ctas(create, &partitioning)?).await
+            execute_ctas(
+                ctx,
+                catalogs,
+                build_ctas(create, &partitioning)?,
+                write_options,
+            )
+            .await
         }
         // Column-def CREATE TABLE (schema-only staged create — I5).
         Statement::CreateTable(create) => {
@@ -173,6 +187,7 @@ async fn execute_inner(
             {
                 return Err(DataFusionError::Plan(message));
             }
+            write_options.refuse_if_non_empty("CREATE TABLE without AS SELECT")?;
             create_table::execute_create_table(ctx, catalogs, create, &partitioning).await
         }
         Statement::Drop {
@@ -209,10 +224,13 @@ async fn execute_inner(
         }
         // INSERT OVERWRITE: probe and validate before an empty-source wipe.
         Statement::Insert(insert) if insert.overwrite => {
-            execute_insert_overwrite(ctx, catalogs, sql, insert).await
+            execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await
         }
         // Non-overwrite INSERT would otherwise passthrough to DF and miss P11 for pg targets.
         Statement::Insert(insert) => {
+            if !write_options.is_empty() {
+                return execute_append_with_options(ctx, catalogs, insert, write_options).await;
+            }
             let refusal = match &insert.table {
                 TableObject::TableName(name) => {
                     refuse_read_only_dml_table_sql(catalogs, &name.to_string())

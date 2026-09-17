@@ -35,6 +35,11 @@ pins: rp-4-fork-repin/C-005, C-006
   refuses `V3-COW-1`.
   SQP-1: the front door canonicalizes escapes once and
   translates downstream parser locations back to the caller's SQL.
+  **ICE-WRITE-OPTIONS-1 (2026-09-17):** the front door extracts the facade
+  `OPTIONS(...)` clause before any rewrite, threads the validated set through
+  `execute_time_travelled` into `execute_inner`, and refuses non-empty sets on the
+  non-Iceberg arms so options are never silently dropped.
+  pins: ice-write-options-1/C-001, C-004
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); MATCHED / NOT MATCHED / NOT MATCHED BY SOURCE (DML-A);
   in-module tests (MG-2: M2 Oracle sub-predicates, M3
@@ -46,6 +51,10 @@ pins: rp-4-fork-repin/C-005, C-006
   Named-ref targets go through `commit_overwrite_replace_all_to` / partition `_to`.
   Empty overwrite onto a branch wipes via `commit_overwrite_replace_all_to`, not a 4-part
   self-scan.
+  **ICE-WRITE-OPTIONS-1 (2026-09-17):** `execute_append_with_options` (option-carrying
+  plain INSERT stages serially on the owned path with the merged summary); the overwrite
+  family threads `StatementWriteOptions` through staging (option-free arms keep the
+  canonical staging byte-identical) into the `*_with_summary` commits.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
   pins: rp-5-fork-repin/C-004
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
@@ -62,6 +71,14 @@ pins: rp-4-fork-repin/C-005, C-006
   refuse `CANNOT_FIND_DATA`; matching honours `spark.sql.caseSensitive`
   (matching plus projection live in `plan_name_projection`).
   pins: ice-rtas-byname-1/C-007, C-008, C-009, C-010
+  pins: ice-write-options-1/C-001, C-003
+- `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** the facade `OPTIONS(...)`
+  clause recognizer: quote/comment/paren-aware extraction (INSERT and CREATE
+  [OR REPLACE] TABLE only; every other form keeps the SQL byte-identical), last-wins
+  validation (snapshot-property strip-and-lowercase, parquet honour, orc/avro/bogus
+  refusals, option-over-table-property numerics/codec/isolation, lenient booleans,
+  Spark-shaped refusal texts), in-module units.
+  pins: ice-write-options-1/C-001, C-002, C-003, C-004
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
@@ -126,6 +143,9 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
+  **ICE-WRITE-OPTIONS-1 (2026-09-17):** option-carrying CTAS stages with overrides,
+  publishes the staged table empty, then appends with the merged summary (one snapshot).
+  pins: ice-write-options-1/C-001, C-003
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the service-managed abort arm skips `drop_table`
   and returns the original error unwrapped when `is_commit_state_unknown` fires — a
   possibly-landed create is never abort-dropped, and the class + `operation_id` reach the
