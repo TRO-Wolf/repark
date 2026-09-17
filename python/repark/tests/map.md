@@ -2786,11 +2786,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `INSERT … BY NAME` on the Spark door against the live-PySpark-4.1.2 cells
   (generator re-derives them; the live tier replays the generator and checks
   the fixture). Pins cover by-name reorder, the case-insensitive match, the
-  missing-nullable NULL fill, Spark's extra/duplicate
-  `INSERT_COLUMN_ARITY_MISMATCH` texts, the positional control, the `BY NAME
-  VALUES` `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS` text, whole-table
-  `INSERT OVERWRITE … BY NAME`, and the native-door steer; the four RTAS
-  snapshot-operation pins stay `xfail(strict)` on fork ask F-RTAS-OPS-1.
+  missing-nullable NULL fill, the count-first error rule
+  (`TOO_MANY_DATA_COLUMNS`, case-insensitive `AMBIGUOUS_COLUMN_NAME`,
+  `EXTRA_COLUMNS`), the positional control, the `BY NAME VALUES` text, the
+  column-list `PARSE_SYNTAX_ERROR`, the eight-cell `USING parquet` matrix,
+  whole-table `INSERT OVERWRITE … BY NAME`, and the native-door steer; the
+  four RTAS snapshot-operation pins stay `xfail(strict)` on fork ask
+  F-RTAS-OPS-1.
   pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004, C-005, C-006
 - **octo-extra C3: format= refuse surface**
 

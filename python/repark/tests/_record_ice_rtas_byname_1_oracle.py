@@ -49,11 +49,44 @@ BYNAME_SEQUENCE: tuple[tuple[str, str], ...] = (
         "INSERT INTO sc.ns.bn BY NAME SELECT 'E' AS first_name, 'F' AS first_name,"
         " 'G' AS last_name, 6 AS n",
     ),
+    (
+        "by_name_case_dup",
+        "INSERT INTO sc.ns.bn BY NAME SELECT 'a' AS first_name, 'b' AS FIRST_NAME,"
+        " 'c' AS last_name",
+    ),
     ("positional", "INSERT INTO sc.ns.bn SELECT * FROM swapped"),
     ("by_name_values", "INSERT INTO sc.ns.bn BY NAME VALUES ('x', 'y', 7)"),
     (
+        "by_name_column_list",
+        "INSERT INTO sc.ns.bn (n, first_name) BY NAME SELECT 9 AS N, 'Q' AS FIRST_NAME",
+    ),
+    (
         "overwrite_by_name",
         "INSERT OVERWRITE sc.ns.bn BY NAME SELECT 'O' AS last_name, 'P' AS first_name, 8 AS n",
+    ),
+)
+
+PARQUET_SEQUENCE: tuple[tuple[str, str], ...] = (
+    ("pq_by_name", "INSERT INTO sc.ns.pq BY NAME SELECT * FROM swapped"),
+    ("pq_subset", "INSERT INTO sc.ns.pq BY NAME SELECT 'Bo' AS first_name, 2 AS n"),
+    (
+        "pq_case",
+        "INSERT INTO sc.ns.pq BY NAME SELECT 'Di' AS FIRST_NAME, 'Y' AS Last_Name, 5 AS N",
+    ),
+    (
+        "pq_extra",
+        "INSERT INTO sc.ns.pq BY NAME SELECT 'Cy' AS first_name, 4 AS extra",
+    ),
+    (
+        "pq_dup",
+        "INSERT INTO sc.ns.pq BY NAME SELECT 'E' AS first_name, 'F' AS first_name,"
+        " 'G' AS last_name, 6 AS n",
+    ),
+    ("pq_values", "INSERT INTO sc.ns.pq BY NAME VALUES ('x', 'y', 7)"),
+    ("pq_positional", "INSERT INTO sc.ns.pq SELECT * FROM swapped"),
+    (
+        "pq_overwrite",
+        "INSERT OVERWRITE sc.ns.pq BY NAME SELECT 'O' AS last_name, 'P' AS first_name, 8 AS n",
     ),
 )
 
@@ -100,6 +133,27 @@ def record_byname(spark: Any) -> dict[str, Any]:
             cells[label] = {
                 "sql": sql,
                 "rows": _rows_of(spark, "SELECT first_name, last_name, n FROM sc.ns.bn"),
+            }
+        except Exception as error:
+            cells[label] = {
+                "sql": sql,
+                "error_class": type(error).__name__,
+                "error": str(error),
+            }
+    return cells
+
+
+def record_parquet(spark: Any) -> dict[str, Any]:
+    spark.sql(
+        "CREATE TABLE sc.ns.pq (first_name STRING, last_name STRING, n INT) USING parquet"
+    )
+    cells: dict[str, Any] = {}
+    for label, sql in PARQUET_SEQUENCE:
+        try:
+            spark.sql(sql)
+            cells[label] = {
+                "sql": sql,
+                "rows": _rows_of(spark, "SELECT first_name, last_name, n FROM sc.ns.pq"),
             }
         except Exception as error:
             cells[label] = {
@@ -175,6 +229,7 @@ def record_all(warehouse: Path) -> dict[str, Any]:
         spark.sql("CREATE NAMESPACE IF NOT EXISTS sc.ns")
         return {
             "insert_by_name": record_byname(spark),
+            "parquet_by_name": record_parquet(spark),
             "rtas_ops": record_rtas(spark),
         }
     finally:
@@ -201,7 +256,7 @@ def _normalized(cell: Any) -> Any:
 def check_against_fixture(derived: dict[str, Any]) -> list[str]:
     expected = json.loads(FIXTURE.read_text(encoding="utf-8"))
     mismatches: list[str] = []
-    for section in ("insert_by_name", "rtas_ops"):
+    for section in ("insert_by_name", "parquet_by_name", "rtas_ops"):
         for cell, want in expected[section].items():
             got = derived[section].get(cell)
             if _normalized(got) != _normalized(want):
@@ -209,7 +264,7 @@ def check_against_fixture(derived: dict[str, Any]) -> list[str]:
                     f"{section}.{cell}:\n  want={json.dumps(want, default=str)[:600]}"
                     f"\n  got ={json.dumps(got, default=str)[:600]}"
                 )
-    for section in ("insert_by_name", "rtas_ops"):
+    for section in ("insert_by_name", "parquet_by_name", "rtas_ops"):
         for cell in derived[section]:
             if cell not in expected[section]:
                 mismatches.append(f"{section}.{cell}: extra cell not in fixture")

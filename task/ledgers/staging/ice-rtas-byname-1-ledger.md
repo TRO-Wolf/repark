@@ -86,12 +86,30 @@ rtas_empty_twice: []                   # Spark: ['delete', 'delete']
 
 ### C-004 scope (measured 2026-09-17)
 
-PROVEN — scoped to Iceberg. The Spark door creates only Iceberg tables:
-`CREATE TABLE … USING parquet` is refused before any write path, and a
-parquet file registered with `read.parquet` is a read-only view, so there is
-no non-Iceberg table kind the SQL door can INSERT into. The BY NAME rewrite
-resolves through the target's planned schema, so a future writable table kind
-inherits it; until one exists there is nothing else to pin.
+PROVEN — `USING parquet` takes the same rewrite with one different error
+cell. The first scope note was wrong: the Spark door DOES create parquet
+tables and positional `INSERT INTO` a `USING parquet` table commits (probed
+2026-09-17 on the unfixed tree). The extra Spark probes (`/tmp/pq_probe.py`,
+`/tmp/pq_probe2.py`, `/tmp/pq_probe3.py`, folded into the generator as the
+`parquet_by_name` section) show the parquet matrix equals the Iceberg matrix
+except one cell: a SHORTER source with an unmapped name answers
+`INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS` on parquet where the longer
+Iceberg `by_name_extra` answers `TOO_MANY_DATA_COLUMNS`. The `/tmp/pq_probe3.py`
+disambiguator (`first_name, bogus1, bogus2, bogus3` into three columns →
+TOO_MANY) proves the rule is provider-independent and count-first:
+
+1. more source columns than target columns → `TOO_MANY_DATA_COLUMNS`
+   (all source names listed);
+2. else a case-insensitive duplicate source name →
+   `INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME` (names the first
+   spelling; measured case-insensitive by the new `by_name_case_dup` cell);
+3. else an unmapped source name → `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS`
+   (unmapped names listed).
+
+`INSERT INTO t (columns) BY NAME` is a Spark `PARSE_SYNTAX_ERROR`
+(`Syntax error at or near 'BY'`, SQLSTATE 42601 — new `by_name_column_list`
+cell), so the rewrite must refuse that combination at parse altitude, never
+strip-and-run it positionally.
 
 ### C-005 — the RTAS operation is fork-owned
 
@@ -144,12 +162,16 @@ view `swapped` = `SELECT 'Smith' AS last_name, 'Ann' AS first_name, 1 AS n`):
 (`SELECT 'Bo' AS first_name, 2 AS n`) → missing `last_name` NULL-filled;
 `by_name_extra` → `[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] …
 SQLSTATE 21S01`; `by_name_case` (`FIRST_NAME`, `Last_Name`, `N`) →
-`[('Di','Y',5)]`; `by_name_dup` (two `first_name`) → same
-TOO_MANY_DATA_COLUMNS; `positional` stays positional
-(`[('Smith','Ann',1)]`); `by_name_values` →
+`[('Di','Y',5)]`; `by_name_dup` (two `first_name`, four source columns) → same
+TOO_MANY_DATA_COLUMNS; `by_name_case_dup` (`first_name` + `FIRST_NAME`, three
+source columns) → `INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME`;
+`positional` stays positional (`[('Smith','Ann',1)]`); `by_name_values` →
 `[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] … extra columns
-col1, col2, col3 … SQLSTATE KD000`; `overwrite_by_name` →
-`INSERT OVERWRITE … BY NAME …` leaves `[('P','O',8)]`.
+col1, col2, col3 … SQLSTATE KD000`; `by_name_column_list`
+(`(n, first_name) BY NAME`) → Spark `PARSE_SYNTAX_ERROR` at `BY`;
+`overwrite_by_name` → `INSERT OVERWRITE … BY NAME …` leaves `[('P','O',8)]`.
+`parquet_by_name` repeats the matrix on a `USING parquet` table (same rows;
+`pq_extra` answers EXTRA_COLUMNS by the count-first rule).
 `rtas_ops`: `ctas_then_rtas` → `[append, overwrite]`; `rtas_new_table` →
 `[overwrite]`; `rtas_empty_new` → `[delete]`; `rtas_empty_twice` →
 `[delete, delete]`, with the full Java summaries in the fixture. Spark basis:

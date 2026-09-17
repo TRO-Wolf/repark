@@ -55,6 +55,11 @@
    "error_class": "AnalysisException",
    "error": "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `sc`.`ns`.`bn`, the reason is too many data columns:\nTable columns: `first_name`, `last_name`, `n`.\nData columns: `first_name`, `first_name`, `last_name`, `n`. SQLSTATE: 21S01"
   },
+  "by_name_case_dup": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME SELECT 'a' AS first_name, 'b' AS FIRST_NAME, 'c' AS last_name",
+   "error_class": "AnalysisException",
+   "error": "[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME] Cannot write incompatible data for the table `sc`.`ns`.`bn`: Ambiguous column name in the input data `first_name`. SQLSTATE: KD000"
+  },
   "positional": {
    "sql": "INSERT INTO sc.ns.bn SELECT * FROM swapped",
    "rows": [
@@ -85,8 +90,110 @@
    "error_class": "AnalysisException",
    "error": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] Cannot write incompatible data for the table `sc`.`ns`.`bn`: Cannot write extra columns `col1`, `col2`, `col3`. SQLSTATE: KD000"
   },
+  "by_name_column_list": {
+   "sql": "INSERT INTO sc.ns.bn (n, first_name) BY NAME SELECT 9 AS N, 'Q' AS FIRST_NAME",
+   "error_class": "ParseException",
+   "error": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'BY'. SQLSTATE: 42601 (line 1, pos 37)\n\n== SQL ==\nINSERT INTO sc.ns.bn (n, first_name) BY NAME SELECT 9 AS N, 'Q' AS FIRST_NAME\n-------------------------------------^^^\n"
+  },
   "overwrite_by_name": {
    "sql": "INSERT OVERWRITE sc.ns.bn BY NAME SELECT 'O' AS last_name, 'P' AS first_name, 8 AS n",
+   "rows": [
+    [
+     "P",
+     "O",
+     8
+    ]
+   ]
+  }
+ },
+ "parquet_by_name": {
+  "pq_by_name": {
+   "sql": "INSERT INTO sc.ns.pq BY NAME SELECT * FROM swapped",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ]
+   ]
+  },
+  "pq_subset": {
+   "sql": "INSERT INTO sc.ns.pq BY NAME SELECT 'Bo' AS first_name, 2 AS n",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ],
+    [
+     "Bo",
+     null,
+     2
+    ]
+   ]
+  },
+  "pq_case": {
+   "sql": "INSERT INTO sc.ns.pq BY NAME SELECT 'Di' AS FIRST_NAME, 'Y' AS Last_Name, 5 AS N",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ],
+    [
+     "Bo",
+     null,
+     2
+    ],
+    [
+     "Di",
+     "Y",
+     5
+    ]
+   ]
+  },
+  "pq_extra": {
+   "sql": "INSERT INTO sc.ns.pq BY NAME SELECT 'Cy' AS first_name, 4 AS extra",
+   "error_class": "AnalysisException",
+   "error": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] Cannot write incompatible data for the table `sc`.`ns`.`pq`: Cannot write extra columns `extra`. SQLSTATE: KD000"
+  },
+  "pq_dup": {
+   "sql": "INSERT INTO sc.ns.pq BY NAME SELECT 'E' AS first_name, 'F' AS first_name, 'G' AS last_name, 6 AS n",
+   "error_class": "AnalysisException",
+   "error": "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `sc`.`ns`.`pq`, the reason is too many data columns:\nTable columns: `first_name`, `last_name`, `n`.\nData columns: `first_name`, `first_name`, `last_name`, `n`. SQLSTATE: 21S01"
+  },
+  "pq_values": {
+   "sql": "INSERT INTO sc.ns.pq BY NAME VALUES ('x', 'y', 7)",
+   "error_class": "AnalysisException",
+   "error": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] Cannot write incompatible data for the table `sc`.`ns`.`pq`: Cannot write extra columns `col1`, `col2`, `col3`. SQLSTATE: KD000"
+  },
+  "pq_positional": {
+   "sql": "INSERT INTO sc.ns.pq SELECT * FROM swapped",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ],
+    [
+     "Bo",
+     null,
+     2
+    ],
+    [
+     "Di",
+     "Y",
+     5
+    ],
+    [
+     "Smith",
+     "Ann",
+     1
+    ]
+   ]
+  },
+  "pq_overwrite": {
+   "sql": "INSERT OVERWRITE sc.ns.pq BY NAME SELECT 'O' AS last_name, 'P' AS first_name, 8 AS n",
    "rows": [
     [
      "P",
@@ -104,11 +211,11 @@
      "engine-version": "4.1.2",
      "added-data-files": "3",
      "total-equality-deletes": "0",
-     "app-id": "local-1789620131286",
+     "app-id": "local-1789620617988",
      "added-records": "2000",
      "total-records": "2000",
      "app-name": "ic-rtas-byname-1-oracle",
-     "spark.app.id": "local-1789620131286",
+     "spark.app.id": "local-1789620617988",
      "changed-partition-count": "3",
      "engine-name": "spark",
      "manifests-created": "1",
@@ -128,11 +235,11 @@
      "engine-version": "4.1.2",
      "added-data-files": "5",
      "total-equality-deletes": "0",
-     "app-id": "local-1789620131286",
+     "app-id": "local-1789620617988",
      "added-records": "100",
      "total-records": "100",
      "app-name": "ic-rtas-byname-1-oracle",
-     "spark.app.id": "local-1789620131286",
+     "spark.app.id": "local-1789620617988",
      "changed-partition-count": "5",
      "engine-name": "spark",
      "manifests-created": "1",
@@ -154,11 +261,11 @@
      "engine-version": "4.1.2",
      "added-data-files": "1",
      "total-equality-deletes": "0",
-     "app-id": "local-1789620131286",
+     "app-id": "local-1789620617988",
      "added-records": "10",
      "total-records": "10",
      "app-name": "ic-rtas-byname-1-oracle",
-     "spark.app.id": "local-1789620131286",
+     "spark.app.id": "local-1789620617988",
      "changed-partition-count": "1",
      "engine-name": "spark",
      "manifests-created": "1",
@@ -179,10 +286,10 @@
     "summary": {
      "engine-version": "4.1.2",
      "total-equality-deletes": "0",
-     "app-id": "local-1789620131286",
+     "app-id": "local-1789620617988",
      "total-records": "0",
      "app-name": "ic-rtas-byname-1-oracle",
-     "spark.app.id": "local-1789620131286",
+     "spark.app.id": "local-1789620617988",
      "changed-partition-count": "0",
      "engine-name": "spark",
      "manifests-created": "0",
@@ -202,10 +309,10 @@
     "summary": {
      "engine-version": "4.1.2",
      "total-equality-deletes": "0",
-     "app-id": "local-1789620131286",
+     "app-id": "local-1789620617988",
      "total-records": "0",
      "app-name": "ic-rtas-byname-1-oracle",
-     "spark.app.id": "local-1789620131286",
+     "spark.app.id": "local-1789620617988",
      "changed-partition-count": "0",
      "engine-name": "spark",
      "manifests-created": "0",
@@ -223,10 +330,10 @@
     "summary": {
      "engine-version": "4.1.2",
      "total-equality-deletes": "0",
-     "app-id": "local-1789620131286",
+     "app-id": "local-1789620617988",
      "total-records": "0",
      "app-name": "ic-rtas-byname-1-oracle",
-     "spark.app.id": "local-1789620131286",
+     "spark.app.id": "local-1789620617988",
      "changed-partition-count": "0",
      "engine-name": "spark",
      "manifests-created": "0",
