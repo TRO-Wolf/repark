@@ -10,6 +10,8 @@ pub(crate) mod distribution;
 pub(crate) mod file_order;
 pub mod file_scoped_rewrite;
 pub mod format_version;
+#[cfg(test)]
+mod hadoop_stale_commit;
 /// Shared Spark/DF `quote_ident` + path-escape needles (CQ-006/007).
 pub mod idents;
 /// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over `LogicalPlan::Dml`.

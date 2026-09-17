@@ -254,6 +254,39 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   doors, including RePark DML on adopted live tables. The bare-decimal-literal
   BACKLOG pins hold today's loud needles against the recorded Spark answers.
   pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — **ICE-HADOOP-VN-1
+  (2026-09-17):** the stale Hadoop `vN` writer raises loud and loses nothing. The
+  committed `fixtures/torture/data/ice_hadoop_vn_1` Spark-written v2 table (one seed
+  row) is materialized at its baked-in path under a directory lock and adopted at
+  `v2` by two memory catalogs; catalog one's INSERT lands `v3`, and the stale
+  INSERT, MERGE, DELETE and UPDATE each raise base `PySparkException` with the
+  `CatalogCommitConflicts`-leading message while `v3` bytes and the metadata
+  listing stay fixed. The winner's rows equal the oracle's `rows_after_conc`; the
+  stale catalog's read stays seed-only (pinned stale, same class as Spark's
+  cached-table staleness); the stale handle stays wedged-loud; a fresh handle
+  registered at `v3` commits `v4` and reads all rows; `writeTo().append()` and
+  `saveAsTable(append)` raise the same conflict. Live (`REPARK_PARITY_LIVE=1`): the
+  Spark-first shape (Spark commits `v3`, stale RePark raises, Spark reads its row
+  and commits on), the conc cross-read, and the recovery cross-read against
+  [ice_hadoop_vn_1_spark_oracle.json](ice_hadoop_vn_1_spark_oracle.json).
+  Round 2 (2026-09-17): the stale-replace split-brain is pinned exactly on both doors
+  (SQL `CREATE OR REPLACE` lands `[(99, 'rtas')]`, `writeTo().replace()` /
+  `.createOrReplace()` land their rows, each replace minting two fresh-uuid metadata
+  files with `v3` bytes intact), the typed-conflict target rides
+  `xfail(strict=True)` pins, and the live mirror shows Spark's own replace continuing
+  the version chain (`v4`, new rows only) while RePark stays stale. Round 2 L-01 pins
+  every registry sentence: same-name re-register refuses, DROP on the stale handle
+  deletes the pointer file, the planted orphan wedges loud then clears, and the frozen
+  Spark scan-forward keys plus the 400k race count are read offline and re-derived live.
+  Round 2 L-03 funnels every stale-writer door through one helper (class, message
+  prefix, `v3` in the message, winner bytes per writer) and adds stale INSERT OVERWRITE,
+  TRUNCATE, ALTER SET TBLPROPERTIES and saveAsTable(overwrite); `writeTo().overwrite`
+  refuses declared on stale and fresh handles alike, pinned as the pre-existing refusal.
+  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [_record_ice_hadoop_vn_1.py](_record_ice_hadoop_vn_1.py) —
+  the explicit-run recorder behind the fixture and the oracle JSON above (JVM +
+  combined interpreter; invocation in its docstring).
+  pins: ice-hadoop-vn-1/C-007
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
