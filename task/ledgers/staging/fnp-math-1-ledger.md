@@ -273,3 +273,21 @@ under both ANSI settings; the kernel's Rust test beside
 `string/format_number.rs` passes (`string::` suite 11 passed, mask lands
 next); comment-ban grep over the diff empty; `functions_expr.py` baseline
 ratchets 2195 → 2192 in `check_lib_py.py` and the CAP-1 mirror.
+
+## Mask slice (run 18a) — `mask` evidence
+
+Kernel `crates/repark-functions/src/string/mask.rs` (new submodule of
+`string.rs`), registered via `string::functions()`, facade arm through the
+door-converged list + `dispatch_spark.rs`, new facade `mask` in
+`functions_math.py` (Spark `upperChar`/`lowerChar`/`digitChar`/`otherChar`
+names; missing replacement → `X`/`x`/`n`/keep default materialized as `lit`
+args, so the display already reads Spark's names) + `INSTALL_NAMES`.
+`test_fnp_math_1.py -k mask` → all fixture cells green on both doors under
+both ANSI settings; the kernel's Rust tests beside `string/mask.rs` pass.
+The 4-column SQL cell runs each recorded item through its own query
+(`_select_items`, `_assert_o245_single_column` in the test file): Spark
+answers duplicate column names (columns 0 and 3 both render
+`mask(masked, X, x, n, NULL)`) where DataFusion requires unique projection
+names; values, names, types and rows stay pinned per column. Missing-vs-NULL
+replacement split (NULL keeps the class, missing takes the default) is pinned
+by the kernel's Rust tests.

@@ -810,6 +810,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `format_number` grouping renderer (HALF_EVEN digit rounding, grouping commas;
   registered through `string::functions()`). Row detail lives in
   [`string/map.md`](string/map.md). pins: fnp-math-1/C-002, C-003
+- `string/mask.rs` — **FNP-MATH-1 mask slice (2026-09-16, run 18a):** Spark `mask`
+  character-class masker (missing replacement → `X`/`x`/`n`/keep default, NULL
+  replacement keeps the class; registered through `string::functions()`). Row
+  detail lives in [`string/map.md`](string/map.md). pins: fnp-math-1/C-002, C-003
 - `spark_reverse.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `reverse`
   (overwrites the string-only DataFusion kernel): arrays reverse element order with the
   element type, `containsNull` and nullability kept; strings reverse by character; untyped

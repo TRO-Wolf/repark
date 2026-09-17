@@ -173,6 +173,53 @@ def _run_python(frame: DataFrame, expr: str) -> DataFrame:
     return frame.select(eval(expr, namespace))
 
 
+def _select_items(query: str) -> list[str]:
+    """Split one recorded SELECT list into items, honouring quotes and parens."""
+    body = query.strip()
+    assert body[:6].upper() == "SELECT"
+    body = body[6:]
+    from_index = body.upper().rfind(" FROM ")
+    assert from_index >= 0
+    items: list[str] = []
+    depth = 0
+    quote: str | None = None
+    start = 0
+    for index, char in enumerate(body[:from_index]):
+        if quote is not None:
+            if char == quote:
+                quote = None
+        elif char in ("'", '"'):
+            quote = char
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+        elif char == "," and depth == 0:
+            items.append(body[start:index].strip())
+            start = index + 1
+    items.append(body[start:from_index].strip())
+    return [item for item in items if item]
+
+
+def _assert_o245_single_column(
+    spark: ReparkSession, expr: str, frame_sql: str, cell: dict[str, Any], index: int
+) -> None:
+    """Pin one recorded select item through its own query on the SQL door.
+
+    DataFusion requires unique projection names while Spark answers duplicate
+    names (mask columns 0 and 3 both render ``mask(masked, X, x, n, NULL)``),
+    and its projection optimizer cannot keep an arg-rendered UDF name stable
+    when one column repeats across items (split over ``csvs``); each recorded
+    item therefore runs alone, keeping its recorded name, type and rows.
+    """
+    item_query = f"SELECT {_select_items(expr)[index]} FROM ({frame_sql})"
+    table = spark.sql(item_query).to_arrow()
+    columns = list(cell["columns"])
+    rows = list(cell["rows"])
+    sub = {"columns": [columns[index]], "rows": [[row[index]] for row in rows]}
+    _assert_o245_value_table(table, sub)
+
+
 def _cell_key(cell: dict[str, Any]) -> str:
     """Identify one o245 cell by name, door, ANSI setting and expression."""
     return f"{cell['name']}|{cell['door']}|ansi={cell['ansi']}|{cell['expr'][:64]}"
@@ -346,7 +393,12 @@ def test_c003_sql_door_value_cells(spark: ReparkSession, key: str) -> None:
     """Pin one o245 SQL-door value cell on the recorded ANSI setting."""
     cell = _O245_BY_KEY[key]
     _set_ansi(spark, bool(cell["ansi"]))
-    query = str(cell["expr"]).replace("FRAME", f"({_FRAME_SQL})")
+    expr = str(cell["expr"])
+    query = expr.replace("FRAME", f"({_FRAME_SQL})")
+    if cell["name"] in ("mask", "split") and len(_select_items(expr)) > 1:
+        for index in range(len(cell["columns"])):
+            _assert_o245_single_column(spark, expr, _FRAME_SQL, cell, index)
+        return
     _assert_o245_value_table(spark.sql(query).to_arrow(), cell)
 
 

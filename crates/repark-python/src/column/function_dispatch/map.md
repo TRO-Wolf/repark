@@ -58,6 +58,8 @@ unit — so a new family gets a child module and the parent's default arm falls 
   over `spark_hash::call_hash`. pins: fnp-math-1/C-002, C-003, C-005
   **FNP-MATH-1 step 5 (2026-09-16, run 18a):** `format_number` joins the converged arms
   (2 args) over `string::call_format_number`. pins: fnp-math-1/C-002, C-003
+  **FNP-MATH-1 mask slice (2026-09-16, run 18a):** `mask` joins the converged arms
+  (1–5 args) over `string::call_mask`. pins: fnp-math-1/C-002, C-003
 
 ## Pointers
 

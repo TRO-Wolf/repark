@@ -13,6 +13,9 @@ Unit tests for [`string.rs`](../string.rs), beside the kernels they pin.
 - [`format_number.rs`](format_number.rs) — Spark `format_number` grouping renderer
   (HALF_EVEN digit rounding, grouping commas, `d` decimals; double/decimal/integral
   inputs, NULL stays NULL) with its Rust tests. pins: fnp-math-1/C-002, C-003
+- [`mask.rs`](mask.rs) — Spark `mask` character-class masker (upper/lower/digit/other
+  replacements with `X`/`x`/`n`/keep defaults; NULL replacement keeps the class;
+  NULL in → NULL out) with its Rust tests. pins: fnp-math-1/C-002, C-003
 
 ## Pointers
 

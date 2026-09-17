@@ -5875,4 +5875,9 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `array<int>` (Spark's recorded element type; the replay had `array<bigint>`,
   which hashes differently per element); the 12-column SQL hash SELECT goes
   `xfail(strict)` on the run-18c `-0.0` planner seam (registry EX-FN-7-RESID-1).
+  **FNP-MATH-1 mask slice (2026-09-16, run 18a):** multi-item mask/split SQL cells run each
+  recorded item through its own query (`_select_items`, `_assert_o245_single_column`):
+  DataFusion requires unique projection names where Spark answers duplicates, and
+  its projection optimizer cannot keep an arg-rendered UDF name stable across
+  repeated columns; values, names, types and rows stay pinned per column.
   pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
