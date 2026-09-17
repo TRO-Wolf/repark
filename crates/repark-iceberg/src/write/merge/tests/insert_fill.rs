@@ -5,8 +5,8 @@ use datafusion::error::Result;
 use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::io::FileIO;
 use iceberg::spec::{
-    FormatVersion, Literal, NestedField, PrimitiveType, Schema as IcebergSchema, SortOrder,
-    TableMetadataBuilder, Type, UnboundPartitionSpec,
+    FormatVersion, Literal, NestedField, PrimitiveType, Schema as IcebergSchema, SortOrder, Struct,
+    StructType, TableMetadataBuilder, Type, UnboundPartitionSpec,
 };
 use iceberg::table::Table;
 use iceberg::{NamespaceIdent, TableIdent};
@@ -97,6 +97,28 @@ fn insert_projection_fills_write_default() {
         insert_projection_with_defaults(&insert(&["name"], &["s.name"]), &write_schema, &defaults)
             .unwrap_err();
     assert!(err.to_string().contains("required column `id`"));
+}
+
+#[test]
+fn column_defaults_ignores_struct_default() {
+    let current = IcebergSchema::builder()
+        .with_schema_id(1)
+        .with_fields(vec![
+            NestedField::required(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+            NestedField::optional(
+                2,
+                "s",
+                Type::Struct(StructType::new(vec![
+                    NestedField::optional(3, "x", Type::Primitive(PrimitiveType::Int)).into(),
+                ])),
+            )
+            .with_write_default(Literal::Struct(Struct::empty()))
+            .into(),
+        ])
+        .build()
+        .expect("schema");
+    let defaults = column_defaults(&current).expect("defaults");
+    assert!(!defaults.has_any());
 }
 
 #[test]

@@ -128,8 +128,9 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 - `insert_fill.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** in-memory `Table`
   builder plus the write-default fill pins: `insert_projection_with_defaults` fills an
   omitted defaulted column and still refuses a missing required one, and `insert_sql`
-  carries the fill into the NOT MATCHED text.
-  pins: ice-v3-write-default-1/C-003, C-005
+  carries the fill into the NOT MATCHED text. `column_defaults_ignores_struct_default`
+  pins the DECLARED boundary: only primitive literals fill.
+  pins: ice-v3-write-default-1/C-003, C-005, C-009
 - `occ_partitions.rs` — **RP-7 (2026-09-02):** one battery through the PRODUCTION
   `commit_row_delta_kind_with_partitions` variant on a partitioned v3 table with a real partition
   map: the commit lands, and a stale `validate_from_snapshot` pin is still rejected with the
