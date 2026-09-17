@@ -316,6 +316,32 @@ fixed here.
   clean on the touched crate, and the panic-ban `--lib` run adds zero new findings.
 - `python3 scripts/sync_map_md.py --check`: 279 maps clean after the round-2 map edits.
 
+## Round 3 (remediate Grok 4.6 critic-logic findings, 2026-09-17)
+
+**Branch:** `feat/ice-rdf-options-1` head `a1534558` (rebased onto RePark main pinning fork
+`75da2b58`). Local override points at fork main `d73b914a` (RDF code identical to round
+2 plus NaN-pushdown and Hadoop-vN fixes). Findings: `/tmp/oc-worker/jc-rv/rdf-rp-logic-1-report.md`
+(L-01..L-07); perf `/tmp/oc-worker/jc-rv/rdf-rp-perf-1-report.md` (P-01..P-04, all P3).
+**Model:** muse-spark-1.3-contributor.
+
+### Round-3 baseline (fork main, release native rebuilt, no round-3 edits)
+
+`pytest python/repark/tests/test_ice_rdf_options_1.py -q`: `65 passed, 1 skipped, 11
+xfailed` in 349 s — identical to round 2, so the fork merge (`75da2b58` pin /
+`d73b914a` override) introduces no drift on this surface.
+
+### Round-3 proposition ledger
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| L-01 | Negative min/max sizes take Spark's signed-long band semantics. | New oracle cells `neg_min_file_size` / `neg_max_file_size` + Rust + Python pins. | OPEN | — |
+| L-02 | RPD byte pins compare against vanished delete files. | `_delete_file_sizes` + green RPD-zero cells. | OPEN | — |
+| L-03 | Live rows pinned green outside every value xfail. | New rows pins over the 7 cells. | OPEN | — |
+| L-04 | `removed/failed_delete_files_count` compared on every cell. | New delete-count pins; dangling 1-vs-0 under DANGLE-2. | OPEN | — |
+| L-05 | Forced-plan RPD cells recorded, or ledger why-impossible. | Generator cells `rpd_target_small_forced` / `rpd_max_group_size_forced`. | OPEN | — |
+| L-06 | RPD semantic-invalid values report IAE before Unsupported. | Reordered `parse_rpd_options` + Rust + Python pins. | OPEN | — |
+| L-07 | NULL map key wins over the legacy dangling flag. | Presence check + pin. | OPEN | — |
+
 ## Hand-back
 
 (TBD.)
