@@ -4820,7 +4820,13 @@ the pin rather than obeying it.
   `Int(1)`; the partition accessor, `PartitionKey::new`, the scan-planning tuples that key the
   delete-file index, and `ReplacePartitions`' drop-set comparison all worked under `long`. After
   the fix each promotes the tuple to the current partition type (Java reads manifests through the
-  table's current specs) and every recorded case answers Spark.
+  table's current specs) and every recorded case answers Spark. The inspect tables
+  needed the same promotion one step further (run-19a critic finding L-01, fork
+  F-PROMOTE-READ-1): `t.partitions` / `t.files` / `t.entries` refused `DataInvalid
+  => partition literal Int(1) does not match its partition field type` on a
+  mixed-era identity-source table instead of answering. After the fix they answer
+  Spark's Long-typed rows — one merged partition row per value (`[7, 2, 2, 0]`
+  for the cross-era `p = 7`) — with `int64` Arrow types, v2 and v3.
 - **Apache Spark** — filters, deletes, updates and replaces the promoted partition.
   *(oracle: recorded — as ICE-PROMOTE-READ-1; the dynamic overwrite is recorded on both the SQL
   spelling and `writeTo(t).overwritePartitions()`.)*
@@ -4828,7 +4834,9 @@ the pin rather than obeying it.
   `…::test_dataframe_door_matches_spark` over `read_partition/*` (identity, bucket(4),
   truncate(10) × v2/v3 × single/mixed) and `dml_partition/*` (DELETE / UPDATE by a non-partition
   and a partition predicate, MERGE on `p`, static and dynamic overwrite × v2/v3 × CoW/MoR ×
-  single/mixed); fork `crates/iceberg/src/spec/promotion_tests.rs`
+  single/mixed) and over `inspect/*` (aliased `partitions` / `files` / `entries`
+  projections plus the `p = 7` read on both doors; the bare-name arm is EX-COL-2
+  BACKLOG); fork `crates/iceberg/src/spec/promotion_tests.rs`
   (`partition_accessor_reads_pre_promotion_literals_under_the_promoted_type`,
   `partition_key_new_promotes_a_pre_promotion_tuple`,
   `promoted_identity_partition_source_filters_and_plans_long_partitions`,
@@ -8264,6 +8272,13 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-17 Column-a batch, struct
   `r<a string, b double>` over rows `("x",2.0)` / `("y",3.0)`.)*
 - **Pin** — `python/repark/tests/test_examples_column_a.py::test_get_field_bare_projection_name`
+- **Note 2026-09-17 (ICE-PROMOTE-READ-1 C-015).** The same default-name divergence
+  is measured on the SQL door over Iceberg metadata tables: `SELECT partition.p
+  FROM t.partitions` on a `(id INT, p INT, s STRING) PARTITIONED BY (p)` table
+  names the column `ice_promote_read_1.ns.t$partitions.partition[p]` in repark
+  and `p` in Spark (values and the `int64` type agree on both). The
+  inspect-table pins therefore alias every nested projection (`partition.p AS
+  p`); the aliased reads are Spark-equal row for row.
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-17 measurement. The example keeps the
   aliased read, where the engines agree; `getField` teaches its bare-name arm only after repark
   projects `r.a`.
