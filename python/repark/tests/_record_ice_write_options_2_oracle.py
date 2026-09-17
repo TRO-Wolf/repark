@@ -106,6 +106,11 @@ def _frame(spark: Any, n: int = 4) -> Any:
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out", default=None)
+    out_path = Path(parser.parse_args().out) if parser.parse_args().out else None
     warehouse = tempfile.mkdtemp(prefix="ice-write-opts2-oracle-")
     spark = _spark(warehouse)
     try:
@@ -241,11 +246,13 @@ def main() -> None:
             .mode("append").saveAsTable(f"{t}.p2_v1app")
         ))
 
-        out = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        base = out_path if out_path is not None and out_path.exists() else FIXTURE
+        dest = out_path or FIXTURE
+        out = json.loads(base.read_text(encoding="utf-8"))
         out["cells"].extend(CELLS)
         out["meta"]["probes"] = "P2 follow-up 2026-09-17"
-        FIXTURE.write_text(json.dumps(out, indent=2, sort_keys=True), encoding="utf-8")
-        print(f"appended {len(CELLS)} cells to {FIXTURE}", flush=True)
+        dest.write_text(json.dumps(out, indent=2, sort_keys=True), encoding="utf-8")
+        print(f"appended {len(CELLS)} cells to {dest}", flush=True)
     finally:
         spark.stop()
         shutil.rmtree(warehouse, ignore_errors=True)

@@ -111,6 +111,11 @@ def _frame(spark: Any, n: int = 4) -> Any:
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out", default=None)
+    out_path = Path(parser.parse_args().out or (Path(__file__).resolve().parent / "ice_write_options_1_spark_oracle.json"))
     warehouse = tempfile.mkdtemp(prefix="ice-write-opts-oracle-")
     spark = _spark(warehouse)
     try:
@@ -314,9 +319,8 @@ def main() -> None:
             },
             "cells": CELLS,
         }
-        dest = Path(__file__).resolve().parent / "ice_write_options_1_spark_oracle.json"
-        dest.write_text(json.dumps(out, indent=2, sort_keys=True), encoding="utf-8")
-        print(f"wrote {dest} ({len(CELLS)} cells)", flush=True)
+        out_path.write_text(json.dumps(out, indent=2, sort_keys=True), encoding="utf-8")
+        print(f"wrote {out_path} ({len(CELLS)} cells)", flush=True)
     finally:
         spark.stop()
         shutil.rmtree(warehouse, ignore_errors=True)

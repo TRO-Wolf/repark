@@ -54,11 +54,54 @@ reach a commit there); ORC/Avro Iceberg writers (DECLARED refusal, no writer bui
 
 ## 1. Red-first record (base `79e328f2`, release native, 2026-09-17)
 
-TODO: paste base-tree red output of `test_ice_write_options_1.py`.
+`test_ice_write_options_1.py -k "not live"`: 23 failed, 11 passed. Every
+snapshot-property cell fails with `KeyError: 'run_id'`; every refusal cell fails
+(no error raised; e.g. orc writes parquet); `test_no_option_warning` fails on the
+old process-once `UserWarning`. The 11 passes are the accept-paths that the old
+ignore-everything behavior satisfies trivially (unknown keys, parquet default,
+check options, distribution hash/none, isolation-on-append, per-snapshot
+non-carry, SQL-door absence, overwrite(cond) refusal). First failure:
+
+    assert summary["run_id"] == "abc-123" → KeyError: 'run_id'
 
 ## 2. Spark oracle recording (PySpark 4.1.2, Iceberg 1.11.0, 2026-09-17)
 
-TODO: generator run output, fixture path, per-cell observations.
+`ice_write_options_1_spark_oracle.json`, 43 cells, one JVM per record driver
+(`SPARK_LOCAL_IP=127.0.0.1`, `spark.driver.memory=2g`, Hadoop catalog, jar
+`iceberg-spark-runtime-4.1_2.13-1.11.0` matching `_oracle_pins.py`). Measured:
+
+- C-001: `snapshot-property.<k>` lands prefix-stripped and LOWER-cased
+  (`SNAPSHOT-PROPERTY.UPPER_KEY` → `upper_key`); empty suffix commits an `""` key.
+  Honoured on append, two props at once, dynamic overwrite, createOrReplace CTAS,
+  V1 saveAsTable CTAS, V1 insertInto, V1 append-mode saveAsTable, and
+  `overwrite(condition)`. Per-snapshot (absent on the next plain commit).
+- C-002: `write-format` parquet/orc/avro (any case) writes that format; `bogus`
+  → `IllegalArgumentException: Invalid file format: bogus`.
+- C-003: `target-file-size-bytes` honoured (layout); `abc` → `NumberFormatException`.
+  `compression-codec=gzip` honoured; lone `compression-level` and `zstd`+level
+  accepted; `gzip`+integer level → `SparkException` wrapping Hadoop
+  `IllegalArgumentException: No enum constant ...ZlibCompressor.CompressionLevel.1`.
+  `distribution-mode` none/hash accepted, `bogus` → `IllegalArgumentException:
+  Invalid distribution mode: bogus`. `fanout-enabled` true/false/garbage all
+  accepted. `isolation-level=serializable` on overlapping dynamic overwrite →
+  `ValidationException` (conflict); `snapshot` commits; `bogus` →
+  `IllegalArgumentException: Invalid isolation level: bogus`; on plain append the
+  level is accepted and ignored. `check-nullability=false` and `check-ordering`
+  true/false/default all commit; a null into a NOT NULL field fails in Spark's own
+  `NOT_NULL_ASSERT_VIOLATION` regardless of the option.
+- C-004: unknown keys commit silently with no summary trace.
+- C-006: `spark.conf.set("spark.sql.iceberg.write.snapshot-property.run_id", ...)`
+  does NOT reach the SQL INSERT summary. No SQL-door channel exists.
+
+R-19c-3 CORRECTION (2026-09-17): the brief's fork-ask premise is wrong at the
+pinned rev. `RollingFileWriterBuilder::new(inner, target_file_size, ...)` exists
+and the data-file builders already pass the parsed table property
+(`merge/mod.rs`, `append.rs` fanout funnel). No fork change is needed: the option
+overrides the table property in RePark code with Spark's precedence. There is no
+F-TARGET-FILE-SIZE-1 and no F-WRITE-OPTIONS-1: every touched fork action
+(FastAppend, OverwriteFiles, ReplacePartitions, staged create/replace publish)
+already carries what RePark needs — the staged publish path is avoided for
+option-carrying CTAS (publish empty, then `commit_append` with the summary).
 
 ## 3. Implementation (Rust)
 

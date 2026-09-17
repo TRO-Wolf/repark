@@ -352,6 +352,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   SQL-door conf probe. Offline pins read the fixture; the live tier re-runs the
   drivers and checks the fixture.
   pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-006
+- [test_ice_write_options_1.py](test_ice_write_options_1.py) —
+  **ICE-WRITE-OPTIONS-1 (2026-09-17):** the DataFrame write-option pins over the
+  fixture above (snapshot properties on append / dynamic overwrite / CTAS / V1
+  paths with Spark's strip-and-lowercase rule, write-format parquet honour plus
+  orc/avro/bogus refusals, per-key option dispositions, unknown-key silence,
+  warning absence, SQL-door absence); the live tier re-runs both record drivers
+  and checks the fixture.
+  pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
