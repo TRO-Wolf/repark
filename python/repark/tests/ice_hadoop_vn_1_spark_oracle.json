@@ -1,0 +1,147 @@
+{
+  "provenance": {
+    "spark_version": "4.1.2",
+    "session_timezone": "UTC",
+    "gav": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+    "note": "oracle: PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (exact Spark-minor match)",
+    "recorded": "2026-09-17",
+    "recorder": "python/repark/tests/_record_ice_hadoop_vn_1.py"
+  },
+  "seed_rows": [
+    [
+      1,
+      "seed"
+    ]
+  ],
+  "rows_after_conc": [
+    [
+      1,
+      "seed"
+    ],
+    [
+      2,
+      "rp-cat1"
+    ]
+  ],
+  "spark_rows_after_conc": [
+    [
+      1,
+      "seed"
+    ],
+    [
+      2,
+      "rp-cat1"
+    ]
+  ],
+  "rows_after_recovery": [
+    [
+      1,
+      "seed"
+    ],
+    [
+      2,
+      "rp-cat1"
+    ],
+    [
+      4,
+      "rp-recovered"
+    ]
+  ],
+  "rows_after_conc2": [
+    [
+      1,
+      "seed"
+    ],
+    [
+      2,
+      "spark"
+    ]
+  ],
+  "rows_after_conc2_second": [
+    [
+      1,
+      "seed"
+    ],
+    [
+      2,
+      "spark"
+    ],
+    [
+      4,
+      "spark-again"
+    ]
+  ],
+  "repark_stale_commit": {
+    "class": "repark.errors.PySparkException",
+    "message_starts_with": "CatalogCommitConflicts => Cannot commit table metadata to",
+    "message_contains": "version file already exists",
+    "per_writer": {
+      "insert": {
+        "class": "repark.errors.PySparkException",
+        "message": "CatalogCommitConflicts => Cannot commit table metadata to /tmp/repark-ice-hadoop-vn-1/ns/conc/metadata/v3.metadata.json: version file already exists (/tmp/repark-ice-hadoop-vn-1/ns/conc/metadata/v3.metadata.json), source: PreconditionFailed => Cannot create /tmp/repark-ice-hadoop-vn-1/ns/conc/metada"
+      },
+      "merge": {
+        "class": "repark.errors.PySparkException",
+        "message": "CatalogCommitConflicts => Cannot commit table metadata to /tmp/repark-ice-hadoop-vn-1/ns/conc/metadata/v3.metadata.json: version file already exists (/tmp/repark-ice-hadoop-vn-1/ns/conc/metadata/v3.metadata.json), source: PreconditionFailed => Cannot create /tmp/repark-ice-hadoop-vn-1/ns/conc/metada"
+      },
+      "delete": {
+        "class": "repark.errors.PySparkException",
+        "message": "CatalogCommitConflicts => Cannot commit table metadata to /tmp/repark-ice-hadoop-vn-1/ns/conc/metadata/v3.metadata.json: version file already exists (/tmp/repark-ice-hadoop-vn-1/ns/conc/metadata/v3.metadata.json), source: PreconditionFailed => Cannot create /tmp/repark-ice-hadoop-vn-1/ns/conc/metada"
+      },
+      "update": {
+        "class": "repark.errors.PySparkException",
+        "message": "CatalogCommitConflicts => Cannot commit table metadata to /tmp/repark-ice-hadoop-vn-1/ns/conc/metadata/v3.metadata.json: version file already exists (/tmp/repark-ice-hadoop-vn-1/ns/conc/metadata/v3.metadata.json), source: PreconditionFailed => Cannot create /tmp/repark-ice-hadoop-vn-1/ns/conc/metada"
+      }
+    },
+    "conc2": {
+      "class": "repark.errors.PySparkException",
+      "message": "CatalogCommitConflicts => Cannot commit table metadata to /tmp/repark-ice-hadoop-vn-1/ns/conc/metadata/v3.metadata.json: version file already exists (/tmp/repark-ice-hadoop-vn-1/ns/conc/metadata/v3.metadata.json), source: PreconditionFailed => Cannot create /tmp/repark-ice-hadoop-vn-1/ns/conc/metada"
+    }
+  },
+  "spark_stale_commit": {
+    "raises": false,
+    "planted_next_version_insert": {
+      "class": "COMMITTED",
+      "message": ""
+    },
+    "note": "Live Spark 4.1.2 lists the metadata directory and continues at the next free version, so neither a racing commit nor a planted next-version file raises a PySpark-visible error. Java's CommitFailedException needs a true simultaneous-commit race."
+  },
+  "spark_replace_after_repark": {
+    "spark_rows": [
+      [
+        100,
+        "spark-rtas"
+      ]
+    ],
+    "repark_stale_rows": [
+      [
+        1,
+        "seed"
+      ],
+      [
+        2,
+        "rp-cat1"
+      ]
+    ],
+    "versions": [
+      "v1.metadata.json",
+      "v2.metadata.json",
+      "v3.metadata.json",
+      "v4.metadata.json"
+    ]
+  },
+  "spark_race_400k": {
+    "outcome": "committed",
+    "row_count": 400002,
+    "repark_row": [
+      400001,
+      "repark-race"
+    ],
+    "seed_row": [
+      1,
+      "seed"
+    ],
+    "spark_rows": 400000
+  },
+  "fixture": "python/repark-parity/fixtures/torture/data/ice_hadoop_vn_1"
+}

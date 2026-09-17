@@ -84,7 +84,7 @@ pins: rp-4-fork-repin/C-005, C-006
   `REF-3` BACKLOG, `REF-4` FIXED.
   pins: ref-branch-tag-wap/C-003, C-004, C-006, C-007
   pins: rp-5-fork-repin/C-004
-- `call.rs` — ten maintenance procedures: nine maintenance calls plus `register_table`. Each
+- `call.rs` — fourteen maintenance procedures: thirteen maintenance calls plus `register_table`. Each
   preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
   `dry_run` to true, and refuses shared fallback roots; on a `ServiceManagedLocation`
   catalog (the `s3tables` kind) it refuses before any IO — table buckets answer
@@ -115,6 +115,11 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   pins: orphan-s3tables-1/C-001, C-002, C-004, C-005
+- `call/branch_ops.rs` — **ICE-BRANCH-OPS-1 (2026-09-17):** `fast_forward`,
+  `cherrypick_snapshot`, `set_current_snapshot`, `rollback_to_timestamp` (Spark 4.1.2
+  parity, oracle-pinned in `python/repark/tests/branch_ops_1_truth.json`).
+  Details: [call/map.md](call/map.md).
+  pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the service-managed abort arm skips `drop_table`

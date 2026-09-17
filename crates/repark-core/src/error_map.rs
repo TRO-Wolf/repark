@@ -16,6 +16,7 @@ pub(crate) enum EngineErrorKind<'a> {
     Analysis,
     /// `DataFusionError::NotImplemented`.
     Unsupported,
+    IllegalArgument,
     /// A peeled `External` wrapping a live [`iceberg::Error`], classified by its `kind()`.
     Iceberg(&'a iceberg::Error),
     CommitStateUnknown(&'a CommitStateUnknownError),
@@ -35,6 +36,7 @@ pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorK
                 return EngineErrorKind::Analysis;
             }
             DataFusionError::NotImplemented(_) => return EngineErrorKind::Unsupported,
+            DataFusionError::Configuration(_) => return EngineErrorKind::IllegalArgument,
             DataFusionError::External(inner) => {
                 return match inner.downcast_ref::<CommitStateUnknownError>() {
                     Some(stamped) => EngineErrorKind::CommitStateUnknown(stamped),
@@ -78,6 +80,7 @@ pub fn engine_err(err: DataFusionError) -> Error {
         EngineErrorKind::Parse => Error::Parse(err.to_string()),
         EngineErrorKind::Analysis => Error::Analysis(err.to_string()),
         EngineErrorKind::Unsupported => Error::NotImplemented(err.to_string()),
+        EngineErrorKind::IllegalArgument => Error::IllegalArgument(err.to_string()),
         EngineErrorKind::Iceberg(iceberg_error) => classify_iceberg_error(iceberg_error),
         EngineErrorKind::CommitStateUnknown(stamped) => Error::CommitStateUnknown {
             message: stamped.inner().to_string(),

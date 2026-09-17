@@ -24,6 +24,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
   `risk_tier: standard`. Branch `docs/registry-16b-1`.
   pins: registry-16b-1/C-001, C-002, C-003
+- [ice-branch-ops-1-ledger.md](ice-branch-ops-1-ledger.md) —
+  **ICE-BRANCH-OPS-1 (2026-09-17), in flight:** `fast_forward`, `cherrypick_snapshot`,
+  `set_current_snapshot` and `rollback_to_timestamp` as RePark-side procedure wiring over
+  the fork's `ManageSnapshots` / `Transaction::cherry_pick` (no fork change), with a
+  recorded Spark oracle (`branch_ops_1_truth.json`), red-first pins on both doors, and
+  registry rows REF-5–REF-8. `risk_tier: standard`. Branch `fix/ice-branch-ops-1`.
+  pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [df-rust-3-ledger.md](df-rust-3-ledger.md) —
   **DF-RUST-3 (2026-09-15), in flight:** `DataFrame.freqItems`,
   `DataFrameStatFunctions.freqItems`, and `DataFrame.transpose` implemented Rust-first —
@@ -269,6 +276,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   maintenance guide's S3 Tables paragraph and the parity registry row land with it (C-005).
   `risk_tier: standard`. Branch `fix/orphan-s3tables-1`.
   pins: orphan-s3tables-1/C-001, C-002, C-003, C-004, C-005
+- [ice-hadoop-vn-1-ledger.md](ice-hadoop-vn-1-ledger.md) —
+  **ICE-HADOOP-VN-1 (2026-09-17), in flight:** the stale Hadoop `vN` writer raises
+  loud and loses nothing — fork #286 exclusive-creates `vN` names
+  (`75da2b58`, in-tree via RP-21); the RePark side pins the `conc` / `conc2`
+  shapes, the re-register recovery, the Spark stale-commit oracle, and the
+  DataFrame-door stale writers, plus registry row ICE-HADOOP-VN-1.
+  `risk_tier: standard`. Branch `fix/ice-hadoop-vn-1`.
+  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [perf-describe-1-ledger.md](perf-describe-1-ledger.md) —
   **PERF-DESCRIBE-1 (2026-09-11), in flight:** `describe`/`summary` aggregate in one
   pass — one `AggregateExec` computes count/avg/stddev/min/max per column over the

@@ -11,6 +11,8 @@ pub(crate) mod distribution;
 pub(crate) mod file_order;
 pub mod file_scoped_rewrite;
 pub mod format_version;
+#[cfg(test)]
+mod hadoop_stale_commit;
 /// Shared Spark/DF `quote_ident` + path-escape needles (CQ-006/007).
 pub mod idents;
 /// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over `LogicalPlan::Dml`.
@@ -42,7 +44,8 @@ pub mod writer_props;
 pub use commit_error::{CommitStateUnknownError, commit_err, is_commit_state_unknown};
 pub use snapshot_refs::{
     SnapshotRefKind, SnapshotRefRetention, create_or_replace_snapshot_ref, create_snapshot_ref,
-    create_snapshot_ref_with_retention, drop_snapshot_ref, replace_snapshot_ref,
+    create_snapshot_ref_with_retention, drop_snapshot_ref, list_snapshot_refs,
+    replace_snapshot_ref,
 };
 pub use testing_support::testing_create_ref;
 

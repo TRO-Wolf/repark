@@ -254,6 +254,39 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   doors, including RePark DML on adopted live tables. The bare-decimal-literal
   BACKLOG pins hold today's loud needles against the recorded Spark answers.
   pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — **ICE-HADOOP-VN-1
+  (2026-09-17):** the stale Hadoop `vN` writer raises loud and loses nothing. The
+  committed `fixtures/torture/data/ice_hadoop_vn_1` Spark-written v2 table (one seed
+  row) is materialized at its baked-in path under a directory lock and adopted at
+  `v2` by two memory catalogs; catalog one's INSERT lands `v3`, and the stale
+  INSERT, MERGE, DELETE and UPDATE each raise base `PySparkException` with the
+  `CatalogCommitConflicts`-leading message while `v3` bytes and the metadata
+  listing stay fixed. The winner's rows equal the oracle's `rows_after_conc`; the
+  stale catalog's read stays seed-only (pinned stale, same class as Spark's
+  cached-table staleness); the stale handle stays wedged-loud; a fresh handle
+  registered at `v3` commits `v4` and reads all rows; `writeTo().append()` and
+  `saveAsTable(append)` raise the same conflict. Live (`REPARK_PARITY_LIVE=1`): the
+  Spark-first shape (Spark commits `v3`, stale RePark raises, Spark reads its row
+  and commits on), the conc cross-read, and the recovery cross-read against
+  [ice_hadoop_vn_1_spark_oracle.json](ice_hadoop_vn_1_spark_oracle.json).
+  Round 2 (2026-09-17): the stale-replace split-brain is pinned exactly on both doors
+  (SQL `CREATE OR REPLACE` lands `[(99, 'rtas')]`, `writeTo().replace()` /
+  `.createOrReplace()` land their rows, each replace minting two fresh-uuid metadata
+  files with `v3` bytes intact), the typed-conflict target rides
+  `xfail(strict=True)` pins, and the live mirror shows Spark's own replace continuing
+  the version chain (`v4`, new rows only) while RePark stays stale. Round 2 L-01 pins
+  every registry sentence: same-name re-register refuses, DROP on the stale handle
+  deletes the pointer file, the planted orphan wedges loud then clears, and the frozen
+  Spark scan-forward keys plus the 400k race count are read offline and re-derived live.
+  Round 2 L-03 funnels every stale-writer door through one helper (class, message
+  prefix, `v3` in the message, winner bytes per writer) and adds stale INSERT OVERWRITE,
+  TRUNCATE, ALTER SET TBLPROPERTIES and saveAsTable(overwrite); `writeTo().overwrite`
+  refuses declared on stale and fresh handles alike, pinned as the pre-existing refusal.
+  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [_record_ice_hadoop_vn_1.py](_record_ice_hadoop_vn_1.py) —
+  the explicit-run recorder behind the fixture and the oracle JSON above (JVM +
+  combined interpreter; invocation in its docstring).
+  pins: ice-hadoop-vn-1/C-007
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
@@ -1023,13 +1056,35 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   branch/tag retention and the refused doors — both `WITH SNAPSHOT RETENTION` halves at the
   oracle's values, the reversed order refusing, write-to-branch landing on the named branch
   (RP-5 / REF-1 FIXED), write-to-tag refusing Spark-shaped, and WAP declared
-  (`fast_forward` / `publish_changes` / `cherrypick_snapshot` and the `spark.wap.*` confs all
-  fail closed). The `branch_`/`tag_` READ selectors resolve the ref here too — standalone and on
-  a DML statement's read side (`INSERT … SELECT`, `MERGE … USING`, a `DELETE` predicate
+  (`publish_changes` and the `spark.wap.*` confs fail closed; `fast_forward` and
+  `cherrypick_snapshot` moved to `test_ice_branch_ops_1.py` when ICE-BRANCH-OPS-1
+  implemented them). The `branch_`/`tag_` READ selectors resolve the ref here too — standalone
+  and on a DML statement's read side (`INSERT … SELECT`, `MERGE … USING`, a `DELETE` predicate
   subquery). A tag-named write TARGET refuses Spark-shaped; a missing branch refuses
   naming it and does not create the branch.
   pins: ref-branch-tag-wap/C-002, C-003, C-004, C-005, C-007
   pins: rp-5-fork-repin/C-004
+- [test_ice_branch_ops_1.py](test_ice_branch_ops_1.py) +
+  [branch_ops_1_truth.json](branch_ops_1_truth.json) +
+  [_record_branch_ops_1.py](_record_branch_ops_1.py) — **ICE-BRANCH-OPS-1 (2026-09-17):**
+  the recorded-oracle pins for `fast_forward`, `cherrypick_snapshot`, `set_current_snapshot`
+  and `rollback_to_timestamp` (live PySpark 4.1.2 + Iceberg 1.11.0). The truth JSON stores
+  one ordered step list per table (v2 `ops`, v3 `ops3`) with position markers instead of
+  snapshot ids; the suite replays the script on RePark and asserts output schemas, rows,
+  every error shape, the snapshot structure, refs, and (v3) `next-row-id` / `_row_id`.
+  The recorder regenerates the truth under a JVM (the `record` extra; routine CI never runs
+  it). The live tier replays Spark on the same shapes and cross-reads both directions.
+  **Round 2:** empty/whitespace-branch auto-create, fast-forward-shape and dynamic-overwrite
+  cherry-picks, lateral rollback, selecting named/string rollback twins, and routine-arg
+  error shapes; the truth gains an `adopted` section (Spark-staged dynamic-overwrite and
+  WAP tables) replayed live by `test_live_branch_ops_adopted_shapes` after
+  `register_table` adoption, including the `published-wap-id` summary pin.
+  **Round 3:** the duplicate-WAP cell pins the fork's already-picked refusal and records
+  Spark's `Duplicate request ...` text beside it as `spark_error` (OPEN residue
+  `ICE-BRANCH-OPS-1-R-001`, fork trigger `F-CHERRYPICK-WAP-ORDER-1`); the recorder
+  rebuilds that cell shape from the live Spark error on every re-record.
+  pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
+  pins: ice-branch-ops-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append; live-DV UPDATE
@@ -4715,7 +4770,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `min-input-files` floor, or step 6 is a no-op — asserted, not assumed),
   `v3_rows_and_lineage` (ONE ordered scan for the post-MERGE and post-rewrite pairs, which used
   to open the same snapshot twice: 45 → 22 object opens per pair, 178.8 → 92.4 ms and
-  168.6 → 70.3 ms, pinned values unchanged), `current_metadata_location`
+  168.6 → 70.3 ms, pinned values unchanged), `current_metadata_location`.
+  **RP-22 (2026-09-17):** `V3_EXPECTED_SNAPSHOTS_BEFORE_EXPIRE` 14 → 13 — fork F-RDF-OPTIONS-1 (#283) commits all rewrite file groups in one snapshot by default, as Spark does (measured one-commit `next-row-id` 24 on the two-partition shape, run 19c); the S3 Tables floor check reads the same constant,
   (`metadata_log_entries` tail = the `register_table` argument), `run_v3_acceptance`, and
   `assert_v3_acceptance_outcome` / `assert_v3_lineage` / `assert_v3_row_ids_are_stable` /
   `assert_deletion_vectors`. `v3_row_delete_sql` is the ONLY `DELETE FROM` in the harness and is

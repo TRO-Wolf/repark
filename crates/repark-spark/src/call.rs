@@ -20,6 +20,7 @@ use crate::call_args::CallArgs;
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
 mod apply_partitioning;
+mod branch_ops;
 mod plan_partitioning;
 mod plan_partitioning_bytes;
 mod plan_partitioning_score;
@@ -31,7 +32,9 @@ mod run_maintenance_apply;
 
 const SUPPORTED_PROCEDURES: &[&str] = &[
     "apply_partitioning",
+    "cherrypick_snapshot",
     "expire_snapshots",
+    "fast_forward",
     "plan_partitioning",
     "register_table",
     "rewrite_data_files",
@@ -39,7 +42,9 @@ const SUPPORTED_PROCEDURES: &[&str] = &[
     "remove_orphan_files",
     "rewrite_position_delete_files",
     "rollback_to_snapshot",
+    "rollback_to_timestamp",
     "run_maintenance",
+    "set_current_snapshot",
 ];
 
 /// Execute one `CALL catalog.system.<proc>(…)` statement.
@@ -67,6 +72,18 @@ pub async fn execute_call(
         }
         "rollback_to_snapshot" => {
             execute_rollback_to_snapshot(ctx, catalog, &catalog_name, &args).await
+        }
+        "fast_forward" => {
+            branch_ops::execute_fast_forward(ctx, catalog, &catalog_name, &args).await
+        }
+        "cherrypick_snapshot" => {
+            branch_ops::execute_cherrypick_snapshot(ctx, catalog, &catalog_name, &args).await
+        }
+        "set_current_snapshot" => {
+            branch_ops::execute_set_current_snapshot(ctx, catalog, &catalog_name, &args).await
+        }
+        "rollback_to_timestamp" => {
+            branch_ops::execute_rollback_to_timestamp(ctx, catalog, &catalog_name, &args).await
         }
         "remove_orphan_files" => {
             execute_remove_orphan_files(

@@ -104,11 +104,7 @@ async fn wap_publish_procedures_and_session_conf_refuse_loud() {
     )
     .await;
 
-    for sql in [
-        "CALL ice.system.fast_forward(table => 'sales.t', branch => 'main', to => 'audit')",
-        "CALL ice.system.publish_changes(table => 'sales.t', wap_id => 'w1')",
-        "CALL ice.system.cherrypick_snapshot(table => 'sales.t', snapshot_id => 1)",
-    ] {
+    for sql in ["CALL ice.system.publish_changes(table => 'sales.t', wap_id => 'w1')"] {
         let error = execute(&ctx, &catalogs, sql)
             .await
             .expect_err("no WAP publish procedure is implemented");

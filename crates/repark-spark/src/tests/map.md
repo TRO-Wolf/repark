@@ -195,6 +195,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   single-file seed. Absolute Spark 4.1.2 + Iceberg 1.11.0 values.
   pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003
 - `v3_subquery_dml.rs` — **V3-8 (2026-09-02):** the V3-COW-1 lift for subquery-`WHERE` COW DML
+  (RP-22, 2026-09-17: the `assert_created` / `assert_adopted` awaits are wrapped in `Box::pin` — the fork pin grew those futures past clippy's `large_futures` bound; `v3_lineage.rs`'s byte tripwire re-records this file's hash for that edit)
   on created and adopted v3 — `DELETE … IN` / `NOT IN` / `EXISTS` / `NOT EXISTS` and
   `UPDATE … IN`, each pinning rows, `(id,_row_id,seq)`, next-row-id / first-row-id /
   added-rows and the live data-file count at the single-file seed. `F_V3_8_UPDATE_FILES` is
@@ -370,12 +371,22 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ref_ddl` (**REF:** the write-to-branch/tag refusal names the `iceberg-datafusion`
   commit-target gap at fork pin `33be9a0`, not the superseded pin; pins:
   ref-branch-tag-wap/C-004),
+  `branch_ops` (**ICE-BRANCH-OPS-1 (2026-09-17):** `fast_forward` moves the branch and
+  answers `(branch_updated, previous_ref, updated_ref)` with null on auto-create, named
+  args, tag-as-`to`, and the three refusals; `cherrypick_snapshot` replays onto `main`
+  (duplicate/ancestor/delete refusals with the fork's Java-identical text);
+  `set_current_snapshot` by id and by ref with both/neither/unknown refusals;
+  `rollback_to_timestamp` by `TIMESTAMP` literal (integer epoch-millis arguments refuse
+  `DATATYPE_MISMATCH`, like Spark) with the ancient-timestamp refusal; every CALL
+  adds no snapshot. pins: ice-branch-ops-1/C-007, C-009, C-011, C-016, C-018),
   `refs_and_wap` (**REF:** both `WITH SNAPSHOT RETENTION` halves at the oracle's values and the
   reversed order refusing; the `branch_`/`tag_` READ selectors resolving the ref, joining
   against the live table, refusing loud on a missing ref, and claiming neither a
   metadata-table suffix nor a real table whose own name starts with `branch_`; and WAP
-  declared — the three publish procedures and the `spark.wap.*` confs all fail closed and leave
-  the branch where it was; and the read-vs-write boundary — a selector in a DML statement's
+  declared — the remaining publish procedure and the `spark.wap.*` confs all fail closed and
+  leave the branch where it was (`fast_forward` and `cherrypick_snapshot` moved to
+  `branch_ops` when ICE-BRANCH-OPS-1 implemented them); and the read-vs-write boundary —
+  a selector in a DML statement's
   source, `USING` operand or predicate subquery reads the ref (four classes plus CTAS, each
   asserting the ref's ids and not `main`'s); a branch write target commits onto the branch
   and a tag write target refuses. The oracle stamp the registry rows §2.2

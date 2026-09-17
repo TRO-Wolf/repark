@@ -181,6 +181,14 @@ repark-core's error map.
   pins: ice-commit-unknown-1/C-001, C-003, C-005, C-006
 - `overwrite_commit.rs` — full-table overwrite commit, optional `to_branch`.
   pins: rp-5-fork-repin/C-004
+- `hadoop_stale_commit.rs` (test-only) — **ICE-HADOOP-VN-1 (2026-09-17):** two memory
+  catalogs over one tempdir warehouse adopt the same Hadoop `v2` file; the first
+  `append()` lands `v3`, and the stale catalog's append burns the fork's bounded
+  retry budget and surfaces `ErrorKind::CatalogCommitConflicts` with the winner's
+  bytes and rows intact, then stays wedged-loud on the next stale append. Red-first:
+  both pins fail on a temporary local revert to the pre-#286 pin (the stale append
+  returns `Ok`), green on `75da2b58`; the revert never reached a commit.
+  pins: ice-hadoop-vn-1/C-001
 - `overwrite.rs` — exclusive full-table `INSERT OVERWRITE` stage-then-swap:
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`
@@ -420,7 +428,11 @@ repark-core's error map.
 - `snapshot_refs.rs` — product CREATE/DROP/REPLACE BRANCH|TAG helpers over fork
   `ManageSnapshots` (+ retention setters). Write-to-branch routing lives in the Spark
   door (`repark-spark` `write_to_branch.rs`) and the `to_branch` / `with_commit_branch`
-  commit seats.
+  commit seats. **ICE-BRANCH-OPS-1 (2026-09-17):** `list_snapshot_refs` reads every ref as
+  `(name, kind, snapshot_id)` through the fork's refs inspect table for the branch-procedure
+  pre-checks (the fork's refs-map field is crate-private). **Round 2:** the inspect batch
+  schema is gated (strict Utf8/Utf8/Int64) and a mistyped refs schema refuses typed instead
+  of panicking.
 - `testing_support.rs` — `testing_create_ref` (wraps `create_snapshot_ref`) for fixtures only;
   product SQL routes via `snapshot_refs`.
 - `concurrency.rs` — `repark.write.max-concurrent-files` (default 4, ≥1 or loud): DataFusion
