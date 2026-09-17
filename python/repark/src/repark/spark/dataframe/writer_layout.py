@@ -56,6 +56,15 @@ def render_write_options_clause(options: dict[str, str]) -> str:
     return f" OPTIONS({pairs})"
 
 
+def store_writer_option(options: dict[str, str], key: object, value: object) -> None:
+    """Store one writer option with case-insensitive last-wins dedup."""
+    key_str = str(key)
+    for existing in list(options):
+        if existing.lower() == key_str.lower():
+            del options[existing]
+    options[key_str] = str(value)
+
+
 def _raise_operation_not_support_bucketing(operation: str) -> NoReturn:
     """Raise Spark's ``_LEGACY_ERROR_TEMP_1312`` for a bucketed action."""
     _raise_analysis(

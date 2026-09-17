@@ -187,3 +187,13 @@ TODO: rows written.
   the spark `write_options.rs` module is `pub(crate)`, so the lint stays
   silent there. `missing_docs` is not enabled workspace-wide, so bare pub
   items are gate-clean. Gate grep exit 1 (no matches) on the working tree.
+
+- Step 2 size restore: `writer_readwriter.py` 1114 -> 1099 (baseline recorded
+  1099, a down-move; ruff format's collapse of the overwritePartitions call
+  saved one line past the 1101 target, so exactness forced 1099, not 1101).
+  Case-insensitive last-wins dedup now lives once in
+  `writer_layout.store_writer_option` (uncapped file, 376 -> 385 lines) and
+  both V1 `option` and V2 `option` call it; the six render sites build a
+  `head` prefix instead of splicing mid-string. Rendered SQL is unchanged
+  (same concatenation, verified by review; behavior gates re-run in step 5).
+  `check_lib_py.py`, ruff check, ruff format, conventions, docstring gates green.

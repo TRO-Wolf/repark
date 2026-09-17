@@ -658,6 +658,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   renders them through `writer_layout.render_write_options_clause` onto the
   generated SQL — binding names only, no key branching in Python. The process-once
   `UserWarning` and its reset helper are gone from `core.py` (4015 → 3991).
+  Round 2 (2026-09-17): the dedup lives once in
+  `writer_layout.store_writer_option` (both V1 and V2 `option` call it), the six
+  render sites build a `head` prefix, and `writer_readwriter.py` holds its exact
+  1099 baseline.
   pins: ice-write-options-1/C-001, C-005
 - `writer_layout.py` owns the writer layout bodies (IO-BUCKET-CLUSTER-1, 2026-09-14):
   the `bucketBy` / `sortBy` / `clusterBy` state setters (Spark's `NOT_INT` on
@@ -690,6 +694,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   ICE-WRITE-OPTIONS-1 (2026-09-17): `render_write_options_clause` renders a stored
   options dict as the facade-internal `OPTIONS('k'='v', …)` clause (`''` escaping,
   empty dict renders nothing) — pure rendering, parsed and validated in Rust.
+  Round 2 adds `store_writer_option` (case-insensitive last-wins dedup shared by
+  both writers).
 - `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1,
 - `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1, **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down. pins: df-surface-b-1/C-008
   2026-09-14), bound on the class from `core.py` at the exact ceiling. `foreach`
