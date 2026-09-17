@@ -12,6 +12,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   note and the §9 audit trail, and registry claims C-3, C-8, C-9 rewritten
   (C-3, C-9 FIXED → OPEN). Docs-only reading unit, no product change.
   `risk_tier: standard`. Branch `docs/ice-cutover-corrections-1`.
+- [ice-promote-read-1-ledger.md](ice-promote-read-1-ledger.md) —
+  **ICE-PROMOTE-READ-1 (2026-09-16), in flight:** reads and DML after a legal
+  `ALTER COLUMN … TYPE` promotion answer Spark 4.1.2 — range / long-`IN` filters, promoted
+  partition sources, MERGE keyed on the promoted column, range UPDATE, single-era DML,
+  promoted-identity-partition DML and overwrite, Spark-created adopted tables, v2 and v3.
+  Fork half F-PROMOTE-READ-1 (manifest values read under the promoted type); RePark half
+  the DML target-scan conform. `risk_tier: high`. Branch `fix/ice-promote-read-1`.
 - [never-oom-panic-1-ledger.md](never-oom-panic-1-ledger.md) —
   **NEVER-OOM-PANIC-1 (2026-09-16), in flight:** the tight-pool NLJ race — `inner future
   panicked during poll` versus the typed refusal — fixed at the root so the nested-loop
