@@ -157,9 +157,7 @@ fn validate_write_format(raw: &str) -> Result<String> {
             "write-format {raw:?} has no RePark Iceberg writer — only parquet is written \
              (ICE-WRITE-OPTIONS-1 ORC/AVRO declared 2026-09-17)"
         ))),
-        _ => Err(DataFusionError::Plan(format!(
-            "Invalid file format: {raw}"
-        ))),
+        _ => Err(DataFusionError::Plan(format!("Invalid file format: {raw}"))),
     }
 }
 
@@ -240,9 +238,7 @@ fn find_options_clause(sql: &str) -> Option<(usize, usize, String)> {
         }
         if byte == b'/' && bytes.get(index + 1) == Some(&b'*') {
             index += 2;
-            while index + 1 < bytes.len()
-                && !(bytes[index] == b'*' && bytes[index + 1] == b'/')
-            {
+            while index + 1 < bytes.len() && !(bytes[index] == b'*' && bytes[index + 1] == b'/') {
                 index += 1;
             }
             index += 2;
@@ -431,16 +427,19 @@ mod tests {
 
     #[test]
     fn orc_refuses_naming_the_registry_row() {
-        let error = extract_statement_write_options("INSERT INTO t OPTIONS('write-format'='orc') SELECT 1")
-            .expect_err("orc must refuse");
+        let error =
+            extract_statement_write_options("INSERT INTO t OPTIONS('write-format'='orc') SELECT 1")
+                .expect_err("orc must refuse");
         let message = error.to_string();
         assert!(message.contains("ICE-WRITE-OPTIONS-1"), "{message}");
     }
 
     #[test]
     fn bogus_format_mirrors_spark_text() {
-        let error = extract_statement_write_options("INSERT INTO t OPTIONS('write-format'='bogus') SELECT 1")
-            .expect_err("bogus must refuse");
+        let error = extract_statement_write_options(
+            "INSERT INTO t OPTIONS('write-format'='bogus') SELECT 1",
+        )
+        .expect_err("bogus must refuse");
         assert!(error.to_string().contains("Invalid file format: bogus"));
     }
 

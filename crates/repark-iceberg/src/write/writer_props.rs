@@ -52,10 +52,7 @@ pub fn writer_properties_with(
 /// property's place.
 /// # Errors
 /// A non-numeric override, mirroring Spark's `NumberFormatException`.
-pub fn target_file_size_with(
-    table: &Table,
-    size_override: Option<u64>,
-) -> Result<usize> {
+pub fn target_file_size_with(table: &Table, size_override: Option<u64>) -> Result<usize> {
     let Some(raw) = size_override else {
         return Ok(table
             .metadata()
@@ -100,10 +97,10 @@ fn compression_with(
     level_override: Option<&str>,
 ) -> Result<Compression> {
     let properties = table.metadata().properties();
-    let codec_raw = codec_override
-        .or_else(|| properties.get(COMPRESSION_CODEC_PROP).map(String::as_str));
-    let level_raw = level_override
-        .or_else(|| properties.get(COMPRESSION_LEVEL_PROP).map(String::as_str));
+    let codec_raw =
+        codec_override.or_else(|| properties.get(COMPRESSION_CODEC_PROP).map(String::as_str));
+    let level_raw =
+        level_override.or_else(|| properties.get(COMPRESSION_LEVEL_PROP).map(String::as_str));
     parse_compression(codec_raw, level_raw)
 }
 
@@ -598,9 +595,8 @@ mod tests {
     }
 
     use crate::write::write_options::{
-        WriterStagingOverrides, append_with_statement_options,
-        commit_append_with_summary, isolation_with_override,
-        stage_unpartitioned_with_overrides, summary_with_extras,
+        WriterStagingOverrides, append_with_statement_options, commit_append_with_summary,
+        isolation_with_override, stage_unpartitioned_with_overrides, summary_with_extras,
     };
 
     fn serial() -> WriteConcurrency {
@@ -675,7 +671,11 @@ mod tests {
         )
         .await
         .expect("option stages");
-        assert_eq!(option.len(), 1, "the option takes the table property's place");
+        assert_eq!(
+            option.len(),
+            1,
+            "the option takes the table property's place"
+        );
     }
 
     #[tokio::test]
@@ -693,8 +693,7 @@ mod tests {
         .await
         .expect("gzip stages");
         assert!(!files.is_empty());
-        let compression =
-            footer_compression(&catalog, &ident, files[0].file_path()).await;
+        let compression = footer_compression(&catalog, &ident, files[0].file_path()).await;
         assert!(
             matches!(compression, Compression::GZIP(_)),
             "the codec option must reach the footer; got {compression:?}"
@@ -797,11 +796,10 @@ mod tests {
         let catalog = memory_catalog(&warehouse).await;
         let ident = create_table(&catalog, "t_iso", HashMap::new()).await;
         let table = catalog.load_table(&ident).await.expect("load");
-        let isolation = isolation_with_override(&table, Some("none"))
-            .expect("none parses");
+        let isolation = isolation_with_override(&table, Some("none")).expect("none parses");
         assert!(isolation.is_none());
-        let isolation = isolation_with_override(&table, Some("SERIALIZABLE"))
-            .expect("case-insensitive");
+        let isolation =
+            isolation_with_override(&table, Some("SERIALIZABLE")).expect("case-insensitive");
         assert!(matches!(
             isolation,
             Some(crate::write::overwrite::OverwriteIsolation::Serializable)
@@ -815,8 +813,7 @@ mod tests {
 
     #[test]
     fn target_size_parse_rejects_non_numeric_like_spark() {
-        let error =
-            crate::write::writer_props::parse_target_file_size("abc").expect_err("abc");
+        let error = crate::write::writer_props::parse_target_file_size("abc").expect_err("abc");
         assert!(
             error.to_string().contains("target-file-size-bytes"),
             "refusal must name the option: {error}"

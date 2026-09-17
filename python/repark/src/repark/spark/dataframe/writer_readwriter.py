@@ -29,12 +29,7 @@ from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
 from repark.spark.dataframe import io_declared as _io_declared
 from repark.spark.dataframe import writer_text as _writer_text
-from repark.spark.dataframe.core import (
-    DataFrame,
-    _by_name_casefold_map,
-    _sql_string_literal,
-    _warn_writer_v2_option_once,
-)
+from repark.spark.dataframe.core import DataFrame, _by_name_casefold_map, _sql_string_literal
 from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
@@ -232,8 +227,9 @@ class DataFrameWriter:
             return
         projection = self._by_name_projection(session, table_ref, display_name=name)
         verb = "INSERT OVERWRITE" if normalized_mode == "overwrite" else "INSERT INTO"
+        options_clause = writer_layout.render_write_options_clause(self._options)
         self._run_through_temp_view(
-            lambda view: f"{verb} {table_ref} SELECT {projection} FROM {view}"
+            lambda view: f"{verb} {table_ref}{options_clause} SELECT {projection} FROM {view}"
         )
 
     save_as_table = saveAsTable
@@ -253,7 +249,10 @@ class DataFrameWriter:
         if overwrite is None:
             overwrite = self._mode == "overwrite"
         verb = "INSERT OVERWRITE" if overwrite else "INSERT INTO"
-        self._run_through_temp_view(lambda view: f"{verb} {table_ref} SELECT * FROM {view}")
+        options_clause = writer_layout.render_write_options_clause(self._options)
+        self._run_through_temp_view(
+            lambda view: f"{verb} {table_ref}{options_clause} SELECT * FROM {view}"
+        )
 
     insert_into = insertInto
 
@@ -789,7 +788,11 @@ class DataFrameWriter:
         if self._partition_columns:
             quoted_parts = ", ".join(_quote_ident(column) for column in self._partition_columns)
             partition_clause = f" PARTITIONED BY ({quoted_parts})"
-        return f"CREATE TABLE {table_ref} USING iceberg{partition_clause} AS SELECT * FROM {view}"
+        options_clause = writer_layout.render_write_options_clause(self._options)
+        return (
+            f"CREATE TABLE {table_ref} USING iceberg{partition_clause}{options_clause} "
+            f"AS SELECT * FROM {view}"
+        )
 
     def _run_through_temp_view(self, build_sql: Callable[[str], str]) -> None:
         """Register a temporary view, execute the generated write SQL, and drop the view."""
@@ -818,6 +821,7 @@ class DataFrameWriterV2:
     __slots__ = (
         "_cluster_columns",
         "_dataframe",
+        "_options",
         "_partition_exprs",
         "_properties",
         "_provider",
@@ -831,6 +835,7 @@ class DataFrameWriterV2:
         _resolve_writer_table(dataframe, table)
         self._provider = "iceberg"
         self._properties: dict[str, str] = {}
+        self._options: dict[str, str] = {}
         self._partition_exprs: list[str] = []
         self._cluster_columns: list[str] = []
 
@@ -929,8 +934,9 @@ class DataFrameWriterV2:
         """Append rows to an existing table by column name."""
         session, table_ref = self._existing_table_ref()
         projection = self._by_name_projection(session, table_ref=table_ref)
+        options_clause = writer_layout.render_write_options_clause(self._options)
         self._run_through_temp_view(
-            lambda view: f"INSERT INTO {table_ref} SELECT {projection} FROM {view}"
+            lambda view: f"INSERT INTO {table_ref}{options_clause} SELECT {projection} FROM {view}"
         )
 
     def overwritePartitions(self) -> None:  # noqa: N802 — PySpark method name
@@ -938,8 +944,12 @@ class DataFrameWriterV2:
         session, table_ref = self._existing_table_ref()
         projection = self._by_name_projection(session, table_ref=table_ref)
         clause = _dynamic_partition_sql(self._dataframe, table_ref)
+        options_clause = writer_layout.render_write_options_clause(self._options)
         self._run_through_temp_view(
-            lambda view: f"INSERT OVERWRITE {table_ref}{clause} SELECT {projection} FROM {view}"
+            lambda view: (
+                f"INSERT OVERWRITE {table_ref}{options_clause}{clause} "
+                f"SELECT {projection} FROM {view}"
+            )
         )
 
     overwrite_partitions = overwritePartitions
@@ -954,15 +964,17 @@ class DataFrameWriterV2:
         )
 
     def option(self, key: str, value: Any) -> DataFrameWriterV2:
-        """Set an option; branch and tag writes are rejected, others warn once."""
-        _ = value
-        key_lower = str(key).lower()
-        if key_lower in {"branch", "tag"}:
+        """Set an option; branch and tag writes are rejected, the rest ride the action SQL."""
+        key_str = str(key)
+        if key_str.lower() in {"branch", "tag"}:
             raise UnsupportedOperationException(
-                f"writing to an Iceberg {key_lower} is not supported — "
+                f"writing to an Iceberg {key_str.lower()} is not supported — "
                 "repark write path is current-snapshot only (I1 / R-TIME-TRAVEL)"
             )
-        _warn_writer_v2_option_once(stacklevel=2)
+        for existing in list(self._options):
+            if existing.lower() == key_str.lower():
+                del self._options[existing]
+        self._options[key_str] = str(value)
         return self
 
     def options(self, **options: Any) -> DataFrameWriterV2:
@@ -1032,9 +1044,10 @@ class DataFrameWriterV2:
                 for key, value in self._properties.items()
             )
             properties_clause = f" TBLPROPERTIES ({pairs})"
+        options_clause = writer_layout.render_write_options_clause(self._options)
         return (
-            f"{verb} {table_ref} USING iceberg{partition_clause}{properties_clause} "
-            f"AS SELECT * FROM {view}"
+            f"{verb} {table_ref} USING iceberg{partition_clause}{properties_clause}"
+            f"{options_clause} AS SELECT * FROM {view}"
         )
 
     def _run_ctas(self, *, or_replace: bool) -> None:

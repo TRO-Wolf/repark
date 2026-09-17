@@ -14,6 +14,7 @@ use std::sync::Arc;
 use datafusion::arrow::array::RecordBatch;
 use datafusion::error::{DataFusionError, Result};
 use futures::{Stream, StreamExt, TryStreamExt};
+use iceberg::Catalog;
 use iceberg::arrow::{FieldMatchMode, RecordBatchPartitionSplitter, schema_to_arrow_schema};
 use iceberg::expr::Predicate;
 use iceberg::spec::{DataFile, DataFileFormat, PartitionKey, Struct};
@@ -28,7 +29,6 @@ use iceberg::writer::file_writer::rolling_writer::RollingFileWriterBuilder;
 use iceberg::writer::partitioning::PartitioningWriter;
 use iceberg::writer::partitioning::fanout_writer::FanoutWriter;
 use iceberg::writer::{IcebergWriter, IcebergWriterBuilder};
-use iceberg::Catalog;
 use uuid::Uuid;
 
 use crate::write::commit_error::commit_result;
@@ -69,8 +69,7 @@ impl WriterStagingOverrides {
 #[must_use]
 pub fn summary_with_extras(extra: &[(String, String)]) -> (String, HashMap<String, String>) {
     let operation_id = Uuid::new_v4().to_string();
-    let mut summary =
-        HashMap::from([(OPERATION_ID_PROP.to_string(), operation_id.clone())]);
+    let mut summary = HashMap::from([(OPERATION_ID_PROP.to_string(), operation_id.clone())]);
     for (key, value) in extra {
         summary.insert(key.clone(), value.clone());
     }
@@ -236,11 +235,7 @@ where
     )
     .map_err(iceberg_err)?;
     let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
-        writer_properties_with(
-            table,
-            staging.codec.as_deref(),
-            staging.level.as_deref(),
-        )?,
+        writer_properties_with(table, staging.codec.as_deref(), staging.level.as_deref())?,
         table.metadata().current_schema().clone(),
         FieldMatchMode::Name,
     );
@@ -284,9 +279,8 @@ pub async fn stage_overwrite_files_with<S>(
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
-    let write_schema: datafusion::arrow::datatypes::SchemaRef = Arc::new(
-        schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?,
-    );
+    let write_schema: datafusion::arrow::datatypes::SchemaRef =
+        Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
     let mapped = stream
         .map(move |item| {
             let batch = item?;
@@ -301,9 +295,7 @@ where
         stage_unpartitioned_stream_with_overrides(table, mapped, concurrency, staging).await
     } else {
         let current_schema = table.metadata().current_schema();
-        let write_schema = Arc::new(
-            schema_to_arrow_schema(current_schema).map_err(iceberg_err)?,
-        );
+        let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
         let write_default_columns =
             crate::write::conform::write_default_column_names(current_schema);
         let mapped: Vec<RecordBatch> = mapped.try_collect().await?;
@@ -315,8 +307,7 @@ where
                 batch,
             )?);
         }
-        let mut stream =
-            futures::stream::iter(conformed.into_iter().map(Ok::<_, DataFusionError>));
+        let mut stream = futures::stream::iter(conformed.into_iter().map(Ok::<_, DataFusionError>));
         stage_partitioned_stream_with_overrides(table, &mut stream, staging).await
     }
 }
@@ -330,11 +321,7 @@ async fn build_unpartitioned_writer_with(
     let file_format =
         DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
     let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
-        writer_properties_with(
-            table,
-            staging.codec.as_deref(),
-            staging.level.as_deref(),
-        )?,
+        writer_properties_with(table, staging.codec.as_deref(), staging.level.as_deref())?,
         crate::write::merge::row_lineage::iceberg_parquet_schema(table)?,
         FieldMatchMode::Name,
     );

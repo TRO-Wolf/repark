@@ -45,6 +45,17 @@ def _raise_analysis(
     raise error
 
 
+def render_write_options_clause(options: dict[str, str]) -> str:
+    """Render stored writer options as a facade ``OPTIONS(...)`` clause for Iceberg SQL."""
+    if not options:
+        return ""
+    pairs = ", ".join(
+        f"'{escape_sql_single_quotes(key)}'='{escape_sql_single_quotes(value)}'"
+        for key, value in options.items()
+    )
+    return f" OPTIONS({pairs})"
+
+
 def _raise_operation_not_support_bucketing(operation: str) -> NoReturn:
     """Raise Spark's ``_LEGACY_ERROR_TEMP_1312`` for a bucketed action."""
     _raise_analysis(

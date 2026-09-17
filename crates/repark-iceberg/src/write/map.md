@@ -542,6 +542,7 @@ repark-core's error map.
 | Stream a SELECT into a staged (CTAS) write with bounded memory | `write_data_files_from_stream` (`merge/mod.rs`) / `write_partitioned_data_files_from_stream` (`append.rs`) |
 | Stage + commit full-table INSERT OVERWRITE | `overwrite.rs` |
 | Stage + commit partition-scoped INSERT OVERWRITE | `partition_overwrite.rs` |
+| Stage static-overwrite batches with statement levers | `partition_overwrite.rs` (`stage_static_partition_overwrite_files_with`, ICE-WRITE-OPTIONS-1) |
 | Cap concurrent Iceberg file writers (session conf) | `repark.write.max-concurrent-files` via `concurrency.rs` |
 | Send one partition value to one writer before a CTAS write (Spark's `hash` distribution) | `distribution.rs` (`hash_distribution`) |
 | Parquet compression codec (table property) | `writer_props.rs` |

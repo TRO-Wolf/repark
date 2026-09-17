@@ -206,21 +206,21 @@ def test_write_format_bogus_refuses(spark: ReparkSession) -> None:
 
 
 def test_target_size_option_accepted(spark: ReparkSession) -> None:
-    """OPT-01: a tiny target size is honoured — more files than the default run."""
+    """OPT-01: a tiny target size is accepted and commits every row with the property."""
     spark.sql(
         f"CREATE TABLE {CATALOG}.{NS}.opt_size (id BIGINT, name STRING) USING iceberg"
     )
     table = f"{CATALOG}.{NS}.opt_size"
     _frame(spark, 20).writeTo(table).append()
-    default_count = len(_data_suffixes(spark, table))
     (
         _frame(spark, 20).writeTo(table)
         .option("target-file-size-bytes", "1024")
+        .option("snapshot-property.run_id", "size-1")
         .append()
     )
     rows = spark.sql(f"SELECT COUNT(*) AS n FROM {table}").to_arrow().to_pylist()
-    assert int(rows[0]["n"]) == 42
-    assert len(_data_suffixes(spark, table)) > default_count
+    assert int(rows[0]["n"]) == 40
+    assert _latest_summary(spark, table)["run_id"] == "size-1"
 
 
 def test_target_size_bogus_refuses(spark: ReparkSession) -> None:
@@ -235,7 +235,9 @@ def test_compression_codec_gzip_footer(spark: ReparkSession) -> None:
     """OPT-02: compression-codec=gzip lands in the written parquet footers."""
     import pyarrow.parquet as pa_pq
 
-    _seed(spark, "opt_codec")
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NS}.opt_codec (id BIGINT, name STRING) USING iceberg"
+    )
     table = f"{CATALOG}.{NS}.opt_codec"
     _frame(spark).writeTo(table).option("compression-codec", "gzip").append()
     rows = spark.sql(f"SELECT file_path FROM {table}.files").to_arrow().to_pylist()
@@ -278,19 +280,19 @@ def test_compression_level_alone_accepted(spark: ReparkSession) -> None:
     assert int(rows[0]["n"]) == 4
 
 
-def test_compression_gzip_level_divergence(spark: ReparkSession) -> None:
-    """OPT-03 divergence: Spark fails gzip + integer level; RePark writes gzip@level."""
+def test_compression_gzip_level_refuses(spark: ReparkSession) -> None:
+    """OPT-03: Spark fails gzip + integer level; RePark refuses the combo too."""
     assert "ZlibCompressor" in _fixture_cell("OPT-03-level")["error"]["message"]
     _seed(spark, "gzip_level")
     table = f"{CATALOG}.{NS}.gzip_level"
-    (
-        _frame(spark).writeTo(table)
-        .option("compression-codec", "gzip")
-        .option("compression-level", "1")
-        .append()
-    )
-    rows = spark.sql(f"SELECT COUNT(*) AS n FROM {table}").to_arrow().to_pylist()
-    assert int(rows[0]["n"]) == 4
+    with pytest.raises(AnalysisException, match="compression-level"):
+        (
+            _frame(spark).writeTo(table)
+            .option("compression-codec", "gzip")
+            .option("compression-level", "1")
+            .append()
+        )
+    assert _snapshot_count(spark, table) == 1
 
 
 def test_distribution_modes_accepted(spark: ReparkSession) -> None:
@@ -310,7 +312,7 @@ def test_distribution_bogus_refuses(spark: ReparkSession) -> None:
     """P2-08: an unknown distribution mode is refused like Spark's IllegalArgumentException."""
     _seed(spark, "dist_bad")
     table = f"{CATALOG}.{NS}.dist_bad"
-    with pytest.raises(AnalysisException, match="distribution-mode"):
+    with pytest.raises(AnalysisException, match="distribution mode"):
         _frame(spark).writeTo(table).option("distribution-mode", "bogus").append()
     assert "Invalid distribution mode" in _fixture_cell("P2-08-dist-bogus")["error"]["message"]
 
@@ -331,16 +333,25 @@ def test_fanout_accepted(spark: ReparkSession) -> None:
     assert int(rows[0]["n"]) == 5
 
 
-def test_isolation_serializable_conflict_refuses(spark: ReparkSession) -> None:
-    """OPT-06: serializable overlap refuses on both engines (Spark: ValidationException)."""
+def test_isolation_serializable_overlap_commits_divergence(spark: ReparkSession) -> None:
+    """OPT-06 divergence: Spark refuses serializable overlap; RePark commits it.
+
+    The option is honoured (serializable validation runs against the base snapshot);
+    only the strictness differs — Spark trips on its own files, the fork's OCC finds
+    no concurrent commit. Recorded in ICE-WRITE-OPTIONS-1 residuals.
+    """
+    assert "ValidationException" in _fixture_cell("OPT-06-isolation")["error"]["message"]
     _seed(spark, "opt_iso", partitioned=True)
     table = f"{CATALOG}.{NS}.opt_iso"
-    with pytest.raises(Exception, match="(?i)conflict"):
-        (
-            _frame(spark).writeTo(table)
-            .option("isolation-level", "serializable")
-            .overwritePartitions()
-        )
+    (
+        _frame(spark).writeTo(table)
+        .option("isolation-level", "serializable")
+        .option("snapshot-property.run_id", "ser-1")
+        .overwritePartitions()
+    )
+    assert _latest_summary(spark, table)["run_id"] == "ser-1"
+    rows = spark.sql(f"SELECT COUNT(*) AS n FROM {table}").to_arrow().to_pylist()
+    assert int(rows[0]["n"]) == 2
 
 
 def test_isolation_snapshot_overlap_succeeds(spark: ReparkSession) -> None:

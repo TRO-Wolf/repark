@@ -2489,6 +2489,71 @@ Differences we intend to close. Each pin **codifies today's behavior** so the fi
 purpose; a pin here is a description, not a contract, and the unit that fixes the class *updates*
 the pin rather than obeying it.
 
+### ICE-WRITE-OPTIONS-1 — DataFrame write options on Iceberg writes — **FIXED 2026-09-17**
+
+- **repark** — **FIXED 2026-09-17.** The facade stores `DataFrameWriterV2.option` /
+  `DataFrameWriter.option` entries and renders them onto its generated Iceberg SQL as a
+  facade-internal `OPTIONS('key'='value', …)` clause; Rust extracts, validates, and
+  honours or refuses every key before any file is staged. `snapshot-property.<k>`
+  lands prefix-stripped and lower-cased in the commit summary on `writeTo(t).append()`,
+  `.overwritePartitions()`, `.create()/.replace()/.createOrReplace()`, and
+  `df.write.format("iceberg")` with `saveAsTable` / `insertInto` / append-mode `save`
+  (an option-carrying append stages serially on the owned path with the merged summary;
+  option-free writes keep their canonical paths byte-identical). `write-format=parquet`
+  (any case) writes parquet. `target-file-size-bytes`, `compression-codec`, and
+  `compression-level` override the table property (option over table property, as Spark);
+  `isolation-level` (`none`/`snapshot`/`serializable`) overrides the table property on
+  the overwrite family and is accepted-and-ignored on plain append, as Spark.
+  `distribution-mode` (`none`/`hash`/`range`), `fanout-enabled`, `check-nullability`,
+  and `check-ordering` are accepted with Spark's leniency (any boolean spelling; unknown
+  `distribution-mode` refused) while file layout follows the engine default; unknown
+  option keys are ignored. Bad values refuse loud: unknown `write-format` (`Invalid file
+  format`), non-numeric `target-file-size-bytes`, unknown codec or level, unknown
+  distribution or isolation level, and `compression-level` with an effective gzip codec
+  (Spark fails integer gzip levels). The process-once `UserWarning` is gone. The SQL
+  door has no snapshot-property channel on either engine (measured: a
+  `spark.sql.iceberg.write.snapshot-property.*` conf does not reach the summary).
+- **Apache Spark** — the recorded cells in
+  `python/repark/tests/ice_write_options_1_spark_oracle.json` (live PySpark 4.1.2 +
+  Iceberg 1.11.0, 2026-09-17): prefix strip and lower-case (upper-case suffix lands
+  lower-cased; empty suffix commits an `""` key), per-snapshot scope, orc/avro files
+  for those formats, `NumberFormatException` for a bad size, Hadoop-enum failure for
+  gzip plus an integer level, `Invalid distribution mode` / `Invalid isolation level`
+  refusals, `ValidationException` on a serializable conflict, lenient booleans, silent
+  unknown keys, and the SQL-door conf absence.
+- **Pin** — `python/repark/tests/test_ice_write_options_1.py` (offline over the
+  fixture; the live tier re-runs both record drivers and checks the fixture);
+  `crates/repark-spark/src/write_options.rs` (extraction/validation units) and the
+  staging/commit units in `crates/repark-iceberg/src/write/write_options.rs`.
+- **Rationale** — FIXED for the measured option set. Two residuals stay named here, not
+  pinned as parity: (a) required-field nullability is not asserted on write, so
+  `check-nullability=true` cannot abort a null-into-required write the way Spark's own
+  `NOT_NULL_ASSERT_VIOLATION` does regardless of the option (pre-existing engine
+  default, outside this unit's fence); (b) `distribution-mode` / `fanout-enabled` change
+  file layout only — committed rows are pinned Spark-equal while the layout follows the
+  engine default; (c) `isolation-level=serializable` on an overlapping dynamic overwrite
+  commits in RePark (the level reaches validation; the fork's OCC finds no concurrent
+  commit) where Spark raises `ValidationException` on its own files — a fork validation
+  strictness shared with the table-property path, not an option-parsing gap.
+  `overwrite(condition)` stays a loud refusal, so options never reach a commit there.
+  pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+
+### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
+
+- **repark** — `.option("write-format", "orc"|"avro")` on any Iceberg write refuses with
+  `UnsupportedOperationException` naming this row; nothing is staged and no snapshot
+  commits. Parquet (any case) proceeds; any other value refuses with `Invalid file
+  format`.
+- **Apache Spark** — writes ORC / AVRO data files for those values (recorded
+  `FORMAT-02` / `FORMAT-03`); `bogus` refuses with `IllegalArgumentException: Invalid
+  file format: bogus`. *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_ice_write_options_1.py::test_write_format_orc_refuses`
+  and `::test_write_format_avro_refuses` (refusal plus snapshot-count-still-1).
+- **Rationale** — DECLARED 2026-09-17. RePark has no ORC/Avro Iceberg writer; writing
+  parquet files while the user asked for orc/avro is the silent wrong answer this row
+  exists to prevent. Revisit when a writer for either format lands.
+  pins: ice-write-options-1/C-002
+
 ### IO-JDBC-FORMAT-1 — `format("jdbc").load()` sends every URL to the PostgreSQL connector; `spark.read.jdbc` dispatches by URL — **BACKLOG 2026-09-15**
 
 - **repark** — `spark.read.jdbc` refuses a non-PostgreSQL URL with `NOT_IMPLEMENTED` `{"feature": "jdbc"}` before any

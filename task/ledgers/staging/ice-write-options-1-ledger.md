@@ -103,9 +103,37 @@ F-TARGET-FILE-SIZE-1 and no F-WRITE-OPTIONS-1: every touched fork action
 already carries what RePark needs — the staged publish path is avoided for
 option-carrying CTAS (publish empty, then `commit_append` with the summary).
 
-## 3. Implementation (Rust)
+## 3. Implementation (2026-09-17)
 
-TODO: files touched, design notes, per-piece commits.
+Channel: the facade renders stored options as `OPTIONS('k'='v', …)` on its generated
+Iceberg SQL (Python binds names only). Rust extracts at the router entry (before any
+rewrite), validates, and honours/refuses. Raw SQL never carries the clause.
+
+- `crates/repark-spark/src/write_options.rs` (new, 500 lines, 13 units): extraction
+  (INSERT + CREATE [OR REPLACE] TABLE only; quote/comment/paren aware; pairs shape
+  required) and validation (strip-and-lowercase snapshot keys incl. `""` suffix,
+  parquet pass, orc/avro/bogus refusals, numeric codec/level/size grammar, isolation
+  and distribution domains, lenient booleans, unknown keys ignored).
+- `crates/repark-iceberg/src/write/write_options.rs` (new, 489 lines):
+  `WriterStagingOverrides`, override-capable builders mirroring the canonicals,
+  `append_with_statement_options`, four `*_with_summary` commits, `summary_with_extras`,
+  `isolation_with_override`. The mirror exists because `append.rs`, `merge/mod.rs` and
+  `overwrite.rs` are size-capped exact (verified byte-identical in the diff).
+- `writer_props.rs` (+67): `writer_properties_with`, `target_file_size_with`,
+  `parse_target_file_size`, gzip-plus-level refusal; option-free behaviour unchanged.
+- `insert_overwrite.rs` (782→912), `ctas.rs` (543→617), `router.rs` (377→395),
+  `partition_overwrite.rs` (+26: one static-staging variant), `row_lineage.rs`
+  (one-word visibility widening). Option-free staging arms keep the canonical
+  functions (layout-identical; default concurrency is 4, so the serial options
+  staging only runs with options present).
+- Python: `render_write_options_clause` in `writer_layout.py`; V2/V1 store and render;
+  the process-once `UserWarning` and its helpers are gone (`core.py` 4015→3991,
+  `writer_readwriter.py` 1101→1114, baselines amended in `check_lib_py.py`).
+- Decisions: R-19c-4 — `isolation-level` values validated strictly on every path
+  (Spark validates where honoured; unknown on append unmeasured, loud wins).
+  gzip+integer level refuses (Spark errors; no divergence pin needed). Serializable
+  overlap commits (fork OCC finds no concurrent commit) vs Spark's
+  `ValidationException` — honest divergence pin + registry residual (c).
 
 ## 4. Gates
 

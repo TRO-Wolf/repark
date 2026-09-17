@@ -54,7 +54,9 @@ pins: rp-4-fork-repin/C-005, C-006
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** `execute_append_with_options` (option-carrying
   plain INSERT stages serially on the owned path with the merged summary); the overwrite
   family threads `StatementWriteOptions` through staging (option-free arms keep the
-  canonical staging byte-identical) into the `*_with_summary` commits.
+  canonical staging byte-identical) into the `*_with_summary` commits. The append
+  executor refuses table-function targets, `REPLACE INTO`, explicit column lists, and
+  non-3-part names loudly instead of mis-staging them.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
   pins: rp-5-fork-repin/C-004
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level

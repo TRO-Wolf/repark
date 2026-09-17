@@ -409,10 +409,8 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     use iceberg::spec::DataFile;
 
     // Fail isolation parse before staging.
-    let _isolation = repark_iceberg::write::isolation_with_override(
-        table,
-        options.isolation.as_deref(),
-    )?;
+    let _isolation =
+        repark_iceberg::write::isolation_with_override(table, options.isolation.as_deref())?;
     let column_names: Vec<String> = columns.iter().map(object_name_last).collect();
     let materialize_sql = format!("SELECT * FROM ({source}) AS _repark_ow_src");
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
