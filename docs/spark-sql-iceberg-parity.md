@@ -368,6 +368,26 @@ perfectly good read.
   row lineage (`next-row-id`, `_row_id`), pinned by the `ops3_*` steps.
   pins: ice-branch-ops-1/C-002, C-005, C-007, C-014, C-015, C-018
 
+#### ICE-BRANCH-OPS-1-R-001 — duplicate WAP cherry-pick message — **OPEN 2026-09-17**
+
+- **repark** — cherry-picking an already-published WAP snapshot refuses with the fork's
+  already-picked message (`Cannot cherrypick snapshot <id>: already picked to create
+  ancestor <id>`, base `PySparkException`).
+- **Apache Spark** — the same call refuses `Duplicate request to cherry pick wap id
+  that was published already: <wap-id>`.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`
+  `wap_pick_dup`, recorded beside the pin as `spark_error`.)*
+- **Pin** —
+  `python/repark/tests/test_ice_branch_ops_1.py::test_live_branch_ops_adopted_shapes`
+  (`wap_pick_dup`: RePark's class and the fork's message prefix).
+- **Rationale** — OPEN (2026-09-17, Q-20b-4). Java validates the WAP duplicate ahead of
+  the already-picked dedup; the fork validates the other way round. Reordering that
+  refusal in RePark would re-implement table-format validation locally, which fork
+  rule 3 forbids — the fork still refuses the duplicate at commit, so no wrong answer
+  results, only the message differs. TRIGGER: the fork reorders its cherry-pick
+  validation (`F-CHERRYPICK-WAP-ORDER-1`).
+  pins: ice-branch-ops-1/C-013
+
 #### REF-7 — `set_current_snapshot` — **FIXED 2026-09-17**
 
 - **repark** — `CALL <cat>.system.set_current_snapshot(table, snapshot_id | ref)` moves `main`

@@ -327,3 +327,31 @@ None. All brief ambiguities resolved by measurement against the oracle.
   calls); the variance sits entirely on the filesystem side while sibling lanes hold
   the box at load 30–68 with test binaries at 400–600% CPU. Environmental contention,
   not a regression — see handback.
+
+## Round 3 (run 20b, muse-worker) — ruling Q-20b-4 — 2026-09-17
+
+**Model:** muse-spark-1.3-contributor. **Ruling Q-20b-4 (orchestrator, 2026-09-17):**
+`duplicate_wap_pick` re-implements Iceberg cherry-pick WAP validation in RePark to
+reorder which refusal wins — table-format semantics patched locally, forbidden by fork
+rule 3 (`docs/fork-sync.md`). The fork already refuses the duplicate pick at commit, so
+no wrong answer results; only the message differs from Java's.
+
+**Change:** `duplicate_wap_pick` and its call site deleted from
+`crates/repark-spark/src/call/branch_ops.rs`; every other round-2 change kept. The
+`wap_pick_dup` truth cell now pins RePark's actual refusal (base `PySparkException`,
+fork prefix `Cannot cherrypick snapshot {snap:1}: already picked to create ancestor
+{snap:3}`) and records Spark's message beside it as `spark_error` (`Duplicate request
+to cherry pick wap id that was published already: r2wapid`, verbatim oracle text from
+the round-2 recording). The recorder reproduces this cell shape on re-record. Registry
+gains dated OPEN residue row `ICE-BRANCH-OPS-1-R-001` beside REF-6 with fork trigger
+`F-CHERRYPICK-WAP-ORDER-1`.
+
+### Clause update
+
+| Clause | Updated text | Verdict |
+|---|---|---|
+| C-013 | A Spark WAP-staged snapshot adopted into RePark cherry-picks with `published-wap-id` stamped; the duplicate pick refuses — with the fork's already-picked message, not Java's duplicate-WAP text (residue `ICE-BRANCH-OPS-1-R-001`, Q-20b-4). | PROVEN |
+
+### Open questions
+
+None. Q-20b-4 resolved by the ruling above; no other ambiguity.

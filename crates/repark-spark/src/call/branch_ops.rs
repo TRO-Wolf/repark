@@ -116,38 +116,6 @@ fn invalid_typed_literal(type_name: &str, value: &str) -> DataFusionError {
     )
 }
 
-fn duplicate_wap_pick(table: &Table, snapshot_id: i64) -> Option<DataFusionError> {
-    let metadata = table.metadata();
-    let picked = metadata.snapshot_by_id(snapshot_id)?;
-    let wap_id = picked
-        .summary()
-        .additional_properties
-        .get("wap.id")
-        .filter(|id| !id.is_empty())?;
-    let head = metadata.current_snapshot_id();
-    if picked.parent_snapshot_id() == head {
-        return None;
-    }
-    let mut current = head;
-    while let Some(id) = current {
-        let Some(snapshot) = metadata.snapshot_by_id(id) else {
-            break;
-        };
-        let properties = &snapshot.summary().additional_properties;
-        if properties.get("wap.id").is_some_and(|id| id == wap_id)
-            || properties
-                .get("published-wap-id")
-                .is_some_and(|id| id == wap_id)
-        {
-            return Some(engine_refusal(format!(
-                "Duplicate request to cherry pick wap id that was published already: {wap_id}"
-            )));
-        }
-        current = snapshot.parent_snapshot_id();
-    }
-    None
-}
-
 fn timestamp_type_mismatch(raw: &str) -> DataFusionError {
     let kind = if raw.parse::<i32>().is_ok() {
         "INT"
@@ -266,9 +234,6 @@ pub(super) async fn execute_cherrypick_snapshot(
         }
     };
     let (ident, table) = load_call_table(&catalog, catalog_name, &table_arg).await?;
-    if let Some(duplicate) = duplicate_wap_pick(&table, snapshot_id) {
-        return Err(duplicate);
-    }
     let tx = Transaction::new(&table);
     let action = tx.cherry_pick(snapshot_id);
     let tx = action.apply(tx).map_err(iceberg_err)?;
