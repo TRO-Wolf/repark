@@ -1,7 +1,11 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
+use datafusion::sql::sqlparser::parser::ParserError;
 use repark_core::CatalogRegistry;
-use repark_iceberg::write::alter::{ColumnPosition, SchemaChange};
+use repark_iceberg::write::alter::{
+    ColumnPosition, SchemaChange, apply_schema_changes_on_table, resolve_move_names,
+    starts_with_alter,
+};
 
 use crate::alter::{
     Sig, collect_name_parts, is_period_at, render_sig_at, table_parts_to_ident,
@@ -9,6 +13,7 @@ use crate::alter::{
 };
 use crate::{catalog_handle, iceberg_err, reregister};
 
+#[derive(Debug)]
 pub(crate) struct ColumnMoveDdl {
     table_parts: Vec<String>,
     name: String,
@@ -16,6 +21,9 @@ pub(crate) struct ColumnMoveDdl {
 }
 
 pub(crate) fn try_parse_column_move_ddl(sql: &str) -> Option<Result<ColumnMoveDdl>> {
+    if !starts_with_alter(sql) {
+        return None;
+    }
     let significant = tokenize_significant(sql)?;
     if significant.len() < 7 {
         return None;
@@ -56,6 +64,14 @@ pub(crate) fn try_parse_column_move_ddl(sql: &str) -> Option<Result<ColumnMoveDd
         }));
     }
     if word_eq(&significant, next, "AFTER") {
+        if is_period_at(&significant, next + 2) {
+            return Some(Err(DataFusionError::SQL(
+                Box::new(ParserError::ParserError(
+                    "[PARSE_SYNTAX_ERROR] Syntax error at or near '.'. SQLSTATE: 42601".to_string(),
+                )),
+                None,
+            )));
+        }
         let (reference, after) = parse_column_path(&significant, next + 1)?;
         if after < significant.len() {
             return Some(Err(DataFusionError::Plan(format!(
@@ -92,21 +108,19 @@ pub(crate) async fn execute_column_move_ddl(
     let (catalog_name, ident) = table_parts_to_ident(&ddl.table_parts)?;
     let handle = catalog_handle(catalogs, &catalog_name)?;
     let table = handle.load_table(&ident).await.map_err(iceberg_err)?;
-    match repark_iceberg::write::alter::check_column_move(
+    let (mover, at) = resolve_move_names(
         table.metadata().current_schema(),
+        &[],
         &ddl.name,
         &ddl.position,
-    ) {
-        Err(message) => return Err(DataFusionError::Plan(message)),
-        Ok(false) => return ctx.read_empty(),
-        Ok(true) => {}
-    }
-    repark_iceberg::write::alter::apply_schema_changes(
+    )
+    .map_err(DataFusionError::Plan)?;
+    apply_schema_changes_on_table(
         handle.as_ref(),
-        &ident,
+        &table,
         &[SchemaChange::MoveColumn {
-            name: ddl.name,
-            position: ddl.position,
+            name: mover,
+            position: at,
         }],
     )
     .await
@@ -159,6 +173,35 @@ mod tests {
         assert!(
             refuse_unsupported_alter_sql("ALTER TABLE ice.sales.t ALTER COLUMN b FIRST").is_none(),
             "a parsed move must not hit the residual refuse path"
+        );
+    }
+
+    #[test]
+    fn parse_column_move_refuses_dotted_after_reference() {
+        let refused =
+            try_parse_column_move_ddl("ALTER TABLE ice.sales.t ALTER COLUMN s.b AFTER s.a")
+                .expect("recognize")
+                .expect_err("a dotted AFTER reference must refuse");
+        let message = refused.to_string();
+        assert!(
+            message.contains("[PARSE_SYNTAX_ERROR]")
+                && message.contains("at or near '.'")
+                && message.contains("42601"),
+            "a dotted AFTER reference must refuse Spark-shaped, got: {message}"
+        );
+        assert!(matches!(refused, DataFusionError::SQL(_, _)));
+    }
+
+    #[test]
+    fn parse_column_move_skips_non_alter_without_tokenizing() {
+        assert!(try_parse_column_move_ddl("SELECT * FROM ice.sales.t").is_none());
+        assert!(try_parse_column_move_ddl("-- lead\nSELECT 1").is_none());
+        assert!(
+            try_parse_column_move_ddl("ALTER TABLE ice.sales.t ALTER COLUMN s.b AFTER a")
+                .expect("recognize")
+                .expect("parse")
+                .position
+                == ColumnPosition::After("a".to_string())
         );
     }
 }

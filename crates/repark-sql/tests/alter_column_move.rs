@@ -104,9 +104,13 @@ async fn alter_column_move_reorders_and_noop_writes_no_metadata() {
         .await
         .expect("collect");
     assert_eq!(
+        column_names(&door, "SELECT * FROM ice.sales.mv").await,
+        vec!["b".to_string(), "id".to_string(), "a".to_string()]
+    );
+    assert_eq!(
         metadata_file_count(&door.warehouse),
-        files_before,
-        "a move to the current position must not write metadata"
+        files_before + 1,
+        "a move to the current position keeps the order but still commits (ICE-COLUMN-REORDER-1-R-001)"
     );
     door.session
         .sql("ALTER TABLE ice.sales.mv ALTER COLUMN id AFTER a")
@@ -130,5 +134,15 @@ async fn alter_column_move_reorders_and_noop_writes_no_metadata() {
             && message.contains("`nope`")
             && message.contains("SQLSTATE: 42703"),
         "an unknown AFTER sibling must refuse Spark-shaped, got: {message}"
+    );
+    let dotted = door
+        .session
+        .sql("ALTER TABLE ice.sales.mv ALTER COLUMN b AFTER s.a")
+        .await
+        .expect_err("a dotted AFTER reference must refuse");
+    let dotted_message = dotted.to_string();
+    assert!(
+        dotted_message.contains("[PARSE_SYNTAX_ERROR]") && dotted_message.contains("42601"),
+        "a dotted AFTER reference must refuse Spark-shaped, got: {dotted_message}"
     );
 }

@@ -5,9 +5,9 @@ use std::hash::BuildHasher;
 
 use iceberg::spec::{PrimitiveType, Type};
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
-use iceberg::{Catalog, Error, ErrorKind, Result, TableIdent};
+use iceberg::{Catalog, Result, TableIdent, table::Table};
 
-pub use super::column_move::check_column_move;
+pub use super::column_move::{resolve_batch_move_names, resolve_move_names, starts_with_alter};
 pub use super::partition_spec::{PartitionSpecChange, apply_partition_spec_changes};
 
 /// Where a newly added column lands in its parent struct (Spark `FIRST` / `AFTER col`).
@@ -133,25 +133,26 @@ pub async fn apply_schema_changes(
         return Ok(());
     }
     let table = catalog.load_table(ident).await?;
-    let schema = table.metadata().current_schema();
-    let mut effective: Vec<&SchemaChange> = Vec::with_capacity(changes.len());
-    for change in changes {
-        if let SchemaChange::MoveColumn { name, position } = change {
-            let order_changed = check_column_move(schema, name, position)
-                .map_err(|message| Error::new(ErrorKind::DataInvalid, message))?;
-            if !order_changed {
-                continue;
-            }
-        }
-        effective.push(change);
-    }
-    if effective.is_empty() {
+    let prepared = resolve_batch_move_names(table.metadata().current_schema(), changes)?;
+    apply_schema_changes_on_table(catalog, &table, &prepared).await
+}
+
+#[expect(
+    clippy::missing_errors_doc,
+    reason = "round comment ban: action-apply and commit errors propagate from the fork, recorded in the unit ledger"
+)]
+pub async fn apply_schema_changes_on_table(
+    catalog: &dyn Catalog,
+    table: &Table,
+    changes: &[SchemaChange],
+) -> Result<()> {
+    if changes.is_empty() {
         return Ok(());
     }
-    let tx = Transaction::new(&table);
+    let tx = Transaction::new(table);
     // Spark `spark.sql.caseSensitive=false` default — match column names case-insensitively.
     let mut action = tx.update_schema().case_sensitive(false);
-    for change in effective {
+    for change in changes {
         action = match change {
             SchemaChange::AddColumn {
                 name,
@@ -728,7 +729,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn schema_move_column_reorders_ids_stable_and_noop_commits_nothing() {
+    async fn schema_move_column_reorders_ids_stable_and_noop_keeps_schema_id() {
         let wh = TempDir::new().unwrap();
         let (catalog, ident) = setup(&wh).await;
         for name in ["a", "b"] {
@@ -807,7 +808,6 @@ mod tests {
             "self-move refusal must carry the Java message, got: {error}"
         );
     }
-
     /// I6 stretch — int→long widen lands; long→int narrow refuses loud (twin pin).
     #[tokio::test]
     async fn schema_type_widen_int_to_long_and_narrow_refuses() {

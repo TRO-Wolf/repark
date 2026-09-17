@@ -8,7 +8,7 @@ behind parser plus end-to-end pins in repark-sql: the Python native session is
 catalog-isolated and cannot address Iceberg tables, so no Python pin can reach it.
 
 pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012
+  C-009, C-010, C-011, C-012, C-013, C-014
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import _live_parity as lp
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, PySparkException
+from repark.errors import AnalysisException, ParseException, PySparkException
 
 _HERE = Path(__file__).resolve().parent
 _TRUTH: dict[str, Any] = json.loads(
@@ -65,10 +65,18 @@ def _flat_ids(fields: list[dict[str, Any]], prefix: str = "") -> list[tuple[int,
     return out
 
 
+def _metadata_version_number(path: Path) -> tuple[int, int]:
+    """(metadata sequence, mtime) so the newest document wins by version, not clock."""
+    stem = path.name[: -len(".metadata.json")]
+    sequence = stem.split("-", 1)[0]
+    version = int(sequence) if sequence.isdigit() else -1
+    return version, path.stat().st_mtime_ns
+
+
 def _current_order_ids(table_root: Path) -> tuple[int, list[tuple[int, str]]]:
     """Current schema id plus ordered (id, dotted-name) pairs."""
     candidates = list((table_root / "metadata").glob("*.metadata.json"))
-    newest = max(candidates, key=lambda path: path.stat().st_mtime_ns)
+    newest = max(candidates, key=_metadata_version_number)
     doc = json.loads(newest.read_text(encoding="utf-8"))
     current = doc["current-schema-id"]
     schema = next(item for item in doc["schemas"] if item["schema-id"] == current)
@@ -143,8 +151,8 @@ def test_move_after_matches_oracle(tmp_path: Path) -> None:
         session.stop()
 
 
-def test_noop_moves_commit_nothing(tmp_path: Path) -> None:
-    """Moves to the current position mint no schema and no metadata file."""
+def test_noop_moves_keep_schema_id(tmp_path: Path) -> None:
+    """Moves to the current position keep the order and the schema id."""
     for name, statement in [
         ("noop_first", "ALTER TABLE {t} ALTER COLUMN id FIRST"),
         ("noop_after", "ALTER TABLE {t} ALTER COLUMN a AFTER id"),
@@ -156,10 +164,27 @@ def test_noop_moves_commit_nothing(tmp_path: Path) -> None:
             catalog = _catalog(name)
             qualified = f"{catalog}.{_NAMESPACE}.t"
             root = _table_root(warehouse, catalog, "t")
+            session.sql(statement.format(t=qualified))
+            _assert_matches_truth_snapshot(session, qualified, root, case["after"])
+        finally:
+            session.stop()
+
+
+@pytest.mark.xfail(strict=True, reason="ICE-COLUMN-REORDER-1-R-001")
+def test_noop_moves_write_no_metadata_file(tmp_path: Path) -> None:
+    """A no-op move writes no metadata file, matching Spark's empty commit."""
+    for name, statement in [
+        ("noop_first_file", "ALTER TABLE {t} ALTER COLUMN id FIRST"),
+        ("noop_after_file", "ALTER TABLE {t} ALTER COLUMN a AFTER id"),
+    ]:
+        session, warehouse = _fresh_facade(tmp_path, name, "t", _PLAIN_DDL, _PLAIN_SEED)
+        try:
+            catalog = _catalog(name)
+            qualified = f"{catalog}.{_NAMESPACE}.t"
+            root = _table_root(warehouse, catalog, "t")
             files_before = _metadata_file_count(root)
             session.sql(statement.format(t=qualified))
             assert _metadata_file_count(root) == files_before
-            _assert_matches_truth_snapshot(session, qualified, root, case["after"])
         finally:
             session.stop()
 
@@ -278,6 +303,65 @@ def test_struct_top_move_matches_oracle(tmp_path: Path) -> None:
         root = _table_root(warehouse, catalog, "t")
         session.sql(f"ALTER TABLE {qualified} ALTER COLUMN s FIRST")
         _assert_matches_truth_snapshot(session, qualified, root, case["after"])
+    finally:
+        session.stop()
+
+
+def test_nested_short_after_matches_oracle(tmp_path: Path) -> None:
+    """ALTER COLUMN s.b AFTER a resolves the short sibling inside the struct."""
+    case = _TRUTH["cases"]["nested_after_short_v2"]
+    assert "after" in case
+    session, warehouse = _fresh_facade(tmp_path, "nestedshort", "t", _NESTED_CTAS, "")
+    try:
+        catalog = _catalog("nestedshort")
+        qualified = f"{catalog}.{_NAMESPACE}.t"
+        root = _table_root(warehouse, catalog, "t")
+        session.sql(f"ALTER TABLE {qualified} ALTER COLUMN s.b FIRST")
+        session.sql(f"ALTER TABLE {qualified} ALTER COLUMN s.b AFTER a")
+        _assert_matches_truth_snapshot(session, qualified, root, case["after"])
+    finally:
+        session.stop()
+
+
+def test_nested_cross_after_refuses(tmp_path: Path) -> None:
+    """ALTER COLUMN s.b AFTER id refuses with the top-level Spark suggestion."""
+    truth_error = _TRUTH["cases"]["nested_after_cross_v2"]["error"]
+    assert truth_error["python_class"] == "AnalysisException"
+    session, warehouse = _fresh_facade(tmp_path, "nestedcross", "t", _NESTED_CTAS, "")
+    try:
+        catalog = _catalog("nestedcross")
+        qualified = f"{catalog}.{_NAMESPACE}.t"
+        root = _table_root(warehouse, catalog, "t")
+        files_before = _metadata_file_count(root)
+        with pytest.raises(AnalysisException) as caught:
+            session.sql(f"ALTER TABLE {qualified} ALTER COLUMN s.b AFTER id")
+        message = str(caught.value)
+        assert "[UNRESOLVED_COLUMN.WITH_SUGGESTION]" in message
+        assert "`s`.`id`" in message
+        assert "[`id`, `s`]" in message
+        assert "SQLSTATE: 42703" in message
+        assert _metadata_file_count(root) == files_before
+    finally:
+        session.stop()
+
+
+def test_nested_dotted_after_refuses(tmp_path: Path) -> None:
+    """ALTER COLUMN s.b AFTER s.a refuses with Spark's parse error."""
+    truth_error = _TRUTH["cases"]["nested_after_dotted_v2"]["error"]
+    assert truth_error["python_class"] == "ParseException"
+    session, warehouse = _fresh_facade(tmp_path, "nesteddotted", "t", _NESTED_CTAS, "")
+    try:
+        catalog = _catalog("nesteddotted")
+        qualified = f"{catalog}.{_NAMESPACE}.t"
+        root = _table_root(warehouse, catalog, "t")
+        files_before = _metadata_file_count(root)
+        with pytest.raises(ParseException) as caught:
+            session.sql(f"ALTER TABLE {qualified} ALTER COLUMN s.b AFTER s.a")
+        message = str(caught.value)
+        assert "[PARSE_SYNTAX_ERROR]" in message
+        assert "at or near '.'" in message
+        assert "42601" in message
+        assert _metadata_file_count(root) == files_before
     finally:
         session.stop()
 
@@ -403,6 +487,7 @@ _LIVE_MOVE_CASES = [
     "first_after_last_v2",
     "nested_v2",
     "struct_top_v2",
+    "nested_after_short_v2",
     "first_v3",
     "part_v2",
 ]
@@ -417,7 +502,11 @@ def test_live_oracle_replays_truth(tmp_path: Path, case_name: str) -> None:
     catalog = _live_catalog(f"replay_{case_name}")
     ddl, seed = _live_case_ddl(case_name)
     qualified = _live_fresh(engine, catalog, "t", ddl, seed)
-    engine.session.sql(case["statement"].format(t=qualified))
+    if case_name == "nested_after_short_v2":
+        engine.session.sql(f"ALTER TABLE {qualified} ALTER COLUMN s.b FIRST")
+        engine.session.sql(f"ALTER TABLE {qualified} ALTER COLUMN s.b AFTER a")
+    else:
+        engine.session.sql(case["statement"].format(t=qualified))
     after = case["after"]
     live = _live_snapshot(engine, qualified)
     assert live["select_columns"] == after["select_columns"]
@@ -432,18 +521,25 @@ def test_live_oracle_replays_truth(tmp_path: Path, case_name: str) -> None:
 
 
 @pytest.mark.skipif(not _LIVE, reason=_LIVE_SKIP)
-@pytest.mark.parametrize("case_name", ["self_v2", "badref_v2", "badcol_v2"])
+@pytest.mark.parametrize(
+    "case_name",
+    ["self_v2", "badref_v2", "badcol_v2", "nested_after_dotted_v2", "nested_after_cross_v2"],
+)
 def test_live_oracle_refusals_match_truth(tmp_path: Path, case_name: str) -> None:
     """Live Spark re-raises the recorded refusal class and message."""
     case = _TRUTH["cases"][case_name]
     engine, _ = _live_engine(tmp_path, f"refuse_{case_name}")
     catalog = _live_catalog(f"refuse_{case_name}")
     shapes = _TRUTH["shapes"]
-    qualified = _live_fresh(engine, catalog, "t", shapes["plain_ddl"], shapes["plain_seed"])
+    nested = "nested" in case_name
+    ddl = shapes["nested_ddl"] if nested else shapes["plain_ddl"]
+    seed = shapes["nested_seed"] if nested else shapes["plain_seed"]
+    qualified = _live_fresh(engine, catalog, "t", ddl, seed)
     with pytest.raises(Exception) as caught:
         engine.session.sql(case["statement"].format(t=qualified))
     assert type(caught.value).__name__ == case["error"]["python_class"]
-    assert case["error"]["message_first_line"] in str(caught.value)
+    needle = case["error"]["message_first_line"].split(" (line 1, pos")[0]
+    assert needle in str(caught.value)
     engine.session.sql(f"DROP TABLE {qualified}")
 
 

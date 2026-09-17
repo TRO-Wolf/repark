@@ -248,6 +248,41 @@ def record() -> dict[str, Any]:
             _NESTED_SEED,
             "ALTER TABLE {t} ALTER COLUMN s FIRST",
         )
+        cases["nested_after_dotted_v2"] = _move_case(
+            session,
+            warehouse,
+            "nested_after_dotted_v2",
+            _NESTED_DDL,
+            _NESTED_SEED,
+            "ALTER TABLE {t} ALTER COLUMN s.b AFTER s.a",
+        )
+        cases["nested_after_cross_v2"] = _move_case(
+            session,
+            warehouse,
+            "nested_after_cross_v2",
+            _NESTED_DDL,
+            _NESTED_SEED,
+            "ALTER TABLE {t} ALTER COLUMN s.b AFTER id",
+        )
+        short_table = "nested_after_short_v2"
+        _fresh(session, short_table, _NESTED_DDL, _NESTED_SEED)
+        short_qualified = f"{_CATALOG}.{_NAMESPACE}.{short_table}"
+        short_before = _snapshot(session, warehouse, short_table)
+        session.sql(f"ALTER TABLE {short_qualified} ALTER COLUMN s.b FIRST")
+        try:
+            session.sql(f"ALTER TABLE {short_qualified} ALTER COLUMN s.b AFTER a")
+        except Exception as exc:
+            cases[short_table] = {
+                "statement": "ALTER COLUMN s.b FIRST then ALTER COLUMN s.b AFTER a",
+                "before": short_before,
+                "error": _error_record(exc),
+            }
+        else:
+            cases[short_table] = {
+                "statement": "ALTER COLUMN s.b FIRST then ALTER COLUMN s.b AFTER a",
+                "before": short_before,
+                "after": _snapshot(session, warehouse, short_table),
+            }
         v3_ddl = _PLAIN_DDL + " TBLPROPERTIES ('format-version'='3')"
         cases["first_v3"] = _move_case(
             session,

@@ -649,6 +649,253 @@
       },
       "statement": "ALTER TABLE {t} ALTER COLUMN b FIRST + INSERT new-order"
     },
+    "nested_after_cross_v2": {
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "s",
+            "struct<a:int,b:string>"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ],
+              "type": "struct"
+            }
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            {
+              "a": 1,
+              "b": "x"
+            }
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "s"
+        ]
+      },
+      "error": {
+        "java_class": null,
+        "message_first_line": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `s`.`id` cannot be resolved. Did you mean one of the following? [`id`, `s`]. SQLSTATE: 42703; line 1 pos 0",
+        "python_class": "AnalysisException"
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN s.b AFTER id"
+    },
+    "nested_after_dotted_v2": {
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "s",
+            "struct<a:int,b:string>"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ],
+              "type": "struct"
+            }
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            {
+              "a": 1,
+              "b": "x"
+            }
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "s"
+        ]
+      },
+      "error": {
+        "java_class": null,
+        "message_first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near '.'. SQLSTATE: 42601 (line 1, pos 66)",
+        "python_class": "ParseException"
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN s.b AFTER s.a"
+    },
+    "nested_after_short_v2": {
+      "after": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "s",
+            "struct<a:int,b:string>"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ],
+              "type": "struct"
+            }
+          }
+        ],
+        "metadata_version": 4,
+        "rows": [
+          [
+            1,
+            {
+              "a": 1,
+              "b": "x"
+            }
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "s"
+        ]
+      },
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "s",
+            "struct<a:int,b:string>"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ],
+              "type": "struct"
+            }
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            {
+              "a": 1,
+              "b": "x"
+            }
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "s"
+        ]
+      },
+      "statement": "ALTER COLUMN s.b FIRST then ALTER COLUMN s.b AFTER a"
+    },
     "nested_v2": {
       "after": {
         "describe": [

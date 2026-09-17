@@ -13,7 +13,10 @@ use iceberg::{Catalog, TableIdent};
 use repark_core::EngineContext;
 use repark_functions::cardinality::repark_sql_settings_from_options;
 use repark_functions::format_version::resolve_alter_format_version;
-use repark_iceberg::write::alter::{ColumnPosition, SchemaChange};
+use repark_iceberg::write::alter::{
+    ColumnPosition, SchemaChange, apply_schema_changes_on_table, resolve_move_names,
+    starts_with_alter,
+};
 use repark_iceberg::write::format_version::{
     FORMAT_VERSION_PROPERTY, format_version_from_number, format_version_number,
     set_properties_and_format_version,
@@ -269,6 +272,7 @@ fn unsupported_operation(operation: &AlterTableOperation) -> DataFusionError {
     ))
 }
 
+#[derive(Debug)]
 pub(crate) struct ColumnMoveDdl {
     table: ObjectName,
     name: String,
@@ -282,7 +286,11 @@ enum MoveToken {
 
 pub(crate) fn try_parse_column_move(sql: &str) -> Option<Result<ColumnMoveDdl>> {
     use datafusion::sql::sqlparser::dialect::GenericDialect;
+    use datafusion::sql::sqlparser::parser::ParserError;
     use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
+    if !starts_with_alter(sql) {
+        return None;
+    }
     let tokens = Tokenizer::new(&GenericDialect {}, sql).tokenize().ok()?;
     let mut significant = Vec::new();
     for token in tokens {
@@ -329,6 +337,14 @@ pub(crate) fn try_parse_column_move(sql: &str) -> Option<Result<ColumnMoveDdl>> 
         }));
     }
     if word_is(next, "AFTER") {
+        if is_period(next + 2) {
+            return Some(Err(DataFusionError::SQL(
+                Box::new(ParserError::ParserError(
+                    "[PARSE_SYNTAX_ERROR] Syntax error at or near '.'. SQLSTATE: 42601".to_string(),
+                )),
+                None,
+            )));
+        }
         let (reference, after) = column_path(&significant, next + 1)?;
         if after < significant.len() {
             return Some(Err(DataFusionError::Plan(format!(
@@ -378,21 +394,19 @@ pub(crate) async fn execute_column_move(
         .load_table(&target.ident())
         .await
         .map_err(iceberg_err)?;
-    match repark_iceberg::write::alter::check_column_move(
+    let (mover, at) = resolve_move_names(
         table.metadata().current_schema(),
+        &[],
         &ddl.name,
         &ddl.position,
-    ) {
-        Err(message) => return Err(DataFusionError::Plan(message)),
-        Ok(false) => return cx.ctx.read_empty(),
-        Ok(true) => {}
-    }
-    repark_iceberg::write::alter::apply_schema_changes(
+    )
+    .map_err(DataFusionError::Plan)?;
+    apply_schema_changes_on_table(
         target.catalog.as_ref(),
-        &target.ident(),
+        &table,
         &[SchemaChange::MoveColumn {
-            name: ddl.name,
-            position: ddl.position,
+            name: mover,
+            position: at,
         }],
     )
     .await

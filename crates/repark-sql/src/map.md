@@ -141,8 +141,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `repark_iceberg::write::alter` seams, plus Trino `SET PROPERTIES` and its ONE pre-parse
   recognizer (blank the word `PROPERTIES`, let the stock parser read `SET (…)`). The move has
   its own pre-parse (`try_parse_column_move` / `execute_column_move`: stock sqlparser models no
-  position-change op). Curated vocabulary; `partitioning` is the pre-designated future
-  spelling and refuses citing Q3. Tests: [alter/map.md](alter/map.md).
+  position-change op; round 2 Q-20b-5: an `ALTER`-prefix fast path, dotted `AFTER` references
+  refuse Spark-shaped, one loaded table per move). Curated vocabulary; `partitioning` is the
+  pre-designated future spelling and refuses citing Q3. Tests: [alter/map.md](alter/map.md).
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-006, C-007
 - `merge.rs` — `MERGE INTO` → `repark_iceberg::write::merge::MergeSpec`.
   ANSI MERGE keeps `commit_branch: None` (dotted write-to-branch is Spark-door only, RP-5).

@@ -198,6 +198,21 @@ fn column_move_first_after_and_nested_parse() {
         .expect("recognize")
         .expect("parse");
     assert_eq!(nested.name, "s.b");
+    let short = try_parse_column_move("ALTER TABLE mem.ns.t ALTER COLUMN s.b AFTER a")
+        .expect("recognize")
+        .expect("parse");
+    assert_eq!(short.name, "s.b");
+    assert!(matches!(short.position, ColumnPosition::After(_)));
+    let dotted = try_parse_column_move("ALTER TABLE mem.ns.t ALTER COLUMN s.b AFTER s.a")
+        .expect("recognize")
+        .expect_err("a dotted AFTER reference must refuse");
+    let message = dotted.to_string();
+    assert!(
+        message.contains("[PARSE_SYNTAX_ERROR]")
+            && message.contains("at or near '.'")
+            && message.contains("42601"),
+        "a dotted AFTER reference must refuse Spark-shaped, got: {message}"
+    );
 }
 
 #[test]

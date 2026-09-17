@@ -17,9 +17,9 @@ which are pure functions, plus the `ALTER COLUMN … FIRST|AFTER` move recognize
   only `format_version = DEFAULT` refuses, because a format version only moves up. The version
   itself is resolved against the table and the session opt-in at execute, not at parse.
   pins: v3-10-upgrade-v2-to-v3/C-003
-  **ICE-COLUMN-REORDER-1 (2026-09-17):** `column_move_first_after_and_nested_parse` and
+  **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):** `column_move_first_after_and_nested_parse` and
   `column_move_leaves_other_alter_forms_alone` pin the move recognizer (FIRST, AFTER, nested
-  path, non-move forms fall through, trailing tokens refuse).
+  path, short sibling reference, dotted `AFTER` refusal, non-move forms fall through, trailing tokens refuse).
   pins: ice-column-reorder-1/C-001, C-002, C-008
 
 ## Pointers
