@@ -9,12 +9,24 @@ use datafusion::prelude::SessionContext;
 use futures::Stream;
 
 use super::{InsertAction, InsertClause, MatchedAction, quote_ident, resolve_schema_field_name};
+use crate::write::insert_defaults::{ColumnDefaults, column_defaults};
 use crate::write::store_assign::{self, MERGE_SPARK_CLASS};
+use iceberg::arrow::schema_to_arrow_schema;
+use iceberg::table::Table;
 
-/// Project an INSERT clause onto the target schema: named columns take VALUES, others become NULL.
-pub(super) fn insert_projection(
+/// Project an INSERT clause for a table, filling omitted defaulted columns.
+pub(super) fn table_projection(clause: &InsertClause, table: &Table) -> Result<String> {
+    let current = table.metadata().current_schema();
+    let write_schema = schema_to_arrow_schema(current).map_err(super::iceberg_err)?;
+    let defaults = column_defaults(current)?;
+    insert_projection_with_defaults(clause, &write_schema, &defaults)
+}
+
+/// Project an INSERT clause onto the target schema, filling omitted defaulted columns.
+pub(super) fn insert_projection_with_defaults(
     clause: &InsertClause,
     write_schema: &ArrowSchema,
+    defaults: &ColumnDefaults,
 ) -> Result<String> {
     let InsertAction::Explicit {
         columns: named,
@@ -65,17 +77,17 @@ pub(super) fn insert_projection(
     let mut projection = Vec::with_capacity(write_schema.fields().len());
     for field in write_schema.fields() {
         let quoted = quote_ident(field.name());
-        match assigned.get(field.name().as_str()) {
-            Some(expr) => projection.push(format!("({expr}) AS {quoted}")),
-            None if field.is_nullable() => {
-                projection.push(format!("NULL AS {quoted}"));
-            }
-            None => {
-                return Err(DataFusionError::Plan(format!(
-                    "MERGE INSERT clause leaves required column `{}` unassigned",
-                    field.name()
-                )));
-            }
+        if let Some(expr) = assigned.get(field.name().as_str()) {
+            projection.push(format!("({expr}) AS {quoted}"));
+        } else if let Some(fill) = defaults.get(&field.name().to_ascii_lowercase()) {
+            projection.push(format!("({}) AS {quoted}", fill.sql_text()?));
+        } else if field.is_nullable() {
+            projection.push(format!("NULL AS {quoted}"));
+        } else {
+            return Err(DataFusionError::Plan(format!(
+                "MERGE INSERT clause leaves required column `{}` unassigned",
+                field.name()
+            )));
         }
     }
     Ok(projection.join(", "))

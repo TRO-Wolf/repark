@@ -6309,3 +6309,11 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   name was missing; this unit lands the kernel, so both pins now assert the name resolves and raises
   Spark 4.1.2's own `[INTERNAL_ERROR]` / `XX000` for the empty literal (R-18a-3, measured). The tripwire
   did its job: it went red the moment the name landed. pins: fnp-gen-1/C-004, unresolved-routine-1/C-006
+- [test_ice_v3_write_default_1.py](test_ice_v3_write_default_1.py) — **ICE-V3-WRITE-DEFAULT-1
+  (2026-09-17):** offline pins over the checked-in v3 fixture plus the live tier under
+  `REPARK_PARITY_LIVE=1`: INSERT / MERGE column-list fill from `write_default`, explicit
+  NULL kept, required-missing refused, positional-short and `DEFAULT`-keyword shapes, the
+  DataFrame writer shapes, no-default and v2 unchanged, and write-default 7 over
+  initial-default 5. Truth in
+  [../../repark-parity/fixtures/torture/data/ice_v3_write_default_1/](../../repark-parity/fixtures/torture/data/ice_v3_write_default_1/map.md).
+  pins: ice-v3-write-default-1/C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012

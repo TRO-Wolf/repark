@@ -435,6 +435,11 @@ repark-core's error map.
   Named residual: `Cast(Literal, …)` inside a `Values` node, where the synthesized and explicit
   forms are byte-identical. Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
+- `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
+  filling omitted columns from `write_default` on every write path: `column_defaults`
+  reads the table defaults, `fill_insert_plan` rewrites a short INSERT plan, an
+  explicit NULL stays NULL, and a missing required column keeps Spark's error.
+  pins: ice-v3-write-default-1/C-004, C-005, C-006, C-007
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):
   `ansi_store_assignable` / `normalize_for_assignment` /

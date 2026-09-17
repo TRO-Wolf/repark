@@ -85,6 +85,10 @@ pins: rp-4-fork-repin/C-005, C-006
   reregister; split out to keep `execute_insert_by_name` under clippy's line limit). Explicit column lists never
   reach this module; they take `execute_insert_overwrite`, which reads the same function.
   pins: ice-dyn-overwrite-1/C-019, C-020, C-021, C-023
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the overwrite stage-then-swap fills
+  omitted columns from `write_default` before staging, so `INSERT OVERWRITE`
+  matches Spark's measured answer.
+  pins: ice-v3-write-default-1/C-007
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
@@ -193,6 +197,10 @@ pins: rp-4-fork-repin/C-005, C-006
   **SPARK-SQL-GRAMMAR-1 (2026-09-16):** the same pre-plan slot runs the bare-unit
   (`bare_unit.rs`), nullary-demote (`bare_nullary.rs`) and keyword (`keyword_lower.rs`)
   lowerings, in that order; the range-frame restatement repeats all three.
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the slot also rewrites INSERT
+  `DEFAULT` markers and records the INSERT column list, then fills omitted
+  columns from `write_default` on the planned DML (`insert_defaults`).
+  pins: ice-v3-write-default-1/C-004, C-007
 - `bare_nullary.rs` — **SPARK-SQL-GRAMMAR-1 C-010 (2026-09-16):** bare nullary
   keywords in both Spark directions. `demote_refusing_nullary_calls` lowers a
   no-paren `localtimestamp` call (the Databricks dialect parses it as a function)

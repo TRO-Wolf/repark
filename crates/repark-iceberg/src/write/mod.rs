@@ -17,6 +17,8 @@ pub mod format_version;
 mod hadoop_stale_commit;
 /// Shared Spark/DF `quote_ident` + path-escape needles (CQ-006/007).
 pub mod idents;
+/// Omitted-column fill from `write_default`: literal converters plus the `INSERT` passes.
+pub mod insert_defaults;
 /// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over `LogicalPlan::Dml`.
 pub mod insert_gate;
 pub mod merge;

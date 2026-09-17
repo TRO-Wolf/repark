@@ -265,6 +265,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   the conflict filter is the target-only predicate since ICE-OCC-SCOPED-1). Pins in
   `tests/occ.rs` (M13 parse + M19-A snapshot split + RP-1 F-0 Replace
   files-exist pin on the snapshot arm).
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** NOT MATCHED INSERT fills omitted
+  columns from `write_default` through `../insert_defaults.rs` (`table_projection`
+  carries the fill into the lowered text); explicit NULL stays NULL. Pins in
+  `tests/insert_fill.rs`.
+  pins: ice-v3-write-default-1/C-005
 - [tests/](tests/map.md) — MERGE unit batteries (primary, OCC, streaming, parallel write).
 
 ## I want to…

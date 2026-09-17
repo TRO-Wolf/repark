@@ -315,7 +315,8 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     // Fail isolation parse before staging.
     let _isolation = repark_iceberg::write::parse_overwrite_isolation(table)?;
     let column_names: Vec<String> = columns.iter().map(object_name_last).collect();
-    let materialize_sql = format!("SELECT * FROM ({source}) AS _repark_ow_src");
+    let (column_names, materialize_sql) =
+        overwrite_source_with_default_fills(table, &column_names, source)?;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
@@ -445,6 +446,50 @@ pub(crate) fn tighten_batch_nullability(batches: Vec<RecordBatch>) -> Result<Vec
             )
         })
         .collect()
+}
+
+/// Extend an `INSERT OVERWRITE` column-list source with write-default fills for omitted columns.
+/// # Errors
+/// Plan error when the table defaults cannot load or a default literal has no SQL rendering.
+fn overwrite_source_with_default_fills(
+    table: &iceberg::table::Table,
+    column_names: &[String],
+    source: &datafusion::sql::sqlparser::ast::Query,
+) -> Result<(Vec<String>, String)> {
+    let plain = format!("SELECT * FROM ({source}) AS _repark_ow_src");
+    if column_names.is_empty() {
+        return Ok((column_names.to_vec(), plain));
+    }
+    let defaults =
+        repark_iceberg::write::insert_defaults::column_defaults(table.metadata().current_schema())?;
+    let mut names = column_names.to_vec();
+    let mut fills = Vec::new();
+    for field in table.metadata().current_schema().as_struct().fields() {
+        if names
+            .iter()
+            .any(|listed| listed.eq_ignore_ascii_case(&field.name))
+        {
+            continue;
+        }
+        if let Some(fill) = defaults.get(&field.name.to_ascii_lowercase()) {
+            fills.push(format!(
+                "({}) AS {}",
+                fill.sql_text()?,
+                repark_iceberg::write::idents::quote_ident_spark(&field.name)
+            ));
+            names.push(field.name.clone());
+        }
+    }
+    if fills.is_empty() {
+        return Ok((names, plain));
+    }
+    Ok((
+        names,
+        format!(
+            "SELECT *, {} FROM ({source}) AS _repark_ow_src",
+            fills.join(", ")
+        ),
+    ))
 }
 
 /// Empty INSERT OVERWRITE wipe must not run when source types are not assignment-compatible.

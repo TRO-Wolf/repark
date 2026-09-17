@@ -33,7 +33,7 @@ step.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | `repro_before_fix`: `p_write_default.py` on the unfixed tree shows INSERT / MERGE column lists writing NULL for omitted `c` and `DataFrame` append refusing `missing from the DataFrame: ['c']`. | Regenerate the source table with `p_v3_types_defaults.py` via `/tmp/ib-scratch/run-probe.sh`; run `p_write_default.py`; paste the output. | **PROVEN** | Source table regenerated (`/tmp/oc-worker/jb-jvm.sh /tmp/ib-scratch/run-probe.sh p_v3_types_defaults.py`, exit 0; schema carries `initial-default: 5, write-default: 5` on `c`; Spark reads pre-add rows as 5; RePark omitted-`c` insert reads back `(6, 'f', None)`). Repro on this tree's release native (`.venv/bin/python /tmp/ib-scratch/probes/p_write_default.py`, no JVM): `INSERT (id, name)` writes `(7, 'g', None)`; MERGE NOT MATCHED writes `(13, 'm', None)`; `writeTo`/`saveAsTable` append refuse `missing from the DataFrame: ['c']`; positional-short and SELECT-short refuse at planning (`Inconsistent data length`, `Column count doesn't match`); `DEFAULT` keyword refuses (`No field named default`). |
+| C-001 | `repro_before_fix`: `p_write_default.py` on the unfixed tree shows INSERT / MERGE column lists writing NULL for omitted `c` and `DataFrame` append refusing `missing from the DataFrame: ['c']`. | Regenerate the source table with `p_v3_types_defaults.py` via `/tmp/ib-scratch/run-probe.sh`; run `p_write_default.py`; paste the output. | **PROVEN** | Source table regenerated (`/tmp/oc-worker/jb-jvm.sh /tmp/ib-scratch/run-probe.sh p_v3_types_defaults.py`, exit 0; schema carries `initial-default: 5, write-default: 5` on `c`; Spark reads pre-add rows as 5; RePark omitted-`c` insert reads back `(6, 'f', None)`). Repro on this tree's release native (`.venv/bin/python /tmp/ib-scratch/probes/p_write_default.py`, no JVM): `INSERT (id, name)` writes `(7, 'g', None)`; MERGE NOT MATCHED writes `(13, 'm', None)`; `writeTo`/`saveAsTable` append refuse `missing from the DataFrame: ['c']`; positional-short and SELECT-short refuse at planning (`Inconsistent data length`, `Column count doesn't match`); `DEFAULT` keyword refuses (`No field named default`). pins: ice-v3-write-default-1/C-001. |
 | C-002 | `spark_oracle_recorded`: the Java-API-created v3 table ships as a checked-in fixture with relative-path-safe adoption, plus a truth JSON of Spark's answer for every cell, recorded by a script checked in beside it. | Fixture directory + truth JSON + recording script, following the `ice_spark_table_1` / `test_ice_spark_table_1.py` copy-and-register pattern. | **PROVEN** | `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/`: seven v3 tables (225,094 bytes, `.crc` stripped), `truth.json` (banner `spark=4.1.2 tz=UTC`, per-table schema plus seed outcome, 22 cells), `record.py` (Spark-only, pins C-002), `map.md`. Recorded 2026-09-17 on live PySpark 4.1.2 + Iceberg 1.11.0; adoption copies to the baked-in canonical `/tmp/repark-ice-v3-write-default-1/ns/<table>` under a lock. pins: ice-v3-write-default-1/C-002. |
 | C-003 | `pins_red_first`: `python/repark/tests/test_ice_v3_write_default_1.py` (offline tier against the fixture, live tier under `REPARK_PARITY_LIVE=1`) and the Rust fill unit tests fail on the unfixed tree. | Run the new pins on the unfixed tree; paste failures. | **OPEN** | — |
 | C-004 | `insert_column_list_fills`: `INSERT INTO t (id, name)` on both SQL doors fills omitted `c` from `write_default` (NULL only when the field has none); a required column with no write-default keeps Spark's error. | Offline + live pins green; Rust unit tests for the fill green. | **OPEN** | — |
@@ -125,3 +125,30 @@ fills there. MERGE NOT MATCHED null-fills in RePark-owned
   on an existing table REPLACES it (2-column result), while this engine
   generates `INSERT OVERWRITE` keeping the schema — pre-existing divergence,
   untouched. pins: none (finding, no clause).
+
+## Build notes (2026-09-17, implementation round)
+
+- Recovered the pre-compaction design from the working-tree diff after the
+  compacted summary's file text proved stale: `insert_defaults` exposes
+  `column_defaults`/`ColumnDefaults` (MERGE), `insert_column_list`,
+  `rewrite_insert_markers` (DEFAULT keyword), `fill_insert_plan` (NULL-pad
+  replacement). Reimplemented against DF54 (`Expr::Literal(_, None)`,
+  `insert_to_plan` pads omitted columns as `Cast(Literal(Null))`) and the fork
+  at `75da2b58` (`PrimitiveLiteral`, `write_default: Option<Literal>`).
+- DAG adaptation: `repark-iceberg` cannot take `repark-core` (`check_crate_dag`
+  allows core→iceberg only), so the doors resolve `(catalog, TableIdent)` via
+  new pure helpers `insert_target` / `dml_target` and pass them in. ANSI door
+  plans from SQL text, so `rewrite_insert_markers` returns the rewritten SQL
+  for `delegate`; the Spark door plans the mutated statement.
+- DataFrame writers funnel through generated SQL: `_by_name_projection` now
+  emits a target column list omitting missing columns, so
+  `INSERT INTO t (id, name) SELECT ...` reaches `fill_insert_plan`; `insertInto`
+  stays positional and refuses; extra columns still refuse in Python.
+- C-009 guard (`test_rp3_c009_write_default.py`) scans non-test `.rs` for
+  `with_write_default` / `write_default(`: product code reads the field via
+  `match &field.write_default` (no needle); schema-building tests live in
+  `merge/tests/` (exempt path). Disposition: guard untouched, still green.
+- Size gates: `merge/mod.rs` 1792 and `merge/tests/merge.rs` 1065 held exact by
+  keeping the `insert_sql(index, table)` shape and moving the fill pins to new
+  `merge/tests/insert_fill.rs`; `writer_readwriter.py` 1101→1095 via ordinary
+  ratchet-down (dead missing-refusal detail removed).
