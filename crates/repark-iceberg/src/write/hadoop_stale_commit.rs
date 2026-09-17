@@ -1,11 +1,3 @@
-//! Stale Hadoop `vN` pointer pins (ICE-HADOOP-VN-1).
-//!
-//! Two memory catalogs share one tempdir warehouse and adopt the same Hadoop-named
-//! metadata file. The first catalog's append lands `vN`; the stale catalog's append
-//! burns the fork's bounded retry budget and surfaces retryable
-//! [`iceberg::ErrorKind::CatalogCommitConflicts`] with the winner's bytes intact.
-//! On the previous fork pin the stale append returned `Ok` and overwrote the winner.
-
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -165,7 +157,6 @@ async fn two_catalogs_over_hadoop_v2() -> (TempDir, Arc<dyn Catalog>, Arc<dyn Ca
     (warehouse, first, second, ident)
 }
 
-/// The stale cross-catalog append fails with the fork conflict kind and keeps the winner.
 #[tokio::test]
 async fn stale_hadoop_pointer_second_append_fails_loud_and_keeps_winner() {
     let (_warehouse, first, second, ident) = two_catalogs_over_hadoop_v2().await;
@@ -219,7 +210,6 @@ async fn stale_hadoop_pointer_second_append_fails_loud_and_keeps_winner() {
     );
 }
 
-/// The stale pointer never advances: a second stale append raises the same way.
 #[tokio::test]
 async fn stale_hadoop_pointer_stays_wedged_loud() {
     let (_warehouse, first, second, ident) = two_catalogs_over_hadoop_v2().await;

@@ -179,7 +179,9 @@ repark-core's error map.
   catalogs over one tempdir warehouse adopt the same Hadoop `v2` file; the first
   `append()` lands `v3`, and the stale catalog's append burns the fork's bounded
   retry budget and surfaces `ErrorKind::CatalogCommitConflicts` with the winner's
-  bytes and rows intact, then stays wedged-loud on the next stale append.
+  bytes and rows intact, then stays wedged-loud on the next stale append. Red-first:
+  both pins fail on a temporary local revert to the pre-#286 pin (the stale append
+  returns `Ok`), green on `75da2b58`; the revert never reached a commit.
   pins: ice-hadoop-vn-1/C-001
 - `overwrite.rs` — exclusive full-table `INSERT OVERWRITE` stage-then-swap:
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
