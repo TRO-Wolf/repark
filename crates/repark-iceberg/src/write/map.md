@@ -156,7 +156,8 @@ repark-core's error map.
 - `commit_target.rs` — `maybe_to_branch` / `snapshot_id_for_commit` for named-ref commits.
   `commit_append_to` (ICE-RTAS-BYNAME-1, 2026-09-17): `commit_append` with an
   optional named branch, mirroring `commit_overwrite_replace_all_to`; the Spark door's
-  `INSERT … BY NAME` staged append commits through it.
+  `INSERT … BY NAME` staged append commits through it. Like its sibling it carries
+  `#[allow(clippy::missing_errors_doc)]` rather than a doc comment.
   pins: rp-5-fork-repin/C-004
   pins: ice-rtas-byname-1/C-001
 - `commit_error.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `CommitStateUnknownError`, the

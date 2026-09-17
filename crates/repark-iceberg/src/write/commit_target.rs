@@ -31,10 +31,7 @@ pub fn maybe_to_branch<A>(
     }
 }
 
-/// `commit_append` onto an optional named branch, mirroring `commit_overwrite_replace_all_to`.
-/// # Errors
-/// Returns the fork's transaction/commit error (folded to this crate's error type) when the append
-/// or the branch commit fails.
+#[allow(clippy::missing_errors_doc)]
 pub async fn commit_append_to(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
