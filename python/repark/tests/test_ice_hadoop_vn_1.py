@@ -1,9 +1,11 @@
 """ICE-HADOOP-VN-1 — a stale Hadoop `vN` writer raises loud and loses nothing.
 
 Two RePark memory catalogs adopt the Spark-written `v2` fixture; the first writer's
-commit lands `v3`, and every later commit from the stale pointer raises
+commit lands `v3`, and every later snapshot commit from the stale pointer raises
 ``PySparkException`` with a ``CatalogCommitConflicts``-leading message while the
-winner's bytes stay intact. Live tier replays the Spark-first shape and the
+winner's bytes stay intact. A stale ``CREATE OR REPLACE`` is the exception: it
+succeeds into fresh-uuid lineage, invisible to the winner and to Spark
+(``ICE-HADOOP-VN-1-R-001``). Live tier replays the Spark-first shape and the
 cross-engine reads.
 
 pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
@@ -13,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import time
 from collections.abc import Iterator
@@ -21,6 +24,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
+_UUID_METADATA_NAME = re.compile(r"^\d{5}-[0-9a-f-]{36}\.metadata\.json$")
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _FIXTURE_SRC = _REPO_ROOT / "python/repark-parity/fixtures/torture/data/ice_hadoop_vn_1"
@@ -190,7 +195,7 @@ def test_conc_winner_rows_read_back(tmp_path: Path) -> None:
 
 
 def test_stale_handle_stays_wedged_loud(tmp_path: Path) -> None:
-    """C-001: the stale pointer never advances — every later commit raises the same way."""
+    """C-001: the stale pointer never advances — every later snapshot commit raises the same way."""
     session = _new_session(tmp_path)
     try:
         with _materialize() as table_root:
@@ -244,6 +249,114 @@ def test_dataframe_doors_stale_writer_raises(tmp_path: Path) -> None:
                 session.createDataFrame([(10, "df-save")], ["id", "s"]).write.mode(
                     "append"
                 ).saveAsTable(stale)
+            assert _metadata_names(table_root) == [
+                "v1.metadata.json",
+                "v2.metadata.json",
+                "v3.metadata.json",
+            ]
+    finally:
+        session.stop()
+
+
+def _split_brain_names(table_root: Path, replaces: int) -> list[str]:
+    """The winner's versions plus exactly two fresh-uuid files per stale replace."""
+    names = _metadata_names(table_root)
+    for version in ("v1.metadata.json", "v2.metadata.json", "v3.metadata.json"):
+        assert version in names, names
+    extras = [
+        name
+        for name in names
+        if name not in ("v1.metadata.json", "v2.metadata.json", "v3.metadata.json")
+    ]
+    assert len(extras) == 2 * replaces, extras
+    for extra in extras:
+        assert _UUID_METADATA_NAME.match(extra), extra
+    return extras
+
+
+def test_stale_replace_splits_brain(tmp_path: Path) -> None:
+    """R-001 current behavior, SQL door: the stale replace succeeds into uuid lineage."""
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            v3_bytes = _run_conc_shape(session, table_root)
+            stale = f"{_CATALOG_TWO}.{_NAMESPACE}.{_TABLE}"
+            session.sql(
+                f"CREATE OR REPLACE TABLE {stale} USING iceberg AS SELECT 99 AS id, 'rtas' AS s"
+            ).collect()
+            _split_brain_names(table_root, 1)
+            assert (table_root / "metadata" / "v3.metadata.json").read_bytes() == v3_bytes
+            assert _select_rows(session, stale) == [[99, "rtas"]]
+            assert (
+                _select_rows(session, f"{_CATALOG_ONE}.{_NAMESPACE}.{_TABLE}")
+                == _ORACLE_DOC["rows_after_conc"]
+            )
+    finally:
+        session.stop()
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="ICE-HADOOP-VN-1-R-001: stale replace must conflict, no uuid file",
+)
+def test_stale_replace_raises_conflict(tmp_path: Path) -> None:
+    """R-001 target, SQL door: the stale replace raises the typed conflict."""
+    from repark.errors import PySparkException
+
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            _run_conc_shape(session, table_root)
+            stale = f"{_CATALOG_TWO}.{_NAMESPACE}.{_TABLE}"
+            with pytest.raises(PySparkException, match="CatalogCommitConflicts"):
+                session.sql(
+                    f"CREATE OR REPLACE TABLE {stale} USING iceberg AS SELECT 99 AS id, 'rtas' AS s"
+                ).collect()
+            assert _metadata_names(table_root) == [
+                "v1.metadata.json",
+                "v2.metadata.json",
+                "v3.metadata.json",
+            ]
+    finally:
+        session.stop()
+
+
+def test_stale_replace_doors_split_brain(tmp_path: Path) -> None:
+    """R-001 current behavior, DataFrame door: replace and createOrReplace both split brain."""
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            v3_bytes = _run_conc_shape(session, table_root)
+            stale = f"{_CATALOG_TWO}.{_NAMESPACE}.{_TABLE}"
+            session.sql("SELECT 98 AS id, 'df-rpl' AS s").writeTo(stale).replace()
+            _split_brain_names(table_root, 1)
+            session.sql("SELECT 97 AS id, 'df-cor' AS s").writeTo(stale).createOrReplace()
+            _split_brain_names(table_root, 2)
+            assert (table_root / "metadata" / "v3.metadata.json").read_bytes() == v3_bytes
+            assert _select_rows(session, stale) == [[97, "df-cor"]]
+            assert (
+                _select_rows(session, f"{_CATALOG_ONE}.{_NAMESPACE}.{_TABLE}")
+                == _ORACLE_DOC["rows_after_conc"]
+            )
+    finally:
+        session.stop()
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="ICE-HADOOP-VN-1-R-001: stale DataFrame replace must raise CatalogCommitConflicts",
+)
+def test_stale_df_replace_raises_conflict(tmp_path: Path) -> None:
+    """R-001 target, DataFrame door: the stale replace raises the typed conflict."""
+    from repark.errors import PySparkException
+
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            _run_conc_shape(session, table_root)
+            stale = f"{_CATALOG_TWO}.{_NAMESPACE}.{_TABLE}"
+            with pytest.raises(PySparkException, match="CatalogCommitConflicts"):
+                session.sql("SELECT 98 AS id, 'df-rpl' AS s").writeTo(stale).replace()
             assert _metadata_names(table_root) == [
                 "v1.metadata.json",
                 "v2.metadata.json",
@@ -364,5 +477,63 @@ def test_live_recovery_spark_reads_all(tmp_path: Path) -> None:
             spark = _live_spark_session()
             spark.sql(f"REFRESH TABLE {_SPARK_TABLE}")
             assert _live_spark_rows(spark) == _ORACLE_DOC["rows_after_recovery"]
+    finally:
+        session.stop()
+
+
+@pytest.mark.skipif(not _LIVE, reason=_LIVE_SKIP)
+def test_live_replace_split_brain_spark_reads_winner(tmp_path: Path) -> None:
+    """R-001 live: after the stale replace, Spark still reads the winner's rows."""
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            _run_conc_shape(session, table_root)
+            stale = f"{_CATALOG_TWO}.{_NAMESPACE}.{_TABLE}"
+            session.sql(
+                f"CREATE OR REPLACE TABLE {stale} USING iceberg AS SELECT 99 AS id, 'rtas' AS s"
+            ).collect()
+            _split_brain_names(table_root, 1)
+            spark = _live_spark_session()
+            spark.sql(f"REFRESH TABLE {_SPARK_TABLE}")
+            assert _live_spark_rows(spark) == _ORACLE_DOC["spark_rows_after_conc"]
+    finally:
+        session.stop()
+
+
+@pytest.mark.skipif(not _LIVE, reason=_LIVE_SKIP)
+def test_live_spark_replace_after_repark_commit(tmp_path: Path) -> None:
+    """R-001 live mirror: Spark's replace continues the version chain; RePark stays stale."""
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            _adopt(
+                session,
+                _CATALOG_ONE,
+                "rpl3",
+                table_root / "metadata" / "v2.metadata.json",
+            )
+            session.sql(
+                f"INSERT INTO {_CATALOG_ONE}.{_NAMESPACE}.rpl3 VALUES (2,'rp-cat1')"
+            ).collect()
+            assert _metadata_names(table_root) == [
+                "v1.metadata.json",
+                "v2.metadata.json",
+                "v3.metadata.json",
+            ]
+            spark = _live_spark_session()
+            spark.sql(f"REFRESH TABLE {_SPARK_TABLE}")
+            spark_table = _SPARK_TABLE
+            spark.sql(
+                f"CREATE OR REPLACE TABLE {spark_table} USING iceberg "
+                "AS SELECT 100 AS id, 'spark-rtas' AS s"
+            )
+            mirror = _ORACLE_DOC["spark_replace_after_repark"]
+            assert _metadata_names(table_root) == mirror["versions"]
+            spark.sql(f"REFRESH TABLE {_SPARK_TABLE}")
+            assert _live_spark_rows(spark) == mirror["spark_rows"]
+            assert (
+                _select_rows(session, f"{_CATALOG_ONE}.{_NAMESPACE}.rpl3")
+                == mirror["repark_stale_rows"]
+            )
     finally:
         session.stop()

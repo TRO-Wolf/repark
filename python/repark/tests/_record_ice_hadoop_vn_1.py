@@ -20,6 +20,8 @@ from __future__ import annotations
 import json
 import shutil
 import sys
+import threading
+import time
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -92,6 +94,24 @@ def _record_error_label(exc: BaseException) -> dict[str, str]:
     }
 
 
+def _spark_slow_insert(slow: Any, race_outcome: dict[str, str]) -> None:
+    """Run the 400k-row Spark INSERT, recording whether it committed or raised."""
+    try:
+        slow.sql("INSERT INTO sc.ns.conc SELECT id, id FROM range(0, 400000, 1, 200)").collect()
+        race_outcome["spark"] = "committed"
+    except Exception as exc:
+        race_outcome["spark"] = _record_error_label(exc)["class"]
+
+
+def _reset_bake(spark: Any) -> None:
+    """Restore the bake table to the pristine fixture state and refresh Spark."""
+    shutil.rmtree(BAKE_TABLE_ROOT)
+    BAKE_TABLE_ROOT.mkdir(parents=True)
+    for name in ("metadata", "data"):
+        shutil.copytree(FIXTURE_DIR / name, BAKE_TABLE_ROOT / name)
+    spark.sql("REFRESH TABLE sc.ns.conc")
+
+
 def main() -> None:
     import tempfile
 
@@ -119,7 +139,9 @@ def main() -> None:
     seed_rows: list[Row] = _rows_of(spark.sql("SELECT id, s FROM sc.ns.conc").toArrow())
     assert seed_rows == [[1, "seed"]], seed_rows
 
-    shutil.rmtree(FIXTURE_DIR, ignore_errors=True)
+    shutil.rmtree(FIXTURE_DIR / "metadata", ignore_errors=True)
+    shutil.rmtree(FIXTURE_DIR / "data", ignore_errors=True)
+    (FIXTURE_DIR / "truth.json").unlink(missing_ok=True)
     (FIXTURE_DIR / "metadata").mkdir(parents=True)
     (FIXTURE_DIR / "data").mkdir(parents=True)
     for name in ("metadata", "data"):
@@ -195,11 +217,31 @@ def main() -> None:
     rows_after_recovery: list[Row] = _rows_of(spark.sql("SELECT id, s FROM sc.ns.conc").toArrow())
     assert rows_after_recovery == [[1, "seed"], [2, "rp-cat1"], [4, "rp-recovered"]]
 
-    shutil.rmtree(BAKE_TABLE_ROOT)
-    BAKE_TABLE_ROOT.mkdir(parents=True)
-    for name in ("metadata", "data"):
-        shutil.copytree(FIXTURE_DIR / name, BAKE_TABLE_ROOT / name)
+    _reset_bake(spark)
+    rp.sql(f"CALL rp.system.register_table(table => 'ns.rpl3', metadata_file => '{v2}')").collect()
+    rp.sql("INSERT INTO rp.ns.rpl3 VALUES (2,'rp-cat1')").collect()
+    assert _metadata_names() == ["v1.metadata.json", "v2.metadata.json", "v3.metadata.json"]
+    spark.sql(
+        "CREATE OR REPLACE TABLE sc.ns.conc USING iceberg AS SELECT 100 AS id, 'spark-rtas' AS s"
+    )
+    replace_versions = _metadata_names()
     spark.sql("REFRESH TABLE sc.ns.conc")
+    spark_rows_after_replace: list[Row] = _rows_of(
+        spark.sql("SELECT id, s FROM sc.ns.conc").toArrow()
+    )
+    repark_rows_after_spark_replace: list[Row] = _rows_of(
+        rp.sql("SELECT id, s FROM rp.ns.rpl3").to_arrow()
+    )
+    assert replace_versions == [
+        "v1.metadata.json",
+        "v2.metadata.json",
+        "v3.metadata.json",
+        "v4.metadata.json",
+    ]
+    assert spark_rows_after_replace == [[100, "spark-rtas"]]
+    assert repark_rows_after_spark_replace == [[1, "seed"], [2, "rp-cat1"]]
+
+    _reset_bake(spark)
     spark.sql("INSERT INTO sc.ns.conc VALUES (2,'spark')")
     assert _metadata_names() == ["v1.metadata.json", "v2.metadata.json", "v3.metadata.json"]
     spark_v3_bytes = (BAKE_TABLE_ROOT / "metadata" / "v3.metadata.json").read_bytes()
@@ -231,6 +273,46 @@ def main() -> None:
         planted.unlink()
     spark.sql("REFRESH TABLE sc.ns.conc")
 
+    race_outcome: dict[str, str] = {}
+    race_count = 0
+    for round_no in range(3):
+        _reset_bake(spark)
+        rp.sql(
+            f"CALL rp.system.register_table(table => 'ns.race{round_no}', metadata_file => '{v2}')"
+        ).collect()
+        slow = spark.newSession()
+        data_root = BAKE_TABLE_ROOT / "data"
+        before_files = {str(path) for path in data_root.rglob("*.parquet")}
+        thread = threading.Thread(target=_spark_slow_insert, args=(slow, race_outcome))
+        thread.start()
+        deadline = time.time() + 180
+        seen = False
+        while time.time() < deadline:
+            current = {str(path) for path in data_root.rglob("*.parquet")}
+            if len(current - before_files) >= 1:
+                seen = True
+                break
+            time.sleep(0.5)
+        try:
+            rp.sql(f"INSERT INTO rp.ns.race{round_no} VALUES (400001,'repark-race')").collect()
+            repark_won = True
+        except Exception:
+            repark_won = False
+        thread.join(timeout=300)
+        print(
+            f"race round {round_no}: files_seen={seen} repark_won={repark_won} "
+            f"spark={race_outcome.get('spark')}",
+            flush=True,
+        )
+        if not repark_won:
+            continue
+        spark.sql("REFRESH TABLE sc.ns.conc")
+        race_count = spark.sql("SELECT count(*) AS n FROM sc.ns.conc").toArrow().to_pylist()[0]["n"]
+        if race_outcome.get("spark") == "committed" and race_count == 400002:
+            break
+    assert race_outcome.get("spark") == "committed", race_outcome
+    assert race_count == 400002, race_count
+
     oracle = {
         "provenance": banner,
         "seed_rows": seed_rows,
@@ -251,11 +333,22 @@ def main() -> None:
             "planted_next_version_insert": planted_error,
             "note": (
                 "Live Spark 4.1.2 lists the metadata directory and continues at the "
-                "next free version, so neither a racing commit (probe: 400k-row "
-                "INSERT committed beside a RePark commit, 400002 rows) nor a "
-                "planted next-version file raises a PySpark-visible error. Java's "
+                "next free version, so neither a racing commit nor a planted "
+                "next-version file raises a PySpark-visible error. Java's "
                 "CommitFailedException needs a true simultaneous-commit race."
             ),
+        },
+        "spark_replace_after_repark": {
+            "spark_rows": spark_rows_after_replace,
+            "repark_stale_rows": repark_rows_after_spark_replace,
+            "versions": replace_versions,
+        },
+        "spark_race_400k": {
+            "outcome": race_outcome.get("spark"),
+            "row_count": race_count,
+            "repark_row": [400001, "repark-race"],
+            "seed_row": [1, "seed"],
+            "spark_rows": 400000,
         },
         "fixture": "python/repark-parity/fixtures/torture/data/ice_hadoop_vn_1",
     }

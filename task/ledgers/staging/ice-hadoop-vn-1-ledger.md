@@ -192,6 +192,49 @@ which the file passes `7 passed`. The whole suite is re-run below on the clean t
    class would contradict the pinned classification tests (session.rs CQ-015); if the
    orchestrator wants one anyway, that is a new unit.
 
+## Round 2 (2026-09-17) — logic-critic remediation
+
+**Ruling Q-20b-3 (orchestrator, 2026-09-17):** a stale replace split-brains (ruling
+text in the brief); the fix belongs in the fork (`F-HADOOP-VN-REPLACE-1`); RePark
+carries no local patch and this unit opens no fork PR. This unit measures both doors,
+records Spark's mirror, pins current behavior exactly with `xfail(strict=True)` target
+cells, and files OPEN residue row `ICE-HADOOP-VN-1-R-001`.
+
+| Clause | Proposition (checkable) | Verdict | Evidence |
+|---|---|---|---|
+| R2-C001 (L-02 per Q-20b-3) | Stale replace measured both doors; Spark mirror recorded; R-001 filed; current behavior pinned exactly with strict-xfail targets; docstring + registry wedge text corrected. | PROVEN | Probe `/tmp/ib-scratch/probes/p_hadoop_vn_r2.py` rc 0 (paste below); `test_stale_replace_splits_brain`, `test_stale_replace_doors_split_brain`, `test_stale_replace_raises_conflict`, `test_stale_df_replace_raises_conflict`, `test_live_replace_split_brain_spark_reads_winner`, `test_live_spark_replace_after_repark_commit`; registry `ICE-HADOOP-VN-1-R-001`. pins: ice-hadoop-vn-1/C-008 |
+| R2-C002 (L-01) | Every registry sentence pinned or removed. | OPEN |  |
+| R2-NOTE | Recorder incident: the fixture rewrite used `rmtree(FIXTURE_DIR)`, deleting the checked-in `map.md`; fixed to clear only `metadata/`, `data/`, `truth.json`, map restored from git. | PROVEN | Recorder diff in the step-1 commit. |
+| R2-C003 (L-03) | DataFrame doors share one helper; overwrite/truncate/alter shapes pinned. | OPEN |  |
+| R2-C004 (gates) | Round-2 gates green with counts. | OPEN |  |
+
+### R2-C001 evidence — L-02 probe output (`p_hadoop_vn_r2.py`, rc 0, 2026-09-17)
+
+```text
+OK rpl cat1 INSERT (base v2): [Row(count=1)]
+rpl metadata after cat1: ['v1.metadata.json', 'v2.metadata.json', 'v3.metadata.json']
+OK rpl cat2 stale CREATE OR REPLACE (SQL door): [Row()]
+rpl metadata after SQL replace: ['00003-f1a6f136-4ba4-44f1-90ff-ca0279905c16.metadata.json', '00004-6d59a76a-8b6d-4341-ae0b-56d65aad35c5.metadata.json', 'v1.metadata.json', 'v2.metadata.json', 'v3.metadata.json']
+rpl v3 bytes unchanged after SQL replace: True
+OK rpl cat2 reads after SQL replace: [(99, 'rtas')]
+OK rpl cat1 reads after SQL replace: [(1, 'seed'), (2, 'rp-cat1')]
+OK rpl spark reads after SQL replace: [(1, 'seed'), (2, 'rp-cat1')]
+OK rpl2 cat2 stale writeTo.replace: None
+rpl2 metadata after DF replace: ['00003-7e588996-53d9-4190-b4d0-8e4d8b4c5f1d.metadata.json', '00004-7377dba4-3ae1-49f0-ad5e-2f47ee08f914.metadata.json', 'v1.metadata.json', 'v2.metadata.json', 'v3.metadata.json']
+rpl2 v3 bytes unchanged after DF replace: True
+OK rpl2 cat2 stale writeTo.createOrReplace: None
+rpl2 metadata after DF createOrReplace: ['00003-7e588996-53d9-4190-b4d0-8e4d8b4c5f1d.metadata.json', '00004-7377dba4-3ae1-49f0-ad5e-2f47ee08f914.metadata.json', '00005-066429fb-f1e3-4651-998d-918d450b714c.metadata.json', '00006-bd3c852f-4839-4cb3-9099-20256e9ea655.metadata.json', 'v1.metadata.json', 'v2.metadata.json', 'v3.metadata.json']
+rpl2 v3 bytes unchanged: True
+OK rpl2 cat2 reads: [(97, 'df-cor')]
+OK rpl2 cat1 reads: [(1, 'seed'), (2, 'rp-cat1')]
+OK rpl2 spark reads: [(1, 'seed'), (2, 'rp-cat1')]
+OK rpl3 spark CREATE OR REPLACE after repark commit: []
+rpl3 metadata after spark replace: ['v1.metadata.json', 'v2.metadata.json', 'v3.metadata.json', 'v4.metadata.json']
+OK rpl3 spark reads after replace: [(100, 'spark-rtas')]
+OK rpl3 repark reads after spark replace: [(1, 'seed'), (2, 'rp-cat1')]
+DONE
+```
+
 ## Coverage attestation
 
 ```text

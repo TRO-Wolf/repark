@@ -104,7 +104,44 @@
       "class": "COMMITTED",
       "message": ""
     },
-    "note": "Live Spark 4.1.2 lists the metadata directory and continues at the next free version, so neither a racing commit (probe: 400k-row INSERT committed beside a RePark commit, 400002 rows) nor a planted next-version file raises a PySpark-visible error. Java's CommitFailedException needs a true simultaneous-commit race."
+    "note": "Live Spark 4.1.2 lists the metadata directory and continues at the next free version, so neither a racing commit nor a planted next-version file raises a PySpark-visible error. Java's CommitFailedException needs a true simultaneous-commit race."
+  },
+  "spark_replace_after_repark": {
+    "spark_rows": [
+      [
+        100,
+        "spark-rtas"
+      ]
+    ],
+    "repark_stale_rows": [
+      [
+        1,
+        "seed"
+      ],
+      [
+        2,
+        "rp-cat1"
+      ]
+    ],
+    "versions": [
+      "v1.metadata.json",
+      "v2.metadata.json",
+      "v3.metadata.json",
+      "v4.metadata.json"
+    ]
+  },
+  "spark_race_400k": {
+    "outcome": "committed",
+    "row_count": 400002,
+    "repark_row": [
+      400001,
+      "repark-race"
+    ],
+    "seed_row": [
+      1,
+      "seed"
+    ],
+    "spark_rows": 400000
   },
   "fixture": "python/repark-parity/fixtures/torture/data/ice_hadoop_vn_1"
 }

@@ -269,6 +269,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark-first shape (Spark commits `v3`, stale RePark raises, Spark reads its row
   and commits on), the conc cross-read, and the recovery cross-read against
   [ice_hadoop_vn_1_spark_oracle.json](ice_hadoop_vn_1_spark_oracle.json).
+  Round 2 (2026-09-17): the stale-replace split-brain is pinned exactly on both doors
+  (SQL `CREATE OR REPLACE` lands `[(99, 'rtas')]`, `writeTo().replace()` /
+  `.createOrReplace()` land their rows, each replace minting two fresh-uuid metadata
+  files with `v3` bytes intact), the typed-conflict target rides
+  `xfail(strict=True)` pins, and the live mirror shows Spark's own replace continuing
+  the version chain (`v4`, new rows only) while RePark stays stale.
   pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [_record_ice_hadoop_vn_1.py](_record_ice_hadoop_vn_1.py) —
   the explicit-run recorder behind the fixture and the oracle JSON above (JVM +
