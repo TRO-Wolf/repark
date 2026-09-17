@@ -1,4 +1,4 @@
-"""Mathematical and trigonometric function wrappers."""
+"""Mathematical, trigonometric and data-masking function wrappers."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import warnings
 from typing import Any
 
 from repark.spark.column import Column
-from repark.spark.functions import _as_column_arg, _scalar
+from repark.spark.functions import _as_column_arg, _scalar, lit
 
 
 def bround(col: Column | str, scale: Column | int | None = None) -> Column:
@@ -17,6 +17,21 @@ def bround(col: Column | str, scale: Column | int | None = None) -> Column:
 def conv(col: Column | str, fromBase: Column | int, toBase: Column | int) -> Column:  # noqa: N803
     """Base conversion with Spark ``conv`` signed-output semantics."""
     return _scalar("conv", col, fromBase, toBase)
+
+
+def mask(
+    col: Column | str,
+    upperChar: Column | str | None = None,  # noqa: N803
+    lowerChar: Column | str | None = None,  # noqa: N803
+    digitChar: Column | str | None = None,  # noqa: N803
+    otherChar: Column | str | None = None,  # noqa: N803
+) -> Column:
+    """Character-class masking with Spark ``mask`` defaults."""
+    upper = upperChar if upperChar is not None else lit("X")
+    lower = lowerChar if lowerChar is not None else lit("x")
+    digit = digitChar if digitChar is not None else lit("n")
+    other = otherChar if otherChar is not None else lit(None)
+    return _scalar("mask", col, upper, lower, digit, other)
 
 
 def bin(col: Column | str) -> Column:
@@ -186,7 +201,7 @@ def toRadians(col: Column | str) -> Column:  # noqa: N802
     return radians(col)
 
 
-INSTALL_NAMES: tuple[str, ...] = ("toDegrees", "toRadians", "bround", "conv")
+INSTALL_NAMES: tuple[str, ...] = ("toDegrees", "toRadians", "bround", "conv", "mask")
 
 
 def install_into(namespace: dict[str, Any], exported: list[str]) -> None:

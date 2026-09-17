@@ -97,6 +97,15 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             }
             repark_functions::string::call_format_number(exprs)
         }
+        "mask" => {
+            if exprs.is_empty() || exprs.len() > 5 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 1 to 5 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::string::call_mask(exprs)
+        }
         "split" => {
             if exprs.len() != 2 && exprs.len() != 3 {
                 return Err(PyValueError::new_err(format!(
