@@ -10838,14 +10838,17 @@ field NAME.
 
 - **repark** — `INSERT INTO t (id, name)` on both SQL doors, `MERGE … WHEN NOT
   MATCHED THEN INSERT (id, name)`, `writeTo(t).append()`, `saveAsTable` append,
-  `insertInto`, and Spark-door whole-table `INSERT OVERWRITE t (id, name)` fill
+  and Spark-door whole-table `INSERT OVERWRITE t (id, name)` fill
   an omitted column from its `write_default` (NULL only when the field has
-  none). An explicit NULL stays NULL. A required column with no default
-  refuses. Positional-short `VALUES`/`SELECT`, the `DEFAULT` keyword, and extra
-  columns keep Spark's measured answers. Tables without defaults and v2 tables
-  behave exactly as before. Write-default 7 over initial-default 5 fills 7 on
-  new writes while old rows still read 5.
-- **Apache Spark** — the same fills and refusals on every shape above.
+  none). `insertInto` stays positional (`INSERT INTO t SELECT *`, no column
+  list) and refuses a short frame, as Spark does. An explicit NULL stays NULL.
+  A required column with no default refuses. Positional-short `VALUES`/`SELECT`,
+  the `DEFAULT` keyword, and extra columns keep Spark's measured answers.
+  Tables without defaults and v2 tables behave exactly as before. Write-default
+  7 over initial-default 5 fills 7 on new writes while old rows still read 5.
+- **Apache Spark** — the same fills and refusals on every shape above, including
+  the `insertInto_missing` arity refusal
+  (`INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS`).
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17; 22 recorded cells
   in `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json`
   beside the Java-API-created v3 tables.)*
