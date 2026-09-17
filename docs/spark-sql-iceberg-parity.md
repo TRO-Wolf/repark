@@ -3373,6 +3373,39 @@ the pin rather than obeying it.
   `IsNaN` kernel returns false for NULL.
 
 
+### ICE-NAN-PUSHDOWN-1 — NaN equality and IN push down as `is_nan` on Iceberg scans — **FIXED 2026-09-17 (ICE-NAN-PUSHDOWN-1)**
+
+- **repark** — **FIXED 2026-09-17 (ICE-NAN-PUSHDOWN-1).** `WHERE d =
+  CAST('NaN' AS DOUBLE)` and `WHERE d IN (CAST('NaN' AS DOUBLE))` on Iceberg
+  tables (v2 and v3, RePark- and Spark-written, NaN-only / mixed / two-file /
+  split layouts) answer the NaN-row ids on both doors; `<=>`, `!=`, ranges,
+  `NOT IN`, `BETWEEN` and negation answer the oracle sets; `DELETE` / `UPDATE …
+  WHERE d = NaN` touch exactly the NaN rows at v2 and v3. The measured pushed
+  shapes (fork #284 at pin `75da2b58`): `=` pushes `Unary IsNan(d)`; `IN (NaN,
+  1.0)` pushes `Or(Unary IsNan(d), Binary Eq(d, 1.0))` with a NaN-free literal;
+  `!=` and single-element `NOT IN` push `Unary NotNan(d)`; `<=>` and
+  NaN-literal ranges push nothing and answer through the residual. `BETWEEN 1.0
+  AND NaN` keeps the pushed finite `>= 1.0` leg (file prune) with the NaN leg
+  residual; `BETWEEN NaN AND NaN` is the pure NaN-bound residual.
+- **Apache Spark** — the same id sets per clause per shape (NaN = NaN is true;
+  NaN sorts above every non-NaN; NULL never matches). *(oracle: recorded —
+  PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
+  `python/repark/tests/ice_nan_pushdown_1_oracle.json`, plus the checked-in
+  Spark-written v2/v3 warehouses; the pin's live tier replays Spark.)*
+- **Pin** —
+  `python/repark/tests/test_ice_nan_pushdown_1.py` (offline: RePark-written
+  tables plus the Spark warehouses vs the truth JSON, both doors; live tier
+  re-derives the grid and the v2/v3 DML from live Spark) and
+  `crates/repark-spark/src/tests/nan_pushdown.rs` (answer pins plus
+  pushed-predicate plan pins over a memory-catalog scan).
+- **Rationale** — FIXED. History: the scan pushed `Eq(d, NaN-datum)`, which the
+  manifest / row-group / row evaluators never match, and pushdown is Inexact,
+  so the NaN rows were silently dropped — the rating's silent answer was `[]`
+  where Spark answers the NaN rows (V2-26, V3-14). Bare-decimal-literal
+  spellings stay a loud error on NaN-holding tables, split out as
+  ICE-NAN-DECIMAL-LITERAL-1 below; the grid pins use the typed spellings.
+
+
 ### FN-SHA2-1 — `sha2` facade returns raw bytes while Spark returns a hex string — **FIXED 2026-09-03 (FN-FIX-1)**
 
 - **repark** — **FIXED 2026-09-03 (FN-FIX-1).** `F.sha2(col, bits)` returns
@@ -9712,6 +9745,29 @@ field NAME.
   mechanics, not literal widths.
 - **Rationale** — BACKLOG, filed 2026-09-16 (SQL-LITERAL-TYPING-1 residue). Unifying needs the
   rule installed for core sessions (home question belongs to that card) plus native-door pins.
+
+### ICE-NAN-DECIMAL-LITERAL-1 — bare decimal literals against a NaN-holding DOUBLE column raise — **BACKLOG 2026-09-17**
+
+- **repark** — on an Iceberg table whose `DOUBLE` column holds NaN rows, the SQL
+  door fails loud where a decimal literal meets the column: `WHERE d = 1.0`
+  raises `Arrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing
+  on NaN`, while `WHERE d IN (CAST('NaN' AS DOUBLE), 1.0)` raises `Cannot cast to
+  Decimal128(30, 15)` without the overflow suffix. The no-NaN-literal spellings
+  `d = 1.0` and `d IN (0.5, 1.0)` fail identically, so this is decimal-literal
+  typing against NaN payloads, not NaN pushdown; the typed spellings (`1.0D`,
+  `CAST(1.0 AS DOUBLE)`) answer the oracle sets.
+- **Apache Spark** — `WHERE d = 1.0` answers `[2]` and
+  `WHERE d IN (CAST('NaN' AS DOUBLE), 1.0)` answers `[1, 2, 5]` on the same
+  six-row mixed shape. *(oracle: recorded — PySpark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0, `decimal_literal` in
+  `python/repark/tests/ice_nan_pushdown_1_oracle.json`, 2026-09-17.)*
+- **Pin** —
+  `python/repark/tests/test_ice_nan_pushdown_1.py::test_bare_decimal_literal_spellings_raise_loud`
+  holds today's two needles and the two recorded Spark answers; it flips red when
+  the typing lands.
+- **Rationale** — BACKLOG, filed 2026-09-17 (ICE-NAN-PUSHDOWN-1 round 2). Fixing it
+  means teaching the decimal-literal coercion to survive NaN payloads, a planner
+  change beyond a pushdown unit.
 
 ## 8. Drop-in disclosure rationale
 

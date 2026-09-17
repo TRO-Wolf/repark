@@ -36,6 +36,7 @@ mod merge;
 mod merge_nmbs;
 mod metadata_tables;
 mod namespace_ddl;
+mod nan_pushdown;
 mod normalize;
 mod partition_overwrite;
 mod partitioned_ctas;
