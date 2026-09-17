@@ -538,7 +538,7 @@ pub(super) fn conform_scan_batch(scratch: &SchemaRef, batch: &RecordBatch) -> Re
         let conformed = match field.name().as_str() {
             FILE_PATH_COL => cast_with_options(column, &DataType::Utf8, &strict_cast())?,
             POS_COL => cast_with_options(column, &DataType::Int64, &strict_cast())?,
-            _ => column.clone(),
+            _ => crate::write::conform::promoted_scan_column(column, field.data_type())?,
         };
         columns.push(conformed);
     }

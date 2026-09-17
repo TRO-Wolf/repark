@@ -125,6 +125,12 @@ repark-core's error map.
   stream-writer map; it calls `conform_batch` then keeps MERGE lineage extras (`_row_id`).
   Matching types skip `try_new` so CAST-NULL empty overwrite keeps source nullability.
   pins: ctas-view-1-conform-stream/C-002
+  **ICE-PROMOTE-READ-1 (2026-09-16):** `promoted_scan_column` widens a scanned column written
+  before a legal Iceberg promotion (`Int32 → Int64`, `Float32 → Float64`,
+  `Decimal128(p,s) → Decimal128(p',s)`) to the current type with a strict cast and returns every
+  other column unchanged, so a non-promotion mismatch still fails in `RecordBatch::try_new`.
+  Caller: `merge/mod.rs` `conform_scan_batch`.
+  pins: ice-promote-read-1/C-011
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform
   ([conform.rs](conform.rs): missing /
   extra / duplicate column = loud error, except a missing column whose Iceberg field carries a

@@ -58,20 +58,68 @@ schema built from the current schema without casting data columns.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Spark's answers are recorded, not hand-computed: `_record_ice_promote_read_1.py` builds 126 cases on PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (ANSI on) and writes `truth.json` plus two Spark-created adopted tables; two independent recordings agree answer for answer; the pin module asserts the recorded catalog digest equals the driver's. | `test_recorded_oracle_covers_the_driver_catalog`; recording logs. | OPEN | Recording 1 (21:57–21:59) and 2 (22:01–22:03): 126 cases, 0 Spark errors, 0 answer differences. `truth.json` 58,427 bytes. |
-| C-002 | Filters on promoted unpartitioned columns (`int→bigint`, `float→double`, `decimal(9,2)→(12,2)`) answer Spark row for row with `int64` / `double` / `decimal128(12, 2)` Arrow types on single- and mixed-era tables: `=`, `<`, `<=`, `BETWEEN`, `>`, `>=`, `<>`, short and long `IN`, `NOT IN`, float and decimal ranges, `count(*)` — SQL door and DataFrame door. | `test_sql_door_matches_spark[read/*]`, `test_dataframe_door_matches_spark[read/*]`. | OPEN | Red: see §Red evidence. |
-| C-003 | Filters on a promoted partition source (`identity(p)`, `bucket(4, p)`, `truncate(10, p)`) answer Spark on both eras, both doors. | `test_*_door_matches_spark[read_partition/*]`. | OPEN | Red: see §Red evidence. |
-| C-004 | MERGE keyed on the promoted column of a mixed-era table answers Spark — MATCHED-only UPDATE, MATCHED UPDATE + NOT MATCHED INSERT with BIGINT and INT source keys — v2/v3 × CoW/MoR, SQL door and facade `mergeInto` door. | `test_*_door_matches_spark[merge_key/*]`. | OPEN | The facade `mergeInto` door renders `ON (target.id = source.id)` over a temp view and answers Spark on the base too (the key-range pushdown does not fire for that spelling): those cells guard the door, the SQL-door cells carry the red. |
-| C-005 | Range and long-`IN` DML on a mixed-era table answers Spark: `UPDATE … WHERE id < 3`, `UPDATE`/`DELETE … WHERE id IN (<24 values>)`, `DELETE … WHERE id < 2`, `DELETE … WHERE f < 2.0D`, v2/v3 × CoW/MoR. SQL door only — PySpark has no DataFrame UPDATE/DELETE. | `test_sql_door_matches_spark[dml_range/*]`. | OPEN | Red: see §Red evidence. |
-| C-006 | DML on a table holding only pre-promotion files answers Spark instead of refusing `column types must match schema types`: MERGE upsert on the promoted key (SQL and `mergeInto`), MERGE non-key float UPDATE, MERGE DELETE on a promoted-decimal table, UPDATE, DELETE — v2/v3 × CoW/MoR. | `test_*_door_matches_spark[dml_single/*]`; `promoted_scan::conform_scan_batch_widens_legally_promoted_columns`, `promoted_scan::target_scan_over_a_single_era_promoted_table_yields_the_current_types`. | OPEN | Red: see §Red evidence. |
-| C-007 | DML on a promoted identity partition source answers Spark on both eras, v2/v3 × CoW/MoR: DELETE / UPDATE by a non-partition predicate and by a partition predicate, MERGE on the partition column, static `INSERT OVERWRITE … PARTITION (p = 1)`, dynamic partition overwrite (SQL under `partitionOverwriteMode=dynamic`, and facade `writeTo(t).overwritePartitions()`). | `test_*_door_matches_spark[dml_partition/*]`. | OPEN | Red: see §Red evidence. |
-| C-008 | RePark adopts the Spark-created, Spark-promoted mixed-era tables (v2 and v3, `identity(p)`, all four columns promoted) through `register_table` and answers every read predicate on both doors, then MERGE `UPDATE SET * / INSERT *`, range UPDATE and `DELETE … WHERE f < 3.0D` equal to Spark's own run of the same statements. | `test_adopted_spark_table_matches_spark[adopted/v2, adopted/v3 × sql, dataframe]`. | OPEN | Red: see §Red evidence. |
-| C-009 | Format v2 and v3 are both measured and pinned for every family above. | The recorded catalog asserts `{"2", "3"}`; every group id carries `v2` and `v3` cells. | OPEN | |
-| C-010 | The table-format cause is fixed fork-side with red-first Rust pins (fork unit F-PROMOTE-READ-1, 10 pins in `crates/iceberg/src/spec/promotion_tests.rs`); RePark patches no Iceberg semantics locally. | Fork red and green runs; RePark Python pins green only with the fork change. | OPEN | Fork red commit `dcd90d2b`: 10 of 10 red on base. |
-| C-011 | RePark's DML target scan conforms a legally promoted column (`Int32→Int64`, `Float32→Float64`, `Decimal128(p,s)→Decimal128(p',s)`) to the current type and still refuses an illegal narrowing. | `promoted_scan` pins in `crates/repark-iceberg/src/write/merge/tests/`. | OPEN | Red: see §Red evidence. |
-| C-012 | Under `REPARK_PARITY_LIVE=1` live Spark re-derives every recorded answer (no golden drift) while the offline cells hold RePark equal to the recording. | `test_live_spark_rederives_every_recorded_answer`. | OPEN | |
+| C-001 | Spark's answers are recorded, not hand-computed: `_record_ice_promote_read_1.py` builds 126 cases on PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (ANSI on) and writes `truth.json` plus two Spark-created adopted tables; two independent recordings agree answer for answer; the pin module asserts the recorded catalog digest equals the driver's. | `test_recorded_oracle_covers_the_driver_catalog`; recording logs. | PROVEN | Recording 1 (21:57–21:59) and 2 (22:01–22:03): 126 cases, 0 Spark errors, 0 answer differences; `truth.json` 58,427 bytes. `test_recorded_oracle_covers_the_driver_catalog` green offline and live. |
+| C-002 | Filters on promoted unpartitioned columns (`int→bigint`, `float→double`, `decimal(9,2)→(12,2)`) answer Spark row for row with `int64` / `double` / `decimal128(12, 2)` Arrow types on single- and mixed-era tables: `=`, `<`, `<=`, `BETWEEN`, `>`, `>=`, `<>`, short and long `IN`, `NOT IN`, float and decimal ranges, `count(*)` — SQL door and DataFrame door. | `test_sql_door_matches_spark[read/*]`, `test_dataframe_door_matches_spark[read/*]`. | PROVEN | Offline 169 passed on release native 23:00:19 (fork `364748c0` via override); red on base: see §Red evidence (`read/*/mixed` both doors). |
+| C-003 | Filters on a promoted partition source (`identity(p)`, `bucket(4, p)`, `truncate(10, p)`) answer Spark on both eras, both doors. | `test_*_door_matches_spark[read_partition/*]`. | PROVEN | Offline 169 passed; red on base: `read_partition/*/mixed` 6 cells per door. |
+| C-004 | MERGE keyed on the promoted column of a mixed-era table answers Spark — MATCHED-only UPDATE, MATCHED UPDATE + NOT MATCHED INSERT with BIGINT and INT source keys — v2/v3 × CoW/MoR, SQL door and facade `mergeInto` door. | `test_*_door_matches_spark[merge_key/*]`. | PROVEN | Offline 169 passed; red on base: 12 SQL-door cells. The facade `mergeInto` door renders `ON (target.id = source.id)` over a temp view and answered Spark on the base too (the key-range pushdown does not fire for that spelling): those cells guard the door, the SQL-door cells carry the red. |
+| C-005 | Range and long-`IN` DML on a mixed-era table answers Spark: `UPDATE … WHERE id < 3`, `UPDATE`/`DELETE … WHERE id IN (<24 values>)`, `DELETE … WHERE id < 2`, `DELETE … WHERE f < 2.0D`, v2/v3 × CoW/MoR. SQL door only — PySpark has no DataFrame UPDATE/DELETE. | `test_sql_door_matches_spark[dml_range/*]`. | PROVEN | Offline 169 passed; red on base: `update_id_lt_3`, `update_id_in_long`, `delete_id_in_long` × 4; `delete_id_lt_2` / `delete_f_lt_2` were already right. |
+| C-006 | DML on a table holding only pre-promotion files answers Spark instead of refusing `column types must match schema types`: MERGE upsert on the promoted key (SQL and `mergeInto`), MERGE non-key float UPDATE, MERGE DELETE on a promoted-decimal table, UPDATE, DELETE — v2/v3 × CoW/MoR. | `test_*_door_matches_spark[dml_single/*]`; `promoted_scan::conform_scan_batch_widens_legally_promoted_columns`, `promoted_scan::target_scan_over_a_single_era_promoted_table_yields_the_current_types`. | PROVEN | Offline 169 passed; red on base: all 20 SQL-door and 4 `mergeInto` cells. After the first fork fix 12 single-era UPDATE cells stayed red (fork DataFusion UPDATE exec) — closed by fork `364748c0`. |
+| C-007 | DML on a promoted identity partition source answers Spark on both eras, v2/v3 × CoW/MoR: DELETE / UPDATE by a non-partition predicate and by a partition predicate, MERGE on the partition column, static `INSERT OVERWRITE … PARTITION (p = 1)`, dynamic partition overwrite (SQL under `partitionOverwriteMode=dynamic`, and facade `writeTo(t).overwritePartitions()`). | `test_*_door_matches_spark[dml_partition/*]`. | PROVEN | Offline 169 passed; red on base: 50 SQL-door cells (every MoR cell, every single-era CoW cell, every static/dynamic overwrite and MERGE-on-`p` cell) and the 8 `overwritePartitions` cells. |
+| C-008 | RePark adopts the Spark-created, Spark-promoted mixed-era tables (v2 and v3, `identity(p)`, all four columns promoted) through `register_table` and answers every read predicate on both doors, then MERGE `UPDATE SET * / INSERT *`, range UPDATE and `DELETE … WHERE f < 3.0D` equal to Spark's own run of the same statements. | `test_adopted_spark_table_matches_spark[adopted/v2, adopted/v3 × sql, dataframe]`. | PROVEN | Offline 169 passed; red on base: all 4 adopted cells. |
+| C-009 | Format v2 and v3 are both measured and pinned for every family above. | The recorded catalog asserts `{"2", "3"}`; every group id carries `v2` and `v3` cells. | PROVEN | Every group carries v2 and v3 cells; the catalog-digest cell asserts `{"2", "3"}`. |
+| C-010 | The table-format cause is fixed fork-side with red-first Rust pins (fork unit F-PROMOTE-READ-1, 10 pins in `crates/iceberg/src/spec/promotion_tests.rs`); RePark patches no Iceberg semantics locally. | Fork red and green runs; RePark Python pins green only with the fork change. | PROVEN | Fork `dcd90d2b` (10 pins red) → `7e027cca` (green, 7/7 seam mutations red) → `e92a9e9d` (4 DataFusion pins red) → `364748c0` (green, revert mutation red). RePark Python pins green only on a native built against the fork change. |
+| C-011 | RePark's DML target scan conforms a legally promoted column (`Int32→Int64`, `Float32→Float64`, `Decimal128(p,s)→Decimal128(p',s)`) to the current type and still refuses an illegal narrowing. | `promoted_scan` pins in `crates/repark-iceberg/src/write/merge/tests/`. | PROVEN | `cargo test -p repark-iceberg --lib` under the override: 437 passed. Mutation: `conform_scan_batch` reverted to `column.clone()` → the two widening pins red, the narrowing control green. |
+| C-012 | Under `REPARK_PARITY_LIVE=1` live Spark re-derives every recorded answer (no golden drift) while the offline cells hold RePark equal to the recording. | `test_live_spark_rederives_every_recorded_answer`. | PROVEN | `REPARK_PARITY_LIVE=1 pytest test_ice_promote_read_1.py` → `170 passed in 153.88s` (live Spark re-derived all 126 recorded answers; no drift). |
 | C-013 | Registry rows land in `docs/spark-sql-iceberg-parity.md` for the read-promotion defect, the DML-after-promotion defect and the promoted-partition-source defect, FIXED with pin names or DECLARED with a typed exception; `V3-COV-2` gains a dated pointer note; maps move in lockstep. | Registry diff; `make check-map-sync`. | OPEN | |
 | C-014 | Gates: fork `cargo test -p iceberg` filters + clippy; RePark `cargo test -p repark-iceberg --lib` under the override; release native; the pin module offline and live; the `*alter*`, `*evo*`, `*merge*`, `*v3_*`, `*ice_spark*` modules; `make verify`; comment and override greps on both branch diffs. | Command → result table. | OPEN | |
+
+## Fix (step 5)
+
+**Fork** (`TRO-Wolf/iceberg-rust` branch `fix/ice-promote-read-1`; detail in its
+`task/f-promote-read-1-ledger.md`):
+
+- `7e027cca` — `crates/iceberg/src/spec/promotion.rs` helpers; both metrics evaluators read bounds
+  under the reference type; the partition accessor, `PartitionKey::new`, scan planning (data and
+  delete manifests) and `resolve_partition_deletes` promote partition tuples; the page-index
+  evaluator builds INT32/FLOAT page bounds under the field type.
+- `364748c0` — `crates/integrations/datafusion/src/physical_plan/promotion.rs` `widened_batch`,
+  used by the DataFusion UPDATE/DELETE execs when they rebuild a scanned batch under the current
+  schema.
+
+**RePark** — `crates/repark-iceberg/src/write/conform.rs` `promoted_scan_column` widens only the
+legal promotions (`Int32 → Int64`, `Float32 → Float64`, `Decimal128(p,s) → Decimal128(p',s)`);
+`write/merge/mod.rs` `conform_scan_batch` calls it for data columns (line-neutral; the file stays
+at its 1792 baseline). Every RePark DML target scan (MERGE, identity DELETE/UPDATE, the COW
+scratch) passes through that conform.
+
+Local override used for every RePark build and test in this unit (never committed; `Cargo.lock`
+restored before each commit): `cargo --config /tmp/oc-worker/ia-build/fork-override.toml …` and
+`maturin develop --release --config …`, a `[patch.crates-io]` table pointing the five `iceberg*`
+crates at the fork checkout.
+
+## Green evidence
+
+Offline, release native built 23:00:19 against fork `364748c0` + the RePark fix:
+
+```
+.venv/bin/python -m pytest python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider -rs
+169 passed, 1 skipped in 29.36s
+SKIPPED [1] … REPARK_PARITY_LIVE != 1 — live Spark cell skipped (routine CI is JVM-free)
+```
+
+Intermediate run on the first fork fix (`7e027cca`, native 22:47:26): `12 failed, 157 passed` —
+every single-era `UPDATE` cell, `column types must match schema types, expected Int64 but found
+Int32`, which located the second fork seam (DataFusion UPDATE exec).
+
+Live:
+
+```
+REPARK_PARITY_LIVE=1 .venv/bin/python -m pytest python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider -rs
+170 passed in 153.88s (0:02:33)
+```
+
+Orchestrator replay block on the fixed native: `id<2 => [old1]`, `id>1 => [new3, old2]`,
+`f<2.0D => [old1]`, `id=1 => [old1]`, MERGE → `[(1,'m1'), (2,'old2'), (3,'new3')]`, v2 and v3.
 
 ## Red evidence
 

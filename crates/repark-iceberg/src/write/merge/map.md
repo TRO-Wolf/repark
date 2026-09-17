@@ -25,6 +25,12 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   pins: v3-9-mor-predicate-dml-dv/C-009
   pins: rp-5-fork-repin/C-004
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
+  **ICE-PROMOTE-READ-1 (2026-09-16):** every DML target scan pins the snapshot id, so on a table
+  with no write since `ALTER COLUMN … TYPE` it reads the pre-promotion types; `conform_scan_batch`
+  widens those data columns through `conform::promoted_scan_column` before building the batch
+  under the scratch schema (MERGE, identity DELETE/UPDATE and the COW scratch all pass here). Its
+  doc line names only the `_file` / `_pos` casts; this entry is where the widening is recorded.
+  pins: ice-promote-read-1/C-006, C-011
   **FNP-4B (2026-09-15):** every generated-SQL identifier quotes with backticks
   (`quote_ident`, incl. the semijoin / discovery / sentinel builders), so the rewrites parse
   under the Spark Databricks session dialect.
