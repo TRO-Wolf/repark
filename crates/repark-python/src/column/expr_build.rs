@@ -353,6 +353,27 @@ pub(crate) fn grouping_id_column(args: Vec<PyColumn>) -> PyResult<PyColumn> {
     })
 }
 
+/// Build a Spark `DISTINCT` aggregate over one column (PySpark `F.sum_distinct`).
+///
+/// # Errors
+/// Returns `ValueError` for an unknown `kind`, or if the aggregate builder fails.
+#[pyfunction]
+pub(crate) fn distinct_aggregate_column(kind: &str, column: &PyColumn) -> PyResult<PyColumn> {
+    fenced!("distinct_aggregate_column", {
+        let udaf = super::function_dispatch::unary_aggregate_udaf(kind)?;
+        let built = udaf
+            .call(vec![column.expr()])
+            .distinct()
+            .build()
+            .map_err(|err| {
+                PyValueError::new_err(format!("could not build {kind}(DISTINCT …): {err}"))
+            })?;
+        Ok(PyColumn::from_expr(cast_unsigned_count_to_signed(
+            &udaf, 1, built,
+        )))
+    })
+}
+
 pub(super) fn cast_unsigned_count_to_signed(udaf: &AggregateUDF, arity: usize, expr: Expr) -> Expr {
     match udaf.return_type(&vec![DataType::Int64; arity]) {
         Ok(returned) if returned.is_unsigned_integer() => {

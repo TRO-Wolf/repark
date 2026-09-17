@@ -201,3 +201,6 @@ pins: fnp-agg-1/C-004
 **FNP-AGG-1 run 18a step 3d (2026-09-16):** `lib.rs` registers the
 `grouping_id_column` binding for the thin `F.grouping_id` facade.
 pins: fnp-agg-1/C-002
+**FNP-AGG-1 run 18a remediation R-18a-26 (2026-09-16):** `lib.rs` registers
+the `distinct_aggregate_column` binding for the thin `F.sum_distinct` facade.
+pins: fnp-agg-1/C-002

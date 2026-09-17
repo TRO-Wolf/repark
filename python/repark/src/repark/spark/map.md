@@ -241,6 +241,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   the name for by-name resolution. Step 7 adds `count_min_sketch` over the new
   kernel (column plus numeric or Column eps / confidence, int / Column / None
   seed with a random default; both doors name `count_min_sketch`).
+  **Remediation R-18a-26 (2026-09-16):** `sum_distinct` over the new native
+  `distinct_aggregate_column` pyfunction plus the deprecated `sumDistinct` spelling
+  (exact Spark warning text); both names join the by-name facade-only allowlist.
+  `listagg` widens its delimiter to `Column | str | bytes | None` (None means
+  `""`) to match the recorded PySpark signature; `functions_expr.py` stays
+  line-neutral at its ceiling.
   pins: fnp-agg-1/C-002, C-003
 - `functions_bitwise.py` — bitwise scalar wrappers.
 - `functions_arrow_udf.py` — **FNP-MISC-1 (2026-09-15):** `arrow_udf` over the pandas

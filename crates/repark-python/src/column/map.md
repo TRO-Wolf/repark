@@ -303,5 +303,8 @@ sync after changes.
   binding behind the unsigned-to-signed cast. Step 8 adds the `count_min_sketch`
   arm (n-ary, value plus three literal columns) onto the shared kernel.
   Remediation drops the `///` line over `grouping_id_call` (R-18a-22); behavior
-  unchanged.
+  unchanged. Remediation R-18a-26 adds the `distinct_aggregate_column`
+  `#[pyfunction]` (one unary UDAF call with `.distinct()`, mirroring
+  `count_aggregate`'s branch; `mod.rs` stays on its exact baseline) behind
+  `sum_distinct`.
   pins: fnp-agg-1/C-002, C-003, C-004

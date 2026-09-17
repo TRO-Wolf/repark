@@ -816,6 +816,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `sum_distinct`/`sumDistinct` stay on the deferred census this round: a DISTINCT sum needs a
   native distinct-aggregate builder (`count_aggregate` is count-specific; `aggregate` has no
   distinct modifier) and Rust is fenced out of this unit — see the unit ledger's ruling question.
+  **FNP-AGG-1 run 18a remediation R-18a-26 (2026-09-16)** closes that deferral:
+  the new native `aggregate_distinct` builder carries `sum_distinct` (plus deprecated
+  `sumDistinct`) with both names on the facade-only allowlist.
   **crit-logic-1 L-001 (2026-09-15):** the semi/anti right-ref raise (all four rescaled names),
   the left-ref control, and the two-sided `degrees` ON-join pin; the wrapper threads
   join origin like `bitwise_not` (**DEGREES-RUST-1**, owner Q-15a-1: a `_scalar` bind over
@@ -873,6 +876,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   values, nullability and the clean schema halves stay strict. Step 9 keeps
   two dedicated strict-xfail tests (binary-type, SQL names) beside the split
   order-insensitive value comparator; card roll-call lives in the ledger.
+  **FNP-AGG-1 run 18a remediation step 6 (2026-09-16):** the sketch binary-type
+  xfail lifts (Binary surfaces on both doors, bytes equal — the WideningCast
+  half needs no fix) and the grouping `tinyint` rewrite drops (engine reports
+  `tinyint` like Spark; the dedicated pin stays a non-strict expected-failure
+  tracking LOGICAL-WIDTH-1). Histogram buckets canonicalize the struct-vs-map
+  collect shape on both test files (Arrow type still pinned exact); DISTINCT
+  strings skip non-string columns. Four SQL-door `listagg` cells, two SQL-door
+  `any_value` cells (duplicate projection names Spark allows) and the four
+  SQL-door `sum(DISTINCT)` qualifier-name cells strict-xfail as tracked product
+  gaps; the SQL `sum_distinct` refusal stays a green error pin.
   **Remediation R-18a-21:** the DISTINCT value pins compare delimiter-split
   elements as multisets (Spark contracts no element order).
   pins: fnp-agg-1/C-001, C-002, C-003, C-004
@@ -1546,6 +1559,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **FNP-ALIAS-1 (2026-09-15):** `approxCountDistinct` ships and leaves the
   deferred census; `sum_distinct`/`sumDistinct` stay (native DISTINCT-aggregate
   builder needed, Rust fenced — unit ledger ruling question).
+  **FNP-AGG-1 run 18a remediation R-18a-26 (2026-09-16):** both ship and leave
+  the census (native `aggregate_distinct` builder, facade-only allowlist).
   **FNP-WIN-1 step 3 (2026-09-15):** `window_time` ships and leaves the
   deferred census (`session_window` stays for step 4).
   pins: fnp-win-1/C-007

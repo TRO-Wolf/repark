@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import warnings
 from typing import Any
 
 from repark.errors import PySparkTypeError
@@ -21,6 +22,8 @@ FNPAGG1_EXPORTS: tuple[str, ...] = (
     "percentile",
     "product",
     "string_agg_distinct",
+    "sum_distinct",
+    "sumDistinct",
 )
 
 
@@ -315,6 +318,37 @@ def product(col: Column | str) -> Column:
         partition_transform=column._partition_transform,
         **_thread_origin(column),
     )
+
+
+def sum_distinct(col: Column | str) -> Column:
+    """Sum of distinct values in a group, skipping NULLs (PySpark ``functions.sum_distinct``).
+
+    Integer inputs widen to ``LongType`` (Spark parity); the empty-group sum is NULL.
+    """
+    from repark import _native
+
+    column, part = _aggregate_argument(col)
+    agg_name = f"sum(DISTINCT {part})"
+    return Column(
+        _native.distinct_aggregate_column("sum", column._inner),
+        agg_name=agg_name,
+        sql_expr=f"sum(DISTINCT {column.sql_expr_part()})",
+        join_sql_expr=f"sum(DISTINCT {column.join_sql_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+        **_thread_origin(column),
+    )
+
+
+def sumDistinct(col: Column | str) -> Column:  # noqa: N802 — PySpark camelCase spelling
+    """Deprecated camelCase spelling of :func:`sum_distinct` (PySpark ``functions.sumDistinct``)."""
+    warnings.warn(
+        "Deprecated in 3.2, use sum_distinct instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
+    return sum_distinct(col)
 
 
 def _mode_with_flag(col: Column | str, deterministic: bool | Column) -> Column:

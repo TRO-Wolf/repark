@@ -370,6 +370,7 @@ functions	F.count
 functions	F.countDistinct
 functions	F.count_distinct
 functions	F.count_if
+functions	F.count_min_sketch
 functions	F.covar_pop
 functions	F.covar_samp
 functions	F.crc32
@@ -443,6 +444,7 @@ functions	F.get_json_object
 functions	F.getbit
 functions	F.greatest
 functions	F.grouping
+functions	F.grouping_id
 functions	F.hash
 functions	F.hex
 functions	F.histogram_numeric
@@ -671,6 +673,8 @@ functions	F.substr
 functions	F.substring
 functions	F.substring_index
 functions	F.sum
+functions	F.sumDistinct
+functions	F.sum_distinct
 functions	F.tan
 functions	F.tanh
 functions	F.theta_difference

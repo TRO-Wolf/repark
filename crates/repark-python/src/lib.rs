@@ -164,6 +164,10 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         column::expr_build::grouping_id_column,
         module
     )?)?;
+    module.add_function(wrap_pyfunction!(
+        column::expr_build::distinct_aggregate_column,
+        module
+    )?)?;
     cache_budget::register(module)?;
     catalog_census::register(module)?;
     cdf_infer::register(module)?;

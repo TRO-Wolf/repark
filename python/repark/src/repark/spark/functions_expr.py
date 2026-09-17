@@ -1260,9 +1260,9 @@ def approx_count_distinct(col: Column | str, rsd: float | None = None) -> Column
     )
 
 
-def listagg(col: Column | str, delimiter: str = "") -> Column:
+def listagg(col: Column | str, delimiter: Column | str | bytes | None = None) -> Column:
     """Concatenate values with ``delimiter`` (PySpark ``functions.listagg``)."""
-    return _binary_aggregate("listagg", col, lit(delimiter))
+    return _binary_aggregate("listagg", col, lit(delimiter if delimiter is not None else ""))
 
 
 def string_agg(col: Column | str, delimiter: str = "") -> Column:

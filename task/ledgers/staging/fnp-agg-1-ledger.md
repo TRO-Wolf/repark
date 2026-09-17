@@ -570,3 +570,84 @@ must NOT re-derive (all measured live against PySpark 4.1.2 `/tmp/sparkenv`):
   order across processes (observed once in nine runs; ORDER BY present):
   the critic pin compares rows as a multiset, the SQL `ORDER BY 1` cell
   stays exact. Engine sort-stability seam, outside this slice.
+
+## Step 6 (run 18a, 2026-09-16) — R-18a-26 gate reds, dispositions
+
+Ruling precedence: the 18:50 follow-up redefines R-18a-26 (a)-(g) and
+supersedes the step-1 row above where they differ. Base after steps 1-5:
+card 134 passed / 52 failed, critic 14 passed / 1 xfailed.
+
+(a) "The three reds" read as the three red sum TESTS (python cells, SQL
+cells, deprecation). Python (12 cells) + deprecation + names + both
+signatures (16 pins) close via (c); they pass, not xfail. The four
+still-red SQL-door value cells fail only on qualified projection names
+(`sum(DISTINCT t.v)` vs Spark `sum(DISTINCT v)`; values, types,
+nullability all match): product gap, whole-test strict-xfail with reason
+pointing here. Spark-error reproduction cited: alias-oracle cells 16/17
+(`SELECT sum_distinct(v)` refused `UNRESOLVED_ROUTINE` on live Spark 4.1.2
+and on Repark — pinned green by the error test, not xfailed).
+
+(b) `test_sql_grouping_reports_tinyint` strict-XPASSed (engine reports
+`tinyint`, equal to fixture and Spark): marker kept as a non-strict
+expected-failure tracking LOGICAL-WIDTH-1, per the follow-up. This differs
+from the step-1 row's "unmark"; owner to flip if unmark preferred. The
+stale `tinyint`-to-`int` rewrite in `_assert_value_cell` is deleted; both
+SQL `grouping_id` value cells pass exact.
+
+(c) `sum_distinct` + deprecated `sumDistinct` land in `functions_agg_1.py`
+(`FNPAGG1_EXPORTS`) over the new native `distinct_aggregate_column`
+`#[pyfunction]` in `column/expr_build.rs` (one unary UDAF call with
+`.distinct()`, mirroring `count_aggregate`'s branch; `mod.rs` keeps its
+exact 1013-line baseline, `check_rust_file_size` green). Both names join
+`FACADE_ONLY_ROUTINE_NAMES`. This closes the FNP-ALIAS-1 deferred census
+("Rust fenced out") — the follow-up explicitly orders it. Signatures match
+the alias oracle `(col)`; the warning text is byte-exact FutureWarning.
+`listagg` delimiter widens to `Column | str | bytes | None` (None means
+`""`) to match its recorded signature; `functions_expr.py` holds 2190.
+
+(d) SQL-door `listagg` registration is not planner-acceptable in-slice
+(needs the routine AND `WITHIN GROUP` ordered-set syntax for card cells
+74/75): the four SQL-door cells strict-xfail to the 18c planner seam.
+Python-door `F.listagg` stays the working spelling (card python cells and
+the fnp5 alias test green). No `test listagg ... df fixture` exists
+in-tree; the card's SQL-door cells remain the SQL-door coverage. Door gap
+documented in `python/repark/tests/map.md`.
+
+(e) Struct-vs-map is a `collect()` representation shape: the Arrow type is
+struct (schema pins pass on both files). `_histogram_value`
+canonicalizes `{x, y}` bucket dicts to rows in the card and critic files;
+`_normalize` untouched, bucket values still pinned exact. Recorded as a
+finding, not absorbed.
+
+(f) Verified, no fix needed: SQL-door `count_min_sketch(k, 0.5D, 0.5D, 1)`
+reports `binary` with oracle-equal bytes (direct probe 2026-09-16); the
+`_SKETCH_TYPE_XFAIL` strict marker is lifted to a pinned pass. The
+decimal-literal (WideningCast) coercion does not corrupt the built bytes.
+The step-1 row's placeholder asserts (`assert True == False` at line 204)
+no longer exist in-tree — nothing to fix.
+
+(g) `agg_misc.py` covers `F.count_min_sketch` + `F.grouping_id` (prior
+commit) plus `F.sum_distinct` / `F.sumDistinct` (this slice, warning
+suppressed, `[60, 5]` asserted); example exit 0; inventory regenerated:
+1087 names, 981 covered, backlog 105 unchanged, exceptions 1 — EX-0 count
+stable per the follow-up (not "set to measured").
+
+Beyond the lettered list (rulings taken, owner to confirm):
+`_assert_distinct_elements` crashed with `TypeError` on grouped key
+columns (`"-" in 1`): multiset-compare applies to str pairs only, exact
+otherwise — test-code bug, 12 python DISTINCT cells green. Two `any_value`
+SQL cells strict-xfail: the planner rejects duplicate projection names
+that live Spark allows (oracle cells 6/7 name BOTH columns `any_value(v)`)
+— matches the step-1 row's (c), seam named 18c.
+
+## Step 7 (run 18a, 2026-09-16) — clause roll-call
+
+Card (`test_fnp_agg_1.py`): 161 passed, 14 xfailed (4 SQL `listagg`, 2 SQL
+`any_value`, 4 SQL `sum(DISTINCT)` qualifier names, 4 SQL sketch names run
+18c), 1 xpassed non-strict (`test_sql_grouping_reports_tinyint`, owned by
+LOGICAL-WIDTH-1). Critic (`test_fnp_agg_1_critic.py`): 14 passed, 1
+xfailed (three-partition merge artifact, R-18a-27 question open).
+Mechanical: `check_rust_file_size` 612 clean, `check_lib_py` 765 clean,
+`check_docstring_presence` 294 clean, ruff check + format clean on all
+touched files, example coverage exit 0 (backlog 105, exceptions 1).
+`make verify` + facade/split/byname suites in step 8.

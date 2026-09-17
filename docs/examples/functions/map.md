@@ -106,8 +106,10 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
 - [agg_misc.py](agg_misc.py) — `F.any_value` / `F.max_by` / `F.min_by` /
   `F.product` / `F.kurtosis` / `F.skewness` / `F.mode` over a two-group frame
   (FNP-AGG-1 step 2), plus `F.percentile` (run 18a step 3a),
-  `F.listagg_distinct` / `F.string_agg_distinct` (run 18a step 3b) and
-  `F.histogram_numeric` (run 18a step 3c).
+  `F.listagg_distinct` / `F.string_agg_distinct` (run 18a step 3b),
+  `F.histogram_numeric` (run 18a step 3c), `F.count_min_sketch` /
+  `F.grouping_id` (remediation step 6g) and `F.sum_distinct` /
+  `F.sumDistinct` (remediation R-18a-26).
   pins: fnp-agg-1/C-007
 - [window_ranking.py](window_ranking.py) — `F.row_number`, `F.rank`, `F.dense_rank`: ties counted three ways on one grouped ordered frame.
 - [window_position.py](window_position.py) — `F.percent_rank`, `F.cume_dist`, `F.ntile`: where a row sits in its partition.

@@ -236,6 +236,8 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "string_agg",
     "struct",
     "sum",
+    "sumDistinct",
+    "sum_distinct",
     "theta_difference",
     "theta_intersection",
     "theta_intersection_agg",

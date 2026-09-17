@@ -148,6 +148,25 @@ def _is_distinct_string(cell: dict[str, Any]) -> bool:
     return cell["name"] in ("listagg_distinct", "string_agg_distinct")
 
 
+def _histogram_value(value: Any) -> Any:
+    """Canonicalize one histogram_numeric answer for the struct-vs-map collect shape."""
+    shaped = _normalize(value)
+    if not isinstance(shaped, list):
+        return shaped
+    buckets: list[Any] = []
+    for bucket in shaped:
+        pairs = bucket.get("map") if isinstance(bucket, dict) else None
+        if (
+            isinstance(pairs, list)
+            and all(isinstance(pair, list) and len(pair) == 2 for pair in pairs)
+            and {pair[0] for pair in pairs} == {"x", "y"}
+        ):
+            buckets.append({"row": {pair[0]: pair[1] for pair in pairs}})
+        else:
+            buckets.append(bucket)
+    return buckets
+
+
 def _key_runs(rows: list[list[Any]], key_width: int) -> list[tuple[str, list[list[Any]]]]:
     runs: list[tuple[str, list[list[Any]]]] = []
     for row in rows:
@@ -190,7 +209,9 @@ def test_critic_value_cell_matches_oracle(cell: dict[str, Any]) -> None:
     if cell["name"] == "histogram_numeric":
         result = _histogram_result(session, cell)
         _assert_schema(result, cell)
-        assert [[_normalize(value) for value in row] for row in result.collect()] == cell["rows"]
+        assert [[_histogram_value(value) for value in row] for row in result.collect()] == cell[
+            "rows"
+        ]
     elif _is_distinct_string(cell):
         frame = session.sql(
             "SELECT * FROM (VALUES ('a'), ('b'), ('b'), ('c'), ('a'), ('d')) AS t(k)"
