@@ -108,6 +108,10 @@ repo.
   is not admitted.
   DOOR-CONVERGE-2 (#622, 2026-09-15): rows DC2-CONCAT-1 / DC2-REVERSE-1 / DC2-SEQUENCE-1 / DC2-SPLIT-1, BACKLOG JAVA-REGEX-FEATURES-1, and the FNP-6D residual `concat(BINARY, BINARY)` now converged.
   FNP-4B (#611, 2026-09-15): the FNP-BITMAP-FACADE-1 residual narrows to the `spark.sql` qualifier leak; `selectExpr` names converged.
+  **ICE-COLUMN-REORDER-1 (2026-09-17):** row `ICE-COLUMN-REORDER-1` FIXED (`ALTER COLUMN …
+  FIRST/AFTER` moves with ids intact; the I6 move refusal text is removed, the COMMENT
+  refusal stays); the self-move diagnostic delta is recorded in the row, not absorbed.
+  pins: ice-column-reorder-1/C-013
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

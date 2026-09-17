@@ -8,8 +8,8 @@ use datafusion::sql::sqlparser::ast::{ObjectType, Statement, TableObject};
 use repark_core::CatalogRegistry;
 
 use crate::{
-    DmlSubqueryVerb, MorDmlKind, alter, alter_write_order, build_ctas, call, create_table,
-    delete_target_object_name, describe_show, execute_create_namespace, execute_ctas,
+    DmlSubqueryVerb, MorDmlKind, alter, alter_write_order, build_ctas, call, column_move,
+    create_table, delete_target_object_name, describe_show, execute_create_namespace, execute_ctas,
     execute_drop_namespace, execute_drop_table, execute_insert_overwrite, execute_truncate, merge,
     metadata_tables, object_name_from_table_with_joins, parse_single_normalized,
     passthrough_after_p11, ref_ddl, refuse_dml_subquery_predicate,
@@ -293,6 +293,12 @@ async fn try_preparse_intercepts(
     if let Some(parsed) = alter_write_order::try_parse_write_order_ddl(sql) {
         return Some(match parsed {
             Ok(ddl) => alter_write_order::execute_write_order_ddl(ctx, catalogs, ddl).await,
+            Err(error) => Err(error),
+        });
+    }
+    if let Some(parsed) = column_move::try_parse_column_move_ddl(sql) {
+        return Some(match parsed {
+            Ok(ddl) => column_move::execute_column_move_ddl(ctx, catalogs, ddl).await,
             Err(error) => Err(error),
         });
     }

@@ -2740,6 +2740,34 @@ the pin rather than obeying it.
   spelling catching up, not a missing capability. The pin codifies today's refusal so the fix
   reds it on purpose.
 
+### ICE-COLUMN-REORDER-1 — `ALTER COLUMN … FIRST/AFTER` column moves — **FIXED 2026-09-17**
+
+- **repark** — `ALTER TABLE cat.ns.t ALTER COLUMN c FIRST` and `ALTER COLUMN c AFTER x` move
+  the column with field ids unchanged and a new schema id, on format-v2 and v3 tables, for
+  nested struct fields (`ALTER COLUMN s.b FIRST`) and for partition-source columns alike. A
+  move to the current position commits nothing (no new schema, no new metadata file), matching
+  Spark. Moving an unknown column, or naming an unknown `AFTER` reference, raises
+  `AnalysisException` with Spark's `[UNRESOLVED_COLUMN.WITH_SUGGESTION] … SQLSTATE: 42703`
+  framing. A self-move (`c AFTER c`) refuses with the fork's Java-shaped `Cannot move c after
+  itself` — a diagnostic delta, not an outcome one: Spark wraps the same core message as
+  `Unsupported table change` in a `SparkException`, RePark raises `PySparkException`. A
+  positional `INSERT INTO … VALUES (…)` in the new order lands Spark-equal rows;
+  `table(t).columns` follows the move and `writeTo(t).append()` resolves by name. The move is
+  implemented on the facade door and the Rust ANSI door (`repark-sql`); the Python native
+  session is catalog-isolated and cannot address Iceberg tables, so it carries no pin for this
+  statement.
+- **Apache Spark** — moves the column (Java `UpdateSchema.moveFirst` / `moveBefore` /
+  `moveAfter`: same field ids, new order, a new schema id; a no-op move commits nothing).
+  *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, recorded in
+  `python/repark/tests/test_ice_column_reorder_1_truth.json`.)*
+- **Pin** — `python/repark/tests/test_ice_column_reorder_1.py` (13 offline vs the truth JSON on
+  the facade SQL door with DataFrame-door reads; 14 live replaying Spark and cross-reading both
+  engines' moved tables) and `crates/repark-sql/src/tests.rs::alter_column_move_reorders_and_noop_mints_no_schema`
+  (ANSI door end to end).
+- **Rationale** — FIXED, not declared. The standing I6 refusal
+  (`ALTER COLUMN … FIRST/AFTER (column MOVE) without ADD …`) is removed; the remaining
+  `ALTER COLUMN … COMMENT` refusal (DBT-COLCOMMENT-1) is untouched.
+
 ### DBT-QUALIFY-1 — a two-part name resolves for `SELECT` but not for `DESCRIBE` or `ALTER TABLE`
 
 - **repark** — with catalog `ice` registered, `SELECT count(*) FROM ns.t` resolves and answers.

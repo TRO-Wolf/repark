@@ -201,6 +201,12 @@ UNRESOLVED-ROUTINE-1 (2026-09-16): `check_rust_file_size.py`
 `repark-python/src/column/mod.rs` 1014 → 1013 (the `SELECT (…) AS _repark_expr`
 wrapper moved into `plan_expr_column`, net −1 line).
 pins: unresolved-routine-1/C-003
+ICE-COLUMN-REORDER-1 (2026-09-17): `check_rust_file_size.py`
+`repark-iceberg/src/write/alter.rs` 1630 → 1607, `repark-spark/src/alter.rs`
+1821 → 1813, `repark-spark/src/tests/alter.rs` 1397 → 1379 (the column-move check
+plus pins move to sibling `column_move` modules; the partition-spec family moves
+to `partition_spec.rs` behaviour-identical; the CAP-1 mirror rows move with them).
+pins: ice-column-reorder-1/C-013
 REPLACE-LINEAR-1 step 1 (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4089 → 4054 (the `DataFrame.replace` body — validation,
 key-family filtering, and the flat searched-CASE build — moved to the new

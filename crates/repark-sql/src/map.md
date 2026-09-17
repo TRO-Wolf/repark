@@ -137,10 +137,13 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   (matching / no-location idempotent; contradictory location fails loud).
   Tests: [schema_ddl/map.md](schema_ddl/map.md).
 - `alter.rs` — `ALTER TABLE` schema evolution (ADD/DROP/RENAME COLUMN, `ALTER COLUMN … SET DATA
-  TYPE`, `RENAME TO`) through the tier-1 `repark_iceberg::write::alter` seams, plus Trino
-  `SET PROPERTIES` and its ONE pre-parse recognizer (blank the word `PROPERTIES`, let the stock
-  parser read `SET (…)`). Curated vocabulary; `partitioning` is the pre-designated future
+  TYPE`, `ALTER COLUMN … FIRST|AFTER` moves, `RENAME TO`) through the tier-1
+  `repark_iceberg::write::alter` seams, plus Trino `SET PROPERTIES` and its ONE pre-parse
+  recognizer (blank the word `PROPERTIES`, let the stock parser read `SET (…)`). The move has
+  its own pre-parse (`try_parse_column_move` / `execute_column_move`: stock sqlparser models no
+  position-change op). Curated vocabulary; `partitioning` is the pre-designated future
   spelling and refuses citing Q3. Tests: [alter/map.md](alter/map.md).
+  pins: ice-column-reorder-1/C-001, C-002, C-003, C-006, C-007
 - `merge.rs` — `MERGE INTO` → `repark_iceberg::write::merge::MergeSpec`.
   ANSI MERGE keeps `commit_branch: None` (dotted write-to-branch is Spark-door only, RP-5).
   Execution is the shared RePark-owned executor, never the fork `TableProvider`. No star forms
@@ -198,7 +201,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 | Add a curated table property | `properties.rs` + a row in `properties/tests.rs` + an e2e row in `tests.rs` |
 | Add a partition transform | `partitioning.rs` + `partitioning/tests.rs` |
 | Add a guard | `guards.rs` + `guards/tests.rs` + a `surfaces` ID if it is a claimed surface (a guard needing the PARSED statement instead of scrubbed text is called from a named `router.rs` arm; unit AND end-to-end pins still live in `guards/tests.rs` — that is what G3-E8 does) |
-| Add an `ALTER TABLE` operation | `alter.rs` `execute_alter_table` + `alter/tests.rs` + an e2e row in `tests.rs` |
+| Add an `ALTER TABLE` operation | `alter.rs` `execute_alter_table` + `alter/tests.rs` + an e2e row in `tests.rs` (a form stock sqlparser cannot model takes the pre-parse route instead: `try_parse_*` + `execute_*` in `alter.rs` wired in `router.rs`, as the column move does) |
 | Add a `SET PROPERTIES` key | `alter.rs` `parse_set_properties` (curated only — dotted keys go through `extra_properties`) |
 | Upgrade a table's Iceberg format version | `alter.rs` `apply_set_properties` → `repark_iceberg::write::format_version` (V3-10; the `format_version` key resolves through `repark_functions::format_version` against the table this door loads ONCE and hands to the transaction, and the upgrade does not invalidate the namespace) |
 | Change what MERGE lowers to | `merge.rs` — the target type is shared with the Spark door, so a change there is a cross-door contract change |

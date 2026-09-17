@@ -157,20 +157,61 @@ use ADD COLUMN … FIRST|AFTER for new columns (I6)
 Every pin fails on the I6 refusal (facade) or the native parse error — none passes
 vacuously. Live tier (14 tests) skips without `REPARK_PARITY_LIVE=1`; replayed in S7.
 
-## 5. Implementation (S5)
+## 5. Implementation (S5) — 2026-09-17
 
-Design: new `SchemaChange::MoveColumn { name, position: ColumnPosition }` in
-`crates/repark-iceberg/src/write/alter.rs` mapped to the fork's standalone
-`move_first` / `move_after`; a token-level `ALTER TABLE … ALTER COLUMN … FIRST|AFTER …`
-parse in `crates/repark-spark/src/alter.rs` in the I7 style (stock sqlparser models no
-position-change op), wired ahead of the I6 refusal in `router.rs`; the I6 refusal arm
-narrows to whatever stays unsupported (nested moves only if C-008 declares them).
-Simplest correct approach: reuse the existing `ColumnPosition` and the fork move builders
-the ADD path already chains.
+`crates/repark-iceberg/src/write/alter.rs`: new `SchemaChange::MoveColumn { name, position }`
+reusing `ColumnPosition`; `apply_schema_changes` maps it to the fork's standalone
+`move_first` / `move_after` (the builders the positioned ADD already chains — no new
+table-format API, no fork work). `check_column_move` (new, pure, shared by both doors):
+resolves the dotted path case-insensitively, returns `Ok(changed)` by simulating the order,
+or `Err` with Spark's `[UNRESOLVED_COLUMN…] SQLSTATE: 42703` framing. `apply_schema_changes`
+filters no-op moves before the commit, so a no-op-only batch returns `Ok` without minting a
+schema (Spark commits nothing on no-ops). Move *legality* (self-move, cross-struct) stays
+fork-owned: the fork refuses with Java's messages.
 
-## 6. Registry (S6)
+Facade (`crates/repark-spark/src/alter.rs` + `router.rs`): `try_parse_column_move_ddl` /
+`execute_column_move_ddl` in the I7 token style, wired ahead of the residual refusal; the I6
+move-refusal arm is deleted (the COMMENT arm stays). Unknown names refuse via
+`DataFusionError::Plan` (→ `AnalysisException`); no-ops return empty with no commit and no
+reregister.
 
-Unmeasured. Row ICE-COLUMN-REORDER-1 lands here in S6.
+ANSI door (`crates/repark-sql/src/alter.rs` + `router.rs`): `try_parse_column_move` /
+`execute_column_move` in the same shape, wired in the pre-parse stage; `resolve_target` +
+`invalidate` reused. The `unsupported_operation` list names the new form.
+
+Tests with the code: `check_column_move_names_noops_and_nested` (pure) and
+`schema_move_column_reorders_ids_stable_and_noop_commits_nothing` (round-trip incl. the
+self-move Java message) in repark-iceberg; `parse_column_move_first_after_and_nested` +
+`parse_column_move_leaves_other_alter_forms_alone` in repark-spark (incl. the residual-refusal
+bypass pin); `column_move_first_after_and_nested_parse` +
+`column_move_leaves_other_alter_forms_alone` in repark-sql; the existing
+`alter_unsupported_comment_move_and_after_missing_refuse` becomes
+`alter_comment_refuses_and_column_move_lands` (COMMENT still refuses; the move lands and
+`SELECT *` leads with the moved column); `alter_column_move_reorders_and_noop_mints_no_schema`
+pins the ANSI door end to end (reorder, no-op mints no schema, `UNRESOLVED_COLUMN`).
+
+No `//` or `#` comment line was added to any source file in this unit (round ban; the
+`///` lines the diff touches are byte-identical context). New public item `check_column_move`
+and the `MoveColumn` variant carry no doc comments for the same reason; the reason lives here.
+
+Native-door finding (S5): the Python `repark.sql` session (`DataFusionDialect`, stock parse)
+cannot address Iceberg tables — it is catalog-isolated (measured: `table 'mem.ns.t' not
+found` from a facade-seeded table) and exposes no catalog registration, and stock sqlparser
+models no position-change op. Wiring it through the ANSI router would reroute every native
+statement, a semantic-adjacent rewrite out of this fix's scope ("Fixes stay narrow"). The
+ANSI door is therefore implemented and pinned at the Rust level (`AnsiDialect`, reachable by
+construction); Python pins cover the facade SQL door and the DataFrame door — every door that
+can express the statement. The registry row states this split.
+
+## 6. Registry (S6) — 2026-09-17
+
+Row `ICE-COLUMN-REORDER-1` FIXED 2026-09-17 in `docs/spark-sql-iceberg-parity.md` after
+DBT-COLCOMMENT-1 (the sibling `ALTER COLUMN` row), with the pins, the oracle path, the
+self-move diagnostic delta, and the native-door split. The I6 move-refusal text is deleted
+from `refuse_unsupported_alter_sql`; the `ALTER COLUMN … COMMENT` refusal is untouched.
+Maps in lockstep: `python/repark/tests/map.md`, `crates/repark-spark/src/map.md`,
+`crates/repark-iceberg/src/write/map.md`, `crates/repark-sql/src/map.md`,
+`crates/repark-sql/src/alter/map.md`, `docs/map.md`.
 
 ## 7. Gates (S7)
 

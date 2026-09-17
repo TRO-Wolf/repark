@@ -1158,9 +1158,8 @@ async fn alter_column_case_insensitive_rename_and_drop() {
     );
 }
 
-/// COMMENT, MOVE FIRST/AFTER, and missing AFTER siblings refuse loudly.
 #[tokio::test]
-async fn alter_unsupported_comment_move_and_after_missing_refuse() {
+async fn alter_unsupported_comment_and_after_missing_refuse() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     create_alter_target(&ctx, &catalogs, "refuse2").await;
@@ -1179,23 +1178,6 @@ async fn alter_unsupported_comment_move_and_after_missing_refuse() {
                 .to_lowercase()
                 .contains("not supported"),
         "got: {comment_err}"
-    );
-
-    let move_err = execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.refuse2 ALTER COLUMN id FIRST",
-    )
-    .await
-    .expect_err("ALTER COLUMN MOVE must refuse loud");
-    assert!(
-        move_err
-            .to_string()
-            .to_lowercase()
-            .contains("not supported")
-            || move_err.to_string().to_uppercase().contains("FIRST")
-            || move_err.to_string().to_lowercase().contains("move"),
-        "got: {move_err}"
     );
 
     let after_err = execute(

@@ -10,6 +10,11 @@ holds behavior observed from outside the crate.
 
 ## Contents
 
+- `alter_column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17):**
+  `alter_column_move_reorders_and_noop_writes_no_metadata` pins the ANSI-door move end to
+  end (reorder, no-op writes no metadata file, unknown `AFTER` sibling refuses
+  Spark-shaped). Split out of `../src/tests.rs`, which sits at its exact ceiling.
+  pins: ice-column-reorder-1/C-001, C-002, C-003, C-007
 - `ansi_door_string_literals.rs` — **SQP-1 control (C-006):** the native/ANSI door keeps generic
   literal semantics (backslash literal, `\'` does not lex, raw strings refuse) — Spark-only (ADR-0002).
 - `parser_productions.rs` — pins stock-parser support and the productions that still require
