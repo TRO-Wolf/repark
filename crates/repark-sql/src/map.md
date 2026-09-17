@@ -81,6 +81,8 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   pins: rp-6-fork-repin/C-002
 - `sniff.rs` — the error-path wrong-door sniff (Q10/G3): on parse/plan FAILURE, name the token,
   the native equivalent, and the Spark door. Tests: [sniff/map.md](sniff/map.md).
+  **ICE-RTAS-BYNAME-1 (2026-09-17):** the composite arm steers `INSERT … BY NAME`
+  (before the source only) to the Spark door; a post-source `ORDER BY name` never steers.
 - `scan.rs` — ANSI-quoting-aware SQL text scanning: the one place the door reads raw text.
   Blanks string-literal / quoted-identifier / comment CONTENT so the guards and the sniff cannot
   false-positive. Backticks are deliberately NOT treated as quoting (they are the Spark-ism the

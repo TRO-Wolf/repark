@@ -95,12 +95,16 @@ async fn append_by_name_projection(
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     let staged = if table.metadata().default_partition_spec().is_unpartitioned() {
         repark_iceberg::write::write_data_files_from_stream_with_concurrency(
-            table, stream, concurrency,
+            table,
+            stream,
+            concurrency,
         )
         .await?
     } else {
         repark_iceberg::write::write_partitioned_data_files_from_stream_with_concurrency(
-            table, stream, concurrency,
+            table,
+            stream,
+            concurrency,
         )
         .await?
     };
@@ -114,7 +118,14 @@ async fn resolve_append_target(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     table_name: &ObjectName,
-) -> Result<Option<(String, Arc<dyn Catalog>, iceberg::table::Table, Option<String>)>> {
+) -> Result<
+    Option<(
+        String,
+        Arc<dyn Catalog>,
+        iceberg::table::Table,
+        Option<String>,
+    )>,
+> {
     let mut parts = name_parts(table_name);
     let branch = match crate::write_to_branch::split_write_ref_parts(&parts) {
         Some((table_parts, crate::write_to_branch::RefSelectorKind::Branch(name))) => {
@@ -249,10 +260,7 @@ fn match_source_to_target(
     table_display: &str,
 ) -> Result<Vec<Option<usize>>> {
     if sources.len() > targets.len() {
-        let data: Vec<String> = sources
-            .iter()
-            .map(|name| name.display.clone())
-            .collect();
+        let data: Vec<String> = sources.iter().map(|name| name.display.clone()).collect();
         return Err(too_many_columns(table_display, targets, &data));
     }
     let folded: Vec<String> = sources
@@ -267,7 +275,10 @@ fn match_source_to_target(
             return Err(ambiguous_column(table_display, spelling));
         }
     }
-    let target_folded: Vec<String> = targets.iter().map(|name| name.to_ascii_lowercase()).collect();
+    let target_folded: Vec<String> = targets
+        .iter()
+        .map(|name| name.to_ascii_lowercase())
+        .collect();
     let extra: Vec<&str> = sources
         .iter()
         .enumerate()
@@ -353,7 +364,9 @@ fn build_projection_sql(
 fn parse_projection_query(sql: &str) -> Result<Box<Query>> {
     let dialect = DatabricksDialect {};
     let mut statements = Parser::parse_sql(&dialect, sql).map_err(|error| {
-        DataFusionError::Plan(format!("INSERT … BY NAME projection failed to plan: {error}"))
+        DataFusionError::Plan(format!(
+            "INSERT … BY NAME projection failed to plan: {error}"
+        ))
     })?;
     if statements.len() != 1 {
         return Err(DataFusionError::Plan(
@@ -403,7 +416,8 @@ fn might_contain_by_name(sql: &str) -> bool {
         let byte = bytes[index];
         if byte.is_ascii_alphabetic() || byte == b'_' {
             let start = index;
-            while index < bytes.len() && (bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_')
+            while index < bytes.len()
+                && (bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_')
             {
                 index += 1;
             }
@@ -607,7 +621,10 @@ fn token_span_offsets(
             base += earlier.len() + 1;
         }
         let skip = usize::try_from(column.saturating_sub(1)).ok()?;
-        let byte = text.char_indices().nth(skip).map_or(text.len(), |(index, _)| index);
+        let byte = text
+            .char_indices()
+            .nth(skip)
+            .map_or(text.len(), |(index, _)| index);
         Some(base + byte)
     };
     let by_start = offset_of(first.span.start.line, first.span.start.column)?;

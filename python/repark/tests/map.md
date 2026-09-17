@@ -2790,9 +2790,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`TOO_MANY_DATA_COLUMNS`, case-insensitive `AMBIGUOUS_COLUMN_NAME`,
   `EXTRA_COLUMNS`), the positional control, the `BY NAME VALUES` text, the
   column-list `PARSE_SYNTAX_ERROR`, the eight-cell `USING parquet` matrix,
-  whole-table `INSERT OVERWRITE … BY NAME`, and the native-door steer; the
-  four RTAS snapshot-operation pins stay `xfail(strict)` on fork ask
-  F-RTAS-OPS-1.
+  whole-table `INSERT OVERWRITE … BY NAME`, and the native-door steer; five
+  pins stay `xfail(strict)` — four RTAS snapshot-operation pins on fork ask
+  F-RTAS-OPS-1 and one `writeTo.append`-by-name pin on F-DML-FIELD-ID-1.
   pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004, C-005, C-006
 - **octo-extra C3: format= refuse surface**
 

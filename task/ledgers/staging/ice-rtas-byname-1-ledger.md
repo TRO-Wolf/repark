@@ -179,6 +179,58 @@ PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (GAV from
 `python/repark/tests/_oracle_pins.py`, never restated), recorded 2026-09-16
 by the orchestrator probe and re-derived by the committed generator.
 
+### Implementation (round 1)
+
+`BY NAME` executes on the Spark door in `crates/repark-spark/src/insert_by_name.rs`
+(Rust kernel, both SQL-facing doors reach it: the Spark door executes, the
+native door steers). `strip_insert_by_name` excises the modifier at the token
+level (sqlparser 0.59 has no `BY NAME` on `Insert`), erroring
+`PARSE_SYNTAX_ERROR` when an explicit column list precedes it (measured Spark
+behavior). `match_source_to_target` applies the count-first rule from the
+C-004 probes (count → case-insensitive duplicate → unmapped, with the three
+byte-exact Spark texts through `DataFusionError::Plan` → `AnalysisException`).
+Source names come from planning `SELECT * FROM (<source>) … LIMIT 0` (VALUES
+sources synthesize Spark's `col1…colN` from the AST arity); the missing
+nullable fill is a bare `NULL AS target` (the store-assignment matrix admits
+`Null`, probed 2026-09-17).
+
+Why the staged route, not a SQL rewrite into the DML passthrough: the
+probes `/tmp/wt_debug*.py` prove `INSERT INTO t SELECT <reordered> FROM s`
+silently writes scan-order values under target-order names on the current
+tree. Root cause, measured to the file bytes: the physical plan is correct
+but the fork's `apply_write_defaults`
+(`crates/iceberg/src/writer/write_defaults.rs`) matches batch columns to the
+target by `PARQUET:field_id` first, and a scan-sourced batch carries the
+SOURCE table's ids. Same-shape tables share id sequences, which is why the
+existing suite never saw it. A logical-plan id strip cannot propagate (the
+physical `ProjectionExec` rebuilds field metadata from its input), and CAST
+armor preserves the stale ids (probed). So `INSERT … BY NAME` stages through
+RePark's own name-based conform (`conform_batch` inside the existing stream
+stagers, which rebuild batches with target ids) and commits `fast_append`
+(`commit_append_to`, new, mirrors `commit_overwrite_replace_all_to` for the
+branch); `INSERT OVERWRITE … BY NAME` resolves names, rewrites the source to
+a positional projection, and delegates to the existing
+`insert_overwrite_from_staged_source` (whose positional mapper already
+re-stamps target ids). Store-assignment refusals flow from the same matrix
+(the staged conform labels the op `append`; the DML gate labels it
+`INSERT INTO`). Consequences recorded: the pre-existing reordered-positional
+DML skew stays open for the fork lane (second ask below); the new surface
+never routes through it.
+
+Fork asks: F-RTAS-OPS-1 (RTAS operations, C-005) and F-DML-FIELD-ID-1 (the
+fork's id-first `batch_column_index` misroutes any DML batch whose field ids
+come from a differently-ordered source table; engine-side evidence in this
+ledger).
+
+Stack-overflow lesson (2026-09-17): adding the `execute_insert_by_name` arm
+to the Spark router overflowed the 2 MiB test-thread stack in
+`refs_and_wap::ref_selector_on_the_read_side_of_dml_is_a_read` — gdb showed
+pure DataFusion planner recursion with no RePark cycle. The arm's future
+(`Table`, streams, name vectors) rides inside `execute_inner`'s future on the
+polling thread's stack during deep planning, so the router now
+`Box::pin`s the arm onto the heap. Any future router arm carrying table-sized
+state needs the same treatment.
+
 ### Gates
 
 Gates for step 5 (`test_ice_rtas_byname_1.py`, `test_insert_store_assign.py`,
