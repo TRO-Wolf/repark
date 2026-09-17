@@ -2792,7 +2792,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   column-list `PARSE_SYNTAX_ERROR`, the eight-cell `USING parquet` matrix,
   whole-table `INSERT OVERWRITE … BY NAME`, and the native-door steer; five
   pins stay `xfail(strict)` — four RTAS snapshot-operation pins on fork ask
-  F-RTAS-OPS-1 and one `writeTo.append`-by-name pin on F-DML-FIELD-ID-1.
+  F-RTAS-OPS-1 and one `writeTo.append`-by-name pin
+  (`test_dataframe_writeto_appends_by_name`) on F-DML-FIELD-ID-1.
   pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004, C-005, C-006
 - **octo-extra C3: format= refuse surface**
 

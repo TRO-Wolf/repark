@@ -27,10 +27,11 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV  # noqa: E402
+from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 
 FIXTURE = Path(__file__).with_name("ice_rtas_byname_1_spark_oracle.json")
 VOLATILE_SUMMARY_KEYS = ("app-id", "spark.app.id")
+ICEBERG_SPARK_EXTENSIONS = "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
 
 BYNAME_SEQUENCE: tuple[tuple[str, str], ...] = (
     ("by_name", "INSERT INTO sc.ns.bn BY NAME SELECT * FROM swapped"),
@@ -101,7 +102,7 @@ def _spark_session(warehouse: Path) -> Any:
         .config("spark.ui.enabled", "false")
         .config("spark.jars.packages", ICEBERG_SPARK_RUNTIME_GAV)
         .config("spark.jars.ivy", "/tmp/ic-build/.ivy2")
-        .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .config("spark.sql.extensions", ICEBERG_SPARK_EXTENSIONS)
         .config("spark.sql.catalog.sc", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.sc.type", "hadoop")
         .config("spark.sql.catalog.sc.warehouse", str(warehouse))

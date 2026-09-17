@@ -157,7 +157,7 @@ def test_by_name_values_refused(spark: Any) -> None:
 
 
 def test_by_name_column_list_is_parse_error(spark: Any) -> None:
-    """column list + BY NAME refuses PARSE_SYNTAX_ERROR naming BY NAME. pins: ice-rtas-byname-1/C-001"""
+    """column list + BY NAME refuses PARSE_SYNTAX_ERROR at BY. pins: ice-rtas-byname-1/C-001"""
     _seed_shapes(spark)
     with pytest.raises(ParseException) as excinfo:
         spark.sql(_cell_sql("insert_by_name", "by_name_column_list")).collect()
@@ -181,7 +181,7 @@ def test_insert_overwrite_by_name_replaces(spark: Any) -> None:
 
 
 def test_thin_native_door_parse_errors_loudly(spark: Any) -> None:
-    """repark.sql BY NAME is a loud parse error like other Spark-isms. pins: ice-rtas-byname-1/C-001"""
+    """repark.sql BY NAME fails loud like other Spark-isms. pins: ice-rtas-byname-1/C-001"""
     _seed_shapes(spark)
     with pytest.raises(ParseException) as excinfo:
         repark.sql(f"INSERT INTO {BN} BY NAME SELECT * FROM {SW}").collect()
@@ -363,7 +363,7 @@ def test_rtas_empty_twice_records_two_deletes(spark: Any) -> None:
 
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
 def test_live_oracle_fixture_reproduces(tmp_path: Path) -> None:
-    """The generator re-derives the committed fixture on live Spark. pins: ice-rtas-byname-1/C-001"""
+    """The generator re-derives the fixture on live Spark. pins: ice-rtas-byname-1/C-001"""
     sparkenv = Path("/tmp/sparkenv/bin/python")
     generator = Path(__file__).with_name("_record_ice_rtas_byname_1_oracle.py")
     environ = dict(os.environ)
