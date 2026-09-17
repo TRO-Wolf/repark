@@ -149,6 +149,42 @@ fills there. MERGE NOT MATCHED null-fills in RePark-owned
   the ANSI door is top-level `repark.sql()` on the native session, which
   cannot adopt a defaulted table in-probe).
 
+## Round-4 notes (2026-09-17, run 20b)
+
+- Ruling Q-20b-7: this unit goes up as a DRAFT PR today; the branch stays in
+  the cleanest committable state (one slice per commit, gates green).
+- Remediated this round: the 14 added `///` lines are gone (exported `Result`
+  entry points carry `#[allow(clippy::missing_errors_doc)]`, error contract in
+  `write/map.md`); L-02 corrected (registry FIXED row + C-006 name `insertInto`
+  with Spark's `insertInto_missing` refusal); R-01/R-02 fixed
+  (`query_has_default_marker` probes the AST before any catalog load,
+  `MarkerRewrite` threads the loaded table into `fill_insert_plan`, both doors
+  updated, load-count pins in `insert_defaults/tests.rs`, tests split to
+  `insert_defaults/tests.rs` + `insert_defaults/map.md` for the file-size
+  ceiling).
+- Open review items with dispositions (no code change this round):
+  - L-01 OPEN: the dynamic PARTITION arm with a column list maps by name and
+    null-fills unlisted nullable fields where Spark fills the write-default;
+    the Spark door shape is a `ParserError` from the generated text.
+    Disposition: needs re-scoping — parser support with a Spark cell
+    (F-003 shapes), or a declared row.
+  - L-03 OPEN: Spark-door `INSERT OVERWRITE … DEFAULT` never reaches
+    `rewrite_insert_markers` (overwrite intercepts first) and the overwrite
+    fill only appends omitted columns, so a present `DEFAULT` token fails.
+    Disposition: fold `DEFAULT` into `overwrite_source_with_default_fills`
+    (or call the marker pass from the overwrite path) and pin both shapes.
+  - L-04 OPEN: `saveAsTable(mode=overwrite)` now fills omitted defaults with
+    no Spark cell; the unit's own F-002 measurement says Spark replaces.
+    Disposition: record a Spark Iceberg cell (fill vs replace) and pin it, or
+    DECLARED next to F-002.
+  - R-03 OPEN (P3): MERGE `table_projection` reconverts a schema
+    `execute_merge` already holds. Disposition: pass the existing
+    `write_schema` plus a once-per-MERGE `ColumnDefaults` into
+    `insert_projection_with_defaults`.
+  - R-04 OPEN (P3): `overwrite_source_with_default_fills` walks the schema on
+    every column-list OVERWRITE even when it adds no fills. Disposition: a
+    `write_default.is_none()` pre-scan before the Arrow conversion, as R-02.
+
 ## Round-2 notes (2026-09-17, run 20b)
 
 - Step-1 comment grep over `git diff --cached` shows only the gate-required
