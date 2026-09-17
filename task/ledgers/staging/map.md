@@ -18,7 +18,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   partition sources, MERGE keyed on the promoted column, range UPDATE, single-era DML,
   promoted-identity-partition DML and overwrite, Spark-created adopted tables, v2 and v3.
   Fork half F-PROMOTE-READ-1 (manifest values read under the promoted type); RePark half
-  the DML target-scan conform. `risk_tier: high`. Branch `fix/ice-promote-read-1`.
+  the DML target-scan conform. Registry rows ICE-PROMOTE-READ-1, ICE-PROMOTE-DML-1,
+  ICE-PROMOTE-PARTITION-1 (FIXED 2026-09-16). `risk_tier: high`. Branch `fix/ice-promote-read-1`.
 - [never-oom-panic-1-ledger.md](never-oom-panic-1-ledger.md) —
   **NEVER-OOM-PANIC-1 (2026-09-16), in flight:** the tight-pool NLJ race — `inner future
   panicked during poll` versus the typed refusal — fixed at the root so the nested-loop

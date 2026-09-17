@@ -1462,6 +1462,11 @@ them, and the document is ordered by surface, never by date.
   `…::test_v3_statement_row_matches_the_live_spark_oracle[alter-alter-column-type]`
 - **Rationale** — FIXED, not declared. A v1.0 gate that promises v3 row lineage cannot ship a
   lineage projection that raises an internal error after a legal schema evolution.
+- **Note 2026-09-16 (ICE-PROMOTE-READ-1).** "the ordinary read path … promoted correctly" held
+  for unfiltered reads only. Range and long-`IN` filters on the promoted column dropped the
+  pre-promotion rows, DML after the promotion duplicated or refused, and a promoted partition
+  source refused its filters — rows **ICE-PROMOTE-READ-1**, **ICE-PROMOTE-DML-1** and
+  **ICE-PROMOTE-PARTITION-1** in §7, FIXED the same day.
 
 ### V3-COV-3 — OPEN (measured 2026-09-16; was FIXED at RP-8, 2026-09-03): partitioned `INSERT INTO` assigns `_row_id` by ascending partition order
 
@@ -4739,6 +4744,100 @@ the pin rather than obeying it.
   The v3 pin records one standing fork semantic, not a regression: RePark rewrites the
   fully-DV-deleted sixth file too (6/3/1 where Spark reports 5/3/0) and drops its DV in the
   same commit (F-16); rows and the surviving file multiset equal Spark's.
+
+### ICE-PROMOTE-READ-1 — filters on a column widened by `ALTER COLUMN … TYPE` dropped the rows written before the promotion — **FIXED 2026-09-16 (fork F-PROMOTE-READ-1)**
+
+- **repark** — **FIXED 2026-09-16** on fork branch `fix/ice-promote-read-1` (F-PROMOTE-READ-1,
+  consumed through a local path override); it reaches the workspace with the pin bump that
+  follows the fork PR, and the pins below are red at pin `edc38c6a` until then. Before the fix
+  (release native `32c0e1a3`, run-19a rows V2-10c, V3-14): on a table holding files written
+  before `ALTER TABLE t ALTER COLUMN id TYPE BIGINT` / `f … TYPE DOUBLE` and at least one file
+  written after, `WHERE id < 2` → `[]`, `id <= 2` → `[]`, `BETWEEN 1 AND 2` → `[]`, `id > 1` →
+  the post-promotion rows only, `f < 2.0D` → `[]`, a 24-value `IN` list → `[]`,
+  `count(*) WHERE id < 2` → `0`; `=`, `<>`, a two-value `IN` and decimal widening answered right,
+  and a table holding only pre-promotion files answered every predicate. Identical on
+  RePark-promoted and Spark-promoted adopted tables, v2 and v3, SQL and DataFrame doors. Cause:
+  the fork decodes a manifest's bounds under the schema embedded in that manifest, so a
+  pre-promotion file carries `int` bounds; the inclusive metrics evaluator compared an `int` bound
+  with a `long` literal, got no ordering, and pruned the file. After the fix the bounds read under
+  the reference type (Java `Conversions.fromByteBuffer(ref.type(), …)`) and every recorded read
+  case answers Spark row for row with `int64` / `double` / `decimal128(12, 2)` Arrow types.
+- **Apache Spark** — every predicate keeps the pre-promotion rows.
+  *(oracle: recorded — PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, ANSI on,
+  2026-09-16, `python/repark-parity/fixtures/torture/data/ice_promote_read_1/truth.json`,
+  two recordings identical; re-derived by the module's live cell.)*
+- **Pin** — `python/repark/tests/test_ice_promote_read_1.py::test_sql_door_matches_spark` and
+  `…::test_dataframe_door_matches_spark` over the `read/*` cases (v2/v3 × single/mixed era),
+  `…::test_adopted_spark_table_matches_spark` (the committed Spark-created tables, both doors),
+  `…::test_live_spark_rederives_every_recorded_answer`; fork
+  `crates/iceberg/src/spec/promotion_tests.rs` (`inclusive_metrics_keep_*`,
+  `strict_metrics_decide_*`, `mixed_era_range_and_in_filters_return_pre_promotion_rows`).
+- **Rationale** — FIXED. Silent row loss after a spec-legal schema evolution.
+
+### ICE-PROMOTE-DML-1 — DML after `ALTER COLUMN … TYPE` duplicated MERGE rows, updated no rows on a range, and refused on tables with no write since — **FIXED 2026-09-16 (fork F-PROMOTE-READ-1 + RePark)**
+
+- **repark** — **FIXED 2026-09-16** (run-19a row V2-06b); the fork half reaches the workspace
+  with the pin bump that follows the fork PR. Before the fix, on a table holding pre- and
+  post-promotion files: `MERGE … ON t.id = s.id` with the key promoted `INT → BIGINT` silently
+  skipped a MATCHED-only update and, with `WHEN NOT MATCHED THEN INSERT *`, inserted a duplicate
+  (`[(1,'a'), (1,'m1'), (2,'b'), (3,'c'), (4,'m4')]`, measured) — BIGINT and INT source keys, v2/v3 ×
+  CoW/MoR; `UPDATE … WHERE id < 3` updated 0 rows; `UPDATE` / `DELETE … WHERE id IN (<24
+  values>)` missed the pre-promotion rows (a range `DELETE … WHERE id < 2` / `f < 2.0D` was
+  right). On a table holding only pre-promotion files, MERGE (upsert on the key, non-key float
+  update, DELETE on a promoted-decimal table), UPDATE and DELETE refused `column types must match
+  schema types, expected Int64 but found Int32` (also `Float64`/`Float32`,
+  `Decimal128(12, 2)`/`Decimal128(9, 2)`). Causes: the key-range pushdown pruned pre-promotion
+  files (ICE-PROMOTE-READ-1's evaluator); every DML target scan pins the snapshot, so a table with
+  no write since the promotion scans under the old types, and both RePark's
+  `write::merge::conform_scan_batch` and the fork's DataFusion UPDATE/DELETE exec rebuilt the
+  batches under the current schema without widening. After the fix both widen only the legal
+  promotions and every recorded DML case answers Spark.
+- **Apache Spark** — updates or deletes the pre-promotion rows, inserts no duplicate.
+  *(oracle: recorded — as ICE-PROMOTE-READ-1.)*
+- **Pin** — `python/repark/tests/test_ice_promote_read_1.py::test_sql_door_matches_spark` over
+  `merge_key/*`, `dml_range/*`, `dml_single/*`; `…::test_dataframe_door_matches_spark` over
+  `merge_key/*` and `dml_single/*` (facade `mergeInto`); the adopted tables' MERGE `*`, range
+  UPDATE and DELETE steps; `crates/repark-iceberg/src/write/merge/tests/promoted_scan.rs`
+  (`conform_scan_batch_widens_legally_promoted_columns`,
+  `target_scan_over_a_single_era_promoted_table_yields_the_current_types`, control
+  `conform_scan_batch_still_refuses_an_illegal_narrowing`); fork
+  `crates/integrations/datafusion/tests/promoted_type_dml.rs`.
+- **Rationale** — FIXED. The duplicate rows persisted and Spark read them back.
+
+### ICE-PROMOTE-PARTITION-1 — a promoted partition source refused every filter and merge-on-read DML, and partition overwrite kept the old rows — **FIXED 2026-09-16 (fork F-PROMOTE-READ-1)**
+
+- **repark** — **FIXED 2026-09-16** (run-19a V2-10c partition-source finding, V3-11); the fork
+  change reaches the workspace with the pin bump that follows the fork PR. Before the fix, with
+  `p INT → BIGINT` as the partition source: `PARTITIONED BY (p)` or `(truncate(10, p))` refused
+  every filter on `p` (`DataInvalid => Literal Int(1) at position 0 is not compatible with
+  accessor type long`) on a mixed-era table; `bucket(4, p)` answered `=` / `IN` right and ranges
+  silently wrong; merge-on-read DELETE and UPDATE on an identity source refused `Partition value
+  for field p is not compatible with its partition type long` on both eras; static
+  `INSERT OVERWRITE … PARTITION (p = 1)` refused (the accessor); dynamic partition overwrite —
+  `INSERT OVERWRITE … PARTITION (p)` under `spark.sql.sources.partitionOverwriteMode=dynamic`
+  and `writeTo(t).overwritePartitions()` — committed but **kept** the old `p = 1` row beside the
+  new one, single and mixed era, v2 and v3. Cause: a pre-promotion manifest's partition tuple is
+  `Int(1)`; the partition accessor, `PartitionKey::new`, the scan-planning tuples that key the
+  delete-file index, and `ReplacePartitions`' drop-set comparison all worked under `long`. After
+  the fix each promotes the tuple to the current partition type (Java reads manifests through the
+  table's current specs) and every recorded case answers Spark.
+- **Apache Spark** — filters, deletes, updates and replaces the promoted partition.
+  *(oracle: recorded — as ICE-PROMOTE-READ-1; the dynamic overwrite is recorded on both the SQL
+  spelling and `writeTo(t).overwritePartitions()`.)*
+- **Pin** — `python/repark/tests/test_ice_promote_read_1.py::test_sql_door_matches_spark` and
+  `…::test_dataframe_door_matches_spark` over `read_partition/*` (identity, bucket(4),
+  truncate(10) × v2/v3 × single/mixed) and `dml_partition/*` (DELETE / UPDATE by a non-partition
+  and a partition predicate, MERGE on `p`, static and dynamic overwrite × v2/v3 × CoW/MoR ×
+  single/mixed); fork `crates/iceberg/src/spec/promotion_tests.rs`
+  (`partition_accessor_reads_pre_promotion_literals_under_the_promoted_type`,
+  `partition_key_new_promotes_a_pre_promotion_tuple`,
+  `promoted_identity_partition_source_filters_and_plans_long_partitions`,
+  `equality_delete_written_after_promotion_applies_to_a_pre_promotion_partition`,
+  `replace_partitions_after_promotion_drops_the_pre_promotion_partition`,
+  `overwrite_by_row_filter_on_a_promoted_identity_partition_replaces_it`).
+- **Rationale** — FIXED. Named fork residue (not reachable from RePark's writers):
+  `ReplacePartitionsAction` keys the added files' tuples as given and its conflict scope compares
+  a concurrent file's tuple exactly — see the fork ledger `task/f-promote-read-1-ledger.md`.
 
 ### V3-COV-4 — a MoR `DELETE` covering every row writes a full-coverage DV where Spark drops the file
 

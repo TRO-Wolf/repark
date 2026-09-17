@@ -306,7 +306,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   answer on private catalogs; any drift fails the cell. Re-record:
   `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the
   path, then `.venv/bin/python python/repark/tests/_record_ice_promote_read_1.py`
-  (`REPARK_ORACLE_IVY` points `spark.jars.ivy` at a warm Ivy cache).
+  (`REPARK_ORACLE_IVY` points `spark.jars.ivy` at a warm Ivy cache). Registry rows (FIXED
+  2026-09-16): ICE-PROMOTE-READ-1, ICE-PROMOTE-DML-1, ICE-PROMOTE-PARTITION-1. The fork half
+  (F-PROMOTE-READ-1) reaches CI with the fork pin bump; until then the table cases are red at
+  pin `edc38c6a`.
   pins: ice-promote-read-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   pins: ice-promote-read-1/C-010, C-012, C-013, C-014
 - `_record_ice_promote_read_1.py` — the **record driver** for the module above (NOT a `test_`
