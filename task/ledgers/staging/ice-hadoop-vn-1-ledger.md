@@ -191,3 +191,50 @@ which the file passes `7 passed`. The whole suite is re-run below on the clean t
    matches it exactly — conformance recorded, no class invented, no HALT. A new typed
    class would contradict the pinned classification tests (session.rs CQ-015); if the
    orchestrator wants one anyway, that is a new unit.
+
+## Coverage attestation
+
+```text
+COVERAGE_ATTESTATION:
+  pr_unit: ice-hadoop-vn-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause C-001..C-009 is pinned and green; the three measured refinements against the brief text (stale-read stays stale F-4, Spark never raises F-5, recovery is a fresh handle F-3) are pinned as measured, not as briefed.
+      artifacts: [python/repark/tests/test_ice_hadoop_vn_1.py, crates/repark-iceberg/src/write/hadoop_stale_commit.rs, python/repark/tests/ice_hadoop_vn_1_spark_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Four stale writer kinds (INSERT, MERGE, DELETE, UPDATE) plus both DataFrame doors plus repeated wedge writes plus the Spark-first shape plus the planted-file and 400k-row race shapes; the matched-zero DELETE (F-2) pins the no-commit boundary.
+      artifacts: [python/repark/tests/test_ice_hadoop_vn_1.py, /tmp/ib-scratch/probes/p_hadoop_vn.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: The stale commit burns a bounded retry budget (2 retries at 1/5ms in the Rust pin, the fork default budget live) then surfaces; the failed commit leaves the version bytes, the metadata listing and the catalog pointer unchanged, and a second stale write raises identically.
+      artifacts: [crates/repark-iceberg/src/write/hadoop_stale_commit.rs, python/repark/tests/test_ice_hadoop_vn_1.py::test_stale_handle_stays_wedged_loud]
+    - id: AT-4
+      status: ATTACKED
+      evidence: Two catalog instances share one file tree with no lock between them; the loser never advances and the winner never blocks; the Spark race scan-forwards; the fresh-handle recovery resumes at v(N+1).
+      artifacts: [python/repark/tests/test_ice_hadoop_vn_1.py::test_recovery_fresh_registration_commits, /tmp/ib-scratch/probes/p_hadoop_vn.py]
+    - id: AT-5
+      status: N/A
+      justification: Local tempdir files only; no credential, no network, no privileged action — the live Spark leg runs local[2] with a cached ivy and the offline legs touch only the copied fixture.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The winner's vN bytes are asserted byte-identical after every stale attempt; the winner's rows read back from the winning catalog, from a fresh registration and from Spark after refresh; the fixture truth.json and the oracle JSON freeze the seed and the row sets.
+      artifacts: [python/repark/tests/test_ice_hadoop_vn_1.py, python/repark-parity/fixtures/torture/data/ice_hadoop_vn_1/truth.json]
+    - id: AT-7
+      status: N/A
+      justification: No unbounded growth and no hot loop — the retry budget is bounded, every stale attempt terminates in seconds, and every tempdir and fixture copy is removed by tmp_path or the materialize guard.
+    - id: AT-8
+      status: ATTACKED
+      evidence: The fork's conflict kind is consumed, not presumed — the Rust pins fail red on the pre-#286 pin and pass green on 75da2b58; the surfaced class and kind-led message match the pinned OCC contract (session.rs CQ-015) instead of inventing a new one.
+      artifacts: [crates/repark-iceberg/src/write/hadoop_stale_commit.rs, python/repark/tests/test_ice_hadoop_vn_1.py::test_exception_contract_matches_occ]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The conflict message names the existing version file, the guard and the OS cause, so the loser is diagnosable from the message alone; the wedge repeats the same message on every later attempt.
+      artifacts: [python/repark/tests/test_ice_hadoop_vn_1.py, python/repark/tests/ice_hadoop_vn_1_spark_oracle.json]
+    - id: AT-10
+      status: ATTACKED
+      evidence: The suite would catch the missing guard — the temporary pre-#286 revert turned both Rust pins red with the stale append returning Ok; the Python pins assert the same seam per writer and door. No product branch was added (test-only Rust under cfg(test), docs, fixtures), so there is no unpinned new branch.
+      artifacts: [task/ledgers/staging/ice-hadoop-vn-1-ledger.md]
+  complete: true
+```
