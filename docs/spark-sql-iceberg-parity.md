@@ -10834,6 +10834,82 @@ field NAME.
   means teaching the decimal-literal coercion to survive NaN payloads, a planner
   change beyond a pushdown unit.
 
+### ICE-V3-WRITE-DEFAULT-1 — omitted columns fill from `write_default` on the row-write paths — **FIXED 2026-09-17**
+
+- **repark** — `INSERT INTO t (id, name)` on both SQL doors, `MERGE … WHEN NOT
+  MATCHED THEN INSERT (id, name)`, `writeTo(t).append()`, `saveAsTable` append,
+  `insertInto`, and Spark-door whole-table `INSERT OVERWRITE t (id, name)` fill
+  an omitted column from its `write_default` (NULL only when the field has
+  none). An explicit NULL stays NULL. A required column with no default
+  refuses. Positional-short `VALUES`/`SELECT`, the `DEFAULT` keyword, and extra
+  columns keep Spark's measured answers. Tables without defaults and v2 tables
+  behave exactly as before. Write-default 7 over initial-default 5 fills 7 on
+  new writes while old rows still read 5.
+- **Apache Spark** — the same fills and refusals on every shape above.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17; 22 recorded cells
+  in `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json`
+  beside the Java-API-created v3 tables.)*
+- **Pin** —
+  `python/repark/tests/test_ice_v3_write_default_1.py` (14 offline cells plus
+  the live rebuild-and-replay cell, 15 green);
+  `crates/repark-iceberg/src/write/merge/tests/insert_fill.rs` (MERGE
+  projection fill and required-missing refusal);
+  `crates/repark-sql/tests/ansi_write_defaults.rs` (ANSI-door fill and the
+  Spark-door-identical required refusal).
+- **Rationale** — FIXED, not declared. The fill lives in one Rust home
+  (`repark-iceberg` `write::insert_defaults`) reached from both doors; the
+  DataFrame writers emit a target column list and let the engine fill. The
+  partition-overwrite shapes, nested-struct defaults, and the F-001 read gap
+  stay open in the three rows below.
+  pins: ice-v3-write-default-1/C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012
+
+### ICE-V3-WRITE-DEFAULT-1-OVERWRITE-PART — partition-overwrite shapes do not fill omitted defaulted columns — **DECLARED 2026-09-17**
+
+- **repark** — `INSERT OVERWRITE … PARTITION (…)` on both doors stages the
+  source positionally with no default fill, and `writeTo(t).overwritePartitions()`
+  emits a projection-only source (measured: a `ParseException` from the
+  generated text on the adopted table). ANSI whole-table `INSERT OVERWRITE`
+  stays Q9-omitted (row DML-1).
+- **Apache Spark** — `INSERT OVERWRITE t (id, name) VALUES (10, 'x')` on a
+  partitioned defaulted table replaces the table with `(10, 'x', 5)`, and
+  `df.select("id", "name").writeTo(t).overwritePartitions()` replaces only the
+  source partitions, filling `c = 5` (`[[10, 'x', 5], [20, 'y', 5]]`).
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17 probe
+  `p_write_default_ow.py`: banner `spark=4.1.2`, partitioned v3 table,
+  Java-API default 5.)*
+- **Pin** — none yet; the shapes are unpinned on both doors.
+- **Rationale** — DECLARED, dated 2026-09-17 (ICE-V3-WRITE-DEFAULT-1 step 5).
+  Filling needs the staged-fill treatment in all four partition arms plus a
+  partitioned defaulted fixture, beyond a write-path unit's budget. Reversing
+  needs the fill plus pins; the partition arms must not silently misalign
+  meanwhile.
+
+### ICE-V3-WRITE-DEFAULT-1-NESTED — nested struct-field defaults are unpinned — **DECLARED 2026-09-17**
+
+- **repark** — only primitive `write_default` literals fill; a default on a
+  nested struct field has no pin and no measured answer on either engine in
+  this tree.
+- **Apache Spark** — unmeasured in this unit.
+- **Pin** — none yet.
+- **Rationale** — DECLARED, dated 2026-09-17 (ICE-V3-WRITE-DEFAULT-1 C-009).
+  The 22 recorded truth cells cover int, string, decimal, and temporal defaults;
+  struct-field defaults need their own oracle cells before any fill.
+
+### F-001 — a schema-only head commit reads pre-add rows as NULL — **BACKLOG 2026-09-17**
+
+- **repark** — a table whose head is a schema-only commit (Java `addColumn`
+  with defaults, no snapshot after) reads pre-add rows as NULL on this engine;
+  one RePark write (a new snapshot on the post-add schema) flips the old rows
+  to the default. Measured on the `defaults` fixture: adopted at v3 (snapshot
+  schema 0) reads `(1, 'a', None)`; after `INSERT INTO t VALUES (99, 'z', 7)`
+  the same rows read `(1, 'a', 5)`.
+- **Apache Spark** — 4.1.2 reads the initial default on the pre-add rows.
+- **Pin** — none yet; the fixture works around it with one post-add Spark seed
+  row per defaulted table.
+- **Rationale** — BACKLOG, filed 2026-09-17 (ICE-V3-WRITE-DEFAULT-1 finding
+  F-001). Read path, untouched by the write unit; fork-or-adoption attribution
+  is open before any fix.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
