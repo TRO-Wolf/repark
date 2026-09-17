@@ -25,9 +25,10 @@ from __future__ import annotations
 import json
 import shutil
 import time
+from collections.abc import Callable
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 CANONICAL = Path("/tmp/repark-ice-v3-write-default-1")
 FIXTURE_DIR = Path(__file__).resolve().parent
@@ -61,7 +62,10 @@ def _spark_session(warehouse: Path) -> Any:
         .config("spark.driver.memory", "2g")
         .config("spark.ui.enabled", "false")
         .config("spark.jars.packages", GAV)
-        .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .config(
+            "spark.sql.extensions",
+            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+        )
         .config(f"spark.sql.catalog.{CATALOG}", "org.apache.iceberg.spark.SparkCatalog")
         .config(f"spark.sql.catalog.{CATALOG}.type", "hadoop")
         .config(f"spark.sql.catalog.{CATALOG}.warehouse", str(warehouse))
@@ -87,7 +91,7 @@ def _newest_metadata(table_root: Path) -> Path:
 def _schema_fields(table_root: Path) -> list[Any]:
     """The current-schema field list of a table root."""
     doc = json.loads(_newest_metadata(table_root).read_text(encoding="utf-8"))
-    current = [s for s in doc["schemas"] if s["schema-id"] == doc["current-schema-id"]][0]
+    current = next(s for s in doc["schemas"] if s["schema-id"] == doc["current-schema-id"])
     return list(current["fields"])
 
 
@@ -136,11 +140,15 @@ def _build(spark: Any) -> None:
     spark.sql("INSERT INTO sc.ns.defaults VALUES (1, 'a'), (2, 'b')")
     _add_default(spark, "defaults", "c", integer, "doc", literal(5))
     spark.sql("INSERT INTO sc.ns.defaults (id, name) VALUES (3, 'c')")
-    spark.sql("CREATE TABLE sc.ns.strdef (id INT) USING iceberg TBLPROPERTIES ('format-version'='3')")
+    spark.sql(
+        "CREATE TABLE sc.ns.strdef (id INT) USING iceberg TBLPROPERTIES ('format-version'='3')"
+    )
     spark.sql("INSERT INTO sc.ns.strdef VALUES (1)")
     _add_default(spark, "strdef", "s", string, "doc", literal("hi"))
     spark.sql("INSERT INTO sc.ns.strdef (id) VALUES (2)")
-    spark.sql("CREATE TABLE sc.ns.decdef (id INT) USING iceberg TBLPROPERTIES ('format-version'='3')")
+    spark.sql(
+        "CREATE TABLE sc.ns.decdef (id INT) USING iceberg TBLPROPERTIES ('format-version'='3')"
+    )
     _add_default(
         spark,
         "decdef",
@@ -150,10 +158,17 @@ def _build(spark: Any) -> None:
         literal(jvm.java.math.BigDecimal("3.14")),
     )
     spark.sql("INSERT INTO sc.ns.decdef VALUES (1, 3.14)")
-    spark.sql("CREATE TABLE sc.ns.temporal (id INT) USING iceberg TBLPROPERTIES ('format-version'='3')")
+    spark.sql(
+        "CREATE TABLE sc.ns.temporal (id INT) USING iceberg TBLPROPERTIES ('format-version'='3')"
+    )
     spark.sql("INSERT INTO sc.ns.temporal VALUES (1)")
     _add_default(
-        spark, "temporal", "dt", jvm.org.apache.iceberg.types.Types.DateType.get(), "doc", literal(20000)
+        spark,
+        "temporal",
+        "dt",
+        jvm.org.apache.iceberg.types.Types.DateType.get(),
+        "doc",
+        literal(20000),
     )
     _add_default(
         spark,
@@ -163,7 +178,9 @@ def _build(spark: Any) -> None:
         "doc",
         literal(20000 * 86400 * 1_000_000),
     )
-    spark.sql("CREATE TABLE sc.ns.differ (id INT) USING iceberg TBLPROPERTIES ('format-version'='3')")
+    spark.sql(
+        "CREATE TABLE sc.ns.differ (id INT) USING iceberg TBLPROPERTIES ('format-version'='3')"
+    )
     spark.sql("INSERT INTO sc.ns.differ VALUES (1)")
     _add_default(spark, "differ", "e", integer, "doc", literal(5))
     differ = jvm.org.apache.iceberg.spark.Spark3Util.loadIcebergTable(
@@ -240,52 +257,129 @@ def _record_shapes(spark: Any, log: Log) -> dict[str, Any]:
     """Run every oracle shape against the canonical working copy."""
     cells: dict[str, Any] = {}
     go = partial(_record_cell, spark, log, cells)
-    go("defaults", "insert_column_list",
-       partial(_collect, spark, "INSERT INTO sc.ns.defaults (id, name) VALUES (11, 'k')"))
-    go("defaults", "merge_not_matched",
-       partial(_collect, spark,
-               "MERGE INTO sc.ns.defaults t USING (SELECT 12 AS id, 'l' AS name) s"
-               " ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)"))
-    go("defaults", "writeto_append",
-       partial(_append_frame, spark, "sc.ns.defaults", [(13, "m")], "id int, name string"))
-    go("defaults", "saveas_append",
-       partial(_saveas_append_frame, spark, "sc.ns.defaults", [(14, "n")], "id int, name string"))
-    go("defaults", "insert_values_default_kw",
-       partial(_collect, spark, "INSERT INTO sc.ns.defaults VALUES (15, 'o', DEFAULT)"))
-    go("defaults", "explicit_null_values",
-       partial(_collect, spark, "INSERT INTO sc.ns.defaults (id, name, c) VALUES (16, 'p', NULL)"))
-    go("defaults", "explicit_null_select",
-       partial(_collect, spark, "INSERT INTO sc.ns.defaults SELECT 17, 'q', NULL"))
-    go("defaults", "select_position_default",
-       partial(_collect, spark, "INSERT INTO sc.ns.defaults (id, name, c) SELECT 18, 'r', DEFAULT"))
-    go("defaults", "insert_positional_short",
-       partial(_collect, spark, "INSERT INTO sc.ns.defaults VALUES (8, 'h')"))
-    go("defaults", "insert_select_short",
-       partial(_collect, spark, "INSERT INTO sc.ns.defaults SELECT 9, 'i'"))
-    go("defaults", "insertInto_missing",
-       partial(_insert_into_frame, spark, "sc.ns.defaults", [(19, "s")], "id int, name string"))
-    go("defaults", "writeto_extra_col",
-       partial(_append_frame, spark, "sc.ns.defaults", [(21, "u", "zzz")], "id int, name string, zzz string"))
-    go("nodefault", "nodefault_insert_column_list",
-       partial(_collect, spark, "INSERT INTO sc.ns.nodefault (id, name) VALUES (2, 'b')"))
-    go("nodefault", "nodefault_writeto_append",
-       partial(_append_frame, spark, "sc.ns.nodefault", [(3, "c")], "id int, name string"))
-    go("nodefault", "nodefault_values_default_kw",
-       partial(_collect, spark, "INSERT INTO sc.ns.nodefault VALUES (4, 'd', DEFAULT)"))
-    go("strdef", "string_default_insert",
-       partial(_collect, spark, "INSERT INTO sc.ns.strdef (id) VALUES (12)"))
-    go("decdef", "decimal_default_insert",
-       partial(_collect, spark, "INSERT INTO sc.ns.decdef (id) VALUES (2)"))
-    go("temporal", "temporal_default_insert",
-       partial(_collect, spark, "INSERT INTO sc.ns.temporal (id) VALUES (12)"))
-    go("differ", "differ_insert",
-       partial(_collect, spark, "INSERT INTO sc.ns.differ (id) VALUES (12)"))
-    go("required", "required_missing_insert",
-       partial(_collect, spark, "INSERT INTO sc.ns.required (id) VALUES (2)"))
-    go("required", "required_missing_writeto",
-       partial(_append_frame, spark, "sc.ns.required", [(3,)], "id int"))
-    go("defaults", "overwrite_column_list",
-       partial(_collect, spark, "INSERT OVERWRITE sc.ns.defaults (id, name) SELECT 30, 'ov'"))
+    go(
+        "defaults",
+        "insert_column_list",
+        partial(_collect, spark, "INSERT INTO sc.ns.defaults (id, name) VALUES (11, 'k')"),
+    )
+    go(
+        "defaults",
+        "merge_not_matched",
+        partial(
+            _collect,
+            spark,
+            "MERGE INTO sc.ns.defaults t USING (SELECT 12 AS id, 'l' AS name) s"
+            " ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)",
+        ),
+    )
+    go(
+        "defaults",
+        "writeto_append",
+        partial(_append_frame, spark, "sc.ns.defaults", [(13, "m")], "id int, name string"),
+    )
+    go(
+        "defaults",
+        "saveas_append",
+        partial(_saveas_append_frame, spark, "sc.ns.defaults", [(14, "n")], "id int, name string"),
+    )
+    go(
+        "defaults",
+        "insert_values_default_kw",
+        partial(_collect, spark, "INSERT INTO sc.ns.defaults VALUES (15, 'o', DEFAULT)"),
+    )
+    go(
+        "defaults",
+        "explicit_null_values",
+        partial(_collect, spark, "INSERT INTO sc.ns.defaults (id, name, c) VALUES (16, 'p', NULL)"),
+    )
+    go(
+        "defaults",
+        "explicit_null_select",
+        partial(_collect, spark, "INSERT INTO sc.ns.defaults SELECT 17, 'q', NULL"),
+    )
+    go(
+        "defaults",
+        "select_position_default",
+        partial(
+            _collect, spark, "INSERT INTO sc.ns.defaults (id, name, c) SELECT 18, 'r', DEFAULT"
+        ),
+    )
+    go(
+        "defaults",
+        "insert_positional_short",
+        partial(_collect, spark, "INSERT INTO sc.ns.defaults VALUES (8, 'h')"),
+    )
+    go(
+        "defaults",
+        "insert_select_short",
+        partial(_collect, spark, "INSERT INTO sc.ns.defaults SELECT 9, 'i'"),
+    )
+    go(
+        "defaults",
+        "insertInto_missing",
+        partial(_insert_into_frame, spark, "sc.ns.defaults", [(19, "s")], "id int, name string"),
+    )
+    go(
+        "defaults",
+        "writeto_extra_col",
+        partial(
+            _append_frame,
+            spark,
+            "sc.ns.defaults",
+            [(21, "u", "zzz")],
+            "id int, name string, zzz string",
+        ),
+    )
+    go(
+        "nodefault",
+        "nodefault_insert_column_list",
+        partial(_collect, spark, "INSERT INTO sc.ns.nodefault (id, name) VALUES (2, 'b')"),
+    )
+    go(
+        "nodefault",
+        "nodefault_writeto_append",
+        partial(_append_frame, spark, "sc.ns.nodefault", [(3, "c")], "id int, name string"),
+    )
+    go(
+        "nodefault",
+        "nodefault_values_default_kw",
+        partial(_collect, spark, "INSERT INTO sc.ns.nodefault VALUES (4, 'd', DEFAULT)"),
+    )
+    go(
+        "strdef",
+        "string_default_insert",
+        partial(_collect, spark, "INSERT INTO sc.ns.strdef (id) VALUES (12)"),
+    )
+    go(
+        "decdef",
+        "decimal_default_insert",
+        partial(_collect, spark, "INSERT INTO sc.ns.decdef (id) VALUES (2)"),
+    )
+    go(
+        "temporal",
+        "temporal_default_insert",
+        partial(_collect, spark, "INSERT INTO sc.ns.temporal (id) VALUES (12)"),
+    )
+    go(
+        "differ",
+        "differ_insert",
+        partial(_collect, spark, "INSERT INTO sc.ns.differ (id) VALUES (12)"),
+    )
+    go(
+        "required",
+        "required_missing_insert",
+        partial(_collect, spark, "INSERT INTO sc.ns.required (id) VALUES (2)"),
+    )
+    go(
+        "required",
+        "required_missing_writeto",
+        partial(_append_frame, spark, "sc.ns.required", [(3,)], "id int"),
+    )
+    go(
+        "defaults",
+        "overwrite_column_list",
+        partial(_collect, spark, "INSERT OVERWRITE sc.ns.defaults (id, name) SELECT 30, 'ov'"),
+    )
     return cells
 
 
@@ -320,7 +414,9 @@ def main() -> None:
         },
         "cells": _record_shapes(spark, log),
     }
-    (FIXTURE_DIR / "truth.json").write_text(json.dumps(truth, indent=2, default=str), encoding="utf-8")
+    (FIXTURE_DIR / "truth.json").write_text(
+        json.dumps(truth, indent=2, default=str), encoding="utf-8"
+    )
     spark.stop()
     cells = truth["cells"]
     assert isinstance(cells, dict)

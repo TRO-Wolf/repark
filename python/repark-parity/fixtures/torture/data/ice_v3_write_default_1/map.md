@@ -46,5 +46,7 @@ around here by construction.
   and the 22 oracle cells (full-table rows or the error class and message).
 - `record.py` — the recording script (Spark-only; run it, never a copy, from
   the repository root under the probe JVM). Re-recording is deterministic in
-  rows, schema and errors; file names carry fresh UUIDs.
+  rows, schema and errors; file names carry fresh UUIDs. Ruff-clean
+  (2026-09-17): import, `next()`, and formatter wraps only — the recorded
+  bytes are untouched.
 - `map.md` — this file.
