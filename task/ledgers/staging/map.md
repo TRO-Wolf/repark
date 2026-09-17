@@ -4,6 +4,14 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-registry-sweep-1a-ledger.md](ice-registry-sweep-1a-ledger.md) —
+  **ICE-REGISTRY-SWEEP-1 part A (2026-09-17), in flight:** the cutover
+  assessment corrections and three registry claims — twelve
+  `production-iceberg-status-2026-09-14.md` rows rewritten in place to the
+  2026-09-16 measured rating (run at `a92a68db`) plus the dated superseding
+  note and the §9 audit trail, and registry claims C-3, C-8, C-9 rewritten
+  (C-3, C-9 FIXED → OPEN). Docs-only reading unit, no product change.
+  `risk_tier: standard`. Branch `docs/ice-cutover-corrections-1`.
 - [never-oom-panic-1-ledger.md](never-oom-panic-1-ledger.md) —
   **NEVER-OOM-PANIC-1 (2026-09-16), in flight:** the tight-pool NLJ race — `inner future
   panicked during poll` versus the typed refusal — fixed at the root so the nested-loop
