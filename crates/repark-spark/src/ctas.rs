@@ -255,9 +255,6 @@ pub(crate) async fn execute_ctas(
     ctx.read_empty()
 }
 
-/// Stream the SELECT into the staged table and publish it.
-/// # Errors
-/// Stream, staging, publish, or commit failures.
 async fn finish_ctas_staged_commit(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,

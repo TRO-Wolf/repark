@@ -22,10 +22,7 @@ pub fn writer_properties_for(table: &Table) -> Result<WriterProperties> {
     writer_properties_with(table, None, None)
 }
 
-/// Build [`WriterProperties`] with statement option overrides taking the table property's
-/// place (Spark's option-over-table-property precedence).
-/// # Errors
-/// Unknown codec, unparsable level, or level out of range for gzip/zstd.
+#[allow(clippy::missing_errors_doc)]
 pub fn writer_properties_with(
     table: &Table,
     codec_override: Option<&str>,
@@ -49,10 +46,7 @@ pub fn writer_properties_with(
         .build())
 }
 
-/// Resolve the rolling-writer target size with a statement option taking the table
-/// property's place.
-/// # Errors
-/// A non-numeric override, mirroring Spark's `NumberFormatException`.
+#[allow(clippy::missing_errors_doc)]
 pub fn target_file_size_with(table: &Table, size_override: Option<u64>) -> Result<usize> {
     let Some(raw) = size_override else {
         return Ok(table
@@ -68,9 +62,7 @@ pub fn target_file_size_with(table: &Table, size_override: Option<u64>) -> Resul
     })
 }
 
-/// Parse a `target-file-size-bytes` option value.
-/// # Errors
-/// A non-numeric value, mirroring Spark's `NumberFormatException`.
+#[allow(clippy::missing_errors_doc)]
 pub fn parse_target_file_size(raw: &str) -> Result<u64> {
     raw.trim().parse::<u64>().map_err(|_| {
         DataFusionError::Plan(format!(

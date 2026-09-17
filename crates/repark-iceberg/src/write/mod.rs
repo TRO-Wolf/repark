@@ -41,7 +41,6 @@ pub(crate) mod store_assign;
 pub mod testing_support;
 /// Whole-table `TRUNCATE TABLE` (delete-only empty overwrite).
 pub mod truncate;
-/// Per-statement DataFrame write-option staging and commits (ICE-WRITE-OPTIONS-1).
 pub mod write_options;
 pub mod writer_props;
 

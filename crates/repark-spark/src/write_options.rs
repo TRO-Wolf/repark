@@ -1,54 +1,30 @@
-//! Facade `OPTIONS(...)` clause extraction and validation.
-//!
-//! The Python facade renders its stored writer options onto generated Iceberg SQL as
-//! `OPTIONS('key'='value', ...)`; this recognizer extracts the clause before `sqlparser`
-//! sees it, validates every key in Rust, and hands the levers to the executors. Raw SQL
-//! never carries the clause: extraction only fires on leading `INSERT`/`CREATE`, the
-//! content must parse as quoted pairs, and non-Iceberg targets refuse a non-empty set.
-//! `pins: ice-write-options-1/C-001, C-002, C-003, C-004`.
-
 use datafusion::error::{DataFusionError, Result};
 
-/// Prefix for snapshot-summary properties (Spark strips it, lower-cases the suffix).
 const SNAPSHOT_PROPERTY_PREFIX: &str = "snapshot-property.";
 
-/// A validated statement write-option set.
 #[derive(Debug, Default, Clone)]
 pub struct StatementWriteOptions {
-    /// Lower-cased keys as written, last wins.
     pub raw: Vec<(String, String)>,
-    /// `(suffix, value)` pairs for the snapshot summary; suffix is lower-cased.
     pub snapshot_extra: Vec<(String, String)>,
-    /// Lower-cased `write-format` value.
     pub write_format: Option<String>,
-    /// Parsed `target-file-size-bytes` value (option over table property).
     pub target_file_size_bytes: Option<u64>,
-    /// Raw `compression-codec` value (option over table property).
     pub codec: Option<String>,
-    /// Raw `compression-level` value (option over table property).
     pub level: Option<String>,
-    /// Lower-cased `distribution-mode` value.
     pub distribution_mode: Option<String>,
-    /// Raw `isolation-level` value (option over table property).
     pub isolation: Option<String>,
 }
 
 impl StatementWriteOptions {
-    /// An empty set; the statement carries no facade options.
     #[must_use]
     pub fn empty() -> Self {
         Self::default()
     }
 
-    /// Whether the statement carries any facade option.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.raw.is_empty()
     }
 
-    /// Refuse a non-empty set outside the Iceberg write paths that honour it.
-    /// # Errors
-    /// A plan error when options are present, so they are never silently dropped.
     pub fn refuse_if_non_empty(&self, context: &str) -> Result<()> {
         if self.raw.is_empty() {
             return Ok(());
@@ -61,7 +37,6 @@ impl StatementWriteOptions {
         )))
     }
 
-    /// The staging levers for `repark-iceberg`.
     #[must_use]
     pub fn staging_overrides(&self) -> repark_iceberg::write::WriterStagingOverrides {
         repark_iceberg::write::WriterStagingOverrides {
@@ -72,12 +47,6 @@ impl StatementWriteOptions {
     }
 }
 
-/// Extract the facade `OPTIONS(...)` clause from `sql`, returning cleaned SQL plus options.
-///
-/// The clause is `OPTIONS('key'='value', ...)` at top level before the statement source;
-/// anything else keeps the SQL byte-identical.
-/// # Errors
-/// A validated key with a bad value (never an extraction miss: those stay untouched).
 pub fn extract_statement_write_options(sql: &str) -> Result<(String, StatementWriteOptions)> {
     if !is_options_write_statement(sql) {
         return Ok((sql.to_string(), StatementWriteOptions::empty()));
@@ -98,9 +67,6 @@ pub fn extract_statement_write_options(sql: &str) -> Result<(String, StatementWr
 }
 
 impl StatementWriteOptions {
-    /// Validate raw pairs into a typed set.
-    /// # Errors
-    /// Refusals for un-writable formats and bad values; unknown keys are ignored like Spark.
     fn validate(pairs: Vec<(String, String)>) -> Result<Self> {
         let mut merged: Vec<(String, String)> = Vec::with_capacity(pairs.len());
         for (key, value) in pairs {
@@ -143,9 +109,6 @@ impl StatementWriteOptions {
     }
 }
 
-/// Validate a `write-format` value: parquet passes, orc/avro are declared refusals.
-/// # Errors
-/// `NotImplemented` naming the registry row for orc/avro; `Plan` for unknown formats.
 fn validate_write_format(raw: &str) -> Result<String> {
     match raw.to_ascii_lowercase().as_str() {
         "parquet" => Ok("parquet".to_string()),
@@ -157,9 +120,6 @@ fn validate_write_format(raw: &str) -> Result<String> {
     }
 }
 
-/// Validate a `distribution-mode` value against the engine domain.
-/// # Errors
-/// Any value outside none/hash/range, mirroring Spark's refusal text.
 fn validate_distribution_mode(raw: &str) -> Result<String> {
     match raw.to_ascii_lowercase().as_str() {
         "none" | "hash" | "range" => Ok(raw.to_ascii_lowercase()),
@@ -169,9 +129,6 @@ fn validate_distribution_mode(raw: &str) -> Result<String> {
     }
 }
 
-/// Validate an `isolation-level` value against the option domain.
-/// # Errors
-/// Any value outside none/snapshot/serializable, mirroring Spark's refusal text.
 fn validate_isolation_level(raw: &str) -> Result<String> {
     match raw.to_ascii_lowercase().as_str() {
         "none" | "snapshot" | "serializable" => Ok(raw.to_string()),
@@ -181,9 +138,6 @@ fn validate_isolation_level(raw: &str) -> Result<String> {
     }
 }
 
-/// Whether `sql` is an INSERT or CREATE [OR REPLACE] TABLE whose facade clause is stripped.
-///
-/// Any other leading form keeps the SQL byte-identical, so user DDL can never lose text.
 fn is_options_write_statement(sql: &str) -> bool {
     let mut words = sql
         .split(|byte: char| byte.is_whitespace() || byte == '(')
@@ -208,10 +162,6 @@ fn is_options_write_statement(sql: &str) -> bool {
     next.is_some_and(|word| word.eq_ignore_ascii_case("table"))
 }
 
-/// Locate the first top-level `OPTIONS(...)` before the statement source.
-///
-/// Returns the byte span to strip plus the raw clause text. Quote-, comment- and
-/// paren-aware; a bare table named `options` never matches (no opening paren follows).
 fn find_options_clause(sql: &str) -> Option<(usize, usize, String)> {
     let bytes = sql.as_bytes();
     let mut index = 0;
@@ -274,7 +224,6 @@ fn find_options_clause(sql: &str) -> Option<(usize, usize, String)> {
     None
 }
 
-/// Skip a quoted span; `at` points at the opening quote. Handles doubled-quote escapes.
 fn skip_quoted(bytes: &[u8], at: usize, quote: u8) -> usize {
     let mut index = at + 1;
     while index < bytes.len() {
@@ -290,7 +239,6 @@ fn skip_quoted(bytes: &[u8], at: usize, quote: u8) -> usize {
     index
 }
 
-/// Scan a balanced paren span; `at` points at `(`. Returns the end offset plus inner text.
 fn scan_balanced(sql: &str, at: usize) -> Option<(usize, String)> {
     let bytes = sql.as_bytes();
     let mut depth = 0usize;
@@ -318,7 +266,6 @@ fn scan_balanced(sql: &str, at: usize) -> Option<(usize, String)> {
     None
 }
 
-/// Parse clause text as `'key'='value'` pairs; `None` when the text is not pairs.
 fn parse_options_pairs(text: &str) -> Option<Vec<(String, String)>> {
     let bytes = text.as_bytes();
     let mut index = 0;
@@ -346,7 +293,6 @@ fn parse_options_pairs(text: &str) -> Option<Vec<(String, String)>> {
     }
 }
 
-/// Parse one single-quoted literal with `''` escapes; `None` on any other shape.
 fn parse_single_literal(text: &str, index: &mut usize) -> Option<String> {
     let bytes = text.as_bytes();
     if bytes.get(*index) != Some(&b'\'') {

@@ -533,6 +533,8 @@ repark-core's error map.
   because the canonicals live in size-capped files the gate holds exact — a fork bump
   re-verifies both copies (see `writer_props.rs` duties). Only option-carrying
   statements reach the override staging; option-free staging keeps the canonicals.
+  Fallible fns carry `#[allow(clippy::missing_errors_doc)]`, never `# Errors` sections
+  (owner comment ban; round-2 purge 2026-09-17).
   pins: ice-write-options-1/C-001, C-002, C-003
 
 ## I want to...

@@ -173,3 +173,17 @@ TODO: rows written.
 - Proposition ledger close: C-001, C-002, C-003, C-004, C-005, C-006, C-007
   PROVEN (C-003 with the named residuals (a)(b)(c) in the registry row;
   C-006 by measurement, no SQL-door change).
+
+## 7. Round 2 remediation (2026-09-17)
+
+- Step 1 comment purge: deleted all 135 added `///`/`//!` lines (both new
+  `write_options.rs` files stripped mechanically; `writer_props.rs`,
+  `partition_overwrite.rs`, `ctas.rs`, `insert_overwrite.rs`, `write/mod.rs`
+  blocks removed by hand). Substance already lived in the two `map.md`
+  entries, so nothing moved except a one-line allow-convention note in
+  `crates/repark-iceberg/src/write/map.md`. Fallible pub fns carry
+  `#[allow(clippy::missing_errors_doc)]` (11 in iceberg `write_options.rs`,
+  1 in `partition_overwrite.rs`, 3 pre-existing-pattern in `writer_props.rs`);
+  the spark `write_options.rs` module is `pub(crate)`, so the lint stays
+  silent there. `missing_docs` is not enabled workspace-wide, so bare pub
+  items are gate-clean. Gate grep exit 1 (no matches) on the working tree.

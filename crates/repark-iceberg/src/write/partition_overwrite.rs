@@ -324,9 +324,7 @@ pub async fn stage_static_partition_overwrite_files(
     .await
 }
 
-/// Stage static-overwrite batches with statement levers after injecting PARTITION columns.
-/// # Errors
-/// Injection, positional map, or file write failures as [`DataFusionError`].
+#[allow(clippy::missing_errors_doc)]
 pub async fn stage_static_partition_overwrite_files_with(
     table: &Table,
     batches: Vec<RecordBatch>,

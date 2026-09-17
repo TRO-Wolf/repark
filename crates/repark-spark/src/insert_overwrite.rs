@@ -28,9 +28,6 @@ use crate::spark_ast;
 /// Monotonic counter for ephemeral `INSERT OVERWRITE` MemTable-fallback temp views.
 pub(crate) static OW_MATERIALIZE_SEQ: AtomicU64 = AtomicU64::new(1);
 
-/// Append with facade write options: stage-then-commit on the owned path with the summary.
-/// # Errors
-/// Target resolution, source materialization, staging, or commit failures.
 pub(crate) async fn execute_append_with_options(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,

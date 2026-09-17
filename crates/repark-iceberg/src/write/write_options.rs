@@ -1,12 +1,3 @@
-//! Per-statement DataFrame write-option staging and commits.
-//!
-//! The facade renders a validated `OPTIONS(...)` clause onto its generated Iceberg SQL;
-//! the `repark-spark` recognizer parses it and these functions stage and commit with the
-//! statement's levers. The option-free canonicals in `append.rs`, `merge/mod.rs` and
-//! `overwrite.rs` stay byte-identical under the file-size ratchet, so the two writer
-//! builders and the four commit bodies here mirror them and call the same fork actions.
-//! `pins: ice-write-options-1/C-001, C-002, C-003`.
-
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -40,32 +31,20 @@ use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::writer_props::{target_file_size_with, writer_properties_with};
 
-/// Statement-level writer levers parsed from the facade `OPTIONS(...)` clause.
-///
-/// Every field is `None` when the statement carries no such option; a `Some` value takes
-/// the table property's place (Spark's option-over-table-property precedence).
 #[derive(Debug, Default, Clone)]
 pub struct WriterStagingOverrides {
-    /// `compression-codec` option value.
     pub codec: Option<String>,
-    /// `compression-level` option value.
     pub level: Option<String>,
-    /// `target-file-size-bytes` option value.
     pub target_file_size_bytes: Option<u64>,
 }
 
 impl WriterStagingOverrides {
-    /// No overrides; staging reads every knob from the table properties.
     #[must_use]
     pub fn none() -> Self {
         Self::default()
     }
 }
 
-/// Mint the operation id and snapshot summary, merged with the statement extras.
-///
-/// Extras arrive validated (lower-cased `snapshot-property` suffixes as keys); the engine
-/// stamp key is disjoint from them by construction.
 #[must_use]
 pub fn summary_with_extras(extra: &[(String, String)]) -> (String, HashMap<String, String>) {
     let operation_id = Uuid::new_v4().to_string();
@@ -76,12 +55,7 @@ pub fn summary_with_extras(extra: &[(String, String)]) -> (String, HashMap<Strin
     (operation_id, summary)
 }
 
-/// Parse an `isolation-level` option value; `None` falls back to the table property.
-///
-/// Accepts the table-property grammar (`none`, `snapshot`, `serializable`,
-/// case-insensitive) so the option and the property share one domain.
-/// # Errors
-/// Any other value, mirroring the table-property refusal text.
+#[allow(clippy::missing_errors_doc)]
 pub fn isolation_with_override(
     table: &Table,
     isolation_override: Option<&str>,
@@ -101,11 +75,7 @@ pub fn isolation_with_override(
     }
 }
 
-/// Append batches with statement levers: the sanctioned add-only commit path.
-///
-/// Mirrors [`crate::write::append::append`]; the summary carries the statement extras.
-/// # Errors
-/// Missing table, non-Parquet default, conform, staging, or commit failures.
+#[allow(clippy::missing_errors_doc)]
 pub async fn append_with_statement_options(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -130,7 +100,6 @@ pub async fn append_with_statement_options(
     commit_append_with_summary(catalog, table, new_files, summary_extra, branch).await
 }
 
-/// The append scope gate, mirrored from `append.rs`: only Parquet data files are written.
 fn reject_non_parquet_append(table: &Table) -> Result<()> {
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
     let file_format =
@@ -143,9 +112,7 @@ fn reject_non_parquet_append(table: &Table) -> Result<()> {
     Ok(())
 }
 
-/// Stage unpartitioned batches with statement levers.
-/// # Errors
-/// Concurrency misconfiguration, conform, or file write failures.
+#[allow(clippy::missing_errors_doc)]
 pub async fn stage_unpartitioned_with_overrides(
     table: &Table,
     batches: Vec<RecordBatch>,
@@ -161,9 +128,7 @@ pub async fn stage_unpartitioned_with_overrides(
     .await
 }
 
-/// Stream unpartitioned batches with statement levers through the shared funnel.
-/// # Errors
-/// Concurrency misconfiguration, conform, or file write failures.
+#[allow(clippy::missing_errors_doc)]
 pub async fn stage_unpartitioned_stream_with_overrides<S>(
     table: &Table,
     stream: S,
@@ -207,9 +172,7 @@ where
     .await
 }
 
-/// Stage partitioned batches with statement levers over one serial fanout.
-/// # Errors
-/// Conform, splitter, or file write failures.
+#[allow(clippy::missing_errors_doc)]
 pub async fn stage_partitioned_with_overrides(
     table: &Table,
     batches: Vec<RecordBatch>,
@@ -223,9 +186,7 @@ pub async fn stage_partitioned_with_overrides(
     stage_partitioned_stream_with_overrides(table, &mut stream, staging).await
 }
 
-/// Stream partitioned batches with statement levers over one serial fanout.
-/// # Errors
-/// Splitter or file write failures.
+#[allow(clippy::missing_errors_doc)]
 pub async fn stage_partitioned_stream_with_overrides<S>(
     table: &Table,
     conformed: &mut S,
@@ -274,9 +235,7 @@ where
     Ok(ascending_partition_order(files))
 }
 
-/// Stage overwrite source batches with statement levers (no catalog mutation).
-/// # Errors
-/// Schema convert, positional map, or file write failures.
+#[allow(clippy::missing_errors_doc)]
 pub async fn stage_overwrite_files_with<S>(
     table: &Table,
     stream: S,
@@ -320,7 +279,6 @@ where
     }
 }
 
-/// One unpartitioned Parquet writer with statement levers.
 async fn build_unpartitioned_writer_with(
     table: &Table,
     staging: &WriterStagingOverrides,
@@ -356,9 +314,7 @@ async fn build_unpartitioned_writer_with(
         .map_err(iceberg_err)
 }
 
-/// One stamped `fast_append` commit with the statement extras in the summary.
-/// # Errors
-/// The fork's transaction/commit error, folded to this crate's error type.
+#[allow(clippy::missing_errors_doc)]
 pub async fn commit_append_with_summary(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -377,9 +333,7 @@ pub async fn commit_append_with_summary(
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
 
-/// Full-table overwrite commit with the statement extras and isolation override.
-/// # Errors
-/// Invalid isolation override, action apply, or catalog commit failures.
+#[allow(clippy::missing_errors_doc)]
 pub async fn commit_overwrite_replace_all_with_summary(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -410,9 +364,7 @@ pub async fn commit_overwrite_replace_all_with_summary(
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
 
-/// Static partition overwrite commit with the statement extras and isolation override.
-/// # Errors
-/// Invalid isolation override, action apply, or catalog commit failures.
+#[allow(clippy::missing_errors_doc)]
 pub async fn commit_overwrite_by_row_filter_with_summary(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -445,9 +397,7 @@ pub async fn commit_overwrite_by_row_filter_with_summary(
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
 
-/// Dynamic partition overwrite commit with the statement extras and isolation override.
-/// # Errors
-/// Empty input, invalid isolation override, action apply, or catalog commit failures.
+#[allow(clippy::missing_errors_doc)]
 pub async fn commit_replace_partitions_with_summary(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -478,7 +428,6 @@ pub async fn commit_replace_partitions_with_summary(
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
 
-/// Fold an iceberg error into the DataFusion error this crate's callers carry.
 fn iceberg_err(err: iceberg::Error) -> DataFusionError {
     crate::catalog::iceberg_to_datafusion(err)
 }
