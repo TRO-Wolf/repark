@@ -73,7 +73,7 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     let mut lineage_pins = repark_core::LineagePins::default();
     let original_for_locations =
         original_sql_for_locations(sql, canonical_sql, sql_after_branch.as_ref());
-    let result = execute_time_travelled(
+    let result = Box::pin(execute_time_travelled(
         ctx,
         &catalogs,
         sql_after_branch.as_ref(),
@@ -81,7 +81,7 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
         &mut pinned,
         &mut lineage_pins,
         &write_options,
-    )
+    ))
     .await;
     lineage_pins.release(ctx);
     pinned.release(ctx);

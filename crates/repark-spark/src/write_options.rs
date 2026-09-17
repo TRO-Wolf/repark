@@ -84,10 +84,7 @@ pub fn extract_statement_write_options(sql: &str) -> Result<(String, StatementWr
     }
     let mut cleaned = sql.to_string();
     let mut pairs: Vec<(String, String)> = Vec::new();
-    loop {
-        let Some((start, end, found)) = find_options_clause(&cleaned) else {
-            break;
-        };
+    while let Some((start, end, found)) = find_options_clause(&cleaned) {
         let Some(clause_pairs) = parse_options_pairs(&found) else {
             return Ok((sql.to_string(), StatementWriteOptions::empty()));
         };
@@ -134,7 +131,6 @@ impl StatementWriteOptions {
                 "distribution-mode" => {
                     options.distribution_mode = Some(validate_distribution_mode(&value)?);
                 }
-                "fanout-enabled" | "check-nullability" | "check-ordering" => {}
                 "isolation-level" => options.isolation = Some(validate_isolation_level(&value)?),
                 _ => {}
             }
@@ -414,7 +410,7 @@ mod tests {
         let (_, options) = extract_statement_write_options(sql).expect("extract");
         assert_eq!(
             options.snapshot_extra,
-            vec![("".to_string(), "v".to_string())]
+            vec![(String::new(), "v".to_string())]
         );
     }
 

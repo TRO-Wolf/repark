@@ -144,6 +144,8 @@ fn reject_non_parquet_append(table: &Table) -> Result<()> {
 }
 
 /// Stage unpartitioned batches with statement levers.
+/// # Errors
+/// Concurrency misconfiguration, conform, or file write failures.
 pub async fn stage_unpartitioned_with_overrides(
     table: &Table,
     batches: Vec<RecordBatch>,
@@ -160,6 +162,8 @@ pub async fn stage_unpartitioned_with_overrides(
 }
 
 /// Stream unpartitioned batches with statement levers through the shared funnel.
+/// # Errors
+/// Concurrency misconfiguration, conform, or file write failures.
 pub async fn stage_unpartitioned_stream_with_overrides<S>(
     table: &Table,
     stream: S,
@@ -204,6 +208,8 @@ where
 }
 
 /// Stage partitioned batches with statement levers over one serial fanout.
+/// # Errors
+/// Conform, splitter, or file write failures.
 pub async fn stage_partitioned_with_overrides(
     table: &Table,
     batches: Vec<RecordBatch>,
@@ -218,6 +224,8 @@ pub async fn stage_partitioned_with_overrides(
 }
 
 /// Stream partitioned batches with statement levers over one serial fanout.
+/// # Errors
+/// Splitter or file write failures.
 pub async fn stage_partitioned_stream_with_overrides<S>(
     table: &Table,
     conformed: &mut S,

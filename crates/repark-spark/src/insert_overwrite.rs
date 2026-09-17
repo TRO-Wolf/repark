@@ -318,30 +318,28 @@ pub(crate) async fn insert_overwrite_from_staged_source(
     columns: &[ObjectName],
     options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
-    match try_resolve_iceberg_overwrite_target(ctx, catalogs, table_name).await? {
-        Some((catalog_name, catalog, table, branch)) => {
-            insert_overwrite_iceberg_stage_then_swap(
-                ctx,
-                catalogs,
-                &catalog_name,
-                &catalog,
-                &table,
-                table_sql,
-                source,
-                columns,
-                branch.as_deref(),
-                options,
-            )
-            .await
-        }
-        None => {
-            options.refuse_if_non_empty("INSERT OVERWRITE on a non-Iceberg target")?;
-            insert_overwrite_from_materialized_source_fallback(
-                ctx, catalogs, table_sql, source, columns,
-            )
-            .await
-        }
-    }
+    let Some((catalog_name, catalog, table, branch)) =
+        try_resolve_iceberg_overwrite_target(ctx, catalogs, table_name).await?
+    else {
+        options.refuse_if_non_empty("INSERT OVERWRITE on a non-Iceberg target")?;
+        return insert_overwrite_from_materialized_source_fallback(
+            ctx, catalogs, table_sql, source, columns,
+        )
+        .await;
+    };
+    insert_overwrite_iceberg_stage_then_swap(
+        ctx,
+        catalogs,
+        &catalog_name,
+        &catalog,
+        &table,
+        table_sql,
+        source,
+        columns,
+        branch.as_deref(),
+        options,
+    )
+    .await
 }
 
 /// Resolve `catalog.namespace….table` against the registry.

@@ -135,14 +135,41 @@ rewrite), validates, and honours/refuses. Raw SQL never carries the clause.
   overlap commits (fork OCC finds no concurrent commit) vs Spark's
   `ValidationException` — honest divergence pin + registry residual (c).
 
-## 4. Gates
+## 4. Gates (release native rebuilt 2026-09-17 12:22 UTC, 2026-09-17)
 
-TODO: paste gate outputs.
+- `test_ice_write_options_1.py -k "not live"`: 34 passed.
+- `test_writer_v2.py` + `test_insert_store_assign.py`: 58 passed.
+- `test_sql_harden_cutover.py` + `test_dml_b_partition_overwrite.py`: 44 passed,
+  15 skipped. Old-warning grep: only an unrelated UDF docstring remains.
+- `cargo test -p repark-spark --lib`: 1056 passed; `-p repark-iceberg --lib`:
+  443 passed; `make test` (workspace): all suites ok, zero failures.
+- `make rust-clippy`: green after fixing 5 iceberg lints (Errors docs, format!),
+  6 spark lints (fn length via `finish_ctas_staged_commit` extraction, borrow,
+  single-match let-else, while-let, same-arms merge, `String::new`), and the
+  `large_futures` tip-over (`Box::pin` on the router thread-through).
+- `make verify`: the monolith outran the 300 s command yield at
+  `check-matrix-test-liveness`; every gate was then run piecewise and is green
+  (fmt, clippy, panic-ban, dag, lib-rs, file-size, lib-py, conventions,
+  docstring, example-coverage, manifest, ledgers, ledger-grammar,
+  docs-compaction, docs-links, owner-ruling, dual-wire, matrix-liveness,
+  rust-check, py-lint, py-format-check, py-lock-check, toml-check, spell-check,
+  workspace tests).
+- Size gates: `append.rs` / `merge/mod.rs` / `overwrite.rs` byte-identical;
+  `partition_overwrite.rs` 896→922, `insert_overwrite.rs` 782→908,
+  `ctas.rs` 543→631, `router.rs` 377→394 (all ≤1000); Python baselines amended
+  (`core.py` 4015→3991, `writer_readwriter.py` 1101→1114).
 
 ## 5. Registry
 
 TODO: rows written.
 
-## 6. Handoff
+## 6. Handoff (2026-09-17)
 
-TODO: disk checks, cleanup, kept artifacts.
+- Disk: `/tmp` 578 GB free at close; no headroom issue at any phase.
+- Cleanup: debug warehouse `/tmp/dbg-size-wh` and commit-output scraps removed.
+  Oracle warehouses were `tempfile.mkdtemp` + `shutil.rmtree` per driver run.
+- Kept: the fixture + both record drivers (deliverables); the release `.so`
+  in-tree (normal build artifact, untracked-ignored).
+- Proposition ledger close: C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  PROVEN (C-003 with the named residuals (a)(b)(c) in the registry row;
+  C-006 by measurement, no SQL-door change).

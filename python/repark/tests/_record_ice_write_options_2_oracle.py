@@ -83,7 +83,7 @@ def _record(cell_id: str, spark: Any, table: str, write: Any) -> None:
         entry["summary"] = _summary(spark, table)
         entry["files"] = _files(spark, table)
         entry["snapshot_count"] = _snapshot_count(spark, table)
-    except Exception as exc:  # noqa: BLE001 - oracle records the refusal verbatim
+    except Exception as exc:
         entry["error"] = {
             "class": type(exc).__name__,
             "message": str(exc)[:2000],
@@ -93,12 +93,19 @@ def _record(cell_id: str, spark: Any, table: str, write: Any) -> None:
             entry["summary"] = _summary(spark, table)
             entry["files"] = _files(spark, table)
             entry["snapshot_count"] = _snapshot_count(spark, table)
-        except Exception:  # noqa: BLE001 - table may not exist after a refused create
+        except Exception:
             entry["summary"] = {}
             entry["files"] = []
             entry["snapshot_count"] = 0
     CELLS.append(entry)
-    print(f"cell {cell_id}: " + ("ERROR " + str(entry["error"])[:150] if entry["error"] else f"summary_extra={sorted(k for k in entry['summary'] if k in ('run_id',) or k.startswith('UP'))} files={len(entry['files'])}"), flush=True)
+    if entry["error"]:
+        outcome = "ERROR " + str(entry["error"])[:150]
+    else:
+        extra = sorted(
+            key for key in entry["summary"] if key in ("run_id",) or key.startswith("UP")
+        )
+        outcome = f"summary_extra={extra} files={len(entry['files'])}"
+    print(f"cell {cell_id}: " + outcome, flush=True)
 
 
 def _frame(spark: Any, n: int = 4) -> Any:
@@ -116,27 +123,41 @@ def main() -> None:
     try:
         spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {CATALOG}.{NAMESPACE}")
 
-        def fresh(table: str, ddl_suffix: str = "(id BIGINT, name STRING) USING iceberg",
-                  partitioned: bool = False) -> None:
+        def fresh(
+            table: str,
+            ddl_suffix: str = "(id BIGINT, name STRING) USING iceberg",
+            partitioned: bool = False,
+        ) -> None:
             spark.sql(f"DROP TABLE IF EXISTS {CATALOG}.{NAMESPACE}.{table}")
             part = " PARTITIONED BY (name)" if partitioned else ""
             spark.sql(f"CREATE TABLE {CATALOG}.{NAMESPACE}.{table} {ddl_suffix}{part}")
 
         t = f"{CATALOG}.{NAMESPACE}"
-        F = __import__("pyspark.sql.functions", fromlist=["lit", "col"])
+        from pyspark.sql import functions as spark_functions
 
         fresh("p2_level")
-        _record("P2-01-level-alone", spark, "p2_level", lambda: (
-            _frame(spark).writeTo(f"{t}.p2_level").option("compression-level", "5").append()
-        ))
+        _record(
+            "P2-01-level-alone",
+            spark,
+            "p2_level",
+            lambda: (
+                _frame(spark).writeTo(f"{t}.p2_level").option("compression-level", "5").append()
+            ),
+        )
 
         fresh("p2_zstd")
-        _record("P2-02-zstd-level", spark, "p2_zstd", lambda: (
-            _frame(spark).writeTo(f"{t}.p2_zstd")
-            .option("compression-codec", "zstd")
-            .option("compression-level", "1")
-            .append()
-        ))
+        _record(
+            "P2-02-zstd-level",
+            spark,
+            "p2_zstd",
+            lambda: (
+                _frame(spark)
+                .writeTo(f"{t}.p2_zstd")
+                .option("compression-codec", "zstd")
+                .option("compression-level", "1")
+                .append()
+            ),
+        )
 
         spark.sql(f"DROP TABLE IF EXISTS {t}.p2_req")
         spark.sql(f"CREATE TABLE {t}.p2_req (id BIGINT NOT NULL, name STRING) USING iceberg")
@@ -146,105 +167,184 @@ def main() -> None:
             [StructField("id", LongType(), True), StructField("name", StringType(), True)]
         )
         nulls = spark.createDataFrame([(None, "n")], schema=null_schema)
-        _record("P2-03-required-default", spark, "p2_req", lambda: (
-            nulls.writeTo(f"{t}.p2_req").append()
-        ))
-        _record("P2-04-required-false", spark, "p2_req", lambda: (
-            nulls.writeTo(f"{t}.p2_req").option("check-nullability", "false").append()
-        ))
-        _record("P2-05-nullability-bogus", spark, "p2_req", lambda: (
-            nulls.writeTo(f"{t}.p2_req").option("check-nullability", "bogus").append()
-        ))
+        _record(
+            "P2-03-required-default", spark, "p2_req", lambda: nulls.writeTo(f"{t}.p2_req").append()
+        )
+        _record(
+            "P2-04-required-false",
+            spark,
+            "p2_req",
+            lambda: nulls.writeTo(f"{t}.p2_req").option("check-nullability", "false").append(),
+        )
+        _record(
+            "P2-05-nullability-bogus",
+            spark,
+            "p2_req",
+            lambda: nulls.writeTo(f"{t}.p2_req").option("check-nullability", "bogus").append(),
+        )
 
         fresh("p2_ord", partitioned=True)
-        unsorted = spark.createDataFrame(
-            [(3, "c"), (1, "a"), (4, "b"), (0, "d")], ["id", "name"]
+        unsorted = spark.createDataFrame([(3, "c"), (1, "a"), (4, "b"), (0, "d")], ["id", "name"])
+        _record(
+            "P2-06-ordering-true",
+            spark,
+            "p2_ord",
+            lambda: unsorted.writeTo(f"{t}.p2_ord").option("check-ordering", "true").append(),
         )
-        _record("P2-06-ordering-true", spark, "p2_ord", lambda: (
-            unsorted.writeTo(f"{t}.p2_ord").option("check-ordering", "true").append()
-        ))
 
         fresh("p2_orddef", partitioned=True)
-        _record("P2-07-ordering-default", spark, "p2_orddef", lambda: (
-            unsorted.writeTo(f"{t}.p2_orddef").append()
-        ))
+        _record(
+            "P2-07-ordering-default",
+            spark,
+            "p2_orddef",
+            lambda: unsorted.writeTo(f"{t}.p2_orddef").append(),
+        )
 
         fresh("p2_distbad")
-        _record("P2-08-dist-bogus", spark, "p2_distbad", lambda: (
-            _frame(spark).writeTo(f"{t}.p2_distbad")
-            .option("distribution-mode", "bogus").append()
-        ))
+        _record(
+            "P2-08-dist-bogus",
+            spark,
+            "p2_distbad",
+            lambda: (
+                _frame(spark)
+                .writeTo(f"{t}.p2_distbad")
+                .option("distribution-mode", "bogus")
+                .append()
+            ),
+        )
 
         fresh("p2_distnone")
-        _record("P2-09-dist-none", spark, "p2_distnone", lambda: (
-            _frame(spark).writeTo(f"{t}.p2_distnone")
-            .option("distribution-mode", "none").append()
-        ))
+        _record(
+            "P2-09-dist-none",
+            spark,
+            "p2_distnone",
+            lambda: (
+                _frame(spark)
+                .writeTo(f"{t}.p2_distnone")
+                .option("distribution-mode", "none")
+                .append()
+            ),
+        )
 
         fresh("p2_fanfalse", partitioned=True)
-        _record("P2-10-fanout-false", spark, "p2_fanfalse", lambda: (
-            _frame(spark).writeTo(f"{t}.p2_fanfalse")
-            .option("fanout-enabled", "false").append()
-        ))
+        _record(
+            "P2-10-fanout-false",
+            spark,
+            "p2_fanfalse",
+            lambda: (
+                _frame(spark).writeTo(f"{t}.p2_fanfalse").option("fanout-enabled", "false").append()
+            ),
+        )
 
         fresh("p2_fanbad")
-        _record("P2-11-fanout-bogus", spark, "p2_fanbad", lambda: (
-            _frame(spark).writeTo(f"{t}.p2_fanbad")
-            .option("fanout-enabled", "bogus").append()
-        ))
+        _record(
+            "P2-11-fanout-bogus",
+            spark,
+            "p2_fanbad",
+            lambda: (
+                _frame(spark).writeTo(f"{t}.p2_fanbad").option("fanout-enabled", "bogus").append()
+            ),
+        )
 
         fresh("p2_isoapp")
-        _record("P2-12-isolation-append", spark, "p2_isoapp", lambda: (
-            _frame(spark).writeTo(f"{t}.p2_isoapp")
-            .option("isolation-level", "serializable").append()
-        ))
+        _record(
+            "P2-12-isolation-append",
+            spark,
+            "p2_isoapp",
+            lambda: (
+                _frame(spark)
+                .writeTo(f"{t}.p2_isoapp")
+                .option("isolation-level", "serializable")
+                .append()
+            ),
+        )
 
         fresh("p2_isosnap", partitioned=True)
         _frame(spark).writeTo(f"{t}.p2_isosnap").append()
-        _record("P2-13-isolation-snapshot", spark, "p2_isosnap", lambda: (
-            _frame(spark, 2).writeTo(f"{t}.p2_isosnap")
-            .option("isolation-level", "snapshot").overwritePartitions()
-        ))
+        _record(
+            "P2-13-isolation-snapshot",
+            spark,
+            "p2_isosnap",
+            lambda: (
+                _frame(spark, 2)
+                .writeTo(f"{t}.p2_isosnap")
+                .option("isolation-level", "snapshot")
+                .overwritePartitions()
+            ),
+        )
 
         fresh("p2_cond")
         _frame(spark).writeTo(f"{t}.p2_cond").append()
-        _record("P2-14-overwrite-cond", spark, "p2_cond", lambda: (
-            _frame(spark, 2).writeTo(f"{t}.p2_cond")
-            .option("snapshot-property.run_id", "cond-1")
-            .overwrite(F.col("id") < 100)
-        ))
+        _record(
+            "P2-14-overwrite-cond",
+            spark,
+            "p2_cond",
+            lambda: (
+                _frame(spark, 2)
+                .writeTo(f"{t}.p2_cond")
+                .option("snapshot-property.run_id", "cond-1")
+                .overwrite(spark_functions.col("id") < 100)
+            ),
+        )
 
         fresh("p2_orcup")
-        _record("P2-15-format-upper", spark, "p2_orcup", lambda: (
-            _frame(spark).writeTo(f"{t}.p2_orcup")
-            .option("write-format", "ORC").append()
-        ))
+        _record(
+            "P2-15-format-upper",
+            spark,
+            "p2_orcup",
+            lambda: _frame(spark).writeTo(f"{t}.p2_orcup").option("write-format", "ORC").append(),
+        )
 
         fresh("p2_case")
-        _record("P2-16-prop-case", spark, "p2_case", lambda: (
-            _frame(spark).writeTo(f"{t}.p2_case")
-            .option("SNAPSHOT-PROPERTY.UPPER_KEY", "v").append()
-        ))
+        _record(
+            "P2-16-prop-case",
+            spark,
+            "p2_case",
+            lambda: (
+                _frame(spark)
+                .writeTo(f"{t}.p2_case")
+                .option("SNAPSHOT-PROPERTY.UPPER_KEY", "v")
+                .append()
+            ),
+        )
 
         fresh("p2_sizebad")
-        _record("P2-17-size-bogus", spark, "p2_sizebad", lambda: (
-            _frame(spark).writeTo(f"{t}.p2_sizebad")
-            .option("target-file-size-bytes", "abc").append()
-        ))
+        _record(
+            "P2-17-size-bogus",
+            spark,
+            "p2_sizebad",
+            lambda: (
+                _frame(spark)
+                .writeTo(f"{t}.p2_sizebad")
+                .option("target-file-size-bytes", "abc")
+                .append()
+            ),
+        )
 
         fresh("p2_emptykey")
-        _record("P2-18-empty-suffix", spark, "p2_emptykey", lambda: (
-            _frame(spark).writeTo(f"{t}.p2_emptykey")
-            .option("snapshot-property.", "v").append()
-        ))
+        _record(
+            "P2-18-empty-suffix",
+            spark,
+            "p2_emptykey",
+            lambda: (
+                _frame(spark).writeTo(f"{t}.p2_emptykey").option("snapshot-property.", "v").append()
+            ),
+        )
 
         fresh("p2_v1app")
         _frame(spark).writeTo(f"{t}.p2_v1app").append()
-        _record("P2-19-v1-append-mode", spark, "p2_v1app", lambda: (
-            _frame(spark, 2).write.format("iceberg")
-            .option("snapshot-property.run_id", "v1-app-1")
-            .mode("append").saveAsTable(f"{t}.p2_v1app")
-        ))
+        _record(
+            "P2-19-v1-append-mode",
+            spark,
+            "p2_v1app",
+            lambda: (
+                _frame(spark, 2)
+                .write.format("iceberg")
+                .option("snapshot-property.run_id", "v1-app-1")
+                .mode("append")
+                .saveAsTable(f"{t}.p2_v1app")
+            ),
+        )
 
         base = out_path if out_path is not None and out_path.exists() else FIXTURE
         dest = out_path or FIXTURE

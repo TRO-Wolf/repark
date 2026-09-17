@@ -55,9 +55,11 @@ def _fixture_cell(cell_id: str) -> dict[str, Any]:
 
 
 def _latest_summary(spark: ReparkSession, table: str) -> dict[str, str]:
-    rows = spark.sql(
-        f"SELECT summary FROM {table}.snapshots ORDER BY committed_at DESC LIMIT 1"
-    ).to_arrow().to_pylist()
+    rows = (
+        spark.sql(f"SELECT summary FROM {table}.snapshots ORDER BY committed_at DESC LIMIT 1")
+        .to_arrow()
+        .to_pylist()
+    )
     assert rows, f"no snapshots on {table}"
     return dict(rows[0]["summary"])
 
@@ -102,7 +104,8 @@ def test_snapshot_property_two_props(spark: ReparkSession) -> None:
     _seed(spark, "snap_two")
     table = f"{CATALOG}.{NS}.snap_two"
     (
-        _frame(spark).writeTo(table)
+        _frame(spark)
+        .writeTo(table)
         .option("snapshot-property.run_id", "abc-123")
         .option("snapshot-property.pipeline.batch", "7")
         .append()
@@ -116,11 +119,7 @@ def test_snapshot_property_dyn_overwrite(spark: ReparkSession) -> None:
     """SNAP-03: the property lands on the dynamic-overwrite (replace-partitions) commit."""
     _seed(spark, "snap_part", partitioned=True)
     table = f"{CATALOG}.{NS}.snap_part"
-    (
-        _frame(spark).writeTo(table)
-        .option("snapshot-property.run_id", "dyn-1")
-        .overwritePartitions()
-    )
+    (_frame(spark).writeTo(table).option("snapshot-property.run_id", "dyn-1").overwritePartitions())
     assert _latest_summary(spark, table)["run_id"] == "dyn-1"
     assert _fixture_cell("SNAP-03-dyn-overwrite")["summary"]["run_id"] == "dyn-1"
 
@@ -128,11 +127,7 @@ def test_snapshot_property_dyn_overwrite(spark: ReparkSession) -> None:
 def test_snapshot_property_create_replace(spark: ReparkSession) -> None:
     """SNAP-04: the property lands on the CTAS snapshot, which is the only snapshot."""
     table = f"{CATALOG}.{NS}.snap_create"
-    (
-        _frame(spark, 4).writeTo(table)
-        .option("snapshot-property.run_id", "ctas-1")
-        .createOrReplace()
-    )
+    (_frame(spark, 4).writeTo(table).option("snapshot-property.run_id", "ctas-1").createOrReplace())
     assert _latest_summary(spark, table)["run_id"] == "ctas-1"
     assert _snapshot_count(spark, table) == 1
     assert _fixture_cell("SNAP-04-create-replace")["snapshot_count"] == 1
@@ -142,7 +137,8 @@ def test_snapshot_property_v1_ctas(spark: ReparkSession) -> None:
     """SNAP-05: V1 saveAsTable carries the property onto the CTAS snapshot."""
     table = f"{CATALOG}.{NS}.snap_v1ctas"
     (
-        _frame(spark, 4).write.format("iceberg")
+        _frame(spark, 4)
+        .write.format("iceberg")
         .option("snapshot-property.run_id", "v1-ctas-1")
         .saveAsTable(table)
     )
@@ -154,7 +150,8 @@ def test_snapshot_property_v1_insertinto(spark: ReparkSession) -> None:
     _seed(spark, "snap_v1ins")
     table = f"{CATALOG}.{NS}.snap_v1ins"
     (
-        _frame(spark).write.format("iceberg")
+        _frame(spark)
+        .write.format("iceberg")
         .option("snapshot-property.run_id", "v1-ins-1")
         .insertInto(table)
     )
@@ -207,13 +204,12 @@ def test_write_format_bogus_refuses(spark: ReparkSession) -> None:
 
 def test_target_size_option_accepted(spark: ReparkSession) -> None:
     """OPT-01: a tiny target size is accepted and commits every row with the property."""
-    spark.sql(
-        f"CREATE TABLE {CATALOG}.{NS}.opt_size (id BIGINT, name STRING) USING iceberg"
-    )
+    spark.sql(f"CREATE TABLE {CATALOG}.{NS}.opt_size (id BIGINT, name STRING) USING iceberg")
     table = f"{CATALOG}.{NS}.opt_size"
     _frame(spark, 20).writeTo(table).append()
     (
-        _frame(spark, 20).writeTo(table)
+        _frame(spark, 20)
+        .writeTo(table)
         .option("target-file-size-bytes", "1024")
         .option("snapshot-property.run_id", "size-1")
         .append()
@@ -235,9 +231,7 @@ def test_compression_codec_gzip_footer(spark: ReparkSession) -> None:
     """OPT-02: compression-codec=gzip lands in the written parquet footers."""
     import pyarrow.parquet as pa_pq
 
-    spark.sql(
-        f"CREATE TABLE {CATALOG}.{NS}.opt_codec (id BIGINT, name STRING) USING iceberg"
-    )
+    spark.sql(f"CREATE TABLE {CATALOG}.{NS}.opt_codec (id BIGINT, name STRING) USING iceberg")
     table = f"{CATALOG}.{NS}.opt_codec"
     _frame(spark).writeTo(table).option("compression-codec", "gzip").append()
     rows = spark.sql(f"SELECT file_path FROM {table}.files").to_arrow().to_pylist()
@@ -262,7 +256,8 @@ def test_compression_level_zstd_accepted(spark: ReparkSession) -> None:
     _seed(spark, "opt_level")
     table = f"{CATALOG}.{NS}.opt_level"
     (
-        _frame(spark).writeTo(table)
+        _frame(spark)
+        .writeTo(table)
         .option("compression-codec", "zstd")
         .option("compression-level", "1")
         .append()
@@ -287,7 +282,8 @@ def test_compression_gzip_level_refuses(spark: ReparkSession) -> None:
     table = f"{CATALOG}.{NS}.gzip_level"
     with pytest.raises(AnalysisException, match="compression-level"):
         (
-            _frame(spark).writeTo(table)
+            _frame(spark)
+            .writeTo(table)
             .option("compression-codec", "gzip")
             .option("compression-level", "1")
             .append()
@@ -323,7 +319,8 @@ def test_fanout_accepted(spark: ReparkSession) -> None:
     table = f"{CATALOG}.{NS}.fanout"
     for value in ("true", "false", "bogus"):
         (
-            _frame(spark, 1).writeTo(table)
+            _frame(spark, 1)
+            .writeTo(table)
             .option("fanout-enabled", value)
             .option("snapshot-property.run_id", f"fan-{value}")
             .append()
@@ -344,7 +341,8 @@ def test_isolation_serializable_overlap_commits_divergence(spark: ReparkSession)
     _seed(spark, "opt_iso", partitioned=True)
     table = f"{CATALOG}.{NS}.opt_iso"
     (
-        _frame(spark).writeTo(table)
+        _frame(spark)
+        .writeTo(table)
         .option("isolation-level", "serializable")
         .option("snapshot-property.run_id", "ser-1")
         .overwritePartitions()
@@ -359,7 +357,8 @@ def test_isolation_snapshot_overlap_succeeds(spark: ReparkSession) -> None:
     _seed(spark, "iso_snap", partitioned=True)
     table = f"{CATALOG}.{NS}.iso_snap"
     (
-        _frame(spark).writeTo(table)
+        _frame(spark)
+        .writeTo(table)
         .option("isolation-level", "snapshot")
         .option("snapshot-property.run_id", "snap-1")
         .overwritePartitions()
@@ -371,11 +370,7 @@ def test_isolation_append_ignored(spark: ReparkSession) -> None:
     """P2-12: isolation on a plain append is accepted and ignored, as Spark does."""
     _seed(spark, "iso_app")
     table = f"{CATALOG}.{NS}.iso_app"
-    (
-        _frame(spark).writeTo(table)
-        .option("isolation-level", "serializable")
-        .append()
-    )
+    (_frame(spark).writeTo(table).option("isolation-level", "serializable").append())
     rows = spark.sql(f"SELECT COUNT(*) AS n FROM {table}").to_arrow().to_pylist()
     assert int(rows[0]["n"]) == 4
 
@@ -384,12 +379,8 @@ def test_isolation_bogus_refuses(spark: ReparkSession) -> None:
     """OPT-07: an unknown isolation level is refused like Spark's IllegalArgumentException."""
     _seed(spark, "iso_bad", partitioned=True)
     table = f"{CATALOG}.{NS}.iso_bad"
-    with pytest.raises(AnalysisException, match="[Ii]solation level"):
-        (
-            _frame(spark).writeTo(table)
-            .option("isolation-level", "bogus")
-            .overwritePartitions()
-        )
+    with pytest.raises(AnalysisException, match="solation level"):
+        (_frame(spark).writeTo(table).option("isolation-level", "bogus").overwritePartitions())
     assert "Invalid isolation level" in _fixture_cell("OPT-07-isolation-bad")["error"]["message"]
 
 
@@ -398,16 +389,13 @@ def test_check_options_accepted(spark: ReparkSession) -> None:
     _seed(spark, "checks", partitioned=True)
     table = f"{CATALOG}.{NS}.checks"
     (
-        _frame(spark).writeTo(table)
+        _frame(spark)
+        .writeTo(table)
         .option("check-nullability", "false")
         .option("check-ordering", "false")
         .append()
     )
-    (
-        _frame(spark).writeTo(table)
-        .option("check-ordering", "true")
-        .append()
-    )
+    (_frame(spark).writeTo(table).option("check-ordering", "true").append())
     rows = spark.sql(f"SELECT COUNT(*) AS n FROM {table}").to_arrow().to_pylist()
     assert int(rows[0]["n"]) == 6
 
@@ -451,7 +439,8 @@ def test_overwrite_condition_refusal_with_options(spark: ReparkSession) -> None:
     table = f"{CATALOG}.{NS}.cond"
     with pytest.raises(UnsupportedOperationException, match="overwrite"):
         (
-            _frame(spark).writeTo(table)
+            _frame(spark)
+            .writeTo(table)
             .option("snapshot-property.run_id", "cond-1")
             .overwrite(fns.col("id") < 100)
         )
@@ -463,7 +452,8 @@ def test_v1_append_mode_property(spark: ReparkSession) -> None:
     _seed(spark, "v1_app")
     table = f"{CATALOG}.{NS}.v1_app"
     (
-        _frame(spark).write.format("iceberg")
+        _frame(spark)
+        .write.format("iceberg")
         .option("snapshot-property.run_id", "v1-app-1")
         .mode("append")
         .saveAsTable(table)
@@ -475,9 +465,7 @@ def test_sql_insert_carries_no_property(spark: ReparkSession) -> None:
     """SQL-00/SQL-01: no session conf reaches the SQL-door summary (C-006 measurement)."""
     _seed(spark, "sql_door")
     table = f"{CATALOG}.{NS}.sql_door"
-    spark.sql(
-        f"INSERT INTO {table} SELECT * FROM (VALUES (9, 'name-9')) AS t(id, name)"
-    )
+    spark.sql(f"INSERT INTO {table} SELECT * FROM (VALUES (9, 'name-9')) AS t(id, name)")
     summary = _latest_summary(spark, table)
     assert "run_id" not in summary
     assert "run_id" not in _fixture_cell("SQL-01-set-conf")["summary"]
@@ -490,7 +478,8 @@ def test_no_option_warning(spark: ReparkSession) -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)
         (
-            _frame(spark).writeTo(table)
+            _frame(spark)
+            .writeTo(table)
             .option("snapshot-property.run_id", "w-1")
             .option("repark-totally-unknown-key", "zzz")
             .append()
@@ -511,13 +500,10 @@ def test_empty_append_with_props_stamps_summary(spark: ReparkSession) -> None:
 
 def _stable_projection(cell: dict[str, Any]) -> dict[str, Any]:
     summary = {
-        key: value
-        for key, value in cell.get("summary", {}).items()
-        if key not in _SPARK_APP_KEYS
+        key: value for key, value in cell.get("summary", {}).items() if key not in _SPARK_APP_KEYS
     }
     files = [
-        (entry["suffix"], entry["file_format"], entry["records"])
-        for entry in cell.get("files", [])
+        (entry["suffix"], entry["file_format"], entry["records"]) for entry in cell.get("files", [])
     ]
     error = cell.get("error")
     return {

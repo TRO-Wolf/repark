@@ -37,10 +37,11 @@ pub fn writer_properties_with(
             .or_else(|| properties.get(COMPRESSION_CODEC_PROP).map(String::as_str))
             .unwrap_or("zstd");
         if effective.eq_ignore_ascii_case("gzip") {
-            return Err(DataFusionError::Plan(format!(
+            return Err(DataFusionError::Plan(
                 "option `compression-level` with gzip `compression-codec` is refused (Spark \
                  fails integer gzip levels; ICE-WRITE-OPTIONS-1)"
-            )));
+                    .to_string(),
+            ));
         }
     }
     Ok(WriterProperties::builder()

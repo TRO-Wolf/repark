@@ -527,10 +527,12 @@ repark-core's error map.
   option over table property) feeds override-capable builders that mirror the
   `merge/mod.rs` unpartitioned and `append.rs` fanout constructions against the same
   fork actions; the four `*_with_summary` commits merge validated `snapshot-property.*`
-  extras into the summary; `isolation_with_override` shares the table-property grammar.
-  The mirror exists because the canonicals live in size-capped files the gate holds
-  exact — a fork bump re-verifies both copies (see `writer_props.rs` duties). The
-  option-free paths never call here.
+  extras into the summary (empty extras are behaviour-identical to the `_to`
+  canonicals, so the overwrite family commits through them unconditionally);
+  `isolation_with_override` shares the table-property grammar. The mirror exists
+  because the canonicals live in size-capped files the gate holds exact — a fork bump
+  re-verifies both copies (see `writer_props.rs` duties). Only option-carrying
+  statements reach the override staging; option-free staging keeps the canonicals.
   pins: ice-write-options-1/C-001, C-002, C-003
 
 ## I want to...
