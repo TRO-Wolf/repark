@@ -341,6 +341,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the fixture directory before their DML steps, and writes `truth.json` (one answer per
   line, `catalog_sha256`). `run_case_steps` / `run_overwrite_partitions_twin` are reused by
   the live cell so the live and recorded answers come from one code path.
+- [ice_write_options_1_spark_oracle.json](ice_write_options_1_spark_oracle.json) +
+  [_record_ice_write_options_1_oracle.py](_record_ice_write_options_1_oracle.py) +
+  [_record_ice_write_options_2_oracle.py](_record_ice_write_options_2_oracle.py) —
+  **ICE-WRITE-OPTIONS-1 (2026-09-17):** the recorded Spark 4.1.2 +
+  iceberg-spark-runtime 1.11.0 oracle (43 cells, one JVM per driver, Hadoop
+  catalog): `snapshot-property.*` lands prefix-stripped and lower-cased in the
+  summary on append / dynamic overwrite / CTAS / V1 paths, `write-format`
+  parquet/orc/avro honored (`bogus` refused), per-key option measurements plus the
+  SQL-door conf probe. Offline pins read the fixture; the live tier re-runs the
+  drivers and checks the fixture.
+  pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-006
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
