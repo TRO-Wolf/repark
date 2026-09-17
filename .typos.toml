@@ -20,6 +20,7 @@ extend-exclude = [
   "task/mw-6-critic-evidence/",
   "python/repark/tests/fnp11a_r2_spark_oracle.json",
   "python/repark/tests/fnp_math_1_spark_oracle.json",
+  "python/repark/tests/fnp_math_1_q12_q15_oracle.json",
 ]
 
 [default.extend-identifiers]

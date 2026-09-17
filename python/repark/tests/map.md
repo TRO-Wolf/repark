@@ -7665,5 +7665,6 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   recorded item through its own query (`_select_items`, `_assert_o245_single_column`):
   DataFusion requires unique projection names where Spark answers duplicates, and
   its projection optimizer cannot keep an arg-rendered UDF name stable across
-  repeated columns; values, names, types and rows stay pinned per column.
+  repeated columns; values, names, types and rows stay pinned per column. Q12
+  list types map the recorded `containsNull` onto the engine `element` field.
   pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009

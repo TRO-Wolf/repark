@@ -51,6 +51,9 @@ ICE-WRITE-OPTIONS-1 run 22b rebase over #682 / #687 / #678 (2026-09-18): `check_
 FNP-MATH-1 step 5 (2026-09-16, run 18a): `check_lib_py.py` ratchets
 `functions_expr.py` 2195 → 2192 (the `format_number` destub is net-negative)
 with the CAP-1 mirror. pins: fnp-math-1/C-001, C-002, C-003
+FNP-MATH-1 step 6 (2026-09-16, run 18a): `check_lib_py.py` ratchets
+`functions_expr.py` 2192 → 2193 (the `split` destub) with the CAP-1 mirror.
+pins: fnp-math-1/C-001, C-008
 FNP-MATH-1 step 4 (2026-09-16, run 18a): `check_lib_py.py` ratchets
 `functions_expr.py` 2198 → 2195 (the `hash` destub is net-negative) with the
 CAP-1 mirror. pins: fnp-math-1/C-001, C-005
