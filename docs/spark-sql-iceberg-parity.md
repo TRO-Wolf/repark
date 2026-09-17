@@ -3373,6 +3373,37 @@ the pin rather than obeying it.
   `IsNaN` kernel returns false for NULL.
 
 
+### ICE-NAN-PUSHDOWN-1 — NaN equality and IN push down as `is_nan` on Iceberg scans — **FIXED 2026-09-17 (ICE-NAN-PUSHDOWN-1)**
+
+- **repark** — **FIXED 2026-09-17 (ICE-NAN-PUSHDOWN-1).** `WHERE d =
+  CAST('NaN' AS DOUBLE)` and `WHERE d IN (CAST('NaN' AS DOUBLE))` on Iceberg
+  tables (v2 and v3, RePark- and Spark-written, NaN-only / mixed / two-file
+  layouts) answer the NaN-row ids on both doors; `<=>` answers the NaN rows,
+  `!=` / ranges / `NOT IN` with NaN and `BETWEEN … AND NaN` answer the oracle
+  sets; `DELETE` / `UPDATE … WHERE d = NaN` touch exactly the NaN rows. The
+  fork conversion (fork #284 at pin `75da2b58`) pushes `IsNan` / `NotNan` /
+  `IsNan OR In(rest)` and leaves ranges and NOT IN with NaN unpushed.
+- **Apache Spark** — the same id sets per clause per shape (NaN = NaN is true;
+  NaN sorts above every non-NaN; NULL never matches). *(oracle: recorded —
+  PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
+  `python/repark/tests/ice_nan_pushdown_1_oracle.json`, plus the checked-in
+  Spark-written v2/v3 warehouses; the pin's live tier replays Spark.)*
+- **Pin** —
+  `python/repark/tests/test_ice_nan_pushdown_1.py` (offline: RePark-written
+  tables plus the Spark warehouses vs the truth JSON, both doors; live tier
+  re-derives the grid from live Spark) and
+  `crates/repark-spark/src/tests/nan_pushdown.rs` (answer pins over a
+  memory-catalog scan).
+- **Rationale** — FIXED. History: the scan pushed `Eq(d, NaN-datum)`, which the
+  manifest / row-group / row evaluators never match, and pushdown is Inexact,
+  so the NaN rows were silently dropped — the rating's silent answer was `[]`
+  where Spark answers the NaN rows (V2-26, V3-14). A bare-decimal-literal
+  spelling such as `d IN (NaN, 1.0)` still raises a loud `Cannot cast to
+  Decimal128` on any table holding NaN rows (measured 2026-09-17, fails with no
+  NaN literal in the query too); that literal-typing defect is out of this
+  unit's fence and the pins use the typed spellings.
+
+
 ### FN-SHA2-1 — `sha2` facade returns raw bytes while Spark returns a hex string — **FIXED 2026-09-03 (FN-FIX-1)**
 
 - **repark** — **FIXED 2026-09-03 (FN-FIX-1).** `F.sha2(col, bits)` returns

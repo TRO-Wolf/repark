@@ -30,27 +30,39 @@ Table shapes: NaN-only file, NaN + finite + NULL in one file, two files (NaN spl
 
 | Clause | Statement | Pins | Verdict |
 |---|---|---|---|
-| C-001 | `d = NaN` (either literal side, CAST spelling) answers the NaN-row ids, double and float, both doors, every shape, v2 and v3, RePark- and Spark-written | `test_ice_nan_pushdown_1.py` eq legs + Rust `is_nan` plan pin | OPEN |
-| C-002 | `d <=> NaN` answers the NaN-row ids, double and float, both doors | `test_ice_nan_pushdown_1.py` eq-null-safe legs | OPEN |
-| C-003 | `d != NaN` answers the non-NaN non-null ids, double and float, both doors | `test_ice_nan_pushdown_1.py` neq legs | OPEN |
-| C-004 | `<`, `<=`, `>`, `>=` with a NaN literal answer the oracle sets (ranges stay unpushed), double and float, both doors | `test_ice_nan_pushdown_1.py` range legs | OPEN |
-| C-005 | `IN (NaN)` answers the NaN-row ids; `IN (NaN, 1.0)` adds the 1.0 rows, double and float, both doors | `test_ice_nan_pushdown_1.py` in legs | OPEN |
-| C-006 | `NOT IN (NaN)` answers the non-NaN non-null ids (stays unpushed), double and float, both doors | `test_ice_nan_pushdown_1.py` not-in legs | OPEN |
-| C-007 | `BETWEEN 1.0 AND NaN` and `NOT (d = NaN)` answer the oracle sets, double, both doors | `test_ice_nan_pushdown_1.py` between/negation legs | OPEN |
-| C-008 | `isnan(d)` control answers the NaN-row ids on every shape the unit reads | `test_ice_nan_pushdown_1.py` control legs | OPEN |
-| C-009 | Shape matrix: NaN-only file, mixed single file, two files; v2 and v3; RePark-written tables built in-test plus checked-in Spark-written warehouses | `test_ice_nan_pushdown_1.py` matrix + fixture warehouses | OPEN |
-| C-010 | DataFrame door: `filter(col("d") == float("nan"))`, `col("d").isin(float("nan"))`, `F.expr(...)` match the SQL door per clause | `test_ice_nan_pushdown_1.py` frame legs | OPEN |
-| C-011 | `DELETE FROM t WHERE d = CAST('NaN' AS DOUBLE)` removes exactly the NaN rows; `UPDATE … WHERE d = NaN` touches exactly the NaN rows | `test_ice_nan_pushdown_1.py` DML legs | OPEN |
-| C-012 | Spark oracle recorded as fixture: recorder script plus truth JSON plus Spark-written v2/v3 warehouses; live tier replays Spark under `REPARK_PARITY_LIVE=1` | recorder script, truth JSON, live legs | OPEN |
-| C-013 | Registry row ICE-NAN-PUSHDOWN-1 FIXED 2026-09-17 by fork #284 at pin `75da2b58`, quoting the rating's silent answer; tests map and ledgers map in lockstep | registry row, map edits | OPEN |
+| C-001 | `d = NaN` (either literal side, CAST spelling) answers the NaN-row ids, double and float, both doors, every shape, v2 and v3, RePark- and Spark-written | `test_ice_nan_pushdown_1.py` eq legs + Rust `is_nan` plan pin | PROVEN |
+| C-002 | `d <=> NaN` answers the NaN-row ids, double and float, both doors | `test_ice_nan_pushdown_1.py` eq-null-safe legs | PROVEN |
+| C-003 | `d != NaN` answers the non-NaN non-null ids, double and float, both doors | `test_ice_nan_pushdown_1.py` neq legs | PROVEN |
+| C-004 | `<`, `<=`, `>`, `>=` with a NaN literal answer the oracle sets (ranges stay unpushed), double and float, both doors | `test_ice_nan_pushdown_1.py` range legs | PROVEN |
+| C-005 | `IN (NaN)` answers the NaN-row ids; `IN (NaN, 1.0)` adds the 1.0 rows, double and float, both doors | `test_ice_nan_pushdown_1.py` in legs | PROVEN |
+| C-006 | `NOT IN (NaN)` answers the non-NaN non-null ids (stays unpushed), double and float, both doors | `test_ice_nan_pushdown_1.py` not-in legs | PROVEN |
+| C-007 | `BETWEEN 1.0 AND NaN` and `NOT (d = NaN)` answer the oracle sets, double, both doors | `test_ice_nan_pushdown_1.py` between/negation legs | PROVEN |
+| C-008 | `isnan(d)` control answers the NaN-row ids on every shape the unit reads | `test_ice_nan_pushdown_1.py` control legs | PROVEN |
+| C-009 | Shape matrix: NaN-only file, mixed single file, two files; v2 and v3; RePark-written tables built in-test plus checked-in Spark-written warehouses | `test_ice_nan_pushdown_1.py` matrix + fixture warehouses | PROVEN |
+| C-010 | DataFrame door: `filter(col("d") == float("nan"))`, `col("d").isin(float("nan"))`, `F.expr(...)` match the SQL door per clause | `test_ice_nan_pushdown_1.py` frame legs | PROVEN |
+| C-011 | `DELETE FROM t WHERE d = CAST('NaN' AS DOUBLE)` removes exactly the NaN rows; `UPDATE … WHERE d = NaN` touches exactly the NaN rows | `test_ice_nan_pushdown_1.py` DML legs | PROVEN |
+| C-012 | Spark oracle recorded as fixture: recorder script plus truth JSON plus Spark-written v2/v3 warehouses; live tier replays Spark under `REPARK_PARITY_LIVE=1` | recorder script, truth JSON, live legs | PROVEN |
+| C-013 | Registry row ICE-NAN-PUSHDOWN-1 FIXED 2026-09-17 by fork #284 at pin `75da2b58`, quoting the rating's silent answer; tests map and ledgers map in lockstep | registry row, map edits | PROVEN |
 
-VERDICT (2026-09-17): 13 clauses, 0 PROVEN, 13 OPEN, 0 REJECTED.
+VERDICT (2026-09-17): 13 clauses, 13 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## 6. Evidence
 
-### Rating rows (prior behaviour, quoted)
+### Rating rows (prior behaviour, quoted verbatim)
 
-Rating report §8 #48/#50 (RePark main before fork #284): `WHERE d = CAST('NaN' AS DOUBLE)` and `WHERE d IN (CAST('NaN' AS DOUBLE))` return `[]` on Iceberg scans where Spark 4.1.2 returns the NaN rows (v2 and v3, RePark- and Spark-written tables, every file layout).
+V2-26 (ice-rating `parts/20-v2.md`): "`WHERE d = CAST('NaN' AS DOUBLE)` on an
+Iceberg table → **`[]`** on RePark (RePark-written and Spark-written tables);
+Spark → `[1, 4]`" and "Characterized (inline p_nan_eq, v2 and v3; NaN-only file,
+NaN + 1.0 in one file, two files): `d = NaN` and `d IN (NaN)` → `[]` in every
+shape; `d <=> NaN`, `isnan(d)` and `d = d` return the NaN row." V3-14
+(`parts/30-v3.md`): "Same defects as V2-26 on format v3: `d = NaN` /
+`d IN (NaN)` → `[]`." Both graded MISSING with "no registry row for either
+wrong answer" — this unit files it.
+
+New behaviour on this pin (`/tmp/ib-scratch/probes/p_nan_eq.py`, 6-row mixed
+shape with NaN at ids 1 and 5): `d = CAST('NaN' AS DOUBLE)` → `[1, 5]`,
+`CAST('NaN' AS DOUBLE) = d` → `[1, 5]`, `d IN (CAST('NaN' AS DOUBLE))` →
+`[1, 5]`, on v2 and v3, RePark- and Spark-written tables, read by both engines.
 
 ### Fork red-first (unfixed tree, quoted from the fork ledger)
 
@@ -58,15 +70,46 @@ Rating report §8 #48/#50 (RePark main before fork #284): `WHERE d = CAST('NaN' 
 
 ### Probe (this unit, release native at the new pin)
 
-(to fill: `/tmp/ib-scratch/probes/p_nan_eq.py` output)
+`/tmp/ib-scratch/probes/p_nan_eq.py` (25 predicates × 8 engine/table cells, one
+JVM via `jb-jvm.sh`): 22 ALL-EQUAL, 3 DIFF. Every NaN pushdown leg (`=`, reversed
+`=`, `<=>`, `!=`, `<>`, `<`, `<=`, `>`, `>=`, `IN (NaN)`, `NOT IN (NaN)`,
+`NOT (=)`, `isnan`, float twins) is ALL-EQUAL across v2/v3 × RePark-/Spark-written
+× RePark/Spark readers. The 3 DIFFs are one defect: a bare-decimal-literal
+spelling (`d IN (NaN, 1.0)`, `d BETWEEN 1.0 AND NaN`, `f IN (NaN, 1.0)`) raises
+`Optimizer rule 'simplify_expressions' failed — Cannot cast to Decimal128` on the
+RePark SQL door. `/tmp/ib-scratch/probes/p_nan_spell.py` isolates it: `d IN (0.5,
+1.0)` and `d = 1.0` with no NaN literal fail identically (`Overflowing on NaN`),
+while the typed spellings (`1.0D`, `CAST(1.0 AS DOUBLE)`, `1.0F`) answer the
+oracle sets — a pre-existing literal-typing defect, out of this unit's fence,
+recorded in the registry row; the pins use the typed spellings.
+
+### Pin runs (release native at pin `75da2b58`)
+
+`python/repark/tests/test_ice_nan_pushdown_1.py`: offline 4 passed, 1 skipped
+in 28.93 s; with `REPARK_PARITY_LIVE=1` (one JVM via `jb-jvm.sh`) 5 passed in
+21.40 s — live Spark re-derives the grid and RePark matches truth and live on
+both doors.
+`cargo test -p repark-spark --lib tests::nan_pushdown`: 2 passed, 0 failed
+(`nan_equality_answers_the_nan_rows`, `nan_in_and_inequality_answer_the_oracle_sets`).
+Red-first by construction: the legs assert the exact query shape the fork ledger
+measured at `[]` on the unfixed tree (`d = CAST('NaN' AS DOUBLE)` → `[1, 5]`,
+`IN (NaN)` → `[1, 5]`); no second native at the old pin was available, so the
+unfixed-tree run itself is quoted, not re-run.
 
 ### Gates (to fill with counts)
 
-(to fill: new-file offline and live, `make verify`, whole facade suite, whole parity suite)
+(to fill: `make verify`, whole facade suite, whole parity suite)
 
 ## Coverage attestation
 
-(to fill at close: every PROVEN clause names the pin that discharges it; the grammar gate holds the citation direction.)
+C-001…C-008: `crates/repark-spark/src/tests/nan_pushdown.rs` (memory-catalog
+answer pins) and the `test_ice_nan_pushdown_1.py` grid legs. C-009: the grid
+runs every shape × version × writer half. C-010: the frame legs on all eight
+table instances. C-011: the DML legs at v2 and v3. C-012: the recorder, the
+truth JSON, the fixture warehouses, and the live replay tier. C-013: the
+ICE-NAN-PUSHDOWN-1 registry row, cited by the C-001…C-012 pins. Citations live
+in the test module docstring and the three `map.md` files (comment ban);
+`make check-ledger-grammar` holds the direction.
 
 ## Open questions
 

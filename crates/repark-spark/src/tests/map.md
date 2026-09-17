@@ -636,6 +636,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `../normalize.rs`. Leaf-private helpers (`g3e8_setup`, `g3e8_seed`, `assert_g3e8_message`) stay
   in `dml.rs`; only that leaf uses them.
   See `task/g3e8-guard-ledger.md`.
+- `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17):** NaN filter answers over
+  a memory-catalog Iceberg scan — `nan_equality_answers_the_nan_rows` (`=`
+  either side, `<=>`, float `=`) and `nan_in_and_inequality_answer_the_oracle_sets`
+  (`IN (NaN)`, `IN (NaN, 1.0)`, `!=`, `NOT IN`, `<`, `>=`, negation, `isnan`
+  control). Red-first by construction: on the pre-#284 fork pin the equality and
+  IN legs answer `[]` (measured in the fork ledger's unfixed-tree e2e run).
+  pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the

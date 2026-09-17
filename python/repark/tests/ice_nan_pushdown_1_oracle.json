@@ -1,0 +1,341 @@
+{
+  "oracle": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, local[2], ANSI on, UTC",
+  "tables": {
+    "v2/mixed": "ids 1..6: (NaN,NaN),(1.0,1.0),(NULL,NULL) in file one; (0.5,0.5),(NaN,NaN),(-2.0,-2.0) in file two",
+    "v2/nan_only": "ids 1..2, every d and f NaN, one file",
+    "v3/mixed": "same rows as v2/mixed at format-version 3",
+    "v3/nan_only": "same rows as v2/nan_only at format-version 3"
+  },
+  "reads": {
+    "v2/mixed": {
+      "d_eq": [
+        1,
+        5
+      ],
+      "d_eq_rev": [
+        1,
+        5
+      ],
+      "d_nullsafe": [
+        1,
+        5
+      ],
+      "d_neq": [
+        2,
+        4,
+        6
+      ],
+      "d_lt": [
+        2,
+        4,
+        6
+      ],
+      "d_le": [
+        1,
+        2,
+        4,
+        5,
+        6
+      ],
+      "d_gt": [],
+      "d_ge": [
+        1,
+        5
+      ],
+      "d_in_nan": [
+        1,
+        5
+      ],
+      "d_in_nan_1": [
+        1,
+        2,
+        5
+      ],
+      "d_not_in_nan": [
+        2,
+        4,
+        6
+      ],
+      "d_between": [
+        1,
+        2
+      ],
+      "d_not_eq": [
+        2,
+        4,
+        6
+      ],
+      "d_isnan": [
+        1,
+        5
+      ],
+      "f_eq": [
+        1,
+        5
+      ],
+      "f_nullsafe": [
+        1,
+        5
+      ],
+      "f_neq": [
+        2,
+        4,
+        6
+      ],
+      "f_lt": [
+        2,
+        4,
+        6
+      ],
+      "f_gt": [],
+      "f_ge": [
+        1,
+        5
+      ],
+      "f_in_nan": [
+        1,
+        5
+      ],
+      "f_in_nan_1": [
+        1,
+        2,
+        5
+      ],
+      "f_not_in_nan": [
+        2,
+        4,
+        6
+      ],
+      "f_isnan": [
+        1,
+        5
+      ]
+    },
+    "v2/nan_only": {
+      "d_eq": [
+        1,
+        2
+      ],
+      "d_eq_rev": [
+        1,
+        2
+      ],
+      "d_nullsafe": [
+        1,
+        2
+      ],
+      "d_neq": [],
+      "d_lt": [],
+      "d_le": [
+        1,
+        2
+      ],
+      "d_gt": [],
+      "d_ge": [
+        1,
+        2
+      ],
+      "d_in_nan": [
+        1,
+        2
+      ],
+      "d_in_nan_1": [
+        1,
+        2
+      ],
+      "d_not_in_nan": [],
+      "d_between": [],
+      "d_not_eq": [],
+      "d_isnan": [
+        1,
+        2
+      ],
+      "f_eq": [
+        1,
+        2
+      ],
+      "f_neq": [],
+      "f_in_nan": [
+        1,
+        2
+      ],
+      "f_isnan": [
+        1,
+        2
+      ]
+    },
+    "v3/mixed": {
+      "d_eq": [
+        1,
+        5
+      ],
+      "d_eq_rev": [
+        1,
+        5
+      ],
+      "d_nullsafe": [
+        1,
+        5
+      ],
+      "d_neq": [
+        2,
+        4,
+        6
+      ],
+      "d_lt": [
+        2,
+        4,
+        6
+      ],
+      "d_le": [
+        1,
+        2,
+        4,
+        5,
+        6
+      ],
+      "d_gt": [],
+      "d_ge": [
+        1,
+        5
+      ],
+      "d_in_nan": [
+        1,
+        5
+      ],
+      "d_in_nan_1": [
+        1,
+        2,
+        5
+      ],
+      "d_not_in_nan": [
+        2,
+        4,
+        6
+      ],
+      "d_between": [
+        1,
+        2
+      ],
+      "d_not_eq": [
+        2,
+        4,
+        6
+      ],
+      "d_isnan": [
+        1,
+        5
+      ],
+      "f_eq": [
+        1,
+        5
+      ],
+      "f_nullsafe": [
+        1,
+        5
+      ],
+      "f_neq": [
+        2,
+        4,
+        6
+      ],
+      "f_lt": [
+        2,
+        4,
+        6
+      ],
+      "f_gt": [],
+      "f_ge": [
+        1,
+        5
+      ],
+      "f_in_nan": [
+        1,
+        5
+      ],
+      "f_in_nan_1": [
+        1,
+        2,
+        5
+      ],
+      "f_not_in_nan": [
+        2,
+        4,
+        6
+      ],
+      "f_isnan": [
+        1,
+        5
+      ]
+    },
+    "v3/nan_only": {
+      "d_eq": [
+        1,
+        2
+      ],
+      "d_eq_rev": [
+        1,
+        2
+      ],
+      "d_nullsafe": [
+        1,
+        2
+      ],
+      "d_neq": [],
+      "d_lt": [],
+      "d_le": [
+        1,
+        2
+      ],
+      "d_gt": [],
+      "d_ge": [
+        1,
+        2
+      ],
+      "d_in_nan": [
+        1,
+        2
+      ],
+      "d_in_nan_1": [
+        1,
+        2
+      ],
+      "d_not_in_nan": [],
+      "d_between": [],
+      "d_not_eq": [],
+      "d_isnan": [
+        1,
+        2
+      ],
+      "f_eq": [
+        1,
+        2
+      ],
+      "f_neq": [],
+      "f_in_nan": [
+        1,
+        2
+      ],
+      "f_isnan": [
+        1,
+        2
+      ]
+    }
+  },
+  "dml": {
+    "delete_remaining": [
+      2,
+      3,
+      4,
+      6
+    ],
+    "update_touched": [
+      1,
+      5
+    ],
+    "update_untouched": [
+      4,
+      6
+    ]
+  }
+}
