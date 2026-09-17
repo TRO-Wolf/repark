@@ -36,6 +36,17 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_ice_column_reorder_1.py](test_ice_column_reorder_1.py) +
+  [test_ice_column_reorder_1_truth.json](test_ice_column_reorder_1_truth.json) +
+  [_record_ice_column_reorder_1.py](_record_ice_column_reorder_1.py) —
+  **ICE-COLUMN-REORDER-1 (2026-09-17):** `ALTER COLUMN … FIRST/AFTER` column moves
+  against the recorded live-PySpark-4.1.2 + Iceberg-1.11.0 oracle. Offline pins cover
+  move-first/after, no-op moves minting no schema, first-after-last, the self-move
+  refusal, unknown-column/reference `UNRESOLVED_COLUMN` refusals on both SQL doors,
+  nested-field moves with ids intact, positional INSERT after the move, v3 tables,
+  partition-source moves, and the DataFrame door; the live tier replays Spark and
+  cross-reads both engines' moved tables.
+  pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 - [test_df_surface_a_1.py](test_df_surface_a_1.py) +
   [facade_dataframe_surface_oracle.json](facade_dataframe_surface_oracle.json) —
   **DF-SURFACE-A-1 (2026-09-14):** the seven-name DataFrame surface pins driven

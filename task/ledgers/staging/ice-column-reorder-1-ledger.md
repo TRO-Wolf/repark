@@ -63,17 +63,68 @@ that ground: the move is expressible in RePark as a schema update with unchanged
 | C-013 | Registry row ICE-COLUMN-REORDER-1 (FIXED 2026-09-17, plus DECLARED rows for anything refused) exists, the I6 refusal text no longer fires on supported moves, and every touched `map.md` is current. | `docs/spark-sql-iceberg-parity.md` diff; grep for the old I6 text; `make check-map-sync`. | **OPEN** | Awaiting S5–S6. |
 | C-014 | Gates green on the release native: new file offline + live, `cargo test -p repark-spark --lib`, `cargo test -p repark-iceberg --lib`, `make verify`, whole facade suite, whole parity suite. | Counts pasted below in §7. | **OPEN** | Awaiting S7. |
 
-## 1. Clause matrix (S1)
+## 1. Clause matrix (S1) — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-17
 
-Unmeasured. Filled in S1–S3.
+Base shape `(id INT, a STRING, b STRING)`, ids 1/2/3, seed `(1, 'a1', 'b1')`, fresh table per
+case (CREATE = v1/schema 0, seed INSERT = v2). Full record:
+`python/repark/tests/test_ice_column_reorder_1_truth.json` via
+`python/repark/tests/_record_ice_column_reorder_1.py`.
 
-## 2. Refusal reproduction (S2)
+| Case | Spark's answer |
+|---|---|
+| `b FIRST` | Moves. Order `[(3,b),(1,id),(2,a)]`, schema 0 → 1 (v3 metadata). DESCRIBE and `SELECT *` both `(b,id,a)`; row `('b1',1,'a1')`. |
+| `b AFTER id` | Moves. Order `[(1,id),(3,b),(2,a)]`, schema 0 → 1. |
+| `id FIRST` (no-op) | Commits NOTHING: stays v2 metadata, schema 0, order unchanged. |
+| `a AFTER id` (no-op) | Commits NOTHING: stays v2 metadata, schema 0. |
+| `id AFTER b` (first after last) | Moves. Order `[(2,a),(3,b),(1,id)]`, schema 0 → 1; row `('a1','b1',1)`. |
+| `b AFTER b` (self) | Refuses, table untouched (v2/schema 0). `Py4JJavaError` wrapping `org.apache.spark.SparkException: Unsupported table change: Cannot move b after itself`. |
+| `a AFTER nope` | Refuses, table untouched. `AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name \`nope\` cannot be resolved. Did you mean one of the following? [\`id\`, \`a\`, \`b\`]. SQLSTATE: 42703`. |
+| `nope FIRST` | Same `UNRESOLVED_COLUMN` refusal as the unknown reference. |
+| Positional INSERT after move | `INSERT ... VALUES ('b2', 2, 'a2')` in the NEW order lands `('b2',2,'a2')`; schema stays 1 (v4 = new snapshot, same schema). |
+| Nested `s.b FIRST` on `(id, s STRUCT<a:3,b:4>)` | Moves inside the struct: `struct<b:4,a:3>`, nested ids unchanged, schema 0 → 1. |
+| Whole-struct `s FIRST` | Moves. Order `[(2,s),(1,id)]`, schema 0 → 1. |
+| v3 table, `b FIRST` | Moves, schema 0 → 1, same as v2. |
+| `PARTITIONED BY (b)`, `b FIRST` | Moves, schema 0 → 1; positional INSERT lands `('b3',3,'a3')`; DESCRIBE appends the partition-info tail. |
+| DataFrame door | `spark.table(t).columns == ['id','b','a']` after the move; `createDataFrame(...).writeTo(t).append()` by name lands `(9,'b9','a9')`. |
 
-Unmeasured. Verbatim paste lands here in S2.
+RePark's pre-fix answer: every move shape refuses on the facade with the I6 text (§2); the
+native door fails to parse (`Expected: SET/DROP NOT NULL, SET DEFAULT, or SET DATA TYPE after
+ALTER COLUMN, found: FIRST`). Post-fix RePark answers are pinned per clause in S4.
+
+Error-shape design (matches Spark's class + prefix on the facade): unknown moved column and
+unknown `AFTER` reference resolve at analysis time, so RePark pre-validates names against the
+loaded schema and raises `DataFusionError::Plan` with Spark's `[UNRESOLVED_COLUMN...] SQLSTATE:
+42703` framing (→ `AnalysisException`, as Spark). Move *legality* (self-move, cross-struct) is
+table-format semantics owned by the fork, which already refuses with Java's messages (`Cannot
+move b after itself` → `Error::Iceberg` → `PySparkException`, the diagnostic delta recorded in
+the registry row). A move that changes nothing commits nothing (Spark mints no schema on
+no-ops), so RePark filters no-op moves before the commit in `apply_schema_changes`, shared by
+both doors.
+
+## 2. Refusal reproduction (S2) — release native at fork pin `75da2b58`, 2026-09-17
+
+Facade door (`spark.sql`):
+
+```text
+ERR  facade: ALTER TABLE rp.ns.t ALTER COLUMN b FIRST
+     UnsupportedOperationException: This feature is not implemented: ALTER COLUMN … FIRST/AFTER (column MOVE) without ADD is not supported yet — use ADD COLUMN … FIRST|AFTER for new columns (I6)
+ERR  facade: ALTER TABLE rp.ns.t ALTER COLUMN b AFTER id
+     UnsupportedOperationException: This feature is not implemented: ALTER COLUMN … FIRST/AFTER (column MOVE) without ADD is not supported yet — use ADD COLUMN … FIRST|AFTER for new columns (I6)
+```
+
+Native door (`repark.sql`):
+
+```text
+ERR  native: ParseException: SQL error: ParserError("Expected: SET/DROP NOT NULL, SET DEFAULT, or SET DATA TYPE after ALTER COLUMN, found: FIRST at Line: 1, Column: 36")
+```
 
 ## 3. Oracle record (S3)
 
-Unmeasured. Recorder script + truth JSON land here in S3.
+Recorder `python/repark/tests/_record_ice_column_reorder_1.py` (GAV from
+`python/repark/tests/_oracle_pins.py`, same session config as `_live_parity.py`'s Iceberg
+engine; local builder only because `/tmp/sparkenv` has no pyarrow) + truth
+`python/repark/tests/test_ice_column_reorder_1_truth.json` (15 cases, provenance Spark 4.1.2 /
+Iceberg 1.11.0). Ran 2026-09-17 under `jb-jvm.sh`, exit 0.
 
 ## 4. Red-first pins (S4)
 
