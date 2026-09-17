@@ -779,6 +779,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`find_at`, cures `'.'`-pattern Q12-50/51). The facade arm lives in `dispatch_spark.rs`,
   but the Python `F.split` still raises `UnsupportedOperationException` before reaching
   it — P2 hand-off to run 16a. pins: door-converge-2/C-004
+  **FNP-MATH-1 step 6 (2026-09-16, run 18a, D-8):** `schema_name` renders Spark's
+  `split(str, pattern, limit)` (literals bare, default limit `-1`); coerce validates
+  without casting so literal folds keep Spark nullability; the facade binds above.
+  pins: fnp-math-1/C-008
   **DOOR-CONVERGE-2 round 3 (2026-09-15):** scalar patterns compile once, pattern columns
   resolve through an LRU(64) `PatternCache`, plain literals take the `str` path, and
   `limit` > 0 stops the match walk after `limit - 1` (equivalence-pinned). pins:

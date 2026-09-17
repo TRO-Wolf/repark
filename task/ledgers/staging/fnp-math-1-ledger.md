@@ -291,3 +291,22 @@ answers duplicate column names (columns 0 and 3 both render
 names; values, names, types and rows stay pinned per column. Missing-vs-NULL
 replacement split (NULL keeps the class, missing takes the default) is pinned
 by the kernel's Rust tests.
+
+## Step 6 (run 18a, D-8) — `split` facade evidence
+
+`F.split` binds the converged `spark_split` kernel: facade destubbed in
+`functions_expr.py` (`str` patterns arrive as `lit`, so the display reads
+Spark's bare `split(csvs, ,, -1)`), the door-converge-2 refusal guard flips to
+facade-vs-SQL answer compare. Kernel work in the same slice: `schema_name`
+renders Spark's `split(str, pattern, limit)` (literals bare via
+`spark_expr_token`, user `CAST` seen through, default limit `-1`); coerce
+validates without casting (the bround precedent) so literal folds keep Spark
+nullability — all-literal calls fold non-nullable, `split(123, '2')` included;
+empty pattern caps at a positive limit (`split('a,b,,c', '', 2)` answers
+`['a', ',b,,c']`), pinned by new kernel tests.
+`test_fnp_math_1.py -k "split or q12"` → 73 passed on the rebuilt release
+native (Q12-41…Q12-55 value, type, containsNull and nullability on both doors
+under both ANSI settings; o245 split cells on both doors); the Q12/Q15 fixture
+lands with the `.typos.toml` exclusion (recorded hex evidence).
+Multi-item SQL cells reuse the mask slice's per-item vehicle. `functions_expr.py`
+baseline ratchets 2192 → 2193 in `check_lib_py.py` and the CAP-1 mirror.

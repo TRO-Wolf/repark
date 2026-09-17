@@ -244,6 +244,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 - `split` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the Rust
   arm is ready, but Python `F.split` raises before reaching it (run 16a owns that half).
   pins: door-converge-2/C-004
+- `split` answers through the same arm (FNP-MATH-1 step 6, run 18a, D-8): `F.split`
+  binds the kernel with Spark names, and the door-converge-2 guard pin flips to
+  answer-compare. pins: fnp-math-1/C-008
 - `bround` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a): the
   name joins the door-converged list (one line — the parent file sits at its ceiling) and the
   arm builds `spark_math::call_bround` over 1–2 args. pins: fnp-math-1/C-002, C-003

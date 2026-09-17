@@ -135,6 +135,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 step 5 (2026-09-16, run 18a):**
   mirror row ratchets `functions_expr.py` 2195 → 2192 with the script baseline.
   pins: fnp-math-1/C-001, C-002, C-003
+- `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 step 6 (2026-09-16, run 18a):**
+  mirror row ratchets `functions_expr.py` 2192 → 2193 with the script baseline.
+  pins: fnp-math-1/C-001, C-008
 - `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 2 (2026-09-16):**
   mirror rows ratchet `functions_expr.py` 2235 → 2213 and
   `test_explode_rewrite.py` 1135 → 1133; a short-lived

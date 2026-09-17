@@ -573,12 +573,13 @@ def date_sub(start: Column | str, days: Column | int | str) -> Column:
     return date_add(start, lit(0) - _integer_argument(days))
 
 
-def split(str: Column | str, pattern: str, limit: int = -1) -> Column:
-    """Unsupported: engine has no Spark ``split`` (use SQL when available)."""
-
-    raise UnsupportedOperationException(
-        "functions.split is not supported yet (engine gap; disclosed R-FN-BATCH1)"
-    )
+def split(
+    str: Column | str, pattern: Column | str, limit: Column | int = -1
+) -> Column:
+    """Java-regex split with Spark ``split`` names and limit semantics."""
+    if not isinstance(pattern, Column):
+        pattern = lit(pattern)
+    return _scalar("split", str, pattern, limit)
 
 
 def regexp_extract(str: Column | str, pattern: Column | str, idx: int | Column = 1) -> Column:

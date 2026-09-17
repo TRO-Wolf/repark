@@ -514,15 +514,15 @@ def test_facade_sequence_illegal_step_text(spark: ReparkSession) -> None:
 
 
 def test_facade_split_refusal_handoff_16a(spark: ReparkSession) -> None:
-    """pins: door-converge-2/C-005 — F.split still refuses; P2 hand-off to run 16a.
+    """pins: door-converge-2/C-005 — the P2 hand-off landed in FNP-MATH-1 run 18a.
 
-    The Python `F.split` raises before reaching the converged Rust kernel, so the
-    split facade sub-cell stays OPEN until run 16a wires it. This pin guards the
-    refusal (loud, typed) so a silent change fails visibly.
+    The Python `F.split` now binds the converged Rust kernel (D-8), so this pin
+    records the arrival: the facade answers and matches the SQL door.
     """
-    _frame(spark)
-    with pytest.raises(UnsupportedOperationException):
-        F.split("s", ",")
+    frame = _frame(spark)
+    api = frame.select(F.split("s", ",").alias("v")).to_arrow()
+    sql = spark.sql("SELECT split(s, ',') AS v FROM t").to_arrow()
+    assert api.column("v").to_pylist() == sql.column("v").to_pylist()
 
 
 def _date_list() -> pa.DataType:

@@ -110,11 +110,19 @@ def _decode_repr_text(text: str) -> Any:
 
 
 def _spark_simple_to_arrow(text: str) -> pa.DataType:
-    """Map one Spark simpleString to the Arrow type the door must answer."""
+    """Map one Spark simpleString to the Arrow type the door must answer.
+
+    SimpleString carries no element nullability; every array-typed cell in this
+    suite is a ``split`` output, whose Q12 block records ``containsNull`` false,
+    and the door renders list elements under the engine ``element`` field.
+    """
     if text == "string collate UTF8_LCASE":
         return pa.string()
     if text.startswith("array<") and text.endswith(">"):
-        return pa.list_(_spark_simple_to_arrow(text[len("array<") : -1]))
+        inner = _spark_simple_to_arrow(text[len("array<") : -1])
+        if inner.equals(pa.string()):
+            return pa.list_(pa.field("element", inner, nullable=False))
+        return pa.list_(inner)
     match = _DECIMAL_RE.match(text)
     if match is not None:
         return pa.decimal128(int(match.group(1)), int(match.group(2)))
@@ -132,7 +140,8 @@ def _q12_arrow(node: Any) -> pa.DataType:
     if isinstance(node, str):
         return {"string": pa.string(), "integer": pa.int32(), "long": pa.int64()}[node]
     assert node["type"] == "array"
-    return pa.list_(_q12_arrow(node["elementType"]))
+    element = pa.field("element", _q12_arrow(node["elementType"]), nullable=node["containsNull"])
+    return pa.list_(element)
 
 
 def _assert_o245_value_table(table: pa.Table, cell: dict[str, Any]) -> None:

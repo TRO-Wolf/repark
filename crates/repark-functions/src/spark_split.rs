@@ -8,9 +8,16 @@ use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err};
 use datafusion::logical_expr::{
-    ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
+    ColumnarValue, Expr, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     TypeSignature, Volatility,
 };
+
+fn split_arg_token(expr: &Expr) -> String {
+    match expr {
+        Expr::Cast(cast) => split_arg_token(&cast.expr),
+        _ => crate::expr_fn::spark_expr_token(expr),
+    }
+}
 use regex::Regex;
 
 #[must_use]
@@ -137,17 +144,30 @@ impl ScalarUDFImpl for SparkSplit {
             .map(|field| field.data_type().clone())
             .collect();
         plan_split(&declared)?;
-        let nullable = args.arg_fields.iter().any(|field| field.is_nullable());
-        Ok(Arc::new(Field::new("split", split_return(), nullable)))
+        let folded = args
+            .scalar_arguments
+            .iter()
+            .all(|scalar| matches!(scalar, Some(value) if !value.is_null()));
+        Ok(Arc::new(Field::new("split", split_return(), !folded)))
+    }
+
+    fn schema_name(&self, args: &[Expr]) -> Result<String> {
+        if args.len() != 2 && args.len() != 3 {
+            return exec_err!(
+                "'split' expects (str, pattern[, limit]), got {} argument(s)",
+                args.len()
+            );
+        }
+        let mut parts: Vec<String> = args.iter().map(split_arg_token).collect();
+        if parts.len() == 2 {
+            parts.push("-1".to_owned());
+        }
+        Ok(format!("split({})", parts.join(", ")))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         plan_split(arg_types)?;
-        let mut coerced = vec![DataType::Utf8, DataType::Utf8];
-        if arg_types.len() == 3 {
-            coerced.push(DataType::Int32);
-        }
-        Ok(coerced)
+        Ok(arg_types.to_vec())
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -371,7 +391,22 @@ fn split_row<'text>(
     }
     if let SplitPattern::Literal(literal) = pattern {
         if literal.is_empty() {
-            return Ok(text.split("").filter(|piece| !piece.is_empty()).collect());
+            let bound = if limit > 0 {
+                usize::try_from(limit).unwrap_or(usize::MAX)
+            } else {
+                usize::MAX
+            };
+            let mut pieces: Vec<&str> = Vec::new();
+            let mut offset = 0;
+            for piece in text.split("").filter(|piece| !piece.is_empty()) {
+                if pieces.len() + 1 == bound {
+                    pieces.push(&text[offset..]);
+                    return Ok(pieces);
+                }
+                offset += piece.len();
+                pieces.push(piece);
+            }
+            return Ok(pieces);
         }
         if limit > 0 {
             let bound = usize::try_from(limit).unwrap_or(usize::MAX);
@@ -458,6 +493,14 @@ mod tests {
         assert_eq!(
             pieces_of(&ctx, "SELECT split('abc', '')").await,
             vec!["a", "b", "c"]
+        );
+        assert_eq!(
+            pieces_of(&ctx, "SELECT split('a,b,,c', '', 2)").await,
+            vec!["a", ",b,,c"]
+        );
+        assert_eq!(
+            pieces_of(&ctx, "SELECT split('a,b,,c', '', 1)").await,
+            vec!["a,b,,c"]
         );
         assert_eq!(pieces_of(&ctx, "SELECT split('', ',')").await, vec![""]);
         assert_eq!(
