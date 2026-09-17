@@ -111,6 +111,7 @@ chrono = { version = "0.4", default-features = false, features = ["std"] }
 # backed) — consumed by repark-spark's describe/show module. Line carried from the v1 root
 # manifest at the port-source pin.
 regex = "1"
+fancy-regex = "0.11"
 # Foundation — the iceberg 0.9.1 family, one version with the DataFusion 54.1 / Arrow 58.4 pins.
 iceberg = "0.9.1"
 iceberg-datafusion = "0.9.1"

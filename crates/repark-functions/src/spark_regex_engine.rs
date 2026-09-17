@@ -1,0 +1,990 @@
+use datafusion::common::{DataFusionError, Result};
+use regex::Regex;
+
+pub(crate) const FANCY_BACKTRACK_LIMIT: usize = 100_000_000;
+pub(crate) const CATASTROPHIC_HAYSTACK_MAX: usize = 10_000;
+
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Engine {
+    Plain,
+    Fancy,
+    Lookbehind,
+}
+
+#[derive(Clone)]
+pub(crate) struct SparkRegex {
+    engine: SparkEngine,
+    java_pattern: String,
+    catastrophic: bool,
+}
+
+#[derive(Clone, Debug)]
+enum SparkEngine {
+    Plain(Regex),
+    Fancy(fancy_regex::Regex),
+    Lookbehind(crate::spark_regex_lookbehind::LookbehindCompiled),
+}
+
+pub(crate) type Spans = Vec<Option<(usize, usize)>>;
+
+fn exact_or_none(spans: Spans, start: usize, end: usize) -> Option<Spans> {
+    if spans.first().copied().flatten() == Some((start, end)) {
+        Some(spans)
+    } else {
+        None
+    }
+}
+
+impl std::fmt::Debug for SparkRegex {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("SparkRegex")
+            .field("pattern", &self.java_pattern)
+            .field("catastrophic", &self.catastrophic)
+            .field("engine", &self.engine)
+            .finish()
+    }
+}
+
+pub(crate) fn compile_spark_regex(pattern: &str, fn_name: &str) -> Result<SparkRegex> {
+    let groups = count_groups(pattern);
+    let rewritten = rewrite_out_of_range_octal(pattern, groups);
+    let renamed = crate::spark_regex_lookbehind::normalize_backrefs(&rewritten, groups);
+    if let Some(plan) = crate::spark_regex_lookbehind::plan_lookbehind(&renamed) {
+        let plan = plan.map_err(|_| {
+            invalid_pattern_error(fn_name, pattern, &translate_pattern(&renamed), None)
+        })?;
+        return compile_lookbehind(pattern, fn_name, &plan);
+    }
+    let Some(outcome) = scan_pattern(&renamed) else {
+        return Err(invalid_pattern_error(
+            fn_name,
+            pattern,
+            &translate_pattern(&renamed),
+            None,
+        ));
+    };
+    let translated = translate_pattern(&renamed);
+    let engine = compile_engine(&translated, pattern, fn_name, outcome.fancy)?;
+    Ok(SparkRegex {
+        engine,
+        java_pattern: pattern.to_owned(),
+        catastrophic: outcome.catastrophic,
+    })
+}
+
+fn compile_engine(
+    translated: &str,
+    java_pattern: &str,
+    fn_name: &str,
+    fancy: bool,
+) -> Result<SparkEngine> {
+    if fancy {
+        fancy_regex::RegexBuilder::new(translated)
+            .backtrack_limit(FANCY_BACKTRACK_LIMIT)
+            .build()
+            .map(SparkEngine::Fancy)
+            .map_err(|error| {
+                invalid_pattern_error(fn_name, java_pattern, translated, Some(error.to_string()))
+            })
+    } else {
+        Regex::new(translated)
+            .map(SparkEngine::Plain)
+            .map_err(|error| {
+                invalid_pattern_error(fn_name, java_pattern, translated, Some(error.to_string()))
+            })
+    }
+}
+
+fn compile_lookbehind(
+    pattern: &str,
+    fn_name: &str,
+    plan: &crate::spark_regex_lookbehind::LookbehindPlan,
+) -> Result<SparkRegex> {
+    let Some(outcome) = scan_pattern(&plan.skeleton) else {
+        return Err(invalid_pattern_error(
+            fn_name,
+            pattern,
+            &translate_pattern(&plan.skeleton),
+            None,
+        ));
+    };
+    let translated = translate_pattern(&plan.skeleton);
+    let skeleton = SparkRegex {
+        engine: compile_engine(&translated, pattern, fn_name, outcome.fancy)?,
+        java_pattern: pattern.to_owned(),
+        catastrophic: outcome.catastrophic,
+    };
+    let mut assertions = Vec::with_capacity(plan.assertions.len());
+    for assertion in &plan.assertions {
+        assertions.push(crate::spark_regex_lookbehind::Assertion {
+            marker: assertion.marker,
+            negative: assertion.negative,
+            max_len: assertion.max_len,
+            body: compile_spark_regex(&assertion.body, fn_name)?,
+        });
+    }
+    Ok(SparkRegex {
+        engine: SparkEngine::Lookbehind(crate::spark_regex_lookbehind::LookbehindCompiled {
+            skeleton: Box::new(skeleton),
+            assertions,
+            group_map: plan.group_map.clone(),
+            named: plan.named.clone(),
+        }),
+        java_pattern: pattern.to_owned(),
+        catastrophic: outcome.catastrophic,
+    })
+}
+
+fn invalid_pattern_error(
+    fn_name: &str,
+    pattern: &str,
+    translated: &str,
+    detail: Option<String>,
+) -> DataFusionError {
+    if fn_name == "split" {
+        match detail {
+            Some(detail) => DataFusionError::Execution(format!(
+                "invalid regular expression '{translated}': {detail}"
+            )),
+            None => {
+                DataFusionError::Execution(format!("invalid regular expression '{translated}'"))
+            }
+        }
+    } else {
+        DataFusionError::Execution(format!(
+            "[INVALID_PARAMETER_VALUE.PATTERN] The value of parameter(s) `regexp` in `{fn_name}` \
+             is invalid: '{pattern}'. SQLSTATE: 22023"
+        ))
+    }
+}
+
+pub(crate) fn overrun_error(java_pattern: &str, budget: &str, limit: usize) -> DataFusionError {
+    DataFusionError::Execution(format!(
+        "regex overrun on pattern '{java_pattern}': exceeded {budget} (limit {limit})"
+    ))
+}
+
+fn runtime_error(java_pattern: &str, error: fancy_regex::Error) -> DataFusionError {
+    match error {
+        fancy_regex::Error::RuntimeError(fancy_regex::RuntimeError::BacktrackLimitExceeded) => {
+            overrun_error(java_pattern, "backtrack budget", FANCY_BACKTRACK_LIMIT)
+        }
+        other => DataFusionError::Execution(format!(
+            "regex runtime failure on pattern '{java_pattern}': {other}"
+        )),
+    }
+}
+
+pub(crate) fn strip_dollar_braces(replacement: &str) -> String {
+    let mut out = String::with_capacity(replacement.len());
+    let mut rest = replacement;
+    while let Some(dollar) = rest.find('$') {
+        out.push_str(&rest[..dollar]);
+        let after = &rest[dollar + 1..];
+        if let Some(braced) = after.strip_prefix('{')
+            && let Some(close) = braced.find('}')
+        {
+            rest = &braced[close + 1..];
+        } else {
+            out.push('$');
+            rest = after;
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct ScanOutcome {
+    fancy: bool,
+    catastrophic: bool,
+}
+
+fn scan_pattern(pattern: &str) -> Option<ScanOutcome> {
+    let bytes = pattern.as_bytes();
+    let mut index = 0;
+    let mut outcome = ScanOutcome {
+        fancy: false,
+        catastrophic: false,
+    };
+    while index < bytes.len() {
+        match bytes[index] {
+            b'\\' => {
+                index += 1;
+                if index >= bytes.len() {
+                    break;
+                }
+                match bytes[index] {
+                    b'Q' => {
+                        index += 1;
+                        while index < bytes.len() {
+                            if bytes[index] == b'\\' && bytes.get(index + 1) == Some(&b'E') {
+                                index += 2;
+                                break;
+                            }
+                            index += 1;
+                        }
+                    }
+                    b'1'..=b'9' => {
+                        outcome.fancy = true;
+                        index += 1;
+                    }
+                    b'k' => {
+                        match bytes.get(index + 1) {
+                            Some(b'<') => outcome.fancy = true,
+                            Some(b'\'') => return None,
+                            _ => {}
+                        }
+                        index += 1;
+                    }
+                    _ => index += 1,
+                }
+            }
+            b'[' => {
+                index = skip_class(bytes, index);
+            }
+            b'(' => {
+                match group_kind(bytes, index) {
+                    GroupKind::Lookahead | GroupKind::Lookbehind | GroupKind::Atomic => {
+                        outcome.fancy = true;
+                    }
+                    GroupKind::Invalid => return None,
+                    GroupKind::Consuming | GroupKind::Other => {
+                        outcome.catastrophic =
+                            outcome.catastrophic || is_catastrophic_group(bytes, index);
+                    }
+                }
+                index += 1;
+            }
+            b'*' | b'+' | b'?' => {
+                outcome.fancy = outcome.fancy || bytes.get(index + 1) == Some(&b'+');
+                index += 1;
+            }
+            b'{' => {
+                index += 1;
+            }
+            b'}' => {
+                if bytes.get(index + 1) == Some(&b'+') {
+                    let mut back = index;
+                    while back > 0 && (bytes[back - 1].is_ascii_digit() || bytes[back - 1] == b',')
+                    {
+                        back -= 1;
+                    }
+                    if back > 0
+                        && bytes[back - 1] == b'{'
+                        && bytes.get(back).is_some_and(u8::is_ascii_digit)
+                    {
+                        outcome.fancy = true;
+                    }
+                }
+                index += 1;
+            }
+            _ => index += 1,
+        }
+    }
+    Some(outcome)
+}
+
+fn is_catastrophic_group(bytes: &[u8], open: usize) -> bool {
+    let Some(close) = match_group(bytes, open) else {
+        return false;
+    };
+    if !is_unbounded_repetition(bytes, close + 1) {
+        return false;
+    }
+    body_has_branch_or_loop(&bytes[open..=close])
+}
+
+fn is_unbounded_repetition(bytes: &[u8], index: usize) -> bool {
+    match bytes.get(index) {
+        Some(b'*' | b'+') => true,
+        Some(b'{') => {
+            let mut cursor = index + 1;
+            if bytes.get(cursor).is_none_or(|byte| !byte.is_ascii_digit()) {
+                return false;
+            }
+            while bytes.get(cursor).is_some_and(u8::is_ascii_digit) {
+                cursor += 1;
+            }
+            if bytes.get(cursor) != Some(&b',') {
+                return false;
+            }
+            cursor += 1;
+            while bytes.get(cursor).is_some_and(u8::is_ascii_digit) {
+                cursor += 1;
+            }
+            bytes.get(cursor) == Some(&b'}') && bytes.get(cursor - 1) == Some(&b',')
+        }
+        _ => false,
+    }
+}
+
+fn body_has_branch_or_loop(bytes: &[u8]) -> bool {
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'\\' => {
+                if bytes.get(index + 1) == Some(&b'Q') {
+                    index = find_quote_end(bytes, index + 2).saturating_sub(1);
+                } else {
+                    index += 1;
+                }
+            }
+            b'[' => index = skip_class(bytes, index).saturating_sub(1),
+            b'|' | b'*' | b'+' => return true,
+            b'{' if is_unbounded_repetition(bytes, index) => return true,
+            _ => {}
+        }
+        index += 1;
+    }
+    false
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum GroupKind {
+    Lookahead,
+    Lookbehind,
+    Atomic,
+    Consuming,
+    Other,
+    Invalid,
+}
+
+pub(crate) fn group_kind(bytes: &[u8], open: usize) -> GroupKind {
+    if bytes.get(open + 1) != Some(&b'?') {
+        return GroupKind::Consuming;
+    }
+    match bytes.get(open + 2) {
+        Some(b'=' | b'!') => GroupKind::Lookahead,
+        Some(b'>') => GroupKind::Atomic,
+        Some(b'P') => GroupKind::Invalid,
+        Some(b'<') => match bytes.get(open + 3) {
+            Some(b'=' | b'!') => GroupKind::Lookbehind,
+            _ => GroupKind::Consuming,
+        },
+        Some(b'\'') => GroupKind::Consuming,
+        _ => group_kind_flags(bytes, open),
+    }
+}
+
+fn group_kind_flags(bytes: &[u8], open: usize) -> GroupKind {
+    let mut index = open + 2;
+    while bytes
+        .get(index)
+        .is_some_and(|byte| byte.is_ascii_lowercase() || *byte == b'-')
+    {
+        index += 1;
+    }
+    if index > open + 2 && bytes.get(index) == Some(&b':') {
+        GroupKind::Consuming
+    } else {
+        GroupKind::Other
+    }
+}
+
+pub(crate) fn match_group(bytes: &[u8], open: usize) -> Option<usize> {
+    let mut depth = 0usize;
+    let mut index = open;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'\\' => {
+                if bytes.get(index + 1) == Some(&b'Q') {
+                    index = find_quote_end(bytes, index + 2).saturating_sub(1);
+                } else {
+                    index += 1;
+                }
+            }
+            b'[' => index = skip_class(bytes, index).saturating_sub(1),
+            b'(' => depth += 1,
+            b')' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(index);
+                }
+            }
+            _ => {}
+        }
+        index += 1;
+    }
+    None
+}
+
+pub(crate) fn skip_class(bytes: &[u8], open: usize) -> usize {
+    let mut index = open + 1;
+    if bytes.get(index) == Some(&b'^') {
+        index += 1;
+    }
+    if bytes.get(index) == Some(&b']') {
+        index += 1;
+    }
+    while index < bytes.len() && bytes[index] != b']' {
+        if bytes[index] == b'\\' {
+            index += 1;
+        }
+        index += 1;
+    }
+    index + 1
+}
+
+fn count_groups(pattern: &str) -> usize {
+    let bytes = pattern.as_bytes();
+    let mut index = 0;
+    let mut groups = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'\\' => {
+                if bytes.get(index + 1) == Some(&b'Q') {
+                    index = find_quote_end(bytes, index + 2).saturating_sub(1);
+                } else {
+                    index += 1;
+                }
+            }
+            b'[' => index = skip_class(bytes, index).saturating_sub(1),
+            b'(' if group_kind(bytes, index) == GroupKind::Consuming => groups += 1,
+            _ => {}
+        }
+        index += 1;
+    }
+    groups
+}
+
+fn rewrite_out_of_range_octal(pattern: &str, groups: usize) -> String {
+    if !pattern.contains('\\') {
+        return pattern.to_owned();
+    }
+    let bytes = pattern.as_bytes();
+    let mut out = String::with_capacity(pattern.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'\\' {
+            if let Some((rewritten, width)) = rewrite_escape(bytes, index, groups) {
+                out.push_str(&rewritten);
+                index += width;
+                continue;
+            }
+            if index + 1 < bytes.len() && bytes[index + 1] == b'Q' {
+                let end = find_quote_end(bytes, index + 2);
+                out.push_str(&pattern[index..end]);
+                index = end;
+                continue;
+            }
+            if index + 1 < bytes.len() && bytes[index + 1] == b'\\' {
+                out.push_str(&pattern[index..=index + 1]);
+                index += 2;
+                continue;
+            }
+        }
+        if bytes[index] == b'[' {
+            let end = skip_class(bytes, index);
+            out.push_str(&pattern[index..end.min(pattern.len())]);
+            index = end;
+            continue;
+        }
+        let width = pattern[index..].chars().next().map_or(1, char::len_utf8);
+        out.push_str(&pattern[index..index + width]);
+        index += width;
+    }
+    out
+}
+
+fn rewrite_escape(bytes: &[u8], index: usize, groups: usize) -> Option<(String, usize)> {
+    let first = *bytes.get(index + 1)?;
+    if !first.is_ascii_digit() || first == b'0' {
+        return None;
+    }
+    let digit = (first - b'0') as usize;
+    let mut value = digit;
+    let mut width = 1;
+    if bytes.get(index + 2).is_some_and(u8::is_ascii_digit) {
+        value = digit * 10 + (bytes[index + 2] - b'0') as usize;
+        width = 2;
+    }
+    if value >= 1 && value <= groups {
+        return Some((
+            String::from_utf8_lossy(&bytes[index..=index + width]).into_owned(),
+            1 + width,
+        ));
+    }
+    if width == 2 && digit <= groups {
+        return Some((
+            String::from_utf8_lossy(&bytes[index..=index + 1]).into_owned(),
+            2,
+        ));
+    }
+    if width == 2 && value <= 0o77 {
+        return Some((format!("\\x{value:02X}"), 1 + width));
+    }
+    if (1..=7).contains(&digit) {
+        return Some((format!("\\x0{digit}"), 2));
+    }
+    None
+}
+
+pub(crate) fn find_quote_end(bytes: &[u8], start: usize) -> usize {
+    let mut index = start;
+    while index < bytes.len() {
+        if bytes[index] == b'\\' && bytes.get(index + 1) == Some(&b'E') {
+            return index + 2;
+        }
+        index += 1;
+    }
+    bytes.len()
+}
+
+pub(crate) fn translate_pattern(pattern: &str) -> String {
+    let quoted = translate_java_quotations(pattern);
+    let classes = crate::java_regex::translate_java_char_classes(&quoted);
+    crate::collection::bind_ascii_perl_classes(&classes)
+}
+
+fn translate_java_quotations(pattern: &str) -> String {
+    let mut out = String::with_capacity(pattern.len());
+    let mut rest = pattern;
+    while let Some(start) = rest.find("\\Q") {
+        out.push_str(&rest[..start]);
+        let quoted = &rest[start + 2..];
+        if let Some(end) = quoted.find("\\E") {
+            out.push_str(&regex::escape(&quoted[..end]));
+            rest = &quoted[end + 2..];
+        } else {
+            out.push_str(&regex::escape(quoted));
+            rest = "";
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+fn count_overflow() -> DataFusionError {
+    DataFusionError::Execution("regexp_count exceeds Spark INT".to_owned())
+}
+
+fn bump_count(count: i32) -> Result<i32> {
+    count.checked_add(1).ok_or_else(count_overflow)
+}
+
+const MID_SURROGATE_PROBE: &str = "\u{FFFD}\u{FFFD}";
+const MID_SURROGATE_PROBE_OFFSET: usize = 3;
+
+impl SparkRegex {
+    #[cfg(test)]
+    pub(crate) fn engine(&self) -> Engine {
+        match self.engine {
+            SparkEngine::Plain(_) => Engine::Plain,
+            SparkEngine::Fancy(_) => Engine::Fancy,
+            SparkEngine::Lookbehind(_) => Engine::Lookbehind,
+        }
+    }
+
+    fn check_wire(&self, text: &str) -> Result<()> {
+        if self.catastrophic && text.len() > CATASTROPHIC_HAYSTACK_MAX {
+            return Err(overrun_error(
+                &self.java_pattern,
+                "looping-pattern haystack",
+                CATASTROPHIC_HAYSTACK_MAX,
+            ));
+        }
+        Ok(())
+    }
+
+    fn overrun(&self, error: fancy_regex::Error) -> DataFusionError {
+        match self.engine {
+            SparkEngine::Fancy(_) | SparkEngine::Lookbehind(_) => {
+                runtime_error(&self.java_pattern, error)
+            }
+            SparkEngine::Plain(_) => {
+                DataFusionError::Internal("plain regex has no runtime failure".to_owned())
+            }
+        }
+    }
+
+    pub(crate) fn is_empty_pattern(&self) -> bool {
+        match &self.engine {
+            SparkEngine::Plain(regex) => regex.as_str().is_empty(),
+            SparkEngine::Fancy(regex) => regex.as_str().is_empty(),
+            SparkEngine::Lookbehind(compiled) => compiled.skeleton.is_empty_pattern(),
+        }
+    }
+
+    pub(crate) fn captures_len(&self) -> usize {
+        match &self.engine {
+            SparkEngine::Plain(regex) => regex.captures_len(),
+            SparkEngine::Fancy(regex) => regex.captures_len(),
+            SparkEngine::Lookbehind(compiled) => compiled.group_map.len(),
+        }
+    }
+
+    pub(crate) fn is_match(&self, text: &str) -> Result<bool> {
+        self.check_wire(text)?;
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex.is_match(text)),
+            SparkEngine::Fancy(regex) => regex.is_match(text).map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => {
+                let mut budget = crate::spark_regex_lookbehind::SearchBudget::budget();
+                Ok(compiled.verified_from(text, 0, &mut budget)?.is_some())
+            }
+        }
+    }
+
+    pub(crate) fn find_first(&self, text: &str) -> Result<Option<(usize, usize)>> {
+        self.check_wire(text)?;
+        match &self.engine {
+            SparkEngine::Plain(regex) => {
+                Ok(regex.find(text).map(|found| (found.start(), found.end())))
+            }
+            SparkEngine::Fancy(regex) => regex
+                .find(text)
+                .map(|matched| matched.map(|found| (found.start(), found.end())))
+                .map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => {
+                let mut budget = crate::spark_regex_lookbehind::SearchBudget::budget();
+                Ok(compiled
+                    .verified_from(text, 0, &mut budget)?
+                    .map(|matched| matched.span))
+            }
+        }
+    }
+
+    pub(crate) fn capture_at(
+        &self,
+        text: &str,
+        start: usize,
+        group: usize,
+    ) -> Result<Option<String>> {
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex
+                .captures_at(text, start)
+                .and_then(|caps| caps.get(group).map(|matched| matched.as_str().to_owned()))),
+            SparkEngine::Fancy(regex) => regex
+                .captures_from_pos(text, start)
+                .map(|caps| {
+                    caps.and_then(|captures| {
+                        captures
+                            .get(group)
+                            .map(|matched| matched.as_str().to_owned())
+                    })
+                })
+                .map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => {
+                let mut budget = crate::spark_regex_lookbehind::SearchBudget::budget();
+                Ok(compiled
+                    .verified_from(text, start, &mut budget)?
+                    .and_then(|matched| compiled.capture_java(&matched, group, text)))
+            }
+        }
+    }
+
+    pub(crate) fn captures_spans(&self, text: &str, start: usize) -> Result<Spans> {
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex.captures_at(text, start).map_or_else(
+                || vec![None; regex.captures_len()],
+                |caps| {
+                    caps.iter()
+                        .map(|found| found.map(|matched| (matched.start(), matched.end())))
+                        .collect()
+                },
+            )),
+            SparkEngine::Fancy(regex) => regex
+                .captures_from_pos(text, start)
+                .map(|caps| {
+                    caps.map_or_else(
+                        || vec![None; regex.captures_len()],
+                        |captures| {
+                            captures
+                                .iter()
+                                .map(|found| found.map(|matched| (matched.start(), matched.end())))
+                                .collect()
+                        },
+                    )
+                })
+                .map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => {
+                let mut budget = crate::spark_regex_lookbehind::SearchBudget::budget();
+                Ok(compiled
+                    .verified_from(text, start, &mut budget)?
+                    .map_or_else(
+                        || vec![None; compiled.group_map.len()],
+                        |matched| matched.skel,
+                    ))
+            }
+        }
+    }
+
+    pub(crate) fn match_exact_spans(
+        &self,
+        text: &str,
+        start: usize,
+        end: usize,
+        budget: &mut crate::spark_regex_lookbehind::SearchBudget,
+    ) -> Result<Option<Spans>> {
+        budget.take(&self.java_pattern)?;
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex.captures_at(text, start).and_then(|caps| {
+                let spans: Spans = caps
+                    .iter()
+                    .map(|found| found.map(|matched| (matched.start(), matched.end())))
+                    .collect();
+                exact_or_none(spans, start, end)
+            })),
+            SparkEngine::Fancy(regex) => regex
+                .captures_from_pos(text, start)
+                .map(|caps| {
+                    caps.and_then(|captures| {
+                        let spans: Spans = captures
+                            .iter()
+                            .map(|found| found.map(|matched| (matched.start(), matched.end())))
+                            .collect();
+                        exact_or_none(spans, start, end)
+                    })
+                })
+                .map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => Ok(compiled
+                .verified_from(text, start, budget)?
+                .and_then(|matched| {
+                    if matched.span == (start, end) {
+                        Some(compiled.java_spans(&matched.skel))
+                    } else {
+                        None
+                    }
+                })),
+        }
+    }
+
+    pub(crate) fn find_from(&self, text: &str, start: usize) -> Result<Option<(usize, usize)>> {
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex
+                .find_at(text, start)
+                .map(|found| (found.start(), found.end()))),
+            SparkEngine::Fancy(regex) => regex
+                .find_from_pos(text, start)
+                .map(|matched| matched.map(|found| (found.start(), found.end())))
+                .map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => {
+                let mut budget = crate::spark_regex_lookbehind::SearchBudget::budget();
+                Ok(compiled
+                    .verified_from(text, start, &mut budget)?
+                    .map(|matched| matched.span))
+            }
+        }
+    }
+
+    pub(crate) fn matches_at_mid_surrogate_index(&self) -> Result<bool> {
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex
+                .find_at(MID_SURROGATE_PROBE, MID_SURROGATE_PROBE_OFFSET)
+                .is_some_and(|found| found.start() == MID_SURROGATE_PROBE_OFFSET)),
+            SparkEngine::Fancy(regex) => regex
+                .find_from_pos(MID_SURROGATE_PROBE, MID_SURROGATE_PROBE_OFFSET)
+                .map(|matched| {
+                    matched.is_some_and(|found| found.start() == MID_SURROGATE_PROBE_OFFSET)
+                })
+                .map_err(|error| self.overrun(error)),
+            SparkEngine::Lookbehind(compiled) => compiled.skeleton.matches_at_mid_surrogate_index(),
+        }
+    }
+
+    pub(crate) fn collect_matches(
+        &self,
+        text: &str,
+        max_matches: usize,
+    ) -> Result<Vec<(usize, usize)>> {
+        self.check_wire(text)?;
+        let mut found_all = Vec::new();
+        if max_matches == 0 {
+            return Ok(found_all);
+        }
+        if self.is_empty_pattern() {
+            for (offset, character) in text.char_indices() {
+                if let Some(found) = self.find_from(text, offset)? {
+                    found_all.push(found);
+                    if character.len_utf16() == 2 {
+                        found_all.push(found);
+                    }
+                }
+            }
+            if let Some(found) = self.find_from(text, text.len())? {
+                found_all.push(found);
+            }
+            return Ok(found_all);
+        }
+        let mut byte = 0usize;
+        let mut mid_surrogate = false;
+        loop {
+            if mid_surrogate {
+                if self.matches_at_mid_surrogate_index()? {
+                    found_all.push((byte, byte));
+                    if found_all.len() >= max_matches {
+                        break;
+                    }
+                    if found_all.len() > usize::try_from(i32::MAX).unwrap_or(usize::MAX) {
+                        return Err(count_overflow());
+                    }
+                }
+                let Some(character) = text.get(byte..).and_then(|rest| rest.chars().next()) else {
+                    break;
+                };
+                byte += character.len_utf8();
+                mid_surrogate = false;
+                continue;
+            }
+            if byte > text.len() {
+                break;
+            }
+            let Some(found) = self.find_from(text, byte)? else {
+                break;
+            };
+            found_all.push(found);
+            if found_all.len() >= max_matches {
+                break;
+            }
+            if found_all.len() > usize::try_from(i32::MAX).unwrap_or(usize::MAX) {
+                return Err(count_overflow());
+            }
+            if found.0 == found.1 {
+                if found.0 == text.len() {
+                    break;
+                }
+                let Some(character) = text[found.0..].chars().next() else {
+                    break;
+                };
+                if character.len_utf16() == 2 {
+                    mid_surrogate = true;
+                    byte = found.0;
+                } else {
+                    byte = found.0 + character.len_utf8();
+                }
+            } else {
+                byte = found.1;
+            }
+        }
+        Ok(found_all)
+    }
+
+    pub(crate) fn count_non_overlapping(&self, text: &str) -> Result<i32> {
+        self.check_wire(text)?;
+        if self.is_empty_pattern() {
+            let count = text.encode_utf16().count().saturating_add(1);
+            return i32::try_from(count).map_err(|_| count_overflow());
+        }
+        let mut count: i32 = 0;
+        let mut byte = 0usize;
+        let mut mid_surrogate = false;
+        loop {
+            if mid_surrogate {
+                if self.matches_at_mid_surrogate_index()? {
+                    count = bump_count(count)?;
+                }
+                let Some(character) = text.get(byte..).and_then(|rest| rest.chars().next()) else {
+                    break;
+                };
+                byte += character.len_utf8();
+                mid_surrogate = false;
+                continue;
+            }
+            if byte > text.len() {
+                break;
+            }
+            let Some(found) = self.find_from(text, byte)? else {
+                break;
+            };
+            count = bump_count(count)?;
+            if found.0 == found.1 {
+                if found.0 == text.len() {
+                    break;
+                }
+                let Some(character) = text[found.0..].chars().next() else {
+                    break;
+                };
+                if character.len_utf16() == 2 {
+                    mid_surrogate = true;
+                    byte = found.0;
+                } else {
+                    byte = found.0 + character.len_utf8();
+                }
+            } else {
+                byte = found.1;
+            }
+        }
+        Ok(count)
+    }
+
+    pub(crate) fn instr_start(&self, text: &str) -> Result<i32> {
+        let Some(found) = self.find_first(text)? else {
+            return Ok(0);
+        };
+        let units_before = text[..found.0].encode_utf16().count();
+        let start = units_before.saturating_add(1);
+        i32::try_from(start)
+            .map_err(|_| DataFusionError::Execution("regexp_instr exceeds Spark INT".to_owned()))
+    }
+
+    pub(crate) fn replace_all(&self, text: &str, replacement: &str) -> Result<String> {
+        self.check_wire(text)?;
+        let stripped;
+        let template = if replacement.contains('$') {
+            stripped = strip_dollar_braces(replacement);
+            stripped.as_str()
+        } else {
+            replacement
+        };
+        match &self.engine {
+            SparkEngine::Plain(regex) => Ok(regex.replace_all(text, template).into_owned()),
+            SparkEngine::Fancy(regex) => {
+                let mut out = String::with_capacity(text.len());
+                let mut last = 0usize;
+                for (start, end) in self.collect_matches(text, usize::MAX)? {
+                    out.push_str(&text[last..start]);
+                    match regex.captures_from_pos(text, start) {
+                        Ok(Some(caps)) => caps.expand(template, &mut out),
+                        Ok(None) => out.push_str(template),
+                        Err(error) => return Err(self.overrun(error)),
+                    }
+                    last = end;
+                }
+                out.push_str(&text[last..]);
+                Ok(out)
+            }
+            SparkEngine::Lookbehind(compiled) => {
+                let mut out = String::with_capacity(text.len());
+                let mut last = 0usize;
+                let mut replaced = 0usize;
+                let mut budget = crate::spark_regex_lookbehind::SearchBudget::budget();
+                let mut byte = 0usize;
+                loop {
+                    if byte > text.len() {
+                        break;
+                    }
+                    let Some(matched) = compiled.verified_from(text, byte, &mut budget)? else {
+                        break;
+                    };
+                    replaced += 1;
+                    if replaced > usize::try_from(i32::MAX).unwrap_or(usize::MAX) {
+                        return Err(count_overflow());
+                    }
+                    let (start, end) = matched.span;
+                    out.push_str(&text[last..start]);
+                    compiled.expand_verified(&mut out, &matched, template, text);
+                    last = end;
+                    if start == end {
+                        if start == text.len() {
+                            break;
+                        }
+                        let Some(character) = text[start..].chars().next() else {
+                            break;
+                        };
+                        byte = start + character.len_utf8();
+                    } else {
+                        byte = end;
+                    }
+                }
+                out.push_str(&text[last..]);
+                Ok(out)
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

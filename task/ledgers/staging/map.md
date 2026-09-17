@@ -16,6 +16,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
   `risk_tier: standard`. Branch `docs/registry-16b-1`.
   pins: registry-16b-1/C-001, C-002, C-003
+- [java-regex-features-1-ledger.md](java-regex-features-1-ledger.md) —
+  **JAVA-REGEX-FEATURES-1 (2026-09-16), in flight:** Java lookaround, backreferences,
+  possessive quantifiers and atomic groups answer like Java on every regex name — the
+  `regex` crate stays fast, `fancy-regex` covers the fallback grammar under a backtrack
+  limit plus a loop-times-haystack overrun guard.
+  `risk_tier: standard`. Branch `feat/java-regex-features-1`.
+  pins: java-regex-features-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [df-rust-3-ledger.md](df-rust-3-ledger.md) —
   **DF-RUST-3 (2026-09-15), in flight:** `DataFrame.freqItems`,
   `DataFrameStatFunctions.freqItems`, and `DataFrame.transpose` implemented Rust-first —

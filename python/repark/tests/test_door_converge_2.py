@@ -660,24 +660,27 @@ _Q15_VALUES: dict[str, tuple[str, list, pa.DataType, bool]] = {
         pa.list_(pa.field("element", pa.string(), nullable=False)),
         True,
     ),
-}
-
-_Q15_ERRORS: dict[str, tuple[str, type, str]] = {
     "Q15-10": (
         "SELECT split('a,b,c', '(?=,)')",
-        PySparkException,
-        "lookahead",
+        [["a", ",b", ",c"]],
+        pa.list_(pa.field("element", pa.string(), nullable=False)),
+        False,
     ),
     "Q15-11": (
         "SELECT split('aa-bb', '(a|b)\\\\1')",
-        PySparkException,
-        "backreference",
+        [["", "-", ""]],
+        pa.list_(pa.field("element", pa.string(), nullable=False)),
+        False,
     ),
     "Q15-12": (
         "SELECT split('aaa', 'a++a')",
-        PySparkException,
-        "possessive",
+        [["aaa"]],
+        pa.list_(pa.field("element", pa.string(), nullable=False)),
+        False,
     ),
+}
+
+_Q15_ERRORS: dict[str, tuple[str, type, str]] = {
     "Q15-13": (
         "SELECT split('ab', '[')",
         PySparkException,
@@ -698,7 +701,11 @@ _Q15_ERRORS: dict[str, tuple[str, type, str]] = {
 
 @pytest.mark.parametrize("cell_id", sorted(_Q15_VALUES), ids=sorted(_Q15_VALUES))
 def test_q15_cell(spark: ReparkSession, cell_id: str) -> None:
-    """pins: door-converge-2/C-007, C-008, C-009 — one round-3 oracle cell."""
+    """One round-3 oracle cell.
+
+    pins: door-converge-2/C-007, C-008, C-009
+    pins: java-regex-features-1/C-008
+    """
     _frame(spark)
     _q15_frame(spark)
     sql, value, arrow_type, nullable = _Q15_VALUES[cell_id]

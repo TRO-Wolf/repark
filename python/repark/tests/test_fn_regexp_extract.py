@@ -173,17 +173,28 @@ def test_extract_unicode_letter_class() -> None:
     assert door == ["alpha"]
 
 
-def test_extract_java_lookbehind_is_loud() -> None:
-    """Lookbehind refuses loud (no engine support).
+def test_extract_java_lookbehind_answers() -> None:
+    """Lookbehind answers through the fallback engine on both doors.
 
-    pins: fn-regexp-extract-1/C-002; door-converge-2/C-008
+    pins: fn-regexp-extract-1/C-002; door-converge-2/C-008; java-regex-features-1/C-001
     """
-    with pytest.raises(Exception, match="unsupported Java regular expression feature 'lookbehind'"):
-        _session().sql("SELECT regexp_extract('foobar', '(?<=foo)bar', 0) AS r").collect()
-    with pytest.raises(Exception, match="unsupported Java regular expression feature 'lookbehind'"):
-        _session().range(1).select(
-            F.regexp_extract(F.lit("foobar"), "(?<=foo)bar", 0).alias("r")
-        ).collect()
+    door = (
+        _session()
+        .sql("SELECT regexp_extract('foobar', '(?<=foo)bar', 0) AS r")
+        .toArrow()
+        .column("r")
+        .to_pylist()
+    )
+    assert door == ["bar"]
+    facade = (
+        _session()
+        .range(1)
+        .select(F.regexp_extract(F.lit("foobar"), "(?<=foo)bar", 0).alias("r"))
+        .toArrow()
+        .column("r")
+        .to_pylist()
+    )
+    assert facade == ["bar"]
 
 
 def test_extract_edge_strings() -> None:

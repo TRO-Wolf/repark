@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use crate::spark_regex_engine::{SparkRegex, compile_spark_regex, translate_pattern};
 use datafusion::arrow::array::{Array, ArrayRef, Int32Array, ListArray, StringArray};
 use datafusion::arrow::buffer::{NullBuffer, OffsetBuffer};
 use datafusion::arrow::compute::cast;
@@ -11,7 +12,6 @@ use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     TypeSignature, Volatility,
 };
-use regex::Regex;
 
 #[must_use]
 pub fn split_udf() -> Arc<ScalarUDF> {
@@ -253,7 +253,7 @@ fn fit_i32(value: usize) -> Result<i32> {
 #[derive(Clone)]
 enum SplitPattern {
     Literal(String),
-    Regex(Regex),
+    Compiled(SparkRegex),
 }
 
 fn is_plain_literal(translated: &str) -> bool {
@@ -265,16 +265,13 @@ fn is_plain_literal(translated: &str) -> bool {
     })
 }
 
-fn resolve_pattern(translated: &str) -> Result<SplitPattern> {
-    if is_plain_literal(translated) {
-        return Ok(SplitPattern::Literal(translated.to_owned()));
+fn resolve_pattern(java_pattern: &str) -> Result<SplitPattern> {
+    let translated = translate_pattern(java_pattern);
+    if is_plain_literal(&translated) {
+        return Ok(SplitPattern::Literal(translated));
     }
-    let regex = Regex::new(translated).map_err(|error| {
-        DataFusionError::Execution(format!(
-            "invalid regular expression '{translated}': {error}"
-        ))
-    })?;
-    Ok(SplitPattern::Regex(regex))
+    let regex = compile_spark_regex(java_pattern, "split")?;
+    Ok(SplitPattern::Compiled(regex))
 }
 
 #[derive(Default)]
@@ -292,8 +289,7 @@ impl PatternCache {
             }
             return Ok(hit.clone());
         }
-        let translated = crate::spark_regexp::translate_java_pattern(pattern)?;
-        let resolved = resolve_pattern(&translated)?;
+        let resolved = resolve_pattern(pattern)?;
         if self.entries.len() >= 64
             && let Some(oldest) = self.order.pop_front()
         {
@@ -310,8 +306,7 @@ fn split_scalar_pattern(
     pattern: &str,
     element: &FieldRef,
 ) -> Result<ColumnarValue> {
-    let translated = crate::spark_regexp::translate_java_pattern(pattern)?;
-    let resolved = resolve_pattern(&translated)?;
+    let resolved = resolve_pattern(pattern)?;
     let mut shape_args = Vec::with_capacity(arg_values.len() - 1);
     shape_args.push(arg_values[0].clone());
     if arg_values.len() > 2 {
@@ -379,7 +374,7 @@ fn split_row<'text>(
         }
         return Ok(text.split(literal.as_str()).collect());
     }
-    let SplitPattern::Regex(regex) = pattern else {
+    let SplitPattern::Compiled(regex) = pattern else {
         return Ok(vec![text]);
     };
     let max_matches = if limit > 0 {
@@ -387,7 +382,7 @@ fn split_row<'text>(
     } else {
         usize::MAX
     };
-    let found = crate::spark_regexp::collect_matches_up_to(text, regex, max_matches)?;
+    let found = regex.collect_matches(text, max_matches)?;
     let usable = found.len();
     let mut pieces = Vec::with_capacity(usable + 1);
     let mut cursor = 0;

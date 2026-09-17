@@ -1,0 +1,1005 @@
+{
+  "cells": [
+    {
+      "door": "py",
+      "expr": "spark.range(1).select(F.lit('ab').rlike('a(?=b)').alias('v'))",
+      "id": "RX-PY-00",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "py",
+      "expr": "spark.range(1).select(F.regexp_extract(F.lit('xaay'), r'(a)\\1', 0).alias('v'))",
+      "id": "RX-PY-01",
+      "outcome": "ok",
+      "rows": [
+        [
+          "aa"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "py",
+      "expr": "spark.range(1).select(F.regexp_replace(F.lit('ab ab'), '(?<=a)b', 'X').alias('v'))",
+      "id": "RX-PY-02",
+      "outcome": "ok",
+      "rows": [
+        [
+          "aX aX"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('ab','a(?=b)') AS v",
+      "id": "RX-SQL-00",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('ab','(?<=a)b') AS v",
+      "id": "RX-SQL-01",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('ab','(?<!x)b') AS v",
+      "id": "RX-SQL-02",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('aa','(a)\\\\1') AS v",
+      "id": "RX-SQL-03",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('aaa','^a*+a$') AS v",
+      "id": "RX-SQL-04",
+      "outcome": "ok",
+      "rows": [
+        [
+          false
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('aaa','^(?>a*)a$') AS v",
+      "id": "RX-SQL-05",
+      "outcome": "ok",
+      "rows": [
+        [
+          false
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract('xaay','(a)\\\\1',0) AS v",
+      "id": "RX-SQL-06",
+      "outcome": "ok",
+      "rows": [
+        [
+          "aa"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_replace('ab ab','(?<=a)b','X') AS v",
+      "id": "RX-SQL-07",
+      "outcome": "ok",
+      "rows": [
+        [
+          "aX aX"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_count('aXbXc','(?=X)') AS v",
+      "id": "RX-SQL-08",
+      "outcome": "ok",
+      "rows": [
+        [
+          2
+        ]
+      ],
+      "schema": "struct<v:int>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_substr('foo123bar','\\\\d++') AS v",
+      "id": "RX-SQL-09",
+      "outcome": "ok",
+      "rows": [
+        [
+          "123"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_instr('abab','(?<=b)a') AS v",
+      "id": "RX-SQL-10",
+      "outcome": "ok",
+      "rows": [
+        [
+          3
+        ]
+      ],
+      "schema": "struct<v:int>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT split('a1b2c','(?<=\\\\d)') AS v",
+      "id": "RX-SQL-11",
+      "outcome": "ok",
+      "rows": [
+        [
+          "['a1', 'b2', 'c']"
+        ]
+      ],
+      "schema": "struct<v:array<string>>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract_all('aa bb cc','(\\\\w)\\\\1',0) AS v",
+      "id": "RX-SQL-12",
+      "outcome": "ok",
+      "rows": [
+        [
+          "['aa', 'bb', 'cc']"
+        ]
+      ],
+      "schema": "struct<v:array<string>>"
+    },
+    {
+      "door": "sql",
+      "error_class": "INVALID_PARAMETER_VALUE.PATTERN",
+      "expr": "SELECT rlike('a','(') AS v",
+      "id": "RX-SQL-13",
+      "message": "[INVALID_PARAMETER_VALUE.PATTERN] The value of parameter(s) `regexp` in `rlike` is invalid: '('. SQLSTATE: 22023",
+      "outcome": "error",
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "error_class": "INVALID_PARAMETER_VALUE.PATTERN",
+      "expr": "SELECT rlike('a','a{2,1}') AS v",
+      "id": "RX-SQL-14",
+      "message": "[INVALID_PARAMETER_VALUE.PATTERN] The value of parameter(s) `regexp` in `rlike` is invalid: 'a{2,1}'. SQLSTATE: 22023",
+      "outcome": "error",
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_replace('abc','(?<name>b)','[${name}]') AS v",
+      "id": "RX-SQL-15",
+      "outcome": "ok",
+      "rows": [
+        [
+          "a[]c"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('AB','(?i)ab') AS v",
+      "id": "RX-SQL-16",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('ab','\\\\p{Lower}b') AS v",
+      "id": "RX-SQL-17",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike(repeat('a',25),'(a+)+b') AS v",
+      "id": "RX-SQL-18",
+      "outcome": "ok",
+      "rows": [
+        [
+          false
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('a\\nb','a.b') AS v",
+      "id": "RX-SQL-19",
+      "outcome": "ok",
+      "rows": [
+        [
+          false
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('ab','(?<=a+)b') AS v",
+      "id": "RX-SQL-20",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_like('aa','(a)\\\\1') AS v",
+      "id": "RX-SQL-21",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('ab', NULL) AS v",
+      "id": "RX-SQL-22",
+      "outcome": "ok",
+      "rows": [
+        [
+          null
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_replace('aab','(a)\\\\1','$1') AS v",
+      "id": "RX-SQL-23",
+      "outcome": "ok",
+      "rows": [
+        [
+          "ab"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('x','\\\\Qa.b\\\\E') AS v",
+      "id": "RX-SQL-24",
+      "outcome": "ok",
+      "rows": [
+        [
+          false
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "error_class": null,
+      "expr": "SELECT rlike(repeat('ab', 20000), '(a|b)*c') AS v",
+      "id": "RX2-SQL-00",
+      "message": "An error occurred while calling o37.collectToPython.\n: java.lang.StackOverflowError\n\tat java.base/java.util.regex.Pattern$Loop.match(Pattern.java:4894)\n\tat java.base/java.util.regex.Pattern$GroupTail.match(Pattern.java:4820)\n\tat java.base/java.util.regex.Pattern$BranchConn.match(Pattern.java:4698)\n\tat java.base/java.util.regex.Pattern$BmpCharProperty.match(Pattern.java:3955)\n\tat java.base/java.util.regex.Pattern$Branch.match(Pattern.java:4734)\n\tat java.base/java.util.regex.Pattern$GroupHead.match(Pattern.java:4789)\n\tat java.base/java.util.regex.Pattern$Loop.match(Pattern.java:4898)\n\tat java.base/java.util.regex.Pattern$GroupTail.match(Pattern.java:4820)\n\tat java.base/java.util.regex.Pattern$BranchConn.match(Pattern.java:4698)\n\tat java.base/java.util.regex.Pattern$BmpCharProperty.match(Pattern.java:3955)\n\tat java.base/java.util.regex.Pattern$Branch.match(Pattern.java:4734)\n\tat java.base/java.util.regex.Pattern$GroupHead.match(Pattern.java:4789)\n\tat java.base/java.util.regex.Pattern$Loop.match(Pattern.java:4898)\n\tat java.base/java.util.regex.Pattern$GroupTail.match(Pattern.java:4820)\n\tat java.base/java.util.regex.Pattern$BranchConn.match(Pattern.java:4698)\n\tat java.base/java.util.regex.Pattern$BmpCharProperty.match(Pattern.java:3955)\n\tat java.base/java.util.regex.Pattern$Branch.match(Pattern.java:4734)\n\tat java.base/java.util.regex.Pattern$GroupHead.match(Pattern.java:4789)\n\tat java.base/java.util.regex.Pattern$Loop.match(Pattern.java:4898)\n\tat java.base/java.util.regex.Pattern$GroupTail.match(Pattern.java:4820)\n\tat java.base/java.util.regex.Pattern$BranchConn.match(Pattern.java:4698)\n\tat java.base/java.util.regex.Pattern$BmpCharProperty.match(Pattern.java:3955)\n\tat java.base/java.util.regex.Pattern$Branch.match(Pattern.java:4734)\n\tat java.base/java.util.regex.Pattern$GroupHead.match(Pattern.java:4789)\n\tat java.base/java.util.regex.Pattern$Loop.match(Pattern.java:4898)\n\tat java.base/java.util.regex.Pattern$GroupTail.match(Pattern.java:4820)\n\tat java.base/java.util.reg",
+      "outcome": "error",
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike(repeat('a', 22), '(a+)+b') AS v",
+      "id": "RX2-SQL-01",
+      "outcome": "ok",
+      "rows": [
+        [
+          false
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT split('a,b,c', '(?=,)') AS v",
+      "id": "RX2-SQL-02",
+      "outcome": "ok",
+      "rows": [
+        [
+          "['a', ',b', ',c']"
+        ]
+      ],
+      "schema": "struct<v:array<string>>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT split('aa-bb', '(a|b)\\\\1') AS v",
+      "id": "RX2-SQL-03",
+      "outcome": "ok",
+      "rows": [
+        [
+          "['', '-', '']"
+        ]
+      ],
+      "schema": "struct<v:array<string>>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT split('aaa', 'a++a') AS v",
+      "id": "RX2-SQL-04",
+      "outcome": "ok",
+      "rows": [
+        [
+          "['aaa']"
+        ]
+      ],
+      "schema": "struct<v:array<string>>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_replace('aaa', 'a*+', 'X') AS v",
+      "id": "RX2-SQL-05",
+      "outcome": "ok",
+      "rows": [
+        [
+          "XX"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract('abc', '(?<x>b)', 1) AS v",
+      "id": "RX2-SQL-06",
+      "outcome": "ok",
+      "rows": [
+        [
+          "b"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract('abc', '(?<x>b)(?=c)', 0) AS v",
+      "id": "RX2-SQL-07",
+      "outcome": "ok",
+      "rows": [
+        [
+          "b"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('ab', '(?<=a{1,3})b') AS v",
+      "id": "RX2-SQL-08",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('ab', '(?<=a*)b') AS v",
+      "id": "RX2-SQL-09",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('abab', '^(ab)\\\\1$') AS v",
+      "id": "RX2-SQL-10",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('aB', '(?i)(a)\\\\1') AS v",
+      "id": "RX2-SQL-11",
+      "outcome": "ok",
+      "rows": [
+        [
+          false
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('aA', '(?i)(a)\\\\1') AS v",
+      "id": "RX2-SQL-12",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_count('aaaa', '(?<=a)a') AS v",
+      "id": "RX2-SQL-13",
+      "outcome": "ok",
+      "rows": [
+        [
+          3
+        ]
+      ],
+      "schema": "struct<v:int>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_replace('abcabc', '(a)(?=b)', '$1$1') AS v",
+      "id": "RX2-SQL-14",
+      "outcome": "ok",
+      "rows": [
+        [
+          "aabcaabc"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('x', '\\\\1') AS v",
+      "id": "RX2-SQL-15",
+      "outcome": "ok",
+      "rows": [
+        [
+          false
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "error_class": "INVALID_PARAMETER_VALUE.PATTERN",
+      "expr": "SELECT rlike('x', '(?<=a') AS v",
+      "id": "RX2-SQL-16",
+      "message": "[INVALID_PARAMETER_VALUE.PATTERN] The value of parameter(s) `regexp` in `rlike` is invalid: '(?<=a'. SQLSTATE: 22023",
+      "outcome": "error",
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "error_class": "INVALID_PARAMETER_VALUE.PATTERN",
+      "expr": "SELECT rlike('x', 'a{') AS v",
+      "id": "RX2-SQL-17",
+      "message": "[INVALID_PARAMETER_VALUE.PATTERN] The value of parameter(s) `regexp` in `rlike` is invalid: 'a{'. SQLSTATE: 22023",
+      "outcome": "error",
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('a++', 'a\\\\++') AS v",
+      "id": "RX2-SQL-18",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract_all('a1b22c333', '\\\\d++(?=[a-z]|$)', 0) AS v",
+      "id": "RX2-SQL-19",
+      "outcome": "ok",
+      "rows": [
+        [
+          "['1', '22', '333']"
+        ]
+      ],
+      "schema": "struct<v:array<string>>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('ab\\ncd', '(?m)^cd$') AS v",
+      "id": "RX2-SQL-20",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('ab', '(?<!a)b') AS v",
+      "id": "RX2-SQL-21",
+      "outcome": "ok",
+      "rows": [
+        [
+          false
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('', '(?=)') AS v",
+      "id": "RX2-SQL-22",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_instr('xxabc', '(?<=x{2})a') AS v",
+      "id": "RX2-SQL-23",
+      "outcome": "ok",
+      "rows": [
+        [
+          3
+        ]
+      ],
+      "schema": "struct<v:int>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_substr('abc', '(?!a).') AS v",
+      "id": "RX2-SQL-24",
+      "outcome": "ok",
+      "rows": [
+        [
+          "b"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "error_class": "INVALID_PARAMETER_VALUE.PATTERN",
+      "expr": "SELECT rlike('aaa', '(a)\\\\k<x>') AS v",
+      "id": "RX2-SQL-25",
+      "message": "[INVALID_PARAMETER_VALUE.PATTERN] The value of parameter(s) `regexp` in `rlike` is invalid: '(a)\\\\k<x>'. SQLSTATE: 22023",
+      "outcome": "error",
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('aa', '(?<x>a)\\\\k<x>') AS v",
+      "id": "RX2-SQL-26",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_replace('aa', '(?<x>a)\\\\k<x>', '${x}') AS v",
+      "id": "RX2-SQL-27",
+      "outcome": "ok",
+      "rows": [
+        [
+          ""
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike(NULL, '(?=a)') AS v",
+      "id": "RX2-SQL-28",
+      "outcome": "ok",
+      "rows": [
+        [
+          null
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('a', CAST(NULL AS STRING)) AS v",
+      "id": "RX2-SQL-29",
+      "outcome": "ok",
+      "rows": [
+        [
+          null
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike(repeat('a',10001),'(a)+') AS v",
+      "id": "RX3-SQL-00",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike(repeat('x',10001),'(ab)*') AS v",
+      "id": "RX3-SQL-01",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike(repeat('a',10001),'(a){2,3}') AS v",
+      "id": "RX3-SQL-02",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike(repeat('a',10001),'a*(?=b)') AS v",
+      "id": "RX3-SQL-03",
+      "outcome": "ok",
+      "rows": [
+        [
+          false
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_count(repeat('a',20000),'(a)(?=a)') AS v",
+      "id": "RX3-SQL-04",
+      "outcome": "ok",
+      "rows": [
+        [
+          19999
+        ]
+      ],
+      "schema": "struct<v:int>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_replace(repeat('ab',6000),'(a)(?=b)','X') = repeat('Xb',6000) AS v",
+      "id": "RX3-SQL-05",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract('abbbc','(?<=ab+)c',0) AS v",
+      "id": "RX3-SQL-06",
+      "outcome": "ok",
+      "rows": [
+        [
+          "c"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract('xabbc','(?<=ab{2,4})c',0) AS v",
+      "id": "RX3-SQL-07",
+      "outcome": "ok",
+      "rows": [
+        [
+          "c"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract('axyzc','(?<=a.+)c',0) AS v",
+      "id": "RX3-SQL-08",
+      "outcome": "ok",
+      "rows": [
+        [
+          "c"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract('aab','(?<=a{2,})b',0) AS v",
+      "id": "RX3-SQL-09",
+      "outcome": "ok",
+      "rows": [
+        [
+          "b"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract('ab','(?<=a{2,})b',0) AS v",
+      "id": "RX3-SQL-10",
+      "outcome": "ok",
+      "rows": [
+        [
+          ""
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract('aabc','(?<=(a){1,2})(b)(c)',2) AS v",
+      "id": "RX3-SQL-11",
+      "outcome": "ok",
+      "rows": [
+        [
+          "b"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract('aabc','(?<=(a){1,2})(b)(c)',3) AS v",
+      "id": "RX3-SQL-12",
+      "outcome": "ok",
+      "rows": [
+        [
+          "c"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('aa','(?<x>a)\\\\1') AS v",
+      "id": "RX3-SQL-13",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('aabb','(?<x>a)\\\\k<x>(b)\\\\2') AS v",
+      "id": "RX3-SQL-14",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('aab','(?<=a+b)') AS v",
+      "id": "RX3-SQL-15",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('aab','(?<=a*b)') AS v",
+      "id": "RX3-SQL-16",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('xab','(?<=.*x)a') AS v",
+      "id": "RX3-SQL-17",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_count('\ud83d\ude00','(?=)') AS v",
+      "id": "RX3-SQL-18",
+      "outcome": "ok",
+      "rows": [
+        [
+          3
+        ]
+      ],
+      "schema": "struct<v:int>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract_all('\ud83d\ude00','(?=)',0) AS v",
+      "id": "RX3-SQL-19",
+      "outcome": "ok",
+      "rows": [
+        [
+          "['', '', '']"
+        ]
+      ],
+      "schema": "struct<v:array<string>>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_replace('\ud83d\ude00','(?=)','X') AS v",
+      "id": "RX3-SQL-20",
+      "outcome": "ok",
+      "rows": [
+        [
+          "X?X?X"
+        ]
+      ],
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT split('\ud83d\ude00','(?=)') AS v",
+      "id": "RX3-SQL-21",
+      "outcome": "ok",
+      "rows": [
+        [
+          "['?', '?', '']"
+        ]
+      ],
+      "schema": "struct<v:array<string>>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_count('\ud83d\ude00','') AS v",
+      "id": "RX3-SQL-22",
+      "outcome": "ok",
+      "rows": [
+        [
+          3
+        ]
+      ],
+      "schema": "struct<v:int>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT regexp_extract_all('\ud83d\ude00x','(?=)',0) AS v",
+      "id": "RX3-SQL-23",
+      "outcome": "ok",
+      "rows": [
+        [
+          "['', '', '', '']"
+        ]
+      ],
+      "schema": "struct<v:array<string>>"
+    },
+    {
+      "door": "sql",
+      "error_class": "INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX",
+      "expr": "SELECT regexp_extract('abc','(b)',2) AS v",
+      "id": "RX3-SQL-24",
+      "message": "[INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX] The value of parameter(s) `idx` in `regexp_extract` is invalid: Expects group index between 0 and 1, but got 2. SQLSTATE: 22023",
+      "outcome": "error",
+      "schema": "struct<v:string>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('aB','(?i)(a)\\\\1') AS v",
+      "id": "RX3-SQL-25",
+      "outcome": "ok",
+      "rows": [
+        [
+          false
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    },
+    {
+      "door": "sql",
+      "expr": "SELECT rlike('ab', '(?<=a)(?<!b)b') AS v",
+      "id": "RX3-SQL-26",
+      "outcome": "ok",
+      "rows": [
+        [
+          true
+        ]
+      ],
+      "schema": "struct<v:boolean>"
+    }
+  ],
+  "oracle": "live PySpark 4.1.2, 2026-09-16 (b2-oracle.json RX-SQL/RX-PY cells, b3-oracle.json RX2-SQL cells, rx3-oracle.json RX3-SQL cells)",
+  "unit": "java-regex-features-1"
+}

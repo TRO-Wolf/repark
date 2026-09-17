@@ -4164,11 +4164,14 @@ the pin rather than obeying it.
   and `Aggregate` output field names.
   pins: types-1/C-003
 
-### RE-2 — a zero-width match at a mid-surrogate position
+### RE-2 — a zero-width match at a mid-surrogate position — **FIXED 2026-09-16 (JAVA-REGEX-FEATURES-1)**
 
-- **repark** — `regexp_extract_all('🎉ab', '', 0)` returns **4** empty strings and
-  `regexp_extract_all('🎉ab', 'b*', 0)` returns 4 elements. `regexp_count` on the same inputs
-  returns **5**, so two functions in this repository disagree.
+- **repark** — **FIXED 2026-09-16.** `regexp_extract_all('🎉ab', '', 0)` returns **5**
+  empty strings and `regexp_extract_all('🎉ab', 'b*', 0)` returns
+  `['','','','b','']`: the collector walks the same mid-surrogate step as the counter,
+  emitting the extra zero-width match at the supplementary character's own offset
+  instead of addressing a mid-surrogate byte index. Count and collection agree with
+  each other and with Spark.
 - **Apache Spark** — **5** in every case (`['','','','','']`, `['','','','b','']`). Java's
   `Matcher` finds an empty match at every UTF-16 code-unit index, including the one *inside* a
   surrogate pair. *(oracle: live — PySpark 4.1.2.)*
@@ -4178,13 +4181,11 @@ the pin rather than obeying it.
   was not about surrogates at all and moved to its own row, `RE-3` — **which SEM-6 then closed the
   same day**, so it is gone from this registry and `regexp_substr` now returns NULL there. What
   remains here is genuinely surrogate-bound: the count.
-- **Pin** — `python/repark/tests/test_lrs6_regexp_divergences.py::test_re2_zero_width_matches_skip_the_mid_surrogate_position`
-- **Rationale** — BACKLOG. `regexp_count` walks UTF-16 code units and is already right;
-  `collect_matches` walks Unicode scalars, because a mid-surrogate offset is **not a byte boundary**
-  and Rust's `&str` cannot address one — there is no `regex::Match` to build there. Closing this
-  means running the collector in UTF-16 space and mapping back, which is a restructure of a hot
-  path, not an edge-case patch. The row exists so the number 4 is a known, measured difference
-  rather than an assumption that the two functions agree.
+- **Pin** — `python/repark/tests/test_java_regex_features_1.py::test_zero_width_matches_agree_with_count_on_supplementary_text`
+- **Rationale** — FIXED 2026-09-16 (JAVA-REGEX-FEATURES-1 round 2, L-006). No UTF-16
+  restructure was needed after all: the duplicate match lands on a real boundary, so the
+  hot path is unchanged.
+  pins: java-regex-features-1/C-002
 
 ### LOG-1 — SQL-door `log` is base 10, Spark's is natural
 
@@ -5797,7 +5798,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   in → NULL out, `containsNull=false`, numeric first argument casts to string)
   with the Rust facade arm in `dispatch_spark.rs` (oracle cells Q12-41…Q12-55). The
   Python `F.split` still raises `UnsupportedOperationException` — P2 hand-off to run
-  16a, recorded in the unit ledger. Round 3: `\Q…\E` literal quoting translates in the
+  16a, recorded in the unit ledger. PYPERF-001 (run 18c): the Python-door refusal
+  lives in `F.split` (`python/repark/src/repark/spark/functions_expr.py`), owned by
+  run 18a — no edit in this lane. Round 3: `\Q…\E` literal quoting translates in the
   shared compiler (Q15-9); lookahead/lookbehind, backreferences and possessive
   quantifiers refuse loudly naming the feature (Q15-10…Q15-12, shared with
   `regexp_*`/`rlike`); an invalid pattern keeps the `regex`-crate text beside Spark's
@@ -5814,29 +5817,88 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   (`Invalid function 'split'`).
   pins: door-converge-2/C-004, C-005; door-converge-2/C-008
 
-### JAVA-REGEX-FEATURES-1 — lookaround, backreferences and possessive quantifiers refuse — **BACKLOG 2026-09-15 (DOOR-CONVERGE-2 round 3)**
+### JAVA-REGEX-FEATURES-1 — lookaround, backreferences, possessive quantifiers, atomic groups — **FIXED 2026-09-16**
 
-- **repark** — `split` (and `regexp_*`/`rlike` through the shared compiler) raises
-  `unsupported Java regular expression feature 'lookahead' | 'lookbehind' |
-  'backreference' | 'possessive quantifier' in pattern '…'` where Spark evaluates:
-  `split('a,b,c', '(?=,)')` → `['a', ',b', ',c']` (Q15-10),
-  `split('aa-bb', '(a|b)\1')` → `['', '-', '']` (Q15-11),
-  `split('aaa', 'a++a')` → `['aaa']` (Q15-12). The `regex` crate has no lookaround,
-  backreferences or possessive quantifiers; closing the gap needs a regex engine
-  with those features (a new dependency — the owner decides, carried by the
-  orchestrator). An invalid pattern (`split('ab', '[')`, Q15-13) keeps the
-  `regex`-crate text (`unclosed character class`, lowercase) beside Spark's
-  `IllegalArgumentException` `Unclosed character class near index 0` (class under
-  the 16b export hand-off with C-003).
-- **Apache Spark** — evaluates all three cells above. *(oracle: live PySpark 4.1.2,
-  fixtures-batch15-critic-622, 2026-09-15.)*
-- **Pin** — `python/repark/tests/test_door_converge_2.py::test_q15_error_cell`
-  (`Q15-10`, `Q15-11`, `Q15-12` refusal legs, `Q15-13` text leg) pins today's
-  refusal so the fix flips it loudly.
-- **Rationale** — BACKLOG, filed 2026-09-15 (DOOR-CONVERGE-2 round 3). The refusal is
-  loud and names the feature; the fix is a regex-engine dependency the owner must
-  approve.
-  pins: door-converge-2/C-008
+- **repark** — **FIXED 2026-09-16.** The shared compiler keeps the `regex` crate for
+  every pattern it can express and compiles lookahead, numbered and named
+  backreferences, possessive quantifiers and atomic groups with `fancy-regex` 0.11
+  under a backtrack budget (100M); lookbehind answers semantically (each assertion
+  verifies its body against the text ending at the assertion — no textual rewrite);
+  a quantified group alone never routes fancy. Overrun stays disjunctive: the
+  backtrack budget, a per-call lookbehind search budget, or a catastrophic-class
+  pattern (unbounded-quantified group over alternation or nested loops) on a haystack
+  over 10000 bytes: `split('a,b,c', '(?=,)')` → `['a', ',b', ',c']` (Q15-10),
+  `split('aa-bb', '(a|b)\1')` → `['', '-', '']` (Q15-11), `split('aaa', 'a++a')` →
+  `['aaa']` (Q15-12). Dangling `\1`…`\7` read as Java octal; `${…}` drops out of
+  replacements (Spark's SQL substitution empties it: `a[]c`, `""`); a numbered
+  backref to a named group reads as the named ref does, and mixed patterns strip
+  names to numbers (`fancy-regex` refuses numbered refs beside named groups); every
+  regexp-family invalid pattern raises Spark's
+  `[INVALID_PARAMETER_VALUE.PATTERN]` naming the caller (`split` keeps its
+  long-standing `invalid regular expression '…'` text). An invalid pattern
+  (`split('ab', '[')`, Q15-13) keeps the `regex`-crate text (`unclosed character
+  class`, lowercase). History: BACKLOG 2026-09-15 (DOOR-CONVERGE-2 round 3), fixed
+  under owner ruling Q-16c-1 (`fancy-regex` approved as the fallback engine).
+- **Apache Spark** — evaluates every cell above. *(oracle: live PySpark 4.1.2,
+  fixtures-batch15-critic-622, 2026-09-15; b2/b3 `RX*` cells, rx3 `RX3-SQL-00…26`,
+  2026-09-16.)*
+- **Pin** — `python/repark/tests/test_door_converge_2.py::test_q15_cell` (`Q15-10`,
+  `Q15-11`, `Q15-12` value legs, `Q15-13` text leg) and
+  `python/repark/tests/test_java_regex_features_1.py` (the 85-cell oracle fixture
+  plus Python-door legs).
+- **Rationale** — FIXED. Residue rows R1 and R2 below cover the cells no UTF-8
+  engine can answer.
+  pins: door-converge-2/C-008; java-regex-features-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008
+
+### JAVA-REGEX-FEATURES-1-R1 — case-insensitive backreferences — **DECLARED 2026-09-16**
+
+- **repark** — `rlike('aA', '(?i)(a)\1')` answers `false`: `fancy-regex` compares a
+  backreference case-sensitively even under `(?i)`, verified at the Rust level
+  against the raw engine with no translation involved.
+- **Apache Spark** — answers `true`: Java compares the backreference
+  case-insensitively. *(oracle: live PySpark 4.1.2, b3 `RX2-SQL-12`, 2026-09-16.)*
+- **Pin** — `python/repark/tests/test_java_regex_features_1.py::test_oracle_divergence_case_insensitive_backref`
+  pins repark's `false` so a fix flips it loudly.
+- **Rationale** — DECLARED 2026-09-16. No rewrite can fix this without reimplementing
+  backtracking search around the engine; revisit if the fallback engine learns
+  case-insensitive backreferences.
+  pins: java-regex-features-1/C-002
+
+### JAVA-REGEX-FEATURES-1-R2 — lone-surrogate replace/split — **DECLARED 2026-09-16**
+
+- **repark** — `regexp_replace('😀', '(?=)', 'X')` answers `'XX😀X'` and
+  `split('😀', '(?=)')` answers `['', '', '😀', '']`: the zero-width matches agree
+  with Spark in count, but the insert positions stay on UTF-8 boundaries.
+- **Apache Spark** — splits the surrogate pair and inserts between the halves:
+  `'X?X?X'` and `['?', '?', '']` with `?` a lone surrogate that cannot exist in a
+  UTF-8 string. *(oracle: live PySpark 4.1.2, rx3 `RX3-SQL-20/21`, 2026-09-16.)*
+- **Pin** —
+  `python/repark/tests/test_java_regex_features_1.py::test_oracle_divergence_lone_surrogate_replace_split`
+  pins today's UTF-8 answer so a representable fix flips it loudly.
+- **Rationale** — DECLARED 2026-09-16. UTF-8 cannot carry a lone surrogate; the
+  count and the number of matches agree with Spark, only the manufactured halves
+  differ.
+  pins: java-regex-features-1/C-002
+
+### JAVA-REGEX-BACKTRACK-1 — runaway patterns fail the query — **DECLARED 2026-09-16**
+
+- **repark** — `rlike(repeat('ab', 20000), '(a|b)*c')` raises a loud execution error
+  (`regex overrun on pattern '(a|b)*c': exceeded looping-pattern haystack (limit
+  10000)`): a catastrophic-class pattern on a haystack over 10000 bytes, past the
+  100M backtrack budget, or past the per-call lookbehind search budget, fails
+  instead of hanging. Never a silent NULL/`false`.
+- **Apache Spark** — has no error class for a runaway pattern: the query dies with
+  `java.lang.StackOverflowError` from `java.util.regex.Pattern` (measured 2026-09-16,
+  b3 `RX2-SQL-00`). *(oracle: live PySpark 4.1.2, 2026-09-16.)*
+- **Pin** — `python/repark/tests/test_java_regex_features_1.py::test_oracle_error_cell[RX2-SQL-00]`
+  pins the loud error. Residual shape note: a plain-loop long-input pattern that
+  stays on the DFA (e.g. `(ab)*c` on 40000 chars, no fallback feature) answers the
+  mathematically correct value where Spark overflows; add an oracle cell if that
+  shape wants the same loud failure.
+- **Rationale** — DECLARED 2026-09-16 under orchestrator ruling R-18c-O3. Outcome
+  converges (both sides fail the query); the mechanism differs by construction, so
+  the row quotes Spark's `StackOverflowError` instead of reproducing it.
+  pins: java-regex-features-1/C-004
 
 ### FN-INITCAP-1 — `initcap` starts a word at any non-alphanumeric — **FIXED 2026-09-04 (FN-FIX-2)**
 

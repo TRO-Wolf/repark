@@ -51,6 +51,8 @@ pub mod spark_log;
 pub mod spark_log1p;
 pub mod spark_math;
 pub mod spark_nullability;
+pub mod spark_regex_engine;
+mod spark_regex_lookbehind;
 pub mod spark_regexp;
 pub mod spark_regexp_match;
 pub mod spark_result_types;

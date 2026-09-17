@@ -4961,6 +4961,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `''` for any idx on both doors). pins: fn-regexp-extract-1/C-002, C-003
   **DOOR-CONVERGE-2 round 3 (2026-09-15):** the lookbehind refusal names the feature
   (`unsupported Java regular expression feature 'lookbehind'`). pins: door-converge-2/C-008
+  **JAVA-REGEX-FEATURES-1 (2026-09-16):** lookbehind answers through the fallback
+  engine on both doors (`test_extract_java_lookbehind_answers`).
+  pins: java-regex-features-1/C-001
+  **Step 6:** `Q15-10…12` move from refusal legs to value legs in
+  `test_door_converge_2.py` (`Q15-13` untouched). pins: java-regex-features-1/C-008
+  **Step 7:** lint-clean docstring shapes. pins: java-regex-features-1/C-001
+- `test_java_regex_features_1.py` + `java_regex_features_1_spark_oracle.json` —
+  **JAVA-REGEX-FEATURES-1 (2026-09-16):** every in-scope oracle cell (`RX-SQL-00…24`,
+  `RX-PY-00…02`, `RX2-SQL-00…29`, `RX3-SQL-00…26`) pinned on its own door for value, Arrow type and
+  nullability, plus Python-door legs for the remaining match/extract names and the NULL
+  pattern leg. Error legs pin Spark's `INVALID_PARAMETER_VALUE.PATTERN` (the overrun
+  leg pins `overrun`, the group-index leg pins `REGEX_GROUP_INDEX`); `RX2-SQL-12` is an honest `_divergence` pin (case-insensitive
+  backreference, residue row R1). The `RX-SQL-18` / `RX2-SQL-01` / `RX3-SQL-00…05` legs pin nullable
+  true: the nullability rides in on `repeat(...)` (another unit's kernel), while
+  `rlike` itself propagates correctly. `RX3-SQL-20/21` pin today's UTF-8 answer as DECLARED row R2 (lone surrogates are unrepresentable).
+  pins: java-regex-features-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **Remediation round 1 (2026-09-16):** `RX3-SQL-00…26` join the fixture and the
+  value/error legs (group-index leg pins `REGEX_GROUP_INDEX`); the R2 declared
+  test pins `XX😀X` / `['', '', '😀', '']`; the closed `RE-2` pin moved in from
+  `test_lrs6_regexp_divergences.py` as a convergence test.
 
 - `test_fnp_9_collections_json.py` — **FNP-9/10 (2026-09-05):** the collections and JSON
   families on both Spark-facade doors against the live PySpark 4.1.2 oracle — `get_json_object`
@@ -5135,6 +5155,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-08-21):** the `regexp_substr` pin is now `RE-3`, its own row, measured on plain ASCII; the
   BMP-bound test's claim that both RE-2 divergences are confined to supplementary-plane text was
   false for the substr half and is corrected.
+  **JAVA-REGEX-FEATURES-1 round 2 (2026-09-16):** `RE-2` closed, so its pin left this
+  file — `test_java_regex_features_1.py::test_zero_width_matches_agree_with_count_on_supplementary_text`
+  owns those assertions now; the BMP agreement pin stays.
 
 - `test_lrs4_door_domain.py` — **LRS-4 (2026-08-20):** pins for `LOG-1` and `UNIX-1`.
   **SEM-1 (2026-08-31):** `LOG-1` pins flip to Spark: `log(8)` is the natural log on both
