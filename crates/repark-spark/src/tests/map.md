@@ -195,7 +195,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   single-file seed. Absolute Spark 4.1.2 + Iceberg 1.11.0 values.
   pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003
 - `v3_subquery_dml.rs` — **V3-8 (2026-09-02):** the V3-COW-1 lift for subquery-`WHERE` COW DML
-  (RP-22, 2026-09-17: the `assert_created` / `assert_adopted` awaits are wrapped in `Box::pin` — the fork pin grew those futures past clippy's `large_futures` bound)
+  (RP-22, 2026-09-17: the `assert_created` / `assert_adopted` awaits are wrapped in `Box::pin` — the fork pin grew those futures past clippy's `large_futures` bound; `v3_lineage.rs`'s byte tripwire re-records this file's hash for that edit)
   on created and adopted v3 — `DELETE … IN` / `NOT IN` / `EXISTS` / `NOT EXISTS` and
   `UPDATE … IN`, each pinning rows, `(id,_row_id,seq)`, next-row-id / first-row-id /
   added-rows and the live data-file count at the single-file seed. `F_V3_8_UPDATE_FILES` is
