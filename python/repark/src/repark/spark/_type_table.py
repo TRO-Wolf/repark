@@ -584,7 +584,7 @@ def _parse_not_null_datatype(text: str) -> Any:
     """Parse a ``struct<…>`` carrying Spark ``NOT NULL`` field markers."""
     t = _types()
     stripped = text.strip()
-    if not stripped[:7].lower() == "struct<" or not stripped.endswith(">"):
+    if stripped[:7].lower() != "struct<" or not stripped.endswith(">"):
         return _parse_datatype_string_inner(stripped)
     fields: list[Any] = []
     for part in t._split_top_level(stripped[len("struct<") : -1], ","):

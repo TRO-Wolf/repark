@@ -245,3 +245,34 @@ re-exports moved out of the module root (non-test builds warn); audit skill
 note: divergences re-measured live this round (derived True-vs-False,
 partitioned `['i']`-vs-`['i','s']`) and filed as this residue plus BACKLOG
 IO-PARQUET-PARTITION-DISCOVERY-1, no new findings.
+
+## COVERAGE_ATTESTATION (2026-09-17, round 3)
+
+- M-1 shape: `schema_parquet/csv/json/text`, `schema_parquet_partitioned`,
+  `json_parquet_partitioned` cells green — struct nullable false, every field
+  non-nullable. Artifact: `python/repark/tests/test_df_metadata_col_1.py`.
+- M-2 names: `names_*` cells green; `names_parquet_partitioned`
+  strict-xfailed (BACKLOG IO-PARQUET-PARTITION-DISCOVERY-1).
+- M-3 values: `values_parquet/csv` green incl. collected rows
+  (columns + `simpleString` + exact metadata-field nullability); derived
+  `endswith`/`substring` nullability uncompared (residue row above).
+- M-4 `metadataColumn`: `metadata_*` cells green incl. post-select, filter,
+  text; plus `docs/examples/dataframe/metadata_column.py` executed rc=0 and
+  covered (`DataFrame.metadataColumn`, inventory row, EX-0 enumerator
+  1082 → 1083, coverage gate rc=0 with falsification).
+- M-5 errors: error-condition cells green in the same file (C-006/C-007).
+- Native door: `repark-core` lib `file_metadata` (10) + `plan_introspect`
+  (10) tests green. SQL door: path-table door strict-xfailed under
+  pre-existing SQL-METADATA-COL-1 (out of scope).
+- No `#[expect]`, no EXCEPTIONS row, no comments added; size ceilings held
+  (split + 1016 → 1014 ratchet + CAP-1/EX-0 mirrors).
+
+## VERDICT
+
+CONCLUDED with one environmental finding: whole parity suite rc=0
+(757 passed); `make verify` rc=0; whole facade suite 9076 passed with 2
+failures confined to `test_q14_current_date_bare_and_paren`, a UTC-vs-EDT
+midnight-window flake (engine answers UTC 09-17, `date.today()` answers EDT
+09-16; both pass under TZ=UTC on this tree; no date code in this diff) —
+left red for its owning unit, recorded here and in the hand-back.
+`git status --porcelain` must read empty at handoff.

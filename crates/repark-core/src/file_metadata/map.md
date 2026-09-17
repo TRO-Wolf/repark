@@ -11,7 +11,8 @@ DF-METADATA-COL-1 round 3; behavior unchanged by the move.
 ## Modules
 
 - [`scan.rs`](scan.rs) — `FileKind`, the delegating `FileMetadataScan`
-  marker, `FileHit`, and the physical-plan file listing. pins:
+  marker, `FileHit`, and the physical-plan file listing (the marker type is
+  crate-visible so the semantic hash reaches the inner provider). pins:
   df-metadata-col-1/M-1, M-3
 - [`status.rs`](status.rs) — plan walk (`Found` / `Realized` / dead ends)
   and the `Available` / `Shadowed` / `Absent` status. pins:

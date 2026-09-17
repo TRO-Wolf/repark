@@ -1541,6 +1541,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the 17 moved names on core and on the package IS the leaf module's object, not a copy.
   IO-BUCKET-CLUSTER-1 (2026-09-14): `EXPECTED_NEW_PACKAGE_SUBMODULES` gains
   `writer_layout`. pins: io-bucket-cluster-1/C-005
+  DF-METADATA-COL-1 (2026-09-16): `EXPECTED_DATAFRAME_DIR` gains
+  `metadataColumn`; `EXPECTED_PACKAGE_EXPORTS` and `EXPECTED_CORE_EXPORTS`
+  gain `metadata_column`. pins: df-metadata-col-1/M-4
   pins: dfcore-1/C-001, C-002, C-003, C-008
   DFCORE-2 (2026-09-07): the class dir loses exactly the four moved helpers; core and the
   package each gain exactly the two new module names; `MOVED_SELECT_HELPERS` pins each

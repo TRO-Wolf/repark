@@ -263,6 +263,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   int. Depth-200 chained-filter hash medians 0.0060s on the always-analyze build
   (2026-09-15, release module, round 4). The Iceberg scan exec exposes table and snapshot
   only, never materialized data files, so Iceberg frames answer empty.
+  **DF-METADATA-COL-1 (2026-09-16):** a `FileMetadataScan`-wrapped source
+  hashes through to the inner provider, so marked and unmarked reads of one
+  path share the fingerprint. pins: df-metadata-col-1/M-3
   pins: df-plan-introspect-1/C-001, C-002, C-006, C-007, C-008, C-009, C-010, C-011, C-013, C-014
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
@@ -369,7 +372,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: nullability-2/C-006
   pins: csv-infer-perf-1/C-002, C-005
   pins: torture-1/C-018, C-020
-- `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead. **DF-METADATA-COL-1 (2026-09-16):** `for_single_file` / `metadata_files` / `metadata_partition_fields` serve the per-file text augmentation. pins: df-metadata-col-1/M-1, M-3
+- `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead. **DF-METADATA-COL-1 (2026-09-16):** `for_single_file` / `metadata_files` / `metadata_partition_fields` serve the per-file text augmentation (null-default `map_or` per clippy). pins: df-metadata-col-1/M-1, M-3
   A `TableProvider` over sorted local files, plain dirs (hidden `_`/`.` skipped,
   `key=value` dirs descended), and Hadoop globs (see `text_glob.rs`), serving one
   nullable `value` Utf8 column through `StreamingTableExec` over at most 8 contiguous

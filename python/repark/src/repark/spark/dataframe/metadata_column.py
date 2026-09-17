@@ -112,10 +112,7 @@ def metadataColumn(frame: Any, name: str) -> Column:  # noqa: N802 — PySpark m
     """
     if not isinstance(name, str):
         raise PySparkTypeError(
-            message=(
-                "[NOT_STR] Argument `colName` should be a str, "
-                f"got {type(name).__name__}."
-            ),
+            message=(f"[NOT_STR] Argument `colName` should be a str, got {type(name).__name__}."),
             errorClass="NOT_STR",
             messageParameters={"arg_name": "colName", "arg_type": type(name).__name__},
         )

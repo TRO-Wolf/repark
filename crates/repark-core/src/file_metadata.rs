@@ -13,6 +13,7 @@ pub(crate) use ensure::mark_file_scan;
 pub use ensure::{ensure_file_metadata, expr_mentions_file_metadata};
 pub use error::FileMetadataError;
 pub use scan::FileKind;
+pub(crate) use scan::FileMetadataScan;
 pub use status::{FileMetadataStatus, file_metadata_status};
 pub const METADATA_COLUMN_NAME: &str = "_metadata";
 

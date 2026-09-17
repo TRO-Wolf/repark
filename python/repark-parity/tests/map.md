@@ -129,12 +129,20 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_ex_0_example_coverage.py` — **DF-METADATA-COL-1 (2026-09-16):** the
+  enumerated public surface moves 1082 → 1083 as `DataFrame.metadataColumn`
+  joins the facade; `docs/examples/dataframe/metadata_column.py` covers it and
+  the backlog baseline holds at 108.
+  pins: df-metadata-col-1/M-4
 - `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 2 (2026-09-16):**
   mirror rows ratchet `functions_expr.py` 2235 → 2213 and
   `test_explode_rewrite.py` 1135 → 1133; a short-lived
-  `scripts/check_example_coverage.py` row was removed when the script was
   compacted back under the default ceiling; python_approved stays 32.
   pins: fnp-gen-1/C-006
+- `test_cap_1_source_file_line_cap.py` — **DF-METADATA-COL-1 (2026-09-16):**
+  mirror row ratchets `repark-python/src/dataframe.rs` 1017 → 1014
+  (comment-strip shrink).
+  pins: df-metadata-col-1/M-2, M-4
 - `test_cap_1_source_file_line_cap.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):**
   `dataframe/writer_readwriter.py` mirror row 1111 → 1105 with the script baseline
   (the bucketBy/sortBy/clusterBy bindings and action-check calls landed while the five

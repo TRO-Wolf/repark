@@ -10,7 +10,6 @@ pins: df-metadata-col-1/M-1, M-2, M-3, M-4, M-5
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -63,9 +62,7 @@ def _parquet(spark: ReparkSession, root: str):
     return spark.read.parquet(f"{root}/p")
 
 
-def _assert_condition(
-    error: BaseException, name: str, fragments: list[str] | None = None
-) -> None:
+def _assert_condition(error: BaseException, name: str, fragments: list[str] | None = None) -> None:
     """Assert a Spark error class, condition, and stable message fragments."""
     recorded = _error(name)
     assert type(error).__name__ == recorded["raises"]
@@ -121,14 +118,10 @@ def test_json_parquet_carries_file_source_metadata(spark: ReparkSession, root: s
     )
 
 
-def test_json_partitioned_carries_file_source_metadata(
-    spark: ReparkSession, root: str
-) -> None:
+def test_json_partitioned_carries_file_source_metadata(spark: ReparkSession, root: str) -> None:
     """pins: df-metadata-col-1/M-1 — cell `json_parquet_partitioned`."""
     frame = spark.read.parquet(f"{root}/pp")
-    assert repr(frame.select("_metadata").schema.json()) == (
-        _result("json_parquet_partitioned")
-    )
+    assert repr(frame.select("_metadata").schema.json()) == (_result("json_parquet_partitioned"))
 
 
 def test_json_csv_carries_file_source_metadata(spark: ReparkSession, root: str) -> None:
@@ -189,7 +182,7 @@ def test_star_plus_fields_names(spark: ReparkSession, root: str) -> None:
     assert repr(frame.columns) == _result("names_parquet")
 
 
-@pytest.mark.xfail(strict=True, reason="BACKLOG IO-PARQUET-PARTITION-DISCOVERY-1 (R-18b-10): base parquet read drops the hive partition column")
+@pytest.mark.xfail(strict=True, reason="BACKLOG IO-PARQUET-PARTITION-DISCOVERY-1 (R-18b-10)")
 def test_star_plus_fields_names_partitioned(spark: ReparkSession, root: str) -> None:
     """pins: df-metadata-col-1/M-2 — cell `names_parquet_partitioned`."""
     frame = spark.read.parquet(f"{root}/pp").select(
@@ -201,35 +194,35 @@ def test_star_plus_fields_names_partitioned(spark: ReparkSession, root: str) -> 
 def test_star_plus_fields_names_csv(spark: ReparkSession, root: str) -> None:
     """pins: df-metadata-col-1/M-2 — cell `names_csv`."""
     frame = (
-        spark.read.option("header", "true").schema("i int, s string").csv(f"{root}/c").select(
-            "*", "_metadata.file_name", "_metadata.file_size"
-        )
+        spark.read.option("header", "true")
+        .schema("i int, s string")
+        .csv(f"{root}/c")
+        .select("*", "_metadata.file_name", "_metadata.file_size")
     )
     assert repr(frame.columns) == _result("names_csv")
 
 
 def test_star_plus_fields_names_json(spark: ReparkSession, root: str) -> None:
     """pins: df-metadata-col-1/M-2 — cell `names_json`."""
-    frame = spark.read.schema("i int, s string").json(f"{root}/j").select(
-        "*", "_metadata.file_name", "_metadata.file_size"
+    frame = (
+        spark.read.schema("i int, s string")
+        .json(f"{root}/j")
+        .select("*", "_metadata.file_name", "_metadata.file_size")
     )
     assert repr(frame.columns) == _result("names_json")
 
 
 def test_star_plus_fields_names_text(spark: ReparkSession, root: str) -> None:
     """pins: df-metadata-col-1/M-2 — cell `names_text`."""
-    frame = spark.read.text(f"{root}/t").select(
-        "*", "_metadata.file_name", "_metadata.file_size"
-    )
+    frame = spark.read.text(f"{root}/t").select("*", "_metadata.file_name", "_metadata.file_size")
     assert repr(frame.columns) == _result("names_text")
 
 
 def test_metadata_survives_dropping_select(spark: ReparkSession, root: str) -> None:
     """pins: df-metadata-col-1/M-2, M-4 — cell `metadata_col_after_select`."""
     frame = _parquet(spark, root)
-    assert repr(frame.select("i").select(frame.metadataColumn("_metadata")).schema.simpleString()) == (
-        _result("metadata_col_after_select")
-    )
+    selected = frame.select("i").select(frame.metadataColumn("_metadata"))
+    assert repr(selected.schema.simpleString()) == (_result("metadata_col_after_select"))
 
 
 def test_named_field_survives_dropping_select(spark: ReparkSession, root: str) -> None:
@@ -242,14 +235,12 @@ def test_named_field_survives_dropping_select(spark: ReparkSession, root: str) -
 def test_metadata_survives_filter(spark: ReparkSession, root: str) -> None:
     """pins: df-metadata-col-1/M-3, M-4 — cell `metadata_after_filter`."""
     frame = _parquet(spark, root)
-    scoped = frame.filter("i > 0").select(
-        frame.metadataColumn("_metadata").getField("file_size")
-    )
+    scoped = frame.filter("i > 0").select(frame.metadataColumn("_metadata").getField("file_size"))
     assert scoped.schema.simpleString() == _result("metadata_after_filter")
 
 
 def test_parquet_values(spark: ReparkSession, root: str) -> None:
-    """pins: df-metadata-col-1/M-3 — cell `values_parquet` (R-18b-9: derived-column nullability out of scope, metadata fields exact)."""
+    """pins: df-metadata-col-1/M-3 — cell `values_parquet` (R-18b-9 residue)."""
     frame = (
         _parquet(spark, root)
         .select("i", "_metadata.file_path", "_metadata.file_block_start", "_metadata.row_index")
@@ -272,11 +263,11 @@ def test_parquet_values(spark: ReparkSession, root: str) -> None:
     (path,) = paths
     assert path.startswith("file:")
     assert path.endswith(".parquet")
-    assert os.path.isfile(path[len("file:") :])
+    assert Path(path[len("file:") :]).is_file()
 
 
 def test_csv_values(spark: ReparkSession, root: str) -> None:
-    """pins: df-metadata-col-1/M-3 — cell `values_csv` (R-18b-9: derived-column nullability out of scope, metadata fields exact)."""
+    """pins: df-metadata-col-1/M-3 — cell `values_csv` (R-18b-9 residue)."""
     frame = (
         spark.read.option("header", "true")
         .schema("i int, s string")
@@ -320,9 +311,7 @@ def test_parquet_field_values(spark: ReparkSession, root: str) -> None:
 
 def test_metadata_column_repr(spark: ReparkSession, root: str) -> None:
     """pins: df-metadata-col-1/M-4 — cell `metadata_col_repr`."""
-    assert repr(_parquet(spark, root).metadataColumn("_metadata")) == _result(
-        "metadata_col_repr"
-    )
+    assert repr(_parquet(spark, root).metadataColumn("_metadata")) == _result("metadata_col_repr")
 
 
 def test_metadata_column_rejects_int(spark: ReparkSession, root: str) -> None:
@@ -403,9 +392,7 @@ def test_metadata_column_field_name_select(spark: ReparkSession, root: str) -> N
     frame = _parquet(spark, root)
     with pytest.raises(AnalysisException) as caught:
         frame.select(frame.metadataColumn("file_path")).schema.simpleString()
-    _assert_condition(
-        caught.value, "metadata_bad_name_select", ["`file_path` cannot be resolved"]
-    )
+    _assert_condition(caught.value, "metadata_bad_name_select", ["`file_path` cannot be resolved"])
 
 
 def test_metadata_column_field_name_repr(spark: ReparkSession, root: str) -> None:
@@ -413,9 +400,7 @@ def test_metadata_column_field_name_repr(spark: ReparkSession, root: str) -> Non
     frame = _parquet(spark, root)
     with pytest.raises(AnalysisException) as caught:
         repr(frame.metadataColumn("file_path"))
-    _assert_condition(
-        caught.value, "metadata_repr_name", ["`file_path` cannot be resolved"]
-    )
+    _assert_condition(caught.value, "metadata_repr_name", ["`file_path` cannot be resolved"])
 
 
 def test_metadata_column_after_join(spark: ReparkSession, root: str) -> None:
@@ -437,9 +422,7 @@ def test_metadata_column_after_agg(spark: ReparkSession, root: str) -> None:
     """pins: df-metadata-col-1/M-4 — cell `metadata_col_after_agg`."""
     frame = _parquet(spark, root)
     with pytest.raises(AnalysisException) as caught:
-        frame.groupBy("s").count().select(
-            frame.metadataColumn("_metadata")
-        ).schema.simpleString()
+        frame.groupBy("s").count().select(frame.metadataColumn("_metadata")).schema.simpleString()
     _assert_condition(
         caught.value,
         "metadata_col_after_agg",

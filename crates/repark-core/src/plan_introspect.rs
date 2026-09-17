@@ -434,6 +434,13 @@ pub(crate) fn write_table_source<S: BuildHasher>(
         write_debug(hash, &Arc::as_ptr(&provider));
         return;
     }
+    if let Some(marker) = provider.downcast_ref::<crate::file_metadata::FileMetadataScan>() {
+        let inner = datafusion::catalog::default_table_source::provider_as_source(Arc::clone(
+            marker.inner(),
+        ));
+        write_table_source(&inner, ctx, hash);
+        return;
+    }
     if let Some(table) = provider.downcast_ref::<ViewTable>() {
         hash.write(b"View");
         write_plan(table.logical_plan(), ctx, hash);

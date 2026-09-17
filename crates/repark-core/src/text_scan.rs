@@ -262,8 +262,7 @@ impl TextTableProvider {
                         self.partition_values
                             .get(file)
                             .and_then(|row| row.get(index))
-                            .map(partition_value_to_scalar)
-                            .unwrap_or(ScalarValue::Null)
+                            .map_or(ScalarValue::Null, partition_value_to_scalar)
                     })
                     .collect();
                 (file.clone(), values)

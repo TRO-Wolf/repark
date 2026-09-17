@@ -120,6 +120,11 @@ DF-SUBQUERY-1 (2026-09-15): the four subquery-surface methods (``scalar``,
 walk sees them — so ``EXPECTED_DATAFRAME_DIR`` gains exactly those four names;
 ``core`` and the package each gain exactly the one new module name ``subquery``.
 pins: df-subquery-1/C-007
+DF-METADATA-COL-1 (2026-09-16): ``DataFrame.metadataColumn`` binds
+``metadata_column.metadataColumn``, so ``EXPECTED_DATAFRAME_DIR`` gains exactly
+that one name; ``core`` and the package each gain exactly the one new module
+name ``metadata_column``.
+pins: df-metadata-col-1/M-4
 """
 
 from __future__ import annotations

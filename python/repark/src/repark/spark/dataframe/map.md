@@ -130,7 +130,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `metadata_column` helper; string `_column_of` routes `_metadata`-dotted names
   through its binder. pins: df-metadata-col-1/M-2, M-4
 - `metadata_column.py` — `metadataColumn(name)` plus `bind_if_file_metadata`:
-  dotted `_metadata.<field>` strings become struct-field projections.
+  dotted `_metadata.<field>` strings become struct-field projections; mistyped
+  and misshaped names fail eagerly with the Spark condition.
   pins: df-metadata-col-1/M-2, M-4
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   IO-DECLARED-1 (2026-09-14): `replace` joins the missing-data surface as the exact
