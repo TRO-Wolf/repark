@@ -306,6 +306,41 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the explicit-run recorder behind the fixture and the oracle JSON above (JVM +
   combined interpreter; invocation in its docstring).
   pins: ice-hadoop-vn-1/C-007
+- [test_ice_promote_read_1.py](test_ice_promote_read_1.py) — **ICE-PROMOTE-READ-1
+  (2026-09-16):** reads and DML after a legal `ALTER COLUMN … TYPE` promotion answer Spark
+  4.1.2 row for row (run-19a V2-10c, V2-06b, V3-11, V3-14). The cases come from
+  `_record_ice_promote_read_1.build_cases()` and Spark's answers from the recorded
+  `fixtures/torture/data/ice_promote_read_1/truth.json`; the first cell fails if the
+  recording's `catalog_sha256` no longer matches the driver. Always-run:
+  `test_sql_door_matches_spark` (126 table cases — unpartitioned and partition-source
+  filters on single- and mixed-era tables, MERGE keyed on the promoted column, range and
+  long-`IN` UPDATE/DELETE, single-era DML, DML and static/dynamic overwrite on a promoted
+  identity partition source, the `inspect/*` metadata-table reads after an identity-source
+  promotion (nested projections aliased to leaf names per ruling Q-20a-5; the
+  bare-name arm is EX-COL-2 BACKLOG), v2/v3 × CoW/MoR), `test_dataframe_door_matches_spark` (the
+  same cases through `table().filter()`, facade `mergeInto`, and
+  `writeTo().overwritePartitions()`; the three nested metadata-table projections are
+  SQL-only — the DataFrame door cannot resolve `partition.p` — while the flat `p = 7`
+  read carries a `filter()` twin), and `test_adopted_spark_table_matches_spark` (the
+  two committed Spark-created promoted tables materialized at their baked-in path under a
+  directory lock, `register_table`, every predicate on both doors, then MERGE `*`, range
+  UPDATE and DELETE). Values and the promoted columns' Arrow types are compared on the
+  `to_arrow` path. Live (`REPARK_PARITY_LIVE=1`): live Spark re-derives every recorded
+  answer on private catalogs; any drift fails the cell. Re-record:
+  `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the
+  path, then `.venv/bin/python python/repark/tests/_record_ice_promote_read_1.py`
+  (`REPARK_ORACLE_IVY` points `spark.jars.ivy` at a warm Ivy cache). Registry rows (FIXED
+  2026-09-16): ICE-PROMOTE-READ-1, ICE-PROMOTE-DML-1, ICE-PROMOTE-PARTITION-1. The fork half
+  (F-PROMOTE-READ-1) reaches CI with the fork pin bump; until then the table cases are red at
+  pin `edc38c6a`.
+  pins: ice-promote-read-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  pins: ice-promote-read-1/C-010, C-012, C-013, C-014, C-015
+- `_record_ice_promote_read_1.py` — the **record driver** for the module above (NOT a `test_`
+  module; never collected). `build_cases()` is the case catalog both the driver and the pins
+  read; `main()` runs every case on a Hadoop catalog, freezes the two adopted tables into
+  the fixture directory before their DML steps, and writes `truth.json` (one answer per
+  line, `catalog_sha256`). `run_case_steps` / `run_overwrite_partitions_twin` are reused by
+  the live cell so the live and recorded answers come from one code path.
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
@@ -1413,6 +1448,25 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and rewrites part=0 away; unknown strategy and bad where use Spark's text; `sort` and
   `sort_order` refuse.
   pins: maint-rewrite-data-files-options/C-003, C-004, C-005, C-006, C-007
+- [test_ice_rdf_options_1.py](test_ice_rdf_options_1.py) —
+  **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** offline pins over the recorded 49-cell
+  Spark 4.1.2 oracle ([ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json),
+  recorded by [_record_rdf_options_1_oracle.py](_record_rdf_options_1_oracle.py)) — result counts
+  (data bytes against vanished data files, delete bytes against vanished delete files),
+  file/spec/row counts, snapshot count+ops, and `IllegalArgumentException` class+message
+  per error cell; the 7 granularity cells carry dated per-cell `xfail(strict)` reasons with
+  green keep-set (rows + rewritten) twins; failed/removed delete-count pins with the
+  DANGLE-2-only xfails; RPD unwired-key `UnsupportedOperationException` pins, IAE-first
+  order pins, the NULL-dangling-precedence pin, and the max-failed-commits no-effect pin;
+  the live tier re-runs the generator and asserts the fixture plus a `4.1.` banner.
+  pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009, C-010
+- [ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json) —
+  **ICE-RDF-OPTIONS-1 (2026-09-17):** the 33-cell RDF oracle section replays byte-identical
+  from the committed generator; the 7 `rpd_*` cells and 2 `residue_*` sequences are this
+  unit's own Spark measurements (MoR half-delete shapes).
+- [_record_rdf_options_1_oracle.py](_record_rdf_options_1_oracle.py) —
+  **ICE-RDF-OPTIONS-1 (2026-09-17):** the Spark 4.1.2 record driver (parameterised warehouse,
+  ivy cache, and output paths); critics replay it to reproduce the fixture.
 - `test_rdf_schema_evo_1.py` — **RDF-SCHEMA-EVO-1** (2026-09-06): `rewrite_data_files` The module docstring is the one-line form; the unit story is in this row and the ledger.
   after schema evolution, through the facade over 6-file seeds with no later write. Red on
   fork `8bc325a3` (the owner's 7v8 refusal and its drop/rename/promote/v3 siblings), green
@@ -5326,7 +5380,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Add a `SHOW NAMESPACES` / namespace-listing / `LIKE`-pattern test | `test_show_namespaces.py` |
 | Add a bare-`spark.sql` eager-DML (INSERT/DELETE/UPDATE/empty OW wipe/CALL refuse) test | `test_sql_dml_eager.py` (C3-Q-002 empty OW facade pin; C3-L-001 residual unknown-CALL refuse; C5-Q-001 incompatible empty OW must not wipe; r25 T2 CREATE OR REPLACE / REPLACE BRANCH|TAG round-trip pin) |
 | Pin rewrite_data_files `where` / strategy / sort_order | `test_rewrite_data_files_options.py` — filtered rewrite byte-identity, Spark unknown-strategy and bad-where text, `sort_order` refuse (`RDF-SORT-1`) |
-| Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and the options map refuses, so the zero is a real count. *(MW-7, 2026-08-24: the zero is real, but do not read it as "delete files therefore survive compaction" — on Spark they do not, because its planner rewrites delete-laden files outright. Registry `RDF-1`.)* **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table`. **MW-6:** `rewrite_manifests` pins Spark's two non-nullable `int32` columns and its counts (5 manifests → 1, `5, 1`), the no-op zeros with no new snapshot, and the argument surface — `spec_id` refuses, `use_caching` is accepted and changes nothing (`MANIFEST-2`) |
+| Pin rewrite `options` maps against the recorded oracle | `test_ice_rdf_options_1.py` — 42 offline pins over `ice_rdf_options_1_spark_oracle.json` (recorded by `_record_rdf_options_1_oracle.py`), fork cells `xfail(strict)` (`BLOCKED-ON-FORK F-RDF-OPTIONS-1`), live tier re-runs the generator (`ICE-RDF-OPTIONS-1`, `RDF-DANGLING-1`) |
+| Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and no options map is passed, so the zero is a real count (the map itself is accepted since **ICE-RDF-OPTIONS-1 round 1**). *(MW-7, 2026-08-24: the zero is real, but do not read it as "delete files therefore survive compaction" — on Spark they do not, because its planner rewrites delete-laden files outright. Registry `RDF-1`.)* **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table`. **MW-6:** `rewrite_manifests` pins Spark's two non-nullable `int32` columns and its counts (5 manifests → 1, `5, 1`), the no-op zeros with no new snapshot, and the argument surface — `spec_id` refuses, `use_caching` is accepted and changes nothing (`MANIFEST-2`) |
 | Pin the MW-7 scale-measurement machinery | `test_mw7_scale_smoke.py` — the bench driver at gate scale: census vs an independent count, delete files `partitions x merges` then folded to one per partition, COW zero-delete control (a control, not a clean delete-cost isolate — MOR-minus-COW bundles delete reads with MOR's data-file fan-out), manifest drop across `rewrite_manifests`, the five-procedure order, timings that carry their answer |
 | Pin the W-0 window-shape bench at gate scale | `test_w0_window_bench_smoke.py` — Iceberg lead/lag cell, memory_limit outcome class, the sliding-refuse set (**EMPTY since WIN-SLIDE-1, 2026-09-04** — the same pin, now the guard against a refusal returning), remaining absents fail at planning. pins: w-0-window-bench/C-002, C-005, C-006, C-009; win-slide-1/C-008 |
 | Pin an aggregate over a SLIDING window frame on both doors | `test_win_slide_1.py` — the thirteen once-refusing aggregates x five frame shapes x two doors against the recorded Spark 4.1.2 column, plus `collect_list` frame order, the `collect_set` multiset, `try_sum` BIGINT overflow inside a frame, `CURRENT ROW … UNBOUNDED FOLLOWING`, and the `percentile_approx` accuracy divergence. pins: win-slide-1/C-001, C-002, C-003, C-004, C-007 |
