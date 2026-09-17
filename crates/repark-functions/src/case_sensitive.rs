@@ -1,5 +1,3 @@
-//! Spark-door `spark.sql.caseSensitive` carrier for name resolution.
-
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::BuildHasher;
@@ -9,16 +7,12 @@ use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, Ex
 use datafusion::error::DataFusionError;
 use datafusion::prelude::SessionConfig;
 
-/// Canonical Spark `SQLConf` key.
 pub const SPARK_SQL_CASE_SENSITIVE_KEY: &str = "spark.sql.caseSensitive";
 
-/// Spark default: names resolve case-insensitively.
 pub const DEFAULT_SPARK_SQL_CASE_SENSITIVE: bool = false;
 
-/// Session-scoped case-sensitivity flag name resolution reads out of [`ConfigOptions`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SparkCaseSensitiveConfig {
-    /// `true` → exact match; `false` → ASCII case-insensitive fold.
     pub enabled: bool,
 }
 
@@ -31,7 +25,6 @@ impl Default for SparkCaseSensitiveConfig {
 }
 
 impl ConfigExtension for SparkCaseSensitiveConfig {
-    /// Two segments keep the carrier unreachable through `SET`.
     const PREFIX: &'static str = "repark.case-sensitive";
 }
 
@@ -48,7 +41,6 @@ impl ExtensionOptions for SparkCaseSensitiveConfig {
         Box::new(self.clone())
     }
 
-    /// Refuse because the knob is set on the session builder.
     fn set(&mut self, key: &str, _value: &str) -> Result<()> {
         Err(DataFusionError::Configuration(format!(
             "`{}.{key}` is not a settable option: case sensitivity is set with \
@@ -58,15 +50,12 @@ impl ExtensionOptions for SparkCaseSensitiveConfig {
         )))
     }
 
-    /// Keep the carrier out of `SET` listings.
     fn entries(&self) -> Vec<ConfigEntry> {
         Vec::new()
     }
 }
 
-/// Parse `spark.sql.caseSensitive`.
-/// # Errors
-/// A present value that is not a boolean token.
+#[allow(clippy::missing_errors_doc)]
 pub fn parse_spark_sql_case_sensitive(raw: &str) -> Result<bool> {
     match raw.trim().to_ascii_lowercase().as_str() {
         "true" | "1" | "yes" => Ok(true),
@@ -79,9 +68,7 @@ pub fn parse_spark_sql_case_sensitive(raw: &str) -> Result<bool> {
     }
 }
 
-/// Parse `spark.sql.caseSensitive` for `spark.conf.set` (strict booleans only).
-/// # Errors
-/// A value that is not `true` or `false`.
+#[allow(clippy::missing_errors_doc)]
 pub fn parse_runtime_spark_sql_case_sensitive(raw: &str) -> Result<bool> {
     if raw.eq_ignore_ascii_case("true") {
         Ok(true)
@@ -96,9 +83,7 @@ pub fn parse_runtime_spark_sql_case_sensitive(raw: &str) -> Result<bool> {
     }
 }
 
-/// Read the builder conf map.
-/// # Errors
-/// Present but unparsable value.
+#[allow(clippy::missing_errors_doc)]
 pub fn spark_case_sensitive_from_config_map<S>(config: &HashMap<String, String, S>) -> Result<bool>
 where
     S: BuildHasher,
@@ -109,13 +94,11 @@ where
     }
 }
 
-/// Attach the flag to a [`SessionConfig`] (Spark door `configure` hook).
 #[must_use]
 pub fn with_spark_case_sensitive_config(config: SessionConfig, enabled: bool) -> SessionConfig {
     config.with_option_extension(SparkCaseSensitiveConfig { enabled })
 }
 
-/// Analyzer / resolver accessor.
 #[must_use]
 pub fn spark_case_sensitive_from_options(options: &ConfigOptions) -> bool {
     options

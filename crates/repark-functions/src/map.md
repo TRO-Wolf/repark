@@ -441,6 +441,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   takes case-insensitive `true`/`false` only
   (`INVALID_CONF_VALUE.TYPE_MISMATCH`, SQLSTATE 22022).
   pins: ice-rtas-byname-1/C-010
+  The module carries no doc comments (comment ban); the three `Result` parsers take `#[allow(clippy::missing_errors_doc)]`.
 - `session_time_zone.rs` (+ `session_time_zone/`) — the carrier that brings the
   resolved session timezone to the extractors. A `ConfigExtension` with a two-segment `PREFIX`
   (`repark.session`), a `set` that always refuses naming `spark.sql.session.timeZone`, and empty
