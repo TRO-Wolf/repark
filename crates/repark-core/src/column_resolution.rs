@@ -960,6 +960,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn dataframe_filter_binds_projection_alias() {
+        use datafusion::logical_expr::{col, lit};
+        for case_insensitive in [false, true] {
+            let ctx = SessionContext::new_with_state(repair_state(case_insensitive));
+            let schema = Arc::new(Schema::new(vec![Field::new("id", DataType::Int64, true)]));
+            let batch =
+                RecordBatch::try_new(schema, vec![Arc::new(Int64Array::from(vec![1, 2]))]).unwrap();
+            ctx.register_table(
+                "nums",
+                Arc::new(MemTable::try_new(batch.schema(), vec![vec![batch]]).unwrap()),
+            )
+            .unwrap();
+            let frame = ctx
+                .sql("SELECT id AS Id FROM nums")
+                .await
+                .unwrap()
+                .filter(col("Id").gt(lit(1i64)))
+                .unwrap();
+            let batches = frame.collect().await.unwrap();
+            assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 1);
+        }
+    }
+
+    #[tokio::test]
     async fn missing_column_stays_missing() {
         let state = mixed_state(true);
         let error = plan_error(&state, "SELECT nope FROM t").await;

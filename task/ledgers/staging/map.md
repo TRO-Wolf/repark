@@ -4,6 +4,13 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-mixed-case-1-ledger.md](ice-mixed-case-1-ledger.md) —
+  **ICE-MIXED-CASE-1 (2026-09-17), in flight:** the Spark door resolves
+  mixed-case columns case-insensitively under `spark.sql.caseSensitive=false`
+  with Spark's `AMBIGUOUS_REFERENCE` shape, exact when true — Rust repair loop
+  plus MERGE fragment scoping, both doors pinned against the recorded live
+  oracle. `risk_tier: standard`. Branch `fix/ice-mixed-case-1`.
+  pins: ice-mixed-case-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 - [ice-registry-sweep-1a-ledger.md](ice-registry-sweep-1a-ledger.md) —
   **ICE-REGISTRY-SWEEP-1 part A (2026-09-17), in flight:** the cutover
   assessment corrections and three registry claims — twelve
