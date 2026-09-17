@@ -8,7 +8,7 @@ Per-procedure bodies for the maintenance `CALL` router (`../call.rs`). The route
 parsing, table-ident resolution, and the other procedures; a procedure moves here when its body
 and measured-parity contract would grow `call.rs` beyond its exact
 `check_rust_file_size` baseline. This directory contains
-`apply_partitioning`, `rewrite_manifests`, `rewrite_data_files`, and `rewrite_where`; `call.rs` keeps
+`apply_partitioning`, `branch_ops`, `rewrite_manifests`, `rewrite_data_files`, and `rewrite_where`; `call.rs` keeps
 `expire_snapshots`, `rewrite_position_delete_files`, `remove_orphan_files`,
 `rollback_to_snapshot`, `register_table`).
 
@@ -33,6 +33,16 @@ and measured-parity contract would grow `call.rs` beyond its exact
   found; when absent the lookup stays at target 1 and a miss tells the caller to pass
   the planning target. Guide: `docs/guide/maintenance-policy.md`.
   pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `branch_ops.rs` — **ICE-BRANCH-OPS-1 (2026-09-17):** `fast_forward`, `cherrypick_snapshot`,
+  `set_current_snapshot` and `rollback_to_timestamp` over the fork's `ManageSnapshots` /
+  `Transaction::cherry_pick` (no fork change). Ref-kind and ancestry pre-checks shape
+  Spark's procedure-layer messages (`IllegalArgumentException` via
+  `DataFusionError::Configuration`, newly mapped in `repark-core` `error_map.rs`);
+  commit-time fork errors pass through with their Java-identical text as the base
+  `PySparkException`. Naive timestamp walls read as UTC in every session zone, matching
+  Spark's measured procedure-path rule (registry REF-8). Ref targets come from
+  `repark-iceberg` `list_snapshot_refs` (the fork's refs-map field is crate-private).
+  pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
 - `rewrite_data_files.rs` — **rewrite_data_files options (2026-08-31):** v2 `where` is wired
   through the fork's `RewriteDataFiles::filter` (file-selection, no residual). `strategy`
   `binpack` runs; `sort` and `sort_order` refuse (fork R135 / registry `RDF-SORT-1`). Unknown

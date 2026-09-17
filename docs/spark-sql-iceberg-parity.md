@@ -246,8 +246,8 @@ Supported surface, for reference:
 #### REF-3 — write-audit-publish (WAP)
 
 - **repark** — there is no WAP surface, and every door into one is fail-closed. The publish
-  procedures `CALL <cat>.system.fast_forward`, `publish_changes` and `cherrypick_snapshot` refuse
-  loud, listing the seven procedures that do exist. The `spark.wap.branch` and `spark.wap.id`
+  procedure `CALL <cat>.system.publish_changes` refuses
+  loud, listing the procedures that do exist (fourteen since 2026-09-17, REF-5–REF-8 included). The `spark.wap.branch` and `spark.wap.id`
   session confs cannot be set at all (`Invalid or Unsupported Configuration: Could not find
   config namespace "spark"`), so no write is silently redirected: a refused conf leaves both
   `main` and the branch where they were.
@@ -264,11 +264,11 @@ Supported surface, for reference:
   conf and wrote to `main`.)*
 - **Pin** — `crates/repark-spark/src/tests/refs_and_wap.rs::wap_publish_procedures_and_session_conf_refuse_loud`;
   facade rows in `python/repark/tests/test_ref_branch_tag_wap.py`
-- **Rationale** — BACKLOG (2026-09-01, RP-5). REF-1 is FIXED, so the "declared while REF-1 holds"
-  reason is gone. The remaining gap is the engine's missing publish procedures and `spark.wap.*`
-  session confs. Fork primitives exist: `ManageSnapshots::fast_forward`,
-  `Transaction::cherry_pick` (`GAP_MATRIX` R98). Do not half-build WAP: a staged write that
-  quietly lands on `main` is the failure mode this row keeps impossible.
+- **Rationale** — BACKLOG (2026-09-01, RP-5; narrowed 2026-09-17, ICE-BRANCH-OPS-1:
+  `fast_forward` and `cherrypick_snapshot` are ordinary branch procedures now, REF-5/REF-6).
+  The remaining gap is the WAP publish procedure and the `spark.wap.*` session confs. Do not
+  half-build WAP: a staged write that quietly lands on `main` is the failure mode this row
+  keeps impossible.
   pins: ref-branch-tag-wap/C-005
 
 #### REF-4 — reading a ref through the dotted selector — **FIXED 2026-09-01**
@@ -309,6 +309,93 @@ perfectly good read.
   `branch_exp` still resolves as itself, and a selector overlapping an `AS OF` clause is left
   alone because Spark rejects that combination.
   pins: ref-branch-tag-wap/C-002, C-007
+
+#### REF-5 — `fast_forward` — **FIXED 2026-09-17**
+
+- **repark** — `CALL <cat>.system.fast_forward(table, branch, to)` moves `branch` to the
+  snapshot `to` points at, positional and named alike, and answers
+  `(branch_updated Utf8, previous_ref Int64, updated_ref Int64)` with `previous_ref` null when
+  the branch is auto-created. A missing `branch` is created at `to` (Spark does the same); a
+  missing `to` refuses `Ref does not exist: <to>`; a tag as `branch` refuses
+  `Ref <branch> is a tag not a branch`; a `to` that is not a descendant refuses
+  `Cannot fast-forward: <branch> is not an ancestor of <to>`; all three are
+  `IllegalArgumentException`, like Spark's client-side refusals. A `to` naming a tag works
+  when the ancestry holds. No snapshot is added; the rows follow the moved ref.
+- **Apache Spark** — the same call, row, and refusals, measured cell by cell.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`.)*
+- **Pin** — `crates/repark-spark/src/tests/branch_ops.rs::fast_forward_moves_branch_and_reports_refs`,
+  `…::fast_forward_named_and_to_tag_and_new_branch`,
+  `…::fast_forward_refusals_name_the_ref`;
+  `python/repark/tests/test_ice_branch_ops_1.py` (`ff_*` steps plus the live cross-read leg)
+- **Rationale** — FIXED (2026-09-17, ICE-BRANCH-OPS-1). Procedure wiring over the fork's
+  `ManageSnapshots::fast_forward`; no fork change. Ref-kind and ancestry pre-checks live in the
+  procedure layer so the messages match Java's procedure layer; the fork still enforces at
+  commit.
+  pins: ice-branch-ops-1/C-001, C-007
+
+#### REF-6 — `cherrypick_snapshot` — **FIXED 2026-09-17**
+
+- **repark** — `CALL <cat>.system.cherrypick_snapshot(table, snapshot_id)` replays a
+  branch-only snapshot onto `main` and answers
+  `(source_snapshot_id Int64, current_snapshot_id Int64)`; when the staged snapshot's parent
+  is already the head it fast-forwards and both ids are equal. An unknown id refuses
+  `Cannot cherry-pick unknown snapshot ID: <id>`; an already-ancestor id refuses
+  `Cannot cherrypick snapshot <id>: already an ancestor`; a second pick of the same staged
+  snapshot refuses `Cannot cherrypick snapshot <id>: already picked to create ancestor <y>`;
+  a delete or static-overwrite staged snapshot refuses
+  `Cannot cherry-pick snapshot <id>: not append, dynamic overwrite, or fast-forward` — all
+  with the fork's Java-identical text as the base `PySparkException` (RePark has no JVM, so
+  the `Py4JJavaError` wrapper has no counterpart; the operative text is what the pins hold).
+- **Apache Spark** — the same call, row, and refusals, measured cell by cell.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`.)*
+- **Pin** — `crates/repark-spark/src/tests/branch_ops.rs::cherrypick_replays_branch_snapshot_onto_main`,
+  `…::cherrypick_ancestor_and_delete_refuse`;
+  `python/repark/tests/test_ice_branch_ops_1.py` (`cp_*` steps plus the live cross-read leg)
+- **Rationale** — FIXED (2026-09-17, ICE-BRANCH-OPS-1). Procedure wiring over the fork's
+  `Transaction::cherry_pick`; no fork change. On a format-v3 table the replay keeps Spark's
+  row lineage (`next-row-id`, `_row_id`), pinned by the `ops3_*` steps.
+  pins: ice-branch-ops-1/C-002, C-005, C-007
+
+#### REF-7 — `set_current_snapshot` — **FIXED 2026-09-17**
+
+- **repark** — `CALL <cat>.system.set_current_snapshot(table, snapshot_id | ref)` moves `main`
+  to any snapshot by id (no ancestry requirement — this is what distinguishes it from
+  `rollback_to_snapshot`) or to the snapshot a branch or tag names, and answers
+  `(previous_snapshot_id Int64, current_snapshot_id Int64)`. Both or neither of
+  `snapshot_id`/`ref` refuses `Either snapshot_id or ref must be provided, not both`
+  (`IllegalArgumentException`); an unknown id refuses
+  `Cannot roll back to unknown snapshot id: <id>`; an unknown ref refuses
+  `Cannot find matching snapshot ID for ref <ref>` (both base `PySparkException`, same
+  operative text as Java).
+- **Apache Spark** — the same call, row, and refusals, measured cell by cell.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`.)*
+- **Pin** — `crates/repark-spark/src/tests/branch_ops.rs::set_current_snapshot_by_id_and_ref`,
+  `…::set_current_snapshot_refusals`;
+  `python/repark/tests/test_ice_branch_ops_1.py` (`sc_*` steps plus the live cross-read leg)
+- **Rationale** — FIXED (2026-09-17, ICE-BRANCH-OPS-1). Procedure wiring over the fork's
+  `ManageSnapshots::set_current_snapshot`; no fork change.
+  pins: ice-branch-ops-1/C-003, C-007
+
+#### REF-8 — `rollback_to_timestamp` — **FIXED 2026-09-17**
+
+- **repark** — `CALL <cat>.system.rollback_to_timestamp(table, timestamp)` moves `main` to the
+  latest ancestor strictly older than the instant and answers
+  `(previous_snapshot_id Int64, current_snapshot_id Int64)`; a timestamp at or before the
+  first snapshot refuses `Cannot roll back, no valid snapshot older than: <ms>`
+  (`IllegalArgumentException`). Naive wall clocks read as UTC **even under a non-UTC
+  `spark.sql.session.timeZone`** — that is what Spark does: the `TIMESTAMP` literal itself
+  evaluates in-session (proved with `UNIX_MICROS` in the same session), but the procedure path
+  reads the wall as UTC, for literals and string arguments alike. RePark parses the argument
+  with the same UTC rule, so the answers agree in every session zone.
+- **Apache Spark** — the same call, row, refusal, and zone rule, measured cell by cell,
+  including an `America/New_York` session (UTC wall selects; NY wall reads as UTC).
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`.)*
+- **Pin** — `crates/repark-spark/src/tests/branch_ops.rs::rollback_to_timestamp_selects_latest_older_ancestor`;
+  `python/repark/tests/test_ice_branch_ops_1.py` (`rt_*` steps plus the live cross-read leg)
+- **Rationale** — FIXED (2026-09-17, ICE-BRANCH-OPS-1). Procedure wiring over the fork's
+  `ManageSnapshots::rollback_to_time`; no fork change. The pre-commit ancestor walk only
+  shapes the refusal class; the fork enforces at commit.
+  pins: ice-branch-ops-1/C-004, C-007
 
 ### 2.3 DML statement forms
 

@@ -24,6 +24,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
   `risk_tier: standard`. Branch `docs/registry-16b-1`.
   pins: registry-16b-1/C-001, C-002, C-003
+- [ice-branch-ops-1-ledger.md](ice-branch-ops-1-ledger.md) —
+  **ICE-BRANCH-OPS-1 (2026-09-17), in flight:** `fast_forward`, `cherrypick_snapshot`,
+  `set_current_snapshot` and `rollback_to_timestamp` as RePark-side procedure wiring over
+  the fork's `ManageSnapshots` / `Transaction::cherry_pick` (no fork change), with a
+  recorded Spark oracle (`branch_ops_1_truth.json`), red-first pins on both doors, and
+  registry rows REF-5–REF-8. `risk_tier: standard`. Branch `fix/ice-branch-ops-1`.
+  pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [df-rust-3-ledger.md](df-rust-3-ledger.md) —
   **DF-RUST-3 (2026-09-15), in flight:** `DataFrame.freqItems`,
   `DataFrameStatFunctions.freqItems`, and `DataFrame.transpose` implemented Rust-first —

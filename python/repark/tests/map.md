@@ -1022,13 +1022,25 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   branch/tag retention and the refused doors — both `WITH SNAPSHOT RETENTION` halves at the
   oracle's values, the reversed order refusing, write-to-branch landing on the named branch
   (RP-5 / REF-1 FIXED), write-to-tag refusing Spark-shaped, and WAP declared
-  (`fast_forward` / `publish_changes` / `cherrypick_snapshot` and the `spark.wap.*` confs all
-  fail closed). The `branch_`/`tag_` READ selectors resolve the ref here too — standalone and on
-  a DML statement's read side (`INSERT … SELECT`, `MERGE … USING`, a `DELETE` predicate
+  (`publish_changes` and the `spark.wap.*` confs fail closed; `fast_forward` and
+  `cherrypick_snapshot` moved to `test_ice_branch_ops_1.py` when ICE-BRANCH-OPS-1
+  implemented them). The `branch_`/`tag_` READ selectors resolve the ref here too — standalone
+  and on a DML statement's read side (`INSERT … SELECT`, `MERGE … USING`, a `DELETE` predicate
   subquery). A tag-named write TARGET refuses Spark-shaped; a missing branch refuses
   naming it and does not create the branch.
   pins: ref-branch-tag-wap/C-002, C-003, C-004, C-005, C-007
   pins: rp-5-fork-repin/C-004
+- [test_ice_branch_ops_1.py](test_ice_branch_ops_1.py) +
+  [branch_ops_1_truth.json](branch_ops_1_truth.json) +
+  [_record_branch_ops_1.py](_record_branch_ops_1.py) — **ICE-BRANCH-OPS-1 (2026-09-17):**
+  the recorded-oracle pins for `fast_forward`, `cherrypick_snapshot`, `set_current_snapshot`
+  and `rollback_to_timestamp` (live PySpark 4.1.2 + Iceberg 1.11.0). The truth JSON stores
+  one ordered step list per table (v2 `ops`, v3 `ops3`) with position markers instead of
+  snapshot ids; the suite replays the script on RePark and asserts output schemas, rows,
+  every error shape, the snapshot structure, refs, and (v3) `next-row-id` / `_row_id`.
+  The recorder regenerates the truth under a JVM (the `record` extra; routine CI never runs
+  it). The live tier replays Spark on the same shapes and cross-reads both directions.
+  pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append; live-DV UPDATE

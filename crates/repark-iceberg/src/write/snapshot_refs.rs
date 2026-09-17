@@ -140,6 +140,34 @@ pub async fn drop_snapshot_ref(
     Ok(())
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub async fn list_snapshot_refs(
+    table: &iceberg::table::Table,
+) -> Result<Vec<(String, SnapshotRefKind, i64)>> {
+    use datafusion::arrow::array::{Array, AsArray};
+    use datafusion::arrow::datatypes::Int64Type;
+    use futures::TryStreamExt;
+    let stream = table.inspect().refs().scan().await?;
+    let batches: Vec<datafusion::arrow::array::RecordBatch> = stream.try_collect().await?;
+    let mut refs = Vec::new();
+    for batch in &batches {
+        let names = batch.column(0).as_string::<i32>();
+        let kinds = batch.column(1).as_string::<i32>();
+        let ids = batch.column(2).as_primitive::<Int64Type>();
+        for row in 0..batch.num_rows() {
+            if names.is_null(row) || kinds.is_null(row) || ids.is_null(row) {
+                continue;
+            }
+            let kind = match kinds.value(row) {
+                "BRANCH" => SnapshotRefKind::Branch,
+                _ => SnapshotRefKind::Tag,
+            };
+            refs.push((names.value(row).to_string(), kind, ids.value(row)));
+        }
+    }
+    Ok(refs)
+}
+
 /// Chain fork retention setters onto a manage-snapshots action.
 fn apply_retention(
     mut action: iceberg::transaction::ManageSnapshotsAction,

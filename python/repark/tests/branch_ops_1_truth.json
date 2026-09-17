@@ -1,0 +1,1031 @@
+{
+ "unit": "ice-branch-ops-1",
+ "oracle": {
+  "spark": "4.1.2",
+  "session_tz": "UTC",
+  "iceberg": "1.11.0"
+ },
+ "table": {
+  "namespace": "ns",
+  "name": "ops",
+  "format_version": 2
+ },
+ "steps": [
+  {
+   "sql": "CREATE TABLE bo.ns.ops (id INT, s STRING) USING iceberg TBLPROPERTIES ('format-version'='2')",
+   "new_pos": null
+  },
+  {
+   "sql": "INSERT INTO bo.ns.ops VALUES (1,'a')",
+   "new_pos": 0
+  },
+  {
+   "sql": "ALTER TABLE bo.ns.ops CREATE BRANCH old",
+   "new_pos": null
+  },
+  {
+   "sql": "INSERT INTO bo.ns.ops VALUES (2,'b')",
+   "new_pos": 1
+  },
+  {
+   "sql": "ALTER TABLE bo.ns.ops CREATE TAG t1",
+   "new_pos": null
+  },
+  {
+   "sql": "ALTER TABLE bo.ns.ops CREATE BRANCH feat",
+   "new_pos": null
+  },
+  {
+   "sql": "INSERT INTO bo.ns.ops.branch_feat VALUES (4,'d')",
+   "new_pos": 2
+  },
+  {
+   "sql": "CALL bo.system.fast_forward('ns.ops', 'main', 'feat')",
+   "label": "ff_positional",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "branch_updated",
+      "string"
+     ],
+     [
+      "previous_ref",
+      "int64"
+     ],
+     [
+      "updated_ref",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "lit": "main"
+      },
+      {
+       "pos": 1
+      },
+      {
+       "pos": 2
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "check_refs": "refs_after_ff",
+   "refs": {
+    "main": {
+     "type": "BRANCH",
+     "pos": 2
+    },
+    "t1": {
+     "type": "TAG",
+     "pos": 1
+    },
+    "feat": {
+     "type": "BRANCH",
+     "pos": 2
+    },
+    "old": {
+     "type": "BRANCH",
+     "pos": 0
+    }
+   }
+  },
+  {
+   "sql": "INSERT INTO bo.ns.ops VALUES (3,'c')",
+   "new_pos": 3
+  },
+  {
+   "sql": "ALTER TABLE bo.ns.ops CREATE BRANCH feat2",
+   "new_pos": null
+  },
+  {
+   "sql": "INSERT INTO bo.ns.ops.branch_feat2 VALUES (6,'f')",
+   "new_pos": 4
+  },
+  {
+   "sql": "CALL bo.system.fast_forward(table => 'ns.ops', branch => 'main', to => 'feat2')",
+   "label": "ff_named",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "branch_updated",
+      "string"
+     ],
+     [
+      "previous_ref",
+      "int64"
+     ],
+     [
+      "updated_ref",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "lit": "main"
+      },
+      {
+       "pos": 3
+      },
+      {
+       "pos": 4
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.fast_forward('ns.ops', 'feat2', 'feat2')",
+   "label": "ff_same",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "branch_updated",
+      "string"
+     ],
+     [
+      "previous_ref",
+      "int64"
+     ],
+     [
+      "updated_ref",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "lit": "feat2"
+      },
+      {
+       "pos": 4
+      },
+      {
+       "pos": 4
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.fast_forward('ns.ops', 'main', 'nope')",
+   "label": "ff_unknown_to",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "IllegalArgumentException",
+    "prefix": "Ref does not exist: nope"
+   }
+  },
+  {
+   "sql": "CALL bo.system.fast_forward('ns.ops', 't1', 'feat2')",
+   "label": "ff_tag_as_branch",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "IllegalArgumentException",
+    "prefix": "Ref t1 is a tag not a branch"
+   }
+  },
+  {
+   "sql": "CALL bo.system.fast_forward('ns.ops', 'main', 'old')",
+   "label": "ff_not_descendant",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "IllegalArgumentException",
+    "prefix": "Cannot fast-forward: main is not an ancestor of old"
+   }
+  },
+  {
+   "sql": "CALL bo.system.fast_forward('ns.ops', 'newb', 'feat2')",
+   "label": "ff_unknown_branch",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "branch_updated",
+      "string"
+     ],
+     [
+      "previous_ref",
+      "int64"
+     ],
+     [
+      "updated_ref",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "lit": "newb"
+      },
+      null,
+      {
+       "pos": 4
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.fast_forward(table => 'ns.ops', branch => 'newb', to => 't1')",
+   "label": "ff_to_tag",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "IllegalArgumentException",
+    "prefix": "Cannot fast-forward: newb is not an ancestor of t1"
+   }
+  },
+  {
+   "sql": "CALL bo.system.fast_forward('ns.ops', 'old', 't1')",
+   "label": "ff_tag_forward",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "branch_updated",
+      "string"
+     ],
+     [
+      "previous_ref",
+      "int64"
+     ],
+     [
+      "updated_ref",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "lit": "old"
+      },
+      {
+       "pos": 0
+      },
+      {
+       "pos": 1
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "ALTER TABLE bo.ns.ops CREATE BRANCH wip",
+   "new_pos": null
+  },
+  {
+   "sql": "INSERT INTO bo.ns.ops.branch_wip VALUES (7,'g')",
+   "new_pos": 5
+  },
+  {
+   "sql": "INSERT INTO bo.ns.ops VALUES (8,'h')",
+   "new_pos": 6
+  },
+  {
+   "sql": "CALL bo.system.cherrypick_snapshot('ns.ops', {snap:5})",
+   "label": "cp_positional",
+   "new_pos": 7,
+   "expect_call": {
+    "columns": [
+     [
+      "source_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 5
+      },
+      {
+       "pos": 7
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.cherrypick_snapshot(table => 'ns.ops', snapshot_id => {snap:5})",
+   "label": "cp_duplicate",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "Py4JJavaError",
+    "prefix": "Cannot cherrypick snapshot {snap:5}: already picked to create ancestor {snap:7}"
+   }
+  },
+  {
+   "sql": "CALL bo.system.cherrypick_snapshot('ns.ops', 123456789)",
+   "label": "cp_unknown",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "Py4JJavaError",
+    "prefix": "Cannot cherry-pick unknown snapshot ID: 123456789"
+   }
+  },
+  {
+   "sql": "CALL bo.system.cherrypick_snapshot('ns.ops', {snap:0})",
+   "label": "cp_ancestor",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "Py4JJavaError",
+    "prefix": "Cannot cherrypick snapshot {snap:0}: already an ancestor"
+   }
+  },
+  {
+   "sql": "ALTER TABLE bo.ns.ops CREATE BRANCH delb",
+   "new_pos": null
+  },
+  {
+   "sql": "DELETE FROM bo.ns.ops.branch_delb WHERE id = 1",
+   "new_pos": 8
+  },
+  {
+   "sql": "INSERT INTO bo.ns.ops VALUES (9,'i')",
+   "new_pos": 9
+  },
+  {
+   "sql": "CALL bo.system.cherrypick_snapshot('ns.ops', {snap:8})",
+   "label": "cp_delete",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "Py4JJavaError",
+    "prefix": "Cannot cherry-pick snapshot {snap:8}: not append, dynamic overwrite, or fast-forward"
+   }
+  },
+  {
+   "sql": "ALTER TABLE bo.ns.ops CREATE BRANCH ovb",
+   "new_pos": null
+  },
+  {
+   "sql": "INSERT OVERWRITE bo.ns.ops.branch_ovb VALUES (10,'j')",
+   "new_pos": 10
+  },
+  {
+   "sql": "INSERT INTO bo.ns.ops VALUES (11,'k')",
+   "new_pos": 11
+  },
+  {
+   "sql": "CALL bo.system.cherrypick_snapshot('ns.ops', {snap:10})",
+   "label": "cp_overwrite_static",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "Py4JJavaError",
+    "prefix": "Cannot cherry-pick snapshot {snap:10}: not append, dynamic overwrite, or fast-forward"
+   }
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', TIMESTAMP '{ts:2}')",
+   "label": "rt_positional",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 11
+      },
+      {
+       "pos": 1
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "check_rows": "rows_after_rt",
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ]
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp(table => 'ns.ops', timestamp => TIMESTAMP '{ts:2}')",
+   "label": "rt_named",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 1
+      },
+      {
+       "pos": 1
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot(table => 'ns.ops', ref => 'feat2')",
+   "new_pos": null
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', TIMESTAMP '{ts:4}')",
+   "label": "rt_exact_equal",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 4
+      },
+      {
+       "pos": 3
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', TIMESTAMP '2000-01-01 00:00:00')",
+   "label": "rt_before_first",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "IllegalArgumentException",
+    "prefix": "Cannot roll back, no valid snapshot older than: 946684800000"
+   }
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot('ns.ops', {snap:11})",
+   "new_pos": null
+  },
+  {
+   "note": "tz_setup",
+   "mid_utc": "2026-09-17 05:03:15.571500",
+   "mid_ny": "2026-09-17 01:03:15.571500"
+  },
+  {
+   "note": "tz_literal_eval",
+   "unix_micros": 1789606995571500
+  },
+  {
+   "note": "tz_literal_eval_ny",
+   "unix_micros": 1789621395571500
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', TIMESTAMP '{ts_ny_mid:9:11}')",
+   "label": "rt_tz_ny",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "IllegalArgumentException",
+    "prefix": "Cannot roll back, no valid snapshot older than: {ms_of_arg}"
+   },
+   "zone": "America/New_York"
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', TIMESTAMP '{ts_mid:9:11}')",
+   "label": "rt_tz_utc_wall_in_ny",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 11
+      },
+      {
+       "pos": 9
+      }
+     ]
+    ]
+   },
+   "zone": "America/New_York"
+  },
+  {
+   "check_refs": "refs_after_rt",
+   "refs": {
+    "newb": {
+     "type": "BRANCH",
+     "pos": 4
+    },
+    "old": {
+     "type": "BRANCH",
+     "pos": 1
+    },
+    "delb": {
+     "type": "BRANCH",
+     "pos": 8
+    },
+    "main": {
+     "type": "BRANCH",
+     "pos": 9
+    },
+    "ovb": {
+     "type": "BRANCH",
+     "pos": 10
+    },
+    "feat2": {
+     "type": "BRANCH",
+     "pos": 4
+    },
+    "t1": {
+     "type": "TAG",
+     "pos": 1
+    },
+    "feat": {
+     "type": "BRANCH",
+     "pos": 2
+    },
+    "wip": {
+     "type": "BRANCH",
+     "pos": 5
+    }
+   }
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot('ns.ops', {snap:0})",
+   "label": "sc_by_id",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 9
+      },
+      {
+       "pos": 0
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "check_rows": "rows_after_sc_id",
+   "rows": [
+    [
+     1,
+     "a"
+    ]
+   ]
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot(table => 'ns.ops', ref => 'feat2')",
+   "label": "sc_by_ref_named",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 0
+      },
+      {
+       "pos": 4
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot(table => 'ns.ops', ref => 't1')",
+   "label": "sc_ref_to_tag",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 4
+      },
+      {
+       "pos": 1
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot(table => 'ns.ops', snapshot_id => {snap:0})",
+   "label": "sc_by_id_named",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 1
+      },
+      {
+       "pos": 0
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot('ns.ops', {snap:0}, 'feat2')",
+   "label": "sc_both",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "IllegalArgumentException",
+    "prefix": "Either snapshot_id or ref must be provided, not both"
+   }
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot('ns.ops')",
+   "label": "sc_neither",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "IllegalArgumentException",
+    "prefix": "Either snapshot_id or ref must be provided, not both"
+   }
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot('ns.ops', 123456789)",
+   "label": "sc_unknown_id",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "Py4JJavaError",
+    "prefix": "Cannot roll back to unknown snapshot id: 123456789"
+   }
+  },
+  {
+   "sql": "CALL bo.system.set_current_snapshot(table => 'ns.ops', ref => 'nope')",
+   "label": "sc_unknown_ref",
+   "new_pos": null,
+   "expect_error": {
+    "exc": "Py4JJavaError",
+    "prefix": "Cannot find matching snapshot ID for ref nope"
+   }
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', '{ts:5}')",
+   "label": "rt_string_utc",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 0
+      },
+      {
+       "pos": 0
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "sql": "CALL bo.system.rollback_to_timestamp('ns.ops', '{ts:5}')",
+   "label": "rt_string_ny",
+   "new_pos": null,
+   "expect_call": {
+    "columns": [
+     [
+      "previous_snapshot_id",
+      "int64"
+     ],
+     [
+      "current_snapshot_id",
+      "int64"
+     ]
+    ],
+    "rows": [
+     [
+      {
+       "pos": 0
+      },
+      {
+       "pos": 0
+      }
+     ]
+    ]
+   },
+   "zone": "America/New_York"
+  },
+  {
+   "check_rows": "final_rows",
+   "rows": [
+    [
+     1,
+     "a"
+    ]
+   ]
+  },
+  {
+   "check_refs": "final_refs",
+   "refs": {
+    "newb": {
+     "type": "BRANCH",
+     "pos": 4
+    },
+    "old": {
+     "type": "BRANCH",
+     "pos": 1
+    },
+    "delb": {
+     "type": "BRANCH",
+     "pos": 8
+    },
+    "main": {
+     "type": "BRANCH",
+     "pos": 0
+    },
+    "ovb": {
+     "type": "BRANCH",
+     "pos": 10
+    },
+    "feat2": {
+     "type": "BRANCH",
+     "pos": 4
+    },
+    "t1": {
+     "type": "TAG",
+     "pos": 1
+    },
+    "feat": {
+     "type": "BRANCH",
+     "pos": 2
+    },
+    "wip": {
+     "type": "BRANCH",
+     "pos": 5
+    }
+   }
+  }
+ ],
+ "snapshots": [
+  {
+   "pos": 0,
+   "parent_pos": null,
+   "operation": "append"
+  },
+  {
+   "pos": 1,
+   "parent_pos": 0,
+   "operation": "append"
+  },
+  {
+   "pos": 2,
+   "parent_pos": 1,
+   "operation": "append"
+  },
+  {
+   "pos": 3,
+   "parent_pos": 2,
+   "operation": "append"
+  },
+  {
+   "pos": 4,
+   "parent_pos": 3,
+   "operation": "append"
+  },
+  {
+   "pos": 5,
+   "parent_pos": 4,
+   "operation": "append"
+  },
+  {
+   "pos": 6,
+   "parent_pos": 4,
+   "operation": "append"
+  },
+  {
+   "pos": 7,
+   "parent_pos": 6,
+   "operation": "append"
+  },
+  {
+   "pos": 8,
+   "parent_pos": 7,
+   "operation": "delete"
+  },
+  {
+   "pos": 9,
+   "parent_pos": 7,
+   "operation": "append"
+  },
+  {
+   "pos": 10,
+   "parent_pos": 9,
+   "operation": "overwrite"
+  },
+  {
+   "pos": 11,
+   "parent_pos": 9,
+   "operation": "append"
+  }
+ ],
+ "v3": {
+  "steps": [
+   {
+    "sql": "CREATE TABLE bo.ns.ops3 (id INT, s STRING) USING iceberg TBLPROPERTIES ('format-version'='3')",
+    "new_pos": null
+   },
+   {
+    "sql": "INSERT INTO bo.ns.ops3 VALUES (1,'a')",
+    "new_pos": 0
+   },
+   {
+    "sql": "ALTER TABLE bo.ns.ops3 CREATE BRANCH b1",
+    "new_pos": null
+   },
+   {
+    "sql": "UPDATE bo.ns.ops3.branch_b1 SET s = 'z' WHERE id = 1",
+    "new_pos": 1
+   },
+   {
+    "sql": "INSERT INTO bo.ns.ops3.branch_b1 VALUES (2,'b')",
+    "new_pos": 2
+   },
+   {
+    "sql": "INSERT INTO bo.ns.ops3 VALUES (3,'c')",
+    "new_pos": 3
+   },
+   {
+    "sql": "CALL bo.system.cherrypick_snapshot('ns.ops3', {snap:2})",
+    "label": "ops3_cp",
+    "new_pos": 4,
+    "expect_call": {
+     "columns": [
+      [
+       "source_snapshot_id",
+       "int64"
+      ],
+      [
+       "current_snapshot_id",
+       "int64"
+      ]
+     ],
+     "rows": [
+      [
+       {
+        "pos": 2
+       },
+       {
+        "pos": 4
+       }
+      ]
+     ]
+    }
+   },
+   {
+    "check_row_ids": "ops3_row_ids",
+    "rows": [
+     [
+      1,
+      0
+     ],
+     [
+      2,
+      4
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   {
+    "check_next_row_id": "ops3_next_row_id",
+    "value": 5
+   },
+   {
+    "check_rows": "ops3_rows",
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "c"
+     ]
+    ]
+   }
+  ],
+  "snapshots": [
+   {
+    "pos": 0,
+    "parent_pos": null,
+    "operation": "append"
+   },
+   {
+    "pos": 1,
+    "parent_pos": 0,
+    "operation": "overwrite"
+   },
+   {
+    "pos": 2,
+    "parent_pos": 1,
+    "operation": "append"
+   },
+   {
+    "pos": 3,
+    "parent_pos": 0,
+    "operation": "append"
+   },
+   {
+    "pos": 4,
+    "parent_pos": 3,
+    "operation": "append"
+   }
+  ]
+ }
+}

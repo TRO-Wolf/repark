@@ -414,7 +414,9 @@ repark-core's error map.
 - `snapshot_refs.rs` — product CREATE/DROP/REPLACE BRANCH|TAG helpers over fork
   `ManageSnapshots` (+ retention setters). Write-to-branch routing lives in the Spark
   door (`repark-spark` `write_to_branch.rs`) and the `to_branch` / `with_commit_branch`
-  commit seats.
+  commit seats. **ICE-BRANCH-OPS-1 (2026-09-17):** `list_snapshot_refs` reads every ref as
+  `(name, kind, snapshot_id)` through the fork's refs inspect table for the branch-procedure
+  pre-checks (the fork's refs-map field is crate-private).
 - `testing_support.rs` — `testing_create_ref` (wraps `create_snapshot_ref`) for fixtures only;
   product SQL routes via `snapshot_refs`.
 - `concurrency.rs` — `repark.write.max-concurrent-files` (default 4, ≥1 or loud): DataFusion

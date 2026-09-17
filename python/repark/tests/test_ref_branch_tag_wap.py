@@ -136,9 +136,7 @@ def test_write_to_tag_refuses_like_spark(spark: ReparkSession) -> None:
 @pytest.mark.parametrize(
     "call",
     [
-        "fast_forward(table => 'ns.events', branch => 'main', to => 'audit')",
         "publish_changes(table => 'ns.events', wap_id => 'w1')",
-        "cherrypick_snapshot(table => 'ns.events', snapshot_id => 1)",
     ],
 )
 def test_wap_publish_procedures_refuse_loud(spark: ReparkSession, call: str) -> None:

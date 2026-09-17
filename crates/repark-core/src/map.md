@@ -280,7 +280,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the direct `iceberg_err` fold; an unstamped `CommitStateUnknown` kind maps to the same
   variant with `operation_id: None`), wrappers peeled iteratively (bounded,
   `MAX_ERROR_PEEL_DEPTH`), everything else → base `Error::DataFusion`. Postgres/excel folds are
-  deferred with their crates. Also `resolve_s3_region_override` (dual-key S3 read-region
+  deferred with their crates. **ICE-BRANCH-OPS-1 (2026-09-17):** `Configuration` →
+  `IllegalArgument` (Spark raises it for invalid procedure arguments and option values;
+  previously fell into the base class). Also `resolve_s3_region_override` (dual-key S3 read-region
   override; identical values collapse, different values fail loud naming both keys).
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** `engine_err_for_sql` reshapes unknown-routine
   texts before classification (never for `Parse`), so `sql_with` answers Spark's shape
