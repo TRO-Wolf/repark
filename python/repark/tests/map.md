@@ -390,7 +390,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (partitioned-local, DESC, two-key null ordering, locally-ordered, float with
   NaN) and on the DataFrame door (`writeTo.append`, `saveAsTable(append)`,
   `insertInto`), plus the RePark-owned paths (INSERT OVERWRITE and MERGE sort
-  and stamp; the CTAS replace resets the default to 0 and stamps 0) and the
+  and stamp; the CTAS replace resets the default to 0 and stamps 0 over the
+  unsorted hash layout, so the CTAS leg asserts stamp plus row set) and the
   adopted Spark-written `days(ts), id` warehouse under
   [fixtures/ice_sorted_insert_1/](fixtures/ice_sorted_insert_1/map.md)
   (canonical `/tmp/repark-ice-sorted-insert-1` path, plain INSERT sorts day-major

@@ -91,7 +91,22 @@ sites, reusing the fork's builder without re-implementing any sort.
 
 ### Green (override)
 
-TBD.
+`test_ice_sorted_insert_1.py -k "not live"`: **10 passed** on the release
+native with the stamp fix. C-001 (5 SQL cells) and C-002 (3 DataFrame doors):
+every file sorted on the order keys, stamped 1, full 2,000-row set. C-003:
+INSERT OVERWRITE and MERGE sort and stamp 1; the CTAS replace resets the
+default to 0 and stamps 0 over the unsorted hash layout (the C-010 shape, so
+the CTAS leg asserts stamp + row set, not sortedness); plain INSERT into the
+adopted `days(ts), id` table sorts day-major and stamps 1, while INSERT
+OVERWRITE keeps the `only identity sort fields are supported` refusal.
+
+| Clause | Statement | Pins | Verdict |
+|---|---|---|---|
+| C-001 | Plain `INSERT INTO … SELECT` into a declared-order table writes sorted, stamped files, SQL door | `test_ice_sorted_insert_1.py` SQL cells | PROVEN |
+| C-002 | Same, DataFrame door (`writeTo(t).append()`, `saveAsTable(mode="append")`, `insertInto`) | `test_ice_sorted_insert_1.py` door legs | PROVEN |
+| C-003 | Paths RePark owns (INSERT OVERWRITE, CTAS, MERGE, `sort_batches_by_default_order`) write sorted, stamped files or file a registry row | `test_ice_sorted_insert_1.py` owned legs + days leg | PROVEN |
+| C-004 | Spark oracle recorded as fixture: recorder script plus truth JSON (sort cells + days-transform cell + float-NaN cell); live tier re-derives | recorder script, truth JSON, live legs | OPEN |
+| C-005 | Registry sort-on-INSERT row FIXED 2026-09-17 (consumes fork #287 via RP-22); WRITE-ORDER-TRANSFORM-1 FIXED if pinned green else stays open with the measurement | registry rows, map edits | OPEN |
 
 ## 7. Gates
 
