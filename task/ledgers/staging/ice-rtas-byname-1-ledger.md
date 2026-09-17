@@ -44,6 +44,18 @@ touched `map.md` files.
 - C-005 RTAS operations (BLOCKED-ON-FORK, xfail pins + exact fork change).
 - C-006 registry rows.
 
+### Clause status (round 1 close)
+
+- C-001 PROVEN — `test_by_name_*` pins green on the release native.
+- C-002 PROVEN — `test_insert_overwrite_by_name_replaces` green.
+- C-003 PROVEN — `test_by_name_values_refused` green.
+- C-004 PROVEN — parquet matrix, partitioned table, empty insert, branch
+  append, and native-door steer pins green.
+- C-005 BLOCKED-ON-FORK — four `xfail(strict)` pins on ask F-RTAS-OPS-1, plus
+  one `writeTo.append` xfail on F-DML-FIELD-ID-1.
+- C-006 PROVEN — rows DML-6 (FIXED) and RTAS-OPS-1 (OPEN) landed in
+  `docs/spark-sql-iceberg-parity.md`.
+
 ### Door decision
 
 `BY NAME` is Spark-dialect syntax with no ANSI spelling, so the Spark door
@@ -241,5 +253,5 @@ native with per-command summaries.
 
 ### C-006 registry rows
 
-`docs/spark-sql-iceberg-parity.md`: BY NAME row (FIXED with pins) and the
-RTAS operation row (BACKLOG, fork ask F-RTAS-OPS-1, pins named).
+`docs/spark-sql-iceberg-parity.md`: BY NAME row DML-6 (FIXED with pins) and
+the RTAS operation row RTAS-OPS-1 (OPEN, fork ask F-RTAS-OPS-1, pins named).
