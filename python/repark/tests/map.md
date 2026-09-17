@@ -278,6 +278,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   every registry sentence: same-name re-register refuses, DROP on the stale handle
   deletes the pointer file, the planted orphan wedges loud then clears, and the frozen
   Spark scan-forward keys plus the 400k race count are read offline and re-derived live.
+  Round 2 L-03 funnels every stale-writer door through one helper (class, message
+  prefix, `v3` in the message, winner bytes per writer) and adds stale INSERT OVERWRITE,
+  TRUNCATE, ALTER SET TBLPROPERTIES and saveAsTable(overwrite); `writeTo().overwrite`
+  refuses declared on stale and fresh handles alike, pinned as the pre-existing refusal.
   pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [_record_ice_hadoop_vn_1.py](_record_ice_hadoop_vn_1.py) —
   the explicit-run recorder behind the fixture and the oracle JSON above (JVM +

@@ -19,7 +19,7 @@ import re
 import shutil
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager, suppress
 from pathlib import Path
 from typing import Any
@@ -135,13 +135,14 @@ def _run_conc_shape(session: Any, table_root: Path) -> bytes:
     return (table_root / "metadata" / "v3.metadata.json").read_bytes()
 
 
-def _assert_stale_commit_raises(session: Any, sql: str, table_root: Path) -> str:
+def _assert_stale_write_raises(session: Any, write: Callable[[], object], table_root: Path) -> str:
     """Run a stale-pointer write; it must raise the recorded conflict; return its text."""
     from repark.errors import PySparkException
 
     contract = _ORACLE_DOC["repark_stale_commit"]
+    v3_bytes = (table_root / "metadata" / "v3.metadata.json").read_bytes()
     with pytest.raises(PySparkException, match="CatalogCommitConflicts") as excinfo:
-        session.sql(sql).collect()
+        write()
     message = str(excinfo.value)
     assert type(excinfo.value) is PySparkException
     assert message.startswith(contract["message_starts_with"]), message[:200]
@@ -152,7 +153,13 @@ def _assert_stale_commit_raises(session: Any, sql: str, table_root: Path) -> str
         "v2.metadata.json",
         "v3.metadata.json",
     ]
+    assert (table_root / "metadata" / "v3.metadata.json").read_bytes() == v3_bytes
     return message
+
+
+def _assert_stale_commit_raises(session: Any, sql: str, table_root: Path) -> str:
+    """Run a stale-pointer SQL write; it must raise the recorded conflict; return its text."""
+    return _assert_stale_write_raises(session, lambda: session.sql(sql).collect(), table_root)
 
 
 def test_conc_stale_writers_raise_and_winner_bytes_survive(tmp_path: Path) -> None:
@@ -160,7 +167,7 @@ def test_conc_stale_writers_raise_and_winner_bytes_survive(tmp_path: Path) -> No
     session = _new_session(tmp_path)
     try:
         with _materialize() as table_root:
-            v3_bytes = _run_conc_shape(session, table_root)
+            _run_conc_shape(session, table_root)
             stale = f"{_CATALOG_TWO}.{_NAMESPACE}.{_TABLE}"
             _assert_stale_commit_raises(
                 session, f"INSERT INTO {stale} VALUES (3,'rp-cat2')", table_root
@@ -175,7 +182,6 @@ def test_conc_stale_writers_raise_and_winner_bytes_survive(tmp_path: Path) -> No
             _assert_stale_commit_raises(
                 session, f"UPDATE {stale} SET s = 'stale' WHERE id = 1", table_root
             )
-            assert (table_root / "metadata" / "v3.metadata.json").read_bytes() == v3_bytes
     finally:
         session.stop()
 
@@ -237,19 +243,65 @@ def test_dataframe_doors_stale_writer_raises(tmp_path: Path) -> None:
         with _materialize() as table_root:
             _run_conc_shape(session, table_root)
             stale = f"{_CATALOG_TWO}.{_NAMESPACE}.{_TABLE}"
-            from repark.errors import PySparkException
+            _assert_stale_write_raises(
+                session,
+                lambda: session.sql("SELECT 9 AS id, 'df-writeto' AS s").writeTo(stale).append(),
+                table_root,
+            )
+            _assert_stale_write_raises(
+                session,
+                lambda: (
+                    session.createDataFrame([(10, "df-save")], ["id", "s"])
+                    .write.mode("append")
+                    .saveAsTable(stale)
+                ),
+                table_root,
+            )
+    finally:
+        session.stop()
 
-            with pytest.raises(PySparkException, match="CatalogCommitConflicts"):
-                session.sql("SELECT 9 AS id, 'df-writeto' AS s").writeTo(stale).append()
-            assert _metadata_names(table_root) == [
-                "v1.metadata.json",
-                "v2.metadata.json",
-                "v3.metadata.json",
-            ]
-            with pytest.raises(PySparkException, match="CatalogCommitConflicts"):
-                session.createDataFrame([(10, "df-save")], ["id", "s"]).write.mode(
-                    "append"
-                ).saveAsTable(stale)
+
+def test_stale_overwrite_shapes_raise(tmp_path: Path) -> None:
+    """L-03: stale INSERT OVERWRITE, TRUNCATE and ALTER SET TBLPROPERTIES raise too."""
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            _run_conc_shape(session, table_root)
+            stale = f"{_CATALOG_TWO}.{_NAMESPACE}.{_TABLE}"
+            _assert_stale_commit_raises(
+                session, f"INSERT OVERWRITE {stale} SELECT 9 AS id, 'ovw' AS s", table_root
+            )
+            _assert_stale_commit_raises(session, f"TRUNCATE TABLE {stale}", table_root)
+            _assert_stale_commit_raises(
+                session, f"ALTER TABLE {stale} SET TBLPROPERTIES ('x'='y')", table_root
+            )
+    finally:
+        session.stop()
+
+
+def test_stale_overwrite_doors_raise(tmp_path: Path) -> None:
+    """L-03: saveAsTable(overwrite) conflicts; writeTo().overwrite refuses declared."""
+    from repark.errors import UnsupportedOperationException
+
+    session = _new_session(tmp_path)
+    try:
+        with _materialize() as table_root:
+            _run_conc_shape(session, table_root)
+            stale = f"{_CATALOG_TWO}.{_NAMESPACE}.{_TABLE}"
+            fresh = f"{_CATALOG_ONE}.{_NAMESPACE}.{_TABLE}"
+            _assert_stale_write_raises(
+                session,
+                lambda: (
+                    session.createDataFrame([(8, "df-ovw")], ["id", "s"])
+                    .write.mode("overwrite")
+                    .saveAsTable(stale)
+                ),
+                table_root,
+            )
+            with pytest.raises(UnsupportedOperationException, match="overwrite"):
+                session.sql("SELECT 7 AS id, 'df-wt-ovw' AS s").writeTo(stale).overwrite("true")
+            with pytest.raises(UnsupportedOperationException, match="overwrite"):
+                session.sql("SELECT 7 AS id, 'df-wt-ovw' AS s").writeTo(fresh).overwrite("true")
             assert _metadata_names(table_root) == [
                 "v1.metadata.json",
                 "v2.metadata.json",
