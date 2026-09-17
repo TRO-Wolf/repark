@@ -110,8 +110,18 @@ Round-2 runs: `test_ice_nan_pushdown_1.py` offline 5 passed, 1 skipped; live
 ### Gates (2026-09-17, release native at pin `75da2b58`)
 
 Round-1 gates (superseded): `make verify` rc 0; facade 9330 passed, 368
-skipped, 26 xfailed; parity 757 passed, 2 skipped, 12 xfailed. Round-2 gates
-replace them below; counts land here before the final commit.
+skipped, 26 xfailed; parity 757 passed, 2 skipped, 12 xfailed.
+Round-2 gates (2026-09-17, native rebuilt 08:02 EDT after the Rust edits):
+
+- Unit file offline: rc 0, 5 passed, 1 skipped.
+- Unit file live (exact command above): rc 0, 6 passed.
+- `cargo test -p repark-spark --lib nan_pushdown`: rc 0, 8 passed.
+- `uvx ruff@0.15.22 check .`: rc 0, all checks passed.
+- `make verify`: rc 0 (log `/tmp/oc-worker/ib-bump/nan-r2-verify.log`).
+- Whole facade suite: rc 0, 9331 passed, 368 skipped, 26 xfailed
+  (log `/tmp/oc-worker/ib-bump/facade-r2.log`).
+- Whole parity suite: rc 0, 757 passed, 2 skipped, 12 xfailed
+  (log `/tmp/oc-worker/ib-bump/parity-r2.log`).
 
 Exact live command (`.venv` has no `pyspark`; the sparkenv site-packages ride
 `PYTHONPATH`, one JVM via `jb-jvm.sh`):
