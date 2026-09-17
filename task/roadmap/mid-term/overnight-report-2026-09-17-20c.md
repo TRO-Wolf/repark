@@ -177,10 +177,8 @@ session can stop either of them (`systemctl --user stop jc-merge-671b`) without 
 | `feat/ice-sorted-insert-1` | pushed, **no PR** — two P1s (§2) | — |
 | `feat/ice-write-options-1` | pushed at `d4ea3b52`, **no PR** — round 3 ungated | — |
 
-**Lanes left on disk for the orchestrating session's reclaim:** `/tmp/ic-build` (44 G, #672's clone — keep until it merges), `/tmp/ic-b2` (#670's clone — free to remove, it merged), `/tmp/jc-bump` (#671's clone, same), `/tmp/jc-sort` and `/tmp/jc-build` (the two carried branches),
-`/tmp/jc-report` (this report), `/tmp/ic-fork` and `/tmp/jc-fork` (fork clones, both merged — free to remove), `/tmp/jc-forksrc` and
-`/tmp/ic-fork-rdfsrc` (small read-only fork checkouts used as path overrides; no longer referenced), `/tmp/jc-gsi-logic` and
-`/tmp/jc-gsi-perf` (the last two Grok clones).
+**Lanes left on disk for the orchestrating session's reclaim:** `/tmp/ic-build` (44 G, #672's clone — keep until it merges), `/tmp/jc-bump` (#671's clone, same), `/tmp/jc-sort` and `/tmp/jc-build` (the two carried branches),
+and `/tmp/jc-report` (this report). Everything else 20c opened was removed at the close.
 
 ## 10. STATUS.md lines that need correction (for the orchestrating session)
 
@@ -203,5 +201,7 @@ session can stop either of them (`systemctl --user stop jc-merge-671b`) without 
 
 - **Freed:** `/tmp/ic-fork2` (99 G, sort merged); run 19c's Grok scratch trees (`ic-gfork-verify*`, `ic-gsort-*`, ~12 G); every 20c Grok
   clone once its report was read (`jc-gsort-verify`, `jc-gtfs-*`, `jc-grdf-*`, `jc-grtas-*`, `jc-gbn-*`, `jc-gwo-*`, with their target dirs).
-  `df -h /` was 472 G free at the 08:40 low and 614 G at 13:48.
+  At the close, `/tmp/ic-b2` (#670 merged), `/tmp/ic-fork` (98 G), `/tmp/jc-fork` (59 G), the last two Grok clones and the three
+  read-only fork checkouts went too. `df -h /` read 472 G free at the 08:40 low, 614 G at 13:48 and **957 G at 14:46** — about
+  **340 G freed** across the run.
 - **Kept for the orchestrating session's reclaim:** see §9.
