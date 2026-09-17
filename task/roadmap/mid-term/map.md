@@ -253,8 +253,20 @@ declines it (a dated ruling in the intake, then the archive).
   LOGICAL-WIDTH-1 whose blast radius is measured down to four match arms. Its central lesson: a review finding can be real
   while its diagnosis is wrong — the live oracle showed freqItems key equality is primitive IEEE `==`, the exact opposite of
   the `doubleToLongBits` reasoning the critic filed, on both signed zeros and NaN.
+- [overnight-report-2026-09-16-18c.md](overnight-report-2026-09-16-18c.md) — run 18c day report (2026-09-16): the SQL door, the
+  planner contracts and the registry backlog of the 1.5 Spark-parity campaign — #654 BL-19 (every unknown function refuses with
+  Spark's `UNRESOLVED_ROUTINE` on both doors) and #656 BL-20 (Spark's integral literal typing, both doors agree) merged, #651 two
+  cards; JAVA-REGEX-FEATURES-1 and DOOR-CONVERGE-2b (#643) carried; eight live oracle batches (313 cells); the Muse-discipline table
+  (a forbidden co-author trailer on resumed rounds, ledger rows written ahead of work after an outage); rulings R-18c-O1…O10; owner
+  questions Q-18c-1…5; three cards for run 19 (SQL-DOOR-SEAMS-1, ERR-UNRESOLVED-COL-1 with a fitted ranking rule, FNP-13a).
 - [overnight-report-2026-09-16-17c.md](overnight-report-2026-09-16-17c.md) — run 17c overnight report (2026-09-15/16): the SQL door, the config carriers and the registry backlog of the 1.5 Spark-parity campaign — registry census before/after (BACKLOG 158 to 154, FIXED 88 to 94), the per-PR table with actor tiers, the Devin-vs-Muse comparison the owner asked for, rulings R-17c-1…8, owner questions Q-17c-1…7, the parked DOOR-CONVERGE-2b draft, and the Rust-first roll-call. Its central lesson: three reviewers agreeing is not a measurement — the live oracle overturned an orchestrator ruling written ahead of it.
+- [overnight-report-2026-09-16-18b.md](overnight-report-2026-09-16-18b.md) — run 18b day report (2026-09-16): the facade surfaces, IO, type widths and the memory guard of the 1.5 Spark-parity campaign — #652 SUBQ-CELLS-1, #653 NEVER-OOM-PANIC-1 and #655 LOGICAL-WIDTH-1 merged, #659 IO-ORC-1 green and ready, #662 DF-METADATA-COL-1 parked as a draft; the Muse-discipline table, rulings R-18b-1…20, owner questions Q-18b-1…7 and the Rust-first roll-call. Its central lesson: removing a panic can expose a wrong answer — once the nested-loop-join spill fallback really ran, LEFT joins returned four times their rows, and only a value pin measured against an unbounded run caught it.
 - [overnight-report-2026-09-15-16c.md](overnight-report-2026-09-15-16c.md) — run 16c day report (2026-09-15): the SQL door, the type table and the registry backlog of the 1.5 Spark-parity campaign — census slice, per-PR table with reviewer verdicts and costs, oracle batches 12–19, rulings R-16c-1…17, owner questions Q-16c-1/2, hand-offs, the Rust-first roll-call.
+- [overnight-report-2026-09-16-18a.md](overnight-report-2026-09-16-18a.md) — run 18a day report (2026-09-16): the
+  functions slice of the 1.5 Spark-parity campaign. #657 FNP-GEN-1 steps 3–4 merged tree-equal (`json_tuple`, `from_csv`,
+  `schema_of_csv` in Rust); #625 FNP-AGG-1 and #628 FNP-MATH-1 pushed as drafts. Census 20 absent names on `main`, 5 once
+  both drafts merge. Four live oracles, every reviewer claim measured before its ruling. The Muse-discipline table, rulings
+  R-18a-1…28, owner questions Q-18a-1…5 and the Rust-first roll-call.
 - [overnight-report-2026-09-16-17a.md](overnight-report-2026-09-16-17a.md) — run 17a (the functions slice) of the
   2026-09-15/16 overnight: census **37 → 22** missing names on `main`, #618 FNP-WIN-1 and #627 FNP-11B merged tree-equal,
   #629 FNP-GEN-1 gated fully green and handed over, #625 FNP-AGG-1 handed over green-with-findings; the **Devin SWE-2 vs Muse contributor** comparison the
