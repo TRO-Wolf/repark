@@ -274,3 +274,21 @@ make verify (re-run 3) -> rc 0, full gate green
 
 `docs/spark-sql-iceberg-parity.md`: BY NAME row DML-6 (FIXED with pins) and
 the RTAS operation row RTAS-OPS-1 (OPEN, fork ask F-RTAS-OPS-1, pins named).
+
+## Round 2 (2026-09-17) — Critic-3 remediation
+
+Critic report `/tmp/oc-worker/jc-rv/bn-logic-1-report.md` (clone
+`/tmp/jc-gbn-logic`, rev `884bcaf3`), verdict NEEDS_REMEDIATION. Four
+findings, all executor-side on shapes round 1 never pinned:
+
+| Finding | Shape | Round-1 behavior |
+|---|---|---|
+| L-001 P1 | `PARTITION … BY NAME` (static, dynamic, append, overwrite) | clause kept by the strip, dropped by the executor: static overwrite wipes the whole table, append NULL-fills the partition column |
+| L-002 P2 | empty `INSERT OVERWRITE … BY NAME` | staged arm errors on 0 rows instead of wiping |
+| L-003 P2 | missing NOT NULL target column | `NULL AS target` fill instead of `CANNOT_FIND_DATA` (KD000) at analysis |
+| L-004 P3 | `spark.sql.caseSensitive=true` | resolver always folds; Spark answers `EXTRA_COLUMNS` on case mismatch |
+
+Rule for this round, per the brief: every claim re-measured into the
+committed generator before pinning. New oracle section `partition_by_name`
+plus `not_null_by_name` / `case_sensitive_by_name` cells; new clauses
+C-007 (L-001), C-008 (L-002), C-009 (L-003), C-010 (L-004); DML-6 updated.
