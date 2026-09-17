@@ -519,8 +519,8 @@ def test_live_write_default_parity(tmp_path: Path) -> None:
         adopted = sorted(
             tuple(row[col] for col in adopted_cols) for row in adopted_arrow.to_pylist()
         )
-        assert [list(row) for row in adopted] == [[1, "a", 5], [2, "b", 5]]
-        repark.sql("INSERT INTO wd_live_rp.ns.defaults (id, name) VALUES (3, 'c')").collect()
+        assert [list(row) for row in adopted] == [[1, "a", 5], [2, "b", 5], [3, "c", 5]]
+        repark.sql("INSERT INTO wd_live_rp.ns.defaults (id, name) VALUES (4, 'd')").collect()
         adopted_arrow = repark.sql(
             "SELECT id, name, c FROM wd_live_rp.ns.defaults ORDER BY id"
         ).to_arrow()
@@ -528,6 +528,11 @@ def test_live_write_default_parity(tmp_path: Path) -> None:
         adopted = sorted(
             tuple(row[col] for col in adopted_cols) for row in adopted_arrow.to_pylist()
         )
-        assert [list(row) for row in adopted] == [[1, "a", 5], [2, "b", 5], [3, "c", 5]]
+        assert [list(row) for row in adopted] == [
+            [1, "a", 5],
+            [2, "b", 5],
+            [3, "c", 5],
+            [4, "d", 5],
+        ]
     finally:
         repark.stop()

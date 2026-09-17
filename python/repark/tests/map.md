@@ -6316,4 +6316,7 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   DataFrame writer shapes, no-default and v2 unchanged, and write-default 7 over
   initial-default 5. Truth in
   [../../repark-parity/fixtures/torture/data/ice_v3_write_default_1/](../../repark-parity/fixtures/torture/data/ice_v3_write_default_1/map.md).
+  Live repair (2026-09-17): the adoption assertion expects Spark's three rows
+  and the RePark replay inserts `(4, 'd')` for the fill — the two-row text was
+  hand-written and never ran live.
   pins: ice-v3-write-default-1/C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012
