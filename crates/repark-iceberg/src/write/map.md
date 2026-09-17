@@ -439,6 +439,8 @@ repark-core's error map.
   filling omitted columns from `write_default` on every write path: `column_defaults`
   reads the table defaults, `fill_insert_plan` rewrites a short INSERT plan, an
   explicit NULL stays NULL, and a missing required column keeps Spark's error.
+  `rewrite_insert_markers` passes a missing table through unloaded, so the door's
+  standard missing-table error fires instead of a leaked `TableNotFound`.
   pins: ice-v3-write-default-1/C-004, C-005, C-006, C-007
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):

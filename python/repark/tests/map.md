@@ -4298,9 +4298,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   valid multipart names still round-trip. Routes only
   through CTAS / `INSERT INTO` / `INSERT OVERWRITE` — no new commit machinery. **R1 (remediation):**
   `saveAsTable` into an existing table resolves columns BY NAME — a reordered same-typed append
-  lands correctly (parity readback value+type), an extra/missing source column raises
+  lands correctly (parity readback value+type), an extra source column raises
   `AnalysisException`, and the insertInto-positional-vs-saveAsTable-by-name discriminator pins the
   two writers genuinely diverge on a reordered frame (oracle-verified on PySpark 4.1.2).
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** a missing source column fills NULL on a
+  table with no defaults (Spark-equal) instead of raising; the extra-column refusal
+  is unchanged.
+  pins: ice-v3-write-default-1/C-006
 - `test_ctas_division_writeback.py` — **Group L-write**: CTAS integer-division type-derivation at
   the facade boundary. `ReparkSession.sql` CTAS into an in-memory Iceberg catalog, then read the
   written table back on the Arrow path (`to_arrow`), value + Arrow type: the load-bearing

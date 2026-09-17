@@ -15,7 +15,7 @@ use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::spec::{Literal, PrimitiveLiteral, Schema as IcebergSchema};
-use iceberg::{Catalog, NamespaceIdent, TableIdent};
+use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 
 pub struct ColumnDefault {
     data_type: ArrowDataType,
@@ -132,10 +132,11 @@ pub async fn rewrite_insert_markers(
     let Some(source) = insert.source.as_mut() else {
         return Ok(None);
     };
-    let table = catalog
-        .load_table(ident)
-        .await
-        .map_err(crate::catalog::iceberg_to_datafusion)?;
+    let table = match catalog.load_table(ident).await {
+        Ok(table) => table,
+        Err(error) if error.kind() == ErrorKind::TableNotFound => return Ok(None),
+        Err(error) => return Err(crate::catalog::iceberg_to_datafusion(error)),
+    };
     let current = table.metadata().current_schema();
     let arrow_schema =
         schema_to_arrow_schema(current).map_err(crate::catalog::iceberg_to_datafusion)?;
