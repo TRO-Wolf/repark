@@ -52,6 +52,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "merge-on-read"],
                             ["write.merge.mode", "merge-on-read"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "merge-on-read"],
                         ],
@@ -97,6 +98,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "merge-on-read"],
                             ["write.merge.mode", "merge-on-read"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "merge-on-read"],
                         ],
@@ -153,6 +155,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "merge-on-read"],
                             ["write.merge.mode", "merge-on-read"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "merge-on-read"],
                         ],
@@ -214,6 +217,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "merge-on-read"],
                             ["write.merge.mode", "merge-on-read"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "merge-on-read"],
                         ],
@@ -289,6 +293,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "merge-on-read"],
                             ["write.merge.mode", "merge-on-read"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "merge-on-read"],
                         ],
@@ -341,6 +346,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "merge-on-read"],
                             ["write.merge.mode", "merge-on-read"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "merge-on-read"],
                         ],
@@ -386,6 +392,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "merge-on-read"],
                             ["write.merge.mode", "merge-on-read"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "merge-on-read"],
                         ],
@@ -426,6 +433,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "merge-on-read"],
                             ["write.merge.mode", "merge-on-read"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "merge-on-read"],
                         ],
@@ -488,6 +496,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "copy-on-write"],
                             ["write.merge.mode", "copy-on-write"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "copy-on-write"],
                         ],
@@ -553,6 +562,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "copy-on-write"],
                             ["write.merge.mode", "copy-on-write"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "copy-on-write"],
                         ],
@@ -633,6 +643,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "copy-on-write"],
                             ["write.merge.mode", "copy-on-write"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "copy-on-write"],
                         ],
@@ -695,6 +706,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "copy-on-write"],
                             ["write.merge.mode", "copy-on-write"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "copy-on-write"],
                         ],
@@ -760,6 +772,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "copy-on-write"],
                             ["write.merge.mode", "copy-on-write"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "copy-on-write"],
                         ],
@@ -840,6 +853,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "copy-on-write"],
                             ["write.merge.mode", "copy-on-write"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.target-file-size-bytes", "268435456"],
                             ["write.update.mode", "copy-on-write"],
                         ],

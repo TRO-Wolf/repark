@@ -232,6 +232,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   WRITE-ORDER-TRANSFORM-1 residual: a `bucket(4,id)` sorted table refuses the MERGE
   loudly (`only identity sort fields are supported`) and commits no snapshot.
   pins: ice-spark-table-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **RP-23 (2026-09-17):** the RePark-created twin now stamps
+  `write.parquet.compression-codec=zstd` like the Spark-written fixture, so the
+  Spark-only property delta is `owner` alone.
+  pins: rp-23-pin-bump/C-001
 - [test_ice_nan_pushdown_1.py](test_ice_nan_pushdown_1.py) +
   [ice_nan_pushdown_1_oracle.json](ice_nan_pushdown_1_oracle.json) +
   [_record_ice_nan_pushdown_1.py](_record_ice_nan_pushdown_1.py) — **ICE-NAN-PUSHDOWN-1
@@ -1154,6 +1158,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   count equal to the memory half) plus the S6 gold namespace, which `date()` now answers into.
   Namespace pin: rendered SQL uses only the passed namespace.
   CUTOVER-DATE-1 controls: `to_date` / `CAST AS DATE` / `date` / `unix_timestamp` answer.
+  **RP-23 (2026-09-17):** the repark half records the `write.parquet.compression-codec=zstd`
+  stamp Spark always wrote, so all 14 DIVERGES verdicts join EQUAL; the MERGE delete-file
+  floors still hold (s2/s7 3 default / 2 capped, s8/s9 zero).
+  pins: rp-23-pin-bump/C-001, C-003, C-004
   MoR MERGE delete-file golden pins kinds (PARQUET vs PUFFIN), not count; count is
   host-dependent (3 on a 64-core box) and the always-run pin is `count >= Spark's 2`.
   CoW MERGE: `delete_files` empty (a delete file is a defect); data-file count after the
@@ -1285,6 +1293,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: v3-cov-statement-coverage/C-003
   **WRITE-ORDER-DIST-1 (2026-09-06):** `alter-write-ordered-by` flips DIVERGES→EQUAL.
   pins: write-order-dist-1/C-001
+  **RP-23 (2026-09-17):** `create-v3-properties` flips DIVERGES→EQUAL — the codec stamp was
+  its sole open difference.
+  pins: rp-23-pin-bump/C-001
 - [_v3_statement_coverage_repark.py](_v3_statement_coverage_repark.py) and
   [_v3_statement_coverage_spark.py](_v3_statement_coverage_spark.py) — **V3-COV (2026-09-03):**
   the measured halves, one entry per program, recorded 2026-09-03 against live PySpark 4.1.2 +
@@ -1294,6 +1305,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   nullability half); verdict stays DIVERGES on width.
   pins: v3-cov-statement-coverage/C-003
   pins: cutover-schema-1/C-002
+  pins: rp-23-pin-bump/C-001
   **WRITE-ORDER-DIST-1 (2026-09-06):** the `alter-write-ordered-by` repark half is `OK` —
   the statement the row runs now executes instead of refusing.
   pins: write-order-dist-1/C-001
@@ -5624,6 +5636,9 @@ pins: fnp-8-review/C-009, C-010
   Spark 4.1.2 and diffs repark row for row (19 of 22 byte-identical; `Name`, `Location`,
   and `Table Properties` engine defaults differ by construction).
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **RP-23 (2026-09-17):** `Table Properties` carries the
+  `write.parquet.compression-codec=zstd` stamp every create writes.
+  pins: rp-23-pin-bump/C-001
 
 - `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
   probe re-runnability pins, run as a subprocess exactly as the document's reproduce
