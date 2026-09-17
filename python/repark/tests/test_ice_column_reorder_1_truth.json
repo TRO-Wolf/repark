@@ -1,0 +1,1607 @@
+{
+  "cases": {
+    "after_v2": {
+      "after": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "b",
+            "string"
+          ],
+          [
+            "a",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 3,
+        "rows": [
+          [
+            1,
+            "b1",
+            "a1"
+          ]
+        ],
+        "schema_id": 1,
+        "select_columns": [
+          "id",
+          "b",
+          "a"
+        ]
+      },
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            "a1",
+            "b1"
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "a",
+          "b"
+        ]
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN b AFTER id"
+    },
+    "badcol_v2": {
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            "a1",
+            "b1"
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "a",
+          "b"
+        ]
+      },
+      "error": {
+        "java_class": null,
+        "message_first_line": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `nope` cannot be resolved. Did you mean one of the following? [`id`, `a`, `b`]. SQLSTATE: 42703; line 1 pos 0",
+        "python_class": "AnalysisException"
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN nope FIRST"
+    },
+    "badref_v2": {
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            "a1",
+            "b1"
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "a",
+          "b"
+        ]
+      },
+      "error": {
+        "java_class": null,
+        "message_first_line": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `nope` cannot be resolved. Did you mean one of the following? [`id`, `a`, `b`]. SQLSTATE: 42703; line 1 pos 0",
+        "python_class": "AnalysisException"
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN a AFTER nope"
+    },
+    "df_v2": {
+      "after": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "b",
+            "string"
+          ],
+          [
+            "a",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 4,
+        "rows": [
+          [
+            1,
+            "b1",
+            "a1"
+          ],
+          [
+            9,
+            "b9",
+            "a9"
+          ]
+        ],
+        "schema_id": 1,
+        "select_columns": [
+          "id",
+          "b",
+          "a"
+        ]
+      },
+      "columns": [
+        "id",
+        "b",
+        "a"
+      ],
+      "statement": "ALTER COLUMN b AFTER id + df.columns + writeTo.append by name"
+    },
+    "first_after_last_v2": {
+      "after": {
+        "describe": [
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ],
+          [
+            "id",
+            "int"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          }
+        ],
+        "metadata_version": 3,
+        "rows": [
+          [
+            "a1",
+            "b1",
+            1
+          ]
+        ],
+        "schema_id": 1,
+        "select_columns": [
+          "a",
+          "b",
+          "id"
+        ]
+      },
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            "a1",
+            "b1"
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "a",
+          "b"
+        ]
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN id AFTER b"
+    },
+    "first_v2": {
+      "after": {
+        "describe": [
+          [
+            "b",
+            "string"
+          ],
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 3,
+        "rows": [
+          [
+            "b1",
+            1,
+            "a1"
+          ]
+        ],
+        "schema_id": 1,
+        "select_columns": [
+          "b",
+          "id",
+          "a"
+        ]
+      },
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            "a1",
+            "b1"
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "a",
+          "b"
+        ]
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN b FIRST"
+    },
+    "first_v3": {
+      "after": {
+        "describe": [
+          [
+            "b",
+            "string"
+          ],
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 3,
+        "rows": [
+          [
+            "b1",
+            1,
+            "a1"
+          ]
+        ],
+        "schema_id": 1,
+        "select_columns": [
+          "b",
+          "id",
+          "a"
+        ]
+      },
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            "a1",
+            "b1"
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "a",
+          "b"
+        ]
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN b FIRST"
+    },
+    "insert_v2": {
+      "after": {
+        "describe": [
+          [
+            "b",
+            "string"
+          ],
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 4,
+        "rows": [
+          [
+            "b1",
+            1,
+            "a1"
+          ],
+          [
+            "b2",
+            2,
+            "a2"
+          ]
+        ],
+        "schema_id": 1,
+        "select_columns": [
+          "b",
+          "id",
+          "a"
+        ]
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN b FIRST + INSERT new-order"
+    },
+    "nested_after_cross_v2": {
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "s",
+            "struct<a:int,b:string>"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ],
+              "type": "struct"
+            }
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            {
+              "a": 1,
+              "b": "x"
+            }
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "s"
+        ]
+      },
+      "error": {
+        "java_class": null,
+        "message_first_line": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `s`.`id` cannot be resolved. Did you mean one of the following? [`id`, `s`]. SQLSTATE: 42703; line 1 pos 0",
+        "python_class": "AnalysisException"
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN s.b AFTER id"
+    },
+    "nested_after_dotted_v2": {
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "s",
+            "struct<a:int,b:string>"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ],
+              "type": "struct"
+            }
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            {
+              "a": 1,
+              "b": "x"
+            }
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "s"
+        ]
+      },
+      "error": {
+        "java_class": null,
+        "message_first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near '.'. SQLSTATE: 42601 (line 1, pos 66)",
+        "python_class": "ParseException"
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN s.b AFTER s.a"
+    },
+    "nested_after_short_v2": {
+      "after": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "s",
+            "struct<a:int,b:string>"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ],
+              "type": "struct"
+            }
+          }
+        ],
+        "metadata_version": 4,
+        "rows": [
+          [
+            1,
+            {
+              "a": 1,
+              "b": "x"
+            }
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "s"
+        ]
+      },
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "s",
+            "struct<a:int,b:string>"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ],
+              "type": "struct"
+            }
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            {
+              "a": 1,
+              "b": "x"
+            }
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "s"
+        ]
+      },
+      "statement": "ALTER COLUMN s.b FIRST then ALTER COLUMN s.b AFTER a"
+    },
+    "nested_v2": {
+      "after": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "s",
+            "struct<b:string,a:int>"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "fields": [
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                },
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                }
+              ],
+              "type": "struct"
+            }
+          }
+        ],
+        "metadata_version": 3,
+        "rows": [
+          [
+            1,
+            {
+              "a": 1,
+              "b": "x"
+            }
+          ]
+        ],
+        "schema_id": 1,
+        "select_columns": [
+          "id",
+          "s"
+        ]
+      },
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "s",
+            "struct<a:int,b:string>"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ],
+              "type": "struct"
+            }
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            {
+              "a": 1,
+              "b": "x"
+            }
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "s"
+        ]
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN s.b FIRST"
+    },
+    "noop_after_v2": {
+      "after": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            "a1",
+            "b1"
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "a",
+          "b"
+        ]
+      },
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            "a1",
+            "b1"
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "a",
+          "b"
+        ]
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN a AFTER id"
+    },
+    "noop_first_v2": {
+      "after": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            "a1",
+            "b1"
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "a",
+          "b"
+        ]
+      },
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            "a1",
+            "b1"
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "a",
+          "b"
+        ]
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN id FIRST"
+    },
+    "part_insert_v2": {
+      "after": {
+        "describe": [
+          [
+            "b",
+            "string"
+          ],
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "# Partition Information",
+            ""
+          ],
+          [
+            "# col_name",
+            "data_type"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 4,
+        "rows": [
+          [
+            "b1",
+            1,
+            "a1"
+          ],
+          [
+            "b3",
+            3,
+            "a3"
+          ]
+        ],
+        "schema_id": 1,
+        "select_columns": [
+          "b",
+          "id",
+          "a"
+        ]
+      },
+      "statement": "partitioned ALTER COLUMN b FIRST + INSERT new-order"
+    },
+    "part_v2": {
+      "after": {
+        "describe": [
+          [
+            "b",
+            "string"
+          ],
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "# Partition Information",
+            ""
+          ],
+          [
+            "# col_name",
+            "data_type"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 3,
+        "rows": [
+          [
+            "b1",
+            1,
+            "a1"
+          ]
+        ],
+        "schema_id": 1,
+        "select_columns": [
+          "b",
+          "id",
+          "a"
+        ]
+      },
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ],
+          [
+            "# Partition Information",
+            ""
+          ],
+          [
+            "# col_name",
+            "data_type"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            "a1",
+            "b1"
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "a",
+          "b"
+        ]
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN b FIRST"
+    },
+    "self_v2": {
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "a",
+            "string"
+          ],
+          [
+            "b",
+            "string"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "a",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "id": 3,
+            "name": "b",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            "a1",
+            "b1"
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "a",
+          "b"
+        ]
+      },
+      "error": {
+        "java_class": "org.apache.spark.SparkException",
+        "message_first_line": "org.apache.spark.SparkException: Unsupported table change: Cannot move b after itself",
+        "python_class": "Py4JJavaError"
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN b AFTER b"
+    },
+    "struct_top_v2": {
+      "after": {
+        "describe": [
+          [
+            "s",
+            "struct<a:int,b:string>"
+          ],
+          [
+            "id",
+            "int"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ],
+              "type": "struct"
+            }
+          },
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          }
+        ],
+        "metadata_version": 3,
+        "rows": [
+          [
+            {
+              "a": 1,
+              "b": "x"
+            },
+            1
+          ]
+        ],
+        "schema_id": 1,
+        "select_columns": [
+          "s",
+          "id"
+        ]
+      },
+      "before": {
+        "describe": [
+          [
+            "id",
+            "int"
+          ],
+          [
+            "s",
+            "struct<a:int,b:string>"
+          ]
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ],
+              "type": "struct"
+            }
+          }
+        ],
+        "metadata_version": 2,
+        "rows": [
+          [
+            1,
+            {
+              "a": 1,
+              "b": "x"
+            }
+          ]
+        ],
+        "schema_id": 0,
+        "select_columns": [
+          "id",
+          "s"
+        ]
+      },
+      "statement": "ALTER TABLE {t} ALTER COLUMN s FIRST"
+    }
+  },
+  "provenance": {
+    "gav": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+    "iceberg": "1.11.0",
+    "note": "oracle: PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (exact Spark-minor match)",
+    "spark": "4.1.2"
+  },
+  "shapes": {
+    "nested_ddl": "CREATE TABLE {t} (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg",
+    "nested_seed": "INSERT INTO {t} VALUES (1, named_struct('a', 1, 'b', 'x'))",
+    "plain_ddl": "CREATE TABLE {t} (id INT, a STRING, b STRING) USING iceberg",
+    "plain_seed": "INSERT INTO {t} VALUES (1, 'a1', 'b1')"
+  }
+}

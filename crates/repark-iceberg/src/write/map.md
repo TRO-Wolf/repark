@@ -402,6 +402,28 @@ repark-core's error map.
   `rename_table`, schema evolution (`apply_schema_changes` / `SchemaChange` → fork
   `UpdateSchema`), partition-spec evolution (`apply_partition_spec_changes` /
   `PartitionSpecChange` → fork `UpdatePartitionSpec`). Return `iceberg::Result`.
+  **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):** `SchemaChange::MoveColumn`
+  (top-level and nested paths via the fork's standalone `move_first` / `move_after`); every
+  move commits through one `UpdateSchema` transaction, with batch-added names known to the
+  resolver. `apply_schema_changes_on_table` runs the commit on an already-loaded table so
+  doors load once. The partition-spec family moved to `partition_spec.rs` in the same change
+  (the size ratchet), behaviour-identical.
+  pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-008, C-010, C-011
+- `column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):**
+  `resolve_move_names` (pure fork-index resolution: the fork's own
+  `field_by_name_case_insensitive`, bare `AFTER` references qualified into the mover's
+  struct, top-level suggestions with Spark's `UNRESOLVED_COLUMN` framing) plus
+  `starts_with_alter` (the zero-alloc `ALTER`-prefix scan gating both doors' intercepts).
+  Split out of `alter.rs`, which sits at its exact ceiling.
+  pins: ice-column-reorder-1/C-001, C-002, C-003, C-006, C-007, C-008, C-014
+- `partition_spec.rs` — the partition-spec evolution family, split out of `alter.rs`
+  behaviour-identical (the size ratchet): one `PartitionSpecChange` transaction through
+  `apply_partition_spec_changes`. `AddField` carries a source column, a transform
+  (`identity` / `bucket[N]` / `truncate[W]` / `year` / `month` / `day` / `hour`) and an
+  optional `AS` name; `RemoveFieldByName` drops by partition name;
+  `RemoveFieldByTransform` drops by source-plus-transform pair; `ReplaceField` drops by old
+  name and adds source plus transform with an optional new name; `RenameField` renames by
+  current name. Errors propagate the load, validation, or commit failure unchanged.
 - `sort_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** `apply_write_order`, the one-transaction
   write-layout primitive over the fork's `Transaction::replace_sort_order` plus an optional
   `write.distribution-mode` property set: column names resolve case-insensitively against the

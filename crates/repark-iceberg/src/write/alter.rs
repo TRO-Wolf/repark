@@ -3,9 +3,12 @@
 use std::collections::HashMap;
 use std::hash::BuildHasher;
 
-use iceberg::spec::{PrimitiveType, Transform, Type};
+use iceberg::spec::{PrimitiveType, Type};
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
-use iceberg::{Catalog, Result, TableIdent};
+use iceberg::{Catalog, Result, TableIdent, table::Table};
+
+pub use super::column_move::{resolve_batch_move_names, resolve_move_names, starts_with_alter};
+pub use super::partition_spec::{PartitionSpecChange, apply_partition_spec_changes};
 
 /// Where a newly added column lands in its parent struct (Spark `FIRST` / `AFTER col`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -63,49 +66,9 @@ pub enum SchemaChange {
         /// New documentation string (`None` clears).
         doc: Option<String>,
     },
-}
-
-/// One partition-spec evolution op folded into a single `apply_partition_spec_changes` transaction.
-#[derive(Debug, Clone)]
-pub enum PartitionSpecChange {
-    /// `ADD PARTITION FIELD <transform> [AS name]`.
-    AddField {
-        /// Source column name (schema field).
-        source_name: String,
-        /// Partition transform (identity / bucket[N] / truncate[W] / year / month / day / hour).
-        transform: Transform,
-        /// Optional partition field name (`AS name`).
-        name: Option<String>,
-    },
-    /// `DROP PARTITION FIELD name` — remove by partition (target) name.
-    RemoveFieldByName {
-        /// Partition field name to remove.
+    MoveColumn {
         name: String,
-    },
-    /// `DROP PARTITION FIELD <transform>(source)` — remove by source + transform pair.
-    RemoveFieldByTransform {
-        /// Source column name.
-        source_name: String,
-        /// Transform that identifies the field.
-        transform: Transform,
-    },
-    /// `REPLACE PARTITION FIELD old WITH <transform> [AS name]`.
-    ReplaceField {
-        /// Existing partition field name to drop.
-        old_name: String,
-        /// Source column for the replacement field.
-        source_name: String,
-        /// Transform for the replacement field.
-        transform: Transform,
-        /// Optional new partition field name.
-        new_name: Option<String>,
-    },
-    /// Rename an existing partition field.
-    RenameField {
-        /// Current partition field name.
-        name: String,
-        /// New partition field name.
-        new_name: String,
+        position: ColumnPosition,
     },
 }
 
@@ -170,7 +133,23 @@ pub async fn apply_schema_changes(
         return Ok(());
     }
     let table = catalog.load_table(ident).await?;
-    let tx = Transaction::new(&table);
+    let prepared = resolve_batch_move_names(table.metadata().current_schema(), changes)?;
+    apply_schema_changes_on_table(catalog, &table, &prepared).await
+}
+
+#[expect(
+    clippy::missing_errors_doc,
+    reason = "round comment ban: action-apply and commit errors propagate from the fork, recorded in the unit ledger"
+)]
+pub async fn apply_schema_changes_on_table(
+    catalog: &dyn Catalog,
+    table: &Table,
+    changes: &[SchemaChange],
+) -> Result<()> {
+    if changes.is_empty() {
+        return Ok(());
+    }
+    let tx = Transaction::new(table);
     // Spark `spark.sql.caseSensitive=false` default — match column names case-insensitively.
     let mut action = tx.update_schema().case_sensitive(false);
     for change in changes {
@@ -202,92 +181,10 @@ pub async fn apply_schema_changes(
             SchemaChange::UpdateColumnDoc { name, doc } => {
                 action.update_column_doc(name, doc.as_deref())
             }
-        };
-    }
-    let tx = action.apply(tx)?;
-    tx.commit(catalog).await?;
-    Ok(())
-}
-
-/// Apply partition-spec changes in one transaction (I7).
-/// # Errors
-/// Propagates any [`iceberg::Error`] from load, action apply (validation), or commit.
-pub async fn apply_partition_spec_changes(
-    catalog: &dyn Catalog,
-    ident: &TableIdent,
-    changes: &[PartitionSpecChange],
-) -> Result<()> {
-    if changes.is_empty() {
-        return Ok(());
-    }
-    let table = catalog.load_table(ident).await?;
-    // Seed known partition-field names from the current default spec.
-    let mut known_field_names: Vec<String> = table
-        .metadata()
-        .default_partition_spec()
-        .fields()
-        .iter()
-        .map(|field| field.name.clone())
-        .collect();
-    let resolve_field_name = |known: &[String], requested: &str| -> String {
-        known
-            .iter()
-            .find(|name| name.eq_ignore_ascii_case(requested))
-            .cloned()
-            .unwrap_or_else(|| requested.to_string())
-    };
-    let forget_field_name = |known: &mut Vec<String>, name: &str| {
-        known.retain(|existing| !existing.eq_ignore_ascii_case(name));
-    };
-    let tx = Transaction::new(&table);
-    // Spark `spark.sql.caseSensitive=false` default — match source columns case-insensitively.
-    let mut action = tx.update_partition_spec().case_sensitive(false);
-    for change in changes {
-        action = match change {
-            PartitionSpecChange::AddField {
-                source_name,
-                transform,
-                name,
-            } => {
-                if let Some(explicit_name) = name {
-                    forget_field_name(&mut known_field_names, explicit_name);
-                    known_field_names.push(explicit_name.clone());
-                }
-                action.add_field_with_transform(name.as_deref(), source_name, *transform)
-            }
-            PartitionSpecChange::RemoveFieldByName { name } => {
-                let resolved = resolve_field_name(&known_field_names, name);
-                forget_field_name(&mut known_field_names, &resolved);
-                action.remove_field(&resolved)
-            }
-            PartitionSpecChange::RemoveFieldByTransform {
-                source_name,
-                transform,
-            } => action.remove_field_by_transform(source_name, *transform),
-            PartitionSpecChange::ReplaceField {
-                old_name,
-                source_name,
-                transform,
-                new_name,
-            } => {
-                let resolved_old = resolve_field_name(&known_field_names, old_name);
-                forget_field_name(&mut known_field_names, &resolved_old);
-                if let Some(explicit_name) = new_name {
-                    forget_field_name(&mut known_field_names, explicit_name);
-                    known_field_names.push(explicit_name.clone());
-                }
-                action.remove_field(&resolved_old).add_field_with_transform(
-                    new_name.as_deref(),
-                    source_name,
-                    *transform,
-                )
-            }
-            PartitionSpecChange::RenameField { name, new_name } => {
-                let resolved = resolve_field_name(&known_field_names, name);
-                forget_field_name(&mut known_field_names, &resolved);
-                known_field_names.push(new_name.clone());
-                action.rename_field(&resolved, new_name)
-            }
+            SchemaChange::MoveColumn { name, position } => match position {
+                ColumnPosition::First => action.move_first(name),
+                ColumnPosition::After(reference) => action.move_after(name, reference),
+            },
         };
     }
     let tx = action.apply(tx)?;
@@ -306,7 +203,7 @@ mod tests {
 
     use iceberg::io::LocalFsStorageFactory;
     use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
-    use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
+    use iceberg::spec::{NestedField, PrimitiveType, Schema, Transform, Type};
     use iceberg::table::Table;
     use iceberg::{
         CatalogBuilder, Error, ErrorKind, Namespace, NamespaceIdent, TableCommit, TableCreation,
@@ -831,6 +728,86 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn schema_move_column_reorders_ids_stable_and_noop_keeps_schema_id() {
+        let wh = TempDir::new().unwrap();
+        let (catalog, ident) = setup(&wh).await;
+        for name in ["a", "b"] {
+            apply_schema_changes(
+                catalog.as_ref(),
+                &ident,
+                &[SchemaChange::AddColumn {
+                    name: (*name).into(),
+                    field_type: Type::Primitive(PrimitiveType::String),
+                    doc: None,
+                    required: false,
+                    position: None,
+                }],
+            )
+            .await
+            .unwrap();
+        }
+        let ids_before = schema_field_ids_by_name(&catalog, &ident).await;
+        let schema_before = catalog
+            .load_table(&ident)
+            .await
+            .unwrap()
+            .metadata()
+            .current_schema_id();
+        apply_schema_changes(
+            catalog.as_ref(),
+            &ident,
+            &[SchemaChange::MoveColumn {
+                name: "b".into(),
+                position: ColumnPosition::First,
+            }],
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            schema_field_names(&catalog, &ident).await,
+            vec!["b".to_string(), "id".to_string(), "a".to_string()]
+        );
+        assert_eq!(schema_field_ids_by_name(&catalog, &ident).await, ids_before);
+        let schema_after = catalog
+            .load_table(&ident)
+            .await
+            .unwrap()
+            .metadata()
+            .current_schema_id();
+        assert_ne!(schema_after, schema_before);
+        apply_schema_changes(
+            catalog.as_ref(),
+            &ident,
+            &[SchemaChange::MoveColumn {
+                name: "b".into(),
+                position: ColumnPosition::First,
+            }],
+        )
+        .await
+        .unwrap();
+        let schema_noop = catalog
+            .load_table(&ident)
+            .await
+            .unwrap()
+            .metadata()
+            .current_schema_id();
+        assert_eq!(schema_noop, schema_after);
+        let error = apply_schema_changes(
+            catalog.as_ref(),
+            &ident,
+            &[SchemaChange::MoveColumn {
+                name: "b".into(),
+                position: ColumnPosition::After("b".into()),
+            }],
+        )
+        .await
+        .expect_err("a self move must refuse");
+        assert!(
+            error.to_string().contains("Cannot move b after itself"),
+            "self-move refusal must carry the Java message, got: {error}"
+        );
+    }
     /// I6 stretch — int→long widen lands; long→int narrow refuses loud (twin pin).
     #[tokio::test]
     async fn schema_type_widen_int_to_long_and_narrow_refuses() {

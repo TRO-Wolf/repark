@@ -716,18 +716,6 @@ pub(crate) fn refuse_unsupported_alter_sql(sql: &str) -> Option<Result<DataFrame
     if !trimmed.starts_with("ALTER") || !trimmed.contains("TABLE") {
         return None;
     }
-    // Standalone MOVE without FIRST/AFTER on ADD (charter OUT).
-    if trimmed.contains("ALTER COLUMN")
-        && (trimmed.contains(" FIRST") || trimmed.contains(" AFTER "))
-        && !trimmed.contains("ADD")
-    {
-        // `ALTER COLUMN c FIRST` is a move — refuse.
-        return Some(Err(DataFusionError::NotImplemented(
-            "ALTER COLUMN … FIRST/AFTER (column MOVE) without ADD is not supported yet — \
-             use ADD COLUMN … FIRST|AFTER for new columns (I6)"
-                .into(),
-        )));
-    }
     // ALTER COLUMN COMMENT.
     if trimmed.contains("ALTER COLUMN") && trimmed.contains("COMMENT") {
         // Allow through only if we later add a rewrite.
@@ -776,7 +764,7 @@ pub(crate) struct ReplaceColumnDef {
 
 /// Significant token for the I7 hand parser (mirrors `ref_ddl`).
 #[derive(Debug, Clone)]
-enum Sig {
+pub(crate) enum Sig {
     Word(String),
     Period,
     Number(String),
@@ -896,7 +884,7 @@ pub(crate) async fn execute_iceberg_alter_ddl(
     }
 }
 
-fn table_parts_to_ident(parts: &[String]) -> Result<(String, TableIdent)> {
+pub(crate) fn table_parts_to_ident(parts: &[String]) -> Result<(String, TableIdent)> {
     let [catalog, namespace, table] = parts else {
         return Err(DataFusionError::Plan(format!(
             "ALTER TABLE expects a three-part `catalog.namespace.table` name, got `{}`",
@@ -1529,7 +1517,7 @@ fn is_iceberg_type_promotion(from: &PrimitiveType, to: &PrimitiveType) -> bool {
     }
 }
 
-fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
+pub(crate) fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
     use datafusion::sql::sqlparser::dialect::DatabricksDialect;
     use datafusion::sql::sqlparser::tokenizer::Tokenizer;
     let tokens = Tokenizer::new(&DatabricksDialect {}, sql).tokenize().ok()?;
@@ -1553,22 +1541,26 @@ fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
     )
 }
 
-fn word_eq(significant: &[Sig], index: usize, expected: &str) -> bool {
+pub(crate) fn word_eq(significant: &[Sig], index: usize, expected: &str) -> bool {
     word_at(significant, index).is_some_and(|word| word.eq_ignore_ascii_case(expected))
 }
 
-fn word_at(significant: &[Sig], index: usize) -> Option<&str> {
+pub(crate) fn word_at(significant: &[Sig], index: usize) -> Option<&str> {
     match significant.get(index) {
         Some(Sig::Word(word)) => Some(word.as_str()),
         _ => None,
     }
 }
 
-fn is_period_at(significant: &[Sig], index: usize) -> bool {
+pub(crate) fn is_period_at(significant: &[Sig], index: usize) -> bool {
     matches!(significant.get(index), Some(Sig::Period))
 }
 
-fn collect_name_parts(significant: &[Sig], start: usize, end: usize) -> Option<Vec<String>> {
+pub(crate) fn collect_name_parts(
+    significant: &[Sig],
+    start: usize,
+    end: usize,
+) -> Option<Vec<String>> {
     let mut parts = Vec::new();
     let mut index = start;
     while index < end {
@@ -1585,7 +1577,7 @@ fn collect_name_parts(significant: &[Sig], start: usize, end: usize) -> Option<V
     if parts.is_empty() { None } else { Some(parts) }
 }
 
-fn render_sig_at(significant: &[Sig], index: usize) -> String {
+pub(crate) fn render_sig_at(significant: &[Sig], index: usize) -> String {
     match significant.get(index) {
         Some(Sig::Word(word)) => word.clone(),
         Some(Sig::Number(number)) => number.clone(),

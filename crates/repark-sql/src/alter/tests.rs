@@ -182,6 +182,50 @@ fn promotion_targets_are_bounded() {
     assert!(!is_promotion_target(&PrimitiveType::Boolean));
 }
 
+#[test]
+fn column_move_first_after_and_nested_parse() {
+    let first = try_parse_column_move("ALTER TABLE mem.ns.t ALTER COLUMN b FIRST")
+        .expect("recognize")
+        .expect("parse");
+    assert_eq!(first.name, "b");
+    assert!(matches!(first.position, ColumnPosition::First));
+    let after = try_parse_column_move("ALTER TABLE mem.ns.t ALTER COLUMN b AFTER id")
+        .expect("recognize")
+        .expect("parse");
+    assert_eq!(after.name, "b");
+    assert!(matches!(after.position, ColumnPosition::After(_)));
+    let nested = try_parse_column_move("ALTER TABLE mem.ns.t ALTER COLUMN s.b FIRST")
+        .expect("recognize")
+        .expect("parse");
+    assert_eq!(nested.name, "s.b");
+    let short = try_parse_column_move("ALTER TABLE mem.ns.t ALTER COLUMN s.b AFTER a")
+        .expect("recognize")
+        .expect("parse");
+    assert_eq!(short.name, "s.b");
+    assert!(matches!(short.position, ColumnPosition::After(_)));
+    let dotted = try_parse_column_move("ALTER TABLE mem.ns.t ALTER COLUMN s.b AFTER s.a")
+        .expect("recognize")
+        .expect_err("a dotted AFTER reference must refuse");
+    let message = dotted.to_string();
+    assert!(
+        message.contains("[PARSE_SYNTAX_ERROR]")
+            && message.contains("at or near '.'")
+            && message.contains("42601"),
+        "a dotted AFTER reference must refuse Spark-shaped, got: {message}"
+    );
+}
+
+#[test]
+fn column_move_leaves_other_alter_forms_alone() {
+    assert!(try_parse_column_move("ALTER TABLE mem.ns.t ALTER COLUMN n TYPE BIGINT").is_none());
+    assert!(try_parse_column_move("SELECT 1").is_none());
+    assert!(
+        try_parse_column_move("ALTER TABLE mem.ns.t ALTER COLUMN b FIRST EXTRA")
+            .expect("recognize")
+            .is_err()
+    );
+}
+
 /// `DEFAULT` is recognized only as a bare keyword; quoted `"DEFAULT"` is an identifier.
 #[test]
 fn default_keyword_recognition_is_quote_sensitive() {

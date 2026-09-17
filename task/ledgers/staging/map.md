@@ -12,6 +12,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   note and the §9 audit trail, and registry claims C-3, C-8, C-9 rewritten
   (C-3, C-9 FIXED → OPEN). Docs-only reading unit, no product change.
   `risk_tier: standard`. Branch `docs/ice-cutover-corrections-1`.
+- [ice-column-reorder-1-ledger.md](ice-column-reorder-1-ledger.md) —
+  **ICE-COLUMN-REORDER-1 (2026-09-17), in flight:** `ALTER COLUMN … FIRST/AFTER`
+  column moves on Iceberg tables (rating row V2-10b) — move as a schema update with
+  unchanged field ids, or a typed Spark-shaped refusal with a dated registry row.
+  `risk_tier: standard`. Branch `fix/ice-column-reorder-1`.
+  pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [never-oom-panic-1-ledger.md](never-oom-panic-1-ledger.md) —
   **NEVER-OOM-PANIC-1 (2026-09-16), in flight:** the tight-pool NLJ race — `inner future
   panicked during poll` versus the typed refusal — fixed at the root so the nested-loop
