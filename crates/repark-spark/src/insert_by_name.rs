@@ -271,7 +271,7 @@ fn match_source_to_target(
     for key in &folded {
         if !seen.insert(key.clone()) {
             let first = folded.iter().position(|other| other == key);
-            let spelling = first.map_or(key, |index| sources[index].display.as_str());
+            let spelling = first.map_or(key.as_str(), |index| sources[index].display.as_str());
             return Err(ambiguous_column(table_display, spelling));
         }
     }
