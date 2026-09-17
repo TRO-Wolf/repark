@@ -14,7 +14,7 @@ use datafusion::arrow::datatypes::{
 use datafusion::arrow::error::ArrowError;
 use datafusion::common::{DataFusionError, Result, exec_err};
 use datafusion::logical_expr::{
-    ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
+    ColumnarValue, Expr, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
 };
 
@@ -250,6 +250,11 @@ impl ScalarUDFImpl for SparkBin {
         Ok(Arc::new(Field::new("bin", DataType::Utf8, nullable)))
     }
 
+    fn schema_name(&self, args: &[Expr]) -> Result<String> {
+        let parts: Vec<String> = args.iter().map(crate::expr_fn::spark_expr_token).collect();
+        Ok(format!("bin({})", parts.join(", ")))
+    }
+
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         match arg_types {
             [data_type]
@@ -330,6 +335,11 @@ impl ScalarUDFImpl for SparkRint {
 
     fn return_field_from_args(&self, _args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
         Ok(Arc::new(Field::new("rint", DataType::Float64, true)))
+    }
+
+    fn schema_name(&self, args: &[Expr]) -> Result<String> {
+        let parts: Vec<String> = args.iter().map(crate::expr_fn::spark_expr_token).collect();
+        Ok(format!("rint({})", parts.join(", ")))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {

@@ -127,6 +127,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `CAST(5 AS BIGINT)`, and the text refusal.
   pins: sql-literal-typing-1/L-002
   pins: door-converge-1/C-002, C-003, C-008
+  **FNP-MATH-1 step 7 (2026-09-16, run 18a, D-9):** `bin` / `rint` gain
+  `schema_name` overrides so the display reads Spark's `bin(1)` (the D-9
+  BOOLEAN refusal already lives in the coercion above).
+  pins: door-converge-1/C-002, C-003, C-008, fnp-math-1/C-009
 - `spark_base64.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `base64` / `unbase64` — a
   hand-rolled `java.util.Base64` MIME codec (no `base64` crate dep): RFC 4648 padding,
   CRLF chunking every 76 output characters, lenient decode that skips non-alphabet bytes

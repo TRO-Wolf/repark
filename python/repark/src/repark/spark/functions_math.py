@@ -37,11 +37,8 @@ def mask(
 def bin(col: Column | str) -> Column:
     """Binary string of a long (PySpark ``functions.bin``).
 
-    Spark casts the input to ``BIGINT`` (numeric and numeric-strings). The
-    ``datafusion-spark`` kernel is Int64-exact, so the leading ``.cast("long")``
-    is the unix_date mold for those accepted inputs. Spark analysis-refuses
-    BOOLEAN; this wrapper's CAST still stringifies ``true``/``false`` to
-    ``1``/``0`` (pinned, not claimed as parity).
+    The kernel casts the input to ``BIGINT`` (numeric and numeric-strings);
+    BOOLEAN refuses with ``DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE``.
 
     Parameters
     ----------
@@ -57,7 +54,7 @@ def bin(col: Column | str) -> Column:
     --------
     ``F.bin(F.lit(13))`` is ``'1101'``.
     """
-    return _scalar("bin", _as_column_arg(col, as_lit=False).cast("long"))
+    return _scalar("bin", col)
 
 
 def hex(col: Column | str) -> Column:
@@ -126,6 +123,9 @@ def factorial(col: Column | str) -> Column:
 def rint(col: Column | str) -> Column:
     """Nearest integer as a double (PySpark ``functions.rint``).
 
+    The kernel casts the input to ``DOUBLE`` (numeric and numeric-strings);
+    BOOLEAN refuses with ``DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE``.
+
     Parameters
     ----------
     col : Column or str
@@ -140,7 +140,7 @@ def rint(col: Column | str) -> Column:
     --------
     ``F.rint(F.lit(1.5))`` is ``2.0``.
     """
-    return _scalar("rint", _as_column_arg(col, as_lit=False).cast("double"))
+    return _scalar("rint", col)
 
 
 def width_bucket(

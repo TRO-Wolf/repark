@@ -310,3 +310,17 @@ under both ANSI settings; o245 split cells on both doors); the Q12/Q15 fixture
 lands with the `.typos.toml` exclusion (recorded hex evidence).
 Multi-item SQL cells reuse the mask slice's per-item vehicle. `functions_expr.py`
 baseline ratchets 2192 → 2193 in `check_lib_py.py` and the CAP-1 mirror.
+
+## Step 7 (run 18a, D-9) — `bin` / `rint` BOOLEAN refusal evidence
+
+The D-9 refusal already lived in the Rust kernels' `coerce_types` (#616); this
+slice removes the facade pre-casts that stringified BOOLEAN past it
+(`_scalar("bin", col)` / `_scalar("rint", col)` directly) and adds `schema_name`
+overrides so the display reads Spark's `bin(1)` instead of `bin(Int64(1))`.
+`test_fnp_math_1.py -k c009` → 12 passed, 6 xfailed on the release native: the
+BOOLEAN refusals raise `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` on both doors
+under both ANSI settings, the accepted `F.bin(1)` / `F.rint(2.5)` values hold;
+`BL6-sql-3` goes `xfail(strict)` (the `2.5D` DOUBLE-suffix literal still
+ParserErrors — SQL parser/dialect is run 18c's fence), as do `DIV-like-1` and
+the 3-arg `like` escape (LIT-DECIMAL-1 owns `escapeChar`, R-17a-6). The
+`test_functions_gt1.py` divergence pin flips to the refusal shape.

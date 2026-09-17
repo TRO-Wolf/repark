@@ -483,20 +483,17 @@ def test_sql_door_bit_length_stringifies(spark: ReparkSession) -> None:
     assert table.schema.field("b").type == pa.int32()
 
 
-def test_bin_bool_over_accepts_where_spark_refuses(spark: ReparkSession) -> None:
-    """Named divergence: CAST(long) lets BOOLEAN through; Spark analysis-refuses.
+def test_bin_rint_bool_refuses_with_spark_class(spark: ReparkSession) -> None:
+    """D-9/R-17a-6 (FNP-MATH-1 run 18a): BOOLEAN refuses in the Rust coercion.
 
-    Spark 4.1.2 citation: ``DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`` — ``bin`` requires
-    BIGINT, ``rint`` requires DOUBLE. Wrong-answer classes outrank over-accepts; the
-    registry row is orchestrator-side.
+    ``bin`` requires BIGINT, ``rint`` requires DOUBLE —
+    ``DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`` on both doors; the facade
+    pre-cast that hid the refusal is gone.
     """
-    table = _table(
-        spark.range(1).select(F.bin(F.lit(True)).alias("t"), F.bin(F.lit(False)).alias("f"))
-    )
-    assert table.column("t").to_pylist() == ["1"]
-    assert table.column("f").to_pylist() == ["0"]
-    rint_table = _table(spark.range(1).select(F.rint(F.lit(True)).alias("r")))
-    assert rint_table.column("r").to_pylist() == [1.0]
+    with pytest.raises(Exception, match="DATATYPE_MISMATCH"):
+        spark.range(1).select(F.bin(F.lit(True)).alias("t")).to_arrow()
+    with pytest.raises(Exception, match="DATATYPE_MISMATCH"):
+        spark.range(1).select(F.rint(F.lit(True)).alias("r")).to_arrow()
 
 
 def test_sql_door_regexp_count_null_is_null(spark: ReparkSession) -> None:
