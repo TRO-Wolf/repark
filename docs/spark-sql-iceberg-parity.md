@@ -963,27 +963,41 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
 **The first row admitted at seeding (campaign decision D3, 2026-08-10).** It is first by
 *declaration*, not by position: §2's rows were back-filled from the sixteen citations that forced
 them, and the document is ordered by surface, never by date. Unit ICE-MIXED-CASE-1 rewrote this
-row on 2026-09-16: the Spark-door half is FIXED, the ANSI-door half is an INTENDED split.
+row on 2026-09-16, and rewrote the Spark-door half again on 2026-09-17 (round 5, Q-20b-2):
+identifier normalization stays ON, so the fold rewrites the parsed statement and DML fragments
+to backticked stored-case spellings instead of switching the parser off.
 
 - **repark, ANSI door** — a *quoted* identifier matches case-**sensitively**: `"ID"` never
   resolves against a column stored as `id`; the refusal is a resolution failure naming `"ID"`.
   Standard SQL keeps quoted names exact, and Spark is not the ANSI door's oracle (owner ruling
   2026-08-12, Option A). *Unquoted* identifiers agree with Spark through either door.
-- **repark, Spark door** — a quoted identifier follows `spark.sql.caseSensitive` (default
-  false): `` `ID` `` finds `id` under the default, and `true` refuses exactly like the ANSI
-  door. Two case-insensitive matches refuse with Spark's `AMBIGUOUS_REFERENCE` shape. The repair
-  runs in the Spark extension's statement loop, so DML fragments (`ON` / `SET` / `INSERT`
-  columns) resolve the same way. Output columns keep stored names where Spark echoes the
-  requested spelling.
-- **Apache Spark** — resolves the backticked form case-**insensitively** by default
-  (`spark.sql.caseSensitive = false` applies to quoted names too), so `` `ID` `` finds `id`.
+- **repark, Spark door, `caseSensitive=false` (default)** — every spelling resolves against
+  the stored case: unquoted mixed/lower/upper case and backticked wrong-case all find `userId`.
+  The fold is single-pass over the parsed statement (SELECT list, WHERE, GROUP BY / ORDER BY /
+  HAVING, JOIN `USING`, UPDATE / INSERT targets) and over DML fragments (`MERGE ON` / `SET` /
+  `INSERT`, identity DELETE / UPDATE selections), and emits backticked stored-case spellings —
+  backticks because double-quoted spans are string literals on this door (ID-2), and a bare
+  `t."userId"` does not parse in the session dialect. Two case-insensitive matches refuse with
+  Spark's `[AMBIGUOUS_REFERENCE]` sentence and `SQLSTATE: 42702`. Output columns keep stored
+  names where Spark echoes the requested spelling (pinned, not converged).
+- **repark, Spark door, `caseSensitive=true` (DECLARED split)** — resolution is exact, and the
+  parser fold is lossy: an unquoted mixed-case spelling arrives lowercased, so even exact-case
+  unquoted `userId` refuses where Spark resolves it. Backticked exact-case (`` `userId` ``)
+  resolves. The refusal is loud (`AnalysisException`, `No field named`), never a silent wrong
+  answer; the backticked success answers the recorded `true` oracle rows.
+- **Apache Spark** — resolves every spelling case-**insensitively** by default
+  (`spark.sql.caseSensitive = false` applies to quoted names too), so `` `ID` `` finds `id`;
+  under `true` both quoted and unquoted exact-case resolve.
   *(oracle: recorded fixture `python/repark/tests/ice_mixed_case_1_spark_oracle.json`, Spark 4.1.2.)*
 - **Pin** — `crates/repark-sql/tests/cross_door.rs::cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`
   (ANSI refuses, Spark resolves) plus `python/repark/tests/test_ice_mixed_case_1.py` (both
-  doors, both flag values, DML fragments, the ambiguity shape, and the live tier).
-- **Rationale** — FIXED on the Spark door (ICE-MIXED-CASE-1, 2026-09-16); INTENDED split on the
-  ANSI door per G11 Option A. The old declared-divergence pin reddened exactly as designed when
-  the Spark half converged, and this row was rewritten in the same change.
+  doors, both flag values, DML fragments, the ambiguity shape, the backticked-`true` success,
+  the unquoted-`true` declared refusal, and the live tier).
+- **Rationale** — FIXED on the Spark door under `false` (ICE-MIXED-CASE-1, 2026-09-17); the
+  `true` unquoted-exact refusal and the stored-name output echo are DECLARED splits with pins.
+  INTENDED split on the ANSI door per G11 Option A. The old declared-divergence pin reddened
+  exactly as designed when the Spark half converged, and this row was rewritten in the same
+  change.
 
 > **G11 closed: not parity — correctness (2026-08-12, Y-10 / #67).** Spark is not the ANSI
 > door's oracle (owner ruling 2026-08-12, Option A). The ANSI door serves standard SQL;

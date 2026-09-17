@@ -62,7 +62,7 @@ pub(crate) use target_scan::{
 use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
 use crate::write::conform::{conform_batch_retaining_unmapped_columns, write_default_column_names};
 pub(crate) use crate::write::name_resolution::{
-    CaseInsensitiveColumnIndex, SourceMatch, dedup_key, resolve_arrow_field,
+    CaseInsensitiveColumnIndex, SourceMatch, dedup_key, resolve_write_column,
 };
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 use crate::write::scan_prune::{
@@ -387,13 +387,11 @@ fn validate_update_columns(spec: &MergeSpec, write_schema: &ArrowSchema) -> Resu
         };
         let mut seen = HashSet::with_capacity(assignments.len());
         for (column, _) in assignments {
-            let Some(canonical) = resolve_arrow_field(write_schema, column, spec.case_insensitive)
-            else {
-                return Err(DataFusionError::Plan(format!(
-                    "MERGE UPDATE SET column `{column}` does not exist in the target table"
-                )));
-            };
-            if !seen.insert(dedup_key(canonical, spec.case_insensitive)) {
+            let canonical =
+                resolve_write_column(write_schema, column, spec.case_insensitive, || {
+                    format!("MERGE UPDATE SET column `{column}` does not exist in the target table")
+                })?;
+            if !seen.insert(dedup_key(&canonical, spec.case_insensitive)) {
                 return Err(DataFusionError::Plan(format!(
                     "MERGE UPDATE SET names column `{column}` more than once"
                 )));

@@ -57,9 +57,8 @@ impl SessionExtension for SparkExtension {
         let config = crate::spark_literals::with_escaped_string_literals_config(config, verbatim);
         let case_sensitive =
             repark_core::column_resolution::column_case_sensitive_from_config_map(session.conf)?;
-        let mut config =
+        let config =
             repark_core::column_resolution::with_column_resolution_config(config, !case_sensitive);
-        config.options_mut().sql_parser.enable_ident_normalization = false;
         Ok(repark_functions::session_time_zone::with_session_time_zone(
             config,
             session.session_time_zone.id(),

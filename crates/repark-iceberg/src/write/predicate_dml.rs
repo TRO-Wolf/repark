@@ -28,7 +28,7 @@ use crate::write::merge::{
     FILE_PATH_COL, IsolationLevel, POS_COL, RowDeltaKind, RowDeltaPolicy, TargetScanStream,
     commit_overwrite, commit_row_delta_kind_with_partitions, dedup_key, deregister_merge_scratch,
     drain_partition_sink, iceberg_err, new_partition_sink, quote_ident, register_streaming_target,
-    reserved_name_guard, resolve_affected_data_files, resolve_arrow_field, scratch_schema,
+    reserved_name_guard, resolve_affected_data_files, resolve_write_column, scratch_schema,
     write_new_data_files_from_stream,
 };
 use crate::write::position_delete::PositionDeletePair;
@@ -546,12 +546,10 @@ fn validate_update_assignments(
 ) -> Result<()> {
     let mut seen = std::collections::HashSet::new();
     for (column, _) in assignments {
-        let Some(canonical) = resolve_arrow_field(write_schema, column, case_insensitive) else {
-            return Err(DataFusionError::Plan(format!(
-                "UPDATE SET column `{column}` does not exist in the target table"
-            )));
-        };
-        if !seen.insert(dedup_key(canonical, case_insensitive)) {
+        let canonical = resolve_write_column(write_schema, column, case_insensitive, || {
+            format!("UPDATE SET column `{column}` does not exist in the target table")
+        })?;
+        if !seen.insert(dedup_key(&canonical, case_insensitive)) {
             return Err(DataFusionError::Plan(format!(
                 "UPDATE SET names column `{column}` more than once"
             )));

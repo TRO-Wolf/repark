@@ -25,8 +25,7 @@ async fn scope_field_names(ctx: &SessionContext, sql: &str) -> Result<Vec<String
     let state = ctx.state();
     let dialect = state.config().options().sql_parser.dialect;
     let statement = state.sql_to_statement(sql, &dialect)?;
-    let plan = repark_core::column_resolution::plan_statement_with_column_repair(&state, statement)
-        .await?;
+    let plan = state.statement_to_plan(statement).await?;
     Ok(plan
         .schema()
         .fields()

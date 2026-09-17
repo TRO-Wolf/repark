@@ -9,7 +9,7 @@ use datafusion::prelude::SessionContext;
 use futures::Stream;
 
 use super::{InsertAction, InsertClause, MatchedAction, quote_ident};
-use crate::write::name_resolution::{dedup_key, resolve_arrow_field};
+use crate::write::name_resolution::{dedup_key, resolve_arrow_field, resolve_write_column};
 use crate::write::store_assign::{self, MERGE_SPARK_CLASS};
 
 /// Project an INSERT clause onto the target schema: named columns take VALUES, others become NULL.
@@ -46,17 +46,15 @@ pub(super) fn insert_projection(
     let mut seen = HashSet::with_capacity(columns.len());
     let mut canonical_columns: Vec<String> = Vec::with_capacity(columns.len());
     for column in &columns {
-        let Some(canonical) = resolve_arrow_field(write_schema, column, case_insensitive) else {
-            return Err(DataFusionError::Plan(format!(
-                "MERGE INSERT column `{column}` does not exist in the target table"
-            )));
-        };
-        if !seen.insert(dedup_key(canonical, case_insensitive)) {
+        let canonical = resolve_write_column(write_schema, column, case_insensitive, || {
+            format!("MERGE INSERT column `{column}` does not exist in the target table")
+        })?;
+        if !seen.insert(dedup_key(&canonical, case_insensitive)) {
             return Err(DataFusionError::Plan(format!(
                 "MERGE INSERT clause names column `{column}` more than once"
             )));
         }
-        canonical_columns.push(canonical.to_string());
+        canonical_columns.push(canonical);
     }
     let assigned: HashMap<&str, &str> = canonical_columns
         .iter()

@@ -2,6 +2,8 @@
 
 ICE-DYN-OVERWRITE-1 round 2, ruling Q-20a-6 (2026-09-17): `check_lib_py.py` sets `writer_readwriter.py` 1101 → 1109 (the `static_overwrite` flag threading; `session_core.py` holds 2290) with the CAP-1 mirror. pins: ice-dyn-overwrite-1/L-001
 ICE-MIXED-CASE-1 (2026-09-17): `check_rust_file_size.py` ratchets six baselines down for the case-insensitive scope work, all shrink-only: `write/merge/mod.rs` 1792 → 1782, `write/merge/tests/merge.rs` 1065 → 1032, `write/merge/tests/streaming_scan.rs` 3028 → 3020, `write/predicate_dml.rs` 1142 → 1141, `write/predicate_dml/tests/predicate_dml.rs` 1442 → 1440, `repark-sql/tests/cross_door.rs` 1258 → 1254. pins: ice-mixed-case-1/C-012
+
+ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): two more shrink-only ratchets behind the shared write-column helper — `write/merge/mod.rs` 1782 → 1780, `write/predicate_dml.rs` 1141 → 1139 — with the CAP-1 mirror. pins: ice-mixed-case-1/C-012
 SET-ANSI-RUNTIME-1 (2026-09-15): `check_lib_py.py` ratchets `tests/test_session_timezone_parity.py` 1328 → 1318 (the applied-contract flips are net-negative). pins: set-ansi-runtime-1/C-005
 FNP-11B remediation round 1 (2026-09-16, run 17a): `check_lib_py.py` sets `functions_expr.py` 2237 → 2220 (the `make_timestamp` forwarder becomes a direct re-export) with the CAP-1 mirror; `build_api_freeze.py` follows module-level `from`-import aliases when reading required params (`aliased_function_signatures`) and carries the alias targets in `source_paths` so scratch trees resolve them — the regenerated register keeps `F.make_timestamp` at `[]` and corrects `F.udtf` from `null` to `[]`. pins: fnp-11b/C-007, C-008
 

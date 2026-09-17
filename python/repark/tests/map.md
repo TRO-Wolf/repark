@@ -2,6 +2,8 @@
 
 ICE-MIXED-CASE-1 (2026-09-17): `test_ice_mixed_case_1.py` pins the Spark-door case-insensitive column resolution cells against `ice_mixed_case_1_spark_oracle.json` (live PySpark 4.1.2 recording); `_record_ice_mixed_case_1.py` is the recorder driver, not a collected test. Round 3: the WHERE-cell ids read `MC-WHERE-*` (typos gate); the record script stays ruff-clean; the moved-symbol baseline carries the new `_SQLCONF_DEFAULTS` hash for the `spark.sql.caseSensitive` default row. pins: ice-mixed-case-1/C-001…C-012
 
+ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the `true` cells pin the declared contract — backticked exact-case succeeds against the recorded `true` oracle rows (`_TRUE_BACKTICK_SQL`), unquoted exact-case refuses. pins: ice-mixed-case-1/C-006
+
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 CC-2 close: S3 Tables location-guard phrase kept contiguous in `test_aws_acceptance.py`.

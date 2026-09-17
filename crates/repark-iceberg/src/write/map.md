@@ -483,7 +483,10 @@ repark-core's error map.
   (`data_file_path: Arc<str>`, `project_field_ids: Arc<[i32]>`, `deletes: Arc<[…]>`).
 - `name_resolution.rs` (crate-private) — the shared case-insensitive by-name column resolver
   (Spark `spark.sql.caseSensitive=false` conform semantics); used by both `append` conform and
-  merge star expansion so the two surfaces cannot drift.
+  merge star expansion so the two surfaces cannot drift. `resolve_write_column` is the single
+  resolve-or-refuse entry for write target lists (case-twin collisions refuse
+  `[AMBIGUOUS_REFERENCE]` / `42702`); `arrow_field_twins` / `ambiguous_write_message` are its
+  pieces. pins: ice-mixed-case-1/C-004
 - `position_delete.rs` (crate-private; two `pub` re-exports via `mod.rs`) — merge-on-read
   WRITE primitive: turn `(_file, _pos)` pairs into committable position-delete `DataFile`s by
   driving the fork's production `PositionDeleteFileWriter`. Owns sort order (ascending

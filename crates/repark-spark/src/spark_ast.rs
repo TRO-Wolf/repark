@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::DataType as ArrowDataType;
 use datafusion::config::Dialect;
-use datafusion::error::{DataFusionError, Result};
+use datafusion::error::Result;
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::{Cast, Expr as DataFusionExpr, ExprSchemable, LogicalPlan, WriteOp};
@@ -219,94 +219,28 @@ async fn canonicalize_identity_selection(
         .map_err(crate::iceberg_err)?;
     let schema = iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
         .map_err(crate::iceberg_err)?;
-    let dialect = datafusion::sql::sqlparser::dialect::DatabricksDialect {};
-    let mut selection = datafusion::sql::sqlparser::parser::Parser::new(&dialect)
-        .try_with_sql(&spec.selection_sql)
-        .map_err(|error| DataFusionError::SQL(Box::new(error), None))?
-        .parse_expr()
-        .map_err(|error| DataFusionError::SQL(Box::new(error), None))?;
-    let mut rewrite = SelectionCaseRewrite {
-        alias: spec.target_alias.clone(),
-        fields: schema
-            .fields()
-            .iter()
-            .map(|field| field.name().clone())
-            .collect(),
-        depth: 0,
-    };
-    let _ = selection.visit(&mut rewrite);
-    spec.selection_sql = selection.to_string();
+    let fields = schema
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect::<Vec<_>>();
+    let scopes = [(spec.target_alias.as_str(), fields.as_slice())];
+    let home = Some(spec.target_alias.as_str());
+    spec.selection_sql = repark_core::column_resolution::rewrite_fragment_case(
+        &spec.selection_sql,
+        &scopes,
+        true,
+        home,
+    )?;
+    if let Some(assignments) = spec.assignments.as_mut() {
+        for (target, value) in assignments {
+            *target =
+                repark_core::column_resolution::rewrite_fragment_case(target, &scopes, true, home)?;
+            *value =
+                repark_core::column_resolution::rewrite_fragment_case(value, &scopes, true, home)?;
+        }
+    }
     Ok(())
-}
-
-struct SelectionCaseRewrite {
-    alias: String,
-    fields: Vec<String>,
-    depth: usize,
-}
-
-impl SelectionCaseRewrite {
-    fn canonical(&self, qualifier: Option<&str>, name: &str) -> Option<String> {
-        if let Some(qualifier) = qualifier
-            && !self.alias.eq_ignore_ascii_case(qualifier)
-        {
-            return None;
-        }
-        let mut found: Option<&str> = None;
-        for field in &self.fields {
-            if !field.eq_ignore_ascii_case(name) {
-                continue;
-            }
-            if found.is_some() {
-                return None;
-            }
-            found = Some(field);
-        }
-        found.map(ToString::to_string)
-    }
-}
-
-impl VisitorMut for SelectionCaseRewrite {
-    type Break = std::convert::Infallible;
-    fn pre_visit_query(
-        &mut self,
-        _query: &mut datafusion::sql::sqlparser::ast::Query,
-    ) -> ControlFlow<Self::Break> {
-        self.depth += 1;
-        ControlFlow::Continue(())
-    }
-    fn post_visit_query(
-        &mut self,
-        _query: &mut datafusion::sql::sqlparser::ast::Query,
-    ) -> ControlFlow<Self::Break> {
-        self.depth = self.depth.saturating_sub(1);
-        ControlFlow::Continue(())
-    }
-    fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
-        if self.depth > 0 {
-            return ControlFlow::Continue(());
-        }
-        match expr {
-            Expr::Identifier(ident) => {
-                if let Some(canonical) = self.canonical(None, &ident.value)
-                    && ident.value != canonical
-                {
-                    ident.value = canonical;
-                }
-            }
-            Expr::CompoundIdentifier(parts) => {
-                if parts.len() == 2
-                    && let Some(canonical) =
-                        self.canonical(Some(parts[0].value.as_str()), &parts[1].value)
-                    && parts[1].value != canonical
-                {
-                    parts[1].value = canonical;
-                }
-            }
-            _ => {}
-        }
-        ControlFlow::Continue(())
-    }
 }
 
 /// Apply Spark's bare-`RANGE`-offset rules to a freshly-planned statement (G5b).

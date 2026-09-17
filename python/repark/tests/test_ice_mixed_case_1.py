@@ -33,6 +33,13 @@ Two deliberate message-shape notes. The ambiguity refusal carries Spark's
 reference under ``caseSensitive=true`` refuses loud with DataFusion's ``No
 field named`` wording — the resolution outcome matches Spark (refuse), the
 sentence stays engine-native; only the error class is pinned there.
+
+Declared ``caseSensitive=true`` divergence (registry ID-1): the parser folds
+unquoted identifiers before planning, so under ``true`` even an exact-case
+unquoted spelling (``userId``) arrives as ``userid`` and refuses. Exact case
+under ``true`` needs backticks. ``test_sql_door_unquoted_exact_case_refuses_case_sensitive``
+pins the refusal; ``test_sql_door_backticked_exact_case_succeeds_case_sensitive``
+pins the backticked success against the recorded ``true`` oracle rows.
 """
 
 from __future__ import annotations
@@ -159,7 +166,22 @@ _MUTATING_CELLS = [
     "MC-INS-01",
 ]
 _AMBIGUOUS_CELLS = ["MC-AMB-01", "MC-AMB-02"]
-_TRUE_SUCCESS_CELLS = ["MC-SEL-01", "MC-SEL-04", "MC-UPD-01", "MC-MRG-01"]
+_TRUE_SUCCESS_CELLS = ["MC-SEL-04"]
+_TRUE_UNQUOTED_EXACT_REFUSES_CELLS = ["MC-SEL-01", "MC-UPD-01", "MC-MRG-01"]
+_TRUE_BACKTICK_SQL: dict[str, list[str]] = {
+    "MC-SEL-01": ["SELECT `userId`, `eventName`, `Mixed Case` FROM {CAT}.ns.mc ORDER BY `userId`"],
+    "MC-UPD-01": [
+        "UPDATE {CAT}.ns.mc SET `eventName` = 'u' WHERE `userId` = 1",
+        "SELECT `userId`, `eventName`, `Mixed Case` FROM {CAT}.ns.mc ORDER BY `userId`",
+    ],
+    "MC-MRG-01": [
+        "MERGE INTO {CAT}.ns.mc t USING mcs s ON t.`userId` = s.`userid` "
+        "WHEN MATCHED THEN UPDATE SET `eventName` = s.`eventname` "
+        "WHEN NOT MATCHED THEN INSERT (`userId`, `eventName`, `Mixed Case`) "
+        "VALUES (s.`userid`, s.`eventname`, s.`mixed case`)",
+        "SELECT `userId`, `eventName`, `Mixed Case` FROM {CAT}.ns.mc ORDER BY `userId`",
+    ],
+}
 _TRUE_FAILURE_CELLS = [
     "MC-SEL-02",
     "MC-SEL-03",
@@ -374,7 +396,7 @@ def test_sql_door_ambiguous_reference_matches_spark_shape(
 def test_sql_door_exact_spelling_succeeds_case_sensitive(
     session: ReparkSession, cell_id: str
 ) -> None:
-    """Exact-case references still resolve with ``caseSensitive=true``."""
+    """Backticked exact-case references resolve with ``caseSensitive=true``."""
     session.conf.set(_CASE_SENSITIVE_KEY, "true")
     try:
         table = _run_statements(session, cell_id, _CATALOG)
@@ -382,6 +404,41 @@ def test_sql_door_exact_spelling_succeeds_case_sensitive(
         session.conf.set(_CASE_SENSITIVE_KEY, "false")
     assert table is not None
     _assert_success(table, cell_id, "true")
+
+
+@pytest.mark.parametrize("cell_id", sorted(_TRUE_BACKTICK_SQL))
+def test_sql_door_backticked_exact_case_succeeds_case_sensitive(
+    session: ReparkSession, cell_id: str
+) -> None:
+    """Backticked exact-case spellings answer the recorded ``true`` oracle rows."""
+    session.conf.set(_CASE_SENSITIVE_KEY, "true")
+    try:
+        _setup_cell_views(session, cell_id, _CATALOG)
+        table: pa.Table | None = None
+        for sql in _TRUE_BACKTICK_SQL[cell_id]:
+            table = session.sql(sql.format(CAT=_CATALOG)).to_arrow()
+    finally:
+        session.conf.set(_CASE_SENSITIVE_KEY, "false")
+    assert table is not None
+    _assert_success(table, cell_id, "true")
+
+
+@pytest.mark.parametrize("cell_id", _TRUE_UNQUOTED_EXACT_REFUSES_CELLS)
+def test_sql_door_unquoted_exact_case_refuses_case_sensitive(
+    session: ReparkSession, cell_id: str
+) -> None:
+    """Unquoted exact-case refuses with ``caseSensitive=true`` (declared).
+
+    The parser folds unquoted identifiers before planning, so the exact case
+    never reaches resolution. Backticks are the exact-case spelling; Spark
+    resolving the unquoted form is the declared divergence (registry ID-1).
+    """
+    session.conf.set(_CASE_SENSITIVE_KEY, "true")
+    try:
+        with pytest.raises(AnalysisException):
+            _run_statements(session, cell_id, _CATALOG)
+    finally:
+        session.conf.set(_CASE_SENSITIVE_KEY, "false")
 
 
 @pytest.mark.parametrize("cell_id", _TRUE_FAILURE_CELLS)
@@ -401,7 +458,9 @@ def test_sql_set_statement_drives_case_sensitive(session: ReparkSession) -> None
     try:
         with pytest.raises(AnalysisException):
             session.sql(f"SELECT userid FROM {_FQ_TABLE} WHERE USERID = 1").to_arrow()
-        table = session.sql(f"SELECT userId FROM {_FQ_TABLE} ORDER BY userId").to_arrow()
+        with pytest.raises(AnalysisException):
+            session.sql(f"SELECT userId FROM {_FQ_TABLE} ORDER BY userId").to_arrow()
+        table = session.sql(f"SELECT `userId` FROM {_FQ_TABLE} ORDER BY `userId`").to_arrow()
         assert table.to_pylist() == [{"userId": 1}, {"userId": 2}]
     finally:
         session.sql("SET spark.sql.caseSensitive = false").collect()

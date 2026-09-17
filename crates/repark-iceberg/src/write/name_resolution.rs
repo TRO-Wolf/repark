@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use datafusion::arrow::datatypes::Schema as ArrowSchema;
+use datafusion::error::{DataFusionError, Result};
 
 /// Outcome of resolving one target column name against source names (Spark `reorderColumnsByName`).
 #[derive(Debug, PartialEq, Eq)]
@@ -105,6 +106,46 @@ pub(crate) fn resolve_arrow_field<'a>(
     found
 }
 
+pub(crate) fn arrow_field_twins<'a>(schema: &'a ArrowSchema, name: &str) -> Vec<&'a str> {
+    let twins = schema
+        .fields()
+        .iter()
+        .filter(|field| field.name().eq_ignore_ascii_case(name))
+        .map(|field| field.name().as_str())
+        .collect::<Vec<_>>();
+    if twins.len() > 1 { twins } else { Vec::new() }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn resolve_write_column(
+    schema: &ArrowSchema,
+    column: &str,
+    case_insensitive: bool,
+    missing: impl FnOnce() -> String,
+) -> Result<String> {
+    if let Some(canonical) = resolve_arrow_field(schema, column, case_insensitive) {
+        return Ok(canonical.to_string());
+    }
+    let twins = arrow_field_twins(schema, column);
+    if case_insensitive && twins.len() > 1 {
+        return Err(DataFusionError::Plan(ambiguous_write_message(
+            column, &twins,
+        )));
+    }
+    Err(DataFusionError::Plan(missing()))
+}
+
+pub(crate) fn ambiguous_write_message(column: &str, twins: &[&str]) -> String {
+    let options = twins
+        .iter()
+        .map(|twin| format!("`{twin}`"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "[AMBIGUOUS_REFERENCE] Reference `{column}` is ambiguous, could be: [{options}]. SQLSTATE: 42702"
+    )
+}
+
 pub(crate) fn dedup_key(canonical: &str, case_insensitive: bool) -> String {
     if case_insensitive {
         canonical.to_ascii_lowercase()
@@ -157,5 +198,24 @@ mod tests {
     fn absent_target_column_is_missing() {
         let index = CaseInsensitiveColumnIndex::new(["key"]);
         assert_eq!(index.resolve("payload"), SourceMatch::Missing);
+    }
+
+    #[test]
+    fn write_side_case_twins_are_ambiguous() {
+        use datafusion::arrow::datatypes::{DataType, Field, Schema};
+        let schema = Schema::new(vec![
+            Field::new("userId", DataType::Int64, true),
+            Field::new("USERID", DataType::Int64, true),
+        ]);
+        assert_eq!(
+            arrow_field_twins(&schema, "UserId"),
+            vec!["userId", "USERID"]
+        );
+        assert_eq!(
+            ambiguous_write_message("UserId", &arrow_field_twins(&schema, "UserId")),
+            "[AMBIGUOUS_REFERENCE] Reference `UserId` is ambiguous, could be: [`userId`, `USERID`]. SQLSTATE: 42702".to_string()
+        );
+        let single = Schema::new(vec![Field::new("userId", DataType::Int64, true)]);
+        assert!(arrow_field_twins(&single, "UserId").is_empty());
     }
 }
