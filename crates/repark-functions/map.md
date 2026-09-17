@@ -136,6 +136,11 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - `src/ansi.rs` — **U5:** `spark.sql.ansi.enabled` ConfigExtension (default TRUE) +
   `__repark_ansi_nonzero_divisor__`. Sibling of `ReparkSqlConfig`, not mixed into
   `repark.sql.*`.
+- `src/case_sensitive.rs` — **ICE-RTAS-BYNAME-1 round 2 (2026-09-17):**
+  `spark.sql.caseSensitive` ConfigExtension (default FALSE) + builder/runtime
+  parsers + `with_spark_case_sensitive_config` + the options accessor the
+  BY NAME resolver reads. Sibling of `src/ansi.rs`.
+  pins: ice-rtas-byname-1/C-010
 - `src/analyzer.rs` — `SparkExprSemantics`: int `/` → double, div/mod-by-zero follows
   `spark.sql.ansi.enabled` (raise when TRUE, `nullif` NULL when false), 0-based `[]` array
   subscript, the planner-embedded-`substr` swap, and **TZ-5**

@@ -13,6 +13,7 @@ pub mod bool_decimal;
 mod interval_avg;
 pub use bool_decimal::install_shared_analyzer_rules;
 pub mod cardinality;
+pub mod case_sensitive;
 pub mod collection;
 pub mod count_if;
 pub mod csv;

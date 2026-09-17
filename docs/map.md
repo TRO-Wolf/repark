@@ -69,6 +69,10 @@ repo.
   with [../STATUS.md](../STATUS.md) — STATUS holds issue *state*, this file holds *semantics*, and
   neither restates the other. §8 is the drop-in disclosure rationale table. §9 is FNP-15/16
   declared-absent Spark functions (unreachable vs deferred-by-cost). pins: fnp-15-16/C-014
+  **ICE-COLUMN-REORDER-1 FIXED 2026-09-17 (run 20b, round 2 Q-20b-5):** `ALTER COLUMN … FIRST/AFTER`
+  moves with ids intact on the facade and Rust ANSI doors; the standing I6 move refusal
+  is removed; OPEN residue `ICE-COLUMN-REORDER-1-R-001` (no-op move writes a metadata file)
+  with fork trigger F-UPDATE-SCHEMA-SAME-1. pins: ice-column-reorder-1/C-001 – C-014
   LIVE-v3 (2026-09-02) added §7 `S3T-V3-1`; LIVE-v3-M (2026-09-02) closed it — **FIXED by
   measurement**: `aws-acceptance` run 33635288918 on merged `main` `8c4bc55` ran both live v3
   legs green, S3 Tables accepting `format-version = 3` at CREATE (the decision table's accepted
@@ -108,6 +112,10 @@ repo.
   is not admitted.
   DOOR-CONVERGE-2 (#622, 2026-09-15): rows DC2-CONCAT-1 / DC2-REVERSE-1 / DC2-SEQUENCE-1 / DC2-SPLIT-1, BACKLOG JAVA-REGEX-FEATURES-1, and the FNP-6D residual `concat(BINARY, BINARY)` now converged.
   FNP-4B (#611, 2026-09-15): the FNP-BITMAP-FACADE-1 residual narrows to the `spark.sql` qualifier leak; `selectExpr` names converged.
+  **ICE-COLUMN-REORDER-1 (2026-09-17):** row `ICE-COLUMN-REORDER-1` FIXED (`ALTER COLUMN …
+  FIRST/AFTER` moves with ids intact; the I6 move refusal text is removed, the COMMENT
+  refusal stays); the self-move diagnostic delta is recorded in the row, not absorbed.
+  pins: ice-column-reorder-1/C-013
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

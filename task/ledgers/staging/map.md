@@ -12,6 +12,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   note and the §9 audit trail, and registry claims C-3, C-8, C-9 rewritten
   (C-3, C-9 FIXED → OPEN). Docs-only reading unit, no product change.
   `risk_tier: standard`. Branch `docs/ice-cutover-corrections-1`.
+- [ice-column-reorder-1-ledger.md](ice-column-reorder-1-ledger.md) —
+  **ICE-COLUMN-REORDER-1 (2026-09-17), in flight:** `ALTER COLUMN … FIRST/AFTER`
+  column moves on Iceberg tables (rating row V2-10b) — move as a schema update with
+  unchanged field ids, or a typed Spark-shaped refusal with a dated registry row.
+  `risk_tier: standard`. Branch `fix/ice-column-reorder-1`.
+  pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [never-oom-panic-1-ledger.md](never-oom-panic-1-ledger.md) —
   **NEVER-OOM-PANIC-1 (2026-09-16), in flight:** the tight-pool NLJ race — `inner future
   panicked during poll` versus the typed refusal — fixed at the root so the nested-loop
@@ -24,6 +30,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
   `risk_tier: standard`. Branch `docs/registry-16b-1`.
   pins: registry-16b-1/C-001, C-002, C-003
+- [ice-branch-ops-1-ledger.md](ice-branch-ops-1-ledger.md) —
+  **ICE-BRANCH-OPS-1 (2026-09-17), in flight:** `fast_forward`, `cherrypick_snapshot`,
+  `set_current_snapshot` and `rollback_to_timestamp` as RePark-side procedure wiring over
+  the fork's `ManageSnapshots` / `Transaction::cherry_pick` (no fork change), with a
+  recorded Spark oracle (`branch_ops_1_truth.json`), red-first pins on both doors, and
+  registry rows REF-5–REF-8. `risk_tier: standard`. Branch `fix/ice-branch-ops-1`.
+  pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [df-rust-3-ledger.md](df-rust-3-ledger.md) —
   **DF-RUST-3 (2026-09-15), in flight:** `DataFrame.freqItems`,
   `DataFrameStatFunctions.freqItems`, and `DataFrame.transpose` implemented Rust-first —
@@ -269,6 +282,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   maintenance guide's S3 Tables paragraph and the parity registry row land with it (C-005).
   `risk_tier: standard`. Branch `fix/orphan-s3tables-1`.
   pins: orphan-s3tables-1/C-001, C-002, C-003, C-004, C-005
+- [ice-hadoop-vn-1-ledger.md](ice-hadoop-vn-1-ledger.md) —
+  **ICE-HADOOP-VN-1 (2026-09-17), in flight:** the stale Hadoop `vN` writer raises
+  loud and loses nothing — fork #286 exclusive-creates `vN` names
+  (`75da2b58`, in-tree via RP-21); the RePark side pins the `conc` / `conc2`
+  shapes, the re-register recovery, the Spark stale-commit oracle, and the
+  DataFrame-door stale writers, plus registry row ICE-HADOOP-VN-1.
+  `risk_tier: standard`. Branch `fix/ice-hadoop-vn-1`.
+  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [perf-describe-1-ledger.md](perf-describe-1-ledger.md) —
   **PERF-DESCRIBE-1 (2026-09-11), in flight:** `describe`/`summary` aggregate in one
   pass — one `AggregateExec` computes count/avg/stddev/min/max per column over the
@@ -857,3 +878,21 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fixtures (`python/repark/tests/fixtures/orc/`).
   `risk_tier: standard`. Branch `feat/io-orc-1`.
   pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ice-rtas-byname-1-ledger.md](ice-rtas-byname-1-ledger.md) —
+  **ICE-RTAS-BYNAME-1 (2026-09-17), in flight:** `INSERT … BY NAME` column
+  resolution on the Spark door plus the RTAS snapshot-operation divergence
+  (V2-24). The oracle cells
+  (`python/repark/tests/ice_rtas_byname_1_spark_oracle.json`, generator
+  `_record_ice_rtas_byname_1_oracle.py`) and the red-first pins
+  (`test_ice_rtas_byname_1.py`); the RTAS operation fix is fork-owned
+  (F-RTAS-OPS-1, xfail pins).
+  `risk_tier: standard`. Branch `feat/ice-rtas-byname-1`.
+  pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [rp-23-pin-bump-ledger.md](rp-23-pin-bump-ledger.md) —
+  **RP-23-PIN-BUMP (2026-09-17), in flight:** the fork-pin `4151b488`
+  consequences round — F-TARGET-FILE-SIZE-1 fallout over the 26 facade
+  failures: the codec-stamp expectation updates (family A), the re-derived
+  file-layout fixtures (family B), and the MERGE delete-file diagnosis
+  (family C, counts healthy, no regression). No product code.
+  `risk_tier: standard`. Branch `chore/fork-pin-ice-20c-2`.
+  pins: rp-23-pin-bump/C-001, C-002, C-003, C-004

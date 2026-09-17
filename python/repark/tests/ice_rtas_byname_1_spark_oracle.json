@@ -1,0 +1,499 @@
+{
+ "insert_by_name": {
+  "by_name": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME SELECT * FROM swapped",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ]
+   ]
+  },
+  "by_name_subset": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME SELECT 'Bo' AS first_name, 2 AS n",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ],
+    [
+     "Bo",
+     null,
+     2
+    ]
+   ]
+  },
+  "by_name_extra": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME SELECT 'Cy' AS first_name, 'Z' AS last_name, 3 AS n, 4 AS extra",
+   "error_class": "AnalysisException",
+   "error": "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `sc`.`ns`.`bn`, the reason is too many data columns:\nTable columns: `first_name`, `last_name`, `n`.\nData columns: `first_name`, `last_name`, `n`, `extra`. SQLSTATE: 21S01"
+  },
+  "by_name_case": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME SELECT 'Di' AS FIRST_NAME, 'Y' AS Last_Name, 5 AS N",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ],
+    [
+     "Bo",
+     null,
+     2
+    ],
+    [
+     "Di",
+     "Y",
+     5
+    ]
+   ]
+  },
+  "by_name_dup": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME SELECT 'E' AS first_name, 'F' AS first_name, 'G' AS last_name, 6 AS n",
+   "error_class": "AnalysisException",
+   "error": "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `sc`.`ns`.`bn`, the reason is too many data columns:\nTable columns: `first_name`, `last_name`, `n`.\nData columns: `first_name`, `first_name`, `last_name`, `n`. SQLSTATE: 21S01"
+  },
+  "by_name_case_dup": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME SELECT 'a' AS first_name, 'b' AS FIRST_NAME, 'c' AS last_name",
+   "error_class": "AnalysisException",
+   "error": "[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME] Cannot write incompatible data for the table `sc`.`ns`.`bn`: Ambiguous column name in the input data `first_name`. SQLSTATE: KD000"
+  },
+  "positional": {
+   "sql": "INSERT INTO sc.ns.bn SELECT * FROM swapped",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ],
+    [
+     "Bo",
+     null,
+     2
+    ],
+    [
+     "Di",
+     "Y",
+     5
+    ],
+    [
+     "Smith",
+     "Ann",
+     1
+    ]
+   ]
+  },
+  "by_name_values": {
+   "sql": "INSERT INTO sc.ns.bn BY NAME VALUES ('x', 'y', 7)",
+   "error_class": "AnalysisException",
+   "error": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] Cannot write incompatible data for the table `sc`.`ns`.`bn`: Cannot write extra columns `col1`, `col2`, `col3`. SQLSTATE: KD000"
+  },
+  "by_name_column_list": {
+   "sql": "INSERT INTO sc.ns.bn (n, first_name) BY NAME SELECT 9 AS N, 'Q' AS FIRST_NAME",
+   "error_class": "ParseException",
+   "error": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'BY'. SQLSTATE: 42601 (line 1, pos 37)\n\n== SQL ==\nINSERT INTO sc.ns.bn (n, first_name) BY NAME SELECT 9 AS N, 'Q' AS FIRST_NAME\n-------------------------------------^^^\n"
+  },
+  "overwrite_by_name": {
+   "sql": "INSERT OVERWRITE sc.ns.bn BY NAME SELECT 'O' AS last_name, 'P' AS first_name, 8 AS n",
+   "rows": [
+    [
+     "P",
+     "O",
+     8
+    ]
+   ]
+  }
+ },
+ "parquet_by_name": {
+  "pq_by_name": {
+   "sql": "INSERT INTO sc.ns.pq BY NAME SELECT * FROM swapped",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ]
+   ]
+  },
+  "pq_subset": {
+   "sql": "INSERT INTO sc.ns.pq BY NAME SELECT 'Bo' AS first_name, 2 AS n",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ],
+    [
+     "Bo",
+     null,
+     2
+    ]
+   ]
+  },
+  "pq_case": {
+   "sql": "INSERT INTO sc.ns.pq BY NAME SELECT 'Di' AS FIRST_NAME, 'Y' AS Last_Name, 5 AS N",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ],
+    [
+     "Bo",
+     null,
+     2
+    ],
+    [
+     "Di",
+     "Y",
+     5
+    ]
+   ]
+  },
+  "pq_extra": {
+   "sql": "INSERT INTO sc.ns.pq BY NAME SELECT 'Cy' AS first_name, 4 AS extra",
+   "error_class": "AnalysisException",
+   "error": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] Cannot write incompatible data for the table `sc`.`ns`.`pq`: Cannot write extra columns `extra`. SQLSTATE: KD000"
+  },
+  "pq_dup": {
+   "sql": "INSERT INTO sc.ns.pq BY NAME SELECT 'E' AS first_name, 'F' AS first_name, 'G' AS last_name, 6 AS n",
+   "error_class": "AnalysisException",
+   "error": "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `sc`.`ns`.`pq`, the reason is too many data columns:\nTable columns: `first_name`, `last_name`, `n`.\nData columns: `first_name`, `first_name`, `last_name`, `n`. SQLSTATE: 21S01"
+  },
+  "pq_values": {
+   "sql": "INSERT INTO sc.ns.pq BY NAME VALUES ('x', 'y', 7)",
+   "error_class": "AnalysisException",
+   "error": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] Cannot write incompatible data for the table `sc`.`ns`.`pq`: Cannot write extra columns `col1`, `col2`, `col3`. SQLSTATE: KD000"
+  },
+  "pq_positional": {
+   "sql": "INSERT INTO sc.ns.pq SELECT * FROM swapped",
+   "rows": [
+    [
+     "Ann",
+     "Smith",
+     1
+    ],
+    [
+     "Bo",
+     null,
+     2
+    ],
+    [
+     "Di",
+     "Y",
+     5
+    ],
+    [
+     "Smith",
+     "Ann",
+     1
+    ]
+   ]
+  },
+  "pq_overwrite": {
+   "sql": "INSERT OVERWRITE sc.ns.pq BY NAME SELECT 'O' AS last_name, 'P' AS first_name, 8 AS n",
+   "rows": [
+    [
+     "P",
+     "O",
+     8
+    ]
+   ]
+  }
+ },
+ "rtas_ops": {
+  "ctas_then_rtas": [
+   {
+    "operation": "append",
+    "summary": {
+     "engine-version": "4.1.2",
+     "added-data-files": "3",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789620617988",
+     "added-records": "2000",
+     "total-records": "2000",
+     "app-name": "ic-rtas-byname-1-oracle",
+     "spark.app.id": "local-1789620617988",
+     "changed-partition-count": "3",
+     "engine-name": "spark",
+     "manifests-created": "1",
+     "total-position-deletes": "0",
+     "added-files-size": "5208",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "0",
+     "total-files-size": "5208",
+     "total-data-files": "3"
+    }
+   },
+   {
+    "operation": "overwrite",
+    "summary": {
+     "engine-version": "4.1.2",
+     "added-data-files": "5",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789620617988",
+     "added-records": "100",
+     "total-records": "100",
+     "app-name": "ic-rtas-byname-1-oracle",
+     "spark.app.id": "local-1789620617988",
+     "changed-partition-count": "5",
+     "engine-name": "spark",
+     "manifests-created": "1",
+     "total-position-deletes": "0",
+     "added-files-size": "3705",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "0",
+     "total-files-size": "3705",
+     "total-data-files": "5"
+    }
+   }
+  ],
+  "rtas_new_table": [
+   {
+    "operation": "overwrite",
+    "summary": {
+     "engine-version": "4.1.2",
+     "added-data-files": "1",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789620617988",
+     "added-records": "10",
+     "total-records": "10",
+     "app-name": "ic-rtas-byname-1-oracle",
+     "spark.app.id": "local-1789620617988",
+     "changed-partition-count": "1",
+     "engine-name": "spark",
+     "manifests-created": "1",
+     "total-position-deletes": "0",
+     "added-files-size": "456",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "0",
+     "total-files-size": "456",
+     "total-data-files": "1"
+    }
+   }
+  ],
+  "rtas_empty_new": [
+   {
+    "operation": "delete",
+    "summary": {
+     "engine-version": "4.1.2",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789620617988",
+     "total-records": "0",
+     "app-name": "ic-rtas-byname-1-oracle",
+     "spark.app.id": "local-1789620617988",
+     "changed-partition-count": "0",
+     "engine-name": "spark",
+     "manifests-created": "0",
+     "total-position-deletes": "0",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "0",
+     "total-files-size": "0",
+     "total-data-files": "0"
+    }
+   }
+  ],
+  "rtas_empty_twice": [
+   {
+    "operation": "delete",
+    "summary": {
+     "engine-version": "4.1.2",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789620617988",
+     "total-records": "0",
+     "app-name": "ic-rtas-byname-1-oracle",
+     "spark.app.id": "local-1789620617988",
+     "changed-partition-count": "0",
+     "engine-name": "spark",
+     "manifests-created": "0",
+     "total-position-deletes": "0",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "0",
+     "total-files-size": "0",
+     "total-data-files": "0"
+    }
+   },
+   {
+    "operation": "delete",
+    "summary": {
+     "engine-version": "4.1.2",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789620617988",
+     "total-records": "0",
+     "app-name": "ic-rtas-byname-1-oracle",
+     "spark.app.id": "local-1789620617988",
+     "changed-partition-count": "0",
+     "engine-name": "spark",
+     "manifests-created": "0",
+     "total-position-deletes": "0",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "0",
+     "total-files-size": "0",
+     "total-data-files": "0"
+    }
+   }
+  ]
+ },
+ "partition_by_name": {
+  "pt_overwrite_static": {
+   "sql": "INSERT OVERWRITE sc.ns.pt PARTITION (p = 1) BY NAME SELECT 9 AS n, 'z' AS first_name",
+   "rows": [
+    [
+     "a",
+     1,
+     0
+    ],
+    [
+     "z",
+     9,
+     1
+    ]
+   ]
+  },
+  "pt_overwrite_static_positional": {
+   "sql": "INSERT OVERWRITE sc.ns.ptp PARTITION (p = 1) SELECT 'z' AS first_name, 9 AS n",
+   "rows": [
+    [
+     "a",
+     1,
+     0
+    ],
+    [
+     "z",
+     9,
+     1
+    ]
+   ]
+  },
+  "pt_overwrite_dynamic": {
+   "sql": "INSERT OVERWRITE sc.ns.ptdyn PARTITION (p) BY NAME SELECT 7 AS n, 'w' AS first_name, 1 AS p",
+   "rows": [
+    [
+     "w",
+     7,
+     1
+    ]
+   ]
+  },
+  "pt_overwrite_no_clause": {
+   "sql": "INSERT OVERWRITE sc.ns.ptn BY NAME SELECT 9 AS n, 'z' AS first_name, 0 AS p",
+   "rows": [
+    [
+     "z",
+     9,
+     0
+    ]
+   ]
+  },
+  "pt_append_static": {
+   "sql": "INSERT INTO sc.ns.pta PARTITION (p = 1) BY NAME SELECT 9 AS n, 'z' AS first_name",
+   "rows": [
+    [
+     "a",
+     1,
+     0
+    ],
+    [
+     "z",
+     9,
+     1
+    ]
+   ]
+  },
+  "pt_append_static_positional": {
+   "sql": "INSERT INTO sc.ns.ptap PARTITION (p = 1) SELECT 'z' AS first_name, 9 AS n",
+   "rows": [
+    [
+     "a",
+     1,
+     0
+    ],
+    [
+     "z",
+     9,
+     1
+    ]
+   ]
+  },
+  "pt_static_in_list": {
+   "sql": "INSERT INTO sc.ns.pts PARTITION (p = 1) BY NAME SELECT 9 AS n, 'z' AS first_name, 1 AS p",
+   "error_class": "AnalysisException",
+   "error": "[STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST] Static partition column p is also specified in the column list. SQLSTATE: 42713"
+  },
+  "pt_empty_overwrite": {
+   "sql": "INSERT OVERWRITE sc.ns.pte BY NAME SELECT * FROM sc.ns.pte WHERE false",
+   "rows": []
+  },
+  "pt_empty_partition_overwrite": {
+   "sql": "INSERT OVERWRITE sc.ns.ptf PARTITION (p = 1) BY NAME SELECT 9 AS n, 'z' AS first_name WHERE false",
+   "rows": [
+    [
+     "a",
+     1,
+     0
+    ]
+   ]
+  }
+ },
+ "not_null_by_name": {
+  "nn_nullable_ok": {
+   "sql": "INSERT INTO sc.ns.nn BY NAME SELECT 'Bo' AS first_name, 2 AS n",
+   "rows": [
+    [
+     "Bo",
+     null,
+     2
+    ]
+   ]
+  },
+  "nn_missing_required": {
+   "sql": "INSERT INTO sc.ns.nn2 BY NAME SELECT 'Bo' AS first_name, 2 AS n",
+   "error_class": "AnalysisException",
+   "error": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `sc`.`ns`.`nn2`: Cannot find data for the output column `last_name`. SQLSTATE: KD000"
+  },
+  "nn_missing_required_overwrite": {
+   "sql": "INSERT OVERWRITE sc.ns.nn3 BY NAME SELECT 'Bo' AS first_name, 2 AS n",
+   "error_class": "AnalysisException",
+   "error": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `sc`.`ns`.`nn3`: Cannot find data for the output column `last_name`. SQLSTATE: KD000"
+  }
+ },
+ "case_sensitive_by_name": {
+  "cs_default_folds": {
+   "sql": "INSERT INTO sc.ns.cs BY NAME SELECT 1 AS N, 'Di' AS FIRST_NAME",
+   "rows": [
+    [
+     "Di",
+     1
+    ]
+   ]
+  },
+  "cs_sensitive_refuses_mismatch": {
+   "sql": "INSERT INTO sc.ns.cs2 BY NAME SELECT 1 AS N, 'Di' AS FIRST_NAME",
+   "error_class": "AnalysisException",
+   "error": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] Cannot write incompatible data for the table `sc`.`ns`.`cs2`: Cannot write extra columns `N`, `FIRST_NAME`. SQLSTATE: KD000"
+  },
+  "cs_sensitive_exact_ok": {
+   "sql": "INSERT INTO sc.ns.cs3 BY NAME SELECT 1 AS n, 'Di' AS `first_name`",
+   "rows": [
+    [
+     "Di",
+     1
+    ]
+   ]
+  }
+ }
+}

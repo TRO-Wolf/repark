@@ -135,6 +135,33 @@ fn insert_overwrite_is_recognized() {
     );
 }
 
+#[test]
+fn insert_by_name_is_recognized() {
+    let message = upgraded("INSERT INTO c.s.t BY NAME SELECT a FROM s");
+    assert_steer(&message, "BY NAME", "no ANSI spelling");
+}
+
+#[test]
+fn insert_by_name_overwrite_keeps_overwrite_steer() {
+    let message = upgraded("INSERT OVERWRITE c.s.t BY NAME VALUES ('x', 1)");
+    assert_steer(&message, "INSERT OVERWRITE", "CREATE OR REPLACE TABLE");
+}
+
+#[test]
+fn order_by_name_after_select_does_not_steer_by_name() {
+    for sql in [
+        "INSERT INTO c.s.t SELECT * FROM s ORDER BY name",
+        "SELECT * FROM s ORDER BY name",
+        "INSERT INTO c.s.t SELECT by_name FROM s",
+    ] {
+        let message = upgraded(sql);
+        assert!(
+            !message.contains("BY NAME"),
+            "`{sql}` must not steer BY NAME: {message}"
+        );
+    }
+}
+
 /// The Spark `SYSTEM_*` time-travel spellings steer to the ANSI ones.
 #[test]
 fn system_time_travel_spellings_are_recognized() {

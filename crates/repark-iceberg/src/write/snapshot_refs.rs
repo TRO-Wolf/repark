@@ -1,7 +1,7 @@
 //! Snapshot-ref helpers over the fork's `ManageSnapshots` transaction API.
 
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
-use iceberg::{Catalog, Result, TableIdent};
+use iceberg::{Catalog, Error, ErrorKind, Result, TableIdent};
 
 /// Kind of snapshot ref (branch vs tag).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -138,6 +138,45 @@ pub async fn drop_snapshot_ref(
     let tx = action.apply(tx)?;
     tx.commit(catalog).await?;
     Ok(())
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn list_snapshot_refs(
+    table: &iceberg::table::Table,
+) -> Result<Vec<(String, SnapshotRefKind, i64)>> {
+    use datafusion::arrow::array::{Array, AsArray};
+    use datafusion::arrow::datatypes::{DataType, Int64Type};
+    use futures::TryStreamExt;
+    let stream = table.inspect().refs().scan().await?;
+    let batches: Vec<datafusion::arrow::array::RecordBatch> = stream.try_collect().await?;
+    let mut refs = Vec::new();
+    for batch in &batches {
+        let schema = batch.schema();
+        let shape_ok = schema.fields().len() >= 3
+            && matches!(schema.field(0).data_type(), DataType::Utf8)
+            && matches!(schema.field(1).data_type(), DataType::Utf8)
+            && matches!(schema.field(2).data_type(), DataType::Int64);
+        if !shape_ok {
+            return Err(Error::new(
+                ErrorKind::DataInvalid,
+                "unexpected refs inspect schema".to_string(),
+            ));
+        }
+        let names = batch.column(0).as_string::<i32>();
+        let kinds = batch.column(1).as_string::<i32>();
+        let ids = batch.column(2).as_primitive::<Int64Type>();
+        for row in 0..batch.num_rows() {
+            if names.is_null(row) || kinds.is_null(row) || ids.is_null(row) {
+                continue;
+            }
+            let kind = match kinds.value(row) {
+                "BRANCH" => SnapshotRefKind::Branch,
+                _ => SnapshotRefKind::Tag,
+            };
+            refs.push((names.value(row).to_string(), kind, ids.value(row)));
+        }
+    }
+    Ok(refs)
 }
 
 /// Chain fork retention setters onto a manage-snapshots action.

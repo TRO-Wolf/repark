@@ -87,7 +87,11 @@ def test_describe_table_extended_sections(spark: ReparkSession) -> None:
     assert detail[4][0] == "Owner"
     assert detail[4][1] != ""
     assert detail[4][2] == ""
-    assert detail[5] == ("Table Properties", "[current-snapshot-id=none,k=v]", "")
+    assert detail[5] == (
+        "Table Properties",
+        "[current-snapshot-id=none,k=v,write.parquet.compression-codec=zstd]",
+        "",
+    )
     assert detail[6] == ("Statistics", "0 bytes, 0 rows", None)
 
 

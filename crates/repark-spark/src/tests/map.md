@@ -371,12 +371,22 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ref_ddl` (**REF:** the write-to-branch/tag refusal names the `iceberg-datafusion`
   commit-target gap at fork pin `33be9a0`, not the superseded pin; pins:
   ref-branch-tag-wap/C-004),
+  `branch_ops` (**ICE-BRANCH-OPS-1 (2026-09-17):** `fast_forward` moves the branch and
+  answers `(branch_updated, previous_ref, updated_ref)` with null on auto-create, named
+  args, tag-as-`to`, and the three refusals; `cherrypick_snapshot` replays onto `main`
+  (duplicate/ancestor/delete refusals with the fork's Java-identical text);
+  `set_current_snapshot` by id and by ref with both/neither/unknown refusals;
+  `rollback_to_timestamp` by `TIMESTAMP` literal (integer epoch-millis arguments refuse
+  `DATATYPE_MISMATCH`, like Spark) with the ancient-timestamp refusal; every CALL
+  adds no snapshot. pins: ice-branch-ops-1/C-007, C-009, C-011, C-016, C-018),
   `refs_and_wap` (**REF:** both `WITH SNAPSHOT RETENTION` halves at the oracle's values and the
   reversed order refusing; the `branch_`/`tag_` READ selectors resolving the ref, joining
   against the live table, refusing loud on a missing ref, and claiming neither a
   metadata-table suffix nor a real table whose own name starts with `branch_`; and WAP
-  declared — the three publish procedures and the `spark.wap.*` confs all fail closed and leave
-  the branch where it was; and the read-vs-write boundary — a selector in a DML statement's
+  declared — the remaining publish procedure and the `spark.wap.*` confs all fail closed and
+  leave the branch where it was (`fast_forward` and `cherrypick_snapshot` moved to
+  `branch_ops` when ICE-BRANCH-OPS-1 implemented them); and the read-vs-write boundary —
+  a selector in a DML statement's
   source, `USING` operand or predicate subquery reads the ref (four classes plus CTAS, each
   asserting the ref's ids and not `main`'s); a branch write target commits onto the branch
   and a tag write target refuses. The oracle stamp the registry rows §2.2
@@ -426,6 +436,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ctas_staged_commit_state_unknown_surfaces_class_without_operation_id` pins the staged
   publish arm (`RequireExplicitLocation`) at `operation_id: None` with no drop.
   pins: ice-commit-unknown-1/C-001, C-003, C-004, C-005, C-008
+- [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
+  `alter_column_move_first_and_after_reorder` pins the move end to end over
+  `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).
+  pins: ice-column-reorder-1/C-001, C-002
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
   and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
