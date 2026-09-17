@@ -276,3 +276,54 @@ midnight-window flake (engine answers UTC 09-17, `date.today()` answers EDT
 09-16; both pass under TZ=UTC on this tree; no date code in this diff) —
 left red for its owning unit, recorded here and in the hand-back.
 `git status --porcelain` must read empty at handoff.
+
+## Round 4 notes (2026-09-16, review-remediation round, hard stop 21:15 EDT)
+
+Rulings recorded: R-18b-16 (L-501 P1 CONFIRMED — `distinct()` then a
+`_metadata` select answers 3 rows, Spark answers 2 with first-row metadata;
+`Distinct`, and the `dropDuplicates` window+filter shape, join `Aggregate` as
+attribute-losing so the later metadata ref REFUSES `MISSING_ATTRIBUTES`; never
+inject `_metadata` into the distinct key), R-18b-17 (L-502/L-503/L-504 P2
+CONFIRMED — stacked keep-and-add select, SQL-string filter on `_metadata`, and
+aggregates over `_metadata` all answer on Spark; fix each via the existing
+ensure path or strict-xfail against its cell), R-18b-18 (L-505 P3 — file the
+`SQL-METADATA-COL-1` BACKLOG registry row for real), R-18b-19 (perf R-01/R-02
+P2 — record `DF-METADATA-COL-PERF-1` BACKLOG with the report's numbers;
+DEFERRED under G-2, no code this round).
+
+Oracle: six `probe_meta_r2.py` cells over one parquet file with rows
+(1,'a'),(1,'a'),(2,'b') copied verbatim into
+`facade_df_metadata_col_oracle.json` (48 → 54 cells):
+`distinct_then_metadata` [(1,'a',0),(2,'b',2)],
+`dropduplicates_then_metadata` [(1,0),(2,2)],
+`stacked_select_keep_and_add` (3 rows, file_name),
+`filter_sql_string_metadata` [(1,),(2,)], `agg_over_metadata` [(3,)],
+`agg_max_row_index` [(2,)].
+
+## Round 4 fix notes
+
+- R-18b-16: `Distinct` leaves the transparent bucket in `walk_plan`
+  (both arms) and joins `Join`/`Aggregate` in the
+  `augmentation_fingerprint` stop set, so a metadata ref above a dedupe
+  (or above an already-augmented dedupe) refuses `MISSING_ATTRIBUTES`.
+  The facade `dropDuplicates(subset)` shape is window+filter+drop with no
+  `Distinct` node; `Window` joins the same attribute-losing classification.
+  Bare `distinct()` / `dropDuplicates()` with no metadata ref are untouched
+  (no ensure trigger).
+- R-18b-17 L-502: `widen_projections` strips the inner redundant
+  `Alias(Column)` (same `drop_redundant_column_alias`) when rebuilding a
+  projection, so a stacked keep-and-add select no longer trips
+  `push_down_leaf_projections` on the duplicate unqualified field.
+- R-18b-17 L-503: `PyDataFrame.filter_sql` routes the parsed predicate
+  through `ensure_single`, the existing ensure path.
+- R-18b-17 L-504: `PyDataFrame.aggregate` routes group+aggregate exprs
+  through `ensure_planned` (split back at the group length) before
+  planning the aggregate.
+- R-18b-18: `### SQL-METADATA-COL-1` BACKLOG registry row filed.
+- R-18b-19: `### DF-METADATA-COL-PERF-1` BACKLOG registry row filed with
+  the S2-21 Rust perf numbers (2000-file EXPLAIN 33.5 s / 1.69 GiB,
+  file_path 73 B/row); no code change.
+
+## Questions (round 4)
+
+None.

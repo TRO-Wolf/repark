@@ -1,4 +1,60 @@
 {
+ "agg_max_row_index": {
+  "result": {
+   "columns": [
+    "m"
+   ],
+   "rows": [
+    "(2,)"
+   ]
+  }
+ },
+ "agg_over_metadata": {
+  "result": {
+   "columns": [
+    "count"
+   ],
+   "rows": [
+    "(3,)"
+   ]
+  }
+ },
+ "distinct_then_metadata": {
+  "result": {
+   "columns": [
+    "i",
+    "s",
+    "ri"
+   ],
+   "rows": [
+    "(1, 'a', 0)",
+    "(2, 'b', 2)"
+   ]
+  }
+ },
+ "dropduplicates_then_metadata": {
+  "result": {
+   "columns": [
+    "i",
+    "ri"
+   ],
+   "rows": [
+    "(1, 0)",
+    "(2, 2)"
+   ]
+  }
+ },
+ "filter_sql_string_metadata": {
+  "result": {
+   "columns": [
+    "i"
+   ],
+   "rows": [
+    "(1,)",
+    "(2,)"
+   ]
+  }
+ },
  "json_csv": {
   "result": "'{\"fields\":[{\"metadata\":{\"__file_source_metadata_col\":true,\"__metadata_col\":\"_metadata\"},\"name\":\"_metadata\",\"nullable\":false,\"type\":{\"fields\":[{\"metadata\":{},\"name\":\"file_path\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_name\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"file_size\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_start\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_block_length\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"file_modification_time\",\"nullable\":false,\"type\":\"timestamp\"}],\"type\":\"struct\"}}],\"type\":\"struct\"}'"
  },
@@ -273,6 +329,19 @@
    "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
    "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `_metadata`.`file_name` cannot be resolved. Did you mean one of the following? [`pv`.`i`, `pv`.`s`]. SQLSTATE: 42703; line 1 pos 10;\n'Project [i#3, '_metadata.file_name LIKE %.parquet AS ok#91]\n+- SubqueryAlias pv\n   +- View (`pv`, [i#3, s#4])\n      +- Relation [i#3,s#4] parquet\n",
    "raises": "AnalysisException"
+  }
+ },
+ "stacked_select_keep_and_add": {
+  "result": {
+   "columns": [
+    "i",
+    "file_name"
+   ],
+   "rows": [
+    "(1, 'part-00000-72714abd-4d66-409b-9457-cb9893abf026-c000.snappy.parquet')",
+    "(1, 'part-00000-72714abd-4d66-409b-9457-cb9893abf026-c000.snappy.parquet')",
+    "(2, 'part-00000-72714abd-4d66-409b-9457-cb9893abf026-c000.snappy.parquet')"
+   ]
   }
  },
  "values_csv": {
