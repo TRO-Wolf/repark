@@ -59,7 +59,8 @@ pins: rp-4-fork-repin/C-005, C-006
   partition arm (static overwrite) or inject clause literals (static append);
   dynamic overwrite stays whole-table replace-all (Spark's default-mode
   answer); empty unpartitioned overwrite wipes; missing required targets
-  refuse `CANNOT_FIND_DATA`; matching honours `spark.sql.caseSensitive`.
+  refuse `CANNOT_FIND_DATA`; matching honours `spark.sql.caseSensitive`
+  (matching plus projection live in `plan_name_projection`).
   pins: ice-rtas-byname-1/C-007, C-008, C-009, C-010
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:

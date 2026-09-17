@@ -31,7 +31,9 @@ append matches the full target list. Empty unpartitioned overwrite wipes
 via `commit_overwrite_replace_all_to` after the empty-source type guard.
 A missing required target refuses `CANNOT_FIND_DATA` before any write.
 `spark.sql.caseSensitive=true` matches exact
-(carrier `repark_functions::case_sensitive`).
+(carrier `repark_functions::case_sensitive`). `plan_name_projection` owns
+matching plus projection building; `execute_insert_by_name` owns routing
+plus the two commits.
 
 ## Pointers
 

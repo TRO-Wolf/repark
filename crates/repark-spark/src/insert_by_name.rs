@@ -27,7 +27,7 @@ struct StaticColumn {
 
 fn case_sensitive_insert(ctx: &SessionContext) -> bool {
     repark_functions::case_sensitive::spark_case_sensitive_from_options(
-        &ctx.copied_config().options(),
+        ctx.copied_config().options(),
     )
 }
 
@@ -75,61 +75,17 @@ pub(crate) async fn execute_insert_by_name(
              `{table_sql}`"
         )));
     };
-    let fields: Vec<(String, bool)> = table
-        .metadata()
-        .current_schema()
-        .as_struct()
-        .fields()
-        .iter()
-        .map(|field| (field.name.clone(), field.required))
-        .collect();
     let case_sensitive = case_sensitive_insert(ctx);
     let source_names = probe_source_names(ctx, catalogs, source, case_sensitive).await?;
     let table_display = display_table_name(&catalog_name, &table);
-    let static_columns = static_partition_columns(&table, &insert, case_sensitive)?;
-    for name in &source_names {
-        if let Some(found) = static_columns.iter().find(|static_column| {
-            same_name(&static_column.canonical, &name.resolved, case_sensitive)
-        }) {
-            return Err(static_partition_in_column_list(&found.written));
-        }
-    }
-    let match_fields: Vec<(String, bool)> = fields
-        .iter()
-        .filter(|(name, _)| {
-            !static_columns
-                .iter()
-                .any(|static_column| same_name(&static_column.canonical, name, case_sensitive))
-        })
-        .cloned()
-        .collect();
-    let match_names: Vec<String> = match_fields.iter().map(|(name, _)| name.clone()).collect();
-    let mapping =
-        match_source_to_target(&match_names, &source_names, &table_display, case_sensitive)?;
-    for ((name, required), slot) in match_fields.iter().zip(mapping.iter()) {
-        if slot.is_none() && *required {
-            return Err(cannot_find_data(&table_display, name));
-        }
-    }
-    let projection_sql = if !insert.overwrite && !static_columns.is_empty() {
-        build_static_append_projection(
-            source,
-            &fields,
-            &static_columns,
-            &source_names,
-            &mapping,
-            case_sensitive,
-        )
-    } else {
-        let fills: Vec<TargetFill> = mapping
-            .iter()
-            .map(|slot| match slot {
-                Some(index) => TargetFill::Source(*index),
-                None => TargetFill::Null,
-            })
-            .collect();
-        build_projection_sql(source, &match_names, &source_names, &fills)
-    };
+    let (projection_sql, static_columns) = plan_name_projection(
+        &table,
+        &insert,
+        source,
+        &source_names,
+        &table_display,
+        case_sensitive,
+    )?;
     if insert.overwrite {
         let query = parse_projection_query(&projection_sql)?;
         if insert.partitioned.is_some() && !static_columns.is_empty() {
@@ -301,6 +257,73 @@ async fn projection_is_empty(
     Ok(batches.iter().all(|batch| batch.num_rows() == 0))
 }
 
+fn plan_name_projection(
+    table: &iceberg::table::Table,
+    insert: &datafusion::sql::sqlparser::ast::Insert,
+    source: &Query,
+    source_names: &[SourceName],
+    table_display: &str,
+    case_sensitive: bool,
+) -> Result<(String, Vec<StaticColumn>)> {
+    let fields: Vec<(String, bool)> = table
+        .metadata()
+        .current_schema()
+        .as_struct()
+        .fields()
+        .iter()
+        .map(|field| (field.name.clone(), field.required))
+        .collect();
+    let static_columns = static_partition_columns(table, insert, case_sensitive)?;
+    for name in source_names {
+        if let Some(found) = static_columns.iter().find(|static_column| {
+            same_name(&static_column.canonical, &name.resolved, case_sensitive)
+        }) {
+            return Err(static_partition_in_column_list(&found.written));
+        }
+    }
+    let match_fields: Vec<(String, bool)> = fields
+        .iter()
+        .filter(|(name, _)| {
+            !static_columns
+                .iter()
+                .any(|static_column| same_name(&static_column.canonical, name, case_sensitive))
+        })
+        .cloned()
+        .collect();
+    let match_names: Vec<String> = match_fields.iter().map(|(name, _)| name.clone()).collect();
+    let mapping =
+        match_source_to_target(&match_names, source_names, table_display, case_sensitive)?;
+    for ((name, required), slot) in match_fields.iter().zip(mapping.iter()) {
+        if slot.is_none() && *required {
+            return Err(cannot_find_data(table_display, name));
+        }
+    }
+    if !insert.overwrite && !static_columns.is_empty() {
+        return Ok((
+            build_static_append_projection(
+                source,
+                &fields,
+                &static_columns,
+                source_names,
+                &mapping,
+                case_sensitive,
+            ),
+            static_columns,
+        ));
+    }
+    let fills: Vec<TargetFill> = mapping
+        .iter()
+        .map(|slot| match slot {
+            Some(index) => TargetFill::Source(*index),
+            None => TargetFill::Null,
+        })
+        .collect();
+    Ok((
+        build_projection_sql(source, &match_names, source_names, &fills),
+        static_columns,
+    ))
+}
+
 fn static_partition_columns(
     table: &iceberg::table::Table,
     insert: &datafusion::sql::sqlparser::ast::Insert,
@@ -340,13 +363,13 @@ fn static_partition_columns(
             Ok(StaticColumn {
                 canonical,
                 written: equality.name.clone(),
-                literal_sql: partition_literal_sql(&equality.value),
+                literal_sql: partition_literal_sql(equality.value.as_ref()),
             })
         })
         .collect()
 }
 
-fn partition_literal_sql(value: &Option<repark_iceberg::write::PartitionLiteral>) -> String {
+fn partition_literal_sql(value: Option<&repark_iceberg::write::PartitionLiteral>) -> String {
     match value {
         None => "NULL".to_string(),
         Some(repark_iceberg::write::PartitionLiteral::Boolean(true)) => "TRUE".to_string(),
@@ -582,21 +605,18 @@ fn build_static_append_projection(
     let mut targets = Vec::with_capacity(fields.len());
     let mut fills = Vec::with_capacity(fields.len());
     for (name, _) in fields {
-        match static_columns
+        if let Some(static_column) = static_columns
             .iter()
             .find(|static_column| same_name(&static_column.canonical, name, case_sensitive))
         {
-            Some(static_column) => {
-                targets.push(name.clone());
-                fills.push(TargetFill::Static(static_column.literal_sql.clone()));
-            }
-            None => {
-                targets.push(name.clone());
-                fills.push(match slots.next() {
-                    Some(Some(index)) => TargetFill::Source(*index),
-                    _ => TargetFill::Null,
-                });
-            }
+            targets.push(name.clone());
+            fills.push(TargetFill::Static(static_column.literal_sql.clone()));
+        } else {
+            targets.push(name.clone());
+            fills.push(match slots.next() {
+                Some(Some(index)) => TargetFill::Source(*index),
+                _ => TargetFill::Null,
+            });
         }
     }
     build_projection_sql(source, &targets, sources, &fills)

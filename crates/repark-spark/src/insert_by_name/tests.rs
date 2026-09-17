@@ -323,19 +323,19 @@ fn cannot_find_data_names_the_missing_required_column() {
 #[test]
 fn partition_literal_sql_renders_each_kind() {
     use repark_iceberg::write::PartitionLiteral;
-    assert_eq!(partition_literal_sql(&None), "NULL");
+    assert_eq!(partition_literal_sql(None), "NULL");
     assert_eq!(
-        partition_literal_sql(&Some(PartitionLiteral::Boolean(true))),
+        partition_literal_sql(Some(&PartitionLiteral::Boolean(true))),
         "TRUE"
     );
     assert_eq!(
-        partition_literal_sql(&Some(PartitionLiteral::Boolean(false))),
+        partition_literal_sql(Some(&PartitionLiteral::Boolean(false))),
         "FALSE"
     );
-    assert_eq!(partition_literal_sql(&Some(PartitionLiteral::Int(1))), "1");
-    assert_eq!(partition_literal_sql(&Some(PartitionLiteral::Long(9))), "9");
+    assert_eq!(partition_literal_sql(Some(&PartitionLiteral::Int(1))), "1");
+    assert_eq!(partition_literal_sql(Some(&PartitionLiteral::Long(9))), "9");
     assert_eq!(
-        partition_literal_sql(&Some(PartitionLiteral::String("o'x".to_string()))),
+        partition_literal_sql(Some(&PartitionLiteral::String("o'x".to_string()))),
         "'o''x'"
     );
 }
