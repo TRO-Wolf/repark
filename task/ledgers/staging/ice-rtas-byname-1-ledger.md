@@ -44,17 +44,16 @@ touched `map.md` files.
 - C-005 RTAS operations (BLOCKED-ON-FORK, xfail pins + exact fork change).
 - C-006 registry rows.
 
-### Clause status (round 1 close)
+### Clause table (round 1 close)
 
-- C-001 PROVEN — `test_by_name_*` pins green on the release native.
-- C-002 PROVEN — `test_insert_overwrite_by_name_replaces` green.
-- C-003 PROVEN — `test_by_name_values_refused` green.
-- C-004 PROVEN — parquet matrix, partitioned table, empty insert, branch
-  append, and native-door steer pins green.
-- C-005 BLOCKED-ON-FORK — four `xfail(strict)` pins on ask F-RTAS-OPS-1, plus
-  one `writeTo.append` xfail on F-DML-FIELD-ID-1.
-- C-006 PROVEN — rows DML-6 (FIXED) and RTAS-OPS-1 (OPEN) landed in
-  `docs/spark-sql-iceberg-parity.md`.
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-001 | `INSERT INTO … BY NAME SELECT` resolves by name, case-insensitively, NULL-fills a missing nullable source column, and answers Spark's count-first errors for extra/duplicate sources. | `test_by_name_*` pins; `insert_by_name/tests.rs`. | PROVEN | 21 passed on the release native (`test_ice_rtas_byname_1.py`). pins: ice-rtas-byname-1/C-001 |
+| C-002 | `INSERT OVERWRITE … BY NAME` replaces the table through the resolved positional projection. | `test_insert_overwrite_by_name_replaces`. | PROVEN | Green on the release native. pins: ice-rtas-byname-1/C-002 |
+| C-003 | `BY NAME` over `VALUES` answers `EXTRA_COLUMNS`; `INSERT INTO t (columns) BY NAME` refuses `PARSE_SYNTAX_ERROR`. | `test_by_name_values_refused`; `test_by_name_column_list_is_parse_error`. | PROVEN | Green on the release native. pins: ice-rtas-byname-1/C-003 |
+| C-004 | `BY NAME` holds on the other table kinds the SQL door writes (parquet matrix, partitioned table, empty insert, branch append) and the native door steers it. | `test_parquet_*`, `test_by_name_partitioned_table_reorders`, `test_by_name_empty_insert_matches_positional_door`, `test_by_name_branch_append`, `test_thin_native_door_parse_errors_loudly`; `sniff/tests.rs`. | PROVEN | Green on the release native. pins: ice-rtas-byname-1/C-004 |
+| C-005 | RTAS snapshot operations match Spark: replace records `overwrite`, RTAS-create records `overwrite`, empty RTAS records `delete`. | Four `xfail(strict)` pins. | OPEN | BLOCKED-ON-FORK F-RTAS-OPS-1: replace-with-files must stage an `overwrite` commit, replace-without-files must still commit one `delete` snapshot, create keeps `append`. pins: ice-rtas-byname-1/C-005 |
+| C-006 | Registry rows DML-6 (FIXED, pins named) and RTAS-OPS-1 (OPEN, fork ask, xfails named) land in `docs/spark-sql-iceberg-parity.md`. | The registry diff. | PROVEN | Commit `b64549c0`. pins: ice-rtas-byname-1/C-006 |
 
 ### Door decision
 
@@ -250,6 +249,20 @@ Gates for step 5 (`test_ice_rtas_byname_1.py`, `test_insert_store_assign.py`,
 `cargo test -p repark-sql --lib`, `cargo test -p repark-spark --lib`,
 clippy on both crates, `make verify`) are recorded below on the release
 native with per-command summaries.
+
+```text
+maturin develop --release (python/repark, VIRTUAL_ENV=.venv) -> rc 0,
+  repark-1.4.2 installed (after a one-line map_or type fix, b8e77335)
+pytest test_ice_rtas_byname_1.py test_insert_store_assign.py
+  test_sql_harden_cutover.py test_writer_v2.py -q
+  -> 114 passed, 16 skipped, 5 xfailed in 42.93s
+cargo test -p repark-sql --lib -> 345 passed, 0 failed
+cargo test -p repark-spark --lib -> 1062 passed, 0 failed, 4 ignored
+make rust-clippy -> rc 0
+make verify -> rc 1 on check-ledger-grammar only (no clause table);
+  clause table added
+check_ledger_grammar.py (re-run) -> rc 0, 177 live ledgers clean
+```
 
 ### C-006 registry rows
 
