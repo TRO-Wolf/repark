@@ -80,12 +80,13 @@ def _assert_not_implemented(error: BaseException, feature: str) -> None:
     assert str(error) == f"[NOT_IMPLEMENTED] {feature} is not implemented."
 
 
-def test_reader_orc_refuses_at_the_call(spark: ReparkSession) -> None:
-    """DataFrameReader.orc takes Spark's signature and refuses NOT_IMPLEMENTED orc.
+def test_reader_orc_takes_spark_signature(spark: ReparkSession) -> None:
+    """DataFrameReader.orc takes Spark's signature and reaches the scan.
 
-    Replaces the read arm of oracle cell ``orc_roundtrip`` (registry IO-ORC-1).
+    IO-ORC-1 (2026-09-16): the read side is a real scan now; a missing path answers
+    PATH_NOT_FOUND. The full read pins live in ``test_io_orc_1.py``.
     """
-    with pytest.raises(PySparkNotImplementedError) as raised:
+    with pytest.raises(AnalysisException) as raised:
         spark.read.orc(
             "/tmp/does-not-matter.orc",
             mergeSchema=True,
@@ -94,18 +95,19 @@ def test_reader_orc_refuses_at_the_call(spark: ReparkSession) -> None:
             modifiedBefore="2026-01-01",
             modifiedAfter="2020-01-01",
         )
-    _assert_not_implemented(raised.value, "orc")
+    assert raised.value.getCondition() == "PATH_NOT_FOUND"
 
 
-def test_reader_format_orc_refuses_at_load(spark: ReparkSession) -> None:
-    """format('orc').load refuses NOT_IMPLEMENTED orc at load, not at format.
+def test_reader_format_orc_loads_at_load(spark: ReparkSession) -> None:
+    """format('orc').load reaches the scan at load, not at format.
 
-    Replaces the read arm of oracle cell ``orc_format_save`` (registry IO-ORC-1).
+    IO-ORC-1 (2026-09-16): the read side is a real scan now; a missing path answers
+    PATH_NOT_FOUND. The full read pins live in ``test_io_orc_1.py``.
     """
     reader = spark.read.format("orc")
-    with pytest.raises(PySparkNotImplementedError) as raised:
+    with pytest.raises(AnalysisException) as raised:
         reader.load("/tmp/does-not-matter.orc")
-    _assert_not_implemented(raised.value, "orc")
+    assert raised.value.getCondition() == "PATH_NOT_FOUND"
 
 
 def test_reader_xml_without_row_tag_refuses(spark: ReparkSession) -> None:

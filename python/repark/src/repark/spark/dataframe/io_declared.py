@@ -1,4 +1,4 @@
-"""Declared IO refusals for the orc, xml, and jdbc reader and writer names."""
+"""Declared IO refusals for the orc writer, the xml names, and the jdbc names."""
 
 from __future__ import annotations
 
@@ -82,21 +82,6 @@ def _is_postgres_url(url: str) -> bool:
     """
     lowered = str(url).lstrip().lower()
     return lowered.startswith(("jdbc:postgresql://", "postgresql://", "postgres://"))
-
-
-def reader_orc(
-    reader: DataFrameReader,
-    path: Any,
-    mergeSchema: Any = None,  # noqa: N803 — PySpark param name
-    pathGlobFilter: Any = None,  # noqa: N803 — PySpark param name
-    recursiveFileLookup: Any = None,  # noqa: N803 — PySpark param name
-    modifiedBefore: Any = None,  # noqa: N803 — PySpark param name
-    modifiedAfter: Any = None,  # noqa: N803 — PySpark param name
-) -> DataFrame:
-    """Refuse ORC reads. pins: io-declared-1/C-001"""
-    _ = reader, path, mergeSchema, pathGlobFilter, recursiveFileLookup, modifiedBefore
-    _ = modifiedAfter
-    _refuse("orc")
 
 
 def reader_xml(
@@ -184,9 +169,8 @@ def reader_jdbc(
 
 
 def refuse_reader_load_format(reader: DataFrameReader, source_format: str) -> NoReturn:
-    """Refuse a declared reader format at ``load``. pins: io-declared-1/C-001, C-002"""
-    if source_format == "orc":
-        _refuse("orc")
+    """Refuse a declared reader format at ``load``. pins: io-declared-1/C-002"""
+    _ = source_format
     if not _row_tag_provided(None, reader._options):
         _refuse_missing_row_tag()
     _refuse("xml")

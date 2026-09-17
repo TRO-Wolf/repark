@@ -69,11 +69,15 @@ directory carries the one-liner (verified by scan, EX-26 round 2).
   `append` (and a second append arm read back ordered by id),
   `overwritePartitions` / `overwrite_partitions`, `option` /
   `options` (EX-22).
+- [orc_read.py](orc_read.py) — **IO-ORC-1 (2026-09-16):** `DataFrameReader.orc`
+  and `format("orc").load` over the committed Spark-written `m1` fixture, plus the
+  `PATH_NOT_FOUND` missing-path shape. pins: io-orc-1/C-010
 - [io_declared_refusals.py](io_declared_refusals.py) — the declared
-  `orc`/`xml` refusals and the non-PostgreSQL-driver `jdbc` refusals
-  (`DataFrameReader.orc`/`xml`/`jdbc`, `DataFrameWriter.orc`/`xml`/`jdbc`)
+  orc-write/`xml` refusals and the non-PostgreSQL-driver `jdbc` refusals
+  (`DataFrameReader.xml`/`jdbc`, `DataFrameWriter.orc`/`xml`/`jdbc`)
   asserting each `NOT_IMPLEMENTED` shape and Spark's own `XML_ROW_TAG_MISSING`
-  check, plus the `DataFrameNaFunctions.replace`
+  check **(IO-ORC-1 moves the `DataFrameReader.orc` arm to `orc_read.py`)**, plus
+  the `DataFrameNaFunctions.replace`
   delegation with its `ARGUMENT_REQUIRED` / `MIXED_TYPE_REPLACEMENT` arms
   (IO-DECLARED-1; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1 — R-3 restores
   PostgreSQL reads on `DataFrameReader.jdbc`, pinned in

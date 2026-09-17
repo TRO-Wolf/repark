@@ -94,6 +94,12 @@ arrow = "58.4"
 arrow-array = "58.4"
 arrow-schema = "58.4"
 parquet = "58.4"
+orc-rust = { version = "0.8.0", default-features = false }
+flate2 = "1"
+lz4_flex = "0.11"
+lzokay-native = "0.1"
+snap = "1.1"
+zstd = "0.13"
 # S3 object-store reads (`s3://` warehouses + `s3a://` Spark bronze). `object_store` is
 # DataFusion's object-store abstraction: it MUST stay at the DataFusion 54.1 family's version
 # (lockfile-resolved), so the version is workspace-pinned; the `aws` feature adds the S3 client

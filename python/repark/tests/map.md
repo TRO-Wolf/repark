@@ -1956,6 +1956,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **octo C4 Fixer:** `test_format_iceberg_load_does_not_prefer_temp_view` (C4-L-001),
   `test_write_csv_json_*` (C4-Q-002) **superseded by R1 round-trip pins**, ndarray dtype pins also
   assert Arrow `to_pylist` values (C4-Q-001);
+  **IO-ORC-1 (2026-09-16):** `test_load_orc_declared_not_implemented` becomes
+  `test_load_orc_reaches_the_scan` (missing path is `PATH_NOT_FOUND` now); the write
+  refusal pin is unchanged. pins: io-orc-1/C-004
 - `test_t4_csv_smart.py` — **r25 T4** smartCsv + Q1 inference protocol: pure rung pins,
   messy preamble/BOM/ragged fixtures, value+type Arrow path (bool/int32/int64/decimal/date/
   timestamp/float64/string), `describe_ingest` diagnostics, opt-in header case normalize,
@@ -1971,6 +1974,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   default `_cN`, empty+sep, gzip RT, multiLine object loud / empty-array ok, bool loud,
   **partitionBy path wires hive dirs (R2; was refuse-loud)**, JSON schema null-fill, semantic
   options on `.csv()` shorthand.
+  **IO-ORC-1 (2026-09-16):** `test_load_orc_declared_not_implemented` becomes
+  `test_load_orc_reaches_the_scan` (missing path is `PATH_NOT_FOUND` now).
+  pins: io-orc-1/C-004
 - `test_r2_read_formats2.py` — R2 writer option matrix / path modes / partitionBy: quoteAll /
   escapeQuotes wired; dateFormat/timestampFormat refuse-loud; parquet compression; path
   mode overwrite/append/error/ignore; partitionBy hive layout + multi-col + append merge +
@@ -2642,12 +2648,27 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusal shape for `rdd`), and a column named `rdd` does not shadow the property.
   pins: df-stream-batch-1/C-001, C-002, C-003, C-004
   Registry rows and the no-regression inventory updates for this unit are proven by these pins and the frozen-surface tables. pins: df-stream-batch-1/C-005, C-006
+- `test_io_orc_1.py` + `facade_orc_oracle.json` + [`fixtures/`](fixtures/map.md) —
+  **IO-ORC-1 (2026-09-16):** the read-only ORC scan against the run-16b live-PySpark-4.1.2
+  cells (fixture `.orc`/`_SUCCESS` bytes copied verbatim, `.crc` skipped). Pins cover
+  the 19-column typed read, all seven codecs, paths/globs/lists with Spark's error
+  shapes, the positional signature, mergeSchema/pathGlobFilter/recursive/modified/
+  basePath options, partition discovery, user schemas, projection/filter/count,
+  session-zone timestamps (the probe ran in America/New_York ambient — `ts` pins set
+  that zone), the SQL-door refusals, and the untouched write refusal.
+  **Round 2:** `test_orc_list_matches_glob_without_merge` pins a differing-schema
+  list answering one scan like the glob (A-7); the probe-zone note lives here,
+  not in code (A-5); the module docstring cites C-001..C-010 (the io-declared-1
+  precedent for setup/registry clauses). **Round 3:** `m?` carries the merge
+  cell (recorded with `m*`), `m*` refuses naming map.md (R-18b-12), and three
+  unapplied-user-schema refuses pin field/type/file-type (R-18b-11) — 50 pins.
+  pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `test_io_declared_1.py` + `facade_reader_writer_oracle.json` —
-  **IO-DECLARED-1 (2026-09-14):** the orc / xml / jdbc declared IO refusals and
+  **IO-DECLARED-1 (2026-09-14):** the orc-write / xml / jdbc declared IO refusals and
   `DataFrameNaFunctions.replace`, driven cell-by-cell from the live-PySpark oracle copy.
-  `DataFrameReader.orc` (Spark's full signature) / `DataFrameWriter.orc` /
-  `format("orc")` refuse `NOT_IMPLEMENTED` `{"feature": "orc"}` at the call (at
-  `load`/`save` for the `format` spellings) — registry IO-ORC-1; `DataFrameReader.xml`
+  **IO-ORC-1 (2026-09-16):** the orc *read* pins moved to `test_io_orc_1.py` (the read
+  side is a real scan now); `DataFrameWriter.orc` / `format("orc").save` keep refusing
+  `NOT_IMPLEMENTED` `{"feature": "orc"}` — registry IO-ORC-1; `DataFrameReader.xml`
   / `DataFrameWriter.xml` / `format("xml")` first reproduce Spark's own
   `XML_ROW_TAG_MISSING` (SQLSTATE 42KDF, byte-exact message) without a `rowTag`
   argument or option, then refuse `NOT_IMPLEMENTED` `{"feature": "xml"}` — registry

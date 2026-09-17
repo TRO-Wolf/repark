@@ -32,6 +32,8 @@ honestly"). SQL routing and session-build registration are seam-inverted
   S3-read stack (`object_store`, `aws-config`, `aws-credential-types`, `async-trait`, `url`), plus
   `tokio` — added phase-3 PR-3 solely to NAME `EngineRuntime` (EC-5); core still constructs no
   runtime and never blocks. No new package resolves: DataFusion already pulls tokio into the lock.
+  **IO-ORC-1 (2026-09-16):** also `orc-rust 0.8.0` (workspace, sync reader) for the read-only ORC
+  scan (`src/orc_scan.rs`); already locked via `datafusion-orc`, so the lock gains only the edge.
 - `src/silver.rs` + [src/silver/](src/silver/map.md) — typed `SilverPlan` (SILVER-S1):
   strict TOML parse, closed enums, canonical identity, deterministic explain. Public from
   this crate, not wired to Python. Unstable until SIL-1..SIL-10.
@@ -93,6 +95,19 @@ honestly"). SQL routing and session-build registration are seam-inverted
 - `src/text_glob.rs` — hand-written Hadoop glob matcher (`*?[]{}`, no `/`
   crossing, char-aware) with no new dependency; unmatched globs answer
   `PATH_NOT_FOUND` from the scan. pins: io-text-1/T-5
+  **IO-ORC-1 (2026-09-16):** adds `match_file_name_glob` for `pathGlobFilter`.
+  pins: io-orc-1/C-006
+- `src/orc_scan.rs` — **IO-ORC-1 (2026-09-16):** the read-only ORC scan
+  (`OrcReadOptions`, `ProjectionMask` projection, recursive conversion with
+  writer-zone undo). Schema inference and the user overlay live in
+  `src/orc_schema.rs` (split at the 1000-line ceiling).
+  pins: io-orc-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `src/orc_schema.rs` — **IO-ORC-1 (2026-09-16):** the ORC schema half beside the
+  scan (attribute mapping, merge union, user-schema select).
+  pins: io-orc-1/C-002, C-006, C-007
+- `src/orc_footer.rs` — **IO-ORC-1 (2026-09-16):** the footer attributes orc-rust
+  drops (`spark.sql.catalyst.type` per column, uniform stripe writer timezone).
+  pins: io-orc-1/C-002
 - `src/text_io.rs` — streaming text part-file writer (`execute_stream` batches
   to sequential `part-*.txt`, empty frame keeps one empty part); offender-first
   schema check, Spark-verbatim 1290 count text, empty-`lineSep` refusal.

@@ -51,6 +51,12 @@ chrono.workspace = true
 # package: DataFusion already pulls tokio into the lock.
 tokio.workspace = true
 futures.workspace = true
+orc-rust.workspace = true
+flate2.workspace = true
+lz4_flex.workspace = true
+lzokay-native.workspace = true
+snap.workspace = true
+zstd.workspace = true
 
 [dev-dependencies]
 # `#[tokio::test]` drives the async session API; `parquet` writes a fixture for the read_parquet

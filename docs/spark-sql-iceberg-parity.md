@@ -1937,24 +1937,69 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   in the same change.
   pins: df-plan-introspect-1/C-015
 
-### IO-ORC-1 — the ORC reader and writer names are a declared `NOT_IMPLEMENTED` refusal
+### IO-ORC-1 — the ORC reader reads; the writer stays a declared `NOT_IMPLEMENTED` refusal
 
 - **repark** — `DataFrameReader.orc(path, mergeSchema, pathGlobFilter, recursiveFileLookup,
-  modifiedBefore, modifiedAfter)`, `DataFrameWriter.orc(path, mode, partitionBy, compression)`,
-  and `format("orc")` on either side raise `PySparkNotImplementedError` with errorClass
-  `NOT_IMPLEMENTED` and `{"feature": "orc"}`, str `[NOT_IMPLEMENTED] orc is not implemented.`
-  — at the call for the shorthand methods, at `load()` / `save()` for the `format` spellings.
-  The old writer `DATA_SOURCE_NOT_FOUND` refusal's orc arm became this class.
+  modifiedBefore, modifiedAfter)` and `format("orc").load(path, …)` read ORC files through
+  the Rust reader (`repark-core` over orc-rust 0.8.0, no planner edits). The suite pins the
+  typed read (`orc_typed`, both spellings), every Spark-written codec
+  (`orc_codec_none/uncompressed/snappy/zlib/lzo/lz4/zstd`), the error shapes
+  (`orc_missing_path`, `orc_empty_dir`, `orc_not_orc_file`, `orc_ignore_corrupt`,
+  `orc_zero_rows`), the signature shapes (`orc_reader_list_arg`, `orc_path_glob`,
+  `orc_two_paths`, `orc_merge_schema_kw`, `orc_reader_signature_bad_arg`), schema merging
+  (`orc_merge_schema_off_dir`, `orc_merge_schema_on`, `orc_partition_*`), user schemas
+  (`orc_user_schema_*`), projection and filters (`orc_select_one`, `orc_filter_pushdown`,
+  `orc_case_insensitive_col`, `orc_count`, `orc_input_files`), the timestamp cells
+  (`orc_ts_session_tz`, `orc_ts_utc_session`), and the option spellings
+  (`orc_glob_filter*`, `orc_nested_*`, `orc_modified_*`).
 - **Apache Spark** — reads and writes ORC, including nested array/map/struct columns, decimals,
-  dates, timestamps, and the zstd default compression. *(oracle: recorded —
-  `facade_reader_writer_oracle.json` cells `orc_roundtrip`, `orc_nested_types`,
-  `orc_compression_default`, `orc_format_save`; PySpark 4.1.2, run 15b.)*
-- **Pin** — `python/repark/tests/test_io_declared_1.py::test_reader_orc_refuses_at_the_call`,
-  `…::test_reader_format_orc_refuses_at_load`, `…::test_writer_orc_refuses_at_the_call`,
+  dates, timestamps, and the zstd default compression. *(oracle: live PySpark 4.1.2 classic,
+  run 16b, 2026-09-15, `python/repark/tests/facade_orc_oracle.json`, 43 cells; the
+  `orc_codec_brotli` cell records Spark itself failing without the brotli native library, so
+  no repark pin claims brotli.)*
+- **Pin** — `python/repark/tests/test_io_orc_1.py` (45 pins, red-first).
+- **Writer** — `DataFrameWriter.orc(path, mode, partitionBy, compression)` and
+  `format("orc").save(…)` stay declared: `PySparkNotImplementedError` with errorClass
+  `NOT_IMPLEMENTED` and `{"feature": "orc"}`, str `[NOT_IMPLEMENTED] orc is not implemented.`
+  — at the call for the shorthand method, at `save()` for the `format` spelling.
+  Pin — `python/repark/tests/test_io_declared_1.py::test_writer_orc_refuses_at_the_call`,
   `…::test_writer_format_orc_refuses_at_save`.
-- **Rationale** — DECLARED (R-1, 2026-09-14). BACKLOG 2026-09-14: reachable in Rust; needs an
-  ORC crate — owner question Q-15B-1. A Rust ORC reader/writer is a new-crate dependency
-  decision reserved to the owner; Python never grows a reader.
+- **Rationale** — DELIVERED 2026-09-16 (run 18b), owner ruling Q-15B-1 (orc-rust 0.8.0,
+  pin `parsers` out of the tree). The old reader refusal pins
+  (`test_reader_orc_refuses_at_the_call`, `test_reader_format_orc_refuses_at_load`) retire
+  in this unit: the names now read. The writer is a new-crate write path and stays
+  declared; Python never grows a reader.
+
+### IO-ORC-SQL-1 — the SQL door over ORC paths stays with the planner
+
+- **repark** — the SQL door over ORC paths is untouched by this unit: a missing path
+  refuses through the planner (`orc_sql_door_missing` pins the `datafusion.orc.` shape)
+  and `CREATE TABLE … USING orc LOCATION` refuses (`orc_sql_create_using` pins the
+  `LOCATION is not supported` shape); the positive `orc_sql_door` read has no repark pin.
+- **Apache Spark** — resolves `orc.` paths through the SQL planner's data-source lookup
+  (`orc_sql_door` reads two rows).
+- **Pin** — `test_io_orc_1.py::test_orc_sql_door_refusal`,
+  `…::test_orc_sql_create_using_refusal` (refusals only).
+- **Rationale** — BACKLOG 2026-09-16 (run 18b): the planner decision belongs to run 18c;
+  no planner file carries an ORC arm from this unit.
+
+### IO-ORC-PERF-1 — the ORC scan is correct but slower than parquet on wide files
+
+- **repark** — `execute` streams batches since round 3 (R-18b-14, no collected
+  `Vec`); one file is still one partition (no stripe split) and every file is
+  still opened five times (footer per infer/catalyst-attrs/writer-tz/projection
+  names/decode). Both are correct-but-slow by measurement, not by guess.
+- **Apache Spark** — not the baseline here (no JVM in the loop); the baseline is
+  repark's own `spark.read.parquet` over the same 1e6×20 int64 rows.
+- **Pin** — none (BACKLOG).
+- **Rationale** — BACKLOG 2026-09-16 (run 18b, R-18b-15, deferred under G-2):
+  20-column sum 3.99 s vs parquet 0.35 s (11.3×, one serial partition of the
+  whole file); 5 opens per file vs parquet's 1 (`strace openat`, 200 files).
+  Round-3 streaming cut the 20-column peak RSS from 561 244 KiB to 465 072 KiB
+  (report recipe, same shape); the narrow 2-column sum sits at 84 440 KiB
+  (near the 77 472 KiB idle). Numbers: perf report
+  `/tmp/oc-worker/run18b/reviews/perf-orc-rust-report.md`, round-3 rerun in the
+  unit ledger Gates.
 
 ### IO-XML-1 — the XML reader and writer names are a declared `NOT_IMPLEMENTED` refusal behind Spark's own `rowTag` check
 

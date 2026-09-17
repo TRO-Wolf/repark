@@ -9,6 +9,7 @@ import pytest
 from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom
 from repark.errors import (
+    AnalysisException,
     PySparkNotImplementedError,
     PySparkTypeError,
     PySparkValueError,
@@ -440,12 +441,11 @@ def test_write_csv_json_round_trip_e2(spark: ReparkSession, tmp_path: Path) -> N
     assert json_rows == [{"id": 1, "name": "a"}]
 
 
-def test_load_orc_declared_not_implemented(spark: ReparkSession) -> None:
-    """format('orc').load is the declared NOT_IMPLEMENTED refusal (IO-ORC-1)."""
-    with pytest.raises(PySparkNotImplementedError) as raised:
+def test_load_orc_reaches_the_scan(spark: ReparkSession) -> None:
+    """format('orc').load is a real scan (IO-ORC-1, 2026-09-16): missing path is PATH_NOT_FOUND."""
+    with pytest.raises(AnalysisException) as raised:
         spark.read.format("orc").load("/tmp/does-not-matter")
-    assert raised.value.getCondition() == "NOT_IMPLEMENTED"
-    assert raised.value.getMessageParameters() == {"feature": "orc"}
+    assert raised.value.getCondition() == "PATH_NOT_FOUND"
 
 
 # ndarray lit
