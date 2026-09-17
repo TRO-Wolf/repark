@@ -7,6 +7,8 @@ Outputs are the checked-in Spark-written fixture
 (python/repark-parity/fixtures/torture/data/ice_hadoop_vn_1) and the truth JSON
 beside the pins (ice_hadoop_vn_1_spark_oracle.json).
 
+pins: ice-hadoop-vn-1/C-006, C-007
+
 Run explicitly, never from the suite: JVM plus both engines on one interpreter.
 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
 PYTHONPATH=/tmp/jb-vn/python/repark/src:/tmp/jb-vn/.venv/lib/python3.12/site-packages \\

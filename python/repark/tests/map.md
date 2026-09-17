@@ -269,7 +269,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark-first shape (Spark commits `v3`, stale RePark raises, Spark reads its row
   and commits on), the conc cross-read, and the recovery cross-read against
   [ice_hadoop_vn_1_spark_oracle.json](ice_hadoop_vn_1_spark_oracle.json).
-  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005
+  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [_record_ice_hadoop_vn_1.py](_record_ice_hadoop_vn_1.py) —
   the explicit-run recorder behind the fixture and the oracle JSON above (JVM +
   combined interpreter; invocation in its docstring).

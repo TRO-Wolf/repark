@@ -6,7 +6,7 @@ commit lands `v3`, and every later commit from the stale pointer raises
 winner's bytes stay intact. Live tier replays the Spark-first shape and the
 cross-engine reads.
 
-pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005
+pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 """
 
 from __future__ import annotations
