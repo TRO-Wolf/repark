@@ -324,3 +324,20 @@ under both ANSI settings, the accepted `F.bin(1)` / `F.rint(2.5)` values hold;
 ParserErrors — SQL parser/dialect is run 18c's fence), as do `DIV-like-1` and
 the 3-arg `like` escape (LIT-DECIMAL-1 owns `escapeChar`, R-17a-6). The
 `test_functions_gt1.py` divergence pin flips to the refusal shape.
+
+## Round state at hard stop (2026-09-16 20:40 EDT)
+
+`test_fnp_math_1.py` on the step-7 tree: **141 passed, 94 failed, 8 xfailed**
+(base was 16 passed). Green: bround, conv, hash (minus the two xfailed 12-col
+SQL statements), format_number, mask, split (o245 both doors + Q12-41…Q12-55),
+bin/rint values and BOOLEAN refusals. The 8 xfails ride their owning fences
+with reasons (run 18c ×2, LIT-DECIMAL-1 ×4, hash `-0.0` ×2).
+Still OPEN (steps 8–10, names not reached): `collate`, `collation`,
+`sentences`, `locate`, `array_join` (C-001 presence, C-002/C-003 values,
+C-004 errors) and AES `aes_encrypt` / `aes_decrypt` / `try_aes_decrypt`
+(C-001 presence, C-005 o245 exact + F14 value cells, C-004 error cells, both
+doors; D-7 crates land in a later round per the run-18a dependency fence, no
+dependency touched here).
+Registry flips EX-FN-5/7/17/18 to FIXED plus section-7 residual rows, and the
+`make verify` / `make preflight` pass, belong to the closing round with the
+green tree.
