@@ -274,7 +274,6 @@ async fn finish_ctas_staged_commit(
             .map_err(iceberg_err)?;
         return Ok(());
     }
-    // Options ride a publish-empty plus an owned append so the summary lands.
     let staging = options.staging_overrides();
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     let mut stream = query.execute_stream().await?;

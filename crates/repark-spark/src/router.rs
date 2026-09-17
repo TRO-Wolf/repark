@@ -39,7 +39,6 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     sql: &str,
     read_only_catalogs: &HashSet<String, S>,
 ) -> Result<DataFrame> {
-    // Extract the facade OPTIONS clause before any rewrite or canonicalization can drop it.
     let (sql_without_options, write_options) =
         crate::write_options::extract_statement_write_options(sql)?;
     // Canonicalize once at the Spark SQL front door so later tokenizers cannot process escapes again.

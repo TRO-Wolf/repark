@@ -10,7 +10,7 @@
 use datafusion::error::{DataFusionError, Result};
 
 /// Prefix for snapshot-summary properties (Spark strips it, lower-cases the suffix).
-pub const SNAPSHOT_PROPERTY_PREFIX: &str = "snapshot-property.";
+const SNAPSHOT_PROPERTY_PREFIX: &str = "snapshot-property.";
 
 /// A validated statement write-option set.
 #[derive(Debug, Default, Clone)]

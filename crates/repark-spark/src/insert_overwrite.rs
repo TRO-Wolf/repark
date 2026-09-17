@@ -415,7 +415,6 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     // OV1 exclusive staging surface (Q9): positional D9 map + write; no catalog mutation yet.
-    // The option-free path keeps the canonical staging byte-identical; options stage serially.
     let staged_files = if options.is_empty() {
         repark_iceberg::write::write_overwrite_staged_files_from_stream(
             table,

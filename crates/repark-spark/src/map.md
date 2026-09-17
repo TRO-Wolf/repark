@@ -81,7 +81,9 @@ pins: rp-4-fork-repin/C-005, C-006
   [OR REPLACE] TABLE only; every other form keeps the SQL byte-identical), last-wins
   validation (snapshot-property strip-and-lowercase, parquet honour, orc/avro/bogus
   refusals, option-over-table-property numerics/codec/isolation, lenient booleans,
-  Spark-shaped refusal texts), in-module units.
+  Spark-shaped refusal texts; pairs are single-quoted with `''` escapes, anything
+  else is not a clause), in-module units. No inline comments per the owner ban;
+  rationale lives here and in the ledger.
   pins: ice-write-options-1/C-001, C-002, C-003, C-004
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
