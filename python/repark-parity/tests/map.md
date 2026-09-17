@@ -172,6 +172,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **FNP-11B step 6 (2026-09-15):**
   `functions.py` mirror row 1960 → 1984 and `functions_expr.py` 2235 → 2237
   with the script baseline. pins: fnp-11b/C-001, C-005
+- `test_cap_1_source_file_line_cap.py` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):**
+  mirror row ratchets `dataframe/writer_readwriter.py` 1101 → 1095 with
+  `scripts/check_lib_py.py` (the by-name projection returns the target column
+  list and stops refusing missing frame columns).
+  pins: ice-v3-write-default-1/C-006
   **FNP-11B remediation round 1 (2026-09-16):** `functions_expr.py` mirror row
   2237 → 2220 with the script baseline (the `make_timestamp` forwarder becomes a
   direct re-export). pins: fnp-11b/C-007
