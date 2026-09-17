@@ -2829,6 +2829,66 @@ the pin rather than obeying it.
   spelling catching up, not a missing capability. The pin codifies today's refusal so the fix
   reds it on purpose.
 
+### ICE-COLUMN-REORDER-1 — `ALTER COLUMN … FIRST/AFTER` column moves — **FIXED 2026-09-17**
+
+- **repark** — `ALTER TABLE cat.ns.t ALTER COLUMN c FIRST` and `ALTER COLUMN c AFTER x` move
+  the column with field ids unchanged and a new schema id, on format-v2 and v3 tables, for
+  nested struct fields (`ALTER COLUMN s.b FIRST`, short sibling `ALTER COLUMN s.b AFTER a`
+  resolved in the mover's struct) and for partition-source columns alike. A move that
+  restores a previously seen order points the current schema id back at the original schema,
+  as Spark does. A move to the current position keeps the order and the schema id, matching
+  Spark, except that RePark still writes a metadata file where Spark commits nothing (OPEN
+  residue [ICE-COLUMN-REORDER-1-R-001](#ice-column-reorder-1-r-001--open-measured-2026-09-17-a-no-op-column-move-writes-a-metadata-file)).
+  A dotted `AFTER` reference (`AFTER s.a`) refuses with Spark's `[PARSE_SYNTAX_ERROR] …
+  SQLSTATE: 42601`; a cross-struct reference (`s.b AFTER id`) refuses
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` naming `` `s`.`id` `` with the top-level suggestions,
+  as Spark does. Moving an unknown column, or naming an unknown `AFTER` reference, raises
+  `AnalysisException` with Spark's `[UNRESOLVED_COLUMN.WITH_SUGGESTION] … SQLSTATE: 42703`
+  framing. A self-move (`c AFTER c`) refuses with the fork's Java-shaped `Cannot move c after
+  itself` — a diagnostic delta, not an outcome one: Spark wraps the same core message as
+  `Unsupported table change` in a `SparkException`, RePark raises `PySparkException`. A
+  positional `INSERT INTO … VALUES (…)` in the new order lands Spark-equal rows;
+  `table(t).columns` follows the move and `writeTo(t).append()` resolves by name. Name
+  resolution is the fork's own `field_by_name` index (Q-20b-5); order, legality and the
+  commit are the fork's `UpdateSchema`, never a local simulation. The move is
+  implemented on the facade door and the Rust ANSI door (`repark-sql`); the Python native
+  session is catalog-isolated and cannot address Iceberg tables, so it carries no pin for this
+  statement.
+- **Apache Spark** — moves the column (Java `UpdateSchema.moveFirst` / `moveBefore` /
+  `moveAfter`: same field ids, new order, a new schema id; a no-op move commits nothing).
+  *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, recorded in
+  `python/repark/tests/test_ice_column_reorder_1_truth.json`.)*
+- **Pin** — `python/repark/tests/test_ice_column_reorder_1.py` (17 offline vs the truth JSON on
+  the facade SQL door with DataFrame-door reads, incl. the short-sibling move, the
+  cross-struct and dotted-`AFTER` refusals, and a strict-xfail no-op-metadata pin; 17 live
+  replaying Spark and cross-reading both engines' moved tables),
+  `crates/repark-sql/tests/alter_column_move.rs::alter_column_move_reorders_and_noop_writes_no_metadata`
+  (ANSI door end to end, incl. the dotted-`AFTER` parse refusal) and the
+  `crates/repark-iceberg` round-trip pins (ADD+MOVE batch order, stale-move rebase to Java's
+  order, sibling-scope resolution).
+- **Rationale** — FIXED, not declared. The standing I6 refusal
+  (`ALTER COLUMN … FIRST/AFTER (column MOVE) without ADD …`) is removed; the remaining
+  `ALTER COLUMN … COMMENT` refusal (DBT-COLCOMMENT-1) is untouched. Round 2 (Q-20b-5)
+  removed RePark's local order/no-op simulation: every move commits through the fork's
+  `UpdateSchema`, with single-catalog-load doors and an `ALTER`-prefix fast path on the
+  intercepts.
+
+### ICE-COLUMN-REORDER-1-R-001 — OPEN (measured 2026-09-17): a no-op column move writes a metadata file
+
+- **repark** — `ALTER TABLE t ALTER COLUMN id FIRST` on `(id, a, b)` keeps the order and the
+  current schema id (the fork reuses the identical schema by content), but still writes a new
+  metadata file.
+- **Apache Spark** — Java's `UpdateSchema.commit` skips the commit when the new schema matches
+  the current one: no new schema, no new metadata file. *(oracle: truth cases `noop_first_v2`
+  / `noop_after_v2`, metadata version and schema id unchanged.)*
+- **Pin** —
+  `python/repark/tests/test_ice_column_reorder_1.py::test_noop_moves_write_no_metadata_file`
+  (`xfail(strict=True, reason="ICE-COLUMN-REORDER-1-R-001")`).
+- **Rationale** — OPEN, filed 2026-09-17 from the round-2 review. Metadata-only: order, ids,
+  rows and the schema id all match Spark. The TRIGGER is fork **F-UPDATE-SCHEMA-SAME-1**: a
+  `sameSchema` short-circuit in the Rust `UpdateSchema` action or commit path that skips the
+  commit when the rebuilt schema matches the current one, mirroring Java.
+
 ### DBT-QUALIFY-1 — a two-part name resolves for `SELECT` but not for `DESCRIBE` or `ALTER TABLE`
 
 - **repark** — with catalog `ice` registered, `SELECT count(*) FROM ns.t` resolves and answers.

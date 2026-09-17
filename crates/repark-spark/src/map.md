@@ -322,7 +322,16 @@ pins: rp-4-fork-repin/C-005, C-006
   I7 partition-field DDL, residual refusals) + the ALTER token rewrites the normalizer runs;
   9 in-module tests. **Q10:** ADD/ALTER COLUMN bare `TIMESTAMP` follows the session
   `spark.sql.timestampType` carrier. REPLACE COLUMNS stays on the LTZ wrapper
-  (parse-time, no session).
+  (parse-time, no session). **ICE-COLUMN-REORDER-1 (2026-09-17):** the I6 move refusal
+  is gone; the move lives in `column_move.rs`.
+- `column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):** the `ALTER COLUMN …
+  FIRST|AFTER` pre-parse (`try_parse_column_move_ddl` / `execute_column_move_ddl`, wired in
+  `router.rs` ahead of the residual refusal): an `ALTER`-prefix fast path before any tokenize,
+  dotted `AFTER` references refuse with Spark's `[PARSE_SYNTAX_ERROR]`, nested paths resolve,
+  every move commits through one loaded table (`apply_schema_changes_on_table`), unknown names
+  refuse with Spark's `UNRESOLVED_COLUMN` framing. A sibling module, not an `alter.rs` arm,
+  because that file sits at its exact ceiling. 4 in-module tests + [`tests/column_move.rs`](tests/map.md).
+  pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-014
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,

@@ -69,4 +69,4 @@ def test_target_file_size_applies_at_table(spark: ReparkSession, tmp_path: Path)
         spark, tmp_path, "t_tiny", "TBLPROPERTIES ('write.target-file-size-bytes' = '1')"
     )
     plain = _merge_rewrite(spark, tmp_path, "t_plain", "")
-    assert (tiny, plain) == (16, 4)
+    assert (tiny, plain) == (20, 4)

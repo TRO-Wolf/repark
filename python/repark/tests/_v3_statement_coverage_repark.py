@@ -82,6 +82,7 @@ REPARK: dict[str, Any] = {
                         [
                             ["write.delete.mode", "merge-on-read"],
                             ["write.merge.mode", "merge-on-read"],
+                            ["write.parquet.compression-codec", "zstd"],
                             ["write.update.mode", "merge-on-read"],
                         ],
                     ],
