@@ -126,9 +126,36 @@ engine; local builder only because `/tmp/sparkenv` has no pyarrow) + truth
 `python/repark/tests/test_ice_column_reorder_1_truth.json` (15 cases, provenance Spark 4.1.2 /
 Iceberg 1.11.0). Ran 2026-09-17 under `jb-jvm.sh`, exit 0.
 
-## 4. Red-first pins (S4)
+## 4. Red-first pins (S4) — 2026-09-17, unfixed release native
 
-Unmeasured. Failing output lands here in S4.
+`python/repark/tests/test_ice_column_reorder_1.py` (26 tests: 12 offline, 14 live):
+
+```text
+FAILED test_move_first_matches_oracle
+FAILED test_move_after_matches_oracle
+FAILED test_noop_moves_commit_nothing
+FAILED test_first_after_last_matches_oracle
+FAILED test_self_move_refuses
+FAILED test_after_unknown_column_refuses
+FAILED test_move_unknown_column_refuses
+FAILED test_nested_field_move_matches_oracle
+FAILED test_positional_insert_and_select_after_move
+FAILED test_move_on_v3_matches_oracle
+FAILED test_move_partition_source_matches_oracle
+FAILED test_dataframe_door_columns_and_append
+12 failed, 14 deselected in 1.46s
+```
+
+Head failure (all twelve refuse at the same gate):
+
+```text
+repark.errors.UnsupportedOperationException: This feature is not implemented:
+ALTER COLUMN … FIRST/AFTER (column MOVE) without ADD is not supported yet —
+use ADD COLUMN … FIRST|AFTER for new columns (I6)
+```
+
+Every pin fails on the I6 refusal (facade) or the native parse error — none passes
+vacuously. Live tier (14 tests) skips without `REPARK_PARITY_LIVE=1`; replayed in S7.
 
 ## 5. Implementation (S5)
 

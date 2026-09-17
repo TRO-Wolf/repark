@@ -44,8 +44,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   move-first/after, no-op moves minting no schema, first-after-last, the self-move
   refusal, unknown-column/reference `UNRESOLVED_COLUMN` refusals on both SQL doors,
   nested-field moves with ids intact, positional INSERT after the move, v3 tables,
-  partition-source moves, and the DataFrame door; the live tier replays Spark and
-  cross-reads both engines' moved tables.
+  partition-source moves, and the DataFrame door (12 offline tests); the live tier
+  replays Spark and cross-reads both engines' moved tables (14 live tests).
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 - [test_df_surface_a_1.py](test_df_surface_a_1.py) +
   [facade_dataframe_surface_oracle.json](facade_dataframe_surface_oracle.json) —
