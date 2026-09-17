@@ -186,7 +186,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   session profile, and a test forbids this door from ever claiming `SparkExtended` evidence.
 - `tests.rs` (`#[cfg(test)]`) — the end-to-end door battery on a native session, asserted on the
   Arrow path with value and type checks. The helper uses its warehouse as the temporary fallback
-  root; the memory-catalog location pin lives in `a13_fallback.rs`.
+  root; the memory-catalog location pin lives in `a13_fallback.rs`. The column-move e2e
+  consolidated into `tests/alter_column_move.rs` (file-size ratchet).
+  pins: ice-column-reorder-1/C-001, C-002, C-003, C-006, C-007
 - `column_defaults.rs` (`#[cfg(test)]`) — **V3-6 C-005:** ANSI-door DEFAULT DDL pins —
   `create_table_column_default_refuses_naming_the_column` (red-first, no table left) and the
   ADD COLUMN / SET DEFAULT refuse battery with the plain-ADD NULL control

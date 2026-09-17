@@ -2762,7 +2762,8 @@ the pin rather than obeying it.
   `python/repark/tests/test_ice_column_reorder_1_truth.json`.)*
 - **Pin** — `python/repark/tests/test_ice_column_reorder_1.py` (13 offline vs the truth JSON on
   the facade SQL door with DataFrame-door reads; 14 live replaying Spark and cross-reading both
-  engines' moved tables) and `crates/repark-sql/src/tests.rs::alter_column_move_reorders_and_noop_mints_no_schema`
+  engines' moved tables) and
+  `crates/repark-sql/tests/alter_column_move.rs::alter_column_move_reorders_and_noop_writes_no_metadata`
   (ANSI door end to end).
 - **Rationale** — FIXED, not declared. The standing I6 refusal
   (`ALTER COLUMN … FIRST/AFTER (column MOVE) without ADD …`) is removed; the remaining

@@ -7,7 +7,8 @@ cross-read each other's moved tables. The Rust ANSI door carries the same move
 behind parser plus end-to-end pins in repark-sql: the Python native session is
 catalog-isolated and cannot address Iceberg tables, so no Python pin can reach it.
 
-pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012
 """
 
 from __future__ import annotations
@@ -33,8 +34,7 @@ _NAMESPACE = "ns"
 _PLAIN_DDL = "CREATE TABLE {t} (id INT, a STRING, b STRING) USING iceberg"
 _PLAIN_SEED = "INSERT INTO {t} VALUES (1, 'a1', 'b1')"
 _NESTED_CTAS = (
-    "CREATE TABLE {t} USING iceberg AS "
-    "SELECT 1 AS id, named_struct('a', 1, 'b', 'x') AS s"
+    "CREATE TABLE {t} USING iceberg AS SELECT 1 AS id, named_struct('a', 1, 'b', 'x') AS s"
 )
 
 
@@ -120,8 +120,9 @@ def test_move_first_matches_oracle(tmp_path: Path) -> None:
     try:
         catalog = _catalog("first")
         qualified = f"{catalog}.{_NAMESPACE}.t"
+        root = _table_root(warehouse, catalog, "t")
         session.sql(f"ALTER TABLE {qualified} ALTER COLUMN b FIRST")
-        _assert_matches_truth_snapshot(session, qualified, _table_root(warehouse, catalog, "t"), case["after"])
+        _assert_matches_truth_snapshot(session, qualified, root, case["after"])
         assert session.table(qualified).columns == ["b", "id", "a"]
     finally:
         session.stop()
@@ -134,8 +135,9 @@ def test_move_after_matches_oracle(tmp_path: Path) -> None:
     try:
         catalog = _catalog("after")
         qualified = f"{catalog}.{_NAMESPACE}.t"
+        root = _table_root(warehouse, catalog, "t")
         session.sql(f"ALTER TABLE {qualified} ALTER COLUMN b AFTER id")
-        _assert_matches_truth_snapshot(session, qualified, _table_root(warehouse, catalog, "t"), case["after"])
+        _assert_matches_truth_snapshot(session, qualified, root, case["after"])
         assert session.table(qualified).columns == ["id", "b", "a"]
     finally:
         session.stop()
@@ -169,8 +171,9 @@ def test_first_after_last_matches_oracle(tmp_path: Path) -> None:
     try:
         catalog = _catalog("last")
         qualified = f"{catalog}.{_NAMESPACE}.t"
+        root = _table_root(warehouse, catalog, "t")
         session.sql(f"ALTER TABLE {qualified} ALTER COLUMN id AFTER b")
-        _assert_matches_truth_snapshot(session, qualified, _table_root(warehouse, catalog, "t"), case["after"])
+        _assert_matches_truth_snapshot(session, qualified, root, case["after"])
     finally:
         session.stop()
 
@@ -272,8 +275,9 @@ def test_struct_top_move_matches_oracle(tmp_path: Path) -> None:
     try:
         catalog = _catalog("structtop")
         qualified = f"{catalog}.{_NAMESPACE}.t"
+        root = _table_root(warehouse, catalog, "t")
         session.sql(f"ALTER TABLE {qualified} ALTER COLUMN s FIRST")
-        _assert_matches_truth_snapshot(session, qualified, _table_root(warehouse, catalog, "t"), case["after"])
+        _assert_matches_truth_snapshot(session, qualified, root, case["after"])
     finally:
         session.stop()
 
@@ -285,9 +289,10 @@ def test_positional_insert_and_select_after_move(tmp_path: Path) -> None:
     try:
         catalog = _catalog("insert")
         qualified = f"{catalog}.{_NAMESPACE}.t"
+        root = _table_root(warehouse, catalog, "t")
         session.sql(f"ALTER TABLE {qualified} ALTER COLUMN b FIRST")
         session.sql(f"INSERT INTO {qualified} VALUES ('b2', 2, 'a2')")
-        _assert_matches_truth_snapshot(session, qualified, _table_root(warehouse, catalog, "t"), case["after"])
+        _assert_matches_truth_snapshot(session, qualified, root, case["after"])
         assert session.table(qualified).columns == ["b", "id", "a"]
     finally:
         session.stop()
@@ -301,8 +306,9 @@ def test_move_on_v3_matches_oracle(tmp_path: Path) -> None:
     try:
         catalog = _catalog("v3")
         qualified = f"{catalog}.{_NAMESPACE}.t"
+        root = _table_root(warehouse, catalog, "t")
         session.sql(f"ALTER TABLE {qualified} ALTER COLUMN b FIRST")
-        _assert_matches_truth_snapshot(session, qualified, _table_root(warehouse, catalog, "t"), case["after"])
+        _assert_matches_truth_snapshot(session, qualified, root, case["after"])
     finally:
         session.stop()
 
@@ -310,16 +316,14 @@ def test_move_on_v3_matches_oracle(tmp_path: Path) -> None:
 def test_move_partition_source_matches_oracle(tmp_path: Path) -> None:
     """Moving a partition-source column keeps reads and positional writes working."""
     case = _TRUTH["cases"]["part_v2"]
-    ddl = (
-        "CREATE TABLE {t} (id INT, a STRING, b STRING) "
-        "USING iceberg PARTITIONED BY (b)"
-    )
+    ddl = "CREATE TABLE {t} (id INT, a STRING, b STRING) USING iceberg PARTITIONED BY (b)"
     session, warehouse = _fresh_facade(tmp_path, "part", "t", ddl, _PLAIN_SEED)
     try:
         catalog = _catalog("part")
         qualified = f"{catalog}.{_NAMESPACE}.t"
+        root = _table_root(warehouse, catalog, "t")
         session.sql(f"ALTER TABLE {qualified} ALTER COLUMN b FIRST")
-        _assert_matches_truth_snapshot(session, qualified, _table_root(warehouse, catalog, "t"), case["after"])
+        _assert_matches_truth_snapshot(session, qualified, root, case["after"])
         session.sql(f"INSERT INTO {qualified} VALUES ('b3', 3, 'a3')")
         arrow = session.sql(f"SELECT * FROM {qualified} ORDER BY id").to_arrow()
         assert arrow.column("b").to_pylist() == ["b1", "b3"]
@@ -334,11 +338,12 @@ def test_dataframe_door_columns_and_append(tmp_path: Path) -> None:
     try:
         catalog = _catalog("df")
         qualified = f"{catalog}.{_NAMESPACE}.t"
+        root = _table_root(warehouse, catalog, "t")
         session.sql(f"ALTER TABLE {qualified} ALTER COLUMN b AFTER id")
         assert session.table(qualified).columns == case["columns"]
         frame = session.createDataFrame([(9, "b9", "a9")], ["id", "b", "a"])
         frame.writeTo(qualified).append()
-        _assert_matches_truth_snapshot(session, qualified, _table_root(warehouse, catalog, "t"), case["after"])
+        _assert_matches_truth_snapshot(session, qualified, root, case["after"])
     finally:
         session.stop()
 
@@ -386,10 +391,7 @@ def _live_case_ddl(case_name: str) -> tuple[str, str]:
     if case_name == "first_v3":
         ddl += " TBLPROPERTIES ('format-version'='3')"
     if case_name == "part_v2":
-        ddl = (
-            "CREATE TABLE {t} (id INT, a STRING, b STRING) "
-            "USING iceberg PARTITIONED BY (b)"
-        )
+        ddl = "CREATE TABLE {t} (id INT, a STRING, b STRING) USING iceberg PARTITIONED BY (b)"
     return ddl, seed
 
 
@@ -506,9 +508,7 @@ def test_live_dataframe_door_matches_truth(tmp_path: Path) -> None:
     qualified = _live_fresh(engine, catalog, "t", shapes["plain_ddl"], shapes["plain_seed"])
     engine.session.sql(f"ALTER TABLE {qualified} ALTER COLUMN b AFTER id")
     assert engine.session.table(qualified).columns == case["columns"]
-    engine.session.createDataFrame([(9, "b9", "a9")], ["id", "b", "a"]).writeTo(
-        qualified
-    ).append()
+    engine.session.createDataFrame([(9, "b9", "a9")], ["id", "b", "a"]).writeTo(qualified).append()
     live = _live_snapshot(engine, qualified)
     assert live["select_columns"] == case["after"]["select_columns"]
     assert live["rows"] == case["after"]["rows"]

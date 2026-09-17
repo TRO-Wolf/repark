@@ -1104,61 +1104,6 @@ async fn alter_batches_ops_and_honours_if_exists() {
     );
 }
 
-#[tokio::test]
-async fn alter_column_move_reorders_and_noop_mints_no_schema() {
-    let door = door_with_schema().await;
-    door.ok("CREATE TABLE ice.sales.mv AS SELECT 1 AS id, 'a' AS a, 'b' AS b")
-        .await;
-
-    door.ok("ALTER TABLE ice.sales.mv ALTER COLUMN b FIRST")
-        .await;
-    let (schema, _) = door.ok_typed("SELECT * FROM ice.sales.mv").await;
-    let names: Vec<&str> = schema
-        .fields()
-        .iter()
-        .map(|field| field.name().as_str())
-        .collect();
-    assert_eq!(names, vec!["b", "id", "a"]);
-
-    let schema_count = door
-        .table("sales", "mv")
-        .await
-        .metadata()
-        .schemas_iter()
-        .count();
-    door.ok("ALTER TABLE ice.sales.mv ALTER COLUMN b FIRST")
-        .await;
-    assert_eq!(
-        door.table("sales", "mv")
-            .await
-            .metadata()
-            .schemas_iter()
-            .count(),
-        schema_count,
-        "a move to the current position must not commit a new schema"
-    );
-
-    door.ok("ALTER TABLE ice.sales.mv ALTER COLUMN id AFTER a")
-        .await;
-    let (moved, _) = door.ok_typed("SELECT * FROM ice.sales.mv").await;
-    let moved_names: Vec<&str> = moved
-        .fields()
-        .iter()
-        .map(|field| field.name().as_str())
-        .collect();
-    assert_eq!(moved_names, vec!["b", "a", "id"]);
-
-    let missing = door
-        .err("ALTER TABLE ice.sales.mv ALTER COLUMN a AFTER nope")
-        .await;
-    assert!(
-        missing.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]")
-            && missing.contains("`nope`")
-            && missing.contains("SQLSTATE: 42703"),
-        "an unknown AFTER sibling must refuse Spark-shaped, got: {missing}"
-    );
-}
-
 /// `ALTER COLUMN … SET DATA TYPE` performs an Iceberg promotion (metadata-only), and the result is readable.
 #[tokio::test]
 async fn alter_column_set_data_type_promotes_and_refuses_narrowing() {

@@ -5,7 +5,8 @@ Run once per Spark bump under the JVM lock; never imported by tests::
     REPARK_PARITY_LIVE=1 /tmp/oc-worker/jb-jvm.sh /tmp/sparkenv/bin/python \\
         python/repark/tests/_record_ice_column_reorder_1.py
 
-pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012
 """
 
 from __future__ import annotations
@@ -79,9 +80,8 @@ def _snapshot(session: Any, warehouse: Path, table: str) -> dict[str, Any]:
     ]
     columns = session.sql(f"SELECT * FROM {qualified}").columns
     order = "id" if "id" in columns else columns[0]
-    rows = [
-        _json_value(tuple(row)) for row in session.sql(f"SELECT * FROM {qualified} ORDER BY {order}").collect()
-    ]
+    select_all = session.sql(f"SELECT * FROM {qualified} ORDER BY {order}")
+    rows = [_json_value(tuple(row)) for row in select_all.collect()]
     return {
         "schema_id": current,
         "metadata_version": _metadata_version(_table_dir(warehouse, table)),
@@ -100,9 +100,7 @@ def _error_record(exc: Exception) -> dict[str, Any]:
     if java_class is None:
         first = text.splitlines()[0][:500]
     else:
-        carrying = next(
-            line for line in text.splitlines() if java_class in line
-        )
+        carrying = next(line for line in text.splitlines() if java_class in line)
         first = carrying.strip().lstrip(":").strip()[:500]
     return {
         "python_class": type(exc).__name__,
@@ -171,56 +169,101 @@ def record() -> dict[str, Any]:
         session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_CATALOG}.{_NAMESPACE}")
         cases: dict[str, Any] = {}
         cases["first_v2"] = _move_case(
-            session, warehouse, "first_v2", _PLAIN_DDL, _PLAIN_SEED,
+            session,
+            warehouse,
+            "first_v2",
+            _PLAIN_DDL,
+            _PLAIN_SEED,
             "ALTER TABLE {t} ALTER COLUMN b FIRST",
         )
         cases["after_v2"] = _move_case(
-            session, warehouse, "after_v2", _PLAIN_DDL, _PLAIN_SEED,
+            session,
+            warehouse,
+            "after_v2",
+            _PLAIN_DDL,
+            _PLAIN_SEED,
             "ALTER TABLE {t} ALTER COLUMN b AFTER id",
         )
         cases["noop_first_v2"] = _move_case(
-            session, warehouse, "noop_first_v2", _PLAIN_DDL, _PLAIN_SEED,
+            session,
+            warehouse,
+            "noop_first_v2",
+            _PLAIN_DDL,
+            _PLAIN_SEED,
             "ALTER TABLE {t} ALTER COLUMN id FIRST",
         )
         cases["noop_after_v2"] = _move_case(
-            session, warehouse, "noop_after_v2", _PLAIN_DDL, _PLAIN_SEED,
+            session,
+            warehouse,
+            "noop_after_v2",
+            _PLAIN_DDL,
+            _PLAIN_SEED,
             "ALTER TABLE {t} ALTER COLUMN a AFTER id",
         )
         cases["first_after_last_v2"] = _move_case(
-            session, warehouse, "first_after_last_v2", _PLAIN_DDL, _PLAIN_SEED,
+            session,
+            warehouse,
+            "first_after_last_v2",
+            _PLAIN_DDL,
+            _PLAIN_SEED,
             "ALTER TABLE {t} ALTER COLUMN id AFTER b",
         )
         cases["self_v2"] = _move_case(
-            session, warehouse, "self_v2", _PLAIN_DDL, _PLAIN_SEED,
+            session,
+            warehouse,
+            "self_v2",
+            _PLAIN_DDL,
+            _PLAIN_SEED,
             "ALTER TABLE {t} ALTER COLUMN b AFTER b",
         )
         cases["badref_v2"] = _move_case(
-            session, warehouse, "badref_v2", _PLAIN_DDL, _PLAIN_SEED,
+            session,
+            warehouse,
+            "badref_v2",
+            _PLAIN_DDL,
+            _PLAIN_SEED,
             "ALTER TABLE {t} ALTER COLUMN a AFTER nope",
         )
         cases["badcol_v2"] = _move_case(
-            session, warehouse, "badcol_v2", _PLAIN_DDL, _PLAIN_SEED,
+            session,
+            warehouse,
+            "badcol_v2",
+            _PLAIN_DDL,
+            _PLAIN_SEED,
             "ALTER TABLE {t} ALTER COLUMN nope FIRST",
         )
         cases["nested_v2"] = _move_case(
-            session, warehouse, "nested_v2", _NESTED_DDL, _NESTED_SEED,
+            session,
+            warehouse,
+            "nested_v2",
+            _NESTED_DDL,
+            _NESTED_SEED,
             "ALTER TABLE {t} ALTER COLUMN s.b FIRST",
         )
         cases["struct_top_v2"] = _move_case(
-            session, warehouse, "struct_top_v2", _NESTED_DDL, _NESTED_SEED,
+            session,
+            warehouse,
+            "struct_top_v2",
+            _NESTED_DDL,
+            _NESTED_SEED,
             "ALTER TABLE {t} ALTER COLUMN s FIRST",
         )
         v3_ddl = _PLAIN_DDL + " TBLPROPERTIES ('format-version'='3')"
         cases["first_v3"] = _move_case(
-            session, warehouse, "first_v3", v3_ddl, _PLAIN_SEED,
+            session,
+            warehouse,
+            "first_v3",
+            v3_ddl,
+            _PLAIN_SEED,
             "ALTER TABLE {t} ALTER COLUMN b FIRST",
         )
-        part_ddl = (
-            "CREATE TABLE {t} (id INT, a STRING, b STRING) "
-            "USING iceberg PARTITIONED BY (b)"
-        )
+        part_ddl = "CREATE TABLE {t} (id INT, a STRING, b STRING) USING iceberg PARTITIONED BY (b)"
         cases["part_v2"] = _move_case(
-            session, warehouse, "part_v2", part_ddl, _PLAIN_SEED,
+            session,
+            warehouse,
+            "part_v2",
+            part_ddl,
+            _PLAIN_SEED,
             "ALTER TABLE {t} ALTER COLUMN b FIRST",
         )
         insert_table = "insert_v2"
@@ -246,9 +289,7 @@ def record() -> dict[str, Any]:
         df_qualified = f"{_CATALOG}.{_NAMESPACE}.{df_table}"
         session.sql(f"ALTER TABLE {df_qualified} ALTER COLUMN b AFTER id")
         columns = session.table(df_qualified).columns
-        session.createDataFrame([(9, "b9", "a9")], ["id", "b", "a"]).writeTo(
-            df_qualified
-        ).append()
+        session.createDataFrame([(9, "b9", "a9")], ["id", "b", "a"]).writeTo(df_qualified).append()
         cases["df_v2"] = {
             "statement": "ALTER COLUMN b AFTER id + df.columns + writeTo.append by name",
             "columns": columns,

@@ -48,20 +48,20 @@ that ground: the move is expressible in RePark as a schema update with unchanged
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | `ALTER COLUMN c FIRST` moves the column to the front with field ids unchanged and a new schema id, matching Spark 4.1.2 + Iceberg 1.11.0 (DESCRIBE order and `SELECT *` order, both doors). | Truth JSON from live Spark; offline pins vs the truth JSON; live tier replaying Spark. Red-first on the release native. | **OPEN** | Awaiting S2 refusal paste and S3 oracle. |
-| C-002 | `ALTER COLUMN c AFTER x` moves the column to immediately after `x`, ids unchanged, new schema id, matching Spark on both doors. | Same harness as C-001. | **OPEN** | Awaiting S2 refusal paste and S3 oracle. |
-| C-003 | Moving a column to where it already is (e.g. first column `FIRST`, `AFTER` its current predecessor) matches Spark's answer — same order, and Spark's schema-id behaviour recorded verbatim. | Truth JSON records whether Spark mints a new schema id on a no-op move; pins assert RePark's commit matches. | **OPEN** | Awaiting S3 oracle. |
-| C-004 | Moving the first column after the last matches Spark on both doors. | Same harness as C-001. | **OPEN** | Awaiting S3 oracle. |
-| C-005 | `AFTER` naming the moved column itself matches Spark's answer (Spark's error class and message prefix, or its resulting order, recorded verbatim). | Truth JSON records Spark's exact behaviour; pins assert RePark answers the same. | **OPEN** | Awaiting S3 oracle. |
-| C-006 | `AFTER` an unknown column refuses loud with Spark's error class and message prefix on both doors. | Truth JSON records Spark's error; pins assert RePark's typed refusal matches the class and prefix. | **OPEN** | Awaiting S3 oracle. |
-| C-007 | Moving an unknown column refuses loud with Spark's error class and message prefix on both doors. | Same harness as C-006. | **OPEN** | Awaiting S3 oracle. |
-| C-008 | Moving a nested struct field (`ALTER COLUMN s.b FIRST`) matches Spark, or — if not small — refuses with a typed Spark-shaped refusal plus a dated DECLARED registry row. | Small: same harness as C-001 on a struct shape. Not small: typed refusal pin + registry row. Decision recorded here with the measured fork behaviour. | **OPEN** | Fork `move_first` takes a name string; whether dotted nested paths validate is measured in S1. |
-| C-009 | After the move, `INSERT INTO t VALUES (...)` in the NEW positional order lands rows readable by both engines, and `SELECT *` reads agree in both directions (Spark reads RePark's moved table; RePark reads Spark's). | Cross-read pins in the live tier; offline pins assert RePark's positional insert + read round-trip against the truth JSON. | **OPEN** | Awaiting S3 oracle and S4 pins. |
-| C-010 | The move works on format-v2 and format-v3 tables. | Truth + pins parametrised over both versions. | **OPEN** | Awaiting S3 oracle. |
-| C-011 | The move works on a partitioned table where the moved column is a partition source, and reads/writes still answer Spark. | Partitioned shape in the truth JSON; pins cover post-move read + insert. | **OPEN** | Awaiting S3 oracle. |
-| C-012 | DataFrame door: `spark.table(t).columns` order and `df.writeTo(t).append()` by name after the move match Spark. | Live-tier pins through the facade DataFrame API. | **OPEN** | Awaiting S3 oracle. |
-| C-013 | Registry row ICE-COLUMN-REORDER-1 (FIXED 2026-09-17, plus DECLARED rows for anything refused) exists, the I6 refusal text no longer fires on supported moves, and every touched `map.md` is current. | `docs/spark-sql-iceberg-parity.md` diff; grep for the old I6 text; `make check-map-sync`. | **OPEN** | Awaiting S5–S6. |
-| C-014 | Gates green on the release native: new file offline + live, `cargo test -p repark-spark --lib`, `cargo test -p repark-iceberg --lib`, `make verify`, whole facade suite, whole parity suite. | Counts pasted below in §7. | **OPEN** | Awaiting S7. |
+| C-001 | `ALTER COLUMN c FIRST` moves the column to the front with field ids unchanged and a new schema id, matching Spark 4.1.2 + Iceberg 1.11.0 (DESCRIBE order and `SELECT *` order, both doors). | Truth JSON from live Spark; offline pins vs the truth JSON; live tier replaying Spark. Red-first on the release native. | **PROVEN** | `test_move_first_matches_oracle` green offline (ids `[(3,b),(1,id),(2,a)]`, schema 0 → 1, rows + `table().columns`) and in the live replay. |
+| C-002 | `ALTER COLUMN c AFTER x` moves the column to immediately after `x`, ids unchanged, new schema id, matching Spark on both doors. | Same harness as C-001. | **PROVEN** | `test_move_after_matches_oracle` green offline and live (`[(1,id),(3,b),(2,a)]`, schema 0 → 1); e2e `alter_column_move_first_and_after_reorder` in `tests/column_move.rs`. |
+| C-003 | Moving a column to where it already is (e.g. first column `FIRST`, `AFTER` its current predecessor) matches Spark's answer — same order, and Spark's schema-id behaviour recorded verbatim. | Truth JSON records whether Spark mints a new schema id on a no-op move; pins assert RePark's commit matches. | **PROVEN** | Spark commits nothing (truth stays v2/schema 0). `test_noop_moves_commit_nothing` asserts no new metadata file and schema 0; ANSI e2e asserts no new metadata file; Rust round-trip asserts the schema id is stable. |
+| C-004 | Moving the first column after the last matches Spark on both doors. | Same harness as C-001. | **PROVEN** | `test_first_after_last_matches_oracle` green offline and live (`[(2,a),(3,b),(1,id)]`, schema 0 → 1). |
+| C-005 | `AFTER` naming the moved column itself matches Spark's answer (Spark's error class and message prefix, or its resulting order, recorded verbatim). | Truth JSON records Spark's exact behaviour; pins assert RePark answers the same. | **PROVEN** | Spark refuses (`SparkException: Unsupported table change: Cannot move b after itself`, table untouched). `test_self_move_refuses` asserts `PySparkException` + `Cannot move b after itself` with no new metadata; the Rust round-trip asserts the fork's Java message. Diagnostic delta recorded in ICE-COLUMN-REORDER-1. |
+| C-006 | `AFTER` an unknown column refuses loud with Spark's error class and message prefix on both doors. | Truth JSON records Spark's error; pins assert RePark's typed refusal matches the class and prefix. | **PROVEN** | Spark raises `AnalysisException [UNRESOLVED_COLUMN.WITH_SUGGESTION] … SQLSTATE: 42703`. `test_after_unknown_column_refuses` asserts the same class, tag, name and SQLSTATE with no new metadata file. |
+| C-007 | Moving an unknown column refuses loud with Spark's error class and message prefix on both doors. | Same harness as C-006. | **PROVEN** | Same shape as C-006 via `test_move_unknown_column_refuses`; ANSI e2e covers the native door's refusal. |
+| C-008 | Moving a nested struct field (`ALTER COLUMN s.b FIRST`) matches Spark, or — if not small — refuses with a typed Spark-shaped refusal plus a dated DECLARED registry row. | Small: same harness as C-001 on a struct shape. Not small: typed refusal pin + registry row. Decision recorded here with the measured fork behaviour. | **PROVEN** | Small: the fork validates dotted paths. `test_nested_field_move_matches_oracle` (struct `b:4,a:3`, ids intact, schema 0 → 1) and `test_struct_top_move_matches_oracle` green offline and live; no DECLARED row needed. |
+| C-009 | After the move, `INSERT INTO t VALUES (...)` in the NEW positional order lands rows readable by both engines, and `SELECT *` reads agree in both directions (Spark reads RePark's moved table; RePark reads Spark's). | Cross-read pins in the live tier; offline pins assert RePark's positional insert + read round-trip against the truth JSON. | **PROVEN** | `test_positional_insert_and_select_after_move` green; `test_live_cross_read_moved_tables` green both directions (`(b1,1,a1),(b2,2,a2)`). |
+| C-010 | The move works on format-v2 and format-v3 tables. | Truth + pins parametrised over both versions. | **PROVEN** | `test_move_on_v3_matches_oracle` green offline; `first_v3` green in the live replay. |
+| C-011 | The move works on a partitioned table where the moved column is a partition source, and reads/writes still answer Spark. | Partitioned shape in the truth JSON; pins cover post-move read + insert. | **PROVEN** | `test_move_partition_source_matches_oracle` green offline; `part_v2` green in the live replay; positional insert lands `(b3,3,a3)`. |
+| C-012 | DataFrame door: `spark.table(t).columns` order and `df.writeTo(t).append()` by name after the move match Spark. | Live-tier pins through the facade DataFrame API. | **PROVEN** | `test_dataframe_door_columns_and_append` green offline (`columns == [id,b,a]`, append lands `(9,b9,a9)`); `test_live_dataframe_door_matches_truth` green live. |
+| C-013 | Registry row ICE-COLUMN-REORDER-1 (FIXED 2026-09-17, plus DECLARED rows for anything refused) exists, the I6 refusal text no longer fires on supported moves, and every touched `map.md` is current. | `docs/spark-sql-iceberg-parity.md` diff; grep for the old I6 text; `make check-map-sync`. | **PROVEN** | Row landed after DBT-COLCOMMENT-1 (no DECLARED rows needed — nested moves work); I6 move arm deleted (`ALTER COLUMN … COMMENT` refusal stays); maps current (`check-map-sync` clean in the S6 hook). |
+| C-014 | Gates green on the release native: new file offline + live, `cargo test -p repark-spark --lib`, `cargo test -p repark-iceberg --lib`, `make verify`, whole facade suite, whole parity suite. | Counts pasted below in §7. | **PROVEN** | §7 counts, all green. |
 
 ## 1. Clause matrix (S1) — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-17
 
@@ -187,8 +187,10 @@ bypass pin); `column_move_first_after_and_nested_parse` +
 `column_move_leaves_other_alter_forms_alone` in repark-sql; the existing
 `alter_unsupported_comment_move_and_after_missing_refuse` becomes
 `alter_comment_refuses_and_column_move_lands` (COMMENT still refuses; the move lands and
-`SELECT *` leads with the moved column); `alter_column_move_reorders_and_noop_mints_no_schema`
-pins the ANSI door end to end (reorder, no-op mints no schema, `UNRESOLVED_COLUMN`).
+`SELECT *` leads with the moved column);
+`alter_column_move_reorders_and_noop_writes_no_metadata` in
+`crates/repark-sql/tests/alter_column_move.rs` pins the ANSI door end to end (reorder,
+no-op writes no metadata, `UNRESOLVED_COLUMN`; consolidated out of `src/tests.rs`).
 
 No `//` or `#` comment line was added to any source file in this unit (round ban; the
 `///` lines the diff touches are byte-identical context). New public item `check_column_move`
@@ -215,7 +217,22 @@ Maps in lockstep: `python/repark/tests/map.md`, `crates/repark-spark/src/map.md`
 
 ## 7. Gates (S7)
 
-Unmeasured. Counts land here in S7.
+Measured 2026-09-17 on the release native after the S5 rebuild.
+
+- New file offline: 13/13 green (`test_ice_column_reorder_1.py`, built native).
+- New file live: 14/14 green under `jb-jvm.sh` with `REPARK_PARITY_LIVE=1`.
+- `cargo test -p repark-spark --lib`: green (inside `make verify`, exit 0).
+- `cargo test -p repark-iceberg --lib`: green (inside `make verify`, exit 0).
+- `make verify`: exit 0 (`/tmp/reorder_verify_out2.txt`).
+- Whole facade suite: 9334 passed, 386 skipped, 26 xfailed, exit 0
+  (`/tmp/oc-worker/jb-reorder/facade.log`, 3307.70 s).
+- Whole parity suite: `make py-test` (uv isolated env) cannot spawn `pytest`
+  on this box, so the identical tree ran under the repo venv instead:
+  `PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest
+  python/repark-parity/tests -q` → 757 passed, 2 skipped, 12 xfailed, exit 0
+  (`/tmp/oc-worker/jb-reorder/parity.log`, 1031.78 s).
+
+C-014 is PROVEN. No gate is red.
 
 ## 8. Open questions
 
