@@ -115,6 +115,19 @@ def test_snapshot_property_two_props(spark: ReparkSession) -> None:
     assert summary["pipeline.batch"] == "7"
 
 
+def test_snapshot_property_quoted_key_value(spark: ReparkSession) -> None:
+    """SNAP-06: a key and a value carrying quotes and parens round-trip exactly."""
+    _seed(spark, "snap_quote")
+    table = f"{CATALOG}.{NS}.snap_quote"
+    (
+        _frame(spark)
+        .writeTo(table)
+        .option("snapshot-property.up')side", "rock'n)roll")
+        .append()
+    )
+    assert _latest_summary(spark, table)["up')side"] == "rock'n)roll"
+
+
 def test_snapshot_property_dyn_overwrite(spark: ReparkSession) -> None:
     """SNAP-03: the property lands on the dynamic-overwrite (replace-partitions) commit."""
     _seed(spark, "snap_part", partitioned=True)

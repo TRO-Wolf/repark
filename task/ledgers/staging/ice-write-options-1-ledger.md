@@ -197,3 +197,16 @@ TODO: rows written.
   `head` prefix instead of splicing mid-string. Rendered SQL is unchanged
   (same concatenation, verified by review; behavior gates re-run in step 5).
   `check_lib_py.py`, ruff check, ruff format, conventions, docstring gates green.
+
+- Step 4 Rust-first check: on the Iceberg write path Python never inspects a
+  stored option. V1/V2 `option()` only store (plus the pre-existing
+  branch/tag refusal, which raises before storage); the six action sites pass
+  the dict to `writer_layout.render_write_options_clause`, which applies the
+  one shared escaper (`_idents.escape_sql_single_quotes`, `'` -> `''`) to
+  both key and value. The other key conditionals in `writer_readwriter.py`
+  belong to the path-save (CSV/TXT) arms, not the Iceberg SQL channel. New
+  pin SNAP-06 (`test_snapshot_property_quoted_key_value`) writes key
+  `up')side` / value `rock'n)roll` through V2 append and reads them back
+  byte-exact from the snapshot summary; it passes. No fixture cell: the
+  Spark oracle has no quote-key cell, so this is a RePark round-trip pin,
+  not a parity claim.

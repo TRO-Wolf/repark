@@ -360,7 +360,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   warning absence, SQL-door absence, plus the serializable-overlap divergence pin
   and the gzip footer / target-size-acceptance pins); the live tier re-runs both
   record drivers and checks the fixture. 34 offline tests plus the live
-  re-run check, all green 2026-09-17.
+  re-run check, all green 2026-09-17. Round 2 adds SNAP-06 (quote/paren key
+  and value round-trip byte-exact through the facade escaper into the
+  summary; RePark-only pin, no oracle cell).
   pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
