@@ -7735,6 +7735,26 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   base native and pass on the branch. Numbers and commands:
   `docs/perf/iceberg-write-baseline.md` §10.
 
+- **WRITE-ORDER-SORTED-INSERT-1** — **FIXED 2026-09-17 (ICE-SORTED-INSERT-1)**;
+  surfaced 2026-09-16 (run-19c rating row V2-12, claim C-7). A plain `INSERT
+  INTO` into a table with a declared sort order wrote unsorted files with
+  `sort_order_id` NULL; Spark writes each file sorted and stamped with the
+  table's order id. The table-format fix is the fork's F-SORTED-INSERT-1
+  (`#287`): `IcebergTableProvider::insert_into` sorts each writer stream by the
+  table's default sort order and stamps `sort_order_id`, consumed via RP-22
+  (`#667`) at fork pin `96fc9f1f`. RePark-side, the three writer sites the fork
+  never sees (the fanout close in `append.rs`, the lineage fanout in
+  `merge/row_lineage.rs`, the unpartitioned MERGE writer in `merge/mod.rs`)
+  stamped nothing, so INSERT OVERWRITE / MERGE / CTAS files read NULL from
+  `{t}.files` even where the bytes were sorted; they now stamp the default
+  order id through `distribution::stamp` (0 when unordered, like the fork),
+  reusing the fork's `with_sort_order_id` with no local sort logic. Pins:
+  `python/repark/tests/test_ice_sorted_insert_1.py` (SQL door over five
+  identity cells — partitioned-local, DESC, two-key null ordering,
+  locally-ordered, float with NaN — plus the DataFrame door, the owned paths,
+  and the adopted Spark-written `days(ts), id` warehouse; oracle
+  `ice_sorted_insert_1_spark_oracle.json` with a live replay tier).
+  pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004
 - **WRITE-ORDER-TRANSFORM-1** — surfaced 2026-09-06 (WRITE-ORDER-DIST-1 round 2). Spark
   accepts transform sort fields: `WRITE ORDERED BY (bucket(4, id))` and `(days(ts))` land
   order 1 (`bucket[4]` on source id 1 / `day` on source id 4, `asc NULLS FIRST`), default 1,
@@ -7752,6 +7772,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `python/repark/tests/test_write_order_dist_1.py::test_write_order_transform_sort_refuses_without_committing`)
   and the write-path refusal
   (`crates/repark-iceberg/src/write/distribution/sort_order_tests.rs::transform_sort_order_refuses_the_write_loud`).
+  Measured 2026-09-17 (ICE-SORTED-INSERT-1, still open): a plain `INSERT INTO`
+  a Spark-registered `days(ts), id` ordered table sorts day-major and stamps 1
+  through the fork, while the RePark-owned paths keep the loud refusal
+  (`python/repark/tests/test_ice_sorted_insert_1.py::test_days_transform_insert_sorts_and_stamps`).
 - **WRITE-RANGE-1** — surfaced 2026-09-06 (WRITE-ORDER-DIST-1). On a partitioned table
   `write.distribution-mode = range` takes the hash shape plus per-file sort (pinned in
   `WRITE-ORDER-DIST-1`); the unbuilt half is an explicit global range shuffle — key ranges
