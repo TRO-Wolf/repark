@@ -964,3 +964,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   counts on a delegating counting catalog (test code only).
   `risk_tier: standard`. Branch `fix/listing-cost-flake-1`.
   pins: listing-cost-flake-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [ice-v3-write-default-1-ledger.md](ice-v3-write-default-1-ledger.md) —
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17), in flight:** omitted columns on every
+  Iceberg write path fill from the schema field's `write_default` in Rust, in
+  the shared write-projection step — INSERT / MERGE column lists and the
+  DataFrame writers on both SQL doors, with type fidelity and the measured
+  Spark oracle as a checked-in fixture.
+  `risk_tier: standard`. Branch `fix/ice-v3-write-default-1`.
+  pins: ice-v3-write-default-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
