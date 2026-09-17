@@ -48,7 +48,7 @@ No hand-computed Spark expectation.
 | C-006 | Repro: `/tmp/ib-scratch/probes/p_failures.py` conc / conc2 blocks copied into `p_hadoop_vn.py`, run through `/tmp/oc-worker/jb-jvm.sh`, output pasted. | Evidence paste below. | PROVEN | 2026-09-17, rc 0, findings F-1..F-6 below. pins: ice-hadoop-vn-1/C-006 |
 | C-007 | Spark oracle recorded as a checked-in fixture (recorder + truth JSON per the `test_ice_spark_table_1.py` / `_oracle_pins.py` convention). | Recorder script + `ice_hadoop_vn_1_spark_oracle.json`. | PROVEN | 2026-09-17: `_record_ice_hadoop_vn_1.py` rc 0; fixture `python/repark-parity/fixtures/torture/data/ice_hadoop_vn_1` (1 parquet, v1+v2, manifest, hint, truth.json) + `ice_hadoop_vn_1_spark_oracle.json` checked in. pins: ice-hadoop-vn-1/C-007 |
 | C-008 | Registry row ICE-HADOOP-VN-1 near V3-ADOPT-1 (FIXED 2026-09-17 by fork #286 at pin sha, typed error, recovery recipe, D-2's loud wedge on an orphan version file); residue sentence at ~6897 replaced with a pointer; tests map and ledgers map in lockstep. | The registry diff. | PROVEN | 2026-09-17: row `ICE-HADOOP-VN-1` after `V3-ADOPT-1`, residue clause replaced with a pointer, `write/map.md` + tests/fixture maps in lockstep. pins: ice-hadoop-vn-1/C-008 |
-| C-009 | No regression: the new file offline and live, `make verify`, the whole facade suite, the whole parity suite, green with real exit codes and counts. | §Gates. | OPEN |  |
+| C-009 | No regression: the new file offline and live, `make verify`, the whole facade suite, the whole parity suite, green with real exit codes and counts. | §Gates. | PROVEN | Counts in §Gates; the release native is untouched (test-only Rust under `cfg(test)`, no facade change), so no rebuild was due. pins: ice-hadoop-vn-1/C-009 |
 
 ## Red-first log
 
@@ -157,7 +157,17 @@ DONE
 
 ## §Gates
 
-Pending — counts land here after the final runs.
+| Gate | Result |
+|---|---|
+| new pins offline (`.venv/bin/python -m pytest python/repark/tests/test_ice_hadoop_vn_1.py -q -p no:cacheprovider`) | 6 passed, 3 skipped (live cells) |
+| new pins live (`REPARK_PARITY_LIVE=1`, pyspark 4.1.2 via sparkenv path, through `jb-jvm.sh`) | 9 passed in 153.80s |
+| Rust pins (`cargo test -p repark-iceberg --lib write::hadoop_stale_commit`) | 2 passed |
+| `make verify` | rc 0 |
+| `cargo test --workspace` | rc 0 (3713 tests listed) |
+| whole facade (`.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider`) | 9332 passed, 370 skipped, 26 xfailed in 628.58s (clean re-run after the bytecode-purge repair; first run `1 failed, 9331 passed` on the poisoned cache, see incident above) |
+| whole parity (`PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest python/repark-parity/tests -q`) | 757 passed, 2 skipped, 12 xfailed in 371.97s |
+| added-comment count over `origin/main..HEAD` | 0 |
+| `git status --short` at handoff | clean |
 
 ### Gate incident 2026-09-17: cross-clone bytecode poisoning (pre-existing, repaired)
 
@@ -175,9 +185,9 @@ which the file passes `7 passed`. The whole suite is re-run below on the clean t
 
 ## Open questions
 
-1. R-1 verdict (see C-004): no typed commit-conflict class exists in the tree; the
-   pinned contract is base `PySparkException`, message-typed with
-   `CatalogCommitConflicts` leading. If the measured stale-writer surface matches
-   that contract exactly, the unit records conformance and concludes without
-   inventing a class; if the orchestrator wants a new typed class instead, that is
-   a new unit (it must move the pinned classification tests).
+1. R-1 verdict, ANSWERED (see C-004, F-6): no distinct typed commit-conflict class
+   exists in the tree; the pinned contract is base `PySparkException`, message-typed
+   with `CatalogCommitConflicts` leading, and the measured stale-writer surface
+   matches it exactly — conformance recorded, no class invented, no HALT. A new typed
+   class would contradict the pinned classification tests (session.rs CQ-015); if the
+   orchestrator wants one anyway, that is a new unit.
