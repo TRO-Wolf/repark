@@ -4669,7 +4669,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `min-input-files` floor, or step 6 is a no-op — asserted, not assumed),
   `v3_rows_and_lineage` (ONE ordered scan for the post-MERGE and post-rewrite pairs, which used
   to open the same snapshot twice: 45 → 22 object opens per pair, 178.8 → 92.4 ms and
-  168.6 → 70.3 ms, pinned values unchanged), `current_metadata_location`
+  168.6 → 70.3 ms, pinned values unchanged), `current_metadata_location`.
+  **RP-22 (2026-09-17):** `V3_EXPECTED_SNAPSHOTS_BEFORE_EXPIRE` 14 → 13 — fork F-RDF-OPTIONS-1 (#283) commits all rewrite file groups in one snapshot by default, as Spark does (measured one-commit `next-row-id` 24 on the two-partition shape, run 19c); the S3 Tables floor check reads the same constant,
   (`metadata_log_entries` tail = the `register_table` argument), `run_v3_acceptance`, and
   `assert_v3_acceptance_outcome` / `assert_v3_lineage` / `assert_v3_row_ids_are_stable` /
   `assert_deletion_vectors`. `v3_row_delete_sql` is the ONLY `DELETE FROM` in the harness and is

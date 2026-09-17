@@ -231,90 +231,123 @@ async fn assert_cell(
 #[tokio::test]
 async fn created_v3_cow_subquery_in_delete_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
-    assert_created("sub_in", DELETE_IN, delete_hit_cell()).await;
+    Box::pin(assert_created("sub_in", DELETE_IN, delete_hit_cell())).await;
 }
 
 #[tokio::test]
 async fn created_v3_cow_subquery_not_in_delete_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
-    assert_created("sub_notin", DELETE_NOT_IN, delete_miss_cell()).await;
+    Box::pin(assert_created(
+        "sub_notin",
+        DELETE_NOT_IN,
+        delete_miss_cell(),
+    ))
+    .await;
 }
 
 #[tokio::test]
 async fn created_v3_cow_subquery_exists_delete_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
-    assert_created("sub_ex", DELETE_EXISTS, delete_hit_cell()).await;
+    Box::pin(assert_created("sub_ex", DELETE_EXISTS, delete_hit_cell())).await;
 }
 
 #[tokio::test]
 async fn created_v3_cow_subquery_not_exists_delete_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
-    assert_created("sub_nex", DELETE_NOT_EXISTS, delete_miss_cell()).await;
+    Box::pin(assert_created(
+        "sub_nex",
+        DELETE_NOT_EXISTS,
+        delete_miss_cell(),
+    ))
+    .await;
 }
 
 #[tokio::test]
 async fn created_v3_cow_subquery_in_update_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
-    assert_created("sub_upd", UPDATE_IN, update_cell()).await;
+    Box::pin(assert_created("sub_upd", UPDATE_IN, update_cell())).await;
 }
 
 #[tokio::test]
 async fn adopted_v3_cow_subquery_in_delete_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
-    assert_adopted("seed_ain", "adopt_ain", DELETE_IN, delete_hit_cell()).await;
+    Box::pin(assert_adopted(
+        "seed_ain",
+        "adopt_ain",
+        DELETE_IN,
+        delete_hit_cell(),
+    ))
+    .await;
 }
 
 #[tokio::test]
 async fn adopted_v3_cow_subquery_not_in_delete_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
-    assert_adopted(
+    Box::pin(assert_adopted(
         "seed_anotin",
         "adopt_anotin",
         DELETE_NOT_IN,
         delete_miss_cell(),
-    )
+    ))
     .await;
 }
 
 #[tokio::test]
 async fn adopted_v3_cow_subquery_exists_delete_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
-    assert_adopted("seed_aex", "adopt_aex", DELETE_EXISTS, delete_hit_cell()).await;
+    Box::pin(assert_adopted(
+        "seed_aex",
+        "adopt_aex",
+        DELETE_EXISTS,
+        delete_hit_cell(),
+    ))
+    .await;
 }
 
 #[tokio::test]
 async fn adopted_v3_cow_subquery_not_exists_delete_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
-    assert_adopted(
+    Box::pin(assert_adopted(
         "seed_anex",
         "adopt_anex",
         DELETE_NOT_EXISTS,
         delete_miss_cell(),
-    )
+    ))
     .await;
 }
 
 #[tokio::test]
 async fn adopted_v3_cow_subquery_in_update_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
-    assert_adopted("seed_aupd", "adopt_aupd", UPDATE_IN, update_cell()).await;
+    Box::pin(assert_adopted(
+        "seed_aupd",
+        "adopt_aupd",
+        UPDATE_IN,
+        update_cell(),
+    ))
+    .await;
 }
 
 #[tokio::test]
 async fn created_v3_cow_correlated_subquery_delete_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
-    assert_created("sub_correlated", DELETE_CORRELATED_IN, delete_hit_cell()).await;
+    Box::pin(assert_created(
+        "sub_correlated",
+        DELETE_CORRELATED_IN,
+        delete_hit_cell(),
+    ))
+    .await;
 }
 
 #[tokio::test]
 async fn adopted_v3_cow_correlated_subquery_delete_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
-    assert_adopted(
+    Box::pin(assert_adopted(
         "seed_acorrelated",
         "adopt_acorrelated",
         DELETE_CORRELATED_IN,
         delete_hit_cell(),
-    )
+    ))
     .await;
 }
 
