@@ -10,6 +10,7 @@ from repark import _native
 from repark.spark.session import _funcs as _session_funcs
 from repark.spark.session.session_configuration import (
     SPARK_SQL_ANSI_ENABLED_KEY,
+    SPARK_SQL_CASE_SENSITIVE_KEY,
     _DISPLAY_INT_DEFAULTS,
     _RETAINED_CACHE_BYTES_KEY,
     _SQLCONF_DEFAULTS,
@@ -190,7 +191,11 @@ class RuntimeConfig:
             )
         # Build-time FairSpillPool size is not runtime-mutable via conf (one truth).
         _refuse_runtime_memory_limit_gb(key)
-        if key in (SESSION_TIME_ZONE_KEY, SPARK_SQL_ANSI_ENABLED_KEY):
+        if key in (
+            SESSION_TIME_ZONE_KEY,
+            SPARK_SQL_ANSI_ENABLED_KEY,
+            SPARK_SQL_CASE_SENSITIVE_KEY,
+        ):
             _native.set_runtime_config(inner, key, text)
             if key == SESSION_TIME_ZONE_KEY:
                 refresh_session_zone_canonical(self._session)
@@ -311,7 +316,11 @@ class RuntimeConfig:
         inner = self._session._ensure_alive()
         if isinstance(key, str) and key.lower() == _RETAINED_CACHE_BYTES_KEY:
             _refuse_read_only_conf_key(key)
-        if key in (SESSION_TIME_ZONE_KEY, SPARK_SQL_ANSI_ENABLED_KEY):
+        if key in (
+            SESSION_TIME_ZONE_KEY,
+            SPARK_SQL_ANSI_ENABLED_KEY,
+            SPARK_SQL_CASE_SENSITIVE_KEY,
+        ):
             self._store().pop(key, None)
             self._unset_keys().add(key)
             _native.set_runtime_config(inner, key, _SQLCONF_DEFAULTS[key])

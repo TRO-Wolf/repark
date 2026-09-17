@@ -938,6 +938,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
   smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
+  ICE-RTAS-BYNAME-1 (2026-09-17) re-hashed `_SQLCONF_DEFAULTS` for its `spark.sql.caseSensitive` default.
   PERF-FACADE-CDF-1 joined the inventory: `create_dataframe_columns.py`, the six new router
   bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
   edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
@@ -2836,6 +2837,29 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
   UPDATE on an unpartitioned target; partial INSERT NULL-fills omitted nullable columns.
   Arrow path, value + type.
+- `test_ice_rtas_byname_1.py` + `ice_rtas_byname_1_spark_oracle.json` +
+  `_record_ice_rtas_byname_1_oracle.py` — **ICE-RTAS-BYNAME-1 (2026-09-17):**
+  `INSERT … BY NAME` on the Spark door against the live-PySpark-4.1.2 cells
+  (generator re-derives them; the live tier replays the generator and checks
+  the fixture). Pins cover by-name reorder, the case-insensitive match, the
+  missing-nullable NULL fill, the count-first error rule
+  (`TOO_MANY_DATA_COLUMNS`, case-insensitive `AMBIGUOUS_COLUMN_NAME`,
+  `EXTRA_COLUMNS`), the positional control, the `BY NAME VALUES` text, the
+  column-list `PARSE_SYNTAX_ERROR`, the eight-cell `USING parquet` matrix,
+  whole-table `INSERT OVERWRITE … BY NAME`, and the native-door steer; five
+  pins stay `xfail(strict)` — four RTAS snapshot-operation pins on fork ask
+  F-RTAS-OPS-1 and one `writeTo.append`-by-name pin
+  (`test_dataframe_writeto_appends_by_name`) on F-DML-FIELD-ID-1. The live
+  replay cell (`test_live_oracle_fixture_reproduces`) skips without a
+  `/tmp/sparkenv` interpreter.
+  **Round 2 (2026-09-17):** the `partition_by_name` section (static/dynamic
+  overwrite, no-clause replace-all, static append, the 42713 refusal, empty
+  overwrite wipe, empty static-partition drop), the `not_null_by_name`
+  section (nullable fill beside NOT NULL, `CANNOT_FIND_DATA` on INSERT and
+  OVERWRITE), and the `case_sensitive_by_name` section (default fold,
+  `EXTRA_COLUMNS` under `caseSensitive=true`, exact-name write).
+  pins: ice-rtas-byname-1/C-007, C-008, C-009, C-010
+  pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004, C-005, C-006
 - **octo-extra C3: format= refuse surface**
 
 - **octo-extra C2: __all__ / export coverage**

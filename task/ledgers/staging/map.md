@@ -872,3 +872,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fixtures (`python/repark/tests/fixtures/orc/`).
   `risk_tier: standard`. Branch `feat/io-orc-1`.
   pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ice-rtas-byname-1-ledger.md](ice-rtas-byname-1-ledger.md) —
+  **ICE-RTAS-BYNAME-1 (2026-09-17), in flight:** `INSERT … BY NAME` column
+  resolution on the Spark door plus the RTAS snapshot-operation divergence
+  (V2-24). The oracle cells
+  (`python/repark/tests/ice_rtas_byname_1_spark_oracle.json`, generator
+  `_record_ice_rtas_byname_1_oracle.py`) and the red-first pins
+  (`test_ice_rtas_byname_1.py`); the RTAS operation fix is fork-owned
+  (F-RTAS-OPS-1, xfail pins).
+  `risk_tier: standard`. Branch `feat/ice-rtas-byname-1`.
+  pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004, C-005, C-006

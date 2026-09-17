@@ -598,6 +598,95 @@ perfectly good read.
   needs the ambiguous case distinguishable from a definite failure, and the snapshot stamp
   makes the unconfirmed commit nameable in an alert.
 
+#### DML-6 — `INSERT … BY NAME`
+
+- **repark** — **FIXED 2026-09-17 (ICE-RTAS-BYNAME-1).** `INSERT INTO t BY NAME
+  SELECT …` and `INSERT OVERWRITE t BY NAME SELECT …` execute on the Spark door;
+  the native door steers the spelling to the Spark door. The Rust kernel
+  (`crates/repark-spark/src/insert_by_name.rs`) strips the modifier at the token
+  level, applies Spark's count-first rule (more source columns than target
+  columns → `INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS`, else a
+  case-insensitive duplicate source name →
+  `INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME`, else an unmapped source
+  name → `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS`), matches case-insensitively,
+  NULL-fills a missing nullable target, and stages through the name-based conform
+  before committing `fast_append`. `BY NAME` over `VALUES` answers
+  `EXTRA_COLUMNS` (`col1…colN`); `INSERT INTO t (columns) BY NAME` refuses
+  `PARSE_SYNTAX_ERROR` at parse altitude. The same matrix holds on `USING
+  parquet` tables except a shorter source with an unmapped name, which answers
+  `EXTRA_COLUMNS` there by the same count-first rule. A plain positional
+  `INSERT` is untouched.
+- **Apache Spark** — resolves by name with the same three errors in the same
+  order. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-16, committed as
+  `python/repark/tests/ice_rtas_byname_1_spark_oracle.json` with generator
+  `python/repark/tests/_record_ice_rtas_byname_1_oracle.py`.)*
+- **Pin** — `python/repark/tests/test_ice_rtas_byname_1.py`
+  (`test_by_name_reorders_source_columns`,
+  `test_by_name_subset_null_fills_missing_nullable`,
+  `test_by_name_matches_case_insensitively`, `test_by_name_extra_column_refused`,
+  `test_by_name_duplicate_source_name_refused`,
+  `test_by_name_case_duplicate_refused`, `test_positional_insert_stays_positional`,
+  `test_by_name_values_refused`, `test_by_name_column_list_is_parse_error`,
+  `test_insert_overwrite_by_name_replaces`,
+  `test_thin_native_door_parse_errors_loudly`, the eight `test_parquet_*` cells,
+  `test_by_name_partitioned_table_reorders`,
+  `test_by_name_empty_insert_matches_positional_door`, `test_by_name_branch_append`,
+  `test_live_oracle_fixture_reproduces`);
+  `crates/repark-spark/src/insert_by_name/tests.rs` (strip + resolution rules);
+  `crates/repark-sql/src/sniff/tests.rs` (native-door steer).
+  pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004
+  **Round 2 (2026-09-17):** static `PARTITION` overwrite delegates to the
+  positional partition arm after name projection (a source naming the static
+  column refuses `[STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST]`, SQLSTATE
+  42713); dynamic `PARTITION (p)` overwrite is whole-table replace-all
+  (Spark's default-mode answer — `partitionOverwriteMode` is unread, the same
+  residue class as the positional always-dynamic path); static append injects
+  the clause literals; empty unpartitioned overwrite wipes; a missing required
+  target refuses `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]` (SQLSTATE
+  KD000) before any write; `spark.sql.caseSensitive=true` matches exact and
+  answers `EXTRA_COLUMNS` on case mismatch (new carrier, default false).
+  Oracle sections `partition_by_name` (9 cells), `not_null_by_name` (3),
+  `case_sensitive_by_name` (3).
+  pins: ice-rtas-byname-1/C-007, C-008, C-009, C-010
+- **Rationale** — FIXED, not declared. `BY NAME` has no ANSI spelling (ADR-0002:
+  the native door steers, never parses). The staged route is load-bearing, not
+  incidental: the DML passthrough misroutes reordered scan batches by
+  `PARQUET:field_id` (fork ask F-DML-FIELD-ID-1), so the surface never routes
+  through it.
+
+#### RTAS-OPS-1 — `CREATE OR REPLACE TABLE … AS SELECT` snapshot operation stamps
+
+- **repark** — CTAS then RTAS over the same table records `[append, append]`;
+  RTAS creating the table records `[append]`; an empty RTAS records no snapshot
+  at all. Both halves live in the fork's `StagedTableTransaction::materialize_pending`,
+  which runs `tx.fast_append()` unconditionally and returns the staged table
+  unchanged when `pending_data_files` is empty — no RePark-side patch can change
+  the recorded operation.
+- **Apache Spark** — CTAS then RTAS records `[append, overwrite]`; RTAS creating
+  the table records `[overwrite]`; an empty RTAS records `[delete]` (twice:
+  `[delete, delete]`). The replace snapshot carries the added/total/manifest
+  keys (`added-data-files`, `added-records`, `total-records`,
+  `total-data-files`, `total-files-size`, `added-files-size`,
+  `changed-partition-count`, `manifests-created`, engine keys) with no
+  `deleted-*` keys; the empty snapshot carries the total keys at zero with no
+  added keys. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-16, fixture
+  `rtas_ops` cells `ctas_then_rtas` / `rtas_new_table` / `rtas_empty_new` /
+  `rtas_empty_twice`.)*
+- **Pin** — `python/repark/tests/test_ice_rtas_byname_1.py::test_rtas_replace_records_overwrite`,
+  `…::test_rtas_new_table_records_overwrite`,
+  `…::test_rtas_empty_new_records_delete`,
+  `…::test_rtas_empty_twice_records_two_deletes`, all
+  `xfail(strict=True, reason="BLOCKED-ON-FORK F-RTAS-OPS-1")`
+  (pins: ice-rtas-byname-1/C-005a–d). The suite's fifth xfail,
+  `test_dataframe_writeto_appends_by_name`, belongs to fork ask
+  F-DML-FIELD-ID-1, not this row.
+- **Rationale** — OPEN, fork ask F-RTAS-OPS-1: replace mode with files must stage
+  an `overwrite` commit (not `fast_append`), replace mode with no files must
+  still commit one `delete` snapshot, and create mode keeps `append`; the RTAS
+  replace path must stay on the replace commit even when the table does not
+  exist yet (Spark records `overwrite` for that shape too). Plain-CTAS-empty is
+  unmeasured and unclaimed.
+
 ### 2.4 Namespace and table listing statements
 
 #### NS-1 — `SHOW NAMESPACES` without `IN` / `FROM` requires an explicit catalog
