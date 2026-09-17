@@ -51,9 +51,7 @@ def spark(tmp_path: Path) -> Any:
 
 def _seed_shapes(session: Any) -> None:
     session.sql(f"CREATE TABLE {BN} {BN_DDL} USING iceberg")
-    session.sql(
-        "CREATE TABLE sc.ns.sw (last_name STRING, first_name STRING, n INT) USING iceberg"
-    )
+    session.sql("CREATE TABLE sc.ns.sw (last_name STRING, first_name STRING, n INT) USING iceberg")
     session.sql("INSERT INTO sc.ns.sw VALUES ('Smith', 'Ann', 1)")
 
 
@@ -80,9 +78,9 @@ def _cell_sql(section: str, cell: str) -> str:
 def _refusal(session: Any, section: str, cell: str) -> None:
     with pytest.raises(AnalysisException) as excinfo:
         session.sql(_cell_sql(section, cell)).collect()
-    assert str(excinfo.value) == "Error during planning: " + str(
-        FIXTURE[section][cell]["error"]
-    ), str(excinfo.value)
+    assert str(excinfo.value) == "Error during planning: " + str(FIXTURE[section][cell]["error"]), (
+        str(excinfo.value)
+    )
 
 
 def test_by_name_reorders_source_columns(spark: Any) -> None:
@@ -213,9 +211,7 @@ def test_parquet_subset_and_case_fill_and_fold(spark: Any) -> None:
     spark.sql(_cell_sql("parquet_by_name", "pq_by_name")).collect()
     spark.sql(_cell_sql("parquet_by_name", "pq_subset")).collect()
     spark.sql(_cell_sql("parquet_by_name", "pq_case")).collect()
-    assert _rows(spark, PQ) == [
-        tuple(row) for row in FIXTURE["parquet_by_name"]["pq_case"]["rows"]
-    ]
+    assert _rows(spark, PQ) == [tuple(row) for row in FIXTURE["parquet_by_name"]["pq_case"]["rows"]]
 
 
 def test_parquet_extra_answers_extra_columns(spark: Any) -> None:
@@ -269,9 +265,9 @@ def _seed_rtas(session: Any) -> None:
 def _snapshot_ops(session: Any, table: str) -> list[str]:
     return [
         row["operation"]
-        for row in session.sql(
-            f"SELECT operation FROM {table}.snapshots ORDER BY committed_at"
-        ).to_arrow().to_pylist()
+        for row in session.sql(f"SELECT operation FROM {table}.snapshots ORDER BY committed_at")
+        .to_arrow()
+        .to_pylist()
     ]
 
 

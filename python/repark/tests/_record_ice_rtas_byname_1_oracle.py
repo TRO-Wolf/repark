@@ -145,9 +145,7 @@ def record_byname(spark: Any) -> dict[str, Any]:
 
 
 def record_parquet(spark: Any) -> dict[str, Any]:
-    spark.sql(
-        "CREATE TABLE sc.ns.pq (first_name STRING, last_name STRING, n INT) USING parquet"
-    )
+    spark.sql("CREATE TABLE sc.ns.pq (first_name STRING, last_name STRING, n INT) USING parquet")
     cells: dict[str, Any] = {}
     for label, sql in PARQUET_SEQUENCE:
         try:

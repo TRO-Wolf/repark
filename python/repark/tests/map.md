@@ -2793,7 +2793,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   whole-table `INSERT OVERWRITE … BY NAME`, and the native-door steer; five
   pins stay `xfail(strict)` — four RTAS snapshot-operation pins on fork ask
   F-RTAS-OPS-1 and one `writeTo.append`-by-name pin
-  (`test_dataframe_writeto_appends_by_name`) on F-DML-FIELD-ID-1.
+  (`test_dataframe_writeto_appends_by_name`) on F-DML-FIELD-ID-1. The live
+  replay cell (`test_live_oracle_fixture_reproduces`) skips without a
+  `/tmp/sparkenv` interpreter.
   pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004, C-005, C-006
 - **octo-extra C3: format= refuse surface**
 
