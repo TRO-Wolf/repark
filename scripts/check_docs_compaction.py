@@ -38,7 +38,7 @@ LEDGER_SUFFIX = "-ledger.md"
 # The SEPMO unit-runbook is a pointer-only checklist: seeded at 5,000 B so it cannot regrow
 # into a second spine — every rule it names lives elsewhere and it only links.
 CEILINGS: dict[str, int] = {
-    "STATUS.md": 26_000,
+    "STATUS.md": 25_000,
     "briefs/next-sequence.md": 6_000,
     "AGENTS.md": 32_000,
     ".agents/skills/engineering-method/SKILL.md": 35_000,

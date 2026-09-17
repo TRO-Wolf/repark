@@ -17,13 +17,10 @@ Decimal arithmetic that overflows 38 digits now types like PySpark 4.1.2 (`decim
 conforms every batch to the analyzed schema and names both fields when it cannot. Also carries the
 run-15 and run-16 parity families merged since v1.4.1, all additive under the API freeze.
 
-**v1.4.1 (2026-09-14) — the first patch on 1.4.0, cut so the five-leg wheel set reaches PyPI.**
-The v1.4.0 tag ran the single manylinux leg; the abi3 matrix (PLATFORM-1, #548/#552/#554) landed
-on `main` five hours after that tag. This tag publishes Windows x86_64, macOS arm64 and x86_64,
-and Linux aarch64 beside Linux x86_64 — each leg an import smoke and one collect, not a platform
-acceptance run (PLATFORM-2..4 stay slated for 1.6). It also carries everything merged since
-1.4.0, all additive under the API freeze (REPLACE-LINEAR-1, EAGER-OWN-1, EAGER-BUDGET-1,
-ABS-EXPR-1, the FACADE-2..5 and CFG-2 steps, SILVER-S1, UNPIVOT-1, CAST-1, RUSTSEC-2026-0285).
+**v1.4.1 (2026-09-14) — the first patch on 1.4.0, cut so the five-leg wheel set reaches PyPI:**
+Windows x86_64, macOS arm64 and x86_64, Linux aarch64 and x86_64 — each leg an import
+smoke and one collect, no platform acceptance (PLATFORM-2..4 stay slated for 1.6).
+Carries everything since 1.4.0, additive under the freeze.
 
 **v1.4.0 (2026-09-12) — the maintenance minor on 1.3**, additive under the API freeze (no frozen
 name or required parameter changed). Roadmap 1.4 closes: the maintenance policy shipped in 1.2 and
@@ -59,8 +56,7 @@ CI tier `make py-test-spill-matrix` against a golden ([docs/testing.md](docs/tes
 **History:** v1.1.1 (2026-09-06, RDF-SCHEMA-EVO-1, WRITE-DISTRIBUTION-2, CSV-INFER-PERF-1);
 v1.1.0 (2026-09-06, the first minor); v1.0.1 (09-04); **v1.0.0 (2026-09-03, the first stable
 tag)** — the format-v3 north star at its gate, all twenty §3 rows of
-[the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED as audited that day (the measured
-rating of 2026-09-16 found silent wrong answers behind some: Known correctness issues), from
+[the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED as audited that day, from
 which the API freeze binds: additive-only within the major for every frozen row of
 [v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json); v0.1.0–v0.6.0 (2026-08-15 → 08-31).
 Tag-triggered `release.yml`, PyPI trusted publishing, one `cp312-abi3` manylinux wheel; version
@@ -132,9 +128,8 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
   **V3-5:** `V3-DANGLE-1` FIXED. V3E-5 added the nightly v3 live-oracle leg (#253); first green
   nightly 2026-09-02.
   V3-7 / V3-8 (2026-09-02) carry MERGE and subquery-`WHERE` COW `_row_id` — `V3-COW-1` **FIXED**.
-  **V3-6 (2026-09-01):** opt-in v3 CREATE takes the fork's `timestamp_ns` types, a positional append
-  fills from a schema-carried `write_default` (column-list INSERT, MERGE insert and DataFrame
-  append fill NULL or refuse — V3-03b, draft #678), and DEFAULT DDL / `unknown` / binary `variant`
+  **V3-6 (2026-09-01):** opt-in v3 CREATE takes the fork's `timestamp_ns` types, a positional
+  append fills from a schema-carried `write_default` (other paths: #678), and DEFAULT DDL / `unknown` / binary `variant`
   refuse Spark-equal (`V3-VARIANT-SHRED-1`).
   **V3-9 (2026-09-02):** predicate DML's V2-only gate is lifted — MoR `DELETE`/`UPDATE …
   WHERE` on v3 write file-scoped Puffin DVs, Spark-equal (`V3-MOR-1` FIXED).
@@ -157,8 +152,8 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
   FIXED 2026-09-03; `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11).
   - **Next:** lineage carry and merge-on-read hold on the statement matrix's DML shapes (`V3-COW-1`,
     `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, the three `V3-UPGRADE-DV` rows and
-    `F-v3-10-partition-file-order` FIXED) — not yet after schema evolution (rating 2026-09-16,
-    Known correctness issues); open v3 residuals are `V3-COV-3` (reopened, #666), `V3-FILEORDER-1`, `V3-COV-4`
+    `F-v3-10-partition-file-order` FIXED), not yet after schema evolution; open v3 residuals are
+    `V3-COV-3` (#666), `V3-FILEORDER-1`, `V3-COV-4`
     / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`. RP-10 (F-25,
     `PERF-DVCLOSE-STMT-1`), PERF-SCAN-1, SQL-HARDEN-1 and RP-11 (F-24, `B-MOR-3-FLOOR-1`)
     landed 2026-09-04.
@@ -250,15 +245,12 @@ this file keeps one line of state plus a link. A known **defect with its fix sch
 divergence and gets no row: it stays here until the fix lands, and the fixing unit deletes the
 entry rather than moving it. Nothing is described in both places.
 
-- **Iceberg rating residue (measured against Spark 4.1.2, 2026-09-16)** — defects with a fix
-  scheduled; each fixing unit deletes its clause. DML refuses after `ADD`/`RENAME COLUMN` and a
-  name swap writes the other field's values (V2-10e, `fix/ice-evo-dml-1`);
-  `partitionOverwriteMode=dynamic` replaces the whole table (V2-24b, #682); `write-default`
-  fills NULL off the positional path (V3-03b, #678); a serializable MERGE aborts on any
-  concurrent commit (V2-20a — fork #291 merged, RePark half unwritten); a Spark-added nested
-  struct child makes the table unreadable (V2-10d, fork #292); unquoted mixed-case columns fail
-  on Spark-created tables (V2-27, #676). State:
-  [run-20 close-out](docs/artifacts/iceberg-run-20-closeout-2026-09-17.html).
+- **Iceberg rating residue (2026-09-16)** — scheduled; each unit deletes its clause:
+  DML after `ADD`/`RENAME COLUMN` refuses (V2-10e); dynamic partition overwrite replaces the
+  table (V2-24b, #682); `write-default` fills NULL (V3-03b, #678); serializable MERGE aborts on
+  any concurrent commit (V2-20a); a Spark-added nested child is unreadable (V2-10d); mixed-case
+  columns fail (V2-27, #676).
+  [State](docs/artifacts/iceberg-run-20-closeout-2026-09-17.html).
 - **FNP-8 residuals** — **BACKLOG (2026-09-07)**: [FNP8-NULLABILITY and following rows](docs/spark-sql-iceberg-parity.md#fnp8-nullability--higher-order-result-metadata-retains-inherited-nullable-fields).
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry
   [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
