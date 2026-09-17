@@ -8,6 +8,11 @@ message, original-error preservation, non-Spark immunity, and literal/comment im
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../sniff.rs`.
+  **ICE-RTAS-BYNAME-1 (2026-09-17):** `insert_by_name_is_recognized` (pre-source
+  `BY NAME` steers), `insert_by_name_overwrite_keeps_overwrite_steer` (post-
+  source `BY NAME` keeps the overwrite steer), and
+  `order_by_name_after_select_does_not_steer_by_name` (post-source `ORDER BY
+  name`, bare `by_name` column) never steer `BY NAME`.
 
 ## Pointers
 

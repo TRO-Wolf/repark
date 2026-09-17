@@ -29,6 +29,9 @@ _CONF_GET_UNSET: object = object()
 SPARK_SQL_ANSI_ENABLED_KEY = "spark.sql.ansi.enabled"
 
 
+SPARK_SQL_CASE_SENSITIVE_KEY = "spark.sql.caseSensitive"
+
+
 _SQLCONF_DEFAULTS: dict[str, str] = {
     "spark.sql.sources.partitionOverwriteMode": "STATIC",
     # Default app name where we control the default (Spark has no default appName).
@@ -43,6 +46,7 @@ _SQLCONF_DEFAULTS: dict[str, str] = {
     # from Spark's JVM-local default (reproducibility; no host-environment read).
     SESSION_TIME_ZONE_KEY: DEFAULT_SESSION_TIME_ZONE,
     SPARK_SQL_ANSI_ENABLED_KEY: "true",
+    SPARK_SQL_CASE_SENSITIVE_KEY: "false",
     # Default TIMESTAMP_LTZ (current LTZ behavior).
     TIMESTAMP_TYPE_KEY: DEFAULT_TIMESTAMP_TYPE,
 }

@@ -2,8 +2,10 @@
 
 pub mod alter;
 pub mod append;
+pub mod column_move;
 mod commit_error;
 pub mod commit_target;
+pub use commit_target::commit_append_to;
 pub mod concurrency;
 pub(crate) mod conform;
 pub(crate) mod distribution;
@@ -23,6 +25,7 @@ pub mod overwrite;
 pub mod overwrite_commit;
 /// Partition-scoped INSERT OVERWRITE (static row-filter + dynamic replace-partitions).
 pub mod partition_overwrite;
+pub mod partition_spec;
 pub mod partition_write;
 pub(crate) mod position_delete;
 /// Identity DELETE/UPDATE (G3-E8 A1): SELECT over pinned `(_file, _pos)`, MERGE write arms.

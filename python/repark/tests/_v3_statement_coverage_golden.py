@@ -13,7 +13,7 @@ VERDICTS: dict[str, str] = {
     "create-v3-partitioned": "EQUAL",
     "create-v3-bucket-transform": "EQUAL",
     "create-v3-write-order": "REFUSED",
-    "create-v3-properties": "DIVERGES",
+    "create-v3-properties": "EQUAL",
     "ctas-v3": "EQUAL",
     "insert-into": "EQUAL",
     "insert-into-select": "EQUAL",

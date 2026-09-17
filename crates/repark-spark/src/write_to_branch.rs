@@ -108,10 +108,12 @@ fn is_owned_write_head(sql: &str) -> bool {
     let head = word.value.to_ascii_uppercase();
     match head.as_str() {
         "MERGE" | "TRUNCATE" => true,
-        "INSERT" => significant.get(1).is_some_and(|token| match token {
-            Token::Word(word) => word.value.eq_ignore_ascii_case("OVERWRITE"),
-            _ => false,
-        }),
+        "INSERT" => {
+            significant.get(1).is_some_and(|token| match token {
+                Token::Word(word) => word.value.eq_ignore_ascii_case("OVERWRITE"),
+                _ => false,
+            }) || crate::insert_by_name::sql_has_insert_by_name(sql)
+        }
         _ => false,
     }
 }
