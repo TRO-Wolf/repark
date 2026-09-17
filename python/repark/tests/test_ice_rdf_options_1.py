@@ -110,9 +110,7 @@ def _file_sizes(spark: ReparkSession, table: str) -> dict[str, int]:
 
 def _delete_file_sizes(spark: ReparkSession, table: str) -> dict[str, int]:
     """Map live delete-file paths to their sizes in bytes."""
-    batch = spark.sql(
-        f"SELECT file_path, file_size_in_bytes FROM {table}.delete_files"
-    ).to_arrow()
+    batch = spark.sql(f"SELECT file_path, file_size_in_bytes FROM {table}.delete_files").to_arrow()
     paths = batch.column("file_path").to_pylist()
     sizes = batch.column("file_size_in_bytes").to_pylist()
     return {str(path): int(size) for path, size in zip(paths, sizes, strict=True)}
@@ -158,9 +156,9 @@ def _check_value_cell(
     else:
         after_sizes = _file_sizes(spark, table)
         vanished = [path for path in before_sizes if path not in after_sizes]
-        assert got["rewritten_bytes_count"] == sum(
-            before_sizes[path] for path in vanished
-        ), f"{name} rewritten_bytes_count is the vanished files' size sum"
+        assert got["rewritten_bytes_count"] == sum(before_sizes[path] for path in vanished), (
+            f"{name} rewritten_bytes_count is the vanished files' size sum"
+        )
     after = cell["after"]
     assert isinstance(after, dict)
     files, deletes, specs = _file_state(spark, table)
@@ -235,8 +233,7 @@ _VALUE_CELLS: list[tuple[str, dict[str, object], int]] = [
 _VALUE_XFAIL: dict[str, str] = {
     "target_small": "FORK-WRITE-GRANULARITY 2026-09-17: fork writes one file per group "
     "(RePark 8→2), Spark splits outputs to the target size (8→4)",
-    "max_group_size": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 added, "
-    "Spark 8→4",
+    "max_group_size": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 added, Spark 8→4",
     "partial_progress_groups": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 "
     "added, Spark 8→4",
     "delete_file_threshold": "DELETE-COW-BYTES 2026-09-17: result counts match Spark "
@@ -356,7 +353,9 @@ def _check_delete_counts(
     ("name", "build"),
     [pytest.param(n, b, id=n) for n, b, _rows in _VALUE_CELLS if not n.startswith("rpd_")],
 )
-def test_option_cell_failed_counts(spark: ReparkSession, name: str, build: dict[str, object]) -> None:
+def test_option_cell_failed_counts(
+    spark: ReparkSession, name: str, build: dict[str, object]
+) -> None:
     """failed_data_files_count is 0 on every RDF cell, like every oracle cell."""
     _check_delete_counts(spark, name, "mem.ns.fail", build, "failed_data_files_count")
 
@@ -465,7 +464,8 @@ _RPD_UNSUPPORTED: list[tuple[str, str]] = [
 
 
 @pytest.mark.parametrize(
-    ("key", "value"), [pytest.param(key, value, id=f"{key}={value}") for key, value in _RPD_UNSUPPORTED]
+    ("key", "value"),
+    [pytest.param(key, value, id=f"{key}={value}") for key, value in _RPD_UNSUPPORTED],
 )
 def test_rpd_unsupported_keys_refuse_loud(spark: ReparkSession, key: str, value: str) -> None:
     """RPD keys without a fork path refuse as UnsupportedOperationException naming the key."""
