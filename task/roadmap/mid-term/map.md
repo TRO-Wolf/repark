@@ -253,6 +253,12 @@ declines it (a dated ruling in the intake, then the archive).
   LOGICAL-WIDTH-1 whose blast radius is measured down to four match arms. Its central lesson: a review finding can be real
   while its diagnosis is wrong — the live oracle showed freqItems key equality is primitive IEEE `==`, the exact opposite of
   the `doubleToLongBits` reasoning the critic filed, on both signed zeros and NaN.
+- [overnight-report-2026-09-17-20c.md](overnight-report-2026-09-17-20c.md) — run 20c morning report (2026-09-17): the maintenance,
+  writer-knob and AWS slice of the Iceberg remediation, rebuilt from run 19's killed lanes. Fork #283 (rewrite_data_files options),
+  #287 (sorted INSERT), #290 (RTAS operations) and #288 (target file size) merged; RePark #667 (RP-22 pin bump) and #670 (INSERT … BY
+  NAME) merged, #672 (the owner-named options map) and #671 (RP-23) queued; ICE-SORTED-INSERT-1 and ICE-WRITE-OPTIONS-1 carried with
+  their P1s named; the aws-acceptance dispatch green and the rating's "no run at this revision" corrected; rulings Q-20c-1…11, owner
+  questions Q-20c-O1…O3, cards C-1…C-7.
 - [overnight-report-2026-09-16-18c.md](overnight-report-2026-09-16-18c.md) — run 18c day report (2026-09-16): the SQL door, the
   planner contracts and the registry backlog of the 1.5 Spark-parity campaign — #654 BL-19 (every unknown function refuses with
   Spark's `UNRESOLVED_ROUTINE` on both doors) and #656 BL-20 (Spark's integral literal typing, both doors agree) merged, #651 two
