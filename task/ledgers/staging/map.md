@@ -950,7 +950,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [test-hygiene-1-ledger.md](test-hygiene-1-ledger.md) —
   **TEST-HYGIENE-1 (2026-09-18), in flight:** four test-hygiene fixes, test code
   only — the Spark v3 fixture keeps its baked-in `/tmp` path behind a
-  cross-process lock directory (Avro carries absolute paths in deflate blocks),
+  cross-process kernel file lock (Avro carries absolute paths in deflate blocks),
   the v3_dv torture fixture holds an `fcntl.flock` while materialized AND read,
   the `current_date` pin reads the session zone with a strict-xfail Kiritimati /
   `Etc/GMT+12` pin under new registry row TZ-9 (OPEN, product defect), the
@@ -958,3 +958,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   it, and the staging map loses its duplicated `array-null-1` / `fnp-11b` entries.
   `risk_tier: standard`. Branch `test/test-hygiene-1`.
   pins: test-hygiene-1/C-001, C-002, C-003, C-004, C-005
+- [ice-rtas-ops-2-ledger.md](ice-rtas-ops-2-ledger.md) —
+  **ICE-RTAS-OPS-2 (2026-09-18), in flight:** the RePark opt-in for the fork's
+  RTAS replace commit (rating row V2-24) — `with_replace_write(ctas.or_replace)`
+  on both staged CTAS branches, the four RTAS pins un-xfailed, plain-CTAS and
+  column-def no-snapshot controls, the overwrite summary-key pin, the recorder
+  Ivy-cache env fix, and the RTAS-OPS-1 registry row to FIXED. Round 2 (claude-opus-5)
+  closes Critic-3 L-01 (the native ANSI door takes the same opt-in) and L-02 (service-managed
+  new-table RTAS commits through the fork's public overwrite path, `commit_replace_write`).
+  `risk_tier: standard`. Branch `ice-rtas-ops-2`.
+  pins: ice-rtas-ops-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022

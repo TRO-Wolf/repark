@@ -49,10 +49,9 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `DATATYPE_MISMATCH`, malformed strings refuse `CAST_INVALID_INPUT`, malformed
   `TIMESTAMP` literals refuse `INVALID_TYPED_LITERAL` — all with Spark's measured text;
   rollback commits the pre-check's selected id via `rollback_to` (fork re-validates
-  ancestry at commit). A duplicate WAP cherry-pick refuses with the fork's already-picked
-  message where Java raises `Duplicate request ...`: reordering that refusal would re-implement
-  table-format validation in RePark, so it stays a dated OPEN residue row beside registry REF-6
-  (fork trigger `F-CHERRYPICK-WAP-ORDER-1`).
+  ancestry at commit). A duplicate WAP cherry-pick refuses with Java's
+  `Duplicate request ...` text since RP-26 (fork #293 reordered its cherry-pick
+  validation WAP-first; FIXED residue `ICE-BRANCH-OPS-1-R-001` beside registry REF-6).
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
   pins: ice-branch-ops-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - `rewrite_data_files.rs` — **rewrite_data_files options (2026-08-31):** v2 `where` is wired

@@ -40,6 +40,24 @@ pub async fn commit_overwrite_replace_all_to(
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub async fn commit_replace_write(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    staged_files: Vec<DataFile>,
+) -> Result<Table> {
+    let (operation_id, summary) = operation_id_and_summary();
+    let tx = Transaction::new(table);
+    let action = tx
+        .overwrite_files()
+        .overwrite_by_row_filter(Predicate::AlwaysTrue)
+        .add_files(staged_files)
+        .allow_empty_commit()
+        .set_snapshot_properties(summary);
+    let tx = action.apply(tx).map_err(iceberg_err)?;
+    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+}
+
 fn iceberg_err(err: iceberg::Error) -> DataFusionError {
     DataFusionError::External(Box::new(err))
 }

@@ -109,8 +109,8 @@ async fn alter_column_move_reorders_and_noop_writes_no_metadata() {
     );
     assert_eq!(
         metadata_file_count(&door.warehouse),
-        files_before + 1,
-        "a move to the current position keeps the order but still commits (ICE-COLUMN-REORDER-1-R-001)"
+        files_before,
+        "a move to the current position commits nothing, matching Spark (ICE-COLUMN-REORDER-1-R-001 FIXED)"
     );
     door.session
         .sql("ALTER TABLE ice.sales.mv ALTER COLUMN id AFTER a")

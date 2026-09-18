@@ -312,7 +312,9 @@ def test_built_tables_carry_the_configured_iceberg_properties(
     """The models are Iceberg tables and the project's TBLPROPERTIES reach the metadata.
 
     A RePark catalog makes every table Iceberg, so ``using iceberg`` alone proves nothing.
-    The write properties the cutover pipeline configures are what must arrive.
+    The write properties the cutover pipeline configures are what must arrive. dbt builds a
+    table model with CREATE OR REPLACE TABLE ... AS SELECT, which records one ``overwrite``
+    snapshot like Spark 4.1.2 (ICE-RTAS-OPS-2).
     """
     root, warehouse = project
     assert _invoke(["run"], root).success
@@ -321,7 +323,7 @@ def test_built_tables_carry_the_configured_iceberg_properties(
         snapshots = _read(
             warehouse, f"select operation from {CATALOG}.{NAMESPACE}.{table}.snapshots"
         )
-        assert snapshots == [{"operation": "append"}]
+        assert snapshots == [{"operation": "overwrite"}]
         pointers = sorted(warehouse.glob(f"*/{table}/metadata/*.metadata.json"))
         assert pointers, f"{table} has no Iceberg metadata"
         document = json.loads(pointers[-1].read_text(encoding="utf-8"))
