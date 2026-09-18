@@ -158,6 +158,31 @@ evidence for Q-21b-5 and Q-21b-6, not a fix.
   rows and the Spark cell's written row, and the written row, filled `c` included,
   matches Spark.
 
+## Roll-call — the moved "missing from the DataFrame" decision (ruling Q-21b-6)
+
+Earlier rounds removed the facade's Python refusal of a DataFrame that omits a
+target column (`missing from the DataFrame: ['c']`) and let the Rust fill decide.
+For a defaulted column that fill writes the default. For a NULLABLE column with NO
+default the refusal was removed **because Spark accepts**: measured tonight,
+Spark 4.1.2 + Iceberg 1.11.0 writes NULL on both writer surfaces —
+`df(40, 't').writeTo(nodef).append()` → `[[1, 'a', 1], [40, 't', null]]`
+(`nodef_writeto_append_missing`) and
+`df(41, 'u').write.mode("append").format("iceberg").saveAsTable(nodef)` →
+`… [41, 'u', null]` (`nodef_saveas_append_missing`), with a full-width control
+keeping its value (`nodef_writeto_append_full`, `[42, 'v', 7]`) and the schema
+unchanged (`schema_after.nodef`). The removal matches Spark; it is not a
+silent loosening.
+
+Pinned on both surfaces: offline
+`test_missing_nullable_no_default_accepts_and_nulls` replays all three cells
+against the recorded `nodef` fixture; live `_live_rollcall` (inside
+`test_live_write_default_parity`) builds `nodef` on live Spark, runs both
+writers there, adopts the table into RePark and runs both writers again —
+`REPARK_PARITY_LIVE=1 … /tmp/oc-worker/jb-jvm.sh .venv/bin/python -m pytest
+python/repark/tests/test_ice_v3_write_default_1.py -q -p no:cacheprovider` →
+**22 passed in 115.19s** (2026-09-17, release native). These pins were green on
+the unfixed round-5 tree — the decision had already moved; the pins prove it.
+
 ## Evidence
 
 Spark oracle (live PySpark 4.1.2 + Iceberg 1.11.0, banner `spark=4.1.2 tz=UTC`,
