@@ -30,7 +30,7 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: fnp-15-16/C-001
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
-  write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests).
+  write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). The MERGE arm delegates to `execute_merge_statement` (OUTPUT refusal, timestamp_ns cast lowering) so `execute_inner` stays under clippy's 100-line cap (run 22b).
   `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
   `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every `?` /
   `return` path of the rewrite — see the `time_travel.rs` row below. **V3-4:** after time

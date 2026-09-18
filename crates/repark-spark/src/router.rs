@@ -172,6 +172,36 @@ fn original_sql_for_locations<'a>(original: &'a str, before: &str, after: &str) 
     (before == after).then_some(original)
 }
 
+async fn execute_merge_statement(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    merge: &datafusion::sql::sqlparser::ast::Merge,
+) -> Result<DataFrame> {
+    if merge.output.is_some() {
+        return Err(DataFusionError::NotImplemented(
+            "MERGE OUTPUT/RETURNING clauses are not supported".to_string(),
+        ));
+    }
+    let lowered;
+    let merge = if crate::keyword_lower::has_timestamp_ns_cast(merge) {
+        let mut owned = merge.clone();
+        crate::keyword_lower::lower_timestamp_ns_casts(&mut owned);
+        lowered = owned;
+        &lowered
+    } else {
+        merge
+    };
+    merge::execute_merge(
+        ctx,
+        catalogs,
+        &merge.table,
+        &merge.source,
+        &merge.on,
+        &merge.clauses,
+    )
+    .await
+}
+
 async fn execute_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -238,31 +268,7 @@ async fn execute_inner(
             alter::execute_alter_table(ctx, catalogs, &alter_table.name, &alter_table.operations)
                 .await
         }
-        Statement::Merge(merge) => {
-            if merge.output.is_some() {
-                return Err(DataFusionError::NotImplemented(
-                    "MERGE OUTPUT/RETURNING clauses are not supported".to_string(),
-                ));
-            }
-            let lowered;
-            let merge = if crate::keyword_lower::has_timestamp_ns_cast(merge) {
-                let mut owned = merge.clone();
-                crate::keyword_lower::lower_timestamp_ns_casts(&mut owned);
-                lowered = owned;
-                &lowered
-            } else {
-                merge
-            };
-            merge::execute_merge(
-                ctx,
-                catalogs,
-                &merge.table,
-                &merge.source,
-                &merge.on,
-                &merge.clauses,
-            )
-            .await
-        }
+        Statement::Merge(merge) => execute_merge_statement(ctx, catalogs, merge).await,
         // INSERT OVERWRITE: probe and validate before an empty-source wipe.
         Statement::Insert(insert) if insert.overwrite => {
             execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await
