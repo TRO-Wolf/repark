@@ -13,6 +13,14 @@ Step 2 adds `v01_order_by_a_select_alias_still_orders_by_the_alias` (the positio
 keeps ORDER BY on the alias).
 pins: ice-mixed-case-1/C-001…C-010, C-013…C-016
 
+## Files
+
+- `fold.rs` — round 21b step 3: the scope-aware statement fold (`Known` field sources,
+  per-query `Level` with per-SELECT relation scopes and projection / alias-reference slots,
+  `CaseFold` visitor, JOIN USING walk, `fold_statement`). Split from `../column_resolution.rs`
+  under the file-size gate. pins: ice-mixed-case-1/C-013, C-014
+- `tests.rs` — the battery below.
+
 ## Purpose
 
 Unit tests for the Spark-door case-insensitive column fold. The implementation

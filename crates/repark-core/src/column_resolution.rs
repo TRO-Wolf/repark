@@ -8,8 +8,7 @@ use datafusion::execution::SessionState;
 use datafusion::logical_expr::{Expr, LogicalPlan};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
-    AccessExpr, AssignmentTarget, Expr as SqlExpr, Ident, ObjectNamePart, Statement, Value,
-    VisitMut, VisitorMut,
+    AccessExpr, Expr as SqlExpr, Ident, ObjectNamePart, Statement, Value, VisitMut, VisitorMut,
 };
 
 #[allow(clippy::missing_errors_doc)]
@@ -24,37 +23,106 @@ pub async fn plan_statement_with_column_repair(
     let datafusion::sql::parser::Statement::Statement(mut inner) = statement else {
         return state.statement_to_plan(statement).await;
     };
-    let written = written_references(&inner);
-    match state
+    let first = state
         .statement_to_plan(datafusion::sql::parser::Statement::Statement(inner.clone()))
-        .await
-    {
+        .await;
+    let written = written_references(&inner);
+    let mut error = match first {
         Ok(plan) => {
             audit_plan_for_ambiguity(&plan, &written)?;
-            Ok(plan)
+            return Ok(plan);
         }
-        Err(error) => {
-            if let Some(field) = missing_ambiguity(&error) {
-                if let Some(spark) =
-                    spark_ambiguous_for_unresolved(state, &inner, &written, field).await
-                {
-                    return Err(spark);
-                }
-                return Err(error);
+        Err(error) => error,
+    };
+    let mut known: Option<fold::Known> = None;
+    let mut seen: HashSet<(Option<String>, String)> = HashSet::new();
+    loop {
+        if let Some(field) = missing_ambiguity(&error) {
+            if let Some(spark) =
+                spark_ambiguous_for_unresolved(state, &inner, &written, field).await
+            {
+                return Err(spark);
             }
-            let Some(valid) = missing_fields(&error) else {
-                return Err(error);
-            };
-            if !fold_statement(&mut inner, valid, &written)? {
-                return Err(error);
+            return Err(error);
+        }
+        let Some((field, valid)) = missing_field(&error) else {
+            return Err(error);
+        };
+        let miss = (
+            field.relation.as_ref().map(ToString::to_string),
+            field.name.clone(),
+        );
+        if !seen.insert(miss) {
+            return Err(error);
+        }
+        let catalog = match known.take() {
+            Some(catalog) => catalog,
+            None => fold::Known::with_tables(catalog_fields(state, &inner).await),
+        };
+        let catalog = known.insert(catalog);
+        catalog.absorb(valid);
+        if !fold::fold_statement(&mut inner, catalog, &written)? {
+            return Err(error);
+        }
+        match state
+            .statement_to_plan(datafusion::sql::parser::Statement::Statement(inner.clone()))
+            .await
+        {
+            Ok(plan) => {
+                audit_plan_for_ambiguity(&plan, &written)?;
+                return Ok(plan);
             }
-            let plan = state
-                .statement_to_plan(datafusion::sql::parser::Statement::Statement(inner))
-                .await?;
-            audit_plan_for_ambiguity(&plan, &written)?;
-            Ok(plan)
+            Err(next) => error = next,
         }
     }
+}
+
+async fn catalog_fields(
+    state: &SessionState,
+    statement: &Statement,
+) -> HashMap<Vec<String>, Vec<String>> {
+    use datafusion::sql::sqlparser::ast::{ObjectName, Visit, Visitor};
+    struct Relations {
+        names: Vec<Vec<String>>,
+    }
+    impl Visitor for Relations {
+        type Break = std::convert::Infallible;
+        fn pre_visit_relation(&mut self, relation: &ObjectName) -> ControlFlow<Self::Break> {
+            if let Some(parts) = fold::normalized_parts(relation)
+                && !self.names.contains(&parts)
+            {
+                self.names.push(parts);
+            }
+            ControlFlow::Continue(())
+        }
+    }
+    let mut relations = Relations { names: Vec::new() };
+    let _ = statement.visit(&mut relations);
+    let mut tables = HashMap::new();
+    for parts in relations.names {
+        let reference = match parts.as_slice() {
+            [table] => TableReference::bare(table.clone()),
+            [schema, table] => TableReference::partial(schema.clone(), table.clone()),
+            [catalog, schema, table] => {
+                TableReference::full(catalog.clone(), schema.clone(), table.clone())
+            }
+            _ => continue,
+        };
+        let Ok(provider) = state.schema_for_ref(reference.clone()) else {
+            continue;
+        };
+        let Ok(Some(table)) = provider.table(reference.table()).await else {
+            continue;
+        };
+        let fields = table
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| field.name().clone())
+            .collect();
+        tables.insert(parts, fields);
+    }
+    tables
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -69,14 +137,17 @@ pub async fn sql_with_column_repair(
     ctx.execute_logical_plan(plan).await
 }
 
-fn missing_fields(error: &DataFusionError) -> Option<&[Column]> {
+fn missing_field(error: &DataFusionError) -> Option<(&Column, &[Column])> {
     match error {
         DataFusionError::SchemaError(inner, _) => match inner.as_ref() {
-            SchemaError::FieldNotFound { valid_fields, .. } => Some(valid_fields),
+            SchemaError::FieldNotFound {
+                field,
+                valid_fields,
+            } => Some((field.as_ref(), valid_fields.as_slice())),
             _ => None,
         },
-        DataFusionError::Diagnostic(_, inner) => missing_fields(inner),
-        DataFusionError::Collection(errors) => errors.iter().find_map(missing_fields),
+        DataFusionError::Diagnostic(_, inner) => missing_field(inner),
+        DataFusionError::Collection(errors) => errors.iter().find_map(missing_field),
         _ => None,
     }
 }
@@ -214,13 +285,11 @@ fn audit_column(column: &Column, schema: &DFSchema, written: &WrittenRefs) -> Re
             let candidates = honored
                 .iter()
                 .map(|valid| {
-                    (
-                        valid
-                            .relation
-                            .as_ref()
-                            .map(|relation| relation.table().to_string()),
-                        valid.name.clone(),
-                    )
+                    valid
+                        .relation
+                        .as_ref()
+                        .map(reference_parts)
+                        .unwrap_or_default()
                 })
                 .collect::<Vec<_>>();
             return Err(DataFusionError::Plan(ambiguous_message(
@@ -247,13 +316,11 @@ fn audit_column(column: &Column, schema: &DFSchema, written: &WrittenRefs) -> Re
         let candidates = unqualified
             .iter()
             .map(|valid| {
-                (
-                    valid
-                        .relation
-                        .as_ref()
-                        .map(|relation| relation.table().to_string()),
-                    valid.name.clone(),
-                )
+                valid
+                    .relation
+                    .as_ref()
+                    .map(reference_parts)
+                    .unwrap_or_default()
             })
             .collect::<Vec<_>>();
         return Err(DataFusionError::Plan(ambiguous_message(
@@ -289,303 +356,41 @@ fn part_matches(first: Option<&str>, second: Option<&str>) -> bool {
     }
 }
 
-fn ambiguous_message(
-    qualifier: Option<&str>,
-    requested: &str,
-    candidates: &[(Option<String>, String)],
-) -> String {
+fn reference_parts(reference: &TableReference) -> Vec<String> {
+    match reference {
+        TableReference::Bare { table } => vec![table.to_string()],
+        TableReference::Partial { schema, table } => vec![schema.to_string(), table.to_string()],
+        TableReference::Full {
+            catalog,
+            schema,
+            table,
+        } => vec![catalog.to_string(), schema.to_string(), table.to_string()],
+    }
+}
+
+fn quoted(parts: &[String], requested: &str) -> String {
+    parts
+        .iter()
+        .map(String::as_str)
+        .chain(std::iter::once(requested))
+        .map(|part| format!("`{part}`"))
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
+fn ambiguous_message(qualifier: Option<&str>, requested: &str, scopes: &[Vec<String>]) -> String {
     let reference = match qualifier {
-        Some(scope) => format!("`{scope}`.`{requested}`"),
-        None => format!("`{requested}`"),
+        Some(scope) => quoted(&[scope.to_string()], requested),
+        None => quoted(&[], requested),
     };
-    let mut seen: HashSet<Option<&str>> = HashSet::new();
-    let mut options: Vec<String> = Vec::new();
-    for (scope, _) in candidates {
-        if !seen.insert(scope.as_deref()) {
-            continue;
-        }
-        match scope {
-            Some(own) => options.push(format!("`{own}`.`{requested}`")),
-            None => options.push(format!("`{requested}`")),
-        }
-    }
-    let options = options.join(", ");
+    let options = scopes
+        .iter()
+        .map(|scope| quoted(scope, requested))
+        .collect::<Vec<_>>()
+        .join(", ");
     format!(
-        "[AMBIGUOUS_REFERENCE] Reference {reference} is ambiguous, could be: [{options}]. SQLSTATE: 42702"
+        "[AMBIGUOUS_REFERENCE] Reference {reference} is ambiguous, could be: [{options}]. SQLSTATE: 42704"
     )
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Slot {
-    Projection,
-    AliasReference,
-}
-
-#[derive(Default)]
-struct Level {
-    aliases: Vec<String>,
-    slots: HashMap<*const SqlExpr, Slot>,
-    active: Vec<(*const SqlExpr, Slot)>,
-}
-
-impl Level {
-    fn of(query: &datafusion::sql::sqlparser::ast::Query) -> Self {
-        use datafusion::sql::sqlparser::ast::OrderByKind;
-        let mut level = Self::default();
-        level.collect(&query.body);
-        if let Some(order_by) = query.order_by.as_ref()
-            && let OrderByKind::Expressions(exprs) = &order_by.kind
-        {
-            for order in exprs {
-                level
-                    .slots
-                    .insert(std::ptr::from_ref(&order.expr), Slot::AliasReference);
-            }
-        }
-        level
-    }
-
-    fn collect(&mut self, body: &datafusion::sql::sqlparser::ast::SetExpr) {
-        use datafusion::sql::sqlparser::ast::{GroupByExpr, SelectItem, SetExpr};
-        match body {
-            SetExpr::Select(select) => {
-                for item in &select.projection {
-                    match item {
-                        SelectItem::UnnamedExpr(expr) => {
-                            self.slots
-                                .insert(std::ptr::from_ref(expr), Slot::Projection);
-                        }
-                        SelectItem::ExprWithAlias { expr, alias } => {
-                            self.slots
-                                .insert(std::ptr::from_ref(expr), Slot::Projection);
-                            self.aliases.push(alias.value.clone());
-                        }
-                        _ => {}
-                    }
-                }
-                let mut references: Vec<&SqlExpr> = Vec::new();
-                if let GroupByExpr::Expressions(exprs, _) = &select.group_by {
-                    references.extend(exprs);
-                }
-                references.extend(select.having.as_ref());
-                references.extend(select.qualify.as_ref());
-                references.extend(select.sort_by.iter().map(|order| &order.expr));
-                for expr in references {
-                    self.slots
-                        .insert(std::ptr::from_ref(expr), Slot::AliasReference);
-                }
-            }
-            SetExpr::SetOperation { left, right, .. } => {
-                self.collect(left);
-                self.collect(right);
-            }
-            _ => {}
-        }
-    }
-
-    fn shields(&self, ident: &str) -> bool {
-        matches!(self.active.last(), Some((_, Slot::AliasReference)))
-            && self
-                .aliases
-                .iter()
-                .any(|alias| alias.eq_ignore_ascii_case(ident))
-    }
-}
-
-struct CaseFold<'a> {
-    scopes: HashMap<String, Vec<(Option<String>, String)>>,
-    levels: Vec<Level>,
-    written: &'a WrittenRefs,
-    changed: bool,
-    error: Option<DataFusionError>,
-}
-
-impl<'a> CaseFold<'a> {
-    fn new(valid_fields: &[Column], written: &'a WrittenRefs) -> Self {
-        let mut scopes: HashMap<String, Vec<(Option<String>, String)>> = HashMap::new();
-        for candidate in valid_fields {
-            scopes
-                .entry(candidate.name.to_ascii_lowercase())
-                .or_default()
-                .push((
-                    candidate.relation.as_ref().map(ToString::to_string),
-                    candidate.name.clone(),
-                ));
-        }
-        Self {
-            scopes,
-            levels: Vec::new(),
-            written,
-            changed: false,
-            error: None,
-        }
-    }
-
-    fn candidates(&self, qualifier: Option<&str>, name: &str) -> Vec<(Option<String>, String)> {
-        let Some(entries) = self.scopes.get(&name.to_ascii_lowercase()) else {
-            return Vec::new();
-        };
-        let mut found: Vec<(Option<String>, String)> = Vec::new();
-        for (scope, stored) in entries {
-            match (qualifier, scope) {
-                (None, _) => {}
-                (Some(written), Some(candidate)) => {
-                    if !written.eq_ignore_ascii_case(candidate) {
-                        continue;
-                    }
-                }
-                (Some(_), None) => continue,
-            }
-            if !found.contains(&(scope.clone(), stored.clone())) {
-                found.push((scope.clone(), stored.clone()));
-            }
-        }
-        found
-    }
-
-    fn requested_spelling(&self, qualifier: Option<&str>, name: &str) -> (Option<String>, String) {
-        if let Some(scope) = qualifier {
-            return self
-                .written
-                .qualified
-                .iter()
-                .find(|(written_scope, written_name)| {
-                    written_scope.eq_ignore_ascii_case(scope)
-                        && written_name.eq_ignore_ascii_case(name)
-                })
-                .map(|(written_scope, written_name)| {
-                    (Some(written_scope.clone()), written_name.clone())
-                })
-                .unwrap_or((Some(scope.to_string()), name.to_string()));
-        }
-        let spelling = self
-            .written
-            .projection
-            .iter()
-            .find(|written| written.eq_ignore_ascii_case(name))
-            .cloned()
-            .or_else(|| {
-                self.written
-                    .bare
-                    .iter()
-                    .find(|written| written.eq_ignore_ascii_case(name))
-                    .cloned()
-            })
-            .unwrap_or_else(|| name.to_string());
-        (None, spelling)
-    }
-
-    fn rewrite_ident(&mut self, qualifier: Option<&str>, ident: &mut Ident) {
-        if self.error.is_some()
-            || self
-                .levels
-                .last()
-                .is_some_and(|level| level.shields(ident.value.as_str()))
-        {
-            return;
-        }
-        let candidates = self.candidates(qualifier, ident.value.as_str());
-        if candidates.len() > 1 {
-            let (scope, spelling) = self.requested_spelling(qualifier, ident.value.as_str());
-            self.error = Some(DataFusionError::Plan(ambiguous_message(
-                scope.as_deref(),
-                spelling.as_str(),
-                candidates.as_slice(),
-            )));
-            return;
-        }
-        let Some((_, stored)) = candidates.into_iter().next() else {
-            return;
-        };
-        let current = if ident.quote_style.is_some() {
-            ident.value.clone()
-        } else {
-            ident.value.to_ascii_lowercase()
-        };
-        if stored != current {
-            ident.value = stored;
-            ident.quote_style = Some('`');
-            self.changed = true;
-        }
-    }
-}
-
-impl VisitorMut for CaseFold<'_> {
-    type Break = std::convert::Infallible;
-
-    fn pre_visit_query(
-        &mut self,
-        query: &mut datafusion::sql::sqlparser::ast::Query,
-    ) -> ControlFlow<Self::Break> {
-        self.levels.push(Level::of(query));
-        ControlFlow::Continue(())
-    }
-
-    fn post_visit_query(
-        &mut self,
-        _query: &mut datafusion::sql::sqlparser::ast::Query,
-    ) -> ControlFlow<Self::Break> {
-        self.levels.pop();
-        ControlFlow::Continue(())
-    }
-
-    fn pre_visit_expr(&mut self, expr: &mut SqlExpr) -> ControlFlow<Self::Break> {
-        let pointer = std::ptr::from_ref::<SqlExpr>(expr);
-        if let Some(level) = self.levels.last_mut()
-            && let Some(slot) = level.slots.get(&pointer).copied()
-        {
-            level.active.push((pointer, slot));
-        }
-        ControlFlow::Continue(())
-    }
-
-    fn post_visit_expr(&mut self, expr: &mut SqlExpr) -> ControlFlow<Self::Break> {
-        let pointer = std::ptr::from_ref::<SqlExpr>(expr);
-        if self.error.is_none() {
-            match expr {
-                SqlExpr::Identifier(ident) => {
-                    self.rewrite_ident(None, ident);
-                }
-                SqlExpr::CompoundIdentifier(parts) if parts.len() >= 2 => {
-                    let qualifier = parts[parts.len() - 2].value.clone();
-                    let last = parts.len() - 1;
-                    self.rewrite_ident(Some(qualifier.as_str()), &mut parts[last]);
-                }
-                _ => {}
-            }
-        }
-        if let Some(level) = self.levels.last_mut()
-            && level
-                .active
-                .last()
-                .is_some_and(|(active, _)| *active == pointer)
-        {
-            level.active.pop();
-        }
-        ControlFlow::Continue(())
-    }
-
-    fn post_visit_statement(&mut self, statement: &mut Statement) -> ControlFlow<Self::Break> {
-        if self.error.is_some() {
-            return ControlFlow::Continue(());
-        }
-        match statement {
-            Statement::Insert(insert) => {
-                for column in &mut insert.columns {
-                    rewrite_object_name(column, self);
-                }
-            }
-            Statement::Update(update) => {
-                for assignment in &mut update.assignments {
-                    if let AssignmentTarget::ColumnName(name) = &mut assignment.target {
-                        rewrite_object_name(name, self);
-                    }
-                }
-            }
-            _ => {}
-        }
-        ControlFlow::Continue(())
-    }
 }
 
 fn part_value(part: &ObjectNamePart) -> Option<&str> {
@@ -670,7 +475,7 @@ impl FragmentRepair<'_> {
         if matches.len() > 1 {
             let candidates = matches
                 .iter()
-                .map(|(scope, field)| (Some(scope.clone()), field.clone()))
+                .map(|(scope, _)| vec![scope.clone()])
                 .collect::<Vec<_>>();
             self.error = Some(DataFusionError::Plan(ambiguous_message(
                 qualifier,
@@ -763,91 +568,6 @@ impl VisitorMut for FragmentRepair<'_> {
     }
 }
 
-fn rewrite_object_name(
-    name: &mut datafusion::sql::sqlparser::ast::ObjectName,
-    fold: &mut CaseFold,
-) {
-    if name.0.is_empty() {
-        return;
-    }
-    let last = name.0.len() - 1;
-    let qualifier = if last > 0 {
-        part_value(&name.0[last - 1]).map(str::to_string)
-    } else {
-        None
-    };
-    let ObjectNamePart::Identifier(ident) = &mut name.0[last] else {
-        return;
-    };
-    fold.rewrite_ident(qualifier.as_deref(), ident);
-}
-
-fn rewrite_join_usings(query: &mut datafusion::sql::sqlparser::ast::Query, fold: &mut CaseFold) {
-    use datafusion::sql::sqlparser::ast::{JoinConstraint, JoinOperator, SetExpr, TableFactor};
-    fn tables(factor: &mut TableFactor, fold: &mut CaseFold) {
-        if let TableFactor::Derived { subquery, .. } = factor {
-            rewrite_join_usings(subquery, fold);
-        }
-    }
-    fn constraint(operator: &mut JoinOperator) -> Option<&mut JoinConstraint> {
-        match operator {
-            JoinOperator::Join(constraint)
-            | JoinOperator::Inner(constraint)
-            | JoinOperator::Left(constraint)
-            | JoinOperator::LeftOuter(constraint)
-            | JoinOperator::Right(constraint)
-            | JoinOperator::RightOuter(constraint)
-            | JoinOperator::FullOuter(constraint)
-            | JoinOperator::CrossJoin(constraint)
-            | JoinOperator::Semi(constraint)
-            | JoinOperator::LeftSemi(constraint)
-            | JoinOperator::RightSemi(constraint)
-            | JoinOperator::Anti(constraint)
-            | JoinOperator::LeftAnti(constraint)
-            | JoinOperator::RightAnti(constraint) => Some(constraint),
-            _ => None,
-        }
-    }
-    fn walk_body(body: &mut SetExpr, fold: &mut CaseFold) {
-        match body {
-            SetExpr::Select(select) => {
-                for from in &mut select.from {
-                    tables(&mut from.relation, fold);
-                    for join in &mut from.joins {
-                        tables(&mut join.relation, fold);
-                        if let Some(JoinConstraint::Using(columns)) =
-                            constraint(&mut join.join_operator)
-                        {
-                            for column in columns {
-                                if let [part] = column.0.as_mut_slice()
-                                    && let ObjectNamePart::Identifier(ident) = part
-                                {
-                                    fold.rewrite_ident(None, ident);
-                                }
-                                if fold.error.is_some() {
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            SetExpr::Query(query) => rewrite_join_usings(query, fold),
-            SetExpr::SetOperation { left, right, .. } => {
-                walk_body(left, fold);
-                walk_body(right, fold);
-            }
-            _ => {}
-        }
-    }
-    walk_body(&mut query.body, fold);
-    if let Some(with) = query.with.as_mut() {
-        for table in &mut with.cte_tables {
-            rewrite_join_usings(&mut table.query, fold);
-        }
-    }
-}
-
 async fn spark_ambiguous_for_unresolved(
     state: &SessionState,
     statement: &Statement,
@@ -914,10 +634,14 @@ async fn spark_ambiguous_for_unresolved(
                 .map(|(_, written_name)| written_name.clone())
         })
         .unwrap_or(requested);
+    let scopes = options
+        .into_iter()
+        .map(|(scope, _)| scope.into_iter().collect::<Vec<_>>())
+        .collect::<Vec<_>>();
     Some(DataFusionError::Plan(ambiguous_message(
         qualifier.as_deref(),
         spelling.as_str(),
-        options.as_slice(),
+        &scopes,
     )))
 }
 
@@ -957,21 +681,7 @@ fn direct_tables(statement: &Statement) -> Vec<(String, TableReference)> {
     collector.tables
 }
 
-fn fold_statement(
-    statement: &mut Statement,
-    valid_fields: &[Column],
-    written: &WrittenRefs,
-) -> Result<bool> {
-    let mut fold = CaseFold::new(valid_fields, written);
-    let _ = statement.visit(&mut fold);
-    if let Statement::Query(query) = statement {
-        rewrite_join_usings(query, &mut fold);
-    }
-    if let Some(error) = fold.error {
-        return Err(error);
-    }
-    Ok(fold.changed)
-}
+mod fold;
 
 #[cfg(test)]
 mod tests;

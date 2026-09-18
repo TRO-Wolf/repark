@@ -578,7 +578,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   each query level records its projection expressions (always foldable) and its alias-reference
   slots (GROUP BY, HAVING, QUALIFY, SORT BY, ORDER BY); only an ident inside an alias-reference
   slot that names a SELECT alias (ASCII case-insensitive, Spark's alias resolution) is left for
-  DataFusion to bind to the alias. pins: ice-mixed-case-1/C-001…C-010, C-013
+  DataFusion to bind to the alias. Round 21b step 3 (V-02): after a `FieldNotFound` the fold
+  runs against every referenced relation's stored fields — catalog schemas resolved once per
+  statement (`catalog_fields`) plus each miss's `valid_fields` for CTEs and derived tables —
+  scope by scope (innermost query first, then outward for correlated references), and replans;
+  the loop ends when a miss repeats or a fold changes nothing. An outer spelling is never
+  rewritten into an inner scope. The ambiguity sentence carries one option per matching field
+  in the requested spelling, qualified by the relation's written parts, `SQLSTATE: 42704`
+  (Q-21b-1, Q-21b-2). The fold itself lives in `column_resolution/fold.rs`.
+  pins: ice-mixed-case-1/C-001…C-010, C-013, C-014, C-016
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias
   binding). Split from `column_resolution.rs` under the file-size gate.
