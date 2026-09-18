@@ -3049,12 +3049,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`TOO_MANY_DATA_COLUMNS`, case-insensitive `AMBIGUOUS_COLUMN_NAME`,
   `EXTRA_COLUMNS`), the positional control, the `BY NAME VALUES` text, the
   column-list `PARSE_SYNTAX_ERROR`, the eight-cell `USING parquet` matrix,
-  whole-table `INSERT OVERWRITE … BY NAME`, and the native-door steer; five
-  pins stay `xfail(strict)` — four RTAS snapshot-operation pins on fork ask
-  F-RTAS-OPS-1 and one `writeTo.append`-by-name pin
-  (`test_dataframe_writeto_appends_by_name`) on F-DML-FIELD-ID-1. The live
+  whole-table `INSERT OVERWRITE … BY NAME`, and the native-door steer; one
+  pin stays `xfail(strict)` — the `writeTo.append`-by-name pin
+  (`test_dataframe_writeto_appends_by_name`) on F-DML-FIELD-ID-1 (ruling Q-21c-1:
+  it never belonged to the RTAS row). The live
   replay cell (`test_live_oracle_fixture_reproduces`) skips without a
   `/tmp/sparkenv` interpreter.
+  **ICE-RTAS-OPS-2 (2026-09-18):** the four RTAS snapshot-operation pins
+  (`test_rtas_replace_records_overwrite`, `test_rtas_new_table_records_overwrite`,
+  `test_rtas_empty_new_records_delete`, `test_rtas_empty_twice_records_two_deletes`)
+  are green un-xfailed via the fork's `with_replace_write` opt-in (RP-23 pin
+  `4151b488`), with new controls `test_plain_ctas_records_append`,
+  `test_coldef_replace_commits_no_snapshot` (the column-def no-snapshot Spark
+  answer measured 2026-09-17) and `test_rtas_replace_summary_keys`.
+  pins: ice-rtas-ops-2/C-005, C-006, C-007, C-008, C-009, C-010
   **Round 2 (2026-09-17):** the `partition_by_name` section (static/dynamic
   overwrite, no-clause replace-all, static append, the 42713 refusal, empty
   overwrite wipe, empty static-partition drop), the `not_null_by_name`

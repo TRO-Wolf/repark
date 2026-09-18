@@ -194,6 +194,12 @@ pins: rp-4-fork-repin/C-005, C-006
   run first on the un-relaxed schema and still fire; only the derived table schema
   relaxes, never the written batches.
   pins: cutover-schema-1/C-002
+  **ICE-RTAS-OPS-2 (2026-09-18):** both staged branches set
+  `StagedTableTransaction::with_replace_write(ctas.or_replace)` — the
+  `begin_replace` arm and the `begin_create` arm — so an RTAS commits `overwrite`
+  (or `delete` when the SELECT is empty) while plain CTAS keeps `append`. The
+  service-managed create-first arm never reaches the staged type and is unchanged.
+  pins: ice-rtas-ops-2/C-001, C-002, C-004
 - `spark_ast.rs` — **SE-1 D1:** after the SEC-02 plan guard,
   calls the shared belt's `repark_core::PreExecute::guard` (which owns
   `refuse_iceberg_create_of_tightened_ddl`) so `CREATE VIEW cat.ns.v AS …` and

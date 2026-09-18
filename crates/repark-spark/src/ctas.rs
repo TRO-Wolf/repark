@@ -221,6 +221,7 @@ pub(crate) async fn execute_ctas(
         StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)
             .await
             .map_err(iceberg_err)?
+            .with_replace_write(ctas.or_replace)
     } else {
         // Replace: stage against the existing table (its own location + FileIO).
         let existing = catalog
@@ -243,6 +244,7 @@ pub(crate) async fn execute_ctas(
         StagedTableTransaction::begin_replace(&existing, creation)
             .await
             .map_err(iceberg_err)?
+            .with_replace_write(ctas.or_replace)
     };
 
     // STREAM the SELECT into the staged table (WG-2 bounded memory).

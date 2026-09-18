@@ -271,6 +271,16 @@ def _snapshot_ops(session: Any, table: str) -> list[str]:
     ]
 
 
+def _snapshot_summaries(session: Any, table: str) -> list[dict[str, str]]:
+    return [
+        dict(pairs)
+        for pairs in session.sql(f"SELECT summary FROM {table}.snapshots ORDER BY committed_at")
+        .to_arrow()
+        .column("summary")
+        .to_pylist()
+    ]
+
+
 def test_by_name_partitioned_table_reorders(spark: Any) -> None:
     """BY NAME resolves before the partition fanout. pins: ice-rtas-byname-1/C-001"""
     _seed_shapes(spark)
@@ -489,7 +499,6 @@ def test_case_sensitive_exact_ok(spark: Any) -> None:
     ]
 
 
-@pytest.mark.xfail(strict=True, reason="BLOCKED-ON-FORK F-RTAS-OPS-1")
 def test_rtas_replace_records_overwrite(spark: Any) -> None:
     """CTAS then RTAS answers [append, overwrite]. pins: ice-rtas-byname-1/C-005"""
     _seed_rtas(spark)
@@ -500,7 +509,6 @@ def test_rtas_replace_records_overwrite(spark: Any) -> None:
     assert _snapshot_ops(spark, "sc.ns.rt") == ["append", "overwrite"]
 
 
-@pytest.mark.xfail(strict=True, reason="BLOCKED-ON-FORK F-RTAS-OPS-1")
 def test_rtas_new_table_records_overwrite(spark: Any) -> None:
     """RTAS creating the table answers [overwrite]. pins: ice-rtas-byname-1/C-005"""
     _seed_rtas(spark)
@@ -510,7 +518,6 @@ def test_rtas_new_table_records_overwrite(spark: Any) -> None:
     assert _snapshot_ops(spark, "sc.ns.rt2") == ["overwrite"]
 
 
-@pytest.mark.xfail(strict=True, reason="BLOCKED-ON-FORK F-RTAS-OPS-1")
 def test_rtas_empty_new_records_delete(spark: Any) -> None:
     """RTAS of an empty SELECT answers [delete]. pins: ice-rtas-byname-1/C-005"""
     _seed_rtas(spark)
@@ -520,7 +527,6 @@ def test_rtas_empty_new_records_delete(spark: Any) -> None:
     assert _snapshot_ops(spark, "sc.ns.rt3") == ["delete"]
 
 
-@pytest.mark.xfail(strict=True, reason="BLOCKED-ON-FORK F-RTAS-OPS-1")
 def test_rtas_empty_twice_records_two_deletes(spark: Any) -> None:
     """RTAS of an empty SELECT twice answers [delete, delete]. pins: ice-rtas-byname-1/C-005"""
     _seed_rtas(spark)
@@ -531,6 +537,38 @@ def test_rtas_empty_twice_records_two_deletes(spark: Any) -> None:
         "CREATE OR REPLACE TABLE sc.ns.rt3 USING iceberg AS SELECT id FROM sc.ns.rsrc WHERE id < 0"
     ).collect()
     assert _snapshot_ops(spark, "sc.ns.rt3") == ["delete", "delete"]
+
+
+def test_plain_ctas_records_append(spark: Any) -> None:
+    """Plain CTAS without OR REPLACE still records [append]. pins: ice-rtas-ops-2/C-006"""
+    _seed_rtas(spark)
+    spark.sql("CREATE TABLE sc.ns.plain USING iceberg AS SELECT id FROM sc.ns.rsrc").collect()
+    assert _snapshot_ops(spark, "sc.ns.plain") == ["append"]
+
+
+def test_rtas_replace_summary_keys(spark: Any) -> None:
+    """The overwrite snapshot carries added/total keys and no deleted-* keys. pins: ice-rtas-ops-2/C-008"""
+    _seed_rtas(spark)
+    spark.sql("CREATE TABLE sc.ns.rt USING iceberg AS SELECT id FROM sc.ns.rsrc").collect()
+    spark.sql(
+        "CREATE OR REPLACE TABLE sc.ns.rt USING iceberg AS SELECT id FROM sc.ns.rsrc WHERE id < 3"
+    ).collect()
+    summaries = _snapshot_summaries(spark, "sc.ns.rt")
+    assert len(summaries) == 2
+    assert _snapshot_ops(spark, "sc.ns.rt") == ["append", "overwrite"]
+    for key in ("added-data-files", "added-records", "total-records", "total-data-files"):
+        assert key in summaries[1], key
+    assert [key for key in summaries[1] if key.startswith("deleted-")] == []
+
+
+def test_coldef_replace_commits_no_snapshot(spark: Any) -> None:
+    """Column-def OR REPLACE commits no snapshot and reads zero rows, the live Spark 4.1.2 answer measured 2026-09-17. pins: ice-rtas-ops-2/C-007"""
+    spark.sql("CREATE TABLE sc.ns.cd (id BIGINT) USING iceberg")
+    spark.sql("INSERT INTO sc.ns.cd VALUES (1), (2), (3)")
+    assert _snapshot_ops(spark, "sc.ns.cd") == ["append"]
+    spark.sql("CREATE OR REPLACE TABLE sc.ns.cd (id BIGINT) USING iceberg").collect()
+    assert _snapshot_ops(spark, "sc.ns.cd") == ["append"]
+    assert spark.sql("SELECT id FROM sc.ns.cd").to_arrow().num_rows == 0
 
 
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
