@@ -14,6 +14,7 @@ use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::spec::{Transform, UnboundPartitionSpec};
 use iceberg::{NamespaceIdent, TableIdent};
+use repark_iceberg::write::nested_type_sql::rewrite_nested_type_tokens;
 
 use repark_core::CatalogRegistry;
 
@@ -170,6 +171,9 @@ pub(crate) fn parse_single_normalized(
     if is_create_table(&tokens) {
         tokens = strip_create_table_using(&tokens);
         (tokens, partitioning) = extract_partitioned_by(&tokens)?;
+        tokens = rewrite_nested_type_tokens(&tokens, false).map_err(|message| {
+            DataFusionError::SQL(Box::new(ParserError::ParserError(message)), None)
+        })?;
     }
     tokens = rewrite_namespace_to_schema(&tokens);
     tokens = alter::rewrite_unset_tblproperties(&tokens);

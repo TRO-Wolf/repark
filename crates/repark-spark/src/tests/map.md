@@ -498,6 +498,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `forkwrite_list_insert_reads_back` waits on the hand-back's fork finding: an `INSERT` into a
   list column fails in the fork writer.
   pins: ice-nested-evo-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012
+  **Round 2 (2026-09-18, run 22b):**
+  `nested_create_not_null_child_is_required_with_level_order_ids` (`STRUCT<a: INT NOT NULL>`
+  and a map-value struct child are required; ids are Java's level order; a hand-written
+  struct-field `OPTIONS` refuses).
+  pins: ice-nested-evo-1/C-014, C-016
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).

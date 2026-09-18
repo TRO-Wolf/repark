@@ -9,6 +9,7 @@ use datafusion::sql::sqlparser::ast::{
     ArrayElemTypeDef, ColumnDef, ColumnOption, CreateTable, CreateTableOptions,
     DataType as SqlDataType, ExactNumberInfo, SqlOption, StructField, TimezoneInfo,
 };
+use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::spec::{
     ListType, MapType, NestedField, PrimitiveType, Schema, StructType, Type, UnboundPartitionSpec,
 };
@@ -17,6 +18,7 @@ use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 
 use repark_core::{CatalogRegistry, LocationPolicy};
 use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
+use repark_iceberg::write::nested_type_sql::struct_field_required;
 
 use crate::{
     CreatePlan, PartitionFieldSpec, PartitionedByElement, build_partition_spec,
@@ -324,11 +326,15 @@ fn struct_type_to_iceberg(
             .ok_or_else(|| DataFusionError::Plan(format!("STRUCT field `{field}` needs a name")))?;
         let field_id = alloc_field_id(next_id)?;
         let field_type = sql_type_to_iceberg_nested(&field.field_type, timestamp_type, next_id)?;
-        children.push(Arc::new(NestedField::optional(
-            field_id,
-            name.value.clone(),
-            field_type,
-        )));
+        let required = struct_field_required(field).map_err(|message| {
+            DataFusionError::SQL(Box::new(ParserError::ParserError(message)), None)
+        })?;
+        let child = if required {
+            NestedField::required(field_id, name.value.clone(), field_type)
+        } else {
+            NestedField::optional(field_id, name.value.clone(), field_type)
+        };
+        children.push(Arc::new(child));
     }
     Ok(Type::Struct(StructType::new(children)))
 }

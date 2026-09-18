@@ -400,6 +400,14 @@ pins: rp-4-fork-repin/C-005, C-006
   with `SparkSqlDialect` (the Databricks dialect has no angle-bracket map type); every other
   statement keeps its dialect.
   pins: ice-nested-evo-1/C-006
+  **Round 2 (2026-09-18, run 22b):** `parse_single_normalized` runs
+  `repark_iceberg::write::nested_type_sql::rewrite_nested_type_tokens` on every
+  `CREATE TABLE`, and `struct_type_to_iceberg` makes a `STRUCT<a: T NOT NULL>` child an Iceberg
+  required child, as Spark's metadata records. The field ids this module numbers are
+  placeholders: the fork's `TableMetadataBuilder::new` reassigns them level-order (Java's
+  `AssignFreshIds`), which is Spark's numbering, pinned by
+  `test_ice_nested_evo_1_schema.py::test_nested_ddl_metadata_matches_spark[create_field_ids-*]`.
+  pins: ice-nested-evo-1/C-014, C-016
 - `format_version.rs` — **V3-10:** the Spark-door adapter for `SET TBLPROPERTIES
   ('format-version' = …)`. It lifts the reserved key out of the property map before the
   transaction (so it is never persisted), resolves it against the table's current version and the

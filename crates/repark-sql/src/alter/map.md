@@ -16,6 +16,9 @@ which are pure functions, plus the `ALTER COLUMN … FIRST|AFTER` move recognize
   on a dotted path, `GenericDialect`). An all-top-level statement returns `None` and keeps
   the stock path. Pinned end to end in `../../tests/alter_nested_column.rs`.
   pins: ice-nested-evo-1/C-007, C-010, C-011, C-012
+  **Round 2 (2026-09-18, run 22b):** the statement is tokenized and passed through
+  `rewrite_nested_type_tokens` (`MAP<K, V>` → `MAP(K, V)`) before the parser.
+  pins: ice-nested-evo-1/C-017
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../alter.rs`.
   **V3-10:** `format_version` is no longer a reserved refusal here — the recognizer folds it to
   the Iceberg `format-version` key for the upgrade path (a bare number or a string literal), and

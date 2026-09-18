@@ -245,6 +245,40 @@ async fn nested_ddl_refuses_malformed_paths_spark_shaped() {
     .await;
 }
 
+#[tokio::test]
+async fn nested_create_not_null_child_is_required_with_level_order_ids() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.nested (id INT, s STRUCT<a: INT NOT NULL, b: STRUCT<c: INT>>, \
+         m MAP<STRING, STRUCT<q: INT NOT NULL>>) USING iceberg",
+    )
+    .await;
+    assert_eq!(
+        children_of(&catalogs, "s").await,
+        vec![(4, "a".to_string(), true), (5, "b".to_string(), false)]
+    );
+    assert_eq!(
+        children_of(&catalogs, "m").await,
+        vec![(9, "q".to_string(), true)]
+    );
+    let refused = execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.opt (s STRUCT<a: INT OPTIONS(repark_not_null = TRUE)>) USING iceberg",
+    )
+    .await
+    .expect_err("a struct-field OPTIONS clause is not Spark syntax");
+    assert!(
+        refused
+            .to_string()
+            .contains("[PARSE_SYNTAX_ERROR] Syntax error at or near 'OPTIONS'. SQLSTATE: 42601"),
+        "{refused}"
+    );
+}
+
 #[test]
 fn nested_parse_leaves_top_level_forms_to_the_existing_path() {
     for sql in [

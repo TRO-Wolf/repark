@@ -35,9 +35,13 @@ pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
     if let Some(ddl) = alter::try_parse_nested_column_ddl(sql) {
         return alter::execute_nested_column_ddl(&cx, ddl?).await;
     }
-    let sql = match alter::rewrite_set_properties(sql) {
+    let sql = match crate::create_table::rewrite_nested_create_types(sql)? {
         Some(rewritten) => Cow::Owned(rewritten),
         None => Cow::Borrowed(sql),
+    };
+    let sql = match alter::rewrite_set_properties(&sql) {
+        Some(rewritten) => Cow::Owned(rewritten),
+        None => sql,
     };
     // Release every relation registered by the rewrite after planning.
     let mut pinned = time_travel::PinnedViews::default();

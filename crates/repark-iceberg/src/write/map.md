@@ -538,6 +538,15 @@ repark-core's error map.
   exact file-size ceiling. 2 in-module tests (children evolve by field id; a required child
   without a default refuses and the schema id stays).
   pins: ice-nested-evo-1/C-007, C-010, C-011, C-012
+- `nested_type_sql.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the one token
+  rewrite both doors run on a nested column type: a struct child's `NOT NULL` becomes the
+  struct-field option `OPTIONS(repark_not_null=TRUE)` (the only struct-field suffix
+  sqlparser models), which `struct_field_required` reads back as an Iceberg required child;
+  a hand-written struct-field `OPTIONS` refuses Spark's `[PARSE_SYNTAX_ERROR] … near
+  'OPTIONS'. SQLSTATE: 42601`; with `map_parens` (the ANSI door, `GenericDialect`) `MAP<K, V>`
+  becomes `MAP(K, V)`, the same AST. A `>>` closing two brackets splits. Comparisons and
+  `ARRAY<… NOT NULL>` are left alone. 4 in-module tests.
+  pins: ice-nested-evo-1/C-016, C-017
 - `partition_spec.rs` — the partition-spec evolution family, split out of `alter.rs`
   behaviour-identical (the size ratchet): one `PartitionSpecChange` transaction through
   `apply_partition_spec_changes`. `AddField` carries a source column, a transform

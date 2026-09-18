@@ -4,13 +4,14 @@ use datafusion::sql::sqlparser::ast::{DataType, ObjectName};
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
-use datafusion::sql::sqlparser::tokenizer::Token;
+use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use repark_core::EngineContext;
 use repark_iceberg::write::alter::{ColumnPosition, starts_with_alter};
 use repark_iceberg::write::nested_column::{ColumnPathChange, apply_column_path_changes};
+use repark_iceberg::write::nested_type_sql::rewrite_nested_type_tokens;
 
 use super::{FORM, invalidate};
-use crate::create_table::{resolve_target, sql_type_to_iceberg};
+use crate::create_table::{nested_type_parse_error, resolve_target, sql_type_to_iceberg};
 use crate::schema_ddl::iceberg_err;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -48,7 +49,12 @@ pub(crate) fn try_parse_nested_column_ddl(sql: &str) -> Option<Result<NestedColu
         return None;
     }
     let dialect = GenericDialect {};
-    let mut parser = Parser::new(&dialect).try_with_sql(sql).ok()?;
+    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let tokens = match rewrite_nested_type_tokens(&tokens, true) {
+        Ok(tokens) => tokens,
+        Err(message) => return Some(Err(nested_type_parse_error(message))),
+    };
+    let mut parser = Parser::new(&dialect).with_tokens(tokens);
     if !parser.parse_keywords(&[Keyword::ALTER, Keyword::TABLE]) {
         return None;
     }
