@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import json
 import os
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -63,12 +66,27 @@ def _register_fixture_table(
     return f"{catalog}.{NAMESPACE}.{table}"
 
 
+_V3DV_MODULE_LOCK = Path("/tmp/repark-torture-v3dv-module.lock")
+
+
+@contextlib.contextmanager
+def _hold_canonical_table_lock() -> Iterator[None]:
+    """Hold an exclusive flock over the canonical copy for one module run."""
+    with _V3DV_MODULE_LOCK.open("w", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
 @pytest.fixture(scope="module")
 def v3dv_table(spark: ReparkSession, tmp_path_factory: pytest.TempPathFactory) -> str:
     """The committed fixture materialized at its baked-in location and registered."""
-    metadata_file = materialize_table(FIXTURE_TABLE_DIR, CANONICAL_TABLE_DIR)
-    warehouse = tmp_path_factory.mktemp("torture-v3dv-warehouse")
-    return _register_fixture_table(spark, REPARK_CATALOG, warehouse, metadata_file, TABLE)
+    with _hold_canonical_table_lock():
+        metadata_file = materialize_table(FIXTURE_TABLE_DIR, CANONICAL_TABLE_DIR)
+        warehouse = tmp_path_factory.mktemp("torture-v3dv-warehouse")
+        yield _register_fixture_table(spark, REPARK_CATALOG, warehouse, metadata_file, TABLE)
 
 
 def _assert_true_rows(frame: Any, truth: dict[str, Any]) -> None:

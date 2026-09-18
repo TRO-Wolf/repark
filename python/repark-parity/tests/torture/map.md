@@ -84,6 +84,12 @@ The suite needs the native module (the doors are repark's), so run it through
   is the live-only cell (skips unless `REPARK_PARITY_LIVE=1`) that generates a fresh
   table in a pytest temp dir and reads it back on both doors.
   pins: torture-1/C-024, C-025, C-026, C-027, C-029
+  **TEST-HYGIENE-1 (2026-09-18):** the Avro manifest lists and manifests carry absolute
+  paths in deflate blocks, so the table cannot relocate to a temp dir without editing
+  Avro bytes; the module-scoped fixture instead holds an exclusive `fcntl.flock` beside
+  the canonical path while the copy is materialized AND read, so a second process waits
+  instead of clobbering.
+  pins: test-hygiene-1/C-002.
 - `test_generate_is_deterministic.py` — byte-identical same-seed CLI runs per family,
   different-seed bytes, the unknown-family and bad-rows refusals, the repository-internal
   output refusal, and the manifest reuse rule (matching rows+seed reuses, a mismatch
