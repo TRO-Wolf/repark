@@ -2,7 +2,7 @@
 
 ## Purpose
 
-File-backed tests for `../alter.rs` (`ALTER TABLE`).
+File-backed tests for `../alter.rs` (`ALTER TABLE`), and its nested-path child module.
 
 The schema-evolution half needs a real Iceberg catalog, so it is pinned end to end in
 `../tests.rs`; what lives here is the `SET PROPERTIES` recognizer and its curated vocabulary,
@@ -11,6 +11,16 @@ which are pure functions, plus the `ALTER COLUMN … FIRST|AFTER` move recognize
 
 ## Contents
 
+- `nested.rs` — **ICE-NESTED-EVO-1 (2026-09-17):** the nested-path `ALTER TABLE` recognizer
+  and executor declared in `../alter.rs` (`ADD COLUMN[S]`, `RENAME COLUMN`, `DROP COLUMN[S]`
+  on a dotted path, `GenericDialect`). An all-top-level statement returns `None` and keeps
+  the stock path. Pinned end to end in `../../tests/alter_nested_column.rs`.
+  pins: ice-nested-evo-1/C-007, C-010, C-011, C-012
+  **Round 2 (2026-09-18, run 22b):** the statement is tokenized and passed through
+  `rewrite_nested_type_tokens` (`MAP<K, V>` → `MAP(K, V)`) before the parser, and
+  `nested_add_refusal` answers Spark's `FIELD_ALREADY_EXISTS` / `UNRESOLVED_COLUMN` before the
+  commit. Every recorded cell is replayed in `../../tests/ansi_nested_ddl_oracle.rs`.
+  pins: ice-nested-evo-1/C-017, C-019
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../alter.rs`.
   **V3-10:** `format_version` is no longer a reserved refusal here — the recognizer folds it to
   the Iceberg `format-version` key for the upgrade path (a bare number or a string literal), and

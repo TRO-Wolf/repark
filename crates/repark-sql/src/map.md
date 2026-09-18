@@ -164,6 +164,25 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   refuse Spark-shaped, one loaded table per move). Curated vocabulary; `partitioning` is the
   pre-designated future spelling and refuses citing Q3. Tests: [alter/map.md](alter/map.md).
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-006, C-007
+  **ICE-NESTED-EVO-1 (2026-09-17):** `alter/nested.rs` is the ANSI door's nested-path pre-parse
+  (`try_parse_nested_column_ddl` / `execute_nested_column_ddl`, `GenericDialect`, wired in
+  `router.rs` after the move): `ADD COLUMN s.c T`, `RENAME COLUMN s.a TO a2`, `DROP COLUMN s.b`,
+  claimed only when a path has a dot, committed through
+  `repark_iceberg::write::nested_column::apply_column_path_changes`. Child types resolve
+  through the door's own `sql_type_to_iceberg`.
+  pins: ice-nested-evo-1/C-007, C-010, C-011, C-012
+  **Round 2 (2026-09-18, run 22b):** `router.rs` runs `create_table::rewrite_nested_create_types`
+  on a `CREATE TABLE` that spells `STRUCT<` or `MAP<` (`MAP<K, V>` → `MAP(K, V)`, a struct
+  child's `NOT NULL` → the required-child option) before the stock parser, and
+  `alter/nested.rs` parses the same rewritten tokens, so `MAP<…>` columns and child types and
+  `STRUCT<a: T NOT NULL>` answer Spark's metadata on this door. `create_table.rs`'s
+  `sql_type_to_iceberg` maps a type holding a `MAP` or a struct-field option structurally
+  (`create_table/nested_type.rs`) and every other type through the unchanged `CAST` path; the
+  column-def CREATE hands that Iceberg type to Arrow with `type_to_arrow_type`. The v3 CREATE
+  opt-in now also reads the typed `ReparkSqlConfig` (as `alter.rs` does): DataFusion 54
+  lists an extension's entries without its `repark.sql.` prefix, so the key scan alone never
+  saw a Spark-extended session's opt-in and `WITH (format_version = '3')` refused there.
+  pins: ice-nested-evo-1/C-016, C-017
 - `merge.rs` — `MERGE INTO` → `repark_iceberg::write::merge::MergeSpec`.
   ANSI MERGE keeps `commit_branch: None` (dotted write-to-branch is Spark-door only, RP-5).
   Execution is the shared RePark-owned executor, never the fork `TableProvider`. No star forms

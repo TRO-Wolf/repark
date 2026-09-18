@@ -595,5 +595,9 @@ fn is_default_keyword(value: &Expr) -> bool {
         && ident.value.eq_ignore_ascii_case("DEFAULT"))
 }
 
+mod nested;
+
+pub(crate) use nested::{execute_nested_column_ddl, try_parse_nested_column_ddl};
+
 #[cfg(test)]
 mod tests;

@@ -387,6 +387,73 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the fixture directory before their DML steps, and writes `truth.json` (one answer per
   line, `catalog_sha256`). `run_case_steps` / `run_overwrite_partitions_twin` are reused by
   the live cell so the live and recorded answers come from one code path.
+- [test_ice_nested_evo_1.py](test_ice_nested_evo_1.py) — **ICE-NESTED-EVO-1 (2026-09-17):**
+  a Spark table whose struct, list element struct or map value struct gained a child reads as
+  Spark 4.1.2 does, and nested DDL answers Spark (rating row V2-10d). Expected answers come
+  from the recorded `fixtures/torture/data/ice_nested_evo_1/oracle.json`.
+  `test_adopted_spark_table_reads_match_spark` materializes the four committed Spark-written
+  tables at their baked root under a directory lock, `register_table`s them and compares the
+  SQL door and the DataFrame door (`table().select/filter`) on the `to_arrow` path (values
+  and Spark simple-string types). The DDL cells replay Spark's own statements per format
+  version (v2, v3) on a RePark catalog in two modes. `test_nested_ddl_schema_matches_spark`
+  skips every `INSERT`: `CREATE TABLE` with struct, array-of-struct and map-of-struct columns,
+  `ADD COLUMN s.b` / `arrs.element.y` / `m.value.q` / `s.c`, `RENAME COLUMN s.a TO a2`,
+  `DROP COLUMN s.b` — each read answers Spark's column names and types over an empty table on
+  both doors, and each `DESCRIBE` answers Spark's `data_type`. `test_nested_ddl_rows_match_spark`
+  keeps the inserts and compares Spark's rows on both doors. Its two
+  `forkwrite-…list_element_child_add_read` ids are strict-xfail: an `INSERT` into a list
+  column fails in the fork writer (hand-back fork finding), so a fork fix XPASSes them loudly. `test_required_nested_child_refuses_like_spark` pins the
+  `ADD COLUMN s.r INT NOT NULL` refusal (the `Incompatible change: cannot add required column`
+  core, no new metadata file, schema unchanged); the strict-xfail
+  `test_required_nested_child_message_matches_spark` holds Spark's whole first line.
+  Test ids with `fork292` read a data file that lacks a child the schema has: they need
+  fork PR #292 (F-NESTED-EVO-1), in the workspace pin since RP-25 — green with no override
+  (measured 2026-09-18, run 22b). The leaf read runs
+  aliased (`s.a AS a`) and the DataFrame twin spells `getField(...).alias(...)`: the unaliased
+  name (`<table>.s[a]`, strict-xfail `test_unaliased_nested_projection_names_like_spark`) is
+  EX-COL-2 and the dotted `col("s.a")` is COL-DOTTED-FIELD-1, both BACKLOG outside the unit.
+  pins: ice-nested-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  pins: ice-nested-evo-1/C-010, C-011, C-012, C-013
+  **Round 3 (2026-09-18, run 22b, V-002):** the two CTAS cells (`… AS SELECT * FROM src WHERE
+  map < 5 AND map > 0`, `… WHERE struct < 5 AND struct IS NOT NULL`) run in both modes; a
+  `SELECT *` read also runs on the DataFrame door (`table(...)`). The `map` cells answer Spark's
+  column, type and row. The `struct` cells are strict-xfail on IDENT-STRUCT-KW-1: sqlparser
+  reads an unquoted column named `struct` in any expression as a STRUCT literal, so the query
+  refuses `ParseException` as a plain `SELECT struct FROM t` does, with or without this unit.
+  pins: ice-nested-evo-1/C-022
+- `_record_ice_nested_evo_1.py` — the **record driver** for ICE-NESTED-EVO-1 (NOT a `test_`
+  module; never collected). `build_cells()` is the cell catalog; `main()` runs every cell on
+  one short-lived local Spark JVM with a Hadoop catalog at the baked root
+  `/tmp/repark-ice-nested-evo-1`, copies the four adoption tables into
+  `fixtures/torture/data/ice_nested_evo_1/` and writes `oracle.json`. Re-record:
+  `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the
+  path (`REPARK_SPARK_IVY` points `spark.jars.ivy` at a warm Ivy cache).
+  **Round 2 (2026-09-18, run 22b):** `build_schema_cells()` adds the metadata cells — nested
+  CREATE field ids, a `NOT NULL` struct child, dotted (backtick) and double-quoted names,
+  `FIRST` / `AFTER a` / `AFTER s.a` / `COMMENT` inside a struct, map / struct / array child
+  types, a duplicate child and an unknown parent — each recording the table's current metadata
+  schema (`version-hint.text` → `vN.metadata.json`), Spark's `SELECT *` schema and any refusal
+  (first non-empty message line); `record_dataframe_create` records the two CREATE schemas
+  through `writeTo(...).create()`.
+  **Round 3 (2026-09-18, run 22b):** three more schema cells, a double-quoted `COMMENT` on a
+  nested `ADD COLUMN` (`"x.y"`, `"c"`, `"x.y" FIRST`); `build_ctas_cells()` adds two CTAS
+  cells per format version over a one-column source named `map` / `struct`, filtered with `<`.
+- [test_ice_nested_evo_1_schema.py](test_ice_nested_evo_1_schema.py) — **ICE-NESTED-EVO-1
+  round 2 (2026-09-18, run 22b):** replays every `schema_cells` entry (v2, v3) on a fresh
+  facade catalog and compares the RePark metadata file's current schema (field ids, child
+  order, `required`, `doc`; `schema-id` ignored) with Spark's, the refusal (exception class
+  name and Spark's message up to `SQLSTATE`) and the `SELECT *` / `table()` read shape with
+  struct-child nullability. `test_dataframe_door_create_matches_spark_metadata` creates the two
+  CREATE schemas through `writeTo(...).create()` against Spark's DataFrame-door recording
+  (Spark's V2 CTAS makes every column nullable). Red on the baseline native: 10 failed
+  (the `NOT NULL` child ×6, the duplicate child ×2, the unknown parent ×2); the two
+  double-quoted cells, recorded after that run, were red too on the same native (accepted,
+  schema changed).
+  pins: ice-nested-evo-1/C-014, C-015, C-016, C-018, C-019, C-020
+  **Round 3 (2026-09-18, run 22b):** the three `add_comment_double_quoted*` cells
+  (`COMMENT "x.y"`, `COMMENT "c"`, `COMMENT "x.y" FIRST` on a nested child) run on the same
+  three tests; red before the V-001 fix: 18 failed (refused `PARSE_SYNTAX_ERROR`).
+  pins: ice-nested-evo-1/C-021
 - [ice_write_options_1_spark_oracle.json](ice_write_options_1_spark_oracle.json) +
   [_record_ice_write_options_1_oracle.py](_record_ice_write_options_1_oracle.py) +
   [_record_ice_write_options_2_oracle.py](_record_ice_write_options_2_oracle.py) +
@@ -427,6 +494,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Iceberg table, so it cannot stand in).
   pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: ice-write-options-1/C-008, C-009, C-010, C-011, C-013
+  Run 22b (ICE-NESTED-EVO-1 merge): the non-write arms sweep gains the nested-DDL intercept
+  (`ALTER TABLE … ADD COLUMN s.z INT`), which refuses a non-empty options map like the other
+  pre-parse ALTER intercepts.
 - [test_ice_write_options_1_rebase.py](test_ice_write_options_1_rebase.py) —
   **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the write options across the paths main
   added under them. WO-DYN-01..06: dynamic `insertInto` overwrite and `INSERT OVERWRITE …
@@ -4113,7 +4183,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the no-write second read still scans the held cache view under the SQL spy),
   `comment` values containing `,` or `]` round-trip, transform-source columns
   (`bucket(16, id)`, `days(ts)`) flag `isPartition`, `createTable` renders `INT[]`
-  recursively and `NOT NULL` (map/struct keep the engine's loud refusal),
+  recursively and `NOT NULL` (map/struct create and list as `map<string,int>` /
+  `struct<a:int>` since ICE-NESTED-EVO-1, 2026-09-17; pins: ice-nested-evo-1/C-006),
   `listFunctions(dbName)` on a missing namespace raises `SCHEMA_NOT_FOUND`,
   unquoted temp-view names classify case-insensitively, and every raised
   `AnalysisException` carries its errorClass through `getCondition()`.

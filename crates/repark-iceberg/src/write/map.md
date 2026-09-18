@@ -540,6 +540,40 @@ repark-core's error map.
   `starts_with_alter` (the zero-alloc `ALTER`-prefix scan gating both doors' intercepts).
   Split out of `alter.rs`, which sits at its exact ceiling.
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-006, C-007, C-008, C-014
+- `nested_column.rs` — **ICE-NESTED-EVO-1 (2026-09-17):** `ColumnPathChange` (`Add` under an
+  optional dotted parent — a struct, or a list or map whose element or value struct the fork
+  resolves — with `FIRST` / `AFTER` sibling positions; `Rename` and `Drop` by dotted path) and
+  `apply_column_path_changes`, which folds them into ONE case-insensitive fork `UpdateSchema`
+  on an already-loaded table. Both doors' nested `ALTER TABLE` intercepts commit through it.
+  A sibling of `alter.rs` rather than a new `SchemaChange` arm because `alter.rs` sits at its
+  exact file-size ceiling. 2 in-module tests (children evolve by field id; a required child
+  without a default refuses and the schema id stays).
+  pins: ice-nested-evo-1/C-007, C-010, C-011, C-012
+  **Round 2 (2026-09-18, run 22b):** `nested_add_refusal` is the Spark-shaped pre-check both
+  doors run before the commit: an unknown parent answers Spark's
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION] … SQLSTATE: 42703`, an existing child (case-insensitive)
+  Spark's `[FIELD_ALREADY_EXISTS] Cannot add column, because `s`.`a` already exists in
+  "STRUCT<…>". SQLSTATE: 42710`, the table schema rendered in Spark's `DataType.sql` form
+  (`NOT NULL`, `COMMENT`, backticked names that need it). It reuses `column_move.rs`'s
+  `unresolved_column` / `top_level_names` (now `pub(super)`). 2 more in-module tests.
+  pins: ice-nested-evo-1/C-019
+- `nested_type_sql.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the one token
+  rewrite both doors run on a nested column type: a struct child's `NOT NULL` becomes the
+  struct-field option `OPTIONS(repark_not_null=TRUE)` (the only struct-field suffix
+  sqlparser models), which `struct_field_required` reads back as an Iceberg required child;
+  a hand-written struct-field `OPTIONS` refuses Spark's `[PARSE_SYNTAX_ERROR] … near
+  'OPTIONS'. SQLSTATE: 42601`; with `map_parens` (the ANSI door, `GenericDialect`) `MAP<K, V>`
+  becomes `MAP(K, V)`, the same AST. A `>>` closing two brackets splits. Comparisons and
+  `ARRAY<… NOT NULL>` are left alone. 4 in-module tests.
+  pins: ice-nested-evo-1/C-016, C-017
+  **Round 3 (2026-09-18, run 22b, V-002):** both doors call `rewrite_create_column_types`,
+  which finds the column-definition list (the first parenthesized group after `TABLE [IF NOT
+  EXISTS] <name>`) and rewrites only that range; the `AS SELECT` query and every other token
+  pass through verbatim, so a column named `map` / `struct` compared with `<` is no longer
+  rewritten into `MAP(` / `OPTIONS(…)`. `create_column_list_has_nested_type_opener` is the ANSI
+  gate over the same range. 2 more in-module tests (mutation-checked: rewriting the whole
+  statement reds both).
+  pins: ice-nested-evo-1/C-022
 - `partition_spec.rs` — the partition-spec evolution family, split out of `alter.rs`
   behaviour-identical (the size ratchet): one `PartitionSpecChange` transaction through
   `apply_partition_spec_changes`. `AddField` carries a source column, a transform
