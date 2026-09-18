@@ -40,6 +40,16 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
+  [range_tvf_id_1/](range_tvf_id_1/map.md) +
+  [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —
+  **RANGE-TVF-ID-1 (2026-09-18, round 1):** the `range(...)` table function names
+  its column `id` like Spark 4.1.2 — every form answers `struct<id:bigint>`
+  non-nullable on the facade door and the native door, the 4-argument form is
+  accepted with rows unaffected, string arguments coerce, zero step refuses with
+  `AnalysisException`, and the `spark.range` DataFrame door is pinned as the
+  already-green regression.
+  pins: range-tvf-id-1/C-001, C-002, C-003, C-004, C-005
 - [test_v3_multiarg_1.py](test_v3_multiarg_1.py) +
   [v3_multiarg_1_spark_oracle.json](v3_multiarg_1_spark_oracle.json) +
   [_record_v3_multiarg_1.py](_record_v3_multiarg_1.py) —
