@@ -136,6 +136,28 @@ full-width values (`ow_partitions_api`), `saveAsTable(overwrite)`
 roll-call cell (C-018 — accept-and-NULL on both writer surfaces). Their green is
 evidence for Q-21b-5 and Q-21b-6, not a fix.
 
+## Round-5 L-02 and L-04 (step 4)
+
+- L-02 re-verified 2026-09-17: the correction landed in round 4 (`987b1d09`) and
+  survives the rebase — the registry FIXED row names `insertInto` as positional and
+  refusing a short frame with Spark's `insertInto_missing` refusal
+  (`INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS`), and C-006 says the same.
+  `git grep -n insertInto -- ':!*.py' ':!*.rs' | grep -i fill` finds no document
+  listing `insertInto` as a fill door. No further edit needed.
+- L-04 (ruling Q-21b-5): registry row `ICE-V3-WRITE-DEFAULT-1-SAVEAS-OVERWRITE`,
+  DECLARED 2026-09-17, beside finding F-002, naming the measured Spark cell
+  (`saveastable_overwrite_missing_defaulted`: rows `[[30, 's']]`, `schema_after`
+  `[id int, name string]` — REPLACE, `c` dropped). RePark's answer
+  (`[(30, 's', 5)]`, schema kept) is pinned by
+  `test_saveastable_overwrite_is_insert_overwrite_not_replace`, which also asserts
+  the recorded Spark cell and schema so it flips red when replace semantics land.
+- L-01's registry row `ICE-V3-WRITE-DEFAULT-1-OVERWRITE-PART` moved DECLARED → FIXED
+  with the round-5 pins. Which rows a name-only dynamic `PARTITION (k)` keeps is the
+  already-DECLARED DML-1 residue ("repark always takes the dynamic path"; Spark's
+  default STATIC mode replaces the whole table) — the pins assert RePark's retained
+  rows and the Spark cell's written row, and the written row, filled `c` included,
+  matches Spark.
+
 ## Evidence
 
 Spark oracle (live PySpark 4.1.2 + Iceberg 1.11.0, banner `spark=4.1.2 tz=UTC`,
