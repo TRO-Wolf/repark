@@ -566,3 +566,21 @@ async fn v01_order_by_a_select_alias_still_orders_by_the_alias() {
         .collect::<Vec<_>>();
     assert_eq!(values, vec!["-2".to_string(), "-1".to_string()]);
 }
+
+#[tokio::test]
+async fn r02_lowercase_only_plans_skip_the_audit() {
+    let ctx = measured_ctx();
+    let lowercase = ctx
+        .sql("SELECT name FROM other")
+        .await
+        .unwrap()
+        .into_unoptimized_plan();
+    assert!(!plan_has_upper_ascii_field(&lowercase));
+    for sql in [
+        "SELECT id FROM tw",
+        "SELECT name FROM other WHERE name IN (SELECT `eventName` FROM mc)",
+    ] {
+        let plan = ctx.sql(sql).await.unwrap().into_unoptimized_plan();
+        assert!(plan_has_upper_ascii_field(&plan), "{sql}");
+    }
+}

@@ -595,6 +595,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   exact case included — whose resolved column has an ASCII case twin there. Options are one per
   matching field, qualified by the relation as written in FROM (`WrittenRefs::relation_parts`;
   the session's default `catalog.schema` prefix is dropped, so a temp view reads bare).
+  Round 21b step 6 (R-02 / V-03 / R-05): a plan that succeeds first time is audited only when
+  some node schema holds an upper-case ASCII field (`plan_has_upper_ascii_field`) — with none,
+  case twins cannot exist, so neither the audit nor `written_references` runs. The written
+  references walk the AST with the immutable `Visit` (no statement clone).
   pins: ice-mixed-case-1/C-001…C-010, C-013…C-016
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias

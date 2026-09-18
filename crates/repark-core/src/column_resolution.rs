@@ -31,14 +31,16 @@ pub async fn plan_statement_with_column_repair(
         catalog_options.default_catalog.clone(),
         catalog_options.default_schema.clone(),
     ];
-    let written = written_references(&inner, defaults);
     let mut error = match first {
         Ok(plan) => {
-            audit_plan_for_ambiguity(&plan, &written)?;
+            if plan_has_upper_ascii_field(&plan) {
+                audit_plan_for_ambiguity(&plan, &written_references(&inner, defaults))?;
+            }
             return Ok(plan);
         }
         Err(error) => error,
     };
+    let written = written_references(&inner, defaults);
     let mut known: Option<fold::Known> = None;
     let mut seen: HashSet<(Option<String>, String)> = HashSet::new();
     loop {
@@ -207,11 +209,11 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
         projection: HashSet<String>,
         relations: Vec<(String, Vec<String>)>,
     }
-    impl VisitorMut for Collector {
+    impl datafusion::sql::sqlparser::ast::Visitor for Collector {
         type Break = std::convert::Infallible;
         fn pre_visit_query(
             &mut self,
-            query: &mut datafusion::sql::sqlparser::ast::Query,
+            query: &datafusion::sql::sqlparser::ast::Query,
         ) -> ControlFlow<Self::Break> {
             if let datafusion::sql::sqlparser::ast::SetExpr::Select(select) = query.body.as_ref() {
                 for item in &select.projection {
@@ -233,7 +235,7 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
         }
         fn pre_visit_table_factor(
             &mut self,
-            factor: &mut datafusion::sql::sqlparser::ast::TableFactor,
+            factor: &datafusion::sql::sqlparser::ast::TableFactor,
         ) -> ControlFlow<Self::Break> {
             if let datafusion::sql::sqlparser::ast::TableFactor::Table { name, alias, .. } = factor
             {
@@ -250,7 +252,7 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
             }
             ControlFlow::Continue(())
         }
-        fn post_visit_expr(&mut self, expr: &mut SqlExpr) -> ControlFlow<Self::Break> {
+        fn post_visit_expr(&mut self, expr: &SqlExpr) -> ControlFlow<Self::Break> {
             match expr {
                 SqlExpr::Identifier(ident) => {
                     self.bare.insert(ident.value.clone());
@@ -271,8 +273,7 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
         projection: HashSet::new(),
         relations: Vec::new(),
     };
-    let mut owned = statement.clone();
-    let _ = owned.visit(&mut collector);
+    let _ = datafusion::sql::sqlparser::ast::Visit::visit(statement, &mut collector);
     WrittenRefs {
         bare: collector.bare,
         qualified: collector.qualified,
@@ -301,6 +302,30 @@ fn audit_plan_for_ambiguity(plan: &LogicalPlan, written: &WrittenRefs) -> Result
         Ok(TreeNodeRecursion::Continue)
     })
     .map(|_| ())
+}
+
+fn plan_has_upper_ascii_field(plan: &LogicalPlan) -> bool {
+    let mut found = false;
+    let _ = plan.apply_with_subqueries(|node| {
+        found = node
+            .schema()
+            .fields()
+            .iter()
+            .any(|field| has_upper_ascii(field.name()))
+            || node.inputs().iter().any(|input| {
+                input
+                    .schema()
+                    .fields()
+                    .iter()
+                    .any(|field| has_upper_ascii(field.name()))
+            });
+        Ok(if found {
+            TreeNodeRecursion::Stop
+        } else {
+            TreeNodeRecursion::Continue
+        })
+    });
+    found
 }
 
 fn has_upper_ascii(name: &str) -> bool {
