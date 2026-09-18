@@ -22,7 +22,12 @@ pub(super) fn insert_projection(
     write_schema: &ArrowSchema,
     case_insensitive: bool,
 ) -> Result<String> {
-    insert_projection_with_defaults(clause, write_schema, case_insensitive, &ColumnDefaults::new())
+    insert_projection_with_defaults(
+        clause,
+        write_schema,
+        case_insensitive,
+        &ColumnDefaults::new(),
+    )
 }
 
 fn insert(columns: &[&str], values: &[&str]) -> InsertClause {
@@ -100,9 +105,13 @@ fn insert_projection_fills_write_default() {
         .unwrap(),
         "(s.id) AS `id`, (s.name) AS `name`, (CAST(5 AS INT)) AS `c`"
     );
-    let err =
-        insert_projection_with_defaults(&insert(&["name"], &["s.name"]), &write_schema, true, &defaults)
-            .unwrap_err();
+    let err = insert_projection_with_defaults(
+        &insert(&["name"], &["s.name"]),
+        &write_schema,
+        true,
+        &defaults,
+    )
+    .unwrap_err();
     assert!(err.to_string().contains("required column `id`"));
 }
 

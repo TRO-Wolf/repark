@@ -725,9 +725,9 @@ def test_join_using_insert_folds_and_writes_the_left_columns(measured: ReparkSes
 _ROUND_2 = _ORACLE["measured_21b_r2"]
 _ROUND_2_CELLS = _ROUND_2["cells"]
 _N01_IN_CELLS = [
-    "N01_inner_select_list_outer_column_upper",
-    "N01_inner_select_list_outer_column_exact",
-    "N01_inner_select_list_outer_column_lower",
+    ("N01_inner_select_list_outer_column_upper", "USERID"),
+    ("N01_inner_select_list_outer_column_exact", "userId"),
+    ("N01_inner_select_list_outer_column_lower", "userid"),
 ]
 
 
@@ -736,9 +736,9 @@ def _round_2_sql(cell_id: str) -> str:
     return _ROUND_2_CELLS[cell_id]["sql"].replace("sc.ns.", f"{_MEASURED_CATALOG}.ns.")
 
 
-@pytest.mark.parametrize("cell_id", _N01_IN_CELLS)
+@pytest.mark.parametrize(("cell_id", "spark_column"), _N01_IN_CELLS)
 def test_correlated_in_subquery_select_list_refuses_where_spark_answers(
-    measured: ReparkSession, cell_id: str
+    measured: ReparkSession, cell_id: str, spark_column: str
 ) -> None:
     """Q-21b-11 (declared): the inner SELECT-list name is the correlated outer column.
 
@@ -753,6 +753,8 @@ def test_correlated_in_subquery_select_list_refuses_where_spark_answers(
     recorded = _ROUND_2_CELLS[cell_id]
     assert recorded["outcome"] == "ok"
     assert recorded["rows"] == [[1], [2]]
+    assert recorded["columns"] == [spark_column]
+    assert recorded["sql"].startswith(f"SELECT {spark_column} FROM ")
     with pytest.raises(
         UnsupportedOperationException,
         match="Physical plan does not support logical expression InSubquery",

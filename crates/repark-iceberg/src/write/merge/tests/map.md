@@ -136,6 +136,8 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   pins: ice-v3-write-default-1/C-003, C-005, C-009
   Round 5 (2026-09-17): `target_schema()` hands the Arrow write schema to
   `insert_sql` (R-03). pins: ice-v3-write-default-1/C-019
+  ICE-MIXED-CASE-1 rebase (2026-09-18, run 22b): the local `insert_projection` helper
+  takes the case-insensitive flag and `spec` comes from `helpers.rs`.
 - `occ_partitions.rs` — **RP-7 (2026-09-02):** one battery through the PRODUCTION
   `commit_row_delta_kind_with_partitions` variant on a partitioned v3 table with a real partition
   map: the commit lands, and a stale `validate_from_snapshot` pin is still rejected with the
