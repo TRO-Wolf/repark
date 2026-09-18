@@ -98,7 +98,6 @@ async fn nested_struct_and_map_insert_reads_back() {
 }
 
 #[tokio::test]
-#[ignore = "fork finding: an INSERT into a list column fails in the fork writer"]
 async fn forkwrite_list_insert_reads_back() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;

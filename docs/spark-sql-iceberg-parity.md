@@ -3529,8 +3529,12 @@ the pin rather than obeying it.
   `GenericDialect`). Before (release native at `2c28bec7`): `CREATE` with a struct refused
   `column type STRUCT<…> is not supported yet for Iceberg tables`, with a map refused at the
   parser, and every dotted `ADD` / `RENAME` / `DROP` refused at the parser — no registry row.
-  Rows after an `INSERT` into a list column are held by
-  [ICE-NESTED-INSERT-LIST-1](#ice-nested-insert-list-1--open-measured-2026-09-17-an-insert-into-a-list-column-fails-in-the-fork-writer).
+  Rows after an `INSERT` into a list column answer Spark since RP-29 (fork #295
+  F-LIST-INSERT-1); see
+  [ICE-NESTED-INSERT-LIST-1](#ice-nested-insert-list-1--an-insert-into-a-list-column-reads-back--fixed-2026-09-18-rp-29-fork-295-f-list-insert-1)
+  (FIXED 2026-09-18) and
+  [ICE-ARRAY-INSERT-1](#ice-array-insert-1--inserts-into-array-columns-answer-spark-on-every-door--fixed-2026-09-18-rp-29-fork-295-f-list-insert-1)
+  for the full door matrix.
 - **Apache Spark** — creates and evolves the nested columns; the same `DESCRIBE` strings and
   rows (`[(1,{a:1,b:'p',c:None})]`, `[(1,{a2:1,b:'p'})]`, `[(1,{a:1})]`); refuses the
   required child with `SparkException` `_LEGACY_ERROR_TEMP_2045` caused by
@@ -3654,22 +3658,51 @@ the pin rather than obeying it.
   `nested_column_ddl.rs`, `ansi_nested_ddl_oracle.rs`, `nested_column.rs`.
 - **Rationale** — FIXED.
 
-### ICE-NESTED-INSERT-LIST-1 — OPEN (measured 2026-09-17): an `INSERT` into a list column fails in the fork writer
+### ICE-NESTED-INSERT-LIST-1 — an `INSERT` into a list column reads back — **FIXED 2026-09-18 (RP-29, fork #295 F-LIST-INSERT-1)**
 
 - **repark** — `CREATE TABLE t (id INT, arr ARRAY<INT>) USING iceberg; INSERT INTO t SELECT 1,
-  array(1, 2)` fails with `Unexpected => Arrow Schema Error … column types must match schema
+  array(1, 2)` answers Spark's row, as do `writeTo(t).append()`, `insertInto` and
+  `saveAsTable(append)`. Before (release native at `2c28bec7`, fork pin `3296ffc7`): the
+  write refused `Unexpected => Arrow Schema Error … column types must match schema
   types, expected List(Int32, field: 'element', metadata: {"PARQUET:field_id": "3"}) but found
-  List(Int32, field: 'element')`; `writeTo(t).append()`, `insertInto` and
-  `saveAsTable(append)` fail the same way. Struct and map columns insert. Pre-existing at
-  `2c28bec7`; it blocks the list cells' rows (`ADD COLUMN arrs.element.y` itself works).
-- **Apache Spark** — inserts the row (`list_add` cells of the same recording).
+  List(Int32, field: 'element')`. At fork `9e67e000` (F-LIST-INSERT-1) every Iceberg writer
+  relabels nested fields to the table's Iceberg types, so the element, key and value field
+  ids reach the parquet footer, and `INSERT … VALUES` into nested columns plans.
+- **Apache Spark** — inserts the row (`list_add` cells of the ICE-NESTED-EVO-1 recording).
 - **Pin** — `python/repark/tests/test_ice_nested_evo_1.py::test_nested_ddl_rows_match_spark`
-  `forkwrite-…list_element_child_add_read` ids (`xfail(strict=True)`),
-  `crates/repark-spark/src/tests/nested_column_ddl.rs::forkwrite_list_insert_reads_back`
-  (`#[ignore]`).
-- **Rationale** — OPEN. The TRIGGER is a fork fix: `writer/write_defaults.rs`
-  `apply_write_defaults` rebuilds the batch against `schema_to_arrow_schema`, whose list
-  element carries a field id the incoming batch lacks, and `RecordBatch::try_new` rejects it.
+  (`fork292-list_element_child_add_read` ids, plain passing pins),
+  `crates/repark-spark/src/tests/nested_column_ddl.rs::forkwrite_list_insert_reads_back`,
+  and the thirty ICE-ARRAY-INSERT-1 cells below.
+- **Rationale** — FIXED 2026-09-18 (RP-29) at fork #295 (F-LIST-INSERT-1).
+
+### ICE-ARRAY-INSERT-1 — inserts into array columns answer Spark on every door — **FIXED 2026-09-18 (RP-29, fork #295 F-LIST-INSERT-1)**
+
+- **repark** — `INSERT … VALUES`, `INSERT … SELECT`, `writeTo(t).append()`,
+  `write.insertInto(t)` and `write.format("iceberg").mode("append").saveAsTable(t)` into
+  `ARRAY<INT>`, `ARRAY<STRUCT<a INT, b STRING>>` and `MAP<STRING, ARRAY<INT>>` columns
+  answer Spark's rows and footer field ids on every door at format versions 2 and 3.
+  Before (measured at fork pin `3296ffc7`, main `f62fb11f`): `INSERT … VALUES` into
+  `list<int>` and `list<struct>` failed loud with `Arrow error: Invalid argument error: It
+  is not possible to concatenate arrays of different data types`; the other doors on those
+  two shapes already answered Spark's rows and footer ids; the re-rating's V2-10d "INSERT
+  into a list column fails" cell is the rating-side before. After: every door answers
+  Spark on all three shapes — the `map_list` non-VALUES doors through a substitute source
+  (the recorded `CAST(NULL AS MAP<STRING, ARRAY<INT>>)` NULL-map row refuses `ParserError`,
+  registry row CAST-MAP-SPELL-1, BACKLOG; the pins write `CASE WHEN false THEN map('k1',
+  array(1, 2)) END`, which Spark 4.1.2 answers identically, measured 2026-09-18).
+- **Apache Spark** — the recorded 30 cells (PySpark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog, 2026-09-18,
+  `python/repark-parity/fixtures/torture/data/ice_array_insert_1/spark_array_insert_oracle.json`).
+- **Pin** — `python/repark/tests/test_ice_array_insert_1.py::test_cell_matches_spark` (one id
+  per cell; the 8 `map_list` non-VALUES ids run the recorded statement verbatim under
+  strict xfail on CAST-MAP-SPELL-1),
+  `…::test_cell_substitute_source_matches_spark` (the 8 substitute-source twins),
+  `…::test_live_spark_reads_repark_table` (live tier: Spark adopts each RePark-written
+  table and reads the recorded rows).
+- **Rationale** — FIXED 2026-09-18 (RP-29) at fork #295 (F-LIST-INSERT-1): every Iceberg
+  writer relabels nested fields to the table's Iceberg types and `INSERT … VALUES` into
+  nested columns plans. No adopted Spark tables were needed — RePark CREATE succeeds for
+  all three shapes, so the pins create with RePark's own DDL.
 
 ### DBT-QUALIFY-1 — a two-part name resolves for `SELECT` but not for `DESCRIBE` or `ALTER TABLE`
 
