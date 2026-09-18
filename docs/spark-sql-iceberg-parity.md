@@ -2523,7 +2523,7 @@ the pin rather than obeying it.
   refusals, `ValidationException` on a serializable conflict, lenient booleans, silent
   unknown keys, and the SQL-door conf absence.
 - **Pin** — `python/repark/tests/test_ice_write_options_1.py` (offline over the
-  fixture; the live tier re-runs both record drivers and checks the fixture);
+  fixture; the live tier re-runs all three record drivers and checks the fixture);
   `crates/repark-spark/src/write_options.rs` (out-of-band pair validation units) and the
   staging/commit units in `crates/repark-iceberg/src/write/write_options.rs`.
 - **Rationale** — FIXED for the measured option set. Two residuals stay named here, not
@@ -2583,6 +2583,25 @@ the pin rather than obeying it.
   in both tiers (`test_table_level_gzip_with_option_codec_refuses`,
   `writer_props.rs::table_level_gzip_option_codec_refuses_like_spark`).
   pins: ice-write-options-1/C-008, C-009, C-010, C-011
+- **Round 5 (2026-09-18)** — *Target file size (Q-21c-7, 2026-09-18).*
+  `target-file-size-bytes`, as an option or as the table property, takes effect at the
+  RP-23 fork granularity, not per input batch. The rolling writer rolls on 1000-row slices
+  once flushed plus in-progress bytes reach the target, as Java 1.11.0 does with
+  `ROWS_DIVISOR`. At a 1-byte target, 3,500 rows sent as five 700-row batches stage
+  exactly 4 files (1000/1000/1000/500 rows). The 512 MB default stages 1. A 512 MB option
+  over a 1-byte table property also stages 1, so the option wins
+  (`writer_props.rs::option_target_size_rolls_on_row_slices`,
+  `::option_target_size_beats_table_property`). *Router.* The two non-Iceberg
+  `INSERT OVERWRITE` refusals (empty-source wipe, no-source passthrough) are pinned on a
+  temp-view target (`test_non_iceberg_overwrite_refuses_write_options`). A
+  `USING parquet` table created in an Iceberg catalog is itself an Iceberg table, so it
+  cannot serve as the non-Iceberg target. *Residuals, stated and not fixed:* (P3) the
+  overwrite family over-refuses `deleted-data-files` / `deleted-records` /
+  `removed-files-size` when an overwrite ends up removing nothing;
+  `_record_ice_write_options_3_oracle.py` has not been run live. Its cells were derived
+  from the measured JSON through its own `collision_cell()`. The `_1` / `_2` recorders
+  now load the runtime GAV through `spark.jars.packages` and have not been re-run since.
+  pins: ice-write-options-1/C-012, C-013
 
 ### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
 

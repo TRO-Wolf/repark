@@ -545,7 +545,12 @@ repark-core's error map.
   as Spark does (Q-20c-5). Round 4 (2026-09-17): the metric-key prefix sweep is
   gone; `summary_with_extras` takes the `EngineSummary` of the commit in hand
   (`summary_collision.rs`) and refuses only a key that summary contains (V-04).
-  pins: ice-write-options-1/C-008
+  Round 5 (2026-09-18, Q-21c-7): the target-size override takes effect at the
+  RP-23 fork granularity, 1000-row slices once the bytes reach the target, not
+  per batch. The `writer_props.rs` units stage 3,500 rows: exactly 4 files at a
+  1-byte option or table property, and 1 at the default or a 512 MB option over
+  the property.
+  pins: ice-write-options-1/C-008, C-012
 - `summary_collision.rs` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
   `EngineSummary`, the snapshot-summary keys the engine computes for the commit
   in hand, which a user `snapshot-property.<k>` may not collide with (Spark's

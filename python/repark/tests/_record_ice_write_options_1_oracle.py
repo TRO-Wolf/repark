@@ -3,10 +3,10 @@
 Produces ``ice_write_options_1_spark_oracle.json`` beside this file. One JVM, stopped
 at the end. Each cell uses a fresh table so summaries never cross-talk.
 
-Run::
+Run with a PySpark 4.1.2 interpreter; ``REPARK_ORACLE_IVY`` optionally points
+``spark.jars.ivy`` at a warm cache (unset = Spark's default Ivy)::
 
-    JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
-        /tmp/sparkenv/bin/python python/repark/tests/_record_ice_write_options_1_oracle.py
+    python python/repark/tests/_record_ice_write_options_1_oracle.py
 
 Not collected by pytest.
 """
@@ -14,6 +14,7 @@ Not collected by pytest.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -21,7 +22,11 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-JAR = "/tmp/ic-build/.ivy2/jars/org.apache.iceberg_iceberg-spark-runtime-4.1_2.13-1.11.0.jar"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
+
+ICEBERG_JAR = "{}_{}-{}.jar".format(*ICEBERG_SPARK_RUNTIME_GAV.split(":"))
 CATALOG = "local"
 NAMESPACE = "ns"
 
@@ -31,12 +36,12 @@ CELLS: list[dict[str, Any]] = []
 def _spark(warehouse: str) -> Any:
     from pyspark.sql import SparkSession
 
-    return (
+    builder = (
         SparkSession.builder.master("local[2]")
         .appName("repark-ice-write-options-1-record")
         .config("spark.driver.memory", "2g")
         .config("spark.ui.enabled", "false")
-        .config("spark.jars", JAR)
+        .config("spark.jars.packages", ICEBERG_SPARK_RUNTIME_GAV)
         .config(
             "spark.sql.extensions",
             "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
@@ -44,8 +49,11 @@ def _spark(warehouse: str) -> Any:
         .config(f"spark.sql.catalog.{CATALOG}", "org.apache.iceberg.spark.SparkCatalog")
         .config(f"spark.sql.catalog.{CATALOG}.type", "hadoop")
         .config(f"spark.sql.catalog.{CATALOG}.warehouse", warehouse)
-        .getOrCreate()
     )
+    ivy = os.environ.get("REPARK_ORACLE_IVY")
+    if ivy:
+        builder = builder.config("spark.jars.ivy", ivy)
+    return builder.getOrCreate()
 
 
 def _summary(spark: Any, table: str) -> dict[str, str]:
@@ -423,7 +431,7 @@ def main() -> None:
         out = {
             "meta": {
                 "spark": spark.version,
-                "iceberg_jar": Path(JAR).name,
+                "iceberg_jar": ICEBERG_JAR,
                 "catalog": "hadoop",
             },
             "cells": CELLS,

@@ -350,7 +350,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   catalog; round 4 appends `COLL-00`…`COLL-08`, the snapshot-property collision
   cells, through the `_3` driver, which takes its warehouse from `--warehouse`
   and its Ivy cache from `REPARK_ORACLE_IVY` and keeps only the run-stable
-  `Multiple entries with same key` text of an error): `snapshot-property.*` lands prefix-stripped and lower-cased in the
+  `Multiple entries with same key` text of an error; round 5 moves the `_1` / `_2`
+  drivers to the same idiom, the runtime GAV from `_oracle_pins` through
+  `spark.jars.packages` with no machine-local JAR path): `snapshot-property.*` lands prefix-stripped and lower-cased in the
   summary on append / dynamic overwrite / CTAS / V1 paths, `write-format`
   parquet/orc/avro honored (`bogus` refused), per-key option measurements plus the
   SQL-door conf probe. Offline pins read the fixture; the live tier re-runs the
@@ -362,7 +364,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   paths with Spark's strip-and-lowercase rule, write-format parquet honour plus
   orc/avro/bogus refusals, per-key option dispositions, unknown-key silence,
   warning absence, SQL-door absence, plus the serializable-overlap divergence pin
-  and the gzip footer / target-size-acceptance pins); the live tier re-runs both
+  and the gzip footer / target-size-acceptance pins); the live tier re-runs the
   record drivers and checks the fixture. 35 offline tests plus the live
   re-run check, all green 2026-09-17. Round 3 replaces round-2 SNAP-06 with
   SNAP-08/09 (UTF-8 key/value byte-exact out of band, V2 + V1) and SQL-02/03
@@ -372,9 +374,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the fixture (V-04 / V-01), the options-channel refusals for MERGE, BY NAME and
   every non-honouring router arm (V-03, through the native
   `session_sql_with_write_options`), and the table-level gzip level twin of the
-  Rust L-04 pin (V-02); the live leg runs all three drivers.
+  Rust L-04 pin (V-02); the live leg runs all three drivers. Round 5 (2026-09-18)
+  pins the two non-Iceberg `INSERT OVERWRITE` refusals (empty-source wipe,
+  no-source passthrough) on a temp-view target: each refuses and leaves the
+  view's rows unchanged (a `USING parquet` table in an Iceberg catalog is an
+  Iceberg table, so it cannot stand in).
   pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
-  pins: ice-write-options-1/C-008, C-009, C-010, C-011
+  pins: ice-write-options-1/C-008, C-009, C-010, C-011, C-013
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine

@@ -1,7 +1,7 @@
 # Charter ledger — ICE-WRITE-OPTIONS-1 · DataFrame write options on Iceberg writes
 
 **Date:** 2026-09-17 · **Branch:** `feat/ice-write-options-1` · **Base:** `origin/main`
-`79e328f2` · **Model:** muse-spark-1.3-contributor (rounds 1–3) · **Model:** claude-opus-5 (round 4) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+`79e328f2` · **Model:** muse-spark-1.3-contributor (rounds 1–3) · **Model:** claude-opus-5 (rounds 4–5) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
@@ -457,10 +457,12 @@ Mutation transcripts (each: revert the fix in the working tree, `maturin develop
   3). Both are this unit's own round-1 tests (`0ccc7fca`). They fail
   identically on `1485db96` once its test module compiles, and they never ran
   before, because the module did not compile until this round. OPEN for the
-  orchestrator: the fork's rolling writer measures written bytes, which stay 0
-  until a row group flushes, so the "rolls every batch" premise may not hold on
-  this fork. The pytest pin only asserts that the option is accepted and the rows
-  commit.
+  orchestrator. Corrected in §17 (Q-21c-7): the reading above, that written
+  bytes stay 0 until a row group flushes, was wrong. The RP-23 fork writer rolls on
+  1000-row slices once flushed plus in-progress bytes reach the target, so 150
+  rows are one file at any target. The "rolls every batch" premise was stale, and
+  the option was not broken. The pytest pin only asserts that the option is
+  accepted and the rows commit.
 - `test_ice_write_options_1.py`: 65 passed, 1 skipped (the JVM-gated live leg).
 - `python/repark/tests -n 8`: 9750 passed, 2 failed, 399 skipped, 47 xfailed.
   The 2 are `test_spark_sql_grammar_1.py::test_q14_current_date_bare_and_paren`
@@ -475,3 +477,85 @@ Mutation transcripts (each: revert the fix in the working tree, `maturin develop
   rust-file-size, lib-py, python-conventions, docstring-presence, ledger-check,
   ledger-grammar, docs-compaction, docs-links, owner-ruling, dual-wire, ruff,
   fmt, clippy); `rust-test` stops at the two `repark-iceberg` failures above.
+
+## 17. Round 5 — Q-21c-7, dead recorder JARs, V-03 overwrite pins (2026-09-18)
+
+**Model:** claude-opus-5 (Actor, round 5). Base `1487180d`.
+
+Rulings carried in:
+
+- Q-21c-7 (orchestrator, 2026-09-18): the two round-1 `option_target_size_*`
+  units asserted that a 1-byte target writes one file per 50-row batch. That
+  premise is stale. The RP-23 fork pin (`4151b488`, fork #288,
+  F-TARGET-FILE-SIZE-1) makes `RollingFileWriter` roll on 1000-row slices once
+  flushed plus in-progress bytes reach the target. This is Java 1.11.0's
+  `ROWS_DIVISOR` / `ParquetWriter.length()` behaviour, and the fork measured it
+  against Spark (20 files of 23,666–68,446 B vs Spark's 20 files of
+  23,735–57,178 B). Three 50-row batches are 150 rows, below one slice, so one file
+  is the correct answer. The units are rewritten to observe the option at slice
+  granularity. No registry sentence claimed per-batch rolling; the §16
+  wording is corrected above.
+- Finding (Actor, 2026-09-18): a `USING parquet` table created inside a
+  registered Iceberg catalog is an Iceberg table (it has `.snapshots`, and an
+  options-carrying empty overwrite on it commits with the extra honoured). It is
+  therefore not a non-Iceberg overwrite target. A session temp view (a DataFusion
+  `MemTable`) is one, and it reaches both refusals.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-012 | Q-21c-7: `target-file-size-bytes` takes effect at the RP-23 granularity. 3,500 rows (five 700-row batches) stage exactly 4 files (1000/1000/1000/500) at a 1-byte option, exactly 4 at a 1-byte table property alone, and exactly 1 at the 512 MB default or at a 512 MB option over the 1-byte property. | `writer_props.rs::option_target_size_rolls_on_row_slices`, `::option_target_size_beats_table_property`; mutations E, F. | PROVEN | Both green. E (option ignored) makes both red; F (property ignored) makes the property leg red. |
+| C-013 | V-03: the empty-source wipe and no-source passthrough `INSERT OVERWRITE` fallbacks refuse a non-empty options map on a non-Iceberg target and leave its rows unchanged. | `test_non_iceberg_overwrite_refuses_write_options[2]`; mutations G, H. | PROVEN | 2/2 green. Each goes red alone when its refusal is disabled. |
+
+Recorders (item 2): `_record_ice_write_options_1_oracle.py` and `_2` drop the
+dead `/tmp/ic-build` JAR literal. They load `ICEBERG_SPARK_RUNTIME_GAV` from
+`_oracle_pins` through `spark.jars.packages`, and `REPARK_ORACLE_IVY` optionally
+sets `spark.jars.ivy` (unset means Spark's default), the same idiom as `_3`. The
+usage docstrings name "a PySpark 4.1.2 interpreter" instead of a `/tmp` path.
+`_1` writes the meta field `iceberg_jar` as the Ivy file name derived from the
+GAV, which is the same string the fixture carries. None of the three recorders
+was run. The fixture JSON is untouched. The live check's `_stable_projection`
+compares the summary minus the app keys, `(suffix, format, records)` per file,
+`snapshot_count`, the error class, the collision fields and the collision
+message. It never reads `trace_tail` or `meta`.
+
+Residues, stated and not fixed:
+
+- (P3) the overwrite family over-refuses `deleted-data-files` /
+  `deleted-records` / `removed-files-size` when an overwrite ends up removing
+  nothing (see §15).
+- `_record_ice_write_options_3_oracle.py` has not been run live, and neither
+  have the `_1` / `_2` recorders since this round's rewiring.
+
+Mutation transcripts (each one: mutate the working tree, rebuild where the pin
+is pytest, run the pins, restore, rebuild):
+
+- E: `target_file_size_with` ignores the option
+  (`size_override.filter(|_| false)`).
+  `cargo test -p repark-iceberg --lib option_target_size` gives
+  `0 passed; 2 failed`: the slices test fails with `left: 1, right: 4` ("a 1-byte
+  option target rolls on every 1000-row slice"), and the precedence test fails
+  with `left: 4, right: 1` ("the option takes the table property's place").
+- F: `target_file_size_with` ignores the table property (the no-override arm
+  returns 512 MB). The result is `1 passed; 1 failed`: the precedence test fails
+  with `left: 1, right: 4` ("the 1-byte table property rolls on every
+  1000-row slice").
+- G: the empty-source wipe refusal in `insert_overwrite.rs` is replaced by
+  `let _ = options;` (native rebuilt). `-k non_iceberg_overwrite` gives
+  `1 failed, 1 passed`. The wipe cell fails with
+  `UnsupportedOperationException: … Insert into not implemented for this table`
+  in place of the options refusal.
+- H: the no-source refusal is replaced the same way (native rebuilt). The
+  result is `1 failed, 1 passed`, and the `DEFAULT VALUES` cell fails with
+  `Regex pattern did not match … Actual message: 'Error during planning: Inserts
+  without a source not supported'`.
+
+Round 5 gates (2026-09-18, native rebuilt from the restored tree):
+
+- Comment ban: the staged-diff grep printed nothing, and `comment_ban.py`
+  against `origin/main` reported `comment-ban hits=0` (exit 0).
+- `cargo test -p repark-iceberg`: 458 passed, 0 failed, 0 ignored.
+- `cargo test -p repark-spark`: 1203 passed, 0 failed, 4 ignored.
+- `test_ice_write_options_1.py`: 67 passed, 1 skipped (the JVM-gated live leg).
+- `make verify`: exit 0. Across its test stages: 3827 passed, 0 failed,
+  7 ignored. ledger-grammar reports 1501 clauses; docs-links reports 5837 links.
+- Targeted parity guards: `test_cap_1` + `test_dl_6`, 42 passed.

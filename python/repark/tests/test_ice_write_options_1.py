@@ -727,6 +727,35 @@ def test_non_write_arms_refuse_write_options(spark: ReparkSession, statement: st
     assert all("other_ns" not in str(row) for row in namespaces)
 
 
+def _non_iceberg_view(spark: ReparkSession, name: str) -> list[dict[str, Any]]:
+    spark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"]).createOrReplaceTempView(name)
+    return spark.sql(f"SELECT * FROM {name} ORDER BY id").to_arrow().to_pylist()
+
+
+@pytest.mark.parametrize(
+    ("statement", "context"),
+    [
+        (
+            "INSERT OVERWRITE {v} SELECT 9 AS id, 'z' AS name WHERE false",
+            "INSERT OVERWRITE on a non-Iceberg target does not support write options",
+        ),
+        (
+            "INSERT OVERWRITE {v} DEFAULT VALUES",
+            "INSERT OVERWRITE without a source does not support write options",
+        ),
+    ],
+)
+def test_non_iceberg_overwrite_refuses_write_options(
+    spark: ReparkSession, statement: str, context: str
+) -> None:
+    """V-03: the empty-source wipe and no-source passthrough refuse on a non-Iceberg target."""
+    view = "ow_non_iceberg"
+    before = _non_iceberg_view(spark, view)
+    with pytest.raises(AnalysisException, match=context):
+        _channel(spark, statement.format(v=view), {"snapshot-property.run_id": "ow-1"})
+    assert spark.sql(f"SELECT * FROM {view} ORDER BY id").to_arrow().to_pylist() == before
+
+
 def _collision_ids() -> set[str]:
     cells = json.loads(_FIXTURE.read_text(encoding="utf-8"))["cells"]
     return {cell["id"] for cell in cells if cell["id"].startswith(_COLLISION_CELLS)}

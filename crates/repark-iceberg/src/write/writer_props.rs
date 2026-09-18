@@ -608,13 +608,28 @@ mod tests {
         }
     }
 
+    const ROLLED_FILES_AT_ONE_BYTE: usize = 4;
+
+    fn record_counts(files: &[iceberg::spec::DataFile]) -> Vec<u64> {
+        let mut counts: Vec<u64> = files
+            .iter()
+            .map(iceberg::spec::DataFile::record_count)
+            .collect();
+        counts.sort_unstable();
+        counts
+    }
+
+    fn rolling_batches() -> Vec<RecordBatch> {
+        (0..5).map(|_| numeric_batch(700)).collect()
+    }
+
     #[tokio::test]
-    async fn option_target_size_rolls_one_file_per_batch() {
+    async fn option_target_size_rolls_on_row_slices() {
         let warehouse = TempDir::new().expect("tmp");
         let catalog = memory_catalog(&warehouse).await;
         let ident = create_table(&catalog, "t_size", HashMap::new()).await;
         let table = catalog.load_table(&ident).await.expect("load");
-        let batches = vec![numeric_batch(50), numeric_batch(50), numeric_batch(50)];
+        let batches = rolling_batches();
         let tiny = stage_unpartitioned_with_overrides(
             &table,
             batches.clone(),
@@ -623,7 +638,12 @@ mod tests {
         )
         .await
         .expect("tiny target stages");
-        assert_eq!(tiny.len(), 3, "a 1-byte target rolls every batch");
+        assert_eq!(
+            tiny.len(),
+            ROLLED_FILES_AT_ONE_BYTE,
+            "a 1-byte option target rolls on every 1000-row slice"
+        );
+        assert_eq!(record_counts(&tiny), vec![500, 1000, 1000, 1000]);
         let wide = stage_unpartitioned_with_overrides(
             &table,
             batches,
@@ -646,7 +666,7 @@ mod tests {
         )
         .await;
         let table = catalog.load_table(&ident).await.expect("load");
-        let batches = vec![numeric_batch(50), numeric_batch(50), numeric_batch(50)];
+        let batches = rolling_batches();
         let prop_only = stage_unpartitioned_with_overrides(
             &table,
             batches.clone(),
@@ -655,7 +675,11 @@ mod tests {
         )
         .await
         .expect("property stages");
-        assert_eq!(prop_only.len(), 3, "the 1-byte table property rolls");
+        assert_eq!(
+            prop_only.len(),
+            ROLLED_FILES_AT_ONE_BYTE,
+            "the 1-byte table property rolls on every 1000-row slice"
+        );
         let option = stage_unpartitioned_with_overrides(
             &table,
             batches,
