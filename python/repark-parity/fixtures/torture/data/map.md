@@ -38,6 +38,10 @@ the committed landing zone, not a generation target.
   storms (`spark_occ_oracle.json` unscoped, `spark_occ_oracle2.json` partition- and
   range-scoped): commits out of N, the losers' error text, the rows left behind
   (ICE-OCC-SCOPED-1; JSON only, no table data).
+- [ice_v3_write_default_1/](ice_v3_write_default_1/map.md) — seven Spark-written
+  format-v3 tables whose Java-API-added columns carry `initial-default` /
+  `write-default`, with the 22-cell Spark oracle `truth.json` and its recording
+  script (ICE-V3-WRITE-DEFAULT-1; 225,094 bytes, third committed-data exception).
 
 ## Pointers
 

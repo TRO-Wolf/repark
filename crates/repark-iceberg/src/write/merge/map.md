@@ -265,6 +265,17 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   the conflict filter is the target-only predicate since ICE-OCC-SCOPED-1). Pins in
   `tests/occ.rs` (M13 parse + M19-A snapshot split + RP-1 F-0 Replace
   files-exist pin on the snapshot arm).
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** NOT MATCHED INSERT fills omitted
+  columns from `write_default` through `../insert_defaults.rs` (`table_projection`
+  carries the fill into the lowered text); explicit NULL stays NULL. The fill entry
+  points carry no doc comments per the no-code-comments ruling. Pins in
+  `tests/insert_fill.rs`.
+  pins: ice-v3-write-default-1/C-005
+  **Round 5 (2026-09-17, R-03):** `insert_sql` takes the Arrow `write_schema`
+  `execute_merge` already built, so `table_projection` no longer converts the Iceberg
+  schema again, and a table with no primitive `write_default` skips the
+  `ColumnDefaults` build (`schema_has_primitive_fill` pre-scan).
+  pins: ice-v3-write-default-1/C-019
 - [tests/](tests/map.md) — MERGE unit batteries (primary, OCC, streaming, parallel write).
 
 ## I want to…

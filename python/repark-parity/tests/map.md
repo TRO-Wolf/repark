@@ -172,6 +172,14 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **FNP-11B step 6 (2026-09-15):**
   `functions.py` mirror row 1960 → 1984 and `functions_expr.py` 2235 → 2237
   with the script baseline. pins: fnp-11b/C-001, C-005
+- `test_cap_1_source_file_line_cap.py` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):**
+  mirror row ratchets `dataframe/writer_readwriter.py` 1101 → 1095 with
+  `scripts/check_lib_py.py` (the by-name projection returns the target column
+  list and stops refusing missing frame columns).
+  pins: ice-v3-write-default-1/C-006
+  Run 21b round 2 (2026-09-18): 1095 → 1094 — `overwritePartitions()` passes the
+  same column list into its `INSERT OVERWRITE` in two lines instead of three.
+  pins: ice-v3-write-default-1/C-020
   **FNP-11B remediation round 1 (2026-09-16):** `functions_expr.py` mirror row
   2237 → 2220 with the script baseline (the `make_timestamp` forwarder becomes a
   direct re-export). pins: fnp-11b/C-007
@@ -910,3 +918,5 @@ Escalate to: [../map.md#debug](../map.md).
 - **FNP-GEN-1 rebase onto #647 (2026-09-16, orchestrating session):** the same recipe a second
   time — `len(rows)` 1082 read from the failing assert on a fresh release native, backlog 108 read
   from `check_example_coverage.py`'s report (unchanged). pins: fnp-gen-1/C-007
+
+ICE-V3-WRITE-DEFAULT-1 rebase onto ICE-DYN-OVERWRITE-1 (2026-09-18, run 21b): `test_cap_1_source_file_line_cap.py` mirrors `check_lib_py.py`: `writer_readwriter.py` 1109 → 1102 (the merged column-list and `static_overwrite` writer; the CAP-1 mirror moves with it). pins: ice-v3-write-default-1/C-024

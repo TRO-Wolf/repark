@@ -12,7 +12,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::expr::{Exists, InSubquery};
 use datafusion::logical_expr::{Expr as DataFusionExpr, ExprSchemable, LogicalPlan};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::{Insert, ObjectName, TableObject};
+use datafusion::sql::sqlparser::ast::{Insert, ObjectName, Statement, TableObject};
 use iceberg::Catalog;
 use iceberg::{NamespaceIdent, TableIdent};
 
@@ -49,6 +49,14 @@ pub(crate) async fn execute_insert_overwrite(
     if let Some(message) = refuse_read_only_dml_table_sql(catalogs, &table_sql) {
         return Err(DataFusionError::Plan(message));
     }
+    let marked = Box::pin(rewrite_overwrite_default_markers(
+        ctx, catalogs, table_name, insert,
+    ))
+    .await?;
+    let (sql, insert) = match marked.as_deref() {
+        Some((rewritten, rewritten_insert)) => (rewritten.as_str(), rewritten_insert),
+        None => (sql, insert),
+    };
 
     if let Some(partition_exprs) = &insert.partitioned {
         return execute_partition_overwrite(
@@ -152,7 +160,7 @@ pub(crate) async fn execute_partition_overwrite(
     use repark_iceberg::write::{
         PartitionOverwritePlan, partition_overwrite_request_from_exprs, plan_partition_overwrite,
         refuse_empty_dynamic_overwrite, stage_static_partition_overwrite_files,
-        write_overwrite_staged_files_from_stream,
+        static_partition_source_columns, write_overwrite_staged_files_from_stream,
     };
 
     let Some((catalog_name, catalog, table, branch)) =
@@ -169,9 +177,21 @@ pub(crate) async fn execute_partition_overwrite(
             "INSERT OVERWRITE … PARTITION requires a SELECT or VALUES source".to_string(),
         )
     })?;
-    let column_names: Vec<String> = insert.columns.iter().map(object_name_last).collect();
-    let materialize_sql = format!("SELECT * FROM ({source}) AS _repark_ow_src");
-    let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
+    let listed: Vec<String> = insert.columns.iter().map(object_name_last).collect();
+    let reserved = match &plan {
+        PartitionOverwritePlan::Static(spec) => {
+            static_partition_source_columns(&table, &spec.equalities)?
+        }
+        PartitionOverwritePlan::Dynamic => Vec::new(),
+    };
+    let filled = repark_iceberg::write::insert_defaults::overwrite_source_with_defaults(
+        table.metadata().current_schema(),
+        &listed,
+        &reserved,
+        source,
+    )?;
+    let column_names = filled.columns;
+    let source_df = spark_ast::execute_passthrough(ctx, catalogs, &filled.sql).await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     match plan {
         PartitionOverwritePlan::Static(spec) => {
@@ -180,6 +200,7 @@ pub(crate) async fn execute_partition_overwrite(
                 &table,
                 batches,
                 &spec.equalities,
+                &column_names,
                 concurrency,
             )
             .await?;
@@ -315,7 +336,8 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     // Fail isolation parse before staging.
     let _isolation = repark_iceberg::write::parse_overwrite_isolation(table)?;
     let column_names: Vec<String> = columns.iter().map(object_name_last).collect();
-    let materialize_sql = format!("SELECT * FROM ({source}) AS _repark_ow_src");
+    let (column_names, materialize_sql) =
+        overwrite_source_with_default_fills(table, &column_names, source)?;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
@@ -445,6 +467,51 @@ pub(crate) fn tighten_batch_nullability(batches: Vec<RecordBatch>) -> Result<Vec
             )
         })
         .collect()
+}
+
+async fn rewrite_overwrite_default_markers(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table_name: &ObjectName,
+    insert: &Insert,
+) -> Result<Option<Box<(String, Insert)>>> {
+    use repark_iceberg::write::insert_defaults::{
+        query_has_default_marker, rewrite_markers_with_table,
+    };
+    let Some(source) = &insert.source else {
+        return Ok(None);
+    };
+    if !query_has_default_marker(source) {
+        return Ok(None);
+    }
+    let Some((_, _, table, _)) =
+        try_resolve_iceberg_overwrite_target(ctx, catalogs, table_name).await?
+    else {
+        return Ok(None);
+    };
+    let mut statement = Statement::Insert(insert.clone());
+    if !rewrite_markers_with_table(&table, &mut statement)? {
+        return Ok(None);
+    }
+    let rewritten = statement.to_string();
+    let Statement::Insert(rewritten_insert) = statement else {
+        return Ok(None);
+    };
+    Ok(Some(Box::new((rewritten, rewritten_insert))))
+}
+
+fn overwrite_source_with_default_fills(
+    table: &iceberg::table::Table,
+    column_names: &[String],
+    source: &datafusion::sql::sqlparser::ast::Query,
+) -> Result<(Vec<String>, String)> {
+    let filled = repark_iceberg::write::insert_defaults::overwrite_source_with_defaults(
+        table.metadata().current_schema(),
+        column_names,
+        &[],
+        source,
+    )?;
+    Ok((filled.columns, filled.sql))
 }
 
 /// Empty INSERT OVERWRITE wipe must not run when source types are not assignment-compatible.

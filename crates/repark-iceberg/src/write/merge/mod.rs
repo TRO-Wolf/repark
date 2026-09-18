@@ -52,7 +52,7 @@ mod snapshot_commit;
 pub(crate) mod target_scan;
 
 use insert::{
-    insert_projection, insert_stream_checked, store_assignment_then_sql, update_stream_checked,
+    insert_stream_checked, store_assignment_then_sql, table_projection, update_stream_checked,
 };
 pub use not_matched_by_source::{NotMatchedBySourceAction, NotMatchedBySourceClause};
 pub(crate) use target_scan::{
@@ -617,7 +617,7 @@ async fn plan_and_commit_cow(
             streams.push(Box::pin(rewrite_stream));
         }
         for index in 0..spec.not_matched.len() {
-            let insert_sql = sql.insert_sql(index, write_schema)?;
+            let insert_sql = sql.insert_sql(index, table, write_schema)?;
             streams.push(Box::pin(
                 insert_stream_checked(ctx, &insert_sql, write_schema).await?,
             ));
@@ -705,7 +705,7 @@ async fn plan_and_commit_mor(
             }
         }
         for index in 0..spec.not_matched.len() {
-            let insert_sql = sql.insert_sql(index, write_schema)?;
+            let insert_sql = sql.insert_sql(index, table, write_schema)?;
             streams.push(Box::pin(
                 insert_stream_checked(ctx, &insert_sql, write_schema).await?,
             ));
@@ -1436,9 +1436,9 @@ impl MergeSql<'_> {
     }
 
     /// The rows insert clause `index` adds: source rows with no target match.
-    fn insert_sql(&self, index: usize, write_schema: &ArrowSchema) -> Result<String> {
+    fn insert_sql(&self, index: usize, table: &Table, schema: &ArrowSchema) -> Result<String> {
         let clause = &self.spec.not_matched[index];
-        let projection = insert_projection(clause, write_schema)?;
+        let projection = table_projection(clause, table, schema)?;
         let predicates: Vec<Option<&str>> = self
             .spec
             .not_matched

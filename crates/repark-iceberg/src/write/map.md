@@ -424,6 +424,13 @@ repark-core's error map.
   refuse) in its rustdoc and error. `commit_*_to` variants pass `.to_branch`.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
   pins: rp-5-fork-repin/C-004 V3-COV pins in this file: a view-string source conforms to its Utf8 target instead of failing the rebuild (V3-COV-1); the identity arm hands the same buffer back while a non-assignable pair still refuses.
+  **ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17, ruling Q-21b-3):**
+  `stage_static_partition_overwrite_files` takes the statement column list; a
+  non-empty list maps the source by name (static columns from the clause, listed
+  columns from the source, the rest NULL or `CANNOT_FIND_DATA` when required) and a
+  listed static column refuses `STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST`.
+  `static_partition_source_columns` names the columns the clause assigns so the
+  default fill skips them. pins: ice-v3-write-default-1/C-015
 - `insert_gate.rs` — **WI-2 (2026-08-15):** `InsertStoreAssignment`, an `AnalyzerRule` over
   `LogicalPlan::Dml(WriteOp::Insert(_))` that runs `store_assign.rs`'s matrix — imported, never
   duplicated — against the pre-cast types in the synthesized projection's INPUT schema. Registered
@@ -435,6 +442,46 @@ repark-core's error map.
   Named residual: `Cast(Literal, …)` inside a `Values` node, where the synthesized and explicit
   forms are byte-identical. Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
+- `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
+  filling omitted columns from `write_default` on every write path: `column_defaults`
+  reads the table defaults, `fill_insert_plan` rewrites a short INSERT plan, an
+  explicit NULL stays NULL, and a missing required column keeps Spark's error.
+  `rewrite_insert_markers` passes a missing table through unloaded, so the door's
+  standard missing-table error fires instead of a leaked `TableNotFound`. An unloadable
+  table, an unrenderable default literal, and a default that does not fit its column type
+  all surface as plan errors. Its entry points carry
+  `#[allow(clippy::missing_errors_doc)]` in place of the `# Errors` doc comment the
+  no-code-comments ruling forbids. The marker pass probes the AST for `DEFAULT`
+  first and loads nothing without one; the loaded table travels in `MarkerRewrite`
+  into `fill_insert_plan`, so an INSERT pays at most one catalog load. Unit tests
+  (including the load-count pins over a counting test catalog) live in
+  `insert_defaults/tests/mod.rs` — a `tests/` directory so the C-009 setter guard
+  (`test_rp3_c009_write_default.py`, needles `with_write_default` / `write_default(`,
+  `tests` path parts exempt) reads the test-only `with_write_default` builder as test
+  code; the pre-scan is named `schema_has_primitive_fill` for the same guard (run 21b
+  round 2, 2026-09-18).
+  **Run 21b round 2 (2026-09-18, ruling Q-21b-9):** `refuse_default_marker_under_with`
+  refuses a `DEFAULT` marker in the outer VALUES / SELECT list of an INSERT whose query
+  carries `WITH` — `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION` naming `DEFAULT`, SQLSTATE
+  42703 — before any table load, on `INSERT INTO` and `INSERT OVERWRITE`, both doors
+  (`rewrite_insert_markers` and `rewrite_markers_with_table` both call it). Spark 4.1.2
+  resolves `DEFAULT` only in the top-level INSERT's own list and refuses it under
+  `WITH` (its text carries `WITH_SUGGESTION` and the CTE's columns; RePark names none).
+  `DEFAULT` inside a CTE body or derived table is never rewritten and refuses in
+  planning (`No field named default`), as Spark refuses it.
+  pins: ice-v3-write-default-1/C-021
+  pins: ice-v3-write-default-1/C-004, C-005, C-006, C-007
+  **Round 5 (2026-09-17):** `overwrite_source_with_defaults` is the one
+  `INSERT OVERWRITE` fill both doors share — whole-table and both PARTITION arms —
+  appending `(CAST(default)) AS col` for every omitted defaulted column not listed
+  and not assigned by a static clause, and returning the extended column list.
+  `schema_has_primitive_fill` is the cheap pre-scan that skips the Arrow conversion
+  and the `ColumnDefaults` map on tables with no defaults (R-04).
+  pins: ice-v3-write-default-1/C-015, C-019
+  `rewrite_markers_with_table` is the DEFAULT-marker pass over an already-loaded table
+  (`rewrite_insert_markers` loads, then calls it); `query_has_default_marker` is the
+  public AST probe. The Spark door's `INSERT OVERWRITE` calls both (ruling Q-21b-4).
+  pins: ice-v3-write-default-1/C-016
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):
   `ansi_store_assignable` / `normalize_for_assignment` /
