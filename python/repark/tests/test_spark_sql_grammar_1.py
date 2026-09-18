@@ -284,14 +284,36 @@ def test_pg_struct_dot(spark: ReparkSession) -> None:
 def test_q14_current_date_bare_and_paren(spark: ReparkSession) -> None:
     """Q14-2/3: ``current_date`` resolves bare and parenthesised.
 
-    Spark types both non-null; the DataFusion builtin stays nullable on RePark
-    and the pin records the engine shape.
+    Spark answers the date in the session zone, so the pin reads the session's
+    configured zone instead of the host-local date. Spark types both non-null;
+    the DataFusion builtin stays nullable on RePark and the pin records the
+    engine shape.
     """
+    zone = ZoneInfo(spark.conf.get("spark.sql.session.timeZone"))
     for expr in ("current_date", "current_date()"):
+        before = datetime.datetime.now(zone).date()
         table = _table(spark, f"SELECT {expr} AS v")
-        assert table.column("v").to_pylist() == [datetime.date.today()]
+        after = datetime.datetime.now(zone).date()
+        assert table.column("v").to_pylist()[0] in (before, after)
         assert table.schema.field("v").type == pa.date32()
         assert table.schema.field("v").nullable is True
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="TZ-9: current_date answers the UTC date under a non-UTC session zone",
+)
+def test_q14_current_date_answers_the_session_zone_date(spark: ReparkSession) -> None:
+    """Q14-2/3 session-zone pin: ``current_date`` follows the session zone."""
+    for zone_name in ("Pacific/Kiritimati", "Etc/GMT+12"):
+        spark.conf.set("spark.sql.session.timeZone", zone_name)
+        assert spark.conf.get("spark.sql.session.timeZone") == zone_name
+        zone = ZoneInfo(zone_name)
+        before = datetime.datetime.now(zone).date()
+        table = _table(spark, "SELECT current_date AS v")
+        after = datetime.datetime.now(zone).date()
+        assert table.column("v").to_pylist()[0] in (before, after)
+        assert table.schema.field("v").type == pa.date32()
 
 
 def test_q14_current_timestamp_bare_and_paren(spark: ReparkSession) -> None:
