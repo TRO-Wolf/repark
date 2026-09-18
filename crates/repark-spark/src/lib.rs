@@ -17,6 +17,7 @@ mod dialect;
 mod format_version;
 mod insert_by_name;
 mod insert_overwrite;
+mod insert_timestamp_ns;
 mod keyword_lower;
 mod local_fs_ddl;
 mod merge;

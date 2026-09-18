@@ -227,6 +227,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`); **V3-9:** the `format-version = 3` opt-in refusal names the conf and no
   longer claims merge-on-read is unserved. pins: v3-9-mor-predicate-dml-dv/C-006
+- `v3_timestamp_ns_door.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door on
+  `timestamp_ns` / `timestamptz_ns` — string casts keep nine digits (offset honoured),
+  INSERT VALUES widens `TIMESTAMP` literals and strings, INSERT SELECT widens microsecond
+  columns, `CAST(ns AS STRING)` keeps every digit and an equality predicate matches at
+  nanosecond precision. Round 2 (2026-09-18): `TIMESTAMP`-typed `VALUES` cells floor to µs while
+  a string keeps nine digits, `CAST(ns AS TIMESTAMP)` floors to µs instants, and `EXPLAIN`
+  lowers ns casts. pins: ice-tsns-sql-1/C-001, C-002, C-004, C-005, C-009, C-010, C-011
 - `v3_types.rs` — **V3-6:** C-001 ledger matrix + refuse of `UNKNOWN` / `VARIANT` /
   ADD COLUMN DEFAULT; C-003 opt-in v3 `timestamp_ns` / `timestamptz_ns` CREATE,
   ns Arrow round-trip, v2 refuse (asserts the fork's exact

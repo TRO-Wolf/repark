@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-tsns-sql-1-ledger.md](ice-tsns-sql-1-ledger.md) —
+  **ICE-TSNS-SQL-1 (2026-09-17), in flight:** `timestamp_ns` / `timestamptz_ns` on the SQL door
+  (rating row V3-06 and the ns half of V3-04) answer the Iceberg v3 spec with a PyIceberg 0.12.0
+  read-back, per ruling Q-21c-6 — string casts, lossless widening on every write path,
+  `days`/`hours` partitions, lossless `CAST … AS STRING`, nanosecond predicates. `hours()` on ns
+  is BLOCKED-ON-FORK F-TSNS-HOUR-1. Round 2 (2026-09-18, ruling Q-21c-8): the type name
+  `TIMESTAMP` is always µs — `CAST(ns AS TIMESTAMP)` narrows, `TIMESTAMP` cells in `VALUES`
+  floor, `EXPLAIN` lowers. `risk_tier: standard`. Branch `feat/ice-tsns-sql-1`.
+  pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [ice-mixed-case-1-ledger.md](ice-mixed-case-1-ledger.md) —
   **ICE-MIXED-CASE-1 (2026-09-17), in flight:** the Spark door resolves
   mixed-case columns case-insensitively under `spark.sql.caseSensitive=false`

@@ -244,6 +244,15 @@ async fn execute_inner(
                     "MERGE OUTPUT/RETURNING clauses are not supported".to_string(),
                 ));
             }
+            let lowered;
+            let merge = if crate::keyword_lower::has_timestamp_ns_cast(merge) {
+                let mut owned = merge.clone();
+                crate::keyword_lower::lower_timestamp_ns_casts(&mut owned);
+                lowered = owned;
+                &lowered
+            } else {
+                merge
+            };
             merge::execute_merge(
                 ctx,
                 catalogs,
