@@ -1,0 +1,257 @@
+<title>Iceberg Re-Rating 2026-09-18</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F2F5F7;
+    --paper: #FFFFFF;
+    --ink: #1A2430;
+    --ink-soft: #55616D;
+    --line: #D6DEE5;
+    --accent: #0E6C88;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #DCEBF1;
+    --good: #2A7A4B;
+    --good-soft: #DDEFE3;
+    --warn: #A86A10;
+    --warn-soft: #F6E8CF;
+    --bad: #B0372A;
+    --bad-soft: #F5DCD8;
+    --hold: #5A6470;
+    --hold-soft: #E4E8EC;
+    --bar: #9CC5D4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1418;
+      --paper: #151D23;
+      --ink: #E4EAEF;
+      --ink-soft: #A3AFB9;
+      --line: #27333C;
+      --accent: #4DB1CF;
+      --accent-ink: #0B1519;
+      --accent-soft: #163541;
+      --good: #63C48A;
+      --good-soft: #163425;
+      --warn: #E0A64A;
+      --warn-soft: #3A2C12;
+      --bad: #EE7A6C;
+      --bad-soft: #3E1D19;
+      --hold: #9AA6B1;
+      --hold-soft: #232D35;
+      --bar: #2B5F70;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1418;
+    --paper: #151D23;
+    --ink: #E4EAEF;
+    --ink-soft: #A3AFB9;
+    --line: #27333C;
+    --accent: #4DB1CF;
+    --accent-ink: #0B1519;
+    --accent-soft: #163541;
+    --good: #63C48A;
+    --good-soft: #163425;
+    --warn: #E0A64A;
+    --warn-soft: #3A2C12;
+    --bad: #EE7A6C;
+    --bad-soft: #3E1D19;
+    --hold: #9AA6B1;
+    --hold-soft: #232D35;
+    --bar: #2B5F70;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 36px 24px 72px; }
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 18px; margin-bottom: 28px; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  h1 {
+    font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: 34px;
+    line-height: 1.1;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  h2 {
+    font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    margin: 36px 0 12px;
+    text-wrap: balance;
+  }
+  .lede { color: var(--ink-soft); margin: 0; max-width: 66ch; }
+  .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0 4px; }
+  .tile { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; }
+  .tile .n {
+    font-family: "IBM Plex Sans Condensed", sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tile .l { font-size: 12px; color: var(--ink-soft); margin-top: 6px; letter-spacing: 0.02em; }
+  .tbl { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 500;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: var(--ground);
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: "IBM Plex Mono", monospace; font-size: 13.5px; }
+  .chip { display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; padding: 1px 8px; border-radius: 3px; white-space: nowrap; }
+  .chip.good { background: var(--good-soft); color: var(--good); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); }
+  .chip.hold { background: var(--hold-soft); color: var(--hold); }
+  .chip.acc { background: var(--accent-soft); color: var(--accent); }
+  code, .mono { font-family: "IBM Plex Mono", monospace; font-size: 13px; }
+  .bars { display: grid; gap: 8px; margin: 10px 0 0; }
+  .bar { display: grid; grid-template-columns: 170px 1fr 120px; align-items: center; gap: 12px; font-size: 13.5px; }
+  .bar .track { height: 12px; background: var(--hold-soft); border-radius: 2px; position: relative; overflow: hidden; }
+  .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--bar); }
+  .bar .done { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+  .bar .v { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink-soft); text-align: right; font-variant-numeric: tabular-nums; }
+  .legend { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; }
+  .legend i { display: inline-block; width: 12px; height: 10px; vertical-align: -1px; margin-right: 4px; border-radius: 2px; }
+  ol, ul { padding-left: 22px; margin: 8px 0; }
+  li { margin: 5px 0; }
+  li b { font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 14px 16px; }
+  .card h3 { font-family: "IBM Plex Sans Condensed", sans-serif; font-size: 16px; margin: 0 0 8px; font-weight: 600; }
+  .card p { margin: 0 0 6px; font-size: 14px; }
+  .note { border-left: 3px solid var(--warn); padding: 8px 14px; background: var(--paper); border-radius: 0 4px 4px 0; font-size: 14px; margin: 14px 0; }
+  footer { margin-top: 44px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 12.5px; }
+  @media (max-width: 640px) {
+    .strip { grid-template-columns: 1fr 1fr; }
+    .grid2 { grid-template-columns: 1fr; }
+    .bar { grid-template-columns: 110px 1fr 80px; }
+  }
+  .seg { display: flex; height: 14px; border-radius: 2px; overflow: hidden; margin: 10px 0 0; gap: 2px; }
+  .seg span { display: block; }
+  .seg .s-good { background: var(--good); }
+  .seg .s-acc { background: var(--accent); }
+  .seg .s-warn { background: var(--warn); }
+  .seg .s-hold { background: var(--hold); }
+  td.row { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; white-space: nowrap; }
+  td.g { white-space: nowrap; }
+  .arrow { color: var(--ink-soft); font-family: "IBM Plex Mono", monospace; font-size: 12px; padding: 0 3px; }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">RePark · Iceberg format v2 and v3 · measured 2026-09-18 17:00 EDT</p>
+  <h1>Iceberg Re-Rating 2026-09-18</h1>
+  <p class="lede">The rating of 2026-09-16 graded eleven rows MISSING, seven of them silent wrong answers. Three remediation nights and one day run later, the rating's own probe scripts were re-run unchanged against merged main at <span class="mono">#703</span>, the RP-28 bump (fork pin <span class="mono">3296ffc7</span>, release native) beside PySpark 4.1.2 with Iceberg 1.11.0. Every silent defect the rating found now answers Spark.</p>
+  <div class="strip">
+    <div class="tile"><div class="n">11 → 0</div><div class="l">rows graded MISSING; one loud write gap remains inside V2-10d</div></div>
+    <div class="tile"><div class="n">0</div><div class="l">silent wrong answers across 39 probes and two replays</div></div>
+    <div class="tile"><div class="n">2/12 → 10/10</div><div class="l">range predicates correct on a promoted column, v2 and v3</div></div>
+    <div class="tile"><div class="n">64 / 64</div><div class="l">DML shapes pass right after ADD COLUMN; the rating had 40</div></div>
+  </div>
+</header>
+
+<h2>Verdict</h2>
+<div class="grid2">
+  <div class="card">
+    <h3>Format v2 <span class="chip acc">HARDENED-NARROW</span> <span class="arrow">held, envelope widened</span></h3>
+    <p>The three things the rating said break the silver shape are gone: promotion reads and MERGE are correct, MERGE commits right after <code>ADD COLUMN</code>, and <code>partitionOverwriteMode=dynamic</code> keeps the untouched partitions.</p>
+    <p>What keeps it from PRODUCTION is evidence, not a known wrong answer: the unknown-outcome commit path has never met a live lost response, and the last green AWS acceptance run is on <span class="mono">3bd667e6</span>, sixteen commits behind this main.</p>
+  </div>
+  <div class="card">
+    <h3>Format v3 <span class="chip good">HARDENED-NARROW</span> <span class="arrow">was EXPERIMENTAL</span></h3>
+    <p><code>write-default</code> fills on every door and Spark reads the value back. <code>timestamp_ns</code> works on the SQL door. Multi-argument transforms are a dated DECLARED row with pins, not an unregistered refusal.</p>
+    <p>Row ids on a partitioned <code>INSERT … SELECT</code> are still not reproducible run to run (6 mappings in 12 runs). Encryption keys are still stored and never applied.</p>
+  </div>
+</div>
+
+<h2>Rows that changed grade</h2>
+<p class="lede">"Then" is the rating at <span class="mono">a92a68db</span>. "Now" is what the same probe printed today. Grades are mine; no second rater reviewed them.</p>
+<div class="tbl">
+<table>
+  <tr><th>Row</th><th>Then</th><th>Now, measured</th><th>Probe</th><th>Grade</th></tr>
+  <tr><td class="row">V2-10c · V3-14</td><td>Range filters on a promoted column drop every pre-promotion row: 2 of 12</td><td>10 of 10 real predicates on RePark- and Spark-promoted tables, v2 and v3. The 2 left are the probe's own <code>BETWEEN</code> evaluator bug, as in the rating. Identity, truncate and bucket partition sources: all filters correct</td><td class="mono">p_promote_read, replay, replay2</td><td class="g"><span class="chip bad">MISSING</span><span class="arrow">→</span><span class="chip good">H-N</span></td></tr>
+  <tr><td class="row">V2-06b · V3-11</td><td>MERGE on a promoted key inserts a duplicate; 6 loud Arrow type errors; range UPDATE hits 0 rows</td><td>32 of 32 MERGE shapes correct (was 24), 10 of 10 isolate cases, range UPDATE correct on v2/v3 × CoW/MoR. Twin 26-step evolution program: 10 EQUAL, 0 DIFFERENT</td><td class="mono">p_merge_evo, p_isolate_merge, p_evolution</td><td class="g"><span class="chip bad">MISSING</span><span class="arrow">→</span><span class="chip good">H-N</span></td></tr>
+  <tr><td class="row">V2-10e</td><td>24 of 64 DML shapes fail after ADD or RENAME COLUMN until an append lands</td><td>64 of 64 pass. <code>UPDATE SET * / INSERT *</code> on a Spark-evolved table equals Spark's twin</td><td class="mono">p_addcol_dml, p_merge_star, p_ddl_then_dml</td><td class="g"><span class="chip bad">MISSING</span><span class="arrow">→</span><span class="chip good">H-N</span></td></tr>
+  <tr><td class="row">V2-10d</td><td>A Spark table with a nested field add is unreadable; nested DDL refused</td><td>16 of 16 nested shapes EQUAL, 0 errors. <code>STRUCT</code>, <code>ARRAY&lt;STRUCT&gt;</code>, <code>MAP</code> create; <code>ADD COLUMN s.c</code> works. <b>Still failing, loud:</b> INSERT into a list column. The fork fix merged today (#295); main gets it with the next pin bump</td><td class="mono">p_isolate_nested, replay2</td><td class="g"><span class="chip bad">MISSING</span><span class="arrow">→</span><span class="chip warn">EXP</span></td></tr>
+  <tr><td class="row">V2-24b</td><td>Dynamic overwrite replaces the whole table on the SQL door and <code>insertInto</code></td><td>All three doors EQUAL to Spark, static and dynamic</td><td class="mono">p_overwrite_mode</td><td class="g"><span class="chip bad">MISSING</span><span class="arrow">→</span><span class="chip good">H-N</span></td></tr>
+  <tr><td class="row">V2-26</td><td><code>= NaN</code> and <code>IN (NaN)</code> return nothing; 18 of 19 edge predicates</td><td>19 of 19 equal across four engine × table cells; <code>IN (NaN)</code> and <code>!= NaN</code> correct</td><td class="mono">p_pruning_edges, replay2</td><td class="g"><span class="chip bad">MISSING</span><span class="arrow">→</span><span class="chip good">H-N</span></td></tr>
+  <tr><td class="row">V2-20c</td><td>A stale-base commit overwrites <code>v(N+1).metadata.json</code>; Spark's commit is lost and its next read fails</td><td>Typed <code>CatalogCommitConflicts</code>, the winner's file unchanged, Spark reads the table</td><td class="mono">p_failures</td><td class="g"><span class="chip bad">MISSING</span><span class="arrow">→</span><span class="chip good">H-N</span></td></tr>
+  <tr><td class="row">V3-03b</td><td><code>write-default</code> ignored on two SQL doors, refused on four others</td><td>Filled on column-list INSERT, MERGE insert, <code>DEFAULT</code> keyword, <code>writeTo</code> and <code>saveAsTable</code>; Spark reads 5 back</td><td class="mono">p_write_default, p_v3_types_defaults</td><td class="g"><span class="chip bad">MISSING</span><span class="arrow">→</span><span class="chip good">H-N</span></td></tr>
+  <tr><td class="row">V3-05</td><td>Multi-argument transforms refused, no registry row</td><td>Still refused, with an arity message. Now a dated DECLARED row, three pins and a post-1.x card</td><td class="mono">replay2</td><td class="g"><span class="chip bad">MISSING</span><span class="arrow">→</span><span class="chip hold">DECL</span></td></tr>
+  <tr><td class="row">V2-10a · V2-10b</td><td>DDL fine but DML breaks after it; <code>FIRST/AFTER</code> refused</td><td>See V2-10e. Column moves work and read back in the new order</td><td class="mono">replay2</td><td class="g"><span class="chip warn">EXP</span><span class="arrow">→</span><span class="chip good">H-N</span></td></tr>
+  <tr><td class="row">V2-12</td><td>INSERT writes unsorted files, <code>sort_order_id</code> NULL</td><td>Both files ascending, <code>sort_order_id = 2</code>, same as Spark's twin. Transform sort orders still refuse, registered</td><td class="mono">p_sort_overwrite</td><td class="g"><span class="chip warn">EXP</span><span class="arrow">→</span><span class="chip good">H-N</span></td></tr>
+  <tr><td class="row">V2-27</td><td>Unquoted mixed-case columns fail on Spark-created tables</td><td>The three mixed-case cells in the read-edge probe pass; 28 of 28 EQUAL</td><td class="mono">p_read_edges</td><td class="g"><span class="chip warn">EXP</span><span class="arrow">→</span><span class="chip good">H-N</span></td></tr>
+  <tr><td class="row">V2-29</td><td>Write options dropped behind a warning</td><td><code>snapshot-property.job-id</code> lands in the snapshot summary. One residue: a user's <code>replace-partitions</code> value loses to the fork's marker</td><td class="mono">replay2</td><td class="g"><span class="chip warn">EXP</span><span class="arrow">→</span><span class="chip good">H-N</span></td></tr>
+  <tr><td class="row">V3-04 · V3-06</td><td><code>timestamp_ns</code>: SQL <code>CAST</code> and INSERT refused</td><td>SQL INSERT and read keep nine fractional digits; <code>CAST</code> works. No second engine on this box reads the type</td><td class="mono">p_v3_types_defaults, replay2</td><td class="g"><span class="chip warn">EXP</span><span class="arrow">→</span><span class="chip good">H-N</span></td></tr>
+  <tr><td class="row">V2-24</td><td>RTAS records <code>append, append</code>; <code>INSERT … BY NAME</code> is a parse error</td><td>RTAS records <code>append, overwrite</code> as Spark does; BY NAME works; 5 of 5 append doors EQUAL</td><td class="mono">p_sort_overwrite, p_append_resolution</td><td class="g"><span class="chip good">H-N</span><span class="arrow">→</span><span class="chip good">PROD</span></td></tr>
+  <tr><td class="row">V2-08 · V2-18</td><td><code>rewrite_data_files</code> refuses every option; four snapshot procedures refused</td><td>The options map is accepted; <code>fast_forward</code> answers. Strategy <code>sort</code> still refuses, registered</td><td class="mono">p_evolution, p_maint, replay2</td><td class="g"><span class="chip good">H-N</span> held</td></tr>
+</table>
+</div>
+<p class="legend">H-N = HARDENED-NARROW · EXP = EXPERIMENTAL · DECL = DECLARED · PROD = PRODUCTION. Rows the rating graded PRODUCTION (layout, sequence numbers, MoR reads, stats, time travel, DVs, v3 constraints) re-measured unchanged: every interop compare EQUAL.</p>
+
+<h2>Still true today</h2>
+<div class="tbl">
+<table>
+  <tr><th>What</th><th>Measured today</th><th>Kind</th></tr>
+  <tr><td>INSERT into an Iceberg list column</td><td>Fails with an Arrow list-field type error on main. Fixed in the fork (#295, merged 16:40); 30 Spark cells are recorded for the pins</td><td><span class="chip warn">loud, next bump</span></td></tr>
+  <tr><td><code>count(*)</code> fold (claim C-9)</td><td>The plan still scans: <code>AggregateExec</code> over <code>IcebergTableScan</code>. The answer is right; the claimed metadata fold is absent. Belongs to the v1.5.0 read-performance slate</td><td><span class="chip warn">perf, claim stands wrong</span></td></tr>
+  <tr><td>Row-id order on partitioned <code>INSERT … SELECT</code> (claim C-3)</td><td>6 distinct partition → first <code>_row_id</code> mappings in 12 runs. VALUES and CTAS are stable 12 of 12. Spec-correct, not reproducible</td><td><span class="chip hold">unchanged</span></td></tr>
+  <tr><td>16 concurrent <code>INSERT</code> statements</td><td>5 of 16 commit, 11 raise <code>CatalogCommitConflicts</code>; no loss. Java retries appends; Spark was not run on this shape</td><td><span class="chip hold">unchanged, loud</span></td></tr>
+  <tr><td>8 disjoint <code>MERGE</code> statements, join-only ON</td><td>1 of 8. Run 21's live oracle measured Spark at 1 of 8 on this same shape; a plain-WHERE UPDATE storm now commits 4 of 4 as Spark does</td><td><span class="chip good">equals Spark</span></td></tr>
+  <tr><td>INSERT OVERWRITE against a concurrent append</td><td>Both commit and the overwrite removes the appended row. The documented snapshot-isolation default, same as the rating</td><td><span class="chip hold">unchanged, documented</span></td></tr>
+  <tr><td>Target file size</td><td>262,144 B target gives 12 files, largest 311,060 B. The rating measured one 573,667 B file</td><td><span class="chip acc">improved</span></td></tr>
+  <tr><td>ORC and Avro writes, <code>truncate(binary)</code>, transform sort orders, <code>compute_table_stats</code>, <code>_file</code> metadata column, <code>MERGE WITH SCHEMA EVOLUTION</code></td><td>All refuse with typed messages</td><td><span class="chip hold">loud</span></td></tr>
+  <tr><td>Encryption key id (ENC-1)</td><td>CREATE accepts it and data is written as plain Parquet. Run 22b recommends a typed refusal at CREATE</td><td><span class="chip bad">silent, DECLARED</span></td></tr>
+  <tr><td>Live unknown-outcome drill, AWS at this revision</td><td>Not done. Nightly AWS acceptance is green on <span class="mono">3bd667e6</span> (run 35326252631)</td><td><span class="chip hold">evidence gap</span></td></tr>
+</table>
+</div>
+<div class="note">Side finding, outside Iceberg: <code>SELECT id FROM range(10)</code> fails on RePark because the column is named <code>value</code>; Spark names it <code>id</code>. I did not check the parity registry for an existing row.</div>
+
+<h2>The rating's eleven contradicted claims</h2>
+<div class="tbl">
+<table>
+  <tr><th>Claim</th><th>Subject</th><th>Today</th></tr>
+  <tr><td class="row">C-1 · C-2</td><td><code>write-default</code> fills an omitted column</td><td><span class="chip good">now true</span></td></tr>
+  <tr><td class="row">C-3</td><td>One partition-order rule on every writer</td><td><span class="chip warn">still false</span> for <code>INSERT … SELECT</code></td></tr>
+  <tr><td class="row">C-4</td><td><code>rewrite_data_files</code> takes options</td><td><span class="chip good">now true</span></td></tr>
+  <tr><td class="row">C-5 · C-6 · C-10</td><td>DML and reads after type promotion and schema evolution</td><td><span class="chip good">now true</span>, except list-column INSERT</td></tr>
+  <tr><td class="row">C-7</td><td>A declared order sorts each writer's stream</td><td><span class="chip good">now true</span> for plain INSERT</td></tr>
+  <tr><td class="row">C-8</td><td>Statistics keys absent from RePark commits</td><td><span class="chip hold">not re-read</span>; behaviour equals Spark as before</td></tr>
+  <tr><td class="row">C-9</td><td><code>count(*)</code> folds with no scan</td><td><span class="chip warn">still false</span></td></tr>
+  <tr><td class="row">C-11</td><td>Unquoted mixed-case identifiers agree with Spark</td><td><span class="chip good">now true</span></td></tr>
+</table>
+</div>
+
+<h2>Method and limits</h2>
+<ul>
+  <li><b>Same scripts, same oracle.</b> 39 of the rating's probe scripts ran unchanged, one at a time, in 9 minutes, plus the rating's headline replay and <code>count(*)</code> check. Logs were compared line by line with the 2026-09-16 logs after stripping timestamps and ids.</li>
+  <li><b>Fourteen inline probes no longer exist.</b> The rating ran them from the shell and only their logs survive. A new RePark-only replay covers their cells for NaN, promoted DML and partition sources, column moves, write options, ORC, file size, multi-argument transforms, <code>timestamp_ns</code>, nested DDL, BY NAME and the procedures. It has no Spark twin; expected values are hand-written.</li>
+  <li><b>Not re-run:</b> the two PyIceberg read probes, the time-travel failure shapes, the conf-door variants of dynamic overwrite, and the pin batteries (CI runs those on every merge). The filter-consistency probe found 41 checks where the rating had 57, because fewer leftover tables existed; 0 inconsistent in both.</li>
+  <li><b>Local catalogs only.</b> RePark's memory catalog and Spark's Hadoop catalog on one box. Nothing here touched Glue or S3 Tables.</li>
+  <li><b>One rater.</b> The grades are the orchestrating session's reading of the measurements. No critic reviewed this page.</li>
+</ul>
+
+<footer>Measured on main at <span class="mono">#703</span> (RP-28) · repark 1.4.2 (no 1.5 tag yet) · fork pin <span class="mono">3296ffc7</span> · PySpark 4.1.2, iceberg-spark-runtime 1.11.0 · rating baseline <span class="mono">a92a68db</span>, 2026-09-16</footer>
+</div>
