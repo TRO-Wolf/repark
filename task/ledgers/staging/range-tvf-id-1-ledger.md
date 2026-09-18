@@ -27,9 +27,9 @@ together; `generate_series` keeps its `value` column.
 | C-002 | The column-name contract holds: `SELECT id`, `r.id`, `r(x)` answer, `sum(id)` answers 45 nullable, and `SELECT value` refuses with `AnalysisException` (class only — RePark carries no `UNRESOLVED_COLUMN` token). | Same pin plus `test_sql_sum_cell_answers_rows_with_qualified_display_name` and `test_sql_range_refusal_matches_spark_class[select_value]`; §1 verbatim commands. | **PROVEN** | Green after the fix (§4) with one declared divergence: unaliased `sum(id)` renders `sum(range().id)` — the systemic table-function qualifier leak, identical on `generate_series` (`sum(generate_series().value)`), owned by the SQL door (FNP-6D residual, run 16c). Fixing the shared display path here would be a passenger rewrite, so the pin asserts the qualified name explicitly instead of laundering it. |
 | C-003 | The argument contract holds: the 4-argument form is accepted with rows unaffected, negative step, empty range, and string coercion answer; zero step refuses with `AnalysisException` (class only — no `FAILED_FUNCTION_CALL` token). | Same pins over the `range_a_b_step_parts`, `range_negative_step`, `range_empty`, `range_string_arg`, `range_zero_step` cells; §1 verbatim commands. | **PROVEN** | Green after the fix (§4). The 4th argument is accepted and ignored without literal validation: DataFusion folds constant 4th args to literals before the provider sees them, so a literal check would be dead weight. |
 | C-004 | The `spark.range(...)` DataFrame door answers `struct<id:bigint>`, non-nullable, with Spark's rows. | `test_spark_range_door_answers_recorded_schema_and_rows`; §1 verbatim commands. | **PROVEN** | Green on the release native before the fix (3 passed, §1a); kept as the regression pin. |
-| C-005 | A dated FIXED registry row names the repark before/after, the Spark oracle, the pins, and the rationale. | Registry row `RANGE-TVF-ID-1` in `docs/spark-sql-iceberg-parity.md`. | **OPEN** | Row written; lands in the step-4 commit. |
+| C-005 | A dated FIXED registry row names the repark before/after, the Spark oracle, the pins, and the rationale. | Registry row `RANGE-TVF-ID-1` in `docs/spark-sql-iceberg-parity.md`. | **PROVEN** | Row `RANGE-TVF-ID-1` sits in §7 beside the function-parity FIXED rows (after `FN-APPROXPCT-ACC-1`): repark before/after, Spark recorded oracle, pins, rationale with the `sum(range().id)` residual, dated 2026-09-18. |
 
-VERDICT: 5 clauses, 4 PROVEN, 1 OPEN, 0 REJECTED.
+VERDICT: 5 clauses, 5 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## 1. Measured on the release native in `.venv` (verbatim)
 
@@ -75,6 +75,10 @@ Step-3 commit: `crates/repark-core/src/range_table.rs` (+ file-backed tests,
 panic-ban (`--lib`), and `cargo fmt --check` clean. Pins: 29 passed on the
 rebuilt release native (the `sum_id` schema-string cell became the declared
 qualifier-name pin, C-002).
+
+Step-4 commit: registry row `RANGE-TVF-ID-1` (**FIXED 2026-09-18**) plus this
+ledger (C-005 PROVEN, verdict 5/5). Test map rows for the fixture, pins, and
+migrations landed in steps 2–3.
 
 ## Hand-back
 
