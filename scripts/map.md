@@ -1,5 +1,6 @@
 # map — scripts/
 
+ICE-V3-WRITE-DEFAULT-1 rebase onto ICE-DYN-OVERWRITE-1 (2026-09-18, run 21b): `check_lib_py.py` ratchets `writer_readwriter.py` 1109 → 1102 (the merged column-list and `static_overwrite` writer; the CAP-1 mirror moves with it). pins: ice-v3-write-default-1/C-024
 ICE-DYN-OVERWRITE-1 round 2, ruling Q-20a-6 (2026-09-17): `check_lib_py.py` sets `writer_readwriter.py` 1101 → 1109 (the `static_overwrite` flag threading; `session_core.py` holds 2290) with the CAP-1 mirror. pins: ice-dyn-overwrite-1/L-001
 SET-ANSI-RUNTIME-1 (2026-09-15): `check_lib_py.py` ratchets `tests/test_session_timezone_parity.py` 1328 → 1318 (the applied-contract flips are net-negative). pins: set-ansi-runtime-1/C-005
 FNP-11B remediation round 1 (2026-09-16, run 17a): `check_lib_py.py` sets `functions_expr.py` 2237 → 2220 (the `make_timestamp` forwarder becomes a direct re-export) with the CAP-1 mirror; `build_api_freeze.py` follows module-level `from`-import aliases when reading required params (`aliased_function_signatures`) and carries the alias targets in `source_paths` so scratch trees resolve them — the regenerated register keeps `F.make_timestamp` at `[]` and corrects `F.udtf` from `null` to `[]`. pins: fnp-11b/C-007, C-008

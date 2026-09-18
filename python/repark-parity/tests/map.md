@@ -918,3 +918,5 @@ Escalate to: [../map.md#debug](../map.md).
 - **FNP-GEN-1 rebase onto #647 (2026-09-16, orchestrating session):** the same recipe a second
   time — `len(rows)` 1082 read from the failing assert on a fresh release native, backlog 108 read
   from `check_example_coverage.py`'s report (unchanged). pins: fnp-gen-1/C-007
+
+ICE-V3-WRITE-DEFAULT-1 rebase onto ICE-DYN-OVERWRITE-1 (2026-09-18, run 21b): `test_cap_1_source_file_line_cap.py` mirrors `check_lib_py.py`: `writer_readwriter.py` 1109 → 1102 (the merged column-list and `static_overwrite` writer; the CAP-1 mirror moves with it). pins: ice-v3-write-default-1/C-024
