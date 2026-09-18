@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
+use datafusion::common::TableReference;
 use datafusion::error::Result;
 use datafusion::prelude::SessionContext;
-use iceberg::TableIdent;
+use iceberg::Catalog;
 use repark_iceberg::write::merge::{
     InsertAction, MatchedAction, MergeSpec, NotMatchedBySourceAction,
 };
@@ -8,21 +11,37 @@ use repark_iceberg::write::merge::{
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn maybe_rewrite_merge_fragments(
     ctx: &SessionContext,
-    catalog_name: &str,
+    catalog: &Arc<dyn Catalog>,
     spec: &mut MergeSpec,
 ) -> Result<()> {
     let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
     spec.case_insensitive = case_insensitive;
     if case_insensitive {
-        rewrite_merge_fragments(ctx, catalog_name, spec).await?;
+        rewrite_merge_fragments(ctx, catalog, spec).await?;
     }
     Ok(())
 }
 
-async fn scope_field_names(ctx: &SessionContext, sql: &str) -> Result<Vec<String>> {
+async fn source_field_names(ctx: &SessionContext, spec: &MergeSpec) -> Result<Vec<String>> {
+    if !spec.source_from_sql.starts_with('(')
+        && let Ok(provider) = ctx
+            .table_provider(TableReference::from(spec.source_from_sql.as_str()))
+            .await
+    {
+        return Ok(provider
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| field.name().clone())
+            .collect());
+    }
     let state = ctx.state();
     let dialect = state.config().options().sql_parser.dialect;
-    let statement = state.sql_to_statement(sql, &dialect)?;
+    let sql = format!(
+        "SELECT * FROM {} AS {} LIMIT 0",
+        spec.source_from_sql, spec.source_alias
+    );
+    let statement = state.sql_to_statement(&sql, &dialect)?;
     let plan = state.statement_to_plan(statement).await?;
     Ok(plan
         .schema()
@@ -34,19 +53,22 @@ async fn scope_field_names(ctx: &SessionContext, sql: &str) -> Result<Vec<String
 
 async fn rewrite_merge_fragments(
     ctx: &SessionContext,
-    catalog_name: &str,
+    catalog: &Arc<dyn Catalog>,
     spec: &mut MergeSpec,
 ) -> Result<()> {
-    let target_sql = format!(
-        "SELECT * FROM {} LIMIT 0",
-        spec_target_from_sql(catalog_name, &spec.target)
-    );
-    let target_fields = scope_field_names(ctx, &target_sql).await?;
-    let source_sql = format!(
-        "SELECT * FROM {} AS {} LIMIT 0",
-        spec.source_from_sql, spec.source_alias
-    );
-    let source_fields = scope_field_names(ctx, &source_sql).await?;
+    let table = catalog
+        .load_table(&spec.target)
+        .await
+        .map_err(crate::iceberg_err)?;
+    let target_fields = table
+        .metadata()
+        .current_schema()
+        .as_struct()
+        .fields()
+        .iter()
+        .map(|field| field.name.clone())
+        .collect::<Vec<_>>();
+    let source_fields = source_field_names(ctx, spec).await?;
     let scopes = [
         (spec.target_alias.as_str(), target_fields.as_slice()),
         (spec.source_alias.as_str(), source_fields.as_slice()),
@@ -108,14 +130,4 @@ async fn rewrite_merge_fragments(
         }
     }
     Ok(())
-}
-
-fn spec_target_from_sql(catalog_name: &str, target: &TableIdent) -> String {
-    let mut parts = vec![catalog_name.to_string(), target.namespace().to_string()];
-    parts.push(target.name().to_string());
-    parts
-        .iter()
-        .map(|part| format!("\"{}\"", part.replace('"', "\"\"")))
-        .collect::<Vec<_>>()
-        .join(".")
 }

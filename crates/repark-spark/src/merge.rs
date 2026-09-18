@@ -53,8 +53,8 @@ pub(crate) async fn execute_merge(
     clauses: &[MergeClause],
 ) -> Result<DataFrame> {
     let (catalog_name, mut spec) = lower(table, source, on, clauses)?;
-    crate::merge_fragments::maybe_rewrite_merge_fragments(ctx, &catalog_name, &mut spec).await?;
     let handle = catalog_handle(catalogs, &catalog_name)?;
+    crate::merge_fragments::maybe_rewrite_merge_fragments(ctx, handle, &mut spec).await?;
     repark_iceberg::write::merge::execute_merge(ctx, handle, &spec).await?;
     ctx.read_empty()
 }

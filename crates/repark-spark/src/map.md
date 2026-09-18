@@ -49,7 +49,12 @@ pins: rp-4-fork-repin/C-005, C-006
 - `merge_fragments.rs` — **ICE-MIXED-CASE-1 (2026-09-17):** MERGE fragment
   preprocessing for case-insensitive resolution (target/source scope read,
   `ON` / predicate / value fragment rewrite, `maybe_` dispatcher that stamps
-  the carrier flag onto the spec).
+  the carrier flag onto the spec). **Round 21b step 7 (R-03):** target field
+  names come from the Iceberg metadata (`catalog.load_table` →
+  `current_schema()`), and a named source reads its `TableProvider` schema; only
+  a subquery source (`USING (SELECT …) AS s`) still plans one `SELECT * … LIMIT
+  0`, because no metadata exists for it. `merge.rs` resolves the catalog handle
+  before the fragment rewrite. pins: ice-mixed-case-1/C-004, C-018
 - `insert_overwrite.rs` — INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
   non-empty stage-then-swap; **DML-B** `PARTITION (…)` static/dynamic via
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).

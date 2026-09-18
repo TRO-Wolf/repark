@@ -102,7 +102,7 @@ table-format semantics change, so no fork PR).
 | C-015 | V-04: JOIN USING folds in every statement that carries a query (INSERT … SELECT … JOIN … USING). | `test_measured_query_cells_answer_spark[V04_join_using_select]`, `test_measured_join_using_insert_answers_spark`; Rust `v04_join_using_folds_inside_insert`. | OPEN | Red §9. |
 | C-016 | L-08: any reference (bare, qualified, exact or case-variant) to a name with an ASCII case twin in the node's input refuses `[AMBIGUOUS_REFERENCE]` / `42704`, one option per matching field in the requested spelling (Q-21b-1, Q-21b-2); a Spark-written twin Iceberg table refuses at adoption (DECLARED). | `test_case_twin_reference_is_ambiguous_exact_or_not`, `test_measured_case_twin_table_refuses_at_adoption[L08_*]`, `test_sql_door_ambiguous_reference_matches_spark_shape`; Rust `l08_*`, `case_only_collision_raises_the_spark_sentence`, `join_collision_on_bare_reference_raises`; `name_resolution.rs` `write_side_case_twins_are_ambiguous`. | OPEN | Red §9. |
 | C-017 | R-02 / V-03: when no referenced schema holds an upper-case ASCII field the audit and the AST clone are skipped; the audit that runs indexes each node schema once. Before/after cost measured on a default-profile release native. | Rust `r02_lowercase_only_plans_skip_the_audit`; timing in §9 step 6. | PROVEN | `53514646`; default-profile timing 381.5/393.2 µs → 377.1/365.4 µs per `sql()` (§9). |
-| C-018 | R-03: MERGE fragment scopes come from loaded schemas, not two `SELECT * … LIMIT 0` plans. | `merge_fragments.rs` diff; MC-MRG-01…04 stay green. | OPEN | |
+| C-018 | R-03: MERGE fragment scopes come from loaded schemas, not two `SELECT * … LIMIT 0` plans. | `merge_fragments.rs` diff; MC-MRG-01…04 stay green. | PROVEN | Step 7: target from Iceberg metadata, named source from its provider schema; a subquery source keeps one LIMIT 0 plan (no metadata exists). MC-MRG-01…04 + `test_merge_insert_scope.py` green on the release native (§9). |
 
 ## 1. Red-first record (base `32c0e1a3`, release native in `.venv`, 2026-09-17)
 
@@ -469,6 +469,24 @@ run-to-run spread (±3%) is about the size of the effect. Read the numbers as:
 the audit plus the AST clone were ~4–7% of a trivial statement's
 `sql()`, and the early exit removes that on lowercase-only schemas. There is no
 regression. `collect()` is dominated by execution.
+
+### Step 7 — R-03
+
+`merge_fragments.rs` no longer plans `SELECT * FROM <target> LIMIT 0`. Target
+field names are read from `catalog.load_table(&spec.target)` →
+`metadata().current_schema()`, using the handle `merge.rs` now resolves before
+the rewrite. A named source (`USING updates s`) reads
+`ctx.table_provider(..).schema()`. A subquery source still plans one `SELECT *
+FROM (…) AS s LIMIT 0`: it is an expression with no metadata to read, and
+reaching its schema otherwise would mean planning it anyway. What remains:
+`repark_iceberg::write::merge::execute_merge` loads the target table once more
+itself. Passing the loaded `Table` in would change that function's signature on
+both doors (Spark and ANSI `repark-sql/src/merge.rs`), which is a
+repark-iceberg API change, not a fork change; left for a follow-up and recorded
+here. Replacing a full `statement_to_plan` (catalog resolve + SqlToRel + table
+load) with one metadata load is strictly less work. Pins after the change, on
+the release native: `test_ice_mixed_case_1.py` + `test_merge_insert_scope.py`
+62 passed, 39 skipped, 1 xfailed.
 
 ## 7. Open questions (HALT writes here; empty means none)
 
