@@ -744,9 +744,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `IN (NaN, 1.0)`, `!=`, `NOT IN`, `<`, `>=`, negation, `isnan` control);
   `nan_equality_pushes_is_nan` (`=` either side push `Unary IsNan(d)`),
   `nan_nullsafe_leaves_pushdown_empty` (`<=>` pushes nothing, residual answers),
-  `nan_inequality_pushes_not_nan`, `nan_in_pushes_is_nan_or_in` (`Or(Unary
+  `nan_inequality_pushes_nothing` (`!=` pushes nothing since RP-27: fork #294 drops `!= NaN`), `nan_in_pushes_is_nan_or_in` (`Or(Unary
   IsNan(d), Binary Eq(d, 1.0))` with a NaN-free literal),
-  `nan_single_not_in_pushes_not_nan` (single-element `NOT IN` reaches `!=`),
+  `nan_single_not_in_pushes_nothing` (single-element `NOT IN` reaches `!=`, pushes nothing),
   `nan_range_stays_unpushed` (`<` pushes nothing). Red-first by construction: on
   the pre-#284 fork pin the equality and IN legs answer `[]` (measured in the
   fork ledger's unfixed-tree e2e run). Leaf-private helpers (`nan_seed`,

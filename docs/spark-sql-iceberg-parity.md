@@ -4457,8 +4457,8 @@ the pin rather than obeying it.
   WHERE d = NaN` touch exactly the NaN rows at v2 and v3. The measured pushed
   shapes (fork #284 at pin `75da2b58`): `=` pushes `Unary IsNan(d)`; `IN (NaN,
   1.0)` pushes `Or(Unary IsNan(d), Binary Eq(d, 1.0))` with a NaN-free literal;
-  `!=` and single-element `NOT IN` push `Unary NotNan(d)`; `<=>` and
-  NaN-literal ranges push nothing and answer through the residual. `BETWEEN 1.0
+  `!=` and single-element `NOT IN` push nothing since RP-27 (fork #294 drops `!= NaN` as
+  prune hardening; they answer through the residual); `<=>` and NaN-literal ranges push nothing and answer through the residual. `BETWEEN 1.0
   AND NaN` keeps the pushed finite `>= 1.0` leg (file prune) with the NaN leg
   residual; `BETWEEN NaN AND NaN` is the pure NaN-bound residual.
 - **Apache Spark** — the same id sets per clause per shape (NaN = NaN is true;
