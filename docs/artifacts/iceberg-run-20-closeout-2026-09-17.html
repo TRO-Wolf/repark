@@ -1,0 +1,272 @@
+<title>Iceberg Remediation Run 20</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F2F5F7;
+    --paper: #FFFFFF;
+    --ink: #1A2430;
+    --ink-soft: #55616D;
+    --line: #D6DEE5;
+    --accent: #0E6C88;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #DCEBF1;
+    --good: #2A7A4B;
+    --good-soft: #DDEFE3;
+    --warn: #A86A10;
+    --warn-soft: #F6E8CF;
+    --bad: #B0372A;
+    --bad-soft: #F5DCD8;
+    --hold: #5A6470;
+    --hold-soft: #E4E8EC;
+    --bar: #9CC5D4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1418;
+      --paper: #151D23;
+      --ink: #E4EAEF;
+      --ink-soft: #A3AFB9;
+      --line: #27333C;
+      --accent: #4DB1CF;
+      --accent-ink: #0B1519;
+      --accent-soft: #163541;
+      --good: #63C48A;
+      --good-soft: #163425;
+      --warn: #E0A64A;
+      --warn-soft: #3A2C12;
+      --bad: #EE7A6C;
+      --bad-soft: #3E1D19;
+      --hold: #9AA6B1;
+      --hold-soft: #232D35;
+      --bar: #2B5F70;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1418;
+    --paper: #151D23;
+    --ink: #E4EAEF;
+    --ink-soft: #A3AFB9;
+    --line: #27333C;
+    --accent: #4DB1CF;
+    --accent-ink: #0B1519;
+    --accent-soft: #163541;
+    --good: #63C48A;
+    --good-soft: #163425;
+    --warn: #E0A64A;
+    --warn-soft: #3A2C12;
+    --bad: #EE7A6C;
+    --bad-soft: #3E1D19;
+    --hold: #9AA6B1;
+    --hold-soft: #232D35;
+    --bar: #2B5F70;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 36px 24px 72px; }
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 18px; margin-bottom: 28px; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  h1 {
+    font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: 34px;
+    line-height: 1.1;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  h2 {
+    font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    margin: 36px 0 12px;
+    text-wrap: balance;
+  }
+  .lede { color: var(--ink-soft); margin: 0; max-width: 66ch; }
+  .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0 4px; }
+  .tile { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; }
+  .tile .n {
+    font-family: "IBM Plex Sans Condensed", sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tile .l { font-size: 12px; color: var(--ink-soft); margin-top: 6px; letter-spacing: 0.02em; }
+  .tbl { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 500;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: var(--ground);
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: "IBM Plex Mono", monospace; font-size: 13.5px; }
+  .chip { display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; padding: 1px 8px; border-radius: 3px; white-space: nowrap; }
+  .chip.good { background: var(--good-soft); color: var(--good); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); }
+  .chip.hold { background: var(--hold-soft); color: var(--hold); }
+  .chip.acc { background: var(--accent-soft); color: var(--accent); }
+  code, .mono { font-family: "IBM Plex Mono", monospace; font-size: 13px; }
+  .bars { display: grid; gap: 8px; margin: 10px 0 0; }
+  .bar { display: grid; grid-template-columns: 170px 1fr 120px; align-items: center; gap: 12px; font-size: 13.5px; }
+  .bar .track { height: 12px; background: var(--hold-soft); border-radius: 2px; position: relative; overflow: hidden; }
+  .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--bar); }
+  .bar .done { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+  .bar .v { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink-soft); text-align: right; font-variant-numeric: tabular-nums; }
+  .legend { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; }
+  .legend i { display: inline-block; width: 12px; height: 10px; vertical-align: -1px; margin-right: 4px; border-radius: 2px; }
+  ol, ul { padding-left: 22px; margin: 8px 0; }
+  li { margin: 5px 0; }
+  li b { font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 14px 16px; }
+  .card h3 { font-family: "IBM Plex Sans Condensed", sans-serif; font-size: 16px; margin: 0 0 8px; font-weight: 600; }
+  .card p { margin: 0 0 6px; font-size: 14px; }
+  .note { border-left: 3px solid var(--warn); padding: 8px 14px; background: var(--paper); border-radius: 0 4px 4px 0; font-size: 14px; margin: 14px 0; }
+  footer { margin-top: 44px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 12.5px; }
+  @media (max-width: 640px) {
+    .strip { grid-template-columns: 1fr 1fr; }
+    .grid2 { grid-template-columns: 1fr; }
+    .bar { grid-template-columns: 110px 1fr 80px; }
+  }
+  .seg { display: flex; height: 14px; border-radius: 2px; overflow: hidden; margin: 10px 0 0; gap: 2px; }
+  .seg span { display: block; }
+  .seg .s-good { background: var(--good); }
+  .seg .s-acc { background: var(--accent); }
+  .seg .s-warn { background: var(--warn); }
+  .seg .s-hold { background: var(--hold); }
+  td.row { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; white-space: nowrap; }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">RePark · Iceberg remediation · close-out of 2026-09-17</p>
+  <h1>Iceberg Remediation Run 20</h1>
+  <p class="lede">Run 19 was killed by a SIGTERM at 00:38 with no report. Run 20 rebuilt its state from the lane clones at 05:07, ran three Opus orchestrators with Muse actors and Grok 4.6 reviewers against the measured rating of 2026-09-16, and closed on time at 15:00 EDT. The box was then backed up, rebooted at 17:49 and restored; the last four pull requests are being driven from the restored queue.</p>
+  <div class="strip">
+    <div class="tile"><div class="n">10 + 7</div><div class="l">RePark and fork PRs merged; four more RePark PRs in the queue</div></div>
+    <div class="tile"><div class="n">7 of 22</div><div class="l">rating rows closed on main, three more closed in part</div></div>
+    <div class="tile"><div class="n">RP-23</div><div class="l">fork pin on main, <span class="mono">4151b488</span>, three bumps in one day</div></div>
+    <div class="tile"><div class="n">$24.21</div><div class="l">reviewer spend over 39 Grok rounds; Muse actors are subscription</div></div>
+  </div>
+</header>
+
+<h2>The residual matrix, rating against main</h2>
+<p class="lede">"Before" is the rating of 2026-09-16 at <span class="mono">a92a68db</span>. Every row marked closed answers Spark 4.1.2 against a recorded oracle on both doors; none was closed by a declared refusal.</p>
+<div class="seg" role="img" aria-label="7 rows on main, 3 partly, 2 queued, 5 draft or carried, 5 open">
+  <span class="s-good" style="flex:7"></span><span class="s-good" style="flex:3;opacity:.55"></span><span class="s-acc" style="flex:2"></span><span class="s-warn" style="flex:5"></span><span class="s-hold" style="flex:5"></span>
+</div>
+<p class="legend"><i style="background:var(--good)"></i>on main 7 &nbsp; <i style="background:var(--good);opacity:.55"></i>partly 3 &nbsp; <i style="background:var(--accent)"></i>queued 2 &nbsp; <i style="background:var(--warn)"></i>draft or carried 5 &nbsp; <i style="background:var(--hold)"></i>open 5</p>
+
+<div class="tbl" style="margin-top:14px">
+<table>
+  <tr><th>Row</th><th>Before</th><th>After</th><th>Where</th><th>State</th></tr>
+  <tr><td class="row">V2-26 · V3-14</td><td><code>= NaN</code>, <code>IN (NaN)</code> return no rows, silently</td><td>Every comparison shape answers Spark on v2 and v3; the pushed predicate is pinned</td><td>fork #284, #665, #669</td><td><span class="chip good">on main</span></td></tr>
+  <tr><td class="row">V2-20c</td><td>Stale-base commit on a Hadoop <code>vN</code> table is lost silently</td><td>Typed <code>CatalogCommitConflicts</code> on every update commit, winner bytes intact. Residue: a stale <code>CREATE OR REPLACE</code> splits the catalog</td><td>fork #286, #665, #675</td><td><span class="chip good">on main</span></td></tr>
+  <tr><td class="row">V2-18</td><td>Four snapshot procedures refused</td><td><code>fast_forward</code>, <code>cherrypick_snapshot</code>, <code>set_current_snapshot</code>, <code>rollback_to_timestamp</code> answer Spark. Residue: duplicate WAP pick carries the fork's message</td><td>#674</td><td><span class="chip good">on main</span></td></tr>
+  <tr><td class="row">V2-10b</td><td><code>ALTER COLUMN … FIRST/AFTER</code> refused, no registry row</td><td>Moves through the fork's <code>UpdateSchema</code> on both doors. Residue: a no-op move mints a schema id</td><td>#677</td><td><span class="chip good">on main</span></td></tr>
+  <tr><td class="row">V2-10d inspect</td><td>Inspect tables wrong after an identity-source promotion (found by the 19a critic)</td><td><code>partitions</code>, <code>files</code>, <code>entries</code> answer Long values, eras group into one row</td><td>fork #285 via RP-22</td><td><span class="chip good">on main</span></td></tr>
+  <tr><td class="row">V2-15 · V3-COV-7</td><td>One 573,667 B file against Spark's 57,178 B maximum; no codec stamp on create</td><td>20 files of 23,666–68,446 B against Spark's 20 of 23,735–57,178 B; every create stamps zstd</td><td>fork #288 via RP-23 #671</td><td><span class="chip good">on main</span></td></tr>
+  <tr><td class="row">V2-20b</td><td>Rating: no AWS acceptance run at the current revision</td><td>The rating was stale: the workflow runs nightly and is green. Dispatch <span class="mono">35207108462</span> on <span class="mono">c42a4692</span>: 10 passed in 381 s, dbt gold 1 passed</td><td>run 20c</td><td><span class="chip good">on main</span></td></tr>
+  <tr><td class="row">V2-12</td><td>INSERT ignores the sort order, <code>sort_order_id</code> NULL</td><td>Plain INSERT sorts and stamps through the fork. The RePark-owned writers' stamp is held: the critic showed it stamps unsorted bytes on v3 partitioned DML</td><td>fork #287 via RP-22; <code>feat/ice-sorted-insert-1</code></td><td><span class="chip good" style="opacity:.75">partly</span></td></tr>
+  <tr><td class="row">V2-24</td><td><code>INSERT … BY NAME</code> is a parse error; RTAS commits <code>append,append</code></td><td>BY NAME answers Spark. RTAS: fork merged and pinned, the RePark opt-in and five xfail flips are one small unit</td><td>#670, fork #290</td><td><span class="chip good" style="opacity:.75">partly</span></td></tr>
+  <tr><td class="row">Registry sweep</td><td>The 09-14 cutover assessment claimed PROVEN without running anything</td><td>Part A: twelve rows corrected, two registry rows back to OPEN. Part B (rows for nine unregistered gaps) not started</td><td>#666</td><td><span class="chip good" style="opacity:.75">partly</span></td></tr>
+  <tr><td class="row">V2-10c · V2-06b · V3-11</td><td>Silent row loss and duplicate MERGE inserts after a legal type promotion</td><td>128 recorded-oracle cases on both doors, v2 and v3; fork half merged</td><td>fork #285, #673</td><td><span class="chip acc">queued</span></td></tr>
+  <tr><td class="row">V2-08</td><td><code>rewrite_data_files</code> refuses every option key</td><td>16 keys honoured with Spark's errors. Residue ICE-RDF-DANGLE-2: two dangling deletes against Spark's zero</td><td>fork #283, #672</td><td><span class="chip acc">queued</span></td></tr>
+  <tr><td class="row">V2-10e</td><td>Every MERGE, UPDATE, DELETE refuses after ADD or RENAME COLUMN; a name swap wrote the other field's values</td><td>393 cases pass on the branch, all 33 plain-UPDATE cells included</td><td>fork #289 via RP-23; <code>fix/ice-evo-dml-1</code>, no PR yet</td><td><span class="chip warn">carried</span></td></tr>
+  <tr><td class="row">V2-24b</td><td><code>partitionOverwriteMode=dynamic</code> silently replaces the whole table</td><td>Routed in Rust through a typed flag, Spark-equal on every measured cell; no critic since the rewrite, 14 comment lines to strip</td><td>#682 draft</td><td><span class="chip warn">draft</span></td></tr>
+  <tr><td class="row">V2-27</td><td>Unquoted mixed-case columns fail on Spark-created tables</td><td>Redesigned after four P1s (normalization stays on, columns fold); five P2s open</td><td>#676 draft</td><td><span class="chip warn">draft</span></td></tr>
+  <tr><td class="row">V3-03b</td><td><code>write-default</code> fills NULL silently on column lists, MERGE inserts, DataFrame appends</td><td>Fill implemented and pinned against a 22-cell oracle; one P1 needs re-scoping, P2s open</td><td>#678 draft</td><td><span class="chip warn">draft</span></td></tr>
+  <tr><td class="row">V2-29</td><td>Write options dropped behind a UserWarning</td><td>Round 3 moved options out of band into a native entry point; not gated or verified</td><td><code>feat/ice-write-options-1</code></td><td><span class="chip warn">carried</span></td></tr>
+  <tr><td class="row">V2-20a · DML-5</td><td>1 of 8 disjoint serializable MERGEs commits</td><td>Fork gives filter-scoped conflict detection and retry-on-rebase with 23 fault-injected pins; nothing in RePark calls it yet</td><td>fork #291</td><td><span class="chip hold">open</span></td></tr>
+  <tr><td class="row">V2-10d nested</td><td>A struct child added by Spark makes the table unreadable</td><td>Fork half written, unreviewed; RePark half and nested DDL not written</td><td>fork #292 draft</td><td><span class="chip hold">open</span></td></tr>
+  <tr><td class="row">V3-05</td><td>Multi-argument transforms refused, unregistered</td><td>Unchanged. Spark DDL cannot create one, so the oracle needs a Java-API fixture</td><td>card</td><td><span class="chip hold">open</span></td></tr>
+  <tr><td class="row">V3-06</td><td><code>timestamp_ns</code> on the SQL door is experimental</td><td>Not started. Spark 4.1.2 cannot read the type; the oracle must be Java Iceberg or PyIceberg</td><td>card</td><td><span class="chip hold">open</span></td></tr>
+  <tr><td class="row">V2-21</td><td>The unknown-outcome path never met a lost response</td><td>Not done. Needs an injectable transport in the fork's Glue client first</td><td>card</td><td><span class="chip hold">open</span></td></tr>
+</table>
+</div>
+
+<h2>The queue after the reboot</h2>
+<p class="lede">The reboot at 17:49 emptied the temporary tree, as the pre-reboot check predicted. The restore script rebuilt the campaign root, the oracle environment and the main clone in one pass. Three of the seven queued merges had landed before the restart.</p>
+<div class="tbl">
+<table>
+  <tr><th>PR</th><th>What</th><th>Found after restart</th><th>Action</th></tr>
+  <tr><td class="mono">#681</td><td>run 20c report</td><td>behind main, checks green</td><td>branch updated, watcher running</td></tr>
+  <tr><td class="mono">#680</td><td>run 20a report</td><td>behind main, checks green</td><td>second in the queue; shares a map file with #681, a conflict there is expected and trivial</td></tr>
+  <tr><td class="mono">#672</td><td>ICE-RDF-OPTIONS-1</td><td>Python check red: two lines over 100 columns in the unit's test file</td><td>formatter commit <span class="mono">69fd9190</span> pushed, no behaviour change; third in the queue</td></tr>
+  <tr><td class="mono">#673</td><td>ICE-PROMOTE-READ-1</td><td>conflict in the staging ledger map after #677 landed</td><td>main merged in keeping both entries (<span class="mono">3e94eb28</span>). CI does not run the facade suite, so a local release build and the full facade run gate the merge</td></tr>
+</table>
+</div>
+<p class="legend">Landed before the restart: #671 (RP-23) 15:06, #677 (column reorder) 15:36, #679 (run 20b report) 16:07 EDT.</p>
+
+<h2>What review caught that a gate would not</h2>
+<ul>
+  <li><b>Mixed-case, four P1s.</b> The first design turned identifier normalization off on the Spark door. <code>SELECT * FROM NUMS</code>, mixed-case CTE and window names all answer on main and would have failed; the unit's own pins used lower-case names, so the suite stayed green.</li>
+  <li><b>NaN pushdown, P1.</b> The pins proved rows, not pushdown: the ledger claimed a plan pin that did not exist.</li>
+  <li><b>Dynamic overwrite, P1.</b> An in-band <code>/*RSOW*/</code> marker in statement text decided overwrite semantics, so a user's comment or string literal could change them. Replaced by a typed flag.</li>
+  <li><b>Sorted insert, two P1s.</b> <code>sort_order_id</code> stamped on bytes that are not sorted, and a MERGE pin that stays green when the stamp is reverted. Held off main for that reason.</li>
+  <li><b>Write options, two P1s.</b> A spliced <code>OPTIONS(...)</code> clause let user SQL add snapshot properties Spark never accepts, and the hand-written lexer corrupted UTF-8.</li>
+  <li><b>A reviewer overturned by measurement.</b> On <code>min-file-size-bytes=-1</code> the live oracle showed Spark rejects the value, the opposite of the reviewer's premise. The fix follows the measurement.</li>
+</ul>
+
+<h2>STATUS.md lines the reports flag</h2>
+<p class="lede">Runs never edit STATUS.md. These go into one docs PR from the orchestrating session once #672 and #673 land.</p>
+<div class="tbl">
+<table>
+  <tr><th>Where</th><th>Says</th><th>Measured</th></tr>
+  <tr><td class="mono">134–135</td><td>append fills from a schema-carried <code>write_default</code></td><td>false on main until #678 merges</td></tr>
+  <tr><td class="mono">156–158</td><td>lineage carry and merge-on-read complete on every served DML shape; V3-COV-3 listed FIXED</td><td>contradicted by the promotion work; #666 moved V3-COV-3 back to OPEN</td></tr>
+  <tr><td>history paragraph</td><td>every north-star row is ✅ or dated DECLARED</td><td>the rating found silent wrong answers behind V2-10c, V2-10e, V2-24b; needs a dated qualifier</td></tr>
+  <tr><td>open defects</td><td>no entry for the rating's findings</td><td>one line each for the carried units until their PRs land</td></tr>
+  <tr><td>maintenance line</td><td><code>rewrite_data_files</code> options are table properties only</td><td>names the options map once #672 lands</td></tr>
+  <tr><td>fork pin, AWS line</td><td>older pin; acceptance run <span class="mono">34901483202</span></td><td>RP-23 <span class="mono">4151b488</span>; nightly schedule plus dispatch <span class="mono">35207108462</span></td></tr>
+</table>
+</div>
+
+<h2>Rulings wanted from you</h2>
+<div class="tbl">
+<table>
+  <tr><th>Question</th><th>Recommendation</th></tr>
+  <tr><td><b>Does the comment ban bind non-Anthropic actors?</b> Muse added comments in four rounds across three units; #682 still carries 14 lines.</td><td>Yes, every actor. One rule is simpler to brief and review, and the orchestrators already rejected rounds on it. Strip #682 before it leaves draft.</td></tr>
+  <tr><td><b>Q-20b-A.</b> Commit conflicts surface as the base exception; callers string-match to retry.</td><td>Add a typed <code>CommitConflictException</code> subclass as a small 1.6 card.</td></tr>
+  <tr><td><b>Q-20b-B.</b> Three fork residues: stale replace split-brain, WAP duplicate order, no-op schema id.</td><td>One fork lane for all three next run, then one pin bump; the RePark pins are already strict-xfail target cells.</td></tr>
+  <tr><td><b>Q-20b-C.</b> <code>rollback_to_timestamp</code> walks ancestry in RePark.</td><td>Accept for 1.x, move the walk into the fork with the same lane.</td></tr>
+  <tr><td><b>Q-20b-D.</b> <code>caseSensitive=true</code> with unquoted mixed case is declared, not implemented.</td><td>Accept; the silver pipeline runs the default.</td></tr>
+  <tr><td><b>Q-20c-O2.</b> Dictionary encoding off for engine writes, from observation (60 of 60 Spark files PLAIN), not a cited Java setting.</td><td>Keep; files are 9–23 % smaller. Find the Java mechanism next run so the setting cites a source.</td></tr>
+  <tr><td><b>Q-20c-O3.</b> The AWS acceptance environment has no required reviewer.</td><td>Leave it; the branch policy keeps it on main and the nightly run is the evidence.</td></tr>
+</table>
+</div>
+
+<h2>Cards for the next run, in order</h2>
+<ol>
+  <li><b>Open the two finished branches.</b> Re-gate <code>fix/ice-evo-dml-1</code> on RP-23 and open its PR; strip and re-review #682.</li>
+  <li><b>ICE-OCC-SCOPED-1, RePark half.</b> Pass each DML target filter into the fork's conflict filter; measure the 8-disjoint-MERGE probe before and after.</li>
+  <li><b>Finish the drafts.</b> #676 on a fresh Muse session (the old one fails on transport), #678 with its P1 re-scoped, write-options gated, sorted-insert remediated so nothing stamps unsorted bytes.</li>
+  <li><b>ICE-RTAS-OPS-2.</b> The one-line opt-in on the RTAS paths and five xfail flips.</li>
+  <li><b>Fork lane.</b> The three residues, #292 reviewed, then one pin bump. Re-measure the 13 RDF granularity xfails on it.</li>
+  <li><b>Registry sweep part B,</b> nested evolution and nested DDL, then the two fixture-bound v3 rows (V3-05, V3-06) and the AWS unknown-outcome drill.</li>
+</ol>
+
+<div class="note">The reboot taught one thing worth keeping: on this box the temporary tree is emptied at every boot, and the whole campaign root lived there. The backup took 21 G and the restore took one command, but the root should move to a durable path before the next run.</div>
+
+<footer>Sources: the three run reports (#679 merged; #680 and #681 queued), the measured rating of 2026-09-16, and GitHub's PR state at 18:15 EDT on 2026-09-17. Times are EDT.</footer>
+</div>
