@@ -1,7 +1,7 @@
 # Unit ledger — ICE-V3-WRITE-DEFAULT-1 · omitted columns fill from `write_default` on every write path
 
 **Unit:** ICE-V3-WRITE-DEFAULT-1 round 1 · **Date:** 2026-09-17 · **Branch:** `fix/ice-v3-write-default-1` · **Base:** `chore/fork-pin-ice-19b` head (fork pin `75da2b58`, RP-21 / PR #665)
-**Model:** muse-spark-1.3-contributor
+**Model:** claude-opus-5 (round 5, run 21b, 2026-09-17); rounds 1–4 muse-spark-1.3-contributor
 **Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 
 **Why now.** A format-v3 table created by Spark, with column `c INT` added through
@@ -24,6 +24,32 @@ step.
 - Q-19b-4: fix scope is every RePark write path that builds rows for an Iceberg
   table, filling from the field's `write_default`, in Rust, in the shared
   write-projection step.
+- **Q-21b-3 (run 21b, 2026-09-17) — L-01 is NOT re-scoped away.** Spark 4.1.2 parses
+  all three `INSERT OVERWRITE … PARTITION` shapes with a named column list and fills
+  the write-default (cells `ow_dynamic_partition_named_list_short` `[[null, 'x', 5]]`,
+  `ow_dynamic_partition_named_list_full` `[[10, 'x', 5]]`,
+  `ow_static_partition_named_list` `[[10, 'x', 5]]`,
+  `ow_partitioned_no_partition_clause_named_list` `[[10, 'x', 5]]`,
+  `ow_partitions_api` `[[10, 'x', 5], [11, 'y', 9]]`). The round-4 "unreachable by
+  SQL" note was RePark's parser. Disposition: FIXED on both doors in Rust (C-015).
+- **Q-21b-4 — L-03 is a real divergence.** Spark fills `DEFAULT` on `INSERT
+  OVERWRITE` in VALUES and named-list position (`ow_values_default_kw`
+  `[[15, 'o', 5]]`, `ow_named_list_default_kw` `[[18, 'r', 5]]`), as on `INSERT INTO`
+  (`insert_values_default_kw`). Disposition: FIXED (C-016).
+- **Q-21b-5 — L-04 is a DECLARED row, not a fill.** Spark `saveAsTable(overwrite)`
+  on an Iceberg table REPLACES it and narrows the schema to the frame
+  (`saveastable_overwrite_missing_defaulted` `[[30, 's']]`, `schema_after.dfltsat`
+  `[id int, name string]`). Disposition: RePark's by-name `INSERT OVERWRITE`
+  pinned; dated DECLARED row beside F-002 (C-017).
+- **Q-21b-6 — the roll-call merge condition says ACCEPT-AND-NULL.** Spark accepts a
+  missing nullable no-default column on `writeTo().append()` and
+  `saveAsTable(append)` and writes NULL (`nodef_writeto_append_missing`,
+  `nodef_saveas_append_missing`; control `nodef_writeto_append_full`).
+  Disposition: pinned offline and live (C-018).
+- All four rulings' cells are recorded by this unit's `record.py` into the
+  checked-in `truth.json` (re-recorded live 2026-09-17), matching the
+  orchestrator's independent `/tmp/oc-worker/kb-oracle/wd-truth.json`
+  value-for-value.
 - Owner, jb-common.md: no comments in code; Rust first; branch commits carry
   `Authored-By: Muse Spark (muse-spark-1.3-contributor) <noreply@meta.ai>` as the
   last line; work COMMITTED by 13:30 EDT 2026-09-17; JVM only through
@@ -48,13 +74,59 @@ step.
 | C-013 | `registry_rewritten`: the V3-6 / write-default rows in `docs/spark-sql-iceberg-parity.md` state the measured truth (dated 2026-09-16, ICE-V3-WRITE-DEFAULT-1, FIXED with the pins; DECLARED rows for anything left, with Spark's shape); `test_rp3_c009_write_default.py` still describes the contract. | Registry diff; guard test disposition recorded. | **PROVEN** | Four rows landed 2026-09-17 (§7): FIXED `ICE-V3-WRITE-DEFAULT-1`, DECLARED `ICE-V3-WRITE-DEFAULT-1-OVERWRITE-PART` (with Spark's measured partition shapes) and `ICE-V3-WRITE-DEFAULT-1-NESTED`, BACKLOG `F-001`. No V3-6/write-default row existed before — these are new. The C-009 guard still describes the contract: the new code only READS defaults (setter needles `with_write_default` / `write_default(` absent from all touched files, grepped 2026-09-17); full guard run in step 7. |
 | C-014 | `gates_green`: the new test file offline and live, `cargo test -p repark-iceberg --lib`, `cargo test -p repark-spark --lib`, `make verify`, the whole facade suite, and the whole parity suite are green on the release native. | Counts in this ledger. | **PROVEN** | Unit pins offline `14 passed, 1 skipped`, live `15 passed` (release native); `repark-iceberg --lib` 442 passed; `repark-spark --lib` 1051 passed, 4 ignored; `repark-sql` all targets exit 0 (342 lib + integration incl. 2 new ANSI pins); `insert_fill` struct pin green; `uvx ruff check .` + `format --check .` clean; `make verify` exit 0. Whole facade (`/tmp/oc-worker/jb-wd/facade-r2.log`): 9342 passed, 369 skipped, 26 xfailed, 3 failed — each dispositioned: the stale saveAsTable-missing-column refusal retired to the measured NULL fill (`0d273199`, green on rerun), the insertInto-missing-table `TableNotFound` leak fixed at the root (`rewrite_insert_markers` passthrough, `test_missing_table_text` green on rerun), the sort-pool OOM is load-induced (passes alone and 18/18 as a file). Whole parity (`/tmp/oc-worker/jb-wd/parity-r2.log`): 756 passed, 2 skipped, 12 xfailed, 1 failed — the CAP-1 mirror row for `writer_readwriter.py` ratcheted 1101 → 1095, `23 passed` on rerun. |
 
-| C-015 | `partition_overwrite_fills` (Q-21b-3 / L-01): dynamic `PARTITION (k) (cols)`, static `PARTITION (k=v) (cols)` and the partitioned whole-table column list fill an omitted defaulted column from `write_default` on BOTH doors — never NULL. | Red-first pins on the recorded partitioned fixture, then green; Rust ANSI-door pins. | **OPEN** | Red first recorded below; fix in round-5 step 2. |
-| C-016 | `overwrite_default_keyword_fills` (Q-21b-4 / L-03): `INSERT OVERWRITE … VALUES (…, DEFAULT)` and `INSERT OVERWRITE t (id, name, c) SELECT …, DEFAULT` fill from `write_default`, exactly as `INSERT INTO` does. | Red-first pins, then green, both doors. | **OPEN** | Red first recorded below; fix in round-5 step 3. |
-| C-017 | `saveastable_overwrite_declared` (Q-21b-5 / L-04): RePark's `saveAsTable(overwrite)` is by-name `INSERT OVERWRITE` (schema kept, defaulted column filled); the measured Spark answer is a REPLACE that narrows the schema to the frame. Pinned on the RePark side and DECLARED beside F-002. | Pin of RePark's behaviour asserting the recorded Spark replace cell; dated DECLARED registry row. | **OPEN** | Cell `saveastable_overwrite_missing_defaulted` recorded; row lands in round-5 step 4. |
-| C-018 | `rollcall_accept_and_null` (Q-21b-6): a missing NULLABLE column with NO default is accepted on `writeTo().append()` and `saveAsTable(append)` and written NULL, matching Spark — the removed "missing from the DataFrame" refusal is correct. | Offline and live pins on both writer surfaces. | **OPEN** | Cells recorded; pins land in round-5 step 5. |
-| C-019 | `no_default_write_cost` (R-03 / R-04): a MERGE and a column-list `INSERT OVERWRITE` against a table with no write-defaults convert the Iceberg schema to Arrow at most once and never build a `ColumnDefaults` map they discard. | Code shape plus a before/after measurement on a DEFAULT-profile release native, both numbers in this ledger. | **OPEN** | Fix and measurement in round-5 step 6. |
+| C-015 | `partition_overwrite_fills` (Q-21b-3 / L-01): dynamic `PARTITION (k) (cols)`, static `PARTITION (k=v) (cols)` and the partitioned whole-table column list fill an omitted defaulted column from `write_default` on BOTH doors — never NULL. | Red-first pins on the recorded partitioned fixture, then green; Rust ANSI-door pins. | **PROVEN** | Red first below (2 offline ParserErrors, ANSI dynamic `(10, 'x', 0)` = NULL, ANSI static `NOT_ENOUGH_DATA_COLUMNS`). Green after `8dfa984a`: offline `test_dynamic_partition_named_list_fills_write_default`, `test_static_partition_named_list_fills_write_default`, `test_partitioned_whole_table_named_list_fills_write_default`, `test_overwrite_partitions_api_replaces_source_partitions`; ANSI `ansi_dynamic_…`, `ansi_static_…`, plus branch pins `ansi_static_partition_value_wins_over_its_write_default` (mutation-checked: dropping the reserved list turns it red) and `ansi_static_partition_column_list_refusals`; parser swap `spark_dialect.rs` 2 tests. Retained-rows semantics of a name-only `PARTITION (k)` stay the DML-1 DECLARED residue. pins: ice-v3-write-default-1/C-015 |
+| C-016 | `overwrite_default_keyword_fills` (Q-21b-4 / L-03): `INSERT OVERWRITE … VALUES (…, DEFAULT)` and `INSERT OVERWRITE t (id, name, c) SELECT …, DEFAULT` fill from `write_default`, exactly as `INSERT INTO` does. | Red-first pins, then green, both doors. | **PROVEN** | Red first below (`No field named default`). Green after `1bea3998`: offline `test_overwrite_default_keyword_fills_write_default` (both forms, whole table `[(15, 'o', 5)]` then `[(18, 'r', 5)]`); ANSI `ansi_partition_overwrite_default_keyword_fills_write_default` (ANSI whole-table overwrite stays the Q9 refusal, row DML-1). pins: ice-v3-write-default-1/C-016 |
+| C-017 | `saveastable_overwrite_declared` (Q-21b-5 / L-04): RePark's `saveAsTable(overwrite)` is by-name `INSERT OVERWRITE` (schema kept, defaulted column filled); the measured Spark answer is a REPLACE that narrows the schema to the frame. Pinned on the RePark side and DECLARED beside F-002. | Pin of RePark's behaviour asserting the recorded Spark replace cell; dated DECLARED registry row. | **PROVEN** | `test_saveastable_overwrite_is_insert_overwrite_not_replace` green (RePark `[(30, 's', 5)]` beside the recorded Spark `[[30, 's']]` and `schema_after`); registry `ICE-V3-WRITE-DEFAULT-1-SAVEAS-OVERWRITE` DECLARED 2026-09-17 (`c5ea01d3`). pins: ice-v3-write-default-1/C-017 |
+| C-018 | `rollcall_accept_and_null` (Q-21b-6): a missing NULLABLE column with NO default is accepted on `writeTo().append()` and `saveAsTable(append)` and written NULL, matching Spark — the removed "missing from the DataFrame" refusal is correct. | Offline and live pins on both writer surfaces. | **PROVEN** | Offline `test_missing_nullable_no_default_accepts_and_nulls` green; live `_live_rollcall` green (`22 passed in 115.19s`, `REPARK_PARITY_LIVE=1`). Roll-call section below. pins: ice-v3-write-default-1/C-018 |
+| C-019 | `no_default_write_cost` (R-03 / R-04): a MERGE and a column-list `INSERT OVERWRITE` against a table with no write-defaults convert the Iceberg schema to Arrow at most once and never build a `ColumnDefaults` map they discard. | Code shape plus a before/after measurement on a DEFAULT-profile release native, both numbers in this ledger. | **PROVEN** | Code shape in `9a9f49e6` / `8dfa984a`; DEFAULT-profile timings recorded below — noise-dominated under load 70–167, no speed claim made. pins: ice-v3-write-default-1/C-019 |
 
-VERDICT: 19 clauses, 14 PROVEN, 5 OPEN, 0 REJECTED.
+VERDICT: 19 clauses, 19 PROVEN, 0 OPEN, 0 REJECTED.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: ice-v3-write-default-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause C-001 … C-019 walked against its proposition; rulings Q-21b-3 … Q-21b-6 each map to one clause (C-015 … C-018) and each clause's pins assert the recorded Spark cell, not a paraphrase.
+      artifacts: [python/repark/tests/test_ice_v3_write_default_1.py, python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json, crates/repark-sql/tests/ansi_write_defaults.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundaries exercised — NULL partition value from an omitted dynamic partition column, static value on a column that itself carries a write-default, listed static column, arity mismatch, duplicate list entry, explicit NULL, required column without default, v2 and no-default tables, quote-free SQL on the parser fast path.
+      artifacts: [crates/repark-sql/tests/ansi_write_defaults.rs, crates/repark-spark/src/tests/spark_dialect.rs, python/repark/tests/test_ice_v3_write_default_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Every refusal on the static by-name path fails before any file is staged or committed (the refusal pin reads the table back empty); the DEFAULT rewrite on overwrite leaves the statement untouched when the target is not an Iceberg table or holds no marker.
+      artifacts: [crates/repark-iceberg/src/write/partition_overwrite.rs, crates/repark-spark/src/insert_overwrite.rs]
+    - id: AT-4
+      status: N/A
+      justification: No shared mutable state, lock or ordering assumption added; the fill is a pure function of the loaded schema and the statement, and commits go through the existing overwrite commit paths unchanged.
+    - id: AT-5
+      status: ATTACKED
+      evidence: The parser swap only reorders two existing token spans of the caller's own statement; fill fragments are generated from typed Iceberg literals and identifiers are quoted through `quote_ident_spark`. No new input reaches SQL text unquoted; no network, credential or path handling added.
+      artifacts: [crates/repark-spark/src/spark_rewrites.rs, crates/repark-iceberg/src/write/insert_defaults.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Fills read the CURRENT schema's `write_default` (never `initial_default`); the fixture was re-recorded and every pre-existing cell came back identical, so the checked-in tables and truth stay a faithful Spark record.
+      artifacts: [python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/record.py, python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json]
+    - id: AT-7
+      status: ATTACKED
+      evidence: R-03/R-04 remove per-statement Arrow conversions on the no-default path; the DEFAULT-profile before/after timing is recorded and honestly reported as noise-dominated (load 70–167), with no claim made either way.
+      artifacts: [crates/repark-iceberg/src/write/merge/insert.rs, crates/repark-iceberg/src/write/insert_defaults.rs]
+    - id: AT-8
+      status: ATTACKED
+      evidence: No Cargo.toml, Cargo.lock, pyproject or fork-pin change; the fork API is only read (`field.write_default`); error text reuses Spark's classes (`STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST` SQLSTATE 42713, `INSERT_COLUMN_ARITY_MISMATCH`, `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA`).
+      artifacts: [crates/repark-iceberg/src/write/partition_overwrite.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Registry rows state the measured truth — OVERWRITE-PART moved to FIXED, SAVEAS-OVERWRITE DECLARED beside F-002 — and every touched directory's map.md records the change with its pins line.
+      artifacts: [docs/spark-sql-iceberg-parity.md, crates/repark-iceberg/src/write/map.md, crates/repark-spark/src/map.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red first recorded for C-015/C-016 on the unfixed tree; the new static by-name branches each have a nameable input and pin, and a real mutation (dropping the reserved static columns) turned `ansi_static_partition_value_wins_over_its_write_default` red before revert.
+      artifacts: [crates/repark-sql/tests/ansi_write_defaults.rs, task/ledgers/staging/ice-v3-write-default-1-ledger.md]
+  complete: true
+```
 
 ## Red first
 
@@ -327,6 +399,9 @@ fills there. MERGE NOT MATCHED null-fills in RePark-owned
   `insert_defaults/tests.rs` + `insert_defaults/map.md` for the file-size
   ceiling).
 - Open review items with dispositions (no code change this round):
+  - (Superseded in round 5 by rulings Q-21b-3 … Q-21b-6: L-01, L-03, L-04, R-03
+    and R-04 are closed as C-015 … C-019; L-02 was re-verified. The dispositions
+    below are the round-4 record.)
   - L-01 OPEN: the dynamic PARTITION arm with a column list maps by name and
     null-fills unlisted nullable fields where Spark fills the write-default;
     the Spark door shape is a `ParserError` from the generated text.
