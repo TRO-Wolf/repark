@@ -83,6 +83,8 @@ repo.
   `ADD` / `RENAME` / `DROP COLUMN` on both SQL doors) FIXED; OPEN `ICE-NESTED-DDL-1-R-001`
   (required-child message) and `ICE-NESTED-INSERT-LIST-1` (list `INSERT` fails in the fork
   writer). pins: ice-nested-evo-1/C-013
+  Run 22b round 3 adds `IDENT-STRUCT-KW-1` (BACKLOG): an unquoted `struct` column in an
+  expression refuses as a STRUCT literal on both doors, where Spark answers.
   **Round 2 (2026-09-18, run 22b):** `ICE-NESTED-DDL-1-R-001` FIXED (Spark's whole
   required-child line); new FIXED `ICE-NESTED-DDL-1-R-002` (double-quoted nested names refuse
   42601), `-R-003` (`NOT NULL` struct child in CREATE), `-R-004` (ANSI door `MAP<…>` and v3

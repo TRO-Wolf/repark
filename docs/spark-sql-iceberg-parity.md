@@ -1176,6 +1176,26 @@ Unit ICE-MIXED-CASE-1, run 21b round 2 (2026-09-18), ruling Q-21b-11.
 > already an INTENDED pin (`cross_door_float_div_by_zero_is_infinity_on_ansi_null_on_spark`).
 > It is not DEC-7 (decimal `/0`, since FIXED — #99).
 
+### IDENT-STRUCT-KW-1 — an unquoted column named `struct` in an expression refuses (BACKLOG)
+
+Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
+
+- **repark, both SQL doors** — an unquoted identifier `struct` in expression position
+  (`SELECT struct FROM t`, `WHERE struct < 5`, `WHERE struct IS NOT NULL`, `WHERE struct = 1`)
+  raises `ParseException`. sqlparser's `supports_struct_literal` (Spark, Databricks and Generic
+  dialects) reads the keyword as the start of a STRUCT literal. The backtick-quoted `` `struct` ``
+  answers. The refusal predates the unit and is loud.
+- **Apache Spark** — `CREATE TABLE … USING iceberg AS SELECT * FROM src2 WHERE struct < 5 AND
+  struct IS NOT NULL` answers rows `[[1]]`. *(oracle: `python/repark-parity/fixtures/torture/data/
+  ice_nested_evo_1/`, CTAS cell `ctas_where_struct_lt`, PySpark 4.1.2 + Iceberg 1.11.0,
+  2026-09-18.)*
+- **Pin** — strict xfail `python/repark/tests/test_ice_nested_evo_1_schema.py::
+  test_nested_ddl_{schema,rows}_matches_spark[ctas_where_struct_lt-v{2,3}]`; the ANSI twin in
+  `crates/repark-sql/tests/ansi_nested_ddl_oracle.rs` requires the refusal and reports the day it
+  answers.
+- **Rationale** — BACKLOG (2026-09-18). Fixing it is an expression-parse change on both doors
+  (decline the STRUCT-literal reading when `struct` is not followed by `(` or `<`), outside the
+  nested-DDL unit. The companion `map < 5` shape (V-002) is FIXED in the same round.
 ### ID-2 — the case-collision refusal covers the SQL-string form only
 
 - **repark** — on a frame carrying both `id` and `ID`, the SQL-string predicate
