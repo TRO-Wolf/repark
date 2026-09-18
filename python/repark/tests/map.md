@@ -341,6 +341,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the fixture directory before their DML steps, and writes `truth.json` (one answer per
   line, `catalog_sha256`). `run_case_steps` / `run_overwrite_partitions_twin` are reused by
   the live cell so the live and recorded answers come from one code path.
+- `_record_ice_nested_evo_1.py` — the **record driver** for ICE-NESTED-EVO-1 (NOT a `test_`
+  module; never collected). `build_cells()` is the cell catalog; `main()` runs every cell on
+  one short-lived local Spark JVM with a Hadoop catalog at the baked root
+  `/tmp/repark-ice-nested-evo-1`, copies the four adoption tables into
+  `fixtures/torture/data/ice_nested_evo_1/` and writes `oracle.json`. Re-record:
+  `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the
+  path (`REPARK_SPARK_IVY` points `spark.jars.ivy` at a warm Ivy cache).
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine

@@ -12,6 +12,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   note and the §9 audit trail, and registry claims C-3, C-8, C-9 rewritten
   (C-3, C-9 FIXED → OPEN). Docs-only reading unit, no product change.
   `risk_tier: standard`. Branch `docs/ice-cutover-corrections-1`.
+- [ice-nested-evo-1-ledger.md](ice-nested-evo-1-ledger.md) —
+  **ICE-NESTED-EVO-1 (2026-09-17), in flight:** adopt a Spark table whose struct, list element
+  struct or map value struct gained a child (rating row V2-10d), and nested DDL on both doors
+  (`CREATE TABLE` with nested columns, `ADD`/`RENAME`/`DROP COLUMN` on a nested path, the
+  required-child refusal). Fork half F-NESTED-EVO-1 (fork PR #292). `risk_tier: high`.
+  Branch `fix/ice-nested-evo-1`.
 - [ice-promote-read-1-ledger.md](ice-promote-read-1-ledger.md) —
   **ICE-PROMOTE-READ-1 (2026-09-16), in flight:** reads and DML after a legal
   `ALTER COLUMN … TYPE` promotion answer Spark 4.1.2 — range / long-`IN` filters, promoted

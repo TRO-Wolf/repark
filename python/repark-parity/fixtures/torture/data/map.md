@@ -26,6 +26,10 @@ the committed landing zone, not a generation target.
   reads and DML after a legal type promotion (`truth.json`, 126 cases) and two
   Spark-created promoted mixed-era tables (v2, v3) for the adoption cells
   (ICE-PROMOTE-READ-1; third committed-data exception).
+- [ice_nested_evo_1/](ice_nested_evo_1/map.md) — the recorded Spark 4.1.2 answers for
+  nested schema evolution and nested DDL (`oracle.json`) and four Spark-written tables whose
+  struct, list-element struct or map-value struct gained a child after the first write
+  (ICE-NESTED-EVO-1, 2026-09-17; fourth committed-data exception).
 
 ## Pointers
 

@@ -1,0 +1,1123 @@
+{
+  "spark_version": "4.1.2",
+  "iceberg_runtime": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+  "warehouse": "/tmp/repark-ice-nested-evo-1",
+  "cells": {
+    "v2_struct_child_add_read": {
+      "statements": [
+        "CREATE TABLE sc.ns.st_add_v2 (id INT, s STRUCT<a: INT>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.st_add_v2 SELECT 1, named_struct('a', 1)",
+        "ALTER TABLE sc.ns.st_add_v2 ADD COLUMN s.b STRING",
+        "INSERT INTO sc.ns.st_add_v2 SELECT 2, named_struct('a', 2, 'b', 'y')"
+      ],
+      "error": null,
+      "query": "SELECT id, s FROM sc.ns.st_add_v2 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "s": {
+            "a": 1,
+            "b": null
+          }
+        },
+        {
+          "id": 2,
+          "s": {
+            "a": 2,
+            "b": "y"
+          }
+        }
+      ]
+    },
+    "v2_struct_child_add_leaf_read": {
+      "statements": [],
+      "error": null,
+      "query": "SELECT id, s.a, s.b FROM sc.ns.st_add_v2 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "a",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "b",
+            "type": "string",
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "a": 1,
+          "b": null
+        },
+        {
+          "id": 2,
+          "a": 2,
+          "b": "y"
+        }
+      ]
+    },
+    "v2_struct_child_add_filter_null": {
+      "statements": [],
+      "error": null,
+      "query": "SELECT id FROM sc.ns.st_add_v2 WHERE s.b IS NULL ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1
+        }
+      ]
+    },
+    "v2_list_element_child_add_read": {
+      "statements": [
+        "CREATE TABLE sc.ns.list_add_v2 (id INT, arrs ARRAY<STRUCT<x: INT>>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.list_add_v2 SELECT 1, array(named_struct('x', 1))",
+        "ALTER TABLE sc.ns.list_add_v2 ADD COLUMN arrs.element.y INT",
+        "INSERT INTO sc.ns.list_add_v2 SELECT 2, array(named_struct('x', 2, 'y', 20))"
+      ],
+      "error": null,
+      "query": "SELECT id, arrs FROM sc.ns.list_add_v2 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "arrs",
+            "type": {
+              "type": "array",
+              "elementType": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "name": "x",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  },
+                  {
+                    "name": "y",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  }
+                ]
+              },
+              "containsNull": true
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "arrs": [
+            {
+              "x": 1,
+              "y": null
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "arrs": [
+            {
+              "x": 2,
+              "y": 20
+            }
+          ]
+        }
+      ]
+    },
+    "v2_list_element_child_add_describe": {
+      "statements": [],
+      "error": null,
+      "query": "DESCRIBE TABLE sc.ns.list_add_v2",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "col_name",
+            "type": "string",
+            "nullable": false,
+            "metadata": {
+              "comment": "name of the column"
+            }
+          },
+          {
+            "name": "data_type",
+            "type": "string",
+            "nullable": false,
+            "metadata": {
+              "comment": "data type of the column"
+            }
+          },
+          {
+            "name": "comment",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "comment of the column"
+            }
+          }
+        ]
+      },
+      "rows": [
+        {
+          "col_name": "id",
+          "data_type": "int",
+          "comment": null
+        },
+        {
+          "col_name": "arrs",
+          "data_type": "array<struct<x:int,y:int>>",
+          "comment": null
+        }
+      ]
+    },
+    "v2_map_value_child_add_read": {
+      "statements": [
+        "CREATE TABLE sc.ns.map_add_v2 (id INT, m MAP<STRING, STRUCT<p: INT>>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.map_add_v2 SELECT 1, map('k', named_struct('p', 1))",
+        "ALTER TABLE sc.ns.map_add_v2 ADD COLUMN m.value.q STRING",
+        "INSERT INTO sc.ns.map_add_v2 SELECT 2, map('k', named_struct('p', 2, 'q', 'z'))"
+      ],
+      "error": null,
+      "query": "SELECT id, m FROM sc.ns.map_add_v2 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "m",
+            "type": {
+              "type": "map",
+              "keyType": "string",
+              "valueType": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "name": "p",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  },
+                  {
+                    "name": "q",
+                    "type": "string",
+                    "nullable": true,
+                    "metadata": {}
+                  }
+                ]
+              },
+              "valueContainsNull": true
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "m": {
+            "k": {
+              "p": 1,
+              "q": null
+            }
+          }
+        },
+        {
+          "id": 2,
+          "m": {
+            "k": {
+              "p": 2,
+              "q": "z"
+            }
+          }
+        }
+      ]
+    },
+    "v2_map_value_child_add_describe": {
+      "statements": [],
+      "error": null,
+      "query": "DESCRIBE TABLE sc.ns.map_add_v2",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "col_name",
+            "type": "string",
+            "nullable": false,
+            "metadata": {
+              "comment": "name of the column"
+            }
+          },
+          {
+            "name": "data_type",
+            "type": "string",
+            "nullable": false,
+            "metadata": {
+              "comment": "data type of the column"
+            }
+          },
+          {
+            "name": "comment",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "comment of the column"
+            }
+          }
+        ]
+      },
+      "rows": [
+        {
+          "col_name": "id",
+          "data_type": "int",
+          "comment": null
+        },
+        {
+          "col_name": "m",
+          "data_type": "map<string,struct<p:int,q:string>>",
+          "comment": null
+        }
+      ]
+    },
+    "v2_nested_create_then_add": {
+      "statements": [
+        "CREATE TABLE sc.ns.nested_create_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.nested_create_v2 SELECT 1, named_struct('a', 1, 'b', 'p')",
+        "ALTER TABLE sc.ns.nested_create_v2 ADD COLUMN s.c BIGINT"
+      ],
+      "error": null,
+      "query": "SELECT id, s FROM sc.ns.nested_create_v2 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "c",
+                  "type": "long",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "s": {
+            "a": 1,
+            "b": "p",
+            "c": null
+          }
+        }
+      ]
+    },
+    "v2_nested_create_describe": {
+      "statements": [],
+      "error": null,
+      "query": "DESCRIBE TABLE sc.ns.nested_create_v2",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "col_name",
+            "type": "string",
+            "nullable": false,
+            "metadata": {
+              "comment": "name of the column"
+            }
+          },
+          {
+            "name": "data_type",
+            "type": "string",
+            "nullable": false,
+            "metadata": {
+              "comment": "data type of the column"
+            }
+          },
+          {
+            "name": "comment",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "comment of the column"
+            }
+          }
+        ]
+      },
+      "rows": [
+        {
+          "col_name": "id",
+          "data_type": "int",
+          "comment": null
+        },
+        {
+          "col_name": "s",
+          "data_type": "struct<a:int,b:string,c:bigint>",
+          "comment": null
+        }
+      ]
+    },
+    "v2_nested_rename_read": {
+      "statements": [
+        "CREATE TABLE sc.ns.nested_rename_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.nested_rename_v2 SELECT 1, named_struct('a', 1, 'b', 'p')",
+        "ALTER TABLE sc.ns.nested_rename_v2 RENAME COLUMN s.a TO a2"
+      ],
+      "error": null,
+      "query": "SELECT id, s FROM sc.ns.nested_rename_v2 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a2",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "s": {
+            "a2": 1,
+            "b": "p"
+          }
+        }
+      ]
+    },
+    "v2_nested_drop_read": {
+      "statements": [
+        "CREATE TABLE sc.ns.nested_drop_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.nested_drop_v2 SELECT 1, named_struct('a', 1, 'b', 'p')",
+        "ALTER TABLE sc.ns.nested_drop_v2 DROP COLUMN s.b"
+      ],
+      "error": null,
+      "query": "SELECT id, s FROM sc.ns.nested_drop_v2 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "s": {
+            "a": 1
+          }
+        }
+      ]
+    },
+    "v2_add_required_nested_child": {
+      "statements": [
+        "ALTER TABLE sc.ns.st_add_v2 ADD COLUMN s.r INT NOT NULL"
+      ],
+      "error": {
+        "python_class": "Py4JJavaError",
+        "java_class": "org.apache.spark.SparkException",
+        "condition": "_LEGACY_ERROR_TEMP_2045",
+        "java_cause_class": "java.lang.IllegalArgumentException",
+        "message": "Unsupported table change: Incompatible change: cannot add required column: r"
+      }
+    },
+    "v3_struct_child_add_read": {
+      "statements": [
+        "CREATE TABLE sc.ns.st_add_v3 (id INT, s STRUCT<a: INT>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.st_add_v3 SELECT 1, named_struct('a', 1)",
+        "ALTER TABLE sc.ns.st_add_v3 ADD COLUMN s.b STRING",
+        "INSERT INTO sc.ns.st_add_v3 SELECT 2, named_struct('a', 2, 'b', 'y')"
+      ],
+      "error": null,
+      "query": "SELECT id, s FROM sc.ns.st_add_v3 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "s": {
+            "a": 1,
+            "b": null
+          }
+        },
+        {
+          "id": 2,
+          "s": {
+            "a": 2,
+            "b": "y"
+          }
+        }
+      ]
+    },
+    "v3_struct_child_add_leaf_read": {
+      "statements": [],
+      "error": null,
+      "query": "SELECT id, s.a, s.b FROM sc.ns.st_add_v3 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "a",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "b",
+            "type": "string",
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "a": 1,
+          "b": null
+        },
+        {
+          "id": 2,
+          "a": 2,
+          "b": "y"
+        }
+      ]
+    },
+    "v3_struct_child_add_filter_null": {
+      "statements": [],
+      "error": null,
+      "query": "SELECT id FROM sc.ns.st_add_v3 WHERE s.b IS NULL ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1
+        }
+      ]
+    },
+    "v3_list_element_child_add_read": {
+      "statements": [
+        "CREATE TABLE sc.ns.list_add_v3 (id INT, arrs ARRAY<STRUCT<x: INT>>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.list_add_v3 SELECT 1, array(named_struct('x', 1))",
+        "ALTER TABLE sc.ns.list_add_v3 ADD COLUMN arrs.element.y INT",
+        "INSERT INTO sc.ns.list_add_v3 SELECT 2, array(named_struct('x', 2, 'y', 20))"
+      ],
+      "error": null,
+      "query": "SELECT id, arrs FROM sc.ns.list_add_v3 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "arrs",
+            "type": {
+              "type": "array",
+              "elementType": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "name": "x",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  },
+                  {
+                    "name": "y",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  }
+                ]
+              },
+              "containsNull": true
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "arrs": [
+            {
+              "x": 1,
+              "y": null
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "arrs": [
+            {
+              "x": 2,
+              "y": 20
+            }
+          ]
+        }
+      ]
+    },
+    "v3_list_element_child_add_describe": {
+      "statements": [],
+      "error": null,
+      "query": "DESCRIBE TABLE sc.ns.list_add_v3",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "col_name",
+            "type": "string",
+            "nullable": false,
+            "metadata": {
+              "comment": "name of the column"
+            }
+          },
+          {
+            "name": "data_type",
+            "type": "string",
+            "nullable": false,
+            "metadata": {
+              "comment": "data type of the column"
+            }
+          },
+          {
+            "name": "comment",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "comment of the column"
+            }
+          }
+        ]
+      },
+      "rows": [
+        {
+          "col_name": "id",
+          "data_type": "int",
+          "comment": null
+        },
+        {
+          "col_name": "arrs",
+          "data_type": "array<struct<x:int,y:int>>",
+          "comment": null
+        }
+      ]
+    },
+    "v3_map_value_child_add_read": {
+      "statements": [
+        "CREATE TABLE sc.ns.map_add_v3 (id INT, m MAP<STRING, STRUCT<p: INT>>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.map_add_v3 SELECT 1, map('k', named_struct('p', 1))",
+        "ALTER TABLE sc.ns.map_add_v3 ADD COLUMN m.value.q STRING",
+        "INSERT INTO sc.ns.map_add_v3 SELECT 2, map('k', named_struct('p', 2, 'q', 'z'))"
+      ],
+      "error": null,
+      "query": "SELECT id, m FROM sc.ns.map_add_v3 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "m",
+            "type": {
+              "type": "map",
+              "keyType": "string",
+              "valueType": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "name": "p",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  },
+                  {
+                    "name": "q",
+                    "type": "string",
+                    "nullable": true,
+                    "metadata": {}
+                  }
+                ]
+              },
+              "valueContainsNull": true
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "m": {
+            "k": {
+              "p": 1,
+              "q": null
+            }
+          }
+        },
+        {
+          "id": 2,
+          "m": {
+            "k": {
+              "p": 2,
+              "q": "z"
+            }
+          }
+        }
+      ]
+    },
+    "v3_map_value_child_add_describe": {
+      "statements": [],
+      "error": null,
+      "query": "DESCRIBE TABLE sc.ns.map_add_v3",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "col_name",
+            "type": "string",
+            "nullable": false,
+            "metadata": {
+              "comment": "name of the column"
+            }
+          },
+          {
+            "name": "data_type",
+            "type": "string",
+            "nullable": false,
+            "metadata": {
+              "comment": "data type of the column"
+            }
+          },
+          {
+            "name": "comment",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "comment of the column"
+            }
+          }
+        ]
+      },
+      "rows": [
+        {
+          "col_name": "id",
+          "data_type": "int",
+          "comment": null
+        },
+        {
+          "col_name": "m",
+          "data_type": "map<string,struct<p:int,q:string>>",
+          "comment": null
+        }
+      ]
+    },
+    "v3_nested_create_then_add": {
+      "statements": [
+        "CREATE TABLE sc.ns.nested_create_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.nested_create_v3 SELECT 1, named_struct('a', 1, 'b', 'p')",
+        "ALTER TABLE sc.ns.nested_create_v3 ADD COLUMN s.c BIGINT"
+      ],
+      "error": null,
+      "query": "SELECT id, s FROM sc.ns.nested_create_v3 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "c",
+                  "type": "long",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "s": {
+            "a": 1,
+            "b": "p",
+            "c": null
+          }
+        }
+      ]
+    },
+    "v3_nested_create_describe": {
+      "statements": [],
+      "error": null,
+      "query": "DESCRIBE TABLE sc.ns.nested_create_v3",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "col_name",
+            "type": "string",
+            "nullable": false,
+            "metadata": {
+              "comment": "name of the column"
+            }
+          },
+          {
+            "name": "data_type",
+            "type": "string",
+            "nullable": false,
+            "metadata": {
+              "comment": "data type of the column"
+            }
+          },
+          {
+            "name": "comment",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "comment of the column"
+            }
+          }
+        ]
+      },
+      "rows": [
+        {
+          "col_name": "id",
+          "data_type": "int",
+          "comment": null
+        },
+        {
+          "col_name": "s",
+          "data_type": "struct<a:int,b:string,c:bigint>",
+          "comment": null
+        }
+      ]
+    },
+    "v3_nested_rename_read": {
+      "statements": [
+        "CREATE TABLE sc.ns.nested_rename_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.nested_rename_v3 SELECT 1, named_struct('a', 1, 'b', 'p')",
+        "ALTER TABLE sc.ns.nested_rename_v3 RENAME COLUMN s.a TO a2"
+      ],
+      "error": null,
+      "query": "SELECT id, s FROM sc.ns.nested_rename_v3 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a2",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "s": {
+            "a2": 1,
+            "b": "p"
+          }
+        }
+      ]
+    },
+    "v3_nested_drop_read": {
+      "statements": [
+        "CREATE TABLE sc.ns.nested_drop_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.nested_drop_v3 SELECT 1, named_struct('a', 1, 'b', 'p')",
+        "ALTER TABLE sc.ns.nested_drop_v3 DROP COLUMN s.b"
+      ],
+      "error": null,
+      "query": "SELECT id, s FROM sc.ns.nested_drop_v3 ORDER BY id",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "s": {
+            "a": 1
+          }
+        }
+      ]
+    },
+    "v3_add_required_nested_child": {
+      "statements": [
+        "ALTER TABLE sc.ns.st_add_v3 ADD COLUMN s.r INT NOT NULL"
+      ],
+      "error": {
+        "python_class": "Py4JJavaError",
+        "java_class": "org.apache.spark.SparkException",
+        "condition": "_LEGACY_ERROR_TEMP_2045",
+        "java_cause_class": "java.lang.IllegalArgumentException",
+        "message": "Unsupported table change: Incompatible change: cannot add required column: r"
+      }
+    }
+  }
+}
