@@ -36,19 +36,19 @@ JVM exception: `org.apache.spark.SparkException`, condition `_LEGACY_ERROR_TEMP_
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | An adopted Spark table whose struct gained `s.b` answers `SELECT id, s` as Spark does (`[(1,{a:1,b:None}),(2,{a:2,b:'y'})]`), v2 and v3, SQL and DataFrame doors. | Pin reads the committed tables after `register_table`, compares rows and Arrow types to `oracle.json`. | **OPEN** | |
-| C-002 | The same tables answer the leaf projection `SELECT id, s.a, s.b` as Spark does, both doors. | Same harness. | **OPEN** | |
-| C-003 | The same tables answer `WHERE s.b IS NULL` with `[1]`, both doors. | Same harness. | **OPEN** | |
-| C-004 | An adopted Spark table whose list element struct gained `arrs.element.y` answers as Spark does, both doors. | Same harness on `list_add_v3`. | **OPEN** | |
-| C-005 | An adopted Spark table whose map value struct gained `m.value.q` answers as Spark does, both doors. | Same harness on `map_add_v3`. | **OPEN** | |
-| C-006 | `CREATE TABLE` with struct, array-of-struct and map-of-struct columns round-trips the types `DESCRIBE` shows in Spark. | Pin compares RePark `DESCRIBE` `data_type` to the oracle's. | **OPEN** | |
-| C-007 | `ALTER TABLE … ADD COLUMN s.c BIGINT` on a RePark-created table adds a nullable child; the read and `DESCRIBE` match Spark. | Pin on both doors (the DataFrame door reads). | **OPEN** | |
-| C-008 | `ADD COLUMN arrs.element.y INT` adds a child to the list element struct; the read matches Spark. | Same. | **OPEN** | |
-| C-009 | `ADD COLUMN m.value.q STRING` adds a child to the map value struct; the read matches Spark. | Same. | **OPEN** | |
-| C-010 | `RENAME COLUMN s.a TO a2` renames the child; the read matches Spark. | Same. | **OPEN** | |
-| C-011 | `DROP COLUMN s.b` drops the child; the read matches Spark. | Same. | **OPEN** | |
-| C-012 | `ADD COLUMN s.r INT NOT NULL` on a table with rows refuses as Spark does (message `cannot add required column: r`) and leaves the table untouched. | Pin asserts the typed exception, message and no new metadata file. | **OPEN** | |
-| C-013 | Every cell above has a registry row (FIXED or DECLARED) in `docs/spark-sql-iceberg-parity.md`. | Registry section present. | **OPEN** | |
+| C-001 | An adopted Spark table whose struct gained `s.b` answers `SELECT id, s` as Spark does (`[(1,{a:1,b:None}),(2,{a:2,b:'y'})]`), v2 and v3, SQL and DataFrame doors. | Pin reads the committed tables after `register_table`, compares rows and Arrow types to `oracle.json`. | **PROVEN** | `test_adopted_spark_table_reads_match_spark[fork292-v{2,3}_struct_child_add_read-…]` green on both doors with the fork override; red at pin `8fb44a39` (arity error) until the pin bump. |
+| C-002 | The same tables answer the leaf projection `SELECT id, s.a, s.b` as Spark does, both doors. | Same harness. | **PROVEN** | `…[fork292-v{2,3}_struct_child_add_leaf_read-…]` green (values and types; read aliased `s.a AS a` — the unaliased name is EX-COL-2, strict-xfail `test_unaliased_nested_projection_names_like_spark`). |
+| C-003 | The same tables answer `WHERE s.b IS NULL` with `[1]`, both doors. | Same harness. | **PROVEN** | `…[fork292-v{2,3}_struct_child_add_filter_null-…]` green, both doors (`getField("b").isNull()` twin). |
+| C-004 | An adopted Spark table whose list element struct gained `arrs.element.y` answers as Spark does, both doors. | Same harness on `list_add_v3`. | **PROVEN** | `…[fork292-v3_list_element_child_add_read-list_add_v3]` green, both doors. |
+| C-005 | An adopted Spark table whose map value struct gained `m.value.q` answers as Spark does, both doors. | Same harness on `map_add_v3`. | **PROVEN** | `…[fork292-v3_map_value_child_add_read-map_add_v3]` green, both doors. |
+| C-006 | `CREATE TABLE` with struct, array-of-struct and map-of-struct columns round-trips the types `DESCRIBE` shows in Spark. | Pin compares RePark `DESCRIBE` `data_type` to the oracle's. | **PROVEN** | `test_nested_ddl_schema_matches_spark[{nested_create,list_element_child_add,map_value_child_add}_describe-v{2,3}]` green; Rust `nested_create_round_trips_the_describe_types`. |
+| C-007 | `ALTER TABLE … ADD COLUMN s.c BIGINT` on a RePark-created table adds a nullable child; the read and `DESCRIBE` match Spark. | Pin on both doors (the DataFrame door reads). | **PROVEN** | `test_nested_ddl_schema_matches_spark[nested_create_then_add-v{2,3}]` + `test_nested_ddl_rows_match_spark[fork292-nested_create_then_add-v{2,3}]` + `struct_child_add_*` rows green (override); ANSI door `nested_add_rename_and_drop_on_the_ansi_door`. |
+| C-008 | `ADD COLUMN arrs.element.y INT` adds a child to the list element struct; the read matches Spark. | Same. | **OPEN** | Schema half PROVEN: `test_nested_ddl_schema_matches_spark[list_element_child_add_read-v{2,3}]` and the `_describe` cells green. Rows half blocked: an `INSERT` into a list column fails in the fork writer (fork finding F-1, registry ICE-NESTED-INSERT-LIST-1), strict-xfail `forkwrite-…list_element_child_add_read`. Closes when the fork writer takes list inserts. |
+| C-009 | `ADD COLUMN m.value.q STRING` adds a child to the map value struct; the read matches Spark. | Same. | **PROVEN** | `test_nested_ddl_schema_matches_spark[map_value_child_add_*]` and `test_nested_ddl_rows_match_spark[fork292-map_value_child_add_read-v{2,3}]` green (override). |
+| C-010 | `RENAME COLUMN s.a TO a2` renames the child; the read matches Spark. | Same. | **PROVEN** | `test_nested_ddl_*[nested_rename_read-v{2,3}]` green; Rust pins keep the field id (`nested_add_rename_and_drop_evolve_by_field_id`, seam `column_path_changes_evolve_nested_children_by_field_id`); ANSI door pin. |
+| C-011 | `DROP COLUMN s.b` drops the child; the read matches Spark. | Same. | **PROVEN** | `test_nested_ddl_*[nested_drop_read-v{2,3}]` green; Rust + ANSI door pins. |
+| C-012 | `ADD COLUMN s.r INT NOT NULL` on a table with rows refuses as Spark does (message `cannot add required column: r`) and leaves the table untouched. | Pin asserts the typed exception, message and no new metadata file. | **OPEN** | Refusal PROVEN: `test_required_nested_child_refuses_like_spark[2,3]` (typed `PySparkException`, `Incompatible change: cannot add required column`, no new metadata file, schema unchanged), Rust + ANSI + seam pins. Message tail differs (fork `…without a default value: s.r` vs Iceberg 1.11.0 `…: r`; RePark omits Spark's `Unsupported table change: ` prefix) — strict-xfail `test_required_nested_child_message_matches_spark`, registry ICE-NESTED-DDL-1-R-001, fork finding F-2. Closes on a fork message fix plus a prefix ruling (Q-21a-3). |
+| C-013 | Every cell above has a registry row (FIXED or DECLARED) in `docs/spark-sql-iceberg-parity.md`. | Registry section present. | **PROVEN** | `docs/spark-sql-iceberg-parity.md` §7: ICE-NESTED-EVO-1 FIXED, ICE-NESTED-DDL-1 FIXED, ICE-NESTED-DDL-1-R-001 OPEN, ICE-NESTED-INSERT-LIST-1 OPEN; `docs/map.md` index line. |
 
 ## RED — measured on main's pin `8fb44a39`, no fork override (2026-09-17)
 
@@ -142,3 +142,10 @@ Iceberg 1.11.0 (the oracle) says `Incompatible change: cannot add required colum
 name, no default clause). RePark also omits Spark's `Unsupported table change: ` prefix
 (`SparkCatalog` wraps the Iceberg `IllegalArgumentException`), as the column-move refusals do
 (ruling Q-21a-3). Pinned strict-xfail `test_required_nested_child_message_matches_spark`.
+
+## Step 5 — registry (2026-09-17)
+
+`docs/spark-sql-iceberg-parity.md` §7, the unit's own block after ICE-COLUMN-REORDER-1-R-001:
+ICE-NESTED-EVO-1 (FIXED, fork F-NESTED-EVO-1), ICE-NESTED-DDL-1 (FIXED), ICE-NESTED-DDL-1-R-001
+(OPEN, required-child message), ICE-NESTED-INSERT-LIST-1 (OPEN, list `INSERT` in the fork
+writer). `docs/map.md` carries the index line.

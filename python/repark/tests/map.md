@@ -366,7 +366,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   name (`<table>.s[a]`, strict-xfail `test_unaliased_nested_projection_names_like_spark`) is
   EX-COL-2 and the dotted `col("s.a")` is COL-DOTTED-FIELD-1, both BACKLOG outside the unit.
   pins: ice-nested-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-  pins: ice-nested-evo-1/C-010, C-011, C-012
+  pins: ice-nested-evo-1/C-010, C-011, C-012, C-013
 - `_record_ice_nested_evo_1.py` — the **record driver** for ICE-NESTED-EVO-1 (NOT a `test_`
   module; never collected). `build_cells()` is the cell catalog; `main()` runs every cell on
   one short-lived local Spark JVM with a Hadoop catalog at the baked root

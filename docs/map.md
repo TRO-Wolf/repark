@@ -73,6 +73,12 @@ repo.
   moves with ids intact on the facade and Rust ANSI doors; the standing I6 move refusal
   is removed; OPEN residue `ICE-COLUMN-REORDER-1-R-001` (no-op move writes a metadata file)
   with fork trigger F-UPDATE-SCHEMA-SAME-1. pins: ice-column-reorder-1/C-001 – C-014
+  **ICE-NESTED-EVO-1 (2026-09-17, run 21a):** §7 rows `ICE-NESTED-EVO-1` (adopted
+  Spark tables whose nested struct gained a child read again — fork F-NESTED-EVO-1, reaches
+  the workspace with the pin bump) and `ICE-NESTED-DDL-1` (nested `CREATE TABLE` and dotted
+  `ADD` / `RENAME` / `DROP COLUMN` on both SQL doors) FIXED; OPEN `ICE-NESTED-DDL-1-R-001`
+  (required-child message) and `ICE-NESTED-INSERT-LIST-1` (list `INSERT` fails in the fork
+  writer). pins: ice-nested-evo-1/C-013
   LIVE-v3 (2026-09-02) added §7 `S3T-V3-1`; LIVE-v3-M (2026-09-02) closed it — **FIXED by
   measurement**: `aws-acceptance` run 33635288918 on merged `main` `8c4bc55` ran both live v3
   legs green, S3 Tables accepting `format-version = 3` at CREATE (the decision table's accepted

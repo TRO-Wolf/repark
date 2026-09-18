@@ -9,7 +9,7 @@ Cells whose id starts with `fork292` read a data file that lacks a nested child 
 has. They need fork PR #292 (F-NESTED-EVO-1) and flip green only with the fork pin bump.
 
 pins: ice-nested-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-pins: ice-nested-evo-1/C-010, C-011, C-012
+pins: ice-nested-evo-1/C-010, C-011, C-012, C-013
 """
 
 from __future__ import annotations
