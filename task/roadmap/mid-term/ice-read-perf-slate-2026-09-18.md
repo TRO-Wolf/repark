@@ -99,13 +99,22 @@ comment ban on every actor, enforced mechanically before the PR and before the m
 cannot (release native, the unit's tests, the Spark-gated and live cells); numbers in a ledger come from the default
 release profile. A performance claim is a before/after pair from unit 0's bed at a named head.
 
-## Owner questions
+## Owner rulings (2026-09-18) and the one open question
 
-- **Q-1** — approve the AWS bench leg (real S3 Tables and Glue calls, a few small tables, dispatch-only)?
-  *Recommendation:* yes, capped at one dispatch per unit plus the baseline.
-- **Q-2** — does v1.5.0 wait for all of wave 1, or ship when the parity campaign and the Iceberg residue close, with
-  wave 1 landing in 1.5.x? *Recommendation:* units 0 and 1 in v1.5.0 (no fork API, smallest risk); units 2 and 3 in
-  v1.5.0 only if their fork PRs are merged and pinned a week before the tag.
-- **Q-3** — on S3 Tables, who owns compaction: AWS-managed maintenance, RePark's maintenance policy, or a per-table
-  switch? *Recommendation:* AWS-managed by default on S3 Tables, RePark's policy on Glue and Hadoop tables, and
-  RePark refuses a rewrite on a table whose AWS maintenance is enabled unless the caller overrides.
+- **R-1 (was Q-2) — v1.5.0 waits for ALL of wave 1.** Units 0 through 4 land, measured, before the tag. Wave 2 stays
+  unscheduled.
+- **R-2 (was Q-3) — on S3 Tables, AWS-managed maintenance owns compaction by default; RePark's maintenance is an
+  option.** RePark's `rewrite_data_files` / maintenance policy on an S3 Tables table is opt-in per call or per table
+  (the switch and its name are ICE-LAYOUT-GUIDE-1's first clause); without the opt-in RePark refuses the rewrite with
+  a typed error naming the switch, so two compactors never rewrite the same files unannounced. Glue and Hadoop tables
+  keep RePark's policy as today.
+- **Q-1 (open) — the AWS bench spend.** Estimate, from AWS list prices as the orchestrating session recalls them
+  (verify on the pricing page before the first dispatch): the bench tables are fixed at **≤ 2 GB** each (about 200
+  files, one S3 Tables table and one Glue table), written once. A dispatch reads roughly 12 GB (cold scan, warm scan,
+  four concurrent scans, selective queries) out to a GitHub-hosted runner, so **data transfer out at about $0.09/GB
+  is the dominant line — about $1 per dispatch**, and AWS's 100 GB/month free transfer tier may absorb all of it.
+  Requests are tens of thousands of GETs (cents), storage is about $0.05 per table-month, Glue catalog calls sit
+  inside the free million. Six dispatches (baseline, units 1–3, the re-measure gate, one retry) come to **about
+  $5–10; cap $25**. Guards: dispatch-only (never on the nightly schedule), one dispatch per unit plus the baseline,
+  AWS-managed compaction **disabled on the bench tables** so the file layout is identical across dispatches, and the
+  bench tables dropped when the re-measure gate closes. An AWS Budgets alert on the account is the owner's to set.
