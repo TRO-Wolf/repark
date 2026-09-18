@@ -7895,6 +7895,91 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   base native and pass on the branch. Numbers and commands:
   `docs/perf/iceberg-write-baseline.md` §10.
 
+- **WRITE-ORDER-SORTED-INSERT-1** — **FIXED 2026-09-17 (ICE-SORTED-INSERT-1)**;
+  surfaced 2026-09-16 (run-19c rating row V2-12, claim C-7). A plain `INSERT
+  INTO` into a table with a declared sort order wrote unsorted files with
+  `sort_order_id` NULL; Spark writes each file sorted and stamped with the
+  table's order id. The table-format fix is the fork's F-SORTED-INSERT-1
+  (`#287`): `IcebergTableProvider::insert_into` sorts each writer stream by the
+  table's default sort order and stamps `sort_order_id`, consumed via RP-22
+  (`#667`) at fork pin `96fc9f1f`. RePark-side, the three writer sites the fork
+  never sees (the fanout close in `append.rs`, the lineage fanout in
+  `merge/row_lineage.rs`, the unpartitioned MERGE writer in `merge/mod.rs`)
+  stamped nothing, so INSERT OVERWRITE / MERGE / CTAS files read NULL from
+  `{t}.files` even where the bytes were sorted; they now stamp the default
+  order id through `distribution::stamp` (0 when unordered, like the fork),
+  reusing the fork's `with_sort_order_id` with no local sort logic. Pins:
+  `python/repark/tests/test_ice_sorted_insert_1.py` (SQL door over five
+  identity cells — partitioned-local, DESC, two-key null ordering,
+  locally-ordered, float with NaN — plus the DataFrame door, the owned paths,
+  and the adopted Spark-written `days(ts), id` warehouse; oracle
+  `ice_sorted_insert_1_spark_oracle.json` with a live replay tier).
+  **Round 3 (2026-09-17)** closed the half round 2 left open. Stamping alone was
+  a false claim on one shape: the v3 partitioned MERGE / UPDATE / DELETE rewrite
+  routes to `merge/row_lineage.rs::write_partitioned_lineage_files`, which wrote
+  the stream in arrival order and stamped it anyway — measured on a v3 MERGE
+  `WHEN NOT MATCHED THEN INSERT` of 400 shuffled keys, file head
+  `[5380, 5152, 5040, …]` carrying `sort_order_id = 1`. That path now sorts by
+  the table's default order before the fanout (`_row_id` and
+  `_last_updated_sequence_number` travel with their rows through the sort, pinned
+  as an unchanged id → `_row_id` map across a matched UPDATE), and the writer is
+  built after the sort, so no shape can stamp bytes it did not sort; the
+  transform-order refusal is unchanged (`WRITE-ORDER-TRANSFORM-1`). The owned
+  sort also canonicalises NaN for `Float32` / `Float64` sort keys as the fork's
+  INSERT path does (`iceberg-datafusion`'s `CanonicalFloatExpr` is private on the
+  pinned rev, so `write/distribution/canonical_float.rs` is its equivalent):
+  Spark's measured float file is NULLS FIRST, then 1,738 values strictly
+  ascending, then a solid 154-value NaN block, one file stamped 1, and a negative
+  NaN now sorts into that block instead of ahead of every value. Spark's answer
+  for the same statements is recorded in
+  `ice_sorted_insert_2_spark_oracle.json` (15 cells, recorder
+  `_record_ice_sorted_insert_2_oracle.py`, live replay under
+  `REPARK_PARITY_LIVE=1`). Two shapes stay open on the fork and carry their own
+  rows: `WRITE-ORDER-RDF-1` and `WRITE-ORDER-COW-UPDATE-1`. Pins:
+  `python/repark/tests/test_ice_sorted_insert_2.py`.
+  pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-006, C-007, C-008, C-010
+
+- **WRITE-ORDER-RDF-1** — surfaced 2026-09-17 (ICE-SORTED-INSERT-1 round 3).
+  **OPEN / BLOCKED-ON-FORK `F-RDF-SORT-STAMP-1`.** On a table with a declared
+  default sort order, `CALL … system.rewrite_data_files` writes compacted files
+  that are unsorted and carry `sort_order_id` NULL: the fork's
+  `maintenance/rewrite_data_files_write.rs` builds
+  `DataFileWriterBuilder::new(rolling_builder).with_partition_spec(spec)` with no
+  sort stage and no `with_sort_order_id`. Spark 4.1.2 re-sorts by the table's
+  default order and stamps it — 6 sorted 100-row inputs binpack to 2 files,
+  `sort_order_id = 1`, id ascending within each, heads `[0, 1, 2, 6, 7, 8]` and
+  `[31, 32, 33, 37, 38, 39]` (cell `binpack_after`,
+  `ice_sorted_insert_2_spark_oracle.json`, recorded 2026-09-17). This is
+  table-format behaviour, so it is filed as a fork ask
+  ([fork-sync.md](fork-sync.md) "Open fork asks") and not patched locally
+  (AGENTS.md rule 3). The pin replays the recorded program verbatim, Spark's own
+  `options => map('min-input-files','2','rewrite-all','true')` included (accepted
+  since ICE-RDF-OPTIONS-1): RePark's compacted `p=0` file then holds 300 rows,
+  as Spark's does, and reads `sort_order_id` NULL. Pin (strict `xfail`, reason `BLOCKED-ON-FORK
+  F-RDF-SORT-STAMP-1`, XPASSes the day the fork lands):
+  `python/repark/tests/test_ice_sorted_insert_2.py::test_binpack_rewrite_sorts_and_stamps_like_spark`
+  pins: ice-sorted-insert-1/C-009
+
+- **WRITE-ORDER-COW-UPDATE-1** — surfaced 2026-09-17 (ICE-SORTED-INSERT-1 round
+  3). **OPEN / BLOCKED-ON-FORK `F-COW-UPDATE-STAMP-1`.** A Spark `UPDATE` whose
+  WHERE is a plain predicate (`UPDATE t SET id = id WHERE p = 0`) does not take
+  RePark's owned UPDATE path. `predicate_dml::try_allowed_update_in` accepts
+  scalar-expression assignments but only an uncorrelated `col IN (SELECT …)`
+  WHERE, and `predicate_dml::plain::try_allowed_plain_identity` handles DELETE
+  only, so the assignment is not what routes it (`SET id = 42 WHERE p = 0` goes
+  the same way). DataFusion then calls the provider's `update`, and the fork's
+  `IcebergUpdateExec` → `physical_plan/delete.rs::copy_on_write_update` rewrites
+  the affected files with neither the default-order sort nor
+  `with_sort_order_id`. Measured 2026-09-17 on `(id BIGINT, p INT)` partitioned
+  by `p` with `WRITE ORDERED BY (id)`: after `UPDATE t SET id = id WHERE p = 0`
+  the rewritten file reads `sort_order_id` NULL where Spark writes 1 (cells
+  `v3_partitioned_update` / `v2_partitioned_update`); the file happens to stay
+  ordered only because the rewrite preserves its input's row order. Filed as a
+  fork ask ([fork-sync.md](fork-sync.md) "Open fork asks"); not patched locally
+  (AGENTS.md rule 3). Pin (strict `xfail`, reason `BLOCKED-ON-FORK
+  F-COW-UPDATE-STAMP-1`):
+  `python/repark/tests/test_ice_sorted_insert_2.py::test_predicate_update_sorts_and_stamps_like_spark`
+  pins: ice-sorted-insert-1/C-009
 - **WRITE-ORDER-TRANSFORM-1** — surfaced 2026-09-06 (WRITE-ORDER-DIST-1 round 2). Spark
   accepts transform sort fields: `WRITE ORDERED BY (bucket(4, id))` and `(days(ts))` land
   order 1 (`bucket[4]` on source id 1 / `day` on source id 4, `asc NULLS FIRST`), default 1,
@@ -7912,6 +7997,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `python/repark/tests/test_write_order_dist_1.py::test_write_order_transform_sort_refuses_without_committing`)
   and the write-path refusal
   (`crates/repark-iceberg/src/write/distribution/sort_order_tests.rs::transform_sort_order_refuses_the_write_loud`).
+  Measured 2026-09-17 (ICE-SORTED-INSERT-1, still open): a plain `INSERT INTO`
+  a Spark-registered `days(ts), id` ordered table sorts day-major and stamps 1
+  through the fork, while the RePark-owned paths keep the loud refusal
+  (`python/repark/tests/test_ice_sorted_insert_1.py::test_days_transform_insert_sorts_and_stamps`).
 - **WRITE-RANGE-1** — surfaced 2026-09-06 (WRITE-ORDER-DIST-1). On a partitioned table
   `write.distribution-mode = range` takes the hash shape plus per-file sort (pinned in
   `WRITE-ORDER-DIST-1`); the unbuilt half is an explicit global range shuffle — key ranges

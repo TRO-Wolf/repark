@@ -24,7 +24,7 @@ use uuid::Uuid;
 
 use crate::write::commit_error::{commit_result, operation_id_and_summary};
 use crate::write::conform::{conform_batch, conform_batches, write_default_column_names};
-use crate::write::distribution::{route_partitioned_stream, send_routed};
+use crate::write::distribution::{route_partitioned_stream, send_routed, stamp};
 use crate::write::merge::write_data_files_with_concurrency;
 use crate::write::writer_props::writer_properties_for;
 use crate::write::{concurrency::WriteConcurrency, file_order::ascending_partition_order};
@@ -274,7 +274,7 @@ where
         location_generator,
         file_name_generator,
     );
-    let mut fanout = FanoutWriter::new(DataFileWriterBuilder::new(rolling_builder));
+    let mut fanout = FanoutWriter::new(stamp(DataFileWriterBuilder::new(rolling_builder), table));
 
     while let Some(batch) = conformed.try_next().await? {
         if aborted.load(Ordering::SeqCst) {

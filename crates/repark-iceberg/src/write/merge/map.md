@@ -213,6 +213,25 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   serial writer for V3 lineage tables and the shared partitioned stream funnel otherwise, and
   the funnel routes one value to one writer. Row semantics and `_row_id` carry are unchanged.
   pins: write-distribution-2/C-004, C-007
+  **ICE-SORTED-INSERT-1 (2026-09-17):** both MERGE writer sites stamp the
+  table's default sort order id through `distribution::stamp` — the lineage
+  fanout and the unpartitioned writer in `mod.rs`.
+  pins: ice-sorted-insert-1/C-003
+  **ICE-SORTED-INSERT-1 round 3 (2026-09-17):** the stamp alone was a false claim
+  here. Round 3's `sorted_lineage_batches` (folded into the writer in round 4) drained the stream and, when the table declares a
+  default sort order, hands it to `distribution::sort_batches_by_default_order`
+  before the fanout; the writer is built after that call, so a shape that cannot
+  sort (a transform order, which the shared helper refuses loud) writes nothing
+  rather than stamping unsorted bytes. The sort carries whole batches, so
+  `_row_id` and `_last_updated_sequence_number` travel with their rows.
+  **Round 4 (V-01):** round 3 drained the stream for every table and only then
+  checked for an order, so an unsorted v3 rewrite buffered the whole table. Now
+  `write_partitioned_lineage_files` checks `default_sort_is_declared` first:
+  unsorted tables stream batch by batch into the fanout, as before round 3, and
+  only a declared order drains (`drain`) and sorts, with the writer built after
+  the sort. That matches `distribution::fanout_sorted_serial` and
+  `drive_unpartitioned`, which also collect only when an order is declared.
+  pins: ice-sorted-insert-1/C-006, C-010
 - `cow_scratch.rs` — COW rewrite scratch tables (file-scoped target, affected-path
   MemTable, drop guard) extracted so `mod.rs` ratchets down. Scratch providers
   register on `datafusion.public` so a session default Iceberg catalog cannot

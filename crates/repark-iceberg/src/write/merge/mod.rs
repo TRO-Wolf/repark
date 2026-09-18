@@ -1578,7 +1578,7 @@ async fn build_unpartitioned_data_file_writer(table: &Table) -> Result<impl Iceb
         Struct::empty(),
     )
     .map_err(iceberg_err)?;
-    DataFileWriterBuilder::new(rolling_builder)
+    crate::write::distribution::stamp(DataFileWriterBuilder::new(rolling_builder), table)
         .build(Some(unpartitioned_key))
         .await
         .map_err(iceberg_err)

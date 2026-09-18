@@ -1,0 +1,265 @@
+{
+  "oracle": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, local[4], UTC",
+  "cells": {
+    "sort_partitioned_local": {
+      "ddl": "(id BIGINT, p INT) USING iceberg PARTITIONED BY (p) TBLPROPERTIES ('format-version'='2')",
+      "order": "WRITE DISTRIBUTED BY PARTITION LOCALLY ORDERED BY id",
+      "insert": "INSERT INTO {t} SELECT (id * 7919) % 2000 AS id, CAST(id % 2 AS INT) AS p FROM r",
+      "door": "sql",
+      "files": [
+        {
+          "records": 1000,
+          "sort_order_id": 1,
+          "partition": "Row(p=0)",
+          "first": [
+            {
+              "id": 0
+            },
+            {
+              "id": 2
+            },
+            {
+              "id": 4
+            }
+          ],
+          "sorted": true
+        },
+        {
+          "records": 1000,
+          "sort_order_id": 1,
+          "partition": "Row(p=1)",
+          "first": [
+            {
+              "id": 1
+            },
+            {
+              "id": 3
+            },
+            {
+              "id": 5
+            }
+          ],
+          "sorted": true
+        }
+      ]
+    },
+    "sort_unpartitioned_desc": {
+      "ddl": "(id BIGINT, s STRING) USING iceberg TBLPROPERTIES ('format-version'='2')",
+      "order": "WRITE ORDERED BY id DESC",
+      "insert": "INSERT INTO {t} SELECT (id * 7919) % 2000 AS id, CAST(id AS STRING) FROM r",
+      "door": "sql",
+      "files": [
+        {
+          "records": 2000,
+          "sort_order_id": 1,
+          "partition": "",
+          "first": [
+            {
+              "id": 1999
+            },
+            {
+              "id": 1998
+            },
+            {
+              "id": 1997
+            }
+          ],
+          "sorted": true
+        }
+      ]
+    },
+    "sort_two_keys_nulls": {
+      "ddl": "(a INT, b BIGINT) USING iceberg TBLPROPERTIES ('format-version'='2')",
+      "order": "WRITE ORDERED BY a ASC NULLS LAST, b DESC NULLS FIRST",
+      "insert": "INSERT INTO {t} SELECT CASE WHEN id % 7 = 0 THEN NULL ELSE CAST(id % 5 AS INT) END AS a, CASE WHEN id % 11 = 0 THEN NULL ELSE (id * 31) % 97 END AS b FROM r",
+      "door": "sql",
+      "files": [
+        {
+          "records": 2000,
+          "sort_order_id": 1,
+          "partition": "",
+          "first": [
+            {
+              "a": 0,
+              "b": null
+            },
+            {
+              "a": 0,
+              "b": null
+            },
+            {
+              "a": 0,
+              "b": null
+            }
+          ],
+          "sorted": true
+        }
+      ]
+    },
+    "sort_dataframe_door": {
+      "ddl": "(id BIGINT, p INT) USING iceberg PARTITIONED BY (p) TBLPROPERTIES ('format-version'='2')",
+      "order": "WRITE ORDERED BY id",
+      "insert": "SELECT (id * 7919) % 2000 AS id, CAST(id % 2 AS INT) AS p FROM r",
+      "door": "df",
+      "files": [
+        {
+          "records": 1000,
+          "sort_order_id": 1,
+          "partition": "Row(p=0)",
+          "first": [
+            {
+              "id": 0
+            },
+            {
+              "id": 2
+            },
+            {
+              "id": 4
+            }
+          ],
+          "sorted": true
+        },
+        {
+          "records": 1000,
+          "sort_order_id": 1,
+          "partition": "Row(p=1)",
+          "first": [
+            {
+              "id": 1
+            },
+            {
+              "id": 3
+            },
+            {
+              "id": 5
+            }
+          ],
+          "sorted": true
+        }
+      ]
+    },
+    "sort_distribution_none": {
+      "ddl": "(id BIGINT, p INT) USING iceberg PARTITIONED BY (p) TBLPROPERTIES ('format-version'='2')",
+      "order": "WRITE LOCALLY ORDERED BY id",
+      "insert": "INSERT INTO {t} SELECT (id * 7919) % 2000 AS id, CAST(id % 2 AS INT) AS p FROM r",
+      "door": "sql",
+      "files": [
+        {
+          "records": 1000,
+          "sort_order_id": 1,
+          "partition": "Row(p=0)",
+          "first": [
+            {
+              "id": 0
+            },
+            {
+              "id": 2
+            },
+            {
+              "id": 4
+            }
+          ],
+          "sorted": true
+        },
+        {
+          "records": 1000,
+          "sort_order_id": 1,
+          "partition": "Row(p=1)",
+          "first": [
+            {
+              "id": 1
+            },
+            {
+              "id": 3
+            },
+            {
+              "id": 5
+            }
+          ],
+          "sorted": true
+        }
+      ]
+    },
+    "sort_transform_bucket": {
+      "ddl": "(id BIGINT, p INT) USING iceberg TBLPROPERTIES ('format-version'='2')",
+      "order": "WRITE ORDERED BY bucket(4, id), id",
+      "insert": "INSERT INTO {t} SELECT (id * 7919) % 2000 AS id, 1 AS p FROM r",
+      "door": "sql",
+      "files": [
+        {
+          "records": 2000,
+          "sort_order_id": 1,
+          "partition": "",
+          "first": [
+            {
+              "id": 0
+            },
+            {
+              "id": 1
+            },
+            {
+              "id": 2
+            }
+          ],
+          "sorted": false
+        }
+      ]
+    },
+    "sort_transform_days": {
+      "ddl": "(id BIGINT, ts TIMESTAMP) USING iceberg TBLPROPERTIES ('format-version'='2')",
+      "order": "WRITE ORDERED BY days(ts), id",
+      "insert": "INSERT INTO {t} SELECT (id * 7919) % 2000 AS id, CAST(DATE_ADD(DATE '2026-01-01', CAST(id % 40 AS INT)) AS TIMESTAMP) AS ts FROM r",
+      "door": "sql",
+      "files": [
+        {
+          "records": 2000,
+          "sort_order_id": 1,
+          "partition": "",
+          "first": [
+            {
+              "id": 0,
+              "ts": "2025-12-31T19:00:00"
+            },
+            {
+              "id": 40,
+              "ts": "2025-12-31T19:00:00"
+            },
+            {
+              "id": 80,
+              "ts": "2025-12-31T19:00:00"
+            }
+          ],
+          "sorted": true
+        }
+      ]
+    },
+    "sort_float_nan": {
+      "ddl": "(id BIGINT, f FLOAT) USING iceberg TBLPROPERTIES ('format-version'='2')",
+      "order": "WRITE ORDERED BY f",
+      "insert": "INSERT INTO {t} SELECT id, CASE WHEN id % 13 = 0 THEN CAST('NaN' AS FLOAT) WHEN id % 17 = 0 THEN CAST(NULL AS FLOAT) ELSE CAST((id * 7919) % 2000 AS FLOAT) END AS f FROM r",
+      "door": "sql",
+      "files": [
+        {
+          "records": 2000,
+          "sort_order_id": 1,
+          "partition": "",
+          "first": [
+            {
+              "id": 17,
+              "f": null
+            },
+            {
+              "id": 34,
+              "f": null
+            },
+            {
+              "id": 51,
+              "f": null
+            }
+          ],
+          "sorted": true
+        }
+      ]
+    }
+  }
+}

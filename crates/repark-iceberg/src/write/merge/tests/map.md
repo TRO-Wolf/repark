@@ -25,6 +25,16 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 - `lineage.rs` — V3-7 rewrite-projection and scratch-schema pins for carried `_row_id`.
   pins: v3-7-merge-lineage/C-001
   **FNP-4B (2026-09-15):** projection expectations in backtick form. pins: fnp-4b/C-002
+- `lineage_stream.rs` — **ICE-SORTED-INSERT-1 round 4 (2026-09-17):** drives
+  `row_lineage::write_partitioned_lineage_files` on a v3 identity-partitioned memory-catalog
+  table with a probe stream that counts the parquet files under the warehouse just before it
+  yields its last batch. Unsorted table: a file already exists at that point (the rewrite
+  streams into the writer), files stamp 0, and each partition file keeps arrival order with
+  `_row_id` / `_last_updated_sequence_number` on their rows. `WRITE ORDERED BY (id)`: no file
+  exists before the stream ends (drain, sort, then write), files stamp 1, and the id order
+  carries the lineage columns with it. Mutations: the unsorted arm draining first reds the
+  unsorted pin; the declared arm skipping the sort reds the ordered pin.
+  pins: ice-sorted-insert-1/C-006, C-010
 - `nmbs.rs` — DML-A `WHEN NOT MATCHED BY SOURCE` SQL-fragment pins and skip_cardinality
   with an NMBS clause present.
   pins: dml-a-merge-not-matched-by-source/C-002, C-003, C-004, C-005

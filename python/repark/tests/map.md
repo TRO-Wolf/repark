@@ -402,6 +402,53 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `truth.json` (one answer per line, `catalog_sha256`). `run_case_steps` /
   `run_dataframe_steps` are reused by the live cell so the live and recorded answers come from
   one code path.
+- [test_ice_sorted_insert_1.py](test_ice_sorted_insert_1.py) +
+  [ice_sorted_insert_1_spark_oracle.json](ice_sorted_insert_1_spark_oracle.json) +
+  [_record_ice_sorted_insert_1_oracle.py](_record_ice_sorted_insert_1_oracle.py) —
+  **ICE-SORTED-INSERT-1 (2026-09-17):** plain INSERT sorts and stamps per the
+  declared order — the fork #287 per-writer sort plus `sort_order_id` stamp at
+  fork main `4151b488` (RP-22), proven per file (parquet bytes sorted on the
+  order keys, `{t}.files` stamped) on the SQL door over five identity cells
+  (partitioned-local, DESC, two-key null ordering, locally-ordered, float with
+  NaN) and on the DataFrame door (`writeTo.append`, `saveAsTable(append)`,
+  `insertInto`), plus the RePark-owned paths (INSERT OVERWRITE and MERGE sort
+  and stamp; the CTAS replace resets the default to 0 and stamps 0 over the
+  unsorted hash layout, so the CTAS leg asserts stamp plus row set) and the
+  adopted Spark-written `days(ts), id` warehouse under
+  [fixtures/ice_sorted_insert_1/](fixtures/ice_sorted_insert_1/map.md)
+  (canonical `/tmp/repark-ice-sorted-insert-1` path, plain INSERT sorts day-major
+  and stamps 1 while INSERT OVERWRITE keeps the transform refusal). The recorder
+  rebuilds the six run-19c cells plus the days and float-NaN cells on live Spark
+  and verifies on re-run (`--rewrite` re-records). Live (`REPARK_PARITY_LIVE=1`):
+  Spark rebuilds every cell from the recorded DDL and asserts the same
+  (records, stamp, sorted) triples.
+  pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-005
+- [test_ice_sorted_insert_2.py](test_ice_sorted_insert_2.py) +
+  [ice_sorted_insert_2_spark_oracle.json](ice_sorted_insert_2_spark_oracle.json) +
+  [_record_ice_sorted_insert_2_oracle.py](_record_ice_sorted_insert_2_oracle.py) —
+  **ICE-SORTED-INSERT-1 round 3 (2026-09-17):** the rewrite half. The recorded
+  plan is the oracle's own cell definitions, so one structure drives Spark (the
+  recorder) and RePark (the pins); the pins substitute a registered `range(n)`
+  view for Spark's table function and read every expected stamp and sortedness
+  out of the fixture, never a literal. Green legs: the v3 and v2 partitioned
+  INSERT OVERWRITE and MERGE (matched UPDATE, NOT MATCHED INSERT of 400 shuffled
+  keys) rewrites are sorted per file and stamped with the table's default order
+  id; the unpartitioned INSERT OVERWRITE stamps it; a second
+  `WRITE ORDERED BY (id DESC)` makes new files carry the CURRENT order id (2) and
+  the new direction; the owned float overwrite places NULLs first, values
+  ascending and NaN as a solid tail block, and a negative NaN canonicalises into
+  that block; a v3 matched UPDATE leaves the id → `_row_id` map unchanged, so the
+  lineage columns travel with their rows through the new sort. Strict `xfail`
+  legs carry the two fork asks the measurement opened —
+  `BLOCKED-ON-FORK F-RDF-SORT-STAMP-1` (binpack `rewrite_data_files` output) and
+  `BLOCKED-ON-FORK F-COW-UPDATE-STAMP-1` (the fork's COW UPDATE exec) — and
+  XPASS the day either fork PR lands. Live (`REPARK_PARITY_LIVE=1`): the
+  recorder's `check` subcommand re-derives all 15 cells and reds on drift.
+  **Round 4 (2026-09-17):** the binpack leg replays the recorded `bp` program
+  verbatim through `_drive`, Spark's `options => map('min-input-files','2',
+  'rewrite-all','true')` included, instead of writing six files per partition
+  to clear the fork's `min_input_files = 5` default.
+  pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
