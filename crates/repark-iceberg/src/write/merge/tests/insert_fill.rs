@@ -56,6 +56,10 @@ pub(super) fn test_table(current: IcebergSchema) -> Table {
         .expect("table")
 }
 
+pub(super) fn target_schema() -> ArrowSchema {
+    schema_to_arrow_schema(target().metadata().current_schema()).expect("arrow")
+}
+
 pub(super) fn target() -> Table {
     test_table(
         IcebergSchema::builder()
@@ -137,7 +141,8 @@ fn insert_sql_fills_write_default() {
     let table = test_table(current);
     let owned = spec(vec![], vec![insert(&["id", "name"], &["s.id", "s.name"])]);
     let sql = merge_sql(&owned);
-    let text = sql.insert_sql(0, &table).expect("insert");
+    let schema = schema_to_arrow_schema(table.metadata().current_schema()).expect("arrow");
+    let text = sql.insert_sql(0, &table, &schema).expect("insert");
     assert!(
         text.contains("(CAST(5 AS INT)) AS `c`"),
         "omitted defaulted column must fill, got: {text}"

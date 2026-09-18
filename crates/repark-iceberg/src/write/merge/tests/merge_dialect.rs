@@ -1,7 +1,7 @@
 use super::super::*;
 use super::merge::{merge_sql, spec, update};
 
-use super::insert_fill::target;
+use super::insert_fill::{target, target_schema};
 
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
@@ -29,7 +29,8 @@ fn merge_internal_statements_parse_under_the_spark_dialect() {
     let sql = merge_sql(&owned);
     let queries = [
         sql.match_discovery_sql(),
-        sql.insert_sql(0, &target()).expect("insert"),
+        sql.insert_sql(0, &target(), &target_schema())
+            .expect("insert"),
         sql.rewrite_sql_allowlisted("scoped_target", &schema),
         sql.rewrite_sql_path_semijoin("scratch", "aff_paths", &schema),
     ];

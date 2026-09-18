@@ -183,6 +183,53 @@ python/repark/tests/test_ice_v3_write_default_1.py -q -p no:cacheprovider` →
 **22 passed in 115.19s** (2026-09-17, release native). These pins were green on
 the unfixed round-5 tree — the decision had already moved; the pins prove it.
 
+## R-03 / R-04 — no-default write cost (step 6)
+
+Code shape (the proof of C-019):
+
+- R-03: `execute_merge` already builds the Arrow `write_schema`; `MergeSql::insert_sql`
+  now takes it and `table_projection` uses it instead of calling
+  `schema_to_arrow_schema` again, and it builds `ColumnDefaults` only when
+  `schema_has_write_default` finds a primitive `write_default` — otherwise an empty
+  map, no second Arrow conversion. Before: two Arrow conversions plus a HashMap build
+  per NOT MATCHED clause. After: zero Arrow conversions and no map on a no-default
+  table. `merge/mod.rs` held at its exact 1792-line baseline, `tests/merge.rs` at 1065.
+- R-04: `insert_defaults::overwrite_source_with_defaults` (the one overwrite fill,
+  step 2) returns the plain `SELECT * FROM (…)` source before any Arrow conversion
+  when `schema_has_write_default` is false. Before: `column_defaults` (one Arrow
+  conversion plus the map) plus a listed-name scan per field on every column-list
+  overwrite. After: one pass over the fields' `write_default` options.
+
+Measurement, DEFAULT release profile on both sides (no
+`CARGO_PROFILE_RELEASE_CODEGEN_UNITS`): **before** = round-4 product code
+(`36e722f1`, scratch worktree, own target dir and venv, `Finished release in
+12m 50s`); **after** = this round's tree (`Finished release in 10m 20s`). Script
+`/tmp/oc-worker/kb-wd/bench_nodefault.py` (memory catalog, v2 tables without
+defaults, 20 warm-up statements, then N timed `session.sql(…).collect()` calls):
+`MERGE INTO m … WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)` and
+`INSERT OVERWRITE o (id, name) SELECT i, 'x'`. Logs:
+`/tmp/oc-worker/kb-wd/bench.log`, `/tmp/oc-worker/kb-wd/bench-alternating.log`.
+
+| Pass (load avg, 64 cores) | MERGE median before → after (ms) | OVERWRITE median before → after (ms) |
+|---|---|---|
+| r1, N=200 (~70–90) | 1420.38 → 180.29 | 920.30 → 75.95 |
+| r2, N=200 (~80) | 78.76 → 111.53 | 38.91 → 62.31 |
+| r3, N=100 (~89 → 139) | 129.88 → 1655.98 | 89.98 → 1615.54 |
+| r4, N=100 (~167) | 1978.54 → (not run) | 1752.24 → (not run) |
+
+Verdict: **no end-to-end difference is measurable on this box tonight.** Other
+lanes held the load average between 70 and 167 on 64 cores, and the same binary
+swung up to 18× between passes (before-MERGE 1420 ms in r1, 79 ms in r2). The
+work removed is plan-time and O(columns) — two Arrow schema conversions and one
+HashMap of a 3-column schema per statement, microseconds — far below that noise.
+I stopped the alternating passes at r4 to protect the clock. The numbers above
+are every sample taken, reported as measured; none supports a speed claim either
+way. C-019 is PROVEN on the code shape and its pins (MERGE fill and no-fill paths
+in `tests/insert_fill.rs` and `tests/merge.rs`; the no-default overwrite branch by
+the 68 existing Spark-door overwrite tests, `cargo test -p repark-spark --lib
+overwrite`, whose tables carry no defaults, and the defaulted branch by the
+round-5 pins), not on a timing.
+
 ## Evidence
 
 Spark oracle (live PySpark 4.1.2 + Iceberg 1.11.0, banner `spark=4.1.2 tz=UTC`,

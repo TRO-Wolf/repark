@@ -109,6 +109,20 @@ async fn door_with_tables() -> Door {
         .create_table(&namespace, partitioned)
         .await
         .expect("create partitioned table");
+    let by_default = UnboundPartitionSpec::builder()
+        .add_partition_field(3, "c", Transform::Identity)
+        .expect("identity partition field")
+        .build();
+    let defaulted_partition = TableCreation::builder()
+        .name("q".to_string())
+        .schema(defaulted_schema())
+        .partition_spec(by_default)
+        .properties(HashMap::new())
+        .build();
+    catalog
+        .create_table(&namespace, defaulted_partition)
+        .await
+        .expect("create default-partitioned table");
     let ctx = SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
     repark_iceberg::catalog::register_iceberg_catalog(&ctx, "ice", Arc::clone(&catalog))
         .await
@@ -201,4 +215,35 @@ async fn ansi_partition_overwrite_default_keyword_fills_write_default() {
         .await;
     let batches = door.ok("SELECT id, name, c FROM ice.sales.p").await;
     assert_eq!(one_row_strings(&batches), (10, "x".to_string(), 5));
+}
+
+#[tokio::test]
+async fn ansi_static_partition_value_wins_over_its_write_default() {
+    let door = door_with_tables().await;
+    door.ok("INSERT OVERWRITE ice.sales.q (id, name) PARTITION (c = 7) SELECT 1, 'x'")
+        .await;
+    let batches = door.ok("SELECT id, name, c FROM ice.sales.q").await;
+    assert_eq!(one_row_strings(&batches), (1, "x".to_string(), 7));
+}
+
+#[tokio::test]
+async fn ansi_static_partition_column_list_refusals() {
+    let door = door_with_tables().await;
+    let listed_static = door
+        .err("INSERT OVERWRITE ice.sales.p (id, name) PARTITION (id = 10) SELECT 10, 'x'")
+        .await;
+    assert!(
+        listed_static.contains("STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST"),
+        "{listed_static}"
+    );
+    let arity = door
+        .err("INSERT OVERWRITE ice.sales.p (name) PARTITION (id = 10) SELECT 'x', 1")
+        .await;
+    assert!(arity.contains("INSERT_COLUMN_ARITY_MISMATCH"), "{arity}");
+    let duplicate = door
+        .err("INSERT OVERWRITE ice.sales.p (name, name) PARTITION (id = 10) SELECT 'x', 'y'")
+        .await;
+    assert!(duplicate.contains("more than once"), "{duplicate}");
+    let empty = door.ok("SELECT id FROM ice.sales.p").await;
+    assert_eq!(empty.iter().map(RecordBatch::num_rows).sum::<usize>(), 0);
 }

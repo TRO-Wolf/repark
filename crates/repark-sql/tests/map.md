@@ -34,6 +34,10 @@ holds behavior observed from outside the crate.
   Round 5, ruling Q-21b-4: `DEFAULT` as a value on the ANSI PARTITION overwrite fills
   (the ANSI router runs the marker pass before dispatch; whole-table overwrite stays
   the Q9 refusal, row DML-1). pins: ice-v3-write-default-1/C-016
+  Branch pins (AT-10): a static partition value wins over that column's own
+  write-default (table `q`, partitioned on the defaulted `c`); a listed static column
+  refuses `STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST`; arity and duplicate-name
+  refusals write nothing. pins: ice-v3-write-default-1/C-015
 
 - `session_timestamp_type_ansi_door.rs` — **Q10:** ANSI-door cell of
   `spark.sql.timestampType=TIMESTAMP_NTZ` on a Spark-extended session
