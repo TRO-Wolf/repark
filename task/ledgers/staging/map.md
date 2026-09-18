@@ -43,6 +43,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (`CREATE TABLE` with nested columns, `ADD`/`RENAME`/`DROP COLUMN` on a nested path, the
   required-child refusal). Fork half F-NESTED-EVO-1 (fork PR #292). `risk_tier: high`.
   Branch `fix/ice-nested-evo-1`.
+- [ice-array-insert-1-ledger.md](ice-array-insert-1-ledger.md) —
+  **ICE-ARRAY-INSERT-1 (2026-09-18), in flight:** inserts into array columns answer Spark
+  4.1.2 on every door at fork #295 (F-LIST-INSERT-1) — one pin per recorded cell (three
+  shapes by five doors by v2/v3) for rows and footer field ids, the eight non-VALUES
+  `map_list` cells verbatim under strict xfail (CAST-MAP-SPELL-1, BACKLOG) with
+  substitute-source twins, the live Spark-adopts-RePark tier, registry row
+  ICE-ARRAY-INSERT-1 FIXED. Test-only, no product change. `risk_tier: standard`.
+  Branch `chore/rp-29-fork-pin`.
+  pins: ice-array-insert-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [ice-evo-dml-1-ledger.md](ice-evo-dml-1-ledger.md) —
   **ICE-EVO-DML-1 (2026-09-17), in flight:** MERGE / UPDATE / DELETE after `ADD COLUMN` or
   `RENAME COLUMN` with no write since answer Spark 4.1.2 instead of refusing `Column … not
