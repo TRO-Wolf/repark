@@ -601,6 +601,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   references walk the AST with the immutable `Visit` (no statement clone).
   Round 2 (2026-09-18): clippy `similar_names` — the audit's written-form hits are
   `relation_hit` / `bare_hit`.
+  Round 2 N-02: a subquery expression's correlated outer references (`outer_ref_columns` of
+  EXISTS / IN / set-comparison / scalar subqueries) are audited against the twins of the node
+  that holds the subquery — the outer scope — so `EXISTS (… CAST(t.ID AS STRING))` over a twin
+  input refuses instead of answering.
   pins: ice-mixed-case-1/C-001…C-010, C-013…C-016
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias

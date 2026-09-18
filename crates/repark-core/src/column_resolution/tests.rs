@@ -468,29 +468,44 @@ async fn v04_join_using_folds_inside_insert() {
 }
 
 #[tokio::test]
-async fn l08_every_reference_to_a_case_twin_is_ambiguous() {
+async fn l08_correlated_reference_to_a_case_twin_is_ambiguous() {
     let ctx = measured_ctx();
     for (sql, message) in [
         (
-            "SELECT t.ID FROM tw AS t",
+            "SELECT 1 FROM tw t WHERE EXISTS (SELECT 1 FROM other o WHERE o.name = CAST(t.ID AS STRING))",
             "[AMBIGUOUS_REFERENCE] Reference `t`.`ID` is ambiguous, could be: [`t`.`ID`, `t`.`ID`]. SQLSTATE: 42704",
         ),
         (
-            "SELECT ID FROM tw",
+            "SELECT 1 FROM tw WHERE EXISTS (SELECT 1 FROM other WHERE name = CAST(ID AS STRING))",
             "[AMBIGUOUS_REFERENCE] Reference `ID` is ambiguous, could be: [`tw`.`ID`, `tw`.`ID`]. SQLSTATE: 42704",
         ),
         (
-            "SELECT id FROM tw",
-            "[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`tw`.`id`, `tw`.`id`]. SQLSTATE: 42704",
-        ),
-        (
-            "SELECT t.id FROM tw AS t",
+            "SELECT 1 FROM tw t WHERE 'a' IN (SELECT name FROM other WHERE name <> CAST(t.id AS STRING))",
             "[AMBIGUOUS_REFERENCE] Reference `t`.`id` is ambiguous, could be: [`t`.`id`, `t`.`id`]. SQLSTATE: 42704",
         ),
     ] {
         let error = plan_error(&ctx.state(), sql, true).await;
         assert!(error.contains(message), "{sql}: {error}");
     }
+}
+
+#[tokio::test]
+async fn l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere() {
+    let ctx = measured_ctx();
+    let (names, rows) = measured_rows(
+        &ctx,
+        "SELECT i.USERID FROM ids i JOIN ja j ON i.USERID = j.userId WHERE j.userId IN (SELECT userid FROM jb)",
+    )
+    .await;
+    assert_eq!(lowered(&names), ["userid"]);
+    assert!(rows.is_empty(), "{rows:?}");
+    let (names, rows) = measured_rows(
+        &ctx,
+        "SELECT i.USERID FROM ids i JOIN ja j ON i.USERID = j.userId WHERE j.userId IN (SELECT userid FROM ja)",
+    )
+    .await;
+    assert_eq!(lowered(&names), ["userid"]);
+    assert_eq!(rows, text_rows(&[&["2"]]));
 }
 
 #[tokio::test]

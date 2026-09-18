@@ -16,6 +16,12 @@ Step 2 adds `v01_order_by_a_select_alias_still_orders_by_the_alias` (the positio
 keeps ORDER BY on the alias).
 Round 2 (2026-09-18): the measured fixture's table tuple is the `MeasuredTable` alias
 (clippy `type_complexity`).
+Round 2 N-02: `l08_every_reference_to_a_case_twin_is_ambiguous` is deleted — it stayed green
+with the step-5 audit reverted (the old walk refuses every such reference too; proof in the
+ledger) and the Python `test_case_twin_reference_is_ambiguous_exact_or_not` holds the same four
+cells. `l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere` is
+the pin that goes red under that revert (the old walk over-refused); `l08_correlated_reference_to_a_case_twin_is_ambiguous`
+pins the outer-reference audit (red on the round-1 head and under the revert).
 pins: ice-mixed-case-1/C-001…C-010, C-013…C-016
 
 ## Files

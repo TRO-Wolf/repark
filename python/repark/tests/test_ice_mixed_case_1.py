@@ -682,6 +682,12 @@ def test_measured_case_twin_table_refuses_at_adoption(
         ("SELECT ID FROM twv", "`ID`", "[`twv`.`ID`, `twv`.`ID`]"),
         ("SELECT id FROM twv", "`id`", "[`twv`.`id`, `twv`.`id`]"),
         ("SELECT t.id FROM twv AS t", "`t`.`id`", "[`t`.`id`, `t`.`id`]"),
+        (
+            "SELECT 1 FROM twv t WHERE EXISTS "
+            f"(SELECT 1 FROM {_MEASURED_CATALOG}.ns.other o WHERE o.name = CAST(t.ID AS STRING))",
+            "`t`.`ID`",
+            "[`t`.`ID`, `t`.`ID`]",
+        ),
     ],
 )
 def test_case_twin_reference_is_ambiguous_exact_or_not(
@@ -690,7 +696,8 @@ def test_case_twin_reference_is_ambiguous_exact_or_not(
     """L-08: any reference to a name with an ASCII case twin refuses like Spark.
 
     The measured Spark rule (``L08_*`` cells): exact or case-variant, bare or
-    qualified, one option per matching field in the requested spelling,
+    qualified, correlated from a subquery included (round 2), one option per
+    matching field in the requested spelling,
     ``SQLSTATE: 42704``. A frame is the twin carrier here because the fork
     cannot load a twin Iceberg schema (the adoption pin above).
     """

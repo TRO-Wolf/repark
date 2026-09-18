@@ -5,6 +5,7 @@ use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, SchemaError, TableReference};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::SessionState;
+use datafusion::logical_expr::expr::{Exists, InSubquery, SetComparison};
 use datafusion::logical_expr::{Expr, LogicalPlan};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
@@ -293,8 +294,19 @@ fn audit_plan_for_ambiguity(plan: &LogicalPlan, written: &WrittenRefs) -> Result
         }
         for expr in node.expressions() {
             expr.apply(|leaf| {
-                if let Expr::Column(column) = leaf {
-                    audit_column(column, &twins, written)?;
+                match leaf {
+                    Expr::Column(column) => audit_column(column, &twins, written)?,
+                    Expr::Exists(Exists { subquery, .. })
+                    | Expr::InSubquery(InSubquery { subquery, .. })
+                    | Expr::SetComparison(SetComparison { subquery, .. })
+                    | Expr::ScalarSubquery(subquery) => {
+                        for outer in &subquery.outer_ref_columns {
+                            if let Expr::OuterReferenceColumn(_, column) = outer {
+                                audit_column(column, &twins, written)?;
+                            }
+                        }
+                    }
+                    _ => {}
                 }
                 Ok(TreeNodeRecursion::Continue)
             })?;
