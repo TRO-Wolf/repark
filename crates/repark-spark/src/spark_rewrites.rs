@@ -898,14 +898,13 @@ fn is_bare_column_list(tokens: &[TokenWithSpan], open: usize, close: usize) -> b
     let mut words = 0usize;
     for token in &tokens[open + 1..close] {
         match &token.token {
-            Token::Whitespace(_) | Token::Comma => {}
+            Token::Whitespace(_) | Token::Comma | Token::Period => {}
             Token::Word(word) => {
                 if word.quote_style.is_none() && starts_insert_source(Some(&token.token)) {
                     return false;
                 }
                 words += 1;
             }
-            Token::Period => {}
             _ => return false,
         }
     }

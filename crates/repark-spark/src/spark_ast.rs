@@ -46,7 +46,7 @@ async fn execute_passthrough_inner(
     let mut statement = state.sql_to_statement(sql, &dialect)?;
     let mut may_have_bare_range_bound = false;
     let mut insert_columns: Option<Vec<String>> = None;
-    let mut preloaded: Option<iceberg::table::Table> = None;
+    let mut preloaded: Option<Box<iceberg::table::Table>> = None;
     match &mut statement {
         DfStatement::Statement(inner) => {
             // G15 — collation at the EXECUTING parse (G3-E8 altitude).
@@ -71,9 +71,12 @@ async fn execute_passthrough_inner(
             preloaded = if let Some((catalog_name, ident)) = insert_defaults::insert_target(inner)
                 && let Some(catalog) = catalogs.get(&catalog_name)
             {
-                insert_defaults::rewrite_insert_markers(catalog, &ident, inner)
-                    .await?
-                    .preloaded
+                Box::pin(insert_defaults::rewrite_insert_markers(
+                    catalog, &ident, inner,
+                ))
+                .await?
+                .preloaded
+                .map(Box::new)
             } else {
                 None
             };
@@ -103,13 +106,13 @@ async fn execute_passthrough_inner(
         .and_then(|(name, ident)| catalogs.get(&name).map(|catalog| (catalog, ident)));
     let plan = match target {
         Some((catalog, ident)) => {
-            insert_defaults::fill_insert_plan(
+            Box::pin(insert_defaults::fill_insert_plan(
                 catalog,
                 &ident,
                 insert_columns.as_deref(),
                 plan,
-                preloaded,
-            )
+                preloaded.map(|table| *table),
+            ))
             .await?
         }
         None => plan,

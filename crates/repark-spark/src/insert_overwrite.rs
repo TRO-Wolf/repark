@@ -49,8 +49,11 @@ pub(crate) async fn execute_insert_overwrite(
     if let Some(message) = refuse_read_only_dml_table_sql(catalogs, &table_sql) {
         return Err(DataFusionError::Plan(message));
     }
-    let marked = rewrite_overwrite_default_markers(ctx, catalogs, table_name, insert).await?;
-    let (sql, insert) = match &marked {
+    let marked = Box::pin(rewrite_overwrite_default_markers(
+        ctx, catalogs, table_name, insert,
+    ))
+    .await?;
+    let (sql, insert) = match marked.as_deref() {
         Some((rewritten, rewritten_insert)) => (rewritten.as_str(), rewritten_insert),
         None => (sql, insert),
     };
@@ -471,7 +474,7 @@ async fn rewrite_overwrite_default_markers(
     catalogs: &CatalogRegistry,
     table_name: &ObjectName,
     insert: &Insert,
-) -> Result<Option<(String, Insert)>> {
+) -> Result<Option<Box<(String, Insert)>>> {
     use repark_iceberg::write::insert_defaults::{
         query_has_default_marker, rewrite_markers_with_table,
     };
@@ -494,7 +497,7 @@ async fn rewrite_overwrite_default_markers(
     let Statement::Insert(rewritten_insert) = statement else {
         return Ok(None);
     };
-    Ok(Some((rewritten, rewritten_insert)))
+    Ok(Some(Box::new((rewritten, rewritten_insert))))
 }
 
 fn overwrite_source_with_default_fills(
