@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{ArrayRef, RecordBatch};
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
-use datafusion::arrow::datatypes::{Field, Schema as ArrowSchema, SchemaRef};
+use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, SchemaRef};
 use datafusion::error::{DataFusionError, Result};
 
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
@@ -197,6 +197,21 @@ pub(crate) fn conform_batch(
             .collect::<Vec<_>>(),
     ));
     Ok(RecordBatch::try_new(reduced, columns)?)
+}
+
+pub(crate) fn promoted_scan_column(column: &ArrayRef, target: &DataType) -> Result<ArrayRef> {
+    let promotion = match (column.data_type(), target) {
+        (DataType::Int32, DataType::Int64) | (DataType::Float32, DataType::Float64) => true,
+        (
+            DataType::Decimal128(from_precision, from_scale),
+            DataType::Decimal128(precision, scale),
+        ) => from_scale == scale && from_precision < precision,
+        _ => false,
+    };
+    if !promotion {
+        return Ok(Arc::clone(column));
+    }
+    Ok(cast_with_options(column, target, &strict_cast())?)
 }
 
 /// Strict cast options: an overflowing cast is an error, never a silent NULL.

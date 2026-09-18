@@ -247,7 +247,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   per-unit FNP remaining order (FNP-7a/7b delivered 2026-08-31; remaining FNP-9/10 → FNP-8
   → FNP-11/12 → FNP-Z) and delivery boundary, FNP-Z retirement, fork independence, and map
   lockstep, including the archived V3-3 and F-rp3-c7 record. **V3-8:** STATUS Next is
-  row-lineage carry complete on every served DML shape.
+  row-lineage carry on the statement matrix's DML shapes (narrowed 2026-09-17 after the
+  2026-09-16 rating measured failures after schema evolution).
   (pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006;
   v3-3-dml/C-003; v3-4-serve-lineage-columns/C-010; fnp-7-try-inversions/C-016;
   v3-5-dv-compaction/C-006; rp-6-fork-repin/C-006; v3-8-subquery-where-lineage/C-003).
