@@ -36,10 +36,7 @@ def _data_files(warehouse: Path, table: str) -> set[Path]:
 
 def _merge_rewrite(spark: ReparkSession, warehouse: Path, table: str, props: str) -> int:
     spark.sql(f"CREATE TABLE mem.ns.{table} (id BIGINT, v STRING) USING iceberg {props}")
-    spark.sql(
-        f"INSERT INTO mem.ns.{table} SELECT id, CAST(id AS STRING) AS v "
-        "FROM range(20000)"
-    )
+    spark.sql(f"INSERT INTO mem.ns.{table} SELECT id, CAST(id AS STRING) AS v FROM range(20000)")
     before = _data_files(warehouse, table)
     spark.sql("CREATE TABLE mem.ns.src (id BIGINT, v STRING) USING iceberg")
     spark.sql("INSERT INTO mem.ns.src SELECT id, 'w' AS v FROM range(20000)")

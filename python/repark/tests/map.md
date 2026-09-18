@@ -6105,7 +6105,8 @@ pins: fnp-8-review/C-009, C-010
   pins: review-fix-8/C-004
   **RP-23 (2026-09-17):** 16 → 20 files — the fork's Java-style mid-stream rolling.
   pins: rp-23-pin-bump/C-002
-  **RANGE-TVF-ID-1 (2026-09-18):** the `range(...)` seeds read the `id` column.
+  **RANGE-TVF-ID-1 (2026-09-18):** the `range(...)` seeds read the `id` column
+  (follow-up: the shortened seed fits one line under `ruff format`).
 
 EAGER-BUDGET-1 declared export delta (2026-09-13): `dataframe/core.py` imports only `_resolve_cache_budgets` from
 `eager.py`, so the frozen `core` and package surfaces in `_dfcore_1_expected.py` lose `_CACHE_MAX_BYTES_KEY`,
