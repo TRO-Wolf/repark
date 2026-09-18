@@ -477,7 +477,7 @@ async fn session_spill_dir_has_no_shuffle_files_after_complete_and_after_cancel(
         spill.display()
     );
 
-    let long_sql = "SELECT value FROM range(100000000)";
+    let long_sql = "SELECT id FROM range(100000000)";
     let long_plan = physical_plan(&context, long_sql).await;
     let provider = ReparkSessionProvider::from_session(&session);
     let cluster = match ReparkClusterExecutor::new(2, bind_address(), provider).await {

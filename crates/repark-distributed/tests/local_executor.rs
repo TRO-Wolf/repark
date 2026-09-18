@@ -56,7 +56,7 @@ async fn drain_stream(
 #[tokio::test]
 async fn range_1000_sum_through_local_executor_equals_direct_datafusion_answer() {
     let context = session_context();
-    let sql = "SELECT SUM(value) FROM range(1000)";
+    let sql = "SELECT SUM(id) FROM range(1000)";
     let expected = collect_sql(&context, sql).await;
     let executor = LocalDataFusionExecutor::new(context.clone());
     let plan = physical_plan(&context, sql).await;
@@ -71,7 +71,7 @@ async fn range_1000_sum_through_local_executor_equals_direct_datafusion_answer()
 #[tokio::test]
 async fn status_is_queued_or_running_before_drain_and_completed_after() {
     let context = session_context();
-    let sql = "SELECT SUM(value) FROM range(1000)";
+    let sql = "SELECT SUM(id) FROM range(1000)";
     let executor = LocalDataFusionExecutor::new(context.clone());
     let plan = physical_plan(&context, sql).await;
     let handle = match executor.execute(plan).await {
@@ -125,7 +125,7 @@ async fn status_is_queued_or_running_before_drain_and_completed_after() {
 #[tokio::test]
 async fn cancel_on_a_long_range_returns_within_one_second_and_status_is_cancelled() {
     let context = session_context();
-    let sql = "SELECT value FROM range(100000000)";
+    let sql = "SELECT id FROM range(100000000)";
     let executor = LocalDataFusionExecutor::new(context.clone());
     let plan = physical_plan(&context, sql).await;
     let handle = match executor.execute(plan).await {

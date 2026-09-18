@@ -15,6 +15,7 @@ The crate-root `lib.rs` gate forbids inline `#[cfg(test)]` modules, so the pins 
   `range(1000)` sum equals the direct DataFusion collect (C-001);
   `status` is `Queued`/`Running` before drain and `Completed` after (C-002);
   `cancel` on `range(100000000)` returns within 1 s and status is `Cancelled` (C-003).
+  RANGE-TVF-ID-1 (2026-09-18): the seeds read the `id` column.
   pins: ballista-m1-a/C-001, C-002, C-003
 - `cluster_two_executors.rs` (`feature = "cluster"`) — one scheduler plus two in-process
   executors: `SELECT sum(x) FROM t` equals the local executor; both executors ran at least
@@ -25,6 +26,7 @@ The crate-root `lib.rs` gate forbids inline `#[cfg(test)]` modules, so the pins 
   `repark_times_ten`); cancel of `range(100000000)` mid-flight sets `Cancelled` and
   `running_executor_task_counts` reaches empty within 5 s; `repark_ballista_codec(&provider)`
   installs the RePark physical wrapper and the Ballista logical default.
+  RANGE-TVF-ID-1 (2026-09-18): the cancel seed reads the `id` column.
   pins: ballista-m1-b/C-001, C-002, C-003, C-005, C-006
 - `codec.rs` (`feature = "cluster"`) — BALLISTA-M2-B: the installed physical codec is the
   RePark wrapper; the five Ballista shuffle nodes and an `IcebergTableScan` round-trip
@@ -47,6 +49,7 @@ The crate-root `lib.rs` gate forbids inline `#[cfg(test)]` modules, so the pins 
   Step 2 adds: `Completed` on the two-stage hash aggregate reports per-stage rows and
   shuffle bytes > 0; the session spill directory has no `data*.arrow` shuffle files after
   that job completes and after a long-range cancel.
+  RANGE-TVF-ID-1 (2026-09-18): the long-range seed reads the `id` column.
   pins: ballista-m1-c/C-001, C-003, C-004
 - `iceberg_scan.rs` (`feature = "cluster"`) — BALLISTA-M1-D: `IcebergScanSpec` round-trip
   of catalog config, table identifier, snapshot id, projection, and filters; truncated

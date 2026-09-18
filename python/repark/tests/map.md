@@ -40,6 +40,16 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
+  [range_tvf_id_1/](range_tvf_id_1/map.md) +
+  [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —
+  **RANGE-TVF-ID-1 (2026-09-18, round 1):** the `range(...)` table function names
+  its column `id` like Spark 4.1.2 — every form answers `struct<id:bigint>`
+  non-nullable on the facade door and the native door, the 4-argument form is
+  accepted with rows unaffected, string arguments coerce, zero step refuses with
+  `AnalysisException`, and the `spark.range` DataFrame door is pinned as the
+  already-green regression.
+  pins: range-tvf-id-1/C-001, C-002, C-003, C-004, C-005
 - [test_v3_multiarg_1.py](test_v3_multiarg_1.py) +
   [v3_multiarg_1_spark_oracle.json](v3_multiarg_1_spark_oracle.json) +
   [_record_v3_multiarg_1.py](_record_v3_multiarg_1.py) —
@@ -6110,6 +6120,8 @@ pins: fnp-8-review/C-009, C-010
   pins: review-fix-8/C-004
   **RP-23 (2026-09-17):** 16 → 20 files — the fork's Java-style mid-stream rolling.
   pins: rp-23-pin-bump/C-002
+  **RANGE-TVF-ID-1 (2026-09-18):** the `range(...)` seeds read the `id` column
+  (follow-up: the shortened seed fits one line under `ruff format`).
 
 EAGER-BUDGET-1 declared export delta (2026-09-13): `dataframe/core.py` imports only `_resolve_cache_budgets` from
 `eager.py`, so the frozen `core` and package surfaces in `_dfcore_1_expected.py` lose `_CACHE_MAX_BYTES_KEY`,

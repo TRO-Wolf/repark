@@ -4426,6 +4426,38 @@ the pin rather than obeying it.
   entry needs unrelated churn; the repark side is pinned by always-run repeatability
   pins and the Spark side rests on the recorded banner.
 
+### RANGE-TVF-ID-1 — the `range(...)` table function names its column `id` — **FIXED 2026-09-18**
+
+- **repark** — **FIXED 2026-09-18 (RANGE-TVF-ID-1).** Every `range(...)` form
+  answers `struct<id:bigint>` with a non-nullable column on the facade SQL door
+  and the native SQL door: `range(n)`, `range(a, b)`, `range(a, b, step)`, and
+  `range(a, b, step, numPartitions)` (the 4th argument is accepted and ignored
+  for rows); negative steps count down, `range(0)` answers no rows, `SELECT id`
+  / `r.id` / the `r(x)` rename / `sum(id)` answer, and a string bound coerces
+  (`range('3')` answers 0, 1, 2). Zero step refuses with `AnalysisException`;
+  `SELECT value FROM range(3)` refuses with `AnalysisException` — both pins
+  assert the class only, since RePark carries no Spark `FAILED_FUNCTION_CALL` /
+  `UNRESOLVED_COLUMN` token. The `spark.range` DataFrame door already answered
+  `id` and is pinned as the regression. `generate_series` keeps its `value`
+  column.
+- **Apache Spark** — every form answers `struct<id:bigint>`, non-nullable; the
+  two refusals carry `AnalysisException` with `FAILED_FUNCTION_CALL` /
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION`. *(oracle: recorded — live PySpark 4.1.2,
+  `local[2]`, UTC, 2026-09-18,
+  `python/repark/tests/range_tvf_id_1/range_tvf_id_1_spark_oracle.json`;
+  re-deriver `python/repark/tests/_record_range_tvf_id_1.py`.)*
+- **Pin** —
+  `python/repark/tests/test_range_tvf_id_1.py::test_sql_range_cell_answers_recorded_schema_and_rows`,
+  `python/repark/tests/test_range_tvf_id_1.py::test_sql_range_refusal_matches_spark_class`,
+  `python/repark/tests/test_range_tvf_id_1.py::test_spark_range_door_answers_recorded_schema_and_rows`;
+  `crates/repark-core/src/range_table/tests.rs` (provider schema, forms, zero step).
+- **Rationale** — FIXED. Both doors resolved `range` to DataFusion's built-in
+  table function (`value`, 1–3 arguments); RePark now registers its own `range`
+  over the same series generator in `ReparkSessionBuilder::build`, so both doors
+  share the one registration. Residual: unaliased `sum(id)` renders
+  `sum(range().id)` — the systemic table-function qualifier leak shared with
+  `generate_series`, owned by the SQL door (FNP-6D residual).
+
 ### FN-APPROXPCT-ACC-TYPE-1 — SQL-door non-integral `accuracy` is AnalysisException without Spark's params
 
 - **repark** — SQL `percentile_approx(x, 0.5, TRUE)` / `1.5` / `'100'` raises

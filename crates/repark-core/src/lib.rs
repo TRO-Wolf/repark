@@ -26,6 +26,7 @@ mod partition_overwrite_mode;
 mod partition_timestamp;
 mod pool_refusals;
 mod pre_execute;
+mod range_table;
 mod read_options;
 mod runtime;
 mod session;
