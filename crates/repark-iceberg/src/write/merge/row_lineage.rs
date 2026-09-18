@@ -26,7 +26,7 @@ use iceberg::writer::partitioning::fanout_writer::FanoutWriter;
 use parquet::arrow::PARQUET_FIELD_ID_META_KEY;
 use uuid::Uuid;
 
-use crate::write::distribution::stamp;
+use crate::write::distribution::{default_sort_is_declared, sort_batches_by_default_order, stamp};
 
 use super::not_matched_by_source;
 use super::{FILE_PATH_COL, MergeSql, POS_COL, iceberg_err, quote_ident};
@@ -175,11 +175,9 @@ where
         location_generator,
         file_name_generator,
     );
+    let ordered = sorted_lineage_batches(table, &mut stream).await?;
     let mut fanout = FanoutWriter::new(stamp(DataFileWriterBuilder::new(rolling_builder), table));
-    while let Some(batch) = stream.try_next().await? {
-        if batch.num_rows() == 0 {
-            continue;
-        }
+    for batch in ordered {
         for (partition_key, partition_batch) in split_lineage_batch(
             &batch,
             user_count,
@@ -195,6 +193,23 @@ where
     }
     let files = fanout.close().await.map_err(iceberg_err)?;
     Ok(crate::write::file_order::ascending_partition_order(files))
+}
+
+async fn sorted_lineage_batches<S>(table: &Table, stream: &mut S) -> Result<Vec<RecordBatch>>
+where
+    S: Stream<Item = Result<RecordBatch>> + Unpin,
+{
+    let mut collected = Vec::new();
+    while let Some(batch) = stream.try_next().await? {
+        if batch.num_rows() == 0 {
+            continue;
+        }
+        collected.push(batch);
+    }
+    if !default_sort_is_declared(table) {
+        return Ok(collected);
+    }
+    sort_batches_by_default_order(table, collected).await
 }
 
 fn split_lineage_batch(

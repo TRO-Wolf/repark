@@ -31,12 +31,14 @@ use iceberg::writer::file_writer::location_generator::{FileNameGenerator, Locati
 use crate::write::merge::iceberg_err;
 use crate::write::sort_order::DISTRIBUTION_MODE_PROPERTY;
 
+mod canonical_float;
 mod router;
 #[cfg(test)]
 mod sort_order_tests;
 #[cfg(test)]
 mod tests;
 
+use canonical_float::CanonicalFloatExpr;
 #[cfg(test)]
 pub(crate) use router::PartitionRouter;
 pub(crate) use router::{route_partitioned_stream, send_routed};
@@ -269,7 +271,7 @@ fn default_sort_lex_ordering(table: &Table, schema: &Schema) -> Result<Option<Le
             });
         }
         exprs.push(PhysicalSortExpr {
-            expr,
+            expr: CanonicalFloatExpr::wrap(expr, &data_type),
             options: datafusion::arrow::compute::SortOptions {
                 descending: field.direction == SortDirection::Descending,
                 nulls_first: field.null_order == NullOrder::First,

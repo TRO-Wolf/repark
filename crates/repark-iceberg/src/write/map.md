@@ -358,6 +358,14 @@ repark-core's error map.
   `merge/mod.rs`. No sort is re-implemented here; the sort stays where
   WRITE-ORDER-DIST-1 put it.
   pins: ice-sorted-insert-1/C-003
+  **Round 3 (2026-09-17):** `default_sort_lex_ordering` wraps every `Float32` /
+  `Float64` sort key in `CanonicalFloatExpr` (`distribution/canonical_float.rs`),
+  so the owned sort places NaN the way the fork's INSERT path does: every NaN,
+  including a negative one, lands in one block above every value. The lineage
+  fanout now calls `sort_batches_by_default_order` too
+  (`merge/row_lineage.rs`), so each of the three stamp sites stamps only bytes
+  that went through this sort.
+  pins: ice-sorted-insert-1/C-006, C-008
   See [distribution/map.md](distribution/map.md).
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec

@@ -194,6 +194,16 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   table's default sort order id through `distribution::stamp` — the lineage
   fanout and the unpartitioned writer in `mod.rs`.
   pins: ice-sorted-insert-1/C-003
+  **ICE-SORTED-INSERT-1 round 3 (2026-09-17):** the stamp alone was a false claim
+  here. `sorted_lineage_batches` drains the stream and, when the table declares a
+  default sort order, hands it to `distribution::sort_batches_by_default_order`
+  before the fanout; the writer is built after that call, so a shape that cannot
+  sort (a transform order, which the shared helper refuses loud) writes nothing
+  rather than stamping unsorted bytes. The sort carries whole batches, so
+  `_row_id` and `_last_updated_sequence_number` travel with their rows. The cost
+  is the v2 arm's cost, already paid there: the write buffers the rewrite stream
+  instead of streaming it.
+  pins: ice-sorted-insert-1/C-006, C-010
 - `cow_scratch.rs` — COW rewrite scratch tables (file-scoped target, affected-path
   MemTable, drop guard) extracted so `mod.rs` ratchets down. Scratch providers
   register on `datafusion.public` so a session default Iceberg catalog cannot
