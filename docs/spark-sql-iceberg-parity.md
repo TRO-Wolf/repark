@@ -1826,8 +1826,9 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   2026-09-17 every ns cast refused `Unsupported SQL type timestamp_ns`, every
   microsecond or string write into an ns column failed with the raw Arrow error, and
   `CAST(<ns> AS STRING)` silently dropped the nanoseconds. Format-v2 tables keep refusing ns
-  types at CREATE. Not in this row: `hours()` on ns
-  ([ICE-TSNS-SQL-1-R-003](#ice-tsns-sql-1-r-003--blocked-on-fork-measured-2026-09-17-hours-on-a-nanosecond-column-refuses)),
+  types at CREATE. `hours()` on ns writes since RP-28 (row
+  [ICE-TSNS-SQL-1-R-003](#ice-tsns-sql-1-r-003--fixed-2026-09-18-rp-28-fork-296-f-tsns-hour-1-hours-on-a-nanosecond-column-writes)
+  below, FIXED 2026-09-18). Not in this row:
   `DESCRIBE` type names
   ([R-001](#ice-tsns-sql-1-r-001--open-measured-2026-09-17-describe-shows-no-nanosecond-type-name)),
   the write-direction oracle
@@ -1904,27 +1905,25 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   PyIceberg once #1551 lands) writing v3 `timestamp_ns` / `timestamptz_ns` files for RePark to
   read.
 
-### ICE-TSNS-SQL-1-R-003 — BLOCKED-ON-FORK (measured 2026-09-17): `hours()` on a nanosecond column refuses
+### ICE-TSNS-SQL-1-R-003 — FIXED 2026-09-18 (RP-28, fork #296 F-TSNS-HOUR-1): `hours()` on a nanosecond column writes
 
-- **repark** — any write into a table partitioned by `hours(tz)` on a `timestamptz_ns` (or
-  `timestamp_ns`) column refuses `FeatureUnsupported => Unsupported data type for hour
-  transform: Timestamp(Nanosecond, Some("UTC"))`, on the SQL door and the DataFrame door alike.
-  `CREATE TABLE … PARTITIONED BY (hours(tz))` succeeds; `days` / `months` / `years` on ns write
-  correctly.
+- **repark** — writes into a table partitioned by `hours(tz)` on a `timestamptz_ns` (or
+  `timestamp_ns`) column land at the true hour boundary since RP-28: the fork's
+  `Hour::transform` accepts `Timestamp(Nanosecond, _)`, on the SQL door and the DataFrame
+  door alike. `CREATE TABLE … PARTITIONED BY (hours(tz))` succeeds; `days` / `months` /
+  `years` on ns write correctly, as before.
 - **Apache Spark** — cannot write the types. The Iceberg spec defines `hour` on
   `timestamp_ns` / `timestamptz_ns` as hours since the epoch. *(oracle: documented — the spec's
   transform table; the fixture's `sql_hours` expectation is derived from it,
-  `hour = floor(tz_ns / 3_600_000_000_000)`, because the DataFrame-door control is refused
-  too.)*
+  `hour = floor(tz_ns / 3_600_000_000_000)`.)*
 - **Pin** — `python/repark/tests/test_ice_tsns_sql_1.py::test_hours_partitions_equal_the_spec`
-  (turns into an xfail naming `BLOCKED-ON-FORK F-TSNS-HOUR-1` only while the fork's message is
-  the failure; it runs fully and must pass once the fork lands) and the recorder's `check` leg,
-  which prints `BLOCKED sql_hours` until the table has data.
-- **Rationale** — BLOCKED-ON-FORK **F-TSNS-HOUR-1**: the pinned fork's
-  `crates/iceberg/src/transform/temporal.rs` `Hour::transform` handles only
-  `Timestamp(Microsecond, _)`; its `transform_literal` and the `Day` / `Month` / `Year` array
-  transforms already handle nanoseconds. The fork fix is a `Timestamp(Nanosecond, _)` arm
-  dividing by nanoseconds per hour; RePark takes it at the next fork repin.
+  (runs plainly and must pass) and the recorder's `check` leg, which reads `sql_hours`
+  back with PyIceberg like every other table now that the fork writes it.
+- **Rationale** — FIXED 2026-09-18 (RP-28) at fork #296 (**F-TSNS-HOUR-1**): the fork's
+  `crates/iceberg/src/transform/temporal.rs` `Hour::transform` gained the
+  `Timestamp(Nanosecond, _)` arm dividing by nanoseconds per hour, matching its
+  `transform_literal` and the `Day` / `Month` / `Year` array transforms. RePark takes it
+  at this fork repin.
 
 ## 5. Facade drop-in semantics (DECLARED)
 
@@ -8631,50 +8630,46 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   for the same statements is recorded in
   `ice_sorted_insert_2_spark_oracle.json` (15 cells, recorder
   `_record_ice_sorted_insert_2_oracle.py`, live replay under
-  `REPARK_PARITY_LIVE=1`). Two shapes stay open on the fork and carry their own
-  rows: `WRITE-ORDER-RDF-1` and `WRITE-ORDER-COW-UPDATE-1`. Pins:
+  `REPARK_PARITY_LIVE=1`). The two shapes the measurement left on the fork —
+  `WRITE-ORDER-RDF-1` and `WRITE-ORDER-COW-UPDATE-1` — closed 2026-09-18 (RP-28,
+  fork #296 sorts and stamps both); their rows below are FIXED. Pins:
   `python/repark/tests/test_ice_sorted_insert_2.py`.
   pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-006, C-007, C-008, C-010
 
 - **WRITE-ORDER-RDF-1** — surfaced 2026-09-17 (ICE-SORTED-INSERT-1 round 3).
-  **OPEN / BLOCKED-ON-FORK `F-RDF-SORT-STAMP-1`.** On a table with a declared
-  default sort order, `CALL … system.rewrite_data_files` writes compacted files
-  that are unsorted and carry `sort_order_id` NULL: the fork's
-  `maintenance/rewrite_data_files_write.rs` builds
-  `DataFileWriterBuilder::new(rolling_builder).with_partition_spec(spec)` with no
-  sort stage and no `with_sort_order_id`. Spark 4.1.2 re-sorts by the table's
-  default order and stamps it — 6 sorted 100-row inputs binpack to 2 files,
+  **FIXED 2026-09-18 (RP-28, fork #296 F-RDF-SORT-STAMP-1).** On a table with a
+  declared default sort order, `CALL … system.rewrite_data_files` sorts each
+  compacted file by the table's default order and stamps it: the fork's
+  `maintenance/rewrite_data_files_write.rs` now sorts in bounded runs at the
+  target file size and sets `with_sort_order_id`. Spark 4.1.2 re-sorts by the
+  table's default order and stamps it — 6 sorted 100-row inputs binpack to 2 files,
   `sort_order_id = 1`, id ascending within each, heads `[0, 1, 2, 6, 7, 8]` and
   `[31, 32, 33, 37, 38, 39]` (cell `binpack_after`,
-  `ice_sorted_insert_2_spark_oracle.json`, recorded 2026-09-17). This is
-  table-format behaviour, so it is filed as a fork ask
-  ([fork-sync.md](fork-sync.md) "Open fork asks") and not patched locally
-  (AGENTS.md rule 3). The pin replays the recorded program verbatim, Spark's own
-  `options => map('min-input-files','2','rewrite-all','true')` included (accepted
-  since ICE-RDF-OPTIONS-1): RePark's compacted `p=0` file then holds 300 rows,
-  as Spark's does, and reads `sort_order_id` NULL. Pin (strict `xfail`, reason `BLOCKED-ON-FORK
-  F-RDF-SORT-STAMP-1`, XPASSes the day the fork lands):
+  `ice_sorted_insert_2_spark_oracle.json`, recorded 2026-09-17). Table-format
+  behaviour, taken through the fork ([fork-sync.md](fork-sync.md) RP-28 row) and not
+  patched locally (AGENTS.md rule 3). The pin replays the recorded program verbatim,
+  Spark's own `options => map('min-input-files','2','rewrite-all','true')` included
+  (accepted since ICE-RDF-OPTIONS-1): RePark's compacted `p=0` file holds 300 rows,
+  as Spark's does, and reads `sort_order_id` 1. Pin (plain, passing):
   `python/repark/tests/test_ice_sorted_insert_2.py::test_binpack_rewrite_sorts_and_stamps_like_spark`
   pins: ice-sorted-insert-1/C-009
 
 - **WRITE-ORDER-COW-UPDATE-1** — surfaced 2026-09-17 (ICE-SORTED-INSERT-1 round
-  3). **OPEN / BLOCKED-ON-FORK `F-COW-UPDATE-STAMP-1`.** A Spark `UPDATE` whose
-  WHERE is a plain predicate (`UPDATE t SET id = id WHERE p = 0`) does not take
+  3). **FIXED 2026-09-18 (RP-28, fork #296 F-COW-UPDATE-STAMP-1).** A Spark `UPDATE`
+  whose WHERE is a plain predicate (`UPDATE t SET id = id WHERE p = 0`) does not take
   RePark's owned UPDATE path. `predicate_dml::try_allowed_update_in` accepts
   scalar-expression assignments but only an uncorrelated `col IN (SELECT …)`
   WHERE, and `predicate_dml::plain::try_allowed_plain_identity` handles DELETE
   only, so the assignment is not what routes it (`SET id = 42 WHERE p = 0` goes
   the same way). DataFusion then calls the provider's `update`, and the fork's
-  `IcebergUpdateExec` → `physical_plan/delete.rs::copy_on_write_update` rewrites
-  the affected files with neither the default-order sort nor
-  `with_sort_order_id`. Measured 2026-09-17 on `(id BIGINT, p INT)` partitioned
+  `IcebergUpdateExec` → `physical_plan/delete.rs::copy_on_write_update` now rewrites
+  the affected files sorted by the table's default order in bounded runs and stamped
+  with `with_sort_order_id`. Measured 2026-09-17 on `(id BIGINT, p INT)` partitioned
   by `p` with `WRITE ORDERED BY (id)`: after `UPDATE t SET id = id WHERE p = 0`
-  the rewritten file reads `sort_order_id` NULL where Spark writes 1 (cells
-  `v3_partitioned_update` / `v2_partitioned_update`); the file happens to stay
-  ordered only because the rewrite preserves its input's row order. Filed as a
-  fork ask ([fork-sync.md](fork-sync.md) "Open fork asks"); not patched locally
-  (AGENTS.md rule 3). Pin (strict `xfail`, reason `BLOCKED-ON-FORK
-  F-COW-UPDATE-STAMP-1`):
+  the rewritten file reads `sort_order_id` 1 where Spark writes 1 (cells
+  `v3_partitioned_update` / `v2_partitioned_update`). Table-format behaviour, taken
+  through the fork ([fork-sync.md](fork-sync.md) RP-28 row); not patched locally
+  (AGENTS.md rule 3). Pin (plain, passing):
   `python/repark/tests/test_ice_sorted_insert_2.py::test_predicate_update_sorts_and_stamps_like_spark`
   pins: ice-sorted-insert-1/C-009
 - **WRITE-ORDER-TRANSFORM-1** — surfaced 2026-09-06 (WRITE-ORDER-DIST-1 round 2). Spark

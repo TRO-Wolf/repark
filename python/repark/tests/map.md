@@ -586,11 +586,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the new direction; the owned float overwrite places NULLs first, values
   ascending and NaN as a solid tail block, and a negative NaN canonicalises into
   that block; a v3 matched UPDATE leaves the id → `_row_id` map unchanged, so the
-  lineage columns travel with their rows through the new sort. Strict `xfail`
-  legs carry the two fork asks the measurement opened —
-  `BLOCKED-ON-FORK F-RDF-SORT-STAMP-1` (binpack `rewrite_data_files` output) and
-  `BLOCKED-ON-FORK F-COW-UPDATE-STAMP-1` (the fork's COW UPDATE exec) — and
-  XPASS the day either fork PR lands. Live (`REPARK_PARITY_LIVE=1`): the
+  lineage columns travel with their rows through the new sort. The two legs the
+  measurement left on the fork — binpack `rewrite_data_files` output
+  (`F-RDF-SORT-STAMP-1`) and the fork's COW UPDATE exec (`F-COW-UPDATE-STAMP-1`)
+  — pass as plain pins since RP-28 (fork #296 sorts and stamps both). Live
+  (`REPARK_PARITY_LIVE=1`): the
   recorder's `check` subcommand re-derives all 15 cells and reds on drift.
   **Round 4 (2026-09-17):** the binpack leg replays the recorded `bp` program
   verbatim through `_drive`, Spark's `options => map('min-input-files','2',
@@ -1748,8 +1748,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   VALUES / SELECT, INSERT OVERWRITE, MERGE and CTAS widen microsecond `TIMESTAMP` values and
   strings losslessly; `days(ts)` `.partitions` equals PyIceberg's; `CAST(ns AS STRING)` is
   lossless; predicates compare at nanosecond precision; format v2 keeps refusing at CREATE.
-  `test_hours_partitions_equal_the_spec` turns into an `xfail` naming `BLOCKED-ON-FORK
-  F-TSNS-HOUR-1` only while the fork's `hour` transform refuses `Timestamp(ns)`. Round 2
+  `test_hours_partitions_equal_the_spec` runs plainly since RP-28 (fork #296: the fork's
+  `hour` transform accepts `Timestamp(ns)`); the oracle's `blocked_on_fork.sql_hours` marker is
+  historical until the next re-record (the recorder's `check` leg reads it only on a failure). Round 2
   (2026-09-18, ruling Q-21c-8): `CAST(<ns column> AS TIMESTAMP)` equals `.cast("timestamp")`,
   floored to µs, in UTC and New York; a nine-digit `TIMESTAMP` value in `VALUES` stores what
   `INSERT … SELECT` stores; `EXPLAIN` lowers ns casts.
@@ -1758,8 +1759,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the PyIceberg `StaticTable` read-back of the DataFrame-door control (schema type names, spec,
   int64-ns values, partitions with counts), RePark's `.partitions` answer for the same table,
   the literals with their spec-derived nanoseconds and renderings, and the SQL-door statements
-  with the read-back each must produce (`hours(tz)` derived from the spec, the control being
-  refused by the fork).
+  with the read-back each must produce (`hours(tz)` derived from the spec; the fork
+  writes it since RP-28, fork #296 — the fixture's `blocked_on_fork` marker still names
+  the closed ask until the recorder re-runs).
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and

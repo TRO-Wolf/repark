@@ -72,6 +72,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **RP-25 (2026-09-18):** `64705c99` (F-NESTED-EVO-1 `#292` — nested struct/list/map children project by field id; a child the file lacks fills from its `initial-default` or NULL, a required one without a default is refused, identical nested columns pass through, and a struct that mixes stamped and unstamped nested ids fails loud).
   **RP-26 (2026-09-18):** `8477b249` (F-HADOOP-VN-REPLACE-1 `#293` — a stale staged Hadoop replace conflicts instead of splitting the brain; F-CHERRYPICK-WAP-ORDER-1 `#293` — a duplicate WAP cherry-pick refuses with Java's text; F-UPDATE-SCHEMA-SAME-1 `#293` — a no-op schema update commits nothing).
   **RP-27 (2026-09-18):** `fdaa82d4` (F-OCC-EXEC-1 `#294` — plain-WHERE DELETE/UPDATE scope conflict validation by their own scan filter; unsound prune conversions are dropped).
+  **RP-28 (2026-09-18):** `3296ffc7` (F-FORK-ASKS-22A `#296` — `hour` on nanosecond timestamps; COW DML and binpack output sorted by the default order and stamped).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
 - `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
   itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).

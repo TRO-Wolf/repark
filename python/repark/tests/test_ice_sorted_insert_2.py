@@ -27,8 +27,6 @@ LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — the live sort oracle is skipped (CI is 
 CATALOG = "icesorted2"
 ALLOW_CREATE_V3 = "repark.sql.allowCreateFormatVersion3"
 RANGE_VIEWS = (2000, 400, 200)
-RDF_FORK_ASK = "BLOCKED-ON-FORK F-RDF-SORT-STAMP-1"
-UPDATE_FORK_ASK = "BLOCKED-ON-FORK F-COW-UPDATE-STAMP-1"
 REPARK_OWNED = "_merge_not_matched_insert"
 
 
@@ -157,9 +155,8 @@ def test_partitioned_rewrites_sort_and_stamp(tmp_path: Path, program: str) -> No
 
 
 @pytest.mark.parametrize("program", ["m3", "m2"])
-@pytest.mark.xfail(reason=UPDATE_FORK_ASK, strict=True)
 def test_predicate_update_sorts_and_stamps_like_spark(tmp_path: Path, program: str) -> None:
-    """C-009: Spark's COW UPDATE rewrite is sorted and stamped; the fork's exec stamps NULL."""
+    """C-009: Spark's COW UPDATE rewrite is sorted and stamped; so is the fork exec's (RP-28)."""
     engine = _session(f"sorted2-upd-{program}", tmp_path / "wh")
     try:
         _drive(engine, _PLAN[program])
@@ -243,9 +240,8 @@ def _lineage(engine: ReparkSession, table: str) -> dict[int, int | None]:
     }
 
 
-@pytest.mark.xfail(reason=RDF_FORK_ASK, strict=True)
 def test_binpack_rewrite_sorts_and_stamps_like_spark(tmp_path: Path) -> None:
-    """C-009: Spark's binpack re-sorts by the table default and stamps it; the fork does not.
+    """C-009: Spark's binpack re-sorts by the table default and stamps it; so does the fork (RP-28).
 
     The recorded program runs verbatim, including Spark's own `options => map('min-input-files',
     '2','rewrite-all','true')` on the CALL, so the compaction rewrites the same three inputs.
