@@ -7,17 +7,15 @@ use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::datasource::MemTable;
 use datafusion::execution::SessionStateBuilder;
 
-fn repair_state(case_insensitive: bool) -> SessionState {
-    let config = datafusion::prelude::SessionConfig::new();
-    let config = with_column_resolution_config(config, case_insensitive);
+fn repair_state() -> SessionState {
     SessionStateBuilder::new()
-        .with_config(config)
+        .with_config(datafusion::prelude::SessionConfig::new())
         .with_default_features()
         .build()
 }
 
-fn mixed_state(case_insensitive: bool) -> SessionState {
-    let state = repair_state(case_insensitive);
+fn mixed_state() -> SessionState {
+    let state = repair_state();
     let schema = Arc::new(Schema::new(vec![
         Field::new("userId", DataType::Int64, true),
         Field::new("eventName", DataType::Utf8, true),
@@ -39,10 +37,10 @@ fn mixed_state(case_insensitive: bool) -> SessionState {
     ctx.state()
 }
 
-async fn plan_names(state: &SessionState, sql: &str) -> Vec<String> {
+async fn plan_names(state: &SessionState, sql: &str, case_insensitive: bool) -> Vec<String> {
     let dialect = state.config().options().sql_parser.dialect;
     let statement = state.sql_to_statement(sql, &dialect).unwrap();
-    plan_statement_with_column_repair(state, statement)
+    plan_statement_with_column_repair(state, statement, case_insensitive)
         .await
         .unwrap()
         .schema()
@@ -52,49 +50,32 @@ async fn plan_names(state: &SessionState, sql: &str) -> Vec<String> {
         .collect()
 }
 
-async fn plan_error(state: &SessionState, sql: &str) -> String {
+async fn plan_error(state: &SessionState, sql: &str, case_insensitive: bool) -> String {
     let dialect = state.config().options().sql_parser.dialect;
     let statement = state.sql_to_statement(sql, &dialect).unwrap();
-    plan_statement_with_column_repair(state, statement)
+    plan_statement_with_column_repair(state, statement, case_insensitive)
         .await
         .unwrap_err()
         .to_string()
 }
 
-#[test]
-fn carrier_absent_means_sensitive() {
-    let options = datafusion::prelude::SessionConfig::new().options().clone();
-    assert!(!column_resolution_is_case_insensitive(&options));
-}
-
-#[test]
-fn builder_map_parses_and_refuses_garbage() {
-    let mut map = HashMap::new();
-    assert!(!column_case_sensitive_from_config_map(&map).unwrap());
-    map.insert(SPARK_SQL_CASE_SENSITIVE_KEY.to_string(), "true".to_string());
-    assert!(column_case_sensitive_from_config_map(&map).unwrap());
-    map.insert(SPARK_SQL_CASE_SENSITIVE_KEY.to_string(), "nope".to_string());
-    assert!(column_case_sensitive_from_config_map(&map).is_err());
-}
-
-#[test]
-fn runtime_parse_is_strict_boolean() {
-    assert!(parse_runtime_column_case_sensitive("true").unwrap());
-    assert!(!parse_runtime_column_case_sensitive("FALSE").unwrap());
-    assert!(parse_runtime_column_case_sensitive("1").is_err());
-}
-
 #[tokio::test]
 async fn wrong_case_select_filters_orders_and_reads_rows() {
-    let state = mixed_state(true);
+    let state = mixed_state();
     assert_eq!(
-        plan_names(&state, "SELECT USERID, EVENTNAME FROM t ORDER BY USERID").await,
+        plan_names(
+            &state,
+            "SELECT USERID, EVENTNAME FROM t ORDER BY USERID",
+            true
+        )
+        .await,
         vec!["userId".to_string(), "eventName".to_string()]
     );
     let ctx = SessionContext::new_with_state(state);
     let batches = sql_with_column_repair(
         &ctx,
         "SELECT USERID FROM t WHERE EVENTNAME = 'b' ORDER BY USERID",
+        true,
     )
     .await
     .unwrap()
@@ -112,24 +93,25 @@ async fn wrong_case_select_filters_orders_and_reads_rows() {
 
 #[tokio::test]
 async fn quoted_wrong_case_and_qualified_resolve() {
-    let state = mixed_state(true);
+    let state = mixed_state();
     assert_eq!(
-        plan_names(&state, "SELECT `USERID` FROM t").await,
+        plan_names(&state, "SELECT `USERID` FROM t", true).await,
         vec!["userId".to_string()]
     );
     assert_eq!(
-        plan_names(&state, "SELECT T.USERID FROM t AS T").await,
+        plan_names(&state, "SELECT T.USERID FROM t AS T", true).await,
         vec!["userId".to_string()]
     );
 }
 
 #[tokio::test]
 async fn group_by_wrong_case_groups() {
-    let state = mixed_state(true);
+    let state = mixed_state();
     assert_eq!(
         plan_names(
             &state,
-            "SELECT EVENTNAME, COUNT(*) AS c FROM t GROUP BY EVENTNAME ORDER BY EVENTNAME"
+            "SELECT EVENTNAME, COUNT(*) AS c FROM t GROUP BY EVENTNAME ORDER BY EVENTNAME",
+            true,
         )
         .await,
         vec!["eventName".to_string(), "c".to_string()]
@@ -138,7 +120,7 @@ async fn group_by_wrong_case_groups() {
 
 #[tokio::test]
 async fn case_only_collision_raises_the_spark_sentence() {
-    let state = repair_state(true);
+    let state = repair_state();
     let schema = Arc::new(Schema::new(vec![
         Field::new("id", DataType::Int32, true),
         Field::new("ID", DataType::Int32, true),
@@ -157,7 +139,7 @@ async fn case_only_collision_raises_the_spark_sentence() {
         Arc::new(MemTable::try_new(batch.schema(), vec![vec![batch]]).unwrap()),
     )
     .unwrap();
-    let error = plan_error(&ctx.state(), "SELECT id FROM t").await;
+    let error = plan_error(&ctx.state(), "SELECT id FROM t", true).await;
     assert!(
         error.contains(
             "[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`t`.`id`]. SQLSTATE: 42702"
@@ -168,7 +150,7 @@ async fn case_only_collision_raises_the_spark_sentence() {
 
 #[tokio::test]
 async fn join_collision_on_bare_reference_raises() {
-    let state = repair_state(true);
+    let state = repair_state();
     let ctx = SessionContext::new_with_state(state);
     for (name, value) in [("amb_l", "a"), ("amb_r", "A")] {
         let schema = Arc::new(Schema::new(vec![Field::new(value, DataType::Int32, true)]));
@@ -183,6 +165,7 @@ async fn join_collision_on_bare_reference_raises() {
     let error = plan_error(
         &ctx.state(),
         "SELECT a FROM amb_l JOIN amb_r ON amb_l.a = amb_r.A",
+        true,
     )
     .await;
     assert!(
@@ -194,7 +177,8 @@ async fn join_collision_on_bare_reference_raises() {
     assert_eq!(
         plan_names(
             &ctx.state(),
-            "SELECT amb_l.a FROM amb_l JOIN amb_r ON amb_l.a = amb_r.A"
+            "SELECT amb_l.a FROM amb_l JOIN amb_r ON amb_l.a = amb_r.A",
+            true,
         )
         .await,
         vec!["a".to_string()]
@@ -203,13 +187,13 @@ async fn join_collision_on_bare_reference_raises() {
 
 #[tokio::test]
 async fn sensitive_session_refuses_folded_names_and_keeps_backticks() {
-    let state = mixed_state(false);
-    let error = plan_error(&state, "SELECT USERID FROM t").await;
+    let state = mixed_state();
+    let error = plan_error(&state, "SELECT USERID FROM t", false).await;
     assert!(error.contains("userid"), "unexpected message: {error}");
-    let error = plan_error(&state, "SELECT userId FROM t").await;
+    let error = plan_error(&state, "SELECT userId FROM t", false).await;
     assert!(error.contains("userid"), "unexpected message: {error}");
     assert_eq!(
-        plan_names(&state, "SELECT `userId` FROM t").await,
+        plan_names(&state, "SELECT `userId` FROM t", false).await,
         vec!["userId".to_string()]
     );
 }
@@ -282,7 +266,7 @@ fn fragment_rewrite_scopes_bare_references_to_one_side() {
 async fn dataframe_filter_binds_projection_alias() {
     use datafusion::logical_expr::{col, lit};
     for case_insensitive in [false, true] {
-        let ctx = SessionContext::new_with_state(repair_state(case_insensitive));
+        let ctx = SessionContext::new_with_state(repair_state());
         let schema = Arc::new(Schema::new(vec![Field::new("id", DataType::Int64, true)]));
         let batch =
             RecordBatch::try_new(schema, vec![Arc::new(Int64Array::from(vec![1, 2]))]).unwrap();
@@ -291,8 +275,7 @@ async fn dataframe_filter_binds_projection_alias() {
             Arc::new(MemTable::try_new(batch.schema(), vec![vec![batch]]).unwrap()),
         )
         .unwrap();
-        let frame = ctx
-            .sql("SELECT id AS Id FROM nums")
+        let frame = sql_with_column_repair(&ctx, "SELECT id AS Id FROM nums", case_insensitive)
             .await
             .unwrap()
             .filter(col("Id").gt(lit(1i64)))
@@ -304,16 +287,16 @@ async fn dataframe_filter_binds_projection_alias() {
 
 #[tokio::test]
 async fn select_alias_does_not_shadow_wrong_case_column() {
-    let state = mixed_state(true);
+    let state = mixed_state();
     assert_eq!(
-        plan_names(&state, "SELECT `USERID` AS userid FROM t").await,
+        plan_names(&state, "SELECT `USERID` AS userid FROM t", true).await,
         vec!["userid".to_string()]
     );
 }
 
 #[tokio::test]
 async fn missing_column_stays_missing() {
-    let state = mixed_state(true);
-    let error = plan_error(&state, "SELECT nope FROM t").await;
+    let state = mixed_state();
+    let error = plan_error(&state, "SELECT nope FROM t", true).await;
     assert!(error.contains("nope"), "unexpected message: {error}");
 }

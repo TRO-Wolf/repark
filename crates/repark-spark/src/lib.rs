@@ -64,6 +64,13 @@ pub fn refuse_sql_fragment(sql: &str) -> datafusion::error::Result<()> {
     Ok(())
 }
 
+#[must_use]
+pub(crate) fn spark_door_case_insensitive(
+    options: &datafusion::common::config::ConfigOptions,
+) -> bool {
+    !repark_functions::case_sensitive::spark_case_sensitive_from_options(options)
+}
+
 // --- Session seam adapter.
 pub use dialect::SparkDialect;
 pub use repark_functions::integer_spark::install_integer_overflow;

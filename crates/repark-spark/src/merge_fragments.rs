@@ -11,9 +11,7 @@ pub(crate) async fn maybe_rewrite_merge_fragments(
     catalog_name: &str,
     spec: &mut MergeSpec,
 ) -> Result<()> {
-    let case_insensitive = repark_core::column_resolution::column_resolution_is_case_insensitive(
-        ctx.state().config().options(),
-    );
+    let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
     spec.case_insensitive = case_insensitive;
     if case_insensitive {
         rewrite_merge_fragments(ctx, catalog_name, spec).await?;

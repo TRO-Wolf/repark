@@ -569,9 +569,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (`plan_statement_with_column_repair` / `sql_with_column_repair` fold the parsed
   statement once against the valid fields under `spark.sql.caseSensitive = false`,
   `rewrite_fragment_case` does the same for DML fragments; both emit backticked
-  stored-case spellings, collisions refuse `[AMBIGUOUS_REFERENCE]` / `42702`),
-  the `ColumnResolutionConfig` carrier, and the `SPARK_SQL_CASE_SENSITIVE_KEY`
-  constant. pins: ice-mixed-case-1/C-001…C-010
+  stored-case spellings, collisions refuse `[AMBIGUOUS_REFERENCE]` / `42704`).
+  Round 21b integration: this module owns no config carrier — `spark.sql.caseSensitive`
+  has one home, `repark_functions::case_sensitive::SparkCaseSensitiveConfig` (landed on
+  main by ICE-RTAS-BYNAME-1), and the Spark door passes `case_insensitive` in as an
+  argument. A second carrier would go stale the moment `SET spark.sql.caseSensitive`
+  wrote only one of them. pins: ice-mixed-case-1/C-001…C-010
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias
   binding). Split from `column_resolution.rs` under the file-size gate.

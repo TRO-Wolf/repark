@@ -55,10 +55,6 @@ impl SessionExtension for SparkExtension {
         let verbatim =
             crate::spark_literals::escaped_string_literals_from_config_map(session.conf)?;
         let config = crate::spark_literals::with_escaped_string_literals_config(config, verbatim);
-        let case_sensitive =
-            repark_core::column_resolution::column_case_sensitive_from_config_map(session.conf)?;
-        let config =
-            repark_core::column_resolution::with_column_resolution_config(config, !case_sensitive);
         Ok(repark_functions::session_time_zone::with_session_time_zone(
             config,
             session.session_time_zone.id(),

@@ -1,8 +1,6 @@
 use std::collections::{HashMap, HashSet};
-use std::hash::BuildHasher;
 use std::ops::ControlFlow;
 
-use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, ExtensionOptions};
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema, SchemaError, TableReference};
 use datafusion::error::{DataFusionError, Result};
@@ -14,105 +12,13 @@ use datafusion::sql::sqlparser::ast::{
     VisitMut, VisitorMut,
 };
 
-pub const SPARK_SQL_CASE_SENSITIVE_KEY: &str = "spark.sql.caseSensitive";
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct ColumnResolutionConfig {
-    pub case_insensitive: bool,
-}
-
-impl ConfigExtension for ColumnResolutionConfig {
-    const PREFIX: &'static str = "repark.column_resolution";
-}
-
-impl ExtensionOptions for ColumnResolutionConfig {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn cloned(&self) -> Box<dyn ExtensionOptions> {
-        Box::new(self.clone())
-    }
-
-    fn set(&mut self, key: &str, _value: &str) -> Result<()> {
-        Err(DataFusionError::Configuration(format!(
-            "`{}.{key}` is not a settable option: case sensitivity is set with \
-             `{SPARK_SQL_CASE_SENSITIVE_KEY}` on the session builder; change it at runtime with \
-             `SET spark.sql.caseSensitive`",
-            Self::PREFIX
-        )))
-    }
-
-    fn entries(&self) -> Vec<ConfigEntry> {
-        Vec::new()
-    }
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn parse_column_case_sensitive(raw: &str) -> Result<bool> {
-    match raw.trim().to_ascii_lowercase().as_str() {
-        "true" | "1" | "yes" => Ok(true),
-        "false" | "0" | "no" => Ok(false),
-        _ => Err(DataFusionError::Configuration(format!(
-            "The value '{raw}' in the config \
-             \"{SPARK_SQL_CASE_SENSITIVE_KEY}\" is invalid. \
-             {SPARK_SQL_CASE_SENSITIVE_KEY} should be boolean, but was {raw}"
-        ))),
-    }
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn column_case_sensitive_from_config_map<S>(config: &HashMap<String, String, S>) -> Result<bool>
-where
-    S: BuildHasher,
-{
-    match config.get(SPARK_SQL_CASE_SENSITIVE_KEY) {
-        Some(raw) => parse_column_case_sensitive(raw),
-        None => Ok(false),
-    }
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn parse_runtime_column_case_sensitive(raw: &str) -> Result<bool> {
-    if raw.eq_ignore_ascii_case("true") {
-        Ok(true)
-    } else if raw.eq_ignore_ascii_case("false") {
-        Ok(false)
-    } else {
-        Err(DataFusionError::Configuration(format!(
-            "[INVALID_CONF_VALUE.TYPE_MISMATCH] The value '{raw}' in the config \
-             \"{SPARK_SQL_CASE_SENSITIVE_KEY}\" is invalid. It should be a/an 'boolean' value. \
-             SQLSTATE: 22022"
-        )))
-    }
-}
-
-#[must_use]
-pub fn with_column_resolution_config(
-    config: datafusion::prelude::SessionConfig,
-    case_insensitive: bool,
-) -> datafusion::prelude::SessionConfig {
-    config.with_option_extension(ColumnResolutionConfig { case_insensitive })
-}
-
-#[must_use]
-pub fn column_resolution_is_case_insensitive(options: &ConfigOptions) -> bool {
-    options
-        .extensions
-        .get::<ColumnResolutionConfig>()
-        .is_some_and(|extension| extension.case_insensitive)
-}
-
 #[allow(clippy::missing_errors_doc)]
 pub async fn plan_statement_with_column_repair(
     state: &SessionState,
     statement: datafusion::sql::parser::Statement,
+    case_insensitive: bool,
 ) -> Result<LogicalPlan> {
-    if !column_resolution_is_case_insensitive(state.config().options()) {
+    if !case_insensitive {
         return state.statement_to_plan(statement).await;
     }
     let datafusion::sql::parser::Statement::Statement(mut inner) = statement else {
@@ -152,10 +58,14 @@ pub async fn plan_statement_with_column_repair(
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub async fn sql_with_column_repair(ctx: &SessionContext, sql: &str) -> Result<DataFrame> {
+pub async fn sql_with_column_repair(
+    ctx: &SessionContext,
+    sql: &str,
+    case_insensitive: bool,
+) -> Result<DataFrame> {
     let dialect = ctx.state().config().options().sql_parser.dialect;
     let statement = ctx.state().sql_to_statement(sql, &dialect)?;
-    let plan = plan_statement_with_column_repair(&ctx.state(), statement).await?;
+    let plan = plan_statement_with_column_repair(&ctx.state(), statement, case_insensitive).await?;
     ctx.execute_logical_plan(plan).await
 }
 

@@ -70,8 +70,12 @@ async fn execute_passthrough_inner(
         }
         _ => {}
     }
-    let plan = repark_core::column_resolution::plan_statement_with_column_repair(&state, statement)
-        .await?;
+    let plan = repark_core::column_resolution::plan_statement_with_column_repair(
+        &state,
+        statement,
+        crate::spark_door_case_insensitive(state.config().options()),
+    )
+    .await?;
     // G5b: a unit-less RANGE offset over datetime is Spark refusal or DAYS, never silent MONTHS.
     let plan = if may_have_bare_range_bound {
         conform_temporal_range_frames(&state, sql, &dialect, plan).await?
@@ -158,9 +162,7 @@ async fn try_execute_identity_dml(
     catalogs: &CatalogRegistry,
     inner: &Statement,
 ) -> Result<Option<DataFrame>> {
-    let case_insensitive = repark_core::column_resolution::column_resolution_is_case_insensitive(
-        ctx.state().config().options(),
-    );
+    let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
     let (mut allowed, kind, object_name) = if let Some(allowed) =
         repark_iceberg::write::predicate_dml::try_allowed_delete_in(inner)?
     {
@@ -293,7 +295,12 @@ async fn restate_range_frames_and_replan(
         window_range::quote_unquoted_interval_range_bounds(inner);
         rewrite(inner);
     }
-    repark_core::column_resolution::plan_statement_with_column_repair(state, restated).await
+    repark_core::column_resolution::plan_statement_with_column_repair(
+        state,
+        restated,
+        crate::spark_door_case_insensitive(state.config().options()),
+    )
+    .await
 }
 
 /// Inject Spark null-placement defaults into every ORDER BY whose placement is unspecified.
