@@ -83,6 +83,11 @@ repo.
   `ADD` / `RENAME` / `DROP COLUMN` on both SQL doors) FIXED; OPEN `ICE-NESTED-DDL-1-R-001`
   (required-child message) and `ICE-NESTED-INSERT-LIST-1` (list `INSERT` fails in the fork
   writer). pins: ice-nested-evo-1/C-013
+  **Round 2 (2026-09-18, run 22b):** `ICE-NESTED-DDL-1-R-001` FIXED (Spark's whole
+  required-child line); new FIXED `ICE-NESTED-DDL-1-R-002` (double-quoted nested names refuse
+  42601), `-R-003` (`NOT NULL` struct child in CREATE), `-R-004` (ANSI door `MAP<…>` and v3
+  CREATE), `-R-005` (duplicate-child / unknown-parent refusal shapes).
+  pins: ice-nested-evo-1/C-012, C-015, C-016, C-017, C-019
   LIVE-v3 (2026-09-02) added §7 `S3T-V3-1`; LIVE-v3-M (2026-09-02) closed it — **FIXED by
   measurement**: `aws-acceptance` run 33635288918 on merged `main` `8c4bc55` ran both live v3
   legs green, S3 Tables accepting `format-version = 3` at CREATE (the decision table's accepted

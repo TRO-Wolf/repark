@@ -3144,8 +3144,9 @@ the pin rather than obeying it.
 - **repark** — **FIXED 2026-09-17** on fork branch `fix/nested-evo-1` (fork PR #292,
   F-NESTED-EVO-1: nested struct, list and map children matched by field id; a child the file
   lacks reads its `initial_default` or `NULL`), consumed through a local path override. It
-  reaches the workspace with the pin bump that follows the fork PR; the `fork292` pins below
-  are red at pin `8fb44a39` until then. No RePark change was needed. Before the fix (rating
+  reached the workspace with fork pin RP-25; the `fork292` pins below are green on main's pin
+  with no override (measured 2026-09-18, run 22b: `test_ice_nested_evo_1.py` 46 passed,
+  4 xfailed, offline and live). No RePark change was needed. Before the fix (rating
   row V2-10d): on a Spark table written as `(id INT, s STRUCT<a INT>)`, then
   `ALTER TABLE t ADD COLUMN s.b STRING`, then one more row, every read that touched `s` —
   `SELECT id, s`, `SELECT id, s.a, s.b`, `WHERE s.b IS NULL`, `table(t)` — failed with
@@ -3180,7 +3181,7 @@ the pin rather than obeying it.
   Spark's columns, types and rows on both doors, v2 and v3. `ADD COLUMN s.r INT NOT NULL`
   refuses (`PySparkException`, `Incompatible change: cannot add required column…`) and leaves
   the schema and the metadata files untouched, as Spark refuses; the message tail differs
-  (residue [ICE-NESTED-DDL-1-R-001](#ice-nested-ddl-1-r-001--open-measured-2026-09-17-the-required-child-refusal-message)).
+  (residue [ICE-NESTED-DDL-1-R-001](#ice-nested-ddl-1-r-001--fixed-2026-09-18-the-required-child-refusal-message)).
   A dotted `AFTER` reference refuses `[PARSE_SYNTAX_ERROR] … SQLSTATE: 42601`, as the column
   move does; an unknown parent refuses naming it. Both SQL doors carry the three `ALTER`
   forms (facade: `SparkSqlDialect`, so `MAP<K, V>` child types parse; Rust ANSI door:
@@ -3203,20 +3204,114 @@ the pin rather than obeying it.
   `crates/repark-iceberg/src/write/nested_column.rs` (2 seam pins).
 - **Rationale** — FIXED, not declared: the fork already carried the Java `UpdateSchema`
   parent-path API; RePark only lacked the grammar and the type mapping.
+- **Round 2 (2026-09-18, run 22b)** — the Grok logic review's five P2s, each measured against
+  new recorded Spark cells (`oracle.json` `schema_cells` / `dataframe_create_cells`, the table
+  metadata file itself) and pinned on the Spark SQL door, the ANSI door and, for CREATE, the
+  DataFrame door: nested CREATE field ids are Java's level order (`id`=1, `s`=2, `arr`=3,
+  `m`=4, then `s.a`=5 …) on every door with no change — the fork's `TableMetadataBuilder::new`
+  reassigns RePark's placeholder ids (L-001, PROVEN); backtick dotted names
+  (`` TO `x.y` ``, `` s.`x.y` ``, `` `p.q` ``) are accepted as Spark accepts them, and the
+  double-quoted spelling now refuses as Spark does (L-002/L-006,
+  [R-002](#ice-nested-ddl-1-r-002--fixed-2026-09-18-a-double-quoted-nested-name-was-accepted));
+  `STRUCT<a: INT NOT NULL>` creates a required child
+  (L-003, [R-003](#ice-nested-ddl-1-r-003--fixed-2026-09-18-a-not-null-struct-child-in-create-refused-at-the-parser));
+  the ANSI door answers every recorded cell (L-004,
+  [R-004](#ice-nested-ddl-1-r-004--fixed-2026-09-18-the-ansi-door-refused-map-and-v3-create));
+  `ADD COLUMN s.z INT FIRST`, `AFTER a` and `COMMENT 'c'` leave Spark's child order and `doc`
+  in the metadata on both doors with no change, `AFTER s.a` refuses `PARSE_SYNTAX_ERROR`
+  42601 as Spark does (L-005, PROVEN); `MAP`, `STRUCT` and `ARRAY<STRUCT>` child types added
+  under a struct take Spark's ids; a duplicate child and an unknown parent refuse with Spark's
+  error class and text ([R-005](#ice-nested-ddl-1-r-005--fixed-2026-09-18-the-duplicate-child-and-unknown-parent-refusals)).
+  Pins: `python/repark/tests/test_ice_nested_evo_1_schema.py` (every schema cell, v2 and v3:
+  metadata, refusal, read shape; the DataFrame-door CREATE),
+  `crates/repark-sql/tests/ansi_nested_ddl_oracle.rs` (every recorded cell on the ANSI door),
+  `crates/repark-spark/src/tests/nested_column_ddl.rs`,
+  `crates/repark-iceberg/src/write/nested_column.rs`, `…/nested_type_sql.rs`.
 
-### ICE-NESTED-DDL-1-R-001 — OPEN (measured 2026-09-17): the required-child refusal message
+### ICE-NESTED-DDL-1-R-001 — FIXED 2026-09-18: the required-child refusal message
 
-- **repark** — `ALTER TABLE t ADD COLUMN s.r INT NOT NULL` raises `PySparkException`
-  `Incompatible change: cannot add required column without a default value: s.r`.
+- **repark** — **FIXED 2026-09-18 (run 22b)**: `ALTER TABLE t ADD COLUMN s.r INT NOT NULL`
+  raises `PySparkException` `Unsupported table change: Incompatible change: cannot add
+  required column: r`, Spark's whole first line, on both SQL doors: the shared
+  `nested_required_add_refusal` answers before the fork is asked, and the schema and metadata
+  files stay untouched. Before (measured 2026-09-17): `Incompatible change: cannot add
+  required column without a default value: s.r` (the fork's text, no Spark prefix).
 - **Apache Spark** — `Unsupported table change: Incompatible change: cannot add required
   column: r` (the Iceberg 1.11.0 message names the leaf and has no default clause; Spark's
   `SparkCatalog` adds the prefix). *(oracle: the same recording.)*
 - **Pin** — `python/repark/tests/test_ice_nested_evo_1.py::test_required_nested_child_message_matches_spark`
-  (`xfail(strict=True)`).
-- **Rationale** — OPEN, diagnostic only: both engines refuse and leave the table untouched.
-  The tail is the fork's message (fork finding in the ICE-NESTED-EVO-1 hand-back); the prefix
-  is the same `Unsupported table change` wrap the column-move refusals omit
-  (ICE-COLUMN-REORDER-1).
+  (v2, v3; a strict xfail until 2026-09-18), `crates/repark-sql/tests/ansi_nested_ddl_oracle.rs`
+  (the ANSI twin compares the whole line), `crates/repark-iceberg/src/write/nested_column.rs`.
+- **Rationale** — FIXED. The fork's own text is unchanged (fork finding F-2 stays a fork-side
+  message difference, no longer visible through RePark's nested DDL); RePark raises the
+  Iceberg 1.11.0 text with the `SparkCatalog` prefix itself (ruling Q-22b-NEST-4).
+
+### ICE-NESTED-DDL-1-R-002 — FIXED 2026-09-18: a double-quoted nested name was accepted
+
+- **repark** — **FIXED 2026-09-18 (run 22b)**: `ALTER TABLE t RENAME COLUMN s.a TO "x.y"` and
+  `ALTER TABLE t ADD COLUMN s."x.y" INT` raise `ParseException` `[PARSE_SYNTAX_ERROR] Syntax
+  error at or near '"x.y"'. SQLSTATE: 42601` and leave the schema untouched. Before (release
+  native at `2f18da51`): the Spark door read `"x.y"` as an identifier and renamed `s.a` to
+  `x.y` / added a child `x.y` — a silent wrong answer.
+- **Apache Spark** — `"x.y"` is a string literal in Spark SQL, not an identifier:
+  `ParseException` `PARSE_SYNTAX_ERROR` near `'"x.y"'` 42601. The backtick spelling
+  (`` TO `x.y` ``, `` s.`x.y` ``, top-level `` `p.q` ``) is accepted and names one leaf `x.y`.
+  *(oracle: `schema_cells` `rename_double_quoted`, `add_double_quoted_leaf`, `rename_dotted`,
+  `add_dotted_leaf`, `add_dotted_top`, recorded 2026-09-18.)*
+- **Pin** — `test_ice_nested_evo_1_schema.py` (`*double_quoted*`, `*dotted*` cells),
+  `crates/repark-spark/src/tests/nested_column_ddl.rs::nested_ddl_refuses_double_quoted_names_and_known_paths_spark_shaped`.
+  The ANSI door reads `"x.y"` as a standard delimited identifier; its twin is Spark's backtick
+  cell (`ansi_nested_ddl_oracle.rs`, ruling Q-22b-NEST-3).
+- **Rationale** — FIXED. A silent schema change where Spark refuses.
+
+### ICE-NESTED-DDL-1-R-003 — FIXED 2026-09-18: a `NOT NULL` struct child in `CREATE` refused at the parser
+
+- **repark** — **FIXED 2026-09-18 (run 22b)**: `CREATE TABLE t (id INT, s STRUCT<a: INT NOT
+  NULL, b: STRING>)` creates `s.a` as an Iceberg required child on both SQL doors; `SELECT *`
+  and `table(t)` answer `a` non-nullable. Before: `ParseException … Expected: >, found: NOT`.
+  A hand-written struct-field `OPTIONS(...)` refuses `PARSE_SYNTAX_ERROR` near `'OPTIONS'`
+  42601, as Spark does.
+- **Apache Spark** — creates `s.a` required (`"required": true` in the metadata file).
+  Through the DataFrame door (`writeTo(t).create()` with the same schema) Spark makes every
+  column optional (V2 CTAS `asNullable`), and so does RePark. *(oracle: `schema_cells`
+  `create_required_child`, `dataframe_create_cells`.)*
+- **Pin** — `test_ice_nested_evo_1_schema.py` (`create_required_child-*`, the DataFrame-door
+  create), `nested_column_ddl.rs::nested_create_not_null_child_is_required_with_level_order_ids`,
+  `ansi_nested_ddl_oracle.rs`.
+- **Rationale** — FIXED. sqlparser models no struct-field nullability; the shared
+  `nested_type_sql` token rewrite carries it as a struct-field option both doors read back.
+
+### ICE-NESTED-DDL-1-R-004 — FIXED 2026-09-18: the ANSI door refused `MAP<…>` and v3 CREATE
+
+- **repark** — **FIXED 2026-09-18 (run 22b)**: on the ANSI door, `CREATE TABLE … (m MAP<STRING,
+  STRUCT<p: INT>>)`, `ADD COLUMN s.mm MAP<STRING, INT>` and every recorded nested cell answer
+  Spark's metadata, read types and `DESCRIBE` types; `WITH (format_version = '3')` creates a
+  v3 table on a Spark-extended session that set `repark.sql.allowCreateFormatVersion3`.
+  Before: `ParserError("Expected: (, found: <")` for `MAP<…>` (GenericDialect only reads
+  `MAP(K, V)`), and v3 CREATE refused `WITH 'format_version' = '3' is not enabled` because the
+  opt-in was looked up by a prefixed entry key DataFusion 54 lists without its prefix (the
+  ALTER path read the typed config and worked). 33 of the recorded cells mismatched.
+- **Apache Spark** — the recorded cells above.
+- **Pin** — `crates/repark-sql/tests/ansi_nested_ddl_oracle.rs` (both tests, v2 and v3).
+- **Rationale** — FIXED.
+
+### ICE-NESTED-DDL-1-R-005 — FIXED 2026-09-18: the duplicate-child and unknown-parent refusals
+
+- **repark** — **FIXED 2026-09-18 (run 22b)**: `ALTER TABLE t ADD COLUMN s.a INT` on an
+  existing child raises `AnalysisException` `[FIELD_ALREADY_EXISTS] Cannot add column, because
+  `s`.`a` already exists in "STRUCT<id: INT, s: STRUCT<a: INT, b: STRING>>". SQLSTATE: 42710`;
+  `ADD COLUMN nope.z INT` raises `AnalysisException` `[UNRESOLVED_COLUMN.WITH_SUGGESTION] A
+  column, variable, or function parameter with name `nope` cannot be resolved. Did you mean
+  one of the following? [`id`, `s`]. SQLSTATE: 42703`; both doors, schema untouched. Before:
+  `PySparkException` `DataInvalid => Cannot add column, name already exists: s.a` /
+  `… Cannot find parent struct: nope`. The suggestion list is the table's top-level columns in
+  schema order (the column-move framing); Spark orders by similarity, which agrees on the
+  recorded cell.
+- **Apache Spark** — the recorded `add_duplicate_child` / `add_unknown_parent` cells (without
+  Spark's `; line 1 pos N` origin tail).
+- **Pin** — `test_ice_nested_evo_1_schema.py` (`add_duplicate_child-*`, `add_unknown_parent-*`),
+  `nested_column_ddl.rs`, `ansi_nested_ddl_oracle.rs`, `nested_column.rs`.
+- **Rationale** — FIXED.
 
 ### ICE-NESTED-INSERT-LIST-1 — OPEN (measured 2026-09-17): an `INSERT` into a list column fails in the fork writer
 
