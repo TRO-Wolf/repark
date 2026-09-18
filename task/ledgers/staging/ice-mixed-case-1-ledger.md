@@ -1,7 +1,7 @@
 # Charter ledger — ICE-MIXED-CASE-1 · Spark-door case-insensitive column resolution
 
 **Date:** 2026-09-17 · **Branch:** `fix/ice-mixed-case-1` · **Base:** `origin/main`
-`32c0e1a3` · **Model:** muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+`32c0e1a3` (rebased onto `71482620` in round 21b) · **Model:** claude-opus-5 (round 21b; rounds 1–5 muse-spark-1.3-contributor) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
@@ -63,6 +63,24 @@ table-format semantics change, so no fork PR).
   tests move to `column_resolution/tests.rs` under the file-size gate
   (996 + 312).
 
+- Q-21b-1 (orchestrator, 2026-09-17, run 21b): the measurement wins — every
+  case-twin refusal keeps the class `[AMBIGUOUS_REFERENCE]` and carries
+  `SQLSTATE: 42704` (measured on PySpark 4.1.2 + Iceberg 1.11.0), not the
+  unmeasured `42702` Q-20b-2 chose. Pins, ledger and registry say 42704.
+- Q-21b-2 (orchestrator, 2026-09-17, run 21b): the option list has one entry per
+  matching field (two twins, two entries), each in the REQUESTED spelling,
+  qualified the way Spark qualifies it — `` `t`.`X` `` for a qualified reference,
+  the relation's name (`` `cat`.`ns`.`tbl`.`X` `` when the FROM names it that way)
+  for a bare one. A case twin is refused even for an exact-case reference.
+- R-21b-1 (this lane, 2026-09-17, round 21b step 0): origin/main landed
+  `repark_functions::case_sensitive::SparkCaseSensitiveConfig` (ICE-RTAS-BYNAME-1)
+  as the `spark.sql.caseSensitive` carrier, runtime setter included. The unit's
+  `ColumnResolutionConfig` duplicated it; after the rebase `SET
+  spark.sql.caseSensitive` would have written only main's. The unit's carrier is
+  deleted; `plan_statement_with_column_repair` / `sql_with_column_repair` take
+  `case_insensitive` as an argument and the Spark door passes
+  `!spark_case_sensitive_from_options(..)`.
+
 ## PROPOSITION LEDGER — ICE-MIXED-CASE-1 — 2026-09-17
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
@@ -79,6 +97,12 @@ table-format semantics change, so no fork PR).
 | C-010 | The live tier re-runs Spark and asserts repark == pinned golden == live Spark for every cell. | Same pin file, live tier under `REPARK_PARITY_LIVE=1`. | PROVEN | 81 passed (42 offline + 39 live) 2026-09-17 via jb-jvm.sh lock, PySpark 4.1.2 from /tmp/sparkenv mixed with the lane native (§6). |
 | C-011 | ID-1 is rewritten to the new truth (dated 2026-09-17, ICE-MIXED-CASE-1 round 5); `cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted` pins the new per-door truth; any still-divergent shape is its own row with its pin. | Registry diff + `cross_door.rs` diff. | PROVEN | `docs/spark-sql-iceberg-parity.md` ID-1 rewritten (false FIXED, `true` unquoted-exact DECLARED refusal, ANSI INTENDED split); `cross_door.rs` ROW 8 asserts ANSI-refuses / Spark-resolves; `cargo test -p repark-sql` pending re-run (§6). |
 | C-012 | Full gates green: new pin file, live tier, `cargo test -p repark-spark --lib`, `cargo test -p repark-sql`, `make verify`, whole facade suite, whole parity suite. | Gate outputs pasted below. | PROVEN | Pins 42 offline + 81 live; core 591 / spark 1043 / iceberg 435 / sql all binaries; `make ci` green; facade r5b 9368 passed; parity r5 757 passed (§6). |
+| C-013 | V-01: a SELECT-list column aliased to its own case-variant spelling folds (`SELECT userId AS USERID`, `userId + 1 AS USERID … ORDER BY USERID`, `COUNT(userId) AS USERID … HAVING USERID > 0`, `USERID AS USERID`); alias references elsewhere stay unfolded. | `test_measured_query_cells_answer_spark[V01_*]` vs `measured_21b` cells; Rust `v01_select_alias_of_the_same_name_folds_the_aliased_column`. | OPEN | Red §9. |
+| C-014 | V-02: every relation's stored fields feed the fold, scope by scope; an outer spelling is never rewritten into an inner scope. | `test_measured_query_cells_answer_spark[V02_*]`; Rust `v02_every_relation_folds_not_only_the_first_miss`, `v02_outer_spelling_is_not_rewritten_into_an_inner_scope`. | OPEN | Red §9. |
+| C-015 | V-04: JOIN USING folds in every statement that carries a query (INSERT … SELECT … JOIN … USING). | `test_measured_query_cells_answer_spark[V04_join_using_select]`, `test_measured_join_using_insert_answers_spark`; Rust `v04_join_using_folds_inside_insert`. | OPEN | Red §9. |
+| C-016 | L-08: any reference (bare, qualified, exact or case-variant) to a name with an ASCII case twin in the node's input refuses `[AMBIGUOUS_REFERENCE]` / `42704`, one option per matching field in the requested spelling (Q-21b-1, Q-21b-2); a Spark-written twin Iceberg table refuses at adoption (DECLARED). | `test_case_twin_reference_is_ambiguous_exact_or_not`, `test_measured_case_twin_table_refuses_at_adoption[L08_*]`, `test_sql_door_ambiguous_reference_matches_spark_shape`; Rust `l08_*`, `case_only_collision_raises_the_spark_sentence`, `join_collision_on_bare_reference_raises`; `name_resolution.rs` `write_side_case_twins_are_ambiguous`. | OPEN | Red §9. |
+| C-017 | R-02 / V-03: when no referenced schema holds an upper-case ASCII field the audit and the AST clone are skipped; the audit that runs indexes each node schema once. Before/after cost measured on a default-profile release native. | Rust pin on the early exit; timing in §9. | OPEN | |
+| C-018 | R-03: MERGE fragment scopes come from loaded schemas, not two `SELECT * … LIMIT 0` plans. | `merge_fragments.rs` diff; MC-MRG-01…04 stay green. | OPEN | |
 
 ## 1. Red-first record (base `32c0e1a3`, release native in `.venv`, 2026-09-17)
 
@@ -299,53 +323,73 @@ guides `sql-doors.md` / `dataframe-guide.md` updated.
   facade+parity load and passes isolated and in the quiet-box full lib re-run
   (435 passed) — the same flake→pass shape as round 3.
 
+## 9. Round 21b (claude-opus-5, 2026-09-17)
+
+### Step 0 — rebase onto `origin/main` `71482620`
+
+Two conflicts on the round-2 commit (`session_runtime.rs`, `builder_conf.py`), both
+from main's own `spark.sql.caseSensitive` carrier; resolved to main's side and the
+unit's duplicate carrier deleted (R-21b-1). No conflict markers in the tree.
+Release native rebuilt (codegen-units 16). `test_ice_mixed_case_1.py` 42 passed,
+39 skipped; `cargo test -p repark-core --lib` 590 passed, 1 ignored (the three
+carrier-parse tests left with the carrier).
+
+### Step 1 — red-first on the unfixed tree
+
+Measured cells: `python/repark/tests/ice_mixed_case_1_spark_oracle.json`
+`measured_21b.cells` is `/tmp/oc-worker/kb-oracle/mc-truth.json` verbatim
+(checked equal). Spark's twin-table `v3.metadata.json` is committed beside the
+fixture (`twin_v3.metadata.json`).
+
+Probe of RePark on the fixture shapes before any fix: `SELECT userId AS USERID`,
+`userId + 1 AS USERID … ORDER BY USERID`, `COUNT(userId) AS USERID … HAVING`
+already answer on the Spark door (the Databricks-dialect parse keeps `userId` and
+`USERID` distinct, so the exact-match alias guard does not fire); `USERID AS
+USERID` fails (`No field named userid`). V-02's recorded statement answers
+(the outer miss happens to be reported first); V-04's SELECT answers, its INSERT
+fails. RePark cannot create or adopt a case-twin Iceberg table at all: `CREATE
+TABLE … (`id` INT, `ID` INT)` and `register_table` on Spark's twin metadata both
+refuse with `DataInvalid => Cannot build lower case index: id and ID collide`
+(the fork's schema index).
+
+Rust `cargo test -p repark-core --lib column_resolution` — 10 passed, 8 FAILED:
+
+```
+case_only_collision_raises_the_spark_sentence: … could be: [`t`.`id`]. SQLSTATE: 42702
+join_collision_on_bare_reference_raises: … could be: [`amb_l`.`a`, `amb_r`.`a`]. SQLSTATE: 42702
+l08_bare_twin_options_carry_the_full_relation_name: … could be: [`tw_full`.`ID`]. SQLSTATE: 42702
+l08_every_reference_to_a_case_twin_is_ambiguous: SELECT t.ID FROM tw AS t: … could be: [`t`.`ID`]. SQLSTATE: 42702
+v01_select_alias_of_the_same_name_folds_the_aliased_column: FieldNotFound userid (valid mc.userId, mc.eventName)
+v02_every_relation_folds_not_only_the_first_miss: FieldNotFound eventname (valid mc.userId, …)
+v02_outer_spelling_is_not_rewritten_into_an_inner_scope: FieldNotFound "USERID" (valid mc.userId, mc.eventName) — the inner miss's fold rewrote the outer `userid` to `USERID`
+v04_join_using_folds_inside_insert: FieldNotFound userid (valid ja.userId, ja.x)
+```
+
+Python `test_ice_mixed_case_1.py` — 50 passed, 8 FAILED, 39 skipped:
+
+```
+test_sql_door_ambiguous_reference_matches_spark_shape[MC-AMB-01]: … [`amb_l`.`a`, `amb_r`.`a`]. SQLSTATE: 42702
+test_sql_door_ambiguous_reference_matches_spark_shape[MC-AMB-02]: … [`amb_l`.`A`, `amb_r`.`A`]. SQLSTATE: 42702
+test_measured_query_cells_answer_spark[V01_alias_upper_of_upper]: Schema error: No field named userid. Valid fields are mc21.ns.mc."userId", mc21.ns.mc."eventName".
+test_measured_join_using_insert_answers_spark: Schema error: No field named userid. Valid fields are mc21.ns.ja."userId", mc21.ns.ja.x.
+test_case_twin_reference_is_ambiguous_exact_or_not[SELECT t.ID …]: … could be: [`t`.`ID`]. SQLSTATE: 42702
+test_case_twin_reference_is_ambiguous_exact_or_not[SELECT ID …]: … could be: [`twv`.`ID`]. SQLSTATE: 42702
+test_case_twin_reference_is_ambiguous_exact_or_not[SELECT id …]: … could be: [`twv`.`id`]. SQLSTATE: 42702
+test_case_twin_reference_is_ambiguous_exact_or_not[SELECT t.id …]: … could be: [`t`.`id`]. SQLSTATE: 42702
+```
+
+Green on the unfixed tree and kept as regression pins: the other three V01
+cells, both V02 cells, V04 SELECT, and the four
+`test_measured_case_twin_table_refuses_at_adoption[L08_*]` cells (RePark's
+declared answer: refusal at adoption). Name comparison on the measured cells
+is case-insensitive, the module's existing convention for the declared
+output-spelling divergence.
+
 ## 7. Open questions (HALT writes here; empty means none)
 
 None.
 
-## 8. Coverage attestation (ref 05 shape, 2026-09-17)
+## 8. Coverage attestation
 
-```yaml
-COVERAGE_ATTESTATION:
-  pr_unit: ice-mixed-case-1
-  complete: true
-  reattested: [AT-1, AT-3, AT-10]
-  categories:
-    - id: AT-1
-      status: ATTACKED
-      evidence: Clauses C-001..C-012 walked one by one against behavior — the 42 pin cells measured against the recorded live-PySpark-4.1.2 oracle offline and re-measured live (81 passed: 42 offline + 39 live), the registry ID-1 rewrite diffed, the cross-door ROW 8 pin green.
-      artifacts: [task/ledgers/staging/ice-mixed-case-1-ledger.md, python/repark/tests/test_ice_mixed_case_1.py]
-    - id: AT-2
-      status: ATTACKED
-      evidence: Boundary spellings actually exercised — mixed/lower/upper unquoted, quoted exact, quoted wrong-case, quoted spaced identifiers, both flag values, ambiguous a/A frames, temp views, DataFrame-door select/filter, MERGE/UPDATE/DELETE/INSERT shapes.
-      artifacts: [python/repark/tests/test_ice_mixed_case_1.py, python/repark/tests/ice_mixed_case_1_spark_oracle.json]
-    - id: AT-3
-      status: ATTACKED
-      evidence: Refusal paths pinned — wrong-case under true refuses, a/A frames raise Spark-shaped AMBIGUOUS_REFERENCE, duplicate UPDATE SET targets refuse instead of first-winning, t.score in NOT MATCHED INSERT stays the loud missing-field error, and the pre-fix tree failed the NOT MATCHED bare-column pin (fixed by the Q-20b-1 scoping, green after).
-      artifacts: [python/repark/tests/test_ice_mixed_case_1.py, python/repark/tests/test_merge_insert_scope.py]
-    - id: AT-4
-      status: N/A
-      justification: No concurrent or async path added — the repair loop is bounded at 64 attempts and the flag mutates session config only through the existing validated runtime setter, the same shape as the ANSI and zone knobs.
-    - id: AT-5
-      status: N/A
-      justification: No privileged action, no secret, no injection or deserialization surface — the change resolves SQL identifier spellings against known scopes only.
-    - id: AT-6
-      status: ATTACKED
-      evidence: Every write-path cell (UPDATE/DELETE/MERGE/INSERT) is verified by reading the table back against the oracle rows, and the duplicate-target refusal closes the silent first-win write.
-      artifacts: [python/repark/tests/test_ice_mixed_case_1.py]
-    - id: AT-7
-      status: N/A
-      justification: No system-breaking resource surface — the repair loop is attempt-bounded, fragment rewrites are single-pass, and the full facade suite ran in its normal band.
-    - id: AT-8
-      status: ATTACKED
-      evidence: The oracle is a verbatim live-Spark-4.1.2 recording the pins read cell by cell; error classes keep Spark's shape; the owned fork is untouched and the registry carries the per-door truth.
-      artifacts: [python/repark/tests/ice_mixed_case_1_spark_oracle.json, docs/spark-sql-iceberg-parity.md]
-    - id: AT-9
-      status: ATTACKED
-      evidence: Every refusal raises a typed AnalysisException carrying Spark's class and the offending spelling, asserted by message match in the pins on both tiers.
-      artifacts: [python/repark/tests/test_ice_mixed_case_1.py]
-    - id: AT-10
-      status: ATTACKED
-      evidence: Red-first record in §1; the new Rust scoping pin names the branch (bare ref with home scope vs without vs qualified); the facade NOT MATCHED pin failed on the pre-fix tree and passes after, so the suite catches the regression it pins.
-      artifacts: [task/ledgers/staging/ice-mixed-case-1-ledger.md, crates/repark-core/src/column_resolution.rs]
-```
+Withdrawn in round 21b step 1: clauses C-013…C-018 are OPEN. The block returns
+only when every clause is PROVEN (step 8).

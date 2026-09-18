@@ -485,8 +485,10 @@ repark-core's error map.
   (Spark `spark.sql.caseSensitive=false` conform semantics); used by both `append` conform and
   merge star expansion so the two surfaces cannot drift. `resolve_write_column` is the single
   resolve-or-refuse entry for write target lists (case-twin collisions refuse
-  `[AMBIGUOUS_REFERENCE]` / `42702`); `arrow_field_twins` / `ambiguous_write_message` are its
-  pieces. pins: ice-mixed-case-1/C-004
+  `[AMBIGUOUS_REFERENCE]` / `42704`, one option per twin in the requested spelling — run 21b
+  Q-21b-1 / Q-21b-2 from the measured Spark cells); `arrow_field_twins` /
+  `ambiguous_write_message` are its pieces. Twin targets only exist on non-fork schemas: the
+  fork refuses to load a twin Iceberg schema. pins: ice-mixed-case-1/C-004, C-016
 - `position_delete.rs` (crate-private; two `pub` re-exports via `mod.rs`) — merge-on-read
   WRITE primitive: turn `(_file, _pos)` pairs into committable position-delete `DataFile`s by
   driving the fork's production `PositionDeleteFileWriter`. Owns sort order (ascending

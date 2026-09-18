@@ -1,6 +1,7 @@
 """ICE-MIXED-CASE-1 — the Spark door resolves mixed-case columns case-insensitively.
 
-pins: ice-mixed-case-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+pins: ice-mixed-case-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+C-013, C-014, C-015, C-016
 
 A Spark-created Iceberg table ``(userId BIGINT, eventName STRING,
 `Mixed Case` INT)`` adopted into RePark must answer Spark 4.1.2 on the SQL
@@ -40,6 +41,16 @@ unquoted spelling (``userId``) arrives as ``userid`` and refuses. Exact case
 under ``true`` needs backticks. ``test_sql_door_unquoted_exact_case_refuses_case_sensitive``
 pins the refusal; ``test_sql_door_backticked_exact_case_succeeds_case_sensitive``
 pins the backticked success against the recorded ``true`` oracle rows.
+
+**Run 21b measurement.** The oracle's ``measured_21b`` block is the
+orchestrator's ``probe_mc.py`` recording (PySpark 4.1.2 + Iceberg 1.11.0,
+2026-09-17), copied verbatim: the V-01 alias cells, the V-02 outer/inner cells,
+the V-04 JOIN USING cells and the L-08 case-twin cells. The ``measured``
+fixture rebuilds the probe's tables on a fresh memory catalog. Case twins
+refuse ``[AMBIGUOUS_REFERENCE]`` with ``SQLSTATE: 42704`` and one option per
+matching field in the requested spelling; the fork cannot load a twin Iceberg
+schema, so the L-08 Iceberg cells pin RePark's refusal at adoption (declared)
+and a twin frame carries the resolution rule.
 """
 
 from __future__ import annotations
@@ -388,8 +399,10 @@ def test_sql_door_ambiguous_reference_matches_spark_shape(
     with pytest.raises(AnalysisException) as excinfo:
         _run_statements(session, cell_id, _CATALOG)
     message = str(excinfo.value)
-    assert "[AMBIGUOUS_REFERENCE]" in message
-    assert "is ambiguous" in message
+    recorded = _expected(cell_id, "false")["error_message"]
+    sentence = recorded[recorded.index("[AMBIGUOUS_REFERENCE]") : recorded.index("; line")]
+    assert sentence.endswith("SQLSTATE: 42704")
+    assert sentence in message
 
 
 @pytest.mark.parametrize("cell_id", _TRUE_SUCCESS_CELLS)
@@ -550,3 +563,134 @@ def test_live_spark_still_matches_the_recorded_oracle(
     else:
         assert live.get("error_class") == recorded["error_class"]
         assert recorded["error_message"].splitlines()[0][:80] in live.get("error_message", "")
+
+
+_MEASURED = _ORACLE["measured_21b"]
+_MEASURED_CELLS = _MEASURED["cells"]
+_MEASURED_QUERY_CELLS = [
+    "V01_alias_same_name_select",
+    "V01_alias_same_name_expr_order",
+    "V01_alias_same_name_agg_having",
+    "V01_alias_upper_of_upper",
+    "V02_outer_mixed_case_with_failing_inner",
+    "V02_control_outer_only",
+    "V04_join_using_select",
+]
+_MEASURED_TWIN_CELLS = [
+    "L08_qualified_twin",
+    "L08_bare_twin",
+    "L08_bare_twin_lower",
+    "L08_star_twin",
+]
+_MEASURED_SETUP = [
+    "CREATE NAMESPACE {CAT}.ns",
+    "CREATE TABLE {CAT}.ns.mc (`userId` INT, `eventName` STRING)",
+    "INSERT INTO {CAT}.ns.mc VALUES (1, 'a'), (2, 'b')",
+    "CREATE TABLE {CAT}.ns.other (name STRING)",
+    "INSERT INTO {CAT}.ns.other VALUES ('a')",
+    "CREATE TABLE {CAT}.ns.ja (`userId` INT, x INT)",
+    "INSERT INTO {CAT}.ns.ja VALUES (1, 10), (2, 20)",
+    "CREATE TABLE {CAT}.ns.jb (`userId` INT, y INT)",
+    "INSERT INTO {CAT}.ns.jb VALUES (1, 100)",
+    "CREATE TABLE {CAT}.ns.jt (`userId` INT, x INT, y INT)",
+]
+_MEASURED_CATALOG = "mc21"
+_TWIN_METADATA = (
+    _REPO_ROOT / "python/repark-parity/fixtures/torture/data/ice_mixed_case_1/twin_v3.metadata.json"
+)
+
+
+@pytest.fixture
+def measured(tmp_path: Path) -> Iterator[ReparkSession]:
+    """A fresh session with the probe's ``mc`` / ``other`` / ``ja`` / ``jb`` / ``jt`` tables."""
+    spark = ReparkSession.builder.appName("pytest-ice-mixed-case-1-21b").getOrCreate()
+    spark.register_memory_catalog(_MEASURED_CATALOG, str(tmp_path / "wh"))
+    for sql in _MEASURED_SETUP:
+        spark.sql(sql.format(CAT=_MEASURED_CATALOG)).collect()
+    yield spark
+    spark.stop()
+
+
+def _measured_sql(cell_id: str) -> str:
+    """The recorded statement, pointed at the pin's catalog instead of the probe's ``sc``."""
+    return _MEASURED_CELLS[cell_id]["sql"].replace("sc.ns.", f"{_MEASURED_CATALOG}.ns.")
+
+
+def _sorted_rows(table: pa.Table) -> list[list[Any]]:
+    """Rows as lists, sorted by ``repr`` exactly as the probe sorted them."""
+    return sorted(([*row.values()] for row in table.to_pylist()), key=repr)
+
+
+@pytest.mark.parametrize("cell_id", _MEASURED_QUERY_CELLS)
+def test_measured_query_cells_answer_spark(measured: ReparkSession, cell_id: str) -> None:
+    """V-01 / V-02 / V-04 query cells answer the run-21b Spark measurement."""
+    recorded = _MEASURED_CELLS[cell_id]
+    assert recorded["outcome"] == "ok"
+    table = measured.sql(_measured_sql(cell_id)).to_arrow()
+    assert [name.lower() for name in table.column_names] == [
+        name.lower() for name in recorded["columns"]
+    ]
+    assert _sorted_rows(table) == recorded["rows"]
+
+
+def test_measured_join_using_insert_answers_spark(measured: ReparkSession) -> None:
+    """V-04: ``INSERT … SELECT … JOIN … USING (USERID)`` writes the Spark rows."""
+    recorded = _MEASURED_CELLS["V04_join_using_insert"]
+    assert recorded["outcome"] == "ok"
+    measured.sql(_measured_sql("V04_join_using_insert")).collect()
+    table = measured.sql(f"SELECT * FROM {_MEASURED_CATALOG}.ns.jt ORDER BY userId").to_arrow()
+    assert _sorted_rows(table) == recorded["rows"]
+
+
+@pytest.mark.parametrize("cell_id", _MEASURED_TWIN_CELLS)
+def test_measured_case_twin_table_refuses_at_adoption(
+    measured: ReparkSession, cell_id: str, tmp_path: Path
+) -> None:
+    """Spark loads a case-twin Iceberg table and refuses the reference; RePark refuses the load.
+
+    Declared (registry ICE-MIXED-CASE-1 twin row): the fork's schema index
+    rejects ``id`` + ``ID`` while parsing the metadata, so every L-08 cell
+    refuses loud at adoption instead of at resolution. Never a silent answer.
+    """
+    recorded = _MEASURED_CELLS[cell_id]
+    assert recorded["outcome"] == "error"
+    assert recorded["class"] == "AnalysisException"
+    assert _MEASURED_CELLS["twin_add"]["schema"] == ["id", "ID"]
+    metadata = tmp_path / "tw" / "metadata" / "v3.metadata.json"
+    metadata.parent.mkdir(parents=True)
+    shutil.copyfile(_TWIN_METADATA, metadata)
+    with pytest.raises(Exception, match="Cannot build lower case index: id and ID collide"):
+        measured.sql(
+            f"CALL {_MEASURED_CATALOG}.system.register_table("
+            f"table => 'ns.tw', metadata_file => '{metadata}')"
+        ).collect()
+    with pytest.raises(AnalysisException):
+        measured.sql(_measured_sql(cell_id)).collect()
+
+
+@pytest.mark.parametrize(
+    ("sql", "reference", "options"),
+    [
+        ("SELECT t.ID FROM twv AS t", "`t`.`ID`", "[`t`.`ID`, `t`.`ID`]"),
+        ("SELECT ID FROM twv", "`ID`", "[`twv`.`ID`, `twv`.`ID`]"),
+        ("SELECT id FROM twv", "`id`", "[`twv`.`id`, `twv`.`id`]"),
+        ("SELECT t.id FROM twv AS t", "`t`.`id`", "[`t`.`id`, `t`.`id`]"),
+    ],
+)
+def test_case_twin_reference_is_ambiguous_exact_or_not(
+    measured: ReparkSession, sql: str, reference: str, options: str
+) -> None:
+    """L-08: any reference to a name with an ASCII case twin refuses like Spark.
+
+    The measured Spark rule (``L08_*`` cells): exact or case-variant, bare or
+    qualified, one option per matching field in the requested spelling,
+    ``SQLSTATE: 42704``. A frame is the twin carrier here because the fork
+    cannot load a twin Iceberg schema (the adoption pin above).
+    """
+    measured.sql("SELECT 1 AS id, 0 AS `ID`").createOrReplaceTempView("twv")
+    with pytest.raises(AnalysisException) as excinfo:
+        measured.sql(sql).to_arrow()
+    assert (
+        f"[AMBIGUOUS_REFERENCE] Reference {reference} is ambiguous, could be: {options}. "
+        "SQLSTATE: 42704"
+    ) in str(excinfo.value)

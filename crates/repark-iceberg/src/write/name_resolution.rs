@@ -213,7 +213,7 @@ mod tests {
         );
         assert_eq!(
             ambiguous_write_message("UserId", &arrow_field_twins(&schema, "UserId")),
-            "[AMBIGUOUS_REFERENCE] Reference `UserId` is ambiguous, could be: [`userId`, `USERID`]. SQLSTATE: 42702".to_string()
+            "[AMBIGUOUS_REFERENCE] Reference `UserId` is ambiguous, could be: [`UserId`, `UserId`]. SQLSTATE: 42704".to_string()
         );
         let single = Schema::new(vec![Field::new("userId", DataType::Int64, true)]);
         assert!(arrow_field_twins(&single, "UserId").is_empty());

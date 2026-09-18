@@ -558,6 +558,189 @@
   },
   "create_table": "CREATE TABLE sc.ns.mc (userId BIGINT, eventName STRING, `Mixed Case` INT) USING iceberg TBLPROPERTIES ('format-version'='2', 'write.delete.mode'='copy-on-write', 'write.update.mode'='copy-on-write', 'write.merge.mode'='copy-on-write')",
   "iceberg_runtime": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+  "measured_21b": {
+    "cells": {
+      "L08_bare_twin": {
+        "class": "AnalysisException",
+        "message": [
+          "[AMBIGUOUS_REFERENCE] Reference `ID` is ambiguous, could be: [`sc`.`ns`.`tw`.`ID`, `sc`.`ns`.`tw`.`ID`]. SQLSTATE: 42704; line 1 pos 7"
+        ],
+        "outcome": "error",
+        "sql": "SELECT ID FROM sc.ns.tw"
+      },
+      "L08_bare_twin_lower": {
+        "class": "AnalysisException",
+        "message": [
+          "[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`sc`.`ns`.`tw`.`id`, `sc`.`ns`.`tw`.`id`]. SQLSTATE: 42704; line 1 pos 7"
+        ],
+        "outcome": "error",
+        "sql": "SELECT id FROM sc.ns.tw"
+      },
+      "L08_qualified_twin": {
+        "class": "AnalysisException",
+        "message": [
+          "[AMBIGUOUS_REFERENCE] Reference `t`.`ID` is ambiguous, could be: [`t`.`ID`, `t`.`ID`]. SQLSTATE: 42704; line 1 pos 7"
+        ],
+        "outcome": "error",
+        "sql": "SELECT t.ID FROM sc.ns.tw AS t"
+      },
+      "L08_star_twin": {
+        "class": "AnalysisException",
+        "message": [
+          "[COLUMN_ALREADY_EXISTS] The column `id` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"
+        ],
+        "outcome": "error",
+        "sql": "SELECT * FROM sc.ns.tw"
+      },
+      "V01_alias_same_name_agg_having": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT COUNT(userId) AS USERID FROM sc.ns.mc HAVING USERID > 0"
+      },
+      "V01_alias_same_name_expr_order": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            2
+          ],
+          [
+            3
+          ]
+        ],
+        "sql": "SELECT userId + 1 AS USERID FROM sc.ns.mc ORDER BY USERID"
+      },
+      "V01_alias_same_name_select": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT userId AS USERID FROM sc.ns.mc"
+      },
+      "V01_alias_upper_of_upper": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT USERID AS USERID FROM sc.ns.mc"
+      },
+      "V02_control_outer_only": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT USERID FROM sc.ns.mc"
+      },
+      "V02_outer_mixed_case_with_failing_inner": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ]
+        ],
+        "sql": "SELECT USERID FROM sc.ns.mc WHERE EVENTNAME IN (SELECT NAME FROM sc.ns.other)"
+      },
+      "V04_join_using_insert": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            10,
+            100
+          ]
+        ],
+        "sql": "INSERT INTO sc.ns.jt SELECT USERID, x, y FROM sc.ns.ja JOIN sc.ns.jb USING (USERID)"
+      },
+      "V04_join_using_select": {
+        "columns": [
+          "USERID",
+          "x",
+          "y"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            10,
+            100
+          ]
+        ],
+        "sql": "SELECT USERID, x, y FROM sc.ns.ja JOIN sc.ns.jb USING (USERID)"
+      },
+      "banner": "spark=4.1.2 iceberg=1.11.0 tz=UTC catalog=hadoop caseSensitive=false",
+      "caseSensitive": "false",
+      "twin_add": {
+        "outcome": "ok",
+        "schema": [
+          "id",
+          "ID"
+        ]
+      }
+    },
+    "recorded_by": "probe_mc.py (run 21b orchestrator), PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, Java 17, hadoop catalog, 2026-09-17",
+    "setup": {
+      "ja": [
+        "CREATE TABLE sc.ns.ja (userId INT, x INT)",
+        "INSERT INTO sc.ns.ja VALUES (1, 10), (2, 20)"
+      ],
+      "jb": [
+        "CREATE TABLE sc.ns.jb (userId INT, y INT)",
+        "INSERT INTO sc.ns.jb VALUES (1, 100)"
+      ],
+      "jt": [
+        "CREATE TABLE sc.ns.jt (userId INT, x INT, y INT)"
+      ],
+      "mc": [
+        "CREATE TABLE sc.ns.mc (userId INT, eventName STRING)",
+        "INSERT INTO sc.ns.mc VALUES (1, 'a'), (2, 'b')"
+      ],
+      "other": [
+        "CREATE TABLE sc.ns.other (name STRING)",
+        "INSERT INTO sc.ns.other VALUES ('a')"
+      ],
+      "tw": [
+        "CREATE TABLE sc.ns.tw (id INT)",
+        "INSERT INTO sc.ns.tw VALUES (1)",
+        "Java API updateSchema().addColumn(\"ID\", IntegerType).commit()"
+      ]
+    }
+  },
   "seed": "INSERT INTO sc.ns.mc VALUES (1, 'a', 10), (2, 'b', 20)",
   "spark": "4.1.2",
   "warehouse": "/tmp/repark-ice-mixed-case-1"

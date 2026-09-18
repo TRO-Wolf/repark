@@ -142,7 +142,7 @@ async fn case_only_collision_raises_the_spark_sentence() {
     let error = plan_error(&ctx.state(), "SELECT id FROM t", true).await;
     assert!(
         error.contains(
-            "[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`t`.`id`]. SQLSTATE: 42702"
+            "[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`t`.`id`, `t`.`id`]. SQLSTATE: 42704"
         ),
         "unexpected message: {error}"
     );
@@ -170,7 +170,7 @@ async fn join_collision_on_bare_reference_raises() {
     .await;
     assert!(
         error.contains(
-            "[AMBIGUOUS_REFERENCE] Reference `a` is ambiguous, could be: [`amb_l`.`a`, `amb_r`.`a`]. SQLSTATE: 42702"
+            "[AMBIGUOUS_REFERENCE] Reference `a` is ambiguous, could be: [`amb_l`.`a`, `amb_r`.`a`]. SQLSTATE: 42704"
         ),
         "unexpected message: {error}"
     );
@@ -299,4 +299,234 @@ async fn missing_column_stays_missing() {
     let state = mixed_state();
     let error = plan_error(&state, "SELECT nope FROM t", true).await;
     assert!(error.contains("nope"), "unexpected message: {error}");
+}
+
+fn measured_ctx() -> SessionContext {
+    let ctx = SessionContext::new_with_state(repair_state());
+    let int = |name: &str| Field::new(name, DataType::Int32, true);
+    let text = |name: &str| Field::new(name, DataType::Utf8, true);
+    let ints = |values: Vec<i32>| -> Arc<dyn datafusion::arrow::array::Array> {
+        Arc::new(Int32Array::from(values))
+    };
+    let texts = |values: Vec<&str>| -> Arc<dyn datafusion::arrow::array::Array> {
+        Arc::new(StringArray::from(values))
+    };
+    let tables: Vec<(
+        &str,
+        Vec<Field>,
+        Vec<Arc<dyn datafusion::arrow::array::Array>>,
+    )> = vec![
+        (
+            "mc",
+            vec![int("userId"), text("eventName")],
+            vec![ints(vec![1, 2]), texts(vec!["a", "b"])],
+        ),
+        ("other", vec![text("name")], vec![texts(vec!["a"])]),
+        ("labels", vec![text("eventLabel")], vec![texts(vec!["a"])]),
+        ("ids", vec![int("USERID")], vec![ints(vec![2])]),
+        (
+            "ja",
+            vec![int("userId"), int("x")],
+            vec![ints(vec![1, 2]), ints(vec![10, 20])],
+        ),
+        (
+            "jb",
+            vec![int("userId"), int("y")],
+            vec![ints(vec![1]), ints(vec![100])],
+        ),
+        (
+            "jt",
+            vec![int("userId"), int("x"), int("y")],
+            vec![ints(vec![]), ints(vec![]), ints(vec![])],
+        ),
+        (
+            "tw",
+            vec![int("id"), int("ID")],
+            vec![ints(vec![1]), ints(vec![0])],
+        ),
+    ];
+    for (name, fields, columns) in tables {
+        let batch = RecordBatch::try_new(Arc::new(Schema::new(fields)), columns).unwrap();
+        ctx.register_table(
+            name,
+            Arc::new(MemTable::try_new(batch.schema(), vec![vec![batch]]).unwrap()),
+        )
+        .unwrap();
+    }
+    ctx
+}
+
+async fn measured_rows(ctx: &SessionContext, sql: &str) -> (Vec<String>, Vec<Vec<String>>) {
+    use datafusion::arrow::util::display::array_value_to_string;
+    let frame = sql_with_column_repair(ctx, sql, true).await.unwrap();
+    let names = frame
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    let mut rows = Vec::new();
+    for batch in frame.collect().await.unwrap() {
+        for row in 0..batch.num_rows() {
+            rows.push(
+                batch
+                    .columns()
+                    .iter()
+                    .map(|column| array_value_to_string(column, row).unwrap())
+                    .collect(),
+            );
+        }
+    }
+    rows.sort();
+    (names, rows)
+}
+
+fn lowered(names: &[String]) -> Vec<String> {
+    names.iter().map(|name| name.to_ascii_lowercase()).collect()
+}
+
+fn text_rows(rows: &[&[&str]]) -> Vec<Vec<String>> {
+    rows.iter()
+        .map(|row| row.iter().map(|value| (*value).to_string()).collect())
+        .collect()
+}
+
+#[tokio::test]
+async fn v01_select_alias_of_the_same_name_folds_the_aliased_column() {
+    let ctx = measured_ctx();
+    for (sql, rows) in [
+        (
+            "SELECT userId AS USERID FROM mc",
+            text_rows(&[&["1"], &["2"]]),
+        ),
+        (
+            "SELECT userId + 1 AS USERID FROM mc ORDER BY USERID",
+            text_rows(&[&["2"], &["3"]]),
+        ),
+        (
+            "SELECT COUNT(userId) AS USERID FROM mc HAVING USERID > 0",
+            text_rows(&[&["2"]]),
+        ),
+        (
+            "SELECT USERID AS USERID FROM mc",
+            text_rows(&[&["1"], &["2"]]),
+        ),
+    ] {
+        let (names, actual) = measured_rows(&ctx, sql).await;
+        assert_eq!(lowered(&names), vec!["userid".to_string()], "{sql}");
+        assert_eq!(actual, rows, "{sql}");
+    }
+}
+
+#[tokio::test]
+async fn v02_every_relation_folds_not_only_the_first_miss() {
+    let ctx = measured_ctx();
+    for sql in [
+        "SELECT USERID FROM mc WHERE EVENTNAME IN (SELECT NAME FROM other)",
+        "SELECT USERID FROM mc WHERE EVENTNAME IN (SELECT EVENTLABEL FROM labels)",
+        "SELECT USERID FROM mc",
+    ] {
+        let (names, _) = measured_rows(&ctx, sql).await;
+        assert_eq!(lowered(&names), vec!["userid".to_string()], "{sql}");
+    }
+    let (_, rows) = measured_rows(
+        &ctx,
+        "SELECT USERID FROM mc WHERE EVENTNAME IN (SELECT NAME FROM other)",
+    )
+    .await;
+    assert_eq!(rows, text_rows(&[&["1"]]));
+    let (_, rows) = measured_rows(
+        &ctx,
+        "SELECT USERID FROM mc WHERE EVENTNAME IN (SELECT EVENTLABEL FROM labels)",
+    )
+    .await;
+    assert_eq!(rows, text_rows(&[&["1"]]));
+}
+
+#[tokio::test]
+async fn v02_outer_spelling_is_not_rewritten_into_an_inner_scope() {
+    let ctx = measured_ctx();
+    let (names, rows) = measured_rows(
+        &ctx,
+        "SELECT userid FROM mc WHERE userid IN (SELECT userid FROM ids)",
+    )
+    .await;
+    assert_eq!(names, vec!["userId".to_string()]);
+    assert_eq!(rows, text_rows(&[&["2"]]));
+}
+
+#[tokio::test]
+async fn v04_join_using_folds_inside_insert() {
+    let ctx = measured_ctx();
+    let (names, rows) =
+        measured_rows(&ctx, "SELECT USERID, x, y FROM ja JOIN jb USING (USERID)").await;
+    assert_eq!(lowered(&names), vec!["userid", "x", "y"]);
+    assert_eq!(rows, text_rows(&[&["1", "10", "100"]]));
+    let (_, inserted) = measured_rows(
+        &ctx,
+        "INSERT INTO jt SELECT USERID, x, y FROM ja JOIN jb USING (USERID)",
+    )
+    .await;
+    assert_eq!(inserted, text_rows(&[&["1"]]));
+    let (_, stored) = measured_rows(&ctx, "SELECT userId, x, y FROM jt").await;
+    assert_eq!(stored, text_rows(&[&["1", "10", "100"]]));
+}
+
+#[tokio::test]
+async fn l08_every_reference_to_a_case_twin_is_ambiguous() {
+    let ctx = measured_ctx();
+    for (sql, message) in [
+        (
+            "SELECT t.ID FROM tw AS t",
+            "[AMBIGUOUS_REFERENCE] Reference `t`.`ID` is ambiguous, could be: [`t`.`ID`, `t`.`ID`]. SQLSTATE: 42704",
+        ),
+        (
+            "SELECT ID FROM tw",
+            "[AMBIGUOUS_REFERENCE] Reference `ID` is ambiguous, could be: [`tw`.`ID`, `tw`.`ID`]. SQLSTATE: 42704",
+        ),
+        (
+            "SELECT id FROM tw",
+            "[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`tw`.`id`, `tw`.`id`]. SQLSTATE: 42704",
+        ),
+        (
+            "SELECT t.id FROM tw AS t",
+            "[AMBIGUOUS_REFERENCE] Reference `t`.`id` is ambiguous, could be: [`t`.`id`, `t`.`id`]. SQLSTATE: 42704",
+        ),
+    ] {
+        let error = plan_error(&ctx.state(), sql, true).await;
+        assert!(error.contains(message), "{sql}: {error}");
+    }
+}
+
+#[tokio::test]
+async fn l08_bare_twin_options_carry_the_full_relation_name() {
+    let ctx = measured_ctx();
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int32, true),
+            Field::new("ID", DataType::Int32, true),
+        ])),
+        vec![
+            Arc::new(Int32Array::from(vec![1])),
+            Arc::new(Int32Array::from(vec![0])),
+        ],
+    )
+    .unwrap();
+    ctx.register_table(
+        "datafusion.public.tw_full",
+        Arc::new(MemTable::try_new(batch.schema(), vec![vec![batch]]).unwrap()),
+    )
+    .unwrap();
+    let error = plan_error(
+        &ctx.state(),
+        "SELECT ID FROM datafusion.public.tw_full",
+        true,
+    )
+    .await;
+    assert!(
+        error.contains(
+            "[AMBIGUOUS_REFERENCE] Reference `ID` is ambiguous, could be: [`datafusion`.`public`.`tw_full`.`ID`, `datafusion`.`public`.`tw_full`.`ID`]. SQLSTATE: 42704"
+        ),
+        "{error}"
+    );
 }
