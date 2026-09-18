@@ -671,7 +671,7 @@ repark-core's error map.
   `stage_static_partition_overwrite_files_with` moves here from `partition_overwrite.rs`
   (which only exposes `static_injected_stream`), takes main's column list and an
   `Option` of the overrides, and hands `None` to the canonical untouched.
-  pins: ice-write-options-1/C-014
+  pins: ice-write-options-1/C-014, C-016, C-017
 - `summary_collision.rs` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
   `EngineSummary`, the snapshot-summary keys the engine computes for the commit
   in hand, which a user `snapshot-property.<k>` may not collide with (Spark's

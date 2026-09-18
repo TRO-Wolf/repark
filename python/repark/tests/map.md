@@ -409,6 +409,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Iceberg table, so it cannot stand in).
   pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: ice-write-options-1/C-008, C-009, C-010, C-011, C-013
+- [test_ice_write_options_1_rebase.py](test_ice_write_options_1_rebase.py) —
+  **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the write options across the paths main
+  added under them. WO-DYN-01..06: dynamic `insertInto` overwrite and `INSERT OVERWRITE …
+  BY NAME` keep sibling partitions (rows from ICE-DYN-OVERWRITE-1's recorded oracle) and
+  stamp `snapshot-property.*` plus the gzip writer knob; `saveAsTable` overwrite stays
+  whole-table under dynamic and stamps; an empty dynamic source commits nothing with
+  options present; the static empty BY NAME wipe keeps its refusal. WO-RTAS-01/02: an
+  option-carrying RTAS answers ICE-RTAS-OPS-2's `[append, overwrite]` / `[overwrite]` /
+  `[delete]` and stamps. WO-SORT-01: an option-carrying append on an ordered table writes
+  sorted files stamped with the order id. WO-APP-01/02: the column-list append the writers
+  render since ICE-V3-WRITE-DEFAULT-1 lands with the property. Imports the row helpers of
+  `test_ice_dyn_overwrite_1.py` and the summary helpers of `test_ice_write_options_1.py`.
+  pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
 - [test_ice_evo_dml_1.py](test_ice_evo_dml_1.py) — **ICE-EVO-DML-1 (2026-09-17):** MERGE,
   UPDATE, DELETE, INSERT and INSERT OVERWRITE on a table evolved by `ADD COLUMN` /
   `RENAME COLUMN` with no write since answer Spark 4.1.2 row for row (run-19a V2-10e, V3-11).
