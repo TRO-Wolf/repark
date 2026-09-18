@@ -586,7 +586,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   rewritten into an inner scope. The ambiguity sentence carries one option per matching field
   in the requested spelling, qualified by the relation's written parts, `SQLSTATE: 42704`
   (Q-21b-1, Q-21b-2). The fold itself lives in `column_resolution/fold.rs`.
-  pins: ice-mixed-case-1/C-001…C-010, C-013, C-014, C-016
+  Round 21b step 4 (V-04): JOIN USING columns fold inside every query the visitor reaches
+  (INSERT … SELECT, CTAS, subqueries, CTE bodies), each against its own SELECT's relations;
+  identical stored spellings across the joined relations fold to that spelling.
+  pins: ice-mixed-case-1/C-001…C-010, C-013…C-016
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias
   binding). Split from `column_resolution.rs` under the file-size gate.

@@ -279,6 +279,26 @@ impl Level {
     }
 }
 
+fn constraint_mut(operator: &mut JoinOperator) -> Option<&mut JoinConstraint> {
+    match operator {
+        JoinOperator::Join(constraint)
+        | JoinOperator::Inner(constraint)
+        | JoinOperator::Left(constraint)
+        | JoinOperator::LeftOuter(constraint)
+        | JoinOperator::Right(constraint)
+        | JoinOperator::RightOuter(constraint)
+        | JoinOperator::FullOuter(constraint)
+        | JoinOperator::CrossJoin(constraint)
+        | JoinOperator::Semi(constraint)
+        | JoinOperator::LeftSemi(constraint)
+        | JoinOperator::RightSemi(constraint)
+        | JoinOperator::Anti(constraint)
+        | JoinOperator::LeftAnti(constraint)
+        | JoinOperator::RightAnti(constraint) => Some(constraint),
+        _ => None,
+    }
+}
+
 fn constraint(operator: &JoinOperator) -> Option<&JoinConstraint> {
     match operator {
         JoinOperator::Join(constraint)
@@ -437,9 +457,6 @@ impl CaseFold<'_> {
             )));
             return;
         }
-        if hits.len() > 1 {
-            return;
-        }
         let current = if ident.quote_style.is_some() {
             ident.value.clone()
         } else {
@@ -449,6 +466,45 @@ impl CaseFold<'_> {
             ident.value = first;
             ident.quote_style = Some('`');
             self.changed = true;
+        }
+    }
+
+    fn fold_usings(&mut self, body: &mut SetExpr, index: &mut usize) {
+        match body {
+            SetExpr::Select(select) => {
+                let current = *index;
+                *index += 1;
+                for table in &mut select.from {
+                    for join in &mut table.joins {
+                        let Some(JoinConstraint::Using(columns)) =
+                            constraint_mut(&mut join.join_operator)
+                        else {
+                            continue;
+                        };
+                        for column in columns {
+                            if let [ObjectNamePart::Identifier(ident)] = column.0.as_mut_slice() {
+                                self.rewrite_in_select(current, ident);
+                            }
+                        }
+                    }
+                }
+            }
+            SetExpr::SetOperation { left, right, .. } => {
+                self.fold_usings(left, index);
+                self.fold_usings(right, index);
+            }
+            _ => {}
+        }
+    }
+
+    fn rewrite_in_select(&mut self, index: usize, ident: &mut Ident) {
+        let Some(level) = self.levels.last_mut() else {
+            return;
+        };
+        level.active.push((std::ptr::null(), index, Slot::Plain));
+        self.rewrite_ident(None, ident);
+        if let Some(level) = self.levels.last_mut() {
+            level.active.pop();
         }
     }
 
@@ -495,6 +551,8 @@ impl VisitorMut for CaseFold<'_> {
     fn pre_visit_query(&mut self, query: &mut Query) -> ControlFlow<Self::Break> {
         let level = Level::of(query, self.known, &self.outer_ctes());
         self.levels.push(level);
+        let mut index = 0;
+        self.fold_usings(&mut query.body, &mut index);
         ControlFlow::Continue(())
     }
 
@@ -563,71 +621,6 @@ impl VisitorMut for CaseFold<'_> {
     }
 }
 
-fn rewrite_join_usings(query: &mut Query, fold: &mut CaseFold) {
-    fn tables(factor: &mut TableFactor, fold: &mut CaseFold) {
-        if let TableFactor::Derived { subquery, .. } = factor {
-            rewrite_join_usings(subquery, fold);
-        }
-    }
-    fn using(operator: &mut JoinOperator) -> Option<&mut Vec<ObjectName>> {
-        match operator {
-            JoinOperator::Join(constraint)
-            | JoinOperator::Inner(constraint)
-            | JoinOperator::Left(constraint)
-            | JoinOperator::LeftOuter(constraint)
-            | JoinOperator::Right(constraint)
-            | JoinOperator::RightOuter(constraint)
-            | JoinOperator::FullOuter(constraint)
-            | JoinOperator::CrossJoin(constraint)
-            | JoinOperator::Semi(constraint)
-            | JoinOperator::LeftSemi(constraint)
-            | JoinOperator::RightSemi(constraint)
-            | JoinOperator::Anti(constraint)
-            | JoinOperator::LeftAnti(constraint)
-            | JoinOperator::RightAnti(constraint) => match constraint {
-                JoinConstraint::Using(columns) => Some(columns),
-                _ => None,
-            },
-            _ => None,
-        }
-    }
-    fn walk_body(body: &mut SetExpr, fold: &mut CaseFold) {
-        match body {
-            SetExpr::Select(select) => {
-                for from in &mut select.from {
-                    tables(&mut from.relation, fold);
-                    for join in &mut from.joins {
-                        tables(&mut join.relation, fold);
-                        if let Some(columns) = using(&mut join.join_operator) {
-                            for column in columns {
-                                if let [ObjectNamePart::Identifier(ident)] = column.0.as_mut_slice()
-                                {
-                                    fold.rewrite_ident(None, ident);
-                                }
-                                if fold.error.is_some() {
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            SetExpr::Query(query) => rewrite_join_usings(query, fold),
-            SetExpr::SetOperation { left, right, .. } => {
-                walk_body(left, fold);
-                walk_body(right, fold);
-            }
-            _ => {}
-        }
-    }
-    walk_body(&mut query.body, fold);
-    if let Some(with) = query.with.as_mut() {
-        for table in &mut with.cte_tables {
-            rewrite_join_usings(&mut table.query, fold);
-        }
-    }
-}
-
 pub(super) fn fold_statement(
     statement: &mut Statement,
     known: &Known,
@@ -643,9 +636,6 @@ pub(super) fn fold_statement(
         error: None,
     };
     let _ = statement.visit(&mut fold);
-    if let Statement::Query(query) = statement {
-        rewrite_join_usings(query, &mut fold);
-    }
     if let Some(error) = fold.error {
         return Err(error);
     }

@@ -17,7 +17,8 @@ pins: ice-mixed-case-1/C-001…C-010, C-013…C-016
 
 - `fold.rs` — round 21b step 3: the scope-aware statement fold (`Known` field sources,
   per-query `Level` with per-SELECT relation scopes and projection / alias-reference slots,
-  `CaseFold` visitor, JOIN USING walk, `fold_statement`). Split from `../column_resolution.rs`
+  `CaseFold` visitor, JOIN USING folded per query level in `pre_visit_query` (step 4, V-04),
+  `fold_statement`). Split from `../column_resolution.rs`
   under the file-size gate. pins: ice-mixed-case-1/C-013, C-014
 - `tests.rs` — the battery below.
 
