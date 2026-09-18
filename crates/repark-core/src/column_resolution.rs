@@ -18,6 +18,15 @@ pub async fn plan_statement_with_column_repair(
     statement: datafusion::sql::parser::Statement,
     case_insensitive: bool,
 ) -> Result<LogicalPlan> {
+    let bytes = stack::stack_bytes_for(&statement);
+    stack::on_grown_stack(bytes, plan_with_repair(state, statement, case_insensitive)).await
+}
+
+async fn plan_with_repair(
+    state: &SessionState,
+    statement: datafusion::sql::parser::Statement,
+    case_insensitive: bool,
+) -> Result<LogicalPlan> {
     if !case_insensitive {
         return state.statement_to_plan(statement).await;
     }
@@ -754,6 +763,7 @@ fn direct_tables(statement: &Statement) -> Vec<(String, TableReference)> {
 }
 
 mod fold;
+mod stack;
 
 #[cfg(test)]
 mod tests;

@@ -605,7 +605,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   EXISTS / IN / set-comparison / scalar subqueries) are audited against the twins of the node
   that holds the subquery — the outer scope — so `EXISTS (… CAST(t.ID AS STRING))` over a twin
   input refuses instead of answering.
-  pins: ice-mixed-case-1/C-001, C-002, C-007, C-013, C-014, C-015, C-016, C-017, C-021
+  Run 22b (2026-09-18, the debug-wheel segfault): `plan_statement_with_column_repair` wraps
+  the repair future in `column_resolution/stack.rs`'s grown-stack poll, so the statement clone,
+  the fold, DataFusion's planning (its per-level `Spanned::span` walk is unguarded upstream) and
+  the final drop run on a stack sized to the statement's nesting depth. Both case modes go
+  through it.
+  pins: ice-mixed-case-1/C-001, C-002, C-007, C-013, C-014, C-015, C-016, C-017, C-021, C-022
+- `column_resolution/stack.rs` — run 22b: `stack_bytes_for` (a `Visit` walk: open
+  queries + their set-operation height + open expressions + open table factors, times
+  32 KiB, plus 256 KiB) and `GrownStack`, a future whose every poll runs under
+  `stacker::maybe_grow`. pins: ice-mixed-case-1/C-022
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias
   binding). Split from `column_resolution.rs` under the file-size gate.

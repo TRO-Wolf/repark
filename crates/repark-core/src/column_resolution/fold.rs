@@ -5,8 +5,8 @@ use datafusion::common::Column;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::ast::{
     AssignmentTarget, Expr as SqlExpr, FromTable, GroupByExpr, Ident, JoinConstraint, JoinOperator,
-    ObjectName, ObjectNamePart, OrderByKind, Query, SelectItem, SetExpr, Statement, TableFactor,
-    TableObject, TableWithJoins, UpdateTableFromKind, VisitMut, VisitorMut,
+    ObjectName, ObjectNamePart, OrderByKind, Query, Select, SelectItem, SetExpr, Statement,
+    TableFactor, TableObject, TableWithJoins, UpdateTableFromKind, VisitMut, VisitorMut,
 };
 
 use super::{WrittenRefs, ambiguous_message, part_value, reference_parts};
@@ -210,51 +210,56 @@ impl Level {
     }
 
     fn collect(&mut self, body: &SetExpr, known: &Known) {
-        match body {
-            SetExpr::Select(select) => {
-                let index = self.selects.len();
-                let mut relations = Vec::new();
-                relations_of(&select.from, known, &self.ctes, &mut relations);
-                self.selects.push(relations);
-                for item in &select.projection {
-                    match item {
-                        SelectItem::UnnamedExpr(expr) => {
-                            self.slot(expr, index, Slot::Projection);
-                        }
-                        SelectItem::ExprWithAlias { expr, alias } => {
-                            self.slot(expr, index, Slot::Projection);
-                            self.aliases.push(alias.value.clone());
-                        }
-                        _ => {}
-                    }
+        let mut pending = vec![body];
+        while let Some(node) = pending.pop() {
+            match node {
+                SetExpr::Select(select) => self.collect_select(select, known),
+                SetExpr::SetOperation { left, right, .. } => {
+                    pending.push(right);
+                    pending.push(left);
                 }
-                if let GroupByExpr::Expressions(exprs, _) = &select.group_by {
-                    for expr in exprs {
-                        self.slot(expr, index, Slot::AliasReference);
-                    }
+                _ => {}
+            }
+        }
+    }
+
+    fn collect_select(&mut self, select: &Select, known: &Known) {
+        let index = self.selects.len();
+        let mut relations = Vec::new();
+        relations_of(&select.from, known, &self.ctes, &mut relations);
+        self.selects.push(relations);
+        for item in &select.projection {
+            match item {
+                SelectItem::UnnamedExpr(expr) => {
+                    self.slot(expr, index, Slot::Projection);
                 }
-                for expr in select.having.iter().chain(select.qualify.iter()) {
-                    self.slot(expr, index, Slot::AliasReference);
+                SelectItem::ExprWithAlias { expr, alias } => {
+                    self.slot(expr, index, Slot::Projection);
+                    self.aliases.push(alias.value.clone());
                 }
-                for order in &select.sort_by {
-                    self.slot(&order.expr, index, Slot::AliasReference);
-                }
-                for expr in select.selection.iter().chain(select.prewhere.iter()) {
+                _ => {}
+            }
+        }
+        if let GroupByExpr::Expressions(exprs, _) = &select.group_by {
+            for expr in exprs {
+                self.slot(expr, index, Slot::AliasReference);
+            }
+        }
+        for expr in select.having.iter().chain(select.qualify.iter()) {
+            self.slot(expr, index, Slot::AliasReference);
+        }
+        for order in &select.sort_by {
+            self.slot(&order.expr, index, Slot::AliasReference);
+        }
+        for expr in select.selection.iter().chain(select.prewhere.iter()) {
+            self.slot(expr, index, Slot::Plain);
+        }
+        for table in &select.from {
+            for join in &table.joins {
+                if let Some(JoinConstraint::On(expr)) = constraint(&join.join_operator) {
                     self.slot(expr, index, Slot::Plain);
                 }
-                for table in &select.from {
-                    for join in &table.joins {
-                        if let Some(JoinConstraint::On(expr)) = constraint(&join.join_operator) {
-                            self.slot(expr, index, Slot::Plain);
-                        }
-                    }
-                }
             }
-            SetExpr::SetOperation { left, right, .. } => {
-                self.collect(left, known);
-                self.collect(right, known);
-            }
-            _ => {}
         }
     }
 
@@ -472,31 +477,36 @@ impl CaseFold<'_> {
         }
     }
 
-    fn fold_usings(&mut self, body: &mut SetExpr, index: &mut usize) {
-        match body {
-            SetExpr::Select(select) => {
-                let current = *index;
-                *index += 1;
-                for table in &mut select.from {
-                    for join in &mut table.joins {
-                        let Some(JoinConstraint::Using(columns)) =
-                            constraint_mut(&mut join.join_operator)
-                        else {
-                            continue;
-                        };
-                        for column in columns {
-                            if let [ObjectNamePart::Identifier(ident)] = column.0.as_mut_slice() {
-                                self.rewrite_in_select(current, ident);
+    fn fold_usings(&mut self, body: &mut SetExpr) {
+        let mut index = 0;
+        let mut pending = vec![body];
+        while let Some(node) = pending.pop() {
+            match node {
+                SetExpr::Select(select) => {
+                    let current = index;
+                    index += 1;
+                    for table in &mut select.from {
+                        for join in &mut table.joins {
+                            let Some(JoinConstraint::Using(columns)) =
+                                constraint_mut(&mut join.join_operator)
+                            else {
+                                continue;
+                            };
+                            for column in columns {
+                                if let [ObjectNamePart::Identifier(ident)] = column.0.as_mut_slice()
+                                {
+                                    self.rewrite_in_select(current, ident);
+                                }
                             }
                         }
                     }
                 }
+                SetExpr::SetOperation { left, right, .. } => {
+                    pending.push(right);
+                    pending.push(left);
+                }
+                _ => {}
             }
-            SetExpr::SetOperation { left, right, .. } => {
-                self.fold_usings(left, index);
-                self.fold_usings(right, index);
-            }
-            _ => {}
         }
     }
 
@@ -554,8 +564,7 @@ impl VisitorMut for CaseFold<'_> {
     fn pre_visit_query(&mut self, query: &mut Query) -> ControlFlow<Self::Break> {
         let level = Level::of(query, self.known, &self.outer_ctes());
         self.levels.push(level);
-        let mut index = 0;
-        self.fold_usings(&mut query.body, &mut index);
+        self.fold_usings(&mut query.body);
         ControlFlow::Continue(())
     }
 

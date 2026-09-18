@@ -1,7 +1,7 @@
 """ICE-MIXED-CASE-1 — the Spark door resolves mixed-case columns case-insensitively.
 
 pins: ice-mixed-case-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-C-013, C-014, C-015, C-016, C-019, C-020, C-021
+C-013, C-014, C-015, C-016, C-019, C-020, C-021, C-022
 
 A Spark-created Iceberg table ``(userId BIGINT, eventName STRING,
 `Mixed Case` INT)`` adopted into RePark must answer Spark 4.1.2 on the SQL
@@ -840,3 +840,15 @@ def test_live_spark_matches_the_round_2_recording(
     error_class = recorded["message"][0].split("]")[0] + "]"
     assert error_class in str(excinfo.value)
     assert recorded["message"][0].split("SQLSTATE: ")[1][:5] in str(excinfo.value)
+
+
+def test_five_thousand_branch_union_all_plans_on_the_spark_door() -> None:
+    """Run 22b: a 5,000-branch ``UNION ALL`` plans through the column repair without overflow."""
+    spark = ReparkSession.builder.appName("pytest-ice-mixed-case-1-22b").getOrCreate()
+    try:
+        assert spark.conf.get("spark.sql.caseSensitive") == "false"
+        branches = " UNION ALL ".join(["SELECT CAST(7.0 AS DOUBLE) AS x"] * 5000)
+        frame = spark.sql(f"SELECT count(*) AS n FROM ({branches})")
+        assert frame.columns == ["n"]
+    finally:
+        spark.stop()

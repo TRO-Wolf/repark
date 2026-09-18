@@ -29,6 +29,10 @@ Run 22b (2026-09-18, the debug-wheel segfault): `s22b_*` plan a 1,000-branch `UN
 (plain and wrong-case fold) and a 5,000-branch one (both case modes) through
 `plan_statement_with_column_repair` on a thread with a 2 MiB stack — the tokio worker default.
 Red on the round-1 head: the unguarded derived `SetExpr::clone` overflows (ledger Run 22b).
+The 5,000-branch pin plans in the default mode only (about 48 s in debug: DataFusion's own
+per-level `span()` walk is quadratic). `s22b_stack_estimate_counts_every_union_level_inside_a_subquery`
+pins the estimate. `fold.rs`'s `Level::collect` and `CaseFold::fold_usings` walk a set
+operation's branches with an explicit stack (left branch first, the old recursion's order).
 pins: ice-mixed-case-1/C-007, C-009, C-013, C-014, C-015, C-016, C-017, C-020, C-021
 
 ## Files
@@ -36,8 +40,14 @@ pins: ice-mixed-case-1/C-007, C-009, C-013, C-014, C-015, C-016, C-017, C-020, C
 - `fold.rs` — round 21b step 3: the scope-aware statement fold (`Known` field sources,
   per-query `Level` with per-SELECT relation scopes and projection / alias-reference slots,
   `CaseFold` visitor, JOIN USING folded per query level in `pre_visit_query` (step 4, V-04),
+  run 22b: set-operation branches walked with an explicit stack, no recursion,
   `fold_statement`). Split from `../column_resolution.rs`
   under the file-size gate. pins: ice-mixed-case-1/C-013, C-014
+- `stack.rs` — run 22b: the nesting-depth stack estimate and the grown-stack future that
+  `plan_statement_with_column_repair` polls the repair through. The per-level 32 KiB is
+  about 1.9× the measured debug cost of the derived `SetExpr::clone` (17,216 B per `UNION`
+  level); at 8 KiB the 1,000-branch pins crash (mutation proof, ledger Run 22b).
+  pins: ice-mixed-case-1/C-022
 - `tests.rs` — the battery below.
 
 ## Purpose

@@ -5055,6 +5055,7 @@ dependencies = [
  "repark-iceberg",
  "serde",
  "snap",
+ "stacker",
  "tempfile",
  "tokio",
  "toml",

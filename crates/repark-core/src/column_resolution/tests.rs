@@ -664,15 +664,27 @@ fn s22b_thousand_branch_union_folds_wrong_case_on_a_two_mebibyte_stack() {
 }
 
 #[test]
-fn s22b_five_thousand_branch_union_plans_on_a_two_mebibyte_stack_either_case_mode() {
+fn s22b_five_thousand_branch_union_plans_on_a_two_mebibyte_stack() {
     let sql = format!(
         "SELECT count(*) FROM ({})",
         union_all("SELECT CAST(7.0 AS DOUBLE) AS x", 5000)
     );
-    for case_insensitive in [true, false] {
-        assert_eq!(
-            plan_on_default_stack(repair_state(), sql.clone(), case_insensitive).unwrap(),
-            ["count(*)"]
-        );
-    }
+    assert_eq!(
+        plan_on_default_stack(repair_state(), sql, true).unwrap(),
+        ["count(*)"]
+    );
+}
+
+#[test]
+fn s22b_stack_estimate_counts_every_union_level_inside_a_subquery() {
+    let state = repair_state();
+    let dialect = state.config().options().sql_parser.dialect;
+    let shallow = state.sql_to_statement("SELECT 1 AS x", &dialect).unwrap();
+    let deep_sql = format!(
+        "SELECT count(*) FROM ({})",
+        union_all("SELECT CAST(7.0 AS DOUBLE) AS x", 1000)
+    );
+    let deep = state.sql_to_statement(&deep_sql, &dialect).unwrap();
+    assert!(stack::stack_bytes_for(&shallow) < 512 * 1024);
+    assert!(stack::stack_bytes_for(&deep) >= 1000 * 32 * 1024);
 }
