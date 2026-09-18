@@ -47,7 +47,9 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
 - `test_gold_models.py` — the acceptance. Builds a dbt project in a tmp directory from the S6
   silver fixture, runs `dbt run` and `dbt test` through `dbtRunner`, and asserts the two gold
   tables answer the S6 measured rows and that all ten test blocks pass. Also holds the
-  materialization refusals and the mutation guard.
+  materialization refusals and the mutation guard. Since ICE-RTAS-OPS-2 (2026-09-18) a
+  table model's `create or replace ... as select` records `overwrite`, not `append`, as
+  Spark 4.1.2 does; the properties test asserts the one `overwrite` snapshot.
   pins: dbt-1-adapter/C-002, C-003, C-004
 - `test_aws_acceptance_gold.py` — the Glue gold leg, gated on `REPARK_AWS_ACCEPTANCE=1` and
   the same env variables as `python/repark/tests/test_aws_acceptance.py`. It writes to
@@ -58,7 +60,7 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   `FCT_ROWS`/`AGG_ROWS` and records both gold models' snapshot counts, runs `dbt run` a
   second time — success, the same rows, and each model's history grown by exactly one
   snapshot (the in-place `create or replace` the memory twin `test_dbt_run_is_idempotent`
-  measures: 1 → 2 `append` snapshots per model) — then `dbt test` (10 results, success).
+  measures: 1 → 2 snapshots per model, each `overwrite` since ICE-RTAS-OPS-2) — then `dbt test` (10 results, success).
   The module joined `aws-acceptance.yml` as a `dbt gold acceptance` step after the silver
   module (`if: !cancelled()`, same env block, `-rA`); the Makefile `DBT_PINS` install in
   the pre-credentials build step; docs/tier2-aws.md §7 is the operator note. The fixture's
