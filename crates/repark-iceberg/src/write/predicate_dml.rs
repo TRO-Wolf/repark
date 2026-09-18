@@ -27,9 +27,9 @@ use crate::write::file_scoped_rewrite::allowlist_from_paths;
 use crate::write::merge::row_lineage::{scratch_schema_for_table, table_carries_merge_lineage};
 use crate::write::merge::{
     CommitScope, FILE_PATH_COL, IsolationLevel, POS_COL, RowDeltaKind, TargetScanStream,
-    commit_overwrite, commit_row_delta_kind_with_partitions, deregister_merge_scratch,
+    commit_overwrite, commit_row_delta_kind_with_partitions, dedup_key, deregister_merge_scratch,
     drain_partition_sink, iceberg_err, new_partition_sink, quote_ident, register_streaming_target,
-    reserved_name_guard, resolve_affected_data_files, scratch_schema,
+    reserved_name_guard, resolve_affected_data_files, resolve_write_column, scratch_schema,
     write_new_data_files_from_stream,
 };
 use crate::write::position_delete::PositionDeletePair;
@@ -66,6 +66,7 @@ pub struct PredicateDmlSpec {
     pub selection_sql: String,
     /// `None` = identity DELETE.
     pub assignments: Option<Vec<(String, String)>>,
+    pub case_insensitive: bool,
 }
 
 /// Catalog name and identity spec from an allow-listed `DELETE … IN` / `NOT IN` / `[NOT] EXISTS`.
@@ -176,6 +177,7 @@ pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDele
             target_alias,
             selection_sql: scratch_selection.to_string(),
             assignments: None,
+            case_insensitive: true,
         },
     }))
 }
@@ -232,6 +234,7 @@ pub fn try_allowed_update_in(statement: &Statement) -> Result<Option<AllowedDele
             target_alias,
             selection_sql: scratch_selection.to_string(),
             assignments: Some(assignments),
+            case_insensitive: true,
         },
     }))
 }
@@ -332,7 +335,7 @@ async fn execute_identity_update(
     let write_schema =
         Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
     reserved_name_guard(&write_schema)?;
-    validate_update_assignments(&write_schema, assignments)?;
+    validate_update_assignments(&write_schema, assignments, spec.case_insensitive)?;
     let mode = resolve_update_mode(&table)?;
     let scope = CommitScope::scoped(
         resolve_update_isolation(&table)?,
@@ -539,22 +542,16 @@ fn register_update_values_table(ctx: &SessionContext, batches: Vec<RecordBatch>)
 fn validate_update_assignments(
     write_schema: &datafusion::arrow::datatypes::SchemaRef,
     assignments: &[(String, String)],
+    case_insensitive: bool,
 ) -> Result<()> {
     let mut seen = std::collections::HashSet::new();
     for (column, _) in assignments {
-        let Some(canonical) = write_schema
-            .fields()
-            .iter()
-            .find(|field| field.name().eq_ignore_ascii_case(column))
-            .map(|field| field.name().clone())
-        else {
+        let canonical = resolve_write_column(write_schema, column, case_insensitive, || {
+            format!("UPDATE SET column `{column}` does not exist in the target table")
+        })?;
+        if !seen.insert(dedup_key(&canonical, case_insensitive)) {
             return Err(DataFusionError::Plan(format!(
-                "UPDATE SET column `{column}` does not exist in the target table"
-            )));
-        };
-        if !seen.insert(canonical.to_ascii_lowercase()) {
-            return Err(DataFusionError::Plan(format!(
-                "UPDATE SET names column `{column}` more than once (case-insensitive)"
+                "UPDATE SET names column `{column}` more than once"
             )));
         }
     }

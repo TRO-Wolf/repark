@@ -101,3 +101,5 @@ pins: perf-facade-cdf-1/C-002, C-003, C-004
 | A second `getOrCreate` with a different zone warns and does not apply | Intended: the session zone joins the engine-knob set, so reuse never folds a zone the live engine session does not have into the facade conf. |
 | `conf.get` returns a trimmed zone though the builder value was padded | Intended: `normalize_session_time_zone_config` strips whitespace exactly as the engine does; validity stays the engine's. |
 | The zone is set but timestamp extraction did not move | The conf surface landed without the extraction fix; the rows in `python/repark/tests/test_session_timezone_parity.py` pin the current divergence honestly. |
+
+ICE-MIXED-CASE-1 (2026-09-17): `spark.sql.caseSensitive` joins the live engine-knob set — default `false` in `_SQLCONF_DEFAULTS`, runtime set/unset routes through the native setter beside the ANSI and zone keys (`builder_conf.py`, `sql_set_statements.py`). pins: ice-mixed-case-1/C-006

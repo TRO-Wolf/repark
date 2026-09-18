@@ -1,5 +1,8 @@
 # map — repark-core/src
 
+ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `rewrite_fragment_case` takes `unqualified_scope` — bare references resolve against one MERGE side only while qualified references keep validating against both. pins: ice-mixed-case-1/C-004
+ICE-MIXED-CASE-1 round 4 (2026-09-17): red-first `dataframe_filter_binds_projection_alias` reproduces the L-01 DataFrame filter regression at the Rust level. pins: ice-mixed-case-1/C-009
+
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 (pins: cc-3-comment-condensation/C-009).
 
@@ -561,6 +564,60 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   column does not become int32 on write. `drop_null_lists=True` still drops `List(Null)`
   that never went through this reader.
   pins: dynflatten-listnull-1/C-002, C-006
+- `column_resolution.rs` — **ICE-MIXED-CASE-1 (2026-09-17, Q-20b-2):** Spark-door
+  case-insensitive column fold with normalization ON
+  (`plan_statement_with_column_repair` / `sql_with_column_repair` fold the parsed
+  statement once against the valid fields under `spark.sql.caseSensitive = false`,
+  `rewrite_fragment_case` does the same for DML fragments; both emit backticked
+  stored-case spellings, collisions refuse `[AMBIGUOUS_REFERENCE]` / `42704`).
+  Round 21b integration: this module owns no config carrier — `spark.sql.caseSensitive`
+  has one home, `repark_functions::case_sensitive::SparkCaseSensitiveConfig` (landed on
+  main by ICE-RTAS-BYNAME-1), and the Spark door passes `case_insensitive` in as an
+  argument. A second carrier would go stale the moment `SET spark.sql.caseSensitive`
+  wrote only one of them. Round 21b step 2 (V-01): the SELECT-alias guard is positional —
+  each query level records its projection expressions (always foldable) and its alias-reference
+  slots (GROUP BY, HAVING, QUALIFY, SORT BY, ORDER BY); only an ident inside an alias-reference
+  slot that names a SELECT alias (ASCII case-insensitive, Spark's alias resolution) is left for
+  DataFusion to bind to the alias. Round 21b step 3 (V-02): after a `FieldNotFound` the fold
+  runs against every referenced relation's stored fields — catalog schemas resolved once per
+  statement (`catalog_fields`) plus each miss's `valid_fields` for CTEs and derived tables —
+  scope by scope (innermost query first, then outward for correlated references), and replans;
+  the loop ends when a miss repeats or a fold changes nothing. An outer spelling is never
+  rewritten into an inner scope. The ambiguity sentence carries one option per matching field
+  in the requested spelling, qualified by the relation's written parts, `SQLSTATE: 42704`
+  (Q-21b-1, Q-21b-2). The fold itself lives in `column_resolution/fold.rs`.
+  Round 21b step 4 (V-04): JOIN USING columns fold inside every query the visitor reaches
+  (INSERT … SELECT, CTAS, subqueries, CTE bodies), each against its own SELECT's relations;
+  identical stored spellings across the joined relations fold to that spelling.
+  Round 21b step 5 (L-08): `audit_plan_for_ambiguity` indexes each node's input fields once
+  (`input_twins`, `DFSchema::iter`, no merge and no `columns()` clone, skipped when no input
+  field has an upper-case ASCII byte) and refuses any written reference — bare or qualified,
+  exact case included — whose resolved column has an ASCII case twin there. Options are one per
+  matching field, qualified by the relation as written in FROM (`WrittenRefs::relation_parts`;
+  the session's default `catalog.schema` prefix is dropped, so a temp view reads bare).
+  Round 21b step 6 (R-02 / V-03 / R-05): a plan that succeeds first time is audited only when
+  some node schema holds an upper-case ASCII field (`plan_has_upper_ascii_field`) — with none,
+  case twins cannot exist, so neither the audit nor `written_references` runs. The written
+  references walk the AST with the immutable `Visit` (no statement clone).
+  Round 2 (2026-09-18): clippy `similar_names` — the audit's written-form hits are
+  `relation_hit` / `bare_hit`.
+  Round 2 N-02: a subquery expression's correlated outer references (`outer_ref_columns` of
+  EXISTS / IN / set-comparison / scalar subqueries) are audited against the twins of the node
+  that holds the subquery — the outer scope — so `EXISTS (… CAST(t.ID AS STRING))` over a twin
+  input refuses instead of answering.
+  Run 22b (2026-09-18, the debug-wheel segfault): `plan_statement_with_column_repair` wraps
+  the repair future in `column_resolution/stack.rs`'s grown-stack poll, so the statement clone,
+  the fold, DataFusion's planning (its per-level `Spanned::span` walk is unguarded upstream) and
+  the final drop run on a stack sized to the statement's nesting depth. Both case modes go
+  through it.
+  pins: ice-mixed-case-1/C-001, C-002, C-007, C-013, C-014, C-015, C-016, C-017, C-021, C-022
+- `column_resolution/stack.rs` — run 22b: `stack_bytes_for` (a `Visit` walk: open
+  queries + their set-operation height + open expressions + open table factors, times
+  32 KiB, plus 256 KiB) and `GrownStack`, a future whose every poll runs under
+  `stacker::maybe_grow`. pins: ice-mixed-case-1/C-022
+- `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
+  scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias
+  binding). Split from `column_resolution.rs` under the file-size gate.
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
   — shared needles). **FNP-4B (2026-09-15):** segment unescaping generalized to the quote

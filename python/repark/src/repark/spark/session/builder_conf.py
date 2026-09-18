@@ -118,10 +118,11 @@ class RuntimeConfig:
     ``datafusion.runtime.temp_directory`` is build-time only; a runtime set refuses
     loud and names ``TMPDIR`` (the DiskManager is fixed after ``build()``).
 
-    ``spark.sql.ansi.enabled`` and ``spark.sql.session.timeZone`` apply to the live
-    session immediately: the value is validated in Rust and written to the running engine,
-    so fresh queries answer it while frames built before the set keep the snapshot they were
-    analysed under. An invalid value refuses before anything is stored.
+    ``spark.sql.ansi.enabled``, ``spark.sql.session.timeZone``, and
+    ``spark.sql.caseSensitive`` apply to the live session immediately: the value is validated
+    in Rust and written to the running engine, so fresh queries answer it while frames built
+    before the set keep the snapshot they were analysed under. An invalid value refuses
+    before anything is stored.
     """
 
     __slots__ = ("_session",)

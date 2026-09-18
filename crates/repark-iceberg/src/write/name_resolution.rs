@@ -2,6 +2,9 @@
 
 use std::collections::HashMap;
 
+use datafusion::arrow::datatypes::Schema as ArrowSchema;
+use datafusion::error::{DataFusionError, Result};
+
 /// Outcome of resolving one target column name against source names (Spark `reorderColumnsByName`).
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum SourceMatch {
@@ -37,6 +40,25 @@ impl<'a> CaseInsensitiveColumnIndex<'a> {
         }
     }
 
+    pub(crate) fn resolve_exact(&self, target_name: &str) -> SourceMatch {
+        match self
+            .source_names
+            .iter()
+            .position(|name| *name == target_name)
+        {
+            Some(index) => SourceMatch::Unique(index),
+            None => SourceMatch::Missing,
+        }
+    }
+
+    pub(crate) fn resolve_scoped(&self, target_name: &str, case_insensitive: bool) -> SourceMatch {
+        if case_insensitive {
+            self.resolve(target_name)
+        } else {
+            self.resolve_exact(target_name)
+        }
+    }
+
     /// Resolve one target column name against the indexed source columns.
     pub(crate) fn resolve(&self, target_name: &str) -> SourceMatch {
         match self
@@ -57,6 +79,78 @@ impl<'a> CaseInsensitiveColumnIndex<'a> {
     /// The original-cased source column name at `source_index` (as returned by [`Self::resolve`]).
     pub(crate) fn source_name(&self, source_index: usize) -> &'a str {
         self.source_names[source_index]
+    }
+}
+
+pub(crate) fn resolve_arrow_field<'a>(
+    schema: &'a ArrowSchema,
+    name: &str,
+    case_insensitive: bool,
+) -> Option<&'a str> {
+    if !case_insensitive {
+        return schema
+            .fields()
+            .iter()
+            .find(|field| field.name() == name)
+            .map(|field| field.name().as_str());
+    }
+    let mut found: Option<&'a str> = None;
+    for field in schema.fields() {
+        if field.name().eq_ignore_ascii_case(name) {
+            if found.is_some() {
+                return None;
+            }
+            found = Some(field.name().as_str());
+        }
+    }
+    found
+}
+
+pub(crate) fn arrow_field_twins<'a>(schema: &'a ArrowSchema, name: &str) -> Vec<&'a str> {
+    let twins = schema
+        .fields()
+        .iter()
+        .filter(|field| field.name().eq_ignore_ascii_case(name))
+        .map(|field| field.name().as_str())
+        .collect::<Vec<_>>();
+    if twins.len() > 1 { twins } else { Vec::new() }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn resolve_write_column(
+    schema: &ArrowSchema,
+    column: &str,
+    case_insensitive: bool,
+    missing: impl FnOnce() -> String,
+) -> Result<String> {
+    if let Some(canonical) = resolve_arrow_field(schema, column, case_insensitive) {
+        return Ok(canonical.to_string());
+    }
+    let twins = arrow_field_twins(schema, column);
+    if case_insensitive && twins.len() > 1 {
+        return Err(DataFusionError::Plan(ambiguous_write_message(
+            column, &twins,
+        )));
+    }
+    Err(DataFusionError::Plan(missing()))
+}
+
+pub(crate) fn ambiguous_write_message(column: &str, twins: &[&str]) -> String {
+    let options = twins
+        .iter()
+        .map(|_| format!("`{column}`"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "[AMBIGUOUS_REFERENCE] Reference `{column}` is ambiguous, could be: [{options}]. SQLSTATE: 42704"
+    )
+}
+
+pub(crate) fn dedup_key(canonical: &str, case_insensitive: bool) -> String {
+    if case_insensitive {
+        canonical.to_ascii_lowercase()
+    } else {
+        canonical.to_string()
     }
 }
 
@@ -104,5 +198,24 @@ mod tests {
     fn absent_target_column_is_missing() {
         let index = CaseInsensitiveColumnIndex::new(["key"]);
         assert_eq!(index.resolve("payload"), SourceMatch::Missing);
+    }
+
+    #[test]
+    fn write_side_case_twins_are_ambiguous() {
+        use datafusion::arrow::datatypes::{DataType, Field, Schema};
+        let schema = Schema::new(vec![
+            Field::new("userId", DataType::Int64, true),
+            Field::new("USERID", DataType::Int64, true),
+        ]);
+        assert_eq!(
+            arrow_field_twins(&schema, "UserId"),
+            vec!["userId", "USERID"]
+        );
+        assert_eq!(
+            ambiguous_write_message("UserId", &arrow_field_twins(&schema, "UserId")),
+            "[AMBIGUOUS_REFERENCE] Reference `UserId` is ambiguous, could be: [`UserId`, `UserId`]. SQLSTATE: 42704".to_string()
+        );
+        let single = Schema::new(vec![Field::new("userId", DataType::Int64, true)]);
+        assert!(arrow_field_twins(&single, "UserId").is_empty());
     }
 }
