@@ -224,22 +224,42 @@ def _expected_of(cell: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _aliased_leaf_read(sql: str) -> str:
+    """Alias the unaliased nested projection `s.a, s.b` to the leaf names Spark reports.
+
+    Notes:
+        RePark names an unaliased `s.a` projection `<table>.s[a]`; Spark names it `a`. That
+        default-name divergence is registry row EX-COL-2 (BACKLOG) and is pinned on its own in
+        `test_unaliased_nested_projection_names_like_spark`. Spark names `s.a AS a` `a` too, so
+        the aliased read compares against the same recorded answer.
+    """
+    return sql.replace("SELECT id, s.a, s.b FROM", "SELECT id, s.a AS a, s.b AS b FROM")
+
+
 def _retargeted(sql: str, catalog: str) -> str:
     """Point one recorded statement at a RePark catalog instead of Spark's `sc`."""
     return sql.replace(f"{recorder.SPARK_CATALOG}.{recorder.ADOPTED_NAMESPACE}.", f"{catalog}.ns.")
 
 
 def _dataframe_read(frame: Any, shape: str) -> Any:
-    """Build the DataFrame-door twin of one recorded read."""
+    """Build the DataFrame-door twin of one recorded read.
+
+    Notes:
+        Nested fields use `getField(...).alias(...)`: the dotted `col("s.a")` spelling is
+        registry row COL-DOTTED-FIELD-1 (BACKLOG), outside this unit.
+    """
     from repark.spark.sql import functions
 
     if shape in ("struct", "list", "map"):
         value_column = {"struct": "s", "list": "arrs", "map": "m"}[shape]
         return frame.select("id", value_column).orderBy("id")
     if shape == "leaf":
-        return frame.select("id", functions.col("s.a"), functions.col("s.b")).orderBy("id")
+        struct = functions.col("s")
+        return frame.select(
+            "id", struct.getField("a").alias("a"), struct.getField("b").alias("b")
+        ).orderBy("id")
     if shape == "filter_null":
-        return frame.filter(functions.col("s.b").isNull()).select("id").orderBy("id")
+        return frame.filter(functions.col("s").getField("b").isNull()).select("id").orderBy("id")
     raise AssertionError(f"unknown read shape {shape}")
 
 
@@ -268,7 +288,8 @@ def test_adopted_spark_table_reads_match_spark(table: str, label: str, shape: st
             f"CALL {catalog}.system.register_table("
             f"table => 'ns.{table}', metadata_file => '{metadata}')"
         )
-        sql_answer = _answer_of(spark.sql(_retargeted(_CELLS[label]["query"], catalog)).toArrow())
+        query = _aliased_leaf_read(_retargeted(_CELLS[label]["query"], catalog))
+        sql_answer = _answer_of(spark.sql(query).toArrow())
         frame_answer = _answer_of(
             _dataframe_read(spark.table(f"{catalog}.ns.{table}"), shape).toArrow()
         )
@@ -325,7 +346,9 @@ def _replay_format_version(spark: Any, format_version: str, warehouse: Path) -> 
         query = cell.get("query") or _recorded_query(format_version, label)
         if query is not None:
             try:
-                outcome["sql"] = _answer_of(spark.sql(_retargeted(query, catalog)).toArrow())
+                outcome["sql"] = _answer_of(
+                    spark.sql(_aliased_leaf_read(_retargeted(query, catalog))).toArrow()
+                )
             except Exception as exc:
                 outcome["sql_error"] = exc
             shape = _READ_SHAPES.get(query.split(" FROM ")[0])
@@ -414,3 +437,24 @@ def test_required_nested_child_refuses_like_spark(
     assert outcome["after"] == outcome["before"]
     expected = _expected_of(_CELLS[f"v{format_version}_struct_child_add_read"])
     assert outcome["sql"] == expected, (outcome["sql"], expected)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="EX-COL-2 BACKLOG: RePark names an unaliased `s.a` projection `<table>.s[a]`",
+)
+def test_unaliased_nested_projection_names_like_spark() -> None:
+    """`SELECT id, s.a, s.b` names its columns `id, a, b` as Spark does (EX-COL-2)."""
+    spark = _session()
+    label = "v2_struct_child_add_leaf_read"
+    with _materialized_adopted_tables() as root:
+        catalog = f"{_ADOPTED_CATALOG}_names"
+        spark.register_memory_catalog(catalog, root)
+        spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.ns")
+        metadata = root / recorder.ADOPTED_NAMESPACE / "st_add_v2" / "metadata/v4.metadata.json"
+        spark.sql(
+            f"CALL {catalog}.system.register_table("
+            f"table => 'ns.st_add_v2', metadata_file => '{metadata}')"
+        )
+        answer = _answer_of(spark.sql(_retargeted(_CELLS[label]["query"], catalog)).toArrow())
+    assert answer["columns"] == _expected_of(_CELLS[label])["columns"], answer["columns"]

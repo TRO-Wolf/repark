@@ -73,3 +73,28 @@ JVM exception: `org.apache.spark.SparkException`, condition `_LEGACY_ERROR_TEMP_
   add required column: r`.
 
 No registry row existed for any of these cells.
+
+## Step 3 — the adoption reads with the fork override (2026-09-17)
+
+Override (never committed): `.cargo/config.toml` `[patch.crates-io]` pointing the five iceberg
+crates at the fork clone on `fix/nested-evo-1`. The brief's `[patch."https://github.com/TRO-Wolf/iceberg-rust"]`
+header does not resolve — Cargo reports `failed to select a version for iceberg` because the
+workspace's own `[patch.crates-io]` already sources the family from that git URL and a patch
+does not apply to a patch source; the config-level `[patch.crates-io]` overrides the manifest's
+entries (ruling Q-21a-1). `Cargo.lock` changes with the override and is never staged. Release
+native built against fork `d9f226414` plus its worker's uncommitted
+`nested_projection.rs` edit (the fork head moved to `c1bc78864` during the build).
+
+Result: all eight adoption cells green on the SQL door and the DataFrame door with **no RePark
+change** — the fork's field-id child matching and NULL fill is the whole reader fix.
+
+Two RePark-side readings, both registered BACKLOG rows outside this unit's fence (ruling
+Q-21a-2), measured first on the adopted `st_add_v2`:
+
+- `SELECT id, s.a, s.b` answers Spark's values and types but names the columns
+  `<table>.s[a]`, `<table>.s[b]` where Spark names them `a`, `b` — EX-COL-2 (its 2026-09-17
+  note already records the SQL-door form). The pins read `s.a AS a, s.b AS b`; the unaliased
+  name is the strict-xfail `test_unaliased_nested_projection_names_like_spark`.
+- `df.select(col("s.a"))` / `df.filter(col("s.b").isNull())` raise `No field named s.a` — the
+  same on a plain in-memory DataFrame, so not an Iceberg read defect — COL-DOTTED-FIELD-1. The
+  DataFrame twins spell `col("s").getField("a").alias("a")`.

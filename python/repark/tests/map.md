@@ -355,7 +355,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and each `DESCRIBE` compared. `test_required_nested_child_refuses_like_spark` pins the
   `ADD COLUMN s.r INT NOT NULL` refusal (message, no new metadata file, table unchanged).
   Test ids starting `fork292` read a data file that lacks a child the schema has: they need
-  fork PR #292 (F-NESTED-EVO-1) and are red until the fork pin bump.
+  fork PR #292 (F-NESTED-EVO-1) and are red until the fork pin bump. The leaf read runs
+  aliased (`s.a AS a`) and the DataFrame twin spells `getField(...).alias(...)`: the unaliased
+  name (`<table>.s[a]`, strict-xfail `test_unaliased_nested_projection_names_like_spark`) is
+  EX-COL-2 and the dotted `col("s.a")` is COL-DOTTED-FIELD-1, both BACKLOG outside the unit.
   pins: ice-nested-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   pins: ice-nested-evo-1/C-010, C-011, C-012
 - `_record_ice_nested_evo_1.py` — the **record driver** for ICE-NESTED-EVO-1 (NOT a `test_`
