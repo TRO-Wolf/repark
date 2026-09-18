@@ -1,0 +1,313 @@
+{
+ "spark_version": "4.1.2",
+ "iceberg_runtime": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+ "cells": {
+  "hadoop_v2_16_concurrent_inserts": [
+   {
+    "committed": 15,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Version 16 already exists: <warehouse>/ns/ins2_0_0/metadata/v16.metadata.json"
+    ],
+    "rows_after": [
+     15,
+     15,
+     15
+    ]
+   },
+   {
+    "committed": 13,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Version 6 already exists: <warehouse>/ns/ins2_0_1/metadata/v6.metadata.json"
+    ],
+    "rows_after": [
+     13,
+     13,
+     13
+    ]
+   },
+   {
+    "committed": 11,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit changes based on stale table metadata",
+     "org.apache.iceberg.exceptions.CommitFailedException: Version 12 already exists: <warehouse>/ns/ins2_0_2/metadata/v12.metadata.json",
+     "org.apache.iceberg.exceptions.CommitFailedException: Version 6 already exists: <warehouse>/ns/ins2_0_2/metadata/v6.metadata.json"
+    ],
+    "rows_after": [
+     11,
+     11,
+     11
+    ]
+   },
+   {
+    "committed": 12,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit changes based on stale table metadata",
+     "org.apache.iceberg.exceptions.CommitFailedException: Version 6 already exists: <warehouse>/ns/ins2_0_3/metadata/v6.metadata.json"
+    ],
+    "rows_after": [
+     12,
+     12,
+     12
+    ]
+   },
+   {
+    "committed": 14,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit changes based on stale table metadata"
+    ],
+    "rows_after": [
+     14,
+     14,
+     14
+    ]
+   },
+   {
+    "committed": 12,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit changes based on stale table metadata",
+     "org.apache.iceberg.exceptions.CommitFailedException: Version 6 already exists: <warehouse>/ns/ins2_0_5/metadata/v6.metadata.json"
+    ],
+    "rows_after": [
+     12,
+     12,
+     12
+    ]
+   }
+  ],
+  "hadoop_v3_16_concurrent_inserts": [
+   {
+    "committed": 14,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit changes based on stale table metadata"
+    ],
+    "rows_after": [
+     14,
+     14,
+     14
+    ]
+   },
+   {
+    "committed": 12,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit changes based on stale table metadata",
+     "org.apache.iceberg.exceptions.CommitFailedException: Version 6 already exists: <warehouse>/ns/ins3_0_1/metadata/v6.metadata.json"
+    ],
+    "rows_after": [
+     12,
+     12,
+     12
+    ]
+   },
+   {
+    "committed": 13,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit changes based on stale table metadata"
+    ],
+    "rows_after": [
+     13,
+     13,
+     13
+    ]
+   },
+   {
+    "committed": 9,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit changes based on stale table metadata",
+     "org.apache.iceberg.exceptions.CommitFailedException: Version 6 already exists: <warehouse>/ns/ins3_0_3/metadata/v6.metadata.json"
+    ],
+    "rows_after": [
+     9,
+     9,
+     9
+    ]
+   },
+   {
+    "committed": 10,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit changes based on stale table metadata",
+     "org.apache.iceberg.exceptions.CommitFailedException: Version 11 already exists: <warehouse>/ns/ins3_0_4/metadata/v11.metadata.json",
+     "org.apache.iceberg.exceptions.CommitFailedException: Version 6 already exists: <warehouse>/ns/ins3_0_4/metadata/v6.metadata.json"
+    ],
+    "rows_after": [
+     10,
+     10,
+     10
+    ]
+   },
+   {
+    "committed": 13,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit changes based on stale table metadata",
+     "org.apache.iceberg.exceptions.CommitFailedException: Version 7 already exists: <warehouse>/ns/ins3_0_5/metadata/v7.metadata.json"
+    ],
+    "rows_after": [
+     13,
+     13,
+     13
+    ]
+   }
+  ],
+  "inmemory_v2_16_concurrent_inserts": [
+   {
+    "committed": 9,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit: stale table metadata"
+    ],
+    "rows_after": [
+     9,
+     9,
+     9
+    ]
+   },
+   {
+    "committed": 9,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit to table ns.ins2_0_1 metadata location from <warehouse>/ns/ins2_0_1/metadata/00007",
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit: stale table metadata"
+    ],
+    "rows_after": [
+     9,
+     9,
+     9
+    ]
+   },
+   {
+    "committed": 8,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit: stale table metadata"
+    ],
+    "rows_after": [
+     8,
+     8,
+     8
+    ]
+   },
+   {
+    "committed": 9,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit: stale table metadata"
+    ],
+    "rows_after": [
+     9,
+     9,
+     9
+    ]
+   },
+   {
+    "committed": 9,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit: stale table metadata"
+    ],
+    "rows_after": [
+     9,
+     9,
+     9
+    ]
+   },
+   {
+    "committed": 8,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit: stale table metadata"
+    ],
+    "rows_after": [
+     8,
+     8,
+     8
+    ]
+   }
+  ],
+  "inmemory_v3_16_concurrent_inserts": [
+   {
+    "committed": 9,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit: stale table metadata"
+    ],
+    "rows_after": [
+     9,
+     9,
+     9
+    ]
+   },
+   {
+    "committed": 8,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit: stale table metadata"
+    ],
+    "rows_after": [
+     8,
+     8,
+     8
+    ]
+   },
+   {
+    "committed": 8,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit: stale table metadata"
+    ],
+    "rows_after": [
+     8,
+     8,
+     8
+    ]
+   },
+   {
+    "committed": 7,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit: stale table metadata"
+    ],
+    "rows_after": [
+     7,
+     7,
+     7
+    ]
+   },
+   {
+    "committed": 9,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit: stale table metadata"
+    ],
+    "rows_after": [
+     9,
+     9,
+     9
+    ]
+   },
+   {
+    "committed": 9,
+    "of": 16,
+    "errors": [
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit to table ns.ins3_0_5 metadata location from <warehouse>/ns/ins3_0_5/metadata/00008",
+     "org.apache.iceberg.exceptions.CommitFailedException: Cannot commit: stale table metadata"
+    ],
+    "rows_after": [
+     9,
+     9,
+     9
+    ]
+   }
+  ]
+ }
+}

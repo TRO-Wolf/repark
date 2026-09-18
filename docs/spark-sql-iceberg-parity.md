@@ -5656,7 +5656,7 @@ the pin rather than obeying it.
   | MERGE `ON t.k = 'a' AND t.id = s.id` vs `INSERT INTO` partition `d`, MoR and COW | 2 of 2 | **FIXED** 2 of 2 |
   | 2 MERGEs `ON t.id < 50 …` / `ON t.id >= 50 …`, unpartitioned, copy-on-write | 2 of 2 | **FIXED** 2 of 2 |
   | 2 whole-partition DELETE statements `WHERE k = 'a'` / `k = 'b'` | 2 of 2 | 2 of 2 before and after (COW, one file per partition: each DELETE removes only its own file) |
-  | 16 concurrent `INSERT INTO` | v2 16 of 16, v3 14 of 16 | 5 of 16, unchanged — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
+  | 16 concurrent `INSERT INTO` | Hadoop 9–16 (16 in 4 of 32 repetitions); InMemory 7–9 | 5–7 of 16, unchanged — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
 
 - **Pin** — `crates/repark-iceberg/src/write/merge/tests/occ_scoped.rs` (fault-injected race
   through the real `execute_merge` / `execute_predicate_dml`, v2 and v3, MoR and COW:
@@ -5763,28 +5763,39 @@ the pin rather than obeying it.
 - **Rationale** — FIXED 2026-09-18, matching Spark. Java's `conflictDetectionFilter` is the
   target scan's filter, not the insert set, and RePark derives the same.
 
-### ICE-OCC-SCOPED-1-INSERT-STORM — 16 concurrent INSERT statements: RePark commits 5, Spark 16 — **BACKLOG 2026-09-17**
+### ICE-OCC-SCOPED-1-INSERT-STORM — 16 concurrent INSERT statements: RePark commits 5–7 of 16, Spark 7–15 — **BACKLOG 2026-09-17, corrected 2026-09-18**
 
 - **repark** — sixteen barrier-released `INSERT INTO … VALUES` against one memory-catalog table
-  commit **5 of 16** on v2 and on v3 (release native, `p_retry.py`, measured before and after
-  ICE-OCC-SCOPED-1 — the unit does not touch appends). Every loser is a `PySparkException`
+  commit v2 7,5,5,6,5,6,6,6,5,5 and v3 6,5,7,5,5,6,5,5,6,7 over ten repetitions (release native,
+  memory catalog, measured 2026-09-18). Every loser is a `PySparkException`
   `CatalogCommitConflicts => Cannot commit to table … metadata location …`: appends validate
-  nothing, so each loser is the fork's commit-retry budget (`commit.retry.num-retries`, default
-  4, `ExponentialBackoff` in the fork's `Transaction::commit`) running out while sixteen writers
-  rebase in lockstep. Every commit that lands is durable (rows = snapshots = commits). Two
+  nothing, so each loser is the fork's commit-retry budget running out while sixteen writers
+  rebase in lockstep — the fork's `Transaction::build_backoff`
+  (`crates/iceberg/src/transaction/mod.rs` at fork `9e67e000`) reads `commit.retry.num-retries`
+  (default 4), `commit.retry.min-wait-ms`, `commit.retry.max-wait-ms` and
+  `commit.retry.total-timeout-ms` from the table properties into an exponential backoff
+  (factor 2). Every commit that lands is durable (rows = snapshots = commits). Two
   concurrent INSERT statements both commit.
-- **Apache Spark** — v2 16 of 16; v3 14 of 16, the two losers Hadoop-catalog
-  `CommitFailedException`s (`Cannot commit changes based on stale table metadata`, `Version 6
-  already exists`) — the same budget class, reached less often. *(oracle: recorded 2026-09-17,
-  fixture `ice_occ_scoped_1/spark_occ_oracle.json`.)*
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, six repetitions per catalog × format
+  version: Hadoop v2 15,13,11,12,14,12, Hadoop v3 14,12,13,9,10,13, InMemory v2 9,9,8,9,9,8,
+  InMemory v3 9,8,8,7,9,9. Every loser is a `CommitFailedException` (`Cannot commit: stale
+  table metadata`, `Cannot commit to table … metadata location from …`; Hadoop also `Cannot
+  commit changes based on stale table metadata`, `Version N already exists`) — the same budget
+  class, reached less often. The earlier `spark_occ_oracle.json` v2 16-of-16 cell was one
+  repetition, not Spark's typical answer: over three passes (32 repetitions per catalog) the
+  Hadoop catalog committed all sixteen in 4 and 9–15 otherwise; the in-memory catalog never
+  exceeded 9. *(oracle: recorded 2026-09-18, fixture
+  `ice_occ_scoped_1/spark_occ_oracle4.json`.)*
 - **Pin** — `python/repark/tests/test_ice_occ_scoped_1.py::test_insert_storm_loses_only_to_the_retry_budget`
   (v2/v3 × SQL / `writeTo().append()`: committed + losers = 16, at least one commit, every loser
   a `CatalogCommitConflicts` `PySparkException`, rows and snapshots equal the commits). The
   exact count is not pinned: it is scheduler-dependent in both engines.
-- **Rationale** — BACKLOG: closing it means retry jitter / budget parity in the fork's commit
-  loop (Java adds jitter to `Tasks.exponentialBackoff`), a fork unit, not this RePark unit's
-  conflict-filter change. Spark's own v3 14/16 shows the target is "rarely", not "never"
-  (ruling Q-21a-5).
+- **Rationale** — BACKLOG: Q-21a-5's "rarely, not never" was read off one repetition — both
+  engines lose appends to the retry budget under a 16-writer barrier storm, Spark somewhat less
+  often. The remaining distance (5–7 vs 7–9 on the same catalog class) is retry jitter: Java's
+  `Tasks.exponentialBackoff` randomizes each wait while the fork's backoff does not — a
+  hypothesis, not a finding (fork card F-COMMIT-JITTER-1, not filed tonight). No product change
+  (ruling Q-23b-1).
 
 ### ICE-PROMOTE-READ-1 — filters on a column widened by `ALTER COLUMN … TYPE` dropped the rows written before the promotion — **FIXED 2026-09-16 (fork F-PROMOTE-READ-1)**
 
