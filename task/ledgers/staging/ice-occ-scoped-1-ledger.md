@@ -321,3 +321,24 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/ice-occ-scoped-1-ledger.md, crates/repark-iceberg/src/write/merge/tests/map.md]
   complete: true
 ```
+
+## Run 21a close-out (2026-09-18)
+
+Verification critic (Grok 4.6) on the round-2 head `e99665ba`: **PASS**, no P1 or P2. It found
+L-01 (float exactness), L-02 (MERGE `NOT MATCHED` insert, measured deterministically on Spark
+and matched in 16 cells) and L-03 (own-partition abort pins, mutation M11) CLOSED, with the
+mutations re-run. It filed two P3s, recorded here and not fixed:
+
+- V-01 — a success cell's snapshot log does not prove a unique interleaving on its own. The
+  abort cells, which fail only in the gated order, carry the order witness.
+- V-02 — the ledger's M9 line counts "2 of 24" `conflict_filter` tests, but the module now
+  has 25. The mutation result (the two float-exactness pins go red) is unchanged.
+
+Orchestrator ruling **Q-21a-5**: a FLOAT or DOUBLE range predicate stays unscoped
+(`AlwaysTrue`). That is stricter than Spark 4.1.2, which scopes it and carries the NaN/±0
+metrics gap. A float-range DML under contention can therefore abort where Spark commits,
+but it never commits a conflicting change.
+
+Remaining OPEN rows: ICE-OCC-SCOPED-1-PLAIN-UPDATE closes when fork #294
+(F-OCC-EXEC-1: the DataFusion DELETE/UPDATE exec scopes by its own scan filter) lands in a
+pin bump. ICE-OCC-SCOPED-1-INSERT-STORM is the fork commit-retry budget, BACKLOG.
