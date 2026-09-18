@@ -9,7 +9,7 @@ Cells whose id starts with `fork292` read a data file that lacks a nested child 
 has. They need fork PR #292 (F-NESTED-EVO-1), in the workspace fork pin since RP-25.
 
 pins: ice-nested-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-pins: ice-nested-evo-1/C-010, C-011, C-012, C-013
+pins: ice-nested-evo-1/C-010, C-011, C-012, C-013, C-022
 """
 
 from __future__ import annotations
@@ -72,6 +72,7 @@ _READ_SHAPES = {
     "SELECT id, arrs": "list",
     "SELECT id, m": "map",
     "SELECT id, s.a, s.b": "leaf",
+    "SELECT *": "all",
 }
 _FORK_292_DDL_LABELS = frozenset(
     {
@@ -88,6 +89,12 @@ _FORK_WRITE_DDL_LABELS = frozenset({"list_element_child_add_read"})
 _FORK_WRITE_REASON = (
     "fork finding: an INSERT into a list column fails in the fork writer "
     "(`column types must match schema types … PARQUET:field_id`)"
+)
+_STRUCT_IDENTIFIER_LABELS = frozenset({"ctas_where_struct_lt"})
+_STRUCT_IDENTIFIER_REASON = (
+    "IDENT-STRUCT-KW-1: sqlparser reads an unquoted column named `struct` in any expression as "
+    "a STRUCT literal, so `WHERE struct < 5` refuses ParseException as plain SELECT does; the "
+    "CREATE rewrite no longer touches the query (V-002)"
 )
 _DDL_LABELS: tuple[str, ...] = tuple(
     label.removeprefix("v2_") for label in _CELLS if label.startswith("v2_")
@@ -263,6 +270,8 @@ def _dataframe_read(frame: Any, shape: str) -> Any:
         return frame.select(
             "id", struct.getField("a").alias("a"), struct.getField("b").alias("b")
         ).orderBy("id")
+    if shape == "all":
+        return frame
     if shape == "filter_null":
         return frame.filter(functions.col("s").getField("b").isNull()).select("id").orderBy("id")
     raise AssertionError(f"unknown read shape {shape}")
@@ -396,10 +405,22 @@ def _replayed(
     return _REPLAYS[key]
 
 
+def _ddl_param(label: str, format_version: str) -> Any:
+    """Return one schema cell, strict-xfail where a column named `struct` meets IDENT-STRUCT-KW-1."""
+    if label in _STRUCT_IDENTIFIER_LABELS:
+        return pytest.param(
+            label,
+            format_version,
+            id=f"{label}-v{format_version}",
+            marks=pytest.mark.xfail(strict=True, reason=_STRUCT_IDENTIFIER_REASON),
+        )
+    return pytest.param(label, format_version, id=f"{label}-v{format_version}")
+
+
 def _ddl_params() -> list[Any]:
     """Return every `(label, format_version)` replay cell except the required-child refusal."""
     return [
-        pytest.param(label, format_version, id=f"{label}-v{format_version}")
+        _ddl_param(label, format_version)
         for format_version in recorder.FORMAT_VERSIONS
         for label in _DDL_LABELS
         if label != "add_required_nested_child"
@@ -416,6 +437,8 @@ def _rows_param(label: str, format_version: str) -> Any:
             id=f"forkwrite-{marker}{label}-v{format_version}",
             marks=pytest.mark.xfail(strict=True, reason=_FORK_WRITE_REASON),
         )
+    if label in _STRUCT_IDENTIFIER_LABELS:
+        return _ddl_param(label, format_version)
     return pytest.param(label, format_version, id=f"{marker}{label}-v{format_version}")
 
 

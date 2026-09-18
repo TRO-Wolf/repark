@@ -561,6 +561,56 @@
         "message": "Unsupported table change: Incompatible change: cannot add required column: r"
       }
     },
+    "v2_ctas_where_map_lt": {
+      "statements": [
+        "CREATE TABLE sc.ns.ctas_src_map_v2 (map INT) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.ctas_src_map_v2 VALUES (1)",
+        "CREATE TABLE sc.ns.ctas_map_lt_v2 USING iceberg TBLPROPERTIES ('format-version'='2') AS SELECT * FROM sc.ns.ctas_src_map_v2 WHERE map < 5 AND map > 0"
+      ],
+      "error": null,
+      "query": "SELECT * FROM sc.ns.ctas_map_lt_v2",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "map",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "map": 1
+        }
+      ]
+    },
+    "v2_ctas_where_struct_lt": {
+      "statements": [
+        "CREATE TABLE sc.ns.ctas_src_struct_v2 (struct INT) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.ctas_src_struct_v2 VALUES (1)",
+        "CREATE TABLE sc.ns.ctas_struct_lt_v2 USING iceberg TBLPROPERTIES ('format-version'='2') AS SELECT * FROM sc.ns.ctas_src_struct_v2 WHERE struct < 5 AND struct IS NOT NULL"
+      ],
+      "error": null,
+      "query": "SELECT * FROM sc.ns.ctas_struct_lt_v2",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "struct",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "struct": 1
+        }
+      ]
+    },
     "v3_struct_child_add_read": {
       "statements": [
         "CREATE TABLE sc.ns.st_add_v3 (id INT, s STRUCT<a: INT>) USING iceberg TBLPROPERTIES ('format-version'='3')",
@@ -1118,6 +1168,56 @@
         "java_cause_class": "java.lang.IllegalArgumentException",
         "message": "Unsupported table change: Incompatible change: cannot add required column: r"
       }
+    },
+    "v3_ctas_where_map_lt": {
+      "statements": [
+        "CREATE TABLE sc.ns.ctas_src_map_v3 (map INT) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.ctas_src_map_v3 VALUES (1)",
+        "CREATE TABLE sc.ns.ctas_map_lt_v3 USING iceberg TBLPROPERTIES ('format-version'='3') AS SELECT * FROM sc.ns.ctas_src_map_v3 WHERE map < 5 AND map > 0"
+      ],
+      "error": null,
+      "query": "SELECT * FROM sc.ns.ctas_map_lt_v3",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "map",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "map": 1
+        }
+      ]
+    },
+    "v3_ctas_where_struct_lt": {
+      "statements": [
+        "CREATE TABLE sc.ns.ctas_src_struct_v3 (struct INT) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.ctas_src_struct_v3 VALUES (1)",
+        "CREATE TABLE sc.ns.ctas_struct_lt_v3 USING iceberg TBLPROPERTIES ('format-version'='3') AS SELECT * FROM sc.ns.ctas_src_struct_v3 WHERE struct < 5 AND struct IS NOT NULL"
+      ],
+      "error": null,
+      "query": "SELECT * FROM sc.ns.ctas_struct_lt_v3",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "struct",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "rows": [
+        {
+          "struct": 1
+        }
+      ]
     }
   },
   "schema_cells": {

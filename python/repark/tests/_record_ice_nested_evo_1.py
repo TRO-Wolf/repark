@@ -123,7 +123,44 @@ def build_cells(format_version: str) -> list[tuple[str, list[str], str | None]]:
             [f"ALTER TABLE {struct_table} ADD COLUMN s.r INT NOT NULL"],
             f"SELECT id, s FROM {struct_table} ORDER BY id",
         ),
+        *build_ctas_cells(format_version),
     ]
+
+
+def build_ctas_cells(format_version: str) -> list[tuple[str, list[str], str | None]]:
+    """Return the CTAS cells whose query compares a column named `map` / `struct` with `<`.
+
+    Args:
+        format_version: The Iceberg format version, `"2"` or `"3"`.
+
+    Returns:
+        Two cells: each creates a one-column source named after a type keyword, inserts one
+        row, and creates a table from a filtered `SELECT *` of it.
+    """
+    properties = f"TBLPROPERTIES ('format-version'='{format_version}')"
+    prefix = f"{SPARK_CATALOG}.{ADOPTED_NAMESPACE}"
+    version = f"v{format_version}"
+    shapes = (
+        ("map", "map < 5 AND map > 0"),
+        ("struct", "struct < 5 AND struct IS NOT NULL"),
+    )
+    cells: list[tuple[str, list[str], str | None]] = []
+    for column, predicate in shapes:
+        source = f"{prefix}.ctas_src_{column}_{version}"
+        target = f"{prefix}.ctas_{column}_lt_{version}"
+        cells.append(
+            (
+                f"{version}_ctas_where_{column}_lt",
+                [
+                    f"CREATE TABLE {source} ({column} INT) USING iceberg {properties}",
+                    f"INSERT INTO {source} VALUES (1)",
+                    f"CREATE TABLE {target} USING iceberg {properties} "
+                    f"AS SELECT * FROM {source} WHERE {predicate}",
+                ],
+                f"SELECT * FROM {target}",
+            )
+        )
+    return cells
 
 
 def build_schema_cells(format_version: str) -> list[tuple[str, list[str], str]]:

@@ -27,6 +27,14 @@ holds behavior observed from outside the crate.
   identifier, so their twin is Spark's backtick cell (`rename_dotted`, `add_dotted_leaf`),
   ruling Q-22b-NEST-3. Red before round 2: 33 mismatching cells.
   pins: ice-nested-evo-1/C-014, C-015, C-016, C-017, C-018, C-019, C-020
+  **Round 3 (2026-09-18, run 22b):** the three `COMMENT "…"` schema cells replay here too.
+  On this door they were already green before the V-001 fix (no double-quote refusal), so they
+  pin behaviour, not the fix. `ctas_filtering_a_type_keyword_column_answers_spark_rows_on_the_ansi_door`
+  replays the two CTAS cells with their inserts and compares Spark's rows. The `map` cell was
+  red before V-002 (`map ( 5 AND map ) 0`). The `struct` cell must still refuse with
+  sqlparser's STRUCT-literal parse error (IDENT-STRUCT-KW-1), and it reports a mismatch the
+  day it answers.
+  pins: ice-nested-evo-1/C-021, C-022
 - `alter_nested_column.rs` — **ICE-NESTED-EVO-1 (2026-09-17):**
   `nested_add_rename_and_drop_on_the_ansi_door` pins the ANSI door's nested DDL end to end:
   `CREATE TABLE … (s STRUCT<a INT, b VARCHAR>)`, `ADD COLUMN s.c BIGINT`,

@@ -1,7 +1,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::{DataType, Field};
+use datafusion::arrow::array::{Array, AsArray};
+use datafusion::arrow::datatypes::{DataType, Field, Int32Type};
 use repark_core::{ErrorClass, ReparkSession, SqlDialect};
 use repark_spark::{SparkDialect, SparkExtension};
 use repark_sql::AnsiDialect;
@@ -14,6 +15,20 @@ const ANSI_DELIMITED_IDENTIFIER_TWINS: [(&str, &str); 2] = [
     ("rename_double_quoted", "rename_dotted"),
     ("add_double_quoted_leaf", "add_dotted_leaf"),
 ];
+
+const IDENT_STRUCT_KW_LABEL: &str = "_ctas_where_struct_lt";
+
+const IDENT_STRUCT_KW_REFUSAL: &str = "Expected: a data type name, found: 5";
+
+fn ident_struct_kw_mismatch(label: &str, refusal: Option<&Refusal>) -> Option<String> {
+    match refusal {
+        Some(refusal) if refusal.message.contains(IDENT_STRUCT_KW_REFUSAL) => None,
+        Some(refusal) => Some(format!("{label}: refused `{}`", refusal.message)),
+        None => Some(format!(
+            "{label}: answers now; IDENT-STRUCT-KW-1 is fixed, pin Spark's rows instead"
+        )),
+    }
+}
 
 fn oracle() -> Value {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -335,6 +350,9 @@ fn spark_message_head(error: &Value) -> String {
 async fn ddl_cell_mismatch(door: &Door, label: &str, cell: &Value) -> Option<String> {
     let statements = cell["statements"].as_array().expect("statements");
     let refusal = run_all(door, statements, false).await;
+    if label.ends_with(IDENT_STRUCT_KW_LABEL) {
+        return ident_struct_kw_mismatch(label, refusal.as_ref());
+    }
     if label.ends_with("add_required_nested_child") {
         let spark_line = cell["error"]["message"]
             .as_str()
@@ -428,5 +446,63 @@ async fn every_recorded_nested_schema_cell_answers_spark_on_the_ansi_door() {
             mismatches.extend(schema_cell_mismatch(&door, label, cell, expected).await);
         }
     }
+    assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+}
+
+async fn ctas_rows_mismatch(door: &Door, label: &str, cell: &Value) -> Option<String> {
+    let statements = cell["statements"].as_array().expect("statements");
+    let refusal = run_all(door, statements, true).await;
+    if label.ends_with(IDENT_STRUCT_KW_LABEL) {
+        return ident_struct_kw_mismatch(label, refusal.as_ref());
+    }
+    if let Some(refusal) = refusal {
+        return Some(format!("{label}: refused `{}`", refusal.message));
+    }
+    let query = ansi_spelling(cell["query"].as_str().expect("query"));
+    let batches = match door.sql(&query).await {
+        Ok(frame) => frame.collect().await.map_err(|error| error.to_string()),
+        Err(error) => Err(error.to_string()),
+    };
+    let batches = match batches {
+        Ok(batches) => batches,
+        Err(message) => return Some(format!("{label}: read refused `{message}`")),
+    };
+    let mut rows = Vec::new();
+    for batch in &batches {
+        for row in 0..batch.num_rows() {
+            let mut object = Map::new();
+            for (field, column) in batch.schema().fields().iter().zip(batch.columns()) {
+                let value = if column.is_null(row) {
+                    Value::Null
+                } else {
+                    Value::from(column.as_primitive::<Int32Type>().value(row))
+                };
+                object.insert(field.name().clone(), value);
+            }
+            rows.push(Value::Object(object));
+        }
+    }
+    let got = Value::Array(rows);
+    (got != cell["rows"]).then(|| format!("{label}: rows {got} != Spark {}", cell["rows"]))
+}
+
+#[tokio::test]
+async fn ctas_filtering_a_type_keyword_column_answers_spark_rows_on_the_ansi_door() {
+    let root = oracle();
+    let mut mismatches = Vec::new();
+    let mut replayed = 0;
+    for format_version in FORMAT_VERSIONS {
+        let door = ansi_door(format_version).await;
+        for (label, cell) in cells_of(&root, "cells", format_version) {
+            if label.contains("_ctas_where_") {
+                replayed += 1;
+                mismatches.extend(ctas_rows_mismatch(&door, label, cell).await);
+            }
+        }
+    }
+    assert_eq!(
+        replayed, 4,
+        "the recording carries two CTAS cells per format version"
+    );
     assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
 }

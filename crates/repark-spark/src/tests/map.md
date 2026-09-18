@@ -509,6 +509,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   adds `s.d COMMENT "x.y"`, `s.e COMMENT "c"` and `s.f COMMENT "x.y" FIRST` and reads the
   children and docs back in Spark's order (V-001; red before the fix: `PARSE_SYNTAX_ERROR`).
   pins: ice-nested-evo-1/C-021
+  `ctas_filtering_a_map_column_with_lt_answers_spark_rows` reads Spark's row back from
+  `CREATE TABLE … AS SELECT * FROM src WHERE map < 5 AND map > 0` (V-002). The `#[ignore]`d
+  `ident_struct_kw_ctas_filtering_a_struct_column_with_lt_answers_spark_rows` waits on
+  IDENT-STRUCT-KW-1.
+  pins: ice-nested-evo-1/C-022
   **Round 2 (2026-09-18, run 22b):**
   `nested_ddl_refuses_double_quoted_names_and_known_paths_spark_shaped` (double-quoted names
   refuse 42601 verbatim, an existing child `FIELD_ALREADY_EXISTS` 42710, an unknown parent

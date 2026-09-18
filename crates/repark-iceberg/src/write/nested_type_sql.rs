@@ -114,6 +114,68 @@ pub fn rewrite_nested_type_tokens(
     Ok(out)
 }
 
+fn column_list_range(tokens: &[Token]) -> Option<std::ops::Range<usize>> {
+    let table = tokens
+        .iter()
+        .position(|token| is_keyword(token, Keyword::TABLE))?;
+    let (mut at, mut token) = next_significant(tokens, table + 1)?;
+    if is_keyword(token, Keyword::IF) {
+        for keyword in [Keyword::NOT, Keyword::EXISTS] {
+            let (next_at, next) = next_significant(tokens, at + 1)?;
+            if !is_keyword(next, keyword) {
+                return None;
+            }
+            at = next_at;
+        }
+        (at, token) = next_significant(tokens, at + 1)?;
+    }
+    while matches!(token, Token::Word(_) | Token::Period) {
+        (at, token) = next_significant(tokens, at + 1)?;
+    }
+    if *token != Token::LParen {
+        return None;
+    }
+    let mut depth = 0_usize;
+    for (end, token) in tokens.iter().enumerate().skip(at) {
+        match token {
+            Token::LParen => depth += 1,
+            Token::RParen => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return Some(at..end + 1);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+#[expect(
+    clippy::missing_errors_doc,
+    reason = "round comment ban: the Err is rewrite_nested_type_tokens' PARSE_SYNTAX_ERROR text, raised only inside the CREATE TABLE column-definition list"
+)]
+pub fn rewrite_create_column_types(
+    tokens: &[Token],
+    map_parens: bool,
+) -> std::result::Result<Vec<Token>, String> {
+    let Some(range) = column_list_range(tokens) else {
+        return Ok(tokens.to_vec());
+    };
+    let mut out = tokens[..range.start].to_vec();
+    out.extend(rewrite_nested_type_tokens(
+        &tokens[range.clone()],
+        map_parens,
+    )?);
+    out.extend_from_slice(&tokens[range.end..]);
+    Ok(out)
+}
+
+#[must_use]
+pub fn create_column_list_has_nested_type_opener(tokens: &[Token]) -> bool {
+    column_list_range(tokens).is_some_and(|range| has_nested_type_opener(&tokens[range]))
+}
+
 #[must_use]
 pub fn has_nested_type_opener(tokens: &[Token]) -> bool {
     let mut previous: Option<&Token> = None;
@@ -244,5 +306,46 @@ mod tests {
                 .tokenize()
                 .expect("lexes")
         ));
+    }
+
+    fn column_types_rewritten(sql: &str, map_parens: bool) -> std::result::Result<String, String> {
+        let tokens = Tokenizer::new(&GenericDialect {}, sql)
+            .tokenize()
+            .map_err(|error| error.to_string())?;
+        let out = rewrite_create_column_types(&tokens, map_parens)?;
+        Ok(out.iter().map(ToString::to_string).collect())
+    }
+
+    #[test]
+    fn a_ctas_query_comparing_a_type_keyword_column_is_left_alone() {
+        for sql in [
+            "CREATE TABLE t AS SELECT * FROM src WHERE map < 5 AND id > 0",
+            "CREATE TABLE t USING iceberg AS SELECT * FROM src WHERE struct < 1 AND x IS NOT NULL",
+            "CREATE TABLE IF NOT EXISTS c.ns.t (id INT) AS SELECT * FROM s WHERE map < 5 AND map > 0",
+        ] {
+            for map_parens in [true, false] {
+                assert_eq!(column_types_rewritten(sql, map_parens), Ok(sql.to_string()));
+            }
+            let tokens = Tokenizer::new(&GenericDialect {}, sql)
+                .tokenize()
+                .expect("lexes");
+            assert!(!create_column_list_has_nested_type_opener(&tokens), "{sql}");
+        }
+    }
+
+    #[test]
+    fn only_the_column_definition_list_is_rewritten() {
+        let sql = "CREATE TABLE IF NOT EXISTS c.ns.t (m MAP<STRING, STRUCT<q: INT NOT NULL>>) \
+                   AS SELECT * FROM s WHERE struct < 1 AND x IS NOT NULL AND map > 0";
+        assert_eq!(
+            column_types_rewritten(sql, true),
+            Ok("CREATE TABLE IF NOT EXISTS c.ns.t (m MAP(STRING, STRUCT<q: INT OPTIONS(repark_not_null=TRUE)>)) \
+                AS SELECT * FROM s WHERE struct < 1 AND x IS NOT NULL AND map > 0"
+                .to_string())
+        );
+        let tokens = Tokenizer::new(&GenericDialect {}, sql)
+            .tokenize()
+            .expect("lexes");
+        assert!(create_column_list_has_nested_type_opener(&tokens));
     }
 }

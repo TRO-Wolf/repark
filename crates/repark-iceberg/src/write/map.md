@@ -566,6 +566,14 @@ repark-core's error map.
   becomes `MAP(K, V)`, the same AST. A `>>` closing two brackets splits. Comparisons and
   `ARRAY<… NOT NULL>` are left alone. 4 in-module tests.
   pins: ice-nested-evo-1/C-016, C-017
+  **Round 3 (2026-09-18, run 22b, V-002):** both doors call `rewrite_create_column_types`,
+  which finds the column-definition list (the first parenthesized group after `TABLE [IF NOT
+  EXISTS] <name>`) and rewrites only that range; the `AS SELECT` query and every other token
+  pass through verbatim, so a column named `map` / `struct` compared with `<` is no longer
+  rewritten into `MAP(` / `OPTIONS(…)`. `create_column_list_has_nested_type_opener` is the ANSI
+  gate over the same range. 2 more in-module tests (mutation-checked: rewriting the whole
+  statement reds both).
+  pins: ice-nested-evo-1/C-022
 - `partition_spec.rs` — the partition-spec evolution family, split out of `alter.rs`
   behaviour-identical (the size ratchet): one `PartitionSpecChange` transaction through
   `apply_partition_spec_changes`. `AddField` carries a source column, a transform

@@ -400,6 +400,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   EX-COL-2 and the dotted `col("s.a")` is COL-DOTTED-FIELD-1, both BACKLOG outside the unit.
   pins: ice-nested-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   pins: ice-nested-evo-1/C-010, C-011, C-012, C-013
+  **Round 3 (2026-09-18, run 22b, V-002):** the two CTAS cells (`… AS SELECT * FROM src WHERE
+  map < 5 AND map > 0`, `… WHERE struct < 5 AND struct IS NOT NULL`) run in both modes; a
+  `SELECT *` read also runs on the DataFrame door (`table(...)`). The `map` cells answer Spark's
+  column, type and row. The `struct` cells are strict-xfail on IDENT-STRUCT-KW-1: sqlparser
+  reads an unquoted column named `struct` in any expression as a STRUCT literal, so the query
+  refuses `ParseException` as a plain `SELECT struct FROM t` does, with or without this unit.
+  pins: ice-nested-evo-1/C-022
 - `_record_ice_nested_evo_1.py` — the **record driver** for ICE-NESTED-EVO-1 (NOT a `test_`
   module; never collected). `build_cells()` is the cell catalog; `main()` runs every cell on
   one short-lived local Spark JVM with a Hadoop catalog at the baked root
@@ -415,7 +422,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (first non-empty message line); `record_dataframe_create` records the two CREATE schemas
   through `writeTo(...).create()`.
   **Round 3 (2026-09-18, run 22b):** three more schema cells, a double-quoted `COMMENT` on a
-  nested `ADD COLUMN` (`"x.y"`, `"c"`, `"x.y" FIRST`).
+  nested `ADD COLUMN` (`"x.y"`, `"c"`, `"x.y" FIRST`); `build_ctas_cells()` adds two CTAS
+  cells per format version over a one-column source named `map` / `struct`, filtered with `<`.
 - [test_ice_nested_evo_1_schema.py](test_ice_nested_evo_1_schema.py) — **ICE-NESTED-EVO-1
   round 2 (2026-09-18, run 22b):** replays every `schema_cells` entry (v2, v3) on a fresh
   facade catalog and compares the RePark metadata file's current schema (field ids, child

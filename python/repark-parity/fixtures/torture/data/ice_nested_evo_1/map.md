@@ -37,6 +37,9 @@ identically. Never hand-edited: re-run the driver.
   `COMMENT "c"` / `COMMENT "x.y" FIRST` on `ADD COLUMN s.<leaf> INT` succeed; the child's
   `doc` is `x.y` / `c` and `FIRST` puts `f` ahead of `a`. Earlier cells answer byte-identically;
   the four adoption tables were not re-committed.
+  `cells` gains `ctas_where_map_lt` / `ctas_where_struct_lt`: `CREATE TABLE … USING iceberg AS
+  SELECT * FROM <src> WHERE map < 5 AND map > 0` (and `struct < 5 AND struct IS NOT NULL`)
+  over a one-row source succeed and read `[{map: 1}]` / `[{struct: 1}]`.
 - `oracle.json` `dataframe_create_cells` — the two CREATE schemas through
   `writeTo(...).create()`: the same level-order ids, every column optional (Spark's V2 CTAS
   applies `asNullable`).

@@ -515,13 +515,17 @@ pins: rp-4-fork-repin/C-005, C-006
   statement keeps its dialect.
   pins: ice-nested-evo-1/C-006
   **Round 2 (2026-09-18, run 22b):** `parse_single_normalized` runs
-  `repark_iceberg::write::nested_type_sql::rewrite_nested_type_tokens` on every
+  `repark_iceberg::write::nested_type_sql::rewrite_nested_type_tokens` (round 3: `rewrite_create_column_types`) on every
   `CREATE TABLE`, and `struct_type_to_iceberg` makes a `STRUCT<a: T NOT NULL>` child an Iceberg
   required child, as Spark's metadata records. The field ids this module numbers are
   placeholders: the fork's `TableMetadataBuilder::new` reassigns them level-order (Java's
   `AssignFreshIds`), which is Spark's numbering, pinned by
   `test_ice_nested_evo_1_schema.py::test_nested_ddl_metadata_matches_spark[create_field_ids-*]`.
   pins: ice-nested-evo-1/C-014, C-016
+  **Round 3 (2026-09-18, run 22b, V-002):** the call is now `rewrite_create_column_types`, so
+  only the column-definition list is rewritten; a CTAS query keeps its `struct < 1 AND x IS
+  NOT NULL` as written.
+  pins: ice-nested-evo-1/C-022
 - `format_version.rs` — **V3-10:** the Spark-door adapter for `SET TBLPROPERTIES
   ('format-version' = …)`. It lifts the reserved key out of the property map before the
   transaction (so it is never persisted), resolves it against the table's current version and the

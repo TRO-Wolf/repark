@@ -10,7 +10,7 @@ use datafusion::sql::sqlparser::parser::ParserError;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::spec::{ListType, MapType, NestedField, StructType, Type};
 use repark_iceberg::write::nested_type_sql::{
-    has_nested_type_opener, rewrite_nested_type_tokens, struct_field_required,
+    create_column_list_has_nested_type_opener, rewrite_create_column_types, struct_field_required,
 };
 
 use super::cast_type_to_iceberg;
@@ -103,9 +103,9 @@ pub(crate) fn rewrite_nested_create_types(sql: &str) -> Result<Option<String>> {
     let Ok(tokens) = Tokenizer::new(&GenericDialect {}, sql).tokenize() else {
         return Ok(None);
     };
-    if !is_create_table(&tokens) || !has_nested_type_opener(&tokens) {
+    if !is_create_table(&tokens) || !create_column_list_has_nested_type_opener(&tokens) {
         return Ok(None);
     }
-    let rewritten = rewrite_nested_type_tokens(&tokens, true).map_err(nested_type_parse_error)?;
+    let rewritten = rewrite_create_column_types(&tokens, true).map_err(nested_type_parse_error)?;
     Ok(Some(rewritten.iter().map(ToString::to_string).collect()))
 }

@@ -17,6 +17,11 @@ opt-in; end-to-end pins live in [`../v3/create.rs`](../v3/create.rs).
   `rewrite_nested_create_types` (the router's CREATE-only token rewrite). Pinned by
   `../../tests/ansi_nested_ddl_oracle.rs`.
   pins: ice-nested-evo-1/C-016, C-017
+  **Round 3 (2026-09-18, run 22b, V-002):** the gate and the rewrite cover only the
+  column-definition list (`create_column_list_has_nested_type_opener`,
+  `rewrite_create_column_types`), so `CREATE TABLE t AS SELECT * FROM src WHERE map < 5 AND
+  id > 0` is no longer rewritten to `map ( 5 AND id ) 0`.
+  pins: ice-nested-evo-1/C-022
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../create_table.rs`. Clause
   refusals plus A11: `nanosecond_timestamp_columns_refuse_with_column_and_precision`,
   `nanosecond_timestamptz_columns_refuse`, `microsecond_timestamp_columns_pass_the_ns_gate`.

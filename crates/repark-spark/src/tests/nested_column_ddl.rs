@@ -433,3 +433,54 @@ async fn nested_add_comment_takes_a_double_quoted_string_spark_shaped() {
         ]
     );
 }
+
+async fn ctas_over_a_type_keyword_column_answers_spark_rows(column: &str, predicate: &str) {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("CREATE TABLE ice.sales.src_{column} ({column} INT) USING iceberg"),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("INSERT INTO ice.sales.src_{column} VALUES (1)"),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.ctas_{column} USING iceberg AS \
+             SELECT * FROM ice.sales.src_{column} WHERE {predicate}"
+        ),
+    )
+    .await;
+    assert_eq!(
+        rendered_row(
+            &ctx,
+            &catalogs,
+            &format!("SELECT * FROM ice.sales.ctas_{column}")
+        )
+        .await,
+        vec!["1"],
+        "{column}"
+    );
+}
+
+#[tokio::test]
+async fn ctas_filtering_a_map_column_with_lt_answers_spark_rows() {
+    ctas_over_a_type_keyword_column_answers_spark_rows("map", "map < 5 AND map > 0").await;
+}
+
+#[tokio::test]
+#[ignore = "IDENT-STRUCT-KW-1: sqlparser reads a column named `struct` in an expression as a STRUCT literal"]
+async fn ident_struct_kw_ctas_filtering_a_struct_column_with_lt_answers_spark_rows() {
+    ctas_over_a_type_keyword_column_answers_spark_rows(
+        "struct",
+        "struct < 5 AND struct IS NOT NULL",
+    )
+    .await;
+}
