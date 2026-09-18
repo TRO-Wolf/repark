@@ -34,6 +34,10 @@ holds behavior observed from outside the crate.
   Round 5, ruling Q-21b-4: `DEFAULT` as a value on the ANSI PARTITION overwrite fills
   (the ANSI router runs the marker pass before dispatch; whole-table overwrite stays
   the Q9 refusal, row DML-1). pins: ice-v3-write-default-1/C-016
+  **Round 2 (2026-09-18, run 21b, ruling Q-21b-9):** `DEFAULT` in the outer SELECT of an
+  INSERT whose query carries `WITH` refuses `UNRESOLVED_COLUMN` 42703 on `INSERT INTO` and on the
+  PARTITION overwrite arm, as Spark 4.1.2 does, and writes nothing.
+  pins: ice-v3-write-default-1/C-021
   Branch pins (AT-10): a static partition value wins over that column's own
   write-default (table `q`, partitioned on the defaulted `c`); a listed static column
   refuses `STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST`; arity and duplicate-name

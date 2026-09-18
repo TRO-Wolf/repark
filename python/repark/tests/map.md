@@ -6334,3 +6334,10 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   cell: a missing nullable column with no default is accepted and written NULL
   on `writeTo().append()` and `saveAsTable(append)`, offline and live (C-018).
   pins: ice-v3-write-default-1/C-015, C-016, C-017, C-018
+  **Round 6 (2026-09-18, run 21b round 2):** rulings Q-21b-8 … Q-21b-10 —
+  `writeTo().overwritePartitions()` fills an omitted defaulted column, offline and
+  live (C-020); `DEFAULT` inside a CTE body, inside a derived table, or in the outer
+  SELECT of a query carrying `WITH` refuses as Spark does, 42703, writing nothing
+  (C-021); mixed static-plus-dynamic `PARTITION (id=1, cat)` refuses loud beside
+  Spark's recorded accept, an OPEN registry row (C-022).
+  pins: ice-v3-write-default-1/C-020, C-021, C-022

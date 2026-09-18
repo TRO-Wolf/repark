@@ -7,7 +7,8 @@ copy per test and replay one shape each; the live cell rebuilds the tables on
 live Spark and replays both engines.
 
 pins: ice-v3-write-default-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
-  C-008, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
+  C-008, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-020,
+  C-021, C-022
 """
 
 from __future__ import annotations
@@ -535,6 +536,7 @@ def test_live_write_default_parity(tmp_path: Path) -> None:
             [4, "d", 5],
         ]
         _live_rollcall(spark, repark, warehouse)
+        _live_overwrite_partitions(spark, repark, warehouse)
     finally:
         repark.stop()
 
@@ -724,5 +726,143 @@ def test_missing_nullable_no_default_accepts_and_nulls() -> None:
                 ["name", "string"],
                 ["c", "int"],
             ]
+    finally:
+        session.stop()
+
+
+def _live_overwrite_partitions(spark: Any, repark: Any, warehouse: Path) -> None:
+    """Both engines fill the omitted defaulted column on ``overwritePartitions()``."""
+    spark.sql(
+        "CREATE TABLE wd_live.ns.pdflt (id INT, name STRING) USING iceberg"
+        " PARTITIONED BY (id) TBLPROPERTIES ('format-version'='3')"
+    )
+    spark.sql("INSERT INTO wd_live.ns.pdflt VALUES (1, 'a'), (2, 'b')")
+    jvm = spark._jvm
+    integer = jvm.org.apache.iceberg.types.Types.IntegerType.get()
+    live_table = jvm.org.apache.iceberg.spark.Spark3Util.loadIcebergTable(
+        spark._jsparkSession, "wd_live.ns.pdflt"
+    )
+    live_table.updateSchema().addColumn(
+        "c", integer, "doc", jvm.org.apache.iceberg.expressions.Literal.of(5)
+    ).commit()
+    spark.sql("REFRESH TABLE wd_live.ns.pdflt")
+    spark.createDataFrame([(12, "y")], "id INT, name STRING").writeTo(
+        "wd_live.ns.pdflt"
+    ).overwritePartitions()
+    live = spark.sql("SELECT id, name, c FROM wd_live.ns.pdflt").toArrow()
+    live_cols = live.column_names
+    live_rows = sorted(([row[col] for col in live_cols] for row in live.to_pylist()), key=repr)
+    recorded = _truth()["cells"]["V01_overwrite_partitions_missing_defaulted_column"]["rows"]
+    assert live_rows == recorded
+    newest = sorted(
+        (warehouse / "ns" / "pdflt" / "metadata").glob("v*.metadata.json"),
+        key=lambda path: int(path.name[1:].split(".", 1)[0]),
+    )[-1]
+    repark.sql(
+        f"CALL wd_live_rp.system.register_table(table => 'ns.pdflt', metadata_file => '{newest}')"
+    )
+    repark.createDataFrame([(13, "z")], "id INT, name STRING").writeTo(
+        "wd_live_rp.ns.pdflt"
+    ).overwritePartitions()
+    mirrored = repark.sql("SELECT id, name, c FROM wd_live_rp.ns.pdflt").to_arrow()
+    mirrored_cols = mirrored.column_names
+    assert sorted(
+        ([row[col] for col in mirrored_cols] for row in mirrored.to_pylist()), key=repr
+    ) == sorted([*recorded, [13, "z", 5]], key=repr)
+
+
+def test_overwrite_partitions_api_fills_missing_defaulted_column() -> None:
+    """``writeTo().overwritePartitions()`` fills an omitted defaulted column (V-01)."""
+    session = _session("ice-v3-write-default-1-ow-api-fill")
+    try:
+        with _materialize():
+            _adopt(session, _CATALOG, "pdflt")
+            session.createDataFrame([(12, "y")], "id int, name string").writeTo(
+                f"{_CATALOG}.{_NAMESPACE}.pdflt"
+            ).overwritePartitions()
+            assert _rows(session, _CATALOG, "pdflt") == _expect("pdflt", [(12, "y", 5)])
+            _cell_contains("V01_overwrite_partitions_missing_defaulted_column", (12, "y", 5))
+    finally:
+        session.stop()
+
+
+def test_default_outside_the_insert_list_refuses() -> None:
+    """``DEFAULT`` under a ``WITH`` or inside a nested query refuses as Spark does (V-02)."""
+    from repark.errors import AnalysisException
+
+    table = f"{_CATALOG}.{_NAMESPACE}.dfltow"
+    shapes = {
+        "V02_default_inside_cte_body": (
+            f"INSERT OVERWRITE {table} WITH x AS (SELECT 18 AS id, 'r' AS name, DEFAULT AS c)"
+            " SELECT * FROM x"
+        ),
+        "V02_default_inside_subquery": (
+            f"INSERT OVERWRITE {table}"
+            " SELECT * FROM (SELECT 19 AS id, 'q' AS name, DEFAULT AS c)"
+        ),
+        "V02_control_default_outer_select_with_cte": (
+            f"INSERT OVERWRITE {table} WITH x AS (SELECT 20 AS id, 'z' AS name)"
+            " SELECT id, name, DEFAULT FROM x"
+        ),
+    }
+    session = _session("ice-v3-write-default-1-default-nested")
+    try:
+        with _materialize():
+            _adopt(session, _CATALOG, "dfltow")
+            before = _rows(session, _CATALOG, "dfltow")
+            for shape, sql in shapes.items():
+                _cell_errors(shape)
+                assert "42703" in _truth()["cells"][shape]["message"][0]
+                with pytest.raises(AnalysisException, match="(?i)default"):
+                    session.sql(sql).collect()
+                assert _rows(session, _CATALOG, "dfltow") == before, shape
+            with pytest.raises(AnalysisException, match="UNRESOLVED_COLUMN.*`DEFAULT`.*42703"):
+                session.sql(shapes["V02_control_default_outer_select_with_cte"]).collect()
+            with pytest.raises(AnalysisException, match="UNRESOLVED_COLUMN.*`DEFAULT`.*42703"):
+                session.sql(
+                    f"INSERT INTO {table} WITH x AS (SELECT 20 AS id, 'z' AS name)"
+                    " SELECT id, name, DEFAULT FROM x"
+                ).collect()
+            assert _rows(session, _CATALOG, "dfltow") == before
+    finally:
+        session.stop()
+
+
+def test_mixed_static_dynamic_partition_refuses() -> None:
+    """Mixed static and dynamic PARTITION keys refuse loud; Spark accepts (OPEN, Q-21b-10)."""
+    from repark.errors import AnalysisException
+
+    table = f"{_CATALOG}.{_NAMESPACE}.p2"
+    session = _session("ice-v3-write-default-1-mix")
+    try:
+        session.sql(
+            f"CREATE TABLE {table} (id INT, cat STRING, payload STRING, c INT)"
+            " USING iceberg PARTITIONED BY (id, cat)"
+        )
+        session.sql(
+            f"INSERT INTO {table} VALUES"
+            " (1, 'east', 'e', 5), (1, 'west', 'w', 5), (2, 'west', 'w2', 5)"
+        ).collect()
+        before = _rows(session, _CATALOG, "p2")
+        shapes = {
+            "MIX_static_dynamic_positional": (
+                f"INSERT OVERWRITE {table} PARTITION (id=1, cat) SELECT 'west', 'p', 9"
+            ),
+            "MIX_static_dynamic_named_list_omits_default": (
+                f"INSERT OVERWRITE {table} PARTITION (id=2, cat) (cat, payload) VALUES ('west','q')"
+            ),
+        }
+        assert _cell_rows("MIX_static_dynamic_positional") == [
+            (1, "west", "p", 9),
+            (2, "west", "w2", 5),
+        ]
+        assert _cell_rows("MIX_static_dynamic_named_list_omits_default") == [
+            (1, "west", "p", 9),
+            (2, "west", "q", 5),
+        ]
+        for shape, sql in shapes.items():
+            with pytest.raises(AnalysisException, match="cannot mix static assignments"):
+                session.sql(sql).collect()
+            assert _rows(session, _CATALOG, "p2") == before, shape
     finally:
         session.stop()

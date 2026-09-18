@@ -247,3 +247,24 @@ async fn ansi_static_partition_column_list_refusals() {
     let empty = door.ok("SELECT id FROM ice.sales.p").await;
     assert_eq!(empty.iter().map(RecordBatch::num_rows).sum::<usize>(), 0);
 }
+
+#[tokio::test]
+async fn ansi_default_in_outer_select_under_with_refuses_unresolved() {
+    let door = door_with_tables().await;
+    for sql in [
+        "INSERT INTO ice.sales.t WITH x AS (SELECT 20 AS id, 'z' AS name) \
+         SELECT id, name, DEFAULT FROM x",
+        "INSERT OVERWRITE ice.sales.p (id, name, c) PARTITION (id) \
+         WITH x AS (SELECT 20 AS id, 'z' AS name) SELECT id, name, DEFAULT FROM x",
+    ] {
+        let err = door.err(sql).await;
+        assert!(
+            err.contains("UNRESOLVED_COLUMN") && err.contains("`DEFAULT`") && err.contains("42703"),
+            "{sql}: {err}"
+        );
+    }
+    for table in ["t", "p"] {
+        let empty = door.ok(&format!("SELECT id FROM ice.sales.{table}")).await;
+        assert_eq!(empty.iter().map(RecordBatch::num_rows).sum::<usize>(), 0);
+    }
+}

@@ -208,6 +208,65 @@ full-width values (`ow_partitions_api`), `saveAsTable(overwrite)`
 roll-call cell (C-018 — accept-and-NULL on both writer surfaces). Their green is
 evidence for Q-21b-5 and Q-21b-6, not a fix.
 
+## Red first — round 6 (run 21b round 2, 2026-09-18)
+
+Spark answers for V-01, V-02 and the mixed-PARTITION cells were measured by the
+orchestrator (`/tmp/oc-worker/kb-oracle/probe_wd2.py`, PySpark 4.1.2 +
+`iceberg-spark-runtime-4.1_2.13:1.11.0`, hadoop catalog, format-version 3) and
+copied verbatim from `/tmp/oc-worker/kb-oracle/wd-truth-2.json` into this unit's
+`truth.json` `cells` (six keys, `V01_*`, `V02_*`, `MIX_*`; not re-derived).
+
+Unfixed tree (`7a088085` product code), release native, `.venv/bin/python -m pytest
+python/repark/tests/test_ice_v3_write_default_1.py -q -p no:cacheprovider -k
+"fills_missing_defaulted or outside_the_insert or mixed_static"` — **2 failed, 1 passed**:
+
+```
+E  repark.errors.AnalysisException: Error during planning: INSERT OVERWRITE column count mismatch: source has 2 columns, target table has 3 (SQL INSERT is positional — OV1 D9)
+E          Failed: DID NOT RAISE AnalysisException
+FAILED python/repark/tests/test_ice_v3_write_default_1.py::test_overwrite_partitions_api_fills_missing_defaulted_column
+FAILED python/repark/tests/test_ice_v3_write_default_1.py::test_default_outside_the_insert_list_refuses
+```
+
+- `test_overwrite_partitions_api_fills_missing_defaulted_column` (V-01): the
+  arity refusal where Spark fills `[[1,'a',5],[12,'y',5],[2,'b',5]]`.
+- `test_default_outside_the_insert_list_refuses` (V-02): the CTE-body and
+  subquery shapes already refuse (`No field named default`); the control
+  `INSERT OVERWRITE dfltow WITH x AS (SELECT 20 AS id, 'z' AS name) SELECT id,
+  name, DEFAULT FROM x` does NOT raise — RePark fills 5 where Spark refuses
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` 42703.
+- `test_mixed_static_dynamic_partition_refuses` (MIX) is green by design: it pins
+  RePark's current loud refusal beside Spark's recorded accept (ruling Q-21b-10,
+  OPEN registry row, not implemented this round).
+
+Spark door, Rust, `cargo test -p repark-spark --lib tests::write_defaults` —
+**1 failed, 2 passed**:
+
+```
+---- tests::write_defaults::spark_default_in_outer_select_under_with_refuses_unresolved stdout ----
+`INSERT OVERWRITE ice.sales.d WITH x AS (SELECT 20 AS id, 'z' AS name) SELECT id, name, DEFAULT FROM x` must refuse
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 1131 filtered out
+```
+
+ANSI door, `cargo test -p repark-sql --test ansi_write_defaults` — **1 failed, 7 passed**:
+
+```
+---- ansi_default_in_outer_select_under_with_refuses_unresolved stdout ----
+`INSERT INTO ice.sales.t WITH x AS (SELECT 20 AS id, 'z' AS name) SELECT id, name, DEFAULT FROM x` must fail
+test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out
+```
+
+Spark-door L-03 pin, mutation-proved (the critic's pin-strength note): with the
+`rewrite_overwrite_default_markers(ctx, catalogs, table_name, insert)` call in
+`crates/repark-spark/src/insert_overwrite.rs::execute_insert_overwrite` replaced
+by `None`, `cargo test -p repark-spark --lib
+tests::write_defaults::spark_overwrite_default` goes **red**; restored, green:
+
+```
+---- tests::write_defaults::spark_overwrite_default_keyword_fills_write_default stdout ----
+called `Result::unwrap()` on an `Err` value: Diagnostic(Diagnostic { kind: Error, message: "column 'default' not found", ... SchemaError(FieldNotFound { field: Column { relation: None, name: "default" }, valid_fields: [] }, Some("")))
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1133 filtered out
+```
+
 ## Round-5 L-02 and L-04 (step 4)
 
 - L-02 re-verified 2026-09-17: the correction landed in round 4 (`987b1d09`) and

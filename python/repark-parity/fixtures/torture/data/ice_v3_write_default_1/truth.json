@@ -1099,6 +1099,90 @@
           7
         ]
       ]
+    },
+    "V01_overwrite_partitions_missing_defaulted_column": {
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          5
+        ],
+        [
+          12,
+          "y",
+          5
+        ],
+        [
+          2,
+          "b",
+          5
+        ]
+      ]
+    },
+    "V02_default_inside_cte_body": {
+      "outcome": "error",
+      "class": "AnalysisException",
+      "message": [
+        "[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION] A column, variable, or function parameter with name `DEFAULT` cannot be resolved.  SQLSTATE: 42703; line 1 pos 69;",
+        "'InsertIntoStatement RelationV2[id#61, name#62, c#63] sc.ns.dflt, true, false, false",
+        "+- 'Project [*]",
+        "   +- 'SubqueryAlias x"
+      ]
+    },
+    "V02_default_inside_subquery": {
+      "outcome": "error",
+      "class": "AnalysisException",
+      "message": [
+        "[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION] A column, variable, or function parameter with name `DEFAULT` cannot be resolved.  SQLSTATE: 42703; line 1 pos 73;",
+        "'InsertIntoStatement RelationV2[id#68, name#69, c#70] sc.ns.dflt, true, false, false",
+        "+- 'Project [*]",
+        "   +- 'SubqueryAlias __auto_generated_subquery_name"
+      ]
+    },
+    "V02_control_default_outer_select_with_cte": {
+      "outcome": "error",
+      "class": "AnalysisException",
+      "message": [
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `DEFAULT` cannot be resolved. Did you mean one of the following? [`id`, `name`]. SQLSTATE: 42703; line 1 pos 86;",
+        "'InsertIntoStatement RelationV2[id#74, name#75, c#76] sc.ns.dflt, true, false, false",
+        "+- 'Project [id#71, name#72, 'DEFAULT]",
+        "   +- SubqueryAlias x"
+      ]
+    },
+    "MIX_static_dynamic_positional": {
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "west",
+          "p",
+          9
+        ],
+        [
+          2,
+          "west",
+          "w2",
+          5
+        ]
+      ]
+    },
+    "MIX_static_dynamic_named_list_omits_default": {
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "west",
+          "p",
+          9
+        ],
+        [
+          2,
+          "west",
+          "q",
+          5
+        ]
+      ]
     }
   },
   "schema_after": {

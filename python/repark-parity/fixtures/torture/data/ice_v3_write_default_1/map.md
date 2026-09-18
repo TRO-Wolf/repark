@@ -58,8 +58,14 @@ around here by construction.
   roll-call table: a missing nullable column without a default is accepted and
   written NULL on both writer surfaces (ruling Q-21b-6).
 - `truth.json` — the writer record: banner, per-table schema plus seed outcome,
-  the 33 oracle cells (full-table rows or the error class and message), and
-  `schema_after` for the two tables whose schema the cells change.
+  the 39 oracle cells (full-table rows or the error class and message), and
+  `schema_after` for the two tables whose schema the cells change. Six of the
+  cells — `V01_overwrite_partitions_missing_defaulted_column`, the three
+  `V02_*` DEFAULT-outside-the-INSERT-list refusals and the two `MIX_*`
+  static-plus-dynamic PARTITION cells — were measured 2026-09-17 by the
+  orchestrator's `probe_wd2.py` (same Spark 4.1.2 + Iceberg 1.11.0 banner, its
+  own `pdflt` / `dflt` / `p2` tables) and copied in verbatim (run 21b round 2,
+  rulings Q-21b-8 … Q-21b-10); `record.py` does not re-record them.
 - `record.py` — the recording script (Spark-only; run it, never a copy, from
   the repository root under the probe JVM). Re-recording is deterministic in
   rows, schema and errors; file names carry fresh UUIDs. Ruff-clean
