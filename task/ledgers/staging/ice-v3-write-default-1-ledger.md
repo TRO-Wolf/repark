@@ -449,7 +449,7 @@ Run in the foreground on the round-6 head, release native
 - `make rust-clippy` — exit 0 (C-024).
 - C-009 guard + CAP-1 mirror — 25 passed.
 - `comment_ban.py /tmp/kb-wd origin/main` — hits=0.
-- `make verify` — see the hand-back (run last).
+- `make verify` — exit 0: ci checks clean, `cargo test --locked --workspace` 58 results, 3832 passed, 0 failed.
 
 ## Open questions
 
