@@ -56,6 +56,9 @@ JVM exception: `org.apache.spark.SparkException`, condition `_LEGACY_ERROR_TEMP_
 | C-018 | (L-005) `ADD COLUMN s.z INT FIRST`, `ADD COLUMN s.w INT AFTER a`, `ADD COLUMN s.d INT COMMENT 'c'` leave Spark's child order, ids and `doc` in the metadata; `AFTER s.a` refuses `PARSE_SYNTAX_ERROR` 42601, schema untouched; both doors. | Metadata and refusal pins. | **PROVEN** | `test_nested_ddl_{metadata,outcome}_matches_spark[{add_first,add_after,add_comment,add_after_dotted}-v{2,3}]`, ANSI twin. No code change. |
 | C-019 | (item 6) `ADD COLUMN s.a INT` on an existing child refuses `AnalysisException` `FIELD_ALREADY_EXISTS` 42710 and `ADD COLUMN nope.z INT` refuses `AnalysisException` `UNRESOLVED_COLUMN.WITH_SUGGESTION` 42703 with Spark's text, schema untouched, both doors. | Refusal pins (class, text up to `SQLSTATE`, metadata). | **PROVEN** | `test_nested_ddl_{metadata,outcome}_matches_spark[{add_duplicate_child,add_unknown_parent}-v{2,3}]`, Rust `nested_ddl_refuses_double_quoted_names_and_known_paths_spark_shaped`, seam `nested_add_refusal_answers_spark_for_known_and_unknown_paths`, ANSI twin. Registry R-005. |
 | C-020 | `ADD COLUMN s.mm MAP<STRING, INT>`, `s.st STRUCT<u: INT, v: STRUCT<w: INT>>`, `s.al ARRAY<STRUCT<k: INT>>` give Spark's child types and ids (level order from the next free id), both doors. | Metadata pins. | **PROVEN** | `test_nested_ddl_metadata_matches_spark[{add_map_child,add_struct_child,add_list_child}-v{2,3}]`, ANSI twin. |
+| C-021 | (V-001, round 3) A double-quoted token in a string position is Spark's string literal: `ADD COLUMN s.d INT COMMENT "x.y"`, `s.e INT COMMENT "c"`, `s.f INT COMMENT "x.y" FIRST` succeed with `doc` `x.y` / `c` and `f` first; the double-quoted refusal holds only in a name position (C-015 unchanged). | Metadata, outcome and read-shape pins on the facade Spark door; ANSI twin; Rust Spark-door pin. | **PROVEN** | `test_nested_ddl_{metadata,outcome,read_schema}_matches_spark[add_comment_double_quoted{,_dotted,_first}-v{2,3}]` (18, red before), Rust `nested_add_comment_takes_a_double_quoted_string_spark_shaped` + the `COMMENT "x.y" FIRST` row of `nested_parse_leaves_top_level_forms_to_the_existing_path` (red before), ANSI `every_recorded_nested_schema_cell_answers_spark_on_the_ansi_door` (green before: behaviour pin). |
+| C-022 | (V-002, round 3) The CREATE nested-type token rewrite covers only the column-definition list on both doors; a CTAS query is passed through verbatim, and `CREATE TABLE … AS SELECT * FROM src WHERE map < 5 AND map > 0` answers Spark's row `[{map: 1}]`. | Token-level seam pins; answer + rows on the facade SQL and DataFrame doors, the ANSI door and the Rust Spark door. | **PROVEN** | seam `a_ctas_query_comparing_a_type_keyword_column_is_left_alone`, `only_the_column_definition_list_is_rewritten` (mutation: whole-statement rewrite reds both); `test_nested_ddl_{schema,rows}_matches_spark[ctas_where_map_lt-v{2,3}]`; ANSI `every_recorded_nested_ddl_cell_answers_spark_on_the_ansi_door` + `ctas_filtering_a_type_keyword_column_answers_spark_rows_on_the_ansi_door` (red before: `map ( 5 AND map ) 0`); Rust `ctas_filtering_a_map_column_with_lt_answers_spark_rows`. |
+| C-023 | (V-002, round 3) `CREATE TABLE … AS SELECT * FROM src WHERE struct < 5 AND struct IS NOT NULL` answers Spark's row `[{struct: 1}]`. | Same pins as C-022. | **DECLARED** — IDENT-STRUCT-KW-1 | Not this unit's defect: sqlparser (`SparkSqlDialect` / `GenericDialect`, `supports_struct_literal`) reads an unquoted `struct` column in any expression as a STRUCT literal, so a plain `SELECT struct FROM t` / `WHERE struct = 1` refuses `ParseException` on the unchanged native too (measured). Strict-xfail `test_nested_ddl_{schema,rows}_matches_spark[ctas_where_struct_lt-v{2,3}]`, `#[ignore]` `ident_struct_kw_ctas_filtering_a_struct_column_with_lt_answers_spark_rows`, and the ANSI twins require the STRUCT-literal refusal and report the day it answers. Ruling Q-22b-NEST-9. |
 
 ## RED — measured on main's pin `8fb44a39`, no fork override (2026-09-17)
 
@@ -318,3 +321,138 @@ V2-10d clause is deleted in this PR. C-008 stays OPEN for a different defect: ev
 Iceberg list column fails in the fork writer (ICE-NESTED-INSERT-LIST-1, fork F-LIST-INSERT-1, run 22a's
 fork lane). Its strict xfails flip when that fork fix reaches RePark in RP-27.
 
+## Round 3 (2026-09-18) — run 22b verification findings
+
+Grok 4.6's verification of `e78a94f7` found V-001 (P1) and V-002 (P2). The orchestrator
+confirmed both on Spark 4.1.2 + Iceberg 1.11.0 (`probe_comment.py`). Branch
+`fix/ice-nested-evo-1`, from `e78a94f7`.
+
+### Cells (recorded by the driver, one JVM, `jvm-lock.sh`; v2 and v3 identical)
+
+| label | statement (on `(id INT, s STRUCT<a: INT, b: STRING>)` / a one-row source) | Spark 4.1.2 |
+|---|---|---|
+| `add_comment_double_quoted_dotted` | `ADD COLUMN s.d INT COMMENT "x.y"` | ok; `s` = `a, b, d(doc x.y)` |
+| `add_comment_double_quoted` | `ADD COLUMN s.e INT COMMENT "c"` | ok; `s` = `a, b, e(doc c)` |
+| `add_comment_double_quoted_first` | `ADD COLUMN s.f INT COMMENT "x.y" FIRST` | ok; `s` = `f(doc x.y), a, b` |
+| `ctas_where_map_lt` | `CREATE TABLE … USING iceberg TBLPROPERTIES (…) AS SELECT * FROM src WHERE map < 5 AND map > 0` | ok; rows `[{map: 1}]` |
+| `ctas_where_struct_lt` | `… AS SELECT * FROM src WHERE struct < 5 AND struct IS NOT NULL` | ok; rows `[{struct: 1}]` |
+
+These are the probe's answers. The driver re-recorded every cell. Every earlier `cells`,
+`schema_cells` and `dataframe_create_cells` entry answers byte-identically (compared key by
+key). The four adoption tables it re-copied were restored from git, not re-committed. The
+fixture has no machine-local path beyond the existing baked root.
+
+### Step 1 — baseline
+
+A release native built from `e78a94f7` sources with the round-3 edits stashed (the first build
+was stopped: it could have caught a half-written edit): `test_ice_nested_evo_1.py` +
+`test_ice_nested_evo_1_schema.py` `-n 4`, offline — the 148 pre-existing tests passed and 3
+xfailed, as round 2 left them.
+
+### Step 2 — RED (pins written first, fix stashed, same baseline native / sources)
+
+- Facade, `-n 4` offline: **22 failed**, 152 passed, 3 xfailed. Failures:
+  `test_nested_ddl_{metadata,outcome,read_schema}_matches_spark[add_comment_double_quoted{,_dotted,_first}-v{2,3}]`
+  (18, refused `PARSE_SYNTAX_ERROR`) and `test_nested_ddl_{schema,rows}_matches_spark[ctas_where_struct_lt-v{2,3}]`
+  (4). The `ctas_where_map_lt` facade cells passed on the Spark door before the fix: there the
+  rewrite (no `map_parens`) re-emits `map < … >` unchanged. The door that corrupted `map` is the ANSI door.
+- Rust Spark door (`cargo test -p repark-spark --lib`): `nested_parse_leaves_top_level_forms_to_the_existing_path`,
+  `nested_add_comment_takes_a_double_quoted_string_spark_shaped`, and the CTAS pin: 3 failed.
+- ANSI door (`--test ansi_nested_ddl_oracle`): `every_recorded_nested_ddl_cell_answers_spark_on_the_ansi_door`
+  and `ctas_filtering_a_type_keyword_column_answers_spark_rows_on_the_ansi_door` failed. `ctas_where_map_lt`
+  refused `Expected: end of statement, found: 0` (`map ( 5 AND map ) 0`). `ctas_where_struct_lt` refused
+  `Expected: a data type name, found: 5`. The schema-cell twin stayed green: the ANSI door has no
+  double-quote refusal, so its `COMMENT "…"` cells pin behaviour, not the V-001 fix. That was
+  recorded in the brief's P3.
+
+### Step 3 — the fixes (Rust)
+
+- **V-001**, `crates/repark-spark/src/nested_column_ddl.rs`: the whole-statement
+  `first_double_quoted_word` scan is gone. A `NameParser { parser, double_quoted }` wraps the
+  sqlparser `Parser`. `name()` / `column_path()` record the first identifier with quote style
+  `"` read in a name position: a path segment, the name after `TO`, the `AFTER` reference.
+  A claimed statement refuses with the same verbatim `PARSE_SYNTAX_ERROR` near `'"x.y"'`
+  (C-015 unchanged). `COMMENT` still reads through `parse_literal_string`, where a double-quoted
+  token is a string.
+- **V-002**, `crates/repark-iceberg/src/write/nested_type_sql.rs`: `column_list_range` finds
+  the first parenthesized group after `TABLE [IF NOT EXISTS] <name>`.
+  `rewrite_create_column_types` runs the unchanged `rewrite_nested_type_tokens` on that range
+  only, and `create_column_list_has_nested_type_opener` is the gate over the same range. Callers:
+  `crates/repark-spark/src/normalize.rs` (`parse_single_normalized`, every `CREATE TABLE`) and
+  `crates/repark-sql/src/create_table/nested_type.rs` (`rewrite_nested_create_types`, the ANSI
+  router). A CTAS with no column list is passed through untouched. The ANSI `ALTER` nested
+  pre-parse keeps `rewrite_nested_type_tokens`: an `ALTER … ADD COLUMN` has no query.
+- After the V-002 fix, `ctas_where_struct_lt` still refuses on both doors. The error is sqlparser's
+  own STRUCT-literal parse (Spark door `Expected: end of statement, found: USING` after
+  `parse_single_normalized` falls back; ANSI `Expected: a data type name, found: 5`). A
+  facade probe on the unchanged native: `SELECT struct FROM t`, `… WHERE struct < 5`,
+  `… WHERE struct IS NOT NULL`, `… WHERE struct = 1` all refuse `ParseException`;
+  `` SELECT `struct` … WHERE `struct` < 5 `` answers. Ruling Q-22b-NEST-9.
+
+### Pins (green after the fix)
+
+- C-021 — facade `test_nested_ddl_{metadata,outcome,read_schema}_matches_spark[add_comment_double_quoted*-v{2,3}]`;
+  Rust `nested_add_comment_takes_a_double_quoted_string_spark_shaped`, `nested_parse_leaves_top_level_forms_to_the_existing_path`;
+  ANSI `every_recorded_nested_schema_cell_answers_spark_on_the_ansi_door`. The round-2 double-quoted
+  refusals (`TO "x.y"`, `s."x.y"`) stay green: `nested_ddl_refuses_double_quoted_names_and_known_paths_spark_shaped`,
+  `[rename_double_quoted,add_double_quoted_leaf-v{2,3}]`.
+- C-022 — seam `a_ctas_query_comparing_a_type_keyword_column_is_left_alone`,
+  `only_the_column_definition_list_is_rewritten` (mutation run: replacing the range with the
+  whole statement reds both); facade `test_nested_ddl_{schema,rows}_matches_spark[ctas_where_map_lt-v{2,3}]`
+  (the `SELECT *` read now also runs on the DataFrame door); ANSI
+  `ctas_filtering_a_type_keyword_column_answers_spark_rows_on_the_ansi_door` (Spark's rows,
+  inserts replayed) and `every_recorded_nested_ddl_cell_answers_spark_on_the_ansi_door`;
+  Rust `ctas_filtering_a_map_column_with_lt_answers_spark_rows`.
+- C-023 — strict-xfail `[ctas_where_struct_lt-v{2,3}]` (schema + rows), `#[ignore]`
+  `ident_struct_kw_ctas_filtering_a_struct_column_with_lt_answers_spark_rows`, and ANSI twins
+  that require the STRUCT-literal refusal and fail the day it answers.
+
+### Rulings
+
+- **Q-22b-NEST-8 — the double-quoted refusal is positional.** Spark reads a double-quoted
+  token as a string literal. It refuses only where the grammar wants an identifier. The Spark-door
+  nested pre-parse records a double-quoted identifier only from its name positions (path
+  segments, `TO`, `AFTER`), and `COMMENT "…"` is the child's `doc`. A `DEFAULT` value is not
+  parsed by the nested pre-parse (it refuses as before, not measured). A single-quoted identifier
+  (`s.'x'`) is left as round 2 had it (not measured).
+- **Q-22b-NEST-9 — `struct` as a column name in an expression is its own row.** The V-002
+  corruption (`NOT NULL` → `OPTIONS(…)`, `MAP<` → `MAP(`) is fixed and pinned at token level. The
+  measured `struct` CTAS still refuses, because sqlparser reads an unquoted `struct` in any
+  expression as a STRUCT literal (`supports_struct_literal` is true for `SparkSqlDialect`,
+  `DatabricksDialect` and `GenericDialect`). That refusal predates this unit, holds for a plain
+  `SELECT`, and is loud (`ParseException`). A fix is a general expression-parse change for both
+  doors, which this nested-DDL unit does not take. It is proposed as registry row
+  **IDENT-STRUCT-KW-1** (BACKLOG, orchestrator to file). Its cells are strict-xfail /
+  expected-refusal so the fix flips them.
+- **Q-22b-NEST-10 — the fixture is extended, not rebuilt.** The driver re-records everything.
+  The committed `oracle.json` carries the new cells and byte-identical old ones. The four
+  adoption tables stay at their round-1 bytes, because their `v4.metadata.json` is what the
+  adoption pins register.
+
+### Step 4 — gates (RULE 2 only; after the fix, on the final tree)
+
+| gate | result |
+|---|---|
+| release native `maturin develop --release` (codegen-units 16, 6 jobs) | exit 0 (pre-fix baseline build, and the fixed build) |
+| `test_ice_nested_evo_1.py` offline / live | **52 passed, 7 xfailed** / **52 passed, 7 xfailed** (xfails: 2 × `forkwrite`, EX-COL-2, 4 × IDENT-STRUCT-KW-1) |
+| `test_ice_nested_evo_1_schema.py` offline / live | **118 passed** / **118 passed** |
+| both files together, `-n 4` offline | 170 passed, 7 xfailed |
+| `cargo test -p repark-iceberg` | 2 binaries, 527 passed, 0 failed |
+| `cargo test -p repark-sql` | 22 binaries, 456 passed, 0 failed |
+| `cargo test -p repark-spark` | 10 binaries, 1249 passed, 0 failed, 6 ignored |
+| `cargo clippy -p repark-iceberg -p repark-sql -p repark-spark --tests -- -D warnings -A clippy::disallowed_methods` | exit 0 |
+| `cargo clippy -p repark-iceberg -p repark-sql -p repark-spark -- -D warnings` | exit 0 |
+| `cargo fmt --check`, pre-commit hook (map lockstep, map-sync, crate DAG, file-size, docstrings, manifest, taplo, typos) | clean on both fix commits |
+| comment ban `comment_ban.py /tmp/lb-build origin/main` | `hits=0` |
+| `[patch]` / path override / session path in `git diff e78a94f7..HEAD` | 0 |
+
+The V-001 commit's intermediate tree (without the CTAS cells) was checked on its own:
+`cargo test -p repark-spark --lib nested_column_ddl` 10 passed / 1 ignored, and
+`--test ansi_nested_ddl_oracle` 2 passed.
+
+### Open after round 3
+
+- C-008 — unchanged (fork F-1, ICE-NESTED-INSERT-LIST-1).
+- C-023 — DECLARED on IDENT-STRUCT-KW-1 (Q-22b-NEST-9).
+- Residual, record only: a `COMMENT` on a struct field inside CREATE (`STRUCT<a: INT COMMENT
+  'x'>`) is still a loud parser refusal on both doors.
