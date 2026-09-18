@@ -3904,7 +3904,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the no-write second read still scans the held cache view under the SQL spy),
   `comment` values containing `,` or `]` round-trip, transform-source columns
   (`bucket(16, id)`, `days(ts)`) flag `isPartition`, `createTable` renders `INT[]`
-  recursively and `NOT NULL` (map/struct keep the engine's loud refusal),
+  recursively and `NOT NULL` (map/struct create and list as `map<string,int>` /
+  `struct<a:int>` since ICE-NESTED-EVO-1, 2026-09-17; pins: ice-nested-evo-1/C-006),
   `listFunctions(dbName)` on a missing namespace raises `SCHEMA_NOT_FOUND`,
   unquoted temp-view names classify case-insensitively, and every raised
   `AnalysisException` carries its errorClass through `getCondition()`.

@@ -149,3 +149,12 @@ name, no default clause). RePark also omits Spark's `Unsupported table change: `
 ICE-NESTED-EVO-1 (FIXED, fork F-NESTED-EVO-1), ICE-NESTED-DDL-1 (FIXED), ICE-NESTED-DDL-1-R-001
 (OPEN, required-child message), ICE-NESTED-INSERT-LIST-1 (OPEN, list `INSERT` in the fork
 writer). `docs/map.md` carries the index line.
+
+## Step 6 — gates, and one pin flipped on purpose (2026-09-17)
+
+The whole facade suite (release native with the override) reddened
+`test_catalog_surface_1.py::test_create_table_map_struct_refuse_loudly`: it pinned
+`catalog.createTable` refusing map and struct schemas, which this unit makes work as Spark
+does. Renamed `test_create_table_map_struct_round_trip`; it now asserts `listColumns` answers
+`map<string,int>` and `struct<a:int>` (Spark's `simpleString`). The frozen
+catalog-surface-1 ledger keeps the old name as history.
