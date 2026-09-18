@@ -120,9 +120,14 @@ pins: rp-4-fork-repin/C-005, C-006
   `execute_append_with_options` (option-carrying plain INSERT on the owned
   stage-then-commit path), moved verbatim out of `insert_overwrite.rs`, which the merge
   with ICE-DYN-OVERWRITE-1 and ICE-V3-WRITE-DEFAULT-1 would take past the 1000-line
-  ceiling. Table-function targets, `REPLACE INTO`, explicit column lists and non-3-part
-  names refuse loudly.
-  pins: ice-write-options-1/C-014
+  ceiling. **Q-22b-WO-5:** since ICE-V3-WRITE-DEFAULT-1 the DataFrame writers emit
+  `INSERT INTO t (cols) SELECT …`, so an explicit column list is honoured instead of
+  refused: it goes through the same `overwrite_source_with_default_fills` step as the
+  overwrite arms (omitted columns fill from `write_default`), `stage_overwrite_files_with`
+  maps the source by name, and `commit_append_with_summary` commits it with the merged
+  summary. A list-free append keeps `append_with_statement_options`. Table-function
+  targets, `REPLACE INTO` and non-3-part names still refuse.
+  pins: ice-write-options-1/C-014, C-018
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
   strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
   projection build, the staged-append executor (stream → conform → `commit_append_to` →

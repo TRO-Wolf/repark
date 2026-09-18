@@ -4,7 +4,9 @@ use datafusion::sql::sqlparser::ast::{Insert, TableObject};
 use repark_core::CatalogRegistry;
 
 use crate::catalog_ops::{namespace_schema_name, refuse_read_only_dml_table_sql, reregister};
-use crate::insert_overwrite::try_resolve_iceberg_overwrite_target;
+use crate::insert_overwrite::{
+    object_name_last, overwrite_source_with_default_fills, try_resolve_iceberg_overwrite_target,
+};
 use crate::spark_ast;
 
 pub(crate) async fn execute_append_with_options(
@@ -28,13 +30,6 @@ pub(crate) async fn execute_append_with_options(
             "REPLACE INTO does not support write options (ICE-WRITE-OPTIONS-1)".to_string(),
         ));
     }
-    if !insert.columns.is_empty() {
-        return Err(DataFusionError::Plan(
-            "INSERT with an explicit column list does not support write options \
-             (ICE-WRITE-OPTIONS-1)"
-                .to_string(),
-        ));
-    }
     let table_sql = table_name.to_string();
     if let Some(message) = refuse_read_only_dml_table_sql(catalogs, &table_sql) {
         return Err(DataFusionError::Plan(message));
@@ -52,20 +47,42 @@ pub(crate) async fn execute_append_with_options(
             "INSERT with write options requires a SELECT or VALUES source".to_string(),
         )
     })?;
-    let materialize_sql = format!("SELECT * FROM ({source}) AS _repark_app_src");
+    let listed: Vec<String> = insert.columns.iter().map(object_name_last).collect();
+    let (column_names, materialize_sql) =
+        overwrite_source_with_default_fills(&table, &listed, source)?;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    repark_iceberg::write::append_with_statement_options(
-        &catalog,
-        &table,
-        stream,
-        &options.snapshot_extra,
-        &options.staging_overrides(),
-        concurrency,
-        branch.as_deref(),
-    )
-    .await?;
+    let staging = options.staging_overrides();
+    if column_names.is_empty() {
+        repark_iceberg::write::append_with_statement_options(
+            &catalog,
+            &table,
+            stream,
+            &options.snapshot_extra,
+            &staging,
+            concurrency,
+            branch.as_deref(),
+        )
+        .await?;
+    } else {
+        let files = repark_iceberg::write::stage_overwrite_files_with(
+            &table,
+            stream,
+            column_names,
+            concurrency,
+            &staging,
+        )
+        .await?;
+        repark_iceberg::write::commit_append_with_summary(
+            &catalog,
+            &table,
+            files,
+            &options.snapshot_extra,
+            branch.as_deref(),
+        )
+        .await?;
+    }
     let namespace = namespace_schema_name(table.identifier().namespace());
     reregister(ctx, catalog, &catalog_name, &namespace).await?;
     ctx.read_empty()

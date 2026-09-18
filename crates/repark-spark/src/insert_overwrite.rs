@@ -565,7 +565,7 @@ async fn rewrite_overwrite_default_markers(
     Ok(Some(Box::new((rewritten, rewritten_insert))))
 }
 
-fn overwrite_source_with_default_fills(
+pub(crate) fn overwrite_source_with_default_fills(
     table: &iceberg::table::Table,
     column_names: &[String],
     source: &datafusion::sql::sqlparser::ast::Query,
