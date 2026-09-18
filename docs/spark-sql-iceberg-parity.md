@@ -5145,13 +5145,15 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   longs (`min-file-size-bytes` below 0 refuses `>= 0`; the band compares signed, so
   `max-file-size-bytes` `-1` renders in the IAE text). A present NULL
   `remove-dangling-deletes` map key wins over the legacy top-level flag (Java's default).
-  RPD byte pins compare against vanished delete files. Thirteen strict xfails stay, all with
-  precise dated reasons: output-splitting and group granularity (`target_small`,
-  `max_group_size`, `partial_progress_groups`, each with a green keep-set twin pinning rows
-  and rewritten counts), DELETE-written-file byte accounting (`delete_file_threshold`,
-  `remove_dangling`), the untouched fork RPD (`rpd_rewrite_all`, `rpd_min_input_files_1`),
-  and the removed-count 1-vs-0 on the two MoR cells (under `ICE-RDF-DANGLE-2`); the residue
-  zero cell belongs to `ICE-RDF-DANGLE-2`.
+  RPD byte pins compare against vanished delete files. Thirteen strict xfails stay, each
+  named under one of four fork-ask rows: `ICE-RDF-GRANULARITY-1` (output splitting and
+  file-group granularity — `target_small`, `max_group_size`, `partial_progress_groups`,
+  each with a green keep-set twin pinning rows and rewritten counts, plus the
+  `partial_progress_groups` snapshot cell), `ICE-RDF-COW-BYTES-1` (DELETE-written-file
+  byte accounting — `delete_file_threshold`, `remove_dangling`),
+  `ICE-RDF-RPD-COMMITS-1` (the untouched fork RPD — `rpd_rewrite_all`,
+  `rpd_min_input_files_1`, value and snapshot cells), and `ICE-RDF-DANGLE-2` (the
+  removed-count 1-vs-0 on the two MoR cells and the residue zero cell).
 - **Apache Spark** — the 49 recorded cells
   (`python/repark/tests/ice_rdf_options_1_spark_oracle.json`, live PySpark 4.1.2 + Iceberg
   1.11.0, 2026-09-17): default single-commit rewrites, per-key validation messages, the
@@ -5214,7 +5216,80 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   Same fork-side drop on single-shape cells (2026-09-17): `delete_file_threshold` and
   `remove_dangling` report `removed_delete_files_count = 1` vs Spark `0` (strict-xfailed
   pins on the removed-count assert only; result counts and rows match).
+  Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed; the rolling writer's
+  target-size split did not close it.
   pins: ice-rdf-options-1/C-006
+
+### ICE-RDF-GRANULARITY-1 — `rewrite_data_files` output splitting and file-group granularity stay fork-side — **OPEN 2026-09-17, fork ask**
+
+- **repark** — on the 8-file shapes the fork writes one file per group and compacts 8→8
+  added where Spark splits outputs to the target size (reason strings 2026-09-17:
+  `target_small` RePark 8→2 vs Spark 8→4; `max_group_size` and `partial_progress_groups`
+  RePark 8→8 added vs Spark 8→4). Under `partial-progress.max-commits 3` 8 groups need
+  3 commits (11 snapshots); Spark compacts 4 groups in 2 (10 snapshots).
+- **Apache Spark** — the recorded cells `target_small` and `max_group_size`
+  (`rewritten_data_files_count = 8`, `added_data_files_count = 4`,
+  `rewritten_bytes_count = 9229`, 9 snapshots, 4 data files) and
+  `partial_progress_groups` (the same result counts, 10 snapshots over 2 `replace`
+  commits, 4 data files) in
+  `python/repark/tests/ice_rdf_options_1_spark_oracle.json`
+  (live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17).
+  *(oracle: recorded — the committed generator replays byte-identical on its RDF section.)*
+- **Pin** —
+  `python/repark/tests/test_ice_rdf_options_1.py::test_option_cell_values[target_small]`,
+  `[max_group_size]`, `[partial_progress_groups]` and
+  `::test_option_cell_snapshots[partial_progress_groups]` (`xfail(strict)` with the dated
+  reasons; green keep-set twins pin rows and rewritten counts).
+- **Rationale** — OPEN, fork ask: output splitting at the target file size and file-group
+  granularity live in the fork's rewrite path.
+  Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed; the rolling writer's
+  target-size split did not close it.
+  pins: ice-rdf-fork-asks-1/C-001
+
+### ICE-RDF-COW-BYTES-1 — `rewritten_bytes` misses the DELETE-written survivor file the rewrite folds in — **OPEN 2026-09-17, fork ask**
+
+- **repark** — result counts match Spark (`delete_file_threshold` 4 rewritten / 1 added;
+  `remove_dangling` 8 rewritten / 2 added) but `rewritten_bytes_count` misses the
+  DELETE-written survivor file the rewrite folds in (reason strings 2026-09-17:
+  `delete_file_threshold` answers 5869 vs the vanished-sum 7592; `remove_dangling`
+  answers 11878 vs the vanished-sum 13522 — the DELETE-written 1644-byte file folds
+  into the 2 outputs).
+- **Apache Spark** — the recorded cell `delete_file_threshold`
+  (`rewritten_data_files_count = 4`, `added_data_files_count = 1`,
+  `rewritten_bytes_count = 4544`, `removed_delete_files_count = 0`, 6 data + 1 delete
+  files) and `remove_dangling` (`rewritten_data_files_count = 8`,
+  `added_data_files_count = 2`, `rewritten_bytes_count = 9229`,
+  `removed_delete_files_count = 0`, 3 data + 1 delete files), same oracle file.
+  *(oracle: recorded — the committed generator replays byte-identical on its RDF section.)*
+- **Pin** —
+  `python/repark/tests/test_ice_rdf_options_1.py::test_option_cell_values[delete_file_threshold]`
+  and `[remove_dangling]` (`xfail(strict)`; the removed-count asserts on the same cells
+  xfail separately under `ICE-RDF-DANGLE-2`).
+- **Rationale** — OPEN, fork ask: the byte accounting sits in the fork's rewrite commit path.
+  Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed; the rolling writer's
+  target-size split did not close it.
+  pins: ice-rdf-fork-asks-1/C-002
+
+### ICE-RDF-RPD-COMMITS-1 — the fork's `rewrite_position_delete_files` commits per group where Spark rewrites in one commit — **OPEN 2026-09-17, fork ask**
+
+- **repark** — the fork RPD path (untouched by #283) compacts 8→2 with per-group commits
+  (11 snapshots on the value cells' shapes); Spark rewrites 8→8 in one commit
+  (10 snapshots).
+- **Apache Spark** — the recorded cells `rpd_rewrite_all`
+  (`rewritten_delete_files_count = 8`, `added_delete_files_count = 8`, one `replace`
+  commit, 10 snapshots, 16 data + 8 delete files) and `rpd_min_input_files_1` (the same
+  counts), same oracle file.
+  *(oracle: recorded — the committed generator replays byte-identical on its RDF section.)*
+- **Pin** —
+  `python/repark/tests/test_ice_rdf_options_1.py::test_option_cell_values[rpd_rewrite_all]`,
+  `[rpd_min_input_files_1]` and
+  `::test_option_cell_snapshots[rpd_rewrite_all]`, `[rpd_min_input_files_1]`
+  (`xfail(strict)` with the dated reasons).
+- **Rationale** — OPEN, fork ask: single-commit RPD batching lives in the fork's
+  position-delete rewrite.
+  Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed; the rolling writer's
+  target-size split did not close it.
+  pins: ice-rdf-fork-asks-1/C-003
 
 ### MANIFEST-1 — `rewrite_manifests` rewrites data manifests only; Spark rewrites delete manifests too
 

@@ -1459,7 +1459,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   DANGLE-2-only xfails; RPD unwired-key `UnsupportedOperationException` pins, IAE-first
   order pins, the NULL-dangling-precedence pin, and the max-failed-commits no-effect pin;
   the live tier re-runs the generator and asserts the fixture plus a `4.1.` banner.
+  The thirteen strict xfails map to four registry fork asks: `ICE-RDF-GRANULARITY-1`,
+  `ICE-RDF-COW-BYTES-1`, `ICE-RDF-RPD-COMMITS-1`, `ICE-RDF-DANGLE-2` (re-measured
+  2026-09-17 on RP-23 `4151b488`: still xfailed, zero XPASS).
   pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009, C-010
+  pins: ice-rdf-fork-asks-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json) —
   **ICE-RDF-OPTIONS-1 (2026-09-17):** the 33-cell RDF oracle section replays byte-identical
   from the committed generator; the 7 `rpd_*` cells and 2 `residue_*` sequences are this
