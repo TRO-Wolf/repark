@@ -219,7 +219,7 @@ def test_dataframe_doors_write_sorted_stamped_files(tmp_path: Path, door: str) -
 
 
 def test_repark_owned_paths_write_sorted_stamped_files(tmp_path: Path) -> None:
-    """C-003: INSERT OVERWRITE, MERGE and CTAS stamp the files they sort."""
+    """C-003: INSERT OVERWRITE and CTAS stamp what they write; MERGE lives in the round-3 pins."""
     engine = _session("sorted-owned", tmp_path / "wh")
     try:
         engine.range(2000).createOrReplaceTempView("r")
@@ -231,12 +231,6 @@ def test_repark_owned_paths_write_sorted_stamped_files(tmp_path: Path) -> None:
         engine.sql(
             f"INSERT OVERWRITE {table} SELECT (id * 7919) % 2000 AS id,"
             " CAST(id % 2 AS INT) AS p FROM r"
-        ).collect()
-        _assert_identity_cell(engine, table, ["id"], [(False, True)], list(range(2000)))
-        engine.sql(
-            f"MERGE INTO {table} t USING (SELECT CAST(1 AS BIGINT) AS id,"
-            " CAST(1 AS INT) AS p) s ON t.id = s.id"
-            " WHEN NOT MATCHED THEN INSERT *"
         ).collect()
         _assert_identity_cell(engine, table, ["id"], [(False, True)], list(range(2000)))
         engine.sql(

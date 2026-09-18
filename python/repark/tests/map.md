@@ -401,6 +401,28 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark rebuilds every cell from the recorded DDL and asserts the same
   (records, stamp, sorted) triples.
   pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-005
+- [test_ice_sorted_insert_2.py](test_ice_sorted_insert_2.py) +
+  [ice_sorted_insert_2_spark_oracle.json](ice_sorted_insert_2_spark_oracle.json) +
+  [_record_ice_sorted_insert_2_oracle.py](_record_ice_sorted_insert_2_oracle.py) —
+  **ICE-SORTED-INSERT-1 round 3 (2026-09-17):** the rewrite half. The recorded
+  plan is the oracle's own cell definitions, so one structure drives Spark (the
+  recorder) and RePark (the pins); the pins substitute a registered `range(n)`
+  view for Spark's table function and read every expected stamp and sortedness
+  out of the fixture, never a literal. Green legs: the v3 and v2 partitioned
+  INSERT OVERWRITE and MERGE (matched UPDATE, NOT MATCHED INSERT of 400 shuffled
+  keys) rewrites are sorted per file and stamped with the table's default order
+  id; the unpartitioned INSERT OVERWRITE stamps it; a second
+  `WRITE ORDERED BY (id DESC)` makes new files carry the CURRENT order id (2) and
+  the new direction; the owned float overwrite places NULLs first, values
+  ascending and NaN as a solid tail block, and a negative NaN canonicalises into
+  that block; a v3 matched UPDATE leaves the id → `_row_id` map unchanged, so the
+  lineage columns travel with their rows through the new sort. Strict `xfail`
+  legs carry the two fork asks the measurement opened —
+  `BLOCKED-ON-FORK F-RDF-SORT-STAMP-1` (binpack `rewrite_data_files` output) and
+  `BLOCKED-ON-FORK F-COW-UPDATE-STAMP-1` (the fork's COW UPDATE exec) — and
+  XPASS the day either fork PR lands. Live (`REPARK_PARITY_LIVE=1`): the
+  recorder's `check` subcommand re-derives all 15 cells and reds on drift.
+  pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine

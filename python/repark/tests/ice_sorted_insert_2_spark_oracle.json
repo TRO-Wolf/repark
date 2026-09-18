@@ -1,0 +1,853 @@
+{
+  "oracle": "PySpark 4.1.2 + org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0, local[4], UTC, Hadoop catalog; per-file sortedness read from the parquet bytes with pyarrow",
+  "plan": [
+    {
+      "name": "m3",
+      "ddl": "(id BIGINT, p INT) USING iceberg PARTITIONED BY (p) TBLPROPERTIES ('format-version'='3')",
+      "order": "WRITE ORDERED BY (id)",
+      "key": "id",
+      "descending": false,
+      "cells": [
+        {
+          "cell": "v3_partitioned_overwrite",
+          "sql": [
+            "INSERT OVERWRITE {t} SELECT (id * 7919) % 2000 AS id, CAST(id % 2 AS INT) AS p FROM range(2000)"
+          ]
+        },
+        {
+          "cell": "v3_partitioned_merge_matched_update",
+          "sql": [
+            "MERGE INTO {t} t USING (SELECT CAST(1 AS BIGINT) AS id, CAST(1 AS INT) AS p) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET id = t.id"
+          ]
+        },
+        {
+          "cell": "v3_partitioned_merge_not_matched_insert",
+          "sql": [
+            "MERGE INTO {t} t USING (SELECT ((id * 3571) % 900) + 5000 AS id, CAST(id % 2 AS INT) AS p FROM range(400)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+          ]
+        },
+        {
+          "cell": "v3_partitioned_update",
+          "sql": [
+            "UPDATE {t} SET id = id WHERE p = 0"
+          ]
+        },
+        {
+          "cell": "v3_partitioned_delete",
+          "sql": [
+            "DELETE FROM {t} WHERE id = 7"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "m2",
+      "ddl": "(id BIGINT, p INT) USING iceberg PARTITIONED BY (p) TBLPROPERTIES ('format-version'='2')",
+      "order": "WRITE ORDERED BY (id)",
+      "key": "id",
+      "descending": false,
+      "cells": [
+        {
+          "cell": "v2_partitioned_overwrite",
+          "sql": [
+            "INSERT OVERWRITE {t} SELECT (id * 7919) % 2000 AS id, CAST(id % 2 AS INT) AS p FROM range(2000)"
+          ]
+        },
+        {
+          "cell": "v2_partitioned_merge_matched_update",
+          "sql": [
+            "MERGE INTO {t} t USING (SELECT CAST(1 AS BIGINT) AS id, CAST(1 AS INT) AS p) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET id = t.id"
+          ]
+        },
+        {
+          "cell": "v2_partitioned_merge_not_matched_insert",
+          "sql": [
+            "MERGE INTO {t} t USING (SELECT ((id * 3571) % 900) + 5000 AS id, CAST(id % 2 AS INT) AS p FROM range(400)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+          ]
+        },
+        {
+          "cell": "v2_partitioned_update",
+          "sql": [
+            "UPDATE {t} SET id = id WHERE p = 0"
+          ]
+        },
+        {
+          "cell": "v2_partitioned_delete",
+          "sql": [
+            "DELETE FROM {t} WHERE id = 7"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "up",
+      "ddl": "(id BIGINT) USING iceberg",
+      "order": "WRITE ORDERED BY (id)",
+      "key": "id",
+      "descending": false,
+      "cells": [
+        {
+          "cell": "unpartitioned_overwrite",
+          "sql": [
+            "INSERT OVERWRITE {t} SELECT (id * 7919) % 2000 AS id FROM range(2000)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "alt",
+      "ddl": "(id BIGINT, p INT) USING iceberg PARTITIONED BY (p)",
+      "order": "WRITE ORDERED BY (id)",
+      "key": "id",
+      "descending": true,
+      "cells": [
+        {
+          "cell": "alter_order_then_overwrite",
+          "sql": [
+            "INSERT OVERWRITE {t} SELECT (id * 7919) % 2000 AS id, CAST(id % 2 AS INT) AS p FROM range(400)",
+            "ALTER TABLE {t} WRITE ORDERED BY (id DESC)",
+            "INSERT OVERWRITE {t} SELECT (id * 7919) % 2000 AS id, CAST(id % 2 AS INT) AS p FROM range(400)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fl",
+      "ddl": "(id BIGINT, f FLOAT) USING iceberg",
+      "order": "WRITE ORDERED BY (f)",
+      "key": "f",
+      "descending": false,
+      "cells": [
+        {
+          "cell": "float_nan_overwrite",
+          "sql": [
+            "INSERT OVERWRITE {t} SELECT id, CASE WHEN id % 13 = 0 THEN CAST('NaN' AS FLOAT) WHEN id % 17 = 0 THEN CAST(NULL AS FLOAT) ELSE CAST((id * 7919) % 2000 AS FLOAT) END AS f FROM range(2000)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bp",
+      "ddl": "(id BIGINT, p INT) USING iceberg PARTITIONED BY (p)",
+      "order": "WRITE ORDERED BY (id)",
+      "key": "id",
+      "descending": false,
+      "cells": [
+        {
+          "cell": "binpack_before",
+          "sql": [
+            "INSERT INTO {t} SELECT ((id * 7919) % 2000) + 0 AS id, CAST(id % 2 AS INT) AS p FROM range(200)",
+            "INSERT INTO {t} SELECT ((id * 7919) % 2000) + 1 AS id, CAST(id % 2 AS INT) AS p FROM range(200)",
+            "INSERT INTO {t} SELECT ((id * 7919) % 2000) + 2 AS id, CAST(id % 2 AS INT) AS p FROM range(200)"
+          ]
+        },
+        {
+          "cell": "binpack_after",
+          "sql": [
+            "CALL {catalog}.system.rewrite_data_files(table => '{ns}.{name}', options => map('min-input-files','2','rewrite-all','true'))"
+          ]
+        }
+      ]
+    }
+  ],
+  "cells": {
+    "v3_partitioned_overwrite": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=0)",
+          "key_head": [
+            0,
+            2,
+            4,
+            6,
+            8,
+            10
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=1)",
+          "key_head": [
+            1,
+            3,
+            5,
+            7,
+            9,
+            11
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "overwrite"
+      ]
+    },
+    "v3_partitioned_merge_matched_update": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=0)",
+          "key_head": [
+            0,
+            2,
+            4,
+            6,
+            8,
+            10
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=1)",
+          "key_head": [
+            1,
+            3,
+            5,
+            7,
+            9,
+            11
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "overwrite",
+        "overwrite"
+      ]
+    },
+    "v3_partitioned_merge_not_matched_insert": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 200,
+          "partition": "Row(p=0)",
+          "key_head": [
+            5000,
+            5002,
+            5004,
+            5006,
+            5008,
+            5010
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=0)",
+          "key_head": [
+            0,
+            2,
+            4,
+            6,
+            8,
+            10
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 200,
+          "partition": "Row(p=1)",
+          "key_head": [
+            5001,
+            5003,
+            5005,
+            5007,
+            5009,
+            5011
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=1)",
+          "key_head": [
+            1,
+            3,
+            5,
+            7,
+            9,
+            11
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "overwrite",
+        "overwrite",
+        "append"
+      ]
+    },
+    "v3_partitioned_update": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 1200,
+          "partition": "Row(p=0)",
+          "key_head": [
+            0,
+            2,
+            4,
+            6,
+            8,
+            10
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 200,
+          "partition": "Row(p=1)",
+          "key_head": [
+            5001,
+            5003,
+            5005,
+            5007,
+            5009,
+            5011
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=1)",
+          "key_head": [
+            1,
+            3,
+            5,
+            7,
+            9,
+            11
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "overwrite",
+        "overwrite",
+        "append",
+        "overwrite"
+      ]
+    },
+    "v3_partitioned_delete": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 1200,
+          "partition": "Row(p=0)",
+          "key_head": [
+            0,
+            2,
+            4,
+            6,
+            8,
+            10
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 200,
+          "partition": "Row(p=1)",
+          "key_head": [
+            5001,
+            5003,
+            5005,
+            5007,
+            5009,
+            5011
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 999,
+          "partition": "Row(p=1)",
+          "key_head": [
+            1,
+            3,
+            5,
+            9,
+            11,
+            13
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "overwrite",
+        "overwrite",
+        "append",
+        "overwrite",
+        "overwrite"
+      ]
+    },
+    "v2_partitioned_overwrite": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=0)",
+          "key_head": [
+            0,
+            2,
+            4,
+            6,
+            8,
+            10
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=1)",
+          "key_head": [
+            1,
+            3,
+            5,
+            7,
+            9,
+            11
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "overwrite"
+      ]
+    },
+    "v2_partitioned_merge_matched_update": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=0)",
+          "key_head": [
+            0,
+            2,
+            4,
+            6,
+            8,
+            10
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=1)",
+          "key_head": [
+            1,
+            3,
+            5,
+            7,
+            9,
+            11
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "overwrite",
+        "overwrite"
+      ]
+    },
+    "v2_partitioned_merge_not_matched_insert": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 200,
+          "partition": "Row(p=0)",
+          "key_head": [
+            5000,
+            5002,
+            5004,
+            5006,
+            5008,
+            5010
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=0)",
+          "key_head": [
+            0,
+            2,
+            4,
+            6,
+            8,
+            10
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 200,
+          "partition": "Row(p=1)",
+          "key_head": [
+            5001,
+            5003,
+            5005,
+            5007,
+            5009,
+            5011
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=1)",
+          "key_head": [
+            1,
+            3,
+            5,
+            7,
+            9,
+            11
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "overwrite",
+        "overwrite",
+        "append"
+      ]
+    },
+    "v2_partitioned_update": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 1200,
+          "partition": "Row(p=0)",
+          "key_head": [
+            0,
+            2,
+            4,
+            6,
+            8,
+            10
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 200,
+          "partition": "Row(p=1)",
+          "key_head": [
+            5001,
+            5003,
+            5005,
+            5007,
+            5009,
+            5011
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 1000,
+          "partition": "Row(p=1)",
+          "key_head": [
+            1,
+            3,
+            5,
+            7,
+            9,
+            11
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "overwrite",
+        "overwrite",
+        "append",
+        "overwrite"
+      ]
+    },
+    "v2_partitioned_delete": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 1200,
+          "partition": "Row(p=0)",
+          "key_head": [
+            0,
+            2,
+            4,
+            6,
+            8,
+            10
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 200,
+          "partition": "Row(p=1)",
+          "key_head": [
+            5001,
+            5003,
+            5005,
+            5007,
+            5009,
+            5011
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 999,
+          "partition": "Row(p=1)",
+          "key_head": [
+            1,
+            3,
+            5,
+            9,
+            11,
+            13
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "overwrite",
+        "overwrite",
+        "append",
+        "overwrite",
+        "overwrite"
+      ]
+    },
+    "binpack_before": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 100,
+          "partition": "Row(p=0)",
+          "key_head": [
+            0,
+            6,
+            12,
+            56,
+            62,
+            68
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 100,
+          "partition": "Row(p=0)",
+          "key_head": [
+            1,
+            7,
+            13,
+            57,
+            63,
+            69
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 100,
+          "partition": "Row(p=0)",
+          "key_head": [
+            2,
+            8,
+            14,
+            58,
+            64,
+            70
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 100,
+          "partition": "Row(p=1)",
+          "key_head": [
+            31,
+            37,
+            43,
+            87,
+            93,
+            137
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 100,
+          "partition": "Row(p=1)",
+          "key_head": [
+            32,
+            38,
+            44,
+            88,
+            94,
+            138
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 100,
+          "partition": "Row(p=1)",
+          "key_head": [
+            33,
+            39,
+            45,
+            89,
+            95,
+            139
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "append",
+        "append",
+        "append"
+      ]
+    },
+    "binpack_after": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 300,
+          "partition": "Row(p=0)",
+          "key_head": [
+            0,
+            1,
+            2,
+            6,
+            7,
+            8
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 1,
+          "record_count": 300,
+          "partition": "Row(p=1)",
+          "key_head": [
+            31,
+            32,
+            33,
+            37,
+            38,
+            39
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "append",
+        "append",
+        "append",
+        "replace"
+      ]
+    },
+    "float_nan_overwrite": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 2000,
+          "partition": "0",
+          "key_head": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "key_sorted": true,
+          "layout": {
+            "null_count": 108,
+            "nan_count": 154,
+            "nulls_first_block": true,
+            "nan_tail_block": true,
+            "middle_strictly_ascending": true
+          }
+        }
+      ],
+      "ops": [
+        "overwrite"
+      ]
+    },
+    "alter_order_then_overwrite": {
+      "files": [
+        {
+          "sort_order_id": 2,
+          "record_count": 200,
+          "partition": "Row(p=0)",
+          "key_head": [
+            1974,
+            1968,
+            1962,
+            1956,
+            1950,
+            1924
+          ],
+          "key_sorted": true
+        },
+        {
+          "sort_order_id": 2,
+          "record_count": 200,
+          "partition": "Row(p=1)",
+          "key_head": [
+            1999,
+            1993,
+            1987,
+            1981,
+            1975,
+            1949
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "overwrite",
+        "overwrite"
+      ]
+    },
+    "unpartitioned_overwrite": {
+      "files": [
+        {
+          "sort_order_id": 1,
+          "record_count": 2000,
+          "partition": "0",
+          "key_head": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "key_sorted": true
+        }
+      ],
+      "ops": [
+        "overwrite"
+      ]
+    }
+  }
+}
