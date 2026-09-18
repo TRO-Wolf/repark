@@ -80,6 +80,23 @@ table-format semantics change, so no fork PR).
   deleted; `plan_statement_with_column_repair` / `sql_with_column_repair` take
   `case_insensitive` as an argument and the Spark door passes
   `!spark_case_sensitive_from_options(..)`.
+- Q-21b-11 (orchestrator, 2026-09-18, run 21b round 2, G-2): N-01 is not a defect.
+  Spark resolves the inner SELECT-list `EVENTNAME` to the outer `mc.eventName`
+  (correlated) and answers `[[1], [2]]` in all three spellings (`probe_mc2.py`).
+  The ruling said to pin those answers, then measure the scalar-subquery cell.
+  Measured outcome in §10 step 2: RePark refuses all four at physical planning,
+  the same as on an all-lowercase schema, so the lane pinned the loud refusal as
+  DECLARED (registry ID-1b) instead of an answer. That choice is item 1 of §7.
+- N-02 ruling (orchestrator, 2026-09-18): a pin that stays green with its fix
+  reverted proves nothing. Add one that goes red under the revert, or prove that
+  no such shape exists and delete the hollow pin. §10 step 3 does both: the
+  proof, the deletion, and the pin that goes red under the revert.
+- Q-21b-12 (orchestrator, 2026-09-18, G-2): if it is small and confined to the
+  fold/audit module, the Spark SQL door refuses a star that would output ASCII
+  case twins with `[COLUMN_ALREADY_EXISTS]` / 42711. Otherwise, pin RePark's
+  answer with a DECLARED registry row. The refusal was built and measured and was
+  not confined to the module (§10 step 4), so the declared answer is pinned
+  (registry ID-1a).
 
 ## PROPOSITION LEDGER — ICE-MIXED-CASE-1 — 2026-09-17
 
@@ -100,7 +117,10 @@ table-format semantics change, so no fork PR).
 | C-013 | V-01: a SELECT-list column aliased to its own case-variant spelling folds (`SELECT userId AS USERID`, `userId + 1 AS USERID … ORDER BY USERID`, `COUNT(userId) AS USERID … HAVING USERID > 0`, `USERID AS USERID`); alias references elsewhere stay unfolded. | `test_measured_query_cells_answer_spark[V01_*]` vs `measured_21b` cells; Rust `v01_select_alias_of_the_same_name_folds_the_aliased_column`. | PROVEN | Step 2 `81e7ae3e`; the four V01 cells and both Rust `v01_*` pins green on the release native (§9, step 9 gates). |
 | C-014 | V-02: every relation's stored fields feed the fold, scope by scope; an outer spelling is never rewritten into an inner scope. | `test_measured_query_cells_answer_spark[V02_*]`; Rust `v02_every_relation_folds_not_only_the_first_miss`, `v02_outer_spelling_is_not_rewritten_into_an_inner_scope`. | PROVEN | Step 3 `b1771781`; V02 cells and both Rust `v02_*` pins green (§9, step 9 gates). |
 | C-015 | V-04: JOIN USING folds in every statement that carries a query (INSERT … SELECT … JOIN … USING). | `test_measured_query_cells_answer_spark[V04_join_using_select]`, `test_measured_join_using_insert_answers_spark`; Rust `v04_join_using_folds_inside_insert`. | PROVEN (fold) | Step 4 `4d61a077`; `V04_join_using_select`, `test_join_using_insert_folds_and_writes_the_left_columns` and Rust `v04_join_using_folds_inside_insert` (full rows on MemTables) green. The measured INSERT cell's `y` column is a strict xfail on fork ask F-DML-FIELD-ID-1, pre-existing on `origin/main` (§7). |
-| C-016 | L-08: any reference (bare, qualified, exact or case-variant) to a name with an ASCII case twin in the node's input refuses `[AMBIGUOUS_REFERENCE]` / `42704`, one option per matching field in the requested spelling (Q-21b-1, Q-21b-2); a Spark-written twin Iceberg table refuses at adoption (DECLARED). | `test_case_twin_reference_is_ambiguous_exact_or_not`, `test_measured_case_twin_table_refuses_at_adoption[L08_*]`, `test_sql_door_ambiguous_reference_matches_spark_shape`; Rust `l08_*`, `case_only_collision_raises_the_spark_sentence`, `join_collision_on_bare_reference_raises`; `name_resolution.rs` `write_side_case_twins_are_ambiguous`. | PROVEN | Step 5 `5b131bce`; `test_case_twin_reference_is_ambiguous_exact_or_not` (4), `test_sql_door_ambiguous_reference_matches_spark_shape` (2), adoption refusal (4), Rust `l08_*` + collision pins green; registry ID-1a (FIXED references, DECLARED twin Iceberg tables). |
+| C-016 | L-08: any reference (bare, qualified, exact or case-variant) to a name with an ASCII case twin in the node's input refuses `[AMBIGUOUS_REFERENCE]` / `42704`, one option per matching field in the requested spelling (Q-21b-1, Q-21b-2); a Spark-written twin Iceberg table refuses at adoption (DECLARED). | `test_case_twin_reference_is_ambiguous_exact_or_not`, `test_measured_case_twin_table_refuses_at_adoption[L08_*]`, `test_sql_door_ambiguous_reference_matches_spark_shape`; Rust `l08_*`, `case_only_collision_raises_the_spark_sentence`, `join_collision_on_bare_reference_raises`; `name_resolution.rs` `write_side_case_twins_are_ambiguous`. | PROVEN | Step 5 `5b131bce`; `test_case_twin_reference_is_ambiguous_exact_or_not` (4), `test_sql_door_ambiguous_reference_matches_spark_shape` (2), adoption refusal (4), Rust `l08_*` + collision pins green; registry ID-1a (FIXED references, DECLARED twin Iceberg tables). Round 2: the hollow `l08_every_reference_to_a_case_twin_is_ambiguous` is deleted (C-021 carries the teeth), and correlated references are covered. |
+| C-019 | Q-21b-11: the three N01 IN-subquery spellings and the scalar-subquery cell never answer silently. Spark answers the IN cells `[[1],[2]]` through the correlated outer column; RePark refuses them loudly with a typed `UnsupportedOperationException` (DECLARED, ID-1b). The scalar cell refuses on both engines. | `test_correlated_in_subquery_select_list_refuses_where_spark_answers[N01_*]` (3), `test_correlated_scalar_subquery_select_list_refuses_like_spark`, against `measured_21b_r2`. | PROVEN (DECLARED) | §10 step 2, `4752784b`. The lowercase control refuses the same way with no fold, so the refusal predates this unit. |
+| C-020 | Q-21b-12: `SELECT *` over a twin frame answers `['id','ID']` where Spark refuses 42711 (DECLARED, ID-1a). The unquoted twin view DDL refuses. | `test_star_over_a_case_twin_frame_answers_both_columns_declared`; Rust `n03_star_over_a_case_twin_answers_both_columns_declared`. | PROVEN (DECLARED) | §10 step 4, `b6279dd8`. |
+| C-021 | N-02: the step-5 audit hunk has a pin that goes red when the hunk is reverted, and correlated references to a twin refuse 42704. | Rust `l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere`, `l08_correlated_reference_to_a_case_twin_is_ambiguous`; Python `test_case_twin_reference_is_ambiguous_exact_or_not` (correlated cell). | PROVEN | §10 step 3, `7d0239a4`. Red under the revert, and red on the round-1 head for the correlated cells. |
 | C-017 | R-02 / V-03: when no referenced schema holds an upper-case ASCII field the audit and the AST clone are skipped; the audit that runs indexes each node schema once. Before/after cost measured on a default-profile release native. | Rust `r02_lowercase_only_plans_skip_the_audit`; timing in §9 step 6. | PROVEN | `53514646`; default-profile timing 381.5/393.2 µs → 377.1/365.4 µs per `sql()` (§9). |
 | C-018 | R-03: MERGE fragment scopes come from loaded schemas, not two `SELECT * … LIMIT 0` plans. | `merge_fragments.rs` diff; MC-MRG-01…04 stay green. | PROVEN | Step 7: target from Iceberg metadata, named source from its provider schema; a subquery source keeps one LIMIT 0 plan (no metadata exists). MC-MRG-01…04 + `test_merge_insert_scope.py` green on the release native (§9). |
 
@@ -502,9 +522,169 @@ Every `42702` in the tree is gone (registry, `column_resolution.rs`,
 The `caseSensitive=true` unquoted-exact DECLARED refusal stays in ID-1
 unchanged.
 
+## 10. Run 21b round 2 (claude-opus-5, 2026-09-18)
+
+Head `fc3c20f6`, not rebased. Release native built with
+`CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16` (no timing in this round).
+
+### Step 1 — clippy (`cb60f7b1`)
+
+`clippy::similar_names` in `audit_column`: the written-form hits are now
+`relation_hit` / `bare_hit`. `clippy::type_complexity` in the measured fixture:
+`type MeasuredTable<'a> = (&'a str, Vec<Field>, Vec<ArrayRef>)`. No `#[allow]`.
+`make rust-clippy` is green (4 m 28 s).
+
+### Step 2 — Q-21b-11 (`4752784b`)
+
+The Spark cells were copied from `/tmp/oc-worker/kb-oracle/probe_mc2.log` into
+the oracle's new `measured_21b_r2` block without re-deriving them. The probe
+stopped at the N03 view before it wrote `mc-truth-2.json`, so the log is the
+record.
+
+RePark (release native, `mc21` memory catalog, the probe's `mc` / `other`):
+
+| Statement | RePark | Spark |
+|---|---|---|
+| `SELECT USERID FROM mc WHERE EVENTNAME IN (SELECT EVENTNAME FROM other)` | `UnsupportedOperationException: … Physical plan does not support logical expression InSubquery(…)` | `[[1],[2]]`, `USERID` |
+| same, `userId` / `eventName` | same refusal | `[[1],[2]]`, `userId` |
+| same, `userid` / `eventname` | same refusal | `[[1],[2]]`, `userid` |
+| `SELECT userId, (SELECT max(EVENTNAME) FROM other) AS m FROM mc` (and `max(eventName)`) | `… does not support logical expression ScalarSubquery(<subquery>)` | `CORRELATED_REFERENCE`, `0A000` |
+| all-lowercase control `lc.ns.mc(userid, eventname)`: `… WHERE eventname IN (SELECT eventname FROM other)` | same `InSubquery` refusal (no fold runs) | — |
+| control: correlated `EXISTS (… WHERE name = eventname)` / uncorrelated `IN (SELECT name …)` | `[[1]]` / `[[1]]` | — |
+
+The critic's plan was right: the fold produces `outer_ref(mc.eventName)`, which
+is Spark's resolution. The plan never executes, though, because the engine does
+not decorrelate an outer reference in an IN-subquery projection. That happens on
+any schema, so it is not a case defect and not a silent answer. Pinning
+`[[1],[2]]` would have needed a planner decorrelation rewrite outside the
+fold/audit module, so the refusal is pinned DECLARED (ID-1b) and flagged in §7.
+The scalar cell refuses on both engines. The fold creates no answer Spark lacks,
+so nothing changes there. The ledger records the choice: "pin RePark's answer
+and file a dated registry note".
+
+### Step 3 — N-02 (`7d0239a4`)
+
+Proof that no refusal shape exists which the pre-step-5 walk misses. Write
+`hit_q` for "a qualified written reference whose qualifier equals the resolved
+relation's table" and `hit_b` for "a bare written reference of the same name,
+case-insensitive".
+- New walk refuses when either holds:
+  - `hit_q` and more than one distinct field matches after the qualifier filter;
+  - no `hit_q`, `hit_b`, and more than one distinct spelling in the node's input.
+- Old walk refuses when either holds:
+  - `hit_q` and `honored > 1`, where `honored` uses the same qualifier filter
+    over the same input fields;
+  - otherwise, `hit_b` and more than one spelling over the same input fields.
+
+Every refusal of the new walk therefore satisfies one of the old walk's
+conditions. The only field-set difference is `DFSchema::merge`, which drops
+`(qualifier, field)` pairs that repeat exactly across inputs; that cannot turn
+two differently-spelled fields into one. So the old walk refuses everything the
+new walk refuses.
+
+The old walk differs in two ways only:
+1. It prints options from the resolved relation, not from the FROM text.
+   `l08_bare_twin_options_carry_the_full_relation_name` already pins this.
+2. It falls through to the bare branch even when `hit_q` holds, so a qualified
+   reference that names one field refuses as soon as any bare spelling of the
+   name is written elsewhere in the statement.
+
+Measured with the old walk applied temporarily over 16 shapes: subquery alias,
+CTE, join, unaliased derived table, 1-/2-/3-part qualifiers, WHERE, EXISTS inner,
+a projection alias over a twin, and the over-refusal. Every twin reference
+refused under both walks. Two shapes differed from Spark, and neither was a miss
+the old walk alone makes:
+- `SELECT i.USERID FROM ids i JOIN ja j ON i.USERID = j.userId WHERE j.x IN (SELECT userid FROM jb)`:
+  the old walk says `[AMBIGUOUS_REFERENCE] Reference `userid` is ambiguous, could
+  be: [`i`.`userid`, `j`.`userid`]`, and the new walk answers. This is difference 2.
+- `SELECT 1 FROM tw t WHERE EXISTS (SELECT 1 FROM other o WHERE o.name = CAST(t.ID AS STRING))`:
+  both walks answered silently. The correlated `t.ID` is an `OuterReferenceColumn`,
+  not an `Expr::Column`, so neither walk looked at it.
+
+What changed:
+- `l08_every_reference_to_a_case_twin_is_ambiguous` is deleted. It was hollow, by
+  the proof above, and the Python
+  `test_case_twin_reference_is_ambiguous_exact_or_not` pins the same four cells
+  with the same sentences.
+- New pin with teeth:
+  `l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere`
+  (difference 2). It answers `USERID` / `[]`, and `[[2]]` with `IN (SELECT userid FROM ja)`.
+- Fix: `audit_plan_for_ambiguity` now audits each subquery expression's
+  `outer_ref_columns` (EXISTS / IN / set-comparison / scalar) against the twins
+  of the node that holds the subquery, which is the outer scope.
+- New pin `l08_correlated_reference_to_a_case_twin_is_ambiguous` covers three
+  shapes: qualified in EXISTS, bare in EXISTS, and IN. The Python twin pin gains
+  the EXISTS cell.
+
+Red on the round-1 head, before the outer-reference fix:
+```
+test column_resolution::tests::l08_correlated_reference_to_a_case_twin_is_ambiguous ... FAILED
+thread '…l08_correlated_reference_to_a_case_twin_is_ambiguous' panicked at crates/repark-core/src/column_resolution/tests.rs:58:10:
+called `Result::unwrap_err()` on an `Ok` value: Projection(Projection { expr: [Literal(Int64(1), None)], input: Filter(Filter { predicate: Exists(…
+test result: FAILED. 0 passed; 1 failed
+```
+Red with `audit_plan_for_ambiguity` / `audit_column` reverted to the pre-step-5
+walk (merged `DFSchema`, honored-vs-bare, `reference_parts`), all other code at
+the fixed head:
+```
+test column_resolution::tests::l08_correlated_reference_to_a_case_twin_is_ambiguous ... FAILED
+test column_resolution::tests::l08_bare_twin_options_carry_the_full_relation_name ... FAILED
+test column_resolution::tests::l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere ... FAILED
+thread '…l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere' panicked at crates/repark-core/src/column_resolution/tests.rs:356:62:
+test result: FAILED. 18 passed; 3 failed
+```
+Tree restored, then 21 `column_resolution` tests green.
+
+### Step 4 — Q-21b-12 (`b6279dd8`)
+
+The star refusal was built first, red-first:
+- Wildcard recorded in `WrittenRefs`.
+- At each `Projection`, two passthrough columns of the same relation whose names
+  are ASCII case twins raise `[COLUMN_ALREADY_EXISTS] The column `id` already
+  exists. … SQLSTATE: 42711`.
+- Red on the unfixed tree:
+  `n03_star_over_a_case_twin_refuses_column_already_exists ... FAILED`
+  (`unwrap_err()` on `Ok`).
+- Green after the fix: `SELECT * FROM twv`, `t.*` and `CREATE TEMP VIEW … AS SELECT * FROM twv`
+  refuse 42711, and a cross-relation join star (`a` / `A`) still answers.
+
+It then failed `test_filter_predicate_rewrite.py`, five cells:
+- `test_unambiguous_column_still_filters_on_a_case_colliding_frame[filter]`
+  and its siblings, and `test_ambiguous_reference_error_uses_the_spark_message_shape`.
+- Cause: the DataFrame door's `filter` on a `createDataFrame([...], ["id", "ID", "other"])`
+  frame lowers to a `SELECT * …` through the same resolution path.
+- `spark.table("twv")` refused the same way.
+- Spark answers those DataFrame calls.
+
+Confining the refusal to user SQL would mean threading a door flag in from the
+callers, which is outside the fold/audit module. So the refusal was reverted,
+per the ruling's alternative. Pinned instead: RePark's answer (`['id','ID']`,
+`[[1, 0]]`) beside both recorded Spark 42711 cells (`L08_star_twin`,
+`N03_star_twin_view_create`). The unquoted twin view DDL refuses with the
+engine's `Projections require unique expression names`. Registry ID-1a carries
+the DECLARED bullet.
+
 ## 7. Open questions (HALT writes here; empty means none)
 
-No HALT. One out-of-scope defect found in round 21b, handed to the orchestrator:
+No HALT. Round 2 (2026-09-18) hands the orchestrator three items:
+
+1. **Q-21b-11 divergence from the brief's expected pin.** The brief ruled that the
+   three N01 IN cells be pinned as answering `[[1],[2]]`. They refuse on RePark
+   at physical planning. It is an engine decorrelation gap that predates this
+   unit and is independent of case (§10 step 2), so the lane pinned the loud
+   refusal as DECLARED (ID-1b) rather than invent a planner rewrite. The decision
+   needed is whether to open a planner unit that decorrelates an outer reference
+   in an IN-subquery projection (`x IN (SELECT outer.y FROM s)`).
+2. **Spark cells this round relied on without measuring** (for the next probe):
+   - (a) `SELECT i.USERID FROM ids i JOIN ja j ON i.USERID = j.userId WHERE j.userId IN (SELECT userid FROM ja)`
+     is expected to answer `[[2]]`; C-021's teeth pin assumes it.
+   - (b) `SELECT 1 FROM tw t WHERE EXISTS (SELECT 1 FROM other o WHERE o.name = CAST(t.ID AS STRING))`
+     on the twin table is expected to refuse `42704`.
+   - (c) `createOrReplaceTempView` of a twin frame from the DataFrame door, and
+     `spark.table(...)` on it. Is it 42711 at view creation, as the SQL DDL is?
+3. The earlier INS-JOIN-FIELD-ID item below is unchanged.
+
+One out-of-scope defect found in round 21b, handed to the orchestrator:
 
 - **INS-JOIN-FIELD-ID (P1, silent wrong answer, pre-existing on `origin/main`
   `71482620`, not a case defect) — a new shape of the open fork ask
@@ -534,3 +714,7 @@ No HALT. One out-of-scope defect found in round 21b, handed to the orchestrator:
 Withdrawn in round 21b step 1 and not restored in step 8: C-012 (full gates,
 including the whole facade and parity suites the orchestrator runs) is OPEN
 after this round's code change, so not every clause is PROVEN.
+Round 2 (2026-09-18): C-019, C-020 and C-021 are PROVEN, and C-016 is restated.
+C-012 stays OPEN, because the whole facade and parity suites are the
+orchestrator's run, so the attestation stays withheld. The round's own gates
+are in `/tmp/oc-worker/kb-mixed/handback-2.md`.

@@ -1029,6 +1029,20 @@ Spark cells.
   relation as written in FROM (`` `sc`.`ns`.`tw`.`ID` ``); a temp view in the session default
   schema reads bare (`` `twv`.`ID` ``). The same sentence covers twins across joined relations
   (`amb_l.a` / `amb_r.A`), and write-side twin targets carry the same class and SQLSTATE.
+  Round 2 (2026-09-18): a correlated reference from inside a subquery
+  (`EXISTS (… WHERE o.name = CAST(t.ID AS STRING))`) is audited against the outer scope's
+  fields and refuses the same way. A qualified reference that names one field
+  (`i.USERID` beside `j.userId`) is not refused just because a bare spelling of the name is
+  written somewhere else in the statement.
+- **repark, `SELECT *` over a twin frame (DECLARED, 2026-09-18, Q-21b-12)** — `SELECT * FROM twv`
+  on a temp view of ``SELECT 1 AS id, 0 AS `ID` `` answers columns `['id', 'ID']`, row `[1, 0]`.
+  Spark refuses both the star over its twin table and the twin view's creation with
+  `[COLUMN_ALREADY_EXISTS]` / `42711`. A star refusal in the Spark door's resolution module was
+  built and measured. It also refused the DataFrame door's `filter` and `table` lowerings on
+  case-colliding frames, which Spark answers (`test_filter_predicate_rewrite.py`, five cells), so
+  it did not land. RePark refuses the unquoted view DDL (`… 1 AS id, 2 AS ID`) with the engine's
+  `Projections require unique expression names`, so the refusal matches Spark there but the
+  sentence does not.
 - **repark, Iceberg table carrying twins (DECLARED)** — a twin Iceberg schema cannot be
   created, and cannot be adopted either. `CREATE TABLE … (`id` INT, `ID` INT)` and
   `register_table` on Spark's own twin metadata both refuse loud with `DataInvalid => Cannot
@@ -1042,23 +1056,54 @@ Spark cells.
   `SELECT ID FROM tw` →
   `` … Reference `ID` is ambiguous, could be: [`sc`.`ns`.`tw`.`ID`, `sc`.`ns`.`tw`.`ID`]. SQLSTATE: 42704 ``,
   and `SELECT id` gives the same sentence in `id`. `SELECT * FROM tw` →
-  `` [COLUMN_ALREADY_EXISTS] The column `id` already exists. … SQLSTATE: 42711 ``.
+  `` [COLUMN_ALREADY_EXISTS] The column `id` already exists. … SQLSTATE: 42711 ``, and so does
+  `CREATE OR REPLACE TEMP VIEW twv AS SELECT 1 AS id, 2 AS ID`.
   *(oracle: `python/repark/tests/ice_mixed_case_1_spark_oracle.json` `measured_21b`, PySpark
   4.1.2 + Iceberg 1.11.0, Java 17, hadoop catalog, 2026-09-17; Spark's twin metadata is
-  committed as `python/repark-parity/fixtures/torture/data/ice_mixed_case_1/twin_v3.metadata.json`.)*
+  committed as `python/repark-parity/fixtures/torture/data/ice_mixed_case_1/twin_v3.metadata.json`;
+  the view cell is `measured_21b_r2` `N03_star_twin_view_create`, `probe_mc2.py`, 2026-09-18.)*
 - **Pin** — `python/repark/tests/test_ice_mixed_case_1.py::test_case_twin_reference_is_ambiguous_exact_or_not`
   (the four reference forms on a twin frame, full sentence), `…::test_sql_door_ambiguous_reference_matches_spark_shape`
   (the recorded cross-relation sentence up to `SQLSTATE: 42704`),
   `…::test_measured_case_twin_table_refuses_at_adoption[L08_*]` (the declared adoption
   refusal for all four measured cells); Rust `crates/repark-core/src/column_resolution/tests.rs`
-  `l08_every_reference_to_a_case_twin_is_ambiguous`, `l08_bare_twin_options_carry_the_full_relation_name`,
+  `l08_correlated_reference_to_a_case_twin_is_ambiguous`,
+  `l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere`,
+  `l08_bare_twin_options_carry_the_full_relation_name`, `n03_star_over_a_case_twin_answers_both_columns_declared`,
   `case_only_collision_raises_the_spark_sentence`, `join_collision_on_bare_reference_raises`;
-  `crates/repark-iceberg/src/write/name_resolution.rs::write_side_case_twins_are_ambiguous`.
-  pins: ice-mixed-case-1/C-016
+  `crates/repark-iceberg/src/write/name_resolution.rs::write_side_case_twins_are_ambiguous`;
+  the declared star answer `…::test_star_over_a_case_twin_frame_answers_both_columns_declared`.
+  pins: ice-mixed-case-1/C-016, C-020
 - **Rationale** — FIXED for references on the Spark door. DECLARED for twin Iceberg tables:
   loading a twin schema is table-format behavior that lives in the fork (fork rule), not a
-  RePark-side patch. A star over a twin frame is not audited, because it is not a written
-  reference and Spark's answer on a frame was not measured.
+  RePark-side patch. DECLARED for a star over a twin frame. Spark's refusal is measured, but the
+  refusal RePark could make here would also refuse DataFrame calls that Spark answers.
+
+### ID-1b — a correlated outer column in a subquery's SELECT list refuses (DECLARED)
+
+Unit ICE-MIXED-CASE-1, run 21b round 2 (2026-09-18), ruling Q-21b-11.
+
+- **repark, Spark door** — `SELECT USERID FROM mc WHERE EVENTNAME IN (SELECT EVENTNAME FROM
+  other)`, where `other` has no `eventName`, resolves the inner `EVENTNAME` to the outer
+  `mc.eventName` (a correlated `outer_ref`, as Spark does). Then it refuses at physical planning
+  with `UnsupportedOperationException: … Physical plan does not support logical expression
+  InSubquery(…)`. The exact (`eventName`) and lower (`eventname`) spellings refuse the same way.
+  So does an all-lowercase schema, where the case fold never runs, because the engine does not
+  decorrelate an outer reference in an IN-subquery projection. A scalar subquery reading the
+  outer column in its SELECT list (`SELECT userId, (SELECT max(EVENTNAME) FROM other) AS m FROM
+  mc`) refuses with `… does not support logical expression ScalarSubquery(…)` in every spelling.
+  Loud and typed, never a silent answer.
+- **Apache Spark** — the three IN spellings answer `[[1], [2]]`, with columns `USERID`, `userId`
+  and `userid`. The scalar cell refuses `[UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE]
+  … Expressions referencing the outer query are not supported outside of WHERE/HAVING clauses …
+  SQLSTATE: 0A000`. *(oracle: `python/repark/tests/ice_mixed_case_1_spark_oracle.json`
+  `measured_21b_r2`, `probe_mc2.py`, PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-18.)*
+- **Pin** — `python/repark/tests/test_ice_mixed_case_1.py::test_correlated_in_subquery_select_list_refuses_where_spark_answers`
+  (three spellings) and `…::test_correlated_scalar_subquery_select_list_refuses_like_spark`.
+  pins: ice-mixed-case-1/C-019
+- **Rationale** — DECLARED. The name resolution matches Spark, and the refusal is an engine
+  decorrelation gap that predates this unit and has nothing to do with case. Answering these cells
+  is a planner change outside the case-fold unit. The scalar cell refuses on both engines.
 
 > **G11 closed: not parity — correctness (2026-08-12, Y-10 / #67).** Spark is not the ANSI
 > door's oracle (owner ruling 2026-08-12, Option A). The ANSI door serves standard SQL;
