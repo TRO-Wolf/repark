@@ -350,7 +350,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   sixteen INSERT statements (every commit durable, every loser a
   `CatalogCommitConflicts`: RePark commits 5–7 of 16 where Spark commits 7–15 over
   repetitions — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM, corrected 2026-09-18, fixture
-  `spark_occ_oracle4.json`) and two whole-partition DELETE statements. The range table is seeded by two INSERT statements so its
+  `spark_occ_oracle4.json`, ruling Q-23b-1: no product change) and two whole-partition DELETE
+  statements. The range table is seeded by two INSERT statements so its
   two MERGEs touch different files, as Spark's `local[8]` `range(100)` does (ruling Q-21a-4).
   pins: ice-occ-scoped-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
   pins: ice-occ-scoped-1/C-015, C-016, C-017

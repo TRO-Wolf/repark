@@ -270,8 +270,9 @@ def test_insert_storm_loses_only_to_the_retry_budget(
 ) -> None:
     """Sixteen appends: every commit is durable, every loser is a catalog commit conflict.
 
-    Spark commits 16 of 16 on v2 (14 of 16 on v3, Hadoop retry exhaustion); RePark's losers
-    exhaust the fork's commit-retry budget — registry row ICE-OCC-SCOPED-1-INSERT-STORM (BACKLOG).
+    Over repetitions Spark commits 7–15 of 16 (Hadoop v2 11–15, v3 9–14; InMemory v2 8–9,
+    v3 7–9 — fixture `spark_occ_oracle4.json`); RePark's losers exhaust the fork's
+    commit-retry budget — registry row ICE-OCC-SCOPED-1-INSERT-STORM (BACKLOG).
     """
     session, catalog = _session(tmp_path)
     table = f"{catalog}.ns.ins{version}"
