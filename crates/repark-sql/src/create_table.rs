@@ -123,6 +123,7 @@ pub(crate) async fn execute_create_table(
 
     // Resolve the placement before running the SELECT so target errors fail before writes.
     let placement = resolve_placement(&target, &properties, cx.catalogs, existed).await?;
+    let replace_write = create.or_replace && query.is_some();
 
     match placement {
         Placement::ServiceManaged => {
@@ -134,6 +135,7 @@ pub(crate) async fn execute_create_table(
                 partition_spec,
                 format_version,
                 query,
+                replace_write,
             )
             .await
         }
@@ -147,6 +149,7 @@ pub(crate) async fn execute_create_table(
                 format_version,
                 query,
                 placement,
+                replace_write,
             )
             .await
         }
@@ -164,6 +167,7 @@ async fn execute_staged_create(
     format_version: FormatVersion,
     query: Option<DataFrame>,
     placement: Placement,
+    replace_write: bool,
 ) -> Result<DataFrame> {
     let staged = if let Placement::StagedCreate { location, file_io } = placement {
         let creation = iceberg_table_creation(
@@ -178,6 +182,7 @@ async fn execute_staged_create(
         StagedTableTransaction::begin_create(*file_io, target.ident(), creation)
             .await
             .map_err(iceberg_err)?
+            .with_replace_write(replace_write)
     } else {
         // Replace stages keep the existing table location and metadata contract.
         let existing = target
@@ -197,6 +202,7 @@ async fn execute_staged_create(
         StagedTableTransaction::begin_replace(&existing, creation)
             .await
             .map_err(iceberg_err)?
+            .with_replace_write(replace_write)
     };
 
     // Streaming bounds memory by batch size and open writers.
@@ -417,6 +423,7 @@ async fn create_first_service_managed(
     partition_spec: Option<UnboundPartitionSpec>,
     format_version: FormatVersion,
     query: Option<DataFrame>,
+    replace_write: bool,
 ) -> Result<DataFrame> {
     let creation = iceberg_table_creation(
         &target.table,
@@ -436,7 +443,10 @@ async fn create_first_service_managed(
     let write: Result<()> = async {
         if let Some(frame) = query {
             let data_files = write_query(cx.ctx, &table, frame).await?;
-            if !data_files.is_empty() {
+            if replace_write {
+                repark_iceberg::write::commit_replace_write(&target.catalog, &table, data_files)
+                    .await?;
+            } else if !data_files.is_empty() {
                 repark_iceberg::write::commit_append(&target.catalog, &table, data_files).await?;
             }
         }
@@ -782,3 +792,6 @@ fn iceberg_v3_named_primitive(
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod rtas_ops_tests;

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -95,20 +96,22 @@ PARQUET_SEQUENCE: tuple[tuple[str, str], ...] = (
 def _spark_session(warehouse: Path) -> Any:
     from pyspark.sql import SparkSession
 
-    return (
+    builder = (
         SparkSession.builder.master("local[4]")
         .appName("ic-rtas-byname-1-oracle")
         .config("spark.driver.memory", "2g")
         .config("spark.ui.enabled", "false")
         .config("spark.jars.packages", ICEBERG_SPARK_RUNTIME_GAV)
-        .config("spark.jars.ivy", "/tmp/ic-build/.ivy2")
         .config("spark.sql.extensions", ICEBERG_SPARK_EXTENSIONS)
         .config("spark.sql.catalog.sc", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.sc.type", "hadoop")
         .config("spark.sql.catalog.sc.warehouse", str(warehouse))
         .config("spark.sql.session.timeZone", "UTC")
-        .getOrCreate()
     )
+    ivy = os.environ.get("REPARK_ORACLE_IVY")
+    if ivy:
+        builder = builder.config("spark.jars.ivy", ivy)
+    return builder.getOrCreate()
 
 
 def _rows_of(spark: Any, sql: str) -> list[list[Any]]:
