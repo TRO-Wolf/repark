@@ -101,6 +101,7 @@ strings) whose committed bytes hash to
   (ledger Q-21a-4).
 
 pins: ice-occ-scoped-1/C-015, C-020
+pins: ice-append-retry-1/C-001, C-002
 
 ## Pointers
 

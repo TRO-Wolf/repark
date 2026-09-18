@@ -11,6 +11,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   refusal fixture, the foreign-metadata register refusal, registry row V3-MULTIARG-1,
   post-1.x card. `risk_tier: standard`. Branch `docs/v3-multiarg-1`.
   pins: v3-multiarg-1/C-001, C-002, C-003, C-004, C-005
+- [ice-append-retry-1-ledger.md](ice-append-retry-1-ledger.md) —
+  **ICE-APPEND-RETRY-1 (2026-09-18), in flight:** the INSERT-STORM row corrected to what
+  Spark measures over repetitions (rating row V2-20a remaining distance) — the six-repetition
+  Spark oracle on two catalogs, the recorder, the corrected registry row and test docstring,
+  no product change under ruling Q-23b-1. `risk_tier: standard`. Branch
+  `docs/ice-append-retry-1`.
+  pins: ice-append-retry-1/C-001, C-002, C-003, C-004, C-005
 - [ice-tsns-sql-1-ledger.md](ice-tsns-sql-1-ledger.md) —
   **ICE-TSNS-SQL-1 (2026-09-17), in flight:** `timestamp_ns` / `timestamptz_ns` on the SQL door
   (rating row V3-06 and the ns half of V3-04) answer the Iceberg v3 spec with a PyIceberg 0.12.0

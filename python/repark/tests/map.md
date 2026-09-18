@@ -355,6 +355,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   two MERGEs touch different files, as Spark's `local[8]` `range(100)` does (ruling Q-21a-4).
   pins: ice-occ-scoped-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
   pins: ice-occ-scoped-1/C-015, C-016, C-017
+  pins: ice-append-retry-1/C-003, C-004, C-005
 - [_record_ice_append_storm_1.py](_record_ice_append_storm_1.py) — the **record driver**
   for ICE-APPEND-RETRY-1 (NOT a `test_` module; never collected): sixteen barrier-released
   single-row inserts on a fresh table per repetition, six repetitions per catalog (Hadoop
