@@ -22,6 +22,9 @@ ledger) and the Python `test_case_twin_reference_is_ambiguous_exact_or_not` hold
 cells. `l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere` is
 the pin that goes red under that revert (the old walk over-refused); `l08_correlated_reference_to_a_case_twin_is_ambiguous`
 pins the outer-reference audit (red on the round-1 head and under the revert).
+Round 2 Q-21b-12: `n03_star_over_a_case_twin_answers_both_columns_declared` pins the declared
+star answer on a twin MemTable (Spark refuses 42711; a star refusal here would also refuse the
+DataFrame `filter` / `table` lowerings, which Spark answers — ledger N-03).
 pins: ice-mixed-case-1/C-001…C-010, C-013…C-016
 
 ## Files

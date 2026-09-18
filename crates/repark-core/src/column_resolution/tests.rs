@@ -594,3 +594,17 @@ async fn r02_lowercase_only_plans_skip_the_audit() {
         assert!(plan_has_upper_ascii_field(&plan), "{sql}");
     }
 }
+
+#[tokio::test]
+async fn n03_star_over_a_case_twin_answers_both_columns_declared() {
+    let ctx = measured_ctx();
+    for sql in [
+        "SELECT * FROM tw",
+        "SELECT t.* FROM tw AS t",
+        "SELECT * FROM (SELECT * FROM tw) AS s",
+    ] {
+        let (names, rows) = measured_rows(&ctx, sql).await;
+        assert_eq!(names, ["id", "ID"], "{sql}");
+        assert_eq!(rows, text_rows(&[&["1", "0"]]), "{sql}");
+    }
+}

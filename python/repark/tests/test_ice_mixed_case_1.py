@@ -779,3 +779,29 @@ def test_correlated_scalar_subquery_select_list_refuses_like_spark(
             match="Physical plan does not support logical expression ScalarSubquery",
         ):
             measured.sql(statement).to_arrow()
+
+
+def test_star_over_a_case_twin_frame_answers_both_columns_declared(
+    measured: ReparkSession,
+) -> None:
+    """Q-21b-12 (declared): ``SELECT *`` over a twin input answers where Spark refuses 42711.
+
+    Spark refuses the star over the twin Iceberg table (``L08_star_twin``) and
+    the twin temp view's creation (``N03_star_twin_view_create``) with
+    ``[COLUMN_ALREADY_EXISTS]``. RePark refuses the twin Iceberg table at
+    adoption and the unquoted view DDL at planning, but a twin frame registered
+    from the DataFrame door answers the star: the DataFrame ``filter`` and
+    ``table`` paths lower to the same ``SELECT *``, so a star refusal in the
+    fold module would refuse DataFrame calls Spark answers (registry
+    ICE-MIXED-CASE-1 star row).
+    """
+    for cell in (_MEASURED_CELLS["L08_star_twin"], _ROUND_2_CELLS["N03_star_twin_view_create"]):
+        assert cell["outcome"] == "error"
+        assert "[COLUMN_ALREADY_EXISTS]" in cell["message"][0]
+        assert "SQLSTATE: 42711" in cell["message"][0]
+    measured.sql("SELECT 1 AS id, 0 AS `ID`").createOrReplaceTempView("twv")
+    table = measured.sql("SELECT * FROM twv").to_arrow()
+    assert table.column_names == ["id", "ID"]
+    assert _sorted_rows(table) == [[1, 0]]
+    with pytest.raises(AnalysisException, match="Projections require unique expression names"):
+        measured.sql(_ROUND_2_CELLS["N03_star_twin_view_create"]["sql"]).collect()
