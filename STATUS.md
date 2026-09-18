@@ -245,8 +245,6 @@ this file keeps one line of state plus a link. A known **defect with its fix sch
 divergence and gets no row: it stays here until the fix lands, and the fixing unit deletes the
 entry rather than moving it. Nothing is described in both places.
 
-- **Iceberg rating residue (2026-09-16)** — scheduled; each unit deletes its clause:
-  [State](docs/artifacts/iceberg-run-20-closeout-2026-09-17.html).
 - **FNP-8 residuals** — **BACKLOG (2026-09-07)**: [FNP8-NULLABILITY and following rows](docs/spark-sql-iceberg-parity.md#fnp8-nullability--higher-order-result-metadata-retains-inherited-nullable-fields).
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry
   [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
