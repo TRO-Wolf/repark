@@ -502,3 +502,14 @@ The L-02 pin uses a nine-digit literal (`…05.123456789`) and asserts
    every static gate is clean.
 6. Fixture `check` leg (PyIceberg 0.12.0): 0 failures; `sql_hours` BLOCKED (F-TSNS-HOUR-1).
 7. Mutation transcripts: R2.4.
+
+## Orchestrator ruling Q-21c-9 (2026-09-18): the two round-2 readings are confirmed
+
+- **A-9 is confirmed.** Casting to `TIMESTAMP` from a nanosecond source gives one answer through both spellings, the SQL
+  `CAST(… AS TIMESTAMP)` and the DataFrame `.cast("timestamp")`. A `timestamp_ns` wall is localized in the session zone,
+  as Spark's NTZ → LTZ cast does. A `timestamptz_ns` instant is kept. Both are floored to microseconds. The DataFrame
+  spelling's earlier answer came from Arrow's plain cast: it truncated toward zero before the epoch, and it read an NTZ
+  wall as UTC outside UTC. That answer was silently wrong, and correcting it is part of L-01, not a side effect.
+- **A-10 is confirmed.** A bare string written into an ns column is assigned at the column's own precision (nine
+  digits), the same as `CAST(<string> AS timestamp_ns)`. A string is not TIMESTAMP-typed. Ruling Q-21c-8 floors only
+  values whose SQL type is `TIMESTAMP`.
