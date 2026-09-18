@@ -636,8 +636,8 @@ def test_measured_query_cells_answer_spark(measured: ReparkSession, cell_id: str
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "pre-existing on origin/main 71482620, not a case defect: INSERT … SELECT over a join of "
-        "two Iceberg scans writes NULL for the right-side column (ledger §7 INS-JOIN-FIELD-ID)"
+        "BLOCKED-ON-FORK F-DML-FIELD-ID-1, pre-existing on origin/main 71482620: INSERT … SELECT "
+        "over a join of two Iceberg scans writes NULL for the right-side column"
     ),
 )
 def test_measured_join_using_insert_answers_spark(measured: ReparkSession) -> None:

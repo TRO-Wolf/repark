@@ -965,7 +965,9 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
 them, and the document is ordered by surface, never by date. Unit ICE-MIXED-CASE-1 rewrote this
 row on 2026-09-16, and rewrote the Spark-door half again on 2026-09-17 (round 5, Q-20b-2):
 identifier normalization stays ON, so the fold rewrites the parsed statement and DML fragments
-to backticked stored-case spellings instead of switching the parser off.
+to backticked stored-case spellings instead of switching the parser off. Round 21b
+(2026-09-17) closed V-01 / V-02 / V-04 / L-08 against a measured Spark recording and moved the
+ambiguity SQLSTATE to the measured `42704` (Q-21b-1).
 
 - **repark, ANSI door** — a *quoted* identifier matches case-**sensitively**: `"ID"` never
   resolves against a column stored as `id`; the refusal is a resolution failure naming `"ID"`.
@@ -973,12 +975,18 @@ to backticked stored-case spellings instead of switching the parser off.
   2026-08-12, Option A). *Unquoted* identifiers agree with Spark through either door.
 - **repark, Spark door, `caseSensitive=false` (default)** — every spelling resolves against
   the stored case: unquoted mixed/lower/upper case and backticked wrong-case all find `userId`.
-  The fold is single-pass over the parsed statement (SELECT list, WHERE, GROUP BY / ORDER BY /
-  HAVING, JOIN `USING`, UPDATE / INSERT targets) and over DML fragments (`MERGE ON` / `SET` /
-  `INSERT`, identity DELETE / UPDATE selections), and emits backticked stored-case spellings —
-  backticks because double-quoted spans are string literals on this door (ID-2), and a bare
-  `t."userId"` does not parse in the session dialect. Two case-insensitive matches refuse with
-  Spark's `[AMBIGUOUS_REFERENCE]` sentence and `SQLSTATE: 42702`. Output columns keep stored
+  After a `FieldNotFound` the fold rewrites the parsed statement against every referenced
+  relation's stored fields, scope by scope (innermost query first, then outward), and replans
+  until a miss repeats. It covers the SELECT list, including a column aliased to its own
+  case-variant spelling (`SELECT userId AS USERID`, `USERID AS USERID`); WHERE; GROUP BY /
+  ORDER BY / HAVING (a reference that names a SELECT alias is left on the alias); JOIN `USING`
+  in every statement that carries a query (`INSERT … SELECT … JOIN … USING`); and UPDATE /
+  INSERT targets. It also covers DML fragments (`MERGE ON` / `SET` / `INSERT`, identity DELETE /
+  UPDATE selections). It emits backticked stored-case spellings, because double-quoted spans
+  are string literals on this door (ID-2) and a bare `t."userId"` does not parse in the session
+  dialect. An outer spelling is never rewritten into an inner scope. A reference to a name with
+  an ASCII case twin in its input refuses, exact case included (row
+  [ID-1a](#id-1a--ascii-case-twin-columns-refuse-every-reference)). Output columns keep stored
   names where Spark echoes the requested spelling (pinned, not converged).
 - **repark, Spark door, `caseSensitive=true` (DECLARED split)** — resolution is exact, and the
   parser fold is lossy: an unquoted mixed-case spelling arrives lowercased, so even exact-case
@@ -988,16 +996,69 @@ to backticked stored-case spellings instead of switching the parser off.
 - **Apache Spark** — resolves every spelling case-**insensitively** by default
   (`spark.sql.caseSensitive = false` applies to quoted names too), so `` `ID` `` finds `id`;
   under `true` both quoted and unquoted exact-case resolve.
-  *(oracle: recorded fixture `python/repark/tests/ice_mixed_case_1_spark_oracle.json`, Spark 4.1.2.)*
+  *(oracle: recorded fixture `python/repark/tests/ice_mixed_case_1_spark_oracle.json`, Spark 4.1.2;
+  its `measured_21b` block is the run-21b recording of the V-01 / V-02 / V-04 / L-08 cells,
+  PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17.)*
 - **Pin** — `crates/repark-sql/tests/cross_door.rs::cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`
   (ANSI refuses, Spark resolves) plus `python/repark/tests/test_ice_mixed_case_1.py` (both
   doors, both flag values, DML fragments, the ambiguity shape, the backticked-`true` success,
-  the unquoted-`true` declared refusal, and the live tier).
+  the unquoted-`true` declared refusal, and the live tier). The run-21b cells are
+  `test_measured_query_cells_answer_spark[V01_* / V02_* / V04_join_using_select]` and
+  `test_join_using_insert_folds_and_writes_the_left_columns`, plus the Rust
+  `crates/repark-core/src/column_resolution/tests.rs` `v01_*`, `v02_*`, `v04_*`.
+  `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) is
+  `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1: the fold plans, but the right-side join
+  column of an INSERT from two Iceberg scans is written NULL (pre-existing on `origin/main`).
 - **Rationale** — FIXED on the Spark door under `false` (ICE-MIXED-CASE-1, 2026-09-17); the
   `true` unquoted-exact refusal and the stored-name output echo are DECLARED splits with pins.
   INTENDED split on the ANSI door per G11 Option A. The old declared-divergence pin reddened
   exactly as designed when the Spark half converged, and this row was rewritten in the same
   change.
+
+### ID-1a — ASCII case-twin columns refuse every reference
+
+Unit ICE-MIXED-CASE-1, round 21b (2026-09-17), rulings Q-21b-1 and Q-21b-2 from the measured
+Spark cells.
+
+- **repark, Spark door, `caseSensitive=false`** — when a node's input holds two fields that
+  differ only by ASCII case (`id`, `ID`), any written reference to either refuses. That covers
+  bare and qualified references, and exact case too (`SELECT id` refuses). The error is
+  `[AMBIGUOUS_REFERENCE] Reference <ref> is ambiguous, could be: [<options>]. SQLSTATE: 42704`,
+  with one option per matching field, each in the requested spelling. A qualified reference
+  prints `` `t`.`ID` `` and its options `` `t`.`ID` ``. A bare reference's options carry the
+  relation as written in FROM (`` `sc`.`ns`.`tw`.`ID` ``); a temp view in the session default
+  schema reads bare (`` `twv`.`ID` ``). The same sentence covers twins across joined relations
+  (`amb_l.a` / `amb_r.A`), and write-side twin targets carry the same class and SQLSTATE.
+- **repark, Iceberg table carrying twins (DECLARED)** — a twin Iceberg schema cannot be
+  created, and cannot be adopted either. `CREATE TABLE … (`id` INT, `ID` INT)` and
+  `register_table` on Spark's own twin metadata both refuse loud with `DataInvalid => Cannot
+  build lower case index: id and ID collide` (the fork's schema index), before any reference is
+  resolved. Every L-08 statement on such a table therefore refuses at adoption rather than with
+  Spark's sentence, and `SELECT *` refuses at adoption rather than with
+  `[COLUMN_ALREADY_EXISTS]`. The refusal is loud, never a silent answer.
+- **Apache Spark** — Iceberg's Java API `updateSchema().addColumn("ID", …)` on a table with
+  `id` is allowed (schema `['id', 'ID']`). `SELECT t.ID FROM tw AS t` →
+  `` [AMBIGUOUS_REFERENCE] Reference `t`.`ID` is ambiguous, could be: [`t`.`ID`, `t`.`ID`]. SQLSTATE: 42704 ``.
+  `SELECT ID FROM tw` →
+  `` … Reference `ID` is ambiguous, could be: [`sc`.`ns`.`tw`.`ID`, `sc`.`ns`.`tw`.`ID`]. SQLSTATE: 42704 ``,
+  and `SELECT id` gives the same sentence in `id`. `SELECT * FROM tw` →
+  `` [COLUMN_ALREADY_EXISTS] The column `id` already exists. … SQLSTATE: 42711 ``.
+  *(oracle: `python/repark/tests/ice_mixed_case_1_spark_oracle.json` `measured_21b`, PySpark
+  4.1.2 + Iceberg 1.11.0, Java 17, hadoop catalog, 2026-09-17; Spark's twin metadata is
+  committed as `python/repark-parity/fixtures/torture/data/ice_mixed_case_1/twin_v3.metadata.json`.)*
+- **Pin** — `python/repark/tests/test_ice_mixed_case_1.py::test_case_twin_reference_is_ambiguous_exact_or_not`
+  (the four reference forms on a twin frame, full sentence), `…::test_sql_door_ambiguous_reference_matches_spark_shape`
+  (the recorded cross-relation sentence up to `SQLSTATE: 42704`),
+  `…::test_measured_case_twin_table_refuses_at_adoption[L08_*]` (the declared adoption
+  refusal for all four measured cells); Rust `crates/repark-core/src/column_resolution/tests.rs`
+  `l08_every_reference_to_a_case_twin_is_ambiguous`, `l08_bare_twin_options_carry_the_full_relation_name`,
+  `case_only_collision_raises_the_spark_sentence`, `join_collision_on_bare_reference_raises`;
+  `crates/repark-iceberg/src/write/name_resolution.rs::write_side_case_twins_are_ambiguous`.
+  pins: ice-mixed-case-1/C-016
+- **Rationale** — FIXED for references on the Spark door. DECLARED for twin Iceberg tables:
+  loading a twin schema is table-format behavior that lives in the fork (fork rule), not a
+  RePark-side patch. A star over a twin frame is not audited, because it is not a written
+  reference and Spark's answer on a frame was not measured.
 
 > **G11 closed: not parity — correctness (2026-08-12, Y-10 / #67).** Spark is not the ANSI
 > door's oracle (owner ruling 2026-08-12, Option A). The ANSI door serves standard SQL;

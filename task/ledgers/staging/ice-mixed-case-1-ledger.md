@@ -95,12 +95,12 @@ table-format semantics change, so no fork PR).
 | C-008 | A temp view of a DataFrame with camelCase columns answers Spark (false) for the SELECT/WHERE cells. | Same pin file, MC-VIEW-01…02. | PROVEN | Round-5 redesign (Q-20b-2): offline 42 passed 2026-09-17, release native (§6); live 78-cell re-run pending. |
 | C-009 | The DataFrame door (`select`, `filter`) answers the same cells as recorded (unchanged behavior). | Same pin file, MC-DF-01…04. | PROVEN | Round-5 redesign (Q-20b-2): offline 42 passed 2026-09-17, release native (§6); live 78-cell re-run pending. |
 | C-010 | The live tier re-runs Spark and asserts repark == pinned golden == live Spark for every cell. | Same pin file, live tier under `REPARK_PARITY_LIVE=1`. | PROVEN | 81 passed (42 offline + 39 live) 2026-09-17 via jb-jvm.sh lock, PySpark 4.1.2 from /tmp/sparkenv mixed with the lane native (§6). |
-| C-011 | ID-1 is rewritten to the new truth (dated 2026-09-17, ICE-MIXED-CASE-1 round 5); `cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted` pins the new per-door truth; any still-divergent shape is its own row with its pin. | Registry diff + `cross_door.rs` diff. | PROVEN | `docs/spark-sql-iceberg-parity.md` ID-1 rewritten (false FIXED, `true` unquoted-exact DECLARED refusal, ANSI INTENDED split); `cross_door.rs` ROW 8 asserts ANSI-refuses / Spark-resolves; `cargo test -p repark-sql` pending re-run (§6). |
-| C-012 | Full gates green: new pin file, live tier, `cargo test -p repark-spark --lib`, `cargo test -p repark-sql`, `make verify`, whole facade suite, whole parity suite. | Gate outputs pasted below. | PROVEN | Pins 42 offline + 81 live; core 591 / spark 1043 / iceberg 435 / sql all binaries; `make ci` green; facade r5b 9368 passed; parity r5 757 passed (§6). |
-| C-013 | V-01: a SELECT-list column aliased to its own case-variant spelling folds (`SELECT userId AS USERID`, `userId + 1 AS USERID … ORDER BY USERID`, `COUNT(userId) AS USERID … HAVING USERID > 0`, `USERID AS USERID`); alias references elsewhere stay unfolded. | `test_measured_query_cells_answer_spark[V01_*]` vs `measured_21b` cells; Rust `v01_select_alias_of_the_same_name_folds_the_aliased_column`. | OPEN | Red §9. |
-| C-014 | V-02: every relation's stored fields feed the fold, scope by scope; an outer spelling is never rewritten into an inner scope. | `test_measured_query_cells_answer_spark[V02_*]`; Rust `v02_every_relation_folds_not_only_the_first_miss`, `v02_outer_spelling_is_not_rewritten_into_an_inner_scope`. | OPEN | Red §9. |
-| C-015 | V-04: JOIN USING folds in every statement that carries a query (INSERT … SELECT … JOIN … USING). | `test_measured_query_cells_answer_spark[V04_join_using_select]`, `test_measured_join_using_insert_answers_spark`; Rust `v04_join_using_folds_inside_insert`. | OPEN | Red §9. |
-| C-016 | L-08: any reference (bare, qualified, exact or case-variant) to a name with an ASCII case twin in the node's input refuses `[AMBIGUOUS_REFERENCE]` / `42704`, one option per matching field in the requested spelling (Q-21b-1, Q-21b-2); a Spark-written twin Iceberg table refuses at adoption (DECLARED). | `test_case_twin_reference_is_ambiguous_exact_or_not`, `test_measured_case_twin_table_refuses_at_adoption[L08_*]`, `test_sql_door_ambiguous_reference_matches_spark_shape`; Rust `l08_*`, `case_only_collision_raises_the_spark_sentence`, `join_collision_on_bare_reference_raises`; `name_resolution.rs` `write_side_case_twins_are_ambiguous`. | OPEN | Red §9. |
+| C-011 | ID-1 is rewritten to the new truth (dated 2026-09-17, ICE-MIXED-CASE-1 round 5); `cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted` pins the new per-door truth; any still-divergent shape is its own row with its pin. | Registry diff + `cross_door.rs` diff. | PROVEN | `docs/spark-sql-iceberg-parity.md` ID-1 rewritten (false FIXED, `true` unquoted-exact DECLARED refusal, ANSI INTENDED split); `cross_door.rs` ROW 8 asserts ANSI-refuses / Spark-resolves; `cargo test -p repark-sql` pending re-run (§6). Round 21b: ID-1 restated (42704, V-01/V-02/V-04 coverage, the F-DML-FIELD-ID-1 xfail) and row ID-1a added (case twins: FIXED references, DECLARED twin Iceberg tables). |
+| C-012 | Full gates green: new pin file, live tier, `cargo test -p repark-spark --lib`, `cargo test -p repark-sql`, `make verify`, whole facade suite, whole parity suite. | Gate outputs pasted below. | OPEN | Pins 42 offline + 81 live; core 591 / spark 1043 / iceberg 435 / sql all binaries; `make ci` green; facade r5b 9368 passed; parity r5 757 passed (§6). Round 21b: re-opened. The code changed; this round's gates are in §9 step 9, and the whole facade and parity suites are the orchestrator's run. |
+| C-013 | V-01: a SELECT-list column aliased to its own case-variant spelling folds (`SELECT userId AS USERID`, `userId + 1 AS USERID … ORDER BY USERID`, `COUNT(userId) AS USERID … HAVING USERID > 0`, `USERID AS USERID`); alias references elsewhere stay unfolded. | `test_measured_query_cells_answer_spark[V01_*]` vs `measured_21b` cells; Rust `v01_select_alias_of_the_same_name_folds_the_aliased_column`. | PROVEN | Step 2 `81e7ae3e`; the four V01 cells and both Rust `v01_*` pins green on the release native (§9, step 9 gates). |
+| C-014 | V-02: every relation's stored fields feed the fold, scope by scope; an outer spelling is never rewritten into an inner scope. | `test_measured_query_cells_answer_spark[V02_*]`; Rust `v02_every_relation_folds_not_only_the_first_miss`, `v02_outer_spelling_is_not_rewritten_into_an_inner_scope`. | PROVEN | Step 3 `b1771781`; V02 cells and both Rust `v02_*` pins green (§9, step 9 gates). |
+| C-015 | V-04: JOIN USING folds in every statement that carries a query (INSERT … SELECT … JOIN … USING). | `test_measured_query_cells_answer_spark[V04_join_using_select]`, `test_measured_join_using_insert_answers_spark`; Rust `v04_join_using_folds_inside_insert`. | PROVEN (fold) | Step 4 `4d61a077`; `V04_join_using_select`, `test_join_using_insert_folds_and_writes_the_left_columns` and Rust `v04_join_using_folds_inside_insert` (full rows on MemTables) green. The measured INSERT cell's `y` column is a strict xfail on fork ask F-DML-FIELD-ID-1, pre-existing on `origin/main` (§7). |
+| C-016 | L-08: any reference (bare, qualified, exact or case-variant) to a name with an ASCII case twin in the node's input refuses `[AMBIGUOUS_REFERENCE]` / `42704`, one option per matching field in the requested spelling (Q-21b-1, Q-21b-2); a Spark-written twin Iceberg table refuses at adoption (DECLARED). | `test_case_twin_reference_is_ambiguous_exact_or_not`, `test_measured_case_twin_table_refuses_at_adoption[L08_*]`, `test_sql_door_ambiguous_reference_matches_spark_shape`; Rust `l08_*`, `case_only_collision_raises_the_spark_sentence`, `join_collision_on_bare_reference_raises`; `name_resolution.rs` `write_side_case_twins_are_ambiguous`. | PROVEN | Step 5 `5b131bce`; `test_case_twin_reference_is_ambiguous_exact_or_not` (4), `test_sql_door_ambiguous_reference_matches_spark_shape` (2), adoption refusal (4), Rust `l08_*` + collision pins green; registry ID-1a (FIXED references, DECLARED twin Iceberg tables). |
 | C-017 | R-02 / V-03: when no referenced schema holds an upper-case ASCII field the audit and the AST clone are skipped; the audit that runs indexes each node schema once. Before/after cost measured on a default-profile release native. | Rust `r02_lowercase_only_plans_skip_the_audit`; timing in §9 step 6. | PROVEN | `53514646`; default-profile timing 381.5/393.2 µs → 377.1/365.4 µs per `sql()` (§9). |
 | C-018 | R-03: MERGE fragment scopes come from loaded schemas, not two `SELECT * … LIMIT 0` plans. | `merge_fragments.rs` diff; MC-MRG-01…04 stay green. | PROVEN | Step 7: target from Iceberg metadata, named source from its provider schema; a subquery source keeps one LIMIT 0 plan (no metadata exists). MC-MRG-01…04 + `test_merge_insert_scope.py` green on the release native (§9). |
 
@@ -488,12 +488,30 @@ load) with one metadata load is strictly less work. Pins after the change, on
 the release native: `test_ice_mixed_case_1.py` + `test_merge_insert_scope.py`
 62 passed, 39 skipped, 1 xfailed.
 
+### Step 8 — registry and rulings
+
+`docs/spark-sql-iceberg-parity.md`:
+- ID-1: restated for round 21b — the V-01 / V-02 / V-04 coverage, `42704`, the
+  `measured_21b` oracle, the pins, and the F-DML-FIELD-ID-1 strict xfail.
+- New row ID-1a (ASCII case-twin columns): FIXED for references with the
+  measured sentence; DECLARED for twin Iceberg tables, which the fork refuses
+  to load.
+
+Every `42702` in the tree is gone (registry, `column_resolution.rs`,
+`name_resolution.rs`, pins). Q-21b-1 and Q-21b-2 are in the rulings section.
+The `caseSensitive=true` unquoted-exact DECLARED refusal stays in ID-1
+unchanged.
+
 ## 7. Open questions (HALT writes here; empty means none)
 
 No HALT. One out-of-scope defect found in round 21b, handed to the orchestrator:
 
 - **INS-JOIN-FIELD-ID (P1, silent wrong answer, pre-existing on `origin/main`
-  `71482620`, not a case defect).** `INSERT INTO t SELECT a.k, x, y FROM a JOIN b
+  `71482620`, not a case defect) — a new shape of the open fork ask
+  F-DML-FIELD-ID-1** (ICE-RTAS-BYNAME-1 ledger: the fork's id-first
+  `batch_column_index` misroutes a DML batch whose field ids come from a
+  differently-ordered source table; here `b.y` carries field id 2 and the
+  target expects `y` at id 3). `INSERT INTO t SELECT a.k, x, y FROM a JOIN b
   ON a.k = b.k` with `a`, `b`, `t` all Iceberg tables and all-lowercase names
   writes `y = NULL`. The SELECT alone answers `[[1, 10, 100]]`. Reproduced on
   this branch's native, on the reviewed PR-head wheel (`28b6ff00`) and on the
@@ -502,7 +520,7 @@ No HALT. One out-of-scope defect found in round 21b, handed to the orchestrator:
   of `a`/`b`, and `vb.y` from a frame view. The lead is that the right-side
   Iceberg column arrives carrying its source `PARQUET:field_id` (`b.y` is field
   id 2, the same id as `a.x`) and is lost between the join output and the
-  write; stripping the metadata avoids it. Out of this unit's surface (the
+  write; stripping the metadata avoids it. Registry ID-1's Pin bullet names it. Out of this unit's surface (the
   write path, not name resolution), so no fix here.
   `test_measured_join_using_insert_answers_spark` asserts the measured V-04
   INSERT cell under `xfail(strict=True)` naming this defect, and turns red when
@@ -513,5 +531,6 @@ No HALT. One out-of-scope defect found in round 21b, handed to the orchestrator:
 
 ## 8. Coverage attestation
 
-Withdrawn in round 21b step 1: clauses C-013…C-018 are OPEN. The block returns
-only when every clause is PROVEN (step 8).
+Withdrawn in round 21b step 1 and not restored in step 8: C-012 (full gates,
+including the whole facade and parity suites the orchestrator runs) is OPEN
+after this round's code change, so not every clause is PROVEN.
