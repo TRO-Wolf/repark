@@ -198,7 +198,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `StagedTableTransaction::with_replace_write(ctas.or_replace)` — the
   `begin_replace` arm and the `begin_create` arm — so an RTAS commits `overwrite`
   (or `delete` when the SELECT is empty) while plain CTAS keeps `append`. The
-  service-managed create-first arm never reaches the staged type and is unchanged.
+  service-managed create-first arm never reaches the staged type; **round 2** gave
+  `execute_ctas_service_managed` the same answer through
+  `repark_iceberg::write::commit_replace_write` when `ctas.or_replace` (new-table
+  RTAS → `overwrite`, empty → `delete`); plain service-managed CTAS keeps `commit_append`.
+  pins: ice-rtas-ops-2/C-018, C-019
   The two opt-in lines took `execute_ctas` past clippy's `too_many_lines`, so it
   carries the repository's `#[allow(clippy::too_many_lines)]` like 23 other sites.
   pins: ice-rtas-ops-2/C-001, C-002, C-004

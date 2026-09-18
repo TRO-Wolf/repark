@@ -1,4 +1,4 @@
-"""ICE-RTAS-BYNAME-1 — ``INSERT … BY NAME`` on the Spark door, RTAS operations as xfails.
+"""ICE-RTAS-BYNAME-1 — ``INSERT … BY NAME`` on the Spark door, plus the RTAS operation pins.
 
 Oracle: ``ice_rtas_byname_1_spark_oracle.json`` (live PySpark 4.1.2 +
 iceberg-spark-runtime-4.1_2.13:1.11.0, re-derived by

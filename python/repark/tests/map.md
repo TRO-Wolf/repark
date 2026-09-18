@@ -3063,6 +3063,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_coldef_replace_commits_no_snapshot` (the column-def no-snapshot Spark
   answer measured 2026-09-17) and `test_rtas_replace_summary_keys`.
   pins: ice-rtas-ops-2/C-003, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+  **ICE-RTAS-OPS-2 round 2 (2026-09-18):** the module docstring now says "plus the RTAS
+  operation pins" (the xfails are gone); the native-door and service-managed twins of these
+  cells are Rust pins — `crates/repark-sql/src/create_table/rtas_ops_tests.rs` and
+  `crates/repark-spark/src/tests/service_managed_ctas.rs` — maps kept in lockstep.
+  pins: ice-rtas-ops-2/C-021, C-022
   **Round 2 (2026-09-17):** the `partition_by_name` section (static/dynamic
   overwrite, no-clause replace-all, static append, the 42713 refusal, empty
   overwrite wipe, empty static-partition drop), the `not_null_by_name`

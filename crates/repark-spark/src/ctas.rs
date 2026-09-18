@@ -443,7 +443,9 @@ pub(crate) async fn execute_ctas_service_managed(
     // From here the table EXISTS in the catalog: any failure below aborts by dropping it.
     let write_result: Result<()> = async {
         let data_files = write_ctas_query(ctx, &table, query).await?;
-        if !data_files.is_empty() {
+        if ctas.or_replace {
+            repark_iceberg::write::commit_replace_write(catalog, &table, data_files).await?;
+        } else if !data_files.is_empty() {
             repark_iceberg::write::commit_append(catalog, &table, data_files).await?;
         }
         Ok(())
