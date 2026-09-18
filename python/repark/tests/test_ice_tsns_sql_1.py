@@ -31,7 +31,6 @@ DAYS_TABLE = (
     f"CREATE TABLE ice.ns.d (id INT, ts timestamp_ns) USING iceberg PARTITIONED BY (days(ts)) {V3}"
 )
 NS_IDS = ("1", "2", "3", "6", "7", "8")
-HOUR_FORK_GAP = "Unsupported data type for hour transform"
 PRE_EPOCH = "1969-12-31 23:59:59.999999999"
 SESSION_OFFSET_US = {"UTC": 0, "America/New_York": 5 * 3_600_000_000}
 MICROS_UTC = pa.timestamp("us", tz="UTC")
@@ -312,14 +311,9 @@ def test_days_partitions_equal_the_pyiceberg_read_back(spark: Any) -> None:
 
 
 def test_hours_partitions_equal_the_spec(spark: Any) -> None:
-    """Clause 3: ``hours(tz)`` on ns partitions at the true boundary (fork gap F-TSNS-HOUR-1)."""
+    """Clause 3: ``hours(tz)`` on ns partitions at the true boundary (FIXED 2026-09-18, RP-28 fork #296)."""
     expected = FIXTURE["sql_tables"]["sql_hours"]
-    try:
-        run_all(spark, FIXTURE["sql_statements"]["sql_hours"])
-    except Exception as exc:
-        if HOUR_FORK_GAP in str(exc):
-            pytest.xfail(f"BLOCKED-ON-FORK F-TSNS-HOUR-1: {exc}")
-        raise
+    run_all(spark, FIXTURE["sql_statements"]["sql_hours"])
     assert ns_rows(spark, "ice.ns.sql_hours", ("tz",)) == expected["rows"]
     assert partitions(spark, "ice.ns.sql_hours") == expected["partitions"]
 
