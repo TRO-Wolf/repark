@@ -40,6 +40,20 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_v3_multiarg_1.py](test_v3_multiarg_1.py) +
+  [v3_multiarg_1_spark_oracle.json](v3_multiarg_1_spark_oracle.json) +
+  [_record_v3_multiarg_1.py](_record_v3_multiarg_1.py) —
+  **V3-MULTIARG-1 (2026-09-18, round 1):** multi-argument partition transforms
+  (`source-ids`) are DECLARED out of 1.x under owner ruling 2026-09-18 (rating row
+  V3-05). The SQL door refuses `bucket(4, id, name)` with the arity
+  `AnalysisException`; the DataFrame door has no multi-argument spelling
+  (`functions.bucket` takes two arguments); a foreign v3 table carrying
+  `"source-ids": [1, 2]` refuses loud at `register_table` (the fork models only the
+  singular `source-id`); Spark 4.1.2 + Iceberg 1.11.0 cannot create the table either
+  (`IllegalArgumentException`, recorded cell `MULTIARG-DDL-01`). The recorder takes
+  `--warehouse`, reads its GAV from `_oracle_pins` and its Ivy cache from
+  `REPARK_ORACLE_IVY`, and exits non-zero on drift.
+  pins: v3-multiarg-1/C-001, C-002, C-003, C-004, C-005
 - [test_ice_column_reorder_1.py](test_ice_column_reorder_1.py) +
   [test_ice_column_reorder_1_truth.json](test_ice_column_reorder_1_truth.json) +
   [_record_ice_column_reorder_1.py](_record_ice_column_reorder_1.py) —

@@ -4,6 +4,13 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [v3-multiarg-1-ledger.md](v3-multiarg-1-ledger.md) —
+  **V3-MULTIARG-1 (2026-09-18), in flight:** multi-argument partition transforms
+  (`source-ids`) DECLARED out of 1.x under owner ruling 2026-09-18 (rating row V3-05)
+  — docs plus one pin: the SQL-door arity refusal, the recorded Spark 4.1.2 DDL
+  refusal fixture, the foreign-metadata register refusal, registry row V3-MULTIARG-1,
+  post-1.x card. `risk_tier: standard`. Branch `docs/v3-multiarg-1`.
+  pins: v3-multiarg-1/C-001, C-002, C-003, C-004, C-005
 - [ice-tsns-sql-1-ledger.md](ice-tsns-sql-1-ledger.md) —
   **ICE-TSNS-SQL-1 (2026-09-17), in flight:** `timestamp_ns` / `timestamptz_ns` on the SQL door
   (rating row V3-06 and the ns half of V3-04) answer the Iceberg v3 spec with a PyIceberg 0.12.0
