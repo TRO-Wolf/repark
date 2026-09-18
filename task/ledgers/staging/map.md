@@ -918,3 +918,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (family C, counts healthy, no regression). No product code.
   `risk_tier: standard`. Branch `chore/fork-pin-ice-20c-2`.
   pins: rp-23-pin-bump/C-001, C-002, C-003, C-004
+- [ice-rdf-fork-asks-1-ledger.md](ice-rdf-fork-asks-1-ledger.md) —
+  **ICE-RDF-FORK-ASKS-1 (2026-09-17), in flight:** the 13 RDF strict xfails re-measured
+  on RP-23 (`4151b488`, zero XPASS) and the three unnamed reasons named as registry
+  fork asks (`ICE-RDF-GRANULARITY-1`, `ICE-RDF-COW-BYTES-1`, `ICE-RDF-RPD-COMMITS-1`)
+  beside `ICE-RDF-DANGLE-2`. Docs-only unit, no product change.
+  `risk_tier: standard`. Branch `docs/ice-rdf-fork-asks-1`.
+  pins: ice-rdf-fork-asks-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
