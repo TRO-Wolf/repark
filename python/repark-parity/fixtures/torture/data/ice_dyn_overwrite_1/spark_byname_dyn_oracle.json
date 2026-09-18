@@ -1,0 +1,596 @@
+{
+  "spark_version": "4.1.2",
+  "iceberg_runtime": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+  "cells": {
+    "v2_dynamic_byname_touch_one": {
+      "mode": "dynamic",
+      "setup": [
+        "CREATE TABLE sc.ns.t1 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.t1 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t1 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k",
+      "error": null,
+      "rows": [
+        [
+          2,
+          "b",
+          "old"
+        ],
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v2_dynamic_byname_empty": {
+      "mode": "dynamic",
+      "setup": [
+        "CREATE TABLE sc.ns.t2 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.t2 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t2 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k WHERE false",
+      "error": null,
+      "rows": [
+        [
+          1,
+          "a",
+          "old"
+        ],
+        [
+          2,
+          "b",
+          "old"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ]
+      ]
+    },
+    "v2_dynamic_byname_column_list_touch_one": {
+      "mode": "dynamic",
+      "setup": [
+        "CREATE TABLE sc.ns.t3 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.t3 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t3 (k, id, v) SELECT 'a', CAST(9 AS BIGINT), 'x'",
+      "error": null,
+      "rows": [
+        [
+          2,
+          "b",
+          "old"
+        ],
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v2_dynamic_positional_touch_one": {
+      "mode": "dynamic",
+      "setup": [
+        "CREATE TABLE sc.ns.t4 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.t4 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t4 SELECT CAST(9 AS BIGINT), 'a', 'x'",
+      "error": null,
+      "rows": [
+        [
+          2,
+          "b",
+          "old"
+        ],
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v2_dynamic_byname_unpartitioned": {
+      "mode": "dynamic",
+      "setup": [
+        "CREATE TABLE sc.ns.u5 (id BIGINT, k STRING, v STRING) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.u5 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.u5 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k",
+      "error": null,
+      "rows": [
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v2_static_byname_touch_one": {
+      "mode": "static",
+      "setup": [
+        "CREATE TABLE sc.ns.t6 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.t6 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t6 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k",
+      "error": null,
+      "rows": [
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v2_static_byname_empty": {
+      "mode": "static",
+      "setup": [
+        "CREATE TABLE sc.ns.t7 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.t7 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t7 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k WHERE false",
+      "error": null,
+      "rows": [],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "delete"
+        ]
+      ]
+    },
+    "v2_static_byname_column_list_touch_one": {
+      "mode": "static",
+      "setup": [
+        "CREATE TABLE sc.ns.t8 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.t8 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t8 (k, id, v) SELECT 'a', CAST(9 AS BIGINT), 'x'",
+      "error": null,
+      "rows": [
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v2_static_positional_touch_one": {
+      "mode": "static",
+      "setup": [
+        "CREATE TABLE sc.ns.t9 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.t9 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t9 SELECT CAST(9 AS BIGINT), 'a', 'x'",
+      "error": null,
+      "rows": [
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v2_static_byname_unpartitioned": {
+      "mode": "static",
+      "setup": [
+        "CREATE TABLE sc.ns.u10 (id BIGINT, k STRING, v STRING) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.u10 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.u10 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k",
+      "error": null,
+      "rows": [
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v3_dynamic_byname_touch_one": {
+      "mode": "dynamic",
+      "setup": [
+        "CREATE TABLE sc.ns.t11 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.t11 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t11 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k",
+      "error": null,
+      "rows": [
+        [
+          2,
+          "b",
+          "old"
+        ],
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v3_dynamic_byname_empty": {
+      "mode": "dynamic",
+      "setup": [
+        "CREATE TABLE sc.ns.t12 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.t12 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t12 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k WHERE false",
+      "error": null,
+      "rows": [
+        [
+          1,
+          "a",
+          "old"
+        ],
+        [
+          2,
+          "b",
+          "old"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ]
+      ]
+    },
+    "v3_dynamic_byname_column_list_touch_one": {
+      "mode": "dynamic",
+      "setup": [
+        "CREATE TABLE sc.ns.t13 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.t13 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t13 (k, id, v) SELECT 'a', CAST(9 AS BIGINT), 'x'",
+      "error": null,
+      "rows": [
+        [
+          2,
+          "b",
+          "old"
+        ],
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v3_dynamic_positional_touch_one": {
+      "mode": "dynamic",
+      "setup": [
+        "CREATE TABLE sc.ns.t14 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.t14 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t14 SELECT CAST(9 AS BIGINT), 'a', 'x'",
+      "error": null,
+      "rows": [
+        [
+          2,
+          "b",
+          "old"
+        ],
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v3_dynamic_byname_unpartitioned": {
+      "mode": "dynamic",
+      "setup": [
+        "CREATE TABLE sc.ns.u15 (id BIGINT, k STRING, v STRING) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.u15 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.u15 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k",
+      "error": null,
+      "rows": [
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v3_static_byname_touch_one": {
+      "mode": "static",
+      "setup": [
+        "CREATE TABLE sc.ns.t16 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.t16 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t16 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k",
+      "error": null,
+      "rows": [
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v3_static_byname_empty": {
+      "mode": "static",
+      "setup": [
+        "CREATE TABLE sc.ns.t17 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.t17 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t17 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k WHERE false",
+      "error": null,
+      "rows": [],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "delete"
+        ]
+      ]
+    },
+    "v3_static_byname_column_list_touch_one": {
+      "mode": "static",
+      "setup": [
+        "CREATE TABLE sc.ns.t18 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.t18 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t18 (k, id, v) SELECT 'a', CAST(9 AS BIGINT), 'x'",
+      "error": null,
+      "rows": [
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v3_static_positional_touch_one": {
+      "mode": "static",
+      "setup": [
+        "CREATE TABLE sc.ns.t19 (id BIGINT, k STRING, v STRING) USING iceberg PARTITIONED BY (k) TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.t19 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.t19 SELECT CAST(9 AS BIGINT), 'a', 'x'",
+      "error": null,
+      "rows": [
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v3_static_byname_unpartitioned": {
+      "mode": "static",
+      "setup": [
+        "CREATE TABLE sc.ns.u20 (id BIGINT, k STRING, v STRING) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.u20 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.u20 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k",
+      "error": null,
+      "rows": [
+        [
+          9,
+          "a",
+          "x"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "overwrite"
+        ]
+      ]
+    },
+    "v2_dynamic_byname_empty_unpartitioned": {
+      "mode": "dynamic",
+      "setup": [
+        "CREATE TABLE sc.ns.ue1 (id BIGINT, k STRING, v STRING) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.ue1 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.ue1 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k WHERE false",
+      "error": null,
+      "rows": [
+        [
+          1,
+          "a",
+          "old"
+        ],
+        [
+          2,
+          "b",
+          "old"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ]
+      ]
+    },
+    "v2_static_byname_empty_unpartitioned": {
+      "mode": "static",
+      "setup": [
+        "CREATE TABLE sc.ns.ue2 (id BIGINT, k STRING, v STRING) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "INSERT INTO sc.ns.ue2 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.ue2 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k WHERE false",
+      "error": null,
+      "rows": [],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "delete"
+        ]
+      ]
+    },
+    "v3_dynamic_byname_empty_unpartitioned": {
+      "mode": "dynamic",
+      "setup": [
+        "CREATE TABLE sc.ns.ue3 (id BIGINT, k STRING, v STRING) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.ue3 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.ue3 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k WHERE false",
+      "error": null,
+      "rows": [
+        [
+          1,
+          "a",
+          "old"
+        ],
+        [
+          2,
+          "b",
+          "old"
+        ]
+      ],
+      "snapshot_operations": [
+        [
+          "append"
+        ]
+      ]
+    },
+    "v3_static_byname_empty_unpartitioned": {
+      "mode": "static",
+      "setup": [
+        "CREATE TABLE sc.ns.ue4 (id BIGINT, k STRING, v STRING) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO sc.ns.ue4 VALUES (1, 'a', 'old'), (2, 'b', 'old')"
+      ],
+      "statement": "INSERT OVERWRITE sc.ns.ue4 BY NAME SELECT 'x' AS v, CAST(9 AS BIGINT) AS id, 'a' AS k WHERE false",
+      "error": null,
+      "rows": [],
+      "snapshot_operations": [
+        [
+          "append"
+        ],
+        [
+          "delete"
+        ]
+      ]
+    }
+  }
+}

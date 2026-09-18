@@ -24,6 +24,7 @@ async fn datafusion_dialect_passthrough_executes_trivial_query() {
                 ctx: &ctx,
                 catalogs: &catalogs,
                 read_only: &read_only,
+                force_static_overwrite: false,
             },
             "SELECT 1 + 1 AS two",
         )
@@ -56,6 +57,7 @@ async fn engine_context_constructs_with_explicit_fields() {
         ctx: &ctx,
         catalogs: &catalogs,
         read_only: &read_only,
+        force_static_overwrite: false,
     };
     assert!(cx.read_only.is_empty());
     let dialect: Arc<dyn SqlDialect> = Arc::new(DataFusionDialect);

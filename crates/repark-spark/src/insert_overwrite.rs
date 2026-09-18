@@ -36,6 +36,7 @@ pub(crate) async fn execute_insert_overwrite(
     catalogs: &CatalogRegistry,
     sql: &str,
     insert: &Insert,
+    force_static_overwrite: bool,
 ) -> Result<DataFrame> {
     let table_name = match &insert.table {
         TableObject::TableName(name) => name,
@@ -62,6 +63,7 @@ pub(crate) async fn execute_insert_overwrite(
     }
 
     if let Some(source) = &insert.source {
+        let dynamic = overwrite_is_dynamic(ctx, force_static_overwrite);
         let probe_sql = format!("SELECT 1 FROM ({source}) AS _repark_ow_probe LIMIT 1");
         let probe = spark_ast::execute_passthrough(ctx, catalogs, &probe_sql).await?;
         let batches = probe.collect().await?;
@@ -96,6 +98,9 @@ pub(crate) async fn execute_insert_overwrite(
             let still_empty = reprobe_batches.iter().all(|batch| batch.num_rows() == 0);
             if still_empty {
                 if let Some((catalog_name, catalog, table, branch)) = iceberg_target {
+                    if dynamic {
+                        return ctx.read_empty();
+                    }
                     repark_iceberg::write::commit_overwrite_replace_all_to(
                         &catalog,
                         &table,
@@ -121,11 +126,16 @@ pub(crate) async fn execute_insert_overwrite(
             &table_sql,
             source,
             &insert.columns,
+            dynamic,
         )
         .await;
     }
 
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
+}
+
+pub(crate) fn overwrite_is_dynamic(ctx: &SessionContext, force_static_overwrite: bool) -> bool {
+    repark_core::partition_overwrite_mode_from_ctx(ctx).is_dynamic() && !force_static_overwrite
 }
 
 /// Static or dynamic `INSERT OVERWRITE … PARTITION (…)`.
@@ -205,6 +215,7 @@ pub(crate) async fn execute_partition_overwrite(
 /// Non-empty `INSERT OVERWRITE` — stage-then-swap (OV1 / OTH-004).
 /// # Errors
 /// Source stream, positional map/cast, write, or commit failures as [`DataFusionError`].
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn insert_overwrite_from_staged_source(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -212,6 +223,7 @@ pub(crate) async fn insert_overwrite_from_staged_source(
     table_sql: &str,
     source: &datafusion::sql::sqlparser::ast::Query,
     columns: &[ObjectName],
+    dynamic: bool,
 ) -> Result<DataFrame> {
     match try_resolve_iceberg_overwrite_target(ctx, catalogs, table_name).await? {
         Some((catalog_name, catalog, table, branch)) => {
@@ -221,10 +233,10 @@ pub(crate) async fn insert_overwrite_from_staged_source(
                 &catalog_name,
                 &catalog,
                 &table,
-                table_sql,
                 source,
                 columns,
                 branch.as_deref(),
+                dynamic,
             )
             .await
         }
@@ -293,10 +305,10 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     catalog_name: &str,
     catalog: &Arc<dyn Catalog>,
     table: &iceberg::table::Table,
-    _table_sql: &str,
     source: &datafusion::sql::sqlparser::ast::Query,
     columns: &[ObjectName],
     branch: Option<&str>,
+    dynamic: bool,
 ) -> Result<DataFrame> {
     use iceberg::spec::DataFile;
 
@@ -325,8 +337,18 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
                 .to_string(),
         ));
     }
-    repark_iceberg::write::commit_overwrite_replace_all_to(catalog, table, staged_files, branch)
+    if dynamic && !table.metadata().default_partition_spec().is_unpartitioned() {
+        repark_iceberg::write::commit_replace_partitions_to(catalog, table, staged_files, branch)
+            .await?;
+    } else {
+        repark_iceberg::write::commit_overwrite_replace_all_to(
+            catalog,
+            table,
+            staged_files,
+            branch,
+        )
         .await?;
+    }
     let namespace = namespace_schema_name(table.identifier().namespace());
     reregister(ctx, Arc::clone(catalog), catalog_name, &namespace).await?;
     // Command shape — same as other DML (empty result frame).

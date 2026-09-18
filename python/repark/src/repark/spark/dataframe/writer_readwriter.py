@@ -233,7 +233,8 @@ class DataFrameWriter:
         projection = self._by_name_projection(session, table_ref, display_name=name)
         verb = "INSERT OVERWRITE" if normalized_mode == "overwrite" else "INSERT INTO"
         self._run_through_temp_view(
-            lambda view: f"{verb} {table_ref} SELECT {projection} FROM {view}"
+            lambda view: f"{verb} {table_ref} SELECT {projection} FROM {view}",
+            static_overwrite=normalized_mode == "overwrite",
         )
 
     save_as_table = saveAsTable
@@ -791,14 +792,21 @@ class DataFrameWriter:
             partition_clause = f" PARTITIONED BY ({quoted_parts})"
         return f"CREATE TABLE {table_ref} USING iceberg{partition_clause} AS SELECT * FROM {view}"
 
-    def _run_through_temp_view(self, build_sql: Callable[[str], str]) -> None:
+    def _run_through_temp_view(
+        self, build_sql: Callable[[str], str], *, static_overwrite: bool = False
+    ) -> None:
         """Register a temporary view, execute the generated write SQL, and drop the view."""
         self._dataframe._ensure_alive()
         session = self._dataframe._session
         view_name = scratch_view_name(session, "_repark_writer_")
         session.create_or_replace_temp_view(view_name, self._dataframe._native_for_registration())
         try:
-            session.sql(build_sql(view_name))
+            if static_overwrite:
+                from repark import _native
+
+                _native.sql_static_overwrite(session, build_sql(view_name))
+            else:
+                session.sql(build_sql(view_name))
         finally:
             session.drop_temp_view(view_name)
 

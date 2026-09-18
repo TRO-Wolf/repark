@@ -43,7 +43,7 @@ mod window_range;
 mod write_to_branch;
 
 // --- Router entrypoints.
-pub use router::{execute, execute_with_read_only};
+pub use router::{execute, execute_static_overwrite, execute_with_read_only};
 // G15: parse-altitude collation refuse (binding `F.expr` / `filter_sql` call this).
 pub use collation::{
     COLLATION_REFUSAL_NEEDLE, collation_refusal_message, is_collation_session_key,

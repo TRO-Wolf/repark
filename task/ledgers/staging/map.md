@@ -900,6 +900,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fixtures (`python/repark/tests/fixtures/orc/`).
   `risk_tier: standard`. Branch `feat/io-orc-1`.
   pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ice-dyn-overwrite-1-ledger.md](ice-dyn-overwrite-1-ledger.md) —
+  **ICE-DYN-OVERWRITE-1 (2026-09-17), in flight:** dynamic `partitionOverwriteMode`
+  routing for PARTITION-less overwrites (V2-24b) plus the INSERT OVERWRITE half of the
+  V2-20a K4 race — Rust-first conf carrier, dynamic path through `ReplacePartitions`,
+  empty-dynamic no-op, `saveAsTable` static overwrite through a typed session flag, Spark
+  race matrix with disk-verified interleaves (default/snapshot silently replace the
+  same-partition append, serializable refuses loud). Fixture
+  `python/repark-parity/fixtures/torture/data/ice_dyn_overwrite_1/spark_oracle.json`;
+  pins `test_ice_dyn_overwrite_1.py` (C-001…C-018) + `tests::dyn_partition_overwrite`.
+  `risk_tier: standard`. Branch `fix/ice-dyn-overwrite-1`.
+  pins: ice-dyn-overwrite-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
 - [ice-rtas-byname-1-ledger.md](ice-rtas-byname-1-ledger.md) —
   **ICE-RTAS-BYNAME-1 (2026-09-17), in flight:** `INSERT … BY NAME` column
   resolution on the Spark door plus the RTAS snapshot-operation divergence

@@ -468,7 +468,93 @@ perfectly good read.
   `PARTITION (k)` (names) full-table wipe (repark always takes the dynamic path, matching
   `writeTo` / `partitionOverwriteMode=dynamic`). Empty-dynamic loud refuse is stricter than
   Spark writeTo no-op and safer than Spark SQL STATIC wipe. `partitionOverwriteMode=dynamic`
-  on a PARTITION-less `INSERT OVERWRITE` stays out of this unit.
+  on a PARTITION-less `INSERT OVERWRITE` moved to rows DML-1B/DML-1C (FIXED 2026-09-17,
+  ICE-DYN-OVERWRITE-1); the residue above is unchanged.
+
+#### DML-1B — `partitionOverwriteMode=dynamic` on PARTITION-less `INSERT OVERWRITE`
+
+- **repark** — **FIXED 2026-09-17 (ICE-DYN-OVERWRITE-1).** The session conf
+  `spark.sql.sources.partitionOverwriteMode` reaches the Spark door: `dynamic`
+  (any case) routes a PARTITION-less `INSERT OVERWRITE` and
+  `write.mode("overwrite").insertInto` through `ReplacePartitions` over the source
+  partitions only (`operation=overwrite`, `replace-partitions=true`,
+  `changed-partition-count=1`); `static` (the default) keeps the whole-table
+  replace-all. Empty source under dynamic commits nothing and leaves the table
+  unchanged (partitioned and unpartitioned tables); empty under static wipes.
+  Unpartitioned tables replace whole under both modes. After an unpartitioned →
+  identity evolution the pre-evolution files survive (they match no new-spec
+  partition). `saveAsTable(overwrite)` always replaces whole: the facade passes a
+  typed static flag that bypasses the conf — no statement text can select the
+  static path. Unknown conf
+  values refuse at set time with Spark's
+  `[INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS]` class and keep the old value;
+  `unset` restores `STATIC`. Set via builder `.config`, `conf.set`, or SQL `SET`;
+  `conf.get` answers the stored spelling. **Round 3 (2026-09-17):** the same mode
+  decides every PARTITION-less SQL overwrite shape — positional,
+  `INSERT OVERWRITE t (k, id, v) SELECT …` (explicit column list), and
+  `INSERT OVERWRITE t BY NAME SELECT …` (ICE-RTAS-BYNAME-1): dynamic replaces only
+  the touched partitions, static the whole table, unpartitioned the whole table
+  under both; an empty `BY NAME` source commits nothing under dynamic (no snapshot)
+  and wipes under static (`append, delete`). One Rust function decides for all
+  three (`overwrite_is_dynamic` in `insert_overwrite.rs`).
+- **Apache Spark** — same on every cell: dynamic scopes SQL + `insertInto` to the
+  touched partitions (v2 and v3), whole-table on static and on unpartitioned tables,
+  empty-dynamic no-op, static-empty wipe, evolved-spec survival of old files, and
+  `saveAsTable` whole-table under dynamic (the conf is ignored there). `BY NAME`, the
+  explicit column list and positional overwrites answer identically per mode on v2
+  and v3, rows and snapshot operations.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17.)*
+- **Pin** — `python/repark-parity/fixtures/torture/data/ice_dyn_overwrite_1/spark_oracle.json`
+  (matrix cells) and `spark_byname_dyn_oracle.json` (20 `BY NAME` / column-list /
+  positional cells); `python/repark/tests/test_ice_dyn_overwrite_1.py` (offline repark vs
+  fixture on both doors plus the live Spark replay);
+  `python/repark/tests/test_ice_dyn_overwrite_1_by_name.py` (every `BY NAME` cell plus the
+  `unset` restore); `crates/repark-spark/src/tests/dyn_by_name_overwrite.rs`;
+  `crates/repark-spark/src/tests/dyn_partition_overwrite.rs` (routing, empty arms,
+  unpartitioned arms, the static-entry pin, the marker-as-payload pins);
+  `crates/repark-core/src/partition_overwrite_mode.rs` (parse/carrier unit tests).
+  pins: ice-dyn-overwrite-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020,
+  C-021, C-022, C-023
+- **Rationale** — the routing decision branches on the conf value in Rust where the
+  SQL door reaches it (`crates/repark-spark/src/insert_overwrite.rs`); the facade
+  forwards the conf and passes an explicit static flag for `saveAsTable`.
+  Statement text (comments, string literals) never selects the static path —
+  pinned by the marker-as-payload tests (ruling Q-20a-6).
+
+#### DML-1C — `INSERT OVERWRITE` vs a concurrent append (overwrite isolation)
+
+- **repark** — **FIXED 2026-09-17 (ICE-DYN-OVERWRITE-1).** Under the default
+  `snapshot` regime an overwrite whose base predates a concurrent append commits
+  and silently removes the appended row **iff it sits in a replaced partition**;
+  other partitions survive — exactly Spark's default. The serializable regime
+  (table property `write.overwrite.isolation-level=serializable`) refuses the same
+  conflict loud (`ValidationException: Found conflicting files …`) — exactly
+  Spark's per-write serializable shape. Regime difference, dated: Spark arrives
+  per-write (`.option("isolation-level", …)` on the DataFrame); repark arrives
+  per-table; the SQL door has no isolation surface on either engine, so the two
+  never meet in one statement. No fork change: the fork already validates and the
+  adapter already invokes it.
+- **Apache Spark** — default and `snapshot`-option dynamic overwrites silently drop
+  a same-partition concurrent append and keep other partitions (disk-verified
+  snapshot order `[seed, append, overwrite]`, `deleted-records` counting the
+  appended row); `serializable`-option refuses with the conflicting-files
+  `ValidationException` and keeps seed + append. Empty-dynamic commits nothing.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, plus the pinned
+  runtime bytecode: `DynamicOverwrite.commit` skips empty, then
+  `validateFromSnapshot` only with the write option, data+deletes under serializable,
+  deletes under snapshot, neither by default.)*
+- **Pin** — fixture `race_default` / `race_serializable` / `race_snapshot` cells;
+  `crates/repark-spark/src/tests/dyn_partition_overwrite.rs::snapshot_race_replaces_concurrent_same_partition_append`
+  (appends into both the replaced and a surviving partition; the surviving row is
+  asserted, mirroring the oracle's `fresh_neg_rows`) and
+  `::serializable_race_refuses_concurrent_same_partition_append` (deterministic
+  stale-handle twins, no threads).
+  pins: ice-dyn-overwrite-1/C-008, C-009, C-010, C-011, C-015, C-016
+- **Rationale** — closes the V2-20a K4 residue for overwrites: the silent
+  same-partition replace under the default is Spark-equal table-format semantics,
+  not a bug. Open residue: V1-door `.option("isolation-level","serializable")`
+  honoring is unmeasured (Spark side) and stays with the V2-29 options surface.
 
 #### V3-COV-1 — static `PARTITION (k = v)` overwrite from a `SELECT` source
 

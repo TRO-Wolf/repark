@@ -2166,7 +2166,7 @@ class ReparkSession:
                     # datafusion.* is runtime-mutable on the live engine — fold via
                     # RuntimeConfig.set so SQL SET forwards (not store-only). Lookalike
                     # mixed-case / padded keys refuse-loud inside set.
-                    if _looks_like_datafusion_conf_key(key):
+                    if key == PARTITION_OVERWRITE_MODE_KEY or _looks_like_datafusion_conf_key(key):
                         RuntimeConfig(_sf._active_session).set(key, text)
                         _sf._active_session._builder_config[key] = text
                         continue

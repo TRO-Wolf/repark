@@ -145,6 +145,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `UnpivotExec`, `apply_stack`, the labeled describe door `apply_labeled_stack` /
   `StackLabels`, marker `stack` UDF, Spark-door `StackRewrite`.
   pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- `static_overwrite.rs` — **ICE-DYN-OVERWRITE-1 round 2, ruling Q-20a-6
+  (2026-09-17):** the shared SQL body `sql_with_overwrite_flag` (moved out of
+  `session.rs`, which lands at 973 lines) plus the `ReparkSession::
+  sql_static_overwrite` saveAsTable entry carrying `force_static_overwrite`.
+  Comment-free per the owner's comment ban (2026-09-17); the public entry
+  carries `#[allow(clippy::missing_errors_doc)]` where its `# Errors` doc was.
+  pins: ice-dyn-overwrite-1/L-001
 - `freq_items.rs` — **DF-RUST-3 (2026-09-15):** Spark's `FreqItemCounter` as a
   DataFusion `AggregateUDFImpl` + `Accumulator` over `HashMap<FreqKey, i64>` —
   capacity `floor(1/support)`, the KSP add/merge (negative-remainder branch keeps
@@ -472,6 +479,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   inference. Unit tests pin naive midnight/walls/refusals, the unchanged
   zoned walls, and discovery types and values under New York.
   pins: io-text-1/Z-1
+- `partition_overwrite_mode.rs` — **ICE-DYN-OVERWRITE-1 (2026-09-17):** the
+  `spark.sql.sources.partitionOverwriteMode` session knob beside the timezone
+  and ANSI carriers: `PARTITION_OVERWRITE_MODE_KEY` (the one spelling),
+  `PartitionOverwriteMode` (`Static` default via derive / `Dynamic`), the case-insensitive
+  parse (unknown values refuse with Spark's
+  `[INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS]` class), the
+  `PartitionOverwriteModeConfig` live carrier (`repark.overwrite` prefix, unsettable),
+  plus the build-map installer and the `SessionContext` reader.
+  pins: ice-dyn-overwrite-1/C-007, C-010, C-014
 - `text_partition.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-1+U-2):** the one-scan
   `partitionBy` text writer (`write_text_partitioned`, exported at the crate root).
   One `execute_stream` pass routes each row to its leaf writer by rendered key
