@@ -399,7 +399,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `call_register` (**V3-1 / RP-3 C-008**): `CALL system.register_table` arguments, three nullable BIGINT columns,
   adoption/read-back, occupied-ident refusal, Hadoop `vN.metadata.json` write bumps to `v(N+1)`,
   S3 Tables register names R126, and the Spark-written `fixtures/v3-spark-mor/`
-  fixture (`B-MOR-3` zeros),
+  fixture (`B-MOR-3` zeros). **TEST-HYGIENE-1 (2026-09-18):** the fixture keeps its
+  baked-in `/tmp` path because the Avro manifest lists and manifests carry absolute
+  paths in deflate blocks, so relocation without editing Avro bytes cannot read; the
+  in-process `Mutex` is now paired with a cross-process lock directory held for the
+  fixture lifetime with wipe-and-copy under the lock.
+  pins: test-hygiene-1/C-001.
   `fixtures/` (Spark-written on-disk Iceberg tables CI can adopt with no JVM),
   `call_orphan` (**MW-3**): full-directory before/after orphan safety and 24-hour cutoff fixtures,
   `ref_ddl` (**REF:** the write-to-branch/tag refusal names the `iceberg-datafusion`
