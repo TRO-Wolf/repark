@@ -559,3 +559,18 @@ Round 5 gates (2026-09-18, native rebuilt from the restored tree):
 - `make verify`: exit 0. Across its test stages: 3827 passed, 0 failed,
   7 ignored. ledger-grammar reports 1501 clauses; docs-links reports 5837 links.
 - Targeted parity guards: `test_cap_1` + `test_dl_6`, 42 passed.
+
+## 18. Orchestrator close-out — live tier and verification round 2 (2026-09-18)
+
+- **Live tier, green.** On 2026-09-18 the orchestrator ran all three record drivers (`_1`, `_2`, `_3`) with `--out` into
+  one scratch file, under a PySpark 4.1.2 interpreter with the Iceberg runtime from `_oracle_pins`. It then compared every
+  cell with the committed fixture through the pin file's own `_stable_projection`: ids equal (52 = 52), **0 mismatched**,
+  including `COLL-00`…`COLL-08`. This closes round 5's residue "not run live" for all three drivers.
+- **Verification critic, round 2 (Grok 4.6): CLOSED.** V-01…V-04, Q-21c-7, the two non-Iceberg overwrite pins, and the
+  comment ban all hold. The critic explained each mutation transcript A–H from the code, and found no regression on an
+  option-free write.
+- **New residue V2-01 (P3), stated and not fixed.** When a table sets `write.summary.partition-limit > 0`, the snapshot
+  producer writes `partitions.*` keys for removed-only partitions. `EngineSummary::for_overwrite` runs the collector only
+  over added files, so a user extra named `partitions.<removed path>` could replace that engine key on an overwrite. The
+  default limit is 0, which means the keys are not written and the append collector stays exact. This joins the §17
+  over-refusal residue as the overwrite family's second known imprecision.
