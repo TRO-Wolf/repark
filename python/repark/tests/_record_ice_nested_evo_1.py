@@ -126,6 +126,111 @@ def build_cells(format_version: str) -> list[tuple[str, list[str], str | None]]:
     ]
 
 
+def build_schema_cells(format_version: str) -> list[tuple[str, list[str], str]]:
+    """Return the ordered `(label, statements, table)` cells whose answer is the table metadata.
+
+    Args:
+        format_version: The Iceberg format version, `"2"` or `"3"`.
+
+    Returns:
+        The cells. Each records the current schema of `table` from its metadata file, with
+        field ids, `required` and `doc`, plus the statement error when one refused.
+    """
+    properties = f"TBLPROPERTIES ('format-version'='{format_version}')"
+    prefix = f"{SPARK_CATALOG}.{ADOPTED_NAMESPACE}"
+    version = f"v{format_version}"
+    two_child = "(id INT, s STRUCT<a: INT, b: STRING>) USING iceberg"
+    deep = (
+        "(id INT, s STRUCT<a: INT, b: STRUCT<c: INT>>, arr ARRAY<STRUCT<x: INT>>, "
+        "m MAP<STRING, STRUCT<q: INT>>) USING iceberg"
+    )
+    required = "(id INT, s STRUCT<a: INT NOT NULL, b: STRING>) USING iceberg"
+    evolutions = (
+        ("rename_dotted", "RENAME COLUMN s.a TO `x.y`"),
+        ("add_dotted_leaf", "ADD COLUMN s.`x.y` INT"),
+        ("add_dotted_top", "ADD COLUMN `p.q` INT"),
+        ("rename_double_quoted", 'RENAME COLUMN s.a TO "x.y"'),
+        ("add_double_quoted_leaf", 'ADD COLUMN s."x.y" INT'),
+        ("add_first", "ADD COLUMN s.z INT FIRST"),
+        ("add_after", "ADD COLUMN s.w INT AFTER a"),
+        ("add_after_dotted", "ADD COLUMN s.w INT AFTER s.a"),
+        ("add_comment", "ADD COLUMN s.d INT COMMENT 'c'"),
+        ("add_map_child", "ADD COLUMN s.mm MAP<STRING, INT>"),
+        ("add_struct_child", "ADD COLUMN s.st STRUCT<u: INT, v: STRUCT<w: INT>>"),
+        ("add_list_child", "ADD COLUMN s.al ARRAY<STRUCT<k: INT>>"),
+        ("add_duplicate_child", "ADD COLUMN s.a INT"),
+        ("add_unknown_parent", "ADD COLUMN nope.z INT"),
+    )
+    cells = [
+        (
+            f"{version}_create_field_ids",
+            [f"CREATE TABLE {prefix}.ids_{version} {deep} {properties}"],
+            f"ids_{version}",
+        ),
+        (
+            f"{version}_create_required_child",
+            [f"CREATE TABLE {prefix}.req_{version} {required} {properties}"],
+            f"req_{version}",
+        ),
+    ]
+    for label, clause in evolutions:
+        table = f"{label}_{version}"
+        cells.append(
+            (
+                f"{version}_{label}",
+                [
+                    f"CREATE TABLE {prefix}.{table} {two_child} {properties}",
+                    f"ALTER TABLE {prefix}.{table} {clause}",
+                ],
+                table,
+            )
+        )
+    return cells
+
+
+def current_metadata_schema(table: str) -> dict[str, Any] | None:
+    """Return the current schema JSON of a Hadoop-catalog table, or `None` when it has none.
+
+    Args:
+        table: The table name under `ADOPTED_WAREHOUSE / ADOPTED_NAMESPACE`.
+
+    Returns:
+        The `schemas` entry whose id is `current-schema-id`, read from the metadata file
+        `version-hint.text` names.
+    """
+    metadata_dir = ADOPTED_WAREHOUSE / ADOPTED_NAMESPACE / table / "metadata"
+    hint = metadata_dir / "version-hint.text"
+    if not hint.exists():
+        return None
+    version = hint.read_text(encoding="utf-8").strip()
+    metadata = json.loads((metadata_dir / f"v{version}.metadata.json").read_text("utf-8"))
+    for schema in metadata["schemas"]:
+        if schema["schema-id"] == metadata["current-schema-id"]:
+            return schema
+    return None
+
+
+def record_schema_cell(spark: Any, statements: list[str], table: str) -> dict[str, Any]:
+    """Run one schema cell's statements and record the table's metadata schema and read shape.
+
+    Args:
+        spark: The live PySpark session.
+        statements: The DDL to run in order; the first failure stops the cell.
+        table: The table whose metadata the cell records.
+
+    Returns:
+        `statements`, `table`, `error`, `metadata_schema` (after the statements, including a
+        refused one), and Spark's `SELECT *` schema JSON when the table exists.
+    """
+    cell = record_cell(spark, statements, None)
+    cell["table"] = table
+    cell["metadata_schema"] = current_metadata_schema(table)
+    if cell["metadata_schema"] is not None:
+        frame = spark.sql(f"SELECT * FROM {SPARK_CATALOG}.{ADOPTED_NAMESPACE}.{table}")
+        cell["read_schema"] = frame.schema.jsonValue()
+    return cell
+
+
 def describe_error(exc: Exception) -> dict[str, Any]:
     """Return the exception class, error condition and first message line Spark raised.
 
@@ -135,7 +240,7 @@ def describe_error(exc: Exception) -> dict[str, Any]:
     Returns:
         `python_class`, `java_class` (the JVM exception class when py4j did not convert it),
         `condition` (Spark's error class when it has one), `java_cause_class` and `message`
-        (the first line).
+        (the first non-empty line).
     """
     java_exception = getattr(exc, "java_exception", None)
     condition = None
@@ -158,7 +263,7 @@ def describe_error(exc: Exception) -> dict[str, Any]:
         "java_class": java_class,
         "condition": condition,
         "java_cause_class": cause_class,
-        "message": message.splitlines()[0][:400] if message else "",
+        "message": next((line for line in message.splitlines() if line.strip()), "")[:400],
     }
 
 
@@ -186,6 +291,37 @@ def record_cell(spark: Any, statements: list[str], query: str | None) -> dict[st
         cell["schema"] = frame.schema.jsonValue()
         cell["rows"] = [row.asDict(recursive=True) for row in frame.collect()]
     return cell
+
+
+DATAFRAME_CREATE_LABELS = ("create_field_ids", "create_required_child")
+
+
+def record_dataframe_create(
+    spark: Any, format_version: str, source: dict[str, Any]
+) -> dict[str, Any]:
+    """Create a table through `writeTo(...).create()` with a SQL-created table's read schema.
+
+    Args:
+        spark: The live PySpark session.
+        format_version: The Iceberg format version, `"2"` or `"3"`.
+        source: The recorded schema cell whose `read_schema` the DataFrame carries.
+
+    Returns:
+        `table`, the `read_schema` used and the new table's `metadata_schema`.
+    """
+    from pyspark.sql.types import StructType
+
+    table = f"df_{source['table']}"
+    schema = StructType.fromJson(source["read_schema"])
+    frame = spark.createDataFrame([], schema)
+    frame.writeTo(f"{SPARK_CATALOG}.{ADOPTED_NAMESPACE}.{table}").using("iceberg").tableProperty(
+        "format-version", format_version
+    ).create()
+    return {
+        "table": table,
+        "read_schema": source["read_schema"],
+        "metadata_schema": current_metadata_schema(table),
+    }
 
 
 def start_spark() -> Any:
@@ -242,6 +378,8 @@ def main() -> None:
         "iceberg_runtime": RUNTIME_GAV,
         "warehouse": str(ADOPTED_WAREHOUSE),
         "cells": {},
+        "schema_cells": {},
+        "dataframe_create_cells": {},
     }
     spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {SPARK_CATALOG}.{ADOPTED_NAMESPACE}")
     for format_version in FORMAT_VERSIONS:
@@ -249,6 +387,15 @@ def main() -> None:
             cell = record_cell(spark, statements, query)
             oracle["cells"][label] = cell
             print(label, cell["error"], cell.get("rows"), flush=True)
+        for label, statements, table in build_schema_cells(format_version):
+            cell = record_schema_cell(spark, statements, table)
+            oracle["schema_cells"][label] = cell
+            print(label, cell["error"], json.dumps(cell["metadata_schema"]), flush=True)
+        for label in DATAFRAME_CREATE_LABELS:
+            source = oracle["schema_cells"][f"v{format_version}_{label}"]
+            cell = record_dataframe_create(spark, format_version, source)
+            oracle["dataframe_create_cells"][f"v{format_version}_{label}"] = cell
+            print(label, "dataframe", json.dumps(cell["metadata_schema"]), flush=True)
     spark.stop()
     FIXTURE_DIR.mkdir(parents=True, exist_ok=True)
     copy_adopted_tables()

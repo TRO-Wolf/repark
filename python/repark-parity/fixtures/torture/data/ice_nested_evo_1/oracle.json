@@ -1119,5 +1119,3549 @@
         "message": "Unsupported table change: Incompatible change: cannot add required column: r"
       }
     }
+  },
+  "schema_cells": {
+    "v2_create_field_ids": {
+      "statements": [
+        "CREATE TABLE sc.ns.ids_v2 (id INT, s STRUCT<a: INT, b: STRUCT<c: INT>>, arr ARRAY<STRUCT<x: INT>>, m MAP<STRING, STRUCT<q: INT>>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+      ],
+      "error": null,
+      "table": "ids_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 5,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 6,
+                  "name": "b",
+                  "required": false,
+                  "type": {
+                    "type": "struct",
+                    "fields": [
+                      {
+                        "id": 7,
+                        "name": "c",
+                        "required": false,
+                        "type": "int"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": 3,
+            "name": "arr",
+            "required": false,
+            "type": {
+              "type": "list",
+              "element-id": 8,
+              "element": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "id": 9,
+                    "name": "x",
+                    "required": false,
+                    "type": "int"
+                  }
+                ]
+              },
+              "element-required": false
+            }
+          },
+          {
+            "id": 4,
+            "name": "m",
+            "required": false,
+            "type": {
+              "type": "map",
+              "key-id": 10,
+              "key": "string",
+              "value-id": 11,
+              "value": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "id": 12,
+                    "name": "q",
+                    "required": false,
+                    "type": "int"
+                  }
+                ]
+              },
+              "value-required": false
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": {
+                    "type": "struct",
+                    "fields": [
+                      {
+                        "name": "c",
+                        "type": "integer",
+                        "nullable": true,
+                        "metadata": {}
+                      }
+                    ]
+                  },
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "arr",
+            "type": {
+              "type": "array",
+              "elementType": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "name": "x",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  }
+                ]
+              },
+              "containsNull": true
+            },
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "m",
+            "type": {
+              "type": "map",
+              "keyType": "string",
+              "valueType": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "name": "q",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  }
+                ]
+              },
+              "valueContainsNull": true
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_create_required_child": {
+      "statements": [
+        "CREATE TABLE sc.ns.req_v2 (id INT, s STRUCT<a: INT NOT NULL, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+      ],
+      "error": null,
+      "table": "req_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": true,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": false,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_rename_dotted": {
+      "statements": [
+        "CREATE TABLE sc.ns.rename_dotted_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.rename_dotted_v2 RENAME COLUMN s.a TO `x.y`"
+      ],
+      "error": null,
+      "table": "rename_dotted_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "x.y",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "x.y",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_add_dotted_leaf": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_dotted_leaf_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.add_dotted_leaf_v2 ADD COLUMN s.`x.y` INT"
+      ],
+      "error": null,
+      "table": "add_dotted_leaf_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                },
+                {
+                  "id": 5,
+                  "name": "x.y",
+                  "required": false,
+                  "type": "int"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "x.y",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_add_dotted_top": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_dotted_top_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.add_dotted_top_v2 ADD COLUMN `p.q` INT"
+      ],
+      "error": null,
+      "table": "add_dotted_top_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          {
+            "id": 5,
+            "name": "p.q",
+            "required": false,
+            "type": "int"
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "p.q",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_rename_double_quoted": {
+      "statements": [
+        "CREATE TABLE sc.ns.rename_double_quoted_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.rename_double_quoted_v2 RENAME COLUMN s.a TO \"x.y\""
+      ],
+      "error": {
+        "python_class": "ParseException",
+        "java_class": null,
+        "condition": "PARSE_SYNTAX_ERROR",
+        "java_cause_class": null,
+        "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"x.y\"'. SQLSTATE: 42601 (line 1, pos 63)"
+      },
+      "table": "rename_double_quoted_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_add_double_quoted_leaf": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_double_quoted_leaf_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.add_double_quoted_leaf_v2 ADD COLUMN s.\"x.y\" INT"
+      ],
+      "error": {
+        "python_class": "ParseException",
+        "java_class": null,
+        "condition": "PARSE_SYNTAX_ERROR",
+        "java_cause_class": null,
+        "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"x.y\"'. SQLSTATE: 42601 (line 1, pos 57)"
+      },
+      "table": "add_double_quoted_leaf_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_add_first": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_first_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.add_first_v2 ADD COLUMN s.z INT FIRST"
+      ],
+      "error": null,
+      "table": "add_first_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 5,
+                  "name": "z",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "z",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_add_after": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_after_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.add_after_v2 ADD COLUMN s.w INT AFTER a"
+      ],
+      "error": null,
+      "table": "add_after_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 5,
+                  "name": "w",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "w",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_add_after_dotted": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_after_dotted_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.add_after_dotted_v2 ADD COLUMN s.w INT AFTER s.a"
+      ],
+      "error": {
+        "python_class": "ParseException",
+        "java_class": null,
+        "condition": "PARSE_SYNTAX_ERROR",
+        "java_cause_class": null,
+        "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '.'. SQLSTATE: 42601 (line 1, pos 64)"
+      },
+      "table": "add_after_dotted_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_add_comment": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_comment_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.add_comment_v2 ADD COLUMN s.d INT COMMENT 'c'"
+      ],
+      "error": null,
+      "table": "add_comment_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                },
+                {
+                  "id": 5,
+                  "name": "d",
+                  "required": false,
+                  "type": "int",
+                  "doc": "c"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "d",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {
+                    "comment": "c"
+                  }
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_add_map_child": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_map_child_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.add_map_child_v2 ADD COLUMN s.mm MAP<STRING, INT>"
+      ],
+      "error": null,
+      "table": "add_map_child_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                },
+                {
+                  "id": 5,
+                  "name": "mm",
+                  "required": false,
+                  "type": {
+                    "type": "map",
+                    "key-id": 6,
+                    "key": "string",
+                    "value-id": 7,
+                    "value": "int",
+                    "value-required": false
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "mm",
+                  "type": {
+                    "type": "map",
+                    "keyType": "string",
+                    "valueType": "integer",
+                    "valueContainsNull": true
+                  },
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_add_struct_child": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_struct_child_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.add_struct_child_v2 ADD COLUMN s.st STRUCT<u: INT, v: STRUCT<w: INT>>"
+      ],
+      "error": null,
+      "table": "add_struct_child_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                },
+                {
+                  "id": 5,
+                  "name": "st",
+                  "required": false,
+                  "type": {
+                    "type": "struct",
+                    "fields": [
+                      {
+                        "id": 6,
+                        "name": "u",
+                        "required": false,
+                        "type": "int"
+                      },
+                      {
+                        "id": 7,
+                        "name": "v",
+                        "required": false,
+                        "type": {
+                          "type": "struct",
+                          "fields": [
+                            {
+                              "id": 8,
+                              "name": "w",
+                              "required": false,
+                              "type": "int"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "st",
+                  "type": {
+                    "type": "struct",
+                    "fields": [
+                      {
+                        "name": "u",
+                        "type": "integer",
+                        "nullable": true,
+                        "metadata": {}
+                      },
+                      {
+                        "name": "v",
+                        "type": {
+                          "type": "struct",
+                          "fields": [
+                            {
+                              "name": "w",
+                              "type": "integer",
+                              "nullable": true,
+                              "metadata": {}
+                            }
+                          ]
+                        },
+                        "nullable": true,
+                        "metadata": {}
+                      }
+                    ]
+                  },
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_add_list_child": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_list_child_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.add_list_child_v2 ADD COLUMN s.al ARRAY<STRUCT<k: INT>>"
+      ],
+      "error": null,
+      "table": "add_list_child_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                },
+                {
+                  "id": 5,
+                  "name": "al",
+                  "required": false,
+                  "type": {
+                    "type": "list",
+                    "element-id": 6,
+                    "element": {
+                      "type": "struct",
+                      "fields": [
+                        {
+                          "id": 7,
+                          "name": "k",
+                          "required": false,
+                          "type": "int"
+                        }
+                      ]
+                    },
+                    "element-required": false
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "al",
+                  "type": {
+                    "type": "array",
+                    "elementType": {
+                      "type": "struct",
+                      "fields": [
+                        {
+                          "name": "k",
+                          "type": "integer",
+                          "nullable": true,
+                          "metadata": {}
+                        }
+                      ]
+                    },
+                    "containsNull": true
+                  },
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_add_duplicate_child": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_duplicate_child_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.add_duplicate_child_v2 ADD COLUMN s.a INT"
+      ],
+      "error": {
+        "python_class": "AnalysisException",
+        "java_class": null,
+        "condition": "FIELD_ALREADY_EXISTS",
+        "java_cause_class": null,
+        "message": "[FIELD_ALREADY_EXISTS] Cannot add column, because `s`.`a` already exists in \"STRUCT<id: INT, s: STRUCT<a: INT, b: STRING>>\". SQLSTATE: 42710; line 1 pos 0;"
+      },
+      "table": "add_duplicate_child_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v2_add_unknown_parent": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_unknown_parent_v2 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+        "ALTER TABLE sc.ns.add_unknown_parent_v2 ADD COLUMN nope.z INT"
+      ],
+      "error": {
+        "python_class": "AnalysisException",
+        "java_class": null,
+        "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+        "java_cause_class": null,
+        "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `nope` cannot be resolved. Did you mean one of the following? [`id`, `s`]. SQLSTATE: 42703; line 1 pos 51"
+      },
+      "table": "add_unknown_parent_v2",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_create_field_ids": {
+      "statements": [
+        "CREATE TABLE sc.ns.ids_v3 (id INT, s STRUCT<a: INT, b: STRUCT<c: INT>>, arr ARRAY<STRUCT<x: INT>>, m MAP<STRING, STRUCT<q: INT>>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+      ],
+      "error": null,
+      "table": "ids_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 5,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 6,
+                  "name": "b",
+                  "required": false,
+                  "type": {
+                    "type": "struct",
+                    "fields": [
+                      {
+                        "id": 7,
+                        "name": "c",
+                        "required": false,
+                        "type": "int"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": 3,
+            "name": "arr",
+            "required": false,
+            "type": {
+              "type": "list",
+              "element-id": 8,
+              "element": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "id": 9,
+                    "name": "x",
+                    "required": false,
+                    "type": "int"
+                  }
+                ]
+              },
+              "element-required": false
+            }
+          },
+          {
+            "id": 4,
+            "name": "m",
+            "required": false,
+            "type": {
+              "type": "map",
+              "key-id": 10,
+              "key": "string",
+              "value-id": 11,
+              "value": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "id": 12,
+                    "name": "q",
+                    "required": false,
+                    "type": "int"
+                  }
+                ]
+              },
+              "value-required": false
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": {
+                    "type": "struct",
+                    "fields": [
+                      {
+                        "name": "c",
+                        "type": "integer",
+                        "nullable": true,
+                        "metadata": {}
+                      }
+                    ]
+                  },
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "arr",
+            "type": {
+              "type": "array",
+              "elementType": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "name": "x",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  }
+                ]
+              },
+              "containsNull": true
+            },
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "m",
+            "type": {
+              "type": "map",
+              "keyType": "string",
+              "valueType": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "name": "q",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  }
+                ]
+              },
+              "valueContainsNull": true
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_create_required_child": {
+      "statements": [
+        "CREATE TABLE sc.ns.req_v3 (id INT, s STRUCT<a: INT NOT NULL, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+      ],
+      "error": null,
+      "table": "req_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": true,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": false,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_rename_dotted": {
+      "statements": [
+        "CREATE TABLE sc.ns.rename_dotted_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.rename_dotted_v3 RENAME COLUMN s.a TO `x.y`"
+      ],
+      "error": null,
+      "table": "rename_dotted_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "x.y",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "x.y",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_add_dotted_leaf": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_dotted_leaf_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.add_dotted_leaf_v3 ADD COLUMN s.`x.y` INT"
+      ],
+      "error": null,
+      "table": "add_dotted_leaf_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                },
+                {
+                  "id": 5,
+                  "name": "x.y",
+                  "required": false,
+                  "type": "int"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "x.y",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_add_dotted_top": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_dotted_top_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.add_dotted_top_v3 ADD COLUMN `p.q` INT"
+      ],
+      "error": null,
+      "table": "add_dotted_top_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          {
+            "id": 5,
+            "name": "p.q",
+            "required": false,
+            "type": "int"
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "p.q",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_rename_double_quoted": {
+      "statements": [
+        "CREATE TABLE sc.ns.rename_double_quoted_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.rename_double_quoted_v3 RENAME COLUMN s.a TO \"x.y\""
+      ],
+      "error": {
+        "python_class": "ParseException",
+        "java_class": null,
+        "condition": "PARSE_SYNTAX_ERROR",
+        "java_cause_class": null,
+        "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"x.y\"'. SQLSTATE: 42601 (line 1, pos 63)"
+      },
+      "table": "rename_double_quoted_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_add_double_quoted_leaf": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_double_quoted_leaf_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.add_double_quoted_leaf_v3 ADD COLUMN s.\"x.y\" INT"
+      ],
+      "error": {
+        "python_class": "ParseException",
+        "java_class": null,
+        "condition": "PARSE_SYNTAX_ERROR",
+        "java_cause_class": null,
+        "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"x.y\"'. SQLSTATE: 42601 (line 1, pos 57)"
+      },
+      "table": "add_double_quoted_leaf_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_add_first": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_first_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.add_first_v3 ADD COLUMN s.z INT FIRST"
+      ],
+      "error": null,
+      "table": "add_first_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 5,
+                  "name": "z",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "z",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_add_after": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_after_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.add_after_v3 ADD COLUMN s.w INT AFTER a"
+      ],
+      "error": null,
+      "table": "add_after_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 5,
+                  "name": "w",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "w",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_add_after_dotted": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_after_dotted_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.add_after_dotted_v3 ADD COLUMN s.w INT AFTER s.a"
+      ],
+      "error": {
+        "python_class": "ParseException",
+        "java_class": null,
+        "condition": "PARSE_SYNTAX_ERROR",
+        "java_cause_class": null,
+        "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '.'. SQLSTATE: 42601 (line 1, pos 64)"
+      },
+      "table": "add_after_dotted_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_add_comment": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_comment_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.add_comment_v3 ADD COLUMN s.d INT COMMENT 'c'"
+      ],
+      "error": null,
+      "table": "add_comment_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                },
+                {
+                  "id": 5,
+                  "name": "d",
+                  "required": false,
+                  "type": "int",
+                  "doc": "c"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "d",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {
+                    "comment": "c"
+                  }
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_add_map_child": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_map_child_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.add_map_child_v3 ADD COLUMN s.mm MAP<STRING, INT>"
+      ],
+      "error": null,
+      "table": "add_map_child_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                },
+                {
+                  "id": 5,
+                  "name": "mm",
+                  "required": false,
+                  "type": {
+                    "type": "map",
+                    "key-id": 6,
+                    "key": "string",
+                    "value-id": 7,
+                    "value": "int",
+                    "value-required": false
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "mm",
+                  "type": {
+                    "type": "map",
+                    "keyType": "string",
+                    "valueType": "integer",
+                    "valueContainsNull": true
+                  },
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_add_struct_child": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_struct_child_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.add_struct_child_v3 ADD COLUMN s.st STRUCT<u: INT, v: STRUCT<w: INT>>"
+      ],
+      "error": null,
+      "table": "add_struct_child_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                },
+                {
+                  "id": 5,
+                  "name": "st",
+                  "required": false,
+                  "type": {
+                    "type": "struct",
+                    "fields": [
+                      {
+                        "id": 6,
+                        "name": "u",
+                        "required": false,
+                        "type": "int"
+                      },
+                      {
+                        "id": 7,
+                        "name": "v",
+                        "required": false,
+                        "type": {
+                          "type": "struct",
+                          "fields": [
+                            {
+                              "id": 8,
+                              "name": "w",
+                              "required": false,
+                              "type": "int"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "st",
+                  "type": {
+                    "type": "struct",
+                    "fields": [
+                      {
+                        "name": "u",
+                        "type": "integer",
+                        "nullable": true,
+                        "metadata": {}
+                      },
+                      {
+                        "name": "v",
+                        "type": {
+                          "type": "struct",
+                          "fields": [
+                            {
+                              "name": "w",
+                              "type": "integer",
+                              "nullable": true,
+                              "metadata": {}
+                            }
+                          ]
+                        },
+                        "nullable": true,
+                        "metadata": {}
+                      }
+                    ]
+                  },
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_add_list_child": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_list_child_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.add_list_child_v3 ADD COLUMN s.al ARRAY<STRUCT<k: INT>>"
+      ],
+      "error": null,
+      "table": "add_list_child_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 1,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                },
+                {
+                  "id": 5,
+                  "name": "al",
+                  "required": false,
+                  "type": {
+                    "type": "list",
+                    "element-id": 6,
+                    "element": {
+                      "type": "struct",
+                      "fields": [
+                        {
+                          "id": 7,
+                          "name": "k",
+                          "required": false,
+                          "type": "int"
+                        }
+                      ]
+                    },
+                    "element-required": false
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "al",
+                  "type": {
+                    "type": "array",
+                    "elementType": {
+                      "type": "struct",
+                      "fields": [
+                        {
+                          "name": "k",
+                          "type": "integer",
+                          "nullable": true,
+                          "metadata": {}
+                        }
+                      ]
+                    },
+                    "containsNull": true
+                  },
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_add_duplicate_child": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_duplicate_child_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.add_duplicate_child_v3 ADD COLUMN s.a INT"
+      ],
+      "error": {
+        "python_class": "AnalysisException",
+        "java_class": null,
+        "condition": "FIELD_ALREADY_EXISTS",
+        "java_cause_class": null,
+        "message": "[FIELD_ALREADY_EXISTS] Cannot add column, because `s`.`a` already exists in \"STRUCT<id: INT, s: STRUCT<a: INT, b: STRING>>\". SQLSTATE: 42710; line 1 pos 0;"
+      },
+      "table": "add_duplicate_child_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    },
+    "v3_add_unknown_parent": {
+      "statements": [
+        "CREATE TABLE sc.ns.add_unknown_parent_v3 (id INT, s STRUCT<a: INT, b: STRING>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+        "ALTER TABLE sc.ns.add_unknown_parent_v3 ADD COLUMN nope.z INT"
+      ],
+      "error": {
+        "python_class": "AnalysisException",
+        "java_class": null,
+        "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+        "java_cause_class": null,
+        "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `nope` cannot be resolved. Did you mean one of the following? [`id`, `s`]. SQLSTATE: 42703; line 1 pos 51"
+      },
+      "table": "add_unknown_parent_v3",
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      }
+    }
+  },
+  "dataframe_create_cells": {
+    "v2_create_field_ids": {
+      "table": "df_ids_v2",
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": {
+                    "type": "struct",
+                    "fields": [
+                      {
+                        "name": "c",
+                        "type": "integer",
+                        "nullable": true,
+                        "metadata": {}
+                      }
+                    ]
+                  },
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "arr",
+            "type": {
+              "type": "array",
+              "elementType": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "name": "x",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  }
+                ]
+              },
+              "containsNull": true
+            },
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "m",
+            "type": {
+              "type": "map",
+              "keyType": "string",
+              "valueType": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "name": "q",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  }
+                ]
+              },
+              "valueContainsNull": true
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 5,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 6,
+                  "name": "b",
+                  "required": false,
+                  "type": {
+                    "type": "struct",
+                    "fields": [
+                      {
+                        "id": 7,
+                        "name": "c",
+                        "required": false,
+                        "type": "int"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": 3,
+            "name": "arr",
+            "required": false,
+            "type": {
+              "type": "list",
+              "element-id": 8,
+              "element": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "id": 9,
+                    "name": "x",
+                    "required": false,
+                    "type": "int"
+                  }
+                ]
+              },
+              "element-required": false
+            }
+          },
+          {
+            "id": 4,
+            "name": "m",
+            "required": false,
+            "type": {
+              "type": "map",
+              "key-id": 10,
+              "key": "string",
+              "value-id": 11,
+              "value": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "id": 12,
+                    "name": "q",
+                    "required": false,
+                    "type": "int"
+                  }
+                ]
+              },
+              "value-required": false
+            }
+          }
+        ]
+      }
+    },
+    "v2_create_required_child": {
+      "table": "df_req_v2",
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": false,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "v3_create_field_ids": {
+      "table": "df_ids_v3",
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": true,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": {
+                    "type": "struct",
+                    "fields": [
+                      {
+                        "name": "c",
+                        "type": "integer",
+                        "nullable": true,
+                        "metadata": {}
+                      }
+                    ]
+                  },
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "arr",
+            "type": {
+              "type": "array",
+              "elementType": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "name": "x",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  }
+                ]
+              },
+              "containsNull": true
+            },
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "m",
+            "type": {
+              "type": "map",
+              "keyType": "string",
+              "valueType": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "name": "q",
+                    "type": "integer",
+                    "nullable": true,
+                    "metadata": {}
+                  }
+                ]
+              },
+              "valueContainsNull": true
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 5,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 6,
+                  "name": "b",
+                  "required": false,
+                  "type": {
+                    "type": "struct",
+                    "fields": [
+                      {
+                        "id": 7,
+                        "name": "c",
+                        "required": false,
+                        "type": "int"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": 3,
+            "name": "arr",
+            "required": false,
+            "type": {
+              "type": "list",
+              "element-id": 8,
+              "element": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "id": 9,
+                    "name": "x",
+                    "required": false,
+                    "type": "int"
+                  }
+                ]
+              },
+              "element-required": false
+            }
+          },
+          {
+            "id": 4,
+            "name": "m",
+            "required": false,
+            "type": {
+              "type": "map",
+              "key-id": 10,
+              "key": "string",
+              "value-id": 11,
+              "value": {
+                "type": "struct",
+                "fields": [
+                  {
+                    "id": 12,
+                    "name": "q",
+                    "required": false,
+                    "type": "int"
+                  }
+                ]
+              },
+              "value-required": false
+            }
+          }
+        ]
+      }
+    },
+    "v3_create_required_child": {
+      "table": "df_req_v3",
+      "read_schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {}
+          },
+          {
+            "name": "s",
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "name": "a",
+                  "type": "integer",
+                  "nullable": false,
+                  "metadata": {}
+                },
+                {
+                  "name": "b",
+                  "type": "string",
+                  "nullable": true,
+                  "metadata": {}
+                }
+              ]
+            },
+            "nullable": true,
+            "metadata": {}
+          }
+        ]
+      },
+      "metadata_schema": {
+        "type": "struct",
+        "schema-id": 0,
+        "fields": [
+          {
+            "id": 1,
+            "name": "id",
+            "required": false,
+            "type": "int"
+          },
+          {
+            "id": 2,
+            "name": "s",
+            "required": false,
+            "type": {
+              "type": "struct",
+              "fields": [
+                {
+                  "id": 3,
+                  "name": "a",
+                  "required": false,
+                  "type": "int"
+                },
+                {
+                  "id": 4,
+                  "name": "b",
+                  "required": false,
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
   }
 }

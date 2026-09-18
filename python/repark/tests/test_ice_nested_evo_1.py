@@ -6,7 +6,7 @@ Spark-written tables to their baked root, `register_table` them, and read them o
 and the DataFrame door. The DDL cells replay Spark's own statements on RePark-created tables.
 
 Cells whose id starts with `fork292` read a data file that lacks a nested child the table schema
-has. They need fork PR #292 (F-NESTED-EVO-1) and flip green only with the fork pin bump.
+has. They need fork PR #292 (F-NESTED-EVO-1), in the workspace fork pin since RP-25.
 
 pins: ice-nested-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 pins: ice-nested-evo-1/C-010, C-011, C-012, C-013
@@ -496,19 +496,18 @@ def test_required_nested_child_refuses_like_spark(
     assert outcome["sql"] == expected, (outcome["sql"], expected)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "fork message `cannot add required column without a default value: s.r` where Iceberg "
-        "1.11.0 says `cannot add required column: r`; RePark omits Spark's "
-        "`Unsupported table change: ` prefix"
-    ),
-)
+@pytest.mark.parametrize("format_version", recorder.FORMAT_VERSIONS)
 def test_required_nested_child_message_matches_spark(
-    tmp_path_factory: pytest.TempPathFactory,
+    format_version: str, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
-    """The required-child refusal carries Spark's whole first message line."""
-    outcome = _replayed("2", False, tmp_path_factory)["add_required_nested_child"]
+    """The required-child refusal carries Spark's whole first message line.
+
+    Notes:
+        Round 2 (2026-09-18): RePark raises Iceberg 1.11.0's `cannot add required column: r`
+        with Spark's `Unsupported table change: ` prefix before the fork is asked, so the
+        fork's own `… without a default value: s.r` text no longer surfaces.
+    """
+    outcome = _replayed(format_version, False, tmp_path_factory)["add_required_nested_child"]
     assert _REQUIRED_CHILD_MESSAGE in str(outcome["error"]), str(outcome["error"])
 
 

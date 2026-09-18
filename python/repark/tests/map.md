@@ -393,7 +393,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   core, no new metadata file, schema unchanged); the strict-xfail
   `test_required_nested_child_message_matches_spark` holds Spark's whole first line.
   Test ids with `fork292` read a data file that lacks a child the schema has: they need
-  fork PR #292 (F-NESTED-EVO-1) and are red until the fork pin bump. The leaf read runs
+  fork PR #292 (F-NESTED-EVO-1), in the workspace pin since RP-25 — green with no override
+  (measured 2026-09-18, run 22b). The leaf read runs
   aliased (`s.a AS a`) and the DataFrame twin spells `getField(...).alias(...)`: the unaliased
   name (`<table>.s[a]`, strict-xfail `test_unaliased_nested_projection_names_like_spark`) is
   EX-COL-2 and the dotted `col("s.a")` is COL-DOTTED-FIELD-1, both BACKLOG outside the unit.
@@ -406,6 +407,25 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `fixtures/torture/data/ice_nested_evo_1/` and writes `oracle.json`. Re-record:
   `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the
   path (`REPARK_SPARK_IVY` points `spark.jars.ivy` at a warm Ivy cache).
+  **Round 2 (2026-09-18, run 22b):** `build_schema_cells()` adds the metadata cells — nested
+  CREATE field ids, a `NOT NULL` struct child, dotted (backtick) and double-quoted names,
+  `FIRST` / `AFTER a` / `AFTER s.a` / `COMMENT` inside a struct, map / struct / array child
+  types, a duplicate child and an unknown parent — each recording the table's current metadata
+  schema (`version-hint.text` → `vN.metadata.json`), Spark's `SELECT *` schema and any refusal
+  (first non-empty message line); `record_dataframe_create` records the two CREATE schemas
+  through `writeTo(...).create()`.
+- [test_ice_nested_evo_1_schema.py](test_ice_nested_evo_1_schema.py) — **ICE-NESTED-EVO-1
+  round 2 (2026-09-18, run 22b):** replays every `schema_cells` entry (v2, v3) on a fresh
+  facade catalog and compares the RePark metadata file's current schema (field ids, child
+  order, `required`, `doc`; `schema-id` ignored) with Spark's, the refusal (exception class
+  name and Spark's message up to `SQLSTATE`) and the `SELECT *` / `table()` read shape with
+  struct-child nullability. `test_dataframe_door_create_matches_spark_metadata` creates the two
+  CREATE schemas through `writeTo(...).create()` against Spark's DataFrame-door recording
+  (Spark's V2 CTAS makes every column nullable). Red on the baseline native: 10 failed
+  (the `NOT NULL` child ×6, the duplicate child ×2, the unknown parent ×2); the two
+  double-quoted cells, recorded after that run, were red too on the same native (accepted,
+  schema changed).
+  pins: ice-nested-evo-1/C-014, C-015, C-016, C-018, C-019, C-020
 - [test_ice_evo_dml_1.py](test_ice_evo_dml_1.py) — **ICE-EVO-DML-1 (2026-09-17):** MERGE,
   UPDATE, DELETE, INSERT and INSERT OVERWRITE on a table evolved by `ADD COLUMN` /
   `RENAME COLUMN` with no write since answer Spark 4.1.2 row for row (run-19a V2-10e, V3-11).
