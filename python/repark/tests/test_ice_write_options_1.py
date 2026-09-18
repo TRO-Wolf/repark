@@ -704,6 +704,7 @@ def test_insert_by_name_overwrite_honours_write_options(spark: ReparkSession) ->
         "TRUNCATE TABLE {t}",
         "ALTER TABLE {t} SET TBLPROPERTIES ('k' = 'v')",
         "ALTER TABLE {t} ADD PARTITION FIELD id",
+        "ALTER TABLE {t} ADD COLUMN s.z INT",
         "DROP TABLE {t}",
         "DROP NAMESPACE {c}.{n}",
         "CREATE NAMESPACE {c}.other_ns",

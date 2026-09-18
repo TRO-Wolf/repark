@@ -506,6 +506,26 @@ pins: rp-4-fork-repin/C-005, C-006
   list with nullable `element` fields and table-unique ids from a checked
   allocator (R-16b-21 grant); bare/square-bracket forms still refuse.
   pins: fnp-4b/C-025 (round-7 fmt/clippy follow-ups carry no behavior change)
+  **ICE-NESTED-EVO-1 (2026-09-17):** `STRUCT<a: T, …>` maps to an Iceberg struct of nullable
+  children and `MAP<K, V>` to an Iceberg map (required key, nullable value), both from the same
+  checked id allocator, so `CREATE TABLE` with struct, array-of-struct and map-of-struct columns
+  round-trips the `DESCRIBE` types Spark shows. `normalize.rs` parses a column-def `CREATE TABLE`
+  whose column list spells `MAP<` (`has_angle_map_column_type`, scanned before the CTAS `AS`)
+  with `SparkSqlDialect` (the Databricks dialect has no angle-bracket map type); every other
+  statement keeps its dialect.
+  pins: ice-nested-evo-1/C-006
+  **Round 2 (2026-09-18, run 22b):** `parse_single_normalized` runs
+  `repark_iceberg::write::nested_type_sql::rewrite_nested_type_tokens` (round 3: `rewrite_create_column_types`) on every
+  `CREATE TABLE`, and `struct_type_to_iceberg` makes a `STRUCT<a: T NOT NULL>` child an Iceberg
+  required child, as Spark's metadata records. The field ids this module numbers are
+  placeholders: the fork's `TableMetadataBuilder::new` reassigns them level-order (Java's
+  `AssignFreshIds`), which is Spark's numbering, pinned by
+  `test_ice_nested_evo_1_schema.py::test_nested_ddl_metadata_matches_spark[create_field_ids-*]`.
+  pins: ice-nested-evo-1/C-014, C-016
+  **Round 3 (2026-09-18, run 22b, V-002):** the call is now `rewrite_create_column_types`, so
+  only the column-definition list is rewritten; a CTAS query keeps its `struct < 1 AND x IS
+  NOT NULL` as written.
+  pins: ice-nested-evo-1/C-022
 - `format_version.rs` — **V3-10:** the Spark-door adapter for `SET TBLPROPERTIES
   ('format-version' = …)`. It lifts the reserved key out of the property map before the
   transaction (so it is never persisted), resolves it against the table's current version and the
@@ -529,6 +549,36 @@ pins: rp-4-fork-repin/C-005, C-006
   refuse with Spark's `UNRESOLVED_COLUMN` framing. A sibling module, not an `alter.rs` arm,
   because that file sits at its exact ceiling. 4 in-module tests + [`tests/column_move.rs`](tests/map.md).
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-014
+- `nested_column_ddl.rs` — **ICE-NESTED-EVO-1 (2026-09-17):** the nested-path `ALTER TABLE`
+  pre-parse (`try_parse_nested_column_ddl` / `execute_nested_column_ddl`, wired in `router.rs`
+  ahead of the column-move intercept): `ADD COLUMN[S] s.c T [NOT NULL] [COMMENT '…']
+  [FIRST|AFTER x]` (a list, with or without parentheses), `RENAME COLUMN s.a TO a2`,
+  `DROP COLUMN[S] [IF EXISTS] s.b, …`. It reads the statement with sqlparser's
+  `SparkSqlDialect` (so a `MAP<K, V>` child type parses) and claims it only when a column path
+  has a dot; an all-top-level statement falls through to the stock path untouched. `element`
+  and `value` path steps (`arrs.element.y`, `m.value.q`) go to the fork verbatim. Every change
+  commits through `repark_iceberg::write::nested_column::apply_column_path_changes` — the
+  fork's `UpdateSchema` (`add_column_to` / `add_required_column_to` with the parent path,
+  `rename_column`, `delete_column`); RePark keeps no schema model of its own. A required child
+  without a default refuses with the fork's `Incompatible change: cannot add required column…`.
+  Pins: [`tests/nested_column_ddl.rs`](tests/map.md).
+  pins: ice-nested-evo-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012
+  **Round 2 (2026-09-18, run 22b):** a claimed statement that holds a double-quoted word
+  (`RENAME COLUMN s.a TO "x.y"`, `ADD COLUMN s."x.y" INT`) refuses Spark's
+  `[PARSE_SYNTAX_ERROR] Syntax error at or near '"x.y"'. SQLSTATE: 42601` (Spark reads `"…"`
+  as a string literal there; `SparkSqlDialect` had read it as an identifier and renamed the
+  child) — the message rides a `Context` over the `SQL` error so it stays a `ParseException`
+  and keeps its quotes verbatim. Backticked dotted names (`` TO `x.y` ``) stay accepted, as in
+  Spark. Before the commit, `nested_add_refusal` answers Spark's `FIELD_ALREADY_EXISTS` /
+  `UNRESOLVED_COLUMN` as an analysis error.
+  pins: ice-nested-evo-1/C-015, C-019
+  **Round 3 (2026-09-18, run 22b, V-001):** the refusal is positional. A `NameParser` wraps
+  the parser and records the first double-quoted identifier it reads in a name position — a
+  column-path segment, the new name after `TO`, the `AFTER` reference — and only that refuses.
+  A double-quoted token in a string position (`COMMENT "x.y"`) is Spark's string literal and
+  becomes the child's `doc`, as Spark measured (round 2 had scanned the whole statement and
+  refused it).
+  pins: ice-nested-evo-1/C-021
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,

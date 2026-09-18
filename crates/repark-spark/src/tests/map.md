@@ -492,6 +492,36 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ctas_service_managed_plain_ctas_records_append` (`[append]`). The first two go red
   when the `ctas.or_replace` branch in `execute_ctas_service_managed` is reverted.
   pins: ice-rtas-ops-2/C-019
+- [nested_column_ddl.rs](nested_column_ddl.rs) — **ICE-NESTED-EVO-1 (2026-09-17):** the Spark
+  door's nested DDL end to end on an in-memory catalog: `CREATE TABLE` with struct,
+  array-of-struct and map-of-struct columns answers Spark's `DESCRIBE` types;
+  `ADD COLUMN s.c` / `arrs.element.y` / `ADD COLUMNS (m.value.q …)`, `RENAME COLUMN s.a TO a2`
+  (field id kept) and `DROP COLUMN s.b` evolve the schema by field id; the required child
+  refuses with the schema id unchanged; malformed paths refuse `[PARSE_SYNTAX_ERROR]` or as a
+  parse error; an unknown parent refuses; `DROP COLUMN IF EXISTS` on a missing child is a
+  no-op; the recognizer leaves top-level forms, column moves and reads to their own paths;
+  struct and map inserts read back. `fork292_nested_add_reads_null_for_rows_written_before`
+  (a child added after the write reads `NULL`) needs fork PR #292. The `#[ignore]`d
+  `forkwrite_list_insert_reads_back` waits on the hand-back's fork finding: an `INSERT` into a
+  list column fails in the fork writer.
+  pins: ice-nested-evo-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012
+  **Round 3 (2026-09-18, run 22b):** `nested_add_comment_takes_a_double_quoted_string_spark_shaped`
+  adds `s.d COMMENT "x.y"`, `s.e COMMENT "c"` and `s.f COMMENT "x.y" FIRST` and reads the
+  children and docs back in Spark's order (V-001; red before the fix: `PARSE_SYNTAX_ERROR`).
+  pins: ice-nested-evo-1/C-021
+  `ctas_filtering_a_map_column_with_lt_answers_spark_rows` reads Spark's row back from
+  `CREATE TABLE … AS SELECT * FROM src WHERE map < 5 AND map > 0` (V-002). The `#[ignore]`d
+  `ident_struct_kw_ctas_filtering_a_struct_column_with_lt_answers_spark_rows` waits on
+  IDENT-STRUCT-KW-1.
+  pins: ice-nested-evo-1/C-022
+  **Round 2 (2026-09-18, run 22b):**
+  `nested_ddl_refuses_double_quoted_names_and_known_paths_spark_shaped` (double-quoted names
+  refuse 42601 verbatim, an existing child `FIELD_ALREADY_EXISTS` 42710, an unknown parent
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` 42703, schema id unchanged) and
+  `nested_create_not_null_child_is_required_with_level_order_ids` (`STRUCT<a: INT NOT NULL>`
+  and a map-value struct child are required; ids are Java's level order; a hand-written
+  struct-field `OPTIONS` refuses).
+  pins: ice-nested-evo-1/C-014, C-015, C-016, C-019
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).

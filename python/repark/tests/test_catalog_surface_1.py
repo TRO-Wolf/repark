@@ -475,14 +475,19 @@ def test_create_table_array_and_not_null(spark: ReparkSession) -> None:
     assert columns["id"].nullable is False
 
 
-def test_create_table_map_struct_refuse_loudly(spark: ReparkSession) -> None:
-    """C-009/L-004: map/struct schema keeps the engine's loud refusal."""
+def test_create_table_map_struct_round_trip(spark: ReparkSession) -> None:
+    """C-009/L-004, ICE-NESTED-EVO-1 C-006: map and struct columns create as Spark does.
+
+    pins: ice-nested-evo-1/C-006
+    """
     map_schema = StructType([StructField("m", MapType(StringType(), IntegerType()))])
-    with pytest.raises(AnalysisException):
-        spark.catalog.createTable("ctm", schema=map_schema)
+    spark.catalog.createTable("ctm", schema=map_schema)
     struct_schema = StructType([StructField("s", StructType([StructField("a", IntegerType())]))])
-    with pytest.raises(UnsupportedOperationException):
-        spark.catalog.createTable("cts", schema=struct_schema)
+    spark.catalog.createTable("cts", schema=struct_schema)
+    map_columns = [(column.name, column.dataType) for column in spark.catalog.listColumns("ctm")]
+    struct_columns = [(column.name, column.dataType) for column in spark.catalog.listColumns("cts")]
+    assert map_columns == [("m", "map<string,int>")]
+    assert struct_columns == [("s", "struct<a:int>")]
 
 
 def test_create_table_exists(spark: ReparkSession) -> None:

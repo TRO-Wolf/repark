@@ -32,7 +32,10 @@ matrix. Stock DataFusion handles delegated reads and DML.
   **declared in the dependency policy as `dev` edges** (`scripts/check_crate_dag.py`
   `ALLOWED_EDGES`): visible and reasoned about, exempt from the layering rule, and RED the moment
   either is promoted to `normal` — `repark-sql → repark-spark` as a product edge is precisely the
-  forbidden door→door edge. Nothing in `src/` may name them.
+  forbidden door→door edge. Nothing in `src/` may name them. **ICE-NESTED-EVO-1 round 2
+  (2026-09-18):** dev-dependency `serde_json` (external, the workspace pin) lets
+  `tests/ansi_nested_ddl_oracle.rs` read Spark's recorded `oracle.json`.
+  pins: ice-nested-evo-1/C-017
 - [src/map.md](src/map.md) — module-by-module navigation.
 - [tests/map.md](tests/map.md) — integration tests: the R1 parser-production pins, the
   two-session `cross_door.rs` rows (incl. G11 intended divergences), F-Y10-1

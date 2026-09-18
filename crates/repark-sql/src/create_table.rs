@@ -15,6 +15,7 @@ use iceberg::spec::{FormatVersion, PrimitiveType, Type, UnboundPartitionSpec};
 use iceberg::transaction::StagedTableTransaction;
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
+use repark_functions::cardinality::repark_sql_settings_from_options;
 
 use crate::partitioning::build_partition_spec;
 use crate::properties::{TableProperties, parse_with_options};
@@ -383,19 +384,20 @@ fn iceberg_create_format_version(
     ctx: &SessionContext,
     requested: Option<&str>,
 ) -> Result<FormatVersion> {
-    let allow_v3 = ctx
-        .copied_config()
-        .options()
-        .entries()
-        .into_iter()
-        .find(|entry| entry.key == ALLOW_CREATE_FORMAT_VERSION_3_OPTION)
-        .and_then(|entry| entry.value)
-        .is_some_and(|value| {
-            matches!(
-                value.trim().to_ascii_lowercase().as_str(),
-                "true" | "1" | "yes"
-            )
-        });
+    let config = ctx.copied_config();
+    let allow_v3 = repark_sql_settings_from_options(config.options()).allow_create_format_version_3
+        || config
+            .options()
+            .entries()
+            .into_iter()
+            .find(|entry| entry.key == ALLOW_CREATE_FORMAT_VERSION_3_OPTION)
+            .and_then(|entry| entry.value)
+            .is_some_and(|value| {
+                matches!(
+                    value.trim().to_ascii_lowercase().as_str(),
+                    "true" | "1" | "yes"
+                )
+            });
     let Some(raw) = requested.map(str::trim).filter(|value| !value.is_empty()) else {
         return Ok(FormatVersion::V2);
     };
@@ -685,7 +687,10 @@ async fn column_def_schema(
             .options
             .iter()
             .any(|option| matches!(option.option, ColumnOption::NotNull));
-        let data_type = if let Some(arrow) = iceberg_v3_named_arrow_type(&column.data_type) {
+        let data_type = if nested_type::needs_structural_mapping(&column.data_type) {
+            let nested = sql_type_to_iceberg(ctx, &column.data_type, form).await?;
+            iceberg::arrow::type_to_arrow_type(&nested).map_err(iceberg_err)?
+        } else if let Some(arrow) = iceberg_v3_named_arrow_type(&column.data_type) {
             arrow
         } else {
             let plan = ctx
@@ -757,6 +762,18 @@ pub(crate) async fn sql_type_to_iceberg(
     data_type: &datafusion::sql::sqlparser::ast::DataType,
     form: &str,
 ) -> Result<iceberg::spec::Type> {
+    if nested_type::needs_structural_mapping(data_type) {
+        let mut next_id = 1;
+        return nested_type::structural_type_to_iceberg(ctx, data_type, form, &mut next_id).await;
+    }
+    cast_type_to_iceberg(ctx, data_type, form).await
+}
+
+async fn cast_type_to_iceberg(
+    ctx: &SessionContext,
+    data_type: &datafusion::sql::sqlparser::ast::DataType,
+    form: &str,
+) -> Result<iceberg::spec::Type> {
     if let Some(primitive) = iceberg_v3_named_primitive(data_type) {
         return Ok(Type::Primitive(primitive));
     }
@@ -789,6 +806,9 @@ fn iceberg_v3_named_primitive(
         _ => None,
     }
 }
+
+mod nested_type;
+pub(crate) use nested_type::{nested_type_parse_error, rewrite_nested_create_types};
 
 #[cfg(test)]
 mod tests;

@@ -12,6 +12,35 @@ holds behavior observed from outside the crate.
 
 ## Contents
 
+- `ansi_nested_ddl_oracle.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the ANSI
+  door's twin of every recorded nested DDL cell, reading Spark's answers from
+  `python/repark-parity/fixtures/torture/data/ice_nested_evo_1/oracle.json`. The `cells`
+  replay (inserts skipped, CREATE cells first because the recording's object keys are
+  sorted) compares every read's column names and types and every `DESCRIBE`'s types; the
+  `schema_cells` replay compares the metadata file's current schema (field ids, order,
+  `required`, `doc`) and the refusal (exception class and Spark's text up to `SQLSTATE`).
+  Spark's statements run verbatim except `sc.ns.` → `ice.ns.`, no `USING iceberg`, and
+  `TBLPROPERTIES ('format-version'='N')` → `WITH (format_version = 'N')`. v2 runs on the
+  native ANSI session, v3 on a Spark-extended session through `sql_with(AnsiDialect)` (the
+  only carrier of the v3 opt-in). The two double-quoted cells (`TO "x.y"`, `s."x.y"`) are
+  string literals in Spark and refuse there; on this door `"x.y"` is a standard delimited
+  identifier, so their twin is Spark's backtick cell (`rename_dotted`, `add_dotted_leaf`),
+  ruling Q-22b-NEST-3. Red before round 2: 33 mismatching cells.
+  pins: ice-nested-evo-1/C-014, C-015, C-016, C-017, C-018, C-019, C-020
+  **Round 3 (2026-09-18, run 22b):** the three `COMMENT "…"` schema cells replay here too.
+  On this door they were already green before the V-001 fix (no double-quote refusal), so they
+  pin behaviour, not the fix. `ctas_filtering_a_type_keyword_column_answers_spark_rows_on_the_ansi_door`
+  replays the two CTAS cells with their inserts and compares Spark's rows. The `map` cell was
+  red before V-002 (`map ( 5 AND map ) 0`). The `struct` cell must still refuse with
+  sqlparser's STRUCT-literal parse error (IDENT-STRUCT-KW-1), and it reports a mismatch the
+  day it answers.
+  pins: ice-nested-evo-1/C-021, C-022
+- `alter_nested_column.rs` — **ICE-NESTED-EVO-1 (2026-09-17):**
+  `nested_add_rename_and_drop_on_the_ansi_door` pins the ANSI door's nested DDL end to end:
+  `CREATE TABLE … (s STRUCT<a INT, b VARCHAR>)`, `ADD COLUMN s.c BIGINT`,
+  `RENAME COLUMN s.a TO a2`, `DROP COLUMN s.b` leave `s struct<a2 int, c bigint>`, and
+  `ADD COLUMN s.r INT NOT NULL` refuses as an incompatible change.
+  pins: ice-nested-evo-1/C-007, C-010, C-011, C-012
 - `alter_column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):**
   `alter_column_move_reorders_and_noop_writes_no_metadata` pins the ANSI-door move end to
   end (reorder, no-op keeps the order and commits nothing per R-001 FIXED 2026-09-18 at

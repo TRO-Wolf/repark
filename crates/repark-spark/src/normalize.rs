@@ -14,6 +14,7 @@ use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::spec::{Transform, UnboundPartitionSpec};
 use iceberg::{NamespaceIdent, TableIdent};
+use repark_iceberg::write::nested_type_sql::rewrite_create_column_types;
 
 use repark_core::CatalogRegistry;
 
@@ -170,6 +171,9 @@ pub(crate) fn parse_single_normalized(
     if is_create_table(&tokens) {
         tokens = strip_create_table_using(&tokens);
         (tokens, partitioning) = extract_partitioned_by(&tokens)?;
+        tokens = rewrite_create_column_types(&tokens, false).map_err(|message| {
+            DataFusionError::SQL(Box::new(ParserError::ParserError(message)), None)
+        })?;
     }
     tokens = rewrite_namespace_to_schema(&tokens);
     tokens = alter::rewrite_unset_tblproperties(&tokens);
@@ -180,9 +184,12 @@ pub(crate) fn parse_single_normalized(
     }
     // ALTER TABLE uses GenericDialect.
     let generic = GenericDialect {};
+    let spark = datafusion::sql::sqlparser::dialect::SparkSqlDialect {};
     let parse_dialect: &dyn datafusion::sql::sqlparser::dialect::Dialect =
         if alter::tokens_are_alter_table(&tokens) {
             &generic
+        } else if is_create_table(&tokens) && has_angle_map_column_type(&tokens) {
+            &spark
         } else {
             &dialect
         };
@@ -471,6 +478,18 @@ pub(crate) fn is_create_table(tokens: &[Token]) -> bool {
         .take(6)
         .collect();
     keywords.first() == Some(&Keyword::CREATE) && keywords.contains(&Keyword::TABLE)
+}
+
+pub(crate) fn has_angle_map_column_type(tokens: &[Token]) -> bool {
+    let boundary = ctas_as_boundary(tokens);
+    let significant: Vec<&Token> = tokens[..boundary]
+        .iter()
+        .filter(|token| !matches!(token, Token::Whitespace(_)))
+        .collect();
+    significant.windows(2).any(|pair| {
+        matches!(pair[0], Token::Word(word) if word.keyword == Keyword::MAP)
+            && matches!(pair[1], Token::Lt)
+    })
 }
 
 /// The CTAS `AS` boundary — the position of the first `AS` keyword (or the end of the stream).

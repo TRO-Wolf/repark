@@ -11,7 +11,7 @@ use crate::{
     DmlSubqueryVerb, MorDmlKind, alter, alter_write_order, build_ctas, call, column_move,
     create_table, delete_target_object_name, describe_show, execute_append_with_options,
     execute_create_namespace, execute_ctas, execute_drop_namespace, execute_drop_table,
-    execute_insert_overwrite, execute_truncate, merge, metadata_tables,
+    execute_insert_overwrite, execute_truncate, merge, metadata_tables, nested_column_ddl,
     object_name_from_table_with_joins, parse_single_normalized, passthrough_after_p11, ref_ddl,
     refuse_dml_subquery_predicate, refuse_mor_unpartitioned_multi_spec_dml,
     refuse_multi_statement_sql, refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql,
@@ -387,6 +387,14 @@ async fn try_preparse_intercepts(
         return Some(
             match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
                 Ok(ddl) => alter_write_order::execute_write_order_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
+    }
+    if let Some(parsed) = nested_column_ddl::try_parse_nested_column_ddl(sql) {
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
+                Ok(ddl) => nested_column_ddl::execute_nested_column_ddl(ctx, catalogs, ddl).await,
                 Err(error) => Err(error),
             },
         );

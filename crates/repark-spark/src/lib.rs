@@ -24,6 +24,7 @@ mod merge;
 mod merge_fragments;
 mod metadata_tables;
 mod namespace_ddl;
+mod nested_column_ddl;
 mod normalize;
 mod ref_ddl;
 mod router;
