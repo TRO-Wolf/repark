@@ -1725,10 +1725,6 @@
      "new_pos": null,
      "expect_error": {
       "exc": "Py4JJavaError",
-      "prefix": "Cannot cherrypick snapshot {snap:1}: already picked to create ancestor {snap:3}"
-     },
-     "spark_error": {
-      "exc": "Py4JJavaError",
       "prefix": "Duplicate request to cherry pick wap id that was published already: r2wapid"
      }
     }

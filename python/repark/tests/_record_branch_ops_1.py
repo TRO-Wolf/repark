@@ -647,20 +647,6 @@ def record(warehouse: Path, out: Path) -> None:
             + ")",
             "wap_pick_dup",
         )
-        dup_step = wap.steps[-1]
-        spark_dup = dup_step.pop("expect_error")
-        staged_pos = next(entry["pos"] for entry in wap.log() if entry["id"] == staged_wap[0]["id"])
-        dup_step["expect_error"] = {
-            "exc": "Py4JJavaError",
-            "prefix": (
-                "Cannot cherrypick snapshot {snap:"
-                + str(staged_pos)
-                + "}: already picked to create ancestor {snap:"
-                + str(len(wap.log()) - 1)
-                + "}"
-            ),
-        }
-        dup_step["spark_error"] = spark_dup
 
         final_log = ops.log()
         idmap = {entry["id"]: entry["pos"] for entry in final_log}
