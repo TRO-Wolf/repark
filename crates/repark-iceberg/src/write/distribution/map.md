@@ -8,6 +8,14 @@ holds the pieces split out of it.
 
 ## Contents
 
+- `canonical_float.rs` — `CanonicalFloatExpr::wrap`, applied to every `Float32` / `Float64` sort
+  key in `default_sort_lex_ordering`. Arrow's total order places a negative NaN below every
+  value; Spark's `Float.compare` treats all NaN as one value above every value, and the fork's
+  INSERT path gets there by canonicalising NaN before the sort (`iceberg-datafusion`
+  `physical_plan/sort.rs`, private on the pinned rev — this is its equivalent, not a second
+  rule). Measured Spark answer for the float cell: NULLS FIRST, values ascending, one solid NaN
+  block at the end.
+  pins: ice-sorted-insert-1/C-008
 - `router.rs` — the stream dispatcher rule (WRITE-DISTRIBUTION-2): `PartitionRouter` splits
   each batch by hash of the writer's partition values and `send_routed` delivers each part to
   its slot's worker. `route_partitioned_stream` honours `write.distribution-mode` — `none`

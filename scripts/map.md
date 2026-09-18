@@ -1,5 +1,6 @@
 # map — scripts/
 
+ICE-V3-WRITE-DEFAULT-1 rebase onto ICE-DYN-OVERWRITE-1 (2026-09-18, run 21b): `check_lib_py.py` ratchets `writer_readwriter.py` 1109 → 1102 (the merged column-list and `static_overwrite` writer; the CAP-1 mirror moves with it). pins: ice-v3-write-default-1/C-024
 ICE-DYN-OVERWRITE-1 round 2, ruling Q-20a-6 (2026-09-17): `check_lib_py.py` sets `writer_readwriter.py` 1101 → 1109 (the `static_overwrite` flag threading; `session_core.py` holds 2290) with the CAP-1 mirror. pins: ice-dyn-overwrite-1/L-001
 ICE-MIXED-CASE-1 (2026-09-17): `check_rust_file_size.py` ratchets six baselines down for the case-insensitive scope work, all shrink-only: `write/merge/mod.rs` 1792 → 1782, `write/merge/tests/merge.rs` 1065 → 1032, `write/merge/tests/streaming_scan.rs` 3028 → 3020, `write/predicate_dml.rs` 1142 → 1141, `write/predicate_dml/tests/predicate_dml.rs` 1442 → 1440, `repark-sql/tests/cross_door.rs` 1258 → 1254. pins: ice-mixed-case-1/C-012
 
@@ -211,6 +212,12 @@ ICE-COLUMN-REORDER-1 (2026-09-17): `check_rust_file_size.py`
 plus pins move to sibling `column_move` modules; the partition-spec family moves
 to `partition_spec.rs` behaviour-identical; the CAP-1 mirror rows move with them).
 pins: ice-column-reorder-1/C-013
+ICE-OCC-SCOPED-1 (2026-09-17): `check_rust_file_size.py`
+`repark-iceberg/src/write/merge/mod.rs` 1792 → 1773 (`residual_join_key_filter` moves
+verbatim to `merge/target_scan.rs`, beside the scan it filters, which pays for the MERGE's
+conflict filter on `MergeTarget`; `write/predicate_dml.rs` holds its 1142 exactly). The CAP-1
+mirror row in `test_cap_1_source_file_line_cap.py` moves with it.
+pins: ice-occ-scoped-1/C-005
 REPLACE-LINEAR-1 step 1 (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4089 → 4054 (the `DataFrame.replace` body — validation,
 key-family filtering, and the flat searched-CASE build — moved to the new
@@ -1367,3 +1374,10 @@ FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` p
   `BACKLOG_BASELINE` is set to the count the script itself reports (108), not to an arithmetic
   combination of the two sides' values. Both sides of the rebase had moved it; a measured count is
   exact where an arithmetic one is only usually right. pins: fnp-gen-1/C-007
+- **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** `check_lib_py.py` ratchets
+  `dataframe/writer_readwriter.py` 1101 → 1095 (the by-name projection returns the
+  target column list and stops refusing missing frame columns).
+  pins: ice-v3-write-default-1/C-006
+  Run 21b round 2 (2026-09-18): 1095 → 1094 — `overwritePartitions()` passes the
+  same column list into its `INSERT OVERWRITE` in two lines instead of three.
+  pins: ice-v3-write-default-1/C-020

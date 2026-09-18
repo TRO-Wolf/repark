@@ -52,23 +52,22 @@ mod snapshot_commit;
 pub(crate) mod target_scan;
 
 use insert::{
-    insert_projection, insert_stream_checked, store_assignment_then_sql, update_stream_checked,
+    insert_stream_checked, store_assignment_then_sql, table_projection, update_stream_checked,
 };
 pub use not_matched_by_source::{NotMatchedBySourceAction, NotMatchedBySourceClause};
 pub(crate) use target_scan::{
     KnownPartitions, PartitionSink, TargetScanStream, drain_partition_sink, new_partition_sink,
+    residual_join_key_filter,
 };
 
 use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
+use crate::write::conflict_filter::from_merge_on;
 use crate::write::conform::{conform_batch_retaining_unmapped_columns, write_default_column_names};
 pub(crate) use crate::write::name_resolution::{
     CaseInsensitiveColumnIndex, SourceMatch, dedup_key, resolve_write_column,
 };
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
-use crate::write::scan_prune::{
-    bare_equalities_from_on, file_scoped_rewrite_from_ctx, residual_bounds_predicate,
-    scan_pruning_from_ctx,
-};
+use crate::write::scan_prune::file_scoped_rewrite_from_ctx;
 
 /// The reserved `_file` metadata column the core scan projects.
 pub(super) const FILE_PATH_COL: &str = "_file";
@@ -204,47 +203,12 @@ pub async fn execute_merge(
         write_schema: &write_schema,
         snapshot_id,
         partitions,
+        conflict_filter: merge_conflict_filter(spec, &table),
     };
     let result = plan_and_commit(ctx, catalog, spec, &target, &target_name, mode).await;
     // Non-fatal for the MERGE result — but never silent (resource leak under repeated MERGEs).
     let _ = deregister_merge_scratch(ctx, &target_name);
     result
-}
-
-/// PERF-04: residual join-key bounds.
-async fn residual_join_key_filter(
-    ctx: &SessionContext,
-    spec: &MergeSpec,
-    write_schema: &SchemaRef,
-    mode: MergeMode,
-    file_scoped_rewrite: bool,
-) -> Result<Option<Predicate>> {
-    if !scan_pruning_from_ctx(ctx) {
-        return Ok(None);
-    }
-    if not_matched_by_source::is_present(spec) {
-        return Ok(None);
-    }
-    // COW full-target rewrite must not residual-filter the primary, or unmatched survivors drop.
-    if matches!(mode, MergeMode::CopyOnWrite) && !file_scoped_rewrite {
-        return Ok(None);
-    }
-    let equalities = bare_equalities_from_on(&spec.on_sql, &spec.target_alias, &spec.source_alias);
-    if equalities.is_empty() {
-        return Ok(None);
-    }
-    let residual = residual_bounds_predicate(
-        ctx,
-        &spec.source_from_sql,
-        &spec.source_alias,
-        write_schema.as_ref(),
-        &equalities,
-    )
-    .await;
-    if residual.is_some() {
-        note_residual_push();
-    }
-    Ok(residual)
 }
 
 /// Test-only instrument handles (PERF-19 pass / PERF-01 discovery alloc / PERF-04 residual push).
@@ -552,6 +516,19 @@ struct MergeTarget<'a> {
     /// The snapshot every merge query reads — the OCC `validate_from_snapshot` anchor.
     snapshot_id: Option<i64>,
     partitions: PartitionSink,
+    conflict_filter: Predicate,
+}
+
+fn merge_conflict_filter(spec: &MergeSpec, table: &Table) -> Predicate {
+    if not_matched_by_source::is_present(spec) {
+        return Predicate::AlwaysTrue;
+    }
+    from_merge_on(
+        &spec.on_sql,
+        &spec.target_alias,
+        &spec.source_alias,
+        table.metadata().current_schema(),
+    )
 }
 
 async fn plan_and_commit(
@@ -589,6 +566,7 @@ async fn plan_and_commit_cow(
         write_schema,
         snapshot_id,
         partitions: _,
+        conflict_filter: _,
     } = *target;
     let (affected, new_files) = async {
         let affected = if not_matched_by_source::is_present(spec) {
@@ -627,7 +605,7 @@ async fn plan_and_commit_cow(
             streams.push(Box::pin(rewrite_stream));
         }
         for index in 0..spec.not_matched.len() {
-            let insert_sql = sql.insert_sql(index, write_schema)?;
+            let insert_sql = sql.insert_sql(index, table, write_schema)?;
             streams.push(Box::pin(
                 insert_stream_checked(ctx, &insert_sql, write_schema).await?,
             ));
@@ -653,6 +631,7 @@ async fn plan_and_commit_cow(
         snapshot_id,
         affected_entries,
         new_files,
+        &target.conflict_filter,
         spec.commit_branch.as_deref(),
     )
     .instrument(tracing::info_span!("merge.commit", files = file_count))
@@ -672,6 +651,7 @@ async fn plan_and_commit_mor(
         write_schema,
         snapshot_id,
         partitions,
+        conflict_filter,
     } = target;
     let (table, write_schema, snapshot_id) = (*table, *write_schema, *snapshot_id);
     // R-MERGE-ONEPASS Stage B (MoR): one INNER JOIN yields cardinality, deletes, and UPDATE values.
@@ -713,7 +693,7 @@ async fn plan_and_commit_mor(
             }
         }
         for index in 0..spec.not_matched.len() {
-            let insert_sql = sql.insert_sql(index, write_schema)?;
+            let insert_sql = sql.insert_sql(index, table, write_schema)?;
             streams.push(Box::pin(
                 insert_stream_checked(ctx, &insert_sql, write_schema).await?,
             ));
@@ -737,6 +717,7 @@ async fn plan_and_commit_mor(
         pairs,
         data_files,
         concurrency,
+        conflict_filter,
         spec.commit_branch.as_deref(),
         drain_partition_sink(partitions),
     )
@@ -1443,9 +1424,9 @@ impl MergeSql<'_> {
     }
 
     /// The rows insert clause `index` adds: source rows with no target match.
-    fn insert_sql(&self, index: usize, write_schema: &ArrowSchema) -> Result<String> {
+    fn insert_sql(&self, index: usize, table: &Table, schema: &ArrowSchema) -> Result<String> {
         let clause = &self.spec.not_matched[index];
-        let projection = insert_projection(clause, write_schema, self.spec.case_insensitive)?;
+        let projection = table_projection(clause, table, schema, self.spec.case_insensitive)?;
         let predicates: Vec<Option<&str>> = self
             .spec
             .not_matched
@@ -1585,7 +1566,7 @@ async fn build_unpartitioned_data_file_writer(table: &Table) -> Result<impl Iceb
         Struct::empty(),
     )
     .map_err(iceberg_err)?;
-    DataFileWriterBuilder::new(rolling_builder)
+    crate::write::distribution::stamp(DataFileWriterBuilder::new(rolling_builder), table)
         .build(Some(unpartitioned_key))
         .await
         .map_err(iceberg_err)

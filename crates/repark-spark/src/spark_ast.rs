@@ -18,6 +18,7 @@ use datafusion::sql::sqlparser::ast::{
 
 use crate::{local_fs_ddl, window_range};
 use repark_core::CatalogRegistry;
+use repark_iceberg::write::insert_defaults;
 
 /// Plan + execute one passthrough statement with Spark's ORDER BY null-placement defaults.
 /// # Errors
@@ -44,6 +45,8 @@ async fn execute_passthrough_inner(
     crate::collation::refuse_type_position_collation_in_sql(sql)?;
     let mut statement = state.sql_to_statement(sql, &dialect)?;
     let mut may_have_bare_range_bound = false;
+    let mut insert_columns: Option<Vec<String>> = None;
+    let mut preloaded: Option<Box<iceberg::table::Table>> = None;
     match &mut statement {
         DfStatement::Statement(inner) => {
             // G15 — collation at the EXECUTING parse (G3-E8 altitude).
@@ -64,6 +67,19 @@ async fn execute_passthrough_inner(
             // R1: DataFusion accepts only SingleQuotedString inside INTERVAL frame bounds.
             window_range::quote_unquoted_interval_range_bounds(inner);
             may_have_bare_range_bound = window_range::statement_has_bare_range_bound(inner);
+            insert_columns = insert_defaults::insert_column_list(inner);
+            preloaded = if let Some((catalog_name, ident)) = insert_defaults::insert_target(inner)
+                && let Some(catalog) = catalogs.get(&catalog_name)
+            {
+                Box::pin(insert_defaults::rewrite_insert_markers(
+                    catalog, &ident, inner,
+                ))
+                .await?
+                .preloaded
+                .map(Box::new)
+            } else {
+                None
+            };
         }
         DfStatement::Reset(ResetStatement::Variable(name)) => {
             crate::collation::refuse_collation_reset_variable(&name.to_string())?;
@@ -91,6 +107,21 @@ async fn execute_passthrough_inner(
     // Eager analysis exposes Spark-adjusted types to Arrow export and CTAS schema derivation.
     let plan = repark_functions::analyze_eagerly(&state, plan)?;
     let plan = conform_insert_narrowed_ints(ctx, plan).await?;
+    let target = insert_defaults::dml_target(&plan)
+        .and_then(|(name, ident)| catalogs.get(&name).map(|catalog| (catalog, ident)));
+    let plan = match target {
+        Some((catalog, ident)) => {
+            Box::pin(insert_defaults::fill_insert_plan(
+                catalog,
+                &ident,
+                insert_columns.as_deref(),
+                plan,
+                preloaded.map(|table| *table),
+            ))
+            .await?
+        }
+        None => plan,
+    };
     let dataframe = ctx.execute_logical_plan(plan).await?;
     if !is_eager_command {
         return Ok(dataframe);

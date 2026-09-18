@@ -24,16 +24,21 @@ use iceberg::spec::{
 use iceberg::table::Table;
 use iceberg::transform::create_transform_function;
 use iceberg::writer::IcebergWriter;
+use iceberg::writer::base_writer::data_file_writer::DataFileWriterBuilder;
+use iceberg::writer::file_writer::FileWriterBuilder;
+use iceberg::writer::file_writer::location_generator::{FileNameGenerator, LocationGenerator};
 
 use crate::write::merge::iceberg_err;
 use crate::write::sort_order::DISTRIBUTION_MODE_PROPERTY;
 
+mod canonical_float;
 mod router;
 #[cfg(test)]
 mod sort_order_tests;
 #[cfg(test)]
 mod tests;
 
+use canonical_float::CanonicalFloatExpr;
 #[cfg(test)]
 pub(crate) use router::PartitionRouter;
 pub(crate) use router::{route_partitioned_stream, send_routed};
@@ -185,6 +190,22 @@ pub(crate) fn default_sort_is_declared(table: &Table) -> bool {
     !table.metadata().default_sort_order().is_unsorted()
 }
 
+pub(crate) fn default_sort_order_id(table: &Table) -> i32 {
+    i32::try_from(table.metadata().default_sort_order().order_id).unwrap_or(0)
+}
+
+pub(crate) fn stamp<B, L, F>(
+    writer: DataFileWriterBuilder<B, L, F>,
+    table: &Table,
+) -> DataFileWriterBuilder<B, L, F>
+where
+    B: FileWriterBuilder,
+    L: LocationGenerator,
+    F: FileNameGenerator,
+{
+    writer.with_sort_order_id(default_sort_order_id(table))
+}
+
 pub(crate) async fn sort_batches_by_default_order(
     table: &Table,
     batches: Vec<RecordBatch>,
@@ -250,7 +271,7 @@ fn default_sort_lex_ordering(table: &Table, schema: &Schema) -> Result<Option<Le
             });
         }
         exprs.push(PhysicalSortExpr {
-            expr,
+            expr: CanonicalFloatExpr::wrap(expr, &data_type),
             options: datafusion::arrow::compute::SortOptions {
                 descending: field.direction == SortDirection::Descending,
                 nulls_first: field.null_order == NullOrder::First,

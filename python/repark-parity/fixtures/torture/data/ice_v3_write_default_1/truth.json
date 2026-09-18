@@ -1,0 +1,1214 @@
+{
+  "unit": "ice-v3-write-default-1",
+  "writer": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, hadoop catalog",
+  "banner": {
+    "spark": "4.1.2",
+    "tz": "UTC"
+  },
+  "tables": {
+    "defaults": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "name",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "id": 3,
+          "name": "c",
+          "required": false,
+          "type": "int",
+          "doc": "doc",
+          "initial-default": 5,
+          "write-default": 5
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            "a",
+            5
+          ],
+          [
+            2,
+            "b",
+            5
+          ],
+          [
+            3,
+            "c",
+            5
+          ]
+        ]
+      }
+    },
+    "strdef": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "s",
+          "required": false,
+          "type": "string",
+          "doc": "doc",
+          "initial-default": "hi",
+          "write-default": "hi"
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            "hi"
+          ],
+          [
+            2,
+            "hi"
+          ]
+        ]
+      }
+    },
+    "decdef": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "d",
+          "required": false,
+          "type": "decimal(10, 2)",
+          "doc": "doc",
+          "initial-default": "3.14",
+          "write-default": "3.14"
+        }
+      ],
+      "seed": {
+        "outcome": "error",
+        "class": "Py4JJavaError",
+        "message": [
+          "An error occurred while calling o245.getResult.",
+          ": org.apache.spark.SparkException: Exception thrown in awaitResult: ",
+          "\tat org.apache.spark.util.SparkThreadUtils$.awaitResult(SparkThreadUtils.scala:53)"
+        ]
+      }
+    },
+    "temporal": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "dt",
+          "required": false,
+          "type": "date",
+          "doc": "doc",
+          "initial-default": "2024-10-04",
+          "write-default": "2024-10-04"
+        },
+        {
+          "id": 3,
+          "name": "ts",
+          "required": false,
+          "type": "timestamptz",
+          "doc": "doc",
+          "initial-default": "2024-10-04T00:00:00+00:00",
+          "write-default": "2024-10-04T00:00:00+00:00"
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            "2024-10-04",
+            "2024-10-04 00:00:00+00:00"
+          ],
+          [
+            2,
+            "2024-10-04",
+            "2024-10-04 00:00:00+00:00"
+          ]
+        ]
+      }
+    },
+    "differ": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "e",
+          "required": false,
+          "type": "int",
+          "doc": "doc",
+          "initial-default": 5,
+          "write-default": 7
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            5
+          ],
+          [
+            2,
+            7
+          ]
+        ]
+      }
+    },
+    "nodefault": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "name",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "id": 3,
+          "name": "note",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            "a",
+            "x"
+          ]
+        ]
+      }
+    },
+    "required": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "req",
+          "required": true,
+          "type": "int"
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            100
+          ]
+        ]
+      }
+    },
+    "pdflt": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "name",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "id": 3,
+          "name": "c",
+          "required": false,
+          "type": "int",
+          "doc": "doc",
+          "initial-default": 5,
+          "write-default": 5
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            "a",
+            5
+          ],
+          [
+            2,
+            "b",
+            5
+          ],
+          [
+            3,
+            "c",
+            5
+          ]
+        ]
+      }
+    },
+    "dfltow": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "name",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "id": 3,
+          "name": "c",
+          "required": false,
+          "type": "int",
+          "doc": "doc",
+          "initial-default": 5,
+          "write-default": 5
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            "a",
+            5
+          ],
+          [
+            2,
+            "b",
+            5
+          ]
+        ]
+      }
+    },
+    "dfltsat": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "name",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "id": 3,
+          "name": "c",
+          "required": false,
+          "type": "int",
+          "doc": "doc",
+          "initial-default": 5,
+          "write-default": 5
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            "a",
+            5
+          ],
+          [
+            2,
+            "b",
+            5
+          ]
+        ]
+      }
+    },
+    "nodef": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "name",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "id": 3,
+          "name": "c",
+          "required": false,
+          "type": "int"
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            "a",
+            1
+          ]
+        ]
+      }
+    }
+  },
+  "cells": {
+    "insert_column_list": {
+      "table": "defaults",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          5
+        ],
+        [
+          11,
+          "k",
+          5
+        ],
+        [
+          2,
+          "b",
+          5
+        ],
+        [
+          3,
+          "c",
+          5
+        ]
+      ]
+    },
+    "merge_not_matched": {
+      "table": "defaults",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          5
+        ],
+        [
+          11,
+          "k",
+          5
+        ],
+        [
+          12,
+          "l",
+          5
+        ],
+        [
+          2,
+          "b",
+          5
+        ],
+        [
+          3,
+          "c",
+          5
+        ]
+      ]
+    },
+    "writeto_append": {
+      "table": "defaults",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          5
+        ],
+        [
+          11,
+          "k",
+          5
+        ],
+        [
+          12,
+          "l",
+          5
+        ],
+        [
+          13,
+          "m",
+          5
+        ],
+        [
+          2,
+          "b",
+          5
+        ],
+        [
+          3,
+          "c",
+          5
+        ]
+      ]
+    },
+    "saveas_append": {
+      "table": "defaults",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          5
+        ],
+        [
+          11,
+          "k",
+          5
+        ],
+        [
+          12,
+          "l",
+          5
+        ],
+        [
+          13,
+          "m",
+          5
+        ],
+        [
+          14,
+          "n",
+          5
+        ],
+        [
+          2,
+          "b",
+          5
+        ],
+        [
+          3,
+          "c",
+          5
+        ]
+      ]
+    },
+    "insert_values_default_kw": {
+      "table": "defaults",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          5
+        ],
+        [
+          11,
+          "k",
+          5
+        ],
+        [
+          12,
+          "l",
+          5
+        ],
+        [
+          13,
+          "m",
+          5
+        ],
+        [
+          14,
+          "n",
+          5
+        ],
+        [
+          15,
+          "o",
+          5
+        ],
+        [
+          2,
+          "b",
+          5
+        ],
+        [
+          3,
+          "c",
+          5
+        ]
+      ]
+    },
+    "explicit_null_values": {
+      "table": "defaults",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          5
+        ],
+        [
+          11,
+          "k",
+          5
+        ],
+        [
+          12,
+          "l",
+          5
+        ],
+        [
+          13,
+          "m",
+          5
+        ],
+        [
+          14,
+          "n",
+          5
+        ],
+        [
+          15,
+          "o",
+          5
+        ],
+        [
+          16,
+          "p",
+          null
+        ],
+        [
+          2,
+          "b",
+          5
+        ],
+        [
+          3,
+          "c",
+          5
+        ]
+      ]
+    },
+    "explicit_null_select": {
+      "table": "defaults",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          5
+        ],
+        [
+          11,
+          "k",
+          5
+        ],
+        [
+          12,
+          "l",
+          5
+        ],
+        [
+          13,
+          "m",
+          5
+        ],
+        [
+          14,
+          "n",
+          5
+        ],
+        [
+          15,
+          "o",
+          5
+        ],
+        [
+          16,
+          "p",
+          null
+        ],
+        [
+          17,
+          "q",
+          null
+        ],
+        [
+          2,
+          "b",
+          5
+        ],
+        [
+          3,
+          "c",
+          5
+        ]
+      ]
+    },
+    "select_position_default": {
+      "table": "defaults",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          5
+        ],
+        [
+          11,
+          "k",
+          5
+        ],
+        [
+          12,
+          "l",
+          5
+        ],
+        [
+          13,
+          "m",
+          5
+        ],
+        [
+          14,
+          "n",
+          5
+        ],
+        [
+          15,
+          "o",
+          5
+        ],
+        [
+          16,
+          "p",
+          null
+        ],
+        [
+          17,
+          "q",
+          null
+        ],
+        [
+          18,
+          "r",
+          5
+        ],
+        [
+          2,
+          "b",
+          5
+        ],
+        [
+          3,
+          "c",
+          5
+        ]
+      ]
+    },
+    "insert_positional_short": {
+      "table": "defaults",
+      "outcome": "error",
+      "class": "AnalysisException",
+      "message": [
+        "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`defaults`, the reason is not enough data columns:",
+        "Table columns: `id`, `name`, `c`.",
+        "Data columns: `col1`, `col2`. SQLSTATE: 21S01"
+      ]
+    },
+    "insert_select_short": {
+      "table": "defaults",
+      "outcome": "error",
+      "class": "AnalysisException",
+      "message": [
+        "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`defaults`, the reason is not enough data columns:",
+        "Table columns: `id`, `name`, `c`.",
+        "Data columns: `9`, `i`. SQLSTATE: 21S01"
+      ]
+    },
+    "insertInto_missing": {
+      "table": "defaults",
+      "outcome": "error",
+      "class": "AnalysisException",
+      "message": [
+        "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`defaults`, the reason is not enough data columns:",
+        "Table columns: `id`, `name`, `c`.",
+        "Data columns: `id`, `name`. SQLSTATE: 21S01"
+      ]
+    },
+    "writeto_extra_col": {
+      "table": "defaults",
+      "outcome": "error",
+      "class": "AnalysisException",
+      "message": [
+        "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] Cannot write incompatible data for the table `sc`.`ns`.`defaults`: Cannot write extra columns `zzz`. SQLSTATE: KD000"
+      ]
+    },
+    "nodefault_insert_column_list": {
+      "table": "nodefault",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          "x"
+        ],
+        [
+          2,
+          "b",
+          null
+        ]
+      ]
+    },
+    "nodefault_writeto_append": {
+      "table": "nodefault",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          "x"
+        ],
+        [
+          2,
+          "b",
+          null
+        ],
+        [
+          3,
+          "c",
+          null
+        ]
+      ]
+    },
+    "nodefault_values_default_kw": {
+      "table": "nodefault",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          "x"
+        ],
+        [
+          2,
+          "b",
+          null
+        ],
+        [
+          3,
+          "c",
+          null
+        ],
+        [
+          4,
+          "d",
+          null
+        ]
+      ]
+    },
+    "string_default_insert": {
+      "table": "strdef",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "hi"
+        ],
+        [
+          12,
+          "hi"
+        ],
+        [
+          2,
+          "hi"
+        ]
+      ]
+    },
+    "decimal_default_insert": {
+      "table": "decdef",
+      "outcome": "ok_write_read_failed",
+      "class": "Py4JJavaError",
+      "message": [
+        "An error occurred while calling o579.getResult.",
+        ": org.apache.spark.SparkException: Exception thrown in awaitResult: ",
+        "\tat org.apache.spark.util.SparkThreadUtils$.awaitResult(SparkThreadUtils.scala:53)"
+      ]
+    },
+    "temporal_default_insert": {
+      "table": "temporal",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "2024-10-04",
+          "2024-10-04 00:00:00+00:00"
+        ],
+        [
+          12,
+          "2024-10-04",
+          "2024-10-04 00:00:00+00:00"
+        ],
+        [
+          2,
+          "2024-10-04",
+          "2024-10-04 00:00:00+00:00"
+        ]
+      ]
+    },
+    "differ_insert": {
+      "table": "differ",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          5
+        ],
+        [
+          12,
+          7
+        ],
+        [
+          2,
+          7
+        ]
+      ]
+    },
+    "required_missing_insert": {
+      "table": "required",
+      "outcome": "error",
+      "class": "AnalysisException",
+      "message": [
+        "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `sc`.`ns`.`required`: Cannot find data for the output column `req`. SQLSTATE: KD000"
+      ]
+    },
+    "required_missing_writeto": {
+      "table": "required",
+      "outcome": "error",
+      "class": "AnalysisException",
+      "message": [
+        "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `sc`.`ns`.`required`: Cannot find data for the output column `req`. SQLSTATE: KD000"
+      ]
+    },
+    "overwrite_column_list": {
+      "table": "defaults",
+      "outcome": "ok",
+      "rows": [
+        [
+          30,
+          "ov",
+          5
+        ]
+      ]
+    },
+    "ow_dynamic_partition_named_list_short": {
+      "table": "pdflt",
+      "outcome": "ok",
+      "rows": [
+        [
+          null,
+          "x",
+          5
+        ]
+      ]
+    },
+    "ow_dynamic_partition_named_list_full": {
+      "table": "pdflt",
+      "outcome": "ok",
+      "rows": [
+        [
+          10,
+          "x",
+          5
+        ]
+      ]
+    },
+    "ow_static_partition_named_list": {
+      "table": "pdflt",
+      "outcome": "ok",
+      "rows": [
+        [
+          10,
+          "x",
+          5
+        ]
+      ]
+    },
+    "ow_partitioned_no_partition_clause_named_list": {
+      "table": "pdflt",
+      "outcome": "ok",
+      "rows": [
+        [
+          10,
+          "x",
+          5
+        ]
+      ]
+    },
+    "ow_partitions_api": {
+      "table": "pdflt",
+      "outcome": "ok",
+      "rows": [
+        [
+          10,
+          "x",
+          5
+        ],
+        [
+          11,
+          "y",
+          9
+        ]
+      ]
+    },
+    "ow_values_default_kw": {
+      "table": "dfltow",
+      "outcome": "ok",
+      "rows": [
+        [
+          15,
+          "o",
+          5
+        ]
+      ]
+    },
+    "ow_named_list_default_kw": {
+      "table": "dfltow",
+      "outcome": "ok",
+      "rows": [
+        [
+          18,
+          "r",
+          5
+        ]
+      ]
+    },
+    "saveastable_overwrite_missing_defaulted": {
+      "table": "dfltsat",
+      "outcome": "ok",
+      "rows": [
+        [
+          30,
+          "s"
+        ]
+      ]
+    },
+    "nodef_writeto_append_missing": {
+      "table": "nodef",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          1
+        ],
+        [
+          40,
+          "t",
+          null
+        ]
+      ]
+    },
+    "nodef_saveas_append_missing": {
+      "table": "nodef",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          1
+        ],
+        [
+          40,
+          "t",
+          null
+        ],
+        [
+          41,
+          "u",
+          null
+        ]
+      ]
+    },
+    "nodef_writeto_append_full": {
+      "table": "nodef",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          1
+        ],
+        [
+          40,
+          "t",
+          null
+        ],
+        [
+          41,
+          "u",
+          null
+        ],
+        [
+          42,
+          "v",
+          7
+        ]
+      ]
+    },
+    "V01_overwrite_partitions_missing_defaulted_column": {
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          5
+        ],
+        [
+          12,
+          "y",
+          5
+        ],
+        [
+          2,
+          "b",
+          5
+        ]
+      ]
+    },
+    "V02_default_inside_cte_body": {
+      "outcome": "error",
+      "class": "AnalysisException",
+      "message": [
+        "[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION] A column, variable, or function parameter with name `DEFAULT` cannot be resolved.  SQLSTATE: 42703; line 1 pos 69;",
+        "'InsertIntoStatement RelationV2[id#61, name#62, c#63] sc.ns.dflt, true, false, false",
+        "+- 'Project [*]",
+        "   +- 'SubqueryAlias x"
+      ]
+    },
+    "V02_default_inside_subquery": {
+      "outcome": "error",
+      "class": "AnalysisException",
+      "message": [
+        "[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION] A column, variable, or function parameter with name `DEFAULT` cannot be resolved.  SQLSTATE: 42703; line 1 pos 73;",
+        "'InsertIntoStatement RelationV2[id#68, name#69, c#70] sc.ns.dflt, true, false, false",
+        "+- 'Project [*]",
+        "   +- 'SubqueryAlias __auto_generated_subquery_name"
+      ]
+    },
+    "V02_control_default_outer_select_with_cte": {
+      "outcome": "error",
+      "class": "AnalysisException",
+      "message": [
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `DEFAULT` cannot be resolved. Did you mean one of the following? [`id`, `name`]. SQLSTATE: 42703; line 1 pos 86;",
+        "'InsertIntoStatement RelationV2[id#74, name#75, c#76] sc.ns.dflt, true, false, false",
+        "+- 'Project [id#71, name#72, 'DEFAULT]",
+        "   +- SubqueryAlias x"
+      ]
+    },
+    "MIX_static_dynamic_positional": {
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "west",
+          "p",
+          9
+        ],
+        [
+          2,
+          "west",
+          "w2",
+          5
+        ]
+      ]
+    },
+    "MIX_static_dynamic_named_list_omits_default": {
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "west",
+          "p",
+          9
+        ],
+        [
+          2,
+          "west",
+          "q",
+          5
+        ]
+      ]
+    }
+  },
+  "schema_after": {
+    "dfltsat": [
+      [
+        "id",
+        "int"
+      ],
+      [
+        "name",
+        "string"
+      ]
+    ],
+    "nodef": [
+      [
+        "id",
+        "int"
+      ],
+      [
+        "name",
+        "string"
+      ],
+      [
+        "c",
+        "int"
+      ]
+    ]
+  }
+}

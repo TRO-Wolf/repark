@@ -633,6 +633,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
   helpers. **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
   (ceiling 1117→1113). pins: dml-b-insert-overwrite/C-003, C-004
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** table writes emit an explicit target
+  column list and pass through columns missing from the frame; the engine fills
+  them from `write_default`. Extra frame columns still refuse.
+  pins: ice-v3-write-default-1/C-006
+  Run 21b round 2 (2026-09-18, ruling Q-21b-8): `overwritePartitions()` carries the
+  same target column list, `INSERT OVERWRITE t (cols) PARTITION (…) SELECT …`, so an
+  omitted defaulted column fills as Spark does instead of refusing on arity
+  (1095 → 1094, mirrored in the CAP-1 test). pins: ice-v3-write-default-1/C-020
   DFCORE-3 (2026-09-07): `DataFrameStatFunctions.freqItems` delegates its refusal to
   `statistics._freq_items` (1113 → 1111, mirrored in the CAP-1 test); the class keeps
   the stat accessor shape. pins: dfcore-3/C-005, C-006
@@ -1205,6 +1213,11 @@ that held the comment (pins: comment-core-1/C-003).
   332→415 and `surface_a.py` 328→416, both below the source-size default;
   `writer_readwriter.py` holds its exact 1101 baseline.
   pins: df-rust-3/C-005
+  ICE-V3-WRITE-DEFAULT-1 (2026-09-17): `writer_readwriter.py` 1101→1095 — both
+  `_by_name_projection` variants return the target column list with the source
+  projection and stop refusing missing DataFrame columns, so the engine fills
+  omitted defaulted columns from `write_default` in Rust.
+  pins: ice-v3-write-default-1/C-006
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.
 

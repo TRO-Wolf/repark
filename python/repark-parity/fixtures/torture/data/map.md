@@ -30,6 +30,18 @@ the committed landing zone, not a generation target.
   ICE-DYN-OVERWRITE-1: the static/dynamic overwrite matrix plus three disk-verified
   overwrite-vs-append interleaves (`spark_oracle.json`, read by
   `python/repark/tests/test_ice_dyn_overwrite_1.py`).
+- [ice_evo_dml_1/](ice_evo_dml_1/map.md) — the recorded Spark 4.1.2 answers for DML after
+  `ADD COLUMN` / `RENAME COLUMN` with no write since (`truth.json`, 183 cases) and one
+  Spark-created, Spark-evolved v2 table for the adoption cells (ICE-EVO-DML-1; fourth
+  committed-data exception, 77,324 bytes).
+- [ice_occ_scoped_1/](ice_occ_scoped_1/map.md) — the recorded Spark 4.1.2 concurrent-DML commit
+  storms (`spark_occ_oracle.json` unscoped, `spark_occ_oracle2.json` partition- and
+  range-scoped): commits out of N, the losers' error text, the rows left behind
+  (ICE-OCC-SCOPED-1; JSON only, no table data).
+- [ice_v3_write_default_1/](ice_v3_write_default_1/map.md) — seven Spark-written
+  format-v3 tables whose Java-API-added columns carry `initial-default` /
+  `write-default`, with the 22-cell Spark oracle `truth.json` and its recording
+  script (ICE-V3-WRITE-DEFAULT-1; 225,094 bytes, third committed-data exception).
 
 ## Pointers
 

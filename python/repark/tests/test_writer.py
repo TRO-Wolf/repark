@@ -196,13 +196,11 @@ def test_save_as_table_append_extra_column_raises(spark: ReparkSession) -> None:
     assert _read2(spark, table).to_pylist() == [{"a": 1, "b": 10}]
 
 
-def test_save_as_table_append_missing_column_raises(spark: ReparkSession) -> None:
-    # A MISSING source column (source columns ⊊ table columns) → AnalysisException likewise.
+def test_save_as_table_append_missing_column_fills_null(spark: ReparkSession) -> None:
     table = "glue_catalog.writer_ns.missing"
     spark.createDataFrame([(1, 10)], ["a", "b"]).write.saveAsTable(table)
-    with pytest.raises(AnalysisException, match="by name"):
-        spark.createDataFrame([(2,)], ["a"]).write.mode("append").saveAsTable(table)
-    assert _read2(spark, table).to_pylist() == [{"a": 1, "b": 10}]
+    spark.createDataFrame([(2,)], ["a"]).write.mode("append").saveAsTable(table)
+    assert _read2(spark, table).to_pylist() == [{"a": 1, "b": 10}, {"a": 2, "b": None}]
 
 
 def test_save_as_table_partition_by(spark: ReparkSession) -> None:
