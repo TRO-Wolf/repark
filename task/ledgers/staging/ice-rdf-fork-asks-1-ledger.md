@@ -52,8 +52,10 @@ and covers all three cells. No reason string names a fork file, so no row names 
 | C-006 | `python/repark/tests/map.md` names the four registry rows on the `test_ice_rdf_options_1.py` entry. | Entry extended with the four row names and the dated re-measure note. | **PROVEN** | Entry now ends with the four-row pointer plus "(re-measured 2026-09-17 on RP-23 `4151b488`: still xfailed, zero XPASS)". |
 | C-007 | Gates green: `make check-map-sync`, the pre-commit hook on commit, and the no-comments fence. | Both gates exit 0; the fence grep prints nothing. | **PROVEN** | `make check-map-sync` exit 0; fence `git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' \| grep -P '^\+\\s*(//|#(?! noqa))'` printed nothing (this unit touches only `.md` files); the commit-time hook passed. |
 
+```yaml
 COVERAGE_ATTESTATION:
   pr_unit: ice-rdf-fork-asks-1
+  complete: true
   categories:
     - id: AT-1
       status: ATTACKED
@@ -67,3 +69,26 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: No Spark, polars, or DataFusion behaviour asserted beyond the orchestrator's recorded run and the committed fixture — the card forbids re-derivation and this lane ran no pytest, cargo, or maturin.
       artifacts: [task/ledgers/staging/ice-rdf-fork-asks-1-ledger.md]
+    - id: AT-4
+      status: N/A
+      justification: Docs and registry only; no session, state, cache or concurrency surface is touched.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, secret, injection or deserialization surface; only markdown changes.
+    - id: AT-6
+      status: N/A
+      justification: No product or test code changes, so there is no behaviour to regress; the thirteen xfails keep their markers and reasons byte-for-byte.
+    - id: AT-7
+      status: N/A
+      justification: No performance-relevant code path is touched.
+    - id: AT-8
+      status: N/A
+      justification: No dependency, build or CI configuration changes.
+    - id: AT-9
+      status: N/A
+      justification: No log format, error text or diagnosis path changes.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Every registry number was re-checked by the orchestrator against the named fixture cell in ice_rdf_options_1_spark_oracle.json, and the thirteen-count mapping against the test file's xfail tables.
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/ice_rdf_options_1_spark_oracle.json]
+```
