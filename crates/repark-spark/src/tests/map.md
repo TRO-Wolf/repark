@@ -402,8 +402,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   fixture (`B-MOR-3` zeros). **TEST-HYGIENE-1 (2026-09-18):** the fixture keeps its
   baked-in `/tmp` path because the Avro manifest lists and manifests carry absolute
   paths in deflate blocks, so relocation without editing Avro bytes cannot read; the
-  in-process `Mutex` is now paired with a cross-process lock directory held for the
-  fixture lifetime with wipe-and-copy under the lock.
+  in-process `Mutex` is now paired with a cross-process `File::lock` on a lock file held
+  for the fixture lifetime (released by the kernel if the process dies) with wipe-and-copy under the lock.
   pins: test-hygiene-1/C-001.
   `fixtures/` (Spark-written on-disk Iceberg tables CI can adopt with no JVM),
   `call_orphan` (**MW-3**): full-directory before/after orphan safety and 24-hour cutoff fixtures,

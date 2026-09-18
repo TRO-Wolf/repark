@@ -88,7 +88,7 @@ The suite needs the native module (the doors are repark's), so run it through
   paths in deflate blocks, so the table cannot relocate to a temp dir without editing
   Avro bytes; the module-scoped fixture instead holds an exclusive `fcntl.flock` beside
   the canonical path while the copy is materialized AND read, so a second process waits
-  instead of clobbering.
+  instead of clobbering; the fixture yields (`Iterator[str]`) so the lock spans the module.
   pins: test-hygiene-1/C-002.
 - `test_generate_is_deterministic.py` — byte-identical same-seed CLI runs per family,
   different-seed bytes, the unknown-family and bad-rows refusals, the repository-internal

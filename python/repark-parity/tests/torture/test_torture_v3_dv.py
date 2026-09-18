@@ -81,7 +81,7 @@ def _hold_canonical_table_lock() -> Iterator[None]:
 
 
 @pytest.fixture(scope="module")
-def v3dv_table(spark: ReparkSession, tmp_path_factory: pytest.TempPathFactory) -> str:
+def v3dv_table(spark: ReparkSession, tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     """The committed fixture materialized at its baked-in location and registered."""
     with _hold_canonical_table_lock():
         metadata_file = materialize_table(FIXTURE_TABLE_DIR, CANONICAL_TABLE_DIR)
