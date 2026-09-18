@@ -348,13 +348,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_adopted_spark_table_reads_match_spark` materializes the four committed Spark-written
   tables at their baked root under a directory lock, `register_table`s them and compares the
   SQL door and the DataFrame door (`table().select/filter`) on the `to_arrow` path (values
-  and Spark simple-string types). `test_nested_ddl_matches_spark` replays Spark's own
-  statements per format version (v2, v3) on a RePark catalog: `CREATE TABLE` with struct,
-  array-of-struct and map-of-struct columns, `ADD COLUMN s.b` / `arrs.element.y` /
-  `m.value.q` / `s.c`, `RENAME COLUMN s.a TO a2`, `DROP COLUMN s.b`, each read on both doors
-  and each `DESCRIBE` compared. `test_required_nested_child_refuses_like_spark` pins the
-  `ADD COLUMN s.r INT NOT NULL` refusal (message, no new metadata file, table unchanged).
-  Test ids starting `fork292` read a data file that lacks a child the schema has: they need
+  and Spark simple-string types). The DDL cells replay Spark's own statements per format
+  version (v2, v3) on a RePark catalog in two modes. `test_nested_ddl_schema_matches_spark`
+  skips every `INSERT`: `CREATE TABLE` with struct, array-of-struct and map-of-struct columns,
+  `ADD COLUMN s.b` / `arrs.element.y` / `m.value.q` / `s.c`, `RENAME COLUMN s.a TO a2`,
+  `DROP COLUMN s.b` — each read answers Spark's column names and types over an empty table on
+  both doors, and each `DESCRIBE` answers Spark's `data_type`. `test_nested_ddl_rows_match_spark`
+  keeps the inserts and compares Spark's rows on both doors. Its two
+  `forkwrite-…list_element_child_add_read` ids are strict-xfail: an `INSERT` into a list
+  column fails in the fork writer (hand-back fork finding), so a fork fix XPASSes them loudly. `test_required_nested_child_refuses_like_spark` pins the
+  `ADD COLUMN s.r INT NOT NULL` refusal (the `Incompatible change: cannot add required column`
+  core, no new metadata file, schema unchanged); the strict-xfail
+  `test_required_nested_child_message_matches_spark` holds Spark's whole first line.
+  Test ids with `fork292` read a data file that lacks a child the schema has: they need
   fork PR #292 (F-NESTED-EVO-1) and are red until the fork pin bump. The leaf read runs
   aliased (`s.a AS a`) and the DataFrame twin spells `getField(...).alias(...)`: the unaliased
   name (`<table>.s[a]`, strict-xfail `test_unaliased_nested_projection_names_like_spark`) is

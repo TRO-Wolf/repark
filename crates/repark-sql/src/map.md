@@ -147,6 +147,13 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   refuse Spark-shaped, one loaded table per move). Curated vocabulary; `partitioning` is the
   pre-designated future spelling and refuses citing Q3. Tests: [alter/map.md](alter/map.md).
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-006, C-007
+  **ICE-NESTED-EVO-1 (2026-09-17):** `alter/nested.rs` is the ANSI door's nested-path pre-parse
+  (`try_parse_nested_column_ddl` / `execute_nested_column_ddl`, `GenericDialect`, wired in
+  `router.rs` after the move): `ADD COLUMN s.c T`, `RENAME COLUMN s.a TO a2`, `DROP COLUMN s.b`,
+  claimed only when a path has a dot, committed through
+  `repark_iceberg::write::nested_column::apply_column_path_changes`. Child types resolve
+  through the door's own `sql_type_to_iceberg`.
+  pins: ice-nested-evo-1/C-007, C-010, C-011, C-012
 - `merge.rs` — `MERGE INTO` → `repark_iceberg::write::merge::MergeSpec`.
   ANSI MERGE keeps `commit_branch: None` (dotted write-to-branch is Spark-door only, RP-5).
   Execution is the shared RePark-owned executor, never the fork `TableProvider`. No star forms

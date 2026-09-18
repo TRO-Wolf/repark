@@ -21,6 +21,7 @@ mod local_fs_ddl;
 mod merge;
 mod metadata_tables;
 mod namespace_ddl;
+mod nested_column_ddl;
 mod normalize;
 mod ref_ddl;
 mod router;

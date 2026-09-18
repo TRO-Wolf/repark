@@ -84,6 +84,11 @@ _FORK_292_DDL_LABELS = frozenset(
         "add_required_nested_child",
     }
 )
+_FORK_WRITE_DDL_LABELS = frozenset({"list_element_child_add_read"})
+_FORK_WRITE_REASON = (
+    "fork finding: an INSERT into a list column fails in the fork writer "
+    "(`column types must match schema types … PARQUET:field_id`)"
+)
 _DDL_LABELS: tuple[str, ...] = tuple(
     label.removeprefix("v2_") for label in _CELLS if label.startswith("v2_")
 )
@@ -320,15 +325,23 @@ def _recorded_query(format_version: str, label: str) -> str | None:
     return None
 
 
-def _replay_format_version(spark: Any, format_version: str, warehouse: Path) -> dict[str, Any]:
+def _replay_format_version(
+    spark: Any, format_version: str, warehouse: Path, with_inserts: bool
+) -> dict[str, Any]:
     """Replay every recorded cell of one format version on a fresh RePark catalog.
+
+    Args:
+        spark: The facade session.
+        format_version: `"2"` or `"3"`.
+        warehouse: A fresh warehouse directory.
+        with_inserts: `False` skips every `INSERT`, so the replay measures the DDL alone.
 
     Returns:
         One outcome per label without its `vN_` prefix: the statement error, the SQL answer,
         the DataFrame answer where the cell reads a whole table, and the metadata files
         before and after the statements.
     """
-    catalog = f"ice_nested_evo_1_ddl_v{format_version}_{warehouse.name.replace('-', '_')}"
+    catalog = f"ice_nested_evo_1_v{format_version}_{warehouse.name.replace('-', '_')}"
     spark.register_memory_catalog(catalog, warehouse)
     spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.ns")
     outcomes: dict[str, Any] = {}
@@ -336,7 +349,11 @@ def _replay_format_version(spark: Any, format_version: str, warehouse: Path) -> 
         if not label.startswith(f"v{format_version}_"):
             continue
         before = _metadata_files(warehouse)
-        statements = [_retargeted(statement, catalog) for statement in cell["statements"]]
+        statements = [
+            _retargeted(statement, catalog)
+            for statement in cell["statements"]
+            if with_inserts or not statement.startswith("INSERT")
+        ]
         error = _run_statements(spark, statements)
         outcome: dict[str, Any] = {
             "error": error,
@@ -364,79 +381,135 @@ def _replay_format_version(spark: Any, format_version: str, warehouse: Path) -> 
     return outcomes
 
 
-_REPLAYS: dict[str, dict[str, Any]] = {}
+_REPLAYS: dict[tuple[str, bool], dict[str, Any]] = {}
 
 
-def _replayed(format_version: str, tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
-    """Replay one format version once per worker and cache the outcomes."""
-    if format_version not in _REPLAYS:
-        warehouse = tmp_path_factory.mktemp(f"nested-ddl-v{format_version}")
-        _REPLAYS[format_version] = _replay_format_version(_session(), format_version, warehouse)
-    return _REPLAYS[format_version]
-
-
-def _ddl_id(label: str, format_version: str) -> str:
-    """Return the test id for one replayed cell, marked `fork292` when it needs the fork."""
-    marker = "fork292-" if label in _FORK_292_DDL_LABELS else ""
-    return f"{marker}{label}-v{format_version}"
+def _replayed(
+    format_version: str, with_inserts: bool, tmp_path_factory: pytest.TempPathFactory
+) -> dict[str, Any]:
+    """Replay one format version once per worker and mode, and cache the outcomes."""
+    key = (format_version, with_inserts)
+    if key not in _REPLAYS:
+        mode = "rows" if with_inserts else "ddl"
+        warehouse = tmp_path_factory.mktemp(f"nested-{mode}-v{format_version}")
+        _REPLAYS[key] = _replay_format_version(_session(), format_version, warehouse, with_inserts)
+    return _REPLAYS[key]
 
 
 def _ddl_params() -> list[Any]:
     """Return every `(label, format_version)` replay cell except the required-child refusal."""
     return [
-        pytest.param(label, format_version, id=_ddl_id(label, format_version))
+        pytest.param(label, format_version, id=f"{label}-v{format_version}")
         for format_version in recorder.FORMAT_VERSIONS
         for label in _DDL_LABELS
         if label != "add_required_nested_child"
     ]
 
 
+def _rows_param(label: str, format_version: str) -> Any:
+    """Return one row cell, marked `fork292` and `forkwrite` where each fork change is needed."""
+    marker = "fork292-" if label in _FORK_292_DDL_LABELS else ""
+    if label in _FORK_WRITE_DDL_LABELS:
+        return pytest.param(
+            label,
+            format_version,
+            id=f"forkwrite-{marker}{label}-v{format_version}",
+            marks=pytest.mark.xfail(strict=True, reason=_FORK_WRITE_REASON),
+        )
+    return pytest.param(label, format_version, id=f"{marker}{label}-v{format_version}")
+
+
+def _rows_params() -> list[Any]:
+    """Return every replay cell that reads rows."""
+    return [
+        _rows_param(label, format_version)
+        for format_version in recorder.FORMAT_VERSIONS
+        for label in _DDL_LABELS
+        if label != "add_required_nested_child" and not label.endswith("_describe")
+    ]
+
+
+def _describe_types(answer: dict[str, Any]) -> list[dict[str, str]]:
+    """Return the `(col_name, data_type)` pairs of a DESCRIBE answer."""
+    return [{"col_name": row["col_name"], "data_type": row["data_type"]} for row in answer["rows"]]
+
+
 @pytest.mark.parametrize(("label", "format_version"), _ddl_params())
-def test_nested_ddl_matches_spark(
+def test_nested_ddl_schema_matches_spark(
     label: str, format_version: str, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
-    """Spark's nested CREATE / ADD / RENAME / DROP statements answer Spark on RePark tables."""
-    outcome = _replayed(format_version, tmp_path_factory)[label]
+    """Spark's nested CREATE / ADD / RENAME / DROP leave the schema Spark reports.
+
+    Every `INSERT` is skipped, so each read answers an empty table with Spark's column names
+    and types on both doors, and each `DESCRIBE` answers Spark's `data_type` strings.
+    """
+    outcome = _replayed(format_version, False, tmp_path_factory)[label]
     cell = _CELLS[f"v{format_version}_{label}"]
     assert outcome["error"] is None, (label, repr(outcome["error"]))
     assert "sql_error" not in outcome, (label, repr(outcome.get("sql_error")))
-    expected = _expected_of(cell)
     if label.endswith("_describe"):
-        got = [
-            {"col_name": row["col_name"], "data_type": row["data_type"]}
-            for row in outcome["sql"]["rows"]
-        ]
-        want = [
-            {"col_name": row["col_name"], "data_type": row["data_type"]} for row in cell["rows"]
-        ]
-        assert got == want, (label, got, want)
+        got = _describe_types(outcome["sql"])
+        assert got == _describe_types(cell), (label, got)
         return
+    expected = {**_expected_of(cell), "rows": []}
     assert outcome["sql"] == expected, (label, "sql", outcome["sql"], expected)
     if "dataframe" in outcome or "dataframe_error" in outcome:
         assert "dataframe_error" not in outcome, (label, repr(outcome.get("dataframe_error")))
         assert outcome["dataframe"] == expected, (label, "dataframe", outcome["dataframe"])
 
 
-@pytest.mark.parametrize(
-    "format_version",
-    [
-        pytest.param(format_version, id=_ddl_id("add_required_nested_child", format_version))
-        for format_version in recorder.FORMAT_VERSIONS
-    ],
-)
+@pytest.mark.parametrize(("label", "format_version"), _rows_params())
+def test_nested_ddl_rows_match_spark(
+    label: str, format_version: str, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Spark's full nested cells — inserts included — answer Spark's rows on both doors.
+
+    Notes:
+        Ids starting `forkwrite` are strict-xfail: an `INSERT` into a list column fails in the
+        fork writer on the pinned fork (hand-back fork finding). Ids with `fork292` read a
+        file that lacks an added child.
+    """
+    outcome = _replayed(format_version, True, tmp_path_factory)[label]
+    cell = _CELLS[f"v{format_version}_{label}"]
+    assert outcome["error"] is None, (label, repr(outcome["error"]))
+    assert "sql_error" not in outcome, (label, repr(outcome.get("sql_error")))
+    expected = _expected_of(cell)
+    assert outcome["sql"] == expected, (label, "sql", outcome["sql"], expected)
+    if "dataframe" in outcome or "dataframe_error" in outcome:
+        assert "dataframe_error" not in outcome, (label, repr(outcome.get("dataframe_error")))
+        assert outcome["dataframe"] == expected, (label, "dataframe", outcome["dataframe"])
+
+
+@pytest.mark.parametrize("format_version", recorder.FORMAT_VERSIONS)
 def test_required_nested_child_refuses_like_spark(
     format_version: str, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
-    """`ADD COLUMN s.r INT NOT NULL` on a table with rows refuses and leaves the table untouched."""
+    """`ADD COLUMN s.r INT NOT NULL` refuses as incompatible and leaves the table untouched."""
     from repark.errors import PySparkException
 
-    outcome = _replayed(format_version, tmp_path_factory)["add_required_nested_child"]
+    outcome = _replayed(format_version, False, tmp_path_factory)["add_required_nested_child"]
     error = outcome["error"]
     assert isinstance(error, PySparkException), repr(error)
-    assert _REQUIRED_CHILD_MESSAGE in str(error), str(error)
+    assert "Incompatible change: cannot add required column" in str(error), str(error)
     assert outcome["after"] == outcome["before"]
-    expected = _expected_of(_CELLS[f"v{format_version}_struct_child_add_read"])
+    expected = {**_expected_of(_CELLS[f"v{format_version}_struct_child_add_read"]), "rows": []}
     assert outcome["sql"] == expected, (outcome["sql"], expected)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "fork message `cannot add required column without a default value: s.r` where Iceberg "
+        "1.11.0 says `cannot add required column: r`; RePark omits Spark's "
+        "`Unsupported table change: ` prefix"
+    ),
+)
+def test_required_nested_child_message_matches_spark(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> None:
+    """The required-child refusal carries Spark's whole first message line."""
+    outcome = _replayed("2", False, tmp_path_factory)["add_required_nested_child"]
+    assert _REQUIRED_CHILD_MESSAGE in str(outcome["error"]), str(outcome["error"])
 
 
 @pytest.mark.xfail(

@@ -7,9 +7,11 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
     ArrayElemTypeDef, ColumnDef, ColumnOption, CreateTable, CreateTableOptions,
-    DataType as SqlDataType, ExactNumberInfo, SqlOption, TimezoneInfo,
+    DataType as SqlDataType, ExactNumberInfo, SqlOption, StructField, TimezoneInfo,
 };
-use iceberg::spec::{ListType, NestedField, PrimitiveType, Schema, Type, UnboundPartitionSpec};
+use iceberg::spec::{
+    ListType, MapType, NestedField, PrimitiveType, Schema, StructType, Type, UnboundPartitionSpec,
+};
 use iceberg::transaction::StagedTableTransaction;
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 
@@ -240,6 +242,19 @@ fn sql_type_to_iceberg_nested(
         let field = NestedField::optional(element_id, "element", element_type);
         return Ok(Type::List(ListType::new(Arc::new(field))));
     }
+    if let SqlDataType::Struct(fields, _) = data_type {
+        return struct_type_to_iceberg(fields, timestamp_type, next_id);
+    }
+    if let SqlDataType::Map(key, value) = data_type {
+        let key_id = alloc_field_id(next_id)?;
+        let key_type = sql_type_to_iceberg_nested(key, timestamp_type, next_id)?;
+        let value_id = alloc_field_id(next_id)?;
+        let value_type = sql_type_to_iceberg_nested(value, timestamp_type, next_id)?;
+        return Ok(Type::Map(MapType::new(
+            Arc::new(NestedField::map_key_element(key_id, key_type)),
+            Arc::new(NestedField::map_value_element(value_id, value_type, false)),
+        )));
+    }
     let primitive = match data_type {
         SqlDataType::Boolean | SqlDataType::Bool => PrimitiveType::Boolean,
         SqlDataType::TinyInt(_)
@@ -294,6 +309,28 @@ fn sql_type_to_iceberg_nested(
         },
     };
     Ok(Type::Primitive(primitive))
+}
+
+fn struct_type_to_iceberg(
+    fields: &[StructField],
+    timestamp_type: SparkTimestampType,
+    next_id: &mut i32,
+) -> Result<Type> {
+    let mut children = Vec::with_capacity(fields.len());
+    for field in fields {
+        let name = field
+            .field_name
+            .as_ref()
+            .ok_or_else(|| DataFusionError::Plan(format!("STRUCT field `{field}` needs a name")))?;
+        let field_id = alloc_field_id(next_id)?;
+        let field_type = sql_type_to_iceberg_nested(&field.field_type, timestamp_type, next_id)?;
+        children.push(Arc::new(NestedField::optional(
+            field_id,
+            name.value.clone(),
+            field_type,
+        )));
+    }
+    Ok(Type::Struct(StructType::new(children)))
 }
 
 fn iceberg_v3_named_primitive(data_type: &SqlDataType) -> Option<PrimitiveType> {

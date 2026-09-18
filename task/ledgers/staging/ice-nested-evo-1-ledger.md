@@ -98,3 +98,47 @@ Q-21a-2), measured first on the adopted `st_add_v2`:
 - `df.select(col("s.a"))` / `df.filter(col("s.b").isNull())` raise `No field named s.a` — the
   same on a plain in-memory DataFrame, so not an Iceberg read defect — COL-DOTTED-FIELD-1. The
   DataFrame twins spell `col("s").getField("a").alias("a")`.
+
+## Step 4 — nested DDL on both SQL doors (2026-09-17)
+
+- **Engine seam** `crates/repark-iceberg/src/write/nested_column.rs`: `ColumnPathChange`
+  (`Add` under an optional dotted parent with `FIRST`/`AFTER`, `Rename`, `Drop`) folded into
+  ONE case-insensitive fork `UpdateSchema` by `apply_column_path_changes` —
+  `add_column_to` / `add_required_column_to` with the parent path, `rename_column`,
+  `delete_column`. The fork resolves `arrs.element` / `m.value` parents to the element/value
+  struct. RePark keeps no schema model (fork rule 3). A sibling of `write/alter.rs` because that
+  file sits at its exact file-size ceiling.
+- **Spark door** `crates/repark-spark/src/nested_column_ddl.rs` (router pre-parse ahead of the
+  move intercept): `ADD COLUMN[S]` (list, with or without parentheses; `NOT NULL`, `COMMENT`,
+  `FIRST`/`AFTER`), `RENAME COLUMN`, `DROP COLUMN[S] [IF EXISTS]` on dotted paths, parsed with
+  `SparkSqlDialect` so `MAP<K, V>` child types parse. Claims a statement only when a path has a
+  dot, so every top-level form keeps its stock path.
+- **CREATE TABLE** (`create_table.rs`): `STRUCT<…>` → Iceberg struct of nullable children,
+  `MAP<K, V>` → Iceberg map (required key, nullable value). `normalize.rs` parses a column-def
+  CREATE whose column list spells `MAP<` with `SparkSqlDialect`; every other statement keeps
+  its dialect.
+- **ANSI door** `crates/repark-sql/src/alter/nested.rs`: the same three forms (`GenericDialect`,
+  types through the door's own `sql_type_to_iceberg`), same engine seam.
+
+Result with the override: `test_ice_nested_evo_1.py` **46 passed, 4 xfailed** (2 × list-insert
+`forkwrite`, the required-child whole-message pin, the EX-COL-2 name pin).
+
+**Fork finding F-1 (INSERT into a list column).** On the pinned fork (and on `fix/nested-evo-1`,
+the writer is byte-identical) every `INSERT` into an Iceberg list column fails:
+`Unexpected => Arrow Schema Error … column types must match schema types, expected
+List(Int32, field: 'element', metadata: {"PARQUET:field_id": "3"}) but found List(Int32, field:
+'element')`. Backtrace: `writer/write_defaults.rs` `apply_write_defaults` (rebuilds the batch
+with `schema_to_arrow_schema`, whose list element carries a field id the incoming DataFusion
+batch lacks) ← `data_file_writer.rs` ← `unpartitioned_writer.rs` ← iceberg-datafusion
+`task_writer.rs` / `physical_plan/write.rs`. Struct and map columns insert fine. Reproduction:
+`CREATE TABLE c.ns.a (id INT, arr ARRAY<INT>) USING iceberg; INSERT INTO c.ns.a SELECT 1,
+array(1, 2)`. The DataFrame `writeTo().append()` / `insertInto` / `saveAsTable(append)` fail
+the same way. Pre-existing on main — not introduced here; pinned strict-xfail
+(`forkwrite-…list_element_child_add_read`) and `#[ignore]` (`forkwrite_list_insert_reads_back`).
+
+**Fork finding F-2 (required-child message).** The fork refuses a required add without a
+default with `Incompatible change: cannot add required column without a default value: s.r`;
+Iceberg 1.11.0 (the oracle) says `Incompatible change: cannot add required column: r` (leaf
+name, no default clause). RePark also omits Spark's `Unsupported table change: ` prefix
+(`SparkCatalog` wraps the Iceberg `IllegalArgumentException`), as the column-move refusals do
+(ruling Q-21a-3). Pinned strict-xfail `test_required_nested_child_message_matches_spark`.

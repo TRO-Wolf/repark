@@ -8,7 +8,7 @@ use datafusion::sql::sqlparser::ast::{
     Expr, FromTable, ObjectName, ObjectNamePart, Query, Statement, TableFactor, TableWithJoins,
     Value, Visit, Visitor,
 };
-use datafusion::sql::sqlparser::dialect::{DatabricksDialect, GenericDialect};
+use datafusion::sql::sqlparser::dialect::{DatabricksDialect, GenericDialect, SparkSqlDialect};
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
@@ -180,9 +180,12 @@ pub(crate) fn parse_single_normalized(
     }
     // ALTER TABLE uses GenericDialect.
     let generic = GenericDialect {};
+    let spark = SparkSqlDialect {};
     let parse_dialect: &dyn datafusion::sql::sqlparser::dialect::Dialect =
         if alter::tokens_are_alter_table(&tokens) {
             &generic
+        } else if is_create_table(&tokens) && has_angle_map_column_type(&tokens) {
+            &spark
         } else {
             &dialect
         };
@@ -471,6 +474,18 @@ pub(crate) fn is_create_table(tokens: &[Token]) -> bool {
         .take(6)
         .collect();
     keywords.first() == Some(&Keyword::CREATE) && keywords.contains(&Keyword::TABLE)
+}
+
+pub(crate) fn has_angle_map_column_type(tokens: &[Token]) -> bool {
+    let boundary = ctas_as_boundary(tokens);
+    let significant: Vec<&Token> = tokens[..boundary]
+        .iter()
+        .filter(|token| !matches!(token, Token::Whitespace(_)))
+        .collect();
+    significant.windows(2).any(|pair| {
+        matches!(pair[0], Token::Word(word) if word.keyword == Keyword::MAP)
+            && matches!(pair[1], Token::Lt)
+    })
 }
 
 /// The CTAS `AS` boundary — the position of the first `AS` keyword (or the end of the stream).
@@ -947,7 +962,9 @@ mod tests {
 
     #[test]
     fn json_arrow_preserves_generic_ast() {
-        use datafusion::sql::sqlparser::dialect::{DatabricksDialect, GenericDialect};
+        use datafusion::sql::sqlparser::dialect::{
+            DatabricksDialect, GenericDialect, SparkSqlDialect,
+        };
         use datafusion::sql::sqlparser::parser::Parser;
 
         let sql = "SELECT payload -> 'a' FROM t";

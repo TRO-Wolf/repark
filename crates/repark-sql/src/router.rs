@@ -31,6 +31,9 @@ pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
     if let Some(ddl) = alter::try_parse_column_move(sql) {
         return alter::execute_column_move(&cx, ddl?).await;
     }
+    if let Some(ddl) = alter::try_parse_nested_column_ddl(sql) {
+        return alter::execute_nested_column_ddl(&cx, ddl?).await;
+    }
     let sql = match alter::rewrite_set_properties(sql) {
         Some(rewritten) => Cow::Owned(rewritten),
         None => Cow::Borrowed(sql),

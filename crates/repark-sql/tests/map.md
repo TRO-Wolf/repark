@@ -10,6 +10,12 @@ holds behavior observed from outside the crate.
 
 ## Contents
 
+- `alter_nested_column.rs` — **ICE-NESTED-EVO-1 (2026-09-17):**
+  `nested_add_rename_and_drop_on_the_ansi_door` pins the ANSI door's nested DDL end to end:
+  `CREATE TABLE … (s STRUCT<a INT, b VARCHAR>)`, `ADD COLUMN s.c BIGINT`,
+  `RENAME COLUMN s.a TO a2`, `DROP COLUMN s.b` leave `s struct<a2 int, c bigint>`, and
+  `ADD COLUMN s.r INT NOT NULL` refuses as an incompatible change.
+  pins: ice-nested-evo-1/C-007, C-010, C-011, C-012
 - `alter_column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):**
   `alter_column_move_reorders_and_noop_writes_no_metadata` pins the ANSI-door move end to
   end (reorder, no-op keeps the order but still commits per R-001, unknown `AFTER` sibling

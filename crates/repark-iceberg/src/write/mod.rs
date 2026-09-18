@@ -20,6 +20,7 @@ pub mod idents;
 pub mod insert_gate;
 pub mod merge;
 mod name_resolution;
+pub mod nested_column;
 /// OV1 exclusive full-table overwrite commit (stage-then-swap).
 pub mod overwrite;
 pub mod overwrite_commit;
