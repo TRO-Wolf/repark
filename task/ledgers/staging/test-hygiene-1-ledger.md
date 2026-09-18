@@ -43,8 +43,10 @@ UTC got: [datetime.date(2026, 9, 18)] session-zone date: 2026-09-18 utc date: 20
 read and set the zone through the session conf. The Kiritimati leg disagrees
 with the session-zone date: product defect, not a test bug — filed as registry
 row `TZ-9` (OPEN), pinned strict-xfail, no product code touched. Spark's
-session-zone semantic for `current_date` is the brief's given premise
-(documented semantic, not re-derived live here — no JVM in this lane).
+session-zone answer was measured by the orchestrator (run 22b, 2026-09-18 13:03 UTC,
+PySpark 4.1.2, one local JVM): `SELECT current_date()` answered `2026-09-19` under
+`Pacific/Kiritimati` and `2026-09-18` under `UTC` and `Etc/GMT+12`, each equal to the
+zone's calendar date at that instant.
 
 ## PROPOSITION LEDGER — TEST-HYGIENE-1 — 2026-09-18
 

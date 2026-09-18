@@ -3590,8 +3590,9 @@ the pin rather than obeying it.
   `spark.sql.session.timeZone` holds: under `Pacific/Kiritimati` (UTC+14) on
   2026-09-18 the engine answered `2026-09-18` while the session-zone date was
   already `2026-09-19` (measured in-repo on the release module, no JVM).
-- **Apache Spark** — answers `current_date` in the session time zone
-  (`spark.sql.session.timeZone`; the documented semantic, not re-derived live here).
+- **Apache Spark** — answers `current_date` in the session time zone: PySpark 4.1.2 measured
+  2026-09-18 13:03 UTC answered `2026-09-19` under `Pacific/Kiritimati` and `2026-09-18` under
+  `UTC` and `Etc/GMT+12`, each equal to that zone's calendar date (run 22b probe `probe_tz9.py`).
 - **Pin** — `python/repark/tests/test_spark_sql_grammar_1.py::test_q14_current_date_answers_the_session_zone_date`
   (`xfail(strict=True)` over `Pacific/Kiritimati` and `Etc/GMT+12`, midnight-race
   guarded); `…::test_q14_current_date_bare_and_paren` now compares against the
