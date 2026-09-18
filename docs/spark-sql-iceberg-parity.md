@@ -5623,7 +5623,7 @@ the pin rather than obeying it.
   | MERGE `ON t.k = 'a' AND t.id = s.id` vs `INSERT INTO` partition `d`, MoR and COW | 2 of 2 | **FIXED** 2 of 2 |
   | 2 MERGEs `ON t.id < 50 …` / `ON t.id >= 50 …`, unpartitioned, copy-on-write | 2 of 2 | **FIXED** 2 of 2 |
   | 2 whole-partition DELETE statements `WHERE k = 'a'` / `k = 'b'` | 2 of 2 | 2 of 2 before and after (COW, one file per partition: each DELETE removes only its own file) |
-  | 16 concurrent `INSERT INTO` | Hadoop v2 11–15, v3 9–14; InMemory v2 8–9, v3 7–9 | 5–7 of 16, unchanged — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
+  | 16 concurrent `INSERT INTO` | Hadoop 9–16 (16 in 4 of 32 repetitions); InMemory 7–9 | 5–7 of 16, unchanged — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
 
 - **Pin** — `crates/repark-iceberg/src/write/merge/tests/occ_scoped.rs` (fault-injected race
   through the real `execute_merge` / `execute_predicate_dml`, v2 and v3, MoR and COW:
@@ -5749,7 +5749,9 @@ the pin rather than obeying it.
   table metadata`, `Cannot commit to table … metadata location from …`; Hadoop also `Cannot
   commit changes based on stale table metadata`, `Version N already exists`) — the same budget
   class, reached less often. The earlier `spark_occ_oracle.json` v2 16-of-16 cell was one
-  lucky repetition (0 of 20 repetitions reached 16). *(oracle: recorded 2026-09-18, fixture
+  repetition, not Spark's typical answer: over three passes (32 repetitions per catalog) the
+  Hadoop catalog committed all sixteen in 4 and 9–15 otherwise; the in-memory catalog never
+  exceeded 9. *(oracle: recorded 2026-09-18, fixture
   `ice_occ_scoped_1/spark_occ_oracle4.json`.)*
 - **Pin** — `python/repark/tests/test_ice_occ_scoped_1.py::test_insert_storm_loses_only_to_the_retry_budget`
   (v2/v3 × SQL / `writeTo().append()`: committed + losers = 16, at least one commit, every loser

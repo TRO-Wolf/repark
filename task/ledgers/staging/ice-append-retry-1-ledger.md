@@ -28,7 +28,7 @@ retry budget, and corrects the registry row and the test docstring.
 | C-002 | RePark's distribution is measured: ten repetitions per format version on the release native, memory catalog. | Registry repark bullet. | **PROVEN** | Orchestrator-measured 2026-09-18: v2 7,5,5,6,5,6,6,6,5,5, v3 6,5,7,5,5,6,5,5,6,7; every loser `CatalogCommitConflicts`; rows = snapshots = commits in every repetition. Transcribed into the registry row; not re-run in this round (no native here). |
 | C-003 | The fork honours the four retry properties: its commit loop reads them into an exponential backoff. | Registry repark bullet (code citation). | **PROVEN** | The fork's `Transaction::build_backoff` (`crates/iceberg/src/transaction/mod.rs` at fork `9e67e000`) reads `commit.retry.num-retries` (default 4), `commit.retry.min-wait-ms`, `commit.retry.max-wait-ms` and `commit.retry.total-timeout-ms` from the table properties into an exponential backoff (factor 2). What differs from Java is only jitter — a hypothesis for RePark sitting ~2 below Spark's in-memory count, not a finding. |
 | C-004 | The registry row and the test docstring are corrected: neither says Spark commits 16 of 16. | Registry row `ICE-OCC-SCOPED-1-INSERT-STORM`; `test_insert_storm_loses_only_to_the_retry_budget` docstring. | **PROVEN** | Row title `RePark commits 5–7 of 16, Spark 7–15`, BACKLOG 2026-09-17 corrected 2026-09-18; both catalogs' distributions with the oracle pointer; the rationale retires Q-21a-5's one-repetition read and names the jitter fork card; the table line is true. The test docstring states the measured ranges and cites the fixture; the test body is untouched. |
-| C-005 | Ruling Q-23b-1 — no product change — with its reason. | Registry rationale; the tree. | **PROVEN** | The premise is false (0 of 20 repetitions reached 16), so there is no retry-on-rebase work to wire; the row stays BACKLOG and the remaining distance is the jitter question, a fork card (F-COMMIT-JITTER-1, not filed). The tree carries no product change: fixture, recorder, registry, docstring, maps, ledger only. |
+| C-005 | Ruling Q-23b-1 — no product change — with its reason. | Registry rationale; the tree. | **PROVEN** | The premise is false (the in-memory catalog never exceeded 9 of 16 in 32 repetitions; the Hadoop catalog reached 16 in 4 of 32), so there is no retry-on-rebase work to wire; the row stays BACKLOG and the remaining distance is the jitter question, a fork card (F-COMMIT-JITTER-1, not filed). The tree carries no product change: fixture, recorder, registry, docstring, maps, ledger only. |
 
 VERDICT: 5 clauses, 5 PROVEN, 0 OPEN, 0 REJECTED.
 
@@ -40,8 +40,10 @@ table per repetition, 6 repetitions per catalog × format version. Committed: Ha
 15,13,11,12,14,12; Hadoop v3 14,12,13,9,10,13; InMemory v2 9,9,8,9,9,8; InMemory v3
 9,8,8,7,9,9. Every loser is a `CommitFailedException`. An earlier 4-repetition pass gave
 Hadoop v2 11,13,13,11 and v3 14,14,15,12, InMemory v2 9,7,8,7 and v3 8,9,8,9; only that
-earlier pass's shape sits behind the old 16-of-16 v2 cell, which is not reproducible (0 of 20
-repetitions reached 16).
+earlier pass's shape sits behind the old 16-of-16 v2 cell, which is one repetition, not the typical answer. A replay of the committed recorder
+(orchestrator, 2026-09-18 18:13) gave Hadoop v2 16,14,11,16,15,13, v3 16,14,13,13,16,14 and
+InMemory v2 8,9,9,8,8,8, v3 8,7,8,9,8,7: over the three passes the Hadoop catalog committed
+all sixteen in 4 of 32 repetitions, the in-memory catalog never more than 9.
 
 RePark main (release native, memory catalog, same storm, 10 repetitions): v2
 7,5,5,6,5,6,6,6,5,5; v3 6,5,7,5,5,6,5,5,6,7. Every loser `CatalogCommitConflicts`; rows =

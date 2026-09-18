@@ -353,6 +353,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `spark_occ_oracle4.json`, ruling Q-23b-1: no product change) and two whole-partition DELETE
   statements. The range table is seeded by two INSERT statements so its
   two MERGEs touch different files, as Spark's `local[8]` `range(100)` does (ruling Q-21a-4).
+  The insert-storm docstring states Spark's range over three recorded passes (Hadoop 9-16,
+  InMemory 7-9), not the single 16-of-16 repetition.
   pins: ice-occ-scoped-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
   pins: ice-occ-scoped-1/C-015, C-016, C-017
   pins: ice-append-retry-1/C-003, C-004, C-005

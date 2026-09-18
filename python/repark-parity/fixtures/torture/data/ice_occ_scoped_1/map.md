@@ -72,7 +72,9 @@ strings) whose committed bytes hash to
   Spark's behaviour: over six barrier-released repetitions per catalog × format version
   (fixture `spark_occ_oracle4.json`, recorded 2026-09-18) Spark 4.1.2 + Iceberg 1.11.0 commits
   Hadoop v2 15,13,11,12,14,12, Hadoop v3 14,12,13,9,10,13, InMemory v2 9,9,8,9,9,8 and InMemory
-  v3 9,8,8,7,9,9. Every loser is a `CommitFailedException` (`Cannot commit: stale table
+  v3 9,8,8,7,9,9; a replay of the recorder (2026-09-18 18:13, not committed) gave Hadoop v2
+  16,14,11,16,15,13 and v3 16,14,13,13,16,14, InMemory v2 8,9,9,8,8,8 and v3 8,7,8,9,8,7 — the
+  Hadoop catalog sometimes commits all sixteen, the in-memory catalog never more than 9. Every loser is a `CommitFailedException` (`Cannot commit: stale table
   metadata`, `Cannot commit to table … metadata location from …`; Hadoop also `Cannot commit
   changes based on stale table metadata`, `Version N already exists`) — commit-retry
   exhaustion, not a validation outcome. RePark's own storm commits v2 7,5,5,6,5,6,6,6,5,5 and
