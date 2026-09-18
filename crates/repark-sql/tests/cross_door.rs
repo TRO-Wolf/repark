@@ -468,7 +468,6 @@ async fn cross_door_time_travel_pins_the_same_snapshot_content() {
     );
 }
 
-/// ROW 8 — **identifier case folding**, the divergence row for design §2 Q10.
 #[tokio::test]
 async fn cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted() {
     let ansi = native_ansi_door().await;
@@ -502,8 +501,8 @@ async fn cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted(
         Err(error) => error.to_string(),
         Ok(_) => panic!(
             "ANSI door: a double-quoted identifier is case-SENSITIVE, so \"ID\" must not resolve \
-             to a column stored as `id`. If it now resolves, repark has CONVERGED on Apache \
-             Spark and docs/spark-sql-iceberg-parity.md §3 row ID-1 must be retired, not this \
+             to a column stored as `id`. If it now resolves, standard-SQL exactness is gone and \
+             docs/spark-sql-iceberg-parity.md §3 row ID-1 must be rewritten, not this \
              assertion relaxed."
         ),
     };
@@ -512,19 +511,16 @@ async fn cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted(
         "the ANSI refusal must be a resolution failure naming the unresolved identifier as \
          `\"ID\"` (row ID-1): {ansi_quoted}"
     );
-    let spark_quoted = match spark.session.sql("SELECT `ID` FROM ice.sales.orders").await {
-        Err(error) => error.to_string(),
-        Ok(_) => panic!(
-            "Spark door: the backticked form is ALSO case-sensitive today (stock DataFusion \
-             resolution) — a divergence from Apache Spark, inherited engine-wide rather than \
-             introduced by either door. If this ever starts resolving, retire \
-             docs/spark-sql-iceberg-parity.md §3 row ID-1 in the same change."
-        ),
-    };
-    assert!(
-        spark_quoted.contains("No field named") && spark_quoted.contains("\"ID\""),
-        "the Spark-door refusal must be a resolution failure naming the unresolved identifier as \
-         `\"ID\"` (row ID-1): {spark_quoted}"
+    let (_, spark_rows) = typed_rows(
+        &spark.session,
+        "SELECT `ID` AS id, label FROM ice.sales.orders",
+    )
+    .await;
+    assert_eq!(
+        spark_rows,
+        vec![(1, "a".to_string())],
+        "Spark door: the backticked form resolves case-INSENSITIVELY under the default \
+         `spark.sql.caseSensitive = false`, matching Apache Spark (row ID-1)"
     );
 }
 

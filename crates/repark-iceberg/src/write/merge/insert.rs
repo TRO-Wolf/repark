@@ -8,8 +8,9 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use futures::Stream;
 
-use super::{InsertAction, InsertClause, MatchedAction, quote_ident, resolve_schema_field_name};
+use super::{InsertAction, InsertClause, MatchedAction, quote_ident};
 use crate::write::insert_defaults::{ColumnDefaults, column_defaults, schema_has_primitive_fill};
+use crate::write::name_resolution::{dedup_key, resolve_arrow_field, resolve_write_column};
 use crate::write::store_assign::{self, MERGE_SPARK_CLASS};
 use iceberg::table::Table;
 
@@ -17,18 +18,25 @@ pub(super) fn table_projection(
     clause: &InsertClause,
     table: &Table,
     write_schema: &ArrowSchema,
+    case_insensitive: bool,
 ) -> Result<String> {
     let current = table.metadata().current_schema();
     if !schema_has_primitive_fill(current) {
-        return insert_projection_with_defaults(clause, write_schema, &ColumnDefaults::new());
+        return insert_projection_with_defaults(
+            clause,
+            write_schema,
+            case_insensitive,
+            &ColumnDefaults::new(),
+        );
     }
     let defaults = column_defaults(current)?;
-    insert_projection_with_defaults(clause, write_schema, &defaults)
+    insert_projection_with_defaults(clause, write_schema, case_insensitive, &defaults)
 }
 
 pub(super) fn insert_projection_with_defaults(
     clause: &InsertClause,
     write_schema: &ArrowSchema,
+    case_insensitive: bool,
     defaults: &ColumnDefaults,
 ) -> Result<String> {
     let InsertAction::Explicit {
@@ -56,21 +64,18 @@ pub(super) fn insert_projection_with_defaults(
             values_sql.len()
         )));
     }
-    // Case-insensitive resolution.
     let mut seen = HashSet::with_capacity(columns.len());
     let mut canonical_columns: Vec<String> = Vec::with_capacity(columns.len());
     for column in &columns {
-        let Some(canonical) = resolve_schema_field_name(write_schema, column) else {
-            return Err(DataFusionError::Plan(format!(
-                "MERGE INSERT column `{column}` does not exist in the target table"
-            )));
-        };
-        if !seen.insert(canonical.to_ascii_lowercase()) {
+        let canonical = resolve_write_column(write_schema, column, case_insensitive, || {
+            format!("MERGE INSERT column `{column}` does not exist in the target table")
+        })?;
+        if !seen.insert(dedup_key(&canonical, case_insensitive)) {
             return Err(DataFusionError::Plan(format!(
                 "MERGE INSERT clause names column `{column}` more than once"
             )));
         }
-        canonical_columns.push(canonical.to_string());
+        canonical_columns.push(canonical);
     }
     let assigned: HashMap<&str, &str> = canonical_columns
         .iter()
@@ -213,7 +218,9 @@ fn update_assignment_probe_sql(
             continue;
         };
         for (column, expr) in assignments {
-            let Some(canonical) = resolve_schema_field_name(write_schema, column) else {
+            let Some(canonical) =
+                resolve_arrow_field(write_schema, column, sql.spec.case_insensitive)
+            else {
                 return Err(DataFusionError::Internal(format!(
                     "MERGE UPDATE SET column `{column}` missing after validate_update_columns \
                      (executor bug)"

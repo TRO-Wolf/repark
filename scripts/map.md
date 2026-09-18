@@ -8,6 +8,9 @@ ICE-WRITE-OPTIONS-1 round 3 (2026-09-17): `check_lib_py.py` sets `dataframe/writ
 
 ICE-V3-WRITE-DEFAULT-1 rebase onto ICE-DYN-OVERWRITE-1 (2026-09-18, run 21b): `check_lib_py.py` ratchets `writer_readwriter.py` 1109 → 1102 (the merged column-list and `static_overwrite` writer; the CAP-1 mirror moves with it). pins: ice-v3-write-default-1/C-024
 ICE-DYN-OVERWRITE-1 round 2, ruling Q-20a-6 (2026-09-17): `check_lib_py.py` sets `writer_readwriter.py` 1101 → 1109 (the `static_overwrite` flag threading; `session_core.py` holds 2290) with the CAP-1 mirror. pins: ice-dyn-overwrite-1/L-001
+ICE-MIXED-CASE-1 (2026-09-17): `check_rust_file_size.py` ratchets six baselines down for the case-insensitive scope work, all shrink-only: `write/merge/mod.rs` 1792 → 1782, `write/merge/tests/merge.rs` 1065 → 1032, `write/merge/tests/streaming_scan.rs` 3028 → 3020, `write/predicate_dml.rs` 1142 → 1141, `write/predicate_dml/tests/predicate_dml.rs` 1442 → 1440, `repark-sql/tests/cross_door.rs` 1258 → 1254. pins: ice-mixed-case-1/C-012 Run 22b rebase onto main (after #682 / #687 / #692 / #678): `write/merge/mod.rs` lands at 1761 and the ceiling ratchets to 1761.
+
+ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): two more shrink-only ratchets behind the shared write-column helper — `write/merge/mod.rs` 1782 → 1780, `write/predicate_dml.rs` 1141 → 1139 — with the CAP-1 mirror. pins: ice-mixed-case-1/C-012
 
 ICE-WRITE-OPTIONS-1 run 22b rebase over #682 / #687 / #678 (2026-09-18): `check_lib_py.py` sets `writer_readwriter.py` 1102 → 1095 (main's column-list and `static_overwrite` writer merged with this unit's options funnel; the static flag rides the options native, Q-22b-WO-1) with the CAP-1 mirror; the mirror keeps this unit's `append.rs` 1819 and main's `merge/mod.rs` 1773. pins: ice-write-options-1/C-014
 

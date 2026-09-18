@@ -298,19 +298,17 @@ async fn live_data_file_paths(catalog: &Arc<dyn Catalog>, ident: &TableIdent) ->
     paths
 }
 
-fn identity_spec(table: &str) -> PredicateDmlSpec {
-    identity_spec_for(table, "id IN (SELECT id FROM keys)")
-}
-
 fn identity_spec_for(table: &str, selection_sql: &str) -> PredicateDmlSpec {
     PredicateDmlSpec {
         target: TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string()),
         target_alias: table.to_string(),
         selection_sql: selection_sql.to_string(),
         assignments: None,
+        case_insensitive: true,
     }
 }
 
+const IN_SELECTION: &str = "id IN (SELECT id FROM keys)";
 const NOT_IN_SELECTION: &str = "id NOT IN (SELECT id FROM keys)";
 
 #[tokio::test]
@@ -327,7 +325,7 @@ async fn identity_delete_empty_match_commits_nothing() {
     let before = snapshot_id(&catalog, &ident).await;
     let ctx = SessionContext::new();
     register_keys(&ctx, &[Some(99)]);
-    execute_predicate_dml(&ctx, &catalog, &identity_spec("empty"))
+    execute_predicate_dml(&ctx, &catalog, &identity_spec_for("empty", IN_SELECTION))
         .await
         .expect("empty-match DELETE");
     assert_eq!(snapshot_id(&catalog, &ident).await, before);
@@ -350,7 +348,7 @@ async fn identity_delete_full_match_empties_the_table() {
     .await;
     let ctx = SessionContext::new();
     register_keys(&ctx, &[Some(1), Some(2)]);
-    execute_predicate_dml(&ctx, &catalog, &identity_spec("full"))
+    execute_predicate_dml(&ctx, &catalog, &identity_spec_for("full", IN_SELECTION))
         .await
         .expect("full-match DELETE");
     assert!(read_back(&catalog, &ident).await.is_empty());
@@ -382,7 +380,7 @@ async fn identity_delete_duplicate_rows_deletes_every_copy() {
     .await;
     let ctx = SessionContext::new();
     register_keys(&ctx, &[Some(1)]);
-    execute_predicate_dml(&ctx, &catalog, &identity_spec("dups"))
+    execute_predicate_dml(&ctx, &catalog, &identity_spec_for("dups", IN_SELECTION))
         .await
         .expect("duplicate-row DELETE");
     assert_eq!(
@@ -405,7 +403,7 @@ async fn identity_delete_null_column_row_is_still_deleted() {
     .await;
     let ctx = SessionContext::new();
     register_keys(&ctx, &[Some(1)]);
-    execute_predicate_dml(&ctx, &catalog, &identity_spec("nullcol"))
+    execute_predicate_dml(&ctx, &catalog, &identity_spec_for("nullcol", IN_SELECTION))
         .await
         .expect("NULL-column DELETE");
     assert_eq!(
@@ -427,7 +425,7 @@ async fn identity_delete_null_key_is_unknown_and_survives() {
     .await;
     let ctx = SessionContext::new();
     register_keys(&ctx, &[Some(2)]);
-    execute_predicate_dml(&ctx, &catalog, &identity_spec("nullkey"))
+    execute_predicate_dml(&ctx, &catalog, &identity_spec_for("nullkey", IN_SELECTION))
         .await
         .expect("NULL-key DELETE");
     assert_eq!(
@@ -473,7 +471,7 @@ async fn identity_delete_honors_write_delete_mode_not_merge_mode() {
     for name in ["mode_mor", "mode_cow"] {
         let ctx = SessionContext::new();
         register_keys(&ctx, &[Some(1)]);
-        execute_predicate_dml(&ctx, &catalog, &identity_spec(name))
+        execute_predicate_dml(&ctx, &catalog, &identity_spec_for(name, IN_SELECTION))
             .await
             .unwrap_or_else(|error| panic!("{name} identity DELETE: {error}"));
     }

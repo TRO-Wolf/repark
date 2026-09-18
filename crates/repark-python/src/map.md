@@ -1,5 +1,7 @@
 # map — repark-python/src
 
+ICE-MIXED-CASE-1 (2026-09-17, round 21b rebase): `session_runtime.rs` is main's version — `spark.sql.caseSensitive` writes `SparkCaseSensitiveConfig` (ICE-RTAS-BYNAME-1) and the Spark-door column fold reads that one carrier; the unit's second carrier is gone. pins: ice-mixed-case-1/C-006
+
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 (pins: cc-3-comment-condensation/C-009).
 

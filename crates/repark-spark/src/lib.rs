@@ -20,6 +20,7 @@ mod insert_overwrite;
 mod keyword_lower;
 mod local_fs_ddl;
 mod merge;
+mod merge_fragments;
 mod metadata_tables;
 mod namespace_ddl;
 mod normalize;
@@ -65,6 +66,13 @@ pub fn refuse_sql_fragment(sql: &str) -> datafusion::error::Result<()> {
     refuse_collation_in_sql(sql)?;
     refuse_declared_function_in_sql(sql)?;
     Ok(())
+}
+
+#[must_use]
+pub(crate) fn spark_door_case_insensitive(
+    options: &datafusion::common::config::ConfigOptions,
+) -> bool {
+    !repark_functions::case_sensitive::spark_case_sensitive_from_options(options)
 }
 
 // --- Session seam adapter.

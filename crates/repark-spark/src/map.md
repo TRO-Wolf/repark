@@ -1,5 +1,11 @@
 # map — repark-spark/src
 
+ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `merge_fragments.rs` passes the clause home scope — NOT MATCHED [BY TARGET] fragments resolve bare references against the source alias, NOT MATCHED BY SOURCE against the target alias, MATCHED/ON against both. pins: ice-mixed-case-1/C-004
+
+ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): normalization stays ON (`extension.rs` carries no parser switch); the fold and fragment rewrites emit backticked stored-case spellings. pins: ice-mixed-case-1/C-001…C-006
+
+ICE-MIXED-CASE-1 round 21b: `lib.rs` `spark_door_case_insensitive` negates `SparkCaseSensitiveConfig` (the one `spark.sql.caseSensitive` carrier); `spark_ast.rs` and `merge_fragments.rs` pass it to the repark-core fold. `extension.rs` installs only main's carrier. pins: ice-mixed-case-1/C-006
+
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Router canonicalize reasons restored byte-exact to `6774ebd` (test-pinned; 102-col line kept). spark_literals rule tokens kept. Wrapped-line fragments rewritten as complete sentences (D-002).
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
@@ -67,6 +73,15 @@ pins: rp-4-fork-repin/C-005, C-006
   in-module tests (MG-2: M2 Oracle sub-predicates, M3
   assignment-target qualification, M8 INSERT column list, M10 non-last
   unconditional clause). pins: dml-a-merge-not-matched-by-source/C-005
+- `merge_fragments.rs` — **ICE-MIXED-CASE-1 (2026-09-17):** MERGE fragment
+  preprocessing for case-insensitive resolution (target/source scope read,
+  `ON` / predicate / value fragment rewrite, `maybe_` dispatcher that stamps
+  the carrier flag onto the spec). **Round 21b step 7 (R-03):** target field
+  names come from the Iceberg metadata (`catalog.load_table` →
+  `current_schema()`), and a named source reads its `TableProvider` schema; only
+  a subquery source (`USING (SELECT …) AS s`) still plans one `SELECT * … LIMIT
+  0`, because no metadata exists for it. `merge.rs` resolves the catalog handle
+  before the fragment rewrite. pins: ice-mixed-case-1/C-004, C-018
 - `insert_overwrite.rs` — INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
   non-empty stage-then-swap; **DML-B** `PARTITION (…)` static/dynamic via
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).

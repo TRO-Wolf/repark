@@ -1,5 +1,9 @@
 # map — repark-iceberg/src/write/merge/
 
+ICE-MIXED-CASE-1 (2026-09-17): the MERGE executor carries the door's case-sensitivity flag on the spec (`mod.rs`, `insert.rs`, `not_matched_by_source.rs`); UPDATE SET rejects case-insensitive duplicate targets instead of first-winning. pins: ice-mixed-case-1/C-004
+
+ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the four write-side twin-check sites delegate to the shared `resolve_write_column` helper (`../name_resolution.rs`); `mod.rs` 1782 → 1780. pins: ice-mixed-case-1/C-004
+
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
