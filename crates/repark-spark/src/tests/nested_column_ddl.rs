@@ -361,6 +361,7 @@ fn nested_parse_leaves_top_level_forms_to_the_existing_path() {
         "ALTER TABLE ice.sales.t ADD COLUMN m.value.q MAP<STRING, STRUCT<z: INT>>",
         "ALTER TABLE ice.sales.t DROP COLUMNS (s.b, c)",
         "ALTER TABLE ice.sales.t RENAME COLUMN s.a TO a2",
+        "ALTER TABLE ice.sales.t ADD COLUMN s.d INT COMMENT \"x.y\" FIRST",
     ] {
         assert!(
             matches!(
@@ -395,5 +396,40 @@ async fn fork292_nested_add_reads_null_for_rows_written_before() {
     assert_eq!(
         rendered_row(&ctx, &catalogs, "SELECT s, m FROM ice.sales.sm").await,
         vec!["{a: 1, b: p, c: }", "{k: {p: 1, q: }}"]
+    );
+}
+
+#[tokio::test]
+async fn nested_add_comment_takes_a_double_quoted_string_spark_shaped() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, STRUCT_MAP_CREATE).await;
+    for sql in [
+        "ALTER TABLE ice.sales.sm ADD COLUMN s.d INT COMMENT \"x.y\"",
+        "ALTER TABLE ice.sales.sm ADD COLUMN s.e INT COMMENT \"c\"",
+        "ALTER TABLE ice.sales.sm ADD COLUMN s.f INT COMMENT \"x.y\" FIRST",
+    ] {
+        run(&ctx, &catalogs, sql).await;
+    }
+    let table = load_sales_table(&catalogs, "sm").await;
+    let schema = table.metadata().current_schema();
+    let field = schema.field_by_name("s").unwrap();
+    let Type::Struct(inner) = field.field_type.as_ref() else {
+        panic!("s is not a struct");
+    };
+    let docs: Vec<(&str, Option<&str>)> = inner
+        .fields()
+        .iter()
+        .map(|child| (child.name.as_str(), child.doc.as_deref()))
+        .collect();
+    assert_eq!(
+        docs,
+        vec![
+            ("f", Some("x.y")),
+            ("a", None),
+            ("b", None),
+            ("d", Some("x.y")),
+            ("e", Some("c")),
+        ]
     );
 }

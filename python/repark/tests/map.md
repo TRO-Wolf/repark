@@ -414,6 +414,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   schema (`version-hint.text` → `vN.metadata.json`), Spark's `SELECT *` schema and any refusal
   (first non-empty message line); `record_dataframe_create` records the two CREATE schemas
   through `writeTo(...).create()`.
+  **Round 3 (2026-09-18, run 22b):** three more schema cells, a double-quoted `COMMENT` on a
+  nested `ADD COLUMN` (`"x.y"`, `"c"`, `"x.y" FIRST`).
 - [test_ice_nested_evo_1_schema.py](test_ice_nested_evo_1_schema.py) — **ICE-NESTED-EVO-1
   round 2 (2026-09-18, run 22b):** replays every `schema_cells` entry (v2, v3) on a fresh
   facade catalog and compares the RePark metadata file's current schema (field ids, child
@@ -426,6 +428,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   double-quoted cells, recorded after that run, were red too on the same native (accepted,
   schema changed).
   pins: ice-nested-evo-1/C-014, C-015, C-016, C-018, C-019, C-020
+  **Round 3 (2026-09-18, run 22b):** the three `add_comment_double_quoted*` cells
+  (`COMMENT "x.y"`, `COMMENT "c"`, `COMMENT "x.y" FIRST` on a nested child) run on the same
+  three tests; red before the V-001 fix: 18 failed (refused `PARSE_SYNTAX_ERROR`).
+  pins: ice-nested-evo-1/C-021
 - [ice_write_options_1_spark_oracle.json](ice_write_options_1_spark_oracle.json) +
   [_record_ice_write_options_1_oracle.py](_record_ice_write_options_1_oracle.py) +
   [_record_ice_write_options_2_oracle.py](_record_ice_write_options_2_oracle.py) +

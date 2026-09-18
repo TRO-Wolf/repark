@@ -10,7 +10,7 @@ DataFrame door (`writeTo(...).create()`) against Spark's recorded DataFrame-door
 (`dataframe_create_cells`): Spark's V2 CTAS makes every column nullable, so there the required
 child is optional.
 
-pins: ice-nested-evo-1/C-014, C-015, C-016, C-017, C-018, C-019, C-020
+pins: ice-nested-evo-1/C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021
 """
 
 from __future__ import annotations

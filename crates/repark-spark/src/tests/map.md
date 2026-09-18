@@ -505,6 +505,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `forkwrite_list_insert_reads_back` waits on the hand-back's fork finding: an `INSERT` into a
   list column fails in the fork writer.
   pins: ice-nested-evo-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012
+  **Round 3 (2026-09-18, run 22b):** `nested_add_comment_takes_a_double_quoted_string_spark_shaped`
+  adds `s.d COMMENT "x.y"`, `s.e COMMENT "c"` and `s.f COMMENT "x.y" FIRST` and reads the
+  children and docs back in Spark's order (V-001; red before the fix: `PARSE_SYNTAX_ERROR`).
+  pins: ice-nested-evo-1/C-021
   **Round 2 (2026-09-18, run 22b):**
   `nested_ddl_refuses_double_quoted_names_and_known_paths_spark_shaped` (double-quoted names
   refuse 42601 verbatim, an existing child `FIELD_ALREADY_EXISTS` 42710, an unknown parent

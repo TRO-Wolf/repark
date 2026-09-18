@@ -32,6 +32,11 @@ identically. Never hand-edited: re-run the driver.
   `AFTER s.a` refuses `PARSE_SYNTAX_ERROR` 42601; a duplicate child refuses
   `FIELD_ALREADY_EXISTS` 42710 and an unknown parent `UNRESOLVED_COLUMN.WITH_SUGGESTION` 42703,
   both leaving the schema unchanged. v2 and v3 identical.
+  **Round 3 (2026-09-18, run 22b):** `add_comment_double_quoted_dotted` /
+  `add_comment_double_quoted` / `add_comment_double_quoted_first` — `COMMENT "x.y"` /
+  `COMMENT "c"` / `COMMENT "x.y" FIRST` on `ADD COLUMN s.<leaf> INT` succeed; the child's
+  `doc` is `x.y` / `c` and `FIRST` puts `f` ahead of `a`. Earlier cells answer byte-identically;
+  the four adoption tables were not re-committed.
 - `oracle.json` `dataframe_create_cells` — the two CREATE schemas through
   `writeTo(...).create()`: the same level-order ids, every column optional (Spark's V2 CTAS
   applies `asNullable`).

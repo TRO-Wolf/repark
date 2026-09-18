@@ -1,10 +1,10 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::DataType as SqlDataType;
+use datafusion::sql::sqlparser::ast::{DataType as SqlDataType, Ident};
 use datafusion::sql::sqlparser::dialect::SparkSqlDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
-use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
+use datafusion::sql::sqlparser::tokenizer::Token;
 use repark_core::CatalogRegistry;
 use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 use repark_iceberg::write::alter::{ColumnPosition, starts_with_alter};
@@ -56,24 +56,35 @@ pub(crate) fn try_parse_nested_column_ddl(sql: &str) -> Option<Result<NestedColu
         return None;
     }
     let table_parts = name_parts(&parser.parse_object_name(false).ok()?);
-    let operation = if parser.parse_keyword(Keyword::ADD) {
-        if !(parser.parse_keyword(Keyword::COLUMN) || parser.parse_keyword(Keyword::COLUMNS)) {
+    let mut names = NameParser {
+        parser,
+        double_quoted: None,
+    };
+    let operation = if names.parser.parse_keyword(Keyword::ADD) {
+        if !(names.parser.parse_keyword(Keyword::COLUMN)
+            || names.parser.parse_keyword(Keyword::COLUMNS))
+        {
             return None;
         }
-        parse_add_columns(&mut parser)
-    } else if parser.parse_keywords(&[Keyword::RENAME, Keyword::COLUMN]) {
-        parse_rename_column(&mut parser)
-    } else if parser.parse_keyword(Keyword::DROP) {
-        if !(parser.parse_keyword(Keyword::COLUMN) || parser.parse_keyword(Keyword::COLUMNS)) {
+        parse_add_columns(&mut names)
+    } else if names
+        .parser
+        .parse_keywords(&[Keyword::RENAME, Keyword::COLUMN])
+    {
+        parse_rename_column(&mut names)
+    } else if names.parser.parse_keyword(Keyword::DROP) {
+        if !(names.parser.parse_keyword(Keyword::COLUMN)
+            || names.parser.parse_keyword(Keyword::COLUMNS))
+        {
             return None;
         }
-        parse_drop_columns(&mut parser)
+        parse_drop_columns(&mut names)
     } else {
         return None;
     };
     match operation {
         Ok(None) => None,
-        Ok(Some(operation)) => Some(match first_double_quoted_word(sql) {
+        Ok(Some(operation)) => Some(match names.double_quoted {
             Some(quoted) => Err(verbatim_parser_error(syntax_error_near(&quoted))),
             None => Ok(NestedColumnDdl {
                 table_parts,
@@ -91,32 +102,35 @@ fn verbatim_parser_error(message: String) -> DataFusionError {
     )
 }
 
-fn first_double_quoted_word(sql: &str) -> Option<Token> {
-    Tokenizer::new(&SparkSqlDialect {}, sql)
-        .tokenize()
-        .ok()?
-        .into_iter()
-        .find(|token| match token {
-            Token::Word(word) => word.quote_style == Some('"'),
-            Token::DoubleQuotedString(_) => true,
-            _ => false,
-        })
+struct NameParser<'a> {
+    parser: Parser<'a>,
+    double_quoted: Option<Ident>,
 }
 
-fn syntax_error_near(token: &Token) -> String {
+impl NameParser<'_> {
+    fn name(&mut self) -> ParseResult<String> {
+        let ident = self.parser.parse_identifier()?;
+        if ident.quote_style == Some('"') && self.double_quoted.is_none() {
+            self.double_quoted = Some(ident.clone());
+        }
+        Ok(ident.value)
+    }
+
+    fn column_path(&mut self) -> ParseResult<Vec<String>> {
+        let mut path = vec![self.name()?];
+        while self.parser.consume_token(&Token::Period) {
+            path.push(self.name()?);
+        }
+        Ok(path)
+    }
+}
+
+fn syntax_error_near(token: &impl std::fmt::Display) -> String {
     format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{token}'. SQLSTATE: 42601")
 }
 
 fn parser_error(error: ParserError) -> DataFusionError {
     DataFusionError::SQL(Box::new(error), None)
-}
-
-fn parse_column_path(parser: &mut Parser<'_>) -> ParseResult<Vec<String>> {
-    let mut path = vec![parser.parse_identifier()?.value];
-    while parser.consume_token(&Token::Period) {
-        path.push(parser.parse_identifier()?.value);
-    }
-    Ok(path)
 }
 
 fn expect_end(parser: &mut Parser<'_>) -> ParseResult<()> {
@@ -128,25 +142,26 @@ fn expect_end(parser: &mut Parser<'_>) -> ParseResult<()> {
     }
 }
 
-fn parse_add_columns(parser: &mut Parser<'_>) -> ParseResult<Option<NestedColumnOperation>> {
-    let parenthesized = parser.consume_token(&Token::LParen);
+fn parse_add_columns(names: &mut NameParser<'_>) -> ParseResult<Option<NestedColumnOperation>> {
+    let parenthesized = names.parser.consume_token(&Token::LParen);
     let mut columns: Vec<NestedAddColumn> = Vec::new();
     let mut nested_seen = false;
     let outcome = loop {
-        let path = match parse_column_path(parser) {
+        let path = match names.column_path() {
             Ok(path) => path,
             Err(error) => break Err(error),
         };
         nested_seen |= path.len() > 1;
-        let column = parser
+        let column = names
+            .parser
             .parse_data_type()
-            .and_then(|data_type| parse_add_column_tail(parser, path, data_type));
+            .and_then(|data_type| parse_add_column_tail(names, path, data_type));
         match column {
             Ok(column) => columns.push(column),
             Err(error) => break Err(error),
         }
-        if !parser.consume_token(&Token::Comma) {
-            break close_list(parser, parenthesized);
+        if !names.parser.consume_token(&Token::Comma) {
+            break close_list(&mut names.parser, parenthesized);
         }
     };
     if !nested_seen {
@@ -168,7 +183,7 @@ fn syntax_error_at(parser: &Parser<'_>) -> ParserError {
 }
 
 fn parse_add_column_tail(
-    parser: &mut Parser<'_>,
+    names: &mut NameParser<'_>,
     path: Vec<String>,
     data_type: SqlDataType,
 ) -> ParseResult<NestedAddColumn> {
@@ -180,6 +195,7 @@ fn parse_add_column_tail(
         position: None,
     };
     loop {
+        let parser = &mut names.parser;
         if parser.parse_keywords(&[Keyword::NOT, Keyword::NULL]) {
             column.required = true;
         } else if parser.parse_keyword(Keyword::NULL) {
@@ -189,7 +205,7 @@ fn parse_add_column_tail(
         } else if parser.parse_keyword(Keyword::FIRST) {
             column.position = Some(ColumnPosition::First);
         } else if parser.parse_keyword(Keyword::AFTER) {
-            let reference = parser.parse_identifier()?.value;
+            let reference = names.name()?;
             column.position = Some(ColumnPosition::After(reference));
         } else {
             return Ok(column);
@@ -197,30 +213,30 @@ fn parse_add_column_tail(
     }
 }
 
-fn parse_rename_column(parser: &mut Parser<'_>) -> ParseResult<Option<NestedColumnOperation>> {
-    let Ok(from) = parse_column_path(parser) else {
+fn parse_rename_column(names: &mut NameParser<'_>) -> ParseResult<Option<NestedColumnOperation>> {
+    let Ok(from) = names.column_path() else {
         return Ok(None);
     };
     if from.len() < 2 {
         return Ok(None);
     }
-    parser.expect_keyword(Keyword::TO)?;
-    let to = parser.parse_identifier()?.value;
-    expect_end(parser)?;
+    names.parser.expect_keyword(Keyword::TO)?;
+    let to = names.name()?;
+    expect_end(&mut names.parser)?;
     Ok(Some(NestedColumnOperation::Rename { from, to }))
 }
 
-fn parse_drop_columns(parser: &mut Parser<'_>) -> ParseResult<Option<NestedColumnOperation>> {
-    let if_exists = parser.parse_keywords(&[Keyword::IF, Keyword::EXISTS]);
-    let parenthesized = parser.consume_token(&Token::LParen);
+fn parse_drop_columns(names: &mut NameParser<'_>) -> ParseResult<Option<NestedColumnOperation>> {
+    let if_exists = names.parser.parse_keywords(&[Keyword::IF, Keyword::EXISTS]);
+    let parenthesized = names.parser.consume_token(&Token::LParen);
     let mut paths: Vec<Vec<String>> = Vec::new();
     let outcome = loop {
-        match parse_column_path(parser) {
+        match names.column_path() {
             Ok(path) => paths.push(path),
             Err(error) => break Err(error),
         }
-        if !parser.consume_token(&Token::Comma) {
-            break close_list(parser, parenthesized);
+        if !names.parser.consume_token(&Token::Comma) {
+            break close_list(&mut names.parser, parenthesized);
         }
     };
     if paths.iter().all(|path| path.len() < 2) {

@@ -568,6 +568,13 @@ pins: rp-4-fork-repin/C-005, C-006
   Spark. Before the commit, `nested_add_refusal` answers Spark's `FIELD_ALREADY_EXISTS` /
   `UNRESOLVED_COLUMN` as an analysis error.
   pins: ice-nested-evo-1/C-015, C-019
+  **Round 3 (2026-09-18, run 22b, V-001):** the refusal is positional. A `NameParser` wraps
+  the parser and records the first double-quoted identifier it reads in a name position — a
+  column-path segment, the new name after `TO`, the `AFTER` reference — and only that refuses.
+  A double-quoted token in a string position (`COMMENT "x.y"`) is Spark's string literal and
+  becomes the child's `doc`, as Spark measured (round 2 had scanned the whole statement and
+  refused it).
+  pins: ice-nested-evo-1/C-021
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,
