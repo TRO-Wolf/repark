@@ -187,6 +187,7 @@ async fn execute_inner(
     // G15.
     crate::refuse_collation_in_statement(&statement)?;
     crate::refuse_declared_function_in_statement(&statement)?;
+    refuse_options_on_non_write(&statement, write_options)?;
     match &statement {
         Statement::CreateTable(create) if create.query.is_some() => {
             execute_ctas(
@@ -212,26 +213,18 @@ async fn execute_inner(
             names,
             if_exists,
             ..
-        } => {
-            write_options.refuse_if_non_empty("DROP TABLE")?;
-            execute_drop_table(ctx, catalogs, names, *if_exists).await
-        }
+        } => execute_drop_table(ctx, catalogs, names, *if_exists).await,
         Statement::Drop {
             object_type: ObjectType::Schema | ObjectType::Database,
             names,
             if_exists,
             ..
-        } => {
-            write_options.refuse_if_non_empty("DROP NAMESPACE")?;
-            execute_drop_namespace(ctx, catalogs, names, *if_exists).await
-        }
+        } => execute_drop_namespace(ctx, catalogs, names, *if_exists).await,
         Statement::AlterTable(alter_table) => {
-            write_options.refuse_if_non_empty("ALTER TABLE")?;
             alter::execute_alter_table(ctx, catalogs, &alter_table.name, &alter_table.operations)
                 .await
         }
         Statement::Merge(merge) => {
-            write_options.refuse_if_non_empty("MERGE INTO")?;
             if merge.output.is_some() {
                 return Err(DataFusionError::NotImplemented(
                     "MERGE OUTPUT/RETURNING clauses are not supported".to_string(),
@@ -265,28 +258,31 @@ async fn execute_inner(
             passthrough_after_p11(ctx, catalogs, sql, refusal).await
         }
         // DELETE/UPDATE.
-        Statement::Delete(delete) => {
-            write_options.refuse_if_non_empty("DELETE FROM")?;
-            execute_delete(ctx, catalogs, sql, delete).await
-        }
-        Statement::Update(update) => {
-            write_options.refuse_if_non_empty("UPDATE")?;
-            execute_update(ctx, catalogs, sql, update).await
-        }
+        Statement::Delete(delete) => execute_delete(ctx, catalogs, sql, delete).await,
+        Statement::Update(update) => execute_update(ctx, catalogs, sql, update).await,
         // Iceberg `CALL catalog.system.<proc>(…)` — I3 / R-MAINTENANCE-CALL.
-        Statement::Call(function) => {
-            write_options.refuse_if_non_empty("CALL")?;
-            call::execute_call(ctx, catalogs, function).await
-        }
-        Statement::Truncate(truncate) => {
-            write_options.refuse_if_non_empty("TRUNCATE TABLE")?;
-            execute_truncate(ctx, catalogs, truncate).await
-        }
-        _ => {
-            write_options.refuse_if_non_empty("this statement")?;
-            spark_ast::execute_passthrough(ctx, catalogs, sql).await
-        }
+        Statement::Call(function) => call::execute_call(ctx, catalogs, function).await,
+        Statement::Truncate(truncate) => execute_truncate(ctx, catalogs, truncate).await,
+        _ => spark_ast::execute_passthrough(ctx, catalogs, sql).await,
     }
+}
+
+fn refuse_options_on_non_write(
+    statement: &Statement,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Result<()> {
+    let context = match statement {
+        Statement::CreateTable(_) | Statement::Insert(_) => return Ok(()),
+        Statement::Merge(_) => "MERGE INTO",
+        Statement::Delete(_) => "DELETE FROM",
+        Statement::Update(_) => "UPDATE",
+        Statement::Truncate(_) => "TRUNCATE TABLE",
+        Statement::Call(_) => "CALL",
+        Statement::Drop { .. } => "DROP",
+        Statement::AlterTable(_) => "ALTER TABLE",
+        _ => "this statement",
+    };
+    write_options.refuse_if_non_empty(context)
 }
 
 /// `DELETE FROM …` applies the write-safety valves before provider execution.

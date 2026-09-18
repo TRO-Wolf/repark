@@ -49,11 +49,7 @@ pub(crate) async fn execute_insert_by_name(
     stripped_sql: &str,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
-    let parsed = parse_single_normalized(stripped_sql)?;
-    let Some((statement, _)) = parsed else {
-        return crate::router::execute_unparsable_fallthrough(ctx, catalogs, stripped_sql).await;
-    };
-    let Statement::Insert(insert) = statement else {
+    let Some((Statement::Insert(insert), _)) = parse_single_normalized(stripped_sql)? else {
         return crate::router::execute_unparsable_fallthrough(ctx, catalogs, stripped_sql).await;
     };
     let table_sql = insert.table.to_string();

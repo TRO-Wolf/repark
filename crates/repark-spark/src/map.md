@@ -37,9 +37,12 @@ pins: rp-4-fork-repin/C-005, C-006
   translates downstream parser locations back to the caller's SQL.
   ICE-WRITE-OPTIONS-1 round 4 (2026-09-17, Q-21c-5): every `execute_inner` arm that
   cannot honour a non-empty statement options map refuses it with
-  `refuse_if_non_empty` before it executes — MERGE, DELETE, UPDATE, TRUNCATE, CALL,
-  DROP TABLE/NAMESPACE, ALTER, the passthrough arm, and each pre-parse intercept
-  (gated once the form is recognised, so nothing runs first). INSERT, INSERT
+  `refuse_if_non_empty` before it executes — one `refuse_options_on_non_write` gate ahead
+  of the arm match covers MERGE, DELETE, UPDATE, TRUNCATE, CALL, DROP, ALTER and the
+  passthrough arm (it keeps `execute_inner` under clippy's line limit), and each pre-parse
+  intercept is gated once its form is recognised, so nothing runs first. `insert_by_name.rs`
+  folds its two parse let-else blocks into one pattern (same fallthrough, under the same
+  limit after `1485db96` threaded the options through). INSERT, INSERT
   OVERWRITE, CTAS and the BY NAME overwrite delegations honour the map; the
   non-Iceberg INSERT OVERWRITE fallbacks in `insert_overwrite.rs` refuse it.
   pins: ice-write-options-1/C-010
