@@ -6325,3 +6325,12 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   and the RePark replay inserts `(4, 'd')` for the fill — the two-row text was
   hand-written and never ran live.
   pins: ice-v3-write-default-1/C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012
+  **Round 5 (2026-09-17, run 21b):** the measured-tonight cells behind rulings
+  Q-21b-3 … Q-21b-6 — the three PARTITION overwrite shapes and the partitioned
+  whole-table column list filling `write_default` (C-015), `DEFAULT` as a value
+  on `INSERT OVERWRITE` in VALUES and named-list position (C-016),
+  `saveAsTable(overwrite)` pinned as RePark's by-name `INSERT OVERWRITE` beside
+  the recorded Spark REPLACE that narrows the schema (C-017), and the roll-call
+  cell: a missing nullable column with no default is accepted and written NULL
+  on `writeTo().append()` and `saveAsTable(append)`, offline and live (C-018).
+  pins: ice-v3-write-default-1/C-015, C-016, C-017, C-018

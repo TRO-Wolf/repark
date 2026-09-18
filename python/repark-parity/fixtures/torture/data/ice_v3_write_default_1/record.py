@@ -35,7 +35,20 @@ FIXTURE_DIR = Path(__file__).resolve().parent
 CATALOG = "sc"
 GAV = "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 GAV_WRITER = "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, hadoop catalog"
-TABLES = ("defaults", "strdef", "decdef", "temporal", "differ", "nodefault", "required")
+TABLES = (
+    "defaults",
+    "strdef",
+    "decdef",
+    "temporal",
+    "differ",
+    "nodefault",
+    "required",
+    "pdflt",
+    "dfltow",
+    "dfltsat",
+    "nodef",
+)
+SCHEMA_AFTER = ("dfltsat", "nodef")
 
 
 class Log:
@@ -199,8 +212,33 @@ def _build(spark: Any) -> None:
         " USING iceberg TBLPROPERTIES ('format-version'='3')"
     )
     spark.sql("INSERT INTO sc.ns.required VALUES (1, 100)")
+    _build_overwrite_tables(spark, integer, literal)
     for table in TABLES:
         spark.sql(f"REFRESH TABLE sc.ns.{table}")
+
+
+def _build_overwrite_tables(spark: Any, integer: Any, literal: Any) -> None:
+    """Create the partitioned, overwrite and no-default tables the L-01/L-03/L-04 cells use."""
+    spark.sql(
+        "CREATE TABLE sc.ns.pdflt (id INT, name STRING) USING iceberg"
+        " PARTITIONED BY (id) TBLPROPERTIES ('format-version'='3')"
+    )
+    spark.sql("INSERT INTO sc.ns.pdflt VALUES (1, 'a'), (2, 'b')")
+    _add_default(spark, "pdflt", "c", integer, "doc", literal(5))
+    spark.sql("INSERT INTO sc.ns.pdflt (id, name) VALUES (3, 'c')")
+    for table in ("dfltow", "dfltsat"):
+        spark.sql(
+            f"CREATE TABLE sc.ns.{table} (id INT, name STRING)"
+            " USING iceberg TBLPROPERTIES ('format-version'='3')"
+        )
+        spark.sql(f"INSERT INTO sc.ns.{table} VALUES (1, 'a')")
+        _add_default(spark, table, "c", integer, "doc", literal(5))
+        spark.sql(f"INSERT INTO sc.ns.{table} (id, name) VALUES (2, 'b')")
+    spark.sql(
+        "CREATE TABLE sc.ns.nodef (id INT, name STRING, c INT)"
+        " USING iceberg TBLPROPERTIES ('format-version'='3')"
+    )
+    spark.sql("INSERT INTO sc.ns.nodef VALUES (1, 'a', 1)")
 
 
 def _record_cell(
@@ -251,6 +289,107 @@ def _saveas_append_frame(spark: Any, table: str, rows: list[Any], schema: str) -
 def _insert_into_frame(spark: Any, table: str, rows: list[Any], schema: str) -> Any:
     """Append a literal frame through ``insertInto``."""
     return spark.createDataFrame(rows, schema).write.insertInto(table)
+
+
+def _saveas_overwrite_frame(spark: Any, table: str, rows: list[Any], schema: str) -> Any:
+    """Write a literal frame through ``saveAsTable`` in overwrite mode."""
+    return (
+        spark.createDataFrame(rows, schema)
+        .write.mode("overwrite")
+        .format("iceberg")
+        .saveAsTable(table)
+    )
+
+
+def _saveas_append_iceberg(spark: Any, table: str, rows: list[Any], schema: str) -> Any:
+    """Append a literal frame through ``saveAsTable`` with the iceberg provider named."""
+    return (
+        spark.createDataFrame(rows, schema)
+        .write.mode("append")
+        .format("iceberg")
+        .saveAsTable(table)
+    )
+
+
+def _overwrite_partitions_frame(spark: Any, table: str, rows: list[Any], schema: str) -> Any:
+    """Replace the source partitions of a table through ``writeTo``."""
+    return spark.createDataFrame(rows, schema).writeTo(table).overwritePartitions()
+
+
+def _record_overwrite_shapes(spark: Any, log: Log, cells: dict[str, Any]) -> None:
+    """Run the partition-overwrite, DEFAULT-on-overwrite, saveAsTable and no-default shapes."""
+    go = partial(_record_cell, spark, log, cells)
+    go(
+        "pdflt",
+        "ow_dynamic_partition_named_list_short",
+        partial(_collect, spark, "INSERT OVERWRITE sc.ns.pdflt PARTITION (id) (name) VALUES ('x')"),
+    )
+    go(
+        "pdflt",
+        "ow_dynamic_partition_named_list_full",
+        partial(
+            _collect,
+            spark,
+            "INSERT OVERWRITE sc.ns.pdflt PARTITION (id) (id, name) SELECT 10, 'x'",
+        ),
+    )
+    go(
+        "pdflt",
+        "ow_static_partition_named_list",
+        partial(
+            _collect, spark, "INSERT OVERWRITE sc.ns.pdflt PARTITION (id=10) (name) VALUES ('x')"
+        ),
+    )
+    go(
+        "pdflt",
+        "ow_partitioned_no_partition_clause_named_list",
+        partial(_collect, spark, "INSERT OVERWRITE sc.ns.pdflt (id, name) VALUES (10, 'x')"),
+    )
+    go(
+        "pdflt",
+        "ow_partitions_api",
+        partial(
+            _overwrite_partitions_frame,
+            spark,
+            "sc.ns.pdflt",
+            [(11, "y", 9)],
+            "id int, name string, c int",
+        ),
+    )
+    go(
+        "dfltow",
+        "ow_values_default_kw",
+        partial(_collect, spark, "INSERT OVERWRITE sc.ns.dfltow VALUES (15, 'o', DEFAULT)"),
+    )
+    go(
+        "dfltow",
+        "ow_named_list_default_kw",
+        partial(
+            _collect, spark, "INSERT OVERWRITE sc.ns.dfltow (id, name, c) SELECT 18, 'r', DEFAULT"
+        ),
+    )
+    go(
+        "dfltsat",
+        "saveastable_overwrite_missing_defaulted",
+        partial(
+            _saveas_overwrite_frame, spark, "sc.ns.dfltsat", [(30, "s")], "id int, name string"
+        ),
+    )
+    go(
+        "nodef",
+        "nodef_writeto_append_missing",
+        partial(_append_frame, spark, "sc.ns.nodef", [(40, "t")], "id int, name string"),
+    )
+    go(
+        "nodef",
+        "nodef_saveas_append_missing",
+        partial(_saveas_append_iceberg, spark, "sc.ns.nodef", [(41, "u")], "id int, name string"),
+    )
+    go(
+        "nodef",
+        "nodef_writeto_append_full",
+        partial(_append_frame, spark, "sc.ns.nodef", [(42, "v", 7)], "id int, name string, c int"),
+    )
 
 
 def _record_shapes(spark: Any, log: Log) -> dict[str, Any]:
@@ -380,6 +519,7 @@ def _record_shapes(spark: Any, log: Log) -> dict[str, Any]:
         "overwrite_column_list",
         partial(_collect, spark, "INSERT OVERWRITE sc.ns.defaults (id, name) SELECT 30, 'ov'"),
     )
+    _record_overwrite_shapes(spark, log, cells)
     return cells
 
 
@@ -400,7 +540,12 @@ def main() -> None:
             shutil.rmtree(entry)
         else:
             entry.unlink()
-    shutil.copytree(CANONICAL / "ns", FIXTURE_DIR / "ns", copy_function=shutil.copy)
+    shutil.copytree(
+        CANONICAL / "ns",
+        FIXTURE_DIR / "ns",
+        copy_function=shutil.copy,
+        ignore=shutil.ignore_patterns(".*.crc"),
+    )
     truth: dict[str, Any] = {
         "unit": "ice-v3-write-default-1",
         "writer": GAV_WRITER,
@@ -413,6 +558,13 @@ def main() -> None:
             for table in TABLES
         },
         "cells": _record_shapes(spark, log),
+    }
+    truth["schema_after"] = {
+        table: [
+            [field.name, field.dataType.simpleString()]
+            for field in spark.table(f"sc.ns.{table}").schema.fields
+        ]
+        for table in SCHEMA_AFTER
     }
     (FIXTURE_DIR / "truth.json").write_text(
         json.dumps(truth, indent=2, default=str), encoding="utf-8"

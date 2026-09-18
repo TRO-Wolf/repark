@@ -7,7 +7,7 @@ copy per test and replay one shape each; the live cell rebuilds the tables on
 live Spark and replays both engines.
 
 pins: ice-v3-write-default-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
-  C-008, C-010, C-011, C-012, C-013, C-014
+  C-008, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
 """
 
 from __future__ import annotations
@@ -534,5 +534,195 @@ def test_live_write_default_parity(tmp_path: Path) -> None:
             [3, "c", 5],
             [4, "d", 5],
         ]
+        _live_rollcall(spark, repark, warehouse)
     finally:
         repark.stop()
+
+
+def _live_rollcall(spark: Any, repark: Any, warehouse: Path) -> None:
+    """Both engines accept a missing nullable no-default column and write NULL."""
+    spark.sql(
+        "CREATE TABLE wd_live.ns.nodef (id INT, name STRING, c INT)"
+        " USING iceberg TBLPROPERTIES ('format-version'='3')"
+    )
+    spark.sql("INSERT INTO wd_live.ns.nodef VALUES (1, 'a', 1)")
+    spark.createDataFrame([(40, "t")], "id int, name string").writeTo("wd_live.ns.nodef").append()
+    spark.createDataFrame([(41, "u")], "id int, name string").write.mode("append").format(
+        "iceberg"
+    ).saveAsTable("wd_live.ns.nodef")
+    live = spark.sql("SELECT id, name, c FROM wd_live.ns.nodef ORDER BY id").toArrow()
+    live_cols = live.column_names
+    assert sorted([row[col] for col in live_cols] for row in live.to_pylist()) == [
+        [1, "a", 1],
+        [40, "t", None],
+        [41, "u", None],
+    ]
+    newest = sorted(
+        (warehouse / "ns" / "nodef" / "metadata").glob("v*.metadata.json"),
+        key=lambda path: int(path.name[1:].split(".", 1)[0]),
+    )[-1]
+    repark.sql(
+        f"CALL wd_live_rp.system.register_table(table => 'ns.nodef', metadata_file => '{newest}')"
+    )
+    repark.createDataFrame([(42, "v")], "id int, name string").writeTo(
+        "wd_live_rp.ns.nodef"
+    ).append()
+    repark.createDataFrame([(43, "w")], "id int, name string").write.mode("append").saveAsTable(
+        "wd_live_rp.ns.nodef"
+    )
+    mirrored = repark.sql("SELECT id, name, c FROM wd_live_rp.ns.nodef ORDER BY id").to_arrow()
+    mirrored_cols = mirrored.column_names
+    assert sorted([row[col] for col in mirrored_cols] for row in mirrored.to_pylist()) == [
+        [1, "a", 1],
+        [40, "t", None],
+        [41, "u", None],
+        [42, "v", None],
+        [43, "w", None],
+    ]
+
+
+def _cell_rows(shape: str) -> list[tuple[Any, ...]]:
+    """The recorded full-table rows of one truth cell as driver values."""
+    cell = _truth()["cells"][shape]
+    assert cell["outcome"] == "ok", cell
+    return [tuple(_json_value(value) for value in row) for row in cell["rows"]]
+
+
+def test_dynamic_partition_named_list_fills_write_default() -> None:
+    """Dynamic PARTITION with a named column list fills the omitted defaulted column."""
+    session = _session("ice-v3-write-default-1-ow-dyn")
+    try:
+        with _materialize():
+            _adopt(session, _CATALOG, "pdflt")
+            session.sql(
+                f"INSERT OVERWRITE {_CATALOG}.{_NAMESPACE}.pdflt PARTITION (id) (name) VALUES ('x')"
+            ).collect()
+            assert _rows(session, _CATALOG, "pdflt") == _expect("pdflt", [(None, "x", 5)])
+            _cell_contains("ow_dynamic_partition_named_list_short", (None, "x", 5))
+            session.sql(
+                f"INSERT OVERWRITE {_CATALOG}.{_NAMESPACE}.pdflt PARTITION (id) (id, name)"
+                " SELECT 10, 'x'"
+            ).collect()
+            assert _rows(session, _CATALOG, "pdflt") == _expect(
+                "pdflt", [(None, "x", 5), (10, "x", 5)]
+            )
+            _cell_contains("ow_dynamic_partition_named_list_full", (10, "x", 5))
+    finally:
+        session.stop()
+
+
+def test_static_partition_named_list_fills_write_default() -> None:
+    """Static PARTITION (k=v) with a named column list fills the omitted defaulted column."""
+    session = _session("ice-v3-write-default-1-ow-static")
+    try:
+        with _materialize():
+            _adopt(session, _CATALOG, "pdflt")
+            session.sql(
+                f"INSERT OVERWRITE {_CATALOG}.{_NAMESPACE}.pdflt PARTITION (id = 10) (name)"
+                " VALUES ('x')"
+            ).collect()
+            assert _rows(session, _CATALOG, "pdflt") == _expect("pdflt", [(10, "x", 5)])
+            _cell_contains("ow_static_partition_named_list", (10, "x", 5))
+    finally:
+        session.stop()
+
+
+def test_partitioned_whole_table_named_list_fills_write_default() -> None:
+    """A whole-table INSERT OVERWRITE column list on a partitioned table fills the default."""
+    session = _session("ice-v3-write-default-1-ow-whole")
+    try:
+        with _materialize():
+            _adopt(session, _CATALOG, "pdflt")
+            session.sql(
+                f"INSERT OVERWRITE {_CATALOG}.{_NAMESPACE}.pdflt (id, name) VALUES (10, 'x')"
+            ).collect()
+            assert _rows(session, _CATALOG, "pdflt") == [(10, "x", 5)]
+            assert _cell_rows("ow_partitioned_no_partition_clause_named_list") == [(10, "x", 5)]
+    finally:
+        session.stop()
+
+
+def test_overwrite_partitions_api_replaces_source_partitions() -> None:
+    """``writeTo().overwritePartitions()`` writes the supplied values on a defaulted table."""
+    session = _session("ice-v3-write-default-1-ow-api")
+    try:
+        with _materialize():
+            _adopt(session, _CATALOG, "pdflt")
+            session.createDataFrame([(11, "y", 9)], "id int, name string, c int").writeTo(
+                f"{_CATALOG}.{_NAMESPACE}.pdflt"
+            ).overwritePartitions()
+            assert _rows(session, _CATALOG, "pdflt") == _expect("pdflt", [(11, "y", 9)])
+            _cell_contains("ow_partitions_api", (11, "y", 9))
+    finally:
+        session.stop()
+
+
+def test_overwrite_default_keyword_fills_write_default() -> None:
+    """The DEFAULT keyword fills on INSERT OVERWRITE in VALUES and named-list position."""
+    session = _session("ice-v3-write-default-1-ow-default-kw")
+    try:
+        with _materialize():
+            _adopt(session, _CATALOG, "dfltow")
+            session.sql(
+                f"INSERT OVERWRITE {_CATALOG}.{_NAMESPACE}.dfltow VALUES (15, 'o', DEFAULT)"
+            ).collect()
+            assert _rows(session, _CATALOG, "dfltow") == [(15, "o", 5)]
+            assert _cell_rows("ow_values_default_kw") == [(15, "o", 5)]
+            session.sql(
+                f"INSERT OVERWRITE {_CATALOG}.{_NAMESPACE}.dfltow (id, name, c)"
+                " SELECT 18, 'r', DEFAULT"
+            ).collect()
+            assert _rows(session, _CATALOG, "dfltow") == [(18, "r", 5)]
+            assert _cell_rows("ow_named_list_default_kw") == [(18, "r", 5)]
+    finally:
+        session.stop()
+
+
+def test_saveastable_overwrite_is_insert_overwrite_not_replace() -> None:
+    """``saveAsTable(overwrite)`` keeps the schema and fills; Spark replaces the table (F-002)."""
+    session = _session("ice-v3-write-default-1-saveas-ow")
+    try:
+        with _materialize():
+            _adopt(session, _CATALOG, "dfltsat")
+            session.createDataFrame([(30, "s")], "id int, name string").write.mode(
+                "overwrite"
+            ).saveAsTable(f"{_CATALOG}.{_NAMESPACE}.dfltsat")
+            assert _rows(session, _CATALOG, "dfltsat") == [(30, "s", 5)]
+            assert _cell_rows("saveastable_overwrite_missing_defaulted") == [(30, "s")]
+            assert _truth()["schema_after"]["dfltsat"] == [["id", "int"], ["name", "string"]]
+    finally:
+        session.stop()
+
+
+def test_missing_nullable_no_default_accepts_and_nulls() -> None:
+    """A missing nullable column with no default is accepted and written NULL on both writers."""
+    session = _session("ice-v3-write-default-1-rollcall")
+    try:
+        with _materialize():
+            _adopt(session, _CATALOG, "nodef")
+            session.createDataFrame([(40, "t")], "id int, name string").writeTo(
+                f"{_CATALOG}.{_NAMESPACE}.nodef"
+            ).append()
+            assert _rows(session, _CATALOG, "nodef") == _expect("nodef", [(40, "t", None)])
+            _cell_contains("nodef_writeto_append_missing", (40, "t", None))
+            session.createDataFrame([(41, "u")], "id int, name string").write.mode(
+                "append"
+            ).saveAsTable(f"{_CATALOG}.{_NAMESPACE}.nodef")
+            assert _rows(session, _CATALOG, "nodef") == _expect(
+                "nodef", [(40, "t", None), (41, "u", None)]
+            )
+            _cell_contains("nodef_saveas_append_missing", (41, "u", None))
+            session.createDataFrame([(42, "v", 7)], "id int, name string, c int").writeTo(
+                f"{_CATALOG}.{_NAMESPACE}.nodef"
+            ).append()
+            assert _rows(session, _CATALOG, "nodef") == _expect(
+                "nodef", [(40, "t", None), (41, "u", None), (42, "v", 7)]
+            )
+            _cell_contains("nodef_writeto_append_full", (42, "v", 7))
+            assert _truth()["schema_after"]["nodef"] == [
+                ["id", "int"],
+                ["name", "string"],
+                ["c", "int"],
+            ]
+    finally:
+        session.stop()

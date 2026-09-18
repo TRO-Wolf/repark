@@ -105,7 +105,7 @@
         "outcome": "error",
         "class": "Py4JJavaError",
         "message": [
-          "An error occurred while calling o187.getResult.",
+          "An error occurred while calling o245.getResult.",
           ": org.apache.spark.SparkException: Exception thrown in awaitResult: ",
           "\tat org.apache.spark.util.SparkThreadUtils$.awaitResult(SparkThreadUtils.scala:53)"
         ]
@@ -239,6 +239,163 @@
           [
             1,
             100
+          ]
+        ]
+      }
+    },
+    "pdflt": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "name",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "id": 3,
+          "name": "c",
+          "required": false,
+          "type": "int",
+          "doc": "doc",
+          "initial-default": 5,
+          "write-default": 5
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            "a",
+            5
+          ],
+          [
+            2,
+            "b",
+            5
+          ],
+          [
+            3,
+            "c",
+            5
+          ]
+        ]
+      }
+    },
+    "dfltow": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "name",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "id": 3,
+          "name": "c",
+          "required": false,
+          "type": "int",
+          "doc": "doc",
+          "initial-default": 5,
+          "write-default": 5
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            "a",
+            5
+          ],
+          [
+            2,
+            "b",
+            5
+          ]
+        ]
+      }
+    },
+    "dfltsat": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "name",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "id": 3,
+          "name": "c",
+          "required": false,
+          "type": "int",
+          "doc": "doc",
+          "initial-default": 5,
+          "write-default": 5
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            "a",
+            5
+          ],
+          [
+            2,
+            "b",
+            5
+          ]
+        ]
+      }
+    },
+    "nodef": {
+      "schema": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": false,
+          "type": "int"
+        },
+        {
+          "id": 2,
+          "name": "name",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "id": 3,
+          "name": "c",
+          "required": false,
+          "type": "int"
+        }
+      ],
+      "seed": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            "a",
+            1
           ]
         ]
       }
@@ -717,7 +874,7 @@
       "outcome": "ok_write_read_failed",
       "class": "Py4JJavaError",
       "message": [
-        "An error occurred while calling o485.getResult.",
+        "An error occurred while calling o579.getResult.",
         ": org.apache.spark.SparkException: Exception thrown in awaitResult: ",
         "\tat org.apache.spark.util.SparkThreadUtils$.awaitResult(SparkThreadUtils.scala:53)"
       ]
@@ -787,6 +944,187 @@
           5
         ]
       ]
+    },
+    "ow_dynamic_partition_named_list_short": {
+      "table": "pdflt",
+      "outcome": "ok",
+      "rows": [
+        [
+          null,
+          "x",
+          5
+        ]
+      ]
+    },
+    "ow_dynamic_partition_named_list_full": {
+      "table": "pdflt",
+      "outcome": "ok",
+      "rows": [
+        [
+          10,
+          "x",
+          5
+        ]
+      ]
+    },
+    "ow_static_partition_named_list": {
+      "table": "pdflt",
+      "outcome": "ok",
+      "rows": [
+        [
+          10,
+          "x",
+          5
+        ]
+      ]
+    },
+    "ow_partitioned_no_partition_clause_named_list": {
+      "table": "pdflt",
+      "outcome": "ok",
+      "rows": [
+        [
+          10,
+          "x",
+          5
+        ]
+      ]
+    },
+    "ow_partitions_api": {
+      "table": "pdflt",
+      "outcome": "ok",
+      "rows": [
+        [
+          10,
+          "x",
+          5
+        ],
+        [
+          11,
+          "y",
+          9
+        ]
+      ]
+    },
+    "ow_values_default_kw": {
+      "table": "dfltow",
+      "outcome": "ok",
+      "rows": [
+        [
+          15,
+          "o",
+          5
+        ]
+      ]
+    },
+    "ow_named_list_default_kw": {
+      "table": "dfltow",
+      "outcome": "ok",
+      "rows": [
+        [
+          18,
+          "r",
+          5
+        ]
+      ]
+    },
+    "saveastable_overwrite_missing_defaulted": {
+      "table": "dfltsat",
+      "outcome": "ok",
+      "rows": [
+        [
+          30,
+          "s"
+        ]
+      ]
+    },
+    "nodef_writeto_append_missing": {
+      "table": "nodef",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          1
+        ],
+        [
+          40,
+          "t",
+          null
+        ]
+      ]
+    },
+    "nodef_saveas_append_missing": {
+      "table": "nodef",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          1
+        ],
+        [
+          40,
+          "t",
+          null
+        ],
+        [
+          41,
+          "u",
+          null
+        ]
+      ]
+    },
+    "nodef_writeto_append_full": {
+      "table": "nodef",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a",
+          1
+        ],
+        [
+          40,
+          "t",
+          null
+        ],
+        [
+          41,
+          "u",
+          null
+        ],
+        [
+          42,
+          "v",
+          7
+        ]
+      ]
     }
+  },
+  "schema_after": {
+    "dfltsat": [
+      [
+        "id",
+        "int"
+      ],
+      [
+        "name",
+        "string"
+      ]
+    ],
+    "nodef": [
+      [
+        "id",
+        "int"
+      ],
+      [
+        "name",
+        "string"
+      ],
+      [
+        "c",
+        "int"
+      ]
+    ]
   }
 }

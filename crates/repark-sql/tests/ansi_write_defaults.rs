@@ -4,7 +4,10 @@ use std::sync::Arc;
 use datafusion::arrow::array::{Array, Int32Array, StringArray};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::prelude::{SessionConfig, SessionContext};
-use iceberg::spec::{Literal, NestedField, PrimitiveType, Schema as IcebergSchema, Type};
+use iceberg::spec::{
+    Literal, NestedField, PrimitiveType, Schema as IcebergSchema, Transform, Type,
+    UnboundPartitionSpec,
+};
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use tempfile::TempDir;
@@ -92,6 +95,20 @@ async fn door_with_tables() -> Door {
             .await
             .expect("create table");
     }
+    let spec = UnboundPartitionSpec::builder()
+        .add_partition_field(1, "id", Transform::Identity)
+        .expect("identity partition field")
+        .build();
+    let partitioned = TableCreation::builder()
+        .name("p".to_string())
+        .schema(defaulted_schema())
+        .partition_spec(spec)
+        .properties(HashMap::new())
+        .build();
+    catalog
+        .create_table(&namespace, partitioned)
+        .await
+        .expect("create partitioned table");
     let ctx = SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
     repark_iceberg::catalog::register_iceberg_catalog(&ctx, "ice", Arc::clone(&catalog))
         .await
@@ -157,4 +174,22 @@ async fn ansi_insert_missing_required_column_refuses() {
         err.contains("non-nullable but contains null"),
         "a missing required column must refuse like the Spark door: {err}"
     );
+}
+
+#[tokio::test]
+async fn ansi_dynamic_partition_column_list_fills_write_default() {
+    let door = door_with_tables().await;
+    door.ok("INSERT OVERWRITE ice.sales.p (id, name) PARTITION (id) SELECT 10, 'x'")
+        .await;
+    let batches = door.ok("SELECT id, name, c FROM ice.sales.p").await;
+    assert_eq!(one_row_strings(&batches), (10, "x".to_string(), 5));
+}
+
+#[tokio::test]
+async fn ansi_static_partition_column_list_fills_write_default() {
+    let door = door_with_tables().await;
+    door.ok("INSERT OVERWRITE ice.sales.p (name) PARTITION (id = 10) SELECT 'x'")
+        .await;
+    let batches = door.ok("SELECT id, name, c FROM ice.sales.p").await;
+    assert_eq!(one_row_strings(&batches), (10, "x".to_string(), 5));
 }

@@ -48,7 +48,13 @@ step.
 | C-013 | `registry_rewritten`: the V3-6 / write-default rows in `docs/spark-sql-iceberg-parity.md` state the measured truth (dated 2026-09-16, ICE-V3-WRITE-DEFAULT-1, FIXED with the pins; DECLARED rows for anything left, with Spark's shape); `test_rp3_c009_write_default.py` still describes the contract. | Registry diff; guard test disposition recorded. | **PROVEN** | Four rows landed 2026-09-17 (§7): FIXED `ICE-V3-WRITE-DEFAULT-1`, DECLARED `ICE-V3-WRITE-DEFAULT-1-OVERWRITE-PART` (with Spark's measured partition shapes) and `ICE-V3-WRITE-DEFAULT-1-NESTED`, BACKLOG `F-001`. No V3-6/write-default row existed before — these are new. The C-009 guard still describes the contract: the new code only READS defaults (setter needles `with_write_default` / `write_default(` absent from all touched files, grepped 2026-09-17); full guard run in step 7. |
 | C-014 | `gates_green`: the new test file offline and live, `cargo test -p repark-iceberg --lib`, `cargo test -p repark-spark --lib`, `make verify`, the whole facade suite, and the whole parity suite are green on the release native. | Counts in this ledger. | **PROVEN** | Unit pins offline `14 passed, 1 skipped`, live `15 passed` (release native); `repark-iceberg --lib` 442 passed; `repark-spark --lib` 1051 passed, 4 ignored; `repark-sql` all targets exit 0 (342 lib + integration incl. 2 new ANSI pins); `insert_fill` struct pin green; `uvx ruff check .` + `format --check .` clean; `make verify` exit 0. Whole facade (`/tmp/oc-worker/jb-wd/facade-r2.log`): 9342 passed, 369 skipped, 26 xfailed, 3 failed — each dispositioned: the stale saveAsTable-missing-column refusal retired to the measured NULL fill (`0d273199`, green on rerun), the insertInto-missing-table `TableNotFound` leak fixed at the root (`rewrite_insert_markers` passthrough, `test_missing_table_text` green on rerun), the sort-pool OOM is load-induced (passes alone and 18/18 as a file). Whole parity (`/tmp/oc-worker/jb-wd/parity-r2.log`): 756 passed, 2 skipped, 12 xfailed, 1 failed — the CAP-1 mirror row for `writer_readwriter.py` ratcheted 1101 → 1095, `23 passed` on rerun. |
 
-VERDICT: 14 clauses, 14 PROVEN, 0 OPEN, 0 REJECTED.
+| C-015 | `partition_overwrite_fills` (Q-21b-3 / L-01): dynamic `PARTITION (k) (cols)`, static `PARTITION (k=v) (cols)` and the partitioned whole-table column list fill an omitted defaulted column from `write_default` on BOTH doors — never NULL. | Red-first pins on the recorded partitioned fixture, then green; Rust ANSI-door pins. | **OPEN** | Red first recorded below; fix in round-5 step 2. |
+| C-016 | `overwrite_default_keyword_fills` (Q-21b-4 / L-03): `INSERT OVERWRITE … VALUES (…, DEFAULT)` and `INSERT OVERWRITE t (id, name, c) SELECT …, DEFAULT` fill from `write_default`, exactly as `INSERT INTO` does. | Red-first pins, then green, both doors. | **OPEN** | Red first recorded below; fix in round-5 step 3. |
+| C-017 | `saveastable_overwrite_declared` (Q-21b-5 / L-04): RePark's `saveAsTable(overwrite)` is by-name `INSERT OVERWRITE` (schema kept, defaulted column filled); the measured Spark answer is a REPLACE that narrows the schema to the frame. Pinned on the RePark side and DECLARED beside F-002. | Pin of RePark's behaviour asserting the recorded Spark replace cell; dated DECLARED registry row. | **OPEN** | Cell `saveastable_overwrite_missing_defaulted` recorded; row lands in round-5 step 4. |
+| C-018 | `rollcall_accept_and_null` (Q-21b-6): a missing NULLABLE column with NO default is accepted on `writeTo().append()` and `saveAsTable(append)` and written NULL, matching Spark — the removed "missing from the DataFrame" refusal is correct. | Offline and live pins on both writer surfaces. | **OPEN** | Cells recorded; pins land in round-5 step 5. |
+| C-019 | `no_default_write_cost` (R-03 / R-04): a MERGE and a column-list `INSERT OVERWRITE` against a table with no write-defaults convert the Iceberg schema to Arrow at most once and never build a `ColumnDefaults` map they discard. | Code shape plus a before/after measurement on a DEFAULT-profile release native, both numbers in this ledger. | **OPEN** | Fix and measurement in round-5 step 6. |
+
+VERDICT: 19 clauses, 14 PROVEN, 5 OPEN, 0 REJECTED.
 
 ## Red first
 
@@ -65,6 +71,70 @@ cells (`insert_column_list`, `merge_not_matched`, `dataframe_writers`,
 already-correct shapes (seed, short-insert refusals, `insertInto`/extra-column
 refusals, explicit NULL, required refusal, v2 control). Live skipped
 (`REPARK_PARITY_LIVE` unset). pins: ice-v3-write-default-1/C-003.
+
+## Red first — round 5 (run 21b, 2026-09-17)
+
+The round-5 cells are recorded by this unit's own fixture recorder
+(`python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/record.py`,
+re-run live on PySpark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0`, Java 17,
+hadoop catalog, format-version 3, exit 0, 33 cells) against four new tables —
+`pdflt` (partitioned by `id`, `c INT` write-default 5), `dfltow` and `dfltsat`
+(unpartitioned, same default) and `nodef` (`id, name, c INT`, NO default). Every
+new cell reproduces the orchestrator's independently measured oracle
+(`/tmp/oc-worker/kb-oracle/wd-truth.json`) value-for-value, and every one of the
+22 pre-existing cells re-recorded byte-identical apart from a Py4J gateway object
+id inside one recorded error message (`o485` → `o579`, `decimal_default_insert`),
+so the recorder is deterministic in rows, schema and error class.
+
+Red first, unfixed tree, release native, `.venv/bin/python -m pytest
+python/repark/tests/test_ice_v3_write_default_1.py -q -p no:cacheprovider` —
+**3 failed, 18 passed, 1 skipped**:
+
+```
+E  repark.errors.ParseException: SQL error: ParserError("Expected: SELECT, VALUES, or a subquery in the query body, found: name at Line: 1, Column: 72")
+E  repark.errors.ParseException: SQL error: ParserError("Expected: SELECT, VALUES, or a subquery in the query body, found: name at Line: 1, Column: 77")
+E  repark.errors.AnalysisException: Schema error: No field named default.
+```
+
+- `test_dynamic_partition_named_list_fills_write_default` — RePark's Spark door
+  refuses `INSERT OVERWRITE t PARTITION (id) (name) VALUES ('x')` at the parser.
+  Spark parses it and answers `[[null, 'x', 5]]`
+  (cell `ow_dynamic_partition_named_list_short`), so the round-4 re-scoping note
+  ("a ParserError on the Spark door, so the path is unreachable by SQL") was
+  RePark's parser, not Spark's. Ruling Q-21b-3 stands L-01 up as filed.
+- `test_static_partition_named_list_fills_write_default` — same parser refusal on
+  `PARTITION (id = 10) (name)`; Spark answers `[[10, 'x', 5]]`.
+- `test_overwrite_default_keyword_fills_write_default` — `No field named default`
+  on both `INSERT OVERWRITE dfltow VALUES (15, 'o', DEFAULT)` and the named-list
+  form; Spark fills 5 on both (`ow_values_default_kw`,
+  `ow_named_list_default_kw`).
+
+Red first, ANSI door, `cargo test -p repark-sql --test ansi_write_defaults` —
+**2 passed, 2 failed**:
+
+```
+---- ansi_static_partition_column_list_fills_write_default stdout ----
+`INSERT OVERWRITE ice.sales.p (name) PARTITION (id = 10) SELECT 'x'` must succeed:
+Error during planning: [INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS]
+Cannot write to the target: table has 3 columns, static PARTITION injects 1, source has 1
+
+---- ansi_dynamic_partition_column_list_fills_write_default stdout ----
+assertion `left == right` failed
+  left: (10, "x", 0)
+ right: (10, "x", 5)
+```
+
+The dynamic row is the V3-03b silent-wrong the logic critic found: the arm writes
+`c = NULL` (read back as `0` through `Int32Array::value`) where Spark writes 5.
+The static row is loud but wrong-shaped against Spark's answer.
+
+Four round-5 pins were **already green** on the unfixed tree and are pinned so
+they cannot regress: the partitioned whole-table column list
+(`ow_partitioned_no_partition_clause_named_list`), `overwritePartitions()` with
+full-width values (`ow_partitions_api`), `saveAsTable(overwrite)`
+(C-017 — RePark's answer, beside the recorded Spark replace), and the whole
+roll-call cell (C-018 — accept-and-NULL on both writer surfaces). Their green is
+evidence for Q-21b-5 and Q-21b-6, not a fix.
 
 ## Evidence
 

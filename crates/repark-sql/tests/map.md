@@ -25,6 +25,12 @@ holds behavior observed from outside the crate.
   shared `insert_defaults` step, and a missing required column refuses with the
   same nullability text as the Spark door.
   pins: ice-v3-write-default-1/C-004
+  **Round 5 (2026-09-17, run 21b, ruling Q-21b-3):** the ANSI door's PARTITION
+  arms too — `INSERT OVERWRITE t (cols) PARTITION (k)` and
+  `… (cols) PARTITION (k = v)` fill an omitted defaulted column instead of
+  writing NULL (dynamic, the V3-03b silent-wrong) or refusing
+  `NOT_ENOUGH_DATA_COLUMNS` (static).
+  pins: ice-v3-write-default-1/C-015
 
 - `session_timestamp_type_ansi_door.rs` — **Q10:** ANSI-door cell of
   `spark.sql.timestampType=TIMESTAMP_NTZ` on a Spark-extended session
