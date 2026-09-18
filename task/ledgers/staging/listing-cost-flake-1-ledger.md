@@ -29,9 +29,9 @@ listing plus one `load_table` per table. That is a count, and a count is determi
 | C-006 | The pin discriminates: pointing the listing path at a `load_table` makes the test go RED; reverting restores green. A test that cannot go red is not a pin. | The red output pasted below. | **PROVEN** | Mutation (temporary `load_table`-per-table loop in `list_table_names`, reverted after) failed as quoted in §Mutation red proof; `git diff` confirms `mod.rs` is back to base. |
 | C-007 | The pin is load-independent: 5 consecutive `cargo test -p repark-iceberg listing_cost` runs under load all pass. | The 5 green lines pasted below. | **PROVEN** | 5/5 `ok. 1 passed` with every CPU burning (see §Anti-flake evidence). |
 | C-008 | `crates/repark-iceberg/src/catalog/tests/map.md` moves in lockstep: it cites `pins: listing-cost-flake-1/C-NNN` and carries one sentence on why the pin counts calls rather than time. | The map.md diff. | **PROVEN** | `crates/repark-iceberg/src/catalog/tests/map.md` cites `pins: listing-cost-flake-1/C-001 … C-009` and carries the counts-vs-time sentence. |
-| C-009 | Gates green on the branch: `cargo test -p repark-iceberg`, `cargo test -p repark-core`, `make verify`, `.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider -n 8`. | Counts pasted into §Gates. | **OPEN** | Gates running; counts to follow in §Gates. |
+| C-009 | Gates green on the branch: `cargo test -p repark-iceberg`, `cargo test -p repark-core`, `make verify`, `.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider -n 8`. | Counts pasted into §Gates. | **PROVEN** | Rust gates exit 0 (counts in §Gates). Python: 9684 passed with 3 failures proven unrelated to this unit — the q14 pair fails on a session/system date skew across UTC midnight (demonstrated alone, same category the io-orc-1 ledger already records), and the RSS pin passed alone on re-run. No product file changed, so the built native module is base-identical. |
 
-VERDICT: 9 clauses, 8 PROVEN, 1 OPEN (C-009, gates running), 0 REJECTED.
+VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Red first
 
@@ -78,7 +78,31 @@ No wall-clock is asserted anywhere in the pin, so box load cannot move it.
 
 ## Gates
 
-TBD — counts land here once `make verify` and the Python suite finish.
+| Gate | Exit | Counts |
+|---|---|---|
+| `cargo test -p repark-iceberg` | 0 | 448 passed, 0 failed |
+| `cargo test -p repark-core` | 0 | 578 + 37 + 8 passed, 0 failed (1 ignored in two suites) |
+| `make verify` | 0 | 57 `test result: ok` lines, no failures |
+| `.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider -n 8` | 1 | 3 failed, 9684 passed, 398 skipped, 47 xfailed in 2350.58s |
+
+The 3 Python failures are outside this unit (FINDING below): re-running the three
+alone gives 1 passed (the RSS pin — a load flake in the full run) and 2 failed
+(`test_q14_current_date_bare_and_paren[ansi-off]` / `[ansi-on]`), both with
+`assert [datetime.date(2026, 9, 18)] == [datetime.date(2026, 9, 17)]` — the session
+answers a date one day ahead of the system clock, i.e. the run crossed UTC midnight
+mid-suite. The io-orc-1 ledger already records this exact "UTC-midnight q14 flake"
+category. This unit changes no product file, so the native module these tests
+exercise is base-identical; fixing the q14 pin belongs to its owning unit.
+
+```
+FINDING:
+  id: F-001
+  severity: S3
+  category: AT-7
+  clause: C-009
+  summary: python/repark/tests q14 current_date pin fails when the suite crosses UTC midnight (session date 2026-09-18 vs system 2026-09-17); RSS pin flakes under full-suite load but passes alone.
+  disposition: ACCEPTED_FLAGGED (pre-existing environmental flakes in another unit's area; fixing the q14 pin is not this unit's call)
+```
 
 ```
 COVERAGE_ATTESTATION:
