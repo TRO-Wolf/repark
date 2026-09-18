@@ -722,3 +722,28 @@ code is byte-identical to the tree the crate tests ran on.
 - §17's P3 over-refusal and §18's V2-01 are unchanged. `EngineSummary::for_overwrite` now
   also guards the RTAS path, which inherits the same over-refusal of the three
   data-removal keys when the replace removes nothing.
+
+## 20. Run 22b verification (orchestrator, 2026-09-18)
+
+Grok 4.6 verification critic on `2df526b1` (read-only; 32 turns, $0.78): **NEEDS_REMEDIATION** —
+the merge dropped none of main's behaviour (typed static flag, write-default fill, sorted-insert
+stamp, evo-DML, RTAS operation names, OCC scoping), comment ban 0, and two findings:
+
+- **P1 "C-008 on replace-partitions"** — premise: Spark refuses a user
+  `snapshot-property.replace-partitions` as a collision. **Measured wrong** (PySpark 4.1.2 +
+  Iceberg 1.11.0, one local JVM, 2026-09-18): dynamic `insertInto(overwrite)` and
+  `overwritePartitions()` with `replace-partitions=false` commit and land `false`; with `true`
+  commit and land `true`; control `snapshot-property.k=v` lands `k=v`. RePark commits and lands
+  `true` in both cases (the fork's action writes its marker last). **Ruling Q-22b-WO-6:** not a
+  collision; the value divergence is residue ICE-WRITE-OPTIONS-1-R-RP (OPEN, registry) with fork
+  ask F-RP-SUMMARY-USER-1 — RePark does not patch fork semantics (fork-sync rule 3).
+- **P2 "collision unpinned on the new commit paths"** — the dynamic replace-partitions and RTAS
+  overwrite/delete commits build their extras with the same `EngineSummary::for_overwrite` the
+  COLL-00..08 cells already pin on the overwrite family. **Ruling Q-22b-WO-7:** P3 — a dedicated
+  cell per new path is a follow-up, not a merge blocker.
+
+Orchestrator local gate on `2df526b1` (run-22 rules): comment gate `hits=0`; release native;
+`cargo test -p repark-iceberg` 517 passed, `-p repark-spark` 1159 passed, `-p repark-core` 610
+passed; the options, rebase, dynamic-overwrite, write-default, RTAS and writer files 283 passed
+offline, 287 passed live (`REPARK_PARITY_LIVE=1`).
+

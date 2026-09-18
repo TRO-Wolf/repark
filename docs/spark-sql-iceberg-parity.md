@@ -2871,6 +2871,17 @@ the pin rather than obeying it.
   WO-SORT-01, WO-APP-01/02).
   pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
 
+- **Residue ICE-WRITE-OPTIONS-1-R-RP (OPEN, 2026-09-18, run 22b)** — a user
+  `snapshot-property.replace-partitions` on a replace-partitions commit (dynamic
+  `insertInto(overwrite)` / `INSERT OVERWRITE`, `overwritePartitions()`). **Apache Spark 4.1.2 +
+  Iceberg 1.11.0 (measured 2026-09-18, run 22b probe `probe_rp.py`)** commits, and the
+  user's value lands: `false` → summary `replace-partitions=false`, `true` → `true`; no
+  refusal. **repark** commits with `replace-partitions=true` either way: the fork's
+  `ReplacePartitionsAction` inserts its marker after the caller's summary properties.
+  Loud-free but value-divergent on one summary key; fork ask F-RP-SUMMARY-USER-1 (let a
+  caller-supplied `replace-partitions` win, as Java's `SnapshotProducer` applies
+  `set(...)` user properties after the operation's own). Not a collision: the run-22b
+  verification critic's premise that Spark refuses it was measured wrong.
 ### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
 
 - **repark** — `.option("write-format", "orc"|"avro")` on any Iceberg write refuses with
