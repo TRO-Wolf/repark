@@ -449,7 +449,10 @@ impl CaseFold<'_> {
         let first = hits[0].1.clone();
         if hits.iter().any(|(_, stored)| *stored != first) {
             let spelling = self.requested_spelling(qualifier, ident.value.as_str());
-            let scopes = hits.into_iter().map(|(scope, _)| scope).collect::<Vec<_>>();
+            let scopes = hits
+                .into_iter()
+                .map(|(scope, _)| self.written.visible(scope))
+                .collect::<Vec<_>>();
             self.error = Some(DataFusionError::Plan(ambiguous_message(
                 qualifier,
                 spelling.as_str(),

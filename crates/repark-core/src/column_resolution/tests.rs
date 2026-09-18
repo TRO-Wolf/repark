@@ -500,7 +500,13 @@ async fn l08_every_reference_to_a_case_twin_is_ambiguous() {
 
 #[tokio::test]
 async fn l08_bare_twin_options_carry_the_full_relation_name() {
+    use datafusion::catalog::{CatalogProvider, MemoryCatalogProvider, MemorySchemaProvider};
     let ctx = measured_ctx();
+    let catalog = Arc::new(MemoryCatalogProvider::new());
+    catalog
+        .register_schema("ns", Arc::new(MemorySchemaProvider::new()))
+        .unwrap();
+    ctx.register_catalog("sc", catalog);
     let batch = RecordBatch::try_new(
         Arc::new(Schema::new(vec![
             Field::new("id", DataType::Int32, true),
@@ -513,22 +519,27 @@ async fn l08_bare_twin_options_carry_the_full_relation_name() {
     )
     .unwrap();
     ctx.register_table(
-        "datafusion.public.tw_full",
+        "sc.ns.tw",
         Arc::new(MemTable::try_new(batch.schema(), vec![vec![batch]]).unwrap()),
     )
     .unwrap();
-    let error = plan_error(
-        &ctx.state(),
-        "SELECT ID FROM datafusion.public.tw_full",
-        true,
-    )
-    .await;
-    assert!(
-        error.contains(
-            "[AMBIGUOUS_REFERENCE] Reference `ID` is ambiguous, could be: [`datafusion`.`public`.`tw_full`.`ID`, `datafusion`.`public`.`tw_full`.`ID`]. SQLSTATE: 42704"
+    for (sql, message) in [
+        (
+            "SELECT ID FROM sc.ns.tw",
+            "[AMBIGUOUS_REFERENCE] Reference `ID` is ambiguous, could be: [`sc`.`ns`.`tw`.`ID`, `sc`.`ns`.`tw`.`ID`]. SQLSTATE: 42704",
         ),
-        "{error}"
-    );
+        (
+            "SELECT id FROM sc.ns.tw",
+            "[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`sc`.`ns`.`tw`.`id`, `sc`.`ns`.`tw`.`id`]. SQLSTATE: 42704",
+        ),
+        (
+            "SELECT ID FROM datafusion.public.tw",
+            "[AMBIGUOUS_REFERENCE] Reference `ID` is ambiguous, could be: [`tw`.`ID`, `tw`.`ID`]. SQLSTATE: 42704",
+        ),
+    ] {
+        let error = plan_error(&ctx.state(), sql, true).await;
+        assert!(error.contains(message), "{sql}: {error}");
+    }
 }
 
 #[tokio::test]

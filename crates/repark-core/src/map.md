@@ -589,6 +589,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   Round 21b step 4 (V-04): JOIN USING columns fold inside every query the visitor reaches
   (INSERT … SELECT, CTAS, subqueries, CTE bodies), each against its own SELECT's relations;
   identical stored spellings across the joined relations fold to that spelling.
+  Round 21b step 5 (L-08): `audit_plan_for_ambiguity` indexes each node's input fields once
+  (`input_twins`, `DFSchema::iter`, no merge and no `columns()` clone, skipped when no input
+  field has an upper-case ASCII byte) and refuses any written reference — bare or qualified,
+  exact case included — whose resolved column has an ASCII case twin there. Options are one per
+  matching field, qualified by the relation as written in FROM (`WrittenRefs::relation_parts`;
+  the session's default `catalog.schema` prefix is dropped, so a temp view reads bare).
   pins: ice-mixed-case-1/C-001…C-010, C-013…C-016
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias

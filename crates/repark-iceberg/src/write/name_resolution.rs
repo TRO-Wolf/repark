@@ -138,11 +138,11 @@ pub(crate) fn resolve_write_column(
 pub(crate) fn ambiguous_write_message(column: &str, twins: &[&str]) -> String {
     let options = twins
         .iter()
-        .map(|twin| format!("`{twin}`"))
+        .map(|_| format!("`{column}`"))
         .collect::<Vec<_>>()
         .join(", ");
     format!(
-        "[AMBIGUOUS_REFERENCE] Reference `{column}` is ambiguous, could be: [{options}]. SQLSTATE: 42702"
+        "[AMBIGUOUS_REFERENCE] Reference `{column}` is ambiguous, could be: [{options}]. SQLSTATE: 42704"
     )
 }
 

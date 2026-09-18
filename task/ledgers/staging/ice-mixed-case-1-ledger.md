@@ -385,9 +385,88 @@ declared answer: refusal at adoption). Name comparison on the measured cells
 is case-insensitive, the module's existing convention for the declared
 output-spelling divergence.
 
+### Steps 2–5 — the fixes
+
+- **Step 2, V-01** (`81e7ae3e`): the SELECT-alias guard is positional. Each query
+  level records its projection expressions (always foldable) and its
+  alias-reference slots — GROUP BY, HAVING, QUALIFY, SORT BY, ORDER BY. Only an
+  ident inside an alias-reference slot that names a SELECT alias is left for
+  DataFusion to bind to the alias. That match is ASCII case-insensitive, like
+  Spark's alias resolution. Before this, the guard compared exact spellings and
+  applied everywhere, so an ident spelled like its own alias never folded. A
+  case-insensitive guard was unsafe then because it also covered the projection
+  (cross_door ROW 8), and a projection slot can no longer be shielded. WHERE
+  and JOIN ON are not alias-reference positions: they always fold, because
+  Spark does not resolve SELECT aliases there. New pin
+  `v01_order_by_a_select_alias_still_orders_by_the_alias` keeps ORDER BY on
+  the alias.
+- **Step 3, V-02** (`b1771781`): the fold moved to `column_resolution/fold.rs`,
+  and a miss now drives a loop:
+  - The first `FieldNotFound` resolves every relation the statement names
+    through the session catalog, once (`catalog_fields`). Each miss's
+    `valid_fields` is absorbed by qualifier, which covers CTEs and derived
+    tables.
+  - The fold resolves each ident against its own SELECT's relations first,
+    then outward for correlated references. A relation whose fields are
+    unknown stops the outward search.
+  - Loop: replan, and stop when a miss repeats or a fold changes nothing. There
+    is no attempt cap.
+
+  The fold's collision sentence also moved to one option per field
+  (Q-21b-1/2), because the new fold raises it.
+- **Step 4, V-04** (`4d61a077`): JOIN USING columns now fold in
+  `pre_visit_query`. That runs for every query the visitor reaches: INSERT …
+  SELECT, CTAS, subqueries and CTE bodies, each against its own SELECT's
+  relations. When every matching relation stores the same spelling
+  (`ja.userId`, `jb.userId`), the ident folds to that spelling. DataFusion
+  still raises its own ambiguity where one exists.
+- **Step 5, L-08**: the audit indexes each node's input fields once. It walks
+  every input schema with `DFSchema::iter`, with no `merge` and no `columns()`
+  clone, and keeps only lowercase keys that hold two or more distinct
+  spellings. A node whose inputs hold no upper-case ASCII field skips the index
+  entirely.
+
+  The audit fires on the resolved column whenever the input holds a twin of
+  it. How the user wrote the reference only picks the requested spelling and
+  the reference form: a qualified write (`t.ID`) keeps the qualifier and
+  filters the twins to that relation, and a bare write (`id`, exact case
+  included) matches every twin. An expression the user never wrote (a star
+  expansion) is not audited. Options are one per matching field, qualified by
+  the field's relation parts (`` `t` `` for an alias, `` `cat`.`ns`.`tbl` ``
+  for a full name), in the requested spelling, with `SQLSTATE: 42704`. The
+  write-side `ambiguous_write_message` (`name_resolution.rs`) follows
+  Q-21b-1/2 too.
+
+  `SELECT * FROM tw` (Spark `[COLUMN_ALREADY_EXISTS]` / `42711`): RePark's
+  answer on the measured Iceberg shape is the adoption refusal pinned by
+  `test_measured_case_twin_table_refuses_at_adoption[L08_star_twin]`. The fork
+  cannot parse a twin schema, and a fork change is out of this unit's scope
+  (fork rule), so this is a DECLARED registry row, not silence. A star over a
+  twin frame is not audited: it is not a written reference, and Spark's answer
+  on a frame was not measured.
+
 ## 7. Open questions (HALT writes here; empty means none)
 
-None.
+No HALT. One out-of-scope defect found in round 21b, handed to the orchestrator:
+
+- **INS-JOIN-FIELD-ID (P1, silent wrong answer, pre-existing on `origin/main`
+  `71482620`, not a case defect).** `INSERT INTO t SELECT a.k, x, y FROM a JOIN b
+  ON a.k = b.k` with `a`, `b`, `t` all Iceberg tables and all-lowercase names
+  writes `y = NULL`. The SELECT alone answers `[[1, 10, 100]]`. Reproduced on
+  this branch's native, on the reviewed PR-head wheel (`28b6ff00`) and on the
+  `/tmp/kc-misc` native built at `71482620` (only test files dirty). The
+  following all write the right value: `y + 0 AS y`, frame temp views in place
+  of `a`/`b`, and `vb.y` from a frame view. The lead is that the right-side
+  Iceberg column arrives carrying its source `PARQUET:field_id` (`b.y` is field
+  id 2, the same id as `a.x`) and is lost between the join output and the
+  write; stripping the metadata avoids it. Out of this unit's surface (the
+  write path, not name resolution), so no fix here.
+  `test_measured_join_using_insert_answers_spark` asserts the measured V-04
+  INSERT cell under `xfail(strict=True)` naming this defect, and turns red when
+  the defect is fixed.
+  `test_join_using_insert_folds_and_writes_the_left_columns` and the Rust
+  `v04_join_using_folds_inside_insert` (MemTables, full rows) keep the V-04
+  fold green. Probe: `/tmp/kb-mixed-scratch/probe5.py`, `probe6.py`.
 
 ## 8. Coverage attestation
 
