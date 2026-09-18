@@ -464,6 +464,10 @@ repark-core's error map.
   `schema_has_write_default` is the cheap pre-scan that skips the Arrow conversion
   and the `ColumnDefaults` map on tables with no defaults (R-04).
   pins: ice-v3-write-default-1/C-015, C-019
+  `rewrite_markers_with_table` is the DEFAULT-marker pass over an already-loaded table
+  (`rewrite_insert_markers` loads, then calls it); `query_has_default_marker` is the
+  public AST probe. The Spark door's `INSERT OVERWRITE` calls both (ruling Q-21b-4).
+  pins: ice-v3-write-default-1/C-016
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):
   `ansi_store_assignable` / `normalize_for_assignment` /

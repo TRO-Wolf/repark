@@ -193,3 +193,12 @@ async fn ansi_static_partition_column_list_fills_write_default() {
     let batches = door.ok("SELECT id, name, c FROM ice.sales.p").await;
     assert_eq!(one_row_strings(&batches), (10, "x".to_string(), 5));
 }
+
+#[tokio::test]
+async fn ansi_partition_overwrite_default_keyword_fills_write_default() {
+    let door = door_with_tables().await;
+    door.ok("INSERT OVERWRITE ice.sales.p (id, name, c) PARTITION (id) SELECT 10, 'x', DEFAULT")
+        .await;
+    let batches = door.ok("SELECT id, name, c FROM ice.sales.p").await;
+    assert_eq!(one_row_strings(&batches), (10, "x".to_string(), 5));
+}

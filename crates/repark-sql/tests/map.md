@@ -31,6 +31,9 @@ holds behavior observed from outside the crate.
   writing NULL (dynamic, the V3-03b silent-wrong) or refusing
   `NOT_ENOUGH_DATA_COLUMNS` (static).
   pins: ice-v3-write-default-1/C-015
+  Round 5, ruling Q-21b-4: `DEFAULT` as a value on the ANSI PARTITION overwrite fills
+  (the ANSI router runs the marker pass before dispatch; whole-table overwrite stays
+  the Q9 refusal, row DML-1). pins: ice-v3-write-default-1/C-016
 
 - `session_timestamp_type_ansi_door.rs` — **Q10:** ANSI-door cell of
   `spark.sql.timestampType=TIMESTAMP_NTZ` on a Spark-extended session

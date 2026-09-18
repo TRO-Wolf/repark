@@ -12,7 +12,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::expr::{Exists, InSubquery};
 use datafusion::logical_expr::{Expr as DataFusionExpr, ExprSchemable, LogicalPlan};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::{Insert, ObjectName, TableObject};
+use datafusion::sql::sqlparser::ast::{Insert, ObjectName, Statement, TableObject};
 use iceberg::Catalog;
 use iceberg::{NamespaceIdent, TableIdent};
 
@@ -49,6 +49,11 @@ pub(crate) async fn execute_insert_overwrite(
     if let Some(message) = refuse_read_only_dml_table_sql(catalogs, &table_sql) {
         return Err(DataFusionError::Plan(message));
     }
+    let marked = rewrite_overwrite_default_markers(ctx, catalogs, table_name, insert).await?;
+    let (sql, insert) = match &marked {
+        Some((rewritten, rewritten_insert)) => (rewritten.as_str(), rewritten_insert),
+        None => (sql, insert),
+    };
 
     if let Some(partition_exprs) = &insert.partitioned {
         return execute_partition_overwrite(
@@ -459,6 +464,37 @@ pub(crate) fn tighten_batch_nullability(batches: Vec<RecordBatch>) -> Result<Vec
             )
         })
         .collect()
+}
+
+async fn rewrite_overwrite_default_markers(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table_name: &ObjectName,
+    insert: &Insert,
+) -> Result<Option<(String, Insert)>> {
+    use repark_iceberg::write::insert_defaults::{
+        query_has_default_marker, rewrite_markers_with_table,
+    };
+    let Some(source) = &insert.source else {
+        return Ok(None);
+    };
+    if !query_has_default_marker(source) {
+        return Ok(None);
+    }
+    let Some((_, _, table, _)) =
+        try_resolve_iceberg_overwrite_target(ctx, catalogs, table_name).await?
+    else {
+        return Ok(None);
+    };
+    let mut statement = Statement::Insert(insert.clone());
+    if !rewrite_markers_with_table(&table, &mut statement)? {
+        return Ok(None);
+    }
+    let rewritten = statement.to_string();
+    let Statement::Insert(rewritten_insert) = statement else {
+        return Ok(None);
+    };
+    Ok(Some((rewritten, rewritten_insert)))
 }
 
 fn overwrite_source_with_default_fills(

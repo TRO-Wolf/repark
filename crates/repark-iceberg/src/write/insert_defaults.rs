@@ -215,6 +215,21 @@ pub async fn rewrite_insert_markers(
         }
         Err(error) => return Err(crate::catalog::iceberg_to_datafusion(error)),
     };
+    let changed = rewrite_markers_with_table(&table, statement)?;
+    Ok(MarkerRewrite {
+        rewritten: changed.then(|| statement.to_string()),
+        preloaded: Some(table),
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn rewrite_markers_with_table(table: &Table, statement: &mut Statement) -> Result<bool> {
+    let Statement::Insert(insert) = statement else {
+        return Ok(false);
+    };
+    let Some(source) = insert.source.as_mut() else {
+        return Ok(false);
+    };
     let current = table.metadata().current_schema();
     let arrow_schema =
         schema_to_arrow_schema(current).map_err(crate::catalog::iceberg_to_datafusion)?;
@@ -271,19 +286,11 @@ pub async fn rewrite_insert_markers(
         }
         _ => {}
     }
-    if changed {
-        return Ok(MarkerRewrite {
-            rewritten: Some(statement.to_string()),
-            preloaded: Some(table),
-        });
-    }
-    Ok(MarkerRewrite {
-        rewritten: None,
-        preloaded: Some(table),
-    })
+    Ok(changed)
 }
 
-fn query_has_default_marker(source: &Query) -> bool {
+#[must_use]
+pub fn query_has_default_marker(source: &Query) -> bool {
     match source.body.as_ref() {
         SetExpr::Values(values) => values
             .rows
