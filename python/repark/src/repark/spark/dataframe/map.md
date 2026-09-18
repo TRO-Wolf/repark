@@ -637,6 +637,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   column list and pass through columns missing from the frame; the engine fills
   them from `write_default`. Extra frame columns still refuse.
   pins: ice-v3-write-default-1/C-006
+  Run 21b round 2 (2026-09-18, ruling Q-21b-8): `overwritePartitions()` carries the
+  same target column list, `INSERT OVERWRITE t (cols) PARTITION (…) SELECT …`, so an
+  omitted defaulted column fills as Spark does instead of refusing on arity
+  (1095 → 1094, mirrored in the CAP-1 test). pins: ice-v3-write-default-1/C-020
   DFCORE-3 (2026-09-07): `DataFrameStatFunctions.freqItems` delegates its refusal to
   `statistics._freq_items` (1113 → 1111, mirrored in the CAP-1 test); the class keeps
   the stat accessor shape. pins: dfcore-3/C-005, C-006

@@ -177,6 +177,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `scripts/check_lib_py.py` (the by-name projection returns the target column
   list and stops refusing missing frame columns).
   pins: ice-v3-write-default-1/C-006
+  Run 21b round 2 (2026-09-18): 1095 → 1094 — `overwritePartitions()` passes the
+  same column list into its `INSERT OVERWRITE` in two lines instead of three.
+  pins: ice-v3-write-default-1/C-020
   **FNP-11B remediation round 1 (2026-09-16):** `functions_expr.py` mirror row
   2237 → 2220 with the script baseline (the `make_timestamp` forwarder becomes a
   direct re-export). pins: fnp-11b/C-007

@@ -797,8 +797,7 @@ def test_default_outside_the_insert_list_refuses() -> None:
             " SELECT * FROM x"
         ),
         "V02_default_inside_subquery": (
-            f"INSERT OVERWRITE {table}"
-            " SELECT * FROM (SELECT 19 AS id, 'q' AS name, DEFAULT AS c)"
+            f"INSERT OVERWRITE {table} SELECT * FROM (SELECT 19 AS id, 'q' AS name, DEFAULT AS c)"
         ),
         "V02_control_default_outer_select_with_cte": (
             f"INSERT OVERWRITE {table} WITH x AS (SELECT 20 AS id, 'z' AS name)"
@@ -813,12 +812,12 @@ def test_default_outside_the_insert_list_refuses() -> None:
             for shape, sql in shapes.items():
                 _cell_errors(shape)
                 assert "42703" in _truth()["cells"][shape]["message"][0]
-                with pytest.raises(AnalysisException, match="(?i)default"):
+                with pytest.raises(AnalysisException, match=r"(?i)default"):
                     session.sql(sql).collect()
                 assert _rows(session, _CATALOG, "dfltow") == before, shape
-            with pytest.raises(AnalysisException, match="UNRESOLVED_COLUMN.*`DEFAULT`.*42703"):
+            with pytest.raises(AnalysisException, match=r"UNRESOLVED_COLUMN.*`DEFAULT`.*42703"):
                 session.sql(shapes["V02_control_default_outer_select_with_cte"]).collect()
-            with pytest.raises(AnalysisException, match="UNRESOLVED_COLUMN.*`DEFAULT`.*42703"):
+            with pytest.raises(AnalysisException, match=r"UNRESOLVED_COLUMN.*`DEFAULT`.*42703"):
                 session.sql(
                     f"INSERT INTO {table} WITH x AS (SELECT 20 AS id, 'z' AS name)"
                     " SELECT id, name, DEFAULT FROM x"

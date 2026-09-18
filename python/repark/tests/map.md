@@ -6340,4 +6340,5 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   SELECT of a query carrying `WITH` refuses as Spark does, 42703, writing nothing
   (C-021); mixed static-plus-dynamic `PARTITION (id=1, cat)` refuses loud beside
   Spark's recorded accept, an OPEN registry row (C-022).
+  The V-01 pin goes green with the writer change (arity refusal before).
   pins: ice-v3-write-default-1/C-020, C-021, C-022

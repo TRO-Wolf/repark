@@ -942,11 +942,10 @@ class DataFrameWriterV2:
     def overwritePartitions(self) -> None:  # noqa: N802 — PySpark method name
         """Replace only the partitions present in this DataFrame (Spark dynamic overwrite)."""
         session, table_ref = self._existing_table_ref()
-        _columns, projection = self._by_name_projection(session, table_ref=table_ref)
+        columns, projection = self._by_name_projection(session, table_ref=table_ref)
         clause = _dynamic_partition_sql(self._dataframe, table_ref)
-        self._run_through_temp_view(
-            lambda view: f"INSERT OVERWRITE {table_ref}{clause} SELECT {projection} FROM {view}"
-        )
+        head = f"INSERT OVERWRITE {table_ref} ({columns}){clause}"
+        self._run_through_temp_view(lambda view: f"{head} SELECT {projection} FROM {view}")
 
     overwrite_partitions = overwritePartitions
 

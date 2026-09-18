@@ -1374,3 +1374,6 @@ FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` p
   `dataframe/writer_readwriter.py` 1101 → 1095 (the by-name projection returns the
   target column list and stops refusing missing frame columns).
   pins: ice-v3-write-default-1/C-006
+  Run 21b round 2 (2026-09-18): 1095 → 1094 — `overwritePartitions()` passes the
+  same column list into its `INSERT OVERWRITE` in two lines instead of three.
+  pins: ice-v3-write-default-1/C-020
