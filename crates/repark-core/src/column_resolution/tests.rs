@@ -608,3 +608,71 @@ async fn n03_star_over_a_case_twin_answers_both_columns_declared() {
         assert_eq!(rows, text_rows(&[&["1", "0"]]), "{sql}");
     }
 }
+
+fn plan_on_default_stack(
+    state: SessionState,
+    sql: String,
+    case_insensitive: bool,
+) -> Result<Vec<String>> {
+    std::thread::Builder::new()
+        .stack_size(2 * 1024 * 1024)
+        .spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .build()
+                .unwrap();
+            runtime.block_on(async {
+                let dialect = state.config().options().sql_parser.dialect;
+                let statement = state.sql_to_statement(&sql, &dialect)?;
+                let plan =
+                    plan_statement_with_column_repair(&state, statement, case_insensitive).await?;
+                Ok(plan
+                    .schema()
+                    .fields()
+                    .iter()
+                    .map(|field| field.name().clone())
+                    .collect())
+            })
+        })
+        .unwrap()
+        .join()
+        .unwrap()
+}
+
+fn union_all(branch: &str, count: usize) -> String {
+    vec![branch; count].join(" UNION ALL ")
+}
+
+#[test]
+fn s22b_thousand_branch_union_plans_on_a_two_mebibyte_stack() {
+    let sql = format!(
+        "SELECT count(*) FROM ({})",
+        union_all("SELECT CAST(7.0 AS DOUBLE) AS x", 1000)
+    );
+    assert_eq!(
+        plan_on_default_stack(repair_state(), sql, true).unwrap(),
+        ["count(*)"]
+    );
+}
+
+#[test]
+fn s22b_thousand_branch_union_folds_wrong_case_on_a_two_mebibyte_stack() {
+    let sql = union_all("SELECT USERID FROM t", 1000);
+    assert_eq!(
+        plan_on_default_stack(mixed_state(), sql, true).unwrap(),
+        ["userId"]
+    );
+}
+
+#[test]
+fn s22b_five_thousand_branch_union_plans_on_a_two_mebibyte_stack_either_case_mode() {
+    let sql = format!(
+        "SELECT count(*) FROM ({})",
+        union_all("SELECT CAST(7.0 AS DOUBLE) AS x", 5000)
+    );
+    for case_insensitive in [true, false] {
+        assert_eq!(
+            plan_on_default_stack(repair_state(), sql.clone(), case_insensitive).unwrap(),
+            ["count(*)"]
+        );
+    }
+}

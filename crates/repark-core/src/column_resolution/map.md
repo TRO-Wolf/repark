@@ -25,6 +25,10 @@ pins the outer-reference audit (red on the round-1 head and under the revert).
 Round 2 Q-21b-12: `n03_star_over_a_case_twin_answers_both_columns_declared` pins the declared
 star answer on a twin MemTable (Spark refuses 42711; a star refusal here would also refuse the
 DataFrame `filter` / `table` lowerings, which Spark answers — ledger N-03).
+Run 22b (2026-09-18, the debug-wheel segfault): `s22b_*` plan a 1,000-branch `UNION ALL`
+(plain and wrong-case fold) and a 5,000-branch one (both case modes) through
+`plan_statement_with_column_repair` on a thread with a 2 MiB stack — the tokio worker default.
+Red on the round-1 head: the unguarded derived `SetExpr::clone` overflows (ledger Run 22b).
 pins: ice-mixed-case-1/C-007, C-009, C-013, C-014, C-015, C-016, C-017, C-020, C-021
 
 ## Files
