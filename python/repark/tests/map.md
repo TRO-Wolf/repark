@@ -6563,3 +6563,15 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the path (`REPARK_ORACLE_IVY` points
   `spark.jars.ivy` at a warm Ivy cache).
   pins: ice-array-insert-1/C-002
+- [test_ice_array_insert_1.py](test_ice_array_insert_1.py) — **ICE-ARRAY-INSERT-1
+  (2026-09-18, RP-29):** inserts into array columns answer Spark 4.1.2 on every door — one
+  pin per recorded cell (30: three shapes by five doors by v2/v3) asserting the read-back
+  rows and the first data file's footer field ids, walked with the recorder's `field_ids`
+  (Spark's file count is recorded but never pinned — it follows Spark's task count). The
+  eight non-VALUES `map_list` cells run the recorded `CAST(NULL AS MAP<...>)` statement
+  verbatim under strict xfail (CAST-MAP-SPELL-1, BACKLOG) with substitute-source twins
+  through the same door from a `CASE WHEN false` NULL-map row Spark answers identically
+  (measured 2026-09-18). Live (`REPARK_PARITY_LIVE=1`): Spark adopts each RePark-written
+  `sql_values` table via `register_table` and reads the recorded rows. Truth in
+  [../../repark-parity/fixtures/torture/data/ice_array_insert_1/](../../repark-parity/fixtures/torture/data/ice_array_insert_1/map.md).
+  pins: ice-array-insert-1/C-003, C-004, C-005, C-006, C-007, C-008

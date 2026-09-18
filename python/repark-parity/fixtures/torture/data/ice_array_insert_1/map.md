@@ -49,5 +49,6 @@ pins: ice-array-insert-1/C-001, C-005
 ## Pointers
 
 - Up: [../map.md](../map.md)
+- Consumer: [../../../../../repark/tests/test_ice_array_insert_1.py](../../../../../repark/tests/test_ice_array_insert_1.py)
 - Driver: [../../../../../repark/tests/_record_ice_array_insert_1.py](../../../../../repark/tests/_record_ice_array_insert_1.py)
 - Ledger: `task/ledgers/staging/ice-array-insert-1-ledger.md`
