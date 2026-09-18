@@ -165,7 +165,7 @@ the first suite run, `41c2d4164` for the final build):
 | gate | result |
 |---|---|
 | comment ban on `origin/main..HEAD` | `hits=0` |
-| `git diff origin/main..HEAD \| grep -c ka-fork` | `0` |
+| fork-clone path in the branch diff (`grep -c` over `git diff origin/main..HEAD`) | `0` |
 | `cargo clippy --all-targets --all-features -- -D warnings` (brief's form) | exit 101: 36 errors, all `disallowed_methods` `unwrap`/`expect` in `crates/repark-ml` test modules (8 expect, 28 unwrap; untouched by this unit). Zero in any touched crate. The repo's own gates — `make rust-clippy` (`-A clippy::disallowed_methods`) and `make rust-panic-ban` (lib/bins) — are clean inside `make verify`. |
 | `cargo test -p repark-spark --lib` | 1132 passed, 0 failed, 5 ignored (one is `forkwrite_list_insert_reads_back`) |
 | `cargo test -p repark-iceberg --lib` | 450 passed, 0 failed |
