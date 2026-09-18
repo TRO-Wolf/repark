@@ -437,7 +437,19 @@ fills there. MERGE NOT MATCHED null-fills in RePark-owned
 
 Run in the foreground on the round-6 head, release native
 (`CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`); full log in
-`/tmp/oc-worker/kb-wd/handback-2.md`. Counts below are filled from that run.
+`/tmp/oc-worker/kb-wd/handback-2.md`.
+
+- `cargo test -p repark-iceberg --lib` — 459 passed, 0 failed.
+- `cargo test -p repark-sql` — 20 test binaries, 443 passed, 0 failed (ANSI pins 8/8).
+- `cargo test -p repark-spark --lib` — 1130 passed, 0 failed, 4 ignored (Spark-door pins 3/3).
+- `test_ice_v3_write_default_1.py` offline — 24 passed, 1 skipped (the live cell).
+- Live leg (`jb-jvm.sh`, `REPARK_PARITY_LIVE=1`, zulu-17, driver 2g) — 25 passed in 28.73 s,
+  including `_live_overwrite_partitions` (C-020).
+- `uvx ruff@0.15.22 check .` — all checks passed; `format --check .` — 1038 files formatted.
+- `make rust-clippy` — exit 0 (C-024).
+- C-009 guard + CAP-1 mirror — 25 passed.
+- `comment_ban.py /tmp/kb-wd origin/main` — hits=0.
+- `make verify` — see the hand-back (run last).
 
 ## Open questions
 
