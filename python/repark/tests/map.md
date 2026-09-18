@@ -1145,6 +1145,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Then C-010 (bare nullary both directions), C-003 (RLIKE lowering), C-004 (LTZ
   cast), C-005 (NTZ refusal naming TZ-6) and the C-006 struct-dot pin.
   pins: spark-sql-grammar-1/C-003, C-004, C-005, C-006, C-008, C-010
+  **TEST-HYGIENE-1 (2026-09-18):** the `current_date` pin compares against the
+  session's configured zone instead of the host-local date, and the deterministic
+  Kiritimati / `Etc/GMT+12` session-zone pin holds the measured UTC-date defect as
+  strict-xfail under registry row TZ-9.
+  pins: test-hygiene-1/C-003.
 - [test_unresolved_routine_1.py](test_unresolved_routine_1.py) +
   [unresolved_routine_1_spark_oracle.json](unresolved_routine_1_spark_oracle.json) —
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** every unknown routine refuses with Spark's
@@ -4840,6 +4845,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
   pins: perf-ice-catalog-io-3/C-001, C-002, C-003, C-004, C-005, C-006
   pins: rp-16/C-001, C-002, C-003, C-004
+  **TEST-HYGIENE-1 (2026-09-18):** the 500-table RSS leg carries the registered
+  `perf` marker (`conftest.py::pytest_configure`); no `-m "not perf"` in CI or the
+  default config, so the wheels smoke job and the nightly keep running it.
+  pins: test-hygiene-1/C-004.
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert

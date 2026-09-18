@@ -3584,6 +3584,23 @@ the pin rather than obeying it.
 > [`task/s5-v-landing-ledger.md`](../task/ledgers/archive/2026-08/2026-08-13-s5-v-landing-ledger.md). TZ-6 / TZ-7 FIXED
 > notes were already in-file from #85 (not duplicated). No new `live-mirror:` tokens.
 
+### TZ-9 — `current_date` answers the UTC date, not the session-zone date
+
+- **repark** — `SELECT current_date` answers the UTC calendar date whatever
+  `spark.sql.session.timeZone` holds: under `Pacific/Kiritimati` (UTC+14) on
+  2026-09-18 the engine answered `2026-09-18` while the session-zone date was
+  already `2026-09-19` (measured in-repo on the release module, no JVM).
+- **Apache Spark** — answers `current_date` in the session time zone
+  (`spark.sql.session.timeZone`; the documented semantic, not re-derived live here).
+- **Pin** — `python/repark/tests/test_spark_sql_grammar_1.py::test_q14_current_date_answers_the_session_zone_date`
+  (`xfail(strict=True)` over `Pacific/Kiritimati` and `Etc/GMT+12`, midnight-race
+  guarded); `…::test_q14_current_date_bare_and_paren` now compares against the
+  session's configured zone instead of the host-local date.
+- **Rationale** — OPEN (2026-09-18), intent to FIX. Product defect, not a test
+  bug: the date builtin does not read the session zone. Test-only unit
+  TEST-HYGIENE-1 files it here and holds it red-on-purpose; the engine fix is a
+  later unit.
+
 ### FN-1 — `element_at` out of range is NULL under ANSI
 
 - **repark** — `element_at(array(1, 2), 5)` and `element_at(array(1, 2), -5)` are
