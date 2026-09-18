@@ -39,6 +39,12 @@ repark-core's error map.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
+- `predicate_dml.rs` — **ICE-OCC-SCOPED-1 (2026-09-17):** the identity DELETE / UPDATE builds a
+  `CommitScope` from its isolation property and `conflict_filter::for_identity_dml` over its own
+  `WHERE`, and hands it to the COW overwrite or the MoR row delta, so a concurrent commit that
+  cannot touch the rows the statement reads no longer aborts it. The two four-line
+  `RowDeltaPolicy` literals became `scope.row_delta(kind)` (net 0 lines; baseline 1142 held).
+  pins: ice-occ-scoped-1/C-005, C-007, C-008
 - `predicate_dml.rs` — **V3-8 (2026-09-02):** the COW rewrite carries stored `_row_id` /
   `_last_updated_sequence_number` on format-v3 (scratch from `merge::row_lineage`, survivors and
   updated rows projected through `predicate_dml/lineage.rs`), so `row_lineage_guard.rs` lost its
@@ -159,6 +165,32 @@ repark-core's error map.
   `commit_truncate_to` commits onto a named branch.
   pins: dml-c-truncate/C-001, C-005
   pins: rp-5-fork-repin/C-004
+- `conflict_filter.rs` — **ICE-OCC-SCOPED-1 (2026-09-17):** the conflict-detection filter a DML
+  commit hands the fork's serializable validation (Java `SparkScan.filterExpression()` threaded into
+  `RowDelta` / `OverwriteFiles.conflictDetectionFilter` by `SparkPositionDeltaWrite` /
+  `SparkCopyOnWriteOperation`). `from_merge_on` keeps only the `ON` conjuncts whose every column is
+  qualified by the target alias (`t.k = 'a'`) — never a join equality (`t.id = s.id`), a
+  source-only conjunct, or a bare identifier, and nothing at all when the source alias shadows the
+  target's. `from_selection` / `for_identity_dml` take the identity DML's `WHERE` (bare or
+  target-qualified columns). Conversion is SOUND BY WIDENING: under `AND` an unconvertible side is
+  dropped (the filter only grows); under `OR` / `NOT` / `IN` / `BETWEEN` every part must convert or
+  the whole node is dropped; a parse failure, an unknown or nested column, a literal that does not
+  fit the column's primitive type, a subquery, or an empty result is `AlwaysTrue`. Columns resolve
+  against the table's top-level fields, exact name first (the struct's own name index, never
+  `Schema::field_by_name`, which also answers dotted nested names), then a unique
+  case-insensitive match
+  (the schema's spelling is emitted so `case_sensitive(true)` binds). Literal typing mirrors
+  `repark-spark`'s `call/rewrite_where.rs` (the `rewrite_data_files` `where` parser); the two stay
+  separate because that one is a maintenance procedure with a strict all-or-nothing contract, and
+  unifying them is left to a later unit (hand-back of run 21a).
+  A FLOAT / DOUBLE literal converts only when it is EXACT: its decimal text and the parsed value's
+  full `{:.800e}` expansion normalize to the same digits and exponent, so an underflow
+  (`f < 1e-50` → `0.0`), an overflow, a rounding (`0.1`) and a zero (the fork orders floats by
+  `total_cmp`, `-0.0 < 0.0`, while SQL equates them) leave the node unconverted. A float column
+  also converts only under `=`, `<>`, `IN` and `NOT IN`: the fork's metrics evaluator skips a
+  nans-only file (and bounds exclude NaN) under `<` / `>` / `BETWEEN`, while SQL ranges order NaN
+  as a value, so a float range stays unscoped (ruling Q-21a-OCC-1).
+  pins: ice-occ-scoped-1/C-001, C-002, C-003, C-018
 - `commit_target.rs` — `maybe_to_branch` / `snapshot_id_for_commit` for named-ref commits.
   `commit_append_to` (ICE-RTAS-BYNAME-1, 2026-09-17): `commit_append` with an
   optional named branch, mirroring `commit_overwrite_replace_all_to`; the Spark door's
@@ -348,6 +380,24 @@ repark-core's error map.
   identity return without an order, monotone committed files on both funnel entries, the
   `none` round-robin stream layout, the nested sort, and the transform refusal.
   pins: write-order-dist-1/C-007, C-008, C-010
+  **ICE-SORTED-INSERT-1 (2026-09-17):** plain `INSERT INTO` sorts inside the
+  fork's `insert_into` (F-SORTED-INSERT-1, RP-22), but the three RePark-owned
+  writer sites never stamped the files they wrote, so `{t}.files` read NULL.
+  `stamp` wraps a built `DataFileWriterBuilder` with the fork's
+  `with_sort_order_id` carrying the table's default order id (0 when unordered,
+  like the fork), called at the fanout close in `append.rs`, the lineage fanout
+  in `merge/row_lineage.rs`, and the unpartitioned MERGE writer in
+  `merge/mod.rs`. No sort is re-implemented here; the sort stays where
+  WRITE-ORDER-DIST-1 put it.
+  pins: ice-sorted-insert-1/C-003
+  **Round 3 (2026-09-17):** `default_sort_lex_ordering` wraps every `Float32` /
+  `Float64` sort key in `CanonicalFloatExpr` (`distribution/canonical_float.rs`),
+  so the owned sort places NaN the way the fork's INSERT path does: every NaN,
+  including a negative one, lands in one block above every value. The lineage
+  fanout now calls `sort_batches_by_default_order` too
+  (`merge/row_lineage.rs`), so each of the three stamp sites stamps only bytes
+  that went through this sort.
+  pins: ice-sorted-insert-1/C-006, C-008
   See [distribution/map.md](distribution/map.md).
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec
@@ -374,6 +424,13 @@ repark-core's error map.
   refuse) in its rustdoc and error. `commit_*_to` variants pass `.to_branch`.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
   pins: rp-5-fork-repin/C-004 V3-COV pins in this file: a view-string source conforms to its Utf8 target instead of failing the rebuild (V3-COV-1); the identity arm hands the same buffer back while a non-assignable pair still refuses.
+  **ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17, ruling Q-21b-3):**
+  `stage_static_partition_overwrite_files` takes the statement column list; a
+  non-empty list maps the source by name (static columns from the clause, listed
+  columns from the source, the rest NULL or `CANNOT_FIND_DATA` when required) and a
+  listed static column refuses `STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST`.
+  `static_partition_source_columns` names the columns the clause assigns so the
+  default fill skips them. pins: ice-v3-write-default-1/C-015
 - `insert_gate.rs` — **WI-2 (2026-08-15):** `InsertStoreAssignment`, an `AnalyzerRule` over
   `LogicalPlan::Dml(WriteOp::Insert(_))` that runs `store_assign.rs`'s matrix — imported, never
   duplicated — against the pre-cast types in the synthesized projection's INPUT schema. Registered
@@ -385,6 +442,46 @@ repark-core's error map.
   Named residual: `Cast(Literal, …)` inside a `Values` node, where the synthesized and explicit
   forms are byte-identical. Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
+- `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
+  filling omitted columns from `write_default` on every write path: `column_defaults`
+  reads the table defaults, `fill_insert_plan` rewrites a short INSERT plan, an
+  explicit NULL stays NULL, and a missing required column keeps Spark's error.
+  `rewrite_insert_markers` passes a missing table through unloaded, so the door's
+  standard missing-table error fires instead of a leaked `TableNotFound`. An unloadable
+  table, an unrenderable default literal, and a default that does not fit its column type
+  all surface as plan errors. Its entry points carry
+  `#[allow(clippy::missing_errors_doc)]` in place of the `# Errors` doc comment the
+  no-code-comments ruling forbids. The marker pass probes the AST for `DEFAULT`
+  first and loads nothing without one; the loaded table travels in `MarkerRewrite`
+  into `fill_insert_plan`, so an INSERT pays at most one catalog load. Unit tests
+  (including the load-count pins over a counting test catalog) live in
+  `insert_defaults/tests/mod.rs` — a `tests/` directory so the C-009 setter guard
+  (`test_rp3_c009_write_default.py`, needles `with_write_default` / `write_default(`,
+  `tests` path parts exempt) reads the test-only `with_write_default` builder as test
+  code; the pre-scan is named `schema_has_primitive_fill` for the same guard (run 21b
+  round 2, 2026-09-18).
+  **Run 21b round 2 (2026-09-18, ruling Q-21b-9):** `refuse_default_marker_under_with`
+  refuses a `DEFAULT` marker in the outer VALUES / SELECT list of an INSERT whose query
+  carries `WITH` — `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION` naming `DEFAULT`, SQLSTATE
+  42703 — before any table load, on `INSERT INTO` and `INSERT OVERWRITE`, both doors
+  (`rewrite_insert_markers` and `rewrite_markers_with_table` both call it). Spark 4.1.2
+  resolves `DEFAULT` only in the top-level INSERT's own list and refuses it under
+  `WITH` (its text carries `WITH_SUGGESTION` and the CTE's columns; RePark names none).
+  `DEFAULT` inside a CTE body or derived table is never rewritten and refuses in
+  planning (`No field named default`), as Spark refuses it.
+  pins: ice-v3-write-default-1/C-021
+  pins: ice-v3-write-default-1/C-004, C-005, C-006, C-007
+  **Round 5 (2026-09-17):** `overwrite_source_with_defaults` is the one
+  `INSERT OVERWRITE` fill both doors share — whole-table and both PARTITION arms —
+  appending `(CAST(default)) AS col` for every omitted defaulted column not listed
+  and not assigned by a static clause, and returning the extended column list.
+  `schema_has_primitive_fill` is the cheap pre-scan that skips the Arrow conversion
+  and the `ColumnDefaults` map on tables with no defaults (R-04).
+  pins: ice-v3-write-default-1/C-015, C-019
+  `rewrite_markers_with_table` is the DEFAULT-marker pass over an already-loaded table
+  (`rewrite_insert_markers` loads, then calls it); `query_has_default_marker` is the
+  public AST probe. The Spark door's `INSERT OVERWRITE` calls both (ruling Q-21b-4).
+  pins: ice-v3-write-default-1/C-016
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):
   `ansi_store_assignable` / `normalize_for_assignment` /
@@ -547,6 +644,7 @@ repark-core's error map.
 | Parquet statistics properties for a position-delete file | `writer_props.rs` (`position_delete_writer_properties_for`) |
 | Change MERGE INTO semantics | [merge/map.md](merge/map.md) |
 | Identity DELETE/UPDATE (subquery `WHERE` and RP-9 r2 plain `WHERE`) | `predicate_dml.rs` (`execute_predicate_dml`) |
+| Change which concurrent commits a MERGE / UPDATE / DELETE conflicts with | `conflict_filter.rs` + [merge/map.md](merge/map.md) `snapshot_commit.rs` |
 | Wire ordinary DELETE/UPDATE/INSERT OVERWRITE | DataFusion → fork `TableProvider` (non-subquery) |
 | Ask whether a `(source, target)` type pair may be written | `store_assign.rs` (`ansi_store_assignable`) |
 | CREATE/DROP BRANCH or TAG | `snapshot_refs.rs` |
@@ -566,6 +664,7 @@ repark-core's error map.
 | Streaming CTAS OOMs / collects the whole SELECT | must use the `_from_stream` writers over `execute_stream()`, never `collect()` |
 | A partitioned CTAS writes writers × values data files | `hash_distribution` must wrap the input when the spec is partitioned and `writers > 1`; check `IcebergPartitionWriteExec`'s child is a `RepartitionExec` with `Partitioning::Hash` |
 | Parallel write left partial files after a failed MERGE | abort flag must skip `finish()`/`close()` |
+| A DML aborts on a concurrent write to another partition | the commit's conflict filter printed `TRUE`: see `conflict_filter.rs`'s widening rules and [merge/map.md](merge/map.md) Debug |
 | Rejected MERGE OCC commit left new Parquet files in the warehouse | commit-error abort must `FileIO::delete` writer-result paths only (`merge/abort.rs`); never re-derive from manifests; never delete `affected` |
 | MERGE OOMs on a large target | target must register as a `StreamingTable` (`(_file, _pos)` identity), never a full-target `MemTable` |
 | MERGE produces duplicates | multiple-source-match must **error** (like Spark); serializable (default) commit arms carry `validate_no_conflicting_data`; snapshot isolation drops it (`write.merge.isolation-level`) |

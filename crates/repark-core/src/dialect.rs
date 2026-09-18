@@ -16,6 +16,7 @@ pub struct EngineContext<'a> {
     pub catalogs: &'a CatalogRegistry,
     /// Read-only (postgres) catalog names for the P11 DML direction-notes.
     pub read_only: &'a HashSet<String>,
+    pub force_static_overwrite: bool,
 }
 
 impl<'a> EngineContext<'a> {
@@ -30,6 +31,7 @@ impl<'a> EngineContext<'a> {
             ctx,
             catalogs,
             read_only,
+            force_static_overwrite: false,
         }
     }
 }

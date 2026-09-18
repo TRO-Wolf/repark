@@ -172,6 +172,14 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **FNP-11B step 6 (2026-09-15):**
   `functions.py` mirror row 1960 → 1984 and `functions_expr.py` 2235 → 2237
   with the script baseline. pins: fnp-11b/C-001, C-005
+- `test_cap_1_source_file_line_cap.py` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):**
+  mirror row ratchets `dataframe/writer_readwriter.py` 1101 → 1095 with
+  `scripts/check_lib_py.py` (the by-name projection returns the target column
+  list and stops refusing missing frame columns).
+  pins: ice-v3-write-default-1/C-006
+  Run 21b round 2 (2026-09-18): 1095 → 1094 — `overwritePartitions()` passes the
+  same column list into its `INSERT OVERWRITE` in two lines instead of three.
+  pins: ice-v3-write-default-1/C-020
   **FNP-11B remediation round 1 (2026-09-16):** `functions_expr.py` mirror row
   2237 → 2220 with the script baseline (the `make_timestamp` forwarder becomes a
   direct re-export). pins: fnp-11b/C-007
@@ -318,7 +326,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `spark/catalog_surface.py` `sql_string_literal` 2 — `create_table` renders
   `TBLPROPERTIES` keys and values through the helper. pins: h3-spill-1/C-001,
   maint-policy-1/C-030, catalog-surface-1/C-009
-- `test_cap_1_source_file_line_cap.py` — **CATALOG-SURFACE-1 (2026-09-14):** `spark/session/session_core.py` row 2304 → 2291 with the script baseline (`table()` delegates to `catalog_surface.session_table`; the orphaned `_sql_table_ref_resolved` helper removed). pins: catalog-surface-1/C-004 **Critic round 1 (2026-09-14):** `spark/dataframe/core.py` row 4044 → 4043 with the script baseline (`create_or_replace_temp_view` delegates registration to `catalog_surface._register_temp_view`; the frame-token note lives in `cache_handle.bind_registered_view`). pins: catalog-surface-1/C-009 **SESSION-SURFACE-1 (2026-09-15, rebase onto #602):** `spark/session/session_core.py` row 2291 → 2290; EX-0 counts recounted after the Catalog merge. pins: session-surface-1/C-001 **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down. pins: df-surface-b-1/C-008 **IO-DECLARED-1 (2026-09-15, rebase onto #603):** the mirror drops `spark/session/reader.py` again — the unit retired that exception (954 lines, under the default ceiling) and the rebase had restored main's row. pins: io-declared-1/C-006
+- `test_cap_1_source_file_line_cap.py` — **CATALOG-SURFACE-1 (2026-09-14):** `spark/session/session_core.py` row 2304 → 2291 with the script baseline (`table()` delegates to `catalog_surface.session_table`; the orphaned `_sql_table_ref_resolved` helper removed). pins: catalog-surface-1/C-004 **Critic round 1 (2026-09-14):** `spark/dataframe/core.py` row 4044 → 4043 with the script baseline (`create_or_replace_temp_view` delegates registration to `catalog_surface._register_temp_view`; the frame-token note lives in `cache_handle.bind_registered_view`). pins: catalog-surface-1/C-009 **SESSION-SURFACE-1 (2026-09-15, rebase onto #602):** `spark/session/session_core.py` row 2291 → 2290; EX-0 counts recounted after the Catalog merge. pins: session-surface-1/C-001 **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down. pins: df-surface-b-1/C-008 **IO-DECLARED-1 (2026-09-15, rebase onto #603):** the mirror drops `spark/session/reader.py` again — the unit retired that exception (954 lines, under the default ceiling) and the rebase had restored main's row. pins: io-declared-1/C-006 **ICE-DYN-OVERWRITE-1 round 2, ruling Q-20a-6 (2026-09-17):** `spark/dataframe/writer_readwriter.py` row 1101 → 1109 (`spark/session/session_core.py` holds 2290) with the script baselines. pins: ice-dyn-overwrite-1/L-001
 - `test_ex_0_example_coverage.py` — **CATALOG-SURFACE-1 (2026-09-14):** measured counts move with the 26 new Catalog names — `len(rows)` 930 → 956 and `families["catalog"]` 28 → 54; the four new `docs/examples/catalog/` scripts cover every name. pins: catalog-surface-1/C-007
   set. pins: h3-spill-1/C-001, maint-policy-1/C-030
 - `test_cap_1_source_file_line_cap.py` — **GROUPED-SURFACE-1 step 1 (2026-09-14):** `dataframe/joins_columns.py` mirror row 1238 → 1169 with the script baseline (the Arrow-batch apply bridge moved byte-identical into the new `dataframe/grouped_arrow.py`; the grouped-surface bindings are one-line class aliases). pins: grouped-surface-1/C-007
@@ -455,6 +463,8 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   WRITE-ORDER-DIST-1 (2026-09-06) ratchets `repark-spark/src/alter.rs` 1830 → 1821,
   `repark-iceberg/src/write/append.rs` 1884 → 1883, and `write/merge/mod.rs` 1795 → 1792
   with the gate table (pins: write-order-dist-1/C-012).
+  ICE-OCC-SCOPED-1 (2026-09-17) ratchets `write/merge/mod.rs` 1792 → 1773 with the gate
+  table (pins: ice-occ-scoped-1/C-005).
   The same unit ratchets `repark-spark/src/tests/alter.rs` 1436 → 1397 — the obsolete
   WRITE-refusal blocks are deleted (pins: write-order-dist-1/C-001).
   NIGHTLY-LIVE-1 (2026-09-11) ratchets `test_ml_boost_oracle.py` 2244 → 2241 with the
@@ -908,3 +918,5 @@ Escalate to: [../map.md#debug](../map.md).
 - **FNP-GEN-1 rebase onto #647 (2026-09-16, orchestrating session):** the same recipe a second
   time — `len(rows)` 1082 read from the failing assert on a fresh release native, backlog 108 read
   from `check_example_coverage.py`'s report (unchanged). pins: fnp-gen-1/C-007
+
+ICE-V3-WRITE-DEFAULT-1 rebase onto ICE-DYN-OVERWRITE-1 (2026-09-18, run 21b): `test_cap_1_source_file_line_cap.py` mirrors `check_lib_py.py`: `writer_readwriter.py` 1109 → 1102 (the merged column-list and `static_overwrite` writer; the CAP-1 mirror moves with it). pins: ice-v3-write-default-1/C-024

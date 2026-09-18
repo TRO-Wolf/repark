@@ -1,0 +1,177 @@
+{
+  "spark_version": "4.1.2",
+  "iceberg_runtime": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+  "cells": {
+    "v2_16_concurrent_inserts": {
+      "committed": 16,
+      "of": 16,
+      "errors": []
+    },
+    "v2_rows_after_insert_storm": {
+      "rows": [
+        [
+          16,
+          16
+        ]
+      ]
+    },
+    "v2_snapshots_after_insert_storm": {
+      "rows": [
+        [
+          16
+        ]
+      ]
+    },
+    "v2_8_disjoint_merges_serializable": {
+      "committed": 1,
+      "of": 8,
+      "errors": [
+        "Py4JJavaError: An error occurred while calling o51.sql.\n: org.apache.iceberg.exceptions.ValidationException: Found conflicting files that can contain records matching true: [<warehouse>/ns/mrg2_serializabl"
+      ]
+    },
+    "v2_rows_after_8_disjoint_merges_serializable": {
+      "rows": [
+        [
+          100,
+          1,
+          100
+        ]
+      ]
+    },
+    "v2_8_disjoint_merges_snapshot": {
+      "committed": 1,
+      "of": 8,
+      "errors": [
+        "Py4JJavaError: An error occurred while calling o51.sql.\n: org.apache.iceberg.exceptions.ValidationException: Found new conflicting delete files that can apply to records matching true: [<warehouse>/ns/mrg2"
+      ]
+    },
+    "v2_rows_after_8_disjoint_merges_snapshot": {
+      "rows": [
+        [
+          100,
+          1,
+          100
+        ]
+      ]
+    },
+    "v2_2_disjoint_partition_deletes": {
+      "committed": 2,
+      "of": 2,
+      "errors": []
+    },
+    "v2_rows_after_disjoint_deletes": {
+      "rows": [
+        [
+          0
+        ]
+      ]
+    },
+    "v2_commit_retry_defaults": {
+      "rows": [
+        [
+          "current-snapshot-id",
+          "472032464837898645"
+        ],
+        [
+          "format",
+          "iceberg/parquet"
+        ],
+        [
+          "format-version",
+          "2"
+        ],
+        [
+          "write.parquet.compression-codec",
+          "zstd"
+        ]
+      ]
+    },
+    "v3_16_concurrent_inserts": {
+      "committed": 14,
+      "of": 16,
+      "errors": [
+        "Py4JJavaError: An error occurred while calling o51.sql.\n: org.apache.iceberg.exceptions.CommitFailedException: Cannot commit changes based on stale table metadata\n\tat org.apache.iceberg.hadoop.HadoopTableOperations.",
+        "Py4JJavaError: An error occurred while calling o51.sql.\n: org.apache.iceberg.exceptions.CommitFailedException: Version 6 already exists: <warehouse>/ns/ins3/metadata/v6.metadata.json\n\tat org.apache.iceberg"
+      ]
+    },
+    "v3_rows_after_insert_storm": {
+      "rows": [
+        [
+          14,
+          14
+        ]
+      ]
+    },
+    "v3_snapshots_after_insert_storm": {
+      "rows": [
+        [
+          14
+        ]
+      ]
+    },
+    "v3_8_disjoint_merges_serializable": {
+      "committed": 1,
+      "of": 8,
+      "errors": [
+        "Py4JJavaError: An error occurred while calling o51.sql.\n: org.apache.iceberg.exceptions.ValidationException: Found conflicting files that can contain records matching true: [<warehouse>/ns/mrg3_serializabl"
+      ]
+    },
+    "v3_rows_after_8_disjoint_merges_serializable": {
+      "rows": [
+        [
+          100,
+          1,
+          100
+        ]
+      ]
+    },
+    "v3_8_disjoint_merges_snapshot": {
+      "committed": 1,
+      "of": 8,
+      "errors": [
+        "Py4JJavaError: An error occurred while calling o51.sql.\n: org.apache.iceberg.exceptions.ValidationException: Found new conflicting delete files that can apply to records matching true: [<warehouse>/ns/mrg3"
+      ]
+    },
+    "v3_rows_after_8_disjoint_merges_snapshot": {
+      "rows": [
+        [
+          100,
+          1,
+          100
+        ]
+      ]
+    },
+    "v3_2_disjoint_partition_deletes": {
+      "committed": 2,
+      "of": 2,
+      "errors": []
+    },
+    "v3_rows_after_disjoint_deletes": {
+      "rows": [
+        [
+          0
+        ]
+      ]
+    },
+    "v3_commit_retry_defaults": {
+      "rows": [
+        [
+          "current-snapshot-id",
+          "3535050080437004265"
+        ],
+        [
+          "format",
+          "iceberg/parquet"
+        ],
+        [
+          "format-version",
+          "3"
+        ],
+        [
+          "write.parquet.compression-codec",
+          "zstd"
+        ]
+      ]
+    }
+  }
+}

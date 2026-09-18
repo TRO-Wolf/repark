@@ -4,9 +4,11 @@
 
 Generated-test fixture sources for the parity harness. Data is never committed — the
 generators write into a temp dir at test time or under `/tmp/torture/` on the full tier,
-and refuse repository-internal output directories — with two ruled exceptions under
-`fixtures/torture/data/`: `v3_dv/` (TORTURE-1 D-5, the ≤ 1 MB Spark-written DV table)
-and `ice_spark_table_1/` (ICE-SPARK-TABLE-1, the 67.8 KB Spark-written v2 CoW table).
+and refuse repository-internal output directories — with three ruled exceptions under
+`fixtures/torture/data/`: `v3_dv/` (TORTURE-1 D-5, the ≤ 1 MB Spark-written DV table),
+`ice_spark_table_1/` (ICE-SPARK-TABLE-1, the 67.8 KB Spark-written v2 CoW table), and
+`ice_v3_write_default_1/` (ICE-V3-WRITE-DEFAULT-1, the 225.1 KB Spark-written v3
+column-defaults tables plus the 22-cell oracle).
 
 ## Contents
 

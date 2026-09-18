@@ -36,6 +36,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (before the optimizer's literal fold), pinning the marker-cast exemption in
   `repark_functions::java_double::rewrite_float_cast` that lets
   `FoldSparkNumericCasts` see the `CAST(__repark_suffix_literal__ …)` shape.
+  Round 5 (2026-09-17): the `PARTITION (…) (cols)` swap and its non-matches.
+  pins: ice-v3-write-default-1/C-015
 - `lambda_door.rs` — **FNP-8 (2026-09-06):** the eleven higher-order names through
   `crate::execute` with `x -> y` syntax — both `transform`/`filter` arities, `exists` as a
   function (not the subquery keyword), `forall` on empty, `aggregate` with and without
@@ -314,6 +316,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `where` byte-identity pins above are the single-load regression guard.
   pins: maint-rewrite-data-files-options/C-002, C-003, C-004, C-005, C-006, C-007, C-008
   pins: maint-policy-1/C-028, C-029
+- `write_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 round 2 (2026-09-18, run 21b):** Spark-door
+  `write_default` pins on a catalog-created table carrying `c INT` write-default 5. `DEFAULT`
+  on `INSERT OVERWRITE` (VALUES and named-list SELECT) fills 5 and goes red with the
+  `rewrite_overwrite_default_markers` call in `insert_overwrite.rs` removed (the ANSI pin cannot
+  see that hunk); `DEFAULT` in the outer SELECT of a query that carries `WITH` refuses
+  `UNRESOLVED_COLUMN` 42703 on INSERT INTO and INSERT OVERWRITE, as Spark 4.1.2 does; `DEFAULT`
+  inside a CTE body or a derived table refuses and writes nothing.
+  pins: ice-v3-write-default-1/C-016, C-021, C-023
 - `write_to_branch.rs` — RP-5 C-004 family pins: INSERT VALUES/SELECT, UPDATE, DELETE,
   MERGE, INSERT OVERWRITE, TRUNCATE, empty overwrite on a diverged branch; two-part
   `t.branch_b` via session defaults; tag and missing-branch Spark-shaped refuse including
@@ -342,6 +352,21 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   sibling file-path stability, two-key AND + incomplete-static, string/NULL partitions,
   Hive too-many-columns refuse, empty-dynamic guard;
   pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005),
+  `dyn_by_name_overwrite` (ICE-DYN-OVERWRITE-1 round 3: `BY NAME` and column-list
+  overwrites under dynamic keep siblings with `replace-partitions=true`, `BY NAME` with an
+  empty source commits no snapshot under dynamic (partitioned and unpartitioned) and
+  wipes under static, and the
+  static entry pins whole-table replace for `BY NAME` under a dynamic conf — reuses the
+  `setup_dynamic` / `seed` / `run_static` helpers of its sibling;
+  pins: ice-dyn-overwrite-1/C-019, C-021),
+  `dyn_partition_overwrite` (ICE-DYN-OVERWRITE-1: dynamic PARTITION-less replace keeps
+  siblings + `replace-partitions=true`, dynamic-empty no-op (partitioned and not),
+  static whole-table, unpartitioned-dynamic whole-table, the marker-as-payload pins
+  (string literal and trailing comment stay partition-scoped under dynamic),
+  the dedicated static-entry pin, and the deterministic stale-handle race twins —
+  snapshot replaces the same-partition append and keeps a surviving-partition
+  append, serializable refuses it (ruling Q-20a-6 closes L-001/L-002);
+  pins: ice-dyn-overwrite-1/C-014, C-015, C-016),
   `truncate` (DML-C: wipe summary keys, equal empty-overwrite keys, time travel,
   missing-table / view / `INVALID_PARTITION_OPERATION` / IF EXISTS parse refuse;
   pins: dml-c-truncate/C-001, C-002, C-005, C-006, C-007),

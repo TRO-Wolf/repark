@@ -27,7 +27,8 @@ v1 crate-root re-export lists.
   repark-core) + `iceberg` + `iceberg-datafusion` + `iceberg-catalog-glue` +
   `iceberg-catalog-s3tables` + `iceberg-storage-opendal` (`opendal-s3`) + `datafusion` +
   `parquet` + `async-trait` + `futures`/`uuid` + `tracing`. Dev-deps `tokio` + `tempfile` +
-  `tracing-subscriber` (registry). The `iceberg*` family is sourced from the owned fork via the
+  `tracing-subscriber` (registry) + `serde_json` (ICE-OCC-SCOPED-1's race pin reads a Spark
+  recording). The `iceberg*` family is sourced from the owned fork via the
   workspace `[patch.crates-io]`.
 - `src/lib.rs` — thin manifest: `pub mod catalog; pub mod write;` + the union re-export lists
   (+ the file-backed `#[cfg(test)] mod tests;`).

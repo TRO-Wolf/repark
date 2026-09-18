@@ -11,7 +11,7 @@ use repark_iceberg::write::{
     PartitionOverwritePlan, commit_overwrite_by_row_filter, commit_replace_partitions,
     partition_overwrite_request_from_exprs, plan_partition_overwrite,
     refuse_empty_dynamic_overwrite, stage_static_partition_overwrite_files,
-    write_overwrite_staged_files_from_stream,
+    static_partition_source_columns, write_overwrite_staged_files_from_stream,
 };
 
 use crate::schema_ddl::{catalog_handle, name_parts};
@@ -56,7 +56,7 @@ async fn execute_partition_overwrite(
             "INSERT OVERWRITE … PARTITION requires a SELECT or VALUES source".to_string(),
         )
     })?;
-    let column_names: Vec<String> = insert
+    let listed: Vec<String> = insert
         .columns
         .iter()
         .filter_map(|name| {
@@ -66,9 +66,21 @@ async fn execute_partition_overwrite(
                 .map(|ident| ident.value.clone())
         })
         .collect();
-    let materialize_sql = format!("SELECT * FROM ({source}) AS _repark_ow_src");
+    let reserved = match &overwrite_plan {
+        PartitionOverwritePlan::Static(spec) => {
+            static_partition_source_columns(&table, &spec.equalities)?
+        }
+        PartitionOverwritePlan::Dynamic => Vec::new(),
+    };
+    let filled = repark_iceberg::write::insert_defaults::overwrite_source_with_defaults(
+        table.metadata().current_schema(),
+        &listed,
+        &reserved,
+        source,
+    )?;
+    let column_names = filled.columns;
     let belt = repark_core::PreExecute::new(cx.ctx, cx.catalogs);
-    let plan = belt.plan(&materialize_sql).await?;
+    let plan = belt.plan(&filled.sql).await?;
     belt.guard(&plan)?;
     let source_df = belt.execute(plan).await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(cx.ctx);
@@ -79,6 +91,7 @@ async fn execute_partition_overwrite(
                 &table,
                 batches,
                 &spec.equalities,
+                &column_names,
                 concurrency,
             )
             .await?;

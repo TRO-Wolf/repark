@@ -859,7 +859,7 @@ migration:
 |---|---|
 | [§2.1 Iceberg metadata tables](../spark-sql-iceberg-parity.md#21-iceberg-metadata-tables) | MT-1, MT-2, F-V4-1 |
 | [§2.2 Snapshot-ref DDL (`BRANCH` / `TAG`)](../spark-sql-iceberg-parity.md#22-snapshot-ref-ddl-branch--tag) | REF-1, REF-2 |
-| [§2.3 DML statement forms](../spark-sql-iceberg-parity.md#23-dml-statement-forms) | DML-1 … DML-5 (including [DML-5](../spark-sql-iceberg-parity.md#dml-5--serializable-merge-conflict-detection-breadth), the over-broad serializable MERGE conflict check and its `write.merge.isolation-level` relief valve) |
+| [§2.3 DML statement forms](../spark-sql-iceberg-parity.md#23-dml-statement-forms) | DML-1 … DML-5 (including [DML-5](../spark-sql-iceberg-parity.md#dml-5--serializable-merge-conflict-detection-breadth): serializable DML conflict validation scoped to the statement's own target predicate since 2026-09-17, except a plain-`WHERE` UPDATE) |
 | [§2.4 Namespace and table listing statements](../spark-sql-iceberg-parity.md#24-namespace-and-table-listing-statements) | NS-1, NS-2, ST-1 |
 
 The registry is authoritative. Where this guide and a row disagree, the row wins.

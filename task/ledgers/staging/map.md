@@ -18,6 +18,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (`CREATE TABLE` with nested columns, `ADD`/`RENAME`/`DROP COLUMN` on a nested path, the
   required-child refusal). Fork half F-NESTED-EVO-1 (fork PR #292). `risk_tier: high`.
   Branch `fix/ice-nested-evo-1`.
+- [ice-evo-dml-1-ledger.md](ice-evo-dml-1-ledger.md) —
+  **ICE-EVO-DML-1 (2026-09-17), in flight:** MERGE / UPDATE / DELETE after `ADD COLUMN` or
+  `RENAME COLUMN` with no write since answer Spark 4.1.2 instead of refusing `Column … not
+  found in table`, and a rename that swaps two names no longer writes one column's values under
+  the other — the DML target scan plans the pinned snapshot and reads it under the current
+  schema. v2/v3 × CoW/MoR, both doors, a Spark-created evolved table adopted. Registry rows
+  ICE-EVO-DML-1, ICE-EVO-SWAP-1. `risk_tier: high`. Branch `fix/ice-evo-dml-1`.
 - [ice-promote-read-1-ledger.md](ice-promote-read-1-ledger.md) —
   **ICE-PROMOTE-READ-1 (2026-09-16), in flight:** reads and DML after a legal
   `ALTER COLUMN … TYPE` promotion answer Spark 4.1.2 — range / long-`IN` filters, promoted
@@ -413,6 +420,20 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   behind `Box::pin` (16 KiB `large_futures`). `risk_tier: standard`. Branch
   `feat/ice-rdf-options-1`.
   pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [ice-sorted-insert-1-ledger.md](ice-sorted-insert-1-ledger.md) —
+  **ICE-SORTED-INSERT-1 (2026-09-17), in flight:** sort-on-INSERT end to end
+  against Spark — the fork #287 per-writer-stream sort plus `sort_order_id`
+  stamp at fork main `4151b488` (RP-22), proven by per-file sortedness and
+  stamp pins on the SQL and DataFrame doors plus the RePark-owned paths
+  (INSERT OVERWRITE, CTAS, MERGE), with the Spark oracle recorded as truth
+  JSON plus a live replay tier; registry sort-on-INSERT row FIXED. Round 3
+  (2026-09-17, logic-critic remediation): the v3 lineage fanout sorts before it
+  stamps, the owned sort canonicalises NaN, every stamp site has a revert-red
+  pin, and the binpack and fork-UPDATE rewrites are filed as fork asks
+  (`F-RDF-SORT-STAMP-1`, `F-COW-UPDATE-STAMP-1`) with strict-xfail pins.
+  `risk_tier: standard`. Branch `feat/ice-sorted-insert-1`.
+  pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-005
+  pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
 
 ## Pointers
 - Up: [../map.md](../map.md)
@@ -906,6 +927,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fixtures (`python/repark/tests/fixtures/orc/`).
   `risk_tier: standard`. Branch `feat/io-orc-1`.
   pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ice-dyn-overwrite-1-ledger.md](ice-dyn-overwrite-1-ledger.md) —
+  **ICE-DYN-OVERWRITE-1 (2026-09-17), in flight:** dynamic `partitionOverwriteMode`
+  routing for PARTITION-less overwrites (V2-24b) plus the INSERT OVERWRITE half of the
+  V2-20a K4 race — Rust-first conf carrier, dynamic path through `ReplacePartitions`,
+  empty-dynamic no-op, `saveAsTable` static overwrite through a typed session flag, Spark
+  race matrix with disk-verified interleaves (default/snapshot silently replace the
+  same-partition append, serializable refuses loud). Fixture
+  `python/repark-parity/fixtures/torture/data/ice_dyn_overwrite_1/spark_oracle.json`;
+  pins `test_ice_dyn_overwrite_1.py` (C-001…C-018) + `tests::dyn_partition_overwrite`.
+  `risk_tier: standard`. Branch `fix/ice-dyn-overwrite-1`.
+  pins: ice-dyn-overwrite-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
 - [ice-rtas-byname-1-ledger.md](ice-rtas-byname-1-ledger.md) —
   **ICE-RTAS-BYNAME-1 (2026-09-17), in flight:** `INSERT … BY NAME` column
   resolution on the Spark door plus the RTAS snapshot-operation divergence
@@ -924,3 +956,25 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (family C, counts healthy, no regression). No product code.
   `risk_tier: standard`. Branch `chore/fork-pin-ice-20c-2`.
   pins: rp-23-pin-bump/C-001, C-002, C-003, C-004
+- [ice-rdf-fork-asks-1-ledger.md](ice-rdf-fork-asks-1-ledger.md) —
+  **ICE-RDF-FORK-ASKS-1 (2026-09-17), in flight:** the 13 RDF strict xfails re-measured
+  on RP-23 (`4151b488`, zero XPASS) and the three unnamed reasons named as registry
+  fork asks (`ICE-RDF-GRANULARITY-1`, `ICE-RDF-COW-BYTES-1`, `ICE-RDF-RPD-COMMITS-1`)
+  beside `ICE-RDF-DANGLE-2`. Docs-only unit, no product change.
+  `risk_tier: standard`. Branch `docs/ice-rdf-fork-asks-1`.
+  pins: ice-rdf-fork-asks-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [listing-cost-flake-1-ledger.md](listing-cost-flake-1-ledger.md) —
+  **LISTING-COST-FLAKE-1 (2026-09-18), in flight:** the catalog
+  listing-cost pin counts calls, not wall-clock — the `Instant` ratio
+  assertion over 20 iterations becomes exact `list_tables` / `load_table`
+  counts on a delegating counting catalog (test code only).
+  `risk_tier: standard`. Branch `fix/listing-cost-flake-1`.
+  pins: listing-cost-flake-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [ice-v3-write-default-1-ledger.md](ice-v3-write-default-1-ledger.md) —
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17), in flight:** omitted columns on every
+  Iceberg write path fill from the schema field's `write_default` in Rust, in
+  the shared write-projection step — INSERT / MERGE column lists and the
+  DataFrame writers on both SQL doors, with type fidelity and the measured
+  Spark oracle as a checked-in fixture.
+  `risk_tier: standard`. Branch `fix/ice-v3-write-default-1`.
+  pins: ice-v3-write-default-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014

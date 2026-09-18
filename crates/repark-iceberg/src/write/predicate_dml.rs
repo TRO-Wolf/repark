@@ -22,10 +22,11 @@ use std::str::FromStr;
 use uuid::Uuid;
 
 use crate::write::concurrency::concurrency_from_ctx;
+use crate::write::conflict_filter::for_identity_dml;
 use crate::write::file_scoped_rewrite::allowlist_from_paths;
 use crate::write::merge::row_lineage::{scratch_schema_for_table, table_carries_merge_lineage};
 use crate::write::merge::{
-    FILE_PATH_COL, IsolationLevel, POS_COL, RowDeltaKind, RowDeltaPolicy, TargetScanStream,
+    CommitScope, FILE_PATH_COL, IsolationLevel, POS_COL, RowDeltaKind, TargetScanStream,
     commit_overwrite, commit_row_delta_kind_with_partitions, deregister_merge_scratch,
     drain_partition_sink, iceberg_err, new_partition_sink, quote_ident, register_streaming_target,
     reserved_name_guard, resolve_affected_data_files, scratch_schema,
@@ -254,7 +255,10 @@ pub async fn execute_predicate_dml(
         Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
     reserved_name_guard(&write_schema)?;
     let mode = resolve_delete_mode(&table)?;
-    let isolation = resolve_delete_isolation(&table)?;
+    let scope = CommitScope::scoped(
+        resolve_delete_isolation(&table)?,
+        for_identity_dml(&table, &spec.selection_sql, &spec.target_alias),
+    );
     let snapshot_id = table
         .metadata()
         .current_snapshot()
@@ -288,7 +292,7 @@ pub async fn execute_predicate_dml(
                     &write_schema,
                     snapshot_id,
                     &pairs,
-                    isolation,
+                    &scope,
                 )
                 .await
             }
@@ -300,10 +304,7 @@ pub async fn execute_predicate_dml(
                     pairs,
                     Vec::new(),
                     concurrency_from_ctx(ctx),
-                    RowDeltaPolicy {
-                        kind: RowDeltaKind::Delete,
-                        isolation,
-                    },
+                    &scope.row_delta(RowDeltaKind::Delete),
                     drain_partition_sink(&partitions),
                 )
                 .await
@@ -333,7 +334,10 @@ async fn execute_identity_update(
     reserved_name_guard(&write_schema)?;
     validate_update_assignments(&write_schema, assignments)?;
     let mode = resolve_update_mode(&table)?;
-    let isolation = resolve_update_isolation(&table)?;
+    let scope = CommitScope::scoped(
+        resolve_update_isolation(&table)?,
+        for_identity_dml(&table, &spec.selection_sql, &spec.target_alias),
+    );
     let snapshot_id = table
         .metadata()
         .current_snapshot()
@@ -368,7 +372,7 @@ async fn execute_identity_update(
                     &write_schema,
                     snapshot_id,
                     (pairs, data_batches),
-                    isolation,
+                    &scope,
                 )
                 .await
             }
@@ -388,11 +392,7 @@ async fn execute_identity_update(
                     pairs,
                     data_files,
                     concurrency_from_ctx(ctx),
-                    RowDeltaPolicy {
-                        // Java buckets UPDATE with MERGE (L251-254).
-                        kind: RowDeltaKind::Merge,
-                        isolation,
-                    },
+                    &scope.row_delta(RowDeltaKind::Merge),
                     drain_partition_sink(&partitions),
                 )
                 .await
@@ -476,7 +476,7 @@ async fn commit_identity_update_cow(
     write_schema: &datafusion::arrow::datatypes::SchemaRef,
     snapshot_id: Option<i64>,
     rewrite: (Vec<PositionDeletePair>, Vec<RecordBatch>),
-    isolation: IsolationLevel,
+    scope: &CommitScope,
 ) -> Result<()> {
     let (pairs, data_batches) = rewrite;
     let mut affected: Vec<String> = Vec::new();
@@ -518,7 +518,7 @@ async fn commit_identity_update_cow(
         snapshot_id,
         affected_entries,
         new_files,
-        isolation,
+        scope,
     )
     .await
 }
@@ -569,7 +569,7 @@ async fn commit_identity_cow(
     write_schema: &datafusion::arrow::datatypes::SchemaRef,
     snapshot_id: Option<i64>,
     pairs: &[PositionDeletePair],
-    isolation: IsolationLevel,
+    scope: &CommitScope,
 ) -> Result<()> {
     let mut affected: Vec<String> = Vec::new();
     let mut seen = std::collections::HashSet::new();
@@ -603,7 +603,7 @@ async fn commit_identity_cow(
         snapshot_id,
         affected_entries,
         new_files,
-        isolation,
+        scope,
     )
     .await
 }

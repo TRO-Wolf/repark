@@ -47,6 +47,7 @@ pub(crate) async fn execute_insert_by_name(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     stripped_sql: &str,
+    force_static_overwrite: bool,
 ) -> Result<DataFrame> {
     let parsed = parse_single_normalized(stripped_sql)?;
     let Some((statement, _)) = parsed else {
@@ -103,6 +104,7 @@ pub(crate) async fn execute_insert_by_name(
             )
             .await;
         }
+        let dynamic = crate::insert_overwrite::overwrite_is_dynamic(ctx, force_static_overwrite);
         if projection_is_empty(ctx, catalogs, &projection_sql).await? {
             let namespace = namespace_schema_name(table.identifier().namespace());
             let type_table_sql =
@@ -115,14 +117,9 @@ pub(crate) async fn execute_insert_by_name(
                 &[],
             )
             .await?;
-            repark_iceberg::write::commit_overwrite_replace_all_to(
-                &catalog,
-                &table,
-                Vec::new(),
-                branch.as_deref(),
-            )
-            .await?;
-            reregister(ctx, catalog, &catalog_name, &namespace).await?;
+            if !dynamic {
+                wipe_by_name_target(ctx, &catalog_name, catalog, &table, branch.as_deref()).await?;
+            }
             return ctx.read_empty();
         }
         return crate::insert_overwrite::insert_overwrite_from_staged_source(
@@ -132,6 +129,7 @@ pub(crate) async fn execute_insert_by_name(
             &table_sql,
             &query,
             &insert.columns,
+            dynamic,
         )
         .await;
     }
@@ -145,6 +143,19 @@ pub(crate) async fn execute_insert_by_name(
         &projection_sql,
     )
     .await
+}
+
+async fn wipe_by_name_target(
+    ctx: &SessionContext,
+    catalog_name: &str,
+    catalog: Arc<dyn Catalog>,
+    table: &iceberg::table::Table,
+    branch: Option<&str>,
+) -> Result<()> {
+    repark_iceberg::write::commit_overwrite_replace_all_to(&catalog, table, Vec::new(), branch)
+        .await?;
+    let namespace = namespace_schema_name(table.identifier().namespace());
+    reregister(ctx, catalog, catalog_name, &namespace).await
 }
 
 async fn append_by_name_projection(

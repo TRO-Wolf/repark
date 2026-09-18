@@ -30,6 +30,16 @@ pub async fn execute(
     execute_with_read_only(ctx, catalogs, sql, &HashSet::new()).await
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub async fn execute_static_overwrite<S: std::hash::BuildHasher>(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    read_only_catalogs: &HashSet<String, S>,
+) -> Result<DataFrame> {
+    execute_routed(ctx, catalogs, sql, read_only_catalogs, true).await
+}
+
 /// Execute with a set of read-only (postgres) catalog names for P11 DML routing.
 /// # Errors
 /// # Errors Any planning/execution error from the underlying statement, plus the P11 refusal.
@@ -38,6 +48,16 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     catalogs: &CatalogRegistry,
     sql: &str,
     read_only_catalogs: &HashSet<String, S>,
+) -> Result<DataFrame> {
+    execute_routed(ctx, catalogs, sql, read_only_catalogs, false).await
+}
+
+async fn execute_routed<S: std::hash::BuildHasher>(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    read_only_catalogs: &HashSet<String, S>,
+    force_static_overwrite: bool,
 ) -> Result<DataFrame> {
     // Canonicalize once at the Spark SQL front door so later tokenizers cannot process escapes again.
     // Translate downstream parser locations back to the caller's SQL before returning an error.
@@ -77,6 +97,7 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
         original_for_locations,
         &mut pinned,
         &mut lineage_pins,
+        force_static_overwrite,
     )
     .await;
     lineage_pins.release(ctx);
@@ -92,6 +113,7 @@ async fn execute_time_travelled(
     original_for_locations: Option<&str>,
     pinned: &mut time_travel::PinnedViews,
     lineage_pins: &mut repark_core::LineagePins,
+    force_static_overwrite: bool,
 ) -> Result<DataFrame> {
     // Iceberg time travel is not modelled by Databricks-dialect sqlparser.
     let sql_after_tt: std::borrow::Cow<'_, str> = if time_travel::sql_has_time_travel(sql) {
@@ -115,7 +137,7 @@ async fn execute_time_travelled(
         Some(rewritten) => std::borrow::Cow::Owned(rewritten),
         None => sql_after_tt,
     };
-    let result = execute_inner(ctx, catalogs, sql_storage.as_ref()).await;
+    let result = execute_inner(ctx, catalogs, sql_storage.as_ref(), force_static_overwrite).await;
     if let Some(original) = original_for_locations
         .and_then(|original| original_sql_for_locations(original, sql, sql_storage.as_ref()))
     {
@@ -142,12 +164,16 @@ async fn execute_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
+    force_static_overwrite: bool,
 ) -> Result<DataFrame> {
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
     if let Some(stripped) = crate::insert_by_name::strip_insert_by_name(sql)? {
         return Box::pin(crate::insert_by_name::execute_insert_by_name(
-            ctx, catalogs, &stripped,
+            ctx,
+            catalogs,
+            &stripped,
+            force_static_overwrite,
         ))
         .await;
     }
@@ -209,7 +235,7 @@ async fn execute_inner(
         }
         // INSERT OVERWRITE: probe and validate before an empty-source wipe.
         Statement::Insert(insert) if insert.overwrite => {
-            execute_insert_overwrite(ctx, catalogs, sql, insert).await
+            execute_insert_overwrite(ctx, catalogs, sql, insert, force_static_overwrite).await
         }
         // Non-overwrite INSERT would otherwise passthrough to DF and miss P11 for pg targets.
         Statement::Insert(insert) => {

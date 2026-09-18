@@ -26,6 +26,28 @@ holds behavior observed from outside the crate.
   literal semantics (backslash literal, `\'` does not lex, raw strings refuse) — Spark-only (ADR-0002).
 - `parser_productions.rs` — pins stock-parser support and the productions that still require
   pre-parse recognition (`ALTER … SET PROPERTIES`, `ALTER … EXECUTE`, and `FOR … AS OF`).
+- `ansi_write_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** ANSI-door
+  `INSERT` with a column list fills an omitted `write_default` column through the
+  shared `insert_defaults` step, and a missing required column refuses with the
+  same nullability text as the Spark door.
+  pins: ice-v3-write-default-1/C-004
+  **Round 5 (2026-09-17, run 21b, ruling Q-21b-3):** the ANSI door's PARTITION
+  arms too — `INSERT OVERWRITE t (cols) PARTITION (k)` and
+  `… (cols) PARTITION (k = v)` fill an omitted defaulted column instead of
+  writing NULL (dynamic, the V3-03b silent-wrong) or refusing
+  `NOT_ENOUGH_DATA_COLUMNS` (static).
+  pins: ice-v3-write-default-1/C-015
+  Round 5, ruling Q-21b-4: `DEFAULT` as a value on the ANSI PARTITION overwrite fills
+  (the ANSI router runs the marker pass before dispatch; whole-table overwrite stays
+  the Q9 refusal, row DML-1). pins: ice-v3-write-default-1/C-016
+  **Round 2 (2026-09-18, run 21b, ruling Q-21b-9):** `DEFAULT` in the outer SELECT of an
+  INSERT whose query carries `WITH` refuses `UNRESOLVED_COLUMN` 42703 on `INSERT INTO` and on the
+  PARTITION overwrite arm, as Spark 4.1.2 does, and writes nothing.
+  pins: ice-v3-write-default-1/C-021
+  Branch pins (AT-10): a static partition value wins over that column's own
+  write-default (table `q`, partitioned on the defaulted `c`); a listed static column
+  refuses `STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST`; arity and duplicate-name
+  refusals write nothing. pins: ice-v3-write-default-1/C-015
 
 - `session_timestamp_type_ansi_door.rs` — **Q10:** ANSI-door cell of
   `spark.sql.timestampType=TIMESTAMP_NTZ` on a Spark-extended session

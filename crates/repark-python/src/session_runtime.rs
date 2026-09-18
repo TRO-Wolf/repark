@@ -79,10 +79,17 @@ fn apply_runtime_config(
         write_case_sensitive_flag(session, enabled)?;
         return Ok(());
     }
+    if key == repark_core::PARTITION_OVERWRITE_MODE_KEY {
+        let mode = repark_core::parse_partition_overwrite_mode(value)
+            .map_err(|error| Error::IllegalArgument(configuration_message(error)))?;
+        write_overwrite_mode(session, mode)?;
+        return Ok(());
+    }
     Err(Error::IllegalArgument(format!(
         "set_runtime_config refuses unknown key {key:?} (served: \
          {SPARK_SQL_ANSI_ENABLED_KEY:?}, {SESSION_TIME_ZONE_KEY:?}, \
-         {SPARK_SQL_CASE_SENSITIVE_KEY:?})"
+         {SPARK_SQL_CASE_SENSITIVE_KEY:?}, {:?})",
+        repark_core::PARTITION_OVERWRITE_MODE_KEY
     )))
 }
 
@@ -129,6 +136,30 @@ fn write_case_sensitive_flag(session: &ReparkSession, enabled: bool) -> Result<(
         None => Err(Error::IllegalArgument(format!(
             "set_runtime_config refuses {SPARK_SQL_CASE_SENSITIVE_KEY:?}: \
              the live session has no case-sensitivity carrier"
+        ))),
+    }
+}
+
+fn write_overwrite_mode(
+    session: &ReparkSession,
+    mode: repark_core::PartitionOverwriteMode,
+) -> Result<()> {
+    let state_lock = session.context().state_ref();
+    let mut state = state_lock.write();
+    let carrier = state
+        .config_mut()
+        .options_mut()
+        .extensions
+        .get_mut::<repark_core::PartitionOverwriteModeConfig>();
+    match carrier {
+        Some(carrier) => {
+            carrier.mode = mode;
+            Ok(())
+        }
+        None => Err(Error::IllegalArgument(format!(
+            "set_runtime_config refuses {:?}: \
+             the live session has no partition-overwrite-mode carrier",
+            repark_core::PARTITION_OVERWRITE_MODE_KEY
         ))),
     }
 }

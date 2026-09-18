@@ -29,10 +29,40 @@ pub(crate) enum RowDeltaKind {
     Delete,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct CommitScope {
+    pub isolation: IsolationLevel,
+    pub conflict_filter: Predicate,
+}
+
+impl CommitScope {
+    #[cfg(test)]
+    pub(crate) fn unscoped(isolation: IsolationLevel) -> Self {
+        Self {
+            isolation,
+            conflict_filter: Predicate::AlwaysTrue,
+        }
+    }
+
+    pub(crate) fn scoped(isolation: IsolationLevel, conflict_filter: Predicate) -> Self {
+        Self {
+            isolation,
+            conflict_filter,
+        }
+    }
+
+    pub(crate) fn row_delta(&self, kind: RowDeltaKind) -> RowDeltaPolicy {
+        RowDeltaPolicy {
+            kind,
+            scope: self.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct RowDeltaPolicy {
     pub kind: RowDeltaKind,
-    pub isolation: IsolationLevel,
+    pub scope: CommitScope,
 }
 
 pub(crate) fn resolve_merge_isolation(table: &Table) -> Result<IsolationLevel> {
@@ -60,7 +90,16 @@ pub(crate) async fn commit(
     affected: Vec<DataFile>,
     new_files: Vec<DataFile>,
 ) -> Result<()> {
-    commit_on_ref(catalog, table, snapshot_id, affected, new_files, None).await
+    commit_on_ref(
+        catalog,
+        table,
+        snapshot_id,
+        affected,
+        new_files,
+        &Predicate::AlwaysTrue,
+        None,
+    )
+    .await
 }
 
 pub(crate) async fn commit_on_ref(
@@ -69,6 +108,7 @@ pub(crate) async fn commit_on_ref(
     snapshot_id: Option<i64>,
     affected: Vec<DataFile>,
     new_files: Vec<DataFile>,
+    conflict_filter: &Predicate,
     branch: Option<&str>,
 ) -> Result<()> {
     let isolation = resolve_merge_isolation(table)?;
@@ -78,7 +118,7 @@ pub(crate) async fn commit_on_ref(
         snapshot_id,
         affected,
         new_files,
-        isolation,
+        &CommitScope::scoped(isolation, conflict_filter.clone()),
         branch,
     )
     .await
@@ -90,7 +130,7 @@ pub(crate) async fn commit_overwrite(
     snapshot_id: Option<i64>,
     affected: Vec<DataFile>,
     new_files: Vec<DataFile>,
-    isolation: IsolationLevel,
+    scope: &CommitScope,
 ) -> Result<()> {
     commit_overwrite_on_ref(
         catalog,
@@ -98,7 +138,7 @@ pub(crate) async fn commit_overwrite(
         snapshot_id,
         affected,
         new_files,
-        isolation,
+        scope,
         None,
     )
     .await
@@ -110,7 +150,7 @@ pub(crate) async fn commit_overwrite_on_ref(
     snapshot_id: Option<i64>,
     affected: Vec<DataFile>,
     new_files: Vec<DataFile>,
-    isolation: IsolationLevel,
+    scope: &CommitScope,
     branch: Option<&str>,
 ) -> Result<()> {
     if affected.is_empty() && new_files.is_empty() {
@@ -123,10 +163,10 @@ pub(crate) async fn commit_overwrite_on_ref(
         let mut action = tx
             .overwrite_files()
             .add_files(new_files)
-            .conflict_detection_filter(Predicate::AlwaysTrue)
+            .conflict_detection_filter(scope.conflict_filter.clone())
             .case_sensitive(true)
             .set_snapshot_properties(summary);
-        if isolation == IsolationLevel::Serializable {
+        if scope.isolation == IsolationLevel::Serializable {
             action = action.validate_no_conflicting_data();
         }
         if let Some(pin) = snapshot_id {
@@ -142,11 +182,11 @@ pub(crate) async fn commit_overwrite_on_ref(
             .overwrite_files()
             .delete_data_files(affected)
             .add_files(new_files)
-            .conflict_detection_filter(Predicate::AlwaysTrue)
+            .conflict_detection_filter(scope.conflict_filter.clone())
             .validate_no_conflicting_deletes()
             .case_sensitive(true)
             .set_snapshot_properties(summary);
-        if isolation == IsolationLevel::Serializable {
+        if scope.isolation == IsolationLevel::Serializable {
             action = action.validate_no_conflicting_data();
         }
         if let Some(pin) = snapshot_id {
@@ -206,10 +246,7 @@ pub(crate) async fn commit_row_delta_on_ref(
         pairs,
         data_files,
         concurrency,
-        RowDeltaPolicy {
-            kind: RowDeltaKind::Merge,
-            isolation,
-        },
+        &CommitScope::unscoped(isolation).row_delta(RowDeltaKind::Merge),
         branch,
         KnownPartitions::new(),
     )
@@ -224,10 +261,12 @@ pub(crate) async fn commit_row_delta_on_ref_with_partitions(
     pairs: Vec<crate::write::position_delete::PositionDeletePair>,
     data_files: Vec<DataFile>,
     concurrency: WriteConcurrency,
+    conflict_filter: &Predicate,
     branch: Option<&str>,
     known_partitions: KnownPartitions,
 ) -> Result<()> {
     let isolation = resolve_merge_isolation(table)?;
+    let scope = CommitScope::scoped(isolation, conflict_filter.clone());
     commit_row_delta_kind_on_ref(
         catalog,
         table,
@@ -235,10 +274,7 @@ pub(crate) async fn commit_row_delta_on_ref_with_partitions(
         pairs,
         data_files,
         concurrency,
-        RowDeltaPolicy {
-            kind: RowDeltaKind::Merge,
-            isolation,
-        },
+        &scope.row_delta(RowDeltaKind::Merge),
         branch,
         known_partitions,
     )
@@ -253,7 +289,7 @@ pub(crate) async fn commit_row_delta_kind(
     pairs: Vec<crate::write::position_delete::PositionDeletePair>,
     data_files: Vec<DataFile>,
     concurrency: WriteConcurrency,
-    policy: RowDeltaPolicy,
+    policy: &RowDeltaPolicy,
 ) -> Result<()> {
     commit_row_delta_kind_on_ref(
         catalog,
@@ -277,7 +313,7 @@ pub(crate) async fn commit_row_delta_kind_with_partitions(
     pairs: Vec<crate::write::position_delete::PositionDeletePair>,
     data_files: Vec<DataFile>,
     concurrency: WriteConcurrency,
-    policy: RowDeltaPolicy,
+    policy: &RowDeltaPolicy,
     known_partitions: KnownPartitions,
 ) -> Result<()> {
     commit_row_delta_kind_on_ref(
@@ -302,7 +338,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     pairs: Vec<crate::write::position_delete::PositionDeletePair>,
     data_files: Vec<DataFile>,
     concurrency: WriteConcurrency,
-    policy: RowDeltaPolicy,
+    policy: &RowDeltaPolicy,
     branch: Option<&str>,
     known_partitions: KnownPartitions,
 ) -> Result<()> {
@@ -334,7 +370,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let mut action = tx.row_delta().add_data_files(data_files);
     action = prepared.apply(action);
     action = action
-        .conflict_detection_filter(Predicate::AlwaysTrue)
+        .conflict_detection_filter(policy.scope.conflict_filter.clone())
         .validate_data_files_exist(referenced)
         .case_sensitive(true)
         .set_snapshot_properties(summary);
@@ -345,7 +381,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     } else if arm_deleted_on_delete {
         action = action.validate_deleted_files();
     }
-    if policy.isolation == IsolationLevel::Serializable {
+    if policy.scope.isolation == IsolationLevel::Serializable {
         action = action.validate_no_conflicting_data_files();
     }
     if let Some(pin) = snapshot_id {
