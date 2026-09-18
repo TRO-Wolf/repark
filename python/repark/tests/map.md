@@ -6601,4 +6601,16 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2
   on the path.
   pins: ice-write-options-rp-1/C-002
+- [test_ice_write_options_rp_1.py](test_ice_write_options_rp_1.py) —
+  **ICE-WRITE-OPTIONS-RP-1 (2026-09-18, RP-30):** a caller-supplied
+  `snapshot-property.replace-partitions` value wins on a replace-partitions commit —
+  one pin per recorded cell (5) asserting the write commits and the newest snapshot's
+  summary `replace-partitions` (and `k` for the control) equals Spark's, each on a
+  fresh RePark memory catalog with the cell's table, seed, source and door. Green at
+  fork #298 (F-RP-SUMMARY-USER-1); the two `false` cells are red at the old pin by the
+  registry row's sentence (RePark wrote `true` either way). Live
+  (`REPARK_PARITY_LIVE=1`): Spark replays the `overwritePartitions_false` cell and
+  answers the recorded summary. Truth in
+  [../../repark-parity/fixtures/torture/data/ice_write_options_rp_1/](../../repark-parity/fixtures/torture/data/ice_write_options_rp_1/map.md).
+  pins: ice-write-options-rp-1/C-003, C-004, C-005, C-006
 
