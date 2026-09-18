@@ -1749,6 +1749,127 @@ Unit ICE-MIXED-CASE-1, run 21b round 2 (2026-09-18), ruling Q-21b-11.
   `HashMap` bucket order, and the two coincide only on collision-free monotonic partition sets —
   `{10, 20}`, this matrix's seed, is one of them.
 
+### ICE-TSNS-SQL-1 — `timestamp_ns` / `timestamptz_ns` on the SQL door answer the Iceberg v3 spec — **FIXED 2026-09-17**
+
+- **repark** — on a format-v3 Iceberg target, the Spark SQL door (the facade `spark.sql` and the
+  Rust `repark-spark` door) now carries nanosecond timestamps end to end.
+  `CAST(<string> AS timestamp_ns)` parses up to nine fraction digits exactly into Arrow
+  `Timestamp(ns)`; `CAST(<string> AS timestamptz_ns)` into `Timestamp(ns, "UTC")`, honouring
+  an explicit offset and otherwise reading the string as a wall in the session zone, as the
+  microsecond `TIMESTAMP` cast does. The type names are case-insensitive (`::` included). A
+  malformed string raises `[CAST_INVALID_INPUT]` under ANSI and is NULL without it, as the
+  `TIMESTAMP` cast answers. A `TIMESTAMP` value or a string literal written into an ns column
+  by `INSERT … VALUES`, `INSERT … SELECT` (from `TIMESTAMP` columns or ns casts),
+  `INSERT OVERWRITE`, MERGE insert/update or CTAS widens exactly (µs × 1000) — never the raw
+  Arrow `expected Timestamp(ns) but found Timestamp(µs, "UTC")` error it raised before.
+  A string COLUMN into an ns column stays refused by the WI-2 store-assignment gate, as it is
+  for `TIMESTAMP` columns. `days(ts)` on ns partitions at the true day boundary, and RePark's
+  `.partitions` answer equals PyIceberg's read-back. `CAST(<ns> AS STRING)` keeps up to nine
+  digits with the microsecond trimming rule (`…05.123456789`, `…00:00:00.000000001`,
+  `…05.5`, no fraction when zero). Predicates compare at nanosecond precision. Before
+  2026-09-17 every ns cast refused `Unsupported SQL type timestamp_ns`, every
+  microsecond or string write into an ns column failed with the raw Arrow error, and
+  `CAST(<ns> AS STRING)` silently dropped the nanoseconds. Format-v2 tables keep refusing ns
+  types at CREATE. Not in this row: `hours()` on ns
+  ([ICE-TSNS-SQL-1-R-003](#ice-tsns-sql-1-r-003--blocked-on-fork-measured-2026-09-17-hours-on-a-nanosecond-column-refuses)),
+  `DESCRIBE` type names
+  ([R-001](#ice-tsns-sql-1-r-001--open-measured-2026-09-17-describe-shows-no-nanosecond-type-name)),
+  the write-direction oracle
+  ([R-002](#ice-tsns-sql-1-r-002--open-2026-09-17-no-second-engine-writes-format-v3-yet)),
+  and `TRY_CAST(… AS timestamp_ns)`, which still refuses `Unsupported SQL type`.
+  **2026-09-18 (ruling Q-21c-8):** the SQL type name `TIMESTAMP` is always Spark's µs LTZ type.
+  `CAST(<ns column> AS TIMESTAMP)` narrows to `Timestamp(µs, "UTC")`, floored to microseconds
+  (a `timestamp_ns` wall read in the session zone, a `timestamptz_ns` instant kept), and
+  equals the DataFrame spelling `.cast("timestamp")`, which now floors and reads the wall in
+  the session zone too (it had truncated toward zero and read the wall as UTC). Before, the SQL
+  cast kept `Timestamp(ns)` and every digit. A `TIMESTAMP '…'` or `CAST(… AS TIMESTAMP)` cell
+  in `INSERT … VALUES` stores its µs value × 1000, as `INSERT … SELECT` does; before, it was
+  re-read at nine digits. A bare string still keeps nine digits. `EXPLAIN` now lowers ns casts.
+  Not in this row: `CAST(ns AS TIMESTAMP)` under `spark.sql.timestampType=TIMESTAMP_NTZ`,
+  which still keeps `Timestamp(ns)`, and
+  [R-007](#ice-tsns-sql-1-r-007--open-measured-2026-09-18-merge-writes-a-timestamp-into-timestamp_ns-as-its-utc-wall).
+- **Apache Spark** — Spark 4.1.2 cannot read or write either type
+  (`UnsupportedOperationException: Cannot convert unsupported type to Spark: timestamp_ns`,
+  measured by the 2026-09-16 rating), so there is no Spark answer to match; the SQL door
+  answers the Iceberg v3 spec (int64 nanoseconds since the epoch, `timestamptz_ns`
+  UTC-adjusted) and a second engine must read back exactly what RePark wrote. *(oracle:
+  recorded — Iceberg v3 spec plus a PyIceberg 0.12.0 `StaticTable` read-back of the
+  DataFrame-door control and of every SQL-door table, in
+  `python/repark/tests/ice_tsns_sql_1_oracle.json` via
+  `python/repark/tests/_record_ice_tsns_sql_1_oracle.py`; no Spark measurement exists or
+  is claimed.)*
+- **Pin** — `python/repark/tests/test_ice_tsns_sql_1.py` (42 pins plus one xfail on
+  R-003, every expected value read from the fixture); the recorder's PyIceberg `check` leg over
+  the SQL-door tables; `crates/repark-spark/src/tests/v3_timestamp_ns_door.rs` (casts, INSERT
+  VALUES / SELECT widening, rendering and predicates on the Rust door); the unit suites in
+  `crates/repark-functions/src/timestamp_ns_cast/tests.rs` and
+  `crates/repark-spark/src/keyword_lower.rs`.
+- **Rationale** — FIXED, ruling Q-21c-6. Rating row V3-06 and the `timestamp_ns` half of
+  V3-04. Every value decision is in Rust: the embedded casts in `repark-functions`, the SQL-door
+  lowering and INSERT conform in `repark-spark`.
+
+### ICE-TSNS-SQL-1-R-007 — OPEN (measured 2026-09-18): MERGE writes a `TIMESTAMP` into `timestamp_ns` as its UTC wall
+
+- **repark** — in a session whose zone is not UTC, a MERGE insert or update that writes a
+  `TIMESTAMP` value into a `timestamp_ns` column stores the instant's UTC wall. `INSERT … VALUES`
+  and `INSERT … SELECT` store the session-zone wall (ledger A-1). Measured in America/New_York:
+  `TIMESTAMP '2026-01-02 03:04:05.123456789'` stores `1767341045123456000` through MERGE and
+  `1767323045123456000` through INSERT. In UTC the two paths agree. `timestamptz_ns` columns
+  agree in every zone.
+- **Apache Spark** — cannot write the type. *(oracle: documented — ledger A-1 is this door's
+  rule for a µs instant written into a naive ns column.)*
+- **Pin** — none yet; recorded in `task/ledgers/staging/ice-tsns-sql-1-ledger.md` (R-007).
+- **Rationale** — OPEN, dated 2026-09-18. MERGE widens through the Iceberg write path's Arrow
+  cast, not through the SQL door's INSERT conform. Found while measuring round 2 of this unit.
+  Round 2 did not change it.
+
+### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
+
+- **repark** — `DESCRIBE TABLE` on `(ts timestamp_ns, tz timestamptz_ns)` answers
+  `timestamp_ntz` / `timestamp`, the microsecond Spark names; the ns-ness is not shown. Reads
+  and writes carry nanoseconds (row ICE-TSNS-SQL-1).
+- **Apache Spark** — cannot describe the table at all (the types do not convert). *(oracle:
+  documented — the Iceberg v3 spec names the types `timestamp_ns` / `timestamptz_ns`; no Spark
+  value exists.)*
+- **Pin** — none yet; out of scope by ruling Q-21c-6 clause 6, recorded in
+  `task/ledgers/staging/ice-tsns-sql-1-ledger.md` (C-006).
+- **Rationale** — OPEN, dated 2026-09-17. Choosing a `DESCRIBE` spelling for a type Spark has no
+  name for is a separate decision; the unit that takes it pins the spelling.
+
+### ICE-TSNS-SQL-1-R-002 — OPEN (2026-09-17): no second engine writes format v3 yet
+
+- **repark** — the read direction is proven (PyIceberg reads RePark's v3 ns tables exactly);
+  the write direction — another engine writes v3 ns data, RePark reads it — has no oracle.
+- **Apache Spark** — cannot write the types. PyIceberg 0.12.0 refuses to write format v3
+  (`NotImplementedError: Writing V3 is not yet supported`, apache/iceberg-python#1551, measured
+  2026-09-17). *(oracle: none available.)*
+- **Pin** — none; recorded in the ICE-TSNS-SQL-1 ledger (C-006).
+- **Rationale** — OPEN, dated 2026-09-17. The future oracle is the Iceberg Java API (or
+  PyIceberg once #1551 lands) writing v3 `timestamp_ns` / `timestamptz_ns` files for RePark to
+  read.
+
+### ICE-TSNS-SQL-1-R-003 — BLOCKED-ON-FORK (measured 2026-09-17): `hours()` on a nanosecond column refuses
+
+- **repark** — any write into a table partitioned by `hours(tz)` on a `timestamptz_ns` (or
+  `timestamp_ns`) column refuses `FeatureUnsupported => Unsupported data type for hour
+  transform: Timestamp(Nanosecond, Some("UTC"))`, on the SQL door and the DataFrame door alike.
+  `CREATE TABLE … PARTITIONED BY (hours(tz))` succeeds; `days` / `months` / `years` on ns write
+  correctly.
+- **Apache Spark** — cannot write the types. The Iceberg spec defines `hour` on
+  `timestamp_ns` / `timestamptz_ns` as hours since the epoch. *(oracle: documented — the spec's
+  transform table; the fixture's `sql_hours` expectation is derived from it,
+  `hour = floor(tz_ns / 3_600_000_000_000)`, because the DataFrame-door control is refused
+  too.)*
+- **Pin** — `python/repark/tests/test_ice_tsns_sql_1.py::test_hours_partitions_equal_the_spec`
+  (turns into an xfail naming `BLOCKED-ON-FORK F-TSNS-HOUR-1` only while the fork's message is
+  the failure; it runs fully and must pass once the fork lands) and the recorder's `check` leg,
+  which prints `BLOCKED sql_hours` until the table has data.
+- **Rationale** — BLOCKED-ON-FORK **F-TSNS-HOUR-1**: the pinned fork's
+  `crates/iceberg/src/transform/temporal.rs` `Hour::transform` handles only
+  `Timestamp(Microsecond, _)`; its `transform_literal` and the `Day` / `Month` / `Year` array
+  transforms already handle nanoseconds. The fork fix is a `Timestamp(Nanosecond, _)` arm
+  dividing by nanoseconds per hour; RePark takes it at the next fork repin.
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`

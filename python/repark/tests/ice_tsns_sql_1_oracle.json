@@ -1,0 +1,397 @@
+{
+  "blocked_on_fork": {
+    "sql_hours": "F-TSNS-HOUR-1: FeatureUnsupported => Unsupported data type for hour transform: Timestamp(Nanosecond, Some(\"UTC\"))"
+  },
+  "control": {
+    "ctl_days": {
+      "format_version": 3,
+      "partitions": [
+        {
+          "partition": {
+            "ts_day": "2026-01-02"
+          },
+          "record_count": 5
+        },
+        {
+          "partition": {
+            "ts_day": "2026-01-03"
+          },
+          "record_count": 2
+        },
+        {
+          "partition": {
+            "ts_day": "2026-01-04"
+          },
+          "record_count": 1
+        }
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "ts": 1767323045123456789,
+          "tz": 1767323045123456789
+        },
+        {
+          "id": 2,
+          "ts": 1767398399999999999,
+          "tz": 1767398399999999999
+        },
+        {
+          "id": 3,
+          "ts": 1767398400000000001,
+          "tz": 1767398400000000001
+        },
+        {
+          "id": 4,
+          "ts": 1767484799999999000,
+          "tz": 1767484799999999000
+        },
+        {
+          "id": 5,
+          "ts": 1767484800000000001,
+          "tz": 1767484800000000001
+        },
+        {
+          "id": 6,
+          "ts": 1767323045500000000,
+          "tz": 1767323045500000000
+        },
+        {
+          "id": 7,
+          "ts": 1767323045000000000,
+          "tz": 1767323045000000000
+        },
+        {
+          "id": 8,
+          "ts": 1767323045123456788,
+          "tz": 1767323045123456788
+        }
+      ],
+      "schema": {
+        "id": "int",
+        "ts": "timestamp_ns",
+        "tz": "timestamptz_ns"
+      },
+      "spec": [
+        {
+          "name": "ts_day",
+          "source": "ts",
+          "transform": "day"
+        }
+      ]
+    }
+  },
+  "control_repark_partitions": {
+    "ctl_days": [
+      {
+        "partition": {
+          "ts_day": "2026-01-02"
+        },
+        "record_count": 5
+      },
+      {
+        "partition": {
+          "ts_day": "2026-01-03"
+        },
+        "record_count": 2
+      },
+      {
+        "partition": {
+          "ts_day": "2026-01-04"
+        },
+        "record_count": 1
+      }
+    ]
+  },
+  "foreign_zone": "America/Los_Angeles",
+  "hours_control": {
+    "message": "FeatureUnsupported => Unsupported data type for hour transform: Timestamp(Nanosecond, Some(\"UTC\"))",
+    "ok": false,
+    "type": "UnsupportedOperationException"
+  },
+  "hours_derivation": "spec: hour = floor(tz_ns / 3_600_000_000_000); the DataFrame-door control is refused by the fork",
+  "literals": {
+    "1": {
+      "foreign_zone_instant_ns": 1767351845123456789,
+      "render": "2026-01-02 03:04:05.123456789",
+      "text": "2026-01-02 03:04:05.123456789",
+      "wall_ns": 1767323045123456789
+    },
+    "2": {
+      "foreign_zone_instant_ns": 1767427199999999999,
+      "render": "2026-01-02 23:59:59.999999999",
+      "text": "2026-01-02 23:59:59.999999999",
+      "wall_ns": 1767398399999999999
+    },
+    "3": {
+      "foreign_zone_instant_ns": 1767427200000000001,
+      "render": "2026-01-03 00:00:00.000000001",
+      "text": "2026-01-03 00:00:00.000000001",
+      "wall_ns": 1767398400000000001
+    },
+    "4": {
+      "foreign_zone_instant_ns": 1767513599999999000,
+      "render": "2026-01-03 23:59:59.999999",
+      "text": "2026-01-03 23:59:59.999999",
+      "wall_ns": 1767484799999999000
+    },
+    "5": {
+      "foreign_zone_instant_ns": 1767513600000000001,
+      "render": "2026-01-04 00:00:00.000000001",
+      "text": "2026-01-04 00:00:00.000000001",
+      "wall_ns": 1767484800000000001
+    },
+    "6": {
+      "foreign_zone_instant_ns": 1767351845500000000,
+      "render": "2026-01-02 03:04:05.5",
+      "text": "2026-01-02 03:04:05.5",
+      "wall_ns": 1767323045500000000
+    },
+    "7": {
+      "foreign_zone_instant_ns": 1767351845000000000,
+      "render": "2026-01-02 03:04:05",
+      "text": "2026-01-02 03:04:05",
+      "wall_ns": 1767323045000000000
+    },
+    "8": {
+      "foreign_zone_instant_ns": 1767351845123456788,
+      "render": "2026-01-02 03:04:05.123456788",
+      "text": "2026-01-02 03:04:05.123456788",
+      "wall_ns": 1767323045123456788
+    }
+  },
+  "micro_render_anchor": {
+    "l4": "2026-01-03 23:59:59.999999",
+    "l6": "2026-01-02 03:04:05.5",
+    "l7": "2026-01-02 03:04:05"
+  },
+  "oracle": {
+    "second_engine": "pyiceberg 0.12.0 StaticTable read-back",
+    "spark": "Spark 4.1.2 cannot read or write timestamp_ns",
+    "spec": "Iceberg table spec v3: timestamp_ns / timestamptz_ns are int64 nanoseconds"
+  },
+  "ruling": "Q-21c-6",
+  "session_zone": "UTC",
+  "sql_statements": {
+    "sql_ctas": [
+      "CREATE TABLE ice.ns.sql_ctas USING iceberg TBLPROPERTIES ('format-version' = '3') AS SELECT 1 AS id, CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns) AS ts, CAST('2026-01-02 03:04:05.123456789' AS timestamptz_ns) AS tz UNION ALL SELECT 3 AS id, CAST('2026-01-03 00:00:00.000000001' AS timestamp_ns) AS ts, CAST('2026-01-03 00:00:00.000000001' AS timestamptz_ns) AS tz"
+    ],
+    "sql_days": [
+      "CREATE TABLE ice.ns.sql_days (id INT, ts timestamp_ns, tz timestamptz_ns) USING iceberg PARTITIONED BY (days(ts)) TBLPROPERTIES ('format-version' = '3')",
+      "INSERT INTO ice.ns.sql_days VALUES (1, CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns), CAST('2026-01-02 03:04:05.123456789+00:00' AS timestamptz_ns)), (2, CAST('2026-01-02 23:59:59.999999999' AS timestamp_ns), CAST('2026-01-02 23:59:59.999999999+00:00' AS timestamptz_ns)), (3, CAST('2026-01-03 00:00:00.000000001' AS timestamp_ns), CAST('2026-01-03 00:00:00.000000001+00:00' AS timestamptz_ns)), (4, TIMESTAMP '2026-01-03 23:59:59.999999', TIMESTAMP '2026-01-03 23:59:59.999999'), (5, '2026-01-04 00:00:00.000000001', '2026-01-04 00:00:00.000000001'), (6, CAST('2026-01-02 03:04:05.5' AS timestamp_ns), CAST('2026-01-02 03:04:05.5+00:00' AS timestamptz_ns)), (7, CAST('2026-01-02 03:04:05' AS timestamp_ns), CAST('2026-01-02 03:04:05+00:00' AS timestamptz_ns)), (8, CAST('2026-01-02 03:04:05.123456788' AS timestamp_ns), CAST('2026-01-02 03:04:05.123456788+00:00' AS timestamptz_ns))"
+    ],
+    "sql_hours": [
+      "CREATE TABLE ice.ns.sql_hours (id INT, tz timestamptz_ns) USING iceberg PARTITIONED BY (hours(tz)) TBLPROPERTIES ('format-version' = '3')",
+      "INSERT INTO ice.ns.sql_hours SELECT 1 AS id, CAST('2026-01-02 03:04:05.123456789' AS timestamptz_ns) AS tz UNION ALL SELECT 2 AS id, CAST('2026-01-02 23:59:59.999999999' AS timestamptz_ns) AS tz UNION ALL SELECT 3 AS id, CAST('2026-01-03 00:00:00.000000001' AS timestamptz_ns) AS tz UNION ALL SELECT 8 AS id, CAST('2026-01-02 03:04:05.123456788' AS timestamptz_ns) AS tz"
+    ],
+    "sql_merge": [
+      "CREATE TABLE ice.ns.sql_merge (id INT, ts timestamp_ns, tz timestamptz_ns) USING iceberg TBLPROPERTIES ('format-version' = '3')",
+      "INSERT INTO ice.ns.sql_merge VALUES (1, TIMESTAMP '2026-01-03 23:59:59.999999', TIMESTAMP '2026-01-03 23:59:59.999999')",
+      "MERGE INTO ice.ns.sql_merge t USING (SELECT 2 AS id, CAST('2026-01-02 23:59:59.999999999' AS timestamp_ns) AS ts, CAST('2026-01-02 23:59:59.999999999' AS timestamptz_ns) AS tz UNION ALL SELECT 3 AS id, CAST('2026-01-03 00:00:00.000000001' AS timestamp_ns) AS ts, CAST('2026-01-03 00:00:00.000000001' AS timestamptz_ns) AS tz UNION ALL SELECT 8 AS id, CAST('2026-01-02 03:04:05.123456788' AS timestamp_ns) AS ts, CAST('2026-01-02 03:04:05.123456788' AS timestamptz_ns) AS tz) s ON t.id = s.id - 7 WHEN MATCHED THEN UPDATE SET t.ts = s.ts, t.tz = s.tz WHEN NOT MATCHED THEN INSERT (id, ts, tz) VALUES (s.id, s.ts, s.tz)"
+    ],
+    "sql_overwrite": [
+      "CREATE TABLE ice.ns.sql_overwrite (id INT, ts timestamp_ns, tz timestamptz_ns) USING iceberg TBLPROPERTIES ('format-version' = '3')",
+      "INSERT OVERWRITE ice.ns.sql_overwrite VALUES (4, TIMESTAMP '2026-01-03 23:59:59.999999', TIMESTAMP '2026-01-03 23:59:59.999999'), (6, CAST('2026-01-02 03:04:05.5' AS timestamp_ns), CAST('2026-01-02 03:04:05.5+00:00' AS timestamptz_ns)), (7, CAST('2026-01-02 03:04:05' AS timestamp_ns), CAST('2026-01-02 03:04:05+00:00' AS timestamptz_ns))"
+    ]
+  },
+  "sql_tables": {
+    "sql_ctas": {
+      "rows": [
+        {
+          "id": 1,
+          "ts": 1767323045123456789,
+          "tz": 1767323045123456789
+        },
+        {
+          "id": 3,
+          "ts": 1767398400000000001,
+          "tz": 1767398400000000001
+        }
+      ],
+      "schema": {
+        "id": "int",
+        "ts": "timestamp_ns",
+        "tz": "timestamptz_ns"
+      },
+      "spec": []
+    },
+    "sql_days": {
+      "partitions": [
+        {
+          "partition": {
+            "ts_day": "2026-01-02"
+          },
+          "record_count": 5
+        },
+        {
+          "partition": {
+            "ts_day": "2026-01-03"
+          },
+          "record_count": 2
+        },
+        {
+          "partition": {
+            "ts_day": "2026-01-04"
+          },
+          "record_count": 1
+        }
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "ts": 1767323045123456789,
+          "tz": 1767323045123456789
+        },
+        {
+          "id": 2,
+          "ts": 1767398399999999999,
+          "tz": 1767398399999999999
+        },
+        {
+          "id": 3,
+          "ts": 1767398400000000001,
+          "tz": 1767398400000000001
+        },
+        {
+          "id": 4,
+          "ts": 1767484799999999000,
+          "tz": 1767484799999999000
+        },
+        {
+          "id": 5,
+          "ts": 1767484800000000001,
+          "tz": 1767484800000000001
+        },
+        {
+          "id": 6,
+          "ts": 1767323045500000000,
+          "tz": 1767323045500000000
+        },
+        {
+          "id": 7,
+          "ts": 1767323045000000000,
+          "tz": 1767323045000000000
+        },
+        {
+          "id": 8,
+          "ts": 1767323045123456788,
+          "tz": 1767323045123456788
+        }
+      ],
+      "schema": {
+        "id": "int",
+        "ts": "timestamp_ns",
+        "tz": "timestamptz_ns"
+      },
+      "spec": [
+        {
+          "name": "ts_day",
+          "source": "ts",
+          "transform": "day"
+        }
+      ]
+    },
+    "sql_hours": {
+      "partitions": [
+        {
+          "partition": {
+            "tz_hour": "490923"
+          },
+          "record_count": 2
+        },
+        {
+          "partition": {
+            "tz_hour": "490943"
+          },
+          "record_count": 1
+        },
+        {
+          "partition": {
+            "tz_hour": "490944"
+          },
+          "record_count": 1
+        }
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "tz": 1767323045123456789
+        },
+        {
+          "id": 2,
+          "tz": 1767398399999999999
+        },
+        {
+          "id": 3,
+          "tz": 1767398400000000001
+        },
+        {
+          "id": 8,
+          "tz": 1767323045123456788
+        }
+      ],
+      "schema": {
+        "id": "int",
+        "tz": "timestamptz_ns"
+      },
+      "spec": [
+        {
+          "name": "tz_hour",
+          "source": "tz",
+          "transform": "hour"
+        }
+      ]
+    },
+    "sql_merge": {
+      "rows": [
+        {
+          "id": 1,
+          "ts": 1767323045123456788,
+          "tz": 1767323045123456788
+        },
+        {
+          "id": 2,
+          "ts": 1767398399999999999,
+          "tz": 1767398399999999999
+        },
+        {
+          "id": 3,
+          "ts": 1767398400000000001,
+          "tz": 1767398400000000001
+        }
+      ],
+      "schema": {
+        "id": "int",
+        "ts": "timestamp_ns",
+        "tz": "timestamptz_ns"
+      },
+      "spec": []
+    },
+    "sql_overwrite": {
+      "rows": [
+        {
+          "id": 4,
+          "ts": 1767484799999999000,
+          "tz": 1767484799999999000
+        },
+        {
+          "id": 6,
+          "ts": 1767323045500000000,
+          "tz": 1767323045500000000
+        },
+        {
+          "id": 7,
+          "ts": 1767323045000000000,
+          "tz": 1767323045000000000
+        }
+      ],
+      "schema": {
+        "id": "int",
+        "ts": "timestamp_ns",
+        "tz": "timestamptz_ns"
+      },
+      "spec": []
+    }
+  },
+  "unit": "ICE-TSNS-SQL-1"
+}
