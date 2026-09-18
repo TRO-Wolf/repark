@@ -1,7 +1,7 @@
 # Unit ledger — ICE-V3-WRITE-DEFAULT-1 · omitted columns fill from `write_default` on every write path
 
 **Unit:** ICE-V3-WRITE-DEFAULT-1 round 1 · **Date:** 2026-09-17 · **Branch:** `fix/ice-v3-write-default-1` · **Base:** `chore/fork-pin-ice-19b` head (fork pin `75da2b58`, RP-21 / PR #665)
-**Model:** claude-opus-5 (round 5, run 21b, 2026-09-17); rounds 1–4 muse-spark-1.3-contributor
+**Model:** claude-opus-5 (round 5, run 21b, 2026-09-17; round 6 = run 21b round 2, 2026-09-18); rounds 1–4 muse-spark-1.3-contributor
 **Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 
 **Why now.** A format-v3 table created by Spark, with column `c INT` added through
@@ -46,6 +46,33 @@ step.
   `saveAsTable(append)` and writes NULL (`nodef_writeto_append_missing`,
   `nodef_saveas_append_missing`; control `nodef_writeto_append_full`).
   Disposition: pinned offline and live (C-018).
+- **Q-21b-8 (run 21b round 2, 2026-09-18) — V-01 is real.** Spark fills an omitted
+  defaulted column on `writeTo(t).overwritePartitions()`: `df(12, 'y')` over `pdflt`
+  → `[[1,'a',5],[12,'y',5],[2,'b',5]]` (`V01_overwrite_partitions_missing_defaulted_column`).
+  RePark refused on arity because the writer threw its by-name column list away.
+  Disposition: FIXED, pinned offline and live (C-020).
+- **Q-21b-9 — V-02 is NOT a gap; the critic's control premise was the reverse of
+  Spark.** Spark refuses `DEFAULT` inside a CTE body (`V02_default_inside_cte_body`),
+  inside a derived table (`V02_default_inside_subquery`), and in the outer SELECT of a
+  query carrying `WITH` (`V02_control_default_outer_select_with_cte`), all
+  `UNRESOLVED_COLUMN` SQLSTATE 42703. RePark refused the first two and FILLED the
+  third. Disposition: the outer-SELECT-under-`WITH` shape refuses on INSERT INTO and
+  INSERT OVERWRITE, both doors; all three cells pinned as refusals (C-021).
+- **Q-21b-10 — mixed static+dynamic PARTITION is out of scope.** Spark accepts
+  `PARTITION (id=1, cat)` positional (`MIX_static_dynamic_positional`
+  `[[1,'west','p',9],[2,'west','w2',5]]`) and with a named list omitting the default
+  (`MIX_static_dynamic_named_list_omits_default` `[[1,'west','p',9],[2,'west','q',5]]`).
+  RePark refuses loud. Disposition: OPEN registry row
+  `ICE-V3-WRITE-DEFAULT-1-MIX-PARTITION`, refusal pinned (C-022).
+- Round 6 cells (Q-21b-8 … Q-21b-10) were measured by the orchestrator
+  (`/tmp/oc-worker/kb-oracle/probe_wd2.py`, truth `wd-truth-2.json`) and copied
+  verbatim into `truth.json`; not re-derived here.
+- The critic's pin-strength note: the ANSI L-03 pin cannot see the Spark-door
+  `rewrite_overwrite_default_markers` hunk; a permanent Spark-door Rust pin now goes
+  red when that call is removed (C-023).
+- Orchestrator addendum (round-1 gate run): the C-009 setter guard and
+  `make rust-clippy` must be green, fixed at the source without weakening either
+  (C-024).
 - All four rulings' cells are recorded by this unit's `record.py` into the
   checked-in `truth.json` (re-recorded live 2026-09-17), matching the
   orchestrator's independent `/tmp/oc-worker/kb-oracle/wd-truth.json`
@@ -80,7 +107,13 @@ step.
 | C-018 | `rollcall_accept_and_null` (Q-21b-6): a missing NULLABLE column with NO default is accepted on `writeTo().append()` and `saveAsTable(append)` and written NULL, matching Spark — the removed "missing from the DataFrame" refusal is correct. | Offline and live pins on both writer surfaces. | **PROVEN** | Offline `test_missing_nullable_no_default_accepts_and_nulls` green; live `_live_rollcall` green (`22 passed in 115.19s`, `REPARK_PARITY_LIVE=1`). Roll-call section below. pins: ice-v3-write-default-1/C-018 |
 | C-019 | `no_default_write_cost` (R-03 / R-04): a MERGE and a column-list `INSERT OVERWRITE` against a table with no write-defaults convert the Iceberg schema to Arrow at most once and never build a `ColumnDefaults` map they discard. | Code shape plus a before/after measurement on a DEFAULT-profile release native, both numbers in this ledger. | **PROVEN** | Code shape in `9a9f49e6` / `8dfa984a`; DEFAULT-profile timings recorded below — noise-dominated under load 70–167, no speed claim made. pins: ice-v3-write-default-1/C-019 |
 
-VERDICT: 19 clauses, 19 PROVEN, 0 OPEN, 0 REJECTED.
+| C-020 | `overwrite_partitions_fills` (Q-21b-8 / V-01): `writeTo(t).overwritePartitions()` with a defaulted column missing from the frame fills it from `write_default`, matching Spark's `V01` cell. | Red-first pin on the recorded `pdflt` fixture, then green offline and live. | **PROVEN** | Red first (`## Red first — round 6`): `INSERT OVERWRITE column count mismatch: source has 2 columns, target table has 3`. Fixed in `2baebd4d` (the writer passes its by-name list: `INSERT OVERWRITE t (cols) PARTITION (…) SELECT …`). Green offline `test_overwrite_partitions_api_fills_missing_defaulted_column` (seed + `(12, 'y', 5)`, cell asserted); live `_live_overwrite_partitions` (Spark answer == the recorded V01 rows, RePark replays `(13, 'z')` on the adopted table and fills 5) — gate counts in `## Round 6 gates`. `writer_readwriter.py` 1095 → 1094 with the CAP-1 mirror. pins: ice-v3-write-default-1/C-020 |
+| C-021 | `default_outside_insert_list_refuses` (Q-21b-9 / V-02): `DEFAULT` inside a CTE body, inside a derived table, or in the outer SELECT of a query carrying `WITH` refuses on INSERT INTO and INSERT OVERWRITE, both doors, and writes nothing; the `WITH` shape names the unresolved `DEFAULT` column with SQLSTATE 42703. | Red-first pins on both doors, then green; all three V02 cells asserted as recorded refusals. | **PROVEN** | Red first: Spark-door Rust `spark_default_in_outer_select_under_with_refuses_unresolved` and ANSI `ansi_default_in_outer_select_under_with_refuses_unresolved` "must refuse"; Python `test_default_outside_the_insert_list_refuses` `DID NOT RAISE`. Fixed in `31c1ca4d` (`insert_defaults::refuse_default_marker_under_with`, called before any load in `rewrite_insert_markers` and at the top of `rewrite_markers_with_table`). Green: Rust Spark door 3/3, ANSI 8/8, offline 24 passed. Text delta, recorded: Spark says `UNRESOLVED_COLUMN.WITH_SUGGESTION … [id, name]` (the CTE's columns); RePark says `WITHOUT_SUGGESTION` — same class, column and SQLSTATE. The CTE-body / subquery shapes refuse `No field named default` (not the Spark text; class of outcome matches — refusal, no write). pins: ice-v3-write-default-1/C-021 |
+| C-022 | `mixed_partition_open` (Q-21b-10): mixed static+dynamic `PARTITION (id=1, cat)` refuses loud on both MIX shapes, writes nothing, and carries an OPEN registry row with Spark's measured accept. | Pin + dated OPEN row. | **PROVEN** | `test_mixed_static_dynamic_partition_refuses` green (refusal `cannot mix static assignments`, rows unchanged, both recorded Spark cells asserted); registry `ICE-V3-WRITE-DEFAULT-1-MIX-PARTITION` OPEN 2026-09-18 (`6b6ad1bf`). Not implemented (ruling). pins: ice-v3-write-default-1/C-022 |
+| C-023 | `spark_door_default_pin_strength` (critic note on L-03): a Spark-door Rust pin goes red when the `rewrite_overwrite_default_markers` call in `crates/repark-spark/src/insert_overwrite.rs` is removed. | Mutation run, red output pasted. | **PROVEN** | `crates/repark-spark/src/tests/write_defaults.rs::spark_overwrite_default_keyword_fills_write_default`; call replaced by `None` → red `column 'default' not found` (`## Red first — round 6`); restored → green. pins: ice-v3-write-default-1/C-023 |
+| C-024 | `guards_green` (orchestrator addendum): `test_rp3_c009_write_default.py::test_engine_sources_do_not_set_write_default` and `make rust-clippy` are green without weakening either. | Guard run; clippy run. | **PROVEN** | Guard: helper renamed `schema_has_primitive_fill`, `insert_defaults` unit tests moved to `insert_defaults/tests/mod.rs` (the guard's own `tests` exemption; guard untouched) — `2 passed` (`fe4e3c08`). Clippy: `match_same_arms` arms merged in `spark_rewrites.rs`; the 135 `large_futures` errors came from round-1 inline awaits in `spark_ast.rs::execute_passthrough_inner` (a preloaded `Option<Table>` held across awaits plus the marker/fill futures) and `insert_overwrite.rs::execute_insert_overwrite` (the rewritten `(String, Insert)`); both `Box::pin`-ed at source with the held values boxed (`8fd8036c`) — `cargo clippy --locked -p repark-spark --all-targets -- -D warnings -A clippy::disallowed_methods` clean; whole-workspace `make rust-clippy` in `## Round 6 gates`. pins: ice-v3-write-default-1/C-024 |
+
+VERDICT: 24 clauses, 24 PROVEN, 0 OPEN, 0 REJECTED.
 
 ```
 COVERAGE_ATTESTATION:
@@ -88,11 +121,11 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Every clause C-001 … C-019 walked against its proposition; rulings Q-21b-3 … Q-21b-6 each map to one clause (C-015 … C-018) and each clause's pins assert the recorded Spark cell, not a paraphrase.
-      artifacts: [python/repark/tests/test_ice_v3_write_default_1.py, python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json, crates/repark-sql/tests/ansi_write_defaults.rs]
+      evidence: Every clause C-001 … C-024 walked against its proposition; rulings Q-21b-3 … Q-21b-6 map to C-015 … C-018 and Q-21b-8 … Q-21b-10 to C-020 … C-022, the critic's pin-strength note to C-023 and the addendum guards to C-024; each clause's pins assert the recorded Spark cell, not a paraphrase.
+      artifacts: [python/repark/tests/test_ice_v3_write_default_1.py, python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json, crates/repark-sql/tests/ansi_write_defaults.rs, crates/repark-spark/src/tests/write_defaults.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: Boundaries exercised — NULL partition value from an omitted dynamic partition column, static value on a column that itself carries a write-default, listed static column, arity mismatch, duplicate list entry, explicit NULL, required column without default, v2 and no-default tables, quote-free SQL on the parser fast path.
+      evidence: Boundaries exercised — DEFAULT in a CTE body, a derived table and the outer SELECT under WITH (refuse, nothing written); overwritePartitions with the defaulted column omitted; mixed static+dynamic PARTITION (loud refusal, OPEN); NULL partition value from an omitted dynamic partition column, static value on a column that itself carries a write-default, listed static column, arity mismatch, duplicate list entry, explicit NULL, required column without default, v2 and no-default tables, quote-free SQL on the parser fast path.
       artifacts: [crates/repark-sql/tests/ansi_write_defaults.rs, crates/repark-spark/src/tests/spark_dialect.rs, python/repark/tests/test_ice_v3_write_default_1.py]
     - id: AT-3
       status: ATTACKED
@@ -123,7 +156,7 @@ COVERAGE_ATTESTATION:
       artifacts: [docs/spark-sql-iceberg-parity.md, crates/repark-iceberg/src/write/map.md, crates/repark-spark/src/map.md]
     - id: AT-10
       status: ATTACKED
-      evidence: Red first recorded for C-015/C-016 on the unfixed tree; the new static by-name branches each have a nameable input and pin, and a real mutation (dropping the reserved static columns) turned `ansi_static_partition_value_wins_over_its_write_default` red before revert.
+      evidence: Red first recorded for C-015/C-016 and C-020/C-021 on the unfixed tree; the Spark-door DEFAULT hunk mutation-proved red (C-023); the new static by-name branches each have a nameable input and pin, and a real mutation (dropping the reserved static columns) turned `ansi_static_partition_value_wins_over_its_write_default` red before revert.
       artifacts: [crates/repark-sql/tests/ansi_write_defaults.rs, task/ledgers/staging/ice-v3-write-default-1-ledger.md]
   complete: true
 ```
@@ -399,6 +432,12 @@ plan literal is not enough. Plain INSERT executes fork `IcebergWriteExec`
 `apply_write_defaults` fills only MISSING columns, so an explicit NULL never
 fills there. MERGE NOT MATCHED null-fills in RePark-owned
 `write/merge/insert.rs::insert_projection` (`NULL AS c`).
+
+## Round 6 gates
+
+Run in the foreground on the round-6 head, release native
+(`CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`); full log in
+`/tmp/oc-worker/kb-wd/handback-2.md`. Counts below are filled from that run.
 
 ## Open questions
 
