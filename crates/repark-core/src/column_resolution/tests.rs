@@ -301,21 +301,16 @@ async fn missing_column_stays_missing() {
     assert!(error.contains("nope"), "unexpected message: {error}");
 }
 
+type ArrayRef = Arc<dyn datafusion::arrow::array::Array>;
+type MeasuredTable<'a> = (&'a str, Vec<Field>, Vec<ArrayRef>);
+
 fn measured_ctx() -> SessionContext {
     let ctx = SessionContext::new_with_state(repair_state());
     let int = |name: &str| Field::new(name, DataType::Int32, true);
     let text = |name: &str| Field::new(name, DataType::Utf8, true);
-    let ints = |values: Vec<i32>| -> Arc<dyn datafusion::arrow::array::Array> {
-        Arc::new(Int32Array::from(values))
-    };
-    let texts = |values: Vec<&str>| -> Arc<dyn datafusion::arrow::array::Array> {
-        Arc::new(StringArray::from(values))
-    };
-    let tables: Vec<(
-        &str,
-        Vec<Field>,
-        Vec<Arc<dyn datafusion::arrow::array::Array>>,
-    )> = vec![
+    let ints = |values: Vec<i32>| -> ArrayRef { Arc::new(Int32Array::from(values)) };
+    let texts = |values: Vec<&str>| -> ArrayRef { Arc::new(StringArray::from(values)) };
+    let tables: Vec<MeasuredTable<'_>> = vec![
         (
             "mc",
             vec![int("userId"), text("eventName")],

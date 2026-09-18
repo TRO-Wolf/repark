@@ -14,6 +14,8 @@ memory catalog (the measured Spark shape) and pins the bare-name form for the se
 Step 6: `r02_lowercase_only_plans_skip_the_audit` pins the early-exit predicate.
 Step 2 adds `v01_order_by_a_select_alias_still_orders_by_the_alias` (the positional guard
 keeps ORDER BY on the alias).
+Round 2 (2026-09-18): the measured fixture's table tuple is the `MeasuredTable` alias
+(clippy `type_complexity`).
 pins: ice-mixed-case-1/C-001…C-010, C-013…C-016
 
 ## Files

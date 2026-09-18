@@ -360,17 +360,17 @@ fn audit_column(column: &Column, twins: &Twins<'_>, written: &WrittenRefs) -> Re
     let Some(fields) = twins.get(&column.name.to_ascii_lowercase()) else {
         return Ok(());
     };
-    let qualified = column.relation.as_ref().and_then(|relation| {
+    let relation_hit = column.relation.as_ref().and_then(|relation| {
         written.qualified.iter().find(|(qualifier, name)| {
             qualifier.eq_ignore_ascii_case(relation.table())
                 && name.eq_ignore_ascii_case(&column.name)
         })
     });
-    let bare = written
+    let bare_hit = written
         .bare
         .iter()
         .find(|name| name.eq_ignore_ascii_case(&column.name));
-    let (qualifier, requested) = match (qualified, bare) {
+    let (qualifier, requested) = match (relation_hit, bare_hit) {
         (Some((qualifier, name)), _) => (Some(qualifier.as_str()), name.as_str()),
         (None, Some(name)) => (None, name.as_str()),
         (None, None) => return Ok(()),

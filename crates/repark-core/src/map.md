@@ -599,6 +599,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   some node schema holds an upper-case ASCII field (`plan_has_upper_ascii_field`) — with none,
   case twins cannot exist, so neither the audit nor `written_references` runs. The written
   references walk the AST with the immutable `Visit` (no statement clone).
+  Round 2 (2026-09-18): clippy `similar_names` — the audit's written-form hits are
+  `relation_hit` / `bare_hit`.
   pins: ice-mixed-case-1/C-001…C-010, C-013…C-016
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias
