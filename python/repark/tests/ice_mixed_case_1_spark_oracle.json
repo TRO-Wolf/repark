@@ -741,6 +741,82 @@
       ]
     }
   },
+  "measured_21b_r2": {
+    "cells": {
+      "N01_inner_select_list_outer_column_exact": {
+        "columns": [
+          "userId"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT userId FROM sc.ns.mc WHERE eventName IN (SELECT eventName FROM sc.ns.other)"
+      },
+      "N01_inner_select_list_outer_column_lower": {
+        "columns": [
+          "userid"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT userid FROM sc.ns.mc WHERE eventname IN (SELECT eventname FROM sc.ns.other)"
+      },
+      "N01_inner_select_list_outer_column_upper": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT USERID FROM sc.ns.mc WHERE EVENTNAME IN (SELECT EVENTNAME FROM sc.ns.other)"
+      },
+      "N01_scalar_subquery_outer_column": {
+        "class": "AnalysisException",
+        "message": [
+          "[UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE] Unsupported subquery expression: Expressions referencing the outer query are not supported outside of WHERE/HAVING clauses: \"max(EVENTNAME) AS `max(outer(sc.ns.mc.EVENTNAME))`\". SQLSTATE: 0A000; line 1 pos 16;"
+        ],
+        "outcome": "error",
+        "sql": "SELECT userId, (SELECT max(EVENTNAME) FROM sc.ns.other) AS m FROM sc.ns.mc"
+      },
+      "N03_star_twin_view_create": {
+        "class": "AnalysisException",
+        "message": [
+          "[COLUMN_ALREADY_EXISTS] The column `id` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"
+        ],
+        "outcome": "error",
+        "sql": "CREATE OR REPLACE TEMP VIEW twv AS SELECT 1 AS id, 2 AS ID"
+      }
+    },
+    "recorded_by": "probe_mc2.py (run 21b orchestrator, round 2), PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, Java 17, hadoop catalog, caseSensitive=false, 2026-09-18; cells copied from probe_mc2.log (the probe stopped at the N03 view before writing its JSON)",
+    "setup": {
+      "mc": [
+        "CREATE TABLE sc.ns.mc (userId INT, eventName STRING)",
+        "INSERT INTO sc.ns.mc VALUES (1, 'a'), (2, 'b')"
+      ],
+      "other": [
+        "CREATE TABLE sc.ns.other (name STRING)",
+        "INSERT INTO sc.ns.other VALUES ('a')"
+      ]
+    }
+  },
   "seed": "INSERT INTO sc.ns.mc VALUES (1, 'a', 10), (2, 'b', 20)",
   "spark": "4.1.2",
   "warehouse": "/tmp/repark-ice-mixed-case-1"

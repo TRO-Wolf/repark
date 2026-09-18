@@ -69,7 +69,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, UnsupportedOperationException
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _FIXTURE_SRC = _REPO_ROOT / "python/repark-parity/fixtures/torture/data/ice_mixed_case_1/ns"
@@ -713,3 +713,62 @@ def test_join_using_insert_folds_and_writes_the_left_columns(measured: ReparkSes
     table = measured.sql(f"SELECT userId, x FROM {_MEASURED_CATALOG}.ns.jt").to_arrow()
     recorded = _MEASURED_CELLS["V04_join_using_insert"]["rows"]
     assert _sorted_rows(table) == [row[:2] for row in recorded]
+
+
+_ROUND_2 = _ORACLE["measured_21b_r2"]
+_ROUND_2_CELLS = _ROUND_2["cells"]
+_N01_IN_CELLS = [
+    "N01_inner_select_list_outer_column_upper",
+    "N01_inner_select_list_outer_column_exact",
+    "N01_inner_select_list_outer_column_lower",
+]
+
+
+def _round_2_sql(cell_id: str) -> str:
+    """The round-2 recorded statement, pointed at the pin's catalog instead of ``sc``."""
+    return _ROUND_2_CELLS[cell_id]["sql"].replace("sc.ns.", f"{_MEASURED_CATALOG}.ns.")
+
+
+@pytest.mark.parametrize("cell_id", _N01_IN_CELLS)
+def test_correlated_in_subquery_select_list_refuses_where_spark_answers(
+    measured: ReparkSession, cell_id: str
+) -> None:
+    """Q-21b-11 (declared): the inner SELECT-list name is the correlated outer column.
+
+    Spark resolves the inner ``EVENTNAME`` to the outer ``mc.eventName`` and
+    answers ``[[1], [2]]`` in every spelling. RePark folds to the same
+    ``outer_ref(mc.eventName)`` plan, but DataFusion leaves a correlated
+    reference in an IN-subquery projection undecorrelated and refuses at
+    physical planning — the same refusal as an all-lowercase schema, where no
+    fold runs. Loud, typed, never a silent answer (registry ICE-MIXED-CASE-1
+    correlated-projection row).
+    """
+    recorded = _ROUND_2_CELLS[cell_id]
+    assert recorded["outcome"] == "ok"
+    assert recorded["rows"] == [[1], [2]]
+    with pytest.raises(
+        UnsupportedOperationException,
+        match="Physical plan does not support logical expression InSubquery",
+    ):
+        measured.sql(_round_2_sql(cell_id)).to_arrow()
+
+
+def test_correlated_scalar_subquery_select_list_refuses_like_spark(
+    measured: ReparkSession,
+) -> None:
+    """Q-21b-11: a scalar subquery reading the outer column in its SELECT list refuses.
+
+    Spark refuses ``CORRELATED_REFERENCE`` (``SQLSTATE: 0A000``); RePark
+    refuses at physical planning in every spelling, so the fold creates no
+    answer Spark lacks.
+    """
+    recorded = _ROUND_2_CELLS["N01_scalar_subquery_outer_column"]
+    assert recorded["outcome"] == "error"
+    assert "SQLSTATE: 0A000" in recorded["message"][0]
+    sql = _round_2_sql("N01_scalar_subquery_outer_column")
+    for statement in (sql, sql.replace("EVENTNAME", "eventName")):
+        with pytest.raises(
+            UnsupportedOperationException,
+            match="Physical plan does not support logical expression ScalarSubquery",
+        ):
+            measured.sql(statement).to_arrow()
