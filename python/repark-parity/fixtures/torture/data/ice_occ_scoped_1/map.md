@@ -7,7 +7,7 @@ many of N concurrent Iceberg writes commit, what the losers raise, and the rows 
 Recorded 2026-09-17 on PySpark 4.1.2 + `org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0`,
 Hadoop catalog, `local[8]`, each storm released by one `threading.Barrier` so the N statements
 race. The facade pins in `python/repark/tests/test_ice_occ_scoped_1.py` read every expectation
-from these two files; no count, row or error text is a literal in a test body.
+from these fixture files; no count, row or error text is a literal in a test body.
 
 ## Contents
 
@@ -56,7 +56,11 @@ scratch paths. Nothing else was edited. Raw-recording SHA-256: `spark_occ_oracle
 (byte-identical to the recording), `spark_occ_oracle3.json`
 `fa6dc5d953f81d2a938a97066b83f15b2b36cddde9ffd0430fe1e579f03e748e` (before normalization: the
 warehouse prefix became `<warehouse>/`, 8 occurrences in error strings, and the gate's flag
-directory `<flags>/`, 16 occurrences in the `merge` SQL).
+directory `<flags>/`, 16 occurrences in the `merge` SQL), `spark_occ_oracle4.json`
+`bcaafb93b6b2685f1e9143880d6d1afed21fa0c15ad5ad42115fdaa65a9dd887` (before normalization:
+the Hadoop and InMemory warehouse prefixes became `<warehouse>/`, 13 occurrences in error
+strings) whose committed bytes hash to
+`fd2286d2cb692d7c3ca271cb087dc7913ad38f883b201ab57e60aefab3932763`.
 
 ## Reading the cells
 
@@ -64,17 +68,30 @@ directory `<flags>/`, 16 occurrences in the `merge` SQL).
   `ValidationException: Found conflicting files that can contain records matching true`
   (serializable) or `Found new conflicting delete files that can apply to records matching true`
   (snapshot). The `ON` condition has no target-only conjunct, so Spark's conflict filter is `true`.
-- `v3_16_concurrent_inserts` is 14 of 16: the two losers are Hadoop-catalog
-  `CommitFailedException`s (`Cannot commit changes based on stale table metadata`, `Version 6
-  already exists`) — commit-retry exhaustion of the Hadoop catalog, not a validation outcome.
-  RePark's own storm commits 5 of 16 (registry BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM,
-  ledger Q-21a-5).
+- `spark_occ_oracle.json`'s `v2_16_concurrent_inserts` (16 of 16) is one repetition, not
+  Spark's behaviour: over six barrier-released repetitions per catalog × format version
+  (fixture `spark_occ_oracle4.json`, recorded 2026-09-18) Spark 4.1.2 + Iceberg 1.11.0 commits
+  Hadoop v2 15,13,11,12,14,12, Hadoop v3 14,12,13,9,10,13, InMemory v2 9,9,8,9,9,8 and InMemory
+  v3 9,8,8,7,9,9. Every loser is a `CommitFailedException` (`Cannot commit: stale table
+  metadata`, `Cannot commit to table … metadata location from …`; Hadoop also `Cannot commit
+  changes based on stale table metadata`, `Version N already exists`) — commit-retry
+  exhaustion, not a validation outcome. RePark's own storm commits v2 7,5,5,6,5,6,6,6,5,5 and
+  v3 6,5,7,5,5,6,5,5,6,7 over ten repetitions (registry BACKLOG row
+  ICE-OCC-SCOPED-1-INSERT-STORM, corrected 2026-09-18).
 - `spark_occ_oracle3.json`: on every format version and write mode an append INSIDE the `ON`
   partition aborts the MERGE (`Found conflicting files that can contain records matching
   (not_null(ref(name="k")) and ref(name="k") == "a")` on merge-on-read, `ref(name="k") == "a"`
   on copy-on-write), whatever its key; an append to ANOTHER partition commits beside it — even
   the same `(1000, 'b')` the MERGE inserts, because `t.k = 'a'` cannot match a `k = 'b'` row in
   any serial order either (registry row ICE-OCC-SCOPED-1-NOT-MATCHED-INSERT).
+- `spark_occ_oracle4.json` — recorded 2026-09-18: the 16-concurrent-`INSERT INTO` storm over
+  six repetitions per catalog × format version, cells `hadoop_v2_16_concurrent_inserts`,
+  `hadoop_v3_16_concurrent_inserts`, `inmemory_v2_16_concurrent_inserts` and
+  `inmemory_v3_16_concurrent_inserts`, each a list of `{committed, of, errors, rows_after}`
+  repetitions (`INSERT INTO ins VALUES (i, i)`, i in 0..16, one fresh unpartitioned table per
+  repetition, `local[8]`, one SparkSession, 16 threads released by one `threading.Barrier`).
+  The registry row ICE-OCC-SCOPED-1-INSERT-STORM carries the corrected numbers; the
+  `test_insert_storm_loses_only_to_the_retry_budget` docstring cites the ranges.
 - The merge-on-read range MERGE is 1 of 2: its loser raises `Found new conflicting delete files
   that can apply to records matching (not_null(ref(name="id")) and ref(name="id") < 50)` — the
   concurrent delete file carries no `id` bounds, so even a scoped filter cannot exclude it.
