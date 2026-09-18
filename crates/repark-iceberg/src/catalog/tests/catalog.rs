@@ -504,59 +504,49 @@ fn catalog_listing_strategy_is_list_on_access() {
     assert_eq!(CATALOG_LISTING_STRATEGY, "list-on-access");
 }
 
-/// Measure-first: single-namespace `list_tables` is cheaper than a full provider rebuild.
 #[tokio::test]
-async fn listing_cost_list_tables_cheaper_than_provider_rebuild() {
-    use std::time::Instant;
-
+async fn listing_cost_list_tables_loads_no_tables() {
     let wh = TempDir::new().unwrap();
     let warehouse = wh.path().to_str().unwrap();
-    let catalog = memory_catalog(warehouse).await.unwrap();
+    let memory = memory_catalog(warehouse).await.unwrap();
     let sales = NamespaceIdent::new("sales".to_string());
-    catalog
+    memory
         .create_namespace(&sales, HashMap::new())
         .await
         .unwrap();
-    // A handful of tables so the provider rebuild has real list work.
     for index in 0..8 {
-        let name = format!("orders_{index}");
         let creation = TableCreation::builder()
-            .name(name)
+            .name(format!("orders_{index}"))
             .location(format!("{warehouse}/orders_{index}"))
             .schema(sample_schema())
             .properties(HashMap::new())
             .build();
-        catalog.create_table(&sales, creation).await.unwrap();
+        memory.create_table(&sales, creation).await.unwrap();
     }
-    // Warm both paths once so the measured loop is not first-touch dominated.
-    let _ = list_table_names(catalog.as_ref(), "sales").await.unwrap();
-    let _ = build_iceberg_catalog_provider(catalog.clone())
+    let counting = Arc::new(CountingCatalog::new(memory));
+    let catalog: Arc<dyn Catalog> = counting.clone();
+    let names = list_table_names(catalog.as_ref(), "sales").await.unwrap();
+    assert_eq!(names.len(), 8);
+    assert_eq!(counting.list_namespaces_count(), 0);
+    assert_eq!(counting.list_tables_count(), 1);
+    assert_eq!(counting.load_table_count(), 0);
+    let listing_calls = counting.list_namespaces_count()
+        + counting.list_tables_count()
+        + counting.load_table_count();
+    counting.reset_counts();
+    build_iceberg_catalog_provider(catalog.clone())
         .await
         .unwrap();
-
-    let iterations: u32 = 20;
-    let list_start = Instant::now();
-    for _ in 0..iterations {
-        let names = list_table_names(catalog.as_ref(), "sales").await.unwrap();
-        assert_eq!(names.len(), 8);
-    }
-    let list_elapsed = list_start.elapsed();
-
-    let rebuild_start = Instant::now();
-    for _ in 0..iterations {
-        let _ = build_iceberg_catalog_provider(catalog.clone())
-            .await
-            .unwrap();
-    }
-    let rebuild_elapsed = rebuild_start.elapsed();
-
-    // list-on-access must not be slower than a full provider rebuild on the same catalog.
+    assert_eq!(counting.list_namespaces_count(), 2);
+    assert_eq!(counting.list_tables_count(), 1);
+    assert_eq!(counting.load_table_count(), 0);
+    let rebuild_calls = counting.list_namespaces_count()
+        + counting.list_tables_count()
+        + counting.load_table_count();
     assert!(
-        list_elapsed <= rebuild_elapsed * 2,
-        "list_table_names ({list_elapsed:?}) should be ≤ ~2× build_iceberg_catalog_provider \
-             ({rebuild_elapsed:?}) over {iterations} iterations — re-measure if this regresses"
+        rebuild_calls > listing_calls,
+        "rebuild {rebuild_calls} > listing {listing_calls}"
     );
-    // Soft preference pin: listing is typically strictly cheaper.
     assert_eq!(CATALOG_LISTING_STRATEGY, "list-on-access");
 }
 
@@ -802,6 +792,7 @@ struct CountingCatalog {
     inner: Arc<dyn Catalog>,
     list_namespaces: std::sync::atomic::AtomicUsize,
     list_tables: std::sync::atomic::AtomicUsize,
+    load_table: std::sync::atomic::AtomicUsize,
 }
 
 impl CountingCatalog {
@@ -810,6 +801,7 @@ impl CountingCatalog {
             inner,
             list_namespaces: std::sync::atomic::AtomicUsize::new(0),
             list_tables: std::sync::atomic::AtomicUsize::new(0),
+            load_table: std::sync::atomic::AtomicUsize::new(0),
         }
     }
 
@@ -822,10 +814,16 @@ impl CountingCatalog {
         self.list_tables.load(std::sync::atomic::Ordering::SeqCst)
     }
 
+    fn load_table_count(&self) -> usize {
+        self.load_table.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
     fn reset_counts(&self) {
         self.list_namespaces
             .store(0, std::sync::atomic::Ordering::SeqCst);
         self.list_tables
+            .store(0, std::sync::atomic::Ordering::SeqCst);
+        self.load_table
             .store(0, std::sync::atomic::Ordering::SeqCst);
     }
 }
@@ -943,6 +941,8 @@ impl Catalog for CountingCatalog {
         'life1: 'async_trait,
         Self: 'async_trait,
     {
+        self.load_table
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         self.inner.load_table(table)
     }
 
