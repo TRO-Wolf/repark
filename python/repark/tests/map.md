@@ -6590,3 +6590,15 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `sql_values` table via `register_table` and reads the recorded rows. Truth in
   [../../repark-parity/fixtures/torture/data/ice_array_insert_1/](../../repark-parity/fixtures/torture/data/ice_array_insert_1/map.md).
   pins: ice-array-insert-1/C-003, C-004, C-005, C-006, C-007, C-008
+- [_record_ice_write_options_rp_1.py](_record_ice_write_options_rp_1.py) — the **record
+  driver** for ICE-WRITE-OPTIONS-RP-1 (NOT a `test_` module; never collected). `CELLS`
+  is the five-cell catalog (dynamic `insertInto` overwrite / `overwritePartitions()`
+  with `snapshot-property.replace-partitions` `false` / `true`, plus the
+  `snapshot-property.k=v` control); `record_all()` seeds one fresh table per cell on
+  one short-lived local Spark JVM with a Hadoop catalog at scratch and writes
+  `spark_rp_oracle.json`. Runtime GAV from `_oracle_pins`, Ivy cache from
+  `REPARK_ORACLE_IVY`, warehouse from `tempfile`. Re-record:
+  `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2
+  on the path.
+  pins: ice-write-options-rp-1/C-002
+

@@ -51,6 +51,14 @@ the committed landing zone, not a generation target.
   five doors by two format versions) with rows and footer field ids per cell
   (ICE-ARRAY-INSERT-1, 2026-09-18; JSON only, no table data).
   pins: ice-array-insert-1/C-001
+- [ice_write_options_rp_1/](ice_write_options_rp_1/map.md) — the recorded Spark 4.1.2
+  answers for a caller-supplied `snapshot-property.replace-partitions` value on a
+  replace-partitions commit (`spark_rp_oracle.json`, 5 cells: dynamic `insertInto`
+  overwrite and `writeTo(t).overwritePartitions()` with the option `false` / `true`,
+  plus the unrelated-option control) with the commit flag and the newest summary's
+  `replace-partitions` and `k` per cell (ICE-WRITE-OPTIONS-RP-1, 2026-09-18; JSON
+  only, no table data).
+  pins: ice-write-options-rp-1/C-001
 
 ## Pointers
 
