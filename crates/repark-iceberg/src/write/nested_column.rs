@@ -1,9 +1,10 @@
-use iceberg::spec::Type;
+use iceberg::spec::{NestedFieldRef, PrimitiveType, Schema, Type};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Result};
 
 use super::alter::ColumnPosition;
+use super::column_move::{top_level_names, unresolved_column};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ColumnPathChange {
@@ -26,6 +27,118 @@ pub enum ColumnPathChange {
 
 fn full_name(parent: Option<&str>, name: &str) -> String {
     parent.map_or_else(|| name.to_string(), |parent| format!("{parent}.{name}"))
+}
+
+fn quote_if_needed(part: &str) -> String {
+    let plain = !part.is_empty()
+        && part
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || character == '_')
+        && !part.chars().all(|character| character.is_ascii_digit());
+    if plain {
+        part.to_string()
+    } else {
+        format!("`{}`", part.replace('`', "``"))
+    }
+}
+
+fn spark_sql_primitive(primitive: &PrimitiveType) -> String {
+    match primitive {
+        PrimitiveType::Boolean => "BOOLEAN".to_string(),
+        PrimitiveType::Int => "INT".to_string(),
+        PrimitiveType::Long => "BIGINT".to_string(),
+        PrimitiveType::Float => "FLOAT".to_string(),
+        PrimitiveType::Double => "DOUBLE".to_string(),
+        PrimitiveType::Decimal { precision, scale } => format!("DECIMAL({precision},{scale})"),
+        PrimitiveType::Date => "DATE".to_string(),
+        PrimitiveType::Timestamp | PrimitiveType::TimestampNs => "TIMESTAMP_NTZ".to_string(),
+        PrimitiveType::Timestamptz | PrimitiveType::TimestamptzNs => "TIMESTAMP".to_string(),
+        PrimitiveType::String | PrimitiveType::Uuid => "STRING".to_string(),
+        PrimitiveType::Fixed(_) | PrimitiveType::Binary => "BINARY".to_string(),
+        other => other.to_string().to_ascii_uppercase(),
+    }
+}
+
+fn spark_sql_struct(fields: &[NestedFieldRef]) -> String {
+    let children = fields
+        .iter()
+        .map(|field| {
+            let not_null = if field.required { " NOT NULL" } else { "" };
+            let comment = field.doc.as_deref().map_or_else(String::new, |doc| {
+                format!(
+                    " COMMENT '{}'",
+                    doc.replace('\\', "\\\\").replace('\'', "\\'")
+                )
+            });
+            format!(
+                "{}: {}{not_null}{comment}",
+                quote_if_needed(&field.name),
+                spark_sql_type(&field.field_type)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("STRUCT<{children}>")
+}
+
+fn spark_sql_type(field_type: &Type) -> String {
+    match field_type {
+        Type::Primitive(primitive) => spark_sql_primitive(primitive),
+        Type::Struct(fields) => spark_sql_struct(fields.fields()),
+        Type::List(list) => format!("ARRAY<{}>", spark_sql_type(&list.element_field.field_type)),
+        Type::Map(map) => format!(
+            "MAP<{}, {}>",
+            spark_sql_type(&map.key_field.field_type),
+            spark_sql_type(&map.value_field.field_type)
+        ),
+        Type::Variant => "VARIANT".to_string(),
+    }
+}
+
+#[must_use]
+pub fn nested_required_add_refusal(changes: &[ColumnPathChange]) -> Option<String> {
+    changes.iter().find_map(|change| match change {
+        ColumnPathChange::Add {
+            name,
+            required: true,
+            ..
+        } => Some(format!(
+            "Unsupported table change: Incompatible change: cannot add required column: {name}"
+        )),
+        _ => None,
+    })
+}
+
+#[must_use]
+pub fn nested_add_refusal(schema: &Schema, changes: &[ColumnPathChange]) -> Option<String> {
+    changes.iter().find_map(|change| {
+        let ColumnPathChange::Add {
+            parent: Some(parent),
+            name,
+            ..
+        } = change
+        else {
+            return None;
+        };
+        if schema.field_by_name_case_insensitive(parent).is_none() {
+            return Some(unresolved_column(parent, &top_level_names(schema)));
+        }
+        schema
+            .field_by_name_case_insensitive(&full_name(Some(parent), name))
+            .map(|_| {
+                let rendered = parent
+                    .split('.')
+                    .chain(std::iter::once(name.as_str()))
+                    .map(|part| format!("`{part}`"))
+                    .collect::<Vec<_>>()
+                    .join(".");
+                format!(
+                    "[FIELD_ALREADY_EXISTS] Cannot add column, because {rendered} already exists \
+                     in \"{}\". SQLSTATE: 42710",
+                    spark_sql_struct(schema.as_struct().fields())
+                )
+            })
+    })
 }
 
 #[expect(
@@ -158,6 +271,54 @@ mod tests {
             required,
             position: None,
         }
+    }
+
+    #[tokio::test]
+    async fn nested_add_refusal_answers_spark_for_known_and_unknown_paths() {
+        let warehouse = TempDir::new().unwrap();
+        let (catalog, ident) = nested_table(&warehouse).await;
+        let table = catalog.load_table(&ident).await.unwrap();
+        let schema = table.metadata().current_schema();
+        assert_eq!(nested_add_refusal(schema, &[add("s", "c", false)]), None);
+        assert_eq!(nested_required_add_refusal(&[add("s", "c", false)]), None);
+        assert_eq!(
+            nested_required_add_refusal(&[add("s", "c", false), add("s", "r", true)]).as_deref(),
+            Some("Unsupported table change: Incompatible change: cannot add required column: r")
+        );
+        assert_eq!(
+            nested_add_refusal(schema, &[add("arrs.element", "y", false)]),
+            None
+        );
+        assert_eq!(
+            nested_add_refusal(schema, &[add("s", "c", false), add("S", "A", false)]).as_deref(),
+            Some(
+                "[FIELD_ALREADY_EXISTS] Cannot add column, because `S`.`A` already exists in \
+                 \"STRUCT<id: INT, s: STRUCT<a: INT, b: STRING>, arrs: ARRAY<STRUCT<x: INT>>>\". \
+                 SQLSTATE: 42710"
+            )
+        );
+        assert_eq!(
+            nested_add_refusal(schema, &[add("nope", "z", false)]).as_deref(),
+            Some(
+                "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter \
+                 with name `nope` cannot be resolved. Did you mean one of the following? \
+                 [`id`, `s`, `arrs`]. SQLSTATE: 42703"
+            )
+        );
+    }
+
+    #[test]
+    fn spark_sql_struct_renders_required_doc_and_quoted_names() {
+        let fields = vec![
+            NestedField::required(1, "a", Type::Primitive(PrimitiveType::Int))
+                .with_doc("it's")
+                .into(),
+            NestedField::optional(2, "x.y", Type::Primitive(PrimitiveType::Long)).into(),
+        ];
+        assert_eq!(
+            spark_sql_struct(&fields),
+            "STRUCT<a: INT NOT NULL COMMENT 'it\\'s', `x.y`: BIGINT>"
+        );
     }
 
     #[tokio::test]

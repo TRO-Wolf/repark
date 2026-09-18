@@ -246,6 +246,67 @@ async fn nested_ddl_refuses_malformed_paths_spark_shaped() {
 }
 
 #[tokio::test]
+async fn nested_ddl_refuses_double_quoted_names_and_known_paths_spark_shaped() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, NESTED_CREATE).await;
+    let schema_id = load_sales_table(&catalogs, "nested")
+        .await
+        .metadata()
+        .current_schema_id();
+    for sql in [
+        "ALTER TABLE ice.sales.nested RENAME COLUMN s.a TO \"x.y\"",
+        "ALTER TABLE ice.sales.nested ADD COLUMN s.\"x.y\" INT",
+    ] {
+        let refused = execute(&ctx, &catalogs, sql).await.expect_err(sql);
+        assert!(
+            matches!(&refused, DataFusionError::Context(_, inner) if matches!(**inner, DataFusionError::SQL(_, _))),
+            "{sql}: {refused}"
+        );
+        assert!(
+            refused.to_string().contains(
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"x.y\"'. SQLSTATE: 42601"
+            ),
+            "{sql}: {refused}"
+        );
+    }
+    let duplicate = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.nested ADD COLUMN s.A INT",
+    )
+    .await
+    .expect_err("an existing child must refuse");
+    assert!(matches!(duplicate, DataFusionError::Plan(_)), "{duplicate}");
+    assert!(
+        duplicate.to_string().contains(
+            "[FIELD_ALREADY_EXISTS] Cannot add column, because `s`.`A` already exists in \
+             \"STRUCT<id: INT, s: STRUCT<a: INT, b: STRING>, arrs: ARRAY<STRUCT<x: INT>>, \
+             m: MAP<STRING, STRUCT<p: INT>>>\". SQLSTATE: 42710"
+        ),
+        "{duplicate}"
+    );
+    let unknown = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.nested ADD COLUMN nope.c INT",
+    )
+    .await
+    .expect_err("an unknown parent must refuse");
+    assert!(matches!(unknown, DataFusionError::Plan(_)), "{unknown}");
+    assert!(
+        unknown.to_string().contains(
+            "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function \
+                parameter with name `nope` cannot be resolved. Did you mean one of the \
+                following? [`id`, `s`, `arrs`, `m`]. SQLSTATE: 42703"
+        ),
+        "{unknown}"
+    );
+    let table = load_sales_table(&catalogs, "nested").await;
+    assert_eq!(table.metadata().current_schema_id(), schema_id);
+}
+
+#[tokio::test]
 async fn nested_create_not_null_child_is_required_with_level_order_ids() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;

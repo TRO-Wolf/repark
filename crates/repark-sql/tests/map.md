@@ -12,6 +12,21 @@ holds behavior observed from outside the crate.
 
 ## Contents
 
+- `ansi_nested_ddl_oracle.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the ANSI
+  door's twin of every recorded nested DDL cell, reading Spark's answers from
+  `python/repark-parity/fixtures/torture/data/ice_nested_evo_1/oracle.json`. The `cells`
+  replay (inserts skipped, CREATE cells first because the recording's object keys are
+  sorted) compares every read's column names and types and every `DESCRIBE`'s types; the
+  `schema_cells` replay compares the metadata file's current schema (field ids, order,
+  `required`, `doc`) and the refusal (exception class and Spark's text up to `SQLSTATE`).
+  Spark's statements run verbatim except `sc.ns.` → `ice.ns.`, no `USING iceberg`, and
+  `TBLPROPERTIES ('format-version'='N')` → `WITH (format_version = 'N')`. v2 runs on the
+  native ANSI session, v3 on a Spark-extended session through `sql_with(AnsiDialect)` (the
+  only carrier of the v3 opt-in). The two double-quoted cells (`TO "x.y"`, `s."x.y"`) are
+  string literals in Spark and refuse there; on this door `"x.y"` is a standard delimited
+  identifier, so their twin is Spark's backtick cell (`rename_dotted`, `add_dotted_leaf`),
+  ruling Q-22b-NEST-3. Red before round 2: 33 mismatching cells.
+  pins: ice-nested-evo-1/C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - `alter_nested_column.rs` — **ICE-NESTED-EVO-1 (2026-09-17):**
   `nested_add_rename_and_drop_on_the_ansi_door` pins the ANSI door's nested DDL end to end:
   `CREATE TABLE … (s STRUCT<a INT, b VARCHAR>)`, `ADD COLUMN s.c BIGINT`,

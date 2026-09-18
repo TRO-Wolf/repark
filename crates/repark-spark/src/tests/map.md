@@ -499,10 +499,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   list column fails in the fork writer.
   pins: ice-nested-evo-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012
   **Round 2 (2026-09-18, run 22b):**
+  `nested_ddl_refuses_double_quoted_names_and_known_paths_spark_shaped` (double-quoted names
+  refuse 42601 verbatim, an existing child `FIELD_ALREADY_EXISTS` 42710, an unknown parent
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` 42703, schema id unchanged) and
   `nested_create_not_null_child_is_required_with_level_order_ids` (`STRUCT<a: INT NOT NULL>`
   and a map-value struct child are required; ids are Java's level order; a hand-written
   struct-field `OPTIONS` refuses).
-  pins: ice-nested-evo-1/C-014, C-016
+  pins: ice-nested-evo-1/C-014, C-015, C-016, C-019
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).

@@ -538,6 +538,14 @@ repark-core's error map.
   exact file-size ceiling. 2 in-module tests (children evolve by field id; a required child
   without a default refuses and the schema id stays).
   pins: ice-nested-evo-1/C-007, C-010, C-011, C-012
+  **Round 2 (2026-09-18, run 22b):** `nested_add_refusal` is the Spark-shaped pre-check both
+  doors run before the commit: an unknown parent answers Spark's
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION] … SQLSTATE: 42703`, an existing child (case-insensitive)
+  Spark's `[FIELD_ALREADY_EXISTS] Cannot add column, because `s`.`a` already exists in
+  "STRUCT<…>". SQLSTATE: 42710`, the table schema rendered in Spark's `DataType.sql` form
+  (`NOT NULL`, `COMMENT`, backticked names that need it). It reuses `column_move.rs`'s
+  `unresolved_column` / `top_level_names` (now `pub(super)`). 2 more in-module tests.
+  pins: ice-nested-evo-1/C-019
 - `nested_type_sql.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the one token
   rewrite both doors run on a nested column type: a struct child's `NOT NULL` becomes the
   struct-field option `OPTIONS(repark_not_null=TRUE)` (the only struct-field suffix

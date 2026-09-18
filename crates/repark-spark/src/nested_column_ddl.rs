@@ -4,11 +4,13 @@ use datafusion::sql::sqlparser::ast::DataType as SqlDataType;
 use datafusion::sql::sqlparser::dialect::SparkSqlDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
-use datafusion::sql::sqlparser::tokenizer::Token;
+use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use repark_core::CatalogRegistry;
 use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 use repark_iceberg::write::alter::{ColumnPosition, starts_with_alter};
-use repark_iceberg::write::nested_column::{ColumnPathChange, apply_column_path_changes};
+use repark_iceberg::write::nested_column::{
+    ColumnPathChange, apply_column_path_changes, nested_add_refusal, nested_required_add_refusal,
+};
 
 use crate::alter::table_parts_to_ident;
 use crate::create_table::sql_type_to_iceberg_with_timestamp_type;
@@ -71,12 +73,38 @@ pub(crate) fn try_parse_nested_column_ddl(sql: &str) -> Option<Result<NestedColu
     };
     match operation {
         Ok(None) => None,
-        Ok(Some(operation)) => Some(Ok(NestedColumnDdl {
-            table_parts,
-            operation,
-        })),
+        Ok(Some(operation)) => Some(match first_double_quoted_word(sql) {
+            Some(quoted) => Err(verbatim_parser_error(syntax_error_near(&quoted))),
+            None => Ok(NestedColumnDdl {
+                table_parts,
+                operation,
+            }),
+        }),
         Err(error) => Some(Err(parser_error(error))),
     }
+}
+
+fn verbatim_parser_error(message: String) -> DataFusionError {
+    DataFusionError::Context(
+        message.clone(),
+        Box::new(parser_error(ParserError::ParserError(message))),
+    )
+}
+
+fn first_double_quoted_word(sql: &str) -> Option<Token> {
+    Tokenizer::new(&SparkSqlDialect {}, sql)
+        .tokenize()
+        .ok()?
+        .into_iter()
+        .find(|token| match token {
+            Token::Word(word) => word.quote_style == Some('"'),
+            Token::DoubleQuotedString(_) => true,
+            _ => false,
+        })
+}
+
+fn syntax_error_near(token: &Token) -> String {
+    format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{token}'. SQLSTATE: 42601")
 }
 
 fn parser_error(error: ParserError) -> DataFusionError {
@@ -136,10 +164,7 @@ fn close_list(parser: &mut Parser<'_>, parenthesized: bool) -> ParseResult<()> {
 }
 
 fn syntax_error_at(parser: &Parser<'_>) -> ParserError {
-    ParserError::ParserError(format!(
-        "[PARSE_SYNTAX_ERROR] Syntax error at or near '{}'. SQLSTATE: 42601",
-        parser.peek_token().token
-    ))
+    ParserError::ParserError(syntax_error_near(&parser.peek_token().token))
 }
 
 fn parse_add_column_tail(
@@ -257,6 +282,12 @@ pub(crate) async fn execute_nested_column_ddl(
     };
     if changes.is_empty() {
         return ctx.read_empty();
+    }
+    if let Some(message) = nested_add_refusal(table.metadata().current_schema(), &changes) {
+        return Err(DataFusionError::Plan(message));
+    }
+    if let Some(message) = nested_required_add_refusal(&changes) {
+        return Err(DataFusionError::Execution(message));
     }
     apply_column_path_changes(handle.as_ref(), &table, &changes)
         .await

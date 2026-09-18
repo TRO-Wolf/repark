@@ -104,7 +104,7 @@ fn name_known(schema: &Schema, added_names: &[String], name: &str) -> bool {
         .any(|added| added.to_lowercase() == folded)
 }
 
-fn top_level_names(schema: &Schema) -> Vec<String> {
+pub(super) fn top_level_names(schema: &Schema) -> Vec<String> {
     schema
         .as_struct()
         .fields()
@@ -113,7 +113,7 @@ fn top_level_names(schema: &Schema) -> Vec<String> {
         .collect()
 }
 
-fn unresolved_column(name: &str, candidates: &[String]) -> String {
+pub(super) fn unresolved_column(name: &str, candidates: &[String]) -> String {
     let rendered = name
         .split('.')
         .map(|part| format!("`{part}`"))

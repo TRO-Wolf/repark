@@ -445,6 +445,15 @@ pins: rp-4-fork-repin/C-005, C-006
   without a default refuses with the fork's `Incompatible change: cannot add required column…`.
   Pins: [`tests/nested_column_ddl.rs`](tests/map.md).
   pins: ice-nested-evo-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012
+  **Round 2 (2026-09-18, run 22b):** a claimed statement that holds a double-quoted word
+  (`RENAME COLUMN s.a TO "x.y"`, `ADD COLUMN s."x.y" INT`) refuses Spark's
+  `[PARSE_SYNTAX_ERROR] Syntax error at or near '"x.y"'. SQLSTATE: 42601` (Spark reads `"…"`
+  as a string literal there; `SparkSqlDialect` had read it as an identifier and renamed the
+  child) — the message rides a `Context` over the `SQL` error so it stays a `ParseException`
+  and keeps its quotes verbatim. Backticked dotted names (`` TO `x.y` ``) stay accepted, as in
+  Spark. Before the commit, `nested_add_refusal` answers Spark's `FIELD_ALREADY_EXISTS` /
+  `UNRESOLVED_COLUMN` as an analysis error.
+  pins: ice-nested-evo-1/C-015, C-019
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,

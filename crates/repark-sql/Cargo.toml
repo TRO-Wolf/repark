@@ -58,3 +58,4 @@ tempfile = "3"
 #    kernel the goldens gate. The TA set is owned by neither door (design §2 Q11).
 repark-spark.workspace = true
 repark-ta = { workspace = true, features = ["datafusion"] }
+serde_json.workspace = true

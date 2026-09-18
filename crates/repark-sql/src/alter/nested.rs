@@ -7,7 +7,9 @@ use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use repark_core::EngineContext;
 use repark_iceberg::write::alter::{ColumnPosition, starts_with_alter};
-use repark_iceberg::write::nested_column::{ColumnPathChange, apply_column_path_changes};
+use repark_iceberg::write::nested_column::{
+    ColumnPathChange, apply_column_path_changes, nested_add_refusal, nested_required_add_refusal,
+};
 use repark_iceberg::write::nested_type_sql::rewrite_nested_type_tokens;
 
 use super::{FORM, invalidate};
@@ -252,6 +254,12 @@ pub(crate) async fn execute_nested_column_ddl(
     };
     if changes.is_empty() {
         return cx.ctx.read_empty();
+    }
+    if let Some(message) = nested_add_refusal(table.metadata().current_schema(), &changes) {
+        return Err(DataFusionError::Plan(message));
+    }
+    if let Some(message) = nested_required_add_refusal(&changes) {
+        return Err(DataFusionError::Execution(message));
     }
     apply_column_path_changes(target.catalog.as_ref(), &table, &changes)
         .await
