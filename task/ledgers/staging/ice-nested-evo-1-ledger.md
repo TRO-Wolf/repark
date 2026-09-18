@@ -49,3 +49,27 @@ JVM exception: `org.apache.spark.SparkException`, condition `_LEGACY_ERROR_TEMP_
 | C-011 | `DROP COLUMN s.b` drops the child; the read matches Spark. | Same. | **OPEN** | |
 | C-012 | `ADD COLUMN s.r INT NOT NULL` on a table with rows refuses as Spark does (message `cannot add required column: r`) and leaves the table untouched. | Pin asserts the typed exception, message and no new metadata file. | **OPEN** | |
 | C-013 | Every cell above has a registry row (FIXED or DECLARED) in `docs/spark-sql-iceberg-parity.md`. | Registry section present. | **OPEN** | |
+
+## RED — measured on main's pin `8fb44a39`, no fork override (2026-09-17)
+
+`python/repark/tests/test_ice_nested_evo_1.py` on the release native built from `origin/main`:
+**32 failed, 0 passed**.
+
+- Adoption reads (8 cells, `fork292-*`, SQL door and DataFrame door alike):
+  `PySparkException: External error: Unexpected => Arrow Schema Error, source: Invalid argument
+  error: Incorrect number of arrays for StructArray fields, expected 2 got 1`.
+- Nested DDL (20 cells): `CREATE TABLE … (s STRUCT<a: INT, b: STRING>)` refuses
+  `UnsupportedOperationException: This feature is not implemented: column type
+  `STRUCT<a INT, b STRING>` is not supported yet for Iceberg tables`; `ARRAY<STRUCT<x: INT>>`
+  refuses the same way on `STRUCT<x INT>`; `MAP<STRING, STRUCT<p: INT>>` refuses at the parser
+  `ParseException: SQL error: ParserError("Expected: ',' or ')' after column definition, found: <
+  …")`. The dependent `DESCRIBE` and read cells then fail `TABLE_OR_VIEW_NOT_FOUND`.
+- Nested ALTER, measured on its own (probe on a fresh catalog, same native):
+  `ADD COLUMN s.c BIGINT` → `ParseException … Expected: a data type name, found: .`;
+  `RENAME COLUMN s.a TO a2` → `ParseException … Expected: TO, found: .`;
+  `DROP COLUMN s.b` → `ParseException … Expected: end of statement, found: .`.
+- Required child (2 cells): `ADD COLUMN s.r INT NOT NULL` → `ParseException … Expected: a data
+  type name, found: .` instead of Spark's `Unsupported table change: Incompatible change: cannot
+  add required column: r`.
+
+No registry row existed for any of these cells.

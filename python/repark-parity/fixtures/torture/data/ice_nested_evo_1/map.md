@@ -35,6 +35,6 @@ side files are not copied.
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Cells: `python/repark/tests/test_ice_nested_evo_1.py` (step 2)
+- Cells: [../../../../../repark/tests/test_ice_nested_evo_1.py](../../../../../repark/tests/test_ice_nested_evo_1.py)
 - Driver: [../../../../../repark/tests/_record_ice_nested_evo_1.py](../../../../../repark/tests/_record_ice_nested_evo_1.py)
 - Ledger: `task/ledgers/staging/ice-nested-evo-1-ledger.md`

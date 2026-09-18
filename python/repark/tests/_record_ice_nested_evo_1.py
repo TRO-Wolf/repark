@@ -48,7 +48,8 @@ def build_cells(format_version: str) -> list[tuple[str, list[str], str | None]]:
         (
             f"{version}_struct_child_add_read",
             [
-                f"CREATE TABLE {struct_table} (id INT, s STRUCT<a: INT>) USING iceberg {properties}",
+                f"CREATE TABLE {struct_table} (id INT, s STRUCT<a: INT>) USING iceberg "
+                f"{properties}",
                 f"INSERT INTO {struct_table} SELECT 1, named_struct('a', 1)",
                 f"ALTER TABLE {struct_table} ADD COLUMN s.b STRING",
                 f"INSERT INTO {struct_table} SELECT 2, named_struct('a', 2, 'b', 'y')",
@@ -176,7 +177,7 @@ def record_cell(spark: Any, statements: list[str], query: str | None) -> dict[st
     for statement in statements:
         try:
             spark.sql(statement)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             cell["error"] = describe_error(exc)
             break
     if query is not None and cell["error"] is None:

@@ -341,6 +341,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the fixture directory before their DML steps, and writes `truth.json` (one answer per
   line, `catalog_sha256`). `run_case_steps` / `run_overwrite_partitions_twin` are reused by
   the live cell so the live and recorded answers come from one code path.
+- [test_ice_nested_evo_1.py](test_ice_nested_evo_1.py) — **ICE-NESTED-EVO-1 (2026-09-17):**
+  a Spark table whose struct, list element struct or map value struct gained a child reads as
+  Spark 4.1.2 does, and nested DDL answers Spark (rating row V2-10d). Expected answers come
+  from the recorded `fixtures/torture/data/ice_nested_evo_1/oracle.json`.
+  `test_adopted_spark_table_reads_match_spark` materializes the four committed Spark-written
+  tables at their baked root under a directory lock, `register_table`s them and compares the
+  SQL door and the DataFrame door (`table().select/filter`) on the `to_arrow` path (values
+  and Spark simple-string types). `test_nested_ddl_matches_spark` replays Spark's own
+  statements per format version (v2, v3) on a RePark catalog: `CREATE TABLE` with struct,
+  array-of-struct and map-of-struct columns, `ADD COLUMN s.b` / `arrs.element.y` /
+  `m.value.q` / `s.c`, `RENAME COLUMN s.a TO a2`, `DROP COLUMN s.b`, each read on both doors
+  and each `DESCRIBE` compared. `test_required_nested_child_refuses_like_spark` pins the
+  `ADD COLUMN s.r INT NOT NULL` refusal (message, no new metadata file, table unchanged).
+  Test ids starting `fork292` read a data file that lacks a child the schema has: they need
+  fork PR #292 (F-NESTED-EVO-1) and are red until the fork pin bump.
+  pins: ice-nested-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  pins: ice-nested-evo-1/C-010, C-011, C-012
 - `_record_ice_nested_evo_1.py` — the **record driver** for ICE-NESTED-EVO-1 (NOT a `test_`
   module; never collected). `build_cells()` is the cell catalog; `main()` runs every cell on
   one short-lived local Spark JVM with a Hadoop catalog at the baked root
