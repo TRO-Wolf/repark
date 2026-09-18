@@ -7,6 +7,7 @@ use datafusion::execution::TaskContext;
 use datafusion::physical_plan::SendableRecordBatchStream;
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::PartitionStream;
+use datafusion::prelude::SessionContext;
 use futures::{StreamExt, TryStreamExt};
 use iceberg::arrow::ArrowReaderBuilder;
 use iceberg::expr::Predicate;
@@ -15,10 +16,52 @@ use iceberg::spec::Struct;
 use iceberg::table::Table;
 use tracing::Instrument;
 
-use super::{conform_scan_batch, iceberg_err};
+use super::{
+    MergeMode, MergeSpec, conform_scan_batch, iceberg_err, not_matched_by_source,
+    note_residual_push,
+};
 use crate::write::file_scoped_rewrite::filter_tasks_to_allowlist_nonempty;
+use crate::write::scan_prune::{
+    bare_equalities_from_on, residual_bounds_predicate, scan_pruning_from_ctx,
+};
 
 type PlannedFileTasks = Arc<futures::lock::Mutex<Option<Arc<Vec<FileScanTask>>>>>;
+
+/// PERF-04: residual join-key bounds.
+pub(crate) async fn residual_join_key_filter(
+    ctx: &SessionContext,
+    spec: &MergeSpec,
+    write_schema: &SchemaRef,
+    mode: MergeMode,
+    file_scoped_rewrite: bool,
+) -> Result<Option<Predicate>, DataFusionError> {
+    if !scan_pruning_from_ctx(ctx) {
+        return Ok(None);
+    }
+    if not_matched_by_source::is_present(spec) {
+        return Ok(None);
+    }
+    // COW full-target rewrite must not residual-filter the primary, or unmatched survivors drop.
+    if matches!(mode, MergeMode::CopyOnWrite) && !file_scoped_rewrite {
+        return Ok(None);
+    }
+    let equalities = bare_equalities_from_on(&spec.on_sql, &spec.target_alias, &spec.source_alias);
+    if equalities.is_empty() {
+        return Ok(None);
+    }
+    let residual = residual_bounds_predicate(
+        ctx,
+        &spec.source_from_sql,
+        &spec.source_alias,
+        write_schema.as_ref(),
+        &equalities,
+    )
+    .await;
+    if residual.is_some() {
+        note_residual_push();
+    }
+    Ok(residual)
+}
 
 pub(crate) type KnownPartitions = HashMap<String, (i32, Struct)>;
 

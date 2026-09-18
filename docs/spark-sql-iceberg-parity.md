@@ -630,18 +630,26 @@ perfectly good read.
 
 #### DML-5 — serializable `MERGE` conflict-detection breadth
 
-- **repark** — a serializable `MERGE` validates against **any** concurrent append
-  (`AlwaysTrue` conflict filter): a concurrent insert into an unrelated partition aborts the
-  MERGE with a conflict error.
-- **Apache Spark** — scopes serializable validation to a filter derived from the scan, so the
-  same unrelated-partition append commits. *(oracle: documented — audit M15.)*
-- **Pin** — `crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs`
-  `commit_serializable_merge_rejects_concurrent_append_in_a_different_partition_m15` (and the
-  snapshot-isolation contrast cases beside it; `write.merge.isolation-level = snapshot` (#117)
-  is the user-facing relief valve).
-- **Rationale** — DECLARED, fail-closed by design. Narrowing to the pushed-predicate residual
-  would be UNSOUND for the shapes whose residual under-covers the scan (audit M15); the honest
-  contract is over-rejection plus the documented `snapshot` opt-down.
+- **repark** — **FIXED 2026-09-17** for every shape where Spark scopes: a MERGE / UPDATE / DELETE
+  now hands its own target predicate to the fork's conflict validation (the target-only `ON`
+  conjuncts, or the DML's `WHERE`), and fork #291 (RP-24) tests each concurrent file through its
+  own partition projection, so a concurrent write to another partition or a disjoint range
+  commits. Exception: a plain-`WHERE` UPDATE runs the fork's DataFusion exec and is still
+  unscoped (row ICE-OCC-SCOPED-1-PLAIN-UPDATE, OPEN). Where the statement has no target-only
+  predicate the filter stays `AlwaysTrue` and
+  the MERGE still aborts on any concurrent commit — as Spark does. Before 2026-09-17 every commit
+  site hard-coded `AlwaysTrue`, and this row DECLARED the over-rejection fail-closed.
+- **Apache Spark** — threads `SparkScan.filterExpression()` into the write's
+  `conflictDetectionFilter`. *(oracle: recorded — the ICE-OCC-SCOPED-1 rows below.)*
+- **Pin** — the ICE-OCC-SCOPED-1 row set in §7. The M15 pin
+  `crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs`
+  `commit_serializable_merge_rejects_concurrent_append_in_a_different_partition_m15` stays green:
+  it drives the `commit` test wrapper, which carries `AlwaysTrue` — the posture a MERGE with no
+  target-only conjunct still has.
+- **Rationale** — the 2026-08-15 decision is reversed by ICE-OCC-SCOPED-1's dated decision. Its
+  worry — a residual that under-covers the scan — does not apply: the conflict filter is never
+  the join-key residual (`merge/target_scan.rs`), only conjuncts of the statement's own
+  predicate, and an unconvertible conjunct WIDENS the filter (`write/conflict_filter.rs`).
 
 #### ICE-COMMIT-UNKNOWN-1 — an ambiguous commit raises `CommitStateUnknownException`
 
@@ -4890,6 +4898,158 @@ the pin rather than obeying it.
   The v3 pin records one standing fork semantic, not a regression: RePark rewrites the
   fully-DV-deleted sixth file too (6/3/1 where Spark reports 5/3/0) and drops its DV in the
   same commit (F-16); rows and the surviving file multiset equal Spark's.
+
+### ICE-OCC-SCOPED-1 — concurrent DML on disjoint partitions or ranges aborted on any concurrent commit — **FIXED 2026-09-17 (fork F-OCC-SCOPED-1 #291 + RePark)**
+
+- **repark** — **FIXED 2026-09-17** (rating row V2-20a, residue DML-5). Before the fix every
+  RePark DML commit site passed `Predicate::AlwaysTrue` as the conflict-detection filter, so a
+  serializable MERGE / UPDATE / DELETE aborted on ANY concurrent commit (`Found conflicting files
+  that can contain records matching TRUE`, naming a file in another partition — measured on the
+  pre-fix head by the race pins below). Now the filter is the statement's own target predicate —
+  the `ON` conjuncts that reference only the target alias, or the identity DML's `WHERE` —
+  `AlwaysTrue` when none converts or when a `WHEN NOT MATCHED BY SOURCE` clause reads the whole
+  target, and fork #291 tests each concurrently added data file and delete file against it
+  through its own spec's partition projection, then its inclusive metrics. `snapshot` isolation
+  arms the same walks as before; the filter scopes whichever are armed, as in Java.
+- **Apache Spark** — Spark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0`, measured
+  2026-09-17 (fixture `python/repark-parity/fixtures/torture/data/ice_occ_scoped_1/`):
+
+  | shape (v2 and v3) | Spark | repark after |
+  |---|---|---|
+  | 4 MERGEs, each `ON t.k = '<key>' AND t.k = s.k AND t.id = s.id`, partitioned by `k`, MoR and COW | 4 of 4 | **FIXED** 4 of 4 (1 of 4 before) |
+  | 4 UPDATE statements `WHERE k = '<key>' AND id < 8`, MoR and COW | 4 of 4 | **OPEN** — plain-`WHERE` UPDATE commits through the fork's DataFusion exec, still unscoped: row ICE-OCC-SCOPED-1-PLAIN-UPDATE |
+  | 4 DELETE statements `WHERE k = '<key>' AND id > 90`, MoR and COW | 4 of 4 | **FIXED** 4 of 4 (MoR already committed: a DELETE's row delta arms no delete-file walk and a concurrent DELETE adds no data file) |
+  | MERGE `ON t.k = 'a' AND t.id = s.id` vs `INSERT INTO` partition `d`, MoR and COW | 2 of 2 | **FIXED** 2 of 2 |
+  | 2 MERGEs `ON t.id < 50 …` / `ON t.id >= 50 …`, unpartitioned, copy-on-write | 2 of 2 | **FIXED** 2 of 2 |
+  | 2 whole-partition DELETE statements `WHERE k = 'a'` / `k = 'b'` | 2 of 2 | 2 of 2 before and after (COW, one file per partition: each DELETE removes only its own file) |
+  | 16 concurrent `INSERT INTO` | v2 16 of 16, v3 14 of 16 | 5 of 16, unchanged — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
+
+- **Pin** — `crates/repark-iceberg/src/write/merge/tests/occ_scoped.rs` (fault-injected race
+  through the real `execute_merge` / `execute_predicate_dml`, v2 and v3, MoR and COW:
+  `partition_scoped_merges_commit_through_a_concurrent_write_to_another_partition`,
+  `partition_scoped_updates_commit_through_a_concurrent_update_of_another_partition` (the
+  identity UPDATE executor `execute_predicate_dml` driven with a convertible plain `WHERE`; the
+  doors route only a bare `UPDATE … WHERE col IN (SELECT …)` there, whose filter is
+  `AlwaysTrue` — sound, unscoped),
+  `partition_scoped_deletes_commit_through_a_concurrent_delete_in_another_partition`,
+  `a_partition_scoped_merge_commits_through_a_concurrent_insert_into_another_partition`,
+  `a_copy_on_write_range_scoped_merge_commits_through_a_disjoint_range_rewrite`);
+  `crates/repark-iceberg/src/write/conflict_filter.rs` unit tests (the derivation);
+  `python/repark/tests/test_ice_occ_scoped_1.py` (`test_partition_scoped_storms_match_spark`,
+  `test_range_scoped_merges_match_spark`, `test_whole_partition_deletes_both_commit`, SQL and
+  DataFrame doors). Red-first and mutation
+  evidence: `task/ledgers/staging/ice-occ-scoped-1-ledger.md`.
+- **Rationale** — FIXED. The over-rejection turned every concurrent partitioned pipeline into
+  a retry loop Spark does not need.
+
+### ICE-OCC-SCOPED-1-PLAIN-UPDATE — a plain-`WHERE` UPDATE still aborts on any concurrent commit — **OPEN 2026-09-17 (fork half)**
+
+- **repark** — four barrier-released `UPDATE … SET v = '<x>' WHERE k = '<key>' AND id < 8`
+  on four partitions commit **1 of 4** (release native, v2/v3 × MoR/COW, measured after
+  ICE-OCC-SCOPED-1); the losers raise `Found conflicting files that can contain records matching
+  TRUE`. A plain-`WHERE` UPDATE is not a RePark commit site: the Spark and ANSI doors route only
+  a subquery `UPDATE … WHERE col IN (SELECT …)` and a plain-`WHERE` DELETE through
+  `repark-iceberg`'s `predicate_dml` (RP-9 r2 left UPDATE on the fork on purpose); every other
+  UPDATE runs the fork's `iceberg-datafusion` `physical_plan/delete.rs` exec, whose four commit
+  sites still pass `Predicate::AlwaysTrue`. The RePark identity UPDATE path is scoped (pinned).
+- **Apache Spark** — 4 of 4. *(oracle: recorded 2026-09-17, fixture
+  `ice_occ_scoped_1/spark_occ_oracle2.json` `*_4_partition_scoped_updates`.)*
+- **Pin** — `python/repark/tests/test_ice_occ_scoped_1.py::test_partition_scoped_storms_match_spark`
+  (`_assert_plain_update_storm_is_open`: fewer than 4 commit, every loser `matching TRUE`, rows =
+  2 × commits) — it reds the day the storm commits 4 of 4, which retires this row.
+- **Rationale** — OPEN: the fix is the fork's DataFusion UPDATE / DELETE exec threading its own
+  scan filter into `conflict_detection_filter` (a fork unit after F-OCC-SCOPED-1), or a RePark
+  decision to route plain UPDATE through `predicate_dml` — a wider change than this unit's
+  (ruling Q-21a-10).
+
+### ICE-OCC-SCOPED-1-REFUSED — where Spark itself refuses a concurrent MERGE — **DECLARED 2026-09-17 (matches Spark; do not "fix")**
+
+- **repark** — refuses exactly where Spark 4.1.2 refuses, with Spark's message: (a) N MERGEs on
+  disjoint KEYS of an unpartitioned merge-on-read table, `ON t.id = s.id`: 1 of 8 commit, the
+  losers raise `Found conflicting files that can contain records matching TRUE` (serializable)
+  or `Found new conflicting delete files that can apply to records matching TRUE` (snapshot) —
+  the `ON` condition has no target-only conjunct, so the filter is `true` in both engines; (b)
+  two disjoint-RANGE MERGEs (`t.id < 50` / `t.id >= 50`) on an unpartitioned merge-on-read
+  table: 1 of 2, the loser raises `Found new conflicting delete files that can apply to records
+  matching id < 50` — the concurrent position-delete file / deletion vector carries no `id`
+  bounds, so no filter can exclude it; (c) a MERGE carrying `WHEN NOT MATCHED BY SOURCE`, which
+  reads every target row and so keeps `AlwaysTrue`. The losers' class is `PySparkException`
+  (Spark's is the JVM `ValidationException`, which PySpark surfaces as `Py4JJavaError`); Java
+  renders the filter `true` / `(not_null(ref(name="id")) and ref(name="id") < 50)` where RePark
+  renders `TRUE` / `id < 50`.
+- **Apache Spark** — (a) 1 of 8 with those messages; (b) 1 of 2 merge-on-read, 2 of 2
+  copy-on-write; (c) not recorded (Java's MERGE scan carries no filter when the NMBS arm is
+  present — documented). *(oracle: recorded 2026-09-17, fixture
+  `ice_occ_scoped_1/spark_occ_oracle.json` and `spark_occ_oracle2.json`.)*
+- **Pin** — `occ_scoped.rs` `disjoint_key_merges_on_an_unpartitioned_table_still_conflict_on_true`,
+  `a_merge_on_read_range_scoped_merge_still_loses_to_the_concurrent_delete_file`,
+  `a_merge_with_not_matched_by_source_stays_unscoped`; `test_ice_occ_scoped_1.py`
+  `test_disjoint_key_merges_refuse_like_spark`, `test_range_scoped_merges_match_spark`
+  (merge-on-read cells). An "optimisation" that derives the filter from the SOURCE's keys, or
+  that treats an unconvertible predicate as `false`, turns these pins red (mutation M7 in the
+  ledger).
+- **Rationale** — DECLARED 2026-09-17: over-fixing is a divergence too. The rating premise that
+  Spark commits the 8 disjoint-key MERGEs is wrong — measured 1 of 8.
+
+### ICE-OCC-SCOPED-1-NOT-MATCHED-INSERT — a MERGE with an INSERT clause, racing a concurrent append — **FIXED 2026-09-18 (matches Spark in every cell)**
+
+- **repark** — a MERGE scoped to one partition that inserts through `WHEN NOT MATCHED THEN
+  INSERT *` answers a concurrent append exactly as Spark 4.1.2 does, v2/v3 × merge-on-read /
+  copy-on-write. `MERGE … USING (SELECT <id> AS id, '<key>' AS k, 'merged' AS v) s ON t.k = 'a'
+  AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN
+  INSERT *`, the append committed between the MERGE's scan and its commit:
+
+  | cell | source row | concurrent append | Spark | repark |
+  |---|---|---|---|---|
+  | (a) inside the `ON` partition, the MERGE's key | `(1000, 'a')` | `(1000, 'a')` | aborts: `Found conflicting files that can contain records matching … k == "a"` | aborts, `matching k = "a"` |
+  | (b) inside the `ON` partition, another key | `(1000, 'a')` | `(2000, 'a')` | aborts, same message | aborts, same |
+  | (c) another partition | `(1000, 'a')` | `(1000, 'b')` | commits: 102 rows | commits: 102 rows |
+  | (d) the source row outside the `ON` partition | `(1000, 'b')` | `(1000, 'b')` | commits: two `(1000, 'b')` rows | commits: two `(1000, 'b')` rows |
+
+  The review's concern (L-02) was cell (d): the filter `k = 'a'` does not cover the partition
+  the MERGE inserts into, so both engines accept the second `(1000, 'b')`. That is no
+  isolation anomaly: `t.k = 'a'` can never match a `k = 'b'` row, so EVERY serial order of the
+  two statements also inserts `(1000, 'b')` twice. Uniqueness is not an Iceberg constraint.
+  With the MERGE filter forced back to `AlwaysTrue` (mutation M4) the pin reds on its first
+  cell, the loser naming `matching TRUE`; an over-narrow filter (M11) makes cell (a) commit where
+  Spark aborts.
+- **Apache Spark** — as tabled. Recorded 2026-09-18 with a deterministic interleaving: the
+  MERGE's source carries a Python UDF that blocks after Spark has analysed the statement and
+  pinned the target snapshot; the append commits; the gate releases. Every cell's snapshot log
+  (`append` 100, `append` 1, then the MERGE's `append` 1 when it commits) is the witness.
+  *(oracle: fixture `ice_occ_scoped_1/spark_occ_oracle3.json`.)*
+- **Pin** — `crates/repark-iceberg/src/write/merge/tests/occ_scoped_insert.rs`
+  `a_merge_that_inserts_answers_a_concurrent_append_as_spark_does`: the fault-injected race of
+  `occ_scoped.rs` (the append lands inside the MERGE's first `update_table`), all 16 cells, every
+  outcome, row set and count read from Spark's recording. The facade cannot run this
+  interleaving: RePark's Python-UDF bridge materialises a UDF source in Python before the native
+  MERGE loads its target, and a registered UDF inside a SQL subquery is refused, so a gated
+  facade race would measure no race at all (ruling Q-21a-OCC-2).
+- **Rationale** — FIXED 2026-09-18, matching Spark. Java's `conflictDetectionFilter` is the
+  target scan's filter, not the insert set, and RePark derives the same.
+
+### ICE-OCC-SCOPED-1-INSERT-STORM — 16 concurrent INSERT statements: RePark commits 5, Spark 16 — **BACKLOG 2026-09-17**
+
+- **repark** — sixteen barrier-released `INSERT INTO … VALUES` against one memory-catalog table
+  commit **5 of 16** on v2 and on v3 (release native, `p_retry.py`, measured before and after
+  ICE-OCC-SCOPED-1 — the unit does not touch appends). Every loser is a `PySparkException`
+  `CatalogCommitConflicts => Cannot commit to table … metadata location …`: appends validate
+  nothing, so each loser is the fork's commit-retry budget (`commit.retry.num-retries`, default
+  4, `ExponentialBackoff` in the fork's `Transaction::commit`) running out while sixteen writers
+  rebase in lockstep. Every commit that lands is durable (rows = snapshots = commits). Two
+  concurrent INSERT statements both commit.
+- **Apache Spark** — v2 16 of 16; v3 14 of 16, the two losers Hadoop-catalog
+  `CommitFailedException`s (`Cannot commit changes based on stale table metadata`, `Version 6
+  already exists`) — the same budget class, reached less often. *(oracle: recorded 2026-09-17,
+  fixture `ice_occ_scoped_1/spark_occ_oracle.json`.)*
+- **Pin** — `python/repark/tests/test_ice_occ_scoped_1.py::test_insert_storm_loses_only_to_the_retry_budget`
+  (v2/v3 × SQL / `writeTo().append()`: committed + losers = 16, at least one commit, every loser
+  a `CatalogCommitConflicts` `PySparkException`, rows and snapshots equal the commits). The
+  exact count is not pinned: it is scheduler-dependent in both engines.
+- **Rationale** — BACKLOG: closing it means retry jitter / budget parity in the fork's commit
+  loop (Java adds jitter to `Tasks.exponentialBackoff`), a fork unit, not this RePark unit's
+  conflict-filter change. Spark's own v3 14/16 shows the target is "rarely", not "never"
+  (ruling Q-21a-5).
 
 ### ICE-PROMOTE-READ-1 — filters on a column widened by `ALTER COLUMN … TYPE` dropped the rows written before the promotion — **FIXED 2026-09-16 (fork F-PROMOTE-READ-1)**
 

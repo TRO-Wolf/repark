@@ -1,0 +1,386 @@
+{
+  "spark_version": "4.1.2",
+  "iceberg_runtime": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+  "cells": {
+    "v2_mergeonread_4_partition_scoped_merges": {
+      "statements": [
+        "MERGE INTO sc.ns.pm2_mergeonread t USING (SELECT CAST(0 AS BIGINT) AS id, 'a' AS k, 'm0' AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.pm2_mergeonread t USING (SELECT CAST(1 AS BIGINT) AS id, 'b' AS k, 'm1' AS v) s ON t.k = 'b' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.pm2_mergeonread t USING (SELECT CAST(2 AS BIGINT) AS id, 'c' AS k, 'm2' AS v) s ON t.k = 'c' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.pm2_mergeonread t USING (SELECT CAST(3 AS BIGINT) AS id, 'd' AS k, 'm3' AS v) s ON t.k = 'd' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+      ],
+      "committed": 4,
+      "of": 4,
+      "errors": []
+    },
+    "v2_mergeonread_rows_after_4_partition_scoped_merges": {
+      "query": "SELECT count(*), sum(CASE WHEN v LIKE 'm%' THEN 1 ELSE 0 END) FROM sc.ns.pm2_mergeonread",
+      "rows": [
+        [
+          100,
+          4
+        ]
+      ]
+    },
+    "v2_mergeonread_4_partition_scoped_updates": {
+      "statements": [
+        "UPDATE sc.ns.pm2_mergeonread SET v = 'ua' WHERE k = 'a' AND id < 8",
+        "UPDATE sc.ns.pm2_mergeonread SET v = 'ub' WHERE k = 'b' AND id < 8",
+        "UPDATE sc.ns.pm2_mergeonread SET v = 'uc' WHERE k = 'c' AND id < 8",
+        "UPDATE sc.ns.pm2_mergeonread SET v = 'ud' WHERE k = 'd' AND id < 8"
+      ],
+      "committed": 4,
+      "of": 4,
+      "errors": []
+    },
+    "v2_mergeonread_rows_after_4_partition_scoped_updates": {
+      "query": "SELECT count(*), sum(CASE WHEN v LIKE 'u%' THEN 1 ELSE 0 END) FROM sc.ns.pm2_mergeonread",
+      "rows": [
+        [
+          100,
+          8
+        ]
+      ]
+    },
+    "v2_mergeonread_4_partition_scoped_deletes": {
+      "statements": [
+        "DELETE FROM sc.ns.pm2_mergeonread WHERE k = 'a' AND id > 90",
+        "DELETE FROM sc.ns.pm2_mergeonread WHERE k = 'b' AND id > 90",
+        "DELETE FROM sc.ns.pm2_mergeonread WHERE k = 'c' AND id > 90",
+        "DELETE FROM sc.ns.pm2_mergeonread WHERE k = 'd' AND id > 90"
+      ],
+      "committed": 4,
+      "of": 4,
+      "errors": []
+    },
+    "v2_mergeonread_rows_after_4_partition_scoped_deletes": {
+      "query": "SELECT count(*) FROM sc.ns.pm2_mergeonread",
+      "rows": [
+        [
+          91
+        ]
+      ]
+    },
+    "v2_mergeonread_merge_vs_concurrent_insert_other_partition": {
+      "statements": [
+        "MERGE INTO sc.ns.pm2_mergeonread t USING (SELECT CAST(4 AS BIGINT) AS id, 'a' AS k, 'mx' AS v) s ON t.k = 'a' AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "INSERT INTO sc.ns.pm2_mergeonread VALUES (1000, 'd', 'appended')"
+      ],
+      "committed": 2,
+      "of": 2,
+      "errors": []
+    },
+    "v2_mergeonread_rows_after_merge_vs_insert": {
+      "query": "SELECT count(*) FROM sc.ns.pm2_mergeonread",
+      "rows": [
+        [
+          92
+        ]
+      ]
+    },
+    "v2_mergeonread_2_range_scoped_merges_unpartitioned": {
+      "statements": [
+        "MERGE INTO sc.ns.um2_mergeonread t USING (SELECT CAST(1 AS BIGINT) AS id, 'm1' AS v) s ON t.id < 50 AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.um2_mergeonread t USING (SELECT CAST(60 AS BIGINT) AS id, 'm60' AS v) s ON t.id >= 50 AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+      ],
+      "committed": 1,
+      "of": 2,
+      "errors": [
+        "Py4JJavaError: : org.apache.iceberg.exceptions.ValidationException: Found new conflicting delete files that can apply to records matching (not_null(ref(name=\"id\")) and ref(nam"
+      ]
+    },
+    "v2_mergeonread_rows_after_2_range_scoped_merges": {
+      "query": "SELECT count(*), sum(CASE WHEN v LIKE 'm%' THEN 1 ELSE 0 END) FROM sc.ns.um2_mergeonread",
+      "rows": [
+        [
+          100,
+          1
+        ]
+      ]
+    },
+    "v2_copyonwrite_4_partition_scoped_merges": {
+      "statements": [
+        "MERGE INTO sc.ns.pm2_copyonwrite t USING (SELECT CAST(0 AS BIGINT) AS id, 'a' AS k, 'm0' AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.pm2_copyonwrite t USING (SELECT CAST(1 AS BIGINT) AS id, 'b' AS k, 'm1' AS v) s ON t.k = 'b' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.pm2_copyonwrite t USING (SELECT CAST(2 AS BIGINT) AS id, 'c' AS k, 'm2' AS v) s ON t.k = 'c' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.pm2_copyonwrite t USING (SELECT CAST(3 AS BIGINT) AS id, 'd' AS k, 'm3' AS v) s ON t.k = 'd' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+      ],
+      "committed": 4,
+      "of": 4,
+      "errors": []
+    },
+    "v2_copyonwrite_rows_after_4_partition_scoped_merges": {
+      "query": "SELECT count(*), sum(CASE WHEN v LIKE 'm%' THEN 1 ELSE 0 END) FROM sc.ns.pm2_copyonwrite",
+      "rows": [
+        [
+          100,
+          4
+        ]
+      ]
+    },
+    "v2_copyonwrite_4_partition_scoped_updates": {
+      "statements": [
+        "UPDATE sc.ns.pm2_copyonwrite SET v = 'ua' WHERE k = 'a' AND id < 8",
+        "UPDATE sc.ns.pm2_copyonwrite SET v = 'ub' WHERE k = 'b' AND id < 8",
+        "UPDATE sc.ns.pm2_copyonwrite SET v = 'uc' WHERE k = 'c' AND id < 8",
+        "UPDATE sc.ns.pm2_copyonwrite SET v = 'ud' WHERE k = 'd' AND id < 8"
+      ],
+      "committed": 4,
+      "of": 4,
+      "errors": []
+    },
+    "v2_copyonwrite_rows_after_4_partition_scoped_updates": {
+      "query": "SELECT count(*), sum(CASE WHEN v LIKE 'u%' THEN 1 ELSE 0 END) FROM sc.ns.pm2_copyonwrite",
+      "rows": [
+        [
+          100,
+          8
+        ]
+      ]
+    },
+    "v2_copyonwrite_4_partition_scoped_deletes": {
+      "statements": [
+        "DELETE FROM sc.ns.pm2_copyonwrite WHERE k = 'a' AND id > 90",
+        "DELETE FROM sc.ns.pm2_copyonwrite WHERE k = 'b' AND id > 90",
+        "DELETE FROM sc.ns.pm2_copyonwrite WHERE k = 'c' AND id > 90",
+        "DELETE FROM sc.ns.pm2_copyonwrite WHERE k = 'd' AND id > 90"
+      ],
+      "committed": 4,
+      "of": 4,
+      "errors": []
+    },
+    "v2_copyonwrite_rows_after_4_partition_scoped_deletes": {
+      "query": "SELECT count(*) FROM sc.ns.pm2_copyonwrite",
+      "rows": [
+        [
+          91
+        ]
+      ]
+    },
+    "v2_copyonwrite_merge_vs_concurrent_insert_other_partition": {
+      "statements": [
+        "MERGE INTO sc.ns.pm2_copyonwrite t USING (SELECT CAST(4 AS BIGINT) AS id, 'a' AS k, 'mx' AS v) s ON t.k = 'a' AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "INSERT INTO sc.ns.pm2_copyonwrite VALUES (1000, 'd', 'appended')"
+      ],
+      "committed": 2,
+      "of": 2,
+      "errors": []
+    },
+    "v2_copyonwrite_rows_after_merge_vs_insert": {
+      "query": "SELECT count(*) FROM sc.ns.pm2_copyonwrite",
+      "rows": [
+        [
+          92
+        ]
+      ]
+    },
+    "v2_copyonwrite_2_range_scoped_merges_unpartitioned": {
+      "statements": [
+        "MERGE INTO sc.ns.um2_copyonwrite t USING (SELECT CAST(1 AS BIGINT) AS id, 'm1' AS v) s ON t.id < 50 AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.um2_copyonwrite t USING (SELECT CAST(60 AS BIGINT) AS id, 'm60' AS v) s ON t.id >= 50 AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+      ],
+      "committed": 2,
+      "of": 2,
+      "errors": []
+    },
+    "v2_copyonwrite_rows_after_2_range_scoped_merges": {
+      "query": "SELECT count(*), sum(CASE WHEN v LIKE 'm%' THEN 1 ELSE 0 END) FROM sc.ns.um2_copyonwrite",
+      "rows": [
+        [
+          100,
+          2
+        ]
+      ]
+    },
+    "v3_mergeonread_4_partition_scoped_merges": {
+      "statements": [
+        "MERGE INTO sc.ns.pm3_mergeonread t USING (SELECT CAST(0 AS BIGINT) AS id, 'a' AS k, 'm0' AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.pm3_mergeonread t USING (SELECT CAST(1 AS BIGINT) AS id, 'b' AS k, 'm1' AS v) s ON t.k = 'b' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.pm3_mergeonread t USING (SELECT CAST(2 AS BIGINT) AS id, 'c' AS k, 'm2' AS v) s ON t.k = 'c' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.pm3_mergeonread t USING (SELECT CAST(3 AS BIGINT) AS id, 'd' AS k, 'm3' AS v) s ON t.k = 'd' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+      ],
+      "committed": 4,
+      "of": 4,
+      "errors": []
+    },
+    "v3_mergeonread_rows_after_4_partition_scoped_merges": {
+      "query": "SELECT count(*), sum(CASE WHEN v LIKE 'm%' THEN 1 ELSE 0 END) FROM sc.ns.pm3_mergeonread",
+      "rows": [
+        [
+          100,
+          4
+        ]
+      ]
+    },
+    "v3_mergeonread_4_partition_scoped_updates": {
+      "statements": [
+        "UPDATE sc.ns.pm3_mergeonread SET v = 'ua' WHERE k = 'a' AND id < 8",
+        "UPDATE sc.ns.pm3_mergeonread SET v = 'ub' WHERE k = 'b' AND id < 8",
+        "UPDATE sc.ns.pm3_mergeonread SET v = 'uc' WHERE k = 'c' AND id < 8",
+        "UPDATE sc.ns.pm3_mergeonread SET v = 'ud' WHERE k = 'd' AND id < 8"
+      ],
+      "committed": 4,
+      "of": 4,
+      "errors": []
+    },
+    "v3_mergeonread_rows_after_4_partition_scoped_updates": {
+      "query": "SELECT count(*), sum(CASE WHEN v LIKE 'u%' THEN 1 ELSE 0 END) FROM sc.ns.pm3_mergeonread",
+      "rows": [
+        [
+          100,
+          8
+        ]
+      ]
+    },
+    "v3_mergeonread_4_partition_scoped_deletes": {
+      "statements": [
+        "DELETE FROM sc.ns.pm3_mergeonread WHERE k = 'a' AND id > 90",
+        "DELETE FROM sc.ns.pm3_mergeonread WHERE k = 'b' AND id > 90",
+        "DELETE FROM sc.ns.pm3_mergeonread WHERE k = 'c' AND id > 90",
+        "DELETE FROM sc.ns.pm3_mergeonread WHERE k = 'd' AND id > 90"
+      ],
+      "committed": 4,
+      "of": 4,
+      "errors": []
+    },
+    "v3_mergeonread_rows_after_4_partition_scoped_deletes": {
+      "query": "SELECT count(*) FROM sc.ns.pm3_mergeonread",
+      "rows": [
+        [
+          91
+        ]
+      ]
+    },
+    "v3_mergeonread_merge_vs_concurrent_insert_other_partition": {
+      "statements": [
+        "MERGE INTO sc.ns.pm3_mergeonread t USING (SELECT CAST(4 AS BIGINT) AS id, 'a' AS k, 'mx' AS v) s ON t.k = 'a' AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "INSERT INTO sc.ns.pm3_mergeonread VALUES (1000, 'd', 'appended')"
+      ],
+      "committed": 2,
+      "of": 2,
+      "errors": []
+    },
+    "v3_mergeonread_rows_after_merge_vs_insert": {
+      "query": "SELECT count(*) FROM sc.ns.pm3_mergeonread",
+      "rows": [
+        [
+          92
+        ]
+      ]
+    },
+    "v3_mergeonread_2_range_scoped_merges_unpartitioned": {
+      "statements": [
+        "MERGE INTO sc.ns.um3_mergeonread t USING (SELECT CAST(1 AS BIGINT) AS id, 'm1' AS v) s ON t.id < 50 AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.um3_mergeonread t USING (SELECT CAST(60 AS BIGINT) AS id, 'm60' AS v) s ON t.id >= 50 AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+      ],
+      "committed": 1,
+      "of": 2,
+      "errors": [
+        "Py4JJavaError: : org.apache.iceberg.exceptions.ValidationException: Found new conflicting delete files that can apply to records matching (not_null(ref(name=\"id\")) and ref(nam"
+      ]
+    },
+    "v3_mergeonread_rows_after_2_range_scoped_merges": {
+      "query": "SELECT count(*), sum(CASE WHEN v LIKE 'm%' THEN 1 ELSE 0 END) FROM sc.ns.um3_mergeonread",
+      "rows": [
+        [
+          100,
+          1
+        ]
+      ]
+    },
+    "v3_copyonwrite_4_partition_scoped_merges": {
+      "statements": [
+        "MERGE INTO sc.ns.pm3_copyonwrite t USING (SELECT CAST(0 AS BIGINT) AS id, 'a' AS k, 'm0' AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.pm3_copyonwrite t USING (SELECT CAST(1 AS BIGINT) AS id, 'b' AS k, 'm1' AS v) s ON t.k = 'b' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.pm3_copyonwrite t USING (SELECT CAST(2 AS BIGINT) AS id, 'c' AS k, 'm2' AS v) s ON t.k = 'c' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.pm3_copyonwrite t USING (SELECT CAST(3 AS BIGINT) AS id, 'd' AS k, 'm3' AS v) s ON t.k = 'd' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+      ],
+      "committed": 4,
+      "of": 4,
+      "errors": []
+    },
+    "v3_copyonwrite_rows_after_4_partition_scoped_merges": {
+      "query": "SELECT count(*), sum(CASE WHEN v LIKE 'm%' THEN 1 ELSE 0 END) FROM sc.ns.pm3_copyonwrite",
+      "rows": [
+        [
+          100,
+          4
+        ]
+      ]
+    },
+    "v3_copyonwrite_4_partition_scoped_updates": {
+      "statements": [
+        "UPDATE sc.ns.pm3_copyonwrite SET v = 'ua' WHERE k = 'a' AND id < 8",
+        "UPDATE sc.ns.pm3_copyonwrite SET v = 'ub' WHERE k = 'b' AND id < 8",
+        "UPDATE sc.ns.pm3_copyonwrite SET v = 'uc' WHERE k = 'c' AND id < 8",
+        "UPDATE sc.ns.pm3_copyonwrite SET v = 'ud' WHERE k = 'd' AND id < 8"
+      ],
+      "committed": 4,
+      "of": 4,
+      "errors": []
+    },
+    "v3_copyonwrite_rows_after_4_partition_scoped_updates": {
+      "query": "SELECT count(*), sum(CASE WHEN v LIKE 'u%' THEN 1 ELSE 0 END) FROM sc.ns.pm3_copyonwrite",
+      "rows": [
+        [
+          100,
+          8
+        ]
+      ]
+    },
+    "v3_copyonwrite_4_partition_scoped_deletes": {
+      "statements": [
+        "DELETE FROM sc.ns.pm3_copyonwrite WHERE k = 'a' AND id > 90",
+        "DELETE FROM sc.ns.pm3_copyonwrite WHERE k = 'b' AND id > 90",
+        "DELETE FROM sc.ns.pm3_copyonwrite WHERE k = 'c' AND id > 90",
+        "DELETE FROM sc.ns.pm3_copyonwrite WHERE k = 'd' AND id > 90"
+      ],
+      "committed": 4,
+      "of": 4,
+      "errors": []
+    },
+    "v3_copyonwrite_rows_after_4_partition_scoped_deletes": {
+      "query": "SELECT count(*) FROM sc.ns.pm3_copyonwrite",
+      "rows": [
+        [
+          91
+        ]
+      ]
+    },
+    "v3_copyonwrite_merge_vs_concurrent_insert_other_partition": {
+      "statements": [
+        "MERGE INTO sc.ns.pm3_copyonwrite t USING (SELECT CAST(4 AS BIGINT) AS id, 'a' AS k, 'mx' AS v) s ON t.k = 'a' AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "INSERT INTO sc.ns.pm3_copyonwrite VALUES (1000, 'd', 'appended')"
+      ],
+      "committed": 2,
+      "of": 2,
+      "errors": []
+    },
+    "v3_copyonwrite_rows_after_merge_vs_insert": {
+      "query": "SELECT count(*) FROM sc.ns.pm3_copyonwrite",
+      "rows": [
+        [
+          92
+        ]
+      ]
+    },
+    "v3_copyonwrite_2_range_scoped_merges_unpartitioned": {
+      "statements": [
+        "MERGE INTO sc.ns.um3_copyonwrite t USING (SELECT CAST(1 AS BIGINT) AS id, 'm1' AS v) s ON t.id < 50 AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v",
+        "MERGE INTO sc.ns.um3_copyonwrite t USING (SELECT CAST(60 AS BIGINT) AS id, 'm60' AS v) s ON t.id >= 50 AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+      ],
+      "committed": 2,
+      "of": 2,
+      "errors": []
+    },
+    "v3_copyonwrite_rows_after_2_range_scoped_merges": {
+      "query": "SELECT count(*), sum(CASE WHEN v LIKE 'm%' THEN 1 ELSE 0 END) FROM sc.ns.um3_copyonwrite",
+      "rows": [
+        [
+          100,
+          2
+        ]
+      ]
+    }
+  }
+}

@@ -882,7 +882,7 @@ async fn update_isolation_serializable_rejects_concurrent_append() {
         Some(pin),
         vec![a],
         vec![synthetic_data_file("test/a-prime.parquet")],
-        isolation,
+        &CommitScope::unscoped(isolation),
     )
     .await
     .expect_err("serializable UPDATE must reject a concurrent append");
@@ -932,7 +932,7 @@ async fn update_isolation_snapshot_commits_through_concurrent_append() {
         Some(pin),
         vec![a],
         vec![synthetic_data_file("test/a-prime.parquet")],
-        isolation,
+        &CommitScope::unscoped(isolation),
     )
     .await
     .expect("snapshot UPDATE must commit through a concurrent append");

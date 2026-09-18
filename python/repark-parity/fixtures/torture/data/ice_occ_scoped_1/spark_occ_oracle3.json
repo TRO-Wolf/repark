@@ -1,0 +1,447 @@
+{
+  "spark_version": "4.1.2",
+  "iceberg_runtime": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+  "interleaving": "MERGE analysed and its target snapshot pinned -> source UDF blocks -> concurrent INSERT commits -> gate released -> MERGE validates and commits or aborts",
+  "cells": {
+    "v2_mergeonread_same_key_in_on_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v2_mergeonread_same_key_in_on_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'a' AS k, gate('merged', '<flags>/v2_mergeonread_same_key_in_on_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v2_mergeonread_same_key_in_on_partition VALUES (1000, 'a', 'appended')",
+      "merge_outcome": "Py4JJavaError: : org.apache.iceberg.exceptions.ValidationException: Found conflicting files that can contain records matching (not_null(ref(name=\"k\")) and ref(name=\"k\") == \"a\"): [<warehouse>/ns/ni_v2_merg",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          1000,
+          "a",
+          "appended"
+        ]
+      ],
+      "count": 101
+    },
+    "v2_mergeonread_other_key_in_on_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v2_mergeonread_other_key_in_on_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'a' AS k, gate('merged', '<flags>/v2_mergeonread_other_key_in_on_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v2_mergeonread_other_key_in_on_partition VALUES (2000, 'a', 'appended')",
+      "merge_outcome": "Py4JJavaError: : org.apache.iceberg.exceptions.ValidationException: Found conflicting files that can contain records matching (not_null(ref(name=\"k\")) and ref(name=\"k\") == \"a\"): [<warehouse>/ns/ni_v2_merg",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          2000,
+          "a",
+          "appended"
+        ]
+      ],
+      "count": 101
+    },
+    "v2_mergeonread_other_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v2_mergeonread_other_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'a' AS k, gate('merged', '<flags>/v2_mergeonread_other_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v2_mergeonread_other_partition VALUES (1000, 'b', 'appended')",
+      "merge_outcome": "ok",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          1000,
+          "a",
+          "merged"
+        ],
+        [
+          1000,
+          "b",
+          "appended"
+        ]
+      ],
+      "count": 102
+    },
+    "v2_mergeonread_source_key_outside_on_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v2_mergeonread_source_key_outside_on_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'b' AS k, gate('merged', '<flags>/v2_mergeonread_source_key_outside_on_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v2_mergeonread_source_key_outside_on_partition VALUES (1000, 'b', 'appended')",
+      "merge_outcome": "ok",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          1000,
+          "b",
+          "appended"
+        ],
+        [
+          1000,
+          "b",
+          "merged"
+        ]
+      ],
+      "count": 102
+    },
+    "v2_copyonwrite_same_key_in_on_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v2_copyonwrite_same_key_in_on_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'a' AS k, gate('merged', '<flags>/v2_copyonwrite_same_key_in_on_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v2_copyonwrite_same_key_in_on_partition VALUES (1000, 'a', 'appended')",
+      "merge_outcome": "Py4JJavaError: : org.apache.iceberg.exceptions.ValidationException: Found conflicting files that can contain records matching ref(name=\"k\") == \"a\": [<warehouse>/ns/ni_v2_copyonwrite_same_key_in_on_partiti",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          1000,
+          "a",
+          "appended"
+        ]
+      ],
+      "count": 101
+    },
+    "v2_copyonwrite_other_key_in_on_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v2_copyonwrite_other_key_in_on_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'a' AS k, gate('merged', '<flags>/v2_copyonwrite_other_key_in_on_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v2_copyonwrite_other_key_in_on_partition VALUES (2000, 'a', 'appended')",
+      "merge_outcome": "Py4JJavaError: : org.apache.iceberg.exceptions.ValidationException: Found conflicting files that can contain records matching ref(name=\"k\") == \"a\": [<warehouse>/ns/ni_v2_copyonwrite_other_key_in_on_partit",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          2000,
+          "a",
+          "appended"
+        ]
+      ],
+      "count": 101
+    },
+    "v2_copyonwrite_other_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v2_copyonwrite_other_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'a' AS k, gate('merged', '<flags>/v2_copyonwrite_other_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v2_copyonwrite_other_partition VALUES (1000, 'b', 'appended')",
+      "merge_outcome": "ok",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          1000,
+          "a",
+          "merged"
+        ],
+        [
+          1000,
+          "b",
+          "appended"
+        ]
+      ],
+      "count": 102
+    },
+    "v2_copyonwrite_source_key_outside_on_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v2_copyonwrite_source_key_outside_on_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'b' AS k, gate('merged', '<flags>/v2_copyonwrite_source_key_outside_on_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v2_copyonwrite_source_key_outside_on_partition VALUES (1000, 'b', 'appended')",
+      "merge_outcome": "ok",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          1000,
+          "b",
+          "appended"
+        ],
+        [
+          1000,
+          "b",
+          "merged"
+        ]
+      ],
+      "count": 102
+    },
+    "v3_mergeonread_same_key_in_on_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v3_mergeonread_same_key_in_on_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'a' AS k, gate('merged', '<flags>/v3_mergeonread_same_key_in_on_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v3_mergeonread_same_key_in_on_partition VALUES (1000, 'a', 'appended')",
+      "merge_outcome": "Py4JJavaError: : org.apache.iceberg.exceptions.ValidationException: Found conflicting files that can contain records matching (not_null(ref(name=\"k\")) and ref(name=\"k\") == \"a\"): [<warehouse>/ns/ni_v3_merg",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          1000,
+          "a",
+          "appended"
+        ]
+      ],
+      "count": 101
+    },
+    "v3_mergeonread_other_key_in_on_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v3_mergeonread_other_key_in_on_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'a' AS k, gate('merged', '<flags>/v3_mergeonread_other_key_in_on_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v3_mergeonread_other_key_in_on_partition VALUES (2000, 'a', 'appended')",
+      "merge_outcome": "Py4JJavaError: : org.apache.iceberg.exceptions.ValidationException: Found conflicting files that can contain records matching (not_null(ref(name=\"k\")) and ref(name=\"k\") == \"a\"): [<warehouse>/ns/ni_v3_merg",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          2000,
+          "a",
+          "appended"
+        ]
+      ],
+      "count": 101
+    },
+    "v3_mergeonread_other_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v3_mergeonread_other_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'a' AS k, gate('merged', '<flags>/v3_mergeonread_other_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v3_mergeonread_other_partition VALUES (1000, 'b', 'appended')",
+      "merge_outcome": "ok",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          1000,
+          "a",
+          "merged"
+        ],
+        [
+          1000,
+          "b",
+          "appended"
+        ]
+      ],
+      "count": 102
+    },
+    "v3_mergeonread_source_key_outside_on_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v3_mergeonread_source_key_outside_on_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'b' AS k, gate('merged', '<flags>/v3_mergeonread_source_key_outside_on_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v3_mergeonread_source_key_outside_on_partition VALUES (1000, 'b', 'appended')",
+      "merge_outcome": "ok",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          1000,
+          "b",
+          "appended"
+        ],
+        [
+          1000,
+          "b",
+          "merged"
+        ]
+      ],
+      "count": 102
+    },
+    "v3_copyonwrite_same_key_in_on_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v3_copyonwrite_same_key_in_on_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'a' AS k, gate('merged', '<flags>/v3_copyonwrite_same_key_in_on_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v3_copyonwrite_same_key_in_on_partition VALUES (1000, 'a', 'appended')",
+      "merge_outcome": "Py4JJavaError: : org.apache.iceberg.exceptions.ValidationException: Found conflicting files that can contain records matching ref(name=\"k\") == \"a\": [<warehouse>/ns/ni_v3_copyonwrite_same_key_in_on_partiti",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          1000,
+          "a",
+          "appended"
+        ]
+      ],
+      "count": 101
+    },
+    "v3_copyonwrite_other_key_in_on_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v3_copyonwrite_other_key_in_on_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'a' AS k, gate('merged', '<flags>/v3_copyonwrite_other_key_in_on_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v3_copyonwrite_other_key_in_on_partition VALUES (2000, 'a', 'appended')",
+      "merge_outcome": "Py4JJavaError: : org.apache.iceberg.exceptions.ValidationException: Found conflicting files that can contain records matching ref(name=\"k\") == \"a\": [<warehouse>/ns/ni_v3_copyonwrite_other_key_in_on_partit",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          2000,
+          "a",
+          "appended"
+        ]
+      ],
+      "count": 101
+    },
+    "v3_copyonwrite_other_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v3_copyonwrite_other_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'a' AS k, gate('merged', '<flags>/v3_copyonwrite_other_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v3_copyonwrite_other_partition VALUES (1000, 'b', 'appended')",
+      "merge_outcome": "ok",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          1000,
+          "a",
+          "merged"
+        ],
+        [
+          1000,
+          "b",
+          "appended"
+        ]
+      ],
+      "count": 102
+    },
+    "v3_copyonwrite_source_key_outside_on_partition": {
+      "merge": "MERGE INTO sc.ns.ni_v3_copyonwrite_source_key_outside_on_partition t USING (SELECT CAST(1000 AS BIGINT) AS id, 'b' AS k, gate('merged', '<flags>/v3_copyonwrite_source_key_outside_on_partition') AS v) s ON t.k = 'a' AND t.k = s.k AND t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT *",
+      "concurrent_insert": "INSERT INTO sc.ns.ni_v3_copyonwrite_source_key_outside_on_partition VALUES (1000, 'b', 'appended')",
+      "merge_outcome": "ok",
+      "snapshots": [
+        [
+          "append",
+          "100"
+        ],
+        [
+          "append",
+          "1"
+        ],
+        [
+          "append",
+          "1"
+        ]
+      ],
+      "rows_at_or_above_1000": [
+        [
+          1000,
+          "b",
+          "appended"
+        ],
+        [
+          1000,
+          "b",
+          "merged"
+        ]
+      ],
+      "count": 102
+    }
+  }
+}

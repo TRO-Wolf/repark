@@ -18,8 +18,8 @@ use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent
 use tempfile::TempDir;
 
 use super::super::{
-    IsolationLevel, OPERATION_ID_PROP, RowDeltaKind, RowDeltaPolicy, commit, commit_row_delta,
-    commit_row_delta_kind, write_data_files,
+    CommitScope, IsolationLevel, OPERATION_ID_PROP, RowDeltaKind, RowDeltaPolicy, commit,
+    commit_row_delta, commit_row_delta_kind, write_data_files,
 };
 
 /// An in-memory Iceberg catalog with a `sales` namespace and one UNPARTITIONED table `t`.
@@ -269,9 +269,9 @@ async fn commit_row_delta_kind_delete_snapshot_tolerates_concurrent_delete_op_re
         vec![(std::sync::Arc::<str>::from("test/a.parquet"), 0)],
         Vec::new(),
         default_concurrency(),
-        RowDeltaPolicy {
+        &RowDeltaPolicy {
             kind: RowDeltaKind::Delete,
-            isolation: IsolationLevel::Snapshot,
+            scope: CommitScope::unscoped(IsolationLevel::Snapshot),
         },
     )
     .await
@@ -302,9 +302,9 @@ async fn commit_row_delta_kind_delete_serializable_tolerates_concurrent_delete_o
         vec![(std::sync::Arc::<str>::from("test/a.parquet"), 0)],
         Vec::new(),
         default_concurrency(),
-        RowDeltaPolicy {
+        &RowDeltaPolicy {
             kind: RowDeltaKind::Delete,
-            isolation: IsolationLevel::Serializable,
+            scope: CommitScope::unscoped(IsolationLevel::Serializable),
         },
     )
     .await
@@ -335,9 +335,9 @@ async fn commit_row_delta_kind_merge_snapshot_rejects_concurrent_delete_op_remov
         vec![(std::sync::Arc::<str>::from("test/a.parquet"), 0)],
         Vec::new(),
         default_concurrency(),
-        RowDeltaPolicy {
+        &RowDeltaPolicy {
             kind: RowDeltaKind::Merge,
-            isolation: IsolationLevel::Snapshot,
+            scope: CommitScope::unscoped(IsolationLevel::Snapshot),
         },
     )
     .await

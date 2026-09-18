@@ -10,6 +10,8 @@ mod occ;
 mod occ_branch;
 mod occ_conflict;
 mod occ_partitions;
+mod occ_scoped;
+mod occ_scoped_insert;
 mod parallel_write;
 mod partition_sink;
 mod promoted_scan;

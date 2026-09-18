@@ -208,6 +208,12 @@ ICE-COLUMN-REORDER-1 (2026-09-17): `check_rust_file_size.py`
 plus pins move to sibling `column_move` modules; the partition-spec family moves
 to `partition_spec.rs` behaviour-identical; the CAP-1 mirror rows move with them).
 pins: ice-column-reorder-1/C-013
+ICE-OCC-SCOPED-1 (2026-09-17): `check_rust_file_size.py`
+`repark-iceberg/src/write/merge/mod.rs` 1792 → 1773 (`residual_join_key_filter` moves
+verbatim to `merge/target_scan.rs`, beside the scan it filters, which pays for the MERGE's
+conflict filter on `MergeTarget`; `write/predicate_dml.rs` holds its 1142 exactly). The CAP-1
+mirror row in `test_cap_1_source_file_line_cap.py` moves with it.
+pins: ice-occ-scoped-1/C-005
 REPLACE-LINEAR-1 step 1 (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4089 → 4054 (the `DataFrame.replace` body — validation,
 key-family filtering, and the flat searched-CASE build — moved to the new

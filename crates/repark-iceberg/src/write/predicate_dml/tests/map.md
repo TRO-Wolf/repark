@@ -16,6 +16,8 @@ Identity DELETE/UPDATE tests. `predicate_dml.rs` declares `#[cfg(test)] mod test
 - `predicate_dml.rs` — DELETE: `IN` / `NOT IN (SELECT …)` including the NULL 3VL trap,
   `[NOT] EXISTS` with and without correlation, correlated `IN`, isolation-level pins
   (M19 / A10).
+- `update.rs` — ICE-OCC-SCOPED-1: the two isolation pins hand `commit_overwrite` a
+  `&CommitScope::unscoped(isolation)` (the commit now takes a scope, not a bare level).
 - `update.rs` — identity `UPDATE … SET <scalar> WHERE col IN`. Unknown
   `write.delete.granularity` refuses before any parquet write (MW-9). **V3-9:**
   `identity_pairs_share_one_arc_per_data_file_path` counts `Arc` identities over 600,003 pairs

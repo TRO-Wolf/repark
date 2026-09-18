@@ -34,6 +34,10 @@ the committed landing zone, not a generation target.
   `ADD COLUMN` / `RENAME COLUMN` with no write since (`truth.json`, 183 cases) and one
   Spark-created, Spark-evolved v2 table for the adoption cells (ICE-EVO-DML-1; fourth
   committed-data exception, 77,324 bytes).
+- [ice_occ_scoped_1/](ice_occ_scoped_1/map.md) — the recorded Spark 4.1.2 concurrent-DML commit
+  storms (`spark_occ_oracle.json` unscoped, `spark_occ_oracle2.json` partition- and
+  range-scoped): commits out of N, the losers' error text, the rows left behind
+  (ICE-OCC-SCOPED-1; JSON only, no table data).
 
 ## Pointers
 
