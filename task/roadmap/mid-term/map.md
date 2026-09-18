@@ -6,6 +6,12 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [v3-multiarg-1.md](v3-multiarg-1.md) — **card V3-MULTIARG-1 (2026-09-18, post-1.x,
+  owner ruling 2026-09-18):** read, then write, multi-argument partition transforms
+  (`source-ids`); NOT in 1.x (declared in registry V3-MULTIARG-1, rating row V3-05).
+  FIRST STEP is a Java-API fixture (Iceberg 1.11.0 `UpdatePartitionSpec` /
+  `PartitionSpec.builderFor`, measured first), then the fork asks (spec parsing in
+  `iceberg-rust`, transform evaluation, pruning). No code in 1.x.
 - [overnight-report-2026-09-18-21a.md](overnight-report-2026-09-18-21a.md) — **run 21a (2026-09-17 → 18, Iceberg remediation night 3: read path, DML, conflict detection, nested evolution):** #685 RP-24, #687 ICE-EVO-DML-1 (V2-10e), #682 ICE-DYN-OVERWRITE-1 (V2-24b), #692 ICE-OCC-SCOPED-1 (V2-20a for MERGE and DELETE — the live oracle showed Spark itself commits 1 of 8 on the rating's headline probe), fork #292 + #690 RP-25 (nested children readable); open draft #695, fork draft #294; F-LIST-INSERT-1 lost to the OOM freeze; finding: every INSERT into an Iceberg ARRAY column fails loud.
 - [overnight-report-2026-09-18-21b.md](overnight-report-2026-09-18-21b.md) — **run 21b (identifiers, defaults, the fork residues, the registry):** #678 ICE-V3-WRITE-DEFAULT-1 merged (V3-03b), fork #293 closes the three run-20 residues (Hadoop `vN` replace, WAP-first cherry-pick, no-op schema update) and the double plan; #676 mixed-case verified but its whole-facade gate hung and it conflicts with main; RP-26 and registry sweep part B not opened; the freeze told plainly in §0.
 - [overnight-report-2026-09-18-21c.md](overnight-report-2026-09-18-21c.md) — **run 21c (maintenance, writer knobs, fixtures):** #691 ICE-SORTED-INSERT-1 remediation merged (V2-12), #686 RDF xfails re-measured on RP-23 (0 XPASS, three fork asks), #688 listing-cost pin counts calls; open #693 RTAS opt-in (CI green), #689 write-options (conflicts with main), draft #694 `timestamp_ns` on the SQL door; comment gate 0 hits on every head; aws-acceptance nightly `35326252631` green on `3bd667e6`.
