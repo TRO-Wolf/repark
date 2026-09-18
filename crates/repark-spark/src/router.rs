@@ -30,6 +30,20 @@ pub async fn execute(
     execute_with_read_only(ctx, catalogs, sql, &HashSet::new()).await
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub async fn execute_static_overwrite<S: std::hash::BuildHasher>(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    read_only_catalogs: &HashSet<String, S>,
+) -> Result<DataFrame> {
+    let write_options = crate::write_options::StatementWriteOptions {
+        force_static_overwrite: true,
+        ..crate::write_options::StatementWriteOptions::empty()
+    };
+    execute_with_statement_options(ctx, catalogs, sql, read_only_catalogs, &write_options).await
+}
+
 /// Execute with a set of read-only (postgres) catalog names for P11 DML routing.
 /// # Errors
 /// # Errors Any planning/execution error from the underlying statement, plus the P11 refusal.

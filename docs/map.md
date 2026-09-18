@@ -71,8 +71,12 @@ repo.
   declared-absent Spark functions (unreachable vs deferred-by-cost). pins: fnp-15-16/C-014
   **ICE-COLUMN-REORDER-1 FIXED 2026-09-17 (run 20b, round 2 Q-20b-5):** `ALTER COLUMN … FIRST/AFTER`
   moves with ids intact on the facade and Rust ANSI doors; the standing I6 move refusal
-  is removed; OPEN residue `ICE-COLUMN-REORDER-1-R-001` (no-op move writes a metadata file)
-  with fork trigger F-UPDATE-SCHEMA-SAME-1. pins: ice-column-reorder-1/C-001 – C-014
+  is removed; residue `ICE-COLUMN-REORDER-1-R-001` FIXED 2026-09-18 at fork #293
+  (a no-op move commits nothing). pins: ice-column-reorder-1/C-001 – C-014
+  **RP-26 FIXED 2026-09-18 (fork #293):** residues `ICE-HADOOP-VN-1-R-001` (a stale
+  Hadoop replace raises `CatalogCommitConflicts`, no uuid file) and
+  `ICE-BRANCH-OPS-1-R-001` (a duplicate WAP cherry-pick answers Spark's
+  `Duplicate request ...` text).
   LIVE-v3 (2026-09-02) added §7 `S3T-V3-1`; LIVE-v3-M (2026-09-02) closed it — **FIXED by
   measurement**: `aws-acceptance` run 33635288918 on merged `main` `8c4bc55` ran both live v3
   legs green, S3 Tables accepting `format-version = 3` at CREATE (the decision table's accepted
@@ -118,6 +122,13 @@ repo.
   pins: ice-column-reorder-1/C-013
   ICE-WRITE-OPTIONS-1 round 3 (2026-09-17): the FIXED row's channel paragraph moves
   out of band (plus the Round 3 bullet: SQL-02/03, SNAP-08..13, merged gzip refusal).
+  ICE-DYN-OVERWRITE-1 (2026-09-17): DML-1 points at new rows DML-1B (dynamic
+  PARTITION-less overwrite FIXED) and DML-1C (overwrite-vs-append race FIXED, serializable
+  surface documented).
+  pins: ice-dyn-overwrite-1/C-017
+  **ICE-EVO-DML-1 (2026-09-17):** rows `ICE-EVO-DML-1` / `ICE-EVO-SWAP-1` /
+  `ICE-EVO-LINEAGE-READ-1` FIXED with pin names and the fork-pin note.
+  pins: ice-evo-dml-1/C-014
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

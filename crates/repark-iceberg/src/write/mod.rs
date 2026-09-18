@@ -8,6 +8,7 @@ mod commit_error;
 pub mod commit_target;
 pub use commit_target::commit_append_to;
 pub mod concurrency;
+pub(crate) mod conflict_filter;
 pub(crate) mod conform;
 pub(crate) mod distribution;
 pub(crate) mod file_order;
@@ -17,6 +18,7 @@ pub mod format_version;
 mod hadoop_stale_commit;
 /// Shared Spark/DF `quote_ident` + path-escape needles (CQ-006/007).
 pub mod idents;
+pub mod insert_defaults;
 /// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over `LogicalPlan::Dml`.
 pub mod insert_gate;
 pub mod merge;
@@ -83,14 +85,14 @@ pub use overwrite::{
     parse_overwrite_isolation, positional_map_overwrite_batch,
     write_overwrite_staged_files_from_stream,
 };
-pub use overwrite_commit::commit_overwrite_replace_all_to;
+pub use overwrite_commit::{commit_overwrite_replace_all_to, commit_replace_write};
 pub use partition_overwrite::{
     EMPTY_DYNAMIC_OVERWRITE_NEEDLE, PartitionEquality, PartitionLiteral, PartitionOverwritePlan,
     PartitionOverwriteRequest, StaticPartitionOverwrite, commit_overwrite_by_row_filter,
     commit_overwrite_by_row_filter_to, commit_replace_partitions, commit_replace_partitions_to,
     inject_static_partition_columns, partition_overwrite_request_from_exprs,
     plan_partition_overwrite, refuse_empty_dynamic_overwrite,
-    stage_static_partition_overwrite_files, stage_static_partition_overwrite_files_with,
+    stage_static_partition_overwrite_files, static_partition_source_columns,
 };
 pub use partition_write::{WRITTEN_FILES_COL_NAME, write_data_files_from_plan};
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
@@ -101,8 +103,9 @@ pub use write_options::{
     WriterStagingOverrides, append_with_statement_options, commit_append_with_summary,
     commit_overwrite_by_row_filter_with_summary, commit_overwrite_replace_all_with_summary,
     commit_replace_partitions_with_summary, isolation_with_override, stage_overwrite_files_with,
-    stage_partitioned_stream_with_overrides, stage_unpartitioned_stream_with_overrides,
-    stage_unpartitioned_with_overrides, summary_with_extras,
+    stage_partitioned_stream_with_overrides, stage_static_partition_overwrite_files_with,
+    stage_unpartitioned_stream_with_overrides, stage_unpartitioned_with_overrides,
+    summary_with_extras,
 };
 pub use writer_props::{
     ACCEPTED_CODECS, COMPRESSION_CODEC_PROP, COMPRESSION_LEVEL_PROP, parse_compression,

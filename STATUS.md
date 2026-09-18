@@ -246,10 +246,8 @@ divergence and gets no row: it stays here until the fix lands, and the fixing un
 entry rather than moving it. Nothing is described in both places.
 
 - **Iceberg rating residue (2026-09-16)** — scheduled; each unit deletes its clause:
-  DML after `ADD`/`RENAME COLUMN` refuses (V2-10e); dynamic partition overwrite replaces the
-  table (V2-24b, #682); `write-default` fills NULL (V3-03b, #678); serializable MERGE aborts on
-  any concurrent commit (V2-20a); a Spark-added nested child is unreadable (V2-10d); mixed-case
-  columns fail (V2-27, #676).
+  a plain-`WHERE` UPDATE aborts on a disjoint commit (V2-20a); a Spark-added nested child is
+  unreadable (V2-10d); mixed-case columns fail (V2-27, #676).
   [State](docs/artifacts/iceberg-run-20-closeout-2026-09-17.html).
 - **FNP-8 residuals** — **BACKLOG (2026-09-07)**: [FNP8-NULLABILITY and following rows](docs/spark-sql-iceberg-parity.md#fnp8-nullability--higher-order-result-metadata-retains-inherited-nullable-fields).
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry

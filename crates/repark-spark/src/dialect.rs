@@ -15,7 +15,11 @@ impl SqlDialect for SparkDialect {
         cx: EngineContext<'_>,
         query: &str,
     ) -> datafusion::error::Result<DataFrame> {
-        crate::execute_with_read_only(cx.ctx, cx.catalogs, query, cx.read_only).await
+        if cx.force_static_overwrite {
+            crate::execute_static_overwrite(cx.ctx, cx.catalogs, query, cx.read_only).await
+        } else {
+            crate::execute_with_read_only(cx.ctx, cx.catalogs, query, cx.read_only).await
+        }
     }
 
     async fn execute_with_write_options(
@@ -29,7 +33,8 @@ impl SqlDialect for SparkDialect {
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect();
         pairs.sort();
-        let write_options = crate::write_options::StatementWriteOptions::validate(pairs)?;
+        let mut write_options = crate::write_options::StatementWriteOptions::validate(pairs)?;
+        write_options.force_static_overwrite = cx.force_static_overwrite;
         crate::execute_with_statement_options(
             cx.ctx,
             cx.catalogs,

@@ -2,6 +2,7 @@
 
 mod alter;
 mod alter_write_order;
+mod append_with_options;
 mod bare_nullary;
 mod bare_unit;
 mod call;
@@ -44,7 +45,9 @@ pub(crate) mod write_options;
 mod write_to_branch;
 
 // --- Router entrypoints.
-pub use router::{execute, execute_with_read_only, execute_with_statement_options};
+pub use router::{
+    execute, execute_static_overwrite, execute_with_read_only, execute_with_statement_options,
+};
 // G15: parse-altitude collation refuse (binding `F.expr` / `filter_sql` call this).
 pub use collation::{
     COLLATION_REFUSAL_NEEDLE, collation_refusal_message, is_collation_session_key,
@@ -75,6 +78,7 @@ pub use metadata_tables::{
 };
 
 // Domain-module re-exports keep sibling paths stable.
+pub(crate) use append_with_options::execute_append_with_options;
 pub use catalog_ops::reregister_catalog_provider;
 pub(crate) use catalog_ops::{
     catalog_handle, iceberg_err, name_parts, namespace_schema_name, passthrough_after_p11,
@@ -89,7 +93,7 @@ pub(crate) use ctas::{
 pub(crate) use describe_show::{
     DescribeNamespace, describe_namespace_batch, quoted_namespace, show_namespace_rows,
 };
-pub(crate) use insert_overwrite::{execute_append_with_options, execute_insert_overwrite};
+pub(crate) use insert_overwrite::execute_insert_overwrite;
 #[cfg(test)]
 pub(crate) use insert_overwrite::{logical_plan_has_unsafe_cast, tighten_batch_nullability};
 pub(crate) use namespace_ddl::{

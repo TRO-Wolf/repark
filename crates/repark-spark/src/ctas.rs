@@ -143,6 +143,7 @@ pub(crate) fn build_ctas(
 }
 
 /// Resolve the target, derive schema, stream rows into a staged transaction, and publish once.
+#[allow(clippy::too_many_lines)]
 pub(crate) async fn execute_ctas(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -225,7 +226,8 @@ pub(crate) async fn execute_ctas(
         let staged =
             StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)
                 .await
-                .map_err(iceberg_err)?;
+                .map_err(iceberg_err)?
+                .with_replace_write(ctas.or_replace);
         (staged, None)
     } else {
         // Replace: stage against the existing table (its own location + FileIO).
@@ -249,7 +251,8 @@ pub(crate) async fn execute_ctas(
             .build();
         let staged = StagedTableTransaction::begin_replace(&existing, creation)
             .await
-            .map_err(iceberg_err)?;
+            .map_err(iceberg_err)?
+            .with_replace_write(ctas.or_replace);
         (staged, replace_base)
     };
 
@@ -516,7 +519,9 @@ pub(crate) async fn execute_ctas_service_managed(
     let write_result: Result<()> = async {
         if options.is_empty() {
             let data_files = write_ctas_query(ctx, &table, query).await?;
-            if !data_files.is_empty() {
+            if ctas.or_replace {
+                repark_iceberg::write::commit_replace_write(catalog, &table, data_files).await?;
+            } else if !data_files.is_empty() {
                 repark_iceberg::write::commit_append(catalog, &table, data_files).await?;
             }
             return Ok(());

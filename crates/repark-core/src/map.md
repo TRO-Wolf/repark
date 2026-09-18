@@ -55,7 +55,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). **ICE-WRITE-OPTIONS-1
   round 3 (2026-09-17):** `sql_with_write_options` runs the session dialect's
-  `execute_with_write_options` (see `dialect.rs`). Builder collects
+  `execute_with_write_options` (see `dialect.rs`). **Run 22b rebase (2026-09-18,
+  Q-22b-WO-1):** ICE-DYN-OVERWRITE-1's `static_overwrite.rs` (`sql_with_overwrite_flag`,
+  `sql_static_overwrite`) is retired; `session/write_options.rs` is the one statement
+  funnel, `sql_with_write_options(query, options, force_static_overwrite)` fills
+  `EngineContext::force_static_overwrite`, and `sql_with` calls it with an empty map and
+  `false`. pins: ice-dyn-overwrite-1/L-001; ice-write-options-1/C-014 Builder collects
   the Spark-style `.config(...)` map (`config(key, value)` / `configs(map)`); sync `build()`
   validates knobs, parses the config's `spark.sql.catalog.<name>.*` /
   `repark.sql.catalog.<name>.*` blocks into `CatalogSpec`s (fail-loud, synchronous), threads every
@@ -474,6 +479,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   inference. Unit tests pin naive midnight/walls/refusals, the unchanged
   zoned walls, and discovery types and values under New York.
   pins: io-text-1/Z-1
+- `partition_overwrite_mode.rs` — **ICE-DYN-OVERWRITE-1 (2026-09-17):** the
+  `spark.sql.sources.partitionOverwriteMode` session knob beside the timezone
+  and ANSI carriers: `PARTITION_OVERWRITE_MODE_KEY` (the one spelling),
+  `PartitionOverwriteMode` (`Static` default via derive / `Dynamic`), the case-insensitive
+  parse (unknown values refuse with Spark's
+  `[INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS]` class), the
+  `PartitionOverwriteModeConfig` live carrier (`repark.overwrite` prefix, unsettable),
+  plus the build-map installer and the `SessionContext` reader.
+  pins: ice-dyn-overwrite-1/C-007, C-010, C-014
 - `text_partition.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-1+U-2):** the one-scan
   `partitionBy` text writer (`write_text_partitioned`, exported at the crate root).
   One `execute_stream` pass routes each row to its leaf writer by rendered key

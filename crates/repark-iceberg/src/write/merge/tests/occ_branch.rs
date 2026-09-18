@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use iceberg::expr::Predicate;
 use iceberg::spec::DataFile;
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
@@ -66,6 +67,7 @@ async fn commit_on_branch_rejects_concurrent_branch_append() {
         Some(pin),
         Vec::new(),
         vec![data_file("test/branch-insert.parquet")],
+        &Predicate::AlwaysTrue,
         Some("audit"),
     )
     .await
@@ -117,6 +119,7 @@ async fn commit_on_branch_ignores_concurrent_main_append() {
         Some(pin),
         Vec::new(),
         vec![data_file("test/branch-insert.parquet")],
+        &Predicate::AlwaysTrue,
         Some("audit"),
     )
     .await

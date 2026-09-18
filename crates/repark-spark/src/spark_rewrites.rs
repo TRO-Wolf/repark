@@ -810,3 +810,114 @@ fn byte_offset(starts: &[usize], sql: &str, location: Location) -> Option<usize>
         None => None,
     }
 }
+
+pub(crate) fn plan_insert_partition_column_list_regions(
+    tokens: &[TokenWithSpan],
+    sql: &str,
+) -> Vec<LiteralRegion> {
+    let first = skip_whitespace(tokens, 0);
+    let Some(Token::Word(insert)) = tokens.get(first).map(|with_span| &with_span.token) else {
+        return Vec::new();
+    };
+    if insert.quote_style.is_some() || !insert.value.eq_ignore_ascii_case("INSERT") {
+        return Vec::new();
+    }
+    let mut index = first + 1;
+    while index < tokens.len() {
+        let Token::Word(word) = &tokens[index].token else {
+            index += 1;
+            continue;
+        };
+        if word.quote_style.is_some() || !word.value.eq_ignore_ascii_case("PARTITION") {
+            index += 1;
+            continue;
+        }
+        let Some(regions) = partition_column_list_swap(tokens, sql, index) else {
+            index += 1;
+            continue;
+        };
+        return regions;
+    }
+    Vec::new()
+}
+
+fn partition_column_list_swap(
+    tokens: &[TokenWithSpan],
+    sql: &str,
+    partition: usize,
+) -> Option<Vec<LiteralRegion>> {
+    let clause_open = skip_whitespace(tokens, partition + 1);
+    let clause_close = matching_paren(tokens, clause_open)?;
+    let list_open = skip_whitespace(tokens, clause_close + 1);
+    let list_close = matching_paren(tokens, list_open)?;
+    if !is_bare_column_list(tokens, list_open, list_close) {
+        return None;
+    }
+    let after = skip_whitespace(tokens, list_close + 1);
+    if !starts_insert_source(tokens.get(after).map(|with_span| &with_span.token)) {
+        return None;
+    }
+    Some(vec![
+        LiteralRegion {
+            start: tokens[partition].span.start,
+            end: tokens[clause_close].span.end,
+            replacement: sql_between(tokens, sql, list_open, list_close + 1),
+        },
+        LiteralRegion {
+            start: tokens[list_open].span.start,
+            end: tokens[list_close].span.end,
+            replacement: sql_between(tokens, sql, partition, clause_close + 1),
+        },
+    ])
+}
+
+fn matching_paren(tokens: &[TokenWithSpan], open: usize) -> Option<usize> {
+    if !matches!(
+        tokens.get(open).map(|with_span| &with_span.token),
+        Some(Token::LParen)
+    ) {
+        return None;
+    }
+    let mut depth = 0usize;
+    for (offset, token) in tokens.iter().enumerate().skip(open) {
+        match token.token {
+            Token::LParen => depth += 1,
+            Token::RParen => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(offset);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn is_bare_column_list(tokens: &[TokenWithSpan], open: usize, close: usize) -> bool {
+    let mut words = 0usize;
+    for token in &tokens[open + 1..close] {
+        match &token.token {
+            Token::Whitespace(_) | Token::Comma | Token::Period => {}
+            Token::Word(word) => {
+                if word.quote_style.is_none() && starts_insert_source(Some(&token.token)) {
+                    return false;
+                }
+                words += 1;
+            }
+            _ => return false,
+        }
+    }
+    words > 0
+}
+
+fn starts_insert_source(token: Option<&Token>) -> bool {
+    let Some(Token::Word(word)) = token else {
+        return matches!(token, Some(Token::LParen));
+    };
+    word.quote_style.is_none()
+        && matches!(
+            word.value.to_ascii_uppercase().as_str(),
+            "SELECT" | "VALUES" | "WITH" | "TABLE" | "FROM"
+        )
+}

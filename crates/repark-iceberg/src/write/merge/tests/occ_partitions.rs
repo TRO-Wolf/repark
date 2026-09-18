@@ -17,7 +17,7 @@ use tempfile::TempDir;
 
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::{
-    IsolationLevel, KnownPartitions, RowDeltaKind, RowDeltaPolicy, commit,
+    CommitScope, IsolationLevel, KnownPartitions, RowDeltaKind, RowDeltaPolicy, commit,
     commit_row_delta_kind_with_partitions,
 };
 
@@ -215,7 +215,7 @@ async fn the_production_partition_carrying_commit_honors_the_snapshot_pin() {
         .map(|snapshot| snapshot.snapshot_id());
     let policy = RowDeltaPolicy {
         kind: RowDeltaKind::Delete,
-        isolation: IsolationLevel::Serializable,
+        scope: CommitScope::unscoped(IsolationLevel::Serializable),
     };
     commit_row_delta_kind_with_partitions(
         &catalog,
@@ -224,7 +224,7 @@ async fn the_production_partition_carrying_commit_honors_the_snapshot_pin() {
         vec![pair_for_id(&table, 1).await],
         Vec::new(),
         WriteConcurrency::new(1).expect("K=1"),
-        policy,
+        &policy,
         known.clone(),
     )
     .await
@@ -239,7 +239,7 @@ async fn the_production_partition_carrying_commit_honors_the_snapshot_pin() {
         vec![pair_for_id(&table, 2).await],
         Vec::new(),
         WriteConcurrency::new(1).expect("K=1"),
-        policy,
+        &policy,
         known,
     )
     .await;

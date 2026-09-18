@@ -24,6 +24,23 @@ opt-in; end-to-end pins live in [`../v3/create.rs`](../v3/create.rs).
   classifies to `Error::CommitStateUnknown` with the minted id.
   pins: ice-commit-unknown-1/C-001, C-003, C-004
 
+- `rtas_ops_tests.rs` — **ICE-RTAS-OPS-2 round 2 (2026-09-18):** the native-door
+  snapshot-operation pins for fixture `rtas_ops`
+  (`python/repark/tests/ice_rtas_byname_1_spark_oracle.json`), declared as
+  `#[cfg(test)] mod rtas_ops_tests;` in `../create_table.rs`. A memory catalog under
+  `RequireExplicitLocation` (staged) or `ServiceManagedLocation` (create-first).
+  RTAS cells: `native_ctas_then_rtas_records_append_then_overwrite`,
+  `native_rtas_creating_the_table_records_overwrite`,
+  `native_empty_rtas_on_new_table_records_delete`,
+  `native_empty_rtas_twice_records_two_deletes`. Controls:
+  `native_plain_ctas_records_append` (`[append]`) and
+  `native_coldef_replace_commits_no_snapshot` (the 2026-09-17 Spark cell: ops stay
+  `[append]`, zero rows; red if the column-def form takes the opt-in).
+  Service-managed: `native_service_managed_rtas_creating_the_table_records_overwrite`,
+  `native_service_managed_empty_rtas_records_delete_then_delete`,
+  `native_service_managed_plain_ctas_records_append`.
+  pins: ice-rtas-ops-2/C-015, C-016, C-017, C-020
+
 ## Pointers
 
 - Up: [../map.md](../map.md). Design: `../../../../docs/design/sql-doors.md`.

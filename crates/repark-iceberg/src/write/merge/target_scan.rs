@@ -7,6 +7,7 @@ use datafusion::execution::TaskContext;
 use datafusion::physical_plan::SendableRecordBatchStream;
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::PartitionStream;
+use datafusion::prelude::SessionContext;
 use futures::{StreamExt, TryStreamExt};
 use iceberg::arrow::ArrowReaderBuilder;
 use iceberg::expr::Predicate;
@@ -15,10 +16,52 @@ use iceberg::spec::Struct;
 use iceberg::table::Table;
 use tracing::Instrument;
 
-use super::{conform_scan_batch, iceberg_err};
+use super::{
+    MergeMode, MergeSpec, conform_scan_batch, iceberg_err, not_matched_by_source,
+    note_residual_push,
+};
 use crate::write::file_scoped_rewrite::filter_tasks_to_allowlist_nonempty;
+use crate::write::scan_prune::{
+    bare_equalities_from_on, residual_bounds_predicate, scan_pruning_from_ctx,
+};
 
 type PlannedFileTasks = Arc<futures::lock::Mutex<Option<Arc<Vec<FileScanTask>>>>>;
+
+/// PERF-04: residual join-key bounds.
+pub(crate) async fn residual_join_key_filter(
+    ctx: &SessionContext,
+    spec: &MergeSpec,
+    write_schema: &SchemaRef,
+    mode: MergeMode,
+    file_scoped_rewrite: bool,
+) -> Result<Option<Predicate>, DataFusionError> {
+    if !scan_pruning_from_ctx(ctx) {
+        return Ok(None);
+    }
+    if not_matched_by_source::is_present(spec) {
+        return Ok(None);
+    }
+    // COW full-target rewrite must not residual-filter the primary, or unmatched survivors drop.
+    if matches!(mode, MergeMode::CopyOnWrite) && !file_scoped_rewrite {
+        return Ok(None);
+    }
+    let equalities = bare_equalities_from_on(&spec.on_sql, &spec.target_alias, &spec.source_alias);
+    if equalities.is_empty() {
+        return Ok(None);
+    }
+    let residual = residual_bounds_predicate(
+        ctx,
+        &spec.source_from_sql,
+        &spec.source_alias,
+        write_schema.as_ref(),
+        &equalities,
+    )
+    .await;
+    if residual.is_some() {
+        note_residual_push();
+    }
+    Ok(residual)
+}
 
 pub(crate) type KnownPartitions = HashMap<String, (i32, Struct)>;
 
@@ -92,15 +135,20 @@ async fn plan_file_scan_tasks(
     concurrency_limit: Option<usize>,
     file_path_allowlist: Option<&std::collections::HashSet<String>>,
 ) -> Result<Vec<FileScanTask>, DataFusionError> {
-    let mut builder = table.scan().snapshot_id(snapshot_id).select(select_columns);
+    let mut builder = table
+        .scan()
+        .snapshot_id(snapshot_id)
+        .select(select_columns)
+        .project_current_schema();
     if let Some(predicate) = filter {
         builder = builder.with_filter(predicate);
     }
     if let Some(limit) = concurrency_limit {
         builder = builder.with_concurrency_limit(limit);
     }
-    let scan = builder.build().map_err(iceberg_err)?;
-    let planned: Vec<_> = scan
+    let planned: Vec<FileScanTask> = builder
+        .build()
+        .map_err(iceberg_err)?
         .plan_files()
         .await
         .map_err(iceberg_err)?
@@ -214,43 +262,27 @@ impl PartitionStream for TargetScanStream {
         // Open the pinned scan lazily and conform each arriving batch onto the scratch schema.
         let opened =
             async move {
-                let arrow = if file_path_allowlist.is_some() || partition_sink.is_some() {
-                    let tasks = planned_or_plan(
-                        &planned_file_tasks,
-                        &table,
-                        pin,
-                        select_columns,
-                        filter,
-                        concurrency_limit,
-                        file_path_allowlist.as_deref(),
-                    )
-                    .await?;
-                    if let Some(sink) = partition_sink.as_ref() {
-                        record_scanned_partitions(sink, tasks.as_ref());
-                    }
-                    let task_stream: iceberg::scan::FileScanTaskStream = Box::pin(
-                        futures::stream::iter(tasks.as_ref().clone().into_iter().map(Ok)),
-                    );
-                    let mut reader = ArrowReaderBuilder::new(table.file_io().clone());
-                    if let Some(limit) = concurrency_limit {
-                        reader = reader.with_data_file_concurrency_limit(limit);
-                    }
-                    reader.build().read(task_stream).map_err(iceberg_err)?
-                } else {
-                    let mut builder = table.scan().snapshot_id(pin).select(select_columns);
-                    if let Some(predicate) = filter {
-                        builder = builder.with_filter(predicate);
-                    }
-                    if let Some(limit) = concurrency_limit {
-                        builder = builder.with_concurrency_limit(limit);
-                    }
-                    builder
-                        .build()
-                        .map_err(iceberg_err)?
-                        .to_arrow()
-                        .await
-                        .map_err(iceberg_err)?
-                };
+                let tasks = planned_or_plan(
+                    &planned_file_tasks,
+                    &table,
+                    pin,
+                    select_columns,
+                    filter,
+                    concurrency_limit,
+                    file_path_allowlist.as_deref(),
+                )
+                .await?;
+                if let Some(sink) = partition_sink.as_ref() {
+                    record_scanned_partitions(sink, tasks.as_ref());
+                }
+                let task_stream: iceberg::scan::FileScanTaskStream = Box::pin(
+                    futures::stream::iter(tasks.as_ref().clone().into_iter().map(Ok)),
+                );
+                let mut reader = ArrowReaderBuilder::new(table.file_io().clone());
+                if let Some(limit) = concurrency_limit {
+                    reader = reader.with_data_file_concurrency_limit(limit);
+                }
+                let arrow = reader.build().read(task_stream).map_err(iceberg_err)?;
                 Ok::<_, DataFusionError>(arrow.map(move |batch| {
                     conform_scan_batch(&map_schema, &batch.map_err(iceberg_err)?)
                 }))

@@ -12,6 +12,7 @@ pub struct StatementWriteOptions {
     pub level: Option<String>,
     pub distribution_mode: Option<String>,
     pub isolation: Option<String>,
+    pub force_static_overwrite: bool,
 }
 
 impl StatementWriteOptions {

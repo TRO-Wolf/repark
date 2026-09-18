@@ -633,12 +633,25 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
   helpers. **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
   (ceiling 1117→1113). pins: dml-b-insert-overwrite/C-003, C-004
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** table writes emit an explicit target
+  column list and pass through columns missing from the frame; the engine fills
+  them from `write_default`. Extra frame columns still refuse.
+  pins: ice-v3-write-default-1/C-006
+  Run 21b round 2 (2026-09-18, ruling Q-21b-8): `overwritePartitions()` carries the
+  same target column list, `INSERT OVERWRITE t (cols) PARTITION (…) SELECT …`, so an
+  omitted defaulted column fills as Spark does instead of refusing on arity
+  (1095 → 1094, mirrored in the CAP-1 test). pins: ice-v3-write-default-1/C-020
   DFCORE-3 (2026-09-07): `DataFrameStatFunctions.freqItems` delegates its refusal to
   `statistics._freq_items` (1113 → 1111, mirrored in the CAP-1 test); the class keeps
   the stat accessor shape. pins: dfcore-3/C-005, C-006
   DF-RUST-3 (2026-09-15): `freqItems` delegates the live call to the same
   `statistics._freq_items` body — line-neutral against the exact 1101 baseline.
   pins: df-rust-3/C-001, C-005
+  ICE-DYN-OVERWRITE-1 (2026-09-17): `saveAsTable` overwrite passes a typed
+  `static_overwrite` flag into the dedicated native `sql_static_overwrite` entry
+  (Spark ignores the dynamic conf there too); round 2, ruling Q-20a-6:
+  1101 → 1109 for the flag threading.
+  pins: ice-dyn-overwrite-1/C-006, C-014
   IO-BUCKET-CLUSTER-1 (2026-09-14): `bucketBy` / `sortBy` / `clusterBy` (v1) and
   `clusterBy` (V2) bind here as thin delegates; the class carries the layout slots and
   runs `writer_layout`'s checks at `save` / `saveAsTable` / V2 `create` / `replace` /
@@ -1218,6 +1231,18 @@ that held the comment (pins: comment-core-1/C-003).
   `writer_readwriter.py` 1101→1114 (options slots, storage, clause rendering);
   `writer_layout.py` 365→376 (render helper, below the default).
   pins: ice-write-options-1/C-001, C-005
+  ICE-V3-WRITE-DEFAULT-1 (2026-09-17): `writer_readwriter.py` 1101→1095 — both
+  `_by_name_projection` variants return the target column list with the source
+  projection and stop refusing missing DataFrame columns, so the engine fills
+  omitted defaulted columns from `write_default` in Rust.
+  pins: ice-v3-write-default-1/C-006
+  ICE-WRITE-OPTIONS-1 run 22b rebase (2026-09-18): `writer_readwriter.py` 1102→1095 — the
+  merge keeps main's column list and `static_overwrite` flag and this unit's options map on
+  every Iceberg writer action; the V1 funnel hands both to
+  `writer_layout.run_through_temp_view`, whose one native call
+  `session_sql_with_write_options(session, sql, options, static_overwrite)` carries the
+  typed flag (the separate `sql_static_overwrite` native is retired, Q-22b-WO-1).
+  pins: ice-write-options-1/C-014
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.
 

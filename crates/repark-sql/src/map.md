@@ -35,12 +35,19 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   CREATE lands under `{warehouse}/repark_ansi_ctas/…`, not the process temp dir.
 - `insert_overwrite.rs` — **DML-B:** `INSERT OVERWRITE … PARTITION (…)` static/dynamic;
   whole-table stays Q9. pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-006
+  ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): both PARTITION arms fill omitted
+  write-defaults through the shared `overwrite_source_with_defaults`; the dynamic arm
+  no longer writes NULL for a defaulted column. pins: ice-v3-write-default-1/C-015
 - `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms
   (static overwrite/delete, two-key AND + incomplete-static, string/NULL, dynamic
   `replace-partitions=true`, empty-dynamic refuse) and the remaining Q9 whole-table refuse.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005, C-006
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
-  (**V3-4:** `prepare_lineage_sql` after time travel; composed statements refuse `V3-ROWID-2`)
+  (**V3-4:** `prepare_lineage_sql` after time travel; composed statements refuse `V3-ROWID-2`;
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** short `INSERT INTO t (cols)` fills omitted
+  columns from `write_default` before delegation, pins ice-v3-write-default-1/C-004;
+  the marker pass hands its loaded table through `delegate`, so the fill pass never
+  reloads)
   valve → match → the MoR DML valve → delegate) and the delegation path that carries the SEC-02
   guard. Delegation
   covers reads, the fork's metadata tables, and `INSERT`/`DELETE`/`UPDATE` via the fork's
@@ -123,6 +130,14 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   unwrapped on `is_commit_state_unknown` — the possibly-landed create is never
   abort-dropped; definite kinds keep the drop-and-explain abort.
   pins: ice-commit-unknown-1/C-001, C-003, C-004
+  **ICE-RTAS-OPS-2 round 2 (2026-09-18):** `replace_write = or_replace && query.is_some()`
+  — `CREATE OR REPLACE TABLE … AS SELECT` only, never the column-def form. The native
+  door's `execute_staged_create` chains `.with_replace_write(replace_write)` on both the
+  `begin_create` and `begin_replace` arms, and `create_first_service_managed` commits a
+  new-table RTAS through `repark_iceberg::write::commit_replace_write` (plain CTAS keeps
+  `commit_append`). RTAS records `overwrite`, or `delete` when empty, as on the Spark door
+  (ADR-0002 §3).
+  pins: ice-rtas-ops-2/C-015, C-016, C-020
   Tests:
   [create_table/map.md](create_table/map.md).
 - `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`

@@ -36,7 +36,7 @@ mod cache_budget;
 mod df_guards;
 mod iceberg_caches;
 mod late_catalogs;
-mod spill;
+pub(crate) mod spill;
 mod temp_views;
 mod write_options;
 
@@ -329,7 +329,7 @@ impl ReparkSessionBuilder {
 pub struct ReparkSession {
     backend: Arc<dyn ExecutionBackend>,
     /// Session-default `SqlDialect` for every `sql` call unless the builder installs another.
-    dialect: Arc<dyn SqlDialect>,
+    pub(crate) dialect: Arc<dyn SqlDialect>,
     /// iceberg `Catalog` handles by registered name.
     pub(crate) catalogs: Arc<RwLock<CatalogRegistry>>,
     /// Names of registered postgres read catalogs.
@@ -397,7 +397,7 @@ impl ReparkSession {
     /// # Errors
     /// Identical classification to [`Self::sql`]: every dialect gets the same error taxonomy.
     pub async fn sql_with(&self, dialect: &Arc<dyn SqlDialect>, query: &str) -> Result<DataFrame> {
-        self.sql_with_write_options_inner(dialect, query, &HashMap::new())
+        self.sql_with_write_options_inner(dialect, query, &HashMap::new(), false)
             .await
     }
 
@@ -513,7 +513,7 @@ impl ReparkSession {
         }
     }
 
-    fn postgres_catalog_names_snapshot(&self) -> HashSet<String> {
+    pub(crate) fn postgres_catalog_names_snapshot(&self) -> HashSet<String> {
         self.postgres_catalog_names
             .read()
             .unwrap_or_else(std::sync::PoisonError::into_inner)

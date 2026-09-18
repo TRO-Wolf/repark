@@ -7,6 +7,7 @@ use datafusion::prelude::DataFrame;
 use datafusion::sql::parser::Statement as DFStatement;
 use datafusion::sql::sqlparser::ast::{ObjectType, Statement};
 use repark_core::EngineContext;
+use repark_iceberg::write::insert_defaults;
 
 use crate::{
     alter, create_table, guards, merge, ref_ddl, refusals, schema_ddl, sniff, time_travel, truncate,
@@ -90,12 +91,22 @@ async fn execute_time_travelled(
     if let DFStatement::Reset(datafusion::sql::parser::ResetStatement::Variable(name)) = &statement
     {
         guards::refuse_collation_reset_variable(&name.to_string())?;
-        return delegate(cx, sql).await;
+        return delegate(cx, sql, None, None).await;
     }
-    let DFStatement::Statement(statement) = statement else {
+    let DFStatement::Statement(mut statement) = statement else {
         // DataFusion's parser extensions use the delegated plan path.
-        return delegate(cx, sql).await;
+        return delegate(cx, sql, None, None).await;
     };
+    let rewrite = match insert_defaults::insert_target(&statement) {
+        Some((catalog_name, ident)) => match cx.catalogs.get(&catalog_name) {
+            Some(catalog) => {
+                insert_defaults::rewrite_insert_markers(catalog, &ident, &mut statement).await?
+            }
+            None => insert_defaults::MarkerRewrite::unchanged(),
+        },
+        None => insert_defaults::MarkerRewrite::unchanged(),
+    };
+    let insert_columns = insert_defaults::insert_column_list(&statement);
 
     // G15 runs at parse altitude before statement-specific handling.
     guards::refuse_collation_in_statement(statement.as_ref())?;
@@ -142,7 +153,15 @@ async fn execute_time_travelled(
         Statement::Delete(_) | Statement::Update(_) => {
             execute_identity_or_delegate(cx, sql, statement.as_ref()).await
         }
-        _ => delegate(cx, sql).await,
+        _ => {
+            delegate(
+                cx,
+                rewrite.rewritten.as_deref().unwrap_or(sql),
+                insert_columns.as_deref(),
+                rewrite.preloaded,
+            )
+            .await
+        }
     }
 }
 
@@ -165,7 +184,7 @@ async fn execute_identity_or_delegate(
     }
     guards::refuse_dml_subquery_predicate(statement)?;
     guards::refuse_mor_multi_spec_dml(cx, statement).await?;
-    delegate(cx, sql).await
+    delegate(cx, sql, None, None).await
 }
 
 async fn commit_identity_dml(
@@ -181,12 +200,25 @@ async fn commit_identity_dml(
 }
 
 /// Plan with DataFusion, run the SEC-02 guard on the resulting plan, then execute.
-async fn delegate(cx: &EngineContext<'_>, sql: &str) -> Result<DataFrame> {
+async fn delegate(
+    cx: &EngineContext<'_>,
+    sql: &str,
+    listed: Option<&[String]>,
+    preloaded: Option<iceberg::table::Table>,
+) -> Result<DataFrame> {
     // Plan, apply SEC-02, then execute through the shared pre-execute belt.
     let belt = repark_core::PreExecute::from_engine_context(cx);
     let plan = match belt.plan(sql).await {
         Ok(plan) => plan,
         Err(err) => return Err(sniff::upgrade_error(sql, err)),
+    };
+    let target = insert_defaults::dml_target(&plan)
+        .and_then(|(name, ident)| cx.catalogs.get(&name).map(|catalog| (catalog, ident)));
+    let plan = match target {
+        Some((catalog, ident)) => {
+            insert_defaults::fill_insert_plan(catalog, &ident, listed, plan, preloaded).await?
+        }
+        None => plan,
     };
     // Door-specific (SEC-02): the belt deliberately does not own the local-filesystem gate.
     guards::refuse_local_filesystem_plan(cx.ctx, cx.catalogs, &plan)?;

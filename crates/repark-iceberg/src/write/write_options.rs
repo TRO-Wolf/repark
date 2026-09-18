@@ -245,6 +245,31 @@ where
     }
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub async fn stage_static_partition_overwrite_files_with(
+    table: &Table,
+    batches: Vec<RecordBatch>,
+    equalities: &[crate::write::partition_overwrite::PartitionEquality],
+    columns: &[String],
+    concurrency: WriteConcurrency,
+    staging: Option<&WriterStagingOverrides>,
+) -> Result<Vec<DataFile>> {
+    let Some(staging) = staging else {
+        return crate::write::partition_overwrite::stage_static_partition_overwrite_files(
+            table,
+            batches,
+            equalities,
+            columns,
+            concurrency,
+        )
+        .await;
+    };
+    let stream = crate::write::partition_overwrite::static_injected_stream(
+        table, batches, equalities, columns,
+    )?;
+    stage_overwrite_files_with(table, stream, Vec::new(), concurrency, staging).await
+}
+
 async fn build_unpartitioned_writer_with(
     table: &Table,
     staging: &WriterStagingOverrides,

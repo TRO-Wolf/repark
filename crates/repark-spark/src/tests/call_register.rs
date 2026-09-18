@@ -16,8 +16,28 @@ const SPARK_V3_WAREHOUSE: &str = "/tmp/repark-v3-1-spark-mor";
 /// Serializes tests that materialize the Spark fixture at a fixed `/tmp` path.
 static SPARK_V3_LOCK: Mutex<()> = Mutex::new(());
 
+const SPARK_V3_LOCK_FILE: &str = "/tmp/repark-v3-1-spark-mor.lock";
+
+struct SparkV3FileLock {
+    _file: fs::File,
+}
+
+impl SparkV3FileLock {
+    fn acquire(path: &Path) -> SparkV3FileLock {
+        let file = fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(path)
+            .expect("open spark v3 fixture lock file");
+        file.lock().expect("lock spark v3 fixture lock file");
+        SparkV3FileLock { _file: file }
+    }
+}
+
 struct SparkV3Fixture {
     _lock: MutexGuard<'static, ()>,
+    _file_lock: SparkV3FileLock,
     metadata_file: String,
 }
 
@@ -37,6 +57,7 @@ fn copy_dir_all(from: &Path, to: &Path) {
 /// Copy the checked-in Spark-written v3 table onto the warehouse path its metadata names.
 fn materialize_spark_v3_fixture() -> SparkV3Fixture {
     let lock = SPARK_V3_LOCK.lock().expect("spark v3 fixture lock");
+    let file_lock = SparkV3FileLock::acquire(Path::new(SPARK_V3_LOCK_FILE));
     let dest = PathBuf::from(SPARK_V3_WAREHOUSE);
     if dest.exists() {
         fs::remove_dir_all(&dest).expect("clear previous fixture");
@@ -50,6 +71,7 @@ fn materialize_spark_v3_fixture() -> SparkV3Fixture {
     );
     SparkV3Fixture {
         _lock: lock,
+        _file_lock: file_lock,
         metadata_file: metadata_file.to_string_lossy().into_owned(),
     }
 }

@@ -223,10 +223,12 @@ class DataFrameWriter:
             )
         if normalized_mode == "ignore":
             return
-        projection = self._by_name_projection(session, table_ref, display_name=name)
+        columns, projection = self._by_name_projection(session, table_ref, display_name=name)
         verb = "INSERT OVERWRITE" if normalized_mode == "overwrite" else "INSERT INTO"
         self._run_through_temp_view(
-            lambda view: f"{verb} {table_ref} SELECT {projection} FROM {view}", self._options
+            lambda view: f"{verb} {table_ref} ({columns}) SELECT {projection} FROM {view}",
+            self._options,
+            static_overwrite=normalized_mode == "overwrite",
         )
 
     save_as_table = saveAsTable
@@ -752,29 +754,27 @@ class DataFrameWriter:
             (staging_path / "part-00000.json").write_text("", encoding="utf-8")
             return
 
-    def _by_name_projection(self, session: Any, table_ref: str, *, display_name: str) -> str:
-        """Return a quoted source projection in target-table order, rejecting schema drift."""
+    def _by_name_projection(
+        self, session: Any, table_ref: str, *, display_name: str
+    ) -> tuple[str, str]:
+        """Return a target column list plus a quoted source projection in target-table order."""
         from repark.spark._idents import quote_ident as _quote_ident
 
         target_columns = list(session.sql(f"SELECT * FROM {table_ref} LIMIT 0").column_names())
         source_columns = self._dataframe.columns
         source_by_case = _by_name_casefold_map(source_columns, surface="DataFrame")
         target_by_case = _by_name_casefold_map(target_columns, surface="table")
-        missing = [column for column in target_columns if column.casefold() not in source_by_case]
+        present = [column for column in target_columns if column.casefold() in source_by_case]
         extra = [column for column in source_columns if column.casefold() not in target_by_case]
-        if missing or extra:
-            detail = ""
-            if missing:
-                detail += f"; missing from the DataFrame: {missing}"
-            if extra:
-                detail += f"; extra in the DataFrame: {extra}"
+        if extra:
             raise AnalysisException(
                 f"cannot write DataFrame columns {source_columns} into table {display_name!r} "
-                f"columns {target_columns} by name for saveAsTable{detail}"
+                f"columns {target_columns} by name for saveAsTable"
+                f"; extra in the DataFrame: {extra}"
             )
-        return ", ".join(
-            _quote_ident(source_by_case[column.casefold()]) for column in target_columns
-        )
+        columns = ", ".join(_quote_ident(column) for column in present)
+        projection = ", ".join(_quote_ident(source_by_case[name.casefold()]) for name in present)
+        return columns, projection
 
     def _ctas_sql(self, table_ref: str, *, view: str) -> str:
         """Build a quoted Iceberg CTAS statement."""
@@ -787,10 +787,16 @@ class DataFrameWriter:
         return f"CREATE TABLE {table_ref} USING iceberg{partition_clause} AS SELECT * FROM {view}"
 
     def _run_through_temp_view(
-        self, build_sql: Callable[[str], str], options: dict[str, str] | None = None
+        self,
+        build_sql: Callable[[str], str],
+        options: dict[str, str] | None = None,
+        *,
+        static_overwrite: bool = False,
     ) -> None:
         """Register a temporary view, execute the generated write SQL, and drop the view."""
-        writer_layout.run_through_temp_view(self._dataframe, build_sql, options, "_repark_writer_")
+        writer_layout.run_through_temp_view(
+            self._dataframe, build_sql, options, "_repark_writer_", static_overwrite
+        )
 
 
 from repark.spark.dataframe.writer_layout import (  # noqa: E402
@@ -920,20 +926,20 @@ class DataFrameWriterV2:
     def append(self) -> None:
         """Append rows to an existing table by column name."""
         session, table_ref = self._existing_table_ref()
-        projection = self._by_name_projection(session, table_ref=table_ref)
+        columns, projection = self._by_name_projection(session, table_ref=table_ref)
         self._run_through_temp_view(
-            lambda view: f"INSERT INTO {table_ref} SELECT {projection} FROM {view}",
+            lambda view: f"INSERT INTO {table_ref} ({columns}) SELECT {projection} FROM {view}",
             self._options,
         )
 
     def overwritePartitions(self) -> None:  # noqa: N802 — PySpark method name
         """Replace only the partitions present in this DataFrame (Spark dynamic overwrite)."""
         session, table_ref = self._existing_table_ref()
-        projection = self._by_name_projection(session, table_ref=table_ref)
+        columns, projection = self._by_name_projection(session, table_ref=table_ref)
         clause = _dynamic_partition_sql(self._dataframe, table_ref)
+        head = f"INSERT OVERWRITE {table_ref} ({columns}){clause}"
         self._run_through_temp_view(
-            lambda view: f"INSERT OVERWRITE {table_ref}{clause} SELECT {projection} FROM {view}",
-            self._options,
+            lambda view: f"{head} SELECT {projection} FROM {view}", self._options
         )
 
     overwrite_partitions = overwritePartitions
@@ -980,32 +986,28 @@ class DataFrameWriterV2:
             f"partitionedBy expects column names (str) or Column, got {type(item).__name__}"
         )
 
-    def _by_name_projection(self, session: Any, *, table_ref: str | None = None) -> str:
-        """Return a quoted source projection in table order, rejecting schema drift."""
+    def _by_name_projection(self, session: Any, *, table_ref: str | None = None) -> tuple[str, str]:
+        """Return a target column list plus a quoted source projection in table order."""
         from repark.spark._idents import quote_ident as _quote_ident
 
-        name = self._table
+        table = self._table
         if table_ref is None:
             _qualified, table_ref = self._resolved_table()
         target_columns = list(session.sql(f"SELECT * FROM {table_ref} LIMIT 0").column_names())
         source_columns = self._dataframe.columns
         source_by_case = _by_name_casefold_map(source_columns, surface="DataFrame")
         target_by_case = _by_name_casefold_map(target_columns, surface="table")
-        missing = [column for column in target_columns if column.casefold() not in source_by_case]
+        present = [column for column in target_columns if column.casefold() in source_by_case]
         extra = [column for column in source_columns if column.casefold() not in target_by_case]
-        if missing or extra:
-            detail = ""
-            if missing:
-                detail += f"; missing from the DataFrame: {missing}"
-            if extra:
-                detail += f"; extra in the DataFrame: {extra}"
+        if extra:
             raise AnalysisException(
-                f"cannot write DataFrame columns {source_columns} into table {name!r} columns "
-                f"{target_columns} by name for writeTo{detail}"
+                f"cannot write DataFrame columns {source_columns} into table {table!r} columns "
+                f"{target_columns} by name for writeTo"
+                f"; extra in the DataFrame: {extra}"
             )
-        return ", ".join(
-            _quote_ident(source_by_case[column.casefold()]) for column in target_columns
-        )
+        columns = ", ".join(_quote_ident(column) for column in present)
+        projection = ", ".join(_quote_ident(source_by_case[name.casefold()]) for name in present)
+        return columns, projection
 
     def _ctas_sql(self, *, or_replace: bool, view: str) -> str:
         """Build ``CREATE [OR REPLACE] TABLE … USING iceberg … AS SELECT``."""

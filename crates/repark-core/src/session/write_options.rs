@@ -14,9 +14,10 @@ impl ReparkSession {
         &self,
         query: &str,
         options: &HashMap<String, String>,
+        force_static_overwrite: bool,
     ) -> Result<DataFrame> {
         let dialect = Arc::clone(&self.dialect);
-        self.sql_with_write_options_inner(&dialect, query, options)
+        self.sql_with_write_options_inner(&dialect, query, options, force_static_overwrite)
             .await
     }
 
@@ -25,6 +26,7 @@ impl ReparkSession {
         dialect: &Arc<dyn SqlDialect>,
         query: &str,
         options: &HashMap<String, String>,
+        force_static_overwrite: bool,
     ) -> Result<DataFrame> {
         if let Some(frame) = super::spill::maybe_apply_runtime_set(self.context(), query)? {
             return Ok(frame);
@@ -38,6 +40,7 @@ impl ReparkSession {
                     ctx: self.context(),
                     catalogs: &catalogs,
                     read_only: &read_only,
+                    force_static_overwrite,
                 },
                 query,
                 options,

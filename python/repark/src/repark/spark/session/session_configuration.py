@@ -28,12 +28,14 @@ _CONF_GET_UNSET: object = object()
 
 SPARK_SQL_ANSI_ENABLED_KEY = "spark.sql.ansi.enabled"
 
+PARTITION_OVERWRITE_MODE_KEY = "spark.sql.sources.partitionOverwriteMode"
+
 
 SPARK_SQL_CASE_SENSITIVE_KEY = "spark.sql.caseSensitive"
 
 
 _SQLCONF_DEFAULTS: dict[str, str] = {
-    "spark.sql.sources.partitionOverwriteMode": "STATIC",
+    PARTITION_OVERWRITE_MODE_KEY: "STATIC",
     # Default app name where we control the default (Spark has no default appName).
     "spark.app.name": "repark",
     # Conf true infers StructType for dict-valued *cells* (any nesting depth); false keeps

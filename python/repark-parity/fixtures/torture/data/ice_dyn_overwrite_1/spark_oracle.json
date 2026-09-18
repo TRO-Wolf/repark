@@ -1,0 +1,431 @@
+{
+ "meta": {
+  "spark": {
+   "version": "4.1.2"
+  },
+  "gav": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+  "unit": "ice-dyn-overwrite-1",
+  "recorded": "2026-09-17",
+  "race_note": "two Hadoop-catalog sessions sharing one warehouse; 2M-row dynamic overwrite vs a 2-row append committing mid-window; snapshot order and final rows read from disk metadata plus a fresh session (catalog-cache reads avoided)"
+ },
+ "cells": {
+  "default_confs": {
+   "owmode": "STATIC"
+  },
+  "static_sql": {
+   "rows": [
+    [
+     20,
+     "b"
+    ]
+   ]
+  },
+  "static_insertInto": {
+   "rows": [
+    [
+     30,
+     "c"
+    ]
+   ]
+  },
+  "static_overwritePartitions": {
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     10,
+     "a"
+    ]
+   ]
+  },
+  "conf_get_after_set": {
+   "owmode": "dynamic"
+  },
+  "dynamic_sql": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     20,
+     "b"
+    ]
+   ]
+  },
+  "dynamic_sql_summary": {
+   "summary": {
+    "operation": "overwrite",
+    "summary": {
+     "engine-version": "4.1.2",
+     "added-data-files": "1",
+     "total-equality-deletes": "0",
+     "app-id": "local-1789647097756",
+     "added-records": "1",
+     "replace-partitions": "true",
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "3",
+     "app-name": "ice-dyn-overwrite-1",
+     "spark.app.id": "local-1789647097756",
+     "removed-files-size": "632",
+     "changed-partition-count": "1",
+     "engine-name": "spark",
+     "manifests-created": "2",
+     "total-position-deletes": "0",
+     "added-files-size": "632",
+     "total-delete-files": "0",
+     "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+     "manifests-kept": "0",
+     "manifests-replaced": "1",
+     "total-files-size": "1896",
+     "total-data-files": "3"
+    }
+   }
+  },
+  "dynamic_insertInto": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     30,
+     "c"
+    ]
+   ]
+  },
+  "dynamic_overwritePartitions": {
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     10,
+     "a"
+    ]
+   ]
+  },
+  "dynamic_partition_clause": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     20,
+     "b"
+    ]
+   ]
+  },
+  "dynamic_sql_v3": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     20,
+     "b"
+    ]
+   ]
+  },
+  "dynamic_insertInto_v3": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     30,
+     "c"
+    ]
+   ]
+  },
+  "dynamic_sql_unpartitioned": {
+   "rows": [
+    [
+     20,
+     "b"
+    ]
+   ]
+  },
+  "dynamic_insertInto_unpartitioned": {
+   "rows": [
+    [
+     30,
+     "c"
+    ]
+   ]
+  },
+  "dynamic_sql_empty": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ]
+  },
+  "dynamic_insertInto_empty": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ]
+  },
+  "static_sql_empty": {
+   "rows": []
+  },
+  "dynamic_sql_empty_unpartitioned": {
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ]
+  },
+  "static_sql_empty_unpartitioned": {
+   "rows": []
+  },
+  "dynamic_saveAsTable": {
+   "rows": [
+    [
+     40,
+     "c"
+    ]
+   ]
+  },
+  "dynamic_sql_evolved_spec": {
+   "evolved": true,
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     20,
+     "b"
+    ]
+   ]
+  },
+  "conf_case": {
+   "mixed_get": "DyNaMiC",
+   "mixed_rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     20,
+     "b"
+    ]
+   ],
+   "bogus_set": "IllegalArgumentException: [INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS] The value 'bogus' in the config \"spark.sql.sources.partitionOverwriteMode\" is invalid. It should be one of 'STATIC, DYNAMIC'. SQLSTATE: 22022",
+   "bogus_get": "DyNaMiC",
+   "bogus_rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     20,
+     "b"
+    ]
+   ]
+  },
+  "set_syntax": {
+   "get": "dynamic"
+  },
+  "builder_conf": {
+   "get": "dynamic",
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     20,
+     "b"
+    ]
+   ]
+  },
+  "race_default": {
+   "append": "committed",
+   "overwrite_error": null,
+   "disk": [
+    [
+     7416560520683143939,
+     null,
+     "3",
+     null
+    ],
+    [
+     1273128030372216057,
+     null,
+     "2",
+     null
+    ],
+    [
+     2846788325288254739,
+     null,
+     "2000000",
+     "2"
+    ]
+   ],
+   "fresh_neg_rows": [
+    [
+     -1,
+     "a"
+    ]
+   ],
+   "fresh_total": 2000003
+  },
+  "race_serializable": {
+   "append": "committed",
+   "overwrite_error": "Py4JJavaError: An error occurred while calling o87.overwritePartitions.\n: org.apache.iceberg.exceptions.ValidationException: Found conflicting files that can contain records matching partitions [p=b]: [/tmp/oc-worker/ja-dyn/spark-wh-race4/ns/ser/data/p=b/00000-23-ee3b7d51-100e-4136-bc3d-7fd2621abc43-0-00002.parquet, /tmp/oc-worker/ja-dyn/spark-wh-race4/ns/ser/data/p=b/00000-15-ea7a41de-3d12-4fa6-97ca-f2535e34e982-0-00002.parquet]\n\tat org.apache.iceberg.MergingSnapshotProducer.validateAddedDataFiles(MergingSnapshotProducer.java:373)\n\tat org.apache.iceberg.BaseReplacePartitions.validate(BaseReplacePartitions.java:95)\n\tat org.apache.iceberg.SnapshotProducer.runValidations(SnapshotProducer.java:351)\n\tat org.apache.iceberg.SnapshotProducer.apply(SnapshotProducer.java:279)\n\tat org.apache.iceberg.BaseReplacePar",
+   "disk": [
+    [
+     8516882464695961029,
+     null,
+     "3",
+     null
+    ],
+    [
+     1753809590335623771,
+     null,
+     "2",
+     null
+    ]
+   ],
+   "fresh_neg_rows": [
+    [
+     -2,
+     "b"
+    ],
+    [
+     -1,
+     "a"
+    ]
+   ],
+   "fresh_total": 5
+  },
+  "race_snapshot": {
+   "append": "committed",
+   "overwrite_error": null,
+   "disk": [
+    [
+     321235309682445860,
+     null,
+     "3",
+     null
+    ],
+    [
+     6690901460586180553,
+     null,
+     "2",
+     null
+    ],
+    [
+     8074856523085905968,
+     null,
+     "2000000",
+     "2"
+    ]
+   ],
+   "fresh_neg_rows": [
+    [
+     -1,
+     "a"
+    ]
+   ],
+   "fresh_total": 2000003
+  }
+ },
+ "notes": [
+  "race-default: attempt 1 saw no interleave, retrying",
+  "race-default: attempt 2 saw no interleave, retrying",
+  "race-default: attempt 3 saw no interleave, retrying",
+  "race-ser: attempt 1 saw no interleave, retrying",
+  "race-ser: attempt 2 saw no interleave, retrying",
+  "race-ser: attempt 3 saw no interleave, retrying",
+  "race-snap: attempt 1 saw no interleave, retrying",
+  "race-snap: attempt 2 saw no interleave, retrying",
+  "race-snap: attempt 3 saw no interleave, retrying"
+ ]
+}

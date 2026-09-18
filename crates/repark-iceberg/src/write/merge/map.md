@@ -14,6 +14,18 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 ## Contents
 
 - `snapshot_commit.rs` — snapshot-producing MERGE commits (`to_branch` when `MergeSpec.commit_branch` is set).
+  **ICE-OCC-SCOPED-1 (2026-09-17):** the three commit sites (`commit_overwrite_on_ref`'s
+  add-only and delete+add arms, `commit_row_delta_kind_on_ref`) no longer hard-code
+  `Predicate::AlwaysTrue`. They take a `CommitScope { isolation, conflict_filter }` as a parameter
+  (`RowDeltaPolicy` now carries `kind` + `scope`) and hand `scope.conflict_filter` to the fork's
+  `conflict_detection_filter`, which (fork #291, RP-24) tests each concurrently added data file
+  and delete file against it through that file's own spec's partition projection before the
+  inclusive metrics. Isolation still decides only whether `validate_no_conflicting_data` /
+  `validate_no_conflicting_data_files` is armed, so `snapshot` arms exactly the walks it armed
+  before; the filter scopes whichever walks are armed, as Java's does (ruling Q-21a-3).
+  `commit_on_ref` / `commit_row_delta_on_ref_with_partitions` take the MERGE's filter as a
+  parameter; the `#[cfg(test)]` wrappers and `CommitScope::unscoped` keep `AlwaysTrue`.
+  pins: ice-occ-scoped-1/C-005, C-014
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `commit_overwrite` and `commit_row_delta_kind` mint
   the commit's `engine.operation-id` via `write::commit_error::operation_id_and_summary` and
   route the `tx.commit` `Err` through `commit_err`, so a `CommitStateUnknown` surfaces
@@ -25,6 +37,13 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   pins: v3-9-mor-predicate-dml-dv/C-009
   pins: rp-5-fork-repin/C-004
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
+  **ICE-OCC-SCOPED-1 (2026-09-17):** `MergeTarget` carries the MERGE's `conflict_filter`,
+  computed once in `execute_merge` by `merge_conflict_filter`: the target-only conjuncts of the
+  `ON` condition (`../conflict_filter.rs` `from_merge_on`), or `AlwaysTrue` whenever a
+  `WHEN NOT MATCHED BY SOURCE` clause is present, because that clause reads every target row
+  the condition does not match. Both arms hand it to their commit. `residual_join_key_filter`
+  moved to `target_scan.rs` unchanged (baseline ratcheted 1792 → 1773 in the same change).
+  pins: ice-occ-scoped-1/C-004, C-006, C-009, C-010, C-011, C-012
   **ICE-PROMOTE-READ-1 (2026-09-16):** every DML target scan pins the snapshot id, so on a table
   with no write since `ALTER COLUMN … TYPE` it reads the pre-promotion types; `conform_scan_batch`
   widens those data columns through `conform::promoted_scan_column` before building the batch
@@ -133,10 +152,26 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   bare `commit_row_delta_kind` / `commit_row_delta_on_ref` wrappers have no production caller
   left and are `#[cfg(test)]`, so the OCC batteries keep their existing spellings.
   pins: rp-7-f18-repin/C-002
-- `target_scan.rs` — **RP-7 (2026-09-02):** `TargetScanStream` and the partition sink, extracted
-  from `mod.rs` (baseline ratcheted 1889 → 1795 in the same change). The scan takes the
+- `target_scan.rs` — **ICE-EVO-DML-1 (2026-09-17):** every execute plans the pinned
+  snapshot with the fork's `project_current_schema()` and reads the planned tasks with
+  `ArrowReaderBuilder` (the `to_arrow()` route is gone; plans stay cached per stream). When the
+  pinned snapshot's schema is not the current schema — `ADD COLUMN`, `RENAME COLUMN`, a type
+  promotion with no write since — the tasks read under the current schema by field id, so
+  MERGE, identity DELETE / UPDATE, the affected-file rewrite and the COW scratch stop refusing
+  `Column … not found in table` and stop reading a swapped name's other field. Round 1 did the
+  re-point locally (`catalog::current_schema_scan`); round 2 (2026-09-17) deleted it for the
+  fork API now that F-EVO-SCAN-1 (#289) owns the semantics. The projection also widens a
+  single-era promoted column before `conform_scan_batch` sees it (measured: the
+  `promoted_scan` table pin stays green with the conform widening bypassed).
+  pins: ice-evo-dml-1/C-010, C-011, C-013
+  **ICE-OCC-SCOPED-1 (2026-09-17):** now also holds `residual_join_key_filter`
+  (PERF-04's join-key bounds pushed onto the target scan), moved verbatim from `mod.rs`. It is the
+  SCAN residual, derived from the SOURCE's key range; it is never the conflict filter, which only
+  ever holds target-only predicates.
+  **RP-7 (2026-09-02):** `TargetScanStream` and the partition sink, extracted
+  from `mod.rs` (baseline ratcheted 1889 → 1795 in the same change). The scan took the
   `plan_files` route whenever an allowlist OR a sink is present and `to_arrow()` otherwise; the
-  two routes are byte-equivalent for this scan shape (the fork's `to_arrow` builds an
+  two routes were byte-equivalent for this scan shape (the fork's `to_arrow` builds an
   `ArrowReaderBuilder` with the same defaults, and its within-file split expansion is a no-op
   while `_pos` is projected).
   **PERF-SCAN-1 (2026-09-03 / r2 2026-09-04):** `plan_files` + `try_collect` run once per
@@ -182,6 +217,25 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   serial writer for V3 lineage tables and the shared partitioned stream funnel otherwise, and
   the funnel routes one value to one writer. Row semantics and `_row_id` carry are unchanged.
   pins: write-distribution-2/C-004, C-007
+  **ICE-SORTED-INSERT-1 (2026-09-17):** both MERGE writer sites stamp the
+  table's default sort order id through `distribution::stamp` — the lineage
+  fanout and the unpartitioned writer in `mod.rs`.
+  pins: ice-sorted-insert-1/C-003
+  **ICE-SORTED-INSERT-1 round 3 (2026-09-17):** the stamp alone was a false claim
+  here. Round 3's `sorted_lineage_batches` (folded into the writer in round 4) drained the stream and, when the table declares a
+  default sort order, hands it to `distribution::sort_batches_by_default_order`
+  before the fanout; the writer is built after that call, so a shape that cannot
+  sort (a transform order, which the shared helper refuses loud) writes nothing
+  rather than stamping unsorted bytes. The sort carries whole batches, so
+  `_row_id` and `_last_updated_sequence_number` travel with their rows.
+  **Round 4 (V-01):** round 3 drained the stream for every table and only then
+  checked for an order, so an unsorted v3 rewrite buffered the whole table. Now
+  `write_partitioned_lineage_files` checks `default_sort_is_declared` first:
+  unsorted tables stream batch by batch into the fanout, as before round 3, and
+  only a declared order drains (`drain`) and sorts, with the writer built after
+  the sort. That matches `distribution::fanout_sorted_serial` and
+  `drive_unpartitioned`, which also collect only when an order is declared.
+  pins: ice-sorted-insert-1/C-006, C-010
 - `cow_scratch.rs` — COW rewrite scratch tables (file-scoped target, affected-path
   MemTable, drop guard) extracted so `mod.rs` ratchets down. Scratch providers
   register on `datafusion.public` so a session default Iceberg catalog cannot
@@ -203,8 +257,8 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   stream; MoR call site is `matched_work_mor`. Match-discovery is not gated.
   Unpartitioned writer: `#182` `PartitionKey::new(...)` is `Result`; `?` via `iceberg_err`
   (net-zero lines vs the 2700-line file ceiling).
-  `residual_join_key_filter` is a thin caller of `scan_prune::residual_bounds_predicate`
-  (M1/M6/M7 helpers stay out of this file; measured net-negative vs the 2700 ceiling).
+  `residual_join_key_filter` (now in `target_scan.rs`) is a thin caller of
+  `scan_prune::residual_bounds_predicate`.
   `commit_overwrite` / `commit_row_delta_kind` are `pub(super)` so identity DML
   (`../predicate_dml.rs`) reuses the COW/MoR commit arms without calling
   `execute_merge`. Identity UPDATE reuses `RowDeltaKind::Merge` (Java
@@ -212,9 +266,20 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `commit` / `commit_row_delta`, which resolve
   `write.merge.isolation-level` (default serializable; snapshot drops
   `validate_no_conflicting_data` / `validate_no_conflicting_data_files`;
-  M15 AlwaysTrue is more conservative than the residual). Pins in
+  the conflict filter is the target-only predicate since ICE-OCC-SCOPED-1). Pins in
   `tests/occ.rs` (M13 parse + M19-A snapshot split + RP-1 F-0 Replace
   files-exist pin on the snapshot arm).
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** NOT MATCHED INSERT fills omitted
+  columns from `write_default` through `../insert_defaults.rs` (`table_projection`
+  carries the fill into the lowered text); explicit NULL stays NULL. The fill entry
+  points carry no doc comments per the no-code-comments ruling. Pins in
+  `tests/insert_fill.rs`.
+  pins: ice-v3-write-default-1/C-005
+  **Round 5 (2026-09-17, R-03):** `insert_sql` takes the Arrow `write_schema`
+  `execute_merge` already built, so `table_projection` no longer converts the Iceberg
+  schema again, and a table with no primitive `write_default` skips the
+  `ColumnDefaults` build (`schema_has_primitive_fill` pre-scan).
+  pins: ice-v3-write-default-1/C-019
 - [tests/](tests/map.md) — MERGE unit batteries (primary, OCC, streaming, parallel write).
 
 ## I want to…
@@ -224,6 +289,7 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 | Change MERGE execute / MoR-CoW arms | `mod.rs` |
 | Change v3 MERGE `_row_id` carry | `row_lineage.rs` |
 | Change MERGE snapshot commit / `to_branch` | `snapshot_commit.rs` |
+| Change what a concurrent commit must touch to conflict with a DML | `../conflict_filter.rs` (derivation) + `CommitScope` in `snapshot_commit.rs` (threading) |
 | Change rejected-commit file cleanup | `abort.rs` + `commit_overwrite` / `commit_row_delta_kind` |
 | Add a unit pin for SQL shape | `tests/merge.rs` |
 | Touch OCC commit behavior | `tests/occ.rs` / `tests/occ_conflict.rs` |
@@ -237,6 +303,11 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
 
 - `--list` paths must stay `write::merge::<battery>::<test>` — identity gate for the
   declared-rename census.
+- A MERGE / UPDATE / DELETE aborts on a concurrent commit to a DIFFERENT partition: print the
+  filter the commit carried (`CommitScope.conflict_filter`). `TRUE` means no target-only
+  predicate converted — check `../conflict_filter.rs` (bare column in an `ON`? a function call?
+  a `WHEN NOT MATCHED BY SOURCE` clause?). Spark refuses the same shapes; see the
+  `ICE-OCC-SCOPED-1` rows in `docs/spark-sql-iceberg-parity.md` before "fixing" one.
 - Rejected MERGE left new Parquet files: cleanup is `tx.commit` `Err` only in
   `commit_overwrite` / `commit_row_delta_kind` via [`abort.rs`](abort.rs). A catch
   that can fire after a successful commit is a HALT.

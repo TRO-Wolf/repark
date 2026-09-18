@@ -12,6 +12,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   note and the §9 audit trail, and registry claims C-3, C-8, C-9 rewritten
   (C-3, C-9 FIXED → OPEN). Docs-only reading unit, no product change.
   `risk_tier: standard`. Branch `docs/ice-cutover-corrections-1`.
+- [ice-evo-dml-1-ledger.md](ice-evo-dml-1-ledger.md) —
+  **ICE-EVO-DML-1 (2026-09-17), in flight:** MERGE / UPDATE / DELETE after `ADD COLUMN` or
+  `RENAME COLUMN` with no write since answer Spark 4.1.2 instead of refusing `Column … not
+  found in table`, and a rename that swaps two names no longer writes one column's values under
+  the other — the DML target scan plans the pinned snapshot and reads it under the current
+  schema. v2/v3 × CoW/MoR, both doors, a Spark-created evolved table adopted. Registry rows
+  ICE-EVO-DML-1, ICE-EVO-SWAP-1. `risk_tier: high`. Branch `fix/ice-evo-dml-1`.
 - [ice-promote-read-1-ledger.md](ice-promote-read-1-ledger.md) —
   **ICE-PROMOTE-READ-1 (2026-09-16), in flight:** reads and DML after a legal
   `ALTER COLUMN … TYPE` promotion answer Spark 4.1.2 — range / long-`IN` filters, promoted
@@ -133,30 +140,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   maintenance guide's S2-24 known-issues line move with it.
   `risk_tier: standard`. Branch `feat/ap-3`.
   pins: ap-3/C-001, C-002, C-003, C-004, C-005, C-006
-- [array-null-1-ledger.md](array-null-1-ledger.md) —
-  **ARRAY-NULL-1 (2026-09-14):** `F.array_append`/`F.array_prepend` lower through
-  `spark_array_append_udf`/`spark_array_prepend_udf` — a `ScalarUDF` that delegates
-  to DataFusion's kernel and grafts the input array's outer null buffer back
-  (route (a); the CASE route died at depth 40 and no lateral plan-level alias
-  exists). One native call per facade level: depth-40 RSS ~2.0 MB vs 577 MB at
-  depth 16 before; the SQL door answers the same arm in Spark `(array, element)`
-  order, and the depth-40 memory pin runs by default on both functions.
-  Measurement script: [array-null-1-spikes/](array-null-1-spikes/map.md).
-  `risk_tier: standard`. Branch `fix/array-null-1`.
-  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
-  L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
-- [array-null-1-ledger.md](array-null-1-ledger.md) —
-  **ARRAY-NULL-1 (2026-09-14):** `F.array_append`/`F.array_prepend` lower through
-  `spark_array_append_udf`/`spark_array_prepend_udf` — a `ScalarUDF` that delegates
-  to DataFusion's kernel and grafts the input array's outer null buffer back
-  (route (a); the CASE route died at depth 40 and no lateral plan-level alias
-  exists). One native call per facade level: depth-40 RSS ~2.0 MB vs 577 MB at
-  depth 16 before; the SQL door answers the same arm in Spark `(array, element)`
-  order, and the depth-40 memory pin runs by default on both functions.
-  Measurement script: [array-null-1-spikes/](array-null-1-spikes/map.md).
-  `risk_tier: standard`. Branch `fix/array-null-1`.
-  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
-  L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
 - [bl-11-numeric-binary-ledger.md](bl-11-numeric-binary-ledger.md) —
   **BL-11 (2026-09-16), in flight:** numeric to BINARY under runtime ANSI (batch-17
   oracle): ANSI-off big-endian encode of the integrals via the `IntToBinaryCast`
@@ -279,7 +262,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   oracle pins on both doors; P2-2 stays OPEN residue.
   `risk_tier: standard`. Branch `feat/java-double-fd-1`.
   pins: java-double-fd-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [fnp-11b-ledger.md](fnp-11b-ledger.md) — Charter ledger — FNP-11B · datetime format parsing, the TIME family, BL-13 and BL-14
 - [orphan-s3tables-1-ledger.md](orphan-s3tables-1-ledger.md) —
   **ORPHAN-S3TABLES-1 step 1 (2026-09-12), in flight:** `remove_orphan_files` refuses loud
   on an `s3tables`-kind catalog before any IO — table buckets answer `ListObjectsV2` 405 —
@@ -407,6 +389,20 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   behind `Box::pin` (16 KiB `large_futures`). `risk_tier: standard`. Branch
   `feat/ice-rdf-options-1`.
   pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [ice-sorted-insert-1-ledger.md](ice-sorted-insert-1-ledger.md) —
+  **ICE-SORTED-INSERT-1 (2026-09-17), in flight:** sort-on-INSERT end to end
+  against Spark — the fork #287 per-writer-stream sort plus `sort_order_id`
+  stamp at fork main `4151b488` (RP-22), proven by per-file sortedness and
+  stamp pins on the SQL and DataFrame doors plus the RePark-owned paths
+  (INSERT OVERWRITE, CTAS, MERGE), with the Spark oracle recorded as truth
+  JSON plus a live replay tier; registry sort-on-INSERT row FIXED. Round 3
+  (2026-09-17, logic-critic remediation): the v3 lineage fanout sorts before it
+  stamps, the owned sort canonicalises NaN, every stamp site has a revert-red
+  pin, and the binpack and fork-UPDATE rewrites are filed as fork asks
+  (`F-RDF-SORT-STAMP-1`, `F-COW-UPDATE-STAMP-1`) with strict-xfail pins.
+  `risk_tier: standard`. Branch `feat/ice-sorted-insert-1`.
+  pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-005
+  pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
 
 ## Pointers
 - Up: [../map.md](../map.md)
@@ -900,6 +896,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fixtures (`python/repark/tests/fixtures/orc/`).
   `risk_tier: standard`. Branch `feat/io-orc-1`.
   pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ice-dyn-overwrite-1-ledger.md](ice-dyn-overwrite-1-ledger.md) —
+  **ICE-DYN-OVERWRITE-1 (2026-09-17), in flight:** dynamic `partitionOverwriteMode`
+  routing for PARTITION-less overwrites (V2-24b) plus the INSERT OVERWRITE half of the
+  V2-20a K4 race — Rust-first conf carrier, dynamic path through `ReplacePartitions`,
+  empty-dynamic no-op, `saveAsTable` static overwrite through a typed session flag, Spark
+  race matrix with disk-verified interleaves (default/snapshot silently replace the
+  same-partition append, serializable refuses loud). Fixture
+  `python/repark-parity/fixtures/torture/data/ice_dyn_overwrite_1/spark_oracle.json`;
+  pins `test_ice_dyn_overwrite_1.py` (C-001…C-018) + `tests::dyn_partition_overwrite`.
+  `risk_tier: standard`. Branch `fix/ice-dyn-overwrite-1`.
+  pins: ice-dyn-overwrite-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
 - [ice-rtas-byname-1-ledger.md](ice-rtas-byname-1-ledger.md) —
   **ICE-RTAS-BYNAME-1 (2026-09-17), in flight:** `INSERT … BY NAME` column
   resolution on the Spark door plus the RTAS snapshot-operation divergence
@@ -941,3 +948,32 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   red-first pins (`test_ice_write_options_1.py`: 23 failed, 11 passed on the base).
   `risk_tier: standard`. Branch `feat/ice-write-options-1`.
   pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [ice-v3-write-default-1-ledger.md](ice-v3-write-default-1-ledger.md) —
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17), in flight:** omitted columns on every
+  Iceberg write path fill from the schema field's `write_default` in Rust, in
+  the shared write-projection step — INSERT / MERGE column lists and the
+  DataFrame writers on both SQL doors, with type fidelity and the measured
+  Spark oracle as a checked-in fixture.
+  `risk_tier: standard`. Branch `fix/ice-v3-write-default-1`.
+  pins: ice-v3-write-default-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [test-hygiene-1-ledger.md](test-hygiene-1-ledger.md) —
+  **TEST-HYGIENE-1 (2026-09-18), in flight:** four test-hygiene fixes, test code
+  only — the Spark v3 fixture keeps its baked-in `/tmp` path behind a
+  cross-process kernel file lock (Avro carries absolute paths in deflate blocks),
+  the v3_dv torture fixture holds an `fcntl.flock` while materialized AND read,
+  the `current_date` pin reads the session zone with a strict-xfail Kiritimati /
+  `Etc/GMT+12` pin under new registry row TZ-9 (OPEN, product defect), the
+  500-table RSS leg carries the registered `perf` marker with CI still running
+  it, and the staging map loses its duplicated `array-null-1` / `fnp-11b` entries.
+  `risk_tier: standard`. Branch `test/test-hygiene-1`.
+  pins: test-hygiene-1/C-001, C-002, C-003, C-004, C-005
+- [ice-rtas-ops-2-ledger.md](ice-rtas-ops-2-ledger.md) —
+  **ICE-RTAS-OPS-2 (2026-09-18), in flight:** the RePark opt-in for the fork's
+  RTAS replace commit (rating row V2-24) — `with_replace_write(ctas.or_replace)`
+  on both staged CTAS branches, the four RTAS pins un-xfailed, plain-CTAS and
+  column-def no-snapshot controls, the overwrite summary-key pin, the recorder
+  Ivy-cache env fix, and the RTAS-OPS-1 registry row to FIXED. Round 2 (claude-opus-5)
+  closes Critic-3 L-01 (the native ANSI door takes the same opt-in) and L-02 (service-managed
+  new-table RTAS commits through the fork's public overwrite path, `commit_replace_write`).
+  `risk_tier: standard`. Branch `ice-rtas-ops-2`.
+  pins: ice-rtas-ops-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022

@@ -17,6 +17,11 @@ os.environ.setdefault("REPARK_DISPLAY_STYLE", "spark")
 _seen_oracle_context: Any = None
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    """Register the perf marker for the slow catalog-IO budget legs."""
+    config.addinivalue_line("markers", "perf: slow catalog-IO budget legs")
+
+
 @pytest.fixture(scope="session")
 def spark_engine() -> Iterator[lp.Engine]:
     """The single shared live PySpark oracle engine (session-scoped). Skips (never fails) when the

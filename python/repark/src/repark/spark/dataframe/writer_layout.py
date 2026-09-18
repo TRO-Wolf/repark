@@ -53,6 +53,7 @@ def run_through_temp_view(
     build_sql: Callable[[str], str],
     options: dict[str, str] | None,
     prefix: str,
+    static_overwrite: bool = False,
 ) -> None:
     """Register a temp view, run the built write SQL with options, drop the view."""
     dataframe._ensure_alive()
@@ -60,7 +61,9 @@ def run_through_temp_view(
     view_name = scratch_view_name(session, prefix)
     session.create_or_replace_temp_view(view_name, dataframe._native_for_registration())
     try:
-        _native.session_sql_with_write_options(session, build_sql(view_name), options or {})
+        _native.session_sql_with_write_options(
+            session, build_sql(view_name), options or {}, static_overwrite
+        )
     finally:
         session.drop_temp_view(view_name)
 

@@ -22,7 +22,7 @@ pins: rp-4-fork-repin/C-005, C-006
 - `lib.rs` — re-exports G15 collation valves and FNP-15/16 `refuse_declared_function_in_*`
   from `repark-functions`, plus `refuse_sql_fragment` for `F.expr` / `filter_sql`.
   pins: fnp-15-16/C-001
-- `router.rs` — `execute` / `execute_with_read_only` / `execute_time_travelled` / `execute_inner`
+- `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests).
   `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
@@ -54,6 +54,14 @@ pins: rp-4-fork-repin/C-005, C-006
   runs heap-pinned (`Box::pin`) so the thread-through keeps test-task futures
   under the 16 KiB clippy ceiling.
   pins: ice-write-options-1/C-001, C-004
+  **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18, Q-22b-WO-1):** main's
+  `execute_routed` folds into `execute_with_statement_options`; ICE-DYN-OVERWRITE-1's
+  typed static flag rides as the typed field
+  `StatementWriteOptions::force_static_overwrite` (never an option key, so `is_empty` and
+  `refuse_if_non_empty` ignore it). `execute_static_overwrite` sets it on an empty set,
+  so the `saveAsTable` static pin and the options travel on one statement and the
+  router keeps its signatures (clippy's argument and line limits hold).
+  pins: ice-write-options-1/C-014
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); MATCHED / NOT MATCHED / NOT MATCHED BY SOURCE (DML-A);
   in-module tests (MG-2: M2 Oracle sub-predicates, M3
@@ -64,15 +72,57 @@ pins: rp-4-fork-repin/C-005, C-006
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).
   Named-ref targets go through `commit_overwrite_replace_all_to` / partition `_to`.
   Empty overwrite onto a branch wipes via `commit_overwrite_replace_all_to`, not a 4-part
-  self-scan.
+  self-scan. **ICE-DYN-OVERWRITE-1 (2026-09-17):** PARTITION-less overwrite computes
+  `dynamic` once in `execute_insert_overwrite` (session conf, bypassed by the
+  `force_static_overwrite` flag the `execute_static_overwrite` router entry carries
+  (comment-free per the owner's comment ban, 2026-09-17: the entry carries
+  `#[allow(clippy::missing_errors_doc)]`);
+  round 2, ruling Q-20a-6 removed the in-band marker) and threads it through
+  `from_staged_source` into the stage-then-commit — dynamic commits
+  `commit_replace_partitions_to` on partitioned tables (the empty arm returns
+  before any commit), static and unpartitioned-dynamic keep replace-all.
+  **Round 3 (2026-09-17):** the mode decision is one function,
+  `overwrite_is_dynamic(ctx, force_static_overwrite)`, called here and by
+  `insert_by_name.rs` — no second conf read.
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** `execute_append_with_options` (option-carrying
   plain INSERT stages on the owned path with the merged summary); the overwrite
   family threads `StatementWriteOptions` through staging (option-free arms keep the
   canonical staging byte-identical) into the `*_with_summary` commits. The append
   executor refuses table-function targets, `REPLACE INTO`, explicit column lists, and
   non-3-part names loudly instead of mis-staging them.
+  **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the options map and the typed
+  `dynamic` answer ride together. A dynamic PARTITION-less overwrite on a partitioned
+  table commits `commit_replace_partitions_with_summary` (the `replace_partitions`
+  action `commit_replace_partitions_to` uses, plus the merged summary and isolation
+  override), so snapshot properties and writer knobs are honoured (Q-22b-WO-2). An
+  empty dynamic source returns before any commit, as Spark's `DynamicOverwrite` does;
+  with no snapshot there is nothing to stamp, so the options are validated and not
+  refused (Q-22b-WO-3). The static PARTITION arm calls
+  `stage_static_partition_overwrite_files_with` with the column list and `None` or the
+  staging overrides.
+  pins: ice-write-options-1/C-014, C-015
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
   pins: rp-5-fork-repin/C-004
+  pins: ice-dyn-overwrite-1/C-014, C-020
+  ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): both PARTITION arms fill omitted
+  write-defaults through `insert_defaults::overwrite_source_with_defaults` and pass
+  the column list into staging (dynamic and static). pins: ice-v3-write-default-1/C-015
+  `rewrite_overwrite_default_markers` substitutes `DEFAULT` value markers before any
+  overwrite arm runs, so `INSERT OVERWRITE t VALUES (…, DEFAULT)` fills as `INSERT INTO`
+  does (ruling Q-21b-4). pins: ice-v3-write-default-1/C-016
+  Run 21b round 2 (2026-09-18): the marker pass and its rewritten `(sql, Insert)` pair are
+  boxed (`Box::pin` on the call, `Box` on the result) and the passthrough's `DEFAULT`
+  marker and fill awaits in `spark_ast.rs` are boxed with their preloaded `Table`, so
+  every `execute` future stays under clippy's `large_futures` 16 KiB threshold (the
+  round-1 inline awaits grew it to 16,384–16,544 bytes and tripped 135 test call sites).
+  pins: ice-v3-write-default-1/C-024
+- `append_with_options.rs` — **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):**
+  `execute_append_with_options` (option-carrying plain INSERT on the owned
+  stage-then-commit path), moved verbatim out of `insert_overwrite.rs`, which the merge
+  with ICE-DYN-OVERWRITE-1 and ICE-V3-WRITE-DEFAULT-1 would take past the 1000-line
+  ceiling. Table-function targets, `REPLACE INTO`, explicit column lists and non-3-part
+  names refuse loudly.
+  pins: ice-write-options-1/C-014
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
   strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
   projection build, the staged-append executor (stream → conform → `commit_append_to` →
@@ -86,11 +136,33 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004; ice-write-options-1/C-006
   **Round 2 (2026-09-17):** `PARTITION` shapes delegate to the positional
   partition arm (static overwrite) or inject clause literals (static append);
-  dynamic overwrite stays whole-table replace-all (Spark's default-mode
-  answer); empty unpartitioned overwrite wipes; missing required targets
+  a PARTITION-less `BY NAME` overwrite follows `partitionOverwriteMode` (see round 3);
+  missing required targets
   refuse `CANNOT_FIND_DATA`; matching honours `spark.sql.caseSensitive`
   (matching plus projection live in `plan_name_projection`).
   pins: ice-rtas-byname-1/C-007, C-008, C-009, C-010
+  **ICE-DYN-OVERWRITE-1 round 3 (2026-09-17):** `execute_insert_by_name` takes the
+  router's `force_static_overwrite` and asks `insert_overwrite::overwrite_is_dynamic`
+  once. A non-empty PARTITION-less `BY NAME` overwrite passes that answer into
+  `insert_overwrite_from_staged_source` (dynamic replaces only the touched partitions
+  on a partitioned table; static and unpartitioned replace the whole table). An empty
+  source still runs the assignment-type check, then under dynamic returns with no
+  commit and no snapshot (Spark skips the commit, partitioned or not), and under
+  static wipes through `wipe_by_name_target` (`commit_overwrite_replace_all_to` plus
+  reregister; split out to keep `execute_insert_by_name` under clippy's line limit). Explicit column lists never
+  reach this module; they take `execute_insert_overwrite`, which reads the same function.
+  pins: ice-dyn-overwrite-1/C-019, C-020, C-021, C-023
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the overwrite stage-then-swap fills
+  omitted columns from `write_default` before staging, so `INSERT OVERWRITE`
+  matches Spark's measured answer. The fill helper carries no doc comment per the
+  no-code-comments ruling.
+  pins: ice-v3-write-default-1/C-007
+  **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the static flag is read from
+  `write_options.force_static_overwrite`. Only the static empty-projection wipe refuses a non-empty map
+  (it commits through `wipe_by_name_target` without a summary); the dynamic empty case
+  commits nothing, and the non-empty dynamic case honours the map through
+  `insert_overwrite_from_staged_source`.
+  pins: ice-write-options-1/C-015
   pins: ice-write-options-1/C-001, C-003
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
   the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
@@ -101,6 +173,10 @@ pins: rp-4-fork-repin/C-005, C-006
   ban (round-2 purge 2026-09-17 removed the `# Errors` sections too); rationale
   lives here and in the ledger.
   pins: ice-write-options-1/C-001, C-002, C-003, C-004
+  Run 22b (2026-09-18, Q-22b-WO-1): the struct also carries
+  `force_static_overwrite`, the `saveAsTable` static pin, set by the dialect from
+  `EngineContext`; it is not an option and never counts toward `is_empty`.
+  pins: ice-write-options-1/C-014
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
@@ -199,6 +275,18 @@ pins: rp-4-fork-repin/C-005, C-006
   run first on the un-relaxed schema and still fire; only the derived table schema
   relaxes, never the written batches.
   pins: cutover-schema-1/C-002
+  **ICE-RTAS-OPS-2 (2026-09-18):** both staged branches set
+  `StagedTableTransaction::with_replace_write(ctas.or_replace)` — the
+  `begin_replace` arm and the `begin_create` arm — so an RTAS commits `overwrite`
+  (or `delete` when the SELECT is empty) while plain CTAS keeps `append`. The
+  service-managed create-first arm never reaches the staged type; **round 2** gave
+  `execute_ctas_service_managed` the same answer through
+  `repark_iceberg::write::commit_replace_write` when `ctas.or_replace` (new-table
+  RTAS → `overwrite`, empty → `delete`); plain service-managed CTAS keeps `commit_append`.
+  pins: ice-rtas-ops-2/C-018, C-019
+  The two opt-in lines took `execute_ctas` past clippy's `too_many_lines`, so it
+  carries the repository's `#[allow(clippy::too_many_lines)]` like 23 other sites.
+  pins: ice-rtas-ops-2/C-001, C-002, C-004
 - `spark_ast.rs` — **SE-1 D1:** after the SEC-02 plan guard,
   calls the shared belt's `repark_core::PreExecute::guard` (which owns
   `refuse_iceberg_create_of_tightened_ddl`) so `CREATE VIEW cat.ns.v AS …` and
@@ -215,6 +303,11 @@ pins: rp-4-fork-repin/C-005, C-006
   **SPARK-SQL-GRAMMAR-1 (2026-09-16):** the same pre-plan slot runs the bare-unit
   (`bare_unit.rs`), nullary-demote (`bare_nullary.rs`) and keyword (`keyword_lower.rs`)
   lowerings, in that order; the range-frame restatement repeats all three.
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the slot also rewrites INSERT
+  `DEFAULT` markers and records the INSERT column list, then fills omitted
+  columns from `write_default` on the planned DML (`insert_defaults`). The marker
+  pass's loaded table threads into the fill call, so one INSERT loads once.
+  pins: ice-v3-write-default-1/C-004, C-007
 - `bare_nullary.rs` — **SPARK-SQL-GRAMMAR-1 C-010 (2026-09-16):** bare nullary
   keywords in both Spark directions. `demote_refusing_nullary_calls` lowers a
   no-paren `localtimestamp` call (the Databricks dialect parses it as a function)
@@ -274,6 +367,8 @@ pins: rp-4-fork-repin/C-005, C-006
   digit/`.` + suffix letter or exponent (`1.e2` stays on the rewrite path); bare
   decimals skip the tokenize. The 200-column decimal gap is DataFusion-side.
   pins: fnp-4b/C-001, C-004, C-005, C-006, C-020
+  `sql_may_have_insert_partition` keeps quote-free `INSERT … PARTITION` text off the
+  fast path so the column-list swap runs.
 - `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
   `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —
   Int64 fitting i32 narrows to Int32, UInt64 becomes Decimal128(digits, 0),
@@ -317,6 +412,11 @@ pins: rp-4-fork-repin/C-005, C-006
   (`CAST({signed} AS TINYINT/SMALLINT)`), range-checked on the signed text; the L arm
   refuses out-of-range `BIGINT` at parse with `[INVALID_NUMERIC_LITERAL_RANGE]`.
   pins: fnp-4b/C-001, C-004, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-021, C-023
+  ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): `plan_insert_partition_column_list_regions`
+  swaps Spark's `INSERT … PARTITION (…) (cols) <query>` into the parser's
+  `INSERT … (cols) PARTITION (…) <query>` order; a group that is not a bare
+  identifier list, or not followed by a query body, is left alone.
+  pins: ice-v3-write-default-1/C-015
 - `spark_typed.rs` — **FNP-4B critic (2026-09-15):** `FoldSparkNumericCasts` folds
   `CAST('1e200' AS DOUBLE)` to a non-null Float64 literal; `SparkProjectionDisplay`
   aliases unaliased projections whose DataFusion names carry `Int64(` /
@@ -400,13 +500,15 @@ pins: rp-4-fork-repin/C-005, C-006
 - `dialect.rs` — `SparkDialect: repark_core::SqlDialect` (seam adapter; unpacks `EngineContext`
   into the positional `execute_with_read_only` call; `#[async_trait(?Send)]` matches the
   core trait; install with `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`).
+  `execute_with_write_options` copies `cx.force_static_overwrite` onto the validated
+  options (ICE-WRITE-OPTIONS-1 run 22b, 2026-09-18). pins: ice-write-options-1/C-014
   Tests: [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension` owns Spark session defaults and installs the ordered
   `InsertStoreAssignment`, function registry, analyzer rules, `StackRewrite` (PERF-UNPIVOT-1,
   after integer-literal narrowing), and composed `TaExtension`. It also
-  carries the session timezone and Spark decimal settings, plus the
-  case-sensitivity carrier (`repark_functions::case_sensitive`, default false).
-  Tests:
+  carries the session timezone, Spark decimal settings, the case-sensitivity
+  carrier (`repark_functions::case_sensitive`, default false) and the
+  partition-overwrite-mode knob (**ICE-DYN-OVERWRITE-1**, 2026-09-17). Tests:
   [extension/map.md](extension/map.md) and [../tests/session_timezone.rs](../tests/session_timezone.rs).
   **FNP-8 (2026-09-07):** its analyzer-configuration hook inserts the shared HOF preparation rule
   before core's first default type-coercion rule. pins: fnp-8/C-003, C-004

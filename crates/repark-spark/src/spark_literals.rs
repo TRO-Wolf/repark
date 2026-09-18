@@ -110,6 +110,7 @@ pub(crate) fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Co
         && !sql_may_have_drop_temporary(sql)
         && !sql_may_have_fromless_delete(sql)
         && !sql_may_have_wildcard_exclude(sql)
+        && !sql_may_have_insert_partition(sql)
     {
         return Ok(Cow::Borrowed(sql));
     }
@@ -117,6 +118,11 @@ pub(crate) fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Co
         Some(rewrite) => Ok(Cow::Owned(rewrite.sql)),
         None => Ok(Cow::Borrowed(sql)),
     }
+}
+
+fn sql_may_have_insert_partition(sql: &str) -> bool {
+    let lower = sql.to_ascii_lowercase();
+    lower.contains("insert") && lower.contains("partition")
 }
 
 fn sql_may_have_wildcard_exclude(sql: &str) -> bool {
@@ -280,6 +286,7 @@ fn canonical_rewrite(sql: &str, keep_verbatim: bool) -> Result<Option<CanonicalR
     regions.extend(crate::spark_rewrites::plan_delete_from_regions(&tokens));
     regions.extend(crate::spark_rewrites::plan_drop_temporary_regions(&tokens));
     regions.extend(crate::spark_rewrites::plan_wildcard_except_regions(&tokens));
+    regions.extend(crate::spark_rewrites::plan_insert_partition_column_list_regions(&tokens, sql));
     crate::spark_rewrites::plan_struct_field_regions(&tokens, sql, &mut regions);
     regions.sort_by_key(|region| (region.start.line, region.start.column));
     if regions.is_empty() {
