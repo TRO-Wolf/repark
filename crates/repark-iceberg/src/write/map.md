@@ -39,6 +39,12 @@ repark-core's error map.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
+- `predicate_dml.rs` — **ICE-OCC-SCOPED-1 (2026-09-17):** the identity DELETE / UPDATE builds a
+  `CommitScope` from its isolation property and `conflict_filter::for_identity_dml` over its own
+  `WHERE`, and hands it to the COW overwrite or the MoR row delta, so a concurrent commit that
+  cannot touch the rows the statement reads no longer aborts it. The two four-line
+  `RowDeltaPolicy` literals became `scope.row_delta(kind)` (net 0 lines; baseline 1142 held).
+  pins: ice-occ-scoped-1/C-005, C-007, C-008
 - `predicate_dml.rs` — **V3-8 (2026-09-02):** the COW rewrite carries stored `_row_id` /
   `_last_updated_sequence_number` on format-v3 (scratch from `merge::row_lineage`, survivors and
   updated rows projected through `predicate_dml/lineage.rs`), so `row_lineage_guard.rs` lost its
@@ -159,6 +165,32 @@ repark-core's error map.
   `commit_truncate_to` commits onto a named branch.
   pins: dml-c-truncate/C-001, C-005
   pins: rp-5-fork-repin/C-004
+- `conflict_filter.rs` — **ICE-OCC-SCOPED-1 (2026-09-17):** the conflict-detection filter a DML
+  commit hands the fork's serializable validation (Java `SparkScan.filterExpression()` threaded into
+  `RowDelta` / `OverwriteFiles.conflictDetectionFilter` by `SparkPositionDeltaWrite` /
+  `SparkCopyOnWriteOperation`). `from_merge_on` keeps only the `ON` conjuncts whose every column is
+  qualified by the target alias (`t.k = 'a'`) — never a join equality (`t.id = s.id`), a
+  source-only conjunct, or a bare identifier, and nothing at all when the source alias shadows the
+  target's. `from_selection` / `for_identity_dml` take the identity DML's `WHERE` (bare or
+  target-qualified columns). Conversion is SOUND BY WIDENING: under `AND` an unconvertible side is
+  dropped (the filter only grows); under `OR` / `NOT` / `IN` / `BETWEEN` every part must convert or
+  the whole node is dropped; a parse failure, an unknown or nested column, a literal that does not
+  fit the column's primitive type, a subquery, or an empty result is `AlwaysTrue`. Columns resolve
+  against the table's top-level fields, exact name first (the struct's own name index, never
+  `Schema::field_by_name`, which also answers dotted nested names), then a unique
+  case-insensitive match
+  (the schema's spelling is emitted so `case_sensitive(true)` binds). Literal typing mirrors
+  `repark-spark`'s `call/rewrite_where.rs` (the `rewrite_data_files` `where` parser); the two stay
+  separate because that one is a maintenance procedure with a strict all-or-nothing contract, and
+  unifying them is left to a later unit (hand-back of run 21a).
+  A FLOAT / DOUBLE literal converts only when it is EXACT: its decimal text and the parsed value's
+  full `{:.800e}` expansion normalize to the same digits and exponent, so an underflow
+  (`f < 1e-50` → `0.0`), an overflow, a rounding (`0.1`) and a zero (the fork orders floats by
+  `total_cmp`, `-0.0 < 0.0`, while SQL equates them) leave the node unconverted. A float column
+  also converts only under `=`, `<>`, `IN` and `NOT IN`: the fork's metrics evaluator skips a
+  nans-only file (and bounds exclude NaN) under `<` / `>` / `BETWEEN`, while SQL ranges order NaN
+  as a value, so a float range stays unscoped (ruling Q-21a-OCC-1).
+  pins: ice-occ-scoped-1/C-001, C-002, C-003, C-018
 - `commit_target.rs` — `maybe_to_branch` / `snapshot_id_for_commit` for named-ref commits.
   `commit_append_to` (ICE-RTAS-BYNAME-1, 2026-09-17): `commit_append` with an
   optional named branch, mirroring `commit_overwrite_replace_all_to`; the Spark door's
@@ -538,6 +570,7 @@ repark-core's error map.
 | Parquet statistics properties for a position-delete file | `writer_props.rs` (`position_delete_writer_properties_for`) |
 | Change MERGE INTO semantics | [merge/map.md](merge/map.md) |
 | Identity DELETE/UPDATE (subquery `WHERE` and RP-9 r2 plain `WHERE`) | `predicate_dml.rs` (`execute_predicate_dml`) |
+| Change which concurrent commits a MERGE / UPDATE / DELETE conflicts with | `conflict_filter.rs` + [merge/map.md](merge/map.md) `snapshot_commit.rs` |
 | Wire ordinary DELETE/UPDATE/INSERT OVERWRITE | DataFusion → fork `TableProvider` (non-subquery) |
 | Ask whether a `(source, target)` type pair may be written | `store_assign.rs` (`ansi_store_assignable`) |
 | CREATE/DROP BRANCH or TAG | `snapshot_refs.rs` |
@@ -557,6 +590,7 @@ repark-core's error map.
 | Streaming CTAS OOMs / collects the whole SELECT | must use the `_from_stream` writers over `execute_stream()`, never `collect()` |
 | A partitioned CTAS writes writers × values data files | `hash_distribution` must wrap the input when the spec is partitioned and `writers > 1`; check `IcebergPartitionWriteExec`'s child is a `RepartitionExec` with `Partitioning::Hash` |
 | Parallel write left partial files after a failed MERGE | abort flag must skip `finish()`/`close()` |
+| A DML aborts on a concurrent write to another partition | the commit's conflict filter printed `TRUE`: see `conflict_filter.rs`'s widening rules and [merge/map.md](merge/map.md) Debug |
 | Rejected MERGE OCC commit left new Parquet files in the warehouse | commit-error abort must `FileIO::delete` writer-result paths only (`merge/abort.rs`); never re-derive from manifests; never delete `affected` |
 | MERGE OOMs on a large target | target must register as a `StreamingTable` (`(_file, _pos)` identity), never a full-target `MemTable` |
 | MERGE produces duplicates | multiple-source-match must **error** (like Spark); serializable (default) commit arms carry `validate_no_conflicting_data`; snapshot isolation drops it (`write.merge.isolation-level`) |

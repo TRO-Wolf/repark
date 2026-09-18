@@ -455,6 +455,8 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   WRITE-ORDER-DIST-1 (2026-09-06) ratchets `repark-spark/src/alter.rs` 1830 → 1821,
   `repark-iceberg/src/write/append.rs` 1884 → 1883, and `write/merge/mod.rs` 1795 → 1792
   with the gate table (pins: write-order-dist-1/C-012).
+  ICE-OCC-SCOPED-1 (2026-09-17) ratchets `write/merge/mod.rs` 1792 → 1773 with the gate
+  table (pins: ice-occ-scoped-1/C-005).
   The same unit ratchets `repark-spark/src/tests/alter.rs` 1436 → 1397 — the obsolete
   WRITE-refusal blocks are deleted (pins: write-order-dist-1/C-001).
   NIGHTLY-LIVE-1 (2026-09-11) ratchets `test_ml_boost_oracle.py` 2244 → 2241 with the

@@ -7,6 +7,7 @@ mod commit_error;
 pub mod commit_target;
 pub use commit_target::commit_append_to;
 pub mod concurrency;
+pub(crate) mod conflict_filter;
 pub(crate) mod conform;
 pub(crate) mod distribution;
 pub(crate) mod file_order;

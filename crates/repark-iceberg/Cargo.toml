@@ -43,6 +43,7 @@ tracing.workspace = true
 # In-memory Iceberg catalog + temp warehouse for AWS-free CTAS/read + transaction tests.
 tokio.workspace = true
 tempfile = "3"
+serde_json.workspace = true
 # Span-capture pin (crate-level pin shape; not workspace.dependencies).
 tracing-subscriber = { version = "0.3", default-features = false, features = [
   "registry",

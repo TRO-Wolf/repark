@@ -20,7 +20,7 @@ use tempfile::TempDir;
 
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::{
-    IsolationLevel, KnownPartitions, RowDeltaKind, RowDeltaPolicy, commit,
+    CommitScope, IsolationLevel, KnownPartitions, RowDeltaKind, RowDeltaPolicy, commit,
     commit_row_delta_kind_with_partitions,
 };
 
@@ -279,7 +279,7 @@ impl Drop for HiddenManifests {
 fn delete_policy() -> RowDeltaPolicy {
     RowDeltaPolicy {
         kind: RowDeltaKind::Delete,
-        isolation: IsolationLevel::Serializable,
+        scope: CommitScope::unscoped(IsolationLevel::Serializable),
     }
 }
 
@@ -313,7 +313,7 @@ async fn a_newest_file_identity_delete_commits_with_one_data_manifest() {
         vec![pair],
         Vec::new(),
         WriteConcurrency::new(1).expect("K=1"),
-        delete_policy(),
+        &delete_policy(),
         known,
     )
     .await
@@ -347,7 +347,7 @@ async fn hiding_the_newest_data_manifest_too_refuses_the_commit() {
         vec![pair],
         Vec::new(),
         WriteConcurrency::new(1).expect("K=1"),
-        delete_policy(),
+        &delete_policy(),
         known,
     )
     .await;
