@@ -10852,6 +10852,12 @@ field NAME.
   `INSERT INTO`; and a missing NULLABLE column with NO default is accepted and
   written NULL on `writeTo(t).append()` and `saveAsTable` append — the facade's old
   "missing from the DataFrame" refusal was removed because Spark accepts.
+  **Run 21b round 2 (2026-09-18, ruling Q-21b-9):** `DEFAULT` anywhere but the
+  top-level INSERT's own VALUES / SELECT list refuses — inside a CTE body or a
+  derived table (`No field named default`), and in the outer SELECT of a query that
+  carries `WITH` (`UNRESOLVED_COLUMN.WITHOUT_SUGGESTION` naming `DEFAULT`, SQLSTATE
+  42703), on `INSERT INTO` and `INSERT OVERWRITE`, both doors. Before, the outer-SELECT
+  shape under `WITH` filled 5.
 - **Apache Spark** — the same fills and refusals on every shape above, including
   the `insertInto_missing` arity refusal
   (`INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS`).
@@ -10860,24 +10866,31 @@ field NAME.
   `[[18, 'r', 5]]`), and accepts a frame missing a nullable no-default column on
   both writers, writing NULL (`nodef_writeto_append_missing`,
   `nodef_saveas_append_missing`).
-  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17; 33 recorded cells
+  Spark refuses `DEFAULT` inside a CTE body, inside a derived table, and in the
+  outer SELECT under `WITH`, all `UNRESOLVED_COLUMN` SQLSTATE 42703 (the last as
+  `WITH_SUGGESTION … [id, name]`; cells `V02_*`).
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17; 39 recorded cells
   in `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json`
-  beside the Java-API-created v3 tables, re-recorded in round 5 by the checked-in
-  `record.py`.)*
+  beside the Java-API-created v3 tables — 33 re-recorded in round 5 by the checked-in
+  `record.py`, six (`V01_*`, `V02_*`, `MIX_*`) copied from the orchestrator's
+  `probe_wd2.py` run the same night.)*
 - **Pin** —
   `python/repark/tests/test_ice_v3_write_default_1.py` (21 offline cells plus
   the live rebuild-and-replay cell with the roll-call leg);
   `crates/repark-iceberg/src/write/merge/tests/insert_fill.rs` (MERGE
   projection fill and required-missing refusal);
-  `crates/repark-sql/tests/ansi_write_defaults.rs` (ANSI-door fill and the
-  Spark-door-identical required refusal).
+  `crates/repark-sql/tests/ansi_write_defaults.rs` (ANSI-door fill, the
+  Spark-door-identical required refusal, and the `DEFAULT`-under-`WITH` refusal);
+  `crates/repark-spark/src/tests/write_defaults.rs` (Spark-door `DEFAULT` on
+  `INSERT OVERWRITE`, mutation-proved against the marker-pass call, and the
+  `DEFAULT`-outside-the-list refusals).
 - **Rationale** — FIXED, not declared. The fill lives in one Rust home
   (`repark-iceberg` `write::insert_defaults`) reached from both doors; the
   DataFrame writers emit a target column list and let the engine fill. The
   partition-overwrite shapes are FIXED in the row below; `saveAsTable`
   overwrite, nested-struct defaults and the F-001 read gap stay open in the
   rows after it.
-  pins: ice-v3-write-default-1/C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012, C-016, C-018
+  pins: ice-v3-write-default-1/C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012, C-016, C-018, C-021
 
 ### ICE-V3-WRITE-DEFAULT-1-OVERWRITE-PART — partition-overwrite shapes fill omitted defaulted columns — **FIXED 2026-09-17** (was DECLARED the same morning)
 
@@ -10895,12 +10908,18 @@ field NAME.
   Which rows a name-only `PARTITION (k)` keeps is unchanged and stays the DML-1
   residue: RePark takes the dynamic path, Spark's default STATIC mode replaces the
   whole table — the written row, including its filled `c`, matches Spark.
+  **Run 21b round 2 (2026-09-18, ruling Q-21b-8):** `writeTo(t).overwritePartitions()`
+  with the defaulted column missing from the frame fills it (it passes its by-name
+  column list into the generated SQL); before, it refused on arity.
 - **Apache Spark** — parses all three shapes and fills 5:
   `PARTITION (id) (name) VALUES ('x')` → `[[null, 'x', 5]]`;
   `PARTITION (id) (id, name) SELECT 10, 'x'` → `[[10, 'x', 5]]`;
   `PARTITION (id = 10) (name) VALUES ('x')` → `[[10, 'x', 5]]`;
   `INSERT OVERWRITE t (id, name) VALUES (10, 'x')` → `[[10, 'x', 5]]`;
-  `writeTo(t).overwritePartitions()` with full-width values keeps them.
+  `writeTo(t).overwritePartitions()` with full-width values keeps them, and with
+  the defaulted column omitted fills it: `df(12, 'y')` over `pdflt` →
+  `[[1,'a',5],[12,'y',5],[2,'b',5]]` (cell
+  `V01_overwrite_partitions_missing_defaulted_column`).
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, hadoop catalog, format-version 3,
   2026-09-17, cells `ow_*` on table `pdflt` in
   `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json`.)*
@@ -10908,14 +10927,41 @@ field NAME.
   (`test_dynamic_partition_named_list_fills_write_default`,
   `test_static_partition_named_list_fills_write_default`,
   `test_partitioned_whole_table_named_list_fills_write_default`,
-  `test_overwrite_partitions_api_replaces_source_partitions`);
+  `test_overwrite_partitions_api_replaces_source_partitions`,
+  `test_overwrite_partitions_api_fills_missing_defaulted_column`, and the live
+  `_live_overwrite_partitions` leg);
   `crates/repark-sql/tests/ansi_write_defaults.rs`
   (`ansi_dynamic_partition_column_list_fills_write_default`,
   `ansi_static_partition_column_list_fills_write_default`);
   `crates/repark-spark/src/tests/spark_dialect.rs` (the column-list swap).
 - **Rationale** — FIXED, not declared. The round-4 note that the shape was
   "unreachable by SQL" described RePark's parser; Spark reaches it.
-  pins: ice-v3-write-default-1/C-015
+  pins: ice-v3-write-default-1/C-015, C-020
+
+### ICE-V3-WRITE-DEFAULT-1-MIX-PARTITION — mixed static + dynamic `PARTITION (k1 = v, k2)` refuses where Spark overwrites — **OPEN 2026-09-18**
+
+- **repark** — `INSERT OVERWRITE t PARTITION (id = 1, cat) …` on a table partitioned
+  by `(id, cat)` refuses loud on the Spark door with `cannot mix static assignments
+  (k=v) and dynamic names (k)` (`repark-iceberg` `write/partition_overwrite.rs`), on
+  both the positional and the named-column-list forms; nothing is written.
+- **Apache Spark** — accepts both. On `p2 (id INT, cat STRING, payload STRING)
+  PARTITIONED BY (id, cat)` + `c INT` write-default 5, seeded `(1,'east','e')`,
+  `(1,'west','w')`, `(2,'west','w2')`: `PARTITION (id=1, cat) SELECT 'west', 'p', 9`
+  replaces every `id = 1` partition (default STATIC overwrite mode) →
+  `[[1,'west','p',9],[2,'west','w2',5]]`; then `PARTITION (id=2, cat) (cat, payload)
+  VALUES ('west','q')` fills the omitted `c` → `[[1,'west','p',9],[2,'west','q',5]]`.
+  *(oracle: PySpark 4.1.2 + Iceberg 1.11.0, hadoop catalog, format-version 3,
+  2026-09-17, orchestrator probe `probe_wd2.py`; cells
+  `MIX_static_dynamic_positional` and `MIX_static_dynamic_named_list_omits_default`
+  copied into `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json`.)*
+- **Pin** — `python/repark/tests/test_ice_v3_write_default_1.py::test_mixed_static_dynamic_partition_refuses`
+  asserts RePark's loud refusal and unchanged rows beside both recorded Spark
+  cells; it flips red when the mixed arm lands.
+- **Rationale** — OPEN, filed 2026-09-18 (ruling Q-21b-10): a loud refusal, never a
+  silent wrong answer, and out of the write-default unit's scope — implementing a
+  mixed static/dynamic arm (static-mode replacement of every matching partition plus
+  by-name fill) belongs to its own unit.
+  pins: ice-v3-write-default-1/C-022
 
 ### ICE-V3-WRITE-DEFAULT-1-SAVEAS-OVERWRITE — `saveAsTable(mode="overwrite")` is `INSERT OVERWRITE` by name, Spark replaces the table — **DECLARED 2026-09-17**
 
