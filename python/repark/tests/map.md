@@ -1749,7 +1749,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   strings losslessly; `days(ts)` `.partitions` equals PyIceberg's; `CAST(ns AS STRING)` is
   lossless; predicates compare at nanosecond precision; format v2 keeps refusing at CREATE.
   `test_hours_partitions_equal_the_spec` runs plainly since RP-28 (fork #296: the fork's
-  `hour` transform accepts `Timestamp(ns)`). Round 2
+  `hour` transform accepts `Timestamp(ns)`); the oracle's `blocked_on_fork.sql_hours` marker is
+  historical until the next re-record (the recorder's `check` leg reads it only on a failure). Round 2
   (2026-09-18, ruling Q-21c-8): `CAST(<ns column> AS TIMESTAMP)` equals `.cast("timestamp")`,
   floored to µs, in UTC and New York; a nine-digit `TIMESTAMP` value in `VALUES` stores what
   `INSERT … SELECT` stores; `EXPLAIN` lowers ns casts.

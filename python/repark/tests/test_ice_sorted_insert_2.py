@@ -156,7 +156,7 @@ def test_partitioned_rewrites_sort_and_stamp(tmp_path: Path, program: str) -> No
 
 @pytest.mark.parametrize("program", ["m3", "m2"])
 def test_predicate_update_sorts_and_stamps_like_spark(tmp_path: Path, program: str) -> None:
-    """C-009: Spark's COW UPDATE rewrite is sorted and stamped; the fork exec sorts and stamps since RP-28 (fork #296)."""
+    """C-009: Spark's COW UPDATE rewrite is sorted and stamped; so is the fork exec's (RP-28)."""
     engine = _session(f"sorted2-upd-{program}", tmp_path / "wh")
     try:
         _drive(engine, _PLAN[program])
@@ -241,7 +241,7 @@ def _lineage(engine: ReparkSession, table: str) -> dict[int, int | None]:
 
 
 def test_binpack_rewrite_sorts_and_stamps_like_spark(tmp_path: Path) -> None:
-    """C-009: Spark's binpack re-sorts by the table default and stamps it; the fork sorts per output file and stamps since RP-28 (fork #296).
+    """C-009: Spark's binpack re-sorts by the table default and stamps it; so does the fork (RP-28).
 
     The recorded program runs verbatim, including Spark's own `options => map('min-input-files',
     '2','rewrite-all','true')` on the CALL, so the compaction rewrites the same three inputs.

@@ -311,7 +311,7 @@ def test_days_partitions_equal_the_pyiceberg_read_back(spark: Any) -> None:
 
 
 def test_hours_partitions_equal_the_spec(spark: Any) -> None:
-    """Clause 3: ``hours(tz)`` on ns partitions at the true boundary (FIXED 2026-09-18, RP-28 fork #296)."""
+    """Clause 3: ``hours(tz)`` on ns partitions at the true boundary (FIXED at RP-28)."""
     expected = FIXTURE["sql_tables"]["sql_hours"]
     run_all(spark, FIXTURE["sql_statements"]["sql_hours"])
     assert ns_rows(spark, "ice.ns.sql_hours", ("tz",)) == expected["rows"]
