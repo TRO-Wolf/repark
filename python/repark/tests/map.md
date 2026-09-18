@@ -1583,6 +1583,31 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [_record_rdf_options_1_oracle.py](_record_rdf_options_1_oracle.py) —
   **ICE-RDF-OPTIONS-1 (2026-09-17):** the Spark 4.1.2 record driver (parameterised warehouse,
   ivy cache, and output paths); critics replay it to reproduce the fixture.
+- [test_ice_tsns_sql_1.py](test_ice_tsns_sql_1.py) — **ICE-TSNS-SQL-1 (2026-09-17):**
+  `timestamp_ns` / `timestamptz_ns` on the SQL door against the Iceberg spec plus a PyIceberg
+  0.12.0 read-back (Spark 4.1.2 cannot read or write these types — ruling Q-21c-6). One pin per
+  contract clause, reading every expected value from
+  [ice_tsns_sql_1_oracle.json](ice_tsns_sql_1_oracle.json): string casts keep nine digits,
+  honour an offset or the session zone, and fail or NULL like the `TIMESTAMP` cast; INSERT
+  VALUES / SELECT, INSERT OVERWRITE, MERGE and CTAS widen microsecond `TIMESTAMP` values and
+  strings losslessly; `days(ts)` `.partitions` equals PyIceberg's; `CAST(ns AS STRING)` is
+  lossless; predicates compare at nanosecond precision; format v2 keeps refusing at CREATE.
+  `test_hours_partitions_equal_the_spec` turns into an `xfail` naming `BLOCKED-ON-FORK
+  F-TSNS-HOUR-1` only while the fork's `hour` transform refuses `Timestamp(ns)`.
+  pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [ice_tsns_sql_1_oracle.json](ice_tsns_sql_1_oracle.json) — **ICE-TSNS-SQL-1 (2026-09-17):**
+  the PyIceberg `StaticTable` read-back of the DataFrame-door control (schema type names, spec,
+  int64-ns values, partitions with counts), RePark's `.partitions` answer for the same table,
+  the literals with their spec-derived nanoseconds and renderings, and the SQL-door statements
+  with the read-back each must produce (`hours(tz)` derived from the spec, the control being
+  refused by the fork).
+- [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
+  (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
+  control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and
+  `check --warehouse W` run under an interpreter that has `pyiceberg==0.12.0` + `pyarrow`
+  (not a repository dependency; the caller supplies the interpreter) — `record` prints the
+  fixture, `check` reads every SQL-door table back with PyIceberg and exits non-zero on any
+  difference.
 - `test_rdf_schema_evo_1.py` — **RDF-SCHEMA-EVO-1** (2026-09-06): `rewrite_data_files` The module docstring is the one-line form; the unit story is in this row and the ledger.
   after schema evolution, through the facade over 6-file seeds with no later write. Red on
   fork `8bc325a3` (the owner's 7v8 refusal and its drop/rename/promote/v3 siblings), green
