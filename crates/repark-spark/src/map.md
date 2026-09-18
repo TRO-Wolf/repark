@@ -231,6 +231,16 @@ pins: rp-4-fork-repin/C-005, C-006
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
   `repark-core::unknown_routine`, not here.
   pins: unresolved-routine-1/C-006
+- `insert_timestamp_ns.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door's INSERT conform
+  for Iceberg `timestamp_ns` / `timestamptz_ns` target columns, called from `spark_ast`.
+  `before_analysis` replaces the planner's `CAST(… AS Timestamp(ns))` over a non-column source
+  (and over each `VALUES` row the insert projection reads) with the embedded ns cast, so the
+  `spark_ltz_timestamp_cast` rule cannot narrow it to microseconds; a cast over a string
+  COLUMN is left for the WI-2 store-assignment gate, which refuses it as it does for
+  `TIMESTAMP` columns. `after_analysis` wraps any remaining temporal source whose analyzed type
+  differs from the ns target (a `TIMESTAMP` column, a `TIMESTAMP` literal selected in a
+  subquery) in the same cast. Rust tests: `tests/v3_timestamp_ns_door.rs`.
+  pins: ice-tsns-sql-1/C-002
 - `keyword_lower.rs` — **SPARK-SQL-GRAMMAR-1 C-003/C-004/C-005 (2026-09-16):**
   Spark-only keyword lowerings onto registered kernels. `x RLIKE p` becomes
   `regexp_like(x, p)` (`NOT RLIKE` becomes `NOT regexp_like`); `CAST(x AS
@@ -241,6 +251,11 @@ pins: rp-4-fork-repin/C-005, C-006
   map chains after the nullary map around the whole passthrough. 6 in-module
   tests.
   pins: spark-sql-grammar-1/C-003, C-004, C-005
+  **ICE-TSNS-SQL-1 (2026-09-17):** `CAST(x AS timestamp_ns)` / `timestamptz_ns` (any case,
+  `::` included, `TRY_CAST` not) lowers to the embedded `__repark_cast_timestamp_ns__` /
+  `__repark_cast_timestamptz_ns__` calls; `lower_timestamp_ns_casts` is the same lowering alone,
+  applied by `router.rs` to a MERGE's source, `ON` and clauses (MERGE plans its rendered pieces
+  outside the passthrough). pins: ice-tsns-sql-1/C-001
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** `unrelated_errors_pass_through` now
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
   `repark-core::unknown_routine`, not here.

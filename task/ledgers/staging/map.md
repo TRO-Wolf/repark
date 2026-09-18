@@ -10,7 +10,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   read-back, per ruling Q-21c-6 — string casts, lossless widening on every write path,
   `days`/`hours` partitions, lossless `CAST … AS STRING`, nanosecond predicates. `hours()` on ns
   is BLOCKED-ON-FORK F-TSNS-HOUR-1. `risk_tier: standard`. Branch `feat/ice-tsns-sql-1`.
-  pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [ice-registry-sweep-1a-ledger.md](ice-registry-sweep-1a-ledger.md) —
   **ICE-REGISTRY-SWEEP-1 part A (2026-09-17), in flight:** the cutover
   assessment corrections and three registry claims — twelve

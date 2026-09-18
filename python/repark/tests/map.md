@@ -1594,7 +1594,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   lossless; predicates compare at nanosecond precision; format v2 keeps refusing at CREATE.
   `test_hours_partitions_equal_the_spec` turns into an `xfail` naming `BLOCKED-ON-FORK
   F-TSNS-HOUR-1` only while the fork's `hour` transform refuses `Timestamp(ns)`.
-  pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [ice_tsns_sql_1_oracle.json](ice_tsns_sql_1_oracle.json) — **ICE-TSNS-SQL-1 (2026-09-17):**
   the PyIceberg `StaticTable` read-back of the DataFrame-door control (schema type names, spec,
   int64-ns values, partitions with counts), RePark's `.partitions` answer for the same table,

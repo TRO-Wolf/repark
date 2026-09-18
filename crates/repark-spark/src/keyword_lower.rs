@@ -3,11 +3,12 @@ use std::ops::ControlFlow;
 
 use datafusion::error::DataFusionError;
 use datafusion::sql::sqlparser::ast::{
-    DataType, Expr, Function, FunctionArg, FunctionArgExpr, FunctionArgumentList,
+    CastKind, DataType, Expr, Function, FunctionArg, FunctionArgExpr, FunctionArgumentList,
     FunctionArguments, Ident, ObjectName, Statement, TimezoneInfo, UnaryOperator, Value,
     ValueWithSpan, VisitMut, VisitorMut,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
+use repark_functions::timestamp_ns_cast::{TIMESTAMP_NS_CAST_NAME, TIMESTAMPTZ_NS_CAST_NAME};
 
 fn null_expr() -> Expr {
     Expr::Value(ValueWithSpan {
@@ -17,16 +18,20 @@ fn null_expr() -> Expr {
 }
 
 fn regexp_like_call(left: Box<Expr>, right: Box<Expr>) -> Expr {
+    function_call("regexp_like", vec![*left, *right])
+}
+
+fn function_call(name: &str, args: Vec<Expr>) -> Expr {
     Expr::Function(Function {
-        name: ObjectName::from(vec![Ident::new("regexp_like")]),
+        name: ObjectName::from(vec![Ident::new(name)]),
         uses_odbc_syntax: false,
         parameters: FunctionArguments::None,
         args: FunctionArguments::List(FunctionArgumentList {
             duplicate_treatment: None,
-            args: vec![
-                FunctionArg::Unnamed(FunctionArgExpr::Expr(*left)),
-                FunctionArg::Unnamed(FunctionArgExpr::Expr(*right)),
-            ],
+            args: args
+                .into_iter()
+                .map(|arg| FunctionArg::Unnamed(FunctionArgExpr::Expr(arg)))
+                .collect(),
             clauses: Vec::new(),
         }),
         filter: None,
@@ -36,7 +41,46 @@ fn regexp_like_call(left: Box<Expr>, right: Box<Expr>) -> Expr {
     })
 }
 
+fn timestamp_ns_cast_name(data_type: &DataType) -> Option<&'static str> {
+    let DataType::Custom(name, modifiers) = data_type else {
+        return None;
+    };
+    if !modifiers.is_empty() {
+        return None;
+    }
+    let spelled = name.to_string();
+    if spelled.eq_ignore_ascii_case("timestamp_ns") {
+        Some(TIMESTAMP_NS_CAST_NAME)
+    } else if spelled.eq_ignore_ascii_case("timestamptz_ns") {
+        Some(TIMESTAMPTZ_NS_CAST_NAME)
+    } else {
+        None
+    }
+}
+
+fn lower_timestamp_ns_cast(node: &mut Expr) -> bool {
+    let Expr::Cast {
+        kind: CastKind::Cast | CastKind::DoubleColon,
+        expr,
+        data_type,
+        array: false,
+        format: None,
+    } = node
+    else {
+        return false;
+    };
+    let Some(name) = timestamp_ns_cast_name(data_type) else {
+        return false;
+    };
+    let value = std::mem::replace(expr, Box::new(null_expr()));
+    *node = function_call(name, vec![*value]);
+    true
+}
+
 fn lower_expression(node: &mut Expr) {
+    if lower_timestamp_ns_cast(node) {
+        return;
+    }
     if let Expr::RLike {
         negated,
         expr,
@@ -78,6 +122,21 @@ impl VisitorMut for KeywordLower {
 
 pub(crate) fn lower_spark_keywords(statement: &mut Statement) {
     let _ = statement.visit(&mut KeywordLower);
+}
+
+struct TimestampNsCastLower;
+
+impl VisitorMut for TimestampNsCastLower {
+    type Break = Infallible;
+
+    fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+        lower_timestamp_ns_cast(expr);
+        ControlFlow::Continue(())
+    }
+}
+
+pub(crate) fn lower_timestamp_ns_casts<T: VisitMut>(node: &mut T) {
+    let _ = node.visit(&mut TimestampNsCastLower);
 }
 
 #[must_use]
@@ -133,6 +192,25 @@ mod tests {
         let text = lowered("SELECT CAST('2024-01-02 03:04:05' AS TIMESTAMP_LTZ) AS v").to_string();
         assert!(!text.contains("TIMESTAMP_LTZ"), "{text}");
         assert!(text.contains("TIMESTAMP"), "{text}");
+    }
+
+    #[test]
+    fn ns_casts_lower_to_the_embedded_cast_calls() {
+        let text = lowered(
+            "SELECT CAST('2026-01-02' AS TIMESTAMP_NS) AS a, '2026-01-02'::timestamptz_ns AS b",
+        )
+        .to_string();
+        assert!(
+            text.contains("__repark_cast_timestamp_ns__('2026-01-02')")
+                && text.contains("__repark_cast_timestamptz_ns__('2026-01-02')"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn try_cast_to_ns_is_left_to_the_planner() {
+        let text = lowered("SELECT TRY_CAST('x' AS timestamp_ns) AS v").to_string();
+        assert!(text.contains("TRY_CAST"), "{text}");
     }
 
     #[test]

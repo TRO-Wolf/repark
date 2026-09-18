@@ -4,7 +4,7 @@ The oracle is the Iceberg v3 spec plus a PyIceberg 0.12.0 read-back recorded in
 ``ice_tsns_sql_1_oracle.json`` by ``_record_ice_tsns_sql_1_oracle.py``; Spark 4.1.2 cannot read or
 write these types. Ruling Q-21c-6.
 
-pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006
+pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 """
 
 from __future__ import annotations
@@ -191,7 +191,7 @@ def test_cast_timestamptz_ns_reads_a_zoneless_string_in_the_session_zone(tmp_pat
             assert value == LITERALS[identifier]["foreign_zone_instant_ns"], identifier
             _, micro = ns_scalar(spark, f"SELECT CAST('{text(identifier)}' AS TIMESTAMP) AS v")
             assert micro is not None
-            assert value // 1000 == micro // 1000, identifier
+            assert value // 1000 == micro, identifier
     finally:
         spark.stop()
 

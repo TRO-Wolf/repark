@@ -51,6 +51,8 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         crate::time_family::time_trunc_udf(),
         crate::time_family::current_time_udf(),
         crate::time_family::type_of_udf(),
+        crate::timestamp_ns_cast::timestamp_ns_cast_udf(false),
+        crate::timestamp_ns_cast::timestamp_ns_cast_udf(true),
     ]
 }
 
@@ -319,7 +321,7 @@ fn parse_extraction_zone(zone_id: &str) -> Result<Tz> {
 }
 
 /// `true` when Spark would treat the string as already carrying a zone (instant, not wall).
-fn string_carries_timezone(text: &str) -> bool {
+pub(crate) fn string_carries_timezone(text: &str) -> bool {
     let trimmed = text.trim();
     if trimmed.is_empty() {
         return false;
@@ -520,7 +522,9 @@ fn rewrite_plan(
             expr.transform_up(|node| Ok(rewrite_cast(node, &schema, zone, timestamp_type)))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
-    transformed.map_data(LogicalPlan::recompute_schema)
+    transformed
+        .map_data(LogicalPlan::recompute_schema)?
+        .map_data(crate::timestamp_ns_cast::conform_values_timestamp_columns)
 }
 
 fn rewrite_cast(

@@ -223,13 +223,15 @@ async fn execute_inner(
                     "MERGE OUTPUT/RETURNING clauses are not supported".to_string(),
                 ));
             }
+            let mut lowered = merge.clone();
+            crate::keyword_lower::lower_timestamp_ns_casts(&mut lowered);
             merge::execute_merge(
                 ctx,
                 catalogs,
-                &merge.table,
-                &merge.source,
-                &merge.on,
-                &merge.clauses,
+                &lowered.table,
+                &lowered.source,
+                &lowered.on,
+                &lowered.clauses,
             )
             .await
         }

@@ -321,7 +321,7 @@ def read_back(warehouse: Path, table: str) -> dict[str, Any]:
     partitions = sorted(
         (
             {
-                "partition": {key: str(value) for key, value in part["partition"].items()},
+                "partition": {key: str(value) for key, value in part.get("partition", {}).items()},
                 "record_count": part["record_count"],
             }
             for part in static.inspect.partitions().to_pylist()
@@ -386,6 +386,14 @@ def expected_sql_tables(days: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def blocked_tables(answers: dict[str, Any]) -> dict[str, str]:
+    """Name the SQL-door tables a fork gap blocks, from the recorded control answers."""
+    control = answers["hours_control"]
+    if control["ok"]:
+        return {}
+    return {"sql_hours": f"F-TSNS-HOUR-1: {control['message']}"}
+
+
 def build_fixture(warehouse: Path) -> dict[str, Any]:
     """Assemble the fixture from the PyIceberg control read-back and the derived expectations."""
     import pyiceberg
@@ -421,6 +429,7 @@ def build_fixture(warehouse: Path) -> dict[str, Any]:
         "hours_derivation": HOURS_DERIVATION,
         "control_repark_partitions": answers["control_partitions"],
         "sql_tables": expected_sql_tables(days),
+        "blocked_on_fork": blocked_tables(answers),
         "sql_statements": sql_statements(),
     }
 
@@ -438,9 +447,17 @@ def command_check(warehouse: Path, fixture_path: str) -> int:
     """PyIceberg half: read every SQL-door table and compare it with the fixture."""
     fixture = json.loads(Path(fixture_path).read_text())
     failures = 0
+    blocked = fixture.get("blocked_on_fork", {})
     for table, expected in fixture["sql_tables"].items():
         try:
             actual = read_back(warehouse, table)
+        except ValueError as exc:
+            if table in blocked:
+                print(f"BLOCKED {table}: {blocked[table]} ({exc})")
+                continue
+            print(f"FAIL {table}: unreadable (ValueError: {exc})")
+            failures += 1
+            continue
         except Exception as exc:
             print(f"FAIL {table}: unreadable ({type(exc).__name__}: {exc})")
             failures += 1

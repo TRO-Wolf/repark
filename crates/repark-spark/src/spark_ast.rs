@@ -93,6 +93,7 @@ async fn execute_passthrough_inner(
     } else {
         plan
     };
+    let plan = crate::insert_timestamp_ns::before_analysis(plan)?;
     // Refuse local CREATE EXTERNAL and COPY TO before eager execution unless explicitly allowed.
     local_fs_ddl::refuse_local_filesystem_plan(ctx, catalogs, &plan)?;
     // Apply the shared create guard to the plan the sink will register.
@@ -117,6 +118,7 @@ async fn execute_passthrough_inner(
         }
         None => plan,
     };
+    let plan = crate::insert_timestamp_ns::after_analysis(plan)?;
     let dataframe = ctx.execute_logical_plan(plan).await?;
     if !is_eager_command {
         return Ok(dataframe);

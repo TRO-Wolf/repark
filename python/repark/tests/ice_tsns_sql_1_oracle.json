@@ -1,4 +1,7 @@
 {
+  "blocked_on_fork": {
+    "sql_hours": "F-TSNS-HOUR-1: FeatureUnsupported => Unsupported data type for hour transform: Timestamp(Nanosecond, Some(\"UTC\"))"
+  },
   "control": {
     "ctl_days": {
       "format_version": 3,

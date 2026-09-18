@@ -871,6 +871,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `return_field_from_args`. **B-TZ-4:** `__repark_timestamp_to_string__` (→ `Utf8`,
   `Volatility::Volatile`) renders Spark's space-separated session-zone wall for LTZ and the
   stored wall for NTZ; trailing-zero fractions are stripped (recorded: `.123400` → `.1234`).
+  **ICE-TSNS-SQL-1 (2026-09-17):** a `Timestamp(ns)` tick renders from its own nanoseconds,
+  so the trimmed fraction keeps up to nine digits (`…00:00:00.000000001`); every other unit
+  still goes through microseconds. pins: ice-tsns-sql-1/C-004
   Embedded, never registered. Pins: `epoch_seconds_floor_is_floor_not_truncation` and siblings,
   plus `spark_timestamp_string_trims_trailing_fraction_zeros` / year-shape / LTZ-vs-NTZ here;
   facade corpus `test_timestamp_cast_parity.py`. **TZ-8:** `__repark_timestamp_to_date__`
@@ -896,6 +899,25 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`. pins: types-1/C-006
+- `timestamp_ns_cast.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the embedded Spark-door casts
+  `__repark_cast_timestamp_ns__` (→ `Timestamp(ns)`) and `__repark_cast_timestamptz_ns__`
+  (→ `Timestamp(ns, "UTC")`), registered through `instant_ts::functions()` and reached only
+  through the SQL door's `CAST(… AS timestamp_ns / timestamptz_ns)` lowering and its INSERT
+  conform. Strings parse with Arrow's `string_to_datetime` (the parser behind `to_timestamp`)
+  to all nine fraction digits; a zone-carrying string is an instant, a zoneless one a wall —
+  localized in the session zone for the zoned target, kept as written for the naive one; an
+  instant into the naive target is its session-zone wall. `TIMESTAMP` / `TIMESTAMP_NTZ` of any
+  unit and `DATE` widen exactly (µs × 1000). Malformed strings raise `[CAST_INVALID_INPUT] …
+  "TIMESTAMP_NS"` under ANSI and are NULL without it; out-of-range widening raises
+  `[CAST_OVERFLOW]` / NULL the same way; any other source refuses at planning with
+  `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]`. `Volatility::Volatile` so constant folding
+  never leaves a `Timestamp(ns)` literal for a re-run of `spark_ltz_timestamp_cast` to narrow.
+  `conform_values_timestamp_columns` is the `VALUES` half: after that rule retypes a row
+  expression, a timestamp column whose rows all agree takes the rows' type (the planner's
+  `Timestamp(ns)` guess no longer outlives the retyped literals), and a nanosecond column
+  with a retyped row keeps its type and casts that row through the embedded cast.
+  Tests in [timestamp_ns_cast/](timestamp_ns_cast/map.md).
+  pins: ice-tsns-sql-1/C-001, C-002
 - `timestamp_ltz_ntz.rs` — **FNP-11B step 3 (2026-09-15):** `to_timestamp_ltz` /
   `to_timestamp_ntz` / `try_to_timestamp` on the step-2 parser (card D-1, no new
   parser). `to_timestamp_ltz` forwards both arities to the `to_timestamp` kernel;
