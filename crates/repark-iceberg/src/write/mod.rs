@@ -38,6 +38,7 @@ pub mod snapshot_refs;
 pub mod sort_order;
 /// The ANSI store-assignment matrix — ONE home for MERGE and the non-MERGE insert/append lowerings.
 pub(crate) mod store_assign;
+pub mod summary_collision;
 /// Test-support-only snapshot-ref helpers (`_testing_create_ref`).
 pub mod testing_support;
 /// Whole-table `TRUNCATE TABLE` (delete-only empty overwrite).
@@ -94,6 +95,7 @@ pub use partition_overwrite::{
 pub use partition_write::{WRITTEN_FILES_COL_NAME, write_data_files_from_plan};
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 pub use repark_common::{Error, Result};
+pub use summary_collision::EngineSummary;
 pub use truncate::{commit_truncate, commit_truncate_to};
 pub use write_options::{
     WriterStagingOverrides, append_with_statement_options, commit_append_with_summary,

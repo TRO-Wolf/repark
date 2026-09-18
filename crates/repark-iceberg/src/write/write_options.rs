@@ -26,6 +26,7 @@ use crate::write::concurrency::WriteConcurrency;
 use crate::write::conform::write_default_column_names;
 use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
+use crate::write::summary_collision::EngineSummary;
 use crate::write::writer_props::{target_file_size_with, writer_properties_with};
 
 #[derive(Debug, Default, Clone)]
@@ -45,6 +46,7 @@ impl WriterStagingOverrides {
 #[allow(clippy::missing_errors_doc)]
 pub fn summary_with_extras(
     extra: &[(String, String)],
+    engine: &EngineSummary,
 ) -> Result<(String, HashMap<String, String>)> {
     let operation_id = Uuid::new_v4().to_string();
     let mut summary = HashMap::from([(OPERATION_ID_PROP.to_string(), operation_id.clone())]);
@@ -53,19 +55,7 @@ pub fn summary_with_extras(
         if folded == "operation" || folded == OPERATION_ID_PROP {
             continue;
         }
-        if folded == "engine-name"
-            || folded == "engine-version"
-            || folded == "changed-partition-count"
-            || ["added-", "deleted-", "removed-", "total-"]
-                .iter()
-                .any(|prefix| folded.starts_with(prefix))
-        {
-            return Err(DataFusionError::Plan(format!(
-                "Multiple entries with same key: `{key}` is an engine-computed snapshot \
-                 summary key (Spark IllegalArgumentException); refusing snapshot-property.{key} \
-                 (ICE-WRITE-OPTIONS-1)"
-            )));
-        }
+        engine.refuse_collision(&folded, value)?;
         summary.insert(key.clone(), value.clone());
     }
     Ok((operation_id, summary))
@@ -298,7 +288,8 @@ pub async fn commit_append_with_summary(
     summary_extra: &[(String, String)],
     branch: Option<&str>,
 ) -> Result<Table> {
-    let (operation_id, summary) = summary_with_extras(summary_extra)?;
+    let engine = EngineSummary::for_append(table, &new_files, branch);
+    let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let action = tx
         .fast_append()
@@ -319,7 +310,8 @@ pub async fn commit_overwrite_replace_all_with_summary(
     isolation_override: Option<&str>,
 ) -> Result<Table> {
     let isolation = isolation_with_override(table, isolation_override)?;
-    let (operation_id, summary) = summary_with_extras(summary_extra)?;
+    let engine = EngineSummary::for_overwrite(table, &staged_files, branch);
+    let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let mut action = tx
         .overwrite_files()
@@ -351,7 +343,8 @@ pub async fn commit_overwrite_by_row_filter_with_summary(
     isolation_override: Option<&str>,
 ) -> Result<Table> {
     let isolation = isolation_with_override(table, isolation_override)?;
-    let (operation_id, summary) = summary_with_extras(summary_extra)?;
+    let engine = EngineSummary::for_overwrite(table, &staged_files, branch);
+    let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let mut action = tx
         .overwrite_files()
@@ -384,7 +377,8 @@ pub async fn commit_replace_partitions_with_summary(
 ) -> Result<Table> {
     crate::write::partition_overwrite::refuse_empty_dynamic_overwrite(&staged_files)?;
     let isolation = isolation_with_override(table, isolation_override)?;
-    let (operation_id, summary) = summary_with_extras(summary_extra)?;
+    let engine = EngineSummary::for_overwrite(table, &staged_files, branch);
+    let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let mut action = tx
         .replace_partitions()

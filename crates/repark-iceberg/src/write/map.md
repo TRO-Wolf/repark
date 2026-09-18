@@ -542,7 +542,26 @@ repark-core's error map.
   canonical concurrent fanout; canonical callers pass `none()`); gzip refuses
   on the merged level whatever side it came from (Q-20c-6); `summary_with_extras`
   drops user `operation`/`engine.operation-id` and refuses engine metric keys
-  as Spark does (Q-20c-5).
+  as Spark does (Q-20c-5). Round 4 (2026-09-17): the metric-key prefix sweep is
+  gone; `summary_with_extras` takes the `EngineSummary` of the commit in hand
+  (`summary_collision.rs`) and refuses only a key that summary contains (V-04).
+  pins: ice-write-options-1/C-008
+- `summary_collision.rs` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
+  `EngineSummary`, the snapshot-summary keys the engine computes for the commit
+  in hand, which a user `snapshot-property.<k>` may not collide with (Spark's
+  measured rule: refuse iff the engine computed that exact key, message
+  `Multiple entries with same key: <k>=<engine> and <k>=<user>`). The fork merges
+  extras inside its own `SnapshotProducer::summary`, where a user value would
+  silently win, so the map is rebuilt ahead of the commit: `for_append`
+  runs the fork's public `SnapshotSummaryCollector` over the staged files and
+  applies the fork's add-only total arithmetic to the branch head (exact
+  values); `for_overwrite` keeps the exact added side and marks totals,
+  `changed-partition-count` and — with a parent — the data-removal keys as
+  `<resolved at commit>`, since the fork resolves the removal set inside the
+  commit. `engine-name` / `engine-version` are reserved (Spark stamps both on
+  every write; RePark writes neither): they refuse with `<engine-reserved>` as
+  the engine half (R-21c-1).
+  pins: ice-write-options-1/C-008
   pins: ice-write-options-1/C-001, C-002, C-003
 
 ## I want to...

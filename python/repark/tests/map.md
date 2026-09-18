@@ -343,15 +343,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the live cell so the live and recorded answers come from one code path.
 - [ice_write_options_1_spark_oracle.json](ice_write_options_1_spark_oracle.json) +
   [_record_ice_write_options_1_oracle.py](_record_ice_write_options_1_oracle.py) +
-  [_record_ice_write_options_2_oracle.py](_record_ice_write_options_2_oracle.py) —
+  [_record_ice_write_options_2_oracle.py](_record_ice_write_options_2_oracle.py) +
+  [_record_ice_write_options_3_oracle.py](_record_ice_write_options_3_oracle.py) —
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** the recorded Spark 4.1.2 +
-  iceberg-spark-runtime 1.11.0 oracle (43 cells, one JVM per driver, Hadoop
-  catalog): `snapshot-property.*` lands prefix-stripped and lower-cased in the
+  iceberg-spark-runtime 1.11.0 oracle (52 cells, one JVM per driver, Hadoop
+  catalog; round 4 appends `COLL-00`…`COLL-08`, the snapshot-property collision
+  cells, through the `_3` driver, which takes its warehouse from `--warehouse`
+  and its Ivy cache from `REPARK_ORACLE_IVY` and keeps only the run-stable
+  `Multiple entries with same key` text of an error): `snapshot-property.*` lands prefix-stripped and lower-cased in the
   summary on append / dynamic overwrite / CTAS / V1 paths, `write-format`
   parquet/orc/avro honored (`bogus` refused), per-key option measurements plus the
   SQL-door conf probe. Offline pins read the fixture; the live tier re-runs the
   drivers and checks the fixture.
-  pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-006
+  pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-006, C-009
 - [test_ice_write_options_1.py](test_ice_write_options_1.py) —
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** the DataFrame write-option pins over the
   fixture above (snapshot properties on append / dynamic overwrite / CTAS / V1
@@ -364,8 +368,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   SNAP-08/09 (UTF-8 key/value byte-exact out of band, V2 + V1) and SQL-02/03
   (user-typed OPTIONS keeps main's INSERT parse error and CTAS WITH-refusal),
   adds SNAP-10/11/12 (Q-20c-5 collision rule) and SNAP-13 (P-04 replace adds
-  one snapshot).
+  one snapshot). Round 4 (2026-09-17) adds the COLL-* collision cells read from
+  the fixture (V-04 / V-01), the options-channel refusals for MERGE, BY NAME and
+  every non-honouring router arm (V-03, through the native
+  `session_sql_with_write_options`), and the table-level gzip level twin of the
+  Rust L-04 pin (V-02); the live leg runs all three drivers.
   pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: ice-write-options-1/C-008, C-009, C-010, C-011
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine

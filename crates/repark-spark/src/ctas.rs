@@ -304,7 +304,9 @@ async fn finish_ctas_staged_commit(
         )
         .await?
     };
-    let (_, summary) = repark_iceberg::write::summary_with_extras(&options.snapshot_extra)?;
+    let engine = repark_iceberg::write::EngineSummary::for_append(&staged_table, &data_files, None);
+    let (_, summary) =
+        repark_iceberg::write::summary_with_extras(&options.snapshot_extra, &engine)?;
     let tx = Transaction::new(&staged_table);
     let tx = tx
         .fast_append()

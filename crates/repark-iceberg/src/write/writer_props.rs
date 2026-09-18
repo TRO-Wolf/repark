@@ -792,8 +792,11 @@ mod tests {
 
     #[test]
     fn summary_extras_keep_engine_stamp() {
-        let (operation_id, summary) =
-            summary_with_extras(&[("run_id".to_string(), "x".to_string())]).expect("extras");
+        let (operation_id, summary) = summary_with_extras(
+            &[("run_id".to_string(), "x".to_string())],
+            &crate::write::EngineSummary::default(),
+        )
+        .expect("extras");
         assert_eq!(summary.get("run_id").map(String::as_str), Some("x"));
         assert_eq!(
             summary

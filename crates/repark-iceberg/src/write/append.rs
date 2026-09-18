@@ -1282,7 +1282,7 @@ mod tests {
             .additional_properties
             .get(crate::write::merge::OPERATION_ID_PROP)
             .expect("append snapshot carries the engine.operation-id stamp");
-        Uuid::from_str(first_id).expect("the stamp is a UUID");
+        uuid::Uuid::from_str(first_id).expect("the stamp is a UUID");
 
         let second = append(
             &catalog,

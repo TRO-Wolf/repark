@@ -35,6 +35,14 @@ pins: rp-4-fork-repin/C-005, C-006
   refuses `V3-COW-1`.
   SQP-1: the front door canonicalizes escapes once and
   translates downstream parser locations back to the caller's SQL.
+  ICE-WRITE-OPTIONS-1 round 4 (2026-09-17, Q-21c-5): every `execute_inner` arm that
+  cannot honour a non-empty statement options map refuses it with
+  `refuse_if_non_empty` before it executes — MERGE, DELETE, UPDATE, TRUNCATE, CALL,
+  DROP TABLE/NAMESPACE, ALTER, the passthrough arm, and each pre-parse intercept
+  (gated once the form is recognised, so nothing runs first). INSERT, INSERT
+  OVERWRITE, CTAS and the BY NAME overwrite delegations honour the map; the
+  non-Iceberg INSERT OVERWRITE fallbacks in `insert_overwrite.rs` refuse it.
+  pins: ice-write-options-1/C-010
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** the front door threads the out-of-band
   validated set through `execute_time_travelled` into `execute_inner`, and refuses
   non-empty sets on the non-Iceberg arms so options are never silently dropped.

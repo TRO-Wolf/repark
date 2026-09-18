@@ -176,6 +176,7 @@ pub(crate) async fn execute_insert_overwrite(
                     reregister(ctx, catalog, &catalog_name, &namespace).await?;
                     return ctx.read_empty();
                 }
+                options.refuse_if_non_empty("INSERT OVERWRITE on a non-Iceberg target")?;
                 let wipe_sql =
                     format!("INSERT OVERWRITE {table_sql} SELECT * FROM {table_sql} WHERE false");
                 return spark_ast::execute_passthrough(ctx, catalogs, &wipe_sql).await;
@@ -195,6 +196,7 @@ pub(crate) async fn execute_insert_overwrite(
         .await;
     }
 
+    options.refuse_if_non_empty("INSERT OVERWRITE without a source")?;
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }
 

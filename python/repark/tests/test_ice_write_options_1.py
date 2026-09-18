@@ -19,7 +19,7 @@ from typing import Any
 
 import pytest
 
-from repark import ReparkSession
+from repark import ReparkSession, _native
 from repark.errors import AnalysisException, ParseException, UnsupportedOperationException
 
 CATALOG = "ice_write_options_1"
@@ -35,6 +35,16 @@ _SPARK_APP_KEYS = {
     "iceberg-version",
     "spark.app.id",
 }
+_COLLISION_FIELDS = (
+    "key",
+    "value",
+    "snapshots_before",
+    "summary_value_for_key",
+    "summary_keys",
+    "rows",
+)
+_COLLISION_CELLS = tuple(f"COLL-{index:02d}" for index in range(9))
+_ENGINE_RESERVED_CELLS = {"COLL-01-engine-name", "COLL-02-engine-version"}
 
 
 @pytest.fixture
@@ -573,6 +583,8 @@ def _stable_projection(cell: dict[str, Any]) -> dict[str, Any]:
         "files": sorted(files),
         "snapshot_count": cell.get("snapshot_count"),
         "error_class": error["class"] if error else None,
+        "collision": {field: cell.get(field) for field in _COLLISION_FIELDS},
+        "collision_message": error["message"] if error and cell["id"] in _collision_ids() else None,
     }
 
 
@@ -587,6 +599,7 @@ def test_live_cells_reproduce_fixture(tmp_path: Path) -> None:
     for script in (
         "_record_ice_write_options_1_oracle.py",
         "_record_ice_write_options_2_oracle.py",
+        "_record_ice_write_options_3_oracle.py",
     ):
         proc = subprocess.run(
             [sys.executable, str(Path(__file__).resolve().parent / script), "--out", str(out)],
@@ -635,3 +648,132 @@ def test_snapshot_property_engine_operation_id_ours(spark: ReparkSession) -> Non
         .append()
     )
     assert _latest_summary(spark, table)["engine.operation-id"] != "stolen-id"
+
+
+def _channel(spark: ReparkSession, sql: str, options: dict[str, str]) -> None:
+    _native.session_sql_with_write_options(spark._inner, sql, options)
+
+
+def test_merge_refuses_write_options(spark: ReparkSession) -> None:
+    """V-03: MERGE refuses a non-empty options map instead of dropping it (Q-21c-5)."""
+    _seed(spark, "merge_opt")
+    table = f"{CATALOG}.{NS}.merge_opt"
+    before = _snapshot_count(spark, table)
+    with pytest.raises(AnalysisException, match="MERGE INTO does not support write options"):
+        _channel(
+            spark,
+            f"MERGE INTO {table} AS t USING (SELECT 9 AS id, 'name-9' AS name) AS s "
+            "ON t.id = s.id WHEN NOT MATCHED THEN INSERT *",
+            {"snapshot-property.run_id": "merge-1"},
+        )
+    assert _snapshot_count(spark, table) == before
+
+
+def test_insert_by_name_append_refuses_write_options(spark: ReparkSession) -> None:
+    """V-03: an INSERT ... BY NAME append refuses a non-empty options map (Q-21c-5)."""
+    _seed(spark, "byname_app")
+    table = f"{CATALOG}.{NS}.byname_app"
+    before = _snapshot_count(spark, table)
+    with pytest.raises(AnalysisException, match="BY NAME does not support write options"):
+        _channel(
+            spark,
+            f"INSERT INTO {table} BY NAME SELECT 'name-9' AS name, 9 AS id",
+            {"snapshot-property.run_id": "byname-1"},
+        )
+    assert _snapshot_count(spark, table) == before
+
+
+def test_insert_by_name_overwrite_honours_write_options(spark: ReparkSession) -> None:
+    """V-03: an INSERT OVERWRITE ... BY NAME carries the snapshot property it was given."""
+    _seed(spark, "byname_ow")
+    table = f"{CATALOG}.{NS}.byname_ow"
+    _channel(
+        spark,
+        f"INSERT OVERWRITE {table} BY NAME SELECT 'name-9' AS name, 9 AS id",
+        {"snapshot-property.run_id": "byname-ow-1"},
+    )
+    assert _latest_summary(spark, table)["run_id"] == "byname-ow-1"
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "SELECT * FROM {t}",
+        "DELETE FROM {t} WHERE id = 0",
+        "UPDATE {t} SET name = 'x' WHERE id = 0",
+        "TRUNCATE TABLE {t}",
+        "ALTER TABLE {t} SET TBLPROPERTIES ('k' = 'v')",
+        "ALTER TABLE {t} ADD PARTITION FIELD id",
+        "DROP TABLE {t}",
+        "DROP NAMESPACE {c}.{n}",
+        "CREATE NAMESPACE {c}.other_ns",
+        "CALL {c}.system.expire_snapshots(table => '{n}.arms')",
+    ],
+)
+def test_non_write_arms_refuse_write_options(spark: ReparkSession, statement: str) -> None:
+    """V-03 sweep: every router arm that cannot honour the options map refuses it."""
+    _seed(spark, "arms")
+    table = f"{CATALOG}.{NS}.arms"
+    before = _snapshot_count(spark, table)
+    with pytest.raises(AnalysisException, match="does not support write options"):
+        _channel(
+            spark,
+            statement.format(t=table, c=CATALOG, n=NS),
+            {"snapshot-property.run_id": "arm-1"},
+        )
+    assert _snapshot_count(spark, table) == before
+    assert spark.sql(f"SELECT COUNT(*) AS n FROM {table}").to_arrow().to_pylist()[0]["n"] == 2
+    namespaces = spark.sql(f"SHOW NAMESPACES IN {CATALOG}").to_arrow().to_pylist()
+    assert all("other_ns" not in str(row) for row in namespaces)
+
+
+def _collision_ids() -> set[str]:
+    cells = json.loads(_FIXTURE.read_text(encoding="utf-8"))["cells"]
+    return {cell["id"] for cell in cells if cell["id"].startswith(_COLLISION_CELLS)}
+
+
+@pytest.mark.parametrize("cell_id", sorted(_collision_ids()))
+def test_snapshot_property_collision_cells(spark: ReparkSession, cell_id: str) -> None:
+    """V-04: a user extra refuses iff the engine computed that key for this append (COLL-*)."""
+    cell = _fixture_cell(cell_id)
+    key, value = cell["key"], cell["value"]
+    table = f"{CATALOG}.{NS}.coll_{cell_id[5:7]}"
+    spark.sql(f"CREATE TABLE {table} (id BIGINT) USING iceberg")
+    spark.sql(f"INSERT INTO {table} VALUES (1)")
+    assert _snapshot_count(spark, table) == cell["snapshots_before"]
+    writer = spark.range(2, 4).toDF("id").writeTo(table).option(f"snapshot-property.{key}", value)
+    if cell["error"] is not None:
+        with pytest.raises(AnalysisException) as refused:
+            writer.append()
+        message = str(refused.value)
+        if cell_id in _ENGINE_RESERVED_CELLS:
+            head, _, tail = cell["error"]["message"].partition(" and ")
+            assert head.rsplit("=", 1)[0] + "=" in message
+            assert f" and {tail}" in message
+        else:
+            assert cell["error"]["message"] in message
+        assert _snapshot_count(spark, table) == cell["snapshot_count"]
+        return
+    writer.append()
+    assert _snapshot_count(spark, table) == cell["snapshot_count"]
+    rows = spark.sql(f"SELECT COUNT(*) AS n FROM {table}").to_arrow().to_pylist()
+    assert int(rows[0]["n"]) == cell["rows"]
+    landed = _latest_summary(spark, table).get(key)
+    if key == "engine.operation-id":
+        assert cell["summary_value_for_key"] == value
+        assert landed not in (None, value)
+    else:
+        assert landed == cell["summary_value_for_key"]
+
+
+def test_table_level_gzip_with_option_codec_refuses(spark: ReparkSession, tmp_path: Path) -> None:
+    """V-02: table compression-level plus option gzip refuses before any file (L-04 twin)."""
+    _seed(spark, "gzip_table_level")
+    table = f"{CATALOG}.{NS}.gzip_table_level"
+    spark.sql(f"ALTER TABLE {table} SET TBLPROPERTIES ('write.parquet.compression-level' = '1')")
+    before = _snapshot_count(spark, table)
+    files_before = sorted(tmp_path.rglob("*.parquet"))
+    with pytest.raises(AnalysisException, match="compression-level"):
+        _frame(spark).writeTo(table).option("compression-codec", "gzip").append()
+    assert _snapshot_count(spark, table) == before
+    assert sorted(tmp_path.rglob("*.parquet")) == files_before

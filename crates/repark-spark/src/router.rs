@@ -176,7 +176,7 @@ async fn execute_inner(
         .await;
     }
     // Pre-parse recognizers for forms stock sqlparser cannot model (or would drop clauses from).
-    if let Some(frame) = try_preparse_intercepts(ctx, catalogs, sql).await {
+    if let Some(frame) = try_preparse_intercepts(ctx, catalogs, sql, write_options).await {
         return frame;
     }
     // If we can't parse it to a single statement we recognise, let DataFusion have it.
@@ -212,18 +212,26 @@ async fn execute_inner(
             names,
             if_exists,
             ..
-        } => execute_drop_table(ctx, catalogs, names, *if_exists).await,
+        } => {
+            write_options.refuse_if_non_empty("DROP TABLE")?;
+            execute_drop_table(ctx, catalogs, names, *if_exists).await
+        }
         Statement::Drop {
             object_type: ObjectType::Schema | ObjectType::Database,
             names,
             if_exists,
             ..
-        } => execute_drop_namespace(ctx, catalogs, names, *if_exists).await,
+        } => {
+            write_options.refuse_if_non_empty("DROP NAMESPACE")?;
+            execute_drop_namespace(ctx, catalogs, names, *if_exists).await
+        }
         Statement::AlterTable(alter_table) => {
+            write_options.refuse_if_non_empty("ALTER TABLE")?;
             alter::execute_alter_table(ctx, catalogs, &alter_table.name, &alter_table.operations)
                 .await
         }
         Statement::Merge(merge) => {
+            write_options.refuse_if_non_empty("MERGE INTO")?;
             if merge.output.is_some() {
                 return Err(DataFusionError::NotImplemented(
                     "MERGE OUTPUT/RETURNING clauses are not supported".to_string(),
@@ -257,12 +265,27 @@ async fn execute_inner(
             passthrough_after_p11(ctx, catalogs, sql, refusal).await
         }
         // DELETE/UPDATE.
-        Statement::Delete(delete) => execute_delete(ctx, catalogs, sql, delete).await,
-        Statement::Update(update) => execute_update(ctx, catalogs, sql, update).await,
+        Statement::Delete(delete) => {
+            write_options.refuse_if_non_empty("DELETE FROM")?;
+            execute_delete(ctx, catalogs, sql, delete).await
+        }
+        Statement::Update(update) => {
+            write_options.refuse_if_non_empty("UPDATE")?;
+            execute_update(ctx, catalogs, sql, update).await
+        }
         // Iceberg `CALL catalog.system.<proc>(…)` — I3 / R-MAINTENANCE-CALL.
-        Statement::Call(function) => call::execute_call(ctx, catalogs, function).await,
-        Statement::Truncate(truncate) => execute_truncate(ctx, catalogs, truncate).await,
-        _ => spark_ast::execute_passthrough(ctx, catalogs, sql).await,
+        Statement::Call(function) => {
+            write_options.refuse_if_non_empty("CALL")?;
+            call::execute_call(ctx, catalogs, function).await
+        }
+        Statement::Truncate(truncate) => {
+            write_options.refuse_if_non_empty("TRUNCATE TABLE")?;
+            execute_truncate(ctx, catalogs, truncate).await
+        }
+        _ => {
+            write_options.refuse_if_non_empty("this statement")?;
+            spark_ast::execute_passthrough(ctx, catalogs, sql).await
+        }
     }
 }
 
@@ -323,25 +346,33 @@ async fn try_preparse_intercepts(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
 ) -> Option<Result<DataFrame>> {
+    let parsed_ddl = |context: &str| write_options.refuse_if_non_empty(context);
     // I7 — ADD/DROP/REPLACE PARTITION FIELD + REPLACE COLUMNS (stock sqlparser cannot model).
     if let Some(parsed) = alter::try_parse_iceberg_alter_ddl(sql) {
-        return Some(match parsed {
-            Ok(ddl) => alter::execute_iceberg_alter_ddl(ctx, catalogs, ddl).await,
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
+                Ok(ddl) => alter::execute_iceberg_alter_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
     }
     if let Some(parsed) = alter_write_order::try_parse_write_order_ddl(sql) {
-        return Some(match parsed {
-            Ok(ddl) => alter_write_order::execute_write_order_ddl(ctx, catalogs, ddl).await,
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
+                Ok(ddl) => alter_write_order::execute_write_order_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
     }
     if let Some(parsed) = column_move::try_parse_column_move_ddl(sql) {
-        return Some(match parsed {
-            Ok(ddl) => column_move::execute_column_move_ddl(ctx, catalogs, ddl).await,
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
+                Ok(ddl) => column_move::execute_column_move_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
     }
     // I6 residual — forms stock sqlparser still cannot model.
     if let Some(refused) = alter::refuse_unsupported_alter_sql(sql) {
@@ -349,22 +380,29 @@ async fn try_preparse_intercepts(
     }
     // CREATE NAMESPACE LOCATION/COMMENT/WITH properties: sqlparser cannot model those clauses.
     if let Some(parsed) = try_parse_create_namespace(sql) {
-        return Some(match parsed {
-            Ok(create_namespace) => execute_create_namespace(ctx, catalogs, create_namespace).await,
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("CREATE NAMESPACE").map(|()| ddl)) {
+                Ok(create_namespace) => {
+                    execute_create_namespace(ctx, catalogs, create_namespace).await
+                }
+                Err(error) => Err(error),
+            },
+        );
     }
     // `DESCRIBE {NAMESPACE|DATABASE|SCHEMA} [EXTENDED]` (Group Z).
     if let Some(parsed) = describe_show::try_parse_describe_namespace(sql) {
-        return Some(match parsed {
-            Ok(describe_namespace) => {
-                describe_show::execute_describe_namespace(ctx, catalogs, describe_namespace).await
-            }
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("DESCRIBE NAMESPACE").map(|()| ddl)) {
+                Ok(describe_namespace) => {
+                    describe_show::execute_describe_namespace(ctx, catalogs, describe_namespace)
+                        .await
+                }
+                Err(error) => Err(error),
+            },
+        );
     }
     if let Some(parsed) = describe_show::try_parse_describe_table(sql) {
-        match parsed {
+        match parsed.and_then(|ddl| parsed_ddl("DESCRIBE TABLE").map(|()| ddl)) {
             Ok(mut describe_table) => {
                 describe_table.complete_from_session(ctx);
                 if catalogs.get(&describe_table.catalog).is_some() {
@@ -378,19 +416,23 @@ async fn try_preparse_intercepts(
     }
     // `SHOW {NAMESPACES|SCHEMAS|DATABASES}` (Group AB).
     if let Some(parsed) = describe_show::try_parse_show_namespaces(sql) {
-        return Some(match parsed {
-            Ok(show_namespaces) => {
-                describe_show::execute_show_namespaces(ctx, catalogs, show_namespaces).await
-            }
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("SHOW NAMESPACES").map(|()| ddl)) {
+                Ok(show_namespaces) => {
+                    describe_show::execute_show_namespaces(ctx, catalogs, show_namespaces).await
+                }
+                Err(error) => Err(error),
+            },
+        );
     }
     // Snapshot-ref DDL (I5) — not modelled by stock sqlparser.
     if let Some(parsed) = ref_ddl::try_parse_ref_ddl(sql) {
-        return Some(match parsed {
-            Ok(ddl) => ref_ddl::execute_ref_ddl(ctx, catalogs, ddl).await,
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("BRANCH/TAG DDL").map(|()| ddl)) {
+                Ok(ddl) => ref_ddl::execute_ref_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
     }
     None
 }

@@ -1738,6 +1738,188 @@
         "total-position-deletes": "0",
         "total-records": "6"
       }
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Multiple entries with same key: added-records=2 and added-records=999"
+      },
+      "id": "COLL-00-added-records",
+      "key": "added-records",
+      "snapshot_count": 1,
+      "snapshots_before": 1,
+      "value": "999"
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Multiple entries with same key: engine-name=spark and engine-name=custom-engine"
+      },
+      "id": "COLL-01-engine-name",
+      "key": "engine-name",
+      "snapshot_count": 1,
+      "snapshots_before": 1,
+      "value": "custom-engine"
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Multiple entries with same key: engine-version=4.1.2 and engine-version=9.9.9"
+      },
+      "id": "COLL-02-engine-version",
+      "key": "engine-version",
+      "snapshot_count": 1,
+      "snapshots_before": 1,
+      "value": "9.9.9"
+    },
+    {
+      "error": null,
+      "id": "COLL-03-operation",
+      "key": "operation",
+      "rows": 3,
+      "snapshot_count": 2,
+      "snapshots_before": 1,
+      "summary_keys": [
+        "added-data-files",
+        "added-files-size",
+        "added-records",
+        "app-id",
+        "app-name",
+        "changed-partition-count",
+        "engine-name",
+        "engine-version",
+        "iceberg-version",
+        "manifests-created",
+        "manifests-kept",
+        "manifests-replaced",
+        "spark.app.id",
+        "total-data-files",
+        "total-delete-files",
+        "total-equality-deletes",
+        "total-files-size",
+        "total-position-deletes",
+        "total-records"
+      ],
+      "summary_value_for_key": null,
+      "value": "stolen-op"
+    },
+    {
+      "error": null,
+      "id": "COLL-04-engine.operation-id",
+      "key": "engine.operation-id",
+      "rows": 3,
+      "snapshot_count": 2,
+      "snapshots_before": 1,
+      "summary_keys": [
+        "added-data-files",
+        "added-files-size",
+        "added-records",
+        "app-id",
+        "app-name",
+        "changed-partition-count",
+        "engine-name",
+        "engine-version",
+        "engine.operation-id",
+        "iceberg-version",
+        "manifests-created",
+        "manifests-kept",
+        "manifests-replaced",
+        "spark.app.id",
+        "total-data-files",
+        "total-delete-files",
+        "total-equality-deletes",
+        "total-files-size",
+        "total-position-deletes",
+        "total-records"
+      ],
+      "summary_value_for_key": "stolen-id",
+      "value": "stolen-id"
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Multiple entries with same key: changed-partition-count=1 and changed-partition-count=42"
+      },
+      "id": "COLL-05-changed-partition-count",
+      "key": "changed-partition-count",
+      "snapshot_count": 1,
+      "snapshots_before": 1,
+      "value": "42"
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Multiple entries with same key: total-records=3 and total-records=7"
+      },
+      "id": "COLL-06-total-records",
+      "key": "total-records",
+      "snapshot_count": 1,
+      "snapshots_before": 1,
+      "value": "7"
+    },
+    {
+      "error": null,
+      "id": "COLL-07-deleted-data-files",
+      "key": "deleted-data-files",
+      "rows": 3,
+      "snapshot_count": 2,
+      "snapshots_before": 1,
+      "summary_keys": [
+        "added-data-files",
+        "added-files-size",
+        "added-records",
+        "app-id",
+        "app-name",
+        "changed-partition-count",
+        "deleted-data-files",
+        "engine-name",
+        "engine-version",
+        "iceberg-version",
+        "manifests-created",
+        "manifests-kept",
+        "manifests-replaced",
+        "spark.app.id",
+        "total-data-files",
+        "total-delete-files",
+        "total-equality-deletes",
+        "total-files-size",
+        "total-position-deletes",
+        "total-records"
+      ],
+      "summary_value_for_key": "3",
+      "value": "3"
+    },
+    {
+      "error": null,
+      "id": "COLL-08-run_id",
+      "key": "run_id",
+      "rows": 3,
+      "snapshot_count": 2,
+      "snapshots_before": 1,
+      "summary_keys": [
+        "added-data-files",
+        "added-files-size",
+        "added-records",
+        "app-id",
+        "app-name",
+        "changed-partition-count",
+        "engine-name",
+        "engine-version",
+        "iceberg-version",
+        "manifests-created",
+        "manifests-kept",
+        "manifests-replaced",
+        "run_id",
+        "spark.app.id",
+        "total-data-files",
+        "total-delete-files",
+        "total-equality-deletes",
+        "total-files-size",
+        "total-position-deletes",
+        "total-records"
+      ],
+      "summary_value_for_key": "control",
+      "value": "control"
     }
   ],
   "meta": {
