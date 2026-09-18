@@ -673,6 +673,112 @@ column names, the scalar `CORRELATED_REFERENCE` / `0A000`, and the twin view
 DDL `COLUMN_ALREADY_EXISTS` / `42711`. 5 passed through `jb-jvm.sh`
 (2026-09-18 01:25 EDT), so the recording copied from the log matches live Spark.
 
+## Run 22b — the debug-wheel segfault (2026-09-18)
+
+Actor: claude-opus-5. Head before the round: `759ec9bd` (merge of `origin/main` into the unit).
+CI's required smoke job (debug wheel, whole facade suite) crashed 4 xdist workers with
+`Fatal Python error: Segmentation fault` on `test_perf_approxpct_1.py::test_accuracy_matrix_matches_spark[dupes_default|dupes_acc2|same_default|same_acc2]`,
+the four cells whose fixture is a 1,000-branch `UNION ALL`.
+
+### Reproduction (debug native, `maturin develop`, unfixed tree)
+
+- `.venv/bin/python -m pytest python/repark/tests/test_perf_approxpct_1.py -q -p no:cacheprovider -n 4`
+  → `4 failed, 59 passed, 7 skipped in 31.74s`; each failure is `worker 'gwN' crashed`, on the same four cells.
+- Control: `/tmp/lb-22b/control.py` runs the four cells' SQL in one session.
+  With `SET spark.sql.caseSensitive=true` (the repair call returns before it does any work) it answers `7.0, 7.0, 5.0, 1.0`
+  (the recorded Spark values), exit 0. With `false` it exits with status 139 (SIGSEGV) on the first cell.
+  The segfault needs the unit's repair path. Main never runs it.
+
+### The overflowing walk
+
+- Red Rust pins (commit `a832c2f1`), `crates/repark-core/src/column_resolution/tests.rs`:
+  `s22b_thousand_branch_union_plans_on_a_two_mebibyte_stack`,
+  `s22b_thousand_branch_union_folds_wrong_case_on_a_two_mebibyte_stack` (`SELECT USERID FROM t` ×1,000,
+  the fold path), and a 5,000-branch pin. Each one plans through `plan_statement_with_column_repair` on a
+  `std::thread` with a 2 MiB stack (the tokio worker default), in a current-thread runtime.
+  On `759ec9bd` all three abort: `thread '<unknown>' has overflowed its stack` (SIGABRT).
+- gdb on the 1,000-branch pin: 473 frames of
+  `<sqlparser::ast::query::SetExpr as Clone>::clone` / `Box::clone` under
+  `<Statement as Clone>::clone`, called from `column_resolution.rs:28`, the `inner.clone()` before the first
+  `statement_to_plan`. One `UNION` level is 4 frames and 17,216 B (`info frame` at levels 0 and 4:
+  `0x7ffff7804c00 − 0x7ffff78008c0`). That is about 120 levels per 2 MiB and about 490 per 8 MiB, so 200 branches pass and
+  1,000 overflow on the Python main thread (8 MiB). The derived `Clone` has no `recursive` guard.
+  sqlparser's derived `Visit` and DataFusion's `TreeNode` / planner walks have one.
+- Baseline measured with the repair off (`case_insensitive=false`, 2 MiB thread): 1,000 branches plan. 5,000
+  overflow inside DataFusion: `set_expr_to_plan` is `#[recursive]`, but at every level it calls
+  sqlparser's `Spanned::span()`, which recurses over the whole remaining subtree with no guard. On the debug
+  wheel, `SELECT count(*) FROM (<5,000-way UNION ALL>)` exits with status 139 under **both** `caseSensitive=true` and
+  `false` (gdb: `SetExpr::span` at `spans.rs:220/229` above `set_expr_to_plan`, Python main thread).
+  So main cannot plan it on the debug wheel either.
+- The other walks the unit added: `written_references`, `catalog_fields`, `direct_tables`, `fold_statement`
+  and `rewrite_fragment_case` / `merge_fragments.rs` use sqlparser `Visit` / `VisitMut` (guarded).
+  `plan_has_upper_ascii_field` and `audit_plan_for_ambiguity` use `apply_with_subqueries` / `Expr::apply`
+  (guarded, DataFusion `recursive_protection` on). `fold.rs`'s `Level::collect` and `CaseFold::fold_usings`
+  recursed once per set-operation level by hand, with small frames and no guard (an engineering-method violation).
+
+### The fix (commit `f49fc665`)
+
+- `column_resolution/stack.rs`: `stack_bytes_for` estimates nesting depth with a guarded `Visit` walk:
+  the open queries plus the set-operation height of each open query's body (computed with an explicit stack),
+  the open expressions and the open table factors. The result is
+  `depth × 32 KiB + 256 KiB`. `GrownStack` is a future whose every `poll` runs under
+  `stacker::maybe_grow(bytes, bytes, …)`: it stays in place when the current stack has room, and
+  otherwise switches to a fresh segment of that size.
+- `plan_statement_with_column_repair` polls the whole repair (`plan_with_repair`) through `GrownStack`.
+  The statement clone, the fold, DataFusion's planning (with its unguarded `span()` walk) and the final
+  drop of the retained statement all run on the grown stack. Both case modes pass through it.
+- `Level::collect` / `CaseFold::fold_usings` walk set-operation branches with an explicit `Vec` stack, left
+  branch first, which keeps the old recursion's select-index order. `Level::collect_select` holds the
+  per-SELECT body.
+- A borrow cannot replace the clone. `SessionState::statement_to_plan` consumes the statement, and the
+  error path needs it again to fold. The callers in `spark_ast.rs` rewrite the statement heavily before this call, so
+  re-parsing is not an equivalent source. The clone stays but is now stack-safe.
+- Mutation proof: with `BYTES_PER_LEVEL = 8 KiB` the two 1,000-branch pins crash (SIGSEGV). With 32 KiB
+  they pass, so the estimate is load-bearing. 32 KiB is about 1.9× the measured 17,216 B/level clone.
+
+### Rulings
+
+- Q-22b-MC-1 (actor, 2026-09-18): declare `stacker = "0.1.25"` (workspace) for `repark-core` instead of
+  `#[recursive::recursive]`. The recursion that overflows is sqlparser's derived `Clone` and `Spanned::span`,
+  and neither can carry an attribute from this crate. `#[recursive]` only grows by 2 MiB segments when fewer
+  than 128 KiB remain at an annotated frame, and an unannotated walk of depth N needs N × frame bytes in
+  one segment. `stacker 0.1.25` is already in `Cargo.lock` under `recursive 0.1.1`, so the lock gains only the edge.
+  No new version.
+- Q-22b-MC-2 (actor, 2026-09-18): the 5,000-branch pins plan and do not collect, in the default mode only.
+  DataFusion's per-level `span()` walk makes planning quadratic in union depth, in both case modes.
+  Measured on the debug wheel (`/tmp/lb-22b/deep.py`, collect, fixed tree): 1,000 → 13.5/13.4 s, 2,000 → 43.0/42.4 s,
+  5,000 → 234.7/228.6 s (`true`/`false`). Plan-only 5,000: 61.1 s debug, 7.8 s release. The Rust 5,000 pin
+  plans once (about 48 s in `cargo test`, debug). The `false`-mode 5,000 result is the measurement above,
+  not a pin. The repair adds no measurable cost at depth: `true` and `false` agree to within 3 %.
+- The 21b "stopped at 99 %" stall: not reproduced. The debug cohort below ran in 108.7 s with no stall.
+  The connection found is cost: a deep `UNION ALL` on the debug wheel plans in tens of seconds
+  (the 5,000-branch pin is the slowest test in the cohort at 62 s). A worker holding one near the end of the run would sit at 99 %.
+  This is a lead, not a diagnosis.
+
+### Gates (all run on 2026-09-18, `CARGO_BUILD_JOBS=6 RUST_TEST_THREADS=6`)
+
+- Debug native, fixed tree: `pytest python/repark/tests/test_perf_approxpct_1.py -q -p no:cacheprovider -n 4`
+  → `63 passed, 7 skipped in 43.12s`.
+- Debug native: `pytest python/repark/tests/test_ice_mixed_case_1.py -q -p no:cacheprovider -n 4`
+  → `65 passed, 44 skipped, 1 xfailed in 66.18s` (the 5,000-branch pin: 61.83 s).
+- Debug native: `pytest python/repark/tests -q -p no:cacheprovider -n 4 -k "case or column or resolve" -m "not perf"`
+  → `1103 passed, 78 skipped, 11 xfailed, 10 warnings in 108.74s` (wall 1m49.6s, no stall; no `perf`
+  marker is registered, so `-m "not perf"` deselects nothing).
+- `cargo test -p repark-core` → lib `610 passed; 0 failed; 1 ignored` (126.58 s) plus the integration binaries
+  (37 + 8 passed, the rest empty).
+- `cargo test -p repark-spark --lib` → `1150 passed; 0 failed; 4 ignored` (42.50 s).
+- `cargo clippy -p repark-core -p repark-spark --tests -- -D warnings` → 1,347 `disallowed_methods`
+  errors, the test-code `unwrap`/`expect` that the repo's `rust-clippy` target allows on purpose (`-A
+  clippy::disallowed_methods`; the top files are pre-existing, e.g. `crates/repark-core/tests/declared_sorted.rs`
+  with 164). The same command with the gate's `-A clippy::disallowed_methods` → clean (exit 0). The `rust-panic-ban` form
+  (`--lib --bins -D clippy::disallowed_methods -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
+  -D clippy::todo -D clippy::unimplemented -D clippy::unreachable`) on both crates → clean (exit 0).
+- Release native (`CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 maturin develop --release`):
+  `test_ice_mixed_case_1.py` → `65 passed, 44 skipped, 1 xfailed in 10.03s` (5,000-branch pin 7.73 s);
+  `test_perf_approxpct_1.py` → `66 passed, 4 skipped in 5.06s`. Deep script on release: 5,000 branches with collect
+  → 33.98 s (`true`), 26.04 s (`false`), both exit 0.
+- `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/lb-build origin/main` → `comment-ban hits=0`.
+
 ## 7. Open questions (HALT writes here; empty means none)
 
 No HALT. Round 2 (2026-09-18) hands the orchestrator three items:
