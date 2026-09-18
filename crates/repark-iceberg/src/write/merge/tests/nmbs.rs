@@ -2,7 +2,7 @@
 //! SQL-fragment pins for the unmatched-by-source arm.
 
 use super::super::*;
-use super::merge::{delete, spec, update};
+use super::helpers::{delete, spec, update};
 use crate::write::merge::not_matched_by_source::{
     NotMatchedBySourceAction, NotMatchedBySourceClause, combined_delete_applies, delete_applies,
 };

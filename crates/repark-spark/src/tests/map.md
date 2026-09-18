@@ -1,5 +1,7 @@
 # map — repark-spark/src/tests
 
+ICE-MIXED-CASE-1 (2026-09-17): `common.rs` test helper carries the case-sensitivity flag into session config — round 21b through `with_spark_case_sensitive_config(config, false)`, main's carrier. pins: ice-mixed-case-1/C-012
+
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
@@ -399,7 +401,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `call_register` (**V3-1 / RP-3 C-008**): `CALL system.register_table` arguments, three nullable BIGINT columns,
   adoption/read-back, occupied-ident refusal, Hadoop `vN.metadata.json` write bumps to `v(N+1)`,
   S3 Tables register names R126, and the Spark-written `fixtures/v3-spark-mor/`
-  fixture (`B-MOR-3` zeros),
+  fixture (`B-MOR-3` zeros). **TEST-HYGIENE-1 (2026-09-18):** the fixture keeps its
+  baked-in `/tmp` path because the Avro manifest lists and manifests carry absolute
+  paths in deflate blocks, so relocation without editing Avro bytes cannot read; the
+  in-process `Mutex` is now paired with a cross-process `File::lock` on a lock file held
+  for the fixture lifetime (released by the kernel if the process dies) with wipe-and-copy under the lock.
+  pins: test-hygiene-1/C-001.
   `fixtures/` (Spark-written on-disk Iceberg tables CI can adopt with no JVM),
   `call_orphan` (**MW-3**): full-directory before/after orphan safety and 24-hour cutoff fixtures,
   `ref_ddl` (**REF:** the write-to-branch/tag refusal names the `iceberg-datafusion`
@@ -470,6 +477,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ctas_staged_commit_state_unknown_surfaces_class_without_operation_id` pins the staged
   publish arm (`RequireExplicitLocation`) at `operation_id: None` with no drop.
   pins: ice-commit-unknown-1/C-001, C-003, C-004, C-005, C-008
+  **ICE-RTAS-OPS-2 round 2 (2026-09-18):** `service_managed_ctas` pins the snapshot
+  operations of the create-first arm against fixture `rtas_ops`:
+  `ctas_service_managed_rtas_creating_the_table_records_overwrite` (`[overwrite]`),
+  `ctas_service_managed_empty_rtas_records_delete_then_delete` (`[delete]`, then
+  `[delete, delete]` through the existing-table replace arm), and the control
+  `ctas_service_managed_plain_ctas_records_append` (`[append]`). The first two go red
+  when the `ctas.or_replace` branch in `execute_ctas_service_managed` is reverted.
+  pins: ice-rtas-ops-2/C-019
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).

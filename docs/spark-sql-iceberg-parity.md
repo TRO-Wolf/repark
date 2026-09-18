@@ -56,7 +56,7 @@ field are pinned JVM-free only; that is a property of what the live tier can exp
 lesser row.
 
 **Scope — swept on 2026-08-10 (method-bounded, not exhaustive).** It opened the same day with
-[ID-1](#id-1--a-quoted-identifier-resolves-case-sensitively) — quoted-identifier case folding,
+[ID-1](#id-1--quoted-identifiers-stay-exact-on-the-ansi-door-fold-on-the-spark-door) — quoted-identifier case folding,
 campaign decision D3 — as the first row admitted at seeding, alongside the rows the sixteen live
 citations forced, the cast-failure backlog row, and the four live-tier disclosures. Unit **G-5**
 then swept the pre-registry disclosures: a wider inventory over `python/repark/` and `crates/`
@@ -347,8 +347,10 @@ perfectly good read.
   is already the head it fast-forwards and both ids are equal. An unknown id refuses
   `Cannot cherry-pick unknown snapshot ID: <id>`; an already-ancestor id refuses
   `Cannot cherrypick snapshot <id>: already an ancestor`; a second pick of the same staged
-  snapshot refuses `Cannot cherrypick snapshot <id>: already picked to create ancestor <y>`;
-  a delete or static-overwrite staged snapshot refuses
+  snapshot refuses `Cannot cherrypick snapshot <id>: already picked to create ancestor <y>`
+  (an already-published WAP snapshot instead refuses Java's `Duplicate request to cherry
+  pick wap id that was published already: <wap-id>` — row `ICE-BRANCH-OPS-1-R-001`,
+  FIXED 2026-09-18); a delete or static-overwrite staged snapshot refuses
   `Cannot cherry-pick snapshot <id>: not append, dynamic overwrite, or fast-forward` — all
   with the fork's Java-identical text as the base `PySparkException` (RePark has no JVM, so
   the `Py4JJavaError` wrapper has no counterpart; the operative text is what the pins hold).
@@ -368,24 +370,22 @@ perfectly good read.
   row lineage (`next-row-id`, `_row_id`), pinned by the `ops3_*` steps.
   pins: ice-branch-ops-1/C-002, C-005, C-007, C-014, C-015, C-018
 
-#### ICE-BRANCH-OPS-1-R-001 — duplicate WAP cherry-pick message — **OPEN 2026-09-17**
+#### ICE-BRANCH-OPS-1-R-001 — duplicate WAP cherry-pick message — **FIXED 2026-09-18**
 
-- **repark** — cherry-picking an already-published WAP snapshot refuses with the fork's
-  already-picked message (`Cannot cherrypick snapshot <id>: already picked to create
-  ancestor <id>`, base `PySparkException`).
+- **repark** — cherry-picking an already-published WAP snapshot refuses with Java's
+  text (`Duplicate request to cherry pick wap id that was published already: <wap-id>`,
+  base `PySparkException`).
 - **Apache Spark** — the same call refuses `Duplicate request to cherry pick wap id
   that was published already: <wap-id>`.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`
-  `wap_pick_dup`, recorded beside the pin as `spark_error`.)*
+  `wap_pick_dup`.)*
 - **Pin** —
   `python/repark/tests/test_ice_branch_ops_1.py::test_live_branch_ops_adopted_shapes`
-  (`wap_pick_dup`: RePark's class and the fork's message prefix).
-- **Rationale** — OPEN (2026-09-17, Q-20b-4). Java validates the WAP duplicate ahead of
-  the already-picked dedup; the fork validates the other way round. Reordering that
-  refusal in RePark would re-implement table-format validation locally, which fork
-  rule 3 forbids — the fork still refuses the duplicate at commit, so no wrong answer
-  results, only the message differs. TRIGGER: the fork reorders its cherry-pick
-  validation (`F-CHERRYPICK-WAP-ORDER-1`).
+  (`wap_pick_dup`: RePark's class and Spark's message prefix).
+- **Rationale** — FIXED 2026-09-18 (RP-26) at fork #293 (`F-CHERRYPICK-WAP-ORDER-1`):
+  the fork validates the WAP duplicate first and refuses with Java's text, which
+  passes through RePark's `cherrypick_snapshot` unmapped. The recorder keeps the live
+  Spark error as the cell's `expect_error`, so a re-record reproduces the pin.
   pins: ice-branch-ops-1/C-013
 
 #### REF-7 — `set_current_snapshot` — **FIXED 2026-09-17**
@@ -750,12 +750,26 @@ perfectly good read.
 
 #### RTAS-OPS-1 — `CREATE OR REPLACE TABLE … AS SELECT` snapshot operation stamps
 
-- **repark** — CTAS then RTAS over the same table records `[append, append]`;
-  RTAS creating the table records `[append]`; an empty RTAS records no snapshot
-  at all. Both halves live in the fork's `StagedTableTransaction::materialize_pending`,
-  which runs `tx.fast_append()` unconditionally and returns the staged table
-  unchanged when `pending_data_files` is empty — no RePark-side patch can change
-  the recorded operation.
+- **repark** — CTAS then RTAS over the same table records `[append, overwrite]`;
+  RTAS creating the table records `[overwrite]`; an empty RTAS records `[delete]`
+  (twice: `[delete, delete]`) — on **both SQL doors** (ADR-0002 §3). The Spark door
+  (`crates/repark-spark/src/ctas.rs::execute_ctas`) and the native ANSI door
+  (`crates/repark-sql/src/create_table.rs::execute_staged_create`) set
+  `StagedTableTransaction::with_replace_write(true)` on both staged branches —
+  the `begin_replace` arm and the `begin_create` arm — exactly when the statement
+  carried `OR REPLACE` with a query (fork PR #290, RP-23 pin `4151b488`); plain
+  CTAS keeps `[append]`. **Service-managed catalogs** (Glue / S3 Tables,
+  `LocationPolicy::ServiceManagedLocation`): an RTAS over an existing table takes
+  the staged replace arm above; an RTAS that creates the table goes create-first
+  (`execute_ctas_service_managed` on the Spark door, `create_first_service_managed`
+  on the native door) and then commits through
+  `repark_iceberg::write::commit_replace_write` — the fork's public
+  `overwrite_files().overwrite_by_row_filter(AlwaysTrue).add_files(…).allow_empty_commit()`
+  — so it records `[overwrite]`, or `[delete]` when empty, like the staged arm;
+  plain service-managed CTAS keeps `commit_append` (`[append]`, or no snapshot
+  when empty). The column-def `CREATE OR REPLACE` form commits no snapshot on
+  either door: the log keeps only the pre-existing `append` and the table reads
+  zero rows.
 - **Apache Spark** — CTAS then RTAS records `[append, overwrite]`; RTAS creating
   the table records `[overwrite]`; an empty RTAS records `[delete]` (twice:
   `[delete, delete]`). The replace snapshot carries the added/total/manifest
@@ -769,17 +783,30 @@ perfectly good read.
 - **Pin** — `python/repark/tests/test_ice_rtas_byname_1.py::test_rtas_replace_records_overwrite`,
   `…::test_rtas_new_table_records_overwrite`,
   `…::test_rtas_empty_new_records_delete`,
-  `…::test_rtas_empty_twice_records_two_deletes`, all
-  `xfail(strict=True, reason="BLOCKED-ON-FORK F-RTAS-OPS-1")`
-  (pins: ice-rtas-byname-1/C-005a–d). The suite's fifth xfail,
+  `…::test_rtas_empty_twice_records_two_deletes`
+  (pins: ice-rtas-byname-1/C-005a–d), plus the `ice-rtas-ops-2` controls
+  `…::test_plain_ctas_records_append` (C-006),
+  `…::test_coldef_replace_commits_no_snapshot` (C-007) and
+  `…::test_rtas_replace_summary_keys` (C-008). Native door:
+  `crates/repark-sql/src/create_table/rtas_ops_tests.rs` (the four cells, the
+  plain-CTAS and column-def controls, and the service-managed new-table cells;
+  ice-rtas-ops-2/C-015–C-017, C-020). Spark-door service-managed:
+  `crates/repark-spark/src/tests/service_managed_ctas.rs::ctas_service_managed_rtas_creating_the_table_records_overwrite`,
+  `…::ctas_service_managed_empty_rtas_records_delete_then_delete`,
+  `…::ctas_service_managed_plain_ctas_records_append` (C-019). The suite's remaining xfail,
   `test_dataframe_writeto_appends_by_name`, belongs to fork ask
-  F-DML-FIELD-ID-1, not this row.
-- **Rationale** — OPEN, fork ask F-RTAS-OPS-1: replace mode with files must stage
-  an `overwrite` commit (not `fast_append`), replace mode with no files must
-  still commit one `delete` snapshot, and create mode keeps `append`; the RTAS
-  replace path must stay on the replace commit even when the table does not
-  exist yet (Spark records `overwrite` for that shape too). Plain-CTAS-empty is
-  unmeasured and unclaimed.
+  F-DML-FIELD-ID-1, not this row (orchestrator ruling Q-21c-1).
+- **Rationale** — FIXED by the fork's `with_replace_write` opt-in (F-RTAS-OPS-1)
+  plus the RePark-side call on both doors (ICE-RTAS-OPS-2 round 2 added the native
+  door and the service-managed new-table arms): replace mode with files stages
+  an `overwrite` commit (not `fast_append`), replace mode with no files still
+  commits one `delete` snapshot, and create mode keeps `append` unless the
+  statement carried `OR REPLACE` (Spark records `overwrite` for that shape too).
+  The column-def `CREATE OR REPLACE` form commits no snapshot in Spark on any of
+  the three measured shapes (replace with rows, replace of an empty table,
+  replace of a missing table) and is pinned as a control, not an RTAS cell
+  (measured on live Spark 4.1.2, 2026-09-17; transcript excerpt in the
+  `ice-rtas-ops-2` ledger). Plain-CTAS-empty is unmeasured and unclaimed.
 
 ### 2.4 Namespace and table listing statements
 
@@ -966,27 +993,152 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
 
 ## 3. Identifier resolution (DECLARED)
 
-### ID-1 — a quoted identifier resolves case-sensitively
+### ID-1 — quoted identifiers stay exact on the ANSI door, fold on the Spark door
 
 **The first row admitted at seeding (campaign decision D3, 2026-08-10).** It is first by
 *declaration*, not by position: §2's rows were back-filled from the sixteen citations that forced
-them, and the document is ordered by surface, never by date.
+them, and the document is ordered by surface, never by date. Unit ICE-MIXED-CASE-1 rewrote this
+row on 2026-09-16, and rewrote the Spark-door half again on 2026-09-17 (round 5, Q-20b-2):
+identifier normalization stays ON, so the fold rewrites the parsed statement and DML fragments
+to backticked stored-case spellings instead of switching the parser off. Round 21b
+(2026-09-17) closed V-01 / V-02 / V-04 / L-08 against a measured Spark recording and moved the
+ambiguity SQLSTATE to the measured `42704` (Q-21b-1).
 
-- **repark** — a *quoted* identifier is matched case-**sensitively** through both SQL doors:
-  neither the ANSI door's `"ID"` nor the Spark door's `` `ID` `` resolves against a column stored
-  as `id`; both refuse. *Unquoted* identifiers agree with Spark — a mixed-case unquoted reference
-  resolves to the same column through either door.
-- **Apache Spark** — resolves the backticked form case-**insensitively** by default
-  (`spark.sql.caseSensitive = false` applies to quoted names too), so `` `ID` `` finds `id`.
-  *(oracle: documented.)*
+- **repark, ANSI door** — a *quoted* identifier matches case-**sensitively**: `"ID"` never
+  resolves against a column stored as `id`; the refusal is a resolution failure naming `"ID"`.
+  Standard SQL keeps quoted names exact, and Spark is not the ANSI door's oracle (owner ruling
+  2026-08-12, Option A). *Unquoted* identifiers agree with Spark through either door.
+- **repark, Spark door, `caseSensitive=false` (default)** — every spelling resolves against
+  the stored case: unquoted mixed/lower/upper case and backticked wrong-case all find `userId`.
+  After a `FieldNotFound` the fold rewrites the parsed statement against every referenced
+  relation's stored fields, scope by scope (innermost query first, then outward), and replans
+  until a miss repeats. It covers the SELECT list, including a column aliased to its own
+  case-variant spelling (`SELECT userId AS USERID`, `USERID AS USERID`); WHERE; GROUP BY /
+  ORDER BY / HAVING (a reference that names a SELECT alias is left on the alias); JOIN `USING`
+  in every statement that carries a query (`INSERT … SELECT … JOIN … USING`); and UPDATE /
+  INSERT targets. It also covers DML fragments (`MERGE ON` / `SET` / `INSERT`, identity DELETE /
+  UPDATE selections). It emits backticked stored-case spellings, because double-quoted spans
+  are string literals on this door (ID-2) and a bare `t."userId"` does not parse in the session
+  dialect. An outer spelling is never rewritten into an inner scope. A reference to a name with
+  an ASCII case twin in its input refuses, exact case included (row
+  [ID-1a](#id-1a--ascii-case-twin-columns-refuse-every-reference)). Output columns keep stored
+  names where Spark echoes the requested spelling (pinned, not converged).
+- **repark, Spark door, `caseSensitive=true` (DECLARED split)** — resolution is exact, and the
+  parser fold is lossy: an unquoted mixed-case spelling arrives lowercased, so even exact-case
+  unquoted `userId` refuses where Spark resolves it. Backticked exact-case (`` `userId` ``)
+  resolves. The refusal is loud (`AnalysisException`, `No field named`), never a silent wrong
+  answer; the backticked success answers the recorded `true` oracle rows.
+- **Apache Spark** — resolves every spelling case-**insensitively** by default
+  (`spark.sql.caseSensitive = false` applies to quoted names too), so `` `ID` `` finds `id`;
+  under `true` both quoted and unquoted exact-case resolve.
+  *(oracle: recorded fixture `python/repark/tests/ice_mixed_case_1_spark_oracle.json`, Spark 4.1.2;
+  its `measured_21b` block is the run-21b recording of the V-01 / V-02 / V-04 / L-08 cells,
+  PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17.)*
 - **Pin** — `crates/repark-sql/tests/cross_door.rs::cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`
-- **Rationale** — DECLARED, not fixed. The behavior is inherited engine-wide from stock DataFusion
-  resolution; it is not introduced by either door and the doors do not disagree with each other.
-  Making quoted resolution case-insensitive means changing identifier resolution engine-wide for
-  marginal migration value, which is a deliberate decision rather than a bug fix. Revisit only if
-  a workload that actually depends on it turns up. The pin is a **declared-divergence test**: it
-  names this section, and it reds if either half of the claim stops being true — including if the
-  divergence silently disappears.
+  (ANSI refuses, Spark resolves) plus `python/repark/tests/test_ice_mixed_case_1.py` (both
+  doors, both flag values, DML fragments, the ambiguity shape, the backticked-`true` success,
+  the unquoted-`true` declared refusal, and the live tier). The run-21b cells are
+  `test_measured_query_cells_answer_spark[V01_* / V02_* / V04_join_using_select]` and
+  `test_join_using_insert_folds_and_writes_the_left_columns`, plus the Rust
+  `crates/repark-core/src/column_resolution/tests.rs` `v01_*`, `v02_*`, `v04_*`.
+  `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) is
+  `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1: the fold plans, but the right-side join
+  column of an INSERT from two Iceberg scans is written NULL (pre-existing on `origin/main`).
+- **Rationale** — FIXED on the Spark door under `false` (ICE-MIXED-CASE-1, 2026-09-17); the
+  `true` unquoted-exact refusal and the stored-name output echo are DECLARED splits with pins.
+  INTENDED split on the ANSI door per G11 Option A. The old declared-divergence pin reddened
+  exactly as designed when the Spark half converged, and this row was rewritten in the same
+  change.
+
+### ID-1a — ASCII case-twin columns refuse every reference
+
+Unit ICE-MIXED-CASE-1, round 21b (2026-09-17), rulings Q-21b-1 and Q-21b-2 from the measured
+Spark cells.
+
+- **repark, Spark door, `caseSensitive=false`** — when a node's input holds two fields that
+  differ only by ASCII case (`id`, `ID`), any written reference to either refuses. That covers
+  bare and qualified references, and exact case too (`SELECT id` refuses). The error is
+  `[AMBIGUOUS_REFERENCE] Reference <ref> is ambiguous, could be: [<options>]. SQLSTATE: 42704`,
+  with one option per matching field, each in the requested spelling. A qualified reference
+  prints `` `t`.`ID` `` and its options `` `t`.`ID` ``. A bare reference's options carry the
+  relation as written in FROM (`` `sc`.`ns`.`tw`.`ID` ``); a temp view in the session default
+  schema reads bare (`` `twv`.`ID` ``). The same sentence covers twins across joined relations
+  (`amb_l.a` / `amb_r.A`), and write-side twin targets carry the same class and SQLSTATE.
+  Round 2 (2026-09-18): a correlated reference from inside a subquery
+  (`EXISTS (… WHERE o.name = CAST(t.ID AS STRING))`) is audited against the outer scope's
+  fields and refuses the same way. A qualified reference that names one field
+  (`i.USERID` beside `j.userId`) is not refused just because a bare spelling of the name is
+  written somewhere else in the statement.
+- **repark, `SELECT *` over a twin frame (DECLARED, 2026-09-18, Q-21b-12)** — `SELECT * FROM twv`
+  on a temp view of ``SELECT 1 AS id, 0 AS `ID` `` answers columns `['id', 'ID']`, row `[1, 0]`.
+  Spark refuses both the star over its twin table and the twin view's creation with
+  `[COLUMN_ALREADY_EXISTS]` / `42711`. A star refusal in the Spark door's resolution module was
+  built and measured. It also refused the DataFrame door's `filter` and `table` lowerings on
+  case-colliding frames, which Spark answers (`test_filter_predicate_rewrite.py`, five cells), so
+  it did not land. RePark refuses the unquoted view DDL (`… 1 AS id, 2 AS ID`) with the engine's
+  `Projections require unique expression names`, so the refusal matches Spark there but the
+  sentence does not.
+- **repark, Iceberg table carrying twins (DECLARED)** — a twin Iceberg schema cannot be
+  created, and cannot be adopted either. `CREATE TABLE … (`id` INT, `ID` INT)` and
+  `register_table` on Spark's own twin metadata both refuse loud with `DataInvalid => Cannot
+  build lower case index: id and ID collide` (the fork's schema index), before any reference is
+  resolved. Every L-08 statement on such a table therefore refuses at adoption rather than with
+  Spark's sentence, and `SELECT *` refuses at adoption rather than with
+  `[COLUMN_ALREADY_EXISTS]`. The refusal is loud, never a silent answer.
+- **Apache Spark** — Iceberg's Java API `updateSchema().addColumn("ID", …)` on a table with
+  `id` is allowed (schema `['id', 'ID']`). `SELECT t.ID FROM tw AS t` →
+  `` [AMBIGUOUS_REFERENCE] Reference `t`.`ID` is ambiguous, could be: [`t`.`ID`, `t`.`ID`]. SQLSTATE: 42704 ``.
+  `SELECT ID FROM tw` →
+  `` … Reference `ID` is ambiguous, could be: [`sc`.`ns`.`tw`.`ID`, `sc`.`ns`.`tw`.`ID`]. SQLSTATE: 42704 ``,
+  and `SELECT id` gives the same sentence in `id`. `SELECT * FROM tw` →
+  `` [COLUMN_ALREADY_EXISTS] The column `id` already exists. … SQLSTATE: 42711 ``, and so does
+  `CREATE OR REPLACE TEMP VIEW twv AS SELECT 1 AS id, 2 AS ID`.
+  *(oracle: `python/repark/tests/ice_mixed_case_1_spark_oracle.json` `measured_21b`, PySpark
+  4.1.2 + Iceberg 1.11.0, Java 17, hadoop catalog, 2026-09-17; Spark's twin metadata is
+  committed as `python/repark-parity/fixtures/torture/data/ice_mixed_case_1/twin_v3.metadata.json`;
+  the view cell is `measured_21b_r2` `N03_star_twin_view_create`, `probe_mc2.py`, 2026-09-18.)*
+- **Pin** — `python/repark/tests/test_ice_mixed_case_1.py::test_case_twin_reference_is_ambiguous_exact_or_not`
+  (the four reference forms on a twin frame, full sentence), `…::test_sql_door_ambiguous_reference_matches_spark_shape`
+  (the recorded cross-relation sentence up to `SQLSTATE: 42704`),
+  `…::test_measured_case_twin_table_refuses_at_adoption[L08_*]` (the declared adoption
+  refusal for all four measured cells); Rust `crates/repark-core/src/column_resolution/tests.rs`
+  `l08_correlated_reference_to_a_case_twin_is_ambiguous`,
+  `l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere`,
+  `l08_bare_twin_options_carry_the_full_relation_name`, `n03_star_over_a_case_twin_answers_both_columns_declared`,
+  `case_only_collision_raises_the_spark_sentence`, `join_collision_on_bare_reference_raises`;
+  `crates/repark-iceberg/src/write/name_resolution.rs::write_side_case_twins_are_ambiguous`;
+  the declared star answer `…::test_star_over_a_case_twin_frame_answers_both_columns_declared`.
+  pins: ice-mixed-case-1/C-016, C-020
+- **Rationale** — FIXED for references on the Spark door. DECLARED for twin Iceberg tables:
+  loading a twin schema is table-format behavior that lives in the fork (fork rule), not a
+  RePark-side patch. DECLARED for a star over a twin frame. Spark's refusal is measured, but the
+  refusal RePark could make here would also refuse DataFrame calls that Spark answers.
+
+### ID-1b — a correlated outer column in a subquery's SELECT list refuses (DECLARED)
+
+Unit ICE-MIXED-CASE-1, run 21b round 2 (2026-09-18), ruling Q-21b-11.
+
+- **repark, Spark door** — `SELECT USERID FROM mc WHERE EVENTNAME IN (SELECT EVENTNAME FROM
+  other)`, where `other` has no `eventName`, resolves the inner `EVENTNAME` to the outer
+  `mc.eventName` (a correlated `outer_ref`, as Spark does). Then it refuses at physical planning
+  with `UnsupportedOperationException: … Physical plan does not support logical expression
+  InSubquery(…)`. The exact (`eventName`) and lower (`eventname`) spellings refuse the same way.
+  So does an all-lowercase schema, where the case fold never runs, because the engine does not
+  decorrelate an outer reference in an IN-subquery projection. A scalar subquery reading the
+  outer column in its SELECT list (`SELECT userId, (SELECT max(EVENTNAME) FROM other) AS m FROM
+  mc`) refuses with `… does not support logical expression ScalarSubquery(…)` in every spelling.
+  Loud and typed, never a silent answer.
+- **Apache Spark** — the three IN spellings answer `[[1], [2]]`, with columns `USERID`, `userId`
+  and `userid`. The scalar cell refuses `[UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE]
+  … Expressions referencing the outer query are not supported outside of WHERE/HAVING clauses …
+  SQLSTATE: 0A000`. *(oracle: `python/repark/tests/ice_mixed_case_1_spark_oracle.json`
+  `measured_21b_r2`, `probe_mc2.py`, PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-18.)*
+- **Pin** — `python/repark/tests/test_ice_mixed_case_1.py::test_correlated_in_subquery_select_list_refuses_where_spark_answers`
+  (three spellings) and `…::test_correlated_scalar_subquery_select_list_refuses_like_spark`.
+  pins: ice-mixed-case-1/C-019
+- **Rationale** — DECLARED. The name resolution matches Spark, and the refusal is an engine
+  decorrelation gap that predates this unit and has nothing to do with case. Answering these cells
+  is a planner change outside the case-fold unit. The scalar cell refuses on both engines.
 
 > **G11 closed: not parity — correctness (2026-08-12, Y-10 / #67).** Spark is not the ANSI
 > door's oracle (owner ruling 2026-08-12, Option A). The ANSI door serves standard SQL;
@@ -994,7 +1146,7 @@ them, and the document is ordered by surface, never by date.
 > `crates/repark-sql/tests/cross_door.rs` (`cross_door_integer_division_*`,
 > `cross_door_*_div_by_zero_*`, `cross_door_order_by_*`). Six ANSI-door standard-SQL value
 > pins live in `crates/repark-sql/tests/ansi_door_values.rs`. Identifier case folding remains
-> this section's [ID-1](#id-1--a-quoted-identifier-resolves-case-sensitively) (cited, not
+> this section's [ID-1](#id-1--quoted-identifiers-stay-exact-on-the-ansi-door-fold-on-the-spark-door) (cited, not
 > duplicated).
 >
 > **F-Y10-1 — integer arithmetic overflow raises where Spark raises — FIXED (2026-08-30).**
@@ -2935,9 +3087,10 @@ the pin rather than obeying it.
   nested struct fields (`ALTER COLUMN s.b FIRST`, short sibling `ALTER COLUMN s.b AFTER a`
   resolved in the mover's struct) and for partition-source columns alike. A move that
   restores a previously seen order points the current schema id back at the original schema,
-  as Spark does. A move to the current position keeps the order and the schema id, matching
-  Spark, except that RePark still writes a metadata file where Spark commits nothing (OPEN
-  residue [ICE-COLUMN-REORDER-1-R-001](#ice-column-reorder-1-r-001--open-measured-2026-09-17-a-no-op-column-move-writes-a-metadata-file)).
+  as Spark does. A move to the current position keeps the order and the schema id and,
+  like Spark, commits nothing (residue
+  [ICE-COLUMN-REORDER-1-R-001](#ice-column-reorder-1-r-001--fixed-2026-09-18-a-no-op-column-move-commits-nothing),
+  FIXED 2026-09-18).
   A dotted `AFTER` reference (`AFTER s.a`) refuses with Spark's `[PARSE_SYNTAX_ERROR] …
   SQLSTATE: 42601`; a cross-struct reference (`s.b AFTER id`) refuses
   `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` naming `` `s`.`id` `` with the top-level suggestions,
@@ -2959,7 +3112,7 @@ the pin rather than obeying it.
   `python/repark/tests/test_ice_column_reorder_1_truth.json`.)*
 - **Pin** — `python/repark/tests/test_ice_column_reorder_1.py` (17 offline vs the truth JSON on
   the facade SQL door with DataFrame-door reads, incl. the short-sibling move, the
-  cross-struct and dotted-`AFTER` refusals, and a strict-xfail no-op-metadata pin; 17 live
+  cross-struct and dotted-`AFTER` refusals, and the no-op-metadata pin; 17 live
   replaying Spark and cross-reading both engines' moved tables),
   `crates/repark-sql/tests/alter_column_move.rs::alter_column_move_reorders_and_noop_writes_no_metadata`
   (ANSI door end to end, incl. the dotted-`AFTER` parse refusal) and the
@@ -2972,21 +3125,19 @@ the pin rather than obeying it.
   `UpdateSchema`, with single-catalog-load doors and an `ALTER`-prefix fast path on the
   intercepts.
 
-### ICE-COLUMN-REORDER-1-R-001 — OPEN (measured 2026-09-17): a no-op column move writes a metadata file
+### ICE-COLUMN-REORDER-1-R-001 — FIXED 2026-09-18: a no-op column move commits nothing
 
 - **repark** — `ALTER TABLE t ALTER COLUMN id FIRST` on `(id, a, b)` keeps the order and the
-  current schema id (the fork reuses the identical schema by content), but still writes a new
-  metadata file.
+  current schema id and writes no new metadata file, matching Spark.
 - **Apache Spark** — Java's `UpdateSchema.commit` skips the commit when the new schema matches
   the current one: no new schema, no new metadata file. *(oracle: truth cases `noop_first_v2`
   / `noop_after_v2`, metadata version and schema id unchanged.)*
 - **Pin** —
   `python/repark/tests/test_ice_column_reorder_1.py::test_noop_moves_write_no_metadata_file`
-  (`xfail(strict=True, reason="ICE-COLUMN-REORDER-1-R-001")`).
-- **Rationale** — OPEN, filed 2026-09-17 from the round-2 review. Metadata-only: order, ids,
-  rows and the schema id all match Spark. The TRIGGER is fork **F-UPDATE-SCHEMA-SAME-1**: a
-  `sameSchema` short-circuit in the Rust `UpdateSchema` action or commit path that skips the
-  commit when the rebuilt schema matches the current one, mirroring Java.
+  plus `crates/repark-sql/tests/alter_column_move.rs` (ANSI door: the no-op move leaves the
+  metadata-file count unchanged).
+- **Rationale** — FIXED 2026-09-18 (RP-26) at fork #293 (**F-UPDATE-SCHEMA-SAME-1**): a
+  schema update that changes nothing commits nothing, mirroring Java.
 
 ### DBT-QUALIFY-1 — a two-part name resolves for `SELECT` but not for `DESCRIBE` or `ALTER TABLE`
 
@@ -3583,6 +3734,24 @@ the pin rather than obeying it.
 > re-verifying each against frozen `d9a7391` (PRs #87–#91). Classification:
 > [`task/s5-v-landing-ledger.md`](../task/ledgers/archive/2026-08/2026-08-13-s5-v-landing-ledger.md). TZ-6 / TZ-7 FIXED
 > notes were already in-file from #85 (not duplicated). No new `live-mirror:` tokens.
+
+### TZ-9 — `current_date` answers the UTC date, not the session-zone date
+
+- **repark** — `SELECT current_date` answers the UTC calendar date whatever
+  `spark.sql.session.timeZone` holds: under `Pacific/Kiritimati` (UTC+14) on
+  2026-09-18 the engine answered `2026-09-18` while the session-zone date was
+  already `2026-09-19` (measured in-repo on the release module, no JVM).
+- **Apache Spark** — answers `current_date` in the session time zone: PySpark 4.1.2 measured
+  2026-09-18 13:03 UTC answered `2026-09-19` under `Pacific/Kiritimati` and `2026-09-18` under
+  `UTC` and `Etc/GMT+12`, each equal to that zone's calendar date (run 22b probe `probe_tz9.py`).
+- **Pin** — `python/repark/tests/test_spark_sql_grammar_1.py::test_q14_current_date_answers_the_session_zone_date`
+  (`xfail(strict=True)` over `Pacific/Kiritimati` and `Etc/GMT+12`, midnight-race
+  guarded); `…::test_q14_current_date_bare_and_paren` now compares against the
+  session's configured zone instead of the host-local date.
+- **Rationale** — OPEN (2026-09-18), intent to FIX. Product defect, not a test
+  bug: the date builtin does not read the session zone. Test-only unit
+  TEST-HYGIENE-1 files it here and holds it red-on-purpose; the engine fix is a
+  later unit.
 
 ### FN-1 — `element_at` out of range is NULL under ANSI
 
@@ -5889,8 +6058,8 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 > **FIXED 2026-09-17 (fork #286 at pin `75da2b58`).** A commit whose next metadata
 > location is a Hadoop `vN(.gz).metadata.json` that already exists fails with retryable
 > `CatalogCommitConflicts` after the retry budget, and the existing file stays
-> byte-identical. Every later *snapshot* commit from the stale handle stays wedged-loud;
-> a stale `CREATE OR REPLACE` is the exception (row `ICE-HADOOP-VN-1-R-001` below).
+> byte-identical. Every later commit from the stale handle stays wedged-loud, including
+> a stale `CREATE OR REPLACE` (row `ICE-HADOOP-VN-1-R-001` below, FIXED 2026-09-18).
 > Recovery is a fresh catalog handle registered at the newest version file.
 
 - **repark** — two memory catalogs adopt a Spark-written `v2` table; catalog one's
@@ -5907,9 +6076,8 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   wedges later commits loud the same way (fork D-2); Spark lists past it and continues,
   so on a shared table the orphan is visible to Spark but harmless. A stale
   `CREATE OR REPLACE` (SQL door, `writeTo().replace()`, `writeTo().createOrReplace()`)
-  is the exception to the wedge: it succeeds into fresh-uuid lineage
-  (`00003-<uuid>` + `00004-<uuid>` per replace), the winner's bytes intact, the replace
-  visible only to the stale handle — row `ICE-HADOOP-VN-1-R-001` below.
+  meets the same wedge: it raises `CatalogCommitConflicts` with no uuid file minted —
+  row `ICE-HADOOP-VN-1-R-001` below.
 - **Apache Spark** — never raises on this path: a 400k-row INSERT racing a RePark commit
   scan-forwards and commits the next version, and a planted next-version file does not
   fail the INSERT either — Spark lists the metadata directory and continues. Java's
@@ -5928,40 +6096,35 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `stale_hadoop_pointer_stays_wedged_loud`)
 - **Rationale** — the V2-20c silent-overwrite shape is closed at the fork seam (exclusive
   `vN` create) and pinned at the RePark surface (loud conflict, nothing lost). The
-  remaining deltas are declared: the stale-read shape (pre-existing, catalog-agnostic),
-  Spark's scan-forward versus RePark's loud refusal (both lossless), and the stale-replace
-  split-brain (`ICE-HADOOP-VN-1-R-001`, open).
+  remaining deltas are declared: the stale-read shape (pre-existing, catalog-agnostic)
+  and Spark's scan-forward versus RePark's loud refusal (both lossless); the stale-replace
+  conflict (`ICE-HADOOP-VN-1-R-001`) is FIXED 2026-09-18.
   pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-007, C-008
 
-### ICE-HADOOP-VN-1-R-001 — a stale replace split-brains into uuid lineage (open)
+### ICE-HADOOP-VN-1-R-001 — a stale replace raises conflict, no uuid file — **FIXED 2026-09-18**
 
-> **OPEN residue, filed 2026-09-17.** A stale `CREATE OR REPLACE TABLE … AS` /
+> **FIXED 2026-09-18 (RP-26) at fork #293.** A stale `CREATE OR REPLACE TABLE … AS` /
 > `writeTo().createOrReplace()` / `writeTo().replace()` on an adopted Hadoop `vN` table
-> writes a fresh-uuid `00003-<uuid>.metadata.json` (plus a second uuid file per replace)
-> and succeeds on the stale catalog — split-brain, winner bytes intact, the replace
-> invisible to Spark and to the winning catalog. The fix belongs in the fork
-> (fork trigger `F-HADOOP-VN-REPLACE-1`: `begin_replace` keeps the Hadoop `vN` naming
-> and exclusive-creates it); RePark carries no local patch for it.
+> stages `v(N+1)` and exclusive-creates it once at commit, so the stale replace fails
+> with retryable `CatalogCommitConflicts`, the winner's bytes stay intact and no uuid
+> file is minted (fork `F-HADOOP-VN-REPLACE-1`).
 
-- **repark** — today's behavior, pinned exactly: after catalog one commits `v3`, the
-  stale SQL-door replace lands `[(99, 'rtas')]` on the stale handle with
-  `v1…v3` plus two uuid files in the metadata listing and `v3` bytes unchanged; the
-  DataFrame door does the same per `replace()` call (`[(98, 'df-rpl')]`) and per
-  `createOrReplace()` call (`[(97, 'df-cor')]`). The target is a typed
-  `CatalogCommitConflicts` refusal with no uuid file, pinned red-when-fixed.
+- **repark** — after catalog one commits `v3`, the stale SQL-door replace and each
+  stale DataFrame-door replace (`replace()`, `createOrReplace()`) raise base
+  `PySparkException` with the `CatalogCommitConflicts`-leading message, the metadata
+  listing stays `v1…v3` and `v3` bytes unchanged.
 - **Apache Spark** — Spark's own `CREATE OR REPLACE` on the shared table is healthy:
-  after a RePark commit it writes `v4` in Hadoop naming and reads the new rows only.
+  after a RePark commit it writes `v4` in Hadoop naming and reads the new rows only,
+  and after a stale RePark replace raises, Spark still reads the winner's rows.
 - **Pin** —
-  `python/repark/tests/test_ice_hadoop_vn_1.py::test_stale_replace_splits_brain`,
-  `::test_stale_replace_doors_split_brain` (today's behavior),
-  `::test_stale_replace_raises_conflict`, `::test_stale_df_replace_raises_conflict`
-  (`xfail(strict=True)`, the target),
-  `::test_live_replace_split_brain_spark_reads_winner`,
+  `python/repark/tests/test_ice_hadoop_vn_1.py::test_stale_replace_raises_conflict`,
+  `::test_stale_df_replace_raises_conflict`,
+  `::test_live_stale_replace_conflicts_spark_reads_winner`,
   `::test_live_spark_replace_after_repark_commit` (oracle
   `spark_replace_after_repark`)
-- **Rationale** — every snapshot commit from the stale pointer is loud except this one;
-  the row stays open until the fork trigger lands, at which point the `xfail` pins go
-  XPASS and force the flip.
+- **Rationale** — every commit from the stale pointer is loud now; the staged replace
+  keeps the Hadoop `vN` naming and exclusive-creates it at commit, closing the
+  split-brain at the fork seam.
   pins: ice-hadoop-vn-1/C-008
 
 ### S3T-1 — S3 Tables `register_table` is a dated service gap (fork R126)

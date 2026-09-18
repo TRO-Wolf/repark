@@ -38,6 +38,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   are in force. **IO-ORC-1 (2026-09-16):** `orc-rust 0.8.0` (`default-features = false`, sync
   reader) in `[workspace.dependencies]` for the read-only ORC scan (owner ruling Q-15B-1),
   plus the codec crates the scan decodes with (DEFLATE/zlib, LZ4, LZO, Snappy, Zstandard).
+  **ICE-MIXED-CASE-1 run 22b (2026-09-18, Q-22b-MC-1):** `stacker 0.1.25` — already in the lock
+  under DataFusion's `recursive` — is declared for `repark-core`'s column repair, which runs
+  each poll of Spark-door planning on a stack grown to the statement's nesting depth.
   The iceberg* `[patch.crates-io]` family is a single shared `rev` (five lines);
   each dedicated bump is one row in the [docs/fork-sync.md](docs/fork-sync.md) pin-history table.
   **RP-1 (2026-08-23):** `5e7b2e4` (F-0 / F-1 / F-2 / F-8a); DataFusion family frozen.
@@ -67,6 +70,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **RP-23 (2026-09-17):** `4151b488` (F-EVO-SCAN-1 `#289` — scans and DML after ADD/RENAME COLUMN bind the current schema; F-RTAS-OPS-1 `#290` — a staged replace can commit overwrite/delete like Java's RTAS; F-TARGET-FILE-SIZE-1 `#288` — the rolling writer checks the target every thousand rows, dictionary-OFF engine writes, new tables stamp zstd).
   **RP-24 (2026-09-17):** `8fb44a39` (F-OCC-SCOPED-1 `#291` — serializable conflict validation is filter-scoped: every concurrently added or deleted file is tested against the operation's conflict-detection filter through its own spec's partition projection before inclusive metrics, as Java's `ManifestGroup.filterData`, and a disjoint-partition concurrent commit rebases and retries instead of aborting; the `AlwaysTrue` default is unchanged).
   **RP-25 (2026-09-18):** `64705c99` (F-NESTED-EVO-1 `#292` — nested struct/list/map children project by field id; a child the file lacks fills from its `initial-default` or NULL, a required one without a default is refused, identical nested columns pass through, and a struct that mixes stamped and unstamped nested ids fails loud).
+  **RP-26 (2026-09-18):** `8477b249` (F-HADOOP-VN-REPLACE-1 `#293` — a stale staged Hadoop replace conflicts instead of splitting the brain; F-CHERRYPICK-WAP-ORDER-1 `#293` — a duplicate WAP cherry-pick refuses with Java's text; F-UPDATE-SCHEMA-SAME-1 `#293` — a no-op schema update commits nothing).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
 - `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
   itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).

@@ -372,6 +372,7 @@ async fn execute_predicate_dml_deletes_the_newest_id_on_a_192_manifest_table() {
             target_alias: "t".to_string(),
             selection_sql: format!("id = {NEWEST_ID}"),
             assignments: None,
+            case_insensitive: true,
         },
     )
     .await

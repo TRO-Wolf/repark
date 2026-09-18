@@ -1,5 +1,5 @@
 use super::super::{MergeSql, row_lineage};
-use super::merge::{spec, update};
+use super::helpers::{spec, update};
 
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 use iceberg::metadata_columns::{

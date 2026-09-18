@@ -13,14 +13,21 @@ use iceberg::{NamespaceIdent, TableIdent};
 
 use super::super::insert::insert_projection_with_defaults;
 use super::super::{InsertAction, InsertClause};
-use super::merge::{merge_sql, spec};
+use super::helpers::spec;
+use super::merge::merge_sql;
 use crate::write::insert_defaults::{ColumnDefaults, column_defaults};
 
 pub(super) fn insert_projection(
     clause: &InsertClause,
     write_schema: &ArrowSchema,
+    case_insensitive: bool,
 ) -> Result<String> {
-    insert_projection_with_defaults(clause, write_schema, &ColumnDefaults::new())
+    insert_projection_with_defaults(
+        clause,
+        write_schema,
+        case_insensitive,
+        &ColumnDefaults::new(),
+    )
 }
 
 fn insert(columns: &[&str], values: &[&str]) -> InsertClause {
@@ -92,14 +99,19 @@ fn insert_projection_fills_write_default() {
         insert_projection_with_defaults(
             &insert(&["id", "name"], &["s.id", "s.name"]),
             &write_schema,
+            true,
             &defaults
         )
         .unwrap(),
         "(s.id) AS `id`, (s.name) AS `name`, (CAST(5 AS INT)) AS `c`"
     );
-    let err =
-        insert_projection_with_defaults(&insert(&["name"], &["s.name"]), &write_schema, &defaults)
-            .unwrap_err();
+    let err = insert_projection_with_defaults(
+        &insert(&["name"], &["s.name"]),
+        &write_schema,
+        true,
+        &defaults,
+    )
+    .unwrap_err();
     assert!(err.to_string().contains("required column `id`"));
 }
 

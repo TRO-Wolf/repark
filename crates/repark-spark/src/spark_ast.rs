@@ -86,7 +86,12 @@ async fn execute_passthrough_inner(
         }
         _ => {}
     }
-    let plan = state.statement_to_plan(statement).await?;
+    let plan = repark_core::column_resolution::plan_statement_with_column_repair(
+        &state,
+        statement,
+        crate::spark_door_case_insensitive(state.config().options()),
+    )
+    .await?;
     // G5b: a unit-less RANGE offset over datetime is Spark refusal or DAYS, never silent MONTHS.
     let plan = if may_have_bare_range_bound {
         conform_temporal_range_frames(&state, sql, &dialect, plan).await?
@@ -188,7 +193,8 @@ async fn try_execute_identity_dml(
     catalogs: &CatalogRegistry,
     inner: &Statement,
 ) -> Result<Option<DataFrame>> {
-    let (allowed, kind, object_name) = if let Some(allowed) =
+    let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
+    let (mut allowed, kind, object_name) = if let Some(allowed) =
         repark_iceberg::write::predicate_dml::try_allowed_delete_in(inner)?
     {
         let object_name = match inner {
@@ -224,10 +230,50 @@ async fn try_execute_identity_dml(
     } else {
         return Ok(None);
     };
+    allowed.spec.case_insensitive = case_insensitive;
+    if case_insensitive {
+        canonicalize_identity_selection(catalogs, &allowed.catalog_name, &mut allowed.spec).await?;
+    }
     crate::refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, kind).await?;
     let handle = crate::catalog_handle(catalogs, &allowed.catalog_name)?;
     repark_iceberg::write::predicate_dml::execute_predicate_dml(ctx, handle, &allowed.spec).await?;
     Ok(Some(ctx.read_empty()?))
+}
+
+async fn canonicalize_identity_selection(
+    catalogs: &CatalogRegistry,
+    catalog_name: &str,
+    spec: &mut repark_iceberg::write::predicate_dml::PredicateDmlSpec,
+) -> Result<()> {
+    let handle = crate::catalog_handle(catalogs, catalog_name)?;
+    let table = handle
+        .load_table(&spec.target)
+        .await
+        .map_err(crate::iceberg_err)?;
+    let schema = iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
+        .map_err(crate::iceberg_err)?;
+    let fields = schema
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect::<Vec<_>>();
+    let scopes = [(spec.target_alias.as_str(), fields.as_slice())];
+    let home = Some(spec.target_alias.as_str());
+    spec.selection_sql = repark_core::column_resolution::rewrite_fragment_case(
+        &spec.selection_sql,
+        &scopes,
+        true,
+        home,
+    )?;
+    if let Some(assignments) = spec.assignments.as_mut() {
+        for (target, value) in assignments {
+            *target =
+                repark_core::column_resolution::rewrite_fragment_case(target, &scopes, true, home)?;
+            *value =
+                repark_core::column_resolution::rewrite_fragment_case(value, &scopes, true, home)?;
+        }
+    }
+    Ok(())
 }
 
 /// Apply Spark's bare-`RANGE`-offset rules to a freshly-planned statement (G5b).
@@ -280,7 +326,12 @@ async fn restate_range_frames_and_replan(
         window_range::quote_unquoted_interval_range_bounds(inner);
         rewrite(inner);
     }
-    state.statement_to_plan(restated).await
+    repark_core::column_resolution::plan_statement_with_column_repair(
+        state,
+        restated,
+        crate::spark_door_case_insensitive(state.config().options()),
+    )
+    .await
 }
 
 /// Inject Spark null-placement defaults into every ORDER BY whose placement is unspecified.

@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/write/predicate_dml
 
+ICE-MIXED-CASE-1 (2026-09-17): predicate DML delegates column resolution to the shared scope helpers so UPDATE/DELETE WHERE folds case exactly like the SELECT door. pins: ice-mixed-case-1/C-003
+
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
 
 ## Purpose

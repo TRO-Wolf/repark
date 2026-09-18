@@ -9,8 +9,9 @@ use iceberg::table::Table;
 
 use super::{
     FILE_PATH_COL, MergeSpec, MergeSql, POS_COL, iceberg_err, quote_ident,
-    resolve_schema_field_name, store_assignment_then_sql,
+    store_assignment_then_sql,
 };
+use crate::write::name_resolution::{dedup_key, resolve_arrow_field, resolve_write_column};
 
 /// One `WHEN NOT MATCHED BY SOURCE [AND …] THEN UPDATE/DELETE` clause.
 #[derive(Debug, Clone)]
@@ -229,7 +230,9 @@ pub(super) fn update_assignment_probe_sql(
             continue;
         };
         for (column, expr) in assignments {
-            let Some(canonical) = resolve_schema_field_name(write_schema, column) else {
+            let Some(canonical) =
+                resolve_arrow_field(write_schema, column, sql.spec.case_insensitive)
+            else {
                 return Err(DataFusionError::Internal(format!(
                     "MERGE UPDATE SET column `{column}` missing after validate_update_columns \
                      (executor bug)"
@@ -261,15 +264,13 @@ pub(super) fn validate_update_columns(spec: &MergeSpec, write_schema: &ArrowSche
         };
         let mut seen = std::collections::HashSet::with_capacity(assignments.len());
         for (column, _) in assignments {
-            let Some(canonical) = resolve_schema_field_name(write_schema, column) else {
+            let canonical =
+                resolve_write_column(write_schema, column, spec.case_insensitive, || {
+                    format!("MERGE UPDATE SET column `{column}` does not exist in the target table")
+                })?;
+            if !seen.insert(dedup_key(&canonical, spec.case_insensitive)) {
                 return Err(DataFusionError::Plan(format!(
-                    "MERGE UPDATE SET column `{column}` does not exist in the target table"
-                )));
-            };
-            if !seen.insert(canonical.to_ascii_lowercase()) {
-                return Err(DataFusionError::Plan(format!(
-                    "MERGE UPDATE SET names column `{column}` more than once \
-                     (case-insensitive)"
+                    "MERGE UPDATE SET names column `{column}` more than once"
                 )));
             }
         }

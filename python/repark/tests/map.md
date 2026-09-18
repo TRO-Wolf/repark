@@ -1,5 +1,9 @@
 # map — python/repark/tests
 
+ICE-MIXED-CASE-1 (2026-09-17): `test_ice_mixed_case_1.py` pins the Spark-door case-insensitive column resolution cells against `ice_mixed_case_1_spark_oracle.json` (live PySpark 4.1.2 recording); `_record_ice_mixed_case_1.py` is the recorder driver, not a collected test. Round 3: the WHERE-cell ids read `MC-WHERE-*` (typos gate); the record script stays ruff-clean; the moved-symbol baseline carries the new `_SQLCONF_DEFAULTS` hash for the `spark.sql.caseSensitive` default row. Run 21b: the oracle JSON gains `measured_21b` (the orchestrator's `probe_mc.py` recording, verbatim) and the pin file gains the V-01 / V-02 / V-04 / L-08 cells on a `measured` memory-catalog fixture, the twin-adoption declared refusal and the 42704 ambiguity sentence. The measured V-04 INSERT cell is `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1 (the pre-existing join-INSERT field-id misroute, ledger §7, registry ID-1); `test_join_using_insert_folds_and_writes_the_left_columns` keeps the fold green. Run 21b round 2 (2026-09-18): the oracle gains `measured_21b_r2` (the orchestrator's `probe_mc2.py` cells, copied from its log — the probe stopped before writing JSON); Q-21b-11 pins the three correlated IN-subquery spellings (Spark answers `[[1],[2]]`, RePark refuses loud at physical planning — declared, the same refusal as an all-lowercase schema) and the scalar-subquery cell (both refuse). N-02: the case-twin reference pin gains a correlated EXISTS cell (`t.ID` from inside the subquery refuses 42704). Q-21b-12: `test_star_over_a_case_twin_frame_answers_both_columns_declared` pins the declared `SELECT *` answer on a twin frame beside the two recorded Spark 42711 cells. `test_live_spark_matches_the_round_2_recording` re-derives every `measured_21b_r2` cell on live Spark under `REPARK_PARITY_LIVE=1` (one hadoop catalog per cell). Run 22b (N-04): each correlated IN-subquery cell also asserts Spark's recorded output column name, the requested spelling. Run 22b (the debug-wheel segfault): `test_five_thousand_branch_union_all_plans_on_the_spark_door` plans (no collect) a 5,000-branch `UNION ALL` count under the default `caseSensitive=false` — segfaulted before the grown-stack fix; about 62 s on the debug wheel (DataFusion's quadratic per-level span walk), C-022. The module docstring's `pins:` line cites C-019…C-021 explicitly (the ledger-grammar citation reads comma lists). pins: ice-mixed-case-1/C-001…C-016
+
+ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the `true` cells pin the declared contract — backticked exact-case succeeds against the recorded `true` oracle rows (`_TRUE_BACKTICK_SQL`), unquoted exact-case refuses. pins: ice-mixed-case-1/C-006
+
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 CC-2 close: S3 Tables location-guard phrase kept contiguous in `test_aws_acceptance.py`.
@@ -46,10 +50,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   nested-field moves with ids intact, the short-sibling move, the cross-struct and
   dotted-`AFTER` refusals, positional INSERT after the move, v3 tables,
   partition-source moves, whole-struct moves, and the DataFrame door (17 offline tests
-  incl. one strict-xfail no-op-metadata pin), all on the facade SQL door; the live tier
-  replays Spark and cross-reads both engines' moved tables (17 live tests). The ANSI door
-  carries the same move end to end in
-  `crates/repark-sql/tests/alter_column_move.rs`.
+  incl. the no-op-metadata pin, plain since RP-26), all on the facade SQL door; the
+  live tier replays Spark and cross-reads both engines' moved tables (17 live tests).
+  The ANSI door carries the same move end to end in
+  `crates/repark-sql/tests/alter_column_move.rs` (the no-op move commits nothing
+  since RP-26, fork #293).
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [test_df_surface_a_1.py](test_df_surface_a_1.py) +
   [facade_dataframe_surface_oracle.json](facade_dataframe_surface_oracle.json) —
@@ -293,7 +298,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `.createOrReplace()` land their rows, each replace minting two fresh-uuid metadata
   files with `v3` bytes intact), the typed-conflict target rides
   `xfail(strict=True)` pins, and the live mirror shows Spark's own replace continuing
-  the version chain (`v4`, new rows only) while RePark stays stale. Round 2 L-01 pins
+  the version chain (`v4`, new rows only) while RePark stays stale.
+  Round 3 (2026-09-18, RP-26, fork #293): the stale replace conflicts on both doors
+  (SQL `CREATE OR REPLACE`, `writeTo().replace()`, `writeTo().createOrReplace()`
+  each raise `CatalogCommitConflicts` with no uuid file), the split-brain pins are
+  deleted, and the live pin asserts the conflict plus Spark reading the winner.
+  Round 2 L-01 pins
   every registry sentence: same-name re-register refuses, DROP on the stale handle
   deletes the pointer file, the planted orphan wedges loud then clears, and the frozen
   Spark scan-forward keys plus the 400k race count are read offline and re-derived live.
@@ -1145,6 +1155,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Then C-010 (bare nullary both directions), C-003 (RLIKE lowering), C-004 (LTZ
   cast), C-005 (NTZ refusal naming TZ-6) and the C-006 struct-dot pin.
   pins: spark-sql-grammar-1/C-003, C-004, C-005, C-006, C-008, C-010
+  **TEST-HYGIENE-1 (2026-09-18):** the `current_date` pin compares against the
+  session's configured zone instead of the host-local date, and the deterministic
+  Kiritimati / `Etc/GMT+12` session-zone pin holds the measured UTC-date defect as
+  strict-xfail under registry row TZ-9.
+  pins: test-hygiene-1/C-003.
 - [test_unresolved_routine_1.py](test_unresolved_routine_1.py) +
   [unresolved_routine_1_spark_oracle.json](unresolved_routine_1_spark_oracle.json) —
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** every unknown routine refuses with Spark's
@@ -1249,6 +1264,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark's `Duplicate request ...` text beside it as `spark_error` (OPEN residue
   `ICE-BRANCH-OPS-1-R-001`, fork trigger `F-CHERRYPICK-WAP-ORDER-1`); the recorder
   rebuilds that cell shape from the live Spark error on every re-record.
+  **Round 4 (2026-09-18, RP-26, fork #293):** the duplicate-WAP cell carries Spark's
+  `Duplicate request ...` text as its `expect_error` (FIXED residue
+  `ICE-BRANCH-OPS-1-R-001`); the recorder keeps the live Spark error unchanged.
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
   pins: ice-branch-ops-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
@@ -3049,12 +3067,25 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`TOO_MANY_DATA_COLUMNS`, case-insensitive `AMBIGUOUS_COLUMN_NAME`,
   `EXTRA_COLUMNS`), the positional control, the `BY NAME VALUES` text, the
   column-list `PARSE_SYNTAX_ERROR`, the eight-cell `USING parquet` matrix,
-  whole-table `INSERT OVERWRITE … BY NAME`, and the native-door steer; five
-  pins stay `xfail(strict)` — four RTAS snapshot-operation pins on fork ask
-  F-RTAS-OPS-1 and one `writeTo.append`-by-name pin
-  (`test_dataframe_writeto_appends_by_name`) on F-DML-FIELD-ID-1. The live
+  whole-table `INSERT OVERWRITE … BY NAME`, and the native-door steer; one
+  pin stays `xfail(strict)` — the `writeTo.append`-by-name pin
+  (`test_dataframe_writeto_appends_by_name`) on F-DML-FIELD-ID-1 (ruling Q-21c-1:
+  it never belonged to the RTAS row). The live
   replay cell (`test_live_oracle_fixture_reproduces`) skips without a
   `/tmp/sparkenv` interpreter.
+  **ICE-RTAS-OPS-2 (2026-09-18):** the four RTAS snapshot-operation pins
+  (`test_rtas_replace_records_overwrite`, `test_rtas_new_table_records_overwrite`,
+  `test_rtas_empty_new_records_delete`, `test_rtas_empty_twice_records_two_deletes`)
+  are green un-xfailed via the fork's `with_replace_write` opt-in (RP-23 pin
+  `4151b488`), with new controls `test_plain_ctas_records_append`,
+  `test_coldef_replace_commits_no_snapshot` (the column-def no-snapshot Spark
+  answer measured 2026-09-17) and `test_rtas_replace_summary_keys`.
+  pins: ice-rtas-ops-2/C-003, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+  **ICE-RTAS-OPS-2 round 2 (2026-09-18):** the module docstring now says "plus the RTAS
+  operation pins" (the xfails are gone); the native-door and service-managed twins of these
+  cells are Rust pins — `crates/repark-sql/src/create_table/rtas_ops_tests.rs` and
+  `crates/repark-spark/src/tests/service_managed_ctas.rs` — maps kept in lockstep.
+  pins: ice-rtas-ops-2/C-021, C-022
   **Round 2 (2026-09-17):** the `partition_by_name` section (static/dynamic
   overwrite, no-clause replace-all, static append, the 42713 refusal, empty
   overwrite wipe, empty static-partition drop), the `not_null_by_name`
@@ -4840,6 +4871,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
   pins: perf-ice-catalog-io-3/C-001, C-002, C-003, C-004, C-005, C-006
   pins: rp-16/C-001, C-002, C-003, C-004
+  **TEST-HYGIENE-1 (2026-09-18):** the 500-table RSS leg carries the registered
+  `perf` marker (`conftest.py::pytest_configure`); no `-m "not perf"` in CI or the
+  default config, so the wheels smoke job and the nightly keep running it. The
+  marker selects out exactly that one leg (`35/36 collected, 1 deselected`).
+  pins: test-hygiene-1/C-004.
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert
@@ -5022,10 +5058,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   truncated replace fails even when a service commit adds snapshots; counts derived from the id
   lists (exact path 1 → 2 → 3; `exact_counts=False` asserts strict growth only, for S3 Tables'
   own service commits — the `assert_v3_acceptance_outcome` precedent); three distinct current
-  ids, each committed `operation == "append"` (on the relaxed path the three current ids' ops
+  ids, the seed committed `operation == "append"` and each replace
+  `operation == "overwrite"` (on the relaxed path the three current ids' ops
   only, extra service snapshots ignored). Type pin proven load-bearing by mutation (`int64` →
   red).
   pins: ice-gold-twice-1/C-001
+  **ICE-RTAS-OPS-2 (2026-09-18):** the seed still commits `append`, but the two
+  replaces now commit `overwrite` (the fork's `with_replace_write` opt-in, RP-23
+  pin `4151b488`) — the live Spark 4.1.2 RTAS answer this unit's registry row
+  carries to FIXED. Holds on all three legs (memory, Glue, S3 Tables: the seed
+  is a plain create on each, the replaces stage against the existing table).
+  pins: ice-rtas-ops-2/C-014
 - `test_acceptance_v3_helpers.py` — **LIVE-v3 (2026-09-02):** AWS-free structural pins for
   `_acceptance_v3` and the two live legs. The never-teardown guard over that module (no DROP,
   exactly one `DELETE FROM`, AST-pinned inside `v3_row_delete_sql` with its `WHERE`);

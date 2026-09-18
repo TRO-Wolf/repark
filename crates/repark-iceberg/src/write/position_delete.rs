@@ -805,6 +805,7 @@ mod tests {
                 not_matched: vec![],
                 not_matched_by_source: vec![],
                 commit_branch: None,
+                case_insensitive: true,
             },
         )
         .await
