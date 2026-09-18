@@ -46,6 +46,11 @@ the committed landing zone, not a generation target.
   format-v3 tables whose Java-API-added columns carry `initial-default` /
   `write-default`, with the 22-cell Spark oracle `truth.json` and its recording
   script (ICE-V3-WRITE-DEFAULT-1; 225,094 bytes, third committed-data exception).
+- [ice_array_insert_1/](ice_array_insert_1/map.md) — the recorded Spark 4.1.2 answers for
+  inserts into array columns (`spark_array_insert_oracle.json`, 30 cells: three shapes by
+  five doors by two format versions) with rows and footer field ids per cell
+  (ICE-ARRAY-INSERT-1, 2026-09-18; JSON only, no table data).
+  pins: ice-array-insert-1/C-001
 
 ## Pointers
 

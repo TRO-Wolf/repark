@@ -6554,3 +6554,12 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   Spark's recorded accept, an OPEN registry row (C-022).
   The V-01 pin goes green with the writer change (arity refusal before).
   pins: ice-v3-write-default-1/C-020, C-021, C-022
+- [_record_ice_array_insert_1.py](_record_ice_array_insert_1.py) — the **record driver**
+  for ICE-ARRAY-INSERT-1 (NOT a `test_` module; never collected). `SHAPES` is the shape
+  catalog (column DDL, SELECT source, VALUES rows); `record_all()` writes each shape
+  through each door at v2 and v3 on one short-lived local Spark JVM with a Hadoop
+  catalog at scratch and writes `spark_array_insert_oracle.json`. `field_ids()` is the
+  one footer walk the pins import. Re-record: `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64
+  SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the path (`REPARK_ORACLE_IVY` points
+  `spark.jars.ivy` at a warm Ivy cache).
+  pins: ice-array-insert-1/C-002

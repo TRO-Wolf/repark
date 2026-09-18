@@ -1,0 +1,1545 @@
+{
+ "cells": {
+  "list_int_insert_into_v2": {
+   "data_files": 4,
+   "door": "insert_into",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    },
+    {
+     "id": 4,
+     "xs": [
+      5,
+      null,
+      7
+     ]
+    }
+   ],
+   "schema": "struct<id:int,xs:array<int>>",
+   "statement": "SELECT 1 AS id, array(1, 2, 3) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<INT>) UNION ALL SELECT 3, CAST(array() AS ARRAY<INT>) UNION ALL SELECT 4, array(5, NULL, 7)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<INT>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "list_int_insert_into_v3": {
+   "data_files": 4,
+   "door": "insert_into",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    },
+    {
+     "id": 4,
+     "xs": [
+      5,
+      null,
+      7
+     ]
+    }
+   ],
+   "schema": "struct<id:int,xs:array<int>>",
+   "statement": "SELECT 1 AS id, array(1, 2, 3) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<INT>) UNION ALL SELECT 3, CAST(array() AS ARRAY<INT>) UNION ALL SELECT 4, array(5, NULL, 7)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<INT>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "list_int_save_as_table_append_v2": {
+   "data_files": 4,
+   "door": "save_as_table_append",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    },
+    {
+     "id": 4,
+     "xs": [
+      5,
+      null,
+      7
+     ]
+    }
+   ],
+   "schema": "struct<id:int,xs:array<int>>",
+   "statement": "SELECT 1 AS id, array(1, 2, 3) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<INT>) UNION ALL SELECT 3, CAST(array() AS ARRAY<INT>) UNION ALL SELECT 4, array(5, NULL, 7)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<INT>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "list_int_save_as_table_append_v3": {
+   "data_files": 4,
+   "door": "save_as_table_append",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    },
+    {
+     "id": 4,
+     "xs": [
+      5,
+      null,
+      7
+     ]
+    }
+   ],
+   "schema": "struct<id:int,xs:array<int>>",
+   "statement": "SELECT 1 AS id, array(1, 2, 3) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<INT>) UNION ALL SELECT 3, CAST(array() AS ARRAY<INT>) UNION ALL SELECT 4, array(5, NULL, 7)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<INT>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "list_int_sql_select_v2": {
+   "data_files": 4,
+   "door": "sql_select",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    },
+    {
+     "id": 4,
+     "xs": [
+      5,
+      null,
+      7
+     ]
+    }
+   ],
+   "schema": "struct<id:int,xs:array<int>>",
+   "statement": "INSERT INTO <t> SELECT 1 AS id, array(1, 2, 3) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<INT>) UNION ALL SELECT 3, CAST(array() AS ARRAY<INT>) UNION ALL SELECT 4, array(5, NULL, 7)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<INT>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "list_int_sql_select_v3": {
+   "data_files": 4,
+   "door": "sql_select",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    },
+    {
+     "id": 4,
+     "xs": [
+      5,
+      null,
+      7
+     ]
+    }
+   ],
+   "schema": "struct<id:int,xs:array<int>>",
+   "statement": "INSERT INTO <t> SELECT 1 AS id, array(1, 2, 3) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<INT>) UNION ALL SELECT 3, CAST(array() AS ARRAY<INT>) UNION ALL SELECT 4, array(5, NULL, 7)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<INT>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "list_int_sql_values_v2": {
+   "data_files": 2,
+   "door": "sql_values",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    },
+    {
+     "id": 4,
+     "xs": [
+      5,
+      null,
+      7
+     ]
+    }
+   ],
+   "schema": "struct<id:int,xs:array<int>>",
+   "statement": "INSERT INTO <t> VALUES (1, array(1, 2, 3)), (2, NULL), (3, CAST(array() AS ARRAY<INT>)), (4, array(5, NULL, 7))",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<INT>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "list_int_sql_values_v3": {
+   "data_files": 2,
+   "door": "sql_values",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    },
+    {
+     "id": 4,
+     "xs": [
+      5,
+      null,
+      7
+     ]
+    }
+   ],
+   "schema": "struct<id:int,xs:array<int>>",
+   "statement": "INSERT INTO <t> VALUES (1, array(1, 2, 3)), (2, NULL), (3, CAST(array() AS ARRAY<INT>)), (4, array(5, NULL, 7))",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<INT>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "list_int_writeto_append_v2": {
+   "data_files": 4,
+   "door": "writeto_append",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    },
+    {
+     "id": 4,
+     "xs": [
+      5,
+      null,
+      7
+     ]
+    }
+   ],
+   "schema": "struct<id:int,xs:array<int>>",
+   "statement": "SELECT 1 AS id, array(1, 2, 3) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<INT>) UNION ALL SELECT 3, CAST(array() AS ARRAY<INT>) UNION ALL SELECT 4, array(5, NULL, 7)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<INT>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "list_int_writeto_append_v3": {
+   "data_files": 4,
+   "door": "writeto_append",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    },
+    {
+     "id": 4,
+     "xs": [
+      5,
+      null,
+      7
+     ]
+    }
+   ],
+   "schema": "struct<id:int,xs:array<int>>",
+   "statement": "SELECT 1 AS id, array(1, 2, 3) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<INT>) UNION ALL SELECT 3, CAST(array() AS ARRAY<INT>) UNION ALL SELECT 4, array(5, NULL, 7)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<INT>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "list_struct_insert_into_v2": {
+   "data_files": 3,
+   "door": "insert_into",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ],
+    [
+     "xs.element.a",
+     "4"
+    ],
+    [
+     "xs.element.b",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      {
+       "a": 1,
+       "b": "x"
+      },
+      {
+       "a": 2,
+       "b": null
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    }
+   ],
+   "schema": "struct<id:int,xs:array<struct<a:int,b:string>>>",
+   "statement": "SELECT 1 AS id, array(named_struct('a', 1, 'b', 'x'), named_struct('a', 2, 'b', NULL)) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<STRUCT<a: INT, b: STRING>>) UNION ALL SELECT 3, CAST(array() AS ARRAY<STRUCT<a: INT, b: STRING>>)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<STRUCT<a: INT, b: STRING>>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "list_struct_insert_into_v3": {
+   "data_files": 3,
+   "door": "insert_into",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ],
+    [
+     "xs.element.a",
+     "4"
+    ],
+    [
+     "xs.element.b",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      {
+       "a": 1,
+       "b": "x"
+      },
+      {
+       "a": 2,
+       "b": null
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    }
+   ],
+   "schema": "struct<id:int,xs:array<struct<a:int,b:string>>>",
+   "statement": "SELECT 1 AS id, array(named_struct('a', 1, 'b', 'x'), named_struct('a', 2, 'b', NULL)) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<STRUCT<a: INT, b: STRING>>) UNION ALL SELECT 3, CAST(array() AS ARRAY<STRUCT<a: INT, b: STRING>>)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<STRUCT<a: INT, b: STRING>>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "list_struct_save_as_table_append_v2": {
+   "data_files": 3,
+   "door": "save_as_table_append",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ],
+    [
+     "xs.element.a",
+     "4"
+    ],
+    [
+     "xs.element.b",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      {
+       "a": 1,
+       "b": "x"
+      },
+      {
+       "a": 2,
+       "b": null
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    }
+   ],
+   "schema": "struct<id:int,xs:array<struct<a:int,b:string>>>",
+   "statement": "SELECT 1 AS id, array(named_struct('a', 1, 'b', 'x'), named_struct('a', 2, 'b', NULL)) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<STRUCT<a: INT, b: STRING>>) UNION ALL SELECT 3, CAST(array() AS ARRAY<STRUCT<a: INT, b: STRING>>)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<STRUCT<a: INT, b: STRING>>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "list_struct_save_as_table_append_v3": {
+   "data_files": 3,
+   "door": "save_as_table_append",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ],
+    [
+     "xs.element.a",
+     "4"
+    ],
+    [
+     "xs.element.b",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      {
+       "a": 1,
+       "b": "x"
+      },
+      {
+       "a": 2,
+       "b": null
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    }
+   ],
+   "schema": "struct<id:int,xs:array<struct<a:int,b:string>>>",
+   "statement": "SELECT 1 AS id, array(named_struct('a', 1, 'b', 'x'), named_struct('a', 2, 'b', NULL)) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<STRUCT<a: INT, b: STRING>>) UNION ALL SELECT 3, CAST(array() AS ARRAY<STRUCT<a: INT, b: STRING>>)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<STRUCT<a: INT, b: STRING>>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "list_struct_sql_select_v2": {
+   "data_files": 3,
+   "door": "sql_select",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ],
+    [
+     "xs.element.a",
+     "4"
+    ],
+    [
+     "xs.element.b",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      {
+       "a": 1,
+       "b": "x"
+      },
+      {
+       "a": 2,
+       "b": null
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    }
+   ],
+   "schema": "struct<id:int,xs:array<struct<a:int,b:string>>>",
+   "statement": "INSERT INTO <t> SELECT 1 AS id, array(named_struct('a', 1, 'b', 'x'), named_struct('a', 2, 'b', NULL)) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<STRUCT<a: INT, b: STRING>>) UNION ALL SELECT 3, CAST(array() AS ARRAY<STRUCT<a: INT, b: STRING>>)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<STRUCT<a: INT, b: STRING>>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "list_struct_sql_select_v3": {
+   "data_files": 3,
+   "door": "sql_select",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ],
+    [
+     "xs.element.a",
+     "4"
+    ],
+    [
+     "xs.element.b",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      {
+       "a": 1,
+       "b": "x"
+      },
+      {
+       "a": 2,
+       "b": null
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    }
+   ],
+   "schema": "struct<id:int,xs:array<struct<a:int,b:string>>>",
+   "statement": "INSERT INTO <t> SELECT 1 AS id, array(named_struct('a', 1, 'b', 'x'), named_struct('a', 2, 'b', NULL)) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<STRUCT<a: INT, b: STRING>>) UNION ALL SELECT 3, CAST(array() AS ARRAY<STRUCT<a: INT, b: STRING>>)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<STRUCT<a: INT, b: STRING>>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "list_struct_sql_values_v2": {
+   "data_files": 2,
+   "door": "sql_values",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ],
+    [
+     "xs.element.a",
+     "4"
+    ],
+    [
+     "xs.element.b",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      {
+       "a": 1,
+       "b": "x"
+      },
+      {
+       "a": 2,
+       "b": null
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    }
+   ],
+   "schema": "struct<id:int,xs:array<struct<a:int,b:string>>>",
+   "statement": "INSERT INTO <t> VALUES (1, array(named_struct('a', 1, 'b', 'x'), named_struct('a', 2, 'b', CAST(NULL AS STRING)))), (2, NULL), (3, CAST(array() AS ARRAY<STRUCT<a: INT, b: STRING>>))",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<STRUCT<a: INT, b: STRING>>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "list_struct_sql_values_v3": {
+   "data_files": 2,
+   "door": "sql_values",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ],
+    [
+     "xs.element.a",
+     "4"
+    ],
+    [
+     "xs.element.b",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      {
+       "a": 1,
+       "b": "x"
+      },
+      {
+       "a": 2,
+       "b": null
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    }
+   ],
+   "schema": "struct<id:int,xs:array<struct<a:int,b:string>>>",
+   "statement": "INSERT INTO <t> VALUES (1, array(named_struct('a', 1, 'b', 'x'), named_struct('a', 2, 'b', CAST(NULL AS STRING)))), (2, NULL), (3, CAST(array() AS ARRAY<STRUCT<a: INT, b: STRING>>))",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<STRUCT<a: INT, b: STRING>>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "list_struct_writeto_append_v2": {
+   "data_files": 3,
+   "door": "writeto_append",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ],
+    [
+     "xs.element.a",
+     "4"
+    ],
+    [
+     "xs.element.b",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      {
+       "a": 1,
+       "b": "x"
+      },
+      {
+       "a": 2,
+       "b": null
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    }
+   ],
+   "schema": "struct<id:int,xs:array<struct<a:int,b:string>>>",
+   "statement": "SELECT 1 AS id, array(named_struct('a', 1, 'b', 'x'), named_struct('a', 2, 'b', NULL)) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<STRUCT<a: INT, b: STRING>>) UNION ALL SELECT 3, CAST(array() AS ARRAY<STRUCT<a: INT, b: STRING>>)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<STRUCT<a: INT, b: STRING>>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "list_struct_writeto_append_v3": {
+   "data_files": 3,
+   "door": "writeto_append",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "xs",
+     "2"
+    ],
+    [
+     "xs.element",
+     "3"
+    ],
+    [
+     "xs.element.a",
+     "4"
+    ],
+    [
+     "xs.element.b",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "xs": [
+      {
+       "a": 1,
+       "b": "x"
+      },
+      {
+       "a": 2,
+       "b": null
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "xs": null
+    },
+    {
+     "id": 3,
+     "xs": []
+    }
+   ],
+   "schema": "struct<id:int,xs:array<struct<a:int,b:string>>>",
+   "statement": "SELECT 1 AS id, array(named_struct('a', 1, 'b', 'x'), named_struct('a', 2, 'b', NULL)) AS xs UNION ALL SELECT 2, CAST(NULL AS ARRAY<STRUCT<a: INT, b: STRING>>) UNION ALL SELECT 3, CAST(array() AS ARRAY<STRUCT<a: INT, b: STRING>>)",
+   "table_ddl": "CREATE TABLE <t> (id INT, xs ARRAY<STRUCT<a: INT, b: STRING>>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "map_list_insert_into_v2": {
+   "data_files": 3,
+   "door": "insert_into",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "m",
+     "2"
+    ],
+    [
+     "m.m",
+     ""
+    ],
+    [
+     "m.m.key",
+     "3"
+    ],
+    [
+     "m.m.value",
+     "4"
+    ],
+    [
+     "m.m.value.element",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "m": {
+      "k1": [
+       1,
+       2
+      ],
+      "k2": []
+     }
+    },
+    {
+     "id": 2,
+     "m": null
+    },
+    {
+     "id": 3,
+     "m": {
+      "k3": null
+     }
+    }
+   ],
+   "schema": "struct<id:int,m:map<string,array<int>>>",
+   "statement": "SELECT 1 AS id, map('k1', array(1, 2), 'k2', CAST(array() AS ARRAY<INT>)) AS m UNION ALL SELECT 2, CAST(NULL AS MAP<STRING, ARRAY<INT>>) UNION ALL SELECT 3, map('k3', CAST(NULL AS ARRAY<INT>))",
+   "table_ddl": "CREATE TABLE <t> (id INT, m MAP<STRING, ARRAY<INT>>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "map_list_insert_into_v3": {
+   "data_files": 3,
+   "door": "insert_into",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "m",
+     "2"
+    ],
+    [
+     "m.m",
+     ""
+    ],
+    [
+     "m.m.key",
+     "3"
+    ],
+    [
+     "m.m.value",
+     "4"
+    ],
+    [
+     "m.m.value.element",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "m": {
+      "k1": [
+       1,
+       2
+      ],
+      "k2": []
+     }
+    },
+    {
+     "id": 2,
+     "m": null
+    },
+    {
+     "id": 3,
+     "m": {
+      "k3": null
+     }
+    }
+   ],
+   "schema": "struct<id:int,m:map<string,array<int>>>",
+   "statement": "SELECT 1 AS id, map('k1', array(1, 2), 'k2', CAST(array() AS ARRAY<INT>)) AS m UNION ALL SELECT 2, CAST(NULL AS MAP<STRING, ARRAY<INT>>) UNION ALL SELECT 3, map('k3', CAST(NULL AS ARRAY<INT>))",
+   "table_ddl": "CREATE TABLE <t> (id INT, m MAP<STRING, ARRAY<INT>>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "map_list_save_as_table_append_v2": {
+   "data_files": 3,
+   "door": "save_as_table_append",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "m",
+     "2"
+    ],
+    [
+     "m.m",
+     ""
+    ],
+    [
+     "m.m.key",
+     "3"
+    ],
+    [
+     "m.m.value",
+     "4"
+    ],
+    [
+     "m.m.value.element",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "m": {
+      "k1": [
+       1,
+       2
+      ],
+      "k2": []
+     }
+    },
+    {
+     "id": 2,
+     "m": null
+    },
+    {
+     "id": 3,
+     "m": {
+      "k3": null
+     }
+    }
+   ],
+   "schema": "struct<id:int,m:map<string,array<int>>>",
+   "statement": "SELECT 1 AS id, map('k1', array(1, 2), 'k2', CAST(array() AS ARRAY<INT>)) AS m UNION ALL SELECT 2, CAST(NULL AS MAP<STRING, ARRAY<INT>>) UNION ALL SELECT 3, map('k3', CAST(NULL AS ARRAY<INT>))",
+   "table_ddl": "CREATE TABLE <t> (id INT, m MAP<STRING, ARRAY<INT>>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "map_list_save_as_table_append_v3": {
+   "data_files": 3,
+   "door": "save_as_table_append",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "m",
+     "2"
+    ],
+    [
+     "m.m",
+     ""
+    ],
+    [
+     "m.m.key",
+     "3"
+    ],
+    [
+     "m.m.value",
+     "4"
+    ],
+    [
+     "m.m.value.element",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "m": {
+      "k1": [
+       1,
+       2
+      ],
+      "k2": []
+     }
+    },
+    {
+     "id": 2,
+     "m": null
+    },
+    {
+     "id": 3,
+     "m": {
+      "k3": null
+     }
+    }
+   ],
+   "schema": "struct<id:int,m:map<string,array<int>>>",
+   "statement": "SELECT 1 AS id, map('k1', array(1, 2), 'k2', CAST(array() AS ARRAY<INT>)) AS m UNION ALL SELECT 2, CAST(NULL AS MAP<STRING, ARRAY<INT>>) UNION ALL SELECT 3, map('k3', CAST(NULL AS ARRAY<INT>))",
+   "table_ddl": "CREATE TABLE <t> (id INT, m MAP<STRING, ARRAY<INT>>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "map_list_sql_select_v2": {
+   "data_files": 3,
+   "door": "sql_select",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "m",
+     "2"
+    ],
+    [
+     "m.m",
+     ""
+    ],
+    [
+     "m.m.key",
+     "3"
+    ],
+    [
+     "m.m.value",
+     "4"
+    ],
+    [
+     "m.m.value.element",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "m": {
+      "k1": [
+       1,
+       2
+      ],
+      "k2": []
+     }
+    },
+    {
+     "id": 2,
+     "m": null
+    },
+    {
+     "id": 3,
+     "m": {
+      "k3": null
+     }
+    }
+   ],
+   "schema": "struct<id:int,m:map<string,array<int>>>",
+   "statement": "INSERT INTO <t> SELECT 1 AS id, map('k1', array(1, 2), 'k2', CAST(array() AS ARRAY<INT>)) AS m UNION ALL SELECT 2, CAST(NULL AS MAP<STRING, ARRAY<INT>>) UNION ALL SELECT 3, map('k3', CAST(NULL AS ARRAY<INT>))",
+   "table_ddl": "CREATE TABLE <t> (id INT, m MAP<STRING, ARRAY<INT>>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "map_list_sql_select_v3": {
+   "data_files": 3,
+   "door": "sql_select",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "m",
+     "2"
+    ],
+    [
+     "m.m",
+     ""
+    ],
+    [
+     "m.m.key",
+     "3"
+    ],
+    [
+     "m.m.value",
+     "4"
+    ],
+    [
+     "m.m.value.element",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "m": {
+      "k1": [
+       1,
+       2
+      ],
+      "k2": []
+     }
+    },
+    {
+     "id": 2,
+     "m": null
+    },
+    {
+     "id": 3,
+     "m": {
+      "k3": null
+     }
+    }
+   ],
+   "schema": "struct<id:int,m:map<string,array<int>>>",
+   "statement": "INSERT INTO <t> SELECT 1 AS id, map('k1', array(1, 2), 'k2', CAST(array() AS ARRAY<INT>)) AS m UNION ALL SELECT 2, CAST(NULL AS MAP<STRING, ARRAY<INT>>) UNION ALL SELECT 3, map('k3', CAST(NULL AS ARRAY<INT>))",
+   "table_ddl": "CREATE TABLE <t> (id INT, m MAP<STRING, ARRAY<INT>>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "map_list_sql_values_v2": {
+   "data_files": 2,
+   "door": "sql_values",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "m",
+     "2"
+    ],
+    [
+     "m.m",
+     ""
+    ],
+    [
+     "m.m.key",
+     "3"
+    ],
+    [
+     "m.m.value",
+     "4"
+    ],
+    [
+     "m.m.value.element",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "m": {
+      "k1": [
+       1,
+       2
+      ],
+      "k2": []
+     }
+    },
+    {
+     "id": 2,
+     "m": null
+    },
+    {
+     "id": 3,
+     "m": {
+      "k3": null
+     }
+    }
+   ],
+   "schema": "struct<id:int,m:map<string,array<int>>>",
+   "statement": "INSERT INTO <t> VALUES (1, map('k1', array(1, 2), 'k2', CAST(array() AS ARRAY<INT>))), (2, NULL), (3, map('k3', CAST(NULL AS ARRAY<INT>)))",
+   "table_ddl": "CREATE TABLE <t> (id INT, m MAP<STRING, ARRAY<INT>>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "map_list_sql_values_v3": {
+   "data_files": 2,
+   "door": "sql_values",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "m",
+     "2"
+    ],
+    [
+     "m.m",
+     ""
+    ],
+    [
+     "m.m.key",
+     "3"
+    ],
+    [
+     "m.m.value",
+     "4"
+    ],
+    [
+     "m.m.value.element",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "m": {
+      "k1": [
+       1,
+       2
+      ],
+      "k2": []
+     }
+    },
+    {
+     "id": 2,
+     "m": null
+    },
+    {
+     "id": 3,
+     "m": {
+      "k3": null
+     }
+    }
+   ],
+   "schema": "struct<id:int,m:map<string,array<int>>>",
+   "statement": "INSERT INTO <t> VALUES (1, map('k1', array(1, 2), 'k2', CAST(array() AS ARRAY<INT>))), (2, NULL), (3, map('k3', CAST(NULL AS ARRAY<INT>)))",
+   "table_ddl": "CREATE TABLE <t> (id INT, m MAP<STRING, ARRAY<INT>>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  },
+  "map_list_writeto_append_v2": {
+   "data_files": 3,
+   "door": "writeto_append",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "m",
+     "2"
+    ],
+    [
+     "m.m",
+     ""
+    ],
+    [
+     "m.m.key",
+     "3"
+    ],
+    [
+     "m.m.value",
+     "4"
+    ],
+    [
+     "m.m.value.element",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "m": {
+      "k1": [
+       1,
+       2
+      ],
+      "k2": []
+     }
+    },
+    {
+     "id": 2,
+     "m": null
+    },
+    {
+     "id": 3,
+     "m": {
+      "k3": null
+     }
+    }
+   ],
+   "schema": "struct<id:int,m:map<string,array<int>>>",
+   "statement": "SELECT 1 AS id, map('k1', array(1, 2), 'k2', CAST(array() AS ARRAY<INT>)) AS m UNION ALL SELECT 2, CAST(NULL AS MAP<STRING, ARRAY<INT>>) UNION ALL SELECT 3, map('k3', CAST(NULL AS ARRAY<INT>))",
+   "table_ddl": "CREATE TABLE <t> (id INT, m MAP<STRING, ARRAY<INT>>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+  },
+  "map_list_writeto_append_v3": {
+   "data_files": 3,
+   "door": "writeto_append",
+   "parquet_field_ids": [
+    [
+     "id",
+     "1"
+    ],
+    [
+     "m",
+     "2"
+    ],
+    [
+     "m.m",
+     ""
+    ],
+    [
+     "m.m.key",
+     "3"
+    ],
+    [
+     "m.m.value",
+     "4"
+    ],
+    [
+     "m.m.value.element",
+     "5"
+    ]
+   ],
+   "rows": [
+    {
+     "id": 1,
+     "m": {
+      "k1": [
+       1,
+       2
+      ],
+      "k2": []
+     }
+    },
+    {
+     "id": 2,
+     "m": null
+    },
+    {
+     "id": 3,
+     "m": {
+      "k3": null
+     }
+    }
+   ],
+   "schema": "struct<id:int,m:map<string,array<int>>>",
+   "statement": "SELECT 1 AS id, map('k1', array(1, 2), 'k2', CAST(array() AS ARRAY<INT>)) AS m UNION ALL SELECT 2, CAST(NULL AS MAP<STRING, ARRAY<INT>>) UNION ALL SELECT 3, map('k3', CAST(NULL AS ARRAY<INT>))",
+   "table_ddl": "CREATE TABLE <t> (id INT, m MAP<STRING, ARRAY<INT>>) USING iceberg TBLPROPERTIES ('format-version'='3')"
+  }
+ },
+ "oracle": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0"
+}
