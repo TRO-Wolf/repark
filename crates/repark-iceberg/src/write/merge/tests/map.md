@@ -103,8 +103,9 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   file + a data file; COW: a removed + an added data file). Every pin also asserts the exact
   surviving rows. The UPDATE pin drives RePark's identity UPDATE executor with a convertible
   plain `WHERE`; production reaches that executor only with a bare `col IN (SELECT …)`, whose
-  filter is `AlwaysTrue` (review L-05), and a plain-`WHERE` UPDATE runs the fork exec and is the OPEN registry row
-  ICE-OCC-SCOPED-1-PLAIN-UPDATE. Six cells commit (C-006..C-010, one row each for MERGE / UPDATE / DELETE /
+  filter is `AlwaysTrue` (review L-05), and a plain-`WHERE` UPDATE runs the fork exec, scoped
+  by its own scan predicate since RP-27 (FIXED registry row ICE-OCC-SCOPED-1-PLAIN-UPDATE,
+  fork #294). Six cells commit (C-006..C-010, one row each for MERGE / UPDATE / DELETE /
   MERGE-vs-INSERT / COW range) and three refuse with Spark's own messages: the MoR range MERGE
   (`Found new conflicting delete files that can apply to records matching id < 50`), the
   disjoint-key MERGE (`… matching TRUE`, serializable and snapshot), and a

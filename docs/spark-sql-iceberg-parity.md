@@ -634,8 +634,9 @@ perfectly good read.
   now hands its own target predicate to the fork's conflict validation (the target-only `ON`
   conjuncts, or the DML's `WHERE`), and fork #291 (RP-24) tests each concurrent file through its
   own partition projection, so a concurrent write to another partition or a disjoint range
-  commits. Exception: a plain-`WHERE` UPDATE runs the fork's DataFusion exec and is still
-  unscoped (row ICE-OCC-SCOPED-1-PLAIN-UPDATE, OPEN). Where the statement has no target-only
+  commits. Exception closed 2026-09-18 (RP-27, fork #294 F-OCC-EXEC-1): a plain-`WHERE` UPDATE
+  runs the fork's DataFusion exec with its own scan predicate as the conflict filter (row
+  ICE-OCC-SCOPED-1-PLAIN-UPDATE, FIXED). Where the statement has no target-only
   predicate the filter stays `AlwaysTrue` and
   the MERGE still aborts on any concurrent commit — as Spark does. Before 2026-09-17 every commit
   site hard-coded `AlwaysTrue`, and this row DECLARED the over-rejection fail-closed.
@@ -5614,7 +5615,7 @@ the pin rather than obeying it.
   | shape (v2 and v3) | Spark | repark after |
   |---|---|---|
   | 4 MERGEs, each `ON t.k = '<key>' AND t.k = s.k AND t.id = s.id`, partitioned by `k`, MoR and COW | 4 of 4 | **FIXED** 4 of 4 (1 of 4 before) |
-  | 4 UPDATE statements `WHERE k = '<key>' AND id < 8`, MoR and COW | 4 of 4 | **OPEN** — plain-`WHERE` UPDATE commits through the fork's DataFusion exec, still unscoped: row ICE-OCC-SCOPED-1-PLAIN-UPDATE |
+  | 4 UPDATE statements `WHERE k = '<key>' AND id < 8`, MoR and COW | 4 of 4 | **FIXED** 4 of 4 (RP-27, fork #294: the fork's UPDATE exec scopes by its own scan predicate — row ICE-OCC-SCOPED-1-PLAIN-UPDATE) |
   | 4 DELETE statements `WHERE k = '<key>' AND id > 90`, MoR and COW | 4 of 4 | **FIXED** 4 of 4 (MoR already committed: a DELETE's row delta arms no delete-file walk and a concurrent DELETE adds no data file) |
   | MERGE `ON t.k = 'a' AND t.id = s.id` vs `INSERT INTO` partition `d`, MoR and COW | 2 of 2 | **FIXED** 2 of 2 |
   | 2 MERGEs `ON t.id < 50 …` / `ON t.id >= 50 …`, unpartitioned, copy-on-write | 2 of 2 | **FIXED** 2 of 2 |
@@ -5639,25 +5640,26 @@ the pin rather than obeying it.
 - **Rationale** — FIXED. The over-rejection turned every concurrent partitioned pipeline into
   a retry loop Spark does not need.
 
-### ICE-OCC-SCOPED-1-PLAIN-UPDATE — a plain-`WHERE` UPDATE still aborts on any concurrent commit — **OPEN 2026-09-17 (fork half)**
+### ICE-OCC-SCOPED-1-PLAIN-UPDATE — a plain-`WHERE` UPDATE commits on disjoint partitions — **FIXED 2026-09-18 (RP-27, fork #294 F-OCC-EXEC-1)**
 
 - **repark** — four barrier-released `UPDATE … SET v = '<x>' WHERE k = '<key>' AND id < 8`
-  on four partitions commit **1 of 4** (release native, v2/v3 × MoR/COW, measured after
-  ICE-OCC-SCOPED-1); the losers raise `Found conflicting files that can contain records matching
-  TRUE`. A plain-`WHERE` UPDATE is not a RePark commit site: the Spark and ANSI doors route only
+  on four partitions commit **4 of 4** (release native, v2/v3 × MoR/COW), matching Spark. A
+  plain-`WHERE` UPDATE is not a RePark commit site: the Spark and ANSI doors route only
   a subquery `UPDATE … WHERE col IN (SELECT …)` and a plain-`WHERE` DELETE through
   `repark-iceberg`'s `predicate_dml` (RP-9 r2 left UPDATE on the fork on purpose); every other
-  UPDATE runs the fork's `iceberg-datafusion` `physical_plan/delete.rs` exec, whose four commit
-  sites still pass `Predicate::AlwaysTrue`. The RePark identity UPDATE path is scoped (pinned).
+  UPDATE runs the fork's `iceberg-datafusion` `physical_plan/delete.rs` exec, whose commit
+  sites now pass their own scan predicate as `conflict_detection_filter`. The RePark identity
+  UPDATE path stays scoped (pinned).
 - **Apache Spark** — 4 of 4. *(oracle: recorded 2026-09-17, fixture
   `ice_occ_scoped_1/spark_occ_oracle2.json` `*_4_partition_scoped_updates`.)*
 - **Pin** — `python/repark/tests/test_ice_occ_scoped_1.py::test_partition_scoped_storms_match_spark`
-  (`_assert_plain_update_storm_is_open`: fewer than 4 commit, every loser `matching TRUE`, rows =
-  2 × commits) — it reds the day the storm commits 4 of 4, which retires this row.
-- **Rationale** — OPEN: the fix is the fork's DataFusion UPDATE / DELETE exec threading its own
-  scan filter into `conflict_detection_filter` (a fork unit after F-OCC-SCOPED-1), or a RePark
-  decision to route plain UPDATE through `predicate_dml` — a wider change than this unit's
-  (ruling Q-21a-10).
+  (replays `*_4_partition_scoped_updates` and asserts Spark's commit count, loser messages and
+  `rows_after_4_partition_scoped_updates` rows on every door).
+- **Rationale** — FIXED 2026-09-18 (RP-27) at fork #294 (**F-OCC-EXEC-1**): the fork's DataFusion
+  UPDATE / DELETE execs thread their own scan prune predicate into `conflict_detection_filter`,
+  so disjoint-partition storms commit concurrently as in Spark 4.1.2. The prune conversion drops
+  every conjunct that could read narrower than the exact `WHERE`, closing a pre-existing silent
+  DELETE/UPDATE miss on the same path.
 
 ### ICE-OCC-SCOPED-1-REFUSED — where Spark itself refuses a concurrent MERGE — **DECLARED 2026-09-17 (matches Spark; do not "fix")**
 

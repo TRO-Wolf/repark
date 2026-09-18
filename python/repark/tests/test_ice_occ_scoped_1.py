@@ -4,8 +4,9 @@ Every count, row and loser message is read from the Spark 4.1.2 recordings under
 ``python/repark-parity/fixtures/torture/data/ice_occ_scoped_1``. MERGE and INSERT run on both
 doors (SQL and ``DataFrame.mergeInto`` / ``writeTo().append()``); UPDATE and DELETE have no
 DataFrame spelling in PySpark 4.1, so they run on the SQL door in both door cells. A plain-WHERE
-UPDATE still commits through the fork's DataFusion exec with an unscoped filter: its storm is
-pinned as the open registry row ICE-OCC-SCOPED-1-PLAIN-UPDATE.
+UPDATE runs the fork's DataFusion exec with its own scan predicate as the conflict filter since
+RP-27 (fork #294 F-OCC-EXEC-1): its storm replays Spark's recorded 4-of-4 answer (registry row
+ICE-OCC-SCOPED-1-PLAIN-UPDATE, FIXED 2026-09-18).
 
 pins: ice-occ-scoped-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
 pins: ice-occ-scoped-1/C-015, C-016, C-017
@@ -196,29 +197,14 @@ def test_partition_scoped_storms_match_spark(
     ).collect()
     _replay_storm(session, catalog, f"{tag}_4_partition_scoped_merges", door)
     _assert_rows(session, catalog, f"{tag}_rows_after_4_partition_scoped_merges", door)
-    _assert_plain_update_storm_is_open(session, catalog, tag)
+    _replay_storm(session, catalog, f"{tag}_4_partition_scoped_updates", door)
+    _assert_rows(session, catalog, f"{tag}_rows_after_4_partition_scoped_updates", door)
     for storm, rows in (
         ("4_partition_scoped_deletes", "rows_after_4_partition_scoped_deletes"),
         ("merge_vs_concurrent_insert_other_partition", "rows_after_merge_vs_insert"),
     ):
         _replay_storm(session, catalog, f"{tag}_{storm}", door)
         _assert_rows(session, catalog, f"{tag}_{rows}", door)
-
-
-def _assert_plain_update_storm_is_open(session: Any, catalog: str, tag: str) -> None:
-    cell = _SCOPED[f"{tag}_4_partition_scoped_updates"]
-    actions = [_statement_action(session, _ours(sql, catalog), "sql") for sql in cell["statements"]]
-    committed, losers = _storm(actions)
-    assert cell["committed"] == cell["of"]
-    assert committed < cell["of"], (
-        "plain-WHERE UPDATE now commits every partition-scoped storm: retire registry row "
-        "ICE-OCC-SCOPED-1-PLAIN-UPDATE and pin Spark's answer"
-    )
-    for loser in losers:
-        assert type(loser).__name__ == _LOSER_CLASS, loser
-        assert "Found conflicting files that can contain records matching TRUE" in str(loser)
-    query = _ours(_SCOPED[f"{tag}_rows_after_4_partition_scoped_updates"]["query"], catalog)
-    assert _rows(session, query) == [[100, 2 * committed]]
 
 
 @pytest.mark.parametrize("door", _DOORS)
