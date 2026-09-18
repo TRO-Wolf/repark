@@ -333,7 +333,7 @@ Oracle rows, repark vs Spark after the fix (v2 and v3 each):
 
 Rulings:
 
-- **Q-21a-1 (empty `BY NAME` under dynamic on an unpartitioned table).** The brief
+- **Q-21a-DYN-1 (empty `BY NAME` under dynamic on an unpartitioned table).** The brief
   names the no-op for a partitioned table. The oracle holds no unpartitioned-empty
   `BY NAME` cell, but C-004 measured the positional shape
   (`dynamic_sql_empty_unpartitioned` unchanged), and the runtime's
@@ -342,10 +342,10 @@ Rulings:
   no-op on every table, the same arm `execute_insert_overwrite` already has, so one
   decision covers both modules. Pinned in Rust
   (`dynamic_by_name_empty_overwrite_on_unpartitioned_table_commits_nothing`).
-- **Q-21a-2 (DataFrame door).** No new DataFrame cell: `insertInto` and
+- **Q-21a-DYN-2 (DataFrame door).** No new DataFrame cell: `insertInto` and
   `writeTo().overwritePartitions()` never lower to `BY NAME` (no `BY NAME` text in
   the facade), and their mode behavior is already pinned by C-002, C-003 and C-006.
-- **Q-21a-3 (`unset` tuple).** The rebase repair (C-022) is in scope: it is part of the
+- **Q-21a-DYN-3 (`unset` tuple).** The rebase repair (C-022) is in scope: it is part of the
   conflict resolution this round was asked to check, and the existing `dynamic`
   fixture in `test_ice_dyn_overwrite_1.py` leans on `unset` to restore STATIC.
 
@@ -367,3 +367,31 @@ pytest python/repark/tests -n 8 (release native, pre-split tree)
 pytest unit files + rtas_byname + production_file_size + dml_b + writer (release native at HEAD)
   117 passed, 2 skipped, 5 xfailed
 ```
+
+## Run 21a close-out (2026-09-18)
+
+The round-3 rulings above are renumbered Q-21a-DYN-1…3 so they do not collide with the run's
+orchestrator rulings. Q-21a-DYN-1 (a dynamic empty `BY NAME` source commits nothing on an
+unpartitioned table too) was measured afterwards on Spark 4.1.2 + Iceberg 1.11.0: v2 and v3,
+dynamic keeps both rows with no new snapshot, static empties the table with `append, delete`.
+The four cells are in `spark_byname_dyn_oracle.json` and replayed by
+`test_ice_dyn_overwrite_1_by_name.py` (25 of 25).
+
+Verification critic (Grok 4.6, on `4414c184`): **PASS**, no P1 or P2. The typed
+`force_static_overwrite` flag, the `BY NAME` dynamic arm, the empty-dynamic no-op and the
+`unset` repair each have a pin that fails when the fix is reverted, and no statement-text
+marker is left on the decision path. Its five P3s are recorded here, not fixed:
+
+- V-01 — parts of the ledger above still describe the in-band marker as the mechanism; the
+  history is kept as written, and ruling Q-20a-6 records the typed flag that replaced it.
+- V-02 — SQL `SET` / `RESET` of `spark.sql.sources.partitionOverwriteMode` has no dedicated
+  pin; the conf path is pinned through `conf.set` / `conf.unset`.
+- V-03 — no dynamic-overwrite × branch-target pin.
+- V-04 — the race pins act at the commit layer; Spark's `race_snapshot` cell is not replayed
+  as a RePark test.
+- V-05 — the `insertInto` docstring predates the typed flag.
+
+Orchestrator gates on the rebased squash (`main` `e980d945`, release native with
+codegen-units 16): comment ban `hits=0`; facade `9726 passed, 2 failed` (only the q14
+`current_date` pair, which fails locally between 20:00 and 24:00 EDT); parity `756 passed`;
+`cargo test -p repark-spark --lib` green; `make verify` rc 0.
