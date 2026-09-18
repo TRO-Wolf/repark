@@ -470,6 +470,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ctas_staged_commit_state_unknown_surfaces_class_without_operation_id` pins the staged
   publish arm (`RequireExplicitLocation`) at `operation_id: None` with no drop.
   pins: ice-commit-unknown-1/C-001, C-003, C-004, C-005, C-008
+  **ICE-RTAS-OPS-2 round 2 (2026-09-18):** `service_managed_ctas` pins the snapshot
+  operations of the create-first arm against fixture `rtas_ops`:
+  `ctas_service_managed_rtas_creating_the_table_records_overwrite` (`[overwrite]`),
+  `ctas_service_managed_empty_rtas_records_delete_then_delete` (`[delete]`, then
+  `[delete, delete]` through the existing-table replace arm), and the control
+  `ctas_service_managed_plain_ctas_records_append` (`[append]`). The first two go red
+  when the `ctas.or_replace` branch in `execute_ctas_service_managed` is reverted.
+  pins: ice-rtas-ops-2/C-019
 - [nested_column_ddl.rs](nested_column_ddl.rs) — **ICE-NESTED-EVO-1 (2026-09-17):** the Spark
   door's nested DDL end to end on an in-memory catalog: `CREATE TABLE` with struct,
   array-of-struct and map-of-struct columns answers Spark's `DESCRIBE` types;

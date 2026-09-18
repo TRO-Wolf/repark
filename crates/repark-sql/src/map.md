@@ -130,6 +130,14 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   unwrapped on `is_commit_state_unknown` — the possibly-landed create is never
   abort-dropped; definite kinds keep the drop-and-explain abort.
   pins: ice-commit-unknown-1/C-001, C-003, C-004
+  **ICE-RTAS-OPS-2 round 2 (2026-09-18):** `replace_write = or_replace && query.is_some()`
+  — `CREATE OR REPLACE TABLE … AS SELECT` only, never the column-def form. The native
+  door's `execute_staged_create` chains `.with_replace_write(replace_write)` on both the
+  `begin_create` and `begin_replace` arms, and `create_first_service_managed` commits a
+  new-table RTAS through `repark_iceberg::write::commit_replace_write` (plain CTAS keeps
+  `commit_append`). RTAS records `overwrite`, or `delete` when empty, as on the Spark door
+  (ADR-0002 §3).
+  pins: ice-rtas-ops-2/C-015, C-016, C-020
   Tests:
   [create_table/map.md](create_table/map.md).
 - `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`

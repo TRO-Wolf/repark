@@ -170,7 +170,6 @@ def test_noop_moves_keep_schema_id(tmp_path: Path) -> None:
             session.stop()
 
 
-@pytest.mark.xfail(strict=True, reason="ICE-COLUMN-REORDER-1-R-001")
 def test_noop_moves_write_no_metadata_file(tmp_path: Path) -> None:
     """A no-op move writes no metadata file, matching Spark's empty commit."""
     for name, statement in [

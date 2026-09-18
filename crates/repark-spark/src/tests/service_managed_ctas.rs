@@ -670,3 +670,67 @@ async fn ctas_service_managed_from_view_typed_batches_round_trips() {
         vec![Some("a".to_string()), None, Some("c".to_string())]
     );
 }
+
+async fn service_managed_ops(catalogs: &CatalogRegistry, table: &str) -> Vec<String> {
+    let loaded = catalogs["svc"]
+        .load_table(&sales_ident(table))
+        .await
+        .unwrap();
+    let mut snapshots: Vec<_> = loaded.metadata().snapshots().cloned().collect();
+    snapshots.sort_by_key(|snapshot| snapshot.sequence_number());
+    snapshots
+        .iter()
+        .map(|snapshot| snapshot.summary().operation.as_str().to_string())
+        .collect()
+}
+
+#[tokio::test]
+async fn ctas_service_managed_rtas_creating_the_table_records_overwrite() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs, svc) = setup_service_managed(&wh, CommitInjection::None).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE OR REPLACE TABLE svc.sales.rn USING iceberg AS SELECT * FROM src",
+    )
+    .await
+    .expect("service-managed new-table RTAS");
+    assert_eq!(svc.create_table_calls(), 1);
+    assert_eq!(service_managed_ops(&catalogs, "rn").await, ["overwrite"]);
+    assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM svc.sales.rn").await, 3);
+}
+
+#[tokio::test]
+async fn ctas_service_managed_empty_rtas_records_delete_then_delete() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs, svc) = setup_service_managed(&wh, CommitInjection::None).await;
+    let sql = "CREATE OR REPLACE TABLE svc.sales.re USING iceberg AS \
+               SELECT * FROM src WHERE id > 99";
+    execute(&ctx, &catalogs, sql)
+        .await
+        .expect("empty new-table RTAS");
+    assert_eq!(service_managed_ops(&catalogs, "re").await, ["delete"]);
+    execute(&ctx, &catalogs, sql)
+        .await
+        .expect("empty RTAS over the existing table");
+    assert_eq!(svc.create_table_calls(), 1);
+    assert_eq!(
+        service_managed_ops(&catalogs, "re").await,
+        ["delete", "delete"]
+    );
+    assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM svc.sales.re").await, 0);
+}
+
+#[tokio::test]
+async fn ctas_service_managed_plain_ctas_records_append() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs, _svc) = setup_service_managed(&wh, CommitInjection::None).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE svc.sales.pa USING iceberg AS SELECT * FROM src",
+    )
+    .await
+    .expect("plain service-managed CTAS");
+    assert_eq!(service_managed_ops(&catalogs, "pa").await, ["append"]);
+}

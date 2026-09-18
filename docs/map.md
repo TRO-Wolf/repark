@@ -71,8 +71,12 @@ repo.
   declared-absent Spark functions (unreachable vs deferred-by-cost). pins: fnp-15-16/C-014
   **ICE-COLUMN-REORDER-1 FIXED 2026-09-17 (run 20b, round 2 Q-20b-5):** `ALTER COLUMN … FIRST/AFTER`
   moves with ids intact on the facade and Rust ANSI doors; the standing I6 move refusal
-  is removed; OPEN residue `ICE-COLUMN-REORDER-1-R-001` (no-op move writes a metadata file)
-  with fork trigger F-UPDATE-SCHEMA-SAME-1. pins: ice-column-reorder-1/C-001 – C-014
+  is removed; residue `ICE-COLUMN-REORDER-1-R-001` FIXED 2026-09-18 at fork #293
+  (a no-op move commits nothing). pins: ice-column-reorder-1/C-001 – C-014
+  **RP-26 FIXED 2026-09-18 (fork #293):** residues `ICE-HADOOP-VN-1-R-001` (a stale
+  Hadoop replace raises `CatalogCommitConflicts`, no uuid file) and
+  `ICE-BRANCH-OPS-1-R-001` (a duplicate WAP cherry-pick answers Spark's
+  `Duplicate request ...` text).
   **ICE-NESTED-EVO-1 (2026-09-17, run 21a):** §7 rows `ICE-NESTED-EVO-1` (adopted
   Spark tables whose nested struct gained a child read again — fork F-NESTED-EVO-1, reaches
   the workspace with the pin bump) and `ICE-NESTED-DDL-1` (nested `CREATE TABLE` and dotted
