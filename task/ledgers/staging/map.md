@@ -936,3 +936,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   beside `ICE-RDF-DANGLE-2`. Docs-only unit, no product change.
   `risk_tier: standard`. Branch `docs/ice-rdf-fork-asks-1`.
   pins: ice-rdf-fork-asks-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [listing-cost-flake-1-ledger.md](listing-cost-flake-1-ledger.md) —
+  **LISTING-COST-FLAKE-1 (2026-09-18), in flight:** the catalog
+  listing-cost pin counts calls, not wall-clock — the `Instant` ratio
+  assertion over 20 iterations becomes exact `list_tables` / `load_table`
+  counts on a delegating counting catalog (test code only).
+  `risk_tier: standard`. Branch `fix/listing-cost-flake-1`.
+  pins: listing-cost-flake-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
