@@ -47,6 +47,7 @@ pub(crate) async fn execute_insert_by_name(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     stripped_sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     let parsed = parse_single_normalized(stripped_sql)?;
     let Some((statement, _)) = parsed else {
@@ -100,6 +101,7 @@ pub(crate) async fn execute_insert_by_name(
                 &table_sql,
                 &delegated,
                 &partitioned,
+                write_options,
             )
             .await;
         }
@@ -115,6 +117,7 @@ pub(crate) async fn execute_insert_by_name(
                 &[],
             )
             .await?;
+            write_options.refuse_if_non_empty("INSERT ... BY NAME of an empty projection")?;
             repark_iceberg::write::commit_overwrite_replace_all_to(
                 &catalog,
                 &table,
@@ -132,9 +135,11 @@ pub(crate) async fn execute_insert_by_name(
             &table_sql,
             &query,
             &insert.columns,
+            write_options,
         )
         .await;
     }
+    write_options.refuse_if_non_empty("INSERT ... BY NAME")?;
     append_by_name_projection(
         ctx,
         catalogs,

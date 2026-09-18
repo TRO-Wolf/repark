@@ -68,7 +68,11 @@ pins: rp-4-fork-repin/C-005, C-006
   reregister) and the overwrite delegation to `insert_overwrite_from_staged_source`. Branch
   targets count as owned write heads (`write_to_branch.rs`), so no temp-view rewrite fires.
   In-module tests (file-backed in [insert_by_name/map.md](insert_by_name/map.md)).
-  pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004
+  ICE-WRITE-OPTIONS-1 (2026-09-17): the statement write options travel into the two
+  delegating overwrite calls, which honour them; the empty-projection commit and the
+  by-name append commit without them, so both refuse a non-empty options set rather than
+  dropping it silently.
+  pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004; ice-write-options-1/C-006
   **Round 2 (2026-09-17):** `PARTITION` shapes delegate to the positional
   partition arm (static overwrite) or inject clause literals (static append);
   dynamic overwrite stays whole-table replace-all (Spark's default-mode

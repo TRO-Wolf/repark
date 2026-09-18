@@ -168,7 +168,10 @@ async fn execute_inner(
     refuse_multi_statement_sql(sql)?;
     if let Some(stripped) = crate::insert_by_name::strip_insert_by_name(sql)? {
         return Box::pin(crate::insert_by_name::execute_insert_by_name(
-            ctx, catalogs, &stripped,
+            ctx,
+            catalogs,
+            &stripped,
+            write_options,
         ))
         .await;
     }
