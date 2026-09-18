@@ -664,6 +664,14 @@ per the ruling's alternative. Pinned instead: RePark's answer (`['id','ID']`,
 engine's `Projections require unique expression names`. Registry ID-1a carries
 the DECLARED bullet.
 
+### Step 5b — live drift detector for the round-2 cells
+
+`test_live_spark_matches_the_round_2_recording` re-runs each `measured_21b_r2`
+cell on live PySpark 4.1.2 + Iceberg 1.11.0: the three N01 answers with their
+column names, the scalar `CORRELATED_REFERENCE` / `0A000`, and the twin view
+DDL `COLUMN_ALREADY_EXISTS` / `42711`. 5 passed through `jb-jvm.sh`
+(2026-09-18 01:25 EDT), so the recording copied from the log matches live Spark.
+
 ## 7. Open questions (HALT writes here; empty means none)
 
 No HALT. Round 2 (2026-09-18) hands the orchestrator three items:

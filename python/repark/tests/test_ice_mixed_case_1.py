@@ -805,3 +805,36 @@ def test_star_over_a_case_twin_frame_answers_both_columns_declared(
     assert _sorted_rows(table) == [[1, 0]]
     with pytest.raises(AnalysisException, match="Projections require unique expression names"):
         measured.sql(_ROUND_2_CELLS["N03_star_twin_view_create"]["sql"]).collect()
+
+
+@pytest.mark.parametrize("cell_id", sorted(_ROUND_2_CELLS))
+def test_live_spark_matches_the_round_2_recording(
+    cell_id: str, tmp_path: Path, spark_engine: Any
+) -> None:
+    """Live PySpark re-derives each ``measured_21b_r2`` cell (drift detector)."""
+    if not _LIVE:
+        pytest.skip(_LIVE_SKIP)
+    catalog = f"mcr2live{sorted(_ROUND_2_CELLS).index(cell_id)}"
+    live = spark_engine.session
+    live.conf.set("spark.sql.caseSensitive", "false")
+    live.conf.set(f"spark.sql.catalog.{catalog}", "org.apache.iceberg.spark.SparkCatalog")
+    live.conf.set(f"spark.sql.catalog.{catalog}.type", "hadoop")
+    live.conf.set(f"spark.sql.catalog.{catalog}.warehouse", str(tmp_path / "r2_wh"))
+    live.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.ns").collect()
+    for statements in _ROUND_2["setup"].values():
+        for statement in statements:
+            live.sql(statement.replace("sc.ns.", f"{catalog}.ns.")).collect()
+    recorded = _ROUND_2_CELLS[cell_id]
+    sql = recorded["sql"].replace("sc.ns.", f"{catalog}.ns.")
+    if recorded["outcome"] == "ok":
+        frame = live.sql(sql)
+        rows = sorted(([*row] for row in frame.collect()), key=repr)
+        assert list(frame.schema.names) == recorded["columns"]
+        assert rows == recorded["rows"]
+        return
+    with pytest.raises(Exception) as excinfo:
+        live.sql(sql).collect()
+    assert type(excinfo.value).__name__ == recorded["class"]
+    error_class = recorded["message"][0].split("]")[0] + "]"
+    assert error_class in str(excinfo.value)
+    assert recorded["message"][0].split("SQLSTATE: ")[1][:5] in str(excinfo.value)
