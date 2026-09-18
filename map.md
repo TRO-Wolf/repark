@@ -38,6 +38,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   are in force. **IO-ORC-1 (2026-09-16):** `orc-rust 0.8.0` (`default-features = false`, sync
   reader) in `[workspace.dependencies]` for the read-only ORC scan (owner ruling Q-15B-1),
   plus the codec crates the scan decodes with (DEFLATE/zlib, LZ4, LZO, Snappy, Zstandard).
+  **ICE-MIXED-CASE-1 run 22b (2026-09-18, Q-22b-MC-1):** `stacker 0.1.25` — already in the lock
+  under DataFusion's `recursive` — is declared for `repark-core`'s column repair, which runs
+  each poll of Spark-door planning on a stack grown to the statement's nesting depth.
   The iceberg* `[patch.crates-io]` family is a single shared `rev` (five lines);
   each dedicated bump is one row in the [docs/fork-sync.md](docs/fork-sync.md) pin-history table.
   **RP-1 (2026-08-23):** `5e7b2e4` (F-0 / F-1 / F-2 / F-8a); DataFusion family frozen.

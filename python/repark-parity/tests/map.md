@@ -1,5 +1,9 @@
 # map — python/repark-parity/tests
 
+ICE-MIXED-CASE-1 round 3 (2026-09-17): the CAP-1 mirror `_RUST_BASELINES` follows the six shrink-only ratchets (merge/mod.rs 1782, merge/tests/merge.rs 1032, streaming_scan.rs 3020, predicate_dml.rs 1141, predicate_dml/tests 1440, cross_door.rs 1254). pins: ice-mixed-case-1/C-012
+
+ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the mirror follows two more ratchets (merge/mod.rs 1780, predicate_dml.rs 1139). pins: ice-mixed-case-1/C-012
+
 DF-PLAN-INTROSPECT-1 follow-up round 3 (2026-09-15, R-11): CAP-1 mirror row
 ratcheted down with the code — `dataframe/core.py` 4027 → 4014 (the
 `sameSemantics` body moves to `dataframe/plan_introspect.py`). The
@@ -139,6 +143,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mirror rows ratchet `functions.py` 1984 → 1983 and `functions_expr.py`
   2198 → 2178 with `scripts/check_lib_py.py`.
   pins: fnp-gen-1/C-002, C-003
+- `test_cap_1_source_file_line_cap.py` — **ICE-MIXED-CASE-1 (2026-09-18, run 22b):**
+  mirror row ratchets `write/merge/mod.rs` to 1761 with `scripts/check_rust_file_size.py`.
+  pins: ice-mixed-case-1/C-012
 - `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 3 (2026-09-16, run 18a):**
   mirror row ratchets `functions_expr.py` 2178 → 2175 with
   `scripts/check_lib_py.py`.

@@ -1,5 +1,7 @@
 # map — repark-spark/src/tests
 
+ICE-MIXED-CASE-1 (2026-09-17): `common.rs` test helper carries the case-sensitivity flag into session config — round 21b through `with_spark_case_sensitive_config(config, false)`, main's carrier. pins: ice-mixed-case-1/C-012
+
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
@@ -399,7 +401,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `call_register` (**V3-1 / RP-3 C-008**): `CALL system.register_table` arguments, three nullable BIGINT columns,
   adoption/read-back, occupied-ident refusal, Hadoop `vN.metadata.json` write bumps to `v(N+1)`,
   S3 Tables register names R126, and the Spark-written `fixtures/v3-spark-mor/`
-  fixture (`B-MOR-3` zeros),
+  fixture (`B-MOR-3` zeros). **TEST-HYGIENE-1 (2026-09-18):** the fixture keeps its
+  baked-in `/tmp` path because the Avro manifest lists and manifests carry absolute
+  paths in deflate blocks, so relocation without editing Avro bytes cannot read; the
+  in-process `Mutex` is now paired with a cross-process `File::lock` on a lock file held
+  for the fixture lifetime (released by the kernel if the process dies) with wipe-and-copy under the lock.
+  pins: test-hygiene-1/C-001.
   `fixtures/` (Spark-written on-disk Iceberg tables CI can adopt with no JVM),
   `call_orphan` (**MW-3**): full-directory before/after orphan safety and 24-hour cutoff fixtures,
   `ref_ddl` (**REF:** the write-to-branch/tag refusal names the `iceberg-datafusion`

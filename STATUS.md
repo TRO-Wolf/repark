@@ -247,7 +247,7 @@ entry rather than moving it. Nothing is described in both places.
 
 - **Iceberg rating residue (2026-09-16)** — scheduled; each unit deletes its clause:
   a plain-`WHERE` UPDATE aborts on a disjoint commit (V2-20a); a Spark-added nested child is
-  unreadable (V2-10d); mixed-case columns fail (V2-27, #676).
+  unreadable (V2-10d).
   [State](docs/artifacts/iceberg-run-20-closeout-2026-09-17.html).
 - **FNP-8 residuals** — **BACKLOG (2026-09-07)**: [FNP8-NULLABILITY and following rows](docs/spark-sql-iceberg-parity.md#fnp8-nullability--higher-order-result-metadata-retains-inherited-nullable-fields).
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry

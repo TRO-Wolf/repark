@@ -1,5 +1,6 @@
 use super::super::*;
-use super::merge::{merge_sql, spec, update};
+use super::helpers::{spec, update};
+use super::merge::merge_sql;
 
 use super::insert_fill::{target, target_schema};
 

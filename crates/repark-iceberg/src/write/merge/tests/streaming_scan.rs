@@ -262,17 +262,9 @@ fn merge_spec(
     matched: Vec<MatchedClause>,
     not_matched: Vec<InsertClause>,
 ) -> MergeSpec {
-    MergeSpec {
-        target: TableIdent::new(NamespaceIdent::new("sales".to_string()), name.to_string()),
-        target_alias: "t".to_string(),
-        source_from_sql: "src".to_string(),
-        source_alias: "s".to_string(),
-        on_sql: "t.id = s.id".to_string(),
-        matched,
-        not_matched,
-        not_matched_by_source: vec![],
-        commit_branch: None,
-    }
+    let mut spec = super::helpers::spec(matched, not_matched);
+    spec.target = TableIdent::new(NamespaceIdent::new("sales".to_string()), name.to_string());
+    spec
 }
 
 /// `WHEN MATCHED THEN UPDATE SET <col> = <expr>`.

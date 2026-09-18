@@ -439,6 +439,7 @@ pub(super) fn merge_spec(ident: &TableIdent, source_from_sql: &str, on_sql: &str
         not_matched: Vec::new(),
         not_matched_by_source: Vec::new(),
         commit_branch: None,
+        case_insensitive: true,
     }
 }
 
@@ -453,6 +454,7 @@ async fn predicate_dml(
         target_alias: "occ".to_string(),
         selection_sql: selection_sql.to_string(),
         assignments: set_value.map(|value| vec![("v".to_string(), format!("'{value}'"))]),
+        case_insensitive: true,
     };
     execute_predicate_dml(&SessionContext::new(), catalog, &spec).await
 }

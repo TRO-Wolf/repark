@@ -1,0 +1,823 @@
+{
+  "cells": {
+    "MC-AMB-01": {
+      "false": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [AMBIGUOUS_REFERENCE] Reference `a` is ambiguous, could be: [`amb_l`.`a`, `amb_r`.`a`]. SQLSTATE: 42704; line 1 pos 7",
+        "failed_sql": "SELECT a FROM amb_l JOIN amb_r ON amb_l.a = amb_r.A"
+      },
+      "true": {
+        "columns": [
+          "a"
+        ],
+        "rows": []
+      }
+    },
+    "MC-AMB-02": {
+      "false": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [AMBIGUOUS_REFERENCE] Reference `A` is ambiguous, could be: [`amb_l`.`A`, `amb_r`.`A`]. SQLSTATE: 42704; line 1 pos 7",
+        "failed_sql": "SELECT A FROM amb_l JOIN amb_r ON amb_l.a = amb_r.A"
+      },
+      "true": {
+        "columns": [
+          "A"
+        ],
+        "rows": []
+      }
+    },
+    "MC-DEL-01": {
+      "false": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `USERID` cannot be resolved. Did you mean one of the following? [`userId`, `eventName`, `Mixed Case`]. SQLSTATE: 42703; line 1 pos 27;\n'DeleteFromTable ('USERID = 2)\n+- SubqueryAlias sc.ns.mc\n   +- RelationV2[userId#736L, eventName#737, Mixed Case#738] sc.ns.mc",
+        "failed_sql": "DELETE FROM sc.ns.mc WHERE USERID = 2"
+      }
+    },
+    "MC-DF-01": {
+      "false": {
+        "columns": [
+          "USERID"
+        ],
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `USERID` cannot be resolved. Did you mean one of the following? [`userId`, `eventName`, `Mixed Case`]. SQLSTATE: 42703;\n'Project ['USERID]\n+- SubqueryAlias sc.ns.mc\n   +- RelationV2[userId#260L, eventName#261, Mixed Case#262] sc.ns.mc"
+      }
+    },
+    "MC-DF-02": {
+      "false": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `USERID` cannot be resolved. Did you mean one of the following? [`userId`, `eventName`, `Mixed Case`]. SQLSTATE: 42703; line 1 pos 0;\n'Filter ('USERID = 1)\n+- SubqueryAlias sc.ns.mc\n   +- RelationV2[userId#279L, eventName#280, Mixed Case#281] sc.ns.mc"
+      }
+    },
+    "MC-GRP-01": {
+      "false": {
+        "columns": [
+          "EVENTNAME",
+          "c"
+        ],
+        "rows": [
+          [
+            "a",
+            1
+          ],
+          [
+            "b",
+            1
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `EVENTNAME` cannot be resolved. Did you mean one of the following? [`userId`, `eventName`, `Mixed Case`]. SQLSTATE: 42703; line 1 pos 7;\n'Sort ['EVENTNAME ASC NULLS FIRST], true\n+- 'Aggregate ['EVENTNAME], ['EVENTNAME, count(1) AS c#125L]\n   +- SubqueryAlias sc.ns.mc\n      +- RelationV2[userId#126L, eventName#127, Mixed Case#128] sc.ns.mc",
+        "failed_sql": "SELECT EVENTNAME, COUNT(*) AS c FROM sc.ns.mc GROUP BY EVENTNAME ORDER BY EVENTNAME"
+      }
+    },
+    "MC-INS-01": {
+      "false": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ],
+          [
+            2,
+            "b",
+            20
+          ],
+          [
+            9,
+            "z",
+            90
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `USERID` cannot be resolved. Did you mean one of the following? [`userId`, `eventName`, `Mixed Case`]. SQLSTATE: 42703; line 1 pos 0",
+        "failed_sql": "INSERT INTO sc.ns.mc (USERID, EVENTNAME, `mixed case`) VALUES (9, 'z', 90)"
+      }
+    },
+    "MC-JOIN-01": {
+      "false": {
+        "columns": [
+          "userId",
+          "eventName"
+        ],
+        "rows": [
+          [
+            1,
+            "a"
+          ],
+          [
+            2,
+            "b"
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `a`.`USERID` cannot be resolved. Did you mean one of the following? [`a`.`userId`, `b`.`userId`, `a`.`eventName`, `a`.`Mixed Case`, `b`.`eventName`]. SQLSTATE: 42703; line 1 pos 64;\n'Sort ['a.userId ASC NULLS FIRST], true\n+- 'Project ['a.userId, 'b.eventName]\n   +- 'Join Inner, ('a.USERID = 'b.userid)\n      :- SubqueryAlias a\n      :  +- SubqueryAlias sc.ns.mc\n      :     +- RelationV2[userId#171L, eventName#172, Mixed Case#173] sc.ns.mc\n      +- SubqueryAlias b\n         +- SubqueryAlias sc.ns.mc\n            +- RelationV2[userId#174L, eventName#175, Mixed Case#176] sc.ns.mc",
+        "failed_sql": "SELECT a.userId, b.eventName FROM sc.ns.mc a JOIN sc.ns.mc b ON a.USERID = b.userid ORDER BY a.userId"
+      }
+    },
+    "MC-MRG-01": {
+      "false": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ],
+          [
+            2,
+            "b2",
+            20
+          ],
+          [
+            3,
+            "c",
+            30
+          ]
+        ]
+      },
+      "true": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ],
+          [
+            2,
+            "b2",
+            20
+          ],
+          [
+            3,
+            "c",
+            30
+          ]
+        ]
+      }
+    },
+    "MC-MRG-02": {
+      "false": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ],
+          [
+            2,
+            "b2",
+            20
+          ],
+          [
+            3,
+            "c",
+            30
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `EventName` cannot be resolved. Did you mean one of the following? [`Mixed Case`, `eventName`, `userId`]. SQLSTATE: 42703; line 1 pos 87",
+        "failed_sql": "MERGE INTO sc.ns.mc t USING mcs2 s ON t.userid = s.USERID WHEN MATCHED THEN UPDATE SET EventName = s.EVENTNAME WHEN NOT MATCHED THEN INSERT (userId, eventName, `Mixed Case`) VALUES (s.USERID, s.EVENTNAME, s.`MIXED CASE`)"
+      }
+    },
+    "MC-MRG-03": {
+      "false": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ],
+          [
+            2,
+            "b2",
+            21
+          ],
+          [
+            3,
+            "c",
+            30
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `userId` cannot be resolved. Did you mean one of the following? [`eventname`, `mixed case`, `userid`]. SQLSTATE: 42703; line 1 pos 0",
+        "failed_sql": "MERGE INTO sc.ns.mc t USING mcs s ON t.userId = s.userid WHEN MATCHED THEN UPDATE SET * WHEN NOT MATCHED THEN INSERT *"
+      }
+    },
+    "MC-MRG-04": {
+      "false": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ],
+          [
+            2,
+            "b2",
+            20
+          ],
+          [
+            3,
+            "c",
+            30
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `USERID` cannot be resolved. Did you mean one of the following? [`Mixed Case`, `eventName`, `userId`]. SQLSTATE: 42703; line 1 pos 0",
+        "failed_sql": "MERGE INTO sc.ns.mc t USING mcs2 s ON t.userid = s.USERID WHEN MATCHED THEN UPDATE SET eventName = s.EVENTNAME WHEN NOT MATCHED THEN INSERT (USERID, EVENTNAME, `mixed case`) VALUES (s.USERID, s.EVENTNAME, s.`MIXED CASE`)"
+      }
+    },
+    "MC-ORD-01": {
+      "false": {
+        "columns": [
+          "userId"
+        ],
+        "rows": [
+          [
+            2
+          ],
+          [
+            1
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `USERID` cannot be resolved. Did you mean one of the following? [`userId`]. SQLSTATE: 42703; line 1 pos 37;\n'Sort ['USERID DESC NULLS LAST], true\n+- Project [userId#144L]\n   +- SubqueryAlias sc.ns.mc\n      +- RelationV2[userId#144L, eventName#145, Mixed Case#146] sc.ns.mc",
+        "failed_sql": "SELECT userId FROM sc.ns.mc ORDER BY USERID DESC"
+      }
+    },
+    "MC-SEL-01": {
+      "false": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ],
+          [
+            2,
+            "b",
+            20
+          ]
+        ]
+      },
+      "true": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ],
+          [
+            2,
+            "b",
+            20
+          ]
+        ]
+      }
+    },
+    "MC-SEL-02": {
+      "false": {
+        "columns": [
+          "userid",
+          "EVENTNAME",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `USERID` cannot be resolved. Did you mean one of the following? [`userId`, `eventName`, `Mixed Case`]. SQLSTATE: 42703; line 1 pos 59;\n'Project ['userid, 'EVENTNAME, 'Mixed Case]\n+- 'Filter ('USERID = 1)\n   +- SubqueryAlias sc.ns.mc\n      +- RelationV2[userId#45L, eventName#46, Mixed Case#47] sc.ns.mc",
+        "failed_sql": "SELECT userid, EVENTNAME, `Mixed Case` FROM sc.ns.mc WHERE USERID = 1"
+      }
+    },
+    "MC-SEL-03": {
+      "false": {
+        "columns": [
+          "USERID",
+          "EVENTNAME",
+          "mixed case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ],
+          [
+            2,
+            "b",
+            20
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `USERID` cannot be resolved. Did you mean one of the following? [`userId`, `eventName`, `Mixed Case`]. SQLSTATE: 42703; line 1 pos 7;\n'Sort ['USERID ASC NULLS FIRST], true\n+- 'Project ['USERID, 'EVENTNAME, 'mixed case]\n   +- SubqueryAlias sc.ns.mc\n      +- RelationV2[userId#64L, eventName#65, Mixed Case#66] sc.ns.mc",
+        "failed_sql": "SELECT `USERID`, `EVENTNAME`, `mixed case` FROM sc.ns.mc ORDER BY `USERID`"
+      }
+    },
+    "MC-SEL-04": {
+      "false": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ],
+          [
+            2,
+            "b",
+            20
+          ]
+        ]
+      },
+      "true": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ],
+          [
+            2,
+            "b",
+            20
+          ]
+        ]
+      }
+    },
+    "MC-UPD-01": {
+      "false": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "u",
+            10
+          ],
+          [
+            2,
+            "b",
+            20
+          ]
+        ]
+      },
+      "true": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "u",
+            10
+          ],
+          [
+            2,
+            "b",
+            20
+          ]
+        ]
+      }
+    },
+    "MC-UPD-02": {
+      "false": {
+        "columns": [
+          "userId",
+          "eventName",
+          "Mixed Case"
+        ],
+        "rows": [
+          [
+            1,
+            "a",
+            10
+          ],
+          [
+            12,
+            "b",
+            20
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `UserId` cannot be resolved. Did you mean one of the following? [`userId`, `eventName`, `Mixed Case`]. SQLSTATE: 42703; line 1 pos 20;\n'UpdateTable [assignment('UserId, ('UserId + 10))], ('EVENTNAME = b)\n+- SubqueryAlias sc.ns.mc\n   +- RelationV2[userId#653L, eventName#654, Mixed Case#655] sc.ns.mc",
+        "failed_sql": "UPDATE sc.ns.mc SET UserId = UserId + 10 WHERE EVENTNAME = 'b'"
+      }
+    },
+    "MC-VIEW-01": {
+      "false": {
+        "columns": [
+          "USERID",
+          "EVENTNAME"
+        ],
+        "rows": [
+          [
+            1,
+            "a"
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `userid` cannot be resolved. Did you mean one of the following? [`userId`, `eventName`, `Mixed Case`]. SQLSTATE: 42703; line 1 pos 40;\n'Project ['USERID, 'EVENTNAME]\n+- 'Filter ('userid = 1)\n   +- SubqueryAlias mcv\n      +- View (`mcv`, [userId#216L, eventName#217, Mixed Case#218])\n         +- Project [cast(userId#219L as bigint) AS userId#216L, cast(eventName#220 as string) AS eventName#217, cast(Mixed Case#221 as int) AS Mixed Case#218]\n            +- Project [userId#219L, eventName#220, Mixed Case#221]\n               +- SubqueryAlias sc.ns.mc\n                  +- RelationV2[userId#219L, eventName#220, Mixed Case#221] sc.ns.mc",
+        "failed_sql": "SELECT USERID, EVENTNAME FROM mcv WHERE userid = 1"
+      }
+    },
+    "MC-WHERE-01": {
+      "false": {
+        "columns": [
+          "userId"
+        ],
+        "rows": [
+          [
+            1
+          ]
+        ]
+      },
+      "true": {
+        "error_class": "AnalysisException",
+        "error_message": "pyspark.errors.exceptions.captured.AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `EVENTNAME` cannot be resolved. Did you mean one of the following? [`userId`, `eventName`, `Mixed Case`]. SQLSTATE: 42703; line 1 pos 34;\n'Sort ['userId ASC NULLS FIRST], true\n+- 'Project ['userId]\n   +- 'Filter ('EVENTNAME = a)\n      +- SubqueryAlias sc.ns.mc\n         +- RelationV2[userId#104L, eventName#105, Mixed Case#106] sc.ns.mc",
+        "failed_sql": "SELECT userId FROM sc.ns.mc WHERE EVENTNAME = 'a' ORDER BY userId"
+      }
+    }
+  },
+  "create_table": "CREATE TABLE sc.ns.mc (userId BIGINT, eventName STRING, `Mixed Case` INT) USING iceberg TBLPROPERTIES ('format-version'='2', 'write.delete.mode'='copy-on-write', 'write.update.mode'='copy-on-write', 'write.merge.mode'='copy-on-write')",
+  "iceberg_runtime": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+  "measured_21b": {
+    "cells": {
+      "L08_bare_twin": {
+        "class": "AnalysisException",
+        "message": [
+          "[AMBIGUOUS_REFERENCE] Reference `ID` is ambiguous, could be: [`sc`.`ns`.`tw`.`ID`, `sc`.`ns`.`tw`.`ID`]. SQLSTATE: 42704; line 1 pos 7"
+        ],
+        "outcome": "error",
+        "sql": "SELECT ID FROM sc.ns.tw"
+      },
+      "L08_bare_twin_lower": {
+        "class": "AnalysisException",
+        "message": [
+          "[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`sc`.`ns`.`tw`.`id`, `sc`.`ns`.`tw`.`id`]. SQLSTATE: 42704; line 1 pos 7"
+        ],
+        "outcome": "error",
+        "sql": "SELECT id FROM sc.ns.tw"
+      },
+      "L08_qualified_twin": {
+        "class": "AnalysisException",
+        "message": [
+          "[AMBIGUOUS_REFERENCE] Reference `t`.`ID` is ambiguous, could be: [`t`.`ID`, `t`.`ID`]. SQLSTATE: 42704; line 1 pos 7"
+        ],
+        "outcome": "error",
+        "sql": "SELECT t.ID FROM sc.ns.tw AS t"
+      },
+      "L08_star_twin": {
+        "class": "AnalysisException",
+        "message": [
+          "[COLUMN_ALREADY_EXISTS] The column `id` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"
+        ],
+        "outcome": "error",
+        "sql": "SELECT * FROM sc.ns.tw"
+      },
+      "V01_alias_same_name_agg_having": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT COUNT(userId) AS USERID FROM sc.ns.mc HAVING USERID > 0"
+      },
+      "V01_alias_same_name_expr_order": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            2
+          ],
+          [
+            3
+          ]
+        ],
+        "sql": "SELECT userId + 1 AS USERID FROM sc.ns.mc ORDER BY USERID"
+      },
+      "V01_alias_same_name_select": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT userId AS USERID FROM sc.ns.mc"
+      },
+      "V01_alias_upper_of_upper": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT USERID AS USERID FROM sc.ns.mc"
+      },
+      "V02_control_outer_only": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT USERID FROM sc.ns.mc"
+      },
+      "V02_outer_mixed_case_with_failing_inner": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ]
+        ],
+        "sql": "SELECT USERID FROM sc.ns.mc WHERE EVENTNAME IN (SELECT NAME FROM sc.ns.other)"
+      },
+      "V04_join_using_insert": {
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            10,
+            100
+          ]
+        ],
+        "sql": "INSERT INTO sc.ns.jt SELECT USERID, x, y FROM sc.ns.ja JOIN sc.ns.jb USING (USERID)"
+      },
+      "V04_join_using_select": {
+        "columns": [
+          "USERID",
+          "x",
+          "y"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1,
+            10,
+            100
+          ]
+        ],
+        "sql": "SELECT USERID, x, y FROM sc.ns.ja JOIN sc.ns.jb USING (USERID)"
+      },
+      "banner": "spark=4.1.2 iceberg=1.11.0 tz=UTC catalog=hadoop caseSensitive=false",
+      "caseSensitive": "false",
+      "twin_add": {
+        "outcome": "ok",
+        "schema": [
+          "id",
+          "ID"
+        ]
+      }
+    },
+    "recorded_by": "probe_mc.py (run 21b orchestrator), PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, Java 17, hadoop catalog, 2026-09-17",
+    "setup": {
+      "ja": [
+        "CREATE TABLE sc.ns.ja (userId INT, x INT)",
+        "INSERT INTO sc.ns.ja VALUES (1, 10), (2, 20)"
+      ],
+      "jb": [
+        "CREATE TABLE sc.ns.jb (userId INT, y INT)",
+        "INSERT INTO sc.ns.jb VALUES (1, 100)"
+      ],
+      "jt": [
+        "CREATE TABLE sc.ns.jt (userId INT, x INT, y INT)"
+      ],
+      "mc": [
+        "CREATE TABLE sc.ns.mc (userId INT, eventName STRING)",
+        "INSERT INTO sc.ns.mc VALUES (1, 'a'), (2, 'b')"
+      ],
+      "other": [
+        "CREATE TABLE sc.ns.other (name STRING)",
+        "INSERT INTO sc.ns.other VALUES ('a')"
+      ],
+      "tw": [
+        "CREATE TABLE sc.ns.tw (id INT)",
+        "INSERT INTO sc.ns.tw VALUES (1)",
+        "Java API updateSchema().addColumn(\"ID\", IntegerType).commit()"
+      ]
+    }
+  },
+  "measured_21b_r2": {
+    "cells": {
+      "N01_inner_select_list_outer_column_exact": {
+        "columns": [
+          "userId"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT userId FROM sc.ns.mc WHERE eventName IN (SELECT eventName FROM sc.ns.other)"
+      },
+      "N01_inner_select_list_outer_column_lower": {
+        "columns": [
+          "userid"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT userid FROM sc.ns.mc WHERE eventname IN (SELECT eventname FROM sc.ns.other)"
+      },
+      "N01_inner_select_list_outer_column_upper": {
+        "columns": [
+          "USERID"
+        ],
+        "outcome": "ok",
+        "rows": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "sql": "SELECT USERID FROM sc.ns.mc WHERE EVENTNAME IN (SELECT EVENTNAME FROM sc.ns.other)"
+      },
+      "N01_scalar_subquery_outer_column": {
+        "class": "AnalysisException",
+        "message": [
+          "[UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE] Unsupported subquery expression: Expressions referencing the outer query are not supported outside of WHERE/HAVING clauses: \"max(EVENTNAME) AS `max(outer(sc.ns.mc.EVENTNAME))`\". SQLSTATE: 0A000; line 1 pos 16;"
+        ],
+        "outcome": "error",
+        "sql": "SELECT userId, (SELECT max(EVENTNAME) FROM sc.ns.other) AS m FROM sc.ns.mc"
+      },
+      "N03_star_twin_view_create": {
+        "class": "AnalysisException",
+        "message": [
+          "[COLUMN_ALREADY_EXISTS] The column `id` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"
+        ],
+        "outcome": "error",
+        "sql": "CREATE OR REPLACE TEMP VIEW twv AS SELECT 1 AS id, 2 AS ID"
+      }
+    },
+    "recorded_by": "probe_mc2.py (run 21b orchestrator, round 2), PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, Java 17, hadoop catalog, caseSensitive=false, 2026-09-18; cells copied from probe_mc2.log (the probe stopped at the N03 view before writing its JSON)",
+    "setup": {
+      "mc": [
+        "CREATE TABLE sc.ns.mc (userId INT, eventName STRING)",
+        "INSERT INTO sc.ns.mc VALUES (1, 'a'), (2, 'b')"
+      ],
+      "other": [
+        "CREATE TABLE sc.ns.other (name STRING)",
+        "INSERT INTO sc.ns.other VALUES ('a')"
+      ]
+    }
+  },
+  "seed": "INSERT INTO sc.ns.mc VALUES (1, 'a', 10), (2, 'b', 20)",
+  "spark": "4.1.2",
+  "warehouse": "/tmp/repark-ice-mixed-case-1"
+}

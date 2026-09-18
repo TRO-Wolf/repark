@@ -1,6 +1,7 @@
 mod commit_unknown;
 mod dv_commit_opens;
 mod evolved_scan;
+mod helpers;
 mod insert_fill;
 mod lineage;
 mod lineage_stream;

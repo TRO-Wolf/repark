@@ -111,6 +111,7 @@ async fn setup_with_owner_and_settings(
     );
     let config = repark_functions::ansi::with_spark_ansi_config(config, ansi_enabled);
     let config = repark_core::with_session_owner(config, owner);
+    let config = repark_functions::case_sensitive::with_spark_case_sensitive_config(config, false);
     let ctx = SessionContext::new_with_config(config);
     repark_functions::decimal_spark::register_spark_decimal_planner(&ctx);
     ctx.register_udf(crate::spark_as_udf().as_ref().clone());

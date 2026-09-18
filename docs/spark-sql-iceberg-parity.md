@@ -56,7 +56,7 @@ field are pinned JVM-free only; that is a property of what the live tier can exp
 lesser row.
 
 **Scope — swept on 2026-08-10 (method-bounded, not exhaustive).** It opened the same day with
-[ID-1](#id-1--a-quoted-identifier-resolves-case-sensitively) — quoted-identifier case folding,
+[ID-1](#id-1--quoted-identifiers-stay-exact-on-the-ansi-door-fold-on-the-spark-door) — quoted-identifier case folding,
 campaign decision D3 — as the first row admitted at seeding, alongside the rows the sixteen live
 citations forced, the cast-failure backlog row, and the four live-tier disclosures. Unit **G-5**
 then swept the pre-registry disclosures: a wider inventory over `python/repark/` and `crates/`
@@ -993,27 +993,152 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
 
 ## 3. Identifier resolution (DECLARED)
 
-### ID-1 — a quoted identifier resolves case-sensitively
+### ID-1 — quoted identifiers stay exact on the ANSI door, fold on the Spark door
 
 **The first row admitted at seeding (campaign decision D3, 2026-08-10).** It is first by
 *declaration*, not by position: §2's rows were back-filled from the sixteen citations that forced
-them, and the document is ordered by surface, never by date.
+them, and the document is ordered by surface, never by date. Unit ICE-MIXED-CASE-1 rewrote this
+row on 2026-09-16, and rewrote the Spark-door half again on 2026-09-17 (round 5, Q-20b-2):
+identifier normalization stays ON, so the fold rewrites the parsed statement and DML fragments
+to backticked stored-case spellings instead of switching the parser off. Round 21b
+(2026-09-17) closed V-01 / V-02 / V-04 / L-08 against a measured Spark recording and moved the
+ambiguity SQLSTATE to the measured `42704` (Q-21b-1).
 
-- **repark** — a *quoted* identifier is matched case-**sensitively** through both SQL doors:
-  neither the ANSI door's `"ID"` nor the Spark door's `` `ID` `` resolves against a column stored
-  as `id`; both refuse. *Unquoted* identifiers agree with Spark — a mixed-case unquoted reference
-  resolves to the same column through either door.
-- **Apache Spark** — resolves the backticked form case-**insensitively** by default
-  (`spark.sql.caseSensitive = false` applies to quoted names too), so `` `ID` `` finds `id`.
-  *(oracle: documented.)*
+- **repark, ANSI door** — a *quoted* identifier matches case-**sensitively**: `"ID"` never
+  resolves against a column stored as `id`; the refusal is a resolution failure naming `"ID"`.
+  Standard SQL keeps quoted names exact, and Spark is not the ANSI door's oracle (owner ruling
+  2026-08-12, Option A). *Unquoted* identifiers agree with Spark through either door.
+- **repark, Spark door, `caseSensitive=false` (default)** — every spelling resolves against
+  the stored case: unquoted mixed/lower/upper case and backticked wrong-case all find `userId`.
+  After a `FieldNotFound` the fold rewrites the parsed statement against every referenced
+  relation's stored fields, scope by scope (innermost query first, then outward), and replans
+  until a miss repeats. It covers the SELECT list, including a column aliased to its own
+  case-variant spelling (`SELECT userId AS USERID`, `USERID AS USERID`); WHERE; GROUP BY /
+  ORDER BY / HAVING (a reference that names a SELECT alias is left on the alias); JOIN `USING`
+  in every statement that carries a query (`INSERT … SELECT … JOIN … USING`); and UPDATE /
+  INSERT targets. It also covers DML fragments (`MERGE ON` / `SET` / `INSERT`, identity DELETE /
+  UPDATE selections). It emits backticked stored-case spellings, because double-quoted spans
+  are string literals on this door (ID-2) and a bare `t."userId"` does not parse in the session
+  dialect. An outer spelling is never rewritten into an inner scope. A reference to a name with
+  an ASCII case twin in its input refuses, exact case included (row
+  [ID-1a](#id-1a--ascii-case-twin-columns-refuse-every-reference)). Output columns keep stored
+  names where Spark echoes the requested spelling (pinned, not converged).
+- **repark, Spark door, `caseSensitive=true` (DECLARED split)** — resolution is exact, and the
+  parser fold is lossy: an unquoted mixed-case spelling arrives lowercased, so even exact-case
+  unquoted `userId` refuses where Spark resolves it. Backticked exact-case (`` `userId` ``)
+  resolves. The refusal is loud (`AnalysisException`, `No field named`), never a silent wrong
+  answer; the backticked success answers the recorded `true` oracle rows.
+- **Apache Spark** — resolves every spelling case-**insensitively** by default
+  (`spark.sql.caseSensitive = false` applies to quoted names too), so `` `ID` `` finds `id`;
+  under `true` both quoted and unquoted exact-case resolve.
+  *(oracle: recorded fixture `python/repark/tests/ice_mixed_case_1_spark_oracle.json`, Spark 4.1.2;
+  its `measured_21b` block is the run-21b recording of the V-01 / V-02 / V-04 / L-08 cells,
+  PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17.)*
 - **Pin** — `crates/repark-sql/tests/cross_door.rs::cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`
-- **Rationale** — DECLARED, not fixed. The behavior is inherited engine-wide from stock DataFusion
-  resolution; it is not introduced by either door and the doors do not disagree with each other.
-  Making quoted resolution case-insensitive means changing identifier resolution engine-wide for
-  marginal migration value, which is a deliberate decision rather than a bug fix. Revisit only if
-  a workload that actually depends on it turns up. The pin is a **declared-divergence test**: it
-  names this section, and it reds if either half of the claim stops being true — including if the
-  divergence silently disappears.
+  (ANSI refuses, Spark resolves) plus `python/repark/tests/test_ice_mixed_case_1.py` (both
+  doors, both flag values, DML fragments, the ambiguity shape, the backticked-`true` success,
+  the unquoted-`true` declared refusal, and the live tier). The run-21b cells are
+  `test_measured_query_cells_answer_spark[V01_* / V02_* / V04_join_using_select]` and
+  `test_join_using_insert_folds_and_writes_the_left_columns`, plus the Rust
+  `crates/repark-core/src/column_resolution/tests.rs` `v01_*`, `v02_*`, `v04_*`.
+  `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) is
+  `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1: the fold plans, but the right-side join
+  column of an INSERT from two Iceberg scans is written NULL (pre-existing on `origin/main`).
+- **Rationale** — FIXED on the Spark door under `false` (ICE-MIXED-CASE-1, 2026-09-17); the
+  `true` unquoted-exact refusal and the stored-name output echo are DECLARED splits with pins.
+  INTENDED split on the ANSI door per G11 Option A. The old declared-divergence pin reddened
+  exactly as designed when the Spark half converged, and this row was rewritten in the same
+  change.
+
+### ID-1a — ASCII case-twin columns refuse every reference
+
+Unit ICE-MIXED-CASE-1, round 21b (2026-09-17), rulings Q-21b-1 and Q-21b-2 from the measured
+Spark cells.
+
+- **repark, Spark door, `caseSensitive=false`** — when a node's input holds two fields that
+  differ only by ASCII case (`id`, `ID`), any written reference to either refuses. That covers
+  bare and qualified references, and exact case too (`SELECT id` refuses). The error is
+  `[AMBIGUOUS_REFERENCE] Reference <ref> is ambiguous, could be: [<options>]. SQLSTATE: 42704`,
+  with one option per matching field, each in the requested spelling. A qualified reference
+  prints `` `t`.`ID` `` and its options `` `t`.`ID` ``. A bare reference's options carry the
+  relation as written in FROM (`` `sc`.`ns`.`tw`.`ID` ``); a temp view in the session default
+  schema reads bare (`` `twv`.`ID` ``). The same sentence covers twins across joined relations
+  (`amb_l.a` / `amb_r.A`), and write-side twin targets carry the same class and SQLSTATE.
+  Round 2 (2026-09-18): a correlated reference from inside a subquery
+  (`EXISTS (… WHERE o.name = CAST(t.ID AS STRING))`) is audited against the outer scope's
+  fields and refuses the same way. A qualified reference that names one field
+  (`i.USERID` beside `j.userId`) is not refused just because a bare spelling of the name is
+  written somewhere else in the statement.
+- **repark, `SELECT *` over a twin frame (DECLARED, 2026-09-18, Q-21b-12)** — `SELECT * FROM twv`
+  on a temp view of ``SELECT 1 AS id, 0 AS `ID` `` answers columns `['id', 'ID']`, row `[1, 0]`.
+  Spark refuses both the star over its twin table and the twin view's creation with
+  `[COLUMN_ALREADY_EXISTS]` / `42711`. A star refusal in the Spark door's resolution module was
+  built and measured. It also refused the DataFrame door's `filter` and `table` lowerings on
+  case-colliding frames, which Spark answers (`test_filter_predicate_rewrite.py`, five cells), so
+  it did not land. RePark refuses the unquoted view DDL (`… 1 AS id, 2 AS ID`) with the engine's
+  `Projections require unique expression names`, so the refusal matches Spark there but the
+  sentence does not.
+- **repark, Iceberg table carrying twins (DECLARED)** — a twin Iceberg schema cannot be
+  created, and cannot be adopted either. `CREATE TABLE … (`id` INT, `ID` INT)` and
+  `register_table` on Spark's own twin metadata both refuse loud with `DataInvalid => Cannot
+  build lower case index: id and ID collide` (the fork's schema index), before any reference is
+  resolved. Every L-08 statement on such a table therefore refuses at adoption rather than with
+  Spark's sentence, and `SELECT *` refuses at adoption rather than with
+  `[COLUMN_ALREADY_EXISTS]`. The refusal is loud, never a silent answer.
+- **Apache Spark** — Iceberg's Java API `updateSchema().addColumn("ID", …)` on a table with
+  `id` is allowed (schema `['id', 'ID']`). `SELECT t.ID FROM tw AS t` →
+  `` [AMBIGUOUS_REFERENCE] Reference `t`.`ID` is ambiguous, could be: [`t`.`ID`, `t`.`ID`]. SQLSTATE: 42704 ``.
+  `SELECT ID FROM tw` →
+  `` … Reference `ID` is ambiguous, could be: [`sc`.`ns`.`tw`.`ID`, `sc`.`ns`.`tw`.`ID`]. SQLSTATE: 42704 ``,
+  and `SELECT id` gives the same sentence in `id`. `SELECT * FROM tw` →
+  `` [COLUMN_ALREADY_EXISTS] The column `id` already exists. … SQLSTATE: 42711 ``, and so does
+  `CREATE OR REPLACE TEMP VIEW twv AS SELECT 1 AS id, 2 AS ID`.
+  *(oracle: `python/repark/tests/ice_mixed_case_1_spark_oracle.json` `measured_21b`, PySpark
+  4.1.2 + Iceberg 1.11.0, Java 17, hadoop catalog, 2026-09-17; Spark's twin metadata is
+  committed as `python/repark-parity/fixtures/torture/data/ice_mixed_case_1/twin_v3.metadata.json`;
+  the view cell is `measured_21b_r2` `N03_star_twin_view_create`, `probe_mc2.py`, 2026-09-18.)*
+- **Pin** — `python/repark/tests/test_ice_mixed_case_1.py::test_case_twin_reference_is_ambiguous_exact_or_not`
+  (the four reference forms on a twin frame, full sentence), `…::test_sql_door_ambiguous_reference_matches_spark_shape`
+  (the recorded cross-relation sentence up to `SQLSTATE: 42704`),
+  `…::test_measured_case_twin_table_refuses_at_adoption[L08_*]` (the declared adoption
+  refusal for all four measured cells); Rust `crates/repark-core/src/column_resolution/tests.rs`
+  `l08_correlated_reference_to_a_case_twin_is_ambiguous`,
+  `l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere`,
+  `l08_bare_twin_options_carry_the_full_relation_name`, `n03_star_over_a_case_twin_answers_both_columns_declared`,
+  `case_only_collision_raises_the_spark_sentence`, `join_collision_on_bare_reference_raises`;
+  `crates/repark-iceberg/src/write/name_resolution.rs::write_side_case_twins_are_ambiguous`;
+  the declared star answer `…::test_star_over_a_case_twin_frame_answers_both_columns_declared`.
+  pins: ice-mixed-case-1/C-016, C-020
+- **Rationale** — FIXED for references on the Spark door. DECLARED for twin Iceberg tables:
+  loading a twin schema is table-format behavior that lives in the fork (fork rule), not a
+  RePark-side patch. DECLARED for a star over a twin frame. Spark's refusal is measured, but the
+  refusal RePark could make here would also refuse DataFrame calls that Spark answers.
+
+### ID-1b — a correlated outer column in a subquery's SELECT list refuses (DECLARED)
+
+Unit ICE-MIXED-CASE-1, run 21b round 2 (2026-09-18), ruling Q-21b-11.
+
+- **repark, Spark door** — `SELECT USERID FROM mc WHERE EVENTNAME IN (SELECT EVENTNAME FROM
+  other)`, where `other` has no `eventName`, resolves the inner `EVENTNAME` to the outer
+  `mc.eventName` (a correlated `outer_ref`, as Spark does). Then it refuses at physical planning
+  with `UnsupportedOperationException: … Physical plan does not support logical expression
+  InSubquery(…)`. The exact (`eventName`) and lower (`eventname`) spellings refuse the same way.
+  So does an all-lowercase schema, where the case fold never runs, because the engine does not
+  decorrelate an outer reference in an IN-subquery projection. A scalar subquery reading the
+  outer column in its SELECT list (`SELECT userId, (SELECT max(EVENTNAME) FROM other) AS m FROM
+  mc`) refuses with `… does not support logical expression ScalarSubquery(…)` in every spelling.
+  Loud and typed, never a silent answer.
+- **Apache Spark** — the three IN spellings answer `[[1], [2]]`, with columns `USERID`, `userId`
+  and `userid`. The scalar cell refuses `[UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE]
+  … Expressions referencing the outer query are not supported outside of WHERE/HAVING clauses …
+  SQLSTATE: 0A000`. *(oracle: `python/repark/tests/ice_mixed_case_1_spark_oracle.json`
+  `measured_21b_r2`, `probe_mc2.py`, PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-18.)*
+- **Pin** — `python/repark/tests/test_ice_mixed_case_1.py::test_correlated_in_subquery_select_list_refuses_where_spark_answers`
+  (three spellings) and `…::test_correlated_scalar_subquery_select_list_refuses_like_spark`.
+  pins: ice-mixed-case-1/C-019
+- **Rationale** — DECLARED. The name resolution matches Spark, and the refusal is an engine
+  decorrelation gap that predates this unit and has nothing to do with case. Answering these cells
+  is a planner change outside the case-fold unit. The scalar cell refuses on both engines.
 
 > **G11 closed: not parity — correctness (2026-08-12, Y-10 / #67).** Spark is not the ANSI
 > door's oracle (owner ruling 2026-08-12, Option A). The ANSI door serves standard SQL;
@@ -1021,7 +1146,7 @@ them, and the document is ordered by surface, never by date.
 > `crates/repark-sql/tests/cross_door.rs` (`cross_door_integer_division_*`,
 > `cross_door_*_div_by_zero_*`, `cross_door_order_by_*`). Six ANSI-door standard-SQL value
 > pins live in `crates/repark-sql/tests/ansi_door_values.rs`. Identifier case folding remains
-> this section's [ID-1](#id-1--a-quoted-identifier-resolves-case-sensitively) (cited, not
+> this section's [ID-1](#id-1--quoted-identifiers-stay-exact-on-the-ansi-door-fold-on-the-spark-door) (cited, not
 > duplicated).
 >
 > **F-Y10-1 — integer arithmetic overflow raises where Spark raises — FIXED (2026-08-30).**
@@ -3705,6 +3830,24 @@ the pin rather than obeying it.
 > re-verifying each against frozen `d9a7391` (PRs #87–#91). Classification:
 > [`task/s5-v-landing-ledger.md`](../task/ledgers/archive/2026-08/2026-08-13-s5-v-landing-ledger.md). TZ-6 / TZ-7 FIXED
 > notes were already in-file from #85 (not duplicated). No new `live-mirror:` tokens.
+
+### TZ-9 — `current_date` answers the UTC date, not the session-zone date
+
+- **repark** — `SELECT current_date` answers the UTC calendar date whatever
+  `spark.sql.session.timeZone` holds: under `Pacific/Kiritimati` (UTC+14) on
+  2026-09-18 the engine answered `2026-09-18` while the session-zone date was
+  already `2026-09-19` (measured in-repo on the release module, no JVM).
+- **Apache Spark** — answers `current_date` in the session time zone: PySpark 4.1.2 measured
+  2026-09-18 13:03 UTC answered `2026-09-19` under `Pacific/Kiritimati` and `2026-09-18` under
+  `UTC` and `Etc/GMT+12`, each equal to that zone's calendar date (run 22b probe `probe_tz9.py`).
+- **Pin** — `python/repark/tests/test_spark_sql_grammar_1.py::test_q14_current_date_answers_the_session_zone_date`
+  (`xfail(strict=True)` over `Pacific/Kiritimati` and `Etc/GMT+12`, midnight-race
+  guarded); `…::test_q14_current_date_bare_and_paren` now compares against the
+  session's configured zone instead of the host-local date.
+- **Rationale** — OPEN (2026-09-18), intent to FIX. Product defect, not a test
+  bug: the date builtin does not read the session zone. Test-only unit
+  TEST-HYGIENE-1 files it here and holds it red-on-purpose; the engine fix is a
+  later unit.
 
 ### FN-1 — `element_at` out of range is NULL under ANSI
 
