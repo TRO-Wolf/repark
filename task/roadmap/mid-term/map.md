@@ -6,6 +6,13 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [day-report-2026-09-18-22a.md](day-report-2026-09-18-22a.md) — **run 22a (2026-09-18 day run, the fork lane and
+  the pin bumps):** fork #294 (exec conflict filter + five prune-soundness fixes), #296 (hour on ns, sorted and
+  stamped COW DML and binpack) and #295 (ARRAY insert) merged; RP-26 #698, RP-27 #702 (V2-20a closed, UPDATE 4/4),
+  RP-28 #703 on main; next: RP-29 with the 30-cell ARRAY-insert oracle.
+- [day-report-2026-09-18-22b.md](day-report-2026-09-18-22b.md) — **run 22b (the RePark pull requests, the hygiene
+  unit, the registry):** #693, #699, #676 (debug-wheel segfault found and fixed), #694, #689, #695, #700 (V3-05
+  DECLARED), #701 (registry sweep B) all merged; owner questions TZ-9, ENC-1 silent cleartext, the 5,000-branch pins.
 - [v3-multiarg-1.md](v3-multiarg-1.md) — **card V3-MULTIARG-1 (2026-09-18, post-1.x,
   owner ruling 2026-09-18):** read, then write, multi-argument partition transforms
   (`source-ids`); NOT in 1.x (declared in registry V3-MULTIARG-1, rating row V3-05).
