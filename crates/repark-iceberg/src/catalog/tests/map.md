@@ -11,6 +11,10 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
 - `mod.rs` — thin index.
 - `catalog.rs` — AWS-free unit battery: CTAS reality, builder validation, live-list staleness,
   O(1) invalidation, scheme selection, span secret-hygiene, fork-patch proof, T6 residual pins.
+  pins: listing-cost-flake-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  The listing-cost pin counts catalog calls instead of wall-clock time: a call count is
+  deterministic under box load, while an elapsed-time ratio cannot tell a regression from a
+  noisy neighbour.
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
   pins: rp-1-fork-repin/C-003
   pins: rp-4-fork-repin/C-002
