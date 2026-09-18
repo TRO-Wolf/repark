@@ -342,7 +342,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   from the recorded `ON` conjuncts) and INSERT (`writeTo().append()`) run on both doors;
   UPDATE and DELETE have no DataFrame spelling in PySpark 4.1 and run on the SQL door in both
   door cells (ruling Q-21a-6). The plain-`WHERE` UPDATE storm runs the fork's DataFusion exec
-  and is pinned OPEN (fewer than 4 commit; registry ICE-OCC-SCOPED-1-PLAIN-UPDATE, Q-21a-10).
+  with its own scan predicate as the conflict filter since RP-27 (fork #294) and replays
+  Spark's recorded 4-of-4 answer (registry ICE-OCC-SCOPED-1-PLAIN-UPDATE, FIXED 2026-09-18).
   Cells: the four partition-scoped MERGE / UPDATE / DELETE storms
   plus MERGE-vs-INSERT (v2/v3 × MoR/COW × door), the disjoint-range MERGEs (COW commits both,
   MoR refuses one), the eight disjoint-key MERGEs (serializable and snapshot refuse seven),

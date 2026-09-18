@@ -237,20 +237,14 @@ async fn nan_nullsafe_leaves_pushdown_empty() {
 }
 
 #[tokio::test]
-async fn nan_inequality_pushes_not_nan() {
+async fn nan_inequality_pushes_nothing() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     nan_seed(&ctx, &catalogs).await;
-    assert_unary_nan(
-        &planned_predicates(
-            &ctx,
-            &catalogs,
-            "SELECT id FROM ice.sales.t WHERE d != CAST('NaN' AS DOUBLE)",
-        )
-        .await,
-        "d != NaN",
-        PredicateOperator::NotNan,
-    );
+    let sql = "SELECT id FROM ice.sales.t WHERE d != CAST('NaN' AS DOUBLE)";
+    let pushed = planned_predicates(&ctx, &catalogs, sql).await;
+    assert_eq!(pushed.len(), 1, "one scan must plan {sql}");
+    assert!(pushed[0].is_none(), "{sql} must push no predicate");
 }
 
 #[tokio::test]
@@ -299,18 +293,12 @@ async fn nan_range_stays_unpushed() {
 }
 
 #[tokio::test]
-async fn nan_single_not_in_pushes_not_nan() {
+async fn nan_single_not_in_pushes_nothing() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     nan_seed(&ctx, &catalogs).await;
-    assert_unary_nan(
-        &planned_predicates(
-            &ctx,
-            &catalogs,
-            "SELECT id FROM ice.sales.t WHERE d NOT IN (CAST('NaN' AS DOUBLE))",
-        )
-        .await,
-        "d NOT IN (NaN)",
-        PredicateOperator::NotNan,
-    );
+    let sql = "SELECT id FROM ice.sales.t WHERE d NOT IN (CAST('NaN' AS DOUBLE))";
+    let pushed = planned_predicates(&ctx, &catalogs, sql).await;
+    assert_eq!(pushed.len(), 1, "one scan must plan {sql}");
+    assert!(pushed[0].is_none(), "{sql} must push no predicate");
 }
