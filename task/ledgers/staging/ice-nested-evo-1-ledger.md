@@ -310,3 +310,11 @@ F-1 in the round-1 hand-back); its DDL half is PROVEN (C-017 twins, `_describe` 
   `ParseException`); the `UNRESOLVED_COLUMN` suggestion list is the top-level columns in
   schema order where Spark ranks by similarity (they agree on the recorded cell); EX-COL-2 and
   COL-DOTTED-FIELD-1 stay BACKLOG.
+
+**Orchestrator ruling Q-22b-4 (run 22b, 2026-09-18).** The STATUS.md residue clause for V2-10d reads
+"a Spark-added nested child is unreadable". That is no longer true on main: the adoption reads are
+green on RP-25 / RP-26 with no override (C-001..C-005, the `fork292` pins, offline and live). The
+V2-10d clause is deleted in this PR. C-008 stays OPEN for a different defect: every `INSERT` into an
+Iceberg list column fails in the fork writer (ICE-NESTED-INSERT-LIST-1, fork F-LIST-INSERT-1, run 22a's
+fork lane). Its strict xfails flip when that fork fix reaches RePark in RP-27.
+
