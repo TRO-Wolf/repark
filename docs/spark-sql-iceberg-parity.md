@@ -347,8 +347,10 @@ perfectly good read.
   is already the head it fast-forwards and both ids are equal. An unknown id refuses
   `Cannot cherry-pick unknown snapshot ID: <id>`; an already-ancestor id refuses
   `Cannot cherrypick snapshot <id>: already an ancestor`; a second pick of the same staged
-  snapshot refuses `Cannot cherrypick snapshot <id>: already picked to create ancestor <y>`;
-  a delete or static-overwrite staged snapshot refuses
+  snapshot refuses `Cannot cherrypick snapshot <id>: already picked to create ancestor <y>`
+  (an already-published WAP snapshot instead refuses Java's `Duplicate request to cherry
+  pick wap id that was published already: <wap-id>` — row `ICE-BRANCH-OPS-1-R-001`,
+  FIXED 2026-09-18); a delete or static-overwrite staged snapshot refuses
   `Cannot cherry-pick snapshot <id>: not append, dynamic overwrite, or fast-forward` — all
   with the fork's Java-identical text as the base `PySparkException` (RePark has no JVM, so
   the `Py4JJavaError` wrapper has no counterpart; the operative text is what the pins hold).
@@ -368,24 +370,22 @@ perfectly good read.
   row lineage (`next-row-id`, `_row_id`), pinned by the `ops3_*` steps.
   pins: ice-branch-ops-1/C-002, C-005, C-007, C-014, C-015, C-018
 
-#### ICE-BRANCH-OPS-1-R-001 — duplicate WAP cherry-pick message — **OPEN 2026-09-17**
+#### ICE-BRANCH-OPS-1-R-001 — duplicate WAP cherry-pick message — **FIXED 2026-09-18**
 
-- **repark** — cherry-picking an already-published WAP snapshot refuses with the fork's
-  already-picked message (`Cannot cherrypick snapshot <id>: already picked to create
-  ancestor <id>`, base `PySparkException`).
+- **repark** — cherry-picking an already-published WAP snapshot refuses with Java's
+  text (`Duplicate request to cherry pick wap id that was published already: <wap-id>`,
+  base `PySparkException`).
 - **Apache Spark** — the same call refuses `Duplicate request to cherry pick wap id
   that was published already: <wap-id>`.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`
-  `wap_pick_dup`, recorded beside the pin as `spark_error`.)*
+  `wap_pick_dup`.)*
 - **Pin** —
   `python/repark/tests/test_ice_branch_ops_1.py::test_live_branch_ops_adopted_shapes`
-  (`wap_pick_dup`: RePark's class and the fork's message prefix).
-- **Rationale** — OPEN (2026-09-17, Q-20b-4). Java validates the WAP duplicate ahead of
-  the already-picked dedup; the fork validates the other way round. Reordering that
-  refusal in RePark would re-implement table-format validation locally, which fork
-  rule 3 forbids — the fork still refuses the duplicate at commit, so no wrong answer
-  results, only the message differs. TRIGGER: the fork reorders its cherry-pick
-  validation (`F-CHERRYPICK-WAP-ORDER-1`).
+  (`wap_pick_dup`: RePark's class and Spark's message prefix).
+- **Rationale** — FIXED 2026-09-18 (RP-26) at fork #293 (`F-CHERRYPICK-WAP-ORDER-1`):
+  the fork validates the WAP duplicate first and refuses with Java's text, which
+  passes through RePark's `cherrypick_snapshot` unmapped. The recorder keeps the live
+  Spark error as the cell's `expect_error`, so a re-record reproduces the pin.
   pins: ice-branch-ops-1/C-013
 
 #### REF-7 — `set_current_snapshot` — **FIXED 2026-09-17**
@@ -2935,9 +2935,10 @@ the pin rather than obeying it.
   nested struct fields (`ALTER COLUMN s.b FIRST`, short sibling `ALTER COLUMN s.b AFTER a`
   resolved in the mover's struct) and for partition-source columns alike. A move that
   restores a previously seen order points the current schema id back at the original schema,
-  as Spark does. A move to the current position keeps the order and the schema id, matching
-  Spark, except that RePark still writes a metadata file where Spark commits nothing (OPEN
-  residue [ICE-COLUMN-REORDER-1-R-001](#ice-column-reorder-1-r-001--open-measured-2026-09-17-a-no-op-column-move-writes-a-metadata-file)).
+  as Spark does. A move to the current position keeps the order and the schema id and,
+  like Spark, commits nothing (residue
+  [ICE-COLUMN-REORDER-1-R-001](#ice-column-reorder-1-r-001--fixed-2026-09-18-a-no-op-column-move-commits-nothing),
+  FIXED 2026-09-18).
   A dotted `AFTER` reference (`AFTER s.a`) refuses with Spark's `[PARSE_SYNTAX_ERROR] …
   SQLSTATE: 42601`; a cross-struct reference (`s.b AFTER id`) refuses
   `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` naming `` `s`.`id` `` with the top-level suggestions,
@@ -2959,7 +2960,7 @@ the pin rather than obeying it.
   `python/repark/tests/test_ice_column_reorder_1_truth.json`.)*
 - **Pin** — `python/repark/tests/test_ice_column_reorder_1.py` (17 offline vs the truth JSON on
   the facade SQL door with DataFrame-door reads, incl. the short-sibling move, the
-  cross-struct and dotted-`AFTER` refusals, and a strict-xfail no-op-metadata pin; 17 live
+  cross-struct and dotted-`AFTER` refusals, and the no-op-metadata pin; 17 live
   replaying Spark and cross-reading both engines' moved tables),
   `crates/repark-sql/tests/alter_column_move.rs::alter_column_move_reorders_and_noop_writes_no_metadata`
   (ANSI door end to end, incl. the dotted-`AFTER` parse refusal) and the
@@ -2972,21 +2973,19 @@ the pin rather than obeying it.
   `UpdateSchema`, with single-catalog-load doors and an `ALTER`-prefix fast path on the
   intercepts.
 
-### ICE-COLUMN-REORDER-1-R-001 — OPEN (measured 2026-09-17): a no-op column move writes a metadata file
+### ICE-COLUMN-REORDER-1-R-001 — FIXED 2026-09-18: a no-op column move commits nothing
 
 - **repark** — `ALTER TABLE t ALTER COLUMN id FIRST` on `(id, a, b)` keeps the order and the
-  current schema id (the fork reuses the identical schema by content), but still writes a new
-  metadata file.
+  current schema id and writes no new metadata file, matching Spark.
 - **Apache Spark** — Java's `UpdateSchema.commit` skips the commit when the new schema matches
   the current one: no new schema, no new metadata file. *(oracle: truth cases `noop_first_v2`
   / `noop_after_v2`, metadata version and schema id unchanged.)*
 - **Pin** —
   `python/repark/tests/test_ice_column_reorder_1.py::test_noop_moves_write_no_metadata_file`
-  (`xfail(strict=True, reason="ICE-COLUMN-REORDER-1-R-001")`).
-- **Rationale** — OPEN, filed 2026-09-17 from the round-2 review. Metadata-only: order, ids,
-  rows and the schema id all match Spark. The TRIGGER is fork **F-UPDATE-SCHEMA-SAME-1**: a
-  `sameSchema` short-circuit in the Rust `UpdateSchema` action or commit path that skips the
-  commit when the rebuilt schema matches the current one, mirroring Java.
+  plus `crates/repark-sql/tests/alter_column_move.rs` (ANSI door: the no-op move leaves the
+  metadata-file count unchanged).
+- **Rationale** — FIXED 2026-09-18 (RP-26) at fork #293 (**F-UPDATE-SCHEMA-SAME-1**): a
+  schema update that changes nothing commits nothing, mirroring Java.
 
 ### DBT-QUALIFY-1 — a two-part name resolves for `SELECT` but not for `DESCRIBE` or `ALTER TABLE`
 
@@ -5889,8 +5888,8 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 > **FIXED 2026-09-17 (fork #286 at pin `75da2b58`).** A commit whose next metadata
 > location is a Hadoop `vN(.gz).metadata.json` that already exists fails with retryable
 > `CatalogCommitConflicts` after the retry budget, and the existing file stays
-> byte-identical. Every later *snapshot* commit from the stale handle stays wedged-loud;
-> a stale `CREATE OR REPLACE` is the exception (row `ICE-HADOOP-VN-1-R-001` below).
+> byte-identical. Every later commit from the stale handle stays wedged-loud, including
+> a stale `CREATE OR REPLACE` (row `ICE-HADOOP-VN-1-R-001` below, FIXED 2026-09-18).
 > Recovery is a fresh catalog handle registered at the newest version file.
 
 - **repark** — two memory catalogs adopt a Spark-written `v2` table; catalog one's
@@ -5907,9 +5906,8 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   wedges later commits loud the same way (fork D-2); Spark lists past it and continues,
   so on a shared table the orphan is visible to Spark but harmless. A stale
   `CREATE OR REPLACE` (SQL door, `writeTo().replace()`, `writeTo().createOrReplace()`)
-  is the exception to the wedge: it succeeds into fresh-uuid lineage
-  (`00003-<uuid>` + `00004-<uuid>` per replace), the winner's bytes intact, the replace
-  visible only to the stale handle — row `ICE-HADOOP-VN-1-R-001` below.
+  meets the same wedge: it raises `CatalogCommitConflicts` with no uuid file minted —
+  row `ICE-HADOOP-VN-1-R-001` below.
 - **Apache Spark** — never raises on this path: a 400k-row INSERT racing a RePark commit
   scan-forwards and commits the next version, and a planted next-version file does not
   fail the INSERT either — Spark lists the metadata directory and continues. Java's
@@ -5928,40 +5926,35 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `stale_hadoop_pointer_stays_wedged_loud`)
 - **Rationale** — the V2-20c silent-overwrite shape is closed at the fork seam (exclusive
   `vN` create) and pinned at the RePark surface (loud conflict, nothing lost). The
-  remaining deltas are declared: the stale-read shape (pre-existing, catalog-agnostic),
-  Spark's scan-forward versus RePark's loud refusal (both lossless), and the stale-replace
-  split-brain (`ICE-HADOOP-VN-1-R-001`, open).
+  remaining deltas are declared: the stale-read shape (pre-existing, catalog-agnostic)
+  and Spark's scan-forward versus RePark's loud refusal (both lossless); the stale-replace
+  conflict (`ICE-HADOOP-VN-1-R-001`) is FIXED 2026-09-18.
   pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-007, C-008
 
-### ICE-HADOOP-VN-1-R-001 — a stale replace split-brains into uuid lineage (open)
+### ICE-HADOOP-VN-1-R-001 — a stale replace raises conflict, no uuid file — **FIXED 2026-09-18**
 
-> **OPEN residue, filed 2026-09-17.** A stale `CREATE OR REPLACE TABLE … AS` /
+> **FIXED 2026-09-18 (RP-26) at fork #293.** A stale `CREATE OR REPLACE TABLE … AS` /
 > `writeTo().createOrReplace()` / `writeTo().replace()` on an adopted Hadoop `vN` table
-> writes a fresh-uuid `00003-<uuid>.metadata.json` (plus a second uuid file per replace)
-> and succeeds on the stale catalog — split-brain, winner bytes intact, the replace
-> invisible to Spark and to the winning catalog. The fix belongs in the fork
-> (fork trigger `F-HADOOP-VN-REPLACE-1`: `begin_replace` keeps the Hadoop `vN` naming
-> and exclusive-creates it); RePark carries no local patch for it.
+> stages `v(N+1)` and exclusive-creates it once at commit, so the stale replace fails
+> with retryable `CatalogCommitConflicts`, the winner's bytes stay intact and no uuid
+> file is minted (fork `F-HADOOP-VN-REPLACE-1`).
 
-- **repark** — today's behavior, pinned exactly: after catalog one commits `v3`, the
-  stale SQL-door replace lands `[(99, 'rtas')]` on the stale handle with
-  `v1…v3` plus two uuid files in the metadata listing and `v3` bytes unchanged; the
-  DataFrame door does the same per `replace()` call (`[(98, 'df-rpl')]`) and per
-  `createOrReplace()` call (`[(97, 'df-cor')]`). The target is a typed
-  `CatalogCommitConflicts` refusal with no uuid file, pinned red-when-fixed.
+- **repark** — after catalog one commits `v3`, the stale SQL-door replace and each
+  stale DataFrame-door replace (`replace()`, `createOrReplace()`) raise base
+  `PySparkException` with the `CatalogCommitConflicts`-leading message, the metadata
+  listing stays `v1…v3` and `v3` bytes unchanged.
 - **Apache Spark** — Spark's own `CREATE OR REPLACE` on the shared table is healthy:
-  after a RePark commit it writes `v4` in Hadoop naming and reads the new rows only.
+  after a RePark commit it writes `v4` in Hadoop naming and reads the new rows only,
+  and after a stale RePark replace raises, Spark still reads the winner's rows.
 - **Pin** —
-  `python/repark/tests/test_ice_hadoop_vn_1.py::test_stale_replace_splits_brain`,
-  `::test_stale_replace_doors_split_brain` (today's behavior),
-  `::test_stale_replace_raises_conflict`, `::test_stale_df_replace_raises_conflict`
-  (`xfail(strict=True)`, the target),
-  `::test_live_replace_split_brain_spark_reads_winner`,
+  `python/repark/tests/test_ice_hadoop_vn_1.py::test_stale_replace_raises_conflict`,
+  `::test_stale_df_replace_raises_conflict`,
+  `::test_live_stale_replace_conflicts_spark_reads_winner`,
   `::test_live_spark_replace_after_repark_commit` (oracle
   `spark_replace_after_repark`)
-- **Rationale** — every snapshot commit from the stale pointer is loud except this one;
-  the row stays open until the fork trigger lands, at which point the `xfail` pins go
-  XPASS and force the flip.
+- **Rationale** — every commit from the stale pointer is loud now; the staged replace
+  keeps the Hadoop `vN` naming and exclusive-creates it at commit, closing the
+  split-brain at the fork seam.
   pins: ice-hadoop-vn-1/C-008
 
 ### S3T-1 — S3 Tables `register_table` is a dated service gap (fork R126)
