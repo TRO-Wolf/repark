@@ -71,6 +71,7 @@ pins: rp-4-fork-repin/C-005, C-006
   marker and fill awaits in `spark_ast.rs` are boxed with their preloaded `Table`, so
   every `execute` future stays under clippy's `large_futures` 16 KiB threshold (the
   round-1 inline awaits grew it to 16,384–16,544 bytes and tripped 135 test call sites).
+  pins: ice-v3-write-default-1/C-024
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
   strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
   projection build, the staged-append executor (stream → conform → `commit_append_to` →

@@ -323,7 +323,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   see that hunk); `DEFAULT` in the outer SELECT of a query that carries `WITH` refuses
   `UNRESOLVED_COLUMN` 42703 on INSERT INTO and INSERT OVERWRITE, as Spark 4.1.2 does; `DEFAULT`
   inside a CTE body or a derived table refuses and writes nothing.
-  pins: ice-v3-write-default-1/C-016, C-021
+  pins: ice-v3-write-default-1/C-016, C-021, C-023
 - `write_to_branch.rs` — RP-5 C-004 family pins: INSERT VALUES/SELECT, UPDATE, DELETE,
   MERGE, INSERT OVERWRITE, TRUNCATE, empty overwrite on a diverged branch; two-part
   `t.branch_b` via session defaults; tag and missing-branch Spark-shaped refuse including

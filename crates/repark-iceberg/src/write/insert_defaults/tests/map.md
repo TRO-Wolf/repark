@@ -4,7 +4,7 @@
 
 Unit tests for `../../insert_defaults.rs`, moved from `insert_defaults/tests.rs` on
 2026-09-18 (run 21b round 2) so the C-009 setter guard's `tests` path exemption covers
-the test-only `with_write_default` builder.
+the test-only `with_write_default` builder. pins: ice-v3-write-default-1/C-024
 
 ## Contents
 
