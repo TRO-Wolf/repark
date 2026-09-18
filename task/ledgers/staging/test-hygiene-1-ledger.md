@@ -79,6 +79,49 @@ zone's calendar date at that instant.
 
 ## COVERAGE_ATTESTATION
 
+```
+COVERAGE_ATTESTATION:
+  pr_unit: test-hygiene-1
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Each clause walked against the tree and a run — both fixed-path fixtures run twice concurrently green (C-001, C-002), the session-zone pin green with its strict-xfail twin biting under --runxfail (C-003), the perf leg collected by default and deselected by -m "not perf" (C-004), the staging map scanned for duplicate blocks (C-005).
+      artifacts: [crates/repark-spark/src/tests/call_register.rs, python/repark-parity/tests/torture/test_torture_v3_dv.py, python/repark/tests/test_spark_sql_grammar_1.py, python/repark/tests/test_perf_ice_catalog_io_1.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundaries — a killed holder (the kernel file lock releases on exit; the round-1 lock directory did not), a midnight crossing (before/after guard), two zones always on different calendar dates.
+      artifacts: [crates/repark-spark/src/tests/call_register.rs, python/repark/tests/test_spark_sql_grammar_1.py]
+    - id: AT-3
+      status: N/A
+      justification: Test code only; no product path changes.
+    - id: AT-4
+      status: ATTACKED
+      evidence: Cross-process exclusion is the unit's subject — std::fs::File::lock and fcntl.flock, each held for the fixture's lifetime.
+      artifacts: [crates/repark-spark/src/tests/call_register.rs, python/repark-parity/tests/torture/test_torture_v3_dv.py]
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, secret or injection surface.
+    - id: AT-6
+      status: ATTACKED
+      evidence: CI keeps the perf leg — no -m filter in wheels.yml or parity-live.yml; only the lane gate deselects it.
+      artifacts: [python/repark/tests/conftest.py]
+    - id: AT-7
+      status: N/A
+      justification: No performance path changes; the 500-table leg is only marked.
+    - id: AT-8
+      status: N/A
+      justification: No dependency, build or CI configuration change.
+    - id: AT-9
+      status: N/A
+      justification: No log format or error text change.
+    - id: AT-10
+      status: ATTACKED
+      evidence: TZ-9 states RePark's measured UTC-date answer and Spark 4.1.2's measured session-zone answer (orchestrator probe, 2026-09-18 13:03 UTC).
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+```
+
+
 Every clause above is PROVEN with a quoted command and its output; no clause is
 OPEN. Touched files per clause: C-001 `crates/repark-spark/src/tests/call_register.rs`
 + `crates/repark-spark/src/tests/map.md`; C-002
