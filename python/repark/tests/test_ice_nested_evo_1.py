@@ -406,7 +406,7 @@ def _replayed(
 
 
 def _ddl_param(label: str, format_version: str) -> Any:
-    """Return one schema cell, strict-xfail where a column named `struct` meets IDENT-STRUCT-KW-1."""
+    """Return one schema cell, strict-xfail where a `struct` column meets IDENT-STRUCT-KW-1."""
     if label in _STRUCT_IDENTIFIER_LABELS:
         return pytest.param(
             label,
