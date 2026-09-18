@@ -6612,5 +6612,5 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   (`REPARK_PARITY_LIVE=1`): Spark replays the `overwritePartitions_false` cell and
   answers the recorded summary. Truth in
   [../../repark-parity/fixtures/torture/data/ice_write_options_rp_1/](../../repark-parity/fixtures/torture/data/ice_write_options_rp_1/map.md).
-  pins: ice-write-options-rp-1/C-003, C-004, C-005, C-006
+  pins: ice-write-options-rp-1/C-003, C-004, C-005, C-006, C-007, C-008
 
