@@ -1,5 +1,7 @@
 # map — repark-sql/src
 
+ICE-MIXED-CASE-1 (2026-09-17): the ANSI door stays exact — `merge.rs`/`router.rs` force `case_insensitive = false` on the MERGE spec so only the Spark door folds case. pins: ice-mixed-case-1/C-006
+
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 (pins: cc-3-comment-condensation/C-009).
 

@@ -74,6 +74,7 @@ fn allowed_from_target(
             target_alias,
             selection_sql: scratch_selection.to_string(),
             assignments: None,
+            case_insensitive: true,
         },
     }))
 }

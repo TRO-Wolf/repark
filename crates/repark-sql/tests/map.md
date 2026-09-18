@@ -1,5 +1,7 @@
 # map — repark-sql/tests
 
+ICE-MIXED-CASE-1 (2026-09-17): `cross_door.rs` ROW 8 pins the identifier-case-folding split — ANSI refuses, Spark resolves. pins: ice-mixed-case-1/C-011
+
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 (pins: cc-3-comment-condensation/C-009).
 

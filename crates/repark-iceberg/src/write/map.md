@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/write
 
+ICE-MIXED-CASE-1 (2026-09-17): the write path resolves target columns through the shared case-insensitive scope helpers (`name_resolution.rs`, `predicate_dml.rs`); identity DELETE/UPDATE take the flag at the execution site. pins: ice-mixed-case-1/C-003, C-005
+
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002). Clippy doc_markdown backticks added.
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
@@ -586,7 +588,13 @@ repark-core's error map.
   (`data_file_path: Arc<str>`, `project_field_ids: Arc<[i32]>`, `deletes: Arc<[…]>`).
 - `name_resolution.rs` (crate-private) — the shared case-insensitive by-name column resolver
   (Spark `spark.sql.caseSensitive=false` conform semantics); used by both `append` conform and
-  merge star expansion so the two surfaces cannot drift.
+  merge star expansion so the two surfaces cannot drift. `resolve_write_column` is the single
+  resolve-or-refuse entry for write target lists (case-twin collisions refuse
+  `[AMBIGUOUS_REFERENCE]` / `42704`, one option per twin in the requested spelling — run 21b
+  Q-21b-1 / Q-21b-2 from the measured Spark cells); `arrow_field_twins` /
+  `ambiguous_write_message` are its pieces. Twin targets only exist on non-fork schemas: the
+  fork refuses to load a twin Iceberg schema (round 21b step 5 applies the requested spelling and
+  42704 in `ambiguous_write_message`). pins: ice-mixed-case-1/C-004, C-016
 - `position_delete.rs` (crate-private; two `pub` re-exports via `mod.rs`) — merge-on-read
   WRITE primitive: turn `(_file, _pos)` pairs into committable position-delete `DataFile`s by
   driving the fork's production `PositionDeleteFileWriter`. Owns sort order (ascending

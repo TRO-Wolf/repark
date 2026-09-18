@@ -190,8 +190,9 @@ async fn execute_identity_or_delegate(
 async fn commit_identity_dml(
     cx: &EngineContext<'_>,
     statement: &Statement,
-    allowed: repark_iceberg::write::predicate_dml::AllowedDeleteIn,
+    mut allowed: repark_iceberg::write::predicate_dml::AllowedDeleteIn,
 ) -> Result<DataFrame> {
+    allowed.spec.case_insensitive = false;
     guards::refuse_mor_multi_spec_dml(cx, statement).await?;
     let handle = schema_ddl::catalog_handle(cx.catalogs, &allowed.catalog_name)?;
     repark_iceberg::write::predicate_dml::execute_predicate_dml(cx.ctx, handle, &allowed.spec)
