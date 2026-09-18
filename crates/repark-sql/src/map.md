@@ -35,6 +35,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   CREATE lands under `{warehouse}/repark_ansi_ctas/…`, not the process temp dir.
 - `insert_overwrite.rs` — **DML-B:** `INSERT OVERWRITE … PARTITION (…)` static/dynamic;
   whole-table stays Q9. pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-006
+  ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): both PARTITION arms fill omitted
+  write-defaults through the shared `overwrite_source_with_defaults`; the dynamic arm
+  no longer writes NULL for a defaulted column. pins: ice-v3-write-default-1/C-015
 - `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms
   (static overwrite/delete, two-key AND + incomplete-static, string/NULL, dynamic
   `replace-partitions=true`, empty-dynamic refuse) and the remaining Q9 whole-table refuse.

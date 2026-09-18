@@ -152,7 +152,7 @@ pub(crate) async fn execute_partition_overwrite(
     use repark_iceberg::write::{
         PartitionOverwritePlan, partition_overwrite_request_from_exprs, plan_partition_overwrite,
         refuse_empty_dynamic_overwrite, stage_static_partition_overwrite_files,
-        write_overwrite_staged_files_from_stream,
+        static_partition_source_columns, write_overwrite_staged_files_from_stream,
     };
 
     let Some((catalog_name, catalog, table, branch)) =
@@ -169,9 +169,21 @@ pub(crate) async fn execute_partition_overwrite(
             "INSERT OVERWRITE … PARTITION requires a SELECT or VALUES source".to_string(),
         )
     })?;
-    let column_names: Vec<String> = insert.columns.iter().map(object_name_last).collect();
-    let materialize_sql = format!("SELECT * FROM ({source}) AS _repark_ow_src");
-    let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
+    let listed: Vec<String> = insert.columns.iter().map(object_name_last).collect();
+    let reserved = match &plan {
+        PartitionOverwritePlan::Static(spec) => {
+            static_partition_source_columns(&table, &spec.equalities)?
+        }
+        PartitionOverwritePlan::Dynamic => Vec::new(),
+    };
+    let filled = repark_iceberg::write::insert_defaults::overwrite_source_with_defaults(
+        table.metadata().current_schema(),
+        &listed,
+        &reserved,
+        source,
+    )?;
+    let column_names = filled.columns;
+    let source_df = spark_ast::execute_passthrough(ctx, catalogs, &filled.sql).await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     match plan {
         PartitionOverwritePlan::Static(spec) => {
@@ -180,6 +192,7 @@ pub(crate) async fn execute_partition_overwrite(
                 &table,
                 batches,
                 &spec.equalities,
+                &column_names,
                 concurrency,
             )
             .await?;
@@ -453,40 +466,13 @@ fn overwrite_source_with_default_fills(
     column_names: &[String],
     source: &datafusion::sql::sqlparser::ast::Query,
 ) -> Result<(Vec<String>, String)> {
-    let plain = format!("SELECT * FROM ({source}) AS _repark_ow_src");
-    if column_names.is_empty() {
-        return Ok((column_names.to_vec(), plain));
-    }
-    let defaults =
-        repark_iceberg::write::insert_defaults::column_defaults(table.metadata().current_schema())?;
-    let mut names = column_names.to_vec();
-    let mut fills = Vec::new();
-    for field in table.metadata().current_schema().as_struct().fields() {
-        if names
-            .iter()
-            .any(|listed| listed.eq_ignore_ascii_case(&field.name))
-        {
-            continue;
-        }
-        if let Some(fill) = defaults.get(&field.name.to_ascii_lowercase()) {
-            fills.push(format!(
-                "({}) AS {}",
-                fill.sql_text()?,
-                repark_iceberg::write::idents::quote_ident_spark(&field.name)
-            ));
-            names.push(field.name.clone());
-        }
-    }
-    if fills.is_empty() {
-        return Ok((names, plain));
-    }
-    Ok((
-        names,
-        format!(
-            "SELECT *, {} FROM ({source}) AS _repark_ow_src",
-            fills.join(", ")
-        ),
-    ))
+    let filled = repark_iceberg::write::insert_defaults::overwrite_source_with_defaults(
+        table.metadata().current_schema(),
+        column_names,
+        &[],
+        source,
+    )?;
+    Ok((filled.columns, filled.sql))
 }
 
 /// Empty INSERT OVERWRITE wipe must not run when source types are not assignment-compatible.

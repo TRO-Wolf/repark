@@ -716,3 +716,42 @@ fn numeric_suffix_guard_skips_bare_decimals() {
         );
     }
 }
+
+#[test]
+fn insert_partition_column_list_moves_before_partition_clause() {
+    let cases = [
+        (
+            "INSERT OVERWRITE ice.ns.t PARTITION (id) (name) VALUES ('x')",
+            "INSERT OVERWRITE ice.ns.t (name) PARTITION (id) VALUES ('x')",
+        ),
+        (
+            "INSERT OVERWRITE ice.ns.t PARTITION (id) (id, name) SELECT 10, 11",
+            "INSERT OVERWRITE ice.ns.t (id, name) PARTITION (id) SELECT 10, 11",
+        ),
+        (
+            "INSERT OVERWRITE ice.ns.t PARTITION (id = 10) (name) VALUES ('x')",
+            "INSERT OVERWRITE ice.ns.t (name) PARTITION (id = 10) VALUES ('x')",
+        ),
+        (
+            "insert overwrite table ice.ns.t partition (bucket(4, id)) (`name`) select 'x'",
+            "insert overwrite table ice.ns.t (`name`) partition (bucket(4, id)) select 'x'",
+        ),
+    ];
+    for (spark, parsed) in cases {
+        let canonical = crate::spark_literals::canonicalize_verbatim(spark, false).expect(spark);
+        assert_eq!(canonical.as_ref(), parsed, "{spark}");
+    }
+}
+
+#[test]
+fn insert_partition_without_column_list_is_untouched() {
+    for sql in [
+        "INSERT OVERWRITE ice.ns.t PARTITION (id = 10) VALUES (1)",
+        "INSERT INTO ice.ns.t PARTITION (id) (SELECT 1, 2)",
+        "INSERT OVERWRITE ice.ns.t PARTITION (id) SELECT 10, 11",
+        "SELECT partition FROM t",
+    ] {
+        let canonical = crate::spark_literals::canonicalize_verbatim(sql, false).expect(sql);
+        assert_eq!(canonical.as_ref(), sql);
+    }
+}

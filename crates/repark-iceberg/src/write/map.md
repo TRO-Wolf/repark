@@ -424,6 +424,13 @@ repark-core's error map.
   refuse) in its rustdoc and error. `commit_*_to` variants pass `.to_branch`.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
   pins: rp-5-fork-repin/C-004 V3-COV pins in this file: a view-string source conforms to its Utf8 target instead of failing the rebuild (V3-COV-1); the identity arm hands the same buffer back while a non-assignable pair still refuses.
+  **ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17, ruling Q-21b-3):**
+  `stage_static_partition_overwrite_files` takes the statement column list; a
+  non-empty list maps the source by name (static columns from the clause, listed
+  columns from the source, the rest NULL or `CANNOT_FIND_DATA` when required) and a
+  listed static column refuses `STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST`.
+  `static_partition_source_columns` names the columns the clause assigns so the
+  default fill skips them. pins: ice-v3-write-default-1/C-015
 - `insert_gate.rs` — **WI-2 (2026-08-15):** `InsertStoreAssignment`, an `AnalyzerRule` over
   `LogicalPlan::Dml(WriteOp::Insert(_))` that runs `store_assign.rs`'s matrix — imported, never
   duplicated — against the pre-cast types in the synthesized projection's INPUT schema. Registered
@@ -450,6 +457,13 @@ repark-core's error map.
   (including the load-count pins over a counting test catalog) live in
   `insert_defaults/tests.rs`.
   pins: ice-v3-write-default-1/C-004, C-005, C-006, C-007
+  **Round 5 (2026-09-17):** `overwrite_source_with_defaults` is the one
+  `INSERT OVERWRITE` fill both doors share — whole-table and both PARTITION arms —
+  appending `(CAST(default)) AS col` for every omitted defaulted column not listed
+  and not assigned by a static clause, and returning the extended column list.
+  `schema_has_write_default` is the cheap pre-scan that skips the Arrow conversion
+  and the `ColumnDefaults` map on tables with no defaults (R-04).
+  pins: ice-v3-write-default-1/C-015, C-019
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):
   `ansi_store_assignable` / `normalize_for_assignment` /

@@ -89,7 +89,7 @@ pub use partition_overwrite::{
     commit_overwrite_by_row_filter_to, commit_replace_partitions, commit_replace_partitions_to,
     inject_static_partition_columns, partition_overwrite_request_from_exprs,
     plan_partition_overwrite, refuse_empty_dynamic_overwrite,
-    stage_static_partition_overwrite_files,
+    stage_static_partition_overwrite_files, static_partition_source_columns,
 };
 pub use partition_write::{WRITTEN_FILES_COL_NAME, write_data_files_from_plan};
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};

@@ -89,6 +89,66 @@ pub fn column_defaults(schema: &IcebergSchema) -> Result<ColumnDefaults> {
     Ok(defaults)
 }
 
+pub struct OverwriteSource {
+    pub columns: Vec<String>,
+    pub sql: String,
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn overwrite_source_with_defaults(
+    schema: &IcebergSchema,
+    listed: &[String],
+    reserved: &[String],
+    source: &Query,
+) -> Result<OverwriteSource> {
+    let plain = format!("SELECT * FROM ({source}) AS _repark_ow_src");
+    if listed.is_empty() || !schema_has_write_default(schema) {
+        return Ok(OverwriteSource {
+            columns: listed.to_vec(),
+            sql: plain,
+        });
+    }
+    let defaults = column_defaults(schema)?;
+    let mut columns = listed.to_vec();
+    let mut fills = Vec::new();
+    for field in schema.as_struct().fields() {
+        let provided = |name: &String| name.eq_ignore_ascii_case(&field.name);
+        if columns.iter().any(provided) || reserved.iter().any(provided) {
+            continue;
+        }
+        if let Some(fill) = defaults.get(&field.name.to_ascii_lowercase()) {
+            fills.push(format!(
+                "({}) AS {}",
+                fill.sql_text()?,
+                crate::write::idents::quote_ident_spark(&field.name)
+            ));
+            columns.push(field.name.clone());
+        }
+    }
+    if fills.is_empty() {
+        return Ok(OverwriteSource {
+            columns,
+            sql: plain,
+        });
+    }
+    Ok(OverwriteSource {
+        columns,
+        sql: format!(
+            "SELECT *, {} FROM ({source}) AS _repark_ow_src",
+            fills.join(", ")
+        ),
+    })
+}
+
+#[must_use]
+pub fn schema_has_write_default(schema: &IcebergSchema) -> bool {
+    schema
+        .as_struct()
+        .fields()
+        .iter()
+        .any(|field| matches!(field.write_default, Some(Literal::Primitive(_))))
+}
+
 pub fn insert_column_list(statement: &Statement) -> Option<Vec<String>> {
     let Statement::Insert(insert) = statement else {
         return None;

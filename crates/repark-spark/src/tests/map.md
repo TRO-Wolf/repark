@@ -36,6 +36,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (before the optimizer's literal fold), pinning the marker-cast exemption in
   `repark_functions::java_double::rewrite_float_cast` that lets
   `FoldSparkNumericCasts` see the `CAST(__repark_suffix_literal__ …)` shape.
+  Round 5 (2026-09-17): the `PARTITION (…) (cols)` swap and its non-matches.
+  pins: ice-v3-write-default-1/C-015
 - `lambda_door.rs` — **FNP-8 (2026-09-06):** the eleven higher-order names through
   `crate::execute` with `x -> y` syntax — both `transform`/`filter` arities, `exists` as a
   function (not the subquery keyword), `forall` on empty, `aggregate` with and without

@@ -60,6 +60,9 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
   pins: rp-5-fork-repin/C-004
   pins: ice-dyn-overwrite-1/C-014, C-020
+  ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): both PARTITION arms fill omitted
+  write-defaults through `insert_defaults::overwrite_source_with_defaults` and pass
+  the column list into staging (dynamic and static). pins: ice-v3-write-default-1/C-015
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
   strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
   projection build, the staged-append executor (stream → conform → `commit_append_to` →
@@ -262,6 +265,8 @@ pins: rp-4-fork-repin/C-005, C-006
   digit/`.` + suffix letter or exponent (`1.e2` stays on the rewrite path); bare
   decimals skip the tokenize. The 200-column decimal gap is DataFusion-side.
   pins: fnp-4b/C-001, C-004, C-005, C-006, C-020
+  `sql_may_have_insert_partition` keeps quote-free `INSERT … PARTITION` text off the
+  fast path so the column-list swap runs.
 - `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
   `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —
   Int64 fitting i32 narrows to Int32, UInt64 becomes Decimal128(digits, 0),
@@ -305,6 +310,11 @@ pins: rp-4-fork-repin/C-005, C-006
   (`CAST({signed} AS TINYINT/SMALLINT)`), range-checked on the signed text; the L arm
   refuses out-of-range `BIGINT` at parse with `[INVALID_NUMERIC_LITERAL_RANGE]`.
   pins: fnp-4b/C-001, C-004, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-021, C-023
+  ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): `plan_insert_partition_column_list_regions`
+  swaps Spark's `INSERT … PARTITION (…) (cols) <query>` into the parser's
+  `INSERT … (cols) PARTITION (…) <query>` order; a group that is not a bare
+  identifier list, or not followed by a query body, is left alone.
+  pins: ice-v3-write-default-1/C-015
 - `spark_typed.rs` — **FNP-4B critic (2026-09-15):** `FoldSparkNumericCasts` folds
   `CAST('1e200' AS DOUBLE)` to a non-null Float64 literal; `SparkProjectionDisplay`
   aliases unaliased projections whose DataFusion names carry `Int64(` /
