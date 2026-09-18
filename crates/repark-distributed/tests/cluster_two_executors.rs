@@ -332,7 +332,7 @@ async fn cancel_mid_flight_sets_cancelled_and_no_running_tasks_within_five_secon
         Err(error) => panic!("ReparkSession::new: {error}"),
     };
     let context = session.context().clone();
-    let sql = "SELECT value FROM range(100000000)";
+    let sql = "SELECT id FROM range(100000000)";
     let plan = physical_plan(&context, sql).await;
     let provider = ReparkSessionProvider::from_context(&context);
     let cluster = match ReparkClusterExecutor::new(2, bind_address(), provider).await {

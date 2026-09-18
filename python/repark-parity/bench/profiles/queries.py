@@ -119,9 +119,9 @@ def run_append_files(spark: object, table: str, scale: WriteScale) -> None:
         base = 10_000_000 + index * 1_000_000
         collect_sql(
             spark,
-            f"INSERT INTO {table} SELECT value + {base} AS id, "
+            f"INSERT INTO {table} SELECT id + {base} AS id, "
             f"'{index % 8}' AS g, "
-            f"CAST(value + {base} AS DOUBLE) AS v FROM range(1000)",
+            f"CAST(id + {base} AS DOUBLE) AS v FROM range(1000)",
         )
 
 
@@ -131,7 +131,7 @@ def run_overwrite_partition(spark: object, table: str, scale: WriteScale) -> Non
     collect_sql(
         spark,
         f"INSERT OVERWRITE {table} PARTITION (g = '7') "
-        f"SELECT value AS id, CAST(value AS DOUBLE) AS v FROM range(1000)",
+        f"SELECT id, CAST(id AS DOUBLE) AS v FROM range(1000)",
     )
 
 
@@ -142,7 +142,7 @@ def run_merge_updates(spark: object, table: str, scale: WriteScale) -> None:
     collect_sql(
         spark,
         f"MERGE INTO {table} AS t USING "
-        f"(SELECT value AS id, CAST(value AS DOUBLE) + 0.5 AS v FROM range({source_rows})) AS s "
+        f"(SELECT id, CAST(id AS DOUBLE) + 0.5 AS v FROM range({source_rows})) AS s "
         f"ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.v = s.v",
     )
 

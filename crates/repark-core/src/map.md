@@ -685,6 +685,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   runs from `ReparkSessionBuilder::build` after extension `register` (F-Y10-1).
   `#[async_trait(?Send)]`
   — rustc 1.96 HRTB + iceberg `Catalog` in `CatalogRegistry`; session awaits in place.
+- `range_table.rs` (+ [range_table/](range_table/map.md)) — **RANGE-TVF-ID-1
+  (2026-09-18, round 1):** `SparkRangeFunc`, RePark's `range` table function —
+  non-nullable `id: Int64` column, 1–4 literal arguments (the 4th is
+  `numPartitions`, accepted and ignored for rows), `Utf8` bounds parsed as
+  integers, zero step refused as a planning error; row generation reuses
+  DataFusion's `GenerateSeriesTable` with `include_end = false`.
+  `ReparkSessionBuilder::build` registers it over the built-in `range` after
+  extension `register`, so the facade door and the native door share the one
+  registration; `generate_series` keeps its `value` column.
+  pins: range-tvf-id-1/C-001, C-002, C-003
 - `runtime.rs` (+ `runtime/tests.rs`) — **`EngineRuntime`** (phase-3 PR-3, EC-5 / design §4 Q7):
   the name the engine gives the **embedding's** Tokio runtime — a cloneable `Arc<Runtime>` handle
   with `runtime()` and `block_on`. ADDITIVE and tier-legal: core constructs no runtime, has no

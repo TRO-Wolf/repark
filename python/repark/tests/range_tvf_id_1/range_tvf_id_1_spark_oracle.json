@@ -1,0 +1,281 @@
+{
+ "spark_version": "4.1.2",
+ "cells": {
+  "range_n": {
+   "sql": "SELECT * FROM range(3)",
+   "schema": "struct<id:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "range_a_b": {
+   "sql": "SELECT * FROM range(1, 4)",
+   "schema": "struct<id:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  "range_a_b_step": {
+   "sql": "SELECT * FROM range(0, 10, 3)",
+   "schema": "struct<id:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     0
+    ],
+    [
+     3
+    ],
+    [
+     6
+    ],
+    [
+     9
+    ]
+   ]
+  },
+  "range_a_b_step_parts": {
+   "sql": "SELECT * FROM range(0, 10, 3, 2)",
+   "schema": "struct<id:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     0
+    ],
+    [
+     3
+    ],
+    [
+     6
+    ],
+    [
+     9
+    ]
+   ]
+  },
+  "range_negative_step": {
+   "sql": "SELECT * FROM range(5, 0, -2)",
+   "schema": "struct<id:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     5
+    ],
+    [
+     3
+    ],
+    [
+     1
+    ]
+   ]
+  },
+  "range_empty": {
+   "sql": "SELECT * FROM range(0)",
+   "schema": "struct<id:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": []
+  },
+  "select_id": {
+   "sql": "SELECT id FROM range(10)",
+   "schema": "struct<id:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ]
+   ]
+  },
+  "select_value": {
+   "sql": "SELECT value FROM range(3)",
+   "error_class": "AnalysisException",
+   "error": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `value` cannot be resolved. Did you mean one of the following? [`id`]. SQLSTATE: 42703; line 1 pos 7;"
+  },
+  "alias_col": {
+   "sql": "SELECT r.id FROM range(3) AS r",
+   "schema": "struct<id:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "alias_rename": {
+   "sql": "SELECT x FROM range(3) AS r(x)",
+   "schema": "struct<x:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "sum_id": {
+   "sql": "SELECT sum(id) FROM range(10)",
+   "schema": "struct<sum(id):bigint>",
+   "nullable": [
+    true
+   ],
+   "rows": [
+    [
+     45
+    ]
+   ]
+  },
+  "range_zero_step": {
+   "sql": "SELECT * FROM range(0, 10, 0)",
+   "error_class": "AnalysisException",
+   "error": "[FAILED_FUNCTION_CALL] Failed preparing of the function `range` for call. Please, double check function's arguments. SQLSTATE: 38000; line 1 pos 14"
+  },
+  "range_string_arg": {
+   "sql": "SELECT * FROM range('3')",
+   "schema": "struct<id:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "spark_range_n": {
+   "call": "spark.range(3,)",
+   "schema": "struct<id:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "spark_range_a_b": {
+   "call": "spark.range(1, 4)",
+   "schema": "struct<id:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  "spark_range_a_b_step": {
+   "call": "spark.range(0, 10, 3)",
+   "schema": "struct<id:bigint>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     0
+    ],
+    [
+     3
+    ],
+    [
+     6
+    ],
+    [
+     9
+    ]
+   ]
+  }
+ }
+}

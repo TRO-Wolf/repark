@@ -296,6 +296,7 @@ impl ReparkSessionBuilder {
         // Capture the final build-time home and its provider identity once; calls re-check it.
         let temp_view_home = build_temp_view_home(&context);
         ext.register(&context).map_err(engine_err)?;
+        crate::range_table::register_spark_range(&context);
         let dialect = self
             .sql_dialect
             .unwrap_or_else(|| Arc::new(DataFusionDialect));
