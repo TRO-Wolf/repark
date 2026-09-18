@@ -47,8 +47,15 @@ JVM exception: `org.apache.spark.SparkException`, condition `_LEGACY_ERROR_TEMP_
 | C-009 | `ADD COLUMN m.value.q STRING` adds a child to the map value struct; the read matches Spark. | Same. | **PROVEN** | `test_nested_ddl_schema_matches_spark[map_value_child_add_*]` and `test_nested_ddl_rows_match_spark[fork292-map_value_child_add_read-v{2,3}]` green (override). |
 | C-010 | `RENAME COLUMN s.a TO a2` renames the child; the read matches Spark. | Same. | **PROVEN** | `test_nested_ddl_*[nested_rename_read-v{2,3}]` green; Rust pins keep the field id (`nested_add_rename_and_drop_evolve_by_field_id`, seam `column_path_changes_evolve_nested_children_by_field_id`); ANSI door pin. |
 | C-011 | `DROP COLUMN s.b` drops the child; the read matches Spark. | Same. | **PROVEN** | `test_nested_ddl_*[nested_drop_read-v{2,3}]` green; Rust + ANSI door pins. |
-| C-012 | `ADD COLUMN s.r INT NOT NULL` on a table with rows refuses as Spark does (message `cannot add required column: r`) and leaves the table untouched. | Pin asserts the typed exception, message and no new metadata file. | **OPEN** | Refusal PROVEN: `test_required_nested_child_refuses_like_spark[2,3]` (typed `PySparkException`, `Incompatible change: cannot add required column`, no new metadata file, schema unchanged), Rust + ANSI + seam pins. Message tail differs (fork `…without a default value: s.r` vs Iceberg 1.11.0 `…: r`; RePark omits Spark's `Unsupported table change: ` prefix) — strict-xfail `test_required_nested_child_message_matches_spark`, registry ICE-NESTED-DDL-1-R-001, fork finding F-2. Closes on a fork message fix plus a prefix ruling (Q-21a-3). |
-| C-013 | Every cell above has a registry row (FIXED or DECLARED) in `docs/spark-sql-iceberg-parity.md`. | Registry section present. | **PROVEN** | `docs/spark-sql-iceberg-parity.md` §7: ICE-NESTED-EVO-1 FIXED, ICE-NESTED-DDL-1 FIXED, ICE-NESTED-DDL-1-R-001 OPEN, ICE-NESTED-INSERT-LIST-1 OPEN; `docs/map.md` index line. |
+| C-012 | `ADD COLUMN s.r INT NOT NULL` on a table with rows refuses as Spark does (message `cannot add required column: r`) and leaves the table untouched. | Pin asserts the typed exception, message and no new metadata file. | **PROVEN** | Round 2 (2026-09-18): Spark's whole first line `Unsupported table change: Incompatible change: cannot add required column: r` on both doors — `test_required_nested_child_message_matches_spark[2,3]` (strict xfail dropped), `test_required_nested_child_refuses_like_spark[2,3]`, ANSI twin `ansi_nested_ddl_oracle.rs` (whole line), seam `nested_add_refusal_answers_spark_for_known_and_unknown_paths`; RePark-side `nested_required_add_refusal` (Q-22b-NEST-4). Round 1: refusal proven, message tail was the fork's. |
+| C-013 | Every cell above has a registry row (FIXED or DECLARED) in `docs/spark-sql-iceberg-parity.md`. | Registry section present. | **PROVEN** | `docs/spark-sql-iceberg-parity.md` §7: ICE-NESTED-EVO-1 FIXED, ICE-NESTED-DDL-1 FIXED (round-2 paragraph), ICE-NESTED-DDL-1-R-001 FIXED 2026-09-18, R-002 … R-005 FIXED 2026-09-18, ICE-NESTED-INSERT-LIST-1 OPEN; `docs/map.md` index lines. |
+| C-014 | (L-001) Nested `CREATE TABLE` writes Spark's field ids — Java's level order (`id`=1, `s`=2, `arr`=3, `m`=4, `s.a`=5, `s.b`=6, `s.b.c`=7, `arr.element`=8, `x`=9, `m.key`=10, `m.value`=11, `q`=12) — on the Spark SQL door, the ANSI door and the DataFrame door. | Pins compare the metadata file's current schema to Spark's recorded metadata. | **PROVEN** | `test_nested_ddl_metadata_matches_spark[create_field_ids-v{2,3}]`, `test_dataframe_door_create_matches_spark_metadata[create_field_ids-v{2,3}]`, ANSI `every_recorded_nested_schema_cell_answers_spark_on_the_ansi_door`, Rust `nested_create_not_null_child_is_required_with_level_order_ids`. No code change: the fork's `TableMetadataBuilder::new` reassigns (Q-22b-NEST-1). |
+| C-015 | (L-002 / L-006) A backtick dotted name (`` TO `x.y` ``, `` s.`x.y` ``, `` `p.q` ``) is one leaf named `x.y`, as Spark; the double-quoted spelling refuses `PARSE_SYNTAX_ERROR` near `'"x.y"'` 42601 with the schema untouched, as Spark. | Pins on the facade (metadata, refusal class and text); ANSI twin. | **PROVEN** | `test_nested_ddl_{metadata,outcome,read_schema}_matches_spark[{rename_dotted,add_dotted_leaf,add_dotted_top,rename_double_quoted,add_double_quoted_leaf}-v{2,3}]`, Rust `nested_ddl_refuses_double_quoted_names_and_known_paths_spark_shaped`, ANSI twin (Q-22b-NEST-3). Registry R-002. |
+| C-016 | (L-003) `CREATE TABLE … (s STRUCT<a: INT NOT NULL, b: STRING>)` creates `s.a` required (Spark's metadata), both SQL doors; the read answers `a` non-nullable; the DataFrame-door create answers Spark's all-optional schema. | Metadata, read-shape and DataFrame-door pins. | **PROVEN** | `test_nested_ddl_*[create_required_child-v{2,3}]`, `test_dataframe_door_create_matches_spark_metadata[create_required_child-v{2,3}]`, Rust `nested_create_not_null_child_is_required_with_level_order_ids`, seam `nested_type_sql` tests, ANSI twin. Registry R-003. |
+| C-017 | (L-004) The ANSI door answers every recorded nested DDL cell (reads, `DESCRIBE`, metadata, refusals), v2 and v3 — `MAP<…>` in CREATE and ADD COLUMN, `element` / `value` paths included. | Oracle-driven Rust twin of every cell. | **PROVEN** | `crates/repark-sql/tests/ansi_nested_ddl_oracle.rs` (2 tests; red before: 33 cells). Registry R-004. |
+| C-018 | (L-005) `ADD COLUMN s.z INT FIRST`, `ADD COLUMN s.w INT AFTER a`, `ADD COLUMN s.d INT COMMENT 'c'` leave Spark's child order, ids and `doc` in the metadata; `AFTER s.a` refuses `PARSE_SYNTAX_ERROR` 42601, schema untouched; both doors. | Metadata and refusal pins. | **PROVEN** | `test_nested_ddl_{metadata,outcome}_matches_spark[{add_first,add_after,add_comment,add_after_dotted}-v{2,3}]`, ANSI twin. No code change. |
+| C-019 | (item 6) `ADD COLUMN s.a INT` on an existing child refuses `AnalysisException` `FIELD_ALREADY_EXISTS` 42710 and `ADD COLUMN nope.z INT` refuses `AnalysisException` `UNRESOLVED_COLUMN.WITH_SUGGESTION` 42703 with Spark's text, schema untouched, both doors. | Refusal pins (class, text up to `SQLSTATE`, metadata). | **PROVEN** | `test_nested_ddl_{metadata,outcome}_matches_spark[{add_duplicate_child,add_unknown_parent}-v{2,3}]`, Rust `nested_ddl_refuses_double_quoted_names_and_known_paths_spark_shaped`, seam `nested_add_refusal_answers_spark_for_known_and_unknown_paths`, ANSI twin. Registry R-005. |
+| C-020 | `ADD COLUMN s.mm MAP<STRING, INT>`, `s.st STRUCT<u: INT, v: STRUCT<w: INT>>`, `s.al ARRAY<STRUCT<k: INT>>` give Spark's child types and ids (level order from the next free id), both doors. | Metadata pins. | **PROVEN** | `test_nested_ddl_metadata_matches_spark[{add_map_child,add_struct_child,add_list_child}-v{2,3}]`, ANSI twin. |
 
 ## RED — measured on main's pin `8fb44a39`, no fork override (2026-09-17)
 
@@ -81,7 +88,7 @@ crates at the fork clone on `fix/nested-evo-1`. The brief's `[patch."https://git
 header does not resolve — Cargo reports `failed to select a version for iceberg` because the
 workspace's own `[patch.crates-io]` already sources the family from that git URL and a patch
 does not apply to a patch source; the config-level `[patch.crates-io]` overrides the manifest's
-entries (ruling Q-21a-1). `Cargo.lock` changes with the override and is never staged. Release
+entries (ruling Q-21a-NEST-1). `Cargo.lock` changes with the override and is never staged. Release
 native built against fork `d9f226414` plus its worker's uncommitted
 `nested_projection.rs` edit (the fork head moved to `c1bc78864` during the build).
 
@@ -89,7 +96,7 @@ Result: all eight adoption cells green on the SQL door and the DataFrame door wi
 change** — the fork's field-id child matching and NULL fill is the whole reader fix.
 
 Two RePark-side readings, both registered BACKLOG rows outside this unit's fence (ruling
-Q-21a-2), measured first on the adopted `st_add_v2`:
+Q-21a-NEST-2), measured first on the adopted `st_add_v2`:
 
 - `SELECT id, s.a, s.b` answers Spark's values and types but names the columns
   `<table>.s[a]`, `<table>.s[b]` where Spark names them `a`, `b` — EX-COL-2 (its 2026-09-17
@@ -141,7 +148,7 @@ default with `Incompatible change: cannot add required column without a default 
 Iceberg 1.11.0 (the oracle) says `Incompatible change: cannot add required column: r` (leaf
 name, no default clause). RePark also omits Spark's `Unsupported table change: ` prefix
 (`SparkCatalog` wraps the Iceberg `IllegalArgumentException`), as the column-move refusals do
-(ruling Q-21a-3). Pinned strict-xfail `test_required_nested_child_message_matches_spark`.
+(ruling Q-21a-NEST-3). Pinned strict-xfail `test_required_nested_child_message_matches_spark`.
 
 ## Step 5 — registry (2026-09-17)
 
@@ -174,3 +181,132 @@ the first suite run, `41c2d4164` for the final build):
 | facade suite `-n 8`, run 2 (01:35 EDT, final native) | reached 99 % with zero failures, then hit the 3500 s wall-clock cap under load average 420–520 (three lanes on the box); not re-run |
 | `test_ice_nested_evo_1.py` + `test_catalog_surface_1.py`, final native | 98 passed, 4 xfailed |
 | `make verify` | exit 0 — `ci` gates clean; 58 Rust test binaries, 3818 passed, 0 failed, 8 ignored |
+
+## Round 2 (2026-09-18) — run 22b
+
+**Date:** 2026-09-18 · **Base:** `2f18da51` (round 1 + main with #676 / RP-25 fork #292 / RP-26
+fork `8477b249`) · **Model:** Claude Opus 5 (high) · **Scope:** the Grok logic review's five P2s
+(L-001 … L-006), the ledger gap audit (item 6), housekeeping. Round 2's first attempt was lost to
+the 2026-09-18 OOM freeze; nothing of it survives. Rulings Q-21a-1 … 5 renamed Q-21a-NEST-1 … 5
+(text unchanged).
+
+### Step 1 — baseline (release native from `2f18da51`, no override)
+
+`test_ice_nested_evo_1.py`: offline **46 passed, 4 xfailed**; live (`REPARK_PARITY_LIVE=1`)
+**46 passed, 4 xfailed**. Every `fork292` pin is green on main's RP-25/RP-26 with no override.
+The 4 xfails: 2 × `forkwrite` (list INSERT, fork F-1), the required-child whole line, EX-COL-2.
+
+### Step 2 — Spark cells (one JVM per run, `jvm-lock.sh`)
+
+`_record_ice_nested_evo_1.py` gained `build_schema_cells()` / `record_schema_cell()` (the table's
+current metadata schema via `version-hint.text`, Spark's `SELECT *` schema, the refusal's first
+non-empty line) and `record_dataframe_create()`. Four recorder runs (the first two added the
+cells and the first-non-empty-line fix; the third the DataFrame-door cells; the fourth the two
+double-quoted cells). Every run rewrote the fixture; the round-1 `cells` are byte-identical
+(checked); the four adopted tables were re-copied (new file names) and the adoption pins stay
+green on them. v2 = v3 on every new cell.
+
+### The five P2s — measurement, decision, pins
+
+| P2 | Spark 4.1.2 + Iceberg 1.11.0 (measured) | RePark before | Decision | Pins |
+|---|---|---|---|---|
+| L-001 CREATE ids | level order: `id`1 `s`2 `arr`3 `m`4, `a`5 `b`6 `c`7, `element`8 `x`9, `key`10 `value`11 `q`12 | **same** on the facade (probe) — the fork's `TableMetadataBuilder::new` → `reassign_ids` (Java `AssignFreshIds`) overwrites RePark's depth-first placeholders | PROVEN, no code (Q-22b-NEST-1) | C-014 |
+| L-002 / L-006 dotted new name | backtick `x.y` accepted (leaf `x.y`; top-level `p.q` too); `TO "x.y"` / `s."x.y"` → `ParseException` `PARSE_SYNTAX_ERROR` near `'"x.y"'` 42601 | backtick: same; double-quoted: **accepted**, schema changed (silent wrong) | IMPLEMENTED (Spark door refusal, Rust) | C-015, R-002 |
+| L-003 nested NOT NULL | `s.a` `"required": true`; DataFrame-door create: all optional | `ParseException … Expected: >, found: NOT` | IMPLEMENTED (both doors, Rust token rewrite + struct-field option) | C-016, R-003 |
+| L-004 ANSI door | the recorded cells | 33 of the ANSI twins mismatched (`MAP<` parse error; v3 CREATE opt-in never read on a Spark-extended session; duplicate / unknown / required shapes) | IMPLEMENTED (Rust) | C-017, R-004 |
+| L-005 FIRST / AFTER / COMMENT in a struct | `z` first (id 5), `w` after `a`, `d` with `doc` `c`; `AFTER s.a` → `PARSE_SYNTAX_ERROR` 42601 | **same** on both doors | PROVEN, no code | C-018 |
+
+Item 6 — gaps closed: the unknown parent and duplicate child were claimed "refuses naming it"
+with no Spark cell; measured `UNRESOLVED_COLUMN.WITH_SUGGESTION` 42703 / `FIELD_ALREADY_EXISTS`
+42710 (`AnalysisException`), RePark raised `PySparkException` `DataInvalid => …` —
+IMPLEMENTED (C-019, R-005). C-012 (required-child message) — IMPLEMENTED, now PROVEN
+(Q-22b-NEST-4). C-020 (map / struct / array child types) — PROVEN, no code. C-008 stays
+**OPEN**: rows after an `INSERT` into a list column need the fork writer (F-1,
+ICE-NESTED-INSERT-LIST-1, strict xfail `forkwrite-…list_element_child_add_read`, fork ask
+F-1 in the round-1 hand-back); its DDL half is PROVEN (C-017 twins, `_describe` cells).
+
+### Step 3 — RED (pins written before the fix)
+
+- Facade, `test_ice_nested_evo_1_schema.py` on the baseline native: **12 failed, 76 passed**.
+  10 real: `create_required_child` × 6 (metadata, outcome, read; v2, v3), `add_duplicate_child`
+  × 2, `add_unknown_parent` × 2. 2 were my wrong expectation — the DataFrame-door create
+  pinned against the SQL door's metadata; the Spark DataFrame-door recording (`asNullable`)
+  shows RePark was right, and the pin now reads `dataframe_create_cells` (Q-22b-NEST-2). The
+  double-quoted cells, recorded next, were red on the same native (accepted; schema changed:
+  `s.a` renamed to `x.y`, child `x.y` added).
+- ANSI door, `ansi_nested_ddl_oracle.rs` against pre-round sources (`git stash` of `src/`):
+  **0 passed, 2 failed**, 33 mismatching cells — v2: `map_value_child_add_read` / `_describe`
+  (`ParserError("Expected: (, found: <")`), `create_field_ids`, `create_required_child`,
+  `add_map_child`, `add_duplicate_child`, `add_unknown_parent`; v3: every cell (`WITH
+  'format_version' = '3' is not enabled`).
+- The round-1 message pin `test_required_nested_child_message_matches_spark` (strict xfail
+  until now) was red as a plain pin at commit 1.
+
+### Step 4 — implementation (Rust; Python forwards nothing new)
+
+- `repark-iceberg/src/write/nested_type_sql.rs` (new): `rewrite_nested_type_tokens`,
+  `has_nested_type_opener`, `struct_field_required`.
+- `repark-iceberg/src/write/nested_column.rs`: `nested_add_refusal`,
+  `nested_required_add_refusal`, Spark `DataType.sql` rendering; `column_move.rs` exposes
+  `unresolved_column` / `top_level_names` to its sibling.
+- Spark door: `normalize.rs` (rewrite on CREATE), `create_table.rs` (required child),
+  `nested_column_ddl.rs` (double-quoted refusal, the two pre-checks).
+- ANSI door: `router.rs` + `create_table/nested_type.rs` (CREATE rewrite, structural type
+  mapping), `create_table.rs` (dispatch, Arrow via `type_to_arrow_type`, the typed v3 opt-in
+  read), `alter/nested.rs` (rewritten tokens, the two pre-checks).
+
+### Rulings
+
+- **Q-22b-NEST-1 — L-001 needs no code.** The fork's fresh-id assignment already produces
+  Spark's ids; RePark's `alloc_field_id` numbering is a placeholder the fork overwrites. It is
+  kept (it also numbers ALTER child types, which `UpdateSchema` reassigns the same way) and
+  the result is pinned on three doors.
+- **Q-22b-NEST-2 — the DataFrame-door CREATE answers Spark's DataFrame door.** Spark's V2 CTAS
+  applies `asNullable`, so `writeTo(t).create()` with a `NOT NULL` child writes it optional;
+  recorded as `dataframe_create_cells` and pinned against that, not the SQL door's metadata.
+- **Q-22b-NEST-3 — `"x.y"` on the ANSI door is a delimited identifier.** Standard SQL (and
+  `GenericDialect`) read double quotes as an identifier; Spark reads a string literal. The
+  ANSI twin of the two double-quoted cells is Spark's backtick cell; the ANSI door accepting
+  `"x.y"` as the leaf `x.y` is the intended door difference.
+- **Q-22b-NEST-4 — the required-child line is raised in RePark.** Spark's line is
+  `SparkCatalog`'s `Unsupported table change: ` prefix over Iceberg 1.11.0's `Incompatible
+  change: cannot add required column: <leaf>`; RePark raises it before the fork is asked
+  (the fork is never patched, rule 3), as a base-class error (`PySparkException`) because
+  Spark's is a `SparkException`, not an `AnalysisException`. Supersedes the prefix question of
+  Q-21a-NEST-3. The fork's own text (F-2) no longer surfaces through nested DDL.
+- **Q-22b-NEST-5 — the ANSI v3 opt-in fix is in scope.** It blocked every v3 ANSI twin; the
+  lookup scanned `entries()` for `repark.sql.allow_create_format_version_3`, which
+  DataFusion 54 lists as `allow_create_format_version_3`. The typed read (the ALTER path's)
+  is added; the key scan stays for the in-crate stand-in config the V3-2 tests use.
+- **Q-22b-NEST-6 — the ANSI twins replay the DDL half.** Spark's `INSERT … SELECT
+  named_struct(…) / array(…) / map(…)` spellings are Spark SQL; rows are pinned on the
+  facade's SQL and DataFrame doors, the ANSI twins pin every read's names and types, every
+  `DESCRIBE`, every metadata schema and every refusal.
+- **Q-22b-NEST-7 — `STATUS.md` is not edited this round.** The brief allows deleting the
+  V2-10d clause only when every clause is PROVEN or DECLARED; C-008 is OPEN (fork F-1).
+
+### Step 5 — gates (RULE 2 only)
+
+| gate | result |
+|---|---|
+| release native `maturin develop --release` (codegen-units 16, 6 jobs) | exit 0 (three builds: baseline, after the fixes, after C-012) |
+| `test_ice_nested_evo_1.py` offline / live | **48 passed, 3 xfailed** / **48 passed, 3 xfailed** (xfails: 2 × `forkwrite`, EX-COL-2) |
+| `test_ice_nested_evo_1_schema.py` offline / live | **100 passed** / **100 passed** |
+| `cargo test -p repark-iceberg` | 2 binaries, 515 passed, 0 failed |
+| `cargo test -p repark-sql` | 22 binaries, 455 passed, 0 failed |
+| `cargo test -p repark-spark` | 10 binaries, 1228 passed, 0 failed, 5 ignored |
+| `cargo clippy -p repark-iceberg -p repark-sql -p repark-spark --tests -- -D warnings` | exit 101: every error is `clippy::disallowed_methods` (`unwrap` / `expect`) in test code across the three crates, pre-existing and in the new test code alike (5710 hits; round 1 measured the same class); `make rust-clippy`'s own form (`-A clippy::disallowed_methods`) on the same crates: **exit 0**; lib/bin `-- -D warnings` with the lint active (the panic-ban surface): **exit 0** |
+| `cargo fmt --check`, pre-commit hook (map lockstep, map-sync, crate DAG, file-size, docstrings, manifest, taplo, typos) | clean on every commit |
+| `python3 scripts/check_docs_links.py` | clean (975 files, 5901 links) |
+| comment ban `comment_ban.py /tmp/lb-build origin/main` | `hits=0` |
+| `[patch]` / path override / session path in `git diff 2f18da51..HEAD` | 0 |
+
+### Open
+
+- C-008 — rows after an `INSERT` into a list column (fork F-1, ICE-NESTED-INSERT-LIST-1).
+  COVERAGE_ATTESTATION withheld: not every clause is PROVEN or DECLARED.
+- Not measured this round, no clause: a `COMMENT` inside a CREATE struct type
+  (`STRUCT<a: INT COMMENT 'x'>`) still refuses at the parser on both doors (a loud
+  `ParseException`); the `UNRESOLVED_COLUMN` suggestion list is the top-level columns in
+  schema order where Spark ranks by similarity (they agree on the recorded cell); EX-COL-2 and
+  COL-DOTTED-FIELD-1 stay BACKLOG.
