@@ -876,9 +876,11 @@ perfectly good read.
 #### ENC-1 — Iceberg table encryption keys are stored, never applied
 
 - **repark** — `CREATE TABLE … TBLPROPERTIES ('encryption.key-id' = …)` on a format-v3 table
-  succeeds. The property is stored. `INSERT` writes ordinary Parquet; `SELECT` returns the
-  rows; table-metadata `encryption-keys` stays empty. There is no KMS client and no file
-  encryption. Owner ruling 2026-08-24: dated DECLARED exclusion from the v1.0 gate.
+  succeeds. The property is stored. `INSERT` writes ordinary unencrypted Parquet
+  (byte-magic `PAR1`, readable with no key — measured 2026-09-18) with no error raised;
+  `SELECT` returns the rows; table-metadata `encryption-keys` stays empty. There is no
+  KMS client and no file encryption. Owner ruling 2026-08-24: dated DECLARED exclusion
+  from the v1.0 gate.
 - **Apache Spark** — with a configured Iceberg KMS, `encryption.key-id` encrypts data,
   delete, manifest, and manifest-list files (Iceberg table-encryption docs). Without a KMS
   the Spark session fails to write. *(oracle: documented — Iceberg table property
@@ -3061,7 +3063,9 @@ the pin rather than obeying it.
 - **repark** — `.option("write-format", "orc"|"avro")` on any Iceberg write refuses with
   `UnsupportedOperationException` naming this row; nothing is staged and no snapshot
   commits. Parquet (any case) proceeds; any other value refuses with `Invalid file
-  format`.
+  format`. The table property `write.format.default=orc|avro` refuses the same way at
+  write time (`FeatureUnsupported`, naming the format and the write path) — measured
+  2026-09-18, so neither door writes a silent parquet file.
 - **Apache Spark** — writes ORC / AVRO data files for those values (recorded
   `FORMAT-02` / `FORMAT-03`); `bogus` refuses with `IllegalArgumentException: Invalid
   file format: bogus`. *(oracle: recorded.)*

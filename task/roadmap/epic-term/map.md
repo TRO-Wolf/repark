@@ -72,6 +72,9 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   programs, 267 cells, 72 EQUAL, 8 rows filed, 2 defects FIXED —
   [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
   `B-MOR-3` FIXED 2026-09-03 (owner ruling: build). The v1.0 tag is what remains.
+  **ICE-REGISTRY-SWEEP-1B (2026-09-18):** the §3 v3-types cell cites the
+  write-default FIXED unit (registry `ICE-V3-WRITE-DEFAULT-1`), re-measured on
+  merged main — no glyph or residual change.
   pins: v1-gate-audit/C-001, C-002, C-004
   pins: v3-cov-statement-coverage/C-005
 - [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) — **the release roadmap Q&A row 2026-09-15 (morning): the run-14 and run-15 owner rulings, every recommendation as ruled, and run 16 on Muse contributor builders. Q&A row 2026-09-15 (evening): v1.4.2, the run-16 rulings, the Devin/Muse actor mix.

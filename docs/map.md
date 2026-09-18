@@ -145,6 +145,10 @@ repo.
   ICE-WRITE-OPTIONS-1 run 22b (2026-09-18): the FIXED row gains the rebase bullet (dynamic
   overwrite, static pin, empty dynamic source, RTAS, sorted tables, column lists).
   pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
+  **ICE-REGISTRY-SWEEP-1B (2026-09-18):** twelve rating rows and claims
+  re-measured on merged main — nine verify unchanged, three tighten with a
+  measured clause (ORC/Avro table-property refusal, ENC-1 cleartext bytes,
+  north-star C-2 FIXED citation); V3-05 stays rowless pending PR #700.
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;
