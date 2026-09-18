@@ -158,3 +158,19 @@ The whole facade suite (release native with the override) reddened
 does. Renamed `test_create_table_map_struct_round_trip`; it now asserts `listColumns` answers
 `map<string,int>` and `struct<a:int>` (Spark's `simpleString`). The frozen
 catalog-surface-1 ledger keeps the old name as history.
+
+Gate counts (2026-09-18; release native with the fork override; fork clone at `c1bc78864` for
+the first suite run, `41c2d4164` for the final build):
+
+| gate | result |
+|---|---|
+| comment ban on `origin/main..HEAD` | `hits=0` |
+| `git diff origin/main..HEAD \| grep -c ka-fork` | `0` |
+| `cargo clippy --all-targets --all-features -- -D warnings` (brief's form) | exit 101: 36 errors, all `disallowed_methods` `unwrap`/`expect` in `crates/repark-ml` test modules (8 expect, 28 unwrap; untouched by this unit). Zero in any touched crate. The repo's own gates — `make rust-clippy` (`-A clippy::disallowed_methods`) and `make rust-panic-ban` (lib/bins) — are clean inside `make verify`. |
+| `cargo test -p repark-spark --lib` | 1132 passed, 0 failed, 5 ignored (one is `forkwrite_list_insert_reads_back`) |
+| `cargo test -p repark-iceberg --lib` | 450 passed, 0 failed |
+| release native `maturin develop --release` | exit 0 |
+| facade suite `-n 8`, run 1 (23:13 EDT) | 3 failed, 9730 passed, 398 skipped, 51 xfailed (1896 s). Failures: `test_spark_sql_grammar_1.py::test_q14_current_date_bare_and_paren[ansi-off/ansi-on]` (known 20:00–24:00 EDT local red) and `test_catalog_surface_1.py::test_create_table_map_struct_refuse_loudly` (flipped on purpose, above; the file then 52 passed) |
+| facade suite `-n 8`, run 2 (01:35 EDT, final native) | reached 99 % with zero failures, then hit the 3500 s wall-clock cap under load average 420–520 (three lanes on the box); not re-run |
+| `test_ice_nested_evo_1.py` + `test_catalog_surface_1.py`, final native | 98 passed, 4 xfailed |
+| `make verify` | exit 0 — `ci` gates clean; 58 Rust test binaries, 3818 passed, 0 failed, 8 ignored |
