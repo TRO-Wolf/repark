@@ -44,6 +44,8 @@ impl SessionExtension for SparkExtension {
             config,
             case_sensitive,
         );
+        let overwrite_mode = repark_core::partition_overwrite_mode_from_config_map(session.conf)?;
+        let config = repark_core::with_partition_overwrite_mode(config, overwrite_mode);
         let timestamp_type =
             repark_functions::timestamp_type::spark_timestamp_type_from_config_map(session.conf)?;
         let config =

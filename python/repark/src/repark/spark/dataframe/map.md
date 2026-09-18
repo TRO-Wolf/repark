@@ -639,6 +639,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   DF-RUST-3 (2026-09-15): `freqItems` delegates the live call to the same
   `statistics._freq_items` body — line-neutral against the exact 1101 baseline.
   pins: df-rust-3/C-001, C-005
+  ICE-DYN-OVERWRITE-1 (2026-09-17): `saveAsTable` overwrite passes a typed
+  `static_overwrite` flag into the dedicated native `sql_static_overwrite` entry
+  (Spark ignores the dynamic conf there too); round 2, ruling Q-20a-6:
+  1101 → 1109 for the flag threading.
+  pins: ice-dyn-overwrite-1/C-006, C-014
   IO-BUCKET-CLUSTER-1 (2026-09-14): `bucketBy` / `sortBy` / `clusterBy` (v1) and
   `clusterBy` (V2) bind here as thin delegates; the class carries the layout slots and
   runs `writer_layout`'s checks at `save` / `saveAsTable` / V2 `create` / `replace` /

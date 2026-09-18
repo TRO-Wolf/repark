@@ -26,6 +26,10 @@ the committed landing zone, not a generation target.
   reads and DML after a legal type promotion (`truth.json`, 126 cases) and two
   Spark-created promoted mixed-era tables (v2, v3) for the adoption cells
   (ICE-PROMOTE-READ-1; third committed-data exception).
+- [ice_dyn_overwrite_1/](ice_dyn_overwrite_1/map.md) — recorded Spark answers for
+  ICE-DYN-OVERWRITE-1: the static/dynamic overwrite matrix plus three disk-verified
+  overwrite-vs-append interleaves (`spark_oracle.json`, read by
+  `python/repark/tests/test_ice_dyn_overwrite_1.py`).
 
 ## Pointers
 

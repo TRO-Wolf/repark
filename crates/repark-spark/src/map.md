@@ -22,7 +22,7 @@ pins: rp-4-fork-repin/C-005, C-006
 - `lib.rs` — re-exports G15 collation valves and FNP-15/16 `refuse_declared_function_in_*`
   from `repark-functions`, plus `refuse_sql_fragment` for `F.expr` / `filter_sql`.
   pins: fnp-15-16/C-001
-- `router.rs` — `execute` / `execute_with_read_only` / `execute_time_travelled` / `execute_inner`
+- `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_routed` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests).
   `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
@@ -45,9 +45,21 @@ pins: rp-4-fork-repin/C-005, C-006
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).
   Named-ref targets go through `commit_overwrite_replace_all_to` / partition `_to`.
   Empty overwrite onto a branch wipes via `commit_overwrite_replace_all_to`, not a 4-part
-  self-scan.
+  self-scan. **ICE-DYN-OVERWRITE-1 (2026-09-17):** PARTITION-less overwrite computes
+  `dynamic` once in `execute_insert_overwrite` (session conf, bypassed by the
+  `force_static_overwrite` flag the `execute_static_overwrite` router entry carries
+  (comment-free per the owner's comment ban, 2026-09-17: the entry carries
+  `#[allow(clippy::missing_errors_doc)]`);
+  round 2, ruling Q-20a-6 removed the in-band marker) and threads it through
+  `from_staged_source` into the stage-then-commit — dynamic commits
+  `commit_replace_partitions_to` on partitioned tables (the empty arm returns
+  before any commit), static and unpartitioned-dynamic keep replace-all.
+  **Round 3 (2026-09-17):** the mode decision is one function,
+  `overwrite_is_dynamic(ctx, force_static_overwrite)`, called here and by
+  `insert_by_name.rs` — no second conf read.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
   pins: rp-5-fork-repin/C-004
+  pins: ice-dyn-overwrite-1/C-014, C-020
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
   strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
   projection build, the staged-append executor (stream → conform → `commit_append_to` →
@@ -57,11 +69,22 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004
   **Round 2 (2026-09-17):** `PARTITION` shapes delegate to the positional
   partition arm (static overwrite) or inject clause literals (static append);
-  dynamic overwrite stays whole-table replace-all (Spark's default-mode
-  answer); empty unpartitioned overwrite wipes; missing required targets
+  a PARTITION-less `BY NAME` overwrite follows `partitionOverwriteMode` (see round 3);
+  missing required targets
   refuse `CANNOT_FIND_DATA`; matching honours `spark.sql.caseSensitive`
   (matching plus projection live in `plan_name_projection`).
   pins: ice-rtas-byname-1/C-007, C-008, C-009, C-010
+  **ICE-DYN-OVERWRITE-1 round 3 (2026-09-17):** `execute_insert_by_name` takes the
+  router's `force_static_overwrite` and asks `insert_overwrite::overwrite_is_dynamic`
+  once. A non-empty PARTITION-less `BY NAME` overwrite passes that answer into
+  `insert_overwrite_from_staged_source` (dynamic replaces only the touched partitions
+  on a partitioned table; static and unpartitioned replace the whole table). An empty
+  source still runs the assignment-type check, then under dynamic returns with no
+  commit and no snapshot (Spark skips the commit, partitioned or not), and under
+  static wipes through `wipe_by_name_target` (`commit_overwrite_replace_all_to` plus
+  reregister; split out to keep `execute_insert_by_name` under clippy's line limit). Explicit column lists never
+  reach this module; they take `execute_insert_overwrite`, which reads the same function.
+  pins: ice-dyn-overwrite-1/C-019, C-020, C-021, C-023
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
@@ -359,9 +382,9 @@ pins: rp-4-fork-repin/C-005, C-006
 - `extension.rs` — `SparkExtension` owns Spark session defaults and installs the ordered
   `InsertStoreAssignment`, function registry, analyzer rules, `StackRewrite` (PERF-UNPIVOT-1,
   after integer-literal narrowing), and composed `TaExtension`. It also
-  carries the session timezone and Spark decimal settings, plus the
-  case-sensitivity carrier (`repark_functions::case_sensitive`, default false).
-  Tests:
+  carries the session timezone, Spark decimal settings, the case-sensitivity
+  carrier (`repark_functions::case_sensitive`, default false) and the
+  partition-overwrite-mode knob (**ICE-DYN-OVERWRITE-1**, 2026-09-17). Tests:
   [extension/map.md](extension/map.md) and [../tests/session_timezone.rs](../tests/session_timezone.rs).
   **FNP-8 (2026-09-07):** its analyzer-configuration hook inserts the shared HOF preparation rule
   before core's first default type-coercion rule. pins: fnp-8/C-003, C-004

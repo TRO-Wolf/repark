@@ -12,6 +12,9 @@ and the `EngineContext` construction contract.
 - `../dialect.rs` — `SqlDialect::on_session_built` (default no-op) runs from
   `ReparkSessionBuilder::build` after extension `register`. AnsiDialect installs
   F-Y10-1 integer overflow there. pins: f-y10-1-int-overflow/C-003
+  **ICE-DYN-OVERWRITE-1 round 2, ruling Q-20a-6 (2026-09-17):** `EngineContext`
+  carries `force_static_overwrite` (default false in `new`; the literals here set
+  it explicitly). pins: ice-dyn-overwrite-1/L-001
 
 ## Pointers
 

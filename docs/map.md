@@ -116,6 +116,10 @@ repo.
   FIRST/AFTER` moves with ids intact; the I6 move refusal text is removed, the COMMENT
   refusal stays); the self-move diagnostic delta is recorded in the row, not absorbed.
   pins: ice-column-reorder-1/C-013
+  ICE-DYN-OVERWRITE-1 (2026-09-17): DML-1 points at new rows DML-1B (dynamic
+  PARTITION-less overwrite FIXED) and DML-1C (overwrite-vs-append race FIXED, serializable
+  surface documented).
+  pins: ice-dyn-overwrite-1/C-017
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

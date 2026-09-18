@@ -993,6 +993,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
   smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
   ICE-RTAS-BYNAME-1 (2026-09-17) re-hashed `_SQLCONF_DEFAULTS` for its `spark.sql.caseSensitive` default.
+  ICE-DYN-OVERWRITE-1 round 3 (2026-09-17) re-hashed `_SQLCONF_DEFAULTS` again (its
+  `partitionOverwriteMode` entry is keyed by `PARTITION_OVERWRITE_MODE_KEY`) and lists that
+  constant among the `_funcs` runtime names (`session_core.py`'s reuse fold reads it).
+  pins: ice-dyn-overwrite-1/C-022
   PERF-FACADE-CDF-1 joined the inventory: `create_dataframe_columns.py`, the six new router
   bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
   edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
@@ -3885,6 +3889,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_dml_b_partition_overwrite.py` — **DML-B:** facade `spark.sql` `INSERT OVERWRITE …
   PARTITION` static/dynamic pins (values, Arrow types, snapshot operation, empty-dynamic
   refuse). pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005
+- `test_ice_dyn_overwrite_1.py` — **ICE-DYN-OVERWRITE-1 (2026-09-17):** dynamic
+  `partitionOverwriteMode` on both doors (SQL + `insertInto`) against the recorded Spark
+  fixture (`python/repark-parity/fixtures/torture/data/ice_dyn_overwrite_1/`):
+  partition-scoped replace v2+v3, whole-table static and unpartitioned-dynamic controls,
+  empty-dynamic no-op, evolved spec, `saveAsTable` static pin, mixed-case/bogus/builder
+  conf cells, plus the live Spark replay. 17 tests (16 offline + 1 live).
+  pins: ice-dyn-overwrite-1/C-001…C-018
+- `test_ice_dyn_overwrite_1_by_name.py` — **ICE-DYN-OVERWRITE-1 round 3 (2026-09-17):**
+  `INSERT OVERWRITE … BY NAME`, the explicit column list and the positional shape under
+  both modes, v2+v3, empty source and unpartitioned, replayed cell-by-cell from
+  `spark_byname_dyn_oracle.json` (rows and snapshot operations; the dynamic empty cell
+  commits nothing), plus the `conf.unset` → native STATIC restore. 21 tests.
+  pins: ice-dyn-overwrite-1/C-019, C-022
 - `test_sql_dml_eager.py` — WG-1 (F-BR-2): bare `spark.sql` DML executes **eagerly**, PySpark
   parity. A bare `INSERT`/`DELETE`/`UPDATE` whose returned DataFrame is never collected still
   applies the write (pre-fix: a silent no-op); collecting the returned DataFrame does not re-apply

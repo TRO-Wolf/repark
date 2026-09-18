@@ -9,6 +9,7 @@ from typing import Any
 from repark import _native
 from repark.spark.session import _funcs as _session_funcs
 from repark.spark.session.session_configuration import (
+    PARTITION_OVERWRITE_MODE_KEY,
     SPARK_SQL_ANSI_ENABLED_KEY,
     SPARK_SQL_CASE_SENSITIVE_KEY,
     _DISPLAY_INT_DEFAULTS,
@@ -199,6 +200,8 @@ class RuntimeConfig:
             _native.set_runtime_config(inner, key, text)
             if key == SESSION_TIME_ZONE_KEY:
                 refresh_session_zone_canonical(self._session)
+        if key == PARTITION_OVERWRITE_MODE_KEY:
+            _native.set_runtime_config(inner, key, text)
         if _looks_like_datafusion_conf_key(key):
             _forward_datafusion_conf(self._session, key, text)
         # conf.set("repark.display.style", …) must drive show() — not only the conf map.
@@ -320,6 +323,7 @@ class RuntimeConfig:
             SESSION_TIME_ZONE_KEY,
             SPARK_SQL_ANSI_ENABLED_KEY,
             SPARK_SQL_CASE_SENSITIVE_KEY,
+            PARTITION_OVERWRITE_MODE_KEY,
         ):
             self._store().pop(key, None)
             self._unset_keys().add(key)

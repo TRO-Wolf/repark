@@ -21,6 +21,7 @@ mod orc_footer;
 mod orc_scan;
 mod orc_schema;
 mod partition_discovery;
+mod partition_overwrite_mode;
 mod partition_timestamp;
 mod pool_refusals;
 mod pre_execute;
@@ -33,6 +34,7 @@ pub mod silver;
 mod sorted_view;
 mod spark_nullable;
 mod stack;
+mod static_overwrite;
 mod temp_view;
 mod text_glob;
 mod text_io;
@@ -79,6 +81,12 @@ pub use config_file::maintenance::{
 pub use na_fill::{FillBuild, na_fill_expr};
 pub use named_sources::{NamedSource, SourceRow};
 pub use namespace_create::refuse_contradictory_namespace_location;
+pub use partition_overwrite_mode::{
+    PARTITION_OVERWRITE_MODE_KEY, PartitionOverwriteMode, PartitionOverwriteModeConfig,
+    parse_partition_overwrite_mode, partition_overwrite_mode_from_config_map,
+    partition_overwrite_mode_from_ctx, partition_overwrite_mode_from_options,
+    with_partition_overwrite_mode,
+};
 pub use session_owner::{DescribeOwnerConfig, session_owner_snapshot, with_session_owner};
 
 // === Time travel ===

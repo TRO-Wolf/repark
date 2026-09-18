@@ -5,7 +5,7 @@ CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated co
 ## Purpose
 
 The **Spark SQL door** (tier 3): a statement
-router (`execute` / `execute_with_read_only`) parses with DataFusion's `sqlparser` (Databricks
+router (`execute` / `execute_with_read_only` / `execute_static_overwrite`) parses with DataFusion's `sqlparser` (Databricks
 dialect + token-level normalisers for Spark-isms), intercepts the forms DataFusion cannot
 execute against Iceberg, and passes everything else through the Spark passthrough
 (`spark_ast` — ORDER BY null-placement defaults + eager analysis + eager DML/COPY commands +
@@ -45,7 +45,7 @@ TABLE, and the DML passthrough. The unit battery is under `src/tests/` (navigati
 
 ## Component contract
 
-- **Owns:** the Spark SQL door — the statement router (`execute` / `execute_with_read_only`),
+- **Owns:** the Spark SQL door — the statement router (`execute` / `execute_with_read_only` / `execute_static_overwrite`),
   `SparkDialect` (adapts to `repark_core::SqlDialect`), `SparkExtension` (installs the function
   registry + analyzer rules + cardinality config + `parse_float_as_decimal=true`, and composes `repark_ta::TaExtension`), the
   Spark-ism normalizers + the `spark_ast` passthrough. **U5:** `SparkExtension::configure`

@@ -262,6 +262,7 @@ vars(_sql_udf_materialization).update(
 )
 
 from repark.spark.session.session_configuration import (
+    PARTITION_OVERWRITE_MODE_KEY,
     _BATCH_SIZE_KEYS,
     _CONF_GET_UNSET,
     _DATAFUSION_CONF_KEY_RE,

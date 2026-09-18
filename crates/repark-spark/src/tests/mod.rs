@@ -30,6 +30,8 @@ mod delete_granularity;
 mod describe_show;
 mod describe_table;
 mod dml;
+mod dyn_by_name_overwrite;
+mod dyn_partition_overwrite;
 mod float_agg;
 mod insert_overwrite;
 mod join_null_keys;
