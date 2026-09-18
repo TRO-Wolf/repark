@@ -7792,16 +7792,22 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `ice_sorted_insert_2_spark_oracle.json`, recorded 2026-09-17). This is
   table-format behaviour, so it is filed as a fork ask
   ([fork-sync.md](fork-sync.md) "Open fork asks") and not patched locally
-  (AGENTS.md rule 3). Pin (strict `xfail`, reason `BLOCKED-ON-FORK
+  (AGENTS.md rule 3). The pin replays the recorded program verbatim, Spark's own
+  `options => map('min-input-files','2','rewrite-all','true')` included (accepted
+  since ICE-RDF-OPTIONS-1): RePark's compacted `p=0` file then holds 300 rows,
+  as Spark's does, and reads `sort_order_id` NULL. Pin (strict `xfail`, reason `BLOCKED-ON-FORK
   F-RDF-SORT-STAMP-1`, XPASSes the day the fork lands):
   `python/repark/tests/test_ice_sorted_insert_2.py::test_binpack_rewrite_sorts_and_stamps_like_spark`
   pins: ice-sorted-insert-1/C-009
 
 - **WRITE-ORDER-COW-UPDATE-1** — surfaced 2026-09-17 (ICE-SORTED-INSERT-1 round
   3). **OPEN / BLOCKED-ON-FORK `F-COW-UPDATE-STAMP-1`.** A Spark `UPDATE` whose
-  assignment is an expression rather than a literal (`SET id = id`) does not take
-  RePark's identity-update path — `predicate_dml::try_allowed_update_in` declines
-  it — so DataFusion calls the provider's `update`, and the fork's
+  WHERE is a plain predicate (`UPDATE t SET id = id WHERE p = 0`) does not take
+  RePark's owned UPDATE path. `predicate_dml::try_allowed_update_in` accepts
+  scalar-expression assignments but only an uncorrelated `col IN (SELECT …)`
+  WHERE, and `predicate_dml::plain::try_allowed_plain_identity` handles DELETE
+  only, so the assignment is not what routes it (`SET id = 42 WHERE p = 0` goes
+  the same way). DataFusion then calls the provider's `update`, and the fork's
   `IcebergUpdateExec` → `physical_plan/delete.rs::copy_on_write_update` rewrites
   the affected files with neither the default-order sort nor
   `with_sort_order_id`. Measured 2026-09-17 on `(id BIGINT, p INT)` partitioned

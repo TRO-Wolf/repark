@@ -3,10 +3,11 @@
 **Unit:** `ice-sorted-insert-1` · **Date:** 2026-09-17 · **Branch:** `feat/ice-sorted-insert-1` · **Base:** `origin/main` at `225f68ee`
 **Model:** muse-spark-1.3-contributor (rounds 1–2)
 **Model:** claude-opus-5 (round 3, 2026-09-17 — remediation of the logic critic's L-01…L-05)
+**Model:** claude-opus-5 (round 4, 2026-09-17 — remediation of the verification critic's V-01…V-04; §10)
 **Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 **Oracle:** PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (see `_oracle_pins.py`), recorded at authoring time into `python/repark/tests/ice_sorted_insert_1_spark_oracle.json`, replayed live under `REPARK_PARITY_LIVE=1`.
-**Fork fix:** fork PR #287 (F-SORTED-INSERT-1), fork main `4151b488`, consumed via RP-22 (PR #667). Round-1 local develop override: the five iceberg* lines of `Cargo.toml` pointed at a local fork checkout; `Cargo.toml` and `Cargo.lock` were skip-worktree and never staged (removed in round 2).
+**Fork fix:** fork PR #287 (F-SORTED-INSERT-1), fork main `4151b488`, consumed via RP-22 (PR #667); the round-4 tree runs on main's later pin RP-24 `8fb44a39`, which carries it. Round-1 local develop override: the five iceberg* lines of `Cargo.toml` pointed at a local fork checkout; `Cargo.toml` and `Cargo.lock` were skip-worktree and never staged (removed in round 2).
 
 ## 1. Scope and fence
 
@@ -165,13 +166,16 @@ ask. It also files a second fork ask that the new measured cells turned up.
 - **A-1, the second fork ask.** The measured `v*_partitioned_update` cells showed that
   `UPDATE t SET id = id WHERE p = 0` writes `sort_order_id` NULL where Spark writes 1, at both
   format versions. The snapshot carries no `engine.operation-id` and the file name is a UUIDv7,
-  so the write is the fork's: `predicate_dml::try_allowed_update_in` accepts only literal
-  assignments, DataFusion hands a column-expression UPDATE to the provider's `update`, and the
+  so the write is the fork's. *(Round 4 correction, V-04: the round-3 reason, "accepts only
+  literal assignments", was wrong. `scalar_set_assignments` accepts scalar expressions. The gate
+  this SQL misses is the WHERE shape: `try_allowed_update_in` takes only an uncorrelated
+  `col IN (SELECT …)`, and `p = 0` is not that; `plain::try_allowed_plain_identity` is
+  DELETE-only.)* DataFusion hands the UPDATE to the provider's `update`, and the
   fork's `IcebergUpdateExec` → `physical_plan/delete.rs::copy_on_write_update` writes with no
   default-order sort and no `with_sort_order_id`. That is table-format behaviour (rule 3), so it
   becomes `F-COW-UPDATE-STAMP-1` next to `F-RDF-SORT-STAMP-1` and is pinned strict-xfail. It is
   not routed through RePark's identity path in this unit, because widening
-  `try_allowed_update_in` to expression assignments is a feature change outside this unit.
+  `try_allowed_update_in` to a plain WHERE predicate is a feature change outside this unit.
 - **A-2, the fork-ask home.** `docs/fork-sync.md` had no section for pending asks (its table is
   the append-only pin history, one row per bump PR). This round adds "Open fork asks" before
   "Debug" and does not add a pin-history row.
@@ -180,6 +184,10 @@ ask. It also files a second fork ask that the new measured cells turned up.
   default is `min_input_files = 5`. So the strict-xfail pin writes 6 sorted files per partition
   and calls with no options. Spark's cell used 3 inputs plus `rewrite-all`. The expected stamp and
   sortedness come from the fixture's `binpack_after` cell.
+  *(Round 4 correction, V-03: stale since ICE-RDF-OPTIONS-1 (#672) landed on main. The CALL now
+  accepts `options => map(...)`, so the pin replays the recorded `bp` program verbatim, Spark's
+  `map('min-input-files','2','rewrite-all','true')` included, and the six-files-per-partition
+  workaround is gone. §10.)*
 - **A-4, NaN canonicalisation lives in RePark.** `iceberg-datafusion`'s `CanonicalFloatExpr` is a
   private `struct` at the pinned rev (`96fc9f1f`, `physical_plan/sort.rs`), so it cannot be
   reused. `write/distribution/canonical_float.rs` reimplements it with the same mapping (every
@@ -197,6 +205,9 @@ ask. It also files a second fork ask that the new measured cells turned up.
 - **A-6, cost.** The lineage fanout now buffers the rewrite stream before it sorts, the same
   cost the v2 arm (`fanout_sorted_*`) and the unpartitioned arm (`drive_unpartitioned`) already
   pay. `stamp` still runs once per writer construction, never per batch.
+  *(Round 4 correction, V-01: true only for declared-order tables. Round 3 drained the stream
+  for every table, unsorted ones included, and those arms stream when no order is declared. The
+  round-4 lineage arm checks for an order first and streams otherwise. §10.)*
 
 ### 9.2 Findings → disposition
 
@@ -262,7 +273,7 @@ restored. The transcripts (site → red tests → counts):
 | B — `merge/row_lineage.rs` `stamp(…)` removed | `test_partitioned_rewrites_sort_and_stamp[m3]`, `test_v3_lineage_survives_the_default_order_sort` | 2 failed, 15 passed, 9 skipped, 3 xfailed |
 | C — `merge/mod.rs:1600` `stamp(…)` removed | `test_unpartitioned_overwrite_sorts_and_stamps`, `test_owned_float_overwrite_places_nan_like_spark` | 2 failed, 15 passed, 9 skipped, 3 xfailed |
 | D — the lineage default-order sort removed (`sorted_lineage_batches` returns arrival order, stamp kept) | `test_partitioned_rewrites_sort_and_stamp[m3]` | 1 failed, 16 passed, 9 skipped, 3 xfailed |
-| E — the sort detaches `_row_id` from its row (the `_row_id` column reversed within each sorted batch) | `test_partitioned_rewrites_sort_and_stamp[m3]`, `test_v3_lineage_survives_the_default_order_sort` | 2 failed, 15 passed, 9 skipped, 3 xfailed |
+| E — the sort detaches `_row_id` from its row (the `_row_id` column reversed within each sorted batch) | `test_partitioned_rewrites_sort_and_stamp[m3]`, `test_v3_lineage_survives_the_default_order_sort` *(round 4, V-02: the `[m3]` entry overclaims; see §10.3)* | 2 failed, 15 passed, 9 skipped, 3 xfailed |
 | F — `CanonicalFloatExpr::wrap` removed from the sort keys | `test_owned_float_overwrite_canonicalises_negative_nan` | 1 failed, 16 passed, 9 skipped, 3 xfailed |
 | restored tree (rebuilt) | none | 17 passed, 9 skipped, 3 xfailed |
 
@@ -285,6 +296,82 @@ the 3 xfails are the strict fork-blocked legs, and none of them XPASSed under an
 | parity suite `make py-test` | 756 passed, 3 skipped, 12 xfailed, exit 0 |
 | comment ban (`comment_ban.py` on the head) | `comment-ban hits=0`, exit 0 against `origin/main` |
 
+
+## 10. Round 4 (2026-09-17) — verification-critic remediation
+
+A Grok verification critic closed L-01…L-05 and confirmed mutations A–D and F from the code. It
+left one P2 (V-01) and three P3s (V-02, V-03, V-04). This round closes all four. The head it
+starts from is round 3 rebased onto main `e980d945` (fork pins RP-23 `4151b488`, RP-24
+`8fb44a39`).
+
+### 10.1 Findings → disposition
+
+| Finding | Disposition | Where |
+|---|---|---|
+| V-01 (P2) round 3 made the unsorted v3 lineage rewrite an unbounded collect | FIXED. `write_partitioned_lineage_files` checks `default_sort_is_declared` first. Unsorted tables stream batch by batch into the fanout, as before round 3. A declared order drains (`drain`), sorts, and only then builds the writer. That is the shape of `fanout_sorted_serial` and `drive_unpartitioned`. `sorted_lineage_batches` is gone | `merge/row_lineage.rs`; `merge/tests/lineage_stream.rs`; C-006, C-010 |
+| V-02 (P3) mutation E's transcript overclaims `[m3]` | Corrected. E was re-run (§10.3). The round-3 E mutation panicked on a lineage-arm batch with no `_row_id` column, and that panic is what turned `[m3]` red. The tolerant form E′ reds only `test_v3_lineage_survives_the_default_order_sort` | §9.4 row E; §10.3 |
+| V-03 (P3) A-3 is stale after ICE-RDF-OPTIONS-1 (#672) | Corrected. The binpack pin replays the recorded `bp` program through `_drive`, Spark's `options => map('min-input-files','2','rewrite-all','true')` included. It still fails strictly for the claimed reason (§10.2) | `test_ice_sorted_insert_2.py`; A-3; registry `WRITE-ORDER-RDF-1` |
+| V-04 (P3) the F-COW-UPDATE-STAMP-1 routing reason is wrong | Corrected in the registry row, the `docs/fork-sync.md` open ask and A-1. `scalar_set_assignments` accepts scalar expressions. `UPDATE t SET id = id WHERE p = 0` misses the WHERE gate of `try_allowed_update_in` (only an uncorrelated `col IN (SELECT …)`), and `plain::try_allowed_plain_identity` is DELETE-only. The xfail is unchanged | `docs/spark-sql-iceberg-parity.md`; `docs/fork-sync.md`; A-1 |
+
+### 10.2 What the V-01 pin can observe
+
+The unsorted arm's result (rows, `_row_id`, stamp 0) is the same whether it streams or
+collects. The memory saved by streaming is not observable from a unit test. The timing is
+observable: when a file is opened. `lineage_stream.rs` feeds `write_partitioned_lineage_files`
+a probe stream that, just before it yields its last batch, counts the parquet files under the
+warehouse. The fork's parquet writer creates its output file on the first write. So a
+streaming arm has already opened a file at that point, and a drain-first arm has not.
+
+- `unsorted_v3_lineage_rewrite_streams_and_keeps_arrival_order`: v3, identity-partitioned by
+  `part`, no order. The probe sees at least one file before the stream ends. Two files, both
+  stamped 0. Partition 0 holds ids `[5, 1, 4]` (arrival order), `_row_id` `[50, 10, 40]`,
+  last-updated `[3, NULL, 1]`. Partition 1 holds `[3, 7]` / `[30, 70]`. An empty batch in the
+  stream is skipped.
+- `declared_order_v3_lineage_rewrite_sorts_before_the_writer_opens`: the same table with
+  `WRITE ORDERED BY (id)`. The probe sees no file before the stream ends. Files are stamped 1.
+  Partition 0 holds `[1, 4, 5]` with `_row_id` `[10, 40, 50]` and last-updated `[NULL, 1, 3]`.
+
+The binpack xfail under `--runxfail` on this round's native fails at `binpack_after`:
+`('binpack_after', {… 'p=0/compacted-00000-….parquet', 'record_count': 300, 'sort_order_id':
+None})`, `assert None == 1`. The options map was honoured (300 rows per compacted file, as in
+Spark's cell), and the stamp is NULL, as `F-RDF-SORT-STAMP-1` states.
+
+### 10.3 Mutation proof (round 4)
+
+Rust pins: `cargo test -p repark-iceberg --lib lineage_stream`. Python pins: the release native
+was rebuilt per mutation, and then `test_ice_sorted_insert_1.py`, `test_ice_sorted_insert_2.py`
+and `test_write_order_dist_1.py` were run. The source was then restored. Harness: a scripted
+single-change patch applied to the round-4 `row_lineage.rs`.
+
+| Mutation | Rust `lineage_stream` | Python red tests | Python counts |
+|---|---|---|---|
+| V01-a — the unsorted arm drains the stream before writing (round-3 shape) | `unsorted_…` red (`seen_before_last > 0` fails); ordered green | not run (no native rebuild; nothing in the Python files observes it) | — |
+| V01-b — the declared arm streams without sorting | `declared_order_…` red (probe saw a file); unsorted green | not run (same change as D's sort removal, plus the drain) | — |
+| B — lineage `stamp(…)` removed | both red (stamp `None`, not `Some(0)` / `Some(1)`) | `test_partitioned_rewrites_sort_and_stamp[m3]` (`v3_partitioned_merge_matched_update`, stamp `None`), `test_v3_lineage_survives_the_default_order_sort` (same cell, reached through `_drive`) | 2 failed, 28 passed, 12 skipped, 3 xfailed |
+| D — the declared arm drains but does not sort (stamp kept) | `declared_order_…` red (`[5, 1, 4]` ≠ `[1, 4, 5]`); unsorted green | `test_partitioned_rewrites_sort_and_stamp[m3]` (`v3_partitioned_merge_not_matched_insert`, stamp 1, `[5002, 5126, 5592, 5640, …]` unsorted) | 1 failed, 29 passed, 12 skipped, 3 xfailed |
+| E (round-3 form) — `_row_id` reversed within each sorted batch, `index_of(…).unwrap()` | `declared_order_…` red (`_row_id` `[70, 40, 30]`) | `[m3]` (a Rust panic: `SchemaError("Unable to get field named \"_row_id\". Valid fields: [\"id\", \"p\"]")`), `test_v3_lineage_survives_the_default_order_sort` (`{1: 1999, …} != {1: 1000, …}`) | 2 failed, 28 passed, 12 skipped, 3 xfailed |
+| E′ — the same reversal, skipping batches with no `_row_id` | `declared_order_…` red | `test_v3_lineage_survives_the_default_order_sort` only | 1 failed, 29 passed, 12 skipped, 3 xfailed |
+| restored tree (rebuilt) | 2 passed | none | 30 passed, 12 skipped, 3 xfailed |
+
+B and D match round 3's red sets, so the sorted arm is still discriminated after the V-01
+restructure. D is also red in the new Rust pin, and B in both. E′ is the honest form of E. A
+`_row_id`-only detach cannot red `[m3]`, because `_assert_cell` never reads the lineage columns.
+The round-3 transcript's `[m3]` red was the mutation's own panic: during the `m3` program a batch
+whose schema was only `[id, p]` reached this arm's sort output, and E's `unwrap` on the missing
+`_row_id` column fired. No xfail XPASSed under any mutation. The Python counts include
+`test_write_order_dist_1.py`, so they are not comparable one-to-one with §9.4's.
+
+### 10.4 Gates (round 4 head)
+
+| Gate | Result |
+|---|---|
+| comment ban (`comment_ban.py` against `origin/main`, on the fix commit and again on the docs head) | `comment-ban hits=0`, exit 0 |
+| `cargo test -p repark-iceberg` | 450 passed, 0 failed (the two `lineage_stream` pins included) |
+| `test_ice_sorted_insert_1.py` + `test_ice_sorted_insert_2.py` + `test_write_order_dist_1.py`, on the native rebuilt from the round-4 source | 30 passed, 12 skipped, 3 xfailed (the 3 strict fork-blocked legs, none XPASSed) |
+| `make verify` | exit 0; 3810 Rust tests passed, 0 failed, 7 ignored. The first run's clippy caught one `from_iter_instead_of_collect` in `lineage_stream.rs`, which was rewritten as `.collect()`. `cargo fmt` rewrapped two lines of the same test file. Both are test-only, non-semantic changes made after the mutation runs. The second run failed only `catalog::tests::catalog::listing_cost_list_tables_cheaper_than_provider_rebuild`, a wall-clock budget in a file this round does not touch (14.0 ms against ≤ 2 × 3.3 ms under box I/O load). That test passed alone and in the `cargo test -p repark-iceberg` gate, and the third run exited 0 |
+
+The whole facade and parity suites were not run this round. The box is shared, and the
+orchestrator runs them after the round.
 
 ```
 COVERAGE_ATTESTATION:
@@ -314,7 +401,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/ice_sorted_insert_2_spark_oracle.json, python/repark/tests/_record_ice_sorted_insert_2_oracle.py]
     - id: AT-7
       status: ATTACKED
-      evidence: The lineage arm now buffers before sorting, the cost the v2 and unpartitioned arms already pay (A-6). The float wrap runs once per sort key per batch evaluation. The stamp stays once per writer construction.
+      evidence: The lineage arm buffers before sorting only when an order is declared, the cost the v2 and unpartitioned arms pay on the same tables; unsorted tables stream (round 4, V-01, §10). The float wrap runs once per sort key per batch evaluation. The stamp stays once per writer construction.
       artifacts: [crates/repark-iceberg/src/write/merge/row_lineage.rs, crates/repark-iceberg/src/write/distribution.rs]
     - id: AT-8
       status: ATTACKED
