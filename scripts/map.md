@@ -916,6 +916,8 @@ repark-parity slice.
   `python/repark-parity/tests/test_dl_2_ledger_grammar.py`.
   `EXCEPTIONS` dropped the `sem-0-charter-ledger.md` row on 2026-09-07 when the archive step
   filed that ledger.
+  TEST-HYGIENE-1 (2026-09-18): the staging ledger map it reads carries each ledger entry once — the three `array-null-1` blocks and the second `fnp-11b` line were deduplicated by a block-identity scan.
+  pins: test-hygiene-1/C-005
 - `doc_blocks.py` — the **block grammar** of the two live documents (DL-4, 2026-08-25;
   `history=` must name one bin under `docs/history/`):
   HTML-comment `ws` blocks around every `STATUS.md` workstream bullet and `unit` markers on the

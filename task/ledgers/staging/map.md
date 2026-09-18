@@ -149,30 +149,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   maintenance guide's S2-24 known-issues line move with it.
   `risk_tier: standard`. Branch `feat/ap-3`.
   pins: ap-3/C-001, C-002, C-003, C-004, C-005, C-006
-- [array-null-1-ledger.md](array-null-1-ledger.md) —
-  **ARRAY-NULL-1 (2026-09-14):** `F.array_append`/`F.array_prepend` lower through
-  `spark_array_append_udf`/`spark_array_prepend_udf` — a `ScalarUDF` that delegates
-  to DataFusion's kernel and grafts the input array's outer null buffer back
-  (route (a); the CASE route died at depth 40 and no lateral plan-level alias
-  exists). One native call per facade level: depth-40 RSS ~2.0 MB vs 577 MB at
-  depth 16 before; the SQL door answers the same arm in Spark `(array, element)`
-  order, and the depth-40 memory pin runs by default on both functions.
-  Measurement script: [array-null-1-spikes/](array-null-1-spikes/map.md).
-  `risk_tier: standard`. Branch `fix/array-null-1`.
-  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
-  L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
-- [array-null-1-ledger.md](array-null-1-ledger.md) —
-  **ARRAY-NULL-1 (2026-09-14):** `F.array_append`/`F.array_prepend` lower through
-  `spark_array_append_udf`/`spark_array_prepend_udf` — a `ScalarUDF` that delegates
-  to DataFusion's kernel and grafts the input array's outer null buffer back
-  (route (a); the CASE route died at depth 40 and no lateral plan-level alias
-  exists). One native call per facade level: depth-40 RSS ~2.0 MB vs 577 MB at
-  depth 16 before; the SQL door answers the same arm in Spark `(array, element)`
-  order, and the depth-40 memory pin runs by default on both functions.
-  Measurement script: [array-null-1-spikes/](array-null-1-spikes/map.md).
-  `risk_tier: standard`. Branch `fix/array-null-1`.
-  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
-  L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
 - [bl-11-numeric-binary-ledger.md](bl-11-numeric-binary-ledger.md) —
   **BL-11 (2026-09-16), in flight:** numeric to BINARY under runtime ANSI (batch-17
   oracle): ANSI-off big-endian encode of the integrals via the `IntToBinaryCast`
@@ -295,7 +271,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   oracle pins on both doors; P2-2 stays OPEN residue.
   `risk_tier: standard`. Branch `feat/java-double-fd-1`.
   pins: java-double-fd-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [fnp-11b-ledger.md](fnp-11b-ledger.md) — Charter ledger — FNP-11B · datetime format parsing, the TIME family, BL-13 and BL-14
 - [orphan-s3tables-1-ledger.md](orphan-s3tables-1-ledger.md) —
   **ORPHAN-S3TABLES-1 step 1 (2026-09-12), in flight:** `remove_orphan_files` refuses loud
   on an `s3tables`-kind catalog before any IO — table buckets answer `ListObjectsV2` 405 —
@@ -981,6 +956,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Spark oracle as a checked-in fixture.
   `risk_tier: standard`. Branch `fix/ice-v3-write-default-1`.
   pins: ice-v3-write-default-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [test-hygiene-1-ledger.md](test-hygiene-1-ledger.md) —
+  **TEST-HYGIENE-1 (2026-09-18), in flight:** four test-hygiene fixes, test code
+  only — the Spark v3 fixture keeps its baked-in `/tmp` path behind a
+  cross-process kernel file lock (Avro carries absolute paths in deflate blocks),
+  the v3_dv torture fixture holds an `fcntl.flock` while materialized AND read,
+  the `current_date` pin reads the session zone with a strict-xfail Kiritimati /
+  `Etc/GMT+12` pin under new registry row TZ-9 (OPEN, product defect), the
+  500-table RSS leg carries the registered `perf` marker with CI still running
+  it, and the staging map loses its duplicated `array-null-1` / `fnp-11b` entries.
+  `risk_tier: standard`. Branch `test/test-hygiene-1`.
+  pins: test-hygiene-1/C-001, C-002, C-003, C-004, C-005
 - [ice-rtas-ops-2-ledger.md](ice-rtas-ops-2-ledger.md) —
   **ICE-RTAS-OPS-2 (2026-09-18), in flight:** the RePark opt-in for the fork's
   RTAS replace commit (rating row V2-24) — `with_replace_write(ctas.or_replace)`

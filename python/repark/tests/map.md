@@ -50,10 +50,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   nested-field moves with ids intact, the short-sibling move, the cross-struct and
   dotted-`AFTER` refusals, positional INSERT after the move, v3 tables,
   partition-source moves, whole-struct moves, and the DataFrame door (17 offline tests
-  incl. one strict-xfail no-op-metadata pin), all on the facade SQL door; the live tier
-  replays Spark and cross-reads both engines' moved tables (17 live tests). The ANSI door
-  carries the same move end to end in
-  `crates/repark-sql/tests/alter_column_move.rs`.
+  incl. the no-op-metadata pin, plain since RP-26), all on the facade SQL door; the
+  live tier replays Spark and cross-reads both engines' moved tables (17 live tests).
+  The ANSI door carries the same move end to end in
+  `crates/repark-sql/tests/alter_column_move.rs` (the no-op move commits nothing
+  since RP-26, fork #293).
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [test_df_surface_a_1.py](test_df_surface_a_1.py) +
   [facade_dataframe_surface_oracle.json](facade_dataframe_surface_oracle.json) —
@@ -297,7 +298,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `.createOrReplace()` land their rows, each replace minting two fresh-uuid metadata
   files with `v3` bytes intact), the typed-conflict target rides
   `xfail(strict=True)` pins, and the live mirror shows Spark's own replace continuing
-  the version chain (`v4`, new rows only) while RePark stays stale. Round 2 L-01 pins
+  the version chain (`v4`, new rows only) while RePark stays stale.
+  Round 3 (2026-09-18, RP-26, fork #293): the stale replace conflicts on both doors
+  (SQL `CREATE OR REPLACE`, `writeTo().replace()`, `writeTo().createOrReplace()`
+  each raise `CatalogCommitConflicts` with no uuid file), the split-brain pins are
+  deleted, and the live pin asserts the conflict plus Spark reading the winner.
+  Round 2 L-01 pins
   every registry sentence: same-name re-register refuses, DROP on the stale handle
   deletes the pointer file, the planted orphan wedges loud then clears, and the frozen
   Spark scan-forward keys plus the 400k race count are read offline and re-derived live.
@@ -1149,6 +1155,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Then C-010 (bare nullary both directions), C-003 (RLIKE lowering), C-004 (LTZ
   cast), C-005 (NTZ refusal naming TZ-6) and the C-006 struct-dot pin.
   pins: spark-sql-grammar-1/C-003, C-004, C-005, C-006, C-008, C-010
+  **TEST-HYGIENE-1 (2026-09-18):** the `current_date` pin compares against the
+  session's configured zone instead of the host-local date, and the deterministic
+  Kiritimati / `Etc/GMT+12` session-zone pin holds the measured UTC-date defect as
+  strict-xfail under registry row TZ-9.
+  pins: test-hygiene-1/C-003.
 - [test_unresolved_routine_1.py](test_unresolved_routine_1.py) +
   [unresolved_routine_1_spark_oracle.json](unresolved_routine_1_spark_oracle.json) —
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** every unknown routine refuses with Spark's
@@ -1253,6 +1264,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark's `Duplicate request ...` text beside it as `spark_error` (OPEN residue
   `ICE-BRANCH-OPS-1-R-001`, fork trigger `F-CHERRYPICK-WAP-ORDER-1`); the recorder
   rebuilds that cell shape from the live Spark error on every re-record.
+  **Round 4 (2026-09-18, RP-26, fork #293):** the duplicate-WAP cell carries Spark's
+  `Duplicate request ...` text as its `expect_error` (FIXED residue
+  `ICE-BRANCH-OPS-1-R-001`); the recorder keeps the live Spark error unchanged.
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
   pins: ice-branch-ops-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
@@ -4857,6 +4871,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
   pins: perf-ice-catalog-io-3/C-001, C-002, C-003, C-004, C-005, C-006
   pins: rp-16/C-001, C-002, C-003, C-004
+  **TEST-HYGIENE-1 (2026-09-18):** the 500-table RSS leg carries the registered
+  `perf` marker (`conftest.py::pytest_configure`); no `-m "not perf"` in CI or the
+  default config, so the wheels smoke job and the nightly keep running it. The
+  marker selects out exactly that one leg (`35/36 collected, 1 deselected`).
+  pins: test-hygiene-1/C-004.
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert

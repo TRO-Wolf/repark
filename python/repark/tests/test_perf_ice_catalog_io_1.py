@@ -637,6 +637,7 @@ def _peak_rss_mb_after_touching_tables(
     return float(lines[0]) / 1024.0, int(lines[1])
 
 
+@pytest.mark.perf
 def test_peak_rss_over_five_hundred_tables_stays_within_the_default_cache_budget(
     tmp_path: Path,
 ) -> None:
