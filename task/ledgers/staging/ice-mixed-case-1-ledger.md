@@ -101,7 +101,7 @@ table-format semantics change, so no fork PR).
 | C-014 | V-02: every relation's stored fields feed the fold, scope by scope; an outer spelling is never rewritten into an inner scope. | `test_measured_query_cells_answer_spark[V02_*]`; Rust `v02_every_relation_folds_not_only_the_first_miss`, `v02_outer_spelling_is_not_rewritten_into_an_inner_scope`. | OPEN | Red §9. |
 | C-015 | V-04: JOIN USING folds in every statement that carries a query (INSERT … SELECT … JOIN … USING). | `test_measured_query_cells_answer_spark[V04_join_using_select]`, `test_measured_join_using_insert_answers_spark`; Rust `v04_join_using_folds_inside_insert`. | OPEN | Red §9. |
 | C-016 | L-08: any reference (bare, qualified, exact or case-variant) to a name with an ASCII case twin in the node's input refuses `[AMBIGUOUS_REFERENCE]` / `42704`, one option per matching field in the requested spelling (Q-21b-1, Q-21b-2); a Spark-written twin Iceberg table refuses at adoption (DECLARED). | `test_case_twin_reference_is_ambiguous_exact_or_not`, `test_measured_case_twin_table_refuses_at_adoption[L08_*]`, `test_sql_door_ambiguous_reference_matches_spark_shape`; Rust `l08_*`, `case_only_collision_raises_the_spark_sentence`, `join_collision_on_bare_reference_raises`; `name_resolution.rs` `write_side_case_twins_are_ambiguous`. | OPEN | Red §9. |
-| C-017 | R-02 / V-03: when no referenced schema holds an upper-case ASCII field the audit and the AST clone are skipped; the audit that runs indexes each node schema once. Before/after cost measured on a default-profile release native. | Rust pin on the early exit; timing in §9. | OPEN | |
+| C-017 | R-02 / V-03: when no referenced schema holds an upper-case ASCII field the audit and the AST clone are skipped; the audit that runs indexes each node schema once. Before/after cost measured on a default-profile release native. | Rust `r02_lowercase_only_plans_skip_the_audit`; timing in §9 step 6. | PROVEN | `53514646`; default-profile timing 381.5/393.2 µs → 377.1/365.4 µs per `sql()` (§9). |
 | C-018 | R-03: MERGE fragment scopes come from loaded schemas, not two `SELECT * … LIMIT 0` plans. | `merge_fragments.rs` diff; MC-MRG-01…04 stay green. | OPEN | |
 
 ## 1. Red-first record (base `32c0e1a3`, release native in `.venv`, 2026-09-17)
@@ -444,6 +444,31 @@ output-spelling divergence.
   (fork rule), so this is a DECLARED registry row, not silence. A star over a
   twin frame is not audited: it is not a written reference, and Spark's answer
   on a frame was not measured.
+
+### Step 6 — R-02 / V-03 early exit, measured
+
+Code in `53514646`. Cost of one trivial Spark-door statement,
+`spark.sql("SELECT id FROM nums")` over a `spark.range(8)` temp view (lowercase
+schema, first-time plan success). Timed in Python with `time.perf_counter_ns`
+around `session.sql(...)`: 300 warm-up calls, then 7 rounds of 1000 calls,
+reporting the median of the round medians, plus 500 calls of `.collect()`.
+Both wheels were built on the **DEFAULT release profile** (`lto = "thin"`,
+`codegen-units = 1`; `CARGO_PROFILE_RELEASE_CODEGEN_UNITS` unset) with
+`maturin build --release` and installed in fresh venvs on the same Python
+3.12.3. Script: `/tmp/kb-mixed-scratch/timing.py`.
+
+| Build | `sql()` median | `sql().collect()` median |
+|---|---|---|
+| before — `28b6ff00` (the reviewed Q-20b-2 design + red pins, no early exit), run 1 | 381.5 µs | 959.7 µs |
+| after — `53514646` (step 6), run 1 | 377.1 µs | 961.5 µs |
+| before, run 2 | 393.2 µs | 1006.5 µs |
+| after, run 2 | 365.4 µs | 920.3 µs |
+
+The box was shared (load average 65–80 on 64 cores from other lanes), so the
+run-to-run spread (±3%) is about the size of the effect. Read the numbers as:
+the audit plus the AST clone were ~4–7% of a trivial statement's
+`sql()`, and the early exit removes that on lowercase-only schemas. There is no
+regression. `collect()` is dominated by execution.
 
 ## 7. Open questions (HALT writes here; empty means none)
 
