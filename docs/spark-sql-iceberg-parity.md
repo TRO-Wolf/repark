@@ -1711,6 +1711,39 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   queued fork work, not an engine invention. Reversing needs a new dated decision; the fork
   I/O landing reds the scan/write pins on purpose.
 
+### V3-MULTIARG-1 — multi-argument partition transforms are DECLARED out of 1.x
+
+- **repark** — no engine surface creates or reads a partition field with more than one
+  source column. The SQL door refuses `PARTITIONED BY (bucket(4, id, name))` at analysis
+  with `AnalysisException: Error during planning: CTAS PARTITIONED BY \`bucket(…)\`
+  expects (numBuckets, column), got 3 argument(s): [4, id, name]` and creates no table.
+  The DataFrame door has no multi-argument spelling: `functions.bucket` takes
+  `(numBuckets, col)` and a three-argument call fails in Python with
+  `TypeError: bucket() takes 2 positional arguments but 3 were given`. A foreign v3
+  table carrying `"source-ids": [1, 2]` refuses loud at `register_table` with
+  `PySparkException: DataInvalid => Failed to parse json string, source: data did not
+  match any variant of untagged enum TableMetadataEnum` — the owned fork models only
+  the singular `source-id`, so the whole document fails the metadata parse before any
+  read. The unmodified single-source control registers and reads cleanly, which proves
+  the refusal is the `source-ids` shape, not the table. **Owner ruling 2026-09-18:
+  dated DECLARED exclusion from the 1.x gate** (rating row V3-05).
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0 cannot create the table either: the
+  same DDL refuses with `IllegalArgumentException: Cannot convert transform with more
+  than one column reference: bucket(4, id, name)`. There is no live table to read, so
+  the oracle is the refusal itself. *(oracle: live PySpark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0 on a Hadoop catalog, 2026-09-18.)*
+- **Pin** —
+  `python/repark/tests/test_v3_multiarg_1.py::test_sql_door_refuses_multiarg_bucket`
+  (C-001), `::test_register_table_with_source_ids_refuses_at_register` (C-003),
+  `::test_spark_oracle_refused_the_multiarg_ddl` over
+  `python/repark/tests/v3_multiarg_1_spark_oracle.json` recorded by
+  `python/repark/tests/_record_v3_multiarg_1.py` (C-002).
+- **Rationale** — DECLARED, owner-dated 2026-09-18. Multi-argument transforms need fork
+  work first (spec parsing in `iceberg-rust`, transform evaluation, pruning) with no
+  1.x consumer; the ruling keeps the gate honest instead of silent. Reversing it needs
+  a new dated decision, and the read/write landing reds the pins on purpose. Follow-up
+  card: [task/roadmap/mid-term/v3-multiarg-1.md](../task/roadmap/mid-term/v3-multiarg-1.md).
+
 ---
 
 ### V3-COV-2 — a lineage projection after a widening `ALTER COLUMN … TYPE`
