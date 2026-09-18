@@ -169,7 +169,9 @@ honestly"). SQL routing and session-build registration are seam-inverted
 - `src/lib.rs` — the crate-root manifest (module declarations + re-exports; no logic).
 - `src/dialect.rs` / `src/extension.rs` — the phase-2 seams: `SqlDialect` (+ `EngineContext`,
   default `DataFusionDialect`) and `SessionExtension` (configure/register hooks,
-  `NoopSessionExtension`).
+  `NoopSessionExtension`). Round 3 (2026-09-17): `execute_with_write_options`
+  carries the out-of-band writer-option map (default impl refuses non-empty,
+  delegates when empty); `Session::sql_with_write_options` is the entry.
 - `src/catalog_state.rs` — the hoisted `CatalogRegistry` + `LocationPolicy` (E-4 temp-root
   resolution at registration).
 - `src/lineage_columns.rs` — **V3-4:** rewrite `SELECT _row_id` / `_last_updated_sequence_number`

@@ -334,21 +334,17 @@ def test_write_to_partitioned_by_string_identity(spark: ReparkSession) -> None:
     assert spark.sql(f"SELECT id, p FROM {table}").to_arrow().to_pylist() == [{"id": 1, "p": "x"}]
 
 
-def test_write_to_option_warns_once(spark: ReparkSession) -> None:
-    """option/options emit a process-once UserWarning (ignored storage options)."""
+def test_write_to_option_stored_without_warning(spark: ReparkSession) -> None:
+    """option/options ride the action SQL now (ICE-WRITE-OPTIONS-1): no UserWarning."""
     import warnings
 
-    from repark.spark.dataframe import _reset_writer_v2_option_warnings_for_tests
-
-    _reset_writer_v2_option_warnings_for_tests()
     writer = _source(spark, "(1,'a')").writeTo(TABLE)
-    with pytest.warns(UserWarning, match="option/options are accepted"):
-        writer.option("compression", "zstd")
-    # Second call in the same process must not warn again.
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        writer.options(compression="snappy")
-        assert caught == [], f"second option/options must not re-warn, got {caught}"
+        writer.option("snapshot-property.run_id", "w-1")
+        writer.options(**{"snapshot-property.batch": "2"})
+        user_warnings = [item for item in caught if issubclass(item.category, UserWarning)]
+        assert user_warnings == [], f"options must not warn, got {user_warnings}"
 
 
 # path parquet / format.save via COPY TO

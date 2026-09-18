@@ -35,7 +35,7 @@ pub(crate) fn table_carries_merge_lineage(table: &Table) -> bool {
     format_supports_row_lineage(table.metadata().format_version())
 }
 
-pub(super) fn iceberg_parquet_schema(table: &Table) -> Result<iceberg::spec::SchemaRef> {
+pub(crate) fn iceberg_parquet_schema(table: &Table) -> Result<iceberg::spec::SchemaRef> {
     let schema = table.metadata().current_schema().clone();
     if !table_carries_merge_lineage(table) {
         return Ok(schema);

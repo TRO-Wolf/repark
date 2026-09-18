@@ -2,6 +2,7 @@
 
 mod alter;
 mod alter_write_order;
+mod append_with_options;
 mod bare_nullary;
 mod bare_unit;
 mod call;
@@ -42,10 +43,13 @@ mod time_window;
 mod truncate;
 pub mod type_table;
 mod window_range;
+pub(crate) mod write_options;
 mod write_to_branch;
 
 // --- Router entrypoints.
-pub use router::{execute, execute_static_overwrite, execute_with_read_only};
+pub use router::{
+    execute, execute_static_overwrite, execute_with_read_only, execute_with_statement_options,
+};
 // G15: parse-altitude collation refuse (binding `F.expr` / `filter_sql` call this).
 pub use collation::{
     COLLATION_REFUSAL_NEEDLE, collation_refusal_message, is_collation_session_key,
@@ -83,6 +87,7 @@ pub use metadata_tables::{
 };
 
 // Domain-module re-exports keep sibling paths stable.
+pub(crate) use append_with_options::execute_append_with_options;
 pub use catalog_ops::reregister_catalog_provider;
 pub(crate) use catalog_ops::{
     catalog_handle, iceberg_err, name_parts, namespace_schema_name, passthrough_after_p11,

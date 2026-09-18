@@ -2856,6 +2856,169 @@ Differences we intend to close. Each pin **codifies today's behavior** so the fi
 purpose; a pin here is a description, not a contract, and the unit that fixes the class *updates*
 the pin rather than obeying it.
 
+### ICE-WRITE-OPTIONS-1 — DataFrame write options on Iceberg writes — **FIXED 2026-09-17**
+
+- **repark** — **FIXED 2026-09-17.** The facade stores `DataFrameWriterV2.option` /
+  `DataFrameWriter.option` entries and forwards them out of band with the generated
+  Iceberg SQL (native `sql_with_write_options`, typed router set; the SQL text stays
+  option-free); Rust validates and honours or refuses every key before any file is
+  staged. `snapshot-property.<k>`
+  lands prefix-stripped and lower-cased in the commit summary on `writeTo(t).append()`,
+  `.overwritePartitions()`, `.create()/.replace()/.createOrReplace()`, and
+  `df.write.format("iceberg")` with `saveAsTable` / `insertInto` / append-mode `save`
+  (an option-carrying append streams onto the owned path with the merged summary;
+  option-free writes keep their canonical paths byte-identical). `write-format=parquet`
+  (any case) writes parquet. `target-file-size-bytes`, `compression-codec`, and
+  `compression-level` override the table property (option over table property, as Spark);
+  `isolation-level` (`none`/`snapshot`/`serializable`) overrides the table property on
+  the overwrite family and is accepted-and-ignored on plain append, as Spark.
+  `distribution-mode` (`none`/`hash`/`range`), `fanout-enabled`, `check-nullability`,
+  and `check-ordering` are accepted with Spark's leniency (any boolean spelling; unknown
+  `distribution-mode` refused) while file layout follows the engine default; unknown
+  option keys are ignored. Bad values refuse loud: unknown `write-format` (`Invalid file
+  format`), non-numeric `target-file-size-bytes`, unknown codec or level, unknown
+  distribution or isolation level, and `compression-level` with an effective gzip codec
+  (Spark fails integer gzip levels). The process-once `UserWarning` is gone. The SQL
+  door has no snapshot-property channel on either engine (measured: a
+  `spark.sql.iceberg.write.snapshot-property.*` conf does not reach the summary).
+- **Apache Spark** — the recorded cells in
+  `python/repark/tests/ice_write_options_1_spark_oracle.json` (live PySpark 4.1.2 +
+  Iceberg 1.11.0, 2026-09-17): prefix strip and lower-case (upper-case suffix lands
+  lower-cased; empty suffix commits an `""` key), per-snapshot scope, orc/avro files
+  for those formats, `NumberFormatException` for a bad size, Hadoop-enum failure for
+  gzip plus an integer level, `Invalid distribution mode` / `Invalid isolation level`
+  refusals, `ValidationException` on a serializable conflict, lenient booleans, silent
+  unknown keys, and the SQL-door conf absence.
+- **Pin** — `python/repark/tests/test_ice_write_options_1.py` (offline over the
+  fixture; the live tier re-runs all three record drivers and checks the fixture);
+  `crates/repark-spark/src/write_options.rs` (out-of-band pair validation units) and the
+  staging/commit units in `crates/repark-iceberg/src/write/write_options.rs`.
+- **Rationale** — FIXED for the measured option set. Two residuals stay named here, not
+  pinned as parity: (a) required-field nullability is not asserted on write, so
+  `check-nullability=true` cannot abort a null-into-required write the way Spark's own
+  `NOT_NULL_ASSERT_VIOLATION` does regardless of the option (pre-existing engine
+  default, outside this unit's fence); (b) `distribution-mode` / `fanout-enabled` change
+  file layout only — committed rows are pinned Spark-equal while the layout follows the
+  engine default; (c) `isolation-level=serializable` on an overlapping dynamic overwrite
+  commits in RePark (the level reaches validation; the fork's OCC finds no concurrent
+  commit) where Spark raises `ValidationException` on its own files — a fork validation
+  strictness shared with the table-property path, not an option-parsing gap.
+  `overwrite(condition)` stays a loud refusal, so options never reach a commit there.
+- **Round 3 (2026-09-17)** — the text channel is withdrawn: options travel out of band
+  (facade dict, native `sql_with_write_options`, typed router set; user-typed `OPTIONS`
+  keeps main's parse error / CTAS refusal, SQL-02/03). UTF-8 rides the map byte-exact
+  (SNAP-08/09). Engine-key collisions follow measured Spark behaviour — user `operation`
+  is dropped, `engine.operation-id` stays ours (SNAP-10/11/12); the round-3 prefix
+  refusal for metric keys is superseded by the round-4 collision rule below. gzip refuses on the merged level
+  whatever side it came from (Q-20c-6). Staging streams with session concurrency and
+  OPTIONS CTAS publishes once (SNAP-04 kept, SNAP-13).
+- **Round 4 (2026-09-17)** — *Collision rule.* A `snapshot-property.<k>` extra refuses
+  if and only if the engine computes `<k>` for the snapshot being committed, with Spark's
+  text `Multiple entries with same key: <k>=<engine value> and <k>=<user value>`; any
+  other key lands. On an append the engine summary is computed before the commit from
+  the staged files (the fork's public `SnapshotSummaryCollector` plus the branch-head
+  totals), so the engine value in the message is exact: `added-records=2`,
+  `changed-partition-count=1` and `total-records=3` refuse, while `deleted-data-files`
+  lands on an append because nothing computes it there. Measured on Spark 4.1.2 +
+  Iceberg 1.11.0 on 2026-09-17, recorded as fixture cells `COLL-00`…`COLL-08` in
+  `ice_write_options_1_spark_oracle.json` (recorder `_record_ice_write_options_3_oracle.py`)
+  and pinned by `test_snapshot_property_collision_cells`. On the overwrite family the
+  fork works out which files it removes inside the commit, so the totals,
+  `changed-partition-count` and the data-removal keys (`deleted-data-files`,
+  `deleted-records`, `removed-files-size`, when a parent snapshot exists) count as
+  engine-computed and refuse with `<resolved at commit>` as the engine value.
+  *Divergences, dated rulings.* `engine.operation-id` is always RePark's (Q-20c-5,
+  2026-09-17): Spark lands a user value (`COLL-04`), RePark keeps its own UUID
+  because `commit_error.rs` reports that id for `CommitStateUnknown` and the two must
+  agree. `engine-name` / `engine-version` refuse the way Spark does (`COLL-01/02`), but
+  RePark writes neither key, so the engine half of the message reads `<engine-reserved>`
+  where Spark's reads `spark` / `4.1.2` (R-21c-1, 2026-09-17). The refusal surfaces as
+  `AnalysisException` where Spark raises `IllegalArgumentException`. *Router
+  (Q-21c-5, 2026-09-17).* A statement that cannot honour a non-empty options map
+  refuses it rather than dropping it: `MERGE INTO`, the `INSERT … BY NAME` append and
+  empty-projection commits, `DELETE`, `UPDATE`, `TRUNCATE`, `CALL`, `DROP`, `ALTER`,
+  the pre-parse DDL / DESCRIBE / SHOW intercepts, passthrough statements and the
+  non-Iceberg `INSERT OVERWRITE` fallbacks. The `INSERT OVERWRITE … BY NAME`
+  delegations honour the map. *ORC/Avro* stays **DECLARED 2026-09-17**: the refusal is a
+  typed `UnsupportedOperationException` whose message carries the needle
+  `ICE-WRITE-OPTIONS-1 ORC/AVRO declared 2026-09-17` and points at the
+  ICE-WRITE-OPTIONS-ORC-AVRO row below. *Residuals, unchanged and still not pinned as
+  parity:* (a) `check-nullability` / `check-ordering` are accepted and not applied;
+  (b) `distribution-mode` / `fanout-enabled` are accepted and not applied, and file
+  layout follows the engine default. A table-level `write.parquet.compression-level`
+  plus an option `compression-codec=gzip` refuses before any file is written, pinned
+  in both tiers (`test_table_level_gzip_with_option_codec_refuses`,
+  `writer_props.rs::table_level_gzip_option_codec_refuses_like_spark`).
+  pins: ice-write-options-1/C-008, C-009, C-010, C-011
+- **Round 5 (2026-09-18)** — *Target file size (Q-21c-7, 2026-09-18).*
+  `target-file-size-bytes`, as an option or as the table property, takes effect at the
+  RP-23 fork granularity, not per input batch. The rolling writer rolls on 1000-row slices
+  once flushed plus in-progress bytes reach the target, as Java 1.11.0 does with
+  `ROWS_DIVISOR`. At a 1-byte target, 3,500 rows sent as five 700-row batches stage
+  exactly 4 files (1000/1000/1000/500 rows). The 512 MB default stages 1. A 512 MB option
+  over a 1-byte table property also stages 1, so the option wins
+  (`writer_props.rs::option_target_size_rolls_on_row_slices`,
+  `::option_target_size_beats_table_property`). *Router.* The two non-Iceberg
+  `INSERT OVERWRITE` refusals (empty-source wipe, no-source passthrough) are pinned on a
+  temp-view target (`test_non_iceberg_overwrite_refuses_write_options`). A
+  `USING parquet` table created in an Iceberg catalog is itself an Iceberg table, so it
+  cannot serve as the non-Iceberg target. *Residuals, stated and not fixed:* (P3) the
+  overwrite family over-refuses `deleted-data-files` / `deleted-records` /
+  `removed-files-size` when an overwrite ends up removing nothing;
+  `_record_ice_write_options_3_oracle.py` has not been run live. Its cells were derived
+  from the measured JSON through its own `collision_cell()`. The `_1` / `_2` recorders
+  now load the runtime GAV through `spark.jars.packages` and have not been re-run since.
+  pins: ice-write-options-1/C-012, C-013
+- **Run 22b rebase (2026-09-18)** — the options map across the paths ICE-DYN-OVERWRITE-1,
+  ICE-RTAS-OPS-2, ICE-SORTED-INSERT-1 and ICE-V3-WRITE-DEFAULT-1 added under it. Every
+  one honours the map; none refuses anew. *Dynamic overwrite (Q-22b-WO-2).* Under
+  `partitionOverwriteMode=dynamic` a PARTITION-less `INSERT OVERWRITE`,
+  `insertInto(overwrite=True)` and `INSERT OVERWRITE … BY NAME` on a partitioned table
+  commit `replace_partitions` with the merged summary and the option writer knobs.
+  Sibling partitions keep their rows as in DML-1B's recorded cells, and the property
+  lands as on Spark's `DynamicOverwrite` (SNAP-03). *Static pin (Q-22b-WO-1).*
+  `saveAsTable` overwrite stays whole-table under dynamic and still stamps: the typed
+  flag and the options travel on one native call. *Empty dynamic source (Q-22b-WO-3).*
+  Nothing commits, as in Spark (`Dynamic overwrite is empty, skipping commit`). The
+  options are validated, there is no snapshot to carry them, and nothing is refused.
+  The static empty `BY NAME` wipe keeps its Round 4 refusal. *RTAS (Q-22b-WO-4).* An
+  option-carrying `createOrReplace()` records `[append, overwrite]` over an existing
+  table, `[overwrite]` on a new one and `[delete]` for an empty SELECT, matching
+  RTAS-OPS-1, and carries the property. *Sorted tables.* Option-carrying writers sort by
+  the declared order and stamp its id, as in WRITE-ORDER-SORTED-INSERT-1. *Column lists
+  (Q-22b-WO-5).* The writers' `INSERT INTO t (cols)` form, and a SQL-channel column list,
+  land with the property. Omitted columns take the `write_default` fill.
+  Pin: `python/repark/tests/test_ice_write_options_1_rebase.py` (WO-DYN-01…06, WO-RTAS-01/02,
+  WO-SORT-01, WO-APP-01/02).
+  pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
+
+- **Residue ICE-WRITE-OPTIONS-1-R-RP (OPEN, 2026-09-18, run 22b)** — a user
+  `snapshot-property.replace-partitions` on a replace-partitions commit (dynamic
+  `insertInto(overwrite)` / `INSERT OVERWRITE`, `overwritePartitions()`). **Apache Spark 4.1.2 +
+  Iceberg 1.11.0 (measured 2026-09-18, run 22b probe `probe_rp.py`)** commits, and the
+  user's value lands: `false` → summary `replace-partitions=false`, `true` → `true`; no
+  refusal. **repark** commits with `replace-partitions=true` either way: the fork's
+  `ReplacePartitionsAction` inserts its marker after the caller's summary properties.
+  Loud-free but value-divergent on one summary key; fork ask F-RP-SUMMARY-USER-1 (let a
+  caller-supplied `replace-partitions` win, as Java's `SnapshotProducer` applies
+  `set(...)` user properties after the operation's own). Not a collision: the run-22b
+  verification critic's premise that Spark refuses it was measured wrong.
+### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
+
+- **repark** — `.option("write-format", "orc"|"avro")` on any Iceberg write refuses with
+  `UnsupportedOperationException` naming this row; nothing is staged and no snapshot
+  commits. Parquet (any case) proceeds; any other value refuses with `Invalid file
+  format`.
+- **Apache Spark** — writes ORC / AVRO data files for those values (recorded
+  `FORMAT-02` / `FORMAT-03`); `bogus` refuses with `IllegalArgumentException: Invalid
+  file format: bogus`. *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_ice_write_options_1.py::test_write_format_orc_refuses`
+  and `::test_write_format_avro_refuses` (refusal plus snapshot-count-still-1).
+- **Rationale** — DECLARED 2026-09-17. RePark has no ORC/Avro Iceberg writer; writing
+  parquet files while the user asked for orc/avro is the silent wrong answer this row
+  exists to prevent. Revisit when a writer for either format lands.
+  pins: ice-write-options-1/C-002
+
 ### IO-JDBC-FORMAT-1 — `format("jdbc").load()` sends every URL to the PostgreSQL connector; `spark.read.jdbc` dispatches by URL — **BACKLOG 2026-09-15**
 
 - **repark** — `spark.read.jdbc` refuses a non-PostgreSQL URL with `NOT_IMPLEMENTED` `{"feature": "jdbc"}` before any

@@ -11,7 +11,6 @@ import functools
 import logging
 import re
 import uuid
-import warnings
 from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING, Any, overload
 
@@ -62,7 +61,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _vertical_show_warned = False
-_writer_v2_option_warned = False
 _STOPPED_MESSAGE = "Cannot call methods on a stopped ReparkSession"
 
 _SQL_LITERAL_KEYWORDS = frozenset({"true", "false", "null"})
@@ -179,28 +177,6 @@ def _reset_dropin_warnings_for_tests() -> None:
     """Test helper: re-arm process-wide display warnings."""
     global _vertical_show_warned
     _vertical_show_warned = False
-    _reset_writer_v2_option_warnings_for_tests()
-
-
-def _reset_writer_v2_option_warnings_for_tests() -> None:
-    """Test helper: re-arm the process-once WriterV2.option/options ignored warning."""
-    global _writer_v2_option_warned
-    _writer_v2_option_warned = False
-
-
-def _warn_writer_v2_option_once(*, stacklevel: int = 2) -> None:
-    """Emit the WriterV2 option-ignored disclosure at most once per process."""
-    global _writer_v2_option_warned
-    if _writer_v2_option_warned:
-        return
-    warnings.warn(
-        "DataFrameWriterV2.option/options are accepted for PySpark signature parity but "
-        "ignored by repark (storage options beyond tableProperty are out of scope for Group I). "
-        "Use tableProperty(...) for Iceberg table properties.",
-        UserWarning,
-        stacklevel=stacklevel,
-    )
-    _writer_v2_option_warned = True
 
 
 _CACHE_VIEW_PREFIX = "__repark_cache_"

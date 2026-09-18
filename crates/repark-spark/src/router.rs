@@ -9,14 +9,14 @@ use repark_core::CatalogRegistry;
 
 use crate::{
     DmlSubqueryVerb, MorDmlKind, alter, alter_write_order, build_ctas, call, column_move,
-    create_table, delete_target_object_name, describe_show, execute_create_namespace, execute_ctas,
-    execute_drop_namespace, execute_drop_table, execute_insert_overwrite, execute_truncate, merge,
-    metadata_tables, object_name_from_table_with_joins, parse_single_normalized,
-    passthrough_after_p11, ref_ddl, refuse_dml_subquery_predicate,
-    refuse_mor_unpartitioned_multi_spec_dml, refuse_multi_statement_sql,
-    refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql, spark_ast,
-    starts_with_branch_or_tag_ddl, starts_with_merge, time_travel, try_parse_create_namespace,
-    write_to_branch,
+    create_table, delete_target_object_name, describe_show, execute_append_with_options,
+    execute_create_namespace, execute_ctas, execute_drop_namespace, execute_drop_table,
+    execute_insert_overwrite, execute_truncate, merge, metadata_tables,
+    object_name_from_table_with_joins, parse_single_normalized, passthrough_after_p11, ref_ddl,
+    refuse_dml_subquery_predicate, refuse_mor_unpartitioned_multi_spec_dml,
+    refuse_multi_statement_sql, refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql,
+    spark_ast, starts_with_branch_or_tag_ddl, starts_with_merge, time_travel,
+    try_parse_create_namespace, write_to_branch,
 };
 
 /// Execute one Spark-SQL statement, routing Iceberg DDL and writes and passing reads to DataFusion.
@@ -37,7 +37,11 @@ pub async fn execute_static_overwrite<S: std::hash::BuildHasher>(
     sql: &str,
     read_only_catalogs: &HashSet<String, S>,
 ) -> Result<DataFrame> {
-    execute_routed(ctx, catalogs, sql, read_only_catalogs, true).await
+    let write_options = crate::write_options::StatementWriteOptions {
+        force_static_overwrite: true,
+        ..crate::write_options::StatementWriteOptions::empty()
+    };
+    execute_with_statement_options(ctx, catalogs, sql, read_only_catalogs, &write_options).await
 }
 
 /// Execute with a set of read-only (postgres) catalog names for P11 DML routing.
@@ -49,15 +53,23 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     sql: &str,
     read_only_catalogs: &HashSet<String, S>,
 ) -> Result<DataFrame> {
-    execute_routed(ctx, catalogs, sql, read_only_catalogs, false).await
+    execute_with_statement_options(
+        ctx,
+        catalogs,
+        sql,
+        read_only_catalogs,
+        &crate::write_options::StatementWriteOptions::empty(),
+    )
+    .await
 }
 
-async fn execute_routed<S: std::hash::BuildHasher>(
+#[allow(clippy::missing_errors_doc)]
+pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
     read_only_catalogs: &HashSet<String, S>,
-    force_static_overwrite: bool,
+    write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     // Canonicalize once at the Spark SQL front door so later tokenizers cannot process escapes again.
     // Translate downstream parser locations back to the caller's SQL before returning an error.
@@ -90,15 +102,15 @@ async fn execute_routed<S: std::hash::BuildHasher>(
     let mut lineage_pins = repark_core::LineagePins::default();
     let original_for_locations =
         original_sql_for_locations(sql, canonical_sql, sql_after_branch.as_ref());
-    let result = execute_time_travelled(
+    let result = Box::pin(execute_time_travelled(
         ctx,
         &catalogs,
         sql_after_branch.as_ref(),
         original_for_locations,
         &mut pinned,
         &mut lineage_pins,
-        force_static_overwrite,
-    )
+        write_options,
+    ))
     .await;
     lineage_pins.release(ctx);
     pinned.release(ctx);
@@ -113,7 +125,7 @@ async fn execute_time_travelled(
     original_for_locations: Option<&str>,
     pinned: &mut time_travel::PinnedViews,
     lineage_pins: &mut repark_core::LineagePins,
-    force_static_overwrite: bool,
+    write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     // Iceberg time travel is not modelled by Databricks-dialect sqlparser.
     let sql_after_tt: std::borrow::Cow<'_, str> = if time_travel::sql_has_time_travel(sql) {
@@ -137,7 +149,7 @@ async fn execute_time_travelled(
         Some(rewritten) => std::borrow::Cow::Owned(rewritten),
         None => sql_after_tt,
     };
-    let result = execute_inner(ctx, catalogs, sql_storage.as_ref(), force_static_overwrite).await;
+    let result = execute_inner(ctx, catalogs, sql_storage.as_ref(), write_options).await;
     if let Some(original) = original_for_locations
         .and_then(|original| original_sql_for_locations(original, sql, sql_storage.as_ref()))
     {
@@ -160,11 +172,41 @@ fn original_sql_for_locations<'a>(original: &'a str, before: &str, after: &str) 
     (before == after).then_some(original)
 }
 
+async fn execute_merge_statement(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    merge: &datafusion::sql::sqlparser::ast::Merge,
+) -> Result<DataFrame> {
+    if merge.output.is_some() {
+        return Err(DataFusionError::NotImplemented(
+            "MERGE OUTPUT/RETURNING clauses are not supported".to_string(),
+        ));
+    }
+    let lowered;
+    let merge = if crate::keyword_lower::has_timestamp_ns_cast(merge) {
+        let mut owned = merge.clone();
+        crate::keyword_lower::lower_timestamp_ns_casts(&mut owned);
+        lowered = owned;
+        &lowered
+    } else {
+        merge
+    };
+    merge::execute_merge(
+        ctx,
+        catalogs,
+        &merge.table,
+        &merge.source,
+        &merge.on,
+        &merge.clauses,
+    )
+    .await
+}
+
 async fn execute_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
-    force_static_overwrite: bool,
+    write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
@@ -173,24 +215,32 @@ async fn execute_inner(
             ctx,
             catalogs,
             &stripped,
-            force_static_overwrite,
+            write_options,
         ))
         .await;
     }
     // Pre-parse recognizers for forms stock sqlparser cannot model (or would drop clauses from).
-    if let Some(frame) = try_preparse_intercepts(ctx, catalogs, sql).await {
+    if let Some(frame) = try_preparse_intercepts(ctx, catalogs, sql, write_options).await {
         return frame;
     }
     // If we can't parse it to a single statement we recognise, let DataFusion have it.
     let Some((statement, partitioning)) = parse_single_normalized(sql)? else {
+        write_options.refuse_if_non_empty("this INSERT form")?;
         return execute_unparsable_fallthrough(ctx, catalogs, sql).await;
     };
     // G15.
     crate::refuse_collation_in_statement(&statement)?;
     crate::refuse_declared_function_in_statement(&statement)?;
+    refuse_options_on_non_write(&statement, write_options)?;
     match &statement {
         Statement::CreateTable(create) if create.query.is_some() => {
-            execute_ctas(ctx, catalogs, build_ctas(create, &partitioning)?).await
+            execute_ctas(
+                ctx,
+                catalogs,
+                build_ctas(create, &partitioning)?,
+                write_options,
+            )
+            .await
         }
         // Column-def CREATE TABLE (schema-only staged create — I5).
         Statement::CreateTable(create) => {
@@ -199,6 +249,7 @@ async fn execute_inner(
             {
                 return Err(DataFusionError::Plan(message));
             }
+            write_options.refuse_if_non_empty("CREATE TABLE without AS SELECT")?;
             create_table::execute_create_table(ctx, catalogs, create, &partitioning).await
         }
         Statement::Drop {
@@ -217,37 +268,16 @@ async fn execute_inner(
             alter::execute_alter_table(ctx, catalogs, &alter_table.name, &alter_table.operations)
                 .await
         }
-        Statement::Merge(merge) => {
-            if merge.output.is_some() {
-                return Err(DataFusionError::NotImplemented(
-                    "MERGE OUTPUT/RETURNING clauses are not supported".to_string(),
-                ));
-            }
-            let lowered;
-            let merge = if crate::keyword_lower::has_timestamp_ns_cast(merge) {
-                let mut owned = merge.clone();
-                crate::keyword_lower::lower_timestamp_ns_casts(&mut owned);
-                lowered = owned;
-                &lowered
-            } else {
-                merge
-            };
-            merge::execute_merge(
-                ctx,
-                catalogs,
-                &merge.table,
-                &merge.source,
-                &merge.on,
-                &merge.clauses,
-            )
-            .await
-        }
+        Statement::Merge(merge) => execute_merge_statement(ctx, catalogs, merge).await,
         // INSERT OVERWRITE: probe and validate before an empty-source wipe.
         Statement::Insert(insert) if insert.overwrite => {
-            execute_insert_overwrite(ctx, catalogs, sql, insert, force_static_overwrite).await
+            execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await
         }
         // Non-overwrite INSERT would otherwise passthrough to DF and miss P11 for pg targets.
         Statement::Insert(insert) => {
+            if !write_options.is_empty() {
+                return execute_append_with_options(ctx, catalogs, insert, write_options).await;
+            }
             let refusal = match &insert.table {
                 TableObject::TableName(name) => {
                     refuse_read_only_dml_table_sql(catalogs, &name.to_string())
@@ -264,6 +294,24 @@ async fn execute_inner(
         Statement::Truncate(truncate) => execute_truncate(ctx, catalogs, truncate).await,
         _ => spark_ast::execute_passthrough(ctx, catalogs, sql).await,
     }
+}
+
+fn refuse_options_on_non_write(
+    statement: &Statement,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Result<()> {
+    let context = match statement {
+        Statement::CreateTable(_) | Statement::Insert(_) => return Ok(()),
+        Statement::Merge(_) => "MERGE INTO",
+        Statement::Delete(_) => "DELETE FROM",
+        Statement::Update(_) => "UPDATE",
+        Statement::Truncate(_) => "TRUNCATE TABLE",
+        Statement::Call(_) => "CALL",
+        Statement::Drop { .. } => "DROP",
+        Statement::AlterTable(_) => "ALTER TABLE",
+        _ => "this statement",
+    };
+    write_options.refuse_if_non_empty(context)
 }
 
 /// `DELETE FROM …` applies the write-safety valves before provider execution.
@@ -323,25 +371,33 @@ async fn try_preparse_intercepts(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
 ) -> Option<Result<DataFrame>> {
+    let parsed_ddl = |context: &str| write_options.refuse_if_non_empty(context);
     // I7 — ADD/DROP/REPLACE PARTITION FIELD + REPLACE COLUMNS (stock sqlparser cannot model).
     if let Some(parsed) = alter::try_parse_iceberg_alter_ddl(sql) {
-        return Some(match parsed {
-            Ok(ddl) => alter::execute_iceberg_alter_ddl(ctx, catalogs, ddl).await,
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
+                Ok(ddl) => alter::execute_iceberg_alter_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
     }
     if let Some(parsed) = alter_write_order::try_parse_write_order_ddl(sql) {
-        return Some(match parsed {
-            Ok(ddl) => alter_write_order::execute_write_order_ddl(ctx, catalogs, ddl).await,
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
+                Ok(ddl) => alter_write_order::execute_write_order_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
     }
     if let Some(parsed) = column_move::try_parse_column_move_ddl(sql) {
-        return Some(match parsed {
-            Ok(ddl) => column_move::execute_column_move_ddl(ctx, catalogs, ddl).await,
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
+                Ok(ddl) => column_move::execute_column_move_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
     }
     // I6 residual — forms stock sqlparser still cannot model.
     if let Some(refused) = alter::refuse_unsupported_alter_sql(sql) {
@@ -349,22 +405,29 @@ async fn try_preparse_intercepts(
     }
     // CREATE NAMESPACE LOCATION/COMMENT/WITH properties: sqlparser cannot model those clauses.
     if let Some(parsed) = try_parse_create_namespace(sql) {
-        return Some(match parsed {
-            Ok(create_namespace) => execute_create_namespace(ctx, catalogs, create_namespace).await,
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("CREATE NAMESPACE").map(|()| ddl)) {
+                Ok(create_namespace) => {
+                    execute_create_namespace(ctx, catalogs, create_namespace).await
+                }
+                Err(error) => Err(error),
+            },
+        );
     }
     // `DESCRIBE {NAMESPACE|DATABASE|SCHEMA} [EXTENDED]` (Group Z).
     if let Some(parsed) = describe_show::try_parse_describe_namespace(sql) {
-        return Some(match parsed {
-            Ok(describe_namespace) => {
-                describe_show::execute_describe_namespace(ctx, catalogs, describe_namespace).await
-            }
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("DESCRIBE NAMESPACE").map(|()| ddl)) {
+                Ok(describe_namespace) => {
+                    describe_show::execute_describe_namespace(ctx, catalogs, describe_namespace)
+                        .await
+                }
+                Err(error) => Err(error),
+            },
+        );
     }
     if let Some(parsed) = describe_show::try_parse_describe_table(sql) {
-        match parsed {
+        match parsed.and_then(|ddl| parsed_ddl("DESCRIBE TABLE").map(|()| ddl)) {
             Ok(mut describe_table) => {
                 describe_table.complete_from_session(ctx);
                 if catalogs.get(&describe_table.catalog).is_some() {
@@ -378,19 +441,23 @@ async fn try_preparse_intercepts(
     }
     // `SHOW {NAMESPACES|SCHEMAS|DATABASES}` (Group AB).
     if let Some(parsed) = describe_show::try_parse_show_namespaces(sql) {
-        return Some(match parsed {
-            Ok(show_namespaces) => {
-                describe_show::execute_show_namespaces(ctx, catalogs, show_namespaces).await
-            }
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("SHOW NAMESPACES").map(|()| ddl)) {
+                Ok(show_namespaces) => {
+                    describe_show::execute_show_namespaces(ctx, catalogs, show_namespaces).await
+                }
+                Err(error) => Err(error),
+            },
+        );
     }
     // Snapshot-ref DDL (I5) — not modelled by stock sqlparser.
     if let Some(parsed) = ref_ddl::try_parse_ref_ddl(sql) {
-        return Some(match parsed {
-            Ok(ddl) => ref_ddl::execute_ref_ddl(ctx, catalogs, ddl).await,
-            Err(error) => Err(error),
-        });
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("BRANCH/TAG DDL").map(|()| ddl)) {
+                Ok(ddl) => ref_ddl::execute_ref_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
     }
     None
 }

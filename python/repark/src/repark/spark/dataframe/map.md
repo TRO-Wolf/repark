@@ -665,6 +665,16 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   test); the orc arm of the old `DATA_SOURCE_NOT_FOUND` refusal became the declared
   `NOT_IMPLEMENTED` (IO-ORC-1) and the duplicate `_VALID_MODES`/`_PATH_MODES`
   tuple became one shared line. pins: io-declared-1/C-001, C-003
+  ICE-WRITE-OPTIONS-1 (2026-09-17): `DataFrameWriterV2` stores `option`/`options`
+  (case-insensitive last-wins; branch/tag still refuse) and every Iceberg action
+  (`append`, `overwritePartitions`, CTAS; V1 `saveAsTable`/`insertInto` likewise)
+  forwards the dict out of band through the native `sql_with_write_options` —
+  binding names only, no key branching in Python. The process-once
+  `UserWarning` and its reset helper are gone from `core.py` (4015 → 3991).
+  Round 3 (2026-09-17): the text-clause rendering is gone with the channel;
+  both `_run_through_temp_view` bodies share `writer_layout.run_through_temp_view`
+  and `writer_readwriter.py` holds its exact 1093 baseline.
+  pins: ice-write-options-1/C-001, C-005
 - `writer_layout.py` owns the writer layout bodies (IO-BUCKET-CLUSTER-1, 2026-09-14):
   the `bucketBy` / `sortBy` / `clusterBy` state setters (Spark's `NOT_INT` on
   `numBuckets` at the call, list first columns flattened), the action-time checks —
@@ -693,6 +703,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `writer_readwriter.py` holds its exact 1105 baseline.
   pins: io-bucket-cluster-1/C-005
   **Re-check (2026-09-15):** `_unpack_column_args` checks `cols` before `col` and raises `NOT_LIST_OF_STR` with Spark's sentence through `_refuse_not_list_of_str`.
+  ICE-WRITE-OPTIONS-1 (2026-09-17): `store_writer_option` (case-insensitive
+  last-wins dedup shared by both writers) and `run_through_temp_view` (the one
+  temp-view/action/drop funnel both writers share, options forwarded out of
+  band). Round 3 deleted the text-clause rendering with the channel.
 - `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1,
 - `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1, **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down. pins: df-surface-b-1/C-008
   2026-09-14), bound on the class from `core.py` at the exact ceiling. `foreach`
@@ -1213,11 +1227,22 @@ that held the comment (pins: comment-core-1/C-003).
   332→415 and `surface_a.py` 328→416, both below the source-size default;
   `writer_readwriter.py` holds its exact 1101 baseline.
   pins: df-rust-3/C-005
+  ICE-WRITE-OPTIONS-1 (2026-09-17): `core.py` 4015→3991 (warning machinery out);
+  `writer_readwriter.py` 1101→1114 (options slots, storage, clause rendering);
+  `writer_layout.py` 365→376 (render helper, below the default).
+  pins: ice-write-options-1/C-001, C-005
   ICE-V3-WRITE-DEFAULT-1 (2026-09-17): `writer_readwriter.py` 1101→1095 — both
   `_by_name_projection` variants return the target column list with the source
   projection and stop refusing missing DataFrame columns, so the engine fills
   omitted defaulted columns from `write_default` in Rust.
   pins: ice-v3-write-default-1/C-006
+  ICE-WRITE-OPTIONS-1 run 22b rebase (2026-09-18): `writer_readwriter.py` 1102→1095 — the
+  merge keeps main's column list and `static_overwrite` flag and this unit's options map on
+  every Iceberg writer action; the V1 funnel hands both to
+  `writer_layout.run_through_temp_view`, whose one native call
+  `session_sql_with_write_options(session, sql, options, static_overwrite)` carries the
+  typed flag (the separate `sql_static_overwrite` native is retired, Q-22b-WO-1).
+  pins: ice-write-options-1/C-014
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.
 

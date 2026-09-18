@@ -7,7 +7,7 @@ accuracy contracts restored in condensed form (see the unit ledger's findings di
 
 ## Purpose
 
-File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`,
+File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`, `write_options.rs`,
 `spill.rs`, `iceberg_caches.rs`, `late_catalogs.rs`, `cache_budget.rs`, `df_guards.rs` and its `df_guards/` submodule) plus the test cohorts under `tests/` (`session.rs`,
 `session/catalog_registration.rs`, `df_guard.rs`, `aws_gate.rs`, `namespace_create.rs`, `a13.rs`,
 `conf_unread.rs`). Test cohorts are two: the E-2 gate tests
@@ -17,6 +17,13 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 
 ## Contents
 
+- `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and
+  its crate-private body, the session's one statement funnel (spill SET intercept, cache
+  trim, registry snapshot, `SqlDialect::execute_with_write_options`). **Run 22b rebase
+  (2026-09-18, Q-22b-WO-1):** it takes `force_static_overwrite` and fills
+  `EngineContext::force_static_overwrite`, replacing ICE-DYN-OVERWRITE-1's
+  `static_overwrite.rs` body; `ReparkSession::sql_with` passes an empty map and `false`.
+  pins: ice-write-options-1/C-014
 - `temp_views.rs` — **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when
   the choke-point fix pushed that file past its ceiling. The old exception then retired under the
   prior default; CAP-1 records the file again at its exact source-size baseline. Holds

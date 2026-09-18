@@ -2,6 +2,7 @@
 
 pub mod alter;
 pub mod append;
+mod append_fanout_serial;
 pub mod column_move;
 mod commit_error;
 pub mod commit_target;
@@ -39,10 +40,12 @@ pub mod snapshot_refs;
 pub mod sort_order;
 /// The ANSI store-assignment matrix — ONE home for MERGE and the non-MERGE insert/append lowerings.
 pub(crate) mod store_assign;
+pub mod summary_collision;
 /// Test-support-only snapshot-ref helpers (`_testing_create_ref`).
 pub mod testing_support;
 /// Whole-table `TRUNCATE TABLE` (delete-only empty overwrite).
 pub mod truncate;
+pub mod write_options;
 pub mod writer_props;
 
 pub use commit_error::{CommitStateUnknownError, commit_err, is_commit_state_unknown};
@@ -94,8 +97,17 @@ pub use partition_overwrite::{
 pub use partition_write::{WRITTEN_FILES_COL_NAME, write_data_files_from_plan};
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 pub use repark_common::{Error, Result};
+pub use summary_collision::EngineSummary;
 pub use truncate::{commit_truncate, commit_truncate_to};
+pub use write_options::{
+    WriterStagingOverrides, append_with_statement_options, commit_append_with_summary,
+    commit_overwrite_by_row_filter_with_summary, commit_overwrite_replace_all_with_summary,
+    commit_replace_partitions_with_summary, commit_replace_write_with_summary,
+    isolation_with_override, stage_overwrite_files_with, stage_partitioned_stream_with_overrides,
+    stage_static_partition_overwrite_files_with, stage_unpartitioned_stream_with_overrides,
+    stage_unpartitioned_with_overrides, summary_with_extras,
+};
 pub use writer_props::{
     ACCEPTED_CODECS, COMPRESSION_CODEC_PROP, COMPRESSION_LEVEL_PROP, parse_compression,
-    writer_properties_for,
+    parse_target_file_size, target_file_size_with, writer_properties_for, writer_properties_with,
 };

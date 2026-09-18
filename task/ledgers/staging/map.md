@@ -957,6 +957,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   counts on a delegating counting catalog (test code only).
   `risk_tier: standard`. Branch `fix/listing-cost-flake-1`.
   pins: listing-cost-flake-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [ice-write-options-1-ledger.md](ice-write-options-1-ledger.md) —
+  **ICE-WRITE-OPTIONS-1 (2026-09-17), in flight:** DataFrame write options on Iceberg
+  writes (V2-29) — the facade renders stored options as an internal `OPTIONS(...)`
+  clause, Rust validates and honours (`snapshot-property.*`, parquet `write-format`,
+  `target-file-size-bytes`, codec/level, isolation) or refuses loud (orc/avro, bad
+  values); the 43-cell Spark oracle (`ice_write_options_1_spark_oracle.json`) and the
+  red-first pins (`test_ice_write_options_1.py`: 23 failed, 11 passed on the base).
+  `risk_tier: standard`. Branch `feat/ice-write-options-1`.
+  pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  Run 22b (2026-09-18): §19 records the rebase over #682 / #687 / #678 (Q-22b-WO-1..5,
+  the constraint-2 table, red-first and gates).
+  pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
 - [ice-v3-write-default-1-ledger.md](ice-v3-write-default-1-ledger.md) —
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17), in flight:** omitted columns on every
   Iceberg write path fill from the schema field's `write_default` in Rust, in
