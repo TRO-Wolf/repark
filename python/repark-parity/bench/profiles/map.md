@@ -19,7 +19,8 @@ results, no `docs/perf/config-profiles-*.md` — those are steps 2–3.
   `hash_join`, `sort_merge_join` on tpch; `window` on futures) and three writes
   (`append_files` × 8, `overwrite_partition` one `PARTITION (g = '7')`,
   `merge_updates` at `MERGE_UPDATE_FRACTION = 0.10`). Every query forces execution
-  through the Arrow path (`to_arrow`), never only `show`.
+  through the Arrow path (`to_arrow`), never only `show`. The write seeds and the Iceberg bed
+  in `datasets.py` read `range(n)`'s column as `id`, Spark's name (RANGE-TVF-ID-1).
   pins: profiles-1/C-002
 - [harness.py](harness.py) — `require_quiet_box` (`pgrep -f java` empty or the timed
   run refuses), `measure` (quiet check before every repetition), `write_cell_rows`

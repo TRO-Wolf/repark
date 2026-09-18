@@ -86,15 +86,15 @@ def build_iceberg_table(spark: object, files: int, rows_per_file: int) -> str:
     spark.sql(f"DROP TABLE IF EXISTS {table}")  # type: ignore[attr-defined]
     spark.sql(  # type: ignore[attr-defined]
         f"CREATE TABLE {table} USING iceberg PARTITIONED BY (g) AS "
-        f"SELECT value AS id, '0' AS g, "
-        f"CAST(value AS DOUBLE) AS v FROM range({rows_per_file})"
+        f"SELECT id, '0' AS g, "
+        f"CAST(id AS DOUBLE) AS v FROM range({rows_per_file})"
     )
     for index in range(1, files):
         base = index * rows_per_file
         spark.sql(  # type: ignore[attr-defined]
-            f"INSERT INTO {table} SELECT value + {base} AS id, "
+            f"INSERT INTO {table} SELECT id + {base} AS id, "
             f"'{index % 8}' AS g, "
-            f"CAST(value + {base} AS DOUBLE) AS v FROM range({rows_per_file})"
+            f"CAST(id + {base} AS DOUBLE) AS v FROM range({rows_per_file})"
         )
     return table
 
