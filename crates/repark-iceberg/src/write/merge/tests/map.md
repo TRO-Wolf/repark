@@ -40,6 +40,18 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   does not fail the branch commit.
   pins: rp-5-fork-repin/C-004
 - `parallel_write.rs` — concurrent file write pins.
+- `evolved_scan.rs` — **ICE-EVO-DML-1 (2026-09-17):** a table evolved by `ADD COLUMN`,
+  `RENAME COLUMN`, a key rename or a name swap after its only write, scanned by
+  `TargetScanStream` at that snapshot with and without a partition sink.
+  `target_scan_after_add_column_null_fills_the_added_column`,
+  `target_scan_after_rename_reads_the_renamed_column_by_field_id` and
+  `target_scan_after_swapping_two_names_keeps_each_value_under_its_field_id` hold the rows
+  under the current schema; `target_scan_residual_on_a_renamed_key_keeps_the_matching_row` and
+  `target_scan_residual_on_a_swapped_name_filters_the_current_field` hold that a residual never
+  refuses and never prunes by another field's bounds;
+  `target_scan_residual_on_an_unchanged_column_still_prunes_after_add_column` holds the kept
+  arm on a two-file table.
+  pins: ice-evo-dml-1/C-004, C-005, C-010, C-011
 - `promoted_scan.rs` — **ICE-PROMOTE-READ-1 (2026-09-16):** after a legal type
   promotion with no write since, the DML target scan pins the pre-promotion snapshot and
   reads `Int32` / `Float32` / `Decimal128(9,2)`; the scratch schema is built from the

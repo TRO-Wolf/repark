@@ -18,7 +18,7 @@ use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::{PartitionStream, StreamingTableExec};
 use futures::TryStreamExt;
-use iceberg::arrow::schema_to_arrow_schema;
+use iceberg::arrow::{ArrowReaderBuilder, schema_to_arrow_schema};
 use iceberg::expr::{Predicate, Reference};
 use iceberg::metadata_columns::{
     RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER, RESERVED_COL_NAME_ROW_ID,
@@ -223,14 +223,24 @@ async fn scan_lineage_batches(
     schema: SchemaRef,
     filter: Option<Predicate>,
 ) -> Result<datafusion::physical_plan::SendableRecordBatchStream> {
-    let mut builder = table.scan().select(column_names);
+    let mut builder = table.scan().select(column_names).project_current_schema();
     if let Some(predicate) = filter {
         builder = builder.with_filter(predicate);
     }
-    let table_scan = builder.build().map_err(iceberg_to_datafusion)?;
-    let inner = table_scan
-        .to_arrow()
+    let tasks: Vec<iceberg::scan::FileScanTask> = builder
+        .build()
+        .map_err(iceberg_to_datafusion)?
+        .plan_files()
         .await
+        .map_err(iceberg_to_datafusion)?
+        .try_collect()
+        .await
+        .map_err(iceberg_to_datafusion)?;
+    let task_stream: iceberg::scan::FileScanTaskStream =
+        Box::pin(futures::stream::iter(tasks.into_iter().map(Ok)));
+    let inner = ArrowReaderBuilder::new(table.file_io().clone())
+        .build()
+        .read(task_stream)
         .map_err(iceberg_to_datafusion)?
         .map_err(iceberg_to_datafusion);
     let schema_for_map = Arc::clone(&schema);

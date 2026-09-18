@@ -341,6 +341,45 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the fixture directory before their DML steps, and writes `truth.json` (one answer per
   line, `catalog_sha256`). `run_case_steps` / `run_overwrite_partitions_twin` are reused by
   the live cell so the live and recorded answers come from one code path.
+- [test_ice_evo_dml_1.py](test_ice_evo_dml_1.py) — **ICE-EVO-DML-1 (2026-09-17):** MERGE,
+  UPDATE, DELETE, INSERT and INSERT OVERWRITE on a table evolved by `ADD COLUMN` /
+  `RENAME COLUMN` with no write since answer Spark 4.1.2 row for row (run-19a V2-10e, V3-11).
+  The cases come from `_record_ice_evo_dml_1.build_cases()` and Spark's answers from the
+  recorded `fixtures/torture/data/ice_evo_dml_1/truth.json`; the first cell fails if the
+  recording's `catalog_sha256` no longer matches the driver. Always-run:
+  `test_sql_door_matches_spark` (176 table cases — eight statements × `add_column` /
+  `rename_column` / `rename_key` / `rename_swap` × v2/v3 × CoW/MoR, a DELETE-emptied table,
+  a no-op `rewrite_data_files`, MERGE `*` from wide / exact / reordered / narrow sources,
+  round-3 L-02: MERGE `*` / UPDATE / DELETE after DROP-then-ADD and after RENAME onto a
+  dropped name, the v3 `ADD COLUMN … DEFAULT` refusal, and the added column in an UPDATE
+  predicate / MERGE key / `NOT MATCHED BY SOURCE` arm),
+  `test_dataframe_door_matches_spark` (the MERGE and INSERT cases through facade `mergeInto`,
+  `writeTo().append()` and `writeTo().overwritePartitions()` against Spark's own DataFrame
+  door; the 16 `overwritePartitions()` cells are strict `xfail(raises=ParseException)` on the
+  separate EX-W2-4 unpartitioned-table defect), and `test_adopted_spark_table_matches_spark`
+  (the committed Spark-created, Spark-evolved table materialized at its baked-in path under a
+  directory lock, `register_table`, then MERGE `*` on both doors, UPDATE and DELETE), and
+  `test_lineage_read_matches_spark` (the v3 `_row_id` / `_last_updated_sequence_number` read of
+  each evolution, projection and a `WHERE v = 'a'` filter; SQL door only — the DataFrame door
+  does not resolve `_row_id` on any table). UPDATE and DELETE have only the SQL door. Refusal
+  cells pin the recorded error class (`AnalysisException` for the narrow source,
+  `UnsupportedOperationException` for the refused default DDL). Live (`REPARK_PARITY_LIVE=1`):
+  live Spark re-derives every recorded answer on both doors; any drift fails the cell. Re-record:
+  `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the
+  path, then `.venv/bin/python python/repark/tests/_record_ice_evo_dml_1.py`
+  (`REPARK_ORACLE_IVY` points `spark.jars.ivy` at a warm Ivy cache). Registry rows (FIXED
+  2026-09-17): ICE-EVO-DML-1, ICE-EVO-SWAP-1, ICE-EVO-LINEAGE-READ-1; the `xfail` cells are
+  pinned on EX-W2-4; the RePark cells need the fork pin carrying F-PROMOTE-READ-1 (stacked
+  on `fix/ice-promote-read-1`; local override until that unit's pin bump).
+  pins: ice-evo-dml-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012
+  pins: ice-evo-dml-1/C-014, C-015, C-016, C-017
+- `_record_ice_evo_dml_1.py` — the **record driver** for the module above (NOT a `test_`
+  module; never collected). `build_cases()` is the case catalog both the driver and the pins
+  read; `main()` runs every case on a Hadoop catalog (the DataFrame door on a twin table),
+  freezes the adopted table once and restores those bytes before each adopted case, and writes
+  `truth.json` (one answer per line, `catalog_sha256`). `run_case_steps` /
+  `run_dataframe_steps` are reused by the live cell so the live and recorded answers come from
+  one code path.
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine

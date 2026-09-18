@@ -120,6 +120,9 @@ repo.
   PARTITION-less overwrite FIXED) and DML-1C (overwrite-vs-append race FIXED, serializable
   surface documented).
   pins: ice-dyn-overwrite-1/C-017
+  **ICE-EVO-DML-1 (2026-09-17):** rows `ICE-EVO-DML-1` / `ICE-EVO-SWAP-1` /
+  `ICE-EVO-LINEAGE-READ-1` FIXED with pin names and the fork-pin note.
+  pins: ice-evo-dml-1/C-014
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

@@ -4937,7 +4937,10 @@ the pin rather than obeying it.
   no write since the promotion scans under the old types, and both RePark's
   `write::merge::conform_scan_batch` and the fork's DataFusion UPDATE/DELETE exec rebuilt the
   batches under the current schema without widening. After the fix both widen only the legal
-  promotions and every recorded DML case answers Spark.
+  promotions and every recorded DML case answers Spark. *(2026-09-17, ICE-EVO-DML-1: the target
+  scan now reads a pinned snapshot under the current schema, so the fork's reader widens a
+  single-era promoted column before `conform_scan_batch` sees it; the conform widening and its
+  narrowing refusal stay.)*
 - **Apache Spark** — updates or deletes the pre-promotion rows, inserts no duplicate.
   *(oracle: recorded — as ICE-PROMOTE-READ-1.)*
 - **Pin** — `python/repark/tests/test_ice_promote_read_1.py::test_sql_door_matches_spark` over
@@ -4992,6 +4995,96 @@ the pin rather than obeying it.
 - **Rationale** — FIXED. Named fork residue (not reachable from RePark's writers):
   `ReplacePartitionsAction` keys the added files' tuples as given and its conflict scope compares
   a concurrent file's tuple exactly — see the fork ledger `task/f-promote-read-1-ledger.md`.
+
+### ICE-EVO-DML-1 — MERGE, UPDATE and DELETE after `ADD COLUMN` or `RENAME COLUMN` with no write since refused `Column … not found in table` — **FIXED 2026-09-17 (RePark)**
+
+- **repark** — **FIXED 2026-09-17** (run-19a rows V2-10e, V3-11). Before the fix, after
+  `ALTER TABLE t ADD COLUMN extra STRING`, `RENAME COLUMN w TO v` or a rename of the key every
+  statement filters on, with no write since, every MERGE (`UPDATE SET *` / `INSERT *`, explicit
+  columns, even `UPDATE SET v = s.v` touching old columns only), UPDATE and DELETE refused
+  `DataInvalid => Column extra not found in table. Schema: table { 1: id … 2: v … }` (`Column v …`,
+  `Column id …`) — v2/v3 × copy-on-write / merge-on-read, both doors, a table emptied by DELETE
+  and then evolved, an evolved table after a no-op `rewrite_data_files`, and RePark's MERGE `*`
+  on a Spark-created table Spark had just evolved. INSERT / INSERT OVERWRITE succeeded and
+  unblocked the table (they write a snapshot under the current schema). Cause: every DML target
+  scan (`write::merge::target_scan::TargetScanStream` — MERGE, identity DELETE / UPDATE, the
+  affected-file rewrite, the COW scratch) pinned the current snapshot and selected the current
+  schema's names, and the fork's scan binds names against the pinned snapshot's schema (Java's
+  `useSnapshot` contract), which DDL does not advance. Round 1 planned the snapshot under its
+  own schema and re-pointed every planned task at the current schema by field id; round 2
+  replaced that local re-point with the fork's `project_current_schema()` (F-EVO-SCAN-1, #289),
+  which binds the current names against the current schema and projects them over the pinned
+  snapshot by field id (the RDF-SCHEMA-EVO-1 recipe; Spark's
+  `useSnapshot(…).project(expectedSchema)`): added columns read NULL, renamed columns read by
+  field id, and the fork's UPDATE / DELETE execs read the same way.
+- **Apache Spark** — every statement runs; old rows read NULL for the added column and keep
+  their values under the new name. On the Spark-created evolved table, MERGE `*` answers
+  `[(1,'m1','x1'), (2,'b',None), (3,'c','x3')]`.
+  *(oracle: recorded — PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, ANSI on, Hadoop
+  catalog, 2026-09-17; `python/repark-parity/fixtures/torture/data/ice_evo_dml_1/truth.json`,
+  183 cases; every recording agrees on the shared cases; re-derived live under
+  `REPARK_PARITY_LIVE=1`.)*
+- **Pin** — `python/repark/tests/test_ice_evo_dml_1.py::test_sql_door_matches_spark` over
+  `grid/add_column/*`, `grid/rename_column/*`, `grid/rename_key/*`, `emptied/*`, `rewrite/*`,
+  `merge_star_source/*`; `…::test_dataframe_door_matches_spark` (facade `mergeInto`,
+  `writeTo().append()`); `…::test_adopted_spark_table_matches_spark` (MERGE `*` both doors,
+  UPDATE, DELETE); `crates/repark-iceberg/src/write/merge/tests/evolved_scan.rs`
+  (`target_scan_after_add_column_null_fills_the_added_column`,
+  `target_scan_after_rename_reads_the_renamed_column_by_field_id`,
+  `target_scan_residual_on_a_renamed_key_keeps_the_matching_row`). The
+  `writeTo().overwritePartitions()` cells stay strict `xfail` on EX-W2-4. The RePark cells
+  need the fork pin carrying F-PROMOTE-READ-1 (#285) and F-EVO-SCAN-1 (#289) (stacked on
+  `fix/ice-promote-read-1`; local override until that pin bump lands).
+- **Rationale** — FIXED. The DML path is RePark's planner; no Iceberg semantics are patched.
+
+### ICE-EVO-SWAP-1 — after a rename that reuses a column name, DML wrote one column's values under the other — **FIXED 2026-09-17 (RePark)**
+
+- **repark** — **FIXED 2026-09-17** (found by ICE-EVO-DML-1, silent). Before the fix, after
+  `RENAME COLUMN extra TO tmp`, `RENAME COLUMN v TO extra`, `RENAME COLUMN tmp TO v` with no write
+  since, every MERGE / UPDATE / DELETE succeeded and committed swapped values: copy-on-write
+  rewrote every surviving row of a touched file with `v` and `extra` exchanged
+  (`UPDATE t SET extra = 'u' WHERE id = 1` on `[(1,'a','e1'), (2,'b',None)]` →
+  `[(1,'e1','u'), (2,None,'b')]`), merge-on-read wrote the updated row swapped, and a residual
+  filter on a swapped name pruned by the other column's bounds. Cause as ICE-EVO-DML-1: the
+  current names bound against the pinned snapshot's schema, where each name still named the
+  other field. Fixed by the same projection — values are read by field id (round 1 a local
+  re-point, round 2 the fork's `project_current_schema()`, F-EVO-SCAN-1 #289).
+- **Apache Spark** — every statement keeps each value under its field id
+  (`[(1,'a','u'), (2,'b',None)]` for the UPDATE above).
+  *(oracle: recorded — as ICE-EVO-DML-1.)*
+- **Pin** — `python/repark/tests/test_ice_evo_dml_1.py::test_sql_door_matches_spark` and
+  `…::test_dataframe_door_matches_spark` over `grid/rename_swap/*` (v2/v3 × CoW/MoR);
+  `crates/repark-iceberg/src/write/merge/tests/evolved_scan.rs`
+  (`target_scan_after_swapping_two_names_keeps_each_value_under_its_field_id`,
+  `target_scan_residual_on_a_swapped_name_filters_the_current_field`). The RePark cells
+  need the fork pin carrying F-PROMOTE-READ-1 (#285) and F-EVO-SCAN-1 (#289) (stacked on
+  `fix/ice-promote-read-1`; local override until that pin bump lands).
+- **Rationale** — FIXED. The swapped values persisted and Spark read them back.
+
+### ICE-EVO-LINEAGE-READ-1 — a v3 `_row_id` read after `ADD COLUMN` or `RENAME COLUMN` with no write since refused, and after a name swap read the other column — **FIXED 2026-09-17 (RePark)**
+
+- **repark** — **FIXED 2026-09-17** (found by ICE-EVO-DML-1). Before the fix, on a format-v3
+  table evolved with no write since, `SELECT _row_id, _last_updated_sequence_number, id, v, extra`
+  refused `External error: DataInvalid => Column extra not found in table` (`Column v …`,
+  `Column id …`) while the same query without the lineage columns answered; after a rename that
+  swaps two names it returned `[(0, 1, 1, 'e1', 'a'), (1, 1, 2, None, 'b')]` (swapped) and
+  `… WHERE v = 'a'` returned `[]`. Cause: `catalog::lineage_columns::scan_lineage_batches` built
+  `table.scan().select(<current names>)`, and the fork's unpinned scan binds names against the
+  current snapshot's schema (Java's `newScan()` binds `table.schema()`). It now plans the
+  current snapshot with the fork's `project_current_schema()` (F-EVO-SCAN-1, #289) — the
+  ICE-EVO-DML-1 projection.
+- **Apache Spark** — `[(0, 1, 1, 'a', 'e1'), (1, 1, 2, 'b', None)]` after every evolution
+  (`extra` NULL after `ADD COLUMN`), and the filter keeps `(0, 1, 'a', …)`.
+  *(oracle: recorded — as ICE-EVO-DML-1, group `lineage_read`.)*
+- **Pin** — `python/repark/tests/test_ice_evo_dml_1.py::test_lineage_read_matches_spark` over
+  `lineage_read/{add_column, rename_column, rename_key, rename_swap}` (SQL door; RePark's
+  DataFrame door does not resolve `_row_id` on any table);
+  `crates/repark-iceberg/src/catalog/tests/evolved_lineage_read.rs`
+  (`row_id_read_after_add_column_null_fills_the_added_column`,
+  `row_id_read_after_swapping_two_names_reads_each_field_by_id`). The RePark cells
+  need the fork pin carrying F-PROMOTE-READ-1 (#285) and F-EVO-SCAN-1 (#289) (stacked on
+  `fix/ice-promote-read-1`; local override until that pin bump lands).
+- **Rationale** — FIXED. The swapped read was silent.
 
 ### V3-COV-4 — a MoR `DELETE` covering every row writes a full-coverage DV where Spark drops the file
 
@@ -8803,7 +8896,11 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog `local` over a local
   warehouse, ANSI on, 2026-09-04, EX-22 round-2 review; repark on the memory catalog with the
   same fixture.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_unpartitioned_leak`
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_unpartitioned_leak`;
+  since 2026-09-17 also the 16 strict `xfail(raises=ParseException)` cells
+  `python/repark/tests/test_ice_evo_dml_1.py::test_dataframe_door_matches_spark[grid/*/insert_overwrite]`,
+  which hold Spark's recorded `writeTo(t).overwritePartitions()` answer on unpartitioned evolved
+  tables and flip red when the fix lands.
 - **Rationale** — OPEN, filed 2026-09-04 from the EX-22 round-2 review. Not a disclosed
   refusal: repark's own generated SQL fails to parse. Follow-up `WRITERV2-OVERWRITE-UNPART-1`
   is the fix unit; the pin codifies today's behavior, and that unit updates the pin rather
