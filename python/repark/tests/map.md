@@ -4847,7 +4847,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: rp-16/C-001, C-002, C-003, C-004
   **TEST-HYGIENE-1 (2026-09-18):** the 500-table RSS leg carries the registered
   `perf` marker (`conftest.py::pytest_configure`); no `-m "not perf"` in CI or the
-  default config, so the wheels smoke job and the nightly keep running it.
+  default config, so the wheels smoke job and the nightly keep running it. The
+  marker selects out exactly that one leg (`35/36 collected, 1 deselected`).
   pins: test-hygiene-1/C-004.
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
