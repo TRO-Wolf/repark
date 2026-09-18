@@ -34,8 +34,8 @@ through the scan's metrics, and a replayable bench with three modes — cold, wa
 records planning time, time to first batch, total time, requests, bytes transferred, cache hits and peak RSS.
 Two beds: **local** (a Hadoop-layout table on local disk; reader-level units rank here, release native on the
 default profile) and **AWS** (an S3 Tables and a Glue table through a dispatch-only leg of `aws-acceptance.yml`;
-catalog-level units rank here). The AWS leg makes real calls and costs money: **owner approval before the first
-dispatch** (question Q-1). The baseline table of this unit is the "before" of every unit below.
+catalog-level units rank here). The AWS leg makes real calls and costs money: approved under ruling R-3, with its 3 GB
+table-size flag as a hard clause of this unit. The baseline table of this unit is the "before" of every unit below.
 
 ### 1. ICE-PAGE-PRUNE-1 — predicate-driven page selection on the DataFusion path
 
@@ -99,7 +99,7 @@ comment ban on every actor, enforced mechanically before the PR and before the m
 cannot (release native, the unit's tests, the Spark-gated and live cells); numbers in a ledger come from the default
 release profile. A performance claim is a before/after pair from unit 0's bed at a named head.
 
-## Owner rulings (2026-09-18) and the one open question
+## Owner rulings (2026-09-18)
 
 - **R-1 (was Q-2) — v1.5.0 waits for ALL of wave 1.** Units 0 through 4 land, measured, before the tag. Wave 2 stays
   unscheduled.
@@ -108,7 +108,13 @@ release profile. A performance claim is a before/after pair from unit 0's bed at
   (the switch and its name are ICE-LAYOUT-GUIDE-1's first clause); without the opt-in RePark refuses the rewrite with
   a typed error naming the switch, so two compactors never rewrite the same files unannounced. Glue and Hadoop tables
   keep RePark's policy as today.
-- **Q-1 (open) — the AWS bench spend.** Estimate, from AWS list prices as the orchestrating session recalls them
+- **R-3 (was Q-1) — the AWS bench spend is approved (owner, 2026-09-18: "that's fine, just implement a flag if the
+  table sizes get anywhere above 3 GB").** The size flag is a clause of unit 0, not a convention: before any read, the
+  bench sums `file_size_in_bytes` over each bench table's `files` metadata table (data and delete files, every
+  snapshot's live set), prints the total, and **if any table exceeds 3 GB (3 × 1024³ bytes) it raises the flag —
+  the dispatch stops before the first scan, the job fails with the measured size in its summary, and one Slack note
+  goes to the owner.** The same check runs right after the tables are written. Raising the threshold is an owner
+  decision, never a bench option. The estimate behind the approval: Estimate, from AWS list prices as the orchestrating session recalls them
   (verify on the pricing page before the first dispatch): the bench tables are fixed at **≤ 2 GB** each (about 200
   files, one S3 Tables table and one Glue table), written once. A dispatch reads roughly 12 GB (cold scan, warm scan,
   four concurrent scans, selective queries) out to a GitHub-hosted runner, so **data transfer out at about $0.09/GB
