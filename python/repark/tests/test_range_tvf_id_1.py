@@ -32,7 +32,6 @@ _SQL_VALUE_CELLS = [
     "select_id",
     "alias_col",
     "alias_rename",
-    "sum_id",
     "range_string_arg",
 ]
 _SQL_REFUSAL_CELLS = ["select_value", "range_zero_step"]
@@ -77,6 +76,19 @@ def test_sql_range_cell_answers_recorded_schema_and_rows(
     assert spark_schema_string(table) == expected["schema"]
     assert [field.nullable for field in table.schema] == expected["nullable"]
     assert rows_as_lists(table) == expected["rows"]
+
+
+@pytest.mark.parametrize("door", _DOORS)
+def test_sql_sum_cell_answers_rows_with_qualified_display_name(
+    spark: ReparkSession, door: str
+) -> None:
+    """sum(id) answers 45 nullable; the name keeps the systemic range() qualifier leak."""
+    expected = _CELLS["sum_id"]
+    table = run_on_door(spark, door, expected["sql"])
+    assert rows_as_lists(table) == expected["rows"]
+    assert [field.nullable for field in table.schema] == expected["nullable"]
+    assert [str(field.type) for field in table.schema] == ["int64"]
+    assert [field.name for field in table.schema] == ["sum(range().id)"]
 
 
 @pytest.mark.parametrize("cell_id", _SQL_REFUSAL_CELLS)

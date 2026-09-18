@@ -37,12 +37,12 @@ def _data_files(warehouse: Path, table: str) -> set[Path]:
 def _merge_rewrite(spark: ReparkSession, warehouse: Path, table: str, props: str) -> int:
     spark.sql(f"CREATE TABLE mem.ns.{table} (id BIGINT, v STRING) USING iceberg {props}")
     spark.sql(
-        f"INSERT INTO mem.ns.{table} SELECT value AS id, CAST(value AS STRING) AS v "
+        f"INSERT INTO mem.ns.{table} SELECT id, CAST(id AS STRING) AS v "
         "FROM range(20000)"
     )
     before = _data_files(warehouse, table)
     spark.sql("CREATE TABLE mem.ns.src (id BIGINT, v STRING) USING iceberg")
-    spark.sql("INSERT INTO mem.ns.src SELECT value AS id, 'w' AS v FROM range(20000)")
+    spark.sql("INSERT INTO mem.ns.src SELECT id, 'w' AS v FROM range(20000)")
     spark.sql(
         f"MERGE INTO mem.ns.{table} AS x USING mem.ns.src AS y ON x.id = y.id "
         "WHEN MATCHED THEN UPDATE SET v = y.v"
@@ -58,8 +58,8 @@ def test_bogus_distribution_mode_refuses_at_write(spark: ReparkSession) -> None:
     with pytest.raises(Exception, match="not supported"):
         spark.sql(
             "CREATE TABLE mem.ns.c_bogus USING iceberg PARTITIONED BY (part) "
-            "TBLPROPERTIES ('write.distribution-mode' = 'bogus') AS SELECT value AS id, "
-            "CAST(value % 8 AS INT) AS part FROM range(200000)"
+            "TBLPROPERTIES ('write.distribution-mode' = 'bogus') AS SELECT id, "
+            "CAST(id % 8 AS INT) AS part FROM range(200000)"
         )
 
 
