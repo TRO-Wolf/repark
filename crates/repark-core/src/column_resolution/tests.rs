@@ -530,3 +530,28 @@ async fn l08_bare_twin_options_carry_the_full_relation_name() {
         "{error}"
     );
 }
+
+#[tokio::test]
+async fn v01_order_by_a_select_alias_still_orders_by_the_alias() {
+    use datafusion::arrow::util::display::array_value_to_string;
+    let ctx = measured_ctx();
+    let batches = sql_with_column_repair(
+        &ctx,
+        "SELECT userId * -1 AS USERID FROM mc ORDER BY USERID",
+        true,
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    let values = batches
+        .iter()
+        .flat_map(|batch| {
+            (0..batch.num_rows())
+                .map(|row| array_value_to_string(batch.column(0), row).unwrap())
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(values, vec!["-2".to_string(), "-1".to_string()]);
+}

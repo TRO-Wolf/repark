@@ -315,9 +315,86 @@ fn ambiguous_message(
     )
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Slot {
+    Projection,
+    AliasReference,
+}
+
+#[derive(Default)]
+struct Level {
+    aliases: Vec<String>,
+    slots: HashMap<*const SqlExpr, Slot>,
+    active: Vec<(*const SqlExpr, Slot)>,
+}
+
+impl Level {
+    fn of(query: &datafusion::sql::sqlparser::ast::Query) -> Self {
+        use datafusion::sql::sqlparser::ast::OrderByKind;
+        let mut level = Self::default();
+        level.collect(&query.body);
+        if let Some(order_by) = query.order_by.as_ref()
+            && let OrderByKind::Expressions(exprs) = &order_by.kind
+        {
+            for order in exprs {
+                level
+                    .slots
+                    .insert(std::ptr::from_ref(&order.expr), Slot::AliasReference);
+            }
+        }
+        level
+    }
+
+    fn collect(&mut self, body: &datafusion::sql::sqlparser::ast::SetExpr) {
+        use datafusion::sql::sqlparser::ast::{GroupByExpr, SelectItem, SetExpr};
+        match body {
+            SetExpr::Select(select) => {
+                for item in &select.projection {
+                    match item {
+                        SelectItem::UnnamedExpr(expr) => {
+                            self.slots
+                                .insert(std::ptr::from_ref(expr), Slot::Projection);
+                        }
+                        SelectItem::ExprWithAlias { expr, alias } => {
+                            self.slots
+                                .insert(std::ptr::from_ref(expr), Slot::Projection);
+                            self.aliases.push(alias.value.clone());
+                        }
+                        _ => {}
+                    }
+                }
+                let mut references: Vec<&SqlExpr> = Vec::new();
+                if let GroupByExpr::Expressions(exprs, _) = &select.group_by {
+                    references.extend(exprs);
+                }
+                references.extend(select.having.as_ref());
+                references.extend(select.qualify.as_ref());
+                references.extend(select.sort_by.iter().map(|order| &order.expr));
+                for expr in references {
+                    self.slots
+                        .insert(std::ptr::from_ref(expr), Slot::AliasReference);
+                }
+            }
+            SetExpr::SetOperation { left, right, .. } => {
+                self.collect(left);
+                self.collect(right);
+            }
+            _ => {}
+        }
+    }
+
+    fn shields(&self, ident: &str) -> bool {
+        matches!(self.active.last(), Some((_, Slot::AliasReference)))
+            && self
+                .aliases
+                .iter()
+                .any(|alias| alias.eq_ignore_ascii_case(ident))
+    }
+}
+
 struct CaseFold<'a> {
     scopes: HashMap<String, Vec<(Option<String>, String)>>,
-    aliases: Vec<HashSet<String>>,
+    levels: Vec<Level>,
     written: &'a WrittenRefs,
     changed: bool,
     error: Option<DataFusionError>,
@@ -337,7 +414,7 @@ impl<'a> CaseFold<'a> {
         }
         Self {
             scopes,
-            aliases: Vec::new(),
+            levels: Vec::new(),
             written,
             changed: false,
             error: None,
@@ -364,12 +441,6 @@ impl<'a> CaseFold<'a> {
             }
         }
         found
-    }
-
-    fn alias_names(&self, ident: &str) -> bool {
-        self.aliases
-            .iter()
-            .any(|level| level.iter().any(|alias| alias == ident))
     }
 
     fn requested_spelling(&self, qualifier: Option<&str>, name: &str) -> (Option<String>, String) {
@@ -405,7 +476,12 @@ impl<'a> CaseFold<'a> {
     }
 
     fn rewrite_ident(&mut self, qualifier: Option<&str>, ident: &mut Ident) {
-        if self.error.is_some() || self.alias_names(ident.value.as_str()) {
+        if self.error.is_some()
+            || self
+                .levels
+                .last()
+                .is_some_and(|level| level.shields(ident.value.as_str()))
+        {
             return;
         }
         let candidates = self.candidates(qualifier, ident.value.as_str());
@@ -441,18 +517,7 @@ impl VisitorMut for CaseFold<'_> {
         &mut self,
         query: &mut datafusion::sql::sqlparser::ast::Query,
     ) -> ControlFlow<Self::Break> {
-        let mut level: HashSet<String> = HashSet::new();
-        if let datafusion::sql::sqlparser::ast::SetExpr::Select(select) = query.body.as_ref() {
-            for item in &select.projection {
-                if let datafusion::sql::sqlparser::ast::SelectItem::ExprWithAlias {
-                    alias, ..
-                } = item
-                {
-                    level.insert(alias.value.clone());
-                }
-            }
-        }
-        self.aliases.push(level);
+        self.levels.push(Level::of(query));
         ControlFlow::Continue(())
     }
 
@@ -460,24 +525,42 @@ impl VisitorMut for CaseFold<'_> {
         &mut self,
         _query: &mut datafusion::sql::sqlparser::ast::Query,
     ) -> ControlFlow<Self::Break> {
-        self.aliases.pop();
+        self.levels.pop();
+        ControlFlow::Continue(())
+    }
+
+    fn pre_visit_expr(&mut self, expr: &mut SqlExpr) -> ControlFlow<Self::Break> {
+        let pointer = std::ptr::from_ref::<SqlExpr>(expr);
+        if let Some(level) = self.levels.last_mut()
+            && let Some(slot) = level.slots.get(&pointer).copied()
+        {
+            level.active.push((pointer, slot));
+        }
         ControlFlow::Continue(())
     }
 
     fn post_visit_expr(&mut self, expr: &mut SqlExpr) -> ControlFlow<Self::Break> {
-        if self.error.is_some() {
-            return ControlFlow::Continue(());
+        let pointer = std::ptr::from_ref::<SqlExpr>(expr);
+        if self.error.is_none() {
+            match expr {
+                SqlExpr::Identifier(ident) => {
+                    self.rewrite_ident(None, ident);
+                }
+                SqlExpr::CompoundIdentifier(parts) if parts.len() >= 2 => {
+                    let qualifier = parts[parts.len() - 2].value.clone();
+                    let last = parts.len() - 1;
+                    self.rewrite_ident(Some(qualifier.as_str()), &mut parts[last]);
+                }
+                _ => {}
+            }
         }
-        match expr {
-            SqlExpr::Identifier(ident) => {
-                self.rewrite_ident(None, ident);
-            }
-            SqlExpr::CompoundIdentifier(parts) if parts.len() >= 2 => {
-                let qualifier = parts[parts.len() - 2].value.clone();
-                let last = parts.len() - 1;
-                self.rewrite_ident(Some(qualifier.as_str()), &mut parts[last]);
-            }
-            _ => {}
+        if let Some(level) = self.levels.last_mut()
+            && level
+                .active
+                .last()
+                .is_some_and(|(active, _)| *active == pointer)
+        {
+            level.active.pop();
         }
         ControlFlow::Continue(())
     }

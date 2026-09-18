@@ -574,7 +574,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   has one home, `repark_functions::case_sensitive::SparkCaseSensitiveConfig` (landed on
   main by ICE-RTAS-BYNAME-1), and the Spark door passes `case_insensitive` in as an
   argument. A second carrier would go stale the moment `SET spark.sql.caseSensitive`
-  wrote only one of them. pins: ice-mixed-case-1/C-001…C-010
+  wrote only one of them. Round 21b step 2 (V-01): the SELECT-alias guard is positional —
+  each query level records its projection expressions (always foldable) and its alias-reference
+  slots (GROUP BY, HAVING, QUALIFY, SORT BY, ORDER BY); only an ident inside an alias-reference
+  slot that names a SELECT alias (ASCII case-insensitive, Spark's alias resolution) is left for
+  DataFusion to bind to the alias. pins: ice-mixed-case-1/C-001…C-010, C-013
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias
   binding). Split from `column_resolution.rs` under the file-size gate.
