@@ -85,11 +85,6 @@ _FORK_292_DDL_LABELS = frozenset(
         "add_required_nested_child",
     }
 )
-_FORK_WRITE_DDL_LABELS = frozenset({"list_element_child_add_read"})
-_FORK_WRITE_REASON = (
-    "fork finding: an INSERT into a list column fails in the fork writer "
-    "(`column types must match schema types … PARQUET:field_id`)"
-)
 _STRUCT_IDENTIFIER_LABELS = frozenset({"ctas_where_struct_lt"})
 _STRUCT_IDENTIFIER_REASON = (
     "IDENT-STRUCT-KW-1: sqlparser reads an unquoted column named `struct` in any expression as "
@@ -428,15 +423,8 @@ def _ddl_params() -> list[Any]:
 
 
 def _rows_param(label: str, format_version: str) -> Any:
-    """Return one row cell, marked `fork292` and `forkwrite` where each fork change is needed."""
+    """Return one row cell, marked `fork292` where fork PR #292 is needed."""
     marker = "fork292-" if label in _FORK_292_DDL_LABELS else ""
-    if label in _FORK_WRITE_DDL_LABELS:
-        return pytest.param(
-            label,
-            format_version,
-            id=f"forkwrite-{marker}{label}-v{format_version}",
-            marks=pytest.mark.xfail(strict=True, reason=_FORK_WRITE_REASON),
-        )
     if label in _STRUCT_IDENTIFIER_LABELS:
         return _ddl_param(label, format_version)
     return pytest.param(label, format_version, id=f"{marker}{label}-v{format_version}")
@@ -488,9 +476,7 @@ def test_nested_ddl_rows_match_spark(
     """Spark's full nested cells — inserts included — answer Spark's rows on both doors.
 
     Notes:
-        Ids starting `forkwrite` are strict-xfail: an `INSERT` into a list column fails in the
-        fork writer on the pinned fork (hand-back fork finding). Ids with `fork292` read a
-        file that lacks an added child.
+        Ids with `fork292` read a file that lacks an added child.
     """
     outcome = _replayed(format_version, True, tmp_path_factory)[label]
     cell = _CELLS[f"v{format_version}_{label}"]

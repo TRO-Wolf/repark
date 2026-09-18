@@ -401,9 +401,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `ADD COLUMN s.b` / `arrs.element.y` / `m.value.q` / `s.c`, `RENAME COLUMN s.a TO a2`,
   `DROP COLUMN s.b` — each read answers Spark's column names and types over an empty table on
   both doors, and each `DESCRIBE` answers Spark's `data_type`. `test_nested_ddl_rows_match_spark`
-  keeps the inserts and compares Spark's rows on both doors. Its two
-  `forkwrite-…list_element_child_add_read` ids are strict-xfail: an `INSERT` into a list
-  column fails in the fork writer (hand-back fork finding), so a fork fix XPASSes them loudly. `test_required_nested_child_refuses_like_spark` pins the
+  keeps the inserts and compares Spark's rows on both doors, including the two
+  `fork292-list_element_child_add_read` ids whose `INSERT` into a list column answers since
+  RP-29 (fork #295 F-LIST-INSERT-1). `test_required_nested_child_refuses_like_spark` pins the
   `ADD COLUMN s.r INT NOT NULL` refusal (the `Incompatible change: cannot add required column`
   core, no new metadata file, schema unchanged); the strict-xfail
   `test_required_nested_child_message_matches_spark` holds Spark's whole first line.
