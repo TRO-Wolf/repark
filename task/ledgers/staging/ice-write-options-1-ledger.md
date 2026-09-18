@@ -1,7 +1,7 @@
 # Charter ledger — ICE-WRITE-OPTIONS-1 · DataFrame write options on Iceberg writes
 
 **Date:** 2026-09-17 · **Branch:** `feat/ice-write-options-1` · **Base:** `origin/main`
-`79e328f2` · **Model:** muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+`79e328f2` · **Model:** muse-spark-1.3-contributor (rounds 1–3) · **Model:** claude-opus-5 (round 4) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
@@ -356,3 +356,122 @@ Rulings carried in:
   `test_dml_b_partition_overwrite`, `test_dfcore_1*`,
   `test_production_file_size`), `make ci`, the live tier. Handed back HALT
   for a follow-up gate round.
+
+## 15. Round 4 — verification-critic findings V-01..V-04 (2026-09-17)
+
+**Model:** claude-opus-5 (Actor, round 4). Muse rows above stand; no contributor stripped.
+Base `1485db96` (the orchestrator's BY NAME threading fix, which this round pins).
+
+Rulings carried in / taken:
+
+- Q-21c-5 (orchestrator, 2026-09-17): a write path that cannot honour the
+  statement options REFUSES with `refuse_if_non_empty`; it never drops them.
+- V-04 collision rule (orchestrator, 2026-09-17, measured): a user
+  `snapshot-property.<k>` refuses if and only if the engine computed `<k>` for
+  that snapshot, with Spark's text `Multiple entries with same key: <k>=<engine>
+  and <k>=<user>`; otherwise it lands. Q-20c-5 keeps its two keys: `operation`
+  dropped, `engine.operation-id` always RePark's (`commit_error.rs` reports that
+  id for `CommitStateUnknown`; the two must agree).
+- Where the computed summary is available: the fork merges extras INSIDE its
+  `SnapshotProducer::summary` (`additional_properties.extend`, user last-wins),
+  so the fork's own computed map is not reachable at the merge point. Its
+  collector is public, though: `EngineSummary::for_append` rebuilds the exact
+  added side (`SnapshotSummaryCollector` over the staged files, partition-summary
+  limit from the table) plus the branch-head totals (the fork's `update_totals`
+  arithmetic for an add-only commit). Appends and OPTIONS CTAS therefore use the
+  exact rule with the exact engine value. The overwrite family resolves its
+  removal set inside the commit; the narrowest honest alternative taken there
+  (`EngineSummary::for_overwrite`) refuses exactly the keys the operation is
+  known to compute: the exact added side, the six totals,
+  `changed-partition-count`, and — when a parent snapshot exists — the
+  data-removal keys `deleted-data-files`, `deleted-records`,
+  `removed-files-size`, engine value `<resolved at commit>`. Residual: an
+  overwrite that ends up removing nothing over-refuses those three keys.
+- R-21c-1 (Actor, 2026-09-17, for orchestrator review): `engine-name` /
+  `engine-version` stay refused, matching COLL-01/02. Spark stamps both on every
+  write; RePark stamps neither, so the message's engine half reads
+  `<engine-reserved>`. The pins assert the key and the user half from the
+  fixture, not Spark's `spark` / `4.1.2`.
+- The refusal class stays `AnalysisException` (Spark: `IllegalArgumentException`);
+  the session error mapping has no DataFusion path to that class and changing it
+  is outside this round.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-008 | V-04: a user extra refuses iff the engine computes that key for the commit in hand (exact on append/CTAS, known-key set on the overwrite family); `deleted-data-files` lands on an append; Spark's message text with the engine value. | `test_snapshot_property_collision_cells[COLL-00..08]`; mutation B. | PROVEN | 9/9 green on the final native; prefix rule restored → 6 red (COLL-07 lands-vs-refused, COLL-00/01/02/05/06 message). |
+| C-009 | V-01: the nine measured collision cells are fixture cells `COLL-00..08` (43 prior cells byte-untouched, `git diff --numstat` 182/0); the committed recorder `_record_ice_write_options_3_oracle.py` re-derives them (no machine-local path literal; `--warehouse`, `REPARK_ORACLE_IVY`); the live leg runs it and compares the COLL fields; pins read `_fixture_cell` only. | Fixture + recorder + live projection; mutation D. | PROVEN | Perturbing three fixture values → 3 red. Recorder not run (no JVM this round). |
+| C-010 | V-03 / Q-21c-5: every `execute_inner` arm that cannot honour a non-empty options map refuses it before executing (MERGE, BY NAME append/empty projection, DELETE, UPDATE, TRUNCATE, CALL, DROP TABLE/NAMESPACE, ALTER, pre-parse DDL/DESCRIBE/SHOW, passthrough, the two non-Iceberg INSERT OVERWRITE fallbacks); INSERT OVERWRITE BY NAME honours it. | `test_merge_refuses_write_options`, `test_insert_by_name_*`, `test_non_write_arms_refuse_write_options[10]`; mutation A. | PROVEN | 13/13 green; all 13 red under mutation A. |
+| C-011 | V-02: table `write.parquet.compression-level=1` + option `compression-codec=gzip` refuses before any file is written, snapshot count unchanged — pinned in pytest, and the Rust pin actually runs. | `test_table_level_gzip_with_option_codec_refuses`; `cargo test -p repark-iceberg`; mutation C. | PROVEN | Both red under mutation C. |
+
+Red first (V-03, base `1485db96` native): the MERGE pin and all ten arm pins
+failed `DID NOT RAISE AnalysisException`; the two BY NAME pins were already green
+because `1485db96` carries the fix (proved by mutation A instead).
+
+Latent break fixed on the way: `cargo test -p repark-iceberg` did not compile
+(`append.rs` test module used `Uuid` through `super::*`; the round-3 split moved
+the import out). Fully qualified `uuid::Uuid` on the same line — `append.rs`
+keeps its exact 1819 baseline.
+
+Mutation transcripts (each: revert the fix in the working tree, `maturin develop
+--release`, run the pins, restore, rebuild):
+
+- A — V-03. `router.rs` / `insert_overwrite.rs` restored to `1485db96` (every
+  round-4 refusal gone) and `insert_by_name.rs` given the pre-fix drop semantics
+  (both delegations get `StatementWriteOptions::empty()`, both refusals deleted;
+  a literal `1485db96^` does not compile against the rebased BY NAME door).
+  `-k "merge_refuses or by_name or non_write_arms"` → `13 failed`:
+  `DID NOT RAISE AnalysisException` (MERGE, BY NAME append, 10 arms);
+  `KeyError: 'run_id'` (BY NAME overwrite — the dropped extra).
+- A' — V-03 on the final structure (after the clippy `too_many_lines` refactor
+  moved the arm refusals into `refuse_options_on_non_write`): the gate call
+  disabled, the pre-parse gate given an empty set, the BY NAME drop semantics as
+  in A, the two non-Iceberg INSERT OVERWRITE refusals deleted → the same
+  `13 failed`. Those last two refusals have no pin of their own (no non-Iceberg
+  overwrite target in this pin file); stated as a residual.
+- B — V-04. `engine.refuse_collision(&folded, value)?` replaced by the round-3
+  prefix block. `-k collision_cells` → `6 failed, 3 passed`: COLL-07
+  `AnalysisException: … deleted-data-files is an engine-computed snapshot summary
+  key` (the over-refusal); COLL-00/05/06 `assert 'Multiple entries with same key:
+  added-records=2 and added-records=999' in …` (no engine value); COLL-01/02 key
+  half missing.
+- C — V-02. `effective_level.is_some()` → `level_override.is_some()` in
+  `writer_properties_with`. pytest `-k gzip` → `1 failed, 2 passed`
+  (`test_table_level_gzip_with_option_codec_refuses`: `DID NOT RAISE`);
+  `cargo test -p repark-iceberg table_level_gzip_option_codec_refuses_like_spark`
+  → `test result: FAILED. 0 passed; 1 failed` (panicked at
+  `writer_props.rs:728`, codec `GZIP(GzipLevel(1))`).
+- D — V-01. Fixture perturbed (COLL-00 engine value 2→5, COLL-06
+  `snapshot_count` 1→2, COLL-07 landed value 3→4). `-k collision_cells` →
+  `3 failed, 6 passed`, each on the perturbed value; fixture restored (182/0).
+
+
+## 16. Round 4 gates (2026-09-17, final native rebuilt from `ba12e621`)
+
+- Comment ban: the staged-diff grep printed nothing before each commit; the
+  orchestrator's `comment_ban.py` against `origin/main` reports 0 hits.
+- `cargo test -p repark-spark`: 1203 passed, 0 failed, 4 ignored (doc leg ok).
+- `cargo test -p repark-core`: 623 passed, 0 failed, 2 ignored.
+- `cargo test -p repark-iceberg`: 456 passed, **2 failed** —
+  `writer_props::tests::option_target_size_rolls_one_file_per_batch` and
+  `::option_target_size_beats_table_property` (a 1-byte target yields 1 file, not
+  3). Both are this unit's own round-1 tests (`0ccc7fca`). They fail
+  identically on `1485db96` once its test module compiles, and they never ran
+  before, because the module did not compile until this round. OPEN for the
+  orchestrator: the fork's rolling writer measures written bytes, which stay 0
+  until a row group flushes, so the "rolls every batch" premise may not hold on
+  this fork. The pytest pin only asserts that the option is accepted and the rows
+  commit.
+- `test_ice_write_options_1.py`: 65 passed, 1 skipped (the JVM-gated live leg).
+- `python/repark/tests -n 8`: 9750 passed, 2 failed, 399 skipped, 47 xfailed.
+  The 2 are `test_spark_sql_grammar_1.py::test_q14_current_date_bare_and_paren`
+  [ansi-on/off], which fail on the UTC/local date window (`2026-09-18` UTC vs
+  `2026-09-17` local). That is unrelated to this unit, and it still fails
+  identically when re-run.
+- `python/repark-parity/tests -n 8`: 754 passed, 2 failed at the time of the
+  run. `test_dl_6_docs_links` failed on the then-untracked `_3` recorder and
+  passes after commit (19 passed). `test_cap_1` failed on mirror rows that
+  round 3 had left behind; after the ratchet it passes (23 passed).
+- `make verify`: `ci` stages all clean (map-sync, crate-dag, lib-rs,
+  rust-file-size, lib-py, python-conventions, docstring-presence, ledger-check,
+  ledger-grammar, docs-compaction, docs-links, owner-ruling, dual-wire, ruff,
+  fmt, clippy); `rust-test` stops at the two `repark-iceberg` failures above.

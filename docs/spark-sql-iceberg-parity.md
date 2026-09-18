@@ -2540,12 +2540,49 @@ the pin rather than obeying it.
 - **Round 3 (2026-09-17)** — the text channel is withdrawn: options travel out of band
   (facade dict, native `sql_with_write_options`, typed router set; user-typed `OPTIONS`
   keeps main's parse error / CTAS refusal, SQL-02/03). UTF-8 rides the map byte-exact
-  (SNAP-08/09). Engine-key collisions follow measured Spark behaviour — metric keys
-  refuse (`Multiple entries with same key`), user `operation` is dropped,
-  `engine.operation-id` stays ours (SNAP-10/11/12). gzip refuses on the merged level
+  (SNAP-08/09). Engine-key collisions follow measured Spark behaviour — user `operation`
+  is dropped, `engine.operation-id` stays ours (SNAP-10/11/12); the round-3 prefix
+  refusal for metric keys is superseded by the round-4 collision rule below. gzip refuses on the merged level
   whatever side it came from (Q-20c-6). Staging streams with session concurrency and
   OPTIONS CTAS publishes once (SNAP-04 kept, SNAP-13).
-  pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- **Round 4 (2026-09-17)** — *Collision rule.* A `snapshot-property.<k>` extra refuses
+  if and only if the engine computes `<k>` for the snapshot being committed, with Spark's
+  text `Multiple entries with same key: <k>=<engine value> and <k>=<user value>`; any
+  other key lands. On an append the engine summary is computed before the commit from
+  the staged files (the fork's public `SnapshotSummaryCollector` plus the branch-head
+  totals), so the engine value in the message is exact: `added-records=2`,
+  `changed-partition-count=1` and `total-records=3` refuse, while `deleted-data-files`
+  lands on an append because nothing computes it there. Measured on Spark 4.1.2 +
+  Iceberg 1.11.0 on 2026-09-17, recorded as fixture cells `COLL-00`…`COLL-08` in
+  `ice_write_options_1_spark_oracle.json` (recorder `_record_ice_write_options_3_oracle.py`)
+  and pinned by `test_snapshot_property_collision_cells`. On the overwrite family the
+  fork works out which files it removes inside the commit, so the totals,
+  `changed-partition-count` and the data-removal keys (`deleted-data-files`,
+  `deleted-records`, `removed-files-size`, when a parent snapshot exists) count as
+  engine-computed and refuse with `<resolved at commit>` as the engine value.
+  *Divergences, dated rulings.* `engine.operation-id` is always RePark's (Q-20c-5,
+  2026-09-17): Spark lands a user value (`COLL-04`), RePark keeps its own UUID
+  because `commit_error.rs` reports that id for `CommitStateUnknown` and the two must
+  agree. `engine-name` / `engine-version` refuse the way Spark does (`COLL-01/02`), but
+  RePark writes neither key, so the engine half of the message reads `<engine-reserved>`
+  where Spark's reads `spark` / `4.1.2` (R-21c-1, 2026-09-17). The refusal surfaces as
+  `AnalysisException` where Spark raises `IllegalArgumentException`. *Router
+  (Q-21c-5, 2026-09-17).* A statement that cannot honour a non-empty options map
+  refuses it rather than dropping it: `MERGE INTO`, the `INSERT … BY NAME` append and
+  empty-projection commits, `DELETE`, `UPDATE`, `TRUNCATE`, `CALL`, `DROP`, `ALTER`,
+  the pre-parse DDL / DESCRIBE / SHOW intercepts, passthrough statements and the
+  non-Iceberg `INSERT OVERWRITE` fallbacks. The `INSERT OVERWRITE … BY NAME`
+  delegations honour the map. *ORC/Avro* stays **DECLARED 2026-09-17**: the refusal is a
+  typed `UnsupportedOperationException` whose message carries the needle
+  `ICE-WRITE-OPTIONS-1 ORC/AVRO declared 2026-09-17` and points at the
+  ICE-WRITE-OPTIONS-ORC-AVRO row below. *Residuals, unchanged and still not pinned as
+  parity:* (a) `check-nullability` / `check-ordering` are accepted and not applied;
+  (b) `distribution-mode` / `fanout-enabled` are accepted and not applied, and file
+  layout follows the engine default. A table-level `write.parquet.compression-level`
+  plus an option `compression-codec=gzip` refuses before any file is written, pinned
+  in both tiers (`test_table_level_gzip_with_option_codec_refuses`,
+  `writer_props.rs::table_level_gzip_option_codec_refuses_like_spark`).
+  pins: ice-write-options-1/C-008, C-009, C-010, C-011
 
 ### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
 
