@@ -140,6 +140,10 @@ repark-core's error map.
 - `append_fanout_serial.rs` — **ICE-WRITE-OPTIONS-1 round 3 (2026-09-17):** the serial
   conformed fanout (`fanout_conformed_stream_serial[_with_abort]`), split out of
   `append.rs` under the file-size gate; re-exported there so callers keep their paths.
+  Run 22b rebase (2026-09-18): the fanout builder is wrapped in `distribution::stamp`, the
+  ICE-SORTED-INSERT-1 change main made to the pre-split `append.rs` body, so both the
+  option-free and the option-carrying fanout stamp the default sort order id.
+  pins: ice-write-options-1/C-017
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform
   ([conform.rs](conform.rs): missing /
   extra / duplicate column = loud error, except a missing column whose Iceberg field carries a
@@ -660,7 +664,9 @@ repark-core's error map.
   1-byte option or table property, and 1 at the default or a 512 MB option over
   the property.
   pins: ice-write-options-1/C-008, C-012
-  Run 22b rebase (2026-09-18): `stage_static_partition_overwrite_files_with` moves here from `partition_overwrite.rs`
+  Run 22b rebase (2026-09-18): the unpartitioned mirror builder takes main's
+  `distribution::stamp` like `merge/mod.rs` (C-017);
+  `stage_static_partition_overwrite_files_with` moves here from `partition_overwrite.rs`
   (which only exposes `static_injected_stream`), takes main's column list and an
   `Option` of the overrides, and hands `None` to the canonical untouched.
   pins: ice-write-options-1/C-014

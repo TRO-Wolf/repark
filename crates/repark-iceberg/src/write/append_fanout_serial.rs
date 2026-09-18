@@ -18,6 +18,7 @@ use iceberg::writer::partitioning::fanout_writer::FanoutWriter;
 use uuid::Uuid;
 
 use super::append::iceberg_err;
+use super::distribution::stamp;
 use super::file_order::ascending_partition_order;
 use super::write_options::WriterStagingOverrides;
 use super::writer_props::{target_file_size_with, writer_properties_with};
@@ -70,7 +71,7 @@ where
         location_generator,
         file_name_generator,
     );
-    let mut fanout = FanoutWriter::new(DataFileWriterBuilder::new(rolling_builder));
+    let mut fanout = FanoutWriter::new(stamp(DataFileWriterBuilder::new(rolling_builder), table));
 
     while let Some(batch) = conformed.try_next().await? {
         if aborted.load(Ordering::SeqCst) {
