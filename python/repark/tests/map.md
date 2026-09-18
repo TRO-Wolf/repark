@@ -358,11 +358,24 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   plus MERGE-vs-INSERT (v2/v3 × MoR/COW × door), the disjoint-range MERGEs (COW commits both,
   MoR refuses one), the eight disjoint-key MERGEs (serializable and snapshot refuse seven),
   sixteen INSERT statements (every commit durable, every loser a
-  `CatalogCommitConflicts`: RePark commits 5 of 16 where Spark commits 16 — BACKLOG row
-  ICE-OCC-SCOPED-1-INSERT-STORM, ruling Q-21a-5) and two whole-partition DELETE statements. The range table is seeded by two INSERT statements so its
+  `CatalogCommitConflicts`: RePark commits 5–7 of 16 where Spark commits 7–15 over
+  repetitions — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM, corrected 2026-09-18, fixture
+  `spark_occ_oracle4.json`, ruling Q-23b-1: no product change) and two whole-partition DELETE
+  statements. The range table is seeded by two INSERT statements so its
   two MERGEs touch different files, as Spark's `local[8]` `range(100)` does (ruling Q-21a-4).
+  The insert-storm docstring states Spark's range over three recorded passes (Hadoop 9-16,
+  InMemory 7-9), not the single 16-of-16 repetition.
   pins: ice-occ-scoped-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
   pins: ice-occ-scoped-1/C-015, C-016, C-017
+  pins: ice-append-retry-1/C-003, C-004, C-005
+- [_record_ice_append_storm_1.py](_record_ice_append_storm_1.py) — the **record driver**
+  for ICE-APPEND-RETRY-1 (NOT a `test_` module; never collected): sixteen barrier-released
+  single-row inserts on a fresh table per repetition, six repetitions per catalog (Hadoop
+  `sc`, InMemory `mc`) × format version on one `local[8]` session, writing the normalized
+  cells into `../repark-parity/fixtures/torture/data/ice_occ_scoped_1/spark_occ_oracle4.json`
+  directly (warehouse prefixes become `<warehouse>/`). GAV from `_oracle_pins`, Ivy cache
+  from `REPARK_ORACLE_IVY`, warehouse from `tempfile`, repetitions as `REPETITIONS`.
+  pins: ice-append-retry-1/C-001
 - [test_ice_promote_read_1.py](test_ice_promote_read_1.py) — **ICE-PROMOTE-READ-1
   (2026-09-16):** reads and DML after a legal `ALTER COLUMN … TYPE` promotion answer Spark
   4.1.2 row for row (run-19a V2-10c, V2-06b, V3-11, V3-14). The cases come from
@@ -411,9 +424,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `ADD COLUMN s.b` / `arrs.element.y` / `m.value.q` / `s.c`, `RENAME COLUMN s.a TO a2`,
   `DROP COLUMN s.b` — each read answers Spark's column names and types over an empty table on
   both doors, and each `DESCRIBE` answers Spark's `data_type`. `test_nested_ddl_rows_match_spark`
-  keeps the inserts and compares Spark's rows on both doors. Its two
-  `forkwrite-…list_element_child_add_read` ids are strict-xfail: an `INSERT` into a list
-  column fails in the fork writer (hand-back fork finding), so a fork fix XPASSes them loudly. `test_required_nested_child_refuses_like_spark` pins the
+  keeps the inserts and compares Spark's rows on both doors, including the two
+  `fork292-list_element_child_add_read` ids whose `INSERT` into a list column answers since
+  RP-29 (fork #295 F-LIST-INSERT-1). `test_required_nested_child_refuses_like_spark` pins the
   `ADD COLUMN s.r INT NOT NULL` refusal (the `Incompatible change: cannot add required column`
   core, no new metadata file, schema unchanged); the strict-xfail
   `test_required_nested_child_message_matches_spark` holds Spark's whole first line.
@@ -432,6 +445,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   reads an unquoted column named `struct` in any expression as a STRUCT literal, so the query
   refuses `ParseException` as a plain `SELECT struct FROM t` does, with or without this unit.
   pins: ice-nested-evo-1/C-022
+  At fork `9e67e000` (RP-29) the `forkwrite` list-INSERT cell is a plain passing pin.
+  pins: ice-array-insert-1/C-009
 - `_record_ice_nested_evo_1.py` — the **record driver** for ICE-NESTED-EVO-1 (NOT a `test_`
   module; never collected). `build_cells()` is the cell catalog; `main()` runs every cell on
   one short-lived local Spark JVM with a Hadoop catalog at the baked root
@@ -6566,3 +6581,24 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   Spark's recorded accept, an OPEN registry row (C-022).
   The V-01 pin goes green with the writer change (arity refusal before).
   pins: ice-v3-write-default-1/C-020, C-021, C-022
+- [_record_ice_array_insert_1.py](_record_ice_array_insert_1.py) — the **record driver**
+  for ICE-ARRAY-INSERT-1 (NOT a `test_` module; never collected). `SHAPES` is the shape
+  catalog (column DDL, SELECT source, VALUES rows); `record_all()` writes each shape
+  through each door at v2 and v3 on one short-lived local Spark JVM with a Hadoop
+  catalog at scratch and writes `spark_array_insert_oracle.json`. `field_ids()` is the
+  one footer walk the pins import. Re-record: `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64
+  SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the path (`REPARK_ORACLE_IVY` points
+  `spark.jars.ivy` at a warm Ivy cache).
+  pins: ice-array-insert-1/C-002
+- [test_ice_array_insert_1.py](test_ice_array_insert_1.py) — **ICE-ARRAY-INSERT-1
+  (2026-09-18, RP-29):** inserts into array columns answer Spark 4.1.2 on every door — one
+  pin per recorded cell (30: three shapes by five doors by v2/v3) asserting the read-back
+  rows and the first data file's footer field ids, walked with the recorder's `field_ids`
+  (Spark's file count is recorded but never pinned — it follows Spark's task count). The
+  eight non-VALUES `map_list` cells run the recorded `CAST(NULL AS MAP<...>)` statement
+  verbatim under strict xfail (CAST-MAP-SPELL-1, BACKLOG) with substitute-source twins
+  through the same door from a `CASE WHEN false` NULL-map row Spark answers identically
+  (measured 2026-09-18). Live (`REPARK_PARITY_LIVE=1`): Spark adopts each RePark-written
+  `sql_values` table via `register_table` and reads the recorded rows. Truth in
+  [../../repark-parity/fixtures/torture/data/ice_array_insert_1/](../../repark-parity/fixtures/torture/data/ice_array_insert_1/map.md).
+  pins: ice-array-insert-1/C-003, C-004, C-005, C-006, C-007, C-008

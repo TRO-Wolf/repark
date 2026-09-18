@@ -18,6 +18,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   refusal fixture, the foreign-metadata register refusal, registry row V3-MULTIARG-1,
   post-1.x card. `risk_tier: standard`. Branch `docs/v3-multiarg-1`.
   pins: v3-multiarg-1/C-001, C-002, C-003, C-004, C-005
+- [ice-append-retry-1-ledger.md](ice-append-retry-1-ledger.md) —
+  **ICE-APPEND-RETRY-1 (2026-09-18), in flight:** the INSERT-STORM row corrected to what
+  Spark measures over repetitions (rating row V2-20a remaining distance) — the six-repetition
+  Spark oracle on two catalogs, the recorder, the corrected registry row and test docstring,
+  no product change under ruling Q-23b-1. `risk_tier: standard`. Branch
+  `docs/ice-append-retry-1`.
+  pins: ice-append-retry-1/C-001, C-002, C-003, C-004, C-005
 - [ice-tsns-sql-1-ledger.md](ice-tsns-sql-1-ledger.md) —
   **ICE-TSNS-SQL-1 (2026-09-17), in flight:** `timestamp_ns` / `timestamptz_ns` on the SQL door
   (rating row V3-06 and the ns half of V3-04) answer the Iceberg v3 spec with a PyIceberg 0.12.0
@@ -50,6 +57,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (`CREATE TABLE` with nested columns, `ADD`/`RENAME`/`DROP COLUMN` on a nested path, the
   required-child refusal). Fork half F-NESTED-EVO-1 (fork PR #292). `risk_tier: high`.
   Branch `fix/ice-nested-evo-1`.
+- [ice-array-insert-1-ledger.md](ice-array-insert-1-ledger.md) —
+  **ICE-ARRAY-INSERT-1 (2026-09-18), in flight:** inserts into array columns answer Spark
+  4.1.2 on every door at fork #295 (F-LIST-INSERT-1) — one pin per recorded cell (three
+  shapes by five doors by v2/v3) for rows and footer field ids, the eight non-VALUES
+  `map_list` cells verbatim under strict xfail (CAST-MAP-SPELL-1, BACKLOG) with
+  substitute-source twins, the live Spark-adopts-RePark tier, registry row
+  ICE-ARRAY-INSERT-1 FIXED. Test-only, no product change. `risk_tier: standard`.
+  Branch `chore/rp-29-fork-pin`.
+  pins: ice-array-insert-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [ice-evo-dml-1-ledger.md](ice-evo-dml-1-ledger.md) —
   **ICE-EVO-DML-1 (2026-09-17), in flight:** MERGE / UPDATE / DELETE after `ADD COLUMN` or
   `RENAME COLUMN` with no write since answer Spark 4.1.2 instead of refusing `Column … not

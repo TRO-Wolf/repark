@@ -3529,8 +3529,12 @@ the pin rather than obeying it.
   `GenericDialect`). Before (release native at `2c28bec7`): `CREATE` with a struct refused
   `column type STRUCT<…> is not supported yet for Iceberg tables`, with a map refused at the
   parser, and every dotted `ADD` / `RENAME` / `DROP` refused at the parser — no registry row.
-  Rows after an `INSERT` into a list column are held by
-  [ICE-NESTED-INSERT-LIST-1](#ice-nested-insert-list-1--open-measured-2026-09-17-an-insert-into-a-list-column-fails-in-the-fork-writer).
+  Rows after an `INSERT` into a list column answer Spark since RP-29 (fork #295
+  F-LIST-INSERT-1); see
+  [ICE-NESTED-INSERT-LIST-1](#ice-nested-insert-list-1--an-insert-into-a-list-column-reads-back--fixed-2026-09-18-rp-29-fork-295-f-list-insert-1)
+  (FIXED 2026-09-18) and
+  [ICE-ARRAY-INSERT-1](#ice-array-insert-1--inserts-into-array-columns-answer-spark-on-every-door--fixed-2026-09-18-rp-29-fork-295-f-list-insert-1)
+  for the full door matrix.
 - **Apache Spark** — creates and evolves the nested columns; the same `DESCRIBE` strings and
   rows (`[(1,{a:1,b:'p',c:None})]`, `[(1,{a2:1,b:'p'})]`, `[(1,{a:1})]`); refuses the
   required child with `SparkException` `_LEGACY_ERROR_TEMP_2045` caused by
@@ -3654,22 +3658,51 @@ the pin rather than obeying it.
   `nested_column_ddl.rs`, `ansi_nested_ddl_oracle.rs`, `nested_column.rs`.
 - **Rationale** — FIXED.
 
-### ICE-NESTED-INSERT-LIST-1 — OPEN (measured 2026-09-17): an `INSERT` into a list column fails in the fork writer
+### ICE-NESTED-INSERT-LIST-1 — an `INSERT` into a list column reads back — **FIXED 2026-09-18 (RP-29, fork #295 F-LIST-INSERT-1)**
 
 - **repark** — `CREATE TABLE t (id INT, arr ARRAY<INT>) USING iceberg; INSERT INTO t SELECT 1,
-  array(1, 2)` fails with `Unexpected => Arrow Schema Error … column types must match schema
+  array(1, 2)` answers Spark's row, as do `writeTo(t).append()`, `insertInto` and
+  `saveAsTable(append)`. Before (release native at `2c28bec7`, fork pin `3296ffc7`): the
+  write refused `Unexpected => Arrow Schema Error … column types must match schema
   types, expected List(Int32, field: 'element', metadata: {"PARQUET:field_id": "3"}) but found
-  List(Int32, field: 'element')`; `writeTo(t).append()`, `insertInto` and
-  `saveAsTable(append)` fail the same way. Struct and map columns insert. Pre-existing at
-  `2c28bec7`; it blocks the list cells' rows (`ADD COLUMN arrs.element.y` itself works).
-- **Apache Spark** — inserts the row (`list_add` cells of the same recording).
+  List(Int32, field: 'element')`. At fork `9e67e000` (F-LIST-INSERT-1) every Iceberg writer
+  relabels nested fields to the table's Iceberg types, so the element, key and value field
+  ids reach the parquet footer, and `INSERT … VALUES` into nested columns plans.
+- **Apache Spark** — inserts the row (`list_add` cells of the ICE-NESTED-EVO-1 recording).
 - **Pin** — `python/repark/tests/test_ice_nested_evo_1.py::test_nested_ddl_rows_match_spark`
-  `forkwrite-…list_element_child_add_read` ids (`xfail(strict=True)`),
-  `crates/repark-spark/src/tests/nested_column_ddl.rs::forkwrite_list_insert_reads_back`
-  (`#[ignore]`).
-- **Rationale** — OPEN. The TRIGGER is a fork fix: `writer/write_defaults.rs`
-  `apply_write_defaults` rebuilds the batch against `schema_to_arrow_schema`, whose list
-  element carries a field id the incoming batch lacks, and `RecordBatch::try_new` rejects it.
+  (`fork292-list_element_child_add_read` ids, plain passing pins),
+  `crates/repark-spark/src/tests/nested_column_ddl.rs::forkwrite_list_insert_reads_back`,
+  and the thirty ICE-ARRAY-INSERT-1 cells below.
+- **Rationale** — FIXED 2026-09-18 (RP-29) at fork #295 (F-LIST-INSERT-1).
+
+### ICE-ARRAY-INSERT-1 — inserts into array columns answer Spark on every door — **FIXED 2026-09-18 (RP-29, fork #295 F-LIST-INSERT-1)**
+
+- **repark** — `INSERT … VALUES`, `INSERT … SELECT`, `writeTo(t).append()`,
+  `write.insertInto(t)` and `write.format("iceberg").mode("append").saveAsTable(t)` into
+  `ARRAY<INT>`, `ARRAY<STRUCT<a INT, b STRING>>` and `MAP<STRING, ARRAY<INT>>` columns
+  answer Spark's rows and footer field ids on every door at format versions 2 and 3.
+  Before (measured at fork pin `3296ffc7`, main `f62fb11f`): `INSERT … VALUES` into
+  `list<int>` and `list<struct>` failed loud with `Arrow error: Invalid argument error: It
+  is not possible to concatenate arrays of different data types`; the other doors on those
+  two shapes already answered Spark's rows and footer ids; the re-rating's V2-10d "INSERT
+  into a list column fails" cell is the rating-side before. After: every door answers
+  Spark on all three shapes — the `map_list` non-VALUES doors through a substitute source
+  (the recorded `CAST(NULL AS MAP<STRING, ARRAY<INT>>)` NULL-map row refuses `ParserError`,
+  registry row CAST-MAP-SPELL-1, BACKLOG; the pins write `CASE WHEN false THEN map('k1',
+  array(1, 2)) END`, which Spark 4.1.2 answers identically, measured 2026-09-18).
+- **Apache Spark** — the recorded 30 cells (PySpark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog, 2026-09-18,
+  `python/repark-parity/fixtures/torture/data/ice_array_insert_1/spark_array_insert_oracle.json`).
+- **Pin** — `python/repark/tests/test_ice_array_insert_1.py::test_cell_matches_spark` (one id
+  per cell; the 8 `map_list` non-VALUES ids run the recorded statement verbatim under
+  strict xfail on CAST-MAP-SPELL-1),
+  `…::test_cell_substitute_source_matches_spark` (the 8 substitute-source twins),
+  `…::test_live_spark_reads_repark_table` (live tier: Spark adopts each RePark-written
+  table and reads the recorded rows).
+- **Rationale** — FIXED 2026-09-18 (RP-29) at fork #295 (F-LIST-INSERT-1): every Iceberg
+  writer relabels nested fields to the table's Iceberg types and `INSERT … VALUES` into
+  nested columns plans. No adopted Spark tables were needed — RePark CREATE succeeds for
+  all three shapes, so the pins create with RePark's own DDL.
 
 ### DBT-QUALIFY-1 — a two-part name resolves for `SELECT` but not for `DESCRIBE` or `ALTER TABLE`
 
@@ -5655,7 +5688,7 @@ the pin rather than obeying it.
   | MERGE `ON t.k = 'a' AND t.id = s.id` vs `INSERT INTO` partition `d`, MoR and COW | 2 of 2 | **FIXED** 2 of 2 |
   | 2 MERGEs `ON t.id < 50 …` / `ON t.id >= 50 …`, unpartitioned, copy-on-write | 2 of 2 | **FIXED** 2 of 2 |
   | 2 whole-partition DELETE statements `WHERE k = 'a'` / `k = 'b'` | 2 of 2 | 2 of 2 before and after (COW, one file per partition: each DELETE removes only its own file) |
-  | 16 concurrent `INSERT INTO` | v2 16 of 16, v3 14 of 16 | 5 of 16, unchanged — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
+  | 16 concurrent `INSERT INTO` | Hadoop 9–16 (16 in 4 of 32 repetitions); InMemory 7–9 | 5–7 of 16, unchanged — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
 
 - **Pin** — `crates/repark-iceberg/src/write/merge/tests/occ_scoped.rs` (fault-injected race
   through the real `execute_merge` / `execute_predicate_dml`, v2 and v3, MoR and COW:
@@ -5762,28 +5795,39 @@ the pin rather than obeying it.
 - **Rationale** — FIXED 2026-09-18, matching Spark. Java's `conflictDetectionFilter` is the
   target scan's filter, not the insert set, and RePark derives the same.
 
-### ICE-OCC-SCOPED-1-INSERT-STORM — 16 concurrent INSERT statements: RePark commits 5, Spark 16 — **BACKLOG 2026-09-17**
+### ICE-OCC-SCOPED-1-INSERT-STORM — 16 concurrent INSERT statements: RePark commits 5–7 of 16, Spark 7–15 — **BACKLOG 2026-09-17, corrected 2026-09-18**
 
 - **repark** — sixteen barrier-released `INSERT INTO … VALUES` against one memory-catalog table
-  commit **5 of 16** on v2 and on v3 (release native, `p_retry.py`, measured before and after
-  ICE-OCC-SCOPED-1 — the unit does not touch appends). Every loser is a `PySparkException`
+  commit v2 7,5,5,6,5,6,6,6,5,5 and v3 6,5,7,5,5,6,5,5,6,7 over ten repetitions (release native,
+  memory catalog, measured 2026-09-18). Every loser is a `PySparkException`
   `CatalogCommitConflicts => Cannot commit to table … metadata location …`: appends validate
-  nothing, so each loser is the fork's commit-retry budget (`commit.retry.num-retries`, default
-  4, `ExponentialBackoff` in the fork's `Transaction::commit`) running out while sixteen writers
-  rebase in lockstep. Every commit that lands is durable (rows = snapshots = commits). Two
+  nothing, so each loser is the fork's commit-retry budget running out while sixteen writers
+  rebase in lockstep — the fork's `Transaction::build_backoff`
+  (`crates/iceberg/src/transaction/mod.rs` at fork `9e67e000`) reads `commit.retry.num-retries`
+  (default 4), `commit.retry.min-wait-ms`, `commit.retry.max-wait-ms` and
+  `commit.retry.total-timeout-ms` from the table properties into an exponential backoff
+  (factor 2). Every commit that lands is durable (rows = snapshots = commits). Two
   concurrent INSERT statements both commit.
-- **Apache Spark** — v2 16 of 16; v3 14 of 16, the two losers Hadoop-catalog
-  `CommitFailedException`s (`Cannot commit changes based on stale table metadata`, `Version 6
-  already exists`) — the same budget class, reached less often. *(oracle: recorded 2026-09-17,
-  fixture `ice_occ_scoped_1/spark_occ_oracle.json`.)*
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, six repetitions per catalog × format
+  version: Hadoop v2 15,13,11,12,14,12, Hadoop v3 14,12,13,9,10,13, InMemory v2 9,9,8,9,9,8,
+  InMemory v3 9,8,8,7,9,9. Every loser is a `CommitFailedException` (`Cannot commit: stale
+  table metadata`, `Cannot commit to table … metadata location from …`; Hadoop also `Cannot
+  commit changes based on stale table metadata`, `Version N already exists`) — the same budget
+  class, reached less often. The earlier `spark_occ_oracle.json` v2 16-of-16 cell was one
+  repetition, not Spark's typical answer: over three passes (32 repetitions per catalog) the
+  Hadoop catalog committed all sixteen in 4 and 9–15 otherwise; the in-memory catalog never
+  exceeded 9. *(oracle: recorded 2026-09-18, fixture
+  `ice_occ_scoped_1/spark_occ_oracle4.json`.)*
 - **Pin** — `python/repark/tests/test_ice_occ_scoped_1.py::test_insert_storm_loses_only_to_the_retry_budget`
   (v2/v3 × SQL / `writeTo().append()`: committed + losers = 16, at least one commit, every loser
   a `CatalogCommitConflicts` `PySparkException`, rows and snapshots equal the commits). The
   exact count is not pinned: it is scheduler-dependent in both engines.
-- **Rationale** — BACKLOG: closing it means retry jitter / budget parity in the fork's commit
-  loop (Java adds jitter to `Tasks.exponentialBackoff`), a fork unit, not this RePark unit's
-  conflict-filter change. Spark's own v3 14/16 shows the target is "rarely", not "never"
-  (ruling Q-21a-5).
+- **Rationale** — BACKLOG: Q-21a-5's "rarely, not never" was read off one repetition — both
+  engines lose appends to the retry budget under a 16-writer barrier storm, Spark somewhat less
+  often. The remaining distance (5–7 vs 7–9 on the same catalog class) is retry jitter: Java's
+  `Tasks.exponentialBackoff` randomizes each wait while the fork's backoff does not — a
+  hypothesis, not a finding (fork card F-COMMIT-JITTER-1, not filed tonight). No product change
+  (ruling Q-23b-1).
 
 ### ICE-PROMOTE-READ-1 — filters on a column widened by `ALTER COLUMN … TYPE` dropped the rows written before the promotion — **FIXED 2026-09-16 (fork F-PROMOTE-READ-1)**
 

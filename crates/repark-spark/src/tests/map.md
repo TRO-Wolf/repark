@@ -500,10 +500,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   refuses with the schema id unchanged; malformed paths refuse `[PARSE_SYNTAX_ERROR]` or as a
   parse error; an unknown parent refuses; `DROP COLUMN IF EXISTS` on a missing child is a
   no-op; the recognizer leaves top-level forms, column moves and reads to their own paths;
-  struct and map inserts read back. `fork292_nested_add_reads_null_for_rows_written_before`
-  (a child added after the write reads `NULL`) needs fork PR #292. The `#[ignore]`d
-  `forkwrite_list_insert_reads_back` waits on the hand-back's fork finding: an `INSERT` into a
-  list column fails in the fork writer.
+  struct, map and list inserts read back. `fork292_nested_add_reads_null_for_rows_written_before`
+  (a child added after the write reads `NULL`) needs fork PR #292.
+  `forkwrite_list_insert_reads_back` pins the list-column `INSERT` read-back, green since
+  RP-29 (fork #295 F-LIST-INSERT-1).
   pins: ice-nested-evo-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012
   **Round 3 (2026-09-18, run 22b):** `nested_add_comment_takes_a_double_quoted_string_spark_shaped`
   adds `s.d COMMENT "x.y"`, `s.e COMMENT "c"` and `s.f COMMENT "x.y" FIRST` and reads the
