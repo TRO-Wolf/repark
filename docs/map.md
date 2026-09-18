@@ -129,6 +129,9 @@ repo.
   **ICE-EVO-DML-1 (2026-09-17):** rows `ICE-EVO-DML-1` / `ICE-EVO-SWAP-1` /
   `ICE-EVO-LINEAGE-READ-1` FIXED with pin names and the fork-pin note.
   pins: ice-evo-dml-1/C-014
+  ICE-WRITE-OPTIONS-1 run 22b (2026-09-18): the FIXED row gains the rebase bullet (dynamic
+  overwrite, static pin, empty dynamic source, RTAS, sorted tables, column lists).
+  pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

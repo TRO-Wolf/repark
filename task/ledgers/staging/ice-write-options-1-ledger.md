@@ -574,3 +574,151 @@ Round 5 gates (2026-09-18, native rebuilt from the restored tree):
   over added files, so a user extra named `partitions.<removed path>` could replace that engine key on an overwrite. The
   default limit is 0, which means the keys are not written and the append collector stays exact. This joins the §17
   over-refusal residue as the overwrite family's second known imprecision.
+
+## 19. Run 22b rebase over #682 / #687 / #678 (2026-09-18)
+
+**Model:** claude-opus-5 (Actor, run 22b round 1). Base `9dc9bef3` merged with `origin/main`
+`13a5d24b`. Main had moved by ten commits: #682 ICE-DYN-OVERWRITE-1, #687 ICE-EVO-DML-1,
+#691 ICE-SORTED-INSERT-1, #692 ICE-OCC-SCOPED-1, #678 ICE-V3-WRITE-DEFAULT-1, RP-25, the
+read-perf slate, #693 ICE-RTAS-OPS-2, RP-26 and TEST-HYGIENE-1. The history is one merge
+commit (`11990953`), then one commit per semantic fix the merge needed (`21d2af58`,
+`91e5a3b3`, `db420c65`), the pins (`b6e6a379`) and this section.
+
+### Rulings (Actor, 2026-09-18)
+
+- **Q-22b-WO-1 (one statement funnel).** ICE-DYN-OVERWRITE-1's typed static flag and this
+  unit's options map travel together. Core `session/write_options.rs` is the only
+  statement body: `sql_with_write_options(query, options, force_static_overwrite)` fills
+  `EngineContext::force_static_overwrite`, and `sql_with` passes an empty map and
+  `false`. Main's `static_overwrite.rs` (core and PyO3) and the `sql_static_overwrite`
+  native are retired. The PyO3 `session_sql_with_write_options` takes
+  `force_static_overwrite=False` as a fourth argument. On the Spark door the flag is the
+  typed field `StatementWriteOptions::force_static_overwrite`. It is not an option key,
+  so `is_empty` and `refuse_if_non_empty` ignore it. Putting it there keeps every
+  router signature within clippy's argument and line limits. `execute_static_overwrite`
+  stays as a public entry that sets the field on an empty set.
+- **Q-22b-WO-2 (dynamic overwrite honours).** A dynamic PARTITION-less overwrite on a
+  partitioned table commits through `commit_replace_partitions_with_summary`. That is the
+  same `replace_partitions` action main's `commit_replace_partitions_to` builds, plus the
+  merged summary and the isolation override. It is the function `overwritePartitions()`
+  already used for options (SNAP-03). The staging takes the option writer knobs. With
+  no options the extras are empty, so the result is value-identical to main's path.
+- **Q-22b-WO-3 (empty dynamic source).** An empty dynamic source commits no snapshot, as
+  Spark's `DynamicOverwrite.commit` does (`Dynamic overwrite is empty, skipping commit`,
+  ICE-DYN-OVERWRITE-1 C-004/C-011). The options are validated up front and have no
+  snapshot to land on. This is Spark's answer, not a silent drop, so nothing refuses.
+  The static empty `BY NAME` wipe does commit, and keeps its C-010 refusal. The refusal
+  now sits inside the `!dynamic` branch.
+- **Q-22b-WO-4 (RTAS with options).** ICE-RTAS-OPS-2 made `CREATE OR REPLACE … AS SELECT`
+  record `overwrite` (or `delete`). The options CTAS path hand-builds its publish, so it
+  takes the same operation: `overwrite_by_row_filter(AlwaysTrue).allow_empty_commit()`
+  with the merged summary, collision-checked against `EngineSummary::for_overwrite`.
+  The service-managed arm uses `commit_replace_write_with_summary`.
+- **Q-22b-WO-5 (column-list append).** Since ICE-V3-WRITE-DEFAULT-1 the DataFrame writers
+  render `INSERT INTO t (cols) SELECT …`. This unit's options append refused explicit
+  column lists, so on the merged tree every option-carrying DataFrame append failed
+  (33 of 67 `test_ice_write_options_1.py` pins red). The list now takes the overwrite
+  arms' `write_default` fill step, is staged by name with the overrides, and commits
+  through `commit_append_with_summary`.
+
+### Conflict files and resolutions
+
+| File | Resolution |
+|---|---|
+| `crates/repark-core/src/session.rs` | `sql_with` calls `sql_with_write_options_inner(dialect, query, &{}, false)` (Q-22b-WO-1). |
+| `crates/repark-core/src/static_overwrite.rs` (main, auto) | Deleted. Its body is the funnel in `session/write_options.rs`. |
+| `crates/repark-iceberg/src/write/append.rs` | Ours: the serial fanout stays split out to `append_fanout_serial.rs`. Main's `stamp` wrap moves there (`21d2af58`). The unused `stamp` import is dropped. The baseline stays 1819. |
+| `crates/repark-iceberg/src/write/mod.rs` | Both exports kept: main's `static_partition_source_columns`, and this unit's `stage_static_partition_overwrite_files_with`, now re-exported from `write_options`. |
+| `crates/repark-iceberg/src/write/partition_overwrite.rs` (auto) | Main's column list reaches the options variant. That variant moves to `write_options.rs` behind a shared `pub(crate) static_injected_stream`, which leaves the file at 991 lines (the naive merge was 1006, over the ceiling). |
+| `crates/repark-python/src/lib.rs` | `session_write_options` kept. `static_overwrite` is retired (Q-22b-WO-1). |
+| `crates/repark-spark/src/ctas.rs` | Main's `with_replace_write(ctas.or_replace)` is kept on both staged arms, and the `(staged, replace_base)` tuple is kept. The service-managed option-free arm takes main's `commit_replace_write`. The options arms: Q-22b-WO-4 (`91e5a3b3`). |
+| `crates/repark-spark/src/insert_by_name.rs` | Options plus the flag field. The static empty wipe refuses a non-empty map through main's `wipe_by_name_target`. The dynamic empty case commits nothing. The non-empty case delegates with the options. |
+| `crates/repark-spark/src/insert_overwrite.rs` | `dynamic` comes from `options.force_static_overwrite`. The empty Iceberg wipe moves to `wipe_empty_overwrite_target` (clippy line limit), with the dynamic early return first. The stage-then-swap commits `commit_replace_partitions_with_summary` or `commit_overwrite_replace_all_with_summary`. The static PARTITION arm passes the column list and `Option` staging. `execute_append_with_options` moves verbatim to `append_with_options.rs` (the merge would have left the file at 1015 lines). |
+| `crates/repark-spark/src/lib.rs` | Exports `execute`, `execute_static_overwrite`, `execute_with_read_only` and `execute_with_statement_options`. |
+| `crates/repark-spark/src/router.rs` | Main's `execute_routed` folds into `execute_with_statement_options`. The signatures are ours; the flag rides in the options (Q-22b-WO-1). |
+| `crates/repark-spark/src/dialect.rs` (auto) | `execute_with_write_options` copies `cx.force_static_overwrite` onto the validated set. |
+| `python/repark/src/repark/spark/dataframe/writer_readwriter.py` | Main's column list and `static_overwrite=` are kept together with `self._options` on every Iceberg action. The V1 funnel forwards both to `writer_layout.run_through_temp_view`, whose one native call carries the flag. |
+| `scripts/check_lib_py.py`, `test_cap_1_source_file_line_cap.py` | `writer_readwriter.py` goes to 1095. That is down from main's 1102; this unit's 1093 plus main's column-list and flag lines cannot fit the old number. `append.rs` stays at ours (1819) and `merge/mod.rs` at main's (1773). |
+| `crates/repark-spark/src/map.md`, `docs/map.md`, `python/repark/src/repark/spark/dataframe/map.md`, `python/repark/tests/map.md`, `scripts/map.md`, `task/ledgers/staging/map.md` | Both sides' entries kept, plus run-22b notes. No exactly duplicated entry block exists after the merge. The two repeated headings in `python/repark/tests/map.md` were already on both parents. |
+
+### Constraint-2 decision (per path)
+
+| Path (main unit) | Decision | Commit path | Pin |
+|---|---|---|---|
+| PARTITION-less `INSERT OVERWRITE` / `insertInto(overwrite=True)`, dynamic, partitioned (#682) | HONOUR | `commit_replace_partitions_with_summary` | WO-DYN-01 (property + `replace-partitions`), WO-DYN-02 (gzip knob) |
+| Same, dynamic, unpartitioned (#682) | HONOUR | `commit_overwrite_replace_all_with_summary` (Spark replaces the whole table) | existing SNAP / OPT overwrite pins |
+| `saveAsTable` overwrite under dynamic, pinned static (#682 typed flag) | HONOUR | replace-all with summary; the flag rides with the options | WO-DYN-03 |
+| `INSERT OVERWRITE … BY NAME`, dynamic (#682 round 3) | HONOUR | through `insert_overwrite_from_staged_source` | WO-DYN-04 |
+| Empty dynamic source, positional and BY NAME (#682) | NO COMMIT (Spark-equal) | none | WO-DYN-05 [2 cells] |
+| Empty static BY NAME wipe | REFUSE (C-010, unchanged) | none | WO-DYN-06, `test_insert_by_name_*` |
+| PARTITION static / dynamic with a column list (#678) | HONOUR | unchanged row-filter / replace-partitions with summary | existing SNAP-03 + DML-B pins |
+| RTAS `createOrReplace()` (RTAS-OPS-2) | HONOUR | overwrite family with summary | WO-RTAS-01, WO-RTAS-02 [2 cells] |
+| Column-list append from the writers (#678) | HONOUR | by-name staging + `commit_append_with_summary` | WO-APP-01, WO-APP-02, all SNAP append pins |
+| Sorted tables (#691) | HONOUR (sort + stamp) | options builders take `stamp` | WO-SORT-01 [2 cells] |
+
+Constraint 5 audit: main added no `execute_inner` arm. #682 added only the
+`execute_static_overwrite` entry and the flag threading; #678 added the `DEFAULT` marker
+rewrite inside existing arms; #692 changed only MERGE / DELETE commit validation, and
+MERGE and DELETE still refuse through `refuse_options_on_non_write`; RTAS-OPS-2 added
+nothing to the router. The C-010 arm sweep (`test_non_write_arms_refuse_write_options`,
+10 cells) is still complete, and all ten stay green. #687's evo-DML planning and #678's
+write-default fill run after the gate unchanged: `test_ice_evo_dml_1.py` and
+`test_ice_v3_write_default_1.py` are green.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-014 | Q-22b-WO-1: the typed static flag and the options map reach the router on one statement; `saveAsTable` overwrite stays whole-table under dynamic and carries the property; option-free statements keep main's behaviour. | WO-DYN-03, main's `test_save_as_table_overwrite_ignores_dynamic_conf`; mutation M-FLAG. | PROVEN | Green. M-FLAG (`writer_layout` passes `False`) → `2 failed` (both saveAsTable pins, rows `[(1,'a'),(2,'b'),(40,'c')] != [(40,'c')]`). |
+| C-015 | Q-22b-WO-2 / WO-3: dynamic PARTITION-less overwrites (positional, `insertInto`, BY NAME) honour the snapshot property and writer knobs; an empty dynamic source commits nothing and refuses nothing; the static empty BY NAME wipe still refuses. | WO-DYN-01, 02, 04, 05, 06; red-first. | PROVEN | Red on `11990953` native + naive `commit_replace_partitions_to`: WO-DYN-01 `KeyError: 'run_id'`, WO-DYN-04 red; green after. |
+| C-016 | Q-22b-WO-4: an option-carrying RTAS records RTAS-OPS-1's operations and carries the property. | WO-RTAS-01, WO-RTAS-02; red-first. | PROVEN | Red on `11990953`: `['append','append'] != ['append','overwrite']`, `['append'] != ['overwrite']`, `['append'] != ['delete']`; green after `91e5a3b3`. |
+| C-017 | Option-carrying writers sort by the declared order and stamp its id (partitioned and unpartitioned). | WO-SORT-01; red-first. | PROVEN | Red on `11990953`: `sort_order_id None == 1` on both cells; green after `21d2af58`. |
+| C-018 | Q-22b-WO-5: option-carrying appends with a writer or SQL column list land with the property; unlisted nullable columns read NULL. | WO-APP-01, WO-APP-02, the SNAP append pins; red-first. | PROVEN | Red on `11990953`: `INSERT with an explicit column list does not support write options` (and `test_ice_write_options_1.py` `33 failed, 34 passed, 1 skipped`); green after `db420c65`. |
+
+### Red-first record
+
+Native built from `11990953`, with the dynamic commit mutated to main's naive resolution
+`commit_replace_partitions_to` (no summary). Then
+`pytest -n 4 test_ice_write_options_1_rebase.py` gave `9 failed, 5 passed`: WO-DYN-01,
+WO-DYN-04, WO-RTAS-01, WO-RTAS-02 ×2, WO-SORT-01 ×2, WO-APP-01 and WO-APP-02. The 5 passes
+are WO-DYN-02, WO-DYN-03, WO-DYN-05 ×2 and WO-DYN-06. WO-DYN-02 passes because the
+mutation leaves the option staging in place, so the gzip knob stays honoured. WO-DYN-03
+passes because the flag funnel is part of the merge commit; M-FLAG reds it. WO-DYN-05
+and WO-DYN-06 pin behaviour the merge commit already has. On the same native,
+`test_ice_write_options_1.py` gave `33 failed, 34 passed, 1 skipped`, which is the
+column-list regression. The mutation was restored (`git checkout`), and the committed
+code is byte-identical to the tree the crate tests ran on.
+
+### Gates (2026-09-18, `CARGO_BUILD_JOBS=6 RUST_TEST_THREADS=6`, build slots)
+
+- `cargo check --tests -p repark-core -p repark-iceberg -p repark-spark -p repark-sql -p repark-python`: clean.
+- `cargo clippy --locked --tests` (same crates) `-- -D warnings -A clippy::disallowed_methods`
+  (the `make rust-clippy` form): clean. `cargo clippy --locked --lib --bins` on core /
+  iceberg / spark / sql `-- -D warnings -D clippy::unwrap_used -D clippy::expect_used`: clean.
+- `cargo test --locked -p repark-iceberg`: 516 passed, 0 failed.
+- `cargo test --locked -p repark-spark`: 1228 passed, 0 failed, 4 ignored.
+- `cargo test --locked -p repark-core`: 629 passed, 0 failed, 2 ignored.
+- `maturin develop --release` (codegen-units 16): exit 0.
+- `pytest -n 4` `test_ice_write_options_1.py` + `test_ice_write_options_1_rebase.py`:
+  81 passed, 1 skipped (the JVM-gated live leg).
+- `pytest -n 4` the files above + `test_ice_dyn_overwrite_1.py`,
+  `test_ice_dyn_overwrite_1_by_name.py`, `test_ice_v3_write_default_1.py`,
+  `test_ice_evo_dml_1.py`: 420 passed, 4 skipped, 16 xfailed.
+- `pytest -n 4` writer files `test_writer.py`, `test_writer_v2.py`, `test_e2_readwriter.py`,
+  `test_insert_store_assign.py`, `test_dml_b_partition_overwrite.py`,
+  `test_ice_rtas_byname_1.py`, `test_ice_sorted_insert_1.py`, `test_ice_sorted_insert_2.py`,
+  `test_ice_occ_scoped_1.py`: 217 passed, 10 skipped, 4 xfailed.
+- Pre-commit hook (map-sync, crate-dag, lib-rs, rust-file-size, lib-py, docstring,
+  compaction, manifest, fmt, taplo, typos) green on every commit.
+  `comment_ban.py /tmp/lb-build origin/main`: `comment-ban hits=0`.
+- Not run (CI owns them, owner ruling 2026-09-18): `make verify`, the whole facade
+  suite, the parity harness. The live tier was not re-run. The Spark cells the new
+  pins read are already recorded fixtures (DML-1B, RTAS-OPS-1, SNAP-03).
+
+### Residues, stated and not fixed
+
+- An option-carrying append whose `VALUES` carry a `DEFAULT` marker fails loudly. The
+  options path materializes the source without main's marker rewrite. The facade never
+  renders `DEFAULT`, so only a hand-written native call reaches it. This is loud, not
+  silent.
+- §17's P3 over-refusal and §18's V2-01 are unchanged. `EngineSummary::for_overwrite` now
+  also guards the RTAS path, which inherits the same over-refusal of the three
+  data-removal keys when the replace removes nothing.

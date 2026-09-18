@@ -2723,6 +2723,28 @@ the pin rather than obeying it.
   from the measured JSON through its own `collision_cell()`. The `_1` / `_2` recorders
   now load the runtime GAV through `spark.jars.packages` and have not been re-run since.
   pins: ice-write-options-1/C-012, C-013
+- **Run 22b rebase (2026-09-18)** — the options map across the paths ICE-DYN-OVERWRITE-1,
+  ICE-RTAS-OPS-2, ICE-SORTED-INSERT-1 and ICE-V3-WRITE-DEFAULT-1 added under it. Every
+  one honours the map; none refuses anew. *Dynamic overwrite (Q-22b-WO-2).* Under
+  `partitionOverwriteMode=dynamic` a PARTITION-less `INSERT OVERWRITE`,
+  `insertInto(overwrite=True)` and `INSERT OVERWRITE … BY NAME` on a partitioned table
+  commit `replace_partitions` with the merged summary and the option writer knobs.
+  Sibling partitions keep their rows as in DML-1B's recorded cells, and the property
+  lands as on Spark's `DynamicOverwrite` (SNAP-03). *Static pin (Q-22b-WO-1).*
+  `saveAsTable` overwrite stays whole-table under dynamic and still stamps: the typed
+  flag and the options travel on one native call. *Empty dynamic source (Q-22b-WO-3).*
+  Nothing commits, as in Spark (`Dynamic overwrite is empty, skipping commit`). The
+  options are validated, there is no snapshot to carry them, and nothing is refused.
+  The static empty `BY NAME` wipe keeps its Round 4 refusal. *RTAS (Q-22b-WO-4).* An
+  option-carrying `createOrReplace()` records `[append, overwrite]` over an existing
+  table, `[overwrite]` on a new one and `[delete]` for an empty SELECT, matching
+  RTAS-OPS-1, and carries the property. *Sorted tables.* Option-carrying writers sort by
+  the declared order and stamp its id, as in WRITE-ORDER-SORTED-INSERT-1. *Column lists
+  (Q-22b-WO-5).* The writers' `INSERT INTO t (cols)` form, and a SQL-channel column list,
+  land with the property. Omitted columns take the `write_default` fill.
+  Pin: `python/repark/tests/test_ice_write_options_1_rebase.py` (WO-DYN-01…06, WO-RTAS-01/02,
+  WO-SORT-01, WO-APP-01/02).
+  pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
 
 ### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
 
