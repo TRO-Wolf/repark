@@ -3062,7 +3062,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `4151b488`), with new controls `test_plain_ctas_records_append`,
   `test_coldef_replace_commits_no_snapshot` (the column-def no-snapshot Spark
   answer measured 2026-09-17) and `test_rtas_replace_summary_keys`.
-  pins: ice-rtas-ops-2/C-005, C-006, C-007, C-008, C-009, C-010
+  pins: ice-rtas-ops-2/C-003, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
   **Round 2 (2026-09-17):** the `partition_by_name` section (static/dynamic
   overwrite, no-clause replace-all, static append, the 42713 refusal, empty
   overwrite wipe, empty static-partition drop), the `not_null_by_name`
