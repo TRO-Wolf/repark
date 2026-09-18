@@ -348,11 +348,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   plus MERGE-vs-INSERT (v2/v3 × MoR/COW × door), the disjoint-range MERGEs (COW commits both,
   MoR refuses one), the eight disjoint-key MERGEs (serializable and snapshot refuse seven),
   sixteen INSERT statements (every commit durable, every loser a
-  `CatalogCommitConflicts`: RePark commits 5 of 16 where Spark commits 16 — BACKLOG row
-  ICE-OCC-SCOPED-1-INSERT-STORM, ruling Q-21a-5) and two whole-partition DELETE statements. The range table is seeded by two INSERT statements so its
+  `CatalogCommitConflicts`: RePark commits 5–7 of 16 where Spark commits 7–15 over
+  repetitions — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM, corrected 2026-09-18, fixture
+  `spark_occ_oracle4.json`) and two whole-partition DELETE statements. The range table is seeded by two INSERT statements so its
   two MERGEs touch different files, as Spark's `local[8]` `range(100)` does (ruling Q-21a-4).
   pins: ice-occ-scoped-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
   pins: ice-occ-scoped-1/C-015, C-016, C-017
+- [_record_ice_append_storm_1.py](_record_ice_append_storm_1.py) — the **record driver**
+  for ICE-APPEND-RETRY-1 (NOT a `test_` module; never collected): sixteen barrier-released
+  single-row inserts on a fresh table per repetition, six repetitions per catalog (Hadoop
+  `sc`, InMemory `mc`) × format version on one `local[8]` session, writing the normalized
+  cells into `../repark-parity/fixtures/torture/data/ice_occ_scoped_1/spark_occ_oracle4.json`
+  directly (warehouse prefixes become `<warehouse>/`). GAV from `_oracle_pins`, Ivy cache
+  from `REPARK_ORACLE_IVY`, warehouse from `tempfile`, repetitions as `REPETITIONS`.
+  pins: ice-append-retry-1/C-001
 - [test_ice_promote_read_1.py](test_ice_promote_read_1.py) — **ICE-PROMOTE-READ-1
   (2026-09-16):** reads and DML after a legal `ALTER COLUMN … TYPE` promotion answer Spark
   4.1.2 row for row (run-19a V2-10c, V2-06b, V3-11, V3-14). The cases come from
