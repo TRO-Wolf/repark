@@ -752,13 +752,24 @@ perfectly good read.
 
 - **repark** — CTAS then RTAS over the same table records `[append, overwrite]`;
   RTAS creating the table records `[overwrite]`; an empty RTAS records `[delete]`
-  (twice: `[delete, delete]`). The Spark-door staged CTAS path
-  (`crates/repark-spark/src/ctas.rs::execute_ctas`) sets
+  (twice: `[delete, delete]`) — on **both SQL doors** (ADR-0002 §3). The Spark door
+  (`crates/repark-spark/src/ctas.rs::execute_ctas`) and the native ANSI door
+  (`crates/repark-sql/src/create_table.rs::execute_staged_create`) set
   `StagedTableTransaction::with_replace_write(true)` on both staged branches —
   the `begin_replace` arm and the `begin_create` arm — exactly when the statement
-  carried `OR REPLACE` (fork PR #290, RP-23 pin `4151b488`); plain CTAS keeps
-  `[append]`. The column-def `CREATE OR REPLACE` form commits no snapshot: the
-  log keeps only the pre-existing `append` and the table reads zero rows.
+  carried `OR REPLACE` with a query (fork PR #290, RP-23 pin `4151b488`); plain
+  CTAS keeps `[append]`. **Service-managed catalogs** (Glue / S3 Tables,
+  `LocationPolicy::ServiceManagedLocation`): an RTAS over an existing table takes
+  the staged replace arm above; an RTAS that creates the table goes create-first
+  (`execute_ctas_service_managed` on the Spark door, `create_first_service_managed`
+  on the native door) and then commits through
+  `repark_iceberg::write::commit_replace_write` — the fork's public
+  `overwrite_files().overwrite_by_row_filter(AlwaysTrue).add_files(…).allow_empty_commit()`
+  — so it records `[overwrite]`, or `[delete]` when empty, like the staged arm;
+  plain service-managed CTAS keeps `commit_append` (`[append]`, or no snapshot
+  when empty). The column-def `CREATE OR REPLACE` form commits no snapshot on
+  either door: the log keeps only the pre-existing `append` and the table reads
+  zero rows.
 - **Apache Spark** — CTAS then RTAS records `[append, overwrite]`; RTAS creating
   the table records `[overwrite]`; an empty RTAS records `[delete]` (twice:
   `[delete, delete]`). The replace snapshot carries the added/total/manifest
@@ -776,11 +787,18 @@ perfectly good read.
   (pins: ice-rtas-byname-1/C-005a–d), plus the `ice-rtas-ops-2` controls
   `…::test_plain_ctas_records_append` (C-006),
   `…::test_coldef_replace_commits_no_snapshot` (C-007) and
-  `…::test_rtas_replace_summary_keys` (C-008). The suite's remaining xfail,
+  `…::test_rtas_replace_summary_keys` (C-008). Native door:
+  `crates/repark-sql/src/create_table/rtas_ops_tests.rs` (the four cells, the
+  plain-CTAS and column-def controls, and the service-managed new-table cells;
+  ice-rtas-ops-2/C-015–C-017, C-020). Spark-door service-managed:
+  `crates/repark-spark/src/tests/service_managed_ctas.rs::ctas_service_managed_rtas_creating_the_table_records_overwrite`,
+  `…::ctas_service_managed_empty_rtas_records_delete_then_delete`,
+  `…::ctas_service_managed_plain_ctas_records_append` (C-019). The suite's remaining xfail,
   `test_dataframe_writeto_appends_by_name`, belongs to fork ask
   F-DML-FIELD-ID-1, not this row (orchestrator ruling Q-21c-1).
 - **Rationale** — FIXED by the fork's `with_replace_write` opt-in (F-RTAS-OPS-1)
-  plus the RePark-side call in `execute_ctas`: replace mode with files stages
+  plus the RePark-side call on both doors (ICE-RTAS-OPS-2 round 2 added the native
+  door and the service-managed new-table arms): replace mode with files stages
   an `overwrite` commit (not `fast_append`), replace mode with no files still
   commits one `delete` snapshot, and create mode keeps `append` unless the
   statement carried `OR REPLACE` (Spark records `overwrite` for that shape too).
