@@ -212,6 +212,7 @@ fn store_assign_source_column(source: &ArrayRef, field: &FieldRef) -> Result<Arr
 struct StaticPartitionPlan<'a> {
     table_schema: SchemaRef,
     by_source: HashMap<String, &'a PartitionEquality>,
+    listed: Vec<String>,
 }
 
 impl<'a> StaticPartitionPlan<'a> {
@@ -235,10 +236,70 @@ impl<'a> StaticPartitionPlan<'a> {
         Ok(Self {
             table_schema,
             by_source,
+            listed: Vec::new(),
+        })
+    }
+
+    fn with_columns(mut self, columns: &[String]) -> Result<Self> {
+        for column in columns {
+            let key = column.to_ascii_lowercase();
+            if self.by_source.contains_key(&key) {
+                return Err(DataFusionError::Plan(format!(
+                    "[STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST] Static partition column \
+                     {column} is also specified in the column list. SQLSTATE: 42713"
+                )));
+            }
+            if self.listed.contains(&key) {
+                return Err(DataFusionError::Plan(format!(
+                    "INSERT OVERWRITE column list names `{column}` more than once"
+                )));
+            }
+            self.listed.push(key);
+        }
+        Ok(self)
+    }
+
+    fn inject_by_name(&self, batch: &RecordBatch) -> Result<RecordBatch> {
+        if batch.num_columns() != self.listed.len() {
+            return Err(DataFusionError::Plan(format!(
+                "[INSERT_COLUMN_ARITY_MISMATCH] Cannot write to the target: the column list \
+                 names {} columns, source has {}",
+                self.listed.len(),
+                batch.num_columns()
+            )));
+        }
+        let mut columns: Vec<ArrayRef> = Vec::with_capacity(self.table_schema.fields().len());
+        for field in self.table_schema.fields() {
+            let key = field.name().to_ascii_lowercase();
+            if let Some(equality) = self.by_source.get(&key) {
+                columns.push(constant_partition_array(
+                    equality,
+                    field.data_type(),
+                    batch.num_rows(),
+                )?);
+            } else if let Some(index) = self.listed.iter().position(|name| *name == key) {
+                columns.push(store_assign_source_column(batch.column(index), field)?);
+            } else if field.is_nullable() {
+                columns.push(new_null_array(field.data_type(), batch.num_rows()));
+            } else {
+                return Err(DataFusionError::Plan(format!(
+                    "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot find data for the \
+                     output column `{}`",
+                    field.name()
+                )));
+            }
+        }
+        RecordBatch::try_new(Arc::clone(&self.table_schema), columns).map_err(|error| {
+            DataFusionError::Execution(format!(
+                "INSERT OVERWRITE PARTITION failed to inject static partition columns: {error}"
+            ))
         })
     }
 
     fn inject(&self, batch: &RecordBatch) -> Result<RecordBatch> {
+        if !self.listed.is_empty() {
+            return self.inject_by_name(batch);
+        }
         let expected_source = self
             .table_schema
             .fields()
@@ -300,6 +361,27 @@ pub fn inject_static_partition_columns(
     StaticPartitionPlan::new(Arc::clone(table_schema), equalities, table)?.inject(batch)
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub fn static_partition_source_columns(
+    table: &Table,
+    equalities: &[PartitionEquality],
+) -> Result<Vec<String>> {
+    let spec = table.metadata().default_partition_spec();
+    let iceberg_schema = table.metadata().current_schema();
+    let bindings = spec
+        .fields()
+        .iter()
+        .map(|field| bind_partition_field(iceberg_schema.as_ref(), field))
+        .collect::<Result<Vec<_>>>()?;
+    equalities
+        .iter()
+        .map(|equality| {
+            resolve_binding(&bindings, &equality.name)
+                .map(|binding| binding.source_column_name.clone())
+        })
+        .collect()
+}
+
 /// Stage static-overwrite batches after injecting PARTITION (k=v) columns.
 /// # Errors
 /// Injection, positional map, or file write failures as [`DataFusionError`].
@@ -307,13 +389,15 @@ pub async fn stage_static_partition_overwrite_files(
     table: &Table,
     batches: Vec<RecordBatch>,
     equalities: &[PartitionEquality],
+    columns: &[String],
     concurrency: crate::write::concurrency::WriteConcurrency,
 ) -> Result<Vec<DataFile>> {
     let write_schema: SchemaRef = Arc::new(
         iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
             .map_err(iceberg_err)?,
     );
-    let plan = StaticPartitionPlan::new(Arc::clone(&write_schema), equalities, table)?;
+    let plan = StaticPartitionPlan::new(Arc::clone(&write_schema), equalities, table)?
+        .with_columns(columns)?;
     let stream = futures::stream::iter(batches.into_iter().map(move |batch| plan.inject(&batch)));
     crate::write::overwrite::write_overwrite_staged_files_from_stream(
         table,

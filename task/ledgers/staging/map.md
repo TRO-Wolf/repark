@@ -414,6 +414,20 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   behind `Box::pin` (16 KiB `large_futures`). `risk_tier: standard`. Branch
   `feat/ice-rdf-options-1`.
   pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [ice-sorted-insert-1-ledger.md](ice-sorted-insert-1-ledger.md) —
+  **ICE-SORTED-INSERT-1 (2026-09-17), in flight:** sort-on-INSERT end to end
+  against Spark — the fork #287 per-writer-stream sort plus `sort_order_id`
+  stamp at fork main `4151b488` (RP-22), proven by per-file sortedness and
+  stamp pins on the SQL and DataFrame doors plus the RePark-owned paths
+  (INSERT OVERWRITE, CTAS, MERGE), with the Spark oracle recorded as truth
+  JSON plus a live replay tier; registry sort-on-INSERT row FIXED. Round 3
+  (2026-09-17, logic-critic remediation): the v3 lineage fanout sorts before it
+  stamps, the owned sort canonicalises NaN, every stamp site has a revert-red
+  pin, and the binpack and fork-UPDATE rewrites are filed as fork asks
+  (`F-RDF-SORT-STAMP-1`, `F-COW-UPDATE-STAMP-1`) with strict-xfail pins.
+  `risk_tier: standard`. Branch `feat/ice-sorted-insert-1`.
+  pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-005
+  pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
 
 ## Pointers
 - Up: [../map.md](../map.md)
@@ -950,3 +964,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   counts on a delegating counting catalog (test code only).
   `risk_tier: standard`. Branch `fix/listing-cost-flake-1`.
   pins: listing-cost-flake-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [ice-v3-write-default-1-ledger.md](ice-v3-write-default-1-ledger.md) —
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17), in flight:** omitted columns on every
+  Iceberg write path fill from the schema field's `write_default` in Rust, in
+  the shared write-projection step — INSERT / MERGE column lists and the
+  DataFrame writers on both SQL doors, with type fidelity and the measured
+  Spark oracle as a checked-in fixture.
+  `risk_tier: standard`. Branch `fix/ice-v3-write-default-1`.
+  pins: ice-v3-write-default-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014

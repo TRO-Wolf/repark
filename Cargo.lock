@@ -5109,6 +5109,7 @@ dependencies = [
  "iceberg-storage-opendal",
  "parquet",
  "repark-common",
+ "serde_json",
  "tempfile",
  "tokio",
  "tracing",

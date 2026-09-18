@@ -1,4 +1,5 @@
 use super::super::*;
+use super::insert_fill::{insert_projection, target};
 
 use datafusion::datasource::MemTable;
 use iceberg::NamespaceIdent;
@@ -496,9 +497,8 @@ fn insert_sql_uses_clause_id_not_oc2_prior_chain() {
         ],
     );
     let sql = merge_sql(&merge_spec);
-    let schema = arrow_schema();
-    let insert0 = sql.insert_sql(0, &schema).expect("insert 0");
-    let insert1 = sql.insert_sql(1, &schema).expect("insert 1");
+    let insert0 = sql.insert_sql(0, &target(), &arrow_schema()).unwrap();
+    let insert1 = sql.insert_sql(1, &target(), &arrow_schema()).unwrap();
     for (index, text) in [(0, &insert0), (1, &insert1)] {
         assert!(
             text.contains("COALESCE((s.flag = 1), FALSE)"),
@@ -695,7 +695,7 @@ fn merge_sql_keys_identity_on_file_and_pos() {
         discovery.contains(") AS s JOIN `scratch` AS t"),
         "must build the join on the source (source JOIN target), got: {discovery}"
     );
-    let insert = sql.insert_sql(0, &arrow_schema()).unwrap();
+    let insert = sql.insert_sql(0, &target(), &arrow_schema()).unwrap();
     // Audit M4: the anti-join `_pos` rides through the source-only scope as a sentinel alias.
     assert!(
         insert.contains("t._pos AS __repark_not_matched_pos")

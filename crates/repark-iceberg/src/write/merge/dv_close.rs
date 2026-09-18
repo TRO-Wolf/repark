@@ -187,9 +187,9 @@ mod tests {
     use datafusion::prelude::SessionContext;
 
     use super::super::{
-        IsolationLevel, KnownPartitions, RowDeltaKind, RowDeltaPolicy, TargetScanStream,
-        commit_row_delta_kind, drain_partition_sink, new_partition_sink, register_streaming_target,
-        scratch_schema,
+        CommitScope, IsolationLevel, KnownPartitions, RowDeltaKind, RowDeltaPolicy,
+        TargetScanStream, commit_row_delta_kind, drain_partition_sink, new_partition_sink,
+        register_streaming_target, scratch_schema,
     };
     use super::*;
     use crate::write::concurrency::WriteConcurrency;
@@ -459,9 +459,9 @@ mod tests {
             vec![pair],
             Vec::new(),
             WriteConcurrency::new(1).expect("K=1"),
-            RowDeltaPolicy {
+            &RowDeltaPolicy {
                 kind: RowDeltaKind::Delete,
-                isolation: IsolationLevel::Serializable,
+                scope: CommitScope::unscoped(IsolationLevel::Serializable),
             },
         )
         .await
@@ -768,9 +768,9 @@ mod tests {
             vec![pair],
             Vec::new(),
             WriteConcurrency::new(1).expect("K=1"),
-            RowDeltaPolicy {
+            &RowDeltaPolicy {
                 kind: RowDeltaKind::Delete,
-                isolation: IsolationLevel::Serializable,
+                scope: CommitScope::unscoped(IsolationLevel::Serializable),
             },
         )
         .await

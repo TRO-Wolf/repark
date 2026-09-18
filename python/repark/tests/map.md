@@ -306,6 +306,28 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the explicit-run recorder behind the fixture and the oracle JSON above (JVM +
   combined interpreter; invocation in its docstring).
   pins: ice-hadoop-vn-1/C-007
+- [test_ice_occ_scoped_1.py](test_ice_occ_scoped_1.py) — **ICE-OCC-SCOPED-1
+  (2026-09-17):** concurrent Iceberg DML storms (rating row V2-20a, residue DML-5) commit and
+  refuse exactly where Spark 4.1.2 does. Each storm releases N actions from one
+  `threading.Barrier` against a fresh memory catalog, then asserts the number that committed,
+  the losers' class (`PySparkException`; Spark's `ValidationException` has no PySpark-side
+  class) and message (Spark's `ValidationException` text up to `matching`, and whether the
+  filter is `true` or scoped), and the rows left. Every count, row, statement and error comes
+  from `fixtures/torture/data/ice_occ_scoped_1/*.json`; the scoped statements are replayed
+  verbatim with the catalog prefix swapped. MERGE (`DataFrame.mergeInto`, its condition built
+  from the recorded `ON` conjuncts) and INSERT (`writeTo().append()`) run on both doors;
+  UPDATE and DELETE have no DataFrame spelling in PySpark 4.1 and run on the SQL door in both
+  door cells (ruling Q-21a-6). The plain-`WHERE` UPDATE storm runs the fork's DataFusion exec
+  and is pinned OPEN (fewer than 4 commit; registry ICE-OCC-SCOPED-1-PLAIN-UPDATE, Q-21a-10).
+  Cells: the four partition-scoped MERGE / UPDATE / DELETE storms
+  plus MERGE-vs-INSERT (v2/v3 × MoR/COW × door), the disjoint-range MERGEs (COW commits both,
+  MoR refuses one), the eight disjoint-key MERGEs (serializable and snapshot refuse seven),
+  sixteen INSERT statements (every commit durable, every loser a
+  `CatalogCommitConflicts`: RePark commits 5 of 16 where Spark commits 16 — BACKLOG row
+  ICE-OCC-SCOPED-1-INSERT-STORM, ruling Q-21a-5) and two whole-partition DELETE statements. The range table is seeded by two INSERT statements so its
+  two MERGEs touch different files, as Spark's `local[8]` `range(100)` does (ruling Q-21a-4).
+  pins: ice-occ-scoped-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+  pins: ice-occ-scoped-1/C-015, C-016, C-017
 - [test_ice_promote_read_1.py](test_ice_promote_read_1.py) — **ICE-PROMOTE-READ-1
   (2026-09-16):** reads and DML after a legal `ALTER COLUMN … TYPE` promotion answer Spark
   4.1.2 row for row (run-19a V2-10c, V2-06b, V3-11, V3-14). The cases come from
@@ -380,6 +402,53 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `truth.json` (one answer per line, `catalog_sha256`). `run_case_steps` /
   `run_dataframe_steps` are reused by the live cell so the live and recorded answers come from
   one code path.
+- [test_ice_sorted_insert_1.py](test_ice_sorted_insert_1.py) +
+  [ice_sorted_insert_1_spark_oracle.json](ice_sorted_insert_1_spark_oracle.json) +
+  [_record_ice_sorted_insert_1_oracle.py](_record_ice_sorted_insert_1_oracle.py) —
+  **ICE-SORTED-INSERT-1 (2026-09-17):** plain INSERT sorts and stamps per the
+  declared order — the fork #287 per-writer sort plus `sort_order_id` stamp at
+  fork main `4151b488` (RP-22), proven per file (parquet bytes sorted on the
+  order keys, `{t}.files` stamped) on the SQL door over five identity cells
+  (partitioned-local, DESC, two-key null ordering, locally-ordered, float with
+  NaN) and on the DataFrame door (`writeTo.append`, `saveAsTable(append)`,
+  `insertInto`), plus the RePark-owned paths (INSERT OVERWRITE and MERGE sort
+  and stamp; the CTAS replace resets the default to 0 and stamps 0 over the
+  unsorted hash layout, so the CTAS leg asserts stamp plus row set) and the
+  adopted Spark-written `days(ts), id` warehouse under
+  [fixtures/ice_sorted_insert_1/](fixtures/ice_sorted_insert_1/map.md)
+  (canonical `/tmp/repark-ice-sorted-insert-1` path, plain INSERT sorts day-major
+  and stamps 1 while INSERT OVERWRITE keeps the transform refusal). The recorder
+  rebuilds the six run-19c cells plus the days and float-NaN cells on live Spark
+  and verifies on re-run (`--rewrite` re-records). Live (`REPARK_PARITY_LIVE=1`):
+  Spark rebuilds every cell from the recorded DDL and asserts the same
+  (records, stamp, sorted) triples.
+  pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-005
+- [test_ice_sorted_insert_2.py](test_ice_sorted_insert_2.py) +
+  [ice_sorted_insert_2_spark_oracle.json](ice_sorted_insert_2_spark_oracle.json) +
+  [_record_ice_sorted_insert_2_oracle.py](_record_ice_sorted_insert_2_oracle.py) —
+  **ICE-SORTED-INSERT-1 round 3 (2026-09-17):** the rewrite half. The recorded
+  plan is the oracle's own cell definitions, so one structure drives Spark (the
+  recorder) and RePark (the pins); the pins substitute a registered `range(n)`
+  view for Spark's table function and read every expected stamp and sortedness
+  out of the fixture, never a literal. Green legs: the v3 and v2 partitioned
+  INSERT OVERWRITE and MERGE (matched UPDATE, NOT MATCHED INSERT of 400 shuffled
+  keys) rewrites are sorted per file and stamped with the table's default order
+  id; the unpartitioned INSERT OVERWRITE stamps it; a second
+  `WRITE ORDERED BY (id DESC)` makes new files carry the CURRENT order id (2) and
+  the new direction; the owned float overwrite places NULLs first, values
+  ascending and NaN as a solid tail block, and a negative NaN canonicalises into
+  that block; a v3 matched UPDATE leaves the id → `_row_id` map unchanged, so the
+  lineage columns travel with their rows through the new sort. Strict `xfail`
+  legs carry the two fork asks the measurement opened —
+  `BLOCKED-ON-FORK F-RDF-SORT-STAMP-1` (binpack `rewrite_data_files` output) and
+  `BLOCKED-ON-FORK F-COW-UPDATE-STAMP-1` (the fork's COW UPDATE exec) — and
+  XPASS the day either fork PR lands. Live (`REPARK_PARITY_LIVE=1`): the
+  recorder's `check` subcommand re-derives all 15 cells and reds on drift.
+  **Round 4 (2026-09-17):** the binpack leg replays the recorded `bp` program
+  verbatim through `_drive`, Spark's `options => map('min-input-files','2',
+  'rewrite-all','true')` included, instead of writing six files per partition
+  to clear the fork's `min_input_files = 5` default.
+  pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
@@ -4229,9 +4298,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   valid multipart names still round-trip. Routes only
   through CTAS / `INSERT INTO` / `INSERT OVERWRITE` — no new commit machinery. **R1 (remediation):**
   `saveAsTable` into an existing table resolves columns BY NAME — a reordered same-typed append
-  lands correctly (parity readback value+type), an extra/missing source column raises
+  lands correctly (parity readback value+type), an extra source column raises
   `AnalysisException`, and the insertInto-positional-vs-saveAsTable-by-name discriminator pins the
   two writers genuinely diverge on a reordered frame (oracle-verified on PySpark 4.1.2).
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** a missing source column fills NULL on a
+  table with no defaults (Spark-equal) instead of raising
+  (`test_save_as_table_append_missing_column_fills_null`); the extra-column refusal
+  is unchanged.
+  pins: ice-v3-write-default-1/C-006
 - `test_ctas_division_writeback.py` — **Group L-write**: CTAS integer-division type-derivation at
   the facade boundary. `ReparkSession.sql` CTAS into an in-memory Iceberg catalog, then read the
   written table back on the Arrow path (`to_arrow`), value + Arrow type: the load-bearing
@@ -6240,3 +6314,31 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   name was missing; this unit lands the kernel, so both pins now assert the name resolves and raises
   Spark 4.1.2's own `[INTERNAL_ERROR]` / `XX000` for the empty literal (R-18a-3, measured). The tripwire
   did its job: it went red the moment the name landed. pins: fnp-gen-1/C-004, unresolved-routine-1/C-006
+- [test_ice_v3_write_default_1.py](test_ice_v3_write_default_1.py) — **ICE-V3-WRITE-DEFAULT-1
+  (2026-09-17):** offline pins over the checked-in v3 fixture plus the live tier under
+  `REPARK_PARITY_LIVE=1`: INSERT / MERGE column-list fill from `write_default`, explicit
+  NULL kept, required-missing refused, positional-short and `DEFAULT`-keyword shapes, the
+  DataFrame writer shapes, no-default and v2 unchanged, and write-default 7 over
+  initial-default 5. Truth in
+  [../../repark-parity/fixtures/torture/data/ice_v3_write_default_1/](../../repark-parity/fixtures/torture/data/ice_v3_write_default_1/map.md).
+  Live repair (2026-09-17): the adoption assertion expects Spark's three rows
+  and the RePark replay inserts `(4, 'd')` for the fill — the two-row text was
+  hand-written and never ran live.
+  pins: ice-v3-write-default-1/C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012
+  **Round 5 (2026-09-17, run 21b):** the measured-tonight cells behind rulings
+  Q-21b-3 … Q-21b-6 — the three PARTITION overwrite shapes and the partitioned
+  whole-table column list filling `write_default` (C-015), `DEFAULT` as a value
+  on `INSERT OVERWRITE` in VALUES and named-list position (C-016),
+  `saveAsTable(overwrite)` pinned as RePark's by-name `INSERT OVERWRITE` beside
+  the recorded Spark REPLACE that narrows the schema (C-017), and the roll-call
+  cell: a missing nullable column with no default is accepted and written NULL
+  on `writeTo().append()` and `saveAsTable(append)`, offline and live (C-018).
+  pins: ice-v3-write-default-1/C-015, C-016, C-017, C-018
+  **Round 6 (2026-09-18, run 21b round 2):** rulings Q-21b-8 … Q-21b-10 —
+  `writeTo().overwritePartitions()` fills an omitted defaulted column, offline and
+  live (C-020); `DEFAULT` inside a CTE body, inside a derived table, or in the outer
+  SELECT of a query carrying `WITH` refuses as Spark does, 42703, writing nothing
+  (C-021); mixed static-plus-dynamic `PARTITION (id=1, cat)` refuses loud beside
+  Spark's recorded accept, an OPEN registry row (C-022).
+  The V-01 pin goes green with the writer change (arity refusal before).
+  pins: ice-v3-write-default-1/C-020, C-021, C-022
