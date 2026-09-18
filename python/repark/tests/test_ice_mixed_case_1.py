@@ -1,7 +1,7 @@
 """ICE-MIXED-CASE-1 — the Spark door resolves mixed-case columns case-insensitively.
 
 pins: ice-mixed-case-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-C-013, C-014, C-015, C-016
+C-013, C-014, C-015, C-016, C-019, C-020, C-021
 
 A Spark-created Iceberg table ``(userId BIGINT, eventName STRING,
 `Mixed Case` INT)`` adopted into RePark must answer Spark 4.1.2 on the SQL

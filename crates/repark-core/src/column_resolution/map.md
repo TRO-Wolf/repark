@@ -25,7 +25,7 @@ pins the outer-reference audit (red on the round-1 head and under the revert).
 Round 2 Q-21b-12: `n03_star_over_a_case_twin_answers_both_columns_declared` pins the declared
 star answer on a twin MemTable (Spark refuses 42711; a star refusal here would also refuse the
 DataFrame `filter` / `table` lowerings, which Spark answers — ledger N-03).
-pins: ice-mixed-case-1/C-001…C-010, C-013…C-016
+pins: ice-mixed-case-1/C-007, C-009, C-013, C-014, C-015, C-016, C-017, C-020, C-021
 
 ## Files
 
