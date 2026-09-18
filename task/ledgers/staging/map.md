@@ -12,6 +12,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   note and the §9 audit trail, and registry claims C-3, C-8, C-9 rewritten
   (C-3, C-9 FIXED → OPEN). Docs-only reading unit, no product change.
   `risk_tier: standard`. Branch `docs/ice-cutover-corrections-1`.
+- [ice-evo-dml-1-ledger.md](ice-evo-dml-1-ledger.md) —
+  **ICE-EVO-DML-1 (2026-09-17), in flight:** MERGE / UPDATE / DELETE after `ADD COLUMN` or
+  `RENAME COLUMN` with no write since answer Spark 4.1.2 instead of refusing `Column … not
+  found in table`, and a rename that swaps two names no longer writes one column's values under
+  the other — the DML target scan plans the pinned snapshot and reads it under the current
+  schema. v2/v3 × CoW/MoR, both doors, a Spark-created evolved table adopted. Registry rows
+  ICE-EVO-DML-1, ICE-EVO-SWAP-1. `risk_tier: high`. Branch `fix/ice-evo-dml-1`.
 - [ice-promote-read-1-ledger.md](ice-promote-read-1-ledger.md) —
   **ICE-PROMOTE-READ-1 (2026-09-16), in flight:** reads and DML after a legal
   `ALTER COLUMN … TYPE` promotion answer Spark 4.1.2 — range / long-`IN` filters, promoted

@@ -92,15 +92,20 @@ async fn plan_file_scan_tasks(
     concurrency_limit: Option<usize>,
     file_path_allowlist: Option<&std::collections::HashSet<String>>,
 ) -> Result<Vec<FileScanTask>, DataFusionError> {
-    let mut builder = table.scan().snapshot_id(snapshot_id).select(select_columns);
+    let mut builder = table
+        .scan()
+        .snapshot_id(snapshot_id)
+        .select(select_columns)
+        .project_current_schema();
     if let Some(predicate) = filter {
         builder = builder.with_filter(predicate);
     }
     if let Some(limit) = concurrency_limit {
         builder = builder.with_concurrency_limit(limit);
     }
-    let scan = builder.build().map_err(iceberg_err)?;
-    let planned: Vec<_> = scan
+    let planned: Vec<FileScanTask> = builder
+        .build()
+        .map_err(iceberg_err)?
         .plan_files()
         .await
         .map_err(iceberg_err)?
@@ -214,43 +219,27 @@ impl PartitionStream for TargetScanStream {
         // Open the pinned scan lazily and conform each arriving batch onto the scratch schema.
         let opened =
             async move {
-                let arrow = if file_path_allowlist.is_some() || partition_sink.is_some() {
-                    let tasks = planned_or_plan(
-                        &planned_file_tasks,
-                        &table,
-                        pin,
-                        select_columns,
-                        filter,
-                        concurrency_limit,
-                        file_path_allowlist.as_deref(),
-                    )
-                    .await?;
-                    if let Some(sink) = partition_sink.as_ref() {
-                        record_scanned_partitions(sink, tasks.as_ref());
-                    }
-                    let task_stream: iceberg::scan::FileScanTaskStream = Box::pin(
-                        futures::stream::iter(tasks.as_ref().clone().into_iter().map(Ok)),
-                    );
-                    let mut reader = ArrowReaderBuilder::new(table.file_io().clone());
-                    if let Some(limit) = concurrency_limit {
-                        reader = reader.with_data_file_concurrency_limit(limit);
-                    }
-                    reader.build().read(task_stream).map_err(iceberg_err)?
-                } else {
-                    let mut builder = table.scan().snapshot_id(pin).select(select_columns);
-                    if let Some(predicate) = filter {
-                        builder = builder.with_filter(predicate);
-                    }
-                    if let Some(limit) = concurrency_limit {
-                        builder = builder.with_concurrency_limit(limit);
-                    }
-                    builder
-                        .build()
-                        .map_err(iceberg_err)?
-                        .to_arrow()
-                        .await
-                        .map_err(iceberg_err)?
-                };
+                let tasks = planned_or_plan(
+                    &planned_file_tasks,
+                    &table,
+                    pin,
+                    select_columns,
+                    filter,
+                    concurrency_limit,
+                    file_path_allowlist.as_deref(),
+                )
+                .await?;
+                if let Some(sink) = partition_sink.as_ref() {
+                    record_scanned_partitions(sink, tasks.as_ref());
+                }
+                let task_stream: iceberg::scan::FileScanTaskStream = Box::pin(
+                    futures::stream::iter(tasks.as_ref().clone().into_iter().map(Ok)),
+                );
+                let mut reader = ArrowReaderBuilder::new(table.file_io().clone());
+                if let Some(limit) = concurrency_limit {
+                    reader = reader.with_data_file_concurrency_limit(limit);
+                }
+                let arrow = reader.build().read(task_stream).map_err(iceberg_err)?;
                 Ok::<_, DataFusionError>(arrow.map(move |batch| {
                     conform_scan_batch(&map_schema, &batch.map_err(iceberg_err)?)
                 }))

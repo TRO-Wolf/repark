@@ -133,10 +133,22 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   bare `commit_row_delta_kind` / `commit_row_delta_on_ref` wrappers have no production caller
   left and are `#[cfg(test)]`, so the OCC batteries keep their existing spellings.
   pins: rp-7-f18-repin/C-002
-- `target_scan.rs` — **RP-7 (2026-09-02):** `TargetScanStream` and the partition sink, extracted
-  from `mod.rs` (baseline ratcheted 1889 → 1795 in the same change). The scan takes the
+- `target_scan.rs` — **ICE-EVO-DML-1 (2026-09-17):** every execute plans the pinned
+  snapshot with the fork's `project_current_schema()` and reads the planned tasks with
+  `ArrowReaderBuilder` (the `to_arrow()` route is gone; plans stay cached per stream). When the
+  pinned snapshot's schema is not the current schema — `ADD COLUMN`, `RENAME COLUMN`, a type
+  promotion with no write since — the tasks read under the current schema by field id, so
+  MERGE, identity DELETE / UPDATE, the affected-file rewrite and the COW scratch stop refusing
+  `Column … not found in table` and stop reading a swapped name's other field. Round 1 did the
+  re-point locally (`catalog::current_schema_scan`); round 2 (2026-09-17) deleted it for the
+  fork API now that F-EVO-SCAN-1 (#289) owns the semantics. The projection also widens a
+  single-era promoted column before `conform_scan_batch` sees it (measured: the
+  `promoted_scan` table pin stays green with the conform widening bypassed).
+  pins: ice-evo-dml-1/C-010, C-011, C-013
+  **RP-7 (2026-09-02):** `TargetScanStream` and the partition sink, extracted
+  from `mod.rs` (baseline ratcheted 1889 → 1795 in the same change). The scan took the
   `plan_files` route whenever an allowlist OR a sink is present and `to_arrow()` otherwise; the
-  two routes are byte-equivalent for this scan shape (the fork's `to_arrow` builds an
+  two routes were byte-equivalent for this scan shape (the fork's `to_arrow` builds an
   `ArrowReaderBuilder` with the same defaults, and its within-file split expansion is a no-op
   while `_pos` is projected).
   **PERF-SCAN-1 (2026-09-03 / r2 2026-09-04):** `plan_files` + `try_collect` run once per

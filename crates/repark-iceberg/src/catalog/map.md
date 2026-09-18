@@ -185,7 +185,14 @@ Source comments retain only API and safety contracts; implementation narration i
   `s3://`/`s3a://` → the fork's OpenDAL S3 factory; `file://`/bare **absolute** path → LocalFs;
   anything else — unknown scheme, single-slash typo `s3:/…`, relative/empty path — fails loud,
   never a silent LocalFs).
-- `lineage_columns.rs` — **V3-COV (2026-09-03):** the scan resolves its field→column projection
+- `lineage_columns.rs` — **ICE-EVO-DML-1 (2026-09-17):** `scan_lineage_batches` plans the current
+  snapshot with the fork's `project_current_schema()` and reads the tasks with
+  `ArrowReaderBuilder`, so a `_row_id` read after `ADD COLUMN` / `RENAME COLUMN` with no write
+  since answers instead of refusing, and a swapped name reads its own field. Round 2 removed the
+  local `current_schema_scan.rs` re-point helper: fork F-EVO-SCAN-1 (#289) owns the semantics now,
+  and `write::merge::target_scan` plans its pinned DML scans the same way.
+  pins: ice-evo-dml-1/C-010, C-011, C-016
+  **V3-COV (2026-09-03):** the scan resolves its field→column projection
   once per batch schema (cached on `Arc::ptr_eq`) instead of a name scan per field per batch, and
   `conform_batch` strict-casts a scanned column
   whose Arrow type differs from the declared field's, so a `_row_id` projection after a widening
@@ -196,7 +203,7 @@ Source comments retain only API and safety contracts; implementation narration i
   **V3-4:** `LineageColumnsTableProvider` serves `_row_id` and
   `_last_updated_sequence_number` on format-v3 **current-snapshot** reads (stored value
   else `first_row_id +` position / file sequence). Simple `col = lit` filters pass through
-  to `table.scan().with_filter` (`TableProviderFilterPushDown::Inexact` residual still
+  to the scan's `with_filter` (`TableProviderFilterPushDown::Inexact` residual still
   applies). Time-travel plus lineage is `V3-ROWID-2` at the SQL rewrite; snapshot-pinned
   scan is the follow-up. `SELECT *` stays user columns because the SQL doors only register
   this provider when a query names the columns.

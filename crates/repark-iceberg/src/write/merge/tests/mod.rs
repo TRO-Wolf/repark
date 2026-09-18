@@ -1,5 +1,6 @@
 mod commit_unknown;
 mod dv_commit_opens;
+mod evolved_scan;
 mod lineage;
 mod merge;
 mod merge_dialect;
