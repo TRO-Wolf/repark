@@ -102,10 +102,10 @@ pub use truncate::{commit_truncate, commit_truncate_to};
 pub use write_options::{
     WriterStagingOverrides, append_with_statement_options, commit_append_with_summary,
     commit_overwrite_by_row_filter_with_summary, commit_overwrite_replace_all_with_summary,
-    commit_replace_partitions_with_summary, isolation_with_override, stage_overwrite_files_with,
-    stage_partitioned_stream_with_overrides, stage_static_partition_overwrite_files_with,
-    stage_unpartitioned_stream_with_overrides, stage_unpartitioned_with_overrides,
-    summary_with_extras,
+    commit_replace_partitions_with_summary, commit_replace_write_with_summary,
+    isolation_with_override, stage_overwrite_files_with, stage_partitioned_stream_with_overrides,
+    stage_static_partition_overwrite_files_with, stage_unpartitioned_stream_with_overrides,
+    stage_unpartitioned_with_overrides, summary_with_extras,
 };
 pub use writer_props::{
     ACCEPTED_CODECS, COMPRESSION_CODEC_PROP, COMPRESSION_LEVEL_PROP, parse_compression,

@@ -287,6 +287,13 @@ pins: rp-4-fork-repin/C-005, C-006
   The two opt-in lines took `execute_ctas` past clippy's `too_many_lines`, so it
   carries the repository's `#[allow(clippy::too_many_lines)]` like 23 other sites.
   pins: ice-rtas-ops-2/C-001, C-002, C-004
+  **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18, Q-22b-WO-4):** an option-carrying RTAS keeps
+  ICE-RTAS-OPS-2's operation. `finish_ctas_staged_commit` takes `replace_write` and stages
+  `overwrite_files().overwrite_by_row_filter(AlwaysTrue).allow_empty_commit()` with the
+  merged summary (collision rule against `EngineSummary::for_overwrite`) instead of
+  `fast_append`; the service-managed arm calls `commit_replace_write_with_summary`.
+  Plain CTAS with options keeps the append summary.
+  pins: ice-write-options-1/C-016
 - `spark_ast.rs` — **SE-1 D1:** after the SEC-02 plan guard,
   calls the shared belt's `repark_core::PreExecute::guard` (which owns
   `refuse_iceberg_create_of_tightened_ddl`) so `CREATE VIEW cat.ns.v AS …` and

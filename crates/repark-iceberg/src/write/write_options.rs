@@ -326,6 +326,26 @@ pub async fn commit_append_with_summary(
 }
 
 #[allow(clippy::missing_errors_doc)]
+pub async fn commit_replace_write_with_summary(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    staged_files: Vec<DataFile>,
+    summary_extra: &[(String, String)],
+) -> Result<Table> {
+    let engine = EngineSummary::for_overwrite(table, &staged_files, None);
+    let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
+    let tx = Transaction::new(table);
+    let action = tx
+        .overwrite_files()
+        .overwrite_by_row_filter(Predicate::AlwaysTrue)
+        .add_files(staged_files)
+        .allow_empty_commit()
+        .set_snapshot_properties(summary);
+    let tx = action.apply(tx).map_err(iceberg_err)?;
+    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+}
+
+#[allow(clippy::missing_errors_doc)]
 pub async fn commit_overwrite_replace_all_with_summary(
     catalog: &Arc<dyn Catalog>,
     table: &Table,

@@ -665,7 +665,9 @@ repark-core's error map.
   the property.
   pins: ice-write-options-1/C-008, C-012
   Run 22b rebase (2026-09-18): the unpartitioned mirror builder takes main's
-  `distribution::stamp` like `merge/mod.rs` (C-017);
+  `distribution::stamp` like `merge/mod.rs` (C-017); `commit_replace_write_with_summary`
+  is the options twin of main's RTAS `commit_replace_write` (overwrite by `AlwaysTrue`,
+  empty allowed, collision rule against `EngineSummary::for_overwrite`, C-016);
   `stage_static_partition_overwrite_files_with` moves here from `partition_overwrite.rs`
   (which only exposes `static_injected_stream`), takes main's column list and an
   `Option` of the overrides, and hands `None` to the canonical untouched.

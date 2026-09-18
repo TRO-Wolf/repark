@@ -257,7 +257,16 @@ pub(crate) async fn execute_ctas(
     };
 
     // STREAM the SELECT into the staged table (WG-2 bounded memory).
-    finish_ctas_staged_commit(ctx, catalog, staged, replace_base, query, options).await?;
+    finish_ctas_staged_commit(
+        ctx,
+        catalog,
+        staged,
+        replace_base,
+        query,
+        options,
+        ctas.or_replace,
+    )
+    .await?;
 
     let namespace = namespace_schema_name(&ctas.namespace);
     reregister(ctx, catalog.clone(), &ctas.catalog, &namespace).await?;
@@ -271,6 +280,7 @@ async fn finish_ctas_staged_commit(
     replace_base: Option<String>,
     query: DataFrame,
     options: &crate::write_options::StatementWriteOptions,
+    replace_write: bool,
 ) -> Result<()> {
     if options.is_empty() {
         let data_files = write_ctas_query(ctx, staged.table(), query).await?;
@@ -307,16 +317,29 @@ async fn finish_ctas_staged_commit(
         )
         .await?
     };
-    let engine = repark_iceberg::write::EngineSummary::for_append(&staged_table, &data_files, None);
-    let (_, summary) =
-        repark_iceberg::write::summary_with_extras(&options.snapshot_extra, &engine)?;
     let tx = Transaction::new(&staged_table);
-    let tx = tx
-        .fast_append()
-        .add_data_files(data_files)
-        .set_snapshot_properties(summary)
-        .apply(tx)
-        .map_err(iceberg_err)?;
+    let tx = if replace_write {
+        let engine =
+            repark_iceberg::write::EngineSummary::for_overwrite(&staged_table, &data_files, None);
+        let (_, summary) =
+            repark_iceberg::write::summary_with_extras(&options.snapshot_extra, &engine)?;
+        tx.overwrite_files()
+            .overwrite_by_row_filter(iceberg::expr::Predicate::AlwaysTrue)
+            .add_files(data_files)
+            .allow_empty_commit()
+            .set_snapshot_properties(summary)
+            .apply(tx)
+    } else {
+        let engine =
+            repark_iceberg::write::EngineSummary::for_append(&staged_table, &data_files, None);
+        let (_, summary) =
+            repark_iceberg::write::summary_with_extras(&options.snapshot_extra, &engine)?;
+        tx.fast_append()
+            .add_data_files(data_files)
+            .set_snapshot_properties(summary)
+            .apply(tx)
+    }
+    .map_err(iceberg_err)?;
     let table = tx.apply_locally().await.map_err(iceberg_err)?;
     match mode {
         StagedTableMode::Create => {
@@ -546,14 +569,24 @@ pub(crate) async fn execute_ctas_service_managed(
             )
             .await?
         };
-        repark_iceberg::write::commit_append_with_summary(
-            catalog,
-            &table,
-            data_files,
-            &options.snapshot_extra,
-            None,
-        )
-        .await?;
+        if ctas.or_replace {
+            repark_iceberg::write::commit_replace_write_with_summary(
+                catalog,
+                &table,
+                data_files,
+                &options.snapshot_extra,
+            )
+            .await?;
+        } else {
+            repark_iceberg::write::commit_append_with_summary(
+                catalog,
+                &table,
+                data_files,
+                &options.snapshot_extra,
+                None,
+            )
+            .await?;
+        }
         Ok(())
     }
     .await;
