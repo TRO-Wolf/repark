@@ -460,6 +460,16 @@ repark-core's error map.
   `tests` path parts exempt) reads the test-only `with_write_default` builder as test
   code; the pre-scan is named `schema_has_primitive_fill` for the same guard (run 21b
   round 2, 2026-09-18).
+  **Run 21b round 2 (2026-09-18, ruling Q-21b-9):** `refuse_default_marker_under_with`
+  refuses a `DEFAULT` marker in the outer VALUES / SELECT list of an INSERT whose query
+  carries `WITH` — `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION` naming `DEFAULT`, SQLSTATE
+  42703 — before any table load, on `INSERT INTO` and `INSERT OVERWRITE`, both doors
+  (`rewrite_insert_markers` and `rewrite_markers_with_table` both call it). Spark 4.1.2
+  resolves `DEFAULT` only in the top-level INSERT's own list and refuses it under
+  `WITH` (its text carries `WITH_SUGGESTION` and the CTE's columns; RePark names none).
+  `DEFAULT` inside a CTE body or derived table is never rewritten and refuses in
+  planning (`No field named default`), as Spark refuses it.
+  pins: ice-v3-write-default-1/C-021
   pins: ice-v3-write-default-1/C-004, C-005, C-006, C-007
   **Round 5 (2026-09-17):** `overwrite_source_with_defaults` is the one
   `INSERT OVERWRITE` fill both doors share — whole-table and both PARTITION arms —

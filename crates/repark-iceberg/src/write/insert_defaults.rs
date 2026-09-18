@@ -208,6 +208,7 @@ pub async fn rewrite_insert_markers(
     if !query_has_default_marker(source) {
         return Ok(MarkerRewrite::unchanged());
     }
+    refuse_default_marker_under_with(source)?;
     let table = match catalog.load_table(ident).await {
         Ok(table) => table,
         Err(error) if error.kind() == ErrorKind::TableNotFound => {
@@ -230,6 +231,7 @@ pub fn rewrite_markers_with_table(table: &Table, statement: &mut Statement) -> R
     let Some(source) = insert.source.as_mut() else {
         return Ok(false);
     };
+    refuse_default_marker_under_with(source)?;
     let current = table.metadata().current_schema();
     let arrow_schema =
         schema_to_arrow_schema(current).map_err(crate::catalog::iceberg_to_datafusion)?;
@@ -287,6 +289,18 @@ pub fn rewrite_markers_with_table(table: &Table, statement: &mut Statement) -> R
         _ => {}
     }
     Ok(changed)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn refuse_default_marker_under_with(source: &Query) -> Result<()> {
+    if source.with.is_some() && query_has_default_marker(source) {
+        return Err(DataFusionError::Plan(
+            "[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION] A column, variable, or function parameter \
+             with name `DEFAULT` cannot be resolved. SQLSTATE: 42703"
+                .to_string(),
+        ));
+    }
+    Ok(())
 }
 
 #[must_use]
