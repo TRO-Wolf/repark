@@ -178,3 +178,100 @@ fn values_retype_microsecond_columns_and_cast_mixed_ones() {
         LogicalPlan::EmptyRelation(_)
     ));
 }
+
+fn micros(array: &ArrayRef) -> Vec<Option<i64>> {
+    array
+        .as_primitive::<datafusion::arrow::datatypes::TimestampMicrosecondType>()
+        .iter()
+        .collect()
+}
+
+#[test]
+fn narrowing_floors_instants_to_microseconds() {
+    let instants: ArrayRef = Arc::new(
+        datafusion::arrow::array::TimestampNanosecondArray::from(vec![
+            Some(1_767_323_045_123_456_789),
+            Some(-1),
+            None,
+        ])
+        .with_timezone("UTC"),
+    );
+    let out = narrow(&instants, Tz::from_str("America/New_York").unwrap()).unwrap();
+    assert_eq!(
+        out.data_type(),
+        &DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC")))
+    );
+    assert_eq!(
+        micros(&out),
+        vec![Some(1_767_323_045_123_456), Some(-1), None]
+    );
+}
+
+#[test]
+fn narrowing_localizes_walls_in_the_session_zone() {
+    let walls: ArrayRef = Arc::new(datafusion::arrow::array::TimestampNanosecondArray::from(
+        vec![Some(1_767_323_045_123_456_789), Some(-1)],
+    ));
+    let utc = narrow(&walls, Tz::from_str("UTC").unwrap()).unwrap();
+    assert_eq!(micros(&utc), vec![Some(1_767_323_045_123_456), Some(-1)]);
+    let new_york = narrow(&walls, Tz::from_str("America/New_York").unwrap()).unwrap();
+    assert_eq!(
+        micros(&new_york),
+        vec![Some(1_767_341_045_123_456), Some(17_999_999_999)]
+    );
+}
+
+#[test]
+fn same_kind_instants_widen_and_overflow_like_the_row_path() {
+    let instants: ArrayRef = Arc::new(
+        TimestampMicrosecondArray::from(vec![Some(-1), None, Some(i64::MAX / 10)])
+            .with_timezone("UTC"),
+    );
+    let error = conversion(true, "UTC", true)
+        .convert(&instants)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        error.contains("[CAST_OVERFLOW]") && error.contains(&(i64::MAX / 10).to_string()),
+        "{error}"
+    );
+    let out = conversion(true, "UTC", false).convert(&instants).unwrap();
+    assert_eq!(
+        out.data_type(),
+        &DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("UTC")))
+    );
+    assert_eq!(nanos(&out), vec![Some(-1_000), None, None]);
+}
+
+#[test]
+fn values_without_ns_columns_are_left_alone() {
+    let micro = lit(ScalarValue::TimestampMicrosecond(
+        Some(1_767_484_799_999_999),
+        Some(Arc::from("UTC")),
+    ));
+    let schema = DFSchema::try_from(datafusion::arrow::datatypes::Schema::new(vec![
+        Field::new("a", DataType::Int64, false),
+        Field::new(
+            "b",
+            DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC"))),
+            false,
+        ),
+    ]))
+    .unwrap();
+    let values = Values {
+        schema: Arc::new(schema),
+        values: vec![vec![lit(1_i64), micro]],
+    };
+    assert!(values_actions(&values).is_empty());
+}
+
+#[test]
+fn narrowing_a_microsecond_input_keeps_its_ticks() {
+    let instants: ArrayRef =
+        Arc::new(TimestampMicrosecondArray::from(vec![Some(-1), None]).with_timezone("UTC"));
+    let out = narrow(&instants, Tz::from_str("America/New_York").unwrap()).unwrap();
+    assert_eq!(micros(&out), vec![Some(-1), None]);
+    let walls: ArrayRef = Arc::new(TimestampMicrosecondArray::from(vec![Some(-1)]));
+    let out = narrow(&walls, Tz::from_str("America/New_York").unwrap()).unwrap();
+    assert_eq!(micros(&out), vec![Some(17_999_999_999)]);
+}

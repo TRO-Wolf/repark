@@ -916,8 +916,17 @@ scalars live under [`try_invert/`](try_invert/map.md).
   expression, a timestamp column whose rows all agree takes the rows' type (the planner's
   `Timestamp(ns)` guess no longer outlives the retyped literals), and a nanosecond column
   with a retyped row keeps its type and casts that row through the embedded cast.
+  **Round 2 (2026-09-18, ruling Q-21c-8):** `narrow_timestamp_ns_expr` builds
+  `__repark_narrow_timestamp_ns__`, which `spark_ltz_timestamp_cast` puts in place of a cast
+  from a nanosecond source to the SQL type `TIMESTAMP` (DataFusion's `Timestamp(ns)`) or to the
+  DataFrame `"timestamp"` (`Timestamp(µs, "UTC")`): ticks floor to microseconds, a zoneless
+  wall is localized in the session zone as the µs `TIMESTAMP_NTZ` → `TIMESTAMP` cast does, and
+  a zoned instant is kept. Any other timestamp unit converts exactly (a stale plan schema can
+  still say ns over a µs column). The `VALUES` conform reads only nanosecond-declared columns
+  and clones nothing unless one needs a change; same-kind widening is Arrow's vectorized
+  checked cast; both ns casts are one shared UDF instance each.
   Tests in [timestamp_ns_cast/](timestamp_ns_cast/map.md).
-  pins: ice-tsns-sql-1/C-001, C-002
+  pins: ice-tsns-sql-1/C-001, C-002, C-009
 - `timestamp_ltz_ntz.rs` — **FNP-11B step 3 (2026-09-15):** `to_timestamp_ltz` /
   `to_timestamp_ntz` / `try_to_timestamp` on the step-2 parser (card D-1, no new
   parser). `to_timestamp_ltz` forwards both arities to the `to_timestamp` kernel;

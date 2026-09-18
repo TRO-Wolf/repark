@@ -4,7 +4,9 @@ The oracle is the Iceberg v3 spec plus a PyIceberg 0.12.0 read-back recorded in
 ``ice_tsns_sql_1_oracle.json`` by ``_record_ice_tsns_sql_1_oracle.py``; Spark 4.1.2 cannot read or
 write these types. Ruling Q-21c-6.
 
-pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+Ruling Q-21c-8 extends it: the SQL type name ``TIMESTAMP`` is always Spark's microsecond LTZ type.
+
+pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 """
 
 from __future__ import annotations
@@ -17,7 +19,7 @@ from typing import Any
 import pyarrow as pa
 import pytest
 
-from repark import ReparkSession
+from repark import ReparkSession, functions
 
 FIXTURE: dict[str, Any] = json.loads(
     (Path(__file__).with_name("ice_tsns_sql_1_oracle.json")).read_text()
@@ -30,6 +32,9 @@ DAYS_TABLE = (
 )
 NS_IDS = ("1", "2", "3", "6", "7", "8")
 HOUR_FORK_GAP = "Unsupported data type for hour transform"
+PRE_EPOCH = "1969-12-31 23:59:59.999999999"
+SESSION_OFFSET_US = {"UTC": 0, "America/New_York": 5 * 3_600_000_000}
+MICROS_UTC = pa.timestamp("us", tz="UTC")
 
 
 def text(identifier: str) -> str:
@@ -380,3 +385,92 @@ def test_format_v2_keeps_refusing_ns_at_create(spark: Any) -> None:
     """Clause 6 fence: a format-v2 table still refuses ``timestamp_ns`` at CREATE."""
     with pytest.raises(Exception, match=r"timestamp_ns"):
         spark.sql("CREATE TABLE ice.ns.v2 (id INT, ts timestamp_ns) USING iceberg").collect()
+
+
+@pytest.mark.parametrize("zone", sorted(SESSION_OFFSET_US))
+def test_cast_ns_column_as_timestamp_floors_like_the_dataframe_spelling(
+    tmp_path: Path, zone: str
+) -> None:
+    """Q-21c-8: ``CAST(<ns column> AS TIMESTAMP)`` answers ``.cast("timestamp")``, floored to µs.
+
+    A ``timestamp_ns`` wall is read in the session zone and a ``timestamptz_ns`` instant is kept,
+    exactly as the microsecond ``TIMESTAMP_NTZ`` → ``TIMESTAMP`` and ``TIMESTAMP`` casts do.
+    """
+    spark = open_session(tmp_path, zone=zone)
+    try:
+        spark.sql(NS_TABLE).collect()
+        rows = ", ".join(
+            f"({index}, CAST('{value}' AS timestamp_ns), CAST('{value}+00:00' AS timestamptz_ns))"
+            for index, value in ((1, text("1")), (2, PRE_EPOCH))
+        )
+        spark.sql(f"INSERT INTO ice.ns.t VALUES {rows}").collect()
+        sql = spark.sql(
+            "SELECT CAST(ts AS TIMESTAMP) AS ts, CAST(tz AS TIMESTAMP) AS tz FROM ice.ns.t "
+            "ORDER BY id"
+        ).to_arrow()
+        frame = (
+            spark.table("ice.ns.t")
+            .orderBy("id")
+            .select(
+                functions.col("ts").cast("timestamp").alias("ts"),
+                functions.col("tz").cast("timestamp").alias("tz"),
+            )
+            .to_arrow()
+        )
+        floored = [wall("1") // 1_000, -1]
+        expected = {
+            "ts": [micros + SESSION_OFFSET_US[zone] for micros in floored],
+            "tz": floored,
+        }
+        for answer in (sql, frame):
+            for name in ("ts", "tz"):
+                assert answer.column(name).type == MICROS_UTC, (name, answer.schema)
+                assert answer.column(name).cast(pa.int64()).to_pylist() == expected[name]
+        rendered = spark.sql(
+            "SELECT CAST(CAST(ts AS TIMESTAMP) AS STRING) AS ts, "
+            "CAST(CAST(tz AS TIMESTAMP) AS STRING) AS tz FROM ice.ns.t ORDER BY id"
+        ).to_arrow()
+        assert rendered.column("ts").to_pylist() == [
+            "2026-01-02 03:04:05.123456",
+            "1969-12-31 23:59:59.999999",
+        ]
+        fractions = [value.rsplit(".", 1)[1] for value in rendered.column("tz").to_pylist()]
+        assert fractions == ["123456", "999999"]
+    finally:
+        spark.stop()
+
+
+def test_timestamp_typed_values_floor_like_insert_select(spark: Any) -> None:
+    """Q-21c-8: a ``TIMESTAMP`` cell in ``VALUES`` stores what ``INSERT … SELECT`` stores.
+
+    A bare string keeps its nine digits; only the ``TIMESTAMP`` type name floors.
+    """
+    spark.sql(NS_TABLE).collect()
+    value = text("1")
+    spark.sql(
+        "INSERT INTO ice.ns.t VALUES "
+        f"(1, TIMESTAMP '{value}', CAST('{value}' AS TIMESTAMP)), "
+        f"(2, CAST('{value}' AS TIMESTAMP), TIMESTAMP '{value}'), "
+        f"(3, '{value}', '{value}')"
+    ).collect()
+    spark.sql(
+        f"INSERT INTO ice.ns.t SELECT 4, TIMESTAMP '{value}' AS a, "
+        f"CAST('{value}' AS TIMESTAMP) AS b"
+    ).collect()
+    floored = wall("1") // 1_000 * 1_000
+    assert floored != wall("1")
+    assert ns_rows(spark, "ice.ns.t", ("ts", "tz")) == [
+        {"id": 1, "ts": floored, "tz": floored},
+        {"id": 2, "ts": floored, "tz": floored},
+        {"id": 3, "ts": wall("1"), "tz": wall("1")},
+        {"id": 4, "ts": floored, "tz": floored},
+    ]
+
+
+def test_explain_lowers_ns_casts(spark: Any) -> None:
+    """``EXPLAIN`` plans a ``timestamp_ns`` cast exactly as the statement it explains."""
+    spark.sql(NS_TABLE).collect()
+    plan = spark.sql(
+        f"EXPLAIN SELECT id FROM ice.ns.t WHERE ts = CAST('{text('1')}' AS timestamp_ns)"
+    ).collect()
+    assert "__repark_cast_timestamp_ns__" in str(plan)

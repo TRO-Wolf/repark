@@ -5,14 +5,25 @@ use datafusion::common::{DFSchema, ExprSchema, Result};
 use datafusion::logical_expr::{
     DmlStatement, Expr, ExprSchemable, LogicalPlan, Projection, Values, WriteOp,
 };
+use datafusion::sql::sqlparser::ast::{
+    DataType as SqlDataType, Expr as SqlExpr, SetExpr, Statement,
+};
 use repark_functions::timestamp_ns_cast::{
     is_temporal_source, timestamp_ns_cast_expr, timestamp_ns_target,
 };
 
-pub(crate) fn before_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
-    let (dml, projection, targets) = match ns_insert_parts(plan) {
-        NsInsert::Parts(dml, projection, targets) => (*dml, projection, targets),
-        NsInsert::Untouched(untouched) => return Ok(*untouched),
+pub(crate) fn before_analysis(
+    plan: LogicalPlan,
+    timestamp_cells: &[(usize, usize)],
+) -> Result<LogicalPlan> {
+    let Some(targets) = ns_insert_targets(&plan) else {
+        return Ok(plan);
+    };
+    let LogicalPlan::Dml(dml) = plan else {
+        return Ok(plan);
+    };
+    let LogicalPlan::Projection(projection) = dml.input.as_ref() else {
+        return Ok(LogicalPlan::Dml(dml));
     };
     let source_schema = Arc::clone(projection.input.schema());
     let mut exprs = Vec::with_capacity(projection.expr.len());
@@ -40,7 +51,7 @@ pub(crate) fn before_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
     }
     let input = match projection.input.as_ref() {
         LogicalPlan::Values(values) if !values_columns.is_empty() => {
-            match conform_values_rows(values, &values_columns) {
+            match conform_values_rows(values, &values_columns, timestamp_cells) {
                 Some(rewritten) => {
                     changed = true;
                     Arc::new(LogicalPlan::Values(rewritten))
@@ -54,9 +65,14 @@ pub(crate) fn before_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
 }
 
 pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
-    let (dml, projection, targets) = match ns_insert_parts(plan) {
-        NsInsert::Parts(dml, projection, targets) => (*dml, projection, targets),
-        NsInsert::Untouched(untouched) => return Ok(*untouched),
+    let Some(targets) = ns_insert_targets(&plan) else {
+        return Ok(plan);
+    };
+    let LogicalPlan::Dml(dml) = plan else {
+        return Ok(plan);
+    };
+    let LogicalPlan::Projection(projection) = dml.input.as_ref() else {
+        return Ok(LogicalPlan::Dml(dml));
     };
     let source_schema = Arc::clone(projection.input.schema());
     let mut exprs = Vec::with_capacity(projection.expr.len());
@@ -91,34 +107,61 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
     rebuild(dml, exprs, input, changed)
 }
 
-enum NsInsert {
-    Parts(Box<DmlStatement>, Projection, Vec<Option<bool>>),
-    Untouched(Box<LogicalPlan>),
-}
-
-fn ns_insert_parts(plan: LogicalPlan) -> NsInsert {
+fn ns_insert_targets(plan: &LogicalPlan) -> Option<Vec<Option<bool>>> {
     let LogicalPlan::Dml(dml) = plan else {
-        return NsInsert::Untouched(Box::new(plan));
+        return None;
     };
     if !matches!(dml.op, WriteOp::Insert(_)) {
-        return NsInsert::Untouched(Box::new(LogicalPlan::Dml(dml)));
+        return None;
     }
-    let targets: Vec<Option<bool>> = dml
-        .target
-        .schema()
-        .fields()
-        .iter()
-        .map(|field| timestamp_ns_target(field.data_type()))
-        .collect();
-    let projection = match dml.input.as_ref() {
-        LogicalPlan::Projection(projection)
-            if projection.expr.len() == targets.len() && targets.iter().any(Option::is_some) =>
-        {
-            projection.clone()
-        }
-        _ => return NsInsert::Untouched(Box::new(LogicalPlan::Dml(dml))),
+    let schema = dml.target.schema();
+    let fields = schema.fields();
+    let LogicalPlan::Projection(projection) = dml.input.as_ref() else {
+        return None;
     };
-    NsInsert::Parts(Box::new(dml), projection, targets)
+    if projection.expr.len() != fields.len()
+        || !fields
+            .iter()
+            .any(|field| timestamp_ns_target(field.data_type()).is_some())
+    {
+        return None;
+    }
+    Some(
+        fields
+            .iter()
+            .map(|field| timestamp_ns_target(field.data_type()))
+            .collect(),
+    )
+}
+
+pub(crate) fn timestamp_typed_values_cells(statement: &Statement) -> Vec<(usize, usize)> {
+    let Statement::Insert(insert) = statement else {
+        return Vec::new();
+    };
+    let Some(source) = insert.source.as_deref() else {
+        return Vec::new();
+    };
+    let SetExpr::Values(values) = source.body.as_ref() else {
+        return Vec::new();
+    };
+    let mut cells = Vec::new();
+    for (row, parens) in values.rows.iter().enumerate() {
+        for (column, cell) in parens.content.iter().enumerate() {
+            if is_timestamp_typed(cell) {
+                cells.push((row, column));
+            }
+        }
+    }
+    cells
+}
+
+fn is_timestamp_typed(cell: &SqlExpr) -> bool {
+    match cell {
+        SqlExpr::Nested(inner) => is_timestamp_typed(inner),
+        SqlExpr::Cast { data_type, .. } => matches!(data_type, SqlDataType::Timestamp(_, _)),
+        SqlExpr::TypedString(typed) => matches!(typed.data_type, SqlDataType::Timestamp(_, _)),
+        _ => false,
+    }
 }
 
 fn rebuild(
@@ -177,21 +220,37 @@ fn is_string_column(expr: &Expr, schema: &DFSchema) -> bool {
     })
 }
 
-fn conform_values_rows(values: &Values, columns: &[(String, bool)]) -> Option<Values> {
-    let mut rows = values.values.clone();
-    let mut changed = false;
+fn conform_values_rows(
+    values: &Values,
+    columns: &[(String, bool)],
+    timestamp_cells: &[(usize, usize)],
+) -> Option<Values> {
+    let mut rewrites: Vec<(usize, usize, Expr)> = Vec::new();
     for (name, zoned) in columns {
         let Some(index) = values.schema.index_of_column_by_name(None, name) else {
             continue;
         };
-        for row in &mut rows {
+        for (row_index, row) in values.values.iter().enumerate() {
+            if timestamp_cells.binary_search(&(row_index, index)).is_ok() {
+                continue;
+            }
             if let Some(base) = peel_ns_casts(&row[index]) {
-                row[index] = timestamp_ns_cast_expr(base.clone(), *zoned);
-                changed = true;
+                rewrites.push((
+                    row_index,
+                    index,
+                    timestamp_ns_cast_expr(base.clone(), *zoned),
+                ));
             }
         }
     }
-    changed.then(|| Values {
+    if rewrites.is_empty() {
+        return None;
+    }
+    let mut rows = values.values.clone();
+    for (row, column, expr) in rewrites {
+        rows[row][column] = expr;
+    }
+    Some(Values {
         schema: Arc::clone(&values.schema),
         values: rows,
     })

@@ -1625,6 +1625,17 @@ them, and the document is ordered by surface, never by date.
   the write-direction oracle
   ([R-002](#ice-tsns-sql-1-r-002--open-2026-09-17-no-second-engine-writes-format-v3-yet)),
   and `TRY_CAST(… AS timestamp_ns)`, which still refuses `Unsupported SQL type`.
+  **2026-09-18 (ruling Q-21c-8):** the SQL type name `TIMESTAMP` is always Spark's µs LTZ type.
+  `CAST(<ns column> AS TIMESTAMP)` narrows to `Timestamp(µs, "UTC")`, floored to microseconds
+  (a `timestamp_ns` wall read in the session zone, a `timestamptz_ns` instant kept), and
+  equals the DataFrame spelling `.cast("timestamp")`, which now floors and reads the wall in
+  the session zone too (it had truncated toward zero and read the wall as UTC). Before, the SQL
+  cast kept `Timestamp(ns)` and every digit. A `TIMESTAMP '…'` or `CAST(… AS TIMESTAMP)` cell
+  in `INSERT … VALUES` stores its µs value × 1000, as `INSERT … SELECT` does; before, it was
+  re-read at nine digits. A bare string still keeps nine digits. `EXPLAIN` now lowers ns casts.
+  Not in this row: `CAST(ns AS TIMESTAMP)` under `spark.sql.timestampType=TIMESTAMP_NTZ`,
+  which still keeps `Timestamp(ns)`, and
+  [R-007](#ice-tsns-sql-1-r-007--open-measured-2026-09-18-merge-writes-a-timestamp-into-timestamp_ns-as-its-utc-wall).
 - **Apache Spark** — Spark 4.1.2 cannot read or write either type
   (`UnsupportedOperationException: Cannot convert unsupported type to Spark: timestamp_ns`,
   measured by the 2026-09-16 rating), so there is no Spark answer to match; the SQL door
@@ -1635,7 +1646,7 @@ them, and the document is ordered by surface, never by date.
   `python/repark/tests/ice_tsns_sql_1_oracle.json` via
   `python/repark/tests/_record_ice_tsns_sql_1_oracle.py`; no Spark measurement exists or
   is claimed.)*
-- **Pin** — `python/repark/tests/test_ice_tsns_sql_1.py` (38 pins plus one xfail on
+- **Pin** — `python/repark/tests/test_ice_tsns_sql_1.py` (42 pins plus one xfail on
   R-003, every expected value read from the fixture); the recorder's PyIceberg `check` leg over
   the SQL-door tables; `crates/repark-spark/src/tests/v3_timestamp_ns_door.rs` (casts, INSERT
   VALUES / SELECT widening, rendering and predicates on the Rust door); the unit suites in
@@ -1644,6 +1655,21 @@ them, and the document is ordered by surface, never by date.
 - **Rationale** — FIXED, ruling Q-21c-6. Rating row V3-06 and the `timestamp_ns` half of
   V3-04. Every value decision is in Rust: the embedded casts in `repark-functions`, the SQL-door
   lowering and INSERT conform in `repark-spark`.
+
+### ICE-TSNS-SQL-1-R-007 — OPEN (measured 2026-09-18): MERGE writes a `TIMESTAMP` into `timestamp_ns` as its UTC wall
+
+- **repark** — in a session whose zone is not UTC, a MERGE insert or update that writes a
+  `TIMESTAMP` value into a `timestamp_ns` column stores the instant's UTC wall. `INSERT … VALUES`
+  and `INSERT … SELECT` store the session-zone wall (ledger A-1). Measured in America/New_York:
+  `TIMESTAMP '2026-01-02 03:04:05.123456789'` stores `1767341045123456000` through MERGE and
+  `1767323045123456000` through INSERT. In UTC the two paths agree. `timestamptz_ns` columns
+  agree in every zone.
+- **Apache Spark** — cannot write the type. *(oracle: documented — ledger A-1 is this door's
+  rule for a µs instant written into a naive ns column.)*
+- **Pin** — none yet; recorded in `task/ledgers/staging/ice-tsns-sql-1-ledger.md` (R-007).
+- **Rationale** — OPEN, dated 2026-09-18. MERGE widens through the Iceberg write path's Arrow
+  cast, not through the SQL door's INSERT conform. Found while measuring round 2 of this unit.
+  Round 2 did not change it.
 
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 

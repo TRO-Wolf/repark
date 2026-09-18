@@ -558,6 +558,16 @@ fn rewrite_cast(
             DataType::Timestamp(TimeUnit::Second, _)
         );
         if let Ok(source) = cast.expr.get_type(schema) {
+            if matches!(source, DataType::Timestamp(TimeUnit::Nanosecond, _))
+                && (matches!(
+                    cast.field.data_type(),
+                    DataType::Timestamp(TimeUnit::Nanosecond, None)
+                ) || is_ltz_timestamp(cast.field.data_type()))
+            {
+                return Transformed::yes(crate::timestamp_ns_cast::narrow_timestamp_ns_expr(
+                    *cast.expr.clone(),
+                ));
+            }
             if targeting_ns && is_ltz_timestamp(&source) {
                 return Transformed::yes(*cast.expr.clone());
             }

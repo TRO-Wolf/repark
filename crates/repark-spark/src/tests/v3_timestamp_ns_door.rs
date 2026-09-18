@@ -162,3 +162,78 @@ async fn ns_string_rendering_and_predicates_keep_nanoseconds() {
         vec![Some("2026-01-02 03:04:05.123456789".to_string())]
     );
 }
+
+#[tokio::test]
+async fn timestamp_typed_values_floor_to_microseconds_and_strings_keep_nine_digits() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ns(&warehouse).await;
+    batches(&ctx, &catalogs, NS_TABLE).await;
+    batches(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.tsns VALUES \
+         (1, TIMESTAMP '2026-01-02 03:04:05.123456789', \
+             CAST('2026-01-02 03:04:05.123456789' AS TIMESTAMP)), \
+         (2, (CAST('2026-01-02 03:04:05.123456789' AS TIMESTAMP)), \
+             (TIMESTAMP '2026-01-02 03:04:05.123456789')), \
+         (3, '2026-01-02 03:04:05.123456789', '2026-01-02 03:04:05.123456789')",
+    )
+    .await;
+    let out = batches(
+        &ctx,
+        &catalogs,
+        "SELECT id, ts, tz FROM ice.sales.tsns ORDER BY id",
+    )
+    .await;
+    let expected = vec![
+        Some(1_767_323_045_123_456_000),
+        Some(1_767_323_045_123_456_000),
+        Some(1_767_323_045_123_456_789),
+    ];
+    assert_eq!(int64_column(&out, 1), expected);
+    assert_eq!(int64_column(&out, 2), expected);
+}
+
+#[tokio::test]
+async fn cast_ns_columns_as_timestamp_floor_to_microsecond_instants() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ns(&warehouse).await;
+    batches(&ctx, &catalogs, NS_TABLE).await;
+    batches(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.tsns VALUES \
+         (1, CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns), \
+             CAST('2026-01-02 03:04:05.123456789' AS timestamptz_ns)), \
+         (2, CAST('1969-12-31 23:59:59.999999999' AS timestamp_ns), \
+             CAST('1969-12-31 23:59:59.999999999' AS timestamptz_ns))",
+    )
+    .await;
+    let out = batches(
+        &ctx,
+        &catalogs,
+        "SELECT CAST(ts AS TIMESTAMP) AS a, CAST(tz AS TIMESTAMP) AS b \
+         FROM ice.sales.tsns ORDER BY id",
+    )
+    .await;
+    let schema = out[0].schema();
+    let micros_utc = DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC")));
+    assert_eq!(schema.field(0).data_type(), &micros_utc);
+    assert_eq!(schema.field(1).data_type(), &micros_utc);
+    let expected = vec![Some(1_767_323_045_123_456), Some(-1)];
+    assert_eq!(int64_column(&out, 0), expected);
+    assert_eq!(int64_column(&out, 1), expected);
+}
+
+#[tokio::test]
+async fn explain_lowers_ns_casts() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ns(&warehouse).await;
+    let out = batches(
+        &ctx,
+        &catalogs,
+        "EXPLAIN SELECT CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns) AS v",
+    )
+    .await;
+    assert!(!out.is_empty());
+}

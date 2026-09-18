@@ -239,8 +239,13 @@ pins: rp-4-fork-repin/C-005, C-006
   COLUMN is left for the WI-2 store-assignment gate, which refuses it as it does for
   `TIMESTAMP` columns. `after_analysis` wraps any remaining temporal source whose analyzed type
   differs from the ns target (a `TIMESTAMP` column, a `TIMESTAMP` literal selected in a
-  subquery) in the same cast. Rust tests: `tests/v3_timestamp_ns_door.rs`.
-  pins: ice-tsns-sql-1/C-002
+  subquery) in the same cast. **Round 2 (2026-09-18, ruling Q-21c-8):**
+  `timestamp_typed_values_cells` reads, from the statement before planning, which `VALUES` cells
+  are `TIMESTAMP`-typed (`TIMESTAMP '…'`, `CAST(… AS TIMESTAMP)`); the planner types those and a
+  bare string identically, and only the bare string is re-read at nine digits — a `TIMESTAMP`
+  cell is left for the µs rule and widened like `INSERT … SELECT`. Both hooks return a
+  non-insert plan without moving it. Rust tests: `tests/v3_timestamp_ns_door.rs`.
+  pins: ice-tsns-sql-1/C-002, C-010
 - `keyword_lower.rs` — **SPARK-SQL-GRAMMAR-1 C-003/C-004/C-005 (2026-09-16):**
   Spark-only keyword lowerings onto registered kernels. `x RLIKE p` becomes
   `regexp_like(x, p)` (`NOT RLIKE` becomes `NOT regexp_like`); `CAST(x AS
@@ -255,7 +260,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `::` included, `TRY_CAST` not) lowers to the embedded `__repark_cast_timestamp_ns__` /
   `__repark_cast_timestamptz_ns__` calls; `lower_timestamp_ns_casts` is the same lowering alone,
   applied by `router.rs` to a MERGE's source, `ON` and clauses (MERGE plans its rendered pieces
-  outside the passthrough). pins: ice-tsns-sql-1/C-001
+  outside the passthrough) only when `has_timestamp_ns_cast` finds one, and by `spark_ast.rs` to
+  the statement an `EXPLAIN` wraps. pins: ice-tsns-sql-1/C-001, C-011
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** `unrelated_errors_pass_through` now
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
   `repark-core::unknown_routine`, not here.

@@ -5,7 +5,7 @@ use datafusion::error::DataFusionError;
 use datafusion::sql::sqlparser::ast::{
     CastKind, DataType, Expr, Function, FunctionArg, FunctionArgExpr, FunctionArgumentList,
     FunctionArguments, Ident, ObjectName, Statement, TimezoneInfo, UnaryOperator, Value,
-    ValueWithSpan, VisitMut, VisitorMut,
+    ValueWithSpan, Visit, VisitMut, Visitor, VisitorMut,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
 use repark_functions::timestamp_ns_cast::{TIMESTAMP_NS_CAST_NAME, TIMESTAMPTZ_NS_CAST_NAME};
@@ -139,6 +139,29 @@ pub(crate) fn lower_timestamp_ns_casts<T: VisitMut>(node: &mut T) {
     let _ = node.visit(&mut TimestampNsCastLower);
 }
 
+struct TimestampNsCastProbe;
+
+impl Visitor for TimestampNsCastProbe {
+    type Break = ();
+
+    fn pre_visit_expr(&mut self, expr: &Expr) -> ControlFlow<Self::Break> {
+        match expr {
+            Expr::Cast {
+                kind: CastKind::Cast | CastKind::DoubleColon,
+                data_type,
+                array: false,
+                format: None,
+                ..
+            } if timestamp_ns_cast_name(data_type).is_some() => ControlFlow::Break(()),
+            _ => ControlFlow::Continue(()),
+        }
+    }
+}
+
+pub(crate) fn has_timestamp_ns_cast<T: Visit>(node: &T) -> bool {
+    node.visit(&mut TimestampNsCastProbe).is_break()
+}
+
 #[must_use]
 pub(crate) fn map_unsupported_timestamp_ntz(error: DataFusionError) -> DataFusionError {
     if error
@@ -205,6 +228,27 @@ mod tests {
                 && text.contains("__repark_cast_timestamptz_ns__('2026-01-02')"),
             "{text}"
         );
+    }
+
+    #[test]
+    fn the_ns_cast_probe_finds_only_ns_casts() {
+        let parse = |sql: &str| {
+            Parser::parse_sql(&DatabricksDialect {}, sql)
+                .unwrap()
+                .remove(0)
+        };
+        assert!(has_timestamp_ns_cast(&parse(
+            "SELECT id FROM t WHERE ts > CAST('2026-01-02' AS timestamptz_ns)"
+        )));
+        assert!(has_timestamp_ns_cast(&parse(
+            "SELECT '2026-01-02'::TIMESTAMP_NS AS v"
+        )));
+        assert!(!has_timestamp_ns_cast(&parse(
+            "SELECT CAST('2026-01-02' AS TIMESTAMP) AS v"
+        )));
+        assert!(!has_timestamp_ns_cast(&parse(
+            "SELECT TRY_CAST('x' AS timestamp_ns) AS v"
+        )));
     }
 
     #[test]

@@ -1,14 +1,19 @@
+use std::fmt::Display;
 use std::hash::{Hash, Hasher};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use arrow::array::timezone::Tz;
 use arrow::compute::kernels::cast_utils::string_to_datetime;
 use chrono::{DateTime, Utc};
 use datafusion::arrow::array::{
-    Array, ArrayRef, AsArray, TimestampNanosecondBuilder, new_null_array,
+    Array, ArrayRef, AsArray, TimestampMicrosecondArray, TimestampNanosecondBuilder, new_null_array,
 };
-use datafusion::arrow::compute::cast;
-use datafusion::arrow::datatypes::{DataType, Date32Type, Field, FieldRef, Int64Type, TimeUnit};
+use datafusion::arrow::compute::{CastOptions, cast, cast_with_options};
+use datafusion::arrow::datatypes::{
+    DataType, Date32Type, Field, FieldRef, Int64Type, TimeUnit, TimestampMicrosecondType,
+    TimestampNanosecondType,
+};
+use datafusion::arrow::error::ArrowError;
 use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
@@ -24,13 +29,23 @@ use crate::timestamp_cast::parse_session_zone;
 
 pub const TIMESTAMP_NS_CAST_NAME: &str = "__repark_cast_timestamp_ns__";
 pub const TIMESTAMPTZ_NS_CAST_NAME: &str = "__repark_cast_timestamptz_ns__";
+pub const NARROW_TIMESTAMP_NS_NAME: &str = "__repark_narrow_timestamp_ns__";
 
 const NANOS_PER_MICRO: i64 = 1_000;
 const NANOS_PER_DAY: i64 = 86_400 * 1_000_000_000;
 
+static TIMESTAMP_NS_CAST: LazyLock<Arc<ScalarUDF>> =
+    LazyLock::new(|| Arc::new(ScalarUDF::from(SparkTimestampNsCast::new(false))));
+static TIMESTAMPTZ_NS_CAST: LazyLock<Arc<ScalarUDF>> =
+    LazyLock::new(|| Arc::new(ScalarUDF::from(SparkTimestampNsCast::new(true))));
+
 #[must_use]
 pub fn timestamp_ns_cast_udf(zoned: bool) -> Arc<ScalarUDF> {
-    Arc::new(ScalarUDF::from(SparkTimestampNsCast::new(zoned)))
+    if zoned {
+        Arc::clone(&TIMESTAMPTZ_NS_CAST)
+    } else {
+        Arc::clone(&TIMESTAMP_NS_CAST)
+    }
 }
 
 #[must_use]
@@ -206,6 +221,9 @@ impl Conversion {
         match array.data_type() {
             DataType::Null => Ok(new_null_array(&target, array.len())),
             source if is_string_source(source) => self.convert_strings(array),
+            DataType::Timestamp(_, source_zone) if source_zone.is_some() == self.zoned => {
+                self.widen_same_kind(array, &target)
+            }
             DataType::Timestamp(unit, source_zone) => {
                 let per_tick = nanos_per_tick(*unit);
                 let ticks = cast(array.as_ref(), &DataType::Int64)?;
@@ -223,7 +241,7 @@ impl Conversion {
                     let nanos = value
                         .checked_mul(per_tick)
                         .and_then(|nanos| self.place(nanos, source_zone.is_some()));
-                    self.or_overflow(nanos, &value.to_string(), source_name)
+                    self.or_overflow(nanos, value, source_name)
                 })
             }
             DataType::Date32 | DataType::Date64 => {
@@ -237,13 +255,43 @@ impl Conversion {
                     let nanos = i64::from(value)
                         .checked_mul(NANOS_PER_DAY)
                         .and_then(|wall| self.place(wall, false));
-                    self.or_overflow(nanos, &value.to_string(), "DATE")
+                    self.or_overflow(nanos, value, "DATE")
                 })
             }
             other => Err(DataFusionError::Plan(format!(
                 "cannot cast \"{other}\" to \"{}\"",
                 target_name(self.zoned)
             ))),
+        }
+    }
+
+    fn widen_same_kind(&self, array: &ArrayRef, target: &DataType) -> Result<ArrayRef> {
+        let options = CastOptions {
+            safe: true,
+            ..CastOptions::default()
+        };
+        let widened = cast_with_options(array.as_ref(), target, &options)?;
+        if !self.ansi || widened.null_count() == array.null_count() {
+            return Ok(widened);
+        }
+        let DataType::Timestamp(unit, source_zone) = array.data_type() else {
+            return Ok(widened);
+        };
+        let ticks = cast(array.as_ref(), &DataType::Int64)?;
+        let ticks = ticks.as_primitive::<Int64Type>();
+        let source_name = if source_zone.is_some() {
+            "TIMESTAMP"
+        } else {
+            "TIMESTAMP_NTZ"
+        };
+        let per_tick = nanos_per_tick(*unit);
+        match (0..ticks.len())
+            .find(|row| ticks.is_valid(*row) && ticks.value(*row).checked_mul(per_tick).is_none())
+        {
+            Some(row) => self
+                .or_overflow(None, ticks.value(row), source_name)
+                .map(|_| widened),
+            None => Ok(widened),
         }
     }
 
@@ -298,7 +346,12 @@ impl Conversion {
         }
     }
 
-    fn or_overflow(&self, nanos: Option<i64>, value: &str, source: &str) -> Result<Option<i64>> {
+    fn or_overflow(
+        &self,
+        nanos: Option<i64>,
+        value: impl Display,
+        source: &str,
+    ) -> Result<Option<i64>> {
         match nanos {
             Some(nanos) => Ok(Some(nanos)),
             None if self.ansi => Err(DataFusionError::Execution(format!(
@@ -345,58 +398,177 @@ fn malformed(value: &str, target: &str) -> String {
     )
 }
 
+static NARROW_TIMESTAMP_NS: LazyLock<Arc<ScalarUDF>> =
+    LazyLock::new(|| Arc::new(ScalarUDF::from(NarrowTimestampNs::new())));
+
+#[must_use]
+pub fn narrow_timestamp_ns_expr(expr: Expr) -> Expr {
+    Expr::ScalarFunction(ScalarFunction::new_udf(
+        Arc::clone(&NARROW_TIMESTAMP_NS),
+        vec![expr],
+    ))
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+struct NarrowTimestampNs {
+    signature: Signature,
+}
+
+impl NarrowTimestampNs {
+    fn new() -> Self {
+        Self {
+            signature: Signature::any(1, Volatility::Stable),
+        }
+    }
+}
+
+impl ScalarUDFImpl for NarrowTimestampNs {
+    fn name(&self) -> &str {
+        NARROW_TIMESTAMP_NS_NAME
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(narrowed_type())
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let nullable = args
+            .arg_fields
+            .first()
+            .is_none_or(|field| field.is_nullable());
+        Ok(Arc::new(Field::new(self.name(), narrowed_type(), nullable)))
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let zone =
+            parse_session_zone(session_time_zone_from_options(args.config_options.as_ref()))?;
+        match args.args.first() {
+            Some(ColumnarValue::Array(array)) => Ok(ColumnarValue::Array(narrow(array, zone)?)),
+            Some(ColumnarValue::Scalar(scalar)) => {
+                let narrowed = narrow(&scalar.to_array()?, zone)?;
+                Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
+                    &narrowed, 0,
+                )?))
+            }
+            None => Err(DataFusionError::Plan(format!(
+                "'{NARROW_TIMESTAMP_NS_NAME}' expects one argument"
+            ))),
+        }
+    }
+}
+
+fn narrowed_type() -> DataType {
+    DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::<str>::from("UTC")))
+}
+
+fn narrow(array: &ArrayRef, zone: Tz) -> Result<ArrayRef> {
+    let DataType::Timestamp(unit, source_zone) = array.data_type() else {
+        return Err(DataFusionError::Plan(format!(
+            "'{NARROW_TIMESTAMP_NS_NAME}' expects a timestamp, found \"{}\"",
+            array.data_type()
+        )));
+    };
+    let micros: TimestampMicrosecondArray = if *unit == TimeUnit::Nanosecond {
+        array
+            .as_primitive::<TimestampNanosecondType>()
+            .unary(|ticks| ticks.div_euclid(NANOS_PER_MICRO))
+    } else {
+        let target = DataType::Timestamp(TimeUnit::Microsecond, source_zone.clone());
+        cast(array.as_ref(), &target)?
+            .as_primitive::<TimestampMicrosecondType>()
+            .clone()
+    };
+    let micros = if source_zone.is_some() {
+        micros
+    } else {
+        micros.try_unary(|wall| {
+            localize_wall_micros_in_zone(wall, zone).ok_or_else(|| {
+                ArrowError::ComputeError(
+                    "cannot localize zoneless timestamp into session timezone: out of range"
+                        .to_string(),
+                )
+            })
+        })?
+    };
+    Ok(Arc::new(micros.with_timezone("UTC")))
+}
+
 pub(crate) fn conform_values_timestamp_columns(plan: LogicalPlan) -> Result<LogicalPlan> {
     let LogicalPlan::Values(values) = plan else {
         return Ok(plan);
     };
-    let empty = DFSchema::empty();
-    let mut rows = values.values.clone();
+    let actions = values_actions(&values);
+    if actions.is_empty() {
+        return Ok(LogicalPlan::Values(values));
+    }
+    let mut rows = values.values;
     let mut fields: Vec<(Option<datafusion::common::TableReference>, FieldRef)> = values
         .schema
         .iter()
         .map(|(qualifier, field)| (qualifier.cloned(), Arc::clone(field)))
         .collect();
-    let mut changed = false;
-    for (column, (_, field)) in fields.iter_mut().enumerate() {
-        let declared = field.data_type().clone();
-        if !matches!(declared, DataType::Timestamp(_, _)) {
-            continue;
-        }
-        let Ok(types) = rows
-            .iter()
-            .map(|row| row[column].get_type(&empty))
-            .collect::<Result<Vec<DataType>>>()
-        else {
-            continue;
-        };
-        if types.iter().all(|found| *found == declared) {
-            continue;
-        }
-        if let Some(zoned) = timestamp_ns_target(&declared)
-            && types.contains(&declared)
-        {
-            for (row, found) in rows.iter_mut().zip(&types) {
-                if *found != declared && is_temporal_source(found) {
-                    row[column] = timestamp_ns_cast_expr(row[column].clone(), zoned);
-                    changed = true;
+    for (column, action) in actions {
+        match action {
+            ValuesAction::Widen(zoned, types) => {
+                let declared = fields[column].1.data_type().clone();
+                for (row, found) in rows.iter_mut().zip(&types) {
+                    if *found != declared && is_temporal_source(found) {
+                        let cell = std::mem::take(&mut row[column]);
+                        row[column] = timestamp_ns_cast_expr(cell, zoned);
+                    }
                 }
             }
-        } else if let Some(first) = types.first()
-            && types.iter().all(|found| found == first)
-            && matches!(first, DataType::Timestamp(_, _))
-        {
-            *field = Arc::new(field.as_ref().clone().with_data_type(first.clone()));
-            changed = true;
+            ValuesAction::Retype(found) => {
+                let field = &mut fields[column].1;
+                *field = Arc::new(field.as_ref().clone().with_data_type(found));
+            }
         }
-    }
-    if !changed {
-        return Ok(LogicalPlan::Values(values));
     }
     let schema = DFSchema::new_with_metadata(fields, values.schema.metadata().clone())?;
     Ok(LogicalPlan::Values(Values {
         schema: Arc::new(schema),
         values: rows,
     }))
+}
+
+enum ValuesAction {
+    Widen(bool, Vec<DataType>),
+    Retype(DataType),
+}
+
+fn values_actions(values: &Values) -> Vec<(usize, ValuesAction)> {
+    let empty = DFSchema::empty();
+    let mut actions = Vec::new();
+    for (column, field) in values.schema.fields().iter().enumerate() {
+        let declared = field.data_type();
+        let Some(zoned) = timestamp_ns_target(declared) else {
+            continue;
+        };
+        let Ok(types) = values
+            .values
+            .iter()
+            .map(|row| row[column].get_type(&empty))
+            .collect::<Result<Vec<DataType>>>()
+        else {
+            continue;
+        };
+        if types.iter().all(|found| found == declared) {
+            continue;
+        }
+        if types.contains(declared) {
+            actions.push((column, ValuesAction::Widen(zoned, types)));
+        } else if let Some(first) = types.first()
+            && types.iter().all(|found| found == first)
+            && matches!(first, DataType::Timestamp(_, _))
+        {
+            actions.push((column, ValuesAction::Retype(first.clone())));
+        }
+    }
+    actions
 }
 
 #[cfg(test)]

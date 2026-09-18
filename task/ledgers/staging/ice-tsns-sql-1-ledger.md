@@ -60,6 +60,9 @@ not yet supported`, apache/iceberg-python#1551), so the write-direction oracle i
 | C-006 | Ruling clause 6: the out-of-scope items are recorded as dated residues here and in the registry; format v2 keeps refusing ns types at CREATE. | `test_format_v2_keeps_refusing_ns_at_create` (fence, green before and after); residues R-001, R-002 below; registry row. | **PROVEN** | Fence `test_format_v2_keeps_refusing_ns_at_create` green before and after; residues R-001 / R-002 dated in §6 and as registry rows `ICE-TSNS-SQL-1-R-001` / `-R-002` in `docs/spark-sql-iceberg-parity.md`. |
 | C-007 | Ruling clause 3, `hours(ts)`: SQL-door writes into `hours(tz)` on ns partition at the true hour boundary and the partitions equal the spec-derived values. | `test_hours_partitions_equal_the_spec`; `check` leg on `sql_hours`. | **OPEN** | BLOCKED-ON-FORK F-TSNS-HOUR-1 (registry `ICE-TSNS-SQL-1-R-003`): the fork's `Hour::transform` refuses `Timestamp(ns)`. `test_hours_partitions_equal_the_spec` xfails on exactly that message; `check` prints `BLOCKED sql_hours`. Closes at the fork repin: the pin then runs fully against the spec-derived fixture. |
 | C-008 | Registry row, maps, gates and the fixture `check` leg are green on the release native. | §7 counts. | **PROVEN** | §7: every gate run with counts; the three facade-suite failures and the parity-suite flake are shown independent of this change (clock window, load timing, shared-path race). |
+| C-009 | Ruling Q-21c-8 (L-01): `CAST(<ns column> AS TIMESTAMP)` is Spark's µs LTZ type — floored to microseconds, a `timestamp_ns` wall read in the session zone, a `timestamptz_ns` instant kept — and equals the DataFrame spelling `.cast("timestamp")`; `CAST(CAST(ns AS TIMESTAMP) AS STRING)` renders six digits. | `test_cast_ns_column_as_timestamp_floors_like_the_dataframe_spelling` (UTC and America/New_York); Rust door `cast_ns_columns_as_timestamp_floor_to_microsecond_instants`; unit `narrowing_*`; mutation proof. | **PROVEN** | Round 2 §R2.2 / §R2.4: both spellings answer `timestamp[us, tz=UTC]` with the floored ticks (`-1 ns` → `-1 µs`) in UTC and New York; the mutation turns the SQL cells red. |
+| C-010 | Ruling Q-21c-8 (L-02): a `TIMESTAMP`-typed `VALUES` cell (`TIMESTAMP '…'`, `CAST(… AS TIMESTAMP)`) written into an ns column stores its µs value × 1000, exactly as `INSERT … SELECT` stores it; a bare string keeps nine digits. | `test_timestamp_typed_values_floor_like_insert_select` (a nine-digit literal); Rust door `timestamp_typed_values_floor_to_microseconds_and_strings_keep_nine_digits`; mutation proof. | **PROVEN** | Round 2 §R2.2 / §R2.4: VALUES and SELECT both store `1767323045123456000`; the string row keeps `…789`; the mutation re-parses the typed cells at nine digits and turns the pin red. |
+| C-011 | L-03: `EXPLAIN` lowers `timestamp_ns` / `timestamptz_ns` casts in the statement it explains. | `test_explain_lowers_ns_casts`; Rust door `explain_lowers_ns_casts`. | **PROVEN** | Round 2 §R2.2: `EXPLAIN … CAST(… AS timestamp_ns)` plans `__repark_cast_timestamp_ns__(…)` where it refused `Unsupported SQL type` before. |
 
 ## 1. Measured before any product change (release native, `126b8285`)
 
@@ -283,9 +286,14 @@ must: microsecond rendering already answers them.
   session-zone wall. Spark's own `CAST(<string> AS TIMESTAMP_NTZ)` drops the zone instead; the
   INSERT planner types a `TIMESTAMP '…'` literal and a string literal identically, so one rule
   covers both, and it is the rule a `TIMESTAMP` value into a naive column already follows.
-- **A-2.** A `TIMESTAMP '…'` literal written by `INSERT … VALUES` into an ns column is read from
-  its text at nanosecond precision. Only a literal with more than six fraction digits can tell
-  the difference, and Spark has no answer for an ns column.
+- **A-2.** *(Revised in round 2 by ruling Q-21c-8; the round-1 text read a `TIMESTAMP '…'`
+  literal in `VALUES` at nanosecond precision.)* The nine-digit re-parse of a `VALUES` cell
+  written into an ns column applies only to a cell that is not `TIMESTAMP`-typed: an explicit
+  `timestamp_ns` / `timestamptz_ns` cast (lowered before planning) and a bare string (A-3). A
+  `TIMESTAMP '…'` literal or a `CAST(… AS TIMESTAMP)` cell is Spark's µs type, floored to
+  microseconds and widened × 1000, exactly as `INSERT … SELECT` stores it. The planner types a
+  bare string and a `TIMESTAMP` cell identically, so the door reads the cell's type name from the
+  statement before planning.
 - **A-3.** "A string written by `INSERT … SELECT`" is read as "where RePark accepts a string for a
   `TIMESTAMP` column": string literals in `VALUES` widen; a string COLUMN (and a string literal
   projected by `INSERT … SELECT`) stays refused by the WI-2 store-assignment gate, exactly as for
@@ -360,3 +368,137 @@ repark-spark: 1200 passed, 0 failed, 4 ignored across 10 test binaries
    check and grammar, docs compaction and links, parity dual-wire).
 7. Fixture `check` leg (PyIceberg 0.12.0) — 0 failures; `sql_hours` BLOCKED (§3).
 8. Mutation transcripts — §4.
+
+## Round 2 (2026-09-18) — run 21c
+
+**Base:** round 1 rebased onto `origin/main` `6617d215` (fork pin RP-24 `8fb44a39`), head
+`b0e19783`. **Model:** claude-opus-5. **Reviews closed:** Critic-3 logic (NEEDS_REMEDIATION:
+L-01 P1, L-02 P2, L-03 P3) and the Rust performance review (PASS with P-01..P-04 P2, P-05..P-07
+P3).
+
+**Ruling Q-21c-8 (orchestrator, extends Q-21c-6), summarized:** the SQL type name `TIMESTAMP`
+is always Spark's microsecond LTZ type — the type name in `CAST(… AS TIMESTAMP)`, the literal
+`TIMESTAMP '…'` and a planned `Cast(_, Timestamp(ns))` standing for it — whatever the source (an
+ns column included) and the statement shape (`VALUES` included). Extra fraction digits floor to
+microseconds, matching RePark's existing µs cast. Only `timestamp_ns` / `timestamptz_ns` keep
+nine digits. A µs value written into an ns column widens exactly (× 1000), and no path re-parses
+a `TIMESTAMP`-typed value at nine digits. The SQL spelling answers what `.cast("timestamp")`
+answers.
+
+### R2.1 Measured on `b0e19783` (release native)
+
+- L-01 reproduced: `CAST(ts AS TIMESTAMP)` on `timestamp_ns` / `timestamptz_ns` answered
+  `timestamp[ns]` with every digit. `.cast("timestamp")` answered `timestamp[us, tz=UTC]`, but
+  through Arrow's plain cast: `-1 ns` became `0` (truncation toward zero, not a floor), and in
+  America/New_York a `timestamp_ns` wall was read as UTC (`1767323045123456`, where the µs
+  `TIMESTAMP_NTZ` → `TIMESTAMP` rule gives `1767341045123456`). The two spellings agreed only in
+  UTC after the epoch.
+- L-02 root cause: the planner types a bare string, `TIMESTAMP '…'` and `CAST(… AS TIMESTAMP)`
+  in a `VALUES` row for a `timestamp_ns` column identically
+  (`CAST(Utf8("…") AS Timestamp(ns))`), so no plan-level rule can tell them apart. The type
+  name is only in the statement.
+
+### R2.2 Implementation
+
+- **L-01** — `spark_ltz_timestamp_cast` puts `__repark_narrow_timestamp_ns__` (in
+  `timestamp_ns_cast.rs`) in place of a cast from a nanosecond source to `Timestamp(ns, None)`
+  (the SQL `TIMESTAMP`) or to `Timestamp(µs, "UTC")` (the DataFrame `"timestamp"`). The kernel
+  floors ticks to microseconds with `div_euclid`, keeps a zoned instant, and localizes a
+  zoneless wall in the session zone with the same `localize_wall_micros_in_zone` the µs rule
+  uses. It accepts any timestamp unit: a `UNION`'s schema can still say ns after its arms were
+  rewritten to µs (found by `plan_partitioning` in `cargo test -p repark-spark`), and those
+  ticks convert exactly. Its field keeps the argument's nullability, so `current_timestamp()`
+  stays non-null (found by `test_dogfood_gaps.py`).
+- **L-02** — `insert_timestamp_ns::timestamp_typed_values_cells` reads the (row, column) of
+  every `TIMESTAMP`-typed `VALUES` cell (`TIMESTAMP '…'`, `CAST(… AS TIMESTAMP)`, parenthesized
+  or not) from the statement before planning. `spark_ast` passes them to `before_analysis`, and
+  `conform_values_rows` leaves those cells to the µs rule. The `VALUES` conform then widens them
+  × 1000, as `after_analysis` widens a `SELECT`.
+- **L-03** — `spark_ast` applies `lower_timestamp_ns_casts` to the statement an `EXPLAIN`
+  wraps.
+- **P-01** — `or_overflow` takes `impl Display`, so the value is formatted only on the overflow
+  arm.
+- **P-02** — `values_actions` reads only nanosecond-declared columns by reference. A `VALUES`
+  with none, or with nothing to change, is returned without a clone. When a change is needed,
+  the rows are moved, not cloned.
+- **P-03** — MERGE clones and lowers its AST only when the read-only probe
+  `has_timestamp_ns_cast` finds a `timestamp_ns` / `timestamptz_ns` cast.
+- **P-04** — same-kind widening (a zoned source into `timestamptz_ns`, a naive one into
+  `timestamp_ns`) is Arrow's vectorized checked cast (`safe: true`, nulls on overflow). Under
+  ANSI, an overflow is found by comparing null counts and raises the row path's
+  `[CAST_OVERFLOW]` naming the first overflowing value. Overflow is real here: µs values past
+  2262-04-11 or before 1677-09-21 do not fit i64 ns (unit
+  `same_kind_instants_widen_and_overflow_like_the_row_path`). Both ns casts are one shared
+  `LazyLock` UDF instance each.
+- **P-05** — `before_analysis` / `after_analysis` inspect the plan by reference and return a
+  non-insert plan without moving it into a box.
+- P-06 and P-07 are left as they are (P3; one loop-invariant match and one extra pattern arm).
+
+### R2.3 Assumptions taken
+
+- **A-2** is revised in place (§5).
+- **A-9.** The DataFrame spelling `.cast("timestamp")` on an ns column goes through the same
+  kernel as the SQL spelling, so the two agree in every zone and on both sides of the epoch.
+  The DataFrame answer changes where Arrow's cast diverged from RePark's µs rule: pre-epoch
+  sub-microsecond ticks now floor, and a `timestamp_ns` wall in a non-UTC session is read in
+  the session zone.
+- **A-10.** A bare string in `VALUES` keeps nine digits (A-3, fixture row 5). The ruling's "only
+  an explicit ns cast" is read against its principle, "no path re-parses a `TIMESTAMP`-typed
+  value": a string literal is not `TIMESTAMP`-typed, and the recorded PyIceberg read-back of
+  `sql_days` row 5 holds `…000000001`.
+
+### R2.4 Mutation proofs (release native, one revert at a time, then restored)
+
+L-01 — `rewrite_cast`'s narrowing arm disabled (`if false && matches!(source, …)`):
+
+```
+FAILED test_ice_tsns_sql_1.py::test_cast_ns_column_as_timestamp_floors_like_the_dataframe_spelling[America/New_York]
+FAILED test_ice_tsns_sql_1.py::test_cast_ns_column_as_timestamp_floors_like_the_dataframe_spelling[UTC]
+E   AssertionError: ('ts', ts: timestamp[ns] … tz: timestamp[ns] …)
+2 failed, 40 passed, 1 xfailed
+```
+
+L-02 — `conform_values_rows` re-parses `TIMESTAMP`-typed cells again
+(`if false && timestamp_cells.binary_search(…).is_ok()`):
+
+```
+FAILED test_ice_tsns_sql_1.py::test_timestamp_typed_values_floor_like_insert_select
+E   At index 0 diff: {'id': 1, 'ts': 1767323045123456789, 'tz': 1767323045123456789}
+      != {'id': 1, 'ts': 1767323045123456000, 'tz': 1767323045123456000}
+1 failed, 41 passed, 1 xfailed
+```
+
+The L-02 pin uses a nine-digit literal (`…05.123456789`) and asserts
+`floored != wall("1")`, so the floor and the re-parse cannot look alike.
+
+### R2.5 Residues
+
+- **R-004** — unchanged (`TRY_CAST(… AS timestamp_ns)`). L-03 closed rather than joining it.
+- **R-006** (observed 2026-09-18) — under `spark.sql.timestampType=TIMESTAMP_NTZ`,
+  `CAST(<ns column> AS TIMESTAMP)` still keeps `Timestamp(ns)`: the NTZ-mode rewrite
+  (`rewrite_cast_as_ntz`) has no nanosecond-source arm. Ruling Q-21c-8 rules on the default LTZ
+  type. Named in the registry row.
+- **R-007** (registry `ICE-TSNS-SQL-1-R-007`, OPEN 2026-09-18) — in a non-UTC session, a MERGE
+  insert/update writes a `TIMESTAMP` into a `timestamp_ns` column as its UTC wall. INSERT stores
+  the session-zone wall (A-1). MERGE widens through the Iceberg write path's Arrow cast. Round
+  2 did not change it.
+
+### R2.6 Gates (release native of the round-2 tree)
+
+1. Comment ban: `comment_ban.py <clone> origin/main` reports `comment-ban hits=0`, and the
+   staged-diff grep in the brief printed nothing.
+2. `cargo test` per crate: `repark-functions` 777 passed, 0 failed, 1 ignored; `repark-spark`
+   1204 passed, 0 failed, 4 ignored across 10 binaries; `repark-iceberg` 448 passed, 0 failed.
+   The first `repark-spark` run failed 7 `plan_partitioning` tests on the stale-`UNION`-schema
+   case (R2.2), which the unit-robust kernel fixed. The `mem::take` spelling clippy asked for
+   afterwards is covered by `make verify`.
+3. `pytest test_ice_tsns_sql_1.py test_v3_create_opt_in.py`: 47 passed, 1 xfailed
+   (`test_hours_partitions_equal_the_spec`, F-TSNS-HOUR-1).
+4. `pytest python/repark/tests -k "timestamp or values or cast or merge" -n 4`: 1324 passed,
+   47 skipped, 12 xfailed. The first run failed
+   `test_dogfood_gaps.py::test_current_timestamp_arrow_type_is_microsecond_utc` on the
+   narrowing field's nullability (R2.2), which is fixed.
+5. `make verify`: exit 0. 3833 Rust tests passed, 0 failed, 7 ignored across 57 binaries, and
+   every static gate is clean.
+6. Fixture `check` leg (PyIceberg 0.12.0): 0 failures; `sql_hours` BLOCKED (F-TSNS-HOUR-1).
+7. Mutation transcripts: R2.4.

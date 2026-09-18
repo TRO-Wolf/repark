@@ -47,6 +47,7 @@ async fn execute_passthrough_inner(
     let mut may_have_bare_range_bound = false;
     let mut insert_columns: Option<Vec<String>> = None;
     let mut preloaded: Option<Box<iceberg::table::Table>> = None;
+    let mut timestamp_cells = Vec::new();
     match &mut statement {
         DfStatement::Statement(inner) => {
             // G15 — collation at the EXECUTING parse (G3-E8 altitude).
@@ -67,6 +68,7 @@ async fn execute_passthrough_inner(
             // R1: DataFusion accepts only SingleQuotedString inside INTERVAL frame bounds.
             window_range::quote_unquoted_interval_range_bounds(inner);
             may_have_bare_range_bound = window_range::statement_has_bare_range_bound(inner);
+            timestamp_cells = crate::insert_timestamp_ns::timestamp_typed_values_cells(inner);
             insert_columns = insert_defaults::insert_column_list(inner);
             preloaded = if let Some((catalog_name, ident)) = insert_defaults::insert_target(inner)
                 && let Some(catalog) = catalogs.get(&catalog_name)
@@ -81,6 +83,11 @@ async fn execute_passthrough_inner(
                 None
             };
         }
+        DfStatement::Explain(explain) => {
+            if let DfStatement::Statement(inner) = explain.statement.as_mut() {
+                crate::keyword_lower::lower_timestamp_ns_casts(inner.as_mut());
+            }
+        }
         DfStatement::Reset(ResetStatement::Variable(name)) => {
             crate::collation::refuse_collation_reset_variable(&name.to_string())?;
         }
@@ -93,7 +100,7 @@ async fn execute_passthrough_inner(
     } else {
         plan
     };
-    let plan = crate::insert_timestamp_ns::before_analysis(plan)?;
+    let plan = crate::insert_timestamp_ns::before_analysis(plan, &timestamp_cells)?;
     // Refuse local CREATE EXTERNAL and COPY TO before eager execution unless explicitly allowed.
     local_fs_ddl::refuse_local_filesystem_plan(ctx, catalogs, &plan)?;
     // Apply the shared create guard to the plan the sink will register.

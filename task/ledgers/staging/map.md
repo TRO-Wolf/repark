@@ -9,8 +9,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (rating row V3-06 and the ns half of V3-04) answer the Iceberg v3 spec with a PyIceberg 0.12.0
   read-back, per ruling Q-21c-6 — string casts, lossless widening on every write path,
   `days`/`hours` partitions, lossless `CAST … AS STRING`, nanosecond predicates. `hours()` on ns
-  is BLOCKED-ON-FORK F-TSNS-HOUR-1. `risk_tier: standard`. Branch `feat/ice-tsns-sql-1`.
-  pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  is BLOCKED-ON-FORK F-TSNS-HOUR-1. Round 2 (2026-09-18, ruling Q-21c-8): the type name
+  `TIMESTAMP` is always µs — `CAST(ns AS TIMESTAMP)` narrows, `TIMESTAMP` cells in `VALUES`
+  floor, `EXPLAIN` lowers. `risk_tier: standard`. Branch `feat/ice-tsns-sql-1`.
+  pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [ice-registry-sweep-1a-ledger.md](ice-registry-sweep-1a-ledger.md) —
   **ICE-REGISTRY-SWEEP-1 part A (2026-09-17), in flight:** the cutover
   assessment corrections and three registry claims — twelve
