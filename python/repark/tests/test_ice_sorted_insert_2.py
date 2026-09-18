@@ -27,7 +27,6 @@ LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — the live sort oracle is skipped (CI is 
 CATALOG = "icesorted2"
 ALLOW_CREATE_V3 = "repark.sql.allowCreateFormatVersion3"
 RANGE_VIEWS = (2000, 400, 200)
-BINPACK_INPUT_FILES = 6
 RDF_FORK_ASK = "BLOCKED-ON-FORK F-RDF-SORT-STAMP-1"
 UPDATE_FORK_ASK = "BLOCKED-ON-FORK F-COW-UPDATE-STAMP-1"
 REPARK_OWNED = "_merge_not_matched_insert"
@@ -246,26 +245,14 @@ def _lineage(engine: ReparkSession, table: str) -> dict[int, int | None]:
 
 @pytest.mark.xfail(reason=RDF_FORK_ASK, strict=True)
 def test_binpack_rewrite_sorts_and_stamps_like_spark(tmp_path: Path) -> None:
-    """C-009: Spark's binpack re-sorts by the table default and stamps it; the fork does not."""
+    """C-009: Spark's binpack re-sorts by the table default and stamps it; the fork does not.
+
+    The recorded program runs verbatim, including Spark's own `options => map('min-input-files',
+    '2','rewrite-all','true')` on the CALL, so the compaction rewrites the same three inputs.
+    """
     engine = _session("sorted2-bp", tmp_path / "wh")
     try:
-        program = _PLAN["bp"]
-        table = f"{CATALOG}.w.{program['name']}"
-        engine.sql(f"CREATE TABLE {table} {program['ddl']}").collect()
-        engine.sql(f"ALTER TABLE {table} {program['order']}").collect()
-        for chunk in range(BINPACK_INPUT_FILES):
-            engine.sql(
-                f"INSERT INTO {table} SELECT ((id * 7919) % 2000) + {chunk} AS id,"
-                " CAST(id % 2 AS INT) AS p FROM r200"
-            ).collect()
-        engine.sql(
-            f"CALL {CATALOG}.system.rewrite_data_files(table => 'w.{program['name']}')"
-        ).collect()
-        stamp = _expected_stamp(_CELLS["binpack_after"])
-        for entry in _files(engine, table):
-            keys = _column(entry["file_path"], program["key"])
-            assert entry["sort_order_id"] == stamp, entry
-            assert _sorted_under(keys, program["descending"]), (entry, keys[:8])
+        _drive(engine, _PLAN["bp"])
     finally:
         engine.stop()
 

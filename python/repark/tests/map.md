@@ -422,6 +422,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `BLOCKED-ON-FORK F-COW-UPDATE-STAMP-1` (the fork's COW UPDATE exec) — and
   XPASS the day either fork PR lands. Live (`REPARK_PARITY_LIVE=1`): the
   recorder's `check` subcommand re-derives all 15 cells and reds on drift.
+  **Round 4 (2026-09-17):** the binpack leg replays the recorded `bp` program
+  verbatim through `_drive`, Spark's `options => map('min-input-files','2',
+  'rewrite-all','true')` included, instead of writing six files per partition
+  to clear the fork's `min_input_files = 5` default.
   pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**

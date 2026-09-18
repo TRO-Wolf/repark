@@ -6,7 +6,7 @@ use datafusion::arrow::array::{RecordBatch, UInt32Array};
 use datafusion::arrow::compute::{CastOptions, cast_with_options, take_record_batch};
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, SchemaRef};
 use datafusion::error::{DataFusionError, Result};
-use futures::{Stream, TryStreamExt};
+use futures::{Stream, StreamExt, TryStreamExt};
 use iceberg::arrow::{FieldMatchMode, PartitionValueCalculator, arrow_struct_to_literal};
 use iceberg::metadata_columns::{
     RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER, RESERVED_COL_NAME_ROW_ID,
@@ -175,9 +175,17 @@ where
         location_generator,
         file_name_generator,
     );
-    let ordered = sorted_lineage_batches(table, &mut stream).await?;
+    let mut ordered = if default_sort_is_declared(table) {
+        let sorted = sort_batches_by_default_order(table, drain(&mut stream).await?).await?;
+        futures::stream::iter(sorted.into_iter().map(Ok)).left_stream()
+    } else {
+        stream.right_stream()
+    };
     let mut fanout = FanoutWriter::new(stamp(DataFileWriterBuilder::new(rolling_builder), table));
-    for batch in ordered {
+    while let Some(batch) = ordered.try_next().await? {
+        if batch.num_rows() == 0 {
+            continue;
+        }
         for (partition_key, partition_batch) in split_lineage_batch(
             &batch,
             user_count,
@@ -195,21 +203,17 @@ where
     Ok(crate::write::file_order::ascending_partition_order(files))
 }
 
-async fn sorted_lineage_batches<S>(table: &Table, stream: &mut S) -> Result<Vec<RecordBatch>>
+async fn drain<S>(stream: &mut S) -> Result<Vec<RecordBatch>>
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
     let mut collected = Vec::new();
     while let Some(batch) = stream.try_next().await? {
-        if batch.num_rows() == 0 {
-            continue;
+        if batch.num_rows() > 0 {
+            collected.push(batch);
         }
-        collected.push(batch);
     }
-    if !default_sort_is_declared(table) {
-        return Ok(collected);
-    }
-    sort_batches_by_default_order(table, collected).await
+    Ok(collected)
 }
 
 fn split_lineage_batch(
