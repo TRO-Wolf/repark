@@ -1011,3 +1011,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   new-table RTAS commits through the fork's public overwrite path, `commit_replace_write`).
   `risk_tier: standard`. Branch `ice-rtas-ops-2`.
   pins: ice-rtas-ops-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
+- [ice-registry-sweep-1b-ledger.md](ice-registry-sweep-1b-ledger.md) —
+  **ICE-REGISTRY-SWEEP-1B (2026-09-18), in flight:** the registry agrees with
+  merged main for the twelve remaining rating rows and claims — every row state
+  measured on merged main (`6cd9ee06`) the hour it is written. Nine rows verify
+  unchanged (nested-evo/DDL, dynamic overwrite, write options, variant/geo,
+  stats carry-forward, write-default fill machinery, sorted INSERT INTO,
+  promote-read ranges, mixed-case ID-1); three tighten with a measured clause
+  (ORC/Avro table-property refusal, ENC-1 cleartext bytes, north-star C-2 FIXED
+  citation); V3-05 recorded in the ledger only (PR #700 owns the row).
+  `risk_tier: standard`. Branch `docs/ice-registry-sweep-1b`.
