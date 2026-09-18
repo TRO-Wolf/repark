@@ -199,6 +199,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `begin_replace` arm and the `begin_create` arm — so an RTAS commits `overwrite`
   (or `delete` when the SELECT is empty) while plain CTAS keeps `append`. The
   service-managed create-first arm never reaches the staged type and is unchanged.
+  The two opt-in lines took `execute_ctas` past clippy's `too_many_lines`, so it
+  carries the repository's `#[allow(clippy::too_many_lines)]` like 23 other sites.
   pins: ice-rtas-ops-2/C-001, C-002, C-004
 - `spark_ast.rs` — **SE-1 D1:** after the SEC-02 plan guard,
   calls the shared belt's `repark_core::PreExecute::guard` (which owns

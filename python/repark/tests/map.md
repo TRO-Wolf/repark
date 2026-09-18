@@ -5030,10 +5030,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   truncated replace fails even when a service commit adds snapshots; counts derived from the id
   lists (exact path 1 → 2 → 3; `exact_counts=False` asserts strict growth only, for S3 Tables'
   own service commits — the `assert_v3_acceptance_outcome` precedent); three distinct current
-  ids, each committed `operation == "append"` (on the relaxed path the three current ids' ops
+  ids, the seed committed `operation == "append"` and each replace
+  `operation == "overwrite"` (on the relaxed path the three current ids' ops
   only, extra service snapshots ignored). Type pin proven load-bearing by mutation (`int64` →
   red).
   pins: ice-gold-twice-1/C-001
+  **ICE-RTAS-OPS-2 (2026-09-18):** the seed still commits `append`, but the two
+  replaces now commit `overwrite` (the fork's `with_replace_write` opt-in, RP-23
+  pin `4151b488`) — the live Spark 4.1.2 RTAS answer this unit's registry row
+  carries to FIXED. Holds on all three legs (memory, Glue, S3 Tables: the seed
+  is a plain create on each, the replaces stage against the existing table).
+  pins: ice-rtas-ops-2/C-014
 - `test_acceptance_v3_helpers.py` — **LIVE-v3 (2026-09-02):** AWS-free structural pins for
   `_acceptance_v3` and the two live legs. The never-teardown guard over that module (no DROP,
   exactly one `DELETE FROM`, AST-pinned inside `v3_row_delete_sql` with its `WHERE`);

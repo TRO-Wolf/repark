@@ -750,12 +750,15 @@ perfectly good read.
 
 #### RTAS-OPS-1 — `CREATE OR REPLACE TABLE … AS SELECT` snapshot operation stamps
 
-- **repark** — CTAS then RTAS over the same table records `[append, append]`;
-  RTAS creating the table records `[append]`; an empty RTAS records no snapshot
-  at all. Both halves live in the fork's `StagedTableTransaction::materialize_pending`,
-  which runs `tx.fast_append()` unconditionally and returns the staged table
-  unchanged when `pending_data_files` is empty — no RePark-side patch can change
-  the recorded operation.
+- **repark** — CTAS then RTAS over the same table records `[append, overwrite]`;
+  RTAS creating the table records `[overwrite]`; an empty RTAS records `[delete]`
+  (twice: `[delete, delete]`). The Spark-door staged CTAS path
+  (`crates/repark-spark/src/ctas.rs::execute_ctas`) sets
+  `StagedTableTransaction::with_replace_write(true)` on both staged branches —
+  the `begin_replace` arm and the `begin_create` arm — exactly when the statement
+  carried `OR REPLACE` (fork PR #290, RP-23 pin `4151b488`); plain CTAS keeps
+  `[append]`. The column-def `CREATE OR REPLACE` form commits no snapshot: the
+  log keeps only the pre-existing `append` and the table reads zero rows.
 - **Apache Spark** — CTAS then RTAS records `[append, overwrite]`; RTAS creating
   the table records `[overwrite]`; an empty RTAS records `[delete]` (twice:
   `[delete, delete]`). The replace snapshot carries the added/total/manifest
@@ -769,17 +772,23 @@ perfectly good read.
 - **Pin** — `python/repark/tests/test_ice_rtas_byname_1.py::test_rtas_replace_records_overwrite`,
   `…::test_rtas_new_table_records_overwrite`,
   `…::test_rtas_empty_new_records_delete`,
-  `…::test_rtas_empty_twice_records_two_deletes`, all
-  `xfail(strict=True, reason="BLOCKED-ON-FORK F-RTAS-OPS-1")`
-  (pins: ice-rtas-byname-1/C-005a–d). The suite's fifth xfail,
+  `…::test_rtas_empty_twice_records_two_deletes`
+  (pins: ice-rtas-byname-1/C-005a–d), plus the `ice-rtas-ops-2` controls
+  `…::test_plain_ctas_records_append` (C-006),
+  `…::test_coldef_replace_commits_no_snapshot` (C-007) and
+  `…::test_rtas_replace_summary_keys` (C-008). The suite's remaining xfail,
   `test_dataframe_writeto_appends_by_name`, belongs to fork ask
-  F-DML-FIELD-ID-1, not this row.
-- **Rationale** — OPEN, fork ask F-RTAS-OPS-1: replace mode with files must stage
-  an `overwrite` commit (not `fast_append`), replace mode with no files must
-  still commit one `delete` snapshot, and create mode keeps `append`; the RTAS
-  replace path must stay on the replace commit even when the table does not
-  exist yet (Spark records `overwrite` for that shape too). Plain-CTAS-empty is
-  unmeasured and unclaimed.
+  F-DML-FIELD-ID-1, not this row (orchestrator ruling Q-21c-1).
+- **Rationale** — FIXED by the fork's `with_replace_write` opt-in (F-RTAS-OPS-1)
+  plus the RePark-side call in `execute_ctas`: replace mode with files stages
+  an `overwrite` commit (not `fast_append`), replace mode with no files still
+  commits one `delete` snapshot, and create mode keeps `append` unless the
+  statement carried `OR REPLACE` (Spark records `overwrite` for that shape too).
+  The column-def `CREATE OR REPLACE` form commits no snapshot in Spark on any of
+  the three measured shapes (replace with rows, replace of an empty table,
+  replace of a missing table) and is pinned as a control, not an RTAS cell
+  (measured on live Spark 4.1.2, 2026-09-17; transcript excerpt in the
+  `ice-rtas-ops-2` ledger). Plain-CTAS-empty is unmeasured and unclaimed.
 
 ### 2.4 Namespace and table listing statements
 

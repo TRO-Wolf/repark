@@ -547,7 +547,7 @@ def test_plain_ctas_records_append(spark: Any) -> None:
 
 
 def test_rtas_replace_summary_keys(spark: Any) -> None:
-    """The overwrite snapshot carries added/total keys and no deleted-* keys. pins: ice-rtas-ops-2/C-008"""
+    """Overwrite summary keeps added/total keys, no deleted-* keys. pins: ice-rtas-ops-2/C-008"""
     _seed_rtas(spark)
     spark.sql("CREATE TABLE sc.ns.rt USING iceberg AS SELECT id FROM sc.ns.rsrc").collect()
     spark.sql(
@@ -562,7 +562,7 @@ def test_rtas_replace_summary_keys(spark: Any) -> None:
 
 
 def test_coldef_replace_commits_no_snapshot(spark: Any) -> None:
-    """Column-def OR REPLACE commits no snapshot and reads zero rows, the live Spark 4.1.2 answer measured 2026-09-17. pins: ice-rtas-ops-2/C-007"""
+    """Coldef OR REPLACE: no snapshot (Spark 4.1.2 2026-09-17). pins: ice-rtas-ops-2/C-007"""
     spark.sql("CREATE TABLE sc.ns.cd (id BIGINT) USING iceberg")
     spark.sql("INSERT INTO sc.ns.cd VALUES (1), (2), (3)")
     assert _snapshot_ops(spark, "sc.ns.cd") == ["append"]

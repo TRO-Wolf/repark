@@ -141,6 +141,7 @@ pub(crate) fn build_ctas(
 }
 
 /// Resolve the target, derive schema, stream rows into a staged transaction, and publish once.
+#[allow(clippy::too_many_lines)]
 pub(crate) async fn execute_ctas(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
