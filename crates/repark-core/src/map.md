@@ -56,7 +56,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: review-fix-7/C-002
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
-  `Self::list_iceberg_table_names` for the live list path). Builder collects
+  `Self::list_iceberg_table_names` for the live list path). **ICE-WRITE-OPTIONS-1
+  round 3 (2026-09-17):** `sql_with_write_options` runs the session dialect's
+  `execute_with_write_options` (see `dialect.rs`). **Run 22b rebase (2026-09-18,
+  Q-22b-WO-1):** ICE-DYN-OVERWRITE-1's `static_overwrite.rs` (`sql_with_overwrite_flag`,
+  `sql_static_overwrite`) is retired; `session/write_options.rs` is the one statement
+  funnel, `sql_with_write_options(query, options, force_static_overwrite)` fills
+  `EngineContext::force_static_overwrite`, and `sql_with` calls it with an empty map and
+  `false`. pins: ice-dyn-overwrite-1/L-001; ice-write-options-1/C-014 Builder collects
   the Spark-style `.config(...)` map (`config(key, value)` / `configs(map)`); sync `build()`
   validates knobs, parses the config's `spark.sql.catalog.<name>.*` /
   `repark.sql.catalog.<name>.*` blocks into `CatalogSpec`s (fail-loud, synchronous), threads every
@@ -148,13 +155,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `UnpivotExec`, `apply_stack`, the labeled describe door `apply_labeled_stack` /
   `StackLabels`, marker `stack` UDF, Spark-door `StackRewrite`.
   pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
-- `static_overwrite.rs` — **ICE-DYN-OVERWRITE-1 round 2, ruling Q-20a-6
-  (2026-09-17):** the shared SQL body `sql_with_overwrite_flag` (moved out of
-  `session.rs`, which lands at 973 lines) plus the `ReparkSession::
-  sql_static_overwrite` saveAsTable entry carrying `force_static_overwrite`.
-  Comment-free per the owner's comment ban (2026-09-17); the public entry
-  carries `#[allow(clippy::missing_errors_doc)]` where its `# Errors` doc was.
-  pins: ice-dyn-overwrite-1/L-001
 - `freq_items.rs` — **DF-RUST-3 (2026-09-15):** Spark's `FreqItemCounter` as a
   DataFusion `AggregateUDFImpl` + `Accumulator` over `HashMap<FreqKey, i64>` —
   capacity `floor(1/support)`, the KSP add/merge (negative-remainder branch keeps

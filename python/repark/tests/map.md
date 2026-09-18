@@ -426,6 +426,59 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   double-quoted cells, recorded after that run, were red too on the same native (accepted,
   schema changed).
   pins: ice-nested-evo-1/C-014, C-015, C-016, C-018, C-019, C-020
+- [ice_write_options_1_spark_oracle.json](ice_write_options_1_spark_oracle.json) +
+  [_record_ice_write_options_1_oracle.py](_record_ice_write_options_1_oracle.py) +
+  [_record_ice_write_options_2_oracle.py](_record_ice_write_options_2_oracle.py) +
+  [_record_ice_write_options_3_oracle.py](_record_ice_write_options_3_oracle.py) —
+  **ICE-WRITE-OPTIONS-1 (2026-09-17):** the recorded Spark 4.1.2 +
+  iceberg-spark-runtime 1.11.0 oracle (52 cells, one JVM per driver, Hadoop
+  catalog; round 4 appends `COLL-00`…`COLL-08`, the snapshot-property collision
+  cells, through the `_3` driver, which takes its warehouse from `--warehouse`
+  and its Ivy cache from `REPARK_ORACLE_IVY` and keeps only the run-stable
+  `Multiple entries with same key` text of an error; round 5 moves the `_1` / `_2`
+  drivers to the same idiom, the runtime GAV from `_oracle_pins` through
+  `spark.jars.packages` with no machine-local JAR path): `snapshot-property.*` lands prefix-stripped and lower-cased in the
+  summary on append / dynamic overwrite / CTAS / V1 paths, `write-format`
+  parquet/orc/avro honored (`bogus` refused), per-key option measurements plus the
+  SQL-door conf probe. Offline pins read the fixture; the live tier re-runs the
+  drivers and checks the fixture.
+  pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-006, C-009
+- [test_ice_write_options_1.py](test_ice_write_options_1.py) —
+  **ICE-WRITE-OPTIONS-1 (2026-09-17):** the DataFrame write-option pins over the
+  fixture above (snapshot properties on append / dynamic overwrite / CTAS / V1
+  paths with Spark's strip-and-lowercase rule, write-format parquet honour plus
+  orc/avro/bogus refusals, per-key option dispositions, unknown-key silence,
+  warning absence, SQL-door absence, plus the serializable-overlap divergence pin
+  and the gzip footer / target-size-acceptance pins); the live tier re-runs the
+  record drivers and checks the fixture. 35 offline tests plus the live
+  re-run check, all green 2026-09-17. Round 3 replaces round-2 SNAP-06 with
+  SNAP-08/09 (UTF-8 key/value byte-exact out of band, V2 + V1) and SQL-02/03
+  (user-typed OPTIONS keeps main's INSERT parse error and CTAS WITH-refusal),
+  adds SNAP-10/11/12 (Q-20c-5 collision rule) and SNAP-13 (P-04 replace adds
+  one snapshot). Round 4 (2026-09-17) adds the COLL-* collision cells read from
+  the fixture (V-04 / V-01), the options-channel refusals for MERGE, BY NAME and
+  every non-honouring router arm (V-03, through the native
+  `session_sql_with_write_options`), and the table-level gzip level twin of the
+  Rust L-04 pin (V-02); the live leg runs all three drivers. Round 5 (2026-09-18)
+  pins the two non-Iceberg `INSERT OVERWRITE` refusals (empty-source wipe,
+  no-source passthrough) on a temp-view target: each refuses and leaves the
+  view's rows unchanged (a `USING parquet` table in an Iceberg catalog is an
+  Iceberg table, so it cannot stand in).
+  pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: ice-write-options-1/C-008, C-009, C-010, C-011, C-013
+- [test_ice_write_options_1_rebase.py](test_ice_write_options_1_rebase.py) —
+  **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the write options across the paths main
+  added under them. WO-DYN-01..06: dynamic `insertInto` overwrite and `INSERT OVERWRITE …
+  BY NAME` keep sibling partitions (rows from ICE-DYN-OVERWRITE-1's recorded oracle) and
+  stamp `snapshot-property.*` plus the gzip writer knob; `saveAsTable` overwrite stays
+  whole-table under dynamic and stamps; an empty dynamic source commits nothing with
+  options present; the static empty BY NAME wipe keeps its refusal. WO-RTAS-01/02: an
+  option-carrying RTAS answers ICE-RTAS-OPS-2's `[append, overwrite]` / `[overwrite]` /
+  `[delete]` and stamps. WO-SORT-01: an option-carrying append on an ordered table writes
+  sorted files stamped with the order id. WO-APP-01/02: the column-list append the writers
+  render since ICE-V3-WRITE-DEFAULT-1 lands with the property. Imports the row helpers of
+  `test_ice_dyn_overwrite_1.py` and the summary helpers of `test_ice_write_options_1.py`.
+  pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
 - [test_ice_evo_dml_1.py](test_ice_evo_dml_1.py) — **ICE-EVO-DML-1 (2026-09-17):** MERGE,
   UPDATE, DELETE, INSERT and INSERT OVERWRITE on a table evolved by `ADD COLUMN` /
   `RENAME COLUMN` with no write since answer Spark 4.1.2 row for row (run-19a V2-10e, V3-11).
@@ -1654,6 +1707,34 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [_record_rdf_options_1_oracle.py](_record_rdf_options_1_oracle.py) —
   **ICE-RDF-OPTIONS-1 (2026-09-17):** the Spark 4.1.2 record driver (parameterised warehouse,
   ivy cache, and output paths); critics replay it to reproduce the fixture.
+- [test_ice_tsns_sql_1.py](test_ice_tsns_sql_1.py) — **ICE-TSNS-SQL-1 (2026-09-17):**
+  `timestamp_ns` / `timestamptz_ns` on the SQL door against the Iceberg spec plus a PyIceberg
+  0.12.0 read-back (Spark 4.1.2 cannot read or write these types — ruling Q-21c-6). One pin per
+  contract clause, reading every expected value from
+  [ice_tsns_sql_1_oracle.json](ice_tsns_sql_1_oracle.json): string casts keep nine digits,
+  honour an offset or the session zone, and fail or NULL like the `TIMESTAMP` cast; INSERT
+  VALUES / SELECT, INSERT OVERWRITE, MERGE and CTAS widen microsecond `TIMESTAMP` values and
+  strings losslessly; `days(ts)` `.partitions` equals PyIceberg's; `CAST(ns AS STRING)` is
+  lossless; predicates compare at nanosecond precision; format v2 keeps refusing at CREATE.
+  `test_hours_partitions_equal_the_spec` turns into an `xfail` naming `BLOCKED-ON-FORK
+  F-TSNS-HOUR-1` only while the fork's `hour` transform refuses `Timestamp(ns)`. Round 2
+  (2026-09-18, ruling Q-21c-8): `CAST(<ns column> AS TIMESTAMP)` equals `.cast("timestamp")`,
+  floored to µs, in UTC and New York; a nine-digit `TIMESTAMP` value in `VALUES` stores what
+  `INSERT … SELECT` stores; `EXPLAIN` lowers ns casts.
+  pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ice_tsns_sql_1_oracle.json](ice_tsns_sql_1_oracle.json) — **ICE-TSNS-SQL-1 (2026-09-17):**
+  the PyIceberg `StaticTable` read-back of the DataFrame-door control (schema type names, spec,
+  int64-ns values, partitions with counts), RePark's `.partitions` answer for the same table,
+  the literals with their spec-derived nanoseconds and renderings, and the SQL-door statements
+  with the read-back each must produce (`hours(tz)` derived from the spec, the control being
+  refused by the fork).
+- [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
+  (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
+  control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and
+  `check --warehouse W` run under an interpreter that has `pyiceberg==0.12.0` + `pyarrow`
+  (not a repository dependency; the caller supplies the interpreter) — `record` prints the
+  fixture, `check` reads every SQL-door table back with PyIceberg and exits non-zero on any
+  difference.
 - `test_rdf_schema_evo_1.py` — **RDF-SCHEMA-EVO-1** (2026-09-06): `rewrite_data_files` The module docstring is the one-line form; the unit story is in this row and the ledger.
   after schema evolution, through the facade over 6-file seeds with no later write. Red on
   fork `8bc325a3` (the owner's 7v8 refusal and its drop/rename/promote/v3 siblings), green
@@ -5627,7 +5708,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Add a withColumnRenamed / na (fillna/dropna) test | `test_na_rename.py` |
 | Add a `DataFrame.write` (saveAsTable/insertInto) test | `test_writer.py` |
 | Add a CTAS write-path type-derivation test (division/write-schema) | `test_ctas_division_writeback.py` |
-| Add a Group I `writeTo` / path parquet / `sortWithinPartitions` / `F.weekday` test | `test_writer_v2.py` (octo r1–r4 + 2026-07-22 review: empty stage-swap, sticky transforms incl. Window.partitionBy, same-session path read after overwrite; **DML-B** `overwritePartitions` replaces source partitions, empty input refuses, snapshot `overwrite` (pins: dml-b-insert-overwrite/C-003, C-004); C1-Q-005 option warn-once; C3-SEC-001 transform identity quoting pin (now incl. `bucket`); O3-C1-Q-003 `insertInto` empty overwrite wipe pin; Group P: `test_bucket_partitioned_by_round_trips_e2e` + `test_years_partitioned_by_round_trips_e2e` — non-identity transform CTAS works end-to-end (replaced the old transform-gate rejects)) |
+| Add a Group I `writeTo` / path parquet / `sortWithinPartitions` / `F.weekday` test | `test_writer_v2.py` (octo r1–r4 + 2026-07-22 review: empty stage-swap, sticky transforms incl. Window.partitionBy, same-session path read after overwrite; **DML-B** `overwritePartitions` replaces source partitions, empty input refuses, snapshot `overwrite` (pins: dml-b-insert-overwrite/C-003, C-004); **ICE-WRITE-OPTIONS-1** replaces the C1-Q-005 option warn-once test with a stored-without-warning pin; C3-SEC-001 transform identity quoting pin (now incl. `bucket`); O3-C1-Q-003 `insertInto` empty overwrite wipe pin; Group P: `test_bucket_partitioned_by_round_trips_e2e` + `test_years_partitioned_by_round_trips_e2e` — non-identity transform CTAS works end-to-end (replaced the old transform-gate rejects)) |
 | Add a facade SQL `INSERT OVERWRITE … PARTITION` pin (DML-B) | `test_dml_b_partition_overwrite.py` — static nonempty/empty + Hive arity + two-key AND/incomplete + string/NULL + dynamic keep-siblings + empty-dynamic refuse (pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005) |
 | Add a Window / date-function / row_number test | `test_functions_dates.py` |
 | Add a `declareSorted` / sort-elimination plan or refusal test | `test_declare_sorted.py` |

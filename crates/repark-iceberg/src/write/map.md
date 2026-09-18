@@ -139,6 +139,13 @@ repark-core's error map.
   other column unchanged, so a non-promotion mismatch still fails in `RecordBatch::try_new`.
   Caller: `merge/mod.rs` `conform_scan_batch`.
   pins: ice-promote-read-1/C-011
+- `append_fanout_serial.rs` — **ICE-WRITE-OPTIONS-1 round 3 (2026-09-17):** the serial
+  conformed fanout (`fanout_conformed_stream_serial[_with_abort]`), split out of
+  `append.rs` under the file-size gate; re-exported there so callers keep their paths.
+  Run 22b rebase (2026-09-18): the fanout builder is wrapped in `distribution::stamp`, the
+  ICE-SORTED-INSERT-1 change main made to the pre-split `append.rs` body, so both the
+  option-free and the option-carrying fanout stamp the default sort order id.
+  pins: ice-write-options-1/C-017
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform
   ([conform.rs](conform.rs): missing /
   extra / duplicate column = loud error, except a missing column whose Iceberg field carries a
@@ -441,6 +448,10 @@ repark-core's error map.
   listed static column refuses `STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST`.
   `static_partition_source_columns` names the columns the clause assigns so the
   default fill skips them. pins: ice-v3-write-default-1/C-015
+  **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the plan-then-inject prelude of
+  `stage_static_partition_overwrite_files` is `pub(crate) static_injected_stream`, shared
+  with the options variant in `write_options.rs`; the file stays under the default ceiling.
+  pins: ice-write-options-1/C-014
 - `insert_gate.rs` — **WI-2 (2026-08-15):** `InsertStoreAssignment`, an `AnalyzerRule` over
   `LogicalPlan::Dml(WriteOp::Insert(_))` that runs `store_assign.rs`'s matrix — imported, never
   duplicated — against the pre-cast types in the synthesized projection's INPUT schema. Registered
@@ -661,6 +672,57 @@ repark-core's error map.
   `tooHighDeleteRatio`. The setting is read from the fork rather than restated, so a fork
   policy change carries. Registry `RDF-1`.
   pins: rdf-1-position-delete-bounds/C-002
+- `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** per-statement DataFrame
+  write-option staging and commits. `WriterStagingOverrides` (codec/level/target-size,
+  option over table property) feeds override-capable builders that mirror the
+  `merge/mod.rs` unpartitioned and `append.rs` fanout constructions against the same
+  fork actions; the four `*_with_summary` commits merge validated `snapshot-property.*`
+  extras into the summary (empty extras are behaviour-identical to the `_to`
+  canonicals, so the overwrite family commits through them unconditionally);
+  `isolation_with_override` shares the table-property grammar. The mirror exists
+  because the canonicals live in size-capped files the gate holds exact — a fork bump
+  re-verifies both copies (see `writer_props.rs` duties). Only option-carrying
+  statements reach the override staging; option-free staging keeps the canonicals.
+  Fallible fns carry `#[allow(clippy::missing_errors_doc)]`, never `# Errors` sections
+  (owner comment ban; round-2 purge 2026-09-17). Round 3 (2026-09-17): staging
+  is stream-in with session concurrency (the override threads through the
+  canonical concurrent fanout; canonical callers pass `none()`); gzip refuses
+  on the merged level whatever side it came from (Q-20c-6); `summary_with_extras`
+  drops user `operation`/`engine.operation-id` and refuses engine metric keys
+  as Spark does (Q-20c-5). Round 4 (2026-09-17): the metric-key prefix sweep is
+  gone; `summary_with_extras` takes the `EngineSummary` of the commit in hand
+  (`summary_collision.rs`) and refuses only a key that summary contains (V-04).
+  Round 5 (2026-09-18, Q-21c-7): the target-size override takes effect at the
+  RP-23 fork granularity, 1000-row slices once the bytes reach the target, not
+  per batch. The `writer_props.rs` units stage 3,500 rows: exactly 4 files at a
+  1-byte option or table property, and 1 at the default or a 512 MB option over
+  the property.
+  pins: ice-write-options-1/C-008, C-012
+  Run 22b rebase (2026-09-18): the unpartitioned mirror builder takes main's
+  `distribution::stamp` like `merge/mod.rs` (C-017); `commit_replace_write_with_summary`
+  is the options twin of main's RTAS `commit_replace_write` (overwrite by `AlwaysTrue`,
+  empty allowed, collision rule against `EngineSummary::for_overwrite`, C-016);
+  `stage_static_partition_overwrite_files_with` moves here from `partition_overwrite.rs`
+  (which only exposes `static_injected_stream`), takes main's column list and an
+  `Option` of the overrides, and hands `None` to the canonical untouched.
+  pins: ice-write-options-1/C-014, C-016, C-017
+- `summary_collision.rs` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
+  `EngineSummary`, the snapshot-summary keys the engine computes for the commit
+  in hand, which a user `snapshot-property.<k>` may not collide with (Spark's
+  measured rule: refuse iff the engine computed that exact key, message
+  `Multiple entries with same key: <k>=<engine> and <k>=<user>`). The fork merges
+  extras inside its own `SnapshotProducer::summary`, where a user value would
+  silently win, so the map is rebuilt ahead of the commit: `for_append`
+  runs the fork's public `SnapshotSummaryCollector` over the staged files and
+  applies the fork's add-only total arithmetic to the branch head (exact
+  values); `for_overwrite` keeps the exact added side and marks totals,
+  `changed-partition-count` and — with a parent — the data-removal keys as
+  `<resolved at commit>`, since the fork resolves the removal set inside the
+  commit. `engine-name` / `engine-version` are reserved (Spark stamps both on
+  every write; RePark writes neither): they refuse with `<engine-reserved>` as
+  the engine half (R-21c-1).
+  pins: ice-write-options-1/C-008
+  pins: ice-write-options-1/C-001, C-002, C-003
 
 ## I want to...
 
@@ -671,9 +733,11 @@ repark-core's error map.
 | Stream a SELECT into a staged (CTAS) write with bounded memory | `write_data_files_from_stream` (`merge/mod.rs`) / `write_partitioned_data_files_from_stream` (`append.rs`) |
 | Stage + commit full-table INSERT OVERWRITE | `overwrite.rs` |
 | Stage + commit partition-scoped INSERT OVERWRITE | `partition_overwrite.rs` |
+| Stage static-overwrite batches with statement levers | `partition_overwrite.rs` (`stage_static_partition_overwrite_files_with`, ICE-WRITE-OPTIONS-1) |
 | Cap concurrent Iceberg file writers (session conf) | `repark.write.max-concurrent-files` via `concurrency.rs` |
 | Send one partition value to one writer before a CTAS write (Spark's `hash` distribution) | `distribution.rs` (`hash_distribution`) |
 | Parquet compression codec (table property) | `writer_props.rs` |
+| Stage/commit an option-carrying write (summary extras + overrides) | `write_options.rs` |
 | Parquet statistics properties for a position-delete file | `writer_props.rs` (`position_delete_writer_properties_for`) |
 | Change MERGE INTO semantics | [merge/map.md](merge/map.md) |
 | Identity DELETE/UPDATE (subquery `WHERE` and RP-9 r2 plain `WHERE`) | `predicate_dml.rs` (`execute_predicate_dml`) |

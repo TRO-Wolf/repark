@@ -35,7 +35,6 @@ pub mod silver;
 mod sorted_view;
 mod spark_nullable;
 mod stack;
-mod static_overwrite;
 mod temp_view;
 mod text_glob;
 mod text_io;

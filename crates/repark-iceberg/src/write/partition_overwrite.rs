@@ -392,13 +392,7 @@ pub async fn stage_static_partition_overwrite_files(
     columns: &[String],
     concurrency: crate::write::concurrency::WriteConcurrency,
 ) -> Result<Vec<DataFile>> {
-    let write_schema: SchemaRef = Arc::new(
-        iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
-            .map_err(iceberg_err)?,
-    );
-    let plan = StaticPartitionPlan::new(Arc::clone(&write_schema), equalities, table)?
-        .with_columns(columns)?;
-    let stream = futures::stream::iter(batches.into_iter().map(move |batch| plan.inject(&batch)));
+    let stream = static_injected_stream(table, batches, equalities, columns)?;
     crate::write::overwrite::write_overwrite_staged_files_from_stream(
         table,
         stream,
@@ -406,6 +400,23 @@ pub async fn stage_static_partition_overwrite_files(
         concurrency,
     )
     .await
+}
+
+pub(crate) fn static_injected_stream<'a>(
+    table: &Table,
+    batches: Vec<RecordBatch>,
+    equalities: &'a [PartitionEquality],
+    columns: &[String],
+) -> Result<impl futures::Stream<Item = Result<RecordBatch>> + Unpin + use<'a>> {
+    let write_schema: SchemaRef = Arc::new(
+        iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
+            .map_err(iceberg_err)?,
+    );
+    let plan = StaticPartitionPlan::new(Arc::clone(&write_schema), equalities, table)?
+        .with_columns(columns)?;
+    Ok(futures::stream::iter(
+        batches.into_iter().map(move |batch| plan.inject(&batch)),
+    ))
 }
 
 fn constant_partition_array(

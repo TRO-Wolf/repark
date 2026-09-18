@@ -9,7 +9,9 @@ use datafusion::sql::sqlparser::ast::{CreateTable, CreateTableOptions, SqlOption
 use iceberg::arrow::arrow_schema_to_schema_auto_assign_ids;
 use iceberg::io::FileIO;
 use iceberg::spec::UnboundPartitionSpec;
-use iceberg::transaction::StagedTableTransaction;
+use iceberg::transaction::{
+    ApplyTransactionAction, StagedTableMode, StagedTableTransaction, Transaction,
+};
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 
 use repark_core::{CatalogRegistry, LocationPolicy};
@@ -146,6 +148,7 @@ pub(crate) async fn execute_ctas(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     ctas: Ctas,
+    options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     // Use catalog_handle so postgres (read-only) targets get P11, not a bare "unknown catalog".
     let catalog = catalog_handle(catalogs, &ctas.catalog)?;
@@ -206,10 +209,11 @@ pub(crate) async fn execute_ctas(
             partition_spec,
             format_version,
             query,
+            options,
         )
         .await;
     }
-    let staged = if let CtasMode::StagedCreate(plan) = mode {
+    let (staged, replace_base) = if let CtasMode::StagedCreate(plan) = mode {
         // Create: location + FileIO were resolved above the SELECT (ADV-3).
         let creation = TableCreation::builder()
             .name(ctas.table.clone())
@@ -219,16 +223,19 @@ pub(crate) async fn execute_ctas(
             .format_version(format_version)
             .properties(ctas.properties.clone())
             .build();
-        StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)
-            .await
-            .map_err(iceberg_err)?
-            .with_replace_write(ctas.or_replace)
+        let staged =
+            StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)
+                .await
+                .map_err(iceberg_err)?
+                .with_replace_write(ctas.or_replace);
+        (staged, None)
     } else {
         // Replace: stage against the existing table (its own location + FileIO).
         let existing = catalog
             .load_table(&table_ident)
             .await
             .map_err(iceberg_err)?;
+        let replace_base = existing.metadata_location().map(str::to_string);
         let mut properties = ctas.properties.clone();
         crate::create_table::stamp_requested_format_version(
             &mut properties,
@@ -242,23 +249,113 @@ pub(crate) async fn execute_ctas(
             .format_version(format_version)
             .properties(properties)
             .build();
-        StagedTableTransaction::begin_replace(&existing, creation)
+        let staged = StagedTableTransaction::begin_replace(&existing, creation)
             .await
             .map_err(iceberg_err)?
-            .with_replace_write(ctas.or_replace)
+            .with_replace_write(ctas.or_replace);
+        (staged, replace_base)
     };
 
     // STREAM the SELECT into the staged table (WG-2 bounded memory).
-    let data_files = write_ctas_query(ctx, staged.table(), query).await?;
-    staged
-        .add_data_files(data_files)
-        .commit(catalog.as_ref())
-        .await
-        .map_err(iceberg_err)?;
+    finish_ctas_staged_commit(
+        ctx,
+        catalog,
+        staged,
+        replace_base,
+        query,
+        options,
+        ctas.or_replace,
+    )
+    .await?;
 
     let namespace = namespace_schema_name(&ctas.namespace);
     reregister(ctx, catalog.clone(), &ctas.catalog, &namespace).await?;
     ctx.read_empty()
+}
+
+async fn finish_ctas_staged_commit(
+    ctx: &SessionContext,
+    catalog: &Arc<dyn Catalog>,
+    staged: StagedTableTransaction,
+    replace_base: Option<String>,
+    query: DataFrame,
+    options: &crate::write_options::StatementWriteOptions,
+    replace_write: bool,
+) -> Result<()> {
+    if options.is_empty() {
+        let data_files = write_ctas_query(ctx, staged.table(), query).await?;
+        staged
+            .add_data_files(data_files)
+            .commit(catalog.as_ref())
+            .await
+            .map_err(iceberg_err)?;
+        return Ok(());
+    }
+    let staging = options.staging_overrides();
+    let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
+    let stream = query.execute_stream().await?;
+    let staged_table = staged.table().clone();
+    let mode = staged.mode();
+    let data_files = if staged_table
+        .metadata()
+        .default_partition_spec()
+        .is_unpartitioned()
+    {
+        repark_iceberg::write::stage_unpartitioned_stream_with_overrides(
+            &staged_table,
+            stream,
+            concurrency,
+            &staging,
+        )
+        .await?
+    } else {
+        repark_iceberg::write::stage_partitioned_stream_with_overrides(
+            &staged_table,
+            stream,
+            &staging,
+            concurrency,
+        )
+        .await?
+    };
+    let tx = Transaction::new(&staged_table);
+    let tx = if replace_write {
+        let engine =
+            repark_iceberg::write::EngineSummary::for_overwrite(&staged_table, &data_files, None);
+        let (_, summary) =
+            repark_iceberg::write::summary_with_extras(&options.snapshot_extra, &engine)?;
+        tx.overwrite_files()
+            .overwrite_by_row_filter(iceberg::expr::Predicate::AlwaysTrue)
+            .add_files(data_files)
+            .allow_empty_commit()
+            .set_snapshot_properties(summary)
+            .apply(tx)
+    } else {
+        let engine =
+            repark_iceberg::write::EngineSummary::for_append(&staged_table, &data_files, None);
+        let (_, summary) =
+            repark_iceberg::write::summary_with_extras(&options.snapshot_extra, &engine)?;
+        tx.fast_append()
+            .add_data_files(data_files)
+            .set_snapshot_properties(summary)
+            .apply(tx)
+    }
+    .map_err(iceberg_err)?;
+    let table = tx.apply_locally().await.map_err(iceberg_err)?;
+    match mode {
+        StagedTableMode::Create => {
+            catalog
+                .publish_create_table(table)
+                .await
+                .map_err(iceberg_err)?;
+        }
+        StagedTableMode::Replace => {
+            catalog
+                .publish_replace_table(table, replace_base)
+                .await
+                .map_err(iceberg_err)?;
+        }
+    }
+    Ok(())
 }
 
 /// Stream a CTAS SELECT into Iceberg data files, honouring session write concurrency.
@@ -426,6 +523,7 @@ pub(crate) async fn execute_ctas_service_managed(
     partition_spec: Option<UnboundPartitionSpec>,
     format_version: iceberg::spec::FormatVersion,
     query: DataFrame,
+    options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     // Location deliberately not set: the service assigns it.
     let creation = TableCreation::builder()
@@ -442,11 +540,52 @@ pub(crate) async fn execute_ctas_service_managed(
 
     // From here the table EXISTS in the catalog: any failure below aborts by dropping it.
     let write_result: Result<()> = async {
-        let data_files = write_ctas_query(ctx, &table, query).await?;
+        if options.is_empty() {
+            let data_files = write_ctas_query(ctx, &table, query).await?;
+            if ctas.or_replace {
+                repark_iceberg::write::commit_replace_write(catalog, &table, data_files).await?;
+            } else if !data_files.is_empty() {
+                repark_iceberg::write::commit_append(catalog, &table, data_files).await?;
+            }
+            return Ok(());
+        }
+        let staging = options.staging_overrides();
+        let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
+        let stream = query.execute_stream().await?;
+        let data_files = if table.metadata().default_partition_spec().is_unpartitioned() {
+            repark_iceberg::write::stage_unpartitioned_stream_with_overrides(
+                &table,
+                stream,
+                concurrency,
+                &staging,
+            )
+            .await?
+        } else {
+            repark_iceberg::write::stage_partitioned_stream_with_overrides(
+                &table,
+                stream,
+                &staging,
+                concurrency,
+            )
+            .await?
+        };
         if ctas.or_replace {
-            repark_iceberg::write::commit_replace_write(catalog, &table, data_files).await?;
-        } else if !data_files.is_empty() {
-            repark_iceberg::write::commit_append(catalog, &table, data_files).await?;
+            repark_iceberg::write::commit_replace_write_with_summary(
+                catalog,
+                &table,
+                data_files,
+                &options.snapshot_extra,
+            )
+            .await?;
+        } else {
+            repark_iceberg::write::commit_append_with_summary(
+                catalog,
+                &table,
+                data_files,
+                &options.snapshot_extra,
+                None,
+            )
+            .await?;
         }
         Ok(())
     }

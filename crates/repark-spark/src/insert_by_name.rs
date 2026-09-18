@@ -47,13 +47,9 @@ pub(crate) async fn execute_insert_by_name(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     stripped_sql: &str,
-    force_static_overwrite: bool,
+    write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
-    let parsed = parse_single_normalized(stripped_sql)?;
-    let Some((statement, _)) = parsed else {
-        return crate::router::execute_unparsable_fallthrough(ctx, catalogs, stripped_sql).await;
-    };
-    let Statement::Insert(insert) = statement else {
+    let Some((Statement::Insert(insert), _)) = parse_single_normalized(stripped_sql)? else {
         return crate::router::execute_unparsable_fallthrough(ctx, catalogs, stripped_sql).await;
     };
     let table_sql = insert.table.to_string();
@@ -101,10 +97,14 @@ pub(crate) async fn execute_insert_by_name(
                 &table_sql,
                 &delegated,
                 &partitioned,
+                write_options,
             )
             .await;
         }
-        let dynamic = crate::insert_overwrite::overwrite_is_dynamic(ctx, force_static_overwrite);
+        let dynamic = crate::insert_overwrite::overwrite_is_dynamic(
+            ctx,
+            write_options.force_static_overwrite,
+        );
         if projection_is_empty(ctx, catalogs, &projection_sql).await? {
             let namespace = namespace_schema_name(table.identifier().namespace());
             let type_table_sql =
@@ -118,6 +118,7 @@ pub(crate) async fn execute_insert_by_name(
             )
             .await?;
             if !dynamic {
+                write_options.refuse_if_non_empty("INSERT ... BY NAME of an empty projection")?;
                 wipe_by_name_target(ctx, &catalog_name, catalog, &table, branch.as_deref()).await?;
             }
             return ctx.read_empty();
@@ -129,10 +130,12 @@ pub(crate) async fn execute_insert_by_name(
             &table_sql,
             &query,
             &insert.columns,
+            write_options,
             dynamic,
         )
         .await;
     }
+    write_options.refuse_if_non_empty("INSERT ... BY NAME")?;
     append_by_name_projection(
         ctx,
         catalogs,

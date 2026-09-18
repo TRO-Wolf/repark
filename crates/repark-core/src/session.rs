@@ -38,6 +38,7 @@ mod iceberg_caches;
 mod late_catalogs;
 pub(crate) mod spill;
 mod temp_views;
+mod write_options;
 
 pub use df_guards::subquery::{resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan};
 use df_guards::{
@@ -396,7 +397,8 @@ impl ReparkSession {
     /// # Errors
     /// Identical classification to [`Self::sql`]: every dialect gets the same error taxonomy.
     pub async fn sql_with(&self, dialect: &Arc<dyn SqlDialect>, query: &str) -> Result<DataFrame> {
-        crate::static_overwrite::sql_with_overwrite_flag(self, dialect, query, false).await
+        self.sql_with_write_options_inner(dialect, query, &HashMap::new(), false)
+            .await
     }
 
     /// Register an Iceberg [`Catalog`] as both a DataFusion provider and session write handle.

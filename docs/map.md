@@ -131,6 +131,8 @@ repo.
   FIRST/AFTER` moves with ids intact; the I6 move refusal text is removed, the COMMENT
   refusal stays); the self-move diagnostic delta is recorded in the row, not absorbed.
   pins: ice-column-reorder-1/C-013
+  ICE-WRITE-OPTIONS-1 round 3 (2026-09-17): the FIXED row's channel paragraph moves
+  out of band (plus the Round 3 bullet: SQL-02/03, SNAP-08..13, merged gzip refusal).
   ICE-DYN-OVERWRITE-1 (2026-09-17): DML-1 points at new rows DML-1B (dynamic
   PARTITION-less overwrite FIXED) and DML-1C (overwrite-vs-append race FIXED, serializable
   surface documented).
@@ -138,6 +140,9 @@ repo.
   **ICE-EVO-DML-1 (2026-09-17):** rows `ICE-EVO-DML-1` / `ICE-EVO-SWAP-1` /
   `ICE-EVO-LINEAGE-READ-1` FIXED with pin names and the fork-pin note.
   pins: ice-evo-dml-1/C-014
+  ICE-WRITE-OPTIONS-1 run 22b (2026-09-18): the FIXED row gains the rebase bullet (dynamic
+  overwrite, static pin, empty dynamic source, RTAS, sorted tables, column lists).
+  pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

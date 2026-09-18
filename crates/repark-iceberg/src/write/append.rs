@@ -6,28 +6,25 @@ use std::sync::{Arc, atomic::AtomicBool, atomic::Ordering};
 use datafusion::arrow::array::RecordBatch;
 use datafusion::error::{DataFusionError, Result};
 use futures::channel::mpsc;
-use futures::{Stream, StreamExt, TryStreamExt};
-use iceberg::arrow::{FieldMatchMode, RecordBatchPartitionSplitter, schema_to_arrow_schema};
+use futures::{Stream, StreamExt};
+use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::spec::{DataFile, DataFileFormat};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
-use iceberg::writer::base_writer::data_file_writer::DataFileWriterBuilder;
-use iceberg::writer::file_writer::ParquetWriterBuilder;
-use iceberg::writer::file_writer::location_generator::{
-    DefaultFileNameGenerator, DefaultLocationGenerator,
-};
-use iceberg::writer::file_writer::rolling_writer::RollingFileWriterBuilder;
-use iceberg::writer::partitioning::PartitioningWriter;
-use iceberg::writer::partitioning::fanout_writer::FanoutWriter;
 use iceberg::{Catalog, TableIdent};
-use uuid::Uuid;
 
 use crate::write::commit_error::{commit_result, operation_id_and_summary};
 use crate::write::conform::{conform_batch, conform_batches, write_default_column_names};
-use crate::write::distribution::{route_partitioned_stream, send_routed, stamp};
+use crate::write::distribution::{route_partitioned_stream, send_routed};
 use crate::write::merge::write_data_files_with_concurrency;
-use crate::write::writer_props::writer_properties_for;
-use crate::write::{concurrency::WriteConcurrency, file_order::ascending_partition_order};
+use crate::write::{
+    concurrency::WriteConcurrency, file_order::ascending_partition_order,
+    write_options::WriterStagingOverrides,
+};
+
+pub(crate) use super::append_fanout_serial::{
+    fanout_conformed_stream_serial, fanout_conformed_stream_serial_with_abort,
+};
 
 /// Append record batches to an Iceberg table — the sanctioned add-only commit path.
 /// # Errors
@@ -134,7 +131,13 @@ where
     let write_default_columns = write_default_column_names(current_schema);
     let conformed =
         stream.map(move |item| conform_batch(&write_schema, &write_default_columns, &item?));
-    fanout_conformed_stream_with_concurrency(table, conformed, concurrency).await
+    fanout_conformed_stream_with_concurrency(
+        table,
+        conformed,
+        concurrency,
+        &WriterStagingOverrides::none(),
+    )
+    .await
 }
 
 /// The identity-partition fanout core over ALREADY-CONFORMED batches (callers: [`append`] after
@@ -147,22 +150,25 @@ async fn fanout_data_files_with_concurrency(
         table,
         futures::stream::iter(batches.into_iter().map(Ok::<_, DataFusionError>)),
         concurrency,
+        &WriterStagingOverrides::none(),
     )
     .await
 }
 
 /// Identity-partition fanout with optional concurrent batch workers.
-async fn fanout_conformed_stream_with_concurrency<S>(
+pub(crate) async fn fanout_conformed_stream_with_concurrency<S>(
     table: &Table,
     mut conformed: S,
     concurrency: WriteConcurrency,
+    staging: &WriterStagingOverrides,
 ) -> Result<Vec<DataFile>>
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
     let max_concurrent = concurrency.max_concurrent_files.max(1);
     if max_concurrent == 1 {
-        return crate::write::distribution::fanout_sorted_serial(table, &mut conformed).await;
+        return crate::write::distribution::fanout_sorted_serial(table, &mut conformed, staging)
+            .await;
     }
 
     // P1-R1: abort flag so workers do not close fanouts after a source/sibling failure.
@@ -174,7 +180,7 @@ where
         let aborted = Arc::clone(&aborted);
         worker_futures.push(async move {
             let stream = rx.map(Ok::<RecordBatch, DataFusionError>);
-            crate::write::distribution::fanout_sorted_stream(table, stream, aborted).await
+            crate::write::distribution::fanout_sorted_stream(table, stream, aborted, staging).await
         });
         senders.push(tx);
     }
@@ -228,75 +234,6 @@ where
 }
 
 /// Single-writer fanout loop (the historical serial body of `fanout_conformed_stream`).
-pub(crate) async fn fanout_conformed_stream_serial<S>(
-    table: &Table,
-    conformed: &mut S,
-) -> Result<Vec<DataFile>>
-where
-    S: Stream<Item = Result<RecordBatch>> + Unpin,
-{
-    let no_abort = AtomicBool::new(false);
-    let files = fanout_conformed_stream_serial_with_abort(table, conformed, &no_abort).await?;
-    Ok(ascending_partition_order(files))
-}
-
-/// Serial fanout that checks `aborted` between batches and after the stream ends.
-pub(crate) async fn fanout_conformed_stream_serial_with_abort<S>(
-    table: &Table,
-    conformed: &mut S,
-    aborted: &AtomicBool,
-) -> Result<Vec<DataFile>>
-where
-    S: Stream<Item = Result<RecordBatch>> + Unpin,
-{
-    let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    let splitter = RecordBatchPartitionSplitter::try_new_with_computed_values(
-        table.metadata().current_schema().clone(),
-        table.metadata().default_partition_spec().clone(),
-    )
-    .map_err(iceberg_err)?;
-
-    let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
-        writer_properties_for(table)?,
-        table.metadata().current_schema().clone(),
-        FieldMatchMode::Name,
-    );
-    let location_generator =
-        DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
-    let file_name_generator =
-        DefaultFileNameGenerator::new(Uuid::new_v4().to_string(), None, file_format);
-    let rolling_builder = RollingFileWriterBuilder::new(
-        parquet_builder,
-        table_props.write_target_file_size_bytes,
-        table.file_io().clone(),
-        location_generator,
-        file_name_generator,
-    );
-    let mut fanout = FanoutWriter::new(stamp(DataFileWriterBuilder::new(rolling_builder), table));
-
-    while let Some(batch) = conformed.try_next().await? {
-        if aborted.load(Ordering::SeqCst) {
-            // Drop fanout without close — no finished partial DataFiles.
-            return Ok(Vec::new());
-        }
-        if batch.num_rows() == 0 {
-            continue;
-        }
-        for (partition_key, partition_batch) in splitter.split(&batch).map_err(iceberg_err)? {
-            if let Err(error) = fanout.write(partition_key, partition_batch).await {
-                aborted.store(true, Ordering::SeqCst);
-                return Err(iceberg_err(error));
-            }
-        }
-    }
-    if aborted.load(Ordering::SeqCst) {
-        return Ok(Vec::new());
-    }
-    fanout.close().await.map_err(iceberg_err)
-}
-
 /// One stamped `fast_append` commit: `ENGINE_CONTRACT` §4 INSERT/append with MERGE's stamp class.
 /// # Errors
 /// Returns the fork's transaction/commit error (folded to this crate's error type) when the append
@@ -316,7 +253,7 @@ pub async fn commit_append(
 }
 
 /// Fold an iceberg error into the DataFusion error this crate's callers carry.
-fn iceberg_err(err: iceberg::Error) -> DataFusionError {
+pub(crate) fn iceberg_err(err: iceberg::Error) -> DataFusionError {
     crate::catalog::iceberg_to_datafusion(err)
 }
 
@@ -1345,7 +1282,7 @@ mod tests {
             .additional_properties
             .get(crate::write::merge::OPERATION_ID_PROP)
             .expect("append snapshot carries the engine.operation-id stamp");
-        Uuid::from_str(first_id).expect("the stamp is a UUID");
+        uuid::Uuid::from_str(first_id).expect("the stamp is a UUID");
 
         let second = append(
             &catalog,

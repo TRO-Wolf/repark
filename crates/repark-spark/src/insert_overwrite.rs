@@ -36,12 +36,13 @@ pub(crate) async fn execute_insert_overwrite(
     catalogs: &CatalogRegistry,
     sql: &str,
     insert: &Insert,
-    force_static_overwrite: bool,
+    options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     let table_name = match &insert.table {
         TableObject::TableName(name) => name,
         // Table-function / table-query targets are not an Iceberg table wipe surface.
         TableObject::TableFunction(_) | TableObject::TableQuery(_) => {
+            options.refuse_if_non_empty("INSERT into a table function")?;
             return spark_ast::execute_passthrough(ctx, catalogs, sql).await;
         }
     };
@@ -66,12 +67,13 @@ pub(crate) async fn execute_insert_overwrite(
             &table_sql,
             insert,
             partition_exprs,
+            options,
         )
         .await;
     }
 
     if let Some(source) = &insert.source {
-        let dynamic = overwrite_is_dynamic(ctx, force_static_overwrite);
+        let dynamic = overwrite_is_dynamic(ctx, options.force_static_overwrite);
         let probe_sql = format!("SELECT 1 FROM ({source}) AS _repark_ow_probe LIMIT 1");
         let probe = spark_ast::execute_passthrough(ctx, catalogs, &probe_sql).await?;
         let batches = probe.collect().await?;
@@ -105,21 +107,13 @@ pub(crate) async fn execute_insert_overwrite(
             let reprobe_batches = reprobe.collect().await?;
             let still_empty = reprobe_batches.iter().all(|batch| batch.num_rows() == 0);
             if still_empty {
-                if let Some((catalog_name, catalog, table, branch)) = iceberg_target {
+                if let Some(target) = iceberg_target {
                     if dynamic {
                         return ctx.read_empty();
                     }
-                    repark_iceberg::write::commit_overwrite_replace_all_to(
-                        &catalog,
-                        &table,
-                        Vec::new(),
-                        branch.as_deref(),
-                    )
-                    .await?;
-                    let namespace = namespace_schema_name(table.identifier().namespace());
-                    reregister(ctx, catalog, &catalog_name, &namespace).await?;
-                    return ctx.read_empty();
+                    return wipe_empty_overwrite_target(ctx, target, options).await;
                 }
+                options.refuse_if_non_empty("INSERT OVERWRITE on a non-Iceberg target")?;
                 let wipe_sql =
                     format!("INSERT OVERWRITE {table_sql} SELECT * FROM {table_sql} WHERE false");
                 return spark_ast::execute_passthrough(ctx, catalogs, &wipe_sql).await;
@@ -134,12 +128,39 @@ pub(crate) async fn execute_insert_overwrite(
             &table_sql,
             source,
             &insert.columns,
+            options,
             dynamic,
         )
         .await;
     }
 
+    options.refuse_if_non_empty("INSERT OVERWRITE without a source")?;
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
+}
+
+async fn wipe_empty_overwrite_target(
+    ctx: &SessionContext,
+    target: (
+        String,
+        Arc<dyn Catalog>,
+        iceberg::table::Table,
+        Option<String>,
+    ),
+    options: &crate::write_options::StatementWriteOptions,
+) -> Result<DataFrame> {
+    let (catalog_name, catalog, table, branch) = target;
+    repark_iceberg::write::commit_overwrite_replace_all_with_summary(
+        &catalog,
+        &table,
+        Vec::new(),
+        branch.as_deref(),
+        &options.snapshot_extra,
+        options.isolation.as_deref(),
+    )
+    .await?;
+    let namespace = namespace_schema_name(table.identifier().namespace());
+    reregister(ctx, catalog, &catalog_name, &namespace).await?;
+    ctx.read_empty()
 }
 
 pub(crate) fn overwrite_is_dynamic(ctx: &SessionContext, force_static_overwrite: bool) -> bool {
@@ -156,11 +177,11 @@ pub(crate) async fn execute_partition_overwrite(
     table_sql: &str,
     insert: &Insert,
     partition_exprs: &[datafusion::sql::sqlparser::ast::Expr],
+    options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     use repark_iceberg::write::{
         PartitionOverwritePlan, partition_overwrite_request_from_exprs, plan_partition_overwrite,
-        refuse_empty_dynamic_overwrite, stage_static_partition_overwrite_files,
-        static_partition_source_columns, write_overwrite_staged_files_from_stream,
+        refuse_empty_dynamic_overwrite, static_partition_source_columns,
     };
 
     let Some((catalog_name, catalog, table, branch)) =
@@ -196,34 +217,55 @@ pub(crate) async fn execute_partition_overwrite(
     match plan {
         PartitionOverwritePlan::Static(spec) => {
             let batches = source_df.collect().await?;
-            let staged_files = stage_static_partition_overwrite_files(
+            let staging = (!options.is_empty()).then(|| options.staging_overrides());
+            let staged_files = repark_iceberg::write::stage_static_partition_overwrite_files_with(
                 &table,
                 batches,
                 &spec.equalities,
                 &column_names,
                 concurrency,
+                staging.as_ref(),
             )
             .await?;
-            repark_iceberg::write::commit_overwrite_by_row_filter_to(
+            repark_iceberg::write::commit_overwrite_by_row_filter_with_summary(
                 &catalog,
                 &table,
                 staged_files,
                 spec.predicate,
                 branch.as_deref(),
+                &options.snapshot_extra,
+                options.isolation.as_deref(),
             )
             .await?;
         }
         PartitionOverwritePlan::Dynamic => {
             let stream = source_df.execute_stream().await?;
-            let staged_files =
-                write_overwrite_staged_files_from_stream(&table, stream, column_names, concurrency)
-                    .await?;
+            let staged_files = if options.is_empty() {
+                repark_iceberg::write::write_overwrite_staged_files_from_stream(
+                    &table,
+                    stream,
+                    column_names,
+                    concurrency,
+                )
+                .await?
+            } else {
+                repark_iceberg::write::stage_overwrite_files_with(
+                    &table,
+                    stream,
+                    column_names,
+                    concurrency,
+                    &options.staging_overrides(),
+                )
+                .await?
+            };
             refuse_empty_dynamic_overwrite(&staged_files)?;
-            repark_iceberg::write::commit_replace_partitions_to(
+            repark_iceberg::write::commit_replace_partitions_with_summary(
                 &catalog,
                 &table,
                 staged_files,
                 branch.as_deref(),
+                &options.snapshot_extra,
+                options.isolation.as_deref(),
             )
             .await?;
         }
@@ -244,30 +286,31 @@ pub(crate) async fn insert_overwrite_from_staged_source(
     table_sql: &str,
     source: &datafusion::sql::sqlparser::ast::Query,
     columns: &[ObjectName],
+    options: &crate::write_options::StatementWriteOptions,
     dynamic: bool,
 ) -> Result<DataFrame> {
-    match try_resolve_iceberg_overwrite_target(ctx, catalogs, table_name).await? {
-        Some((catalog_name, catalog, table, branch)) => {
-            insert_overwrite_iceberg_stage_then_swap(
-                ctx,
-                catalogs,
-                &catalog_name,
-                &catalog,
-                &table,
-                source,
-                columns,
-                branch.as_deref(),
-                dynamic,
-            )
-            .await
-        }
-        None => {
-            insert_overwrite_from_materialized_source_fallback(
-                ctx, catalogs, table_sql, source, columns,
-            )
-            .await
-        }
-    }
+    let Some((catalog_name, catalog, table, branch)) =
+        try_resolve_iceberg_overwrite_target(ctx, catalogs, table_name).await?
+    else {
+        options.refuse_if_non_empty("INSERT OVERWRITE on a non-Iceberg target")?;
+        return insert_overwrite_from_materialized_source_fallback(
+            ctx, catalogs, table_sql, source, columns,
+        )
+        .await;
+    };
+    insert_overwrite_iceberg_stage_then_swap(
+        ctx,
+        catalogs,
+        &catalog_name,
+        &catalog,
+        &table,
+        source,
+        columns,
+        branch.as_deref(),
+        options,
+        dynamic,
+    )
+    .await
 }
 
 /// Resolve `catalog.namespace….table` against the registry.
@@ -329,12 +372,14 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     source: &datafusion::sql::sqlparser::ast::Query,
     columns: &[ObjectName],
     branch: Option<&str>,
+    options: &crate::write_options::StatementWriteOptions,
     dynamic: bool,
 ) -> Result<DataFrame> {
     use iceberg::spec::DataFile;
 
     // Fail isolation parse before staging.
-    let _isolation = repark_iceberg::write::parse_overwrite_isolation(table)?;
+    let _isolation =
+        repark_iceberg::write::isolation_with_override(table, options.isolation.as_deref())?;
     let column_names: Vec<String> = columns.iter().map(object_name_last).collect();
     let (column_names, materialize_sql) =
         overwrite_source_with_default_fills(table, &column_names, source)?;
@@ -342,13 +387,24 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     // OV1 exclusive staging surface (Q9): positional D9 map + write; no catalog mutation yet.
-    let staged_files = repark_iceberg::write::write_overwrite_staged_files_from_stream(
-        table,
-        stream,
-        column_names,
-        concurrency,
-    )
-    .await?;
+    let staged_files = if options.is_empty() {
+        repark_iceberg::write::write_overwrite_staged_files_from_stream(
+            table,
+            stream,
+            column_names,
+            concurrency,
+        )
+        .await?
+    } else {
+        repark_iceberg::write::stage_overwrite_files_with(
+            table,
+            stream,
+            column_names,
+            concurrency,
+            &options.staging_overrides(),
+        )
+        .await?
+    };
     let total_rows: u64 = staged_files.iter().map(DataFile::record_count).sum();
     if total_rows == 0 {
         // BUG-001: never AlwaysTrue wipe on the non-empty-classified arm.
@@ -360,14 +416,23 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
         ));
     }
     if dynamic && !table.metadata().default_partition_spec().is_unpartitioned() {
-        repark_iceberg::write::commit_replace_partitions_to(catalog, table, staged_files, branch)
-            .await?;
-    } else {
-        repark_iceberg::write::commit_overwrite_replace_all_to(
+        repark_iceberg::write::commit_replace_partitions_with_summary(
             catalog,
             table,
             staged_files,
             branch,
+            &options.snapshot_extra,
+            options.isolation.as_deref(),
+        )
+        .await?;
+    } else {
+        repark_iceberg::write::commit_overwrite_replace_all_with_summary(
+            catalog,
+            table,
+            staged_files,
+            branch,
+            &options.snapshot_extra,
+            options.isolation.as_deref(),
         )
         .await?;
     }
@@ -500,7 +565,7 @@ async fn rewrite_overwrite_default_markers(
     Ok(Some(Box::new((rewritten, rewritten_insert))))
 }
 
-fn overwrite_source_with_default_fills(
+pub(crate) fn overwrite_source_with_default_fills(
     table: &iceberg::table::Table,
     column_names: &[String],
     source: &datafusion::sql::sqlparser::ast::Query,

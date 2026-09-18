@@ -1,0 +1,1931 @@
+{
+  "cells": [
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "SNAP-00-baseline-append",
+      "snapshot_count": 2,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1386",
+        "added-records": "2",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "1",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2770",
+        "total-position-deletes": "0",
+        "total-records": "6"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "SNAP-01-run-id-append",
+      "snapshot_count": 2,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1386",
+        "added-records": "2",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "1",
+        "manifests-replaced": "0",
+        "run_id": "abc-123",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2770",
+        "total-position-deletes": "0",
+        "total-records": "6"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "SNAP-02-two-props",
+      "snapshot_count": 2,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1386",
+        "added-records": "2",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "1",
+        "manifests-replaced": "0",
+        "pipeline.batch": "7",
+        "run_id": "abc-123",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2770",
+        "total-position-deletes": "0",
+        "total-records": "6"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "SNAP-03-dyn-overwrite",
+      "snapshot_count": 2,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1386",
+        "added-records": "2",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "2",
+        "deleted-data-files": "2",
+        "deleted-records": "2",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "2",
+        "manifests-kept": "0",
+        "manifests-replaced": "1",
+        "removed-files-size": "1386",
+        "replace-partitions": "true",
+        "run_id": "dyn-1",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2772",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "SNAP-04-create-replace",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1384",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "run_id": "ctas-1",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1384",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "SNAP-05-v1-saveastable",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1384",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "run_id": "v1-ctas-1",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1384",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "SNAP-06-v1-insertinto",
+      "snapshot_count": 2,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1386",
+        "added-records": "2",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "1",
+        "manifests-replaced": "0",
+        "run_id": "v1-ins-1",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2770",
+        "total-position-deletes": "0",
+        "total-records": "6"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "SNAP-07-no-prop-after",
+      "snapshot_count": 2,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1386",
+        "added-records": "2",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "1",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2770",
+        "total-position-deletes": "0",
+        "total-records": "6"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "FORMAT-01-parquet",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1384",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1384",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "ORC",
+          "records": 2,
+          "size": 385,
+          "suffix": "orc"
+        },
+        {
+          "file_format": "ORC",
+          "records": 2,
+          "size": 387,
+          "suffix": "orc"
+        }
+      ],
+      "id": "FORMAT-02-orc",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "772",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "772",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "AVRO",
+          "records": 2,
+          "size": 433,
+          "suffix": "avro"
+        },
+        {
+          "file_format": "AVRO",
+          "records": 2,
+          "size": 433,
+          "suffix": "avro"
+        }
+      ],
+      "id": "FORMAT-03-avro",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "866",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "866",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Invalid file format: bogus",
+        "trace_tail": "Traceback (most recent call last):\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_1_oracle.py\", line 86, in _record\n    write()\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_1_oracle.py\", line 215, in <lambda>\n    .append()\n     ^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/sql/readwriter.py\", line 2489, in append\n    self._jwriter.append()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/py4j/java_gateway.py\", line 1362, in __call__\n    return_value = get_return_value(\n                   ^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/errors/exceptions/captured.py\", line 269, in deco\n    raise converted from None\npyspark.errors.exceptions.captured.IllegalArgumentException: Invalid file format: bogus\n"
+      },
+      "files": [],
+      "id": "FORMAT-04-bogus",
+      "snapshot_count": 0,
+      "summary": {}
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 5000,
+          "size": 9781,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 5000,
+          "size": 5821,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 5000,
+          "size": 5818,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 5000,
+          "size": 5821,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 10000,
+          "size": 19755,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 10000,
+          "size": 10908,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "OPT-01-target-size",
+      "snapshot_count": 2,
+      "summary": {
+        "added-data-files": "4",
+        "added-files-size": "27241",
+        "added-records": "20000",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "1",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "6",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "57904",
+        "total-position-deletes": "0",
+        "total-records": "40000"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 691,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "OPT-02-codec",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1383",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1383",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": {
+        "class": "Py4JJavaError",
+        "message": "An error occurred while calling o795.append.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 106.0 failed 1 times, most recent failure: Lost task 1.0 in stage 106.0 (TID 111) (localhost executor driver): java.lang.IllegalArgumentException: No enum constant org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel.1\n\tat java.base/java.lang.Enum.valueOf(Enum.java:273)\n\tat org.apache.hadoop.conf.Configuration.getEnum(Configuration.java:1788)\n\tat org.apache.hadoop.io.compress.zlib.ZlibFactory.getCompressionLevel(ZlibFactory.java:165)\n\tat org.apache.hadoop.io.compress.zlib.BuiltInGzipCompressor.init(BuiltInGzipCompressor.java:157)\n\tat org.apache.hadoop.io.compress.zlib.BuiltInGzipCompressor.<init>(BuiltInGzipCompressor.java:67)\n\tat org.apache.hadoop.io.compress.GzipCodec.createCompressor(GzipCodec.java:64)\n\tat org.apache.hadoop.io.compress.CodecPool.getCompressor(CodecPool.java:152)\n\tat org.apache.hadoop.io.compress.CodecPool.getCompressor(CodecPool.java:168)\n\tat org.apache.iceberg.shaded.org.apache.parquet.hadoop.CodecFactory$HeapBytesCompressor.<init>(CodecFactory.java:221)\n\tat org.apache.iceberg.shaded.org.apache.parquet.hadoop.CodecFactory.createCompressor(CodecFactory.java:273)\n\tat org.apache.iceberg.shaded.org.apache.parquet.hadoop.CodecFactory.getCompressor(CodecFactory.java:255)\n\tat org.apache.iceberg.parquet.ParquetWriter.<init>(ParquetWriter.java:93)\n\tat org.apache.iceberg.parquet.Parquet$WriteBuilder.build(Parquet.java:453)\n\tat org.apache.iceberg.parquet.ParquetFormatModel$WriteBuilderWrapper.build(ParquetFormatModel.java:258)\n\tat org.apache.iceberg.formats.FileWriterBuilderImpl$DataFileWriterBuilder.build(FileWriterBuilderImpl.java:231)\n\tat org.apache.iceberg.formats.FileWriterBuilderImpl$DataFileWriterBuilder.build(FileWriterBuilderImpl.java:219)\n\tat org.apache.iceberg.data.RegistryBasedFileWriterFactory.newDataWriter(RegistryBasedFileWriterFactory.java:121)\n\tat org.apache.iceberg.io.RollingDataWriter.newWriter(R",
+        "trace_tail": "e$UnpartitionedDataWriter.<init>(SparkWrite.java:796)\n\tat org.apache.iceberg.spark.source.SparkWrite$WriterFactory.createWriter(SparkWrite.java:766)\n\tat org.apache.iceberg.spark.source.SparkWrite$WriterFactory.createWriter(SparkWrite.java:740)\n\tat org.apache.spark.sql.execution.datasources.v2.WritingSparkTask.run(WriteToDataSourceV2Exec.scala:524)\n\tat org.apache.spark.sql.execution.datasources.v2.WritingSparkTask.run$(WriteToDataSourceV2Exec.scala:513)\n\tat org.apache.spark.sql.execution.datasources.v2.DataWritingSparkTask$.run(WriteToDataSourceV2Exec.scala:631)\n\tat org.apache.spark.sql.execution.datasources.v2.V2TableWriteExec.$anonfun$writeWithV2$2(WriteToDataSourceV2Exec.scala:454)\n\tat org.apache.spark.scheduler.ResultTask.runTask(ResultTask.scala:93)\n\tat org.apache.spark.TaskContext.runTaskWithListeners(TaskContext.scala:180)\n\tat org.apache.spark.scheduler.Task.run(Task.scala:147)\n\tat org.apache.spark.executor.Executor$TaskRunner.$anonfun$run$4(Executor.scala:873)\n\tat org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally(SparkErrorUtils.scala:86)\n\tat org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally$(SparkErrorUtils.scala:83)\n\tat org.apache.spark.util.Utils$.tryWithSafeFinally(Utils.scala:97)\n\tat org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:876)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)\n\t... 1 more\n\n"
+      },
+      "files": [],
+      "id": "OPT-03-level",
+      "snapshot_count": 0,
+      "summary": {}
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "OPT-04-dist",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1384",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1384",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "OPT-05-fanout",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1384",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1384",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": {
+        "class": "Py4JJavaError",
+        "message": "An error occurred while calling o949.overwritePartitions.\n: org.apache.iceberg.exceptions.ValidationException: Found conflicting files that can contain records matching partitions [name=name-0, name=name-1]: [/tmp/ice-write-opts-oracle-vgcxt9ah/ns/opt_iso/data/name=name-0/00000-131-484f9be3-f608-4de6-b844-d2cbb052aa6b-0-00002.parquet, /tmp/ice-write-opts-oracle-vgcxt9ah/ns/opt_iso/data/name=name-1/00000-131-484f9be3-f608-4de6-b844-d2cbb052aa6b-0-00001.parquet]\n\tat org.apache.iceberg.MergingSnapshotProducer.validateAddedDataFiles(MergingSnapshotProducer.java:373)\n\tat org.apache.iceberg.BaseReplacePartitions.validate(BaseReplacePartitions.java:95)\n\tat org.apache.iceberg.SnapshotProducer.runValidations(SnapshotProducer.java:351)\n\tat org.apache.iceberg.SnapshotProducer.apply(SnapshotProducer.java:279)\n\tat org.apache.iceberg.BaseReplacePartitions.apply(BaseReplacePartitions.java:26)\n\tat org.apache.iceberg.SnapshotProducer.lambda$commit$2(SnapshotProducer.java:475)\n\tat org.apache.iceberg.util.Tasks$Builder.runTaskWithRetry(Tasks.java:413)\n\tat org.apache.iceberg.util.Tasks$Builder.runSingleThreaded(Tasks.java:219)\n\tat org.apache.iceberg.util.Tasks$Builder.run(Tasks.java:203)\n\tat org.apache.iceberg.util.Tasks$Builder.run(Tasks.java:196)\n\tat org.apache.iceberg.SnapshotProducer.commit(SnapshotProducer.java:473)\n\tat org.apache.iceberg.BaseReplacePartitions.commit(BaseReplacePartitions.java:26)\n\tat org.apache.iceberg.spark.source.SparkWrite.commitOperation(SparkWrite.java:267)\n\tat org.apache.iceberg.spark.source.SparkWrite.commitOperation(SparkWrite.java:232)\n\tat org.apache.iceberg.spark.source.SparkWrite$DynamicOverwrite.commit(SparkWrite.java:376)\n\tat org.apache.spark.sql.execution.datasources.v2.V2TableWriteExec.writeWithV2(WriteToDataSourceV2Exec.scala:468)\n\tat org.apache.spark.sql.execution.datasources.v2.V2TableWriteExec.writeWithV2$(WriteToDataSourceV2Exec.scala:424)\n\tat org.apache.spark.sql.execution.datasources.v2.OverwritePartitionsDynamicExec.writeWithV2(WriteToDataS",
+        "trace_tail": ".applyOrElse(QueryExecution.scala:194)\n\t\tat org.apache.spark.sql.catalyst.trees.TreeNode.$anonfun$transformDownWithPruning$1(TreeNode.scala:491)\n\t\tat org.apache.spark.sql.catalyst.trees.CurrentOrigin$.withOrigin(origin.scala:107)\n\t\tat org.apache.spark.sql.catalyst.trees.TreeNode.transformDownWithPruning(TreeNode.scala:491)\n\t\tat org.apache.spark.sql.catalyst.plans.logical.LogicalPlan.org$apache$spark$sql$catalyst$plans$logical$AnalysisHelper$$super$transformDownWithPruning(LogicalPlan.scala:37)\n\t\tat org.apache.spark.sql.catalyst.plans.logical.AnalysisHelper.transformDownWithPruning(AnalysisHelper.scala:360)\n\t\tat org.apache.spark.sql.catalyst.plans.logical.AnalysisHelper.transformDownWithPruning$(AnalysisHelper.scala:356)\n\t\tat org.apache.spark.sql.catalyst.plans.logical.LogicalPlan.transformDownWithPruning(LogicalPlan.scala:37)\n\t\tat org.apache.spark.sql.catalyst.plans.logical.LogicalPlan.transformDownWithPruning(LogicalPlan.scala:37)\n\t\tat org.apache.spark.sql.catalyst.trees.TreeNode.transformDown(TreeNode.scala:467)\n\t\tat org.apache.spark.sql.execution.QueryExecution.eagerlyExecuteCommands(QueryExecution.scala:194)\n\t\tat org.apache.spark.sql.execution.QueryExecution.$anonfun$lazyCommandExecuted$1(QueryExecution.scala:155)\n\t\tat scala.util.Try$.apply(Try.scala:217)\n\t\tat org.apache.spark.util.Utils$.doTryWithCallerStacktrace(Utils.scala:1392)\n\t\tat org.apache.spark.util.LazyTry.tryT$lzycompute(LazyTry.scala:46)\n\t\tat org.apache.spark.util.LazyTry.tryT(LazyTry.scala:46)\n\t\t... 17 more\n\n"
+      },
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "OPT-06-isolation",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "4",
+        "added-files-size": "2772",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "4",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2772",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Invalid isolation level: bogus",
+        "trace_tail": "Traceback (most recent call last):\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_1_oracle.py\", line 86, in _record\n    write()\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_1_oracle.py\", line 271, in <lambda>\n    .overwritePartitions()\n     ^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/sql/readwriter.py\", line 2513, in overwritePartitions\n    self._jwriter.overwritePartitions()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/py4j/java_gateway.py\", line 1362, in __call__\n    return_value = get_return_value(\n                   ^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/errors/exceptions/captured.py\", line 269, in deco\n    raise converted from None\npyspark.errors.exceptions.captured.IllegalArgumentException: Invalid isolation level: bogus\n"
+      },
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "OPT-07-isolation-bad",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "4",
+        "added-files-size": "2772",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "4",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2772",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "OPT-08-nullability",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1384",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1384",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "OPT-09-ordering",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "4",
+        "added-files-size": "2772",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "4",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2772",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "UNKNOWN-01",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1384",
+        "added-records": "4",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1384",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 641,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 641,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "SQL-00-baseline-insert",
+      "snapshot_count": 2,
+      "summary": {
+        "added-data-files": "1",
+        "added-files-size": "641",
+        "added-records": "1",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "1",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1282",
+        "total-position-deletes": "0",
+        "total-records": "2"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 641,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 641,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "SQL-01-set-conf",
+      "snapshot_count": 2,
+      "summary": {
+        "added-data-files": "1",
+        "added-files-size": "641",
+        "added-records": "1",
+        "app-id": "local-1789638360578",
+        "app-name": "repark-ice-write-options-1-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "1",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638360578",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1282",
+        "total-position-deletes": "0",
+        "total-records": "2"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 695,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 695,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-01-level-alone",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1390",
+        "added-records": "4",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1390",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 695,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 695,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-02-zstd-level",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1390",
+        "added-records": "4",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1390",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": {
+        "class": "SparkRuntimeException",
+        "message": "[NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field: \nid\nIf the schema is inferred from a Scala tuple/case class, or a Java bean, please try to use scala.Option[_] or other nullable types (such as java.lang.Integer instead of int/scala.Int). SQLSTATE: 42000",
+        "trace_tail": "Traceback (most recent call last):\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_2_oracle.py\", line 82, in _record\n    write()\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_2_oracle.py\", line 145, in <lambda>\n    nulls.writeTo(f\"{t}.p2_req\").append()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/sql/readwriter.py\", line 2489, in append\n    self._jwriter.append()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/py4j/java_gateway.py\", line 1362, in __call__\n    return_value = get_return_value(\n                   ^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/errors/exceptions/captured.py\", line 269, in deco\n    raise converted from None\npyspark.errors.exceptions.captured.SparkRuntimeException: [NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field: \nid\nIf the schema is inferred from a Scala tuple/case class, or a Java bean, please try to use scala.Option[_] or other nullable types (such as java.lang.Integer instead of int/scala.Int). SQLSTATE: 42000\n"
+      },
+      "files": [],
+      "id": "P2-03-required-default",
+      "snapshot_count": 0,
+      "summary": {}
+    },
+    {
+      "error": {
+        "class": "SparkRuntimeException",
+        "message": "[NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field: \nid\nIf the schema is inferred from a Scala tuple/case class, or a Java bean, please try to use scala.Option[_] or other nullable types (such as java.lang.Integer instead of int/scala.Int). SQLSTATE: 42000",
+        "trace_tail": "Traceback (most recent call last):\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_2_oracle.py\", line 82, in _record\n    write()\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_2_oracle.py\", line 148, in <lambda>\n    nulls.writeTo(f\"{t}.p2_req\").option(\"check-nullability\", \"false\").append()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/sql/readwriter.py\", line 2489, in append\n    self._jwriter.append()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/py4j/java_gateway.py\", line 1362, in __call__\n    return_value = get_return_value(\n                   ^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/errors/exceptions/captured.py\", line 269, in deco\n    raise converted from None\npyspark.errors.exceptions.captured.SparkRuntimeException: [NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field: \nid\nIf the schema is inferred from a Scala tuple/case class, or a Java bean, please try to use scala.Option[_] or other nullable types (such as java.lang.Integer instead of int/scala.Int). SQLSTATE: 42000\n"
+      },
+      "files": [],
+      "id": "P2-04-required-false",
+      "snapshot_count": 0,
+      "summary": {}
+    },
+    {
+      "error": {
+        "class": "SparkRuntimeException",
+        "message": "[NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field: \nid\nIf the schema is inferred from a Scala tuple/case class, or a Java bean, please try to use scala.Option[_] or other nullable types (such as java.lang.Integer instead of int/scala.Int). SQLSTATE: 42000",
+        "trace_tail": "Traceback (most recent call last):\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_2_oracle.py\", line 82, in _record\n    write()\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_2_oracle.py\", line 151, in <lambda>\n    nulls.writeTo(f\"{t}.p2_req\").option(\"check-nullability\", \"bogus\").append()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/sql/readwriter.py\", line 2489, in append\n    self._jwriter.append()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/py4j/java_gateway.py\", line 1362, in __call__\n    return_value = get_return_value(\n                   ^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/errors/exceptions/captured.py\", line 269, in deco\n    raise converted from None\npyspark.errors.exceptions.captured.SparkRuntimeException: [NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field: \nid\nIf the schema is inferred from a Scala tuple/case class, or a Java bean, please try to use scala.Option[_] or other nullable types (such as java.lang.Integer instead of int/scala.Int). SQLSTATE: 42000\n"
+      },
+      "files": [],
+      "id": "P2-05-nullability-bogus",
+      "snapshot_count": 0,
+      "summary": {}
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 658,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 658,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 658,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 658,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-06-ordering-true",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "4",
+        "added-files-size": "2632",
+        "added-records": "4",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "4",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2632",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 658,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 658,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 658,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 658,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-07-ordering-default",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "4",
+        "added-files-size": "2632",
+        "added-records": "4",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "4",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2632",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Invalid distribution mode: bogus",
+        "trace_tail": "Traceback (most recent call last):\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_2_oracle.py\", line 82, in _record\n    write()\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_2_oracle.py\", line 170, in <lambda>\n    .option(\"distribution-mode\", \"bogus\").append()\n                                          ^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/sql/readwriter.py\", line 2489, in append\n    self._jwriter.append()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/py4j/java_gateway.py\", line 1362, in __call__\n    return_value = get_return_value(\n                   ^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/errors/exceptions/captured.py\", line 269, in deco\n    raise converted from None\npyspark.errors.exceptions.captured.IllegalArgumentException: Invalid distribution mode: bogus\n"
+      },
+      "files": [],
+      "id": "P2-08-dist-bogus",
+      "snapshot_count": 0,
+      "summary": {}
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-09-dist-none",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1384",
+        "added-records": "4",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1384",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-10-fanout-false",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "4",
+        "added-files-size": "2772",
+        "added-records": "4",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "4",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2772",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-11-fanout-bogus",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1384",
+        "added-records": "4",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1384",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-12-isolation-append",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1384",
+        "added-records": "4",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1384",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-13-isolation-snapshot",
+      "snapshot_count": 2,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1386",
+        "added-records": "2",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "2",
+        "deleted-data-files": "2",
+        "deleted-records": "2",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "2",
+        "manifests-kept": "0",
+        "manifests-replaced": "1",
+        "removed-files-size": "1386",
+        "replace-partitions": "true",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2772",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-14-overwrite-cond",
+      "snapshot_count": 2,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1386",
+        "added-records": "2",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "1",
+        "deleted-data-files": "2",
+        "deleted-records": "4",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "2",
+        "manifests-kept": "0",
+        "manifests-replaced": "1",
+        "removed-files-size": "1384",
+        "run_id": "cond-1",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1386",
+        "total-position-deletes": "0",
+        "total-records": "2"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "ORC",
+          "records": 2,
+          "size": 385,
+          "suffix": "orc"
+        },
+        {
+          "file_format": "ORC",
+          "records": 2,
+          "size": 387,
+          "suffix": "orc"
+        }
+      ],
+      "id": "P2-15-format-upper",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "772",
+        "added-records": "4",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "772",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-16-prop-case",
+      "snapshot_count": 1,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1384",
+        "added-records": "4",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1384",
+        "total-position-deletes": "0",
+        "total-records": "4",
+        "upper_key": "v"
+      }
+    },
+    {
+      "error": {
+        "class": "NumberFormatException",
+        "message": "For input string: \"abc\"",
+        "trace_tail": "Traceback (most recent call last):\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_2_oracle.py\", line 82, in _record\n    write()\n  File \"/tmp/jc-build/python/repark/tests/_record_ice_write_options_2_oracle.py\", line 227, in <lambda>\n    .option(\"target-file-size-bytes\", \"abc\").append()\n                                             ^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/sql/readwriter.py\", line 2489, in append\n    self._jwriter.append()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/py4j/java_gateway.py\", line 1362, in __call__\n    return_value = get_return_value(\n                   ^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/errors/exceptions/captured.py\", line 269, in deco\n    raise converted from None\npyspark.errors.exceptions.captured.NumberFormatException: For input string: \"abc\"\n"
+      },
+      "files": [],
+      "id": "P2-17-size-bogus",
+      "snapshot_count": 0,
+      "summary": {}
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-18-empty-suffix",
+      "snapshot_count": 1,
+      "summary": {
+        "": "v",
+        "added-data-files": "2",
+        "added-files-size": "1384",
+        "added-records": "4",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "0",
+        "manifests-replaced": "0",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "2",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "1384",
+        "total-position-deletes": "0",
+        "total-records": "4"
+      }
+    },
+    {
+      "error": null,
+      "files": [
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 1,
+          "size": 693,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        },
+        {
+          "file_format": "PARQUET",
+          "records": 2,
+          "size": 692,
+          "suffix": "parquet"
+        }
+      ],
+      "id": "P2-19-v1-append-mode",
+      "snapshot_count": 2,
+      "summary": {
+        "added-data-files": "2",
+        "added-files-size": "1386",
+        "added-records": "2",
+        "app-id": "local-1789638643137",
+        "app-name": "repark-ice-write-options-2-record",
+        "changed-partition-count": "1",
+        "engine-name": "spark",
+        "engine-version": "4.1.2",
+        "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+        "manifests-created": "1",
+        "manifests-kept": "1",
+        "manifests-replaced": "0",
+        "run_id": "v1-app-1",
+        "spark.app.id": "local-1789638643137",
+        "total-data-files": "4",
+        "total-delete-files": "0",
+        "total-equality-deletes": "0",
+        "total-files-size": "2770",
+        "total-position-deletes": "0",
+        "total-records": "6"
+      }
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Multiple entries with same key: added-records=2 and added-records=999"
+      },
+      "id": "COLL-00-added-records",
+      "key": "added-records",
+      "snapshot_count": 1,
+      "snapshots_before": 1,
+      "value": "999"
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Multiple entries with same key: engine-name=spark and engine-name=custom-engine"
+      },
+      "id": "COLL-01-engine-name",
+      "key": "engine-name",
+      "snapshot_count": 1,
+      "snapshots_before": 1,
+      "value": "custom-engine"
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Multiple entries with same key: engine-version=4.1.2 and engine-version=9.9.9"
+      },
+      "id": "COLL-02-engine-version",
+      "key": "engine-version",
+      "snapshot_count": 1,
+      "snapshots_before": 1,
+      "value": "9.9.9"
+    },
+    {
+      "error": null,
+      "id": "COLL-03-operation",
+      "key": "operation",
+      "rows": 3,
+      "snapshot_count": 2,
+      "snapshots_before": 1,
+      "summary_keys": [
+        "added-data-files",
+        "added-files-size",
+        "added-records",
+        "app-id",
+        "app-name",
+        "changed-partition-count",
+        "engine-name",
+        "engine-version",
+        "iceberg-version",
+        "manifests-created",
+        "manifests-kept",
+        "manifests-replaced",
+        "spark.app.id",
+        "total-data-files",
+        "total-delete-files",
+        "total-equality-deletes",
+        "total-files-size",
+        "total-position-deletes",
+        "total-records"
+      ],
+      "summary_value_for_key": null,
+      "value": "stolen-op"
+    },
+    {
+      "error": null,
+      "id": "COLL-04-engine.operation-id",
+      "key": "engine.operation-id",
+      "rows": 3,
+      "snapshot_count": 2,
+      "snapshots_before": 1,
+      "summary_keys": [
+        "added-data-files",
+        "added-files-size",
+        "added-records",
+        "app-id",
+        "app-name",
+        "changed-partition-count",
+        "engine-name",
+        "engine-version",
+        "engine.operation-id",
+        "iceberg-version",
+        "manifests-created",
+        "manifests-kept",
+        "manifests-replaced",
+        "spark.app.id",
+        "total-data-files",
+        "total-delete-files",
+        "total-equality-deletes",
+        "total-files-size",
+        "total-position-deletes",
+        "total-records"
+      ],
+      "summary_value_for_key": "stolen-id",
+      "value": "stolen-id"
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Multiple entries with same key: changed-partition-count=1 and changed-partition-count=42"
+      },
+      "id": "COLL-05-changed-partition-count",
+      "key": "changed-partition-count",
+      "snapshot_count": 1,
+      "snapshots_before": 1,
+      "value": "42"
+    },
+    {
+      "error": {
+        "class": "IllegalArgumentException",
+        "message": "Multiple entries with same key: total-records=3 and total-records=7"
+      },
+      "id": "COLL-06-total-records",
+      "key": "total-records",
+      "snapshot_count": 1,
+      "snapshots_before": 1,
+      "value": "7"
+    },
+    {
+      "error": null,
+      "id": "COLL-07-deleted-data-files",
+      "key": "deleted-data-files",
+      "rows": 3,
+      "snapshot_count": 2,
+      "snapshots_before": 1,
+      "summary_keys": [
+        "added-data-files",
+        "added-files-size",
+        "added-records",
+        "app-id",
+        "app-name",
+        "changed-partition-count",
+        "deleted-data-files",
+        "engine-name",
+        "engine-version",
+        "iceberg-version",
+        "manifests-created",
+        "manifests-kept",
+        "manifests-replaced",
+        "spark.app.id",
+        "total-data-files",
+        "total-delete-files",
+        "total-equality-deletes",
+        "total-files-size",
+        "total-position-deletes",
+        "total-records"
+      ],
+      "summary_value_for_key": "3",
+      "value": "3"
+    },
+    {
+      "error": null,
+      "id": "COLL-08-run_id",
+      "key": "run_id",
+      "rows": 3,
+      "snapshot_count": 2,
+      "snapshots_before": 1,
+      "summary_keys": [
+        "added-data-files",
+        "added-files-size",
+        "added-records",
+        "app-id",
+        "app-name",
+        "changed-partition-count",
+        "engine-name",
+        "engine-version",
+        "iceberg-version",
+        "manifests-created",
+        "manifests-kept",
+        "manifests-replaced",
+        "run_id",
+        "spark.app.id",
+        "total-data-files",
+        "total-delete-files",
+        "total-equality-deletes",
+        "total-files-size",
+        "total-position-deletes",
+        "total-records"
+      ],
+      "summary_value_for_key": "control",
+      "value": "control"
+    }
+  ],
+  "meta": {
+    "catalog": "hadoop",
+    "iceberg_jar": "org.apache.iceberg_iceberg-spark-runtime-4.1_2.13-1.11.0.jar",
+    "probes": "P2 follow-up 2026-09-17",
+    "spark": "4.1.2"
+  }
+}

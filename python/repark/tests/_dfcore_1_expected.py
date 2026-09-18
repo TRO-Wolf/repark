@@ -118,7 +118,6 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "_reject_partition_transform",
     "_render_explain_sections",
     "_reset_dropin_warnings_for_tests",
-    "_reset_writer_v2_option_warnings_for_tests",
     "_resolve_cache_budgets",
     "_resolve_writer_table",
     "_rewrite_join_qcol_sql",
@@ -139,9 +138,7 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "_validate_map_in_arrow_batch",
     "_vertical_show_warned",
     "_warn_storage_level_cosmetic_once",
-    "_warn_writer_v2_option_once",
     "_window_spec_structural_key",
-    "_writer_v2_option_warned",
     "actions_export",
     "annotations",
     "contextlib",
@@ -158,7 +155,6 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "sort_nulls_first_for",
     "udf_bridge",
     "uuid",
-    "warnings",
     "writer_readwriter",
 ]
 
@@ -278,7 +274,6 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "_reject_partition_transform",
     "_render_explain_sections",
     "_reset_dropin_warnings_for_tests",
-    "_reset_writer_v2_option_warnings_for_tests",
     "_resolve_cache_budgets",
     "_resolve_writer_table",
     "_rewrite_join_qcol_sql",
@@ -299,9 +294,7 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "_validate_map_in_arrow_batch",
     "_vertical_show_warned",
     "_warn_storage_level_cosmetic_once",
-    "_warn_writer_v2_option_once",
     "_window_spec_structural_key",
-    "_writer_v2_option_warned",
     "annotations",
     "contextlib",
     "functools",
@@ -313,7 +306,6 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "scratch_view_name",
     "sort_nulls_first_for",
     "uuid",
-    "warnings",
 ]
 
 EXPECTED_DATAFRAME_SLOTS: tuple[str, ...] = (

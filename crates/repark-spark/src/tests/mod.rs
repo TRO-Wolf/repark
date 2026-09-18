@@ -66,6 +66,7 @@ mod v3_lineage;
 mod v3_mor_dml;
 mod v3_row_order;
 mod v3_subquery_dml;
+mod v3_timestamp_ns_door;
 mod v3_types;
 mod v3_upgrade;
 mod v3_upgrade_calls;

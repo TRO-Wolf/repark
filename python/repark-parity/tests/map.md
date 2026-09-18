@@ -150,6 +150,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mirror row ratchets `functions_expr.py` 2178 → 2175 with
   `scripts/check_lib_py.py`.
   pins: fnp-gen-1/C-003, C-004
+- `test_cap_1_source_file_line_cap.py` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
+  mirror rows ratchet `crates/repark-iceberg/src/write/append.rs` 1882 → 1819,
+  `dataframe/core.py` 4015 → 3991 and `dataframe/writer_readwriter.py` 1101 → 1093
+  in lockstep with `scripts/check_rust_file_size.py` / `scripts/check_lib_py.py`
+  (round 3 moved the SSOT rows and left these mirrors behind).
 - `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 4b (2026-09-16, run 18a):**
   mirror row ratchets `functions_expr.py` 2175 → 2177 with
   `scripts/check_lib_py.py`.

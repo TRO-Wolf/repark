@@ -705,8 +705,10 @@ fn wall_clock_from_ticks(
     zone_annotation: Option<&Arc<str>>,
     session_zone: Tz,
 ) -> Option<NaiveDateTime> {
-    let micros = ticks_to_micros(ticks, unit)?;
-    let utc = DateTime::from_timestamp_micros(micros)?;
+    let utc = match unit {
+        TimeUnit::Nanosecond => DateTime::from_timestamp_nanos(ticks),
+        _ => DateTime::from_timestamp_micros(ticks_to_micros(ticks, unit)?)?,
+    };
     if zone_annotation.is_some() {
         Some(utc.with_timezone(&session_zone).naive_local())
     } else {
@@ -851,6 +853,17 @@ mod tests {
     }
 
     /// Spark `CAST(ts AS STRING)` trims trailing fractional zeros.
+    #[test]
+    fn nanosecond_ticks_render_every_digit() {
+        let zone = Tz::from_str("UTC").unwrap();
+        let wall =
+            wall_clock_from_ticks(1_767_398_400_000_000_001, TimeUnit::Nanosecond, None, zone);
+        assert_eq!(
+            wall.map(format_spark_timestamp_string).as_deref(),
+            Some("2026-01-03 00:00:00.000000001")
+        );
+    }
+
     #[test]
     fn spark_timestamp_string_trims_trailing_fraction_zeros() {
         assert_eq!(

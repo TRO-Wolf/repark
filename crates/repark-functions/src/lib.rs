@@ -68,6 +68,7 @@ pub mod temporal_ctor;
 pub mod time_family;
 pub mod timestamp_cast;
 pub mod timestamp_ltz_ntz;
+pub mod timestamp_ns_cast;
 pub mod timestamp_type;
 pub mod try_invert;
 pub mod url;
