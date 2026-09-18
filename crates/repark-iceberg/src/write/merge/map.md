@@ -274,7 +274,7 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   **Round 5 (2026-09-17, R-03):** `insert_sql` takes the Arrow `write_schema`
   `execute_merge` already built, so `table_projection` no longer converts the Iceberg
   schema again, and a table with no primitive `write_default` skips the
-  `ColumnDefaults` build (`schema_has_write_default` pre-scan).
+  `ColumnDefaults` build (`schema_has_primitive_fill` pre-scan).
   pins: ice-v3-write-default-1/C-019
 - [tests/](tests/map.md) — MERGE unit batteries (primary, OCC, streaming, parallel write).
 

@@ -9,7 +9,7 @@ use datafusion::prelude::SessionContext;
 use futures::Stream;
 
 use super::{InsertAction, InsertClause, MatchedAction, quote_ident, resolve_schema_field_name};
-use crate::write::insert_defaults::{ColumnDefaults, column_defaults, schema_has_write_default};
+use crate::write::insert_defaults::{ColumnDefaults, column_defaults, schema_has_primitive_fill};
 use crate::write::store_assign::{self, MERGE_SPARK_CLASS};
 use iceberg::table::Table;
 
@@ -19,7 +19,7 @@ pub(super) fn table_projection(
     write_schema: &ArrowSchema,
 ) -> Result<String> {
     let current = table.metadata().current_schema();
-    if !schema_has_write_default(current) {
+    if !schema_has_primitive_fill(current) {
         return insert_projection_with_defaults(clause, write_schema, &ColumnDefaults::new());
     }
     let defaults = column_defaults(current)?;

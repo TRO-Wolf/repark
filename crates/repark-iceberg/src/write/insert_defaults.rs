@@ -102,7 +102,7 @@ pub fn overwrite_source_with_defaults(
     source: &Query,
 ) -> Result<OverwriteSource> {
     let plain = format!("SELECT * FROM ({source}) AS _repark_ow_src");
-    if listed.is_empty() || !schema_has_write_default(schema) {
+    if listed.is_empty() || !schema_has_primitive_fill(schema) {
         return Ok(OverwriteSource {
             columns: listed.to_vec(),
             sql: plain,
@@ -141,7 +141,7 @@ pub fn overwrite_source_with_defaults(
 }
 
 #[must_use]
-pub fn schema_has_write_default(schema: &IcebergSchema) -> bool {
+pub fn schema_has_primitive_fill(schema: &IcebergSchema) -> bool {
     schema
         .as_struct()
         .fields()

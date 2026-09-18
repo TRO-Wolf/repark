@@ -455,13 +455,17 @@ repark-core's error map.
   first and loads nothing without one; the loaded table travels in `MarkerRewrite`
   into `fill_insert_plan`, so an INSERT pays at most one catalog load. Unit tests
   (including the load-count pins over a counting test catalog) live in
-  `insert_defaults/tests.rs`.
+  `insert_defaults/tests/mod.rs` — a `tests/` directory so the C-009 setter guard
+  (`test_rp3_c009_write_default.py`, needles `with_write_default` / `write_default(`,
+  `tests` path parts exempt) reads the test-only `with_write_default` builder as test
+  code; the pre-scan is named `schema_has_primitive_fill` for the same guard (run 21b
+  round 2, 2026-09-18).
   pins: ice-v3-write-default-1/C-004, C-005, C-006, C-007
   **Round 5 (2026-09-17):** `overwrite_source_with_defaults` is the one
   `INSERT OVERWRITE` fill both doors share — whole-table and both PARTITION arms —
   appending `(CAST(default)) AS col` for every omitted defaulted column not listed
   and not assigned by a static clause, and returning the extended column list.
-  `schema_has_write_default` is the cheap pre-scan that skips the Arrow conversion
+  `schema_has_primitive_fill` is the cheap pre-scan that skips the Arrow conversion
   and the `ColumnDefaults` map on tables with no defaults (R-04).
   pins: ice-v3-write-default-1/C-015, C-019
   `rewrite_markers_with_table` is the DEFAULT-marker pass over an already-loaded table

@@ -2,13 +2,12 @@
 
 ## Purpose
 
-Unit tests for `../insert_defaults.rs`. The parent module declares
-`#[cfg(test)] mod tests;`.
+Holds the unit-test directory for `../insert_defaults.rs`. The parent module declares
+`#[cfg(test)] mod tests;`, which resolves to `tests/mod.rs`.
 
 ## Contents
 
-- `tests.rs` — literal-converter pins, INSERT target/list helpers, and the
-  load-count pins: an INSERT without a `DEFAULT` marker loads no table, and
-  `fill_insert_plan` reuses the marker pass table instead of a second load
-  (counting test catalog).
-  pins: ice-v3-write-default-1/C-004, C-006, C-010
+- [tests/](tests/map.md) — the unit tests. A directory rather than `tests.rs` so the
+  C-009 setter guard (`python/repark/tests/test_rp3_c009_write_default.py`) reads the
+  test-only `with_write_default` builder as test code (run 21b round 2, 2026-09-18).
+- `map.md` — this file.
