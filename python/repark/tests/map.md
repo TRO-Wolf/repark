@@ -466,6 +466,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Iceberg table, so it cannot stand in).
   pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: ice-write-options-1/C-008, C-009, C-010, C-011, C-013
+  Run 22b (ICE-NESTED-EVO-1 merge): the non-write arms sweep gains the nested-DDL intercept
+  (`ALTER TABLE … ADD COLUMN s.z INT`), which refuses a non-empty options map like the other
+  pre-parse ALTER intercepts.
 - [test_ice_write_options_1_rebase.py](test_ice_write_options_1_rebase.py) —
   **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the write options across the paths main
   added under them. WO-DYN-01..06: dynamic `insertInto` overwrite and `INSERT OVERWRITE …
