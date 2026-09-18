@@ -105,7 +105,7 @@ def run_create_or_replace_twice(
 def assert_replace_twice_outcome(
     outcome: ReplaceTwiceOutcome, *, exact_counts: bool = True
 ) -> None:
-    """The measured shape: last-SELECT rows, measured types, history retained, all ``append``."""
+    """Last-SELECT rows, measured types, history kept: seed append, replaces overwrite."""
     created = outcome.created
     first_replace = outcome.first_replace
     second_replace = outcome.second_replace
@@ -131,5 +131,5 @@ def assert_replace_twice_outcome(
     }
     assert len(current_ids) == 3
     assert created.snapshot_operations[created.snapshot_ids[-1]] == "append"
-    assert first_replace.snapshot_operations[first_replace.snapshot_ids[-1]] == "append"
-    assert second_replace.snapshot_operations[second_replace.snapshot_ids[-1]] == "append"
+    assert first_replace.snapshot_operations[first_replace.snapshot_ids[-1]] == "overwrite"
+    assert second_replace.snapshot_operations[second_replace.snapshot_ids[-1]] == "overwrite"

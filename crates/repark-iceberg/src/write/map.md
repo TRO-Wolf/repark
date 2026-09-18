@@ -221,6 +221,14 @@ repark-core's error map.
   pins: ice-commit-unknown-1/C-001, C-003, C-005, C-006
 - `overwrite_commit.rs` — full-table overwrite commit, optional `to_branch`.
   pins: rp-5-fork-repin/C-004
+  **ICE-RTAS-OPS-2 round 2 (2026-09-18):** `commit_replace_write` is the RTAS commit for
+  a table the service just created: the fork's public
+  `overwrite_files().overwrite_by_row_filter(AlwaysTrue).add_files(…).allow_empty_commit()`,
+  stamped like `commit_append`. It records `overwrite` with files and `delete` with none —
+  the same snapshot the fork's `StagedTableTransaction::with_replace_write(true)` stages.
+  Only the two service-managed create-first arms call it, and only for `OR REPLACE … AS
+  SELECT`; no fork semantics are patched here.
+  pins: ice-rtas-ops-2/C-018
 - `hadoop_stale_commit.rs` (test-only) — **ICE-HADOOP-VN-1 (2026-09-17):** two memory
   catalogs over one tempdir warehouse adopt the same Hadoop `v2` file; the first
   `append()` lands `v3`, and the stale catalog's append burns the fork's bounded

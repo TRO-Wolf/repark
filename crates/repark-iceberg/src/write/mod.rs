@@ -82,7 +82,7 @@ pub use overwrite::{
     parse_overwrite_isolation, positional_map_overwrite_batch,
     write_overwrite_staged_files_from_stream,
 };
-pub use overwrite_commit::commit_overwrite_replace_all_to;
+pub use overwrite_commit::{commit_overwrite_replace_all_to, commit_replace_write};
 pub use partition_overwrite::{
     EMPTY_DYNAMIC_OVERWRITE_NEEDLE, PartitionEquality, PartitionLiteral, PartitionOverwritePlan,
     PartitionOverwriteRequest, StaticPartitionOverwrite, commit_overwrite_by_row_filter,
