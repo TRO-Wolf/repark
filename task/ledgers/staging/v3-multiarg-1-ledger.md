@@ -173,6 +173,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: N/A
       justification: Single-round docs-plus-pin unit; no prior round to regress.
+  complete: true
 ```
 
 ## Hand-back
