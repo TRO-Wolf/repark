@@ -435,6 +435,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   reads an unquoted column named `struct` in any expression as a STRUCT literal, so the query
   refuses `ParseException` as a plain `SELECT struct FROM t` does, with or without this unit.
   pins: ice-nested-evo-1/C-022
+  At fork `9e67e000` (RP-29) the `forkwrite` list-INSERT cell is a plain passing pin.
+  pins: ice-array-insert-1/C-009
 - `_record_ice_nested_evo_1.py` — the **record driver** for ICE-NESTED-EVO-1 (NOT a `test_`
   module; never collected). `build_cells()` is the cell catalog; `main()` runs every cell on
   one short-lived local Spark JVM with a Hadoop catalog at the baked root

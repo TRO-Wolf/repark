@@ -3531,7 +3531,7 @@ the pin rather than obeying it.
   parser, and every dotted `ADD` / `RENAME` / `DROP` refused at the parser — no registry row.
   Rows after an `INSERT` into a list column answer Spark since RP-29 (fork #295
   F-LIST-INSERT-1); see
-  [ICE-NESTED-INSERT-LIST-1](#ice-nested-insert-list-1--fixed-2026-09-18-rp-29-fork-295-f-list-insert-1)
+  [ICE-NESTED-INSERT-LIST-1](#ice-nested-insert-list-1--an-insert-into-a-list-column-reads-back--fixed-2026-09-18-rp-29-fork-295-f-list-insert-1)
   (FIXED 2026-09-18) and
   [ICE-ARRAY-INSERT-1](#ice-array-insert-1--inserts-into-array-columns-answer-spark-on-every-door--fixed-2026-09-18-rp-29-fork-295-f-list-insert-1)
   for the full door matrix.
