@@ -317,8 +317,9 @@ pins: rp-4-fork-repin/C-005, C-006
   children and `MAP<K, V>` to an Iceberg map (required key, nullable value), both from the same
   checked id allocator, so `CREATE TABLE` with struct, array-of-struct and map-of-struct columns
   round-trips the `DESCRIBE` types Spark shows. `normalize.rs` parses a column-def `CREATE TABLE`
-  whose column list spells `MAP<` with `SparkSqlDialect` (the Databricks dialect has no
-  angle-bracket map type); every other statement keeps its dialect.
+  whose column list spells `MAP<` (`has_angle_map_column_type`, scanned before the CTAS `AS`)
+  with `SparkSqlDialect` (the Databricks dialect has no angle-bracket map type); every other
+  statement keeps its dialect.
   pins: ice-nested-evo-1/C-006
 - `format_version.rs` — **V3-10:** the Spark-door adapter for `SET TBLPROPERTIES
   ('format-version' = …)`. It lifts the reserved key out of the property map before the

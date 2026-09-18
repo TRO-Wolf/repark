@@ -8,7 +8,7 @@ use datafusion::sql::sqlparser::ast::{
     Expr, FromTable, ObjectName, ObjectNamePart, Query, Statement, TableFactor, TableWithJoins,
     Value, Visit, Visitor,
 };
-use datafusion::sql::sqlparser::dialect::{DatabricksDialect, GenericDialect, SparkSqlDialect};
+use datafusion::sql::sqlparser::dialect::{DatabricksDialect, GenericDialect};
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
@@ -180,7 +180,7 @@ pub(crate) fn parse_single_normalized(
     }
     // ALTER TABLE uses GenericDialect.
     let generic = GenericDialect {};
-    let spark = SparkSqlDialect {};
+    let spark = datafusion::sql::sqlparser::dialect::SparkSqlDialect {};
     let parse_dialect: &dyn datafusion::sql::sqlparser::dialect::Dialect =
         if alter::tokens_are_alter_table(&tokens) {
             &generic
@@ -962,9 +962,7 @@ mod tests {
 
     #[test]
     fn json_arrow_preserves_generic_ast() {
-        use datafusion::sql::sqlparser::dialect::{
-            DatabricksDialect, GenericDialect, SparkSqlDialect,
-        };
+        use datafusion::sql::sqlparser::dialect::{DatabricksDialect, GenericDialect};
         use datafusion::sql::sqlparser::parser::Parser;
 
         let sql = "SELECT payload -> 'a' FROM t";
