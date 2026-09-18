@@ -3047,17 +3047,22 @@ the pin rather than obeying it.
   WO-SORT-01, WO-APP-01/02).
   pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
 
-- **Residue ICE-WRITE-OPTIONS-1-R-RP (OPEN, 2026-09-18, run 22b)** — a user
-  `snapshot-property.replace-partitions` on a replace-partitions commit (dynamic
-  `insertInto(overwrite)` / `INSERT OVERWRITE`, `overwritePartitions()`). **Apache Spark 4.1.2 +
-  Iceberg 1.11.0 (measured 2026-09-18, run 22b probe `probe_rp.py`)** commits, and the
-  user's value lands: `false` → summary `replace-partitions=false`, `true` → `true`; no
-  refusal. **repark** commits with `replace-partitions=true` either way: the fork's
-  `ReplacePartitionsAction` inserts its marker after the caller's summary properties.
-  Loud-free but value-divergent on one summary key; fork ask F-RP-SUMMARY-USER-1 (let a
-  caller-supplied `replace-partitions` win, as Java's `SnapshotProducer` applies
-  `set(...)` user properties after the operation's own). Not a collision: the run-22b
+- **Residue ICE-WRITE-OPTIONS-1-R-RP — FIXED 2026-09-18 (RP-30, fork #298
+  F-RP-SUMMARY-USER-1)** — a user `snapshot-property.replace-partitions` on a
+  replace-partitions commit (dynamic `insertInto(overwrite)` / `INSERT OVERWRITE`,
+  `overwritePartitions()`). **Apache Spark 4.1.2 + Iceberg 1.11.0 (measured 2026-09-18,
+  run 22b probe `probe_rp.py`; re-recorded 2026-09-18 in
+  `fixtures/torture/data/ice_write_options_rp_1/spark_rp_oracle.json`)** commits, and
+  the user's value lands: `false` → summary `replace-partitions=false`, `true` →
+  `true`; no refusal. **repark** commits with the caller's value in the summary: the
+  fork's replace-partitions action applies caller summary properties after its own
+  marker, as Java's `SnapshotProducer` applies user `set(...)` properties last (the
+  cherry-pick path reads the key case-insensitively). Not a collision: the run-22b
   verification critic's premise that Spark refuses it was measured wrong.
+- **Pin** — `python/repark/tests/test_ice_write_options_rp_1.py` (one test per recorded
+  cell: the write commits and the newest summary's `replace-partitions` — and `k` for
+  the control — equals Spark's; the live tier re-derives one cell on Spark).
+  pins: ice-write-options-rp-1/C-007
 ### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
 
 - **repark** — `.option("write-format", "orc"|"avro")` on any Iceberg write refuses with
