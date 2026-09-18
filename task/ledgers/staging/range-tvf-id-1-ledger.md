@@ -62,7 +62,23 @@ is untouched. Rust pins live file-backed in `range_table/tests.rs`.
 
 ## 3. Targeted checks
 
-Recorded in §4 on the unit's last commit.
+| Command | Result |
+|---|---|
+| `.venv/bin/python -m pytest python/repark/tests/test_range_tvf_id_1.py -q -p no:cacheprovider -n 4` | 0 — 29 passed |
+| `test_profiles1_table_properties.py` + `test_date_fn_1.py` + `test_f1_sql_expander.py` (`-n 4`) | 0 — 84 passed |
+| `test_perf_ice_catalog_io_1.py` (all range-seed tests; glue/s3tables acceptance and the peak-RSS subprocess excluded) | 0 — 33 passed |
+| `cargo test -p repark-core range_table` | 0 — 12 passed |
+| `cargo test -p repark-distributed --test local_executor` | 0 — 3 passed |
+| `cargo test -p repark-distributed --features cluster --test multi_stage session_spill_dir…` | 0 — 1 passed |
+| `cargo test -p repark-distributed --features cluster --test cluster_two_executors cancel_mid_flight` | 0 — 1 passed |
+| `cargo clippy --locked -p repark-core --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 — clean (repo `rust-clippy` flags) |
+| `cargo clippy --locked -p repark-core --lib -- -D clippy::disallowed_methods -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic -D clippy::todo -D clippy::unimplemented -D clippy::unreachable` | 0 — clean (repo `rust-panic-ban` flags, crate scope) |
+| `cargo fmt --all --check` | 0 — clean |
+| `.venv/bin/python -m ruff check` + `ruff format --check` on the new Python files | 0 — clean |
+
+Per the brief's machine rule, `make verify`, `make preflight`, `make py-test*`, a
+whole-workspace `cargo test`, the whole facade suite, and the parity harness were
+deliberately not run.
 
 ## 4. Gate log
 
@@ -80,7 +96,70 @@ Step-4 commit: registry row `RANGE-TVF-ID-1` (**FIXED 2026-09-18**) plus this
 ledger (C-005 PROVEN, verdict 5/5). Test map rows for the fixture, pins, and
 migrations landed in steps 2–3.
 
+## 5. Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: range-tvf-id-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every recorded cell is measured against the release native on both
+        SQL doors (§1a red, §3 green) and the DataFrame door; each pin asserts the
+        measured schema string, nullability, and rows, and the value cells redden
+        when the column is `value`.
+      artifacts: [python/repark/tests/test_range_tvf_id_1.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: The Spark cells are the verbatim orchestrator recording (Spark 4.1.2,
+        local[2], UTC), committed under range_tvf_id_1/ with SHA-256; the committed
+        `_record_range_tvf_id_1.py` driver re-derives them and exits non-zero on drift.
+      artifacts: [python/repark/tests/_record_range_tvf_id_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Refusal paths are pinned by class on both doors (zero step, SELECT
+        value); the 4-argument acceptance, negative step, empty frame, and string
+        coercion are pinned as answers. No silent path exists.
+      artifacts: [python/repark/tests/test_range_tvf_id_1.py, crates/repark-core/src/range_table/tests.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The new provider holds no mutable state (pure argument coercion over
+        DataFusion's generator); registration runs once inside the sync build().
+      artifacts: [crates/repark-core/src/range_table.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: Memory sessions under temp dirs only; no network, no credentials, no
+        AWS; the Spark oracle arrived as a recorded file, not a live JVM run.
+      artifacts: [task/ledgers/staging/range-tvf-id-1-ledger.md]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Every pinned value is a measured value (§1, §3 verbatim blocks), not
+        prose: the `id` schema strings, the row lists, the AnalysisException classes,
+        the declared `sum(range().id)` display name.
+      artifacts: [python/repark/tests/test_range_tvf_id_1.py]
+    - id: AT-7
+      status: N/A
+      justification: No wall-clock claim anywhere in the change.
+    - id: AT-8
+      status: ATTACKED
+      evidence: `git status` shows only the fixture, pins, recorder, provider plus
+        tests, the two maps, the three fallout migrations with map notes, the registry
+        row, and this ledger; no Cargo.toml, lockfile, workflow, or pin change.
+      artifacts: [task/ledgers/staging/range-tvf-id-1-ledger.md]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The fix lives in its registered home (registry row RANGE-TVF-ID-1);
+        the fixture map, the tests map, the staging map, the core src map, the
+        range_table map, and the distributed-tests map carry the entries in the same
+        commits.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: N/A
+      justification: Single-round fix unit; no prior round to regress.
+  complete: true
+```
+
 ## Hand-back
 
-`Model: muse-spark-1.3-contributor`. `risk_tier: standard`. Round 1 in flight:
-fixture committed, pins red on main for the named reason, fix not yet written.
+`Model: muse-spark-1.3-contributor`. `risk_tier: standard`. Round 1 CONCLUDED with all
+five clauses PROVEN, pins green, comment-ban hits=0.
