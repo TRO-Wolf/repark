@@ -464,11 +464,7 @@ def test_facade_sql_cells(
 ) -> None:
     """Facade SQL cells answer the fixture. pins: ice-tt-resolve-1/C-004"""
     seed = seeded["seeds"][version]
-    session = (
-        spark_ny
-        if cell in ("TT-SQL-EXPR-NY", "TT-SQL-STR-NY", "TT-SQL-EPOCH-NY")
-        else spark
-    )
+    session = spark_ny if cell in ("TT-SQL-EXPR-NY", "TT-SQL-STR-NY", "TT-SQL-EPOCH-NY") else spark
     frame = session.sql(_facade_query(cell, _facade_table(version), seed))
     assert _rows_of(frame) == _query_expected(cell, version)
 

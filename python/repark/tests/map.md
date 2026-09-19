@@ -43,6 +43,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_ice_tt_resolve_1.py](test_ice_tt_resolve_1.py) +
   [ice_tt_resolve_1_spark_oracle.json](ice_tt_resolve_1_spark_oracle.json) +
   [_record_ice_tt_resolve_1_oracle.py](_record_ice_tt_resolve_1_oracle.py) —
+  `test_ice_tt_resolve_1.py` is `ruff format` clean (orchestrator fix-up, round 3).
   **ICE-TT-RESOLVE-1 (2026-09-19, round 1):** the 94 recorded Spark time-travel
   cells (47 shapes on format versions 2 and 3, live PySpark 4.1.2 + Iceberg
   1.11.0, InMemory catalog) replayed against RePark — reader `versionAsOf` /
