@@ -213,6 +213,27 @@ Release native rebuilt from the round-2 step-2 tree (no Rust change after it).
   `OW3-WRITETO-OWP-EMPTY-*` cells pin the same answer with the full snapshot history.
 - P2-PY-INTENT (C-017): four Rust tests drive the binding entry itself.
 
+Gates (release native rebuilt from the round-3 tree):
+
+- Harness replay of the round-2 cells (88) and the round-3 cells (68: the 60 base cells
+  re-recorded plus 8 `OW3`): every `OW2` and `OW3` cell equal on rows and snapshots; the only
+  misses are the 4 base `saveAsTable(overwrite)` RTAS histories (R-4) in each run. The 10
+  refusing cells match Spark's class (`AnalysisException`) and carry the
+  `[NON_PARTITION_COLUMN]` token; `getCondition()` stays `None` (R-5).
+- Offline `-n 4`: the same 29 `rg`-found files — 1135 passed, 37 skipped, 20 xfailed; the 32
+  further files — 1403 passed, 93 skipped, 1 xfailed.
+- Live (`REPARK_PARITY_LIVE=1`, PySpark 4.1.2, JVM lock): `test_ice_overwrite_mode_1.py`
+  99 passed, 4 xfailed; the recorder's `check` re-derives all 96 cells.
+- `cargo test -p repark-iceberg --lib` (overwrite filters) 38 passed; `-p repark-spark --lib`
+  (the round-2 filters) 160 passed and (`overwrite partition insert`) 277 passed; `-p
+  repark-sql --lib` 369 passed, `--test ansi_write_defaults` 8 passed; `-p repark-core --lib`
+  (dialect, mode, write-option, session) 172 passed; `-p repark-python --lib` 79 passed.
+- `cargo fmt --all --check` clean; `make rust-clippy`'s command and both `rust-panic-ban`
+  commands clean; `ruff check .` clean; rust-file-size, lib-py, lib-rs, crate-dag,
+  python-conventions, docstring-presence, ledger-grammar, ledger lifecycle, docs-links and
+  map-sync clean; `test_cap_1_source_file_line_cap.py` 23 passed. Comment ban: 0 hits after
+  every commit.
+
 ## Coverage attestation
 
 ```yaml
