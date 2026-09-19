@@ -484,7 +484,7 @@ pins: rp-4-fork-repin/C-005, C-006
   literal. Names are preserved (`NamePreserver`), the result stays `Int64`. Unit pins
   `count_star_keeps_the_int64_expansion_and_its_name`,
   `int32_count_of_one_widens_without_an_int64_literal`.
-  pins: ice-count-fold-1/C-002
+  pins: ice-count-fold-1/C-001, C-002
 - `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
   `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),

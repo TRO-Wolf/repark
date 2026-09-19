@@ -4108,6 +4108,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and `_pos` never-split halves live fork-side (`parallel_small_scan.rs`,
   `expand_skips_*_projection`): EXPLAIN cannot plan `_row_id` (pre-existing) and `_pos`
   is not SQL-visible in RePark.
+  **ICE-COUNT-FOLD-1 (2026-09-19):** the probe was red for a RePark reason, not the fork's —
+  literal narrowing hid `count(*)`'s `Int64(1)` from the statistics fold — so the six F-27
+  pins skipped on every pinned fork. They run and pass since the fix.
+  pins: ice-count-fold-1/C-003
   Live (`REPARK_PARITY_LIVE=1`): the partitioned bed, the post-DELETE row set and the DV
   count against Spark on the same seeds. Numbers and commands:
   [docs/perf/iceberg-scan-baseline.md](../../../docs/perf/iceberg-scan-baseline.md).
@@ -6893,7 +6897,7 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `agg(F.count('*'))` → `count(1)`, `df.count()` → a Python `int`. The fold is measured
   through EXPLAIN text on the SQL door and `DataFrame.explain()` on the DataFrame door; a
   `WHERE` residual still scans.
-  pins: ice-count-fold-1/C-003, C-004
+  pins: ice-count-fold-1/C-003, C-004, C-006
 - [test_ice_list_null_1.py](test_ice_list_null_1.py) —
   **ICE-LIST-NULL-1 (2026-09-18, RP-31):** DELETE and UPDATE with IS NULL on nested
   columns answer Spark 4.1.2 — one pin per recorded cell (128: four shapes by four
