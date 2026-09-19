@@ -41,6 +41,8 @@ changing a decision here means a new dated design pass, not an in-place edit.
   72 EQUAL, 1 refused by both engines, 8 rows filed, 2 defects FIXED in the same unit. Harness:
   `python/repark/tests/test_v3_statement_coverage.py`. Read it before adding a statement surface:
   a new statement class that is not in §3 is not covered, whatever the nightly legs say.
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** `insert-overwrite-partition-dynamic` reads EQUAL;
+  the totals are 73 EQUAL and 7 DIVERGES. pins: ice-overwrite-mode-1/C-018
 - [format-v3-track.md](format-v3-track.md) — **the format-v3 track's scope audit
   (2026-08-21; §5 the delivery sequence, Steps 1–3 done 2026-08-30, RP-3 consumed at `d408da42`;
   Step 4 V3-3 keep-refusal dated 2026-08-30; Step 5 V3-5 `V3-DANGLE-1` FIXED 2026-08-31):** what roadmap item A12 got wrong once the surfaces were actually run. The engine

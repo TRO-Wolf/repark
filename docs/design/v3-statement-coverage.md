@@ -17,11 +17,11 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | Statement programs measured | **81** |
 | Statement classes covered | 12 groups (create · insert · delete · update · merge · alter · lifecycle · metadata · lineage · time travel · refs · call) |
 | Comparison cells (statements + probes) | 267 |
-| **EQUAL** — repark and Spark agree on every cell | **72** |
+| **EQUAL** — repark and Spark agree on every cell | **73** |
 | **REFUSED** — both engines refuse the statement | **1** |
-| **DIVERGES** — a registry row | **8** |
+| **DIVERGES** — a registry row | **7** |
 | Registry rows filed by this unit | 6 (`V3-COV-3` **FIXED at RP-8, 2026-09-03** · `V3-COV-4` BACKLOG · `V3-COV-5` BACKLOG · `V3-COV-6` DECLARED · `V3-COV-7` BACKLOG · `V3-COV-8` BACKLOG) |
-| Registry rows an existing row already covers | 2 (`DML-1`, `G3-E8` ×2); `B-MOR-3` FIXED 2026-09-03 |
+| Registry rows an existing row already covers | 2 (`DML-1` — FIXED 2026-09-19 by ICE-OVERWRITE-MODE-1, `G3-E8` ×2); `B-MOR-3` FIXED 2026-09-03 |
 | Defects FIXED inside this unit | 2 (`V3-COV-1`, `V3-COV-2`) |
 | Live runtime, matrix co-collected with the nightly live legs | 1 min 57 s |
 
@@ -61,7 +61,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | `insert-overwrite-table` | insert | `INSERT OVERWRITE t VALUES (9, 'z')` | flat MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `insert-overwrite-partition-static-values` | insert | `INSERT OVERWRITE t PARTITION (part = 10) VALUES (CAST(7 AS INT), 'g')` | part MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `insert-overwrite-partition-static-select` | insert | `INSERT OVERWRITE t PARTITION (part = 10) SELECT CAST(id AS INT), CAST(name AS STRING) FROM t WHERE id = 1` | part MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
-| `insert-overwrite-partition-dynamic` | insert | `INSERT OVERWRITE t PARTITION (part) SELECT CAST(7 AS INT), CAST('g' AS STRING), CAST(10 AS INT)` | part MoR v3 | 2 | replaced only `part = 10` until 2026-09-19; since ICE-OVERWRITE-MODE-1 the default-STATIC mode replaces the whole table | default-STATIC wipes the table | **EQUAL** (2026-09-19; DIVERGES before) | `DML-1` |
+| `insert-overwrite-partition-dynamic` | insert | `INSERT OVERWRITE t PARTITION (part) SELECT CAST(7 AS INT), CAST('g' AS STRING), CAST(10 AS INT)` | part MoR v3 | 2 | replaced only `part = 10` until 2026-09-19; since ICE-OVERWRITE-MODE-1 the default-STATIC mode replaces the whole table | default-STATIC wipes the table (DIVERGES before 2026-09-19) | **EQUAL** | — |
 | `delete-where-mor` | delete | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 3 | as Spark | as Spark | **EQUAL** | — |
 | `delete-where-cow` | delete | `DELETE FROM t WHERE id = 2` | flat COW v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `delete-where-partitioned-mor` | delete | `DELETE FROM t WHERE id = 2` | part MoR v3 | 3 | as Spark | as Spark | **EQUAL** | — |
@@ -135,7 +135,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 
 | Registry row | Statement | What differs | Class | Owner |
 |---|---|---|---|---|
-| `DML-1` | `INSERT OVERWRITE t PARTITION (part) …` | repark replaces only the source partitions; Spark SQL's default `partitionOverwriteMode=STATIC` wipes the table | DECLARED residue on a FIXED row (2026-08-30, DML-B) | repark, deliberate |
+| `DML-1` | `INSERT OVERWRITE t PARTITION (part) …` | repark replaced only the source partitions; Spark SQL's default `partitionOverwriteMode=STATIC` wipes the table | FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1); was a DECLARED residue on a FIXED row (2026-08-30, DML-B) | — |
 | `G3-E8` | `UPDATE … WHERE col NOT IN (SELECT …)` and `UPDATE … WHERE EXISTS (…)` | repark refuses at the valve; Spark updates the matching rows | DEFECT, partial fix | repark |
 | `B-MOR-3` | `CALL system.rewrite_position_delete_files` | **FIXED 2026-09-03** — both engines answer four zeros on a DV-only table | FIXED (owner ruling: build); `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11) | — |
 | `V3-COV-3` | partitioned `INSERT INTO` on v3 | `_row_id` was assigned by an unstable data-file order — two permutations across twelve runs | **FIXED (RP-8, 2026-09-03)** — the fork's `FanoutWriter::close` drains ascending, 12 of 12 runs give Spark's mapping | fork `IcebergTableProvider::insert_into` |

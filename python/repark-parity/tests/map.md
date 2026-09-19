@@ -605,6 +605,8 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   the 6-distinct reopening, the hash-order residual, both pin files).
   pins: v3-cov-statement-coverage/C-001, C-004, C-005
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** the stated totals follow the flipped verdict (EQUAL
+  73, DIVERGES 7). pins: ice-overwrite-mode-1/C-018
 - `test_v1_gate_docs.py` — **V1-GATE (2026-09-03; tree pins):** the v1.0 gate audit is written
   and true. The north star's §3.1 must carry twenty numbered audit rows, every one glyphed ✅
   and none naming a BACKLOG residual; each of the seven rows that has a residual must name its
