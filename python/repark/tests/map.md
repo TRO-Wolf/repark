@@ -71,9 +71,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   selector clashes on a two-snapshot seed; the recorder replays them once on
   version 2. Offline pins seed the two-snapshot shape per test and assert the
   fixture class, message, or rows (`test_ice_tt_resolve_1_tt2.py` holds the TT2
-  pins under the default ceiling). Strings the engine CAST cannot take
-  (short/year-only/no-seconds forms, years past 2262) pin the Spark answer as
-  strict xfails citing the cast finding.
+  pins under the default ceiling). Strings the engine CAST could not take
+  (short/year-only/no-seconds forms, years past 2262) pinned the Spark answer as
+  strict xfails citing the cast finding; **CAST-TS-STRING-1 (2026-09-19)** flipped
+  them to plain pins (`test_reader_tas_date_past_2262`,
+  `test_facade_sql_tt2_short_and_year_only_casts`,
+  `test_reader_tt2_timestamp_as_of_nosec`). pins: cast-ts-string-1/C-009
   pins: ice-tt-resolve-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
   Round 3 item 3: the extractor stops a `TIMESTAMP AS OF` expression at a trailing
   alias (`AS ident` or a bare ident after a quoted/`)/number` value), so the alias
@@ -84,9 +87,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   on a branch selector. pins: ice-tt-resolve-1/C-002
   Round 3 item 6: the New York wall clocks use `zoneinfo.ZoneInfo("America/New_York")`
   instead of a fixed -4h offset, so the pins hold in winter. pins: ice-tt-resolve-1/C-002
-  Round 3 item 8: the alias-join b-side literal is `2261-01-01` (the oracle cell's
-  `2999-01-01` exceeds the engine CAST range; identical expected rows).
-  pins: ice-tt-resolve-1/C-002
+  Round 3 item 8: the alias-join b-side literal was `2261-01-01` (the oracle cell's
+  `2999-01-01` exceeded the engine CAST range; identical expected rows); CAST-TS-STRING-1
+  restores the oracle's `2999-01-01`. pins: ice-tt-resolve-1/C-002, cast-ts-string-1/C-009
 - [test_cast_map_spell_1.py](test_cast_map_spell_1.py) +
   [cast_map_spell_1/](cast_map_spell_1/map.md) +
   [_record_cast_map_spell_1.py](_record_cast_map_spell_1.py) —
@@ -119,6 +122,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and RePark's loud refusal where Spark stores a NULL key. The native door runs the ANSI-on
   cells it can spell; its overflow cell is a dated strict xfail (it types `128` as BIGINT).
   pins: cast-map-spell-1/C-013, C-015, C-016
+- [test_cast_ts_string_1.py](test_cast_ts_string_1.py) +
+  [cast_ts_string_1_spark_oracle.json](cast_ts_string_1_spark_oracle.json) +
+  [_record_cast_ts_string_1.py](_record_cast_ts_string_1.py) —
+  **CAST-TS-STRING-1 (2026-09-19, round 1):** `CAST(<string> AS TIMESTAMP)` against
+  Spark 4.1.2's `stringToTimestamp`. The oracle holds 151 strings x session zones `UTC` /
+  `America/New_York` x ANSI off / on (604 cells). Each cell carries the `unix_micros` of
+  `CAST`, `TRY_CAST` and one-argument `to_timestamp`, or Spark's error condition and message.
+  The 46 strings measured first are extended with fractions of 0–10 digits, offset / `UTC+h` /
+  region / short-id zones, whitespace and control-character trims, year signs and 5–7 digit
+  years, the micros range edges, DST gap and overlap walls, and far-future DST.
+  The pins run every cell on the facade `spark.sql` door as a literal and as a temp-view
+  column, on `Column.cast` / `Column.try_cast`, and on `to_timestamp`, and pin the
+  `timestamp[us, tz=UTC]` Arrow type. Time-only strings (`T10:00`, `10:00:00`) resolve
+  against today's date in their zone, so they check the local date and time of day. The
+  native door has no LTZ `TIMESTAMP` (its `TIMESTAMP` is the ANSI zoneless type) and carries
+  no cell. The live leg re-derives the fixture. Red on main: 30 failed, 1 live-skip; green
+  on the kernel fix. The registry row `CAST-TS-STRING-1` reads FIXED 2026-09-19 with its
+  residues. The recorder spells each string as a SQL literal: the shared live oracle loads
+  Iceberg's SQL extensions, whose parser does not bind named parameters. Live: 31 passed.
+  pins: cast-ts-string-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-011, C-012
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —
