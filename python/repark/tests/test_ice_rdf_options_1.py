@@ -234,19 +234,11 @@ _VALUE_XFAIL: dict[str, str] = {
     "max_group_size": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 added, Spark 8→4",
     "partial_progress_groups": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 "
     "added, Spark 8→4",
-    "rpd_rewrite_all": "FORK-RPD 2026-09-17: fork RPD untouched by #283, compacts 8→2 "
-    "per-group commits, Spark rewrites 8→8 in one commit",
-    "rpd_min_input_files_1": "FORK-RPD 2026-09-17: fork RPD untouched by #283, compacts "
-    "8→2 per-group commits, Spark rewrites 8→8 in one commit",
 }
 
 _SNAPSHOT_XFAIL: dict[str, str] = {
     "partial_progress_groups": "FORK-GROUP-GRANULARITY 2026-09-17: 8 groups under "
     "max-commits 3 need 3 commits (11 snapshots), Spark compacts 4 groups in 2 (10)",
-    "rpd_rewrite_all": "FORK-RPD 2026-09-17: per-group commits (11 snapshots), Spark one "
-    "commit (10)",
-    "rpd_min_input_files_1": "FORK-RPD 2026-09-17: per-group commits (11 snapshots), "
-    "Spark one commit (10)",
 }
 
 
