@@ -212,6 +212,7 @@ fn schema_from_column_defs(
 }
 
 /// Map a Spark/SQL column type to an Iceberg primitive (loud on nested / unsupported).
+#[cfg(test)]
 pub(crate) fn sql_type_to_iceberg(data_type: &SqlDataType) -> Result<Type> {
     sql_type_to_iceberg_with_timestamp_type(data_type, SparkTimestampType::Ltz)
 }

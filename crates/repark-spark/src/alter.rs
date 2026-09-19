@@ -3,17 +3,18 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
-    AlterColumnOperation, AlterTableOperation, ColumnDef, ColumnOption, DataType, ExactNumberInfo,
-    Ident, MySQLColumnPosition, ObjectName, RenameTableNameKind, TimezoneInfo,
+    AlterColumnOperation, AlterTableOperation, ColumnDef, ColumnOption, Ident, MySQLColumnPosition,
+    ObjectName, RenameTableNameKind,
 };
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::tokenizer::{Token, Word};
-use iceberg::spec::{PrimitiveType, Transform, Type};
+use iceberg::spec::{PrimitiveType, Transform};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_iceberg::write::alter::{ColumnPosition, PartitionSpecChange, SchemaChange};
 
-use crate::create_table::{sql_type_to_iceberg, sql_type_to_iceberg_with_timestamp_type};
+use crate::create_table::sql_type_to_iceberg_with_timestamp_type;
+use crate::replace_columns::ReplaceColumnDef;
 use crate::{
     PartitionFieldSpec, build_transform_field, catalog_handle, iceberg_err, name_parts,
     property_value, reregister,
@@ -740,26 +741,13 @@ pub(crate) enum IcebergAlterDdl {
         /// Ordered ops (usually one; multi-clause future-proof).
         changes: Vec<PartitionSpecChange>,
     },
-    /// `REPLACE COLUMNS (col TYPE [COMMENT …] [NOT NULL], …)`.
+    /// `REPLACE COLUMNS (col TYPE [COMMENT …], …)`.
     ReplaceColumns {
         /// `catalog.namespace.table` parts.
         table_parts: Vec<String>,
         /// New top-level column list (order preserved).
         columns: Vec<ReplaceColumnDef>,
     },
-}
-
-/// One column in a `REPLACE COLUMNS` list.
-#[derive(Debug, Clone)]
-pub(crate) struct ReplaceColumnDef {
-    /// Column name.
-    name: String,
-    /// Iceberg field type.
-    field_type: Type,
-    /// Optional COMMENT.
-    doc: Option<String>,
-    /// When true the column is required (`NOT NULL`).
-    required: bool,
 }
 
 /// Significant token for the I7 hand parser (mirrors `ref_ddl`).
@@ -802,7 +790,7 @@ pub(crate) fn try_parse_iceberg_alter_ddl(sql: &str) -> Option<Result<IcebergAlt
 
     // REPLACE COLUMNS (…)
     if word_eq(&significant, index, "REPLACE") && word_eq(&significant, index + 1, "COLUMNS") {
-        return Some(parse_replace_columns(&significant, index + 2, table_parts));
+        return Some(crate::replace_columns::parse(sql, table_parts));
     }
 
     // ADD|DROP|REPLACE PARTITION FIELD …
@@ -869,7 +857,10 @@ pub(crate) async fn execute_iceberg_alter_ddl(
         } => {
             let (catalog_name, ident) = table_parts_to_ident(&table_parts)?;
             let handle = catalog_handle(catalogs, &catalog_name)?;
-            let schema_changes = plan_replace_columns(handle.as_ref(), &ident, &columns).await?;
+            let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
+            let schema_changes =
+                crate::replace_columns::plan(handle.as_ref(), &ident, &columns, timestamp_type)
+                    .await?;
             repark_iceberg::write::alter::apply_schema_changes(
                 handle.as_ref(),
                 &ident,
@@ -1161,360 +1152,6 @@ fn partition_field_spec_to_remove_by_transform(
 
 fn partition_field_spec_parts(field_spec: &PartitionFieldSpec) -> (String, Transform) {
     (field_spec.column().to_string(), field_spec.transform())
-}
-
-fn parse_replace_columns(
-    significant: &[Sig],
-    start: usize,
-    table_parts: Vec<String>,
-) -> Result<IcebergAlterDdl> {
-    if !matches!(significant.get(start), Some(Sig::LParen)) {
-        return Err(DataFusionError::Plan(
-            "ALTER TABLE REPLACE COLUMNS expects `(col TYPE, …)`".into(),
-        ));
-    }
-    // Find matching close paren for the column list.
-    let mut depth = 0_i32;
-    let mut close = None;
-    for (offset, token) in significant.iter().enumerate().skip(start) {
-        match token {
-            Sig::LParen => depth += 1,
-            Sig::RParen => {
-                depth -= 1;
-                if depth == 0 {
-                    close = Some(offset);
-                    break;
-                }
-            }
-            _ => {}
-        }
-    }
-    let close = close.ok_or_else(|| {
-        DataFusionError::Plan("ALTER TABLE REPLACE COLUMNS: unterminated column list".into())
-    })?;
-    if close + 1 < significant.len() {
-        return Err(DataFusionError::Plan(
-            "trailing tokens after REPLACE COLUMNS (…)".into(),
-        ));
-    }
-    let inner = &significant[start + 1..close];
-    let segments = split_sig_comma_segments(inner);
-    if segments.is_empty() {
-        return Err(DataFusionError::Plan(
-            "ALTER TABLE REPLACE COLUMNS requires at least one column".into(),
-        ));
-    }
-    let mut columns = Vec::with_capacity(segments.len());
-    for segment in segments {
-        columns.push(parse_replace_column_segment(segment)?);
-    }
-    Ok(IcebergAlterDdl::ReplaceColumns {
-        table_parts,
-        columns,
-    })
-}
-
-fn split_sig_comma_segments(tokens: &[Sig]) -> Vec<&[Sig]> {
-    let mut segments = Vec::new();
-    let mut depth = 0_i32;
-    let mut start = 0usize;
-    for (index, token) in tokens.iter().enumerate() {
-        match token {
-            Sig::LParen => depth += 1,
-            Sig::RParen => depth -= 1,
-            Sig::Comma if depth == 0 => {
-                if start < index {
-                    segments.push(&tokens[start..index]);
-                }
-                start = index + 1;
-            }
-            _ => {}
-        }
-    }
-    if start < tokens.len() {
-        segments.push(&tokens[start..]);
-    }
-    segments
-}
-
-fn parse_replace_column_segment(segment: &[Sig]) -> Result<ReplaceColumnDef> {
-    // name TYPE [NOT NULL] [COMMENT '…'] (order of options flexible)
-    let name = word_at(segment, 0).ok_or_else(|| {
-        DataFusionError::Plan("REPLACE COLUMNS column entry must start with a name".into())
-    })?;
-    let type_word = word_at(segment, 1).ok_or_else(|| {
-        DataFusionError::Plan(format!("REPLACE COLUMNS column `{name}` expects a type"))
-    })?;
-    let (data_type, mut index) = parse_sql_type_tokens(segment, 1, type_word)?;
-    let field_type = sql_type_to_iceberg(&data_type)?;
-    let mut required = false;
-    let mut doc = None;
-    while index < segment.len() {
-        if word_eq(segment, index, "NOT") && word_eq(segment, index + 1, "NULL") {
-            required = true;
-            index += 2;
-            continue;
-        }
-        if word_eq(segment, index, "NULL") {
-            // explicit NULL = optional
-            index += 1;
-            continue;
-        }
-        if word_eq(segment, index, "COMMENT") {
-            match segment.get(index + 1) {
-                Some(Sig::String(text)) => {
-                    doc = Some(text.clone());
-                    index += 2;
-                    continue;
-                }
-                _ => {
-                    return Err(DataFusionError::Plan(format!(
-                        "REPLACE COLUMNS column `{name}` COMMENT expects a string literal"
-                    )));
-                }
-            }
-        }
-        return Err(DataFusionError::Plan(format!(
-            "REPLACE COLUMNS column `{name}`: unexpected token at `{}`",
-            render_sig_at(segment, index)
-        )));
-    }
-    Ok(ReplaceColumnDef {
-        name: name.to_string(),
-        field_type,
-        doc,
-        required,
-    })
-}
-
-/// Parse a simple SQL type starting at `type_index` (word already known as `type_word`).
-fn parse_sql_type_tokens(
-    segment: &[Sig],
-    type_index: usize,
-    type_word: &str,
-) -> Result<(DataType, usize)> {
-    let lower = type_word.to_ascii_lowercase();
-    // DECIMAL(p, s) / DECIMAL(p)
-    if lower == "decimal" || lower == "numeric" {
-        if !matches!(segment.get(type_index + 1), Some(Sig::LParen)) {
-            return Ok((DataType::Decimal(ExactNumberInfo::None), type_index + 1));
-        }
-        let (args, after) = parse_paren_arg_list(segment, type_index + 1)?;
-        let info = match args.as_slice() {
-            [precision] => {
-                let precision: u64 = precision.parse().map_err(|_| {
-                    DataFusionError::Plan(format!(
-                        "DECIMAL precision must be an integer, got `{precision}`"
-                    ))
-                })?;
-                ExactNumberInfo::Precision(precision)
-            }
-            [precision, scale] => {
-                let precision: u64 = precision.parse().map_err(|_| {
-                    DataFusionError::Plan(format!(
-                        "DECIMAL precision must be an integer, got `{precision}`"
-                    ))
-                })?;
-                let scale: i64 = scale.parse().map_err(|_| {
-                    DataFusionError::Plan(format!(
-                        "DECIMAL scale must be an integer, got `{scale}`"
-                    ))
-                })?;
-                ExactNumberInfo::PrecisionAndScale(precision, scale)
-            }
-            _ => {
-                return Err(DataFusionError::Plan(
-                    "DECIMAL expects DECIMAL, DECIMAL(p), or DECIMAL(p, s)".into(),
-                ));
-            }
-        };
-        return Ok((DataType::Decimal(info), after));
-    }
-    // VARCHAR(n) / CHAR(n) — map via sql_type_to_iceberg as string-like
-    if lower == "varchar" || lower == "char" || lower == "character" {
-        if matches!(segment.get(type_index + 1), Some(Sig::LParen)) {
-            let (_args, after) = parse_paren_arg_list(segment, type_index + 1)?;
-            return Ok((DataType::Varchar(None), after));
-        }
-        return Ok((DataType::Varchar(None), type_index + 1));
-    }
-    let data_type = match lower.as_str() {
-        "int" | "integer" => DataType::Int(None),
-        "bigint" | "long" => DataType::BigInt(None),
-        "smallint" | "short" => DataType::SmallInt(None),
-        "tinyint" | "byte" => DataType::TinyInt(None),
-        "float" | "real" => DataType::Float(ExactNumberInfo::None),
-        "double" | "float8" => DataType::Double(ExactNumberInfo::None),
-        "string" | "text" => DataType::String(None),
-        "boolean" | "bool" => DataType::Boolean,
-        "date" => DataType::Date,
-        "timestamp" => DataType::Timestamp(None, TimezoneInfo::None),
-        "binary" | "bytes" => DataType::Binary(None),
-        other => {
-            return Err(DataFusionError::NotImplemented(format!(
-                "REPLACE COLUMNS type `{other}` is not supported yet (I7 primitives only)"
-            )));
-        }
-    };
-    Ok((data_type, type_index + 1))
-}
-
-/// Plan REPLACE COLUMNS against the current schema: identity-trap refuse, then drop/add/promote.
-async fn plan_replace_columns(
-    catalog: &dyn iceberg::Catalog,
-    ident: &TableIdent,
-    columns: &[ReplaceColumnDef],
-) -> Result<Vec<SchemaChange>> {
-    let table = catalog.load_table(ident).await.map_err(iceberg_err)?;
-    let existing: Vec<_> = table
-        .metadata()
-        .current_schema()
-        .as_struct()
-        .fields()
-        .iter()
-        .map(|field| {
-            (
-                field.name.clone(),
-                field.field_type.as_ref().clone(),
-                field.required,
-            )
-        })
-        .collect();
-    refuse_replace_columns_identity_and_required(&existing, columns)?;
-    Ok(build_replace_column_changes(&existing, columns))
-}
-
-/// Identity-trap + required-incompatible gates for REPLACE COLUMNS.
-fn refuse_replace_columns_identity_and_required(
-    existing: &[(String, Type, bool)],
-    columns: &[ReplaceColumnDef],
-) -> Result<()> {
-    for column in columns {
-        if let Some((_, existing_type, _)) = existing
-            .iter()
-            .find(|(name, _, _)| name.eq_ignore_ascii_case(&column.name))
-            && !types_compatible_for_replace(existing_type, &column.field_type)
-        {
-            return Err(DataFusionError::Plan(format!(
-                "ALTER TABLE REPLACE COLUMNS identity trap: column `{}` exists as `{}` but \
-                 REPLACE would re-introduce it as `{}` — Iceberg field-ids would be recycled \
-                 only under type promotion (int→long, float→double, decimal widen); refuse \
-                 rather than silently drop+re-add under the same name (I7)",
-                column.name, existing_type, column.field_type
-            )));
-        }
-    }
-    for column in columns {
-        if !column.required {
-            continue;
-        }
-        let existing_required = existing
-            .iter()
-            .find(|(name, _, _)| name.eq_ignore_ascii_case(&column.name))
-            .map(|(_, _, required)| *required);
-        match existing_required {
-            None => {
-                return Err(DataFusionError::NotImplemented(format!(
-                    "ALTER TABLE REPLACE COLUMNS cannot ADD required column `{}` without a \
-                     default (incompatible change; omit NOT NULL or use a write-default path)",
-                    column.name
-                )));
-            }
-            Some(false) => {
-                return Err(DataFusionError::NotImplemented(format!(
-                    "ALTER TABLE REPLACE COLUMNS cannot SET NOT NULL on existing column `{}` \
-                     (incompatible without backfill; I7)",
-                    column.name
-                )));
-            }
-            Some(true) => {}
-        }
-    }
-    Ok(())
-}
-
-/// Build the schema-change list for a validated REPLACE COLUMNS.
-fn build_replace_column_changes(
-    existing: &[(String, Type, bool)],
-    columns: &[ReplaceColumnDef],
-) -> Vec<SchemaChange> {
-    let mut changes = Vec::new();
-    for (existing_name, _, _) in existing {
-        let kept = columns
-            .iter()
-            .any(|column| column.name.eq_ignore_ascii_case(existing_name));
-        if !kept {
-            changes.push(SchemaChange::DropColumn {
-                name: existing_name.clone(),
-            });
-        }
-    }
-    for column in columns {
-        if let Some((existing_name, existing_type, was_required)) = existing
-            .iter()
-            .find(|(name, _, _)| name.eq_ignore_ascii_case(&column.name))
-        {
-            if existing_type != &column.field_type
-                && let Type::Primitive(new_type) = &column.field_type
-            {
-                changes.push(SchemaChange::UpdateColumnType {
-                    name: existing_name.clone(),
-                    new_type: new_type.clone(),
-                });
-            }
-            if *was_required && !column.required {
-                changes.push(SchemaChange::MakeColumnOptional {
-                    name: existing_name.clone(),
-                });
-            }
-            if column.doc.is_some() {
-                changes.push(SchemaChange::UpdateColumnDoc {
-                    name: existing_name.clone(),
-                    doc: column.doc.clone(),
-                });
-            }
-        } else {
-            changes.push(SchemaChange::AddColumn {
-                name: column.name.clone(),
-                field_type: column.field_type.clone(),
-                doc: column.doc.clone(),
-                required: false,
-                position: None,
-            });
-        }
-    }
-    changes
-}
-
-/// True when REPLACE may keep the field-id: same type, or Iceberg promotion target pair.
-fn types_compatible_for_replace(existing: &Type, new_type: &Type) -> bool {
-    if existing == new_type {
-        return true;
-    }
-    match (existing, new_type) {
-        (Type::Primitive(from), Type::Primitive(to)) => is_iceberg_type_promotion(from, to),
-        _ => false,
-    }
-}
-
-/// Iceberg type-promotion pairs (Java parity): int→long, float→double, decimal same-scale widen.
-fn is_iceberg_type_promotion(from: &PrimitiveType, to: &PrimitiveType) -> bool {
-    match (from, to) {
-        (PrimitiveType::Int, PrimitiveType::Long)
-        | (PrimitiveType::Float, PrimitiveType::Double) => true,
-        (
-            PrimitiveType::Decimal {
-                precision: from_precision,
-                scale: from_scale,
-            },
-            PrimitiveType::Decimal {
-                precision: to_precision,
-                scale: to_scale,
-            },
-        ) => from_scale == to_scale && to_precision >= from_precision,
-        // Identity (same primitive) already handled by ==; allow same-type restate.
-        _ => from == to,
-    }
 }
 
 pub(crate) fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {

@@ -2600,7 +2600,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_alter_table.py` — I6 / R-ALTER-TABLE: ADD/DROP/RENAME COLUMN schema-eq + read-after
   (added→NULL, rename data intact), ADD COLUMNS plural + FIRST, TYPE widen + narrow-refuse twin
   (int→long + float→double + decimal — octo C3), case-insensitive DROP (octo C5), DROP NOT NULL,
-  loud refuse REPLACE COLUMNS / partition evolution / ADD NOT NULL, and **V3-6 C-005**
+  loud refuse partition evolution / ADD NOT NULL, and **V3-6 C-005**
   Spark-equal DEFAULT DDL refuse (CREATE / ADD COLUMN / SET DEFAULT)
   (pins: v3-6-v3-types/C-005). FQ `mem.ns.table` only (no
   bare-name dependency).
@@ -2609,7 +2609,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   widen + narrow-refuse twin (int→long + float→double + decimal — octo C3), case-insensitive
   DROP (octo C5), DROP NOT NULL; I7 ADD/DROP PARTITION FIELD + write-after-evo + VERSION AS OF
   pre-evo pin (octo I7-C5) + case-insensitive DROP name, REPLACE PARTITION FIELD, REPLACE
-  COLUMNS promote + identity-trap twin; residual refuse ADD NOT NULL.
+  COLUMNS drop-and-re-add (**ICE-REPLACE-COLUMNS-1, 2026-09-19** — the identity-trap twin is
+  gone: a same-named column gets a fresh id and reads NULL, and a re-typed name is answered,
+  not refused; the measured cells are in `test_ice_replace_columns_1.py`); residual refuse
+  ADD NOT NULL.
   FQ `mem.ns.table` only (no bare-name dependency).
 - `test_ml_feature_oracle.py` — **U2:** NaN-mix SQL fixtures CAST float literals to DOUBLE;
   CountVectorizer `1.0` SQL now yields decimal128 vectors (values still sum). R-ML-FEATURE (M2) + Q1 R-ML-QUANTILE: VectorAssembler, StringIndexer/IndexToString,

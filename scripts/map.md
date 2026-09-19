@@ -1,5 +1,6 @@
 # map — scripts/
 
+ICE-REPLACE-COLUMNS-1 (2026-09-19): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1813 → 1450 (the REPLACE COLUMNS parser, planner and identity-trap gate move to `replace_columns.rs`) and `repark-spark/src/tests/alter.rs` 1379 → 1185 (the two identity-trap tests move to `tests/replace_columns.rs`), both shrink-only. pins: ice-replace-columns-1/C-009
 ICE-OVERWRITE-MODE-1 (2026-09-19): `check_lib_py.py` ratchets `dataframe/writer_readwriter.py` 1095 → 1093 → 1091 (the verification fix drops the `_dynamic_partition_sql` import) (`overwritePartitions` hands its SQL to `writer_layout.run_overwrite_partitions`), shrink-only. pins: ice-overwrite-mode-1/C-007
 ICE-DROP-NS-1 (2026-09-19): `check_rust_file_size.py` ratchets `repark-sql/src/tests.rs` 1520 → 1513 (the native `CASCADE` refusal pin and its doc line left the file; its replacement pins live in `schema_ddl/tests.rs`). pins: ice-drop-ns-1/C-011
 

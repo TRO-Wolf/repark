@@ -394,30 +394,13 @@ async fn alter_column_drop_not_null() {
     assert!(!id.required, "DROP NOT NULL must make the column optional");
 }
 
-/// I6 residual + I7 identity-trap.
+/// I6 residual refusals.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // flat refuse battery: ORDERED/DISTRIBUTED/LHS/width=0 (octo C2)
 async fn alter_unsupported_forms_refuse_loud() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     create_alter_target(&ctx, &catalogs, "loud").await;
-
-    // I7 identity trap: table has `id INT` + `name STRING`; REPLACE with id STRING refuses.
-    let replace_err = execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.loud REPLACE COLUMNS (id STRING, name STRING)",
-    )
-    .await
-    .expect_err("REPLACE COLUMNS identity trap must refuse");
-    assert!(
-        replace_err
-            .to_string()
-            .to_lowercase()
-            .contains("identity trap")
-            || replace_err.to_string().contains("REPLACE COLUMNS"),
-        "got: {replace_err}"
-    );
 
     let not_null_err = execute(
         &ctx,
@@ -645,91 +628,6 @@ async fn alter_replace_partition_field_and_transforms() {
     );
 }
 
-/// I7 stretch — REPLACE COLUMNS happy path (drop unused + promote int→long) + identity-trap twin.
-#[tokio::test]
-async fn alter_replace_columns_promote_and_identity_trap() {
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
-    execute(
-        &ctx,
-        &catalogs,
-        "CREATE TABLE ice.sales.rcols (id INT, name STRING, junk INT) USING iceberg",
-    )
-    .await
-    .unwrap();
-    execute(
-        &ctx,
-        &catalogs,
-        "INSERT INTO ice.sales.rcols VALUES (1, 'a', 9), (2, 'b', 8)",
-    )
-    .await
-    .unwrap();
-
-    // Happy: drop junk, promote id INT→BIGINT, keep name.
-    execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.rcols REPLACE COLUMNS (id BIGINT, name STRING)",
-    )
-    .await
-    .unwrap();
-    let names = {
-        let batches = execute(&ctx, &catalogs, "SELECT * FROM ice.sales.rcols")
-            .await
-            .unwrap()
-            .collect()
-            .await
-            .unwrap();
-        batches[0]
-            .schema()
-            .fields()
-            .iter()
-            .map(|field| field.name().clone())
-            .collect::<Vec<_>>()
-    };
-    assert_eq!(names, vec!["id".to_string(), "name".to_string()]);
-    // Read-after: data intact under promoted type.
-    let count = rows(&ctx, &catalogs, "SELECT * FROM ice.sales.rcols").await;
-    assert_eq!(count, 2);
-
-    // Identity-trap twin: same name, incompatible type (BIGINT → STRING).
-    let trap = execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.rcols REPLACE COLUMNS (id STRING, name STRING)",
-    )
-    .await
-    .expect_err("identity trap must refuse");
-    assert!(
-        trap.to_string().to_lowercase().contains("identity trap"),
-        "got: {trap}"
-    );
-
-    // Field-id stability on promote.
-    let table = load_sales_table(&catalogs, "rcols").await;
-    let id_field = table
-        .metadata()
-        .current_schema()
-        .as_struct()
-        .fields()
-        .iter()
-        .find(|field| field.name == "id")
-        .expect("id column");
-    // CREATE TABLE column-def assigns sequential ids starting at 1 for `id`.
-    assert_eq!(
-        id_field.id, 1,
-        "REPLACE COLUMNS promote int→long must preserve field-id"
-    );
-    assert!(
-        matches!(
-            id_field.field_type.as_ref(),
-            iceberg::spec::Type::Primitive(iceberg::spec::PrimitiveType::Long)
-        ),
-        "id must be long after promote, got {:?}",
-        id_field.field_type
-    );
-}
-
 /// Cover truncate and temporal partition fields, transform drops, required-column refusal.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // flat pin battery: truncate/year/drop-by-transform/required
@@ -909,98 +807,6 @@ async fn alter_partition_transforms_drop_by_transform_and_replace_required_refus
         opt_req.to_string().to_lowercase().contains("not null")
             || opt_req.to_string().to_lowercase().contains("required"),
         "got: {opt_req}"
-    );
-}
-
-/// REPLACE COLUMNS widens float and decimal types and rejects unsafe identity changes.
-#[tokio::test]
-async fn alter_replace_columns_float_decimal_promote_and_traps() {
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
-    execute(
-        &ctx,
-        &catalogs,
-        "CREATE TABLE ice.sales.rfd (measure FLOAT, amount DECIMAL(5,2), junk INT) USING iceberg",
-    )
-    .await
-    .unwrap();
-    execute(
-        &ctx,
-        &catalogs,
-        "INSERT INTO ice.sales.rfd VALUES (1.5, 12.34, 9)",
-    )
-    .await
-    .unwrap();
-    execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.rfd REPLACE COLUMNS (measure DOUBLE, amount DECIMAL(10,2))",
-    )
-    .await
-    .unwrap();
-    let table = load_sales_table(&catalogs, "rfd").await;
-    let fields = table.metadata().current_schema().as_struct().fields();
-    let measure = fields.iter().find(|f| f.name == "measure").unwrap();
-    let amount = fields.iter().find(|f| f.name == "amount").unwrap();
-    assert!(
-        matches!(
-            measure.field_type.as_ref(),
-            iceberg::spec::Type::Primitive(iceberg::spec::PrimitiveType::Double)
-        ),
-        "float→double via REPLACE COLUMNS, got {:?}",
-        measure.field_type
-    );
-    match amount.field_type.as_ref() {
-        iceberg::spec::Type::Primitive(iceberg::spec::PrimitiveType::Decimal {
-            precision,
-            scale,
-        }) => {
-            assert_eq!((*precision, *scale), (10, 2));
-        }
-        other => panic!("expected decimal(10,2), got {other:?}"),
-    }
-    assert!(
-        fields.iter().all(|f| f.name != "junk"),
-        "junk must be dropped by REPLACE COLUMNS"
-    );
-    // Read-after value integrity (Arrow path).
-    let batches = execute(&ctx, &catalogs, "SELECT measure, amount FROM ice.sales.rfd")
-        .await
-        .unwrap()
-        .collect()
-        .await
-        .unwrap();
-    assert!(!batches.is_empty());
-    assert_eq!(batches[0].schema().field(0).data_type(), &DataType::Float64);
-
-    // Identity-trap twins on REPLACE COLUMNS (double→string, decimal→int).
-    let trap_double = execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.rfd REPLACE COLUMNS (measure STRING, amount DECIMAL(10,2))",
-    )
-    .await
-    .expect_err("double→string identity trap");
-    assert!(
-        trap_double
-            .to_string()
-            .to_lowercase()
-            .contains("identity trap"),
-        "got: {trap_double}"
-    );
-    let trap_dec = execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.rfd REPLACE COLUMNS (measure DOUBLE, amount INT)",
-    )
-    .await
-    .expect_err("decimal→int identity trap");
-    assert!(
-        trap_dec
-            .to_string()
-            .to_lowercase()
-            .contains("identity trap"),
-        "got: {trap_dec}"
     );
 }
 

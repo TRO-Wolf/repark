@@ -77,6 +77,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `alter.rs::alter_unsupported_forms_refuse_loud` in the same unit (`tests/alter.rs`
   1436→1397) — the forms execute now, so the refusal pin would fail.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the Rust twins of the measured
+  `RC-*` cells — fresh ids + all-NULL read-back on the basic, same-list and re-typed forms, the
+  level-order struct ids (`s` 5, `s.a` 6, `s.b` 7, `last-column-id` 7), the kept `COMMENT`, the
+  replace-insert-replace sequence that NULLs the row written in between, and the five refusals
+  with Spark's text (`NOT NULL` as a parse error, `[COLUMN_ALREADY_EXISTS]`, the partition-field
+  and sort-field source loss, the column position and the nested name) — each refusal asserting
+  the table's ids and rows are untouched. The two identity-trap tests in `alter.rs`
+  (`alter_replace_columns_promote_and_identity_trap`,
+  `alter_replace_columns_float_decimal_promote_and_traps`) and the REPLACE block in
+  `alter_unsupported_forms_refuse_loud` encoded the opposite design and are gone.
+  pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `v3_upgrade_calls.rs` — **V3-10:** the catalog-call budget for `ALTER … SET TBLPROPERTIES`,
   counted through a wrapper registered into BOTH the catalog registry and the DF provider: an
   upgrading ALTER is (2 `load_table`, 0 `list_tables`, 0 `namespace_exists`) — one load for the
