@@ -40,6 +40,16 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_cast_map_spell_1.py](test_cast_map_spell_1.py) +
+  [cast_map_spell_1/](cast_map_spell_1/map.md) +
+  [_record_cast_map_spell_1.py](_record_cast_map_spell_1.py) —
+  **CAST-MAP-SPELL-1 (2026-09-19, round 1):** the 21-cell Spark 4.1.2 oracle for
+  `CAST(… AS MAP<…>)` and `.cast(MapType)` — one pin per cell on the facade SQL
+  door, the native ANSI door wherever it can spell the cell (`array(...)` and
+  bare `map()` have no native spelling and stay facade-only), and the DataFrame
+  door for the three `.cast` cells; refusals pin Spark's exception class and
+  error token. Red on main: 34 failed, 1 live-skip.
+  pins: cast-map-spell-1/C-002, C-003, C-004
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —
