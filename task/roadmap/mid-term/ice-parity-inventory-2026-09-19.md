@@ -25,17 +25,29 @@ wave **and** for this slate.
 | DIFFERENT | 57 | **0** |
 | REFUSED-UNREGISTERED | 126 | **0** |
 | NOT-PARSED | 28 | **0** |
-| REFUSED-REGISTERED | 87 | **0**, except a cell the owner has ruled out by a dated ruling recorded here |
+| REFUSED-REGISTERED | 87 | **0**, except the cells a dated owner ruling below carves out (C-1: the 3 streaming cells) |
 | EQUAL + SPARK-CANNOT | 544 | everything else |
 
 A registry row marked DECLARED is not an exemption: a refusal is an end state only where Spark refuses too
 (SPARK-CANNOT) or where a dated owner ruling below names the cell. The 2026-09-16 rating's probes and the run-23
 still-true list are part of the same gate, and so is a green `aws-acceptance` run at the release head.
 
-**Rulings that carve a cell out** (none yet). Candidates the orchestrating session has put to the owner, each with
-its default until ruled: IPI-17 (Spark's `merge-schema` + `INSERT … VALUES` adds `col1..colN` — default: do not copy,
-DECLARED), IPI-18 (RePark accepts three reader options Spark 4.1 refuses — default: keep accepting, DECLARED). Every
-other unit, IPI-47 (streaming) and IPI-40 (views) included, is in the gate until the owner says otherwise.
+**Rulings that carve a cell out.**
+
+- **C-1 (owner, 2026-09-19) — IPI-47, structured streaming read and write of Iceberg tables, moves to v1.6.0.** The
+  owner agreed to the orchestrating session's proposal ("I like it, let's get it recorded"). The three streaming cells
+  (`R-STREAM-READ`, `R-STREAM-READ-SKIP`, `W-STREAM-WRITE-FILESRC`) are out of the v1.5.0 gate; every other unit of
+  §2 stays in. Reason: every other gate item makes RePark answer an Iceberg statement the way Spark does, while
+  streaming needs a runtime RePark does not have (`readStream` / `writeStream`, triggers, checkpoints, offsets,
+  restart recovery, exactly-once commits). Its Iceberg half is built by v1.5.0 anyway — incremental append and
+  changelog reads (IPI-22) are what Spark's streaming read loops over. The card is
+  [ice-streaming-1-6.md](ice-streaming-1-6.md). v1.5.0's claim is therefore full Spark–Iceberg parity **for batch**;
+  registry rows SES-DECL-readStream and SES-DECL-streams stay until v1.6.0 and the release notes say so.
+
+Candidates not yet ruled, each with its default until the owner rules: IPI-17 (Spark's `merge-schema` +
+`INSERT … VALUES` adds `col1..colN` — default: do not copy, DECLARED), IPI-18 (RePark accepts three reader options
+Spark 4.1 refuses — default: keep accepting, DECLARED). Every other unit, IPI-40 (views) and IPI-41 (ORC and Avro data
+files) included, is in the gate.
 
 ## 1. The matrix in numbers
 
