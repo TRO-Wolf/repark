@@ -114,3 +114,51 @@ Commands: `run --mode <mode> --warehouse <dir> --repeat 5 --out <mode>.json`.
 - **Pages per file:** three data pages per column at 50,000 rows per file, so within-file page
   pruning (ICE-PAGE-PRUNE-1) has little to skip on this bed. That unit's pair adds a
   large-file bed (`setup --files 20 --rows-per-file 500000`) and records it here beside this one.
+
+## RP-36 pair (fork `7bd2fea3` → `fa77fb2b`: F-TS-PUSHDOWN-1 #312, F-PAGE-PRUNE-1 #310)
+
+Both heads built and run back to back on 2026-09-19 (11:02–11:14 EDT, load average 12–25),
+default release profile, `--repeat 5` (medians; requests and bytes identical across samples).
+Beds: the 200-file bed above (4 pages per narrow column) and a large-file bed
+(`setup --files 20 --rows-per-file 500000`, 1,427,929,166 B, 25 pages per narrow column).
+Ledger: [rp-36-fork-pin](../../task/ledgers/staging/rp-36-fork-pin-ledger.md).
+
+| bed, mode | query | total ms | footer requests | page bytes | all bytes |
+|---|---|---|---|---|---|
+| default-cold | Q1 | 200.8 → 195.1 | 200 → 200 | 0 → 0 | 105,637,162 → 105,637,162 |
+| default-cold | Q2 | 228.8 → 220.6 | 200 → 200 | 22,157,067 → 22,157,067 | 127,794,229 → 127,794,229 |
+| default-cold | Q3 | 234.8 → 189.0 | 200 → 27 | 65,501,593 → 985,929 | 171,138,755 → 15,921,267 |
+| default-cold | Q4 | 175.4 → 176.7 | 26 → 26 | 1,008,817 → 1,008,817 | 15,419,867 → 15,419,867 |
+| default-cold | Q5 | 236.6 → 239.8 | 200 → 200 | 65,501,593 → 65,501,593 | 171,138,755 → 171,138,755 |
+| default-cold | Q6 | 833.7 → 999.7 | 200 → 200 | 1,428,284,966 → 1,428,284,966 | 1,533,922,128 → 1,533,922,128 |
+| default-cold | Q7 | 171.5 → 154.9 | 27 → 27 | 323,875 → 323,875 | 15,259,213 → 15,259,213 |
+| default-warm | Q1 | 11.0 → 11.1 | 200 → 200 | 0 → 0 | 104,857,600 → 104,857,600 |
+| default-warm | Q2 | 33.5 → 29.9 | 200 → 200 | 22,157,067 → 22,157,067 | 127,014,667 → 127,014,667 |
+| default-warm | Q3 | 84.7 → 11.8 | 200 → 27 | 65,501,593 → 985,929 | 170,359,193 → 15,141,705 |
+| default-warm | Q4 | 14.0 → 13.9 | 26 → 26 | 1,008,817 → 1,008,817 | 14,640,305 → 14,640,305 |
+| default-warm | Q5 | 61.6 → 56.1 | 200 → 200 | 65,501,593 → 65,501,593 | 170,359,193 → 170,359,193 |
+| default-warm | Q6 | 659.3 → 776.4 | 200 → 200 | 1,428,284,966 → 1,428,284,966 | 1,533,142,566 → 1,533,142,566 |
+| default-warm | Q7 | 8.3 → 7.9 | 27 → 27 | 323,875 → 323,875 | 14,479,651 → 14,479,651 |
+| large-cold | Q1 | 33.7 → 30.1 | 20 → 20 | 0 → 0 | 10,565,325 → 10,565,325 |
+| large-cold | Q2 | 51.1 → 42.3 | 40 → 40 | 21,271,973 → 21,271,973 | 42,323,058 → 42,323,058 |
+| large-cold | Q3 | 93.8 → 42.5 | 40 → 26 | 64,603,029 → 2,335,277 | 85,654,114 → 16,046,330 |
+| large-cold | Q4 | 36.6 → 33.2 | 26 → 26 | 2,542,390 → 2,114,116 | 16,253,443 → 15,825,169 |
+| large-cold | Q5 | 79.1 → 85.4 | 40 → 40 | 31,486,183 → 31,486,183 | 52,537,268 → 52,537,268 |
+| large-cold | Q6 | 1226.1 → 1187.7 | 40 → 40 | 1,373,195,126 → 1,373,195,126 | 1,394,246,211 → 1,394,246,211 |
+| large-cold | Q7 | 42.5 → 34.9 | 26 → 26 | 1,196,696 → 1,094,733 | 14,907,749 → 14,805,786 |
+| large-warm | Q1 | 8.0 → 6.8 | 20 → 20 | 0 → 0 | 10,485,760 → 10,485,760 |
+| large-warm | Q2 | 19.1 → 27.6 | 40 → 40 | 21,271,973 → 21,271,973 | 42,243,493 → 42,243,493 |
+| large-warm | Q3 | 55.9 → 21.4 | 40 → 26 | 64,603,029 → 2,335,277 | 85,574,549 → 15,966,765 |
+| large-warm | Q4 | 21.7 → 13.2 | 26 → 26 | 2,542,390 → 2,114,116 | 16,173,878 → 15,745,604 |
+| large-warm | Q5 | 62.1 → 54.6 | 40 → 40 | 31,486,183 → 31,486,183 | 52,457,703 → 52,457,703 |
+| large-warm | Q6 | 1174.4 → 1233.1 | 40 → 40 | 1,373,195,126 → 1,373,195,126 | 1,394,166,646 → 1,394,166,646 |
+| large-warm | Q7 | 19.1 → 12.7 | 26 → 26 | 1,196,696 → 1,094,733 | 14,828,184 → 14,726,221 |
+
+- **Q3** (the `CAST(n AS TIMESTAMP)` window) now reaches the scan: 200 → 27 footers on the
+  200-file bed and 65.5 MB → 0.99 MB of pages; warm 84.7 → 11.8 ms.
+- **Page selection** trims page bytes where a file's pages differ on the filter column (Q4, Q7 on
+  the large bed); `value` (Q5) and `category` (Q6) are spread through every page, so nothing is
+  skipped there.
+- **Q6 regression** on the 200-file bed: the same bytes, warm +18 %, cold +20 % — the cost of
+  loading and evaluating page indexes that cannot prune. Fork ask F-PAGE-PRUNE-2.
+
