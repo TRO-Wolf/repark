@@ -146,10 +146,12 @@ jobs:
           TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
         run: |
           set -euo pipefail
-          if [ -z "${REPARK_ACCEPT_WAREHOUSE}" ] || [ "${REPARK_ACCEPT_WAREHOUSE}" = "s3://example-warehouse/" ]; then
-            echo "REPARK_ACCEPT_WAREHOUSE is unset or the placeholder; the bench needs the Glue scratch warehouse (docs/tier2-aws.md §4)" >&2
-            exit 1
-          fi
+          case "${REPARK_ACCEPT_WAREHOUSE}" in
+            "" | "s3://example-warehouse/")
+              echo "REPARK_ACCEPT_WAREHOUSE is unset or the placeholder; the bench needs the Glue scratch warehouse (docs/tier2-aws.md §4)" >&2
+              exit 1
+              ;;
+          esac
           if [ -z "${TABLE_BUCKET_ARN}" ]; then
             echo "TABLE_BUCKET_ARN is unset; the bench needs the S3 Tables leg (docs/tier2-aws.md §4)" >&2
             exit 1
@@ -250,11 +252,11 @@ jobs:
           PURPOSE: ${{ inputs.purpose }}
         run: |
           set -euo pipefail
+          shopt -s nullglob
           total=0
           {
             echo "## ICE-READ-PERF bench — purpose: ${PURPOSE:-unstated}"
             for file in "${RUNNER_TEMP}"/ice-read-perf-out/*.json; do
-              [ -e "${file}" ] || continue
               bytes="$(jq '.run_io_total.bytes' "${file}")"
               total=$((total + bytes))
               echo "- $(basename "${file}" .json): ${bytes} bytes read"

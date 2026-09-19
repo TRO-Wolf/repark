@@ -133,7 +133,12 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   both run loops, the bytes summary, the upload. It runs four modes on both catalogs at
   `BENCH_REPEAT: "1"` (Q-24a-1) under `set -euo pipefail`. No `${{ }}` reaches a `run:` script, and the job
   carries no `#` comment. Doctoring compaction to `enabled` or adding `continue-on-error` reds
-  it. YAML read by regex, no PyYAML.
+  it. Round 3 (F-MUT-4B): no failure can be swallowed. The only `||` in the job's `run:`
+  scripts is `|| stop "…"` on the two `aws s3tables` calls, and every `cargo bench` command
+  line (backslash continuations joined, `>` scripts folded) carries no `||`, `&&`, `;` or
+  pipe, so `|| true`, `&& true` or `; true` after any of the seven bench commands or the two
+  compaction calls reds `test_no_bench_or_s3tables_failure_can_be_swallowed`. YAML read by
+  regex, no PyYAML.
   pins: ice-read-perf-0/C-018, C-019
 - `test_ex_0_example_coverage.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):** the raw-walk
   count pin moved 936 → 944 with the eight new writer-layout inventory names

@@ -57,6 +57,37 @@ def _steps(block: str) -> list[str]:
     return re.split(r"(?m)^      - ", block)[1:]
 
 
+def _run_script(step: str) -> str | None:
+    """Return a step's ``run:`` script as bash sees it (``>`` folded, ``|`` kept)."""
+    lines = step.splitlines()
+    for index, line in enumerate(lines):
+        match = re.match(r"^(\s*)run:\s*(.*?)\s*$", line)
+        if match is None:
+            continue
+        indent, value = len(match.group(1)), match.group(2)
+        if value not in ("|", ">"):
+            return value
+        body = []
+        for following in lines[index + 1 :]:
+            if following.strip() and len(following) - len(following.lstrip()) <= indent:
+                break
+            body.append(following.strip())
+        if value == ">":
+            return " ".join(part for part in body if part)
+        return "\n".join(body)
+    return None
+
+
+def _run_scripts(block: str) -> list[str]:
+    """Return every ``run:`` script of a job body, in step order."""
+    return [script for step in _steps(block) if (script := _run_script(step)) is not None]
+
+
+def _logical_lines(script: str) -> list[str]:
+    """Join backslash continuations so each entry is one shell command line."""
+    return re.sub(r"\\\n\s*", " ", script).splitlines()
+
+
 def _uses_pins(block: str) -> dict[str, str]:
     """Map each action used in ``block`` to its pinned ref."""
     return dict(re.findall(r"uses:\s*([\w./-]+)@([0-9a-f]{40})", block))
@@ -143,3 +174,39 @@ def test_no_expression_reaches_a_run_script_and_the_job_carries_no_comment() -> 
     for line in block.splitlines():
         assert not line.lstrip().startswith("#"), line
         assert not re.search(r"@[0-9a-f]{40}\s+#", line), line
+
+
+def test_no_bench_or_s3tables_failure_can_be_swallowed() -> None:
+    """R-3's exit 3 and every AWS failure reach ``set -e``: no ``||``, ``&&`` or ``;`` recovery."""
+    scripts = _run_scripts(_job_block(_text(), "ice-read-perf-bench"))
+    recoveries = [match for script in scripts for match in re.finditer(r"\|\|", script)]
+    assert len(recoveries) == 2, [script for script in scripts if "||" in script]
+    for script in scripts:
+        for match in re.finditer(r"\|\|", script):
+            assert re.match(r'\|\| stop "[^"]+"\s*$', script[match.start() :].splitlines()[0]), (
+                script[match.start() :].splitlines()[0]
+            )
+    compaction = [script for script in scripts if "aws s3tables" in script]
+    assert len(compaction) == 1
+    assert compaction[0].count('|| stop "') == 2
+    bench_lines = [
+        line.strip()
+        for script in scripts
+        for line in _logical_lines(script)
+        if "cargo bench" in line
+    ]
+    assert len(bench_lines) == 7, bench_lines
+    for line in bench_lines:
+        assert line.startswith("cargo bench --locked -p repark-spark --bench ice_read_perf"), line
+        assert not re.search(r"\|\||&&|;|\|", line), line
+    aws_lines = [
+        line.strip()
+        for script in compaction
+        for line in _logical_lines(script)
+        if "aws s3tables" in line
+    ]
+    assert len(aws_lines) == 2, aws_lines
+    for line in aws_lines:
+        assert line.count("||") == 1, line
+        assert re.search(r'\|\| stop "[^"]+"$', line), line
+        assert not re.search(r"&&|;", line), line
