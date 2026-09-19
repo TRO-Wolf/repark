@@ -9313,7 +9313,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   catalog, format-v3 table, measured **SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3** metadata
   document READS (the analysis' §7.6 totals split into reads and the commit's own write). FIXED
   by a session-scoped cache keyed by metadata-file location, built once per session and handed to
-  every **memory** catalog it builds (`repark.iceberg.metadataCache`, default on;
+  every memory catalog it builds — and, since ICE-CATALOG-CACHE-1 (2026-09-19), every Glue and S3
+  Tables catalog (`repark.iceberg.metadataCache`, default on;
   `repark.iceberg.metadataCacheEntries`, default 512): reads are **0 on every statement that
   reads an existing table**. Three things this row does NOT claim. (1) `CREATE TABLE` and CTAS
   still read 1, with the cache on and off alike — the catalog reads back the document it wrote to
@@ -9321,8 +9322,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   catalog ROUND TRIPS per statement is **unchanged**: measured through the census counter
   (`hits + misses`, cache on) at SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3 — the same
   numbers as the knob-off read column, because the cache turns those calls into hits rather than
-  removing them. On Glue each is still a `GetTable`; cutting that is `PERF-CATALOG-LOADS-1`. (3) Glue and S3 Tables are **not wired** and pay exactly what they paid
-  before; that is `PERF-CATALOG-AWS-CACHE-1`. Staleness pinned across two doors over one catalog
+  removing them. On Glue each is still a `GetTable`; cutting that is `PERF-CATALOG-LOADS-1`. (3) The read counts above are the memory catalog's; Glue and S3 Tables
+  receive the same session caches since ICE-CATALOG-CACHE-1 but are unmeasured — that is
+  `PERF-CATALOG-AWS-CACHE-1`. Staleness pinned across two doors over one catalog
   (commit visibility, `ADD COLUMNS`, a MERGE after another door's commit, `rewrite_manifests` +
   `expire_snapshots`, DROP + re-CREATE, and a Hadoop pointer adopted by `CALL register_table`).
   Pins: `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
@@ -9342,17 +9344,24 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   behaviour alone. Implemented and test-green in the fork lane; measured through a temporary,
   never-committed path override as part of the 120.01 → 11.33 ms cell in
   `docs/perf/iceberg-catalog-io-baseline.md` §3.1.
-- **PERF-CATALOG-AWS-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **BACKLOG** behind a
-  fork pin bump. The metadata-location cache reaches the memory catalog only:
-  `MemoryCatalogBuilder::with_table_metadata_cache` exists at fork pin `189a73ed`, but
-  `GlueCatalogBuilder` and `S3TablesCatalogBuilder` have no such method, so `glue_catalog` and
-  `s3tables_catalog` are unchanged and a Glue statement still pays its S3 GET of the metadata
-  document (2 per SELECT, 3–6 per DML, by the census method). Fork trigger **F-CATIO-AWS**: the
-  two AWS builders take an `Option<Arc<TableMetadataCache>>` and route `load_table` through
-  `load_or_fetch_table_metadata`, as `MemoryCatalog` already does. The two acceptance legs
-  (`test_glue_parses_no_metadata_document_for_an_unchanged_pointer`,
-  `test_s3tables_parses_no_metadata_document_for_an_unchanged_pointer`) are written and SKIP
-  naming this ask; they un-skip at the bump. No AWS was measured by this unit.
+- **PERF-CATALOG-AWS-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **Wired,
+  unmeasured (the AWS bench is blocked on an IAM grant)** since 2026-09-19 (ICE-CATALOG-CACHE-1)
+  at fork pin `27e0d5fa`: fork `#311` (ask `F-CATIO-AWS`) gave `GlueCatalogBuilder` and
+  `S3TablesCatalogBuilder` `with_table_metadata_cache`, `with_shared_object_cache_bytes` and
+  `with_cache_credential_context`, and RePark's `glue_catalog_counted` /
+  `s3tables_catalog_counted` hand them the session's `CatalogCaches` through the same
+  `wire_caches` the memory catalog uses, on every production registration path
+  (`register_catalog_spec`). The caches are session-scoped: one metadata cache per session,
+  shared by its catalogs within one credential context (the fork's
+  `CacheScope::credential_context_from_props`, selectors only; with no selector each catalog
+  instance keeps its own scope), and one manifest `ObjectCache` per catalog instance. Pinned
+  offline (`catalog/tests/cache_wiring.rs`, the session caches reach both real builders);
+  expected effect by the census method is 0 S3 GETs of `metadata.json` per statement on an
+  unchanged pointer (it was 2 per SELECT, 3–6 per DML), but no AWS number exists yet. The two
+  acceptance legs (`test_glue_parses_no_metadata_document_for_an_unchanged_pointer`,
+  `test_s3tables_parses_no_metadata_document_for_an_unchanged_pointer`) still SKIP, now naming
+  the blocked AWS measurement (ledger `ice-catalog-cache-1` C-011) instead of the fork. The
+  `GetTable` count per statement is unchanged; that is `PERF-CATALOG-LOADS-1`.
 - **PERF-CATALOG-CACHE-BOUND-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **FIXED
   2026-09-19 (ICE-CATALOG-CACHE-1)** at fork pin `27e0d5fa` (fork `#311`, ask `F-CATIO-BOUND`).
   The fork's `TableMetadataCache` is now a moka cache weighed by each entry's metadata-document

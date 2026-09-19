@@ -654,8 +654,8 @@ def test_peak_rss_over_five_hundred_tables_stays_within_the_default_cache_budget
     reason="Glue leg runs under the AWS acceptance gate only",
 )
 @pytest.mark.skip(
-    reason="PERF-ICE-CATALOG-IO-1 part 2 for Glue is fork-gated: GlueCatalogBuilder takes no "
-    "with_table_metadata_cache at fork pin 189a73ed (fork ask F-CATIO-AWS)."
+    reason="PERF-CATALOG-AWS-CACHE-1 for Glue: the session caches are wired (ICE-CATALOG-CACHE-1, "
+    "fork #311); the AWS measurement is blocked on an IAM grant (ledger ice-catalog-cache-1 C-011)."
 )
 def test_glue_parses_no_metadata_document_for_an_unchanged_pointer() -> None:
     raise AssertionError("unreachable while the leg is skipped")
@@ -666,8 +666,9 @@ def test_glue_parses_no_metadata_document_for_an_unchanged_pointer() -> None:
     reason="S3 Tables leg runs under the AWS acceptance gate only",
 )
 @pytest.mark.skip(
-    reason="PERF-ICE-CATALOG-IO-1 part 2 for S3 Tables is fork-gated: S3TablesCatalogBuilder "
-    "takes no with_table_metadata_cache at fork pin 189a73ed (fork ask F-CATIO-AWS)."
+    reason="PERF-CATALOG-AWS-CACHE-1 for S3 Tables: the session caches are wired "
+    "(ICE-CATALOG-CACHE-1, fork #311); the AWS measurement is blocked on an IAM grant "
+    "(ledger ice-catalog-cache-1 C-011)."
 )
 def test_s3tables_parses_no_metadata_document_for_an_unchanged_pointer() -> None:
     raise AssertionError("unreachable while the leg is skipped")

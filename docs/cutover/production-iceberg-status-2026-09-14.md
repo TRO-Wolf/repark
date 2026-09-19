@@ -391,7 +391,9 @@ this report cites it.
 **Performance only; no effect on correctness.**
 
 - `PERF-CATALOG-AWS-CACHE-1`, `PERF-CATALOG-COMMIT-CACHE-1` and `PERF-CATALOG-CACHE-BOUND-1`, all
-  BACKLOG.
+  BACKLOG at this snapshot. Since ICE-CATALOG-CACHE-1 (2026-09-19): `PERF-CATALOG-AWS-CACHE-1` is
+  wired, unmeasured (the AWS bench is blocked on an IAM grant) and `PERF-CATALOG-CACHE-BOUND-1` is
+  FIXED; `PERF-CATALOG-COMMIT-CACHE-1` is unchanged.
 
 ## 6. Operational acceptance state
 
