@@ -109,6 +109,7 @@ mod tests {
             start: 0,
             length: 1,
             record_count: None,
+            file_record_count: None,
             data_file_path: path.to_string().into(),
             data_file_format: DataFileFormat::Parquet,
             schema: StdArc::new(schema),
